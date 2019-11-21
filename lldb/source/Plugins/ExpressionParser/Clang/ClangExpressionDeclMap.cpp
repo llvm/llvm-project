@@ -1224,8 +1224,6 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  SymbolContextList sc_list;
-
   const ConstString name(context.m_decl_name.getAsString().c_str());
   if (IgnoreName(name, false))
     return;
@@ -1289,8 +1287,6 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
     return;
   }
-  ValueObjectSP valobj;
-  VariableSP var;
 
   bool local_var_lookup =
       !namespace_decl || (namespace_decl.GetName() ==
@@ -1300,6 +1296,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
       return;
 
   if (target) {
+    ValueObjectSP valobj;
+    VariableSP var;
     var = FindGlobalVariable(*target, module_sp, name, &namespace_decl,
                              nullptr);
 
@@ -1321,7 +1319,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   }
 
   const bool include_inlines = false;
-  sc_list.Clear();
+  SymbolContextList sc_list;
   if (namespace_decl && module_sp) {
     const bool include_symbols = false;
 
