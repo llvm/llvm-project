@@ -10,7 +10,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Signals.h"
 #include <system_error>
 
 using namespace llvm;
@@ -110,7 +109,6 @@ void Error::fatalUncheckedError() const {
   }else
     dbgs() << "Error value was Success. (Note: Success values must still be "
               "checked prior to being destroyed).\n";
-  PrintStackTrace();
   abort();
 }
 #endif
