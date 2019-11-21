@@ -1536,22 +1536,19 @@ struct AggDtor getAggDtor(void);
 
 // CHECK-LABEL: define void @test71
 void test71(void) {
-  // FIXME: It would be nice if the __destructor_8_s40 for the first call (and
-  // the following lifetime.end) came before the second call.
-  //
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1:[^ ]+]] to i8*
   // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* %[[T]])
   // CHECK: call void @getAggDtor(%struct.AggDtor* sret %[[TMP1]])
+  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1]] to i8**
+  // CHECK: call void @__destructor_8_s40(i8** %[[T]])
+  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1:[^ ]+]] to i8*
+  // CHECK: call void @llvm.lifetime.end.p0i8({{[^,]+}}, i8* %[[T]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2:[^ ]+]] to i8*
   // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* %[[T]])
   // CHECK: call void @getAggDtor(%struct.AggDtor* sret %[[TMP2]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2]] to i8**
   // CHECK: call void @__destructor_8_s40(i8** %[[T]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2:[^ ]+]] to i8*
-  // CHECK: call void @llvm.lifetime.end.p0i8({{[^,]+}}, i8* %[[T]])
-  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1]] to i8**
-  // CHECK: call void @__destructor_8_s40(i8** %[[T]])
-  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1:[^ ]+]] to i8*
   // CHECK: call void @llvm.lifetime.end.p0i8({{[^,]+}}, i8* %[[T]])
   getAggDtor();
   getAggDtor();

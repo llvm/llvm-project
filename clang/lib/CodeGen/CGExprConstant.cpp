@@ -1167,9 +1167,7 @@ public:
   }
 
   llvm::Constant *VisitExprWithCleanups(ExprWithCleanups *E, QualType T) {
-    if (!E->cleanupsHaveSideEffects())
-      return Visit(E->getSubExpr(), T);
-    return nullptr;
+    return Visit(E->getSubExpr(), T);
   }
 
   llvm::Constant *VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E,
