@@ -324,3 +324,13 @@ entry:
   ret void
 }
 declare fp128 @llvm.round.f128(fp128)
+
+define fp128 @Test128FMA(fp128 %a, fp128 %b, fp128 %c) nounwind {
+; CHECK-LABEL: Test128FMA:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    jmp fmal # TAILCALL
+entry:
+  %call = call fp128 @llvm.fma.f128(fp128 %a, fp128 %b, fp128 %c)
+  ret fp128 %call
+}
+declare fp128 @llvm.fma.f128(fp128, fp128, fp128)
