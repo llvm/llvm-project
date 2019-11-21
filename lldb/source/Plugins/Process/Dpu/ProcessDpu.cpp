@@ -386,7 +386,6 @@ Status ProcessDpu::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
     if (!m_dpu->ReadWRAM(addr, buf, size))
       return Status("Cannot copy from WRAM");
   }
-  // TODO proper bytes_read
   bytes_read = size;
 
   return Status();
@@ -407,7 +406,6 @@ Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
     if (!m_dpu->WriteWRAM(addr, buf, size))
       return Status("Cannot copy to WRAM");
   }
-  // TODO proper bytes_written
   bytes_written = size;
 
   return Status();
