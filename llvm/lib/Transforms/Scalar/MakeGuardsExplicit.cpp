@@ -57,9 +57,9 @@ struct MakeGuardsExplicitLegacyPass : public FunctionPass {
 
 static void turnToExplicitForm(CallInst *Guard, Function *DeoptIntrinsic) {
   // Replace the guard with an explicit branch (just like in GuardWidening).
-  BasicBlock *BB = Guard->getParent();
   makeGuardControlFlowExplicit(DeoptIntrinsic, Guard, true);
-  assert(isWidenableBranch(BB->getTerminator()) && "should hold");
+  assert(isWidenableBranch(Guard->getParent()->getTerminator()) &&
+         "should hold");
 
   Guard->eraseFromParent();
 }
