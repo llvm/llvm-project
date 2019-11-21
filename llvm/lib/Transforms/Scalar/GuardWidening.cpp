@@ -84,15 +84,16 @@ static Value *getCondition(Instruction *I) {
            "Bad guard intrinsic?");
     return GI->getArgOperand(0);
   }
-  if (isGuardAsWidenableBranch(I)) {
-    auto *Cond = cast<BranchInst>(I)->getCondition();
-    return cast<BinaryOperator>(Cond)->getOperand(0);
-  }
+  Value *Cond, *WC;
+  BasicBlock *IfTrueBB, *IfFalseBB;
+  if (parseWidenableBranch(I, Cond, WC, IfTrueBB, IfFalseBB))
+    return Cond;
+
   return cast<BranchInst>(I)->getCondition();
 }
 
 // Set the condition for \p I to \p NewCond. \p I can either be a guard or a
-// conditional branch.
+// conditional branch.  
 static void setCondition(Instruction *I, Value *NewCond) {
   if (IntrinsicInst *GI = dyn_cast<IntrinsicInst>(I)) {
     assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&

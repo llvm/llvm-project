@@ -762,6 +762,166 @@ exit:
   ret i32 %result
 }
 
+define i32 @swapped_wb(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
+; CHECK-LABEL: @swapped_wb(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
+; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[COND_0:%.*]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDENABLE_COND]], [[TMP5]]
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK:       deopt:
+; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTRET]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
+; CHECK-NEXT:    br i1 true, label [[GUARDED]], label [[DEOPT2:%.*]], !prof !0
+; CHECK:       deopt2:
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[DEOPTRET2:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTRET2]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  %exiplicit_guard_cond = and i1 %widenable_cond, %cond_0
+  br i1 %exiplicit_guard_cond, label %loop.preheader, label %deopt, !prof !0
+
+deopt:
+  %deoptret = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret
+
+loop.preheader:
+  br label %loop
+
+loop:
+  %loop.acc = phi i32 [ %loop.acc.next, %guarded ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %guarded ], [ 0, %loop.preheader ]
+  call void @unknown()
+  %within.bounds = icmp ult i32 %i, %length
+  br i1 %within.bounds, label %guarded, label %deopt2, !prof !0
+
+deopt2:
+  call void @unknown()
+  %deoptret2 = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret2
+
+guarded:
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  store i32 0, i32* %array.i.ptr
+  %loop.acc.next = add i32 %loop.acc, %array.i
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ult i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ %loop.acc.next, %guarded ]
+  ret i32 %result
+}
+
+define i32 @trivial_wb(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @trivial_wb(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
+; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK:       deopt:
+; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTRET]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
+; CHECK-NEXT:    br i1 true, label [[GUARDED]], label [[DEOPT2:%.*]], !prof !0
+; CHECK:       deopt2:
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[DEOPTRET2:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTRET2]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  br i1 %widenable_cond, label %loop.preheader, label %deopt, !prof !0
+
+deopt:
+  %deoptret = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret
+
+loop.preheader:
+  br label %loop
+
+loop:
+  %loop.acc = phi i32 [ %loop.acc.next, %guarded ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %guarded ], [ 0, %loop.preheader ]
+  call void @unknown()
+  %within.bounds = icmp ult i32 %i, %length
+  br i1 %within.bounds, label %guarded, label %deopt2, !prof !0
+
+deopt2:
+  call void @unknown()
+  %deoptret2 = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret2
+
+guarded:
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  store i32 0, i32* %array.i.ptr
+  %loop.acc.next = add i32 %loop.acc, %array.i
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ult i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ %loop.acc.next, %guarded ]
+  ret i32 %result
+}
+
 ; TODO: Non-latch exits can still be predicated
 ; This is currently prevented by an overly restrictive profitability check.
 define i32 @todo_unconditional_latch(i32* %array, i32 %length, i1 %cond_0) {
