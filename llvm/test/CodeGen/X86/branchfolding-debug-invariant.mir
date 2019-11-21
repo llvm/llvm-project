@@ -1,0 +1,135 @@
+# RUN: llc -mtriple=x86_64-- -run-pass branch-folder -O3 -o - %s | FileCheck %s
+
+---
+name:            test1a
+body:             |
+  ; CHECK-LABEL: name: test1a
+  ; CHECK: bb.0:
+  ; CHECK:   TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+  ; CHECK:   JCC_1 %bb.2, 5, implicit $eflags
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+  ; CHECK-NOT: RET
+  ; CHECK: bb.2:
+  ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  bb.0:
+    TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+
+  bb.2:
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+...
+
+---
+name:            test1b
+body:             |
+
+  ; Verify that we get the same rewrites as in test1a when adding some
+  ; DBG_VALUE instructions in the mix.
+  ;
+  ; CHECK-LABEL: name: test1b
+  ; CHECK: bb.0:
+  ; CHECK:   TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+  ; CHECK:   JCC_1 %bb.2, 5, implicit $eflags
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+  ; CHECK-NOT: RET
+  ; CHECK: bb.2:
+  ; CHECK:   DBG_VALUE
+  ; CHECK:   DBG_VALUE
+  ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  bb.0:
+    TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+
+  bb.2:
+    DBG_VALUE
+    DBG_VALUE
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+...
+
+---
+name:            test2a
+body:             |
+  ; CFI instruction currently prevents the rewrite here (although technically
+  ; I suppose that branch folding could let bb.1 fallthrough into bb.2 here).
+  ;
+  ; CHECK-LABEL: name: test2a
+  ; CHECK: bb.0:
+  ; CHECK:   TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+  ; CHECK:   JCC_1 %bb.2, 5, implicit killed $eflags
+  ; CHECK: bb.1:
+  ; CHECK:   MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  ; CHECK: bb.2:
+  ; CHECK:   CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  bb.0:
+    TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+
+  bb.2:
+    CFI_INSTRUCTION def_cfa_offset 8
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+...
+
+---
+name:            test2b
+body:             |
+  ; Verify that we get the same rewrites as in test1a when adding some
+  ; DBG_VALUE instructions in the mix.
+  ;
+  ; CHECK-LABEL: name: test2b
+  ; CHECK: bb.0:
+  ; CHECK:   TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+  ; CHECK:   JCC_1 %bb.2, 5, implicit killed $eflags
+  ; CHECK: bb.1:
+  ; CHECK:   MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  ; CHECK: bb.2:
+  ; CHECK:   DBG_VALUE
+  ; CHECK:   CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK:   DBG_VALUE
+  ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  bb.0:
+    TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+
+  bb.2:
+    DBG_VALUE
+    CFI_INSTRUCTION def_cfa_offset 8
+    DBG_VALUE
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+...
