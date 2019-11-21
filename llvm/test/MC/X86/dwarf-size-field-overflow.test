@@ -1,8 +1,8 @@
 # This test generates too many debug location entries to fit into 65KB required
 # by DWARF < 5. Check that the location is set to 0 instead of crashing.
 #
-# RUN: %python %s 10000 | llc -mtriple=x86_64-apple-darwin -filetype=obj -o %t
-# RUN: llvm-dwarfdump %t | FileCheck %s
+# RUN: %python %s 5750 | llc -mtriple=x86_64-apple-darwin -filetype=obj -o - \
+# RUN:    | llvm-dwarfdump - | FileCheck %s
 #
 # CHECK:       0x0000004d:       DW_TAG_formal_parameter
 # CHECK-NEXT:      DW_AT_location   (0x00000000
