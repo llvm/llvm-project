@@ -29,7 +29,7 @@ static void removeSections(const CopyConfig &Config, Object &Obj) {
     };
   }
 
-  if (Config.StripAll) {
+  if (Config.StripAll || Config.StripDebug) {
     // Remove all debug sections.
     RemovePred = [RemovePred](const Section &Sec) {
       if (Sec.Segname == "__DWARF")
@@ -99,8 +99,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
       Config.PreserveDates || Config.StripAllGNU || Config.StripDWO ||
       Config.StripNonAlloc || Config.StripSections || Config.Weaken ||
-      Config.DecompressDebugSections || Config.StripDebug ||
-      Config.StripNonAlloc || Config.StripSections || Config.StripUnneeded ||
+      Config.DecompressDebugSections || Config.StripNonAlloc ||
+      Config.StripSections || Config.StripUnneeded ||
       Config.DiscardMode != DiscardType::None || !Config.SymbolsToAdd.empty() ||
       Config.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
