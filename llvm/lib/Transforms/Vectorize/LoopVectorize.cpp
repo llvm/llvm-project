@@ -7429,6 +7429,9 @@ getScalarEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
                           ScalarEvolution *SE, DominatorTree *DT,
                           const LoopAccessInfo *LAI) {
   ScalarEpilogueLowering SEL = CM_ScalarEpilogueAllowed;
+  bool PredicateOptDisabled = PreferPredicateOverEpilog.getNumOccurrences() &&
+                              !PreferPredicateOverEpilog;
+
   if (Hints.getForce() != LoopVectorizeHints::FK_Enabled &&
       (F->hasOptSize() ||
        llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI)))
@@ -7436,7 +7439,8 @@ getScalarEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
   else if (PreferPredicateOverEpilog ||
            Hints.getPredicate() == LoopVectorizeHints::FK_Enabled ||
            (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, LAI) &&
-            Hints.getPredicate() != LoopVectorizeHints::FK_Disabled))
+            Hints.getPredicate() != LoopVectorizeHints::FK_Disabled &&
+            !PredicateOptDisabled))
     SEL = CM_ScalarEpilogueNotNeededUsePredicate;
 
   return SEL;
