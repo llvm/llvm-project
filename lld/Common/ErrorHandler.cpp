@@ -51,8 +51,6 @@ ErrorHandler &lld::errorHandler() {
   return handler;
 }
 
-void lld::enableColors(bool enable) { lld::errs().enable_colors(enable); }
-
 void lld::exitLld(int val) {
   // Delete any temporary file, while keeping the memory mapping open.
   if (errorHandler().outputBuffer)

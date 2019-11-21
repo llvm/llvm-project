@@ -59,15 +59,15 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    enableColors(true);
+    lld::errs().enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    enableColors(false);
+    lld::errs().enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      enableColors(true);
+      lld::errs().enable_colors(true);
     else if (s == "never")
-      enableColors(false);
+      lld::errs().enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
