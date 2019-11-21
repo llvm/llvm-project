@@ -247,7 +247,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   Instruction *STI = BB->getTerminator();
   Instruction *Start = &*BB->begin();
   // If there's nothing to move, mark the starting instruction as the last
-  // instruction in the block.
+  // instruction in the block. Terminator instruction is handled separately.
   if (Start == STI)
     Start = PTI;
 
@@ -274,6 +274,12 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
     // Move terminator instruction.
     PredBB->getInstList().splice(PredBB->end(), BB->getInstList());
+
+    // Terminator may be a memory accessing instruction too.
+    if (MSSAU)
+      if (MemoryUseOrDef *MUD = cast_or_null<MemoryUseOrDef>(
+              MSSAU->getMemorySSA()->getMemoryAccess(PredBB->getTerminator())))
+        MSSAU->moveToPlace(MUD, PredBB, MemorySSA::End);
   }
   // Add unreachable to now empty BB.
   new UnreachableInst(BB->getContext(), BB);
