@@ -3500,7 +3500,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     Actions.push_back(
         C.MakeAction<IfsMergeJobAction>(MergerInputs, types::TY_Image));
 
-  if (Arg *A = Args.getLastArg(options::OPT_emit_interface_stubs)) {
+  if (Args.hasArg(options::OPT_emit_interface_stubs)) {
     llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PhaseList;
     if (Args.hasArg(options::OPT_c)) {
       llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> CompilePhaseList;
