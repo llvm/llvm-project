@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=+relax %s -o - \
 ; RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX %s
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=+relax %s -o - \
-; RUN:     | llvm-dwarfdump --debug-frame - \
+; RUN:     | llvm-dwarfdump --debug-frame - 2>&1 \
 ; RUN:     | FileCheck -check-prefix=RELAX-DWARFDUMP %s
 ;
 ; RELAX: Section{{.*}}.rela.{{eh|debug}}_frame {
@@ -15,6 +15,7 @@
 ; RELAX: 0x39 R_RISCV_SET6
 ; RELAX: 0x39 R_RISCV_SUB6
 ;
+; RELAX-DWARFDUMP-NOT: error: failed to compute relocation
 ; RELAX-DWARFDUMP: CIE
 ; RELAX-DWARFDUMP: DW_CFA_advance_loc
 ; RELAX-DWARFDUMP: DW_CFA_def_cfa_offset
