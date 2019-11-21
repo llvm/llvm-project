@@ -317,8 +317,7 @@ TEST_F(TestClangASTContext, TestUnifyAccessSpecifiers) {
 }
 
 TEST_F(TestClangASTContext, TestRecordHasFields) {
-  CompilerType int_type =
-      ClangASTContext::GetBasicType(m_ast->getASTContext(), eBasicTypeInt);
+  CompilerType int_type = m_ast->GetBasicType(eBasicTypeInt);
 
   // Test that a record with no fields returns false
   CompilerType empty_base = m_ast->CreateRecordType(

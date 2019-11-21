@@ -314,7 +314,10 @@ public:
   DIEFixupVisitor(DWARFYAML::Data &DI) : DWARFYAML::Visitor(DI){};
 
 private:
-  virtual void onStartCompileUnit(DWARFYAML::Unit &CU) { Length = 7; }
+  virtual void onStartCompileUnit(DWARFYAML::Unit &CU) {
+    // Size of the unit header, excluding the length field itself.
+    Length = CU.Version >= 5 ? 8 : 7;
+  }
 
   virtual void onEndCompileUnit(DWARFYAML::Unit &CU) {
     CU.Length.setLength(Length);

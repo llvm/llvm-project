@@ -19,7 +19,9 @@ using namespace llvm;
 /// Checks if we should import SGV as a definition, otherwise import as a
 /// declaration.
 bool FunctionImportGlobalProcessing::doImportAsDefinition(
-    const GlobalValue *SGV, SetVector<GlobalValue *> *GlobalsToImport) {
+    const GlobalValue *SGV) {
+  if (!isPerformingImport())
+    return false;
 
   // Only import the globals requested for importing.
   if (!GlobalsToImport->count(const_cast<GlobalValue *>(SGV)))
@@ -32,16 +34,8 @@ bool FunctionImportGlobalProcessing::doImportAsDefinition(
   return true;
 }
 
-bool FunctionImportGlobalProcessing::doImportAsDefinition(
-    const GlobalValue *SGV) {
-  if (!isPerformingImport())
-    return false;
-  return FunctionImportGlobalProcessing::doImportAsDefinition(SGV,
-                                                              GlobalsToImport);
-}
-
 bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
-    const GlobalValue *SGV) {
+    const GlobalValue *SGV, ValueInfo VI) {
   assert(SGV->hasLocalLinkage());
   // Both the imported references and the original local variable must
   // be promoted.
@@ -66,7 +60,7 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
   // (so the source file name and resulting GUID is the same). Find the one
   // in this module.
   auto Summary = ImportIndex.findSummaryInModule(
-      SGV->getGUID(), SGV->getParent()->getModuleIdentifier());
+      VI, SGV->getParent()->getModuleIdentifier());
   assert(Summary && "Missing summary for global value when exporting");
   auto Linkage = Summary->linkage();
   if (!GlobalValue::isLocalLinkage(Linkage)) {
@@ -92,18 +86,15 @@ bool FunctionImportGlobalProcessing::isNonRenamableLocal(
 }
 #endif
 
-std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV,
-                                                    bool DoPromote) {
+std::string
+FunctionImportGlobalProcessing::getPromotedName(const GlobalValue *SGV) {
+  assert(SGV->hasLocalLinkage());
   // For locals that must be promoted to global scope, ensure that
   // the promoted name uniquely identifies the copy in the original module,
-  // using the ID assigned during combined index creation. When importing,
-  // we rename all locals (not just those that are promoted) in order to
-  // avoid naming conflicts between locals imported from different modules.
-  if (SGV->hasLocalLinkage() && (DoPromote || isPerformingImport()))
-    return ModuleSummaryIndex::getGlobalNameForLocal(
-        SGV->getName(),
-        ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
-  return SGV->getName();
+  // using the ID assigned during combined index creation.
+  return ModuleSummaryIndex::getGlobalNameForLocal(
+      SGV->getName(),
+      ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
 }
 
 GlobalValue::LinkageTypes
@@ -230,6 +221,11 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     }
   }
 
+  // We should always have a ValueInfo (i.e. GV in index) for definitions when
+  // we are exporting, and also when importing that value.
+  assert(VI || GV.isDeclaration() ||
+         (isPerformingImport() && !doImportAsDefinition(&GV)));
+
   // Mark read/write-only variables which can be imported with specific
   // attribute. We can't internalize them now because IRMover will fail
   // to link variable definitions to their external declarations during
@@ -268,19 +264,13 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     }
   }
 
-  bool DoPromote = false;
-  if (GV.hasLocalLinkage() &&
-      ((DoPromote = shouldPromoteLocalToGlobal(&GV)) || isPerformingImport())) {
+  if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, VI)) {
     // Save the original name string before we rename GV below.
     auto Name = GV.getName().str();
-    // Once we change the name or linkage it is difficult to determine
-    // again whether we should promote since shouldPromoteLocalToGlobal needs
-    // to locate the summary (based on GUID from name and linkage). Therefore,
-    // use DoPromote result saved above.
-    GV.setName(getName(&GV, DoPromote));
-    GV.setLinkage(getLinkage(&GV, DoPromote));
-    if (!GV.hasLocalLinkage())
-      GV.setVisibility(GlobalValue::HiddenVisibility);
+    GV.setName(getPromotedName(&GV));
+    GV.setLinkage(getLinkage(&GV, /* DoPromote */ true));
+    assert(!GV.hasLocalLinkage());
+    GV.setVisibility(GlobalValue::HiddenVisibility);
 
     // If we are renaming a COMDAT leader, ensure that we record the COMDAT
     // for later renaming as well. This is required for COFF.

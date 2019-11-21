@@ -78,7 +78,7 @@ void ImplicitConversionInLoopCheck::check(
   // iterator returns a value instead of a reference, and the loop variable
   // is a reference. This situation is fine (it probably produces the same
   // code at the end).
-  if (IsNonTrivialImplicitCast(Materialized->getTemporary()))
+  if (IsNonTrivialImplicitCast(Materialized->getSubExpr()))
     ReportAndFix(Result.Context, VD, OperatorCall);
 }
 

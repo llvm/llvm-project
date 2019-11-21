@@ -150,8 +150,8 @@ values that can be in the ``NamedValues`` map are function arguments.
 This code simply checks to see that the specified name is in the map (if
 not, an unknown variable is being referenced) and returns the value for
 it. In future chapters, we'll add support for `loop induction
-variables <LangImpl5.html#for-loop-expression>`_ in the symbol table, and for `local
-variables <LangImpl7.html#user-defined-local-variables>`_.
+variables <LangImpl05.html#for-loop-expression>`_ in the symbol table, and for `local
+variables <LangImpl07.html#user-defined-local-variables>`_.
 
 .. code-block:: c++
 
@@ -436,10 +436,10 @@ at the LLVM IR for simple functions. For example:
 
 Note how the parser turns the top-level expression into anonymous
 functions for us. This will be handy when we add `JIT
-support <LangImpl4.html#adding-a-jit-compiler>`_ in the next chapter. Also note that the
+support <LangImpl04.html#adding-a-jit-compiler>`_ in the next chapter. Also note that the
 code is very literally transcribed, no optimizations are being performed
 except simple constant folding done by IRBuilder. We will `add
-optimizations <LangImpl4.html#trivial-constant-folding>`_ explicitly in the next
+optimizations <LangImpl04.html#trivial-constant-folding>`_ explicitly in the next
 chapter.
 
 ::

@@ -907,6 +907,17 @@ inline size_t capacity_in_bytes(const SmallVector<T, N> &X) {
   return X.capacity_in_bytes();
 }
 
+/// Given a range of type R, iterate the entire range and return a
+/// SmallVector with elements of the vector.  This is useful, for example,
+/// when you want to iterate a range and then sort the results.
+template <unsigned Size, typename R>
+SmallVector<typename std::remove_const<typename std::remove_reference<
+                decltype(*std::begin(std::declval<R &>()))>::type>::type,
+            Size>
+to_vector(R &&Range) {
+  return {std::begin(Range), std::end(Range)};
+}
+
 } // end namespace llvm
 
 namespace std {

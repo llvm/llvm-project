@@ -107,8 +107,8 @@
   !14 = !DISubroutineType(types: !15)
   !15 = !{!7, !7, !7, !7}
   !16 = !{!17, !18, !19, !20}
-  !17 = !DILocalVariable(name: "arg1", arg: 1, scope: !13, file: !1, line: 9, type: !7, flags: DIFlagArgumentNotModified)
-  !18 = !DILocalVariable(name: "arg2", arg: 2, scope: !13, file: !1, line: 9, type: !7, flags: DIFlagArgumentNotModified)
+  !17 = !DILocalVariable(name: "arg1", arg: 1, scope: !13, file: !1, line: 9, type: !7)
+  !18 = !DILocalVariable(name: "arg2", arg: 2, scope: !13, file: !1, line: 9, type: !7)
   !19 = !DILocalVariable(name: "arg3", arg: 3, scope: !13, file: !1, line: 9, type: !7)
   !20 = !DILocalVariable(name: "a", scope: !13, file: !1, line: 10, type: !7)
   !21 = !DILocation(line: 0, scope: !13)

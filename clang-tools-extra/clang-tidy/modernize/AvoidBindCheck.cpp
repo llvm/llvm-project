@@ -53,7 +53,7 @@ buildBindArguments(const MatchFinder::MatchResult &Result, const CallExpr *C) {
     const Expr *E = C->getArg(I);
     BindArgument B;
     if (const auto *M = dyn_cast<MaterializeTemporaryExpr>(E)) {
-      const auto *TE = M->GetTemporaryExpr();
+      const auto *TE = M->getSubExpr();
       B.Kind = isa<CallExpr>(TE) ? BK_CallExpr : BK_Temporary;
     }
 

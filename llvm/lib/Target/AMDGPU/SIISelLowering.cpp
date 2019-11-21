@@ -100,6 +100,16 @@ static cl::opt<bool> DisableLoopAlignment(
   cl::desc("Do not align and prefetch loops"),
   cl::init(false));
 
+static bool hasFP32Denormals(const MachineFunction &MF) {
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  return Info->getMode().FP32Denormals;
+}
+
+static bool hasFP64FP16Denormals(const MachineFunction &MF) {
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  return Info->getMode().FP64FP16Denormals;
+}
+
 static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (unsigned Reg = 0; Reg < NumSGPRs; ++Reg) {
@@ -370,9 +380,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLOG10, MVT::f16, Custom);
   }
 
-  // v_mad_f32 does not support denormals according to some sources.
-  if (!Subtarget->hasFP32Denormals())
-    setOperationAction(ISD::FMAD, MVT::f32, Legal);
+  // v_mad_f32 does not support denormals. We report it as unconditionally
+  // legal, and the context where it is formed will disallow it when fp32
+  // denormals are enabled.
+  setOperationAction(ISD::FMAD, MVT::f32, Legal);
 
   if (!Subtarget->hasBFI()) {
     // fcopysign can be done in a single instruction with BFI.
@@ -510,7 +521,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     // F16 - VOP3 Actions.
     setOperationAction(ISD::FMA, MVT::f16, Legal);
-    if (!Subtarget->hasFP16Denormals() && STI.hasMadF16())
+    if (STI.hasMadF16())
       setOperationAction(ISD::FMAD, MVT::f16, Legal);
 
     for (MVT VT : {MVT::v2i16, MVT::v2f16, MVT::v4i16, MVT::v4f16}) {
@@ -772,8 +783,9 @@ bool SITargetLowering::isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode,
                                        EVT DestVT, EVT SrcVT) const {
   return ((Opcode == ISD::FMAD && Subtarget->hasMadMixInsts()) ||
           (Opcode == ISD::FMA && Subtarget->hasFmaMixInsts())) &&
-         DestVT.getScalarType() == MVT::f32 && !Subtarget->hasFP32Denormals() &&
-         SrcVT.getScalarType() == MVT::f16;
+    DestVT.getScalarType() == MVT::f32 &&
+    SrcVT.getScalarType() == MVT::f16 &&
+    !hasFP32Denormals(DAG.getMachineFunction());
 }
 
 bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT) const {
@@ -1076,23 +1088,18 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
     return AM.BaseOffs == 0 && AM.Scale == 0;
   }
 
-  // GFX9 added a 13-bit signed offset. When using regular flat instructions,
-  // the sign bit is ignored and is treated as a 12-bit unsigned offset.
-
-  // GFX10 shrinked signed offset to 12 bits. When using regular flat
-  // instructions, the sign bit is also ignored and is treated as 11-bit
-  // unsigned offset.
-
-  if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10)
-    return isUInt<11>(AM.BaseOffs) && AM.Scale == 0;
-
-  // Just r + i
-  return isUInt<12>(AM.BaseOffs) && AM.Scale == 0;
+  return AM.Scale == 0 &&
+         (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
+                                  AM.BaseOffs, AMDGPUAS::FLAT_ADDRESS,
+                                  /*Signed=*/false));
 }
 
 bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
   if (Subtarget->hasFlatGlobalInsts())
-    return isInt<13>(AM.BaseOffs) && AM.Scale == 0;
+    return AM.Scale == 0 &&
+           (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
+                                    AM.BaseOffs, AMDGPUAS::GLOBAL_ADDRESS,
+                                    /*Signed=*/true));
 
   if (!Subtarget->hasAddr64() || Subtarget->useFlatForGlobal()) {
       // Assume the we will use FLAT for all global memory accesses
@@ -3920,7 +3927,8 @@ MVT SITargetLowering::getScalarShiftAmountTy(const DataLayout &, EVT VT) const {
 // however does not support denormals, so we do report fma as faster if we have
 // a fast fma device and require denormals.
 //
-bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
+bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                                  EVT VT) const {
   VT = VT.getScalarType();
 
   switch (VT.getSimpleVT().SimpleTy) {
@@ -3929,7 +3937,7 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
     // mad available which returns the same result as the separate operations
     // which we should prefer over fma. We can't use this if we want to support
     // denormals, so only report this in these cases.
-    if (Subtarget->hasFP32Denormals())
+    if (hasFP32Denormals(MF))
       return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
 
     // If the subtarget has v_fmac_f32, that's just as good as v_mac_f32.
@@ -3938,7 +3946,7 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   case MVT::f64:
     return true;
   case MVT::f16:
-    return Subtarget->has16BitInsts() && Subtarget->hasFP16Denormals();
+    return Subtarget->has16BitInsts() && hasFP64FP16Denormals(MF);
   default:
     break;
   }
@@ -3952,9 +3960,11 @@ bool SITargetLowering::isFMADLegalForFAddFSub(const SelectionDAG &DAG,
   // v_mad_f32/v_mac_f32 do not support denormals.
   EVT VT = N->getValueType(0);
   if (VT == MVT::f32)
-    return !Subtarget->hasFP32Denormals();
-  if (VT == MVT::f16)
-    return !Subtarget->hasFP16Denormals() && Subtarget->hasMadF16();
+    return !hasFP32Denormals(DAG.getMachineFunction());
+  if (VT == MVT::f16) {
+    return Subtarget->hasMadF16() &&
+           !hasFP64FP16Denormals(DAG.getMachineFunction());
+  }
 
   return false;
 }
@@ -7563,7 +7573,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   const SDNodeFlags Flags = Op->getFlags();
   bool Unsafe = DAG.getTarget().Options.UnsafeFPMath || Flags.hasAllowReciprocal();
 
-  if (!Unsafe && VT == MVT::f32 && Subtarget->hasFP32Denormals())
+  if (!Unsafe && VT == MVT::f32 && hasFP32Denormals(DAG.getMachineFunction()))
     return SDValue();
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
@@ -7706,7 +7716,7 @@ SDValue SITargetLowering::lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const {
 static const SDValue getSPDenormModeValue(int SPDenormMode, SelectionDAG &DAG,
                                           const SDLoc &SL, const GCNSubtarget *ST) {
   assert(ST->hasDenormModeInst() && "Requires S_DENORM_MODE");
-  int DPDenormModeDefault = ST->hasFP64Denormals()
+  int DPDenormModeDefault = hasFP64FP16Denormals(DAG.getMachineFunction())
                                 ? FP_DENORM_FLUSH_NONE
                                 : FP_DENORM_FLUSH_IN_FLUSH_OUT;
 
@@ -7742,7 +7752,9 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
                                (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
   const SDValue BitField = DAG.getTargetConstant(Denorm32Reg, SL, MVT::i16);
 
-  if (!Subtarget->hasFP32Denormals()) {
+  const bool HasFP32Denormals = hasFP32Denormals(DAG.getMachineFunction());
+
+  if (!HasFP32Denormals) {
     SDVTList BindParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
 
     SDValue EnableDenorm;
@@ -7786,8 +7798,7 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
   SDValue Fma4 = getFPTernOp(DAG, ISD::FMA, SL, MVT::f32, NegDivScale0, Fma3,
                              NumeratorScaled, Fma3);
 
-  if (!Subtarget->hasFP32Denormals()) {
-
+  if (!HasFP32Denormals) {
     SDValue DisableDenorm;
     if (Subtarget->hasDenormModeInst()) {
       const SDValue DisableDenormValue =
@@ -8761,7 +8772,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     auto F = CFP->getValueAPF();
     if (F.isNaN() && F.isSignaling())
       return false;
-    return !F.isDenormal() || denormalsEnabledForType(Op.getValueType());
+    return !F.isDenormal() || denormalsEnabledForType(DAG, Op.getValueType());
   }
 
   // If source is a result of another standard FP operation it is already in
@@ -8830,7 +8841,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
 
     // snans will be quieted, so we only need to worry about denormals.
     if (Subtarget->supportsMinMaxDenormModes() ||
-        denormalsEnabledForType(Op.getValueType()))
+        denormalsEnabledForType(DAG, Op.getValueType()))
       return true;
 
     // Flushing may be required.
@@ -8902,7 +8913,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     LLVM_FALLTHROUGH;
   }
   default:
-    return denormalsEnabledForType(Op.getValueType()) &&
+    return denormalsEnabledForType(DAG, Op.getValueType()) &&
            DAG.isKnownNeverSNaN(Op);
   }
 
@@ -8913,7 +8924,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
 SDValue SITargetLowering::getCanonicalConstantFP(
   SelectionDAG &DAG, const SDLoc &SL, EVT VT, const APFloat &C) const {
   // Flush denormals to 0 if not enabled.
-  if (C.isDenormal() && !denormalsEnabledForType(VT))
+  if (C.isDenormal() && !denormalsEnabledForType(DAG, VT))
     return DAG.getConstantFP(0.0, SL, VT);
 
   if (C.isNaN()) {
@@ -9451,8 +9462,8 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
 
   // Only do this if we are not trying to support denormals. v_mad_f32 does not
   // support denormals ever.
-  if (((VT == MVT::f32 && !Subtarget->hasFP32Denormals()) ||
-       (VT == MVT::f16 && !Subtarget->hasFP16Denormals() &&
+  if (((VT == MVT::f32 && !hasFP32Denormals(DAG.getMachineFunction())) ||
+       (VT == MVT::f16 && !hasFP64FP16Denormals(DAG.getMachineFunction()) &&
         getSubtarget()->hasMadF16())) &&
        isOperationLegal(ISD::FMAD, VT))
     return ISD::FMAD;
@@ -9461,7 +9472,7 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
   if ((Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
        (N0->getFlags().hasAllowContract() &&
         N1->getFlags().hasAllowContract())) &&
-      isFMAFasterThanFMulAndFAdd(VT)) {
+      isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
     return ISD::FMA;
   }
 
@@ -10963,14 +10974,14 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
   return false;
 }
 
-bool SITargetLowering::denormalsEnabledForType(EVT VT) const {
+bool SITargetLowering::denormalsEnabledForType(const SelectionDAG &DAG,
+                                               EVT VT) const {
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f32:
-    return Subtarget->hasFP32Denormals();
+    return hasFP32Denormals(DAG.getMachineFunction());
   case MVT::f64:
-    return Subtarget->hasFP64Denormals();
   case MVT::f16:
-    return Subtarget->hasFP16Denormals();
+    return hasFP64FP16Denormals(DAG.getMachineFunction());
   default:
     return false;
   }

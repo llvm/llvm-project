@@ -6621,8 +6621,8 @@ AST_MATCHER_P(Expr, ignoringElidableConstructorCall,
     if (CtorExpr->isElidable()) {
       if (const auto *MaterializeTemp =
               dyn_cast<MaterializeTemporaryExpr>(CtorExpr->getArg(0))) {
-        return InnerMatcher.matches(*MaterializeTemp->GetTemporaryExpr(),
-                                    Finder, Builder);
+        return InnerMatcher.matches(*MaterializeTemp->getSubExpr(), Finder,
+                                    Builder);
       }
     }
   }
@@ -6781,7 +6781,9 @@ AST_MATCHER(OMPDefaultClause, isSharedKind) {
 /// ``isAllowedToContainClauseKind("OMPC_default").``
 AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
               OpenMPClauseKind, CKind) {
-  return isAllowedClauseForDirective(Node.getDirectiveKind(), CKind);
+  return isAllowedClauseForDirective(
+      Node.getDirectiveKind(), CKind,
+      Finder->getASTContext().getLangOpts().OpenMP);
 }
 
 //----------------------------------------------------------------------------//

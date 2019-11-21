@@ -5730,7 +5730,7 @@ void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
     const Elf_Verdef *Verdef = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
     DictScope Def(W, "Definition");
     W.printNumber("Version", Verdef->vd_version);
-    W.printEnum("Flags", Verdef->vd_flags, makeArrayRef(SymVersionFlags));
+    W.printFlags("Flags", Verdef->vd_flags, makeArrayRef(SymVersionFlags));
     W.printNumber("Index", Verdef->vd_ndx);
     W.printNumber("Hash", Verdef->vd_hash);
     W.printString("Name", StringRef(reinterpret_cast<const char *>(
@@ -5790,7 +5790,7 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
           reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
       DictScope Entry(W, "Entry");
       W.printNumber("Hash", Vernaux->vna_hash);
-      W.printEnum("Flags", Vernaux->vna_flags, makeArrayRef(SymVersionFlags));
+      W.printFlags("Flags", Vernaux->vna_flags, makeArrayRef(SymVersionFlags));
       W.printNumber("Index", Vernaux->vna_other);
 
       StringRef Name = StringTable.size() > Vernaux->vna_name
@@ -6013,21 +6013,41 @@ template <class ELFT>
 void LLVMStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
   ListScope L(W, "LinkerOptions");
 
+  unsigned I = -1;
   for (const Elf_Shdr &Shdr : unwrapOrError(this->FileName, Obj->sections())) {
+    ++I;
     if (Shdr.sh_type != ELF::SHT_LLVM_LINKER_OPTIONS)
       continue;
 
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, Obj->getSectionContents(&Shdr));
-    for (const uint8_t *P = Contents.begin(), *E = Contents.end(); P < E; ) {
-      StringRef Key = StringRef(reinterpret_cast<const char *>(P));
-      StringRef Value =
-          StringRef(reinterpret_cast<const char *>(P) + Key.size() + 1);
+    if (Contents.empty())
+      continue;
 
-      W.printString(Key, Value);
-
-      P = P + Key.size() + Value.size() + 2;
+    if (Contents.back() != 0) {
+      reportWarning(createError("SHT_LLVM_LINKER_OPTIONS section at index " +
+                                Twine(I) +
+                                " is broken: the "
+                                "content is not null-terminated"),
+                    this->FileName);
+      continue;
     }
+
+    SmallVector<StringRef, 16> Strings;
+    toStringRef(Contents.drop_back()).split(Strings, '\0');
+    if (Strings.size() % 2 != 0) {
+      reportWarning(
+          createError(
+              "SHT_LLVM_LINKER_OPTIONS section at index " + Twine(I) +
+              " is broken: an incomplete "
+              "key-value pair was found. The last possible key was: \"" +
+              Strings.back() + "\""),
+          this->FileName);
+      continue;
+    }
+
+    for (size_t I = 0; I < Strings.size(); I += 2)
+      W.printString(Strings[I], Strings[I + 1]);
   }
 }
 

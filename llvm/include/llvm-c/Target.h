@@ -19,12 +19,11 @@
 #ifndef LLVM_C_TARGET_H
 #define LLVM_C_TARGET_H
 
+#include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 #include "llvm/Config/llvm-config.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_C_EXTERN_C_BEGIN
 
 /**
  * @defgroup LLVMCTarget Target information
@@ -288,8 +287,6 @@ unsigned long long LLVMOffsetOfElement(LLVMTargetDataRef TD,
  * @}
  */
 
-#ifdef __cplusplus
-}
-#endif /* defined(__cplusplus) */
+LLVM_C_EXTERN_C_END
 
 #endif

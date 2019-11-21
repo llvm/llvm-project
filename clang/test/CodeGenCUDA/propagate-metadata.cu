@@ -11,7 +11,7 @@
 
 // Build the bitcode library.  This is not built in CUDA mode, otherwise it
 // might have incompatible attributes.  This mirrors how libdevice is built.
-// RUN: %clang_cc1 -x c++ -emit-llvm-bc -ftrapping-math -DLIB \
+// RUN: %clang_cc1 -x c++ -fconvergent-functions -emit-llvm-bc -ftrapping-math -DLIB \
 // RUN:   %s -o %t.bc -triple nvptx-unknown-unknown
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc -o - \
@@ -53,7 +53,8 @@ __global__ void kernel() { lib_fn(); }
 
 // Check the attribute list.
 // CHECK: attributes [[attr]] = {
-// CHECK: "no-trapping-math"="true"
+// CHECK-SAME: convergent
+// CHECK-SAME: "no-trapping-math"="true"
 
 // FTZ-SAME: "nvptx-f32ftz"="true"
 // NOFTZ-NOT: "nvptx-f32ftz"="true"

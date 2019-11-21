@@ -508,6 +508,20 @@ namespace {
                                    ARCInstKind &Class);
     void OptimizeIndividualCalls(Function &F);
 
+    /// Optimize an individual call, optionally passing the
+    /// GetArgRCIdentityRoot if it has already been computed.
+    void OptimizeIndividualCallImpl(
+        Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
+        Instruction *Inst, ARCInstKind Class, const Value *Arg);
+
+    /// Try to optimize an AutoreleaseRV with a RetainRV or ClaimRV.  If the
+    /// optimization occurs, returns true to indicate that the caller should
+    /// assume the instructions are dead.
+    bool OptimizeInlinedAutoreleaseRVCall(
+        Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
+        Instruction *Inst, const Value *&Arg, ARCInstKind Class,
+        Instruction *AutoreleaseRV, const Value *&AutoreleaseRVArg);
+
     void CheckForCFGHazards(const BasicBlock *BB,
                             DenseMap<const BasicBlock *, BBState> &BBStates,
                             BBState &MyStates) const;
@@ -590,36 +604,8 @@ void ObjCARCOpt::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
 }
 
-static bool isSafeBetweenRVCalls(const Instruction *I) {
-  if (IsNoopInstruction(I))
-    return true;
-
-  auto *CB = dyn_cast<CallBase>(I);
-  if (!CB)
-    return false;
-
-  Intrinsic::ID IID = CB->getIntrinsicID();
-  if (IID == Intrinsic::not_intrinsic)
-    return false;
-
-  switch (IID) {
-  case Intrinsic::lifetime_start:
-  case Intrinsic::lifetime_end:
-    // The inliner adds new lifetime markers as part of the return sequence,
-    // which should be skipped when looking for paired return RV call.
-    LLVM_FALLTHROUGH;
-  case Intrinsic::stacksave:
-  case Intrinsic::stackrestore:
-    // If the inlined code contains dynamic allocas, the above applies as well.
-    return true;
-  default:
-    return false;
-  }
-}
-
 /// Turn objc_retainAutoreleasedReturnValue into objc_retain if the operand is
-/// not a return value.  Or, if it can be paired with an
-/// objc_autoreleaseReturnValue, delete the pair and return true.
+/// not a return value.
 bool
 ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
   // Check for the argument being from an immediately preceding call or invoke.
@@ -645,39 +631,6 @@ ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
     }
   }
 
-  // Track PHIs which are equivalent to our Arg.
-  SmallDenseSet<const Value*, 2> EquivalentArgs;
-  EquivalentArgs.insert(Arg);
-
-  // Add PHIs that are equivalent to Arg to ArgUsers.
-  if (const PHINode *PN = dyn_cast<PHINode>(Arg)) {
-    SmallVector<const Value *, 2> ArgUsers;
-    getEquivalentPHIs(*PN, ArgUsers);
-    EquivalentArgs.insert(ArgUsers.begin(), ArgUsers.end());
-  }
-
-  // Check for being preceded by an objc_autoreleaseReturnValue on the same
-  // pointer. In this case, we can delete the pair.
-  BasicBlock::iterator I = RetainRV->getIterator(),
-                       Begin = RetainRV->getParent()->begin();
-  if (I != Begin) {
-    do
-      --I;
-    while (I != Begin && isSafeBetweenRVCalls(&*I));
-    if (GetBasicARCInstKind(&*I) == ARCInstKind::AutoreleaseRV &&
-        EquivalentArgs.count(GetArgRCIdentityRoot(&*I))) {
-      Changed = true;
-      ++NumPeeps;
-
-      LLVM_DEBUG(dbgs() << "Erasing autoreleaseRV,retainRV pair: " << *I << "\n"
-                        << "Erasing " << *RetainRV << "\n");
-
-      EraseInstruction(&*I);
-      EraseInstruction(RetainRV);
-      return true;
-    }
-  }
-
   // Turn it to a plain objc_retain.
   Changed = true;
   ++NumPeeps;
@@ -693,6 +646,62 @@ ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
   LLVM_DEBUG(dbgs() << "New = " << *RetainRV << "\n");
 
   return false;
+}
+
+bool ObjCARCOpt::OptimizeInlinedAutoreleaseRVCall(
+    Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
+    Instruction *Inst, const Value *&Arg, ARCInstKind Class,
+    Instruction *AutoreleaseRV, const Value *&AutoreleaseRVArg) {
+  // Must be in the same basic block.
+  assert(Inst->getParent() == AutoreleaseRV->getParent());
+
+  // Must operate on the same root.
+  Arg = GetArgRCIdentityRoot(Inst);
+  AutoreleaseRVArg = GetArgRCIdentityRoot(AutoreleaseRV);
+  if (Arg != AutoreleaseRVArg) {
+    // If there isn't an exact match, check if we have equivalent PHIs.
+    const PHINode *PN = dyn_cast<PHINode>(Arg);
+    if (!PN)
+      return false;
+
+    SmallVector<const Value *, 4> ArgUsers;
+    getEquivalentPHIs(*PN, ArgUsers);
+    if (llvm::find(ArgUsers, AutoreleaseRVArg) == ArgUsers.end())
+      return false;
+  }
+
+  // Okay, this is a match.  Merge them.
+  ++NumPeeps;
+  LLVM_DEBUG(dbgs() << "Found inlined objc_autoreleaseReturnValue '"
+                    << *AutoreleaseRV << "' paired with '" << *Inst << "'\n");
+
+  // Delete the RV pair, starting with the AutoreleaseRV.
+  AutoreleaseRV->replaceAllUsesWith(
+      cast<CallInst>(AutoreleaseRV)->getArgOperand(0));
+  EraseInstruction(AutoreleaseRV);
+  if (Class == ARCInstKind::RetainRV) {
+    // AutoreleaseRV and RetainRV cancel out.  Delete the RetainRV.
+    Inst->replaceAllUsesWith(cast<CallInst>(Inst)->getArgOperand(0));
+    EraseInstruction(Inst);
+    return true;
+  }
+
+  // ClaimRV is a frontend peephole for RetainRV + Release.  Since the
+  // AutoreleaseRV and RetainRV cancel out, replace the ClaimRV with a Release.
+  assert(Class == ARCInstKind::ClaimRV);
+  Value *CallArg = cast<CallInst>(Inst)->getArgOperand(0);
+  CallInst *Release = CallInst::Create(
+      EP.get(ARCRuntimeEntryPointKind::Release), CallArg, "", Inst);
+  assert(IsAlwaysTail(ARCInstKind::ClaimRV) &&
+         "Expected ClaimRV to be safe to tail call");
+  Release->setTailCall();
+  Inst->replaceAllUsesWith(CallArg);
+  EraseInstruction(Inst);
+
+  // Run the normal optimizations on Release.
+  OptimizeIndividualCallImpl(F, BlockColors, Release, ARCInstKind::Release,
+                             Arg);
+  return true;
 }
 
 /// Turn objc_autoreleaseReturnValue into objc_autorelease if the result is not
@@ -781,286 +790,370 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
       isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     BlockColors = colorEHFunclets(F);
 
+  // Store any delayed AutoreleaseRV intrinsics, so they can be easily paired
+  // with RetainRV and ClaimRV.
+  Instruction *DelayedAutoreleaseRV = nullptr;
+  const Value *DelayedAutoreleaseRVArg = nullptr;
+  auto setDelayedAutoreleaseRV = [&](Instruction *AutoreleaseRV) {
+    assert(!DelayedAutoreleaseRV || !AutoreleaseRV);
+    DelayedAutoreleaseRV = AutoreleaseRV;
+    DelayedAutoreleaseRVArg = nullptr;
+  };
+  auto optimizeDelayedAutoreleaseRV = [&]() {
+    if (!DelayedAutoreleaseRV)
+      return;
+    OptimizeIndividualCallImpl(F, BlockColors, DelayedAutoreleaseRV,
+                               ARCInstKind::AutoreleaseRV,
+                               DelayedAutoreleaseRVArg);
+    setDelayedAutoreleaseRV(nullptr);
+  };
+  auto shouldDelayAutoreleaseRV = [&](Instruction *NonARCInst) {
+    // Nothing to delay, but we may as well skip the logic below.
+    if (!DelayedAutoreleaseRV)
+      return true;
+
+    // If we hit the end of the basic block we're not going to find an RV-pair.
+    // Stop delaying.
+    if (NonARCInst->isTerminator())
+      return false;
+
+    // Given the frontend rules for emitting AutoreleaseRV, RetainRV, and
+    // ClaimRV, it's probably safe to skip over even opaque function calls
+    // here since OptimizeInlinedAutoreleaseRVCall will confirm that they
+    // have the same RCIdentityRoot.  However, what really matters is
+    // skipping instructions or intrinsics that the inliner could leave behind;
+    // be conservative for now and don't skip over opaque calls, which could
+    // potentially include other ARC calls.
+    auto *CB = dyn_cast<CallBase>(NonARCInst);
+    if (!CB)
+      return true;
+    return CB->getIntrinsicID() != Intrinsic::not_intrinsic;
+  };
+
   // Visit all objc_* calls in F.
   for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E; ) {
     Instruction *Inst = &*I++;
 
     ARCInstKind Class = GetBasicARCInstKind(Inst);
 
-    LLVM_DEBUG(dbgs() << "Visiting: Class: " << Class << "; " << *Inst << "\n");
-
-    // Some of the ARC calls can be deleted if their arguments are global
-    // variables that are inert in ARC.
-    if (IsNoopOnGlobal(Class)) {
-      Value *Opnd = Inst->getOperand(0);
-      if (auto *GV = dyn_cast<GlobalVariable>(Opnd->stripPointerCasts()))
-        if (GV->hasAttribute("objc_arc_inert")) {
-          if (!Inst->getType()->isVoidTy())
-            Inst->replaceAllUsesWith(Opnd);
-          Inst->eraseFromParent();
-          continue;
-        }
-    }
-
+    // Skip this loop if this instruction isn't itself an ARC intrinsic.
+    const Value *Arg = nullptr;
     switch (Class) {
-    default: break;
-
-    // Delete no-op casts. These function calls have special semantics, but
-    // the semantics are entirely implemented via lowering in the front-end,
-    // so by the time they reach the optimizer, they are just no-op calls
-    // which return their argument.
-    //
-    // There are gray areas here, as the ability to cast reference-counted
-    // pointers to raw void* and back allows code to break ARC assumptions,
-    // however these are currently considered to be unimportant.
-    case ARCInstKind::NoopCast:
-      Changed = true;
-      ++NumNoops;
-      LLVM_DEBUG(dbgs() << "Erasing no-op cast: " << *Inst << "\n");
-      EraseInstruction(Inst);
+    default:
+      optimizeDelayedAutoreleaseRV();
+      break;
+    case ARCInstKind::CallOrUser:
+    case ARCInstKind::User:
+    case ARCInstKind::None:
+      // This is a non-ARC instruction.  If we're delaying an AutoreleaseRV,
+      // check if it's safe to skip over it; if not, optimize the AutoreleaseRV
+      // now.
+      if (!shouldDelayAutoreleaseRV(Inst))
+        optimizeDelayedAutoreleaseRV();
       continue;
-
-    // If the pointer-to-weak-pointer is null, it's undefined behavior.
-    case ARCInstKind::StoreWeak:
-    case ARCInstKind::LoadWeak:
-    case ARCInstKind::LoadWeakRetained:
-    case ARCInstKind::InitWeak:
-    case ARCInstKind::DestroyWeak: {
-      CallInst *CI = cast<CallInst>(Inst);
-      if (IsNullOrUndef(CI->getArgOperand(0))) {
-        Changed = true;
-        Type *Ty = CI->getArgOperand(0)->getType();
-        new StoreInst(UndefValue::get(cast<PointerType>(Ty)->getElementType()),
-                      Constant::getNullValue(Ty),
-                      CI);
-        Value *NewValue = UndefValue::get(CI->getType());
-        LLVM_DEBUG(
-            dbgs() << "A null pointer-to-weak-pointer is undefined behavior."
-                      "\nOld = "
-                   << *CI << "\nNew = " << *NewValue << "\n");
-        CI->replaceAllUsesWith(NewValue);
-        CI->eraseFromParent();
-        continue;
-      }
-      break;
-    }
-    case ARCInstKind::CopyWeak:
-    case ARCInstKind::MoveWeak: {
-      CallInst *CI = cast<CallInst>(Inst);
-      if (IsNullOrUndef(CI->getArgOperand(0)) ||
-          IsNullOrUndef(CI->getArgOperand(1))) {
-        Changed = true;
-        Type *Ty = CI->getArgOperand(0)->getType();
-        new StoreInst(UndefValue::get(cast<PointerType>(Ty)->getElementType()),
-                      Constant::getNullValue(Ty),
-                      CI);
-
-        Value *NewValue = UndefValue::get(CI->getType());
-        LLVM_DEBUG(
-            dbgs() << "A null pointer-to-weak-pointer is undefined behavior."
-                      "\nOld = "
-                   << *CI << "\nNew = " << *NewValue << "\n");
-
-        CI->replaceAllUsesWith(NewValue);
-        CI->eraseFromParent();
-        continue;
-      }
-      break;
-    }
-    case ARCInstKind::RetainRV:
-      if (OptimizeRetainRVCall(F, Inst))
-        continue;
-      break;
     case ARCInstKind::AutoreleaseRV:
-      OptimizeAutoreleaseRVCall(F, Inst, Class);
+      optimizeDelayedAutoreleaseRV();
+      setDelayedAutoreleaseRV(Inst);
+      continue;
+    case ARCInstKind::RetainRV:
+    case ARCInstKind::ClaimRV:
+      if (DelayedAutoreleaseRV) {
+        // We have a potential RV pair.  Check if they cancel out.
+        if (OptimizeInlinedAutoreleaseRVCall(F, BlockColors, Inst, Arg, Class,
+                                             DelayedAutoreleaseRV,
+                                             DelayedAutoreleaseRVArg)) {
+          setDelayedAutoreleaseRV(nullptr);
+          continue;
+        }
+        optimizeDelayedAutoreleaseRV();
+      }
       break;
     }
 
-    // objc_autorelease(x) -> objc_release(x) if x is otherwise unused.
-    if (IsAutorelease(Class) && Inst->use_empty()) {
-      CallInst *Call = cast<CallInst>(Inst);
-      const Value *Arg = Call->getArgOperand(0);
-      Arg = FindSingleUseIdentifiedObject(Arg);
-      if (Arg) {
-        Changed = true;
-        ++NumAutoreleases;
-
-        // Create the declaration lazily.
-        LLVMContext &C = Inst->getContext();
-
-        Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
-        CallInst *NewCall = CallInst::Create(Decl, Call->getArgOperand(0), "",
-                                             Call);
-        NewCall->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease),
-                             MDNode::get(C, None));
-
-        LLVM_DEBUG(
-            dbgs() << "Replacing autorelease{,RV}(x) with objc_release(x) "
-                      "since x is otherwise unused.\nOld: "
-                   << *Call << "\nNew: " << *NewCall << "\n");
-
-        EraseInstruction(Call);
-        Inst = NewCall;
-        Class = ARCInstKind::Release;
-      }
-    }
-
-    // For functions which can never be passed stack arguments, add
-    // a tail keyword.
-    if (IsAlwaysTail(Class) && !cast<CallInst>(Inst)->isNoTailCall()) {
-      Changed = true;
-      LLVM_DEBUG(
-          dbgs() << "Adding tail keyword to function since it can never be "
-                    "passed stack args: "
-                 << *Inst << "\n");
-      cast<CallInst>(Inst)->setTailCall();
-    }
-
-    // Ensure that functions that can never have a "tail" keyword due to the
-    // semantics of ARC truly do not do so.
-    if (IsNeverTail(Class)) {
-      Changed = true;
-      LLVM_DEBUG(dbgs() << "Removing tail keyword from function: " << *Inst
-                        << "\n");
-      cast<CallInst>(Inst)->setTailCall(false);
-    }
-
-    // Set nounwind as needed.
-    if (IsNoThrow(Class)) {
-      Changed = true;
-      LLVM_DEBUG(dbgs() << "Found no throw class. Setting nounwind on: "
-                        << *Inst << "\n");
-      cast<CallInst>(Inst)->setDoesNotThrow();
-    }
-
-    if (!IsNoopOnNull(Class)) {
-      UsedInThisFunction |= 1 << unsigned(Class);
-      continue;
-    }
-
-    const Value *Arg = GetArgRCIdentityRoot(Inst);
-
-    // ARC calls with null are no-ops. Delete them.
-    if (IsNullOrUndef(Arg)) {
-      Changed = true;
-      ++NumNoops;
-      LLVM_DEBUG(dbgs() << "ARC calls with  null are no-ops. Erasing: " << *Inst
-                        << "\n");
-      EraseInstruction(Inst);
-      continue;
-    }
-
-    // Keep track of which of retain, release, autorelease, and retain_block
-    // are actually present in this function.
-    UsedInThisFunction |= 1 << unsigned(Class);
-
-    // If Arg is a PHI, and one or more incoming values to the
-    // PHI are null, and the call is control-equivalent to the PHI, and there
-    // are no relevant side effects between the PHI and the call, and the call
-    // is not a release that doesn't have the clang.imprecise_release tag, the
-    // call could be pushed up to just those paths with non-null incoming
-    // values. For now, don't bother splitting critical edges for this.
-    if (Class == ARCInstKind::Release &&
-        !Inst->getMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease)))
-      continue;
-
-    SmallVector<std::pair<Instruction *, const Value *>, 4> Worklist;
-    Worklist.push_back(std::make_pair(Inst, Arg));
-    do {
-      std::pair<Instruction *, const Value *> Pair = Worklist.pop_back_val();
-      Inst = Pair.first;
-      Arg = Pair.second;
-
-      const PHINode *PN = dyn_cast<PHINode>(Arg);
-      if (!PN) continue;
-
-      // Determine if the PHI has any null operands, or any incoming
-      // critical edges.
-      bool HasNull = false;
-      bool HasCriticalEdges = false;
-      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-        Value *Incoming =
-          GetRCIdentityRoot(PN->getIncomingValue(i));
-        if (IsNullOrUndef(Incoming))
-          HasNull = true;
-        else if (PN->getIncomingBlock(i)->getTerminator()->getNumSuccessors() !=
-                 1) {
-          HasCriticalEdges = true;
-          break;
-        }
-      }
-      // If we have null operands and no critical edges, optimize.
-      if (!HasCriticalEdges && HasNull) {
-        SmallPtrSet<Instruction *, 4> DependingInstructions;
-        SmallPtrSet<const BasicBlock *, 4> Visited;
-
-        // Check that there is nothing that cares about the reference
-        // count between the call and the phi.
-        switch (Class) {
-        case ARCInstKind::Retain:
-        case ARCInstKind::RetainBlock:
-          // These can always be moved up.
-          break;
-        case ARCInstKind::Release:
-          // These can't be moved across things that care about the retain
-          // count.
-          FindDependencies(NeedsPositiveRetainCount, Arg,
-                           Inst->getParent(), Inst,
-                           DependingInstructions, Visited, PA);
-          break;
-        case ARCInstKind::Autorelease:
-          // These can't be moved across autorelease pool scope boundaries.
-          FindDependencies(AutoreleasePoolBoundary, Arg,
-                           Inst->getParent(), Inst,
-                           DependingInstructions, Visited, PA);
-          break;
-        case ARCInstKind::ClaimRV:
-        case ARCInstKind::RetainRV:
-        case ARCInstKind::AutoreleaseRV:
-          // Don't move these; the RV optimization depends on the autoreleaseRV
-          // being tail called, and the retainRV being immediately after a call
-          // (which might still happen if we get lucky with codegen layout, but
-          // it's not worth taking the chance).
-          continue;
-        default:
-          llvm_unreachable("Invalid dependence flavor");
-        }
-
-        if (DependingInstructions.size() == 1 &&
-            *DependingInstructions.begin() == PN) {
-          Changed = true;
-          ++NumPartialNoops;
-          // Clone the call into each predecessor that has a non-null value.
-          CallInst *CInst = cast<CallInst>(Inst);
-          Type *ParamTy = CInst->getArgOperand(0)->getType();
-          for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-            Value *Incoming =
-              GetRCIdentityRoot(PN->getIncomingValue(i));
-            if (!IsNullOrUndef(Incoming)) {
-              Value *Op = PN->getIncomingValue(i);
-              Instruction *InsertPos = &PN->getIncomingBlock(i)->back();
-              CallInst *Clone = cast<CallInst>(CloneCallInstForBB(
-                  *CInst, *InsertPos->getParent(), BlockColors));
-              if (Op->getType() != ParamTy)
-                Op = new BitCastInst(Op, ParamTy, "", InsertPos);
-              Clone->setArgOperand(0, Op);
-              Clone->insertBefore(InsertPos);
-
-              LLVM_DEBUG(dbgs() << "Cloning " << *CInst
-                                << "\n"
-                                   "And inserting clone at "
-                                << *InsertPos << "\n");
-              Worklist.push_back(std::make_pair(Clone, Incoming));
-            }
-          }
-          // Erase the original call.
-          LLVM_DEBUG(dbgs() << "Erasing: " << *CInst << "\n");
-          EraseInstruction(CInst);
-          continue;
-        }
-      }
-    } while (!Worklist.empty());
+    OptimizeIndividualCallImpl(F, BlockColors, Inst, Class, Arg);
   }
+
+  // Catch the final delayed AutoreleaseRV.
+  optimizeDelayedAutoreleaseRV();
+}
+
+void ObjCARCOpt::OptimizeIndividualCallImpl(
+    Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
+    Instruction *Inst, ARCInstKind Class, const Value *Arg) {
+  LLVM_DEBUG(dbgs() << "Visiting: Class: " << Class << "; " << *Inst << "\n");
+
+  // Some of the ARC calls can be deleted if their arguments are global
+  // variables that are inert in ARC.
+  if (IsNoopOnGlobal(Class)) {
+    Value *Opnd = Inst->getOperand(0);
+    if (auto *GV = dyn_cast<GlobalVariable>(Opnd->stripPointerCasts()))
+      if (GV->hasAttribute("objc_arc_inert")) {
+        if (!Inst->getType()->isVoidTy())
+          Inst->replaceAllUsesWith(Opnd);
+        Inst->eraseFromParent();
+        return;
+      }
+  }
+
+  switch (Class) {
+  default:
+    break;
+
+  // Delete no-op casts. These function calls have special semantics, but
+  // the semantics are entirely implemented via lowering in the front-end,
+  // so by the time they reach the optimizer, they are just no-op calls
+  // which return their argument.
+  //
+  // There are gray areas here, as the ability to cast reference-counted
+  // pointers to raw void* and back allows code to break ARC assumptions,
+  // however these are currently considered to be unimportant.
+  case ARCInstKind::NoopCast:
+    Changed = true;
+    ++NumNoops;
+    LLVM_DEBUG(dbgs() << "Erasing no-op cast: " << *Inst << "\n");
+    EraseInstruction(Inst);
+    return;
+
+  // If the pointer-to-weak-pointer is null, it's undefined behavior.
+  case ARCInstKind::StoreWeak:
+  case ARCInstKind::LoadWeak:
+  case ARCInstKind::LoadWeakRetained:
+  case ARCInstKind::InitWeak:
+  case ARCInstKind::DestroyWeak: {
+    CallInst *CI = cast<CallInst>(Inst);
+    if (IsNullOrUndef(CI->getArgOperand(0))) {
+      Changed = true;
+      Type *Ty = CI->getArgOperand(0)->getType();
+      new StoreInst(UndefValue::get(cast<PointerType>(Ty)->getElementType()),
+                    Constant::getNullValue(Ty), CI);
+      Value *NewValue = UndefValue::get(CI->getType());
+      LLVM_DEBUG(
+          dbgs() << "A null pointer-to-weak-pointer is undefined behavior."
+                    "\nOld = "
+                 << *CI << "\nNew = " << *NewValue << "\n");
+      CI->replaceAllUsesWith(NewValue);
+      CI->eraseFromParent();
+      return;
+    }
+    break;
+  }
+  case ARCInstKind::CopyWeak:
+  case ARCInstKind::MoveWeak: {
+    CallInst *CI = cast<CallInst>(Inst);
+    if (IsNullOrUndef(CI->getArgOperand(0)) ||
+        IsNullOrUndef(CI->getArgOperand(1))) {
+      Changed = true;
+      Type *Ty = CI->getArgOperand(0)->getType();
+      new StoreInst(UndefValue::get(cast<PointerType>(Ty)->getElementType()),
+                    Constant::getNullValue(Ty), CI);
+
+      Value *NewValue = UndefValue::get(CI->getType());
+      LLVM_DEBUG(
+          dbgs() << "A null pointer-to-weak-pointer is undefined behavior."
+                    "\nOld = "
+                 << *CI << "\nNew = " << *NewValue << "\n");
+
+      CI->replaceAllUsesWith(NewValue);
+      CI->eraseFromParent();
+      return;
+    }
+    break;
+  }
+  case ARCInstKind::RetainRV:
+    if (OptimizeRetainRVCall(F, Inst))
+      return;
+    break;
+  case ARCInstKind::AutoreleaseRV:
+    OptimizeAutoreleaseRVCall(F, Inst, Class);
+    break;
+  }
+
+  // objc_autorelease(x) -> objc_release(x) if x is otherwise unused.
+  if (IsAutorelease(Class) && Inst->use_empty()) {
+    CallInst *Call = cast<CallInst>(Inst);
+    const Value *Arg = Call->getArgOperand(0);
+    Arg = FindSingleUseIdentifiedObject(Arg);
+    if (Arg) {
+      Changed = true;
+      ++NumAutoreleases;
+
+      // Create the declaration lazily.
+      LLVMContext &C = Inst->getContext();
+
+      Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
+      CallInst *NewCall =
+          CallInst::Create(Decl, Call->getArgOperand(0), "", Call);
+      NewCall->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease),
+                           MDNode::get(C, None));
+
+      LLVM_DEBUG(dbgs() << "Replacing autorelease{,RV}(x) with objc_release(x) "
+                           "since x is otherwise unused.\nOld: "
+                        << *Call << "\nNew: " << *NewCall << "\n");
+
+      EraseInstruction(Call);
+      Inst = NewCall;
+      Class = ARCInstKind::Release;
+    }
+  }
+
+  // For functions which can never be passed stack arguments, add
+  // a tail keyword.
+  if (IsAlwaysTail(Class) && !cast<CallInst>(Inst)->isNoTailCall()) {
+    Changed = true;
+    LLVM_DEBUG(
+        dbgs() << "Adding tail keyword to function since it can never be "
+                  "passed stack args: "
+               << *Inst << "\n");
+    cast<CallInst>(Inst)->setTailCall();
+  }
+
+  // Ensure that functions that can never have a "tail" keyword due to the
+  // semantics of ARC truly do not do so.
+  if (IsNeverTail(Class)) {
+    Changed = true;
+    LLVM_DEBUG(dbgs() << "Removing tail keyword from function: " << *Inst
+                      << "\n");
+    cast<CallInst>(Inst)->setTailCall(false);
+  }
+
+  // Set nounwind as needed.
+  if (IsNoThrow(Class)) {
+    Changed = true;
+    LLVM_DEBUG(dbgs() << "Found no throw class. Setting nounwind on: " << *Inst
+                      << "\n");
+    cast<CallInst>(Inst)->setDoesNotThrow();
+  }
+
+  // Note: This catches instructions unrelated to ARC.
+  if (!IsNoopOnNull(Class)) {
+    UsedInThisFunction |= 1 << unsigned(Class);
+    return;
+  }
+
+  // If we haven't already looked up the root, look it up now.
+  if (!Arg)
+    Arg = GetArgRCIdentityRoot(Inst);
+
+  // ARC calls with null are no-ops. Delete them.
+  if (IsNullOrUndef(Arg)) {
+    Changed = true;
+    ++NumNoops;
+    LLVM_DEBUG(dbgs() << "ARC calls with  null are no-ops. Erasing: " << *Inst
+                      << "\n");
+    EraseInstruction(Inst);
+    return;
+  }
+
+  // Keep track of which of retain, release, autorelease, and retain_block
+  // are actually present in this function.
+  UsedInThisFunction |= 1 << unsigned(Class);
+
+  // If Arg is a PHI, and one or more incoming values to the
+  // PHI are null, and the call is control-equivalent to the PHI, and there
+  // are no relevant side effects between the PHI and the call, and the call
+  // is not a release that doesn't have the clang.imprecise_release tag, the
+  // call could be pushed up to just those paths with non-null incoming
+  // values. For now, don't bother splitting critical edges for this.
+  if (Class == ARCInstKind::Release &&
+      !Inst->getMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease)))
+    return;
+
+  SmallVector<std::pair<Instruction *, const Value *>, 4> Worklist;
+  Worklist.push_back(std::make_pair(Inst, Arg));
+  do {
+    std::pair<Instruction *, const Value *> Pair = Worklist.pop_back_val();
+    Inst = Pair.first;
+    Arg = Pair.second;
+
+    const PHINode *PN = dyn_cast<PHINode>(Arg);
+    if (!PN)
+      continue;
+
+    // Determine if the PHI has any null operands, or any incoming
+    // critical edges.
+    bool HasNull = false;
+    bool HasCriticalEdges = false;
+    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+      Value *Incoming = GetRCIdentityRoot(PN->getIncomingValue(i));
+      if (IsNullOrUndef(Incoming))
+        HasNull = true;
+      else if (PN->getIncomingBlock(i)->getTerminator()->getNumSuccessors() !=
+               1) {
+        HasCriticalEdges = true;
+        break;
+      }
+    }
+    // If we have null operands and no critical edges, optimize.
+    if (HasCriticalEdges)
+      continue;
+    if (!HasNull)
+      continue;
+
+    SmallPtrSet<Instruction *, 4> DependingInstructions;
+    SmallPtrSet<const BasicBlock *, 4> Visited;
+
+    // Check that there is nothing that cares about the reference
+    // count between the call and the phi.
+    switch (Class) {
+    case ARCInstKind::Retain:
+    case ARCInstKind::RetainBlock:
+      // These can always be moved up.
+      break;
+    case ARCInstKind::Release:
+      // These can't be moved across things that care about the retain
+      // count.
+      FindDependencies(NeedsPositiveRetainCount, Arg, Inst->getParent(), Inst,
+                       DependingInstructions, Visited, PA);
+      break;
+    case ARCInstKind::Autorelease:
+      // These can't be moved across autorelease pool scope boundaries.
+      FindDependencies(AutoreleasePoolBoundary, Arg, Inst->getParent(), Inst,
+                       DependingInstructions, Visited, PA);
+      break;
+    case ARCInstKind::ClaimRV:
+    case ARCInstKind::RetainRV:
+    case ARCInstKind::AutoreleaseRV:
+      // Don't move these; the RV optimization depends on the autoreleaseRV
+      // being tail called, and the retainRV being immediately after a call
+      // (which might still happen if we get lucky with codegen layout, but
+      // it's not worth taking the chance).
+      continue;
+    default:
+      llvm_unreachable("Invalid dependence flavor");
+    }
+
+    if (DependingInstructions.size() != 1)
+      continue;
+    if (*DependingInstructions.begin() != PN)
+      continue;
+
+    Changed = true;
+    ++NumPartialNoops;
+    // Clone the call into each predecessor that has a non-null value.
+    CallInst *CInst = cast<CallInst>(Inst);
+    Type *ParamTy = CInst->getArgOperand(0)->getType();
+    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+      Value *Incoming = GetRCIdentityRoot(PN->getIncomingValue(i));
+      if (IsNullOrUndef(Incoming))
+        continue;
+      Value *Op = PN->getIncomingValue(i);
+      Instruction *InsertPos = &PN->getIncomingBlock(i)->back();
+      CallInst *Clone = cast<CallInst>(
+          CloneCallInstForBB(*CInst, *InsertPos->getParent(), BlockColors));
+      if (Op->getType() != ParamTy)
+        Op = new BitCastInst(Op, ParamTy, "", InsertPos);
+      Clone->setArgOperand(0, Op);
+      Clone->insertBefore(InsertPos);
+
+      LLVM_DEBUG(dbgs() << "Cloning " << *CInst << "\n"
+                                                   "And inserting clone at "
+                        << *InsertPos << "\n");
+      Worklist.push_back(std::make_pair(Clone, Incoming));
+    }
+    // Erase the original call.
+    LLVM_DEBUG(dbgs() << "Erasing: " << *CInst << "\n");
+    EraseInstruction(CInst);
+  } while (!Worklist.empty());
 }
 
 /// If we have a top down pointer in the S_Use state, make sure that there are

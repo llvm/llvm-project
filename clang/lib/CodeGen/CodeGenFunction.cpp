@@ -33,8 +33,6 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/FPEnv.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Operator.h"
@@ -89,7 +87,6 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     FMF.setAllowReassoc();
   }
   Builder.setFastMathFlags(FMF);
-  SetFPModel();
 }
 
 CodeGenFunction::~CodeGenFunction() {
@@ -103,51 +100,6 @@ CodeGenFunction::~CodeGenFunction() {
 
   if (getLangOpts().OpenMP && CurFn)
     CGM.getOpenMPRuntime().functionFinished(*this);
-}
-
-// Map the LangOption for rounding mode into
-// the corresponding enum in the IR.
-static llvm::fp::RoundingMode ToConstrainedRoundingMD(
-  LangOptions::FPRoundingModeKind Kind) {
-
-  switch (Kind) {
-  case LangOptions::FPR_ToNearest:  return llvm::fp::rmToNearest;
-  case LangOptions::FPR_Downward:   return llvm::fp::rmDownward;
-  case LangOptions::FPR_Upward:     return llvm::fp::rmUpward;
-  case LangOptions::FPR_TowardZero: return llvm::fp::rmTowardZero;
-  case LangOptions::FPR_Dynamic:    return llvm::fp::rmDynamic;
-  }
-  llvm_unreachable("Unsupported FP RoundingMode");
-}
-
-// Map the LangOption for exception behavior into
-// the corresponding enum in the IR.
-static llvm::fp::ExceptionBehavior ToConstrainedExceptMD(
-  LangOptions::FPExceptionModeKind Kind) {
-
-  switch (Kind) {
-  case LangOptions::FPE_Ignore:  return llvm::fp::ebIgnore;
-  case LangOptions::FPE_MayTrap: return llvm::fp::ebMayTrap;
-  case LangOptions::FPE_Strict:  return llvm::fp::ebStrict;
-  }
-  llvm_unreachable("Unsupported FP Exception Behavior");
-}
-
-void CodeGenFunction::SetFPModel() {
-  auto fpRoundingMode = ToConstrainedRoundingMD(
-                          getLangOpts().getFPRoundingMode());
-  auto fpExceptionBehavior = ToConstrainedExceptMD(
-                               getLangOpts().getFPExceptionMode());
-
-  if (fpExceptionBehavior == llvm::fp::ebIgnore &&
-      fpRoundingMode == llvm::fp::rmToNearest)
-    // Constrained intrinsics are not used.
-    ;
-  else {
-    Builder.setIsFPConstrained(true);
-    Builder.setDefaultConstrainedRounding(fpRoundingMode);
-    Builder.setDefaultConstrainedExcept(fpExceptionBehavior);
-  }
 }
 
 CharUnits CodeGenFunction::getNaturalPointeeTypeAlignment(QualType T,
@@ -2271,8 +2223,8 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
           << TargetDecl->getDeclName()
           << CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID);
 
-  } else if (TargetDecl->hasAttr<TargetAttr>() ||
-             TargetDecl->hasAttr<CPUSpecificAttr>()) {
+  } else if (!TargetDecl->isMultiVersion() &&
+             TargetDecl->hasAttr<TargetAttr>()) {
     // Get the required features for the callee.
 
     const TargetAttr *TD = TargetDecl->getAttr<TargetAttr>();

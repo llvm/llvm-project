@@ -125,6 +125,7 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.qThreadStopInfo_works_for_multiple_threads(self.THREAD_COUNT)
 
     @llgs_test
+    @skipIfNetBSD
     def test_qThreadStopInfo_works_for_multiple_threads_llgs(self):
         self.init_llgs_test()
         self.build()
@@ -164,6 +165,7 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt(
             self.THREAD_COUNT)
 
+    @expectedFailureNetBSD
     @llgs_test
     def test_qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt_llgs(
             self):

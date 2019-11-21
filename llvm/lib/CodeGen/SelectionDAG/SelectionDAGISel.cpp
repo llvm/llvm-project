@@ -1157,7 +1157,7 @@ void SelectionDAGISel::DoInstructionSelection() {
       // selectors.
       if (Node->isStrictFPOpcode() &&
           (TLI->getOperationAction(Node->getOpcode(), Node->getValueType(0))
-           != TargetLowering::Legal))
+           == TargetLowering::Expand))
         Node = CurDAG->mutateStrictFPToFP(Node);
 
       LLVM_DEBUG(dbgs() << "\nISEL: Starting selection on root node: ";

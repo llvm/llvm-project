@@ -113,6 +113,8 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
   // We haven't read anything from the external source.
   ReadMacrosFromExternalSource = false;
 
+  BuiltinInfo = std::make_unique<Builtin::Context>();
+
   // "Poison" __VA_ARGS__, __VA_OPT__ which can only appear in the expansion of
   // a macro. They get unpoisoned where it is allowed.
   (Ident__VA_ARGS__ = getIdentifierInfo("__VA_ARGS__"))->setIsPoisoned();
@@ -203,7 +205,6 @@ void Preprocessor::Initialize(const TargetInfo &Target,
   this->AuxTarget = AuxTarget;
 
   // Initialize information about built-ins.
-  BuiltinInfo = std::make_unique<Builtin::Context>();
   BuiltinInfo->InitializeTarget(Target, AuxTarget);
   HeaderInfo.setTarget(Target);
 

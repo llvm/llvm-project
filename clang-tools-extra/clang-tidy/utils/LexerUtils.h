@@ -80,6 +80,11 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
   }
 }
 
+// Finds next token that's not a comment.
+Optional<Token> findNextTokenSkippingComments(SourceLocation Start,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts);
+
 /// Re-lex the provide \p Range and return \c false if either a macro spans
 /// multiple tokens, a pre-processor directive or failure to retrieve the
 /// next token is found, otherwise \c true.

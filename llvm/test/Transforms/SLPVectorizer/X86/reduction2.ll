@@ -54,10 +54,10 @@ define double @foo(double* nocapture %D) {
 define i1 @two_wide_fcmp_reduction(<2 x double> %a0) {
 ; CHECK-LABEL: @two_wide_fcmp_reduction(
 ; CHECK-NEXT:    [[A:%.*]] = fcmp ogt <2 x double> [[A0:%.*]], <double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = and <2 x i1> [[A]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[BIN_RDX]], i32 0
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = extractelement <2 x i1> [[A]], i32 0
+; CHECK-NEXT:    [[C:%.*]] = extractelement <2 x i1> [[A]], i32 1
+; CHECK-NEXT:    [[D:%.*]] = and i1 [[B]], [[C]]
+; CHECK-NEXT:    ret i1 [[D]]
 ;
   %a = fcmp ogt <2 x double> %a0, <double 1.0, double 1.0>
   %b = extractelement <2 x i1> %a, i32 0
@@ -96,11 +96,12 @@ define i1 @fcmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> undef, double [[MUL]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[MUL]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = and <2 x i1> [[TMP8]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[BIN_RDX]], i32 0
-; CHECK-NEXT:    br i1 [[TMP9]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[TMP8]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[TMP9]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP4]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
 ; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0

@@ -100,13 +100,16 @@ class PredicateControl {
 class AMDGPUPat<dag pattern, dag result> : Pat<pattern, result>,
       PredicateControl;
 
-def FP16Denormals : Predicate<"Subtarget->hasFP16Denormals()">;
-def FP32Denormals : Predicate<"Subtarget->hasFP32Denormals()">;
-def FP64Denormals : Predicate<"Subtarget->hasFP64Denormals()">;
-def NoFP16Denormals : Predicate<"!Subtarget->hasFP16Denormals()">;
-def NoFP32Denormals : Predicate<"!Subtarget->hasFP32Denormals()">;
-def NoFP64Denormals : Predicate<"!Subtarget->hasFP64Denormals()">;
+let RecomputePerFunction = 1 in {
+def FP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals">;
+def FP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals">;
+def FP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals">;
+def NoFP16Denormals : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals">;
+def NoFP32Denormals : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals">;
+def NoFP64Denormals : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals">;
 def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
+}
+
 def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;

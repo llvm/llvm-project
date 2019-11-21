@@ -12,6 +12,7 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
@@ -245,6 +246,10 @@ public:
     if (canSafelySkipNode(N))
       return false;
     push(std::move(N));
+    if (shouldSkipChildren(X)) {
+      pop();
+      return false;
+    }
     return true;
   }
   bool dataTraverseStmtPost(Stmt *X) {
@@ -353,6 +358,15 @@ private:
     dlog("{1}skip: {0}", printNodeToString(N, PrintPolicy), indent());
     dlog("{1}skipped range = {0}", S.printToString(SM), indent(1));
     return true;
+  }
+
+  // There are certain nodes we want to treat as leaves in the SelectionTree,
+  // although they do have children.
+  bool shouldSkipChildren(const Stmt *X) const {
+    // UserDefinedLiteral (e.g. 12_i) has two children (12 and _i).
+    // Unfortunately TokenBuffer sees 12_i as one token and can't split it.
+    // So we treat UserDefinedLiteral as a leaf node, owning the token.
+    return llvm::isa<UserDefinedLiteral>(X);
   }
 
   // Pushes a node onto the ancestor stack. Pairs with pop().

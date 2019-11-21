@@ -353,9 +353,6 @@ def: Pat<(v64i16 (trunc v64i32:$Vdd)),
                  (v32i32 (V6_lo HvxWR:$Vdd))))>,
      Requires<[UseHVX]>;
 
-def: Pat<(int_hexagon_S2_asr_i_vh DoubleRegs:$src1, IntRegs:$src2),
-         (S2_asr_r_vh DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV55]>;
-
 multiclass T_VI_pat <InstHexagon MI, Intrinsic IntID> {
   def: Pat<(IntID HvxVR:$src1, u3_0ImmPred:$src2),
            (MI    HvxVR:$src1, HvxVR:$src1, u3_0ImmPred:$src2)>,

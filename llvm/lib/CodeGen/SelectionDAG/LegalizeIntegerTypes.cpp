@@ -1698,8 +1698,10 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FLT_ROUNDS_: ExpandIntRes_FLT_ROUNDS(N, Lo, Hi); break;
   case ISD::FP_TO_SINT:  ExpandIntRes_FP_TO_SINT(N, Lo, Hi); break;
   case ISD::FP_TO_UINT:  ExpandIntRes_FP_TO_UINT(N, Lo, Hi); break;
-  case ISD::LLROUND:     ExpandIntRes_LLROUND(N, Lo, Hi); break;
-  case ISD::LLRINT:      ExpandIntRes_LLRINT(N, Lo, Hi); break;
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_LLRINT:
+  case ISD::LLROUND:
+  case ISD::LLRINT:      ExpandIntRes_LLROUND_LLRINT(N, Lo, Hi); break;
   case ISD::LOAD:        ExpandIntRes_LOAD(cast<LoadSDNode>(N), Lo, Hi); break;
   case ISD::MUL:         ExpandIntRes_MUL(N, Lo, Hi); break;
   case ISD::READCYCLECOUNTER: ExpandIntRes_READCYCLECOUNTER(N, Lo, Hi); break;
@@ -1816,7 +1818,7 @@ std::pair <SDValue, SDValue> DAGTypeLegalizer::ExpandAtomic(SDNode *Node) {
   RTLIB::Libcall LC = RTLIB::getSYNC(Opc, VT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected atomic op or value type!");
 
-  return ExpandChainLibCall(LC, Node, false);
+  return TLI.ExpandChainLibCall(DAG, LC, Node, false);
 }
 
 /// N is a shift by a value that needs to be expanded,
@@ -2584,56 +2586,55 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_UINT(SDNode *N, SDValue &Lo,
                Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_LLROUND(SDNode *N, SDValue &Lo,
-                                            SDValue &Hi) {
-  RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
-  EVT VT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
-  if (VT == MVT::f32)
-    LC = RTLIB::LLROUND_F32;
-  else if (VT == MVT::f64)
-    LC = RTLIB::LLROUND_F64;
-  else if (VT == MVT::f80)
-    LC = RTLIB::LLROUND_F80;
-  else if (VT == MVT::f128)
-    LC = RTLIB::LLROUND_F128;
-  else if (VT == MVT::ppcf128)
-    LC = RTLIB::LLROUND_PPCF128;
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected llround input type!");
+void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
+                                                   SDValue &Hi) {
+  SDValue Op = N->getOperand(N->isStrictFPOpcode() ? 1 : 0);
 
-  SDValue Op = N->getOperand(0);
-  if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat)
-    Op = GetPromotedFloat(Op);
+  assert(getTypeAction(Op.getValueType()) != TargetLowering::TypePromoteFloat &&
+         "Input type needs to be promoted!");
+
+  EVT VT = Op.getValueType();
+
+  RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+  if (N->getOpcode() == ISD::LLROUND ||
+      N->getOpcode() == ISD::STRICT_LLROUND) {
+    if (VT == MVT::f32)
+      LC = RTLIB::LLROUND_F32;
+    else if (VT == MVT::f64)
+      LC = RTLIB::LLROUND_F64;
+    else if (VT == MVT::f80)
+      LC = RTLIB::LLROUND_F80;
+    else if (VT == MVT::f128)
+      LC = RTLIB::LLROUND_F128;
+    else if (VT == MVT::ppcf128)
+      LC = RTLIB::LLROUND_PPCF128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected llround input type!");
+  } else if (N->getOpcode() == ISD::LLRINT ||
+             N->getOpcode() == ISD::STRICT_LLRINT) {
+    if (VT == MVT::f32)
+      LC = RTLIB::LLRINT_F32;
+    else if (VT == MVT::f64)
+      LC = RTLIB::LLRINT_F64;
+    else if (VT == MVT::f80)
+      LC = RTLIB::LLRINT_F80;
+    else if (VT == MVT::f128)
+      LC = RTLIB::LLRINT_F128;
+    else if (VT == MVT::ppcf128)
+      LC = RTLIB::LLRINT_PPCF128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected llrint input type!");
+  } else
+    llvm_unreachable("Unexpected opcode!");
 
   SDLoc dl(N);
   EVT RetVT = N->getValueType(0);
-  TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(true);
-  SplitInteger(TLI.makeLibCall(DAG, LC, RetVT, Op, CallOptions, dl).first,
-               Lo, Hi);
-}
 
-void DAGTypeLegalizer::ExpandIntRes_LLRINT(SDNode *N, SDValue &Lo,
-                                            SDValue &Hi) {
-  RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
-  EVT VT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
-  if (VT == MVT::f32)
-    LC = RTLIB::LLRINT_F32;
-  else if (VT == MVT::f64)
-    LC = RTLIB::LLRINT_F64;
-  else if (VT == MVT::f80)
-    LC = RTLIB::LLRINT_F80;
-  else if (VT == MVT::f128)
-    LC = RTLIB::LLRINT_F128;
-  else if (VT == MVT::ppcf128)
-    LC = RTLIB::LLRINT_PPCF128;
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected llrint input type!");
+  if (N->isStrictFPOpcode()) {
+    std::pair<SDValue, SDValue> Tmp = TLI.ExpandChainLibCall(DAG, LC, N, true);
+    SplitInteger(Tmp.first, Lo, Hi);
+    ReplaceValueWith(SDValue(N, 1), Tmp.second);
+    return;
+  }
 
-  SDValue Op = N->getOperand(0);
-  if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat)
-    Op = GetPromotedFloat(Op);
-
-  SDLoc dl(N);
-  EVT RetVT = N->getValueType(0);
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(true);
   SplitInteger(TLI.makeLibCall(DAG, LC, RetVT, Op, CallOptions, dl).first,

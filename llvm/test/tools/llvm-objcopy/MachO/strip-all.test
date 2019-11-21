@@ -3,6 +3,10 @@
 # RUN: yaml2obj %p/Inputs/strip-all.yaml > %t.exec
 # RUN: yaml2obj %p/Inputs/strip-all-with-dwarf.yaml > %t.dwarf
 
+## Check that the symbol list satisfies the order: local / defined external /
+## undefined external, otherwise llvm-objcopy will fail.
+# RUN: llvm-objcopy %t.exec /dev/null
+
 # RUN: llvm-objcopy --strip-all %t.exec %t.exec.stripped
 # RUN: llvm-readobj --sections --relocations --symbols %t.exec.stripped \
 # RUN:   | FileCheck --check-prefixes=COMMON,EXEC %s

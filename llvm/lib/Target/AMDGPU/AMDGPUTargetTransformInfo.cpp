@@ -57,7 +57,7 @@ using namespace llvm;
 static cl::opt<unsigned> UnrollThresholdPrivate(
   "amdgpu-unroll-threshold-private",
   cl::desc("Unroll threshold for AMDGPU if private memory used in a loop"),
-  cl::init(2000), cl::Hidden);
+  cl::init(2700), cl::Hidden);
 
 static cl::opt<unsigned> UnrollThresholdLocal(
   "amdgpu-unroll-threshold-local",
@@ -90,7 +90,8 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                             TTI::UnrollingPreferences &UP) {
-  UP.Threshold = 300; // Twice the default.
+  const Function &F = *L->getHeader()->getParent();
+  UP.Threshold = AMDGPU::getIntegerAttribute(F, "amdgpu-unroll-threshold", 300);
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.Partial = true;
 
@@ -412,7 +413,7 @@ int GCNTTIImpl::getArithmeticInstrCost(
 
     if (!Args.empty() && match(Args[0], PatternMatch::m_FPOne())) {
       // TODO: This is more complicated, unsafe flags etc.
-      if ((SLT == MVT::f32 && !ST->hasFP32Denormals()) ||
+      if ((SLT == MVT::f32 && !HasFP32Denormals) ||
           (SLT == MVT::f16 && ST->has16BitInsts())) {
         return LT.first * getQuarterRateInstrCost() * NElts;
       }
@@ -431,7 +432,7 @@ int GCNTTIImpl::getArithmeticInstrCost(
     if (SLT == MVT::f32 || SLT == MVT::f16) {
       int Cost = 7 * getFullRateInstrCost() + 1 * getQuarterRateInstrCost();
 
-      if (!ST->hasFP32Denormals()) {
+      if (!HasFP32Denormals) {
         // FP mode switches.
         Cost += 2 * getFullRateInstrCost();
       }
@@ -671,10 +672,13 @@ unsigned GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
 bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
                                      const Function *Callee) const {
   const TargetMachine &TM = getTLI()->getTargetMachine();
-  const FeatureBitset &CallerBits =
-    TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-    TM.getSubtargetImpl(*Callee)->getFeatureBits();
+  const GCNSubtarget *CallerST
+    = static_cast<const GCNSubtarget *>(TM.getSubtargetImpl(*Caller));
+  const GCNSubtarget *CalleeST
+    = static_cast<const GCNSubtarget *>(TM.getSubtargetImpl(*Callee));
+
+  const FeatureBitset &CallerBits = CallerST->getFeatureBits();
+  const FeatureBitset &CalleeBits = CalleeST->getFeatureBits();
 
   FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
   FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
@@ -683,8 +687,8 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
 
   // FIXME: dx10_clamp can just take the caller setting, but there seems to be
   // no way to support merge for backend defined attributes.
-  AMDGPU::SIModeRegisterDefaults CallerMode(*Caller);
-  AMDGPU::SIModeRegisterDefaults CalleeMode(*Callee);
+  AMDGPU::SIModeRegisterDefaults CallerMode(*Caller, *CallerST);
+  AMDGPU::SIModeRegisterDefaults CalleeMode(*Callee, *CalleeST);
   return CallerMode.isInlineCompatible(CalleeMode);
 }
 

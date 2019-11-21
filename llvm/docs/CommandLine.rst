@@ -1277,7 +1277,7 @@ Top-Level Classes and Functions
 -------------------------------
 
 Despite all of the built-in flexibility, the CommandLine option library really
-only consists of one function `cl::ParseCommandLineOptions`_) and three main
+only consists of one function `cl::ParseCommandLineOptions`_ and three main
 classes: `cl::opt`_, `cl::list`_, and `cl::alias`_.  This section describes
 these three classes in detail.
 

@@ -13,6 +13,14 @@ else:
 
 ##### Common utilities for update_*test_checks.py
 
+
+def parse_commandline_args(parser):
+  parser.add_argument('-v', '--verbose', action='store_true',
+                      help='Show verbose output')
+  parser.add_argument('-u', '--update-only', action='store_true',
+                      help='Only update test if it was already autogened')
+  return parser.parse_args()
+
 def should_add_line_to_output(input_line, prefix_set):
   # Skip any blank comment lines in the IR.
   if input_line.strip() == ';':

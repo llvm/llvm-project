@@ -732,8 +732,22 @@ void sigcont_handler(int signo) {
   signal(signo, sigcont_handler);
 }
 
+void reproducer_handler(void *) {
+  if (SBReproducer::Generate()) {
+    llvm::outs() << "********************\n";
+    llvm::outs() << "Crash reproducer for ";
+    llvm::outs() << lldb::SBDebugger::GetVersionString() << '\n';
+    llvm::outs() << "Reproducer written to '" << SBReproducer::GetPath()
+                 << "'\n";
+    llvm::outs()
+        << "Please have a look at the directory to assess if you're willing to "
+           "share the contained information.\n";
+    llvm::outs() << "********************\n";
+  }
+}
+
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
-  std::string usage_str = tool_name.str() + "options";
+  std::string usage_str = tool_name.str() + " [options]";
   table.PrintHelp(llvm::outs(), usage_str.c_str(), "LLDB", false);
 
   std::string examples = R"___(
@@ -806,11 +820,10 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
   return llvm::None;
 }
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
   // Setup LLVM signal handlers and make sure we call llvm_shutdown() on
   // destruction.
-  llvm::InitLLVM IL(argc, argv);
+  llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
 
   // Parse arguments.
   LLDBOptTable T;
@@ -833,6 +846,9 @@ int main(int argc, char const *argv[])
     return *exit_code;
   }
 
+  // Register the reproducer signal handler.
+  llvm::sys::AddSignalHandler(reproducer_handler, nullptr);
+
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
     WithColor::error() << "initialization failed: " << error.GetCString()
@@ -840,25 +856,6 @@ int main(int argc, char const *argv[])
     return 1;
   }
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
-
-  // Install llvm's signal handlers up front to prevent lldb's handlers from
-  // being ignored. This is (hopefully) a stopgap workaround.
-  //
-  // When lldb invokes an llvm API that installs signal handlers (e.g.
-  // llvm::sys::RemoveFileOnSignal, possibly via a compiler embedded within
-  // lldb), lldb's signal handlers are overriden if llvm is installing its
-  // handlers for the first time.
-  //
-  // To work around llvm's behavior, force it to install its handlers up front,
-  // and *then* install lldb's handlers. In practice this is used to prevent
-  // lldb test processes from exiting due to IO_ERR when SIGPIPE is received.
-  //
-  // Note that when llvm installs its handlers, it 1) records the old handlers
-  // it replaces and 2) re-installs the old handlers when its new handler is
-  // invoked. That means that a signal not explicitly handled by lldb can fall
-  // back to being handled by llvm's handler the first time it is received,
-  // and then by the default handler the second time it is received.
-  llvm::sys::AddSignalHandler([](void *) -> void {}, nullptr);
 
   signal(SIGINT, sigint_handler);
 #if !defined(_MSC_VER)

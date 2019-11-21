@@ -30,7 +30,7 @@ using namespace lldb_private;
 using namespace lldb_private::repro;
 
 SBRegistry::SBRegistry() {
-  Registry& R = *this;
+  Registry &R = *this;
 
   RegisterMethods<SBAddress>(R);
   RegisterMethods<SBAttachInfo>(R);
@@ -147,6 +147,22 @@ const char *SBReproducer::Replay(const char *path) {
   registry.Replay(file);
 
   return nullptr;
+}
+
+bool SBReproducer::Generate() {
+  auto &r = Reproducer::Instance();
+  if (auto generator = r.GetGenerator()) {
+    generator->Keep();
+    return true;
+  }
+  return false;
+}
+
+const char *SBReproducer::GetPath() {
+  static std::string path;
+  auto &r = Reproducer::Instance();
+  path = r.GetReproducerPath().GetCString();
+  return path.c_str();
 }
 
 char lldb_private::repro::SBProvider::ID = 0;

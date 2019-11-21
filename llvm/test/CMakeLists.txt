@@ -70,6 +70,7 @@ set(LLVM_TEST_DEPENDS
           llvm-extract
           llvm-isel-fuzzer
           llvm-ifs
+          llvm-install-name-tool
           llvm-jitlink
           llvm-lib
           llvm-link

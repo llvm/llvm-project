@@ -1,0 +1,128 @@
+## Check that yaml2obj is able to produce output
+## when a symbol with section index SHN_XINDEX is used,
+## but no SHT_SYMTAB_SHNDX section is defined.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --symbols 2>&1 %t1 | FileCheck -DFILE=%t1 %s --check-prefix=CASE1
+
+# CASE1: warning: '[[FILE]]': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: bar
+    Type: SHT_PROGBITS
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## Check that yaml2obj keeps the SHT_SYMTAB_SHNDX section in the output
+## even when symbol's section index value is low enough to not require the extended symtab.
+## Also, check that symbols in .symtab still have the SHN_XINDEX index.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --sections --symbols --section-data 2>&1 %t2 | FileCheck %s --check-prefix=CASE2
+
+# CASE2:      Section {
+# CASE2:       Name: .symtab_shndx (1)
+# CASE2-NEXT:  Type: SHT_SYMTAB_SHNDX (0x12)
+
+# CASE2:      Name: .symtab
+# CASE2:      SectionData (
+# CASE2-NEXT:   0000: 00000000 00000000 00000000 00000000
+# CASE2-NEXT:   0010: 00000000 00000000 00000000 0300FFFF
+##                                                   ^-- 0xFFFF here is a SHN_XINDEX.
+# CASE2-NEXT:   0020: 00000000 00000000 00000000 00000000
+# CASE2-NEXT: )
+
+# CASE2:      Symbol {
+# CASE2:        Name: bar (0)
+# CASE2-NEXT:   Value: 0x0
+# CASE2-NEXT:   Size: 0
+# CASE2-NEXT:   Binding: Local (0x0)
+# CASE2-NEXT:   Type: Section (0x3)
+# CASE2-NEXT:   Other: 0
+# CASE2-NEXT:   Section: bar (0x1)
+# CASE2-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: bar
+    Type: SHT_PROGBITS
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 1 ]
+    Link:    .symtab
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## Check that yaml2obj allows producing broken SHT_SYMTAB_SHNDX section
+## content (in the case below it contains 0xff as an index of a section,
+## which is larger than the total number of sections in the file).
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --symbols 2>&1 %t3 | FileCheck %s -DFILE=%t3 --check-prefix=CASE3
+
+# CASE3: warning: '[[FILE]]': invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: bar
+    Type: SHT_PROGBITS
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 255 ]
+    Link:    .symtab
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## Check that yaml2obj reports an error if a symbol index does not fit into 2 bytes.
+
+# RUN: not yaml2obj --docnum=4 %s -o %t4 2>&1 | FileCheck %s --check-prefix=CASE4
+
+# CASE4: error: out of range hex16 number
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Type:  STT_SECTION
+    Index: 65536
+
+## Check we can set a custom sh_entsize for SHT_SYMTAB_SHNDX section.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: not llvm-readelf -S 2>&1 %t5 | FileCheck %s -DFILE=%t5 --check-prefix=CASE5
+
+# CASE5: error: '[[FILE]]': section [index 1] has an invalid sh_entsize: 2
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0 ]
+    EntSize: 2

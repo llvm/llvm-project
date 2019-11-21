@@ -62,16 +62,10 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
   if (!DumpOpts.ShowAddresses)
     return;
 
-  ArrayRef<SectionName> SectionNames;
-  if (DumpOpts.Verbose)
-    SectionNames = Obj.getSectionNames();
-
   for (const DWARFAddressRange &R : Ranges) {
     OS << '\n';
     OS.indent(Indent);
-    R.dump(OS, AddressSize);
-
-    DWARFFormValue::dumpAddressSection(Obj, OS, DumpOpts, R.SectionIndex);
+    R.dump(OS, AddressSize, DumpOpts, &Obj);
   }
 }
 
@@ -91,9 +85,6 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
   }
 
   if (FormValue.isFormClass(DWARFFormValue::FC_SectionOffset)) {
-    auto LLDumpOpts = DumpOpts;
-    LLDumpOpts.Verbose = false;
-
     uint64_t Offset = *FormValue.getAsSectionOffset();
 
     if (FormValue.getForm() == DW_FORM_loclistx) {
@@ -104,7 +95,7 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
         return;
     }
     U->getLocationTable().dumpLocationList(&Offset, OS, U->getBaseAddress(),
-                                           MRI, U, LLDumpOpts, Indent);
+                                           MRI, U, DumpOpts, Indent);
     return;
   }
 
@@ -493,6 +484,27 @@ bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {
     if (R.LowPC <= Address && Address < R.HighPC)
       return true;
   return false;
+}
+
+Expected<DWARFLocationExpressionsVector>
+DWARFDie::getLocations(dwarf::Attribute Attr) const {
+  Optional<DWARFFormValue> Location = find(Attr);
+  if (!Location)
+    return createStringError(inconvertibleErrorCode(), "No %s",
+                             dwarf::AttributeString(Attr).data());
+
+  if (Optional<uint64_t> Off = Location->getAsSectionOffset())
+    return U->findLoclistFromOffset(*Off);
+
+  if (Optional<ArrayRef<uint8_t>> Expr = Location->getAsBlock()) {
+    return DWARFLocationExpressionsVector{
+        DWARFLocationExpression{None, to_vector<4>(*Expr)}};
+  }
+
+  return createStringError(
+      inconvertibleErrorCode(), "Unsupported %s encoding: %s",
+      dwarf::AttributeString(Attr).data(),
+      dwarf::FormEncodingString(Location->getForm()).data());
 }
 
 const char *DWARFDie::getSubroutineName(DINameKind Kind) const {

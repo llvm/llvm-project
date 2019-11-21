@@ -49,7 +49,7 @@ const Expr *Expr::getBestDynamicClassTypeExpr() const {
 
     // Step into initializer for materialized temporaries.
     if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E)) {
-      E = MTE->GetTemporaryExpr();
+      E = MTE->getSubExpr();
       continue;
     }
 
@@ -127,11 +127,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
   return E;
 }
 
-/// isKnownToHaveBooleanValue - Return true if this is an integer expression
-/// that is known to return 0 or 1.  This happens for _Bool/bool expressions
-/// but also int expressions which are produced by things like comparisons in
-/// C.
-bool Expr::isKnownToHaveBooleanValue() const {
+bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   const Expr *E = IgnoreParens();
 
   // If this value has _Bool type, it is obvious 0/1.
@@ -142,7 +138,7 @@ bool Expr::isKnownToHaveBooleanValue() const {
   if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
     switch (UO->getOpcode()) {
     case UO_Plus:
-      return UO->getSubExpr()->isKnownToHaveBooleanValue();
+      return UO->getSubExpr()->isKnownToHaveBooleanValue(Semantic);
     case UO_LNot:
       return true;
     default:
@@ -152,8 +148,9 @@ bool Expr::isKnownToHaveBooleanValue() const {
 
   // Only look through implicit casts.  If the user writes
   // '(int) (a && b)' treat it as an arbitrary int.
+  // FIXME: Should we look through any cast expression in !Semantic mode?
   if (const ImplicitCastExpr *CE = dyn_cast<ImplicitCastExpr>(E))
-    return CE->getSubExpr()->isKnownToHaveBooleanValue();
+    return CE->getSubExpr()->isKnownToHaveBooleanValue(Semantic);
 
   if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
     switch (BO->getOpcode()) {
@@ -172,24 +169,30 @@ bool Expr::isKnownToHaveBooleanValue() const {
     case BO_Xor:  // Bitwise XOR operator.
     case BO_Or:   // Bitwise OR operator.
       // Handle things like (x==2)|(y==12).
-      return BO->getLHS()->isKnownToHaveBooleanValue() &&
-             BO->getRHS()->isKnownToHaveBooleanValue();
+      return BO->getLHS()->isKnownToHaveBooleanValue(Semantic) &&
+             BO->getRHS()->isKnownToHaveBooleanValue(Semantic);
 
     case BO_Comma:
     case BO_Assign:
-      return BO->getRHS()->isKnownToHaveBooleanValue();
+      return BO->getRHS()->isKnownToHaveBooleanValue(Semantic);
     }
   }
 
   if (const ConditionalOperator *CO = dyn_cast<ConditionalOperator>(E))
-    return CO->getTrueExpr()->isKnownToHaveBooleanValue() &&
-           CO->getFalseExpr()->isKnownToHaveBooleanValue();
+    return CO->getTrueExpr()->isKnownToHaveBooleanValue(Semantic) &&
+           CO->getFalseExpr()->isKnownToHaveBooleanValue(Semantic);
 
   if (isa<ObjCBoolLiteralExpr>(E))
     return true;
 
   if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
-    return OVE->getSourceExpr()->isKnownToHaveBooleanValue();
+    return OVE->getSourceExpr()->isKnownToHaveBooleanValue(Semantic);
+
+  if (const FieldDecl *FD = E->getSourceBitField())
+    if (!Semantic && FD->getType()->isUnsignedIntegerType() &&
+        !FD->getBitWidth()->isValueDependent() &&
+        FD->getBitWidthValue(FD->getASTContext()) == 1)
+      return true;
 
   return false;
 }
@@ -1891,7 +1894,7 @@ namespace {
   const Expr *skipImplicitTemporary(const Expr *E) {
     // Skip through reference binding to temporary.
     if (auto *Materialize = dyn_cast<MaterializeTemporaryExpr>(E))
-      E = Materialize->GetTemporaryExpr();
+      E = Materialize->getSubExpr();
 
     // Skip any temporary bindings; they're implicit.
     if (auto *Binder = dyn_cast<CXXBindTemporaryExpr>(E))
@@ -2721,8 +2724,9 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case CXXDeleteExprClass:
     return false;
   case MaterializeTemporaryExprClass:
-    return cast<MaterializeTemporaryExpr>(this)->GetTemporaryExpr()
-               ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+    return cast<MaterializeTemporaryExpr>(this)
+        ->getSubExpr()
+        ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   case CXXBindTemporaryExprClass:
     return cast<CXXBindTemporaryExpr>(this)->getSubExpr()
                ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
@@ -2746,8 +2750,8 @@ bool Expr::isOBJCGCCandidate(ASTContext &Ctx) const {
   case ImplicitCastExprClass:
     return cast<ImplicitCastExpr>(E)->getSubExpr()->isOBJCGCCandidate(Ctx);
   case MaterializeTemporaryExprClass:
-    return cast<MaterializeTemporaryExpr>(E)->GetTemporaryExpr()
-                                                      ->isOBJCGCCandidate(Ctx);
+    return cast<MaterializeTemporaryExpr>(E)->getSubExpr()->isOBJCGCCandidate(
+        Ctx);
   case CStyleCastExprClass:
     return cast<CStyleCastExpr>(E)->getSubExpr()->isOBJCGCCandidate(Ctx);
   case DeclRefExprClass: {
@@ -2822,7 +2826,7 @@ static Expr *IgnoreImpCastsExtraSingleStep(Expr *E) {
     return SubE;
 
   if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-    return MTE->GetTemporaryExpr();
+    return MTE->getSubExpr();
 
   if (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
     return NTTP->getReplacement();
@@ -2838,7 +2842,7 @@ static Expr *IgnoreCastsSingleStep(Expr *E) {
     return FE->getSubExpr();
 
   if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-    return MTE->GetTemporaryExpr();
+    return MTE->getSubExpr();
 
   if (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
     return NTTP->getReplacement();
@@ -2872,7 +2876,7 @@ static Expr *IgnoreImplicitSingleStep(Expr *E) {
     return SubE;
 
   if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-    return MTE->GetTemporaryExpr();
+    return MTE->getSubExpr();
 
   if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
     return BTE->getSubExpr();
@@ -2999,7 +3003,7 @@ Expr *Expr::IgnoreParenNoopCasts(const ASTContext &Ctx) {
 bool Expr::isDefaultArgument() const {
   const Expr *E = this;
   if (const MaterializeTemporaryExpr *M = dyn_cast<MaterializeTemporaryExpr>(E))
-    E = M->GetTemporaryExpr();
+    E = M->getSubExpr();
 
   while (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E))
     E = ICE->getSubExprAsWritten();
@@ -3011,7 +3015,7 @@ bool Expr::isDefaultArgument() const {
 /// expressions.
 static const Expr *skipTemporaryBindingsNoOpCastsAndParens(const Expr *E) {
   if (const MaterializeTemporaryExpr *M = dyn_cast<MaterializeTemporaryExpr>(E))
-    E = M->GetTemporaryExpr();
+    E = M->getSubExpr();
 
   while (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
     if (ICE->getCastKind() == CK_NoOp)
@@ -3106,7 +3110,7 @@ bool Expr::isImplicitCXXThis() const {
 
     if (const MaterializeTemporaryExpr *M
                                       = dyn_cast<MaterializeTemporaryExpr>(E)) {
-      E = M->GetTemporaryExpr();
+      E = M->getSubExpr();
       continue;
     }
 
@@ -3283,8 +3287,9 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     break;
   }
   case MaterializeTemporaryExprClass:
-    return cast<MaterializeTemporaryExpr>(this)->GetTemporaryExpr()
-      ->isConstantInitializer(Ctx, false, Culprit);
+    return cast<MaterializeTemporaryExpr>(this)
+        ->getSubExpr()
+        ->isConstantInitializer(Ctx, false, Culprit);
 
   case SubstNonTypeTemplateParmExprClass:
     return cast<SubstNonTypeTemplateParmExpr>(this)->getReplacement()
@@ -3751,7 +3756,7 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
     return NPCK_GNUNull;
   } else if (const MaterializeTemporaryExpr *M
                                    = dyn_cast<MaterializeTemporaryExpr>(this)) {
-    return M->GetTemporaryExpr()->isNullPointerConstant(Ctx, NPC);
+    return M->getSubExpr()->isNullPointerConstant(Ctx, NPC);
   } else if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(this)) {
     if (const Expr *Source = OVE->getSourceExpr())
       return Source->isNullPointerConstant(Ctx, NPC);
@@ -4460,7 +4465,7 @@ const OpaqueValueExpr *OpaqueValueExpr::findInCopyConstruct(const Expr *e) {
   if (const ExprWithCleanups *ewc = dyn_cast<ExprWithCleanups>(e))
     e = ewc->getSubExpr();
   if (const MaterializeTemporaryExpr *m = dyn_cast<MaterializeTemporaryExpr>(e))
-    e = m->GetTemporaryExpr();
+    e = m->getSubExpr();
   e = cast<CXXConstructExpr>(e)->getArg(0);
   while (const ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(e))
     e = ice->getSubExpr();
@@ -4598,6 +4603,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__c11_atomic_fetch_and:
   case AO__c11_atomic_fetch_or:
   case AO__c11_atomic_fetch_xor:
+  case AO__c11_atomic_fetch_max:
+  case AO__c11_atomic_fetch_min:
   case AO__atomic_fetch_add:
   case AO__atomic_fetch_sub:
   case AO__atomic_fetch_and:
@@ -4610,6 +4617,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_or_fetch:
   case AO__atomic_xor_fetch:
   case AO__atomic_nand_fetch:
+  case AO__atomic_min_fetch:
+  case AO__atomic_max_fetch:
   case AO__atomic_fetch_min:
   case AO__atomic_fetch_max:
     return 3;

@@ -16,6 +16,10 @@ set(SCUDO_UNITTEST_CFLAGS
   # TODO(kostyak): find a way to make -fsized-deallocation work
   -Wno-mismatched-new-delete)
 
+if(ANDROID)
+  list(APPEND SCUDO_UNITTEST_CFLAGS -fno-emulated-tls)
+endif()
+
 set(SCUDO_TEST_ARCH ${SCUDO_STANDALONE_SUPPORTED_ARCH})
 
 # gtests requires c++

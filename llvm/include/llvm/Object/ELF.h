@@ -406,7 +406,7 @@ ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr *Sec) const {
       Offset + Size > Buf.size())
     return createError("section " + getSecIndexForError(this, Sec) +
                        " has a sh_offset (0x" + Twine::utohexstr(Offset) +
-                       ") + sh_size (0x" + Twine(Size) +
+                       ") + sh_size (0x" + Twine::utohexstr(Size) +
                        ") that cannot be represented");
 
   if (Offset % alignof(T))

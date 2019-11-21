@@ -2003,11 +2003,11 @@ static uint64_t layoutSegmentsForOnlyKeepDebug(std::vector<Segment *> &Segments,
                                                uint64_t HdrEnd) {
   uint64_t MaxOffset = 0;
   for (Segment *Seg : Segments) {
-    const SectionBase *Sec = Seg->firstSection();
-    if (Seg->Type == PT_PHDR || !Sec)
+    const SectionBase *FirstSec = Seg->firstSection();
+    if (Seg->Type == PT_PHDR || !FirstSec)
       continue;
 
-    uint64_t Offset = Sec->Offset;
+    uint64_t Offset = FirstSec->Offset;
     uint64_t FileSize = 0;
     for (const SectionBase *Sec : Seg->Sections) {
       uint64_t Size = Sec->Type == SHT_NOBITS ? 0 : Sec->Size;

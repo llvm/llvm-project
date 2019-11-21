@@ -1303,7 +1303,8 @@ bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
   return true;
 }
 
-SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
+SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F,
+                                               const GCNSubtarget &ST) {
   *this = getDefaultForCallingConv(F.getCallingConv());
 
   StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
@@ -1314,6 +1315,9 @@ SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
     = F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
   if (!DX10ClampAttr.empty())
     DX10Clamp = DX10ClampAttr == "true";
+
+  FP32Denormals = ST.hasFP32Denormals(F);
+  FP64FP16Denormals = ST.hasFP64FP16Denormals(F);
 }
 
 namespace {
@@ -1324,12 +1328,30 @@ struct SourceOfDivergence {
 const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
 #define GET_SourcesOfDivergence_IMPL
+#define GET_Gfx9BufferFormat_IMPL
+#define GET_Gfx10PlusBufferFormat_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
 
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
   return lookupSourceOfDivergence(IntrID);
+}
+
+const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
+                                                  uint8_t NumComponents,
+                                                  uint8_t NumFormat,
+                                                  const MCSubtargetInfo &STI) {
+  return isGFX10(STI)
+             ? getGfx10PlusBufferFormatInfo(BitsPerComp, NumComponents,
+                                            NumFormat)
+             : getGfx9BufferFormatInfo(BitsPerComp, NumComponents, NumFormat);
+}
+
+const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
+                                                  const MCSubtargetInfo &STI) {
+  return isGFX10(STI) ? getGfx10PlusBufferFormatInfo(Format)
+                      : getGfx9BufferFormatInfo(Format);
 }
 
 } // namespace AMDGPU

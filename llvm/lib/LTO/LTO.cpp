@@ -386,11 +386,10 @@ static bool isWeakObjectWithRWAccess(GlobalValueSummary *GVS) {
 }
 
 static void thinLTOInternalizeAndPromoteGUID(
-    GlobalValueSummaryList &GVSummaryList, ValueInfo VI,
-    function_ref<bool(StringRef, ValueInfo)> isExported,
+    ValueInfo VI, function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
-  for (auto &S : GVSummaryList) {
+  for (auto &S : VI.getSummaryList()) {
     if (isExported(S->modulePath(), VI)) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
         S->setLinkage(GlobalValue::ExternalLinkage);
@@ -422,8 +421,8 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
   for (auto &I : Index)
-    thinLTOInternalizeAndPromoteGUID(
-        I.second.SummaryList, Index.getValueInfo(I), isExported, isPrevailing);
+    thinLTOInternalizeAndPromoteGUID(Index.getValueInfo(I), isExported,
+                                     isPrevailing);
 }
 
 // Requires a destructor for std::vector<InputModule>.

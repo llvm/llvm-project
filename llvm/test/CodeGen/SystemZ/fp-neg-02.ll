@@ -7,7 +7,7 @@ define float @f1(float %f) {
 ; CHECK-LABEL: f1:
 ; CHECK: lcdfr %f0, %f0
 ; CHECK: br %r14
-  %res = fsub float -0.0, %f
+  %res = fneg float %f
   ret float %res
 }
 
@@ -16,7 +16,7 @@ define double @f2(double %f) {
 ; CHECK-LABEL: f2:
 ; CHECK: lcdfr %f0, %f0
 ; CHECK: br %r14
-  %res = fsub double -0.0, %f
+  %res = fneg double %f
   ret double %res
 }
 
@@ -33,7 +33,7 @@ define void @f3(fp128 *%ptr, fp128 *%ptr2) {
 ; CHECK: br %r14
   %orig = load fp128, fp128 *%ptr
   %negzero = fpext float -0.0 to fp128
-  %neg = fsub fp128 0xL00000000000000008000000000000000, %orig
+  %neg = fneg fp128 %orig
   %op2 = load fp128, fp128 *%ptr2
   %res = fdiv fp128 %neg, %op2
   store fp128 %res, fp128 *%ptr

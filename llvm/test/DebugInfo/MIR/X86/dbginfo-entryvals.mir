@@ -56,10 +56,10 @@
   !11 = !{null, !12, !12}
   !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
   !13 = !{!14, !15, !16, !17}
-  !14 = !DILocalVariable(name: "x", arg: 1, scope: !9, file: !1, line: 15, type: !12, flags: DIFlagArgumentNotModified)
-  !15 = !DILocalVariable(name: "y", arg: 2, scope: !9, file: !1, line: 15, type: !12, flags: DIFlagArgumentNotModified)
-  !16 = !DILocalVariable(name: "u", scope: !9, file: !1, line: 16, type: !12, flags: DIFlagArgumentNotModified)
-  !17 = !DILocalVariable(name: "a", scope: !9, file: !1, line: 21, type: !12, flags: DIFlagArgumentNotModified)
+  !14 = !DILocalVariable(name: "x", arg: 1, scope: !9, file: !1, line: 15, type: !12)
+  !15 = !DILocalVariable(name: "y", arg: 2, scope: !9, file: !1, line: 15, type: !12)
+  !16 = !DILocalVariable(name: "u", scope: !9, file: !1, line: 16, type: !12)
+  !17 = !DILocalVariable(name: "a", scope: !9, file: !1, line: 21, type: !12)
   !18 = !DILocation(line: 15, column: 10, scope: !9)
 
 ...

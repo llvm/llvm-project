@@ -1557,8 +1557,8 @@ public:
 
   /// Retrieve the default argument, if any.
   const TemplateArgumentLoc &getDefaultArgument() const {
-    static const TemplateArgumentLoc None;
-    return DefaultArgument.isSet() ? *DefaultArgument.get() : None;
+    static const TemplateArgumentLoc NoneLoc;
+    return DefaultArgument.isSet() ? *DefaultArgument.get() : NoneLoc;
   }
 
   /// Retrieve the location of the default argument, if any.

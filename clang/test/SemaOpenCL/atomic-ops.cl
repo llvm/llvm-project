@@ -73,7 +73,7 @@ void f(atomic_int *i, const atomic_int *ci,
   __opencl_atomic_fetch_add(d, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer or pointer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
   __opencl_atomic_fetch_and(i, 1, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_fetch_and(p, 1, memory_order_seq_cst, memory_scope_work_group);
-  __opencl_atomic_fetch_and(d, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to bitwise atomic operation must be a pointer to atomic integer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
+  __opencl_atomic_fetch_and(d, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
 
   __opencl_atomic_fetch_min(i, 1, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_fetch_max(i, 1, memory_order_seq_cst, memory_scope_work_group);

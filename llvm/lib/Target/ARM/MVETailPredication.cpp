@@ -299,7 +299,7 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
         // MVE vectors are 128-bit, but don't support 128 x i1.
         // TODO: Can we support vectors larger than 128-bits?
         unsigned MaxWidth = TTI->getRegisterBitWidth(true); 
-        if (Lanes * ElementWidth != MaxWidth || Lanes == MaxWidth)
+        if (Lanes * ElementWidth > MaxWidth || Lanes == MaxWidth)
           return false;
         MaskedInsts.push_back(cast<IntrinsicInst>(&I));
       } else if (auto *Int = dyn_cast<IntrinsicInst>(&I)) {

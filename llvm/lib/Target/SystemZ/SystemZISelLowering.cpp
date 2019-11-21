@@ -643,7 +643,8 @@ EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,
   return VT.changeVectorElementTypeToInteger();
 }
 
-bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
+bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(
+    const MachineFunction &MF, EVT VT) const {
   VT = VT.getScalarType();
 
   if (!VT.isSimple())

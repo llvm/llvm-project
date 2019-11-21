@@ -113,18 +113,21 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
 
     @llgs_test
     @skipUnlessPlatform(["linux", "android", "netbsd"])
+    @expectedFailureNetBSD
     def test_libraries_svr4_well_formed(self):
         self.setup_test()
         self.libraries_svr4_well_formed()
 
     @llgs_test
     @skipUnlessPlatform(["linux", "android", "netbsd"])
+    @expectedFailureNetBSD
     def test_libraries_svr4_load_addr(self):
         self.setup_test()
         self.libraries_svr4_has_correct_load_addr()
 
     @llgs_test
     @skipUnlessPlatform(["linux", "android", "netbsd"])
+    @expectedFailureNetBSD
     def test_libraries_svr4_libs_present(self):
         self.setup_test()
         self.libraries_svr4_libs_present()

@@ -79,5 +79,17 @@ if (OPENMP_ENABLE_LIBOMPTARGET)
   add_subdirectory(libomptarget)
 endif()
 
+set(ENABLE_OMPT_TOOLS ON)
+# Currently tools are not tested well on Windows or MacOS X.
+if (APPLE OR WIN32)
+  set(ENABLE_OMPT_TOOLS OFF)
+endif()
+
+option(OPENMP_ENABLE_OMPT_TOOLS "Enable building ompt based tools for OpenMP."
+       ${ENABLE_OMPT_TOOLS})
+if (OPENMP_ENABLE_OMPT_TOOLS)
+  add_subdirectory(tools)
+endif()
+
 # Now that we have seen all testuites, create the check-openmp target.
 construct_check_openmp_target()

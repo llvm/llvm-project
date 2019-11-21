@@ -32,6 +32,13 @@
 using namespace llvm;
 using namespace object;
 
+raw_ostream &object::operator<<(raw_ostream &OS, const SectionedAddress &Addr) {
+  OS << "SectionedAddress{" << format_hex(Addr.Address, 10);
+  if (Addr.SectionIndex != SectionedAddress::UndefSection)
+    OS << ", " << Addr.SectionIndex;
+  return OS << "}";
+}
+
 void ObjectFile::anchor() {}
 
 ObjectFile::ObjectFile(unsigned int Type, MemoryBufferRef Source)

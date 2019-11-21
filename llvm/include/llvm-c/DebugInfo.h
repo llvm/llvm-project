@@ -17,10 +17,9 @@
 #define LLVM_C_DEBUGINFO_H
 
 #include "llvm-c/Core.h"
+#include "llvm-c/ExternC.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_C_EXTERN_C_BEGIN
 
 /**
  * Debug info flags.
@@ -875,7 +874,7 @@ LLVMMetadataRef
 LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef Builder, LLVMMetadataRef Type,
                            const char *Name, size_t NameLen,
                            LLVMMetadataRef File, unsigned LineNo,
-                           LLVMMetadataRef Scope, uint32_t AlignInBits);
+                           LLVMMetadataRef Scope);
 
 /**
  * Create debugging information entry to establish inheritance relationship
@@ -1353,8 +1352,6 @@ void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc);
  */
 LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata);
 
-#ifdef __cplusplus
-} /* end extern "C" */
-#endif
+LLVM_C_EXTERN_C_END
 
 #endif

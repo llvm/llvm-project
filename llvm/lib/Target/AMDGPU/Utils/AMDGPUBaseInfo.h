@@ -41,6 +41,14 @@ class Triple;
 
 namespace AMDGPU {
 
+struct GcnBufferFormatInfo {
+  unsigned Format;
+  unsigned BitsPerComp;
+  unsigned NumComponents;
+  unsigned NumFormat;
+  unsigned DataFormat;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -298,6 +306,15 @@ bool getMUBUFHasSrsrc(unsigned Opc);
 
 LLVM_READONLY
 bool getMUBUFHasSoffset(unsigned Opc);
+
+LLVM_READONLY
+const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
+                                                  uint8_t NumComponents,
+                                                  uint8_t NumFormat,
+                                                  const MCSubtargetInfo &STI);
+LLVM_READONLY
+const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
+                                                  const MCSubtargetInfo &STI);
 
 LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
@@ -646,7 +663,6 @@ bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
-
 // Track defaults for fields in the MODE registser.
 struct SIModeRegisterDefaults {
   /// Floating point opcodes that support exception flag gathering quiet and
@@ -676,7 +692,8 @@ struct SIModeRegisterDefaults {
     FP32Denormals(true),
     FP64FP16Denormals(true) {}
 
-  SIModeRegisterDefaults(const Function &F);
+  // FIXME: Should not depend on the subtarget
+  SIModeRegisterDefaults(const Function &F, const GCNSubtarget &ST);
 
   static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
     const bool IsCompute = AMDGPU::isCompute(CC);
@@ -695,10 +712,23 @@ struct SIModeRegisterDefaults {
            FP64FP16Denormals == Other.FP64FP16Denormals;
   }
 
+  /// Returns true if a flag is compatible if it's enabled in the callee, but
+  /// disabled in the caller.
+  static bool oneWayCompatible(bool CallerMode, bool CalleeMode) {
+    return CallerMode == CalleeMode || (CallerMode && !CalleeMode);
+  }
+
   // FIXME: Inlining should be OK for dx10-clamp, since the caller's mode should
   // be able to override.
   bool isInlineCompatible(SIModeRegisterDefaults CalleeMode) const {
-    return *this == CalleeMode;
+    if (DX10Clamp != CalleeMode.DX10Clamp)
+      return false;
+    if (IEEE != CalleeMode.IEEE)
+      return false;
+
+    // Allow inlining denormals enabled into denormals flushed functions.
+    return oneWayCompatible(FP64FP16Denormals, CalleeMode.FP64FP16Denormals) &&
+           oneWayCompatible(FP32Denormals, CalleeMode.FP32Denormals);
   }
 };
 

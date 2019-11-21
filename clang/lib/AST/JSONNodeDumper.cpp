@@ -878,12 +878,6 @@ void JSONNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *LSD) {
   switch (LSD->getLanguage()) {
   case LinkageSpecDecl::lang_c: Lang = "C"; break;
   case LinkageSpecDecl::lang_cxx: Lang = "C++"; break;
-  case LinkageSpecDecl::lang_cxx_11:
-    Lang = "C++11";
-    break;
-  case LinkageSpecDecl::lang_cxx_14:
-    Lang = "C++14";
-    break;
   }
   JOS.attribute("language", Lang);
   attributeOnlyIfTrue("hasBraces", LSD->hasBraces());
@@ -1017,6 +1011,7 @@ void JSONNodeDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
     attributeOnlyIfTrue("unsafe_unretained",
                         Attrs & ObjCPropertyDecl::OBJC_PR_unsafe_unretained);
     attributeOnlyIfTrue("class", Attrs & ObjCPropertyDecl::OBJC_PR_class);
+    attributeOnlyIfTrue("direct", Attrs & ObjCPropertyDecl::OBJC_PR_direct);
     attributeOnlyIfTrue("nullability",
                         Attrs & ObjCPropertyDecl::OBJC_PR_nullability);
     attributeOnlyIfTrue("null_resettable",

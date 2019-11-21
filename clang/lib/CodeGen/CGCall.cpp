@@ -1741,8 +1741,9 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
 
     if (CodeGenOpts.NullPointerIsValid)
       FuncAttrs.addAttribute("null-pointer-is-valid", "true");
-    if (!CodeGenOpts.FPDenormalMode.empty())
-      FuncAttrs.addAttribute("denormal-fp-math", CodeGenOpts.FPDenormalMode);
+    if (CodeGenOpts.FPDenormalMode != llvm::DenormalMode::Invalid)
+      FuncAttrs.addAttribute("denormal-fp-math",
+                             llvm::denormalModeName(CodeGenOpts.FPDenormalMode));
 
     FuncAttrs.addAttribute("no-trapping-math",
                            llvm::toStringRef(CodeGenOpts.NoTrappingMath));

@@ -366,6 +366,7 @@ OPENMP_SIMD_CLAUSE(simdlen)
 OPENMP_SIMD_CLAUSE(collapse)
 OPENMP_SIMD_CLAUSE(reduction)
 OPENMP_SIMD_CLAUSE(allocate)
+OPENMP_SIMD_CLAUSE(if)
 
 // Clauses allowed for directive 'omp for'.
 OPENMP_FOR_CLAUSE(private)
@@ -393,6 +394,7 @@ OPENMP_FOR_SIMD_CLAUSE(linear)
 OPENMP_FOR_SIMD_CLAUSE(aligned)
 OPENMP_FOR_SIMD_CLAUSE(ordered)
 OPENMP_FOR_SIMD_CLAUSE(allocate)
+OPENMP_FOR_SIMD_CLAUSE(if)
 
 // Clauses allowed for OpenMP directive 'omp sections'.
 OPENMP_SECTIONS_CLAUSE(private)

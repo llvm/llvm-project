@@ -24,6 +24,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 #include <cstdlib>
 
@@ -261,7 +262,8 @@ int main(int argc, char **argv) {
   std::unique_ptr<SpecialCaseList> SpecialCaseList;
   if (BlacklistFilename != "-") {
     std::string Error;
-    SpecialCaseList = SpecialCaseList::create({BlacklistFilename}, Error);
+    SpecialCaseList = SpecialCaseList::create({BlacklistFilename},
+                                              *vfs::getRealFileSystem(), Error);
     if (!SpecialCaseList) {
       errs() << "Failed to get blacklist: " << Error << "\n";
       exit(EXIT_FAILURE);

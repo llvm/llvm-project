@@ -1,4 +1,4 @@
-RUN: llvm-cxxfilt -t f i | FileCheck %s
+RUN: llvm-cxxfilt -n -t f i | FileCheck %s
 RUN: echo "f i" | llvm-cxxfilt -t | FileCheck %s --check-prefix="CHECK-STRING"
 
 CHECK: float

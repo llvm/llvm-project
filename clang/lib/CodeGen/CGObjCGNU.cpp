@@ -606,6 +606,9 @@ public:
 
   llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
                                  const ObjCContainerDecl *CD) override;
+  void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
+                                    const ObjCMethodDecl *OMD,
+                                    const ObjCContainerDecl *CD) override;
   void GenerateCategory(const ObjCCategoryImplDecl *CMD) override;
   void GenerateClass(const ObjCImplementationDecl *ClassDecl) override;
   void RegisterAlias(const ObjCCompatibleAliasDecl *OAD) override;
@@ -3869,6 +3872,13 @@ llvm::Function *CGObjCGNU::GenerateMethod(const ObjCMethodDecl *OMD,
                              FunctionName,
                              &TheModule);
   return Method;
+}
+
+void CGObjCGNU::GenerateDirectMethodPrologue(CodeGenFunction &CGF,
+                                             llvm::Function *Fn,
+                                             const ObjCMethodDecl *OMD,
+                                             const ObjCContainerDecl *CD) {
+  // GNU runtime doesn't support direct calls at this time
 }
 
 llvm::FunctionCallee CGObjCGNU::GetPropertyGetFunction() {

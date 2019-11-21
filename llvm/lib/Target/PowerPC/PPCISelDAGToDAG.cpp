@@ -1044,7 +1044,7 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
       if (Use->isMachineOpcode())
         return 0;
       MaxTruncation =
-        std::max(MaxTruncation, Use->getValueType(0).getSizeInBits());
+        std::max(MaxTruncation, (unsigned)Use->getValueType(0).getSizeInBits());
       continue;
     case ISD::STORE: {
       if (Use->isMachineOpcode())

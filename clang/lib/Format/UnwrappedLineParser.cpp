@@ -2498,9 +2498,10 @@ bool UnwrappedLineParser::isOnNewLine(const FormatToken &FormatTok) {
 
 // Checks if \p FormatTok is a line comment that continues the line comment
 // section on \p Line.
-static bool continuesLineCommentSection(const FormatToken &FormatTok,
-                                        const UnwrappedLine &Line,
-                                        llvm::Regex &CommentPragmasRegex) {
+static bool
+continuesLineCommentSection(const FormatToken &FormatTok,
+                            const UnwrappedLine &Line,
+                            const llvm::Regex &CommentPragmasRegex) {
   if (Line.Tokens.empty())
     return false;
 

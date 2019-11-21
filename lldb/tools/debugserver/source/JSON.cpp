@@ -516,13 +516,16 @@ JSONValue::SP JSONParser::ParseJSONArray() {
   std::string value;
   std::string key;
   while (true) {
-    JSONValue::SP value_sp = ParseJSONValue();
+    JSONParser::Token token = GetToken(value);
+    if (token == JSONParser::Token::ArrayEnd)
+      return JSONValue::SP(array_up.release());
+    JSONValue::SP value_sp = ParseJSONValue(value, token);
     if (value_sp)
       array_up->AppendObject(value_sp);
     else
       break;
 
-    JSONParser::Token token = GetToken(value);
+    token = GetToken(value);
     if (token == JSONParser::Token::Comma) {
       continue;
     } else if (token == JSONParser::Token::ArrayEnd) {
@@ -537,6 +540,11 @@ JSONValue::SP JSONParser::ParseJSONArray() {
 JSONValue::SP JSONParser::ParseJSONValue() {
   std::string value;
   const JSONParser::Token token = GetToken(value);
+  return ParseJSONValue(value, token);
+}
+
+JSONValue::SP JSONParser::ParseJSONValue(const std::string &value,
+                                         const Token &token) {
   switch (token) {
   case JSONParser::Token::ObjectStart:
     return ParseJSONObject();

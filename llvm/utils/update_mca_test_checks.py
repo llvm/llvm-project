@@ -56,9 +56,6 @@ def _showwarning(message, category, filename, lineno, file=None, line=None):
 
 def _parse_args():
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument('-v', '--verbose',
-                      action='store_true',
-                      help='show verbose output')
   parser.add_argument('-w',
                       action='store_true',
                       help='suppress warnings')
@@ -73,7 +70,7 @@ def _parse_args():
   parser.add_argument('tests',
                       metavar='<test-path>',
                       nargs='+')
-  args = parser.parse_args()
+  args = common.parse_commandline_args(parser)
 
   _configure_warnings(args)
 

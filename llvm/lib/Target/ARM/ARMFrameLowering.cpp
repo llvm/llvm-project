@@ -1704,6 +1704,19 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
   for (unsigned i = 0; CSRegs[i]; ++i) {
     unsigned Reg = CSRegs[i];
+    if (STI.isRWPI() && Reg == ARM::R9) {
+      // Paranoid check for use of R9 with RWPI. Clobbering R9 with -frwpi will
+      // emit warnings about undefined behaviour but maybe theres's a valid use
+      // case so on that basis allow it to be pushed/popped in the
+      // prologue/epilogue.
+    } else if (Reg > ARM::R0 && ARM::GPRRegClass.contains(Reg) &&
+               STI.isGPRegisterReserved(Reg - ARM::R0)) {
+      LLVM_DEBUG(dbgs() << printReg(Reg, TRI) << " has been reserved and"
+                        << " should not be allocatable"
+                        << " or spillable.\n");
+      SavedRegs.reset(Reg);
+      continue;
+    }
     bool Spilled = false;
     if (SavedRegs.test(Reg)) {
       Spilled = true;
@@ -1948,7 +1961,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
           LLVM_DEBUG(dbgs() << printReg(Reg, TRI)
                             << " is saved low register, RegDeficit = "
                             << RegDeficit << "\n");
-        } else {
+        } else if (!STI.isGPRegisterReserved(Reg - ARM::R0)) {
           AvailableRegs.push_back(Reg);
           LLVM_DEBUG(
               dbgs()
@@ -1963,7 +1976,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
           --RegDeficit;
           LLVM_DEBUG(dbgs() << "%r7 is saved low register, RegDeficit = "
                             << RegDeficit << "\n");
-        } else {
+        } else if (!STI.isGPRegisterReserved(7)) {
           AvailableRegs.push_back(ARM::R7);
           LLVM_DEBUG(
               dbgs()

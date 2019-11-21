@@ -268,6 +268,22 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
     }
     __kmp_str_free(&libs);
   }
+  if (ret)
+    return ret;
+
+#if KMP_OS_UNIX
+  { // Non-standard: load archer tool if application is built with TSan
+    const char *fname = "libarcher.so";
+    void *h = dlopen(fname, RTLD_LAZY);
+    if (h) {
+      start_tool = (ompt_start_tool_t)dlsym(h, "ompt_start_tool");
+      if (start_tool)
+        ret = (*start_tool)(omp_version, runtime_version);
+      if (ret)
+        return ret;
+    }
+  }
+#endif
   return ret;
 }
 

@@ -1,10 +1,13 @@
 ; Test strict multiplication of two f32s, producing an f64 result.
-; FIXME: we do not have a strict version of fpext yet
+; FIXME: We should use llvm.experimental.constrained.fpext, but we currently
+;        cannot match a combination of two strict operations in ISel.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
 declare float @foo()
 declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
+declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 
 ; Check register multiplication.
 define double @f1(float %f1, float %f2) #0 {
@@ -133,17 +136,50 @@ define float @f7(float *%ptr0) #0 {
   %val9 = load float, float *%ptr9
   %val10 = load float, float *%ptr10
 
-  %frob0 = fadd float %val0, %val0
-  %frob1 = fadd float %val1, %val1
-  %frob2 = fadd float %val2, %val2
-  %frob3 = fadd float %val3, %val3
-  %frob4 = fadd float %val4, %val4
-  %frob5 = fadd float %val5, %val5
-  %frob6 = fadd float %val6, %val6
-  %frob7 = fadd float %val7, %val7
-  %frob8 = fadd float %val8, %val8
-  %frob9 = fadd float %val9, %val9
-  %frob10 = fadd float %val9, %val10
+  %frob0 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val0, float %val0,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob1 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val1, float %val1,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob2 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val2, float %val2,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob3 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val3, float %val3,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob4 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val4, float %val4,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob5 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val5, float %val5,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob6 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val6, float %val6,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob7 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val7, float %val7,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob8 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val8, float %val8,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob9 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val9, float %val9,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob10 = call float @llvm.experimental.constrained.fadd.f32(
+                        float %val10, float %val10,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   store float %frob0, float *%ptr0
   store float %frob1, float *%ptr1
@@ -169,7 +205,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul0, double 1.01,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc0 = fptrunc double %extra0 to float
+  %trunc0 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra0,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext1 = fpext float %trunc0 to double
   %ext1 = fpext float %frob1 to double
@@ -181,7 +220,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul1, double 1.11,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc1 = fptrunc double %extra1 to float
+  %trunc1 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra1,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext2 = fpext float %trunc1 to double
   %ext2 = fpext float %frob2 to double
@@ -193,7 +235,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul2, double 1.21,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc2 = fptrunc double %extra2 to float
+  %trunc2 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra2,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext3 = fpext float %trunc2 to double
   %ext3 = fpext float %frob3 to double
@@ -205,7 +250,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul3, double 1.31,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc3 = fptrunc double %extra3 to float
+  %trunc3 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra3,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext4 = fpext float %trunc3 to double
   %ext4 = fpext float %frob4 to double
@@ -217,7 +265,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul4, double 1.41,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc4 = fptrunc double %extra4 to float
+  %trunc4 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra4,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext5 = fpext float %trunc4 to double
   %ext5 = fpext float %frob5 to double
@@ -229,7 +280,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul5, double 1.51,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc5 = fptrunc double %extra5 to float
+  %trunc5 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra5,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext6 = fpext float %trunc5 to double
   %ext6 = fpext float %frob6 to double
@@ -241,7 +295,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul6, double 1.61,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc6 = fptrunc double %extra6 to float
+  %trunc6 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra6,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext7 = fpext float %trunc6 to double
   %ext7 = fpext float %frob7 to double
@@ -253,7 +310,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul7, double 1.71,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc7 = fptrunc double %extra7 to float
+  %trunc7 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra7,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext8 = fpext float %trunc7 to double
   %ext8 = fpext float %frob8 to double
@@ -265,7 +325,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul8, double 1.81,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc8 = fptrunc double %extra8 to float
+  %trunc8 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra8,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext9 = fpext float %trunc8 to double
   %ext9 = fpext float %frob9 to double
@@ -277,7 +340,10 @@ define float @f7(float *%ptr0) #0 {
                         double %mul9, double 1.91,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc9 = fptrunc double %extra9 to float
+  %trunc9 = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                        double %extra9,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   ret float %trunc9
 }

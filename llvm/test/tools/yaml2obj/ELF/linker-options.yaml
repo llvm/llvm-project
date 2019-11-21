@@ -1,0 +1,120 @@
+## Check we are able to produce a valid SHT_LLVM_LINKER_OPTIONS
+## section from its description.
+
+## Check we can use either "Options" or "Content" to describe the data.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --string-dump .linker-options1 --sections --section-data %t1 \
+# RUN:   | FileCheck %s --check-prefix=OPTIONS
+
+# OPTIONS:        Name: .linker-options1
+# OPTIONS-NEXT:   Type: SHT_LLVM_LINKER_OPTIONS
+# OPTIONS-NEXT:   Flags [
+# OPTIONS-NEXT:   ]
+# OPTIONS-NEXT:   Address: 0x0
+# OPTIONS-NEXT:   Offset: 0x40
+# OPTIONS-NEXT:   Size: 34
+# OPTIONS-NEXT:   Link: 0
+# OPTIONS-NEXT:   Info: 0
+# OPTIONS-NEXT:   AddressAlignment: 0
+# OPTIONS-NEXT:   EntrySize: 0
+
+# OPTIONS:      Name: .linker-options2
+# OPTIONS-NEXT: Type: SHT_LLVM_LINKER_OPTIONS
+# OPTIONS:      SectionData (
+# OPTIONS-NEXT:   0000: 00112233 |
+# OPTIONS-NEXT: )
+
+# OPTIONS:      String dump of section '.linker-options1':
+# OPTIONS-NEXT: [     0] option 0
+# OPTIONS-NEXT: [     9] value 0
+# OPTIONS-NEXT: [    11] option 1
+# OPTIONS-NEXT: [    1a] value 1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .linker-options1
+    Type: SHT_LLVM_LINKER_OPTIONS
+    Options:
+      - Name:  option 0
+        Value: value 0
+      - Name:  option 1
+        Value: value 1
+  - Name: .linker-options2
+    Type: SHT_LLVM_LINKER_OPTIONS
+    Content: "00112233"
+
+## Check that "Value" and "Name" fields are mandatory when using "Options" key.
+
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=NOVALUE
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=NONAME
+
+# NOVALUE: error: missing required key 'Value'
+# NONAME: error: missing required key 'Name'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .linker-options
+    Type: SHT_LLVM_LINKER_OPTIONS
+    Options:
+      - Name: name
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .linker-options
+    Type: SHT_LLVM_LINKER_OPTIONS
+    Options:
+      - Value: value
+
+## Check we can't use both "Options" and "Content" together.
+
+# RUN: not yaml2obj %s --docnum=4 2>&1 | FileCheck %s --check-prefix=BOTH
+
+# BOTH: error: "Options" and "Content" can't be used together
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .linker-options
+    Type: SHT_LLVM_LINKER_OPTIONS
+    Options:
+      - Name:  name
+        Value: value
+    Content: "00112233"
+
+## Check we can omit both "Options" and "Content". This produces an empty section.
+
+# RUN: yaml2obj %s --docnum=5 2>&1 -o %t5
+# RUN: llvm-readelf --sections %t5 | FileCheck %s --check-prefix=NONE
+
+# NONE: [Nr] Name            Type                Address          Off    Size
+# NONE: [ 1] .linker-options LLVM_LINKER_OPTIONS 0000000000000000 000040 000000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .linker-options
+    Type: SHT_LLVM_LINKER_OPTIONS

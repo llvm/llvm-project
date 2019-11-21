@@ -18,6 +18,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -209,11 +210,13 @@ namespace llvm {
 
     /// Return true if the bit size is a multiple of 8.
     bool isByteSized() const {
-      return (getSizeInBits() & 7) == 0;
+      return getSizeInBits().isByteSized();
     }
 
     /// Return true if the size is a power-of-two number of bytes.
     bool isRound() const {
+      if (isScalableVector())
+        return false;
       unsigned BitSize = getSizeInBits();
       return BitSize >= 8 && !(BitSize & (BitSize - 1));
     }
@@ -288,25 +291,38 @@ namespace llvm {
     }
 
     /// Return the size of the specified value type in bits.
-    unsigned getSizeInBits() const {
+    ///
+    /// If the value type is a scalable vector type, the scalable property will
+    /// be set and the runtime size will be a positive integer multiple of the
+    /// base size.
+    TypeSize getSizeInBits() const {
       if (isSimple())
         return V.getSizeInBits();
       return getExtendedSizeInBits();
     }
 
-    unsigned getScalarSizeInBits() const {
+    TypeSize getScalarSizeInBits() const {
       return getScalarType().getSizeInBits();
     }
 
     /// Return the number of bytes overwritten by a store of the specified value
     /// type.
-    unsigned getStoreSize() const {
-      return (getSizeInBits() + 7) / 8;
+    ///
+    /// If the value type is a scalable vector type, the scalable property will
+    /// be set and the runtime size will be a positive integer multiple of the
+    /// base size.
+    TypeSize getStoreSize() const {
+      TypeSize BaseSize = getSizeInBits();
+      return {(BaseSize.getKnownMinSize() + 7) / 8, BaseSize.isScalable()};
     }
 
     /// Return the number of bits overwritten by a store of the specified value
     /// type.
-    unsigned getStoreSizeInBits() const {
+    ///
+    /// If the value type is a scalable vector type, the scalable property will
+    /// be set and the runtime size will be a positive integer multiple of the
+    /// base size.
+    TypeSize getStoreSizeInBits() const {
       return getStoreSize() * 8;
     }
 
@@ -428,7 +444,7 @@ namespace llvm {
     bool isExtended2048BitVector() const LLVM_READONLY;
     EVT getExtendedVectorElementType() const;
     unsigned getExtendedVectorNumElements() const LLVM_READONLY;
-    unsigned getExtendedSizeInBits() const LLVM_READONLY;
+    TypeSize getExtendedSizeInBits() const LLVM_READONLY;
   };
 
 } // end namespace llvm

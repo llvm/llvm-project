@@ -3115,7 +3115,6 @@ extern void __kmp_internal_begin(void);
 extern void __kmp_internal_end_library(int gtid);
 extern void __kmp_internal_end_thread(int gtid);
 extern void __kmp_internal_end_atexit(void);
-extern void __kmp_internal_end_fini(void);
 extern void __kmp_internal_end_dtor(void);
 extern void __kmp_internal_end_dest(void *);
 

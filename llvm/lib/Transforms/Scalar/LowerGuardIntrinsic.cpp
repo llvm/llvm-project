@@ -61,7 +61,7 @@ static bool lowerGuardIntrinsic(Function &F) {
   DeoptIntrinsic->setCallingConv(GuardDecl->getCallingConv());
 
   for (auto *CI : ToLower) {
-    makeGuardControlFlowExplicit(DeoptIntrinsic, CI);
+    makeGuardControlFlowExplicit(DeoptIntrinsic, CI, false);
     CI->eraseFromParent();
   }
 

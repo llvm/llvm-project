@@ -4155,11 +4155,6 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
         continue;
       }
 
-      // NOTE: Right now, if a function that has malloc pointer as an argument
-      // frees memory, we assume that the malloc pointer is freed.
-
-      // TODO: Add nofree callsite argument attribute to indicate that pointer
-      // argument is not freed.
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
         if (!CB->isArgOperand(U))
           continue;
@@ -4180,15 +4175,16 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
           continue;
         }
 
-        // If a function does not free memory we are fine
-        const auto &NoFreeAA =
-            A.getAAFor<AANoFree>(*this, IRPosition::callsite_function(*CB));
-
         unsigned ArgNo = CB->getArgOperandNo(U);
+
         const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
             *this, IRPosition::callsite_argument(*CB, ArgNo));
 
-        if (!NoCaptureAA.isAssumedNoCapture() || !NoFreeAA.isAssumedNoFree()) {
+        // If a callsite argument use is nofree, we are fine.
+        const auto &ArgNoFreeAA = A.getAAFor<AANoFree>(
+            *this, IRPosition::callsite_argument(*CB, ArgNo));
+
+        if (!NoCaptureAA.isAssumedNoCapture() || !ArgNoFreeAA.isAssumedNoFree()) {
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
           ValidUsesOnly = false;
         }

@@ -2551,6 +2551,11 @@ public:
       return 0;
   }
 
+  /// Append a zero- or sign-extension to \p Expr. Converts the expression to a
+  /// stack value if it isn't one already.
+  static DIExpression *appendExt(const DIExpression *Expr, unsigned FromSize,
+                                 unsigned ToSize, bool Signed);
+
   /// Check if fragments overlap between a pair of FragmentInfos.
   static bool fragmentsOverlap(const FragmentInfo &A, const FragmentInfo &B) {
     return fragmentCmp(A, B) == 0;
@@ -2814,11 +2819,6 @@ public:
 
   bool isArtificial() const { return getFlags() & FlagArtificial; }
   bool isObjectPointer() const { return getFlags() & FlagObjectPointer; }
-
-  /// Check that an argument is unmodified.
-  bool isNotModified() const { return getFlags() & FlagArgumentNotModified; }
-  /// Set the flag if an argument is unmodified.
-  void setIsNotModified() { Flags |= FlagArgumentNotModified; }
 
   /// Check that a location is valid for this variable.
   ///

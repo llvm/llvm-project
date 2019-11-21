@@ -223,8 +223,8 @@ bool Resolver::resolveUndefines() {
     if (!file)
       return true;
     if (std::error_code ec = file->parse()) {
-      llvm::errs() << "Cannot open " + file->path()
-                   << ": " << ec.message() << "\n";
+      llvm::errs() << "Cannot open " + file->path() << ": " << ec.message()
+                   << "\n";
       return false;
     }
     DEBUG_WITH_TYPE("resolver",
@@ -424,9 +424,8 @@ bool Resolver::checkUndefines() {
     // Seems like this symbol is undefined. Warn that.
     foundUndefines = true;
     if (_ctx.printRemainingUndefines()) {
-      llvm::errs() << "Undefined symbol: " << undef->file().path()
-                   << ": " << _ctx.demangle(undef->name())
-                   << "\n";
+      llvm::errs() << "Undefined symbol: " << undef->file().path() << ": "
+                   << _ctx.demangle(undef->name()) << "\n";
     }
   }
   if (!foundUndefines)

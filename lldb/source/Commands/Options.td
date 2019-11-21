@@ -429,13 +429,19 @@ let Command = "log" in {
     Desc<"Prepend the names of files and function that generate the logs.">;
 }
 
-let Command = "reproducer" in {
+let Command = "reproducer dump" in {
   def reproducer_provider : Option<"provider", "p">, Group<1>,
     EnumArg<"None", "ReproducerProviderType()">,
     Required, Desc<"The reproducer provider to dump.">;
   def reproducer_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
     Desc<"The reproducer path. If a reproducer is replayed and no path is "
     "provided, that reproducer is dumped.">;
+}
+
+let Command = "reproducer xcrash" in {
+  def reproducer_signal : Option<"signal", "s">, Group<1>,
+    EnumArg<"None", "ReproducerSignalType()">,
+    Required, Desc<"The signal to crash the debugger.">;
 }
 
 let Command = "memory read" in {

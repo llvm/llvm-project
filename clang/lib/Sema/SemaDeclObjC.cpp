@@ -3239,6 +3239,9 @@ bool Sema::MatchTwoMethodDeclarations(const ObjCMethodDecl *left,
   if (left->isHidden() || right->isHidden())
     return false;
 
+  if (left->isDirectMethod() != right->isDirectMethod())
+    return false;
+
   if (getLangOpts().ObjCAutoRefCount &&
       (left->hasAttr<NSReturnsRetainedAttr>()
          != right->hasAttr<NSReturnsRetainedAttr>() ||
@@ -3428,6 +3431,9 @@ void Sema::AddMethodToGlobalPool(ObjCMethodDecl *Method, bool impl,
 static bool isAcceptableMethodMismatch(ObjCMethodDecl *chosen,
                                        ObjCMethodDecl *other) {
   if (!chosen->isInstanceMethod())
+    return false;
+
+  if (chosen->isDirectMethod() != other->isDirectMethod())
     return false;
 
   Selector sel = chosen->getSelector();
@@ -4339,6 +4345,18 @@ private:
 };
 } // end anonymous namespace
 
+void Sema::CheckObjCMethodDirectOverrides(ObjCMethodDecl *method,
+                                          ObjCMethodDecl *overridden) {
+  if (const auto *attr = overridden->getAttr<ObjCDirectAttr>()) {
+    Diag(method->getLocation(), diag::err_objc_override_direct_method);
+    Diag(attr->getLocation(), diag::note_previous_declaration);
+  } else if (const auto *attr = method->getAttr<ObjCDirectAttr>()) {
+    Diag(attr->getLocation(), diag::err_objc_direct_on_override)
+        << isa<ObjCProtocolDecl>(overridden->getDeclContext());
+    Diag(overridden->getLocation(), diag::note_previous_declaration);
+  }
+}
+
 void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
                                     ObjCInterfaceDecl *CurrentClass,
                                     ResultTypeCompatibilityKind RTC) {
@@ -4357,8 +4375,8 @@ void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
       if (isa<ObjCProtocolDecl>(overridden->getDeclContext()) ||
           CurrentClass != overridden->getClassInterface() ||
           overridden->isOverriding()) {
+        CheckObjCMethodDirectOverrides(ObjCMethod, overridden);
         hasOverriddenMethodsInBaseOrProtocol = true;
-
       } else if (isa<ObjCImplDecl>(ObjCMethod->getDeclContext())) {
         // OverrideSearch will return as "overridden" the same method in the
         // interface. For hasOverriddenMethodsInBaseOrProtocol, we need to
@@ -4382,6 +4400,7 @@ void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
               for (ObjCMethodDecl *SuperOverridden : overrides) {
                 if (isa<ObjCProtocolDecl>(SuperOverridden->getDeclContext()) ||
                     CurrentClass != SuperOverridden->getClassInterface()) {
+                  CheckObjCMethodDirectOverrides(ObjCMethod, SuperOverridden);
                   hasOverriddenMethodsInBaseOrProtocol = true;
                   overridden->setOverriding(true);
                   break;
@@ -4488,6 +4507,12 @@ static void mergeInterfaceMethodToImpl(Sema &S,
       ObjCRequiresSuperAttr::CreateImplicit(S.Context,
                                             method->getLocation()));
   }
+
+  if (!method->isDirectMethod())
+    if (const auto *attr = prevMethod->getAttr<ObjCDirectAttr>()) {
+      method->addAttr(
+          ObjCDirectAttr::CreateImplicit(S.Context, attr->getLocation()));
+    }
 
   // Merge nullability of the result type.
   QualType newReturnType
@@ -4719,6 +4744,12 @@ Decl *Sema::ActOnMethodDeclaration(
       if (auto *IMD = IDecl->lookupMethod(ObjCMethod->getSelector(),
                                           ObjCMethod->isInstanceMethod())) {
         mergeInterfaceMethodToImpl(*this, ObjCMethod, IMD);
+        if (const auto *attr = ObjCMethod->getAttr<ObjCDirectAttr>()) {
+          if (!IMD->isDirectMethod()) {
+            Diag(attr->getLocation(), diag::err_objc_direct_missing_on_decl);
+            Diag(IMD->getLocation(), diag::note_previous_declaration);
+          }
+        }
 
         // Warn about defining -dealloc in a category.
         if (isa<ObjCCategoryImplDecl>(ImpDecl) && IMD->isOverriding() &&
@@ -4726,6 +4757,9 @@ Decl *Sema::ActOnMethodDeclaration(
           Diag(ObjCMethod->getLocation(), diag::warn_dealloc_in_category)
             << ObjCMethod->getDeclName();
         }
+      } else if (ImpDecl->hasAttr<ObjCDirectMembersAttr>()) {
+        ObjCMethod->addAttr(
+            ObjCDirectAttr::CreateImplicit(Context, ObjCMethod->getLocation()));
       }
 
       // Warn if a method declared in a protocol to which a category or
@@ -4745,6 +4779,11 @@ Decl *Sema::ActOnMethodDeclaration(
           }
     }
   } else {
+    if (!ObjCMethod->isDirectMethod() &&
+        ClassDecl->hasAttr<ObjCDirectMembersAttr>()) {
+      ObjCMethod->addAttr(
+          ObjCDirectAttr::CreateImplicit(Context, ObjCMethod->getLocation()));
+    }
     cast<DeclContext>(ClassDecl)->addDecl(ObjCMethod);
   }
 

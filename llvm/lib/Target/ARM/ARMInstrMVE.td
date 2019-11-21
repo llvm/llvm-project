@@ -409,9 +409,12 @@ class MVE_ScalarShiftSingleReg<string iname, dag iops, string asm, string cstr,
   let Inst{19-16} = RdaDest{3-0};
 }
 
-class MVE_ScalarShiftSRegImm<string iname, bits<2> op5_4, list<dag> pattern=[]>
+class MVE_ScalarShiftSRegImm<string iname, bits<2> op5_4>
   : MVE_ScalarShiftSingleReg<iname, (ins rGPR:$RdaSrc, long_shift:$imm),
-                     "$RdaSrc, $imm", "$RdaDest = $RdaSrc", pattern> {
+                     "$RdaSrc, $imm", "$RdaDest = $RdaSrc",
+                     [(set rGPR:$RdaDest,
+                          (i32 (!cast<Intrinsic>("int_arm_mve_" # iname)
+                                    (i32 rGPR:$RdaSrc), (i32 imm:$imm))))]> {
   bits<5> imm;
 
   let Inst{15} = 0b0;
@@ -427,9 +430,12 @@ def MVE_SRSHR : MVE_ScalarShiftSRegImm<"srshr", 0b10>;
 def MVE_UQSHL : MVE_ScalarShiftSRegImm<"uqshl", 0b00>;
 def MVE_URSHR : MVE_ScalarShiftSRegImm<"urshr", 0b01>;
 
-class MVE_ScalarShiftSRegReg<string iname, bits<2> op5_4, list<dag> pattern=[]>
+class MVE_ScalarShiftSRegReg<string iname, bits<2> op5_4>
   : MVE_ScalarShiftSingleReg<iname, (ins rGPR:$RdaSrc, rGPR:$Rm),
-                     "$RdaSrc, $Rm", "$RdaDest = $RdaSrc", pattern> {
+                     "$RdaSrc, $Rm", "$RdaDest = $RdaSrc",
+                     [(set rGPR:$RdaDest,
+                         (i32 (!cast<Intrinsic>("int_arm_mve_" # iname)
+                                   (i32 rGPR:$RdaSrc), (i32 rGPR:$Rm))))]> {
   bits<4> Rm;
 
   let Inst{15-12} = Rm{3-0};
@@ -1515,6 +1521,7 @@ class MVE_VMULt1<string suffix, bits<2> size, list<dag> pattern=[]>
   let Inst{12-8} = 0b01001;
   let Inst{4} = 0b1;
   let Inst{0} = 0b0;
+  let validForTailPredication = 1;
 }
 
 def MVE_VMULt1i8  : MVE_VMULt1<"i8", 0b00>;
@@ -1951,6 +1958,41 @@ def MVE_VQABSs32 : MVE_VQABSNEG<"vqabs", "s32", 0b10, 0b0>;
 def MVE_VQNEGs8  : MVE_VQABSNEG<"vqneg", "s8",  0b00, 0b1>;
 def MVE_VQNEGs16 : MVE_VQABSNEG<"vqneg", "s16", 0b01, 0b1>;
 def MVE_VQNEGs32 : MVE_VQABSNEG<"vqneg", "s32", 0b10, 0b1>;
+
+// int_min/int_max: vector containing INT_MIN/INT_MAX VTI.Size times
+// zero_vec: v4i32-initialized zero vector, potentially wrapped in a bitconvert
+multiclass vqabs_pattern<MVEVectorVTInfo VTI, dag int_min, dag int_max,
+                         dag zero_vec, MVE_VQABSNEG vqabs_instruction> {
+  // The below tree can be replaced by a vqabs instruction, as it represents
+  // the following vectorized expression (r being the value in $reg):
+  // r > 0 ? r : (r == INT_MIN ? INT_MAX : -r)
+  let Predicates = [HasMVEInt] in {
+    def : Pat<(VTI.Vec (vselect
+                      (VTI.Pred (ARMvcmpz (VTI.Vec MQPR:$reg), (i32 12))),
+                      (VTI.Vec MQPR:$reg),
+                      (VTI.Vec (vselect
+                                (VTI.Pred (ARMvcmp (VTI.Vec MQPR:$reg), int_min, (i32 0))),
+                                int_max,
+                                (sub (VTI.Vec zero_vec), (VTI.Vec MQPR:$reg)))))),
+            (VTI.Vec (vqabs_instruction (VTI.Vec MQPR:$reg)))>;
+  }
+}
+
+defm MVE_VQABS_Ps8  : vqabs_pattern<MVE_v16i8,
+                                    (v16i8 (ARMvmovImm (i32 3712))),
+                                    (v16i8 (ARMvmovImm (i32 3711))),
+                                    (bitconvert (v4i32 (ARMvmovImm (i32 0)))),
+                                    MVE_VQABSs8>;
+defm MVE_VQABS_Ps16 : vqabs_pattern<MVE_v8i16,
+                                    (v8i16 (ARMvmovImm (i32 2688))),
+                                    (v8i16 (ARMvmvnImm (i32 2688))),
+                                    (bitconvert (v4i32 (ARMvmovImm (i32 0)))),
+                                    MVE_VQABSs16>;
+defm MVE_VQABS_Ps32 : vqabs_pattern<MVE_v4i32,
+                                    (v4i32 (ARMvmovImm (i32 1664))),
+                                    (v4i32 (ARMvmvnImm (i32 1664))),
+                                    (ARMvmovImm (i32 0)),
+                                    MVE_VQABSs32>;
 
 class MVE_mod_imm<string iname, string suffix, bits<4> cmode, bit op,
                   dag iops, list<dag> pattern=[]>

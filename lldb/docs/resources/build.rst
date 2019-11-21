@@ -533,6 +533,11 @@ built correctly and is available to the default Python interpreter, run:
 
   > python -c 'import lldb'
 
+
+Make sure you're using the Python interpreter that matches the Python library
+you linked against. For more details please refer to the :ref:`caveats
+<python_caveat>`.
+
 .. _CodeSigning:
 
 Code Signing on macOS

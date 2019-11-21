@@ -37,7 +37,8 @@
 # LLVM-VERNEED-NAME-NEXT:     Entries [
 # LLVM-VERNEED-NAME-NEXT:       Entry {
 # LLVM-VERNEED-NAME-NEXT:         Hash:  0
-# LLVM-VERNEED-NAME-NEXT:         Flags: 0x0
+# LLVM-VERNEED-NAME-NEXT:         Flags [ (0x0)
+# LLVM-VERNEED-NAME-NEXT:         ]
 # LLVM-VERNEED-NAME-NEXT:         Index: 2
 # LLVM-VERNEED-NAME-NEXT:         Name: {{$}}
 # LLVM-VERNEED-NAME-NEXT:       }
@@ -111,7 +112,8 @@ DynamicSymbols:
 # LLVM-NOLINK-NEXT:     Entries [
 # LLVM-NOLINK-NEXT:       Entry {
 # LLVM-NOLINK-NEXT:         Hash: 0
-# LLVM-NOLINK-NEXT:         Flags: 0
+# LLVM-NOLINK-NEXT:         Flags [ (0x0)
+# LLVM-NOLINK-NEXT:         ]
 # LLVM-NOLINK-NEXT:         Index: 2
 # LLVM-NOLINK-NEXT:         Name: <invalid>
 # LLVM-NOLINK-NEXT:       }
@@ -215,7 +217,8 @@ DynamicSymbols:
 # LLVM-OFFSET-EQ-NEXT:     Entries [
 # LLVM-OFFSET-EQ-NEXT:       Entry {
 # LLVM-OFFSET-EQ-NEXT:         Hash: 0
-# LLVM-OFFSET-EQ-NEXT:         Flags: 0x0
+# LLVM-OFFSET-EQ-NEXT:         Flags [ (0x0)
+# LLVM-OFFSET-EQ-NEXT:         ]
 # LLVM-OFFSET-EQ-NEXT:         Index: 0
 # LLVM-OFFSET-EQ-NEXT:         Name: <invalid>
 # LLVM-OFFSET-EQ-NEXT:       }
@@ -270,7 +273,8 @@ DynamicSymbols:
 # LLVM-OFFSET-GR-NEXT:     Entries [
 # LLVM-OFFSET-GR-NEXT:       Entry {
 # LLVM-OFFSET-GR-NEXT:         Hash: 0
-# LLVM-OFFSET-GR-NEXT:         Flags: 0x0
+# LLVM-OFFSET-GR-NEXT:         Flags [ (0x0)
+# LLVM-OFFSET-GR-NEXT:         ]
 # LLVM-OFFSET-GR-NEXT:         Index: 0
 # LLVM-OFFSET-GR-NEXT:         Name: <invalid>
 # LLVM-OFFSET-GR-NEXT:       }

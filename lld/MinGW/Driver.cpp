@@ -83,9 +83,9 @@ public:
 
 static void printHelp(const char *argv0) {
   MinGWOptTable().PrintHelp(
-      outs(), (std::string(argv0) + " [options] file...").c_str(), "lld",
+      lld::outs(), (std::string(argv0) + " [options] file...").c_str(), "lld",
       false /*ShowHidden*/, true /*ShowAllAliases*/);
-  outs() << "\n";
+  lld::outs() << "\n";
 }
 
 static cl::TokenizerCallback getQuotingStyle() {
@@ -159,8 +159,12 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
 
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
-bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
-  enableColors(diag.has_colors());
+bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
+                 raw_ostream &stdoutOS, raw_ostream &stderrOS) {
+  lld::stdoutOS = &stdoutOS;
+  lld::stderrOS = &stderrOS;
+
+  stderrOS.enable_colors(stderrOS.has_colors());
 
   MinGWOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -372,7 +376,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
     return false;
 
   if (args.hasArg(OPT_verbose) || args.hasArg(OPT__HASH_HASH_HASH))
-    outs() << llvm::join(linkArgs, " ") << "\n";
+    lld::outs() << llvm::join(linkArgs, " ") << "\n";
 
   if (args.hasArg(OPT__HASH_HASH_HASH))
     return true;
@@ -381,5 +385,5 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
   std::vector<const char *> vec;
   for (const std::string &s : linkArgs)
     vec.push_back(s.c_str());
-  return coff::link(vec, true);
+  return coff::link(vec, true, stdoutOS, stderrOS);
 }

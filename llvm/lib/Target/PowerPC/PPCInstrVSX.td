@@ -3924,8 +3924,20 @@ def DblToULongLoad {
   dag A = (i64 (PPCmfvsr (PPCfctiduz (f64 (load xoaddr:$A)))));
 }
 
+// FP load dags (for f32 -> v4f32)
+def LoadFP {
+  dag A = (f32 (load xoaddr:$A));
+  dag B = (f32 (load xoaddr:$B));
+  dag C = (f32 (load xoaddr:$C));
+  dag D = (f32 (load xoaddr:$D));
+}
+
 // FP merge dags (for f32 -> v4f32)
 def MrgFP {
+  dag LD32A = (COPY_TO_REGCLASS (LIWZX xoaddr:$A), VSRC);
+  dag LD32B = (COPY_TO_REGCLASS (LIWZX xoaddr:$B), VSRC);
+  dag LD32C = (COPY_TO_REGCLASS (LIWZX xoaddr:$C), VSRC);
+  dag LD32D = (COPY_TO_REGCLASS (LIWZX xoaddr:$D), VSRC);
   dag AC = (XVCVDPSP (XXPERMDI (COPY_TO_REGCLASS $A, VSRC),
                                (COPY_TO_REGCLASS $C, VSRC), 0));
   dag BD = (XVCVDPSP (XXPERMDI (COPY_TO_REGCLASS $B, VSRC),
@@ -4081,7 +4093,18 @@ let AddedComplexity = 400 in {
               (v2f64 (XXPERMDI
                         (COPY_TO_REGCLASS $A, VSRC),
                         (COPY_TO_REGCLASS $B, VSRC), 0))>;
-
+    // Using VMRGEW to assemble the final vector would be a lower latency
+    // solution. However, we choose to go with the slightly higher latency
+    // XXPERMDI for 2 reasons:
+    // 1. This is likely to occur in unrolled loops where regpressure is high,
+    //    so we want to use the latter as it has access to all 64 VSX registers.
+    // 2. Using Altivec instructions in this sequence would likely cause the
+    //    allocation of Altivec registers even for the loads which in turn would
+    //    force the use of LXSIWZX for the loads, adding a cycle of latency to
+    //    each of the loads which would otherwise be able to use LFIWZX.
+    def : Pat<(v4f32 (build_vector LoadFP.A, LoadFP.B, LoadFP.C, LoadFP.D)),
+              (v4f32 (XXPERMDI (XXMRGHW MrgFP.LD32A, MrgFP.LD32B),
+                               (XXMRGHW MrgFP.LD32C, MrgFP.LD32D), 3))>;
     def : Pat<(v4f32 (build_vector f32:$A, f32:$B, f32:$C, f32:$D)),
               (VMRGEW MrgFP.AC, MrgFP.BD)>;
     def : Pat<(v4f32 (build_vector DblToFlt.A0, DblToFlt.A1,
@@ -4148,7 +4171,18 @@ let AddedComplexity = 400 in {
               (v2f64 (XXPERMDI
                         (COPY_TO_REGCLASS $B, VSRC),
                         (COPY_TO_REGCLASS $A, VSRC), 0))>;
-
+    // Using VMRGEW to assemble the final vector would be a lower latency
+    // solution. However, we choose to go with the slightly higher latency
+    // XXPERMDI for 2 reasons:
+    // 1. This is likely to occur in unrolled loops where regpressure is high,
+    //    so we want to use the latter as it has access to all 64 VSX registers.
+    // 2. Using Altivec instructions in this sequence would likely cause the
+    //    allocation of Altivec registers even for the loads which in turn would
+    //    force the use of LXSIWZX for the loads, adding a cycle of latency to
+    //    each of the loads which would otherwise be able to use LFIWZX.
+    def : Pat<(v4f32 (build_vector LoadFP.A, LoadFP.B, LoadFP.C, LoadFP.D)),
+              (v4f32 (XXPERMDI (XXMRGHW MrgFP.LD32D, MrgFP.LD32C),
+                               (XXMRGHW MrgFP.LD32B, MrgFP.LD32A), 3))>;
     def : Pat<(v4f32 (build_vector f32:$D, f32:$C, f32:$B, f32:$A)),
               (VMRGEW MrgFP.AC, MrgFP.BD)>;
     def : Pat<(v4f32 (build_vector DblToFlt.A0, DblToFlt.A1,

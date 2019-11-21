@@ -153,11 +153,7 @@ public:
 
   CompilerType GetBasicType(lldb::BasicType type);
 
-  static CompilerType GetBasicType(clang::ASTContext *ast,
-                                   lldb::BasicType type);
-
-  static CompilerType GetBasicType(clang::ASTContext *ast,
-                                   ConstString name);
+  CompilerType GetBasicType(ConstString name);
 
   static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
 
@@ -166,12 +162,6 @@ public:
                                                         uint32_t bit_size);
 
   CompilerType GetCStringType(bool is_const);
-
-  static CompilerType GetUnknownAnyType(clang::ASTContext *ast);
-
-  CompilerType GetUnknownAnyType() {
-    return ClangASTContext::GetUnknownAnyType(getASTContext());
-  }
 
   static clang::DeclContext *GetDeclContextForType(clang::QualType type);
 
@@ -308,19 +298,13 @@ public:
                                             class_template_specialization_decl);
 
   static clang::DeclContext *
-  GetAsDeclContext(clang::CXXMethodDecl *cxx_method_decl);
-
-  static clang::DeclContext *
-  GetAsDeclContext(clang::ObjCMethodDecl *objc_method_decl);
+  GetAsDeclContext(clang::FunctionDecl *function_decl);
 
   static bool CheckOverloadedOperatorKindParameterCount(
       bool is_method, clang::OverloadedOperatorKind op_kind,
       uint32_t num_params);
 
   bool FieldIsBitfield(clang::FieldDecl *field, uint32_t &bitfield_bit_size);
-
-  static bool FieldIsBitfield(clang::ASTContext *ast, clang::FieldDecl *field,
-                              uint32_t &bitfield_bit_size);
 
   static bool RecordHasFields(const clang::RecordDecl *record_decl);
 
@@ -342,11 +326,6 @@ public:
 
   clang::NamespaceDecl *
   GetUniqueNamespaceDeclaration(const char *name, clang::DeclContext *decl_ctx,
-                                bool is_inline = false);
-
-  static clang::NamespaceDecl *
-  GetUniqueNamespaceDeclaration(clang::ASTContext *ast, const char *name,
-                                clang::DeclContext *decl_ctx,
                                 bool is_inline = false);
 
   // Function Types

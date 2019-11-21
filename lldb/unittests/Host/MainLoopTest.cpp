@@ -102,9 +102,6 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
 }
 
 #ifdef LLVM_ON_UNIX
-// NetBSD currently does not report slave pty EOF via kevent
-// causing this test to hang forever.
-#ifndef __NetBSD__
 TEST_F(MainLoopTest, DetectsEOF) {
 
   PseudoTerminal term;
@@ -123,7 +120,6 @@ TEST_F(MainLoopTest, DetectsEOF) {
   ASSERT_TRUE(loop.Run().Success());
   ASSERT_EQ(1u, callback_count);
 }
-#endif
 
 TEST_F(MainLoopTest, Signal) {
   MainLoop loop;

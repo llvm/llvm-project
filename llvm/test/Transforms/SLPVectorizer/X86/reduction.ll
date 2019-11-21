@@ -123,3 +123,32 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
   store i32 %three_or_four, i32* %p, align 8
   ret i32 %t17
 }
+
+; FIXME: This is a miscompile (see the undef operand) and/or test for invalid IR.
+
+define i1 @bad_insertpoint_rdx([8 x i32]* %p) #0 {
+; CHECK-LABEL: @bad_insertpoint_rdx(
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* [[P:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[T0:%.*]] = load i32, i32* [[ARRAYIDX22]], align 16
+; CHECK-NEXT:    [[CMP23:%.*]] = icmp sgt i32 [[T0]], 0
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP23]], i32 [[T0]], i32 0
+; CHECK-NEXT:    [[ARRAYIDX22_1:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* [[P]], i64 0, i64 1
+; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[ARRAYIDX22_1]], align 4
+; CHECK-NEXT:    [[CMP23_1:%.*]] = icmp sgt i32 [[T1]], [[SPEC_SELECT]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT87:%.*]] = zext i1 [[CMP23_1]] to i32
+; CHECK-NEXT:    [[SPEC_SELECT88:%.*]] = select i1 [[CMP23_1]], i32 [[T1]], i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[CMP23_2:%.*]] = icmp sgt i32 [[SPEC_STORE_SELECT87]], [[SPEC_SELECT88]]
+; CHECK-NEXT:    ret i1 [[CMP23_2]]
+;
+  %arrayidx22 = getelementptr inbounds [8 x i32], [8 x i32]* %p, i64 0, i64 0
+  %t0 = load i32, i32* %arrayidx22, align 16
+  %cmp23 = icmp sgt i32 %t0, 0
+  %spec.select = select i1 %cmp23, i32 %t0, i32 0
+  %arrayidx22.1 = getelementptr inbounds [8 x i32], [8 x i32]* %p, i64 0, i64 1
+  %t1 = load i32, i32* %arrayidx22.1, align 4
+  %cmp23.1 = icmp sgt i32 %t1, %spec.select
+  %spec.store.select87 = zext i1 %cmp23.1 to i32
+  %spec.select88 = select i1 %cmp23.1, i32 %t1, i32 %spec.select
+  %cmp23.2 = icmp sgt i32 %spec.store.select87, %spec.select88
+  ret i1 %cmp23.2
+}

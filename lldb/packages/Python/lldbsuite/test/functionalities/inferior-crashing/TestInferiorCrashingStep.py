@@ -184,6 +184,7 @@ class CrashingInferiorStepTestCase(TestBase):
         # And it should report the correct line number.
         self.expect("thread backtrace all", substrs=['main.c:%d' % self.line])
 
+    @expectedFailureNetBSD
     def inferior_crashing_step_after_break(self):
         """Test that lldb behaves correctly when stepping after a crash."""
         exe = self.getBuildArtifact("a.out")

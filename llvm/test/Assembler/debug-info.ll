@@ -1,8 +1,8 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
 
-; CHECK: !named = !{!0, !0, !1, !2, !3, !4, !5, !6, !7, !8, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41}
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !43, !44}
+; CHECK: !named = !{!0, !0, !1, !2, !3, !4, !5, !6, !7, !8, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42}
 
 ; CHECK:      !0 = !DISubrange(count: 3)
 ; CHECK-NEXT: !1 = !DISubrange(count: 3, lowerBound: 4)
@@ -99,8 +99,3 @@
 ; CHECK-NEXT: !39 = !DIBasicType(name: "u64.le", size: 64, align: 1, encoding: DW_ATE_unsigned, flags: DIFlagLittleEndian)
 !41 = !DIBasicType(name: "u64.be", size: 64, align: 1, encoding: DW_ATE_unsigned, flags: DIFlagBigEndian)
 !42 = !DIBasicType(name: "u64.le", size: 64, align: 1, encoding: DW_ATE_unsigned, flags: DIFlagLittleEndian)
-
-; CHECK-NEXT: !40 = distinct !DISubprogram(name: "fn", scope: {{.*}}, file: {{.*}}, spFlags: 0)
-; CHECK-NEXT: !41 = !DILocalVariable(name: "Name", arg: 1, scope: {{.*}}, file: {{.*}}, line: 13, type: {{.*}}, flags: DIFlagArgumentNotModified)
-!43 = distinct !DISubprogram(name: "fn", scope: !12, file: !12, spFlags: 0)
-!44 = !DILocalVariable(name: "Name", arg: 1, scope: !43, file: !12, line: 13, type: !7, flags: DIFlagArgumentNotModified)

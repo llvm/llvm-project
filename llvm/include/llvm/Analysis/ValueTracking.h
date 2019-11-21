@@ -203,6 +203,12 @@ class Value;
   ///   x < -0 --> false
   bool CannotBeOrderedLessThanZero(const Value *V, const TargetLibraryInfo *TLI);
 
+  /// Return true if the floating-point scalar value is not an infinity or if
+  /// the floating-point vector value has no infinities. Return false if a value
+  /// could ever be infinity.
+  bool isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
+                            unsigned Depth = 0);
+
   /// Return true if the floating-point scalar value is not a NaN or if the
   /// floating-point vector value has no NaN elements. Return false if a value
   /// could ever be NaN.
