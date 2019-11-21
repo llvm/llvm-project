@@ -64,6 +64,10 @@ N: Howard Hinnant
 E: hhinnant@apple.com
 D: Architect and primary author of libc++
 
+N: Sergej Jaskiewicz
+E: jaskiewiczs@icloud.com
+D: Minor improvements in the testing infrastructure
+
 N: Hyeon-bin Jeong
 E: tuhertz@gmail.com
 D: Minor patches and bug fixes.
