@@ -1179,13 +1179,12 @@ static const FileEntry *getPublicModuleMap(const FileEntry *File,
   return nullptr;
 }
 
-/// Compile a module file for the given module, using the options
-/// provided by the importing compiler instance. Returns true if the module
-/// was built without errors.
-static bool compileModuleImpl(CompilerInstance &ImportingInstance,
-                              SourceLocation ImportLoc,
-                              Module *Module,
-                              StringRef ModuleFileName) {
+/// Compile a module file for the given module in a separate compiler instance,
+/// using the options provided by the importing compiler instance. Returns true
+/// if the module was built without errors.
+static bool compileModule(CompilerInstance &ImportingInstance,
+                          SourceLocation ImportLoc, Module *Module,
+                          StringRef ModuleFileName) {
   InputKind IK(getLanguageFromOptions(ImportingInstance.getLangOpts()),
                InputKind::ModuleMap);
 
@@ -1245,10 +1244,17 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   return Result;
 }
 
-static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
-                                 SourceLocation ImportLoc,
-                                 SourceLocation ModuleNameLoc, Module *Module,
-                                 StringRef ModuleFileName) {
+/// Compile a module in a separate compiler instance and read the AST,
+/// returning true if the module compiles without errors.
+///
+/// Uses a lock file manager and exponential backoff to reduce the chances that
+/// multiple instances will compete to create the same module.  On timeout,
+/// deletes the lock file in order to avoid deadlock from crashing processes or
+/// bugs in the lock file manager.
+static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
+                                    SourceLocation ImportLoc,
+                                    SourceLocation ModuleNameLoc,
+                                    Module *Module, StringRef ModuleFileName) {
   DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
 
   auto diagnoseBuildFailure = [&] {
@@ -1276,8 +1282,8 @@ static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
       LLVM_FALLTHROUGH;
     case llvm::LockFileManager::LFS_Owned:
       // We're responsible for building the module ourselves.
-      if (!compileModuleImpl(ImportingInstance, ModuleNameLoc, Module,
-                             ModuleFileName)) {
+      if (!compileModule(ImportingInstance, ModuleNameLoc, Module,
+                         ModuleFileName)) {
         diagnoseBuildFailure();
         return false;
       }
@@ -1613,6 +1619,220 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
   }
 }
 
+namespace {
+enum ModuleSource {
+  MS_ModuleNotFound,
+  MS_ModuleCache,
+  MS_PrebuiltModulePath,
+  MS_ModuleBuildPragma
+};
+} // end namespace
+
+/// Select a source for loading the named module and compute the filename to
+/// load it from.
+static ModuleSource
+selectModuleSource(Module *M, StringRef ModuleName, std::string &ModuleFilename,
+                   const std::map<std::string, std::string> &BuiltModules,
+                   HeaderSearch &HS) {
+  assert(ModuleFilename.empty() && "Already has a module source?");
+
+  // Check to see if the module has been built as part of this compilation
+  // via a module build pragma.
+  auto BuiltModuleIt = BuiltModules.find(ModuleName);
+  if (BuiltModuleIt != BuiltModules.end()) {
+    ModuleFilename = BuiltModuleIt->second;
+    return MS_ModuleBuildPragma;
+  }
+
+  // Try to load the module from the prebuilt module path.
+  const HeaderSearchOptions &HSOpts = HS.getHeaderSearchOpts();
+  if (!HSOpts.PrebuiltModuleFiles.empty() ||
+      !HSOpts.PrebuiltModulePaths.empty()) {
+    ModuleFilename = HS.getPrebuiltModuleFileName(ModuleName);
+    if (!ModuleFilename.empty())
+      return MS_PrebuiltModulePath;
+  }
+
+  // Try to load the module from the module cache.
+  if (M) {
+    ModuleFilename = HS.getCachedModuleFileName(M);
+    return MS_ModuleCache;
+  }
+
+  return MS_ModuleNotFound;
+}
+
+ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
+    StringRef ModuleName, SourceLocation ImportLoc,
+    SourceLocation ModuleNameLoc, bool IsInclusionDirective) {
+  // Search for a module with the given name.
+  HeaderSearch &HS = PP->getHeaderSearchInfo();
+  Module *M = HS.lookupModule(ModuleName, true, !IsInclusionDirective);
+
+  // Select the source and filename for loading the named module.
+  std::string ModuleFilename;
+  ModuleSource Source =
+      selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
+  if (Source == MS_ModuleNotFound) {
+    // We can't find a module, error out here.
+    getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
+        << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
+    ModuleBuildFailed = true;
+    // FIXME: Why is this not cached?
+    return ModuleLoadResult::OtherUncachedFailure;
+  }
+  if (ModuleFilename.empty()) {
+    if (M && M->HasIncompatibleModuleFile) {
+      // We tried and failed to load a module file for this module. Fall
+      // back to textual inclusion for its headers.
+      return ModuleLoadResult::ConfigMismatch;
+    }
+
+    getDiagnostics().Report(ModuleNameLoc, diag::err_module_build_disabled)
+        << ModuleName;
+    ModuleBuildFailed = true;
+    // FIXME: Why is this not cached?
+    return ModuleLoadResult::OtherUncachedFailure;
+  }
+
+  // Create an ASTReader on demand.
+  if (!getModuleManager())
+    createModuleManager();
+
+  // Time how long it takes to load the module.
+  llvm::Timer Timer;
+  if (FrontendTimerGroup)
+    Timer.init("loading." + ModuleFilename, "Loading " + ModuleFilename,
+               *FrontendTimerGroup);
+  llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
+  llvm::TimeTraceScope TimeScope("Module Load", ModuleName);
+
+  // Try to load the module file. If we are not trying to load from the
+  // module cache, we don't know how to rebuild modules.
+  unsigned ARRFlags = Source == MS_ModuleCache
+                          ? ASTReader::ARR_OutOfDate | ASTReader::ARR_Missing
+                          : Source == MS_PrebuiltModulePath
+                                ? 0
+                                : ASTReader::ARR_ConfigurationMismatch;
+  switch (getModuleManager()->ReadAST(
+      ModuleFilename,
+      Source == MS_PrebuiltModulePath
+          ? serialization::MK_PrebuiltModule
+          : Source == MS_ModuleBuildPragma ? serialization::MK_ExplicitModule
+                                           : serialization::MK_ImplicitModule,
+      ImportLoc, ARRFlags)) {
+  case ASTReader::Success: {
+    if (M)
+      return M;
+    assert(Source != MS_ModuleCache &&
+           "missing module, but file loaded from cache");
+
+    // A prebuilt module is indexed as a ModuleFile; the Module does not exist
+    // until the first call to ReadAST.  Look it up now.
+    M = HS.lookupModule(ModuleName, true, !IsInclusionDirective);
+
+    // Check whether M refers to the file in the prebuilt module path.
+    if (M && M->getASTFile())
+      if (auto ModuleFile = FileMgr->getFile(ModuleFilename))
+        if (*ModuleFile == M->getASTFile())
+          return M;
+
+    ModuleBuildFailed = true;
+    getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)
+        << ModuleName;
+    return ModuleLoadResult();
+  }
+
+  case ASTReader::OutOfDate:
+  case ASTReader::Missing:
+    // The most interesting case.
+    break;
+
+  case ASTReader::ConfigurationMismatch:
+    if (Source == MS_PrebuiltModulePath)
+      // FIXME: We shouldn't be setting HadFatalFailure below if we only
+      // produce a warning here!
+      getDiagnostics().Report(SourceLocation(),
+                              diag::warn_module_config_mismatch)
+          << ModuleFilename;
+    // Fall through to error out.
+    LLVM_FALLTHROUGH;
+  case ASTReader::VersionMismatch:
+  case ASTReader::HadErrors:
+    // FIXME: Should this set ModuleBuildFailed = true?
+    ModuleLoader::HadFatalFailure = true;
+    // FIXME: The ASTReader will already have complained, but can we shoehorn
+    // that diagnostic information into a more useful form?
+    return ModuleLoadResult();
+
+  case ASTReader::Failure:
+    // FIXME: Should this set ModuleBuildFailed = true?
+    ModuleLoader::HadFatalFailure = true;
+    return ModuleLoadResult();
+  }
+
+  // ReadAST returned Missing or OutOfDate.
+  if (Source != MS_ModuleCache) {
+    // We don't know the desired configuration for this module and don't
+    // necessarily even have a module map. Since ReadAST already produces
+    // diagnostics for these two cases, we simply error out here.
+    ModuleBuildFailed = true;
+    return ModuleLoadResult();
+  }
+
+  // The module file is missing or out-of-date. Build it.
+  assert(M && "missing module, but trying to compile for cache");
+
+  // Check whether there is a cycle in the module graph.
+  ModuleBuildStack ModPath = getSourceManager().getModuleBuildStack();
+  ModuleBuildStack::iterator Pos = ModPath.begin(), PosEnd = ModPath.end();
+  for (; Pos != PosEnd; ++Pos) {
+    if (Pos->first == ModuleName)
+      break;
+  }
+
+  if (Pos != PosEnd) {
+    SmallString<256> CyclePath;
+    for (; Pos != PosEnd; ++Pos) {
+      CyclePath += Pos->first;
+      CyclePath += " -> ";
+    }
+    CyclePath += ModuleName;
+
+    getDiagnostics().Report(ModuleNameLoc, diag::err_module_cycle)
+        << ModuleName << CyclePath;
+    // FIXME: Should this set ModuleBuildFailed = true?
+    // FIXME: Why is this not cached?
+    return ModuleLoadResult::OtherUncachedFailure;
+  }
+
+  // Check whether we have already attempted to build this module (but
+  // failed).
+  if (getPreprocessorOpts().FailedModules &&
+      getPreprocessorOpts().FailedModules->hasAlreadyFailed(ModuleName)) {
+    getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_built)
+        << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
+    ModuleBuildFailed = true;
+    // FIXME: Why is this not cached?
+    return ModuleLoadResult::OtherUncachedFailure;
+  }
+
+  // Try to compile and then read the AST.
+  if (!compileModuleAndReadAST(*this, ImportLoc, ModuleNameLoc, M,
+                               ModuleFilename)) {
+    assert(getDiagnostics().hasErrorOccurred() &&
+           "undiagnosed error in compileModuleAndReadAST");
+    if (getPreprocessorOpts().FailedModules)
+      getPreprocessorOpts().FailedModules->addFailed(ModuleName);
+    ModuleBuildFailed = true;
+    // FIXME: Why is this not cached?
+    return ModuleLoadResult::OtherUncachedFailure;
+  }
+
+  // Okay, we've rebuilt and now loaded the module.
+  return M;
+}
+
 ModuleLoadResult
 CompilerInstance::loadModule(SourceLocation ImportLoc,
                              ModuleIdPath Path,
@@ -1654,196 +1874,21 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     //}
     MM.cacheModuleLoad(*Path[0].first, Module);
   } else {
-    // Search for a module with the given name.
-    Module = PP->getHeaderSearchInfo().lookupModule(ModuleName, true,
-                                                    !IsInclusionDirective);
-    HeaderSearchOptions &HSOpts =
-        PP->getHeaderSearchInfo().getHeaderSearchOpts();
-
-    std::string ModuleFileName;
-    enum ModuleSource {
-      ModuleNotFound, ModuleCache, PrebuiltModulePath, ModuleBuildPragma
-    } Source = ModuleNotFound;
-
-    // Check to see if the module has been built as part of this compilation
-    // via a module build pragma.
-    auto BuiltModuleIt = BuiltModules.find(ModuleName);
-    if (BuiltModuleIt != BuiltModules.end()) {
-      ModuleFileName = BuiltModuleIt->second;
-      Source = ModuleBuildPragma;
-    }
-
-    // Try to load the module from the prebuilt module path.
-    if (Source == ModuleNotFound && (!HSOpts.PrebuiltModuleFiles.empty() ||
-                                     !HSOpts.PrebuiltModulePaths.empty())) {
-      ModuleFileName =
-        PP->getHeaderSearchInfo().getPrebuiltModuleFileName(ModuleName);
-      if (!ModuleFileName.empty())
-        Source = PrebuiltModulePath;
-    }
-
-    // Try to load the module from the module cache.
-    if (Source == ModuleNotFound && Module) {
-      ModuleFileName = PP->getHeaderSearchInfo().getCachedModuleFileName(Module);
-      Source = ModuleCache;
-    }
-
-    if (Source == ModuleNotFound) {
-      // We can't find a module, error out here.
-      getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
-          << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
-      ModuleBuildFailed = true;
-      return ModuleLoadResult();
-    }
-
-    if (ModuleFileName.empty()) {
-      if (Module && Module->HasIncompatibleModuleFile) {
-        // We tried and failed to load a module file for this module. Fall
-        // back to textual inclusion for its headers.
-        return ModuleLoadResult::ConfigMismatch;
-      }
-
-      getDiagnostics().Report(ModuleNameLoc, diag::err_module_build_disabled)
-          << ModuleName;
-      ModuleBuildFailed = true;
-      return ModuleLoadResult();
-    }
-
-    // If we don't already have an ASTReader, create one now.
-    if (!ModuleManager)
-      createModuleManager();
-
-    llvm::Timer Timer;
-    if (FrontendTimerGroup)
-      Timer.init("loading." + ModuleFileName, "Loading " + ModuleFileName,
-                 *FrontendTimerGroup);
-    llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
-    llvm::TimeTraceScope TimeScope("Module Load", ModuleName);
-
-    // Try to load the module file. If we are not trying to load from the
-    // module cache, we don't know how to rebuild modules.
-    unsigned ARRFlags = Source == ModuleCache ?
-                        ASTReader::ARR_OutOfDate | ASTReader::ARR_Missing :
-                        Source == PrebuiltModulePath ?
-                            0 :
-                            ASTReader::ARR_ConfigurationMismatch;
-    switch (ModuleManager->ReadAST(ModuleFileName,
-                                   Source == PrebuiltModulePath
-                                       ? serialization::MK_PrebuiltModule
-                                       : Source == ModuleBuildPragma
-                                             ? serialization::MK_ExplicitModule
-                                             : serialization::MK_ImplicitModule,
-                                   ImportLoc, ARRFlags)) {
-    case ASTReader::Success: {
-      if (Source != ModuleCache && !Module) {
-        Module = PP->getHeaderSearchInfo().lookupModule(ModuleName, true,
-                                                        !IsInclusionDirective);
-        auto ModuleFile = FileMgr->getFile(ModuleFileName);
-        if (!Module || !Module->getASTFile() ||
-            !ModuleFile || (*ModuleFile != Module->getASTFile())) {
-          // Error out if Module does not refer to the file in the prebuilt
-          // module path.
-          getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)
-              << ModuleName;
-          ModuleBuildFailed = true;
-          MM.cacheModuleLoad(*Path[0].first, nullptr);
-          return ModuleLoadResult();
-        }
-      }
-      break;
-    }
-
-    case ASTReader::OutOfDate:
-    case ASTReader::Missing: {
-      if (Source != ModuleCache) {
-        // We don't know the desired configuration for this module and don't
-        // necessarily even have a module map. Since ReadAST already produces
-        // diagnostics for these two cases, we simply error out here.
-        ModuleBuildFailed = true;
-        MM.cacheModuleLoad(*Path[0].first, nullptr);
-        return ModuleLoadResult();
-      }
-
-      // The module file is missing or out-of-date. Build it.
-      assert(Module && "missing module file");
-      // Check whether there is a cycle in the module graph.
-      ModuleBuildStack ModPath = getSourceManager().getModuleBuildStack();
-      ModuleBuildStack::iterator Pos = ModPath.begin(), PosEnd = ModPath.end();
-      for (; Pos != PosEnd; ++Pos) {
-        if (Pos->first == ModuleName)
-          break;
-      }
-
-      if (Pos != PosEnd) {
-        SmallString<256> CyclePath;
-        for (; Pos != PosEnd; ++Pos) {
-          CyclePath += Pos->first;
-          CyclePath += " -> ";
-        }
-        CyclePath += ModuleName;
-
-        getDiagnostics().Report(ModuleNameLoc, diag::err_module_cycle)
-          << ModuleName << CyclePath;
-        return ModuleLoadResult();
-      }
-
-      // Check whether we have already attempted to build this module (but
-      // failed).
-      if (getPreprocessorOpts().FailedModules &&
-          getPreprocessorOpts().FailedModules->hasAlreadyFailed(ModuleName)) {
-        getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_built)
-          << ModuleName
-          << SourceRange(ImportLoc, ModuleNameLoc);
-        ModuleBuildFailed = true;
-        return ModuleLoadResult();
-      }
-
-      // Try to compile and then load the module.
-      if (!compileAndLoadModule(*this, ImportLoc, ModuleNameLoc, Module,
-                                ModuleFileName)) {
-        assert(getDiagnostics().hasErrorOccurred() &&
-               "undiagnosed error in compileAndLoadModule");
-        if (getPreprocessorOpts().FailedModules)
-          getPreprocessorOpts().FailedModules->addFailed(ModuleName);
-        MM.cacheModuleLoad(*Path[0].first, nullptr);
-        ModuleBuildFailed = true;
-        return ModuleLoadResult();
-      }
-
-      // Okay, we've rebuilt and now loaded the module.
-      break;
-    }
-
-    case ASTReader::ConfigurationMismatch:
-      if (Source == PrebuiltModulePath)
-        // FIXME: We shouldn't be setting HadFatalFailure below if we only
-        // produce a warning here!
-        getDiagnostics().Report(SourceLocation(),
-                                diag::warn_module_config_mismatch)
-            << ModuleFileName;
-      // Fall through to error out.
-      LLVM_FALLTHROUGH;
-    case ASTReader::VersionMismatch:
-    case ASTReader::HadErrors:
-      ModuleLoader::HadFatalFailure = true;
-      // FIXME: The ASTReader will already have complained, but can we shoehorn
-      // that diagnostic information into a more useful form?
-      MM.cacheModuleLoad(*Path[0].first, nullptr);
-      return ModuleLoadResult();
-
-    case ASTReader::Failure:
-      ModuleLoader::HadFatalFailure = true;
-      // Already complained, but note now that we failed.
-      MM.cacheModuleLoad(*Path[0].first, nullptr);
-      ModuleBuildFailed = true;
-      return ModuleLoadResult();
-    }
-
-    // Cache the result of this top-level module lookup for later.
+    ModuleLoadResult Result = findOrCompileModuleAndReadAST(
+        ModuleName, ImportLoc, ModuleNameLoc, IsInclusionDirective);
+    // FIXME: Can we pull 'ModuleBuildFailed = true' out of the return
+    // sequences for findOrCompileModuleAndReadAST and do it here (as long as
+    // the result is not a config mismatch)?  See FIXMEs there.
+    if (!Result.isNormal())
+      return Result;
+    Module = Result;
     MM.cacheModuleLoad(*Path[0].first, Module);
+    if (!Module)
+      return Module;
   }
 
-  // If we never found the module, fail.
+  // If we never found the module, fail.  Otherwise, verify the module and link
+  // it up.
   if (!Module)
     return ModuleLoadResult();
 
@@ -1984,9 +2029,9 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   return LastModuleImportResult;
 }
 
-void CompilerInstance::loadModuleFromSource(SourceLocation ImportLoc,
-                                            StringRef ModuleName,
-                                            StringRef Source) {
+void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
+                                              StringRef ModuleName,
+                                              StringRef Source) {
   // Avoid creating filenames with special characters.
   SmallString<128> CleanModuleName(ModuleName);
   for (auto &C : CleanModuleName)

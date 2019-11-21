@@ -786,12 +786,30 @@ public:
 
   bool loadModuleFile(StringRef FileName);
 
+private:
+  /// Find a module, potentially compiling it, before reading its AST.  This is
+  /// the guts of loadModule.
+  ///
+  /// For prebuilt modules, the Module is not expected to exist in
+  /// HeaderSearch's ModuleMap.  If a ModuleFile by that name is in the
+  /// ModuleManager, then it will be loaded and looked up.
+  ///
+  /// For implicit modules, the Module is expected to already be in the
+  /// ModuleMap.  First attempt to load it from the given path on disk.  If that
+  /// fails, defer to compileModuleAndReadAST, which will first build and then
+  /// load it.
+  ModuleLoadResult findOrCompileModuleAndReadAST(StringRef ModuleName,
+                                                 SourceLocation ImportLoc,
+                                                 SourceLocation ModuleNameLoc,
+                                                 bool IsInclusionDirective);
+
+public:
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,
                               bool IsInclusionDirective) override;
 
-  void loadModuleFromSource(SourceLocation ImportLoc, StringRef ModuleName,
-                            StringRef Source) override;
+  void createModuleFromSource(SourceLocation ImportLoc, StringRef ModuleName,
+                              StringRef Source) override;
 
   void makeModuleVisible(Module *Mod, Module::NameVisibilityKind Visibility,
                          SourceLocation ImportLoc) override;
