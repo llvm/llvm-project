@@ -114,12 +114,9 @@ private:
 
   /// Try to find horizontal reduction or otherwise vectorize a chain of binary
   /// operators.
-  /// \p Try2WayRdx specializes the analysis to only attempt a 2-element
-  /// reduction.
   bool vectorizeRootInstruction(PHINode *P, Value *V, BasicBlock *BB,
                                 slpvectorizer::BoUpSLP &R,
-                                TargetTransformInfo *TTI,
-                                bool Try2WayRdx = false);
+                                TargetTransformInfo *TTI);
 
   /// Try to vectorize trees that start at insertvalue instructions.
   bool vectorizeInsertValueInst(InsertValueInst *IVI, BasicBlock *BB,
