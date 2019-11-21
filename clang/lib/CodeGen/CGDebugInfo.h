@@ -114,7 +114,10 @@ class CGDebugInfo {
   llvm::SmallVector<ObjCInterfaceCacheEntry, 32> ObjCInterfaceCache;
 
   /// Cache of forward declarations for methods belonging to the interface.
-  llvm::DenseMap<const ObjCInterfaceDecl *, std::vector<llvm::DISubprogram *>>
+  /// The extra bit on the DISubprogram specifies whether a method is
+  /// "objc_direct".
+  llvm::DenseMap<const ObjCInterfaceDecl *,
+                 std::vector<llvm::PointerIntPair<llvm::DISubprogram *, 1>>>
       ObjCMethodCache;
 
   /// Cache of references to clang modules and precompiled headers.
