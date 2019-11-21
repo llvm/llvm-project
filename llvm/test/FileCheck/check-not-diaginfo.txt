@@ -1,4 +1,4 @@
-; RUN: not FileCheck --input-file %s %s 2>&1 \
+; RUN: %ProtectFileCheckOutput not FileCheck --input-file %s %s 2>&1 \
 ; RUN:   | FileCheck --strict-whitespace --check-prefix DIAG %s
 
 CHECK-NOT: test

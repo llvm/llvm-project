@@ -97,6 +97,7 @@ foo 104 bar
 ; CHECK-NEXT: foo [[#]] bar
 
 ; Numeric expression using undefined variables.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefix UNDEF-USE --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix UNDEF-USE-MSG %s
 
@@ -115,7 +116,9 @@ UNDEF-USE-MSG-NEXT:      UNDEFVAR: 11
 UNDEF-USE-MSG-NEXT: {{^}}^{{$}}
 
 ; Numeric expression with unsupported operator.
-RUN: not FileCheck -D#NUMVAR=10 --check-prefix INVAL-OP --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix INVAL-OP \
+RUN:               --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix INVAL-OP-MSG %s
 
 INVALID OPERATOR
@@ -128,17 +131,29 @@ INVAL-OP-MSG-NEXT:     {{^}}                                  ^{{$}}
 
 ; Name conflict between Numeric variable definition and string variable
 ; definition whether from the command-line or input text.
-RUN: not FileCheck --check-prefixes CONFLICT,CONFLICT1,CONFLICT2 --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes CONFLICT,CONFLICT1,CONFLICT2 \
+RUN:               --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-STR-CONFLICT %s
-RUN: not FileCheck -D#NUMVAR=42 --check-prefixes CONFLICT,CONFLICT2 --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=42 --check-prefixes CONFLICT,CONFLICT2 \
+RUN:               --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-STR-CONFLICT %s
-RUN: not FileCheck -D#NUMVAR=42 -DNUMVAR=foobar --check-prefix CONFLICT --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=42 -DNUMVAR=foobar --check-prefix CONFLICT \
+RUN:               --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix CLI-STR-CONFLICT %s
-RUN: not FileCheck --check-prefixes CONFLICT,CONFLICT3,CONFLICT4 --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes CONFLICT,CONFLICT3,CONFLICT4 \
+RUN:               --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-NUM-CONFLICT %s
-RUN: not FileCheck -DSTRVAR=foobar --check-prefixes CONFLICT,CONFLICT4 --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -DSTRVAR=foobar --check-prefixes CONFLICT,CONFLICT4 \
+RUN:               --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-NUM-CONFLICT %s
-RUN: not FileCheck -DSTRVAR=foobar -D#STRVAR=42 --check-prefix CONFLICT --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -DSTRVAR=foobar -D#STRVAR=42 --check-prefix CONFLICT \
+RUN:               --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix CLI-NUM-CONFLICT %s
 
 STRVAR NUMVAR CONFLICT
@@ -164,6 +179,7 @@ CLI-NUM-CONFLICT: Global defines:2:45: error: string variable with name 'STRVAR'
 CLI-NUM-CONFLICT-NEXT: {{^}}                                            ^{{$}}
 
 ; Numeric variable definition with too big value.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefix BIGVAL --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix BIGVAL-MSG %s
 
@@ -177,6 +193,7 @@ BIGVAL-MSG-NEXT: {{^}}        ^{{$}}
 
 ; Verify that when a variable is set to an expression the expression is still
 ; checked.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefix DEF-EXPR-FAIL --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix DEF-EXPR-FAIL-MSG %s
 
@@ -192,8 +209,10 @@ DEF-EXPR-FAIL-MSG-NEXT:   {{^}}                    ^{{$}}
 
 ; Verify that using a numeric variable defined on the same line (whether from
 ; input or from an expression) is rejected.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefix SAME-LINE-USE1 --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix SAME-LINE-USE-MSG1 %s
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefix SAME-LINE-USE2 --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix SAME-LINE-USE-MSG2 %s
 

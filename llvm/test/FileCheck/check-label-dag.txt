@@ -1,4 +1,5 @@
-; RUN: not FileCheck -input-file %s %s 2>&1 | FileCheck --check-prefix=ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -input-file %s %s 2>&1 \
+; RUN: | FileCheck --check-prefix=ERROR %s
 
 bar
 zed
