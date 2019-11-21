@@ -124,7 +124,7 @@ public:
   SwiftASTContext(std::string description, llvm::Triple triple,
                   Target *target = nullptr);
 
-  SwiftASTContext(const SwiftASTContext &rhs);
+  SwiftASTContext(const SwiftASTContext &rhs) = delete;
 
   ~SwiftASTContext();
 

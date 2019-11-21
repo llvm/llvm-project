@@ -870,50 +870,6 @@ SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
   ir_gen_opts.DWARFVersion = swift::DWARFVersion;
 }
 
-SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
-    : TypeSystem(rhs.getKind()),
-      m_compiler_invocation_ap(new swift::CompilerInvocation()),
-      m_description(rhs.m_description) {
-  // rdar://53971116
-  m_compiler_invocation_ap->disableASTScopeLookup();
-
-  if (rhs.m_compiler_invocation_ap) {
-    SetTriple(rhs.GetTriple());
-    llvm::StringRef module_cache_path =
-        rhs.m_compiler_invocation_ap->getClangModuleCachePath();
-    m_compiler_invocation_ap->setClangModuleCachePath(module_cache_path);
-  }
-
-  swift::IRGenOptions &ir_gen_opts =
-      m_compiler_invocation_ap->getIRGenOptions();
-  ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
-  ir_gen_opts.UseJIT = true;
-
-  TargetSP target_sp = rhs.m_target_wp.lock();
-  if (target_sp)
-    m_target_wp = target_sp;
-
-  m_platform_sdk_path = rhs.m_platform_sdk_path;
-
-  // Initialize search paths and clang importer options, we need
-  // them to grab a SwiftASTContext without asserting.
-  std::vector<std::string> module_search_paths;
-  std::vector<std::pair<std::string, bool>> framework_search_paths;
-  const auto &opts = rhs.m_compiler_invocation_ap->getSearchPathOptions();
-  module_search_paths.insert(module_search_paths.end(),
-                             opts.ImportSearchPaths.begin(),
-                             opts.ImportSearchPaths.end());
-  for (const auto &fwsp : opts.FrameworkSearchPaths)
-      framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
-  InitializeSearchPathOptions(module_search_paths, framework_search_paths);
-  GetClangImporterOptions();
-
-  // As this is a copy constructor, make sure we copy the clang importer
-  // options from RHS to LHS.
-  GetCompilerInvocation().getClangImporterOptions() =
-      rhs.m_compiler_invocation_ap->getClangImporterOptions();
-}
-
 SwiftASTContext::~SwiftASTContext() {
   if (swift::ASTContext *ctx = m_ast_context_ap.get()) {
     // A RemoteASTContext associated with this swift::ASTContext has
