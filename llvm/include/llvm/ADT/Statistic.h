@@ -173,7 +173,7 @@ using Statistic = NoopStatistic;
   static llvm::TrackingStatistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC}
 
 /// Enable the collection and printing of statistics.
-void EnableStatistics(bool PrintOnExit = true);
+void EnableStatistics(bool DoPrintOnExit = true);
 
 /// Check if statistics are enabled.
 bool AreStatisticsEnabled();
