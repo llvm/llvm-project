@@ -27,14 +27,15 @@ namespace clang {
 
 class PointerAuthSchema {
 public:
-  enum class Kind {
+  enum class Kind : unsigned {
     None,
     Soft,
     ARM8_3,
   };
 
-  /// Software pointer-signing "keys".
-  enum class SoftKey {
+  /// Software pointer-signing "keys". If you add a new key, make sure this->Key
+  /// has a large enough bit-width.
+  enum class SoftKey : unsigned {
     FunctionPointers = 0,
     BlockInvocationFunctionPointers = 1,
     BlockHelperFunctionPointers = 2,
@@ -47,7 +48,7 @@ public:
   /// Hardware pointer-signing keys in ARM8.3.
   ///
   /// These values are the same used in ptrauth.h.
-  enum class ARM8_3Key {
+  enum class ARM8_3Key : unsigned {
     ASIA = 0,
     ASIB = 1,
     ASDA = 2,
@@ -55,7 +56,7 @@ public:
   };
 
   /// Forms of extra discrimination.
-  enum class Discrimination {
+  enum class Discrimination : unsigned {
     /// No additional discrimination.
     None,
 
@@ -67,68 +68,33 @@ public:
   };
 
 private:
-  enum {
-    NumKindBits = 2
-  };
-  union {
-    /// A common header shared by all pointer authentication kinds.
-    struct {
-      unsigned Kind : NumKindBits;
-      unsigned AddressDiscriminated : 1;
-      unsigned Discrimination : 2;
-    } Common;
-
-    struct {
-      unsigned Kind : NumKindBits;
-      unsigned AddressDiscriminated : 1;
-      unsigned Discrimination : 2;
-      unsigned Key : 3;
-    } Soft;
-
-    struct {
-      unsigned Kind : NumKindBits;
-      unsigned AddressDiscriminated : 1;
-      unsigned Discrimination : 2;
-      unsigned Key : 2;
-    } ARM8_3;
-  };
+  Kind TheKind : 2;
+  unsigned IsAddressDiscriminated : 1;
+  Discrimination DiscriminationKind : 2;
+  unsigned Key : 3;
 
 public:
-  PointerAuthSchema() {
-    Common.Kind = unsigned(Kind::None);
-  }
+  PointerAuthSchema() : TheKind(Kind::None) {}
 
   PointerAuthSchema(SoftKey key, bool isAddressDiscriminated,
-                    Discrimination otherDiscrimination) {
-    Common.Kind = unsigned(Kind::Soft);
-    Common.AddressDiscriminated = isAddressDiscriminated;
-    Common.Discrimination = unsigned(otherDiscrimination);
-    Soft.Key = unsigned(key);
-  }
+                    Discrimination otherDiscrimination)
+      : TheKind(Kind::Soft), IsAddressDiscriminated(isAddressDiscriminated),
+        DiscriminationKind(otherDiscrimination), Key(unsigned(key)) {}
 
   PointerAuthSchema(ARM8_3Key key, bool isAddressDiscriminated,
-                    Discrimination otherDiscrimination) {
-    Common.Kind = unsigned(Kind::ARM8_3);
-    Common.AddressDiscriminated = isAddressDiscriminated;
-    Common.Discrimination = unsigned(otherDiscrimination);
-    ARM8_3.Key = unsigned(key);
-  }
+                    Discrimination otherDiscrimination)
+      : TheKind(Kind::ARM8_3), IsAddressDiscriminated(isAddressDiscriminated),
+        DiscriminationKind(otherDiscrimination), Key(unsigned(key)) {}
 
-  Kind getKind() const {
-    return Kind(Common.Kind);
-  }
+  Kind getKind() const { return TheKind; }
 
-  explicit operator bool() const {
-    return isEnabled();
-  }
+  explicit operator bool() const { return isEnabled(); }
 
-  bool isEnabled() const {
-    return getKind() != Kind::None;
-  }
+  bool isEnabled() const { return getKind() != Kind::None; }
 
   bool isAddressDiscriminated() const {
     assert(getKind() != Kind::None);
-    return Common.AddressDiscriminated;
+    return IsAddressDiscriminated;
   }
 
   bool hasOtherDiscrimination() const {
@@ -137,29 +103,31 @@ public:
 
   Discrimination getOtherDiscrimination() const {
     assert(getKind() != Kind::None);
-    return Discrimination(Common.Discrimination);
+    return DiscriminationKind;
   }
 
   unsigned getKey() const {
     switch (getKind()) {
-    case Kind::None: llvm_unreachable("calling getKey() on disabled schema");
-    case Kind::Soft: return unsigned(getSoftKey());
-    case Kind::ARM8_3: return unsigned(getARM8_3Key());
+    case Kind::None:
+      llvm_unreachable("calling getKey() on disabled schema");
+    case Kind::Soft:
+      return unsigned(getSoftKey());
+    case Kind::ARM8_3:
+      return unsigned(getARM8_3Key());
     }
     llvm_unreachable("bad key kind");
   }
 
   SoftKey getSoftKey() const {
     assert(getKind() == Kind::Soft);
-    return SoftKey(Soft.Key);
+    return SoftKey(Key);
   }
 
   ARM8_3Key getARM8_3Key() const {
     assert(getKind() == Kind::ARM8_3);
-    return ARM8_3Key(ARM8_3.Key);
+    return ARM8_3Key(Key);
   }
 };
-
 
 struct PointerAuthOptions {
   /// Do member function pointers to virtual functions need to be built
