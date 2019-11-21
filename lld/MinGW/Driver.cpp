@@ -161,9 +161,10 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
 // then call coff::link.
 bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
-  enableColors(stderrOS.has_colors());
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
+
+  stderrOS.enable_colors(stderrOS.has_colors());
 
   MinGWOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));

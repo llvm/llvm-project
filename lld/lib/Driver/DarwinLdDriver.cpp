@@ -1145,15 +1145,15 @@ static void createFiles(MachOLinkingContext &ctx, bool Implicit) {
 /// This is where the link is actually performed.
 bool link(llvm::ArrayRef<const char *> args, bool CanExitEarly,
           raw_ostream &StdoutOS, raw_ostream &StderrOS) {
+  lld::stdoutOS = &StdoutOS;
+  lld::stderrOS = &StderrOS;
+
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "'-error-limit 0' to see all errors)";
   errorHandler().exitEarly = CanExitEarly;
-  enableColors(StderrOS.has_colors());
-
-  lld::stdoutOS = &StdoutOS;
-  lld::stderrOS = &StderrOS;
+  StderrOS.enable_colors(StderrOS.has_colors());
 
   MachOLinkingContext ctx;
   if (!parse(args, ctx))
