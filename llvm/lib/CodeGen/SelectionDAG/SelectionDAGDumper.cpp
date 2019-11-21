@@ -685,6 +685,10 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     if (doExt)
       OS << " from " << MLd->getMemoryVT().getEVTString();
 
+    const char *AM = getIndexedModeName(MLd->getAddressingMode());
+    if (*AM)
+      OS << ", " << AM;
+
     if (MLd->isExpandingLoad())
       OS << ", expanding";
 
@@ -695,6 +699,10 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
     if (MSt->isTruncatingStore())
       OS << ", trunc to " << MSt->getMemoryVT().getEVTString();
+
+    const char *AM = getIndexedModeName(MSt->getAddressingMode());
+    if (*AM)
+      OS << ", " << AM;
 
     if (MSt->isCompressingStore())
       OS << ", compressing";
