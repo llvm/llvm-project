@@ -363,9 +363,9 @@ static uint64_t resolveRISCV(RelocationRef R, uint64_t S, uint64_t A) {
   case ELF::R_RISCV_64:
     return S + RA;
   case ELF::R_RISCV_SET6:
-    return (A + (S + RA)) & 0xFF;
+    return (A & 0xC0) | ((S + RA) & 0x3F);
   case ELF::R_RISCV_SUB6:
-    return (A - (S + RA)) & 0xFF;
+    return (A & 0xC0) | (((A & 0x3F) - (S + RA)) & 0x3F);
   case ELF::R_RISCV_ADD8:
     return (A + (S + RA)) & 0xFF;
   case ELF::R_RISCV_SUB8:
