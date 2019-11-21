@@ -878,12 +878,6 @@ void JSONNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *LSD) {
   switch (LSD->getLanguage()) {
   case LinkageSpecDecl::lang_c: Lang = "C"; break;
   case LinkageSpecDecl::lang_cxx: Lang = "C++"; break;
-  case LinkageSpecDecl::lang_cxx_11:
-    Lang = "C++11";
-    break;
-  case LinkageSpecDecl::lang_cxx_14:
-    Lang = "C++14";
-    break;
   }
   JOS.attribute("language", Lang);
   attributeOnlyIfTrue("hasBraces", LSD->hasBraces());
