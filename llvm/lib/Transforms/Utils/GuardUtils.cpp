@@ -87,23 +87,20 @@ void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
   // condition, but that doesn't match the pattern parseWidenableBranch expects
   // so we have to be more sophisticated.
 
-  if (match(WidenableBR->getCondition(),
-            m_Intrinsic<Intrinsic::experimental_widenable_condition>())) {
+  Use *C, *WC;
+  BasicBlock *IfTrueBB, *IfFalseBB;
+  parseWidenableBranch(WidenableBR, C, WC, IfTrueBB, IfFalseBB);
+  if (!C) {
+    // br (wc()), ... form
     IRBuilder<> B(WidenableBR);
-    WidenableBR->setCondition(B.CreateAnd(NewCond,
-                                          WidenableBR->getCondition()));
+    WidenableBR->setCondition(B.CreateAnd(NewCond, WC->get()));
   } else {
+    // br (wc & C), ... form
+    IRBuilder<> B(WidenableBR);
+    C->set(B.CreateAnd(NewCond, C->get()));
     Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
     // Condition is only guaranteed to dominate branch
-    WCAnd->moveBefore(WidenableBR);
-    IRBuilder<> B(WCAnd);
-    const bool Op0IsWC =
-      match(WCAnd->getOperand(0),
-            m_Intrinsic<Intrinsic::experimental_widenable_condition>());
-    const unsigned CondOpIdx = Op0IsWC ? 1 : 0;
-    Value *OldCond = WCAnd->getOperand(CondOpIdx);
-    NewCond = B.CreateAnd(NewCond, OldCond);
-    WCAnd->setOperand(CondOpIdx, NewCond);
+    WCAnd->moveBefore(WidenableBR);    
   }
   assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
 }
@@ -111,20 +108,19 @@ void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
 void llvm::setWidenableBranchCond(BranchInst *WidenableBR, Value *NewCond) {
   assert(isWidenableBranch(WidenableBR) && "precondition");
 
-  if (match(WidenableBR->getCondition(),
-            m_Intrinsic<Intrinsic::experimental_widenable_condition>())) {
+  Use *C, *WC;
+  BasicBlock *IfTrueBB, *IfFalseBB;
+  parseWidenableBranch(WidenableBR, C, WC, IfTrueBB, IfFalseBB);
+  if (!C) {
+    // br (wc()), ... form
     IRBuilder<> B(WidenableBR);
-    WidenableBR->setCondition(B.CreateAnd(NewCond,
-                                          WidenableBR->getCondition()));
+    WidenableBR->setCondition(B.CreateAnd(NewCond, WC->get()));
   } else {
+    // br (wc & C), ... form
     Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
     // Condition is only guaranteed to dominate branch
     WCAnd->moveBefore(WidenableBR);
-    const bool Op0IsWC =
-      match(WCAnd->getOperand(0),
-            m_Intrinsic<Intrinsic::experimental_widenable_condition>());
-    const unsigned CondOpIdx = Op0IsWC ? 1 : 0;
-    WCAnd->setOperand(CondOpIdx, NewCond);
+    C->set(NewCond);
   }
   assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
 }
