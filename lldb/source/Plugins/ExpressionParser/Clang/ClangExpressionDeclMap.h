@@ -434,6 +434,30 @@ private:
   void LookupInModulesDeclVendor(NameSearchContext &context, ConstString name,
                                  unsigned current_id);
 
+  /// Looks up a local variable.
+  ///
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  ///
+  /// \param[in] name
+  ///     The name of the entities that need to be found.
+  ///
+  /// \param[in] current_id
+  ///     The ID for the current FindExternalVisibleDecls invocation,
+  ///     for logging purposes.
+  ///
+  /// \param[in] sym_ctx
+  ///     The current SymbolContext of this frame.
+  ///
+  /// \param[in] namespace_decl
+  ///     The parent namespace if there is one.
+  ///
+  /// \return
+  ///    True iff a local variable was found.
+  bool LookupLocalVariable(NameSearchContext &context, ConstString name,
+                           unsigned current_id, SymbolContext &sym_ctx,
+                           CompilerDeclContext &namespace_decl);
+
   /// Given a target, find a variable that matches the given name and type.
   ///
   /// \param[in] target
