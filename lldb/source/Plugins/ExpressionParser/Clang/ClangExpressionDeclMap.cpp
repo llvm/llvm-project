@@ -1169,6 +1169,53 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
   }
 }
 
+bool ClangExpressionDeclMap::LookupLocalVariable(
+    NameSearchContext &context, ConstString name, unsigned current_id,
+    SymbolContext &sym_ctx, CompilerDeclContext &namespace_decl) {
+  ValueObjectSP valobj;
+  VariableSP var;
+
+  StackFrame *frame = m_parser_vars->m_exe_ctx.GetFramePtr();
+  CompilerDeclContext compiler_decl_context =
+      sym_ctx.block != nullptr ? sym_ctx.block->GetDeclContext()
+                               : CompilerDeclContext();
+
+  if (compiler_decl_context) {
+    // Make sure that the variables are parsed so that we have the
+    // declarations.
+    VariableListSP vars = frame->GetInScopeVariableList(true);
+    for (size_t i = 0; i < vars->GetSize(); i++)
+      vars->GetVariableAtIndex(i)->GetDecl();
+
+    // Search for declarations matching the name. Do not include imported
+    // decls in the search if we are looking for decls in the artificial
+    // namespace $__lldb_local_vars.
+    std::vector<CompilerDecl> found_decls =
+        compiler_decl_context.FindDeclByName(name, namespace_decl.IsValid());
+
+    bool variable_found = false;
+    for (CompilerDecl decl : found_decls) {
+      for (size_t vi = 0, ve = vars->GetSize(); vi != ve; ++vi) {
+        VariableSP candidate_var = vars->GetVariableAtIndex(vi);
+        if (candidate_var->GetDecl() == decl) {
+          var = candidate_var;
+          break;
+        }
+      }
+
+      if (var && !variable_found) {
+        variable_found = true;
+        valobj = ValueObjectVariable::Create(frame, var);
+        AddOneVariable(context, var, valobj, current_id);
+        context.m_found.variable = true;
+      }
+    }
+    if (variable_found)
+      return true;
+  }
+  return false;
+}
+
 void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context, lldb::ModuleSP module_sp,
     CompilerDeclContext &namespace_decl, unsigned int current_id) {
@@ -1247,46 +1294,10 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   bool local_var_lookup =
       !namespace_decl || (namespace_decl.GetName() ==
                           ConstString(g_lldb_local_vars_namespace_cstr));
-  if (frame && local_var_lookup) {
-    CompilerDeclContext compiler_decl_context =
-        sym_ctx.block != nullptr ? sym_ctx.block->GetDeclContext()
-                                 : CompilerDeclContext();
+  if (frame && local_var_lookup)
+    if (LookupLocalVariable(context, name, current_id, sym_ctx, namespace_decl))
+      return;
 
-    if (compiler_decl_context) {
-      // Make sure that the variables are parsed so that we have the
-      // declarations.
-      VariableListSP vars = frame->GetInScopeVariableList(true);
-      for (size_t i = 0; i < vars->GetSize(); i++)
-        vars->GetVariableAtIndex(i)->GetDecl();
-
-      // Search for declarations matching the name. Do not include imported
-      // decls in the search if we are looking for decls in the artificial
-      // namespace $__lldb_local_vars.
-      std::vector<CompilerDecl> found_decls =
-          compiler_decl_context.FindDeclByName(name,
-                                               namespace_decl.IsValid());
-
-      bool variable_found = false;
-      for (CompilerDecl decl : found_decls) {
-        for (size_t vi = 0, ve = vars->GetSize(); vi != ve; ++vi) {
-          VariableSP candidate_var = vars->GetVariableAtIndex(vi);
-          if (candidate_var->GetDecl() == decl) {
-            var = candidate_var;
-            break;
-          }
-        }
-
-        if (var && !variable_found) {
-          variable_found = true;
-          valobj = ValueObjectVariable::Create(frame, var);
-          AddOneVariable(context, var, valobj, current_id);
-          context.m_found.variable = true;
-        }
-      }
-      if (variable_found)
-        return;
-    }
-  }
   if (target) {
     var = FindGlobalVariable(*target, module_sp, name, &namespace_decl,
                              nullptr);
