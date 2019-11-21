@@ -458,6 +458,27 @@ private:
                            unsigned current_id, SymbolContext &sym_ctx,
                            CompilerDeclContext &namespace_decl);
 
+  /// Looks up a function.
+  ///
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  ///
+  /// \param[in] module_sp
+  ///     If non-NULL, the module to query.
+  ///
+  /// \param[in] name
+  ///     The name of the function that should be find.
+  ///
+  /// \param[in] namespace_decl
+  ///     If valid and module is non-NULL, the parent namespace.
+  ///
+  /// \param[in] current_id
+  ///     The ID for the current FindExternalVisibleDecls invocation,
+  ///     for logging purposes.
+  void LookupFunction(NameSearchContext &context, lldb::ModuleSP module_sp,
+                      ConstString name, CompilerDeclContext &namespace_decl,
+                      unsigned current_id);
+
   /// Given a target, find a variable that matches the given name and type.
   ///
   /// \param[in] target
