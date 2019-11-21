@@ -532,7 +532,15 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   const unsigned AVXBits = (1 << 27) | (1 << 28);
   bool HasAVX = ((ECX & AVXBits) == AVXBits) && !getX86XCR0(&EAX, &EDX) &&
                 ((EAX & 0x6) == 0x6);
+#if defined(__APPLE__)
+  // Darwin lazily saves the AVX512 context on first use: trust that the OS will
+  // save the AVX512 context if we use AVX512 instructions, even the bit is not
+  // set right now.
+  bool HasAVX512Save = true;
+#else
+  // AVX512 requires additional context to be saved by the OS.
   bool HasAVX512Save = HasAVX && ((EAX & 0xe0) == 0xe0);
+#endif
 
   if (HasAVX)
     setFeature(FEATURE_AVX);
