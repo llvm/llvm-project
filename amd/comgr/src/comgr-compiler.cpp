@@ -811,7 +811,7 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
   CPU = (Twine("-mcpu=") + GPUArch).str();
 
   if (SrcToBC && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
-    std::string CUDAGPUArch = (Twine("--cuda-gpu-arch=") + GPUArch).str();
+    CUDAGPUArch = (Twine("--cuda-gpu-arch=") + GPUArch).str();
     Args.push_back(CUDAGPUArch.c_str());
   }
   else {
