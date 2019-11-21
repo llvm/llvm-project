@@ -42,8 +42,7 @@ const uint32_t instruction_size_mod = sizeof(dpuinstruction_t) - 1;
 const uint32_t instruction_size_mask = ~instruction_size_mod;
 const uint32_t dpuword_size_mod = sizeof(dpuword_t) - 1;
 const uint32_t dpuword_size_mask = ~dpuword_size_mod;
-
-}
+} // namespace
 
 // -----------------------------------------------------------------------------
 // DPU rank handling
