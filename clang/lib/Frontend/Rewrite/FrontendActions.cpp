@@ -21,7 +21,7 @@
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
 #include "clang/Serialization/ASTReader.h"
-#include "clang/Serialization/Module.h"
+#include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleManager.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/CrashRecoveryContext.h"

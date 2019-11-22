@@ -65,7 +65,7 @@
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
-#include "clang/Serialization/Module.h"
+#include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
 #include "llvm/ADT/APFloat.h"
