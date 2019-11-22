@@ -13,6 +13,7 @@
 
 
 // RUN: %libarcher-compile-and-run | FileCheck %s
+// REQUIRES: tsan
 #include <omp.h>
 #include <stdio.h>
 
