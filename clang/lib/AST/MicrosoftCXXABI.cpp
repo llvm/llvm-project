@@ -171,10 +171,10 @@ CXXRecordDecl::getMSInheritanceModel() const {
   return IA->getSemanticSpelling();
 }
 
-MSVtorDispAttr::Mode CXXRecordDecl::getMSVtorDispMode() const {
+MSVtorDispMode CXXRecordDecl::getMSVtorDispMode() const {
   if (MSVtorDispAttr *VDA = getAttr<MSVtorDispAttr>())
     return VDA->getVtorDispMode();
-  return MSVtorDispAttr::Mode(getASTContext().getLangOpts().VtorDispMode);
+  return getASTContext().getLangOpts().getVtorDispMode();
 }
 
 // Returns the number of pointer and integer slots used to represent a member

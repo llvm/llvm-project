@@ -518,7 +518,7 @@ public:
   ///    structors
   /// 2: Always insert vtordisps to support RTTI on partially constructed
   ///    objects
-  PragmaStack<MSVtorDispAttr::Mode> VtorDispStack;
+  PragmaStack<MSVtorDispMode> VtorDispStack;
   // #pragma pack.
   // Sentinel to represent when the stack is set to mac68k alignment.
   static const unsigned kMac68kAlignmentSentinel = ~0U;
@@ -8960,7 +8960,7 @@ public:
   /// Called on well formed \#pragma vtordisp().
   void ActOnPragmaMSVtorDisp(PragmaMsStackAction Action,
                              SourceLocation PragmaLoc,
-                             MSVtorDispAttr::Mode Value);
+                             MSVtorDispMode Value);
 
   enum PragmaSectionKind {
     PSK_DataSeg,
