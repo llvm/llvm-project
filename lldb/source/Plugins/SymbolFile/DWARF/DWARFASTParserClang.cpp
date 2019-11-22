@@ -187,7 +187,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   languages.Insert(die.GetCU()->GetLanguageType());
   llvm::DenseSet<SymbolFile *> searched_symbol_files;
   clang_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
-                                            searched_symbol_files, pcm_types);
+                                              searched_symbol_files, pcm_types);
   if (pcm_types.Empty()) {
     // Since this type is defined in one of the Clang modules imported
     // by this symbol file, search all of them. Instead of calling
@@ -221,6 +221,19 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
 
   if (!type)
     return TypeSP();
+
+  // Under normal operation pcm_type is a shallow forward declaration
+  // that gets completed later. This is necessary to support cyclic
+  // data structures. If, however, pcm_type is already complete (for
+  // example, because it was loaded for a different target before),
+  // the definition needs to be imported right away, too.
+  // Type::ResolveClangType() effectively ignores the ResolveState
+  // inside type_sp and only looks at IsDefined(), so it never calls
+  // ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(),
+  // which does extra work for Objective-C classes. This would result
+  // in only the forward declaration to be visible.
+  if (pcm_type.IsDefined())
+    GetClangASTImporter().RequireCompleteType(ClangUtil::GetQualType(type));
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
   TypeSP type_sp(new Type(
