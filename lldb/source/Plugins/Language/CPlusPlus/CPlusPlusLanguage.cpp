@@ -425,6 +425,13 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                             "std::__[[:alnum:]]+::char_traits<char>, "
                             "std::__[[:alnum:]]+::allocator<char> >$"),
                 stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxStringSummaryProviderASCII,
+                "std::string summary provider",
+                ConstString("^std::__[[:alnum:]]+::basic_string<unsigned char, "
+                            "std::__[[:alnum:]]+::char_traits<unsigned char>, "
+                            "std::__[[:alnum:]]+::allocator<unsigned char> >$"),
+                stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF16,
@@ -722,6 +729,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   cpp_category_sp->GetTypeSummariesContainer()->Add(
       ConstString("std::__cxx11::basic_string<char, std::char_traits<char>, "
                   "std::allocator<char> >"),
+      cxx11_string_summary_sp);
+  cpp_category_sp->GetTypeSummariesContainer()->Add(
+      ConstString("std::__cxx11::basic_string<unsigned char, std::char_traits<unsigned char>, "
+                  "std::allocator<unsigned char> >"),
       cxx11_string_summary_sp);
 
   // making sure we force-pick the summary for printing wstring (_M_p is a

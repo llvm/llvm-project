@@ -16,6 +16,7 @@ int main()
     std::u16string u16_empty(u"");
     std::u32string u32_string(U"🍄🍅🍆🍌");
     std::u32string u32_empty(U"");
+    std::basic_string<unsigned char> uchar(5, 'a');
     S.assign(L"!!!!!"); // Set break point at this line.
     return 0;
 }

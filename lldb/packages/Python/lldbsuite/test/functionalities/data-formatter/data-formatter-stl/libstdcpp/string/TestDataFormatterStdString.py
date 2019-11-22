@@ -59,26 +59,28 @@ class StdStringDataFormatterTestCase(TestBase):
         var_empty = self.frame().FindVariable('empty')
         var_q = self.frame().FindVariable('q')
         var_Q = self.frame().FindVariable('Q')
+        var_uchar = self.frame().FindVariable('uchar')
 
         # TODO: This is currently broken
-        # self.assertTrue(var_wempty.GetSummary() == 'L""', "wempty summary wrong")
-        self.assertTrue(
-            var_s.GetSummary() == 'L"hello world! מזל טוב!"',
+        # self.assertEqual(var_wempty.GetSummary(), 'L""', "wempty summary wrong")
+        self.assertEqual(
+            var_s.GetSummary(), 'L"hello world! מזל טוב!"',
             "s summary wrong")
-        self.assertTrue(var_S.GetSummary() == 'L"!!!!"', "S summary wrong")
-        self.assertTrue(
-            var_mazeltov.GetSummary() == 'L"מזל טוב"',
+        self.assertEqual(var_S.GetSummary(), 'L"!!!!"', "S summary wrong")
+        self.assertEqual(
+            var_mazeltov.GetSummary(), 'L"מזל טוב"',
             "mazeltov summary wrong")
-        self.assertTrue(var_empty.GetSummary() == '""', "empty summary wrong")
-        self.assertTrue(
-            var_q.GetSummary() == '"hello world"',
+        self.assertEqual(var_empty.GetSummary(), '""', "empty summary wrong")
+        self.assertEqual(
+            var_q.GetSummary(), '"hello world"',
             "q summary wrong")
-        self.assertTrue(
-            var_Q.GetSummary() == '"quite a long std::strin with lots of info inside it"',
+        self.assertEqual(
+            var_Q.GetSummary(), '"quite a long std::strin with lots of info inside it"',
             "Q summary wrong")
+        self.assertEqual(var_uchar.GetSummary(), '"aaaaa"', "u summary wrong")
 
         self.runCmd("next")
 
-        self.assertTrue(
-            var_S.GetSummary() == 'L"!!!!!"',
+        self.assertEqual(
+            var_S.GetSummary(), 'L"!!!!!"',
             "new S summary wrong")
