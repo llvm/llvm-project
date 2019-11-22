@@ -233,6 +233,46 @@ TEST_F(StencilTest, AddressOfDerefExpr) {
   testExpr(Id, "int *x; *x;", addressOf(Id), "x");
 }
 
+TEST_F(StencilTest, MaybeDerefValue) {
+  StringRef Id = "id";
+  testExpr(Id, "int x; x;", maybeDeref(Id), "x");
+}
+
+TEST_F(StencilTest, MaybeDerefPointer) {
+  StringRef Id = "id";
+  testExpr(Id, "int *x; x;", maybeDeref(Id), "*x");
+}
+
+TEST_F(StencilTest, MaybeDerefBinOp) {
+  StringRef Id = "id";
+  testExpr(Id, "int *x; x + 1;", maybeDeref(Id), "*(x + 1)");
+}
+
+TEST_F(StencilTest, MaybeDerefAddressExpr) {
+  StringRef Id = "id";
+  testExpr(Id, "int x; &x;", maybeDeref(Id), "x");
+}
+
+TEST_F(StencilTest, MaybeAddressOfPointer) {
+  StringRef Id = "id";
+  testExpr(Id, "int *x; x;", maybeAddressOf(Id), "x");
+}
+
+TEST_F(StencilTest, MaybeAddressOfValue) {
+  StringRef Id = "id";
+  testExpr(Id, "int x; x;", addressOf(Id), "&x");
+}
+
+TEST_F(StencilTest, MaybeAddressOfBinOp) {
+  StringRef Id = "id";
+  testExpr(Id, "int x; x + 1;", maybeAddressOf(Id), "&(x + 1)");
+}
+
+TEST_F(StencilTest, MaybeAddressOfDerefExpr) {
+  StringRef Id = "id";
+  testExpr(Id, "int *x; *x;", addressOf(Id), "x");
+}
+
 TEST_F(StencilTest, AccessOpValue) {
   StringRef Snippet = R"cc(
     S x;
