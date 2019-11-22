@@ -39,20 +39,16 @@ class AArch64DAGToDAGISel : public SelectionDAGISel {
   /// make the right decision when generating code for different targets.
   const AArch64Subtarget *Subtarget;
 
-  bool ForCodeSize;
-
 public:
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
                                CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr),
-        ForCodeSize(false) {}
+      : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr) {}
 
   StringRef getPassName() const override {
     return "AArch64 Instruction Selection";
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    ForCodeSize = MF.getFunction().hasOptSize();
     Subtarget = &MF.getSubtarget<AArch64Subtarget>();
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
@@ -399,7 +395,7 @@ static bool isWorthFoldingSHL(SDValue V) {
 bool AArch64DAGToDAGISel::isWorthFolding(SDValue V) const {
   // Trivial if we are optimizing for code size or if there is only
   // one use of the value.
-  if (ForCodeSize || V.hasOneUse())
+  if (CurDAG->shouldOptForSize() || V.hasOneUse())
     return true;
   // If a subtarget has a fastpath LSL we can fold a logical shift into
   // the addressing mode and save a cycle.

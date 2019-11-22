@@ -1,3 +1,3 @@
-add_llvm_library(LLVMSparcAsmParser
+add_llvm_component_library(LLVMSparcAsmParser
   SparcAsmParser.cpp
   )

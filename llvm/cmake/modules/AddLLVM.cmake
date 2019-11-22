@@ -397,10 +397,14 @@ endfunction(set_windows_version_resource_properties)
 #     Suppress default RPATH settings in shared libraries.
 #   PLUGIN_TOOL
 #     The tool (i.e. cmake target) that this plugin will link against
+#   COMPONENT_LIB
+#      This is used to specify that this is a component library of
+#      LLVM which means that the source resides in llvm/lib/ and it is a
+#      candidate for inclusion into libLLVM.so.
 #   )
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
-    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH"
+    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB"
     "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH"
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
@@ -484,6 +488,11 @@ function(llvm_add_library name)
     add_library(${name} SHARED ${ALL_FILES})
   else()
     add_library(${name} STATIC ${ALL_FILES})
+  endif()
+
+  if(ARG_COMPONENT_LIB)
+    set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
+    set_property(GLOBAL APPEND PROPERTY LLVM_COMPONENT_LIBS ${name})
   endif()
 
   if(NOT ARG_NO_INSTALL_RPATH)
@@ -570,7 +579,7 @@ function(llvm_add_library name)
   if(ARG_MODULE AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS AND ARG_PLUGIN_TOOL AND (WIN32 OR CYGWIN))
     # On DLL platforms symbols are imported from the tool by linking against it.
     set(llvm_libs ${ARG_PLUGIN_TOOL})
-  elseif (DEFINED LLVM_LINK_COMPONENTS OR DEFINED ARG_LINK_COMPONENTS)
+  elseif (NOT ARG_COMPONENT_LIB)
     if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       set(llvm_libs LLVM)
     else()
@@ -667,6 +676,10 @@ function(add_llvm_install_targets target)
     add_dependencies(${target} ${target_dependencies})
     add_dependencies(${target}-stripped ${target_dependencies})
   endif()
+endfunction()
+
+function(add_llvm_component_library name)
+  add_llvm_library(${name} COMPONENT_LIB ${ARGN})
 endfunction()
 
 macro(add_llvm_library name)
@@ -1027,7 +1040,7 @@ macro(add_llvm_target target_name)
   include_directories(BEFORE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR})
-  add_llvm_library(LLVM${target_name} ${ARGN})
+  add_llvm_component_library(LLVM${target_name} ${ARGN})
   set( CURRENT_LLVM_TARGET LLVM${target_name} )
 endmacro(add_llvm_target)
 

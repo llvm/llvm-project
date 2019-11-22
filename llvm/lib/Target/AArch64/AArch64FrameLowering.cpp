@@ -935,15 +935,15 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                       {-NumBytes, MVT::i8}, TII, MachineInstr::FrameSetup,
                       false, NeedsWinCFI, &HasWinCFI);
-      if (!NeedsWinCFI) {
+      if (!NeedsWinCFI && needsFrameMoves) {
         // Label used to tie together the PROLOG_LABEL and the MachineMoves.
         MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
-        // Encode the stack size of the leaf function.
-        unsigned CFIIndex = MF.addFrameInst(
-            MCCFIInstruction::createDefCfaOffset(FrameLabel, -NumBytes));
-        BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex)
-            .setMIFlags(MachineInstr::FrameSetup);
+          // Encode the stack size of the leaf function.
+          unsigned CFIIndex = MF.addFrameInst(
+              MCCFIInstruction::createDefCfaOffset(FrameLabel, -NumBytes));
+          BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+              .addCFIIndex(CFIIndex)
+              .setMIFlags(MachineInstr::FrameSetup);
       }
     }
 

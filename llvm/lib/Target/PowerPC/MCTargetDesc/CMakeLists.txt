@@ -1,4 +1,4 @@
-add_llvm_library(LLVMPowerPCDesc
+add_llvm_component_library(LLVMPowerPCDesc
   PPCAsmBackend.cpp
   PPCInstPrinter.cpp
   PPCMCTargetDesc.cpp

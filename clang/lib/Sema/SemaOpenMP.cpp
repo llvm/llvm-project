@@ -5364,7 +5364,7 @@ void Sema::ActOnOpenMPDeclareVariantDirective(
   SmallVector<Expr *, 4> CtxScores;
   SmallVector<unsigned, 4> CtxSets;
   SmallVector<unsigned, 4> Ctxs;
-  SmallVector<StringRef, 4> ImplVendors;
+  SmallVector<StringRef, 4> ImplVendors, DeviceKinds;
   bool IsError = false;
   for (const OMPCtxSelectorData &D : Data) {
     OpenMPContextSelectorSetKind CtxSet = D.CtxSet;
@@ -5384,7 +5384,19 @@ void Sema::ActOnOpenMPDeclareVariantDirective(
           Score = VerifyIntegerConstantExpression(Score).get();
       }
     } else {
-      Score = ActOnIntegerConstant(SourceLocation(), 0).get();
+      // OpenMP 5.0, 2.3.3 Matching and Scoring Context Selectors.
+      // The kind, arch, and isa selectors are given the values 2^l, 2^(l+1) and
+      // 2^(l+2), respectively, where l is the number of traits in the construct
+      // set.
+      // TODO: implement correct logic for isa and arch traits.
+      // TODO: take the construct context set into account when it is
+      // implemented.
+      int L = 0; // Currently set the number of traits in construct set to 0,
+                 // since the construct trait set in not supported yet.
+      if (CtxSet == OMP_CTX_SET_device && Ctx == OMP_CTX_kind)
+        Score = ActOnIntegerConstant(SourceLocation(), std::pow(2, L)).get();
+      else
+        Score = ActOnIntegerConstant(SourceLocation(), 0).get();
     }
     switch (CtxSet) {
     case OMP_CTX_SET_implementation:
@@ -5392,6 +5404,17 @@ void Sema::ActOnOpenMPDeclareVariantDirective(
       case OMP_CTX_vendor:
         ImplVendors.append(D.Names.begin(), D.Names.end());
         break;
+      case OMP_CTX_kind:
+      case OMP_CTX_unknown:
+        llvm_unreachable("Unexpected context selector kind.");
+      }
+      break;
+    case OMP_CTX_SET_device:
+      switch (Ctx) {
+      case OMP_CTX_kind:
+        DeviceKinds.append(D.Names.begin(), D.Names.end());
+        break;
+      case OMP_CTX_vendor:
       case OMP_CTX_unknown:
         llvm_unreachable("Unexpected context selector kind.");
       }
@@ -5408,7 +5431,8 @@ void Sema::ActOnOpenMPDeclareVariantDirective(
     auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(
         Context, VariantRef, CtxScores.begin(), CtxScores.size(),
         CtxSets.begin(), CtxSets.size(), Ctxs.begin(), Ctxs.size(),
-        ImplVendors.begin(), ImplVendors.size(), SR);
+        ImplVendors.begin(), ImplVendors.size(), DeviceKinds.begin(),
+        DeviceKinds.size(), SR);
     FD->addAttr(NewAttr);
   }
 }

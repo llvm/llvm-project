@@ -15,10 +15,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static cl::opt<uint32_t> PredicatePassBranchWeight(
     "guards-predicate-pass-branch-weight", cl::Hidden, cl::init(1 << 20),
@@ -80,23 +82,45 @@ void llvm::makeGuardControlFlowExplicit(Function *DeoptIntrinsic,
 void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
   assert(isWidenableBranch(WidenableBR) && "precondition");
 
-  Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
-  // Condition is only guaranteed to dominate branch
-  WCAnd->moveBefore(WidenableBR);
-  Value *OldCond = WCAnd->getOperand(0);
-  IRBuilder<> B(WCAnd);
-  WCAnd->setOperand(0, B.CreateAnd(NewCond, OldCond));
+  // The tempting trivially option is to produce something like this:
+  // br (and oldcond, newcond) where oldcond is assumed to contain a widenable
+  // condition, but that doesn't match the pattern parseWidenableBranch expects
+  // so we have to be more sophisticated.
 
+  Use *C, *WC;
+  BasicBlock *IfTrueBB, *IfFalseBB;
+  parseWidenableBranch(WidenableBR, C, WC, IfTrueBB, IfFalseBB);
+  if (!C) {
+    // br (wc()), ... form
+    IRBuilder<> B(WidenableBR);
+    WidenableBR->setCondition(B.CreateAnd(NewCond, WC->get()));
+  } else {
+    // br (wc & C), ... form
+    IRBuilder<> B(WidenableBR);
+    C->set(B.CreateAnd(NewCond, C->get()));
+    Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
+    // Condition is only guaranteed to dominate branch
+    WCAnd->moveBefore(WidenableBR);    
+  }
   assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
 }
 
 void llvm::setWidenableBranchCond(BranchInst *WidenableBR, Value *NewCond) {
   assert(isWidenableBranch(WidenableBR) && "precondition");
 
-  Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
-  // Condition is only guaranteed to dominate branch
-  WCAnd->moveBefore(WidenableBR);
-  WCAnd->setOperand(0, NewCond);
-
+  Use *C, *WC;
+  BasicBlock *IfTrueBB, *IfFalseBB;
+  parseWidenableBranch(WidenableBR, C, WC, IfTrueBB, IfFalseBB);
+  if (!C) {
+    // br (wc()), ... form
+    IRBuilder<> B(WidenableBR);
+    WidenableBR->setCondition(B.CreateAnd(NewCond, WC->get()));
+  } else {
+    // br (wc & C), ... form
+    Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
+    // Condition is only guaranteed to dominate branch
+    WCAnd->moveBefore(WidenableBR);
+    C->set(NewCond);
+  }
   assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
 }

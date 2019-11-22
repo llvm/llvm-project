@@ -309,29 +309,23 @@ if.end:                                           ; preds = %if.then, %entry
 define fp128 @TestI128_4(fp128 %x) #0 {
 ; SSE-LABEL: TestI128_4:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    subq $40, %rsp
 ; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; SSE-NEXT:    movq $0, (%rsp)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    callq __addtf3
-; SSE-NEXT:    addq $40, %rsp
-; SSE-NEXT:    retq
+; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; SSE-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    jmp __addtf3 # TAILCALL
 ;
 ; AVX-LABEL: TestI128_4:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $40, %rsp
 ; AVX-NEXT:    vmovaps %xmm0, %xmm1
-; AVX-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    movq $0, (%rsp)
-; AVX-NEXT:    vmovaps (%rsp), %xmm0
-; AVX-NEXT:    callq __addtf3
-; AVX-NEXT:    addq $40, %rsp
-; AVX-NEXT:    retq
+; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; AVX-NEXT:    jmp __addtf3 # TAILCALL
 entry:
   %0 = bitcast fp128 %x to i128
   %bf.clear = and i128 %0, -18446744073709551616
@@ -370,29 +364,23 @@ entry:
 define fp128 @acosl(fp128 %x) #0 {
 ; SSE-LABEL: acosl:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    subq $40, %rsp
 ; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; SSE-NEXT:    movq $0, (%rsp)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    callq __addtf3
-; SSE-NEXT:    addq $40, %rsp
-; SSE-NEXT:    retq
+; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; SSE-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    jmp __addtf3 # TAILCALL
 ;
 ; AVX-LABEL: acosl:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $40, %rsp
 ; AVX-NEXT:    vmovaps %xmm0, %xmm1
-; AVX-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    movq $0, (%rsp)
-; AVX-NEXT:    vmovaps (%rsp), %xmm0
-; AVX-NEXT:    callq __addtf3
-; AVX-NEXT:    addq $40, %rsp
-; AVX-NEXT:    retq
+; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; AVX-NEXT:    jmp __addtf3 # TAILCALL
 entry:
   %0 = bitcast fp128 %x to i128
   %bf.clear = and i128 %0, -18446744073709551616

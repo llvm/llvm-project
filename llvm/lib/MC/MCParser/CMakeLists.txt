@@ -1,4 +1,4 @@
-add_llvm_library(LLVMMCParser
+add_llvm_component_library(LLVMMCParser
   AsmLexer.cpp
   AsmParser.cpp
   COFFAsmParser.cpp

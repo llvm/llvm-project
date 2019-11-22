@@ -1,4 +1,4 @@
-add_llvm_library(LLVMObjectYAML
+add_llvm_component_library(LLVMObjectYAML
   CodeViewYAMLDebugSections.cpp
   CodeViewYAMLSymbols.cpp
   CodeViewYAMLTypeHashing.cpp

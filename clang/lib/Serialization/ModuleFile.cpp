@@ -1,4 +1,4 @@
-//===- Module.cpp - Module description ------------------------------------===//
+//===- ModuleFile.cpp - Module description --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file implements the Module class, which describes a module that has
-//  been loaded from an AST file.
+//  This file implements the ModuleFile class, which describes a module that
+//  has been loaded from an AST file.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Serialization/Module.h"
+#include "clang/Serialization/ModuleFile.h"
 #include "ASTReaderInternals.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "llvm/ADT/StringRef.h"

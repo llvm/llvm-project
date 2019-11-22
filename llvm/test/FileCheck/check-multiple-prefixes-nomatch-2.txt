@@ -1,6 +1,14 @@
-; RUN: not FileCheck -input-file %s %s -check-prefix=FOO -check-prefix=BAR 2>&1 | FileCheck %s
-; RUN: not FileCheck -input-file %s %s -check-prefixes=FOO,BAR 2>&1 | FileCheck %s
-; RUN: not FileCheck -input-file %s %s -check-prefixes=BAR,FOO 2>&1 | FileCheck %s
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -input-file %s %s -check-prefix=FOO -check-prefix=BAR \
+; RUN: 2>&1 | FileCheck %s
+;
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -input-file %s %s -check-prefixes=FOO,BAR 2>&1 \
+; RUN: | FileCheck %s
+;
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -input-file %s %s -check-prefixes=BAR,FOO 2>&1 \
+; RUN: | FileCheck %s
 
 fog
 bar

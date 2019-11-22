@@ -1,4 +1,4 @@
-add_llvm_library(LLVMBitWriter
+add_llvm_component_library(LLVMBitWriter
   BitWriter.cpp
   BitcodeWriter.cpp
   BitcodeWriterPass.cpp

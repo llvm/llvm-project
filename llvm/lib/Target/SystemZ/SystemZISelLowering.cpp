@@ -634,6 +634,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   // than "STC;MVC".  Handle the choice in target-specific code instead.
   MaxStoresPerMemset = 0;
   MaxStoresPerMemsetOptSize = 0;
+
+  // Default to having -disable-strictnode-mutation on
+  IsStrictFPEnabled = true;
 }
 
 EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,

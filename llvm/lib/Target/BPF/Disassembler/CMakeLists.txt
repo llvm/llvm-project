@@ -1,4 +1,4 @@
-add_llvm_library(LLVMBPFDisassembler
+add_llvm_component_library(LLVMBPFDisassembler
   BPFDisassembler.cpp
 )
 

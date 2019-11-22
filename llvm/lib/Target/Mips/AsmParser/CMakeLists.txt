@@ -1,3 +1,3 @@
-add_llvm_library(LLVMMipsAsmParser
+add_llvm_component_library(LLVMMipsAsmParser
   MipsAsmParser.cpp
   )

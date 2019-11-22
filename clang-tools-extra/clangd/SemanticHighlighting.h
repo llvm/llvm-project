@@ -44,7 +44,11 @@ enum class HighlightingKind {
   Primitive,
   Macro,
 
-  LastKind = Macro
+  // This one is different from the other kinds as it's a line style
+  // rather than a token style.
+  InactiveCode,
+
+  LastKind = InactiveCode
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K);
 
@@ -61,6 +65,7 @@ bool operator<(const HighlightingToken &L, const HighlightingToken &R);
 struct LineHighlightings {
   int Line;
   std::vector<HighlightingToken> Tokens;
+  bool IsInactive;
 };
 
 bool operator==(const LineHighlightings &L, const LineHighlightings &R);

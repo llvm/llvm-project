@@ -1,4 +1,4 @@
-add_llvm_library(LLVMLinker
+add_llvm_component_library(LLVMLinker
   IRMover.cpp
   LinkModules.cpp
 

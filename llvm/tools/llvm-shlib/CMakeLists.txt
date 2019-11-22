@@ -17,22 +17,10 @@ if(LLVM_BUILD_LLVM_DYLIB)
 
   llvm_map_components_to_libnames(LIB_NAMES ${LLVM_DYLIB_COMPONENTS})
 
-  # libLLVM.so should not have any dependencies on any other LLVM
-  # shared libraries. When using the "all" pseudo-component,
-  # LLVM_AVAILABLE_LIBS is added to the dependencies, which may
-  # contain shared libraries (e.g. libLTO).
-  #
-  # Also exclude libLLVMTableGen for the following reasons:
+  # Exclude libLLVMTableGen for the following reasons:
   #  - it is only used by internal *-tblgen utilities;
   #  - it pollutes the global options space.
-  foreach(lib ${LIB_NAMES})
-    get_target_property(t ${lib} TYPE)
-    if("${lib}" STREQUAL "LLVMTableGen")
-    elseif("x${t}" STREQUAL "xSTATIC_LIBRARY")
-      list(APPEND FILTERED_LIB_NAMES ${lib})
-    endif()
-  endforeach()
-  set(LIB_NAMES ${FILTERED_LIB_NAMES})
+  list(REMOVE_ITEM LIB_NAMES "LLVMTableGen")
 
   if(LLVM_DYLIB_EXPORTED_SYMBOL_FILE)
     set(LLVM_EXPORTED_SYMBOL_FILE ${LLVM_DYLIB_EXPORTED_SYMBOL_FILE})

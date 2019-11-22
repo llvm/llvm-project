@@ -1924,6 +1924,72 @@ exit:                                             ; preds = %guarded, %entry
   ret i32 0
 }
 
+define i32 @swapped_wb(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @swapped_wb(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[N]], [[LENGTH:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LENGTH]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
+; CHECK:       deopt:
+; CHECK-NEXT:    [[DEOPTCALL:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTCALL]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]], !prof !1
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[LOOP_ACC_NEXT_LCSSA:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[LOOP_ACC_NEXT_LCSSA]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %tmp5 = icmp eq i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:                                   ; preds = %entry
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  br label %loop
+
+loop:                                             ; preds = %guarded, %loop.preheader
+  %loop.acc = phi i32 [ %loop.acc.next, %guarded ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %guarded ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  %exiplicit_guard_cond = and i1 %widenable_cond, %within.bounds
+  br i1 %exiplicit_guard_cond, label %guarded, label %deopt, !prof !0
+
+deopt:                                            ; preds = %loop
+  %deoptcall = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
+  ret i32 %deoptcall
+
+guarded:                                          ; preds = %loop
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ult i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit, !prof !2
+
+exit:                                             ; preds = %guarded, %entry
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %guarded ]
+  ret i32 %result
+}
 
 declare i32 @llvm.experimental.deoptimize.i32(...)
 

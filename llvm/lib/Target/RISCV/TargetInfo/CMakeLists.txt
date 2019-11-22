@@ -1,3 +1,3 @@
-add_llvm_library(LLVMRISCVInfo
+add_llvm_component_library(LLVMRISCVInfo
   RISCVTargetInfo.cpp
   )

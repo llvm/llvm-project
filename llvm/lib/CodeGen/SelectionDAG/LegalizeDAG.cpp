@@ -2805,12 +2805,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   }
   case ISD::STRICT_FP_ROUND:
-    // This expansion does not honor the "strict" properties anyway,
-    // so prefer falling back to the non-strict operation if legal.
+    // When strict mode is enforced we can't do expansion because it
+    // does not honor the "strict" properties. Only libcall is allowed.
+    if (TLI.isStrictFPEnabled())
+      break;
+    // We might as well mutate to FP_ROUND when FP_ROUND operation is legal
+    // since this operation is more efficient than stack operation.
     if (TLI.getStrictFPOperationAction(Node->getOpcode(),
                                        Node->getValueType(0))
         == TargetLowering::Legal)
       break;
+    // We fall back to use stack operation when the FP_ROUND operation
+    // isn't available.
     Tmp1 = EmitStackConvert(Node->getOperand(1), 
                             Node->getValueType(0),
                             Node->getValueType(0), dl, Node->getOperand(0));
@@ -2825,12 +2831,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   case ISD::STRICT_FP_EXTEND:
-    // This expansion does not honor the "strict" properties anyway,
-    // so prefer falling back to the non-strict operation if legal.
+    // When strict mode is enforced we can't do expansion because it
+    // does not honor the "strict" properties. Only libcall is allowed.
+    if (TLI.isStrictFPEnabled())
+      break;
+    // We might as well mutate to FP_EXTEND when FP_EXTEND operation is legal
+    // since this operation is more efficient than stack operation.
     if (TLI.getStrictFPOperationAction(Node->getOpcode(),
                                        Node->getValueType(0))
         == TargetLowering::Legal)
       break;
+    // We fall back to use stack operation when the FP_EXTEND operation
+    // isn't available.
     Tmp1 = EmitStackConvert(Node->getOperand(1),
                             Node->getOperand(1).getValueType(),
                             Node->getValueType(0), dl, Node->getOperand(0));
@@ -3701,7 +3713,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   }
 
-  if (Results.empty() && Node->isStrictFPOpcode()) {
+  if (!TLI.isStrictFPEnabled() && Results.empty() && Node->isStrictFPOpcode()) {
     // FIXME: We were asked to expand a strict floating-point operation,
     // but there is currently no expansion implemented that would preserve
     // the "strict" properties.  For now, we just fall back to the non-strict
@@ -4019,6 +4031,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                        RTLIB::LLRINT_PPCF128, Results);
     break;
   case ISD::FDIV:
+  case ISD::STRICT_FDIV:
     ExpandFPLibCall(Node, RTLIB::DIV_F32, RTLIB::DIV_F64,
                     RTLIB::DIV_F80, RTLIB::DIV_F128,
                     RTLIB::DIV_PPCF128, Results);
@@ -4036,11 +4049,13 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::FMA_PPCF128, Results);
     break;
   case ISD::FADD:
+  case ISD::STRICT_FADD:
     ExpandFPLibCall(Node, RTLIB::ADD_F32, RTLIB::ADD_F64,
                     RTLIB::ADD_F80, RTLIB::ADD_F128,
                     RTLIB::ADD_PPCF128, Results);
     break;
   case ISD::FMUL:
+  case ISD::STRICT_FMUL:
     ExpandFPLibCall(Node, RTLIB::MUL_F32, RTLIB::MUL_F64,
                     RTLIB::MUL_F80, RTLIB::MUL_F128,
                     RTLIB::MUL_PPCF128, Results);
@@ -4058,6 +4073,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   }
   case ISD::FSUB:
+  case ISD::STRICT_FSUB:
     ExpandFPLibCall(Node, RTLIB::SUB_F32, RTLIB::SUB_F64,
                     RTLIB::SUB_F80, RTLIB::SUB_F128,
                     RTLIB::SUB_PPCF128, Results);

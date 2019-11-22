@@ -1074,6 +1074,35 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (isa<SCEVCouldNotCompute>(LatchEC))
     return false; // profitability - want hot exit in analyzeable set
 
+  // At this point, we have found an analyzeable latch, and a widenable
+  // condition above the loop.  If we have a widenable exit within the loop
+  // (for which we can't compute exit counts), drop the ability to further
+  // widen so that we gain ability to analyze it's exit count and perform this
+  // transform.  TODO: It'd be nice to know for sure the exit became
+  // analyzeable after dropping widenability.
+  {
+    bool Invalidate = false;
+    
+    for (auto *ExitingBB : ExitingBlocks) {
+      if (LI->getLoopFor(ExitingBB) != L)
+        continue;
+
+      auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+      if (!BI)
+        continue;
+
+      Use *Cond, *WC;
+      BasicBlock *IfTrueBB, *IfFalseBB;
+      if (parseWidenableBranch(BI, Cond, WC, IfTrueBB, IfFalseBB) &&
+          L->contains(IfTrueBB)) {
+        WC->set(ConstantInt::getTrue(IfTrueBB->getContext()));
+        Invalidate = true;
+      }
+    }
+    if (Invalidate)
+      SE->forgetLoop(L);
+  }
+
   // The use of umin(all analyzeable exits) instead of latch is subtle, but
   // important for profitability.  We may have a loop which hasn't been fully
   // canonicalized just yet.  If the exit we chose to widen is provably never

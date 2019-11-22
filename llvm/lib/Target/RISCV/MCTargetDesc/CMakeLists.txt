@@ -1,4 +1,4 @@
-add_llvm_library(LLVMRISCVDesc
+add_llvm_component_library(LLVMRISCVDesc
   RISCVAsmBackend.cpp
   RISCVELFObjectWriter.cpp
   RISCVInstPrinter.cpp

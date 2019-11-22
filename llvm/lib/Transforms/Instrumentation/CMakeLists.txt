@@ -1,4 +1,4 @@
-add_llvm_library(LLVMInstrumentation
+add_llvm_component_library(LLVMInstrumentation
   AddressSanitizer.cpp
   BoundsChecking.cpp
   CGProfile.cpp

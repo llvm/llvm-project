@@ -4,8 +4,8 @@
 
 ; Run without and with -color.  In the former case, FileCheck should suppress
 ; color in its diagnostics because stderr is a file.
-; RUN: not FileCheck %s < %t.in 2> %t.no-color
-; RUN: not FileCheck -color %s < %t.in 2> %t.color
+; RUN: %ProtectFileCheckOutput not FileCheck %s < %t.in 2> %t.no-color
+; RUN: %ProtectFileCheckOutput not FileCheck -color %s < %t.in 2> %t.color
 
 ; Check whether color was produced.
 ; RUN: FileCheck -check-prefix NO-COLOR %s < %t.no-color

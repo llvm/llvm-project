@@ -1,9 +1,9 @@
-; RUN: not FileCheck -check-prefix=DAGNOT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=DAGNOT-ERROR %s
-; RUN: not FileCheck -check-prefix=NOTDAG -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NOTDAG-ERROR %s
-; RUN: not FileCheck -check-prefix=NEXTNOT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NEXTNOT-ERROR %s
-; RUN: not FileCheck -check-prefix=NOTNEXT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NOTNEXT-ERROR %s
-; RUN: not FileCheck -check-prefix=SAMENOT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=SAMENOT-ERROR %s
-; RUN: not FileCheck -check-prefix=NOTSAME -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NOTSAME-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=DAGNOT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=DAGNOT-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=NOTDAG -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NOTDAG-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=NEXTNOT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NEXTNOT-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=NOTNEXT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NOTNEXT-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=SAMENOT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=SAMENOT-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=NOTSAME -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NOTSAME-ERROR %s
 
 foo
 ; DAGNOT: foo

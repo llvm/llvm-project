@@ -1,4 +1,4 @@
-add_llvm_library(LLVMAggressiveInstCombine
+add_llvm_component_library(LLVMAggressiveInstCombine
   AggressiveInstCombine.cpp
   TruncInstCombine.cpp
 

@@ -1,4 +1,4 @@
-add_llvm_library(LLVMCoverage
+add_llvm_component_library(LLVMCoverage
   CoverageMapping.cpp
   CoverageMappingWriter.cpp
   CoverageMappingReader.cpp

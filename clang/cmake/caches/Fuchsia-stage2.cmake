@@ -1,6 +1,6 @@
 # This file sets up a CMakeCache for the second stage of a Fuchsia toolchain build.
 
-set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64 CACHE STRING "")
+set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64;RISCV CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
@@ -106,13 +106,14 @@ endforeach()
 if(FUCHSIA_SDK)
   set(FUCHSIA_aarch64_NAME arm64)
   set(FUCHSIA_x86_64_NAME x64)
-  foreach(target x86_64;aarch64)
+  set(FUCHSIA_riscv64_NAME riscv64)
+  foreach(target x86_64;aarch64;riscv64)
     set(FUCHSIA_${target}_COMPILER_FLAGS "-I${FUCHSIA_SDK}/pkg/fdio/include")
     set(FUCHSIA_${target}_LINKER_FLAGS "-L${FUCHSIA_SDK}/arch/${FUCHSIA_${target}_NAME}/lib")
     set(FUCHSIA_${target}_SYSROOT "${FUCHSIA_SDK}/arch/${FUCHSIA_${target}_NAME}/sysroot")
   endforeach()
 
-  foreach(target x86_64;aarch64)
+  foreach(target x86_64;aarch64;riscv64)
     # Set the per-target builtins options.
     list(APPEND BUILTIN_TARGETS "${target}-unknown-fuchsia")
     set(BUILTINS_${target}-unknown-fuchsia_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")
@@ -124,7 +125,9 @@ if(FUCHSIA_SDK)
     set(BUILTINS_${target}-unknown-fuchsia_CMAKE_MODULE_LINKER_FLAGS ${FUCHSIA_${target}_LINKER_FLAGS} CACHE STRING "")
     set(BUILTINS_${target}-unknown-fuchsia_CMAKE_EXE_LINKER_FLAGS ${FUCHSIA_${target}_LINKER_FLAGS} CACHE STRING "")
     set(BUILTINS_${target}-unknown-fuchsia_CMAKE_SYSROOT ${FUCHSIA_${target}_SYSROOT} CACHE PATH "")
+  endforeach()
 
+  foreach(target x86_64;aarch64)
     # Set the per-target runtimes options.
     list(APPEND RUNTIME_TARGETS "${target}-unknown-fuchsia")
     set(RUNTIMES_${target}-unknown-fuchsia_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")

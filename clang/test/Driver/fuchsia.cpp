@@ -1,9 +1,22 @@
 // RUN: %clangxx %s -### -no-canonical-prefixes --target=x86_64-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 | FileCheck %s
+// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN: %clangxx %s -### -no-canonical-prefixes --target=aarch64-fuchsia \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
+// RUN: %clangxx %s -### -no-canonical-prefixes --target=riscv64-fuchsia \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
-// CHECK: "-triple" "x86_64-fuchsia"
+// CHECK-X86_64: "-triple" "x86_64-unknown-fuchsia"
+// CHECK-AARCH64: "-triple" "aarch64-unknown-fuchsia"
+// CHECK-RISCV64: "-triple" "riscv64-unknown-fuchsia"
 // CHECK: "-fuse-init-array"
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -23,7 +36,9 @@
 // CHECK: "-lc++"
 // CHECK: "-lm"
 // CHECK: "--pop-state"
-// CHECK: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-X86_64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-RISCV64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}riscv64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o

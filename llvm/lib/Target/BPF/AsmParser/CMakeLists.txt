@@ -1,3 +1,3 @@
-add_llvm_library(LLVMBPFAsmParser
+add_llvm_component_library(LLVMBPFAsmParser
   BPFAsmParser.cpp
   )

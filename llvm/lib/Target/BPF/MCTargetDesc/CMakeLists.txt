@@ -1,4 +1,4 @@
-add_llvm_library(LLVMBPFDesc
+add_llvm_component_library(LLVMBPFDesc
   BPFMCTargetDesc.cpp
   BPFAsmBackend.cpp
   BPFInstPrinter.cpp

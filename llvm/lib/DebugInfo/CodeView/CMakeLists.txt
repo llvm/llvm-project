@@ -1,4 +1,4 @@
-add_llvm_library(LLVMDebugInfoCodeView
+add_llvm_component_library(LLVMDebugInfoCodeView
   AppendingTypeTableBuilder.cpp
   CodeViewError.cpp
   CodeViewRecordIO.cpp

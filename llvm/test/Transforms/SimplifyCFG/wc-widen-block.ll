@@ -363,6 +363,81 @@ return:
   ret i32 0
 }
 
+define i32 @trivial_wb(i1 %cond_0, i32* %p) {
+; CHECK-LABEL: @trivial_wb(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    br i1 [[WIDENABLE_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK:       deopt:
+; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTRET]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i32 [[V]], 0
+; CHECK-NEXT:    br i1 [[COND_1]], label [[RETURN:%.*]], label [[DEOPT]], !prof !0
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  br i1 %widenable_cond, label %guarded, label %deopt, !prof !0
+
+deopt:
+  %deoptret = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret
+
+guarded:
+  %v = load i32, i32* %p
+  %cond_1 = icmp eq i32 %v, 0
+  br i1 %cond_1, label %return, label %deopt2, !prof !0
+
+deopt2:
+  %deoptret2 = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret2
+
+return:
+  ret i32 0
+}
+
+
+define i32 @swapped_wb(i1 %cond_0, i32* %p) {
+; CHECK-LABEL: @swapped_wb(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDENABLE_COND]], [[COND_0:%.*]]
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK:       deopt:
+; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTRET]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i32 [[V]], 0
+; CHECK-NEXT:    br i1 [[COND_1]], label [[RETURN:%.*]], label [[DEOPT]], !prof !0
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  %exiplicit_guard_cond = and i1 %widenable_cond, %cond_0
+  br i1 %exiplicit_guard_cond, label %guarded, label %deopt, !prof !0
+
+deopt:
+  %deoptret = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret
+
+guarded:
+  %v = load i32, i32* %p
+  %cond_1 = icmp eq i32 %v, 0
+  br i1 %cond_1, label %return, label %deopt2, !prof !0
+
+deopt2:
+  %deoptret2 = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret2
+
+return:
+  ret i32 0
+}
+
 
 
 
