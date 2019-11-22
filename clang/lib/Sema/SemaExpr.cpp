@@ -8182,7 +8182,7 @@ Sema::CheckAssignmentConstraints(SourceLocation Loc,
 /// type ElementType.
 static bool isVector(QualType QT, QualType ElementType) {
   if (const VectorType *VT = QT->getAs<VectorType>())
-    return VT->getElementType() == ElementType;
+    return VT->getElementType().getCanonicalType() == ElementType;
   return false;
 }
 
