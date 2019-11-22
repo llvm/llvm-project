@@ -1,3 +1,3 @@
-add_llvm_library(LLVMAMDGPUInfo
+add_llvm_component_library(LLVMAMDGPUInfo
   AMDGPUTargetInfo.cpp
   )

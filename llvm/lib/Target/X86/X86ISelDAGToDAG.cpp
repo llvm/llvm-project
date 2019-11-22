@@ -335,7 +335,7 @@ namespace {
       // Do not want to hoist if we're not optimizing for size.
       // TODO: We'd like to remove this restriction.
       // See the comment in X86InstrInfo.td for more info.
-      if (!OptForSize)
+      if (!CurDAG->shouldOptForSize())
         return false;
 
       // Walk all the users of the immediate.
@@ -3019,7 +3019,7 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
    LLVM_FALLTHROUGH;
   case X86ISD::ADD:
     // Try to match inc/dec.
-    if (!Subtarget->slowIncDec() || OptForSize) {
+    if (!Subtarget->slowIncDec() || CurDAG->shouldOptForSize()) {
       bool IsOne = isOneConstant(StoredVal.getOperand(1));
       bool IsNegOne = isAllOnesConstant(StoredVal.getOperand(1));
       // ADD/SUB with 1/-1 and carry flag isn't used can use inc/dec.
@@ -5220,6 +5220,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SelectCode(Res.getNode());
     return;
   }
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_FP_ROUND:

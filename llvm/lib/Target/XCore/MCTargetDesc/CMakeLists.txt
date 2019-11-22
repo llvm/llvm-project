@@ -1,4 +1,4 @@
-add_llvm_library(LLVMXCoreDesc
+add_llvm_component_library(LLVMXCoreDesc
   XCoreInstPrinter.cpp
   XCoreMCTargetDesc.cpp
   XCoreMCAsmInfo.cpp

@@ -15,6 +15,7 @@
 ; RUN: echo 'CHECK: hello' > %t.chk
 ; RUN: echo 'CHECK: universe' >> %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -strict-whitespace -match-full-lines -check-prefix=ALIGN \
 ; RUN:             -implicit-check-not='remark:' %s
@@ -51,12 +52,15 @@
 ; RUN: echo 'CHECK: hello' > %t.chk
 ; RUN: echo 'CHECK: world' >> %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=CHK \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=CHK,CHK-V \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=CHK,CHK-V \
 ; RUN:             -implicit-check-not='remark:'
@@ -88,12 +92,15 @@
 
 ; RUN: echo 'CHECK-COUNT-3: pete' > %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=CNT,CNT-Q \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=CNT,CNT-V \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=CNT,CNT-V \
 ; RUN:             -implicit-check-not='remark:'
@@ -125,12 +132,15 @@
 ; RUN: echo 'CHECK-NEXT: again' >> %t.chk
 ; RUN: echo 'CHECK-NEXT: world' >> %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=NXT \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=NXT,NXT-V \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=NXT,NXT-V,NXT-VV \
 ; RUN:             -implicit-check-not='remark:'
@@ -153,6 +163,7 @@
 ; RUN: echo 'yonder' >> %t.in
 ; RUN: echo 'world' >> %t.in
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=NXT2
 
@@ -178,12 +189,15 @@
 ; RUN: echo 'CHECK-SAME: world' >> %t.chk
 ; RUN: echo 'CHECK-SAME: again' >> %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=SAM \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=SAM,SAM-V \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=SAM,SAM-V,SAM-VV \
 ; RUN:             -implicit-check-not='remark:'
@@ -203,6 +217,7 @@
 
 ; RUN: echo 'again' >> %t.in
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=SAM2 \
 ; RUN:             -implicit-check-not='remark:'
@@ -241,12 +256,15 @@
 ; RUN: echo 'CHECK-EMPTY:' >> %t.chk
 ; RUN: echo 'CHECK-LABEL: label' >> %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=EMP \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP,EMP-V \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP,EMP-V,EMP-VV \
 ; RUN:             -implicit-check-not='remark:'
@@ -275,12 +293,15 @@
 ; RUN: echo 'CHECK: hello' > %t.chk
 ; RUN: echo 'CHECK-EMPTY:' >> %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=EMP2 \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP2,EMP2-V \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP2,EMP2-V,EMP2-VV \
 ; RUN:             -implicit-check-not='remark:'
@@ -310,12 +331,15 @@
 ; RUN: echo 'CHECK-NOT: goodbye' > %t.chk
 ; RUN: echo 'CHECK-NOT: world' >> %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=NOT \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT,NOT-V \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT,NOT-V,NOT-VV \
 ; RUN:             -implicit-check-not='remark:'
@@ -340,12 +364,15 @@
 
 ; RUN: echo 'CHECK: ain' >> %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=NOT2 \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT2,NOT2-V \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT2,NOT2-V,NOT2-VV \
 ; RUN:             -implicit-check-not='remark:'
@@ -387,12 +414,15 @@
 ; DAG-VQ = -v and not -vv
 ; DAG-VV = -vv
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG,DAG-Q \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG,DAG-V,DAG-VQ \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG,DAG-V,DAG-VV \
 ; RUN:             -implicit-check-not='remark:'
@@ -434,12 +464,15 @@
 ; RUN: echo 'CHECK: foo' >> %t.chk
 ; RUN: echo 'CHECK-LABEL: lab2' >> %t.chk
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-V \
 ; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-V,LAB-VV \
 ; RUN:             -implicit-check-not='remark:'

@@ -14,35 +14,7 @@ declare <16 x float> @llvm.experimental.constrained.fdiv.v16f32(<16 x float>, <1
 define <8 x double> @f1(<8 x double> %a, <8 x double> %b) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf32x4 $3, %zmm1, %xmm2
-; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
-; CHECK-NEXT:    vaddsd %xmm2, %xmm3, %xmm4
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm2[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; CHECK-NEXT:    vaddsd %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm4[0],xmm2[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm1, %xmm3
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm4
-; CHECK-NEXT:    vaddsd %xmm3, %xmm4, %xmm5
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm4[1,0]
-; CHECK-NEXT:    vaddsd %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm5[0],xmm3[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; CHECK-NEXT:    vaddsd %xmm3, %xmm4, %xmm5
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm4[1,0]
-; CHECK-NEXT:    vaddsd %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm5[0],xmm3[0]
-; CHECK-NEXT:    vaddsd %xmm1, %xmm0, %xmm4
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm4[0],xmm0[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; CHECK-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <8 x double> @llvm.experimental.constrained.fadd.v8f64(<8 x double> %a, <8 x double> %b,
                                                                      metadata !"round.dynamic",
@@ -53,67 +25,7 @@ define <8 x double> @f1(<8 x double> %a, <8 x double> %b) #0 {
 define <16 x float> @f2(<16 x float> %a, <16 x float> %b) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf32x4 $3, %zmm1, %xmm2
-; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
-; CHECK-NEXT:    vaddss %xmm2, %xmm3, %xmm4
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm2[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
-; CHECK-NEXT:    vaddss %xmm5, %xmm6, %xmm5
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm2[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm3[1,0]
-; CHECK-NEXT:    vaddss %xmm5, %xmm6, %xmm5
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm5[0],xmm4[3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; CHECK-NEXT:    vaddss %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm4[0,1,2],xmm2[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm1, %xmm3
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm4
-; CHECK-NEXT:    vaddss %xmm3, %xmm4, %xmm5
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm4[1,1,3,3]
-; CHECK-NEXT:    vaddss %xmm6, %xmm7, %xmm6
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[2,3]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm3[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm7 = xmm4[1,0]
-; CHECK-NEXT:    vaddss %xmm6, %xmm7, %xmm6
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm6[0],xmm5[3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[3,1,2,3]
-; CHECK-NEXT:    vaddss %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm5[0,1,2],xmm3[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; CHECK-NEXT:    vaddss %xmm3, %xmm4, %xmm5
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm4[1,1,3,3]
-; CHECK-NEXT:    vaddss %xmm6, %xmm7, %xmm6
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[2,3]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm3[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm7 = xmm4[1,0]
-; CHECK-NEXT:    vaddss %xmm6, %xmm7, %xmm6
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm6[0],xmm5[3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[3,1,2,3]
-; CHECK-NEXT:    vaddss %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm5[0,1,2],xmm3[0]
-; CHECK-NEXT:    vaddss %xmm1, %xmm0, %xmm4
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vaddss %xmm5, %xmm6, %xmm5
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm0[1,0]
-; CHECK-NEXT:    vaddss %xmm5, %xmm6, %xmm5
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm5[0],xmm4[3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; CHECK-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm4[0,1,2],xmm0[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; CHECK-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %a, <16 x float> %b,
                                                                       metadata !"round.dynamic",
@@ -124,35 +36,7 @@ define <16 x float> @f2(<16 x float> %a, <16 x float> %b) #0 {
 define <8 x double> @f3(<8 x double> %a, <8 x double> %b) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf32x4 $3, %zmm1, %xmm2
-; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
-; CHECK-NEXT:    vsubsd %xmm2, %xmm3, %xmm4
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm2[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; CHECK-NEXT:    vsubsd %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm4[0],xmm2[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm1, %xmm3
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm4
-; CHECK-NEXT:    vsubsd %xmm3, %xmm4, %xmm5
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm4[1,0]
-; CHECK-NEXT:    vsubsd %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm5[0],xmm3[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; CHECK-NEXT:    vsubsd %xmm3, %xmm4, %xmm5
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm4[1,0]
-; CHECK-NEXT:    vsubsd %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm5[0],xmm3[0]
-; CHECK-NEXT:    vsubsd %xmm1, %xmm0, %xmm4
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm4[0],xmm0[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; CHECK-NEXT:    vsubpd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <8 x double> @llvm.experimental.constrained.fsub.v8f64(<8 x double> %a, <8 x double> %b,
                                                                      metadata !"round.dynamic",
@@ -163,67 +47,7 @@ define <8 x double> @f3(<8 x double> %a, <8 x double> %b) #0 {
 define <16 x float> @f4(<16 x float> %a, <16 x float> %b) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf32x4 $3, %zmm1, %xmm2
-; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
-; CHECK-NEXT:    vsubss %xmm2, %xmm3, %xmm4
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm2[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
-; CHECK-NEXT:    vsubss %xmm5, %xmm6, %xmm5
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm2[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm3[1,0]
-; CHECK-NEXT:    vsubss %xmm5, %xmm6, %xmm5
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm5[0],xmm4[3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; CHECK-NEXT:    vsubss %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm4[0,1,2],xmm2[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm1, %xmm3
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm4
-; CHECK-NEXT:    vsubss %xmm3, %xmm4, %xmm5
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm4[1,1,3,3]
-; CHECK-NEXT:    vsubss %xmm6, %xmm7, %xmm6
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[2,3]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm3[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm7 = xmm4[1,0]
-; CHECK-NEXT:    vsubss %xmm6, %xmm7, %xmm6
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm6[0],xmm5[3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[3,1,2,3]
-; CHECK-NEXT:    vsubss %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm5[0,1,2],xmm3[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; CHECK-NEXT:    vsubss %xmm3, %xmm4, %xmm5
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm4[1,1,3,3]
-; CHECK-NEXT:    vsubss %xmm6, %xmm7, %xmm6
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[2,3]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm3[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm7 = xmm4[1,0]
-; CHECK-NEXT:    vsubss %xmm6, %xmm7, %xmm6
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm6[0],xmm5[3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[3,1,2,3]
-; CHECK-NEXT:    vsubss %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm5[0,1,2],xmm3[0]
-; CHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm4
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vsubss %xmm5, %xmm6, %xmm5
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm0[1,0]
-; CHECK-NEXT:    vsubss %xmm5, %xmm6, %xmm5
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm5[0],xmm4[3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; CHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm4[0,1,2],xmm0[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; CHECK-NEXT:    vsubps %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x float> @llvm.experimental.constrained.fsub.v16f32(<16 x float> %a, <16 x float> %b,
                                                                       metadata !"round.dynamic",

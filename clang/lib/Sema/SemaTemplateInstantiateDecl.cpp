@@ -410,6 +410,17 @@ static void instantiateOMPDeclareVariantAttr(
       case OMP_CTX_vendor:
         Data.emplace_back(CtxSet, Ctx, Score, Attr.implVendors());
         break;
+      case OMP_CTX_kind:
+      case OMP_CTX_unknown:
+        llvm_unreachable("Unexpected context selector kind.");
+      }
+      break;
+    case OMP_CTX_SET_device:
+      switch (Ctx) {
+      case OMP_CTX_kind:
+        Data.emplace_back(CtxSet, Ctx, Score, Attr.deviceKinds());
+        break;
+      case OMP_CTX_vendor:
       case OMP_CTX_unknown:
         llvm_unreachable("Unexpected context selector kind.");
       }

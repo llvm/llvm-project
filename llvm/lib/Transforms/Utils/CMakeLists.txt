@@ -1,4 +1,4 @@
-add_llvm_library(LLVMTransformUtils
+add_llvm_component_library(LLVMTransformUtils
   ASanStackFrameLayout.cpp
   AddDiscriminators.cpp
   BasicBlockUtils.cpp

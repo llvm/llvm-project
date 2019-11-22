@@ -1,4 +1,4 @@
-add_llvm_library(LLVMTableGen
+add_llvm_component_library(LLVMTableGen
   Error.cpp
   JSONBackend.cpp
   Main.cpp

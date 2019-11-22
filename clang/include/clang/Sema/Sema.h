@@ -9315,8 +9315,7 @@ public:
   /// Struct to store the context selectors info for declare variant directive.
   using OMPCtxStringType = SmallString<8>;
   using OMPCtxSelectorData =
-      OpenMPCtxSelectorData<OMPCtxStringType, SmallVector<OMPCtxStringType, 4>,
-                            ExprResult>;
+      OpenMPCtxSelectorData<SmallVector<OMPCtxStringType, 4>, ExprResult>;
 
   /// Checks if the variant/multiversion functions are compatible.
   bool areMultiversionVariantFunctionsCompatible(

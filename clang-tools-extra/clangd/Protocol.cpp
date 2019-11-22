@@ -1063,7 +1063,8 @@ bool operator==(const SemanticHighlightingInformation &Lhs,
 
 llvm::json::Value toJSON(const SemanticHighlightingInformation &Highlighting) {
   return llvm::json::Object{{"line", Highlighting.Line},
-                            {"tokens", Highlighting.Tokens}};
+                            {"tokens", Highlighting.Tokens},
+                            {"isInactive", Highlighting.IsInactive}};
 }
 
 llvm::json::Value toJSON(const SemanticHighlightingParams &Highlighting) {

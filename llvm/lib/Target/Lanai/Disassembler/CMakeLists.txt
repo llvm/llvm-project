@@ -1,3 +1,3 @@
-add_llvm_library(LLVMLanaiDisassembler
+add_llvm_component_library(LLVMLanaiDisassembler
   LanaiDisassembler.cpp
   )

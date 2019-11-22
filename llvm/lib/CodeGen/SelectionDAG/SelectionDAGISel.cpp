@@ -444,7 +444,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   SplitCriticalSideEffectEdges(const_cast<Function &>(Fn), DT, LI);
 
   CurDAG->init(*MF, *ORE, this, LibInfo,
-   getAnalysisIfAvailable<LegacyDivergenceAnalysis>());
+               getAnalysisIfAvailable<LegacyDivergenceAnalysis>(),
+               nullptr, nullptr);
   FuncInfo->set(Fn, *MF, CurDAG);
   SwiftError->setFunction(*MF);
 
@@ -1155,7 +1156,7 @@ void SelectionDAGISel::DoInstructionSelection() {
       // we convert them to normal FP opcodes instead at this point.  This
       // will allow them to be handled by existing target-specific instruction
       // selectors.
-      if (Node->isStrictFPOpcode() &&
+      if (!TLI->isStrictFPEnabled() && Node->isStrictFPOpcode() &&
           (TLI->getOperationAction(Node->getOpcode(), Node->getValueType(0))
            == TargetLowering::Expand))
         Node = CurDAG->mutateStrictFPToFP(Node);

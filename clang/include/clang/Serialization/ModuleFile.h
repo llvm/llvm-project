@@ -1,4 +1,4 @@
-//===- Module.h - Module description ----------------------------*- C++ -*-===//
+//===- ModuleFile.h - Module file description -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SERIALIZATION_MODULE_H
-#define LLVM_CLANG_SERIALIZATION_MODULE_H
+#ifndef LLVM_CLANG_SERIALIZATION_MODULEFILE_H
+#define LLVM_CLANG_SERIALIZATION_MODULEFILE_H
 
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
@@ -489,4 +489,4 @@ public:
 
 } // namespace clang
 
-#endif // LLVM_CLANG_SERIALIZATION_MODULE_H
+#endif // LLVM_CLANG_SERIALIZATION_MODULEFILE_H

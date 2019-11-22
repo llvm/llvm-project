@@ -1,4 +1,4 @@
-add_llvm_library(LLVMObjCARCOpts
+add_llvm_component_library(LLVMObjCARCOpts
   ObjCARC.cpp
   ObjCARCOpts.cpp
   ObjCARCExpand.cpp

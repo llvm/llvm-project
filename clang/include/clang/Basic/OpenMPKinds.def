@@ -221,9 +221,11 @@
 
 // OpenMP context selector sets.
 OPENMP_CONTEXT_SELECTOR_SET(implementation)
+OPENMP_CONTEXT_SELECTOR_SET(device)
 
 // OpenMP context selectors.
 OPENMP_CONTEXT_SELECTOR(vendor)
+OPENMP_CONTEXT_SELECTOR(kind)
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)

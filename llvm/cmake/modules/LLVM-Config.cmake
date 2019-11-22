@@ -267,7 +267,8 @@ function(llvm_map_components_to_libnames out_libs)
     elseif( c STREQUAL "engine" )
       # already processed
     elseif( c STREQUAL "all" )
-      list(APPEND expanded_components ${LLVM_AVAILABLE_LIBS})
+      get_property(all_components GLOBAL PROPERTY LLVM_COMPONENT_LIBS)
+      list(APPEND expanded_components ${all_components})
     else()
       # Canonize the component name:
       string(TOUPPER "${c}" capitalized)

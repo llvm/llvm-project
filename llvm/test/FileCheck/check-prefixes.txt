@@ -1,5 +1,8 @@
 // RUN: FileCheck -check-prefix=ANOTHER-PREFIX -input-file %s %s
-// RUN: not FileCheck -check-prefix=PREFIX -input-file %s %s 2>&1 | FileCheck -check-prefix=CHECK-NONEXISTENT-PREFIX %s
+//
+// RUN: %ProtectFileCheckOutput \
+// RUN: not FileCheck -check-prefix=PREFIX -input-file %s %s 2>&1 \
+// RUN: | FileCheck -check-prefix=CHECK-NONEXISTENT-PREFIX %s
 
 foobar
 ; ANOTHER-PREFIX: foobar

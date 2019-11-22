@@ -1225,6 +1225,9 @@ def note_omp_declare_variant_ctx_used_here : Note<
 def warn_omp_more_one_device_type_clause : Warning<
   "more than one 'device_type' clause is specified">,
   InGroup<OpenMPClauses>;
+def err_omp_wrong_device_kind_trait : Error<
+  "unknown '%0' device kind trait in the 'device' context selector set, expected"
+  " one of 'host', 'nohost', 'cpu', 'gpu' or 'fpga'">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

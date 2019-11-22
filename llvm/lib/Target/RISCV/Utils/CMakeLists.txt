@@ -1,4 +1,4 @@
-add_llvm_library(LLVMRISCVUtils
+add_llvm_component_library(LLVMRISCVUtils
   RISCVBaseInfo.cpp
   RISCVMatInt.cpp
   )

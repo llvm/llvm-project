@@ -16,6 +16,7 @@ class EditlineTest(PExpectTest):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfAsan
     def test_left_right_arrow(self):
         """Test that ctrl+left/right arrow navigates words correctly.
 

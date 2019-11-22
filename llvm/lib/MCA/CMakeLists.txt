@@ -1,4 +1,4 @@
-add_llvm_library(LLVMMCA
+add_llvm_component_library(LLVMMCA
   CodeEmitter.cpp
   Context.cpp
   HWEventListener.cpp

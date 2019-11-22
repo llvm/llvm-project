@@ -1,3 +1,3 @@
-add_llvm_library(LLVMARMDisassembler
+add_llvm_component_library(LLVMARMDisassembler
   ARMDisassembler.cpp
   )

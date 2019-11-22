@@ -1,4 +1,4 @@
-add_llvm_library(LLVMRuntimeDyld
+add_llvm_component_library(LLVMRuntimeDyld
   JITSymbol.cpp
   RTDyldMemoryManager.cpp
   RuntimeDyld.cpp

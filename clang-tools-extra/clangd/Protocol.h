@@ -1209,6 +1209,11 @@ struct SemanticHighlightingInformation {
   int Line = 0;
   /// The base64 encoded string of highlighting tokens.
   std::string Tokens;
+  /// Is the line in an inactive preprocessor branch?
+  /// This is a clangd extension.
+  /// An inactive line can still contain highlighting tokens as well;
+  /// clients should combine line style and token style if possible.
+  bool IsInactive = false;
 };
 bool operator==(const SemanticHighlightingInformation &Lhs,
                 const SemanticHighlightingInformation &Rhs);

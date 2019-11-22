@@ -3,8 +3,9 @@
 
 ; String variable correctly defined to a non-empty string.
 RUN: FileCheck -DVALUE=10 --input-file %s %s
-RUN: not FileCheck -DVALUE=20 --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput not FileCheck -DVALUE=20 --input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --check-prefix ERRMSG
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -DVALUE=10 --check-prefix NOT --input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --check-prefix NOT-ERRMSG
 RUN: FileCheck -DVALUE=20 --check-prefix NOT --input-file %s %s

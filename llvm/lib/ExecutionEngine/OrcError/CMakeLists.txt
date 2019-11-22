@@ -1,4 +1,4 @@
-add_llvm_library(LLVMOrcError
+add_llvm_component_library(LLVMOrcError
   OrcError.cpp
   RPCError.cpp
   ADDITIONAL_HEADER_DIRS

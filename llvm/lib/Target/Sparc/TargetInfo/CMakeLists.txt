@@ -1,3 +1,3 @@
-add_llvm_library(LLVMSparcInfo
+add_llvm_component_library(LLVMSparcInfo
   SparcTargetInfo.cpp
   )

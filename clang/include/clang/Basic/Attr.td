@@ -3337,7 +3337,8 @@ def OMPDeclareVariant : InheritableAttr {
     VariadicExprArgument<"Scores">,
     VariadicUnsignedArgument<"CtxSelectorSets">,
     VariadicUnsignedArgument<"CtxSelectors">,
-    VariadicStringArgument<"ImplVendors">
+    VariadicStringArgument<"ImplVendors">,
+    VariadicStringArgument<"DeviceKinds">
   ];
   let AdditionalMembers = [{
     void printScore(raw_ostream & OS, const PrintingPolicy &Policy, unsigned I) const {
@@ -3377,6 +3378,27 @@ def OMPDeclareVariant : InheritableAttr {
             }
             OS << ")";
             break;
+          case OMP_CTX_kind:
+            llvm_unreachable("Unexpected context selector in implementation set.");
+          case OMP_CTX_unknown:
+            llvm_unreachable("Unknown context selector.");
+          }
+          OS << "}";
+          break;
+        case OMP_CTX_SET_device:
+          OS << "device={";
+          switch (Ctx) {
+          case OMP_CTX_kind:
+            OS << "kind(";
+            if (deviceKinds_size() > 0) {
+              OS << *deviceKinds().begin();
+              for (StringRef KindName : llvm::drop_begin(deviceKinds(), 1))
+                OS << ", " << KindName;
+            }
+            OS << ")";
+            break;
+          case OMP_CTX_vendor:
+            llvm_unreachable("Unexpected context selector in device set.");
           case OMP_CTX_unknown:
             llvm_unreachable("Unknown context selector.");
           }
@@ -3385,6 +3407,8 @@ def OMPDeclareVariant : InheritableAttr {
         case OMP_CTX_SET_unknown:
           llvm_unreachable("Unknown context selector set.");
         }
+        if (I != E - 1)
+          OS << ",";
       }
       OS << ")";
     }

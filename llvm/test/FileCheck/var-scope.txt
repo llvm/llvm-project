@@ -6,11 +6,11 @@
 RUN: FileCheck --check-prefixes CHECK,LOCAL3,GLOBAL --input-file %s %s
 
 RUN: FileCheck --check-prefixes CHECK,GLOBAL --enable-var-scope --input-file %s %s
-RUN: not FileCheck --check-prefixes CHECK,LOCAL1 --enable-var-scope --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL1 --enable-var-scope --input-file %s %s 2>&1 \
 RUN:   | FileCheck --check-prefixes ERRUNDEF,ERRUNDEFLOCAL %s
-RUN: not FileCheck --check-prefixes CHECK,LOCAL2 --enable-var-scope --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL2 --enable-var-scope --input-file %s %s 2>&1 \
 RUN:   | FileCheck --check-prefixes ERRUNDEF,ERRUNDEFLOCNUM %s
-RUN: not FileCheck --check-prefixes CHECK,LOCAL3 --enable-var-scope --input-file %s %s 2>&1 \
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL3 --enable-var-scope --input-file %s %s 2>&1 \
 RUN:   | FileCheck --check-prefixes ERRUNDEF,ERRUNDEFLOCAL,ERRUNDEFLOCNUM %s
 
 local1
