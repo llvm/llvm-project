@@ -13,6 +13,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
@@ -37,6 +38,64 @@ public:
 private:
   std::mutex Lock;
   raw_ostream &OS;
+};
+
+class ResourceDirectoryCache {
+public:
+  /// findResourceDir finds the resource directory relative to the clang
+  /// compiler being used in Args, by running it with "-print-resource-dir"
+  /// option and cache the results for reuse. \returns resource directory path
+  /// associated with the given invocation command or empty string if the
+  /// compiler path is NOT an absolute path.
+  StringRef findResourceDir(const tooling::CommandLineArguments &Args) {
+    if (Args.size() < 1)
+      return "";
+
+    const std::string &ClangBinaryPath = Args[0];
+    if (!llvm::sys::path::is_absolute(ClangBinaryPath))
+      return "";
+
+    const std::string &ClangBinaryName =
+        llvm::sys::path::filename(ClangBinaryPath);
+
+    std::unique_lock<std::mutex> LockGuard(CacheLock);
+    const auto &CachedResourceDir = Cache.find(ClangBinaryPath);
+    if (CachedResourceDir != Cache.end())
+      return CachedResourceDir->second;
+
+    std::vector<StringRef> PrintResourceDirArgs{ClangBinaryName,
+                                                "-print-resource-dir"};
+    llvm::SmallString<64> OutputFile, ErrorFile;
+    llvm::sys::fs::createTemporaryFile("print-resource-dir-output",
+                                       "" /*no-suffix*/, OutputFile);
+    llvm::sys::fs::createTemporaryFile("print-resource-dir-error",
+                                       "" /*no-suffix*/, ErrorFile);
+    llvm::FileRemover OutputRemover(OutputFile.c_str());
+    llvm::FileRemover ErrorRemover(ErrorFile.c_str());
+    llvm::Optional<StringRef> Redirects[] = {
+        {""}, // Stdin
+        StringRef(OutputFile),
+        StringRef(ErrorFile),
+    };
+    if (const int RC = llvm::sys::ExecuteAndWait(
+            ClangBinaryPath, PrintResourceDirArgs, {}, Redirects)) {
+      auto ErrorBuf = llvm::MemoryBuffer::getFile(ErrorFile.c_str());
+      llvm::errs() << ErrorBuf.get()->getBuffer();
+      return "";
+    }
+
+    auto OutputBuf = llvm::MemoryBuffer::getFile(OutputFile.c_str());
+    if (!OutputBuf)
+      return "";
+    StringRef Output = OutputBuf.get()->getBuffer().rtrim('\n');
+
+    Cache[ClangBinaryPath] = Output.str();
+    return Cache[ClangBinaryPath];
+  }
+
+private:
+  std::map<std::string, std::string> Cache;
+  std::mutex CacheLock;
 };
 
 llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"),
@@ -169,12 +228,15 @@ int main(int argc, const char **argv) {
   auto AdjustingCompilations =
       std::make_unique<tooling::ArgumentsAdjustingCompilations>(
           std::move(Compilations));
+  ResourceDirectoryCache ResourceDirCache;
   AdjustingCompilations->appendArgumentsAdjuster(
-      [](const tooling::CommandLineArguments &Args, StringRef FileName) {
+      [&ResourceDirCache](const tooling::CommandLineArguments &Args,
+                          StringRef FileName) {
         std::string LastO = "";
         bool HasMT = false;
         bool HasMQ = false;
         bool HasMD = false;
+        bool HasResourceDir = false;
         // We need to find the last -o value.
         if (!Args.empty()) {
           std::size_t Idx = Args.size() - 1;
@@ -188,6 +250,8 @@ int main(int argc, const char **argv) {
                 HasMQ = true;
               if (Args[Idx] == "-MD")
                 HasMD = true;
+              if (Args[Idx] == "-resource-dir")
+                HasResourceDir = true;
             }
             --Idx;
           }
@@ -215,6 +279,15 @@ int main(int argc, const char **argv) {
         AdjustedArgs.push_back("-Xclang");
         AdjustedArgs.push_back("-sys-header-deps");
         AdjustedArgs.push_back("-Wno-error");
+
+        if (!HasResourceDir) {
+          StringRef ResourceDir =
+              ResourceDirCache.findResourceDir(Args);
+          if (!ResourceDir.empty()) {
+            AdjustedArgs.push_back("-resource-dir");
+            AdjustedArgs.push_back(ResourceDir);
+          }
+        }
         return AdjustedArgs;
       });
   AdjustingCompilations->appendArgumentsAdjuster(
