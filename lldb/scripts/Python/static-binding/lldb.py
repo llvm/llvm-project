@@ -1673,14 +1673,17 @@ class SBBreakpoint(_object):
         return _lldb.SBBreakpoint_GetQueueName(self)
 
 
-    def SetScriptCallbackFunction(self, callback_function_name):
+    def SetScriptCallbackFunction(self, *args):
         """
         SetScriptCallbackFunction(SBBreakpoint self, char const * callback_function_name)
+        SetScriptCallbackFunction(SBBreakpoint self, char const * callback_function_name, SBStructuredData extra_args) -> SBError
 
 
         Set the name of the script function to be called when the breakpoint is hit.
+        To use this variant, the function should take (frame, bp_loc, extra_args, dict) and
+        when the breakpoint is hit the extra_args will be passed to the callback function.
         """
-        return _lldb.SBBreakpoint_SetScriptCallbackFunction(self, callback_function_name)
+        return _lldb.SBBreakpoint_SetScriptCallbackFunction(self, *args)
 
 
     def SetScriptCallbackBody(self, script_body_text):
@@ -2043,14 +2046,17 @@ class SBBreakpointLocation(_object):
         return _lldb.SBBreakpointLocation_SetAutoContinue(self, auto_continue)
 
 
-    def SetScriptCallbackFunction(self, callback_function_name):
+    def SetScriptCallbackFunction(self, *args):
         """
         SetScriptCallbackFunction(SBBreakpointLocation self, char const * callback_function_name)
+        SetScriptCallbackFunction(SBBreakpointLocation self, char const * callback_function_name, SBStructuredData extra_args) -> SBError
 
 
-        Set the callback to the given Python function name.
+        Set the name of the script function to be called when the breakpoint is hit.
+        To use this variant, the function should take (frame, bp_loc, extra_args, dict) and
+        when the breakpoint is hit the extra_args will be passed to the callback function.
         """
-        return _lldb.SBBreakpointLocation_SetScriptCallbackFunction(self, callback_function_name)
+        return _lldb.SBBreakpointLocation_SetScriptCallbackFunction(self, *args)
 
 
     def SetScriptCallbackBody(self, script_body_text):
@@ -2296,9 +2302,12 @@ class SBBreakpointName(_object):
         return _lldb.SBBreakpointName_GetQueueName(self)
 
 
-    def SetScriptCallbackFunction(self, callback_function_name):
-        """SetScriptCallbackFunction(SBBreakpointName self, char const * callback_function_name)"""
-        return _lldb.SBBreakpointName_SetScriptCallbackFunction(self, callback_function_name)
+    def SetScriptCallbackFunction(self, *args):
+        """
+        SetScriptCallbackFunction(SBBreakpointName self, char const * callback_function_name)
+        SetScriptCallbackFunction(SBBreakpointName self, char const * callback_function_name, SBStructuredData extra_args) -> SBError
+        """
+        return _lldb.SBBreakpointName_SetScriptCallbackFunction(self, *args)
 
 
     def SetCommandLineCommands(self, commands):
@@ -2883,14 +2892,20 @@ class SBCommandReturnObject(_object):
         return _lldb.SBCommandReturnObject_GetError(self, *args)
 
 
-    def PutOutput(self, fh):
-        """PutOutput(SBCommandReturnObject self, FILE * fh) -> size_t"""
-        return _lldb.SBCommandReturnObject_PutOutput(self, fh)
+    def PutOutput(self, *args):
+        """
+        PutOutput(SBCommandReturnObject self, SBFile file) -> size_t
+        PutOutput(SBCommandReturnObject self, lldb::FileSP BORROWED) -> size_t
+        """
+        return _lldb.SBCommandReturnObject_PutOutput(self, *args)
 
 
-    def PutError(self, fh):
-        """PutError(SBCommandReturnObject self, FILE * fh) -> size_t"""
-        return _lldb.SBCommandReturnObject_PutError(self, fh)
+    def PutError(self, *args):
+        """
+        PutError(SBCommandReturnObject self, SBFile file) -> size_t
+        PutError(SBCommandReturnObject self, lldb::FileSP BORROWED) -> size_t
+        """
+        return _lldb.SBCommandReturnObject_PutError(self, *args)
 
 
     def Clear(self):
@@ -2942,14 +2957,22 @@ class SBCommandReturnObject(_object):
         return _lldb.SBCommandReturnObject_GetDescription(self, description)
 
 
-    def SetImmediateOutputFile(self, fh):
-        """SetImmediateOutputFile(SBCommandReturnObject self, FILE * fh)"""
-        return _lldb.SBCommandReturnObject_SetImmediateOutputFile(self, fh)
+    def SetImmediateOutputFile(self, *args):
+        """
+        SetImmediateOutputFile(SBCommandReturnObject self, SBFile file)
+        SetImmediateOutputFile(SBCommandReturnObject self, lldb::FileSP BORROWED)
+        SetImmediateOutputFile(SBCommandReturnObject self, lldb::FileSP BORROWED, bool transfer_ownership)
+        """
+        return _lldb.SBCommandReturnObject_SetImmediateOutputFile(self, *args)
 
 
-    def SetImmediateErrorFile(self, fh):
-        """SetImmediateErrorFile(SBCommandReturnObject self, FILE * fh)"""
-        return _lldb.SBCommandReturnObject_SetImmediateErrorFile(self, fh)
+    def SetImmediateErrorFile(self, *args):
+        """
+        SetImmediateErrorFile(SBCommandReturnObject self, SBFile file)
+        SetImmediateErrorFile(SBCommandReturnObject self, lldb::FileSP BORROWED)
+        SetImmediateErrorFile(SBCommandReturnObject self, lldb::FileSP BORROWED, bool transfer_ownership)
+        """
+        return _lldb.SBCommandReturnObject_SetImmediateErrorFile(self, *args)
 
 
     def PutCString(self, string):
@@ -3874,34 +3897,80 @@ class SBDebugger(_object):
         return _lldb.SBDebugger_SkipLLDBInitFiles(self, b)
 
 
-    def SetInputFileHandle(self, f, transfer_ownership):
-        """SetInputFileHandle(SBDebugger self, FILE * f, bool transfer_ownership)"""
-        return _lldb.SBDebugger_SetInputFileHandle(self, f, transfer_ownership)
+    def SetOutputFileHandle(self, file, transfer_ownership):
+        "DEPRECATED, use SetOutputFile"
+        if file is None:
+            import sys
+            file = sys.stdout
+        self.SetOutputFile(SBFile.Create(file, borrow=True))
 
+    def SetInputFileHandle(self, file, transfer_ownership):
+        "DEPRECATED, use SetInputFile"
+        if file is None:
+            import sys
+            file = sys.stdin
+        self.SetInputFile(SBFile.Create(file, borrow=True))
 
-    def SetOutputFileHandle(self, f, transfer_ownership):
-        """SetOutputFileHandle(SBDebugger self, FILE * f, bool transfer_ownership)"""
-        return _lldb.SBDebugger_SetOutputFileHandle(self, f, transfer_ownership)
-
-
-    def SetErrorFileHandle(self, f, transfer_ownership):
-        """SetErrorFileHandle(SBDebugger self, FILE * f, bool transfer_ownership)"""
-        return _lldb.SBDebugger_SetErrorFileHandle(self, f, transfer_ownership)
+    def SetErrorFileHandle(self, file, transfer_ownership):
+        "DEPRECATED, use SetErrorFile"
+        if file is None:
+            import sys
+            file = sys.stderr
+        self.SetErrorFile(SBFile.Create(file, borrow=True))
 
 
     def GetInputFileHandle(self):
-        """GetInputFileHandle(SBDebugger self) -> FILE *"""
+        """GetInputFileHandle(SBDebugger self) -> lldb::FileSP"""
         return _lldb.SBDebugger_GetInputFileHandle(self)
 
 
     def GetOutputFileHandle(self):
-        """GetOutputFileHandle(SBDebugger self) -> FILE *"""
+        """GetOutputFileHandle(SBDebugger self) -> lldb::FileSP"""
         return _lldb.SBDebugger_GetOutputFileHandle(self)
 
 
     def GetErrorFileHandle(self):
-        """GetErrorFileHandle(SBDebugger self) -> FILE *"""
+        """GetErrorFileHandle(SBDebugger self) -> lldb::FileSP"""
         return _lldb.SBDebugger_GetErrorFileHandle(self)
+
+
+    def SetInputFile(self, *args):
+        """
+        SetInputFile(SBDebugger self, SBFile file) -> SBError
+        SetInputFile(SBDebugger self, lldb::FileSP file) -> SBError
+        """
+        return _lldb.SBDebugger_SetInputFile(self, *args)
+
+
+    def SetOutputFile(self, *args):
+        """
+        SetOutputFile(SBDebugger self, SBFile file) -> SBError
+        SetOutputFile(SBDebugger self, lldb::FileSP file) -> SBError
+        """
+        return _lldb.SBDebugger_SetOutputFile(self, *args)
+
+
+    def SetErrorFile(self, *args):
+        """
+        SetErrorFile(SBDebugger self, SBFile file) -> SBError
+        SetErrorFile(SBDebugger self, lldb::FileSP file) -> SBError
+        """
+        return _lldb.SBDebugger_SetErrorFile(self, *args)
+
+
+    def GetInputFile(self):
+        """GetInputFile(SBDebugger self) -> SBFile"""
+        return _lldb.SBDebugger_GetInputFile(self)
+
+
+    def GetOutputFile(self):
+        """GetOutputFile(SBDebugger self) -> SBFile"""
+        return _lldb.SBDebugger_GetOutputFile(self)
+
+
+    def GetErrorFile(self):
+        """GetErrorFile(SBDebugger self) -> SBFile"""
+        return _lldb.SBDebugger_GetErrorFile(self)
 
 
     def GetCommandInterpreter(self):
@@ -3919,9 +3988,12 @@ class SBDebugger(_object):
         return _lldb.SBDebugger_GetListener(self)
 
 
-    def HandleProcessEvent(self, process, event, out, err):
-        """HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, FILE * out, FILE * err)"""
-        return _lldb.SBDebugger_HandleProcessEvent(self, process, event, out, err)
+    def HandleProcessEvent(self, *args):
+        """
+        HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, SBFile out, SBFile err)
+        HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, lldb::FileSP arg4, lldb::FileSP arg5)
+        """
+        return _lldb.SBDebugger_HandleProcessEvent(self, *args)
 
 
     def CreateTargetWithFileAndTargetTriple(self, filename, target_triple):
@@ -5323,6 +5395,184 @@ def SBFileSpec_ResolvePath(src_path, dst_path, dst_len):
     """SBFileSpec_ResolvePath(char const * src_path, char * dst_path, size_t dst_len) -> int"""
     return _lldb.SBFileSpec_ResolvePath(src_path, dst_path, dst_len)
 
+class SBFile(_object):
+    """Represents a file."""
+
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, SBFile, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, SBFile, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        """
+        __init__(lldb::SBFile self) -> SBFile
+        __init__(lldb::SBFile self, int fd, char const * mode, bool transfer_ownership) -> SBFile
+        __init__(lldb::SBFile self, lldb::FileSP file) -> SBFile
+
+        initialize a SBFile from a python file object
+        """
+        this = _lldb.new_SBFile(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+
+    def MakeBorrowed(BORROWED):
+        """
+        MakeBorrowed(lldb::FileSP BORROWED) -> SBFile
+
+        initialize a SBFile from a python file object
+        """
+        return _lldb.SBFile_MakeBorrowed(BORROWED)
+
+    MakeBorrowed = staticmethod(MakeBorrowed)
+
+    def MakeForcingIOMethods(FORCE_IO_METHODS):
+        """
+        MakeForcingIOMethods(lldb::FileSP FORCE_IO_METHODS) -> SBFile
+
+        initialize a SBFile from a python file object
+        """
+        return _lldb.SBFile_MakeForcingIOMethods(FORCE_IO_METHODS)
+
+    MakeForcingIOMethods = staticmethod(MakeForcingIOMethods)
+
+    def MakeBorrowedForcingIOMethods(BORROWED_FORCE_IO_METHODS):
+        """
+        MakeBorrowedForcingIOMethods(lldb::FileSP BORROWED_FORCE_IO_METHODS) -> SBFile
+
+        initialize a SBFile from a python file object
+        """
+        return _lldb.SBFile_MakeBorrowedForcingIOMethods(BORROWED_FORCE_IO_METHODS)
+
+    MakeBorrowedForcingIOMethods = staticmethod(MakeBorrowedForcingIOMethods)
+
+    @classmethod
+    def Create(cls, file, borrow=False, force_io_methods=False):
+        """
+        Create a SBFile from a python file object, with options.
+
+        If borrow is set then the underlying file will
+        not be closed when the SBFile is closed or destroyed.
+
+        If force_scripting_io is set then the python read/write
+        methods will be called even if a file descriptor is available.
+        """
+        if borrow:
+            if force_io_methods:
+                return cls.MakeBorrowedForcingIOMethods(file)
+            else:
+                return cls.MakeBorrowed(file)
+        else:
+            if force_io_methods:
+                return cls.MakeForcingIOMethods(file)
+            else:
+                return cls(file)
+
+    __swig_destroy__ = _lldb.delete_SBFile
+    __del__ = lambda self: None
+
+    def Read(self, buf):
+        """
+        Read(buffer) -> SBError, bytes_read
+
+        initialize a SBFile from a python file object
+        """
+        return _lldb.SBFile_Read(self, buf)
+
+
+    def Write(self, buf):
+        """
+        Write(buffer) -> SBError, written_read
+
+        initialize a SBFile from a python file object
+        """
+        return _lldb.SBFile_Write(self, buf)
+
+
+    def Flush(self):
+        """
+        Flush(SBFile self)
+
+        initialize a SBFile from a python file object
+        """
+        return _lldb.SBFile_Flush(self)
+
+
+    def IsValid(self):
+        """
+        IsValid(SBFile self) -> bool
+
+        initialize a SBFile from a python file object
+        """
+        return _lldb.SBFile_IsValid(self)
+
+
+    def __nonzero__(self):
+        return _lldb.SBFile___nonzero__(self)
+    __bool__ = __nonzero__
+
+
+
+    def Close(self):
+        """
+        Close(SBFile self) -> SBError
+
+        initialize a SBFile from a python file object
+        """
+        return _lldb.SBFile_Close(self)
+
+
+    def GetFile(self):
+        """
+        GetFile(SBFile self) -> lldb::FileSP
+
+
+        Convert this SBFile into a python io.IOBase file object.
+
+        If the SBFile is itself a wrapper around a python file object,
+        this will return that original object.
+
+        The file returned from here should be considered borrowed,
+        in the sense that you may read and write to it, and flush it,
+        etc, but you should not close it.   If you want to close the
+        SBFile, call SBFile.Close().
+
+        If there is no underlying python file to unwrap, GetFile will
+        use the file descriptor, if availble to create a new python
+        file object using `open(fd, mode=..., closefd=False)`
+
+        """
+        return _lldb.SBFile_GetFile(self)
+
+SBFile_swigregister = _lldb.SBFile_swigregister
+SBFile_swigregister(SBFile)
+
+def SBFile_MakeBorrowed(BORROWED):
+    """
+    SBFile_MakeBorrowed(lldb::FileSP BORROWED) -> SBFile
+
+    initialize a SBFile from a python file object
+    """
+    return _lldb.SBFile_MakeBorrowed(BORROWED)
+
+def SBFile_MakeForcingIOMethods(FORCE_IO_METHODS):
+    """
+    SBFile_MakeForcingIOMethods(lldb::FileSP FORCE_IO_METHODS) -> SBFile
+
+    initialize a SBFile from a python file object
+    """
+    return _lldb.SBFile_MakeForcingIOMethods(FORCE_IO_METHODS)
+
+def SBFile_MakeBorrowedForcingIOMethods(BORROWED_FORCE_IO_METHODS):
+    """
+    SBFile_MakeBorrowedForcingIOMethods(lldb::FileSP BORROWED_FORCE_IO_METHODS) -> SBFile
+
+    initialize a SBFile from a python file object
+    """
+    return _lldb.SBFile_MakeBorrowedForcingIOMethods(BORROWED_FORCE_IO_METHODS)
+
 class SBFileSpecList(_object):
     """Proxy of C++ lldb::SBFileSpecList class."""
 
@@ -6215,9 +6465,12 @@ class SBInstruction(_object):
         return _lldb.SBInstruction_CanSetBreakpoint(self)
 
 
-    def Print(self, out):
-        """Print(SBInstruction self, FILE * out)"""
-        return _lldb.SBInstruction_Print(self, out)
+    def Print(self, *args):
+        """
+        Print(SBInstruction self, SBFile out)
+        Print(SBInstruction self, lldb::FileSP BORROWED)
+        """
+        return _lldb.SBInstruction_Print(self, *args)
 
 
     def GetDescription(self, description):
@@ -6337,9 +6590,12 @@ class SBInstructionList(_object):
         return _lldb.SBInstructionList_AppendInstruction(self, inst)
 
 
-    def Print(self, out):
-        """Print(SBInstructionList self, FILE * out)"""
-        return _lldb.SBInstructionList_Print(self, out)
+    def Print(self, *args):
+        """
+        Print(SBInstructionList self, SBFile out)
+        Print(SBInstructionList self, lldb::FileSP BORROWED)
+        """
+        return _lldb.SBInstructionList_Print(self, *args)
 
 
     def GetDescription(self, description):
@@ -8359,9 +8615,12 @@ class SBProcess(_object):
         return _lldb.SBProcess_GetAsyncProfileData(self, dst)
 
 
-    def ReportEventState(self, event, out):
-        """ReportEventState(SBProcess self, SBEvent event, FILE * out)"""
-        return _lldb.SBProcess_ReportEventState(self, event, out)
+    def ReportEventState(self, *args):
+        """
+        ReportEventState(SBProcess self, SBEvent event, SBFile out)
+        ReportEventState(SBProcess self, SBEvent event, lldb::FileSP BORROWED)
+        """
+        return _lldb.SBProcess_ReportEventState(self, *args)
 
 
     def AppendEventStateReport(self, event, result):
@@ -9540,24 +9799,28 @@ class SBStream(_object):
         return _lldb.SBStream_Print(self, str)
 
 
-    def RedirectToFile(self, path, append):
-        """RedirectToFile(SBStream self, char const * path, bool append)"""
-        return _lldb.SBStream_RedirectToFile(self, path, append)
+    def RedirectToFile(self, *args):
+        """
+        RedirectToFile(SBStream self, char const * path, bool append)
+        RedirectToFile(SBStream self, SBFile file)
+        RedirectToFile(SBStream self, lldb::FileSP file)
+        """
+        return _lldb.SBStream_RedirectToFile(self, *args)
 
 
-    def RedirectToFileHandle(self, fh, transfer_fh_ownership):
-        """RedirectToFileHandle(SBStream self, FILE * fh, bool transfer_fh_ownership)"""
-        return _lldb.SBStream_RedirectToFileHandle(self, fh, transfer_fh_ownership)
+    def RedirectToFileHandle(self, file, transfer_fh_ownership):
+        """DEPRECATED, use RedirectToFile"""
+        return _lldb.SBStream_RedirectToFileHandle(self, file, transfer_fh_ownership)
 
 
     def RedirectToFileDescriptor(self, fd, transfer_fh_ownership):
-        """RedirectToFileDescriptor(SBStream self, int fd, bool transfer_fh_ownership)"""
+        """DEPRECATED, use RedirectToFile"""
         return _lldb.SBStream_RedirectToFileDescriptor(self, fd, transfer_fh_ownership)
 
 
     def Clear(self):
         """
-        Clear(SBStream self)
+        DEPRECATED, use RedirectToFile
 
 
         If the stream is redirected to a file, forget about the file and if
@@ -9568,12 +9831,12 @@ class SBStream(_object):
 
 
     def write(self, str):
-        """write(SBStream self, char const * str)"""
+        """DEPRECATED, use RedirectToFile"""
         return _lldb.SBStream_write(self, str)
 
 
     def flush(self):
-        """flush(SBStream self)"""
+        """DEPRECATED, use RedirectToFile"""
         return _lldb.SBStream_flush(self)
 
 SBStream_swigregister = _lldb.SBStream_swigregister
@@ -11743,6 +12006,7 @@ class SBThread(_object):
         """
         StepUsingScriptedThreadPlan(SBThread self, char const * script_class_name) -> SBError
         StepUsingScriptedThreadPlan(SBThread self, char const * script_class_name, bool resume_immediately) -> SBError
+        StepUsingScriptedThreadPlan(SBThread self, char const * script_class_name, SBStructuredData args_data, bool resume_immediately) -> SBError
         """
         return _lldb.SBThread_StepUsingScriptedThreadPlan(self, *args)
 
@@ -12097,6 +12361,14 @@ class SBThreadPlan(_object):
     __swig_destroy__ = _lldb.delete_SBThreadPlan
     __del__ = lambda self: None
 
+    def IsValid(self, *args):
+        """
+        IsValid(SBThreadPlan self) -> bool
+        IsValid(SBThreadPlan self) -> bool
+        """
+        return _lldb.SBThreadPlan_IsValid(self, *args)
+
+
     def __nonzero__(self):
         return _lldb.SBThreadPlan___nonzero__(self)
     __bool__ = __nonzero__
@@ -12174,14 +12446,6 @@ class SBThreadPlan(_object):
         return _lldb.SBThreadPlan_IsPlanStale(self)
 
 
-    def IsValid(self, *args):
-        """
-        IsValid(SBThreadPlan self) -> bool
-        IsValid(SBThreadPlan self) -> bool
-        """
-        return _lldb.SBThreadPlan_IsValid(self, *args)
-
-
     def QueueThreadPlanForStepOverRange(self, start_address, range_size):
         """QueueThreadPlanForStepOverRange(SBThreadPlan self, SBAddress start_address, lldb::addr_t range_size) -> SBThreadPlan"""
         return _lldb.SBThreadPlan_QueueThreadPlanForStepOverRange(self, start_address, range_size)
@@ -12205,9 +12469,13 @@ class SBThreadPlan(_object):
         return _lldb.SBThreadPlan_QueueThreadPlanForRunToAddress(self, address)
 
 
-    def QueueThreadPlanForStepScripted(self, script_class_name):
-        """QueueThreadPlanForStepScripted(SBThreadPlan self, char const * script_class_name) -> SBThreadPlan"""
-        return _lldb.SBThreadPlan_QueueThreadPlanForStepScripted(self, script_class_name)
+    def QueueThreadPlanForStepScripted(self, *args):
+        """
+        QueueThreadPlanForStepScripted(SBThreadPlan self, char const * script_class_name) -> SBThreadPlan
+        QueueThreadPlanForStepScripted(SBThreadPlan self, char const * script_class_name, SBError error) -> SBThreadPlan
+        QueueThreadPlanForStepScripted(SBThreadPlan self, char const * script_class_name, SBStructuredData args_data, SBError error) -> SBThreadPlan
+        """
+        return _lldb.SBThreadPlan_QueueThreadPlanForStepScripted(self, *args)
 
 SBThreadPlan_swigregister = _lldb.SBThreadPlan_swigregister
 SBThreadPlan_swigregister(SBThreadPlan)
@@ -15710,10 +15978,10 @@ def is_numeric_type(basic_type):
 debugger_unique_id = 0
 SBDebugger.Initialize()
 debugger = None
-target = SBTarget()
-process = SBProcess()
-thread = SBThread()
-frame = SBFrame()
+target = None
+process = None
+thread = None
+frame = None
 
 # This file is compatible with both classic and new-style classes.
 
