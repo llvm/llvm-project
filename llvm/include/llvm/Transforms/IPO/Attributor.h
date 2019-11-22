@@ -1682,6 +1682,37 @@ struct AAWillReturn
   static const char ID;
 };
 
+/// An abstract interface to determine reachability of point A to B.
+struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute>,
+                        public IRPosition {
+  AAReachability(const IRPosition &IRP) : IRPosition(IRP) {}
+
+  /// Returns true if 'From' instruction is assumed to reach, 'To' instruction.
+  /// Users should provide two positions they are interested in, and the class
+  /// determines (and caches) reachability.
+  bool isAssumedReachable(const Instruction *From,
+                          const Instruction *To) const {
+    return true;
+  }
+
+  /// Returns true if 'From' instruction is known to reach, 'To' instruction.
+  /// Users should provide two positions they are interested in, and the class
+  /// determines (and caches) reachability.
+  bool isKnownReachable(const Instruction *From, const Instruction *To) const {
+    return true;
+  }
+
+  /// Return an IR position, see struct IRPosition.
+  const IRPosition &getIRPosition() const override { return *this; }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAReachability &createForPosition(const IRPosition &IRP,
+                                           Attributor &A);
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 /// An abstract interface for all noalias attributes.
 struct AANoAlias
     : public IRAttribute<Attribute::NoAlias,
