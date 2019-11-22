@@ -1355,6 +1355,8 @@ external build_is_not_null : llvalue -> string -> llbuilder -> llvalue
                            = "llvm_build_is_not_null"
 external build_ptrdiff : llvalue -> llvalue -> string -> llbuilder -> llvalue
                        = "llvm_build_ptrdiff"
+external build_freeze : llvalue -> string -> llbuilder -> llvalue
+                      = "llvm_build_freeze"
 
 
 (*===-- Memory buffers ----------------------------------------------------===*)
