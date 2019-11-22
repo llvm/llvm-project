@@ -406,10 +406,12 @@
 #if __has_feature(memory_sanitizer)
 # define LLVM_MEMORY_SANITIZER_BUILD 1
 # include <sanitizer/msan_interface.h>
+# define LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE __attribute__((no_sanitize_memory))
 #else
 # define LLVM_MEMORY_SANITIZER_BUILD 0
 # define __msan_allocated_memory(p, size)
 # define __msan_unpoison(p, size)
+# define LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE
 #endif
 
 /// \macro LLVM_ADDRESS_SANITIZER_BUILD

@@ -162,7 +162,9 @@ void *User::operator new(size_t Size) {
 //                         User operator delete Implementation
 //===----------------------------------------------------------------------===//
 
-void User::operator delete(void *Usr) {
+// Repress memory sanitization, due to use-after-destroy by operator
+// delete. Bug report 24578 identifies this issue.
+LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE void User::operator delete(void *Usr) {
   // Hung off uses use a single Use* before the User, while other subclasses
   // use a Use[] allocated prior to the user.
   User *Obj = static_cast<User *>(Usr);
