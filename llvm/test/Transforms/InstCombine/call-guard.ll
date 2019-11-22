@@ -1,4 +1,5 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -instcombine -S -debugify-each | FileCheck %s
 
 declare void @llvm.experimental.guard(i1, ...)
 
