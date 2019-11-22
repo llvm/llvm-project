@@ -2465,6 +2465,26 @@ TEST(CompletionTest, NoCompletionsForNewNames) {
   EXPECT_THAT(Results.Completions, UnorderedElementsAre());
 }
 
+TEST(CompletionTest, Lambda) {
+  clangd::CodeCompleteOptions Opts = {};
+
+  auto Results = completions(R"cpp(
+    void function() {
+      auto Lambda = [](int a, const double &b) {return 1.f;};
+      Lam^
+    }
+  )cpp",
+                             {}, Opts);
+
+  ASSERT_EQ(Results.Completions.size(), 1u);
+  const auto &A = Results.Completions.front();
+  EXPECT_EQ(A.Name, "Lambda");
+  EXPECT_EQ(A.Signature, "(int a, const double &b) const");
+  EXPECT_EQ(A.Kind, CompletionItemKind::Variable);
+  EXPECT_EQ(A.ReturnType, "float");
+  EXPECT_EQ(A.SnippetSuffix, "(${1:int a}, ${2:const double &b})");
+}
+
 TEST(CompletionTest, ObjectiveCMethodNoArguments) {
   auto Results = completions(R"objc(
       @interface Foo
