@@ -30,6 +30,8 @@ struct MainFileMacros {
   // reference to an undefined macro. Store them separately, e.g. for semantic
   // highlighting.
   std::vector<Range> UnknownMacros;
+  // Ranges skipped by the preprocessor due to being inactive.
+  std::vector<Range> SkippedRanges;
 };
 
 /// Collects macro references (e.g. definitions, expansions) in the main file.
@@ -76,6 +78,14 @@ public:
   void Defined(const Token &MacroName, const MacroDefinition &MD,
                SourceRange Range) override {
     add(MacroName, MD.getMacroInfo());
+  }
+
+  void SourceRangeSkipped(SourceRange R, SourceLocation EndifLoc) override {
+    if (!InMainFile)
+      return;
+    Position Begin = sourceLocToPosition(SM, R.getBegin());
+    Position End = sourceLocToPosition(SM, R.getEnd());
+    Out.SkippedRanges.push_back(Range{Begin, End});
   }
 
 private:
