@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMTransformUtils
   CloneFunction.cpp
   CloneModule.cpp
   CodeExtractor.cpp
+  CodeMoverUtils.cpp
   CtorUtils.cpp
   Debugify.cpp
   DemoteRegToStack.cpp
