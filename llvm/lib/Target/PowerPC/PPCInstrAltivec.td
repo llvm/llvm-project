@@ -1410,6 +1410,12 @@ let isCodeGenOnly = 1 in {
   def VEXTSW2Ds : VX_VT5_EO5_VB5s<1538, 26, "vextsw2d", []>;
 }
 
+def : Pat<(v4i32 (sext_inreg v4i32:$VRB, v4i8)), (v4i32 (VEXTSB2W $VRB))>;
+def : Pat<(v4i32 (sext_inreg v4i32:$VRB, v4i16)), (v4i32 (VEXTSH2W $VRB))>;
+def : Pat<(v2i64 (sext_inreg v2i64:$VRB, v2i8)), (v2i64 (VEXTSB2D $VRB))>;
+def : Pat<(v2i64 (sext_inreg v2i64:$VRB, v2i16)), (v2i64 (VEXTSH2D $VRB))>;
+def : Pat<(v2i64 (sext_inreg v2i64:$VRB, v2i32)), (v2i64 (VEXTSW2D $VRB))>;
+
 // Vector Integer Negate
 def VNEGW : VX_VT5_EO5_VB5<1538, 6, "vnegw",
                            [(set v4i32:$vD,

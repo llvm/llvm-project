@@ -926,6 +926,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.hasP9Altivec()) {
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v8i16, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v16i8, Custom);
+
+      setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i8,  Legal);
+      setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i16, Legal);
+      setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i32, Legal);
+      setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i8,  Legal);
+      setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i16, Legal);
+      setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i32, Legal);
+      setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i64, Legal);
     }
   }
 
