@@ -674,7 +674,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FDIV, MVT::f128, LibCall);
     setOperationAction(ISD::FMUL,        MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FMUL, MVT::f128, LibCall);
-    setOperationAction(ISD::FMA,         MVT::f128, Expand);
+    setOperationAction(ISD::FMA,         MVT::f128, LibCall);
+    setOperationAction(ISD::STRICT_FMA,  MVT::f128, LibCall);
 
     setOperationAction(ISD::FABS, MVT::f128, Custom);
     setOperationAction(ISD::FNEG, MVT::f128, Custom);
