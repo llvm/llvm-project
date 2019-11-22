@@ -84,7 +84,10 @@ bool llvm::parseWidenableBranch(User *U, Use *&C,Use *&WC,
   Value *A, *B;
   if (!match(Cond, m_And(m_Value(A), m_Value(B))))
     return false;
-  auto *And = cast<Instruction>(Cond);
+  auto *And = dyn_cast<Instruction>(Cond);
+  if (!And)
+    // Could be a constexpr
+    return false;
   
   if (match(A, m_Intrinsic<Intrinsic::experimental_widenable_condition>()) &&
       A->hasOneUse()) {
