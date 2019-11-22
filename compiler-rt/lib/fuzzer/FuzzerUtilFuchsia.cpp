@@ -18,6 +18,7 @@
 #include <cinttypes>
 #include <cstdint>
 #include <fcntl.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fdio/spawn.h>
 #include <string>
 #include <sys/select.h>
@@ -527,6 +528,18 @@ int ExecuteCommand(const Command &Cmd) {
 const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
                          size_t PattLen) {
   return memmem(Data, DataLen, Patt, PattLen);
+}
+
+// In fuchsia, accessing /dev/null is not supported. There's nothing
+// similar to a file that discards everything that is written to it.
+// The way of doing something similar in fuchsia is by using
+// fdio_null_create and binding that to a file descriptor.
+void DiscardOutput(int Fd) {
+  fdio_t *fdio_null = fdio_null_create();
+  if (fdio_null == nullptr) return;
+  int nullfd = fdio_bind_to_fd(fdio_null, -1, 0);
+  if (nullfd < 0) return;
+  dup2(nullfd, Fd);
 }
 
 } // namespace fuzzer
