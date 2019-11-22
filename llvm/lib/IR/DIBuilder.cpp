@@ -640,13 +640,14 @@ static void checkGlobalVariableScope(DIScope *Context) {
 
 DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
-    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, DIExpression *Expr,
+    unsigned LineNumber, DIType *Ty, bool isLocalToUnit,
+    bool isDefined, DIExpression *Expr,
     MDNode *Decl, MDTuple *templateParams, uint32_t AlignInBits) {
   checkGlobalVariableScope(Context);
 
   auto *GV = DIGlobalVariable::getDistinct(
       VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
-      LineNumber, Ty, isLocalToUnit, true, cast_or_null<DIDerivedType>(Decl),
+      LineNumber, Ty, isLocalToUnit, isDefined, cast_or_null<DIDerivedType>(Decl),
       templateParams, AlignInBits);
   if (!Expr)
     Expr = createExpression();
