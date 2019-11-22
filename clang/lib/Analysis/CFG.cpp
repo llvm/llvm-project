@@ -5769,6 +5769,10 @@ const Expr *CFGBlock::getLastCondition() const {
   if (succ_size() < 2)
     return nullptr;
 
+  // FIXME: Is there a better condition expression we can return in this case?
+  if (size() == 0)
+    return nullptr;
+
   auto StmtElem = rbegin()->getAs<CFGStmt>();
   if (!StmtElem)
     return nullptr;
