@@ -54,9 +54,22 @@ entry:
   ret fp128 %div
 }
 
+define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
+; CHECK-LABEL: fma:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq fmal
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %fma = call fp128 @llvm.experimental.constrained.fma.f128(fp128 %x, fp128 %y,  fp128 %z, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret fp128 %fma
+}
+
 attributes #0 = { strictfp }
 
 declare fp128 @llvm.experimental.constrained.fadd.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.fsub.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.fmul.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.fdiv.f128(fp128, fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.fma.f128(fp128, fp128, fp128, metadata, metadata)
