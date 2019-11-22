@@ -57,6 +57,8 @@ private:
   bool isMovFrom32Def(MachineInstr *MovMI);
   bool eliminateZExtSeq(void);
 
+  std::set<MachineInstr *> PhiInsns;
+
 public:
 
   // Main entry point for this pass.
@@ -113,8 +115,13 @@ bool BPFMIPeephole::isPhiFrom32Def(MachineInstr *PhiMI)
     MachineInstr *PhiDef = MRI->getVRegDef(opnd.getReg());
     if (!PhiDef)
       return false;
-    if (PhiDef->isPHI() && !isPhiFrom32Def(PhiDef))
-      return false;
+    if (PhiDef->isPHI()) {
+      if (PhiInsns.find(PhiDef) != PhiInsns.end())
+        return false;
+      PhiInsns.insert(PhiDef);
+      if (!isPhiFrom32Def(PhiDef))
+        return false;
+    }
     if (PhiDef->getOpcode() == BPF::COPY && !isCopyFrom32Def(PhiDef))
       return false;
   }
@@ -129,6 +136,9 @@ bool BPFMIPeephole::isInsnFrom32Def(MachineInstr *DefInsn)
     return false;
 
   if (DefInsn->isPHI()) {
+    if (PhiInsns.find(DefInsn) != PhiInsns.end())
+      return false;
+    PhiInsns.insert(DefInsn);
     if (!isPhiFrom32Def(DefInsn))
       return false;
   } else if (DefInsn->getOpcode() == BPF::COPY) {
@@ -146,6 +156,7 @@ bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
   LLVM_DEBUG(dbgs() << "  Def of Mov Src:");
   LLVM_DEBUG(DefInsn->dump());
 
+  PhiInsns.clear();
   if (!isInsnFrom32Def(DefInsn))
     return false;
 
