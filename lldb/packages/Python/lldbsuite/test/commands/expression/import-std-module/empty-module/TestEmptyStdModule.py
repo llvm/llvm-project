@@ -28,7 +28,6 @@ class ImportStdModule(TestBase):
             "// Set break point at this line.", lldb.SBFileSpec("main.cpp"))
 
         self.runCmd("settings set target.import-std-module true")
-        self.runCmd("log enable lldb expr")
 
         # Use the typedef that is only defined in our 'empty' module. If this fails, then LLDB
         # somehow figured out the correct define for the header and compiled the right
