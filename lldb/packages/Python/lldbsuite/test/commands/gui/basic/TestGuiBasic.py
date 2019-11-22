@@ -11,6 +11,9 @@ class BasicGuiCommandTest(PExpectTest):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    # PExpect uses many timeouts internally and doesn't play well
+    # under ASAN on a loaded machine..
+    @skipIfAsan
     @skipIfCursesSupportMissing
     @skipIfLinux #rdar://problem/55757360
     def test_gui(self):

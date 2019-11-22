@@ -11,6 +11,9 @@ class MultilineCompletionTest(PExpectTest):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    # PExpect uses many timeouts internally and doesn't play well
+    # under ASAN on a loaded machine..
+    @skipIfAsan
     def test_basic_completion(self):
         """Test that we can complete a simple multiline expression"""
         self.build()
