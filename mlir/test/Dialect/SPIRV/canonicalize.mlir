@@ -391,3 +391,60 @@ func @cannot_canonicalize_selection_op_4(%cond: i1) -> () {
   }
   spv.Return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.LogicalNot
+//===----------------------------------------------------------------------===//
+
+func @convert_logical_not_to_not_equal(%arg0: vector<3xi64>, %arg1: vector<3xi64>) -> vector<3xi1> {
+  // CHECK: %[[RESULT:.*]] = spv.INotEqual {{%.*}}, {{%.*}} : vector<3xi64>
+  // CHECK-NEXT: spv.ReturnValue %[[RESULT]] : vector<3xi1>
+  %2 = spv.IEqual %arg0, %arg1 : vector<3xi64>
+  %3 = spv.LogicalNot %2 : vector<3xi1>
+  spv.ReturnValue %3 : vector<3xi1>
+}
+
+// -----
+
+func @convert_logical_not_to_equal(%arg0: vector<3xi64>, %arg1: vector<3xi64>) -> vector<3xi1> {
+  // CHECK: %[[RESULT:.*]] = spv.IEqual {{%.*}}, {{%.*}} : vector<3xi64>
+  // CHECK-NEXT: spv.ReturnValue %[[RESULT]] : vector<3xi1>
+  %2 = spv.INotEqual %arg0, %arg1 : vector<3xi64>
+  %3 = spv.LogicalNot %2 : vector<3xi1>
+  spv.ReturnValue %3 : vector<3xi1>
+}
+
+// -----
+
+func @convert_logical_not_parent_multi_use(%arg0: vector<3xi64>, %arg1: vector<3xi64>, %arg2: !spv.ptr<vector<3xi1>, Uniform>) -> vector<3xi1> {
+  // CHECK: %[[RESULT_0:.*]] = spv.INotEqual {{%.*}}, {{%.*}} : vector<3xi64>
+  // CHECK-NEXT: %[[RESULT_1:.*]] = spv.IEqual {{%.*}}, {{%.*}} : vector<3xi64>
+  // CHECK-NEXT: spv.Store "Uniform" {{%.*}}, %[[RESULT_0]]
+  // CHECK-NEXT: spv.ReturnValue %[[RESULT_1]]
+  %0 = spv.INotEqual %arg0, %arg1 : vector<3xi64>
+  %1 = spv.LogicalNot %0 : vector<3xi1>
+  spv.Store "Uniform" %arg2, %0 : vector<3xi1>
+  spv.ReturnValue %1 : vector<3xi1>
+}
+
+// -----
+
+func @convert_logical_not_to_logical_not_equal(%arg0: vector<3xi1>, %arg1: vector<3xi1>) -> vector<3xi1> {
+  // CHECK: %[[RESULT:.*]] = spv.LogicalNotEqual {{%.*}}, {{%.*}} : vector<3xi1>
+  // CHECK-NEXT: spv.ReturnValue %[[RESULT]] : vector<3xi1>
+  %2 = spv.LogicalEqual %arg0, %arg1 : vector<3xi1>
+  %3 = spv.LogicalNot %2 : vector<3xi1>
+  spv.ReturnValue %3 : vector<3xi1>
+}
+
+// -----
+
+func @convert_logical_not_to_logical_equal(%arg0: vector<3xi1>, %arg1: vector<3xi1>) -> vector<3xi1> {
+  // CHECK: %[[RESULT:.*]] = spv.LogicalEqual {{%.*}}, {{%.*}} : vector<3xi1>
+  // CHECK-NEXT: spv.ReturnValue %[[RESULT]] : vector<3xi1>
+  %2 = spv.LogicalNotEqual %arg0, %arg1 : vector<3xi1>
+  %3 = spv.LogicalNot %2 : vector<3xi1>
+  spv.ReturnValue %3 : vector<3xi1>
+}
