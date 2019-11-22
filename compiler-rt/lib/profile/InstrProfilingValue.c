@@ -17,7 +17,7 @@
 
 #define INSTR_PROF_VALUE_PROF_DATA
 #define INSTR_PROF_COMMON_API_IMPL
-#include "profile/InstrProfData.inc"
+#include "InstrProfData.inc"
 
 static int hasStaticCounters = 1;
 static int OutOfNodesWarnings = 0;

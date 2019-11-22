@@ -16,7 +16,7 @@
 #include "InstrProfilingUtil.h"
 
 #define INSTR_PROF_VALUE_PROF_DATA
-#include "profile/InstrProfData.inc"
+#include "InstrProfData.inc"
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */
