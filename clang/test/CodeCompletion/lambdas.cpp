@@ -60,3 +60,15 @@ void test5() {
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:57:24 %s -o - | FileCheck -check-prefix=CHECK-8 %s
   // CHECK-8-NOT: COMPLETION: Pattern : [<#=
 }
+
+void test6() {
+  auto my_lambda = [&](int a, double &b) { return 1.f; };
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:65:58 %s -o - | FileCheck -check-prefix=CHECK-9 %s
+  // CHECK-9: [#float#]my_lambda(<#int a#>, <#double &b#>)[# const#]
+}
+
+void test7() {
+  auto generic_lambda = [&](auto a, const auto &b) { return a + b; };
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:71:70 %s -o - | FileCheck -check-prefix=CHECK-10 %s
+  // CHECK-10: [#auto#]generic_lambda(<#auto a#>, <#const auto &b#>)[# const#]
+}
