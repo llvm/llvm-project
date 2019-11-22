@@ -630,6 +630,8 @@ public:
   }
 
   /// Check if ArrayType or StructType is isomorphic to some VectorType.
+  /// Accepts homogeneous aggregate of vectors like
+  /// { <2 x float>, <2 x float> }
   ///
   /// \returns number of elements in vector if isomorphism exists, 0 otherwise.
   unsigned canMapToVector(Type *T, const DataLayout &DL) const;
@@ -3096,6 +3098,12 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
     N = cast<ArrayType>(T)->getNumElements();
     EltTy = cast<ArrayType>(T)->getElementType();
   }
+
+  if (auto *VT = dyn_cast<VectorType>(EltTy)) {
+    EltTy = VT->getElementType();
+    N *= VT->getNumElements();
+  }
+
   if (!isValidElementType(EltTy))
     return 0;
   uint64_t VTSize = DL.getTypeStoreSizeInBits(VectorType::get(EltTy, N));
@@ -3104,7 +3112,7 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
   if (ST) {
     // Check that struct is homogeneous.
     for (const auto *Ty : ST->elements())
-      if (Ty != EltTy)
+      if (Ty != *ST->element_begin())
         return 0;
   }
   return N;
@@ -6960,12 +6968,24 @@ static bool findBuildVector(InsertElementInst *LastInsertElem,
 }
 
 /// Like findBuildVector, but looks for construction of aggregate.
+/// Accepts homegeneous aggregate of vectors like { <2 x float>, <2 x float> }.
 ///
 /// \return true if it matches.
-static bool findBuildAggregate(InsertValueInst *IV,
-                               SmallVectorImpl<Value *> &BuildVectorOpds) {
+static bool findBuildAggregate(InsertValueInst *IV, TargetTransformInfo *TTI,
+                               SmallVectorImpl<Value *> &BuildVectorOpds,
+                               int &UserCost) {
+  UserCost = 0;
   do {
-    BuildVectorOpds.push_back(IV->getInsertedValueOperand());
+    if (auto *IE = dyn_cast<InsertElementInst>(IV->getInsertedValueOperand())) {
+      int TmpUserCost;
+      SmallVector<Value *, 4> TmpBuildVectorOpds;
+      if (!findBuildVector(IE, TTI, TmpBuildVectorOpds, TmpUserCost))
+        return false;
+      BuildVectorOpds.append(TmpBuildVectorOpds.rbegin(), TmpBuildVectorOpds.rend());
+      UserCost += TmpUserCost;
+    } else {
+      BuildVectorOpds.push_back(IV->getInsertedValueOperand());
+    }
     Value *V = IV->getAggregateOperand();
     if (isa<UndefValue>(V))
       break;
@@ -7138,18 +7158,19 @@ bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
 
 bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
                                                  BasicBlock *BB, BoUpSLP &R) {
+  int UserCost = 0;
   const DataLayout &DL = BB->getModule()->getDataLayout();
   if (!R.canMapToVector(IVI->getType(), DL))
     return false;
 
   SmallVector<Value *, 16> BuildVectorOpds;
-  if (!findBuildAggregate(IVI, BuildVectorOpds))
+  if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, UserCost))
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
   // Aggregate value is unlikely to be processed in vector register, we need to
   // extract scalars into scalar registers, so NeedExtraction is set true.
-  return tryToVectorizeList(BuildVectorOpds, R);
+  return tryToVectorizeList(BuildVectorOpds, R, UserCost);
 }
 
 bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
