@@ -7,12 +7,12 @@
 define i64 @t() nounwind ssp {
 entry:
 ; CHECK-LABEL: t:
-; CHECK: adrp [[REG:x[0-9]+]], Ltmp1@PAGE
-; CHECK: add {{x[0-9]+}}, [[REG]], Ltmp1@PAGEOFF
+; CHECK: adrp [[REG:x[0-9]+]], Ltmp0@PAGE
+; CHECK: add {{x[0-9]+}}, [[REG]], Ltmp0@PAGEOFF
 
 ; CHECK-LINUX-LABEL: t:
-; CHECK-LINUX: adrp [[REG:x[0-9]+]], .Ltmp1
-; CHECK-LINUX: add {{x[0-9]+}}, [[REG]], :lo12:.Ltmp1
+; CHECK-LINUX: adrp [[REG:x[0-9]+]], .Ltmp0
+; CHECK-LINUX: add {{x[0-9]+}}, [[REG]], :lo12:.Ltmp0
 
 ; CHECK-LARGE-LABEL: t:
 ; CHECK-LARGE: movz [[ADDR_REG:x[0-9]+]], #:abs_g0_nc:[[DEST_LBL:.Ltmp[0-9]+]]
