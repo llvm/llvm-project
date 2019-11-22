@@ -64,6 +64,8 @@ LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_ASE)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_FLAGS1)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_ISA)
 
+LLVM_YAML_STRONG_TYPEDEF(StringRef, YAMLFlowString)
+
 // For now, hardcode 64 bits everywhere that 32 or 64 would be needed
 // since 64-bit can hold 32-bit values too.
 struct FileHeader {
@@ -149,6 +151,7 @@ struct Chunk {
     Addrsig,
     Fill,
     LinkerOptions,
+    DependentLibraries,
   };
 
   ChunkKind Kind;
@@ -363,6 +366,17 @@ struct LinkerOptionsSection : Section {
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::LinkerOptions;
+  }
+};
+
+struct DependentLibrariesSection : Section {
+  Optional<std::vector<YAMLFlowString>> Libs;
+  Optional<yaml::BinaryRef> Content;
+
+  DependentLibrariesSection() : Section(ChunkKind::DependentLibraries) {}
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::DependentLibraries;
   }
 };
 

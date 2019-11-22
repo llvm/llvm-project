@@ -62,6 +62,8 @@ class ELFDumper {
   Expected<ELFYAML::AddrsigSection *> dumpAddrsigSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::LinkerOptionsSection *>
   dumpLinkerOptionsSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::DependentLibrariesSection *>
+  dumpDependentLibrariesSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::DynamicSection *> dumpDynamicSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RelocationSection *> dumpRelocSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RawContentSection *>
@@ -320,6 +322,14 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     case ELF::SHT_LLVM_LINKER_OPTIONS: {
       Expected<ELFYAML::LinkerOptionsSection *> SecOrErr =
           dumpLinkerOptionsSection(&Sec);
+      if (!SecOrErr)
+        return SecOrErr.takeError();
+      Y->Chunks.emplace_back(*SecOrErr);
+      break;
+    }
+    case ELF::SHT_LLVM_DEPENDENT_LIBRARIES: {
+      Expected<ELFYAML::DependentLibrariesSection *> SecOrErr =
+          dumpDependentLibrariesSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
       Y->Chunks.emplace_back(*SecOrErr);
@@ -627,6 +637,33 @@ ELFDumper<ELFT>::dumpLinkerOptionsSection(const Elf_Shdr *Shdr) {
     S->Options->push_back({Strings[I], Strings[I + 1]});
 
   return S.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::DependentLibrariesSection *>
+ELFDumper<ELFT>::dumpDependentLibrariesSection(const Elf_Shdr *Shdr) {
+  auto DL = std::make_unique<ELFYAML::DependentLibrariesSection>();
+  if (Error E = dumpCommonSection(Shdr, *DL))
+    return std::move(E);
+
+  Expected<ArrayRef<uint8_t>> ContentOrErr = Obj.getSectionContents(Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+  if (!Content.empty() && Content.back() != 0) {
+    DL->Content = Content;
+    return DL.release();
+  }
+
+  DL->Libs.emplace();
+  for (const uint8_t *I = Content.begin(), *E = Content.end(); I < E;) {
+    StringRef Lib((const char *)I);
+    DL->Libs->emplace_back(Lib);
+    I += Lib.size() + 1;
+  }
+
+  return DL.release();
 }
 
 template <class ELFT>
