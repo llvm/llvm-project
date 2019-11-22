@@ -8435,9 +8435,11 @@ bool ClangASTContext::AddObjCClassProperty(
   const bool isInstance =
       (property_attributes & ObjCPropertyDecl::OBJC_PR_class) == 0;
 
-  if (!getter_sel.isNull() &&
-      !(isInstance ? class_interface_decl->lookupInstanceMethod(getter_sel)
-                   : class_interface_decl->lookupClassMethod(getter_sel))) {
+  clang::ObjCMethodDecl *getter = nullptr;
+  if (!getter_sel.isNull())
+    getter = isInstance ? class_interface_decl->lookupInstanceMethod(getter_sel)
+                        : class_interface_decl->lookupClassMethod(getter_sel);
+  if (!getter_sel.isNull() && !getter) {
     const bool isVariadic = false;
     const bool isPropertyAccessor = false;
     const bool isSynthesizedAccessorStub = false;
@@ -8447,28 +8449,31 @@ bool ClangASTContext::AddObjCClassProperty(
         clang::ObjCMethodDecl::None;
     const bool HasRelatedResultType = false;
 
-    clang::ObjCMethodDecl *getter = clang::ObjCMethodDecl::Create(
+    getter = clang::ObjCMethodDecl::Create(
         *clang_ast, clang::SourceLocation(), clang::SourceLocation(),
         getter_sel, ClangUtil::GetQualType(property_clang_type_to_access),
         nullptr, class_interface_decl, isInstance, isVariadic,
         isPropertyAccessor, isSynthesizedAccessorStub, isImplicitlyDeclared,
         isDefined, impControl, HasRelatedResultType);
 
-    if (getter && metadata)
-      ClangASTContext::SetMetadata(clang_ast, getter, *metadata);
-
     if (getter) {
-      getter->setMethodParams(*clang_ast,
+      if (metadata)
+        ClangASTContext::SetMetadata(clang_ast, getter, *metadata);
+       getter->setMethodParams(*clang_ast,
                               llvm::ArrayRef<clang::ParmVarDecl *>(),
                               llvm::ArrayRef<clang::SourceLocation>());
-
       class_interface_decl->addDecl(getter);
     }
   }
+  if (getter) {
+    getter->setPropertyAccessor(true);
+    property_decl->setGetterMethodDecl(getter);
+  }
 
-  if (!setter_sel.isNull() &&
-      !(isInstance ? class_interface_decl->lookupInstanceMethod(setter_sel)
-                   : class_interface_decl->lookupClassMethod(setter_sel))) {
+  clang::ObjCMethodDecl *setter = nullptr;
+    setter = isInstance ? class_interface_decl->lookupInstanceMethod(setter_sel)
+                        : class_interface_decl->lookupClassMethod(setter_sel);
+  if (!setter_sel.isNull() && !setter) {
     clang::QualType result_type = clang_ast->VoidTy;
     const bool isVariadic = false;
     const bool isPropertyAccessor = true;
@@ -8479,30 +8484,34 @@ bool ClangASTContext::AddObjCClassProperty(
         clang::ObjCMethodDecl::None;
     const bool HasRelatedResultType = false;
 
-    clang::ObjCMethodDecl *setter = clang::ObjCMethodDecl::Create(
+    setter = clang::ObjCMethodDecl::Create(
         *clang_ast, clang::SourceLocation(), clang::SourceLocation(),
         setter_sel, result_type, nullptr, class_interface_decl, isInstance,
         isVariadic, isPropertyAccessor, isSynthesizedAccessorStub,
         isImplicitlyDeclared, isDefined, impControl, HasRelatedResultType);
 
-    if (setter && metadata)
-      ClangASTContext::SetMetadata(clang_ast, setter, *metadata);
-
-    llvm::SmallVector<clang::ParmVarDecl *, 1> params;
-
-    params.push_back(clang::ParmVarDecl::Create(
-        *clang_ast, setter, clang::SourceLocation(), clang::SourceLocation(),
-        nullptr, // anonymous
-        ClangUtil::GetQualType(property_clang_type_to_access), nullptr,
-        clang::SC_Auto, nullptr));
-
     if (setter) {
+      if (metadata)
+        ClangASTContext::SetMetadata(clang_ast, setter, *metadata);
+
+      llvm::SmallVector<clang::ParmVarDecl *, 1> params;
+
+      params.push_back(clang::ParmVarDecl::Create(
+          *clang_ast, setter, clang::SourceLocation(), clang::SourceLocation(),
+          nullptr, // anonymous
+          ClangUtil::GetQualType(property_clang_type_to_access), nullptr,
+          clang::SC_Auto, nullptr));
+
       setter->setMethodParams(*clang_ast,
                               llvm::ArrayRef<clang::ParmVarDecl *>(params),
                               llvm::ArrayRef<clang::SourceLocation>());
 
       class_interface_decl->addDecl(setter);
     }
+  }
+  if (setter) {
+    setter->setPropertyAccessor(true);
+    property_decl->setSetterMethodDecl(setter);
   }
 
   return true;
@@ -8939,16 +8948,23 @@ void ClangASTContext::DumpFromSymbolFile(Stream &s,
 
     s << type->GetName().AsCString() << "\n";
 
-    if (clang::TagDecl *tag_decl =
-                 GetAsTagDecl(type->GetFullCompilerType()))
+    CompilerType full_type = type->GetFullCompilerType();
+    if (clang::TagDecl *tag_decl = GetAsTagDecl(full_type)) {
       tag_decl->dump(s.AsRawOstream());
-    else if (clang::TypedefNameDecl *typedef_decl =
-                 GetAsTypedefDecl(type->GetFullCompilerType()))
-      typedef_decl->dump(s.AsRawOstream());
-    else {
-      GetCanonicalQualType(type->GetFullCompilerType().GetOpaqueQualType())
-          .dump(s.AsRawOstream());
+      continue;
     }
+    if (clang::TypedefNameDecl *typedef_decl = GetAsTypedefDecl(full_type)) {
+      typedef_decl->dump(s.AsRawOstream());
+      continue;
+    }
+    if (auto *objc_obj = llvm::dyn_cast<clang::ObjCObjectType>(
+            ClangUtil::GetQualType(full_type).getTypePtr())) {
+      if (clang::ObjCInterfaceDecl *interface_decl = objc_obj->getInterface()) {
+        interface_decl->dump(s.AsRawOstream());
+        continue;
+      }
+    }
+    GetCanonicalQualType(full_type.GetOpaqueQualType()).dump(s.AsRawOstream());
   }
 }
 
