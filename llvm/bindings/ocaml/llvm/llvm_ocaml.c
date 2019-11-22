@@ -2451,6 +2451,12 @@ CAMLprim LLVMValueRef llvm_build_ptrdiff(LLVMValueRef LHS, LLVMValueRef RHS,
   return LLVMBuildPtrDiff(Builder_val(B), LHS, RHS, String_val(Name));
 }
 
+/* llvalue -> string -> llbuilder -> llvalue */
+CAMLprim LLVMValueRef llvm_build_freeze(LLVMValueRef X,
+                                        value Name, value B) {
+  return LLVMBuildFreeze(Builder_val(B), X, String_val(Name));
+}
+
 /*===-- Memory buffers ----------------------------------------------------===*/
 
 /* string -> llmemorybuffer
