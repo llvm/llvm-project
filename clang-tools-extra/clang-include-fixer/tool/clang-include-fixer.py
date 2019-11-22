@@ -85,9 +85,16 @@ def GetUserSelection(message, headers, maximum_suggested_headers):
 
 
 def execute(command, text):
+  # Avoid flashing a cmd prompt on Windows.
+  startupinfo = None
+  if sys.platform.startswith('win32'):
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+
   p = subprocess.Popen(command,
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                       stdin=subprocess.PIPE)
+                       stdin=subprocess.PIPE, startupinfo=startupinfo)
   return p.communicate(input=text)
 
 
