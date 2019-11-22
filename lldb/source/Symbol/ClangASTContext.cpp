@@ -8459,7 +8459,8 @@ bool ClangASTContext::AddObjCClassProperty(
     if (getter) {
       if (metadata)
         ClangASTContext::SetMetadata(clang_ast, getter, *metadata);
-       getter->setMethodParams(*clang_ast,
+
+      getter->setMethodParams(*clang_ast,
                               llvm::ArrayRef<clang::ParmVarDecl *>(),
                               llvm::ArrayRef<clang::SourceLocation>());
       class_interface_decl->addDecl(getter);
@@ -8495,7 +8496,6 @@ bool ClangASTContext::AddObjCClassProperty(
         ClangASTContext::SetMetadata(clang_ast, setter, *metadata);
 
       llvm::SmallVector<clang::ParmVarDecl *, 1> params;
-
       params.push_back(clang::ParmVarDecl::Create(
           *clang_ast, setter, clang::SourceLocation(), clang::SourceLocation(),
           nullptr, // anonymous
