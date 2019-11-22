@@ -2051,6 +2051,34 @@ struct AAWillReturnCallSite final : AAWillReturnImpl {
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(willreturn); }
 };
 
+/// -------------------AAReachability Attribute--------------------------
+
+struct AAReachabilityImpl : AAReachability {
+  AAReachabilityImpl(const IRPosition &IRP) : AAReachability(IRP) {}
+
+  const std::string getAsStr() const override {
+    // TODO: Return the number of reachable queries.
+    return "reachable";
+  }
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    return indicatePessimisticFixpoint();
+  }
+};
+
+struct AAReachabilityFunction final : public AAReachabilityImpl {
+  AAReachabilityFunction(const IRPosition &IRP) : AAReachabilityImpl(IRP) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(reachable); }
+};
+
 /// ------------------------ NoAlias Argument Attribute ------------------------
 
 struct AANoAliasImpl : AANoAlias {
@@ -5680,6 +5708,7 @@ const char AANonNull::ID = 0;
 const char AANoRecurse::ID = 0;
 const char AAWillReturn::ID = 0;
 const char AANoAlias::ID = 0;
+const char AAReachability::ID = 0;
 const char AANoReturn::ID = 0;
 const char AAIsDead::ID = 0;
 const char AADereferenceable::ID = 0;
@@ -5799,6 +5828,7 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReachability)
 
 CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
 
