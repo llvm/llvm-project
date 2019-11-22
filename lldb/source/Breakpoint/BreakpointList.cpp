@@ -10,6 +10,8 @@
 
 #include "lldb/Target/Target.h"
 
+#include "llvm/Support/Errc.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -128,22 +130,24 @@ BreakpointSP BreakpointList::FindBreakpointByID(break_id_t break_id) const {
   return {};
 }
 
-bool BreakpointList::FindBreakpointsByName(const char *name,
-                                           BreakpointList &matching_bps) {
-  Status error;
+llvm::Expected<std::vector<lldb::BreakpointSP>>
+BreakpointList::FindBreakpointsByName(const char *name) {
   if (!name)
-    return false;
+    return llvm::createStringError(llvm::errc::invalid_argument,
+                                   "FindBreakpointsByName requires a name");
 
+  Status error;
   if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(name), error))
-    return false;
+    return error.ToError();
 
+  std::vector<lldb::BreakpointSP> matching_bps;
   for (BreakpointSP bkpt_sp : Breakpoints()) {
     if (bkpt_sp->MatchesName(name)) {
-      matching_bps.Add(bkpt_sp, false);
+      matching_bps.push_back(bkpt_sp);
     }
   }
 
-  return true;
+  return matching_bps;
 }
 
 void BreakpointList::Dump(Stream *s) const {
