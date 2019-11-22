@@ -256,7 +256,7 @@ static lldb::addr_t GetVTableAddress(Process &process,
   // We have an object already read from process memory,
   // so just extract VTable pointer from it
 
-  DataExtractor data;
+  lldb_private::DataExtractor data;
   Status err;
   auto size = valobj.GetData(data, err);
   if (err.Fail() || vbtable_ptr_offset + data.GetAddressByteSize() > size)
