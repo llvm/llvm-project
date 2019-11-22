@@ -293,6 +293,9 @@ class BTFDebug : public DebugHandlerBase {
   /// Generate types and variables for globals.
   void processGlobals(bool ProcessingMapDef);
 
+  /// Generate types for function prototypes.
+  void processFuncPrototypes();
+
   /// Generate one offset relocation record.
   void generateFieldReloc(const MachineInstr *MI, const MCSymbol *ORSym,
                            DIType *RootTy, StringRef AccessPattern);
