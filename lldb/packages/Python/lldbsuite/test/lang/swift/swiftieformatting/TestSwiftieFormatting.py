@@ -54,6 +54,9 @@ class TestSwiftieFormatting(TestBase):
         ns_n = swcla.GetChildMemberWithName("ns_n")
         self.assertTrue(ns_n.GetSummary() == ("Int%d(30)" % IntWidth), "ns_n summary wrong")
 
+        ns_u = swcla.GetChildMemberWithName("ns_u")
+        self.assertTrue(ns_u.GetSummary() == ('"page.html -- http://www.apple.com"'), "ns_u summary wrong")
+
         swcla = self.frame().EvaluateExpression("swcla")
         swcla.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         swcla.SetPreferSyntheticValue(True)
@@ -68,6 +71,9 @@ class TestSwiftieFormatting(TestBase):
 
         ns_n = swcla.GetChildMemberWithName("ns_n")
         self.assertTrue(ns_n.GetSummary() == ("Int%d(30)" % IntWidth), "ns_n summary wrong")
+
+        ns_u = swcla.GetChildMemberWithName("ns_u")
+        self.assertTrue(ns_u.GetSummary() == ('"page.html -- http://www.apple.com"'), "ns_u summary wrong")
 
         nsarr = self.frame().FindVariable("nsarr")
         nsarr.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
