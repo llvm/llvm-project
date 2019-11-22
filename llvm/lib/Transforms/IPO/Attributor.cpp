@@ -1389,7 +1389,7 @@ ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
 
   auto CheckRWInstForNoSync = [&](Instruction &I) {
     /// We are looking for volatile instructions or Non-Relaxed atomics.
-    /// FIXME: We should ipmrove the handling of intrinsics.
+    /// FIXME: We should improve the handling of intrinsics.
 
     if (isa<IntrinsicInst>(&I) && isNoSyncIntrinsic(&I))
       return true;
