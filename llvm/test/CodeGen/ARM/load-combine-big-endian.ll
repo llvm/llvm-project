@@ -824,25 +824,23 @@ define i32 @zext_load_i32_by_i8(i32* %arg) {
 ;
 ; CHECK-ARMv6-LABEL: zext_load_i32_by_i8:
 ; CHECK-ARMv6:       @ %bb.0:
-; CHECK-ARMv6-NEXT:    ldrb r1, [r0]
-; CHECK-ARMv6-NEXT:    ldrb r0, [r0, #1]
-; CHECK-ARMv6-NEXT:    orr r0, r1, r0, lsl #8
+; CHECK-ARMv6-NEXT:    ldrh r0, [r0]
+; CHECK-ARMv6-NEXT:    lsl r0, r0, #16
+; CHECK-ARMv6-NEXT:    rev r0, r0
 ; CHECK-ARMv6-NEXT:    bx lr
 ;
 ; CHECK-THUMBv6-LABEL: zext_load_i32_by_i8:
 ; CHECK-THUMBv6:       @ %bb.0:
-; CHECK-THUMBv6-NEXT:    ldrb r1, [r0]
-; CHECK-THUMBv6-NEXT:    ldrb r0, [r0, #1]
-; CHECK-THUMBv6-NEXT:    lsls r0, r0, #8
-; CHECK-THUMBv6-NEXT:    adds r0, r0, r1
+; CHECK-THUMBv6-NEXT:    ldrh r0, [r0]
+; CHECK-THUMBv6-NEXT:    lsls r0, r0, #16
+; CHECK-THUMBv6-NEXT:    rev r0, r0
 ; CHECK-THUMBv6-NEXT:    bx lr
 ;
 ; CHECK-THUMBv7-LABEL: zext_load_i32_by_i8:
 ; CHECK-THUMBv7:       @ %bb.0:
-; CHECK-THUMBv7-NEXT:    ldrb r1, [r0]
-; CHECK-THUMBv7-NEXT:    ldrb r0, [r0, #1]
-; CHECK-THUMBv7-NEXT:    lsls r0, r0, #8
-; CHECK-THUMBv7-NEXT:    adds r0, r0, r1
+; CHECK-THUMBv7-NEXT:    ldrh r0, [r0]
+; CHECK-THUMBv7-NEXT:    lsls r0, r0, #16
+; CHECK-THUMBv7-NEXT:    rev r0, r0
 ; CHECK-THUMBv7-NEXT:    bx lr
 
   %tmp = bitcast i32* %arg to i8*
@@ -962,32 +960,22 @@ define i32 @zext_load_i32_by_i8_shl_16(i32* %arg) {
 define i32 @zext_load_i32_by_i8_bswap(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8_bswap:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    ldrb r1, [r0]
-; CHECK-NEXT:    ldrb r0, [r0, #1]
-; CHECK-NEXT:    orr r0, r0, r1, lsl #8
+; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    mov pc, lr
 ;
 ; CHECK-ARMv6-LABEL: zext_load_i32_by_i8_bswap:
 ; CHECK-ARMv6:       @ %bb.0:
-; CHECK-ARMv6-NEXT:    ldrb r1, [r0]
-; CHECK-ARMv6-NEXT:    ldrb r0, [r0, #1]
-; CHECK-ARMv6-NEXT:    orr r0, r0, r1, lsl #8
+; CHECK-ARMv6-NEXT:    ldrh r0, [r0]
 ; CHECK-ARMv6-NEXT:    bx lr
 ;
 ; CHECK-THUMBv6-LABEL: zext_load_i32_by_i8_bswap:
 ; CHECK-THUMBv6:       @ %bb.0:
-; CHECK-THUMBv6-NEXT:    ldrb r1, [r0, #1]
-; CHECK-THUMBv6-NEXT:    ldrb r0, [r0]
-; CHECK-THUMBv6-NEXT:    lsls r0, r0, #8
-; CHECK-THUMBv6-NEXT:    adds r0, r0, r1
+; CHECK-THUMBv6-NEXT:    ldrh r0, [r0]
 ; CHECK-THUMBv6-NEXT:    bx lr
 ;
 ; CHECK-THUMBv7-LABEL: zext_load_i32_by_i8_bswap:
 ; CHECK-THUMBv7:       @ %bb.0:
-; CHECK-THUMBv7-NEXT:    ldrb r1, [r0, #1]
-; CHECK-THUMBv7-NEXT:    ldrb r0, [r0]
-; CHECK-THUMBv7-NEXT:    lsls r0, r0, #8
-; CHECK-THUMBv7-NEXT:    adds r0, r0, r1
+; CHECK-THUMBv7-NEXT:    ldrh r0, [r0]
 ; CHECK-THUMBv7-NEXT:    bx lr
 
   %tmp = bitcast i32* %arg to i8*

@@ -445,10 +445,9 @@ define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 define i32 @zext_load_i32_by_i8(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    bfi w8, w9, #8, #8
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    rev w0, w8
 ; CHECK-NEXT:    ret
 
   %tmp = bitcast i32* %arg to i8*
@@ -515,10 +514,7 @@ define i32 @zext_load_i32_by_i8_shl_16(i32* %arg) {
 define i32 @zext_load_i32_by_i8_bswap(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8_bswap:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0, #1]
-; CHECK-NEXT:    ldrb w9, [x0]
-; CHECK-NEXT:    bfi w8, w9, #8, #8
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ldrh w0, [x0]
 ; CHECK-NEXT:    ret
 
   %tmp = bitcast i32* %arg to i8*
