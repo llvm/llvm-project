@@ -17,7 +17,7 @@
 #include "InstrProfilingPort.h"
 
 #define INSTR_PROF_VALUE_PROF_DATA
-#include "profile/InstrProfData.inc"
+#include "InstrProfData.inc"
 
 COMPILER_RT_VISIBILITY void (*FreeHook)(void *) = NULL;
 static ProfBufferIO TheBufferIO;
@@ -280,7 +280,7 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
 /* Initialize header structure.  */
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
-#include "profile/InstrProfData.inc"
+#include "InstrProfData.inc"
 
   /* Write the data. */
   ProfDataIOVec IOVec[] = {
