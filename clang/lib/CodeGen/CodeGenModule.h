@@ -1165,6 +1165,8 @@ public:
 
   void EmitTentativeDefinition(const VarDecl *D);
 
+  void EmitExternalDeclaration(const VarDecl *D);
+
   void EmitVTable(CXXRecordDecl *Class);
 
   void RefreshTypeCacheForClass(const CXXRecordDecl *Class);
@@ -1400,6 +1402,7 @@ private:
   void EmitMultiVersionFunctionDefinition(GlobalDecl GD, llvm::GlobalValue *GV);
 
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
+  void EmitExternalVarDeclaration(const VarDecl *D);
   void EmitAliasDefinition(GlobalDecl GD);
   void emitIFuncDefinition(GlobalDecl GD);
   void emitCPUDispatchDefinition(GlobalDecl GD);
