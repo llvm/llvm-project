@@ -12,6 +12,7 @@
 
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -48,6 +49,28 @@ bool PostDominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
   auto PAC = PA.getChecker<PostDominatorTreeAnalysis>();
   return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
            PAC.preservedSet<CFGAnalyses>());
+}
+
+bool PostDominatorTree::dominates(const Instruction *I1,
+                                  const Instruction *I2) const {
+  assert(I1 && I2 && "Expecting valid I1 and I2");
+
+  const BasicBlock *BB1 = I1->getParent();
+  const BasicBlock *BB2 = I2->getParent();
+
+  if (BB1 != BB2)
+    return Base::dominates(BB1, BB2);
+
+  // PHINodes in a block are unordered.
+  if (isa<PHINode>(I1) && isa<PHINode>(I2))
+    return false;
+
+  // Loop through the basic block until we find I1 or I2.
+  BasicBlock::const_iterator I = BB1->begin();
+  for (; &*I != I1 && &*I != I2; ++I)
+    /*empty*/;
+
+  return &*I == I2;
 }
 
 bool PostDominatorTreeWrapperPass::runOnFunction(Function &F) {
