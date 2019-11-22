@@ -136,7 +136,7 @@ public:
   void GetTypes(lldb_private::SymbolContextScope *sc_scope,
                 lldb::TypeClass type_mask,
                 lldb_private::TypeList &type_list) override;
-  std::vector<lldb_private::CallEdge>
+  std::vector<std::unique_ptr<lldb_private::CallEdge>>
   ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
 
   void DumpClangAST(lldb_private::Stream &s) override;

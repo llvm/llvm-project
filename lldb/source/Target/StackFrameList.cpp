@@ -243,7 +243,8 @@ void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
 /// \p return_pc) to \p end. On success this path is stored into \p path, and 
 /// on failure \p path is unchanged.
 static void FindInterveningFrames(Function &begin, Function &end,
-                                  Target &target, addr_t return_pc,
+                                  ExecutionContext &exe_ctx, Target &target,
+                                  addr_t return_pc,
                                   std::vector<Function *> &path,
                                   ModuleList &images, Log *log) {
   LLDB_LOG(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
@@ -251,9 +252,9 @@ static void FindInterveningFrames(Function &begin, Function &end,
 
   // Find a non-tail calling edge with the correct return PC.
   if (log)
-    for (const CallEdge &edge : begin.GetCallEdges())
+    for (const auto &edge : begin.GetCallEdges())
       LLDB_LOG(log, "FindInterveningFrames: found call with retn-PC = {0:x}",
-               edge.GetReturnPCAddress(begin, target));
+               edge->GetReturnPCAddress(begin, target));
   CallEdge *first_edge = begin.GetCallEdgeForReturnAddress(return_pc, target);
   if (!first_edge) {
     LLDB_LOG(log, "No call edge outgoing from {0} with retn-PC == {1:x}",
@@ -262,7 +263,7 @@ static void FindInterveningFrames(Function &begin, Function &end,
   }
 
   // The first callee may not be resolved, or there may be nothing to fill in.
-  Function *first_callee = first_edge->GetCallee(images);
+  Function *first_callee = first_edge->GetCallee(images, exe_ctx);
   if (!first_callee) {
     LLDB_LOG(log, "Could not resolve callee");
     return;
@@ -283,8 +284,10 @@ static void FindInterveningFrames(Function &begin, Function &end,
     bool ambiguous = false;
     Function *end;
     ModuleList &images;
+    ExecutionContext &context;
 
-    DFS(Function *end, ModuleList &images) : end(end), images(images) {}
+    DFS(Function *end, ModuleList &images, ExecutionContext &context)
+        : end(end), images(images), context(context) {}
 
     void search(Function &first_callee, std::vector<Function *> &path) {
       dfs(first_callee);
@@ -313,8 +316,8 @@ static void FindInterveningFrames(Function &begin, Function &end,
 
       // Search the calls made from this callee.
       active_path.push_back(&callee);
-      for (CallEdge &edge : callee.GetTailCallingEdges()) {
-        Function *next_callee = edge.GetCallee(images);
+      for (const auto &edge : callee.GetTailCallingEdges()) {
+        Function *next_callee = edge->GetCallee(images, context);
         if (!next_callee)
           continue;
 
@@ -326,7 +329,7 @@ static void FindInterveningFrames(Function &begin, Function &end,
     }
   };
 
-  DFS(&end, images).search(*first_callee, path);
+  DFS(&end, images, exe_ctx).search(*first_callee, path);
 }
 
 /// Given that \p next_frame will be appended to the frame list, synthesize
@@ -379,8 +382,10 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
   addr_t return_pc = next_reg_ctx_sp->GetPC();
   Target &target = *target_sp.get();
   ModuleList &images = next_frame.CalculateTarget()->GetImages();
-  FindInterveningFrames(*next_func, *prev_func, target, return_pc, path, images,
-                        log);
+  ExecutionContext exe_ctx(target_sp, /*get_process=*/true);
+  exe_ctx.SetFramePtr(&next_frame);
+  FindInterveningFrames(*next_func, *prev_func, exe_ctx, target, return_pc,
+                        path, images, log);
 
   // Push synthetic tail call frames.
   for (Function *callee : llvm::reverse(path)) {

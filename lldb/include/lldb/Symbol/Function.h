@@ -19,6 +19,8 @@
 
 namespace lldb_private {
 
+class ExecutionContext;
+
 /// \class FunctionInfo Function.h "lldb/Symbol/Function.h"
 /// A class that contains generic function information.
 ///
@@ -264,23 +266,14 @@ using CallSiteParameterArray = llvm::SmallVector<CallSiteParameter, 0>;
 /// in the call graph between two functions, or to evaluate DW_OP_entry_value.
 class CallEdge {
 public:
-  /// Construct a call edge using a symbol name to identify the calling
-  /// function, and a return PC within the calling function to identify a
-  /// specific call site.
-  ///
-  /// TODO: A symbol name may not be globally unique. To disambiguate ODR
-  /// conflicts, it's necessary to determine the \c Target a call edge is
-  /// associated with before resolving it.
-  CallEdge(const char *symbol_name, lldb::addr_t return_pc,
-           CallSiteParameterArray parameters);
-
-  CallEdge(CallEdge &&) = default;
-  CallEdge &operator=(CallEdge &&) = default;
+  virtual ~CallEdge() {}
 
   /// Get the callee's definition.
   ///
-  /// Note that this might lazily invoke the DWARF parser.
-  Function *GetCallee(ModuleList &images);
+  /// Note that this might lazily invoke the DWARF parser. A register context
+  /// from the caller's activation is needed to find indirect call targets.
+  virtual Function *GetCallee(ModuleList &images,
+                              ExecutionContext &exe_ctx) = 0;
 
   /// Get the load PC address of the instruction which executes after the call
   /// returns. Returns LLDB_INVALID_ADDRESS iff this is a tail call. \p caller
@@ -293,17 +286,13 @@ public:
   lldb::addr_t GetUnresolvedReturnPCAddress() const { return return_pc; }
 
   /// Get the call site parameters available at this call edge.
-  llvm::ArrayRef<CallSiteParameter> GetCallSiteParameters() const;
+  llvm::ArrayRef<CallSiteParameter> GetCallSiteParameters() const {
+    return parameters;
+  }
 
-private:
-  void ParseSymbolFileAndResolve(ModuleList &images);
-
-  /// Either the callee's mangled name or its definition, discriminated by
-  /// \ref resolved.
-  union {
-    const char *symbol_name;
-    Function *def;
-  } lazy_callee;
+protected:
+  CallEdge(lldb::addr_t return_pc, CallSiteParameterArray &&parameters)
+      : return_pc(return_pc), parameters(std::move(parameters)) {}
 
   /// An invalid address if this is a tail call. Otherwise, the function-local
   /// PC offset. Adding this PC offset to the function's base load address
@@ -311,11 +300,58 @@ private:
   lldb::addr_t return_pc;
 
   CallSiteParameterArray parameters;
+};
+
+/// A direct call site. Used to represent call sites where the address of the
+/// callee is fixed (e.g. a function call in C in which the call target is not
+/// a function pointer).
+class DirectCallEdge : public CallEdge {
+public:
+  /// Construct a call edge using a symbol name to identify the callee, and a
+  /// return PC within the calling function to identify a specific call site.
+  DirectCallEdge(const char *symbol_name, lldb::addr_t return_pc,
+                 CallSiteParameterArray &&parameters)
+      : CallEdge(return_pc, std::move(parameters)) {
+    lazy_callee.symbol_name = symbol_name;
+  }
+
+  Function *GetCallee(ModuleList &images, ExecutionContext &exe_ctx) override;
+
+private:
+  void ParseSymbolFileAndResolve(ModuleList &images);
+
+  // Used to describe a direct call.
+  //
+  // Either the callee's mangled name or its definition, discriminated by
+  // \ref resolved.
+  union {
+    const char *symbol_name;
+    Function *def;
+  } lazy_callee;
 
   /// Whether or not an attempt was made to find the callee's definition.
-  bool resolved;
+  bool resolved = false;
+};
 
-  DISALLOW_COPY_AND_ASSIGN(CallEdge);
+/// An indirect call site. Used to represent call sites where the address of
+/// the callee is not fixed, e.g. a call to a C++ virtual function (where the
+/// address is loaded out of a vtable), or a call to a function pointer in C.
+class IndirectCallEdge : public CallEdge {
+public:
+  /// Construct a call edge using a DWARFExpression to identify the callee, and
+  /// a return PC within the calling function to identify a specific call site.
+  IndirectCallEdge(DWARFExpression call_target, lldb::addr_t return_pc,
+                   CallSiteParameterArray &&parameters)
+      : CallEdge(return_pc, std::move(parameters)),
+        call_target(std::move(call_target)) {}
+
+  Function *GetCallee(ModuleList &images, ExecutionContext &exe_ctx) override;
+
+private:
+  // Used to describe an indirect call.
+  //
+  // Specifies the location of the callee address in the calling frame.
+  DWARFExpression call_target;
 };
 
 /// \class Function Function.h "lldb/Symbol/Function.h"
@@ -414,11 +450,11 @@ public:
 
   /// Get the outgoing call edges from this function, sorted by their return
   /// PC addresses (in increasing order).
-  llvm::MutableArrayRef<CallEdge> GetCallEdges();
+  llvm::ArrayRef<std::unique_ptr<CallEdge>> GetCallEdges();
 
   /// Get the outgoing tail-calling edges from this function. If none exist,
   /// return None.
-  llvm::MutableArrayRef<CallEdge> GetTailCallingEdges();
+  llvm::ArrayRef<std::unique_ptr<CallEdge>> GetTailCallingEdges();
 
   /// Get the outgoing call edge from this function which has the given return
   /// address \p return_pc, or return nullptr. Note that this will not return a
@@ -587,11 +623,9 @@ protected:
   uint32_t
       m_prologue_byte_size; ///< Compute the prologue size once and cache it
 
-  // TODO: Use a layer of indirection to point to call edges, to save space
-  // when call info hasn't been parsed.
   bool m_call_edges_resolved = false; ///< Whether call site info has been
                                       ///  parsed.
-  std::vector<CallEdge> m_call_edges; ///< Outgoing call edges.
+  std::vector<std::unique_ptr<CallEdge>> m_call_edges; ///< Outgoing call edges.
 private:
   DISALLOW_COPY_AND_ASSIGN(Function);
 };
