@@ -61,6 +61,16 @@ Tool *RISCVToolChain::buildLinker() const {
   return new tools::RISCV::Linker(*this);
 }
 
+ToolChain::RuntimeLibType RISCVToolChain::GetDefaultRuntimeLibType() const {
+  return GCCInstallation.isValid() ?
+    ToolChain::RLT_Libgcc : ToolChain::RLT_CompilerRT;
+}
+
+ToolChain::UnwindLibType
+RISCVToolChain::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
+  return ToolChain::UNW_None;
+}
+
 void RISCVToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args,
@@ -138,9 +148,22 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool WantCRTs =
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);
 
+  const char *crtbegin, *crtend;
+  auto RuntimeLib = ToolChain.GetRuntimeLibType(Args);
+  if (RuntimeLib == ToolChain::RLT_Libgcc) {
+    crtbegin = "crtbegin.o";
+    crtend = "crtend.o";
+  } else {
+    assert (RuntimeLib == ToolChain::RLT_CompilerRT);
+    crtbegin = ToolChain.getCompilerRTArgString(Args, "crtbegin",
+                                                ToolChain::FT_Object);
+    crtend = ToolChain.getCompilerRTArgString(Args, "crtend",
+                                              ToolChain::FT_Object);
+  }
+
   if (WantCRTs) {
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtbegin.o")));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
   }
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
@@ -161,11 +184,11 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lc");
     CmdArgs.push_back("-lgloss");
     CmdArgs.push_back("--end-group");
-    CmdArgs.push_back("-lgcc");
+    AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
   }
 
   if (WantCRTs)
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());

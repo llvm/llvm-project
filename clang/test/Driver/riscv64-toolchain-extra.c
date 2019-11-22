@@ -19,15 +19,15 @@
 // RUN: ln -s %S/Inputs/basic_riscv64_nogcc_tree/bin/riscv64-unknown-elf-ld %T/testroot-riscv64-baremetal-nogcc/bin/riscv64-unknown-elf-ld
 // RUN: ln -s %S/Inputs/basic_riscv64_nogcc_tree/riscv64-unknown-elf %T/testroot-riscv64-baremetal-nogcc/riscv64-unknown-elf
 // RUN: %T/testroot-riscv64-baremetal-nogcc/bin/clang %s -### -no-canonical-prefixes \
-// RUN:    -target riscv64-unknown-elf 2>&1 \
+// RUN:    -target riscv64-unknown-elf --rtlib=platform 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64-NOGCC %s
 
-// C-RV64-BAREMETAL-LP64-NOGCC: InstalledDir: [[DRIVERDIR:.*]]
 // C-RV64-BAREMETAL-LP64-NOGCC: "-fuse-init-array"
-// C-RV64-BAREMETAL-LP64-NOGCC: "-internal-isystem" "[[DRIVERDIR]]/../riscv64-unknown-elf/include"
-// C-RV64-BAREMETAL-LP64-NOGCC: "[[DRIVERDIR]]/riscv64-unknown-elf-ld"
-// C-RV64-BAREMETAL-LP64-NOGCC: "[[DRIVERDIR]]/../riscv64-unknown-elf/lib/crt0.o"
-// C-RV64-BAREMETAL-LP64-NOGCC: "[[DRIVERDIR]]/../riscv64-unknown-elf/lib/crtbegin.o"
-// C-RV64-BAREMETAL-LP64-NOGCC: "-L[[DRIVERDIR]]/../riscv64-unknown-elf/lib"
-// C-RV64-BAREMETAL-LP64-NOGCC: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
-// C-RV64-BAREMETAL-LP64-NOGCC: "[[DRIVERDIR]]/../riscv64-unknown-elf/lib/crtend.o"
+// C-RV64-BAREMETAL-LP64-NOGCC: "-internal-isystem" "{{.*}}Output/testroot-riscv64-baremetal-nogcc/bin/../riscv64-unknown-elf/include"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}Output/testroot-riscv64-baremetal-nogcc/bin/riscv64-unknown-elf-ld"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}Output/testroot-riscv64-baremetal-nogcc/bin/../riscv64-unknown-elf/lib/crt0.o"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}Output/testroot-riscv64-baremetal-nogcc/lib/clang/{{[0-9.]*}}/lib/clang_rt.crtbegin-riscv64.o"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}Output/testroot-riscv64-baremetal-nogcc/bin/../riscv64-unknown-elf/lib"
+// C-RV64-BAREMETAL-LP64-NOGCC: "--start-group" "-lc" "-lgloss" "--end-group"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}Output/testroot-riscv64-baremetal-nogcc/lib/clang/{{[0-9.]*}}/lib/libclang_rt.builtins-riscv64.a"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}Output/testroot-riscv64-baremetal-nogcc/lib/clang/{{[0-9.]*}}/lib/clang_rt.crtend-riscv64.o"

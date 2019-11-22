@@ -3,8 +3,11 @@
 // RUN: %clang %s -### -no-canonical-prefixes -target riscv32 2>&1 | FileCheck -check-prefix=CC1 %s
 // CC1: clang{{.*}} "-cc1" "-triple" "riscv32"
 
+// In the below tests, --rtlib=platform is used so that the driver ignores
+// the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
+
 // RUN: %clang %s -### -no-canonical-prefixes \
-// RUN:   -target riscv32-unknown-elf \
+// RUN:   -target riscv32-unknown-elf --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32 %s
@@ -20,7 +23,7 @@
 // C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: %clang %s -### -no-canonical-prefixes \
-// RUN:   -target riscv32-unknown-elf \
+// RUN:   -target riscv32-unknown-elf --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-BAREMETAL-NOSYSROOT-ILP32 %s
@@ -35,7 +38,7 @@
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: %clangxx %s -### -no-canonical-prefixes \
-// RUN:   -target riscv32-unknown-elf -stdlib=libstdc++ \
+// RUN:   -target riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
 // RUN:   | FileCheck -check-prefix=CXX-RV32-BAREMETAL-ILP32 %s
@@ -52,7 +55,7 @@
 // CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: %clangxx %s -### -no-canonical-prefixes \
-// RUN:   -target riscv32-unknown-elf -stdlib=libstdc++ \
+// RUN:   -target riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=CXX-RV32-BAREMETAL-NOSYSROOT-ILP32 %s
@@ -68,7 +71,7 @@
 // CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
-// RUN:   -target riscv32-unknown-linux-gnu -mabi=ilp32 \
+// RUN:   -target riscv32-unknown-linux-gnu --rtlib=platform -mabi=ilp32 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-LINUX-MULTI-ILP32 %s
@@ -84,7 +87,7 @@
 // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib32/ilp32"
 
 // RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
-// RUN:   -target riscv32-unknown-linux-gnu -march=rv32imafd \
+// RUN:   -target riscv32-unknown-linux-gnu --rtlib=platform -march=rv32imafd \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-LINUX-MULTI-ILP32D %s
@@ -100,7 +103,7 @@
 // C-RV32-LINUX-MULTI-ILP32D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib32/ilp32d"
 
 // RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
-// RUN:   -target riscv32-unknown-elf --sysroot= \
+// RUN:   -target riscv32-unknown-elf --rtlib=platform --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32I-BAREMETAL-MULTI-ILP32 %s
 
@@ -115,7 +118,8 @@
 // C-RV32I-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32imac/ilp32{{/|\\\\}}crtend.o"
 
 // RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
-// RUN:   -target riscv32-unknown-elf --sysroot= -march=rv32im -mabi=ilp32\
+// RUN:   -target riscv32-unknown-elf --rtlib=platform --sysroot= \
+// RUN:   -march=rv32im -mabi=ilp32\
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32IM-BAREMETAL-MULTI-ILP32 %s
 
@@ -130,7 +134,8 @@
 // C-RV32IM-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32im/ilp32{{/|\\\\}}crtend.o"
 
 // RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
-// RUN:   -target riscv32-unknown-elf --sysroot= -march=rv32iac -mabi=ilp32\
+// RUN:   -target riscv32-unknown-elf --rtlib=platform --sysroot= \
+// RUN:   -march=rv32iac -mabi=ilp32\
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32IAC-BAREMETAL-MULTI-ILP32 %s
 
@@ -145,7 +150,8 @@
 // C-RV32IAC-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32iac/ilp32{{/|\\\\}}crtend.o"
 
 // RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
-// RUN:   -target riscv32-unknown-elf --sysroot= -march=rv32imac -mabi=ilp32\
+// RUN:   -target riscv32-unknown-elf --rtlib=platform --sysroot= \
+// RUN:   -march=rv32imac -mabi=ilp32\
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32IMAC-BAREMETAL-MULTI-ILP32 %s
 
@@ -160,7 +166,8 @@
 // C-RV32IMAC-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32imac/ilp32{{/|\\\\}}crtend.o"
 
 // RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
-// RUN:   -target riscv32-unknown-elf --sysroot= -march=rv32imafc -mabi=ilp32f \
+// RUN:   -target riscv32-unknown-elf --rtlib=platform --sysroot= \
+// RUN:   -march=rv32imafc -mabi=ilp32f \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32IMAFC-BAREMETAL-MULTI-ILP32F %s
 
@@ -173,6 +180,23 @@
 // C-RV32IMAFC-BAREMETAL-MULTI-ILP32F: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib"
 // C-RV32IMAFC-BAREMETAL-MULTI-ILP32F: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV32IMAFC-BAREMETAL-MULTI-ILP32F: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32imafc/ilp32f{{/|\\\\}}crtend.o"
+
+// Check that --rtlib can be used to override the used runtime library
+// RUN: %clang %s -### -no-canonical-prefixes \
+// RUN:   -target riscv32-unknown-elf --rtlib=libgcc 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-RV32-RTLIB-LIBGCC-ILP32 %s
+// C-RV32-RTLIB-LIBGCC-ILP32: "{{.*}}crt0.o"
+// C-RV32-RTLIB-LIBGCC-ILP32: "{{.*}}crtbegin.o"
+// C-RV32-RTLIB-LIBGCC-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV32-RTLIB-LIBGCC-ILP32: "{{.*}}crtend.o"
+
+// RUN: %clang %s -### -no-canonical-prefixes \
+// RUN:   -target riscv32-unknown-elf --rtlib=compiler-rt 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-RV32-RTLIB-COMPILERRT-ILP32 %s
+// C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}crt0.o"
+// C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtbegin-riscv32.o"
+// C-RV32-RTLIB-COMPILERRT-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins-riscv32.a"
+// C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtend-riscv32.o"
 
 // RUN: %clang -target riscv32 %s -emit-llvm -S -o - | FileCheck %s
 
