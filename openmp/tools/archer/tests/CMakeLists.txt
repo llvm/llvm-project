@@ -2,6 +2,11 @@
 include(CheckFunctionExists)
 include(CheckLibraryExists)
 
+if (OPENMP_STANDALONE_BUILD)
+  return ()
+endif ()
+
+
 # When using libgcc, -latomic may be needed for atomics
 # (but when using compiler-rt, the atomics will be built-in)
 # Note: we can not check for __atomic_load because clang treats it
