@@ -136,7 +136,6 @@ getFunctionSourceAfterReplacements(const FunctionDecl *FD,
 // Contains function signature, body and template parameters if applicable.
 // No need to qualify parameters, as they are looked up in the context
 // containing the function/method.
-// FIXME: Qualify function name depending on the target context.
 llvm::Expected<std::string>
 getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace) {
   auto &SM = FD->getASTContext().getSourceManager();
@@ -149,16 +148,17 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace) {
   llvm::Error Errors = llvm::Error::success();
   tooling::Replacements QualifierInsertions;
 
-  // Finds the first unqualified name in function return type and qualifies it
-  // to be valid in TargetContext.
+  // Finds the first unqualified name in function return type and name, then
+  // qualifies those to be valid in TargetContext.
   findExplicitReferences(FD, [&](ReferenceLoc Ref) {
     // It is enough to qualify the first qualifier, so skip references with a
     // qualifier. Also we can't do much if there are no targets or name is
     // inside a macro body.
     if (Ref.Qualifier || Ref.Targets.empty() || Ref.NameLoc.isMacroID())
       return;
-    // Qualify return type
-    if (Ref.NameLoc != FD->getReturnTypeSourceRange().getBegin())
+    // Only qualify return type and function name.
+    if (Ref.NameLoc != FD->getReturnTypeSourceRange().getBegin() &&
+        Ref.NameLoc != FD->getLocation())
       return;
 
     for (const NamedDecl *ND : Ref.Targets) {
@@ -293,9 +293,7 @@ public:
     auto FuncDef =
         getFunctionSourceCode(Source, InsertionPoint->EnclosingNamespace);
     if (!FuncDef)
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "Couldn't get full source for function definition.");
+      return FuncDef.takeError();
 
     SourceManagerForFile SMFF(*CCFile, Contents);
     const tooling::Replacement InsertFunctionDef(
