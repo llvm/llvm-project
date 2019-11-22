@@ -489,7 +489,9 @@ void *MDNode::operator new(size_t Size, unsigned NumOps) {
   return Ptr;
 }
 
-void MDNode::operator delete(void *Mem) {
+// Repress memory sanitization, due to use-after-destroy by operator
+// delete. Bug report 24578 identifies this issue.
+LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE void MDNode::operator delete(void *Mem) {
   MDNode *N = static_cast<MDNode *>(Mem);
   size_t OpSize = N->NumOperands * sizeof(MDOperand);
   OpSize = alignTo(OpSize, alignof(uint64_t));
