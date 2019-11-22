@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 
@@ -160,7 +161,7 @@ public:
     Tokens.push_back(HighlightingToken{Kind, *Range});
   }
 
-  std::vector<HighlightingToken> collect() && {
+  std::vector<HighlightingToken> collect(ParsedAST &AST) && {
     // Initializer lists can give duplicates of tokens, therefore all tokens
     // must be deduplicated.
     llvm::sort(Tokens);
@@ -187,6 +188,22 @@ public:
       // the end of the Tokens).
       TokRef = TokRef.drop_front(Conflicting.size());
     }
+    // Add tokens indicating lines skipped by the preprocessor.
+    for (const Range &R : AST.getMacros().SkippedRanges) {
+      // Create one token for each line in the skipped range, so it works
+      // with line-based diffing.
+      assert(R.start.line <= R.end.line);
+      for (int Line = R.start.line; Line < R.end.line; ++Line) {
+        // Don't bother computing the offset for the end of the line, just use
+        // zero. The client will treat this highlighting kind specially, and
+        // highlight the entire line visually (i.e. not just to where the text
+        // on the line ends, but to the end of the screen).
+        NonConflicting.push_back({HighlightingKind::InactiveCode,
+                                  {Position{Line, 0}, Position{Line, 0}}});
+      }
+    }
+    // Re-sort the tokens because that's what the diffing expects.
+    llvm::sort(NonConflicting);
     return NonConflicting;
   }
 
@@ -319,7 +336,7 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
   for (const auto &M : AST.getMacros().UnknownMacros)
     Builder.addToken({HighlightingKind::Macro, M});
 
-  return std::move(Builder).collect();
+  return std::move(Builder).collect(AST);
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
@@ -360,6 +377,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "Primitive";
   case HighlightingKind::Macro:
     return OS << "Macro";
+  case HighlightingKind::InactiveCode:
+    return OS << "InactiveCode";
   }
   llvm_unreachable("invalid HighlightingKind");
 }
@@ -404,8 +423,19 @@ diffHighlightings(ArrayRef<HighlightingToken> New,
        LineNumber = NextLineNumber()) {
     NewLine = takeLine(New, NewLine.end(), LineNumber);
     OldLine = takeLine(Old, OldLine.end(), LineNumber);
-    if (NewLine != OldLine)
-      DiffedLines.push_back({LineNumber, NewLine});
+    if (NewLine != OldLine) {
+      DiffedLines.push_back({LineNumber, NewLine, /*IsInactive=*/false});
+
+      // Turn a HighlightingKind::InactiveCode token into the IsInactive flag.
+      auto &AddedLine = DiffedLines.back();
+      llvm::erase_if(AddedLine.Tokens, [&](const HighlightingToken &T) {
+        if (T.Kind == HighlightingKind::InactiveCode) {
+          AddedLine.IsInactive = true;
+          return true;
+        }
+        return false;
+      });
+    }
   }
 
   return DiffedLines;
@@ -444,7 +474,7 @@ toSemanticHighlightingInformation(llvm::ArrayRef<LineHighlightings> Tokens) {
       write16be(static_cast<int>(Token.Kind), OS);
     }
 
-    Lines.push_back({Line.Line, encodeBase64(LineByteTokens)});
+    Lines.push_back({Line.Line, encodeBase64(LineByteTokens), Line.IsInactive});
   }
 
   return Lines;
@@ -489,6 +519,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "storage.type.primitive.cpp";
   case HighlightingKind::Macro:
     return "entity.name.function.preprocessor.cpp";
+  case HighlightingKind::InactiveCode:
+    return "meta.disabled";
   }
   llvm_unreachable("unhandled HighlightingKind");
 }
