@@ -4,18 +4,16 @@
 define <4 x i1> @t32_3(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: t32_3:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    adrp x9, .LCPI0_1
 ; CHECK-NEXT:    mov w8, #43691
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI0_1]
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
-; CHECK-NEXT:    adrp x9, .LCPI0_0
+; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI0_0]
-; CHECK-NEXT:    umull2 v3.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    ushr v1.4s, v1.4s, #1
-; CHECK-NEXT:    movi v3.4s, #3
-; CHECK-NEXT:    mls v0.4s, v1.4s, v3.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 3, i32 3, i32 3, i32 3>
@@ -26,18 +24,17 @@ define <4 x i1> @t32_3(<4 x i32> %X) nounwind {
 define <4 x i1> @t32_5(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: t32_5:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI1_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:    mov w8, #52429
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
-; CHECK-NEXT:    adrp x9, .LCPI1_0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI1_0]
-; CHECK-NEXT:    umull2 v3.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    ushr v1.4s, v1.4s, #2
-; CHECK-NEXT:    movi v3.4s, #5
-; CHECK-NEXT:    mls v0.4s, v1.4s, v3.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    mov w9, #13106
+; CHECK-NEXT:    movk w9, #13107, lsl #16
+; CHECK-NEXT:    dup v2.4s, w8
+; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    dup v1.4s, w9
+; CHECK-NEXT:    cmhs v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 5, i32 5>
