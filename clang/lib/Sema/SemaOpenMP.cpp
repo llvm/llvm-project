@@ -1763,7 +1763,12 @@ void Sema::checkOpenMPDeviceExpr(const Expr *E) {
 }
 
 static OpenMPDefaultmapClauseKind
-getVariableCategoryFromDecl(const ValueDecl *VD) {
+getVariableCategoryFromDecl(const LangOptions &LO, const ValueDecl *VD) {
+  if (LO.OpenMP <= 45) {
+    if (VD->getType().getNonReferenceType()->isScalarType())
+      return OMPC_DEFAULTMAP_scalar;
+    return OMPC_DEFAULTMAP_aggregate;
+  }
   if (VD->getType().getNonReferenceType()->isAnyPointerType())
     return OMPC_DEFAULTMAP_pointer;
   if (VD->getType().getNonReferenceType()->isScalarType())
@@ -1894,8 +1899,8 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
           (DSAStack->isForceCaptureByReferenceInTargetExecutable() &&
            !Ty->isAnyPointerType()) ||
           !Ty->isScalarType() ||
-          DSAStack->isDefaultmapCapturedByRef(Level,
-                                              getVariableCategoryFromDecl(D)) ||
+          DSAStack->isDefaultmapCapturedByRef(
+              Level, getVariableCategoryFromDecl(LangOpts, D)) ||
           DSAStack->hasExplicitDSA(
               D, [](OpenMPClauseKind K) { return K == OMPC_reduction; }, Level);
     }
@@ -2112,8 +2117,8 @@ void Sema::setOpenMPCaptureKind(FieldDecl *FD, const ValueDecl *D,
     if (DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective,
                                        NewLevel)) {
       OMPC = OMPC_map;
-      if (DSAStack->mustBeFirstprivateAtLevel(NewLevel,
-                                              getVariableCategoryFromDecl(D)))
+      if (DSAStack->mustBeFirstprivateAtLevel(
+              NewLevel, getVariableCategoryFromDecl(LangOpts, D)))
         OMPC = OMPC_firstprivate;
       break;
     }
@@ -2944,7 +2949,8 @@ public:
       // data-haring attribute clause (including a data-sharing attribute
       // clause on a combined construct where target. is one of the
       // constituent constructs), or an is_device_ptr clause.
-      OpenMPDefaultmapClauseKind ClauseKind = getVariableCategoryFromDecl(VD);
+      OpenMPDefaultmapClauseKind ClauseKind =
+          getVariableCategoryFromDecl(SemaRef.getLangOpts(), VD);
       if (SemaRef.getLangOpts().OpenMP >= 50) {
         bool IsModifierNone = Stack->getDefaultmapModifier(ClauseKind) ==
                               OMPC_DEFAULTMAP_MODIFIER_none;
