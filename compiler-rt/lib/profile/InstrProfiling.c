@@ -15,7 +15,7 @@
 #include "InstrProfilingInternal.h"
 
 #define INSTR_PROF_VALUE_PROF_DATA
-#include "profile/InstrProfData.inc"
+#include "InstrProfData.inc"
 
 
 COMPILER_RT_WEAK uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION;

@@ -14,7 +14,7 @@
 #include "InstrProfilingUtil.h"
 
 #define INSTR_PROF_VALUE_PROF_DATA
-#include "profile/InstrProfData.inc"
+#include "InstrProfData.inc"
 
 COMPILER_RT_VISIBILITY
 void (*VPMergeHook)(ValueProfData *, __llvm_profile_data *);
