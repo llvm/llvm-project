@@ -124,14 +124,6 @@ void RenameFile(const std::string &OldPath, const std::string &NewPath) {
   rename(OldPath.c_str(), NewPath.c_str());
 }
 
-void DiscardOutput(int Fd) {
-  FILE* Temp = fopen("/dev/null", "w");
-  if (!Temp)
-    return;
-  dup2(fileno(Temp), Fd);
-  fclose(Temp);
-}
-
 intptr_t GetHandleFromFd(int fd) {
   return static_cast<intptr_t>(fd);
 }
