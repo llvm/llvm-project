@@ -1,6 +1,6 @@
 // UNSUPPORTED: system-windows
 //
-// Test to verify we are corectly generating anonymous flags when parsing
+// Test to verify we are correctly generating anonymous flags when parsing
 // anonymous class and unnamed structs from DWARF to the a clang AST node.
 
 // RUN: %clang++ -g -c -o %t.o %s
