@@ -111,7 +111,7 @@ std::string DirPlusFile(const std::string &DirPath,
 
 void DupAndCloseStderr() {
   int OutputFd = DuplicateFile(2);
-  if (OutputFd > 0) {
+  if (OutputFd >= 0) {
     FILE *NewOutputFile = OpenFile(OutputFd, "w");
     if (NewOutputFile) {
       OutputFile = NewOutputFile;
