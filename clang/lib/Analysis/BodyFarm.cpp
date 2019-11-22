@@ -737,50 +737,65 @@ static const ObjCIvarDecl *findBackingIvar(const ObjCPropertyDecl *Prop) {
 }
 
 static Stmt *createObjCPropertyGetter(ASTContext &Ctx,
-                                      const ObjCPropertyDecl *Prop) {
-  // First, find the backing ivar.
-  const ObjCIvarDecl *IVar = findBackingIvar(Prop);
-  if (!IVar)
-    return nullptr;
+                                      const ObjCMethodDecl *MD) {
+    // First, find the backing ivar.
+  const ObjCIvarDecl *IVar = nullptr;
 
-  // Ignore weak variables, which have special behavior.
-  if (Prop->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_weak)
-    return nullptr;
-
-  // Look to see if Sema has synthesized a body for us. This happens in
-  // Objective-C++ because the return value may be a C++ class type with a
-  // non-trivial copy constructor. We can only do this if we can find the
-  // @synthesize for this property, though (or if we know it's been auto-
-  // synthesized).
-  const ObjCImplementationDecl *ImplDecl =
-    IVar->getContainingInterface()->getImplementation();
-  if (ImplDecl) {
-    for (const auto *I : ImplDecl->property_impls()) {
-      if (I->getPropertyDecl() != Prop)
-        continue;
-
-      if (I->getGetterCXXConstructor()) {
-        ASTMaker M(Ctx);
-        return M.makeReturn(I->getGetterCXXConstructor());
-      }
+  // Property accessor stubs sometimes do not correspond to any property.
+  if (MD->isSynthesizedAccessorStub()) {
+    const ObjCInterfaceDecl *IntD = MD->getClassInterface();
+    const ObjCImplementationDecl *ImpD = IntD->getImplementation();
+    for (const auto *V: ImpD->ivars()) {
+      if (V->getName() == MD->getSelector().getNameForSlot(0))
+        IVar = V;
     }
   }
 
-  // Sanity check that the property is the same type as the ivar, or a
-  // reference to it, and that it is either an object pointer or trivially
-  // copyable.
-  if (!Ctx.hasSameUnqualifiedType(IVar->getType(),
-                                  Prop->getType().getNonReferenceType()))
-    return nullptr;
-  if (!IVar->getType()->isObjCLifetimeType() &&
-      !IVar->getType().isTriviallyCopyableType(Ctx))
-    return nullptr;
+  if (!IVar) {
+    const ObjCPropertyDecl *Prop = MD->findPropertyDecl();
+    IVar = findBackingIvar(Prop);
+    if (!IVar)
+      return nullptr;
+
+    // Ignore weak variables, which have special behavior.
+    if (Prop->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_weak)
+      return nullptr;
+
+    // Look to see if Sema has synthesized a body for us. This happens in
+    // Objective-C++ because the return value may be a C++ class type with a
+    // non-trivial copy constructor. We can only do this if we can find the
+    // @synthesize for this property, though (or if we know it's been auto-
+    // synthesized).
+    const ObjCImplementationDecl *ImplDecl =
+      IVar->getContainingInterface()->getImplementation();
+    if (ImplDecl) {
+      for (const auto *I : ImplDecl->property_impls()) {
+        if (I->getPropertyDecl() != Prop)
+          continue;
+
+        if (I->getGetterCXXConstructor()) {
+          ASTMaker M(Ctx);
+          return M.makeReturn(I->getGetterCXXConstructor());
+        }
+      }
+    }
+
+    // Sanity check that the property is the same type as the ivar, or a
+    // reference to it, and that it is either an object pointer or trivially
+    // copyable.
+    if (!Ctx.hasSameUnqualifiedType(IVar->getType(),
+                                    Prop->getType().getNonReferenceType()))
+      return nullptr;
+    if (!IVar->getType()->isObjCLifetimeType() &&
+        !IVar->getType().isTriviallyCopyableType(Ctx))
+      return nullptr;
+  }
 
   // Generate our body:
   //   return self->_ivar;
   ASTMaker M(Ctx);
 
-  const VarDecl *selfVar = Prop->getGetterMethodDecl()->getSelfDecl();
+  const VarDecl *selfVar = MD->getSelfDecl();
   if (!selfVar)
     return nullptr;
 
@@ -791,7 +806,7 @@ static Stmt *createObjCPropertyGetter(ASTContext &Ctx,
         selfVar->getType()),
       IVar);
 
-  if (!Prop->getType()->isReferenceType())
+  if (!MD->getReturnType()->isReferenceType())
     loadedIVar = M.makeLvalueToRvalue(loadedIVar, IVar->getType());
 
   return M.makeReturn(loadedIVar);
@@ -813,10 +828,6 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
   if (Val.hasValue())
     return Val.getValue();
   Val = nullptr;
-
-  const ObjCPropertyDecl *Prop = D->findPropertyDecl();
-  if (!Prop)
-    return nullptr;
 
   // For now, we only synthesize getters.
   // Synthesizing setters would cause false negatives in the
@@ -840,7 +851,7 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
         return nullptr;
     }
 
-  Val = createObjCPropertyGetter(C, Prop);
+  Val = createObjCPropertyGetter(C, D);
 
   return Val.getValue();
 }
