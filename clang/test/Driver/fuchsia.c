@@ -6,7 +6,14 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
+// RUN: %clang %s -### -no-canonical-prefixes --target=riscv64-fuchsia \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-X86_64: "-triple" "x86_64-unknown-fuchsia"
+// CHECK-AARCH64: "-triple" "aarch64-unknown-fuchsia"
+// CHECK-RISCV64: "-triple" "riscv64-unknown-fuchsia"
 // CHECK: "--mrelax-relocations"
 // CHECK: "-munwind-tables"
 // CHECK: "-fuse-init-array"
@@ -29,6 +36,7 @@
 // CHECK: "-L[[SYSROOT]]{{/|\\\\}}lib"
 // CHECK-X86_64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-RISCV64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}riscv64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o

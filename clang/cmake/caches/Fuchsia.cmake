@@ -1,6 +1,6 @@
 # This file sets up a CMakeCache for a Fuchsia toolchain build.
 
-set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64 CACHE STRING "")
+set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64;RISCV CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
