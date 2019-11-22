@@ -4,7 +4,7 @@
 # Build the inferior.
 # RUN: mkdir -p %t
 # RUN: rm -rf %t.repro
-# RUN: %clang_host %S/Inputs/simple.c -g -o %t/reproducer.out
+# RUN: %clang %S/Inputs/simple.c -g -o %t/reproducer.out
 
 # Capture but don't generate the reproducer.
 # RUN: %lldb -x -b -s %S/Inputs/Discard.in --capture --capture-path %t.repro %t/reproducer.out
