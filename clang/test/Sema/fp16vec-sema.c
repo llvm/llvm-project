@@ -4,7 +4,6 @@ typedef __fp16 half4 __attribute__ ((vector_size (8)));
 typedef float float4 __attribute__ ((vector_size (16)));
 typedef short short4 __attribute__ ((vector_size (8)));
 typedef int int4 __attribute__ ((vector_size (16)));
-typedef __fp16 float16_t;
 
 half4 hv0, hv1;
 float4 fv0, fv1;
@@ -49,10 +48,4 @@ void testFP16Vec(int c) {
   sv0 = !hv0; // expected-error{{invalid argument type}}
   hv0++; // expected-error{{cannot increment value of type}}
   ++hv0; // expected-error{{cannot increment value of type}}
-}
-
-void testTypeDef() {
-  __fp16 t0 __attribute__((vector_size (8)));
-  float16_t t1 __attribute__((vector_size (8)));
-  t1 = t0;
 }
