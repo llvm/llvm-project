@@ -656,15 +656,15 @@ void implicit_maps_pointer (){
 
 // CK11-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l678.region_id = weak constant i8 0
 
-// CK11-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK11-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 {{8|4}}]
 // Map types: OMP_MAP_TO  | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
-// CK11-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 547]
+// CK11-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 547]
 
 // CK11-LABEL: implicit_maps_double_complex{{.*}}(
-void implicit_maps_double_complex (int a){
+void implicit_maps_double_complex (int a, int *b){
   double _Complex dc = (double)a;
 
-  // CK11-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}})
+  // CK11-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 2, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}})
   // CK11-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK11-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK11-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
@@ -674,14 +674,14 @@ void implicit_maps_double_complex (int a){
   // CK11-DAG: store { double, double }* [[PTR:%[^,]+]], { double, double }** [[CBP1]]
   // CK11-DAG: store { double, double }* [[PTR]], { double, double }** [[CP1]]
 
-  // CK11: call void [[KERNEL:@.+]]({ double, double }* [[PTR]])
+  // CK11: call void [[KERNEL:@.+]]({ double, double }* [[PTR]], i32** %{{.+}})
   #pragma omp target defaultmap(tofrom:scalar)
   {
-   dc *= dc;
+   dc *= dc; *b = 1;
   }
 }
 
-// CK11: define internal void [[KERNEL]]({ double, double }* {{.*}}[[ARG:%.+]])
+// CK11: define internal void [[KERNEL]]({ double, double }* {{.*}}[[ARG:%.+]], i32** {{.*}})
 // CK11: [[ADDR:%.+]] = alloca { double, double }*,
 // CK11: store { double, double }* [[ARG]], { double, double }** [[ADDR]],
 // CK11: [[REF:%.+]] = load { double, double }*, { double, double }** [[ADDR]],
