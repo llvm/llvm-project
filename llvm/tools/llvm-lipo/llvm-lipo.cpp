@@ -83,6 +83,7 @@ enum class LipoAction {
   PrintInfo,
   VerifyArch,
   ThinArch,
+  ExtractArch,
   CreateUniversal,
   ReplaceArch,
 };
@@ -97,7 +98,7 @@ struct Config {
   SmallVector<std::string, 1> VerifyArchList;
   SmallVector<InputFile, 1> ReplacementFiles;
   StringMap<const uint32_t> SegmentAlignments;
-  std::string ThinArchType;
+  std::string ArchType;
   std::string OutputFile;
   LipoAction ActionToPerform;
 };
@@ -391,12 +392,21 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
   case LIPO_thin:
     if (C.InputFiles.size() > 1)
       reportError("thin expects a single input file");
-    C.ThinArchType = ActionArgs[0]->getValue();
-    validateArchitectureName(C.ThinArchType);
     if (C.OutputFile.empty())
       reportError("thin expects a single output file");
-
+    C.ArchType = ActionArgs[0]->getValue();
+    validateArchitectureName(C.ArchType);
     C.ActionToPerform = LipoAction::ThinArch;
+    return C;
+
+  case LIPO_extract:
+    if (C.InputFiles.size() > 1)
+      reportError("extract expects a single input file");
+    if (C.OutputFile.empty())
+      reportError("extract expects a single output file");
+    C.ArchType = ActionArgs[0]->getValue();
+    validateArchitectureName(C.ArchType);
+    C.ActionToPerform = LipoAction::ExtractArch;
     return C;
 
   case LIPO_create:
@@ -544,9 +554,9 @@ static void printInfo(ArrayRef<OwningBinary<Binary>> InputBinaries) {
 }
 
 LLVM_ATTRIBUTE_NORETURN
-static void extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
-                         StringRef ThinArchType, StringRef OutputFileName) {
-  assert(!ThinArchType.empty() && "The architecture type should be non-empty");
+static void thinSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
+                      StringRef ArchType, StringRef OutputFileName) {
+  assert(!ArchType.empty() && "The architecture type should be non-empty");
   assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
   assert(!OutputFileName.empty() && "Thin expects a single output file");
 
@@ -559,11 +569,11 @@ static void extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
 
   auto *UO = cast<MachOUniversalBinary>(InputBinaries.front().getBinary());
   Expected<std::unique_ptr<MachOObjectFile>> Obj =
-      UO->getMachOObjectForArch(ThinArchType);
-  Expected<std::unique_ptr<Archive>> Ar = UO->getArchiveForArch(ThinArchType);
+      UO->getMachOObjectForArch(ArchType);
+  Expected<std::unique_ptr<Archive>> Ar = UO->getArchiveForArch(ArchType);
   if (!Obj && !Ar)
     reportError("fat input file " + UO->getFileName() +
-                " does not contain the specified architecture " + ThinArchType +
+                " does not contain the specified architecture " + ArchType +
                 " to thin it to");
   Binary *B = Obj ? static_cast<Binary *>(Obj->get())
                   : static_cast<Binary *>(Ar->get());
@@ -739,6 +749,37 @@ static void createUniversalBinary(ArrayRef<OwningBinary<Binary>> InputBinaries,
   exit(EXIT_SUCCESS);
 }
 
+LLVM_ATTRIBUTE_NORETURN
+static void extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
+                         const StringMap<const uint32_t> &Alignments,
+                         StringRef ArchType, StringRef OutputFileName) {
+  assert(!ArchType.empty() &&
+         "The architecture type should be non-empty");
+  assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
+  assert(!OutputFileName.empty() && "Thin expects a single output file");
+
+  if (InputBinaries.front().getBinary()->isMachO()) {
+    reportError("input file " +
+                InputBinaries.front().getBinary()->getFileName() +
+                " must be a fat file when the -extract option is specified");
+    exit(EXIT_FAILURE);
+  }
+
+  SmallVector<std::unique_ptr<MachOObjectFile>, 2> ExtractedObjects;
+  SmallVector<Slice, 2> Slices =
+      buildSlices(InputBinaries, Alignments, ExtractedObjects);
+  erase_if(Slices, [ArchType](const Slice &S) {
+    return ArchType != S.getArchString();
+  });
+
+  if (Slices.empty())
+    reportError(
+        "fat input file " + InputBinaries.front().getBinary()->getFileName() +
+        " does not contain the specified architecture " + ArchType);
+  createUniversalBinary(Slices, OutputFileName);
+  exit(EXIT_SUCCESS);
+}
+
 static StringMap<Slice>
 buildReplacementSlices(ArrayRef<OwningBinary<Binary>> ReplacementBinaries,
                        const StringMap<const uint32_t> &Alignments) {
@@ -823,7 +864,10 @@ int main(int argc, char **argv) {
     printInfo(InputBinaries);
     break;
   case LipoAction::ThinArch:
-    extractSlice(InputBinaries, C.ThinArchType, C.OutputFile);
+    thinSlice(InputBinaries, C.ArchType, C.OutputFile);
+    break;
+  case LipoAction::ExtractArch:
+    extractSlice(InputBinaries, C.SegmentAlignments, C.ArchType, C.OutputFile);
     break;
   case LipoAction::CreateUniversal:
     createUniversalBinary(InputBinaries, C.SegmentAlignments, C.OutputFile);
