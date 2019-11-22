@@ -4943,7 +4943,7 @@ SDValue TargetLowering::buildUREMEqFold(EVT SETCCVT, SDValue REMNode,
                                         ISD::CondCode Cond,
                                         DAGCombinerInfo &DCI,
                                         const SDLoc &DL) const {
-  SmallVector<SDNode *, 2> Built;
+  SmallVector<SDNode *, 4> Built;
   if (SDValue Folded = prepareUREMEqFold(SETCCVT, REMNode, CompTargetNode, Cond,
                                          DCI, DL, Built)) {
     for (SDNode *N : Built)
@@ -4978,26 +4978,40 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
   if (!isOperationLegalOrCustom(ISD::MUL, VT))
     return SDValue();
 
-  // TODO: Could support comparing with non-zero too.
-  ConstantSDNode *CompTarget = isConstOrConstSplat(CompTargetNode);
-  if (!CompTarget || !CompTarget->isNullValue())
-    return SDValue();
-
-  bool HadOneDivisor = false;
-  bool AllDivisorsAreOnes = true;
+  bool HadTautologicalLanes = false;
+  bool AllLanesAreTautological = true;
   bool HadEvenDivisor = false;
   bool AllDivisorsArePowerOfTwo = true;
-  SmallVector<SDValue, 16> PAmts, KAmts, QAmts;
+  bool HadTautologicalInvertedLanes = false;
+  SmallVector<SDValue, 16> PAmts, KAmts, QAmts, IAmts;
 
-  auto BuildUREMPattern = [&](ConstantSDNode *C) {
+  auto BuildUREMPattern = [&](ConstantSDNode *CDiv, ConstantSDNode *CCmp) {
     // Division by 0 is UB. Leave it to be constant-folded elsewhere.
-    if (C->isNullValue())
+    if (CDiv->isNullValue())
       return false;
 
-    const APInt &D = C->getAPIntValue();
-    // If all divisors are ones, we will prefer to avoid the fold.
-    HadOneDivisor |= D.isOneValue();
-    AllDivisorsAreOnes &= D.isOneValue();
+    const APInt &D = CDiv->getAPIntValue();
+    const APInt &Cmp = CCmp->getAPIntValue();
+
+    // x u% C1` is *always* less than C1. So given `x u% C1 == C2`,
+    // if C2 is not less than C1, the comparison is always false.
+    // But we will only be able to produce the comparison that will give the
+    // opposive tautological answer. So this lane would need to be fixed up.
+    bool TautologicalInvertedLane = D.ule(Cmp);
+    HadTautologicalInvertedLanes |= TautologicalInvertedLane;
+
+    // If we are checking that remainder is something smaller than the divisor,
+    // then this comparison isn't tautological. For now this is not handled,
+    // other than the comparison that remainder is zero.
+    if (!Cmp.isNullValue() && !TautologicalInvertedLane)
+      return false;
+
+    // If all lanes are tautological (either all divisors are ones, or divisor
+    // is not greater than the constant we are comparing with),
+    // we will prefer to avoid the fold.
+    bool TautologicalLane = D.isOneValue() || TautologicalInvertedLane;
+    HadTautologicalLanes |= TautologicalLane;
+    AllLanesAreTautological &= TautologicalLane;
 
     // Decompose D into D0 * 2^K
     unsigned K = D.countTrailingZeros();
@@ -5025,13 +5039,14 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
     assert(APInt::getAllOnesValue(ShSVT.getSizeInBits()).ugt(K) &&
            "We are expecting that K is always less than all-ones for ShSVT");
 
-    // If the divisor is 1 the result can be constant-folded.
-    if (D.isOneValue()) {
+    // If the lane is tautological the result can be constant-folded.
+    if (TautologicalLane) {
       // Set P and K amount to a bogus values so we can try to splat them.
       P = 0;
       K = -1;
-      assert(Q.isAllOnesValue() &&
-             "Expecting all-ones comparison for one divisor");
+      // And ensure that comparison constant is tautological,
+      // it will always compare true/false.
+      Q = -1;
     }
 
     PAmts.push_back(DAG.getConstant(P, DL, SVT));
@@ -5045,11 +5060,11 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
   SDValue D = REMNode.getOperand(1);
 
   // Collect the values from each element.
-  if (!ISD::matchUnaryPredicate(D, BuildUREMPattern))
+  if (!ISD::matchBinaryPredicate(D, CompTargetNode, BuildUREMPattern))
     return SDValue();
 
-  // If this is a urem by a one, avoid the fold since it can be constant-folded.
-  if (AllDivisorsAreOnes)
+  // If all lanes are tautological, the result can be constant-folded.
+  if (AllLanesAreTautological)
     return SDValue();
 
   // If this is a urem by a powers-of-two, avoid the fold since it can be
@@ -5059,7 +5074,7 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
 
   SDValue PVal, KVal, QVal;
   if (VT.isVector()) {
-    if (HadOneDivisor) {
+    if (HadTautologicalLanes) {
       // Try to turn PAmts into a splat, since we don't care about the values
       // that are currently '0'. If we can't, just keep '0'`s.
       turnVectorIntoSplatVector(PAmts, isNullConstant);
@@ -5096,8 +5111,41 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
   }
 
   // UREM: (setule/setugt (rotr (mul N, P), K), Q)
-  return DAG.getSetCC(DL, SETCCVT, Op0, QVal,
-                      ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
+  SDValue NewCC =
+      DAG.getSetCC(DL, SETCCVT, Op0, QVal,
+                   ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
+  if (!HadTautologicalInvertedLanes)
+    return NewCC;
+
+  // If any lanes previously compared always-false, the NewCC will give
+  // always-true result for them, so we need to fixup those lanes.
+  // Or the other way around for inequality predicate.
+  assert(VT.isVector() && "Can/should only get here for vectors.");
+  Created.push_back(NewCC.getNode());
+
+  // x u% C1` is *always* less than C1. So given `x u% C1 == C2`,
+  // if C2 is not less than C1, the comparison is always false.
+  // But we have produced the comparison that will give the
+  // opposive tautological answer. So these lanes would need to be fixed up.
+  SDValue TautologicalInvertedChannels =
+      DAG.getSetCC(DL, SETCCVT, D, CompTargetNode, ISD::SETULE);
+  Created.push_back(TautologicalInvertedChannels.getNode());
+
+  if (isOperationLegalOrCustom(ISD::VSELECT, SETCCVT)) {
+    // If we have a vector select, let's replace the comparison results in the
+    // affected lanes with the correct tautological result.
+    SDValue Replacement = DAG.getBoolConstant(Cond == ISD::SETEQ ? false : true,
+                                              DL, SETCCVT, SETCCVT);
+    return DAG.getNode(ISD::VSELECT, DL, SETCCVT, TautologicalInvertedChannels,
+                       Replacement, NewCC);
+  }
+
+  // Else, we can just invert the comparison result in the appropriate lanes.
+  if (isOperationLegalOrCustom(ISD::XOR, SETCCVT))
+    return DAG.getNode(ISD::XOR, DL, SETCCVT, NewCC,
+                       TautologicalInvertedChannels);
+
+  return SDValue(); // Don't know how to lower.
 }
 
 /// Given an ISD::SREM used only by an ISD::SETEQ or ISD::SETNE
