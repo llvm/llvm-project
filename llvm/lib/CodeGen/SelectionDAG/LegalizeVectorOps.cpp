@@ -319,9 +319,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     // best approach, except in the case where the resulting strict (scalar)
     // operations would themselves use the fallback mutation to non-strict.
     // In that specific case, just do the fallback on the vector op.
-    if (Action == TargetLowering::Expand &&
+    if (Action == TargetLowering::Expand && !TLI.isStrictFPEnabled() &&
         TLI.getStrictFPOperationAction(Node->getOpcode(),
-                                       Node->getValueType(0))
+                                   Node->getValueType(0))
         == TargetLowering::Legal) {
       EVT EltVT = Node->getValueType(0).getVectorElementType();
       if (TLI.getOperationAction(Node->getOpcode(), EltVT)
