@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
