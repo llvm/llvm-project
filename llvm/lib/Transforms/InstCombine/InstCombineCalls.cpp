@@ -4060,12 +4060,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Is this guard followed by another guard?  We scan forward over a small
     // fixed window of instructions to handle common cases with conditions
     // computed between guards.
-    Instruction *NextInst = II->getNextNode();
+    Instruction *NextInst = II->getNextNonDebugInstruction();
     for (unsigned i = 0; i < GuardWideningWindow; i++) {
       // Note: Using context-free form to avoid compile time blow up
       if (!isSafeToSpeculativelyExecute(NextInst))
         break;
-      NextInst = NextInst->getNextNode();
+      NextInst = NextInst->getNextNonDebugInstruction();
     }
     Value *NextCond = nullptr;
     if (match(NextInst,
@@ -4077,10 +4077,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         return eraseInstFromFunction(*NextInst);
 
       // Otherwise canonicalize guard(a); guard(b) -> guard(a & b).
-      Instruction* MoveI = II->getNextNode();
+      Instruction *MoveI = II->getNextNonDebugInstruction();
       while (MoveI != NextInst) {
         auto *Temp = MoveI;
-        MoveI = MoveI->getNextNode();
+        MoveI = MoveI->getNextNonDebugInstruction();
         Temp->moveBefore(II);
       }
       II->setArgOperand(0, Builder.CreateAnd(CurrCond, NextCond));
