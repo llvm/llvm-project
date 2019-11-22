@@ -468,27 +468,21 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     ReportError("DIE has invalid DW_AT_stmt_list encoding:");
     break;
   case DW_AT_location: {
-    auto VerifyLocationExpr = [&](ArrayRef<uint8_t> D) {
+    if (Expected<std::vector<DWARFLocationExpression>> Loc =
+            Die.getLocations(DW_AT_location)) {
       DWARFUnit *U = Die.getDwarfUnit();
-      DataExtractor Data(toStringRef(D), DCtx.isLittleEndian(), 0);
-      DWARFExpression Expression(Data, U->getVersion(),
-                                 U->getAddressByteSize());
-      bool Error = llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
-        return Op.isError();
-      });
-      if (Error || !Expression.verify(U))
-        ReportError("DIE contains invalid DWARF expression:");
-    };
-    if (Optional<ArrayRef<uint8_t>> Expr = AttrValue.Value.getAsBlock()) {
-      // Verify inlined location.
-      VerifyLocationExpr(*Expr);
-    } else if (auto LocOffset = AttrValue.Value.getAsSectionOffset()) {
-      // Verify location list.
-      if (auto DebugLoc = DCtx.getDebugLoc())
-        if (auto LocList = DebugLoc->getLocationListAtOffset(*LocOffset))
-          for (const auto &Entry : LocList->Entries)
-            VerifyLocationExpr(Entry.Loc);
-    }
+      for (const auto &Entry : *Loc) {
+        DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(), 0);
+        DWARFExpression Expression(Data, U->getVersion(),
+                                   U->getAddressByteSize());
+        bool Error = any_of(Expression, [](DWARFExpression::Operation &Op) {
+          return Op.isError();
+        });
+        if (Error || !Expression.verify(U))
+          ReportError("DIE contains invalid DWARF expression:");
+      }
+    } else
+      ReportError(toString(Loc.takeError()));
     break;
   }
   case DW_AT_specification:
@@ -1278,36 +1272,24 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
 }
 
 static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
-  Optional<DWARFFormValue> Location = Die.findRecursively(DW_AT_location);
-  if (!Location)
+  Expected<std::vector<DWARFLocationExpression>> Loc =
+      Die.getLocations(DW_AT_location);
+  if (!Loc) {
+    consumeError(Loc.takeError());
     return false;
-
-  auto ContainsInterestingOperators = [&](ArrayRef<uint8_t> D) {
-    DWARFUnit *U = Die.getDwarfUnit();
-    DataExtractor Data(toStringRef(D), DCtx.isLittleEndian(), U->getAddressByteSize());
+  }
+  DWARFUnit *U = Die.getDwarfUnit();
+  for (const auto &Entry : *Loc) {
+    DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(),
+                       U->getAddressByteSize());
     DWARFExpression Expression(Data, U->getVersion(), U->getAddressByteSize());
-    return any_of(Expression, [](DWARFExpression::Operation &Op) {
+    bool IsInteresting = any_of(Expression, [](DWARFExpression::Operation &Op) {
       return !Op.isError() && (Op.getCode() == DW_OP_addr ||
                                Op.getCode() == DW_OP_form_tls_address ||
                                Op.getCode() == DW_OP_GNU_push_tls_address);
     });
-  };
-
-  if (Optional<ArrayRef<uint8_t>> Expr = Location->getAsBlock()) {
-    // Inlined location.
-    if (ContainsInterestingOperators(*Expr))
+    if (IsInteresting)
       return true;
-  } else if (Optional<uint64_t> Offset = Location->getAsSectionOffset()) {
-    // Location list.
-    if (const DWARFDebugLoc *DebugLoc = DCtx.getDebugLoc()) {
-      if (const DWARFDebugLoc::LocationList *LocList =
-              DebugLoc->getLocationListAtOffset(*Offset)) {
-        if (any_of(LocList->Entries, [&](const DWARFLocationEntry &E) {
-              return ContainsInterestingOperators(E.Loc);
-            }))
-          return true;
-      }
-    }
   }
   return false;
 }

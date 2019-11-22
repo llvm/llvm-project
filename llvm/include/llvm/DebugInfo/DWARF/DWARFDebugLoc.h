@@ -101,17 +101,9 @@ public:
   void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo, DIDumpOptions DumpOpts,
             Optional<uint64_t> Offset) const;
 
-  /// Parse the debug_loc section.
-  void parse();
-
-  /// Return the location list at the given offset or nullptr.
-  LocationList const *getLocationListAtOffset(uint64_t Offset) const;
-
   Error visitLocationList(
       uint64_t *Offset,
       function_ref<bool(const DWARFLocationEntry &)> Callback) const override;
-
-  Expected<LocationList> parseOneLocationList(uint64_t *Offset);
 
 protected:
   void dumpRawEntry(const DWARFLocationEntry &Entry, raw_ostream &OS,
