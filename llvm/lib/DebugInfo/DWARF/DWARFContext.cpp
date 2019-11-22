@@ -746,7 +746,6 @@ const DWARFDebugLoc *DWARFContext::getDebugLoc() {
                                getUnitAtIndex(0)->getAddressByteSize())
           : DWARFDataExtractor("", isLittleEndian(), 0);
   Loc.reset(new DWARFDebugLoc(std::move(LocData)));
-  Loc->parse();
   return Loc.get();
 }
 
