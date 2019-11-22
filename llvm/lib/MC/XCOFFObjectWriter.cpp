@@ -150,6 +150,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   // the sections. Should have one for each set of csects that get mapped into
   // the same section and get handled in a 'similar' way.
   CsectGroup ProgramCodeCsects;
+  CsectGroup ReadOnlyCsects;
   CsectGroup DataCsects;
   CsectGroup FuncDSCsects;
   CsectGroup TOCCsects;
@@ -219,7 +220,7 @@ XCOFFObjectWriter::XCOFFObjectWriter(
     : W(OS, support::big), TargetObjectWriter(std::move(MOTW)),
       Strings(StringTableBuilder::XCOFF),
       Text(".text", XCOFF::STYP_TEXT, /* IsVirtual */ false,
-           CsectGroups{&ProgramCodeCsects}),
+           CsectGroups{&ProgramCodeCsects, &ReadOnlyCsects}),
       Data(".data", XCOFF::STYP_DATA, /* IsVirtual */ false,
            CsectGroups{&DataCsects, &FuncDSCsects, &TOCCsects}),
       BSS(".bss", XCOFF::STYP_BSS, /* IsVirtual */ true,
@@ -245,6 +246,10 @@ CsectGroup &XCOFFObjectWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
     assert(XCOFF::XTY_SD == MCSec->getCSectType() &&
            "Only an initialized csect can contain program code.");
     return ProgramCodeCsects;
+  case XCOFF::XMC_RO:
+    assert(XCOFF::XTY_SD == MCSec->getCSectType() &&
+           "Only an initialized csect can contain read only data.");
+    return ReadOnlyCsects;
   case XCOFF::XMC_RW:
     if (XCOFF::XTY_CM == MCSec->getCSectType())
       return BSSCsects;
