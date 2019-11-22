@@ -10,7 +10,7 @@ config.libomp_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.omp_library_dir = "@LIBOMP_LIBRARY_DIR@"
 config.omp_header_dir = "@LIBOMP_INCLUDE_DIR@"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
-config.has_libatomic = @LIBOMP_HAVE_LIBATOMIC@
+config.has_libatomic = "@LIBARCHER_HAVE_LIBATOMIC@"
 
 config.test_archer_flags = "@OPENMP_TEST_ARCHER_FLAGS@"
 config.libarcher_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
