@@ -75,7 +75,7 @@ void CompilerInstance::setInvocation(
 
 bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
   return (BuildGlobalModuleIndex ||
-          (ModuleManager && ModuleManager->isGlobalIndexUnavailable() &&
+          (TheASTReader && TheASTReader->isGlobalIndexUnavailable() &&
            getFrontendOpts().GenerateGlobalModuleIndex)) &&
          !ModuleBuildFailed;
 }
@@ -135,13 +135,13 @@ std::unique_ptr<Sema> CompilerInstance::takeSema() {
   return std::move(TheSema);
 }
 
-IntrusiveRefCntPtr<ASTReader> CompilerInstance::getModuleManager() const {
-  return ModuleManager;
+IntrusiveRefCntPtr<ASTReader> CompilerInstance::getASTReader() const {
+  return TheASTReader;
 }
 void CompilerInstance::setModuleManager(IntrusiveRefCntPtr<ASTReader> Reader) {
   assert(ModuleCache.get() == &Reader->getModuleManager().getModuleCache() &&
          "Expected ASTReader to use the same PCM cache");
-  ModuleManager = std::move(Reader);
+  TheASTReader = std::move(Reader);
 }
 
 std::shared_ptr<ModuleDependencyCollector>
@@ -380,7 +380,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   const PreprocessorOptions &PPOpts = getPreprocessorOpts();
 
   // The module manager holds a reference to the old preprocessor (if any).
-  ModuleManager.reset();
+  TheASTReader.reset();
 
   // Create the Preprocessor.
   HeaderSearch *HeaderInfo =
@@ -494,7 +494,7 @@ void CompilerInstance::createPCHExternalASTSource(
     StringRef Path, bool DisablePCHValidation, bool AllowPCHWithCompilerErrors,
     void *DeserializationListener, bool OwnDeserializationListener) {
   bool Preamble = getPreprocessorOpts().PrecompiledPreambleBytes.first != 0;
-  ModuleManager = createPCHExternalASTSource(
+  TheASTReader = createPCHExternalASTSource(
       Path, getHeaderSearchOpts().Sysroot, DisablePCHValidation,
       AllowPCHWithCompilerErrors, getPreprocessor(), getModuleCache(),
       getASTContext(), getPCHContainerReader(),
@@ -1313,7 +1313,7 @@ static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
 
     // Try to read the module file, now that we've compiled it.
     ASTReader::ASTReadResult ReadResult =
-        ImportingInstance.getModuleManager()->ReadAST(
+        ImportingInstance.getASTReader()->ReadAST(
             ModuleFileName, serialization::MK_ImplicitModule, ImportLoc,
             ModuleLoadCapabilities);
 
@@ -1477,8 +1477,8 @@ static void pruneModuleCache(const HeaderSearchOptions &HSOpts) {
   }
 }
 
-void CompilerInstance::createModuleManager() {
-  if (ModuleManager)
+void CompilerInstance::createASTReader() {
+  if (TheASTReader)
     return;
 
   if (!hasASTContext())
@@ -1501,29 +1501,28 @@ void CompilerInstance::createModuleManager() {
     ReadTimer = std::make_unique<llvm::Timer>("reading_modules",
                                                 "Reading modules",
                                                 *FrontendTimerGroup);
-  ModuleManager = new ASTReader(
+  TheASTReader = new ASTReader(
       getPreprocessor(), getModuleCache(), &getASTContext(),
       getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(), PPOpts.DisablePCHValidation,
       /*AllowASTWithCompilerErrors=*/false,
-      /*AllowConfigurationMismatch=*/false,
-      HSOpts.ModulesValidateSystemHeaders,
+      /*AllowConfigurationMismatch=*/false, HSOpts.ModulesValidateSystemHeaders,
       HSOpts.ValidateASTInputFilesContent,
       getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
   if (hasASTConsumer()) {
-    ModuleManager->setDeserializationListener(
-      getASTConsumer().GetASTDeserializationListener());
+    TheASTReader->setDeserializationListener(
+        getASTConsumer().GetASTDeserializationListener());
     getASTContext().setASTMutationListener(
       getASTConsumer().GetASTMutationListener());
   }
-  getASTContext().setExternalSource(ModuleManager);
+  getASTContext().setExternalSource(TheASTReader);
   if (hasSema())
-    ModuleManager->InitializeSema(getSema());
+    TheASTReader->InitializeSema(getSema());
   if (hasASTConsumer())
-    ModuleManager->StartTranslationUnit(&getASTConsumer());
+    TheASTReader->StartTranslationUnit(&getASTConsumer());
 
   for (auto &Listener : DependencyCollectors)
-    Listener->attachToASTReader(*ModuleManager);
+    Listener->attachToASTReader(*TheASTReader);
 }
 
 bool CompilerInstance::loadModuleFile(StringRef FileName) {
@@ -1580,8 +1579,8 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
   };
 
   // If we don't already have an ASTReader, create one now.
-  if (!ModuleManager)
-    createModuleManager();
+  if (!TheASTReader)
+    createASTReader();
 
   // If -Wmodule-file-config-mismatch is mapped as an error or worse, allow the
   // ASTReader to diagnose it, since it can produce better errors that we can.
@@ -1592,11 +1591,11 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
 
   auto Listener = std::make_unique<ReadModuleNames>(*this);
   auto &ListenerRef = *Listener;
-  ASTReader::ListenerScope ReadModuleNamesListener(*ModuleManager,
+  ASTReader::ListenerScope ReadModuleNamesListener(*TheASTReader,
                                                    std::move(Listener));
 
   // Try to load the module file.
-  switch (ModuleManager->ReadAST(
+  switch (TheASTReader->ReadAST(
       FileName, serialization::MK_ExplicitModule, SourceLocation(),
       ConfigMismatchIsRecoverable ? ASTReader::ARR_ConfigurationMismatch : 0)) {
   case ASTReader::Success:
@@ -1696,8 +1695,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   }
 
   // Create an ASTReader on demand.
-  if (!getModuleManager())
-    createModuleManager();
+  if (!getASTReader())
+    createASTReader();
 
   // Time how long it takes to load the module.
   llvm::Timer Timer;
@@ -1714,13 +1713,13 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
                           : Source == MS_PrebuiltModulePath
                                 ? 0
                                 : ASTReader::ARR_ConfigurationMismatch;
-  switch (getModuleManager()->ReadAST(
-      ModuleFilename,
-      Source == MS_PrebuiltModulePath
-          ? serialization::MK_PrebuiltModule
-          : Source == MS_ModuleBuildPragma ? serialization::MK_ExplicitModule
-                                           : serialization::MK_ImplicitModule,
-      ImportLoc, ARRFlags)) {
+  switch (getASTReader()->ReadAST(ModuleFilename,
+                                  Source == MS_PrebuiltModulePath
+                                      ? serialization::MK_PrebuiltModule
+                                      : Source == MS_ModuleBuildPragma
+                                            ? serialization::MK_ExplicitModule
+                                            : serialization::MK_ImplicitModule,
+                                  ImportLoc, ARRFlags)) {
   case ASTReader::Success: {
     if (M)
       return M;
@@ -1848,8 +1847,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   if (ImportLoc.isValid() && LastModuleImportLoc == ImportLoc) {
     // Make the named module visible.
     if (LastModuleImportResult && ModuleName != getLangOpts().CurrentModule)
-      ModuleManager->makeModuleVisible(LastModuleImportResult, Visibility,
-                                       ImportLoc);
+      TheASTReader->makeModuleVisible(LastModuleImportResult, Visibility,
+                                      ImportLoc);
     return LastModuleImportResult;
   }
 
@@ -2008,7 +2007,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       return ModuleLoadResult();
     }
 
-    ModuleManager->makeModuleVisible(Module, Visibility, ImportLoc);
+    TheASTReader->makeModuleVisible(Module, Visibility, ImportLoc);
   }
 
   // Check for any configuration macros that have changed.
@@ -2085,27 +2084,27 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
 void CompilerInstance::makeModuleVisible(Module *Mod,
                                          Module::NameVisibilityKind Visibility,
                                          SourceLocation ImportLoc) {
-  if (!ModuleManager)
-    createModuleManager();
-  if (!ModuleManager)
+  if (!TheASTReader)
+    createASTReader();
+  if (!TheASTReader)
     return;
 
-  ModuleManager->makeModuleVisible(Mod, Visibility, ImportLoc);
+  TheASTReader->makeModuleVisible(Mod, Visibility, ImportLoc);
 }
 
 GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
     SourceLocation TriggerLoc) {
   if (getPreprocessor().getHeaderSearchInfo().getModuleCachePath().empty())
     return nullptr;
-  if (!ModuleManager)
-    createModuleManager();
+  if (!TheASTReader)
+    createASTReader();
   // Can't do anything if we don't have the module manager.
-  if (!ModuleManager)
+  if (!TheASTReader)
     return nullptr;
   // Get an existing global index.  This loads it if not already
   // loaded.
-  ModuleManager->loadGlobalIndex();
-  GlobalModuleIndex *GlobalIndex = ModuleManager->getGlobalIndex();
+  TheASTReader->loadGlobalIndex();
+  GlobalModuleIndex *GlobalIndex = TheASTReader->getGlobalIndex();
   // If the global index doesn't exist, create it.
   if (!GlobalIndex && shouldBuildGlobalModuleIndex() && hasFileManager() &&
       hasPreprocessor()) {
@@ -2121,9 +2120,9 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
       consumeError(std::move(Err));
       return nullptr;
     }
-    ModuleManager->resetForReload();
-    ModuleManager->loadGlobalIndex();
-    GlobalIndex = ModuleManager->getGlobalIndex();
+    TheASTReader->resetForReload();
+    TheASTReader->loadGlobalIndex();
+    GlobalIndex = TheASTReader->getGlobalIndex();
   }
   // For finding modules needing to be imported for fixit messages,
   // we need to make the global index cover all modules, so we do that here.
@@ -2152,9 +2151,9 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
         consumeError(std::move(Err));
         return nullptr;
       }
-      ModuleManager->resetForReload();
-      ModuleManager->loadGlobalIndex();
-      GlobalIndex = ModuleManager->getGlobalIndex();
+      TheASTReader->resetForReload();
+      TheASTReader->loadGlobalIndex();
+      GlobalIndex = TheASTReader->getGlobalIndex();
     }
     HaveFullGlobalModuleIndex = true;
   }

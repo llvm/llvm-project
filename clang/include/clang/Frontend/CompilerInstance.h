@@ -116,7 +116,7 @@ class CompilerInstance : public ModuleLoader {
   std::unique_ptr<llvm::Timer> FrontendTimer;
 
   /// The ASTReader, if one exists.
-  IntrusiveRefCntPtr<ASTReader> ModuleManager;
+  IntrusiveRefCntPtr<ASTReader> TheASTReader;
 
   /// The module dependency collector for crashdumps
   std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector;
@@ -514,7 +514,7 @@ public:
   /// @name Module Management
   /// {
 
-  IntrusiveRefCntPtr<ASTReader> getModuleManager() const;
+  IntrusiveRefCntPtr<ASTReader> getASTReader() const;
   void setModuleManager(IntrusiveRefCntPtr<ASTReader> Reader);
 
   std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const;
@@ -782,7 +782,7 @@ public:
   }
 
   // Create module manager.
-  void createModuleManager();
+  void createASTReader();
 
   bool loadModuleFile(StringRef FileName);
 
