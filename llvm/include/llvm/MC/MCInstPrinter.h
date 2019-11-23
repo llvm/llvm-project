@@ -16,6 +16,7 @@ namespace llvm {
 
 class MCAsmInfo;
 class MCInst;
+class MCOperand;
 class MCInstrInfo;
 class MCRegisterInfo;
 class MCSubtargetInfo;
@@ -33,6 +34,8 @@ enum Style {
 };
 
 } // end namespace HexStyle
+
+struct AliasMatchingData;
 
 /// This is an instance of a target assembly language printer that
 /// converts an MCInst to valid target assembly syntax.
@@ -57,6 +60,10 @@ protected:
 
   /// Utility function for printing annotations.
   void printAnnotation(raw_ostream &OS, StringRef Annot);
+
+  /// Helper for matching MCInsts to alias patterns when printing instructions.
+  const char *matchAliasPatterns(const MCInst *MI, const MCSubtargetInfo *STI,
+                                 const AliasMatchingData &M);
 
 public:
   MCInstPrinter(const MCAsmInfo &mai, const MCInstrInfo &mii,
@@ -102,6 +109,48 @@ public:
   format_object<int64_t> formatDec(int64_t Value) const;
   format_object<int64_t> formatHex(int64_t Value) const;
   format_object<uint64_t> formatHex(uint64_t Value) const;
+};
+
+/// Map from opcode to pattern list by binary search.
+struct PatternsForOpcode {
+  uint32_t Opcode;
+  uint16_t PatternStart;
+  uint16_t NumPatterns;
+};
+
+/// Data for each alias pattern. Includes feature bits, string, number of
+/// operands, and a variadic list of conditions to check.
+struct AliasPattern {
+  uint32_t AsmStrOffset;
+  uint32_t AliasCondStart;
+  uint8_t NumOperands;
+  uint8_t NumConds;
+};
+
+struct AliasPatternCond {
+  enum CondKind : uint8_t {
+    K_Feature,    // Match only if a feature is enabled.
+    K_NegFeature, // Match only if a feature is disabled.
+    K_Ignore,     // Match any operand.
+    K_Reg,        // Match a specific register.
+    K_TiedReg,    // Match another already matched register.
+    K_Imm,        // Match a specific immediate.
+    K_RegClass,   // Match registers in a class.
+    K_Custom,     // Call custom matcher by index.
+  };
+
+  CondKind Kind;
+  uint32_t Value;
+};
+
+/// Tablegenerated data structures needed to match alias patterns.
+struct AliasMatchingData {
+  ArrayRef<PatternsForOpcode> OpToPatterns;
+  ArrayRef<AliasPattern> Patterns;
+  ArrayRef<AliasPatternCond> PatternConds;
+  StringRef AsmStrings;
+  bool (*ValidateMCOperand)(const MCOperand &MCOp, const MCSubtargetInfo &STI,
+                            unsigned PredicateIndex);
 };
 
 } // end namespace llvm

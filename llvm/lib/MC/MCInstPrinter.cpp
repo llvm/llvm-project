@@ -10,7 +10,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -55,6 +57,94 @@ void MCInstPrinter::printAnnotation(raw_ostream &OS, StringRef Annot) {
     } else
       OS << " " << MAI.getCommentString() << " " << Annot;
   }
+}
+
+static bool matchAliasCondition(const MCInst &MI, const MCSubtargetInfo *STI,
+                                const MCRegisterInfo &MRI, unsigned &OpIdx,
+                                const AliasMatchingData &M,
+                                const AliasPatternCond &C) {
+  // Feature tests are special, they don't consume operands.
+  if (C.Kind == AliasPatternCond::K_Feature)
+    return STI->getFeatureBits().test(C.Value);
+  if (C.Kind == AliasPatternCond::K_NegFeature)
+    return !STI->getFeatureBits().test(C.Value);
+
+  // Get and consume an operand.
+  const MCOperand &Opnd = MI.getOperand(OpIdx);
+  ++OpIdx;
+
+  // Check the specific condition for the operand.
+  switch (C.Kind) {
+  case AliasPatternCond::K_Imm:
+    // Operand must be a specific immediate.
+    return Opnd.isImm() && Opnd.getImm() == int32_t(C.Value);
+  case AliasPatternCond::K_Reg:
+    // Operand must be a specific register.
+    return Opnd.isReg() && Opnd.getReg() == C.Value;
+  case AliasPatternCond::K_TiedReg:
+    // Operand must match the register of another operand.
+    return Opnd.isReg() && Opnd.getReg() == MI.getOperand(C.Value).getReg();
+  case AliasPatternCond::K_RegClass:
+    // Operand must be a register in this class. Value is a register class id.
+    return Opnd.isReg() && MRI.getRegClass(C.Value).contains(Opnd.getReg());
+  case AliasPatternCond::K_Custom:
+    // Operand must match some custom criteria.
+    return M.ValidateMCOperand(Opnd, *STI, C.Value);
+  case AliasPatternCond::K_Ignore:
+    // Operand can be anything.
+    return true;
+  case AliasPatternCond::K_Feature:
+  case AliasPatternCond::K_NegFeature:
+    llvm_unreachable("handled earlier");
+  }
+  llvm_unreachable("invalid kind");
+}
+
+const char *MCInstPrinter::matchAliasPatterns(const MCInst *MI,
+                                              const MCSubtargetInfo *STI,
+                                              const AliasMatchingData &M) {
+  // Binary search by opcode. Return false if there are no aliases for this
+  // opcode.
+  auto It = lower_bound(M.OpToPatterns, MI->getOpcode(),
+                        [](const PatternsForOpcode &L, unsigned Opcode) {
+                          return L.Opcode < Opcode;
+                        });
+  if (It == M.OpToPatterns.end() || It->Opcode != MI->getOpcode())
+    return nullptr;
+
+  // Try all patterns for this opcode.
+  uint32_t AsmStrOffset = ~0U;
+  ArrayRef<AliasPattern> Patterns =
+      M.Patterns.slice(It->PatternStart, It->NumPatterns);
+  for (const AliasPattern &P : Patterns) {
+    // Check operand count first.
+    if (MI->getNumOperands() != P.NumOperands)
+      return nullptr;
+
+    // Test all conditions for this pattern.
+    ArrayRef<AliasPatternCond> Conds =
+        M.PatternConds.slice(P.AliasCondStart, P.NumConds);
+    unsigned OpIdx = 0;
+    if (llvm::all_of(Conds, [&](const AliasPatternCond &C) {
+          return matchAliasCondition(*MI, STI, MRI, OpIdx, M, C);
+        })) {
+      // If all conditions matched, use this asm string.
+      AsmStrOffset = P.AsmStrOffset;
+      break;
+    }
+  }
+
+  // If no alias matched, don't print an alias.
+  if (AsmStrOffset == ~0U)
+    return nullptr;
+
+  // Go to offset AsmStrOffset and use the null terminated string there. The
+  // offset should point to the beginning of an alias string, so it should
+  // either be zero or be preceded by a null byte.
+  assert(AsmStrOffset < M.AsmStrings.size() &&
+         (AsmStrOffset == 0 || M.AsmStrings[AsmStrOffset - 1] == '\0') &&
+         "bad asm string offset");
+  return M.AsmStrings.data() + AsmStrOffset;
 }
 
 /// Utility functions to make adding mark ups simpler.
