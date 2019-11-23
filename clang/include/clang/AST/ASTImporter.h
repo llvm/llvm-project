@@ -60,12 +60,8 @@ class TypeSourceInfo;
 
     static char ID;
 
-    ImportError() : Error(Unknown) {}
-    ImportError(const ImportError &Other) : Error(Other.Error) {}
-    ImportError &operator=(const ImportError &Other) {
-      Error = Other.Error;
-      return *this;
-    }
+    ImportError() : Error(Unknown) { }
+    ImportError(const ImportError &Other) : Error(Other.Error) { }
     ImportError(ErrorKind Error) : Error(Error) { }
 
     std::string toString() const;

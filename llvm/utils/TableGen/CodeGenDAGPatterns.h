@@ -194,7 +194,6 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
-  TypeSetByHwMode &operator=(const TypeSetByHwMode &) = default;
   TypeSetByHwMode(MVT::SimpleValueType VT)
     : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
   TypeSetByHwMode(ValueTypeByHwMode VT)
