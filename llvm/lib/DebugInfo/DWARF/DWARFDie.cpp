@@ -89,6 +89,7 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
 
     if (FormValue.getForm() == DW_FORM_loclistx) {
       FormValue.dump(OS, DumpOpts);
+
       if (auto LoclistOffset = U->getLoclistOffset(Offset))
         Offset = *LoclistOffset + U->getLocSectionBase();
       else
