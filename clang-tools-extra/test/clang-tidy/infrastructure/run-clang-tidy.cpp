@@ -9,7 +9,7 @@
 // RUN: echo "    value:           '0'" >> %t/.clang-tidy
 // RUN: cp "%s" "%t/test.cpp"
 // RUN: cd "%t"
-// RUN: not %run_clang_tidy "%t/test.cpp"
+// RUN: not %run_clang_tidy "test.cpp"
 
 int main()
 {
