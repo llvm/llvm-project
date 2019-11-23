@@ -39,6 +39,7 @@ public:
   DbiModuleSourceFilesIterator(const DbiModuleList &Modules, uint32_t Modi,
                                uint16_t Filei);
   DbiModuleSourceFilesIterator() = default;
+  DbiModuleSourceFilesIterator(const DbiModuleSourceFilesIterator &R) = default;
   DbiModuleSourceFilesIterator &
   operator=(const DbiModuleSourceFilesIterator &R) = default;
 
