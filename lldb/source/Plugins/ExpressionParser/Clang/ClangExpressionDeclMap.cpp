@@ -1172,48 +1172,45 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
 bool ClangExpressionDeclMap::LookupLocalVariable(
     NameSearchContext &context, ConstString name, unsigned current_id,
     SymbolContext &sym_ctx, CompilerDeclContext &namespace_decl) {
-  ValueObjectSP valobj;
-  VariableSP var;
+  if (sym_ctx.block == nullptr)
+    return false;
 
+  CompilerDeclContext decl_context = sym_ctx.block->GetDeclContext();
+  if (!decl_context)
+    return false;
+
+  // Make sure that the variables are parsed so that we have the
+  // declarations.
   StackFrame *frame = m_parser_vars->m_exe_ctx.GetFramePtr();
-  CompilerDeclContext compiler_decl_context =
-      sym_ctx.block != nullptr ? sym_ctx.block->GetDeclContext()
-                               : CompilerDeclContext();
+  VariableListSP vars = frame->GetInScopeVariableList(true);
+  for (size_t i = 0; i < vars->GetSize(); i++)
+    vars->GetVariableAtIndex(i)->GetDecl();
 
-  if (compiler_decl_context) {
-    // Make sure that the variables are parsed so that we have the
-    // declarations.
-    VariableListSP vars = frame->GetInScopeVariableList(true);
-    for (size_t i = 0; i < vars->GetSize(); i++)
-      vars->GetVariableAtIndex(i)->GetDecl();
+  // Search for declarations matching the name. Do not include imported
+  // decls in the search if we are looking for decls in the artificial
+  // namespace $__lldb_local_vars.
+  std::vector<CompilerDecl> found_decls =
+      decl_context.FindDeclByName(name, namespace_decl.IsValid());
 
-    // Search for declarations matching the name. Do not include imported
-    // decls in the search if we are looking for decls in the artificial
-    // namespace $__lldb_local_vars.
-    std::vector<CompilerDecl> found_decls =
-        compiler_decl_context.FindDeclByName(name, namespace_decl.IsValid());
-
-    bool variable_found = false;
-    for (CompilerDecl decl : found_decls) {
-      for (size_t vi = 0, ve = vars->GetSize(); vi != ve; ++vi) {
-        VariableSP candidate_var = vars->GetVariableAtIndex(vi);
-        if (candidate_var->GetDecl() == decl) {
-          var = candidate_var;
-          break;
-        }
-      }
-
-      if (var && !variable_found) {
-        variable_found = true;
-        valobj = ValueObjectVariable::Create(frame, var);
-        AddOneVariable(context, var, valobj, current_id);
-        context.m_found.variable = true;
+  VariableSP var;
+  bool variable_found = false;
+  for (CompilerDecl decl : found_decls) {
+    for (size_t vi = 0, ve = vars->GetSize(); vi != ve; ++vi) {
+      VariableSP candidate_var = vars->GetVariableAtIndex(vi);
+      if (candidate_var->GetDecl() == decl) {
+        var = candidate_var;
+        break;
       }
     }
-    if (variable_found)
-      return true;
+
+    if (var && !variable_found) {
+      variable_found = true;
+      ValueObjectSP valobj = ValueObjectVariable::Create(frame, var);
+      AddOneVariable(context, var, valobj, current_id);
+      context.m_found.variable = true;
+    }
   }
-  return false;
+  return variable_found;
 }
 
 void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
