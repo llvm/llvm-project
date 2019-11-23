@@ -416,10 +416,10 @@ private:
   /// \param[in] sym_ctx
   ///     The current SymbolContext of this frame.
   ///
-  /// \param[in] context
+  /// \param[in] name_context
   ///     The NameSearchContext that can construct Decls for this name.
   void LookupLocalVarNamespace(SymbolContext &sym_ctx,
-                               NameSearchContext &context);
+                               NameSearchContext &name_context);
 
   /// Lookup entities in the ClangModulesDeclVendor.
   /// \param[in] context
