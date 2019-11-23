@@ -22,9 +22,7 @@
 #ifndef TOY_OPS
 #define TOY_OPS
 
-#ifndef OP_BASE
 include "mlir/IR/OpBase.td"
-#endif // OP_BASE
 
 // Provide a definition of the 'toy' dialect in the ODS framework so that we
 // can define our operations.

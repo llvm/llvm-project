@@ -1,8 +1,6 @@
 // RUN: mlir-tblgen -gen-reference-implementations -I %S/../../include %s | FileCheck %s
 
-#ifndef OP_BASE
 include "mlir/IR/OpBase.td"
-#endif // OP_BASE
 
 def X_Dialect : Dialect {
   let name = "x";

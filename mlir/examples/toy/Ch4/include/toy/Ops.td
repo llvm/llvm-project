@@ -22,13 +22,8 @@
 #ifndef TOY_OPS
 #define TOY_OPS
 
-#ifndef MLIR_CALLINTERFACES
 include "mlir/Analysis/CallInterfaces.td"
-#endif // MLIR_CALLINTERFACES
-
-#ifndef SHAPE_INFERENCE_INTERFACE
 include "toy/ShapeInferenceInterface.td"
-#endif // SHAPE_INFERENCE_INTERFACE
 
 // Provide a definition of the 'toy' dialect in the ODS framework so that we
 // can define our operations.

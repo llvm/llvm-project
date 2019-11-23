@@ -23,9 +23,7 @@
 #ifndef TOY_COMBINE
 #define TOY_COMBINE
 
-#ifndef OP_BASE
 include "toy/Ops.td"
-#endif // OP_BASE
 
 /// Note: The DRR definition used for defining patterns is shown below:
 ///

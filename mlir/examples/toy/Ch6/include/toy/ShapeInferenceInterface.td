@@ -22,9 +22,7 @@
 #ifndef SHAPE_INFERENCE_INTERFACE
 #define SHAPE_INFERENCE_INTERFACE
 
-#ifndef OP_BASE
 include "mlir/IR/OpBase.td"
-#endif // OP_BASE
 
 def ShapeInferenceOpInterface : OpInterface<"ShapeInference"> {
   let description = [{
