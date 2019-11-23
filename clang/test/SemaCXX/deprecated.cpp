@@ -101,6 +101,12 @@ namespace DeprecatedCopy {
   };
   Dtor c1, c2(c1); // expected-note {{implicit copy constructor for 'DeprecatedCopy::Dtor' first required here}}
   void g() { c1 = c2; } // expected-note {{implicit copy assignment operator for 'DeprecatedCopy::Dtor' first required here}}
+
+  struct DefaultedDtor {
+    ~DefaultedDtor() = default;
+  };
+  DefaultedDtor d1, d2(d1);
+  void h() { d1 = d2; }
 }
 #endif
 
