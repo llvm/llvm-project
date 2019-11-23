@@ -56,6 +56,7 @@ public:
     }
   }
 
+  HashTableIterator(const HashTableIterator &R) : Map(R.Map) {}
   HashTableIterator &operator=(const HashTableIterator &R) {
     Map = R.Map;
     return *this;
