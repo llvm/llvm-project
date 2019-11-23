@@ -29,6 +29,9 @@ def main():
     parser.add_argument('-d', '--depfile',
                         help='if set, writes a depfile that causes this script '
                              'to re-run each time the current revision changes')
+    parser.add_argument('--name', action='append',
+                        help='if set, writes a depfile that causes this script '
+                             'to re-run each time the current revision changes')
     parser.add_argument('vcs_header', help='path to the output file to write')
     args = parser.parse_args()
 
@@ -54,8 +57,12 @@ def main():
 
     rev = subprocess.check_output([git, 'rev-parse', '--short', 'HEAD'],
                                   cwd=git_dir, shell=use_shell).decode().strip()
-    # FIXME: add pizzas such as the svn revision read off a git note?
-    vcsrevision_contents = '#define LLVM_REVISION "git-%s"\n' % rev
+    url = subprocess.check_output([git, 'remote', 'get-url', 'origin'],
+                                  cwd=git_dir, shell=use_shell).decode().strip()
+    vcsrevision_contents = ''
+    for name in args.name:
+        vcsrevision_contents += '#define %s_REVISION "%s"\n' % (name, rev)
+        vcsrevision_contents += '#define %s_REPOSITORY "%s"\n' % (name, url)
 
     # If the output already exists and is identical to what we'd write,
     # return to not perturb the existing file's timestamp.
