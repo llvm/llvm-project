@@ -41,9 +41,7 @@ void EmitOptRST(RecordKeeper &Records, raw_ostream &OS) {
   // Map options to their group.
   for (unsigned i = 0, e = Opts.size(); i != e; ++i) {
     const Record &R = *Opts[i];
-    const ListInit *GroupFlags = nullptr;
     if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
-      GroupFlags = DI->getDef()->getValueAsListInit("Flags");
       OptionsByGroup[DI->getDef()->getValueAsString("Name")].push_back(Opts[i]);
     } else {
       OptionsByGroup["options"].push_back(Opts[i]);
