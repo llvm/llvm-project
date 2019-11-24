@@ -42,8 +42,7 @@ int pragma_tests(int n) {
     foo(i);
 
 #pragma cilk grainsize = 4 \
-// expected-error{{expected expression}}                              \
-   expected-warning{{extra tokens at end of '#pragma cilk grainsize' - ignored}}
+// expected-warning{{'#pragma cilk grainsize' no longer requires '='}}
   _Cilk_for (int i = 0; i < n; ++i)
     foo(i);
 
