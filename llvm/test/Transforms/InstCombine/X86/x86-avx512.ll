@@ -921,8 +921,8 @@ declare float @llvm.fma.f32(float, float, float) #1
 define <4 x float> @test_mask_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask_vfmadd_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
@@ -1063,8 +1063,8 @@ define double @test_mask_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x doub
 define <4 x float> @test_maskz_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
 ; CHECK-LABEL: @test_maskz_vfmadd_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
@@ -1202,8 +1202,8 @@ define double @test_maskz_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x dou
 
 define <4 x float> @test_mask3_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfmadd_ss(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -1342,8 +1342,8 @@ define double @test_mask3_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x dou
 
 define <4 x float> @test_mask3_vfmsub_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfmsub_ss(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub float -0.000000e+00, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP4]])
@@ -1544,7 +1544,7 @@ define <4 x float> @test_mask3_vfnmsub_ss(<4 x float> %a, <4 x float> %b, <4 x f
 ; CHECK-LABEL: @test_mask3_vfnmsub_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub float -0.000000e+00, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub float -0.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.fma.f32(float [[TMP2]], float [[TMP3]], float [[TMP5]])

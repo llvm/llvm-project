@@ -140,6 +140,34 @@ void func12(int &sink, int x) {
   func11_tailcalled(sink, x);
 }
 
+__attribute__((noinline))
+void func13(int &sink, int x) {
+  //% self.filecheck("bt", "main.cpp", "-check-prefix=FUNC13-BT")
+  // FUNC13-BT: func13{{.*}}
+  // FUNC13-BT-NEXT: func14{{.*}}
+  use(x);
+
+  // Destroy 'x' in the current frame.
+  DESTROY_RSI;
+
+  //% self.filecheck("expr x", "main.cpp", "-check-prefix=FUNC13-EXPR")
+  // FUNC13-EXPR: (int) ${{.*}} = 123
+
+  ++sink;
+}
+
+__attribute__((noinline, disable_tail_calls))
+void func14(int &sink, void (*target_no_tailcall)(int &, int)) {
+  // Move the call target into a register that won't get clobbered. Do this
+  // by calling the same indirect target twice, and hoping that regalloc is
+  // 'smart' enough to stash the call target in a non-clobbered register.
+  //
+  // llvm.org/PR43926 tracks work in the compiler to emit call targets which
+  // describe non-clobbered values.
+  target_no_tailcall(sink, 123);
+  target_no_tailcall(sink, 123);
+}
+
 __attribute__((disable_tail_calls))
 int main() {
   int sink = 0;
@@ -167,6 +195,9 @@ int main() {
 
   // Test that evaluation can "see through" tail calls.
   func12(sink, 123);
+
+  // Test that evaluation can "see through" an indirect tail call.
+  func14(sink, func13);
 
   return 0;
 }

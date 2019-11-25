@@ -304,7 +304,8 @@ BENIGN_LANGOPT(BracketDepth, 32, 256,
 BENIGN_LANGOPT(NumLargeByValueCopy, 32, 0,
         "if non-zero, warn about parameter or return Warn if parameter/return value is larger in bytes than this setting. 0 is no check.")
 VALUE_LANGOPT(MSCompatibilityVersion, 32, 0, "Microsoft Visual C/C++ Version")
-VALUE_LANGOPT(VtorDispMode, 2, 1, "How many vtordisps to insert")
+ENUM_LANGOPT(VtorDispMode, MSVtorDispMode, 2, MSVtorDispMode::ForVBaseOverride,
+             "How many vtordisps to insert")
 
 LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 

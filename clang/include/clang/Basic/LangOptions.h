@@ -44,6 +44,10 @@ protected:
 #include "clang/Basic/LangOptions.def"
 };
 
+/// In the Microsoft ABI, this controls the placement of virtual displacement
+/// members used to implement virtual inheritance.
+enum class MSVtorDispMode { Never, ForVBaseOverride, ForVFTable };
+
 /// Keeps track of the various options that can be
 /// enabled, which controls the dialect of C or C++ that is accepted.
 class LangOptions : public LangOptionsBase {
@@ -90,6 +94,8 @@ public:
     PPTMK_FullGeneralityMultipleInheritance,
     PPTMK_FullGeneralityVirtualInheritance
   };
+
+  using MSVtorDispMode = clang::MSVtorDispMode;
 
   enum DefaultCallingConvention {
     DCC_None,

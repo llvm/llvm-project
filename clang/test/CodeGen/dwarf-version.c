@@ -38,10 +38,10 @@ int main (void) {
 
 // NOCODEVIEW-NOT: !"CodeView"
 
-// VER2: !{i32 2, !"Dwarf Version", i32 2}
-// VER3: !{i32 2, !"Dwarf Version", i32 3}
-// VER4: !{i32 2, !"Dwarf Version", i32 4}
-// VER5: !{i32 2, !"Dwarf Version", i32 5}
+// VER2: !{i32 7, !"Dwarf Version", i32 2}
+// VER3: !{i32 7, !"Dwarf Version", i32 3}
+// VER4: !{i32 7, !"Dwarf Version", i32 4}
+// VER5: !{i32 7, !"Dwarf Version", i32 5}
 
 // NODWARF-NOT: !"Dwarf Version"
 // CODEVIEW: !{i32 2, !"CodeView", i32 1}

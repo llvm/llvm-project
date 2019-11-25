@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 // RUN: %libarcher-compile-and-run-race | FileCheck %s
+// REQUIRES: tsan
 #include <omp.h>
 #include <stdio.h>
 #include <unistd.h>

@@ -1,4 +1,5 @@
 ; RUN: opt -S -jump-threading %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading %s | FileCheck %s
 
 ; Test if edge weights are properly updated after jump threading.
 

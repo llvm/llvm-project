@@ -1527,8 +1527,8 @@ bool Sema::buildCoroutineParameterMoves(SourceLocation Loc) {
   auto *FD = cast<FunctionDecl>(CurContext);
 
   auto *ScopeInfo = getCurFunction();
-  assert(ScopeInfo->CoroutineParameterMoves.empty() &&
-         "Should not build parameter moves twice");
+  if (!ScopeInfo->CoroutineParameterMoves.empty())
+    return false;
 
   for (auto *PD : FD->parameters()) {
     if (PD->getType()->isDependentType())

@@ -59,7 +59,9 @@ struct DebugPrintNodeData {
 enum class UnaryNodeOperator {
   Parens,
   Deref,
-  Address,
+  MaybeDeref,
+  AddressOf,
+  MaybeAddressOf,
 };
 
 // Generic container for stencil operations with a (single) node-id argument.
@@ -121,8 +123,14 @@ std::string toStringData(const UnaryOperationData &Data) {
   case UnaryNodeOperator::Deref:
     OpName = "deref";
     break;
-  case UnaryNodeOperator::Address:
+  case UnaryNodeOperator::MaybeDeref:
+    OpName = "maybeDeref";
+    break;
+  case UnaryNodeOperator::AddressOf:
     OpName = "addressOf";
+    break;
+  case UnaryNodeOperator::MaybeAddressOf:
+    OpName = "maybeAddressOf";
     break;
   }
   return (OpName + "(\"" + Data.Id + "\")").str();
@@ -191,7 +199,21 @@ Error evalData(const UnaryOperationData &Data,
   case UnaryNodeOperator::Deref:
     Source = tooling::buildDereference(*E, *Match.Context);
     break;
-  case UnaryNodeOperator::Address:
+  case UnaryNodeOperator::MaybeDeref:
+    if (!E->getType()->isAnyPointerType()) {
+      *Result += tooling::getText(*E, *Match.Context);
+      return Error::success();
+    }
+    Source = tooling::buildDereference(*E, *Match.Context);
+    break;
+  case UnaryNodeOperator::AddressOf:
+    Source = tooling::buildAddressOf(*E, *Match.Context);
+    break;
+  case UnaryNodeOperator::MaybeAddressOf:
+    if (E->getType()->isAnyPointerType()) {
+      *Result += tooling::getText(*E, *Match.Context);
+      return Error::success();
+    }
     Source = tooling::buildAddressOf(*E, *Match.Context);
     break;
   }
@@ -300,9 +322,19 @@ Stencil transformer::deref(llvm::StringRef ExprId) {
       UnaryNodeOperator::Deref, ExprId);
 }
 
+Stencil transformer::maybeDeref(llvm::StringRef ExprId) {
+  return std::make_shared<StencilImpl<UnaryOperationData>>(
+      UnaryNodeOperator::MaybeDeref, ExprId);
+}
+
 Stencil transformer::addressOf(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Address, ExprId);
+      UnaryNodeOperator::AddressOf, ExprId);
+}
+
+Stencil transformer::maybeAddressOf(llvm::StringRef ExprId) {
+  return std::make_shared<StencilImpl<UnaryOperationData>>(
+      UnaryNodeOperator::MaybeAddressOf, ExprId);
 }
 
 Stencil transformer::access(StringRef BaseId, Stencil Member) {

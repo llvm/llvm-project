@@ -879,6 +879,21 @@
 // CHECK-OPENSUSE-TW-RISCV64: "{{.*}}/usr/lib64/gcc/riscv64-suse-linux/9{{/|\\\\}}crtend.o"
 // CHECK-OPENSUSE-TW-RISCV64: "{{.*}}/usr/lib64/gcc/riscv64-suse-linux/9/../../../../lib64{{/|\\\\}}crtn.o"
 //
+// Check openSUSE Tumbleweed on ppc
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=powerpc-unknown-linux-gnu -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/opensuse_tumbleweed_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-TW-PPC %s
+// CHECK-OPENSUSE-TW-PPC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-OPENSUSE-TW-PPC: "{{.*}}/usr/lib/gcc/powerpc64-suse-linux/9/../../..{{/|\\\\}}crt1.o"
+// CHECK-OPENSUSE-TW-PPC: "{{.*}}/usr/lib/gcc/powerpc64-suse-linux/9/../../..{{/|\\\\}}crti.o"
+// CHECK-OPENSUSE-TW-PPC: "{{.*}}/usr/lib/gcc/powerpc64-suse-linux/9{{/|\\\\}}crtbegin.o"
+// CHECK-OPENSUSE-TW-PPC: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-suse-linux/9"
+// CHECK-OPENSUSE-TW-PPC: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-suse-linux/9/../../.."
+// CHECK-OPENSUSE-TW-PPC: "{{.*}}/usr/lib/gcc/powerpc64-suse-linux/9{{/|\\\\}}crtend.o"
+// CHECK-OPENSUSE-TW-PPC: "{{.*}}/usr/lib/gcc/powerpc64-suse-linux/9/../../..{{/|\\\\}}crtn.o"
+//
 // Check dynamic-linker for different archs
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-gnueabi \

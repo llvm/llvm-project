@@ -464,6 +464,9 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   DwarfRnglistsDWOSection =
       Ctx->getELFSection(".debug_rnglists.dwo", DebugSecType, ELF::SHF_EXCLUDE);
 
+  DwarfLoclistsDWOSection =
+      Ctx->getELFSection(".debug_loclists.dwo", DebugSecType, ELF::SHF_EXCLUDE);
+
   // DWP Sections
   DwarfCUIndexSection =
       Ctx->getELFSection(".debug_cu_index", DebugSecType, 0);

@@ -1,0 +1,82 @@
+## Show that llvm-objcopy extracts section contents into files specified by
+## --dump-section.
+
+# RUN: yaml2obj %s -o %t
+
+## Extract section contents into files.
+# RUN: llvm-objcopy --dump-section __TEXT,__text=%t.dump.text \
+# RUN:   --dump-section __DATA,__data=%t.dump.data %t
+# RUN: od -t x1 %t.dump.text | FileCheck %s --check-prefix=TEXT-CONTENT
+# RUN: wc -c %t.dump.text | FileCheck %s --check-prefix=TEXT-SIZE
+# RUN: od -t x1 %t.dump.data | FileCheck %s --check-prefix=DATA-CONTENT
+# RUN: wc -c %t.dump.data | FileCheck %s --check-prefix=DATA-SIZE
+
+# TEXT-CONTENT: 0000000 aa bb cc dd
+# TEXT-SIZE: 4
+# DATA-CONTENT: 0000000 ee ff ee ff
+# DATA-SIZE: 4
+
+## Error case: A non-existent section name.
+# RUN: not llvm-objcopy --dump-section __TEXT,__foo=%t.no-such-section %t 2>&1 \
+# RUN:   | FileCheck %s -DINPUT=%t --check-prefix=NO-SUCH-SECTION
+# NO-SUCH-SECTION: error: '[[INPUT]]': section '__TEXT,__foo' not found
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      312
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          12
+    fileoff:         344
+    filesize:        12
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          344
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000000004
+        content:         'EEFFEEFF'
+        size:            4
+        offset:          348
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0x0000000000000008
+        content:         'EEFFEEFF'
+        size:            4
+        offset:          352
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000

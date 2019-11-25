@@ -20,6 +20,7 @@ static_library("performance") {
     "InefficientVectorOperationCheck.cpp",
     "MoveConstArgCheck.cpp",
     "MoveConstructorInitCheck.cpp",
+    "NoAutomaticMoveCheck.cpp",
     "NoexceptMoveConstructorCheck.cpp",
     "PerformanceTidyModule.cpp",
     "TriviallyDestructibleCheck.cpp",

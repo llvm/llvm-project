@@ -71,6 +71,7 @@ class FileCheckType {
 public:
   FileCheckType(FileCheckKind Kind = CheckNone) : Kind(Kind), Count(1) {}
   FileCheckType(const FileCheckType &) = default;
+  FileCheckType &operator=(const FileCheckType &) = default;
 
   operator FileCheckKind() const { return Kind; }
 

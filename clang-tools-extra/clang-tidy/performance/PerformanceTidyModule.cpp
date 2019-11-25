@@ -17,6 +17,7 @@
 #include "InefficientVectorOperationCheck.h"
 #include "MoveConstArgCheck.h"
 #include "MoveConstructorInitCheck.h"
+#include "NoAutomaticMoveCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
@@ -46,6 +47,8 @@ public:
         "performance-move-const-arg");
     CheckFactories.registerCheck<MoveConstructorInitCheck>(
         "performance-move-constructor-init");
+    CheckFactories.registerCheck<NoAutomaticMoveCheck>(
+        "performance-no-automatic-move");
     CheckFactories.registerCheck<NoexceptMoveConstructorCheck>(
         "performance-noexcept-move-constructor");
     CheckFactories.registerCheck<TriviallyDestructibleCheck>(

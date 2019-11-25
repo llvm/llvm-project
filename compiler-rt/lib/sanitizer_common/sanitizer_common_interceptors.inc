@@ -4177,11 +4177,27 @@ INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
 
 #if SANITIZER_INTERCEPT___PTHREAD_MUTEX
 INTERCEPTOR(int, __pthread_mutex_lock, void *m) {
-  return WRAP(pthread_mutex_lock)(m);
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __pthread_mutex_lock, m);
+  COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m);
+  int res = REAL(__pthread_mutex_lock)(m);
+  if (res == errno_EOWNERDEAD)
+    COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m);
+  if (res == 0 || res == errno_EOWNERDEAD)
+    COMMON_INTERCEPTOR_MUTEX_POST_LOCK(ctx, m);
+  if (res == errno_EINVAL)
+    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
+  return res;
 }
 
 INTERCEPTOR(int, __pthread_mutex_unlock, void *m) {
-  return WRAP(pthread_mutex_unlock)(m);
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __pthread_mutex_unlock, m);
+  COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m);
+  int res = REAL(__pthread_mutex_unlock)(m);
+  if (res == errno_EINVAL)
+    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
+  return res;
 }
 
 #define INIT___PTHREAD_MUTEX_LOCK \

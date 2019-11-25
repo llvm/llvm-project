@@ -3781,8 +3781,8 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
     if (child.Tag() != DW_TAG_call_site_parameter)
       continue;
 
-    llvm::Optional<DWARFExpression> LocationInCallee = {};
-    llvm::Optional<DWARFExpression> LocationInCaller = {};
+    llvm::Optional<DWARFExpression> LocationInCallee;
+    llvm::Optional<DWARFExpression> LocationInCaller;
 
     DWARFAttributes attributes;
     const size_t num_attributes = child.GetAttributes(attributes);
@@ -3821,7 +3821,7 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
 }
 
 /// Collect call graph edges present in a function DIE.
-static std::vector<lldb_private::CallEdge>
+static std::vector<std::unique_ptr<lldb_private::CallEdge>>
 CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   // Check if the function has a supported call site-related attribute.
   // TODO: In the future it may be worthwhile to support call_all_source_calls.
@@ -3839,32 +3839,87 @@ CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   // to be DWARF5-compliant. This may need to be done lazily to be performant.
   // For now, assume that all entries are nested directly under the subprogram
   // (this is the kind of DWARF LLVM produces) and parse them eagerly.
-  std::vector<CallEdge> call_edges;
+  std::vector<std::unique_ptr<CallEdge>> call_edges;
   for (DWARFDIE child = function_die.GetFirstChild(); child.IsValid();
        child = child.GetSibling()) {
     if (child.Tag() != DW_TAG_call_site)
       continue;
 
-    // Extract DW_AT_call_origin (the call target's DIE).
-    DWARFDIE call_origin = child.GetReferencedDIE(DW_AT_call_origin);
-    if (!call_origin.IsValid()) {
-      LLDB_LOG(log, "CollectCallEdges: Invalid call origin in {0}",
-               function_die.GetPubname());
+    llvm::Optional<DWARFDIE> call_origin;
+    llvm::Optional<DWARFExpression> call_target;
+    addr_t return_pc = LLDB_INVALID_ADDRESS;
+
+    DWARFAttributes attributes;
+    const size_t num_attributes = child.GetAttributes(attributes);
+    for (size_t i = 0; i < num_attributes; ++i) {
+      DWARFFormValue form_value;
+      if (!attributes.ExtractFormValueAtIndex(i, form_value)) {
+        LLDB_LOG(log, "CollectCallEdges: Could not extract TAG_call_site form");
+        break;
+      }
+
+      dw_attr_t attr = attributes.AttributeAtIndex(i);
+
+      // Extract DW_AT_call_origin (the call target's DIE).
+      if (attr == DW_AT_call_origin) {
+        call_origin = form_value.Reference();
+        if (!call_origin->IsValid()) {
+          LLDB_LOG(log, "CollectCallEdges: Invalid call origin in {0}",
+                   function_die.GetPubname());
+          break;
+        }
+      }
+
+      // Extract DW_AT_call_return_pc (the PC the call returns to) if it's
+      // available. It should only ever be unavailable for tail call edges, in
+      // which case use LLDB_INVALID_ADDRESS.
+      if (attr == DW_AT_call_return_pc)
+        return_pc = form_value.Address();
+
+      // Extract DW_AT_call_target (the location of the address of the indirect
+      // call).
+      if (attr == DW_AT_call_target) {
+        if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
+          LLDB_LOG(log,
+                   "CollectCallEdges: AT_call_target does not have block form");
+          break;
+        }
+
+        auto data = child.GetData();
+        uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
+        uint32_t block_length = form_value.Unsigned();
+        call_target = DWARFExpression(
+            module, DataExtractor(data, block_offset, block_length),
+            child.GetCU());
+      }
+    }
+    if (!call_origin && !call_target) {
+      LLDB_LOG(log, "CollectCallEdges: call site without any call target");
       continue;
     }
-
-    // Extract DW_AT_call_return_pc (the PC the call returns to) if it's
-    // available. It should only ever be unavailable for tail call edges, in
-    // which case use LLDB_INVALID_ADDRESS.
-    addr_t return_pc = child.GetAttributeValueAsAddress(DW_AT_call_return_pc,
-                                                        LLDB_INVALID_ADDRESS);
 
     // Extract call site parameters.
     CallSiteParameterArray parameters =
         CollectCallSiteParameters(module, child);
 
-    LLDB_LOG(log, "CollectCallEdges: Found call origin: {0} (retn-PC: {1:x})",
-             call_origin.GetPubname(), return_pc);
+    std::unique_ptr<CallEdge> edge;
+    if (call_origin) {
+      LLDB_LOG(log, "CollectCallEdges: Found call origin: {0} (retn-PC: {1:x})",
+               call_origin->GetPubname(), return_pc);
+      edge = std::make_unique<DirectCallEdge>(call_origin->GetMangledName(),
+                                              return_pc, std::move(parameters));
+    } else {
+      if (log) {
+        StreamString call_target_desc;
+        call_target->GetDescription(&call_target_desc, eDescriptionLevelBrief,
+                                    LLDB_INVALID_ADDRESS, nullptr);
+        LLDB_LOG(log, "CollectCallEdges: Found indirect call target: {0}",
+                 call_target_desc.GetString());
+      }
+      edge = std::make_unique<IndirectCallEdge>(*call_target, return_pc,
+                                                std::move(parameters));
+    }
+
     if (log && parameters.size()) {
       for (const CallSiteParameter &param : parameters) {
         StreamString callee_loc_desc, caller_loc_desc;
@@ -3879,13 +3934,12 @@ CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
       }
     }
 
-    call_edges.emplace_back(call_origin.GetMangledName(), return_pc,
-                            std::move(parameters));
+    call_edges.push_back(std::move(edge));
   }
   return call_edges;
 }
 
-std::vector<lldb_private::CallEdge>
+std::vector<std::unique_ptr<lldb_private::CallEdge>>
 SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
   DWARFDIE func_die = GetDIE(func_id.GetID());
   if (func_die.IsValid())

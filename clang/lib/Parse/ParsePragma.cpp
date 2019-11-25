@@ -734,7 +734,7 @@ void Parser::HandlePragmaMSVtorDisp() {
   uintptr_t Value = reinterpret_cast<uintptr_t>(Tok.getAnnotationValue());
   Sema::PragmaMsStackAction Action =
       static_cast<Sema::PragmaMsStackAction>((Value >> 16) & 0xFFFF);
-  MSVtorDispAttr::Mode Mode = MSVtorDispAttr::Mode(Value & 0xFFFF);
+  MSVtorDispMode Mode = MSVtorDispMode(Value & 0xFFFF);
   SourceLocation PragmaLoc = ConsumeAnnotationToken();
   Actions.ActOnPragmaMSVtorDisp(Action, PragmaLoc, Mode);
 }

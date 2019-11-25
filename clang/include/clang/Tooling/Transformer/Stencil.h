@@ -87,10 +87,23 @@ Stencil expression(llvm::StringRef Id);
 /// \p ExprId is wrapped in parentheses, if needed.
 Stencil deref(llvm::StringRef ExprId);
 
+/// If \p ExprId is of pointer type, constructs an idiomatic dereferencing of
+/// the expression bound to \p ExprId, including wrapping it in parentheses, if
+/// needed. Otherwise, generates the original expression source.
+/// FIXME: Identify smart-pointers as pointer types.
+Stencil maybeDeref(llvm::StringRef ExprId);
+
 /// Constructs an expression that idiomatically takes the address of the
 /// expression bound to \p ExprId. \p ExprId is wrapped in parentheses, if
 /// needed.
 Stencil addressOf(llvm::StringRef ExprId);
+
+/// If \p ExprId is not a pointer type, constructs an expression that
+/// idiomatically takes the address of the expression bound to \p ExprId,
+/// including wrapping \p ExprId in parentheses, if needed. Otherwise, generates
+/// the original expression source.
+/// FIXME: Identify smart-pointers as pointer types.
+Stencil maybeAddressOf(llvm::StringRef ExprId);
 
 /// Constructs a `MemberExpr` that accesses the named member (\p Member) of the
 /// object bound to \p BaseId. The access is constructed idiomatically: if \p

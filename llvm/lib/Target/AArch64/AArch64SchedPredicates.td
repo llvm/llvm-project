@@ -322,7 +322,7 @@ def IsLoadRegOffsetOp      : CheckOpcode<[PRFMroW, PRFMroX,
                                           LDRDroW, LDRDroX,
                                           LDRQroW, LDRQroX]>;
 
-// Identify whether an instruction is a load
+// Identify whether an instruction is a store
 // using the register offset addressing mode.
 def IsStoreRegOffsetOp     : CheckOpcode<[STRBBroW, STRBBroX,
                                           STRHHroW, STRHHroX,

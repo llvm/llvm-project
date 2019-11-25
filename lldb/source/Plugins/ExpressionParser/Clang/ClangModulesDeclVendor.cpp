@@ -704,7 +704,7 @@ ClangModulesDeclVendor::Create(Target &target) {
 
   instance->getPreprocessor().enableIncrementalProcessing();
 
-  instance->createModuleManager();
+  instance->createASTReader();
 
   instance->createSema(action->getTranslationUnitKind(), nullptr);
 

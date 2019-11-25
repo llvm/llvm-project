@@ -2057,7 +2057,9 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const PPCLibDirs[] = {"/lib32", "/lib"};
   static const char *const PPCTriples[] = {
       "powerpc-linux-gnu", "powerpc-unknown-linux-gnu", "powerpc-linux-gnuspe",
-      "powerpc-suse-linux", "powerpc-montavista-linuxspe"};
+      // On 32-bit PowerPC systems running SUSE Linux, gcc is configured as a
+      // 64-bit compiler which defaults to "-m32", hence "powerpc64-suse-linux".
+      "powerpc64-suse-linux", "powerpc-montavista-linuxspe"};
   static const char *const PPC64LibDirs[] = {"/lib64", "/lib"};
   static const char *const PPC64Triples[] = {
       "powerpc64-linux-gnu", "powerpc64-unknown-linux-gnu",

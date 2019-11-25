@@ -21,10 +21,10 @@ add_header(
     llvm_libc_common_h
 )
 
-add_header(
+add_gen_header(
   string_h
-  HDR
-    string.h
+  DEF_FILE string.h.def
+  GEN_HDR string.h
   DEPENDS
     llvm_libc_common_h
 )
