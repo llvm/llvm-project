@@ -1,0 +1,87 @@
+## Check how yaml2obj produces SHT_LLVM_DEPENDENT_LIBRARIES sections.
+
+## Check we can describe SHT_LLVM_DEPENDENT_LIBRARIES using
+## "Libraries" and "Content" properies.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s --check-prefix=LIBRARIES
+
+# LIBRARIES:      Name: .deplibs.lib
+# LIBRARIES-NEXT: Type: SHT_LLVM_DEPENDENT_LIBRARIES (0x6FFF4C04)
+# LIBRARIES-NEXT: Flags [ (0x0)
+# LIBRARIES-NEXT: ]
+# LIBRARIES-NEXT: Address: 0x0
+# LIBRARIES-NEXT: Offset: 0x40
+# LIBRARIES-NEXT: Size: 12
+# LIBRARIES-NEXT: Link: 0
+# LIBRARIES-NEXT: Info: 0
+# LIBRARIES-NEXT: AddressAlignment: 0
+# LIBRARIES-NEXT: EntrySize: 0
+# LIBRARIES-NEXT: SectionData (
+# LIBRARIES-NEXT:   0000: 666F6F00 62617200 666F6F00 |foo.bar.foo.|
+# LIBRARIES-NEXT: )
+
+# LIBRARIES:      Name: .deplibs.content
+# LIBRARIES-NEXT: Type: SHT_LLVM_DEPENDENT_LIBRARIES
+# LIBRARIES-NEXT: Flags [
+# LIBRARIES-NEXT: ]
+# LIBRARIES-NEXT: Address: 0x0
+# LIBRARIES-NEXT: Offset: 0x4C
+# LIBRARIES-NEXT: Size: 3
+# LIBRARIES-NEXT: Link: 0
+# LIBRARIES-NEXT: Info: 0
+# LIBRARIES-NEXT: AddressAlignment: 0
+# LIBRARIES-NEXT: EntrySize: 0
+# LIBRARIES-NEXT: SectionData (
+# LIBRARIES-NEXT:   0000: 112233
+# LIBRARIES-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:      .deplibs.lib
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Libraries: [ foo, bar, foo ]
+  - Name:    .deplibs.content
+    Type:    SHT_LLVM_DEPENDENT_LIBRARIES
+    Content: "112233"
+
+## Check we report an error when "Libraries" and "Content" are used together.
+
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=LIBS-CONTENT
+
+# LIBS-CONTENT: error: SHT_LLVM_DEPENDENT_LIBRARIES: "Libraries" and "Content" can't be used together
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:      .deplibs
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Content:   "FF"
+    Libraries: [ foo ]
+
+## Check we create an empty section when neither "Libraries" nor "Content" are specified.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=NOPROPS
+
+# NOPROPS: [Nr] Name     Type                     Address          Off    Size
+# NOPROPS: [ 1] .deplibs LLVM_DEPENDENT_LIBRARIES 0000000000000000 000040 000000
+ 
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .deplibs
+    Type: SHT_LLVM_DEPENDENT_LIBRARIES
