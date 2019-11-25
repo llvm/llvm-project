@@ -50,6 +50,34 @@ func @addf_splat_tensor() -> tensor<4xf32> {
 
 // -----
 
+// CHECK-LABEL: func @addf_dense_tensor
+func @addf_dense_tensor() -> tensor<4xf32> {
+  %0 = constant dense<[1.5, 2.5, 3.5, 4.5]> : tensor<4xf32>
+  %1 = constant dense<[1.5, 2.5, 3.5, 4.5]> : tensor<4xf32>
+
+  // CHECK-NEXT: [[C:%.+]] = constant dense<[3.{{0*}}e+00, 5.{{0*}}e+00, 7.{{0*}}e+00, 9.{{0*}}e+00]> : tensor<4xf32>
+  %2 = addf %0, %1 : tensor<4xf32>
+
+  // CHECK-NEXT: return [[C]]
+  return %2 : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @addf_dense_and_splat_tensors
+func @addf_dense_and_splat_tensors() -> tensor<4xf32> {
+  %0 = constant dense<[1.5, 2.5, 3.5, 4.5]> : tensor<4xf32>
+  %1 = constant dense<1.5> : tensor<4xf32>
+
+  // CHECK-NEXT: [[C:%.+]] = constant dense<[3.{{0*}}e+00, 4.{{0*}}e+00, 5.{{0*}}e+00, 6.{{0*}}e+00]> : tensor<4xf32>
+  %2 = addf %0, %1 : tensor<4xf32>
+
+  // CHECK-NEXT: return [[C]]
+  return %2 : tensor<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @simple_addi
 func @simple_addi() -> i32 {
   %0 = constant 1 : i32
