@@ -112,4 +112,53 @@ module attributes {gpu.container_module} {
     return
   }
 
+  module @gpu_funcs attributes {gpu.kernel_module} {
+    // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32) -> f32
+    // CHECK:       workgroup
+    // CHECK:       private
+    // CHECK:       attributes
+    gpu.func @kernel_1(%arg0: f32) -> f32
+        workgroup(%arg1: memref<42xf32, 3>)
+        private(%arg2: memref<2xf32, 5>, %arg3: memref<1xf32, 5>)
+        kernel
+        attributes {foo="bar"} {
+      "use"(%arg1) : (memref<42xf32, 3>) -> ()
+      "use"(%arg2) : (memref<2xf32, 5>) -> ()
+      "use"(%arg3) : (memref<1xf32, 5>) -> ()
+      gpu.return
+    }
+
+    // CHECK-LABEL: gpu.func @no_attribution
+    // CHECK: {
+    gpu.func @no_attribution(%arg0: f32) {
+      gpu.return
+    }
+
+    // CHECK-LABEL: @no_attribution_attrs
+    // CHECK:       attributes
+    // CHECK:       {
+    gpu.func @no_attribution_attrs(%arg0: f32) attributes {foo="bar"} {
+      gpu.return
+    }
+
+    // CHECK-LABEL: @workgroup_only
+    // CHECK:       workgroup({{.*}}: {{.*}})
+    // CHECK:       {
+    gpu.func @workgroup_only() workgroup(%arg0: memref<42xf32, 3>) {
+      gpu.return
+    }
+    // CHECK-LABEL: @private_only
+    // CHECK:       private({{.*}}: {{.*}})
+    // CHECK:       {
+    gpu.func @private_only() private(%arg0: memref<2xf32, 5>) {
+      gpu.return
+    }
+
+    // CHECK-LABEL: @empty_attribution
+    // CHECK:       {
+    gpu.func @empty_attribution(%arg0: f32) workgroup() private() {
+      gpu.return
+    }
+  }
+
 }

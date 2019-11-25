@@ -360,3 +360,25 @@ func @reduce_incorrect_yield(%arg0 : f32) {
   }) : (f32) -> (f32)
 }
 
+// -----
+
+module {
+  module @gpu_funcs attributes {gpu.kernel_module} {
+    // expected-error @+1 {{custom op 'gpu.func' gpu.func requires named arguments}}
+    gpu.func @kernel_1(f32, f32) {
+    ^bb0(%arg0: f32):
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module {
+  module @gpu_funcs attributes {gpu.kernel_module} {
+    // expected-error @+1 {{requires 'type' attribute of function type}}
+    "gpu.func"() ({
+      gpu.return
+    }) {sym_name="kernel_1", type=f32} : () -> ()
+  }
+}
