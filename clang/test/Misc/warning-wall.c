@@ -90,7 +90,6 @@ CHECK-NEXT:    -Wparentheses-equality
 CHECK-NEXT:    -Wdangling-else
 CHECK-NEXT:  -Wswitch
 CHECK-NEXT:  -Wswitch-bool
-CHECK-NEXT:  -Wmisleading-indentation
 
 
 CHECK-NOT:-W
