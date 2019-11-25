@@ -831,14 +831,12 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
       if (frame) {
-        size_t i;
         VariableList *variable_list = nullptr;
         variable_list = frame->GetVariableList(true);
         if (variable_list) {
           const size_t num_variables = variable_list->GetSize();
           if (num_variables) {
-            for (i = 0; i < num_variables; ++i) {
-              VariableSP variable_sp(variable_list->GetVariableAtIndex(i));
+            for (const VariableSP &variable_sp : *variable_list) {
               if (variable_sp) {
                 bool add_variable = false;
                 switch (variable_sp->GetScope()) {

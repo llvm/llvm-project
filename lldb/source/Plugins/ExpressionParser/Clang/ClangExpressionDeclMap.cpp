@@ -648,9 +648,7 @@ lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
 
   if (vars.GetSize()) {
     if (type) {
-      for (size_t i = 0; i < vars.GetSize(); ++i) {
-        VariableSP var_sp = vars.GetVariableAtIndex(i);
-
+      for (VariableSP var_sp : vars) {
         if (ClangASTContext::AreTypesSame(
                 *type, var_sp->GetType()->GetFullCompilerType()))
           return var_sp;
