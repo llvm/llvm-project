@@ -215,6 +215,15 @@ enum NodeType : unsigned {
   GLD1_SXTW_SCALED,
   GLD1_IMM,
 
+  // Signed gather loads
+  GLD1S,
+  GLD1S_SCALED,
+  GLD1S_UXTW,
+  GLD1S_SXTW,
+  GLD1S_UXTW_SCALED,
+  GLD1S_SXTW_SCALED,
+  GLD1S_IMM,
+
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LD3post,

@@ -614,6 +614,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::ANY_EXTEND);
   setTargetDAGCombine(ISD::ZERO_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND);
+  setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   setTargetDAGCombine(ISD::BITCAST);
   setTargetDAGCombine(ISD::CONCAT_VECTORS);
   setTargetDAGCombine(ISD::STORE);
@@ -1350,6 +1351,13 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::GLD1_SXTW_SCALED:  return "AArch64ISD::GLD1_SXTW_SCALED";
   case AArch64ISD::GLD1_UXTW_SCALED:  return "AArch64ISD::GLD1_UXTW_SCALED";
   case AArch64ISD::GLD1_IMM:          return "AArch64ISD::GLD1_IMM";
+  case AArch64ISD::GLD1S:             return "AArch64ISD::GLD1S";
+  case AArch64ISD::GLD1S_SCALED:      return "AArch64ISD::GLD1S_SCALED";
+  case AArch64ISD::GLD1S_SXTW:        return "AArch64ISD::GLD1S_SXTW";
+  case AArch64ISD::GLD1S_UXTW:        return "AArch64ISD::GLD1S_UXTW";
+  case AArch64ISD::GLD1S_SXTW_SCALED: return "AArch64ISD::GLD1S_SXTW_SCALED";
+  case AArch64ISD::GLD1S_UXTW_SCALED: return "AArch64ISD::GLD1S_UXTW_SCALED";
+  case AArch64ISD::GLD1S_IMM:         return "AArch64ISD::GLD1S_IMM";
   }
   return nullptr;
 }
@@ -9917,6 +9925,67 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+static bool isConstantSplatVectorMaskForType(SDNode *N, EVT MemVT) {
+  if (!MemVT.getVectorElementType().isSimple())
+    return false;
+
+  uint64_t MaskForTy = 0ull;
+  switch (MemVT.getVectorElementType().getSimpleVT().SimpleTy) {
+  case MVT::i8:
+    MaskForTy = 0xffull;
+    break;
+  case MVT::i16:
+    MaskForTy = 0xffffull;
+    break;
+  case MVT::i32:
+    MaskForTy = 0xffffffffull;
+    break;
+  default:
+    return false;
+    break;
+  }
+
+  if (N->getOpcode() == AArch64ISD::DUP || N->getOpcode() == ISD::SPLAT_VECTOR)
+    if (auto *Op0 = dyn_cast<ConstantSDNode>(N->getOperand(0)))
+      return Op0->getAPIntValue().getLimitedValue() == MaskForTy;
+
+  return false;
+}
+
+static SDValue performSVEAndCombine(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+  SDValue Mask = N->getOperand(1);
+
+  if (!Src.hasOneUse())
+    return SDValue();
+
+  // GLD1* instructions perform an implicit zero-extend, which makes them
+  // perfect candidates for combining.
+  switch (Src->getOpcode()) {
+  case AArch64ISD::GLD1:
+  case AArch64ISD::GLD1_SCALED:
+  case AArch64ISD::GLD1_SXTW:
+  case AArch64ISD::GLD1_SXTW_SCALED:
+  case AArch64ISD::GLD1_UXTW:
+  case AArch64ISD::GLD1_UXTW_SCALED:
+  case AArch64ISD::GLD1_IMM:
+    break;
+  default:
+    return SDValue();
+  }
+
+  EVT MemVT = cast<VTSDNode>(Src->getOperand(4))->getVT();
+
+  if (isConstantSplatVectorMaskForType(Mask.getNode(), MemVT))
+    return Src;
+
+  return SDValue();
+}
+
 static SDValue performANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -9924,6 +9993,9 @@ static SDValue performANDCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
+
+  if (VT.isScalableVector())
+    return performSVEAndCombine(N, DCI);
 
   BuildVectorSDNode *BVN =
       dyn_cast<BuildVectorSDNode>(N->getOperand(1).getNode());
@@ -12063,6 +12135,64 @@ static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getMergeValues({Load, LoadChain}, DL);
 }
 
+
+static SDValue
+performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+  unsigned Opc = Src->getOpcode();
+
+  // Gather load nodes (e.g. AArch64ISD::GLD1) are straightforward candidates
+  // for DAG Combine with SIGN_EXTEND_INREG. Bail out for all other nodes.
+  unsigned NewOpc;
+  switch (Opc) {
+  case AArch64ISD::GLD1:
+    NewOpc = AArch64ISD::GLD1S;
+    break;
+  case AArch64ISD::GLD1_SCALED:
+    NewOpc = AArch64ISD::GLD1S_SCALED;
+    break;
+  case AArch64ISD::GLD1_SXTW:
+    NewOpc = AArch64ISD::GLD1S_SXTW;
+    break;
+  case AArch64ISD::GLD1_SXTW_SCALED:
+    NewOpc = AArch64ISD::GLD1S_SXTW_SCALED;
+    break;
+  case AArch64ISD::GLD1_UXTW:
+    NewOpc = AArch64ISD::GLD1S_UXTW;
+    break;
+  case AArch64ISD::GLD1_UXTW_SCALED:
+    NewOpc = AArch64ISD::GLD1S_UXTW_SCALED;
+    break;
+  case AArch64ISD::GLD1_IMM:
+    NewOpc = AArch64ISD::GLD1S_IMM;
+    break;
+  default:
+    return SDValue();
+  }
+
+  EVT SignExtSrcVT = cast<VTSDNode>(N->getOperand(1))->getVT();
+  EVT GLD1SrcMemVT = cast<VTSDNode>(Src->getOperand(4))->getVT();
+
+  if ((SignExtSrcVT != GLD1SrcMemVT) || !Src.hasOneUse())
+    return SDValue();
+
+  EVT DstVT = N->getValueType(0);
+  SDVTList VTs = DAG.getVTList(DstVT, MVT::Other);
+  SDValue Ops[] = {Src->getOperand(0), Src->getOperand(1), Src->getOperand(2),
+                   Src->getOperand(3), Src->getOperand(4)};
+
+  SDValue ExtLoad = DAG.getNode(NewOpc, SDLoc(N), VTs, Ops);
+  DCI.CombineTo(N, ExtLoad);
+  DCI.CombineTo(Src.getNode(), ExtLoad, ExtLoad.getValue(1));
+
+  // Return N so it doesn't get rechecked
+  return SDValue(N, 0);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -12097,6 +12227,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
     return performExtendCombine(N, DCI, DAG);
+  case ISD::SIGN_EXTEND_INREG:
+    return performSignExtendInRegCombine(N, DCI, DAG);
   case ISD::BITCAST:
     return performBitcastCombine(N, DCI, DAG);
   case ISD::CONCAT_VECTORS:
