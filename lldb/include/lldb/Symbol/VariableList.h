@@ -16,6 +16,8 @@
 namespace lldb_private {
 
 class VariableList {
+  typedef std::vector<lldb::VariableSP> collection;
+
 public:
   // Constructors and Destructors
   //  VariableList(const SymbolContext &symbol_context);
@@ -65,11 +67,15 @@ public:
   size_t GetSize() const;
   bool Empty() const { return m_variables.empty(); }
 
-protected:
-  typedef std::vector<lldb::VariableSP> collection;
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
+  iterator begin() { return m_variables.begin(); }
+  iterator end() { return m_variables.end(); }
+  const_iterator begin() const { return m_variables.begin(); }
+  const_iterator end() const { return m_variables.end(); }
+
+protected:
   collection m_variables;
 
 private:
