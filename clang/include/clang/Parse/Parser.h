@@ -2266,11 +2266,13 @@ private:
     return isTypeSpecifierQualifier();
   }
 
+public:
   /// isCXXDeclarationStatement - C++-specialized function that disambiguates
   /// between a declaration or an expression statement, when parsing function
   /// bodies. Returns true for declaration, false for expression.
   bool isCXXDeclarationStatement();
 
+private:
   /// isCXXSimpleDeclaration - C++-specialized function that disambiguates
   /// between a simple-declaration or an expression-statement.
   /// If during the disambiguation process a parsing error is encountered,
