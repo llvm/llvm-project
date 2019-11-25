@@ -1,0 +1,118 @@
+# RUN: llc -debug-entry-values -start-after=livedebugvalues -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+
+# Based on the following reproducer:
+#
+# #include <stdint.h>
+#
+# extern uint32_t value32(void);
+# extern uint64_t value64(void);
+# extern void call32(uint32_t);
+# extern void call64(uint64_t);
+#
+# uint32_t test_sub_reg() {
+#   uint32_t local = value32();
+#   call64(local);
+#   return local;
+# }
+
+--- |
+  ; ModuleID = 'ext.c'
+  source_filename = "ext.c"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  ; Function Attrs: minsize nounwind optsize uwtable
+  define i32 @test_sub_reg() #0 !dbg !22 {
+  entry:
+    %call = tail call i32 @value32(), !dbg !29
+    call void @llvm.dbg.value(metadata i32 %call, metadata !28, metadata !DIExpression()), !dbg !30
+    %conv = zext i32 %call to i64, !dbg !31
+    tail call void @call64(i64 %conv), !dbg !31
+    ret i32 %call, !dbg !32
+  }
+
+  declare !dbg !4 i32 @value32()
+
+  declare !dbg !8 void @call64(i64)
+
+  declare !dbg !12 i64 @value64()
+
+  declare !dbg !15 void @call32(i32)
+
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+
+  attributes #0 = { minsize nounwind optsize uwtable }
+  attributes #1 = { nounwind readnone speculatable willreturn }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!18, !19, !20}
+  !llvm.ident = !{!21}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "ext.c", directory: "/")
+  !2 = !{}
+  !3 = !{!4, !8, !12, !15}
+  !4 = !DISubprogram(name: "value32", scope: !1, file: !1, line: 3, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7}
+  !7 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !8 = !DISubprogram(name: "call64", scope: !1, file: !1, line: 6, type: !9, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !9 = !DISubroutineType(types: !10)
+  !10 = !{null, !11}
+  !11 = !DIBasicType(name: "long unsigned int", size: 64, encoding: DW_ATE_unsigned)
+  !12 = !DISubprogram(name: "value64", scope: !1, file: !1, line: 4, type: !13, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{!11}
+  !15 = !DISubprogram(name: "call32", scope: !1, file: !1, line: 5, type: !16, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !16 = !DISubroutineType(types: !17)
+  !17 = !{null, !7}
+  !18 = !{i32 2, !"Dwarf Version", i32 4}
+  !19 = !{i32 2, !"Debug Info Version", i32 3}
+  !20 = !{i32 1, !"wchar_size", i32 4}
+  !21 = !{!"clang version 10.0.0"}
+  !22 = distinct !DISubprogram(name: "test_sub_reg", scope: !1, file: !1, line: 8, type: !23, scopeLine: 8, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !27)
+  !23 = !DISubroutineType(types: !24)
+  !24 = !{!25}
+  !25 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint32_t", file: !26, line: 52, baseType: !7)
+  !26 = !DIFile(filename: "/usr/include/stdint.h", directory: "")
+  !27 = !{!28}
+  !28 = !DILocalVariable(name: "local", scope: !22, file: !1, line: 9, type: !25)
+  !29 = !DILocation(line: 9, scope: !22)
+  !30 = !DILocation(line: 0, scope: !22)
+  !31 = !DILocation(line: 10, scope: !22)
+  !32 = !DILocation(line: 11, scope: !22)
+
+...
+---
+name:            test_sub_reg
+tracksRegLiveness: true
+callSites:
+  - { bb: 0, offset: 3 }
+  - { bb: 0, offset: 7, fwdArgRegs:
+      - { arg: 0, reg: '$rdi' } }
+body:             |
+  bb.0.entry:
+    liveins: $rbx
+
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp, debug-location !29
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbx, -16
+    CALL64pcrel32 @value32, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !29
+    $ebx = MOV32rr $eax, debug-location !29
+    DBG_VALUE $ebx, $noreg, !28, !DIExpression(), debug-location !30
+    renamable $edi = MOV32rr $ebx, implicit-def $rdi, debug-location !31
+    CALL64pcrel32 @call64, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, debug-location !31
+    $eax = MOV32rr killed $ebx, debug-location !32
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !32
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !32
+    RETQ killed $eax, debug-location !32
+
+...
+
+# Verify that a call site value is emitted for the 64-bit parameter that is
+# loaded using the zero-extending MOV32rr.
+
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location (DW_OP_reg5 RDI)
+# CHECK-NEXT: DW_AT_GNU_call_site_value (DW_OP_breg3 RBX+0)

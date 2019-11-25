@@ -1,0 +1,141 @@
+# RUN: llc -O1 -debug-entry-values -start-after=livedebugvalues -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
+
+# Based on the following C reproducer:
+#
+# extern void call(long, int);
+# extern int a, b, c, d;
+#
+# int e() { return a; }
+#
+# int main() {
+#   d = c;
+#   b = e();
+#   call(c, c);
+#   return 0;
+# }
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64"
+
+  @a = external global i32, align 4
+  @c = external global i32, align 4
+  @d = external global i32, align 4
+  @b = external global i32, align 4
+
+  ; Function Attrs: noinline norecurse nounwind readonly
+  define i32 @e() #0 !dbg !13 {
+  entry:
+    %0 = load i32, i32* @a, align 4, !dbg !16
+    ret i32 %0, !dbg !16
+  }
+
+  ; Function Attrs: noinline nounwind
+  define i32 @main() #1 !dbg !17 {
+  entry:
+    %0 = load i32, i32* @c, align 4, !dbg !19
+    store i32 %0, i32* @d, align 4, !dbg !19
+    %call = tail call i32 @e(), !dbg !20
+    store i32 %call, i32* @b, align 4, !dbg !20
+    %conv = sext i32 %0 to i64, !dbg !21
+    tail call void @call(i64 %conv, i32 %0), !dbg !21
+    ret i32 0, !dbg !22
+  }
+
+  declare !dbg !4 void @call(i64, i32)
+
+  attributes #0 = { noinline norecurse nounwind readonly "frame-pointer"="all" }
+  attributes #1 = { noinline nounwind "frame-pointer"="all" }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!9, !10, !11}
+  !llvm.ident = !{!12}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "x86_two_defs.c", directory: "/")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "call", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7, !8}
+  !7 = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !{i32 2, !"Dwarf Version", i32 5}
+  !10 = !{i32 2, !"Debug Info Version", i32 3}
+  !11 = !{i32 1, !"wchar_size", i32 4}
+  !12 = !{!"clang version 10.0.0"}
+  !13 = distinct !DISubprogram(name: "e", scope: !1, file: !1, line: 5, type: !14, scopeLine: 5, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !14 = !DISubroutineType(types: !15)
+  !15 = !{!8}
+  !16 = !DILocation(line: 6, scope: !13)
+  !17 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 9, type: !14, scopeLine: 9, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !19 = !DILocation(line: 10, scope: !17)
+  !20 = !DILocation(line: 11, scope: !17)
+  !21 = !DILocation(line: 12, scope: !17)
+  !22 = !DILocation(line: 13, scope: !17)
+
+...
+---
+name:            e
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    renamable $eax = MOV32rm $rip, 1, $noreg, @a, $noreg, debug-location !16 :: (dereferenceable load 4 from @a)
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !16
+    CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !16
+    RETQ $eax, debug-location !16
+
+...
+---
+name:            main
+tracksRegLiveness: true
+callSites:
+  - { bb: 0, offset: 10 }
+  - { bb: 0, offset: 14, fwdArgRegs:
+      - { arg: 0, reg: '$rdi' }
+      - { arg: 1, reg: '$esi' } }
+body:             |
+  bb.0.entry:
+    liveins: $rbx
+
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp, debug-location !19
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION offset $rbx, -24
+    renamable $ebx = MOV32rm $rip, 1, $noreg, @c, $noreg, debug-location !19 :: (dereferenceable load 4 from @c)
+    MOV32mr $rip, 1, $noreg, @d, $noreg, renamable $ebx, debug-location !19 :: (store 4 into @d)
+    CALL64pcrel32 @e, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !20
+    MOV32mr $rip, 1, $noreg, @b, $noreg, killed renamable $eax, debug-location !20 :: (store 4 into @b)
+    renamable $rdi = MOVSX64rr32 killed renamable $ebx, debug-location !21
+    $esi = MOV32rr $edi, debug-location !21
+    CALL64pcrel32 @call, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit killed $esi, implicit-def $rsp, implicit-def $ssp, debug-location !21
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
+    $rsp = frame-destroy ADD64ri8 $rsp, 8, implicit-def dead $eflags, debug-location !22
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
+    CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !22
+    RETQ $eax, debug-location !22
+
+...
+
+# Verify that call site entries are emitted for both parameters in the call to
+# %call. Both parameters should be described by the preserved $ebx register,
+# and the value for the first parameter (passed in $rdi) should be
+# sign-extended to 64 bits.
+
+# CHECK: DW_TAG_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg4 RSI)
+# CHECK-NEXT: DW_AT_call_value    (DW_OP_breg3 RBX+0)
+
+# CHECK: DW_TAG_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg5 RDI)
+# CHECK-NEXT: DW_AT_call_value    (DW_OP_breg3 RBX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_convert ({{.*}}) "DW_ATE_signed_32", DW_OP_convert ({{.*}}) "DW_ATE_signed_64")
