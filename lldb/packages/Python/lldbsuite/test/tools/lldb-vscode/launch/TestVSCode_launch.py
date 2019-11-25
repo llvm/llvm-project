@@ -352,7 +352,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             'target create "%s"' % (program),
             'br s -f main.c -l %d' % first_line,
             'br s -f main.c -l %d' % second_line,
-            'run'
+            'process launch --stop-at-entry'
         ]
 
         initCommands = ['target list', 'platform list']

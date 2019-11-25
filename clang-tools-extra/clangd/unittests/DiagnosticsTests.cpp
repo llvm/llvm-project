@@ -941,7 +941,7 @@ TEST(DiagsInHeaders, OnlyErrorOrFatal) {
                   WithNote(Diag(Header.range(), "error occurred here")))));
 }
 
-TEST(IgnoreDiags, FromNonWrittenSources) {
+TEST(DiagsInHeaders, FromNonWrittenSources) {
   Annotations Main(R"cpp(
     #include [["a.h"]]
     void foo() {})cpp");
@@ -951,11 +951,49 @@ TEST(IgnoreDiags, FromNonWrittenSources) {
   TestTU TU = TestTU::withCode(Main.code());
   TU.AdditionalFiles = {{"a.h", Header.code()}};
   TU.ExtraArgs = {"-DFOO=NOOO"};
-  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre());
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(AllOf(
+                  Diag(Main.range(),
+                       "in included file: use of undeclared identifier 'NOOO'"),
+                  WithNote(Diag(Header.range(), "error occurred here")))));
+}
+
+TEST(DiagsInHeaders, ErrorFromMacroExpansion) {
+  Annotations Main(R"cpp(
+  void bar() {
+    int fo;
+    #include [["a.h"]]
+  })cpp");
+  Annotations Header(R"cpp(
+  #define X foo
+  X;)cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(
+                  Diag(Main.range(), "in included file: use of undeclared "
+                                     "identifier 'foo'; did you mean 'fo'?")));
+}
+
+TEST(DiagsInHeaders, ErrorFromMacroArgument) {
+  Annotations Main(R"cpp(
+  void bar() {
+    int fo;
+    #include [["a.h"]]
+  })cpp");
+  Annotations Header(R"cpp(
+  #define X(arg) arg
+  X(foo);)cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(
+                  Diag(Main.range(), "in included file: use of undeclared "
+                                     "identifier 'foo'; did you mean 'fo'?")));
 }
 
 TEST(IgnoreDiags, FromNonWrittenInclude) {
-  TestTU TU = TestTU::withCode("");
+  TestTU TU;
   TU.ExtraArgs.push_back("--include=a.h");
   TU.AdditionalFiles = {{"a.h", "void main();"}};
   // The diagnostic "main must return int" is from the header, we don't attempt
@@ -964,6 +1002,5 @@ TEST(IgnoreDiags, FromNonWrittenInclude) {
 }
 
 } // namespace
-
 } // namespace clangd
 } // namespace clang
