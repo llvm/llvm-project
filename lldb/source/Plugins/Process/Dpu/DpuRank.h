@@ -58,7 +58,8 @@ private:
   dpu_rank_t *m_rank;
   dpu_description_t m_desc;
   int nr_threads;
-  std::recursive_mutex m_lock; /* protect rank resources including the comm channel */
+  std::recursive_mutex
+      m_lock; /* protect rank resources including the comm channel */
   std::vector<Dpu *> m_dpus;
 };
 

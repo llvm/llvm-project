@@ -195,7 +195,8 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   }
 
   if (dpu->PrintfEnable()) {
-    SetSoftwareBreakpoint(dpu->GetOpenPrintfSequenceAddr() | k_dpu_iram_base, 8);
+    SetSoftwareBreakpoint(dpu->GetOpenPrintfSequenceAddr() | k_dpu_iram_base,
+                          8);
     SetSoftwareBreakpoint(dpu->GetClosePrintfSequenceAddr() | k_dpu_iram_base,
                           8);
   }
