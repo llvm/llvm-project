@@ -1900,13 +1900,11 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
         continue;
       }
 
-      if (Mask[i] < (int)LHSWidth && isa<UndefValue>(LHS)) {
-        Mask[i] = -1;     // Turn into undef.
+      // Change select of undef to undef mask element or force to LHS.
+      if (Mask[i] < (int)LHSWidth && isa<UndefValue>(LHS))
         Elts.push_back(UndefValue::get(Int32Ty));
-      } else {
-        Mask[i] = Mask[i] % LHSWidth;  // Force to LHS.
-        Elts.push_back(ConstantInt::get(Int32Ty, Mask[i]));
-      }
+      else
+        Elts.push_back(ConstantInt::get(Int32Ty, Mask[i] % LHSWidth));
     }
     SVI.setOperand(0, SVI.getOperand(1));
     SVI.setOperand(1, UndefValue::get(RHS->getType()));
