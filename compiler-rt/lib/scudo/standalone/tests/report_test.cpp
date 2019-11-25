@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "scudo/standalone/report.h"
-#include "gtest/gtest.h"
+#include "tests/scudo_unit_test.h"
+
+#include "report.h"
 
 TEST(ScudoReportTest, Generic) {
-  void *P = reinterpret_cast<void *>(0x42424242U);
+  // Potentially unused if EXPECT_DEATH isn't defined.
+  UNUSED void *P = reinterpret_cast<void *>(0x42424242U);
   EXPECT_DEATH(scudo::reportError("TEST123"), "Scudo ERROR.*TEST123");
   EXPECT_DEATH(scudo::reportInvalidFlag("ABC", "DEF"), "Scudo ERROR.*ABC.*DEF");
   EXPECT_DEATH(scudo::reportHeaderCorruption(P), "Scudo ERROR.*42424242");

@@ -6,31 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/scudo_unit_test.h"
+
 #include "allocator_config.h"
 #include "combined.h"
-
-#include "gtest/gtest.h"
 
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 static std::mutex Mutex;
 static std::condition_variable Cv;
 static bool Ready = false;
 
 static constexpr scudo::Chunk::Origin Origin = scudo::Chunk::Origin::Malloc;
-
-// This allows us to turn on the Quarantine for specific tests. The Quarantine
-// parameters are on the low end, to avoid having to loop excessively in some
-// tests.
-static bool UseQuarantine = false;
-extern "C" const char *__scudo_default_options() {
-  if (!UseQuarantine)
-    return "";
-  return "quarantine_size_kb=256:thread_local_quarantine_size_kb=128:"
-         "quarantine_max_chunk_size=1024";
-}
 
 template <class Config> static void testAllocator() {
   using AllocatorT = scudo::Allocator<Config>;
@@ -168,15 +158,15 @@ template <class Config> static void testAllocator() {
 }
 
 TEST(ScudoCombinedTest, BasicCombined) {
-  testAllocator<scudo::DefaultConfig>();
-#if SCUDO_WORDSIZE == 64U
-  testAllocator<scudo::FuchsiaConfig>();
-#endif
-  // The following configs should work on all platforms.
-  UseQuarantine = true;
-  testAllocator<scudo::AndroidConfig>();
   UseQuarantine = false;
   testAllocator<scudo::AndroidSvelteConfig>();
+#if SCUDO_FUCHSIA
+  testAllocator<scudo::FuchsiaConfig>();
+#else
+  testAllocator<scudo::DefaultConfig>();
+  UseQuarantine = true;
+  testAllocator<scudo::AndroidConfig>();
+#endif
 }
 
 template <typename AllocatorT> static void stressAllocator(AllocatorT *A) {
@@ -223,20 +213,21 @@ template <class Config> static void testAllocatorThreaded() {
 }
 
 TEST(ScudoCombinedTest, ThreadedCombined) {
-  testAllocatorThreaded<scudo::DefaultConfig>();
-#if SCUDO_WORDSIZE == 64U
-  testAllocatorThreaded<scudo::FuchsiaConfig>();
-#endif
-  UseQuarantine = true;
-  testAllocatorThreaded<scudo::AndroidConfig>();
   UseQuarantine = false;
   testAllocatorThreaded<scudo::AndroidSvelteConfig>();
+#if SCUDO_FUCHSIA
+  testAllocatorThreaded<scudo::FuchsiaConfig>();
+#else
+  testAllocatorThreaded<scudo::DefaultConfig>();
+  UseQuarantine = true;
+  testAllocatorThreaded<scudo::AndroidConfig>();
+#endif
 }
 
 struct DeathConfig {
   // Tiny allocator, its Primary only serves chunks of 1024 bytes.
   using DeathSizeClassMap = scudo::SizeClassMap<1U, 10U, 10U, 10U, 1U, 10U>;
-  typedef scudo::SizeClassAllocator32<DeathSizeClassMap, 18U> Primary;
+  typedef scudo::SizeClassAllocator64<DeathSizeClassMap, 20U> Primary;
   typedef scudo::MapAllocator<0U> Secondary;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U>;
 };
@@ -258,8 +249,8 @@ TEST(ScudoCombinedTest, DeathCombined) {
   // Invalid sized deallocation.
   EXPECT_DEATH(Allocator->deallocate(P, Origin, Size + 8U), "");
 
-  // Misaligned pointer.
-  void *MisalignedP =
+  // Misaligned pointer. Potentially unused if EXPECT_DEATH isn't available.
+  UNUSED void *MisalignedP =
       reinterpret_cast<void *>(reinterpret_cast<scudo::uptr>(P) | 1U);
   EXPECT_DEATH(Allocator->deallocate(MisalignedP, Origin, Size), "");
   EXPECT_DEATH(Allocator->reallocate(MisalignedP, Size * 2U), "");

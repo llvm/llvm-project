@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/scudo_unit_test.h"
+
 #include "tsd_exclusive.h"
 #include "tsd_shared.h"
-
-#include "gtest/gtest.h"
 
 #include <condition_variable>
 #include <mutex>
@@ -108,7 +108,9 @@ template <class AllocatorT> static void testRegistry() {
 TEST(ScudoTSDTest, TSDRegistryBasic) {
   testRegistry<MockAllocator<OneCache>>();
   testRegistry<MockAllocator<SharedCaches>>();
+#if !SCUDO_FUCHSIA
   testRegistry<MockAllocator<ExclusiveCaches>>();
+#endif
 }
 
 static std::mutex Mutex;
@@ -164,5 +166,7 @@ template <class AllocatorT> static void testRegistryThreaded() {
 TEST(ScudoTSDTest, TSDRegistryThreaded) {
   testRegistryThreaded<MockAllocator<OneCache>>();
   testRegistryThreaded<MockAllocator<SharedCaches>>();
+#if !SCUDO_FUCHSIA
   testRegistryThreaded<MockAllocator<ExclusiveCaches>>();
+#endif
 }

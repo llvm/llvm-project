@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/scudo_unit_test.h"
+
 #include "list.h"
 #include "release.h"
 #include "size_class_map.h"
-
-#include "gtest/gtest.h"
 
 #include <string.h>
 
 #include <algorithm>
 #include <random>
+#include <set>
 
 TEST(ScudoReleaseTest, PackedCounterArray) {
   for (scudo::uptr I = 0; I < SCUDO_WORDSIZE; I++) {

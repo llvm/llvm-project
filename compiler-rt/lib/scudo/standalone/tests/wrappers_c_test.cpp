@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "platform.h"
+#include "tests/scudo_unit_test.h"
 
-#include "gtest/gtest.h"
-
+#include <errno.h>
 #include <limits.h>
 #include <malloc.h>
 #include <stdlib.h>
@@ -32,11 +31,6 @@ int malloc_iterate(uintptr_t base, size_t size,
 // We have to use a small quarantine to make sure that our double-free tests
 // trigger. Otherwise EXPECT_DEATH ends up reallocating the chunk that was just
 // freed (this depends on the size obviously) and the following free succeeds.
-extern "C" __attribute__((visibility("default"))) const char *
-__scudo_default_options() {
-  return "quarantine_size_kb=256:thread_local_quarantine_size_kb=128:"
-         "quarantine_max_chunk_size=512";
-}
 
 static const size_t Size = 100U;
 
@@ -200,6 +194,7 @@ TEST(ScudoWrappersCTest, Realloc) {
 #define M_PURGE -101
 #endif
 
+#if !SCUDO_FUCHSIA
 TEST(ScudoWrappersCTest, MallOpt) {
   errno = 0;
   EXPECT_EQ(mallopt(-1000, 1), 0);
@@ -213,8 +208,10 @@ TEST(ScudoWrappersCTest, MallOpt) {
   EXPECT_EQ(mallopt(M_DECAY_TIME, 1), 1);
   EXPECT_EQ(mallopt(M_DECAY_TIME, 0), 1);
 }
+#endif
 
 TEST(ScudoWrappersCTest, OtherAlloc) {
+#if !SCUDO_FUCHSIA
   const size_t PageSize = sysconf(_SC_PAGESIZE);
 
   void *P = pvalloc(Size);
@@ -229,10 +226,12 @@ TEST(ScudoWrappersCTest, OtherAlloc) {
   EXPECT_NE(P, nullptr);
   EXPECT_EQ(reinterpret_cast<uintptr_t>(P) & (PageSize - 1), 0U);
   free(P);
+#endif
 
   EXPECT_EQ(valloc(SIZE_MAX), nullptr);
 }
 
+#if !SCUDO_FUCHSIA
 TEST(ScudoWrappersCTest, MallInfo) {
   const size_t BypassQuarantineSize = 1024U;
 
@@ -248,6 +247,7 @@ TEST(ScudoWrappersCTest, MallInfo) {
   MI = mallinfo();
   EXPECT_GE(static_cast<size_t>(MI.fordblks), Free + BypassQuarantineSize);
 }
+#endif
 
 static uintptr_t BoundaryP;
 static size_t Count;
@@ -282,6 +282,7 @@ TEST(ScudoWrappersCTest, MallocIterateBoundary) {
   free(P);
 }
 
+#if !SCUDO_FUCHSIA
 TEST(ScudoWrappersCTest, MallocInfo) {
   char Buffer[64];
   FILE *F = fmemopen(Buffer, sizeof(Buffer), "w+");
@@ -292,3 +293,4 @@ TEST(ScudoWrappersCTest, MallocInfo) {
   fclose(F);
   EXPECT_EQ(strncmp(Buffer, "<malloc version=\"scudo-", 23), 0);
 }
+#endif
