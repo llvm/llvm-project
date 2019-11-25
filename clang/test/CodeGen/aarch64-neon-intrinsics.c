@@ -17756,6 +17756,8 @@ float32_t test_vminnmv_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpaddq_s64(
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
+// CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VPADDQ_V2_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64> %a, <2 x i64> %b)
 // CHECK:   [[VPADDQ_V3_I:%.*]] = bitcast <2 x i64> [[VPADDQ_V2_I]] to <16 x i8>
 // CHECK:   ret <2 x i64> [[VPADDQ_V2_I]]
@@ -17764,6 +17766,8 @@ int64x2_t test_vpaddq_s64(int64x2_t a, int64x2_t b) {
 }
 
 // CHECK-LABEL: @test_vpaddq_u64(
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
+// CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VPADDQ_V2_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64> %a, <2 x i64> %b)
 // CHECK:   [[VPADDQ_V3_I:%.*]] = bitcast <2 x i64> [[VPADDQ_V2_I]] to <16 x i8>
 // CHECK:   ret <2 x i64> [[VPADDQ_V2_I]]
