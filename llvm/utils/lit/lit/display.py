@@ -24,7 +24,7 @@ def create_display(opts, tests, total_tests, workers):
 class NopDisplay(object):
     def print_header(self): pass
     def update(self, test): pass
-    def clear(self): pass
+    def clear(self, interrupted): pass
 
 
 class Display(object):
@@ -49,7 +49,7 @@ class Display(object):
                 (not self.opts.quiet and not self.opts.succinct)
         if show_result:
             if self.progress_bar:
-                self.progress_bar.clear()
+                self.progress_bar.clear(interrupted=False)
             self.print_result(test)
 
         if self.progress_bar:
@@ -58,10 +58,9 @@ class Display(object):
             percent = float(self.completed) / self.tests
             self.progress_bar.update(percent, test.getFullName())
 
-    def clear(self):
+    def clear(self, interrupted):
         if self.progress_bar:
-            self.progress_bar.clear()
-        sys.stdout.write('\n')
+            self.progress_bar.clear(interrupted)
 
     def print_result(self, test):
         # Show the test result line.

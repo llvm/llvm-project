@@ -119,7 +119,7 @@ void test11(struct mystruct P, float F) {
 
 // PR3753
 int test12(const char *X) {
-  return X == "foo";  // expected-warning {{comparison against a string literal is unspecified (use strncmp instead)}}
+  return X == "foo";  // expected-warning {{comparison against a string literal is unspecified (use an explicit string comparison function instead)}}
 }
 
 int test12b(const char *X) {

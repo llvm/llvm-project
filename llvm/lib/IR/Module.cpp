@@ -381,6 +381,22 @@ void Module::debug_compile_units_iterator::SkipNoDebugCUs() {
     ++Idx;
 }
 
+iterator_range<Module::global_object_iterator> Module::global_objects() {
+  return concat<GlobalObject>(functions(), globals());
+}
+iterator_range<Module::const_global_object_iterator>
+Module::global_objects() const {
+  return concat<const GlobalObject>(functions(), globals());
+}
+
+iterator_range<Module::global_value_iterator> Module::global_values() {
+  return concat<GlobalValue>(functions(), globals(), aliases(), ifuncs());
+}
+iterator_range<Module::const_global_value_iterator>
+Module::global_values() const {
+  return concat<const GlobalValue>(functions(), globals(), aliases(), ifuncs());
+}
+
 //===----------------------------------------------------------------------===//
 // Methods to control the materialization of GlobalValues in the Module.
 //

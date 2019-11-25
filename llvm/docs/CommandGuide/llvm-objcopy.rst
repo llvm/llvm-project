@@ -58,6 +58,18 @@ multiple file formats.
  this to a subset of the local symbols. For example, file and section symbols in
  ELF objects will not be discarded.
 
+.. option:: --dump-section <section>=<file>
+
+ Dump the contents of section ``<section>`` into the file ``<file>``. Can be
+ specified multiple times to dump multiple sections to different files.
+ ``<file>`` is unrelated to the input and output files provided to
+ :program:`llvm-objcopy` and as such the normal copying and editing
+ operations will still be performed. No operations are performed on the sections
+ prior to dumping them.
+
+ For MachO objects, ``<section>`` must be formatted as
+ ``<segment name>,<section name>``.
+
 .. option:: --enable-deterministic-archives, -D
 
  Enable deterministic mode when copying archives, i.e. use 0 for archive member
@@ -273,15 +285,6 @@ them.
 .. option:: --discard-locals, -X
 
  Remove local symbols starting with ".L" from the output.
-
-.. option:: --dump-section <section>=<file>
-
- Dump the contents of section ``<section>`` into the file ``<file>``. Can be
- specified multiple times to dump multiple sections to different files.
- ``<file>`` is unrelated to the input and output files provided to
- :program:`llvm-objcopy` and as such the normal copying and editing
- operations will still be performed. No operations are performed on the sections
- prior to dumping them.
 
 .. option:: --extract-dwo
 

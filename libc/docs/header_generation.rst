@@ -96,3 +96,21 @@ Action
 
   The header generator will only include content starting from the line after the
   line on which this command is listed.
+
+``public_api``
+~~~~~~~~~~~~~~
+
+This is a replacement command which should be listed in an input ``.h.def``
+file. The header file generator will replace this command with the public API of
+the target platform. See the build system document for more information on the
+relevant build rules. Also, see "Mechanics of public_api" to learn the mechanics
+of how the header generator replaces this command with the public API.
+
+Arguments
+
+  None.
+
+Action
+
+  The header generator will replace this command with the public API to be exposed
+  from the generated header file.

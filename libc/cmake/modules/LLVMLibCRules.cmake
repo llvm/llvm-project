@@ -54,7 +54,7 @@ function(add_gen_header target_name)
     "ADD_GEN_HDR"
     "" # No optional arguments
     "DEF_FILE;GEN_HDR" # Single value arguments
-    "PARAMS;DATA_FILES"     # Multi value arguments
+    "PARAMS;DATA_FILES;DEPENDS"     # Multi value arguments
     ${ARGN}
   )
   if(NOT ADD_GEN_HDR_DEF_FILE)
@@ -76,21 +76,21 @@ function(add_gen_header target_name)
 
   set(replacement_params "")
   if(ADD_GEN_HDR_PARAMS)
-    list(APPEND replacement_params "-P" ${ADD_GEN_HDR_PARAMS})
+    list(APPEND replacement_params "--args" ${ADD_GEN_HDR_PARAMS})
   endif()
 
   set(gen_hdr_script "${LIBC_BUILD_SCRIPTS_DIR}/gen_hdr.py")
 
   add_custom_command(
     OUTPUT ${out_file}
-    COMMAND ${gen_hdr_script} -o ${out_file} ${in_file} ${replacement_params}
+    COMMAND $<TARGET_FILE:libc-hdrgen> -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR} --def ${in_file} ${replacement_params} -I ${LIBC_SOURCE_DIR} ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${in_file} ${fq_data_files} ${gen_hdr_script}
+    DEPENDS ${in_file} ${fq_data_files} ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td libc-hdrgen
   )
 
   add_custom_target(
     ${target_name}
-    DEPENDS ${out_file}
+    DEPENDS ${out_file} ${ADD_GEN_HDR_DEPENDS}
   )
 endfunction(add_gen_header)
 

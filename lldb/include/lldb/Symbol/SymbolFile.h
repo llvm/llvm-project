@@ -260,7 +260,8 @@ public:
   const ObjectFile *GetObjectFile() const { return m_objfile_sp.get(); }
   ObjectFile *GetMainObjectFile();
 
-  virtual std::vector<CallEdge> ParseCallEdgesInFunction(UserID func_id) {
+  virtual std::vector<std::unique_ptr<CallEdge>>
+  ParseCallEdgesInFunction(UserID func_id) {
     return {};
   }
 

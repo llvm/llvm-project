@@ -660,24 +660,8 @@ public:
       concat_iterator<const GlobalObject, const_iterator,
                       const_global_iterator>;
 
-  iterator_range<global_object_iterator> global_objects() {
-    return concat<GlobalObject>(functions(), globals());
-  }
-  iterator_range<const_global_object_iterator> global_objects() const {
-    return concat<const GlobalObject>(functions(), globals());
-  }
-
-  global_object_iterator global_object_begin() {
-    return global_objects().begin();
-  }
-  global_object_iterator global_object_end() { return global_objects().end(); }
-
-  const_global_object_iterator global_object_begin() const {
-    return global_objects().begin();
-  }
-  const_global_object_iterator global_object_end() const {
-    return global_objects().end();
-  }
+  iterator_range<global_object_iterator> global_objects();
+  iterator_range<const_global_object_iterator> global_objects() const;
 
   using global_value_iterator =
       concat_iterator<GlobalValue, iterator, global_iterator, alias_iterator,
@@ -686,23 +670,8 @@ public:
       concat_iterator<const GlobalValue, const_iterator, const_global_iterator,
                       const_alias_iterator, const_ifunc_iterator>;
 
-  iterator_range<global_value_iterator> global_values() {
-    return concat<GlobalValue>(functions(), globals(), aliases(), ifuncs());
-  }
-  iterator_range<const_global_value_iterator> global_values() const {
-    return concat<const GlobalValue>(functions(), globals(), aliases(),
-                                     ifuncs());
-  }
-
-  global_value_iterator global_value_begin() { return global_values().begin(); }
-  global_value_iterator global_value_end() { return global_values().end(); }
-
-  const_global_value_iterator global_value_begin() const {
-    return global_values().begin();
-  }
-  const_global_value_iterator global_value_end() const {
-    return global_values().end();
-  }
+  iterator_range<global_value_iterator> global_values();
+  iterator_range<const_global_value_iterator> global_values() const;
 
   /// @}
   /// @name Named Metadata Iteration

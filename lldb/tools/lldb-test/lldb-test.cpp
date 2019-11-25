@@ -623,7 +623,7 @@ Error opts::symbols::dumpClangAST(lldb_private::Module &Module) {
     return make_string_error("Module has no symbol file.");
 
   llvm::Expected<TypeSystem &> type_system_or_err =
-      symfile->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+      symfile->GetTypeSystemForLanguage(eLanguageTypeObjC_plus_plus);
   if (!type_system_or_err)
     return make_string_error("Can't retrieve ClangASTContext");
 

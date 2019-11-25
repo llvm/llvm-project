@@ -372,6 +372,30 @@ class CXXFinalOverriderMap
 class CXXIndirectPrimaryBaseSet
   : public llvm::SmallSet<const CXXRecordDecl*, 32> {};
 
+inline bool
+inheritanceModelHasVBPtrOffsetField(MSInheritanceModel Inheritance) {
+  return Inheritance == MSInheritanceModel::Unspecified;
+}
+
+// Only member pointers to functions need a this adjustment, since it can be
+// combined with the field offset for data pointers.
+inline bool inheritanceModelHasNVOffsetField(bool IsMemberFunction,
+                                             MSInheritanceModel Inheritance) {
+  return IsMemberFunction && Inheritance >= MSInheritanceModel::Multiple;
+}
+
+inline bool
+inheritanceModelHasVBTableOffsetField(MSInheritanceModel Inheritance) {
+  return Inheritance >= MSInheritanceModel::Virtual;
+}
+
+inline bool inheritanceModelHasOnlyOneField(bool IsMemberFunction,
+                                            MSInheritanceModel Inheritance) {
+  if (IsMemberFunction)
+    return Inheritance <= MSInheritanceModel::Single;
+  return Inheritance <= MSInheritanceModel::Multiple;
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_CXXINHERITANCE_H

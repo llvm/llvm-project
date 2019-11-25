@@ -904,8 +904,9 @@ bool MatchASTVisitor::objcClassIsDerivedFrom(
     if (Base.matches(*ClassDecl, this, Builder))
       return true;
 
+    // Not `return false` as a temporary workaround for PR43879.
     if (Directly)
-      return false;
+      break;
   }
 
   return false;

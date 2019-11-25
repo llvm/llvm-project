@@ -2716,7 +2716,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                                    OPT_fno_dollars_in_identifiers,
                                    Opts.DollarIdents);
   Opts.PascalStrings = Args.hasArg(OPT_fpascal_strings);
-  Opts.VtorDispMode = getLastArgIntValue(Args, OPT_vtordisp_mode_EQ, 1, Diags);
+  Opts.setVtorDispMode(
+      MSVtorDispMode(getLastArgIntValue(Args, OPT_vtordisp_mode_EQ, 1, Diags)));
   Opts.Borland = Args.hasArg(OPT_fborland_extensions);
   Opts.WritableStrings = Args.hasArg(OPT_fwritable_strings);
   Opts.ConstStrings = Args.hasFlag(OPT_fconst_strings, OPT_fno_const_strings,

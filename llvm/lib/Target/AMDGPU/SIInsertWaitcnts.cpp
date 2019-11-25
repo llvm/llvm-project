@@ -751,7 +751,10 @@ void WaitcntBrackets::determineWait(InstCounterType T, uint32_t ScoreToWait,
       // with a conservative value of 0 for the counter.
       addWait(Wait, T, 0);
     } else {
-      addWait(Wait, T, UB - ScoreToWait);
+      // If a counter has been maxed out avoid overflow by waiting for
+      // MAX(CounterType) - 1 instead.
+      uint32_t NeededWait = std::min(UB - ScoreToWait, getWaitCountMax(T) - 1);
+      addWait(Wait, T, NeededWait);
     }
   }
 }

@@ -450,6 +450,7 @@ include "AArch64SchedFalkor.td"
 include "AArch64SchedKryo.td"
 include "AArch64SchedExynosM3.td"
 include "AArch64SchedExynosM4.td"
+include "AArch64SchedExynosM5.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
 
@@ -790,7 +791,7 @@ def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
 def : ProcessorModel<"exynos-m4", ExynosM4Model, [ProcExynosM4]>;
-def : ProcessorModel<"exynos-m5", ExynosM4Model, [ProcExynosM4]>;
+def : ProcessorModel<"exynos-m5", ExynosM5Model, [ProcExynosM4]>;
 def : ProcessorModel<"falkor", FalkorModel, [ProcFalkor]>;
 def : ProcessorModel<"saphira", FalkorModel, [ProcSaphira]>;
 def : ProcessorModel<"kryo", KryoModel, [ProcKryo]>;

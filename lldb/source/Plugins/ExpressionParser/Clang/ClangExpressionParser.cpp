@@ -974,7 +974,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   m_compiler->setASTConsumer(std::move(Consumer));
 
   if (ast_context.getLangOpts().Modules) {
-    m_compiler->createModuleManager();
+    m_compiler->createASTReader();
     m_ast_context->setSema(&m_compiler->getSema());
   }
 
