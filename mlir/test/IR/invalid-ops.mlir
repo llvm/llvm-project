@@ -951,3 +951,19 @@ func @invalid_subview(%arg0 : index, %arg1 : memref<?x8x?xf32>) {
   %0 = subview %arg1[%c0, %c0, %c0][%c1, %arg0, %c1][%c1, %c1, %c1] : memref<?x8x?xf32> to memref<?x8x?xf32, offset:?, strides:[?, ?, ?]>
   return
 }
+
+// -----
+
+func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]>) {
+  // expected-error@+1{{operand type 'memref<12x4x16xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2)>' and result type 'memref<12x4x16xf32, (d0, d1, d2) -> (d0 * 128 + d1 * 32 + d2 * 2)>' are cast incompatible}}
+  %0 = memref_cast %arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]> to memref<12x4x16xf32, offset:0, strides:[128, 32, 2]>
+  return
+}
+
+// -----
+
+func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]>) {
+  // expected-error@+1{{operand type 'memref<12x4x16xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2)>' and result type 'memref<12x4x16xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2 + 16)>' are cast incompatible}}
+  %0 = memref_cast %arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]> to memref<12x4x16xf32, offset:16, strides:[64, 16, 1]>
+  return
+}

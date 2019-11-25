@@ -13,6 +13,7 @@
 // CHECK-DAG: #[[VIEW_MAP3:map[0-9]+]] = (d0, d1)[s0] -> (d0 * s0 + d1)
 
 // CHECK-DAG: #[[BASE_MAP0:map[0-9]+]] = (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)
+// CHECK-DAG: #[[BASE_MAP3:map[0-9]+]] = (d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)
 // CHECK-DAG: #[[SUBVIEW_MAP0:map[0-9]+]] = (d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)
 
 // CHECK-DAG: #[[BASE_MAP1:map[0-9]+]] = (d0)[s0] -> (d0 + s0)
@@ -476,12 +477,19 @@ func @tensor_cast(%arg0: tensor<*xf32>, %arg1 : tensor<4x4xf32>, %arg2: tensor<?
 }
 
 // CHECK-LABEL: func @memref_cast(%arg0
-func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>) {
+func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]>) {
   // CHECK: %0 = memref_cast %arg0 : memref<4xf32> to memref<?xf32>
   %0 = memref_cast %arg0 : memref<4xf32> to memref<?xf32>
 
   // CHECK: %1 = memref_cast %arg1 : memref<?xf32> to memref<4xf32>
   %1 = memref_cast %arg1 : memref<?xf32> to memref<4xf32>
+
+  // CHECK: {{%.*}} = memref_cast %arg2 : memref<64x16x4xf32, #[[BASE_MAP0]]> to memref<64x16x4xf32, #[[BASE_MAP3]]>
+  %2 = memref_cast %arg2 : memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]> to memref<64x16x4xf32, offset: ?, strides: [?, ?, ?]>
+
+  // CHECK: {{%.*}} = memref_cast {{%.*}} : memref<64x16x4xf32, #[[BASE_MAP3]]> to memref<64x16x4xf32, #[[BASE_MAP0]]>
+  %3 = memref_cast %2 : memref<64x16x4xf32, offset: ?, strides: [?, ?, ?]> to memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]>
+
   return
 }
 
