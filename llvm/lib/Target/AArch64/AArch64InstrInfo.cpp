@@ -3571,6 +3571,18 @@ static bool isCombineInstrCandidate64(unsigned Opc) {
   // Note: MSUB Wd,Wn,Wm,Wi -> Wd = Wi - WnxWm, not Wd=WnxWm - Wi.
   case AArch64::SUBXri:
   case AArch64::SUBSXri:
+  case AArch64::ADDv8i8:
+  case AArch64::ADDv16i8:
+  case AArch64::ADDv4i16:
+  case AArch64::ADDv8i16:
+  case AArch64::ADDv2i32:
+  case AArch64::ADDv4i32:
+  case AArch64::SUBv8i8:
+  case AArch64::SUBv16i8:
+  case AArch64::SUBv4i16:
+  case AArch64::SUBv8i16:
+  case AArch64::SUBv2i32:
+  case AArch64::SUBv4i32:
     return true;
   default:
     break;
@@ -3713,6 +3725,13 @@ static bool getMaddPatterns(MachineInstr &Root,
     }
   };
 
+  auto setVFound = [&](int Opcode, int Operand, MachineCombinerPattern Pattern) {
+    if (canCombine(MBB, Root.getOperand(Operand), Opcode)) {
+      Patterns.push_back(Pattern);
+      Found = true;
+    }
+  };
+
   typedef MachineCombinerPattern MCP;
 
   switch (Opc) {
@@ -3747,6 +3766,70 @@ static bool getMaddPatterns(MachineInstr &Root,
     break;
   case AArch64::SUBXri:
     setFound(AArch64::MADDXrrr, 1, AArch64::XZR, MCP::MULSUBXI_OP1);
+    break;
+  case AArch64::ADDv8i8:
+    setVFound(AArch64::MULv8i8, 1, MCP::MULADDv8i8_OP1);
+    setVFound(AArch64::MULv8i8, 2, MCP::MULADDv8i8_OP2);
+    break;
+  case AArch64::ADDv16i8:
+    setVFound(AArch64::MULv16i8, 1, MCP::MULADDv16i8_OP1);
+    setVFound(AArch64::MULv16i8, 2, MCP::MULADDv16i8_OP2);
+    break;
+  case AArch64::ADDv4i16:
+    setVFound(AArch64::MULv4i16, 1, MCP::MULADDv4i16_OP1);
+    setVFound(AArch64::MULv4i16, 2, MCP::MULADDv4i16_OP2);
+    setVFound(AArch64::MULv4i16_indexed, 1, MCP::MULADDv4i16_indexed_OP1);
+    setVFound(AArch64::MULv4i16_indexed, 2, MCP::MULADDv4i16_indexed_OP2);
+    break;
+  case AArch64::ADDv8i16:
+    setVFound(AArch64::MULv8i16, 1, MCP::MULADDv8i16_OP1);
+    setVFound(AArch64::MULv8i16, 2, MCP::MULADDv8i16_OP2);
+    setVFound(AArch64::MULv8i16_indexed, 1, MCP::MULADDv8i16_indexed_OP1);
+    setVFound(AArch64::MULv8i16_indexed, 2, MCP::MULADDv8i16_indexed_OP2);
+    break;
+  case AArch64::ADDv2i32:
+    setVFound(AArch64::MULv2i32, 1, MCP::MULADDv2i32_OP1);
+    setVFound(AArch64::MULv2i32, 2, MCP::MULADDv2i32_OP2);
+    setVFound(AArch64::MULv2i32_indexed, 1, MCP::MULADDv2i32_indexed_OP1);
+    setVFound(AArch64::MULv2i32_indexed, 2, MCP::MULADDv2i32_indexed_OP2);
+    break;
+  case AArch64::ADDv4i32:
+    setVFound(AArch64::MULv4i32, 1, MCP::MULADDv4i32_OP1);
+    setVFound(AArch64::MULv4i32, 2, MCP::MULADDv4i32_OP2);
+    setVFound(AArch64::MULv4i32_indexed, 1, MCP::MULADDv4i32_indexed_OP1);
+    setVFound(AArch64::MULv4i32_indexed, 2, MCP::MULADDv4i32_indexed_OP2);
+    break;
+  case AArch64::SUBv8i8:
+    setVFound(AArch64::MULv8i8, 1, MCP::MULSUBv8i8_OP1);
+    setVFound(AArch64::MULv8i8, 2, MCP::MULSUBv8i8_OP2);
+    break;
+  case AArch64::SUBv16i8:
+    setVFound(AArch64::MULv16i8, 1, MCP::MULSUBv16i8_OP1);
+    setVFound(AArch64::MULv16i8, 2, MCP::MULSUBv16i8_OP2);
+    break;
+  case AArch64::SUBv4i16:
+    setVFound(AArch64::MULv4i16, 1, MCP::MULSUBv4i16_OP1);
+    setVFound(AArch64::MULv4i16, 2, MCP::MULSUBv4i16_OP2);
+    setVFound(AArch64::MULv4i16_indexed, 1, MCP::MULSUBv4i16_indexed_OP1);
+    setVFound(AArch64::MULv4i16_indexed, 2, MCP::MULSUBv4i16_indexed_OP2);
+    break;
+  case AArch64::SUBv8i16:
+    setVFound(AArch64::MULv8i16, 1, MCP::MULSUBv8i16_OP1);
+    setVFound(AArch64::MULv8i16, 2, MCP::MULSUBv8i16_OP2);
+    setVFound(AArch64::MULv8i16_indexed, 1, MCP::MULSUBv8i16_indexed_OP1);
+    setVFound(AArch64::MULv8i16_indexed, 2, MCP::MULSUBv8i16_indexed_OP2);
+    break;
+  case AArch64::SUBv2i32:
+    setVFound(AArch64::MULv2i32, 1, MCP::MULSUBv2i32_OP1);
+    setVFound(AArch64::MULv2i32, 2, MCP::MULSUBv2i32_OP2);
+    setVFound(AArch64::MULv2i32_indexed, 1, MCP::MULSUBv2i32_indexed_OP1);
+    setVFound(AArch64::MULv2i32_indexed, 2, MCP::MULSUBv2i32_indexed_OP2);
+    break;
+  case AArch64::SUBv4i32:
+    setVFound(AArch64::MULv4i32, 1, MCP::MULSUBv4i32_OP1);
+    setVFound(AArch64::MULv4i32, 2, MCP::MULSUBv4i32_OP2);
+    setVFound(AArch64::MULv4i32_indexed, 1, MCP::MULSUBv4i32_indexed_OP1);
+    setVFound(AArch64::MULv4i32_indexed, 2, MCP::MULSUBv4i32_indexed_OP2);
     break;
   }
   return Found;
@@ -3960,6 +4043,46 @@ bool AArch64InstrInfo::isThroughputPattern(
   case MachineCombinerPattern::FMLSv2f64_OP2:
   case MachineCombinerPattern::FMLSv4i32_indexed_OP2:
   case MachineCombinerPattern::FMLSv4f32_OP2:
+  case MachineCombinerPattern::MULADDv8i8_OP1:
+  case MachineCombinerPattern::MULADDv8i8_OP2:
+  case MachineCombinerPattern::MULADDv16i8_OP1:
+  case MachineCombinerPattern::MULADDv16i8_OP2:
+  case MachineCombinerPattern::MULADDv4i16_OP1:
+  case MachineCombinerPattern::MULADDv4i16_OP2:
+  case MachineCombinerPattern::MULADDv8i16_OP1:
+  case MachineCombinerPattern::MULADDv8i16_OP2:
+  case MachineCombinerPattern::MULADDv2i32_OP1:
+  case MachineCombinerPattern::MULADDv2i32_OP2:
+  case MachineCombinerPattern::MULADDv4i32_OP1:
+  case MachineCombinerPattern::MULADDv4i32_OP2:
+  case MachineCombinerPattern::MULSUBv8i8_OP1:
+  case MachineCombinerPattern::MULSUBv8i8_OP2:
+  case MachineCombinerPattern::MULSUBv16i8_OP1:
+  case MachineCombinerPattern::MULSUBv16i8_OP2:
+  case MachineCombinerPattern::MULSUBv4i16_OP1:
+  case MachineCombinerPattern::MULSUBv4i16_OP2:
+  case MachineCombinerPattern::MULSUBv8i16_OP1:
+  case MachineCombinerPattern::MULSUBv8i16_OP2:
+  case MachineCombinerPattern::MULSUBv2i32_OP1:
+  case MachineCombinerPattern::MULSUBv2i32_OP2:
+  case MachineCombinerPattern::MULSUBv4i32_OP1:
+  case MachineCombinerPattern::MULSUBv4i32_OP2:
+  case MachineCombinerPattern::MULADDv4i16_indexed_OP1:
+  case MachineCombinerPattern::MULADDv4i16_indexed_OP2:
+  case MachineCombinerPattern::MULADDv8i16_indexed_OP1:
+  case MachineCombinerPattern::MULADDv8i16_indexed_OP2:
+  case MachineCombinerPattern::MULADDv2i32_indexed_OP1:
+  case MachineCombinerPattern::MULADDv2i32_indexed_OP2:
+  case MachineCombinerPattern::MULADDv4i32_indexed_OP1:
+  case MachineCombinerPattern::MULADDv4i32_indexed_OP2:
+  case MachineCombinerPattern::MULSUBv4i16_indexed_OP1:
+  case MachineCombinerPattern::MULSUBv4i16_indexed_OP2:
+  case MachineCombinerPattern::MULSUBv8i16_indexed_OP1:
+  case MachineCombinerPattern::MULSUBv8i16_indexed_OP2:
+  case MachineCombinerPattern::MULSUBv2i32_indexed_OP1:
+  case MachineCombinerPattern::MULSUBv2i32_indexed_OP2:
+  case MachineCombinerPattern::MULSUBv4i32_indexed_OP1:
+  case MachineCombinerPattern::MULSUBv4i32_indexed_OP2:
     return true;
   } // end switch (Pattern)
   return false;
@@ -4061,6 +4184,30 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   // Insert the MADD (MADD, FMA, FMS, FMLA, FMSL)
   InsInstrs.push_back(MIB);
   return MUL;
+}
+
+/// genFusedMultiplyAcc - Helper to generate fused multiply accumulate
+/// instructions.
+///
+/// \see genFusedMultiply
+static MachineInstr *genFusedMultiplyAcc(
+    MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
+    MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    unsigned IdxMulOpd, unsigned MaddOpc, const TargetRegisterClass *RC) {
+  return genFusedMultiply(MF, MRI, TII, Root, InsInstrs, IdxMulOpd, MaddOpc, RC,
+                          FMAInstKind::Accumulator);
+}
+
+/// genFusedMultiplyIdx - Helper to generate fused multiply accumulate
+/// instructions.
+///
+/// \see genFusedMultiply
+static MachineInstr *genFusedMultiplyIdx(
+    MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
+    MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    unsigned IdxMulOpd, unsigned MaddOpc, const TargetRegisterClass *RC) {
+  return genFusedMultiply(MF, MRI, TII, Root, InsInstrs, IdxMulOpd, MaddOpc, RC,
+                          FMAInstKind::Indexed);
 }
 
 /// genMaddR - Generate madd instruction and combine mul and add using
@@ -4302,6 +4449,211 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
   }
+
+  case MachineCombinerPattern::MULADDv8i8_OP1:
+    Opc = AArch64::MLAv8i8;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv8i8_OP2:
+    Opc = AArch64::MLAv8i8;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv16i8_OP1:
+    Opc = AArch64::MLAv16i8;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv16i8_OP2:
+    Opc = AArch64::MLAv16i8;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv4i16_OP1:
+    Opc = AArch64::MLAv4i16;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv4i16_OP2:
+    Opc = AArch64::MLAv4i16;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv8i16_OP1:
+    Opc = AArch64::MLAv8i16;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv8i16_OP2:
+    Opc = AArch64::MLAv8i16;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv2i32_OP1:
+    Opc = AArch64::MLAv2i32;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv2i32_OP2:
+    Opc = AArch64::MLAv2i32;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv4i32_OP1:
+    Opc = AArch64::MLAv4i32;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv4i32_OP2:
+    Opc = AArch64::MLAv4i32;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+
+  case MachineCombinerPattern::MULSUBv8i8_OP1:
+    Opc = AArch64::MLSv8i8;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv8i8_OP2:
+    Opc = AArch64::MLSv8i8;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv16i8_OP1:
+    Opc = AArch64::MLSv16i8;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv16i8_OP2:
+    Opc = AArch64::MLSv16i8;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv4i16_OP1:
+    Opc = AArch64::MLSv4i16;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv4i16_OP2:
+    Opc = AArch64::MLSv4i16;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv8i16_OP1:
+    Opc = AArch64::MLSv8i16;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv8i16_OP2:
+    Opc = AArch64::MLSv8i16;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv2i32_OP1:
+    Opc = AArch64::MLSv2i32;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv2i32_OP2:
+    Opc = AArch64::MLSv2i32;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv4i32_OP1:
+    Opc = AArch64::MLSv4i32;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv4i32_OP2:
+    Opc = AArch64::MLSv4i32;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+
+  case MachineCombinerPattern::MULADDv4i16_indexed_OP1:
+    Opc = AArch64::MLAv4i16_indexed;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv4i16_indexed_OP2:
+    Opc = AArch64::MLAv4i16_indexed;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv8i16_indexed_OP1:
+    Opc = AArch64::MLAv8i16_indexed;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv8i16_indexed_OP2:
+    Opc = AArch64::MLAv8i16_indexed;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv2i32_indexed_OP1:
+    Opc = AArch64::MLAv2i32_indexed;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv2i32_indexed_OP2:
+    Opc = AArch64::MLAv2i32_indexed;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv4i32_indexed_OP1:
+    Opc = AArch64::MLAv4i32_indexed;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULADDv4i32_indexed_OP2:
+    Opc = AArch64::MLAv4i32_indexed;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+
+  case MachineCombinerPattern::MULSUBv4i16_indexed_OP1:
+    Opc = AArch64::MLSv4i16_indexed;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv4i16_indexed_OP2:
+    Opc = AArch64::MLSv4i16_indexed;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv8i16_indexed_OP1:
+    Opc = AArch64::MLSv8i16_indexed;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv8i16_indexed_OP2:
+    Opc = AArch64::MLSv8i16_indexed;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv2i32_indexed_OP1:
+    Opc = AArch64::MLSv2i32_indexed;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv2i32_indexed_OP2:
+    Opc = AArch64::MLSv2i32_indexed;
+    RC = &AArch64::FPR64RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv4i32_indexed_OP1:
+    Opc = AArch64::MLSv4i32_indexed;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  case MachineCombinerPattern::MULSUBv4i32_indexed_OP2:
+    Opc = AArch64::MLSv4i32_indexed;
+    RC = &AArch64::FPR128RegClass;
+    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
+    break;
+
   // Floating Point Support
   case MachineCombinerPattern::FMULADDH_OP1:
     Opc = AArch64::FMADDHrrr;
