@@ -941,12 +941,21 @@ llvm.func @fcmp(%arg0: !llvm.float, %arg1: !llvm.float) {
 
 // CHECK-LABEL: @vect
 llvm.func @vect(%arg0: !llvm<"<4 x float>">, %arg1: !llvm.i32, %arg2: !llvm.float) {
-  // CHECK-NEXT: extractelement <4 x float> {{.*}}, i32 {{.*}}
-  // CHECK-NEXT: insertelement <4 x float> {{.*}}, float %2, i32 {{.*}}
+  // CHECK-NEXT: extractelement <4 x float> {{.*}}, i32
+  // CHECK-NEXT: insertelement <4 x float> {{.*}}, float %2, i32
   // CHECK-NEXT: shufflevector <4 x float> {{.*}}, <4 x float> {{.*}}, <5 x i32> <i32 0, i32 0, i32 0, i32 0, i32 7>
-  %0 = llvm.extractelement %arg0, %arg1 : !llvm<"<4 x float>">
-  %1 = llvm.insertelement %arg0, %arg2, %arg1 : !llvm<"<4 x float>">
+  %0 = llvm.extractelement %arg0[%arg1 : !llvm.i32] : !llvm<"<4 x float>">
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : !llvm.i32] : !llvm<"<4 x float>">
   %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : !llvm<"<4 x float>">, !llvm<"<4 x float>">
+  llvm.return
+}
+
+// CHECK-LABEL: @vect_i64idx
+llvm.func @vect_i64idx(%arg0: !llvm<"<4 x float>">, %arg1: !llvm.i64, %arg2: !llvm.float) {
+  // CHECK-NEXT: extractelement <4 x float> {{.*}}, i64
+  // CHECK-NEXT: insertelement <4 x float> {{.*}}, float %2, i64
+  %0 = llvm.extractelement %arg0[%arg1 : !llvm.i64] : !llvm<"<4 x float>">
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : !llvm.i64] : !llvm<"<4 x float>">
   llvm.return
 }
 

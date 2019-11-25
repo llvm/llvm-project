@@ -45,7 +45,7 @@ func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
 // CHECK-LABEL: extract_element_from_vec_3d
 //       CHECK:   llvm.extractvalue %{{.*}}[0 : i32, 0 : i32] : !llvm<"[4 x [3 x <16 x float>]]">
 //       CHECK:   llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK:   llvm.extractelement %{{.*}}, %{{.*}} : !llvm<"<16 x float>">
+//       CHECK:   llvm.extractelement %{{.*}}[%{{.*}} : !llvm.i32] : !llvm<"<16 x float>">
 //       CHECK:   llvm.return %{{.*}} : !llvm.float
 
 func @vector_type_cast(%arg0: memref<8x8x8xf32>) -> memref<vector<8x8x8xf32>> {

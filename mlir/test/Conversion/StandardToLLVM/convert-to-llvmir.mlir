@@ -588,19 +588,19 @@ func @vec_bin(%arg0: vector<2x2x2xf32>) -> vector<2x2x2xf32> {
 }
 
 // CHECK-LABEL: @splat
-// CHECK-SAME: [[A:%arg[0-9]+]]: !llvm<"<4 x float>">
-// CHECK-SAME: [[ELT:%arg[0-9]+]]: !llvm.float
+// CHECK-SAME: %[[A:arg[0-9]+]]: !llvm<"<4 x float>">
+// CHECK-SAME: %[[ELT:arg[0-9]+]]: !llvm.float
 func @splat(%a: vector<4xf32>, %b: f32) -> vector<4xf32> {
   %vb = splat %b : vector<4xf32>
   %r = mulf %a, %vb : vector<4xf32>
   return %r : vector<4xf32>
 }
-// CHECK-NEXT: [[UNDEF:%[0-9]+]] = llvm.mlir.undef : !llvm<"<4 x float>">
-// CHECK-NEXT: [[ZERO:%[0-9]+]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-// CHECK-NEXT: [[V:%[0-9]+]] = llvm.insertelement [[UNDEF]], [[ELT]], [[ZERO]] : !llvm<"<4 x float>">
-// CHECK-NEXT: [[SPLAT:%[0-9]+]] = llvm.shufflevector [[V]], [[UNDEF]] [0 : i32, 0 : i32, 0 : i32, 0 : i32]
-// CHECK-NEXT: [[SCALE:%[0-9]+]] = llvm.fmul [[A]], [[SPLAT]] : !llvm<"<4 x float>">
-// CHECK-NEXT: llvm.return [[SCALE]] : !llvm<"<4 x float>">
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.undef : !llvm<"<4 x float>">
+// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : !llvm.i32] : !llvm<"<4 x float>">
+// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0 : i32, 0 : i32, 0 : i32, 0 : i32]
+// CHECK-NEXT: %[[SCALE:[0-9]+]] = llvm.fmul %[[A]], %[[SPLAT]] : !llvm<"<4 x float>">
+// CHECK-NEXT: llvm.return %[[SCALE]] : !llvm<"<4 x float>">
 
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0:.*]]: !llvm.i64, %[[ARG1:.*]]: !llvm.i64, %[[ARG2:.*]]: !llvm.i64
