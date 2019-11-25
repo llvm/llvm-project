@@ -22,7 +22,7 @@ func @vector_transfer_ops(%arg0: memref<?x?xf32>) {
   return
 }
 
-// CHECK-LABEL: extractelement
+// CHECK-LABEL: @extractelement
 func @extractelement(%arg0: vector<4x8x16xf32>) -> (vector<8x16xf32>, vector<16xf32>, f32) {
   //      CHECK: vector.extractelement {{.*}}[3 : i32] : vector<4x8x16xf32>
   %1 = vector.extractelement %arg0[3 : i32] : vector<4x8x16xf32>
@@ -33,7 +33,7 @@ func @extractelement(%arg0: vector<4x8x16xf32>) -> (vector<8x16xf32>, vector<16x
   return %1, %2, %3 : vector<8x16xf32>, vector<16xf32>, f32
 }
 
-// CHECK-LABEL: insertelement
+// CHECK-LABEL: @insertelement
 func @insertelement(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>, %res: vector<4x8x16xf32>) {
   //      CHECK: vector.insertelement %{{.*}}, %{{.*}}[3 : i32] : vector<8x16xf32> into vector<4x8x16xf32>
   %1 = vector.insertelement %c, %res[3 : i32] : vector<8x16xf32> into vector<4x8x16xf32>
@@ -44,7 +44,7 @@ func @insertelement(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>, %res: vec
   return
 }
 
-// CHECK-LABEL: outerproduct
+// CHECK-LABEL: @outerproduct
 func @outerproduct(%arg0: vector<4xf32>, %arg1: vector<8xf32>, %arg2: vector<4x8xf32>) -> vector<4x8xf32> {
   //     CHECK: vector.outerproduct {{.*}} : vector<4xf32>, vector<8xf32>
   %0 = vector.outerproduct %arg0, %arg1 : vector<4xf32>, vector<8xf32>
@@ -53,7 +53,14 @@ func @outerproduct(%arg0: vector<4xf32>, %arg1: vector<8xf32>, %arg2: vector<4x8
   return %1 : vector<4x8xf32>
 }
 
-// CHECK-LABEL: strided_slice
+// CHECK-LABEL: @insert_strided_slice
+func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
+  //      CHECK: vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [2, 2, 2], strides = [1, 1]} : vector<4x4xf32> into vector<4x8x16xf32>
+  %1 = vector.insert_strided_slice %a, %b {offsets = [2, 2, 2], strides = [1, 1]} : vector<4x4xf32> into vector<4x8x16xf32>
+  return
+}
+
+// CHECK-LABEL: @strided_slice
 func @strided_slice(%arg0: vector<4x8x16xf32>) -> vector<2x2x16xf32> {
   //      CHECK: vector.strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x8x16xf32>
   %1 = vector.strided_slice %arg0 {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
