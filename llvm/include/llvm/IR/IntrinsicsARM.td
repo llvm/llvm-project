@@ -805,6 +805,9 @@ def int_arm_mve_add_predicated: Intrinsic<[llvm_anyvector_ty],
 def int_arm_mve_sub_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
    [IntrNoMem]>;
+def int_arm_mve_mul_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
 
 defm int_arm_mve_minv: IntrinsicSignSuffix<[llvm_i32_ty],
    [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
