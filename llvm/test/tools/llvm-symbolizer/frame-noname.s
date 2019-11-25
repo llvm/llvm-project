@@ -7,7 +7,7 @@
 
 // CHECK:      ??
 // CHECK-NEXT: ??
-// CHECK-NEXT: /tmp/dbg.cc:2
+// CHECK-NEXT: {{.*}}dbg.cc:2
 // CHECK-NEXT: ?? ?? ??
 
 	.text

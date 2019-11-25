@@ -9,7 +9,7 @@
 // CHECK-NEXT: ?? 8 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: x
-// CHECK-NEXT: /tmp/dbg.cc:8
+// CHECK-NEXT: {{.*}}dbg.cc:8
 // CHECK-NEXT: -4 4 ??
 
 	.text
