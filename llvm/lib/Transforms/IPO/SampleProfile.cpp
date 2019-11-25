@@ -137,6 +137,11 @@ static cl::opt<bool> ProfileAccurateForSymsInList(
     cl::desc("For symbols in profile symbol list, regard their profiles to "
              "be accurate. It may be overriden by profile-sample-accurate. "));
 
+static cl::opt<bool> ProfileMergeInlinee(
+    "sample-profile-merge-inlinee", cl::Hidden, cl::init(false),
+    cl::desc("Merge past inlinee's profile to outline version if sample "
+             "profile loader decided not to inline a call site."));
+
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -1008,9 +1013,26 @@ bool SampleProfileLoader::inlineHotFunctions(
     if (!Callee || Callee->isDeclaration())
       continue;
     const FunctionSamples *FS = Pair.getSecond();
-    auto pair =
-        notInlinedCallInfo.try_emplace(Callee, NotInlinedProfileInfo{0});
-    pair.first->second.entryCount += FS->getEntrySamples();
+    if (FS->getTotalSamples() == 0 && FS->getEntrySamples() == 0) {
+      continue;
+    }
+
+    if (ProfileMergeInlinee) {
+      // Use entry samples as head samples during the merge, as inlinees
+      // don't have head samples.
+      assert(FS->getHeadSamples() == 0 && "Expect 0 head sample for inlinee");
+      const_cast<FunctionSamples *>(FS)->addHeadSamples(FS->getEntrySamples());
+
+      // Note that we have to do the merge right after processing function.
+      // This allows OutlineFS's profile to be used for annotation during
+      // top-down processing of functions' annotation.
+      FunctionSamples *OutlineFS = Reader->getOrCreateSamplesFor(*Callee);
+      OutlineFS->merge(*FS);
+    } else {
+      auto pair =
+          notInlinedCallInfo.try_emplace(Callee, NotInlinedProfileInfo{0});
+      pair.first->second.entryCount += FS->getEntrySamples();
+    }
   }
   return Changed;
 }
