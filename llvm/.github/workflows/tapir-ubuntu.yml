@@ -1,0 +1,49 @@
+name: Tapir CI
+
+on: [push]
+
+jobs:
+  build:
+    name: Test on os ${{ matrix.os }} mode ${{ matrix.build }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build: ["Release"] #, "Debug"] # "RelWithDebInfo"
+        os: [ubuntu-18.04]
+
+    steps:
+    - name: add dependencies #llvm
+      run: sudo apt-get install -y binutils-gold binutils binutils-dev clang lld
+      #  run: sudo apt-get install -y llvm-${{ matrix.llvm }}-dev llvm-${{ matrix.llvm }}-tools
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - uses: actions/checkout@v1
+      with:
+        repository: wsmoses/Tapir-Clang
+        fetch-depth: 1
+        ref: xla_8
+        clean: false
+        path: tools/clang
+
+    - uses: actions/checkout@v1
+      with:
+        repository: wsmoses/Tapir-compiler-rt
+        fetch-depth: 1
+        ref: xla_8
+        clean: false
+        path: projects/compiler-rt
+
+    - name: mkdir
+      run: mkdir build
+    - name: cmake
+      run: |
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_ENABLE_LLD=On -DLLVM_TARGETS_TO_BUILD="host;NVPTX" -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 2"
+    - name: make
+      run: cd build && make -j2
+    - name: make check-all
+      run: cd build && make check-all -j2
