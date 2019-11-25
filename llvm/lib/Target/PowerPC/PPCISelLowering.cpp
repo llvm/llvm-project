@@ -5325,8 +5325,20 @@ SDValue PPCTargetLowering::FinishCall(
     // C-linkage name.
     GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Callee);
     auto &Context = DAG.getMachineFunction().getMMI().getContext();
-    MCSymbol *S = Context.getOrCreateSymbol(Twine(".") +
-                                            Twine(G->getGlobal()->getName()));
+
+    MCSymbolXCOFF *S = cast<MCSymbolXCOFF>(Context.getOrCreateSymbol(
+        Twine(".") + Twine(G->getGlobal()->getName())));
+
+    const GlobalValue *GV = G->getGlobal();
+    if (GV && GV->isDeclaration() && !S->hasContainingCsect()) {
+      // On AIX, undefined symbol need to associate with a MCSectionXCOFF to
+      // get the correct storage mapping class. In this case, XCOFF::XMC_PR.
+      MCSectionXCOFF *Sec =
+          Context.getXCOFFSection(S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER,
+                                  XCOFF::C_EXT, SectionKind::getMetadata());
+      S->setContainingCsect(Sec);
+    }
+
     Callee = DAG.getMCSymbol(S, PtrVT);
     // Replace the GlobalAddressSDNode Callee with the MCSymbolSDNode.
     Ops[1] = Callee;
@@ -14376,6 +14388,17 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(0U, &PPC::VSFRCRegClass);
   }
 
+  // If we name a VSX register, we can't defer to the base class because it
+  // will not recognize the correct register (their names will be VSL{0-31}
+  // and V{0-31} so they won't match). So we match them here.
+  if (Constraint.size() > 3 && Constraint[1] == 'v' && Constraint[2] == 's') {
+    int VSNum = atoi(Constraint.data() + 3);
+    assert(VSNum >= 0 && VSNum <= 63 &&
+           "Attempted to access a vsr out of range");
+    if (VSNum < 32)
+      return std::make_pair(PPC::VSL0 + VSNum, &PPC::VSRCRegClass);
+    return std::make_pair(PPC::V0 + VSNum - 32, &PPC::VSRCRegClass);
+  }
   std::pair<unsigned, const TargetRegisterClass *> R =
       TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 

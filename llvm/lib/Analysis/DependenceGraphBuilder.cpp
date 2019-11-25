@@ -353,5 +353,21 @@ void AbstractDependenceGraphBuilder<G>::createMemoryDependencyEdges() {
   }
 }
 
+template <class G>
+void AbstractDependenceGraphBuilder<G>::sortNodesTopologically() {
+
+  // If we don't create pi-blocks, then we may not have a DAG.
+  if (!shouldCreatePiBlocks())
+    return;
+
+  SmallVector<NodeType *, 64> NodesInPO;
+  for (NodeType *N : post_order(&Graph))
+    NodesInPO.push_back(N);
+  
+  Graph.Nodes.clear();
+  for (auto &N : make_range(NodesInPO.rbegin(), NodesInPO.rend()))
+    Graph.Nodes.push_back(N);
+}
+
 template class llvm::AbstractDependenceGraphBuilder<DataDependenceGraph>;
 template class llvm::DependenceGraphInfo<DDGNode>;
