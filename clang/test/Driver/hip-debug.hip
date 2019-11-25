@@ -2,9 +2,9 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// Check that -grocgdb correctly differentiates device/host code
+// Check that -ggdb correctly differentiates device/host code
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu -nogpulib -grocgdb \
+// RUN: %clang -### -target x86_64-unknown-linux-gnu -nogpulib -ggdb \
 // RUN:   -x hip --cuda-gpu-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK %s
 

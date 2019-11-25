@@ -3264,20 +3264,19 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
         DebuggerTuning = llvm::DebuggerKind::LLDB;
       else if (A->getOption().matches(options::OPT_gsce))
         DebuggerTuning = llvm::DebuggerKind::SCE;
-      else if (A->getOption().matches(options::OPT_grocgdb)) {
+      else {
         DebuggerTuning = llvm::DebuggerKind::GDB;
         if (T.getArch() == llvm::Triple::amdgcn) {
           CmdArgs.push_back("-disable-O0-optnone");
           CmdArgs.push_back("-disable-O0-noinline");
-          // -grocgdb does not currently compose with options that affect the
-          // debug info kind. The behavior of commands like `-grocgdb -g` may be
-          // surprising (the -g is effectively ignored).
+          // -ggdb with AMDGCN does not currently compose with options that
+          // affect the debug info kind. The behavior of commands like `-ggdb
+          // -g` may be surprising (the -g is effectively ignored).
           DebugInfoKind = codegenoptions::DebugLineTablesOnly;
           if (SplitDWARFInlining)
             DwarfFission = DwarfFissionKind::None;
         }
-      } else
-        DebuggerTuning = llvm::DebuggerKind::GDB;
+      }
     }
   }
 
