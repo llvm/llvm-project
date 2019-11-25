@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 #include "Logger.h"
 #include "Protocol.h" // For LSPError
+#include "Shutdown.h"
 #include "Transport.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace clangd {
@@ -81,6 +83,10 @@ public:
 
   llvm::Error loop(MessageHandler &Handler) override {
     while (!feof(In)) {
+      if (shutdownRequested())
+        return llvm::createStringError(
+            std::make_error_code(std::errc::operation_canceled),
+            "Got signal, shutting down");
       if (ferror(In))
         return llvm::errorCodeToError(
             std::error_code(errno, std::system_category()));
@@ -167,7 +173,7 @@ bool JSONTransport::handleMessage(llvm::json::Value Message,
 }
 
 // Tries to read a line up to and including \n.
-// If failing, feof() or ferror() will be set.
+// If failing, feof(), ferror(), or shutdownRequested() will be set.
 bool readLine(std::FILE *In, std::string &Out) {
   static constexpr int BufSize = 1024;
   size_t Size = 0;
@@ -175,7 +181,8 @@ bool readLine(std::FILE *In, std::string &Out) {
   for (;;) {
     Out.resize(Size + BufSize);
     // Handle EINTR which is sent when a debugger attaches on some platforms.
-    if (!llvm::sys::RetryAfterSignal(nullptr, ::fgets, &Out[Size], BufSize, In))
+    if (!retryAfterSignalUnlessShutdown(
+            nullptr, [&] { return std::fgets(&Out[Size], BufSize, In); }))
       return false;
     clearerr(In);
     // If the line contained null bytes, anything after it (including \n) will
@@ -190,7 +197,7 @@ bool readLine(std::FILE *In, std::string &Out) {
 }
 
 // Returns None when:
-//  - ferror() or feof() are set.
+//  - ferror(), feof(), or shutdownRequested() are set.
 //  - Content-Length is missing or empty (protocol error)
 llvm::Optional<std::string> JSONTransport::readStandardMessage() {
   // A Language Server Protocol message starts with a set of HTTP headers,
@@ -244,8 +251,9 @@ llvm::Optional<std::string> JSONTransport::readStandardMessage() {
   std::string JSON(ContentLength, '\0');
   for (size_t Pos = 0, Read; Pos < ContentLength; Pos += Read) {
     // Handle EINTR which is sent when a debugger attaches on some platforms.
-    Read = llvm::sys::RetryAfterSignal(0u, ::fread, &JSON[Pos], 1,
-                                       ContentLength - Pos, In);
+    Read = retryAfterSignalUnlessShutdown(0, [&]{
+      return std::fread(&JSON[Pos], 1, ContentLength - Pos, In);
+    });
     if (Read == 0) {
       elog("Input was aborted. Read only {0} bytes of expected {1}.", Pos,
            ContentLength);
@@ -263,7 +271,7 @@ llvm::Optional<std::string> JSONTransport::readStandardMessage() {
 // - messages are delimited by '---' on a line by itself
 // - lines starting with # are ignored.
 // This is a testing path, so favor simplicity over performance here.
-// When returning None, feof() or ferror() will be set.
+// When returning None, feof(), ferror(), or shutdownRequested() will be set.
 llvm::Optional<std::string> JSONTransport::readDelimitedMessage() {
   std::string JSON;
   std::string Line;
@@ -280,6 +288,8 @@ llvm::Optional<std::string> JSONTransport::readDelimitedMessage() {
     JSON += Line;
   }
 
+  if (shutdownRequested())
+    return llvm::None;
   if (ferror(In)) {
     elog("Input error while reading message!");
     return llvm::None;
