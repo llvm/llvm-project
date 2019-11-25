@@ -13,7 +13,7 @@ Rhino extensions to Tapir (unpublished).
 Tapir/LLVM is open source software.  You may freely distribute it
 under the terms of the license agreement found in LICENSE.txt.
 
-[![CircleCI](https://circleci.com/gh/wsmoses/Parallel-IR.svg?style=svg)](https://circleci.com/gh/wsmoses/Parallel-IR)
+![](https://github.com/wsmoses/Tapir-LLVM/workflows/tapir-ubuntu.yml/badge.svg)
 
 
 # References

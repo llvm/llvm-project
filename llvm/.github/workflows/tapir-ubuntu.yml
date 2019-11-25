@@ -4,22 +4,34 @@ on: [push]
 
 jobs:
   build:
-    name: Test on os ${{ matrix.os }} mode ${{ matrix.build }}
+    name: Build-test_${{ matrix.build }}_${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         build: ["Release"] #, "Debug"] # "RelWithDebInfo"
-        os: [ubuntu-18.04]
+        os: [ubuntu-16.04, ubuntu-18.04]
+        compiler: [gcc, clang]
+        exclude:
+          - os: ubuntu-16.04
+            compiler: clang
+        include:
+          - compiler: clang
+            cxx: clang++
+            linker-pkg: lld
+            cmake-linker-flag: "-DLLVM_ENABLE_LLD=On"
+          - compiler: gcc
+            cxx: g++
 
     steps:
-    - name: add dependencies #llvm
-      run: sudo apt-get install -y binutils-gold binutils binutils-dev clang lld
-      #  run: sudo apt-get install -y llvm-${{ matrix.llvm }}-dev llvm-${{ matrix.llvm }}-tools
+    - name: add dependencies
+      run: sudo apt-get install -y binutils-gold binutils binutils-dev ${{ matrix.compiler }} ${{ matrix.linker-pkg }}
+
     - uses: actions/checkout@v1
       with:
         fetch-depth: 1
+        path: src
 
     - uses: actions/checkout@v1
       with:
@@ -27,7 +39,7 @@ jobs:
         fetch-depth: 1
         ref: xla_8
         clean: false
-        path: tools/clang
+        path: src/tools/clang
 
     - uses: actions/checkout@v1
       with:
@@ -35,15 +47,27 @@ jobs:
         fetch-depth: 1
         ref: xla_8
         clean: false
-        path: projects/compiler-rt
+        path: src/projects/compiler-rt
 
     - name: mkdir
       run: mkdir build
     - name: cmake
       run: |
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_ENABLE_LLD=On -DLLVM_TARGETS_TO_BUILD="host;NVPTX" -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 2"
+        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DCMAKE_C_COMPILER=${{ matrix.compiler }} -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} ${{ matrix.cmake-linker-flag }} -DLLVM_TARGETS_TO_BUILD="host;NVPTX" -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 2"
     - name: make
       run: cd build && make -j2
+
+    - name: cilkrts-build-test
+      run: |
+        git clone https://github.com/CilkHub/cilkrts.git
+        mkdir -p cilkrts/build
+        cd cilkrts
+        git checkout tags/v0.1.2
+        cd build
+        cmake -DCMAKE_C_COMPILER=$PWD/../../build/bin/clang -DCMAKE_CXX_COMPILER=$PWD/../../build/bin/clang++ ..
+        make -j2
+
     - name: make check-all
       run: cd build && make check-all -j2
+
