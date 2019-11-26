@@ -854,7 +854,7 @@ int main(int argc, char const *argv[]) {
   }
 
   // Register the reproducer signal handler.
-  llvm::sys::AddSignalHandler(reproducer_handler, (void *)(argv[0]));
+  llvm::sys::AddSignalHandler(reproducer_handler, const_cast<char *>(argv[0]));
 
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
