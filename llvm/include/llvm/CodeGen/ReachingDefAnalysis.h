@@ -114,6 +114,15 @@ public:
   /// reaching def instuction of PhysReg that reaches MI.
   int getClearance(MachineInstr *MI, MCPhysReg PhysReg);
 
+  /// Provides the uses, in the same block as MI, of register that MI defines.
+  /// This does not consider live-outs.
+  void getReachingLocalUses(MachineInstr *MI, int PhysReg,
+                            SmallVectorImpl<MachineInstr*> &Uses);
+
+  /// Provide the number of uses, in the same block as MI, of the register that
+  /// MI defines.
+  unsigned getNumUses(MachineInstr *MI, int PhysReg);
+
 private:
   /// Set up LiveRegs by merging predecessor live-out values.
   void enterBasicBlock(const LoopTraversal::TraversedMBBInfo &TraversedMBB);
