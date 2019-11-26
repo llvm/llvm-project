@@ -5222,12 +5222,20 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::STRICT_FADD:
   case ISD::STRICT_FSUB:
+  case ISD::STRICT_FP_ROUND: {
+    // X87 instructions has enabled these strict fp operation.
+    bool UsingFp80 = Node->getSimpleValueType(0) == MVT::f80 ||
+                     Node->getOperand(1).getSimpleValueType() == MVT::f80;
+    if (UsingFp80 || (!Subtarget->hasSSE1() && Subtarget->hasX87()))
+      break;
+    LLVM_FALLTHROUGH;
+  }
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
-  case ISD::STRICT_FP_ROUND:
     // FIXME: Remove when we have isel patterns for strict versions of these
     // nodes.
-    CurDAG->mutateStrictFPToFP(Node);
+    if (!TLI->isStrictFPEnabled())
+      CurDAG->mutateStrictFPToFP(Node);
     break;
   }
 
