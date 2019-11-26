@@ -9292,7 +9292,7 @@ def ext_omp_loop_not_canonical_init : ExtWarn<
   "('var = init' or 'T var = init')">, InGroup<OpenMPLoopForm>;
 def err_omp_loop_not_canonical_cond : Error<
   "condition of OpenMP for loop must be a relational comparison "
-	"('<', '<=', '>', %select{or '>='|'>=', or '!='}0) of loop variable %1">;
+  "('<', '<=', '>', %select{or '>='|'>=', or '!='}0) of loop variable %1">;
 def err_omp_loop_not_canonical_incr : Error<
   "increment clause of OpenMP for loop must perform simple addition "
   "or subtraction on loop variable %0">;
