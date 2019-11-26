@@ -21,7 +21,6 @@
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Signals.h"
 
 namespace clang {
@@ -93,7 +92,7 @@ private:
 } // namespace clang
 
 int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   const char *Overview = R"(
   Creates an index of symbol information etc in a whole project.

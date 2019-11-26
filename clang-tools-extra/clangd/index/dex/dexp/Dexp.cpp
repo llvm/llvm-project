@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Signals.h"
 
 namespace clang {
@@ -276,9 +275,9 @@ std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
 int main(int argc, const char *argv[]) {
   using namespace clang::clangd;
 
-  llvm::InitLLVM X(argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
   llvm::cl::ResetCommandLineParser(); // We reuse it for REPL commands.
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   std::unique_ptr<SymbolIndex> Index;
   reportTime("Dex build", [&]() {

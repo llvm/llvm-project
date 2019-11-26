@@ -21,7 +21,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
@@ -434,8 +433,8 @@ int main(int argc, char *argv[]) {
   using namespace clang;
   using namespace clang::clangd;
 
-  llvm::InitLLVM X(argc, argv);
   llvm::InitializeAllTargetInfos();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::cl::SetVersionPrinter([](llvm::raw_ostream &OS) {
     OS << clang::getClangToolFullVersion("clangd") << "\n";
   });
