@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple armv7-unknown-linux-gnueabihf %s -o - -emit-llvm -O1 | FileCheck %s
+// RUN: %clang_cc1 -triple armv7-unknown-linux-gnueabihf %s -o - -emit-llvm -O2 | FileCheck %s
 
 // Stack should be reused when possible, no need to allocate two separate slots
 // if they have disjoint lifetime.

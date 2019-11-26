@@ -33,13 +33,13 @@ X test0() {
 // CHECK-LABEL: define void @_Z5test1b(
 // CHECK-EH-LABEL: define void @_Z5test1b(
 X test1(bool B) {
-  // CHECK:      tail call {{.*}} @_ZN1XC1Ev
+  // CHECK:      call {{.*}} @_ZN1XC1Ev
   // CHECK-NEXT: ret void
   X x;
   if (B)
     return (x);
   return x;
-  // CHECK-EH:      tail call {{.*}} @_ZN1XC1Ev
+  // CHECK-EH:      call {{.*}} @_ZN1XC1Ev
   // CHECK-EH-NEXT: ret void
 }
 
@@ -130,7 +130,7 @@ X test2(bool B) {
 
 // CHECK-LABEL: define void @_Z5test3b
 X test3(bool B) {
-  // CHECK: tail call {{.*}} @_ZN1XC1Ev
+  // CHECK: call {{.*}} @_ZN1XC1Ev
   // CHECK-NOT: call {{.*}} @_ZN1XC1ERKS_
   // CHECK: call {{.*}} @_ZN1XC1Ev
   // CHECK: call {{.*}} @_ZN1XC1ERKS_
@@ -148,14 +148,14 @@ extern "C" void exit(int) throw();
 // CHECK-LABEL: define void @_Z5test4b
 X test4(bool B) {
   {
-    // CHECK: tail call {{.*}} @_ZN1XC1Ev
+    // CHECK: call {{.*}} @_ZN1XC1Ev
     X x;
     // CHECK: br i1
     if (B)
       return x;
   }
-  // CHECK: tail call {{.*}} @_ZN1XD1Ev
-  // CHECK: tail call void @exit(i32 1)
+  // CHECK: call {{.*}} @_ZN1XD1Ev
+  // CHECK: call void @exit(i32 1)
   exit(1);
 }
 
@@ -191,7 +191,7 @@ X test6() {
 
 // CHECK-LABEL: define void @_Z5test7b
 X test7(bool b) {
-  // CHECK: tail call {{.*}} @_ZN1XC1Ev
+  // CHECK: call {{.*}} @_ZN1XC1Ev
   // CHECK-NEXT: ret
   if (b) {
     X x;
@@ -202,7 +202,7 @@ X test7(bool b) {
 
 // CHECK-LABEL: define void @_Z5test8b
 X test8(bool b) {
-  // CHECK: tail call {{.*}} @_ZN1XC1Ev
+  // CHECK: call {{.*}} @_ZN1XC1Ev
   // CHECK-NEXT: ret
   if (b) {
     X x;
@@ -218,6 +218,6 @@ Y<int> test9() {
 }
 
 // CHECK-LABEL: define linkonce_odr void @_ZN1YIiE1fEv
-// CHECK: tail call {{.*}} @_ZN1YIiEC1Ev
+// CHECK: call {{.*}} @_ZN1YIiEC1Ev
 
 // CHECK-EH-03: attributes [[NR_NUW]] = { noreturn nounwind }
