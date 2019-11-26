@@ -3002,10 +3002,9 @@ public:
         VariableList *locals = frame->GetVariableList(true);
         if (locals) {
           const DynamicValueType use_dynamic = eDynamicDontRunTarget;
-          const size_t num_locals = locals->GetSize();
-          for (size_t i = 0; i < num_locals; ++i) {
-            ValueObjectSP value_sp = frame->GetValueObjectForFrameVariable(
-                locals->GetVariableAtIndex(i), use_dynamic);
+          for (const VariableSP &local_sp : *locals) {
+            ValueObjectSP value_sp =
+                frame->GetValueObjectForFrameVariable(local_sp, use_dynamic);
             if (value_sp) {
               ValueObjectSP synthetic_value_sp = value_sp->GetSyntheticValue();
               if (synthetic_value_sp)

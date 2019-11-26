@@ -759,11 +759,14 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   auto *ADbgVal = cast<DbgValueInst>(A.getNextNode());
   EXPECT_EQ(ConstantInt::get(A.getType(), 0), ADbgVal->getVariableLocation());
 
-  // Introduce a use-before-def. Check that the dbg.values for %f are deleted.
+  // Introduce a use-before-def. Check that the dbg.values for %f become undef.
   EXPECT_TRUE(replaceAllDbgUsesWith(F_, G, G, DT));
 
+  auto *FDbgVal = cast<DbgValueInst>(F_.getNextNode());
+  EXPECT_TRUE(isa<UndefValue>(FDbgVal->getVariableLocation()));
+
   SmallVector<DbgValueInst *, 1> FDbgVals;
-  findDbgValues(FDbgVals, &F);
+  findDbgValues(FDbgVals, &F_);
   EXPECT_EQ(0U, FDbgVals.size());
 
   // Simulate i32 -> i64 conversion to test sign-extension. Here are some

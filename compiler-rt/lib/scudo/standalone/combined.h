@@ -402,7 +402,10 @@ public:
     Str.output();
   }
 
-  void releaseToOS() { Primary.releaseToOS(); }
+  void releaseToOS() {
+    initThreadMaybe();
+    Primary.releaseToOS();
+  }
 
   // Iterate over all chunks and call a callback for all busy chunks located
   // within the provided memory range. Said callback must not use this allocator

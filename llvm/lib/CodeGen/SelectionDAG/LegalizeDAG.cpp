@@ -2098,9 +2098,14 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
   }
 
   if (Node->isStrictFPOpcode()) {
+    EVT RetVT = Node->getValueType(0);
+    SmallVector<SDValue, 4> Ops(Node->op_begin() + 1, Node->op_end());
+    TargetLowering::MakeLibCallOptions CallOptions;
     // FIXME: This doesn't support tail calls.
-    std::pair<SDValue, SDValue> Tmp = TLI.ExpandChainLibCall(DAG, LC, Node,
-                                                             false);
+    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RetVT,
+                                                      Ops, CallOptions,
+                                                      SDLoc(Node),
+                                                      Node->getOperand(0));
     Results.push_back(Tmp.first);
     Results.push_back(Tmp.second);
   } else {
@@ -2149,9 +2154,14 @@ void SelectionDAGLegalize::ExpandArgFPLibCall(SDNode* Node,
   }
 
   if (Node->isStrictFPOpcode()) {
+    EVT RetVT = Node->getValueType(0);
+    SmallVector<SDValue, 4> Ops(Node->op_begin() + 1, Node->op_end());
+    TargetLowering::MakeLibCallOptions CallOptions;
     // FIXME: This doesn't support tail calls.
-    std::pair<SDValue, SDValue> Tmp = TLI.ExpandChainLibCall(DAG, LC, Node,
-                                                             false);
+    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RetVT,
+                                                      Ops, CallOptions,
+                                                      SDLoc(Node),
+                                                      Node->getOperand(0));
     Results.push_back(Tmp.first);
     Results.push_back(Tmp.second);
   } else {
@@ -3798,8 +3808,13 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getSYNC(Opc, VT);
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected atomic op or value type!");
 
-    std::pair<SDValue, SDValue> Tmp = TLI.ExpandChainLibCall(DAG, LC, Node,
-                                                             false);
+    EVT RetVT = Node->getValueType(0);
+    SmallVector<SDValue, 4> Ops(Node->op_begin() + 1, Node->op_end());
+    TargetLowering::MakeLibCallOptions CallOptions;
+    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RetVT,
+                                                      Ops, CallOptions,
+                                                      SDLoc(Node),
+                                                      Node->getOperand(0));
     Results.push_back(Tmp.first);
     Results.push_back(Tmp.second);
     break;

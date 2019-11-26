@@ -1,0 +1,42 @@
+## Check how obj2yaml produces SHT_LLVM_DEPENDENT_LIBRARIES section descriptions.
+
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT:  - Name:      .deplibs.single
+# CHECK-NEXT:    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+# CHECK-NEXT:    Libraries: [ foo ]
+# CHECK-NEXT:  - Name:      .deplibs.multiple
+# CHECK-NEXT:    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+# CHECK-NEXT:    Libraries: [ foo, bar, foo ]
+# CHECK-NEXT:  - Name:      .deplibs.empty
+# CHECK-NEXT:    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+# CHECK-NEXT:    Libraries: [  ]
+# CHECK-NEXT:  - Name:      .deplibs.nonul
+# CHECK-NEXT:    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+# CHECK-NEXT:    Content:   666F6F
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+## Case 1: test we use "Libraries" when dumping a valid section with a null-terminated string.
+  - Name:      .deplibs.single
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Libraries: [ foo ]
+## Case 2: the same, but the section has multiple strings.
+  - Name:      .deplibs.multiple
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Libraries: [ foo, bar, foo ]
+## Case 3: test we use "Libraries" when dumping an empty section.
+  - Name:      .deplibs.empty
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Libraries: [ ]
+## Case 4: test we use "Content" when dumping a non-null terminated section.
+  - Name:      .deplibs.nonul
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Content:   "666f6f"

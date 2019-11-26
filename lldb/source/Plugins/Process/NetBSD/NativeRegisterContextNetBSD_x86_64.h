@@ -58,6 +58,8 @@ public:
 
   bool ClearHardwareWatchpoint(uint32_t wp_index) override;
 
+  Status ClearWatchpointHit(uint32_t wp_index) override;
+
   Status ClearAllHardwareWatchpoints() override;
 
   Status SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
@@ -70,6 +72,9 @@ public:
   lldb::addr_t GetWatchpointAddress(uint32_t wp_index) override;
 
   uint32_t NumSupportedHardwareWatchpoints() override;
+
+  Status
+  CopyHardwareWatchpointsFrom(NativeRegisterContextNetBSD &source) override;
 
 private:
   // Private member types.

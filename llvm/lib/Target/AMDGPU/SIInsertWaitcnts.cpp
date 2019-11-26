@@ -1140,7 +1140,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         Wait.VsCnt = ~0u;
       }
 
-      LLVM_DEBUG(dbgs() << "updateWaitcntInBlock\n"
+      LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
                         << "Old Instr: " << MI << '\n'
                         << "New Instr: " << *II << '\n');
 
@@ -1157,7 +1157,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     TrackedWaitcntSet.insert(SWaitInst);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "insertWaitcntInBlock\n"
+    LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
                       << "Old Instr: " << MI << '\n'
                       << "New Instr: " << *SWaitInst << '\n');
   }
@@ -1173,7 +1173,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     TrackedWaitcntSet.insert(SWaitInst);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "insertWaitcntInBlock\n"
+    LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
                       << "Old Instr: " << MI << '\n'
                       << "New Instr: " << *SWaitInst << '\n');
   }

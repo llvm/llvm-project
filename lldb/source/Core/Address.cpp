@@ -712,22 +712,20 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                                     [](Variable *) { return true; },
                                     &variable_list);
 
-          const size_t num_variables = variable_list.GetSize();
-          for (size_t var_idx = 0; var_idx < num_variables; ++var_idx) {
-            Variable *var = variable_list.GetVariableAtIndex(var_idx).get();
-            if (var && var->LocationIsValidForAddress(*this)) {
+          for (const VariableSP &var_sp : variable_list) {
+            if (var_sp && var_sp->LocationIsValidForAddress(*this)) {
               s->Indent();
               s->Printf("   Variable: id = {0x%8.8" PRIx64 "}, name = \"%s\"",
-                        var->GetID(), var->GetName().GetCString());
-              Type *type = var->GetType();
+                        var_sp->GetID(), var_sp->GetName().GetCString());
+              Type *type = var_sp->GetType();
               if (type)
                 s->Printf(", type = \"%s\"", type->GetName().GetCString());
               else
                 s->PutCString(", type = <unknown>");
               s->PutCString(", location = ");
-              var->DumpLocationForAddress(s, *this);
+              var_sp->DumpLocationForAddress(s, *this);
               s->PutCString(", decl = ");
-              var->GetDeclaration().DumpStopContext(s, false);
+              var_sp->GetDeclaration().DumpStopContext(s, false);
               s->EOL();
             }
           }

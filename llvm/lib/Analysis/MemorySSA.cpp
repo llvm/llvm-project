@@ -1870,9 +1870,7 @@ LLVM_DUMP_METHOD void MemorySSA::dump() const { print(dbgs()); }
 #endif
 
 void MemorySSA::verifyMemorySSA() const {
-  verifyDefUses(F);
-  verifyDomination(F);
-  verifyOrdering(F);
+  verifyOrderingDominationAndDefUses(F);
   verifyDominationNumbers(F);
   verifyPrevDefInPhis(F);
   // Previously, the verification used to also verify that the clobberingAccess
@@ -1959,10 +1957,14 @@ void MemorySSA::verifyDominationNumbers(const Function &F) const {
 #endif
 }
 
-/// Verify that the order and existence of MemoryAccesses matches the
+/// Verify ordering: the order and existence of MemoryAccesses matches the
 /// order and existence of memory affecting instructions.
-void MemorySSA::verifyOrdering(Function &F) const {
-#ifndef NDEBUG
+/// Verify domination: each definition dominates all of its uses.
+/// Verify def-uses: the immediate use information - walk all the memory
+/// accesses and verifying that, for each use, it appears in the appropriate
+/// def's use list
+void MemorySSA::verifyOrderingDominationAndDefUses(Function &F) const {
+#if !defined(NDEBUG)
   // Walk all the blocks, comparing what the lookups think and what the access
   // lists think, as well as the order in the blocks vs the order in the access
   // lists.
@@ -1971,29 +1973,56 @@ void MemorySSA::verifyOrdering(Function &F) const {
   for (BasicBlock &B : F) {
     const AccessList *AL = getBlockAccesses(&B);
     const auto *DL = getBlockDefs(&B);
-    MemoryAccess *Phi = getMemoryAccess(&B);
+    MemoryPhi *Phi = getMemoryAccess(&B);
     if (Phi) {
+      // Verify ordering.
       ActualAccesses.push_back(Phi);
       ActualDefs.push_back(Phi);
+      // Verify domination
+      for (const Use &U : Phi->uses())
+        assert(dominates(Phi, U) && "Memory PHI does not dominate it's uses");
+#if defined(EXPENSIVE_CHECKS)
+      // Verify def-uses.
+      assert(Phi->getNumOperands() == static_cast<unsigned>(std::distance(
+                                          pred_begin(&B), pred_end(&B))) &&
+             "Incomplete MemoryPhi Node");
+      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
+        verifyUseInDefs(Phi->getIncomingValue(I), Phi);
+        assert(find(predecessors(&B), Phi->getIncomingBlock(I)) !=
+                   pred_end(&B) &&
+               "Incoming phi block not a block predecessor");
+      }
+#endif
     }
 
     for (Instruction &I : B) {
-      MemoryAccess *MA = getMemoryAccess(&I);
+      MemoryUseOrDef *MA = getMemoryAccess(&I);
       assert((!MA || (AL && (isa<MemoryUse>(MA) || DL))) &&
              "We have memory affecting instructions "
              "in this block but they are not in the "
              "access list or defs list");
       if (MA) {
+        // Verify ordering.
         ActualAccesses.push_back(MA);
-        if (isa<MemoryDef>(MA))
+        if (MemoryAccess *MD = dyn_cast<MemoryDef>(MA)) {
+          // Verify ordering.
           ActualDefs.push_back(MA);
+          // Verify domination.
+          for (const Use &U : MD->uses())
+            assert(dominates(MD, U) &&
+                   "Memory Def does not dominate it's uses");
+        }
+#if defined(EXPENSIVE_CHECKS)
+        // Verify def-uses.
+        verifyUseInDefs(MA->getDefiningAccess(), MA);
+#endif
       }
     }
     // Either we hit the assert, really have no accesses, or we have both
-    // accesses and an access list.
-    // Same with defs.
+    // accesses and an access list. Same with defs.
     if (!AL && !DL)
       continue;
+    // Verify ordering.
     assert(AL->size() == ActualAccesses.size() &&
            "We don't have the same number of accesses in the block as on the "
            "access list");
@@ -2024,28 +2053,6 @@ void MemorySSA::verifyOrdering(Function &F) const {
 #endif
 }
 
-/// Verify the domination properties of MemorySSA by checking that each
-/// definition dominates all of its uses.
-void MemorySSA::verifyDomination(Function &F) const {
-#ifndef NDEBUG
-  for (BasicBlock &B : F) {
-    // Phi nodes are attached to basic blocks
-    if (MemoryPhi *MP = getMemoryAccess(&B))
-      for (const Use &U : MP->uses())
-        assert(dominates(MP, U) && "Memory PHI does not dominate it's uses");
-
-    for (Instruction &I : B) {
-      MemoryAccess *MD = dyn_cast_or_null<MemoryDef>(getMemoryAccess(&I));
-      if (!MD)
-        continue;
-
-      for (const Use &U : MD->uses())
-        assert(dominates(MD, U) && "Memory Def does not dominate it's uses");
-    }
-  }
-#endif
-}
-
 /// Verify the def-use lists in MemorySSA, by verifying that \p Use
 /// appears in the use list of \p Def.
 void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
@@ -2057,34 +2064,6 @@ void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
   else
     assert(is_contained(Def->users(), Use) &&
            "Did not find use in def's use list");
-#endif
-}
-
-/// Verify the immediate use information, by walking all the memory
-/// accesses and verifying that, for each use, it appears in the
-/// appropriate def's use list
-void MemorySSA::verifyDefUses(Function &F) const {
-#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
-  for (BasicBlock &B : F) {
-    // Phi nodes are attached to basic blocks
-    if (MemoryPhi *Phi = getMemoryAccess(&B)) {
-      assert(Phi->getNumOperands() == static_cast<unsigned>(std::distance(
-                                          pred_begin(&B), pred_end(&B))) &&
-             "Incomplete MemoryPhi Node");
-      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
-        verifyUseInDefs(Phi->getIncomingValue(I), Phi);
-        assert(find(predecessors(&B), Phi->getIncomingBlock(I)) !=
-                   pred_end(&B) &&
-               "Incoming phi block not a block predecessor");
-      }
-    }
-
-    for (Instruction &I : B) {
-      if (MemoryUseOrDef *MA = getMemoryAccess(&I)) {
-        verifyUseInDefs(MA->getDefiningAccess(), MA);
-      }
-    }
-  }
 #endif
 }
 

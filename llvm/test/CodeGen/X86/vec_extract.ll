@@ -110,14 +110,10 @@ define <4 x i32> @ossfuzz15662(<4 x i32*>* %in) {
 ; X32-LABEL: ossfuzz15662:
 ; X32:       # %bb.0:
 ; X32-NEXT:    xorps %xmm0, %xmm0
-; X32-NEXT:    movaps %xmm0, (%eax)
-; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ossfuzz15662:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorps %xmm0, %xmm0
-; X64-NEXT:    movaps %xmm0, (%rax)
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    retq
    %C10 = icmp ule i1 false, false

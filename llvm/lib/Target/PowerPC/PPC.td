@@ -22,35 +22,35 @@ include "llvm/Target/Target.td"
 // CPU Directives                                                             //
 //===----------------------------------------------------------------------===//
 
-def Directive440 : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_440", "">;
-def Directive601 : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_601", "">;
-def Directive602 : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_602", "">;
-def Directive603 : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_603", "">;
-def Directive604 : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_603", "">;
-def Directive620 : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_603", "">;
-def Directive7400: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_7400", "">;
-def Directive750 : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_750", "">;
-def Directive970 : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_970", "">;
-def Directive32  : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_32", "">;
-def Directive64  : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_64", "">;
-def DirectiveA2  : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_A2", "">;
-def DirectiveE500   : SubtargetFeature<"", "DarwinDirective",
+def Directive440 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_440", "">;
+def Directive601 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_601", "">;
+def Directive602 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_602", "">;
+def Directive603 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_603", "">;
+def Directive604 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_603", "">;
+def Directive620 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_603", "">;
+def Directive7400: SubtargetFeature<"", "CPUDirective", "PPC::DIR_7400", "">;
+def Directive750 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_750", "">;
+def Directive970 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_970", "">;
+def Directive32  : SubtargetFeature<"", "CPUDirective", "PPC::DIR_32", "">;
+def Directive64  : SubtargetFeature<"", "CPUDirective", "PPC::DIR_64", "">;
+def DirectiveA2  : SubtargetFeature<"", "CPUDirective", "PPC::DIR_A2", "">;
+def DirectiveE500   : SubtargetFeature<"", "CPUDirective",
                                        "PPC::DIR_E500", "">;
-def DirectiveE500mc : SubtargetFeature<"", "DarwinDirective",
+def DirectiveE500mc : SubtargetFeature<"", "CPUDirective",
                                        "PPC::DIR_E500mc", "">;
-def DirectiveE5500  : SubtargetFeature<"", "DarwinDirective",
+def DirectiveE5500  : SubtargetFeature<"", "CPUDirective",
                                        "PPC::DIR_E5500", "">;
-def DirectivePwr3: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR3", "">;
-def DirectivePwr4: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR4", "">;
-def DirectivePwr5: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR5", "">;
+def DirectivePwr3: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR3", "">;
+def DirectivePwr4: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR4", "">;
+def DirectivePwr5: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR5", "">;
 def DirectivePwr5x
-    : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR5X", "">;
-def DirectivePwr6: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR6", "">;
+    : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR5X", "">;
+def DirectivePwr6: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR6", "">;
 def DirectivePwr6x
-    : SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR6X", "">;
-def DirectivePwr7: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR7", "">;
-def DirectivePwr8: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR8", "">;
-def DirectivePwr9: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR9", "">;
+    : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR6X", "">;
+def DirectivePwr7: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR7", "">;
+def DirectivePwr8: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR8", "">;
+def DirectivePwr9: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR9", "">;
 
 def Feature64Bit     : SubtargetFeature<"64bit","Has64BitSupport", "true",
                                         "Enable 64-bit instructions">;

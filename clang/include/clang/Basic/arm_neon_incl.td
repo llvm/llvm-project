@@ -198,8 +198,10 @@ def OP_UNAVAILABLE : Operation {
 //
 // The prototype is a string that defines the return type of the intrinsic
 // and the type of each argument. The return type and every argument gets a
-// set of "modifiers" that can change in some way the "base type" of the
-// intrinsic.
+// "modifier" that can change in some way the "base type" of the intrinsic.
+//
+// The modifier 'd' means "default" and does not modify the base type in any
+// way. The available modifiers are given below.
 //
 // Typespecs
 // ---------
@@ -224,34 +226,41 @@ def OP_UNAVAILABLE : Operation {
 // -------------------
 // prototype: return (arg, arg, ...)
 //
-// Each type modifier is either a single character, or a group surrounded by
-// parentheses.
-//
-// .: default
-// v: change to void category.
-// S: change to signed integer category.
-// U: change to unsigned integer category.
-// F: change to floating category.
-// P: change to polynomial category.
-// p: change polynomial to equivalent integer category. Otherwise nop.
-//
-// >: double element width (vector size unchanged).
-// <: half element width (vector size unchanged).
-//
-// 1: change to scalar.
-// 2: change to struct of two vectors.
-// 3: change to struct of three vectors.
-// 4: change to struct of four vectors.
-//
-// *: make a pointer argument.
-// c: make a constant argument (for pointers).
-//
-// Q: force 128-bit width.
-// q: force 64-bit width.
-//
-// I: make 32-bit signed scalar immediate
-// !: make this the key type passed to CGBuiltin.cpp in a polymorphic call.
-
+// v: void
+// t: best-fit integer (int/poly args)
+// x: signed integer   (int/float args)
+// u: unsigned integer (int/float args)
+// f: float (int args)
+// F: double (int args)
+// H: half (int args)
+// 0: half (int args), ignore 'Q' size modifier.
+// 1: half (int args), force 'Q' size modifier.
+// d: default
+// g: default, ignore 'Q' size modifier.
+// j: default, force 'Q' size modifier.
+// w: double width elements, same num elts
+// n: double width elements, half num elts
+// h: half width elements, double num elts
+// q: half width elements, quad num elts
+// e: half width elements, double num elts, unsigned
+// m: half width elements, same num elts
+// i: constant int
+// l: constant uint64
+// s: scalar of element type
+// z: scalar of half width element type, signed
+// r: scalar of double width element type, signed
+// b: scalar of unsigned integer/long type (int/float args)
+// $: scalar of signed integer/long type (int/float args)
+// y: scalar of float
+// o: scalar of double
+// k: default elt width, double num elts
+// 2,3,4: array of default vectors
+// B,C,D: array of default elts, force 'Q' size modifier.
+// p: pointer type
+// c: const pointer type
+// 7: vector of 8-bit elements, ignore 'Q' size modifier
+// 8: vector of 8-bit elements, same width as default type
+// 9: vector of 8-bit elements, force 'Q' size modifier
 
 // Every intrinsic subclasses Inst.
 class Inst <string n, string p, string t, Operation o> {

@@ -8,7 +8,6 @@
 
 #include "AppleObjCDeclVendor.h"
 
-#include "Plugins/ExpressionParser/Clang/ASTDumper.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
@@ -77,24 +76,18 @@ public:
     Log *log(GetLogIfAllCategoriesSet(
         LIBLLDB_LOG_EXPRESSIONS)); // FIXME - a more appropriate log channel?
 
-    if (log) {
-      LLDB_LOGF(log,
-                "AppleObjCExternalASTSource::CompleteType[%u] on "
-                "(ASTContext*)%p Completing (TagDecl*)%p named %s",
-                current_id, static_cast<void *>(&tag_decl->getASTContext()),
-                static_cast<void *>(tag_decl),
-                tag_decl->getName().str().c_str());
+    LLDB_LOGF(log,
+              "AppleObjCExternalASTSource::CompleteType[%u] on "
+              "(ASTContext*)%p Completing (TagDecl*)%p named %s",
+              current_id, static_cast<void *>(&tag_decl->getASTContext()),
+              static_cast<void *>(tag_decl), tag_decl->getName().str().c_str());
 
-      LLDB_LOGF(log, "  AOEAS::CT[%u] Before:", current_id);
-      ASTDumper dumper((clang::Decl *)tag_decl);
-      dumper.ToLog(log, "    [CT] ");
-    }
+    LLDB_LOG(log, "  AOEAS::CT[{0}] Before:\n{1}", current_id,
+             ClangUtil::DumpDecl(tag_decl));
 
-    if (log) {
-      LLDB_LOGF(log, "  AOEAS::CT[%u] After:", current_id);
-      ASTDumper dumper((clang::Decl *)tag_decl);
-      dumper.ToLog(log, "    [CT] ");
-    }
+    LLDB_LOG(log, "  AOEAS::CT[{1}] After:{1}", current_id,
+             ClangUtil::DumpDecl(tag_decl));
+
     return;
   }
 
@@ -115,16 +108,14 @@ public:
                 interface_decl->getName().str().c_str());
 
       LLDB_LOGF(log, "  AOEAS::CT[%u] Before:", current_id);
-      ASTDumper dumper((clang::Decl *)interface_decl);
-      dumper.ToLog(log, "    [CT] ");
+      LLDB_LOG(log, "    [CT] {0}", ClangUtil::DumpDecl(interface_decl));
     }
 
     m_decl_vendor.FinishDecl(interface_decl);
 
     if (log) {
       LLDB_LOGF(log, "  [CT] After:");
-      ASTDumper dumper((clang::Decl *)interface_decl);
-      dumper.ToLog(log, "    [CT] ");
+      LLDB_LOG(log, "    [CT] {0}", ClangUtil::DumpDecl(interface_decl));
     }
     return;
   }
@@ -526,27 +517,21 @@ bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {
     return false;
   };
 
-  if (log) {
-    ASTDumper method_dumper((clang::Decl *)interface_decl);
-
-    LLDB_LOGF(log,
-              "[AppleObjCDeclVendor::FinishDecl] Finishing Objective-C "
-              "interface for %s",
-              descriptor->GetClassName().AsCString());
-  }
+  LLDB_LOG(log,
+           "[AppleObjCDeclVendor::FinishDecl] Finishing Objective-C "
+           "interface for %s",
+           descriptor->GetClassName().AsCString());
 
   if (!descriptor->Describe(superclass_func, instance_method_func,
                             class_method_func, ivar_func))
     return false;
 
   if (log) {
-    ASTDumper method_dumper((clang::Decl *)interface_decl);
-
     LLDB_LOGF(
         log,
         "[AppleObjCDeclVendor::FinishDecl] Finished Objective-C interface");
 
-    method_dumper.ToLog(log, "  [AOTV::FD] ");
+    LLDB_LOG(log, "  [AOTV::FD] {0}", ClangUtil::DumpDecl(interface_decl));
   }
 
   return true;
@@ -590,7 +575,6 @@ AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
         if (log) {
           clang::QualType result_iface_type =
               ast_ctx->getObjCInterfaceType(result_iface_decl);
-          ASTDumper dumper(result_iface_type);
 
           uint64_t isa_value = LLDB_INVALID_ADDRESS;
           ClangASTMetadata *metadata =
@@ -598,10 +582,10 @@ AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
           if (metadata)
             isa_value = metadata->GetISAPtr();
 
-          LLDB_LOGF(log,
-                    "AOCTV::FT [%u] Found %s (isa 0x%" PRIx64
-                    ") in the ASTContext",
-                    current_id, dumper.GetCString(), isa_value);
+          LLDB_LOG(log,
+                   "AOCTV::FT [%u] Found %s (isa 0x%" PRIx64
+                   ") in the ASTContext",
+                   current_id, result_iface_type.getAsString(), isa_value);
         }
 
         decls.push_back(result_iface_decl);
@@ -643,9 +627,9 @@ AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
     if (log) {
       clang::QualType new_iface_type =
           ast_ctx->getObjCInterfaceType(iface_decl);
-      ASTDumper dumper(new_iface_type);
-      LLDB_LOGF(log, "AOCTV::FT [%u] Created %s (isa 0x%" PRIx64 ")",
-                current_id, dumper.GetCString(), (uint64_t)isa);
+
+      LLDB_LOG(log, "AOCTV::FT [{0}] Created {1} (isa 0x{2:x})", current_id,
+               new_iface_type.getAsString(), (uint64_t)isa);
     }
 
     decls.push_back(iface_decl);
