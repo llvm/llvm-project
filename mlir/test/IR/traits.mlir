@@ -215,3 +215,103 @@ func @failedSingleBlockImplicitTerminator_missing_terminator() {
 }) : () -> ()
 func @foo() {
 }
+
+// -----
+
+func @failedMissingOperandSizeAttr(%arg: i32) {
+  // expected-error @+1 {{requires 1D vector attribute 'operand_segment_sizes'}}
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) : (i32, i32, i32, i32) -> ()
+}
+
+// -----
+
+func @failedOperandSizeAttrWrongType(%arg: i32) {
+  // expected-error @+1 {{requires 1D vector attribute 'operand_segment_sizes'}}
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[1, 1, 1, 1]>: tensor<4xi32>} : (i32, i32, i32, i32) -> ()
+}
+
+// -----
+
+func @failedOperandSizeAttrWrongRank(%arg: i32) {
+  // expected-error @+1 {{requires 1D vector attribute 'operand_segment_sizes'}}
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[[1, 1], [1, 1]]>: vector<2x2xi32>} : (i32, i32, i32, i32) -> ()
+}
+
+// -----
+
+func @failedOperandSizeAttrNegativeValue(%arg: i32) {
+  // expected-error @+1 {{'operand_segment_sizes' attribute cannot have negative elements}}
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[1, 1, -1, 1]>: vector<4xi32>} : (i32, i32, i32, i32) -> ()
+}
+
+// -----
+
+func @failedOperandSizeAttrWrongTotalSize(%arg: i32) {
+  // expected-error @+1 {{operand count (4) does not match with the total size (3) specified in attribute 'operand_segment_sizes'}}
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[0, 1, 1, 1]>: vector<4xi32>} : (i32, i32, i32, i32) -> ()
+}
+
+// -----
+
+func @failedOperandSizeAttrWrongCount(%arg: i32) {
+  // expected-error @+1 {{'operand_segment_sizes' attribute for specifiying operand segments must have 4 elements}}
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[2, 1, 1]>: vector<3xi32>} : (i32, i32, i32, i32) -> ()
+}
+
+// -----
+
+func @succeededOperandSizeAttr(%arg: i32) {
+  // CHECK: test.attr_sized_operands
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[0, 2, 1, 1]>: vector<4xi32>} : (i32, i32, i32, i32) -> ()
+  return
+}
+
+// -----
+
+func @failedMissingResultSizeAttr() {
+  // expected-error @+1 {{requires 1D vector attribute 'result_segment_sizes'}}
+  %0:4 = "test.attr_sized_results"() : () -> (i32, i32, i32, i32)
+}
+
+// -----
+
+func @failedResultSizeAttrWrongType() {
+  // expected-error @+1 {{requires 1D vector attribute 'result_segment_sizes'}}
+  %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[1, 1, 1, 1]>: tensor<4xi32>} : () -> (i32, i32, i32, i32)
+}
+
+// -----
+
+func @failedResultSizeAttrWrongRank() {
+  // expected-error @+1 {{requires 1D vector attribute 'result_segment_sizes'}}
+  %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[[1, 1], [1, 1]]>: vector<2x2xi32>} : () -> (i32, i32, i32, i32)
+}
+
+// -----
+
+func @failedResultSizeAttrNegativeValue() {
+  // expected-error @+1 {{'result_segment_sizes' attribute cannot have negative elements}}
+  %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[1, 1, -1, 1]>: vector<4xi32>} : () -> (i32, i32, i32, i32)
+}
+
+// -----
+
+func @failedResultSizeAttrWrongTotalSize() {
+  // expected-error @+1 {{result count (4) does not match with the total size (3) specified in attribute 'result_segment_sizes'}}
+  %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[0, 1, 1, 1]>: vector<4xi32>} : () -> (i32, i32, i32, i32)
+}
+
+// -----
+
+func @failedResultSizeAttrWrongCount() {
+  // expected-error @+1 {{'result_segment_sizes' attribute for specifiying result segments must have 4 elements}}
+  %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[2, 1, 1]>: vector<3xi32>} : () -> (i32, i32, i32, i32)
+}
+
+// -----
+
+func @succeededResultSizeAttr() {
+  // CHECK: test.attr_sized_results
+  %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[0, 2, 1, 1]>: vector<4xi32>} : () -> (i32, i32, i32, i32)
+  return
+}
