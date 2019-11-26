@@ -854,6 +854,7 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::SELECT_CC:   Res = SoftenFloatOp_SELECT_CC(N); break;
   case ISD::SETCC:       Res = SoftenFloatOp_SETCC(N); break;
   case ISD::STORE:       Res = SoftenFloatOp_STORE(N, OpNo); break;
+  case ISD::FCOPYSIGN:   Res = SoftenFloatOp_FCOPYSIGN(N); break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1034,6 +1035,40 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_STORE(SDNode *N, unsigned OpNo) {
 
   return DAG.getStore(ST->getChain(), dl, Val, ST->getBasePtr(),
                       ST->getMemOperand());
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_FCOPYSIGN(SDNode *N) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = BitConvertToInteger(N->getOperand(1));
+  SDLoc dl(N);
+
+  EVT LVT = LHS.getValueType();
+  EVT ILVT = EVT::getIntegerVT(*DAG.getContext(), LVT.getSizeInBits());
+  EVT RVT = RHS.getValueType();
+
+  unsigned LSize = LVT.getSizeInBits();
+  unsigned RSize = RVT.getSizeInBits();
+
+  // Shift right or sign-extend it if the two operands have different types.
+  int SizeDiff = RSize - LSize;
+  if (SizeDiff > 0) {
+    RHS =
+        DAG.getNode(ISD::SRL, dl, RVT, RHS,
+                    DAG.getConstant(SizeDiff, dl,
+                                    TLI.getShiftAmountTy(RHS.getValueType(),
+                                                         DAG.getDataLayout())));
+    RHS = DAG.getNode(ISD::TRUNCATE, dl, ILVT, RHS);
+  } else if (SizeDiff < 0) {
+    RHS = DAG.getNode(ISD::ANY_EXTEND, dl, LVT, RHS);
+    RHS =
+        DAG.getNode(ISD::SHL, dl, ILVT, RHS,
+                    DAG.getConstant(-SizeDiff, dl,
+                                    TLI.getShiftAmountTy(RHS.getValueType(),
+                                                         DAG.getDataLayout())));
+  }
+
+  RHS = DAG.getBitcast(LVT, RHS);
+  return DAG.getNode(ISD::FCOPYSIGN, dl, LVT, LHS, RHS);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_LROUND(SDNode *N) {

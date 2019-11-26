@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
+; RUN: llc -mtriple=riscv32 -verify-machineinstrs -mattr=+f \
+; RUN:   -target-abi ilp32f < %s | FileCheck %s -check-prefix=RV32IF
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs -mattr=+f -mattr=+d \
 ; RUN:   -target-abi ilp32d < %s | FileCheck %s -check-prefix=RV32IFD
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs -mattr=+f -mattr=+d \
@@ -36,6 +38,16 @@ define double @fold_promote(double %a, float %b) nounwind {
 ; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
+;
+; RV32IF-LABEL: fold_promote:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.x.w a2, fa0
+; RV32IF-NEXT:    lui a3, 524288
+; RV32IF-NEXT:    and a2, a2, a3
+; RV32IF-NEXT:    addi a3, a3, -1
+; RV32IF-NEXT:    and a1, a1, a3
+; RV32IF-NEXT:    or a1, a1, a2
+; RV32IF-NEXT:    ret
 ;
 ; RV32IFD-LABEL: fold_promote:
 ; RV32IFD:       # %bb.0:
@@ -74,6 +86,12 @@ define float @fold_demote(float %a, double %b) nounwind {
 ; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
+;
+; RV32IF-LABEL: fold_demote:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a1
+; RV32IF-NEXT:    fsgnj.s fa0, fa0, ft0
+; RV32IF-NEXT:    ret
 ;
 ; RV32IFD-LABEL: fold_demote:
 ; RV32IFD:       # %bb.0:

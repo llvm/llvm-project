@@ -37,9 +37,8 @@ ENDIF:
 ; SI: ; %endif
 
 ; SI: [[LOOP_LABEL:BB[0-9]+_[0-9]+]]: ; %loop
-; SI:     s_mov_b64         [[TMP:s\[[0-9]+:[0-9]+\]]], [[LEFT]]
 ; SI:     s_and_b64         [[TMP1:s\[[0-9]+:[0-9]+\]]], exec, [[PHI]]
-; SI:     s_or_b64          [[LEFT]], [[TMP1]], [[TMP]]
+; SI:     s_or_b64          [[LEFT]], [[TMP1]], [[LEFT]]
 ; SI:     s_andn2_b64       exec, exec, [[LEFT]]
 ; SI:     s_cbranch_execnz  [[LOOP_LABEL]]
 ; SI:     s_endpgm
