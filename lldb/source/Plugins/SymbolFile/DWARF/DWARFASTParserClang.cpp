@@ -463,7 +463,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
   const dw_tag_t tag = die.Tag();
 
-  CompilerType clang_type;
   TypeSP type_sp;
 
   switch (tag) {
