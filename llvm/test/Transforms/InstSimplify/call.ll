@@ -926,8 +926,7 @@ declare <2 x double> @llvm.copysign.v2f64(<2 x double>, <2 x double>)
 
 define float @copysign_same_operand(float %x) {
 ; CHECK-LABEL: @copysign_same_operand(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[X]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[X:%.*]]
 ;
   %r = call float @llvm.copysign.f32(float %x, float %x)
   ret float %r
@@ -935,8 +934,7 @@ define float @copysign_same_operand(float %x) {
 
 define <2 x double> @copysign_same_operand_vec(<2 x double> %x) {
 ; CHECK-LABEL: @copysign_same_operand_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @llvm.copysign.v2f64(<2 x double> [[X:%.*]], <2 x double> [[X]])
-; CHECK-NEXT:    ret <2 x double> [[R]]
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
 ;
   %r = call <2 x double> @llvm.copysign.v2f64(<2 x double> %x, <2 x double> %x)
   ret <2 x double> %r
