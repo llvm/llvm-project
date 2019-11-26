@@ -3119,6 +3119,20 @@ static unsigned int getKnownAlignForUse(Attributor &A,
                                         AbstractAttribute &QueryingAA,
                                         Value &AssociatedValue, const Use *U,
                                         const Instruction *I, bool &TrackUse) {
+  // We need to follow common pointer manipulation uses to the accesses they
+  // feed into.
+  if (isa<CastInst>(I)) {
+    TrackUse = true;
+    return 0;
+  }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    if (GEP->hasAllConstantIndices()) {
+      TrackUse = true;
+      return 0;
+    }
+  }
+
+  unsigned Alignment = 0;
   if (ImmutableCallSite ICS = ImmutableCallSite(I)) {
     if (ICS.isBundleOperand(U) || ICS.isCallee(U))
       return 0;
@@ -3129,23 +3143,34 @@ static unsigned int getKnownAlignForUse(Attributor &A,
     // dependences here.
     auto &AlignAA = A.getAAFor<AAAlign>(QueryingAA, IRP,
                                         /* TrackDependence */ false);
-    return AlignAA.getKnownAlign();
+    Alignment = AlignAA.getKnownAlign();
   }
 
-  // We need to follow common pointer manipulation uses to the accesses they
-  // feed into.
-  // TODO: Consider gep instruction
-  if (isa<CastInst>(I)) {
-    TrackUse = true;
-    return 0;
-  }
-
+  const Value *UseV = U->get();
   if (auto *SI = dyn_cast<StoreInst>(I))
-    return SI->getAlignment();
+    Alignment = SI->getAlignment();
   else if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getAlignment();
+    Alignment = LI->getAlignment();
 
-  return 0;
+  if (Alignment <= 1)
+    return 0;
+
+  auto &DL = A.getDataLayout();
+  int64_t Offset;
+
+  if (const Value *Base = GetPointerBaseWithConstantOffset(UseV, Offset, DL)) {
+    if (Base == &AssociatedValue) {
+      // BasePointerAddr + Offset = Alignment * Q for some integer Q.
+      // So we can say that the maximum power of two which is a divisor of
+      // gcd(Offset, Alignment) is an alignment.
+
+      uint32_t gcd =
+          greatestCommonDivisor(uint32_t(abs((int32_t)Offset)), Alignment);
+      Alignment = llvm::PowerOf2Floor(gcd);
+    }
+  }
+
+  return Alignment;
 }
 struct AAAlignImpl : AAAlign {
   AAAlignImpl(const IRPosition &IRP) : AAAlign(IRP) {}
