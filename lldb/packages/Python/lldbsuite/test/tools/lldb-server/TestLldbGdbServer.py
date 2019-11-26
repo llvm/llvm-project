@@ -675,7 +675,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.Hg_switches_to_3_threads()
 
     @expectedFailureAll(oslist=["windows"]) # expect 4 threads
-    @expectedFailureNetBSD
     @llgs_test
     def test_Hg_switches_to_3_threads_launch_llgs(self):
         self.init_llgs_test()
@@ -1583,7 +1582,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.P_and_p_thread_suffix_work()
 
     @skipIfWindows
-    @expectedFailureNetBSD
     @llgs_test
     def test_P_and_p_thread_suffix_work_llgs(self):
         self.init_llgs_test()
