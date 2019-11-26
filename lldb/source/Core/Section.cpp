@@ -94,6 +94,8 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-ranges";
   case eSectionTypeDWARFDebugRngLists:
     return "dwarf-rnglists";
+  case eSectionTypeDWARFDebugRngListsDwo:
+    return "dwarf-rnglists-dwo";
   case eSectionTypeDWARFDebugStr:
     return "dwarf-str";
   case eSectionTypeDWARFDebugStrDwo:
