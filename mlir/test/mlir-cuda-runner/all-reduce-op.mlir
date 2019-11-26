@@ -1,4 +1,4 @@
-// RUN: mlir-cuda-runner %s --shared-libs=%tools_lib_dir/mlir-cuda-runner/libcuda-runtime-wrappers%shlibext,%test_lib_dir/mlir-cpu-runner/libmlir_runner_utils%shlibext --entry-point-result=void | FileCheck %s
+// RUN: mlir-cuda-runner %s --shared-libs=%cuda_wrapper_library_dir/libcuda-runtime-wrappers%shlibext,%linalg_test_lib_dir/libmlir_runner_utils%shlibext --entry-point-result=void | FileCheck %s
 
 // CHECK-COUNT-8: [{{(5356, ){12}5356}}]
 func @main() {
