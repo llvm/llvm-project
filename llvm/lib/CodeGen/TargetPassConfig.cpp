@@ -179,10 +179,10 @@ static cl::opt<CFLAAType> UseCFLAA(
 /// Option names for limiting the codegen pipeline.
 /// Those are used in error reporting and we didn't want
 /// to duplicate their names all over the place.
-static const char *StartAfterOptName = "start-after";
-static const char *StartBeforeOptName = "start-before";
-static const char *StopAfterOptName = "stop-after";
-static const char *StopBeforeOptName = "stop-before";
+static const char StartAfterOptName[] = "start-after";
+static const char StartBeforeOptName[] = "start-before";
+static const char StopAfterOptName[] = "stop-after";
+static const char StopBeforeOptName[] = "stop-before";
 
 static cl::opt<std::string>
     StartAfterOpt(StringRef(StartAfterOptName),
