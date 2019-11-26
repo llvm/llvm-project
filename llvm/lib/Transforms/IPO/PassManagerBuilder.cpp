@@ -530,9 +530,6 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createIPSCCPPass());          // IP SCCP
   MPM.add(createCalledValuePropagationPass());
 
-  // Infer attributes on declarations, call sites, arguments, etc.
-  MPM.add(createAttributorLegacyPass());
-
   MPM.add(createGlobalOptimizerPass()); // Optimize out global vars
   // Promote any localized global vars.
   MPM.add(createPromoteMemoryToRegisterPass());
@@ -540,6 +537,8 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createDeadArgEliminationPass()); // Dead argument elimination
 
   addInstructionCombiningPass(MPM); // Clean up after IPCP & DAE
+  // Infer attributes on declarations, call sites, arguments, etc.
+  MPM.add(createAttributorLegacyPass());
   addExtensionsToPM(EP_Peephole, MPM);
   MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
 
