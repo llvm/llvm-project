@@ -161,11 +161,11 @@ public:
         Pointer(false), ScalarForMangling(false), NoManglingQ(false),
         Bitwidth(0), ElementBitwidth(0), NumVectors(0) {}
 
-  Type(TypeSpec TS, char CharMod)
+  Type(TypeSpec TS, StringRef CharMods)
       : TS(std::move(TS)), Kind(Void), Immediate(false),
         Constant(false), Pointer(false), ScalarForMangling(false),
         NoManglingQ(false), Bitwidth(0), ElementBitwidth(0), NumVectors(0) {
-    applyModifier(CharMod);
+    applyModifiers(CharMods);
   }
 
   /// Returns a type representing "void".
@@ -181,13 +181,15 @@ public:
   bool noManglingQ() const { return NoManglingQ; }
 
   bool isPointer() const { return Pointer; }
+  bool isValue() const { return !isVoid() && !isPointer(); }
+  bool isScalar() const { return isValue() && NumVectors == 0; }
+  bool isVector() const { return isValue() && NumVectors > 0; }
+  bool isConstPointer() const { return Constant; }
   bool isFloating() const { return Kind == Float; }
   bool isInteger() const { return Kind == SInt || Kind == UInt; }
   bool isPoly() const { return Kind == Poly; }
   bool isSigned() const { return Kind == SInt; }
   bool isImmediate() const { return Immediate; }
-  bool isScalar() const { return NumVectors == 0; }
-  bool isVector() const { return NumVectors > 0; }
   bool isFloat() const { return isFloating() && ElementBitwidth == 32; }
   bool isDouble() const { return isFloating() && ElementBitwidth == 64; }
   bool isHalf() const { return isFloating() && ElementBitwidth == 16; }
@@ -205,11 +207,11 @@ public:
   // Mutator functions
   //
   void makeUnsigned() {
-    assert(isInteger() && "not a potentially signed type");
+    assert(!isVoid() && "not a potentially signed type");
     Kind = UInt;
   }
   void makeSigned() {
-    assert(isInteger() && "not a potentially signed type");
+    assert(!isVoid() && "not a potentially signed type");
     Kind = SInt;
   }
 
@@ -267,8 +269,8 @@ private:
   /// seen. This is needed by applyModifier as some modifiers
   /// only take effect if the type size was changed by "Q" or "H".
   void applyTypespec(bool &Quad);
-  /// Applies a prototype modifiers to the type.
-  void applyModifier(char Mod);
+  /// Applies prototype modifiers to the type.
+  void applyModifiers(StringRef Mods);
 };
 
 //===----------------------------------------------------------------------===//
@@ -299,8 +301,8 @@ class Intrinsic {
 
   /// The Record this intrinsic was created from.
   Record *R;
-  /// The unmangled name and prototype.
-  std::string Name, Proto;
+  /// The unmangled name.
+  std::string Name;
   /// The input and output typespecs. InTS == OutTS except when
   /// CartesianProductOfTypes is 1 - this is the case for vreinterpret.
   TypeSpec OutTS, InTS;
@@ -323,6 +325,8 @@ class Intrinsic {
 
   /// The types of return value [0] and parameters [1..].
   std::vector<Type> Types;
+  /// The index of the key type passed to CGBuiltin.cpp for polymorphic calls.
+  int PolymorphicKeyType;
   /// The local variables defined.
   std::map<std::string, Variable> Variables;
   /// NeededEarly - set if any other intrinsic depends on this intrinsic.
@@ -358,34 +362,39 @@ public:
   Intrinsic(Record *R, StringRef Name, StringRef Proto, TypeSpec OutTS,
             TypeSpec InTS, ClassKind CK, ListInit *Body, NeonEmitter &Emitter,
             StringRef Guard, bool IsUnavailable, bool BigEndianSafe)
-      : R(R), Name(Name.str()), Proto(Proto.str()), OutTS(OutTS), InTS(InTS),
-        CK(CK), Body(Body), Guard(Guard.str()), IsUnavailable(IsUnavailable),
-        BigEndianSafe(BigEndianSafe), NeededEarly(false), UseMacro(false),
-        BaseType(OutTS, 'd'), InBaseType(InTS, 'd'), Emitter(Emitter) {
-    // If this builtin takes an immediate argument, we need to #define it rather
-    // than use a standard declaration, so that SemaChecking can range check
-    // the immediate passed by the user.
-    if (Proto.find('i') != std::string::npos)
-      UseMacro = true;
-
-    // Pointer arguments need to use macros to avoid hiding aligned attributes
-    // from the pointer type.
-    if (Proto.find('p') != std::string::npos ||
-        Proto.find('c') != std::string::npos)
-      UseMacro = true;
-
-    // It is not permitted to pass or return an __fp16 by value, so intrinsics
-    // taking a scalar float16_t must be implemented as macros.
-    if (OutTS.find('h') != std::string::npos &&
-        Proto.find('s') != std::string::npos)
-      UseMacro = true;
-
+      : R(R), Name(Name.str()), OutTS(OutTS), InTS(InTS), CK(CK), Body(Body),
+        Guard(Guard.str()), IsUnavailable(IsUnavailable),
+        BigEndianSafe(BigEndianSafe), PolymorphicKeyType(0), NeededEarly(false),
+        UseMacro(false), BaseType(OutTS, "."), InBaseType(InTS, "."),
+        Emitter(Emitter) {
     // Modify the TypeSpec per-argument to get a concrete Type, and create
     // known variables for each.
     // Types[0] is the return value.
-    Types.emplace_back(OutTS, Proto[0]);
-    for (unsigned I = 1; I < Proto.size(); ++I)
-      Types.emplace_back(InTS, Proto[I]);
+    unsigned Pos = 0;
+    Types.emplace_back(OutTS, getNextModifiers(Proto, Pos));
+    StringRef Mods = getNextModifiers(Proto, Pos);
+    while (!Mods.empty()) {
+      Types.emplace_back(InTS, Mods);
+      if (Mods.find("!") != StringRef::npos)
+        PolymorphicKeyType = Types.size() - 1;
+
+      Mods = getNextModifiers(Proto, Pos);
+    }
+
+    for (auto Type : Types) {
+      // If this builtin takes an immediate argument, we need to #define it rather
+      // than use a standard declaration, so that SemaChecking can range check
+      // the immediate passed by the user.
+
+      // Pointer arguments need to use macros to avoid hiding aligned attributes
+      // from the pointer type.
+
+      // It is not permitted to pass or return an __fp16 by value, so intrinsics
+      // taking a scalar float16_t must be implemented as macros.
+      if (Type.isImmediate() || Type.isPointer() ||
+          (Type.isScalar() && Type.isHalf()))
+        UseMacro = true;
+    }
   }
 
   /// Get the Record that this intrinsic is based off.
@@ -401,23 +410,24 @@ public:
 
   /// Return true if the intrinsic takes an immediate operand.
   bool hasImmediate() const {
-    return Proto.find('i') != std::string::npos;
+    return std::any_of(Types.begin(), Types.end(),
+                       [](const Type &T) { return T.isImmediate(); });
   }
 
   /// Return the parameter index of the immediate operand.
   unsigned getImmediateIdx() const {
-    assert(hasImmediate());
-    unsigned Idx = Proto.find('i');
-    assert(Idx > 0 && "Can't return an immediate!");
-    return Idx - 1;
+    for (unsigned Idx = 0; Idx < Types.size(); ++Idx)
+      if (Types[Idx].isImmediate())
+        return Idx - 1;
+    llvm_unreachable("Intrinsic has no immediate");
   }
 
-  unsigned getNumParams() const { return Proto.size() - 1; }
+
+  unsigned getNumParams() const { return Types.size() - 1; }
   Type getReturnType() const { return Types[0]; }
   Type getParamType(unsigned I) const { return Types[I + 1]; }
   Type getBaseType() const { return BaseType; }
-  /// Return the raw prototype string.
-  std::string getProto() const { return Proto; }
+  Type getPolymorphicKeyType() const { return Types[PolymorphicKeyType]; }
 
   /// Return true if the prototype has a scalar argument.
   bool protoHasScalar() const;
@@ -471,6 +481,8 @@ public:
   void indexBody();
 
 private:
+  StringRef getNextModifiers(StringRef Proto, unsigned &Pos) const;
+
   std::string mangleName(std::string Name, ClassKind CK) const;
 
   void initVariables();
@@ -614,10 +626,14 @@ std::string Type::builtin_str() const {
   if (isVoid())
     return "v";
 
-  if (Pointer)
+  if (isPointer()) {
     // All pointers are void pointers.
-    S += "v";
-  else if (isInteger())
+    S = "v";
+    if (isConstPointer())
+      S += "C";
+    S += "*";
+    return S;
+  } else if (isInteger())
     switch (ElementBitwidth) {
     case 8: S += "c"; break;
     case 16: S += "s"; break;
@@ -634,10 +650,11 @@ std::string Type::builtin_str() const {
     default: llvm_unreachable("Unhandled case!");
     }
 
+  // FIXME: NECESSARY???????????????????????????????????????????????????????????????????????
   if (isChar() && !isPointer() && isSigned())
     // Make chars explicitly signed.
     S = "S" + S;
-  else if (!isPointer() && isInteger() && !isSigned())
+  else if (isInteger() && !isSigned())
     S = "U" + S;
 
   // Constant indices are "int", but have the "constant expression" modifier.
@@ -646,11 +663,8 @@ std::string Type::builtin_str() const {
     S = "I" + S;
   }
 
-  if (isScalar()) {
-    if (Constant) S += "C";
-    if (Pointer) S += "*";
+  if (isScalar())
     return S;
-  }
 
   std::string Ret;
   for (unsigned I = 0; I < NumVectors; ++I)
@@ -812,208 +826,96 @@ void Type::applyTypespec(bool &Quad) {
   Bitwidth = Quad ? 128 : 64;
 }
 
-void Type::applyModifier(char Mod) {
+void Type::applyModifiers(StringRef Mods) {
   bool AppliedQuad = false;
   applyTypespec(AppliedQuad);
 
-  switch (Mod) {
-  case 'v':
-    Kind = Void;
-    break;
-  case 't':
-    if (isPoly())
+  for (char Mod : Mods) {
+    switch (Mod) {
+    case '.':
+      break;
+    case 'v':
+      Kind = Void;
+      break;
+    case 'S':
+      Kind = SInt;
+      break;
+    case 'U':
       Kind = UInt;
-    break;
-  case 'b':
-    Kind = UInt;
-    NumVectors = 0;
-    Bitwidth = ElementBitwidth;
-    break;
-  case '$':
-    Kind = SInt;
-    NumVectors = 0;
-    Bitwidth = ElementBitwidth;
-    break;
-  case 'u':
-    Kind = UInt;
-    break;
-  case 'x':
-    assert(!isPoly() && "'u' can't be used with poly types!");
-    Kind = SInt;
-    break;
-  case 'o':
-    Bitwidth = ElementBitwidth = 64;
-    NumVectors = 0;
-    Kind = Float;
-    break;
-  case 'y':
-    Bitwidth = ElementBitwidth = 32;
-    NumVectors = 0;
-    Kind = Float;
-    break;
-  case 'Y':
-    Bitwidth = ElementBitwidth = 16;
-    NumVectors = 0;
-    Kind = Float;
-    break;
-  case 'I':
-    Bitwidth = ElementBitwidth = 32;
-    NumVectors = 0;
-    Kind = SInt;
-    break;
-  case 'L':
-    Bitwidth = ElementBitwidth = 64;
-    NumVectors = 0;
-    Kind = SInt;
-    break;
-  case 'U':
-    Bitwidth = ElementBitwidth = 32;
-    NumVectors = 0;
-    Kind = UInt;
-    break;
-  case 'O':
-    Bitwidth = ElementBitwidth = 64;
-    NumVectors = 0;
-    Kind = UInt;
-    break;
-  case 'f':
-    Kind = Float;
-    ElementBitwidth = 32;
-    break;
-  case 'F':
-    Kind = Float;
-    ElementBitwidth = 64;
-    break;
-  case 'H':
-    Kind = Float;
-    ElementBitwidth = 16;
-    break;
-  case '0':
-    Kind = Float;
-    if (AppliedQuad)
-      Bitwidth /= 2;
-    ElementBitwidth = 16;
-    break;
-  case '1':
-    Kind = Float;
-    if (!AppliedQuad)
-      Bitwidth *= 2;
-    ElementBitwidth = 16;
-    break;
-  case 'g':
-    if (AppliedQuad)
-      Bitwidth /= 2;
-    break;
-  case 'j':
-    if (!AppliedQuad)
-      Bitwidth *= 2;
-    break;
-  case 'w':
-    ElementBitwidth *= 2;
-    Bitwidth *= 2;
-    break;
-  case 'n':
-    ElementBitwidth *= 2;
-    break;
-  case 'i':
-    Kind = SInt;
-    ElementBitwidth = Bitwidth = 32;
-    NumVectors = 0;
-    Immediate = true;
-    break;
-  case 'l':
-    Kind = UInt;
-    ElementBitwidth = Bitwidth = 64;
-    NumVectors = 0;
-    Immediate = true;
-    break;
-  case 'z':
-    ElementBitwidth /= 2;
-    Bitwidth = ElementBitwidth;
-    NumVectors = 0;
-    break;
-  case 'r':
-    ElementBitwidth *= 2;
-    Bitwidth = ElementBitwidth;
-    NumVectors = 0;
-    break;
-  case 's':
-    Bitwidth = ElementBitwidth;
-    NumVectors = 0;
-    break;
-  case 'k':
-    Bitwidth *= 2;
-    break;
-  case 'c':
-    Constant = true;
-    LLVM_FALLTHROUGH;
-  case 'p':
-    Pointer = true;
-    Bitwidth = ElementBitwidth;
-    NumVectors = 0;
-    break;
-  case 'h':
-    ElementBitwidth /= 2;
-    break;
-  case 'q':
-    ElementBitwidth /= 2;
-    Bitwidth *= 2;
-    break;
-  case 'e':
-    ElementBitwidth /= 2;
-    Kind = UInt;
-    break;
-  case 'm':
-    ElementBitwidth /= 2;
-    Bitwidth /= 2;
-    break;
-  case 'd':
-    break;
-  case '2':
-    NumVectors = 2;
-    break;
-  case '3':
-    NumVectors = 3;
-    break;
-  case '4':
-    NumVectors = 4;
-    break;
-  case 'B':
-    NumVectors = 2;
-    if (!AppliedQuad)
-      Bitwidth *= 2;
-    break;
-  case 'C':
-    NumVectors = 3;
-    if (!AppliedQuad)
-      Bitwidth *= 2;
-    break;
-  case 'D':
-    NumVectors = 4;
-    if (!AppliedQuad)
-      Bitwidth *= 2;
-    break;
-  case '7':
-    if (AppliedQuad)
-      Bitwidth /= 2;
-    ElementBitwidth = 8;
-    break;
-  case '8':
-    ElementBitwidth = 8;
-    break;
-  case '9':
-    if (!AppliedQuad)
-      Bitwidth *= 2;
-    ElementBitwidth = 8;
-    break;
-  default:
-    llvm_unreachable("Unhandled character!");
+      break;
+    case 'F':
+      Kind = Float;
+      break;
+    case 'P':
+      Kind = Poly;
+      break;
+    case '>':
+      assert(ElementBitwidth < 128);
+      ElementBitwidth *= 2;
+      break;
+    case '<':
+      assert(ElementBitwidth > 8);
+      ElementBitwidth /= 2;
+      break;
+    case '1':
+      NumVectors = 0;
+      break;
+    case '2':
+      NumVectors = 2;
+      break;
+    case '3':
+      NumVectors = 3;
+      break;
+    case '4':
+      NumVectors = 4;
+      break;
+    case '*':
+      Pointer = true;
+      break;
+    case 'c':
+      Constant = true;
+      break;
+    case 'Q':
+      Bitwidth = 128;
+      break;
+    case 'q':
+      Bitwidth = 64;
+      break;
+    case 'I':
+      Kind = SInt;
+      ElementBitwidth = Bitwidth = 32;
+      NumVectors = 0;
+      Immediate = true;
+      break;
+    case 'p':
+      if (isPoly())
+        Kind = UInt;
+      break;
+    case '!':
+      // Key type, handled elsewhere.
+      break;
+    default:
+      llvm_unreachable("Unhandled character!");
+    }
   }
 }
 
 //===----------------------------------------------------------------------===//
 // Intrinsic implementation
 //===----------------------------------------------------------------------===//
+
+StringRef Intrinsic::getNextModifiers(StringRef Proto, unsigned &Pos) const {
+  if (Proto.size() == Pos)
+    return StringRef();
+  else if (Proto[Pos] != '(')
+    return Proto.substr(Pos++, 1);
+
+  size_t Start = Pos + 1;
+  size_t End = Proto.find(')', Start);
+  assert_with_loc(End != StringRef::npos, "unmatched modifier group paren");
+  Pos = End + 1;
+  return Proto.slice(Start, End);
+}
 
 std::string Intrinsic::getInstTypeCode(Type T, ClassKind CK) const {
   char typeCode = '\0';
@@ -1053,17 +955,13 @@ std::string Intrinsic::getInstTypeCode(Type T, ClassKind CK) const {
   return S;
 }
 
-static bool isFloatingPointProtoModifier(char Mod) {
-  return Mod == 'F' || Mod == 'f' || Mod == 'H' || Mod == 'Y' || Mod == 'I';
-}
-
 std::string Intrinsic::getBuiltinTypeStr() {
   ClassKind LocalCK = getClassKind(true);
   std::string S;
 
   Type RetT = getReturnType();
   if ((LocalCK == ClassI || LocalCK == ClassW) && RetT.isScalar() &&
-      !RetT.isFloating() && !RetT.isVoid())
+      !RetT.isFloating())
     RetT.makeInteger(RetT.getElementSizeInBits(), false);
 
   // Since the return value must be one type, return a vector type of the
@@ -1078,7 +976,7 @@ std::string Intrinsic::getBuiltinTypeStr() {
     if (!RetT.isScalar() && RetT.isInteger() && !RetT.isSigned())
       RetT.makeSigned();
 
-    if (LocalCK == ClassB && !RetT.isVoid() && !RetT.isScalar())
+    if (LocalCK == ClassB && RetT.isValue() && !RetT.isScalar())
       // Cast to vector of 8-bit elements.
       RetT.makeInteger(8, true);
 
@@ -1194,7 +1092,7 @@ void Intrinsic::initVariables() {
 
   // Modify the TypeSpec per-argument to get a concrete Type, and create
   // known variables for each.
-  for (unsigned I = 1; I < Proto.size(); ++I) {
+  for (unsigned I = 1; I < Types.size(); ++I) {
     char NameC = '0' + (I - 1);
     std::string Name = "p";
     Name.push_back(NameC);
@@ -1315,7 +1213,7 @@ void Intrinsic::emitShadowedArgs() {
   for (unsigned I = 0; I < getNumParams(); ++I) {
     // Do not create a temporary for an immediate argument.
     // That would defeat the whole point of using a macro!
-    if (hasImmediate() && Proto[I+1] == 'i')
+    if (getParamType(I).isImmediate())
       continue;
     // Do not create a temporary for pointer arguments. The input
     // pointer may have an alignment hint.
@@ -1339,13 +1237,9 @@ void Intrinsic::emitShadowedArgs() {
 }
 
 bool Intrinsic::protoHasScalar() const {
-  return (Proto.find('s') != std::string::npos ||
-          Proto.find('z') != std::string::npos ||
-          Proto.find('r') != std::string::npos ||
-          Proto.find('b') != std::string::npos ||
-          Proto.find('$') != std::string::npos ||
-          Proto.find('y') != std::string::npos ||
-          Proto.find('o') != std::string::npos);
+  return std::any_of(Types.begin(), Types.end(), [](const Type &T) {
+    return T.isScalar() && !T.isImmediate();
+  });
 }
 
 void Intrinsic::emitBodyAsBuiltinCall() {
@@ -1408,13 +1302,7 @@ void Intrinsic::emitBodyAsBuiltinCall() {
 
   // Extra constant integer to hold type class enum for this function, e.g. s8
   if (getClassKind(true) == ClassB) {
-    Type ThisTy = getReturnType();
-    if (Proto[0] == 'v' || isFloatingPointProtoModifier(Proto[0]))
-      ThisTy = getParamType(0);
-    if (ThisTy.isPointer())
-      ThisTy = getParamType(1);
-
-    S += utostr(ThisTy.getNeonEnum());
+    S += utostr(getPolymorphicKeyType().getNeonEnum());
   } else {
     // Remove extraneous ", ".
     S.pop_back();
@@ -2019,9 +1907,9 @@ void NeonEmitter::createIntrinsic(Record *R,
   std::vector<std::pair<TypeSpec, TypeSpec>> NewTypeSpecs;
   for (auto TS : TypeSpecs) {
     if (CartesianProductOfTypes) {
-      Type DefaultT(TS, 'd');
+      Type DefaultT(TS, ".");
       for (auto SrcTS : TypeSpecs) {
-        Type DefaultSrcT(SrcTS, 'd');
+        Type DefaultSrcT(SrcTS, ".");
         if (TS == SrcTS ||
             DefaultSrcT.getSizeInBits() != DefaultT.getSizeInBits())
           continue;
@@ -2101,31 +1989,19 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
       continue;
 
     uint64_t Mask = 0ULL;
-    Type Ty = Def->getReturnType();
-    if (Def->getProto()[0] == 'v' ||
-        isFloatingPointProtoModifier(Def->getProto()[0]))
-      Ty = Def->getParamType(0);
-    if (Ty.isPointer())
-      Ty = Def->getParamType(1);
-
-    Mask |= 1ULL << Ty.getNeonEnum();
+    Mask |= 1ULL << Def->getPolymorphicKeyType().getNeonEnum();
 
     // Check if the function has a pointer or const pointer argument.
-    std::string Proto = Def->getProto();
     int PtrArgNum = -1;
     bool HasConstPtr = false;
     for (unsigned I = 0; I < Def->getNumParams(); ++I) {
-      char ArgType = Proto[I + 1];
-      if (ArgType == 'c') {
-        HasConstPtr = true;
+      const auto &Type = Def->getParamType(I);
+      if (Type.isPointer()) {
         PtrArgNum = I;
-        break;
-      }
-      if (ArgType == 'p') {
-        PtrArgNum = I;
-        break;
+        HasConstPtr = Type.isConstPointer();
       }
     }
+
     // For sret builtins, adjust the pointer argument index.
     if (PtrArgNum >= 0 && Def->getReturnType().getNumVectors() > 1)
       PtrArgNum += 1;
@@ -2349,7 +2225,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   bool InIfdef = false;
   for (auto &TS : TDTypeVec) {
     bool IsA64 = false;
-    Type T(TS, 'd');
+    Type T(TS, ".");
     if (T.isDouble() || (T.isPoly() && T.getElementSizeInBits() == 64))
       IsA64 = true;
 
@@ -2382,7 +2258,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   for (unsigned NumMembers = 2; NumMembers <= 4; ++NumMembers) {
     for (auto &TS : TDTypeVec) {
       bool IsA64 = false;
-      Type T(TS, 'd');
+      Type T(TS, ".");
       if (T.isDouble() || (T.isPoly() && T.getElementSizeInBits() == 64))
         IsA64 = true;
 
@@ -2395,8 +2271,8 @@ void NeonEmitter::run(raw_ostream &OS) {
         InIfdef = true;
       }
 
-      char M = '2' + (NumMembers - 2);
-      Type VT(TS, M);
+      const char Mods[] = { static_cast<char>('2' + (NumMembers - 2)), 0};
+      Type VT(TS, Mods);
       OS << "typedef struct " << VT.str() << " {\n";
       OS << "  " << T.str() << " val";
       OS << "[" << NumMembers << "]";

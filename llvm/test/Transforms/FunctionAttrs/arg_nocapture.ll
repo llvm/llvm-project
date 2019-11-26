@@ -260,8 +260,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; FIXME: %a should have align 8
-; CHECK: define nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly dereferenceable(16) "no-capture-maybe-returned" %a)
+; CHECK: define nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" %a)
 define i64* @not_captured_but_returned_1(i64* %a) #0 {
 entry:
   %add.ptr = getelementptr inbounds i64, i64* %a, i64 1

@@ -2069,7 +2069,7 @@ let Predicates = [FeatureProcessorAssist] in {
     def PPA : SideEffectTernaryRRFc<"ppa", 0xB2E8, GR64, GR64, imm32zx4>;
   def : Pat<(int_s390_ppa_txassist GR32:$src),
             (PPA (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, subreg_l32),
-                 0, 1)>;
+                 zero_reg, 1)>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -40,10 +40,9 @@
 
 ; GCN: [[FLOW]]: ; %Flow
 ; GCN:           ;   in Loop: Header=BB0_1 Depth=1
-; GCN:      s_and_b64         [[BROKEN_MASK]], exec, [[INNER_MASK]]
-; GCN:      s_or_b64          [[BROKEN_MASK]], [[BROKEN_MASK]], [[ACCUM_MASK]]
-; GCN:      s_mov_b64         [[ACCUM_MASK]], [[BROKEN_MASK]]
-; GCN:      s_andn2_b64       exec, exec, [[BROKEN_MASK]]
+; GCN:      s_and_b64         [[AND_MASK:s\[[0-9]+:[0-9]+\]]], exec, [[INNER_MASK]]
+; GCN-NEXT: s_or_b64          [[ACCUM_MASK]], [[AND_MASK]], [[ACCUM_MASK]]
+; GCN-NEXT: s_andn2_b64       exec, exec, [[ACCUM_MASK]]
 ; GCN-NEXT: s_cbranch_execnz  [[LOOP_ENTRY]]
 
 ; GCN: ; %bb.4: ; %bb9

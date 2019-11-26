@@ -63,6 +63,16 @@
 # CONST-NEXT: >>> referenced by {{.*}}
 # CONST-NEXT: >>> did you mean: foo(int const*)
 
+## Case mismatch.
+# RUN: echo 'call _Z3FOOPKi' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
+# RUN: not ld.lld %t.o %t1.o -o /dev/null 2>&1 | FileCheck --check-prefix=CASE %s
+# RUN: echo '_Z3fooPKi: call _Z3FOOPKi' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
+# RUN: not ld.lld %t1.o -o /dev/null 2>&1 | FileCheck --check-prefix=CASE %s
+
+# CASE:      error: undefined symbol: FOO(int const*)
+# CASE-NEXT: >>> referenced by {{.*}}
+# CASE-NEXT: >>> did you mean: foo(int const*)
+
 .globl _start, abcde, _Z3fooPKi
 _start:
 abcde:

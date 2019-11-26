@@ -1074,7 +1074,8 @@ static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
 static void sectionMapping(IO &IO, ELFYAML::VerdefSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Info", Section.Info);
-  IO.mapRequired("Entries", Section.Entries);
+  IO.mapOptional("Entries", Section.Entries);
+  IO.mapOptional("Content", Section.Content);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::SymverSection &Section) {
@@ -1416,6 +1417,13 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
       return {};
     if (F->Pattern->binary_size() != 0 && !F->Size)
       return "\"Size\" can't be 0 when \"Pattern\" is not empty";
+    return {};
+  }
+
+  if (const auto *VD = dyn_cast<ELFYAML::VerdefSection>(C.get())) {
+    if (VD->Entries && VD->Content)
+      return "SHT_GNU_verdef: \"Entries\" and \"Content\" can't be used "
+             "together";
     return {};
   }
 

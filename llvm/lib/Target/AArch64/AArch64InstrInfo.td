@@ -262,15 +262,17 @@ def SDT_AArch64WrapperLarge : SDTypeProfile<1, 4,
 // non-extending masked load fragment.
 def nonext_masked_load :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
-          (masked_ld node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD;
+          (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
+  return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
+         cast<MaskedLoadSDNode>(N)->isUnindexed();
 }]>;
 // sign extending masked load fragments.
 def asext_masked_load :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
-          (masked_ld node:$ptr, node:$pred, node:$def),[{
-  return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD ||
-         cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD;
+          (masked_ld node:$ptr, undef, node:$pred, node:$def),[{
+  return (cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD ||
+          cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD) &&
+         cast<MaskedLoadSDNode>(N)->isUnindexed();
 }]>;
 def asext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
@@ -290,8 +292,9 @@ def asext_masked_load_i32 :
 // zero extending masked load fragments.
 def zext_masked_load :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
-          (masked_ld node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD;
+          (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
+  return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD &&
+         cast<MaskedLoadSDNode>(N)->isUnindexed();
 }]>;
 def zext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
@@ -312,14 +315,16 @@ def zext_masked_load_i32 :
 // non-truncating masked store fragment.
 def nontrunc_masked_store :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
-          (masked_st node:$val, node:$ptr, node:$pred), [{
-  return !cast<MaskedStoreSDNode>(N)->isTruncatingStore();
+          (masked_st node:$val, node:$ptr, undef, node:$pred), [{
+  return !cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
+         cast<MaskedStoreSDNode>(N)->isUnindexed();
 }]>;
 // truncating masked store fragments.
 def trunc_masked_store :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
-          (masked_st node:$val, node:$ptr, node:$pred), [{
-  return cast<MaskedStoreSDNode>(N)->isTruncatingStore();
+          (masked_st node:$val, node:$ptr, undef, node:$pred), [{
+  return cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
+         cast<MaskedStoreSDNode>(N)->isUnindexed();
 }]>;
 def trunc_masked_store_i8 :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),

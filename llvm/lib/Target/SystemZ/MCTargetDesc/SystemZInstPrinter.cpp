@@ -41,8 +41,12 @@ void SystemZInstPrinter::printAddress(unsigned Base, int64_t Disp,
 
 void SystemZInstPrinter::printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
                                       raw_ostream &O) {
-  if (MO.isReg())
-    O << '%' << getRegisterName(MO.getReg());
+  if (MO.isReg()) {
+    if (!MO.getReg())
+      O << '0';
+    else
+      O << '%' << getRegisterName(MO.getReg());
+  }
   else if (MO.isImm())
     O << MO.getImm();
   else if (MO.isExpr())

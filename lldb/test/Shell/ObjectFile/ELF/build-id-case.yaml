@@ -4,8 +4,25 @@
 # RUN: llvm-objcopy --strip-all %t/.build-id/1b/8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug %t/stripped.out
 # RUN: lldb-test object-file %t/stripped.out | FileCheck %s
 
+# CHECK: Name: .debug_abbrev
+# CHECK: Name: .debug_addr
+# CHECK: Name: .debug_aranges
 # CHECK: Name: .debug_frame
-# CHECK-NEXT: Type: dwarf-frame
+# CHECK: Name: .debug_info
+# CHECK: Name: .debug_line
+# CHECK: Name: .debug_line_str
+# CHECK: Name: .debug_loc
+# CHECK: Name: .debug_loclists
+# CHECK: Name: .debug_macinfo
+# CHECK: Name: .debug_macro
+# CHECK: Name: .debug_names
+# CHECK: Name: .debug_pubnames
+# CHECK: Name: .debug_pubtypes
+# CHECK: Name: .debug_ranges
+# CHECK: Name: .debug_rnglists
+# CHECK: Name: .debug_str
+# CHECK: Name: .debug_str_offsets
+# CHECK: Name: .debug_types
 
 --- !ELF
 FileHeader:
@@ -27,9 +44,62 @@ Sections:
     Address:         0x00000000004003D0
     AddressAlign:    0x0000000000000010
     Content:         DEADBEEFBAADF00D
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_addr
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_aranges
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
   - Name:            .debug_frame
     Type:            SHT_PROGBITS
-    AddressAlign:    0x0000000000000008
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loc
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loclists
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_macinfo
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_macro
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_names
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_pubnames
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_pubtypes
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_ranges
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_rnglists
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_str
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_types
+    Type:            SHT_PROGBITS
     Content:         DEADBEEFBAADF00D
 Symbols:
   - Name:            main

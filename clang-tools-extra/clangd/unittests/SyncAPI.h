@@ -38,8 +38,8 @@ runLocateSymbolAt(ClangdServer &Server, PathRef File, Position Pos);
 llvm::Expected<std::vector<DocumentHighlight>>
 runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos);
 
-llvm::Expected<std::vector<TextEdit>>
-runRename(ClangdServer &Server, PathRef File, Position Pos, StringRef NewName);
+llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
+                                    Position Pos, StringRef NewName);
 
 std::string runDumpAST(ClangdServer &Server, PathRef File);
 

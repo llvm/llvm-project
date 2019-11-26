@@ -10,12 +10,12 @@ the following CMake vars:
 
 - BUILD_CLANG_FORMAT_VS_PLUGIN=ON
 
-- NUGET_EXE_PATH=path/to/nuget_dir (unless nuget.exe is already available in PATH)
+- NUGET_EXE_DIR=path/to/nuget_dir (unless nuget.exe is already available in PATH)
 
 example:
   cd /d C:\code\llvm
   mkdir build & cd build
-  cmake -DBUILD_CLANG_FORMAT_VS_PLUGIN=ON -DNUGET_EXE_PATH=C:\nuget ..
+  cmake -DBUILD_CLANG_FORMAT_VS_PLUGIN=ON -DNUGET_EXE_DIR=C:\nuget ..
 
 Once LLVM.sln is generated, build the clang_format_vsix target, which will build
 ClangFormat.sln, the C# extension application.

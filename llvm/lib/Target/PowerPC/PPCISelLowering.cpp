@@ -52,6 +52,7 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/CallSite.h"
@@ -5326,16 +5327,19 @@ SDValue PPCTargetLowering::FinishCall(
     GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Callee);
     auto &Context = DAG.getMachineFunction().getMMI().getContext();
 
+    const GlobalObject *GO = cast<GlobalObject>(G->getGlobal());
     MCSymbolXCOFF *S = cast<MCSymbolXCOFF>(Context.getOrCreateSymbol(
-        Twine(".") + Twine(G->getGlobal()->getName())));
+        Twine(".") + Twine(GO->getName())));
 
-    const GlobalValue *GV = G->getGlobal();
-    if (GV && GV->isDeclaration() && !S->hasContainingCsect()) {
-      // On AIX, undefined symbol need to associate with a MCSectionXCOFF to
-      // get the correct storage mapping class. In this case, XCOFF::XMC_PR.
+    if (GO && GO->isDeclaration() && !S->hasContainingCsect()) {
+      // On AIX, an undefined symbol needs to be associated with a
+      // MCSectionXCOFF to get the correct storage mapping class.
+      // In this case, XCOFF::XMC_PR.
+      const XCOFF::StorageClass SC =
+          TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
       MCSectionXCOFF *Sec =
           Context.getXCOFFSection(S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER,
-                                  XCOFF::C_EXT, SectionKind::getMetadata());
+                                  SC, SectionKind::getMetadata());
       S->setContainingCsect(Sec);
     }
 

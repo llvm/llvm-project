@@ -463,13 +463,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
   const dw_tag_t tag = die.Tag();
 
-  Type::ResolveState resolve_state = Type::ResolveState::Unresolved;
-
-  Type::EncodingDataType encoding_data_type = Type::eEncodingIsUID;
-  CompilerType clang_type;
-
   TypeSP type_sp;
-  LanguageType cu_language = die.GetLanguage();
+
   switch (tag) {
   case DW_TAG_typedef:
   case DW_TAG_base_type:
@@ -480,830 +475,34 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_restrict_type:
   case DW_TAG_volatile_type:
   case DW_TAG_unspecified_type: {
-    if (tag == DW_TAG_typedef && attrs.type.IsValid()) {
-      // Try to parse a typedef from the (DWARF embedded in the) Clang
-      // module file first as modules can contain typedef'ed
-      // structures that have no names like:
-      //
-      //  typedef struct { int a; } Foo;
-      //
-      // In this case we will have a structure with no name and a
-      // typedef named "Foo" that points to this unnamed
-      // structure. The name in the typedef is the only identifier for
-      // the struct, so always try to get typedefs from Clang modules
-      // if possible.
-      //
-      // The type_sp returned will be empty if the typedef doesn't
-      // exist in a module file, so it is cheap to call this function
-      // just to check.
-      //
-      // If we don't do this we end up creating a TypeSP that says
-      // this is a typedef to type 0x123 (the DW_AT_type value would
-      // be 0x123 in the DW_TAG_typedef), and this is the unnamed
-      // structure type. We will have a hard time tracking down an
-      // unnammed structure type in the module debug info, so we make
-      // sure we don't get into this situation by always resolving
-      // typedefs from the module.
-      const DWARFDIE encoding_die = attrs.type.Reference();
-
-      // First make sure that the die that this is typedef'ed to _is_
-      // just a declaration (DW_AT_declaration == 1), not a full
-      // definition since template types can't be represented in
-      // modules since only concrete instances of templates are ever
-      // emitted and modules won't contain those
-      if (encoding_die &&
-          encoding_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
-        type_sp = ParseTypeFromClangModule(sc, die, log);
-        if (type_sp)
-          return type_sp;
-      }
-    }
-
-    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\") type => 0x%8.8lx\n",
-                 die.GetID(), DW_TAG_value_to_name(tag), type_name_cstr,
-                 encoding_uid.Reference());
-
-    switch (tag) {
-    default:
-      break;
-
-    case DW_TAG_unspecified_type:
-      if (attrs.name == "nullptr_t" || attrs.name == "decltype(nullptr)") {
-        resolve_state = Type::ResolveState::Full;
-        clang_type = m_ast.GetBasicType(eBasicTypeNullPtr);
-        break;
-      }
-      // Fall through to base type below in case we can handle the type
-      // there...
-      LLVM_FALLTHROUGH;
-
-    case DW_TAG_base_type:
-      resolve_state = Type::ResolveState::Full;
-      clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-          attrs.name.GetCString(), attrs.encoding,
-          attrs.byte_size.getValueOr(0) * 8);
-      break;
-
-    case DW_TAG_pointer_type:
-      encoding_data_type = Type::eEncodingIsPointerUID;
-      break;
-    case DW_TAG_reference_type:
-      encoding_data_type = Type::eEncodingIsLValueReferenceUID;
-      break;
-    case DW_TAG_rvalue_reference_type:
-      encoding_data_type = Type::eEncodingIsRValueReferenceUID;
-      break;
-    case DW_TAG_typedef:
-      encoding_data_type = Type::eEncodingIsTypedefUID;
-      break;
-    case DW_TAG_const_type:
-      encoding_data_type = Type::eEncodingIsConstUID;
-      break;
-    case DW_TAG_restrict_type:
-      encoding_data_type = Type::eEncodingIsRestrictUID;
-      break;
-    case DW_TAG_volatile_type:
-      encoding_data_type = Type::eEncodingIsVolatileUID;
-      break;
-    }
-
-    if (!clang_type && (encoding_data_type == Type::eEncodingIsPointerUID ||
-                        encoding_data_type == Type::eEncodingIsTypedefUID)) {
-      if (tag == DW_TAG_pointer_type) {
-        DWARFDIE target_die = die.GetReferencedDIE(DW_AT_type);
-
-        if (target_die.GetAttributeValueAsUnsigned(DW_AT_APPLE_block, 0)) {
-          // Blocks have a __FuncPtr inside them which is a pointer to a
-          // function of the proper type.
-
-          for (DWARFDIE child_die = target_die.GetFirstChild();
-               child_die.IsValid(); child_die = child_die.GetSibling()) {
-            if (!strcmp(child_die.GetAttributeValueAsString(DW_AT_name, ""),
-                        "__FuncPtr")) {
-              DWARFDIE function_pointer_type =
-                  child_die.GetReferencedDIE(DW_AT_type);
-
-              if (function_pointer_type) {
-                DWARFDIE function_type =
-                    function_pointer_type.GetReferencedDIE(DW_AT_type);
-
-                bool function_type_is_new_pointer;
-                TypeSP lldb_function_type_sp = ParseTypeFromDWARF(
-                    sc, function_type, &function_type_is_new_pointer);
-
-                if (lldb_function_type_sp) {
-                  clang_type = m_ast.CreateBlockPointerType(
-                      lldb_function_type_sp->GetForwardCompilerType());
-                  encoding_data_type = Type::eEncodingIsUID;
-                  attrs.type.Clear();
-                  resolve_state = Type::ResolveState::Full;
-                }
-              }
-
-              break;
-            }
-          }
-        }
-      }
-
-      if (cu_language == eLanguageTypeObjC ||
-          cu_language == eLanguageTypeObjC_plus_plus) {
-        if (attrs.name) {
-          static ConstString g_objc_type_name_id("id");
-          static ConstString g_objc_type_name_Class("Class");
-          static ConstString g_objc_type_name_selector("SEL");
-
-          if (attrs.name == g_objc_type_name_id) {
-            if (log)
-              dwarf->GetObjectFile()->GetModule()->LogMessage(
-                  log,
-                  "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
-                  "is Objective-C 'id' built-in type.",
-                  die.GetOffset(), die.GetTagAsCString(), die.GetName());
-            clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
-            encoding_data_type = Type::eEncodingIsUID;
-            attrs.type.Clear();
-            resolve_state = Type::ResolveState::Full;
-
-          } else if (attrs.name == g_objc_type_name_Class) {
-            if (log)
-              dwarf->GetObjectFile()->GetModule()->LogMessage(
-                  log,
-                  "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
-                  "is Objective-C 'Class' built-in type.",
-                  die.GetOffset(), die.GetTagAsCString(), die.GetName());
-            clang_type = m_ast.GetBasicType(eBasicTypeObjCClass);
-            encoding_data_type = Type::eEncodingIsUID;
-            attrs.type.Clear();
-            resolve_state = Type::ResolveState::Full;
-          } else if (attrs.name == g_objc_type_name_selector) {
-            if (log)
-              dwarf->GetObjectFile()->GetModule()->LogMessage(
-                  log,
-                  "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
-                  "is Objective-C 'selector' built-in type.",
-                  die.GetOffset(), die.GetTagAsCString(), die.GetName());
-            clang_type = m_ast.GetBasicType(eBasicTypeObjCSel);
-            encoding_data_type = Type::eEncodingIsUID;
-            attrs.type.Clear();
-            resolve_state = Type::ResolveState::Full;
-          }
-        } else if (encoding_data_type == Type::eEncodingIsPointerUID &&
-                   attrs.type.IsValid()) {
-          // Clang sometimes erroneously emits id as objc_object*.  In that
-          // case we fix up the type to "id".
-
-          const DWARFDIE encoding_die = attrs.type.Reference();
-
-          if (encoding_die && encoding_die.Tag() == DW_TAG_structure_type) {
-            if (const char *struct_name = encoding_die.GetName()) {
-              if (!strcmp(struct_name, "objc_object")) {
-                if (log)
-                  dwarf->GetObjectFile()->GetModule()->LogMessage(
-                      log,
-                      "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s "
-                      "'%s' is 'objc_object*', which we overrode to "
-                      "'id'.",
-                      die.GetOffset(), die.GetTagAsCString(), die.GetName());
-                clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
-                encoding_data_type = Type::eEncodingIsUID;
-                attrs.type.Clear();
-                resolve_state = Type::ResolveState::Full;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    type_sp = std::make_shared<Type>(
-        die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
-        dwarf->GetUID(attrs.type.Reference()), encoding_data_type, &attrs.decl,
-        clang_type, resolve_state);
-
-    dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
-  } break;
+    type_sp = ParseTypeModifier(sc, die, attrs);
+    break;
+  }
 
   case DW_TAG_structure_type:
   case DW_TAG_union_type:
   case DW_TAG_class_type: {
-    assert((!type_sp && !clang_type) &&
-           "Did not expect partially computed structure-like type");
-    TypeSP struct_like_type_sp = ParseStructureLikeDIE(sc, die, attrs);
-    return UpdateSymbolContextScopeForType(sc, die, struct_like_type_sp);
+    type_sp = ParseStructureLikeDIE(sc, die, attrs);
+    break;
   }
 
   case DW_TAG_enumeration_type: {
-    if (attrs.is_forward_declaration) {
-      type_sp = ParseTypeFromClangModule(sc, die, log);
-      if (type_sp)
-        return type_sp;
-
-      DWARFDeclContext die_decl_ctx;
-      die.GetDWARFDeclContext(die_decl_ctx);
-
-      type_sp = dwarf->FindDefinitionTypeForDWARFDeclContext(die_decl_ctx);
-
-      if (!type_sp) {
-        SymbolFileDWARFDebugMap *debug_map_symfile =
-            dwarf->GetDebugMapSymfile();
-        if (debug_map_symfile) {
-          // We weren't able to find a full declaration in this DWARF,
-          // see if we have a declaration anywhere else...
-          type_sp = debug_map_symfile->FindDefinitionTypeForDWARFDeclContext(
-              die_decl_ctx);
-        }
-      }
-
-      if (type_sp) {
-        if (log) {
-          dwarf->GetObjectFile()->GetModule()->LogMessage(
-              log,
-              "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" is a "
-              "forward declaration, complete type is 0x%8.8" PRIx64,
-              static_cast<void *>(this), die.GetOffset(),
-              DW_TAG_value_to_name(tag), attrs.name.GetCString(),
-              type_sp->GetID());
-        }
-
-        // We found a real definition for this type elsewhere so lets use
-        // it and cache the fact that we found a complete type for this
-        // die
-        dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
-        clang::DeclContext *defn_decl_ctx =
-            GetCachedClangDeclContextForDIE(dwarf->GetDIE(type_sp->GetID()));
-        if (defn_decl_ctx)
-          LinkDeclContextToDIE(defn_decl_ctx, die);
-        return type_sp;
-      }
-    }
-    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-                 DW_TAG_value_to_name(tag), type_name_cstr);
-
-    CompilerType enumerator_clang_type;
-    clang_type.SetCompilerType(
-        &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
-    if (!clang_type) {
-      if (attrs.type.IsValid()) {
-        Type *enumerator_type =
-            dwarf->ResolveTypeUID(attrs.type.Reference(), true);
-        if (enumerator_type)
-          enumerator_clang_type = enumerator_type->GetFullCompilerType();
-      }
-
-      if (!enumerator_clang_type) {
-        if (attrs.byte_size) {
-          enumerator_clang_type =
-              m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-                  NULL, DW_ATE_signed, *attrs.byte_size * 8);
-        } else {
-          enumerator_clang_type = m_ast.GetBasicType(eBasicTypeInt);
-        }
-      }
-
-      clang_type = m_ast.CreateEnumerationType(
-          attrs.name.GetCString(),
-          GetClangDeclContextContainingDIE(die, nullptr), attrs.decl,
-          enumerator_clang_type, attrs.is_scoped_enum);
-    } else {
-      enumerator_clang_type =
-          m_ast.GetEnumerationIntegerType(clang_type.GetOpaqueQualType());
-    }
-
-    LinkDeclContextToDIE(ClangASTContext::GetDeclContextForType(clang_type),
-                         die);
-
-    type_sp = std::make_shared<Type>(
-        die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
-        dwarf->GetUID(attrs.type.Reference()), Type::eEncodingIsUID,
-        &attrs.decl, clang_type, Type::ResolveState::Forward);
-
-    if (ClangASTContext::StartTagDeclarationDefinition(clang_type)) {
-      if (die.HasChildren()) {
-        bool is_signed = false;
-        enumerator_clang_type.IsIntegerType(is_signed);
-        ParseChildEnumerators(clang_type, is_signed,
-                              type_sp->GetByteSize().getValueOr(0), die);
-      }
-      ClangASTContext::CompleteTagDeclarationDefinition(clang_type);
-    } else {
-      dwarf->GetObjectFile()->GetModule()->ReportError(
-          "DWARF DIE at 0x%8.8x named \"%s\" was not able to start its "
-          "definition.\nPlease file a bug and attach the file at the "
-          "start of this error message",
-          die.GetOffset(), attrs.name.GetCString());
-    }
-  } break;
+    type_sp = ParseEnum(sc, die, attrs);
+    break;
+  }
 
   case DW_TAG_inlined_subroutine:
   case DW_TAG_subprogram:
   case DW_TAG_subroutine_type: {
-    bool is_variadic = false;
-    bool is_static = false;
-    bool has_template_params = false;
-
-    unsigned type_quals = 0;
-
-    std::string object_pointer_name;
-    if (attrs.object_pointer) {
-      const char *object_pointer_name_cstr = attrs.object_pointer.GetName();
-      if (object_pointer_name_cstr)
-        object_pointer_name = object_pointer_name_cstr;
-    }
-
-    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-                 DW_TAG_value_to_name(tag), type_name_cstr);
-
-    CompilerType return_clang_type;
-    Type *func_type = NULL;
-
-    if (attrs.type.IsValid())
-      func_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
-
-    if (func_type)
-      return_clang_type = func_type->GetForwardCompilerType();
-    else
-      return_clang_type = m_ast.GetBasicType(eBasicTypeVoid);
-
-    std::vector<CompilerType> function_param_types;
-    std::vector<clang::ParmVarDecl *> function_param_decls;
-
-    // Parse the function children for the parameters
-
-    DWARFDIE decl_ctx_die;
-    clang::DeclContext *containing_decl_ctx =
-        GetClangDeclContextContainingDIE(die, &decl_ctx_die);
-    const clang::Decl::Kind containing_decl_kind =
-        containing_decl_ctx->getDeclKind();
-
-    bool is_cxx_method = DeclKindIsCXXClass(containing_decl_kind);
-    // Start off static. This will be set to false in
-    // ParseChildParameters(...) if we find a "this" parameters as the
-    // first parameter
-    if (is_cxx_method) {
-      is_static = true;
-    }
-
-    if (die.HasChildren()) {
-      bool skip_artificial = true;
-      ParseChildParameters(containing_decl_ctx, die, skip_artificial, is_static,
-                           is_variadic, has_template_params,
-                           function_param_types, function_param_decls,
-                           type_quals);
-    }
-
-    bool ignore_containing_context = false;
-    // Check for templatized class member functions. If we had any
-    // DW_TAG_template_type_parameter or DW_TAG_template_value_parameter
-    // the DW_TAG_subprogram DIE, then we can't let this become a method in
-    // a class. Why? Because templatized functions are only emitted if one
-    // of the templatized methods is used in the current compile unit and
-    // we will end up with classes that may or may not include these member
-    // functions and this means one class won't match another class
-    // definition and it affects our ability to use a class in the clang
-    // expression parser. So for the greater good, we currently must not
-    // allow any template member functions in a class definition.
-    if (is_cxx_method && has_template_params) {
-      ignore_containing_context = true;
-      is_cxx_method = false;
-    }
-
-    // clang_type will get the function prototype clang type after this
-    // call
-    clang_type = m_ast.CreateFunctionType(
-        return_clang_type, function_param_types.data(),
-        function_param_types.size(), is_variadic, type_quals);
-
-    if (attrs.name) {
-      bool type_handled = false;
-      if (tag == DW_TAG_subprogram || tag == DW_TAG_inlined_subroutine) {
-        ObjCLanguage::MethodName objc_method(attrs.name.GetStringRef(), true);
-        if (objc_method.IsValid(true)) {
-          CompilerType class_opaque_type;
-          ConstString class_name(objc_method.GetClassName());
-          if (class_name) {
-            TypeSP complete_objc_class_type_sp(
-                dwarf->FindCompleteObjCDefinitionTypeForDIE(DWARFDIE(),
-                                                            class_name, false));
-
-            if (complete_objc_class_type_sp) {
-              CompilerType type_clang_forward_type =
-                  complete_objc_class_type_sp->GetForwardCompilerType();
-              if (ClangASTContext::IsObjCObjectOrInterfaceType(
-                      type_clang_forward_type))
-                class_opaque_type = type_clang_forward_type;
-            }
-          }
-
-          if (class_opaque_type) {
-            // If accessibility isn't set to anything valid, assume public
-            // for now...
-            if (attrs.accessibility == eAccessNone)
-              attrs.accessibility = eAccessPublic;
-
-            clang::ObjCMethodDecl *objc_method_decl =
-                m_ast.AddMethodToObjCObjectType(
-                    class_opaque_type, attrs.name.GetCString(), clang_type,
-                    attrs.accessibility, attrs.is_artificial, is_variadic);
-            type_handled = objc_method_decl != NULL;
-            if (type_handled) {
-              LinkDeclContextToDIE(objc_method_decl, die);
-              m_ast.SetMetadataAsUserID(objc_method_decl, die.GetID());
-            } else {
-              dwarf->GetObjectFile()->GetModule()->ReportError(
-                  "{0x%8.8x}: invalid Objective-C method 0x%4.4x (%s), "
-                  "please file a bug and attach the file at the start of "
-                  "this error message",
-                  die.GetOffset(), tag, DW_TAG_value_to_name(tag));
-            }
-          }
-        } else if (is_cxx_method) {
-          // Look at the parent of this DIE and see if is is a class or
-          // struct and see if this is actually a C++ method
-          Type *class_type = dwarf->ResolveType(decl_ctx_die);
-          if (class_type) {
-            bool alternate_defn = false;
-            if (class_type->GetID() != decl_ctx_die.GetID() ||
-                IsClangModuleFwdDecl(decl_ctx_die)) {
-              alternate_defn = true;
-
-              // We uniqued the parent class of this function to another
-              // class so we now need to associate all dies under
-              // "decl_ctx_die" to DIEs in the DIE for "class_type"...
-              DWARFDIE class_type_die = dwarf->GetDIE(class_type->GetID());
-
-              if (class_type_die) {
-                std::vector<DWARFDIE> failures;
-
-                CopyUniqueClassMethodTypes(decl_ctx_die, class_type_die,
-                                           class_type, failures);
-
-                // FIXME do something with these failures that's
-                // smarter than just dropping them on the ground.
-                // Unfortunately classes don't like having stuff added
-                // to them after their definitions are complete...
-
-                type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
-                if (type_ptr && type_ptr != DIE_IS_BEING_PARSED) {
-                  type_sp = type_ptr->shared_from_this();
-                  break;
-                }
-              }
-            }
-
-            if (attrs.specification.IsValid()) {
-              // We have a specification which we are going to base our
-              // function prototype off of, so we need this type to be
-              // completed so that the m_die_to_decl_ctx for the method in
-              // the specification has a valid clang decl context.
-              class_type->GetForwardCompilerType();
-              // If we have a specification, then the function type should
-              // have been made with the specification and not with this
-              // die.
-              DWARFDIE spec_die = attrs.specification.Reference();
-              clang::DeclContext *spec_clang_decl_ctx =
-                  GetClangDeclContextForDIE(spec_die);
-              if (spec_clang_decl_ctx) {
-                LinkDeclContextToDIE(spec_clang_decl_ctx, die);
-              } else {
-                dwarf->GetObjectFile()->GetModule()->ReportWarning(
-                    "0x%8.8" PRIx64 ": DW_AT_specification(0x%8.8x"
-                    ") has no decl\n",
-                    die.GetID(), spec_die.GetOffset());
-              }
-              type_handled = true;
-            } else if (attrs.abstract_origin.IsValid()) {
-              // We have a specification which we are going to base our
-              // function prototype off of, so we need this type to be
-              // completed so that the m_die_to_decl_ctx for the method in
-              // the abstract origin has a valid clang decl context.
-              class_type->GetForwardCompilerType();
-
-              DWARFDIE abs_die = attrs.abstract_origin.Reference();
-              clang::DeclContext *abs_clang_decl_ctx =
-                  GetClangDeclContextForDIE(abs_die);
-              if (abs_clang_decl_ctx) {
-                LinkDeclContextToDIE(abs_clang_decl_ctx, die);
-              } else {
-                dwarf->GetObjectFile()->GetModule()->ReportWarning(
-                    "0x%8.8" PRIx64 ": DW_AT_abstract_origin(0x%8.8x"
-                    ") has no decl\n",
-                    die.GetID(), abs_die.GetOffset());
-              }
-              type_handled = true;
-            } else {
-              CompilerType class_opaque_type =
-                  class_type->GetForwardCompilerType();
-              if (ClangASTContext::IsCXXClassType(class_opaque_type)) {
-                if (class_opaque_type.IsBeingDefined() || alternate_defn) {
-                  if (!is_static && !die.HasChildren()) {
-                    // We have a C++ member function with no children (this
-                    // pointer!) and clang will get mad if we try and make
-                    // a function that isn't well formed in the DWARF, so
-                    // we will just skip it...
-                    type_handled = true;
-                  } else {
-                    bool add_method = true;
-                    if (alternate_defn) {
-                      // If an alternate definition for the class exists,
-                      // then add the method only if an equivalent is not
-                      // already present.
-                      clang::CXXRecordDecl *record_decl =
-                          m_ast.GetAsCXXRecordDecl(
-                              class_opaque_type.GetOpaqueQualType());
-                      if (record_decl) {
-                        for (auto method_iter = record_decl->method_begin();
-                             method_iter != record_decl->method_end();
-                             method_iter++) {
-                          clang::CXXMethodDecl *method_decl = *method_iter;
-                          if (method_decl->getNameInfo().getAsString() ==
-                              attrs.name.GetStringRef()) {
-                            if (method_decl->getType() ==
-                                ClangUtil::GetQualType(clang_type)) {
-                              add_method = false;
-                              LinkDeclContextToDIE(method_decl, die);
-                              type_handled = true;
-
-                              break;
-                            }
-                          }
-                        }
-                      }
-                    }
-
-                    if (add_method) {
-                      llvm::PrettyStackTraceFormat stack_trace(
-                          "SymbolFileDWARF::ParseType() is adding a method "
-                          "%s to class %s in DIE 0x%8.8" PRIx64 " from %s",
-                          attrs.name.GetCString(),
-                          class_type->GetName().GetCString(), die.GetID(),
-                          dwarf->GetObjectFile()
-                              ->GetFileSpec()
-                              .GetPath()
-                              .c_str());
-
-                      const bool is_attr_used = false;
-                      // Neither GCC 4.2 nor clang++ currently set a valid
-                      // accessibility in the DWARF for C++ methods...
-                      // Default to public for now...
-                      if (attrs.accessibility == eAccessNone)
-                        attrs.accessibility = eAccessPublic;
-
-                      clang::CXXMethodDecl *cxx_method_decl =
-                          m_ast.AddMethodToCXXRecordType(
-                              class_opaque_type.GetOpaqueQualType(),
-                              attrs.name.GetCString(), attrs.mangled_name,
-                              clang_type, attrs.accessibility, attrs.is_virtual,
-                              is_static, attrs.is_inline, attrs.is_explicit,
-                              is_attr_used, attrs.is_artificial);
-
-                      type_handled = cxx_method_decl != NULL;
-                      // Artificial methods are always handled even when we
-                      // don't create a new declaration for them.
-                      type_handled |= attrs.is_artificial;
-
-                      if (cxx_method_decl) {
-                        LinkDeclContextToDIE(cxx_method_decl, die);
-
-                        ClangASTMetadata metadata;
-                        metadata.SetUserID(die.GetID());
-
-                        if (!object_pointer_name.empty()) {
-                          metadata.SetObjectPtrName(
-                              object_pointer_name.c_str());
-                          LLDB_LOGF(log,
-                                    "Setting object pointer name: %s on method "
-                                    "object %p.\n",
-                                    object_pointer_name.c_str(),
-                                    static_cast<void *>(cxx_method_decl));
-                        }
-                        m_ast.SetMetadata(cxx_method_decl, metadata);
-                      } else {
-                        ignore_containing_context = true;
-                      }
-                    }
-                  }
-                } else {
-                  // We were asked to parse the type for a method in a
-                  // class, yet the class hasn't been asked to complete
-                  // itself through the clang::ExternalASTSource protocol,
-                  // so we need to just have the class complete itself and
-                  // do things the right way, then our
-                  // DIE should then have an entry in the
-                  // dwarf->GetDIEToType() map. First
-                  // we need to modify the dwarf->GetDIEToType() so it
-                  // doesn't think we are trying to parse this DIE
-                  // anymore...
-                  dwarf->GetDIEToType()[die.GetDIE()] = NULL;
-
-                  // Now we get the full type to force our class type to
-                  // complete itself using the clang::ExternalASTSource
-                  // protocol which will parse all base classes and all
-                  // methods (including the method for this DIE).
-                  class_type->GetFullCompilerType();
-
-                  // The type for this DIE should have been filled in the
-                  // function call above
-                  type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
-                  if (type_ptr && type_ptr != DIE_IS_BEING_PARSED) {
-                    type_sp = type_ptr->shared_from_this();
-                    break;
-                  }
-
-                  // FIXME This is fixing some even uglier behavior but we
-                  // really need to
-                  // uniq the methods of each class as well as the class
-                  // itself. <rdar://problem/11240464>
-                  type_handled = true;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      if (!type_handled) {
-        clang::FunctionDecl *function_decl = nullptr;
-        clang::FunctionDecl *template_function_decl = nullptr;
-
-        if (attrs.abstract_origin.IsValid()) {
-          DWARFDIE abs_die = attrs.abstract_origin.Reference();
-
-          if (dwarf->ResolveType(abs_die)) {
-            function_decl = llvm::dyn_cast_or_null<clang::FunctionDecl>(
-                GetCachedClangDeclContextForDIE(abs_die));
-
-            if (function_decl) {
-              LinkDeclContextToDIE(function_decl, die);
-            }
-          }
-        }
-
-        if (!function_decl) {
-          // We just have a function that isn't part of a class
-          function_decl = m_ast.CreateFunctionDeclaration(
-              ignore_containing_context ? m_ast.GetTranslationUnitDecl()
-                                        : containing_decl_ctx,
-              attrs.name.GetCString(), clang_type, attrs.storage,
-              attrs.is_inline);
-
-          if (has_template_params) {
-            ClangASTContext::TemplateParameterInfos template_param_infos;
-            ParseTemplateParameterInfos(die, template_param_infos);
-            template_function_decl = m_ast.CreateFunctionDeclaration(
-                ignore_containing_context ? m_ast.GetTranslationUnitDecl()
-                                          : containing_decl_ctx,
-                attrs.name.GetCString(), clang_type, attrs.storage,
-                attrs.is_inline);
-            clang::FunctionTemplateDecl *func_template_decl =
-                m_ast.CreateFunctionTemplateDecl(
-                    containing_decl_ctx, template_function_decl,
-                    attrs.name.GetCString(), template_param_infos);
-            m_ast.CreateFunctionTemplateSpecializationInfo(
-                function_decl, func_template_decl, template_param_infos);
-          }
-
-          lldbassert(function_decl);
-
-          if (function_decl) {
-            LinkDeclContextToDIE(function_decl, die);
-
-            if (!function_param_decls.empty()) {
-              m_ast.SetFunctionParameters(function_decl,
-                                          &function_param_decls.front(),
-                                          function_param_decls.size());
-              if (template_function_decl)
-                m_ast.SetFunctionParameters(template_function_decl,
-                                            &function_param_decls.front(),
-                                            function_param_decls.size());
-            }
-
-            ClangASTMetadata metadata;
-            metadata.SetUserID(die.GetID());
-
-            if (!object_pointer_name.empty()) {
-              metadata.SetObjectPtrName(object_pointer_name.c_str());
-              LLDB_LOGF(log,
-                        "Setting object pointer name: %s on function "
-                        "object %p.",
-                        object_pointer_name.c_str(),
-                        static_cast<void *>(function_decl));
-            }
-            m_ast.SetMetadata(function_decl, metadata);
-          }
-        }
-      }
-    }
-    type_sp = std::make_shared<Type>(
-        die.GetID(), dwarf, attrs.name, llvm::None, nullptr, LLDB_INVALID_UID,
-        Type::eEncodingIsUID, &attrs.decl, clang_type, Type::ResolveState::Full);
-    assert(type_sp.get());
-  } break;
-
+    type_sp = ParseSubroutine(die, attrs);
+    break;
+  }
   case DW_TAG_array_type: {
-    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-                 DW_TAG_value_to_name(tag), type_name_cstr);
-
-    DWARFDIE type_die = attrs.type.Reference();
-    Type *element_type = dwarf->ResolveTypeUID(type_die, true);
-
-    if (element_type) {
-      auto array_info = ParseChildArrayInfo(die);
-      if (array_info) {
-        attrs.byte_stride = array_info->byte_stride;
-        attrs.bit_stride = array_info->bit_stride;
-      }
-      if (attrs.byte_stride == 0 && attrs.bit_stride == 0)
-        attrs.byte_stride = element_type->GetByteSize().getValueOr(0);
-      CompilerType array_element_type = element_type->GetForwardCompilerType();
-
-      if (ClangASTContext::IsCXXClassType(array_element_type) &&
-          !array_element_type.GetCompleteType()) {
-        ModuleSP module_sp = die.GetModule();
-        if (module_sp) {
-          if (die.GetCU()->GetProducer() == eProducerClang)
-            module_sp->ReportError(
-                "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
-                "class/union/struct element type DIE 0x%8.8x that is a "
-                "forward declaration, not a complete definition.\nTry "
-                "compiling the source file with -fstandalone-debug or "
-                "disable -gmodules",
-                die.GetOffset(), type_die.GetOffset());
-          else
-            module_sp->ReportError(
-                "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
-                "class/union/struct element type DIE 0x%8.8x that is a "
-                "forward declaration, not a complete definition.\nPlease "
-                "file a bug against the compiler and include the "
-                "preprocessed output for %s",
-                die.GetOffset(), type_die.GetOffset(),
-                GetUnitName(die).c_str());
-        }
-
-        // We have no choice other than to pretend that the element class
-        // type is complete. If we don't do this, clang will crash when
-        // trying to layout the class. Since we provide layout
-        // assistance, all ivars in this class and other classes will be
-        // fine, this is the best we can do short of crashing.
-        if (ClangASTContext::StartTagDeclarationDefinition(
-                array_element_type)) {
-          ClangASTContext::CompleteTagDeclarationDefinition(array_element_type);
-        } else {
-          module_sp->ReportError("DWARF DIE at 0x%8.8x was not able to "
-                                 "start its definition.\nPlease file a "
-                                 "bug and attach the file at the start "
-                                 "of this error message",
-                                 type_die.GetOffset());
-        }
-      }
-
-      uint64_t array_element_bit_stride =
-          attrs.byte_stride * 8 + attrs.bit_stride;
-      if (array_info && array_info->element_orders.size() > 0) {
-        uint64_t num_elements = 0;
-        auto end = array_info->element_orders.rend();
-        for (auto pos = array_info->element_orders.rbegin(); pos != end;
-             ++pos) {
-          num_elements = *pos;
-          clang_type = m_ast.CreateArrayType(array_element_type, num_elements,
-                                             attrs.is_vector);
-          array_element_type = clang_type;
-          array_element_bit_stride =
-              num_elements ? array_element_bit_stride * num_elements
-                           : array_element_bit_stride;
-        }
-      } else {
-        clang_type = m_ast.CreateArrayType(array_element_type, 0, attrs.is_vector);
-      }
-      ConstString empty_name;
-      type_sp = std::make_shared<Type>(
-          die.GetID(), dwarf, empty_name, array_element_bit_stride / 8, nullptr,
-          dwarf->GetUID(type_die), Type::eEncodingIsUID, &attrs.decl,
-          clang_type, Type::ResolveState::Full);
-      type_sp->SetEncodingType(element_type);
-      m_ast.SetMetadataAsUserID(clang_type.GetOpaqueQualType(), die.GetID());
-    }
-  } break;
-
+    type_sp = ParseArrayType(die, attrs);
+    break;
+  }
   case DW_TAG_ptr_to_member_type: {
-    Type *pointee_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
-    Type *class_type =
-        dwarf->ResolveTypeUID(attrs.containing_type.Reference(), true);
-
-    CompilerType pointee_clang_type = pointee_type->GetForwardCompilerType();
-    CompilerType class_clang_type = class_type->GetLayoutCompilerType();
-
-    clang_type = ClangASTContext::CreateMemberPointerType(class_clang_type,
-                                                          pointee_clang_type);
-
-    if (llvm::Optional<uint64_t> clang_type_size =
-            clang_type.GetByteSize(nullptr)) {
-      type_sp = std::make_shared<Type>(
-          die.GetID(), dwarf, attrs.name, *clang_type_size, nullptr,
-          LLDB_INVALID_UID, Type::eEncodingIsUID, nullptr, clang_type,
-          Type::ResolveState::Forward);
-    }
-
+    type_sp = ParsePointerToMemberType(die, attrs);
     break;
   }
   default:
@@ -1320,6 +519,846 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   return UpdateSymbolContextScopeForType(sc, die, type_sp);
 }
 
+lldb::TypeSP
+DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
+                                       const DWARFDIE &die,
+                                       ParsedDWARFTypeAttributes &attrs) {
+  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
+                                        DWARF_LOG_LOOKUPS));
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  const dw_tag_t tag = die.Tag();
+  LanguageType cu_language = die.GetLanguage();
+  Type::ResolveState resolve_state = Type::ResolveState::Unresolved;
+  Type::EncodingDataType encoding_data_type = Type::eEncodingIsUID;
+  TypeSP type_sp;
+  CompilerType clang_type;
+
+  if (tag == DW_TAG_typedef && attrs.type.IsValid()) {
+    // Try to parse a typedef from the (DWARF embedded in the) Clang
+    // module file first as modules can contain typedef'ed
+    // structures that have no names like:
+    //
+    //  typedef struct { int a; } Foo;
+    //
+    // In this case we will have a structure with no name and a
+    // typedef named "Foo" that points to this unnamed
+    // structure. The name in the typedef is the only identifier for
+    // the struct, so always try to get typedefs from Clang modules
+    // if possible.
+    //
+    // The type_sp returned will be empty if the typedef doesn't
+    // exist in a module file, so it is cheap to call this function
+    // just to check.
+    //
+    // If we don't do this we end up creating a TypeSP that says
+    // this is a typedef to type 0x123 (the DW_AT_type value would
+    // be 0x123 in the DW_TAG_typedef), and this is the unnamed
+    // structure type. We will have a hard time tracking down an
+    // unnammed structure type in the module debug info, so we make
+    // sure we don't get into this situation by always resolving
+    // typedefs from the module.
+    const DWARFDIE encoding_die = attrs.type.Reference();
+
+    // First make sure that the die that this is typedef'ed to _is_
+    // just a declaration (DW_AT_declaration == 1), not a full
+    // definition since template types can't be represented in
+    // modules since only concrete instances of templates are ever
+    // emitted and modules won't contain those
+    if (encoding_die &&
+        encoding_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
+      type_sp = ParseTypeFromClangModule(sc, die, log);
+      if (type_sp)
+        return type_sp;
+    }
+  }
+
+  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\") type => 0x%8.8lx\n", die.GetID(),
+               DW_TAG_value_to_name(tag), type_name_cstr,
+               encoding_uid.Reference());
+
+  switch (tag) {
+  default:
+    break;
+
+  case DW_TAG_unspecified_type:
+    if (attrs.name == "nullptr_t" || attrs.name == "decltype(nullptr)") {
+      resolve_state = Type::ResolveState::Full;
+      clang_type = m_ast.GetBasicType(eBasicTypeNullPtr);
+      break;
+    }
+    // Fall through to base type below in case we can handle the type
+    // there...
+    LLVM_FALLTHROUGH;
+
+  case DW_TAG_base_type:
+    resolve_state = Type::ResolveState::Full;
+    clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
+        attrs.name.GetCString(), attrs.encoding,
+        attrs.byte_size.getValueOr(0) * 8);
+    break;
+
+  case DW_TAG_pointer_type:
+    encoding_data_type = Type::eEncodingIsPointerUID;
+    break;
+  case DW_TAG_reference_type:
+    encoding_data_type = Type::eEncodingIsLValueReferenceUID;
+    break;
+  case DW_TAG_rvalue_reference_type:
+    encoding_data_type = Type::eEncodingIsRValueReferenceUID;
+    break;
+  case DW_TAG_typedef:
+    encoding_data_type = Type::eEncodingIsTypedefUID;
+    break;
+  case DW_TAG_const_type:
+    encoding_data_type = Type::eEncodingIsConstUID;
+    break;
+  case DW_TAG_restrict_type:
+    encoding_data_type = Type::eEncodingIsRestrictUID;
+    break;
+  case DW_TAG_volatile_type:
+    encoding_data_type = Type::eEncodingIsVolatileUID;
+    break;
+  }
+
+  if (!clang_type && (encoding_data_type == Type::eEncodingIsPointerUID ||
+                      encoding_data_type == Type::eEncodingIsTypedefUID)) {
+    if (tag == DW_TAG_pointer_type) {
+      DWARFDIE target_die = die.GetReferencedDIE(DW_AT_type);
+
+      if (target_die.GetAttributeValueAsUnsigned(DW_AT_APPLE_block, 0)) {
+        // Blocks have a __FuncPtr inside them which is a pointer to a
+        // function of the proper type.
+
+        for (DWARFDIE child_die = target_die.GetFirstChild();
+             child_die.IsValid(); child_die = child_die.GetSibling()) {
+          if (!strcmp(child_die.GetAttributeValueAsString(DW_AT_name, ""),
+                      "__FuncPtr")) {
+            DWARFDIE function_pointer_type =
+                child_die.GetReferencedDIE(DW_AT_type);
+
+            if (function_pointer_type) {
+              DWARFDIE function_type =
+                  function_pointer_type.GetReferencedDIE(DW_AT_type);
+
+              bool function_type_is_new_pointer;
+              TypeSP lldb_function_type_sp = ParseTypeFromDWARF(
+                  sc, function_type, &function_type_is_new_pointer);
+
+              if (lldb_function_type_sp) {
+                clang_type = m_ast.CreateBlockPointerType(
+                    lldb_function_type_sp->GetForwardCompilerType());
+                encoding_data_type = Type::eEncodingIsUID;
+                attrs.type.Clear();
+                resolve_state = Type::ResolveState::Full;
+              }
+            }
+
+            break;
+          }
+        }
+      }
+    }
+
+    if (cu_language == eLanguageTypeObjC ||
+        cu_language == eLanguageTypeObjC_plus_plus) {
+      if (attrs.name) {
+        if (attrs.name == "id") {
+          if (log)
+            dwarf->GetObjectFile()->GetModule()->LogMessage(
+                log,
+                "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
+                "is Objective-C 'id' built-in type.",
+                die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
+          encoding_data_type = Type::eEncodingIsUID;
+          attrs.type.Clear();
+          resolve_state = Type::ResolveState::Full;
+        } else if (attrs.name == "Class") {
+          if (log)
+            dwarf->GetObjectFile()->GetModule()->LogMessage(
+                log,
+                "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
+                "is Objective-C 'Class' built-in type.",
+                die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          clang_type = m_ast.GetBasicType(eBasicTypeObjCClass);
+          encoding_data_type = Type::eEncodingIsUID;
+          attrs.type.Clear();
+          resolve_state = Type::ResolveState::Full;
+        } else if (attrs.name == "SEL") {
+          if (log)
+            dwarf->GetObjectFile()->GetModule()->LogMessage(
+                log,
+                "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
+                "is Objective-C 'selector' built-in type.",
+                die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          clang_type = m_ast.GetBasicType(eBasicTypeObjCSel);
+          encoding_data_type = Type::eEncodingIsUID;
+          attrs.type.Clear();
+          resolve_state = Type::ResolveState::Full;
+        }
+      } else if (encoding_data_type == Type::eEncodingIsPointerUID &&
+                 attrs.type.IsValid()) {
+        // Clang sometimes erroneously emits id as objc_object*.  In that
+        // case we fix up the type to "id".
+
+        const DWARFDIE encoding_die = attrs.type.Reference();
+
+        if (encoding_die && encoding_die.Tag() == DW_TAG_structure_type) {
+          llvm::StringRef struct_name = encoding_die.GetName();
+          if (struct_name == "objc_object") {
+            if (log)
+              dwarf->GetObjectFile()->GetModule()->LogMessage(
+                  log,
+                  "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s "
+                  "'%s' is 'objc_object*', which we overrode to "
+                  "'id'.",
+                  die.GetOffset(), die.GetTagAsCString(), die.GetName());
+            clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
+            encoding_data_type = Type::eEncodingIsUID;
+            attrs.type.Clear();
+            resolve_state = Type::ResolveState::Full;
+          }
+        }
+      }
+    }
+  }
+
+  type_sp = std::make_shared<Type>(
+      die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
+      dwarf->GetUID(attrs.type.Reference()), encoding_data_type, &attrs.decl,
+      clang_type, resolve_state);
+
+  dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
+  return type_sp;
+}
+
+TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
+                                      const DWARFDIE &die,
+                                      ParsedDWARFTypeAttributes &attrs) {
+  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
+                                        DWARF_LOG_LOOKUPS));
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  const dw_tag_t tag = die.Tag();
+  TypeSP type_sp;
+
+  if (attrs.is_forward_declaration) {
+    type_sp = ParseTypeFromClangModule(sc, die, log);
+    if (type_sp)
+      return type_sp;
+
+    DWARFDeclContext die_decl_ctx;
+    die.GetDWARFDeclContext(die_decl_ctx);
+
+    type_sp = dwarf->FindDefinitionTypeForDWARFDeclContext(die_decl_ctx);
+
+    if (!type_sp) {
+      SymbolFileDWARFDebugMap *debug_map_symfile = dwarf->GetDebugMapSymfile();
+      if (debug_map_symfile) {
+        // We weren't able to find a full declaration in this DWARF,
+        // see if we have a declaration anywhere else...
+        type_sp = debug_map_symfile->FindDefinitionTypeForDWARFDeclContext(
+            die_decl_ctx);
+      }
+    }
+
+    if (type_sp) {
+      if (log) {
+        dwarf->GetObjectFile()->GetModule()->LogMessage(
+            log,
+            "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" is a "
+            "forward declaration, complete type is 0x%8.8" PRIx64,
+            static_cast<void *>(this), die.GetOffset(),
+            DW_TAG_value_to_name(tag), attrs.name.GetCString(),
+            type_sp->GetID());
+      }
+
+      // We found a real definition for this type elsewhere so lets use
+      // it and cache the fact that we found a complete type for this
+      // die
+      dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
+      clang::DeclContext *defn_decl_ctx =
+          GetCachedClangDeclContextForDIE(dwarf->GetDIE(type_sp->GetID()));
+      if (defn_decl_ctx)
+        LinkDeclContextToDIE(defn_decl_ctx, die);
+      return type_sp;
+    }
+  }
+  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
+               DW_TAG_value_to_name(tag), type_name_cstr);
+
+  CompilerType enumerator_clang_type;
+  CompilerType clang_type;
+  clang_type.SetCompilerType(
+      &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+  if (!clang_type) {
+    if (attrs.type.IsValid()) {
+      Type *enumerator_type =
+          dwarf->ResolveTypeUID(attrs.type.Reference(), true);
+      if (enumerator_type)
+        enumerator_clang_type = enumerator_type->GetFullCompilerType();
+    }
+
+    if (!enumerator_clang_type) {
+      if (attrs.byte_size) {
+        enumerator_clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
+            NULL, DW_ATE_signed, *attrs.byte_size * 8);
+      } else {
+        enumerator_clang_type = m_ast.GetBasicType(eBasicTypeInt);
+      }
+    }
+
+    clang_type = m_ast.CreateEnumerationType(
+        attrs.name.GetCString(), GetClangDeclContextContainingDIE(die, nullptr),
+        attrs.decl, enumerator_clang_type, attrs.is_scoped_enum);
+  } else {
+    enumerator_clang_type =
+        m_ast.GetEnumerationIntegerType(clang_type.GetOpaqueQualType());
+  }
+
+  LinkDeclContextToDIE(ClangASTContext::GetDeclContextForType(clang_type), die);
+
+  type_sp = std::make_shared<Type>(
+      die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
+      dwarf->GetUID(attrs.type.Reference()), Type::eEncodingIsUID, &attrs.decl,
+      clang_type, Type::ResolveState::Forward);
+
+  if (ClangASTContext::StartTagDeclarationDefinition(clang_type)) {
+    if (die.HasChildren()) {
+      bool is_signed = false;
+      enumerator_clang_type.IsIntegerType(is_signed);
+      ParseChildEnumerators(clang_type, is_signed,
+                            type_sp->GetByteSize().getValueOr(0), die);
+    }
+    ClangASTContext::CompleteTagDeclarationDefinition(clang_type);
+  } else {
+    dwarf->GetObjectFile()->GetModule()->ReportError(
+        "DWARF DIE at 0x%8.8x named \"%s\" was not able to start its "
+        "definition.\nPlease file a bug and attach the file at the "
+        "start of this error message",
+        die.GetOffset(), attrs.name.GetCString());
+  }
+  return type_sp;
+}
+
+TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
+                           ParsedDWARFTypeAttributes &attrs) {
+  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
+                                        DWARF_LOG_LOOKUPS));
+
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  const dw_tag_t tag = die.Tag();
+
+  bool is_variadic = false;
+  bool is_static = false;
+  bool has_template_params = false;
+
+  unsigned type_quals = 0;
+
+  std::string object_pointer_name;
+  if (attrs.object_pointer) {
+    const char *object_pointer_name_cstr = attrs.object_pointer.GetName();
+    if (object_pointer_name_cstr)
+      object_pointer_name = object_pointer_name_cstr;
+  }
+
+  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
+               DW_TAG_value_to_name(tag), type_name_cstr);
+
+  CompilerType return_clang_type;
+  Type *func_type = NULL;
+
+  if (attrs.type.IsValid())
+    func_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
+
+  if (func_type)
+    return_clang_type = func_type->GetForwardCompilerType();
+  else
+    return_clang_type = m_ast.GetBasicType(eBasicTypeVoid);
+
+  std::vector<CompilerType> function_param_types;
+  std::vector<clang::ParmVarDecl *> function_param_decls;
+
+  // Parse the function children for the parameters
+
+  DWARFDIE decl_ctx_die;
+  clang::DeclContext *containing_decl_ctx =
+      GetClangDeclContextContainingDIE(die, &decl_ctx_die);
+  const clang::Decl::Kind containing_decl_kind =
+      containing_decl_ctx->getDeclKind();
+
+  bool is_cxx_method = DeclKindIsCXXClass(containing_decl_kind);
+  // Start off static. This will be set to false in
+  // ParseChildParameters(...) if we find a "this" parameters as the
+  // first parameter
+  if (is_cxx_method) {
+    is_static = true;
+  }
+
+  if (die.HasChildren()) {
+    bool skip_artificial = true;
+    ParseChildParameters(containing_decl_ctx, die, skip_artificial, is_static,
+                         is_variadic, has_template_params,
+                         function_param_types, function_param_decls,
+                         type_quals);
+  }
+
+  bool ignore_containing_context = false;
+  // Check for templatized class member functions. If we had any
+  // DW_TAG_template_type_parameter or DW_TAG_template_value_parameter
+  // the DW_TAG_subprogram DIE, then we can't let this become a method in
+  // a class. Why? Because templatized functions are only emitted if one
+  // of the templatized methods is used in the current compile unit and
+  // we will end up with classes that may or may not include these member
+  // functions and this means one class won't match another class
+  // definition and it affects our ability to use a class in the clang
+  // expression parser. So for the greater good, we currently must not
+  // allow any template member functions in a class definition.
+  if (is_cxx_method && has_template_params) {
+    ignore_containing_context = true;
+    is_cxx_method = false;
+  }
+
+  // clang_type will get the function prototype clang type after this
+  // call
+  CompilerType clang_type = m_ast.CreateFunctionType(
+      return_clang_type, function_param_types.data(),
+      function_param_types.size(), is_variadic, type_quals);
+
+  if (attrs.name) {
+    bool type_handled = false;
+    if (tag == DW_TAG_subprogram || tag == DW_TAG_inlined_subroutine) {
+      ObjCLanguage::MethodName objc_method(attrs.name.GetStringRef(), true);
+      if (objc_method.IsValid(true)) {
+        CompilerType class_opaque_type;
+        ConstString class_name(objc_method.GetClassName());
+        if (class_name) {
+          TypeSP complete_objc_class_type_sp(
+              dwarf->FindCompleteObjCDefinitionTypeForDIE(DWARFDIE(),
+                                                          class_name, false));
+
+          if (complete_objc_class_type_sp) {
+            CompilerType type_clang_forward_type =
+                complete_objc_class_type_sp->GetForwardCompilerType();
+            if (ClangASTContext::IsObjCObjectOrInterfaceType(
+                    type_clang_forward_type))
+              class_opaque_type = type_clang_forward_type;
+          }
+        }
+
+        if (class_opaque_type) {
+          // If accessibility isn't set to anything valid, assume public
+          // for now...
+          if (attrs.accessibility == eAccessNone)
+            attrs.accessibility = eAccessPublic;
+
+          clang::ObjCMethodDecl *objc_method_decl =
+              m_ast.AddMethodToObjCObjectType(
+                  class_opaque_type, attrs.name.GetCString(), clang_type,
+                  attrs.accessibility, attrs.is_artificial, is_variadic);
+          type_handled = objc_method_decl != NULL;
+          if (type_handled) {
+            LinkDeclContextToDIE(objc_method_decl, die);
+            m_ast.SetMetadataAsUserID(objc_method_decl, die.GetID());
+          } else {
+            dwarf->GetObjectFile()->GetModule()->ReportError(
+                "{0x%8.8x}: invalid Objective-C method 0x%4.4x (%s), "
+                "please file a bug and attach the file at the start of "
+                "this error message",
+                die.GetOffset(), tag, DW_TAG_value_to_name(tag));
+          }
+        }
+      } else if (is_cxx_method) {
+        // Look at the parent of this DIE and see if is is a class or
+        // struct and see if this is actually a C++ method
+        Type *class_type = dwarf->ResolveType(decl_ctx_die);
+        if (class_type) {
+          bool alternate_defn = false;
+          if (class_type->GetID() != decl_ctx_die.GetID() ||
+              IsClangModuleFwdDecl(decl_ctx_die)) {
+            alternate_defn = true;
+
+            // We uniqued the parent class of this function to another
+            // class so we now need to associate all dies under
+            // "decl_ctx_die" to DIEs in the DIE for "class_type"...
+            DWARFDIE class_type_die = dwarf->GetDIE(class_type->GetID());
+
+            if (class_type_die) {
+              std::vector<DWARFDIE> failures;
+
+              CopyUniqueClassMethodTypes(decl_ctx_die, class_type_die,
+                                         class_type, failures);
+
+              // FIXME do something with these failures that's
+              // smarter than just dropping them on the ground.
+              // Unfortunately classes don't like having stuff added
+              // to them after their definitions are complete...
+
+              Type *type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
+              if (type_ptr && type_ptr != DIE_IS_BEING_PARSED) {
+                return type_ptr->shared_from_this();
+              }
+            }
+          }
+
+          if (attrs.specification.IsValid()) {
+            // We have a specification which we are going to base our
+            // function prototype off of, so we need this type to be
+            // completed so that the m_die_to_decl_ctx for the method in
+            // the specification has a valid clang decl context.
+            class_type->GetForwardCompilerType();
+            // If we have a specification, then the function type should
+            // have been made with the specification and not with this
+            // die.
+            DWARFDIE spec_die = attrs.specification.Reference();
+            clang::DeclContext *spec_clang_decl_ctx =
+                GetClangDeclContextForDIE(spec_die);
+            if (spec_clang_decl_ctx) {
+              LinkDeclContextToDIE(spec_clang_decl_ctx, die);
+            } else {
+              dwarf->GetObjectFile()->GetModule()->ReportWarning(
+                  "0x%8.8" PRIx64 ": DW_AT_specification(0x%8.8x"
+                  ") has no decl\n",
+                  die.GetID(), spec_die.GetOffset());
+            }
+            type_handled = true;
+          } else if (attrs.abstract_origin.IsValid()) {
+            // We have a specification which we are going to base our
+            // function prototype off of, so we need this type to be
+            // completed so that the m_die_to_decl_ctx for the method in
+            // the abstract origin has a valid clang decl context.
+            class_type->GetForwardCompilerType();
+
+            DWARFDIE abs_die = attrs.abstract_origin.Reference();
+            clang::DeclContext *abs_clang_decl_ctx =
+                GetClangDeclContextForDIE(abs_die);
+            if (abs_clang_decl_ctx) {
+              LinkDeclContextToDIE(abs_clang_decl_ctx, die);
+            } else {
+              dwarf->GetObjectFile()->GetModule()->ReportWarning(
+                  "0x%8.8" PRIx64 ": DW_AT_abstract_origin(0x%8.8x"
+                  ") has no decl\n",
+                  die.GetID(), abs_die.GetOffset());
+            }
+            type_handled = true;
+          } else {
+            CompilerType class_opaque_type =
+                class_type->GetForwardCompilerType();
+            if (ClangASTContext::IsCXXClassType(class_opaque_type)) {
+              if (class_opaque_type.IsBeingDefined() || alternate_defn) {
+                if (!is_static && !die.HasChildren()) {
+                  // We have a C++ member function with no children (this
+                  // pointer!) and clang will get mad if we try and make
+                  // a function that isn't well formed in the DWARF, so
+                  // we will just skip it...
+                  type_handled = true;
+                } else {
+                  bool add_method = true;
+                  if (alternate_defn) {
+                    // If an alternate definition for the class exists,
+                    // then add the method only if an equivalent is not
+                    // already present.
+                    clang::CXXRecordDecl *record_decl =
+                        m_ast.GetAsCXXRecordDecl(
+                            class_opaque_type.GetOpaqueQualType());
+                    if (record_decl) {
+                      for (auto method_iter = record_decl->method_begin();
+                           method_iter != record_decl->method_end();
+                           method_iter++) {
+                        clang::CXXMethodDecl *method_decl = *method_iter;
+                        if (method_decl->getNameInfo().getAsString() ==
+                            attrs.name.GetStringRef()) {
+                          if (method_decl->getType() ==
+                              ClangUtil::GetQualType(clang_type)) {
+                            add_method = false;
+                            LinkDeclContextToDIE(method_decl, die);
+                            type_handled = true;
+
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }
+
+                  if (add_method) {
+                    llvm::PrettyStackTraceFormat stack_trace(
+                        "SymbolFileDWARF::ParseType() is adding a method "
+                        "%s to class %s in DIE 0x%8.8" PRIx64 " from %s",
+                        attrs.name.GetCString(),
+                        class_type->GetName().GetCString(), die.GetID(),
+                        dwarf->GetObjectFile()
+                            ->GetFileSpec()
+                            .GetPath()
+                            .c_str());
+
+                    const bool is_attr_used = false;
+                    // Neither GCC 4.2 nor clang++ currently set a valid
+                    // accessibility in the DWARF for C++ methods...
+                    // Default to public for now...
+                    if (attrs.accessibility == eAccessNone)
+                      attrs.accessibility = eAccessPublic;
+
+                    clang::CXXMethodDecl *cxx_method_decl =
+                        m_ast.AddMethodToCXXRecordType(
+                            class_opaque_type.GetOpaqueQualType(),
+                            attrs.name.GetCString(), attrs.mangled_name,
+                            clang_type, attrs.accessibility, attrs.is_virtual,
+                            is_static, attrs.is_inline, attrs.is_explicit,
+                            is_attr_used, attrs.is_artificial);
+
+                    type_handled = cxx_method_decl != NULL;
+                    // Artificial methods are always handled even when we
+                    // don't create a new declaration for them.
+                    type_handled |= attrs.is_artificial;
+
+                    if (cxx_method_decl) {
+                      LinkDeclContextToDIE(cxx_method_decl, die);
+
+                      ClangASTMetadata metadata;
+                      metadata.SetUserID(die.GetID());
+
+                      if (!object_pointer_name.empty()) {
+                        metadata.SetObjectPtrName(
+                            object_pointer_name.c_str());
+                        LLDB_LOGF(log,
+                                  "Setting object pointer name: %s on method "
+                                  "object %p.\n",
+                                  object_pointer_name.c_str(),
+                                  static_cast<void *>(cxx_method_decl));
+                      }
+                      m_ast.SetMetadata(cxx_method_decl, metadata);
+                    } else {
+                      ignore_containing_context = true;
+                    }
+                  }
+                }
+              } else {
+                // We were asked to parse the type for a method in a
+                // class, yet the class hasn't been asked to complete
+                // itself through the clang::ExternalASTSource protocol,
+                // so we need to just have the class complete itself and
+                // do things the right way, then our
+                // DIE should then have an entry in the
+                // dwarf->GetDIEToType() map. First
+                // we need to modify the dwarf->GetDIEToType() so it
+                // doesn't think we are trying to parse this DIE
+                // anymore...
+                dwarf->GetDIEToType()[die.GetDIE()] = NULL;
+
+                // Now we get the full type to force our class type to
+                // complete itself using the clang::ExternalASTSource
+                // protocol which will parse all base classes and all
+                // methods (including the method for this DIE).
+                class_type->GetFullCompilerType();
+
+                // The type for this DIE should have been filled in the
+                // function call above
+                Type *type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
+                if (type_ptr && type_ptr != DIE_IS_BEING_PARSED) {
+                  return type_ptr->shared_from_this();
+                }
+
+                // FIXME This is fixing some even uglier behavior but we
+                // really need to
+                // uniq the methods of each class as well as the class
+                // itself. <rdar://problem/11240464>
+                type_handled = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (!type_handled) {
+      clang::FunctionDecl *function_decl = nullptr;
+      clang::FunctionDecl *template_function_decl = nullptr;
+
+      if (attrs.abstract_origin.IsValid()) {
+        DWARFDIE abs_die = attrs.abstract_origin.Reference();
+
+        if (dwarf->ResolveType(abs_die)) {
+          function_decl = llvm::dyn_cast_or_null<clang::FunctionDecl>(
+              GetCachedClangDeclContextForDIE(abs_die));
+
+          if (function_decl) {
+            LinkDeclContextToDIE(function_decl, die);
+          }
+        }
+      }
+
+      if (!function_decl) {
+        // We just have a function that isn't part of a class
+        function_decl = m_ast.CreateFunctionDeclaration(
+            ignore_containing_context ? m_ast.GetTranslationUnitDecl()
+                                      : containing_decl_ctx,
+            attrs.name.GetCString(), clang_type, attrs.storage,
+            attrs.is_inline);
+
+        if (has_template_params) {
+          ClangASTContext::TemplateParameterInfos template_param_infos;
+          ParseTemplateParameterInfos(die, template_param_infos);
+          template_function_decl = m_ast.CreateFunctionDeclaration(
+              ignore_containing_context ? m_ast.GetTranslationUnitDecl()
+                                        : containing_decl_ctx,
+              attrs.name.GetCString(), clang_type, attrs.storage,
+              attrs.is_inline);
+          clang::FunctionTemplateDecl *func_template_decl =
+              m_ast.CreateFunctionTemplateDecl(
+                  containing_decl_ctx, template_function_decl,
+                  attrs.name.GetCString(), template_param_infos);
+          m_ast.CreateFunctionTemplateSpecializationInfo(
+              function_decl, func_template_decl, template_param_infos);
+        }
+
+        lldbassert(function_decl);
+
+        if (function_decl) {
+          LinkDeclContextToDIE(function_decl, die);
+
+          if (!function_param_decls.empty()) {
+            m_ast.SetFunctionParameters(function_decl,
+                                        &function_param_decls.front(),
+                                        function_param_decls.size());
+            if (template_function_decl)
+              m_ast.SetFunctionParameters(template_function_decl,
+                                          &function_param_decls.front(),
+                                          function_param_decls.size());
+          }
+
+          ClangASTMetadata metadata;
+          metadata.SetUserID(die.GetID());
+
+          if (!object_pointer_name.empty()) {
+            metadata.SetObjectPtrName(object_pointer_name.c_str());
+            LLDB_LOGF(log,
+                      "Setting object pointer name: %s on function "
+                      "object %p.",
+                      object_pointer_name.c_str(),
+                      static_cast<void *>(function_decl));
+          }
+          m_ast.SetMetadata(function_decl, metadata);
+        }
+      }
+    }
+  }
+  return std::make_shared<Type>(
+      die.GetID(), dwarf, attrs.name, llvm::None, nullptr, LLDB_INVALID_UID,
+      Type::eEncodingIsUID, &attrs.decl, clang_type, Type::ResolveState::Full);
+}
+
+TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
+                                           ParsedDWARFTypeAttributes &attrs) {
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+
+  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
+               DW_TAG_value_to_name(tag), type_name_cstr);
+
+  DWARFDIE type_die = attrs.type.Reference();
+  Type *element_type = dwarf->ResolveTypeUID(type_die, true);
+
+  if (element_type) {
+    auto array_info = ParseChildArrayInfo(die);
+    if (array_info) {
+      attrs.byte_stride = array_info->byte_stride;
+      attrs.bit_stride = array_info->bit_stride;
+    }
+    if (attrs.byte_stride == 0 && attrs.bit_stride == 0)
+      attrs.byte_stride = element_type->GetByteSize().getValueOr(0);
+    CompilerType array_element_type = element_type->GetForwardCompilerType();
+
+    if (ClangASTContext::IsCXXClassType(array_element_type) &&
+        !array_element_type.GetCompleteType()) {
+      ModuleSP module_sp = die.GetModule();
+      if (module_sp) {
+        if (die.GetCU()->GetProducer() == eProducerClang)
+          module_sp->ReportError(
+              "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
+              "class/union/struct element type DIE 0x%8.8x that is a "
+              "forward declaration, not a complete definition.\nTry "
+              "compiling the source file with -fstandalone-debug or "
+              "disable -gmodules",
+              die.GetOffset(), type_die.GetOffset());
+        else
+          module_sp->ReportError(
+              "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
+              "class/union/struct element type DIE 0x%8.8x that is a "
+              "forward declaration, not a complete definition.\nPlease "
+              "file a bug against the compiler and include the "
+              "preprocessed output for %s",
+              die.GetOffset(), type_die.GetOffset(), GetUnitName(die).c_str());
+      }
+
+      // We have no choice other than to pretend that the element class
+      // type is complete. If we don't do this, clang will crash when
+      // trying to layout the class. Since we provide layout
+      // assistance, all ivars in this class and other classes will be
+      // fine, this is the best we can do short of crashing.
+      if (ClangASTContext::StartTagDeclarationDefinition(array_element_type)) {
+        ClangASTContext::CompleteTagDeclarationDefinition(array_element_type);
+      } else {
+        module_sp->ReportError("DWARF DIE at 0x%8.8x was not able to "
+                               "start its definition.\nPlease file a "
+                               "bug and attach the file at the start "
+                               "of this error message",
+                               type_die.GetOffset());
+      }
+    }
+
+    uint64_t array_element_bit_stride =
+        attrs.byte_stride * 8 + attrs.bit_stride;
+    CompilerType clang_type;
+    if (array_info && array_info->element_orders.size() > 0) {
+      uint64_t num_elements = 0;
+      auto end = array_info->element_orders.rend();
+      for (auto pos = array_info->element_orders.rbegin(); pos != end; ++pos) {
+        num_elements = *pos;
+        clang_type = m_ast.CreateArrayType(array_element_type, num_elements,
+                                           attrs.is_vector);
+        array_element_type = clang_type;
+        array_element_bit_stride = num_elements
+                                       ? array_element_bit_stride * num_elements
+                                       : array_element_bit_stride;
+      }
+    } else {
+      clang_type =
+          m_ast.CreateArrayType(array_element_type, 0, attrs.is_vector);
+    }
+    ConstString empty_name;
+    TypeSP type_sp = std::make_shared<Type>(
+        die.GetID(), dwarf, empty_name, array_element_bit_stride / 8, nullptr,
+        dwarf->GetUID(type_die), Type::eEncodingIsUID, &attrs.decl, clang_type,
+        Type::ResolveState::Full);
+    type_sp->SetEncodingType(element_type);
+    m_ast.SetMetadataAsUserID(clang_type.GetOpaqueQualType(), die.GetID());
+    return type_sp;
+  }
+  return nullptr;
+}
+
+TypeSP DWARFASTParserClang::ParsePointerToMemberType(
+    const DWARFDIE &die, const ParsedDWARFTypeAttributes &attrs) {
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  Type *pointee_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
+  Type *class_type =
+      dwarf->ResolveTypeUID(attrs.containing_type.Reference(), true);
+
+  CompilerType pointee_clang_type = pointee_type->GetForwardCompilerType();
+  CompilerType class_clang_type = class_type->GetLayoutCompilerType();
+
+  CompilerType clang_type = ClangASTContext::CreateMemberPointerType(
+      class_clang_type, pointee_clang_type);
+
+  if (llvm::Optional<uint64_t> clang_type_size =
+          clang_type.GetByteSize(nullptr)) {
+    return std::make_shared<Type>(die.GetID(), dwarf, attrs.name,
+                                  *clang_type_size, nullptr, LLDB_INVALID_UID,
+                                  Type::eEncodingIsUID, nullptr, clang_type,
+                                  Type::ResolveState::Forward);
+  }
+  return nullptr;
+}
+
 TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
     const SymbolContext &sc, const DWARFDIE &die, TypeSP type_sp) {
   if (!type_sp)
@@ -1330,20 +1369,20 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
   DWARFDIE sc_parent_die = SymbolFileDWARF::GetParentSymbolContextDIE(die);
   dw_tag_t sc_parent_tag = sc_parent_die.Tag();
 
-  SymbolContextScope *symbol_context_scope = NULL;
+  SymbolContextScope *symbol_context_scope = nullptr;
   if (sc_parent_tag == DW_TAG_compile_unit ||
       sc_parent_tag == DW_TAG_partial_unit) {
     symbol_context_scope = sc.comp_unit;
-  } else if (sc.function != NULL && sc_parent_die) {
+  } else if (sc.function != nullptr && sc_parent_die) {
     symbol_context_scope =
         sc.function->GetBlock(true).FindBlockByID(sc_parent_die.GetID());
-    if (symbol_context_scope == NULL)
+    if (symbol_context_scope == nullptr)
       symbol_context_scope = sc.function;
   } else {
     symbol_context_scope = sc.module_sp.get();
   }
 
-  if (symbol_context_scope != NULL)
+  if (symbol_context_scope != nullptr)
     type_sp->SetSymbolContextScope(symbol_context_scope);
 
   // We are ready to put this type into the uniqued list up at the module

@@ -2147,6 +2147,13 @@ int8x8_t test_vcreate_s8(uint64_t a) {
   return vclz_s8(vcreate_s8(a));
 }
 
+// CHECK-LABEL: @test_vcreate_imm
+// CHECK: [[RES:%.*]] = bitcast i64 0 to <4 x i16>
+// CHECK: ret <4 x i16> [[RES]]
+int16x4_t test_vcreate_imm(void) {
+  return vcreate_s16(0);
+}
+
 // CHECK-LABEL: @test_vcreate_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast i64 %a to <4 x i16>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>

@@ -219,10 +219,9 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  symtab->forEachSymbol([&](Symbol *sym) {
+  for (Symbol *sym : symtab->symbols())
     if (sym->includeInDynsym() && sym->partition == partition)
       markSymbol(sym);
-  });
 
   // If this isn't the main partition, that's all that we need to preserve.
   if (partition != 1) {
@@ -330,11 +329,10 @@ template <class ELFT> void markLive() {
       sec->markLive();
 
     // If a DSO defines a symbol referenced in a regular object, it is needed.
-    symtab->forEachSymbol([](Symbol *sym) {
+    for (Symbol *sym : symtab->symbols())
       if (auto *s = dyn_cast<SharedSymbol>(sym))
         if (s->isUsedInRegularObj && !s->isWeak())
           s->getFile().isNeeded = true;
-    });
     return;
   }
 

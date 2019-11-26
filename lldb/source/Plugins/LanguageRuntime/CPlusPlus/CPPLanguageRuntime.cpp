@@ -62,7 +62,7 @@ bool CPPLanguageRuntime::GetObjectDescription(
 
 bool contains_lambda_identifier(llvm::StringRef &str_ref) {
   return str_ref.contains("$_") || str_ref.contains("'lambda'");
-};
+}
 
 CPPLanguageRuntime::LibCppStdFunctionCallableInfo
 line_entry_helper(Target &target, const SymbolContext &sc, Symbol *symbol,

@@ -168,6 +168,20 @@ protected:
   // Return true if this type is a declaration to a type in an external
   // module.
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
+
+private:
+  lldb::TypeSP ParseTypeModifier(const lldb_private::SymbolContext &sc,
+                                 const DWARFDIE &die,
+                                 ParsedDWARFTypeAttributes &attrs);
+  lldb::TypeSP ParseEnum(const lldb_private::SymbolContext &sc,
+                         const DWARFDIE &die, ParsedDWARFTypeAttributes &attrs);
+  lldb::TypeSP ParseSubroutine(const DWARFDIE &die,
+                               ParsedDWARFTypeAttributes &attrs);
+  // FIXME: attrs should be passed as a const reference.
+  lldb::TypeSP ParseArrayType(const DWARFDIE &die,
+                              ParsedDWARFTypeAttributes &attrs);
+  lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
+                                        const ParsedDWARFTypeAttributes &attrs);
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.
