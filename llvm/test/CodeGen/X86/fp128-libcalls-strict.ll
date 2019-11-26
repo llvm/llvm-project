@@ -296,6 +296,54 @@ entry:
   ret fp128 %trunc
 }
 
+define i32 @lrint(fp128 %x) nounwind strictfp {
+; CHECK-LABEL: lrint:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq lrintl
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+entry:
+  %rint = call i32 @llvm.experimental.constrained.lrint.i32.f128(fp128 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret i32 %rint
+}
+
+define i64 @llrint(fp128 %x) nounwind strictfp {
+; CHECK-LABEL: llrint:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq llrintl
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+entry:
+  %rint = call i64 @llvm.experimental.constrained.llrint.i64.f128(fp128 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret i64 %rint
+}
+
+define i32 @lround(fp128 %x) nounwind strictfp {
+; CHECK-LABEL: lround:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq lroundl
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+entry:
+  %round = call i32 @llvm.experimental.constrained.lround.i32.f128(fp128 %x, metadata !"fpexcept.strict") #0
+  ret i32 %round
+}
+
+define i64 @llround(fp128 %x) nounwind strictfp {
+; CHECK-LABEL: llround:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq llroundl
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+entry:
+  %round = call i64 @llvm.experimental.constrained.llround.i64.f128(fp128 %x, metadata !"fpexcept.strict") #0
+  ret i64 %round
+}
+
 attributes #0 = { strictfp }
 
 declare fp128 @llvm.experimental.constrained.fadd.f128(fp128, fp128, metadata, metadata)
@@ -322,3 +370,7 @@ declare fp128 @llvm.experimental.constrained.round.f128(fp128, metadata, metadat
 declare fp128 @llvm.experimental.constrained.sin.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.sqrt.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lrint.i32.f128(fp128, metadata, metadata)
+declare i64 @llvm.experimental.constrained.llrint.i64.f128(fp128, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lround.i32.f128(fp128, metadata)
+declare i64 @llvm.experimental.constrained.llround.i64.f128(fp128, metadata)
