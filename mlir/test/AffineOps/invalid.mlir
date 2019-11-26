@@ -2,32 +2,6 @@
 
 // -----
 
-#map = (d0)[s0] -> (d0 + s0)
-
-func @affine_apply_invalid_dim(%arg : index) {
-  affine.for %n0 = 0 to 7 {
-    %dim = addi %arg, %arg : index
-
-    // expected-error@+1 {{operand cannot be used as a dimension id}}
-    %x  = affine.apply #map(%dim)[%arg]
-  }
-  return
-}
-
-// -----
-
-#map0 = (d0)[s0] -> (d0 + s0)
-
-func @affine_apply_invalid_sym() {
-  affine.for %i0 = 0 to 7 {
-    // expected-error@+1 {{operand cannot be used as a symbol}}
-    %0 = affine.apply #map0(%i0)[%i0]
-  }
-  return
-}
-
-// -----
-
 func @affine_apply_operand_non_index(%arg0 : i32) {
   // Custom parser automatically assigns all arguments the `index` so we must
   // use the generic syntax here to exercise the verifier.
