@@ -1,7 +1,7 @@
 ## Check we are able to handle SHT_GNU_verdef sections.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readobj -V %t | FileCheck %s
+# RUN: llvm-readobj -V %t1 | FileCheck %s
 
 # CHECK:      VersionDefinitions [
 # CHECK-NEXT:   Definition {
@@ -31,7 +31,7 @@
 # CHECK-NEXT:     Index: 3
 # CHECK-NEXT:     Hash: 108387922
 # CHECK-NEXT:     Name: VERSION_2
-# CHECK-NEXT:     Predecessor: VERSION_3
+# CHECK-NEXT:     Predecessors: [VERSION_3]
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
