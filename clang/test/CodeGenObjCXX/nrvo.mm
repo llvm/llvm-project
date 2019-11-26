@@ -14,7 +14,7 @@ struct X {
 // CHECK: define internal void @"\01-[NRVO getNRVO]"
 - (X)getNRVO { 
   X x;
-  // CHECK: call void @_ZN1XC1Ev
+  // CHECK: tail call void @_ZN1XC1Ev
   // CHECK-NEXT: ret void
   return x;
 }
@@ -24,7 +24,7 @@ X blocksNRVO() {
   return ^{
     // CHECK-LABEL: define internal void @___Z10blocksNRVOv_block_invoke
     X x;
-    // CHECK: call void @_ZN1XC1Ev
+    // CHECK: tail call void @_ZN1XC1Ev
     // CHECK-NEXT: ret void
     return x;
   }() ;

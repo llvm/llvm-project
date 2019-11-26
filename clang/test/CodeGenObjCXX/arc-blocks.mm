@@ -122,7 +122,7 @@ namespace test1 {
 // CHECK: call void @__clang_call_terminate(
 
 // CHECK-O1-LABEL: define linkonce_odr hidden void @__copy_helper_block_ea8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
-// CHECK-O1: call void @llvm.objc.release({{.*}}) {{.*}} !clang.imprecise_release
+// CHECK-O1: tail call void @llvm.objc.release({{.*}}) {{.*}} !clang.imprecise_release
 // CHECK-NOEXCP: define linkonce_odr hidden void @__copy_helper_block_8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
 
 // CHECK: define linkonce_odr hidden void @__destroy_helper_block_ea8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
@@ -170,8 +170,8 @@ namespace test1 {
 // CHECK: call void @__clang_call_terminate(
 
 // CHECK-O1-LABEL: define linkonce_odr hidden void @__destroy_helper_block_ea8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
-// CHECK-O1: call void @llvm.objc.release({{.*}}) {{.*}} !clang.imprecise_release
-// CHECK-O1: call void @llvm.objc.release({{.*}}) {{.*}} !clang.imprecise_release
+// CHECK-O1: tail call void @llvm.objc.release({{.*}}) {{.*}} !clang.imprecise_release
+// CHECK-O1: tail call void @llvm.objc.release({{.*}}) {{.*}} !clang.imprecise_release
 // CHECK-NOEXCP: define linkonce_odr hidden void @__destroy_helper_block_8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
 
 namespace {

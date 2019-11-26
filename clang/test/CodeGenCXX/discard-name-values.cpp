@@ -11,11 +11,11 @@ bool test(bool pred) {
 
   if (pred) {
     // DISCARDVALUE: 2:
-    // DISCARDVALUE-NEXT: call void @branch()
+    // DISCARDVALUE-NEXT: tail call void @branch()
     // DISCARDVALUE-NEXT: br label %3
 
     // CHECK: if.then:
-    // CHECK-NEXT: call void @branch()
+    // CHECK-NEXT: tail call void @branch()
     // CHECK-NEXT: br label %if.end
     branch();
   }
