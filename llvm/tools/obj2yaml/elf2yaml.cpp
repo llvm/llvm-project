@@ -923,6 +923,8 @@ ELFDumper<ELFT>::dumpVerdefSection(const Elf_Shdr *Shdr) {
   if (!Contents)
     return Contents.takeError();
 
+  S->Entries.emplace();
+
   llvm::ArrayRef<uint8_t> Data = *Contents;
   const uint8_t *Buf = Data.data();
   while (Buf) {
@@ -942,7 +944,7 @@ ELFDumper<ELFT>::dumpVerdefSection(const Elf_Shdr *Shdr) {
       BufAux = Verdaux->vda_next ? BufAux + Verdaux->vda_next : nullptr;
     }
 
-    S->Entries.push_back(Entry);
+    S->Entries->push_back(Entry);
     Buf = Verdef->vd_next ? Buf + Verdef->vd_next : nullptr;
   }
 
