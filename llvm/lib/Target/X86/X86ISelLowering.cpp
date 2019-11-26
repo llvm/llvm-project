@@ -24105,7 +24105,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       MFI.setHasCopyImplyingStackAdjustment(true);
       // Don't do anything here, we will expand these intrinsics out later
       // during FinalizeISel in EmitInstrWithCustomInserter.
-      return SDValue();
+      return Op;
     }
     case Intrinsic::x86_lwpins32:
     case Intrinsic::x86_lwpins64:
