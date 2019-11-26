@@ -106,7 +106,7 @@ private:
 
   SegmentLayoutMap layOutBlocks();
   Error allocateSegments(const SegmentLayoutMap &Layout);
-  DenseSet<StringRef> getExternalSymbolNames() const;
+  JITLinkContext::LookupMap getExternalSymbolNames() const;
   void applyLookupResult(AsyncLookupResult LR);
   void deallocateAndBailOut(Error Err);
 
