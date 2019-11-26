@@ -36,11 +36,7 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:  .LBB0_4: @ %vector.ph
-; CHECK-NEXT:    adds r6, r3, #3
-; CHECK-NEXT:    bic r6, r6, #3
-; CHECK-NEXT:    subs r6, #4
-; CHECK-NEXT:    add.w lr, r12, r6, lsr #2
-; CHECK-NEXT:    dlstp.32 lr, lr
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]

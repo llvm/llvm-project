@@ -14,7 +14,6 @@ class ConcurrentManyWatchpoints(ConcurrentEventsBase):
 
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
-    @expectedFailureNetBSD
     @add_test_categories(["watchpoint"])
     @skipIfOutOfTreeDebugserver
     def test(self):

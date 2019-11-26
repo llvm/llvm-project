@@ -1,44 +1,7 @@
 ; RUN: opt < %s -disable-output "-passes=print<ddg>" 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: 'DDG' for loop 'test1.for.body':
-
-; CHECK: Node Address:[[PI:0x[0-9a-f]*]]:pi-block
-; CHECK-NEXT: --- start of nodes in pi-block ---
-; CHECK-NEXT: Node Address:[[N10:0x[0-9a-f]*]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %inc = add i64 %i.02, 1
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N11:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N11]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %i.02 = phi i64 [ %inc, %test1.for.body ], [ 0, %test1.for.body.preheader ]
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N10]]
-; CHECK-NEXT: --- end of nodes in pi-block ---
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N1:0x[0-9a-f]*]]
-; CHECK-NEXT:  [def-use] to [[N6:0x[0-9a-f]*]]
-; CHECK-NEXT:  [def-use] to [[N7:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N7]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %exitcond = icmp ne i64 %inc, %n
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N8:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N8]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    br i1 %exitcond, label %test1.for.body, label %for.end.loopexit
-; CHECK-NEXT: Edges:none!
-
-; CHECK: Node Address:[[N6]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds float, float* %a, i64 %i.02
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N5:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N1]]:single-instruction
+; CHECK: Node Address:[[N1:0x[0-9a-f]*]]:single-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, float* %b, i64 %i.02
 ; CHECK-NEXT: Edges:
@@ -60,12 +23,48 @@
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %add = fadd float %0, %conv
 ; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N5:0x[0-9a-f]*]]
+
+; CHECK: Node Address:[[N6:0x[0-9a-f]*]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds float, float* %a, i64 %i.02
+; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N5]]
 
 ; CHECK: Node Address:[[N5]]:single-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    store float %add, float* %arrayidx1, align 4
 ; CHECK-NEXT: Edges:none!
+
+; CHECK: Node Address:[[N7:0x[0-9a-f]*]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %exitcond = icmp ne i64 %inc, %n
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N8:0x[0-9a-f]*]]
+
+; CHECK: Node Address:[[N8]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    br i1 %exitcond, label %test1.for.body, label %for.end.loopexit
+; CHECK-NEXT: Edges:none!
+
+; CHECK: Node Address:[[N9:0x[0-9a-f]*]]:pi-block
+; CHECK-NEXT: --- start of nodes in pi-block ---
+; CHECK-NEXT: Node Address:[[N10:0x[0-9a-f]*]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %inc = add i64 %i.02, 1
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N11:0x[0-9a-f]*]]
+
+; CHECK: Node Address:[[N11]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %i.02 = phi i64 [ %inc, %test1.for.body ], [ 0, %test1.for.body.preheader ]
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N10]]
+; CHECK-NEXT: --- end of nodes in pi-block ---
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N1]]
+; CHECK-NEXT:  [def-use] to [[N6]]
+; CHECK-NEXT:  [def-use] to [[N7]]
 
 
 ;; No memory dependencies.
@@ -97,8 +96,60 @@ for.end:                                          ; preds = %test1.for.body, %en
 
 
 ; CHECK-LABEL: 'DDG' for loop 'test2.for.body':
+; CHECK: Node Address:[[N1:0x[0-9a-f]*]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, float* %b, i64 %i.02
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N2:0x[0-9a-f]*]]
 
-; CHECK: Node Address:[[PI:0x[0-9a-f]*]]:pi-block
+; CHECK: Node Address:[[N2]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %0 = load float, float* %arrayidx, align 4
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N3:0x[0-9a-f]*]]
+
+; CHECK: Node Address:[[N4:0x[0-9a-f]*]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds float, float* %a, i64 %i.02
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N5:0x[0-9a-f]*]]
+
+; CHECK: Node Address:[[N5]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %1 = load float, float* %arrayidx1, align 4
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N3]]
+; CHECK-NEXT:  [memory] to [[N6:0x[0-9a-f]*]]
+
+; CHECK: Node Address:[[N3]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %add = fadd float %0, %1
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N6]]
+
+; CHECK: Node Address:[[N7:0x[0-9a-f]*]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %arrayidx2 = getelementptr inbounds float, float* %a, i64 %i.02
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N6]]
+
+; CHECK: Node Address:[[N6]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    store float %add, float* %arrayidx2, align 4
+; CHECK-NEXT: Edges:none!
+
+; CHECK: Node Address:[[N8:0x[0-9a-f]*]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %exitcond = icmp ne i64 %inc, %n
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N9:0x[0-9a-f]*]]
+
+; CHECK: Node Address:[[N9]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    br i1 %exitcond, label %test2.for.body, label %for.end.loopexit
+; CHECK-NEXT: Edges:none!
+
+; CHECK: Node Address:[[N10:0x[0-9a-f]*]]:pi-block
 ; CHECK-NEXT: --- start of nodes in pi-block ---
 ; CHECK: Node Address:[[N11:0x[0-9a-f]*]]:single-instruction
 ; CHECK-NEXT: Instructions:
@@ -113,64 +164,10 @@ for.end:                                          ; preds = %test1.for.body, %en
 ; CHECK-NEXT:  [def-use] to [[N11]]
 ; CHECK-NEXT: --- end of nodes in pi-block ---
 ; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N1:0x[0-9a-f]*]]
-; CHECK-NEXT:  [def-use] to [[N4:0x[0-9a-f]*]]
-; CHECK-NEXT:  [def-use] to [[N7:0x[0-9a-f]*]]
-; CHECK-NEXT:  [def-use] to [[N8:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N8]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %exitcond = icmp ne i64 %inc, %n
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N9:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N9]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    br i1 %exitcond, label %test2.for.body, label %for.end.loopexit
-; CHECK-NEXT: Edges:none!
-
-; CHECK: Node Address:[[N7]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %arrayidx2 = getelementptr inbounds float, float* %a, i64 %i.02
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N6:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N4]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds float, float* %a, i64 %i.02
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N5:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N5]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %1 = load float, float* %arrayidx1, align 4
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N3:0x[0-9a-f]*]]
-; CHECK-NEXT:  [memory] to [[N6]]
-
-; CHECK: Node Address:[[N1]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, float* %b, i64 %i.02
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N2:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N2]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %0 = load float, float* %arrayidx, align 4
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N3]]
-
-; CHECK: Node Address:[[N3]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %add = fadd float %0, %1
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N6]]
-
-; CHECK: Node Address:[[N6]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    store float %add, float* %arrayidx2, align 4
-; CHECK-NEXT: Edges:none!
-
+; CHECK-NEXT:  [def-use] to [[N1]]
+; CHECK-NEXT:  [def-use] to [[N4]]
+; CHECK-NEXT:  [def-use] to [[N7]]
+; CHECK-NEXT:  [def-use] to [[N8]]
 
 
 ;; Loop-independent memory dependencies.

@@ -5,6 +5,7 @@ import platform
 import re
 import shutil
 import site
+import subprocess
 import sys
 
 import lit.formats
@@ -103,3 +104,17 @@ if config.lldb_enable_lzma:
 
 if find_executable('xz') != None:
     config.available_features.add('xz')
+
+# NetBSD permits setting dbregs either if one is root
+# or if user_set_dbregs is enabled
+can_set_dbregs = True
+if platform.system() == 'NetBSD' and os.geteuid() != 0:
+    try:
+        output = subprocess.check_output(["/sbin/sysctl", "-n",
+          "security.models.extensions.user_set_dbregs"]).decode().strip()
+        if output != "1":
+            can_set_dbregs = False
+    except subprocess.CalledProcessError:
+        can_set_dbregs = False
+if can_set_dbregs:
+    config.available_features.add('dbregs-set')

@@ -23,7 +23,6 @@ class NumberOfThreadsTestCase(TestBase):
         self.thread3_notify_all_line = line_number('main.cpp', '// Set thread3 break point on notify_all at this line.')
         self.thread3_before_lock_line = line_number('main.cpp', '// thread3-before-lock')
 
-    @expectedFailureNetBSD
     def test_number_of_threads(self):
         """Test number of threads."""
         self.build()

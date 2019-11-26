@@ -475,6 +475,7 @@ static_library("builtins") {
     sources += [
       "ppc/divtc3.c",
       "ppc/fixtfdi.c",
+      "ppc/fixtfti.c",
       "ppc/fixunstfdi.c",
       "ppc/fixunstfti.c",
       "ppc/floatditf.c",

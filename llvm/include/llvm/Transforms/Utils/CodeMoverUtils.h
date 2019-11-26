@@ -16,6 +16,7 @@
 
 namespace llvm {
 
+class BasicBlock;
 class DependenceInfo;
 class DominatorTree;
 class Instruction;
@@ -27,6 +28,15 @@ class PostDominatorTree;
 /// and post-dominators: if A dominates B and B post-dominates A then A and B
 /// are control-flow equivalent.
 bool isControlFlowEquivalent(const Instruction &I0, const Instruction &I1,
+                             const DominatorTree &DT,
+                             const PostDominatorTree &PDT);
+
+/// Return true if \p BB0 and \p BB1 are control flow equivalent.
+/// Two basic blocks are control flow equivalent if when one executes, the other
+/// is guaranteed to execute. This is determined using dominators and
+/// post-dominators: if A dominates B and B post-dominates A then A and B are
+/// control-flow equivalent.
+bool isControlFlowEquivalent(const BasicBlock &BB0, const BasicBlock &BB1,
                              const DominatorTree &DT,
                              const PostDominatorTree &PDT);
 

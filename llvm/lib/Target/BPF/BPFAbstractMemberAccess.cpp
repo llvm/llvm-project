@@ -829,9 +829,13 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
                             RecordAlignment);
   }
 
-  // Access key is the type name + reloc type + patched imm + access string,
+  // Access key is the
+  //   "llvm." + type name + ":" + reloc type + ":" + patched imm + "$" +
+  //   access string,
   // uniquely identifying one relocation.
-  AccessKey = TypeName + ":" + std::to_string(InfoKind) + ":" +
+  // The prefix "llvm." indicates this is a temporary global, which should
+  // not be emitted to ELF file.
+  AccessKey = "llvm." + TypeName + ":" + std::to_string(InfoKind) + ":" +
               std::to_string(PatchImm) + "$" + AccessKey;
 
   return Base;

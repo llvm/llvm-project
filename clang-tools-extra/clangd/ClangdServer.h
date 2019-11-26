@@ -24,6 +24,7 @@
 #include "index/Background.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
+#include "refactor/Rename.h"
 #include "refactor/Tweak.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -132,6 +133,9 @@ public:
 
     /// Enable semantic highlighting features.
     bool SemanticHighlighting = false;
+
+    /// Enable cross-file rename feature.
+    bool CrossFileRename = false;
 
     /// Returns true if the tweak should be enabled.
     std::function<bool(const Tweak &)> TweakFilter = [](const Tweak &T) {
@@ -252,7 +256,7 @@ public:
   /// embedders could use this method to get all occurrences of the symbol (e.g.
   /// highlighting them in prepare stage).
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
-              bool WantFormat, Callback<std::vector<TextEdit>> CB);
+              bool WantFormat, Callback<FileEdits> CB);
 
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.
@@ -326,6 +330,8 @@ private:
   // If this is true, suggest include insertion fixes for diagnostic errors that
   // can be caused by missing includes (e.g. member access in incomplete type).
   bool SuggestMissingIncludes = false;
+
+  bool CrossFileRename = false;
 
   std::function<bool(const Tweak &)> TweakFilter;
 

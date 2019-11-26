@@ -180,6 +180,9 @@ public:
   /// The returned StringRef may be invalidated by any write to TUScheduler.
   llvm::StringRef getContents(PathRef File) const;
 
+  /// Returns a snapshot of all file buffer contents, per last update().
+  llvm::StringMap<std::string> getAllFileContents() const;
+
   /// Schedule an async task with no dependencies.
   void run(llvm::StringRef Name, llvm::unique_function<void()> Action);
 

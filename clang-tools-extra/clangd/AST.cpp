@@ -457,8 +457,10 @@ std::string getQualification(ASTContext &Context,
                              const DeclContext *DestContext,
                              SourceLocation InsertionPoint, const NamedDecl *ND,
                              llvm::ArrayRef<std::string> VisibleNamespaces) {
-  for (llvm::StringRef NS : VisibleNamespaces)
+  for (llvm::StringRef NS : VisibleNamespaces) {
     assert(NS.endswith("::"));
+    (void)NS;
+  }
   return getQualification(
       Context, DestContext, ND->getDeclContext(),
       [&](NestedNameSpecifier *NNS) {

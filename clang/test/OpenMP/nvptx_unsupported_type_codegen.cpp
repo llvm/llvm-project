@@ -34,18 +34,18 @@ struct T1 {
 #pragma omp declare target
 T a = T();
 T f = a;
-// CHECK: define{{ dso_local | }}void @{{.+}}foo{{.+}}([[T]]* byval([[T]]) align {{.+}})
+// CHECK: define{{ hidden | }}void @{{.+}}foo{{.+}}([[T]]* byval([[T]]) align {{.+}})
 void foo(T a = T()) {
   return;
 }
-// CHECK: define{{ dso_local | }}[6 x i64] @{{.+}}bar{{.+}}()
+// CHECK: define{{ hidden | }}[6 x i64] @{{.+}}bar{{.+}}()
 T bar() {
 // CHECK:      bitcast [[T]]* %{{.+}} to [6 x i64]*
 // CHECK-NEXT: load [6 x i64], [6 x i64]* %{{.+}},
 // CHECK-NEXT: ret [6 x i64]
   return T();
 }
-// CHECK: define{{ dso_local | }}void @{{.+}}baz{{.+}}()
+// CHECK: define{{ hidden | }}void @{{.+}}baz{{.+}}()
 void baz() {
 // CHECK:      call [6 x i64] @{{.+}}bar{{.+}}()
 // CHECK-NEXT: bitcast [[T]]* %{{.+}} to [6 x i64]*
@@ -54,17 +54,17 @@ void baz() {
 }
 T1 a1 = T1();
 T1 f1 = a1;
-// CHECK: define{{ dso_local | }}void @{{.+}}foo1{{.+}}([[T1]]* byval([[T1]]) align {{.+}})
+// CHECK: define{{ hidden | }}void @{{.+}}foo1{{.+}}([[T1]]* byval([[T1]]) align {{.+}})
 void foo1(T1 a = T1()) {
   return;
 }
-// CHECK: define{{ dso_local | }}[[T1]] @{{.+}}bar1{{.+}}()
+// CHECK: define{{ hidden | }}[[T1]] @{{.+}}bar1{{.+}}()
 T1 bar1() {
 // CHECK:      load [[T1]], [[T1]]*
 // CHECK-NEXT: ret [[T1]]
   return T1();
 }
-// CHECK: define{{ dso_local | }}void @{{.+}}baz1{{.+}}()
+// CHECK: define{{ hidden | }}void @{{.+}}baz1{{.+}}()
 void baz1() {
 // CHECK: call [[T1]] @{{.+}}bar1{{.+}}()
   T1 t = bar1();

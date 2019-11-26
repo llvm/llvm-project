@@ -32,6 +32,7 @@ typedef float float4 __attribute__((ext_vector_type(4)));
 typedef half half4 __attribute__((ext_vector_type(4)));
 typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int4 __attribute__((ext_vector_type(4)));
+typedef uint uint4 __attribute__((ext_vector_type(4)));
 typedef long long2 __attribute__((ext_vector_type(2)));
 #endif
 
@@ -65,6 +66,13 @@ char4 test_int(char c, char4 c4) {
   uchar4 abs1 = abs(c4);
   uchar4 abs2 = abs(abs1);
   return max(c4, c);
+}
+
+kernel void basic_vector_misc(float4 a) {
+  float4 res;
+  uint4 mask = (uint4)(1, 2, 3, 4);
+
+  res = shuffle(a, mask);
 }
 
 kernel void basic_image_readonly(read_only image2d_t image_read_only_image2d) {

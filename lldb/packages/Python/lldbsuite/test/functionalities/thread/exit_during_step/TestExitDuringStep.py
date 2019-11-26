@@ -17,7 +17,6 @@ class ExitDuringStepTestCase(TestBase):
 
     @skipIfFreeBSD  # llvm.org/pr21411: test is hanging
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
-    @expectedFailureNetBSD
     def test(self):
         """Test thread exit during step handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -28,7 +27,6 @@ class ExitDuringStepTestCase(TestBase):
 
     @skipIfFreeBSD  # llvm.org/pr21411: test is hanging
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
-    @expectedFailureNetBSD
     def test_step_over(self):
         """Test thread exit during step-over handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -39,7 +37,6 @@ class ExitDuringStepTestCase(TestBase):
 
     @skipIfFreeBSD  # llvm.org/pr21411: test is hanging
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
-    @expectedFailureNetBSD
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build(dictionary=self.getBuildFlags())

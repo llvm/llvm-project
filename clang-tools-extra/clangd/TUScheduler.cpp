@@ -916,6 +916,13 @@ llvm::StringRef TUScheduler::getContents(PathRef File) const {
   return It->second->Contents;
 }
 
+llvm::StringMap<std::string> TUScheduler::getAllFileContents() const {
+  llvm::StringMap<std::string> Results;
+  for (auto &It : Files)
+    Results.try_emplace(It.getKey(), It.getValue()->Contents);
+  return Results;
+}
+
 void TUScheduler::run(llvm::StringRef Name,
                       llvm::unique_function<void()> Action) {
   if (!PreambleTasks)

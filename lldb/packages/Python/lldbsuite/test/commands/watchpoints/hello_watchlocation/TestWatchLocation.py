@@ -36,7 +36,6 @@ class HelloWatchLocationTestCase(TestBase):
     @expectedFailureAll(triple=re.compile('^mips'))
     # SystemZ and PowerPC also currently supports only one H/W watchpoint
     @expectedFailureAll(archs=['powerpc64le', 's390x'])
-    @expectedFailureNetBSD
     @skipIfDarwin
     def test_hello_watchlocation(self):
         """Test watching a location with '-s size' option."""

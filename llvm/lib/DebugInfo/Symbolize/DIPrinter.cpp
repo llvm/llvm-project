@@ -118,21 +118,32 @@ DIPrinter &DIPrinter::operator<<(const DIGlobal &Global) {
 }
 
 DIPrinter &DIPrinter::operator<<(const DILocal &Local) {
-  OS << Local.FunctionName << '\n';
-  OS << Local.Name << '\n';
+  if (Local.FunctionName.empty())
+    OS << "??\n";
+  else
+    OS << Local.FunctionName << '\n';
+
+  if (Local.Name.empty())
+    OS << "??\n";
+  else
+    OS << Local.Name << '\n';
+
   if (Local.DeclFile.empty())
     OS << "??";
   else
     OS << Local.DeclFile;
   OS << ':' << Local.DeclLine << '\n';
+
   if (Local.FrameOffset)
     OS << *Local.FrameOffset << ' ';
   else
     OS << "?? ";
+
   if (Local.Size)
     OS << *Local.Size << ' ';
   else
     OS << "?? ";
+
   if (Local.TagOffset)
     OS << *Local.TagOffset << '\n';
   else

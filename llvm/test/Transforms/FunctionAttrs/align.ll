@@ -337,5 +337,66 @@ define i64 @test11(i32* %p) {
   %ret = load i64, i64* %p-cast, align 8
   ret i64 %ret
 }
+
+; TEST 12
+; Test for deduction using must-be-executed-context and GEP instruction 
+
+; FXIME: %p should have nonnull
+; ATTRIBUTOR: define i64 @test12-1(i32* nocapture nofree readonly align 16 %p)
+define i64 @test12-1(i32* align 4 %p) {
+  %p-cast = bitcast i32* %p to i64*
+  %arrayidx0 = getelementptr i64, i64* %p-cast, i64 1
+  %arrayidx1 = getelementptr i64, i64* %arrayidx0, i64 3
+  %ret = load i64, i64* %arrayidx1, align 16
+  ret i64 %ret
+}
+
+; FXIME: %p should have nonnull
+; ATTRIBUTOR: define i64 @test12-2(i32* nocapture nofree readonly align 16 %p)
+define i64 @test12-2(i32* align 4 %p) {
+  %p-cast = bitcast i32* %p to i64*
+  %arrayidx0 = getelementptr i64, i64* %p-cast, i64 0
+  %ret = load i64, i64* %arrayidx0, align 16
+  ret i64 %ret
+}
+
+; FXIME: %p should have nonnull
+; ATTRIBUTOR: define void @test12-3(i32* nocapture nofree writeonly align 16 %p)
+define void @test12-3(i32* align 4 %p) {
+  %p-cast = bitcast i32* %p to i64*
+  %arrayidx0 = getelementptr i64, i64* %p-cast, i64 1
+  %arrayidx1 = getelementptr i64, i64* %arrayidx0, i64 3
+  store i64 0, i64* %arrayidx1, align 16
+  ret void 
+}
+
+; FXIME: %p should have nonnull
+; ATTRIBUTOR: define void @test12-4(i32* nocapture nofree writeonly align 16 %p)
+define void @test12-4(i32* align 4 %p) {
+  %p-cast = bitcast i32* %p to i64*
+  %arrayidx0 = getelementptr i64, i64* %p-cast, i64 0
+  store i64 0, i64* %arrayidx0, align 16
+  ret void 
+}
+
+declare void @use(i64*) willreturn nounwind
+
+; ATTRIBUTOR: define void @test12-5(i32* align 16 %p)
+define void @test12-5(i32* align 4 %p) {
+  %p-cast = bitcast i32* %p to i64*
+  %arrayidx0 = getelementptr i64, i64* %p-cast, i64 1
+  %arrayidx1 = getelementptr i64, i64* %arrayidx0, i64 3
+  tail call void @use(i64* align 16 %arrayidx1)
+  ret void 
+}
+
+; ATTRIBUTOR: define void @test12-6(i32* align 16 %p)
+define void @test12-6(i32* align 4 %p) {
+  %p-cast = bitcast i32* %p to i64*
+  %arrayidx0 = getelementptr i64, i64* %p-cast, i64 0
+  tail call void @use(i64* align 16 %arrayidx0)
+  ret void 
+}
+
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }

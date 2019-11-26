@@ -551,13 +551,9 @@ def err_access_decl : Error<
   "use using declarations instead">;
 def warn_deprecated_copy_operation : Warning<
   "definition of implicit copy %select{constructor|assignment operator}1 "
-  "for %0 is deprecated because it has a user-declared copy "
-  "%select{assignment operator|constructor}1">,
-  InGroup<DeprecatedCopy>, DefaultIgnore;
-def warn_deprecated_copy_dtor_operation : Warning<
-  "definition of implicit copy %select{constructor|assignment operator}1 "
-  "for %0 is deprecated because it has a user-declared destructor">,
-  InGroup<DeprecatedCopyDtor>, DefaultIgnore;
+  "for %0 is deprecated because it has a user-declared "
+  "%select{copy %select{assignment operator|constructor}1|destructor}2">,
+  InGroup<Deprecated>, DefaultIgnore;
 def warn_cxx17_compat_exception_spec_in_signature : Warning<
   "mangled name of %0 will change in C++17 due to non-throwing exception "
   "specification in function signature">, InGroup<CXX17CompatMangling>;

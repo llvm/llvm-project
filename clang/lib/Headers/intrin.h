@@ -169,7 +169,6 @@ long _InterlockedExchangeAdd_HLEAcquire(long volatile *, long);
 long _InterlockedExchangeAdd_HLERelease(long volatile *, long);
 __int64 _InterlockedExchangeAdd64_HLEAcquire(__int64 volatile *, __int64);
 __int64 _InterlockedExchangeAdd64_HLERelease(__int64 volatile *, __int64);
-void __cdecl _invpcid(unsigned int, void *);
 static __inline__ void
 __attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
 _ReadBarrier(void);

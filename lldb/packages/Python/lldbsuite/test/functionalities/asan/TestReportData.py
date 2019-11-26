@@ -17,6 +17,7 @@ class AsanTestReportDataCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
+    @expectedFailureNetBSD
     @skipUnlessAddressSanitizer
     @skipIf(archs=['i386'], bugnumber="llvm.org/PR36710")
     def test(self):

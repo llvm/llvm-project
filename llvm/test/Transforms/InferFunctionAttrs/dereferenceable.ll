@@ -31,8 +31,7 @@ define <4 x double> @PR21780(double* %ptr) {
 
 define double @PR21780_only_access3_with_inbounds(double* %ptr) {
 ; CHECK-LABEL: @PR21780_only_access3_with_inbounds(double* %ptr)
-; FIXME: %ptr should have align 8
-; ATTRIBUTOR-LABEL: @PR21780_only_access3_with_inbounds(double* nocapture nofree nonnull readonly dereferenceable(32) %ptr)
+; ATTRIBUTOR-LABEL: @PR21780_only_access3_with_inbounds(double* nocapture nofree nonnull readonly align 8 dereferenceable(32) %ptr)
 
   %arrayidx3 = getelementptr inbounds double, double* %ptr, i64 3
   %t3 = load double, double* %arrayidx3, align 8
@@ -41,8 +40,7 @@ define double @PR21780_only_access3_with_inbounds(double* %ptr) {
 
 define double @PR21780_only_access3_without_inbounds(double* %ptr) {
 ; CHECK-LABEL: @PR21780_only_access3_without_inbounds(double* %ptr)
-; FIXME: %ptr should have align 8
-; ATTRIBUTOR-LABEL: @PR21780_only_access3_without_inbounds(double* nocapture nofree readonly %ptr)
+; ATTRIBUTOR-LABEL: @PR21780_only_access3_without_inbounds(double* nocapture nofree readonly align 8 %ptr)
   %arrayidx3 = getelementptr double, double* %ptr, i64 3
   %t3 = load double, double* %arrayidx3, align 8
   ret double %t3

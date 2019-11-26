@@ -37,7 +37,7 @@ L0:
         .text
 _f0:
 L1:
-        jmp	0xbabecafe
+        jmp	0x7abecafe
         jmp L0
         jmp L1
         ret

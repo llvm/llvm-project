@@ -4551,10 +4551,18 @@ class T2TT<bits<2> at, string asm, list<dag> pattern>
   let Unpredictable{5-0} = 0b111111;
 }
 
-def t2TT   : T2TT<0b00, "tt",   []>, Requires<[IsThumb,Has8MSecExt]>;
-def t2TTT  : T2TT<0b01, "ttt",  []>, Requires<[IsThumb,Has8MSecExt]>;
-def t2TTA  : T2TT<0b10, "tta",  []>, Requires<[IsThumb,Has8MSecExt]>;
-def t2TTAT : T2TT<0b11, "ttat", []>, Requires<[IsThumb,Has8MSecExt]>;
+def t2TT   : T2TT<0b00, "tt",
+                 [(set rGPR:$Rt, (int_arm_cmse_tt   GPRnopc:$Rn))]>,
+             Requires<[IsThumb, Has8MSecExt]>;
+def t2TTT  : T2TT<0b01, "ttt",
+                  [(set rGPR:$Rt, (int_arm_cmse_ttt  GPRnopc:$Rn))]>,
+             Requires<[IsThumb, Has8MSecExt]>;
+def t2TTA  : T2TT<0b10, "tta",
+                  [(set rGPR:$Rt, (int_arm_cmse_tta  GPRnopc:$Rn))]>,
+             Requires<[IsThumb, Has8MSecExt]>;
+def t2TTAT : T2TT<0b11, "ttat",
+                  [(set rGPR:$Rt, (int_arm_cmse_ttat GPRnopc:$Rn))]>,
+             Requires<[IsThumb, Has8MSecExt]>;
 
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns

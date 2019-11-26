@@ -573,7 +573,7 @@ int baz(int f, double &a) {
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define{{ dso_local | }}i32 [[BAZ]](i32 [[F:%.*]], double* dereferenceable{{.*}})
+  // CHECK: define{{ hidden | }}i32 [[BAZ]](i32 [[F:%.*]], double* dereferenceable{{.*}})
   // CHECK: alloca i32,
   // CHECK: [[LOCAL_F_PTR:%.+]] = alloca i32,
   // CHECK: [[ZERO_ADDR:%.+]] = alloca i32,

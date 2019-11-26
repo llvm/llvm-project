@@ -5,13 +5,14 @@ define anyregcc void @anyregcc1() {
 entry:
 ;CHECK-LABEL: anyregcc1
 ;CHECK: stmg %r2, %r15, 16(%r15)
-;CHECK: std %f0,
+;CHECK: aghi %r15, -256
+;CHECK: std %f0, 384(%r15)
 ;CHECK: std %f1,
-;CHECK: std %f2,
+;CHECK: std %f2, 392(%r15)
 ;CHECK: std %f3,
-;CHECK: std %f4,
+;CHECK: std %f4, 400(%r15)
 ;CHECK: std %f5,
-;CHECK: std %f6,
+;CHECK: std %f6, 408(%r15)
 ;CHECK: std %f7,
 ;CHECK: std %f8,
 ;CHECK: std %f9,
@@ -21,6 +22,14 @@ entry:
 ;CHECK: std %f13,
 ;CHECK: std %f14,
 ;CHECK: std %f15,
+;CHECK: .cfi_offset %f0, -32
+;CHECK: .cfi_offset %f2, -24
+;CHECK: .cfi_offset %f4, -16
+;CHECK: .cfi_offset %f6, -8
+;CHECK: ld %f0, 384(%r15)
+;CHECK: ld %f2, 392(%r15)
+;CHECK: ld %f4, 400(%r15)
+;CHECK: ld %f6, 408(%r15)
   call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{f0},~{f1},~{f2},~{f3},~{f4},~{f5},~{f6},~{f7},~{f8},~{f9},~{f10},~{f11},~{f12},~{f13},~{f14},~{f15}"() nounwind
   ret void
 }

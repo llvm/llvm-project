@@ -527,7 +527,7 @@ void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr, Error E) {
     printAllocDeallocTraces(AccessPtr, Meta, Printf, PrintBacktrace);
 }
 
-TLS_INITIAL_EXEC
+GWP_ASAN_TLS_INITIAL_EXEC
 GuardedPoolAllocator::ThreadLocalPackedVariables
     GuardedPoolAllocator::ThreadLocals;
 } // namespace gwp_asan

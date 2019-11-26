@@ -100,19 +100,19 @@ public:
   void init(const options::Options &Opts);
 
   // Return whether the allocation should be randomly chosen for sampling.
-  ALWAYS_INLINE bool shouldSample() {
+  GWP_ASAN_ALWAYS_INLINE bool shouldSample() {
     // NextSampleCounter == 0 means we "should regenerate the counter".
     //                   == 1 means we "should sample this allocation".
-    if (UNLIKELY(ThreadLocals.NextSampleCounter == 0))
+    if (GWP_ASAN_UNLIKELY(ThreadLocals.NextSampleCounter == 0))
       ThreadLocals.NextSampleCounter =
           (getRandomUnsigned32() % AdjustedSampleRate) + 1;
 
-    return UNLIKELY(--ThreadLocals.NextSampleCounter == 0);
+    return GWP_ASAN_UNLIKELY(--ThreadLocals.NextSampleCounter == 0);
   }
 
   // Returns whether the provided pointer is a current sampled allocation that
   // is owned by this pool.
-  ALWAYS_INLINE bool pointerIsMine(const void *Ptr) const {
+  GWP_ASAN_ALWAYS_INLINE bool pointerIsMine(const void *Ptr) const {
     uintptr_t P = reinterpret_cast<uintptr_t>(Ptr);
     return GuardedPagePool <= P && P < GuardedPagePoolEnd;
   }
@@ -267,7 +267,7 @@ private:
     // allocation.
     bool RecursiveGuard = false;
   };
-  static TLS_INITIAL_EXEC ThreadLocalPackedVariables ThreadLocals;
+  static GWP_ASAN_TLS_INITIAL_EXEC ThreadLocalPackedVariables ThreadLocals;
 };
 } // namespace gwp_asan
 

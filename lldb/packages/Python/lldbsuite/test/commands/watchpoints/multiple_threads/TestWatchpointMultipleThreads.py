@@ -18,12 +18,10 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     main_spec = lldb.SBFileSpec("main.cpp", False)
 
-    @expectedFailureNetBSD
     def test_watchpoint_before_thread_start(self):
         """Test that we can hit a watchpoint we set before starting another thread"""
         self.do_watchpoint_test("Before running the thread")
 
-    @expectedFailureNetBSD
     def test_watchpoint_after_thread_start(self):
         """Test that we can hit a watchpoint we set after starting another thread"""
         self.do_watchpoint_test("After running the thread")

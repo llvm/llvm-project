@@ -554,7 +554,7 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
 
 void PPCTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP) {
-  if (ST->getDarwinDirective() == PPC::DIR_A2) {
+  if (ST->getCPUDirective() == PPC::DIR_A2) {
     // The A2 is in-order with a deep pipeline, and concatenation unrolling
     // helps expose latency-hiding opportunities to the instruction scheduler.
     UP.Partial = UP.Runtime = true;
@@ -580,7 +580,7 @@ bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) {
   // on combining the loads generated for consecutive accesses, and failure to
   // do so is particularly expensive. This makes it much more likely (compared
   // to only using concatenation unrolling).
-  if (ST->getDarwinDirective() == PPC::DIR_A2)
+  if (ST->getCPUDirective() == PPC::DIR_A2)
     return true;
 
   return LoopHasReductions;
@@ -650,7 +650,7 @@ unsigned PPCTTIImpl::getCacheLineSize() const {
     return CacheLineSize;
 
   // On P7, P8 or P9 we have a cache line size of 128.
-  unsigned Directive = ST->getDarwinDirective();
+  unsigned Directive = ST->getCPUDirective();
   if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
       Directive == PPC::DIR_PWR9)
     return 128;
@@ -666,7 +666,7 @@ unsigned PPCTTIImpl::getPrefetchDistance() const {
 }
 
 unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
-  unsigned Directive = ST->getDarwinDirective();
+  unsigned Directive = ST->getCPUDirective();
   // The 440 has no SIMD support, but floating-point instructions
   // have a 5-cycle latency, so unroll by 5x for latency hiding.
   if (Directive == PPC::DIR_440)

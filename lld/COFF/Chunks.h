@@ -267,6 +267,7 @@ public:
             AssociatedIterator, std::forward_iterator_tag, SectionChunk> {
   public:
     AssociatedIterator() = default;
+    AssociatedIterator(const AssociatedIterator&) = default;
     AssociatedIterator(SectionChunk *head) : cur(head) {}
     AssociatedIterator &operator=(const AssociatedIterator &r) {
       cur = r.cur;

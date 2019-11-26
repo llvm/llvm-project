@@ -118,6 +118,14 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 }
 
+/// Given a base library directory, append path components to form the
+/// LTO directory.
+static std::string AppendLTOLibDir(const std::string &Dir) {
+    // The version allows the path to be keyed to the specific version of
+    // LLVM in used, as the bitcode format is not stable.
+    return Dir + "/llvm-lto/" LLVM_VERSION_STRING;
+}
+
 WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
                          const llvm::opt::ArgList &Args)
     : ToolChain(D, Triple, Args) {
@@ -126,26 +134,24 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
 
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
+  auto SysRoot = getDriver().SysRoot;
   if (getTriple().getOS() == llvm::Triple::UnknownOS) {
     // Theoretically an "unknown" OS should mean no standard libraries, however
     // it could also mean that a custom set of libraries is in use, so just add
     // /lib to the search path. Disable multiarch in this case, to discourage
     // paths containing "unknown" from acquiring meanings.
-    getFilePaths().push_back(getDriver().SysRoot + "/lib");
+    getFilePaths().push_back(SysRoot + "/lib");
   } else {
     const std::string MultiarchTriple =
-        getMultiarchTriple(getDriver(), Triple, getDriver().SysRoot);
+        getMultiarchTriple(getDriver(), Triple, SysRoot);
     if (D.isUsingLTO()) {
-      auto LLVMRevision = getLLVMRevision();
-      if (!LLVMRevision.empty()) {
-        // For LTO, enable use of lto-enabled sysroot libraries too, if available.
-        // Note that the directory is keyed to the LLVM revision, as LLVM's
-        // bitcode format is not stable.
-        getFilePaths().push_back(getDriver().SysRoot + "/lib/" + MultiarchTriple +
-                                 "/llvm-lto/" + LLVMRevision);
-      }
+      // For LTO, enable use of lto-enabled sysroot libraries too, if available.
+      // Note that the directory is keyed to the LLVM revision, as LLVM's
+      // bitcode format is not stable.
+      auto Dir = AppendLTOLibDir(SysRoot + "/lib/" + MultiarchTriple);
+      getFilePaths().push_back(Dir);
     }
-    getFilePaths().push_back(getDriver().SysRoot + "/lib/" + MultiarchTriple);
+    getFilePaths().push_back(SysRoot + "/lib/" + MultiarchTriple);
   }
 }
 

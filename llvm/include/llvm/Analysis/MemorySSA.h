@@ -794,11 +794,9 @@ protected:
   friend class MemorySSAPrinterLegacyPass;
   friend class MemorySSAUpdater;
 
-  void verifyPrevDefInPhis(Function &F) const;
-  void verifyDefUses(Function &F) const;
-  void verifyDomination(Function &F) const;
-  void verifyOrdering(Function &F) const;
+  void verifyOrderingDominationAndDefUses(Function &F) const;
   void verifyDominationNumbers(const Function &F) const;
+  void verifyPrevDefInPhis(Function &F) const;
 
   // This is used by the use optimizer and updater.
   AccessList *getWritableBlockAccesses(const BasicBlock *BB) const {
