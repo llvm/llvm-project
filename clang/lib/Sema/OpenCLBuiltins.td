@@ -274,13 +274,20 @@ def Event             : Type<"Event", QualType<"OCLEventTy">>;
 def VecAndScalar: IntList<"VecAndScalar", [1, 2, 3, 4, 8, 16]>;
 def VecNoScalar : IntList<"VecNoScalar", [2, 3, 4, 8, 16]>;
 def Vec1        : IntList<"Vec1", [1]>;
+def Vec2        : IntList<"Vec2", [2]>;
+def Vec4        : IntList<"Vec4", [4]>;
+def Vec8        : IntList<"Vec8", [8]>;
+def Vec16       : IntList<"Vec16", [16]>;
 def Vec1234     : IntList<"Vec1234", [1, 2, 3, 4]>;
 
 // Type lists.
-def TLAll   : TypeList<"TLAll", [Char, UChar, Short, UShort, Int, UInt, Long, ULong, Float, Double, Half]>;
+def TLAll         : TypeList<"TLAll", [Char,  UChar, Short,  UShort, Int,  UInt, Long,  ULong, Float, Double, Half]>;
+def TLAllUnsigned : TypeList<"TLAllUnsigned", [UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong, UInt,  ULong,  UShort]>;
 def TLFloat : TypeList<"TLFloat", [Float, Double, Half]>;
 def TLSignedInts   : TypeList<"TLSignedInts", [Char, Short, Int, Long]>;
 def TLUnsignedInts : TypeList<"TLUnsignedInts", [UChar, UShort, UInt, ULong]>;
+
+def TLIntLongFloats : TypeList<"TLIntLongFloats", [Int, UInt, Long, ULong, Float, Double, Half]>;
 
 // All unsigned integer types twice, to facilitate unsigned return types for e.g.
 // uchar abs(char) and
@@ -306,6 +313,8 @@ def SGenTypeN              : GenericType<"SGenTypeN", TLSignedInts, VecAndScalar
 def UGenTypeN              : GenericType<"UGenTypeN", TLUnsignedInts, VecAndScalar>;
 // Float
 def FGenTypeN              : GenericType<"FGenTypeN", TLFloat, VecAndScalar>;
+// (u)int, (u)long, and all floats
+def IntLongFloatGenType1   : GenericType<"IntLongFloatGenType1", TLIntLongFloats, Vec1>;
 
 // GenType definitions for every single base type (e.g. fp32 only).
 // Names are like: GenTypeFloatVecAndScalar.
@@ -868,6 +877,31 @@ foreach Type = [Int, UInt] in {
 }
 
 //--------------------------------------------------------------------
+// OpenCL v1.1 s6.11.12, v1.2 s6.12.12, v2.0 s6.13.12 - Miscellaneous Vector Functions
+// --- Table 19 ---
+foreach name = ["shuffle"] in {
+  foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
+    foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
+      def : Builtin<name, [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
+                           GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
+                           GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
+                          Attr.Const>;
+    }
+  }
+}
+foreach name = ["shuffle2"] in {
+  foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
+    foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
+      def : Builtin<name, [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
+                           GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
+                           GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
+                           GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
+                          Attr.Const>;
+    }
+  }
+}
+
+//--------------------------------------------------------------------
 // OpenCL v1.1 s6.11.3, v1.2 s6.12.14, v2.0 s6.13.14: Image Read and Write Functions
 // OpenCL Extension v2.0 s5.1.8 and s6.1.8: Image Read and Write Functions
 // --- Table 22: Image Read Functions with Samplers ---
@@ -1016,6 +1050,27 @@ foreach aQual = ["WO", "RW"] in {
     def : Builtin<name, [Void, ImageType<Image1dBuffer, aQual>, Int, VectorType<Half, 4>]>;
     def : Builtin<name, [Void, ImageType<Image1dArray, aQual>, VectorType<Int, 2>, VectorType<Half, 4>]>;
     def : Builtin<name, [Void, ImageType<Image3d, aQual>, VectorType<Int, 4>, VectorType<Half, 4>]>;
+  }
+}
+
+
+//--------------------------------------------------------------------
+// OpenCL v2.0 s6.13.15 - Work-group Functions
+// --- Table 26 ---
+let MinVersion = CL20 in {
+  foreach name = ["work_group_all", "work_group_any"] in {
+    def : Builtin<name, [Int, Int], Attr.Convergent>;
+  }
+  foreach name = ["work_group_broadcast"] in {
+    def : Builtin<name, [IntLongFloatGenType1, IntLongFloatGenType1, Size], Attr.Convergent>;
+    def : Builtin<name, [IntLongFloatGenType1, IntLongFloatGenType1, Size, Size], Attr.Convergent>;
+    def : Builtin<name, [IntLongFloatGenType1, IntLongFloatGenType1, Size, Size, Size], Attr.Convergent>;
+  }
+  foreach op = ["add", "min", "max"] in {
+    foreach name = ["work_group_reduce_", "work_group_scan_exclusive_",
+                    "work_group_scan_inclusive_"] in {
+      def : Builtin<name # op, [IntLongFloatGenType1, IntLongFloatGenType1], Attr.Convergent>;
+    }
   }
 }
 
