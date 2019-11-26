@@ -16,7 +16,7 @@ declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, me
 declare double @llvm.experimental.constrained.fdiv.f64(double, double, metadata, metadata)
 declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
-declare float @llvm.experimental.constrained.fptrunc.f64.f32(double, metadata, metadata)
+declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
 declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadata)
 
@@ -480,7 +480,7 @@ define void @fptrunc_double_to_f32(double* %val, float *%ret) nounwind strictfp 
 ; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %1 = load double, double* %val, align 8
-  %res = call float @llvm.experimental.constrained.fptrunc.f64.f32(double %1,
+  %res = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %1,
                                                                    metadata !"round.dynamic",
                                                                    metadata !"fpexcept.strict") #0
   store float %res, float* %ret, align 4
