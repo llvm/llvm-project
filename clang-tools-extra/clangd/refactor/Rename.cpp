@@ -20,6 +20,7 @@
 #include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace clang {
 namespace clangd {
@@ -297,34 +298,6 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
   return AffectedFiles;
 }
 
-llvm::Expected<std::pair<size_t, size_t>> toRangeOffset(const clangd::Range &R,
-                                                        llvm::StringRef Code) {
-  auto StartOffset = positionToOffset(Code, R.start);
-  if (!StartOffset)
-    return StartOffset.takeError();
-  auto EndOffset = positionToOffset(Code, R.end);
-  if (!EndOffset)
-    return EndOffset.takeError();
-  return std::make_pair(*StartOffset, *EndOffset);
-};
-
-llvm::Expected<Edit> buildRenameEdit(llvm::StringRef InitialCode,
-                                     const std::vector<Range> &Occurrences,
-                                     llvm::StringRef NewName) {
-  tooling::Replacements RenameEdit;
-  for (const Range &Occurrence : Occurrences) {
-    // FIXME: !positionToOffset is O(N), optimize it.
-    auto RangeOffset = toRangeOffset(Occurrence, InitialCode);
-    if (!RangeOffset)
-      return RangeOffset.takeError();
-    auto ByteLength = RangeOffset->second - RangeOffset->first;
-    if (auto Err = RenameEdit.add(tooling::Replacement(
-            InitialCode, RangeOffset->first, ByteLength, NewName)))
-      return std::move(Err);
-  }
-  return Edit(InitialCode, std::move(RenameEdit));
-}
-
 // Index-based rename, it renames all occurrences outside of the main file.
 //
 // The cross-file rename is purely based on the index, as we don't want to
@@ -358,7 +331,7 @@ llvm::Expected<FileEdits> renameOutsideFile(
         llvm::inconvertibleErrorCode());
 
   FileEdits Results;
-  for (const auto &FileAndOccurrences : AffectedFiles) {
+  for (auto &FileAndOccurrences : AffectedFiles) {
     llvm::StringRef FilePath = FileAndOccurrences.first();
 
     auto AffectedFileCode = GetFileContent(FilePath);
@@ -366,11 +339,14 @@ llvm::Expected<FileEdits> renameOutsideFile(
       elog("Fail to read file content: {0}", AffectedFileCode.takeError());
       continue;
     }
-
-    auto RenameEdit = buildRenameEdit(*AffectedFileCode,
-                                      FileAndOccurrences.getValue(), NewName);
-    if (!RenameEdit)
-      return RenameEdit.takeError();
+    auto RenameEdit = buildRenameEdit(
+        *AffectedFileCode, std::move(FileAndOccurrences.second), NewName);
+    if (!RenameEdit) {
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("fail to build rename edit for file {0}: {1}", FilePath,
+                        llvm::toString(RenameEdit.takeError())),
+          llvm::inconvertibleErrorCode());
+    }
     if (!RenameEdit->Replacements.empty())
       Results.insert({FilePath, std::move(*RenameEdit)});
   }
@@ -463,6 +439,52 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
   Results.try_emplace(RInputs.MainFilePath, MainFileCode,
                       std::move(*MainFileRenameEdit));
   return Results;
+}
+
+llvm::Expected<Edit> buildRenameEdit(llvm::StringRef InitialCode,
+                                     std::vector<Range> Occurrences,
+                                     llvm::StringRef NewName) {
+  llvm::sort(Occurrences);
+  // These two always correspond to the same position.
+  Position LastPos{0, 0};
+  size_t LastOffset = 0;
+
+  auto Offset = [&](const Position &P) -> llvm::Expected<size_t> {
+    assert(LastPos <= P && "malformed input");
+    Position Shifted = {
+        P.line - LastPos.line,
+        P.line > LastPos.line ? P.character : P.character - LastPos.character};
+    auto ShiftedOffset =
+        positionToOffset(InitialCode.substr(LastOffset), Shifted);
+    if (!ShiftedOffset)
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("fail to convert the position {0} to offset ({1})", P,
+                        llvm::toString(ShiftedOffset.takeError())),
+          llvm::inconvertibleErrorCode());
+    LastPos = P;
+    LastOffset += *ShiftedOffset;
+    return LastOffset;
+  };
+
+  std::vector<std::pair</*start*/ size_t, /*end*/ size_t>> OccurrencesOffsets;
+  for (const auto &R : Occurrences) {
+    auto StartOffset = Offset(R.start);
+    if (!StartOffset)
+      return StartOffset.takeError();
+    auto EndOffset = Offset(R.end);
+    if (!EndOffset)
+      return EndOffset.takeError();
+    OccurrencesOffsets.push_back({*StartOffset, *EndOffset});
+  }
+
+  tooling::Replacements RenameEdit;
+  for (const auto &R : OccurrencesOffsets) {
+    auto ByteLength = R.second - R.first;
+    if (auto Err = RenameEdit.add(
+            tooling::Replacement(InitialCode, R.first, ByteLength, NewName)))
+      return std::move(Err);
+  }
+  return Edit(InitialCode, std::move(RenameEdit));
 }
 
 } // namespace clangd
