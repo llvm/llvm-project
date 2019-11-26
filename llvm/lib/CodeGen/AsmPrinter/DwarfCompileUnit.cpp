@@ -615,6 +615,10 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   unsigned Offset = DV.getDebugLocListIndex();
   if (Offset != ~0U) {
     addLocationList(*VariableDie, dwarf::DW_AT_location, Offset);
+    auto TagOffset = DV.getDebugLocListTagOffset();
+    if (TagOffset)
+      addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
+              *TagOffset);
     return VariableDie;
   }
 
@@ -632,6 +636,10 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
         DwarfExpr.addUnsignedConstant(DVal->getInt());
         DwarfExpr.addExpression(Expr);
         addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+        if (DwarfExpr.TagOffset)
+          addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset,
+                  dwarf::DW_FORM_data1, *DwarfExpr.TagOffset);
+
       } else
         addConstantValue(*VariableDie, DVal->getInt(), DV.getType());
     } else if (DVal->isConstantFP()) {
@@ -1198,6 +1206,10 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, DwarfExpr.finalize());
+
+  if (DwarfExpr.TagOffset)
+    addUInt(Die, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
+            *DwarfExpr.TagOffset);
 }
 
 /// Start with the address based on the location provided, and generate the
@@ -1228,6 +1240,10 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, DwarfExpr.finalize());
+
+  if (DwarfExpr.TagOffset)
+    addUInt(Die, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
+            *DwarfExpr.TagOffset);
 }
 
 /// Add a Dwarf loclistptr attribute data and value.

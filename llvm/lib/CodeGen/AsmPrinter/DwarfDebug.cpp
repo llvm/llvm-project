@@ -2275,6 +2275,8 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
     DwarfDebug::emitDebugLocValue(AP, BT, Value, DwarfExpr);
   }
   DwarfExpr.finalize();
+  if (DwarfExpr.TagOffset)
+    List.setTagOffset(*DwarfExpr.TagOffset);
 }
 
 void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
