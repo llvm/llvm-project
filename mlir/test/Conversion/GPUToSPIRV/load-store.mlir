@@ -22,9 +22,9 @@ module attributes {gpu.container_module} {
     // CHECK-DAG: spv.globalVariable [[LOCALINVOCATIONIDVAR:@.*]] built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
     // CHECK-DAG: spv.globalVariable [[WORKGROUPIDVAR:@.*]] built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
     // CHECK-LABEL:    func @load_store_kernel
-    // CHECK-SAME: [[ARG0:%.*]]: !spv.ptr<!spv.array<12 x !spv.array<4 x f32>>, StorageBuffer> {spirv.interface_var_abi = {binding = 0 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
-    // CHECK-SAME: [[ARG1:%.*]]: !spv.ptr<!spv.array<12 x !spv.array<4 x f32>>, StorageBuffer> {spirv.interface_var_abi = {binding = 1 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
-    // CHECK-SAME: [[ARG2:%.*]]: !spv.ptr<!spv.array<12 x !spv.array<4 x f32>>, StorageBuffer> {spirv.interface_var_abi = {binding = 2 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
+    // CHECK-SAME: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32 [4]> [16]> [0]>, StorageBuffer> {spirv.interface_var_abi = {binding = 0 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
+    // CHECK-SAME: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32 [4]> [16]> [0]>, StorageBuffer> {spirv.interface_var_abi = {binding = 1 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
+    // CHECK-SAME: [[ARG2:%.*]]: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32 [4]> [16]> [0]>, StorageBuffer> {spirv.interface_var_abi = {binding = 2 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
     // CHECK-SAME: [[ARG3:%.*]]: i32 {spirv.interface_var_abi = {binding = 3 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
     // CHECK-SAME: [[ARG4:%.*]]: i32 {spirv.interface_var_abi = {binding = 4 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
     // CHECK-SAME: [[ARG5:%.*]]: i32 {spirv.interface_var_abi = {binding = 5 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
@@ -53,15 +53,18 @@ module attributes {gpu.container_module} {
       %12 = addi %arg3, %0 : index
       // CHECK: [[INDEX2:%.*]] = spv.IAdd [[ARG4]], [[LOCALINVOCATIONIDX]]
       %13 = addi %arg4, %3 : index
-      // CHECK: [[PTR1:%.*]] = spv.AccessChain [[ARG0]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}}
+      // CHECK: [[ZERO1:%.*]] = spv.constant 0 : i32
+      // CHECK: [[PTR1:%.*]] = spv.AccessChain [[ARG0]]{{\[}}[[ZERO1]], [[INDEX1]], [[INDEX2]]{{\]}}
       // CHECK-NEXT: [[VAL1:%.*]] = spv.Load "StorageBuffer" [[PTR1]]
       %14 = load %arg0[%12, %13] : memref<12x4xf32>
-      // CHECK: [[PTR2:%.*]] = spv.AccessChain [[ARG1]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}}
+      // CHECK: [[ZERO2:%.*]] = spv.constant 0 : i32
+      // CHECK: [[PTR2:%.*]] = spv.AccessChain [[ARG1]]{{\[}}[[ZERO2]], [[INDEX1]], [[INDEX2]]{{\]}}
       // CHECK-NEXT: [[VAL2:%.*]] = spv.Load "StorageBuffer" [[PTR2]]
       %15 = load %arg1[%12, %13] : memref<12x4xf32>
       // CHECK: [[VAL3:%.*]] = spv.FAdd [[VAL1]], [[VAL2]]
       %16 = addf %14, %15 : f32
-      // CHECK: [[PTR3:%.*]] = spv.AccessChain [[ARG2]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}}
+      // CHECK: [[ZERO3:%.*]] = spv.constant 0 : i32
+      // CHECK: [[PTR3:%.*]] = spv.AccessChain [[ARG2]]{{\[}}[[ZERO3]], [[INDEX1]], [[INDEX2]]{{\]}}
       // CHECK-NEXT: spv.Store "StorageBuffer" [[PTR3]], [[VAL3]]
       store %16, %arg2[%12, %13] : memref<12x4xf32>
       return

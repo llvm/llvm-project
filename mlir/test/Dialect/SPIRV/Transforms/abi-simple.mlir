@@ -9,14 +9,12 @@ spv.module "Logical" "GLSL450" {
                 {spirv.interface_var_abi = {binding = 0 : i32,
                                             descriptor_set = 0 : i32,
                                             storage_class = 12 : i32}},
-                 %arg1: !spv.ptr<!spv.array<12 x f32>, StorageBuffer>
+                 %arg1: !spv.ptr<!spv.struct<!spv.array<12 x f32>>, StorageBuffer>
                  {spirv.interface_var_abi = {binding = 1 : i32,
                                              descriptor_set = 0 : i32,
                                              storage_class = 12 : i32}})
   attributes  {spirv.entry_point_abi = {local_size = dense<[32, 1, 1]> : vector<3xi32>}} {
-    // CHECK: [[ADDRESSARG1:%.*]] = spv._address_of [[VAR1]]
-    // CHECK: [[CONST1:%.*]] = spv.constant 0 : i32
-    // CHECK: [[ARG1:%.*]] = spv.AccessChain [[ADDRESSARG1]]{{\[}}[[CONST1]]
+    // CHECK: [[ARG1:%.*]] = spv._address_of [[VAR1]]
     // CHECK: [[ADDRESSARG0:%.*]] = spv._address_of [[VAR0]]
     // CHECK: [[CONST0:%.*]] = spv.constant 0 : i32
     // CHECK: [[ARG0PTR:%.*]] = spv.AccessChain [[ADDRESSARG0]]{{\[}}[[CONST0]]

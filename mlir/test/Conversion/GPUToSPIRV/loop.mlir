@@ -22,8 +22,8 @@ module attributes {gpu.container_module} {
       // CHECK:        [[CMP:%.*]] = spv.SLessThan [[INDVAR]], [[UB]] : i32
       // CHECK:        spv.BranchConditional [[CMP]], [[BODY:\^.*]], [[MERGE:\^.*]]
       // CHECK:      [[BODY]]:
-      // CHECK:        spv.AccessChain {{%.*}}{{\[}}[[INDVAR]]{{\]}} : {{.*}}
-      // CHECK:        spv.AccessChain {{%.*}}{{\[}}[[INDVAR]]{{\]}} : {{.*}}
+      // CHECK:        spv.AccessChain {{%.*}}{{\[}}{{%.*}}, [[INDVAR]]{{\]}} : {{.*}}
+      // CHECK:        spv.AccessChain {{%.*}}{{\[}}{{%.*}}, [[INDVAR]]{{\]}} : {{.*}}
       // CHECK:        [[INCREMENT:%.*]] = spv.IAdd [[INDVAR]], [[STEP]] : i32
       // CHECK:        spv.Branch [[HEADER]]([[INCREMENT]] : i32)
       // CHECK:      [[MERGE]]

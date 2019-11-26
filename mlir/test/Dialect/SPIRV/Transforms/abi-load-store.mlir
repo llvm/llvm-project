@@ -18,15 +18,15 @@ spv.module "Logical" "GLSL450" {
   // CHECK-DAG: spv.globalVariable [[VAR5:@.*]] bind(0, 5) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
   // CHECK-DAG: spv.globalVariable [[VAR6:@.*]] bind(0, 6) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
   // CHECK: func [[FN:@.*]]()
-  func @load_store_kernel(%arg0: !spv.ptr<!spv.array<12 x !spv.array<4 x f32>>, StorageBuffer>
+  func @load_store_kernel(%arg0: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
                           {spirv.interface_var_abi = {binding = 0 : i32,
                                                       descriptor_set = 0 : i32,
                                                       storage_class = 12 : i32}},
-                          %arg1: !spv.ptr<!spv.array<12 x !spv.array<4 x f32>>, StorageBuffer>
+                          %arg1: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
                           {spirv.interface_var_abi = {binding = 1 : i32,
                                                       descriptor_set = 0 : i32,
                                                       storage_class = 12 : i32}},
-                          %arg2: !spv.ptr<!spv.array<12 x !spv.array<4 x f32>>, StorageBuffer>
+                          %arg2: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
                           {spirv.interface_var_abi = {binding = 2 : i32,
                                                       descriptor_set = 0 : i32,
                                                       storage_class = 12 : i32}},
@@ -63,15 +63,9 @@ spv.module "Logical" "GLSL450" {
     // CHECK: [[CONST3:%.*]] = spv.constant 0 : i32
     // CHECK: [[ARG3PTR:%.*]] = spv.AccessChain [[ADDRESSARG3]]{{\[}}[[CONST3]]
     // CHECK: [[ARG3:%.*]] = spv.Load "StorageBuffer" [[ARG3PTR]]
-    // CHECK: [[ADDRESSARG2:%.*]] = spv._address_of [[VAR2]]
-    // CHECK: [[CONST2:%.*]] = spv.constant 0 : i32
-    // CHECK: [[ARG2:%.*]] = spv.AccessChain [[ADDRESSARG2]]{{\[}}[[CONST2]]
-    // CHECK: [[ADDRESSARG1:%.*]] = spv._address_of [[VAR1]]
-    // CHECK: [[CONST1:%.*]] = spv.constant 0 : i32
-    // CHECK: [[ARG1:%.*]] = spv.AccessChain [[ADDRESSARG1]]{{\[}}[[CONST1]]
-    // CHECK: [[ADDRESSARG0:%.*]] = spv._address_of [[VAR0]]
-    // CHECK: [[CONST0:%.*]] = spv.constant 0 : i32
-    // CHECK: [[ARG0:%.*]] = spv.AccessChain [[ADDRESSARG0]]{{\[}}[[CONST0]]
+    // CHECK: [[ARG2:%.*]] = spv._address_of [[VAR2]]
+    // CHECK: [[ARG1:%.*]] = spv._address_of [[VAR1]]
+    // CHECK: [[ARG0:%.*]] = spv._address_of [[VAR0]]
     %0 = spv._address_of @__builtin_var_WorkgroupId__ : !spv.ptr<vector<3xi32>, Input>
     %1 = spv.Load "Input" %0 : vector<3xi32>
     %2 = spv.CompositeExtract %1[0 : i32] : vector<3xi32>
@@ -113,14 +107,15 @@ spv.module "Logical" "GLSL450" {
     // CHECK: spv.IAdd [[ARG4]]
     %37 = spv.IAdd %arg4, %11 : i32
     // CHECK: spv.AccessChain [[ARG0]]
-    %38 = spv.AccessChain %arg0[%36, %37] : !spv.ptr<!spv.array<12 x !spv.array<4 x f32>>, StorageBuffer>
+    %c0 = spv.constant 0 : i32
+    %38 = spv.AccessChain %arg0[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
     %39 = spv.Load "StorageBuffer" %38 : f32
     // CHECK: spv.AccessChain [[ARG1]]
-    %40 = spv.AccessChain %arg1[%36, %37] : !spv.ptr<!spv.array<12 x !spv.array<4 x f32>>, StorageBuffer>
+    %40 = spv.AccessChain %arg1[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
     %41 = spv.Load "StorageBuffer" %40 : f32
     %42 = spv.FAdd %39, %41 : f32
     // CHECK: spv.AccessChain [[ARG2]]
-    %43 = spv.AccessChain %arg2[%36, %37] : !spv.ptr<!spv.array<12 x !spv.array<4 x f32>>, StorageBuffer>
+    %43 = spv.AccessChain %arg2[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
     spv.Store "StorageBuffer" %43, %42 : f32
     spv.Return
   }
