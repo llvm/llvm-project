@@ -1964,6 +1964,12 @@ def fdebug_prefix_map_EQ
   : Joined<["-"], "fdebug-prefix-map=">, Group<f_Group>,
     Flags<[CC1Option,CC1AsOption]>,
     HelpText<"remap file source paths in debug info">;
+def ffile_prefix_map_EQ
+  : Joined<["-"], "ffile-prefix-map=">, Group<f_Group>, Flags<[CC1Option]>,
+    HelpText<"remap file source paths in debug info and predefined preprocessor macros">;
+def fmacro_prefix_map_EQ
+  : Joined<["-"], "fmacro-prefix-map=">, Group<Preprocessor_Group>, Flags<[CC1Option]>,
+    HelpText<"remap file source paths in predefined preprocessor macros">;
 def fforce_dwarf_frame : Flag<["-"], "fforce-dwarf-frame">, Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Always emit a debug frame section">;
 def fno_force_dwarf_frame : Flag<["-"], "fno-force-dwarf-frame">, Group<f_Group>, Flags<[CC1Option]>,
