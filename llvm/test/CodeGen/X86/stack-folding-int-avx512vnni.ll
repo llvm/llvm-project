@@ -39,10 +39,10 @@ define <16 x i32> @stack_fold_vpdpwssd_mask(<16 x i32>* %a0, <16 x i32> %a1, <16
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %zmm2
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpdpwssd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm2 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = load <16 x i32>, <16 x i32>* %a0
@@ -59,10 +59,10 @@ define <16 x i32> @stack_fold_vpdpwssd_mask_commuted(<16 x i32>* %a0, <16 x i32>
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %zmm2
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpdpwssd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm2 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = load <16 x i32>, <16 x i32>* %a0
@@ -143,10 +143,10 @@ define <16 x i32> @stack_fold_vpdpwssds_mask(<16 x i32>* %a0, <16 x i32> %a1, <1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %zmm2
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpdpwssds {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm2 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = load <16 x i32>, <16 x i32>* %a0
@@ -163,10 +163,10 @@ define <16 x i32> @stack_fold_vpdpwssds_mask_commuted(<16 x i32>* %a0, <16 x i32
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %zmm2
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpdpwssds {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm2 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = load <16 x i32>, <16 x i32>* %a0
