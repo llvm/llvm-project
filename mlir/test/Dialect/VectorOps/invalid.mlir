@@ -2,6 +2,13 @@
 
 // -----
 
+func @broadcast_rank_too_high(%arg0: vector<4x4xf32>, %arg1: vector<4xf32>) {
+  // expected-error@+1 {{source rank higher than destination rank}}
+  %2 = vector.broadcast %arg0, %arg1 : vector<4x4xf32> into vector<4xf32>
+}
+
+// -----
+
 func @extract_element_vector_type(%arg0: index) {
   // expected-error@+1 {{expected vector type}}
   %1 = vector.extractelement %arg0[] : index
