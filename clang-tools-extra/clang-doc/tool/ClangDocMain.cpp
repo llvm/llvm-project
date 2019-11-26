@@ -36,6 +36,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -179,7 +180,7 @@ llvm::Expected<llvm::SmallString<128>> getInfoOutputFile(StringRef Root,
 }
 
 int main(int argc, const char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+  llvm::InitLLVM X(argc, argv);
   std::error_code OK;
 
   ExecutorName.setInitialValue("all-TUs");

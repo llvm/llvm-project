@@ -33,6 +33,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include <fstream>
@@ -81,7 +82,7 @@ bool runCommandsInFile(const char *ExeName, std::string const &FileName,
 }
 
 int main(int argc, const char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+  llvm::InitLLVM X(argc, argv);
 
   CommonOptionsParser OptionsParser(argc, argv, ClangQueryCategory);
 

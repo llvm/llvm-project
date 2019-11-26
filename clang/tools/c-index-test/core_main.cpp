@@ -13,16 +13,17 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
-#include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexDataConsumer.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/PrettyStackTrace.h"
 
 using namespace clang;
 using namespace clang::index;
@@ -320,8 +321,7 @@ static void printSymbolNameAndUSR(const clang::Module *Mod, raw_ostream &OS) {
 //===----------------------------------------------------------------------===//
 
 int indextest_core_main(int argc, const char **argv) {
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  PrettyStackTraceProgram X(argc, argv);
+  llvm::InitLLVM X(argc, argv);
   void *MainAddr = (void*) (intptr_t) indextest_core_main;
   std::string Executable = llvm::sys::fs::getMainExecutable(argv[0], MainAddr);
 
