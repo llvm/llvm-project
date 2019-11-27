@@ -1,9 +1,6 @@
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | FileCheck %s
 
-; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
-; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | FileCheck %s --check-prefix=DWO
-
 ; CHECK:      DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x00000018:
 ; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +3, DW_OP_stack_value
@@ -22,9 +19,6 @@
 
 ; CHECK:      .debug_loclists contents:
 ; CHECK-NEXT: 0x00000000: locations list header: length = 0x00000035, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
-
-; DWO:      .debug_loclists.dwo contents:
-; DWO-NEXT: 0x00000000: locations list header: length = 0x00000035, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
 
 ; CHECK-NEXT: offsets: [
 ; CHECK-NEXT: 0x0000000c => 0x00000018
