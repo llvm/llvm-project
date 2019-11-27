@@ -3013,12 +3013,8 @@ public:
   std::pair<SDValue, SDValue> makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC,
                                           EVT RetVT, ArrayRef<SDValue> Ops,
                                           MakeLibCallOptions CallOptions,
-                                          const SDLoc &dl) const;
-
-  std::pair<SDValue, SDValue> ExpandChainLibCall(SelectionDAG &DAG,
-                                                 RTLIB::Libcall LC,
-                                                 SDNode *Node,
-                                                 bool isSigned) const;
+                                          const SDLoc &dl,
+                                          SDValue Chain = SDValue()) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
