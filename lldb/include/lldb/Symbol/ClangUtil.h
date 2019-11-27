@@ -11,6 +11,7 @@
 #ifndef LLDB_SYMBOL_CLANGUTIL_H
 #define LLDB_SYMBOL_CLANGUTIL_H
 
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/Type.h"
 
 #include "lldb/Symbol/CompilerType.h"
@@ -30,6 +31,15 @@ struct ClangUtil {
   static CompilerType RemoveFastQualifiers(const CompilerType &ct);
 
   static clang::TagDecl *GetAsTagDecl(const CompilerType &type);
+
+  /// Returns a textual representation of the given Decl's AST. Does not
+  /// deserialize any child nodes.
+  static std::string DumpDecl(const clang::Decl *d);
+  /// Returns a textual representation of the given type.
+  static std::string ToString(const clang::Type *t);
+  /// Returns a textual representation of the given CompilerType (assuming
+  /// its underlying type is a Clang type).
+  static std::string ToString(const CompilerType &c);
 };
 }
 
