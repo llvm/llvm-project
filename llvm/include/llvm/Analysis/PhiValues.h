@@ -108,7 +108,7 @@ private:
 
   /// Process a phi so that its entries in the depth and reachable maps are
   /// fully populated.
-  void processPhi(const PHINode *PN, SmallVector<const PHINode *, 8> &Stack);
+  void processPhi(const PHINode *PN, SmallVectorImpl<const PHINode *> &Stack);
 };
 
 /// The analysis pass which yields a PhiValues
