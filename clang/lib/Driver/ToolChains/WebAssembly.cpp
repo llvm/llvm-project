@@ -8,6 +8,7 @@
 
 #include "WebAssembly.h"
 #include "CommonArgs.h"
+#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -90,6 +91,31 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Output.getFilename());
 
   C.addCommand(std::make_unique<Command>(JA, *this, Linker, CmdArgs, Inputs));
+
+  // When optimizing, if wasm-opt is in the PATH, run wasm-opt.
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (llvm::ErrorOr<std::string> WasmOptPath =
+           llvm::sys::findProgramByName("wasm-opt")) {
+      StringRef OOpt = "s";
+      if (A->getOption().matches(options::OPT_O4) ||
+          A->getOption().matches(options::OPT_Ofast))
+        OOpt = "4";
+      else if (A->getOption().matches(options::OPT_O0))
+        OOpt = "0";
+      else if (A->getOption().matches(options::OPT_O))
+        OOpt = A->getValue();
+
+      if (OOpt != "0") {
+        const char *WasmOpt = Args.MakeArgString(*WasmOptPath);
+        ArgStringList CmdArgs;
+        CmdArgs.push_back(Output.getFilename());
+        CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
+        CmdArgs.push_back("-o");
+        CmdArgs.push_back(Output.getFilename());
+        C.addCommand(std::make_unique<Command>(JA, *this, WasmOpt, CmdArgs, Inputs));
+      }
+    }
+  }
 }
 
 WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
@@ -109,6 +135,16 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
   } else {
     const std::string MultiarchTriple =
         getMultiarchTriple(getDriver(), Triple, getDriver().SysRoot);
+    if (D.isUsingLTO()) {
+      auto LLVMRevision = getLLVMRevision();
+      if (!LLVMRevision.empty()) {
+        // For LTO, enable use of lto-enabled sysroot libraries too, if available.
+        // Note that the directory is keyed to the LLVM revision, as LLVM's
+        // bitcode format is not stable.
+        getFilePaths().push_back(getDriver().SysRoot + "/lib/" + MultiarchTriple +
+                                 "/llvm-lto/" + LLVMRevision);
+      }
+    }
     getFilePaths().push_back(getDriver().SysRoot + "/lib/" + MultiarchTriple);
   }
 }
