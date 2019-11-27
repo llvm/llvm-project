@@ -1893,18 +1893,18 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (LHS == RHS || isa<UndefValue>(LHS)) {
     // Remap any references to RHS to use LHS.
     SmallVector<Constant*, 16> Elts;
-    for (unsigned i = 0, e = LHSWidth; i != VWidth; ++i) {
+    for (unsigned i = 0; i != VWidth; ++i) {
       if (Mask[i] < 0) {
         Elts.push_back(UndefValue::get(Int32Ty));
         continue;
       }
 
-      if ((Mask[i] >= (int)e && isa<UndefValue>(RHS)) ||
-          (Mask[i] <  (int)e && isa<UndefValue>(LHS))) {
+      if ((Mask[i] >= (int)LHSWidth && isa<UndefValue>(RHS)) ||
+          (Mask[i] <  (int)LHSWidth && isa<UndefValue>(LHS))) {
         Mask[i] = -1;     // Turn into undef.
         Elts.push_back(UndefValue::get(Int32Ty));
       } else {
-        Mask[i] = Mask[i] % e;  // Force to LHS.
+        Mask[i] = Mask[i] % LHSWidth;  // Force to LHS.
         Elts.push_back(ConstantInt::get(Int32Ty, Mask[i]));
       }
     }
