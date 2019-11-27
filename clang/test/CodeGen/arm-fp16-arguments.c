@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple armv7a--none-eabi -target-abi aapcs -mfloat-abi soft -fallow-half-arguments-and-returns -emit-llvm -o - -O1 %s | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT
-// RUN: %clang_cc1 -triple armv7a--none-eabi -target-abi aapcs -mfloat-abi hard -fallow-half-arguments-and-returns -emit-llvm -o - -O1 %s | FileCheck %s --check-prefix=CHECK --check-prefix=HARD
-// RUN: %clang_cc1 -triple armv7a--none-eabi -target-abi aapcs -mfloat-abi soft -fnative-half-arguments-and-returns -emit-llvm -o - -O1 %s | FileCheck %s --check-prefix=NATIVE
+// RUN: %clang_cc1 -triple armv7a--none-eabi -target-abi aapcs -mfloat-abi soft -fallow-half-arguments-and-returns -emit-llvm -o - -O2 %s | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT
+// RUN: %clang_cc1 -triple armv7a--none-eabi -target-abi aapcs -mfloat-abi hard -fallow-half-arguments-and-returns -emit-llvm -o - -O2 %s | FileCheck %s --check-prefix=CHECK --check-prefix=HARD
+// RUN: %clang_cc1 -triple armv7a--none-eabi -target-abi aapcs -mfloat-abi soft -fnative-half-arguments-and-returns -emit-llvm -o - -O2 %s | FileCheck %s --check-prefix=NATIVE
 
 __fp16 g;
 

@@ -156,10 +156,6 @@ public:
                               unsigned BaseReg, int64_t Offset,
                               function_ref<unsigned()> GetATReg, SMLoc IDLoc,
                               const MCSubtargetInfo *STI);
-  void emitSCWithSymOffset(unsigned Opcode, unsigned SrcReg, unsigned BaseReg,
-                           MCOperand &HiOperand, MCOperand &LoOperand,
-                           unsigned ATReg, SMLoc IDLoc,
-                           const MCSubtargetInfo *STI);
   void emitLoadWithImmOffset(unsigned Opcode, unsigned DstReg, unsigned BaseReg,
                              int64_t Offset, unsigned TmpReg, SMLoc IDLoc,
                              const MCSubtargetInfo *STI);

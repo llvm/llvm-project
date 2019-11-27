@@ -587,6 +587,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSIN   , VT, Expand);
       setOperationAction(ISD::FCOS   , VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
+
+      // Handle constrained floating-point operations of scalar.
+      setOperationAction(ISD::STRICT_FMUL     , VT, Legal);
+      setOperationAction(ISD::STRICT_FDIV     , VT, Legal);
+      setOperationAction(ISD::STRICT_FSQRT    , VT, Legal);
+      setOperationAction(ISD::STRICT_FP_EXTEND, VT, Legal);
+      // FIXME: When the target is 64-bit, STRICT_FP_ROUND will be overwritten
+      // as Custom.
+      setOperationAction(ISD::STRICT_FP_ROUND, VT, Legal);
     }
   }
 
@@ -657,6 +666,17 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::LLROUND, MVT::f80, Expand);
     setOperationAction(ISD::LRINT, MVT::f80, Expand);
     setOperationAction(ISD::LLRINT, MVT::f80, Expand);
+
+    // Handle constrained floating-point operations of scalar.
+    setOperationAction(ISD::STRICT_FADD     , MVT::f80, Legal);
+    setOperationAction(ISD::STRICT_FSUB     , MVT::f80, Legal);
+    setOperationAction(ISD::STRICT_FMUL     , MVT::f80, Legal);
+    setOperationAction(ISD::STRICT_FDIV     , MVT::f80, Legal);
+    setOperationAction(ISD::STRICT_FSQRT    , MVT::f80, Legal);
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f80, Legal);
+    // FIXME: When the target is 64-bit, STRICT_FP_ROUND will be overwritten
+    // as Custom.
+    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f80, Legal);
   }
 
   // f128 uses xmm registers, but most operations require libcalls.

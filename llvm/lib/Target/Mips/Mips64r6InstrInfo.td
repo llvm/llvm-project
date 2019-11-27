@@ -75,7 +75,7 @@ class DMUL_R6_DESC : MUL_R6_DESC_BASE<"dmul", GPR64Opnd, II_DMUL, mul>;
 class DMULU_DESC   : MUL_R6_DESC_BASE<"dmulu", GPR64Opnd, II_DMUL>;
 class LDPC_DESC    : PCREL_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3, II_LDPC>;
 class LWUPC_DESC   : PCREL_DESC_BASE<"lwupc", GPR32Opnd, simm19_lsl2, II_LWUPC>;
-class LLD_R6_DESC   : LL_R6_DESC_BASE<"lld", GPR64Opnd, mem_simmptr, II_LLD>;
+class LLD_R6_DESC   : LL_R6_DESC_BASE<"lld", GPR64Opnd, mem_simm9_exp, II_LLD>;
 class SCD_R6_DESC   : SC_R6_DESC_BASE<"scd", GPR64Opnd, II_SCD>;
 class SELEQZ64_DESC : SELEQNE_Z_DESC_BASE<"seleqz", GPR64Opnd>;
 class SELNEZ64_DESC : SELEQNE_Z_DESC_BASE<"selnez", GPR64Opnd>;
@@ -106,7 +106,7 @@ class JIC64_DESC : JMP_IDX_COMPACT_DESC_BASE<"jic", jmpoffset16, GPR64Opnd,
   list<Register> Defs = [AT];
 }
 
-class LL64_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9, II_LL>;
+class LL64_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9_exp, II_LL>;
 class SC64_R6_DESC : SC_R6_DESC_BASE<"sc", GPR32Opnd, II_SC>;
 
 class JR_HB64_R6_DESC : JR_HB_DESC_BASE<"jr.hb", GPR64Opnd> {

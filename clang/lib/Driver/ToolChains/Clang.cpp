@@ -628,12 +628,29 @@ static void addDebugCompDirArg(const ArgList &Args, ArgStringList &CmdArgs,
 
 /// Add a CC1 and CC1AS option to specify the debug file path prefix map.
 static void addDebugPrefixMapArg(const Driver &D, const ArgList &Args, ArgStringList &CmdArgs) {
-  for (const Arg *A : Args.filtered(options::OPT_fdebug_prefix_map_EQ)) {
+  for (const Arg *A : Args.filtered(options::OPT_ffile_prefix_map_EQ,
+                                    options::OPT_fdebug_prefix_map_EQ)) {
     StringRef Map = A->getValue();
     if (Map.find('=') == StringRef::npos)
-      D.Diag(diag::err_drv_invalid_argument_to_fdebug_prefix_map) << Map;
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Map << A->getOption().getName();
     else
       CmdArgs.push_back(Args.MakeArgString("-fdebug-prefix-map=" + Map));
+    A->claim();
+  }
+}
+
+/// Add a CC1 and CC1AS option to specify the macro file path prefix map.
+static void addMacroPrefixMapArg(const Driver &D, const ArgList &Args,
+                                 ArgStringList &CmdArgs) {
+  for (const Arg *A : Args.filtered(options::OPT_ffile_prefix_map_EQ,
+                                    options::OPT_fmacro_prefix_map_EQ)) {
+    StringRef Map = A->getValue();
+    if (Map.find('=') == StringRef::npos)
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Map << A->getOption().getName();
+    else
+      CmdArgs.push_back(Args.MakeArgString("-fmacro-prefix-map=" + Map));
     A->claim();
   }
 }
@@ -1343,6 +1360,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     // For IAMCU add special include arguments.
     getToolChain().AddIAMCUIncludeArgs(Args, CmdArgs);
   }
+
+  addMacroPrefixMapArg(D, Args, CmdArgs);
 }
 
 // FIXME: Move to target hook.

@@ -1,13 +1,13 @@
-; Test pass name: ppc-loop-preinc-prep.
-; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-before=ppc-loop-preinc-prep -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-BEFORE-LOOP-PREINC-PREP
-; STOP-BEFORE-LOOP-PREINC-PREP-NOT: -ppc-loop-preinc-prep
-; STOP-BEFORE-LOOP-PREINC-PREP-NOT: "ppc-loop-preinc-prep" pass is not registered.
-; STOP-BEFORE-LOOP-PREINC-PREP-NOT: Prepare loop for pre-inc. addressing modes
+; Test pass name: ppc-loop-instr-form-prep.
+; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-before=ppc-loop-instr-form-prep -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-BEFORE-LOOP-INSTR-FORM-PREP
+; STOP-BEFORE-LOOP-INSTR-FORM-PREP-NOT: -ppc-loop-instr-form-prep
+; STOP-BEFORE-LOOP-INSTR-FORM-PREP-NOT: "ppc-loop-instr-form-prep" pass is not registered.
+; STOP-BEFORE-LOOP-INSTR-FORM-PREP-NOT: Prepare loop for ppc preferred instruction forms
 
-; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-after=ppc-loop-preinc-prep -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-AFTER-LOOP-PREINC-PREP
-; STOP-AFTER-LOOP-PREINC-PREP: -ppc-loop-preinc-prep
-; STOP-AFTER-LOOP-PREINC-PREP-NOT: "ppc-loop-preinc-prep" pass is not registered.
-; STOP-AFTER-LOOP-PREINC-PREP: Prepare loop for pre-inc. addressing modes
+; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-after=ppc-loop-instr-form-prep -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-AFTER-LOOP-INSTR-FORM-PREP
+; STOP-AFTER-LOOP-INSTR-FORM-PREP: -ppc-loop-instr-form-prep
+; STOP-AFTER-LOOP-INSTR-FORM-PREP-NOT: "ppc-loop-instr-form-prep" pass is not registered.
+; STOP-AFTER-LOOP-INSTR-FORM-PREP: Prepare loop for ppc preferred instruction forms
 
 
 ; Test pass name: ppc-toc-reg-deps.

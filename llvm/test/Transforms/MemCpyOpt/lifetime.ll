@@ -1,4 +1,4 @@
-; RUN: opt < %s -O1 -S | FileCheck %s
+; RUN: opt < %s -O2 -S | FileCheck %s
 
 ; performCallSlotOptzn in MemCpy should not exchange the calls to
 ; @llvm.lifetime.start and @llvm.memcpy.

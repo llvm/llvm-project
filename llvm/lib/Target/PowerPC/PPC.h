@@ -34,7 +34,7 @@ namespace llvm {
 #ifndef NDEBUG
   FunctionPass *createPPCCTRLoopsVerify();
 #endif
-  FunctionPass *createPPCLoopPreIncPrepPass(PPCTargetMachine &TM);
+  FunctionPass *createPPCLoopInstrFormPrepPass(PPCTargetMachine &TM);
   FunctionPass *createPPCTOCRegDepsPass();
   FunctionPass *createPPCEarlyReturnPass();
   FunctionPass *createPPCVSXCopyPass();
@@ -60,7 +60,7 @@ namespace llvm {
 #ifndef NDEBUG
   void initializePPCCTRLoopsVerifyPass(PassRegistry&);
 #endif
-  void initializePPCLoopPreIncPrepPass(PassRegistry&);
+  void initializePPCLoopInstrFormPrepPass(PassRegistry&);
   void initializePPCTOCRegDepsPass(PassRegistry&);
   void initializePPCEarlyReturnPass(PassRegistry&);
   void initializePPCVSXCopyPass(PassRegistry&);
