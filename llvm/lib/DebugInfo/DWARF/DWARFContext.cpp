@@ -1077,33 +1077,6 @@ getExpressionFrameOffset(ArrayRef<uint8_t> Expr,
   return None;
 }
 
-static Optional<int64_t>
-getLocationFrameOffset(DWARFCompileUnit *CU, DWARFFormValue &FormValue,
-                       Optional<unsigned> FrameBaseReg) {
-  if (Optional<ArrayRef<uint8_t>> Location = FormValue.getAsBlock()) {
-    return getExpressionFrameOffset(*Location, FrameBaseReg);
-  } else if (FormValue.isFormClass(DWARFFormValue::FC_SectionOffset)) {
-    uint64_t Offset = *FormValue.getAsSectionOffset();
-    const DWARFLocationTable &LocTable = CU->getLocationTable();
-    Optional<int64_t> FrameOffset;
-    Error E = LocTable.visitLocationList(
-        &Offset, [&](const DWARFLocationEntry &Entry) {
-          if (Entry.Kind == dwarf::DW_LLE_base_address ||
-              Entry.Kind == dwarf::DW_LLE_base_addressx ||
-              Entry.Kind == dwarf::DW_LLE_end_of_list) {
-            return true;
-          }
-          if ((FrameOffset = getExpressionFrameOffset(Entry.Loc, FrameBaseReg)))
-            return false;
-          return true;
-        });
-    if (E)
-      return None;
-    return FrameOffset;
-  }
-  return None;
-}
-
 void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
                                    DWARFDie Die, std::vector<DILocal> &Result) {
   if (Die.getTag() == DW_TAG_variable ||
@@ -1119,8 +1092,21 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
             (*Expr)[0] <= DW_OP_reg31) {
           FrameBaseReg = (*Expr)[0] - DW_OP_reg0;
         }
-    if (auto LocationAttr = Die.find(DW_AT_location))
-      Local.FrameOffset = getLocationFrameOffset(CU, *LocationAttr, FrameBaseReg);
+
+    if (Expected<std::vector<DWARFLocationExpression>> Loc =
+            Die.getLocations(DW_AT_location)) {
+      for (const auto &Entry : *Loc) {
+        if (Optional<int64_t> FrameOffset =
+                getExpressionFrameOffset(Entry.Expr, FrameBaseReg)) {
+          Local.FrameOffset = *FrameOffset;
+          break;
+        }
+      }
+    } else {
+      // FIXME: missing DW_AT_location is OK here, but other errors should be
+      // reported to the user.
+      consumeError(Loc.takeError());
+    }
 
     if (auto TagOffsetAttr = Die.find(DW_AT_LLVM_tag_offset))
       Local.TagOffset = TagOffsetAttr->getAsUnsignedConstant();
