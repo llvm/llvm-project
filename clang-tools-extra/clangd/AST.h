@@ -15,9 +15,13 @@
 
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
+#include <string>
+#include <vector>
 
 namespace clang {
 class SourceManager;
@@ -76,7 +80,7 @@ llvm::Optional<SymbolID> getSymbolID(const llvm::StringRef MacroName,
 
 /// Returns a QualType as string. The result doesn't contain unwritten scopes
 /// like annoymous/inline namespace.
-std::string printType(const QualType QT, const DeclContext & Context);
+std::string printType(const QualType QT, const DeclContext &Context);
 
 /// Try to shorten the OriginalName by removing namespaces from the left of
 /// the string that are redundant in the CurrentNamespace. This way the type
@@ -120,6 +124,39 @@ QualType declaredType(const TypeDecl *D);
 /// Retuns None unless Loc starts an auto/decltype token.
 /// It will return the underlying type.
 llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
+
+/// Gets the nested name specifier necessary for spelling \p ND in \p
+/// DestContext, at \p InsertionPoint. It selects the shortest suffix of \p ND
+/// such that it is visible in \p DestContext.
+/// Returns an empty string if no qualification is necessary. For example, if
+/// you want to qualify clang::clangd::bar::foo in clang::clangd::x, this
+/// function will return bar. Note that the result might be sub-optimal for
+/// classes, e.g. when the \p ND is a member of the base class.
+///
+/// This version considers all the using namespace directives before \p
+/// InsertionPoint. i.e, if you have `using namespace
+/// clang::clangd::bar`, this function will return an empty string for the
+/// example above since no qualification is necessary in that case.
+std::string getQualification(ASTContext &Context,
+                             const DeclContext *DestContext,
+                             SourceLocation InsertionPoint,
+                             const NamedDecl *ND);
+
+/// This function uses the \p VisibleNamespaces to figure out if a shorter
+/// qualification is sufficient for \p ND, and ignores any using namespace
+/// directives. It can be useful if there's no AST for the DestContext, but some
+/// pseudo-parsing is done. i.e. if \p ND is ns1::ns2::X and \p DestContext is
+/// ns1::, users can provide `ns2::` as visible to change the result to be
+/// empty.
+/// Elements in VisibleNamespaces should be in the form: `ns::`, with trailing
+/// "::".
+/// Note that this is just textual and might be incorrect. e.g. when there are
+/// two namespaces ns1::a and ns2::a, the function will early exit if "a::" is
+/// present in \p VisibleNamespaces, no matter whether it is from ns1:: or ns2::
+std::string getQualification(ASTContext &Context,
+                             const DeclContext *DestContext,
+                             SourceLocation InsertionPoint, const NamedDecl *ND,
+                             llvm::ArrayRef<std::string> VisibleNamespaces);
 
 } // namespace clangd
 } // namespace clang
