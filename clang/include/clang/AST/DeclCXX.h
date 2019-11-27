@@ -1755,7 +1755,7 @@ public:
 
   /// Controls when vtordisps will be emitted if this record is used as a
   /// virtual base.
-  MSVtorDispAttr::Mode getMSVtorDispMode() const;
+  MSVtorDispMode getMSVtorDispMode() const;
 
   /// Determine whether this lambda expression was known to be dependent
   /// at the time it was created, even if its context does not appear to be
