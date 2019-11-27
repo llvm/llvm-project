@@ -64,7 +64,7 @@ class TypeSourceInfo;
     ImportError(const ImportError &Other) : Error(Other.Error) {}
     ImportError &operator=(const ImportError &Other) {
       Error = Other.Error;
-      return *this,
+      return *this;
     }
     ImportError(ErrorKind Error) : Error(Error) { }
 
