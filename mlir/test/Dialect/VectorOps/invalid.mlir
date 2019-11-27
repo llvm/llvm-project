@@ -2,9 +2,9 @@
 
 // -----
 
-func @broadcast_rank_too_high(%arg0: vector<4x4xf32>, %arg1: vector<4xf32>) {
+func @broadcast_rank_too_high(%arg0: vector<4x4xf32>) {
   // expected-error@+1 {{source rank higher than destination rank}}
-  %2 = vector.broadcast %arg0, %arg1 : vector<4x4xf32> into vector<4xf32>
+  %1 = vector.broadcast %arg0 : vector<4x4xf32> to vector<4xf32>
 }
 
 // -----
