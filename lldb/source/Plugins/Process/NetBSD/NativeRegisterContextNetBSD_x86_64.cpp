@@ -988,4 +988,19 @@ uint32_t NativeRegisterContextNetBSD_x86_64::NumSupportedHardwareWatchpoints() {
   return 4;
 }
 
+Status NativeRegisterContextNetBSD_x86_64::CopyHardwareWatchpointsFrom(
+    NativeRegisterContextNetBSD &source) {
+  auto &r_source = static_cast<NativeRegisterContextNetBSD_x86_64&>(source);
+  Status res = r_source.ReadRegisterSet(DBRegSet);
+  if (!res.Fail()) {
+    // copy dbregs only if any watchpoints were set
+    if ((r_source.m_dbr_x86_64.dr[7] & 0xFF) == 0)
+      return res;
+
+    m_dbr_x86_64 = r_source.m_dbr_x86_64;
+    res = WriteRegisterSet(DBRegSet);
+  }
+  return res;
+}
+
 #endif // defined(__x86_64__)

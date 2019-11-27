@@ -221,9 +221,9 @@ bool NativeThreadNetBSD::GetStopReason(ThreadStopInfo &stop_info,
   llvm_unreachable("unhandled StateType!");
 }
 
-NativeRegisterContext& NativeThreadNetBSD::GetRegisterContext() {
+NativeRegisterContextNetBSD &NativeThreadNetBSD::GetRegisterContext() {
   assert(m_reg_context_up);
-return  *m_reg_context_up;
+  return *m_reg_context_up;
 }
 
 Status NativeThreadNetBSD::SetWatchpoint(lldb::addr_t addr, size_t size,
@@ -283,4 +283,14 @@ Status NativeThreadNetBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   }
 
   return Status("Clearing hardware breakpoint failed.");
+}
+
+Status NativeThreadNetBSD::CopyWatchpointsFrom(NativeThreadNetBSD &source) {
+  Status s = GetRegisterContext().CopyHardwareWatchpointsFrom(
+      source.GetRegisterContext());
+  if (!s.Fail()) {
+    m_watchpoint_index_map = source.m_watchpoint_index_map;
+    m_hw_break_index_map = source.m_hw_break_index_map;
+  }
+  return s;
 }
