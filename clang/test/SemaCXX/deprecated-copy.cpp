@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy -verify
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy-dtor -DDEPRECATED_COPY_DTOR -verify
+// RUN: %clang_cc1 -std=c++11 %s -Wextra -verify
 
 #ifdef DEPRECATED_COPY_DTOR
 struct A {
