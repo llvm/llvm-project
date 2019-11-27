@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t
-// RUN: ld.lld %t -o %t2 2>&1
-// RUN: llvm-objdump -d --start-address=0x81d1008 -stop-address=0x81d1014 -triple=aarch64-linux-gnu %t2 | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t.o
+// RUN: ld.lld %t.o -o %t
+// RUN: llvm-objdump -d --start-address=0x81d1008 -stop-address=0x81d1014 --no-show-raw-insn %t | FileCheck %s
 // Check that the range extension thunks are dumped close to the aarch64 branch
 // range of 128 MiB
  .section .text.1, "ax", %progbits
@@ -35,7 +35,7 @@ high_target:
  ret
 
 // CHECK: __AArch64AbsLongThunk_high_target:
-// CHECK-NEXT:  81d1008:        50 00 00 58     ldr     x16, #8
-// CHECK-NEXT:  81d100c:        00 02 1f d6     br      x16
+// CHECK-NEXT:  81d1008:       ldr     x16, #8
+// CHECK-NEXT:  81d100c:       br      x16
 // CHECK: $d:
-// CHECK-NEXT:  81d1010:        00 20 21 08     .word   0x08212000
+// CHECK-NEXT:  81d1010:       00 20 21 08     .word   0x08212000
