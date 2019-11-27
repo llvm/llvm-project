@@ -34,6 +34,8 @@ public:
   virtual Status
   CopyHardwareWatchpointsFrom(NativeRegisterContextNetBSD &source) = 0;
 
+  virtual Status ClearWatchpointHit(uint32_t wp_index) = 0;
+
 protected:
   Status DoRegisterSet(int req, void *buf);
   virtual NativeProcessNetBSD &GetProcess();
