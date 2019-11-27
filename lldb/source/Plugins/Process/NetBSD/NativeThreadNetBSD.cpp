@@ -18,6 +18,11 @@
 #include "lldb/Utility/State.h"
 #include "llvm/Support/Errno.h"
 
+// clang-format off
+#include <sys/types.h>
+#include <sys/ptrace.h>
+// clang-format on
+
 #include <sstream>
 
 // clang-format off
@@ -35,6 +40,38 @@ NativeThreadNetBSD::NativeThreadNetBSD(NativeProcessNetBSD &process,
       m_stop_info(), m_reg_context_up(
 NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(process.GetArchitecture(), *this)
 ), m_stop_description() {}
+
+Status NativeThreadNetBSD::Resume() {
+  Status ret = NativeProcessNetBSD::PtraceWrapper(PT_RESUME, m_process.GetID(),
+                                                  nullptr, GetID());
+  if (!ret.Success())
+    return ret;
+  ret = NativeProcessNetBSD::PtraceWrapper(PT_CLEARSTEP, m_process.GetID(),
+                                           nullptr, GetID());
+  if (ret.Success())
+    SetRunning();
+  return ret;
+}
+
+Status NativeThreadNetBSD::SingleStep() {
+  Status ret = NativeProcessNetBSD::PtraceWrapper(PT_RESUME, m_process.GetID(),
+                                                  nullptr, GetID());
+  if (!ret.Success())
+    return ret;
+  ret = NativeProcessNetBSD::PtraceWrapper(PT_SETSTEP, m_process.GetID(),
+                                           nullptr, GetID());
+  if (ret.Success())
+    SetStepping();
+  return ret;
+}
+
+Status NativeThreadNetBSD::Suspend() {
+  Status ret = NativeProcessNetBSD::PtraceWrapper(PT_SUSPEND, m_process.GetID(),
+                                                  nullptr, GetID());
+  if (ret.Success())
+    SetStopped();
+  return ret;
+}
 
 void NativeThreadNetBSD::SetStoppedBySignal(uint32_t signo,
                                             const siginfo_t *info) {
@@ -93,6 +130,13 @@ void NativeThreadNetBSD::SetStoppedByWatchpoint(uint32_t wp_index) {
 
   m_stop_info.reason = StopReason::eStopReasonWatchpoint;
   m_stop_info.details.signal.signo = SIGTRAP;
+}
+
+void NativeThreadNetBSD::SetStoppedWithNoReason() {
+  SetStopped();
+
+  m_stop_info.reason = StopReason::eStopReasonNone;
+  m_stop_info.details.signal.signo = 0;
 }
 
 void NativeThreadNetBSD::SetStopped() {
