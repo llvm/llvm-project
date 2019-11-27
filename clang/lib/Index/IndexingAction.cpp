@@ -401,7 +401,7 @@ public:
           visitor) override {
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
 
-    if (auto Reader = CI.getModuleManager()) {
+    if (auto Reader = CI.getASTReader()) {
       Reader->getModuleManager().visit(
           [&](serialization::ModuleFile &Mod) -> bool {
             bool isSystemMod = false;
@@ -749,7 +749,7 @@ public:
       const CompilerInstance &CI,
       llvm::function_ref<void(const FileEntry *FE, bool isSystem)> visitor)
       override {
-    auto Reader = CI.getModuleManager();
+    auto Reader = CI.getASTReader();
     Reader->visitInputFiles(
         ModFile, RecordOpts.RecordSystemDependencies,
         /*Complain=*/false,
@@ -810,7 +810,7 @@ static void indexModule(serialization::ModuleFile &Mod,
   IndexCtx.setSysrootPath(SysrootPath);
   Recorder.init(&IndexCtx, CI);
 
-  for (const Decl *D : CI.getModuleManager()->getModuleFileLevelDecls(Mod)) {
+  for (const Decl *D : CI.getASTReader()->getModuleFileLevelDecls(Mod)) {
     IndexCtx.indexTopLevelDecl(D);
   }
   Recorder.finish();
@@ -889,7 +889,7 @@ bool index::emitIndexDataForModuleFile(const Module *Mod,
   std::tie(IndexOpts, RecordOpts) =
       getIndexOptionsFromFrontendOptions(CI.getFrontendOpts());
 
-  auto astReader = CI.getModuleManager();
+  auto astReader = CI.getASTReader();
   serialization::ModuleFile *ModFile =
       astReader->getModuleManager().lookup(Mod->getASTFile());
   assert(ModFile && "no module file loaded for module ?");
