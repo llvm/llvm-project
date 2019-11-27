@@ -10251,18 +10251,29 @@ static bool isNoopShuffleMask(ArrayRef<int> Mask) {
   return true;
 }
 
-/// Test whether there are elements crossing 128-bit lanes in this
+/// Test whether there are elements crossing LaneSizeInBits lanes in this
 /// shuffle mask.
 ///
 /// X86 divides up its shuffles into in-lane and cross-lane shuffle operations
 /// and we routinely test for these.
-static bool is128BitLaneCrossingShuffleMask(MVT VT, ArrayRef<int> Mask) {
-  int LaneSize = 128 / VT.getScalarSizeInBits();
+static bool isLaneCrossingShuffleMask(unsigned LaneSizeInBits,
+                                      unsigned ScalarSizeInBits,
+                                      ArrayRef<int> Mask) {
+  assert(LaneSizeInBits && ScalarSizeInBits &&
+         (LaneSizeInBits % ScalarSizeInBits) == 0 &&
+         "Illegal shuffle lane size");
+  int LaneSize = LaneSizeInBits / ScalarSizeInBits;
   int Size = Mask.size();
   for (int i = 0; i < Size; ++i)
     if (Mask[i] >= 0 && (Mask[i] % Size) / LaneSize != i / LaneSize)
       return true;
   return false;
+}
+
+/// Test whether there are elements crossing 128-bit lanes in this
+/// shuffle mask.
+static bool is128BitLaneCrossingShuffleMask(MVT VT, ArrayRef<int> Mask) {
+  return isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(), Mask);
 }
 
 /// Test whether a shuffle mask is equivalent within each sub-lane.
