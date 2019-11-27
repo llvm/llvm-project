@@ -71,6 +71,9 @@ public:
 
   uint32_t NumSupportedHardwareWatchpoints() override;
 
+  Status
+  CopyHardwareWatchpointsFrom(NativeRegisterContextNetBSD &source) override;
+
 private:
   // Private member types.
   enum { GPRegSet, FPRegSet, XStateRegSet, DBRegSet };
