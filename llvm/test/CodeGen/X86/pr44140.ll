@@ -10,7 +10,6 @@ define win64cc void @opaque() {
 
 ; We need xmm6 to be live from the loop header across all iterations of the loop.
 ; We shouldn't clobber ymm6 inside the loop.
-; FIXME: We currently clobber ymm6
 define i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %start
@@ -23,7 +22,7 @@ define i32 @main() {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
-; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm6
+; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm7
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm2
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm3
 ; CHECK-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
@@ -31,10 +30,10 @@ define i32 @main() {
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
 ; CHECK-NEXT:    vmovups %ymm3, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm2, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups %ymm6, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups %ymm7, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm3, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm2, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups %ymm6, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups %ymm7, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm5
