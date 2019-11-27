@@ -157,12 +157,13 @@ public:
 /// instruction.
 class MCInst {
   unsigned Opcode = 0;
-  SMLoc Loc;
-  SmallVector<MCOperand, 8> Operands;
   // These flags could be used to pass some info from one target subcomponent
   // to another, for example, from disassembler to asm printer. The values of
   // the flags have any sense on target level only (e.g. prefixes on x86).
   unsigned Flags = 0;
+
+  SMLoc Loc;
+  SmallVector<MCOperand, 8> Operands;
 
 public:
   MCInst() = default;
