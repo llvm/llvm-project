@@ -853,10 +853,10 @@ Status NativeRegisterContextNetBSD_x86_64::SetHardwareWatchpointWithIndex(
   if (!is_vacant)
     return Status("Watchpoint index not vacant");
 
-  RegisterValue reg_value;
   const RegisterInfo *const reg_info_dr7 =
       GetRegisterInfoAtIndex(lldb_dr7_x86_64);
-  error = ReadRegister(reg_info_dr7, reg_value);
+  RegisterValue dr7_value;
+  error = ReadRegister(reg_info_dr7, dr7_value);
   if (error.Fail())
     return error;
 
@@ -874,15 +874,27 @@ Status NativeRegisterContextNetBSD_x86_64::SetHardwareWatchpointWithIndex(
 
   uint64_t bit_mask = (0x3 << (2 * wp_index)) | (0xF << (16 + 4 * wp_index));
 
-  uint64_t control_bits = reg_value.GetAsUInt64() & ~bit_mask;
+  uint64_t control_bits = dr7_value.GetAsUInt64() & ~bit_mask;
 
   control_bits |= enable_bit | rw_bits | size_bits;
 
   const RegisterInfo *const reg_info_drN =
       GetRegisterInfoAtIndex(lldb_dr0_x86_64 + wp_index);
-  error = WriteRegister(reg_info_drN, RegisterValue(addr));
+  RegisterValue drN_value;
+  error = ReadRegister(reg_info_drN, drN_value);
   if (error.Fail())
     return error;
+
+  // clear dr6 if address or bits changed (i.e. we're not reenabling the same
+  // watchpoint)
+  if (drN_value.GetAsUInt64() != addr ||
+      (dr7_value.GetAsUInt64() & bit_mask) != (rw_bits | size_bits)) {
+    ClearWatchpointHit(wp_index);
+
+    error = WriteRegister(reg_info_drN, RegisterValue(addr));
+    if (error.Fail())
+      return error;
+  }
 
   error = WriteRegister(reg_info_dr7, RegisterValue(control_bits));
   if (error.Fail())
@@ -897,32 +909,36 @@ bool NativeRegisterContextNetBSD_x86_64::ClearHardwareWatchpoint(
   if (wp_index >= NumSupportedHardwareWatchpoints())
     return false;
 
+  // for watchpoints 0, 1, 2, or 3, respectively, clear bits 0-1, 2-3, 4-5
+  // or 6-7 of the debug control register (DR7)
+  const RegisterInfo *const reg_info_dr7 =
+      GetRegisterInfoAtIndex(lldb_dr7_x86_64);
   RegisterValue reg_value;
+  Status error = ReadRegister(reg_info_dr7, reg_value);
+  if (error.Fail())
+    return false;
+  uint64_t bit_mask = 0x3 << (2 * wp_index);
+  uint64_t control_bits = reg_value.GetAsUInt64() & ~bit_mask;
 
-  // for watchpoints 0, 1, 2, or 3, respectively, clear bits 0, 1, 2, or 3 of
+  return WriteRegister(reg_info_dr7, RegisterValue(control_bits)).Success();
+}
+
+Status NativeRegisterContextNetBSD_x86_64::ClearWatchpointHit(uint32_t wp_index) {
+  if (wp_index >= NumSupportedHardwareWatchpoints())
+    return Status("Watchpoint index out of range");
+
+  // for watchpoints 0, 1, 2, or 3, respectively, check bits 0, 1, 2, or 3 of
   // the debug status register (DR6)
   const RegisterInfo *const reg_info_dr6 =
       GetRegisterInfoAtIndex(lldb_dr6_x86_64);
+  RegisterValue reg_value;
   Status error = ReadRegister(reg_info_dr6, reg_value);
   if (error.Fail())
-    return false;
+    return error;
+
   uint64_t bit_mask = 1 << wp_index;
   uint64_t status_bits = reg_value.GetAsUInt64() & ~bit_mask;
-  error = WriteRegister(reg_info_dr6, RegisterValue(status_bits));
-  if (error.Fail())
-    return false;
-
-  // for watchpoints 0, 1, 2, or 3, respectively, clear bits {0-1,16-19},
-  // {2-3,20-23}, {4-5,24-27}, or {6-7,28-31} of the debug control register
-  // (DR7)
-  const RegisterInfo *const reg_info_dr7 =
-      GetRegisterInfoAtIndex(lldb_dr7_x86_64);
-  error = ReadRegister(reg_info_dr7, reg_value);
-  if (error.Fail())
-    return false;
-  bit_mask = (0x3 << (2 * wp_index)) | (0xF << (16 + 4 * wp_index));
-  uint64_t control_bits = reg_value.GetAsUInt64() & ~bit_mask;
-  return WriteRegister(reg_info_dr7, RegisterValue(control_bits)).Success();
+  return WriteRegister(reg_info_dr6, RegisterValue(status_bits));
 }
 
 Status NativeRegisterContextNetBSD_x86_64::ClearAllHardwareWatchpoints() {

@@ -8,7 +8,7 @@
 
 #include "NativeProcessNetBSD.h"
 
-
+#include "Plugins/Process/NetBSD/NativeRegisterContextNetBSD.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
@@ -305,15 +305,18 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     if (!thread)
       break;
 
+    auto &regctx = static_cast<NativeRegisterContextNetBSD &>(
+        thread->GetRegisterContext());
     uint32_t wp_index = LLDB_INVALID_INDEX32;
-    Status error = thread->GetRegisterContext().GetWatchpointHitIndex(
-        wp_index, (uintptr_t)info.psi_siginfo.si_addr);
+    Status error = regctx.GetWatchpointHitIndex(wp_index,
+        (uintptr_t)info.psi_siginfo.si_addr);
     if (error.Fail())
       LLDB_LOG(log,
                "received error while checking for watchpoint hits, pid = "
                "{0}, LWP = {1}, error = {2}", pid, info.psi_lwpid, error);
     if (wp_index != LLDB_INVALID_INDEX32) {
       thread->SetStoppedByWatchpoint(wp_index);
+      regctx.ClearWatchpointHit(wp_index);
       SetState(StateType::eStateStopped, true);
       break;
     }
