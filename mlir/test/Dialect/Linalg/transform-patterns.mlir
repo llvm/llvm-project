@@ -17,7 +17,13 @@ func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
 // CHECK-DAG  :   %[[c8000:.*]] = constant 8000 : index
 // CHECK      :   loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c8000]] {
 // CHECK      :     loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c8]] {
-// CHECK      :       linalg.dot({{.*}}, {{.*}}, {{.*}}) : memref<?xf32, #[[STRIDED_1D]]>, memref<?xf32, #[[STRIDED_1D]]>, memref<f32>
+// CHECK      :       loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c1]] {
+// CHECK      :         load
+// CHECK      :         load
+// CHECK      :         mulf
+// CHECK      :         load
+// CHECK      :         addf
+// CHECK      :         store
 
 func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %x: memref<?xf32, offset: ?, strides: [1]>,

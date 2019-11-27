@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-lower-to-loops | FileCheck %s
+// RUN: mlir-opt %s -convert-linalg-to-loops | FileCheck %s
 
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // RUN: mlir-opt %s --convert-linalg-to-llvm -o=/dev/null 2>&1
