@@ -8,7 +8,6 @@
 
 #include "ClangExpressionDeclMap.h"
 
-#include "ASTDumper.h"
 #include "ClangASTSource.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
@@ -20,6 +19,7 @@
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
@@ -879,11 +879,8 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context,
         class_qual_type.getAsOpaquePtr(),
         ClangASTContext::GetASTContext(&class_decl->getASTContext()));
 
-    if (log) {
-      ASTDumper ast_dumper(class_qual_type);
-      LLDB_LOGF(log, "  CEDM::FEVD[%u] Adding type for $__lldb_class: %s",
-                current_id, ast_dumper.GetCString());
-    }
+    LLDB_LOG(log, "  CEDM::FEVD[{0}] Adding type for $__lldb_class: {1}",
+             current_id, class_qual_type.getAsString());
 
     AddThisType(context, class_user_type, current_id);
 
@@ -925,17 +922,12 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context,
     TypeFromUser pointee_type =
         this_type->GetForwardCompilerType().GetPointeeType();
 
-    if (pointee_type.IsValid()) {
-      if (log) {
-        ASTDumper ast_dumper(pointee_type);
-        LLDB_LOGF(log, "  FEVD[%u] Adding type for $__lldb_class: %s",
-                  current_id, ast_dumper.GetCString());
-      }
+    LLDB_LOG(log, "  FEVD[{0}] Adding type for $__lldb_class: {1}", current_id,
+             ClangUtil::GetQualType(pointee_type).getAsString());
 
-      AddThisType(context, pointee_type, current_id);
-      TypeFromUser this_user_type(this_type->GetFullCompilerType());
-      m_struct_vars->m_object_pointer_type = this_user_type;
-    }
+    AddThisType(context, pointee_type, current_id);
+    TypeFromUser this_user_type(this_type->GetFullCompilerType());
+    m_struct_vars->m_object_pointer_type = this_user_type;
   }
 }
 
@@ -997,11 +989,8 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context,
         QualType(interface_type, 0).getAsOpaquePtr(),
         ClangASTContext::GetASTContext(&method_decl->getASTContext()));
 
-    if (log) {
-      ASTDumper ast_dumper(interface_type);
-      LLDB_LOGF(log, "  FEVD[%u] Adding type for $__lldb_objc_class: %s",
-                current_id, ast_dumper.GetCString());
-    }
+    LLDB_LOG(log, "  FEVD[{0}] Adding type for $__lldb_objc_class: {1}",
+             current_id, ClangUtil::ToString(interface_type));
 
     AddOneType(context, class_user_type, current_id);
 
@@ -1064,11 +1053,8 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context,
   if (!self_clang_type)
     return;
 
-  if (log) {
-    ASTDumper ast_dumper(self_type->GetFullCompilerType());
-    LLDB_LOGF(log, "  FEVD[%u] Adding type for $__lldb_objc_class: %s",
-              current_id, ast_dumper.GetCString());
-  }
+  LLDB_LOG(log, "  FEVD[{0}] Adding type for $__lldb_objc_class: {1}",
+           current_id, ClangUtil::ToString(self_type->GetFullCompilerType()));
 
   TypeFromUser class_user_type(self_clang_type);
 
@@ -1701,14 +1687,10 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
   if (is_reference)
     entity->m_flags |= ClangExpressionVariable::EVTypeIsReference;
 
-  if (log) {
-    ASTDumper orig_dumper(ut.GetOpaqueQualType());
-    ASTDumper ast_dumper(var_decl);
-    LLDB_LOGF(log,
-              "  CEDM::FEVD[%u] Found variable %s, returned %s (original %s)",
-              current_id, decl_name.c_str(), ast_dumper.GetCString(),
-              orig_dumper.GetCString());
-  }
+  LLDB_LOG(log,
+           "  CEDM::FEVD[{0}] Found variable {1}, returned\n{2} (original {3})",
+           current_id, decl_name, ClangUtil::DumpDecl(var_decl),
+           ClangUtil::ToString(ut));
 }
 
 void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
@@ -1740,11 +1722,8 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value.Clear();
 
-  if (log) {
-    ASTDumper ast_dumper(var_decl);
-    LLDB_LOGF(log, "  CEDM::FEVD[%u] Added pvar %s, returned %s", current_id,
-              pvar_sp->GetName().GetCString(), ast_dumper.GetCString());
-  }
+  LLDB_LOG(log, "  CEDM::FEVD[{0}] Added pvar {1}, returned\n{2}", current_id,
+           pvar_sp->GetName(), ClangUtil::DumpDecl(var_decl));
 }
 
 void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
@@ -1796,12 +1775,8 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_sym = &symbol;
 
-  if (log) {
-    ASTDumper ast_dumper(var_decl);
-
-    LLDB_LOGF(log, "  CEDM::FEVD[%u] Found variable %s, returned %s",
-              current_id, decl_name.c_str(), ast_dumper.GetCString());
-  }
+  LLDB_LOG(log, "  CEDM::FEVD[{0}] Found variable {1}, returned\n{2}",
+           current_id, decl_name, ClangUtil::DumpDecl(var_decl));
 }
 
 void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
@@ -1841,12 +1816,9 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
   parser_vars->m_lldb_value.Clear();
   entity->m_flags |= ClangExpressionVariable::EVBareRegister;
 
-  if (log) {
-    ASTDumper ast_dumper(var_decl);
-    LLDB_LOGF(log, "  CEDM::FEVD[%d] Added register %s, returned %s",
-              current_id, context.m_decl_name.getAsString().c_str(),
-              ast_dumper.GetCString());
-  }
+  LLDB_LOG(log, "  CEDM::FEVD[{0}] Added register {1}, returned\n{2}",
+           current_id, context.m_decl_name.getAsString(),
+           ClangUtil::DumpDecl(var_decl));
 }
 
 void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
@@ -1889,17 +1861,16 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
                   CopyDecl(function_template));
           if (copied_function_template) {
             if (log) {
-              ASTDumper ast_dumper((clang::Decl *)copied_function_template);
-
               StreamString ss;
 
               function->DumpSymbolContext(&ss);
 
-              log->Printf("  CEDM::FEVD[%u] Imported decl for function template"
-                          " %s (description %s), returned %s",
-                          current_id,
-                          copied_function_template->getNameAsString().c_str(),
-                          ss.GetData(), ast_dumper.GetCString());
+              LLDB_LOG(log,
+                       "  CEDM::FEVD[{0}] Imported decl for function template"
+                       " {1} (description {2}), returned\n{3}",
+                       current_id, copied_function_template->getNameAsString(),
+                       ss.GetData(),
+                       ClangUtil::DumpDecl(copied_function_template));
             }
 
             context.AddNamedDecl(copied_function_template);
@@ -1909,18 +1880,15 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
                   llvm::dyn_cast_or_null<clang::FunctionDecl>(
                       CopyDecl(src_function_decl))) {
             if (log) {
-              ASTDumper ast_dumper((clang::Decl *)copied_function_decl);
-
               StreamString ss;
 
               function->DumpSymbolContext(&ss);
 
-              LLDB_LOGF(log,
-                        "  CEDM::FEVD[%u] Imported decl for function %s "
-                        "(description %s), returned %s",
-                        current_id,
-                        copied_function_decl->getNameAsString().c_str(),
-                        ss.GetData(), ast_dumper.GetCString());
+              LLDB_LOG(log,
+                       "  CEDM::FEVD[{0}]] Imported decl for function {1} "
+                       "(description {2}), returned\n{3}",
+                       current_id, copied_function_decl->getNameAsString(),
+                       ss.GetData(), ClangUtil::DumpDecl(copied_function_decl));
             }
 
             context.AddNamedDecl(copied_function_decl);
@@ -2022,20 +1990,17 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   parser_vars->m_llvm_value = nullptr;
 
   if (log) {
-    std::string function_str =
-        function_decl ? ASTDumper(function_decl).GetCString() : "nullptr";
-
     StreamString ss;
 
     fun_address.Dump(&ss,
                      m_parser_vars->m_exe_ctx.GetBestExecutionContextScope(),
                      Address::DumpStyleResolvedDescription);
 
-    LLDB_LOGF(
-        log,
-        "  CEDM::FEVD[%u] Found %s function %s (description %s), returned %s",
-        current_id, (function ? "specific" : "generic"), decl_name.c_str(),
-        ss.GetData(), function_str.c_str());
+    LLDB_LOG(log,
+             "  CEDM::FEVD[{0}] Found {1} function {2} (description {3}), "
+             "returned\n{4}",
+             current_id, (function ? "specific" : "generic"), decl_name,
+             ss.GetData(), ClangUtil::DumpDecl(function_decl));
   }
 }
 
@@ -2079,15 +2044,11 @@ void ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
                 method_type, lldb::eAccessPublic, is_virtual, is_static,
                 is_inline, is_explicit, is_attr_used, is_artificial);
 
-    if (log) {
-      ASTDumper method_ast_dumper((clang::Decl *)method_decl);
-      ASTDumper type_ast_dumper(copied_clang_type);
-
-      LLDB_LOGF(log,
-                "  CEDM::AddThisType Added function $__lldb_expr "
-                "(description %s) for this type %s",
-                method_ast_dumper.GetCString(), type_ast_dumper.GetCString());
-    }
+    LLDB_LOG(log,
+             "  CEDM::AddThisType Added function $__lldb_expr "
+             "(description {0}) for this type\n{1}",
+             ClangUtil::ToString(copied_clang_type),
+             ClangUtil::DumpDecl(method_decl));
   }
 
   if (!copied_clang_type.IsValid())
