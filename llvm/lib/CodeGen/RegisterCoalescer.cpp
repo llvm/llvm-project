@@ -120,6 +120,8 @@ static cl::opt<unsigned> LargeIntervalFreqThreshold(
 
 namespace {
 
+  class JoinVals;
+
   class RegisterCoalescer : public MachineFunctionPass,
                             private LiveRangeEdit::Delegate {
     MachineFunction* MF = nullptr;
@@ -130,6 +132,18 @@ namespace {
     const MachineLoopInfo* Loops = nullptr;
     AliasAnalysis *AA = nullptr;
     RegisterClassInfo RegClassInfo;
+
+    /// Debug variable location tracking -- for each VReg, maintain an
+    /// ordered-by-slot-index set of DBG_VALUEs, to help quick
+    /// identification of whether coalescing may change location validity.
+    using DbgValueLoc = std::pair<SlotIndex, MachineInstr*>;
+    DenseMap<unsigned, std::vector<DbgValueLoc>> DbgVRegToValues;
+
+    /// VRegs may be repeatedly coalesced, and have many DBG_VALUEs attached.
+    /// To avoid repeatedly merging sets of DbgValueLocs, instead record
+    /// which vregs have been coalesced, and where to. This map is from
+    /// vreg => {set of vregs merged in}.
+    DenseMap<unsigned, SmallVector<unsigned, 4>> DbgMergedVRegNums;
 
     /// A LaneMask to remember on which subregister live ranges we need to call
     /// shrinkToUses() later.
@@ -326,6 +340,19 @@ namespace {
       LIS->RemoveMachineInstrFromMaps(*MI);
       MI->eraseFromParent();
     }
+
+    /// Walk over function and initialize the DbgVRegToValues map.
+    void buildVRegToDbgValueMap(MachineFunction &MF);
+
+    /// Test whether, after merging, any DBG_VALUEs would refer to a
+    /// different value number than before merging, and whether this can
+    /// be resolved. If not, mark the DBG_VALUE as being undef.
+    void checkMergingChangesDbgValues(CoalescerPair &CP, LiveRange &LHS,
+                                      JoinVals &LHSVals, LiveRange &RHS,
+                                      JoinVals &RHSVals);
+
+    void checkMergingChangesDbgValuesImpl(unsigned Reg, LiveRange &OtherRange,
+                                          LiveRange &RegRange, JoinVals &Vals2);
 
   public:
     static char ID; ///< Class identification, replacement for typeinfo
@@ -1650,8 +1677,7 @@ void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
   }
 }
 
-void RegisterCoalescer::updateRegDefsUses(unsigned SrcReg,
-                                          unsigned DstReg,
+void RegisterCoalescer::updateRegDefsUses(unsigned SrcReg, unsigned DstReg,
                                           unsigned SubIdx) {
   bool DstIsPhys = Register::isPhysicalRegister(DstReg);
   LiveInterval *DstInt = DstIsPhys ? nullptr : &LIS->getInterval(DstReg);
@@ -2197,6 +2223,7 @@ class JoinVals {
   /// NewVNInfo. This is suitable for passing to LiveInterval::join().
   SmallVector<int, 8> Assignments;
 
+  public:
   /// Conflict resolution for overlapping values.
   enum ConflictResolution {
     /// No overlap, simply keep this value.
@@ -2225,6 +2252,7 @@ class JoinVals {
     CR_Impossible
   };
 
+  private:
   /// Per-value info for LI. The lane bit masks are all relative to the final
   /// joined register, so they can be compared directly between SrcReg and
   /// DstReg.
@@ -2385,6 +2413,11 @@ public:
 
   /// Get the value assignments suitable for passing to LiveInterval::join.
   const int *getAssignments() const { return Assignments.data(); }
+
+  /// Get the conflict resolution for a value number.
+  ConflictResolution getResolution(unsigned Num) const {
+    return Vals[Num].Resolution;
+  }
 };
 
 } // end anonymous namespace
@@ -3387,6 +3420,9 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   while (!ShrinkRegs.empty())
     shrinkToUses(&LIS->getInterval(ShrinkRegs.pop_back_val()));
 
+  // Scan and mark undef any DBG_VALUEs that would refer to a different value.
+  checkMergingChangesDbgValues(CP, LHS, LHSVals, RHS, RHSVals);
+
   // Join RHS into LHS.
   LHS.join(RHS, LHSVals.getAssignments(), RHSVals.getAssignments(), NewVNInfo);
 
@@ -3416,6 +3452,140 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
 bool RegisterCoalescer::joinIntervals(CoalescerPair &CP) {
   return CP.isPhys() ? joinReservedPhysReg(CP) : joinVirtRegs(CP);
+}
+
+void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF)
+{
+  const SlotIndexes &Slots = *LIS->getSlotIndexes();
+  SmallVector<MachineInstr *, 8> ToInsert;
+
+  // After collecting a block of DBG_VALUEs into ToInsert, enter them into the
+  // vreg => DbgValueLoc map.
+  auto CloseNewDVRange = [this, &ToInsert](SlotIndex Slot) {
+    for (auto *X : ToInsert)
+      DbgVRegToValues[X->getOperand(0).getReg()].push_back({Slot, X});
+
+    ToInsert.clear();
+  };
+
+  // Iterate over all instructions, collecting them into the ToInsert vector.
+  // Once a non-debug instruction is found, record the slot index of the
+  // collected DBG_VALUEs.
+  for (auto &MBB : MF) {
+    SlotIndex CurrentSlot = Slots.getMBBStartIdx(&MBB);
+
+    for (auto &MI : MBB) {
+      if (MI.isDebugValue() && MI.getOperand(0).isReg() &&
+          MI.getOperand(0).getReg().isVirtual()) {
+        ToInsert.push_back(&MI);
+      } else if (!MI.isDebugInstr()) {
+        CurrentSlot = Slots.getInstructionIndex(MI);
+        CloseNewDVRange(CurrentSlot);
+      }
+    }
+
+    // Close range of DBG_VALUEs at the end of blocks.
+    CloseNewDVRange(Slots.getMBBEndIdx(&MBB));
+  }
+
+  // Sort all DBG_VALUEs we've seen by slot number.
+  for (auto &Pair : DbgVRegToValues)
+    llvm::sort(Pair.second);
+}
+
+void RegisterCoalescer::checkMergingChangesDbgValues(CoalescerPair &CP,
+                                                     LiveRange &LHS,
+                                                     JoinVals &LHSVals,
+                                                     LiveRange &RHS,
+                                                     JoinVals &RHSVals) {
+  auto ScanForDstReg = [&](unsigned Reg) {
+    checkMergingChangesDbgValuesImpl(Reg, RHS, LHS, LHSVals);
+  };
+
+  auto ScanForSrcReg = [&](unsigned Reg) {
+    checkMergingChangesDbgValuesImpl(Reg, LHS, RHS, RHSVals);
+  };
+
+  // Scan for potentially unsound DBG_VALUEs: examine first the register number
+  // Reg, and then any other vregs that may have been merged into  it.
+  auto PerformScan = [this](unsigned Reg, std::function<void(unsigned)> Func) {
+    Func(Reg);
+    if (DbgMergedVRegNums.count(Reg))
+      for (unsigned X : DbgMergedVRegNums[Reg])
+        Func(X);
+  };
+
+  // Scan for unsound updates of both the source and destination register.
+  PerformScan(CP.getSrcReg(), ScanForSrcReg);
+  PerformScan(CP.getDstReg(), ScanForDstReg);
+}
+
+void RegisterCoalescer::checkMergingChangesDbgValuesImpl(unsigned Reg,
+                                                         LiveRange &OtherLR,
+                                                         LiveRange &RegLR,
+                                                         JoinVals &RegVals) {
+  // Are there any DBG_VALUEs to examine?
+  auto VRegMapIt = DbgVRegToValues.find(Reg);
+  if (VRegMapIt == DbgVRegToValues.end())
+    return;
+
+  auto &DbgValueSet = VRegMapIt->second;
+  auto DbgValueSetIt = DbgValueSet.begin();
+  auto SegmentIt = OtherLR.begin();
+
+  bool LastUndefResult = false;
+  SlotIndex LastUndefIdx;
+
+  // If the "Other" register is live at a slot Idx, test whether Reg can
+  // safely be merged with it, or should be marked undef.
+  auto ShouldUndef = [&RegVals, &RegLR, &LastUndefResult,
+                      &LastUndefIdx](SlotIndex Idx) -> bool {
+    // Our worst-case performance typically happens with asan, causing very
+    // many DBG_VALUEs of the same location. Cache a copy of the most recent
+    // result for this edge-case.
+    if (LastUndefIdx == Idx)
+      return LastUndefResult;
+
+    // If the other range was live, and Reg's was not, the register coalescer
+    // will not have tried to resolve any conflicts. We don't know whether
+    // the DBG_VALUE will refer to the same value number, so it must be made
+    // undef.
+    auto OtherIt = RegLR.find(Idx);
+    if (OtherIt == RegLR.end())
+      return true;
+
+    // Both the registers were live: examine the conflict resolution record for
+    // the value number Reg refers to. CR_Keep meant that this value number
+    // "won" and the merged register definitely refers to that value. CR_Erase
+    // means the value number was a redundant copy of the other value, which
+    // was coalesced and Reg deleted. It's safe to refer to the other register
+    // (which will be the source of the copy).
+    auto Resolution = RegVals.getResolution(OtherIt->valno->id);
+    LastUndefResult = Resolution != JoinVals::CR_Keep &&
+                      Resolution != JoinVals::CR_Erase;
+    LastUndefIdx = Idx;
+    return LastUndefResult;
+  };
+
+  // Iterate over both the live-range of the "Other" register, and the set of
+  // DBG_VALUEs for Reg at the same time. Advance whichever one has the lowest
+  // slot index. This relies on the DbgValueSet being ordered.
+  while (DbgValueSetIt != DbgValueSet.end() && SegmentIt != OtherLR.end()) {
+    if (DbgValueSetIt->first < SegmentIt->end) {
+      // "Other" is live and there is a DBG_VALUE of Reg: test if we should
+      // set it undef.
+      if (DbgValueSetIt->first >= SegmentIt->start &&
+          DbgValueSetIt->second->getOperand(0).getReg() != 0 &&
+          ShouldUndef(DbgValueSetIt->first)) {
+        // Mark undef, erase record of this DBG_VALUE to avoid revisiting.
+        DbgValueSetIt->second->getOperand(0).setReg(0);
+        continue;
+      }
+      ++DbgValueSetIt;
+    } else {
+      ++SegmentIt;
+    }
+  }
 }
 
 namespace {
@@ -3699,6 +3869,10 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
 
   if (VerifyCoalescing)
     MF->verify(this, "Before register coalescing");
+
+  DbgVRegToValues.clear();
+  DbgMergedVRegNums.clear();
+  buildVRegToDbgValueMap(fn);
 
   RegClassInfo.runOnMachineFunction(fn);
 
