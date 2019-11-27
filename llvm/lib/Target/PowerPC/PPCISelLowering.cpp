@@ -5325,8 +5325,20 @@ SDValue PPCTargetLowering::FinishCall(
     // C-linkage name.
     GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Callee);
     auto &Context = DAG.getMachineFunction().getMMI().getContext();
-    MCSymbol *S = Context.getOrCreateSymbol(Twine(".") +
-                                            Twine(G->getGlobal()->getName()));
+
+    MCSymbolXCOFF *S = cast<MCSymbolXCOFF>(Context.getOrCreateSymbol(
+        Twine(".") + Twine(G->getGlobal()->getName())));
+
+    const GlobalValue *GV = G->getGlobal();
+    if (GV && GV->isDeclaration() && !S->hasContainingCsect()) {
+      // On AIX, undefined symbol need to associate with a MCSectionXCOFF to
+      // get the correct storage mapping class. In this case, XCOFF::XMC_PR.
+      MCSectionXCOFF *Sec =
+          Context.getXCOFFSection(S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER,
+                                  XCOFF::C_EXT, SectionKind::getMetadata());
+      S->setContainingCsect(Sec);
+    }
+
     Callee = DAG.getMCSymbol(S, PtrVT);
     // Replace the GlobalAddressSDNode Callee with the MCSymbolSDNode.
     Ops[1] = Callee;

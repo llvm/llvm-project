@@ -48,6 +48,8 @@ public:
     return ContainingCsect;
   }
 
+  bool hasContainingCsect() const { return ContainingCsect != nullptr; }
+
 private:
   Optional<XCOFF::StorageClass> StorageClass;
   MCSectionXCOFF *ContainingCsect = nullptr;
