@@ -141,24 +141,6 @@ exit:
   ret i32 %result
 }
 
-define i32 @test_cold_loop(i32 %a, i32 %b) {
-entry:
-  %cond1 = icmp eq i32 %a, 42
-  br i1 %cond1, label %header, label %exit
-
-header:
-  br label %body
-
-body:
-  %cond2 = icmp eq i32 %b, 42
-  br i1 %cond2, label %header, label %exit
-; CHECK: edge body -> header probability is 0x40000000 / 0x80000000 = 50.00%
-
-exit:
-  call void @coldfunc()
-  ret i32 %b
-}
-
 declare i32 @regular_function(i32 %i)
 
 define i32 @test_cold_call_sites_with_prof(i32 %a, i32 %b, i1 %flag, i1 %flag2) {
