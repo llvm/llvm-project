@@ -93,6 +93,10 @@ namespace {
     RegisterSet() = default;
     explicit RegisterSet(unsigned s, bool t = false) : BitVector(s, t) {}
     RegisterSet(const RegisterSet &RS) : BitVector(RS) {}
+    RegisterSet &operator=(const RegisterSet &RS) {
+      BitVector::operator=(RS);
+      return *this;
+    }
 
     using BitVector::clear;
 
