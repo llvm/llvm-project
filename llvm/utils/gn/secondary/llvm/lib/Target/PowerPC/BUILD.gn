@@ -53,7 +53,7 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCISelDAGToDAG.cpp",
     "PPCISelLowering.cpp",
     "PPCInstrInfo.cpp",
-    "PPCLoopPreIncPrep.cpp",
+    "PPCLoopInstrFormPrep.cpp",
     "PPCLowerMASSVEntries.cpp",
     "PPCMCInstLower.cpp",
     "PPCMIPeephole.cpp",

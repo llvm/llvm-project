@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -disable-ppc-preinc-prep < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -disable-ppc-instr-form-prep < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s -check-prefix=PIP
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"

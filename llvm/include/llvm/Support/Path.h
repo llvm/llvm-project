@@ -152,18 +152,33 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
 ///
 /// @code
 ///   /foo, /old, /new => /foo
+///   /old, /old, /new => /new
+///   /old, /old/, /new, false => /old
+///   /old, /old/, /new, true => /new
 ///   /old/foo, /old, /new => /new/foo
+///   /old/foo, /old/, /new => /new/foo
+///   /old/foo, /old/, /new/ => /new/foo
+///   /oldfoo, /old, /new => /oldfoo
 ///   /foo, <empty>, /new => /new/foo
-///   /old/foo, /old, <empty> => /foo
+///   /foo, <empty>, new => new/foo
+///   /old/foo, /old, <empty>, false => /foo
+///   /old/foo, /old, <empty>, true => foo
 /// @endcode
 ///
 /// @param Path If \a Path starts with \a OldPrefix modify to instead
 ///        start with \a NewPrefix.
-/// @param OldPrefix The path prefix to strip from \a Path.
+/// @param OldPrefix The path prefix to strip from \a Path. Any trailing
+///        path separator is ignored if strict is true.
 /// @param NewPrefix The path prefix to replace \a NewPrefix with.
-void replace_path_prefix(SmallVectorImpl<char> &Path,
+/// @param style The path separator style
+/// @param strict If strict is true, a directory separator following
+///        \a OldPrefix will also be stripped. Otherwise, directory
+///        separators will only be matched and stripped when present
+///        in \a OldPrefix.
+/// @result true if \a Path begins with OldPrefix
+bool replace_path_prefix(SmallVectorImpl<char> &Path,
                          const StringRef &OldPrefix, const StringRef &NewPrefix,
-                         Style style = Style::native);
+                         Style style = Style::native, bool strict = false);
 
 /// Append to path.
 ///

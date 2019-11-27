@@ -124,7 +124,7 @@ struct Object {
 
   ArrayRef<Section> getSections() const { return Sections; }
   // This allows mutating individual Sections, but not mutating the list
-  // of symbols itself.
+  // of sections itself.
   iterator_range<std::vector<Section>::iterator> getMutableSections() {
     return make_range(Sections.begin(), Sections.end());
   }

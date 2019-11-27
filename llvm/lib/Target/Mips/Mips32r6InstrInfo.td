@@ -765,12 +765,12 @@ class LL_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
   InstrItinClass Itinerary = itin;
 }
 
-class LL_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9, II_LL>;
+class LL_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9_exp, II_LL>;
 
 class SC_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                       InstrItinClass itin> {
   dag OutOperandList = (outs GPROpnd:$dst);
-  dag InOperandList = (ins GPROpnd:$rt, mem_simm9:$addr);
+  dag InOperandList = (ins GPROpnd:$rt, mem_simm9_exp:$addr);
   string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
   list<dag> Pattern = [];
   bit mayStore = 1;

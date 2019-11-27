@@ -1,4 +1,4 @@
-//===------ PPCLoopPreIncPrep.cpp - Loop Pre-Inc. AM Prep. Pass -----------===//
+//===------ PPCLoopInstrFormPrep.cpp - Loop Instr Form Prep Pass ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,7 +41,7 @@
 //      *++p = c;
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "ppc-loop-preinc-prep"
+#define DEBUG_TYPE "ppc-loop-instr-form-prep"
 
 #include "PPC.h"
 #include "PPCSubtarget.h"
@@ -148,16 +148,16 @@ namespace {
   // For DQ form instructions, their displacements must be multiple of 16.
   enum InstrForm { UpdateForm = 1, DSForm = 4, DQForm = 16 };
 
-  class PPCLoopPreIncPrep : public FunctionPass {
+  class PPCLoopInstrFormPrep : public FunctionPass {
   public:
     static char ID; // Pass ID, replacement for typeid
 
-    PPCLoopPreIncPrep() : FunctionPass(ID) {
-      initializePPCLoopPreIncPrepPass(*PassRegistry::getPassRegistry());
+    PPCLoopInstrFormPrep() : FunctionPass(ID) {
+      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
     }
 
-    PPCLoopPreIncPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {
-      initializePPCLoopPreIncPrepPass(*PassRegistry::getPassRegistry());
+    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {
+      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -237,20 +237,20 @@ namespace {
 
 } // end anonymous namespace
 
-char PPCLoopPreIncPrep::ID = 0;
-static const char *name = "Prepare loop for pre-inc. addressing modes";
-INITIALIZE_PASS_BEGIN(PPCLoopPreIncPrep, DEBUG_TYPE, name, false, false)
+char PPCLoopInstrFormPrep::ID = 0;
+static const char *name = "Prepare loop for ppc preferred instruction forms";
+INITIALIZE_PASS_BEGIN(PPCLoopInstrFormPrep, DEBUG_TYPE, name, false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_END(PPCLoopPreIncPrep, DEBUG_TYPE, name, false, false)
+INITIALIZE_PASS_END(PPCLoopInstrFormPrep, DEBUG_TYPE, name, false, false)
 
 static const std::string PHINodeNameSuffix    = ".phi";
 static const std::string CastNodeNameSuffix   = ".cast";
 static const std::string GEPNodeIncNameSuffix = ".inc";
 static const std::string GEPNodeOffNameSuffix = ".off";
 
-FunctionPass *llvm::createPPCLoopPreIncPrepPass(PPCTargetMachine &TM) {
-  return new PPCLoopPreIncPrep(TM);
+FunctionPass *llvm::createPPCLoopInstrFormPrepPass(PPCTargetMachine &TM) {
+  return new PPCLoopInstrFormPrep(TM);
 }
 
 static bool IsPtrInBounds(Value *BasePtr) {
@@ -284,7 +284,7 @@ static Value *GetPointerOperand(Value *MemI) {
   return nullptr;
 }
 
-bool PPCLoopPreIncPrep::runOnFunction(Function &F) {
+bool PPCLoopInstrFormPrep::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
@@ -305,7 +305,7 @@ bool PPCLoopPreIncPrep::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-void PPCLoopPreIncPrep::addOneCandidate(Instruction *MemI, const SCEV *LSCEV,
+void PPCLoopInstrFormPrep::addOneCandidate(Instruction *MemI, const SCEV *LSCEV,
                                         SmallVector<Bucket, 16> &Buckets,
                                         unsigned MaxCandidateNum) {
   assert((MemI && GetPointerOperand(MemI)) &&
@@ -328,7 +328,7 @@ void PPCLoopPreIncPrep::addOneCandidate(Instruction *MemI, const SCEV *LSCEV,
   }
 }
 
-SmallVector<Bucket, 16> PPCLoopPreIncPrep::collectCandidates(
+SmallVector<Bucket, 16> PPCLoopInstrFormPrep::collectCandidates(
     Loop *L,
     std::function<bool(const Instruction *, const Value *)> isValidCandidate,
     unsigned MaxCandidateNum) {
@@ -369,7 +369,7 @@ SmallVector<Bucket, 16> PPCLoopPreIncPrep::collectCandidates(
   return Buckets;
 }
 
-bool PPCLoopPreIncPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
+bool PPCLoopInstrFormPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
                                                     InstrForm Form) {
   // RemainderOffsetInfo details:
   // key:            value of (Offset urem DispConstraint). For DSForm, it can
@@ -444,7 +444,7 @@ bool PPCLoopPreIncPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
 // {-32769, 2003, 2007, 2011}, we choose -32769 as base offset, and left disp
 // for load/stores are {0, 34772, 34776, 34780}. Though each offset now is a
 // multipler of 4, it cannot be represented by sint16.
-bool PPCLoopPreIncPrep::prepareBaseForUpdateFormChain(Bucket &BucketChain) {
+bool PPCLoopInstrFormPrep::prepareBaseForUpdateFormChain(Bucket &BucketChain) {
   // We have a choice now of which instruction's memory operand we use as the
   // base for the generated PHI. Always picking the first instruction in each
   // bucket does not work well, specifically because that instruction might
@@ -484,7 +484,7 @@ bool PPCLoopPreIncPrep::prepareBaseForUpdateFormChain(Bucket &BucketChain) {
   return true;
 }
 
-bool PPCLoopPreIncPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
+bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
                                           SmallSet<BasicBlock *, 16> &BBChanged,
                                           InstrForm Form) {
   bool MadeChange = false;
@@ -676,7 +676,7 @@ bool PPCLoopPreIncPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
   return MadeChange;
 }
 
-bool PPCLoopPreIncPrep::updateFormPrep(Loop *L,
+bool PPCLoopInstrFormPrep::updateFormPrep(Loop *L,
                                        SmallVector<Bucket, 16> &Buckets) {
   bool MadeChange = false;
   if (Buckets.empty())
@@ -695,7 +695,7 @@ bool PPCLoopPreIncPrep::updateFormPrep(Loop *L,
   return MadeChange;
 }
 
-bool PPCLoopPreIncPrep::dispFormPrep(Loop *L, SmallVector<Bucket, 16> &Buckets,
+bool PPCLoopInstrFormPrep::dispFormPrep(Loop *L, SmallVector<Bucket, 16> &Buckets,
                                      InstrForm Form) {
   bool MadeChange = false;
 
@@ -721,7 +721,7 @@ bool PPCLoopPreIncPrep::dispFormPrep(Loop *L, SmallVector<Bucket, 16> &Buckets,
 // This function will check to see if that PHI already exists and will return
 // true if it found an existing PHI with the matched start and increment as the
 // one we wanted to create.
-bool PPCLoopPreIncPrep::alreadyPrepared(Loop *L, Instruction* MemI,
+bool PPCLoopInstrFormPrep::alreadyPrepared(Loop *L, Instruction* MemI,
                                         const SCEV *BasePtrStartSCEV,
                                         const SCEVConstant *BasePtrIncSCEV,
                                         InstrForm Form) {
@@ -787,7 +787,7 @@ bool PPCLoopPreIncPrep::alreadyPrepared(Loop *L, Instruction* MemI,
   return false;
 }
 
-bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
+bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   bool MadeChange = false;
 
   // Only prep. the inner-most loop
