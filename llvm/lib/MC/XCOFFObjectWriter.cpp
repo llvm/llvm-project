@@ -149,6 +149,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   // CsectGroups. These store the csects which make up different parts of
   // the sections. Should have one for each set of csects that get mapped into
   // the same section and get handled in a 'similar' way.
+  CsectGroup UndefinedCsects;
   CsectGroup ProgramCodeCsects;
   CsectGroup ReadOnlyCsects;
   CsectGroup DataCsects;
@@ -227,6 +228,8 @@ XCOFFObjectWriter::XCOFFObjectWriter(
           CsectGroups{&BSSCsects}) {}
 
 void XCOFFObjectWriter::reset() {
+  UndefinedCsects.clear();
+
   // Reset any sections we have written to, and empty the section header table.
   for (auto *Sec : Sections)
     Sec->reset();
@@ -291,6 +294,8 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     const auto *MCSec = cast<const MCSectionXCOFF>(&S);
     assert(WrapperMap.find(MCSec) == WrapperMap.end() &&
            "Cannot add a csect twice.");
+    assert(XCOFF::XTY_ER != MCSec->getCSectType() &&
+           "An undefined csect should not get registered.");
 
     // If the name does not fit in the storage provided in the symbol table
     // entry, add it to the string table.
@@ -310,13 +315,19 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 
     // Map the symbol into its containing csect.
     const MCSectionXCOFF *ContainingCsect = XSym->getContainingCsect();
-    assert(WrapperMap.find(ContainingCsect) != WrapperMap.end() &&
-           "Expected containing csect to exist in map");
 
-    // If the symbol is the Csect itself, we don't need to put the symbol
-    // into Csect's Syms.
+    // If the symbol is the csect itself, we don't need to put the symbol
+    // into csect's Syms.
     if (XSym == ContainingCsect->getQualNameSymbol())
       continue;
+
+    if (XSym->isUndefined(false)) {
+      UndefinedCsects.emplace_back(ContainingCsect);
+      continue;
+    }
+
+    assert(WrapperMap.find(ContainingCsect) != WrapperMap.end() &&
+           "Expected containing csect to exist in map");
 
     // Lookup the containing csect and add the symbol to it.
     WrapperMap[ContainingCsect]->Syms.emplace_back(XSym);
@@ -530,6 +541,11 @@ void XCOFFObjectWriter::writeSectionHeaderTable() {
 }
 
 void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
+  for (const auto &Csect : UndefinedCsects) {
+    writeSymbolTableEntryForControlSection(
+        Csect, XCOFF::ReservedSectionNum::N_UNDEF, Csect.MCCsect->getStorageClass());
+  }
+
   for (const auto *Section : Sections) {
     // Nothing to write for this Section.
     if (Section->Index == Section::UninitializedIndex)
@@ -554,15 +570,25 @@ void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
 }
 
 void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
+  // The first symbol table entry is for the file name. We are not emitting it
+  // yet, so start at index 0.
+  uint32_t SymbolTableIndex = 0;
+
+  // Calculate undefined symbol's indices.
+  for (auto &Csect : UndefinedCsects) {
+    Csect.Size = 0;
+    Csect.Address = 0;
+    Csect.SymbolTableIndex = SymbolTableIndex;
+    // 1 main and 1 auxiliary symbol table entry for each contained symbol.
+    SymbolTableIndex += 2;
+  }
+
   // The address corrresponds to the address of sections and symbols in the
   // object file. We place the shared address 0 immediately after the
   // section header table.
   uint32_t Address = 0;
   // Section indices are 1-based in XCOFF.
   int32_t SectionIndex = 1;
-  // The first symbol table entry is for the file name. We are not emitting it
-  // yet, so start at index 0.
-  uint32_t SymbolTableIndex = 0;
 
   for (auto *Section : Sections) {
     const bool IsEmpty =
