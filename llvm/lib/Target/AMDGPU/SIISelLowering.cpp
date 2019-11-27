@@ -11023,6 +11023,8 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
 }
 
 static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited) {
+  if (!isa<Instruction>(V))
+    return false;
   if (!Visited.insert(V).second)
     return false;
   bool Result = false;
