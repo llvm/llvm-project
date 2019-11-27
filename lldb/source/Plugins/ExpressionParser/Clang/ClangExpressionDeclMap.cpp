@@ -1039,64 +1039,72 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context,
 
   lldb::VariableSP self_var = vars->FindVariable(ConstString("self"));
 
-  if (self_var && self_var->IsInScope(frame) &&
-      self_var->LocationIsValidForFrame(frame)) {
-    Type *self_type = self_var->GetType();
+  if (!self_var)
+    return;
+  if (!self_var->IsInScope(frame))
+    return;
+  if (!self_var->LocationIsValidForFrame(frame))
+    return;
 
-    if (!self_type)
-      return;
+  Type *self_type = self_var->GetType();
 
-    CompilerType self_clang_type = self_type->GetFullCompilerType();
+  if (!self_type)
+    return;
 
-    if (ClangASTContext::IsObjCClassType(self_clang_type)) {
-      return;
-    } else if (ClangASTContext::IsObjCObjectPointerType(self_clang_type)) {
-      self_clang_type = self_clang_type.GetPointeeType();
+  CompilerType self_clang_type = self_type->GetFullCompilerType();
 
-      if (!self_clang_type)
-        return;
-
-      if (log) {
-        ASTDumper ast_dumper(self_type->GetFullCompilerType());
-        LLDB_LOGF(log, "  FEVD[%u] Adding type for $__lldb_objc_class: %s",
-                  current_id, ast_dumper.GetCString());
-      }
-
-      TypeFromUser class_user_type(self_clang_type);
-
-      AddOneType(context, class_user_type, current_id);
-
-      TypeFromUser self_user_type(self_type->GetFullCompilerType());
-
-      m_struct_vars->m_object_pointer_type = self_user_type;
-    }
+  if (ClangASTContext::IsObjCClassType(self_clang_type)) {
+    return;
   }
+  if (!ClangASTContext::IsObjCObjectPointerType(self_clang_type))
+    return;
+  self_clang_type = self_clang_type.GetPointeeType();
+
+  if (!self_clang_type)
+    return;
+
+  if (log) {
+    ASTDumper ast_dumper(self_type->GetFullCompilerType());
+    LLDB_LOGF(log, "  FEVD[%u] Adding type for $__lldb_objc_class: %s",
+              current_id, ast_dumper.GetCString());
+  }
+
+  TypeFromUser class_user_type(self_clang_type);
+
+  AddOneType(context, class_user_type, current_id);
+
+  TypeFromUser self_user_type(self_type->GetFullCompilerType());
+
+  m_struct_vars->m_object_pointer_type = self_user_type;
 }
 
 void ClangExpressionDeclMap::LookupLocalVarNamespace(
-    SymbolContext &sym_ctx, NameSearchContext &context) {
-  CompilerDeclContext frame_decl_context = sym_ctx.block != nullptr
-                                               ? sym_ctx.block->GetDeclContext()
-                                               : CompilerDeclContext();
+    SymbolContext &sym_ctx, NameSearchContext &name_context) {
+  if (sym_ctx.block == nullptr)
+    return;
 
-  if (frame_decl_context) {
-    ClangASTContext *frame_ast = llvm::dyn_cast_or_null<ClangASTContext>(
-        frame_decl_context.GetTypeSystem());
+  CompilerDeclContext frame_decl_context = sym_ctx.block->GetDeclContext();
+  if (!frame_decl_context)
+    return;
 
-    ClangASTContext *map_ast = ClangASTContext::GetASTContext(m_ast_context);
-    if (frame_ast && map_ast) {
-      clang::NamespaceDecl *namespace_decl =
-          map_ast->GetUniqueNamespaceDeclaration(
-              g_lldb_local_vars_namespace_cstr, nullptr);
-      if (namespace_decl) {
-        context.AddNamedDecl(namespace_decl);
-        clang::DeclContext *clang_decl_ctx =
-            clang::Decl::castToDeclContext(namespace_decl);
-        clang_decl_ctx->setHasExternalVisibleStorage(true);
-        context.m_found.local_vars_nsp = true;
-      }
-    }
-  }
+  ClangASTContext *frame_ast = llvm::dyn_cast_or_null<ClangASTContext>(
+      frame_decl_context.GetTypeSystem());
+  if (!frame_ast)
+    return;
+
+  ClangASTContext *map_ast = ClangASTContext::GetASTContext(m_ast_context);
+  if (!map_ast)
+    return;
+
+  clang::NamespaceDecl *namespace_decl = map_ast->GetUniqueNamespaceDeclaration(
+      g_lldb_local_vars_namespace_cstr, nullptr);
+  if (!namespace_decl)
+    return;
+
+  name_context.AddNamedDecl(namespace_decl);
+  clang::DeclContext *ctxt = clang::Decl::castToDeclContext(namespace_decl);
+  ctxt->setHasExternalVisibleStorage(true);
+  name_context.m_found.local_vars_nsp = true;
 }
 
 void ClangExpressionDeclMap::LookupInModulesDeclVendor(
