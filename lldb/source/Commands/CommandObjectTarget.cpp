@@ -812,32 +812,29 @@ protected:
   void DumpGlobalVariableList(const ExecutionContext &exe_ctx,
                               const SymbolContext &sc,
                               const VariableList &variable_list, Stream &s) {
-    size_t count = variable_list.GetSize();
-    if (count > 0) {
-      if (sc.module_sp) {
-        if (sc.comp_unit) {
-          s.Printf("Global variables for %s in %s:\n",
-                   sc.comp_unit->GetPath().c_str(),
-                   sc.module_sp->GetFileSpec().GetPath().c_str());
-        } else {
-          s.Printf("Global variables for %s\n",
-                   sc.module_sp->GetFileSpec().GetPath().c_str());
-        }
-      } else if (sc.comp_unit) {
-        s.Printf("Global variables for %s\n", sc.comp_unit->GetPath().c_str());
+    if (variable_list.Empty())
+      return;
+    if (sc.module_sp) {
+      if (sc.comp_unit) {
+        s.Printf("Global variables for %s in %s:\n",
+                 sc.comp_unit->GetPath().c_str(),
+                 sc.module_sp->GetFileSpec().GetPath().c_str());
+      } else {
+        s.Printf("Global variables for %s\n",
+                 sc.module_sp->GetFileSpec().GetPath().c_str());
       }
+    } else if (sc.comp_unit) {
+      s.Printf("Global variables for %s\n", sc.comp_unit->GetPath().c_str());
+    }
 
-      for (uint32_t i = 0; i < count; ++i) {
-        VariableSP var_sp(variable_list.GetVariableAtIndex(i));
-        if (var_sp) {
-          ValueObjectSP valobj_sp(ValueObjectVariable::Create(
-              exe_ctx.GetBestExecutionContextScope(), var_sp));
+    for (VariableSP var_sp : variable_list) {
+      if (!var_sp)
+        continue;
+      ValueObjectSP valobj_sp(ValueObjectVariable::Create(
+          exe_ctx.GetBestExecutionContextScope(), var_sp));
 
-          if (valobj_sp)
-            DumpValueObject(s, var_sp, valobj_sp,
-                            var_sp->GetName().GetCString());
-        }
-      }
+      if (valobj_sp)
+        DumpValueObject(s, var_sp, valobj_sp, var_sp->GetName().GetCString());
     }
   }
 

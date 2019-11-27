@@ -1989,14 +1989,13 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
     VariableList variable_list;
     target_sp->GetImages().FindGlobalVariables(ConstString(name), max_matches,
                                                variable_list);
-    const uint32_t match_count = variable_list.GetSize();
-    if (match_count > 0) {
+    if (!variable_list.Empty()) {
       ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
       if (exe_scope == nullptr)
         exe_scope = target_sp.get();
-      for (uint32_t i = 0; i < match_count; ++i) {
-        lldb::ValueObjectSP valobj_sp(ValueObjectVariable::Create(
-            exe_scope, variable_list.GetVariableAtIndex(i)));
+      for (const VariableSP &var_sp : variable_list) {
+        lldb::ValueObjectSP valobj_sp(
+            ValueObjectVariable::Create(exe_scope, var_sp));
         if (valobj_sp)
           sb_value_list.Append(SBValue(valobj_sp));
       }
@@ -2021,7 +2020,6 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
     VariableList variable_list;
 
     std::string regexstr;
-    uint32_t match_count;
     switch (matchtype) {
     case eMatchTypeNormal:
       target_sp->GetImages().FindGlobalVariables(ConstString(name), max_matches,
@@ -2037,14 +2035,13 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
                                                  max_matches, variable_list);
       break;
     }
-    match_count = variable_list.GetSize();
-    if (match_count > 0) {
+    if (!variable_list.Empty()) {
       ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
       if (exe_scope == nullptr)
         exe_scope = target_sp.get();
-      for (uint32_t i = 0; i < match_count; ++i) {
-        lldb::ValueObjectSP valobj_sp(ValueObjectVariable::Create(
-            exe_scope, variable_list.GetVariableAtIndex(i)));
+      for (const VariableSP &var_sp : variable_list) {
+        lldb::ValueObjectSP valobj_sp(
+            ValueObjectVariable::Create(exe_scope, var_sp));
         if (valobj_sp)
           sb_value_list.Append(SBValue(valobj_sp));
       }
