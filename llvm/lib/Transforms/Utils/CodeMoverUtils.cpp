@@ -33,10 +33,17 @@ STATISTIC(NotMovedTerminator, "Movement of Terminator are not supported");
 bool llvm::isControlFlowEquivalent(const Instruction &I0, const Instruction &I1,
                                    const DominatorTree &DT,
                                    const PostDominatorTree &PDT) {
-  const BasicBlock *BB0 = I0.getParent();
-  const BasicBlock *BB1 = I1.getParent();
-  return ((DT.dominates(BB0, BB1) && PDT.dominates(BB1, BB0)) ||
-          (PDT.dominates(BB0, BB1) && DT.dominates(BB1, BB0)));
+  return isControlFlowEquivalent(*I0.getParent(), *I1.getParent(), DT, PDT);
+}
+
+bool llvm::isControlFlowEquivalent(const BasicBlock &BB0, const BasicBlock &BB1,
+                                   const DominatorTree &DT,
+                                   const PostDominatorTree &PDT) {
+  if (&BB0 == &BB1)
+    return true;
+
+  return ((DT.dominates(&BB0, &BB1) && PDT.dominates(&BB1, &BB0)) ||
+          (PDT.dominates(&BB0, &BB1) && DT.dominates(&BB1, &BB0)));
 }
 
 static bool reportInvalidCandidate(const Instruction &I,

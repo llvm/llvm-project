@@ -63,6 +63,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/CodeMoverUtils.h"
 
 using namespace llvm;
 
@@ -593,16 +594,8 @@ private:
                                const FusionCandidate &FC1) const {
     assert(FC0.Preheader && FC1.Preheader && "Expecting valid preheaders");
 
-    BasicBlock *FC0EntryBlock = FC0.getEntryBlock();
-    BasicBlock *FC1EntryBlock = FC1.getEntryBlock();
-
-    if (DT.dominates(FC0EntryBlock, FC1EntryBlock))
-      return PDT.dominates(FC1EntryBlock, FC0EntryBlock);
-
-    if (DT.dominates(FC1EntryBlock, FC0EntryBlock))
-      return PDT.dominates(FC0EntryBlock, FC1EntryBlock);
-
-    return false;
+    return ::isControlFlowEquivalent(*FC0.getEntryBlock(), *FC1.getEntryBlock(),
+                                     DT, PDT);
   }
 
   /// Iterate over all loops in the given loop set and identify the loops that
