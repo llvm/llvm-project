@@ -1,0 +1,10 @@
+RUN: %clang_profgen %S/Inputs/instrprof-multiprocess.c -o %t
+RUN: rm -f %t_*.profraw
+RUN: env LLVM_PROFILE_FILE=%t_%m.profraw %run %t
+RUN: llvm-profdata show --counts -function=foo %t_*.profraw | FileCheck %s
+
+CHECK: Counters:
+CHECK:   foo:
+CHECK:     Function count: 10
+CHECK:     Block counts: [5, 5]
+CHECK: Functions shown: 1

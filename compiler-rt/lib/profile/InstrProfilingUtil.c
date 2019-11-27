@@ -207,8 +207,9 @@ COMPILER_RT_VISIBILITY FILE *lprofOpenFileEx(const char *ProfileName) {
   f = fdopen(fd, "r+b");
 #elif defined(_WIN32)
   // FIXME: Use the wide variants to handle Unicode filenames.
-  HANDLE h = CreateFileA(ProfileName, GENERIC_READ | GENERIC_WRITE, 0, 0,
-                         OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+  HANDLE h = CreateFileA(ProfileName, GENERIC_READ | GENERIC_WRITE,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_ALWAYS,
+                         FILE_ATTRIBUTE_NORMAL, 0);
   if (h == INVALID_HANDLE_VALUE)
     return NULL;
 
@@ -217,6 +218,10 @@ COMPILER_RT_VISIBILITY FILE *lprofOpenFileEx(const char *ProfileName) {
     CloseHandle(h);
     return NULL;
   }
+
+  if (lprofLockFd(fd) != 0)
+    PROF_WARN("Data may be corrupted during profile merging : %s\n",
+              "Fail to obtain file lock due to system limit.");
 
   f = _fdopen(fd, "r+b");
   if (f == 0) {
