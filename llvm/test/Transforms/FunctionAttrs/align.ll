@@ -351,8 +351,7 @@ define i64 @test12-1(i32* align 4 %p) {
   ret i64 %ret
 }
 
-; FXIME: %p should have nonnull
-; ATTRIBUTOR: define i64 @test12-2(i32* nocapture nofree readonly align 16 %p)
+; ATTRIBUTOR: define i64 @test12-2(i32* nocapture nofree nonnull readonly align 16 dereferenceable(8) %p)
 define i64 @test12-2(i32* align 4 %p) {
   %p-cast = bitcast i32* %p to i64*
   %arrayidx0 = getelementptr i64, i64* %p-cast, i64 0
@@ -370,8 +369,7 @@ define void @test12-3(i32* align 4 %p) {
   ret void 
 }
 
-; FXIME: %p should have nonnull
-; ATTRIBUTOR: define void @test12-4(i32* nocapture nofree writeonly align 16 %p)
+; ATTRIBUTOR: define void @test12-4(i32* nocapture nofree nonnull writeonly align 16 dereferenceable(8) %p)
 define void @test12-4(i32* align 4 %p) {
   %p-cast = bitcast i32* %p to i64*
   %arrayidx0 = getelementptr i64, i64* %p-cast, i64 0
