@@ -22,7 +22,7 @@
 
    Remarks compilation:
       for FILE in basic1.c basic2.c basic3.c; do
-         clang -gline-tables-only -c $FILE -fsave-optimization-record=bitstream -foptimization-remarks-file=/tmp/${FILE%.c}.macho.remarks.x86_64.opt.bitstream -mllvm -remarks-section -o ${FILE%.c}.macho.remarks.x86_64.o
+         clang -gline-tables-only -c $FILE -fsave-optimization-record=bitstream -foptimization-record-file=/remarks/${FILE%.c}.macho.remarks.x86_64.opt.bitstream -o ${FILE%.c}.macho.remarks.x86_64.o
       done
       clang basic1.macho.remarks.x86_64.o basic2.macho.remarks.x86_64.o basic3.macho.remarks.x86_64.o -o basic.macho.remarks.x86_64 -Wl,-dead_strip
 

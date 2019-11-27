@@ -2240,8 +2240,7 @@ void RenderScriptRuntime::FindStructTypeName(Element &elem,
   // Iterate over all the global variables looking for one with a matching type
   // to the Element. We make the assumption a match exists since there needs to
   // be a global variable to reflect the struct type back into java host code.
-  for (uint32_t i = 0; i < var_list.GetSize(); ++i) {
-    const VariableSP var_sp(var_list.GetVariableAtIndex(i));
+  for (const VariableSP &var_sp : var_list) {
     if (!var_sp)
       continue;
 

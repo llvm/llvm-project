@@ -174,6 +174,7 @@ class TimerGroup {
     std::string Description;
 
     PrintRecord(const PrintRecord &Other) = default;
+    PrintRecord &operator=(const PrintRecord &Other) = default;
     PrintRecord(const TimeRecord &Time, const std::string &Name,
                 const std::string &Description)
       : Time(Time), Name(Name), Description(Description) {}

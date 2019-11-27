@@ -1209,7 +1209,10 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
     break;
   }
   case ToolChain::UNW_CompilerRT:
-    CmdArgs.push_back("-lunwind");
+    if (LGT == LibGccType::StaticLibGcc)
+      CmdArgs.push_back("-l:libunwind.a");
+    else
+      CmdArgs.push_back("-l:libunwind.so");
     break;
   }
 

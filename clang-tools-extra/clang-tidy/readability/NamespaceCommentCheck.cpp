@@ -19,6 +19,44 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
+namespace {
+class NamespaceCommentPPCallbacks : public PPCallbacks {
+public:
+  NamespaceCommentPPCallbacks(Preprocessor *PP, NamespaceCommentCheck *Check)
+      : PP(PP), Check(Check) {}
+
+  void MacroDefined(const Token &MacroNameTok, const MacroDirective *MD) {
+    // Record all defined macros. We store the whole token to compare names
+    // later.
+
+    const MacroInfo * MI = MD->getMacroInfo();
+
+    if (MI->isFunctionLike())
+      return;
+
+    std::string ValueBuffer;
+    llvm::raw_string_ostream Value(ValueBuffer);
+
+    SmallString<128> SpellingBuffer;
+    bool First = true;
+    for (const auto &T : MI->tokens()) {
+      if (!First && T.hasLeadingSpace())
+        Value << ' ';
+
+      Value << PP->getSpelling(T, SpellingBuffer);
+      First = false;
+    }
+
+    Check->addMacro(MacroNameTok.getIdentifierInfo()->getName().str(),
+                    Value.str());
+  }
+
+private:
+  Preprocessor *PP;
+  NamespaceCommentCheck *Check;
+};
+} // namespace
+
 NamespaceCommentCheck::NamespaceCommentCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -40,29 +78,68 @@ void NamespaceCommentCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(namespaceDecl().bind("namespace"), this);
 }
 
+void NamespaceCommentCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(std::make_unique<NamespaceCommentPPCallbacks>(PP, this));
+}
+
 static bool locationsInSameFile(const SourceManager &Sources,
                                 SourceLocation Loc1, SourceLocation Loc2) {
   return Loc1.isFileID() && Loc2.isFileID() &&
          Sources.getFileID(Loc1) == Sources.getFileID(Loc2);
 }
 
-static std::string getNamespaceComment(const NamespaceDecl *ND,
-                                       bool InsertLineBreak) {
+std::string NamespaceCommentCheck::getNamespaceComment(const NamespaceDecl *ND,
+                                                       bool InsertLineBreak) {
   std::string Fix = "// namespace";
-  if (!ND->isAnonymousNamespace())
-    Fix.append(" ").append(ND->getNameAsString());
+  if (!ND->isAnonymousNamespace()) {
+    bool IsNamespaceMacroExpansion;
+    StringRef MacroDefinition;
+    std::tie(IsNamespaceMacroExpansion, MacroDefinition) =
+        isNamespaceMacroExpansion(ND->getName());
+
+    Fix.append(" ").append(IsNamespaceMacroExpansion ? MacroDefinition
+                                                     : ND->getName());
+  }
   if (InsertLineBreak)
     Fix.append("\n");
   return Fix;
 }
 
-static std::string getNamespaceComment(const std::string &NameSpaceName,
-                                       bool InsertLineBreak) {
+std::string
+NamespaceCommentCheck::getNamespaceComment(const std::string &NameSpaceName,
+                                           bool InsertLineBreak) {
   std::string Fix = "// namespace ";
   Fix.append(NameSpaceName);
   if (InsertLineBreak)
     Fix.append("\n");
   return Fix;
+}
+
+void NamespaceCommentCheck::addMacro(const std::string &Name,
+                                     const std::string &Value) noexcept {
+  Macros.emplace_back(Name, Value);
+}
+
+bool NamespaceCommentCheck::isNamespaceMacroDefinition(
+    const StringRef NameSpaceName) {
+  return llvm::any_of(Macros, [&NameSpaceName](const auto &Macro) {
+    return NameSpaceName == Macro.first;
+  });
+}
+
+std::tuple<bool, StringRef> NamespaceCommentCheck::isNamespaceMacroExpansion(
+    const StringRef NameSpaceName) {
+  const auto &MacroIt =
+      llvm::find_if(Macros, [&NameSpaceName](const auto &Macro) {
+        return NameSpaceName == Macro.second;
+      });
+
+  const bool IsNamespaceMacroExpansion = Macros.end() != MacroIt;
+
+  return std::make_tuple(IsNamespaceMacroExpansion,
+                         IsNamespaceMacroExpansion ? StringRef(MacroIt->first)
+                                                   : NameSpaceName);
 }
 
 void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
@@ -143,28 +220,48 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
       StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5] : "";
       StringRef Anonymous = Groups.size() > 3 ? Groups[3] : "";
 
+      // Don't allow to use macro expansion in closing comment.
+      // FIXME: Use Structured Bindings once C++17 features will be enabled.
+      bool IsNamespaceMacroExpansion;
+      StringRef MacroDefinition;
+      std::tie(IsNamespaceMacroExpansion, MacroDefinition) =
+          isNamespaceMacroExpansion(NamespaceNameInComment);
+
       if (IsNested && NestedNamespaceName == NamespaceNameInComment) {
         // C++17 nested namespace.
         return;
       } else if ((ND->isAnonymousNamespace() &&
                   NamespaceNameInComment.empty()) ||
-                 (ND->getNameAsString() == NamespaceNameInComment &&
-                  Anonymous.empty())) {
+                 (((ND->getNameAsString() == NamespaceNameInComment) &&
+                   Anonymous.empty()) &&
+                  !IsNamespaceMacroExpansion)) {
         // Check if the namespace in the comment is the same.
         // FIXME: Maybe we need a strict mode, where we always fix namespace
         // comments with different format.
         return;
       }
 
+      // Allow using macro definitions in closing comment.
+      if (isNamespaceMacroDefinition(NamespaceNameInComment))
+        return;
+
       // Otherwise we need to fix the comment.
       NeedLineBreak = Comment.startswith("/*");
       OldCommentRange =
           SourceRange(AfterRBrace, Loc.getLocWithOffset(Tok.getLength()));
-      Message =
-          (llvm::Twine(
-               "%0 ends with a comment that refers to a wrong namespace '") +
-           NamespaceNameInComment + "'")
-              .str();
+
+      if (IsNamespaceMacroExpansion) {
+        Message = (llvm::Twine("%0 ends with a comment that refers to an "
+                               "expansion of macro"))
+                      .str();
+        NestedNamespaceName = MacroDefinition;
+      } else {
+        Message = (llvm::Twine("%0 ends with a comment that refers to a "
+                               "wrong namespace '") +
+                   NamespaceNameInComment + "'")
+                      .str();
+      }
+
     } else if (Comment.startswith("//")) {
       // Assume that this is an unrecognized form of a namespace closing line
       // comment. Replace it.
@@ -176,6 +273,16 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
     // If it's a block comment, just move it to the next line, as it can be
     // multi-line or there may be other tokens behind it.
   }
+
+  // Print Macro definition instead of expansion.
+  // FIXME: Use Structured Bindings once C++17 features will be enabled.
+  bool IsNamespaceMacroExpansion;
+  StringRef MacroDefinition;
+  std::tie(IsNamespaceMacroExpansion, MacroDefinition) =
+      isNamespaceMacroExpansion(NestedNamespaceName);
+
+  if (IsNamespaceMacroExpansion)
+    NestedNamespaceName = MacroDefinition;
 
   std::string NamespaceName =
       ND->isAnonymousNamespace()

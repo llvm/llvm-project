@@ -1,20 +1,52 @@
+import("//llvm/utils/gn/build/write_vcsrevision.gni")
+
+config("write_vcsrevision_config") {
+  # To pick up the generated inc file.
+  include_dirs = [ target_gen_dir ]
+  visibility = [ ":write_vcsrevision" ]
+}
+
+write_vcsrevision("write_vcsrevision") {
+  visibility = [ ":Version" ]
+  header = "$target_gen_dir/VCSVersion.inc"
+  names = [ "LLVM", "CLANG" ]
+  public_configs = [ ":write_vcsrevision_config" ]
+}
+
+source_set("Version") {
+  visibility = [ ":Basic" ]
+
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  public_deps = [
+    # public_dep because public header Version.h includes generated Version.inc.
+    "//clang/include/clang/Basic:version",
+  ]
+  deps = [
+    ":write_vcsrevision",
+    "//clang/include/clang/Config",
+  ]
+  sources = [
+    "Version.cpp",
+  ]
+  defines = [ "HAVE_VCS_VERSION_INC" ]
+}
+
 static_library("Basic") {
   output_name = "clangBasic"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   public_deps = [
     # public_dep because public header Version.h includes generated Version.inc.
+    ":Version",
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:arm_mve_builtins",
     "//clang/include/clang/Basic:diags_tablegen",
-    "//clang/include/clang/Basic:version",
   ]
   deps = [
     "//clang/include/clang/Basic:AttrHasAttributeImpl",
     "//clang/include/clang/Basic:arm_fp16",
     "//clang/include/clang/Basic:arm_neon",
-    "//clang/include/clang/Config",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
@@ -72,10 +104,6 @@ static_library("Basic") {
     "Targets/X86.cpp",
     "Targets/XCore.cpp",
     "TokenKinds.cpp",
-
-    # FIXME: This should be in its own target that passes -DHAVE_SVN_VERSION_INC
-    # and that also depends on a target generating SVNVersion.inc.
-    "Version.cpp",
     "Warnings.cpp",
     "XRayInstr.cpp",
     "XRayLists.cpp",

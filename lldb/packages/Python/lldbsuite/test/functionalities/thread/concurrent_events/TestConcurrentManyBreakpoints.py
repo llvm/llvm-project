@@ -14,7 +14,6 @@ class ConcurrentManyBreakpoints(ConcurrentEventsBase):
 
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
-    @expectedFailureNetBSD
     @skipIfOutOfTreeDebugserver
     def test(self):
         """Test 100 breakpoints from 100 threads."""

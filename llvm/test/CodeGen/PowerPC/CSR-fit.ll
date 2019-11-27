@@ -178,16 +178,26 @@ define dso_local signext i32 @caller4(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8:       # %bb.0: # %entry
 ; CHECK-PWR8-NEXT:    mflr r0
 ; CHECK-PWR8-NEXT:    std r0, 16(r1)
-; CHECK-PWR8-NEXT:    stdu r1, -32(r1)
-; CHECK-PWR8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-PWR8-NEXT:    stdu r1, -240(r1)
+; CHECK-PWR8-NEXT:    .cfi_def_cfa_offset 240
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
+; CHECK-PWR8-NEXT:    .cfi_offset v20, -192
+; CHECK-PWR8-NEXT:    .cfi_offset v21, -176
+; CHECK-PWR8-NEXT:    li r5, 48
+; CHECK-PWR8-NEXT:    stxvd2x v20, r1, r5 # 16-byte Folded Spill
+; CHECK-PWR8-NEXT:    li r5, 64
+; CHECK-PWR8-NEXT:    stxvd2x v21, r1, r5 # 16-byte Folded Spill
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
 ; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
-; CHECK-PWR8-NEXT:    addi r1, r1, 32
+; CHECK-PWR8-NEXT:    li r4, 64
+; CHECK-PWR8-NEXT:    lxvd2x v21, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    li r4, 48
+; CHECK-PWR8-NEXT:    lxvd2x v20, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    addi r1, r1, 240
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR8-NEXT:    mtlr r0
 ; CHECK-PWR8-NEXT:    blr
@@ -196,16 +206,22 @@ define dso_local signext i32 @caller4(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR9:       # %bb.0: # %entry
 ; CHECK-PWR9-NEXT:    mflr r0
 ; CHECK-PWR9-NEXT:    std r0, 16(r1)
-; CHECK-PWR9-NEXT:    stdu r1, -32(r1)
-; CHECK-PWR9-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-PWR9-NEXT:    stdu r1, -224(r1)
+; CHECK-PWR9-NEXT:    .cfi_def_cfa_offset 224
 ; CHECK-PWR9-NEXT:    .cfi_offset lr, 16
+; CHECK-PWR9-NEXT:    .cfi_offset v20, -192
+; CHECK-PWR9-NEXT:    .cfi_offset v21, -176
+; CHECK-PWR9-NEXT:    stxv v20, 32(r1) # 16-byte Folded Spill
+; CHECK-PWR9-NEXT:    stxv v21, 48(r1) # 16-byte Folded Spill
 ; CHECK-PWR9-NEXT:    #APP
 ; CHECK-PWR9-NEXT:    add r3, r3, r4
 ; CHECK-PWR9-NEXT:    #NO_APP
 ; CHECK-PWR9-NEXT:    extsw r3, r3
 ; CHECK-PWR9-NEXT:    bl callee
 ; CHECK-PWR9-NEXT:    nop
-; CHECK-PWR9-NEXT:    addi r1, r1, 32
+; CHECK-PWR9-NEXT:    lxv v21, 48(r1) # 16-byte Folded Reload
+; CHECK-PWR9-NEXT:    lxv v20, 32(r1) # 16-byte Folded Reload
+; CHECK-PWR9-NEXT:    addi r1, r1, 224
 ; CHECK-PWR9-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    blr
@@ -226,19 +242,24 @@ define dso_local signext i32 @caller_mixed(i32 signext %a, i32 signext %b) local
 ; CHECK-PWR8-NEXT:    .cfi_offset r14, -288
 ; CHECK-PWR8-NEXT:    .cfi_offset f14, -144
 ; CHECK-PWR8-NEXT:    .cfi_offset v20, -480
+; CHECK-PWR8-NEXT:    .cfi_offset v21, -464
 ; CHECK-PWR8-NEXT:    li r5, 48
 ; CHECK-PWR8-NEXT:    std r14, 240(r1) # 8-byte Folded Spill
 ; CHECK-PWR8-NEXT:    stfd f14, 384(r1) # 8-byte Folded Spill
 ; CHECK-PWR8-NEXT:    stxvd2x v20, r1, r5 # 16-byte Folded Spill
+; CHECK-PWR8-NEXT:    li r5, 64
+; CHECK-PWR8-NEXT:    stxvd2x v21, r1, r5 # 16-byte Folded Spill
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
 ; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
-; CHECK-PWR8-NEXT:    li r4, 48
+; CHECK-PWR8-NEXT:    li r4, 64
 ; CHECK-PWR8-NEXT:    lfd f14, 384(r1) # 8-byte Folded Reload
 ; CHECK-PWR8-NEXT:    ld r14, 240(r1) # 8-byte Folded Reload
+; CHECK-PWR8-NEXT:    lxvd2x v21, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    li r4, 48
 ; CHECK-PWR8-NEXT:    lxvd2x v20, r1, r4 # 16-byte Folded Reload
 ; CHECK-PWR8-NEXT:    addi r1, r1, 528
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
@@ -255,15 +276,18 @@ define dso_local signext i32 @caller_mixed(i32 signext %a, i32 signext %b) local
 ; CHECK-PWR9-NEXT:    .cfi_offset r14, -288
 ; CHECK-PWR9-NEXT:    .cfi_offset f14, -144
 ; CHECK-PWR9-NEXT:    .cfi_offset v20, -480
+; CHECK-PWR9-NEXT:    .cfi_offset v21, -464
 ; CHECK-PWR9-NEXT:    std r14, 224(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    stfd f14, 368(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    stxv v20, 32(r1) # 16-byte Folded Spill
+; CHECK-PWR9-NEXT:    stxv v21, 48(r1) # 16-byte Folded Spill
 ; CHECK-PWR9-NEXT:    #APP
 ; CHECK-PWR9-NEXT:    add r3, r3, r4
 ; CHECK-PWR9-NEXT:    #NO_APP
 ; CHECK-PWR9-NEXT:    extsw r3, r3
 ; CHECK-PWR9-NEXT:    bl callee
 ; CHECK-PWR9-NEXT:    nop
+; CHECK-PWR9-NEXT:    lxv v21, 48(r1) # 16-byte Folded Reload
 ; CHECK-PWR9-NEXT:    lxv v20, 32(r1) # 16-byte Folded Reload
 ; CHECK-PWR9-NEXT:    lfd f14, 368(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-NEXT:    ld r14, 224(r1) # 8-byte Folded Reload

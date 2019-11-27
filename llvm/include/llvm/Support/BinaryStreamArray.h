@@ -274,6 +274,7 @@ public:
     return !(*this == Other);
   }
 
+  FixedStreamArray(const FixedStreamArray &) = default;
   FixedStreamArray &operator=(const FixedStreamArray &) = default;
 
   const T &operator[](uint32_t Index) const {
@@ -323,6 +324,8 @@ public:
   FixedStreamArrayIterator(const FixedStreamArray<T> &Array, uint32_t Index)
       : Array(Array), Index(Index) {}
 
+  FixedStreamArrayIterator<T>(const FixedStreamArrayIterator<T> &Other)
+      : Array(Other.Array), Index(Other.Index) {}
   FixedStreamArrayIterator<T> &
   operator=(const FixedStreamArrayIterator<T> &Other) {
     Array = Other.Array;

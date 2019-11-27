@@ -97,9 +97,8 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.ModulePCMPath = M->getASTFile()->getName();
   MD.ContextHash = MDC.ContextHash;
   serialization::ModuleFile *MF =
-      MDC.Instance.getModuleManager()->getModuleManager().lookup(
-          M->getASTFile());
-  MDC.Instance.getModuleManager()->visitInputFiles(
+      MDC.Instance.getASTReader()->getModuleManager().lookup(M->getASTFile());
+  MDC.Instance.getASTReader()->visitInputFiles(
       *MF, true, true, [&](const serialization::InputFile &IF, bool isSystem) {
         MD.FileDeps.insert(IF.getFile()->getName());
       });

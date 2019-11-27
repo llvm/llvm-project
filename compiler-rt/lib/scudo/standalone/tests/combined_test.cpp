@@ -279,3 +279,18 @@ TEST(ScudoCombinedTest, DeathCombined) {
   EXPECT_DEATH(Allocator->reallocate(P, Size * 2U), "");
   EXPECT_DEATH(Allocator->getUsableSize(P), "");
 }
+
+// Ensure that releaseToOS can be called prior to any other allocator
+// operation without issue.
+TEST(ScudoCombinedTest, ReleaseToOS) {
+  using AllocatorT = scudo::Allocator<DeathConfig>;
+  auto Deleter = [](AllocatorT *A) {
+    A->unmapTestOnly();
+    delete A;
+  };
+  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
+                                                           Deleter);
+  Allocator->reset();
+
+  Allocator->releaseToOS();
+}

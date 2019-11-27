@@ -11,6 +11,8 @@
 
 #include "lldb/Host/common/NativeThreadProtocol.h"
 
+#include "Plugins/Process/NetBSD/NativeRegisterContextNetBSD.h"
+
 #include <csignal>
 #include <map>
 #include <string>
@@ -34,7 +36,7 @@ public:
   bool GetStopReason(ThreadStopInfo &stop_info,
                      std::string &description) override;
 
-  NativeRegisterContext& GetRegisterContext() override;
+  NativeRegisterContextNetBSD &GetRegisterContext() override;
 
   Status SetWatchpoint(lldb::addr_t addr, size_t size, uint32_t watch_flags,
                        bool hardware) override;
@@ -48,19 +50,26 @@ public:
 private:
   // Interface for friend classes
 
+  Status Resume();
+  Status SingleStep();
+  Status Suspend();
+
   void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr);
   void SetStoppedByBreakpoint();
   void SetStoppedByTrace();
   void SetStoppedByExec();
   void SetStoppedByWatchpoint(uint32_t wp_index);
+  void SetStoppedWithNoReason();
   void SetStopped();
   void SetRunning();
   void SetStepping();
 
+  Status CopyWatchpointsFrom(NativeThreadNetBSD& source);
+
   // Member Variables
   lldb::StateType m_state;
   ThreadStopInfo m_stop_info;
-  std::unique_ptr<NativeRegisterContext> m_reg_context_up;
+  std::unique_ptr<NativeRegisterContextNetBSD> m_reg_context_up;
   std::string m_stop_description;
   using WatchpointIndexMap = std::map<lldb::addr_t, uint32_t>;
   WatchpointIndexMap m_watchpoint_index_map;

@@ -56,6 +56,8 @@ extern struct _FILE *stdin;
 extern FILE *stdin;
 #endif
 
+#define bool _Bool
+
 int fscanf(FILE *restrict stream, const char *restrict format, ...);
 int sprintf(char *str, const char *format, ...);
 void setproctitle(const char *fmt, ...);
@@ -346,6 +348,7 @@ void mySource2(int*);
 void myScanf(const char*, ...);
 int myPropagator(int, int*);
 int mySnprintf(char*, size_t, const char*, ...);
+bool isOutOfRange(const int*);
 void mySink(int, int, int);
 
 void testConfigurationSources1() {
@@ -370,6 +373,13 @@ void testConfigurationPropagation() {
   int y;
   myPropagator(x, &y);
   Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
+}
+
+void testConfigurationFilter() {
+  int x = mySource1();
+  if (isOutOfRange(&x)) // the filter function
+    return;
+  Buffer[x] = 1; // no-warning
 }
 
 void testConfigurationSinks() {

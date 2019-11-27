@@ -1974,6 +1974,12 @@ Check for overflows in the arguments to malloc().
    void *p = malloc(n * sizeof(int)); // warn
  }
 
+ void test2(int n) {
+   if (n > 100) // gives an upper-bound
+     return;
+   void *p = malloc(n * sizeof(int)); // no warning
+ }
+
 .. _alpha-security-MmapWriteExec:
 
 alpha.security.MmapWriteExec (C)

@@ -573,8 +573,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   if (!var_sp && (options & eExpressionPathOptionsInspectAnonymousUnions)) {
     // Check if any anonymous unions are there which contain a variable with
     // the name we need
-    for (size_t i = 0; i < variable_list->GetSize(); i++) {
-      VariableSP variable_sp = variable_list->GetVariableAtIndex(i);
+    for (const VariableSP &variable_sp : *variable_list) {
       if (!variable_sp)
         continue;
       if (!variable_sp->GetName().IsEmpty())
@@ -1529,11 +1528,9 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
              : Instruction::Operand::BuildDereference(
                    Instruction::Operand::BuildRegister(reg));
 
-  for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi) {
-    VariableSP var_sp = variables.GetVariableAtIndex(vi);
-    if (var_sp->LocationExpression().MatchesOperand(frame, op)) {
+  for (VariableSP var_sp : variables) {
+    if (var_sp->LocationExpression().MatchesOperand(frame, op))
       return frame.GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
-    }
   }
 
   const uint32_t current_inst =

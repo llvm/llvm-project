@@ -3,7 +3,6 @@ if(NOT LLDB_BUILT_STANDALONE)
 endif()
 
 add_lldb_library(lldbPluginExpressionParserClang PLUGIN
-  ASTDumper.cpp
   ASTResultSynthesizer.cpp
   ASTStructExtractor.cpp
   ASTUtils.cpp
