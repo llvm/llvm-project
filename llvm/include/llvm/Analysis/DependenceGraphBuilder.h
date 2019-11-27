@@ -59,6 +59,7 @@ public:
     createMemoryDependencyEdges();
     createAndConnectRootNode();
     createPiBlocks();
+    sortNodesTopologically();
   }
 
   /// Create fine grained nodes. These are typically atomic nodes that
@@ -83,6 +84,9 @@ public:
   /// program elements that need to stay together during codegen and turn
   /// the dependence graph into an acyclic graph.
   void createPiBlocks();
+
+  /// Topologically sort the graph nodes.
+  void sortNodesTopologically();
 
 protected:
   /// Create the root node of the graph.
