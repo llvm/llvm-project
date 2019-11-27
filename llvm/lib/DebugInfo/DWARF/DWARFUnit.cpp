@@ -186,9 +186,16 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
     if (auto *IndexEntry = Header.getIndexEntry())
       if (const auto *C = IndexEntry->getOffset(DW_SECT_LOC))
         Data = Data.substr(C->Offset, C->Length);
-    LocTable = std::make_unique<DWARFDebugLoclists>(
-        DWARFDataExtractor(Data, isLittleEndian, getAddressByteSize()),
-        Header.getVersion());
+
+    DWARFDataExtractor DWARFData =
+        Header.getVersion() >= 5
+            ? DWARFDataExtractor(Context.getDWARFObj(),
+                                 Context.getDWARFObj().getLoclistsDWOSection(),
+                                 isLittleEndian, getAddressByteSize())
+            : DWARFDataExtractor(Data, isLittleEndian, getAddressByteSize());
+    LocTable =
+        std::make_unique<DWARFDebugLoclists>(DWARFData, Header.getVersion());
+
   } else if (Header.getVersion() >= 5) {
     LocTable = std::make_unique<DWARFDebugLoclists>(
         DWARFDataExtractor(Context.getDWARFObj(),
@@ -502,14 +509,23 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
         RangeSectionBase = RngListTable->getHeaderSize();
     }
 
-    // FIXME: add loclists.dwo support
-    setLocSection(&Context.getDWARFObj().getLoclistsSection(),
-                  toSectionOffset(UnitDie.find(DW_AT_loclists_base), 0));
+    // In a split dwarf unit, there is no DW_AT_loclists_base attribute.
+    // Setting LocSectionBase to point past the table header.
+    if (IsDWO)
+      setLocSection(&Context.getDWARFObj().getLoclistsDWOSection(),
+                    DWARFListTableHeader::getHeaderSize(Header.getFormat()));
+    else
+      setLocSection(&Context.getDWARFObj().getLoclistsSection(),
+                    toSectionOffset(UnitDie.find(DW_AT_loclists_base), 0));
 
     if (LocSection->Data.size()) {
-      LoclistTableHeader.emplace(".debug_loclists", "locations");
-      uint64_t Offset = LocSectionBase;
+      if (IsDWO)
+        LoclistTableHeader.emplace(".debug_loclists.dwo", "locations");
+      else
+        LoclistTableHeader.emplace(".debug_loclists", "locations");
+
       uint64_t HeaderSize = DWARFListTableHeader::getHeaderSize(Header.getFormat());
+      uint64_t Offset = getLocSectionBase();
       DWARFDataExtractor Data(Context.getDWARFObj(), *LocSection,
                               isLittleEndian, getAddressByteSize());
       if (Offset < HeaderSize)
