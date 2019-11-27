@@ -530,6 +530,7 @@ private:
 
   // Convert Float Operand to Integer.
   bool SoftenFloatOperand(SDNode *N, unsigned OpNo);
+  SDValue SoftenFloatOp_Unary(SDNode *N, RTLIB::Libcall LC);
   SDValue SoftenFloatOp_BITCAST(SDNode *N);
   SDValue SoftenFloatOp_BR_CC(SDNode *N);
   SDValue SoftenFloatOp_FP_EXTEND(SDNode *N);
