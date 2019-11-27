@@ -221,7 +221,8 @@ define <8 x i16> @elts_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) {
 define <8 x i16> @elts_packusdw_128(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @elts_packusdw_128(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]])
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> undef, <8 x i32> <i32 undef, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 undef>
+; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 ;
   %1 = insertelement <4 x i32> %a0, i32 0, i32 0
   %2 = insertelement <4 x i32> %a1, i32 0, i32 3
@@ -255,7 +256,8 @@ define <16 x i8> @elts_packuswb_128(<8 x i16> %a0, <8 x i16> %a1) {
 define <16 x i16> @elts_packssdw_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: @elts_packssdw_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> [[A0:%.*]], <8 x i32> undef)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[TMP1]], <16 x i16> undef, <16 x i32> <i32 undef, i32 undef, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 8, i32 undef, i32 undef, i32 11, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <16 x i16> [[TMP2]]
 ;
   %1 = shufflevector <8 x i32> %a0, <8 x i32> undef, <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = shufflevector <8 x i32> %a1, <8 x i32> undef, <8 x i32> <i32 undef, i32 2, i32 1, i32 undef, i32 undef, i32 6, i32 5, i32 undef>
@@ -303,7 +305,8 @@ define <32 x i8> @elts_packuswb_256(<16 x i16> %a0, <16 x i16> %a1) {
 define <32 x i16> @elts_packssdw_512(<16 x i32> %a0, <16 x i32> %a1) {
 ; CHECK-LABEL: @elts_packssdw_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.packssdw.512(<16 x i32> [[A0:%.*]], <16 x i32> undef)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i16> [[TMP1]], <32 x i16> undef, <32 x i32> <i32 undef, i32 undef, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 8, i32 undef, i32 undef, i32 11, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 18, i32 19, i32 undef, i32 undef, i32 undef, i32 undef, i32 24, i32 undef, i32 undef, i32 27, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <32 x i16> [[TMP2]]
 ;
   %1 = shufflevector <16 x i32> %a0, <16 x i32> undef, <16 x i32> <i32 1, i32 0, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 9, i32 8, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %2 = shufflevector <16 x i32> %a1, <16 x i32> undef, <16 x i32> <i32 undef, i32 2, i32 1, i32 undef, i32 undef, i32 6, i32 5, i32 undef, i32 undef, i32 10, i32 9, i32 undef, i32 undef, i32 14, i32 13, i32 undef>
