@@ -354,6 +354,15 @@ namespace clang {
     SwiftContext
   };
 
+  /// Assigned inheritance model for a class in the MS C++ ABI. Must match order
+  /// of spellings in MSInheritanceAttr.
+  enum class MSInheritanceModel {
+    Single = 0,
+    Multiple = 1,
+    Virtual = 2,
+    Unspecified = 3,
+  };
+
   llvm::StringRef getParameterABISpelling(ParameterABI kind);
 } // end namespace clang
 
