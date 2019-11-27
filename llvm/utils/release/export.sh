@@ -13,14 +13,13 @@
 
 set -e
 
-projects="llvm cfe test-suite compiler-rt libcxx libcxxabi clang-tools-extra polly lldb lld openmp libunwind"
-base_url="https://llvm.org/svn/llvm-project"
+projects="llvm clang test-suite compiler-rt libcxx libcxxabi clang-tools-extra polly lldb lld openmp libunwind"
 
 release=""
 rc=""
 
 usage() {
-    echo "Export the SVN sources and build tarballs from them"
+    echo "Export the Git sources and build tarballs from them"
     echo "usage: `basename $0`"
     echo " "
     echo "  -release <num> The version number of the release"
@@ -30,20 +29,34 @@ usage() {
 
 export_sources() {
     release_no_dot=`echo $release | sed -e 's,\.,,g'`
-    tag_dir="tags/RELEASE_$release_no_dot/$rc"
+    tag="llvmorg-$release"
 
     if [ "$rc" = "final" ]; then
         rc=""
+    else
+        tag="$tag-$rc"
     fi
 
-    for proj in $projects; do
-        echo "Exporting $proj ..."
-        svn export \
-            $base_url/$proj/$tag_dir \
-            $proj-$release$rc.src
+    llvm_src_dir=llvm-project-$release$rc
+    mkdir -p $llvm_src_dir
 
-        echo "Creating tarball ..."
-        tar cfJ $proj-$release$rc.src.tar.xz $proj-$release$rc.src
+    echo $tag
+    echo "Fetching LLVM project source ..."
+    curl -L https://github.com/llvm/llvm-project/archive/$tag.tar.gz | \
+        tar -C $llvm_src_dir --strip-components=1 -xzf -
+
+    echo "Creating tarball for llvm-project ..."
+    tar -cJf llvm-project-$release$rc.tar.xz $llvm_src_dir
+
+    echo "Fetching LLVM test-suite source ..."
+    mkdir -p $llvm_src_dir/test-suite
+    curl -L https://github.com/llvm/test-suite/archive/$tag.tar.gz | \
+        tar -C $llvm_src_dir/test-suite --strip-components=1 -xzf -
+
+    for proj in $projects; do
+        echo "Creating tarball for $proj ..."
+        mv $llvm_src_dir/$proj $llvm_src_dir/$proj-$release$rc.src
+        tar -C $llvm_src_dir -cJf $proj-$release$rc.src.tar.xz $proj-$release$rc.src
     done
 }
 
