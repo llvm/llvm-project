@@ -7,11 +7,12 @@
 ; CHECK-NEXT:  [rooted] to [[N1:0x[0-9a-f]*]]
 ; CHECK-NEXT:  [rooted] to [[N2:0x[0-9a-f]*]]
 
+; CHECK: Node Address:[[N1]]:pi-block
+; CHECK: %i2.03 = phi i64 [ 0, %for.body.lr.ph ], [ %inc2, %test1.for.body ]
+
 ; CHECK: Node Address:[[N2]]:pi-block
 ; CHECK: %i1.02 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %test1.for.body ]
 
-; CHECK: Node Address:[[N1]]:pi-block
-; CHECK: %i2.03 = phi i64 [ 0, %for.body.lr.ph ], [ %inc2, %test1.for.body ]
 
 ;; // Two separate components in the graph. Root node must link to both.
 ;; void test1(unsigned long n, float * restrict a, float * restrict b) {

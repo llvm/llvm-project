@@ -300,7 +300,6 @@ using DDGInfo = DependenceGraphInfo<DDGNode>;
 
 /// Data Dependency Graph
 class DataDependenceGraph : public DDGBase, public DDGInfo {
-  friend AbstractDependenceGraphBuilder<DataDependenceGraph>;
   friend class DDGBuilder;
 
 public:
@@ -312,7 +311,7 @@ public:
   DataDependenceGraph(DataDependenceGraph &&G)
       : DDGBase(std::move(G)), DDGInfo(std::move(G)) {}
   DataDependenceGraph(Function &F, DependenceInfo &DI);
-  DataDependenceGraph(Loop &L, LoopInfo &LI, DependenceInfo &DI);
+  DataDependenceGraph(const Loop &L, DependenceInfo &DI);
   ~DataDependenceGraph();
 
   /// If node \p N belongs to a pi-block return a pointer to the pi-block,
