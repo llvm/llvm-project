@@ -58,11 +58,11 @@ void f5(int i) {
               : bl2(i);     // expected-error {{block type cannot be used as expression in ternary expression in OpenCL}}
 }
 // A block pointer type and all pointer operations are disallowed
-void f6(bl2_t *bl_ptr) { // expected-error{{pointer to type '__generic bl2_t' (aka 'int (__generic ^const __generic)(int)') is invalid in OpenCL}}
+void f6(bl2_t *bl_ptr) { // expected-error{{pointer to type 'bl2_t' (aka 'int (__generic ^const)(int)') is invalid in OpenCL}}
   bl2_t bl = ^(int i) {
     return 1;
   };
-  bl2_t *p; // expected-error {{pointer to type '__generic bl2_t' (aka 'int (__generic ^const __generic)(int)') is invalid in OpenCL}}
+  bl2_t *p; // expected-error {{pointer to type 'bl2_t' (aka 'int (__generic ^const)(int)') is invalid in OpenCL}}
   *bl;      // expected-error {{invalid argument type 'bl2_t' (aka 'int (__generic ^const)(int)') to unary expression}}
   &bl;      // expected-error {{invalid argument type 'bl2_t' (aka 'int (__generic ^const)(int)') to unary expression}}
 }

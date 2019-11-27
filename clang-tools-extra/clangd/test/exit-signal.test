@@ -1,0 +1,32 @@
+# This is a fiddly signal test, we need POSIX and a real shell.
+UNSUPPORTED: win32
+REQUIRES: shell
+
+# Our goal is:
+#  1) spawn clangd
+#  2) wait for it to start up (install signal handlers)
+#  3) send SIGTERM
+#  4) wait for clangd to shut down (nonzero exit for a signal)
+#  4) verify the shutdown was clean
+
+RUN: rm -f %t.err
+     # To keep clangd running, we need to hold its input stream open.
+     # We redirect its input to a subshell that waits for it to start up.
+RUN: not clangd 2> %t.err < <( \
+       # Loop waiting for clangd to start up, so signal handlers are installed.
+       # Reading the PID line ensures this, and lets us send a signal.
+RUN:   while true; do \
+         # Relevant log line is I[timestamp] PID: <NNN>
+RUN:     CLANGD_PID=$(grep -a -m 1 "PID:" %t.err | cut -d' ' -f 3); \
+RUN:     [ ! -z "$CLANGD_PID" ] && break; \
+RUN:   done; \
+RUN:   kill $CLANGD_PID; \
+       # Now wait for clangd to stop reading (before closing its input!)
+RUN:   while not grep "LSP finished" %t.err; do :; done; \
+RUN: )
+
+# Check that clangd caught the signal and shut down cleanly.
+RUN: FileCheck %s < %t.err
+CHECK: Transport error: Got signal
+CHECK: LSP finished
+

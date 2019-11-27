@@ -134,14 +134,6 @@ private:
     // A main method used to construct TempPCHFile.
     static llvm::ErrorOr<TempPCHFile> CreateNewPreamblePCHFile();
 
-    /// Call llvm::sys::fs::createTemporaryFile to create a new temporary file.
-    static llvm::ErrorOr<TempPCHFile> createInSystemTempDir(const Twine &Prefix,
-                                                            StringRef Suffix);
-    /// Create a new instance of TemporaryFile for file at \p Path. Use with
-    /// extreme caution, there's an assertion checking that there's only a
-    /// single instance of TempPCHFile alive for each path.
-    static llvm::ErrorOr<TempPCHFile> createFromCustomPath(const Twine &Path);
-
   private:
     TempPCHFile(std::string FilePath);
 

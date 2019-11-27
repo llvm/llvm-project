@@ -48,6 +48,9 @@ constant struct sampler_s {
 sampler_t bad(void); //expected-error{{declaring function return value of type 'sampler_t' is not allowed}}
 
 sampler_t global_nonconst_smp = 0; // expected-error {{global sampler requires a const or constant address space qualifier}}
+#ifdef CHECK_SAMPLER_VALUE
+// expected-warning@-2{{sampler initializer has invalid Filter Mode bits}}
+#endif
 
 const sampler_t glb_smp10 = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
 const constant sampler_t glb_smp11 = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
@@ -62,7 +65,7 @@ void kernel ker(sampler_t argsmp) {
 }
 
 #if __OPENCL_C_VERSION__ == 200
-void bad(sampler_t*); // expected-error{{pointer to type '__generic sampler_t' is invalid in OpenCL}}
+void bad(sampler_t *); // expected-error{{pointer to type 'sampler_t' is invalid in OpenCL}}
 #else
 void bad(sampler_t*); // expected-error{{pointer to type 'sampler_t' is invalid in OpenCL}}
 #endif
