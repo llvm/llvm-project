@@ -135,8 +135,10 @@ bool checkDeclsAreVisible(const llvm::DenseSet<const Decl *> &DeclRefs,
   return true;
 }
 
-// Rewrites body of FD to fully-qualify all of the decls inside.
-llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD) {
+// Rewrites body of FD by re-spelling all of the names to make sure they are
+// still valid in context of Target.
+llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD,
+                                            const FunctionDecl *Target) {
   // There are three types of spellings that needs to be qualified in a function
   // body:
   // - Types:       Foo                 -> ns::Foo
@@ -147,16 +149,16 @@ llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD) {
   //    using ns3 = ns2     -> using ns3 = ns1::ns2
   //
   // Go over all references inside a function body to generate replacements that
-  // will fully qualify those. So that body can be moved into an arbitrary file.
+  // will qualify those. So that body can be moved into an arbitrary file.
   // We perform the qualification by qualyfying the first type/decl in a
   // (un)qualified name. e.g:
   //    namespace a { namespace b { class Bar{}; void foo(); } }
   //    b::Bar x; -> a::b::Bar x;
   //    foo(); -> a::b::foo();
-  // FIXME: Instead of fully qualyfying we should try deducing visible scopes at
-  // target location and generate minimal edits.
 
+  auto *TargetContext = Target->getLexicalDeclContext();
   const SourceManager &SM = FD->getASTContext().getSourceManager();
+
   tooling::Replacements Replacements;
   bool HadErrors = false;
   findExplicitReferences(FD->getBody(), [&](ReferenceLoc Ref) {
@@ -193,7 +195,8 @@ llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD) {
     if (!ND->getDeclContext()->isNamespace())
       return;
 
-    std::string Qualifier = printNamespaceScope(*ND->getDeclContext());
+    const std::string Qualifier = getQualification(
+        FD->getASTContext(), TargetContext, Target->getBeginLoc(), ND);
     if (auto Err = Replacements.add(
             tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier))) {
       HadErrors = true;
@@ -437,7 +440,7 @@ public:
     if (!ParamReplacements)
       return ParamReplacements.takeError();
 
-    auto QualifiedBody = qualifyAllDecls(Source);
+    auto QualifiedBody = qualifyAllDecls(Source, Target);
     if (!QualifiedBody)
       return QualifiedBody.takeError();
 
