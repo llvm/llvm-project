@@ -134,11 +134,21 @@ namespace {
     uint32_t properties() const;
     unsigned size() const { return Size; }
 
-    LatticeCell &operator= (const LatticeCell &L) {
+    LatticeCell(const LatticeCell &L) {
+      // This memcpy also copies Properties (when L.Size == 0).
+      uint32_t N =
+          L.IsSpecial ? sizeof L.Properties : L.Size * sizeof(const Constant *);
+      memcpy(Values, L.Values, N);
+      Kind = L.Kind;
+      Size = L.Size;
+      IsSpecial = L.IsSpecial;
+    }
+
+    LatticeCell &operator=(const LatticeCell &L) {
       if (this != &L) {
         // This memcpy also copies Properties (when L.Size == 0).
         uint32_t N = L.IsSpecial ? sizeof L.Properties
-                                 : L.Size*sizeof(const Constant*);
+                                 : L.Size * sizeof(const Constant *);
         memcpy(Values, L.Values, N);
         Kind = L.Kind;
         Size = L.Size;
