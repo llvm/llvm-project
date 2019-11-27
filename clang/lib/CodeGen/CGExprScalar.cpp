@@ -976,6 +976,11 @@ EmitIntegerTruncationCheckHelper(Value *Src, QualType SrcType, Value *Dst,
   return std::make_pair(Kind, std::make_pair(Check, Mask));
 }
 
+static bool PromotionIsPotentiallyEligibleForImplicitIntegerConversionCheck(
+    QualType SrcType, QualType DstType) {
+  return SrcType->isIntegerType() && DstType->isIntegerType();
+}
+
 void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
                                                    Value *Dst, QualType DstType,
                                                    SourceLocation Loc) {
@@ -984,7 +989,8 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
 
   // We only care about int->int conversions here.
   // We ignore conversions to/from pointer and/or bool.
-  if (!(SrcType->isIntegerType() && DstType->isIntegerType()))
+  if (!PromotionIsPotentiallyEligibleForImplicitIntegerConversionCheck(SrcType,
+                                                                       DstType))
     return;
 
   unsigned SrcBits = Src->getType()->getScalarSizeInBits();
@@ -1095,7 +1101,8 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
 
   // We only care about int->int conversions here.
   // We ignore conversions to/from pointer and/or bool.
-  if (!(SrcType->isIntegerType() && DstType->isIntegerType()))
+  if (!PromotionIsPotentiallyEligibleForImplicitIntegerConversionCheck(SrcType,
+                                                                       DstType))
     return;
 
   bool SrcSigned = SrcType->isSignedIntegerOrEnumerationType();
@@ -2419,9 +2426,51 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
 
   // Most common case by far: integer increment.
   } else if (type->isIntegerType()) {
-    // Note that signed integer inc/dec with width less than int can't
-    // overflow because of promotion rules; we're just eliding a few steps here.
-    if (E->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
+    QualType promotedType;
+    bool canPerformLossyDemotionCheck = false;
+    if (type->isPromotableIntegerType()) {
+      promotedType = CGF.getContext().getPromotedIntegerType(type);
+      assert(promotedType != type && "Shouldn't promote to the same type.");
+      canPerformLossyDemotionCheck = true;
+      canPerformLossyDemotionCheck &=
+          CGF.getContext().getCanonicalType(type) !=
+          CGF.getContext().getCanonicalType(promotedType);
+      canPerformLossyDemotionCheck &=
+          PromotionIsPotentiallyEligibleForImplicitIntegerConversionCheck(
+              type, promotedType);
+      assert((!canPerformLossyDemotionCheck ||
+              type->isSignedIntegerOrEnumerationType() ||
+              promotedType->isSignedIntegerOrEnumerationType() ||
+              ConvertType(type)->getScalarSizeInBits() ==
+                  ConvertType(promotedType)->getScalarSizeInBits()) &&
+             "The following check expects that if we do promotion to different "
+             "underlying canonical type, at least one of the types (either "
+             "base or promoted) will be signed, or the bitwidths will match.");
+    }
+    if (CGF.SanOpts.hasOneOf(
+            SanitizerKind::ImplicitIntegerArithmeticValueChange) &&
+        canPerformLossyDemotionCheck) {
+      // While `x += 1` (for `x` with width less than int) is modeled as
+      // promotion+arithmetics+demotion, and we can catch lossy demotion with
+      // ease; inc/dec with width less than int can't overflow because of
+      // promotion rules, so we omit promotion+demotion, which means that we can
+      // not catch lossy "demotion". Because we still want to catch these cases
+      // when the sanitizer is enabled, we perform the promotion, then perform
+      // the increment/decrement in the wider type, and finally
+      // perform the demotion. This will catch lossy demotions.
+
+      value = EmitScalarConversion(value, type, promotedType, E->getExprLoc());
+      Value *amt = llvm::ConstantInt::get(value->getType(), amount, true);
+      value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
+      // Do pass non-default ScalarConversionOpts so that sanitizer check is
+      // emitted.
+      value = EmitScalarConversion(value, promotedType, type, E->getExprLoc(),
+                                   ScalarConversionOpts(CGF.SanOpts));
+
+      // Note that signed integer inc/dec with width less than int can't
+      // overflow because of promotion rules; we're just eliding a few steps
+      // here.
+    } else if (E->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
       value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
     } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
                CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) {
