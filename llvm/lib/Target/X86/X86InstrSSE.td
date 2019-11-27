@@ -1815,8 +1815,8 @@ let Constraints = "$src1 = $dst" in {
 // sse12_ord_cmp - Unordered/Ordered scalar fp compare and set EFLAGS
 multiclass sse12_ord_cmp<bits<8> opc, RegisterClass RC, SDNode OpNode,
                          ValueType vt, X86MemOperand x86memop,
-                         PatFrag ld_frag, string OpcodeStr,
-                         X86FoldableSchedWrite sched> {
+                         PatFrag ld_frag, string OpcodeStr, Domain d,
+                         X86FoldableSchedWrite sched = WriteFCom> {
 let hasSideEffects = 0, Uses = [MXCSR], mayRaiseFPException = 1 in {
   def rr: SI<opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
@@ -1835,7 +1835,8 @@ let mayLoad = 1 in
 multiclass sse12_ord_cmp_int<bits<8> opc, RegisterClass RC, SDNode OpNode,
                              ValueType vt, Operand memop,
                              ComplexPattern mem_cpat, string OpcodeStr,
-                             X86FoldableSchedWrite sched> {
+                             Domain d,
+                             X86FoldableSchedWrite sched = WriteFCom> {
 let Uses = [MXCSR], mayRaiseFPException = 1 in {
   def rr_Int: SI<opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
@@ -1852,49 +1853,49 @@ let mayLoad = 1 in
 
 let Defs = [EFLAGS] in {
   defm VUCOMISS : sse12_ord_cmp<0x2E, FR32, X86cmp, f32, f32mem, loadf32,
-                               "ucomiss", WriteFCom>, PS, VEX, VEX_LIG, VEX_WIG;
+                               "ucomiss", SSEPackedSingle>, PS, VEX, VEX_LIG, VEX_WIG;
   defm VUCOMISD : sse12_ord_cmp<0x2E, FR64, X86cmp, f64, f64mem, loadf64,
-                               "ucomisd", WriteFCom>, PD, VEX, VEX_LIG, VEX_WIG;
+                               "ucomisd", SSEPackedDouble>, PD, VEX, VEX_LIG, VEX_WIG;
   let Pattern = []<dag> in {
     defm VCOMISS  : sse12_ord_cmp<0x2F, FR32, undef, f32, f32mem, loadf32,
-                                "comiss", WriteFCom>, PS, VEX, VEX_LIG, VEX_WIG;
+                                "comiss", SSEPackedSingle>, PS, VEX, VEX_LIG, VEX_WIG;
     defm VCOMISD  : sse12_ord_cmp<0x2F, FR64, undef, f64, f64mem, loadf64,
-                                "comisd", WriteFCom>, PD, VEX, VEX_LIG, VEX_WIG;
+                                "comisd", SSEPackedDouble>, PD, VEX, VEX_LIG, VEX_WIG;
   }
 
   let isCodeGenOnly = 1 in {
     defm VUCOMISS  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v4f32, ssmem,
-                      sse_load_f32, "ucomiss", WriteFCom>, PS, VEX, VEX_LIG, VEX_WIG;
+                      sse_load_f32, "ucomiss", SSEPackedSingle>, PS, VEX, VEX_LIG, VEX_WIG;
     defm VUCOMISD  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v2f64, sdmem,
-                      sse_load_f64, "ucomisd", WriteFCom>, PD, VEX, VEX_LIG, VEX_WIG;
+                      sse_load_f64, "ucomisd", SSEPackedDouble>, PD, VEX, VEX_LIG, VEX_WIG;
 
     defm VCOMISS  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v4f32, ssmem,
-                       sse_load_f32, "comiss", WriteFCom>, PS, VEX, VEX_LIG, VEX_WIG;
+                       sse_load_f32, "comiss", SSEPackedSingle>, PS, VEX, VEX_LIG, VEX_WIG;
     defm VCOMISD  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v2f64, sdmem,
-                       sse_load_f64, "comisd", WriteFCom>, PD, VEX, VEX_LIG, VEX_WIG;
+                       sse_load_f64, "comisd", SSEPackedDouble>, PD, VEX, VEX_LIG, VEX_WIG;
   }
   defm UCOMISS  : sse12_ord_cmp<0x2E, FR32, X86cmp, f32, f32mem, loadf32,
-                                  "ucomiss", WriteFCom>, PS;
+                                  "ucomiss", SSEPackedSingle>, PS;
   defm UCOMISD  : sse12_ord_cmp<0x2E, FR64, X86cmp, f64, f64mem, loadf64,
-                                  "ucomisd", WriteFCom>, PD;
+                                  "ucomisd", SSEPackedDouble>, PD;
 
   let Pattern = []<dag> in {
     defm COMISS  : sse12_ord_cmp<0x2F, FR32, undef, f32, f32mem, loadf32,
-                                    "comiss", WriteFCom>, PS;
+                                    "comiss", SSEPackedSingle>, PS;
     defm COMISD  : sse12_ord_cmp<0x2F, FR64, undef, f64, f64mem, loadf64,
-                                    "comisd", WriteFCom>, PD;
+                                    "comisd", SSEPackedDouble>, PD;
   }
 
   let isCodeGenOnly = 1 in {
     defm UCOMISS  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v4f32, ssmem,
-                            sse_load_f32, "ucomiss", WriteFCom>, PS;
+                            sse_load_f32, "ucomiss", SSEPackedSingle>, PS;
     defm UCOMISD  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v2f64, sdmem,
-                            sse_load_f64, "ucomisd", WriteFCom>, PD;
+                            sse_load_f64, "ucomisd", SSEPackedDouble>, PD;
 
     defm COMISS  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v4f32, ssmem,
-                                sse_load_f32, "comiss", WriteFCom>, PS;
+                                sse_load_f32, "comiss", SSEPackedSingle>, PS;
     defm COMISD  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v2f64, sdmem,
-                                    sse_load_f64, "comisd", WriteFCom>, PD;
+                                    sse_load_f64, "comisd", SSEPackedDouble>, PD;
   }
 } // Defs = [EFLAGS]
 
