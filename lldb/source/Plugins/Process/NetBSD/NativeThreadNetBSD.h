@@ -48,11 +48,16 @@ public:
 private:
   // Interface for friend classes
 
+  Status Resume();
+  Status SingleStep();
+  Status Suspend();
+
   void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr);
   void SetStoppedByBreakpoint();
   void SetStoppedByTrace();
   void SetStoppedByExec();
   void SetStoppedByWatchpoint(uint32_t wp_index);
+  void SetStoppedWithNoReason();
   void SetStopped();
   void SetRunning();
   void SetStepping();
