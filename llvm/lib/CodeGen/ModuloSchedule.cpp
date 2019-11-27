@@ -1215,7 +1215,7 @@ namespace {
 // Remove any dead phis in MBB. Dead phis either have only one block as input
 // (in which case they are the identity) or have no uses.
 void EliminateDeadPhis(MachineBasicBlock *MBB, MachineRegisterInfo &MRI,
-                       LiveIntervals *LIS) {
+                       LiveIntervals *LIS, bool KeepSingleSrcPhi = false) {
   bool Changed = true;
   while (Changed) {
     Changed = false;
@@ -1227,7 +1227,7 @@ void EliminateDeadPhis(MachineBasicBlock *MBB, MachineRegisterInfo &MRI,
           LIS->RemoveMachineInstrFromMaps(MI);
         MI.eraseFromParent();
         Changed = true;
-      } else if (MI.getNumExplicitOperands() == 3) {
+      } else if (!KeepSingleSrcPhi && MI.getNumExplicitOperands() == 3) {
         MRI.constrainRegClass(MI.getOperand(1).getReg(),
                               MRI.getRegClass(MI.getOperand(0).getReg()));
         MRI.replaceRegWith(MI.getOperand(0).getReg(),
@@ -1658,22 +1658,56 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
   for (auto *P : PhiToDelete)
     P->eraseFromParent();
   InsertPt = DestBB->getFirstNonPHI();
-  for (MachineInstr &MI : SourceBB->phis()) {
-    MachineInstr *NewMI = MF.CloneMachineInstr(&MI);
+  // Helper to clone Phi instructions into the destination block. We clone Phi
+  // greedily to avoid combinatorial explosion of Phi instructions.
+  auto clonePhi = [&](MachineInstr *Phi) {
+    MachineInstr *NewMI = MF.CloneMachineInstr(Phi);
     DestBB->insert(InsertPt, NewMI);
-    Register OrigR = MI.getOperand(0).getReg();
+    Register OrigR = Phi->getOperand(0).getReg();
     Register R = MRI.createVirtualRegister(MRI.getRegClass(OrigR));
     NewMI->getOperand(0).setReg(R);
     NewMI->getOperand(1).setReg(OrigR);
     NewMI->getOperand(2).setMBB(*DestBB->pred_begin());
     Remaps[OrigR] = R;
-    CanonicalMIs[NewMI] = CanonicalMIs[&MI];
-    BlockMIs[{DestBB, CanonicalMIs[&MI]}] = NewMI;
-  }
-  for (auto I = DestBB->getFirstNonPHI(); I != DestBB->end(); ++I)
-    for (MachineOperand &MO : I->uses())
-      if (MO.isReg() && Remaps.count(MO.getReg()))
+    CanonicalMIs[NewMI] = CanonicalMIs[Phi];
+    BlockMIs[{DestBB, CanonicalMIs[Phi]}] = NewMI;
+    PhiNodeLoopIteration[NewMI] = PhiNodeLoopIteration[Phi];
+    return R;
+  };
+  for (auto I = DestBB->getFirstNonPHI(); I != DestBB->end(); ++I) {
+    for (MachineOperand &MO : I->uses()) {
+      if (!MO.isReg())
+        continue;
+      if (Remaps.count(MO.getReg()))
         MO.setReg(Remaps[MO.getReg()]);
+      else {
+        // If we are using a phi from the source block we need to add a new phi
+        // pointing to the old one.
+        MachineInstr *Use = MRI.getUniqueVRegDef(MO.getReg());
+        if (Use && Use->isPHI() && Use->getParent() == SourceBB) {
+          Register R = clonePhi(Use);
+          MO.setReg(R);
+        }
+      }
+    }
+  }
+}
+
+Register
+PeelingModuloScheduleExpander::getPhiCanonicalReg(MachineInstr *CanonicalPhi,
+                                                  MachineInstr *Phi) {
+  unsigned distance = PhiNodeLoopIteration[Phi];
+  MachineInstr *CanonicalUse = CanonicalPhi;
+  for (unsigned I = 0; I < distance; ++I) {
+    assert(CanonicalUse->isPHI());
+    assert(CanonicalUse->getNumOperands() == 5);
+    unsigned LoopRegIdx = 3, InitRegIdx = 1;
+    if (CanonicalUse->getOperand(2).getMBB() == CanonicalUse->getParent())
+      std::swap(LoopRegIdx, InitRegIdx);
+    CanonicalUse =
+        MRI.getVRegDef(CanonicalUse->getOperand(LoopRegIdx).getReg());
+  }
+  return CanonicalUse->getOperand(0).getReg();
 }
 
 void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
@@ -1698,7 +1732,7 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
   // property that any value deffed in BB but used outside of BB is used by a
   // PHI in the exiting block.
   MachineBasicBlock *ExitingBB = CreateLCSSAExitingBlock();
-
+  EliminateDeadPhis(ExitingBB, MRI, LIS, /*KeepSingleSrcPhi=*/true);
   // Push out the epilogs, again in reverse order.
   // We can't assume anything about the minumum loop trip count at this point,
   // so emit a fairly complex epilog.
@@ -1717,7 +1751,13 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
   // instructions of a previous loop iteration.
   for (int I = 1; I <= Schedule.getNumStages() - 1; ++I) {
     Epilogs.push_back(peelKernel(LPD_Back));
-    filterInstructions(Epilogs.back(), Schedule.getNumStages() - I);
+    MachineBasicBlock *B = Epilogs.back();
+    filterInstructions(B, Schedule.getNumStages() - I);
+    // Keep track at which iteration each phi belongs to. We need it to know
+    // what version of the variable to use during prologue/epilogue stitching.
+    EliminateDeadPhis(B, MRI, LIS, /*KeepSingleSrcPhi=*/true);
+    for (auto Phi = B->begin(), IE = B->getFirstNonPHI(); Phi != IE; ++Phi)
+      PhiNodeLoopIteration[&*Phi] = Schedule.getNumStages() - I;
   }
   for (size_t I = 0; I < Epilogs.size(); I++) {
     LS.reset();
@@ -1745,8 +1785,16 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
     for (MachineInstr &MI : (*EI)->phis()) {
       Register Reg = MI.getOperand(1).getReg();
       MachineInstr *Use = MRI.getUniqueVRegDef(Reg);
-      if (Use && Use->getParent() == Pred)
+      if (Use && Use->getParent() == Pred) {
+        MachineInstr *CanonicalUse = CanonicalMIs[Use];
+        if (CanonicalUse->isPHI()) {
+          // If the use comes from a phi we need to skip as many phi as the
+          // distance between the epilogue and the kernel. Trace through the phi
+          // chain to find the right value.
+          Reg = getPhiCanonicalReg(CanonicalUse, Use);
+        }
         Reg = getEquivalentRegisterIn(Reg, *PI);
+      }
       MI.addOperand(MachineOperand::CreateReg(Reg, /*isDef=*/false));
       MI.addOperand(MachineOperand::CreateMBB(*PI));
     }

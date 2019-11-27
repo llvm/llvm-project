@@ -5,7 +5,7 @@
 
 ; CHECK: loop0
 ; CHECK: r{{[0-9]+}} = add([[REG0:r([0-9]+)]],#8)
-; CHECK: [[REG0:r([0-9]+)]] = [[REG1:r([0-9]+)]]
+; CHECK: [[REG0]] = [[REG1:r([0-9]+)]]
 ; CHECK: endloop0
 ; CHECK: = add([[REG1]],#8)
 
