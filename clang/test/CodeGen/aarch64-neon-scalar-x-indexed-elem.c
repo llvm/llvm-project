@@ -407,10 +407,12 @@ int64_t test_vqdmlsls_laneq_s32(int64_t a, int32_t b, int32x4_t c) {
 }
 
 // CHECK-LABEL: define <1 x double> @test_vmulx_lane_f64_0() #0 {
-// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x double> <double 0x3FD6304BC43AB5C2>, i32 0
-// CHECK:   [[VGET_LANE7:%.*]] = extractelement <1 x double> <double 0x3FEE211E215AEEF3>, i32 0
+// CHECK:   [[TMP0:%.*]] = bitcast i64 4599917171378402754 to <1 x double>
+// CHECK:   [[TMP1:%.*]] = bitcast i64 4606655882138939123 to <1 x double>
+// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x double> [[TMP0]], i32 0
+// CHECK:   [[VGET_LANE7:%.*]] = extractelement <1 x double> [[TMP1]], i32 0
 // CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGET_LANE7]])
-// CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x double> <double 0x3FD6304BC43AB5C2>, double [[VMULXD_F64_I]], i32 0
+// CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x double> [[TMP0]], double [[VMULXD_F64_I]], i32 0
 // CHECK:   ret <1 x double> [[VSET_LANE]]
 float64x1_t test_vmulx_lane_f64_0() {
       float64x1_t arg1;
@@ -424,11 +426,13 @@ float64x1_t test_vmulx_lane_f64_0() {
 }
 
 // CHECK-LABEL: define <1 x double> @test_vmulx_laneq_f64_2() #1 {
-// CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <1 x double> <double 0x3FD6304BC43AB5C2>, <1 x double> <double 0x3FEE211E215AEEF3>, <2 x i32> <i32 0, i32 1>
-// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x double> <double 0x3FD6304BC43AB5C2>, i32 0
+// CHECK:   [[TMP0:%.*]] = bitcast i64 4599917171378402754 to <1 x double>
+// CHECK:   [[TMP1:%.*]] = bitcast i64 4606655882138939123 to <1 x double>
+// CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <1 x double> [[TMP0]], <1 x double> [[TMP1]], <2 x i32> <i32 0, i32 1>
+// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x double> [[TMP0]], i32 0
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x double> [[SHUFFLE_I]], i32 1
 // CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGETQ_LANE]])
-// CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x double> <double 0x3FD6304BC43AB5C2>, double [[VMULXD_F64_I]], i32 0
+// CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x double> [[TMP0]], double [[VMULXD_F64_I]], i32 0
 // CHECK:   ret <1 x double> [[VSET_LANE]]
 float64x1_t test_vmulx_laneq_f64_2() {
       float64x1_t arg1;
