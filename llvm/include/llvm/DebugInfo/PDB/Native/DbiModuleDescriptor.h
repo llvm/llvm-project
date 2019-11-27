@@ -25,8 +25,9 @@ class DbiModuleDescriptor {
   friend class DbiStreamBuilder;
 
 public:
-  DbiModuleDescriptor();
-  DbiModuleDescriptor(const DbiModuleDescriptor &Info);
+  DbiModuleDescriptor() = default;
+  DbiModuleDescriptor(const DbiModuleDescriptor &Info) = default;
+  DbiModuleDescriptor &operator=(const DbiModuleDescriptor &Info) = default;
 
   static Error initialize(BinaryStreamRef Stream, DbiModuleDescriptor &Info);
 
