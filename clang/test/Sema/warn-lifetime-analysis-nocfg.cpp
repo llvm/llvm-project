@@ -450,3 +450,8 @@ MyIntPointer handleDerivedToBaseCast1(MySpecialIntPointer ptr) {
 MyIntPointer handleDerivedToBaseCast2(MyOwnerIntPointer ptr) {
   return ptr; // expected-warning {{address of stack memory associated with parameter 'ptr' returned}}
 }
+
+std::vector<int>::iterator noFalsePositiveWithVectorOfPointers() {
+  std::vector<std::vector<int>::iterator> iters;
+  return iters.at(0);
+}
