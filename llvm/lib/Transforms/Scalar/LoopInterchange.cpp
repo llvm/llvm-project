@@ -1316,25 +1316,32 @@ static void moveBBContents(BasicBlock *FromBB, Instruction *InsertBefore) {
                 FromBB->getTerminator()->getIterator());
 }
 
-/// Update BI to jump to NewBB instead of OldBB. Records updates to
-/// the dominator tree in DTUpdates, if DT should be preserved.
+// Update BI to jump to NewBB instead of OldBB. Records updates to the
+// dominator tree in DTUpdates. If \p MustUpdateOnce is true, assert that
+// \p OldBB  is exactly once in BI's successor list.
 static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
                             BasicBlock *NewBB,
-                            std::vector<DominatorTree::UpdateType> &DTUpdates) {
-  assert(llvm::count_if(successors(BI),
-                        [OldBB](BasicBlock *BB) { return BB == OldBB; }) < 2 &&
-         "BI must jump to OldBB at most once.");
-  for (unsigned i = 0, e = BI->getNumSuccessors(); i < e; ++i) {
-    if (BI->getSuccessor(i) == OldBB) {
-      BI->setSuccessor(i, NewBB);
-
-      DTUpdates.push_back(
-          {DominatorTree::UpdateKind::Insert, BI->getParent(), NewBB});
-      DTUpdates.push_back(
-          {DominatorTree::UpdateKind::Delete, BI->getParent(), OldBB});
-      break;
+                            std::vector<DominatorTree::UpdateType> &DTUpdates,
+                            bool MustUpdateOnce = true) {
+  assert((!MustUpdateOnce ||
+          llvm::count_if(successors(BI),
+                         [OldBB](BasicBlock *BB) {
+                           return BB == OldBB;
+                         }) == 1) && "BI must jump to OldBB exactly once.");
+  bool Changed = false;
+  for (Use &Op : BI->operands())
+    if (Op == OldBB) {
+      Op.set(NewBB);
+      Changed = true;
     }
+
+  if (Changed) {
+    DTUpdates.push_back(
+        {DominatorTree::UpdateKind::Insert, BI->getParent(), NewBB});
+    DTUpdates.push_back(
+        {DominatorTree::UpdateKind::Delete, BI->getParent(), OldBB});
   }
+  assert(Changed && "Expected a successor to be updated");
 }
 
 // Move Lcssa PHIs to the right place.
@@ -1481,12 +1488,21 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   if (!InnerLoopHeaderSuccessor)
     return false;
 
-  // Adjust Loop Preheader and headers
+  // Adjust Loop Preheader and headers.
+  // The branches in the outer loop predecessor and the outer loop header can
+  // be unconditional branches or conditional branches with duplicates. Consider
+  // this when updating the successors.
   updateSuccessor(OuterLoopPredecessorBI, OuterLoopPreHeader,
-                  InnerLoopPreHeader, DTUpdates);
-  updateSuccessor(OuterLoopHeaderBI, OuterLoopLatch, LoopExit, DTUpdates);
+                  InnerLoopPreHeader, DTUpdates, /*MustUpdateOnce=*/false);
+  // The outer loop header might or might not branch to the outer latch.
+  // We are guaranteed to branch to the inner loop preheader.
+  if (std::find(succ_begin(OuterLoopHeaderBI), succ_end(OuterLoopHeaderBI),
+                OuterLoopLatch) != succ_end(OuterLoopHeaderBI))
+    updateSuccessor(OuterLoopHeaderBI, OuterLoopLatch, LoopExit, DTUpdates,
+                    /*MustUpdateOnce=*/false);
   updateSuccessor(OuterLoopHeaderBI, InnerLoopPreHeader,
-                  InnerLoopHeaderSuccessor, DTUpdates);
+                  InnerLoopHeaderSuccessor, DTUpdates,
+                  /*MustUpdateOnce=*/false);
 
   // Adjust reduction PHI's now that the incoming block has changed.
   InnerLoopHeaderSuccessor->replacePhiUsesWith(InnerLoopHeader,
