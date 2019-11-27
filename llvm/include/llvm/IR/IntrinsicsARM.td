@@ -426,8 +426,6 @@ let IntrProperties = [IntrNoMem, Commutative] in {
   def int_arm_neon_vhaddu : Neon_2Arg_Intrinsic;
   def int_arm_neon_vrhadds : Neon_2Arg_Intrinsic;
   def int_arm_neon_vrhaddu : Neon_2Arg_Intrinsic;
-  def int_arm_neon_vqadds : Neon_2Arg_Intrinsic;
-  def int_arm_neon_vqaddu : Neon_2Arg_Intrinsic;
   def int_arm_neon_vraddhn : Neon_2Arg_Narrow_Intrinsic;
 
   // Vector Multiply.
@@ -459,8 +457,6 @@ let IntrProperties = [IntrNoMem, Commutative] in {
 // Vector Subtract.
 def int_arm_neon_vhsubs : Neon_2Arg_Intrinsic;
 def int_arm_neon_vhsubu : Neon_2Arg_Intrinsic;
-def int_arm_neon_vqsubs : Neon_2Arg_Intrinsic;
-def int_arm_neon_vqsubu : Neon_2Arg_Intrinsic;
 def int_arm_neon_vrsubhn : Neon_2Arg_Narrow_Intrinsic;
 
 // Vector Absolute Compare.
@@ -800,10 +796,31 @@ multiclass IntrinsicSignSuffix<list<LLVMType> rets, list<LLVMType> params = [],
   def _u: Intrinsic<rets, params, props, name, sdprops>;
 }
 
+def int_arm_mve_abd_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
 def int_arm_mve_add_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
    [IntrNoMem]>;
+def int_arm_mve_and_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_bic_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_eor_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_orn_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_orr_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
 def int_arm_mve_sub_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_mul_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
    [IntrNoMem]>;
 
@@ -870,6 +887,9 @@ defm int_arm_mve_sqrshr: ARM_MVE_qrshift<[llvm_i32_ty]>;
 def int_arm_mve_lsll: ARM_MVE_qrshift_single<[llvm_i32_ty, llvm_i32_ty]>;
 def int_arm_mve_asrl: ARM_MVE_qrshift_single<[llvm_i32_ty, llvm_i32_ty]>;
 
+def int_arm_mve_vabd: Intrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
 def int_arm_mve_vadc: Intrinsic<
    [llvm_anyvector_ty, llvm_i32_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty], [IntrNoMem]>;

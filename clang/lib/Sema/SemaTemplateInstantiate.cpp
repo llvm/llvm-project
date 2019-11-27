@@ -1514,8 +1514,12 @@ TemplateInstantiator::TransformFunctionTypeParam(ParmVarDecl *OldParm,
                                                  int indexAdjustment,
                                                Optional<unsigned> NumExpansions,
                                                  bool ExpectParameterPack) {
-  return SemaRef.SubstParmVarDecl(OldParm, TemplateArgs, indexAdjustment,
-                                  NumExpansions, ExpectParameterPack);
+  auto NewParm =
+      SemaRef.SubstParmVarDecl(OldParm, TemplateArgs, indexAdjustment,
+                               NumExpansions, ExpectParameterPack);
+  if (NewParm && SemaRef.getLangOpts().OpenCL)
+    SemaRef.deduceOpenCLAddressSpace(NewParm);
+  return NewParm;
 }
 
 QualType

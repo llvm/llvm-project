@@ -2069,6 +2069,8 @@ public:
   bool isAlignValT() const;                     // C++17 std::align_val_t
   bool isStdByteType() const;                   // C++17 std::byte
   bool isAtomicType() const;                    // C11 _Atomic()
+  bool isUndeducedAutoType() const;             // C++11 auto or
+                                                // C++14 decltype(auto)
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
@@ -6507,6 +6509,10 @@ inline bool Type::isObjCObjectOrInterfaceType() const {
 
 inline bool Type::isAtomicType() const {
   return isa<AtomicType>(CanonicalType);
+}
+
+inline bool Type::isUndeducedAutoType() const {
+  return isa<AutoType>(CanonicalType);
 }
 
 inline bool Type::isObjCQualifiedIdType() const {

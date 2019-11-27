@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/scudo_unit_test.h"
+
 #include "flags.h"
 #include "flags_parser.h"
-
-#include "gtest/gtest.h"
 
 #include <string.h>
 

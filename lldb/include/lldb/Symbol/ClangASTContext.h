@@ -41,15 +41,17 @@ namespace lldb_private {
 class Declaration;
 
 class ClangASTContext : public TypeSystem {
+  // LLVM RTTI support
+  static char ID;
+
 public:
   typedef void (*CompleteTagDeclCallback)(void *baton, clang::TagDecl *);
   typedef void (*CompleteObjCInterfaceDeclCallback)(void *baton,
                                                     clang::ObjCInterfaceDecl *);
 
   // llvm casting support
-  static bool classof(const TypeSystem *ts) {
-    return ts->getKind() == TypeSystem::eKindClang;
-  }
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
 
   // Constructors and Destructors
   explicit ClangASTContext(llvm::StringRef triple = "");

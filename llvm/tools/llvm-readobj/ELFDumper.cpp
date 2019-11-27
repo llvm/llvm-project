@@ -5826,9 +5826,6 @@ void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
     W.printNumber("Index", D.Ndx);
     W.printNumber("Hash", D.Hash);
     W.printString("Name", D.Name.c_str());
-
-    if (D.AuxV.empty())
-      continue;
     W.printList(
         "Predecessors", D.AuxV,
         [](raw_ostream &OS, const VerdAux &Aux) { OS << Aux.Name.c_str(); });

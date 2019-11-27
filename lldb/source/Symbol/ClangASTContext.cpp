@@ -337,6 +337,8 @@ static ClangASTMap &GetASTMap() {
   return *g_map_ptr;
 }
 
+char ClangASTContext::ID;
+
 bool ClangASTContext::IsOperator(llvm::StringRef name,
                                  clang::OverloadedOperatorKind &op_kind) {
   // All operators have to start with "operator".
@@ -522,8 +524,7 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   Opts.NoInlineDefine = !Opt;
 }
 
-ClangASTContext::ClangASTContext(llvm::StringRef target_triple)
-    : TypeSystem(TypeSystem::eKindClang) {
+ClangASTContext::ClangASTContext(llvm::StringRef target_triple) {
   if (!target_triple.empty())
     SetTargetTriple(target_triple);
   // The caller didn't pass an ASTContext so create a new one for this
@@ -531,16 +532,14 @@ ClangASTContext::ClangASTContext(llvm::StringRef target_triple)
   CreateASTContext();
 }
 
-ClangASTContext::ClangASTContext(ArchSpec arch)
-    : TypeSystem(TypeSystem::eKindClang) {
+ClangASTContext::ClangASTContext(ArchSpec arch) {
   SetTargetTriple(arch.GetTriple().str());
   // The caller didn't pass an ASTContext so create a new one for this
   // ClangASTContext.
   CreateASTContext();
 }
 
-ClangASTContext::ClangASTContext(ASTContext &existing_ctxt)
-  : TypeSystem(TypeSystem::eKindClang) {
+ClangASTContext::ClangASTContext(ASTContext &existing_ctxt) {
   SetTargetTriple(existing_ctxt.getTargetInfo().getTriple().str());
 
   m_ast_up.reset(&existing_ctxt);

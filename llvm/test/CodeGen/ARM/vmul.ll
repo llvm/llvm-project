@@ -574,7 +574,7 @@ for.body33:                                       ; preds = %for.body33, %for.bo
   %vmovl.i225 = zext <8 x i8> undef to <8 x i16>
   %mul.i223 = mul <8 x i16> %vmovl.i249, %vmovl.i249
   %vshl_n = shl <8 x i16> %mul.i223, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
-  %vqsub2.i216 = tail call <8 x i16> @llvm.arm.neon.vqsubu.v8i16(<8 x i16> <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>, <8 x i16> %vshl_n) nounwind
+  %vqsub2.i216 = tail call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>, <8 x i16> %vshl_n) nounwind
   %mul.i209 = mul <8 x i16> undef, <i16 80, i16 80, i16 80, i16 80, i16 80, i16 80, i16 80, i16 80>
   %vshr_n130 = lshr <8 x i16> undef, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %vshr_n134 = lshr <8 x i16> %mul.i209, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
@@ -608,7 +608,7 @@ for.end179:                                       ; preds = %for.cond.loopexit, 
 }
 
 declare <8 x i16> @llvm.arm.neon.vrshiftu.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
-declare <8 x i16> @llvm.arm.neon.vqsubu.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.usub.sat.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 declare <8 x i8> @llvm.arm.neon.vqmovnu.v8i8(<8 x i16>) nounwind readnone
 
 ; vmull lowering would create a zext(v4i8 load()) instead of a zextload(v4i8),

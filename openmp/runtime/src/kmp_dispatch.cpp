@@ -379,14 +379,15 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       }
       break;
     } else {
-      KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d falling-through to "
-                     "kmp_sch_static_balanced\n",
-                     gtid));
-      schedule = kmp_sch_static_balanced;
-      /* too few iterations: fall-through to kmp_sch_static_balanced */
+      /* too few chunks: switching to kmp_sch_dynamic_chunked */
+      schedule = kmp_sch_dynamic_chunked;
+      KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d switching to "
+                     "kmp_sch_dynamic_chunked\n",
+                      gtid));
+      if (pr->u.p.parm1 <= 0)
+        pr->u.p.parm1 = KMP_DEFAULT_CHUNK;
+      break;
     } // if
-    /* FALL-THROUGH to static balanced */
-    KMP_FALLTHROUGH();
   } // case
 #endif
   case kmp_sch_static_balanced: {

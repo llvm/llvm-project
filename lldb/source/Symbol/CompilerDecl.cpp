@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CompilerDecl.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/TypeSystem.h"
 
 using namespace lldb_private;
 
 bool CompilerDecl::IsClang() const {
-  return IsValid() && m_type_system->getKind() == TypeSystem::eKindClang;
+  return IsValid() && llvm::isa<ClangASTContext>(m_type_system);
 }
 
 ConstString CompilerDecl::GetName() const {

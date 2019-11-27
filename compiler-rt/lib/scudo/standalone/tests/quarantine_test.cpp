@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/scudo_unit_test.h"
+
 #include "quarantine.h"
 
-#include "gtest/gtest.h"
-
+#include <pthread.h>
 #include <stdlib.h>
 
 static void *FakePtr = reinterpret_cast<void *>(0xFA83FA83);

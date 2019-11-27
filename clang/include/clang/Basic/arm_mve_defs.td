@@ -58,12 +58,16 @@ class CGHelperFn<string func> : IRBuilderBase {
   let prefix = func # "(Builder, ";
 }
 def add: IRBuilder<"CreateAdd">;
+def mul: IRBuilder<"CreateMul">;
+def not: IRBuilder<"CreateNot">;
 def or: IRBuilder<"CreateOr">;
 def and: IRBuilder<"CreateAnd">;
+def xor: IRBuilder<"CreateXor">;
 def sub: IRBuilder<"CreateSub">;
 def shl: IRBuilder<"CreateShl">;
 def lshr: IRBuilder<"CreateLShr">;
 def fadd: IRBuilder<"CreateFAdd">;
+def fmul: IRBuilder<"CreateFMul">;
 def fsub: IRBuilder<"CreateFSub">;
 def load: IRBuilder<"CreateLoad"> {
   let special_params = [IRBuilderAddrParam<0>];
