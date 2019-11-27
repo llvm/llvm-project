@@ -36,12 +36,6 @@ struct ObjCMethodList {
       : MethodAndHasMoreThanOneDecl(L.MethodAndHasMoreThanOneDecl),
         NextAndExtraBits(L.NextAndExtraBits) {}
 
-  ObjCMethodList &operator=(const ObjCMethodList &L) {
-    MethodAndHasMoreThanOneDecl = L.MethodAndHasMoreThanOneDecl;
-    NextAndExtraBits = L.NextAndExtraBits;
-    return *this;
-  }
-
   ObjCMethodList *getNext() const { return NextAndExtraBits.getPointer(); }
   unsigned getBits() const { return NextAndExtraBits.getInt(); }
   void setNext(ObjCMethodList *L) { NextAndExtraBits.setPointer(L); }

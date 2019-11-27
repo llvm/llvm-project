@@ -174,7 +174,6 @@ struct DiagnosticPredicate {
                    : DiagnosticPredicateTy::NearMatch) {}
   DiagnosticPredicate(DiagnosticPredicateTy T) : Type(T) {}
   DiagnosticPredicate(const DiagnosticPredicate &) = default;
-  DiagnosticPredicate& operator=(const DiagnosticPredicate &) = default;
 
   operator bool() const { return Type == DiagnosticPredicateTy::Match; }
   bool isMatch() const { return Type == DiagnosticPredicateTy::Match; }

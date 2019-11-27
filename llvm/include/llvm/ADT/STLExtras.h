@@ -1415,8 +1415,6 @@ template <typename R> struct result_pair {
   result_pair(std::size_t Index, IterOfRange<R> Iter)
       : Index(Index), Iter(Iter) {}
 
-  result_pair<R>(const result_pair<R> &Other)
-      : Index(Other.Index), Iter(Other.Iter) {}
   result_pair<R> &operator=(const result_pair<R> &Other) {
     Index = Other.Index;
     Iter = Other.Iter;
@@ -1465,7 +1463,6 @@ public:
     return Result.Iter == RHS.Result.Iter;
   }
 
-  enumerator_iter<R>(const enumerator_iter<R> &Other) : Result(Other.Result) {}
   enumerator_iter<R> &operator=(const enumerator_iter<R> &Other) {
     Result = Other.Result;
     return *this;
