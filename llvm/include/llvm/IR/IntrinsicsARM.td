@@ -426,8 +426,6 @@ let IntrProperties = [IntrNoMem, Commutative] in {
   def int_arm_neon_vhaddu : Neon_2Arg_Intrinsic;
   def int_arm_neon_vrhadds : Neon_2Arg_Intrinsic;
   def int_arm_neon_vrhaddu : Neon_2Arg_Intrinsic;
-  def int_arm_neon_vqadds : Neon_2Arg_Intrinsic;
-  def int_arm_neon_vqaddu : Neon_2Arg_Intrinsic;
   def int_arm_neon_vraddhn : Neon_2Arg_Narrow_Intrinsic;
 
   // Vector Multiply.
@@ -459,8 +457,6 @@ let IntrProperties = [IntrNoMem, Commutative] in {
 // Vector Subtract.
 def int_arm_neon_vhsubs : Neon_2Arg_Intrinsic;
 def int_arm_neon_vhsubu : Neon_2Arg_Intrinsic;
-def int_arm_neon_vqsubs : Neon_2Arg_Intrinsic;
-def int_arm_neon_vqsubu : Neon_2Arg_Intrinsic;
 def int_arm_neon_vrsubhn : Neon_2Arg_Narrow_Intrinsic;
 
 // Vector Absolute Compare.

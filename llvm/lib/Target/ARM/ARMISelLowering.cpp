@@ -209,6 +209,9 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT,
       VT != MVT::v2i64 && VT != MVT::v1i64)
     for (auto Opcode : {ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX})
       setOperationAction(Opcode, VT, Legal);
+  if (!VT.isFloatingPoint())
+    for (auto Opcode : {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT})
+      setOperationAction(Opcode, VT, Legal);
 }
 
 void ARMTargetLowering::addDRTypeForNEON(MVT VT) {
