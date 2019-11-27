@@ -41,5 +41,5 @@ define void @test_store(i32 %0) {
 ; LARGE: stw [[REG3:[0-9]+]], 0([[REG2]])
 ; LARGE: blr
 
-; TODO Update test when TOC-entry emission lands.
-; CHECK-NOT: .tc
+; CHECK: .tc a[TC],a
+; CHECK: .tc b[TC],b
