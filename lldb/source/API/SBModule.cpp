@@ -419,16 +419,12 @@ SBValueList SBModule::FindGlobalVariables(SBTarget &target, const char *name,
     VariableList variable_list;
     module_sp->FindGlobalVariables(ConstString(name), nullptr, max_matches,
                                    variable_list);
-    const uint32_t match_count = variable_list.GetSize();
-    if (match_count > 0) {
-      for (uint32_t i = 0; i < match_count; ++i) {
-        lldb::ValueObjectSP valobj_sp;
-        TargetSP target_sp(target.GetSP());
-        valobj_sp = ValueObjectVariable::Create(
-            target_sp.get(), variable_list.GetVariableAtIndex(i));
-        if (valobj_sp)
-          sb_value_list.Append(SBValue(valobj_sp));
-      }
+    for (const VariableSP &var_sp : variable_list) {
+      lldb::ValueObjectSP valobj_sp;
+      TargetSP target_sp(target.GetSP());
+      valobj_sp = ValueObjectVariable::Create(target_sp.get(), var_sp);
+      if (valobj_sp)
+        sb_value_list.Append(SBValue(valobj_sp));
     }
   }
 
