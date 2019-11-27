@@ -26,14 +26,29 @@ public:
   NamespaceCommentCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
+
+  void addMacro(const std::string &Name, const std::string &Value) noexcept;
 
 private:
   void storeOptions(ClangTidyOptions::OptionMap &Options) override;
+  std::string getNamespaceComment(const NamespaceDecl *ND,
+                                  bool InsertLineBreak);
+  std::string getNamespaceComment(const std::string &NameSpaceName,
+                                  bool InsertLineBreak);
+  bool isNamespaceMacroDefinition(const StringRef NameSpaceName);
+  std::tuple<bool, StringRef>
+  isNamespaceMacroExpansion(const StringRef NameSpaceName);
 
   llvm::Regex NamespaceCommentPattern;
   const unsigned ShortNamespaceLines;
   const unsigned SpacesBeforeComments;
   llvm::SmallVector<SourceLocation, 4> Ends;
+
+  // Store macros to verify that warning is not thrown when namespace name is a
+  // preprocessed define.
+  std::vector<std::pair<std::string, std::string>> Macros;
 };
 
 } // namespace readability
