@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <errno.h>
 
 int main(int argc, char **argv) {
   int mount_id;

@@ -7,7 +7,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <errno.h>
 
 int main(void) {
   struct file_handle *handle = reinterpret_cast<struct file_handle *>(
@@ -16,10 +15,6 @@ int main(void) {
 
   int mount_id;
   int res = name_to_handle_at(AT_FDCWD, "/dev/null", handle, &mount_id, 0);
-  if (errno == EPERM) { // Function not permitted
-    free(handle);
-    return 0;
-  }
   assert(!res);
   __msan_check_mem_is_initialized(&mount_id, sizeof(mount_id));
   __msan_check_mem_is_initialized(&handle->handle_bytes,
