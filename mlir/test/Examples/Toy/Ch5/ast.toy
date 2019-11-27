@@ -25,7 +25,7 @@ def main() {
   var e = multiply_transpose(b, c);
   # Finally, calling into `multiply_transpose` with incompatible shape will
   # trigger a shape inference error.
-  var e = multiply_transpose(transpose(a), c);
+  var f = multiply_transpose(transpose(a), c);
 }
 
 
@@ -66,7 +66,7 @@ def main() {
 # CHECK-NEXT:             var: b @{{.*}}ast.toy:25:30
 # CHECK-NEXT:             var: c @{{.*}}ast.toy:25:33
 # CHECK-NEXT:           ]
-# CHECK-NEXT:         VarDecl e<> @{{.*}}ast.toy:28:3
+# CHECK-NEXT:         VarDecl f<> @{{.*}}ast.toy:28:3
 # CHECK-NEXT:           Call 'multiply_transpose' [ @{{.*}}ast.toy:28:11
 # CHECK-NEXT:             Call 'transpose' [ @{{.*}}ast.toy:28:30
 # CHECK-NEXT:               var: a @{{.*}}ast.toy:28:40
