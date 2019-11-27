@@ -1103,69 +1103,44 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
     NameSearchContext &context, ConstString name, unsigned current_id) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  if (ClangModulesDeclVendor *modules_decl_vendor =
-          m_target->GetClangModulesDeclVendor()) {
-    bool append = false;
-    uint32_t max_matches = 1;
-    std::vector<clang::NamedDecl *> decls;
+  auto *modules_decl_vendor = m_target->GetClangModulesDeclVendor();
+  if (!modules_decl_vendor)
+    return;
 
-    if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
-      return;
+  bool append = false;
+  uint32_t max_matches = 1;
+  std::vector<clang::NamedDecl *> decls;
 
-    clang::NamedDecl *const decl_from_modules = decls[0];
+  if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
+    return;
 
-    if (llvm::isa<clang::FunctionDecl>(decl_from_modules)) {
-      if (log) {
-        LLDB_LOGF(log,
-                  "  CAS::FEVD[%u] Matching function found for "
-                  "\"%s\" in the modules",
-                  current_id, name.GetCString());
-      }
+  assert(!decls.empty() && "FindDecls returned true but no decls?");
+  clang::NamedDecl *const decl_from_modules = decls[0];
 
-      clang::Decl *copied_decl = CopyDecl(decl_from_modules);
-      clang::FunctionDecl *copied_function_decl =
-          copied_decl ? dyn_cast<clang::FunctionDecl>(copied_decl) : nullptr;
+  LLDB_LOG(log,
+           "  CAS::FEVD[{0}] Matching decl found for "
+           "\"{1}\" in the modules",
+           current_id, name);
 
-      if (!copied_function_decl) {
-        LLDB_LOGF(log,
-                  "  CAS::FEVD[%u] - Couldn't export a function "
-                  "declaration from the modules",
-                  current_id);
+  clang::Decl *copied_decl = CopyDecl(decl_from_modules);
+  if (!copied_decl) {
+    LLDB_LOG(log,
+             "  CAS::FEVD[{0}] - Couldn't export a "
+             "declaration from the modules",
+             current_id);
+    return;
+  }
 
-        return;
-      }
+  if (auto copied_function = dyn_cast<clang::FunctionDecl>(copied_decl)) {
+    MaybeRegisterFunctionBody(copied_function);
 
-      MaybeRegisterFunctionBody(copied_function_decl);
+    context.AddNamedDecl(copied_function);
 
-      context.AddNamedDecl(copied_function_decl);
-
-      context.m_found.function_with_type_info = true;
-      context.m_found.function = true;
-    } else if (llvm::isa<clang::VarDecl>(decl_from_modules)) {
-      if (log) {
-        LLDB_LOGF(log,
-                  "  CAS::FEVD[%u] Matching variable found for "
-                  "\"%s\" in the modules",
-                  current_id, name.GetCString());
-      }
-
-      clang::Decl *copied_decl = CopyDecl(decl_from_modules);
-      clang::VarDecl *copied_var_decl =
-          copied_decl ? dyn_cast_or_null<clang::VarDecl>(copied_decl) : nullptr;
-
-      if (!copied_var_decl) {
-        LLDB_LOGF(log,
-                  "  CAS::FEVD[%u] - Couldn't export a variable "
-                  "declaration from the modules",
-                  current_id);
-
-        return;
-      }
-
-      context.AddNamedDecl(copied_var_decl);
-
-      context.m_found.variable = true;
-    }
+    context.m_found.function_with_type_info = true;
+    context.m_found.function = true;
+  } else if (auto copied_var = dyn_cast<clang::VarDecl>(copied_decl)) {
+    context.AddNamedDecl(copied_var);
+    context.m_found.variable = true;
   }
 }
 
