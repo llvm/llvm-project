@@ -5828,8 +5828,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Output.getType() == types::TY_Dependencies) {
     // Handled with other dependency code.
   } else if (Output.isFilename()) {
-    CmdArgs.push_back("-o");
-    CmdArgs.push_back(Output.getFilename());
+    if (Output.getType() == clang::driver::types::TY_IFS_CPP ||
+        Output.getType() == clang::driver::types::TY_IFS) {
+      SmallString<128> OutputFilename(Output.getFilename());
+      llvm::sys::path::replace_extension(OutputFilename, "ifs");
+      CmdArgs.push_back("-o");
+      CmdArgs.push_back(Args.MakeArgString(OutputFilename));
+    } else {
+      CmdArgs.push_back("-o");
+      CmdArgs.push_back(Output.getFilename());
+    }
   } else {
     assert(Output.isNothing() && "Invalid output.");
   }
