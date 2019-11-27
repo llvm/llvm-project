@@ -404,6 +404,14 @@ void DWARFContext::dump(
     dumpLoclistsSection(OS, LLDumpOpts, Data, getRegisterInfo(), *Off);
   }
   if (const auto *Off =
+          shouldDump(ExplicitDWO, ".debug_loclists.dwo", DIDT_ID_DebugLoclists,
+                     DObj->getLoclistsDWOSection().Data)) {
+    DWARFDataExtractor Data(*DObj, DObj->getLoclistsDWOSection(),
+                            isLittleEndian(), 0);
+    dumpLoclistsSection(OS, LLDumpOpts, Data, getRegisterInfo(), *Off);
+  }
+
+  if (const auto *Off =
           shouldDump(ExplicitDWO, ".debug_loc.dwo", DIDT_ID_DebugLoc,
                      DObj->getLocDWOSection().Data)) {
     DWARFDataExtractor Data(*DObj, DObj->getLocDWOSection(), isLittleEndian(),
@@ -1385,6 +1393,7 @@ class DWARFObjInMemory final : public DWARFObject {
 
   DWARFSectionMap LocSection;
   DWARFSectionMap LoclistsSection;
+  DWARFSectionMap LoclistsDWOSection;
   DWARFSectionMap LineSection;
   DWARFSectionMap RangesSection;
   DWARFSectionMap RnglistsSection;
@@ -1411,6 +1420,7 @@ class DWARFObjInMemory final : public DWARFObject {
     return StringSwitch<DWARFSectionMap *>(Name)
         .Case("debug_loc", &LocSection)
         .Case("debug_loclists", &LoclistsSection)
+        .Case("debug_loclists.dwo", &LoclistsDWOSection)
         .Case("debug_line", &LineSection)
         .Case("debug_frame", &FrameSection)
         .Case("eh_frame", &EHFrameSection)
@@ -1740,6 +1750,9 @@ public:
   }
   const DWARFSection &getRnglistsDWOSection() const override {
     return RnglistsDWOSection;
+  }
+  const DWARFSection &getLoclistsDWOSection() const override {
+    return LoclistsDWOSection;
   }
   const DWARFSection &getAddrSection() const override { return AddrSection; }
   StringRef getCUIndexSection() const override { return CUIndexSection; }

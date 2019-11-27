@@ -120,8 +120,9 @@ protected:
   /// The DWARF v5 locations list section.
   MCSection *DwarfLoclistsSection = nullptr;
 
-  /// The DWARF v5 range list section for fission.
+  /// The DWARF v5 range and location list sections for fission.
   MCSection *DwarfRnglistsDWOSection = nullptr;
+  MCSection *DwarfLoclistsDWOSection = nullptr;
 
   // These are for Fission DWP files.
   MCSection *DwarfCUIndexSection = nullptr;
@@ -298,6 +299,9 @@ public:
   MCSection *getDwarfAddrSection() const { return DwarfAddrSection; }
   MCSection *getDwarfRnglistsDWOSection() const {
     return DwarfRnglistsDWOSection;
+  }
+  MCSection *getDwarfLoclistsDWOSection() const {
+    return DwarfLoclistsDWOSection;
   }
   MCSection *getDwarfCUIndexSection() const { return DwarfCUIndexSection; }
   MCSection *getDwarfTUIndexSection() const { return DwarfTUIndexSection; }
