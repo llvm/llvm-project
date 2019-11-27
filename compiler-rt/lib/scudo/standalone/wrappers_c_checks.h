@@ -20,7 +20,7 @@
 namespace scudo {
 
 // A common errno setting logic shared by almost all Scudo C wrappers.
-INLINE void *setErrnoOnNull(void *Ptr) {
+inline void *setErrnoOnNull(void *Ptr) {
   if (UNLIKELY(!Ptr))
     errno = ENOMEM;
   return Ptr;
@@ -30,14 +30,14 @@ INLINE void *setErrnoOnNull(void *Ptr) {
 
 // Checks aligned_alloc() parameters, verifies that the alignment is a power of
 // two and that the size is a multiple of alignment.
-INLINE bool checkAlignedAllocAlignmentAndSize(uptr Alignment, uptr Size) {
+inline bool checkAlignedAllocAlignmentAndSize(uptr Alignment, uptr Size) {
   return Alignment == 0 || !isPowerOfTwo(Alignment) ||
          !isAligned(Size, Alignment);
 }
 
 // Checks posix_memalign() parameters, verifies that alignment is a power of two
 // and a multiple of sizeof(void *).
-INLINE bool checkPosixMemalignAlignment(uptr Alignment) {
+inline bool checkPosixMemalignAlignment(uptr Alignment) {
   return Alignment == 0 || !isPowerOfTwo(Alignment) ||
          !isAligned(Alignment, sizeof(void *));
 }
@@ -45,7 +45,7 @@ INLINE bool checkPosixMemalignAlignment(uptr Alignment) {
 // Returns true if calloc(Size, N) overflows on Size*N calculation. Use a
 // builtin supported by recent clang & GCC if it exists, otherwise fallback to a
 // costly division.
-INLINE bool checkForCallocOverflow(uptr Size, uptr N, uptr *Product) {
+inline bool checkForCallocOverflow(uptr Size, uptr N, uptr *Product) {
 #if __has_builtin(__builtin_umull_overflow)
   return __builtin_umull_overflow(Size, N, Product);
 #else
@@ -58,7 +58,7 @@ INLINE bool checkForCallocOverflow(uptr Size, uptr N, uptr *Product) {
 
 // Returns true if the size passed to pvalloc overflows when rounded to the next
 // multiple of PageSize.
-INLINE bool checkForPvallocOverflow(uptr Size, uptr PageSize) {
+inline bool checkForPvallocOverflow(uptr Size, uptr PageSize) {
   return roundUpTo(Size, PageSize) < Size;
 }
 

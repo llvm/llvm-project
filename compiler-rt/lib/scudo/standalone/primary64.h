@@ -215,7 +215,7 @@ private:
     MapPlatformData Data;
     ReleaseToOsInfo ReleaseInfo;
   };
-  COMPILER_CHECK(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0);
+  static_assert(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
   uptr PrimaryBase;
   RegionInfo *RegionInfoArray;
