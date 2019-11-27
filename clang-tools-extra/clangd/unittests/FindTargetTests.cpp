@@ -114,6 +114,23 @@ TEST_F(TargetDeclTest, Exprs) {
     auto X = S() [[+]] S();
   )cpp";
   EXPECT_DECLS("DeclRefExpr", "S operator+(S) const");
+
+  Code = R"cpp(
+    int foo();
+    int s = foo[[()]];
+  )cpp";
+  EXPECT_DECLS("CallExpr", "int foo()");
+
+  Code = R"cpp(
+    struct X {
+    void operator()(int n);
+    };
+    void test() {
+      X x;
+      x[[(123)]];
+    }
+  )cpp";
+  EXPECT_DECLS("CXXOperatorCallExpr", "void operator()(int n)");
 }
 
 TEST_F(TargetDeclTest, UsingDecl) {
