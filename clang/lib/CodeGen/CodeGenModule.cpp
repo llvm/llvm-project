@@ -472,9 +472,7 @@ void CodeGenModule::Release() {
                               CodeGenOpts.NumRegisterParameters);
 
   if (CodeGenOpts.DwarfVersion) {
-    // We actually want the latest version when there are conflicts.
-    // We can change from Warning to Latest if such mode is supported.
-    getModule().addModuleFlag(llvm::Module::Warning, "Dwarf Version",
+    getModule().addModuleFlag(llvm::Module::Max, "Dwarf Version",
                               CodeGenOpts.DwarfVersion);
   }
   if (CodeGenOpts.EmitCodeView) {

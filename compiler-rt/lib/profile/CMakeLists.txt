@@ -68,7 +68,6 @@ set(PROFILE_SOURCES
   )
 
 set(PROFILE_HEADERS
-  InstrProfData.inc
   InstrProfiling.h
   InstrProfilingInternal.h
   InstrProfilingPort.h
@@ -81,6 +80,9 @@ if(WIN32)
     WindowsMMap.c
     )
 endif()
+
+include_directories(..)
+include_directories(../../include)
 
 if(FUCHSIA OR UNIX)
  set(EXTRA_FLAGS
