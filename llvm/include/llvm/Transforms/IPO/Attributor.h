@@ -101,13 +101,16 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 namespace llvm {
 
@@ -537,25 +540,16 @@ public:
 struct AnalysisGetter {
   template <typename Analysis>
   typename Analysis::Result *getAnalysis(const Function &F) {
-    if (!MAM || !F.getParent())
+    if (!FAM || !F.getParent())
       return nullptr;
-    auto &FAM = MAM->getResult<FunctionAnalysisManagerModuleProxy>(
-                       const_cast<Module &>(*F.getParent()))
-                    .getManager();
-    return &FAM.getResult<Analysis>(const_cast<Function &>(F));
+    return &FAM->getResult<Analysis>(const_cast<Function &>(F));
   }
 
-  template <typename Analysis>
-  typename Analysis::Result *getAnalysis(const Module &M) {
-    if (!MAM)
-      return nullptr;
-    return &MAM->getResult<Analysis>(const_cast<Module &>(M));
-  }
-  AnalysisGetter(ModuleAnalysisManager &MAM) : MAM(&MAM) {}
+  AnalysisGetter(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
   AnalysisGetter() {}
 
 private:
-  ModuleAnalysisManager *MAM = nullptr;
+  FunctionAnalysisManager *FAM = nullptr;
 };
 
 /// Data structure to hold cached (LLVM-IR) information.
@@ -571,20 +565,10 @@ private:
 /// reusable, it is advised to inherit from the InformationCache and cast the
 /// instance down in the abstract attributes.
 struct InformationCache {
-  InformationCache(const Module &M, AnalysisGetter &AG)
-      : DL(M.getDataLayout()), Explorer(/* ExploreInterBlock */ true), AG(AG) {
-
-    CallGraph *CG = AG.getAnalysis<CallGraphAnalysis>(M);
-    if (!CG)
-      return;
-
-    DenseMap<const Function *, unsigned> SccSize;
-    for (scc_iterator<CallGraph *> I = scc_begin(CG); !I.isAtEnd(); ++I) {
-      for (CallGraphNode *Node : *I)
-        SccSize[Node->getFunction()] = I->size();
-    }
-    SccSizeOpt = std::move(SccSize);
-  }
+  InformationCache(const Module &M, AnalysisGetter &AG,
+                   SetVector<Function *> *CGSCC)
+      : DL(M.getDataLayout()), Explorer(/* ExploreInterBlock */ true), AG(AG),
+        CGSCC(CGSCC) {}
 
   /// A map type from opcodes to instructions with this opcode.
   using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;
@@ -624,11 +608,11 @@ struct InformationCache {
     return AG.getAnalysis<AP>(F);
   }
 
-  /// Return SCC size on call graph for function \p F.
+  /// Return SCC size on call graph for function \p F or 0 if unknown.
   unsigned getSccSize(const Function &F) {
-    if (!SccSizeOpt.hasValue())
-      return 0;
-    return (SccSizeOpt.getValue())[&F];
+    if (CGSCC && CGSCC->count(const_cast<Function *>(&F)))
+      return CGSCC->size();
+    return 0;
   }
 
   /// Return datalayout used in the module.
@@ -657,8 +641,8 @@ private:
   /// Getters for analysis.
   AnalysisGetter &AG;
 
-  /// Cache result for scc size in the call graph
-  Optional<DenseMap<const Function *, unsigned>> SccSizeOpt;
+  /// The underlying CGSCC, or null if not available.
+  SetVector<Function *> *CGSCC;
 
   /// Give the Attributor access to the members so
   /// Attributor::identifyDefaultAbstractAttributes(...) can initialize them.
@@ -695,15 +679,18 @@ private:
 struct Attributor {
   /// Constructor
   ///
+  /// \param Functions The set of functions we are deriving attributes for.
   /// \param InfoCache Cache to hold various information accessible for
   ///                  the abstract attributes.
+  /// \param CGUpdater Helper to update an underlying call graph.
   /// \param DepRecomputeInterval Number of iterations until the dependences
   ///                             between abstract attributes are recomputed.
   /// \param Whitelist If not null, a set limiting the attribute opportunities.
-  Attributor(InformationCache &InfoCache, unsigned DepRecomputeInterval,
+  Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
+             CallGraphUpdater &CGUpdater, unsigned DepRecomputeInterval,
              DenseSet<const char *> *Whitelist = nullptr)
-      : InfoCache(InfoCache), DepRecomputeInterval(DepRecomputeInterval),
-        Whitelist(Whitelist) {}
+      : Functions(Functions), InfoCache(InfoCache), CGUpdater(CGUpdater),
+        DepRecomputeInterval(DepRecomputeInterval), Whitelist(Whitelist) {}
 
   ~Attributor() {
     DeleteContainerPointers(AllAbstractAttributes);
@@ -717,7 +704,7 @@ struct Attributor {
   /// as the Attributor is not destroyed (it owns the attributes now).
   ///
   /// \Returns CHANGED if the IR was changed, otherwise UNCHANGED.
-  ChangeStatus run(Module &M);
+  ChangeStatus run();
 
   /// Lookup an abstract attribute of type \p AAType at position \p IRP. While
   /// no abstract attribute is found equivalent positions are checked, see
@@ -1036,6 +1023,17 @@ struct Attributor {
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
 
+  /// Replace all uses of \p Old with \p New and, for calls (and invokes),
+  /// update the call graph.
+  void replaceAllUsesWith(Value &Old, Value &New) {
+    if (CallBase *OldCB = dyn_cast<CallBase>(&Old)) {
+      // We do not modify the call graph here but simply reanalyze the old
+      // function. This should be revisited once the old PM is gone.
+      CGModifiedFunctions.insert(OldCB->getFunction());
+    }
+    Old.replaceAllUsesWith(&New);
+  }
+
 private:
   /// Check \p Pred on all call sites of \p Fn.
   ///
@@ -1067,9 +1065,10 @@ private:
 
     // For now we ignore naked and optnone functions.
     bool Invalidate = Whitelist && !Whitelist->count(&AAType::ID);
-    if (const Function *Fn = IRP.getAnchorScope())
-      Invalidate |= Fn->hasFnAttribute(Attribute::Naked) ||
-                    Fn->hasFnAttribute(Attribute::OptimizeNone);
+    const Function *FnScope = IRP.getAnchorScope();
+    if (FnScope)
+      Invalidate |= FnScope->hasFnAttribute(Attribute::Naked) ||
+                    FnScope->hasFnAttribute(Attribute::OptimizeNone);
 
     // Bootstrap the new attribute with an initial update to propagate
     // information, e.g., function -> call site. If it is not on a given
@@ -1080,6 +1079,15 @@ private:
     }
 
     AA.initialize(*this);
+
+    // We can initialize (=look at) code outside the current function set but
+    // not call update because that would again spawn new abstract attributes in
+    // potentially unconnected code regions (=SCCs).
+    if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
+      AA.getState().indicatePessimisticFixpoint();
+      return AA;
+    }
+
     AA.update(*this);
 
     if (TrackDependence && AA.getState().isValidState())
@@ -1117,7 +1125,8 @@ private:
   /// Apply all requested function signature rewrites
   /// (\see registerFunctionSignatureRewrite) and return Changed if the module
   /// was altered.
-  ChangeStatus rewriteFunctionSignatures();
+  ChangeStatus
+  rewriteFunctionSignatures(SmallPtrSetImpl<Function *> &ModifiedFns);
 
   /// The set of all abstract attributes.
   ///{
@@ -1154,8 +1163,18 @@ private:
   DenseMap<Function *, SmallVector<ArgumentReplacementInfo *, 8>>
       ArgumentReplacementMap;
 
+  /// The set of functions we are deriving attributes for.
+  SetVector<Function *> &Functions;
+
   /// The information cache that holds pre-processed (LLVM-IR) information.
   InformationCache &InfoCache;
+
+  /// Helper to update an underlying call graph.
+  CallGraphUpdater &CGUpdater;
+
+  /// Set of functions for which we modified the content such that it might
+  /// impact the call graph.
+  SmallPtrSet<Function *, 8> CGModifiedFunctions;
 
   /// Set if the attribute currently updated did query a non-fix attribute.
   bool QueriedNonFixAA;
@@ -1834,8 +1853,13 @@ raw_ostream &operator<<(raw_ostream &OS, const IntegerRangeState &State);
 struct AttributorPass : public PassInfoMixin<AttributorPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
+struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+};
 
 Pass *createAttributorLegacyPass();
+Pass *createAttributorCGSCCLegacyPass();
 
 /// ----------------------------------------------------------------------------
 ///                       Abstract Attribute Classes

@@ -551,6 +551,9 @@ void PassManagerBuilder::populateModulePassManager(
   // Infer attributes about declarations if possible.
   MPM.add(createInferFunctionAttrsLegacyPass());
 
+  // Infer attributes on declarations, call sites, arguments, etc.
+  MPM.add(createAttributorLegacyPass());
+
   addExtensionsToPM(EP_ModuleOptimizerEarly, MPM);
 
   if (OptLevel > 2)
@@ -558,9 +561,6 @@ void PassManagerBuilder::populateModulePassManager(
 
   MPM.add(createIPSCCPPass());          // IP SCCP
   MPM.add(createCalledValuePropagationPass());
-
-  // Infer attributes on declarations, call sites, arguments, etc.
-  MPM.add(createAttributorLegacyPass());
 
   MPM.add(createGlobalOptimizerPass()); // Optimize out global vars
   // Promote any localized global vars.
@@ -598,6 +598,9 @@ void PassManagerBuilder::populateModulePassManager(
     Inliner = nullptr;
     RunInliner = true;
   }
+
+  // Infer attributes on declarations, call sites, arguments, etc. for an SCC.
+  MPM.add(createAttributorCGSCCLegacyPass());
 
   // Try to perform OpenMP specific optimizations. This is a (quick!) no-op if
   // there are no OpenMP runtime calls present in the module.
@@ -934,6 +937,9 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
 
   // CSFDO instrumentation and use pass.
   addPGOInstrPasses(PM, /* IsCS */ true);
+
+  // Infer attributes on declarations, call sites, arguments, etc. for an SCC.
+  PM.add(createAttributorCGSCCLegacyPass());
 
   // Try to perform OpenMP specific optimizations. This is a (quick!) no-op if
   // there are no OpenMP runtime calls present in the module.
