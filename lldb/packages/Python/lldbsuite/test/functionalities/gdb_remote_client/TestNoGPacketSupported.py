@@ -72,7 +72,6 @@ class TestNoGPacketSupported(GDBRemoteTestBase):
 
         self.server.responder = MyResponder()
         target = self.dbg.CreateTarget('')
-        self.runCmd("log enable gdb-remote packets")
         if self.TraceOn():
           self.runCmd("log enable gdb-remote packets")
           self.addTearDownHook(
