@@ -1891,6 +1891,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   SmallVector<int, 16> Mask = SVI.getShuffleMask();
   Type *Int32Ty = Type::getInt32Ty(SVI.getContext());
   if (LHS == RHS || isa<UndefValue>(LHS)) {
+    assert(!isa<UndefValue>(RHS) && "Shuffle with 2 undef ops not simplified?");
     // Remap any references to RHS to use LHS.
     SmallVector<Constant*, 16> Elts;
     for (unsigned i = 0; i != VWidth; ++i) {
@@ -1899,8 +1900,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
         continue;
       }
 
-      if ((Mask[i] >= (int)LHSWidth && isa<UndefValue>(RHS)) ||
-          (Mask[i] <  (int)LHSWidth && isa<UndefValue>(LHS))) {
+      if (Mask[i] < (int)LHSWidth && isa<UndefValue>(LHS)) {
         Mask[i] = -1;     // Turn into undef.
         Elts.push_back(UndefValue::get(Int32Ty));
       } else {
