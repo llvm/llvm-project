@@ -1191,6 +1191,27 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   return false;
 }
 
+enum MisleadingStatementKind { MSK_if, MSK_else, MSK_for, MSK_while };
+
+static void
+MaybeDiagnoseMisleadingIndentation(Parser &P, SourceLocation PrevLoc,
+                                   SourceLocation StmtLoc,
+                                   MisleadingStatementKind StmtKind) {
+  Token Tok = P.getCurToken();
+  if (Tok.is(tok::semi))
+    return;
+  SourceManager &SM = P.getPreprocessor().getSourceManager();
+  unsigned PrevColNum = SM.getSpellingColumnNumber(PrevLoc);
+  unsigned CurColNum = SM.getSpellingColumnNumber(Tok.getLocation());
+  unsigned StmtColNum = SM.getSpellingColumnNumber(StmtLoc);
+  if (!Tok.isAtStartOfLine() ||
+      (PrevColNum != 0 && CurColNum != 0 && StmtColNum != 0 &&
+       PrevColNum > StmtColNum && PrevColNum == CurColNum)) {
+    P.Diag(Tok.getLocation(), diag::warn_misleading_indentation)
+        << P.isCXXDeclarationStatement() << StmtKind;
+    P.Diag(StmtLoc, diag::note_previous_statement);
+  }
+}
 
 /// ParseIfStatement
 ///       if-statement: [C99 6.8.4.1]
@@ -1281,6 +1302,9 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   // Pop the 'if' scope if needed.
   InnerScope.Exit();
 
+  if (Tok.isNot(tok::kw_else))
+    MaybeDiagnoseMisleadingIndentation(*this, ThenStmtLoc, IfLoc, MSK_if);
+
   // If it has an else, parse it.
   SourceLocation ElseLoc;
   SourceLocation ElseStmtLoc;
@@ -1313,6 +1337,9 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
 
     // Pop the 'else' scope if needed.
     InnerScope.Exit();
+    if (ElseStmt.isUsable())
+      MaybeDiagnoseMisleadingIndentation(*this, ElseStmt.get()->getBeginLoc(),
+                                         ElseLoc, MSK_else);
   } else if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteAfterIf(getCurScope());
     cutOffParsing();
@@ -1490,6 +1517,10 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   // Pop the body scope if needed.
   InnerScope.Exit();
   WhileScope.Exit();
+
+  if (Body.isUsable())
+    MaybeDiagnoseMisleadingIndentation(*this, Body.get()->getBeginLoc(),
+                                       WhileLoc, MSK_while);
 
   if (Cond.isInvalid() || Body.isInvalid())
     return StmtError();
@@ -1926,6 +1957,10 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
   // Leave the for-scope.
   ForScope.Exit();
+
+  if (Body.isUsable())
+    MaybeDiagnoseMisleadingIndentation(*this, Body.get()->getBeginLoc(), ForLoc,
+                                       MSK_for);
 
   if (Body.isInvalid())
     return StmtError();
