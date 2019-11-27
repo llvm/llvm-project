@@ -1732,7 +1732,7 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
 using DbgValReplacement = Optional<DIExpression *>;
 
 /// Point debug users of \p From to \p To using exprs given by \p RewriteExpr,
-/// possibly moving/deleting users to prevent use-before-def. Returns true if
+/// possibly moving/undefing users to prevent use-before-def. Returns true if
 /// changes are made.
 static bool rewriteDebugUsers(
     Instruction &From, Value &To, Instruction &DomPoint, DominatorTree &DT,
@@ -1745,7 +1745,7 @@ static bool rewriteDebugUsers(
 
   // Prevent use-before-def of To.
   bool Changed = false;
-  SmallPtrSet<DbgVariableIntrinsic *, 1> DeleteOrSalvage;
+  SmallPtrSet<DbgVariableIntrinsic *, 1> UndefOrSalvage;
   if (isa<Instruction>(&To)) {
     bool DomPointAfterFrom = From.getNextNonDebugInstruction() == &DomPoint;
 
@@ -1760,14 +1760,14 @@ static bool rewriteDebugUsers(
       // Users which otherwise aren't dominated by the replacement value must
       // be salvaged or deleted.
       } else if (!DT.dominates(&DomPoint, DII)) {
-        DeleteOrSalvage.insert(DII);
+        UndefOrSalvage.insert(DII);
       }
     }
   }
 
   // Update debug users without use-before-def risk.
   for (auto *DII : Users) {
-    if (DeleteOrSalvage.count(DII))
+    if (UndefOrSalvage.count(DII))
       continue;
 
     LLVMContext &Ctx = DII->getContext();
@@ -1781,18 +1781,10 @@ static bool rewriteDebugUsers(
     Changed = true;
   }
 
-  if (!DeleteOrSalvage.empty()) {
+  if (!UndefOrSalvage.empty()) {
     // Try to salvage the remaining debug users.
-    Changed |= salvageDebugInfo(From);
-
-    // Delete the debug users which weren't salvaged.
-    for (auto *DII : DeleteOrSalvage) {
-      if (DII->getVariableLocation() == &From) {
-        LLVM_DEBUG(dbgs() << "Erased UseBeforeDef:  " << *DII << '\n');
-        DII->eraseFromParent();
-        Changed = true;
-      }
-    }
+    salvageDebugInfoOrMarkUndef(From);
+    Changed = true;
   }
 
   return Changed;
