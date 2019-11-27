@@ -1553,9 +1553,11 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
   if (!Shuf.isSelect())
     return nullptr;
 
-  // Canonicalize to choose from operand 0 first.
+  // Canonicalize to choose from operand 0 first unless operand 1 is undefined.
+  // Commuting undef to operand 0 conflicts with another canonicalization.
   unsigned NumElts = Shuf.getType()->getVectorNumElements();
-  if (Shuf.getMaskValue(0) >= (int)NumElts) {
+  if (!isa<UndefValue>(Shuf.getOperand(1)) &&
+      Shuf.getMaskValue(0) >= (int)NumElts) {
     // TODO: Can we assert that both operands of a shuffle-select are not undef
     // (otherwise, it would have been folded by instsimplify?
     Shuf.commute();
