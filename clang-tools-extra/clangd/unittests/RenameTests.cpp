@@ -621,6 +621,34 @@ TEST(RenameTests, CrossFile) {
       UnorderedElementsAre(
           Pair(Eq(BarPath), Eq(expectedResult(BarCode, NewName))),
           Pair(Eq(MainFilePath), Eq(expectedResult(MainCode, NewName)))));
+
+  // Run rename on a pagination index which couldn't return all refs in one
+  // request, we reject rename on this case.
+  class PaginationIndex : public SymbolIndex {
+    bool refs(const RefsRequest &Req,
+              llvm::function_ref<void(const Ref &)> Callback) const override {
+      return true; // has more references
+    }
+
+    bool fuzzyFind(
+        const FuzzyFindRequest &Req,
+        llvm::function_ref<void(const Symbol &)> Callback) const override {
+      return false;
+    }
+    void
+    lookup(const LookupRequest &Req,
+           llvm::function_ref<void(const Symbol &)> Callback) const override {}
+
+    void relations(const RelationsRequest &Req,
+                   llvm::function_ref<void(const SymbolID &, const Symbol &)>
+                       Callback) const override {}
+    size_t estimateMemoryUsage() const override { return 0; }
+  } PIndex;
+  Results = rename({MainCode.point(), NewName, AST, MainFilePath, &PIndex,
+                    /*CrossFile=*/true, GetDirtyBuffer});
+  EXPECT_FALSE(Results);
+  EXPECT_THAT(llvm::toString(Results.takeError()),
+              testing::HasSubstr("too many occurrences"));
 }
 
 TEST(CrossFileRenameTests, CrossFileOnLocalSymbol) {

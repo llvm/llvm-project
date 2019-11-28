@@ -17,6 +17,7 @@
 # It operates on the current, potentially unsaved buffer and does not create
 # or save any files. To revert a fix, just undo.
 
+from __future__ import print_function
 import argparse
 import difflib
 import json
@@ -79,7 +80,7 @@ def GetUserSelection(message, headers, maximum_suggested_headers):
     except Exception:
       # Show a new prompt on invalid option instead of aborting so that users
       # don't need to wait for another clang-include-fixer run.
-      print >> sys.stderr, "Invalid option:", res
+      print("Invalid option: {}".format(res), file=sys.stderr)
       return GetUserSelection(message, headers, maximum_suggested_headers)
   return headers[idx - 1]
 
@@ -95,7 +96,7 @@ def execute(command, text):
   p = subprocess.Popen(command,
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        stdin=subprocess.PIPE, startupinfo=startupinfo)
-  return p.communicate(input=text)
+  return p.communicate(input=text.encode('utf-8'))
 
 
 def InsertHeaderToVimBuffer(header, text):
@@ -159,7 +160,7 @@ def main():
   if query_mode:
     symbol = get_symbol_under_cursor()
     if len(symbol) == 0:
-      print "Skip querying empty symbol."
+      print("Skip querying empty symbol.")
       return
     command = [binary, "-stdin", "-query-symbol="+get_symbol_under_cursor(),
                "-db=" + args.db, "-input=" + args.input,
@@ -170,13 +171,14 @@ def main():
                "-input=" + args.input, vim.current.buffer.name]
   stdout, stderr = execute(command, text)
   if stderr:
-    print >> sys.stderr, "Error while running clang-include-fixer: " + stderr
+    print("Error while running clang-include-fixer: {}".format(stderr),
+          file=sys.stderr)
     return
 
   include_fixer_context = json.loads(stdout)
   query_symbol_infos = include_fixer_context["QuerySymbolInfos"]
   if not query_symbol_infos:
-    print "The file is fine, no need to add a header."
+    print("The file is fine, no need to add a header.")
     return
   symbol = query_symbol_infos[0]["RawIdentifier"]
   # The header_infos is already sorted by clang-include-fixer.
@@ -192,7 +194,7 @@ def main():
       unique_headers.append(header)
 
   if not unique_headers:
-    print "Couldn't find a header for {0}.".format(symbol)
+    print("Couldn't find a header for {0}.".format(symbol))
     return
 
   try:
@@ -207,9 +209,9 @@ def main():
     include_fixer_context["HeaderInfos"] = inserted_header_infos
 
     InsertHeaderToVimBuffer(include_fixer_context, text)
-    print "Added #include {0} for {1}.".format(selected, symbol)
+    print("Added #include {0} for {1}.".format(selected, symbol))
   except Exception as error:
-    print >> sys.stderr, error.message
+    print(error.message, file=sys.stderr)
   return
 
 

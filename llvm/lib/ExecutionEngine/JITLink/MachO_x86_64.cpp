@@ -252,7 +252,7 @@ private:
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
             return TargetSymbolOrErr.takeError();
-          Addend = *(const ulittle32_t *)FixupContent;
+          Addend = *(const little32_t *)FixupContent;
           break;
         case Pointer32:
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
@@ -284,12 +284,12 @@ private:
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
             return TargetSymbolOrErr.takeError();
-          Addend = *(const ulittle32_t *)FixupContent +
+          Addend = *(const little32_t *)FixupContent +
                    (1 << (*Kind - PCRel32Minus1));
           break;
         case PCRel32Anon: {
           JITTargetAddress TargetAddress =
-              FixupAddress + 4 + *(const ulittle32_t *)FixupContent;
+              FixupAddress + 4 + *(const little32_t *)FixupContent;
           if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else
@@ -303,7 +303,7 @@ private:
           JITTargetAddress Delta =
               static_cast<JITTargetAddress>(1ULL << (*Kind - PCRel32Minus1Anon));
           JITTargetAddress TargetAddress =
-              FixupAddress + 4 + Delta + *(const ulittle32_t *)FixupContent;
+              FixupAddress + 4 + Delta + *(const little32_t *)FixupContent;
           if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else

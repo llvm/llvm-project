@@ -175,8 +175,8 @@ public:
 
   public:
     /// ChildIterator - Copy constructor.
-    ChildIterator(const ChildIterator& other) : FirstNode(other.FirstNode),
-      Children(other.Children) {}
+    ChildIterator(const ChildIterator &other) = default;
+    ChildIterator &operator=(const ChildIterator &other) = default;
 
     /// Comparison operators.
     bool operator==(const ChildIterator &other) const {

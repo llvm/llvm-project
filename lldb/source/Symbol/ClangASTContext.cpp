@@ -10199,16 +10199,20 @@ bool ClangASTContext::DeclContextIsContainedInLookup(
   return false;
 }
 
+static bool IsClangDeclContext(const CompilerDeclContext &dc) {
+  return dc.IsValid() && isa<ClangASTContext>(dc.GetTypeSystem());
+}
+
 clang::DeclContext *
 ClangASTContext::DeclContextGetAsDeclContext(const CompilerDeclContext &dc) {
-  if (dc.IsClang())
+  if (IsClangDeclContext(dc))
     return (clang::DeclContext *)dc.GetOpaqueDeclContext();
   return nullptr;
 }
 
 ObjCMethodDecl *
 ClangASTContext::DeclContextGetAsObjCMethodDecl(const CompilerDeclContext &dc) {
-  if (dc.IsClang())
+  if (IsClangDeclContext(dc))
     return llvm::dyn_cast<clang::ObjCMethodDecl>(
         (clang::DeclContext *)dc.GetOpaqueDeclContext());
   return nullptr;
@@ -10216,7 +10220,7 @@ ClangASTContext::DeclContextGetAsObjCMethodDecl(const CompilerDeclContext &dc) {
 
 CXXMethodDecl *
 ClangASTContext::DeclContextGetAsCXXMethodDecl(const CompilerDeclContext &dc) {
-  if (dc.IsClang())
+  if (IsClangDeclContext(dc))
     return llvm::dyn_cast<clang::CXXMethodDecl>(
         (clang::DeclContext *)dc.GetOpaqueDeclContext());
   return nullptr;
@@ -10224,7 +10228,7 @@ ClangASTContext::DeclContextGetAsCXXMethodDecl(const CompilerDeclContext &dc) {
 
 clang::FunctionDecl *
 ClangASTContext::DeclContextGetAsFunctionDecl(const CompilerDeclContext &dc) {
-  if (dc.IsClang())
+  if (IsClangDeclContext(dc))
     return llvm::dyn_cast<clang::FunctionDecl>(
         (clang::DeclContext *)dc.GetOpaqueDeclContext());
   return nullptr;
@@ -10232,7 +10236,7 @@ ClangASTContext::DeclContextGetAsFunctionDecl(const CompilerDeclContext &dc) {
 
 clang::NamespaceDecl *
 ClangASTContext::DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc) {
-  if (dc.IsClang())
+  if (IsClangDeclContext(dc))
     return llvm::dyn_cast<clang::NamespaceDecl>(
         (clang::DeclContext *)dc.GetOpaqueDeclContext());
   return nullptr;

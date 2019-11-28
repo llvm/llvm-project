@@ -49,7 +49,7 @@ public:
   static const uptr MaxSize = 1UL << MaxSizeLog;
   static const uptr NumClasses =
       MidClass + ((MaxSizeLog - MidSizeLog) << S) + 1;
-  COMPILER_CHECK(NumClasses <= 256);
+  static_assert(NumClasses <= 256, "");
   static const uptr LargestClassId = NumClasses - 1;
   static const uptr BatchClassId = 0;
 

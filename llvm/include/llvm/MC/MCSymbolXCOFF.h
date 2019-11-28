@@ -9,6 +9,7 @@
 #define LLVM_MC_MCSYMBOLXCOFF_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCSymbol.h"
 
@@ -49,6 +50,17 @@ public:
   }
 
   bool hasContainingCsect() const { return ContainingCsect != nullptr; }
+
+  StringRef getUnqualifiedName() const {
+    const StringRef name = getName();
+    if (name.back() == ']') {
+      StringRef lhs, rhs;
+      std::tie(lhs, rhs) = name.rsplit('[');
+      assert(!rhs.empty() && "Invalid SMC format in XCOFF symbol.");
+      return lhs;
+    }
+    return name;
+  }
 
 private:
   Optional<XCOFF::StorageClass> StorageClass;

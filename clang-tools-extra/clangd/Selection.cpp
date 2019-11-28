@@ -513,8 +513,9 @@ static std::pair<unsigned, unsigned> pointBounds(unsigned Offset, FileID FID,
     return {Offset - 1, Offset};
   // We could choose either this byte or the previous. Usually we prefer the
   // character on the right of the cursor (or under a block cursor).
-  // But if that's whitespace, we likely want the token on the left.
-  if (isWhitespace(Buf[Offset]) && !isWhitespace(Buf[Offset - 1]))
+  // But if that's whitespace/semicolon, we likely want the token on the left.
+  auto IsIgnoredChar = [](char C) { return isWhitespace(C) || C == ';'; };
+  if (IsIgnoredChar(Buf[Offset]) && !IsIgnoredChar(Buf[Offset - 1]))
     return {Offset - 1, Offset};
   return {Offset, Offset + 1};
 }

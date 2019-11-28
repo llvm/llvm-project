@@ -10,8 +10,7 @@ Introduction
 
 The constexpr interpreter aims to replace the existing tree evaluator in clang, improving performance on constructs which are executed inefficiently by the evaluator. The interpreter is activated using the following flags:
 
-* ``-fexperimental-new-constant-interpreter`` enables the interpreter, falling back to the evaluator for unsupported features
-* ``-fforce-experimental-new-constant-interpreter`` forces the use of the interpreter, bailing out if an unsupported feature is encountered
+* ``-fexperimental-new-constant-interpreter`` enables the interpreter, emitting an error if an unsupported feature is encountered
 
 Bytecode Compilation
 ====================
