@@ -39,8 +39,6 @@ public:
     return m_type_system != nullptr && m_opaque_decl != nullptr;
   }
 
-  bool IsClang() const;
-
   // Accessors
 
   TypeSystem *GetTypeSystem() const { return m_type_system; }
