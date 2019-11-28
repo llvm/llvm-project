@@ -19712,15 +19712,20 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   // fp128 needs to use a libcall.
   if (SrcVT == MVT::f128) {
     RTLIB::Libcall LC;
-    if (Op.getOpcode() == ISD::FP_TO_SINT)
+    if (IsSigned)
       LC = RTLIB::getFPTOSINT(SrcVT, VT);
     else
       LC = RTLIB::getFPTOUINT(SrcVT, VT);
 
-    // FIXME: Strict fp!
-    assert(!IsStrict && "Unhandled strict operation!");
+    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
     MakeLibCallOptions CallOptions;
-    return makeLibCall(DAG, LC, VT, Src, CallOptions, SDLoc(Op)).first;
+    std::pair<SDValue, SDValue> Tmp = makeLibCall(DAG, LC, VT, Src, CallOptions,
+                                                  SDLoc(Op), Chain);
+
+    if (IsStrict)
+      return DAG.getMergeValues({ Tmp.first, Tmp.second }, dl);
+
+    return Tmp.first;
   }
 
   // Fall back to X87.
