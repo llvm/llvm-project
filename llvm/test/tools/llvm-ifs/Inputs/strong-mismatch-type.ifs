@@ -1,0 +1,8 @@
+# NOTE: Used by weak-mismatch.ifs
+--- !experimental-ifs-v1
+IfsVersion: 1.0
+Triple: x86_64-unknown-linux-gnu
+ObjectFileFormat: ELF
+Symbols:
+  foobar: { Type: Func }
+...
