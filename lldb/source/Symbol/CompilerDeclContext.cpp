@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CompilerDeclContext.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include <vector>
@@ -22,10 +21,6 @@ CompilerDeclContext::FindDeclByName(ConstString name,
                                                     ignore_using_decls);
   else
     return std::vector<CompilerDecl>();
-}
-
-bool CompilerDeclContext::IsClang() const {
-  return IsValid() && llvm::isa<ClangASTContext>(m_type_system);
 }
 
 ConstString CompilerDeclContext::GetName() const {

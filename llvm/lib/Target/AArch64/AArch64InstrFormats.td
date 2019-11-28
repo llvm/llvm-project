@@ -1473,7 +1473,7 @@ multiclass AuthLoad<bit M, string asm, Operand opr> {
                   (!cast<Instruction>(NAME # "indexed") GPR64:$Rt, GPR64sp:$Rn, 0)>;
 
   def : InstAlias<asm # "\t$Rt, [$wback]!",
-                  (!cast<Instruction>(NAME # "writeback") GPR64sp:$wback, GPR64:$Rt, 0)>;
+                  (!cast<Instruction>(NAME # "writeback") GPR64sp:$wback, GPR64:$Rt, 0), 0>;
 }
 
 //---
