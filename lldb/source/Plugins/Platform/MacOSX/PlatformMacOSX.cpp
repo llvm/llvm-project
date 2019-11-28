@@ -180,11 +180,11 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
             std::string output;
             const char *command = "xcrun -sdk macosx --show-sdk-path";
             lldb_private::Status error = RunShellCommand(
-                command, // shell command to run
-                nullptr, // current working directory
-                &status, // Put the exit status of the process in here
-                &signo,  // Put the signal that caused the process to exit in
-                         // here
+                command,    // shell command to run
+                FileSpec(), // current working directory
+                &status,    // Put the exit status of the process in here
+                &signo,     // Put the signal that caused the process to exit in
+                            // here
                 &output, // Get the output from the command and place it in this
                          // string
                 std::chrono::seconds(3));

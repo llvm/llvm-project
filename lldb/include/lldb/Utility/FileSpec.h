@@ -75,18 +75,6 @@ public:
 
   explicit FileSpec(llvm::StringRef path, const llvm::Triple &triple);
 
-  /// Copy constructor
-  ///
-  /// Makes a copy of the uniqued directory and filename strings from \a rhs
-  /// if it is not nullptr.
-  ///
-  /// \param[in] rhs
-  ///     A const FileSpec object pointer to copy if non-nullptr.
-  FileSpec(const FileSpec *rhs);
-
-  /// Destructor.
-  ~FileSpec();
-
   bool DirectoryEquals(const FileSpec &other) const;
 
   bool FileEquals(const FileSpec &other) const;
