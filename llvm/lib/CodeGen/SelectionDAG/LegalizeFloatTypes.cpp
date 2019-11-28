@@ -546,12 +546,6 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP16_TO_FP(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftenFloatRes_FP_ROUND(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = N->getOperand(0);
-  if (N->getValueType(0) == MVT::f16) {
-    // Semi-soften first, to FP_TO_FP16, so that targets which support f16 as a
-    // storage-only type get a chance to select things.
-    return DAG.getNode(ISD::FP_TO_FP16, SDLoc(N), NVT, Op);
-  }
-
   RTLIB::Libcall LC = RTLIB::getFPROUND(Op.getValueType(), N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_ROUND!");
   TargetLowering::MakeLibCallOptions CallOptions;
@@ -790,7 +784,6 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::BITCAST:     Res = SoftenFloatOp_BITCAST(N); break;
   case ISD::BR_CC:       Res = SoftenFloatOp_BR_CC(N); break;
-  case ISD::FP_EXTEND:   Res = SoftenFloatOp_FP_EXTEND(N); break;
   case ISD::FP_TO_FP16:  // Same as FP_ROUND for softening purposes
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:    Res = SoftenFloatOp_FP_ROUND(N); break;
@@ -832,25 +825,6 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_BITCAST(SDNode *N) {
 
   return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0), Op0);
 }
-
-SDValue DAGTypeLegalizer::SoftenFloatOp_FP_EXTEND(SDNode *N) {
-  // If we get here, the result must be legal but the source illegal.
-  EVT SVT = N->getOperand(0).getValueType();
-  EVT RVT = N->getValueType(0);
-  SDValue Op = GetSoftenedFloat(N->getOperand(0));
-
-  if (SVT == MVT::f16)
-    return DAG.getNode(ISD::FP16_TO_FP, SDLoc(N), RVT, Op);
-
-  RTLIB::Libcall LC = RTLIB::getFPEXT(SVT, RVT);
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND libcall");
-
-  TargetLowering::MakeLibCallOptions CallOptions;
-  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
-  return TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, SDLoc(N)).first;
-}
-
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
   // We actually deal with the partially-softened FP_TO_FP16 node too, which
