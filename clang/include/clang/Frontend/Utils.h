@@ -217,14 +217,18 @@ createChainedIncludesSource(CompilerInstance &CI,
 /// non-null (and possibly incorrect) CompilerInvocation if any errors were
 /// encountered. When this flag is false, always return null on errors.
 ///
-/// \return A CompilerInvocation, or 0 if none was built for the given
+/// \param CC1Args - if non-null, will be populated with the args to cc1
+/// expanded from \p Args. May be set even if nullptr is returned.
+///
+/// \return A CompilerInvocation, or nullptr if none was built for the given
 /// argument vector.
 std::unique_ptr<CompilerInvocation> createInvocationFromCommandLine(
     ArrayRef<const char *> Args,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
         IntrusiveRefCntPtr<DiagnosticsEngine>(),
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr,
-    bool ShouldRecoverOnErrors = false);
+    bool ShouldRecoverOnErrors = false,
+    std::vector<std::string> *CC1Args = nullptr);
 
 /// Return the value of the last argument as an integer, or a default. If Diags
 /// is non-null, emits an error if the argument is given, but non-integral.
