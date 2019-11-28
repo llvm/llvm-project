@@ -908,7 +908,8 @@ public:
 
   static clang::TypedefNameDecl *GetAsTypedefDecl(const CompilerType &type);
 
-  clang::CXXRecordDecl *GetAsCXXRecordDecl(lldb::opaque_compiler_type_t type);
+  static clang::CXXRecordDecl *
+  GetAsCXXRecordDecl(lldb::opaque_compiler_type_t type);
 
   static clang::ObjCInterfaceDecl *
   GetAsObjCInterfaceDecl(const CompilerType &type);
