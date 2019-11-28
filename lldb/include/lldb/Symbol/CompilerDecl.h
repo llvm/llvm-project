@@ -18,12 +18,10 @@ namespace lldb_private {
 class CompilerDecl {
 public:
   // Constructors and Destructors
-  CompilerDecl() : m_type_system(nullptr), m_opaque_decl(nullptr) {}
+  CompilerDecl() = default;
 
   CompilerDecl(TypeSystem *type_system, void *decl)
       : m_type_system(type_system), m_opaque_decl(decl) {}
-
-  ~CompilerDecl() {}
 
   // Tests
 
@@ -38,8 +36,6 @@ public:
   bool IsValid() const {
     return m_type_system != nullptr && m_opaque_decl != nullptr;
   }
-
-  bool IsClang() const;
 
   // Accessors
 
@@ -75,8 +71,8 @@ public:
   CompilerType GetFunctionArgumentType(size_t arg_idx) const;
 
 private:
-  TypeSystem *m_type_system;
-  void *m_opaque_decl;
+  TypeSystem *m_type_system = nullptr;
+  void *m_opaque_decl = nullptr;
 };
 
 bool operator==(const CompilerDecl &lhs, const CompilerDecl &rhs);
