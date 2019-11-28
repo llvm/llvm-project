@@ -186,7 +186,7 @@ llvm::Error makeError(ReasonToReject Reason) {
     case ReasonToReject::NoSymbolFound:
       return "there is no symbol at the given location";
     case ReasonToReject::NoIndexProvided:
-      return "symbol may be used in other files (no index available)";
+      return "no index provided";
     case ReasonToReject::UsedOutsideFile:
       return "the symbol is used outside main file";
     case ReasonToReject::NonIndexable:
