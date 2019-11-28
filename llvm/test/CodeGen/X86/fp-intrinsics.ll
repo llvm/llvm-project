@@ -1087,6 +1087,81 @@ entry:
 ; Verify that fptoui(%x) isn't simplified when the rounding mode is
 ; unknown.
 ; Verify that no gross errors happen.
+define i128 @f20s128(double %x) nounwind strictfp {
+; X87-LABEL: f20s128:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %edi
+; X87-NEXT:    pushl %esi
+; X87-NEXT:    subl $36, %esp
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    calll __fixdfti
+; X87-NEXT:    subl $4, %esp
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X87-NEXT:    movl %edi, 8(%esi)
+; X87-NEXT:    movl %edx, 12(%esi)
+; X87-NEXT:    movl %eax, (%esi)
+; X87-NEXT:    movl %ecx, 4(%esi)
+; X87-NEXT:    movl %esi, %eax
+; X87-NEXT:    addl $36, %esp
+; X87-NEXT:    popl %esi
+; X87-NEXT:    popl %edi
+; X87-NEXT:    retl $4
+;
+; X86-SSE-LABEL: f20s128:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    pushl %edi
+; X86-SSE-NEXT:    pushl %esi
+; X86-SSE-NEXT:    subl $36, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl %eax, (%esp)
+; X86-SSE-NEXT:    calll __fixdfti
+; X86-SSE-NEXT:    subl $4, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    movl %edi, 8(%esi)
+; X86-SSE-NEXT:    movl %edx, 12(%esi)
+; X86-SSE-NEXT:    movl %eax, (%esi)
+; X86-SSE-NEXT:    movl %ecx, 4(%esi)
+; X86-SSE-NEXT:    movl %esi, %eax
+; X86-SSE-NEXT:    addl $36, %esp
+; X86-SSE-NEXT:    popl %esi
+; X86-SSE-NEXT:    popl %edi
+; X86-SSE-NEXT:    retl $4
+;
+; SSE-LABEL: f20s128:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    callq __fixdfti
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f20s128:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    callq __fixdfti
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    retq
+entry:
+  %result = call i128 @llvm.experimental.constrained.fptosi.i128.f64(double %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i128 %result
+}
+
+; Verify that fptoui(%x) isn't simplified when the rounding mode is
+; unknown.
+; Verify that no gross errors happen.
 ; FIXME: The SSE/AVX code does not raise an invalid exception for all values
 ; that don't fit in i8.
 define i8 @f20u8(double %x) #0 {
@@ -1346,6 +1421,82 @@ entry:
   %result = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i64 %result
+}
+
+
+; Verify that fptoui(%x) isn't simplified when the rounding mode is
+; unknown.
+; Verify that no gross errors happen.
+define i128 @f20u128(double %x) nounwind strictfp {
+; X87-LABEL: f20u128:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %edi
+; X87-NEXT:    pushl %esi
+; X87-NEXT:    subl $36, %esp
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    calll __fixunsdfti
+; X87-NEXT:    subl $4, %esp
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X87-NEXT:    movl %edi, 8(%esi)
+; X87-NEXT:    movl %edx, 12(%esi)
+; X87-NEXT:    movl %eax, (%esi)
+; X87-NEXT:    movl %ecx, 4(%esi)
+; X87-NEXT:    movl %esi, %eax
+; X87-NEXT:    addl $36, %esp
+; X87-NEXT:    popl %esi
+; X87-NEXT:    popl %edi
+; X87-NEXT:    retl $4
+;
+; X86-SSE-LABEL: f20u128:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    pushl %edi
+; X86-SSE-NEXT:    pushl %esi
+; X86-SSE-NEXT:    subl $36, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl %eax, (%esp)
+; X86-SSE-NEXT:    calll __fixunsdfti
+; X86-SSE-NEXT:    subl $4, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    movl %edi, 8(%esi)
+; X86-SSE-NEXT:    movl %edx, 12(%esi)
+; X86-SSE-NEXT:    movl %eax, (%esi)
+; X86-SSE-NEXT:    movl %ecx, 4(%esi)
+; X86-SSE-NEXT:    movl %esi, %eax
+; X86-SSE-NEXT:    addl $36, %esp
+; X86-SSE-NEXT:    popl %esi
+; X86-SSE-NEXT:    popl %edi
+; X86-SSE-NEXT:    retl $4
+;
+; SSE-LABEL: f20u128:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    callq __fixunsdfti
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f20u128:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    callq __fixunsdfti
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    retq
+entry:
+  %result = call i128 @llvm.experimental.constrained.fptoui.i128.f64(double %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i128 %result
 }
 
 ; Verify that round(42.1) isn't simplified when the rounding mode is
@@ -1823,10 +1974,12 @@ declare i8  @llvm.experimental.constrained.fptosi.i8.f64(double, metadata)
 declare i16 @llvm.experimental.constrained.fptosi.i16.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.fptosi.i64.f64(double, metadata)
+declare i128 @llvm.experimental.constrained.fptosi.i128.f64(double, metadata)
 declare i8  @llvm.experimental.constrained.fptoui.i8.f64(double, metadata)
 declare i16 @llvm.experimental.constrained.fptoui.i16.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.fptoui.i64.f64(double, metadata)
+declare i128 @llvm.experimental.constrained.fptoui.i128.f64(double, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
 declare i32 @llvm.experimental.constrained.lrint.i32.f64(double, metadata, metadata)

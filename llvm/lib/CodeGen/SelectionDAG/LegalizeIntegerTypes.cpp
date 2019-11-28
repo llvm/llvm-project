@@ -1698,7 +1698,9 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTTZ:        ExpandIntRes_CTTZ(N, Lo, Hi); break;
   case ISD::FLT_ROUNDS_: ExpandIntRes_FLT_ROUNDS(N, Lo, Hi); break;
+  case ISD::STRICT_FP_TO_SINT:
   case ISD::FP_TO_SINT:  ExpandIntRes_FP_TO_SINT(N, Lo, Hi); break;
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_UINT:  ExpandIntRes_FP_TO_UINT(N, Lo, Hi); break;
   case ISD::STRICT_LLROUND:
   case ISD::STRICT_LLRINT:
@@ -2564,7 +2566,9 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_SINT(SDNode *N, SDValue &Lo,
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
 
-  SDValue Op = N->getOperand(0);
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat)
     Op = GetPromotedFloat(Op);
 
@@ -2572,8 +2576,12 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_SINT(SDNode *N, SDValue &Lo,
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fp-to-sint conversion!");
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(true);
-  SplitInteger(TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, dl).first,
-               Lo, Hi);
+  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, VT, Op,
+                                                    CallOptions, dl, Chain);
+  SplitInteger(Tmp.first, Lo, Hi);
+
+  if (IsStrict)
+    ReplaceValueWith(SDValue(N, 1), Tmp.second);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_FP_TO_UINT(SDNode *N, SDValue &Lo,
@@ -2581,15 +2589,21 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_UINT(SDNode *N, SDValue &Lo,
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
 
-  SDValue Op = N->getOperand(0);
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat)
     Op = GetPromotedFloat(Op);
 
   RTLIB::Libcall LC = RTLIB::getFPTOUINT(Op.getValueType(), VT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fp-to-uint conversion!");
   TargetLowering::MakeLibCallOptions CallOptions;
-  SplitInteger(TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, dl).first,
-               Lo, Hi);
+  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, VT, Op,
+                                                    CallOptions, dl, Chain);
+  SplitInteger(Tmp.first, Lo, Hi);
+
+  if (IsStrict)
+    ReplaceValueWith(SDValue(N, 1), Tmp.second);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
