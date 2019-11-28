@@ -109,7 +109,7 @@ int main (int argc, char **argv) {
 // CHECK-DEBUG-NEXT:  ret i32 0
 // CHECK-DEBUG-NEXT:  }
 
-// CHECK:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** dereferenceable({{4|8}}) %argc, i{{64|32}} %{{.+}})
+// CHECK:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** dereferenceable({{4|8}}) %argc, i{{64|32}}{{.*}} %{{.+}})
 // CHECK:       store i8*** %argc, i8**** [[ARGC_PTR_ADDR:%.+]],
 // CHECK:       [[ARGC_REF:%.+]] = load i8***, i8**** [[ARGC_PTR_ADDR]]
 // CHECK:       [[ARGC:%.+]] = load i8**, i8*** [[ARGC_REF]]
