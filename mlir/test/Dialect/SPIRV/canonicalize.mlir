@@ -126,6 +126,17 @@ func @extract_array_interm() -> (vector<2xi32>) {
 
 // -----
 
+// CHECK-LABEL: extract_from_not_constant
+func @extract_from_not_constant() -> i32 {
+  %0 = spv.Variable : !spv.ptr<vector<3xi32>, Function>
+  %1 = spv.Load "Function" %0 : vector<3xi32>
+  // CHECK: spv.CompositeExtract
+  %2 = spv.CompositeExtract %1[0 : i32] : vector<3xi32>
+  spv.ReturnValue %2 : i32
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spv.constant
 //===----------------------------------------------------------------------===//
