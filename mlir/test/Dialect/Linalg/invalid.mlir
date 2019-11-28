@@ -60,7 +60,7 @@ func @generic_at_least_2_operands(%arg0: memref<f32>) {
     fun = @foo,
     indexing_maps =  [ () -> (0) ],
     n_views = [1, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0: memref<f32>
 }
 
@@ -72,7 +72,7 @@ func @generic_exactly_2_views(%arg0: memref<f32>) {
     fun = @foo,
     indexing_maps =  [ () -> (0) ],
     n_views = [1, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0, %arg0, %arg0: memref<f32>, memref<f32>, memref<f32>
 }
 
@@ -84,7 +84,7 @@ func @generic_undefined_fun(%arg0: memref<f32>) {
     fun = @foo,
     indexing_maps =  [ () -> (0) ],
     n_views = [1, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0, %arg0: memref<f32>, memref<f32>
 }
 
@@ -98,7 +98,7 @@ func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
     fun = @foo,
     indexing_maps =  [ () -> (0) ],
     n_views = [0, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0: memref<f32>
 }
 
@@ -112,7 +112,7 @@ func @generic_mismatched_num_returns(%arg0: memref<f32>) {
     fun = @foo,
     indexing_maps =  [ () -> (0) ],
     n_views = [0, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0: memref<f32>
 }
 
@@ -126,7 +126,7 @@ func @generic_symbol_in_map(%arg0: memref<i32>) {
     fun = @foo,
     indexing_maps =  [ ()[N] -> (0) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0]
+    iterator_types = ["parallel"]
   } %arg0: memref<i32>
 }
 
@@ -140,7 +140,7 @@ func @generic_wrong_dim_in_map(%arg0: memref<i32>) {
     fun = @foo,
     indexing_maps =  [ () -> (0) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0]
+    iterator_types = ["parallel"]
   } %arg0: memref<i32>
 }
 
@@ -154,7 +154,7 @@ func @generic_zero_d_view(%arg0: memref<i32>) {
     fun = @foo,
     indexing_maps =  [ () -> (1) ],
     n_views = [0, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0: memref<i32>
 }
 
@@ -168,7 +168,7 @@ func @generic_one_d_view(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
     fun = @foo,
     indexing_maps =  [ () -> (0, 0) ],
     n_views = [0, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0: memref<?xf32, (i)[off]->(off + i)>
 }
 
@@ -185,7 +185,7 @@ func @generic_fun_arg_0_element_type(%arg0: memref<?xf32, (i)[off]->(off + i)>) 
     fun = @foo,
     indexing_maps =  [ () -> (0) ],
     n_views = [0, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0: memref<?xf32, (i)[off]->(off + i)>
 }
 
@@ -202,7 +202,7 @@ func @generic_fun_result_0_element_type(%arg0: memref<?xf32, (i)[off]->(off + i)
     fun = @foo,
     indexing_maps =  [ () -> (0) ],
     n_views = [0, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0: memref<?xf32, (i)[off]->(off + i)>
 }
 
@@ -219,7 +219,7 @@ func @generic_singular_maps(%arg0: memref<?xf32, (i)[off]->(off + i)>, %arg1: me
       (i, j) -> (i + j)
     ],
     n_views = [1, 1],
-    n_loop_types = [2, 0, 0]
+    iterator_types = ["parallel","parallel"]
   } %arg0, %arg1: memref<?xf32, (i)[off]->(off + i)>, memref<?xf32, (i)[off]->(off + i)>
 }
 
@@ -234,7 +234,7 @@ func @generic_empty_region(%arg0: memref<f32>) {
   linalg.generic {
     indexing_maps =  [ () -> (0) ],
     n_views = [1, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0, %arg0 {
     ^bb1:
     ^bb2:
@@ -248,7 +248,7 @@ func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
   linalg.generic {
     indexing_maps =  [ () -> (0) ],
     n_views = [0, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0 {
     ^bb:
   }: memref<f32>
@@ -261,7 +261,7 @@ func @generic_block_arg_type(%arg0: memref<f32>) {
   linalg.generic {
     indexing_maps =  [ () -> (0) ],
     n_views = [0, 1],
-    n_loop_types = [0, 0, 0]
+    iterator_types = []
   } %arg0 {
     ^bb(%i: i1):
   }: memref<f32>
@@ -274,7 +274,7 @@ func @indexed_generic_block_arg_count(%arg0: memref<f32>) {
   linalg.indexed_generic {
     indexing_maps =  [ (d0) -> (d0) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0]
+    iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%f: f32):
   }: memref<f32>
@@ -287,7 +287,7 @@ func @indexed_generic_block_induction_var_arg_type(%arg0: memref<f32>) {
   linalg.indexed_generic {
     indexing_maps =  [ (d0) -> (d0) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0]
+    iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%i: f64, %f: f32):
   }: memref<f32>
@@ -300,7 +300,7 @@ func @indexed_generic_block_arg_type(%arg0: memref<f32>) {
   linalg.indexed_generic {
     indexing_maps =  [ (d0) -> (d0) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0]
+    iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%i: index, %f: i1):
   }: memref<f32>
@@ -316,7 +316,7 @@ func @indexed_generic_fun_arg_count(%arg0: memref<f32>) {
   linalg.indexed_generic {
     indexing_maps =  [ (d0) -> (d0) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0],
+    iterator_types = ["parallel"],
     fun = @foo
   } %arg0:  memref<f32>
 }
@@ -330,7 +330,7 @@ func @indexed_generic_fun_induction_var_arg_type(%arg0: memref<f32>) {
   // expected-error @+1 {{op expected fun argument 0 to be of IndexType}}
   linalg.indexed_generic {
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0],
+    iterator_types = ["parallel"],
     indexing_maps = [ (i) -> (i) ],
     fun = @foo
   } %arg0 : memref<f32>
@@ -346,7 +346,7 @@ func @indexed_generic_fun_arg_type(%arg0: memref<f32>) {
   linalg.indexed_generic {
     indexing_maps =  [ (d0) -> (d0) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0],
+    iterator_types = ["parallel"],
     fun = @foo
   } %arg0: memref<f32>
 }
@@ -361,7 +361,7 @@ func @indexed_generic_fun_result_count(%arg0: memref<f32>) {
   linalg.indexed_generic {
     indexing_maps =  [ (d0) -> (d0) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0],
+    iterator_types = ["parallel"],
     fun = @foo
   } %arg0: memref<f32>
 }
@@ -377,7 +377,7 @@ func @indexed_generic_fun_result_count(%arg0: memref<i32>) {
   linalg.indexed_generic {
     indexing_maps =  [ (d0) -> (d0) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0],
+    iterator_types = ["parallel"],
     fun = @foo
   } %arg0: memref<i32>
 }
@@ -389,7 +389,7 @@ func @generic_fun_result_0_element_type(%arg0: memref<?xf32, (i)[off]->(off + i)
   linalg.generic {
     indexing_maps =  [ (i) -> (i) ],
     n_views = [0, 1],
-    n_loop_types = [1, 0, 0]
+    iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%i: f32):
       %0 = constant 0: i1

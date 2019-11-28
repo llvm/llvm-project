@@ -139,7 +139,7 @@ func @copy_transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %a
 ]
 #matmul_trait = {
   n_views = [2, 1],
-  n_loop_types = [2, 1, 0],
+  iterator_types = ["parallel", "parallel", "reduction"],
   indexing_maps = #matmul_accesses,
   library_call = "some_external_function_name_for_vector_outerproduct_matmul"
 }

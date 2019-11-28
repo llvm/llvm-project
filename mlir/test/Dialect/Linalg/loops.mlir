@@ -223,7 +223,7 @@ func @foo(%0: f32, %1: f32, %2: f32) -> (f32, f32) {
 ]
 #trait = {
   n_views = [1, 2],
-  n_loop_types = [3, 0, 0],
+  iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   fun = @foo,
   library_call = "some_external_function_name_1",
@@ -248,7 +248,7 @@ func @generic_function(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1
 
 #trait2 = {
   n_views = [1, 2],
-  n_loop_types = [3, 0, 0],
+  iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   library_call = "some_external_function_name_2",
   doc = "B(i,j,k), C(i,k,j) = foo(A(i, j), B(i,j,k), C(i,k,j))"
@@ -281,7 +281,7 @@ func @indexed_foo(%i: index, %j: index, %k: index, %0: f32, %1: f32, %2: f32) ->
 }
 #trait3 = {
   n_views = [1, 2],
-  n_loop_types = [3, 0, 0],
+  iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   fun = @indexed_foo,
   library_call = "some_external_function_name_1",
@@ -311,7 +311,7 @@ func @indexed_generic_function(
 
 #trait4 = {
   n_views = [1, 2],
-  n_loop_types = [3, 0, 0],
+  iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   library_call = "some_external_function_name_2",
   doc = "B(i,j,k), C(i,k,j) = foo(A(i, j) * B(i,j,k), i * j * k + C(i,k,j))"

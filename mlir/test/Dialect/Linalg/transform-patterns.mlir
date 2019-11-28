@@ -83,7 +83,7 @@ func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
     (i, j) -> (i, j)
   ],
   n_views = [1, 1],
-  n_loop_types = [2, 0, 0]
+  iterator_types = ["parallel", "parallel"]
 }
 func @fusion_test(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                   %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
