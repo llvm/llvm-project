@@ -16,18 +16,12 @@
 #include "DWARFTypeUnit.h"
 #include "DWARFUnit.h"
 #include "SymbolFileDWARF.h"
-#include "lldb/Core/STLUtils.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Error.h"
 
 namespace lldb_private {
 class DWARFContext;
 }
-
-typedef std::multimap<const char *, dw_offset_t, CStringCompareFunctionObject>
-    CStringToDIEMap;
-typedef CStringToDIEMap::iterator CStringToDIEMapIter;
-typedef CStringToDIEMap::const_iterator CStringToDIEMapConstIter;
 
 class DWARFDebugInfo {
 public:
