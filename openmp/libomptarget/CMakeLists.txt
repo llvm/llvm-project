@@ -39,6 +39,7 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda")
 # Once the plugins for the different targets are validated, they will be added to
 # the list of supported targets in the current system.
 set (LIBOMPTARGET_SYSTEM_TARGETS "")
+set (LIBOMPTARGET_TESTED_PLUGINS "")
 
 # Check whether using debug mode. In debug mode, allow dumping progress
 # messages at runtime by default. Otherwise, it can be enabled
