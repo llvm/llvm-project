@@ -50,6 +50,7 @@ template <class Allocator, u32 MaxTSDCount> struct TSDRegistrySharedT {
   void unmapTestOnly() {
     unmap(reinterpret_cast<void *>(TSDs),
           sizeof(TSD<Allocator>) * NumberOfTSDs);
+    setCurrentTSD(nullptr);
   }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,

@@ -184,7 +184,7 @@ public:
         ((Alignment > MinAlignment) ? Alignment : Chunk::getHeaderSize());
 
     // Takes care of extravagantly large sizes as well as integer overflows.
-    COMPILER_CHECK(MaxAllowedMallocSize < UINTPTR_MAX - MaxAlignment);
+    static_assert(MaxAllowedMallocSize < UINTPTR_MAX - MaxAlignment, "");
     if (UNLIKELY(Size >= MaxAllowedMallocSize)) {
       if (Options.MayReturnNull)
         return nullptr;
@@ -523,7 +523,7 @@ private:
       reportSanityCheckError("class ID");
   }
 
-  static INLINE void *getBlockBegin(const void *Ptr,
+  static inline void *getBlockBegin(const void *Ptr,
                                     Chunk::UnpackedHeader *Header) {
     return reinterpret_cast<void *>(
         reinterpret_cast<uptr>(Ptr) - Chunk::getHeaderSize() -
@@ -531,7 +531,7 @@ private:
   }
 
   // Return the size of a chunk as requested during its allocation.
-  INLINE uptr getSize(const void *Ptr, Chunk::UnpackedHeader *Header) {
+  inline uptr getSize(const void *Ptr, Chunk::UnpackedHeader *Header) {
     const uptr SizeOrUnusedBytes = Header->SizeOrUnusedBytes;
     if (LIKELY(Header->ClassId))
       return SizeOrUnusedBytes;

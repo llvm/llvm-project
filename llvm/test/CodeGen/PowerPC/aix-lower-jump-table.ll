@@ -185,4 +185,4 @@
 ; 64LARGE-ASM:      .long   LBB0_5-.LJTI0_0
 
 ; CHECK: .toc
-; CHECK-NOT: .tc
+; CHECK: .tc .LJTI0_0[TC],.LJTI0_0

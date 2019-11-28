@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "scudo/standalone/stats.h"
-#include "gtest/gtest.h"
+#include "tests/scudo_unit_test.h"
+
+#include "stats.h"
 
 TEST(ScudoStatsTest, LocalStats) {
   scudo::LocalStats LStats;

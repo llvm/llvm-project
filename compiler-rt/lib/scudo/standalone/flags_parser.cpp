@@ -108,7 +108,7 @@ void FlagParser::parseString(const char *S) {
   Pos = OldPos;
 }
 
-INLINE bool parseBool(const char *Value, bool *b) {
+inline bool parseBool(const char *Value, bool *b) {
   if (strncmp(Value, "0", 1) == 0 || strncmp(Value, "no", 2) == 0 ||
       strncmp(Value, "false", 5) == 0) {
     *b = false;

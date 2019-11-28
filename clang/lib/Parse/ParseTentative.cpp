@@ -2066,9 +2066,21 @@ Parser::TPResult Parser::TryParseFunctionDeclarator() {
 ///
 Parser::TPResult Parser::TryParseBracketDeclarator() {
   ConsumeBracket();
-  if (!SkipUntil(tok::r_square, StopAtSemi))
+
+  // A constant-expression cannot begin with a '{', but the
+  // expr-or-braced-init-list of a postfix-expression can.
+  if (Tok.is(tok::l_brace))
+    return TPResult::False;
+
+  if (!SkipUntil(tok::r_square, tok::comma, StopAtSemi | StopBeforeMatch))
     return TPResult::Error;
 
+  // If we hit a comma before the ']', this is not a constant-expression,
+  // but might still be the expr-or-braced-init-list of a postfix-expression.
+  if (Tok.isNot(tok::r_square))
+    return TPResult::False;
+
+  ConsumeBracket();
   return TPResult::Ambiguous;
 }
 

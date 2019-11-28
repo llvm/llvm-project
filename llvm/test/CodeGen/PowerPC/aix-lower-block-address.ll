@@ -69,4 +69,4 @@ __here:
 ; 64LARGE-ASM:         ld [[REG2:[0-9]+]], LC0@l([[REG1]])
 
 ; CHECK: .toc
-; CHECK-NOT: .tc
+; CHECK: .tc Ltmp0[TC],Ltmp0

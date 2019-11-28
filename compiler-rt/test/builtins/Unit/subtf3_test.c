@@ -69,7 +69,8 @@ int main()
                      UINT64_C(0xa44a7bca780a166c)))
         return 1;
 
-#if (defined(__arm__) || defined(__aarch64__)) && defined(__ARM_FP)
+#if (defined(__arm__) || defined(__aarch64__)) && defined(__ARM_FP) || \
+    defined(i386) || defined(__x86_64__)
     // Rounding mode tests on supported architectures
     const long double m = 1234.02L, n = 0.01L;
 

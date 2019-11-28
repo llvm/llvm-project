@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "secondary.h"
+#include "tests/scudo_unit_test.h"
 
-#include "gtest/gtest.h"
+#include "secondary.h"
 
 #include <stdio.h>
 
@@ -16,6 +16,7 @@
 #include <mutex>
 #include <random>
 #include <thread>
+#include <vector>
 
 template <class SecondaryT> static void testSecondaryBasic(void) {
   scudo::GlobalStats S;
@@ -54,12 +55,18 @@ template <class SecondaryT> static void testSecondaryBasic(void) {
 }
 
 TEST(ScudoSecondaryTest, SecondaryBasic) {
-  testSecondaryBasic<scudo::MapAllocator<>>();
   testSecondaryBasic<scudo::MapAllocator<0U>>();
+#if !SCUDO_FUCHSIA
+  testSecondaryBasic<scudo::MapAllocator<>>();
   testSecondaryBasic<scudo::MapAllocator<64U>>();
+#endif
 }
 
+#if SCUDO_FUCHSIA
+using LargeAllocator = scudo::MapAllocator<0U>;
+#else
 using LargeAllocator = scudo::MapAllocator<>;
+#endif
 
 // This exercises a variety of combinations of size and alignment for the
 // MapAllocator. The size computation done here mimic the ones done by the

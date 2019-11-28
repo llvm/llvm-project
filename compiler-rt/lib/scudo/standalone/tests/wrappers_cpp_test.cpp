@@ -6,23 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
+#include "tests/scudo_unit_test.h"
 
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 void operator delete(void *, size_t) noexcept;
 void operator delete[](void *, size_t) noexcept;
 
 // Note that every Cxx allocation function in the test binary will be fulfilled
 // by Scudo. See the comment in the C counterpart of this file.
-
-extern "C" __attribute__((visibility("default"))) const char *
-__scudo_default_options() {
-  return "quarantine_size_kb=256:thread_local_quarantine_size_kb=128:"
-         "quarantine_max_chunk_size=512:dealloc_type_mismatch=true";
-}
 
 template <typename T> static void testCxxNew() {
   T *P = new T;
