@@ -31,6 +31,7 @@ const Builtin::Info DPUTargetInfo::BuiltinInfo[] = {
 void DPUTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   DefineStd(Builder, "DPU", Opts);
+  Builder.defineMacro("__ELF__");
 }
 
 ArrayRef<Builtin::Info> DPUTargetInfo::getTargetBuiltins() const {
