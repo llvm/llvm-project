@@ -13,7 +13,6 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RichManglingContext.h"
-#include "lldb/Core/STLUtils.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -107,10 +106,8 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
       // sorted by name. So we must make the ordered symbol list up ourselves.
       s->PutCString(" (sorted by name):\n");
       DumpSymbolHeader(s);
-      typedef std::multimap<const char *, const Symbol *,
-                            CStringCompareFunctionObject>
-          CStringToSymbol;
-      CStringToSymbol name_map;
+
+      std::multimap<llvm::StringRef, const Symbol *> name_map;
       for (const_iterator pos = m_symbols.begin(), end = m_symbols.end();
            pos != end; ++pos) {
         const char *name = pos->GetName().AsCString();
@@ -118,12 +115,10 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
           name_map.insert(std::make_pair(name, &(*pos)));
       }
 
-      for (CStringToSymbol::const_iterator pos = name_map.begin(),
-                                           end = name_map.end();
-           pos != end; ++pos) {
+      for (const auto &name_to_symbol : name_map) {
+        const Symbol *symbol = name_to_symbol.second;
         s->Indent();
-        pos->second->Dump(s, target, pos->second - &m_symbols[0],
-                          name_preference);
+        symbol->Dump(s, target, symbol - &m_symbols[0], name_preference);
       }
     } break;
 
