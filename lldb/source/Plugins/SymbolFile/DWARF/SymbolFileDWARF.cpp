@@ -1046,7 +1046,8 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
 
   comp_unit.SetSupportFiles(ParseSupportFilesFromPrologue(
       comp_unit.GetModule(), line_table->Prologue, dwarf_cu->GetPathStyle(),
-      dwarf_cu->GetCompilationDirectory().GetCString(), FileSpec(comp_unit)));
+      dwarf_cu->GetCompilationDirectory().GetCString(),
+      comp_unit.GetPrimaryFile()));
 
   return true;
 }
@@ -1951,7 +1952,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
 
       const bool full_match = (bool)file_spec.GetDirectory();
       bool file_spec_matches_cu_file_spec =
-          FileSpec::Equal(file_spec, *dc_cu, full_match);
+          FileSpec::Equal(file_spec, dc_cu->GetPrimaryFile(), full_match);
       if (check_inlines || file_spec_matches_cu_file_spec) {
         SymbolContext sc(m_objfile_sp->GetModule());
         sc.comp_unit = dc_cu;

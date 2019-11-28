@@ -50,7 +50,7 @@ SBFileSpec SBCompileUnit::GetFileSpec() const {
 
   SBFileSpec file_spec;
   if (m_opaque_ptr)
-    file_spec.SetFileSpec(*m_opaque_ptr);
+    file_spec.SetFileSpec(m_opaque_ptr->GetPrimaryFile());
   return LLDB_RECORD_RESULT(file_spec);
 }
 
@@ -106,7 +106,7 @@ uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
     if (inline_file_spec && inline_file_spec->IsValid())
       file_spec = inline_file_spec->ref();
     else
-      file_spec = *m_opaque_ptr;
+      file_spec = m_opaque_ptr->GetPrimaryFile();
 
     index = m_opaque_ptr->FindLineEntry(
         start_idx, line, inline_file_spec ? inline_file_spec->get() : nullptr,

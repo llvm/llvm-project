@@ -617,7 +617,8 @@ void Module::FindCompileUnits(const FileSpec &path,
   for (size_t i = 0; i < num_compile_units; ++i) {
     sc.comp_unit = GetCompileUnitAtIndex(i).get();
     if (sc.comp_unit) {
-      if (FileSpec::Equal(*sc.comp_unit, path, compare_directory))
+      if (FileSpec::Equal(sc.comp_unit->GetPrimaryFile(), path,
+                          compare_directory))
         sc_list.Append(sc);
     }
   }
