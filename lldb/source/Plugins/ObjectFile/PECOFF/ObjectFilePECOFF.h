@@ -283,6 +283,8 @@ protected:
   void DumpDependentModules(lldb_private::Stream *s);
 
   llvm::StringRef GetSectionName(const section_header_t &sect);
+  static lldb::SectionType GetSectionType(llvm::StringRef sect_name,
+                                          const section_header_t &sect);
 
   typedef std::vector<section_header_t> SectionHeaderColl;
   typedef SectionHeaderColl::iterator SectionHeaderCollIter;

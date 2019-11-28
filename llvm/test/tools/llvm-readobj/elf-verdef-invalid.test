@@ -3,14 +3,14 @@
 ## Check that we report a warning when sh_link references a non-existent section.
 
 # RUN: yaml2obj %s --docnum=1 -o %t1
-# RUN: llvm-readobj -V %t1 2>&1 | FileCheck %s --check-prefix=INVALID-LINK-LLVM -DFILE=%t1
-# RUN: not llvm-readelf -V %t1 2>&1 | FileCheck %s --check-prefix=INVALID-LINK-GNU -DFILE=%t1
+# RUN: llvm-readobj -V %t1 2>&1 | FileCheck %s --check-prefix=INVALID-LINK-LLVM --implicit-check-not="warning:" -DFILE=%t1
+# RUN: llvm-readelf -V %t1 2>&1 | FileCheck %s --check-prefix=INVALID-LINK-GNU --implicit-check-not="warning:" -DFILE=%t1
 
 # INVALID-LINK-LLVM: warning: '[[FILE]]': invalid section linked to SHT_GNU_verdef section with index 1: invalid section index: 255
 
-## TODO: llvm-readelf should also report a meaningful warning instead of an error.
-# INVALID-LINK-GNU: Version definition
-# INVALID-LINK-GNU: error: '[[FILE]]': invalid section index: 255
+# INVALID-LINK-GNU:      Version definition section '.gnu.version_d' contains 0 entries:
+# INVALID-LINK-GNU:      warning: '[[FILE]]': invalid section linked to SHT_GNU_verdef section with index 1: invalid section index: 255
+# INVALID-LINK-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 255 (<corrupt>)
 
 --- !ELF
 FileHeader:
