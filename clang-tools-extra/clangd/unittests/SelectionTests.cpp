@@ -234,6 +234,7 @@ TEST(SelectionTest, CommonAncestor) {
       {"void foo() { [[foo^()]]; }", "CallExpr"},
       {"void foo() { [[foo^]] (); }", "DeclRefExpr"},
       {"int bar; void foo() [[{ foo (); }]]^", "CompoundStmt"},
+      {"int x = [[42]]^;", "IntegerLiteral"},
 
       // Ignores whitespace, comments, and semicolons in the selection.
       {"void foo() { [[foo^()]]; /*comment*/^}", "CallExpr"},
@@ -271,7 +272,6 @@ TEST(SelectionTest, CommonAncestor) {
       // FIXME: Ideally we'd get a declstmt or the VarDecl itself here.
       // This doesn't happen now; the RAV doesn't traverse a node containing ;.
       {"int x = 42;^", nullptr},
-      {"int x = 42^;", nullptr},
 
       // Common ancestor is logically TUDecl, but we never return that.
       {"^int x; int y;^", nullptr},
