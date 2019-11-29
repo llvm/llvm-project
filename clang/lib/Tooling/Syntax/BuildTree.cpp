@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Tooling/Syntax/BuildTree.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/LLVM.h"
@@ -56,6 +58,14 @@ public:
   /// Range.
   void foldNode(llvm::ArrayRef<syntax::Token> Range, syntax::Tree *New);
 
+  /// Must be called with the range of each `DeclaratorDecl`. Ensures the
+  /// corresponding declarator nodes are covered by `SimpleDeclaration`.
+  void noticeDeclaratorRange(llvm::ArrayRef<syntax::Token> Range);
+
+  /// Notifies that we should not consume trailing semicolon when computing
+  /// token range of \p D.
+  void noticeDeclaratorWithoutSemicolon(Decl *D);
+
   /// Mark the \p Child node with a corresponding \p Role. All marked children
   /// should be consumed by foldNode.
   /// (!) when called on expressions (clang::Expr is derived from clang::Stmt),
@@ -94,7 +104,14 @@ public:
     return llvm::makeArrayRef(findToken(First), std::next(findToken(Last)));
   }
   llvm::ArrayRef<syntax::Token> getRange(const Decl *D) const {
-    return getRange(D->getBeginLoc(), D->getEndLoc());
+    auto Tokens = getRange(D->getBeginLoc(), D->getEndLoc());
+    if (llvm::isa<NamespaceDecl>(D))
+      return Tokens;
+    if (DeclsWithoutSemicolons.count(D))
+      return Tokens;
+    // FIXME: do not consume trailing semicolon on function definitions.
+    // Most declarations own a semicolon in syntax trees, but not in clang AST.
+    return withTrailingSemicolon(Tokens);
   }
   llvm::ArrayRef<syntax::Token> getExprRange(const Expr *E) const {
     return getRange(E->getBeginLoc(), E->getEndLoc());
@@ -108,14 +125,22 @@ public:
 
     // Some statements miss a trailing semicolon, e.g. 'return', 'continue' and
     // all statements that end with those. Consume this semicolon here.
-    //
-    // (!) statements never consume 'eof', so looking at the next token is ok.
+    if (Tokens.back().kind() == tok::semi)
+      return Tokens;
+    return withTrailingSemicolon(Tokens);
+  }
+
+private:
+  llvm::ArrayRef<syntax::Token>
+  withTrailingSemicolon(llvm::ArrayRef<syntax::Token> Tokens) const {
+    assert(!Tokens.empty());
+    assert(Tokens.back().kind() != tok::eof);
+    // (!) we never consume 'eof', so looking at the next token is ok.
     if (Tokens.back().kind() != tok::semi && Tokens.end()->kind() == tok::semi)
       return llvm::makeArrayRef(Tokens.begin(), Tokens.end() + 1);
     return Tokens;
   }
 
-private:
   /// Finds a token starting at \p L. The token must exist.
   const syntax::Token *findToken(SourceLocation L) const;
 
@@ -136,6 +161,8 @@ private:
                      {&T, NodeAndRole{new (A.allocator()) syntax::Leaf(&T)}});
     }
 
+    ~Forest() { assert(DelayedFolds.empty()); }
+
     void assignRole(llvm::ArrayRef<syntax::Token> Range,
                     syntax::NodeRole Role) {
       assert(!Range.empty());
@@ -148,30 +175,46 @@ private:
       It->second.Role = Role;
     }
 
-    /// Add \p Node to the forest and fill its children nodes based on the \p
-    /// NodeRange.
-    void foldChildren(llvm::ArrayRef<syntax::Token> NodeTokens,
+    /// Add \p Node to the forest and attach child nodes based on \p Tokens.
+    void foldChildren(llvm::ArrayRef<syntax::Token> Tokens,
                       syntax::Tree *Node) {
-      assert(!NodeTokens.empty());
-      assert(Node->firstChild() == nullptr && "node already has children");
+      // Execute delayed folds inside `Tokens`.
+      auto BeginExecuted = DelayedFolds.lower_bound(Tokens.begin());
+      auto It = BeginExecuted;
+      for (; It != DelayedFolds.end() && It->second.End <= Tokens.end(); ++It)
+        foldChildrenEager(llvm::makeArrayRef(It->first, It->second.End),
+                          It->second.Node);
+      DelayedFolds.erase(BeginExecuted, It);
 
-      auto *FirstToken = NodeTokens.begin();
-      auto BeginChildren = Trees.lower_bound(FirstToken);
-      assert(BeginChildren != Trees.end() &&
-             BeginChildren->first == FirstToken &&
-             "fold crosses boundaries of existing subtrees");
-      auto EndChildren = Trees.lower_bound(NodeTokens.end());
-      assert((EndChildren == Trees.end() ||
-              EndChildren->first == NodeTokens.end()) &&
-             "fold crosses boundaries of existing subtrees");
+      // Attach children to `Node`.
+      foldChildrenEager(Tokens, Node);
+    }
 
-      // (!) we need to go in reverse order, because we can only prepend.
-      for (auto It = EndChildren; It != BeginChildren; --It)
-        Node->prependChildLowLevel(std::prev(It)->second.Node,
-                                   std::prev(It)->second.Role);
+    /// Schedule a call to `foldChildren` that will only be executed when
+    /// containing node is folded. The range of delayed nodes can be extended by
+    /// calling `extendDelayedFold`. Only one delayed node for each starting
+    /// token is allowed.
+    void foldChildrenDelayed(llvm::ArrayRef<syntax::Token> Tokens,
+                             syntax::Tree *Node) {
+      assert(!Tokens.empty());
+      bool Inserted =
+          DelayedFolds.insert({Tokens.begin(), DelayedFold{Tokens.end(), Node}})
+              .second;
+      (void)Inserted;
+      assert(Inserted && "Multiple delayed folds start at the same token");
+    }
 
-      Trees.erase(BeginChildren, EndChildren);
-      Trees.insert({FirstToken, NodeAndRole(Node)});
+    /// If there a delayed fold, starting at `ExtendedRange.begin()`, extends
+    /// its endpoint to `ExtendedRange.end()` and returns true.
+    /// Otherwise, returns false.
+    bool extendDelayedFold(llvm::ArrayRef<syntax::Token> ExtendedRange) {
+      assert(!ExtendedRange.empty());
+      auto It = DelayedFolds.find(ExtendedRange.data());
+      if (It == DelayedFolds.end())
+        return false;
+      assert(It->second.End <= ExtendedRange.end());
+      It->second.End = ExtendedRange.end();
+      return true;
     }
 
     // EXPECTS: all tokens were consumed and are owned by a single root node.
@@ -199,6 +242,30 @@ private:
     }
 
   private:
+    /// Implementation detail of `foldChildren`, does acutal folding ignoring
+    /// delayed folds.
+    void foldChildrenEager(llvm::ArrayRef<syntax::Token> Tokens,
+                           syntax::Tree *Node) {
+      assert(Node->firstChild() == nullptr && "node already has children");
+
+      auto *FirstToken = Tokens.begin();
+      auto BeginChildren = Trees.lower_bound(FirstToken);
+      assert((BeginChildren == Trees.end() ||
+              BeginChildren->first == FirstToken) &&
+             "fold crosses boundaries of existing subtrees");
+      auto EndChildren = Trees.lower_bound(Tokens.end());
+      assert(
+          (EndChildren == Trees.end() || EndChildren->first == Tokens.end()) &&
+          "fold crosses boundaries of existing subtrees");
+
+      // (!) we need to go in reverse order, because we can only prepend.
+      for (auto It = EndChildren; It != BeginChildren; --It)
+        Node->prependChildLowLevel(std::prev(It)->second.Node,
+                                   std::prev(It)->second.Role);
+
+      Trees.erase(BeginChildren, EndChildren);
+      Trees.insert({FirstToken, NodeAndRole(Node)});
+    }
     /// A with a role that should be assigned to it when adding to a parent.
     struct NodeAndRole {
       explicit NodeAndRole(syntax::Node *Node)
@@ -214,6 +281,13 @@ private:
     /// FIXME: storing the end tokens is redundant.
     /// FIXME: the key of a map is redundant, it is also stored in NodeForRange.
     std::map<const syntax::Token *, NodeAndRole> Trees;
+
+    /// See documentation of `foldChildrenDelayed` for details.
+    struct DelayedFold {
+      const syntax::Token *End = nullptr;
+      syntax::Tree *Node = nullptr;
+    };
+    std::map<const syntax::Token *, DelayedFold> DelayedFolds;
   };
 
   /// For debugging purposes.
@@ -221,6 +295,7 @@ private:
 
   syntax::Arena &Arena;
   Forest Pending;
+  llvm::DenseSet<Decl*> DeclsWithoutSemicolons;
 };
 
 namespace {
@@ -231,20 +306,30 @@ public:
 
   bool shouldTraversePostOrder() const { return true; }
 
-  bool TraverseDecl(Decl *D) {
-    if (!D || isa<TranslationUnitDecl>(D))
-      return RecursiveASTVisitor::TraverseDecl(D);
-    if (!llvm::isa<TranslationUnitDecl>(D->getDeclContext()))
-      return true; // Only build top-level decls for now, do not recurse.
-    return RecursiveASTVisitor::TraverseDecl(D);
+  bool WalkUpFromDeclaratorDecl(DeclaratorDecl *D) {
+    // Ensure declarators are covered by SimpleDeclaration.
+    Builder.noticeDeclaratorRange(Builder.getRange(D));
+    // FIXME: build nodes for the declarator too.
+    return true;
+  }
+  bool WalkUpFromTypedefNameDecl(TypedefNameDecl *D) {
+    // Also a declarator.
+    Builder.noticeDeclaratorRange(Builder.getRange(D));
+    // FIXME: build nodes for the declarator too.
+    return true;
   }
 
   bool VisitDecl(Decl *D) {
-    assert(llvm::isa<TranslationUnitDecl>(D->getDeclContext()) &&
-           "expected a top-level decl");
     assert(!D->isImplicit());
     Builder.foldNode(Builder.getRange(D),
-                     new (allocator()) syntax::TopLevelDeclaration());
+                     new (allocator()) syntax::UnknownDeclaration());
+    return true;
+  }
+
+  bool WalkUpFromTagDecl(TagDecl *C) {
+    // Avoid building UnknownDeclaration here, syntatically 'struct X {}' and
+    // similar are part of declaration specifiers and do not introduce a new
+    // top-level declaration.
     return true;
   }
 
@@ -291,7 +376,11 @@ public:
   }
 
   bool TraverseStmt(Stmt *S) {
-    if (auto *E = llvm::dyn_cast_or_null<Expr>(S)) {
+    if (auto *DS = llvm::dyn_cast_or_null<DeclStmt>(S)) {
+      // We want to consume the semicolon, make sure SimpleDeclaration does not.
+      for (auto *D : DS->decls())
+        Builder.noticeDeclaratorWithoutSemicolon(D);
+    } else if (auto *E = llvm::dyn_cast_or_null<Expr>(S)) {
       // (!) do not recurse into subexpressions.
       // we do not have syntax trees for expressions yet, so we only want to see
       // the first top-level expression.
@@ -427,6 +516,18 @@ private:
 void syntax::TreeBuilder::foldNode(llvm::ArrayRef<syntax::Token> Range,
                                    syntax::Tree *New) {
   Pending.foldChildren(Range, New);
+}
+
+void syntax::TreeBuilder::noticeDeclaratorRange(
+    llvm::ArrayRef<syntax::Token> Range) {
+  if (Pending.extendDelayedFold(Range))
+    return;
+  Pending.foldChildrenDelayed(Range,
+                              new (allocator()) syntax::SimpleDeclaration);
+}
+
+void syntax::TreeBuilder::noticeDeclaratorWithoutSemicolon(Decl *D) {
+  DeclsWithoutSemicolons.insert(D);
 }
 
 void syntax::TreeBuilder::markChildToken(SourceLocation Loc, NodeRole Role) {

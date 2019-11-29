@@ -16,8 +16,6 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "Leaf";
   case NodeKind::TranslationUnit:
     return OS << "TranslationUnit";
-  case NodeKind::TopLevelDeclaration:
-    return OS << "TopLevelDeclaration";
   case NodeKind::UnknownExpression:
     return OS << "UnknownExpression";
   case NodeKind::UnknownStatement:
@@ -50,6 +48,10 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "ExpressionStatement";
   case NodeKind::CompoundStatement:
     return OS << "CompoundStatement";
+  case NodeKind::UnknownDeclaration:
+    return OS << "UnknownDeclaration";
+  case NodeKind::SimpleDeclaration:
+    return OS << "SimpleDeclaration";
   }
   llvm_unreachable("unknown node kind");
 }
