@@ -997,7 +997,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     } else {
       ast_context.setExternalSource(ast_source);
     }
-    decl_map->InstallASTContext(ast_context, m_compiler->getFileManager());
+    decl_map->InstallASTContext(*m_ast_context, m_compiler->getFileManager());
   }
 
   // Check that the ASTReader is properly attached to ASTContext and Sema.

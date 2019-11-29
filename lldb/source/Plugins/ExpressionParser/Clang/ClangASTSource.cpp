@@ -57,10 +57,11 @@ ClangASTSource::ClangASTSource(const lldb::TargetSP &target)
   }
 }
 
-void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
+void ClangASTSource::InstallASTContext(ClangASTContext &clang_ast_context,
                                        clang::FileManager &file_manager,
                                        bool is_shared_context) {
-  m_ast_context = &ast_context;
+  m_ast_context = clang_ast_context.getASTContext();
+  m_clang_ast_context = &clang_ast_context;
   m_file_manager = &file_manager;
   if (m_target->GetUseModernTypeLookup()) {
     // Configure the ExternalASTMerger.  The merger needs to be able to import
@@ -69,7 +70,7 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
     // AST contexts.
 
     lldbassert(!m_merger_up);
-    clang::ExternalASTMerger::ImporterTarget target = {ast_context,
+    clang::ExternalASTMerger::ImporterTarget target = {*m_ast_context,
                                                        file_manager};
     std::vector<clang::ExternalASTMerger::ImporterSource> sources;
     for (lldb::ModuleSP module_sp : m_target->GetImages().Modules()) {
@@ -132,7 +133,7 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
     m_merger_up =
         std::make_unique<clang::ExternalASTMerger>(target, sources);
   } else {
-    m_ast_importer_sp->InstallMapCompleter(&ast_context, *this);
+    m_ast_importer_sp->InstallMapCompleter(m_ast_context, *this);
   }
 }
 
@@ -775,7 +776,7 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
 }
 
 clang::Sema *ClangASTSource::getSema() {
-  return ClangASTContext::GetASTContext(m_ast_context)->getSema();
+  return m_clang_ast_context->getSema();
 }
 
 bool ClangASTSource::IgnoreName(const ConstString name,
@@ -2058,8 +2059,7 @@ CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
     // seems to be generating bad types on occasion.
     return CompilerType();
 
-  return CompilerType(ClangASTContext::GetASTContext(m_ast_context),
-                      copied_qual_type.getAsOpaquePtr());
+  return CompilerType(m_clang_ast_context, copied_qual_type.getAsOpaquePtr());
 }
 
 clang::NamedDecl *NameSearchContext::AddVarDecl(const CompilerType &type) {
@@ -2186,10 +2186,9 @@ clang::NamedDecl *NameSearchContext::AddGenericFunDecl() {
       ArrayRef<QualType>(),                     // argument types
       proto_info));
 
-  return AddFunDecl(
-      CompilerType(ClangASTContext::GetASTContext(m_ast_source.m_ast_context),
-                   generic_function_type.getAsOpaquePtr()),
-      true);
+  return AddFunDecl(CompilerType(m_ast_source.m_clang_ast_context,
+                                 generic_function_type.getAsOpaquePtr()),
+                    true);
 }
 
 clang::NamedDecl *
