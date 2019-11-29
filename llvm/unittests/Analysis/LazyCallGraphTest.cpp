@@ -450,6 +450,47 @@ TEST(LazyCallGraphTest, BasicGraphMutation) {
   EXPECT_EQ(0, std::distance(B->begin(), B->end()));
 }
 
+TEST(LazyCallGraphTest, BasicGraphMutationOutlining) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssembly(Context, "define void @a() {\n"
+                                                     "entry:\n"
+                                                     "  call void @b()\n"
+                                                     "  call void @c()\n"
+                                                     "  ret void\n"
+                                                     "}\n"
+                                                     "define void @b() {\n"
+                                                     "entry:\n"
+                                                     "  ret void\n"
+                                                     "}\n"
+                                                     "define void @c() {\n"
+                                                     "entry:\n"
+                                                     "  ret void\n"
+                                                     "}\n");
+  LazyCallGraph CG = buildCG(*M);
+
+  LazyCallGraph::Node &A = CG.get(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &B = CG.get(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &C = CG.get(lookupFunction(*M, "c"));
+  A.populate();
+  B.populate();
+  C.populate();
+  CG.buildRefSCCs();
+
+  // Add a new function that is called from @b and verify it is in the same SCC.
+  Function &BFn = B.getFunction();
+  Function *NewFn =
+      Function::Create(BFn.getFunctionType(), BFn.getLinkage(), "NewFn", *M);
+  auto IP = BFn.getEntryBlock().getFirstInsertionPt();
+  CallInst::Create(NewFn, "", &*IP);
+  CG.addNewFunctionIntoSCC(*NewFn, *CG.lookupSCC(B));
+
+  EXPECT_EQ(CG.lookupSCC(A)->size(), 1U);
+  EXPECT_EQ(CG.lookupSCC(B)->size(), 2U);
+  EXPECT_EQ(CG.lookupSCC(C)->size(), 1U);
+  EXPECT_EQ(CG.lookupSCC(*CG.lookup(*NewFn))->size(), 2U);
+  EXPECT_EQ(CG.lookupSCC(*CG.lookup(*NewFn))->size(), CG.lookupSCC(B)->size());
+}
+
 TEST(LazyCallGraphTest, InnerSCCFormation) {
   LLVMContext Context;
   std::unique_ptr<Module> M = parseAssembly(Context, DiamondOfTriangles);

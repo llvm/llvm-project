@@ -29,6 +29,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/CallGraphUpdater.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -559,6 +560,72 @@ namespace llvm {
       return mod;
     }
 
+    struct CGModifierPass : public CGPass {
+      unsigned NumSCCs = 0;
+      unsigned NumFns = 0;
+      bool SetupWorked = true;
+
+      CallGraphUpdater CGU;
+
+      bool runOnSCC(CallGraphSCC &SCMM) override {
+        ++NumSCCs;
+        for (CallGraphNode *N : SCMM)
+          if (N->getFunction())
+            ++NumFns;
+
+        CGPass::run();
+
+        if (SCMM.size() <= 1)
+          return false;
+
+        CallGraphNode *N = *(SCMM.begin());
+        Function *F = N->getFunction();
+        Module *M = F->getParent();
+        Function *Test1F = M->getFunction("test1");
+        Function *Test2F = M->getFunction("test2");
+        Function *Test3F = M->getFunction("test3");
+        auto InSCC = [&](Function *Fn) {
+          return llvm::any_of(SCMM, [Fn](CallGraphNode *CGN) {
+            return CGN->getFunction() == Fn;
+          });
+        };
+
+        if (!Test1F || !Test2F || !Test3F || !InSCC(Test1F) || !InSCC(Test2F) ||
+            !InSCC(Test3F))
+          return SetupWorked = false;
+
+        CallInst *CI = dyn_cast<CallInst>(&Test1F->getEntryBlock().front());
+        if (!CI || CI->getCalledFunction() != Test2F)
+          return SetupWorked = false;
+
+        CI->setCalledFunction(Test3F);
+
+        CGU.initialize(const_cast<CallGraph &>(SCMM.getCallGraph()), SCMM);
+        CGU.removeFunction(*Test2F);
+        CGU.reanalyzeFunction(*Test1F);
+        return true;
+      }
+
+      bool doFinalization(CallGraph &CG) override { return CGU.finalize(); }
+    };
+
+    TEST(PassManager, CallGraphUpdater0) {
+      // SCC#1: test1->test2->test3->test1
+      // SCC#2: test4
+      // SCC#3: indirect call node
+
+      LLVMContext Context;
+      std::unique_ptr<Module> M(makeLLVMModule(Context));
+      ASSERT_EQ(M->getFunctionList().size(), 4U);
+      CGModifierPass *P = new CGModifierPass();
+      legacy::PassManager Passes;
+      Passes.add(P);
+      Passes.run(*M);
+      ASSERT_TRUE(P->SetupWorked);
+      ASSERT_EQ(P->NumSCCs, 3U);
+      ASSERT_EQ(P->NumFns, 4U);
+      ASSERT_EQ(M->getFunctionList().size(), 3U);
+    }
   }
 }
 

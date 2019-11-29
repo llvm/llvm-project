@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   Core
   Support
+  TransformUtils
   )
 
 add_llvm_unittest(AnalysisTests
