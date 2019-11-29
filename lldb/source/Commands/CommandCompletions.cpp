@@ -413,10 +413,7 @@ void CommandCompletions::SourceFileCompleter::DoCompletion(
 // SymbolCompleter
 
 static bool regex_chars(const char comp) {
-  return (comp == '[' || comp == ']' || comp == '(' || comp == ')' ||
-          comp == '{' || comp == '}' || comp == '+' || comp == '.' ||
-          comp == '*' || comp == '|' || comp == '^' || comp == '$' ||
-          comp == '\\' || comp == '?');
+  return llvm::StringRef("[](){}+.*|^$\\?").contains(comp);
 }
 
 CommandCompletions::SymbolCompleter::SymbolCompleter(
