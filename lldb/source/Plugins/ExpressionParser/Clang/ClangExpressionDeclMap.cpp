@@ -1762,8 +1762,8 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   CompilerType clang_type =
-      ClangASTContext::GetBuiltinTypeForEncodingAndBitSize(
-          m_ast_context, reg_info->encoding, reg_info->byte_size * 8);
+      m_clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
+          reg_info->encoding, reg_info->byte_size * 8);
 
   if (!clang_type) {
     LLDB_LOGF(log, "  Tried to add a type for %s, but couldn't get one",
