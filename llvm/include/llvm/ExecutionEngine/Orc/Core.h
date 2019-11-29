@@ -45,8 +45,11 @@ using VModuleKey = uint64_t;
 //         efficiency).
 using SymbolNameSet = DenseSet<SymbolStringPtr>;
 
+/// A vector of symbol names.
+using SymbolNameVector = std::vector<SymbolStringPtr>;
+
 /// A map from symbol names (as SymbolStringPtrs) to JITSymbols
-///        (address/flags pairs).
+/// (address/flags pairs).
 using SymbolMap = DenseMap<SymbolStringPtr, JITEvaluatedSymbol>;
 
 /// A map from symbol names (as SymbolStringPtrs) to JITSymbolFlags.
@@ -55,8 +58,244 @@ using SymbolFlagsMap = DenseMap<SymbolStringPtr, JITSymbolFlags>;
 /// A map from JITDylibs to sets of symbols.
 using SymbolDependenceMap = DenseMap<JITDylib *, SymbolNameSet>;
 
-/// A list of (JITDylib*, bool) pairs.
-using JITDylibSearchList = std::vector<std::pair<JITDylib *, bool>>;
+/// Lookup flags that apply to each dylib in the search order for a lookup.
+///
+/// If MatchHiddenSymbolsOnly is used (the default) for a given dylib, then
+/// only symbols in that Dylib's interface will be searched. If
+/// MatchHiddenSymbols is used then symbols with hidden visibility will match
+/// as well.
+enum class JITDylibLookupFlags { MatchExportedSymbolsOnly, MatchAllSymbols };
+
+/// Lookup flags that apply to each symbol in a lookup.
+///
+/// If RequiredSymbol is used (the default) for a given symbol then that symbol
+/// must be found during the lookup or the lookup will fail returning a
+/// SymbolNotFound error. If WeaklyReferencedSymbol is used and the given
+/// symbol is not found then the query will continue, and no result for the
+/// missing symbol will be present in the result (assuming the rest of the
+/// lookup succeeds).
+enum class SymbolLookupFlags { RequiredSymbol, WeaklyReferencedSymbol };
+
+/// Describes the kind of lookup being performed. The lookup kind is passed to
+/// symbol generators (if they're invoked) to help them determine what
+/// definitions to generate.
+///
+/// Static -- Lookup is being performed as-if at static link time (e.g.
+///           generators representing static archives should pull in new
+///           definitions).
+///
+/// DLSym -- Lookup is being performed as-if at runtime (e.g. generators
+///          representing static archives should not pull in new definitions).
+enum class LookupKind { Static, DLSym };
+
+/// A list of (JITDylib*, JITDylibLookupFlags) pairs to be used as a search
+/// order during symbol lookup.
+using JITDylibSearchOrder =
+    std::vector<std::pair<JITDylib *, JITDylibLookupFlags>>;
+
+/// Convenience function for creating a search order from an ArrayRef of
+/// JITDylib*, all with the same flags.
+inline JITDylibSearchOrder makeJITDylibSearchOrder(
+    ArrayRef<JITDylib *> JDs,
+    JITDylibLookupFlags Flags = JITDylibLookupFlags::MatchExportedSymbolsOnly) {
+  JITDylibSearchOrder O;
+  O.reserve(JDs.size());
+  for (auto *JD : JDs)
+    O.push_back(std::make_pair(JD, Flags));
+  return O;
+}
+
+/// A set of symbols to look up, each associated with a SymbolLookupFlags
+/// value.
+///
+/// This class is backed by a vector and optimized for fast insertion,
+/// deletion and iteration. It does not guarantee a stable order between
+/// operations, and will not automatically detect duplicate elements (they
+/// can be manually checked by calling the validate method).
+class SymbolLookupSet {
+public:
+  using value_type = std::pair<SymbolStringPtr, SymbolLookupFlags>;
+  using UnderlyingVector = std::vector<value_type>;
+  using iterator = UnderlyingVector::iterator;
+  using const_iterator = UnderlyingVector::const_iterator;
+
+  SymbolLookupSet() = default;
+
+  explicit SymbolLookupSet(
+      SymbolStringPtr Name,
+      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
+    add(std::move(Name), Flags);
+  }
+
+  /// Construct a SymbolLookupSet from an initializer list of SymbolStringPtrs.
+  explicit SymbolLookupSet(
+      std::initializer_list<SymbolStringPtr> Names,
+      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
+    Symbols.reserve(Names.size());
+    for (auto &Name : Names)
+      add(std::move(Name), Flags);
+  }
+
+  /// Construct a SymbolLookupSet from a SymbolNameSet with the given
+  /// Flags used for each value.
+  explicit SymbolLookupSet(
+      const SymbolNameSet &Names,
+      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
+    Symbols.reserve(Names.size());
+    for (const auto &Name : Names)
+      add(Name, Flags);
+  }
+
+  /// Construct a SymbolLookupSet from a vector of symbols with the given Flags
+  /// used for each value.
+  /// If the ArrayRef contains duplicates it is up to the client to remove these
+  /// before using this instance for lookup.
+  explicit SymbolLookupSet(
+      ArrayRef<SymbolStringPtr> Names,
+      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
+    Symbols.reserve(Names.size());
+    for (const auto &Name : Names)
+      add(Name, Flags);
+  }
+
+  /// Add an element to the set. The client is responsible for checking that
+  /// duplicates are not added.
+  void add(SymbolStringPtr Name,
+           SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
+    Symbols.push_back(std::make_pair(std::move(Name), Flags));
+  }
+
+  bool empty() const { return Symbols.empty(); }
+  UnderlyingVector::size_type size() const { return Symbols.size(); }
+  iterator begin() { return Symbols.begin(); }
+  iterator end() { return Symbols.end(); }
+  const_iterator begin() const { return Symbols.begin(); }
+  const_iterator end() const { return Symbols.end(); }
+
+  /// Removes the Ith element of the vector, replacing it with the last element.
+  void remove(UnderlyingVector::size_type I) {
+    std::swap(Symbols[I], Symbols.back());
+    Symbols.pop_back();
+  }
+
+  /// Removes the element pointed to by the given iterator. This iterator and
+  /// all subsequent ones (including end()) are invalidated.
+  void remove(iterator I) { remove(I - begin()); }
+
+  /// Removes all elements matching the given predicate, which must be callable
+  /// as bool(const SymbolStringPtr &, SymbolLookupFlags Flags).
+  template <typename PredFn> void remove_if(PredFn &&Pred) {
+    UnderlyingVector::size_type I = 0;
+    while (I != Symbols.size()) {
+      const auto &Name = Symbols[I].first;
+      auto Flags = Symbols[I].second;
+      if (Pred(Name, Flags))
+        remove(I);
+      else
+        ++I;
+    }
+  }
+
+  /// Loop over the elements of this SymbolLookupSet, applying the Body function
+  /// to each one. Body must be callable as
+  /// bool(const SymbolStringPtr &, SymbolLookupFlags).
+  /// If Body returns true then the element just passed in is removed from the
+  /// set. If Body returns false then the element is retained.
+  template <typename BodyFn>
+  auto forEachWithRemoval(BodyFn &&Body) -> typename std::enable_if<
+      std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
+                                 std::declval<SymbolLookupFlags>())),
+                   bool>::value>::type {
+    UnderlyingVector::size_type I = 0;
+    while (I != Symbols.size()) {
+      const auto &Name = Symbols[I].first;
+      auto Flags = Symbols[I].second;
+      if (Body(Name, Flags))
+        remove(I);
+      else
+        ++I;
+    }
+  }
+
+  /// Loop over the elements of this SymbolLookupSet, applying the Body function
+  /// to each one. Body must be callable as
+  /// Expected<bool>(const SymbolStringPtr &, SymbolLookupFlags).
+  /// If Body returns a failure value, the loop exits immediately. If Body
+  /// returns true then the element just passed in is removed from the set. If
+  /// Body returns false then the element is retained.
+  template <typename BodyFn>
+  auto forEachWithRemoval(BodyFn &&Body) -> typename std::enable_if<
+      std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
+                                 std::declval<SymbolLookupFlags>())),
+                   Expected<bool>>::value,
+      Error>::type {
+    UnderlyingVector::size_type I = 0;
+    while (I != Symbols.size()) {
+      const auto &Name = Symbols[I].first;
+      auto Flags = Symbols[I].second;
+      auto Remove = Body(Name, Flags);
+      if (!Remove)
+        return Remove.takeError();
+      if (*Remove)
+        remove(I);
+      else
+        ++I;
+    }
+    return Error::success();
+  }
+
+  /// Construct a SymbolNameVector from this instance by dropping the Flags
+  /// values.
+  SymbolNameVector getSymbolNames() const {
+    SymbolNameVector Names;
+    Names.reserve(Symbols.size());
+    for (auto &KV : Symbols)
+      Names.push_back(KV.first);
+    return Names;
+  }
+
+  /// Sort the lookup set by pointer value. This sort is fast but sensitive to
+  /// allocation order and so should not be used where a consistent order is
+  /// required.
+  void sortByAddress() {
+    llvm::sort(Symbols, [](const value_type &LHS, const value_type &RHS) {
+      return LHS.first < RHS.first;
+    });
+  }
+
+  /// Sort the lookup set lexicographically. This sort is slow but the order
+  /// is unaffected by allocation order.
+  void sortByName() {
+    llvm::sort(Symbols, [](const value_type &LHS, const value_type &RHS) {
+      return *LHS.first < *RHS.first;
+    });
+  }
+
+  /// Remove any duplicate elements. If a SymbolLookupSet is not duplicate-free
+  /// by construction, this method can be used to turn it into a proper set.
+  void removeDuplicates() {
+    sortByAddress();
+    auto LastI = std::unique(Symbols.begin(), Symbols.end());
+    Symbols.erase(LastI, Symbols.end());
+  }
+
+#ifndef NDEBUG
+  /// Returns true if this set contains any duplicates. This should only be used
+  /// in assertions.
+  bool containsDuplicates() {
+    if (Symbols.size() < 2)
+      return false;
+    sortByAddress();
+    for (UnderlyingVector::size_type I = 1; I != Symbols.size(); ++I)
+      if (Symbols[I].first == Symbols[I - 1].first)
+        return true;
+    return true;
+  }
+#endif
+
+private:
+  UnderlyingVector Symbols;
+};
 
 struct SymbolAliasMapEntry {
   SymbolAliasMapEntry() = default;
@@ -75,6 +314,9 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtr &Sym);
 
 /// Render a SymbolNameSet.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolNameSet &Symbols);
+
+/// Render a SymbolNameVector.
+raw_ostream &operator<<(raw_ostream &OS, const SymbolNameVector &Symbols);
 
 /// Render a SymbolFlagsMap entry.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap::value_type &KV);
@@ -98,14 +340,34 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolDependenceMap &Deps);
 /// Render a MaterializationUnit.
 raw_ostream &operator<<(raw_ostream &OS, const MaterializationUnit &MU);
 
-/// Render a JITDylibSearchList.
-raw_ostream &operator<<(raw_ostream &OS, const JITDylibSearchList &JDs);
+//// Render a JITDylibLookupFlags instance.
+raw_ostream &operator<<(raw_ostream &OS,
+                        const JITDylibLookupFlags &JDLookupFlags);
+
+/// Rendar a SymbolLookupFlags instance.
+raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LookupFlags);
+
+/// Render a JITDylibLookupFlags instance.
+raw_ostream &operator<<(raw_ostream &OS, const LookupKind &K);
+
+/// Render a SymbolLookupSet entry.
+raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet::value_type &KV);
+
+/// Render a SymbolLookupSet.
+raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet &LookupSet);
+
+/// Render a JITDylibSearchOrder.
+raw_ostream &operator<<(raw_ostream &OS,
+                        const JITDylibSearchOrder &SearchOrder);
 
 /// Render a SymbolAliasMap.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolAliasMap &Aliases);
 
 /// Render a SymbolState.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S);
+
+/// Render a LookupKind.
+raw_ostream &operator<<(raw_ostream &OS, const LookupKind &K);
 
 /// Callback to notify client that symbols have been resolved.
 using SymbolsResolvedCallback = unique_function<void(Expected<SymbolMap>)>;
@@ -139,12 +401,13 @@ public:
   static char ID;
 
   SymbolsNotFound(SymbolNameSet Symbols);
+  SymbolsNotFound(SymbolNameVector Symbols);
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
-  const SymbolNameSet &getSymbols() const { return Symbols; }
+  const SymbolNameVector &getSymbols() const { return Symbols; }
 
 private:
-  SymbolNameSet Symbols;
+  SymbolNameVector Symbols;
 };
 
 /// Used to notify clients that a set of symbols could not be removed.
@@ -376,7 +639,8 @@ public:
   /// Note: Care must be taken that no sets of aliases form a cycle, as such
   ///       a cycle will result in a deadlock when any symbol in the cycle is
   ///       resolved.
-  ReExportsMaterializationUnit(JITDylib *SourceJD, bool MatchNonExported,
+  ReExportsMaterializationUnit(JITDylib *SourceJD,
+                               JITDylibLookupFlags SourceJDLookupFlags,
                                SymbolAliasMap Aliases, VModuleKey K);
 
   StringRef getName() const override;
@@ -387,7 +651,7 @@ private:
   static SymbolFlagsMap extractFlags(const SymbolAliasMap &Aliases);
 
   JITDylib *SourceJD = nullptr;
-  bool MatchNonExported = false;
+  JITDylibLookupFlags SourceJDLookupFlags;
   SymbolAliasMap Aliases;
 };
 
@@ -405,25 +669,26 @@ private:
 inline std::unique_ptr<ReExportsMaterializationUnit>
 symbolAliases(SymbolAliasMap Aliases, VModuleKey K = VModuleKey()) {
   return std::make_unique<ReExportsMaterializationUnit>(
-      nullptr, true, std::move(Aliases), std::move(K));
+      nullptr, JITDylibLookupFlags::MatchAllSymbols, std::move(Aliases),
+      std::move(K));
 }
 
 /// Create a materialization unit for re-exporting symbols from another JITDylib
 /// with alternative names/flags.
-/// If MatchNonExported is true then non-exported symbols from SourceJD can be
-/// re-exported. If it is false, attempts to re-export a non-exported symbol
-/// will result in a "symbol not found" error.
+/// SourceJD will be searched using the given JITDylibLookupFlags.
 inline std::unique_ptr<ReExportsMaterializationUnit>
 reexports(JITDylib &SourceJD, SymbolAliasMap Aliases,
-          bool MatchNonExported = false, VModuleKey K = VModuleKey()) {
+          JITDylibLookupFlags SourceJDLookupFlags =
+              JITDylibLookupFlags::MatchExportedSymbolsOnly,
+          VModuleKey K = VModuleKey()) {
   return std::make_unique<ReExportsMaterializationUnit>(
-      &SourceJD, MatchNonExported, std::move(Aliases), std::move(K));
+      &SourceJD, SourceJDLookupFlags, std::move(Aliases), std::move(K));
 }
 
 /// Build a SymbolAliasMap for the common case where you want to re-export
 /// symbols from another JITDylib with the same linkage/flags.
 Expected<SymbolAliasMap>
-buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols);
+buildSimpleReexportsAAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols);
 
 /// Represents the state that a symbol has reached during materialization.
 enum class SymbolState : uint8_t {
@@ -448,13 +713,22 @@ public:
   /// Create a query for the given symbols. The NotifyComplete
   /// callback will be called once all queried symbols reach the given
   /// minimum state.
-  AsynchronousSymbolQuery(const SymbolNameSet &Symbols,
+  AsynchronousSymbolQuery(const SymbolLookupSet &Symbols,
                           SymbolState RequiredState,
                           SymbolsResolvedCallback NotifyComplete);
 
   /// Notify the query that a requested symbol has reached the required state.
   void notifySymbolMetRequiredState(const SymbolStringPtr &Name,
                                     JITEvaluatedSymbol Sym);
+
+  /// Remove a symbol from the query. This is used to drop weakly referenced
+  /// symbols that are not found.
+  void dropSymbol(const SymbolStringPtr &Name) {
+    assert(ResolvedSymbols.count(Name) &&
+           "Redundant removal of weakly-referenced symbol");
+    ResolvedSymbols.erase(Name);
+    --OutstandingSymbolsCount;
+  }
 
   /// Returns true if all symbols covered by this query have been
   ///        resolved.
@@ -497,11 +771,21 @@ class JITDylib {
   friend class ExecutionSession;
   friend class MaterializationResponsibility;
 public:
+  /// Definition generators can be attached to JITDylibs to generate new
+  /// definitions for otherwise unresolved symbols during lookup.
   class DefinitionGenerator {
   public:
     virtual ~DefinitionGenerator();
-    virtual Expected<SymbolNameSet>
-    tryToGenerate(JITDylib &Parent, const SymbolNameSet &Names) = 0;
+
+    /// DefinitionGenerators should override this method to insert new
+    /// definitions into the parent JITDylib. K specifies the kind of this
+    /// lookup. JD specifies the target JITDylib being searched, and
+    /// JDLookupFlags specifies whether the search should match against
+    /// hidden symbols. Finally, Symbols describes the set of unresolved
+    /// symbols and their associated lookup flags.
+    virtual Error tryToGenerate(LookupKind K, JITDylib &JD,
+                                JITDylibLookupFlags JDLookupFlags,
+                                const SymbolLookupSet &LookupSet) = 0;
   };
 
   using AsynchronousSymbolQuerySet =
@@ -552,18 +836,20 @@ public:
   /// as the first in the search order (instead of this dylib) ensures that
   /// definitions within this dylib resolve to the lazy-compiling stubs,
   /// rather than immediately materializing the definitions in this dylib.
-  void setSearchOrder(JITDylibSearchList NewSearchOrder,
-                      bool SearchThisJITDylibFirst = true,
-                      bool MatchNonExportedInThisDylib = true);
+  void setSearchOrder(JITDylibSearchOrder NewSearchOrder,
+                      bool SearchThisJITDylibFirst = true);
 
   /// Add the given JITDylib to the search order for definitions in this
   /// JITDylib.
-  void addToSearchOrder(JITDylib &JD, bool MatcNonExported = false);
+  void addToSearchOrder(JITDylib &JD,
+                        JITDylibLookupFlags JDLookupFlags =
+                            JITDylibLookupFlags::MatchExportedSymbolsOnly);
 
   /// Replace OldJD with NewJD in the search order if OldJD is present.
   /// Otherwise this operation is a no-op.
   void replaceInSearchOrder(JITDylib &OldJD, JITDylib &NewJD,
-                            bool MatchNonExported = false);
+                            JITDylibLookupFlags JDLookupFlags =
+                                JITDylibLookupFlags::MatchExportedSymbolsOnly);
 
   /// Remove the given JITDylib from the search order for this JITDylib if it is
   /// present. Otherwise this operation is a no-op.
@@ -572,7 +858,7 @@ public:
   /// Do something with the search order (run under the session lock).
   template <typename Func>
   auto withSearchOrderDo(Func &&F)
-      -> decltype(F(std::declval<const JITDylibSearchList &>()));
+      -> decltype(F(std::declval<const JITDylibSearchOrder &>()));
 
   /// Define all symbols provided by the materialization unit to be part of this
   /// JITDylib.
@@ -605,8 +891,11 @@ public:
   Error remove(const SymbolNameSet &Names);
 
   /// Search the given JITDylib for the symbols in Symbols. If found, store
-  ///        the flags for each symbol in Flags. Returns any unresolved symbols.
-  Expected<SymbolFlagsMap> lookupFlags(const SymbolNameSet &Names);
+  /// the flags for each symbol in Flags. If any required symbols are not found
+  /// then an error will be returned.
+  Expected<SymbolFlagsMap> lookupFlags(LookupKind K,
+                                       JITDylibLookupFlags JDLookupFlags,
+                                       SymbolLookupSet LookupSet);
 
   /// Dump current JITDylib state to OS.
   void dump(raw_ostream &OS);
@@ -709,20 +998,23 @@ private:
 
   Error defineImpl(MaterializationUnit &MU);
 
-  Expected<SymbolNameSet> lookupFlagsImpl(SymbolFlagsMap &Flags,
-                                          const SymbolNameSet &Names);
+  void lookupFlagsImpl(SymbolFlagsMap &Result, LookupKind K,
+                       JITDylibLookupFlags JDLookupFlags,
+                       SymbolLookupSet &Unresolved);
 
-  Error lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                   SymbolNameSet &Unresolved, bool MatchNonExported,
-                   MaterializationUnitList &MUs);
+  Error lodgeQuery(MaterializationUnitList &MUs,
+                   std::shared_ptr<AsynchronousSymbolQuery> &Q, LookupKind K,
+                   JITDylibLookupFlags JDLookupFlags,
+                   SymbolLookupSet &Unresolved);
 
-  Error lodgeQueryImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                       SymbolNameSet &Unresolved, bool MatchNonExported,
-                       MaterializationUnitList &MUs);
+  Error lodgeQueryImpl(MaterializationUnitList &MUs,
+                       std::shared_ptr<AsynchronousSymbolQuery> &Q,
+                       LookupKind K, JITDylibLookupFlags JDLookupFlags,
+                       SymbolLookupSet &Unresolved);
 
   bool lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
                   std::vector<std::unique_ptr<MaterializationUnit>> &MUs,
-                  SymbolNameSet &Unresolved);
+                  SymbolLookupSet &Unresolved);
 
   void detachQueryHelper(AsynchronousSymbolQuery &Q,
                          const SymbolNameSet &QuerySymbols);
@@ -754,7 +1046,7 @@ private:
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
   std::vector<std::unique_ptr<DefinitionGenerator>> DefGenerators;
-  JITDylibSearchList SearchOrder;
+  JITDylibSearchOrder SearchOrder;
 };
 
 /// An ExecutionSession represents a running JIT program.
@@ -863,8 +1155,9 @@ public:
   /// dependenant symbols for this query (e.g. it is being made by a top level
   /// client to get an address to call) then the value NoDependenciesToRegister
   /// can be used.
-  void lookup(const JITDylibSearchList &SearchOrder, SymbolNameSet Symbols,
-              SymbolState RequiredState, SymbolsResolvedCallback NotifyComplete,
+  void lookup(LookupKind K, const JITDylibSearchOrder &SearchOrder,
+              SymbolLookupSet Symbols, SymbolState RequiredState,
+              SymbolsResolvedCallback NotifyComplete,
               RegisterDependenciesFunction RegisterDependencies);
 
   /// Blocking version of lookup above. Returns the resolved symbol map.
@@ -874,8 +1167,9 @@ public:
   /// or an error occurs. If WaitUntilReady is false and an error occurs
   /// after resolution, the function will return a success value, but the
   /// error will be reported via reportErrors.
-  Expected<SymbolMap> lookup(const JITDylibSearchList &SearchOrder,
-                             const SymbolNameSet &Symbols,
+  Expected<SymbolMap> lookup(const JITDylibSearchOrder &SearchOrder,
+                             const SymbolLookupSet &Symbols,
+                             LookupKind K = LookupKind::Static,
                              SymbolState RequiredState = SymbolState::Ready,
                              RegisterDependenciesFunction RegisterDependencies =
                                  NoDependenciesToRegister);
@@ -883,7 +1177,7 @@ public:
   /// Convenience version of blocking lookup.
   /// Searches each of the JITDylibs in the search order in turn for the given
   /// symbol.
-  Expected<JITEvaluatedSymbol> lookup(const JITDylibSearchList &SearchOrder,
+  Expected<JITEvaluatedSymbol> lookup(const JITDylibSearchOrder &SearchOrder,
                                       SymbolStringPtr Symbol);
 
   /// Convenience version of blocking lookup.
@@ -951,7 +1245,7 @@ GeneratorT &JITDylib::addGenerator(std::unique_ptr<GeneratorT> DefGenerator) {
 
 template <typename Func>
 auto JITDylib::withSearchOrderDo(Func &&F)
-    -> decltype(F(std::declval<const JITDylibSearchList &>())) {
+    -> decltype(F(std::declval<const JITDylibSearchOrder &>())) {
   return ES.runSessionLocked([&]() { return F(SearchOrder); });
 }
 
@@ -997,15 +1291,17 @@ public:
   /// Create a reexports generator. If an Allow predicate is passed, only
   /// symbols for which the predicate returns true will be reexported. If no
   /// Allow predicate is passed, all symbols will be exported.
-  ReexportsGenerator(JITDylib &SourceJD, bool MatchNonExported = false,
+  ReexportsGenerator(JITDylib &SourceJD,
+                     JITDylibLookupFlags SourceJDLookupFlags,
                      SymbolPredicate Allow = SymbolPredicate());
 
-  Expected<SymbolNameSet> tryToGenerate(JITDylib &JD,
-                                        const SymbolNameSet &Names) override;
+  Error tryToGenerate(LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &LookupSet) override;
 
 private:
   JITDylib &SourceJD;
-  bool MatchNonExported = false;
+  JITDylibLookupFlags SourceJDLookupFlags;
   SymbolPredicate Allow;
 };
 

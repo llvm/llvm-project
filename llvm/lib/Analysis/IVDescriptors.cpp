@@ -721,6 +721,13 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
     if (I->getParent()->getTerminator() == I)
       return false;
 
+    // Do not try to sink an instruction multiple times (if multiple operands
+    // are first order recurrences).
+    // TODO: We can support this case, by sinking the instruction after the
+    // 'deepest' previous instruction.
+    if (SinkAfter.find(I) != SinkAfter.end())
+      return false;
+
     if (DT->dominates(Previous, I)) // We already are good w/o sinking.
       return true;
 

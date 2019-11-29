@@ -526,7 +526,7 @@ public:
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused),
         m_step_type(step_type), m_step_scope(step_scope), m_options(),
-        m_class_options("scripted step", 'C') {
+        m_class_options("scripted step") {
     CommandArgumentEntry arg;
     CommandArgumentData thread_id_arg;
 

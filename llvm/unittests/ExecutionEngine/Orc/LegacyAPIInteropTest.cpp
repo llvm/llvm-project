@@ -24,7 +24,9 @@ TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
 
   auto Resolver = createSymbolResolver(
       [&](const SymbolNameSet &Symbols) {
-        auto FlagsMap = cantFail(JD.lookupFlags(Symbols));
+        auto FlagsMap = cantFail(JD.lookupFlags(
+            LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
+            SymbolLookupSet(Symbols)));
         SymbolNameSet Result;
         for (auto &KV : FlagsMap)
           if (!KV.second.isStrong())
@@ -57,7 +59,7 @@ TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
   };
 
   auto Q = std::make_shared<AsynchronousSymbolQuery>(
-      SymbolNameSet({Foo, Bar}), SymbolState::Resolved, OnCompletion);
+      SymbolLookupSet({Foo, Bar}), SymbolState::Resolved, OnCompletion);
   auto Unresolved =
       Resolver->lookup(std::move(Q), SymbolNameSet({Foo, Bar, Baz}));
 
@@ -111,7 +113,8 @@ TEST_F(LegacyAPIsStandardTest, LegacyLookupHelpersFn) {
         << "Wrong flags for bar";
   };
 
-  AsynchronousSymbolQuery Q({Foo, Bar}, SymbolState::Resolved, OnCompletion);
+  AsynchronousSymbolQuery Q(SymbolLookupSet({Foo, Bar}), SymbolState::Resolved,
+                            OnCompletion);
   auto Unresolved =
       lookupWithLegacyFn(ES, Q, SymbolNameSet({Foo, Bar, Baz}), LegacyLookup);
 

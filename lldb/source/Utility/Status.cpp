@@ -100,11 +100,20 @@ static std::string RetrieveWin32ErrorString(uint32_t error_code) {
   char *buffer = nullptr;
   std::string message;
   // Retrieve win32 system error.
+  // First, attempt to load a en-US message
   if (::FormatMessageA(
           FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
               FORMAT_MESSAGE_MAX_WIDTH_MASK,
-          NULL, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+          NULL, error_code, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
           (LPSTR)&buffer, 0, NULL)) {
+    message.assign(buffer);
+    ::LocalFree(buffer);
+  }
+  // If the previous didn't work, use the default OS language
+  else if (::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                                FORMAT_MESSAGE_FROM_SYSTEM |
+                                FORMAT_MESSAGE_MAX_WIDTH_MASK,
+                            NULL, error_code, 0, (LPSTR)&buffer, 0, NULL)) {
     message.assign(buffer);
     ::LocalFree(buffer);
   }

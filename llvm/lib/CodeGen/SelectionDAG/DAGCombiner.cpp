@@ -16696,11 +16696,15 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
 
 /// Convert a disguised subvector insertion into a shuffle:
 SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
+  assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT &&
+         "Expected extract_vector_elt");
   SDValue InsertVal = N->getOperand(1);
   SDValue Vec = N->getOperand(0);
 
-  // (insert_vector_elt (vector_shuffle X, Y), (extract_vector_elt X, N), InsIndex)
-  //   --> (vector_shuffle X, Y)
+  // (insert_vector_elt (vector_shuffle X, Y), (extract_vector_elt X, N),
+  // InsIndex)
+  //   --> (vector_shuffle X, Y) and variations where shuffle operands may be
+  //   CONCAT_VECTORS.
   if (Vec.getOpcode() == ISD::VECTOR_SHUFFLE && Vec.hasOneUse() &&
       InsertVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
       isa<ConstantSDNode>(InsertVal.getOperand(1))) {
@@ -16713,18 +16717,47 @@ SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
     // Vec's operand 0 is using indices from 0 to N-1 and
     // operand 1 from N to 2N - 1, where N is the number of
     // elements in the vectors.
-    int XOffset = -1;
-    if (InsertVal.getOperand(0) == X) {
-      XOffset = 0;
-    } else if (InsertVal.getOperand(0) == Y) {
-      XOffset = X.getValueType().getVectorNumElements();
+    SDValue InsertVal0 = InsertVal.getOperand(0);
+    int ElementOffset = -1;
+
+    // We explore the inputs of the shuffle in order to see if we find the
+    // source of the extract_vector_elt. If so, we can use it to modify the
+    // shuffle rather than perform an insert_vector_elt.
+    SmallVector<std::pair<int, SDValue>, 8> ArgWorkList;
+    ArgWorkList.emplace_back(Mask.size(), Y);
+    ArgWorkList.emplace_back(0, X);
+
+    while (!ArgWorkList.empty()) {
+      int ArgOffset;
+      SDValue ArgVal;
+      std::tie(ArgOffset, ArgVal) = ArgWorkList.pop_back_val();
+
+      if (ArgVal == InsertVal0) {
+        ElementOffset = ArgOffset;
+        break;
+      }
+
+      // Peek through concat_vector.
+      if (ArgVal.getOpcode() == ISD::CONCAT_VECTORS) {
+        int CurrentArgOffset =
+            ArgOffset + ArgVal.getValueType().getVectorNumElements();
+        int Step = ArgVal.getOperand(0).getValueType().getVectorNumElements();
+        for (SDValue Op : reverse(ArgVal->ops())) {
+          CurrentArgOffset -= Step;
+          ArgWorkList.emplace_back(CurrentArgOffset, Op);
+        }
+
+        // Make sure we went through all the elements and did not screw up index
+        // computation.
+        assert(CurrentArgOffset == ArgOffset);
+      }
     }
 
-    if (XOffset != -1) {
+    if (ElementOffset != -1) {
       SmallVector<int, 16> NewMask(Mask.begin(), Mask.end());
 
       auto *ExtrIndex = cast<ConstantSDNode>(InsertVal.getOperand(1));
-      NewMask[InsIndex] = XOffset + ExtrIndex->getZExtValue();
+      NewMask[InsIndex] = ElementOffset + ExtrIndex->getZExtValue();
       assert(NewMask[InsIndex] <
                  (int)(2 * Vec.getValueType().getVectorNumElements()) &&
              NewMask[InsIndex] >= 0 && "NewMask[InsIndex] is out of bound");

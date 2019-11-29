@@ -268,8 +268,9 @@ public:
     return Load(nullptr, GlobalPrefix, std::move(Allow));
   }
 
-  Expected<SymbolNameSet> tryToGenerate(JITDylib &JD,
-                                        const SymbolNameSet &Names) override;
+  Error tryToGenerate(LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &Symbols) override;
 
 private:
   sys::DynamicLibrary Dylib;
@@ -297,8 +298,9 @@ public:
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer);
 
-  Expected<SymbolNameSet> tryToGenerate(JITDylib &JD,
-                                        const SymbolNameSet &Names) override;
+  Error tryToGenerate(LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &Symbols) override;
 
 private:
   StaticLibraryDefinitionGenerator(ObjectLayer &L,
@@ -307,8 +309,7 @@ private:
 
   ObjectLayer &L;
   std::unique_ptr<MemoryBuffer> ArchiveBuffer;
-  object::Archive Archive;
-  size_t UnrealizedObjects = 0;
+  std::unique_ptr<object::Archive> Archive;
 };
 
 } // end namespace orc

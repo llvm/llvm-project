@@ -100,23 +100,27 @@ private:
       SymbolsInJD.insert(ImplSymbolName);
     }
 
-    DEBUG_WITH_TYPE("orc", for (auto &I
-                                : SpeculativeLookUpImpls) {
-      llvm::dbgs() << "\n In " << I.first->getName() << " JITDylib ";
-      for (auto &N : I.second)
-        llvm::dbgs() << "\n Likely Symbol : " << N;
+    DEBUG_WITH_TYPE("orc", {
+      for (auto &I : SpeculativeLookUpImpls) {
+        llvm::dbgs() << "\n In " << I.first->getName() << " JITDylib ";
+        for (auto &N : I.second)
+          llvm::dbgs() << "\n Likely Symbol : " << N;
+      }
     });
 
     // for a given symbol, there may be no symbol qualified for speculatively
     // compile try to fix this before jumping to this code if possible.
     for (auto &LookupPair : SpeculativeLookUpImpls)
-      ES.lookup(JITDylibSearchList({{LookupPair.first, true}}),
-                LookupPair.second, SymbolState::Ready,
-                [this](Expected<SymbolMap> Result) {
-                  if (auto Err = Result.takeError())
-                    ES.reportError(std::move(Err));
-                },
-                NoDependenciesToRegister);
+      ES.lookup(
+          LookupKind::Static,
+          makeJITDylibSearchOrder(LookupPair.first,
+                                  JITDylibLookupFlags::MatchAllSymbols),
+          SymbolLookupSet(LookupPair.second), SymbolState::Ready,
+          [this](Expected<SymbolMap> Result) {
+            if (auto Err = Result.takeError())
+              ES.reportError(std::move(Err));
+          },
+          NoDependenciesToRegister);
   }
 
 public:
@@ -151,8 +155,11 @@ public:
           this->getES().reportError(ReadySymbol.takeError());
       };
       // Include non-exported symbols also.
-      ES.lookup(JITDylibSearchList({{JD, true}}), SymbolNameSet({Target}),
-                SymbolState::Ready, OnReadyFixUp, NoDependenciesToRegister);
+      ES.lookup(
+          LookupKind::Static,
+          makeJITDylibSearchOrder(JD, JITDylibLookupFlags::MatchAllSymbols),
+          SymbolLookupSet(Target, SymbolLookupFlags::WeaklyReferencedSymbol),
+          SymbolState::Ready, OnReadyFixUp, NoDependenciesToRegister);
     }
   }
 
