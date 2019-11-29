@@ -45,7 +45,6 @@ you are interested in working on any of these projects, please send a mail to
 the `LLVM Developer's mailing list`_, so that we know the project is being
 worked on.
 
-
 How to Submit a Patch
 =====================
 Once you have a patch ready, it is time to submit it. The patch should:
@@ -54,6 +53,35 @@ Once you have a patch ready, it is time to submit it. The patch should:
 * conform to the :doc:`CodingStandards`. You can use the `clang-format-diff.py`_ or `git-clang-format`_ tools to automatically format your patch properly.
 * not contain any unrelated changes
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
+
+.. _format patches:
+
+Before sending a patch for review, please also try to ensure it is
+formatted properly. We use ``clang-format`` for this, which has git integration
+through the ``git-clang-format`` script. On some systems, it may already be
+installed (or be installable via your package manager). If so, you can simply
+run it -- the following command will format only the code changed in the most
+recent commit:
+
+.. code-block:: console
+
+  % git clang-format HEAD~1
+
+Note that this modifies the files, but doesn't commit them -- you'll likely want
+to run
+
+.. code-block:: console
+
+  % git commit --amend -a
+
+in order to update the last commit with all pending changes.
+
+.. note::
+  If you don't already have ``clang-format`` or ``git clang-format`` installed
+  on your system, the ``clang-format`` binary will be built alongside clang, and
+  the git integration can be run from
+  ``clang/tools/clang-format/git-clang-format``.
+
 
 To get a patch accepted, it has to be reviewed by the LLVM community. This can
 be done using `LLVM's Phabricator`_ or the llvm-commits mailing list.
