@@ -146,12 +146,6 @@ protected:
     Target *target = m_exe_ctx.GetTargetPtr();
 
     uint32_t num_matches = 0;
-    bool has_path = false;
-    if (file_spec) {
-      assert(file_spec.GetFilename().AsCString());
-      has_path = (file_spec.GetDirectory().AsCString() != nullptr);
-    }
-
     // Dump all the line entries for the file in the list.
     ConstString last_module_file_name;
     uint32_t num_scs = sc_list.GetSize();
@@ -168,8 +162,7 @@ protected:
         if (module_list.GetSize() &&
             module_list.GetIndexForModule(module) == LLDB_INVALID_INDEX32)
           continue;
-        if (file_spec && !lldb_private::FileSpec::Equal(
-                             file_spec, line_entry.file, has_path))
+        if (!FileSpec::Match(file_spec, line_entry.file))
           continue;
         if (start_line > 0 && line_entry.line < start_line)
           continue;
@@ -250,8 +243,7 @@ protected:
             num_matches++;
             if (num_lines > 0 && num_matches > num_lines)
               break;
-            assert(lldb_private::FileSpec::Equal(cu_file_spec, line_entry.file,
-                                                 has_path));
+            assert(cu_file_spec == line_entry.file);
             if (!cu_header_printed) {
               if (num_matches > 0)
                 strm << "\n\n";

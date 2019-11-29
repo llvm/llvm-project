@@ -195,6 +195,12 @@ public:
 
   static bool Equal(const FileSpec &a, const FileSpec &b, bool full);
 
+  /// Match FileSpec \a pattern against FileSpec \a file. If \a pattern has a
+  /// directory component, then the \a file must have the same directory
+  /// component. Otherwise, just it matches just the filename. An empty \a
+  /// pattern matches everything.
+  static bool Match(const FileSpec &pattern, const FileSpec &file);
+
   /// Attempt to guess path style for a given path string. It returns a style,
   /// if it was able to make a reasonable guess, or None if it wasn't. The guess
   /// will be correct if the input path was a valid absolute path on the system
