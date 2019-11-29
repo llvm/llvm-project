@@ -63,8 +63,9 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
 
   ObjLayer.setProcessAllSections(ProcessAllSections);
   cantFail(ObjLayer.add(JD, std::move(Obj), ES.allocateVModule()));
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
-            OnResolveDoNothing, NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Resolved, OnResolveDoNothing,
+            NoDependenciesToRegister);
 
   return DebugSectionSeen;
 }
@@ -160,7 +161,8 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
 
   cantFail(CompileLayer.add(JD, std::move(M), ES.allocateVModule()));
   ES.lookup(
-      JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Resolved,
       [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
       NoDependenciesToRegister);
 }
@@ -225,7 +227,8 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
 
   cantFail(CompileLayer.add(JD, std::move(M), ES.allocateVModule()));
   ES.lookup(
-      JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Resolved,
       [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
       NoDependenciesToRegister);
 }

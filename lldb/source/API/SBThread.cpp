@@ -914,9 +914,10 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     const bool exact = false;
 
     SymbolContextList sc_list;
-    const uint32_t num_matches = frame_sc.comp_unit->ResolveSymbolContext(
-        step_file_spec, line, check_inlines, exact, eSymbolContextLineEntry,
-        sc_list);
+    frame_sc.comp_unit->ResolveSymbolContext(step_file_spec, line,
+                                             check_inlines, exact,
+                                             eSymbolContextLineEntry, sc_list);
+    const uint32_t num_matches = sc_list.GetSize();
     if (num_matches > 0) {
       SymbolContext sc;
       for (uint32_t i = 0; i < num_matches; ++i) {

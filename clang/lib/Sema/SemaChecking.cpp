@@ -3051,8 +3051,37 @@ bool Sema::CheckHexagonBuiltinFunctionCall(unsigned BuiltinID,
          CheckHexagonBuiltinArgument(BuiltinID, TheCall);
 }
 
+bool Sema::CheckMipsBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  return CheckMipsBuiltinCpu(BuiltinID, TheCall) ||
+         CheckMipsBuiltinArgument(BuiltinID, TheCall);
+}
 
-// CheckMipsBuiltinFunctionCall - Checks the constant value passed to the
+bool Sema::CheckMipsBuiltinCpu(unsigned BuiltinID, CallExpr *TheCall) {
+  const TargetInfo &TI = Context.getTargetInfo();
+
+  if (Mips::BI__builtin_mips_addu_qb <= BuiltinID &&
+      BuiltinID <= Mips::BI__builtin_mips_lwx) {
+    if (!TI.hasFeature("dsp"))
+      return Diag(TheCall->getBeginLoc(), diag::err_mips_builtin_requires_dsp);
+  }
+
+  if (Mips::BI__builtin_mips_absq_s_qb <= BuiltinID &&
+      BuiltinID <= Mips::BI__builtin_mips_subuh_r_qb) {
+    if (!TI.hasFeature("dspr2"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_mips_builtin_requires_dspr2);
+  }
+
+  if (Mips::BI__builtin_msa_add_a_b <= BuiltinID &&
+      BuiltinID <= Mips::BI__builtin_msa_xori_b) {
+    if (!TI.hasFeature("msa"))
+      return Diag(TheCall->getBeginLoc(), diag::err_mips_builtin_requires_msa);
+  }
+
+  return false;
+}
+
+// CheckMipsBuiltinArgument - Checks the constant value passed to the
 // intrinsic is correct. The switch statement is ordered by DSP, MSA. The
 // ordering for DSP is unspecified. MSA is ordered by the data format used
 // by the underlying instruction i.e., df/m, df/n and then by size.
@@ -3061,7 +3090,7 @@ bool Sema::CheckHexagonBuiltinFunctionCall(unsigned BuiltinID,
 //        definitions from include/clang/Basic/BuiltinsMips.def.
 // FIXME: GCC is strict on signedness for some of these intrinsics, we should
 //        be too.
-bool Sema::CheckMipsBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+bool Sema::CheckMipsBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
   unsigned i = 0, l = 0, u = 0, m = 0;
   switch (BuiltinID) {
   default: return false;

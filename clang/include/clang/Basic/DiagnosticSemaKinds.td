@@ -8742,6 +8742,12 @@ def err_32_bit_builtin_64_bit_tgt : Error<
   "this builtin is only available on 32-bit targets">;
 def err_builtin_x64_aarch64_only : Error<
   "this builtin is only available on x86-64 and aarch64 targets">;
+def err_mips_builtin_requires_dsp : Error<
+  "this builtin requires 'dsp' ASE, please use -mdsp">;
+def err_mips_builtin_requires_dspr2 : Error<
+  "this builtin requires 'dsp r2' ASE, please use -mdspr2">;
+def err_mips_builtin_requires_msa : Error<
+  "this builtin requires 'msa' ASE, please use -mmsa">;
 def err_ppc_builtin_only_on_pwr7 : Error<
   "this builtin is only valid on POWER7 or later CPUs">;
 def err_x86_builtin_invalid_rounding : Error<

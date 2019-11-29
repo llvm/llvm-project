@@ -1123,11 +1123,15 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               if (!IsVOP2)
                 MIB.addImm(0); // clamp bit
             } else {
-              Register ConstOffsetReg =
-                RS->scavengeRegister(&AMDGPU::SReg_32_XM0RegClass, MIB, 0, false);
+              assert(MIB->getOpcode() == AMDGPU::V_ADD_I32_e64 &&
+                     "Need to reuse carry out register");
 
-              // This should always be able to use the unused carry out.
-              assert(ConstOffsetReg && "this scavenge should not be able to fail");
+              // Use scavenged unused carry out as offset register.
+              Register ConstOffsetReg;
+              if (!isWave32)
+                ConstOffsetReg = getSubReg(MIB.getReg(1), AMDGPU::sub0);
+              else
+                ConstOffsetReg = MIB.getReg(1);
 
               BuildMI(*MBB, *MIB, DL, TII->get(AMDGPU::S_MOV_B32), ConstOffsetReg)
                 .addImm(Offset);

@@ -526,7 +526,7 @@ public:
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused),
         m_step_type(step_type), m_step_scope(step_scope), m_options(),
-        m_class_options("scripted step", 'C') {
+        m_class_options("scripted step") {
     CommandArgumentEntry arg;
     CommandArgumentData thread_id_arg;
 
@@ -1193,7 +1193,7 @@ protected:
             LineEntry line_entry;
             const bool exact = false;
             start_idx_ptr = sc.comp_unit->FindLineEntry(
-                start_idx_ptr, line_number, sc.comp_unit, exact, &line_entry);
+                start_idx_ptr, line_number, nullptr, exact, &line_entry);
             if (start_idx_ptr == UINT32_MAX)
               break;
 

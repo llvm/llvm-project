@@ -213,7 +213,10 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
 bool MipsTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("mips", true)
+      .Case("dsp", DspRev >= DSP1)
+      .Case("dspr2", DspRev >= DSP2)
       .Case("fp64", FPMode == FP64)
+      .Case("msa", HasMSA)
       .Default(false);
 }
 

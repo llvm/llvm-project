@@ -37,7 +37,8 @@ void JITSymbolResolverAdapter::lookup(const LookupSet &Symbols,
   };
 
   auto Q = std::make_shared<AsynchronousSymbolQuery>(
-      InternedSymbols, SymbolState::Resolved, std::move(OnResolvedWithUnwrap));
+      SymbolLookupSet(InternedSymbols), SymbolState::Resolved,
+      std::move(OnResolvedWithUnwrap));
 
   auto Unresolved = R.lookup(Q, InternedSymbols);
   if (Unresolved.empty()) {

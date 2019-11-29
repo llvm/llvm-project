@@ -1,7 +1,7 @@
 ## Check we are able to handle SHT_GNU_verneed sections.
 
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -V %t | FileCheck %s
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj -V %t1 | FileCheck %s
 
 # CHECK:      VersionRequirements [
 # CHECK-NEXT:   Dependency {
@@ -82,3 +82,77 @@ Sections:
 DynamicSymbols:
   - Name:    f1
     Binding: STB_GLOBAL
+
+## Check we can use "Content" to describe the content.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=CONTENT
+
+# CONTENT:      Name: .gnu.version_r
+# CONTENT-NEXT: Type: SHT_GNU_verneed
+# CONTENT-NEXT: Flags [ (0x2)
+# CONTENT-NEXT:   SHF_ALLOC (0x2)
+# CONTENT-NEXT: ]
+# CONTENT-NEXT: Address: 0x0
+# CONTENT-NEXT: Offset: 0x40
+# CONTENT-NEXT: Size: 3
+# CONTENT-NEXT: Link: 0
+# CONTENT-NEXT: Info: 1
+# CONTENT-NEXT: AddressAlignment: 0
+# CONTENT-NEXT: EntrySize: 0
+# CONTENT-NEXT: SectionData (
+# CONTENT-NEXT:   0000: 112233
+# CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .gnu.version_r
+    Type:    SHT_GNU_verneed
+    Flags:   [ SHF_ALLOC ]
+    Info:    0x1
+    Content: "112233"
+
+## Check we can omit "Content" and "Dependencies" fields to produce an empty SHT_GNU_verneed section.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=NO-PROPS
+
+# NO-PROPS: [Nr] Name           Type    Address          Off    Size
+# NO-PROPS: [ 1] .gnu.version_r VERNEED 0000000000000000 000040 000000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  0x0
+
+## Check we can't use both "Dependencies" and "Content" together.
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=BOTH
+
+# BOTH: error: SHT_GNU_verneed: "Dependencies" and "Content" can't be used together
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .gnu.version_r
+    Type:         SHT_GNU_verneed
+    Flags:        [ SHF_ALLOC ]
+    Info:         0x0
+    Content:      ""
+    Dependencies: []

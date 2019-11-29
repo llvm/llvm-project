@@ -101,7 +101,10 @@ JITTargetAddress JITCompileCallbackManager::executeCompileCallback(
       Name = I->second;
   }
 
-  if (auto Sym = ES.lookup(JITDylibSearchList({{&CallbacksJD, true}}), Name))
+  if (auto Sym =
+          ES.lookup(makeJITDylibSearchOrder(
+                        &CallbacksJD, JITDylibLookupFlags::MatchAllSymbols),
+                    Name))
     return Sym->getAddress();
   else {
     llvm::dbgs() << "Didn't find callback.\n";

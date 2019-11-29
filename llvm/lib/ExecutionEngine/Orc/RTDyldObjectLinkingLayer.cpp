@@ -19,11 +19,11 @@ public:
 
   void lookup(const LookupSet &Symbols, OnResolvedFunction OnResolved) {
     auto &ES = MR.getTargetJITDylib().getExecutionSession();
-    SymbolNameSet InternedSymbols;
+    SymbolLookupSet InternedSymbols;
 
     // Intern the requested symbols: lookup takes interned strings.
     for (auto &S : Symbols)
-      InternedSymbols.insert(ES.intern(S));
+      InternedSymbols.add(ES.intern(S));
 
     // Build an OnResolve callback to unwrap the interned strings and pass them
     // to the OnResolved callback.
@@ -46,11 +46,12 @@ public:
       MR.addDependenciesForAll(Deps);
     };
 
-    JITDylibSearchList SearchOrder;
+    JITDylibSearchOrder SearchOrder;
     MR.getTargetJITDylib().withSearchOrderDo(
-        [&](const JITDylibSearchList &JDs) { SearchOrder = JDs; });
-    ES.lookup(SearchOrder, InternedSymbols, SymbolState::Resolved,
-              std::move(OnResolvedWithUnwrap), RegisterDependencies);
+        [&](const JITDylibSearchOrder &JDs) { SearchOrder = JDs; });
+    ES.lookup(LookupKind::Static, SearchOrder, InternedSymbols,
+              SymbolState::Resolved, std::move(OnResolvedWithUnwrap),
+              RegisterDependencies);
   }
 
   Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) {

@@ -324,7 +324,8 @@ struct VerneedEntry {
 };
 
 struct VerneedSection : Section {
-  std::vector<VerneedEntry> VerneedV;
+  Optional<yaml::BinaryRef> Content;
+  Optional<std::vector<VerneedEntry>> VerneedV;
   llvm::yaml::Hex64 Info;
 
   VerneedSection() : Section(ChunkKind::Verneed) {}

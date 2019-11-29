@@ -1076,12 +1076,9 @@ void ClangExpressionDeclMap::LookupLocalVarNamespace(
   if (!frame_ast)
     return;
 
-  ClangASTContext *map_ast = ClangASTContext::GetASTContext(m_ast_context);
-  if (!map_ast)
-    return;
-
-  clang::NamespaceDecl *namespace_decl = map_ast->GetUniqueNamespaceDeclaration(
-      g_lldb_local_vars_namespace_cstr, nullptr);
+  clang::NamespaceDecl *namespace_decl =
+      m_clang_ast_context->GetUniqueNamespaceDeclaration(
+          g_lldb_local_vars_namespace_cstr, nullptr);
   if (!namespace_decl)
     return;
 
@@ -1724,8 +1721,7 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   TypeFromUser user_type(scratch_ast_context->GetBasicType(eBasicTypeVoid)
                              .GetPointerType()
                              .GetLValueReferenceType());
-  ClangASTContext *own_context = ClangASTContext::GetASTContext(m_ast_context);
-  TypeFromParser parser_type(own_context->GetBasicType(eBasicTypeVoid)
+  TypeFromParser parser_type(m_clang_ast_context->GetBasicType(eBasicTypeVoid)
                                  .GetPointerType()
                                  .GetLValueReferenceType());
   NamedDecl *var_decl = context.AddVarDecl(parser_type);
@@ -2003,9 +1999,8 @@ void ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
 
   if (copied_clang_type.IsAggregateType() &&
       copied_clang_type.GetCompleteType()) {
-    ClangASTContext *own_context =
-        ClangASTContext::GetASTContext(m_ast_context);
-    CompilerType void_clang_type = own_context->GetBasicType(eBasicTypeVoid);
+    CompilerType void_clang_type =
+        m_clang_ast_context->GetBasicType(eBasicTypeVoid);
     CompilerType void_ptr_clang_type = void_clang_type.GetPointerType();
 
     CompilerType method_type = ClangASTContext::CreateFunctionType(
@@ -2018,12 +2013,10 @@ void ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
     const bool is_attr_used = true;
     const bool is_artificial = false;
 
-    CXXMethodDecl *method_decl =
-        ClangASTContext::GetASTContext(m_ast_context)
-            ->AddMethodToCXXRecordType(
-                copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", nullptr,
-                method_type, lldb::eAccessPublic, is_virtual, is_static,
-                is_inline, is_explicit, is_attr_used, is_artificial);
+    CXXMethodDecl *method_decl = m_clang_ast_context->AddMethodToCXXRecordType(
+        copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", nullptr,
+        method_type, lldb::eAccessPublic, is_virtual, is_static, is_inline,
+        is_explicit, is_attr_used, is_artificial);
 
     LLDB_LOG(log,
              "  CEDM::AddThisType Added function $__lldb_expr "

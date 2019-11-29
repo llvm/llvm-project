@@ -257,25 +257,35 @@ Error JITLinkerBase::allocateSegments(const SegmentLayoutMap &Layout) {
   return Error::success();
 }
 
-DenseSet<StringRef> JITLinkerBase::getExternalSymbolNames() const {
+JITLinkContext::LookupMap JITLinkerBase::getExternalSymbolNames() const {
   // Identify unresolved external symbols.
-  DenseSet<StringRef> UnresolvedExternals;
+  JITLinkContext::LookupMap UnresolvedExternals;
   for (auto *Sym : G->external_symbols()) {
     assert(Sym->getAddress() == 0 &&
            "External has already been assigned an address");
     assert(Sym->getName() != StringRef() && Sym->getName() != "" &&
            "Externals must be named");
-    UnresolvedExternals.insert(Sym->getName());
+    SymbolLookupFlags LookupFlags =
+        Sym->getLinkage() == Linkage::Weak
+            ? SymbolLookupFlags::WeaklyReferencedSymbol
+            : SymbolLookupFlags::RequiredSymbol;
+    UnresolvedExternals[Sym->getName()] = LookupFlags;
   }
   return UnresolvedExternals;
 }
 
 void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
   for (auto *Sym : G->external_symbols()) {
+    assert(Sym->getOffset() == 0 &&
+           "External symbol is not at the start of its addressable block");
     assert(Sym->getAddress() == 0 && "Symbol already resolved");
     assert(!Sym->isDefined() && "Symbol being resolved is already defined");
-    assert(Result.count(Sym->getName()) && "Missing resolution for symbol");
-    Sym->getAddressable().setAddress(Result[Sym->getName()].getAddress());
+    auto ResultI = Result.find(Sym->getName());
+    if (ResultI != Result.end())
+      Sym->getAddressable().setAddress(ResultI->second.getAddress());
+    else
+      assert(Sym->getLinkage() == Linkage::Weak &&
+             "Failed to resolve non-weak reference");
   }
 
   LLVM_DEBUG({
@@ -285,8 +295,11 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
              << formatv("{0:x16}", Sym->getAddress()) << "\n";
   });
   assert(llvm::all_of(G->external_symbols(),
-                      [](Symbol *Sym) { return Sym->getAddress() != 0; }) &&
-         "All symbols should have been resolved by this point");
+                      [](Symbol *Sym) {
+                        return Sym->getAddress() != 0 ||
+                               Sym->getLinkage() == Linkage::Weak;
+                      }) &&
+         "All strong external symbols should have been resolved by now");
 }
 
 void JITLinkerBase::deallocateAndBailOut(Error Err) {

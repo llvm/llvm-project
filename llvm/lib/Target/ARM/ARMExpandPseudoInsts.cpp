@@ -1213,9 +1213,10 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       MBBI = NewMI;
       return true;
     }
+    case ARM::VMOVHcc:
     case ARM::VMOVScc:
     case ARM::VMOVDcc: {
-      unsigned newOpc = Opcode == ARM::VMOVScc ? ARM::VMOVS : ARM::VMOVD;
+      unsigned newOpc = Opcode != ARM::VMOVDcc ? ARM::VMOVS : ARM::VMOVD;
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(newOpc),
               MI.getOperand(1).getReg())
           .add(MI.getOperand(2))

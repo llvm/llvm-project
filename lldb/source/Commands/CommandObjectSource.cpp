@@ -256,7 +256,8 @@ protected:
               if (num_matches > 0)
                 strm << "\n\n";
               strm << "Lines found for file " << file_spec_name
-                   << " in compilation unit " << cu->GetFilename() << " in `"
+                   << " in compilation unit "
+                   << cu->GetPrimaryFile().GetFilename() << " in `"
                    << module_file_name << "\n";
               cu_header_printed = true;
             }
@@ -1077,7 +1078,8 @@ protected:
           if (m_options.show_bp_locs) {
             m_breakpoint_locations.Clear();
             const bool show_inlines = true;
-            m_breakpoint_locations.Reset(*sc.comp_unit, 0, show_inlines);
+            m_breakpoint_locations.Reset(sc.comp_unit->GetPrimaryFile(), 0,
+                                         show_inlines);
             SearchFilterForUnconstrainedSearches target_search_filter(
                 target->shared_from_this());
             target_search_filter.Search(m_breakpoint_locations);
@@ -1106,8 +1108,8 @@ protected:
                   ? sc.line_entry.column
                   : 0;
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit, sc.line_entry.line, column, lines_to_back_up,
-              m_options.num_lines - lines_to_back_up, "->",
+              sc.comp_unit->GetPrimaryFile(), sc.line_entry.line, column,
+              lines_to_back_up, m_options.num_lines - lines_to_back_up, "->",
               &result.GetOutputStream(), GetBreakpointLocations());
           result.SetStatus(eReturnStatusSuccessFinishResult);
         }
@@ -1190,18 +1192,18 @@ protected:
 
       if (num_matches > 1) {
         bool got_multiple = false;
-        FileSpec *test_cu_spec = nullptr;
+        CompileUnit *test_cu = nullptr;
 
         for (unsigned i = 0; i < num_matches; i++) {
           SymbolContext sc;
           sc_list.GetContextAtIndex(i, sc);
           if (sc.comp_unit) {
-            if (test_cu_spec) {
-              if (test_cu_spec != static_cast<FileSpec *>(sc.comp_unit))
+            if (test_cu) {
+              if (test_cu != sc.comp_unit)
                 got_multiple = true;
               break;
             } else
-              test_cu_spec = sc.comp_unit;
+              test_cu = sc.comp_unit;
           }
         }
         if (got_multiple) {
@@ -1218,7 +1220,8 @@ protected:
         if (sc.comp_unit) {
           if (m_options.show_bp_locs) {
             const bool show_inlines = true;
-            m_breakpoint_locations.Reset(*sc.comp_unit, 0, show_inlines);
+            m_breakpoint_locations.Reset(sc.comp_unit->GetPrimaryFile(), 0,
+                                         show_inlines);
             SearchFilterForUnconstrainedSearches target_search_filter(
                 target->shared_from_this());
             target_search_filter.Search(m_breakpoint_locations);
@@ -1229,7 +1232,7 @@ protected:
             m_options.num_lines = 10;
           const uint32_t column = 0;
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit, m_options.start_line, column, 0,
+              sc.comp_unit->GetPrimaryFile(), m_options.start_line, column, 0,
               m_options.num_lines, "", &result.GetOutputStream(),
               GetBreakpointLocations());
 

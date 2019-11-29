@@ -731,7 +731,7 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
   }
   if (next_addr)
     finish_sequence();
-  data.support_files = map.translate(cu, *m_files);
+  data.support_files = map.translate(cu.GetPrimaryFile(), *m_files);
 }
 
 void SymbolFileBreakpad::ParseUnwindData() {
