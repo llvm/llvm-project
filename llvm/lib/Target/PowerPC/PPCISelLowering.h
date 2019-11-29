@@ -1121,6 +1121,10 @@ namespace llvm {
                               SelectionDAG &DAG, SDValue ArgVal,
                               const SDLoc &dl) const;
 
+    SDValue LowerFormalArguments_AIX(
+        SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+        const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+        SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const;
     SDValue LowerFormalArguments_Darwin(
         SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
         const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
