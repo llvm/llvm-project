@@ -12950,7 +12950,8 @@ public:
     //   expression or statement in the body of the function [and thus before
     //   the value computation of its result].
     SequencedSubexpression Sequenced(*this);
-    Base::VisitCallExpr(CE);
+    SemaRef.runWithSufficientStackSpace(CE->getExprLoc(),
+                                        [&] { Base::VisitCallExpr(CE); });
 
     // FIXME: CXXNewExpr and CXXDeleteExpr implicitly call functions.
   }

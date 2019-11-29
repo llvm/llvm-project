@@ -3595,6 +3595,7 @@ enum CXErrorCode clang_parseTranslationUnit2(
     const char *const *command_line_args, int num_command_line_args,
     struct CXUnsavedFile *unsaved_files, unsigned num_unsaved_files,
     unsigned options, CXTranslationUnit *out_TU) {
+  noteBottomOfStack();
   SmallVector<const char *, 4> Args;
   Args.push_back("clang");
   Args.append(command_line_args, command_line_args + num_command_line_args);
@@ -3619,6 +3620,7 @@ enum CXErrorCode clang_parseTranslationUnit2FullArgv(
 
   CXErrorCode result = CXError_Failure;
   auto ParseTranslationUnitImpl = [=, &result] {
+    noteBottomOfStack();
     result = clang_parseTranslationUnit_Impl(
         CIdx, source_filename, command_line_args, num_command_line_args,
         llvm::makeArrayRef(unsaved_files, num_unsaved_files), options, out_TU);
@@ -6622,9 +6624,10 @@ void clang_enableStackTraces(void) {
 
 void clang_executeOnThread(void (*fn)(void*), void *user_data,
                            unsigned stack_size) {
-  llvm::llvm_execute_on_thread(
-      fn, user_data,
-      stack_size == 0 ? llvm::None : llvm::Optional<unsigned>(stack_size));
+  llvm::llvm_execute_on_thread(fn, user_data,
+                               stack_size == 0
+                                   ? clang::DesiredStackSize
+                                   : llvm::Optional<unsigned>(stack_size));
 }
 
 //===----------------------------------------------------------------------===//
