@@ -526,6 +526,12 @@ ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr *Sec) const {
           ": found a misaligned version dependency entry at offset 0x" +
           Twine::utohexstr(VerneedBuf - Start));
 
+    unsigned Version = *reinterpret_cast<const Elf_Half *>(VerneedBuf);
+    if (Version != 1)
+      return createError("unable to dump SHT_GNU_verneed section with index " +
+                         Twine(SecNdx) + ": version " + Twine(Version) +
+                         " is not yet supported");
+
     const Elf_Verneed *Verneed =
         reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
 

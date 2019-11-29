@@ -520,3 +520,34 @@ Sections:
     Content: "0100010001000000110000000000000000000000"
 DynamicSymbols:
   - Name: foo
+
+## Check how we handle the case when a dependency definition entry has an unsupported version.
+
+# RUN: yaml2obj %s --docnum=12 -o %t12
+# RUN: llvm-readobj -V %t12 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-VERSION -DFILE=%t12
+# RUN: llvm-readelf -V %t12 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-VERSION -DFILE=%t12
+
+# UNSUPPORTED-VERSION: warning: '[[FILE]]': unable to dump SHT_GNU_verneed section with index 1: version 65278 is not yet supported
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    Link:  .dynstr
+    Dependencies:
+      - Version: 0xfefe
+        File:    foo
+        Entries:
+          - Name:  'foo'
+            Hash:  0
+            Flags: 0
+            Other: 0
+DynamicSymbols:
+  - Name: foo
