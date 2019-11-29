@@ -1376,8 +1376,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (sc) {
       CompileUnit *cu = sc->comp_unit;
       if (cu) {
-        // CompileUnit is a FileSpec
-        if (DumpFile(s, *cu, (FileKind)entry.number))
+        if (DumpFile(s, cu->GetPrimaryFile(), (FileKind)entry.number))
           return true;
       }
     }

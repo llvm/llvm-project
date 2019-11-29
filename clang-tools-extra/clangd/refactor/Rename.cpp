@@ -349,8 +349,9 @@ llvm::Expected<FileEdits> renameOutsideFile(
       elog("Fail to read file content: {0}", AffectedFileCode.takeError());
       continue;
     }
-    auto RenameEdit = buildRenameEdit(
-        *AffectedFileCode, std::move(FileAndOccurrences.second), NewName);
+    auto RenameEdit =
+        buildRenameEdit(FilePath, *AffectedFileCode,
+                        std::move(FileAndOccurrences.second), NewName);
     if (!RenameEdit) {
       return llvm::make_error<llvm::StringError>(
           llvm::formatv("fail to build rename edit for file {0}: {1}", FilePath,
@@ -451,7 +452,8 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
   return Results;
 }
 
-llvm::Expected<Edit> buildRenameEdit(llvm::StringRef InitialCode,
+llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
+                                     llvm::StringRef InitialCode,
                                      std::vector<Range> Occurrences,
                                      llvm::StringRef NewName) {
   llvm::sort(Occurrences);
@@ -491,7 +493,7 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef InitialCode,
   for (const auto &R : OccurrencesOffsets) {
     auto ByteLength = R.second - R.first;
     if (auto Err = RenameEdit.add(
-            tooling::Replacement(InitialCode, R.first, ByteLength, NewName)))
+            tooling::Replacement(AbsFilePath, R.first, ByteLength, NewName)))
       return std::move(Err);
   }
   return Edit(InitialCode, std::move(RenameEdit));

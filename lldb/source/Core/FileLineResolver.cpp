@@ -36,8 +36,8 @@ FileLineResolver::SearchCallback(SearchFilter &filter, SymbolContext &context,
                                  Address *addr) {
   CompileUnit *cu = context.comp_unit;
 
-  if (m_inlines ||
-      m_file_spec.Compare(*cu, m_file_spec, (bool)m_file_spec.GetDirectory())) {
+  if (m_inlines || m_file_spec.Compare(cu->GetPrimaryFile(), m_file_spec,
+                                       (bool)m_file_spec.GetDirectory())) {
     uint32_t start_file_idx = 0;
     uint32_t file_idx =
         cu->GetSupportFiles().FindFileIndex(start_file_idx, m_file_spec, false);

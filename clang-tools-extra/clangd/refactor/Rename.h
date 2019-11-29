@@ -50,7 +50,8 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs);
 /// Generates rename edits that replaces all given occurrences with the
 /// NewName.
 /// Exposed for testing only.
-llvm::Expected<Edit> buildRenameEdit(llvm::StringRef InitialCode,
+llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
+                                     llvm::StringRef InitialCode,
                                      std::vector<Range> Occurrences,
                                      llvm::StringRef NewName);
 

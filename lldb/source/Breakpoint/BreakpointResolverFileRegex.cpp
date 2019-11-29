@@ -102,7 +102,7 @@ Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
     return eCallbackReturnContinue;
 
   CompileUnit *cu = context.comp_unit;
-  FileSpec cu_file_spec = *(static_cast<FileSpec *>(cu));
+  FileSpec cu_file_spec = cu->GetPrimaryFile();
   std::vector<uint32_t> line_matches;
   context.target_sp->GetSourceManager().FindLinesMatchingRegex(
       cu_file_spec, m_regex, 1, UINT32_MAX, line_matches);

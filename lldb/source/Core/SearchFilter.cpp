@@ -726,8 +726,11 @@ bool SearchFilterByModuleListAndCU::AddressPasses(Address &address) {
     if (m_cu_spec_list.GetSize() != 0)
       return false; // Has no comp_unit so can't pass the file check.
   }
-  if (m_cu_spec_list.FindFileIndex(0, sym_ctx.comp_unit, false) == UINT32_MAX)
-        return false; // Fails the file check
+  FileSpec cu_spec;
+  if (sym_ctx.comp_unit)
+    cu_spec = sym_ctx.comp_unit->GetPrimaryFile();
+  if (m_cu_spec_list.FindFileIndex(0, cu_spec, false) == UINT32_MAX)
+    return false; // Fails the file check
   return SearchFilterByModuleList::ModulePasses(sym_ctx.module_sp); 
 }
 
@@ -736,8 +739,8 @@ bool SearchFilterByModuleListAndCU::CompUnitPasses(FileSpec &fileSpec) {
 }
 
 bool SearchFilterByModuleListAndCU::CompUnitPasses(CompileUnit &compUnit) {
-  bool in_cu_list =
-      m_cu_spec_list.FindFileIndex(0, compUnit, false) != UINT32_MAX;
+  bool in_cu_list = m_cu_spec_list.FindFileIndex(0, compUnit.GetPrimaryFile(),
+                                                 false) != UINT32_MAX;
   if (in_cu_list) {
     ModuleSP module_sp(compUnit.GetModule());
     if (module_sp) {
@@ -787,8 +790,9 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
           CompUnitSP cu_sp = module_sp->GetCompileUnitAtIndex(cu_idx);
           matchingContext.comp_unit = cu_sp.get();
           if (matchingContext.comp_unit) {
-            if (m_cu_spec_list.FindFileIndex(0, *matchingContext.comp_unit,
-                                             false) != UINT32_MAX) {
+            if (m_cu_spec_list.FindFileIndex(
+                    0, matchingContext.comp_unit->GetPrimaryFile(), false) !=
+                UINT32_MAX) {
               shouldContinue =
                   DoCUIteration(module_sp, matchingContext, searcher);
               if (shouldContinue == Searcher::eCallbackReturnStop)

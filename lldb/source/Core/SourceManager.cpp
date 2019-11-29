@@ -399,24 +399,25 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         if (num_matches != 0) {
           if (num_matches > 1) {
             SymbolContext sc;
-            FileSpec *test_cu_spec = nullptr;
+            CompileUnit *test_cu = nullptr;
 
             for (unsigned i = 0; i < num_matches; i++) {
               sc_list.GetContextAtIndex(i, sc);
               if (sc.comp_unit) {
-                if (test_cu_spec) {
-                  if (test_cu_spec != static_cast<FileSpec *>(sc.comp_unit))
+                if (test_cu) {
+                  if (test_cu != sc.comp_unit)
                     got_multiple = true;
                   break;
                 } else
-                  test_cu_spec = sc.comp_unit;
+                  test_cu = sc.comp_unit;
               }
             }
           }
           if (!got_multiple) {
             SymbolContext sc;
             sc_list.GetContextAtIndex(0, sc);
-            m_file_spec = sc.comp_unit;
+            if (sc.comp_unit)
+              m_file_spec = sc.comp_unit->GetPrimaryFile();
             m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
           }
         }

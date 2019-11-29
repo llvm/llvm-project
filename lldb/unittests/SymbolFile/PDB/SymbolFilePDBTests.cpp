@@ -109,7 +109,7 @@ protected:
                            const FileSpec &spec) const {
     for (size_t i = 0; i < sc_list.GetSize(); ++i) {
       const SymbolContext &sc = sc_list[i];
-      if (FileSpecMatchesAsBaseOrFull(*sc.comp_unit, spec))
+      if (FileSpecMatchesAsBaseOrFull(sc.comp_unit->GetPrimaryFile(), spec))
         return true;
     }
     return false;

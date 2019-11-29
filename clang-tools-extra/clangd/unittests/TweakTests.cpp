@@ -269,7 +269,7 @@ TEST_F(ExtractVariableTest, Test) {
   EXPECT_UNAVAILABLE(UnavailableCases);
 
   // vector of pairs of input and output strings
-  const std::vector<std::pair<llvm::StringLiteral, llvm::StringLiteral>>
+  const std::vector<std::pair<std::string, std::string>>
       InputOutputs = {
           // extraction from variable declaration/assignment
           {R"cpp(void varDecl() {
@@ -321,17 +321,10 @@ TEST_F(ExtractVariableTest, Test) {
                    if(1)
                     LOOP(5 + [[3]])
                  })cpp",
-           /*FIXME: It should be extracted like this. SelectionTree needs to be
-             * fixed for macros.
             R"cpp(#define LOOP(x) while (1) {a = x;}
-                void f(int a) {
-                  auto dummy = 3; if(1)
-                   LOOP(5 + dummy)
-                })cpp"},*/
-           R"cpp(#define LOOP(x) while (1) {a = x;}
                  void f(int a) {
-                   auto dummy = LOOP(5 + 3); if(1)
-                    dummy
+                   auto dummy = 3; if(1)
+                    LOOP(5 + dummy)
                  })cpp"},
           {R"cpp(#define LOOP(x) do {x;} while(1);
                  void f(int a) {
@@ -644,13 +637,18 @@ void f(const int c) {
   )cpp";
   EXPECT_EQ(apply(TemplateFailInput), "unavailable");
 
-  // FIXME: This should be extractable after selectionTree works correctly for
-  // macros (currently it doesn't select anything for the following case)
-  std::string MacroFailInput = R"cpp(
+  std::string MacroInput = R"cpp(
     #define F(BODY) void f() { BODY }
     F ([[int x = 0;]])
   )cpp";
-  EXPECT_EQ(apply(MacroFailInput), "unavailable");
+  std::string MacroOutput = R"cpp(
+    #define F(BODY) void f() { BODY }
+    void extracted() {
+int x = 0;
+}
+F (extracted();)
+  )cpp";
+  EXPECT_EQ(apply(MacroInput), MacroOutput);
 
   // Shouldn't crash.
   EXPECT_EQ(apply("void f([[int a]]);"), "unavailable");

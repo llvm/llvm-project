@@ -13,6 +13,7 @@
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
@@ -35,7 +36,6 @@ namespace lldb_private {
 /// table.
 class CompileUnit : public std::enable_shared_from_this<CompileUnit>,
                     public ModuleChild,
-                    public FileSpec,
                     public UserID,
                     public SymbolContextScope {
 public:
@@ -115,9 +115,6 @@ public:
   CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
               const FileSpec &file_spec, lldb::user_id_t uid,
               lldb::LanguageType language, lldb_private::LazyBool is_optimized);
-
-  /// Destructor
-  ~CompileUnit() override;
 
   /// Add a function to this compile unit.
   ///
@@ -224,6 +221,9 @@ public:
   uint32_t FindLineEntry(uint32_t start_idx, uint32_t line,
                          const FileSpec *file_spec_ptr, bool exact,
                          LineEntry *line_entry);
+
+  /// Return the primary source file associated with this compile unit.
+  const FileSpec &GetPrimaryFile() const { return m_file_spec; }
 
   /// Get the line table for the compile unit.
   ///
@@ -415,6 +415,8 @@ protected:
   /// All modules, including the current module, imported by this
   /// compile unit.
   std::vector<SourceModule> m_imported_modules;
+  /// The primary file associated with this compile unit.
+  FileSpec m_file_spec;
   /// Files associated with this compile unit's line table and
   /// declarations.
   FileSpecList m_support_files;
