@@ -54,6 +54,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_PT>::enumeration(
   ECase(PT_GNU_EH_FRAME);
   ECase(PT_GNU_STACK);
   ECase(PT_GNU_RELRO);
+  ECase(PT_GNU_PROPERTY);
 #undef ECase
   IO.enumFallback<Hex32>(Value);
 }
