@@ -29,6 +29,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <map>
@@ -1043,14 +1045,18 @@ static bool hasUTF8ByteOrderMark(ArrayRef<char> S) {
   return (S.size() >= 3 && S[0] == '\xef' && S[1] == '\xbb' && S[2] == '\xbf');
 }
 
-static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
+static llvm::Error ExpandResponseFile(StringRef FName, StringSaver &Saver,
                                TokenizerCallback Tokenizer,
                                SmallVectorImpl<const char *> &NewArgv,
-                               bool MarkEOLs, bool RelativeNames) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufOrErr =
-      MemoryBuffer::getFile(FName);
+                               bool MarkEOLs, bool RelativeNames,
+                               llvm::vfs::FileSystem &FS) {
+  llvm::ErrorOr<std::string> CurrDirOrErr = FS.getCurrentWorkingDirectory();
+  if (!CurrDirOrErr)
+    return llvm::errorCodeToError(CurrDirOrErr.getError());
+  llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufOrErr =
+      FS.getBufferForFile(FName);
   if (!MemBufOrErr)
-    return false;
+    return llvm::errorCodeToError(MemBufOrErr.getError());
   MemoryBuffer &MemBuf = *MemBufOrErr.get();
   StringRef Str(MemBuf.getBufferStart(), MemBuf.getBufferSize());
 
@@ -1059,7 +1065,8 @@ static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
   std::string UTF8Buf;
   if (hasUTF16ByteOrderMark(BufRef)) {
     if (!convertUTF16ToUTF8String(BufRef, UTF8Buf))
-      return false;
+      return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                     "Could not convert UTF16 to UTF8");
     Str = StringRef(UTF8Buf);
   }
   // If we see UTF-8 BOM sequence at the beginning of a file, we shall remove
@@ -1084,9 +1091,7 @@ static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
             SmallString<128> ResponseFile;
             ResponseFile.append(1, '@');
             if (llvm::sys::path::is_relative(FName)) {
-              SmallString<128> curr_dir;
-              llvm::sys::fs::current_path(curr_dir);
-              ResponseFile.append(curr_dir.str());
+              ResponseFile.append(CurrDirOrErr.get());
             }
             llvm::sys::path::append(
                 ResponseFile, llvm::sys::path::parent_path(FName), FileName);
@@ -1095,14 +1100,14 @@ static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
         }
       }
 
-  return true;
+  return Error::success();
 }
 
 /// Expand response files on a command line recursively using the given
 /// StringSaver and tokenization strategy.
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
-                             SmallVectorImpl<const char *> &Argv,
-                             bool MarkEOLs, bool RelativeNames) {
+                             SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
+                             bool RelativeNames, llvm::vfs::FileSystem &FS) {
   bool AllExpanded = true;
   struct ResponseFileRecord {
     const char *File;
@@ -1139,8 +1144,20 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     }
 
     const char *FName = Arg + 1;
-    auto IsEquivalent = [FName](const ResponseFileRecord &RFile) {
-      return sys::fs::equivalent(RFile.File, FName);
+    auto IsEquivalent = [FName, &FS](const ResponseFileRecord &RFile) {
+      llvm::ErrorOr<llvm::vfs::Status> LHS = FS.status(FName);
+      if (!LHS) {
+        // TODO: The error should be propagated up the stack.
+        llvm::consumeError(llvm::errorCodeToError(LHS.getError()));
+        return false;
+      }
+      llvm::ErrorOr<llvm::vfs::Status> RHS = FS.status(RFile.File);
+      if (!RHS) {
+        // TODO: The error should be propagated up the stack.
+        llvm::consumeError(llvm::errorCodeToError(RHS.getError()));
+        return false;
+      }
+      return LHS->equivalent(*RHS);
     };
 
     // Check for recursive response files.
@@ -1155,10 +1172,13 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     // Replace this response file argument with the tokenization of its
     // contents.  Nested response files are expanded in subsequent iterations.
     SmallVector<const char *, 0> ExpandedArgv;
-    if (!ExpandResponseFile(FName, Saver, Tokenizer, ExpandedArgv, MarkEOLs,
-                            RelativeNames)) {
+    if (llvm::Error Err =
+            ExpandResponseFile(FName, Saver, Tokenizer, ExpandedArgv, MarkEOLs,
+                               RelativeNames, FS)) {
       // We couldn't read this file, so we leave it in the argument stream and
       // move on.
+      // TODO: The error should be propagated up the stack.
+      llvm::consumeError(std::move(Err));
       AllExpanded = false;
       ++I;
       continue;
@@ -1186,9 +1206,14 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
 
 bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
                         SmallVectorImpl<const char *> &Argv) {
-  if (!ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
-                          /*MarkEOLs*/ false, /*RelativeNames*/ true))
+  if (llvm::Error Err =
+          ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
+                             /*MarkEOLs*/ false, /*RelativeNames*/ true,
+                             *llvm::vfs::getRealFileSystem())) {
+    // TODO: The error should be propagated up the stack.
+    llvm::consumeError(std::move(Err));
     return false;
+  }
   return ExpandResponseFiles(Saver, cl::tokenizeConfigFile, Argv,
                              /*MarkEOLs*/ false, /*RelativeNames*/ true);
 }
