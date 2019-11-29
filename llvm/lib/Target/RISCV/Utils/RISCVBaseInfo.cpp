@@ -37,17 +37,8 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
     errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
-  } else if (ABIName.endswith("f") && !FeatureBits[RISCV::FeatureStdExtF]) {
-    errs() << "Hard-float 'f' ABI can't be used for a target that "
-              "doesn't support the F instruction set extension (ignoring "
-              "target-abi)\n";
-    TargetABI = ABI_Unknown;
-  } else if (ABIName.endswith("d") && !FeatureBits[RISCV::FeatureStdExtD]) {
-    errs() << "Hard-float 'd' ABI can't be used for a target that "
-              "doesn't support the D instruction set extension (ignoring "
-              "target-abi)\n";
-    TargetABI = ABI_Unknown;
   } else if (IsRV32E && TargetABI != ABI_ILP32E && TargetABI != ABI_Unknown) {
+    // TODO: move this checking to RISCVTargetLowering and RISCVAsmParser
     errs()
         << "Only the ilp32e ABI is supported for RV32E (ignoring target-abi)\n";
     TargetABI = ABI_Unknown;
