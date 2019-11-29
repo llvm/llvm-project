@@ -30,7 +30,7 @@
 ; DWARF5-NOT: Compile Unit
 ; DWARF5: DW_TAG_skeleton_unit
 ; DWARF5-NOT: DW_TAG_{{.*}}
-; DWARF5: DW_AT_GNU_dwo_name{{.*}}test.dwo
+; DWARF5: DW_AT_dwo_name{{.*}}test.dwo
 ; DWARF5: DW_AT_addr_base{{.*}}0x00000008
 ; DWARF5: DW_AT_low_pc [DW_FORM_addrx] (indexed (00000000) address = 0x0000000000000000 ".text")
 ; DWARF5: .debug_addr contents:
