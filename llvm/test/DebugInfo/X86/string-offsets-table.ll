@@ -60,7 +60,7 @@
 ; SPLIT-NOT:  {{DW_TAG|contents:}}
 ; SPLIT:      DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
 ; SPLIT:      DW_AT_comp_dir [DW_FORM_strx1] (indexed (00000000) string = "/home/test")
-; SPLIT:      DW_AT_GNU_dwo_name [DW_FORM_strx1] (indexed (00000001) string = "foo.dwo")
+; SPLIT:      DW_AT_dwo_name [DW_FORM_strx1] (indexed (00000001) string = "foo.dwo")
 
 ; Check for the split CU in .debug_info.dwo.
 ; SPLIT:      .debug_info.dwo contents:

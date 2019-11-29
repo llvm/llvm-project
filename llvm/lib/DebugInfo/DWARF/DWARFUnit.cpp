@@ -554,7 +554,9 @@ bool DWARFUnit::parseDWO() {
   DWARFDie UnitDie = getUnitDIE();
   if (!UnitDie)
     return false;
-  auto DWOFileName = dwarf::toString(UnitDie.find(DW_AT_GNU_dwo_name));
+  auto DWOFileName = getVersion() >= 5
+                         ? dwarf::toString(UnitDie.find(DW_AT_dwo_name))
+                         : dwarf::toString(UnitDie.find(DW_AT_GNU_dwo_name));
   if (!DWOFileName)
     return false;
   auto CompilationDir = dwarf::toString(UnitDie.find(DW_AT_comp_dir));
