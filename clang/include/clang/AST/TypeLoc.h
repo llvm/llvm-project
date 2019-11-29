@@ -173,9 +173,6 @@ public:
 
   TypeLoc IgnoreParens() const;
 
-  /// Strips MacroDefinitionTypeLocs from a type location.
-  TypeLoc IgnoreMacroDefinitions() const;
-
   /// Find a type with the location of an explicit type qualifier.
   ///
   /// The result, if non-null, will be one of:
