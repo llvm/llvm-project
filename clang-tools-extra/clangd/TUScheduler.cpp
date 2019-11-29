@@ -408,11 +408,11 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     // Rebuild the preamble and the AST.
     StoreDiags CompilerInvocationDiagConsumer;
     std::vector<std::string> CC1Args;
-    std::unique_ptr<CompilerInvocation> Invocation =
-        buildCompilerInvocation(Inputs, CompilerInvocationDiagConsumer);
+    std::unique_ptr<CompilerInvocation> Invocation = buildCompilerInvocation(
+        Inputs, CompilerInvocationDiagConsumer, &CC1Args);
     // Log cc1 args even (especially!) if creating invocation failed.
     if (!CC1Args.empty())
-      vlog("cc1 args: {0}", llvm::join(CC1Args, " "));
+      vlog("Driver produced command: cc1 {0}", llvm::join(CC1Args, " "));
     std::vector<Diag> CompilerInvocationDiags =
         CompilerInvocationDiagConsumer.take();
     if (!Invocation) {
