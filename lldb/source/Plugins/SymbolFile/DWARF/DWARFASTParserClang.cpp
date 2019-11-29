@@ -1974,8 +1974,6 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
                                              CompilerType &clang_type) {
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
-  Log *log =
-      nullptr; // (LogChannelDWARF::GetLogIfAny(DWARF_LOG_DEBUG_INFO|DWARF_LOG_TYPE_COMPLETION));
 
   ClangASTImporter::LayoutInfo layout_info;
 
@@ -2125,75 +2123,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
     clang::CXXRecordDecl *record_decl =
         m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
-    if (record_decl) {
-      if (log) {
-        ModuleSP module_sp = dwarf->GetObjectFile()->GetModule();
-
-        if (module_sp) {
-          module_sp->LogMessage(
-              log,
-              "ClangASTContext::CompleteTypeFromDWARF (clang_type = %p) "
-              "caching layout info for record_decl = %p, bit_size = %" PRIu64
-              ", alignment = %" PRIu64
-              ", field_offsets[%u], base_offsets[%u], vbase_offsets[%u])",
-              static_cast<void *>(clang_type.GetOpaqueQualType()),
-              static_cast<void *>(record_decl), layout_info.bit_size,
-              layout_info.alignment,
-              static_cast<uint32_t>(layout_info.field_offsets.size()),
-              static_cast<uint32_t>(layout_info.base_offsets.size()),
-              static_cast<uint32_t>(layout_info.vbase_offsets.size()));
-
-          uint32_t idx;
-          {
-            llvm::DenseMap<const clang::FieldDecl *, uint64_t>::const_iterator
-                pos,
-                end = layout_info.field_offsets.end();
-            for (idx = 0, pos = layout_info.field_offsets.begin(); pos != end;
-                 ++pos, ++idx) {
-              module_sp->LogMessage(
-                  log,
-                  "ClangASTContext::CompleteTypeFromDWARF (clang_type = "
-                  "%p) field[%u] = { bit_offset=%u, name='%s' }",
-                  static_cast<void *>(clang_type.GetOpaqueQualType()), idx,
-                  static_cast<uint32_t>(pos->second),
-                  pos->first->getNameAsString().c_str());
-            }
-          }
-
-          {
-            llvm::DenseMap<const clang::CXXRecordDecl *,
-                           clang::CharUnits>::const_iterator base_pos,
-                base_end = layout_info.base_offsets.end();
-            for (idx = 0, base_pos = layout_info.base_offsets.begin();
-                 base_pos != base_end; ++base_pos, ++idx) {
-              module_sp->LogMessage(
-                  log,
-                  "ClangASTContext::CompleteTypeFromDWARF (clang_type = "
-                  "%p) base[%u] = { byte_offset=%u, name='%s' }",
-                  clang_type.GetOpaqueQualType(), idx,
-                  (uint32_t)base_pos->second.getQuantity(),
-                  base_pos->first->getNameAsString().c_str());
-            }
-          }
-          {
-            llvm::DenseMap<const clang::CXXRecordDecl *,
-                           clang::CharUnits>::const_iterator vbase_pos,
-                vbase_end = layout_info.vbase_offsets.end();
-            for (idx = 0, vbase_pos = layout_info.vbase_offsets.begin();
-                 vbase_pos != vbase_end; ++vbase_pos, ++idx) {
-              module_sp->LogMessage(
-                  log,
-                  "ClangASTContext::CompleteTypeFromDWARF (clang_type = "
-                  "%p) vbase[%u] = { byte_offset=%u, name='%s' }",
-                  static_cast<void *>(clang_type.GetOpaqueQualType()), idx,
-                  static_cast<uint32_t>(vbase_pos->second.getQuantity()),
-                  vbase_pos->first->getNameAsString().c_str());
-            }
-          }
-        }
-      }
+    if (record_decl)
       GetClangASTImporter().InsertRecordDecl(record_decl, layout_info);
-    }
   }
 
   return (bool)clang_type;
