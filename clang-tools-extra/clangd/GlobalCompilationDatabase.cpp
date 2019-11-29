@@ -18,7 +18,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include <string>
 #include <tuple>
 #include <vector>
@@ -26,30 +28,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-
-void adjustArguments(tooling::CompileCommand &Cmd,
-                     llvm::StringRef ResourceDir) {
-  tooling::ArgumentsAdjuster ArgsAdjuster = tooling::combineAdjusters(
-      // clangd should not write files to disk, including dependency files
-      // requested on the command line.
-      tooling::getClangStripDependencyFileAdjuster(),
-      // Strip plugin related command line arguments. Clangd does
-      // not support plugins currently. Therefore it breaks if
-      // compiler tries to load plugins.
-      tooling::combineAdjusters(tooling::getStripPluginsAdjuster(),
-                                tooling::getClangSyntaxOnlyAdjuster()));
-
-  Cmd.CommandLine = ArgsAdjuster(Cmd.CommandLine, Cmd.Filename);
-  // Inject the resource dir.
-  // FIXME: Don't overwrite it if it's already there.
-  if (!ResourceDir.empty())
-    Cmd.CommandLine.push_back(("-resource-dir=" + ResourceDir).str());
-}
-
-std::string getStandardResourceDir() {
-  static int Dummy; // Just an address in this process.
-  return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
-}
 
 // Runs the given action on all parent directories of filename, starting from
 // deepest directory and going up to root. Stops whenever action succeeds.
@@ -63,19 +41,9 @@ void actOnAllParentDirectories(PathRef FileName,
 
 } // namespace
 
-static std::string getFallbackClangPath() {
-  static int Dummy;
-  std::string ClangdExecutable =
-      llvm::sys::fs::getMainExecutable("clangd", (void *)&Dummy);
-  SmallString<128> ClangPath;
-  ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
-  llvm::sys::path::append(ClangPath, "clang");
-  return ClangPath.str();
-}
-
 tooling::CompileCommand
 GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
-  std::vector<std::string> Argv = {getFallbackClangPath()};
+  std::vector<std::string> Argv = {"clang"};
   // Clang treats .h files as C by default and files without extension as linker
   // input, resulting in unhelpful diagnostics.
   // Parsing as Objective C++ is friendly to more cases.
@@ -263,9 +231,8 @@ DirectoryBasedGlobalCompilationDatabase::getProjectInfo(PathRef File) const {
 
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
-                       llvm::Optional<std::string> ResourceDir)
-    : Base(Base), ResourceDir(ResourceDir ? std::move(*ResourceDir)
-                                          : getStandardResourceDir()),
+                       tooling::ArgumentsAdjuster Adjuster)
+    : Base(Base), ArgsAdjuster(std::move(Adjuster)),
       FallbackFlags(std::move(FallbackFlags)) {
   if (Base)
     BaseChanged = Base->watch([this](const std::vector<std::string> Changes) {
@@ -286,7 +253,8 @@ OverlayCDB::getCompileCommand(PathRef File) const {
     Cmd = Base->getCompileCommand(File);
   if (!Cmd)
     return llvm::None;
-  adjustArguments(*Cmd, ResourceDir);
+  if (ArgsAdjuster)
+    Cmd->CommandLine = ArgsAdjuster(Cmd->CommandLine, Cmd->Filename);
   return Cmd;
 }
 
@@ -296,7 +264,8 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
-  adjustArguments(Cmd, ResourceDir);
+  if (ArgsAdjuster)
+    Cmd.CommandLine = ArgsAdjuster(Cmd.CommandLine, Cmd.Filename);
   return Cmd;
 }
 
