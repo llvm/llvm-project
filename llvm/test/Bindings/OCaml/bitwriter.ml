@@ -17,7 +17,7 @@ let test x = if not x then exit 1 else ()
 let read_file name =
   let ic = open_in_bin name in
   let len = in_channel_length ic in
-  let buf = String.create len in
+  let buf = Bytes.create len in
 
   test ((input ic buf 0 len) = len);
 
@@ -46,4 +46,4 @@ let _ =
   test (file_buf = temp_bitcode m);
   test (file_buf = temp_bitcode ~unbuffered:false m);
   test (file_buf = temp_bitcode ~unbuffered:true m);
-  test (file_buf = Llvm.MemoryBuffer.as_string (Llvm_bitwriter.write_bitcode_to_memory_buffer m))
+  test (file_buf = Bytes.of_string (Llvm.MemoryBuffer.as_string (Llvm_bitwriter.write_bitcode_to_memory_buffer m)))
