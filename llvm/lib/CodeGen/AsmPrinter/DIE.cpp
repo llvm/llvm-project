@@ -319,8 +319,10 @@ DIEUnit::DIEUnit(uint16_t V, uint8_t A, dwarf::Tag UnitTag)
 {
   Die.Owner = this;
   assert((UnitTag == dwarf::DW_TAG_compile_unit ||
+          UnitTag == dwarf::DW_TAG_skeleton_unit ||
           UnitTag == dwarf::DW_TAG_type_unit ||
-          UnitTag == dwarf::DW_TAG_partial_unit) && "expected a unit TAG");
+          UnitTag == dwarf::DW_TAG_partial_unit) &&
+         "expected a unit TAG");
 }
 
 void DIEValue::EmitValue(const AsmPrinter *AP) const {
