@@ -704,11 +704,19 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
   assert((Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_UGT) &&
          "Unexpected isUnsigned predicate!");
 
-  // Account for swapped form of subtraction: ((a > b) ? b - a : 0).
+  // Ensure the sub is of the form:
+  //  (a > b) ? a - b : 0 -> usub.sat(a, b)
+  //  (a > b) ? b - a : 0 -> -usub.sat(a, b)
+  // Checking for both a-b and a+(-b) as a constant.
   bool IsNegative = false;
-  if (match(TrueVal, m_Sub(m_Specific(B), m_Specific(A))))
+  const APInt *C;
+  if (match(TrueVal, m_Sub(m_Specific(B), m_Specific(A))) ||
+      (match(A, m_APInt(C)) &&
+       match(TrueVal, m_Add(m_Specific(B), m_SpecificInt(-*C)))))
     IsNegative = true;
-  else if (!match(TrueVal, m_Sub(m_Specific(A), m_Specific(B))))
+  else if (!match(TrueVal, m_Sub(m_Specific(A), m_Specific(B))) &&
+           !(match(B, m_APInt(C)) &&
+             match(TrueVal, m_Add(m_Specific(A), m_SpecificInt(-*C)))))
     return nullptr;
 
   // If we are adding a negate and the sub and icmp are used anywhere else, we
