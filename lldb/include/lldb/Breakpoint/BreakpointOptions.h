@@ -88,7 +88,8 @@ public:
     explicit CommandBaton(std::unique_ptr<CommandData> Data)
         : TypedBaton(std::move(Data)) {}
 
-    void GetDescription(Stream *s, lldb::DescriptionLevel level) const override;
+    void GetDescription(llvm::raw_ostream &s, lldb::DescriptionLevel level,
+                        unsigned indentation) const override;
   };
 
   typedef std::shared_ptr<CommandBaton> CommandBatonSP;
