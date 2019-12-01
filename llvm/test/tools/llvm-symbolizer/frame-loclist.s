@@ -7,13 +7,13 @@
 // DW_AT_location        (DW_OP_breg29 W29-4)
 // CHECK:      func00
 // CHECK-NEXT: x
-// CHECK-NEXT: /tmp/dbg.cc:7
+// CHECK-NEXT: {{.*}}dbg.cc:7
 // CHECK-NEXT: -4 4 ??
 
 // DW_AT_location        (DW_OP_fbreg -4)
 // CHECK:      func0{{$}}
 // CHECK-NEXT: x
-// CHECK-NEXT: /tmp/dbg.cc:12
+// CHECK-NEXT: {{.*}}dbg.cc:12
 // CHECK-NEXT: -4 4 ??
 
 // DW_AT_location        (0x00000000: 
@@ -21,7 +21,7 @@
 //   [0x0000000000000058, 0x000000000000005c): DW_OP_reg0 W0)
 // CHECK:      func1
 // CHECK-NEXT: x
-// CHECK-NEXT: /tmp/dbg.cc:17
+// CHECK-NEXT: {{.*}}dbg.cc:17
 // CHECK-NEXT: -4 4 ??
 
 // DW_AT_location        (0x00000037: 
@@ -30,7 +30,7 @@
 //    [0x0000000000000088, 0x000000000000008c): DW_OP_reg0 W0)
 // CHECK:      func2
 // CHECK-NEXT: x
-// CHECK-NEXT: /tmp/dbg.cc:23
+// CHECK-NEXT: {{.*}}dbg.cc:23
 // CHECK-NEXT: -4 4 ??
 
 // location lost
@@ -39,7 +39,7 @@
 //    [0x00000000000000b8, 0x00000000000000bc): DW_OP_reg0 W0)
 // CHECK:      func3
 // CHECK-NEXT: x
-// CHECK-NEXT: /tmp/dbg.cc:29
+// CHECK-NEXT: {{.*}}dbg.cc:29
 // CHECK-NEXT: ?? 4 ??
 
 	.text
