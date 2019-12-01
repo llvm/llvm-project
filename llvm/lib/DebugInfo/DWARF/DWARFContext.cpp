@@ -1094,9 +1094,8 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
   if (Die.getTag() == DW_TAG_variable ||
       Die.getTag() == DW_TAG_formal_parameter) {
     DILocal Local;
-    if (auto NameAttr = Subprogram.find(DW_AT_name))
-      if (Optional<const char *> Name = NameAttr->getAsCString())
-        Local.FunctionName = *Name;
+    if (const char *Name = Subprogram.getSubroutineName(DINameKind::ShortName))
+      Local.FunctionName = Name;
 
     Optional<unsigned> FrameBaseReg;
     if (auto FrameBase = Subprogram.find(DW_AT_frame_base))
