@@ -1,0 +1,61 @@
+# RUN: llc  -run-pass mir-namer -x mir -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc  -run-pass mir-canonicalizer -x mir -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  define i32 @_Z1fi(i32 %arg) {
+    %tmp = alloca i32, align 4
+    %tmp1 = alloca i32, align 4
+    ret i32 %arg
+  }
+
+...
+---
+name:            _Z1fi
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+  - { id: 7, class: _, preferred-register: '' }
+  - { id: 8, class: _, preferred-register: '' }
+stack:
+  - { id: 0, name: tmp, type: default, offset: 0, size: 4, alignment: 4  }
+  - { id: 1, name: tmp1, type: default, offset: 0, size: 4, alignment: 4 }
+body:             |
+  bb.0:
+    %tmp0:_(s32) = COPY $edi
+    %tmp1:_(s32) = G_CONSTANT i32 0
+    %tmp5:_(p0) = G_FRAME_INDEX %stack.0.tmp
+    %tmp6:_(p0) = G_FRAME_INDEX %stack.1.tmp1
+    G_STORE %tmp0(s32), %tmp5(p0) :: (store 4 into %ir.tmp)
+    %tmp7:_(s32) = G_LOAD %tmp5(p0) :: (load 4 from %ir.tmp)
+    %tmp8:_(s1) = G_ICMP intpred(ne), %tmp7(s32), %tmp1
+    G_BRCOND %tmp8(s1), %bb.1
+    G_BR %bb.2
+
+  ; CHECK: bb.1:
+  ; CHECK: %bb2_{{[0-9]+}}__1:_(s32) = G_CONSTANT
+  bb.1:
+    %tmp4:_(s32) = G_CONSTANT i32 1
+    G_STORE %tmp4(s32), %tmp6(p0) :: (store 4 into %ir.tmp1)
+    G_BR %bb.3
+
+
+  ; CHECK: bb.2:
+  ; CHECK: %bb1_{{[0-9]+}}__1:_(s32) = G_CONSTANT
+  bb.2:
+    %tmp3:_(s32) = G_CONSTANT i32 2
+    G_STORE %tmp3(s32), %tmp6(p0) :: (store 4 into %ir.tmp1)
+
+  ; CHECK: bb.3:
+  ; CHECK: %bb3_{{[0-9]+}}__1:_(s32) =  G_LOAD
+  bb.3:
+    %tmp9:_(s32) = G_LOAD %tmp6(p0) :: (load 4 from %ir.tmp1)
+    $eax = COPY %tmp9(s32)
+    RET 0, implicit $eax
+
+...
