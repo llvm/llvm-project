@@ -21,7 +21,7 @@ define <2 x i64> @fptosi_2f64_to_2i64(<2 x double> %a) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movq %rax, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
@@ -125,13 +125,13 @@ define <4 x i64> @fptosi_4f64_to_4i64(<4 x double> %a) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movq %rax, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; SSE-NEXT:    cvttsd2si %xmm1, %rax
 ; SSE-NEXT:    movq %rax, %xmm3
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm1, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
@@ -335,7 +335,7 @@ define <4 x i32> @fptoui_2f64_to_4i32(<2 x double> %a) {
 ; SSE-LABEL: fptoui_2f64_to_4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm0, %rcx
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    movd %ecx, %xmm1
@@ -409,7 +409,7 @@ define <4 x i32> @fptoui_2f64_to_2i32(<2 x double> %a) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movd %eax, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -482,7 +482,7 @@ define <4 x i32> @fptoui_4f64_to_2i32(<2 x double> %a) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movd %eax, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -734,13 +734,13 @@ define <4 x i32> @fptoui_4f64_to_4i32(<4 x double> %a) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm1, %rax
 ; SSE-NEXT:    movd %eax, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm1, %rax
 ; SSE-NEXT:    movd %eax, %xmm1
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movd %eax, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]

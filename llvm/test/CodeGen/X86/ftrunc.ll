@@ -289,12 +289,12 @@ define <2 x double> @trunc_signed_v2f64(<2 x double> %x) #0 {
 ; SSE2-LABEL: trunc_signed_v2f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rax
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rcx
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
 ; SSE2-NEXT:    cvtsi2sd %rax, %xmm0
 ; SSE2-NEXT:    cvtsi2sd %rcx, %xmm1
-; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_signed_v2f64:
@@ -315,20 +315,20 @@ define <4 x double> @trunc_signed_v4f64(<4 x double> %x) #0 {
 ; SSE2-LABEL: trunc_signed_v4f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttsd2si %xmm1, %rax
-; SSE2-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE2-NEXT:    cvttsd2si %xmm1, %rcx
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rdx
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rsi
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
 ; SSE2-NEXT:    cvtsi2sd %rdx, %xmm0
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    cvtsi2sd %rsi, %xmm1
-; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    cvtsi2sd %rax, %xmm1
 ; SSE2-NEXT:    cvtsi2sd %rcx, %xmm2
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_signed_v4f64:
