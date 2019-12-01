@@ -27,6 +27,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -151,7 +152,7 @@ public:
 } // namespace
 
 int main(int argc, const char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+  llvm::InitLLVM X(argc, argv);
 
   // Initialize targets for clang module support.
   llvm::InitializeAllTargets();
