@@ -78,6 +78,7 @@ public:
   }
   void setImportModule(StringRef Name) { ImportModule = Name; }
 
+  bool hasImportName() const { return ImportName.hasValue(); }
   const StringRef getImportName() const {
       if (ImportName.hasValue()) {
           return ImportName.getValue();
