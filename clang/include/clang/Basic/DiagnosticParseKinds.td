@@ -61,13 +61,6 @@ def warn_null_statement : Warning<
   "remove unnecessary ';' to silence this warning">,
   InGroup<ExtraSemiStmt>, DefaultIgnore;
 
-def warn_misleading_indentation : Warning<
-  "misleading indentation; %select{statement|declaration}0 is not part of "
-  "the previous '%select{if|else|for|while}1'">,
-  InGroup<MisleadingIndentation>, DefaultIgnore;
-def note_previous_statement : Note<
-  "previous statement is here">;
-
 def ext_thread_before : Extension<"'__thread' before '%0'">;
 def ext_keyword_as_ident : ExtWarn<
   "keyword '%0' will be made available as an identifier "
