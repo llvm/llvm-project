@@ -59,7 +59,18 @@ class SymbolFileDWARFDwp;
 
 class SymbolFileDWARF : public lldb_private::SymbolFile,
                         public lldb_private::UserID {
+  /// LLVM RTTI support.
+  static char ID;
+
 public:
+  /// LLVM RTTI support.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || SymbolFile::isA(ClassID);
+  }
+  static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
+  /// \}
+
   friend class SymbolFileDWARFDebugMap;
   friend class SymbolFileDWARFDwo;
   friend class DebugMapModule;
@@ -104,6 +115,10 @@ public:
   bool ParseLineTable(lldb_private::CompileUnit &comp_unit) override;
 
   bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
+
+  bool ForEachExternalModule(
+      lldb_private::CompileUnit &, llvm::DenseSet<lldb_private::SymbolFile *> &,
+      llvm::function_ref<bool(lldb_private::Module &)>) override;
 
   bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
                          lldb_private::FileSpecList &support_files) override;
@@ -186,6 +201,7 @@ public:
 
   void FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
                  lldb_private::LanguageSet languages,
+                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                  lldb_private::TypeMap &types) override;
 
   void GetTypes(lldb_private::SymbolContextScope *sc_scope,
@@ -249,7 +265,7 @@ public:
   virtual lldb_private::DWARFExpression::LocationListFormat
   GetLocationListFormat() const;
 
-  lldb::ModuleSP GetDWOModule(lldb_private::ConstString name);
+  lldb::ModuleSP GetExternalModule(lldb_private::ConstString name);
 
   typedef std::map<lldb_private::ConstString, lldb::ModuleSP>
       ExternalTypeModuleMap;
@@ -283,6 +299,9 @@ public:
   virtual DWARFCompileUnit *GetBaseCompileUnit() { return nullptr; }
 
   virtual llvm::Optional<uint32_t> GetDwoNum() { return llvm::None; }
+
+  /// If this is a DWARF object with a single CU, return its DW_AT_dwo_id.
+  llvm::Optional<uint64_t> GetDWOId();
 
   static bool
   DIEInDeclContext(const lldb_private::CompilerDeclContext *parent_decl_ctx,

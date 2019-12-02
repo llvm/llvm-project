@@ -84,18 +84,12 @@ public:
     eEncodingIsSyntheticUID
   };
 
-  // We must force the underlying type of the enum to be unsigned here.  Not
-  // all compilers behave the same with regards to the default underlying type
-  // of an enum, but because this enum is used in an enum bitfield and integer
-  // comparisons are done with the value we need to guarantee that it's always
-  // unsigned so that, for example, eResolveStateFull doesn't compare less than
-  // eResolveStateUnresolved when used in a 2-bit bitfield.
-  typedef enum ResolveStateTag : unsigned {
-    eResolveStateUnresolved = 0,
-    eResolveStateForward = 1,
-    eResolveStateLayout = 2,
-    eResolveStateFull = 3
-  } ResolveState;
+  enum class ResolveState : unsigned char {
+    Unresolved = 0,
+    Forward = 1,
+    Layout = 2,
+    Full = 3
+  };
 
   Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
        llvm::Optional<uint64_t> byte_size, SymbolContextScope *context,
@@ -200,17 +194,17 @@ public:
 
   uint32_t GetEncodingMask();
 
-  bool IsCompleteObjCClass() { return m_flags.is_complete_objc_class; }
+  bool IsCompleteObjCClass() { return m_is_complete_objc_class; }
 
   void SetIsCompleteObjCClass(bool is_complete_objc_class) {
-    m_flags.is_complete_objc_class = is_complete_objc_class;
+    m_is_complete_objc_class = is_complete_objc_class;
   }
 
 protected:
   ConstString m_name;
   SymbolFile *m_symbol_file;
-  SymbolContextScope
-      *m_context; // The symbol context in which this type is defined
+  /// The symbol context in which this type is defined.
+  SymbolContextScope *m_context;
   Type *m_encoding_type;
   lldb::user_id_t m_encoding_uid;
   EncodingDataType m_encoding_uid_type;
@@ -218,16 +212,8 @@ protected:
   uint64_t m_byte_size_has_value : 1;
   Declaration m_decl;
   CompilerType m_compiler_type;
-
-  struct Flags {
-#ifdef __GNUC__
-    // using unsigned type here to work around a very noisy gcc warning
-    unsigned compiler_type_resolve_state : 2;
-#else
-    ResolveState compiler_type_resolve_state : 2;
-#endif
-    bool is_complete_objc_class : 1;
-  } m_flags;
+  ResolveState m_compiler_type_resolve_state;
+  bool m_is_complete_objc_class;
 
   Type *GetEncodingType();
 

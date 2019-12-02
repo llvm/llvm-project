@@ -23,7 +23,18 @@ class DWARFDebugAranges;
 class DWARFDeclContext;
 
 class SymbolFileDWARFDebugMap : public lldb_private::SymbolFile {
+  /// LLVM RTTI support.
+  static char ID;
+
 public:
+  /// LLVM RTTI support.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || SymbolFile::isA(ClassID);
+  }
+  static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
+  /// \}
+
   // Static Functions
   static void Initialize();
 
@@ -52,6 +63,10 @@ public:
   bool ParseLineTable(lldb_private::CompileUnit &comp_unit) override;
 
   bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
+
+  bool ForEachExternalModule(
+      lldb_private::CompileUnit &, llvm::DenseSet<lldb_private::SymbolFile *> &,
+      llvm::function_ref<bool(lldb_private::Module &)>) override;
 
   bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
                          lldb_private::FileSpecList &support_files) override;
@@ -108,6 +123,11 @@ public:
   FindTypes(lldb_private::ConstString name,
             const lldb_private::CompilerDeclContext *parent_decl_ctx,
             uint32_t max_matches,
+            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
+            lldb_private::TypeMap &types) override;
+  void
+  FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> context,
+            lldb_private::LanguageSet languages,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
   lldb_private::CompilerDeclContext FindNamespace(

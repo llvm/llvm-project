@@ -10,12 +10,8 @@ class TestDbgInfoContentDeque(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # FIXME: This should work on more setups, so remove these
-    # skipIf's in the future.
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
-    @skipIf(oslist=no_match(["linux"]))
-    @skipIf(debug_info=no_match(["dwarf"]))
     def test(self):
         self.build()
 

@@ -28,12 +28,13 @@ namespace lldb_private {
 /// self-contained function meant to be used from other code.  Utility
 /// functions can perform error-checking for ClangUserExpressions,
 class UtilityFunction : public Expression {
+  // LLVM RTTI support
+  static char ID;
+
 public:
-  /// LLVM-style RTTI support.
-  static bool classof(const Expression *E) {
-    return E->getKind() == eKindUtilityFunction;
-  }
-  
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const Expression *obj) { return obj->isA(&ID); }
+
   /// Constructor
   ///
   /// \param[in] text
@@ -42,7 +43,7 @@ public:
   /// \param[in] name
   ///     The name of the function, as used in the text.
   UtilityFunction(ExecutionContextScope &exe_scope, const char *text,
-                  const char *name, ExpressionKind kind);
+                  const char *name);
 
   ~UtilityFunction() override;
 

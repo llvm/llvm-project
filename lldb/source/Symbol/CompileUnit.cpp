@@ -379,6 +379,14 @@ const std::vector<SourceModule> &CompileUnit::GetImportedModules() {
   return m_imported_modules;
 }
 
+bool CompileUnit::ForEachExternalModule(
+    llvm::DenseSet<SymbolFile *> &visited_symbol_files,
+    llvm::function_ref<bool(Module &)> lambda) {
+  if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+    return symfile->ForEachExternalModule(*this, visited_symbol_files, lambda);
+  return false;
+}
+
 const FileSpecList &CompileUnit::GetSupportFiles() {
   if (m_support_files.GetSize() == 0) {
     if (m_flags.IsClear(flagsParsedSupportFiles)) {

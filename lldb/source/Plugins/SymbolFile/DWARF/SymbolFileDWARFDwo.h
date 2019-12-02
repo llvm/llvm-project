@@ -12,7 +12,18 @@
 #include "SymbolFileDWARF.h"
 
 class SymbolFileDWARFDwo : public SymbolFileDWARF {
+  /// LLVM RTTI support.
+  static char ID;
+
 public:
+  /// LLVM RTTI support.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || SymbolFileDWARF::isA(ClassID);
+  }
+  static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
+  /// \}
+
   SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFCompileUnit &dwarf_cu);
 
   ~SymbolFileDWARFDwo() override = default;

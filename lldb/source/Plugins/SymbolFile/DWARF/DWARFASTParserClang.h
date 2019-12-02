@@ -15,7 +15,10 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "DWARFASTParser.h"
+#include "DWARFDIE.h"
 #include "DWARFDefines.h"
+#include "DWARFFormValue.h"
+#include "LogChannelDWARF.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -29,6 +32,8 @@ class CompileUnit;
 class DWARFDebugInfoEntry;
 class SymbolFileDWARF;
 
+struct ParsedDWARFTypeAttributes;
+
 class DWARFASTParserClang : public DWARFASTParser {
 public:
   DWARFASTParserClang(lldb_private::ClangASTContext &ast);
@@ -37,7 +42,7 @@ public:
 
   // DWARFASTParser interface.
   lldb::TypeSP ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
-                                  const DWARFDIE &die, lldb_private::Log *log,
+                                  const DWARFDIE &die,
                                   bool *type_is_new_ptr) override;
 
   lldb_private::Function *
@@ -103,6 +108,11 @@ protected:
                                bool is_signed, uint32_t enumerator_byte_size,
                                const DWARFDIE &parent_die);
 
+  /// Parse a structure, class, or union type DIE.
+  lldb::TypeSP ParseStructureLikeDIE(const lldb_private::SymbolContext &sc,
+                                     const DWARFDIE &die,
+                                     ParsedDWARFTypeAttributes &attrs);
+
   lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
 
   clang::Decl *GetClangDeclForDIE(const DWARFDIE &die);
@@ -123,7 +133,18 @@ protected:
 
   void LinkDeclToDIE(clang::Decl *decl, const DWARFDIE &die);
 
-  lldb::TypeSP ParseTypeFromDWO(const DWARFDIE &die, lldb_private::Log *log);
+  /// If \p type_sp is valid, calculate and set its symbol context scope, and
+  /// update the type list for its backing symbol file.
+  ///
+  /// Returns \p type_sp.
+  lldb::TypeSP
+  UpdateSymbolContextScopeForType(const lldb_private::SymbolContext &sc,
+                                  const DWARFDIE &die, lldb::TypeSP type_sp);
+
+  /// Follow Clang Module Skeleton CU references to find a type definition.
+  lldb::TypeSP ParseTypeFromClangModule(const lldb_private::SymbolContext &sc,
+                                        const DWARFDIE &die,
+                                        lldb_private::Log *log);
 
   // Return true if this type is a declaration to a type in an external
   // module.
@@ -146,6 +167,40 @@ protected:
   DIEToDeclContextMap m_die_to_decl_ctx;
   DeclContextToDIEMap m_decl_ctx_to_die;
   std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
+};
+
+/// Parsed form of all attributes that are relevant for type reconstruction.
+/// Some attributes are relevant for all kinds of types (declaration), while
+/// others are only meaningful to a specific type (is_virtual)
+struct ParsedDWARFTypeAttributes {
+  explicit ParsedDWARFTypeAttributes(const DWARFDIE &die);
+
+  lldb::AccessType accessibility = lldb::eAccessNone;
+  bool is_artificial = false;
+  bool is_complete_objc_class = false;
+  bool is_explicit = false;
+  bool is_forward_declaration = false;
+  bool is_inline = false;
+  bool is_scoped_enum = false;
+  bool is_vector = false;
+  bool is_virtual = false;
+  bool exports_symbols = false;
+  clang::StorageClass storage = clang::SC_None;
+  const char *mangled_name = nullptr;
+  lldb_private::ConstString name;
+  lldb_private::Declaration decl;
+  DWARFDIE object_pointer;
+  DWARFFormValue abstract_origin;
+  DWARFFormValue containing_type;
+  DWARFFormValue signature;
+  DWARFFormValue specification;
+  DWARFFormValue type;
+  lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
+  llvm::Optional<uint64_t> byte_size;
+  size_t calling_convention = llvm::dwarf::DW_CC_normal;
+  uint32_t bit_stride = 0;
+  uint32_t byte_stride = 0;
+  uint32_t encoding = 0;
 };
 
 #endif // SymbolFileDWARF_DWARFASTParserClang_h_

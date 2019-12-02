@@ -22,7 +22,18 @@
 class PDBASTParser;
 
 class SymbolFilePDB : public lldb_private::SymbolFile {
+  /// LLVM RTTI support.
+  static char ID;
+
 public:
+  /// LLVM RTTI support.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || SymbolFile::isA(ClassID);
+  }
+  static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
+  /// \}
+
   // Static Functions
   static void Initialize();
 
@@ -134,6 +145,7 @@ public:
 
   void FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
                  lldb_private::LanguageSet languages,
+                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                  lldb_private::TypeMap &types) override;
 
   void FindTypesByRegex(const lldb_private::RegularExpression &regex,
