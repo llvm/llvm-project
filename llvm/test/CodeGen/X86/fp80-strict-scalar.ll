@@ -9,8 +9,8 @@ declare x86_fp80 @llvm.experimental.constrained.fdiv.x86_fp80(x86_fp80, x86_fp80
 declare x86_fp80 @llvm.experimental.constrained.fpext.x86_fp80.f32(float, metadata)
 declare x86_fp80 @llvm.experimental.constrained.fpext.x86_fp80.f64(double, metadata)
 declare x86_fp80 @llvm.experimental.constrained.sqrt.x86_fp80(x86_fp80, metadata, metadata)
-declare float @llvm.experimental.constrained.fptrunc.x86_fp80.f32(x86_fp80, metadata, metadata)
-declare double @llvm.experimental.constrained.fptrunc.x86_fp80.f64(x86_fp80, metadata, metadata)
+declare float @llvm.experimental.constrained.fptrunc.f32.x86_fp80(x86_fp80, metadata, metadata)
+declare double @llvm.experimental.constrained.fptrunc.f64.x86_fp80(x86_fp80, metadata, metadata)
 
 define x86_fp80 @fadd_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X86-LABEL: fadd_fp80:
@@ -106,7 +106,6 @@ define x86_fp80 @fpext_f32_to_fp80(float %a) nounwind strictfp {
   %ret = call x86_fp80 @llvm.experimental.constrained.fpext.x86_fp80.f32(float %a,
                                                                          metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
-
 }
 
 define x86_fp80 @fpext_f64_to_fp80(double %a) nounwind strictfp {
@@ -123,7 +122,6 @@ define x86_fp80 @fpext_f64_to_fp80(double %a) nounwind strictfp {
   %ret = call x86_fp80 @llvm.experimental.constrained.fpext.x86_fp80.f64(double %a,
                                                                          metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
-
 }
 
 define float @fptrunc_fp80_to_f32(x86_fp80 %a) nounwind strictfp {
@@ -142,11 +140,10 @@ define float @fptrunc_fp80_to_f32(x86_fp80 %a) nounwind strictfp {
 ; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
-  %ret = call float @llvm.experimental.constrained.fptrunc.x86_fp80.f32(x86_fp80 %a,
+  %ret = call float @llvm.experimental.constrained.fptrunc.f32.x86_fp80(x86_fp80 %a,
                                                                         metadata !"round.dynamic",
                                                                         metadata !"fpexcept.strict") #0
   ret float %ret
-
 }
 
 define double @fptrunc_fp80_to_f64(x86_fp80 %a) nounwind strictfp {
@@ -169,11 +166,10 @@ define double @fptrunc_fp80_to_f64(x86_fp80 %a) nounwind strictfp {
 ; X64-NEXT:    fstpl -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
-  %ret = call double @llvm.experimental.constrained.fptrunc.x86_fp80.f64(x86_fp80 %a,
+  %ret = call double @llvm.experimental.constrained.fptrunc.f64.x86_fp80(x86_fp80 %a,
                                                                          metadata !"round.dynamic",
                                                                          metadata !"fpexcept.strict") #0
   ret double %ret
-
 }
 
 define x86_fp80 @fsqrt_fp80(x86_fp80 %a) nounwind strictfp {
@@ -192,7 +188,6 @@ define x86_fp80 @fsqrt_fp80(x86_fp80 %a) nounwind strictfp {
                                                                     metadata !"round.dynamic",
                                                                     metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
-
 }
 
 attributes #0 = { strictfp }
