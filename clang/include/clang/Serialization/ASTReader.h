@@ -551,14 +551,6 @@ private:
   llvm::DenseMap<Decl*, llvm::SmallVector<NamedDecl*, 2>>
     AnonymousDeclarationsForMerging;
 
-  /// Key used to identify LifetimeExtendedTemporaryDecl for merging,
-  /// containing the lifetime-extending declaration and the mangling number.
-  using LETemporaryKey = std::pair<Decl *, unsigned>;
-
-  /// Map of already deserialiazed temporaries.
-  llvm::DenseMap<LETemporaryKey, LifetimeExtendedTemporaryDecl *>
-      LETemporaryForMerging;
-
   struct FileDeclsInfo {
     ModuleFile *Mod = nullptr;
     ArrayRef<serialization::LocalDeclID> Decls;
