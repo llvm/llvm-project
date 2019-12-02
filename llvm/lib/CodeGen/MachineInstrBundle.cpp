@@ -308,20 +308,15 @@ VirtRegInfo llvm::AnalyzeVirtRegInBundle(
   return RI;
 }
 
-//===----------------------------------------------------------------------===//
-// MachineOperand iterator
-//===----------------------------------------------------------------------===//
-
-MachineOperandIteratorBase::PhysRegInfo
-MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
-                                           const TargetRegisterInfo *TRI) {
+PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, unsigned Reg,
+                                         const TargetRegisterInfo *TRI) {
   bool AllDefsDead = true;
   PhysRegInfo PRI = {false, false, false, false, false, false, false, false};
 
   assert(Register::isPhysicalRegister(Reg) &&
          "analyzePhysReg not given a physical register!");
-  for (; isValid(); ++*this) {
-    MachineOperand &MO = deref();
+  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
+    const MachineOperand &MO = *O;
 
     if (MO.isRegMask() && MO.clobbersPhysReg(Reg)) {
       PRI.Clobbered = true;
