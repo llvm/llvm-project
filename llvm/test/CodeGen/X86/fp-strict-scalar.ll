@@ -70,8 +70,8 @@ define double @fadd_f64(double %a, double %b) nounwind strictfp {
   ret double %ret
 }
 
-define float @fadd_fsub_f32(float %a, float %b) nounwind strictfp {
-; SSE-X86-LABEL: fadd_fsub_f32:
+define float @fadd_f32(float %a, float %b) nounwind strictfp {
+; SSE-X86-LABEL: fadd_f32:
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    pushl %eax
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -81,12 +81,12 @@ define float @fadd_fsub_f32(float %a, float %b) nounwind strictfp {
 ; SSE-X86-NEXT:    popl %eax
 ; SSE-X86-NEXT:    retl
 ;
-; SSE-X64-LABEL: fadd_fsub_f32:
+; SSE-X64-LABEL: fadd_f32:
 ; SSE-X64:       # %bb.0:
 ; SSE-X64-NEXT:    addss %xmm1, %xmm0
 ; SSE-X64-NEXT:    retq
 ;
-; AVX-X86-LABEL: fadd_fsub_f32:
+; AVX-X86-LABEL: fadd_f32:
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -96,12 +96,12 @@ define float @fadd_fsub_f32(float %a, float %b) nounwind strictfp {
 ; AVX-X86-NEXT:    popl %eax
 ; AVX-X86-NEXT:    retl
 ;
-; AVX-X64-LABEL: fadd_fsub_f32:
+; AVX-X64-LABEL: fadd_f32:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
-; X87-LABEL: fadd_fsub_f32:
+; X87-LABEL: fadd_f32:
 ; X87:       # %bb.0:
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
