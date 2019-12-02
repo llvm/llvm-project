@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -debug-info-kind=standalone -fdebug-prefix-map=%p=/UNLIKELY_PATH=empty %s -emit-llvm -o - | FileCheck %s -check-prefix CHECK-EVIL
 // RUN: %clang_cc1 -debug-info-kind=standalone -fdebug-prefix-map=%p=/UNLIKELY_PATH/empty %s -emit-llvm -o - -main-file-name debug-prefix-map.c | FileCheck %s
 // RUN: %clang_cc1 -debug-info-kind=standalone -fdebug-prefix-map=%p=/UNLIKELY_PATH/empty %s -emit-llvm -o - -fdebug-compilation-dir %p | FileCheck %s -check-prefix CHECK-COMPILATION-DIR
+// RUN: %clang -g -fdebug-prefix-map=%p=/UNLIKELY_PATH/empty -S -c %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang -g -ffile-prefix-map=%p=/UNLIKELY_PATH/empty -S -c %s -emit-llvm -o - | FileCheck %s
 
 #include "Inputs/stdio.h"
 
