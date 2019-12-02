@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "scudo/standalone/atomic_helpers.h"
-#include "gtest/gtest.h"
+#include "tests/scudo_unit_test.h"
+
+#include "atomic_helpers.h"
 
 namespace scudo {
 

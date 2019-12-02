@@ -50,6 +50,10 @@ static Header *getHeader(const void *Ptr) {
 
 template <uptr MaxFreeListSize = 32U> class MapAllocator {
 public:
+  // Ensure the freelist is disabled on Fuchsia, since it doesn't support
+  // releasing Secondary blocks yet.
+  COMPILER_CHECK(!SCUDO_FUCHSIA || MaxFreeListSize == 0U);
+
   void initLinkerInitialized(GlobalStats *S) {
     Stats.initLinkerInitialized();
     if (LIKELY(S))
@@ -205,10 +209,11 @@ void *MapAllocator<MaxFreeListSize>::allocate(uptr Size, uptr AlignmentHint,
 template <uptr MaxFreeListSize>
 void MapAllocator<MaxFreeListSize>::deallocate(void *Ptr) {
   LargeBlock::Header *H = LargeBlock::getHeader(Ptr);
+  const uptr Block = reinterpret_cast<uptr>(H);
   {
     ScopedLock L(Mutex);
     InUseBlocks.remove(H);
-    const uptr CommitSize = H->BlockEnd - reinterpret_cast<uptr>(H);
+    const uptr CommitSize = H->BlockEnd - Block;
     FreedBytes += CommitSize;
     NumberOfFrees++;
     Stats.sub(StatAllocated, CommitSize);
@@ -225,11 +230,10 @@ void MapAllocator<MaxFreeListSize>::deallocate(void *Ptr) {
       if (!Inserted)
         FreeBlocks.push_back(H);
       const uptr RoundedAllocationStart =
-          roundUpTo(reinterpret_cast<uptr>(H) + LargeBlock::getHeaderSize(),
-                    getPageSizeCached());
+          roundUpTo(Block + LargeBlock::getHeaderSize(), getPageSizeCached());
       MapPlatformData Data = H->Data;
       // TODO(kostyak): use release_to_os_interval_ms
-      releasePagesToOS(H->MapBase, RoundedAllocationStart - H->MapBase,
+      releasePagesToOS(Block, RoundedAllocationStart - Block,
                        H->BlockEnd - RoundedAllocationStart, &Data);
       return;
     }
