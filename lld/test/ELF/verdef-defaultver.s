@@ -84,6 +84,7 @@
 # DSO-NEXT:      Index: 1
 # DSO-NEXT:      Hash: 127830196
 # DSO-NEXT:      Name: shared
+# DSO-NEXT:      Predecessors: []
 # DSO-NEXT:    }
 # DSO-NEXT:    Definition {
 # DSO-NEXT:      Version: 1
@@ -92,6 +93,7 @@
 # DSO-NEXT:      Index: 2
 # DSO-NEXT:      Hash: 1425
 # DSO-NEXT:      Name: V1
+# DSO-NEXT:      Predecessors: []
 # DSO-NEXT:    }
 # DSO-NEXT:    Definition {
 # DSO-NEXT:      Version: 1
@@ -100,6 +102,7 @@
 # DSO-NEXT:      Index: 3
 # DSO-NEXT:      Hash: 1426
 # DSO-NEXT:      Name: V2
+# DSO-NEXT:      Predecessors: []
 # DSO-NEXT:    }
 # DSO-NEXT:  ]
 
