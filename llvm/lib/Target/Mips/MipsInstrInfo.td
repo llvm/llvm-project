@@ -1140,6 +1140,13 @@ def simm12 : Operand<i32> {
   let DecoderMethod = "DecodeSimm12";
 }
 
+def mem_simm9_exp : mem_generic {
+  let MIOperandInfo = (ops ptr_rc, simm9);
+  let ParserMatchClass = MipsMemSimmPtrAsmOperand;
+  let OperandNamespace = "MipsII";
+  let OperandType = "OPERAND_MEM_SIMM9";
+}
+
 foreach I = {9, 10, 11, 12, 16} in
   def mem_simm # I : mem_generic {
     let MIOperandInfo = (ops ptr_rc, !cast<Operand>("simm" # I));

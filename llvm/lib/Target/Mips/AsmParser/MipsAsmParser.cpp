@@ -252,8 +252,10 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandUncondBranchMMPseudo(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                                   const MCSubtargetInfo *STI);
 
-  void expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                     const MCSubtargetInfo *STI, bool IsLoad);
+  void expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                       const MCSubtargetInfo *STI, bool IsLoad);
+  void expandMem9Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                      const MCSubtargetInfo *STI, bool IsLoad);
 
   bool expandLoadStoreMultiple(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                                const MCSubtargetInfo *STI);
@@ -1824,11 +1826,14 @@ static bool needsExpandMemInst(MCInst &Inst) {
 
   const MCOperandInfo &OpInfo = MCID.OpInfo[NumOp - 1];
   if (OpInfo.OperandType != MCOI::OPERAND_MEMORY &&
-      OpInfo.OperandType != MCOI::OPERAND_UNKNOWN)
+      OpInfo.OperandType != MCOI::OPERAND_UNKNOWN &&
+      OpInfo.OperandType != MipsII::OPERAND_MEM_SIMM9)
     return false;
 
   MCOperand &Op = Inst.getOperand(NumOp - 1);
   if (Op.isImm()) {
+    if (OpInfo.OperandType == MipsII::OPERAND_MEM_SIMM9)
+      return !isInt<9>(Op.getImm());
     // Offset can't exceed 16bit value.
     return !isInt<16>(Op.getImm());
   }
@@ -2133,7 +2138,15 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     // Check the offset of memory operand, if it is a symbol
     // reference or immediate we may have to expand instructions.
     if (needsExpandMemInst(Inst)) {
-      expandMemInst(Inst, IDLoc, Out, STI, MCID.mayLoad());
+      const MCInstrDesc &MCID = getInstDesc(Inst.getOpcode());
+      switch (MCID.OpInfo[MCID.getNumOperands() - 1].OperandType) {
+      case MipsII::OPERAND_MEM_SIMM9:
+        expandMem9Inst(Inst, IDLoc, Out, STI, MCID.mayLoad());
+        break;
+      default:
+        expandMem16Inst(Inst, IDLoc, Out, STI, MCID.mayLoad());
+        break;
+      }
       return getParser().hasPendingError();
     }
   }
@@ -3631,20 +3644,26 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   return false;
 }
 
-void MipsAsmParser::expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                                  const MCSubtargetInfo *STI, bool IsLoad) {
-  const MCOperand &DstRegOp = Inst.getOperand(0);
+void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                                    const MCSubtargetInfo *STI, bool IsLoad) {
+  unsigned NumOp = Inst.getNumOperands();
+  assert((NumOp == 3 || NumOp == 4) && "unexpected operands number");
+  unsigned StartOp = NumOp == 3 ? 0 : 1;
+
+  const MCOperand &DstRegOp = Inst.getOperand(StartOp);
   assert(DstRegOp.isReg() && "expected register operand kind");
-  const MCOperand &BaseRegOp = Inst.getOperand(1);
+  const MCOperand &BaseRegOp = Inst.getOperand(StartOp + 1);
   assert(BaseRegOp.isReg() && "expected register operand kind");
+  const MCOperand &OffsetOp = Inst.getOperand(StartOp + 2);
 
   MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned OpCode = Inst.getOpcode();
   unsigned DstReg = DstRegOp.getReg();
   unsigned BaseReg = BaseRegOp.getReg();
   unsigned TmpReg = DstReg;
 
-  const MCInstrDesc &Desc = getInstDesc(Inst.getOpcode());
-  int16_t DstRegClass = Desc.OpInfo[0].RegClass;
+  const MCInstrDesc &Desc = getInstDesc(OpCode);
+  int16_t DstRegClass = Desc.OpInfo[StartOp].RegClass;
   unsigned DstRegClassID =
       getContext().getRegisterInfo()->getRegClass(DstRegClass).getID();
   bool IsGPR = (DstRegClassID == Mips::GPR32RegClassID) ||
@@ -3658,25 +3677,12 @@ void MipsAsmParser::expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       return;
   }
 
-  if (Inst.getNumOperands() > 3) {
-    const MCOperand &BaseRegOp = Inst.getOperand(2);
-    assert(BaseRegOp.isReg() && "expected register operand kind");
-    const MCOperand &ExprOp = Inst.getOperand(3);
-    assert(ExprOp.isExpr() && "expected expression oprand kind");
-
-    unsigned BaseReg = BaseRegOp.getReg();
-    const MCExpr *ExprOffset = ExprOp.getExpr();
-
-    MCOperand LoOperand = MCOperand::createExpr(
-        MipsMCExpr::create(MipsMCExpr::MEK_LO, ExprOffset, getContext()));
-    MCOperand HiOperand = MCOperand::createExpr(
-        MipsMCExpr::create(MipsMCExpr::MEK_HI, ExprOffset, getContext()));
-    TOut.emitSCWithSymOffset(Inst.getOpcode(), DstReg, BaseReg, HiOperand,
-                             LoOperand, TmpReg, IDLoc, STI);
-    return;
-  }
-
-  const MCOperand &OffsetOp = Inst.getOperand(2);
+  auto emitInstWithOffset = [&](const MCOperand &Off) {
+    if (NumOp == 3)
+      TOut.emitRRX(OpCode, DstReg, TmpReg, Off, IDLoc, STI);
+    else
+      TOut.emitRRRX(OpCode, DstReg, DstReg, TmpReg, Off, IDLoc, STI);
+  };
 
   if (OffsetOp.isImm()) {
     int64_t LoOffset = OffsetOp.getImm() & 0xffff;
@@ -3690,16 +3696,16 @@ void MipsAsmParser::expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     bool IsLargeOffset = HiOffset != 0;
 
     if (IsLargeOffset) {
-      bool Is32BitImm = (HiOffset >> 32) == 0;
+      bool Is32BitImm = isInt<32>(OffsetOp.getImm());
       if (loadImmediate(HiOffset, TmpReg, Mips::NoRegister, Is32BitImm, true,
                         IDLoc, Out, STI))
         return;
     }
 
     if (BaseReg != Mips::ZERO && BaseReg != Mips::ZERO_64)
-      TOut.emitRRR(isGP64bit() ? Mips::DADDu : Mips::ADDu, TmpReg, TmpReg,
-                   BaseReg, IDLoc, STI);
-    TOut.emitRRI(Inst.getOpcode(), DstReg, TmpReg, LoOffset, IDLoc, STI);
+      TOut.emitRRR(ABI.ArePtrs64bit() ? Mips::DADDu : Mips::ADDu, TmpReg,
+                   TmpReg, BaseReg, IDLoc, STI);
+    emitInstWithOffset(MCOperand::createImm(int16_t(LoOffset)));
     return;
   }
 
@@ -3723,27 +3729,100 @@ void MipsAsmParser::expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
       loadAndAddSymbolAddress(Res.getSymA(), TmpReg, BaseReg,
                               !ABI.ArePtrs64bit(), IDLoc, Out, STI);
-      TOut.emitRRI(Inst.getOpcode(), DstReg, TmpReg, Res.getConstant(), IDLoc,
-                   STI);
+      emitInstWithOffset(MCOperand::createImm(int16_t(Res.getConstant())));
     } else {
       // FIXME: Implement 64-bit case.
       // 1) lw $8, sym => lui $8,  %hi(sym)
       //                  lw  $8,  %lo(sym)($8)
       // 2) sw $8, sym => lui $at, %hi(sym)
       //                  sw  $8,  %lo(sym)($at)
-      const MCExpr *ExprOffset = OffsetOp.getExpr();
+      const MCExpr *OffExpr = OffsetOp.getExpr();
       MCOperand LoOperand = MCOperand::createExpr(
-          MipsMCExpr::create(MipsMCExpr::MEK_LO, ExprOffset, getContext()));
+          MipsMCExpr::create(MipsMCExpr::MEK_LO, OffExpr, getContext()));
       MCOperand HiOperand = MCOperand::createExpr(
-          MipsMCExpr::create(MipsMCExpr::MEK_HI, ExprOffset, getContext()));
+          MipsMCExpr::create(MipsMCExpr::MEK_HI, OffExpr, getContext()));
 
-      // Generate the base address in TmpReg.
-      TOut.emitRX(Mips::LUi, TmpReg, HiOperand, IDLoc, STI);
-      if (BaseReg != Mips::ZERO)
-        TOut.emitRRR(Mips::ADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
-      // Emit the load or store with the adjusted base and offset.
-      TOut.emitRRX(Inst.getOpcode(), DstReg, TmpReg, LoOperand, IDLoc, STI);
+      if (ABI.IsN64()) {
+        MCOperand HighestOperand = MCOperand::createExpr(
+            MipsMCExpr::create(MipsMCExpr::MEK_HIGHEST, OffExpr, getContext()));
+        MCOperand HigherOperand = MCOperand::createExpr(
+            MipsMCExpr::create(MipsMCExpr::MEK_HIGHER, OffExpr, getContext()));
+
+        TOut.emitRX(Mips::LUi, TmpReg, HighestOperand, IDLoc, STI);
+        TOut.emitRRX(Mips::DADDiu, TmpReg, TmpReg, HigherOperand, IDLoc, STI);
+        TOut.emitRRI(Mips::DSLL, TmpReg, TmpReg, 16, IDLoc, STI);
+        TOut.emitRRX(Mips::DADDiu, TmpReg, TmpReg, HiOperand, IDLoc, STI);
+        TOut.emitRRI(Mips::DSLL, TmpReg, TmpReg, 16, IDLoc, STI);
+        if (BaseReg != Mips::ZERO && BaseReg != Mips::ZERO_64)
+          TOut.emitRRR(Mips::DADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
+        emitInstWithOffset(LoOperand);
+      } else {
+        // Generate the base address in TmpReg.
+        TOut.emitRX(Mips::LUi, TmpReg, HiOperand, IDLoc, STI);
+        if (BaseReg != Mips::ZERO)
+          TOut.emitRRR(Mips::ADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
+        // Emit the load or store with the adjusted base and offset.
+        emitInstWithOffset(LoOperand);
+      }
     }
+    return;
+  }
+
+  llvm_unreachable("unexpected operand type");
+}
+
+void MipsAsmParser::expandMem9Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                                   const MCSubtargetInfo *STI, bool IsLoad) {
+  unsigned NumOp = Inst.getNumOperands();
+  assert((NumOp == 3 || NumOp == 4) && "unexpected operands number");
+  unsigned StartOp = NumOp == 3 ? 0 : 1;
+
+  const MCOperand &DstRegOp = Inst.getOperand(StartOp);
+  assert(DstRegOp.isReg() && "expected register operand kind");
+  const MCOperand &BaseRegOp = Inst.getOperand(StartOp + 1);
+  assert(BaseRegOp.isReg() && "expected register operand kind");
+  const MCOperand &OffsetOp = Inst.getOperand(StartOp + 2);
+
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned OpCode = Inst.getOpcode();
+  unsigned DstReg = DstRegOp.getReg();
+  unsigned BaseReg = BaseRegOp.getReg();
+  unsigned TmpReg = DstReg;
+
+  const MCInstrDesc &Desc = getInstDesc(OpCode);
+  int16_t DstRegClass = Desc.OpInfo[StartOp].RegClass;
+  unsigned DstRegClassID =
+      getContext().getRegisterInfo()->getRegClass(DstRegClass).getID();
+  bool IsGPR = (DstRegClassID == Mips::GPR32RegClassID) ||
+               (DstRegClassID == Mips::GPR64RegClassID);
+
+  if (!IsLoad || !IsGPR || (BaseReg == DstReg)) {
+    // At this point we need AT to perform the expansions
+    // and we exit if it is not available.
+    TmpReg = getATReg(IDLoc);
+    if (!TmpReg)
+      return;
+  }
+
+  auto emitInst = [&]() {
+    if (NumOp == 3)
+      TOut.emitRRX(OpCode, DstReg, TmpReg, MCOperand::createImm(0), IDLoc, STI);
+    else
+      TOut.emitRRRX(OpCode, DstReg, DstReg, TmpReg, MCOperand::createImm(0),
+                    IDLoc, STI);
+  };
+
+  if (OffsetOp.isImm()) {
+    loadImmediate(OffsetOp.getImm(), TmpReg, BaseReg, !ABI.ArePtrs64bit(), true,
+                  IDLoc, Out, STI);
+    emitInst();
+    return;
+  }
+
+  if (OffsetOp.isExpr()) {
+    loadAndAddSymbolAddress(OffsetOp.getExpr(), TmpReg, BaseReg,
+                            !ABI.ArePtrs64bit(), IDLoc, Out, STI);
+    emitInst();
     return;
   }
 
