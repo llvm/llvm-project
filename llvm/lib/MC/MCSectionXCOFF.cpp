@@ -40,6 +40,8 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     case XCOFF::XMC_DS:
       OS << "\t.csect " << QualName->getName() << '\n';
       break;
+    case XCOFF::XMC_TC:
+      break;
     case XCOFF::XMC_TC0:
       OS << "\t.toc\n";
       break;
