@@ -372,12 +372,15 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   // exit" mask.
   MachineInstr *And = nullptr, *Or = nullptr;
   if (!SkipAnding) {
-    And = BuildMI(MBB, &MI, DL, TII->get(AndOpc), Dst)
+    Register AndReg = MRI->createVirtualRegister(BoolRC);
+    And = BuildMI(MBB, &MI, DL, TII->get(AndOpc), AndReg)
              .addReg(Exec)
              .add(MI.getOperand(1));
     Or = BuildMI(MBB, &MI, DL, TII->get(OrOpc), Dst)
-             .addReg(Dst)
+             .addReg(AndReg)
              .add(MI.getOperand(2));
+    if (LIS)
+      LIS->createAndComputeVirtRegInterval(AndReg);
   } else
     Or = BuildMI(MBB, &MI, DL, TII->get(OrOpc), Dst)
              .add(MI.getOperand(1))
