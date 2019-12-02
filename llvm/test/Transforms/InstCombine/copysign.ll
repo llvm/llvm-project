@@ -6,8 +6,8 @@ declare <3 x double> @llvm.copysign.v3f64(<3 x double>, <3 x double>)
 
 define float @positive_sign_arg(float %x) {
 ; CHECK-LABEL: @positive_sign_arg(
-; CHECK-NEXT:    [[R:%.*]] = call arcp float @llvm.copysign.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call arcp float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %r = call arcp float @llvm.copysign.f32(float %x, float 0.0)
   ret float %r
@@ -15,8 +15,8 @@ define float @positive_sign_arg(float %x) {
 
 define <3 x double> @positive_sign_arg_vec_splat(<3 x double> %x) {
 ; CHECK-LABEL: @positive_sign_arg_vec_splat(
-; CHECK-NEXT:    [[R:%.*]] = call ninf <3 x double> @llvm.copysign.v3f64(<3 x double> [[X:%.*]], <3 x double> <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>)
-; CHECK-NEXT:    ret <3 x double> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf <3 x double> @llvm.fabs.v3f64(<3 x double> [[X:%.*]])
+; CHECK-NEXT:    ret <3 x double> [[TMP1]]
 ;
   %r = call ninf <3 x double> @llvm.copysign.v3f64(<3 x double> %x, <3 x double> <double 42.0, double 42.0, double 42.0>)
   ret <3 x double> %r
@@ -24,8 +24,9 @@ define <3 x double> @positive_sign_arg_vec_splat(<3 x double> %x) {
 
 define float @negative_sign_arg(float %x) {
 ; CHECK-LABEL: @negative_sign_arg(
-; CHECK-NEXT:    [[R:%.*]] = call nnan float @llvm.copysign.f32(float [[X:%.*]], float -0.000000e+00)
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan float [[TMP1]]
+; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %r = call nnan float @llvm.copysign.f32(float %x, float -0.0)
   ret float %r
@@ -33,8 +34,9 @@ define float @negative_sign_arg(float %x) {
 
 define <3 x double> @negative_sign_arg_vec_splat(<3 x double> %x) {
 ; CHECK-LABEL: @negative_sign_arg_vec_splat(
-; CHECK-NEXT:    [[R:%.*]] = call fast <3 x double> @llvm.copysign.v3f64(<3 x double> [[X:%.*]], <3 x double> <double -4.200000e+01, double -4.200000e+01, double -4.200000e+01>)
-; CHECK-NEXT:    ret <3 x double> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <3 x double> @llvm.fabs.v3f64(<3 x double> [[X:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg fast <3 x double> [[TMP1]]
+; CHECK-NEXT:    ret <3 x double> [[TMP2]]
 ;
   %r = call fast <3 x double> @llvm.copysign.v3f64(<3 x double> %x, <3 x double> <double -42.0, double -42.0, double -42.0>)
   ret <3 x double> %r
