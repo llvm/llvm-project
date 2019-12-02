@@ -1,10 +1,10 @@
 ; RUN: opt -globalopt < %s -S -o - | FileCheck %s
 
-@GV1 = internal global i64 1
-@GV2 = internal global i32 0
+@GV1 = internal global i64 1, align 8
+@GV2 = internal global i32 0, align 4
 
-; CHECK: @GV1 = internal unnamed_addr global i64 1
-; CHECK: @GV2 = internal unnamed_addr global i32 0
+; CHECK: @GV1 = internal unnamed_addr global i64 1, align 8
+; CHECK: @GV2 = internal unnamed_addr global i32 0, align 4
 
 define void @test1() {
 entry:
