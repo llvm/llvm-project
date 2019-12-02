@@ -78,10 +78,6 @@ Non-comprehensive list of changes in this release
   been extended to detect these cases, so that code relying on them can be
   detected and fixed.
 
-* The Implicit Conversion Sanitizer (``-fsanitize=implicit-conversion``) has
-  learned to sanitize pre/post increment/decrement of types with bit width
-  smaller than ``int``.
-
 - For X86 target, -march=skylake-avx512, -march=icelake-client,
   -march=icelake-server, -march=cascadelake, -march=cooperlake will default to
   not using 512-bit zmm registers in vectorized code unless 512-bit intrinsics
