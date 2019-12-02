@@ -310,7 +310,7 @@ struct CilkSanitizerImpl : public CSIImpl {
   // Initialize custom hooks for CilkSanitizer
   void initializeCsanHooks();
 
-  Value *GetCalleeFuncID(Function *Callee, IRBuilder<> &IRB);
+  Value *GetCalleeFuncID(const Function *Callee, IRBuilder<> &IRB);
 
   // Helper function for prepareToInstrumentFunction that chooses loads and
   // stores in a basic block to instrument.
@@ -1247,7 +1247,8 @@ bool CilkSanitizerImpl::simpleCallCannotRace(const Instruction &I) {
 // Helper function to get the ID of a function being called.  These IDs are
 // stored in separate global variables in the program.  This method will create
 // a new global variable for the Callee's ID if necessary.
-Value *CilkSanitizerImpl::GetCalleeFuncID(Function *Callee, IRBuilder<> &IRB) {
+Value *CilkSanitizerImpl::GetCalleeFuncID(const Function *Callee,
+                                          IRBuilder<> &IRB) {
   if (!Callee)
     // Unknown targets (i.e. indirect calls) are always unknown.
     return IRB.getInt64(CsiCallsiteUnknownTargetId);
@@ -1895,6 +1896,7 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionValue(
       IRB, static_cast<unsigned>(SuppressionVal::NoAlias));
   // Check the recorded race data for I.
   for (const RaceInfo::RaceData &RD : RI.getRaceData(I)) {
+    // Skip race data for different operands of the same instruction.
     if (OperandNum != RD.OperandNum)
       continue;
 
@@ -2011,6 +2013,7 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionCheck(
   Value *SuppressionChk = IRB.getTrue();
   // Check the recorded race data for I.
   for (const RaceInfo::RaceData &RD : RI.getRaceData(I)) {
+    // Skip race data for different operands of the same instruction.
     if (OperandNum != RD.OperandNum)
       continue;
 
@@ -2200,7 +2203,14 @@ static bool CheckSanitizeCilkAttr(Function &F) {
 bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F) ||
       !CheckSanitizeCilkAttr(F)) {
-    LLVM_DEBUG(dbgs() << "Skipping " << F.getName() << "\n");
+    LLVM_DEBUG({
+        dbgs() << "Skipping " << F.getName() << "\n";
+        if (F.empty())
+          dbgs() << "  Empty function\n";
+        else if (shouldNotInstrumentFunction(F))
+          dbgs() << "  Function should not be instrumented\n";
+        else if (!CheckSanitizeCilkAttr(F))
+          dbgs() << "  Function lacks sanitize_cilk attribute\n";});
     return false;
   }
 
