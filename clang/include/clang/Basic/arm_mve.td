@@ -214,6 +214,32 @@ let params = T.Float in {
                                (IRIntBase<"maxnum", [Vector]> $a, $b)>;
 }
 
+def vpselq: Intrinsic<Vector, (args Vector:$t, Vector:$f, Predicate:$pred),
+                      (select $pred, $t, $f)> { let params = T.Usual; }
+def vpselq_64: Intrinsic<
+    Vector, (args Vector:$t, Vector:$f, PredOf<u32>:$pred),
+            (bitcast (select $pred, (bitcast $t, VecOf<u32>),
+                                    (bitcast $f, VecOf<u32>)), Vector)>,
+    NameOverride<"vpselq"> { let params = T.All64; }
+
+let params = [Void], pnt = PNT_None in {
+
+  multiclass vctp<Type pred, string intname> {
+    def "": Intrinsic<pred, (args u32:$val),
+        (u16 (IRInt<"pred_v2i", [pred]> (IRIntBase<intname> $val)))>;
+    def _m: Intrinsic<pred, (args u32:$val, pred:$inpred),
+        (u16 (IRInt<"pred_v2i", [pred]> (and $inpred,
+                                         (IRIntBase<intname> $val))))>;
+  }
+  defm vctp8q:  vctp<PredOf<u8>,  "arm_mve_vctp8">;
+  defm vctp16q: vctp<PredOf<u16>, "arm_mve_vctp16">;
+  defm vctp32q: vctp<PredOf<u32>, "arm_mve_vctp32">;
+  defm vctp64q: vctp<PredOf<u64>, "arm_mve_vctp64">;
+
+  def vpnot: Intrinsic<PredOf<u8>, (args unpromoted<PredOf<u8>>:$pred),
+                       (xor $pred, (u16 65535))>;
+
+}
 
 multiclass contiguous_load<string mnemonic, PrimitiveType memtype,
                            list<Type> same_size, list<Type> wider> {

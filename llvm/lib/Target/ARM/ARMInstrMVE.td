@@ -4267,7 +4267,7 @@ def MVE_VDWDUPu16 : MVE_VxWDUP<"vdwdup", "u16", 0b01, 0b1>;
 def MVE_VDWDUPu32 : MVE_VxWDUP<"vdwdup", "u32", 0b10, 0b1>;
 
 let hasSideEffects = 1 in
-class MVE_VCTP<string suffix, bits<2> size, list<dag> pattern=[]>
+class MVE_VCTPInst<string suffix, bits<2> size, list<dag> pattern=[]>
   : MVE_p<(outs VCCR:$P0), (ins rGPR:$Rn), NoItinerary, "vctp", suffix,
           "$Rn", vpred_n, "", pattern> {
   bits<4> Rn;
@@ -4285,19 +4285,21 @@ class MVE_VCTP<string suffix, bits<2> size, list<dag> pattern=[]>
   let validForTailPredication = 1;
 }
 
-def MVE_VCTP8  : MVE_VCTP<"8",  0b00>;
-def MVE_VCTP16 : MVE_VCTP<"16", 0b01>;
-def MVE_VCTP32 : MVE_VCTP<"32", 0b10>;
-def MVE_VCTP64 : MVE_VCTP<"64", 0b11>;
+multiclass MVE_VCTP<MVEVectorVTInfo VTI, Intrinsic intr> {
+  def "": MVE_VCTPInst<VTI.BitsSuffix, VTI.Size>;
 
-let Predicates = [HasMVEInt] in {
-  def : Pat<(int_arm_mve_vctp8 rGPR:$Rn),
-            (v16i1 (MVE_VCTP8 rGPR:$Rn))>;
-  def : Pat<(int_arm_mve_vctp16 rGPR:$Rn),
-            (v8i1 (MVE_VCTP16 rGPR:$Rn))>;
-  def : Pat<(int_arm_mve_vctp32 rGPR:$Rn),
-            (v4i1 (MVE_VCTP32 rGPR:$Rn))>;
+  let Predicates = [HasMVEInt] in {
+    def : Pat<(intr rGPR:$Rn),
+              (VTI.Pred (!cast<Instruction>(NAME) rGPR:$Rn))>;
+    def : Pat<(and (intr rGPR:$Rn), (VTI.Pred VCCR:$mask)),
+              (VTI.Pred (!cast<Instruction>(NAME) rGPR:$Rn, 1, VCCR:$mask))>;
+  }
 }
+
+defm MVE_VCTP8  : MVE_VCTP<MVE_v16i8, int_arm_mve_vctp8>;
+defm MVE_VCTP16 : MVE_VCTP<MVE_v8i16, int_arm_mve_vctp16>;
+defm MVE_VCTP32 : MVE_VCTP<MVE_v4i32, int_arm_mve_vctp32>;
+defm MVE_VCTP64 : MVE_VCTP<MVE_v2i64, int_arm_mve_vctp64>;
 
 // end of mve_qDest_rSrc
 
