@@ -8,8 +8,8 @@
 # RUN: %lldb %t.exe -o "image dump line-table -v win-i386-line-table.c" -b | FileCheck %s
 
 # CHECK: Line table for win-i386-line-table.c in `win-i386-line-table.s.tmp.exe
-# CHECK: 0x00401000: /path/to/src/win-i386-line-table.c:2:1
-# CHECK: 0x00401001: /path/to/src/win-i386-line-table.c:2:1
+# CHECK: 0x00401000: {{/|\\\\}}path{{/|\\\\}}to{{/|\\\\}}src{{/|\\\\}}win-i386-line-table.c:2:1
+# CHECK: 0x00401001: {{/|\\\\}}path{{/|\\\\}}to{{/|\\\\}}src{{/|\\\\}}win-i386-line-table.c:2:1
 
         .text
         .file   "win-i386-line-table.c"
