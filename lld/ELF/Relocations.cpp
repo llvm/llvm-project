@@ -1763,6 +1763,19 @@ static bool isThunkSectionCompatible(InputSection *source,
   return true;
 }
 
+static int64_t getPCBias(RelType type) {
+  if (config->emachine != EM_ARM)
+    return 0;
+  switch (type) {
+  case R_ARM_THM_JUMP19:
+  case R_ARM_THM_JUMP24:
+  case R_ARM_THM_CALL:
+    return 4;
+  default:
+    return 8;
+  }
+}
+
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
                                                 Relocation &rel, uint64_t src) {
   std::vector<Thunk *> *thunkVec = nullptr;
@@ -1779,7 +1792,9 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
   for (Thunk *t : *thunkVec)
     if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
         t->isCompatibleWith(*isec, rel) &&
-        target->inBranchRange(rel.type, src, t->getThunkTargetSym()->getVA()))
+        target->inBranchRange(rel.type, src,
+                              t->getThunkTargetSym()->getVA(rel.addend) +
+                                  getPCBias(rel.type)))
       return std::make_pair(t, false);
 
   // No existing compatible Thunk in range, create a new one
@@ -1794,7 +1809,8 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
 // relocation back to its original non-Thunk target.
 bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
   if (Thunk *t = thunks.lookup(rel.sym)) {
-    if (target->inBranchRange(rel.type, src, rel.sym->getVA()))
+    if (target->inBranchRange(rel.type, src,
+                              rel.sym->getVA(rel.addend) + getPCBias(rel.type)))
       return true;
     rel.sym = &t->destination;
     if (rel.sym->isInPlt())
