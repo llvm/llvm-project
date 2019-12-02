@@ -42,7 +42,7 @@ template <class SizeClassMapT, uptr RegionSizeLog> class SizeClassAllocator32 {
 public:
   typedef SizeClassMapT SizeClassMap;
   // Regions should be large enough to hold the largest Block.
-  COMPILER_CHECK((1UL << RegionSizeLog) >= SizeClassMap::MaxSize);
+  static_assert((1UL << RegionSizeLog) >= SizeClassMap::MaxSize, "");
   typedef SizeClassAllocator32<SizeClassMapT, RegionSizeLog> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
@@ -204,7 +204,7 @@ private:
     uptr AllocatedUser;
     ReleaseToOsInfo ReleaseInfo;
   };
-  COMPILER_CHECK(sizeof(SizeClassInfo) % SCUDO_CACHE_LINE_SIZE == 0);
+  static_assert(sizeof(SizeClassInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
   uptr computeRegionId(uptr Mem) {
     const uptr Id = Mem >> RegionSizeLog;
