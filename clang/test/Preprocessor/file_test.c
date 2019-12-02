@@ -6,14 +6,14 @@
 filename: __FILE__
 #include "file_test.h"
 
-// CHECK: filename: "/UNLIKELY_PATH/empty{{[/\\]}}file_test.c"
-// CHECK: filename: "/UNLIKELY_PATH/empty{{[/\\]}}file_test.h"
-// CHECK: basefile: "/UNLIKELY_PATH/empty{{[/\\]}}file_test.c"
+// CHECK: filename: "/UNLIKELY_PATH/empty{{/|\\\\}}file_test.c"
+// CHECK: filename: "/UNLIKELY_PATH/empty{{/|\\\\}}file_test.h"
+// CHECK: basefile: "/UNLIKELY_PATH/empty{{/|\\\\}}file_test.c"
 // CHECK-NOT: filename:
 
-// CHECK-EVIL: filename: "/UNLIKELY_PATH=empty{{[/\\]}}file_test.c"
-// CHECK-EVIL: filename: "/UNLIKELY_PATH=empty{{[/\\]}}file_test.h"
-// CHECK-EVIL: basefile: "/UNLIKELY_PATH=empty{{[/\\]}}file_test.c"
+// CHECK-EVIL: filename: "/UNLIKELY_PATH=empty{{/|\\\\}}file_test.c"
+// CHECK-EVIL: filename: "/UNLIKELY_PATH=empty{{/|\\\\}}file_test.h"
+// CHECK-EVIL: basefile: "/UNLIKELY_PATH=empty{{/|\\\\}}file_test.c"
 // CHECK-EVIL-NOT: filename:
 
 // CHECK-REMOVE: filename: "file_test.c"
