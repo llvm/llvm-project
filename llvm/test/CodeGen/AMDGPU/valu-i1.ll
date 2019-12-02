@@ -223,9 +223,8 @@ exit:
 ; SI-NEXT: ; in Loop: Header=[[LABEL_LOOP]]
 ; SI-NEXT: s_or_b64 exec, exec, [[ORNEG2]]
 ; SI-NEXT: s_and_b64 [[TMP1:s\[[0-9]+:[0-9]+\]]],
-; SI-NEXT: s_or_b64 [[TMP2:s\[[0-9]+:[0-9]+\]]], [[TMP1]], [[COND_STATE]]
-; SI-NEXT: s_mov_b64 [[COND_STATE]], [[TMP2]]
-; SI-NEXT: s_andn2_b64 exec, exec, [[TMP2]]
+; SI-NEXT: s_or_b64 [[COND_STATE]], [[TMP1]], [[COND_STATE]]
+; SI-NEXT: s_andn2_b64 exec, exec, [[COND_STATE]]
 ; SI-NEXT: s_cbranch_execnz [[LABEL_LOOP]]
 
 ; SI: [[LABEL_EXIT]]:
