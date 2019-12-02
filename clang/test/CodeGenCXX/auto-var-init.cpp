@@ -645,7 +645,7 @@ TEST_UNINIT(smallpartinit, smallpartinit);
 // ZERO-LABEL: @test_smallpartinit_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,
 // ZERO-O1-LEGACY: store i16 0, i16* %uninit, align 2
-// ZERO-O1-NEWPM: store i16 0, i16* %uninit, align 2
+// ZERO-O1-NEWPM: store i16 42, i16* %uninit, align 2
 
 TEST_BRACES(smallpartinit, smallpartinit);
 // CHECK-LABEL: @test_smallpartinit_braces()
@@ -718,7 +718,7 @@ TEST_UNINIT(paddednullinit, paddednullinit);
 // PATTERN-LABEL: @test_paddednullinit_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_paddednullinit_uninit.uninit
 // PATTERN-O1-LEGACY: store i64 [[I64]], i64* %uninit, align 8
-// PATTERN-O1-NEWPM: store i64 [[I64]], i64* %uninit, align 8
+// PATTERN-O1-NEWPM: store i64 2863311360, i64* %uninit, align 8
 // ZERO-LABEL: @test_paddednullinit_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,
 // ZERO-O1: store i64 0, i64* %uninit, align 8
@@ -1344,7 +1344,10 @@ TEST_UNINIT(virtualderived, virtualderived);
 // ZERO-LABEL: @test_virtualderived_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,
 // ZERO-O1-LEGACY: call void @llvm.memset{{.*}}, i8 0,
-// ZERO-O1-NEWPM: call void @llvm.memset{{.*}}, i8 0,
+// ZERO-O1-NEWPM: [[FIELD1:%.*]] = getelementptr inbounds %struct.virtualderived, %struct.virtualderived* %uninit, i64 0, i32 1, i32 0, i32 0
+// ZERO-O1-NEWPM: [[FIELD0:%.*]] = getelementptr inbounds %struct.virtualderived, %struct.virtualderived* %uninit, i64 0, i32 0, i32 0
+// ZERO-O1-NEWPM: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [7 x i8*], [5 x i8*] }, { [7 x i8*], [5 x i8*] }* @_ZTV14virtualderived, i64 0, inrange i32 0, i64 5) to i32 (...)**), i32 (...)*** [[FIELD0]], align 8
+// ZERO-O1-NEWPM: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [7 x i8*], [5 x i8*] }, { [7 x i8*], [5 x i8*] }* @_ZTV14virtualderived, i64 0, inrange i32 1, i64 3) to i32 (...)**), i32 (...)*** [[FIELD1]], align 8
 
 TEST_BRACES(virtualderived, virtualderived);
 // CHECK-LABEL: @test_virtualderived_braces()
