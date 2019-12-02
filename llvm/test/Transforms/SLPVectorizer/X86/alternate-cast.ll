@@ -35,30 +35,9 @@ define <8 x float> @sitofp_uitofp(<8 x i32> %a) {
 ; SSE-NEXT:    ret <8 x float> [[R7]]
 ;
 ; SLM-LABEL: @sitofp_uitofp(
-; SLM-NEXT:    [[A0:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 0
-; SLM-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A]], i32 1
-; SLM-NEXT:    [[A2:%.*]] = extractelement <8 x i32> [[A]], i32 2
-; SLM-NEXT:    [[A3:%.*]] = extractelement <8 x i32> [[A]], i32 3
-; SLM-NEXT:    [[A4:%.*]] = extractelement <8 x i32> [[A]], i32 4
-; SLM-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i32 5
-; SLM-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A]], i32 6
-; SLM-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i32 7
-; SLM-NEXT:    [[AB0:%.*]] = sitofp i32 [[A0]] to float
-; SLM-NEXT:    [[AB1:%.*]] = sitofp i32 [[A1]] to float
-; SLM-NEXT:    [[AB2:%.*]] = sitofp i32 [[A2]] to float
-; SLM-NEXT:    [[AB3:%.*]] = sitofp i32 [[A3]] to float
-; SLM-NEXT:    [[AB4:%.*]] = uitofp i32 [[A4]] to float
-; SLM-NEXT:    [[AB5:%.*]] = uitofp i32 [[A5]] to float
-; SLM-NEXT:    [[AB6:%.*]] = uitofp i32 [[A6]] to float
-; SLM-NEXT:    [[AB7:%.*]] = uitofp i32 [[A7]] to float
-; SLM-NEXT:    [[R0:%.*]] = insertelement <8 x float> undef, float [[AB0]], i32 0
-; SLM-NEXT:    [[R1:%.*]] = insertelement <8 x float> [[R0]], float [[AB1]], i32 1
-; SLM-NEXT:    [[R2:%.*]] = insertelement <8 x float> [[R1]], float [[AB2]], i32 2
-; SLM-NEXT:    [[R3:%.*]] = insertelement <8 x float> [[R2]], float [[AB3]], i32 3
-; SLM-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R3]], float [[AB4]], i32 4
-; SLM-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[AB5]], i32 5
-; SLM-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[AB6]], i32 6
-; SLM-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[AB7]], i32 7
+; SLM-NEXT:    [[TMP1:%.*]] = sitofp <8 x i32> [[A:%.*]] to <8 x float>
+; SLM-NEXT:    [[TMP2:%.*]] = uitofp <8 x i32> [[A]] to <8 x float>
+; SLM-NEXT:    [[R7:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
 ; SLM-NEXT:    ret <8 x float> [[R7]]
 ;
 ; AVX-LABEL: @sitofp_uitofp(
@@ -268,11 +247,50 @@ define <8 x float> @fneg_fabs(<8 x float> %a) {
 }
 
 define <8 x i32> @sext_zext(<8 x i16> %a) {
-; CHECK-LABEL: @sext_zext(
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[A:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i16> [[A]] to <8 x i32>
-; CHECK-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    ret <8 x i32> [[R7]]
+; SSE-LABEL: @sext_zext(
+; SSE-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[A:%.*]] to <8 x i32>
+; SSE-NEXT:    [[TMP2:%.*]] = zext <8 x i16> [[A]] to <8 x i32>
+; SSE-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; SSE-NEXT:    ret <8 x i32> [[R7]]
+;
+; SLM-LABEL: @sext_zext(
+; SLM-NEXT:    [[A0:%.*]] = extractelement <8 x i16> [[A:%.*]], i32 0
+; SLM-NEXT:    [[A1:%.*]] = extractelement <8 x i16> [[A]], i32 1
+; SLM-NEXT:    [[A2:%.*]] = extractelement <8 x i16> [[A]], i32 2
+; SLM-NEXT:    [[A3:%.*]] = extractelement <8 x i16> [[A]], i32 3
+; SLM-NEXT:    [[A4:%.*]] = extractelement <8 x i16> [[A]], i32 4
+; SLM-NEXT:    [[A5:%.*]] = extractelement <8 x i16> [[A]], i32 5
+; SLM-NEXT:    [[A6:%.*]] = extractelement <8 x i16> [[A]], i32 6
+; SLM-NEXT:    [[A7:%.*]] = extractelement <8 x i16> [[A]], i32 7
+; SLM-NEXT:    [[AB0:%.*]] = sext i16 [[A0]] to i32
+; SLM-NEXT:    [[AB1:%.*]] = sext i16 [[A1]] to i32
+; SLM-NEXT:    [[AB2:%.*]] = sext i16 [[A2]] to i32
+; SLM-NEXT:    [[AB3:%.*]] = sext i16 [[A3]] to i32
+; SLM-NEXT:    [[AB4:%.*]] = zext i16 [[A4]] to i32
+; SLM-NEXT:    [[AB5:%.*]] = zext i16 [[A5]] to i32
+; SLM-NEXT:    [[AB6:%.*]] = zext i16 [[A6]] to i32
+; SLM-NEXT:    [[AB7:%.*]] = zext i16 [[A7]] to i32
+; SLM-NEXT:    [[R0:%.*]] = insertelement <8 x i32> undef, i32 [[AB0]], i32 0
+; SLM-NEXT:    [[R1:%.*]] = insertelement <8 x i32> [[R0]], i32 [[AB1]], i32 1
+; SLM-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i32 2
+; SLM-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i32 3
+; SLM-NEXT:    [[R4:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB4]], i32 4
+; SLM-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R4]], i32 [[AB5]], i32 5
+; SLM-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i32 6
+; SLM-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
+; SLM-NEXT:    ret <8 x i32> [[R7]]
+;
+; AVX-LABEL: @sext_zext(
+; AVX-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[A:%.*]] to <8 x i32>
+; AVX-NEXT:    [[TMP2:%.*]] = zext <8 x i16> [[A]] to <8 x i32>
+; AVX-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; AVX-NEXT:    ret <8 x i32> [[R7]]
+;
+; AVX512-LABEL: @sext_zext(
+; AVX512-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[A:%.*]] to <8 x i32>
+; AVX512-NEXT:    [[TMP2:%.*]] = zext <8 x i16> [[A]] to <8 x i32>
+; AVX512-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; AVX512-NEXT:    ret <8 x i32> [[R7]]
 ;
   %a0 = extractelement <8 x i16> %a, i32 0
   %a1 = extractelement <8 x i16> %a, i32 1
@@ -383,26 +401,24 @@ define <8 x float> @sitofp_uitofp_4i32_8i16_16i8(<4 x i32> %a, <8 x i16> %b, <16
 ; SSE-NEXT:    ret <8 x float> [[R7]]
 ;
 ; SLM-LABEL: @sitofp_uitofp_4i32_8i16_16i8(
-; SLM-NEXT:    [[A0:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 0
-; SLM-NEXT:    [[A1:%.*]] = extractelement <4 x i32> [[A]], i32 1
-; SLM-NEXT:    [[A2:%.*]] = extractelement <4 x i32> [[A]], i32 2
-; SLM-NEXT:    [[A3:%.*]] = extractelement <4 x i32> [[A]], i32 3
 ; SLM-NEXT:    [[B0:%.*]] = extractelement <8 x i16> [[B:%.*]], i32 0
 ; SLM-NEXT:    [[B1:%.*]] = extractelement <8 x i16> [[B]], i32 1
 ; SLM-NEXT:    [[C0:%.*]] = extractelement <16 x i8> [[C:%.*]], i32 0
 ; SLM-NEXT:    [[C1:%.*]] = extractelement <16 x i8> [[C]], i32 1
-; SLM-NEXT:    [[AB0:%.*]] = sitofp i32 [[A0]] to float
-; SLM-NEXT:    [[AB1:%.*]] = sitofp i32 [[A1]] to float
-; SLM-NEXT:    [[AB2:%.*]] = uitofp i32 [[A2]] to float
-; SLM-NEXT:    [[AB3:%.*]] = uitofp i32 [[A3]] to float
+; SLM-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
+; SLM-NEXT:    [[TMP2:%.*]] = uitofp <4 x i32> [[A]] to <4 x float>
 ; SLM-NEXT:    [[AB4:%.*]] = sitofp i16 [[B0]] to float
 ; SLM-NEXT:    [[AB5:%.*]] = uitofp i16 [[B1]] to float
 ; SLM-NEXT:    [[AB6:%.*]] = sitofp i8 [[C0]] to float
 ; SLM-NEXT:    [[AB7:%.*]] = uitofp i8 [[C1]] to float
-; SLM-NEXT:    [[R0:%.*]] = insertelement <8 x float> undef, float [[AB0]], i32 0
-; SLM-NEXT:    [[R1:%.*]] = insertelement <8 x float> [[R0]], float [[AB1]], i32 1
-; SLM-NEXT:    [[R2:%.*]] = insertelement <8 x float> [[R1]], float [[AB2]], i32 2
-; SLM-NEXT:    [[R3:%.*]] = insertelement <8 x float> [[R2]], float [[AB3]], i32 3
+; SLM-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
+; SLM-NEXT:    [[R0:%.*]] = insertelement <8 x float> undef, float [[TMP3]], i32 0
+; SLM-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
+; SLM-NEXT:    [[R1:%.*]] = insertelement <8 x float> [[R0]], float [[TMP4]], i32 1
+; SLM-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
+; SLM-NEXT:    [[R2:%.*]] = insertelement <8 x float> [[R1]], float [[TMP5]], i32 2
+; SLM-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
+; SLM-NEXT:    [[R3:%.*]] = insertelement <8 x float> [[R2]], float [[TMP6]], i32 3
 ; SLM-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R3]], float [[AB4]], i32 4
 ; SLM-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[AB5]], i32 5
 ; SLM-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[AB6]], i32 6

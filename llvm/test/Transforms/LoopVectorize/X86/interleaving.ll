@@ -1,6 +1,6 @@
 ; RUN: opt -S -mtriple=x86_64-pc_linux -loop-vectorize -instcombine < %s | FileCheck %s --check-prefix=NORMAL
-; RUN: opt -S -mtriple=x86_64-pc_linux -loop-vectorize -instcombine -mcpu=slm < %s | FileCheck %s --check-prefix=NORMAL
-; RUN: opt -S -mtriple=x86_64-pc_linux -loop-vectorize -instcombine -mcpu=atom < %s | FileCheck %s --check-prefix=ATOM
+; RUN: opt -S -mtriple=x86_64-pc_linux -loop-vectorize -instcombine -mcpu=slm < %s | FileCheck %s --check-prefix=SLOW
+; RUN: opt -S -mtriple=x86_64-pc_linux -loop-vectorize -instcombine -mcpu=atom < %s | FileCheck %s --check-prefix=SLOW
 
 ; NORMAL-LABEL: foo
 ; NORMAL: %[[WIDE:.*]] = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
@@ -8,10 +8,10 @@
 ; NORMAL: %[[STRIDED2:.*]] = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; NORMAL: add nsw <4 x i32> %[[STRIDED2]], %[[STRIDED1]]
 
-; ATOM-LABEL: foo
-; ATOM: load i32
-; ATOM: load i32
-; ATOM: store i32
+; SLOW-LABEL: foo
+; SLOW: load i32
+; SLOW: load i32
+; SLOW: store i32
 define void @foo(i32* noalias nocapture %a, i32* noalias nocapture readonly %b) {
 entry:
   br label %for.body

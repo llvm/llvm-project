@@ -9,8 +9,8 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512F
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512BW
 ;
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SSE42,SLM
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE,SSE42,GLM
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=BTVER2
 
 define i32 @extract_double(i32 %arg) {
@@ -188,19 +188,117 @@ define i32 @extract_float(i32 %arg) {
 }
 
 define i32 @extract_i64(i32 %arg) {
-; CHECK-LABEL: 'extract_i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_0 = extractelement <2 x i64> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_1 = extractelement <2 x i64> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_a = extractelement <4 x i64> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_0 = extractelement <4 x i64> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_3 = extractelement <4 x i64> undef, i32 3
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_a = extractelement <8 x i64> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_0 = extractelement <8 x i64> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_3 = extractelement <8 x i64> undef, i32 3
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_4 = extractelement <8 x i64> undef, i32 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_7 = extractelement <8 x i64> undef, i32 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; SSE2-LABEL: 'extract_i64'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_0 = extractelement <2 x i64> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_1 = extractelement <2 x i64> undef, i32 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_a = extractelement <4 x i64> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_0 = extractelement <4 x i64> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_3 = extractelement <4 x i64> undef, i32 3
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_a = extractelement <8 x i64> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_0 = extractelement <8 x i64> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_3 = extractelement <8 x i64> undef, i32 3
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_4 = extractelement <8 x i64> undef, i32 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_7 = extractelement <8 x i64> undef, i32 7
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE3-LABEL: 'extract_i64'
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_0 = extractelement <2 x i64> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_1 = extractelement <2 x i64> undef, i32 1
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_a = extractelement <4 x i64> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_0 = extractelement <4 x i64> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_3 = extractelement <4 x i64> undef, i32 3
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_a = extractelement <8 x i64> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_0 = extractelement <8 x i64> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_3 = extractelement <8 x i64> undef, i32 3
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_4 = extractelement <8 x i64> undef, i32 4
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_7 = extractelement <8 x i64> undef, i32 7
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSSE3-LABEL: 'extract_i64'
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_0 = extractelement <2 x i64> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_1 = extractelement <2 x i64> undef, i32 1
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_a = extractelement <4 x i64> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_0 = extractelement <4 x i64> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_3 = extractelement <4 x i64> undef, i32 3
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_a = extractelement <8 x i64> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_0 = extractelement <8 x i64> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_3 = extractelement <8 x i64> undef, i32 3
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_4 = extractelement <8 x i64> undef, i32 4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_7 = extractelement <8 x i64> undef, i32 7
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE41-LABEL: 'extract_i64'
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_0 = extractelement <2 x i64> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_1 = extractelement <2 x i64> undef, i32 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_a = extractelement <4 x i64> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_0 = extractelement <4 x i64> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_3 = extractelement <4 x i64> undef, i32 3
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_a = extractelement <8 x i64> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_0 = extractelement <8 x i64> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_3 = extractelement <8 x i64> undef, i32 3
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_4 = extractelement <8 x i64> undef, i32 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_7 = extractelement <8 x i64> undef, i32 7
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX-LABEL: 'extract_i64'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_0 = extractelement <2 x i64> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_1 = extractelement <2 x i64> undef, i32 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_a = extractelement <4 x i64> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_0 = extractelement <4 x i64> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_3 = extractelement <4 x i64> undef, i32 3
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_a = extractelement <8 x i64> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_0 = extractelement <8 x i64> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_3 = extractelement <8 x i64> undef, i32 3
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_4 = extractelement <8 x i64> undef, i32 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_7 = extractelement <8 x i64> undef, i32 7
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512-LABEL: 'extract_i64'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_0 = extractelement <2 x i64> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_1 = extractelement <2 x i64> undef, i32 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_a = extractelement <4 x i64> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_0 = extractelement <4 x i64> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_3 = extractelement <4 x i64> undef, i32 3
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_a = extractelement <8 x i64> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_0 = extractelement <8 x i64> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_3 = extractelement <8 x i64> undef, i32 3
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_4 = extractelement <8 x i64> undef, i32 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_7 = extractelement <8 x i64> undef, i32 7
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SLM-LABEL: 'extract_i64'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v2i64_0 = extractelement <2 x i64> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v2i64_1 = extractelement <2 x i64> undef, i32 1
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_a = extractelement <4 x i64> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v4i64_0 = extractelement <4 x i64> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v4i64_3 = extractelement <4 x i64> undef, i32 3
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_a = extractelement <8 x i64> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v8i64_0 = extractelement <8 x i64> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v8i64_3 = extractelement <8 x i64> undef, i32 3
+; SLM-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v8i64_4 = extractelement <8 x i64> undef, i32 4
+; SLM-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v8i64_7 = extractelement <8 x i64> undef, i32 7
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; GLM-LABEL: 'extract_i64'
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_0 = extractelement <2 x i64> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_1 = extractelement <2 x i64> undef, i32 1
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_a = extractelement <4 x i64> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_0 = extractelement <4 x i64> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i64_3 = extractelement <4 x i64> undef, i32 3
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_a = extractelement <8 x i64> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_0 = extractelement <8 x i64> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_3 = extractelement <8 x i64> undef, i32 3
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_4 = extractelement <8 x i64> undef, i32 4
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i64_7 = extractelement <8 x i64> undef, i32 7
+; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'extract_i64'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64_a = extractelement <2 x i64> undef, i32 %arg
@@ -234,24 +332,157 @@ define i32 @extract_i64(i32 %arg) {
 }
 
 define i32 @extract_i32(i32 %arg) {
-; CHECK-LABEL: 'extract_i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_0 = extractelement <2 x i32> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_1 = extractelement <2 x i32> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_a = extractelement <4 x i32> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_0 = extractelement <4 x i32> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_3 = extractelement <4 x i32> undef, i32 3
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_a = extractelement <8 x i32> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_0 = extractelement <8 x i32> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_3 = extractelement <8 x i32> undef, i32 3
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_4 = extractelement <8 x i32> undef, i32 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_7 = extractelement <8 x i32> undef, i32 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_a = extractelement <16 x i32> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_0 = extractelement <16 x i32> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_3 = extractelement <16 x i32> undef, i32 3
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_8 = extractelement <16 x i32> undef, i32 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_15 = extractelement <16 x i32> undef, i32 15
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; SSE2-LABEL: 'extract_i32'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_0 = extractelement <2 x i32> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_1 = extractelement <2 x i32> undef, i32 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_a = extractelement <4 x i32> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_0 = extractelement <4 x i32> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_3 = extractelement <4 x i32> undef, i32 3
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_a = extractelement <8 x i32> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_0 = extractelement <8 x i32> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_3 = extractelement <8 x i32> undef, i32 3
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_4 = extractelement <8 x i32> undef, i32 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_7 = extractelement <8 x i32> undef, i32 7
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_a = extractelement <16 x i32> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_0 = extractelement <16 x i32> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_3 = extractelement <16 x i32> undef, i32 3
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_8 = extractelement <16 x i32> undef, i32 8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_15 = extractelement <16 x i32> undef, i32 15
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE3-LABEL: 'extract_i32'
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_0 = extractelement <2 x i32> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_1 = extractelement <2 x i32> undef, i32 1
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_a = extractelement <4 x i32> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_0 = extractelement <4 x i32> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_3 = extractelement <4 x i32> undef, i32 3
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_a = extractelement <8 x i32> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_0 = extractelement <8 x i32> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_3 = extractelement <8 x i32> undef, i32 3
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_4 = extractelement <8 x i32> undef, i32 4
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_7 = extractelement <8 x i32> undef, i32 7
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_a = extractelement <16 x i32> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_0 = extractelement <16 x i32> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_3 = extractelement <16 x i32> undef, i32 3
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_8 = extractelement <16 x i32> undef, i32 8
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_15 = extractelement <16 x i32> undef, i32 15
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSSE3-LABEL: 'extract_i32'
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_0 = extractelement <2 x i32> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_1 = extractelement <2 x i32> undef, i32 1
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_a = extractelement <4 x i32> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_0 = extractelement <4 x i32> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_3 = extractelement <4 x i32> undef, i32 3
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_a = extractelement <8 x i32> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_0 = extractelement <8 x i32> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_3 = extractelement <8 x i32> undef, i32 3
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_4 = extractelement <8 x i32> undef, i32 4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_7 = extractelement <8 x i32> undef, i32 7
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_a = extractelement <16 x i32> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_0 = extractelement <16 x i32> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_3 = extractelement <16 x i32> undef, i32 3
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_8 = extractelement <16 x i32> undef, i32 8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_15 = extractelement <16 x i32> undef, i32 15
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE41-LABEL: 'extract_i32'
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_0 = extractelement <2 x i32> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_1 = extractelement <2 x i32> undef, i32 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_a = extractelement <4 x i32> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_0 = extractelement <4 x i32> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_3 = extractelement <4 x i32> undef, i32 3
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_a = extractelement <8 x i32> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_0 = extractelement <8 x i32> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_3 = extractelement <8 x i32> undef, i32 3
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_4 = extractelement <8 x i32> undef, i32 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_7 = extractelement <8 x i32> undef, i32 7
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_a = extractelement <16 x i32> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_0 = extractelement <16 x i32> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_3 = extractelement <16 x i32> undef, i32 3
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_8 = extractelement <16 x i32> undef, i32 8
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_15 = extractelement <16 x i32> undef, i32 15
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX-LABEL: 'extract_i32'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_0 = extractelement <2 x i32> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_1 = extractelement <2 x i32> undef, i32 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_a = extractelement <4 x i32> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_0 = extractelement <4 x i32> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_3 = extractelement <4 x i32> undef, i32 3
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_a = extractelement <8 x i32> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_0 = extractelement <8 x i32> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_3 = extractelement <8 x i32> undef, i32 3
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_4 = extractelement <8 x i32> undef, i32 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_7 = extractelement <8 x i32> undef, i32 7
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_a = extractelement <16 x i32> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_0 = extractelement <16 x i32> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_3 = extractelement <16 x i32> undef, i32 3
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_8 = extractelement <16 x i32> undef, i32 8
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_15 = extractelement <16 x i32> undef, i32 15
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512-LABEL: 'extract_i32'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_0 = extractelement <2 x i32> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_1 = extractelement <2 x i32> undef, i32 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_a = extractelement <4 x i32> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_0 = extractelement <4 x i32> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_3 = extractelement <4 x i32> undef, i32 3
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_a = extractelement <8 x i32> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_0 = extractelement <8 x i32> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_3 = extractelement <8 x i32> undef, i32 3
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_4 = extractelement <8 x i32> undef, i32 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_7 = extractelement <8 x i32> undef, i32 7
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_a = extractelement <16 x i32> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_0 = extractelement <16 x i32> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_3 = extractelement <16 x i32> undef, i32 3
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_8 = extractelement <16 x i32> undef, i32 8
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_15 = extractelement <16 x i32> undef, i32 15
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SLM-LABEL: 'extract_i32'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i32_0 = extractelement <2 x i32> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i32_1 = extractelement <2 x i32> undef, i32 1
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_a = extractelement <4 x i32> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i32_0 = extractelement <4 x i32> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i32_3 = extractelement <4 x i32> undef, i32 3
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_a = extractelement <8 x i32> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i32_0 = extractelement <8 x i32> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i32_3 = extractelement <8 x i32> undef, i32 3
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i32_4 = extractelement <8 x i32> undef, i32 4
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i32_7 = extractelement <8 x i32> undef, i32 7
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_a = extractelement <16 x i32> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16i32_0 = extractelement <16 x i32> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16i32_3 = extractelement <16 x i32> undef, i32 3
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16i32_8 = extractelement <16 x i32> undef, i32 8
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16i32_15 = extractelement <16 x i32> undef, i32 15
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; GLM-LABEL: 'extract_i32'
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_0 = extractelement <2 x i32> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_1 = extractelement <2 x i32> undef, i32 1
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_a = extractelement <4 x i32> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_0 = extractelement <4 x i32> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32_3 = extractelement <4 x i32> undef, i32 3
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_a = extractelement <8 x i32> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_0 = extractelement <8 x i32> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_3 = extractelement <8 x i32> undef, i32 3
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_4 = extractelement <8 x i32> undef, i32 4
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i32_7 = extractelement <8 x i32> undef, i32 7
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_a = extractelement <16 x i32> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_0 = extractelement <16 x i32> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_3 = extractelement <16 x i32> undef, i32 3
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_8 = extractelement <16 x i32> undef, i32 8
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32_15 = extractelement <16 x i32> undef, i32 15
+; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'extract_i32'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32_a = extractelement <2 x i32> undef, i32 %arg
@@ -296,24 +527,157 @@ define i32 @extract_i32(i32 %arg) {
 }
 
 define i32 @extract_i16(i32 %arg) {
-; CHECK-LABEL: 'extract_i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = extractelement <8 x i16> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = extractelement <8 x i16> undef, i32 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = extractelement <16 x i16> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = extractelement <16 x i16> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = extractelement <16 x i16> undef, i32 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = extractelement <16 x i16> undef, i32 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = extractelement <16 x i16> undef, i32 15
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = extractelement <32 x i16> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = extractelement <32 x i16> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = extractelement <32 x i16> undef, i32 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = extractelement <32 x i16> undef, i32 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_15 = extractelement <32 x i16> undef, i32 15
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_16 = extractelement <32 x i16> undef, i32 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_24 = extractelement <32 x i16> undef, i32 24
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_31 = extractelement <32 x i16> undef, i32 31
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; SSE2-LABEL: 'extract_i16'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = extractelement <8 x i16> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = extractelement <8 x i16> undef, i32 7
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = extractelement <16 x i16> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = extractelement <16 x i16> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = extractelement <16 x i16> undef, i32 7
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = extractelement <16 x i16> undef, i32 8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = extractelement <16 x i16> undef, i32 15
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = extractelement <32 x i16> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = extractelement <32 x i16> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = extractelement <32 x i16> undef, i32 7
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = extractelement <32 x i16> undef, i32 8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_15 = extractelement <32 x i16> undef, i32 15
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_16 = extractelement <32 x i16> undef, i32 16
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_24 = extractelement <32 x i16> undef, i32 24
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_31 = extractelement <32 x i16> undef, i32 31
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE3-LABEL: 'extract_i16'
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = extractelement <8 x i16> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = extractelement <8 x i16> undef, i32 7
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = extractelement <16 x i16> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = extractelement <16 x i16> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = extractelement <16 x i16> undef, i32 7
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = extractelement <16 x i16> undef, i32 8
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = extractelement <16 x i16> undef, i32 15
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = extractelement <32 x i16> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = extractelement <32 x i16> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = extractelement <32 x i16> undef, i32 7
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = extractelement <32 x i16> undef, i32 8
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_15 = extractelement <32 x i16> undef, i32 15
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_16 = extractelement <32 x i16> undef, i32 16
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_24 = extractelement <32 x i16> undef, i32 24
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_31 = extractelement <32 x i16> undef, i32 31
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSSE3-LABEL: 'extract_i16'
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = extractelement <8 x i16> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = extractelement <8 x i16> undef, i32 7
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = extractelement <16 x i16> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = extractelement <16 x i16> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = extractelement <16 x i16> undef, i32 7
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = extractelement <16 x i16> undef, i32 8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = extractelement <16 x i16> undef, i32 15
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = extractelement <32 x i16> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = extractelement <32 x i16> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = extractelement <32 x i16> undef, i32 7
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = extractelement <32 x i16> undef, i32 8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_15 = extractelement <32 x i16> undef, i32 15
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_16 = extractelement <32 x i16> undef, i32 16
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_24 = extractelement <32 x i16> undef, i32 24
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_31 = extractelement <32 x i16> undef, i32 31
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE41-LABEL: 'extract_i16'
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = extractelement <8 x i16> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = extractelement <8 x i16> undef, i32 7
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = extractelement <16 x i16> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = extractelement <16 x i16> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = extractelement <16 x i16> undef, i32 7
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = extractelement <16 x i16> undef, i32 8
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = extractelement <16 x i16> undef, i32 15
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = extractelement <32 x i16> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = extractelement <32 x i16> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = extractelement <32 x i16> undef, i32 7
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = extractelement <32 x i16> undef, i32 8
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_15 = extractelement <32 x i16> undef, i32 15
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_16 = extractelement <32 x i16> undef, i32 16
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_24 = extractelement <32 x i16> undef, i32 24
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_31 = extractelement <32 x i16> undef, i32 31
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX-LABEL: 'extract_i16'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = extractelement <8 x i16> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = extractelement <8 x i16> undef, i32 7
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = extractelement <16 x i16> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = extractelement <16 x i16> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = extractelement <16 x i16> undef, i32 7
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = extractelement <16 x i16> undef, i32 8
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = extractelement <16 x i16> undef, i32 15
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = extractelement <32 x i16> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = extractelement <32 x i16> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = extractelement <32 x i16> undef, i32 7
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = extractelement <32 x i16> undef, i32 8
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_15 = extractelement <32 x i16> undef, i32 15
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_16 = extractelement <32 x i16> undef, i32 16
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_24 = extractelement <32 x i16> undef, i32 24
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_31 = extractelement <32 x i16> undef, i32 31
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512-LABEL: 'extract_i16'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = extractelement <8 x i16> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = extractelement <8 x i16> undef, i32 7
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = extractelement <16 x i16> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = extractelement <16 x i16> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = extractelement <16 x i16> undef, i32 7
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = extractelement <16 x i16> undef, i32 8
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = extractelement <16 x i16> undef, i32 15
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = extractelement <32 x i16> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = extractelement <32 x i16> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = extractelement <32 x i16> undef, i32 7
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = extractelement <32 x i16> undef, i32 8
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_15 = extractelement <32 x i16> undef, i32 15
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_16 = extractelement <32 x i16> undef, i32 16
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_24 = extractelement <32 x i16> undef, i32 24
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_31 = extractelement <32 x i16> undef, i32 31
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SLM-LABEL: 'extract_i16'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i16_0 = extractelement <8 x i16> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i16_7 = extractelement <8 x i16> undef, i32 7
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = extractelement <16 x i16> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i16_0 = extractelement <16 x i16> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i16_7 = extractelement <16 x i16> undef, i32 7
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i16_8 = extractelement <16 x i16> undef, i32 8
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i16_15 = extractelement <16 x i16> undef, i32 15
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = extractelement <32 x i16> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i16_0 = extractelement <32 x i16> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i16_7 = extractelement <32 x i16> undef, i32 7
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i16_8 = extractelement <32 x i16> undef, i32 8
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i16_15 = extractelement <32 x i16> undef, i32 15
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i16_16 = extractelement <32 x i16> undef, i32 16
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i16_24 = extractelement <32 x i16> undef, i32 24
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i16_31 = extractelement <32 x i16> undef, i32 31
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; GLM-LABEL: 'extract_i16'
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = extractelement <8 x i16> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = extractelement <8 x i16> undef, i32 7
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = extractelement <16 x i16> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = extractelement <16 x i16> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = extractelement <16 x i16> undef, i32 7
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = extractelement <16 x i16> undef, i32 8
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = extractelement <16 x i16> undef, i32 15
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = extractelement <32 x i16> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = extractelement <32 x i16> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = extractelement <32 x i16> undef, i32 7
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = extractelement <32 x i16> undef, i32 8
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_15 = extractelement <32 x i16> undef, i32 15
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_16 = extractelement <32 x i16> undef, i32 16
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_24 = extractelement <32 x i16> undef, i32 24
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_31 = extractelement <32 x i16> undef, i32 31
+; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'extract_i16'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> undef, i32 %arg
@@ -357,29 +721,197 @@ define i32 @extract_i16(i32 %arg) {
 }
 
 define i32 @extract_i8(i32 %arg) {
-; CHECK-LABEL: 'extract_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = extractelement <32 x i8> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = extractelement <32 x i8> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = extractelement <32 x i8> undef, i32 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = extractelement <32 x i8> undef, i32 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = extractelement <32 x i8> undef, i32 15
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = extractelement <32 x i8> undef, i32 24
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = extractelement <32 x i8> undef, i32 31
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = extractelement <64 x i8> undef, i32 %arg
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = extractelement <64 x i8> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = extractelement <64 x i8> undef, i32 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = extractelement <64 x i8> undef, i32 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = extractelement <64 x i8> undef, i32 15
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = extractelement <64 x i8> undef, i32 24
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = extractelement <64 x i8> undef, i32 31
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = extractelement <64 x i8> undef, i32 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = extractelement <64 x i8> undef, i32 48
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = extractelement <64 x i8> undef, i32 63
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; SSE2-LABEL: 'extract_i8'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = extractelement <32 x i8> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = extractelement <32 x i8> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = extractelement <32 x i8> undef, i32 7
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = extractelement <32 x i8> undef, i32 8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = extractelement <32 x i8> undef, i32 15
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = extractelement <32 x i8> undef, i32 24
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = extractelement <32 x i8> undef, i32 31
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = extractelement <64 x i8> undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = extractelement <64 x i8> undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = extractelement <64 x i8> undef, i32 7
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = extractelement <64 x i8> undef, i32 8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = extractelement <64 x i8> undef, i32 15
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = extractelement <64 x i8> undef, i32 24
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = extractelement <64 x i8> undef, i32 31
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = extractelement <64 x i8> undef, i32 32
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = extractelement <64 x i8> undef, i32 48
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = extractelement <64 x i8> undef, i32 63
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE3-LABEL: 'extract_i8'
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = extractelement <32 x i8> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = extractelement <32 x i8> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = extractelement <32 x i8> undef, i32 7
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = extractelement <32 x i8> undef, i32 8
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = extractelement <32 x i8> undef, i32 15
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = extractelement <32 x i8> undef, i32 24
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = extractelement <32 x i8> undef, i32 31
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = extractelement <64 x i8> undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = extractelement <64 x i8> undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = extractelement <64 x i8> undef, i32 7
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = extractelement <64 x i8> undef, i32 8
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = extractelement <64 x i8> undef, i32 15
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = extractelement <64 x i8> undef, i32 24
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = extractelement <64 x i8> undef, i32 31
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = extractelement <64 x i8> undef, i32 32
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = extractelement <64 x i8> undef, i32 48
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = extractelement <64 x i8> undef, i32 63
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSSE3-LABEL: 'extract_i8'
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = extractelement <32 x i8> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = extractelement <32 x i8> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = extractelement <32 x i8> undef, i32 7
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = extractelement <32 x i8> undef, i32 8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = extractelement <32 x i8> undef, i32 15
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = extractelement <32 x i8> undef, i32 24
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = extractelement <32 x i8> undef, i32 31
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = extractelement <64 x i8> undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = extractelement <64 x i8> undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = extractelement <64 x i8> undef, i32 7
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = extractelement <64 x i8> undef, i32 8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = extractelement <64 x i8> undef, i32 15
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = extractelement <64 x i8> undef, i32 24
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = extractelement <64 x i8> undef, i32 31
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = extractelement <64 x i8> undef, i32 32
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = extractelement <64 x i8> undef, i32 48
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = extractelement <64 x i8> undef, i32 63
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE41-LABEL: 'extract_i8'
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = extractelement <32 x i8> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = extractelement <32 x i8> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = extractelement <32 x i8> undef, i32 7
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = extractelement <32 x i8> undef, i32 8
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = extractelement <32 x i8> undef, i32 15
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = extractelement <32 x i8> undef, i32 24
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = extractelement <32 x i8> undef, i32 31
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = extractelement <64 x i8> undef, i32 %arg
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = extractelement <64 x i8> undef, i32 0
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = extractelement <64 x i8> undef, i32 7
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = extractelement <64 x i8> undef, i32 8
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = extractelement <64 x i8> undef, i32 15
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = extractelement <64 x i8> undef, i32 24
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = extractelement <64 x i8> undef, i32 31
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = extractelement <64 x i8> undef, i32 32
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = extractelement <64 x i8> undef, i32 48
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = extractelement <64 x i8> undef, i32 63
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX-LABEL: 'extract_i8'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = extractelement <32 x i8> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = extractelement <32 x i8> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = extractelement <32 x i8> undef, i32 7
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = extractelement <32 x i8> undef, i32 8
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = extractelement <32 x i8> undef, i32 15
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = extractelement <32 x i8> undef, i32 24
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = extractelement <32 x i8> undef, i32 31
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = extractelement <64 x i8> undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = extractelement <64 x i8> undef, i32 0
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = extractelement <64 x i8> undef, i32 7
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = extractelement <64 x i8> undef, i32 8
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = extractelement <64 x i8> undef, i32 15
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = extractelement <64 x i8> undef, i32 24
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = extractelement <64 x i8> undef, i32 31
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = extractelement <64 x i8> undef, i32 32
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = extractelement <64 x i8> undef, i32 48
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = extractelement <64 x i8> undef, i32 63
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512-LABEL: 'extract_i8'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = extractelement <32 x i8> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = extractelement <32 x i8> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = extractelement <32 x i8> undef, i32 7
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = extractelement <32 x i8> undef, i32 8
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = extractelement <32 x i8> undef, i32 15
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = extractelement <32 x i8> undef, i32 24
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = extractelement <32 x i8> undef, i32 31
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = extractelement <64 x i8> undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = extractelement <64 x i8> undef, i32 0
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = extractelement <64 x i8> undef, i32 7
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = extractelement <64 x i8> undef, i32 8
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = extractelement <64 x i8> undef, i32 15
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = extractelement <64 x i8> undef, i32 24
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = extractelement <64 x i8> undef, i32 31
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = extractelement <64 x i8> undef, i32 32
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = extractelement <64 x i8> undef, i32 48
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = extractelement <64 x i8> undef, i32 63
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SLM-LABEL: 'extract_i8'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = extractelement <32 x i8> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i8_0 = extractelement <32 x i8> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i8_7 = extractelement <32 x i8> undef, i32 7
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i8_8 = extractelement <32 x i8> undef, i32 8
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i8_15 = extractelement <32 x i8> undef, i32 15
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i8_24 = extractelement <32 x i8> undef, i32 24
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i8_31 = extractelement <32 x i8> undef, i32 31
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = extractelement <64 x i8> undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i8_0 = extractelement <64 x i8> undef, i32 0
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i8_7 = extractelement <64 x i8> undef, i32 7
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i8_8 = extractelement <64 x i8> undef, i32 8
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i8_15 = extractelement <64 x i8> undef, i32 15
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i8_24 = extractelement <64 x i8> undef, i32 24
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i8_31 = extractelement <64 x i8> undef, i32 31
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i8_32 = extractelement <64 x i8> undef, i32 32
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i8_48 = extractelement <64 x i8> undef, i32 48
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i8_63 = extractelement <64 x i8> undef, i32 63
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; GLM-LABEL: 'extract_i8'
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = extractelement <32 x i8> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = extractelement <32 x i8> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = extractelement <32 x i8> undef, i32 7
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = extractelement <32 x i8> undef, i32 8
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = extractelement <32 x i8> undef, i32 15
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = extractelement <32 x i8> undef, i32 24
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = extractelement <32 x i8> undef, i32 31
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = extractelement <64 x i8> undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = extractelement <64 x i8> undef, i32 0
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = extractelement <64 x i8> undef, i32 7
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = extractelement <64 x i8> undef, i32 8
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = extractelement <64 x i8> undef, i32 15
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = extractelement <64 x i8> undef, i32 24
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = extractelement <64 x i8> undef, i32 31
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = extractelement <64 x i8> undef, i32 32
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = extractelement <64 x i8> undef, i32 48
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = extractelement <64 x i8> undef, i32 63
+; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'extract_i8'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
