@@ -54,7 +54,7 @@ static bool isSurroundedRight(const Token &T) {
 /// Is given TokenKind a keyword?
 static bool isKeyword(const Token &T) {
   // FIXME: better matching of keywords to avoid false positives.
-  return T.isOneOf(tok::kw_case, tok::kw_const, tok::kw_struct);
+  return T.isOneOf(tok::kw_if, tok::kw_case, tok::kw_const, tok::kw_struct);
 }
 
 /// Warning is written when one of these operators are not within parentheses.
