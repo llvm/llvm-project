@@ -141,7 +141,7 @@ func @copy_transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %a
   n_views = [2, 1],
   iterator_types = ["parallel", "parallel", "reduction"],
   indexing_maps = #matmul_accesses,
-  library_call = "some_external_function_name_for_vector_outerproduct_matmul"
+  library_call = "external_outerproduct_matmul"
 }
 
 !vector_type_A = type vector<4xf32>
@@ -162,7 +162,7 @@ func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C
   return
 }
 // CHECK-LABEL: func @matmul_vec_impl(
-//   CHECK:  llvm.call @some_external_function_name_for_vector_outerproduct_matmul(%{{.*}}) : (!llvm<"{ <4 x float>*, <4 x float>*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ <4 x float>*, <4 x float>*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ [4 x <4 x float>]*, [4 x <4 x float>]*, i64, [2 x i64], [2 x i64] }*">) -> ()
+//   CHECK:  llvm.call @external_outerproduct_matmul(%{{.*}}) : (!llvm<"{ <4 x float>*, <4 x float>*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ <4 x float>*, <4 x float>*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ [4 x <4 x float>]*, [4 x <4 x float>]*, i64, [2 x i64], [2 x i64] }*">) -> ()
 
 // LLVM-LOOPS-LABEL: func @matmul_vec_impl(
 //   LLVM-LOOPS: llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !llvm<"<4 x float>">, !llvm<"<4 x float>">
@@ -172,3 +172,25 @@ func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C
 //   LLVM-LOOPS-NEXT: llvm.extractvalue {{.*}}[3] : !llvm<"[4 x <4 x float>]">
 //   LLVM-LOOPS-NEXT: "llvm.intr.fmuladd"({{.*}}) : (!llvm<"<4 x float>">, !llvm<"<4 x float>">, !llvm<"<4 x float>">) -> !llvm<"<4 x float>">
 //   LLVM-LOOPS-NEXT: llvm.insertvalue {{.*}}, {{.*}}[3] : !llvm<"[4 x <4 x float>]">
+
+
+#indexed_matmul_trait = {
+  n_views = [2, 1],
+  iterator_types = ["parallel", "parallel", "reduction"],
+  indexing_maps = #matmul_accesses,
+  library_call = "external_indexed_outerproduct_matmul"
+}
+func @matmul_vec_indexed(%A: !matrix_type_A,
+                         %B: !matrix_type_B,
+                         %C: !matrix_type_C) {
+  linalg.indexed_generic #indexed_matmul_trait %A, %B, %C {
+    ^bb0(%i: index, %j: index, %k: index,
+         %a: !vector_type_A, %b: !vector_type_B, %c: !vector_type_C):
+      %d = vector.outerproduct %a, %b, %c: !vector_type_A, !vector_type_B
+      linalg.yield %d: !vector_type_C
+  } : !matrix_type_A, !matrix_type_B, !matrix_type_C
+  return
+}
+// CHECK-LABEL: func @matmul_vec_indexed(
+//   CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+//   CHECK: llvm.call @external_indexed_outerproduct_matmul(%[[ZERO]], %[[ZERO]], %[[ZERO]], %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.i64, !llvm.i64, !llvm.i64, !llvm<"{ <4 x float>*, <4 x float>*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ <4 x float>*, <4 x float>*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ [4 x <4 x float>]*, [4 x <4 x float>]*, i64, [2 x i64], [2 x i64] }*">) -> ()
