@@ -77,14 +77,14 @@ define i1 @test4(i32 %a) {
 
 define { i32, i1 } @test4multiuse(i32 %a) {
 ; CHECK-LABEL: @test4multiuse(
-; CHECK-NEXT:    [[B:%.*]] = add i32 [[A:%.*]], -2147483644
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[B]], -4
+; CHECK-NEXT:    [[B:%.*]] = add nsw i32 [[A:%.*]], -2147483644
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A]], 2147483640
 ; CHECK-NEXT:    [[TMP:%.*]] = insertvalue { i32, i1 } undef, i32 [[B]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i32, i1 } [[TMP]], i1 [[C]], 1
 ; CHECK-NEXT:    ret { i32, i1 } [[RES]]
 ;
 
-  %b = add i32 %a, -2147483644
+  %b = add nsw i32 %a, -2147483644
   %c = icmp slt i32 %b, -4
 
   %tmp = insertvalue { i32, i1 } undef, i32 %b, 0

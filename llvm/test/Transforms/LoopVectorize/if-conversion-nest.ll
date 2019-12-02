@@ -12,7 +12,7 @@ define i32 @foo(i32* nocapture %A, i32* nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 3
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1
@@ -22,33 +22,33 @@ define i32 @foo(i32* nocapture %A, i32* nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i32, i32* [[B:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i32* [[SCEVGEP4]], [[A]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt i32* [[SCEVGEP]], [[B]]
-; CHECK-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934588
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[TMP7]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP8]], align 4, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP9]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, <4 x i32>* [[TMP10]], align 4, !alias.scope !3
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD6]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], <i32 19, i32 19, i32 19, i32 19>
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD6]], <i32 4, i32 4, i32 4, i32 4>
-; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP13]], <4 x i32> <i32 4, i32 4, i32 4, i32 4>, <4 x i32> <i32 5, i32 5, i32 5, i32 5>
-; CHECK-NEXT:    [[TMP15:%.*]] = and <4 x i1> [[TMP12]], [[TMP11]]
-; CHECK-NEXT:    [[TMP16:%.*]] = xor <4 x i1> [[TMP12]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP17:%.*]] = and <4 x i1> [[TMP11]], [[TMP16]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP15]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32> <i32 9, i32 9, i32 9, i32 9>
-; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP17]], <4 x i32> [[TMP14]], <4 x i32> [[PREDPHI]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i32* [[TMP7]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[PREDPHI7]], <4 x i32>* [[TMP18]], align 4, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP7]], align 4, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <4 x i32>*
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, <4 x i32>* [[TMP9]], align 4, !alias.scope !3
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], <i32 19, i32 19, i32 19, i32 19>
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD6]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP12]], <4 x i32> <i32 4, i32 4, i32 4, i32 4>, <4 x i32> <i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP14:%.*]] = and <4 x i1> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP15:%.*]] = xor <4 x i1> [[TMP11]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP16:%.*]] = and <4 x i1> [[TMP10]], [[TMP15]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP14]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32> <i32 9, i32 9, i32 9, i32 9>
+; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP16]], <4 x i32> [[TMP13]], <4 x i32> [[PREDPHI]]
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[PREDPHI7]], <4 x i32>* [[TMP17]], align 4, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !5
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !5
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -58,16 +58,16 @@ define i32 @foo(i32* nocapture %A, i32* nocapture %B, i32 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[IF_END14:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP21:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[TMP20]], [[TMP21]]
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[TMP19]], [[TMP20]]
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[IF_THEN:%.*]], label [[IF_END14]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TMP20]], 19
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TMP19]], 19
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[IF_END14]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp slt i32 [[TMP21]], 4
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp slt i32 [[TMP20]], 4
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP10]], i32 4, i32 5
 ; CHECK-NEXT:    br label [[IF_END14]]
 ; CHECK:       if.end14:
