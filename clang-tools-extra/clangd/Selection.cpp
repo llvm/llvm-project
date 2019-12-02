@@ -34,283 +34,95 @@ namespace {
 using Node = SelectionTree::Node;
 using ast_type_traits::DynTypedNode;
 
-// An IntervalSet maintains a set of disjoint subranges of an array.
-//
-// Initially, it contains the entire array.
-//           [-----------------------------------------------------------]
-//
-// When a range is erased(), it will typically split the array in two.
-//  Claim:                     [--------------------]
-//  after:   [----------------]                      [-------------------]
-//
-// erase() returns the segments actually erased. Given the state above:
-//  Claim:          [---------------------------------------]
-//  Out:            [---------]                      [------]
-//  After:   [-----]                                         [-----------]
-//
-// It is used to track (expanded) tokens not yet associated with an AST node.
-// On traversing an AST node, its token range is erased from the unclaimed set.
-// The tokens actually removed are associated with that node, and hit-tested
-// against the selection to determine whether the node is selected.
-template <typename T>
-class IntervalSet {
+// Identifies which tokens are selected, and evaluates claims of source ranges
+// by AST nodes. Tokens may be claimed only once: first-come, first-served.
+class SelectedTokens {
 public:
-  IntervalSet(llvm::ArrayRef<T> Range) : UnclaimedRanges(&rangeLess) {
-    UnclaimedRanges.insert(Range);
-  }
-
-  // Removes the elements of Claim from the set, modifying or removing ranges
-  // that overlap it.
-  // Returns the continuous subranges of Claim that were actually removed.
-  llvm::SmallVector<llvm::ArrayRef<T>, 4> erase(llvm::ArrayRef<T> Claim) {
-    llvm::SmallVector<llvm::ArrayRef<T>, 4> Out;
-    if (Claim.empty())
-      return Out;
-    // equal_range finds overlapping ranges, because of how we chose <.
-    auto Overlap = UnclaimedRanges.equal_range(Claim);
-    if (Overlap.first == Overlap.second)
-      return Out;
-
-    // General case:
-    // Claim:                   [-----------------]
-    // UnclaimedRanges: [-A-] [-B-] [-C-] [-D-] [-E-] [-F-] [-G-]
-    // Overlap:               ^first                  ^second
-    // Ranges C and D are fully included. Ranges B and E must be trimmed.
-
-    // First, copy all overlapping ranges into the output.
-    auto OutFirst = Out.insert(Out.end(), Overlap.first, Overlap.second);
-    // If any of the overlapping ranges were sliced by the claim, split them:
-    //  - restrict the returned range to the claimed part
-    //  - save the unclaimed part so it can be reinserted
-    llvm::ArrayRef<T> RemainingHead, RemainingTail;
-    if (Claim.begin() > OutFirst->begin()) {
-      RemainingHead = {OutFirst->begin(), Claim.begin()};
-      *OutFirst = {Claim.begin(), OutFirst->end()};
-    }
-    if (Claim.end() < Out.back().end()) {
-      RemainingTail = {Claim.end(), Out.back().end()};
-      Out.back() = {Out.back().begin(), Claim.end()};
-    }
-
-    // Erase all the overlapping ranges (invalidating all iterators).
-    UnclaimedRanges.erase(Overlap.first, Overlap.second);
-    // Reinsert ranges that were merely trimmed.
-    if (!RemainingHead.empty())
-      UnclaimedRanges.insert(RemainingHead);
-    if (!RemainingTail.empty())
-      UnclaimedRanges.insert(RemainingTail);
-
-    return Out;
-  }
-
-private:
-  using TokenRange = llvm::ArrayRef<T>;
-  // Given that the ranges we insert are disjoint, there are several ways to
-  // legally define range < range.
-  // We choose to define it so overlapping ranges compare equal.
-  static bool rangeLess(llvm::ArrayRef<T> L, llvm::ArrayRef<T> R) {
-    return L.end() <= R.begin();
-  }
-
-  // Disjoint sorted unclaimed ranges of expanded tokens.
-  std::set<llvm::ArrayRef<T>, decltype(&rangeLess)> UnclaimedRanges;
-};
-
-// Sentinel value for the selectedness of a node where we've seen no tokens yet.
-// This resolves to Unselected if no tokens are ever seen.
-// But Unselected + Complete -> Partial, while NoTokens + Complete --> Complete.
-// This value is never exposed publicly.
-constexpr SelectionTree::Selection NoTokens =
-    static_cast<SelectionTree::Selection>(
-        static_cast<unsigned char>(SelectionTree::Complete + 1));
-
-// Nodes start with NoTokens, and then use this function to aggregate the
-// selectedness as more tokens are found.
-void update(SelectionTree::Selection &Result, SelectionTree::Selection New) {
-  if (New == NoTokens)
-    return;
-  if (Result == NoTokens)
-    Result = New;
-  else if (Result != New)
-    // Can only be completely selected (or unselected) if all tokens are.
-    Result = SelectionTree::Partial;
-}
-
-
-// SelectionTester can determine whether a range of tokens from the PP-expanded
-// stream (corresponding to an AST node) is considered selected.
-//
-// When the tokens result from macro expansions, the appropriate tokens in the
-// main file are examined (macro invocation or args). Similarly for #includes.
-//
-// It tests each token in the range (not just the endpoints) as contiguous
-// expanded tokens may not have contiguous spellings (with macros).
-//
-// Non-token text, and tokens not modeled in the AST (comments, semicolons)
-// are ignored when determining selectedness.
-class SelectionTester {
-public:
-  // The selection is offsets [SelBegin, SelEnd) in SelFile.
-  SelectionTester(const syntax::TokenBuffer &Buf, FileID SelFile,
-                  unsigned SelBegin, unsigned SelEnd, const SourceManager &SM)
-      : SelFile(SelFile), SM(SM) {
-    // Find all tokens (partially) selected in the file.
-    auto AllSpelledTokens = Buf.spelledTokens(SelFile);
-    const syntax::Token *SelFirst =
-        llvm::partition_point(AllSpelledTokens, [&](const syntax::Token &Tok) {
-          return SM.getFileOffset(Tok.endLocation()) <= SelBegin;
-        });
-    const syntax::Token *SelLimit = std::partition_point(
-        SelFirst, AllSpelledTokens.end(), [&](const syntax::Token &Tok) {
-          return SM.getFileOffset(Tok.location()) < SelEnd;
-        });
-    // Precompute selectedness and offset for selected spelled tokens.
-    for (const syntax::Token *T = SelFirst; T < SelLimit; ++T) {
+  SelectedTokens(llvm::ArrayRef<syntax::Token> Spelled, const SourceManager &SM,
+                 unsigned SelBegin, unsigned SelEnd)
+      : SelBegin(SelBegin), SelEnd(SelEnd) {
+    // Extract bounds and selected-ness for all tokens spelled in the file.
+    Tokens.reserve(Spelled.size());
+    for (const auto& Tok : Spelled) {
       // As well as comments, don't count semicolons as real tokens.
       // They're not properly claimed as expr-statement is missing from the AST.
-      if (T->kind() == tok::comment || T->kind() == tok::semi)
+      if (Tok.kind() == tok::comment || Tok.kind() == tok::semi)
         continue;
-      SpelledTokens.emplace_back();
-      Tok &S = SpelledTokens.back();
-      S.Offset = SM.getFileOffset(T->location());
-      if (S.Offset >= SelBegin && S.Offset + T->length() <= SelEnd)
+
+      Tokens.emplace_back();
+      TokInfo &S = Tokens.back();
+      S.StartOffset = SM.getFileOffset(Tok.location());
+      S.EndOffset = S.StartOffset + Tok.length();
+      if (S.StartOffset >= SelBegin && S.EndOffset <= SelEnd)
         S.Selected = SelectionTree::Complete;
-      else
+      else if (S.EndOffset > SelBegin && S.StartOffset < SelEnd)
         S.Selected = SelectionTree::Partial;
+      else
+        S.Selected = SelectionTree::Unselected;
+      S.Claimed = false;
     }
   }
 
-  // Test whether a consecutive range of tokens is selected.
-  // The tokens are taken from the expanded token stream.
-  SelectionTree::Selection
-  test(llvm::ArrayRef<syntax::Token> ExpandedTokens) const {
-    if (SpelledTokens.empty())
-      return NoTokens;
-    SelectionTree::Selection Result = NoTokens;
-    while (!ExpandedTokens.empty()) {
-      // Take consecutive tokens from the same context together for efficiency.
-      FileID FID = SM.getFileID(ExpandedTokens.front().location());
-      auto Batch = ExpandedTokens.take_while([&](const syntax::Token &T) {
-        return SM.getFileID(T.location()) == FID;
-      });
-      assert(!Batch.empty());
-      ExpandedTokens = ExpandedTokens.drop_front(Batch.size());
+  // Associates any tokens overlapping [Begin, End) with an AST node.
+  // Tokens that were already claimed by another AST node are not claimed again.
+  // Updates Result if the node is selected in the sense of SelectionTree.
+  void claim(unsigned Begin, unsigned End, SelectionTree::Selection &Result) {
+    assert(Begin <= End);
 
-      update(Result, testChunk(FID, Batch));
+    // Fast-path for missing the selection entirely.
+    if (Begin >= SelEnd || End <= SelBegin)
+      return;
+
+    // We will consider the range (at least partially) selected if it hit any
+    // selected and previously unclaimed token.
+    bool ClaimedAnyToken = false;
+    // The selection is (at most) partial if:
+    // - any claimed token is partially selected
+    // - any token in the range is unselected
+    bool PartialSelection = false;
+
+    // Find the first token that (maybe) overlaps the claimed range.
+    auto Start = llvm::partition_point(Tokens, [&](const TokInfo &Tok) {
+      return Tok.EndOffset <= Begin;
+    });
+    // Iterate over every token that overlaps the range.
+    // Claim selected tokens, and update the two result flags.
+    for (auto It = Start; It != Tokens.end() && It->StartOffset < End; ++It) {
+      if (It->Selected) {
+        if (!It->Claimed) {
+          // Token is selected, in the node's range, and unclaimed; claim it.
+          It->Claimed = true;
+          ClaimedAnyToken = true;
+          // If the token was only partially selected, so is the node.
+          PartialSelection |= (It->Selected == SelectionTree::Partial);
+        }
+      } else {
+        // If the node covers an unselected token, it's not completely selected.
+        PartialSelection = true;
+      }
     }
-    return Result;
-  }
 
-  // Cheap check whether any of the tokens in R might be selected.
-  // If it returns false, test() will return NoTokens or Unselected.
-  // If it returns true, test() may return any value.
-  bool mayHit(SourceRange R) const {
-    if (SpelledTokens.empty())
-      return false;
-    auto B = SM.getDecomposedLoc(R.getBegin());
-    auto E = SM.getDecomposedLoc(R.getEnd());
-    if (B.first == SelFile && E.first == SelFile)
-      if (E.second < SpelledTokens.front().Offset ||
-          B.second > SpelledTokens.back().Offset)
-        return false;
-    return true;
+    // If some tokens were previously claimed (Result != Unselected), we may
+    // upgrade from Partial->Complete, even if no new tokens were claimed.
+    // Important for [[int a]].
+    if (ClaimedAnyToken || Result) {
+      Result = std::max(Result, PartialSelection ? SelectionTree::Partial
+                                                 : SelectionTree::Complete);
+    }
   }
 
 private:
-  // Hit-test a consecutive range of tokens from a single file ID.
-  SelectionTree::Selection
-  testChunk(FileID FID, llvm::ArrayRef<syntax::Token> Batch) const {
-    assert(!Batch.empty());
-    SourceLocation StartLoc = Batch.front().location();
-    // There are several possible categories of FileID depending on how the
-    // preprocessor was used to generate these tokens:
-    //   main file, #included file, macro args, macro bodies.
-    // We need to identify the main-file tokens that represent Batch, and
-    // determine whether we want to exclusively claim them. Regular tokens
-    // represent one AST construct, but a macro invocation can represent many.
-
-    // Handle tokens written directly in the main file.
-    if (FID == SelFile) {
-      return testTokenRange(SM.getFileOffset(Batch.front().location()),
-                            SM.getFileOffset(Batch.back().location()));
-    }
-
-    // Handle tokens in another file #included into the main file.
-    // Check if the #include is selected, but don't claim it exclusively.
-    if (StartLoc.isFileID()) {
-      for (SourceLocation Loc = Batch.front().location(); Loc.isValid();
-           Loc = SM.getIncludeLoc(SM.getFileID(Loc))) {
-        if (SM.getFileID(Loc) == SelFile)
-          // FIXME: use whole #include directive, not just the filename string.
-          return testToken(SM.getFileOffset(Loc));
-      }
-      return NoTokens;
-    }
-
-    assert(StartLoc.isMacroID());
-    // Handle tokens that were passed as a macro argument.
-    SourceLocation ArgStart = SM.getTopMacroCallerLoc(StartLoc);
-    if (SM.getFileID(ArgStart) == SelFile) {
-      SourceLocation ArgEnd = SM.getTopMacroCallerLoc(Batch.back().location());
-      return testTokenRange(SM.getFileOffset(ArgStart),
-                            SM.getFileOffset(ArgEnd));
-    }
-
-    // Handle tokens produced by non-argument macro expansion.
-    // Check if the macro name is selected, don't claim it exclusively.
-    auto Expansion = SM.getDecomposedExpansionLoc(StartLoc);
-    if (Expansion.first == SelFile)
-      // FIXME: also check ( and ) for function-like macros?
-      return testToken(Expansion.second);
-    else
-      return NoTokens;
-  }
-
-  // Is the closed token range [Begin, End] selected?
-  SelectionTree::Selection testTokenRange(unsigned Begin, unsigned End) const {
-    assert(Begin <= End);
-    // Outside the selection entirely?
-    if (End < SpelledTokens.front().Offset ||
-        Begin > SpelledTokens.back().Offset)
-      return SelectionTree::Unselected;
-
-    // Compute range of tokens.
-    auto B = llvm::partition_point(
-        SpelledTokens, [&](const Tok &T) { return T.Offset < Begin; });
-    auto E = std::partition_point(
-        B, SpelledTokens.end(), [&](const Tok &T) { return T.Offset <= End; });
-
-    // Aggregate selectedness of tokens in range.
-    bool ExtendsOutsideSelection = Begin < SpelledTokens.front().Offset ||
-                                   End > SpelledTokens.back().Offset;
-    SelectionTree::Selection Result =
-        ExtendsOutsideSelection ? SelectionTree::Unselected : NoTokens;
-    for (auto It = B; It != E; ++It)
-      update(Result, It->Selected);
-    return Result;
-  }
-
-  // Is the token at `Offset` selected?
-  SelectionTree::Selection testToken(unsigned Offset) const {
-    // Outside the selection entirely?
-    if (Offset < SpelledTokens.front().Offset ||
-        Offset > SpelledTokens.back().Offset)
-      return SelectionTree::Unselected;
-    // Find the token, if it exists.
-    auto It = llvm::partition_point(
-        SpelledTokens, [&](const Tok &T) { return T.Offset < Offset; });
-    if (It != SpelledTokens.end() && It->Offset == Offset)
-      return It->Selected;
-    return NoTokens;
-  }
-
-  struct Tok {
-    unsigned Offset;
+  struct TokInfo {
+    unsigned StartOffset;
+    unsigned EndOffset;
     SelectionTree::Selection Selected;
+    bool Claimed;
+    bool operator<(const TokInfo &Other) const {
+      return StartOffset < Other.StartOffset;
+    }
   };
-  std::vector<Tok> SpelledTokens;
-  FileID SelFile;
-  const SourceManager &SM;
+  std::vector<TokInfo> Tokens;
+  unsigned SelBegin, SelEnd;
 };
 
 // Show the type of a node for debugging.
@@ -383,6 +195,16 @@ public:
     V.TraverseAST(AST);
     assert(V.Stack.size() == 1 && "Unpaired push/pop?");
     assert(V.Stack.top() == &V.Nodes.front());
+    // We selected TUDecl if tokens were unclaimed (or the file is empty).
+    SelectionTree::Selection UnclaimedTokens = SelectionTree::Unselected;
+    V.Claimed.claim(Begin, End, UnclaimedTokens);
+    if (UnclaimedTokens || V.Nodes.size() == 1) {
+      StringRef FileContent = AST.getSourceManager().getBufferData(File);
+      // Don't require the trailing newlines to be selected.
+      bool SelectedAll = Begin == 0 && End >= FileContent.rtrim().size();
+      V.Stack.top()->Selected =
+          SelectedAll ? SelectionTree::Complete : SelectionTree::Partial;
+    }
     return std::move(V.Nodes);
   }
 
@@ -467,8 +289,11 @@ private:
 #ifndef NDEBUG
         PrintPolicy(PP),
 #endif
-        TokenBuf(Tokens), SelChecker(Tokens, SelFile, SelBegin, SelEnd, SM),
-        UnclaimedExpandedTokens(Tokens.expandedTokens()) {
+        Claimed(Tokens.spelledTokens(SelFile), SM, SelBegin, SelEnd),
+        SelFile(SelFile),
+        SelBeginTokenStart(SM.getFileOffset(Lexer::GetBeginningOfToken(
+            SM.getComposedLoc(SelFile, SelBegin), SM, LangOpts))),
+        SelEnd(SelEnd) {
     // Ensure we have a node for the TU decl, regardless of traversal scope.
     Nodes.emplace_back();
     Nodes.back().ASTNode = DynTypedNode::create(*AST.getTranslationUnitDecl());
@@ -521,12 +346,18 @@ private:
   // don't intersect the selection may be recursively skipped.
   bool canSafelySkipNode(const DynTypedNode &N) {
     SourceRange S = N.getSourceRange();
-    if (!SelChecker.mayHit(S)) {
-      dlog("{1}skip: {0}", printNodeToString(N, PrintPolicy), indent());
-      dlog("{1}skipped range = {0}", S.printToString(SM), indent(1));
-      return true;
-    }
-    return false;
+    auto B = SM.getDecomposedLoc(S.getBegin());
+    auto E = SM.getDecomposedLoc(S.getEnd());
+    // Node lies in a macro expansion?
+    if (B.first != SelFile || E.first != SelFile)
+      return false;
+    // Node intersects selection tokens?
+    if (B.second < SelEnd && E.second >= SelBeginTokenStart)
+      return false;
+    // Otherwise, allow skipping over the node.
+    dlog("{1}skip: {0}", printNodeToString(N, PrintPolicy), indent());
+    dlog("{1}skipped range = {0}", S.printToString(SM), indent(1));
+    return true;
   }
 
   // There are certain nodes we want to treat as leaves in the SelectionTree,
@@ -546,9 +377,11 @@ private:
     Nodes.emplace_back();
     Nodes.back().ASTNode = std::move(Node);
     Nodes.back().Parent = Stack.top();
-    Nodes.back().Selected = NoTokens;
     Stack.push(&Nodes.back());
     claimRange(Early, Nodes.back().Selected);
+    // Early hit detection never selects the whole node.
+    if (Nodes.back().Selected)
+      Nodes.back().Selected = SelectionTree::Partial;
   }
 
   // Pops a node off the ancestor stack, and finalizes it. Pairs with push().
@@ -557,8 +390,6 @@ private:
     Node &N = *Stack.top();
     dlog("{1}pop: {0}", printNodeToString(N.ASTNode, PrintPolicy), indent(-1));
     claimRange(N.ASTNode.getSourceRange(), N.Selected);
-    if (N.Selected == NoTokens)
-      N.Selected = SelectionTree::Unselected;
     if (N.Selected || !N.Children.empty()) {
       // Attach to the tree.
       N.Parent->Children.push_back(&N);
@@ -593,12 +424,31 @@ private:
   // This is usually called from pop(), so we can take children into account.
   // The existing state of Result is relevant (early/late claims can interact).
   void claimRange(SourceRange S, SelectionTree::Selection &Result) {
-    for (const auto &ClaimedRange :
-         UnclaimedExpandedTokens.erase(TokenBuf.expandedTokens(S)))
-      update(Result, SelChecker.test(ClaimedRange));
-
-    if (Result && Result != NoTokens)
-      dlog("{1}hit selection: {0}", S.printToString(SM), indent());
+    if (!S.isValid())
+      return;
+    // toHalfOpenFileRange() allows selection of constructs in macro args. e.g:
+    //   #define LOOP_FOREVER(Body) for(;;) { Body }
+    //   void IncrementLots(int &x) {
+    //     LOOP_FOREVER( ++x; )
+    //   }
+    // Selecting "++x" or "x" will do the right thing.
+    auto Range = toHalfOpenFileRange(SM, LangOpts, S);
+    assert(Range && "We should be able to get the File Range");
+    dlog("{1}claimRange: {0}", Range->printToString(SM), indent());
+    auto B = SM.getDecomposedLoc(Range->getBegin());
+    auto E = SM.getDecomposedLoc(Range->getEnd());
+    // Otherwise, nodes in macro expansions can't be selected.
+    if (B.first != SelFile || E.first != SelFile)
+      return;
+    // Attempt to claim the remaining range. If there's nothing to claim, only
+    // children were selected.
+    Claimed.claim(B.second, E.second, Result);
+    if (Result)
+      dlog("{1}hit selection: {0}",
+           SourceRange(SM.getComposedLoc(B.first, B.second),
+                       SM.getComposedLoc(E.first, E.second))
+               .printToString(SM),
+           indent());
   }
 
   std::string indent(int Offset = 0) {
@@ -613,11 +463,17 @@ private:
 #ifndef NDEBUG
   const PrintingPolicy &PrintPolicy;
 #endif
-  const syntax::TokenBuffer &TokenBuf;
   std::stack<Node *> Stack;
-  SelectionTester SelChecker;
-  IntervalSet<syntax::Token> UnclaimedExpandedTokens;
+  SelectedTokens Claimed;
   std::deque<Node> Nodes; // Stable pointers as we add more nodes.
+  FileID SelFile;
+  // If the selection start slices a token in half, the beginning of that token.
+  // This is useful for checking whether the end of a token range overlaps
+  // the selection: range.end < SelBeginTokenStart is equivalent to
+  // range.end + measureToken(range.end) < SelBegin (assuming range.end points
+  // to a token), and it saves a lex every time.
+  unsigned SelBeginTokenStart;
+  unsigned SelEnd;
 };
 
 } // namespace
