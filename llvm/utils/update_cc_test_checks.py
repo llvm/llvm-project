@@ -52,28 +52,37 @@ def get_line2spell_and_mangled(args, clang_args):
     sys.stderr.write(status.stderr.decode())
     sys.stderr.write(status.stdout.decode())
     sys.exit(2)
-  ast = json.loads(status.stdout.decode())
-  if ast['kind'] != 'TranslationUnitDecl':
-    common.error('Clang AST dump JSON format changed?')
-    sys.exit(2)
 
-  # Get the inner node and iterate over all children of type FunctionDecl.
+  # Parse the clang JSON and add all children of type FunctionDecl.
   # TODO: Should we add checks for global variables being emitted?
-  for node in ast['inner']:
+  def parse_clang_ast_json(node):
+    node_kind = node['kind']
+    # Recurse for the following nodes that can contain nested function decls:
+    if node_kind in ('NamespaceDecl', 'LinkageSpecDecl', 'TranslationUnitDecl'):
+      for inner in node['inner']:
+        parse_clang_ast_json(inner)
+    # Otherwise we ignore everything except functions:
     if node['kind'] != 'FunctionDecl':
-      continue
+      return
     if node.get('isImplicit') is True and node.get('storageClass') == 'extern':
       common.debug('Skipping builtin function:', node['name'], '@', node['loc'])
-      continue
+      return
     common.debug('Found function:', node['kind'], node['name'], '@', node['loc'])
     line = node['loc'].get('line')
     # If there is no line it is probably a builtin function -> skip
     if line is None:
       common.debug('Skipping function without line number:', node['name'], '@', node['loc'])
-      continue
+      return
     spell = node['name']
     mangled = node.get('mangledName', spell)
     ret[int(line)-1] = (spell, mangled)
+
+  ast = json.loads(status.stdout.decode())
+  if ast['kind'] != 'TranslationUnitDecl':
+    common.error('Clang AST dump JSON format changed?')
+    sys.exit(2)
+  parse_clang_ast_json(ast)
+
   for line, func_name in sorted(ret.items()):
     common.debug('line {}: found function {}'.format(line+1, func_name), file=sys.stderr)
   if not ret:
