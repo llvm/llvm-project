@@ -21,29 +21,20 @@ CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                          const char *pathname, const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized)
-    : ModuleChild(module_sp), FileSpec(pathname), UserID(cu_sym_id),
-      m_user_data(user_data), m_language(language), m_flags(0),
-      m_support_files(), m_line_table_up(), m_variables(),
-      m_is_optimized(is_optimized) {
-  if (language != eLanguageTypeUnknown)
-    m_flags.Set(flagsParsedLanguage);
-  assert(module_sp);
-}
+    : CompileUnit(module_sp, user_data, FileSpec(pathname), cu_sym_id, language,
+                  is_optimized) {}
 
 CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                          const FileSpec &fspec, const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized)
-    : ModuleChild(module_sp), FileSpec(fspec), UserID(cu_sym_id),
-      m_user_data(user_data), m_language(language), m_flags(0),
-      m_support_files(), m_line_table_up(), m_variables(),
+    : ModuleChild(module_sp), UserID(cu_sym_id), m_user_data(user_data),
+      m_language(language), m_flags(0), m_file_spec(fspec),
       m_is_optimized(is_optimized) {
   if (language != eLanguageTypeUnknown)
     m_flags.Set(flagsParsedLanguage);
   assert(module_sp);
 }
-
-CompileUnit::~CompileUnit() {}
 
 void CompileUnit::CalculateSymbolContext(SymbolContext *sc) {
   sc->comp_unit = this;
@@ -63,7 +54,7 @@ void CompileUnit::GetDescription(Stream *s,
                                  lldb::DescriptionLevel level) const {
   const char *language = Language::GetNameForLanguageType(m_language);
   *s << "id = " << (const UserID &)*this << ", file = \""
-     << (const FileSpec &)*this << "\", language = \"" << language << '"';
+     << this->GetPrimaryFile() << "\", language = \"" << language << '"';
 }
 
 void CompileUnit::ForeachFunction(
@@ -117,8 +108,7 @@ void CompileUnit::Dump(Stream *s, bool show_context) const {
   s->Printf("%p: ", static_cast<const void *>(this));
   s->Indent();
   *s << "CompileUnit" << static_cast<const UserID &>(*this) << ", language = \""
-     << language << "\", file = '" << static_cast<const FileSpec &>(*this)
-     << "'\n";
+     << language << "\", file = '" << GetPrimaryFile() << "'\n";
 
   //  m_types.Dump(s);
 
@@ -255,7 +245,7 @@ void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
   std::vector<uint32_t> file_indexes;
   const bool full_match = (bool)file_spec.GetDirectory();
   bool file_spec_matches_cu_file_spec =
-      FileSpec::Equal(file_spec, *this, full_match);
+      FileSpec::Equal(file_spec, this->GetPrimaryFile(), full_match);
 
   // If we are not looking for inlined functions and our file spec doesn't
   // match then we are done...
