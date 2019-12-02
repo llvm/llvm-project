@@ -843,77 +843,62 @@ static inline bool QualTypeMatchesBitSize(const uint64_t bit_size,
 CompilerType
 ClangASTContext::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
                                                      size_t bit_size) {
-  return ClangASTContext::GetBuiltinTypeForEncodingAndBitSize(
-      getASTContext(), encoding, bit_size);
-}
-
-CompilerType ClangASTContext::GetBuiltinTypeForEncodingAndBitSize(
-    ASTContext *ast, Encoding encoding, uint32_t bit_size) {
-  auto *clang_ast_context = ClangASTContext::GetASTContext(ast);
+  ASTContext *ast = this->getASTContext();
   if (!ast)
     return CompilerType();
   switch (encoding) {
   case eEncodingInvalid:
     if (QualTypeMatchesBitSize(bit_size, ast, ast->VoidPtrTy))
-      return CompilerType(clang_ast_context, ast->VoidPtrTy.getAsOpaquePtr());
+      return CompilerType(this, ast->VoidPtrTy.getAsOpaquePtr());
     break;
 
   case eEncodingUint:
     if (QualTypeMatchesBitSize(bit_size, ast, ast->UnsignedCharTy))
-      return CompilerType(clang_ast_context,
-                          ast->UnsignedCharTy.getAsOpaquePtr());
+      return CompilerType(this, ast->UnsignedCharTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->UnsignedShortTy))
-      return CompilerType(clang_ast_context,
-                          ast->UnsignedShortTy.getAsOpaquePtr());
+      return CompilerType(this, ast->UnsignedShortTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->UnsignedIntTy))
-      return CompilerType(clang_ast_context,
-                          ast->UnsignedIntTy.getAsOpaquePtr());
+      return CompilerType(this, ast->UnsignedIntTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->UnsignedLongTy))
-      return CompilerType(clang_ast_context,
-                          ast->UnsignedLongTy.getAsOpaquePtr());
+      return CompilerType(this, ast->UnsignedLongTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->UnsignedLongLongTy))
-      return CompilerType(clang_ast_context,
-                          ast->UnsignedLongLongTy.getAsOpaquePtr());
+      return CompilerType(this, ast->UnsignedLongLongTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->UnsignedInt128Ty))
-      return CompilerType(clang_ast_context,
-                          ast->UnsignedInt128Ty.getAsOpaquePtr());
+      return CompilerType(this, ast->UnsignedInt128Ty.getAsOpaquePtr());
     break;
 
   case eEncodingSint:
     if (QualTypeMatchesBitSize(bit_size, ast, ast->SignedCharTy))
-      return CompilerType(clang_ast_context,
-                          ast->SignedCharTy.getAsOpaquePtr());
+      return CompilerType(this, ast->SignedCharTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->ShortTy))
-      return CompilerType(clang_ast_context, ast->ShortTy.getAsOpaquePtr());
+      return CompilerType(this, ast->ShortTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->IntTy))
-      return CompilerType(clang_ast_context, ast->IntTy.getAsOpaquePtr());
+      return CompilerType(this, ast->IntTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->LongTy))
-      return CompilerType(clang_ast_context, ast->LongTy.getAsOpaquePtr());
+      return CompilerType(this, ast->LongTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->LongLongTy))
-      return CompilerType(clang_ast_context, ast->LongLongTy.getAsOpaquePtr());
+      return CompilerType(this, ast->LongLongTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->Int128Ty))
-      return CompilerType(clang_ast_context, ast->Int128Ty.getAsOpaquePtr());
+      return CompilerType(this, ast->Int128Ty.getAsOpaquePtr());
     break;
 
   case eEncodingIEEE754:
     if (QualTypeMatchesBitSize(bit_size, ast, ast->FloatTy))
-      return CompilerType(clang_ast_context, ast->FloatTy.getAsOpaquePtr());
+      return CompilerType(this, ast->FloatTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->DoubleTy))
-      return CompilerType(clang_ast_context, ast->DoubleTy.getAsOpaquePtr());
+      return CompilerType(this, ast->DoubleTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->LongDoubleTy))
-      return CompilerType(clang_ast_context,
-                          ast->LongDoubleTy.getAsOpaquePtr());
+      return CompilerType(this, ast->LongDoubleTy.getAsOpaquePtr());
     if (QualTypeMatchesBitSize(bit_size, ast, ast->HalfTy))
-      return CompilerType(clang_ast_context, ast->HalfTy.getAsOpaquePtr());
+      return CompilerType(this, ast->HalfTy.getAsOpaquePtr());
     break;
 
   case eEncodingVector:
     // Sanity check that bit_size is a multiple of 8's.
     if (bit_size && !(bit_size & 0x7u))
       return CompilerType(
-          clang_ast_context,
-          ast->getExtVectorType(ast->UnsignedCharTy, bit_size / 8)
-              .getAsOpaquePtr());
+          this, ast->getExtVectorType(ast->UnsignedCharTy, bit_size / 8)
+                    .getAsOpaquePtr());
     break;
   }
 

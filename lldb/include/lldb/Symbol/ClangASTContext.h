@@ -150,9 +150,6 @@ public:
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
                                                    size_t bit_size) override;
 
-  static CompilerType GetBuiltinTypeForEncodingAndBitSize(
-      clang::ASTContext *ast, lldb::Encoding encoding, uint32_t bit_size);
-
   CompilerType GetBasicType(lldb::BasicType type);
 
   CompilerType GetBasicType(ConstString name);
