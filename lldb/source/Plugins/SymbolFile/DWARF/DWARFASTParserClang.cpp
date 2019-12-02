@@ -1286,24 +1286,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   } break;
 
   case DW_TAG_ptr_to_member_type: {
-    Type *pointee_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
-    Type *class_type =
-        dwarf->ResolveTypeUID(attrs.containing_type.Reference(), true);
-
-    CompilerType pointee_clang_type = pointee_type->GetForwardCompilerType();
-    CompilerType class_clang_type = class_type->GetLayoutCompilerType();
-
-    clang_type = ClangASTContext::CreateMemberPointerType(class_clang_type,
-                                                          pointee_clang_type);
-
-    if (llvm::Optional<uint64_t> clang_type_size =
-            clang_type.GetByteSize(nullptr)) {
-      type_sp = std::make_shared<Type>(
-          die.GetID(), dwarf, attrs.name, *clang_type_size, nullptr,
-          LLDB_INVALID_UID, Type::eEncodingIsUID, nullptr, clang_type,
-          Type::ResolveState::Forward);
-    }
-
+    type_sp = ParsePointerToMemberType(die, attrs);
     break;
   }
   default:
@@ -1318,6 +1301,29 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   // control flow in ParseTypeFromDWARF. Then, we could simply replace this
   // return statement with a call to llvm_unreachable.
   return UpdateSymbolContextScopeForType(sc, die, type_sp);
+}
+
+TypeSP DWARFASTParserClang::ParsePointerToMemberType(
+    const DWARFDIE &die, const ParsedDWARFTypeAttributes &attrs) {
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  Type *pointee_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
+  Type *class_type =
+      dwarf->ResolveTypeUID(attrs.containing_type.Reference(), true);
+
+  CompilerType pointee_clang_type = pointee_type->GetForwardCompilerType();
+  CompilerType class_clang_type = class_type->GetLayoutCompilerType();
+
+  CompilerType clang_type = ClangASTContext::CreateMemberPointerType(
+      class_clang_type, pointee_clang_type);
+
+  if (llvm::Optional<uint64_t> clang_type_size =
+          clang_type.GetByteSize(nullptr)) {
+    return std::make_shared<Type>(die.GetID(), dwarf, attrs.name,
+                                  *clang_type_size, nullptr, LLDB_INVALID_UID,
+                                  Type::eEncodingIsUID, nullptr, clang_type,
+                                  Type::ResolveState::Forward);
+  }
+  return nullptr;
 }
 
 TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
