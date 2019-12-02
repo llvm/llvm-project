@@ -74,12 +74,35 @@ bool CombinerHelper::matchCombineCopy(MachineInstr &MI) {
     return false;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
+
+  // Give up if either DstReg or SrcReg  is a physical register.
+  if (Register::isPhysicalRegister(DstReg) ||
+      Register::isPhysicalRegister(SrcReg))
+    return false;
+
+  // Give up the types don't match.
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
-  // Simple Copy Propagation.
-  // a(sx) = COPY b(sx) -> Replace all uses of a with b.
-  if (DstTy.isValid() && SrcTy.isValid() && DstTy == SrcTy)
+  // Give up if one has a valid LLT, but the other doesn't.
+  if (DstTy.isValid() != SrcTy.isValid())
+    return false;
+  // Give up if the types don't match.
+  if (DstTy.isValid() && SrcTy.isValid() && DstTy != SrcTy)
+    return false;
+
+  // Get the register banks and classes.
+  const RegisterBank *DstBank = MRI.getRegBankOrNull(DstReg);
+  const RegisterBank *SrcBank = MRI.getRegBankOrNull(SrcReg);
+  const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
+  const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(SrcReg);
+
+  // Replace if the register constraints match.
+  if ((SrcRC == DstRC) && (SrcBank == DstBank))
     return true;
+  // Replace if DstReg has no constraints.
+  if (!DstBank && !DstRC)
+    return true;
+
   return false;
 }
 void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
