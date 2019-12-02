@@ -4,7 +4,7 @@
 global pipe int gp;            // expected-error {{type '__global read_only pipe int' can only be used as a function parameter in OpenCL}}
 global reserve_id_t rid;          // expected-error {{the '__global reserve_id_t' type cannot be used to declare a program scope variable}}
 
-extern pipe write_only int get_pipe(); // expected-error-re{{type '__global write_only pipe int ({{(void)?}})' can only be used as a function parameter in OpenCL}}
+extern pipe write_only int get_pipe(); // expected-error-re{{type '__global write_only pipe int ({{(void)?}})' can only be used as a function parameter in OpenCL}} expected-error{{'write_only' attribute only applies to parameters and typedefs}}
 
 kernel void test_invalid_reserved_id(reserve_id_t ID) { // expected-error {{'reserve_id_t' cannot be used as the type of a kernel parameter}}
 }
