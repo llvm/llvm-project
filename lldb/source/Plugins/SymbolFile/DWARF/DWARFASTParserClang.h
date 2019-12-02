@@ -170,6 +170,8 @@ protected:
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
 
 private:
+  lldb::TypeSP ParseSubroutine(const DWARFDIE &die,
+                               ParsedDWARFTypeAttributes &attrs);
   // FIXME: attrs should be passed as a const reference.
   lldb::TypeSP ParseArrayType(const DWARFDIE &die,
                               ParsedDWARFTypeAttributes &attrs);
