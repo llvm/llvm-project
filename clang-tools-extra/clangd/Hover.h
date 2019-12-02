@@ -12,6 +12,7 @@
 #include "FormattedString.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "clang/Index/IndexSymbol.h"
 
 namespace clang {
 namespace clangd {
@@ -53,7 +54,7 @@ struct HoverInfo {
   /// Name of the symbol, does not contain any "::".
   std::string Name;
   llvm::Optional<Range> SymRange;
-  index::SymbolKind Kind;
+  index::SymbolKind Kind = index::SymbolKind::Unknown;
   std::string Documentation;
   /// Source code containing the definition of the symbol.
   std::string Definition;
