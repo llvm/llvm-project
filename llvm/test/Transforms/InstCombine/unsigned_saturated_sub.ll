@@ -254,10 +254,8 @@ define i64 @neg_max_sub_ult_sel_swapped(i64 %a, i64 %b) {
 
 define i32 @max_sub_ugt_c1(i32 %a) {
 ; CHECK-LABEL: @max_sub_ugt_c1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[A]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 0
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 1)
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %cmp = icmp ugt i32 %a, 1
   %sub = add i32 %a, -1
@@ -280,10 +278,8 @@ define i32 @max_sub_ugt_c01(i32 %a) {
 
 define i32 @max_sub_ugt_c10(i32 %a) {
 ; CHECK-LABEL: @max_sub_ugt_c10(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A:%.*]], 10
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[A]], -10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 0
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 10)
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %cmp = icmp ugt i32 %a, 10
   %sub = add i32 %a, -10
@@ -354,10 +350,9 @@ define i32 @max_sub_ult_c1(i32 %a) {
 
 define i32 @max_sub_ult_c2(i32 %a) {
 ; CHECK-LABEL: @max_sub_ult_c2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], 2
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[A]], -2
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 0
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 2, i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %cmp = icmp ult i32 %a, 2
   %sub = add i32 %a, -2
@@ -368,10 +363,10 @@ define i32 @max_sub_ult_c2(i32 %a) {
 define i32 @max_sub_ult_c2_oneuseicmp(i32 %a) {
 ; CHECK-LABEL: @max_sub_ult_c2_oneuseicmp(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], 2
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[A]], -2
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 2, i32 [[A]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
 ; CHECK-NEXT:    call void @usei1(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %cmp = icmp ult i32 %a, 2
   %sub = add i32 %a, -2
@@ -382,11 +377,11 @@ define i32 @max_sub_ult_c2_oneuseicmp(i32 %a) {
 
 define i32 @max_sub_ult_c2_oneusesub(i32 %a) {
 ; CHECK-LABEL: @max_sub_ult_c2_oneusesub(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], 2
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[A]], -2
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 0
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[A:%.*]], -2
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 2, i32 [[A]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
 ; CHECK-NEXT:    call void @usei32(i32 [[SUB]])
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %cmp = icmp ult i32 %a, 2
   %sub = add i32 %a, -2
