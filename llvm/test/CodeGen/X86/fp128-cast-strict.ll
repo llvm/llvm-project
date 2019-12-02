@@ -215,6 +215,18 @@ entry:
   ret i64 %conv
 }
 
+define i128 @fptosi_i128(fp128 %x) nounwind strictfp {
+; X64-LABEL: fptosi_i128:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq __fixtfti
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+entry:
+  %conv = call i128 @llvm.experimental.constrained.fptosi.i128.f128(fp128 %x, metadata !"fpexcept.strict") #0
+  ret i128 %conv
+}
+
 define i8 @fptoui_i8(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptoui_i8:
 ; X64:       # %bb.0: # %entry
@@ -265,6 +277,18 @@ entry:
   ret i64 %conv
 }
 
+define i128 @fptoui_i128(fp128 %x) nounwind strictfp {
+; X64-LABEL: fptoui_i128:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq __fixunstfti
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+entry:
+  %conv = call i128 @llvm.experimental.constrained.fptoui.i128.f128(fp128 %x, metadata !"fpexcept.strict") #0
+  ret i128 %conv
+}
+
 attributes #0 = { strictfp }
 
 declare float @llvm.experimental.constrained.fptrunc.f32.f128(fp128, metadata, metadata)
@@ -277,7 +301,9 @@ declare i8 @llvm.experimental.constrained.fptosi.i8.f128(fp128, metadata)
 declare i16 @llvm.experimental.constrained.fptosi.i16.f128(fp128, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128, metadata)
 declare i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128, metadata)
+declare i128 @llvm.experimental.constrained.fptosi.i128.f128(fp128, metadata)
 declare i8 @llvm.experimental.constrained.fptoui.i8.f128(fp128, metadata)
 declare i16 @llvm.experimental.constrained.fptoui.i16.f128(fp128, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128, metadata)
 declare i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128, metadata)
+declare i128 @llvm.experimental.constrained.fptoui.i128.f128(fp128, metadata)
