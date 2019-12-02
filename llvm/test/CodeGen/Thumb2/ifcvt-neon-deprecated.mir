@@ -1,54 +1,89 @@
-# RUN: llc -mtriple=thumbv7 -start-before=if-converter -o - %s | FileCheck %s
+# RUN: llc -mtriple=thumbv7 -start-before=if-converter %s -o - | FileCheck %s
+
+--- |
+  ; ModuleID = 'vdup-test.ll'
+  source_filename = "vdup-test.ll"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv7"
+  
+  define arm_aapcs_vfpcc <2 x i32> @NeonVdupMul(i32 %scalar, i32 %N, <2 x i32> %vector) {
+  entry:
+    %cmp = icmp ne i32 %N, 0
+    %broadcast = insertelement <2 x i32> undef, i32 %scalar, i32 0
+    %dup = shufflevector <2 x i32> %broadcast, <2 x i32> undef, <2 x i32> zeroinitializer
+    %mul = mul <2 x i32> %dup, %vector
+    br i1 %cmp, label %select.end, label %select.false
+  
+  select.false:                                     ; preds = %entry
+    br label %select.end
+  
+  select.end:                                       ; preds = %entry, %select.false
+    %res = phi <2 x i32> [ %mul, %entry ], [ %vector, %select.false ]
+    ret <2 x i32> %res
+  }
+
+...
 ---
 name:            NeonVdupMul
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$d0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
 body:             |
-  bb.0:
-    successors: %bb.2, %bb.1
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $d0, $r0, $r1
-
-    t2CMPri killed $r1, 0, 14, $noreg, implicit-def $cpsr
+  
+    t2CMPri killed renamable $r1, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 0, killed $cpsr
-
+  
   bb.1:
+    successors: %bb.2(0x80000000)
     liveins: $d0, $r0
-
-    $d16 = VDUP32d killed $r0, 14, $noreg
+  
+    renamable $d16 = VDUP32d killed renamable $r0, 14, $noreg
     ; Verify that the neon instructions haven't been conditionalized:
     ; CHECK-LABEL: NeonVdupMul
     ; CHECK: vdup.32
     ; CHECK: vmul.i32
-    $d0 = VMULv2i32 killed $d16, killed $d0, 14, $noreg
-
-  bb.2:
+    renamable $d0 = VMULv2i32 killed renamable $d16, killed renamable $d0, 14, $noreg
+  
+  bb.2.select.end:
     liveins: $d0
-
-    tBX_RET 14, $noreg, implicit $d0
-
-...
----
-name:            NeonVmovVfpLdr
-body:             |
-  bb.0.entry:
-    successors: %bb.1, %bb.2
-    liveins: $r0, $r1
-
-    t2CMPri killed $r1, 0, 14, $noreg, implicit-def $cpsr
-    t2Bcc %bb.2, 1, killed $cpsr
-
-  bb.1:
-    $d0 = VMOVv2i32 0, 14, $noreg
-    tBX_RET 14, $noreg, implicit $d0
-
-  bb.2:
-    liveins: $r0
-
-    $d0 = VLDRD killed $r0, 0, 14, $noreg
-    ; Verify that the neon instruction VMOVv2i32 hasn't been conditionalized,
-    ; but the VLDR instruction that is available both in the VFP and Advanced
-    ; SIMD extensions has.
-    ; CHECK-LABEL: NeonVmovVfpLdr
-    ; CHECK-DAG: vmov.i32 d0, #0x0
-    ; CHECK-DAG: vldr{{ne|eq}} d0, [r0]
+  
     tBX_RET 14, $noreg, implicit $d0
 
 ...

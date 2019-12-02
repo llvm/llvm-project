@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -189,7 +190,58 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, int PhysReg) {
   return LatestDef;
 }
 
+MachineInstr* ReachingDefAnalysis::getReachingMIDef(MachineInstr *MI, int PhysReg) {
+  return getInstFromId(MI->getParent(), getReachingDef(MI, PhysReg));
+}
+
+MachineInstr *ReachingDefAnalysis::getInstFromId(MachineBasicBlock *MBB,
+                                                 int InstId) {
+  assert(MBB->getNumber() < MBBReachingDefs.size() &&
+         "Unexpected basic block number.");
+  assert(InstId < static_cast<int>(MBB->size()) &&
+         "Unexpected instruction id.");
+
+  if (InstId < 0)
+    return nullptr;
+
+  for (auto &MI : *MBB) {
+    if (InstIds.count(&MI) && InstIds[&MI] == InstId)
+      return &MI;
+  }
+  return nullptr;
+}
+
 int ReachingDefAnalysis::getClearance(MachineInstr *MI, MCPhysReg PhysReg) {
   assert(InstIds.count(MI) && "Unexpected machine instuction.");
   return InstIds[MI] - getReachingDef(MI, PhysReg);
 }
+
+bool ReachingDefAnalysis::hasSameReachingDef(MachineInstr *A, MachineInstr *B,
+                                             int PhysReg) {
+  MachineBasicBlock *ParentA = A->getParent();
+  MachineBasicBlock *ParentB = B->getParent();
+  if (ParentA != ParentB)
+    return false;
+
+  return getReachingDef(A, PhysReg) == getReachingDef(B, PhysReg);
+}
+
+bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI, int PhysReg) {
+  MachineBasicBlock *MBB = MI->getParent();
+  LivePhysRegs LiveRegs(*TRI);
+  LiveRegs.addLiveOuts(*MBB);
+
+  // Yes if the register is live out of the basic block.
+  if (LiveRegs.contains(PhysReg))
+    return true;
+
+  // Walk backwards through the block to see if the register is live at some
+  // point.
+  for (auto Last = MBB->rbegin(), End = MBB->rend(); Last != End; ++Last) {
+    LiveRegs.stepBackward(*Last);
+    if (LiveRegs.contains(PhysReg))
+      return InstIds[&*Last] > InstIds[MI];
+  }
+  return false;
+}
+

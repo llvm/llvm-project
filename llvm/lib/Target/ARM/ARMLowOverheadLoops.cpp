@@ -25,6 +25,8 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 
 using namespace llvm;
@@ -104,10 +106,11 @@ namespace {
     // Is it safe to define LR with DLS/WLS?
     // LR can be defined if it is the operand to start, because it's the same
     // value, or if it's going to be equivalent to the operand to Start.
-    MachineInstr *IsSafeToDefineLR();
+    MachineInstr *IsSafeToDefineLR(ReachingDefAnalysis *RDA);
 
-    // Check the branch targets are within range and we satisfy our restructi
-    void CheckLegality(ARMBasicBlockUtils *BBUtils);
+    // Check the branch targets are within range and we satisfy our
+    // restrictions.
+    void CheckLegality(ARMBasicBlockUtils *BBUtils, ReachingDefAnalysis *RDA);
 
     bool FoundAllComponents() const {
       return Start && Dec && End;
@@ -127,6 +130,7 @@ namespace {
 
   class ARMLowOverheadLoops : public MachineFunctionPass {
     MachineFunction           *MF = nullptr;
+    ReachingDefAnalysis       *RDA = nullptr;
     const ARMBaseInstrInfo    *TII = nullptr;
     MachineRegisterInfo       *MRI = nullptr;
     std::unique_ptr<ARMBasicBlockUtils> BBUtils = nullptr;
@@ -139,6 +143,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
       AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<ReachingDefAnalysis>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -146,7 +151,8 @@ namespace {
 
     MachineFunctionProperties getRequiredProperties() const override {
       return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+          MachineFunctionProperties::Property::NoVRegs).set(
+          MachineFunctionProperties::Property::TracksLiveness);
     }
 
     StringRef getPassName() const override {
@@ -183,31 +189,6 @@ static bool IsLoopStart(MachineInstr &MI) {
          MI.getOpcode() == ARM::t2WhileLoopStart;
 }
 
-template<typename T>
-static MachineInstr* SearchForDef(MachineInstr *Begin, T End, unsigned Reg) {
-  for(auto &MI : make_range(T(Begin), End)) {
-    for (auto &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isDef() || MO.getReg() != Reg)
-        continue;
-      return &MI;
-    }
-  }
-  return nullptr;
-}
-
-static MachineInstr* SearchForUse(MachineInstr *Begin,
-                                  MachineBasicBlock::iterator End,
-                                  unsigned Reg) {
-  for(auto &MI : make_range(MachineBasicBlock::iterator(Begin), End)) {
-    for (auto &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isUse() || MO.getReg() != Reg)
-        continue;
-      return &MI;
-    }
-  }
-  return nullptr;
-}
-
 static bool IsVCTP(MachineInstr *MI) {
   switch (MI->getOpcode()) {
   default:
@@ -221,73 +202,41 @@ static bool IsVCTP(MachineInstr *MI) {
   return false;
 }
 
-MachineInstr *LowOverheadLoop::IsSafeToDefineLR() {
-
-  auto IsMoveLR = [](MachineInstr *MI, unsigned Reg) {
-    return MI->getOpcode() == ARM::tMOVr &&
-           MI->getOperand(0).getReg() == ARM::LR &&
-           MI->getOperand(1).getReg() == Reg &&
-           MI->getOperand(2).getImm() == ARMCC::AL;
-   };
-
-  MachineBasicBlock *MBB = Start->getParent();
-  unsigned CountReg = Start->getOperand(0).getReg();
-  // Walk forward and backward in the block to find the closest instructions
-  // that define LR. Then also filter them out if they're not a mov lr.
-  MachineInstr *PredLRDef = SearchForDef(Start, MBB->rend(), ARM::LR);
-  if (PredLRDef && !IsMoveLR(PredLRDef, CountReg))
-    PredLRDef = nullptr;
-
-  MachineInstr *SuccLRDef = SearchForDef(Start, MBB->end(), ARM::LR);
-  if (SuccLRDef && !IsMoveLR(SuccLRDef, CountReg))
-    SuccLRDef = nullptr;
-
-  // We've either found one, two or none mov lr instructions... Now figure out
-  // if they are performing the equilvant mov that the Start instruction will.
-  // Do this by scanning forward and backward to see if there's a def of the
-  // register holding the count value. If we find a suitable def, return it as
-  // the insert point. Later, if InsertPt != Start, then we can remove the
-  // redundant instruction.
-  if (SuccLRDef) {
-    MachineBasicBlock::iterator End(SuccLRDef);
-    if (!SearchForDef(Start, End, CountReg)) {
-      return SuccLRDef;
-    } else
-      SuccLRDef = nullptr;
-  }
-  if (PredLRDef) {
-    MachineBasicBlock::reverse_iterator End(PredLRDef);
-    if (!SearchForDef(Start, End, CountReg)) {
-      return PredLRDef;
-    } else
-      PredLRDef = nullptr;
-  }
-
+MachineInstr *LowOverheadLoop::IsSafeToDefineLR(ReachingDefAnalysis *RDA) {
   // We can define LR because LR already contains the same value.
   if (Start->getOperand(0).getReg() == ARM::LR)
     return Start;
 
+  unsigned CountReg = Start->getOperand(0).getReg();
+  auto IsMoveLR = [&CountReg](MachineInstr *MI) {
+    return MI->getOpcode() == ARM::tMOVr &&
+           MI->getOperand(0).getReg() == ARM::LR &&
+           MI->getOperand(1).getReg() == CountReg &&
+           MI->getOperand(2).getImm() == ARMCC::AL;
+   };
+
+  MachineBasicBlock *MBB = Start->getParent();
+
+  // Find an insertion point:
+  // - Is there a (mov lr, Count) before Start? If so, and nothing else writes
+  //   to Count before Start, we can insert at that mov.
+  // - Is there a (mov lr, Count) after Start? If so, and nothing else writes
+  //   to Count after Start, we can insert at that mov.
+  if (auto *LRDef = RDA->getReachingMIDef(&MBB->back(), ARM::LR)) {
+    if (IsMoveLR(LRDef) && RDA->hasSameReachingDef(Start, LRDef, CountReg))
+      return LRDef;
+  }
+
   // We've found no suitable LR def and Start doesn't use LR directly. Can we
-  // just define LR anyway? 
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  LivePhysRegs LiveRegs(*TRI);
-  LiveRegs.addLiveOuts(*MBB);
-
-  // Not if we've haven't found a suitable mov and LR is live out.
-  if (LiveRegs.contains(ARM::LR))
-    return nullptr;
-
-  // If LR is not live out, we can insert the instruction if nothing else
-  // uses LR after it.
-  if (!SearchForUse(Start, MBB->end(), ARM::LR))
+  // just define LR anyway?
+  if (!RDA->isRegUsedAfter(Start, ARM::LR))
     return Start;
 
-  LLVM_DEBUG(dbgs() << "ARM Loops: Failed to find suitable insertion point for"
-             << " LR\n");
   return nullptr;
 }
 
-void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils) {
+void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils,
+                                    ReachingDefAnalysis *RDA) {
   if (Revert)
     return;
 
@@ -320,7 +269,7 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils) {
     return;
   }
 
-  InsertPt = Revert ? nullptr : IsSafeToDefineLR();
+  InsertPt = Revert ? nullptr : IsSafeToDefineLR(RDA);
   if (!InsertPt) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Unable to find safe insertion point.\n");
     Revert = true;
@@ -343,6 +292,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "ARM Loops on " << MF->getName() << " ------------- \n");
 
   auto &MLI = getAnalysis<MachineLoopInfo>();
+  RDA = &getAnalysis<ReachingDefAnalysis>();
   MF->getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
   MRI = &MF->getRegInfo();
   TII = static_cast<const ARMBaseInstrInfo*>(ST.getInstrInfo());
@@ -462,7 +412,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   if (!LoLoop.FoundAllComponents())
     return false;
 
-  LoLoop.CheckLegality(BBUtils.get());
+  LoLoop.CheckLegality(BBUtils.get(), RDA);
   Expand(LoLoop);
   return true;
 }
@@ -493,19 +443,15 @@ void ARMLowOverheadLoops::RevertWhile(MachineInstr *MI) const {
 }
 
 bool ARMLowOverheadLoops::RevertLoopDec(MachineInstr *MI,
-                                        bool AllowFlags) const {
+                                        bool SetFlags) const {
   LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to sub: " << *MI);
   MachineBasicBlock *MBB = MI->getParent();
 
-  // If nothing uses or defines CPSR between LoopDec and LoopEnd, use a t2SUBS.
-  bool SetFlags = false;
-  if (AllowFlags) {
-    if (auto *Def = SearchForDef(MI, MBB->end(), ARM::CPSR)) {
-      if (!SearchForUse(MI, MBB->end(), ARM::CPSR) &&
-          Def->getOpcode() == ARM::t2LoopEnd)
-        SetFlags = true;
-    }
-  }
+  // If nothing defines CPSR between LoopDec and LoopEnd, use a t2SUBS.
+  if (SetFlags &&
+      (RDA->isRegUsedAfter(MI, ARM::CPSR) ||
+       !RDA->hasSameReachingDef(MI, &MBB->back(), ARM::CPSR)))
+      SetFlags = false;
 
   MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
                                     TII->get(ARM::t2SUBri));
