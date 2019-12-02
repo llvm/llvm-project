@@ -88,11 +88,8 @@ TEST(SemanticSelection, All) {
       R"cpp( // Single statement in TU.
         [[int v = [[1^00]]]];
       )cpp",
-      // FIXME: No node found associated to the position.
       R"cpp( // Cursor at end of VarDecl.
-        void func() {
-          int v = 100 + 100^;
-        }
+        [[int v = [[100]]^]];
       )cpp",
       // FIXME: No node found associated to the position.
       R"cpp( // Cursor in between spaces.
