@@ -21,7 +21,7 @@
 
 # HEADER: [Nr] Name        Type     Address  Off    Size
 # LEVEL1: [ 1] .debug_info PROGBITS 00000000 000094 00001c
-# LEVEL6: [ 1] .debug_info PROGBITS 00000000 000094 00001b
+# LEVEL6: [ 1] .debug_info PROGBITS 00000000 000094 00001a
 
 ## A little arbitrary debug section which has a different size after
 ## applying compression of level 1 and 6.
@@ -35,4 +35,4 @@ FileHeader:
 Sections:
   - Name:    .debug_info
     Type:    SHT_PROGBITS
-    Content: '01010201020201020102'
+    Content: '010101010101010201010201'
