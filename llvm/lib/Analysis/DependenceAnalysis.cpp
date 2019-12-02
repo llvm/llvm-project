@@ -307,6 +307,26 @@ bool FullDependence::isSplitable(unsigned Level) const {
 
 
 //===----------------------------------------------------------------------===//
+// GeneralAccess methods
+
+raw_ostream &llvm::operator<<(raw_ostream &OS, const GeneralAccess &GA) {
+  if (!GA.isValid())
+    OS << "(invalid GeneralAccess)";
+  else {
+    OS << "(GA.I: " << *GA.I;
+    OS << ", GA.Loc: ";
+    if (!GA.Loc)
+      OS << "nullptr";
+    else
+      OS << *GA.Loc->Ptr;
+    OS << ", GA.OperandNum: " << static_cast<int>(GA.OperandNum);
+    OS << ", GA.ModRef: " << static_cast<int>(GA.ModRef);
+    OS << ")";
+  }
+  return OS;
+}
+
+//===----------------------------------------------------------------------===//
 // DependenceInfo::Constraint methods
 
 // If constraint is a point <X, Y>, returns X.
