@@ -52,7 +52,7 @@ template <uptr MaxFreeListSize = 32U> class MapAllocator {
 public:
   // Ensure the freelist is disabled on Fuchsia, since it doesn't support
   // releasing Secondary blocks yet.
-  COMPILER_CHECK(!SCUDO_FUCHSIA || MaxFreeListSize == 0U);
+  static_assert(!SCUDO_FUCHSIA || MaxFreeListSize == 0U, "");
 
   void initLinkerInitialized(GlobalStats *S) {
     Stats.initLinkerInitialized();

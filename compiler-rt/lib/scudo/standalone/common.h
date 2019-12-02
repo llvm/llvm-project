@@ -19,22 +19,22 @@
 
 namespace scudo {
 
-template <class Dest, class Source> INLINE Dest bit_cast(const Source &S) {
-  COMPILER_CHECK(sizeof(Dest) == sizeof(Source));
+template <class Dest, class Source> inline Dest bit_cast(const Source &S) {
+  static_assert(sizeof(Dest) == sizeof(Source), "");
   Dest D;
   memcpy(&D, &S, sizeof(D));
   return D;
 }
 
-INLINE constexpr uptr roundUpTo(uptr X, uptr Boundary) {
+inline constexpr uptr roundUpTo(uptr X, uptr Boundary) {
   return (X + Boundary - 1) & ~(Boundary - 1);
 }
 
-INLINE constexpr uptr roundDownTo(uptr X, uptr Boundary) {
+inline constexpr uptr roundDownTo(uptr X, uptr Boundary) {
   return X & ~(Boundary - 1);
 }
 
-INLINE constexpr bool isAligned(uptr X, uptr Alignment) {
+inline constexpr bool isAligned(uptr X, uptr Alignment) {
   return (X & (Alignment - 1)) == 0;
 }
 
@@ -48,14 +48,14 @@ template <class T> void Swap(T &A, T &B) {
   B = Tmp;
 }
 
-INLINE bool isPowerOfTwo(uptr X) { return (X & (X - 1)) == 0; }
+inline bool isPowerOfTwo(uptr X) { return (X & (X - 1)) == 0; }
 
-INLINE uptr getMostSignificantSetBitIndex(uptr X) {
+inline uptr getMostSignificantSetBitIndex(uptr X) {
   DCHECK_NE(X, 0U);
   return SCUDO_WORDSIZE - 1U - static_cast<uptr>(__builtin_clzl(X));
 }
 
-INLINE uptr roundUpToPowerOfTwo(uptr Size) {
+inline uptr roundUpToPowerOfTwo(uptr Size) {
   DCHECK(Size);
   if (isPowerOfTwo(Size))
     return Size;
@@ -65,17 +65,17 @@ INLINE uptr roundUpToPowerOfTwo(uptr Size) {
   return 1UL << (Up + 1);
 }
 
-INLINE uptr getLeastSignificantSetBitIndex(uptr X) {
+inline uptr getLeastSignificantSetBitIndex(uptr X) {
   DCHECK_NE(X, 0U);
   return static_cast<uptr>(__builtin_ctzl(X));
 }
 
-INLINE uptr getLog2(uptr X) {
+inline uptr getLog2(uptr X) {
   DCHECK(isPowerOfTwo(X));
   return getLeastSignificantSetBitIndex(X);
 }
 
-INLINE u32 getRandomU32(u32 *State) {
+inline u32 getRandomU32(u32 *State) {
   // ANSI C linear congruential PRNG (16-bit output).
   // return (*State = *State * 1103515245 + 12345) >> 16;
   // XorShift (32-bit output).
@@ -85,11 +85,11 @@ INLINE u32 getRandomU32(u32 *State) {
   return *State;
 }
 
-INLINE u32 getRandomModN(u32 *State, u32 N) {
+inline u32 getRandomModN(u32 *State, u32 N) {
   return getRandomU32(State) % N; // [0, N)
 }
 
-template <typename T> INLINE void shuffle(T *A, u32 N, u32 *RandState) {
+template <typename T> inline void shuffle(T *A, u32 N, u32 *RandState) {
   if (N <= 1)
     return;
   u32 State = *RandState;
@@ -100,7 +100,7 @@ template <typename T> INLINE void shuffle(T *A, u32 N, u32 *RandState) {
 
 // Hardware specific inlinable functions.
 
-INLINE void yieldProcessor(u8 Count) {
+inline void yieldProcessor(u8 Count) {
 #if defined(__i386__) || defined(__x86_64__)
   __asm__ __volatile__("" ::: "memory");
   for (u8 I = 0; I < Count; I++)
@@ -117,7 +117,7 @@ INLINE void yieldProcessor(u8 Count) {
 
 extern uptr PageSizeCached;
 uptr getPageSizeSlow();
-INLINE uptr getPageSizeCached() {
+inline uptr getPageSizeCached() {
   // Bionic uses a hardcoded value.
   if (SCUDO_ANDROID)
     return 4096U;
