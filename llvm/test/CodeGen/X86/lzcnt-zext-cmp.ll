@@ -321,7 +321,7 @@ define i32 @test_zext_cmp11(double %a, double %b) "no-nans-fp-math"="true" {
 ;
 ; ALL-LABEL: test_zext_cmp11:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; ALL-NEXT:    vucomisd %xmm2, %xmm0
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    vucomisd %xmm2, %xmm1

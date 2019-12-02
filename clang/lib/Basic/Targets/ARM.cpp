@@ -580,6 +580,13 @@ void ARMTargetInfo::getTargetDefinesARMV82A(const LangOptions &Opts,
   getTargetDefinesARMV81A(Opts, Builder);
 }
 
+void ARMTargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
+                                            MacroBuilder &Builder) const {
+  // Also include the ARMv8.2-A defines
+  Builder.defineMacro("__ARM_FEATURE_COMPLEX", "1");
+  getTargetDefinesARMV82A(Opts, Builder);
+}
+
 void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   // Target identification.
@@ -809,6 +816,11 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV8_2A:
     getTargetDefinesARMV82A(Opts, Builder);
     break;
+  case llvm::ARM::ArchKind::ARMV8_3A:
+  case llvm::ARM::ArchKind::ARMV8_4A:
+  case llvm::ARM::ArchKind::ARMV8_5A:
+    getTargetDefinesARMV83A(Opts, Builder);
+    break;
   }
 }
 
@@ -877,38 +889,6 @@ const TargetInfo::GCCRegAlias ARMTargetInfo::GCCRegAliases[] = {
 
 ArrayRef<TargetInfo::GCCRegAlias> ARMTargetInfo::getGCCRegAliases() const {
   return llvm::makeArrayRef(GCCRegAliases);
-}
-
-bool ARMTargetInfo::validateGlobalRegisterVariable(
-    StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
-  bool isValid = llvm::StringSwitch<bool>(RegName)
-                     .Case("r6", true)
-                     .Case("r7", true)
-                     .Case("r8", true)
-                     .Case("r9", true)
-                     .Case("r10", true)
-                     .Case("r11", true)
-                     .Case("sp", true)
-                     .Default(false);
-  HasSizeMismatch = false;
-  return isValid;
-}
-
-bool ARMTargetInfo::isRegisterReservedGlobally(StringRef RegName) const {
-  // The "sp" register does not have a -ffixed-sp option,
-  // so reserve it unconditionally.
-  if (RegName.equals("sp"))
-    return true;
-
-  // reserve rN (N:6-11) registers only if the corresponding
-  // +reserve-rN feature is found
-  const std::vector<std::string> &Features = getTargetOpts().Features;
-  const std::string SearchFeature = "+reserve-" + RegName.str();
-  for (const std::string &Feature : Features) {
-    if (Feature.compare(SearchFeature) == 0)
-      return true;
-  }
-  return false;
 }
 
 bool ARMTargetInfo::validateAsmConstraint(

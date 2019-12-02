@@ -262,3 +262,48 @@ Sections:
         Names: []
 DynamicSymbols:
   - Name: foo
+
+## Check we error out when trying to print version symbols, but SHT_GNU_verdef is invalid due to any reason.
+
+# RUN: yaml2obj %s --docnum=10 -o %t10
+# RUN: not llvm-readobj -V %t10 2>&1 | FileCheck %s --check-prefix=INVALID-VERDEF-LLVM -DFILE=%t10
+# RUN: not llvm-readelf -V %t10 2>&1 | FileCheck %s --check-prefix=INVALID-VERDEF-GNU -DFILE=%t10
+
+# INVALID-VERDEF-LLVM:      VersionSymbols [
+# INVALID-VERDEF-LLVM-NEXT:    Symbol {
+# INVALID-VERDEF-LLVM-NEXT:      Version: 0
+# INVALID-VERDEF-LLVM-NEXT:      Name:
+# INVALID-VERDEF-LLVM-NEXT:    }
+# INVALID-VERDEF-LLVM-NEXT:    Symbol {
+# INVALID-VERDEF-LLVM-EMPTY:
+# INVALID-VERDEF-LLVM-NEXT:  error: '[[FILE]]': invalid SHT_GNU_verdef section with index 2: version definition 1 goes past the end of the section
+
+# INVALID-VERDEF-GNU:      Version symbols section '.gnu.version' contains 2 entries:
+# INVALID-VERDEF-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
+# INVALID-VERDEF-GNU-NEXT:   000:   0 (*local*)
+# INVALID-VERDEF-GNU-NEXT: error: '[[FILE]]': invalid SHT_GNU_verdef section with index 2: version definition 1 goes past the end of the section
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .gnu.version
+    Type:         SHT_GNU_versym
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynsym
+    AddressAlign: 0x0000000000000002
+    EntSize:      0x0000000000000002
+    Entries:      [ 0, 2 ]
+  - Name:         .gnu.version_d
+    Type:         SHT_GNU_verdef
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynstr
+    AddressAlign: 0x4
+    Info:         0x1
+    Entries: []
+DynamicSymbols:
+  - Name:    foo
+    Binding: STB_GLOBAL

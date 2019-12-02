@@ -778,6 +778,10 @@ def int_arm_vctp16 : Intrinsic<[llvm_v8i1_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_vctp32 : Intrinsic<[llvm_v4i1_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_vctp64 : Intrinsic<[llvm_v2i1_ty], [llvm_i32_ty], [IntrNoMem]>;
 
+// v8.3-A Floating-point complex add
+def int_arm_neon_vcadd_rot90  : Neon_2Arg_Intrinsic;
+def int_arm_neon_vcadd_rot270 : Neon_2Arg_Intrinsic;
+
 // GNU eabi mcount
 def int_arm_gnu_eabi_mcount : Intrinsic<[],
                                     [],
@@ -796,6 +800,12 @@ multiclass IntrinsicSignSuffix<list<LLVMType> rets, list<LLVMType> params = [],
   def _u: Intrinsic<rets, params, props, name, sdprops>;
 }
 
+def int_arm_mve_min_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_max_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
 def int_arm_mve_abd_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
    [IntrNoMem]>;

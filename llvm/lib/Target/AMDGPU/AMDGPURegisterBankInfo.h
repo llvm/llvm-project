@@ -103,6 +103,11 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
                                        const MachineRegisterInfo &MRI,
                                        const TargetRegisterInfo &TRI) const;
 
+  // Return a value mapping for an operand that is required to be a AGPR.
+  const ValueMapping *getAGPROpMapping(Register Reg,
+                                       const MachineRegisterInfo &MRI,
+                                       const TargetRegisterInfo &TRI) const;
+
   /// Split 64-bit value \p Reg into two 32-bit halves and populate them into \p
   /// Regs. This appropriately sets the regbank of the new registers.
   void split64BitValueForMapping(MachineIRBuilder &B,
@@ -131,6 +136,7 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
       const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
 
   bool isSALUMapping(const MachineInstr &MI) const;
+
   const InstructionMapping &getDefaultMappingSOP(const MachineInstr &MI) const;
   const InstructionMapping &getDefaultMappingVOP(const MachineInstr &MI) const;
   const InstructionMapping &getDefaultMappingAllVGPR(
