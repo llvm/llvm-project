@@ -3,24 +3,51 @@
 %struct.t = type {}
 %struct.s = type { %struct.t, i64 }
 
-; CHECK: llvm.mlir.global @g1() : !llvm<"{ {}, i64 }">
+; CHECK: llvm.mlir.global external @g1() : !llvm<"{ {}, i64 }">
 @g1 = external global %struct.s, align 8
-; CHECK: llvm.mlir.global @g2() : !llvm.double
+; CHECK: llvm.mlir.global external @g2() : !llvm.double
 @g2 = external global double, align 8
-; CHECK: llvm.mlir.global @g3("string")
+; CHECK: llvm.mlir.global internal @g3("string")
 @g3 = internal global [6 x i8] c"string"
 
-; CHECK: llvm.mlir.global @g5() : !llvm<"<8 x i32>">
+; CHECK: llvm.mlir.global external @g5() : !llvm<"<8 x i32>">
 @g5 = external global <8 x i32>
 
 @g4 = external global i32, align 8
-; CHECK: llvm.mlir.global constant @int_gep() : !llvm<"i32*"> {
+; CHECK: llvm.mlir.global internal constant @int_gep() : !llvm<"i32*"> {
 ; CHECK-DAG:   %[[addr:[0-9]+]] = llvm.mlir.addressof @g4 : !llvm<"i32*">
 ; CHECK-DAG:   %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : !llvm.i32
 ; CHECK-NEXT:  %[[gepinit:[0-9]+]] = llvm.getelementptr %[[addr]][%[[c2]]] : (!llvm<"i32*">, !llvm.i32) -> !llvm<"i32*">
 ; CHECK-NEXT:  llvm.return %[[gepinit]] : !llvm<"i32*">
 ; CHECK-NEXT: }
 @int_gep = internal constant i32* getelementptr (i32, i32* @g4, i32 2)
+
+;
+; Linkage attribute.
+;
+
+; CHECK: llvm.mlir.global private @private(42 : i32) : !llvm.i32
+@private = private global i32 42
+; CHECK: llvm.mlir.global internal @internal(42 : i32) : !llvm.i32
+@internal = internal global i32 42
+; CHECK: llvm.mlir.global available_externally @available_externally(42 : i32) : !llvm.i32
+@available_externally = available_externally global i32 42
+; CHECK: llvm.mlir.global linkonce @linkonce(42 : i32) : !llvm.i32
+@linkonce = linkonce global i32 42
+; CHECK: llvm.mlir.global weak @weak(42 : i32) : !llvm.i32
+@weak = weak global i32 42
+; CHECK: llvm.mlir.global common @common(42 : i32) : !llvm.i32
+@common = common global i32 42
+; CHECK: llvm.mlir.global appending @appending(42 : i32) : !llvm.i32
+@appending = appending global i32 42
+; CHECK: llvm.mlir.global extern_weak @extern_weak() : !llvm.i32
+@extern_weak = extern_weak global i32
+; CHECK: llvm.mlir.global linkonce_odr @linkonce_odr(42 : i32) : !llvm.i32
+@linkonce_odr = linkonce_odr global i32 42
+; CHECK: llvm.mlir.global weak_odr @weak_odr(42 : i32) : !llvm.i32
+@weak_odr = weak_odr global i32 42
+; CHECK: llvm.mlir.global external @external() : !llvm.i32
+@external = external global i32
 
 ; CHECK: llvm.func @fe(!llvm.i32) -> !llvm.float
 declare float @fe(i32)

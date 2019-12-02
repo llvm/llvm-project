@@ -111,7 +111,7 @@ func @extra_constants(%arg0 : memref<?xf32>) {
 
 // -----
 
-llvm.mlir.global @global(42 : i64) : !llvm.i64
+llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 
 func @function_call(%arg0 : memref<?xf32>) {
   %cst = constant 8 : index
@@ -143,7 +143,7 @@ func @recursive_device_function() {
 // CHECK:     call @device_function() : () -> ()
 // CHECK:     llvm.mlir.addressof @global : !llvm<"i64*">
 //
-// CHECK:   llvm.mlir.global @global(42 : i64) : !llvm.i64
+// CHECK:   llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 //
 // CHECK:   func @device_function()
 // CHECK:   func @recursive_device_function()

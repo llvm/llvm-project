@@ -141,8 +141,9 @@ private:
       builder.setInsertionPointToStart(module.getBody());
       auto type = LLVM::LLVMType::getArrayTy(
           LLVM::LLVMType::getInt8Ty(llvmDialect), value.size());
-      global = builder.create<LLVM::GlobalOp>(
-          loc, type, /*isConstant=*/true, name, builder.getStringAttr(value));
+      global = builder.create<LLVM::GlobalOp>(loc, type, /*isConstant=*/true,
+                                              LLVM::Linkage::Internal, name,
+                                              builder.getStringAttr(value));
     }
 
     // Get the pointer to the first character in the global string.

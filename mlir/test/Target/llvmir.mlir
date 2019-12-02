@@ -1,36 +1,64 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // CHECK: @i32_global = internal global i32 42
-llvm.mlir.global @i32_global(42: i32) : !llvm.i32
+llvm.mlir.global internal @i32_global(42: i32) : !llvm.i32
 
 // CHECK: @i32_const = internal constant i53 52
-llvm.mlir.global constant @i32_const(52: i53) : !llvm.i53
+llvm.mlir.global internal constant @i32_const(52: i53) : !llvm.i53
 
 // CHECK: @int_global_array = internal global [3 x i32] [i32 62, i32 62, i32 62]
-llvm.mlir.global @int_global_array(dense<62> : vector<3xi32>) : !llvm<"[3 x i32]">
+llvm.mlir.global internal @int_global_array(dense<62> : vector<3xi32>) : !llvm<"[3 x i32]">
 
 // CHECK: @i32_global_addr_space = internal addrspace(7) global i32 62
-llvm.mlir.global @i32_global_addr_space(62: i32) {addr_space = 7 : i32} : !llvm.i32
+llvm.mlir.global internal @i32_global_addr_space(62: i32) {addr_space = 7 : i32} : !llvm.i32
 
 // CHECK: @float_global = internal global float 0.000000e+00
-llvm.mlir.global @float_global(0.0: f32) : !llvm.float
+llvm.mlir.global internal @float_global(0.0: f32) : !llvm.float
 
 // CHECK: @float_global_array = internal global [1 x float] [float -5.000000e+00]
-llvm.mlir.global @float_global_array(dense<[-5.0]> : vector<1xf32>) : !llvm<"[1 x float]">
+llvm.mlir.global internal @float_global_array(dense<[-5.0]> : vector<1xf32>) : !llvm<"[1 x float]">
 
 // CHECK: @string_const = internal constant [6 x i8] c"foobar"
-llvm.mlir.global constant @string_const("foobar") : !llvm<"[6 x i8]">
+llvm.mlir.global internal constant @string_const("foobar") : !llvm<"[6 x i8]">
 
 // CHECK: @int_global_undef = internal global i64 undef
-llvm.mlir.global @int_global_undef() : !llvm.i64
+llvm.mlir.global internal @int_global_undef() : !llvm.i64
 
 // CHECK: @int_gep = internal constant i32* getelementptr (i32, i32* @i32_global, i32 2)
-llvm.mlir.global constant @int_gep() : !llvm<"i32*"> {
+llvm.mlir.global internal constant @int_gep() : !llvm<"i32*"> {
   %addr = llvm.mlir.addressof @i32_global : !llvm<"i32*">
   %_c0 = llvm.mlir.constant(2: i32) :!llvm.i32
   %gepinit = llvm.getelementptr %addr[%_c0] : (!llvm<"i32*">, !llvm.i32) -> !llvm<"i32*">
   llvm.return %gepinit : !llvm<"i32*">
 }
+
+//
+// Linkage attribute.
+//
+
+// CHECK: @private = private global i32 42
+llvm.mlir.global private @private(42 : i32) : !llvm.i32
+// CHECK: @internal = internal global i32 42
+llvm.mlir.global internal @internal(42 : i32) : !llvm.i32
+// CHECK: @available_externally = available_externally global i32 42
+llvm.mlir.global available_externally @available_externally(42 : i32) : !llvm.i32
+// CHECK: @linkonce = linkonce global i32 42
+llvm.mlir.global linkonce @linkonce(42 : i32) : !llvm.i32
+// CHECK: @weak = weak global i32 42
+llvm.mlir.global weak @weak(42 : i32) : !llvm.i32
+// CHECK: @common = common global i32 42
+llvm.mlir.global common @common(42 : i32) : !llvm.i32
+// CHECK: @appending = appending global i32 42
+llvm.mlir.global appending @appending(42 : i32) : !llvm.i32
+// CHECK: @extern_weak = extern_weak global i32
+llvm.mlir.global extern_weak @extern_weak() : !llvm.i32
+// CHECK: @linkonce_odr = linkonce_odr global i32 42
+llvm.mlir.global linkonce_odr @linkonce_odr(42 : i32) : !llvm.i32
+// CHECK: @weak_odr = weak_odr global i32 42
+llvm.mlir.global weak_odr @weak_odr(42 : i32) : !llvm.i32
+// CHECK: @external = external global i32
+llvm.mlir.global external @external() : !llvm.i32
+
 
 //
 // Declarations of the allocation functions to be linked against.

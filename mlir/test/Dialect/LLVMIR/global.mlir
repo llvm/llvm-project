@@ -1,28 +1,50 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
-// CHECK: llvm.mlir.global @global(42 : i64) : !llvm.i64
-llvm.mlir.global @global(42 : i64) : !llvm.i64
+// CHECK: llvm.mlir.global internal @global(42 : i64) : !llvm.i64
+llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 
-// CHECK: llvm.mlir.global constant @constant(3.700000e+01 : f64) : !llvm.float
-llvm.mlir.global constant @constant(37.0) : !llvm.float
+// CHECK: llvm.mlir.global internal constant @constant(3.700000e+01 : f64) : !llvm.float
+llvm.mlir.global internal constant @constant(37.0) : !llvm.float
 
-// CHECK: llvm.mlir.global constant @string("foobar")
-llvm.mlir.global constant @string("foobar") : !llvm<"[6 x i8]">
+// CHECK: llvm.mlir.global internal constant @string("foobar")
+llvm.mlir.global internal constant @string("foobar") : !llvm<"[6 x i8]">
 
-// CHECK: llvm.mlir.global @string_notype("1234567")
-llvm.mlir.global @string_notype("1234567")
+// CHECK: llvm.mlir.global internal @string_notype("1234567")
+llvm.mlir.global internal @string_notype("1234567")
 
-// CHECK: llvm.mlir.global @global_undef()
-llvm.mlir.global @global_undef() : !llvm.i64
+// CHECK: llvm.mlir.global internal @global_undef()
+llvm.mlir.global internal @global_undef() : !llvm.i64
 
-// CHECK: llvm.mlir.global @global_mega_initializer() : !llvm.i64 {
+// CHECK: llvm.mlir.global internal @global_mega_initializer() : !llvm.i64 {
 // CHECK-NEXT:  %[[c:[0-9]+]] = llvm.mlir.constant(42 : i64) : !llvm.i64
 // CHECK-NEXT:  llvm.return %[[c]] : !llvm.i64
 // CHECK-NEXT: }
-llvm.mlir.global @global_mega_initializer() : !llvm.i64 {
+llvm.mlir.global internal @global_mega_initializer() : !llvm.i64 {
   %c = llvm.mlir.constant(42 : i64) : !llvm.i64
   llvm.return %c : !llvm.i64
 }
+
+// Check different linkage types.
+// CHECK: llvm.mlir.global private
+llvm.mlir.global private @private() : !llvm.i64
+// CHECK: llvm.mlir.global internal
+llvm.mlir.global internal @internal() : !llvm.i64
+// CHECK: llvm.mlir.global available_externally
+llvm.mlir.global available_externally @available_externally() : !llvm.i64
+// CHECK: llvm.mlir.global linkonce
+llvm.mlir.global linkonce @linkonce() : !llvm.i64
+// CHECK: llvm.mlir.global weak
+llvm.mlir.global weak @weak() : !llvm.i64
+// CHECK: llvm.mlir.global common
+llvm.mlir.global common @common() : !llvm.i64
+// CHECK: llvm.mlir.global appending
+llvm.mlir.global appending @appending() : !llvm.i64
+// CHECK: llvm.mlir.global extern_weak
+llvm.mlir.global extern_weak @extern_weak() : !llvm.i64
+// CHECK: llvm.mlir.global linkonce_odr
+llvm.mlir.global linkonce_odr @linkonce_odr() : !llvm.i64
+// CHECK: llvm.mlir.global weak_odr
+llvm.mlir.global weak_odr @weak_odr() : !llvm.i64
 
 // CHECK-LABEL: references
 func @references() {
@@ -48,43 +70,43 @@ func @references() {
 // -----
 
 // expected-error @+1 {{expects type to be a valid element type for an LLVM pointer}}
-llvm.mlir.global constant @constant(37.0) : !llvm<"label">
+llvm.mlir.global internal constant @constant(37.0) : !llvm<"label">
 
 // -----
 
 // expected-error @+1 {{'addr_space' failed to satisfy constraint: non-negative 32-bit integer}}
-"llvm.mlir.global"() {sym_name = "foo", type = !llvm.i64, value = 42 : i64, addr_space = -1 : i32} : () -> ()
+"llvm.mlir.global"() {sym_name = "foo", type = !llvm.i64, value = 42 : i64, addr_space = -1 : i32, linkage = 0} : () -> ()
 
 // -----
 
 // expected-error @+1 {{'addr_space' failed to satisfy constraint: non-negative 32-bit integer}}
-"llvm.mlir.global"() {sym_name = "foo", type = !llvm.i64, value = 42 : i64, addr_space = 1.0 : f32} : () -> ()
+"llvm.mlir.global"() {sym_name = "foo", type = !llvm.i64, value = 42 : i64, addr_space = 1.0 : f32, linkage = 0} : () -> ()
 
 // -----
 
 func @foo() {
   // expected-error @+1 {{must appear at the module level}}
-  llvm.mlir.global @bar(42) : !llvm.i32
+  llvm.mlir.global internal @bar(42) : !llvm.i32
 }
 
 // -----
 
 // expected-error @+1 {{requires an i8 array type of the length equal to that of the string}}
-llvm.mlir.global constant @string("foobar") : !llvm<"[42 x i8]">
+llvm.mlir.global internal constant @string("foobar") : !llvm<"[42 x i8]">
 
 // -----
 
 // expected-error @+1 {{type can only be omitted for string globals}}
-llvm.mlir.global @i64_needs_type(0: i64)
+llvm.mlir.global internal @i64_needs_type(0: i64)
 
 // -----
 
 // expected-error @+1 {{expected zero or one type}}
-llvm.mlir.global @more_than_one_type(0) : !llvm.i64, !llvm.i32
+llvm.mlir.global internal @more_than_one_type(0) : !llvm.i64, !llvm.i32
 
 // -----
 
-llvm.mlir.global @foo(0: i32) : !llvm.i32
+llvm.mlir.global internal @foo(0: i32) : !llvm.i32
 
 func @bar() {
   // expected-error @+2{{expected ':'}}
@@ -109,7 +131,7 @@ func @foo() {
 
 // -----
 
-llvm.mlir.global @foo(0: i32) : !llvm.i32
+llvm.mlir.global internal @foo(0: i32) : !llvm.i32
 
 func @bar() {
   // expected-error @+1 {{the type must be a pointer to the type of the referred global}}
@@ -120,14 +142,14 @@ func @bar() {
 
 // expected-error @+2 {{'llvm.mlir.global' op expects regions to end with 'llvm.return', found 'llvm.mlir.constant'}}
 // expected-note @+1 {{in custom textual format, the absence of terminator implies 'llvm.return'}}
-llvm.mlir.global @g() : !llvm.i64 {
+llvm.mlir.global internal @g() : !llvm.i64 {
   %c = llvm.mlir.constant(42 : i64) : !llvm.i64
 }
 
 // -----
 
 // expected-error @+1 {{'llvm.mlir.global' op initializer region type '!llvm.i64' does not match global type '!llvm.i32'}}
-llvm.mlir.global @g() : !llvm.i32 {
+llvm.mlir.global internal @g() : !llvm.i32 {
   %c = llvm.mlir.constant(42 : i64) : !llvm.i64
   llvm.return %c : !llvm.i64
 }
@@ -135,7 +157,7 @@ llvm.mlir.global @g() : !llvm.i32 {
 // -----
 
 // expected-error @+1 {{'llvm.mlir.global' op cannot have both initializer value and region}}
-llvm.mlir.global @g(43 : i64) : !llvm.i64 {
+llvm.mlir.global internal @g(43 : i64) : !llvm.i64 {
   %c = llvm.mlir.constant(42 : i64) : !llvm.i64
   llvm.return %c : !llvm.i64
 }
