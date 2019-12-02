@@ -2961,12 +2961,34 @@ struct AADereferenceableImpl : AADereferenceable {
   const StateType &getState() const override { return *this; }
   /// }
 
+  /// Helper function for collecting accessed bytes in must-be-executed-context
+  void addAccessedBytesForUse(Attributor &A, const Use *U,
+                              const Instruction *I) {
+    const Value *UseV = U->get();
+    if (!UseV->getType()->isPointerTy())
+      return;
+
+    Type *PtrTy = UseV->getType();
+    const DataLayout &DL = A.getDataLayout();
+    int64_t Offset;
+    if (const Value *Base = getBasePointerOfAccessPointerOperand(
+            I, Offset, DL, /*AllowNonInbounds*/ true)) {
+      if (Base == &getAssociatedValue() && getPointerOperand(I) == UseV) {
+        uint64_t Size = DL.getTypeStoreSize(PtrTy->getPointerElementType());
+        addAccessedBytes(Offset, Size);
+      }
+    }
+    return;
+  }
+
   /// See AAFromMustBeExecutedContext
   bool followUse(Attributor &A, const Use *U, const Instruction *I) {
     bool IsNonNull = false;
     bool TrackUse = false;
     int64_t DerefBytes = getKnownNonNullAndDerefBytesForUse(
         A, *this, getAssociatedValue(), U, I, IsNonNull, TrackUse);
+
+    addAccessedBytesForUse(A, U, I);
     takeKnownDerefBytesMaximum(DerefBytes);
     return TrackUse;
   }

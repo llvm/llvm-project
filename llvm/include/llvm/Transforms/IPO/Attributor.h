@@ -1820,6 +1820,42 @@ struct DerefState : AbstractState {
   /// State representing for dereferenceable bytes.
   IncIntegerState<> DerefBytesState;
 
+  /// Map representing for accessed memory offsets and sizes.
+  /// A key is Offset and a value is size.
+  /// If there is a load/store instruction something like,
+  ///   p[offset] = v;
+  /// (offset, sizeof(v)) will be inserted to this map.
+  /// std::map is used because we want to iterate keys in ascending order.
+  std::map<int64_t, uint64_t> AccessedBytesMap;
+
+  /// Helper function to calculate dereferenceable bytes from current known
+  /// bytes and accessed bytes.
+  ///
+  /// int f(int *A){
+  ///    *A = 0;
+  ///    *(A+2) = 2;
+  ///    *(A+1) = 1;
+  ///    *(A+10) = 10;
+  /// }
+  /// ```
+  /// In that case, AccessedBytesMap is `{0:4, 4:4, 8:4, 40:4}`.
+  /// AccessedBytesMap is std::map so it is iterated in accending order on
+  /// key(Offset). So KnownBytes will be updated like this: |Access | KnownBytes
+  /// |(0, 4)| 0 -> 4
+  /// |(4, 4)| 4 -> 8
+  /// |(8, 4)| 8 -> 12
+  /// |(40, 4) | 12 (break)
+  void computeKnownDerefBytesFromAccessedMap() {
+    int64_t KnownBytes = DerefBytesState.getKnown();
+    for (auto &Access : AccessedBytesMap) {
+      if (KnownBytes < Access.first)
+        break;
+      KnownBytes = std::max(KnownBytes, Access.first + (int64_t)Access.second);
+    }
+
+    DerefBytesState.takeKnownMaximum(KnownBytes);
+  }
+
   /// State representing that whether the value is globaly dereferenceable.
   BooleanState GlobalState;
 
@@ -1849,11 +1885,22 @@ struct DerefState : AbstractState {
   /// Update known dereferenceable bytes.
   void takeKnownDerefBytesMaximum(uint64_t Bytes) {
     DerefBytesState.takeKnownMaximum(Bytes);
+
+    // Known bytes might increase.
+    computeKnownDerefBytesFromAccessedMap();
   }
 
   /// Update assumed dereferenceable bytes.
   void takeAssumedDerefBytesMinimum(uint64_t Bytes) {
     DerefBytesState.takeAssumedMinimum(Bytes);
+  }
+
+  /// Add accessed bytes to the map.
+  void addAccessedBytes(int64_t Offset, uint64_t Size) {
+    AccessedBytesMap[Offset] = std::max(AccessedBytesMap[Offset], Size);
+
+    // Known bytes might increase.
+    computeKnownDerefBytesFromAccessedMap();
   }
 
   /// Equality for DerefState.
