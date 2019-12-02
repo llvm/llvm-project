@@ -2377,6 +2377,13 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
 }
 
 int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
+  static const CostTblEntry SLMCostTbl[] = {
+     { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
+     { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
+     { ISD::EXTRACT_VECTOR_ELT,       MVT::i32,     4 },
+     { ISD::EXTRACT_VECTOR_ELT,       MVT::i64,     7 }
+   };
+
   assert(Val->isVectorTy() && "This must be a vector type");
 
   Type *ScalarType = Val->getScalarType();
@@ -2396,6 +2403,13 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
     // Floating point scalars are already located in index #0.
     if (ScalarType->isFloatingPointTy() && Index == 0)
       return 0;
+
+    int ISD = TLI->InstructionOpcodeToISD(Opcode);
+    assert(ISD && "Unexpected vector opcode");
+    MVT MScalarTy = LT.second.getScalarType();
+    if (ST->isSLM())
+      if (auto *Entry = CostTableLookup(SLMCostTbl, ISD, MScalarTy))
+        return LT.first * Entry->Cost;
   }
 
   // Add to the base cost if we know that the extracted element of a vector is
