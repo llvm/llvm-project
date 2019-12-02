@@ -752,7 +752,7 @@ void ARMAsmPrinter::emitAttributes() {
   if (STI.isRWPI())
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use,
                       ARMBuildAttrs::R9IsSB);
-  else if (STI.isGPRegisterReserved(9))
+  else if (STI.isR9Reserved())
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use,
                       ARMBuildAttrs::R9Reserved);
   else
