@@ -439,6 +439,8 @@ struct ConstantInliner {
 
   std::vector<MCInst> popFlagAndFinalize();
 
+  std::vector<MCInst> loadMXCSRAndFinalize(bool HasAVX);
+
 private:
   ConstantInliner &add(const MCInst &Inst) {
     Instructions.push_back(Inst);
@@ -496,6 +498,19 @@ std::vector<MCInst> ConstantInliner::loadX87FPAndFinalize(unsigned Reg) {
 std::vector<MCInst> ConstantInliner::popFlagAndFinalize() {
   initStack(8);
   add(MCInstBuilder(X86::POPF64));
+  return std::move(Instructions);
+}
+
+std::vector<MCInst> ConstantInliner::loadMXCSRAndFinalize(bool HasAVX) {
+  add(allocateStackSpace(4));
+  add(fillStackSpace(X86::MOV32mi, 0, 0x1f80)); // Mask all FP exceptions
+  add(MCInstBuilder(HasAVX ? X86::VLDMXCSR : X86::LDMXCSR)
+          // Address = ESP
+          .addReg(X86::RSP) // BaseReg
+          .addImm(1)        // ScaleAmt
+          .addReg(0)        // IndexReg
+          .addImm(0)        // Disp
+          .addReg(0));      // Segment
   return std::move(Instructions);
 }
 
@@ -699,6 +714,8 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
   }
   if (Reg == X86::EFLAGS)
     return CI.popFlagAndFinalize();
+  if (Reg == X86::MXCSR)
+    return CI.loadMXCSRAndFinalize(STI.getFeatureBits()[X86::FeatureAVX]);
   return {}; // Not yet implemented.
 }
 

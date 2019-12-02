@@ -32,7 +32,13 @@ enum PartialMappingIdx {
   PM_VGPR512 = 22,
   PM_VGPR1024 = 23,
   PM_SGPR96 = 24,
-  PM_VGPR96 = 25
+  PM_VGPR96 = 25,
+  PM_AGPR96 = 26,
+  PM_AGPR32 = 32,
+  PM_AGPR64 = 33,
+  PM_AGPR128 = 34,
+  PM_AGPR512 = 36,
+  PM_AGPR1024 = 37
 };
 
 const RegisterBankInfo::PartialMapping PartMappings[] {
@@ -58,7 +64,14 @@ const RegisterBankInfo::PartialMapping PartMappings[] {
   {0, 512, VGPRRegBank},
   {0, 1024, VGPRRegBank},
   {0, 96, SGPRRegBank},
-  {0, 96, VGPRRegBank}
+  {0, 96, VGPRRegBank},
+  {0, 96, AGPRRegBank},
+
+  {0, 32, AGPRRegBank}, // AGPR begin
+  {0, 64, AGPRRegBank},
+  {0, 128, AGPRRegBank},
+  {0, 512, AGPRRegBank},
+  {0, 1024, AGPRRegBank}
 };
 
 const RegisterBankInfo::ValueMapping ValMappings[] {
@@ -94,7 +107,21 @@ const RegisterBankInfo::ValueMapping ValMappings[] {
   {&PartMappings[16], 1}, // 512
   {&PartMappings[17], 1}, // 1024
   {&PartMappings[18], 1},
-  {&PartMappings[19], 1}
+  {&PartMappings[19], 1},
+  {&PartMappings[20], 1},
+
+  // AGPRs
+  {nullptr, 0},
+  {nullptr, 0},
+  {nullptr, 0},
+  {nullptr, 0},
+  {nullptr, 0},
+  {&PartMappings[21], 1}, // 32
+  {&PartMappings[22], 1}, // 64
+  {&PartMappings[23], 1}, // 128
+  {nullptr, 0},
+  {&PartMappings[24], 1}, // 512
+  {&PartMappings[25], 1}  // 1024
 };
 
 const RegisterBankInfo::PartialMapping SGPROnly64BreakDown[] {
@@ -122,7 +149,8 @@ const RegisterBankInfo::ValueMapping ValMappingsSGPR64OnlyVGPR32[] {
 enum ValueMappingIdx {
   SCCStartIdx = 0,
   SGPRStartIdx = 2,
-  VGPRStartIdx = 13
+  VGPRStartIdx = 13,
+  AGPRStartIdx = 27
 };
 
 const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
@@ -139,12 +167,32 @@ const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
     Idx = BankID == AMDGPU::SGPRRegBankID ? PM_SGPR1 : PM_VGPR1;
     break;
   case 96:
-    assert(BankID != AMDGPU::VCCRegBankID);
-    Idx = BankID == AMDGPU::SGPRRegBankID ? PM_SGPR96 : PM_VGPR96;
+    switch (BankID) {
+      case AMDGPU::VGPRRegBankID:
+        Idx = PM_VGPR96;
+        break;
+      case AMDGPU::SGPRRegBankID:
+        Idx = PM_SGPR96;
+        break;
+      case AMDGPU::AGPRRegBankID:
+        Idx = PM_AGPR96;
+        break;
+      default: llvm_unreachable("Invalid register bank");
+    }
     break;
   default:
-    assert(BankID != AMDGPU::VCCRegBankID);
-    Idx = BankID == AMDGPU::VGPRRegBankID ? VGPRStartIdx : SGPRStartIdx;
+    switch (BankID) {
+      case AMDGPU::VGPRRegBankID:
+        Idx = VGPRStartIdx;
+        break;
+      case AMDGPU::SGPRRegBankID:
+        Idx = SGPRStartIdx;
+        break;
+      case AMDGPU::AGPRRegBankID:
+        Idx = AGPRStartIdx;
+        break;
+      default: llvm_unreachable("Invalid register bank");
+    }
     Idx += Log2_32_Ceil(Size);
     break;
   }

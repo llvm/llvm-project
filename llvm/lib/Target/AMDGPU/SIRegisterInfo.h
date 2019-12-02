@@ -144,6 +144,11 @@ public:
     return isSGPRClass(RC);
   }
 
+  /// \returns true if this class contains only AGPR registers
+  bool isAGPRClass(const TargetRegisterClass *RC) const {
+    return hasAGPRs(RC) && !hasVGPRs(RC);
+  }
+
   /// \returns true if this class contains VGPR registers.
   bool hasVGPRs(const TargetRegisterClass *RC) const;
 

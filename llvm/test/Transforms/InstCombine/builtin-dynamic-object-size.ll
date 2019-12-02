@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s --dump-input-on-failure
+; RUN: opt -instcombine -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -48,10 +48,8 @@ entry:
 
 ; CHECK:      define i64 @internal_pointer(i64 %sz)
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   %0 = add i64 %sz, -2
-; CHECK-NEXT:   %1 = icmp ult i64 %sz, 2
-; CHECK-NEXT:   %2 = select i1 %1, i64 0, i64 %0
-; CHECK-NEXT:   ret i64 %2
+; CHECK-NEXT:   %0 = call i64 @llvm.usub.sat.i64(i64 %sz, i64 2)
+; CHECK-NEXT:   ret i64 %0
 ; CHECK-NEXT: }
 
 define i64 @uses_nullptr_no_fold() {

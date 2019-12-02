@@ -176,20 +176,11 @@ int main(int argc, char *argv[]) {
                             ThreadSafeModule(std::move(M), std::move(Ctx))));
   }
 
-  // Build an argv array for the JIT'd main.
-  std::vector<const char *> ArgV;
-  ArgV.push_back(argv[0]);
-  for (const auto &InputArg : InputArgv)
-    ArgV.push_back(InputArg.data());
-  ArgV.push_back(nullptr);
-
-  // Look up the JIT'd main, cast it to a function pointer, then call it.
-
   auto MainSym = ExitOnErr(SJ->lookup("main"));
-  int (*Main)(int, const char *[]) =
-      (int (*)(int, const char *[]))MainSym.getAddress();
+  auto Main =
+      jitTargetAddressToFunction<int (*)(int, char *[])>(MainSym.getAddress());
 
-  Main(ArgV.size() - 1, ArgV.data());
+  return runAsMain(Main, InputArgv, StringRef(InputFiles.front()));
 
   return 0;
 }

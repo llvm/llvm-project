@@ -1785,60 +1785,6 @@ def MVE_VHSUBu8  : MVE_VHSUB<"u8",  0b1, 0b00>;
 def MVE_VHSUBu16 : MVE_VHSUB<"u16", 0b1, 0b01>;
 def MVE_VHSUBu32 : MVE_VHSUB<"u32", 0b1, 0b10>;
 
-let Predicates = [HasMVEInt] in {
-  def : Pat<(v16i8 (ARMvshrsImm
-                     (v16i8 (add (v16i8 MQPR:$v1), (v16i8 MQPR:$v2))), 1)),
-            (v16i8 (MVE_VHADDs8
-                     (v16i8 MQPR:$v1), (v16i8 MQPR:$v2)))>;
-  def : Pat<(v8i16 (ARMvshrsImm
-                     (v8i16 (add (v8i16 MQPR:$v1), (v8i16 MQPR:$v2))), 1)),
-            (v8i16 (MVE_VHADDs16
-                     (v8i16 MQPR:$v1), (v8i16 MQPR:$v2)))>;
-  def : Pat<(v4i32 (ARMvshrsImm
-                     (v4i32 (add (v4i32 MQPR:$v1), (v4i32 MQPR:$v2))), 1)),
-            (v4i32 (MVE_VHADDs32
-                     (v4i32 MQPR:$v1), (v4i32 MQPR:$v2)))>;
-
-  def : Pat<(v16i8 (ARMvshruImm
-                     (v16i8 (add (v16i8 MQPR:$v1), (v16i8 MQPR:$v2))), 1)),
-            (v16i8 (MVE_VHADDu8
-                     (v16i8 MQPR:$v1), (v16i8 MQPR:$v2)))>;
-  def : Pat<(v8i16 (ARMvshruImm
-                     (v8i16 (add (v8i16 MQPR:$v1), (v8i16 MQPR:$v2))), 1)),
-            (v8i16 (MVE_VHADDu16
-                     (v8i16 MQPR:$v1), (v8i16 MQPR:$v2)))>;
-  def : Pat<(v4i32 (ARMvshruImm
-                     (v4i32 (add (v4i32 MQPR:$v1), (v4i32 MQPR:$v2))), 1)),
-            (v4i32 (MVE_VHADDu32
-                     (v4i32 MQPR:$v1), (v4i32 MQPR:$v2)))>;
-
-  def : Pat<(v16i8 (ARMvshrsImm
-                     (v16i8 (sub (v16i8 MQPR:$v1), (v16i8 MQPR:$v2))), 1)),
-            (v16i8 (MVE_VHSUBs8
-                     (v16i8 MQPR:$v1), (v16i8 MQPR:$v2)))>;
-  def : Pat<(v8i16 (ARMvshrsImm
-                     (v8i16 (sub (v8i16 MQPR:$v1), (v8i16 MQPR:$v2))), 1)),
-            (v8i16 (MVE_VHSUBs16
-                     (v8i16 MQPR:$v1), (v8i16 MQPR:$v2)))>;
-  def : Pat<(v4i32 (ARMvshrsImm
-                     (v4i32 (sub (v4i32 MQPR:$v1), (v4i32 MQPR:$v2))), 1)),
-            (v4i32 (MVE_VHSUBs32
-                     (v4i32 MQPR:$v1), (v4i32 MQPR:$v2)))>;
-
-  def : Pat<(v16i8 (ARMvshruImm
-                     (v16i8 (sub (v16i8 MQPR:$v1), (v16i8 MQPR:$v2))), 1)),
-            (v16i8 (MVE_VHSUBu8
-                     (v16i8 MQPR:$v1), (v16i8 MQPR:$v2)))>;
-  def : Pat<(v8i16 (ARMvshruImm
-                     (v8i16 (sub (v8i16 MQPR:$v1), (v8i16 MQPR:$v2))), 1)),
-            (v8i16 (MVE_VHSUBu16
-                     (v8i16 MQPR:$v1), (v8i16 MQPR:$v2)))>;
-  def : Pat<(v4i32 (ARMvshruImm
-                     (v4i32 (sub (v4i32 MQPR:$v1), (v4i32 MQPR:$v2))), 1)),
-            (v4i32 (MVE_VHSUBu32
-                     (v4i32 MQPR:$v1), (v4i32 MQPR:$v2)))>;
-}
-
 class MVE_VDUP<string suffix, bit B, bit E, list<dag> pattern=[]>
   : MVE_p<(outs MQPR:$Qd), (ins rGPR:$Rt), NoItinerary,
           "vdup", suffix, "$Qd, $Rt", vpred_r, "", pattern> {
