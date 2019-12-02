@@ -31,7 +31,7 @@ _Atomic(B) b;
 // CHECK-LABEL: define void @_Z11atomic_initR1Ai
 void atomic_init(A& a, int i) {
   // CHECK-NOT: atomic
-  // CHECK: tail call void @_ZN1BC1Ei
+  // CHECK: call void @_ZN1BC1Ei
   __c11_atomic_init(&b, B(i));
   // CHECK-NEXT: ret void
 }

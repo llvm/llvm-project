@@ -25,10 +25,10 @@ const std::type_info* test2_typeid() { return &typeid(&a); }
 
 const std::type_info* test3_typeid() { return &typeid(*fn()); }
 // CHECK-LABEL: define dso_local %struct.type_info* @"?test3_typeid@@YAPBUtype_info@@XZ"()
-// CHECK:        [[CALL:%.*]] = tail call %struct.A* @"?fn@@YAPAUA@@XZ"()
+// CHECK:        [[CALL:%.*]] = call %struct.A* @"?fn@@YAPAUA@@XZ"()
 // CHECK-NEXT:   [[CMP:%.*]] = icmp eq %struct.A* [[CALL]], null
 // CHECK-NEXT:   br i1 [[CMP]]
-// CHECK:        tail call i8* @__RTtypeid(i8* null)
+// CHECK:        call i8* @__RTtypeid(i8* null)
 // CHECK-NEXT:   unreachable
 // CHECK:        [[THIS:%.*]] = bitcast %struct.A* [[CALL]] to i8*
 // CHECK-NEXT:   [[VBTBLP:%.*]] = getelementptr %struct.A, %struct.A* [[CALL]], i32 0, i32 0
@@ -36,7 +36,7 @@ const std::type_info* test3_typeid() { return &typeid(*fn()); }
 // CHECK-NEXT:   [[VBSLOT:%.*]] = getelementptr inbounds i32, i32* [[VBTBL]], i32 1
 // CHECK-NEXT:   [[VBASE_OFFS:%.*]] = load i32, i32* [[VBSLOT]], align 4
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, i8* [[THIS]], i32 [[VBASE_OFFS]]
-// CHECK-NEXT:   [[RT:%.*]] = tail call i8* @__RTtypeid(i8* nonnull [[ADJ]])
+// CHECK-NEXT:   [[RT:%.*]] = call i8* @__RTtypeid(i8* nonnull [[ADJ]])
 // CHECK-NEXT:   [[RET:%.*]] = bitcast i8* [[RT]] to %struct.type_info*
 // CHECK-NEXT:   ret %struct.type_info* [[RET]]
 
@@ -46,7 +46,7 @@ const std::type_info* test4_typeid() { return &typeid(b); }
 
 const std::type_info* test5_typeid() { return &typeid(v); }
 // CHECK: define dso_local %struct.type_info* @"?test5_typeid@@YAPBUtype_info@@XZ"()
-// CHECK:        [[RT:%.*]] = tail call i8* @__RTtypeid(i8* bitcast (%struct.V* @"?v@@3UV@@A" to i8*))
+// CHECK:        [[RT:%.*]] = call i8* @__RTtypeid(i8* bitcast (%struct.V* @"?v@@3UV@@A" to i8*))
 // CHECK-NEXT:   [[RET:%.*]] = bitcast i8* [[RT]] to %struct.type_info*
 // CHECK-NEXT:   ret %struct.type_info* [[RET]]
 
