@@ -493,8 +493,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
   RTLIB::Libcall LC = RTLIB::getFPEXT(Op.getValueType(), N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
   TargetLowering::MakeLibCallOptions CallOptions;
-  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
+  EVT OpVT = N->getOperand(IsStrict ? 1 : 0).getValueType();
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -523,14 +523,21 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP16_TO_FP(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FP_ROUND(SDNode *N) {
+  bool IsStrict = N->isStrictFPOpcode();
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  SDValue Op = N->getOperand(0);
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
+  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   RTLIB::Libcall LC = RTLIB::getFPROUND(Op.getValueType(), N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_ROUND!");
   TargetLowering::MakeLibCallOptions CallOptions;
-  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
-  return TLI.makeLibCall(DAG, LC, NVT, Op, CallOptions, SDLoc(N)).first;
+  EVT OpVT = N->getOperand(IsStrict ? 1 : 0).getValueType();
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
+                                                    CallOptions, SDLoc(N),
+                                                    Chain);
+  if (IsStrict)
+    ReplaceValueWith(SDValue(N, 1), Tmp.second);
+  return Tmp.first;
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FPOW(SDNode *N) {
