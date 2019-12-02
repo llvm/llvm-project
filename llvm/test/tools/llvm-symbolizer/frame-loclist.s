@@ -2,45 +2,49 @@
 // REQUIRES: aarch64-registered-target
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64-linux-android -o %t.o %s
-// RUN: echo -e 'FRAME %t.o 0x4\nFRAME %t.o 0x24\nFRAME %t.o 0x48\nFRAME %t.o 0x6a\nFRAME %t.o 0x9a' | llvm-symbolizer | FileCheck %s
+// RUN: echo 'FRAME %t.o 0x4'  | llvm-symbolizer | FileCheck %s --check-prefix=CHECK0
+// RUN: echo 'FRAME %t.o 0x24' | llvm-symbolizer | FileCheck %s --check-prefix=CHECK1
+// RUN: echo 'FRAME %t.o 0x48' | llvm-symbolizer | FileCheck %s --check-prefix=CHECK2
+// RUN: echo 'FRAME %t.o 0x6a' | llvm-symbolizer | FileCheck %s --check-prefix=CHECK3
+// RUN: echo 'FRAME %t.o 0x9a' | llvm-symbolizer | FileCheck %s --check-prefix=CHECK4
 
 // DW_AT_location        (DW_OP_breg29 W29-4)
-// CHECK:      func00
-// CHECK-NEXT: x
-// CHECK-NEXT: {{.*}}dbg.cc:7
-// CHECK-NEXT: -4 4 ??
+// CHECK0:      func00
+// CHECK0-NEXT: x
+// CHECK0-NEXT: {{.*}}dbg.cc:7
+// CHECK0-NEXT: -4 4 ??
 
 // DW_AT_location        (DW_OP_fbreg -4)
-// CHECK:      func0{{$}}
-// CHECK-NEXT: x
-// CHECK-NEXT: {{.*}}dbg.cc:12
-// CHECK-NEXT: -4 4 ??
+// CHECK1:      func0{{$}}
+// CHECK1-NEXT: x
+// CHECK1-NEXT: {{.*}}dbg.cc:12
+// CHECK1-NEXT: -4 4 ??
 
 // DW_AT_location        (0x00000000: 
 //   [0x000000000000004c, 0x0000000000000058): DW_OP_breg29 W29-4
 //   [0x0000000000000058, 0x000000000000005c): DW_OP_reg0 W0)
-// CHECK:      func1
-// CHECK-NEXT: x
-// CHECK-NEXT: {{.*}}dbg.cc:17
-// CHECK-NEXT: -4 4 ??
+// CHECK2:      func1
+// CHECK2-NEXT: x
+// CHECK2-NEXT: {{.*}}dbg.cc:17
+// CHECK2-NEXT: -4 4 ??
 
 // DW_AT_location        (0x00000037: 
 //    [0x0000000000000078, 0x0000000000000080): DW_OP_consts +1, DW_OP_stack_value
 //    [0x0000000000000080, 0x0000000000000088): DW_OP_breg29 W29-4
 //    [0x0000000000000088, 0x000000000000008c): DW_OP_reg0 W0)
-// CHECK:      func2
-// CHECK-NEXT: x
-// CHECK-NEXT: {{.*}}dbg.cc:23
-// CHECK-NEXT: -4 4 ??
+// CHECK3:      func2
+// CHECK3-NEXT: x
+// CHECK3-NEXT: {{.*}}dbg.cc:23
+// CHECK3-NEXT: -4 4 ??
 
 // location lost
 // DW_AT_location        (0x00000083: 
 //    [0x00000000000000a8, 0x00000000000000b8): DW_OP_consts +1, DW_OP_stack_value
 //    [0x00000000000000b8, 0x00000000000000bc): DW_OP_reg0 W0)
-// CHECK:      func3
-// CHECK-NEXT: x
-// CHECK-NEXT: {{.*}}dbg.cc:29
-// CHECK-NEXT: ?? 4 ??
+// CHECK4:      func3
+// CHECK4-NEXT: x
+// CHECK4-NEXT: {{.*}}dbg.cc:29
+// CHECK4-NEXT: ?? 4 ??
 
 	.text
 	.file	"dbg.cc"
