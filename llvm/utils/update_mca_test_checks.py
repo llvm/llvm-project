@@ -83,26 +83,6 @@ def _parse_args():
   return args
 
 
-def _find_run_lines(input_lines, args):
-  raw_lines = [m.group(1)
-               for m in [common.RUN_LINE_RE.match(l) for l in input_lines]
-               if m]
-  run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
-  for l in raw_lines[1:]:
-    if run_lines[-1].endswith(r'\\'):
-      run_lines[-1] = run_lines[-1].rstrip('\\') + ' ' + l
-    else:
-      run_lines.append(l)
-
-  if args.verbose:
-    sys.stderr.write('Found {} RUN line{}:\n'.format(
-        len(run_lines), '' if len(run_lines) == 1 else 's'))
-    for line in run_lines:
-      sys.stderr.write('  RUN: {}\n'.format(line))
-
-  return run_lines
-
-
 def _get_run_infos(run_lines, args):
   run_infos = []
   for run_line in run_lines:
@@ -544,9 +524,7 @@ def _write_output(test_path, input_lines, prefix_list, block_infos,  # noqa
     return
   sys.stderr.write('      [{} lines total]\n'.format(len(output_lines)))
 
-  if args.verbose:
-    sys.stderr.write(
-        'Writing {} lines to {}...\n\n'.format(len(output_lines), test_path))
+  common.debug('Writing', len(output_lines), 'lines to', test_path, '..\n\n')
 
   with open(test_path, 'wb') as f:
     f.writelines(['{}\n'.format(l).encode('utf-8') for l in output_lines])
@@ -562,17 +540,13 @@ def main():
     # will be written once per source location per test.
     _configure_warnings(args)
 
-    if args.verbose:
-      sys.stderr.write(
-          'Scanning for RUN lines in test file: {}\n'.format(test_path))
-
     if not os.path.isfile(test_path):
       raise Error('could not find test file: {}'.format(test_path))
 
     with open(test_path) as f:
       input_lines = [l.rstrip() for l in f]
 
-    run_lines = _find_run_lines(input_lines, args)
+    run_lines = common.find_run_lines(test_path, input_lines)
     run_infos = _get_run_infos(run_lines, args)
     common_prefix, prefix_pad = _get_useful_prefix_info(run_infos)
     block_infos = _get_block_infos(run_infos, test_path, args, common_prefix)

@@ -439,7 +439,8 @@ struct ConstantInliner {
 
   std::vector<MCInst> popFlagAndFinalize();
 
-  std::vector<MCInst> loadMXCSRAndFinalize(bool HasAVX);
+  std::vector<MCInst> loadImplicitRegAndFinalize(unsigned Opcode,
+                                                 unsigned Value);
 
 private:
   ConstantInliner &add(const MCInst &Inst) {
@@ -501,10 +502,11 @@ std::vector<MCInst> ConstantInliner::popFlagAndFinalize() {
   return std::move(Instructions);
 }
 
-std::vector<MCInst> ConstantInliner::loadMXCSRAndFinalize(bool HasAVX) {
+std::vector<MCInst>
+ConstantInliner::loadImplicitRegAndFinalize(unsigned Opcode, unsigned Value) {
   add(allocateStackSpace(4));
-  add(fillStackSpace(X86::MOV32mi, 0, 0x1f80)); // Mask all FP exceptions
-  add(MCInstBuilder(HasAVX ? X86::VLDMXCSR : X86::LDMXCSR)
+  add(fillStackSpace(X86::MOV32mi, 0, Value)); // Mask all FP exceptions
+  add(MCInstBuilder(Opcode)
           // Address = ESP
           .addReg(X86::RSP) // BaseReg
           .addImm(1)        // ScaleAmt
@@ -715,7 +717,11 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
   if (Reg == X86::EFLAGS)
     return CI.popFlagAndFinalize();
   if (Reg == X86::MXCSR)
-    return CI.loadMXCSRAndFinalize(STI.getFeatureBits()[X86::FeatureAVX]);
+    return CI.loadImplicitRegAndFinalize(
+              STI.getFeatureBits()[X86::FeatureAVX] ? X86::VLDMXCSR
+                                                    : X86::LDMXCSR, 0x1f80);
+  if (Reg == X86::FPCW)
+    return CI.loadImplicitRegAndFinalize(X86::FLDCW16m, 0x37f);
   return {}; // Not yet implemented.
 }
 

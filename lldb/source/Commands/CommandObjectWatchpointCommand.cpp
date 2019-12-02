@@ -611,10 +611,10 @@ protected:
             const Baton *baton = wp_options->GetBaton();
             if (baton) {
               result.GetOutputStream().Printf("Watchpoint %u:\n", cur_wp_id);
-              result.GetOutputStream().IndentMore();
-              baton->GetDescription(&result.GetOutputStream(),
-                                    eDescriptionLevelFull);
-              result.GetOutputStream().IndentLess();
+              baton->GetDescription(result.GetOutputStream().AsRawOstream(),
+                                    eDescriptionLevelFull,
+                                    result.GetOutputStream().GetIndentLevel() +
+                                        2);
             } else {
               result.AppendMessageWithFormat(
                   "Watchpoint %u does not have an associated command.\n",
