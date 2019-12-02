@@ -920,3 +920,24 @@ define double @fmuladd_nan_addend_neginf_inf(double %x, i1 %y) {
   %r = call double @llvm.fmuladd.f64(double %notnan, double 0xfff0000000000000, double 0x7ff0000000000000)
   ret double %r
 }
+
+declare float @llvm.copysign.f32(float, float)
+declare <2 x double> @llvm.copysign.v2f64(<2 x double>, <2 x double>)
+
+define float @copysign_same_operand(float %x) {
+; CHECK-LABEL: @copysign_same_operand(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[X]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @llvm.copysign.f32(float %x, float %x)
+  ret float %r
+}
+
+define <2 x double> @copysign_same_operand_vec(<2 x double> %x) {
+; CHECK-LABEL: @copysign_same_operand_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @llvm.copysign.v2f64(<2 x double> [[X:%.*]], <2 x double> [[X]])
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %r = call <2 x double> @llvm.copysign.v2f64(<2 x double> %x, <2 x double> %x)
+  ret <2 x double> %r
+}
