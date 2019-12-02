@@ -559,6 +559,26 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::thread_pointer);
       return true;
     }
+    if (Name.startswith("arm.neon.vqadds.")) {
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::sadd_sat,
+                                        F->arg_begin()->getType());
+      return true;
+    }
+    if (Name.startswith("arm.neon.vqaddu.")) {
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::uadd_sat,
+                                        F->arg_begin()->getType());
+      return true;
+    }
+    if (Name.startswith("arm.neon.vqsubs.")) {
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ssub_sat,
+                                        F->arg_begin()->getType());
+      return true;
+    }
+    if (Name.startswith("arm.neon.vqsubu.")) {
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::usub_sat,
+                                        F->arg_begin()->getType());
+      return true;
+    }
     if (Name.startswith("aarch64.neon.addp")) {
       if (F->arg_size() != 2)
         break; // Invalid IR.
