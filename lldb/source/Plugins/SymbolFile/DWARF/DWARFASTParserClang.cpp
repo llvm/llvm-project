@@ -2465,7 +2465,6 @@ bool DWARFASTParserClang::ParseChildMembers(
   const uint64_t parent_bit_size =
       parent_byte_size == UINT64_MAX ? UINT64_MAX : parent_byte_size * 8;
 
-  uint32_t member_idx = 0;
   BitfieldInfo last_field_info;
 
   ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
@@ -2935,7 +2934,6 @@ bool DWARFASTParserClang::ParseChildMembers(
           }
         }
       }
-      ++member_idx;
     } break;
 
     case DW_TAG_subprogram:

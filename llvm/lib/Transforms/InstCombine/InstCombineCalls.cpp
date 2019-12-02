@@ -2279,6 +2279,21 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::copysign: {
+    const APFloat *C;
+    if (match(II->getArgOperand(1), m_APFloat(C))) {
+      // If we know the sign bit of the sign argument, reduce to FABS/FNABS:
+      // copysign X, PosC --> fabs X
+      // copysign X, NegC --> fneg (fabs X)
+      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
+                                                 II->getArgOperand(0), II);
+      if (C->isNegative())
+        Fabs = Builder.CreateFNegFMF(Fabs, II);
+
+      return replaceInstUsesWith(*II, Fabs);
+    }
+    break;
+  }
   case Intrinsic::fabs: {
     Value *Cond;
     Constant *LHS, *RHS;
