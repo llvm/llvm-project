@@ -492,13 +492,6 @@ static void PrivateAutoCompleteMembers(
     llvm::StringRef partial_path,
     const llvm::Twine
         &prefix_path, // Anything that has been resolved already will be in here
-    const CompilerType &compiler_type, CompletionRequest &request);
-
-static void PrivateAutoCompleteMembers(
-    StackFrame *frame, const std::string &partial_member_name,
-    llvm::StringRef partial_path,
-    const llvm::Twine
-        &prefix_path, // Anything that has been resolved already will be in here
     const CompilerType &compiler_type, CompletionRequest &request) {
 
   // We are in a type parsing child members
