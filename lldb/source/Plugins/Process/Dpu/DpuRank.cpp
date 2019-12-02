@@ -711,8 +711,14 @@ lldb::StateType Dpu::GetThreadState(int thread_index, std::string &description,
   stop_reason = eStopReasonNone;
   if (m_context->bkp_fault &&
       m_context->bkp_fault_thread_index == thread_index) {
-    stop_reason = eStopReasonBreakpoint;
-    return eStateStopped;
+    if (m_context->bkp_fault_id == 0) {
+      stop_reason = eStopReasonBreakpoint;
+      return eStateStopped;
+    } else {
+      description = "fault " + std::to_string(m_context->bkp_fault_id);
+      stop_reason = eStopReasonException;
+      return eStateCrashed;
+    }
   } else if (m_context->dma_fault &&
              m_context->dma_fault_thread_index == thread_index) {
     description = "dma fault";
