@@ -3041,9 +3041,7 @@ public:
 
 /// Implicit declaration of a temporary that was materialized by
 /// a MaterializeTemporaryExpr and lifetime-extended by a declaration
-class LifetimeExtendedTemporaryDecl final
-    : public Decl,
-      public Mergeable<LifetimeExtendedTemporaryDecl> {
+class LifetimeExtendedTemporaryDecl final : public Decl {
   friend class MaterializeTemporaryExpr;
   friend class ASTDeclReader;
 
