@@ -123,20 +123,26 @@ llvm::Optional<ReasonToReject> renameable(const Decl &RenameDecl,
   if (RenameDecl.getParentFunctionOrMethod())
     return None;
 
+  // Check whether the symbol being rename is indexable.
+  auto &ASTCtx = RenameDecl.getASTContext();
+  bool MainFileIsHeader = isHeaderFile(MainFilePath, ASTCtx.getLangOpts());
+  bool DeclaredInMainFile =
+      isInsideMainFile(RenameDecl.getBeginLoc(), ASTCtx.getSourceManager());
+  bool IsMainFileOnly = true;
+  if (MainFileIsHeader)
+    // main file is a header, the symbol can't be main file only.
+    IsMainFileOnly = false;
+  else if (!DeclaredInMainFile)
+    IsMainFileOnly = false;
   bool IsIndexable =
       isa<NamedDecl>(RenameDecl) &&
       SymbolCollector::shouldCollectSymbol(
           cast<NamedDecl>(RenameDecl), RenameDecl.getASTContext(),
-          SymbolCollector::Options(), CrossFile);
+          SymbolCollector::Options(), IsMainFileOnly);
   if (!IsIndexable) // If the symbol is not indexable, we disallow rename.
     return ReasonToReject::NonIndexable;
 
   if (!CrossFile) {
-    auto &ASTCtx = RenameDecl.getASTContext();
-    const auto &SM = ASTCtx.getSourceManager();
-    bool MainFileIsHeader = isHeaderFile(MainFilePath, ASTCtx.getLangOpts());
-    bool DeclaredInMainFile = isInsideMainFile(RenameDecl.getBeginLoc(), SM);
-
     if (!DeclaredInMainFile)
       // We are sure the symbol is used externally, bail out early.
       return ReasonToReject::UsedOutsideFile;
