@@ -4095,9 +4095,26 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
             << From->getSourceRange();
     }
 
+    // Defer address space conversion to the third conversion.
+    QualType FromPteeType = From->getType()->getPointeeType();
+    QualType ToPteeType = ToType->getPointeeType();
+    QualType NewToType = ToType;
+    if (!FromPteeType.isNull() && !ToPteeType.isNull() &&
+        FromPteeType.getAddressSpace() != ToPteeType.getAddressSpace()) {
+      NewToType = Context.removeAddrSpaceQualType(ToPteeType);
+      NewToType = Context.getAddrSpaceQualType(NewToType,
+                                               FromPteeType.getAddressSpace());
+      if (ToType->isObjCObjectPointerType())
+        NewToType = Context.getObjCObjectPointerType(NewToType);
+      else if (ToType->isBlockPointerType())
+        NewToType = Context.getBlockPointerType(NewToType);
+      else
+        NewToType = Context.getPointerType(NewToType);
+    }
+
     CastKind Kind;
     CXXCastPath BasePath;
-    if (CheckPointerConversion(From, ToType, Kind, BasePath, CStyle))
+    if (CheckPointerConversion(From, NewToType, Kind, BasePath, CStyle))
       return ExprError();
 
     // Make sure we extend blocks if necessary.
@@ -4108,8 +4125,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       From = E.get();
     }
     if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
-      CheckObjCConversion(SourceRange(), ToType, From, CCK);
-    From = ImpCastExprToType(From, ToType, Kind, VK_RValue, &BasePath, CCK)
+      CheckObjCConversion(SourceRange(), NewToType, From, CCK);
+    From = ImpCastExprToType(From, NewToType, Kind, VK_RValue, &BasePath, CCK)
              .get();
     break;
   }
