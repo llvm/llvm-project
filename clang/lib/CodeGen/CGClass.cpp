@@ -917,6 +917,8 @@ namespace {
     }
 
     void addMemcpyableField(FieldDecl *F) {
+      if (F->isZeroSize(CGF.getContext()))
+        return;
       if (!FirstField)
         addInitialField(F);
       else
