@@ -4291,11 +4291,11 @@ def MVE_VCTP32 : MVE_VCTP<"32", 0b10>;
 def MVE_VCTP64 : MVE_VCTP<"64", 0b11>;
 
 let Predicates = [HasMVEInt] in {
-  def : Pat<(int_arm_vctp8 rGPR:$Rn),
+  def : Pat<(int_arm_mve_vctp8 rGPR:$Rn),
             (v16i1 (MVE_VCTP8 rGPR:$Rn))>;
-  def : Pat<(int_arm_vctp16 rGPR:$Rn),
+  def : Pat<(int_arm_mve_vctp16 rGPR:$Rn),
             (v8i1 (MVE_VCTP16 rGPR:$Rn))>;
-  def : Pat<(int_arm_vctp32 rGPR:$Rn),
+  def : Pat<(int_arm_mve_vctp32 rGPR:$Rn),
             (v4i1 (MVE_VCTP32 rGPR:$Rn))>;
 }
 

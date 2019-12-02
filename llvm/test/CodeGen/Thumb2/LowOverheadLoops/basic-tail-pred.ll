@@ -4,7 +4,7 @@
 ; CHECK: vector.body:
 ; CHECK: %index = phi i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
-; CHECK: [[VCTP:%[^ ]+]] = call <16 x i1> @llvm.arm.vctp8(i32 [[ELEMS]])
+; CHECK: [[VCTP:%[^ ]+]] = call <16 x i1> @llvm.arm.mve.vctp8(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 16
 ; CHECK: [[LD0:%[^ ]+]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* {{.*}}, i32 4, <16 x i1> [[VCTP]], <16 x i8> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* {{.*}}, i32 4, <16 x i1> [[VCTP]], <16 x i8> undef)
@@ -57,7 +57,7 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; CHECK: vector.body:
 ; CHECK: %index = phi i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
-; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[ELEMS]])
+; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.mve.vctp16(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 8
 ; CHECK: [[LD0:%[^ ]+]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* {{.*}}, i32 4, <8 x i1> [[VCTP]], <8 x i16> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* {{.*}}, i32 4, <8 x i1> [[VCTP]], <8 x i16> undef)
@@ -109,7 +109,7 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; CHECK-LABEL: mul_v4i32
 ; CHECK: vector.body:
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
-; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[ELEMS]])
+; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 4
 ; CHECK: [[LD0:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
@@ -158,59 +158,11 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
-; CHECK-LABEL: copy_v2i64
-; CHECK: vector.body:
-; CHECK: %index = phi i32
-; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
-; CHECK: [[VCTP:%[^ ]+]] = call <2 x i1> @llvm.arm.vctp64(i32 [[ELEMS]])
-; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 2
-; CHECK: [[LD0:%[^ ]+]] = tail call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* {{.*}}, i32 4, <2 x i1> [[VCTP]], <2 x i64> undef)
-; CHECK: tail call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> [[LD0]], <2 x i64>* {{.*}}, i32 4, <2 x i1> [[VCTP]])
-define void @copy_v2i64(i64* %a, i64* %b, i32 %N) {
-entry:
-  %cmp8 = icmp eq i32 %N, 0
-  %tmp8 = add i32 %N, 1
-  %tmp9 = lshr i32 %tmp8, 1
-  %tmp10 = shl nuw i32 %tmp9, 1
-  %tmp11 = add i32 %tmp10, -2
-  %tmp12 = lshr i32 %tmp11, 1
-  %tmp13 = add nuw nsw i32 %tmp12, 1
-  br i1 %cmp8, label %for.cond.cleanup, label %vector.ph
-
-vector.ph:                                        ; preds = %entry
-  %trip.count.minus.1 = add i32 %N, -1
-  %broadcast.splatinsert10 = insertelement <2 x i32> undef, i32 %trip.count.minus.1, i32 0
-  %broadcast.splat11 = shufflevector <2 x i32> %broadcast.splatinsert10, <2 x i32> undef, <2 x i32> zeroinitializer
-  call void @llvm.set.loop.iterations.i32(i32 %tmp13)
-  br label %vector.body
-
-vector.body:                                      ; preds = %vector.body, %vector.ph
-  %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %tmp14 = phi i32 [ %tmp13, %vector.ph ], [ %tmp15, %vector.body ]
-  %broadcast.splatinsert = insertelement <2 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <2 x i32> %broadcast.splatinsert, <2 x i32> undef, <2 x i32> zeroinitializer
-  %induction = add <2 x i32> %broadcast.splat, <i32 0, i32 1>
-  %tmp1 = icmp ule <2 x i32> %induction, %broadcast.splat11
-  %tmp = getelementptr inbounds i64, i64* %a, i32 %index
-  %tmp2 = bitcast i64* %tmp to <2 x i64>*
-  %wide.masked.load = tail call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* %tmp2, i32 4, <2 x i1> %tmp1, <2 x i64> undef)
-  %tmp3 = getelementptr inbounds i64, i64* %b, i32 %index
-  %tmp7 = bitcast i64* %tmp3 to <2 x i64>*
-  tail call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %wide.masked.load, <2 x i64>* %tmp7, i32 4, <2 x i1> %tmp1)
-  %index.next = add i32 %index, 2
-  %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp14, i32 1)
-  %tmp16 = icmp ne i32 %tmp15, 0
-  br i1 %tmp16, label %vector.body, label %for.cond.cleanup
-
-for.cond.cleanup:                                 ; preds = %vector.body, %entry
-  ret void
-}
-
 ; CHECK-LABEL: split_vector
 ; CHECK: vector.body:
 ; CHECK: %index = phi i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
-; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[ELEMS]])
+; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 4
 ; CHECK: [[LD0:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
@@ -268,7 +220,7 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; One of the loads now uses ult predicate.
 ; CHECK-LABEL: mismatch_load_pred
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
-; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[ELEMS]])
+; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 4
 ; CHECK: [[LD0:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> %wrong, <4 x i32> undef)
@@ -322,7 +274,7 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; CHECK-LABEL: mismatch_store_pred
 ; CHECK: %index = phi i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
-; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[ELEMS]])
+; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 4
 ; CHECK: [[LD0:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)

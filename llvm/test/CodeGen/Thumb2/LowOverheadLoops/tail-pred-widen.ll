@@ -1,7 +1,7 @@
 ; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -disable-mve-tail-predication=false -mattr=+mve,+lob %s -S -o - | FileCheck %s
 
 ; CHECK-LABEL: expand_v8i16_v8i32
-; CHECK-NOT: call i32 @llvm.arm.vctp
+; CHECK-NOT: call i32 @llvm.arm.mve.vctp
 define void @expand_v8i16_v8i32(i16* noalias nocapture readonly %a, i16* noalias nocapture readonly %b, i32* noalias nocapture %c, i32 %N) {
 entry:
   %cmp8 = icmp eq i32 %N, 0
@@ -50,7 +50,7 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 
 ; CHECK-LABEL: expand_v8i16_v4i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[ELEMS_REM:%[^ ]+]], %vector.body ]
-; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[ELEMS]])
+; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.mve.vctp16(i32 [[ELEMS]])
 ; CHECK: [[ELEMS_REM]] = sub i32 [[ELEMS]], 8
 ; CHECK: tail call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* {{.*}}, i32 4, <8 x i1> [[VCTP]], <8 x i16> undef)
 ; CHECK: %store.pred = icmp ule <4 x i32> %induction.store
@@ -117,7 +117,7 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 }
 
 ; CHECK-LABEL: expand_v4i32_v4i64
-; CHECK-NOT: call i32 @llvm.arm.vctp
+; CHECK-NOT: call i32 @llvm.arm.mve.vctp
 define void @expand_v4i32_v4i64(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b, i64* noalias nocapture %c, i32 %N) {
 entry:
   %cmp8 = icmp eq i32 %N, 0
