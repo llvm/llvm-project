@@ -381,11 +381,14 @@ public:
   ///     A SymbolContext list class that will get any matching
   ///     entries appended to.
   ///
+  /// \return
+  ///     The number of new matches that were added to \a sc_list.
+  ///
   /// \see enum SymbolContext::Scope
-  void ResolveSymbolContext(const FileSpec &file_spec, uint32_t line,
-                            bool check_inlines, bool exact,
-                            lldb::SymbolContextItem resolve_scope,
-                            SymbolContextList &sc_list);
+  uint32_t ResolveSymbolContext(const FileSpec &file_spec, uint32_t line,
+                                bool check_inlines, bool exact,
+                                lldb::SymbolContextItem resolve_scope,
+                                SymbolContextList &sc_list);
 
   /// Get whether compiler optimizations were enabled for this compile unit
   ///
