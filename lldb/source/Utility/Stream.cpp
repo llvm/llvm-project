@@ -160,30 +160,6 @@ Stream &Stream::operator<<(const void *p) {
   return *this;
 }
 
-// Stream a uint8_t "uval" out to this stream.
-Stream &Stream::operator<<(uint8_t uval) {
-  PutHex8(uval);
-  return *this;
-}
-
-// Stream a uint16_t "uval" out to this stream.
-Stream &Stream::operator<<(uint16_t uval) {
-  PutHex16(uval, m_byte_order);
-  return *this;
-}
-
-// Stream a uint32_t "uval" out to this stream.
-Stream &Stream::operator<<(uint32_t uval) {
-  PutHex32(uval, m_byte_order);
-  return *this;
-}
-
-// Stream a uint64_t "uval" out to this stream.
-Stream &Stream::operator<<(uint64_t uval) {
-  PutHex64(uval, m_byte_order);
-  return *this;
-}
-
 // Stream a int8_t "sval" out to this stream.
 Stream &Stream::operator<<(int8_t sval) {
   Printf("%i", static_cast<int>(sval));
