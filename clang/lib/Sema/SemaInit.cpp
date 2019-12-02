@@ -6653,6 +6653,7 @@ struct IndirectLocalPathEntry {
     VarInit,
     LValToRVal,
     LifetimeBoundCall,
+    GslReferenceInit,
     GslPointerInit
   } Kind;
   Expr *E;
@@ -6783,12 +6784,24 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
 
 static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
                                     LocalVisitor Visit) {
-  auto VisitPointerArg = [&](const Decl *D, Expr *Arg) {
+  auto VisitPointerArg = [&](const Decl *D, Expr *Arg, bool Value) {
     // We are not interested in the temporary base objects of gsl Pointers:
     //   Temp().ptr; // Here ptr might not dangle.
     if (isa<MemberExpr>(Arg->IgnoreImpCasts()))
       return;
-    Path.push_back({IndirectLocalPathEntry::GslPointerInit, Arg, D});
+    // Once we initialized a value with a reference, it can no longer dangle.
+    if (!Value) {
+      for (auto It = Path.rbegin(), End = Path.rend(); It != End; ++It) {
+        if (It->Kind == IndirectLocalPathEntry::GslReferenceInit)
+          continue;
+        if (It->Kind == IndirectLocalPathEntry::GslPointerInit)
+          return;
+        break;
+      }
+    }
+    Path.push_back({Value ? IndirectLocalPathEntry::GslPointerInit
+                          : IndirectLocalPathEntry::GslReferenceInit,
+                    Arg, D});
     if (Arg->isGLValue())
       visitLocalsRetainedByReferenceBinding(Path, Arg, RK_ReferenceBinding,
                                             Visit,
@@ -6802,18 +6815,21 @@ static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
     const auto *MD = cast_or_null<CXXMethodDecl>(MCE->getDirectCallee());
     if (MD && shouldTrackImplicitObjectArg(MD))
-      VisitPointerArg(MD, MCE->getImplicitObjectArgument());
+      VisitPointerArg(MD, MCE->getImplicitObjectArgument(),
+                      !MD->getReturnType()->isReferenceType());
     return;
   } else if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
     FunctionDecl *Callee = OCE->getDirectCallee();
     if (Callee && Callee->isCXXInstanceMember() &&
         shouldTrackImplicitObjectArg(cast<CXXMethodDecl>(Callee)))
-      VisitPointerArg(Callee, OCE->getArg(0));
+      VisitPointerArg(Callee, OCE->getArg(0),
+                      !Callee->getReturnType()->isReferenceType());
     return;
   } else if (auto *CE = dyn_cast<CallExpr>(Call)) {
     FunctionDecl *Callee = CE->getDirectCallee();
     if (Callee && shouldTrackFirstArgument(Callee))
-      VisitPointerArg(Callee, CE->getArg(0));
+      VisitPointerArg(Callee, CE->getArg(0),
+                      !Callee->getReturnType()->isReferenceType());
     return;
   }
 
@@ -6821,7 +6837,7 @@ static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
     const auto *Ctor = CCE->getConstructor();
     const CXXRecordDecl *RD = Ctor->getParent();
     if (CCE->getNumArgs() > 0 && RD->hasAttr<PointerAttr>())
-      VisitPointerArg(Ctor->getParamDecl(0), CCE->getArgs()[0]);
+      VisitPointerArg(Ctor->getParamDecl(0), CCE->getArgs()[0], true);
   }
 }
 
@@ -7287,6 +7303,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::AddressOf:
     case IndirectLocalPathEntry::LValToRVal:
     case IndirectLocalPathEntry::LifetimeBoundCall:
+    case IndirectLocalPathEntry::GslReferenceInit:
     case IndirectLocalPathEntry::GslPointerInit:
       // These exist primarily to mark the path as not permitting or
       // supporting lifetime extension.
@@ -7309,7 +7326,8 @@ static bool pathOnlyInitializesGslPointer(IndirectLocalPath &Path) {
       continue;
     if (It->Kind == IndirectLocalPathEntry::AddressOf)
       continue;
-    return It->Kind == IndirectLocalPathEntry::GslPointerInit;
+    return It->Kind == IndirectLocalPathEntry::GslPointerInit ||
+           It->Kind == IndirectLocalPathEntry::GslReferenceInit;
   }
   return false;
 }
@@ -7532,6 +7550,7 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
 
       case IndirectLocalPathEntry::LifetimeBoundCall:
       case IndirectLocalPathEntry::GslPointerInit:
+      case IndirectLocalPathEntry::GslReferenceInit:
         // FIXME: Consider adding a note for these.
         break;
 
