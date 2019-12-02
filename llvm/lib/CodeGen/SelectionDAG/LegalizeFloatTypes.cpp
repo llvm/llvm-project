@@ -705,9 +705,6 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSUB(SDNode *N) {
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FTRUNC(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  if (N->getValueType(0) == MVT::f16)
-    return DAG.getNode(ISD::FP_TO_FP16, SDLoc(N), NVT, N->getOperand(0));
-
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[1] = { N->getOperand(0).getValueType() };
