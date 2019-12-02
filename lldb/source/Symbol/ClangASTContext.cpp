@@ -598,7 +598,7 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
         new ClangASTSource(target->shared_from_this()));
     lldbassert(ast_sp->getFileManager());
     ast_sp->m_scratch_ast_source_up->InstallASTContext(
-        *ast_sp->getASTContext(), *ast_sp->getFileManager(), true);
+        *ast_sp, *ast_sp->getFileManager(), true);
     llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
         ast_sp->m_scratch_ast_source_up->CreateProxy());
     ast_sp->SetExternalSource(proxy_ast_source);
