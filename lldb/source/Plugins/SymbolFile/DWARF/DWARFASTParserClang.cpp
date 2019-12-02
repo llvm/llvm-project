@@ -662,11 +662,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     if (cu_language == eLanguageTypeObjC ||
         cu_language == eLanguageTypeObjC_plus_plus) {
       if (attrs.name) {
-        static ConstString g_objc_type_name_id("id");
-        static ConstString g_objc_type_name_Class("Class");
-        static ConstString g_objc_type_name_selector("SEL");
-
-        if (attrs.name == g_objc_type_name_id) {
+        if (attrs.name == "id") {
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
@@ -677,8 +673,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
           encoding_data_type = Type::eEncodingIsUID;
           attrs.type.Clear();
           resolve_state = Type::ResolveState::Full;
-
-        } else if (attrs.name == g_objc_type_name_Class) {
+        } else if (attrs.name == "Class") {
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
@@ -689,7 +684,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
           encoding_data_type = Type::eEncodingIsUID;
           attrs.type.Clear();
           resolve_state = Type::ResolveState::Full;
-        } else if (attrs.name == g_objc_type_name_selector) {
+        } else if (attrs.name == "SEL") {
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
@@ -709,20 +704,19 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
         const DWARFDIE encoding_die = attrs.type.Reference();
 
         if (encoding_die && encoding_die.Tag() == DW_TAG_structure_type) {
-          if (const char *struct_name = encoding_die.GetName()) {
-            if (!strcmp(struct_name, "objc_object")) {
-              if (log)
-                dwarf->GetObjectFile()->GetModule()->LogMessage(
-                    log,
-                    "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s "
-                    "'%s' is 'objc_object*', which we overrode to "
-                    "'id'.",
-                    die.GetOffset(), die.GetTagAsCString(), die.GetName());
-              clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
-              encoding_data_type = Type::eEncodingIsUID;
-              attrs.type.Clear();
-              resolve_state = Type::ResolveState::Full;
-            }
+          llvm::StringRef struct_name = encoding_die.GetName();
+          if (struct_name == "objc_object") {
+            if (log)
+              dwarf->GetObjectFile()->GetModule()->LogMessage(
+                  log,
+                  "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s "
+                  "'%s' is 'objc_object*', which we overrode to "
+                  "'id'.",
+                  die.GetOffset(), die.GetTagAsCString(), die.GetName());
+            clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
+            encoding_data_type = Type::eEncodingIsUID;
+            attrs.type.Clear();
+            resolve_state = Type::ResolveState::Full;
           }
         }
       }
