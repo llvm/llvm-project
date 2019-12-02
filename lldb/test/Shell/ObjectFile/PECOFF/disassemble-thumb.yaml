@@ -1,3 +1,5 @@
+# REQUIRES: arm
+
 # RUN: yaml2obj %s > %t.exe
 # RUN: %lldb %t.exe -o "disassemble -b -n entry" -b | FileCheck %s
 
