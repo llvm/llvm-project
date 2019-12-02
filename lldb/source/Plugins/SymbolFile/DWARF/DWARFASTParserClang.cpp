@@ -483,10 +483,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_structure_type:
   case DW_TAG_union_type:
   case DW_TAG_class_type: {
-    assert((!type_sp && !clang_type) &&
-           "Did not expect partially computed structure-like type");
-    TypeSP struct_like_type_sp = ParseStructureLikeDIE(sc, die, attrs);
-    return UpdateSymbolContextScopeForType(sc, die, struct_like_type_sp);
+    type_sp = ParseStructureLikeDIE(sc, die, attrs);
+    break;
   }
 
   case DW_TAG_enumeration_type: {
