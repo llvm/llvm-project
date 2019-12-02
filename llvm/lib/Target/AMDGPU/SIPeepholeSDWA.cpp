@@ -26,6 +26,7 @@
 #include "SIRegisterInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -73,8 +74,8 @@ private:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
-  std::unordered_map<MachineInstr *, std::unique_ptr<SDWAOperand>> SDWAOperands;
-  std::unordered_map<MachineInstr *, SDWAOperandsVector> PotentialMatches;
+  MapVector<MachineInstr *, std::unique_ptr<SDWAOperand>> SDWAOperands;
+  MapVector<MachineInstr *, SDWAOperandsVector> PotentialMatches;
   SmallVector<MachineInstr *, 8> ConvertedInstructions;
 
   Optional<int64_t> foldToImm(const MachineOperand &Op) const;
