@@ -1664,7 +1664,8 @@ let Predicates = [HasMVEInt] in {
 }
 
 
-class MVE_VABD_int<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
+class MVE_VABD_int<string suffix, bit U, bits<2> size,
+                     list<dag> pattern=[]>
   : MVE_int<"vabd", suffix, size, pattern> {
 
   let Inst{28} = U;
@@ -1676,12 +1677,35 @@ class MVE_VABD_int<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
   let validForTailPredication = 1;
 }
 
-def MVE_VABDs8  : MVE_VABD_int<"s8", 0b0, 0b00>;
-def MVE_VABDs16 : MVE_VABD_int<"s16", 0b0, 0b01>;
-def MVE_VABDs32 : MVE_VABD_int<"s32", 0b0, 0b10>;
-def MVE_VABDu8  : MVE_VABD_int<"u8", 0b1, 0b00>;
-def MVE_VABDu16 : MVE_VABD_int<"u16", 0b1, 0b01>;
-def MVE_VABDu32 : MVE_VABD_int<"u32", 0b1, 0b10>;
+multiclass MVE_VABD_m<MVEVectorVTInfo VTI,
+                      Intrinsic unpred_int, Intrinsic pred_int> {
+  def "" : MVE_VABD_int<VTI.Suffix, VTI.Unsigned, VTI.Size>;
+
+  let Predicates = [HasMVEInt] in {
+    // Unpredicated absolute difference
+    def : Pat<(VTI.Vec (unpred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
+
+    // Predicated absolute difference
+    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 1), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive)))>;
+  }
+}
+
+multiclass MVE_VABD<MVEVectorVTInfo VTI>
+  : MVE_VABD_m<VTI, int_arm_mve_vabd, int_arm_mve_abd_predicated>;
+
+defm MVE_VABDs8  : MVE_VABD<MVE_v16s8>;
+defm MVE_VABDs16 : MVE_VABD<MVE_v8s16>;
+defm MVE_VABDs32 : MVE_VABD<MVE_v4s32>;
+defm MVE_VABDu8  : MVE_VABD<MVE_v16u8>;
+defm MVE_VABDu16 : MVE_VABD<MVE_v8u16>;
+defm MVE_VABDu32 : MVE_VABD<MVE_v4u32>;
 
 class MVE_VRHADD<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
   : MVE_int<"vrhadd", suffix, size, pattern> {
@@ -2950,8 +2974,28 @@ class MVE_VABD_fp<string suffix, bit size>
   let validForTailPredication = 1;
 }
 
-def MVE_VABDf32 : MVE_VABD_fp<"f32", 0b0>;
-def MVE_VABDf16 : MVE_VABD_fp<"f16", 0b1>;
+multiclass MVE_VABDT_fp_m<MVEVectorVTInfo VTI,
+                            Intrinsic unpred_int, Intrinsic pred_int> {
+  def "" : MVE_VABD_fp<VTI.Suffix, VTI.Size{0}>;
+
+  let Predicates = [HasMVEFloat] in {
+    def : Pat<(VTI.Vec (unpred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
+    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 1), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive)))>;
+  }
+}
+
+multiclass MVE_VABD_fp_m<MVEVectorVTInfo VTI>
+  : MVE_VABDT_fp_m<VTI, int_arm_mve_vabd, int_arm_mve_abd_predicated>;
+
+defm MVE_VABDf32 : MVE_VABD_fp_m<MVE_v4f32>;
+defm MVE_VABDf16 : MVE_VABD_fp_m<MVE_v8f16>;
 
 class MVE_VCVT_fix<string suffix, bit fsi, bit U, bit op,
                    Operand imm_operand_type, list<dag> pattern=[]>
