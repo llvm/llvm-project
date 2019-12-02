@@ -170,6 +170,8 @@ protected:
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
 
 private:
+  lldb::TypeSP ParseEnum(const lldb_private::SymbolContext &sc,
+                         const DWARFDIE &die, ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseSubroutine(const DWARFDIE &die,
                                ParsedDWARFTypeAttributes &attrs);
   // FIXME: attrs should be passed as a const reference.
