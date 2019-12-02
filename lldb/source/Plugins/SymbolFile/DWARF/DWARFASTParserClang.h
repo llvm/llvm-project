@@ -168,6 +168,10 @@ protected:
   // Return true if this type is a declaration to a type in an external
   // module.
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
+
+private:
+  lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
+                                        const ParsedDWARFTypeAttributes &attrs);
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.
