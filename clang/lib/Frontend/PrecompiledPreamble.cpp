@@ -535,31 +535,20 @@ PrecompiledPreamble::TempPCHFile::CreateNewPreamblePCHFile() {
   // FIXME: This is a hack so that we can override the preamble file during
   // crash-recovery testing, which is the only case where the preamble files
   // are not necessarily cleaned up.
-  const char *TmpFile = ::getenv("CINDEXTEST_PREAMBLE_FILE");
-  if (TmpFile)
-    return TempPCHFile::createFromCustomPath(TmpFile);
-  return TempPCHFile::createInSystemTempDir("preamble", "pch");
-}
+  if (const char *TmpFile = ::getenv("CINDEXTEST_PREAMBLE_FILE"))
+    return TempPCHFile(TmpFile);
 
-llvm::ErrorOr<PrecompiledPreamble::TempPCHFile>
-PrecompiledPreamble::TempPCHFile::createInSystemTempDir(const Twine &Prefix,
-                                                        StringRef Suffix) {
   llvm::SmallString<64> File;
   // Using a version of createTemporaryFile with a file descriptor guarantees
   // that we would never get a race condition in a multi-threaded setting
   // (i.e., multiple threads getting the same temporary path).
   int FD;
-  auto EC = llvm::sys::fs::createTemporaryFile(Prefix, Suffix, FD, File);
+  auto EC = llvm::sys::fs::createTemporaryFile("preamble", "pch", FD, File);
   if (EC)
     return EC;
   // We only needed to make sure the file exists, close the file right away.
   llvm::sys::Process::SafelyCloseFileDescriptor(FD);
   return TempPCHFile(std::move(File).str());
-}
-
-llvm::ErrorOr<PrecompiledPreamble::TempPCHFile>
-PrecompiledPreamble::TempPCHFile::createFromCustomPath(const Twine &Path) {
-  return TempPCHFile(Path.str());
 }
 
 PrecompiledPreamble::TempPCHFile::TempPCHFile(std::string FilePath)
