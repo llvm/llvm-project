@@ -16,9 +16,20 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-/// aix -- Directly call system default linker.
-// TODO: Enable direct call to system default assembler.
+/// aix -- Directly call system default assembler and linker.
 namespace aix {
+
+class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
+public:
+  Assembler(const ToolChain &TC) : Tool("aix::Assembler", "assembler", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
 
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
@@ -53,6 +64,7 @@ public:
   bool isPICDefaultForced() const override { return true; }
 
 protected:
+  Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
 };
 
