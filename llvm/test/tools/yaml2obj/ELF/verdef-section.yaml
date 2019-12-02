@@ -1,7 +1,7 @@
 ## Check we are able to handle SHT_GNU_verdef sections.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readobj -V %t | FileCheck %s
+# RUN: llvm-readobj -V %t1 | FileCheck %s
 
 # CHECK:      VersionDefinitions [
 # CHECK-NEXT:   Definition {
