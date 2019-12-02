@@ -148,9 +148,10 @@ public:
 
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
-
   void getTargetDefinesARMV82A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV83A(const LangOptions &Opts,
+                                 MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
