@@ -574,7 +574,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
   // yet, so start at index 0.
   uint32_t SymbolTableIndex = 0;
 
-  // Calculate undefined symbol's indices.
+  // Calculate indices for undefined symbols.
   for (auto &Csect : UndefinedCsects) {
     Csect.Size = 0;
     Csect.Address = 0;
