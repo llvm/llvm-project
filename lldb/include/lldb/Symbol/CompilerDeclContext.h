@@ -19,12 +19,10 @@ namespace lldb_private {
 class CompilerDeclContext {
 public:
   // Constructors and Destructors
-  CompilerDeclContext() : m_type_system(nullptr), m_opaque_decl_ctx(nullptr) {}
+  CompilerDeclContext() = default;
 
   CompilerDeclContext(TypeSystem *type_system, void *decl_ctx)
       : m_type_system(type_system), m_opaque_decl_ctx(decl_ctx) {}
-
-  ~CompilerDeclContext() {}
 
   // Tests
 
@@ -105,8 +103,8 @@ public:
   bool IsStructUnionOrClass() const;
 
 private:
-  TypeSystem *m_type_system;
-  void *m_opaque_decl_ctx;
+  TypeSystem *m_type_system = nullptr;
+  void *m_opaque_decl_ctx = nullptr;
 };
 
 bool operator==(const CompilerDeclContext &lhs, const CompilerDeclContext &rhs);
