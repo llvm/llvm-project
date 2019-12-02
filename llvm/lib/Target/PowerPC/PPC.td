@@ -237,13 +237,22 @@ def ProcessorFeatures {
   list<SubtargetFeature> Power8FeatureList =
       !listconcat(Power7FeatureList, Power8SpecificFeatures);
   list<SubtargetFeature> Power9SpecificFeatures =
-      [DirectivePwr9, FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0,
-       FeatureVectorsUseTwoUnits, FeaturePPCPreRASched, FeaturePPCPostRASched];
+      [DirectivePwr9, FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0];
+
+  // Some features are unique to Power9 and there is no reason to assume
+  // they will be part of any future CPUs. One example is the narrower
+  // dispatch for vector operations than scalar ones. For the time being,
+  // this list also includes scheduling-related features since we do not have
+  // enough info to create custom scheduling strategies for future CPUs.
+  list<SubtargetFeature> Power9OnlyFeatures =
+      [FeatureVectorsUseTwoUnits, FeaturePPCPreRASched, FeaturePPCPostRASched];
   list<SubtargetFeature> Power9FeatureList =
       !listconcat(Power8FeatureList, Power9SpecificFeatures);
+  list<SubtargetFeature> Power9ImplList =
+      !listconcat(Power9FeatureList, Power9OnlyFeatures);
 
   // For future CPU we assume that all of the existing features from Power 9
-  // still exist.
+  // still exist with the exception of those we know are Power 9 specific.
   list<SubtargetFeature> FutureSpecificFeatures =
       [];
   list<SubtargetFeature> FutureFeatureList =
@@ -449,7 +458,7 @@ def : ProcessorModel<"pwr6x", G5Model,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.Power7FeatureList>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.Power8FeatureList>;
-def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.Power9FeatureList>;
+def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.Power9ImplList>;
 // No scheduler model for future CPU.
 def : ProcessorModel<"future", NoSchedModel,
                   ProcessorFeatures.FutureFeatureList>;
