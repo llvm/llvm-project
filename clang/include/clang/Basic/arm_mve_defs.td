@@ -59,8 +59,10 @@ class CGHelperFn<string func> : IRBuilderBase {
 }
 def add: IRBuilder<"CreateAdd">;
 def mul: IRBuilder<"CreateMul">;
+def not: IRBuilder<"CreateNot">;
 def or: IRBuilder<"CreateOr">;
 def and: IRBuilder<"CreateAnd">;
+def xor: IRBuilder<"CreateXor">;
 def sub: IRBuilder<"CreateSub">;
 def shl: IRBuilder<"CreateShl">;
 def lshr: IRBuilder<"CreateLShr">;
