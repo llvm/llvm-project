@@ -463,13 +463,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
   const dw_tag_t tag = die.Tag();
 
-  Type::ResolveState resolve_state = Type::ResolveState::Unresolved;
-
-  Type::EncodingDataType encoding_data_type = Type::eEncodingIsUID;
   CompilerType clang_type;
-
   TypeSP type_sp;
-  LanguageType cu_language = die.GetLanguage();
+
   switch (tag) {
   case DW_TAG_typedef:
   case DW_TAG_base_type:
@@ -480,209 +476,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_restrict_type:
   case DW_TAG_volatile_type:
   case DW_TAG_unspecified_type: {
-    if (tag == DW_TAG_typedef && attrs.type.IsValid()) {
-      // Try to parse a typedef from the (DWARF embedded in the) Clang
-      // module file first as modules can contain typedef'ed
-      // structures that have no names like:
-      //
-      //  typedef struct { int a; } Foo;
-      //
-      // In this case we will have a structure with no name and a
-      // typedef named "Foo" that points to this unnamed
-      // structure. The name in the typedef is the only identifier for
-      // the struct, so always try to get typedefs from Clang modules
-      // if possible.
-      //
-      // The type_sp returned will be empty if the typedef doesn't
-      // exist in a module file, so it is cheap to call this function
-      // just to check.
-      //
-      // If we don't do this we end up creating a TypeSP that says
-      // this is a typedef to type 0x123 (the DW_AT_type value would
-      // be 0x123 in the DW_TAG_typedef), and this is the unnamed
-      // structure type. We will have a hard time tracking down an
-      // unnammed structure type in the module debug info, so we make
-      // sure we don't get into this situation by always resolving
-      // typedefs from the module.
-      const DWARFDIE encoding_die = attrs.type.Reference();
-
-      // First make sure that the die that this is typedef'ed to _is_
-      // just a declaration (DW_AT_declaration == 1), not a full
-      // definition since template types can't be represented in
-      // modules since only concrete instances of templates are ever
-      // emitted and modules won't contain those
-      if (encoding_die &&
-          encoding_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
-        type_sp = ParseTypeFromClangModule(sc, die, log);
-        if (type_sp)
-          return type_sp;
-      }
-    }
-
-    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\") type => 0x%8.8lx\n",
-                 die.GetID(), DW_TAG_value_to_name(tag), type_name_cstr,
-                 encoding_uid.Reference());
-
-    switch (tag) {
-    default:
-      break;
-
-    case DW_TAG_unspecified_type:
-      if (attrs.name == "nullptr_t" || attrs.name == "decltype(nullptr)") {
-        resolve_state = Type::ResolveState::Full;
-        clang_type = m_ast.GetBasicType(eBasicTypeNullPtr);
-        break;
-      }
-      // Fall through to base type below in case we can handle the type
-      // there...
-      LLVM_FALLTHROUGH;
-
-    case DW_TAG_base_type:
-      resolve_state = Type::ResolveState::Full;
-      clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-          attrs.name.GetCString(), attrs.encoding,
-          attrs.byte_size.getValueOr(0) * 8);
-      break;
-
-    case DW_TAG_pointer_type:
-      encoding_data_type = Type::eEncodingIsPointerUID;
-      break;
-    case DW_TAG_reference_type:
-      encoding_data_type = Type::eEncodingIsLValueReferenceUID;
-      break;
-    case DW_TAG_rvalue_reference_type:
-      encoding_data_type = Type::eEncodingIsRValueReferenceUID;
-      break;
-    case DW_TAG_typedef:
-      encoding_data_type = Type::eEncodingIsTypedefUID;
-      break;
-    case DW_TAG_const_type:
-      encoding_data_type = Type::eEncodingIsConstUID;
-      break;
-    case DW_TAG_restrict_type:
-      encoding_data_type = Type::eEncodingIsRestrictUID;
-      break;
-    case DW_TAG_volatile_type:
-      encoding_data_type = Type::eEncodingIsVolatileUID;
-      break;
-    }
-
-    if (!clang_type && (encoding_data_type == Type::eEncodingIsPointerUID ||
-                        encoding_data_type == Type::eEncodingIsTypedefUID)) {
-      if (tag == DW_TAG_pointer_type) {
-        DWARFDIE target_die = die.GetReferencedDIE(DW_AT_type);
-
-        if (target_die.GetAttributeValueAsUnsigned(DW_AT_APPLE_block, 0)) {
-          // Blocks have a __FuncPtr inside them which is a pointer to a
-          // function of the proper type.
-
-          for (DWARFDIE child_die = target_die.GetFirstChild();
-               child_die.IsValid(); child_die = child_die.GetSibling()) {
-            if (!strcmp(child_die.GetAttributeValueAsString(DW_AT_name, ""),
-                        "__FuncPtr")) {
-              DWARFDIE function_pointer_type =
-                  child_die.GetReferencedDIE(DW_AT_type);
-
-              if (function_pointer_type) {
-                DWARFDIE function_type =
-                    function_pointer_type.GetReferencedDIE(DW_AT_type);
-
-                bool function_type_is_new_pointer;
-                TypeSP lldb_function_type_sp = ParseTypeFromDWARF(
-                    sc, function_type, &function_type_is_new_pointer);
-
-                if (lldb_function_type_sp) {
-                  clang_type = m_ast.CreateBlockPointerType(
-                      lldb_function_type_sp->GetForwardCompilerType());
-                  encoding_data_type = Type::eEncodingIsUID;
-                  attrs.type.Clear();
-                  resolve_state = Type::ResolveState::Full;
-                }
-              }
-
-              break;
-            }
-          }
-        }
-      }
-
-      if (cu_language == eLanguageTypeObjC ||
-          cu_language == eLanguageTypeObjC_plus_plus) {
-        if (attrs.name) {
-          static ConstString g_objc_type_name_id("id");
-          static ConstString g_objc_type_name_Class("Class");
-          static ConstString g_objc_type_name_selector("SEL");
-
-          if (attrs.name == g_objc_type_name_id) {
-            if (log)
-              dwarf->GetObjectFile()->GetModule()->LogMessage(
-                  log,
-                  "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
-                  "is Objective-C 'id' built-in type.",
-                  die.GetOffset(), die.GetTagAsCString(), die.GetName());
-            clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
-            encoding_data_type = Type::eEncodingIsUID;
-            attrs.type.Clear();
-            resolve_state = Type::ResolveState::Full;
-
-          } else if (attrs.name == g_objc_type_name_Class) {
-            if (log)
-              dwarf->GetObjectFile()->GetModule()->LogMessage(
-                  log,
-                  "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
-                  "is Objective-C 'Class' built-in type.",
-                  die.GetOffset(), die.GetTagAsCString(), die.GetName());
-            clang_type = m_ast.GetBasicType(eBasicTypeObjCClass);
-            encoding_data_type = Type::eEncodingIsUID;
-            attrs.type.Clear();
-            resolve_state = Type::ResolveState::Full;
-          } else if (attrs.name == g_objc_type_name_selector) {
-            if (log)
-              dwarf->GetObjectFile()->GetModule()->LogMessage(
-                  log,
-                  "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
-                  "is Objective-C 'selector' built-in type.",
-                  die.GetOffset(), die.GetTagAsCString(), die.GetName());
-            clang_type = m_ast.GetBasicType(eBasicTypeObjCSel);
-            encoding_data_type = Type::eEncodingIsUID;
-            attrs.type.Clear();
-            resolve_state = Type::ResolveState::Full;
-          }
-        } else if (encoding_data_type == Type::eEncodingIsPointerUID &&
-                   attrs.type.IsValid()) {
-          // Clang sometimes erroneously emits id as objc_object*.  In that
-          // case we fix up the type to "id".
-
-          const DWARFDIE encoding_die = attrs.type.Reference();
-
-          if (encoding_die && encoding_die.Tag() == DW_TAG_structure_type) {
-            if (const char *struct_name = encoding_die.GetName()) {
-              if (!strcmp(struct_name, "objc_object")) {
-                if (log)
-                  dwarf->GetObjectFile()->GetModule()->LogMessage(
-                      log,
-                      "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s "
-                      "'%s' is 'objc_object*', which we overrode to "
-                      "'id'.",
-                      die.GetOffset(), die.GetTagAsCString(), die.GetName());
-                clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
-                encoding_data_type = Type::eEncodingIsUID;
-                attrs.type.Clear();
-                resolve_state = Type::ResolveState::Full;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    type_sp = std::make_shared<Type>(
-        die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
-        dwarf->GetUID(attrs.type.Reference()), encoding_data_type, &attrs.decl,
-        clang_type, resolve_state);
-
-    dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
-  } break;
+    type_sp = ParseTypeModifier(sc, die, attrs);
+    break;
+  }
 
   case DW_TAG_structure_type:
   case DW_TAG_union_type:
@@ -724,6 +520,225 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   // control flow in ParseTypeFromDWARF. Then, we could simply replace this
   // return statement with a call to llvm_unreachable.
   return UpdateSymbolContextScopeForType(sc, die, type_sp);
+}
+
+lldb::TypeSP
+DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
+                                       const DWARFDIE &die,
+                                       ParsedDWARFTypeAttributes &attrs) {
+  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
+                                        DWARF_LOG_LOOKUPS));
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  const dw_tag_t tag = die.Tag();
+  LanguageType cu_language = die.GetLanguage();
+  Type::ResolveState resolve_state = Type::ResolveState::Unresolved;
+  Type::EncodingDataType encoding_data_type = Type::eEncodingIsUID;
+  TypeSP type_sp;
+  CompilerType clang_type;
+
+  if (tag == DW_TAG_typedef && attrs.type.IsValid()) {
+    // Try to parse a typedef from the (DWARF embedded in the) Clang
+    // module file first as modules can contain typedef'ed
+    // structures that have no names like:
+    //
+    //  typedef struct { int a; } Foo;
+    //
+    // In this case we will have a structure with no name and a
+    // typedef named "Foo" that points to this unnamed
+    // structure. The name in the typedef is the only identifier for
+    // the struct, so always try to get typedefs from Clang modules
+    // if possible.
+    //
+    // The type_sp returned will be empty if the typedef doesn't
+    // exist in a module file, so it is cheap to call this function
+    // just to check.
+    //
+    // If we don't do this we end up creating a TypeSP that says
+    // this is a typedef to type 0x123 (the DW_AT_type value would
+    // be 0x123 in the DW_TAG_typedef), and this is the unnamed
+    // structure type. We will have a hard time tracking down an
+    // unnammed structure type in the module debug info, so we make
+    // sure we don't get into this situation by always resolving
+    // typedefs from the module.
+    const DWARFDIE encoding_die = attrs.type.Reference();
+
+    // First make sure that the die that this is typedef'ed to _is_
+    // just a declaration (DW_AT_declaration == 1), not a full
+    // definition since template types can't be represented in
+    // modules since only concrete instances of templates are ever
+    // emitted and modules won't contain those
+    if (encoding_die &&
+        encoding_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
+      type_sp = ParseTypeFromClangModule(sc, die, log);
+      if (type_sp)
+        return type_sp;
+    }
+  }
+
+  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\") type => 0x%8.8lx\n", die.GetID(),
+               DW_TAG_value_to_name(tag), type_name_cstr,
+               encoding_uid.Reference());
+
+  switch (tag) {
+  default:
+    break;
+
+  case DW_TAG_unspecified_type:
+    if (attrs.name == "nullptr_t" || attrs.name == "decltype(nullptr)") {
+      resolve_state = Type::ResolveState::Full;
+      clang_type = m_ast.GetBasicType(eBasicTypeNullPtr);
+      break;
+    }
+    // Fall through to base type below in case we can handle the type
+    // there...
+    LLVM_FALLTHROUGH;
+
+  case DW_TAG_base_type:
+    resolve_state = Type::ResolveState::Full;
+    clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
+        attrs.name.GetCString(), attrs.encoding,
+        attrs.byte_size.getValueOr(0) * 8);
+    break;
+
+  case DW_TAG_pointer_type:
+    encoding_data_type = Type::eEncodingIsPointerUID;
+    break;
+  case DW_TAG_reference_type:
+    encoding_data_type = Type::eEncodingIsLValueReferenceUID;
+    break;
+  case DW_TAG_rvalue_reference_type:
+    encoding_data_type = Type::eEncodingIsRValueReferenceUID;
+    break;
+  case DW_TAG_typedef:
+    encoding_data_type = Type::eEncodingIsTypedefUID;
+    break;
+  case DW_TAG_const_type:
+    encoding_data_type = Type::eEncodingIsConstUID;
+    break;
+  case DW_TAG_restrict_type:
+    encoding_data_type = Type::eEncodingIsRestrictUID;
+    break;
+  case DW_TAG_volatile_type:
+    encoding_data_type = Type::eEncodingIsVolatileUID;
+    break;
+  }
+
+  if (!clang_type && (encoding_data_type == Type::eEncodingIsPointerUID ||
+                      encoding_data_type == Type::eEncodingIsTypedefUID)) {
+    if (tag == DW_TAG_pointer_type) {
+      DWARFDIE target_die = die.GetReferencedDIE(DW_AT_type);
+
+      if (target_die.GetAttributeValueAsUnsigned(DW_AT_APPLE_block, 0)) {
+        // Blocks have a __FuncPtr inside them which is a pointer to a
+        // function of the proper type.
+
+        for (DWARFDIE child_die = target_die.GetFirstChild();
+             child_die.IsValid(); child_die = child_die.GetSibling()) {
+          if (!strcmp(child_die.GetAttributeValueAsString(DW_AT_name, ""),
+                      "__FuncPtr")) {
+            DWARFDIE function_pointer_type =
+                child_die.GetReferencedDIE(DW_AT_type);
+
+            if (function_pointer_type) {
+              DWARFDIE function_type =
+                  function_pointer_type.GetReferencedDIE(DW_AT_type);
+
+              bool function_type_is_new_pointer;
+              TypeSP lldb_function_type_sp = ParseTypeFromDWARF(
+                  sc, function_type, &function_type_is_new_pointer);
+
+              if (lldb_function_type_sp) {
+                clang_type = m_ast.CreateBlockPointerType(
+                    lldb_function_type_sp->GetForwardCompilerType());
+                encoding_data_type = Type::eEncodingIsUID;
+                attrs.type.Clear();
+                resolve_state = Type::ResolveState::Full;
+              }
+            }
+
+            break;
+          }
+        }
+      }
+    }
+
+    if (cu_language == eLanguageTypeObjC ||
+        cu_language == eLanguageTypeObjC_plus_plus) {
+      if (attrs.name) {
+        static ConstString g_objc_type_name_id("id");
+        static ConstString g_objc_type_name_Class("Class");
+        static ConstString g_objc_type_name_selector("SEL");
+
+        if (attrs.name == g_objc_type_name_id) {
+          if (log)
+            dwarf->GetObjectFile()->GetModule()->LogMessage(
+                log,
+                "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
+                "is Objective-C 'id' built-in type.",
+                die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
+          encoding_data_type = Type::eEncodingIsUID;
+          attrs.type.Clear();
+          resolve_state = Type::ResolveState::Full;
+
+        } else if (attrs.name == g_objc_type_name_Class) {
+          if (log)
+            dwarf->GetObjectFile()->GetModule()->LogMessage(
+                log,
+                "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
+                "is Objective-C 'Class' built-in type.",
+                die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          clang_type = m_ast.GetBasicType(eBasicTypeObjCClass);
+          encoding_data_type = Type::eEncodingIsUID;
+          attrs.type.Clear();
+          resolve_state = Type::ResolveState::Full;
+        } else if (attrs.name == g_objc_type_name_selector) {
+          if (log)
+            dwarf->GetObjectFile()->GetModule()->LogMessage(
+                log,
+                "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
+                "is Objective-C 'selector' built-in type.",
+                die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          clang_type = m_ast.GetBasicType(eBasicTypeObjCSel);
+          encoding_data_type = Type::eEncodingIsUID;
+          attrs.type.Clear();
+          resolve_state = Type::ResolveState::Full;
+        }
+      } else if (encoding_data_type == Type::eEncodingIsPointerUID &&
+                 attrs.type.IsValid()) {
+        // Clang sometimes erroneously emits id as objc_object*.  In that
+        // case we fix up the type to "id".
+
+        const DWARFDIE encoding_die = attrs.type.Reference();
+
+        if (encoding_die && encoding_die.Tag() == DW_TAG_structure_type) {
+          if (const char *struct_name = encoding_die.GetName()) {
+            if (!strcmp(struct_name, "objc_object")) {
+              if (log)
+                dwarf->GetObjectFile()->GetModule()->LogMessage(
+                    log,
+                    "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s "
+                    "'%s' is 'objc_object*', which we overrode to "
+                    "'id'.",
+                    die.GetOffset(), die.GetTagAsCString(), die.GetName());
+              clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
+              encoding_data_type = Type::eEncodingIsUID;
+              attrs.type.Clear();
+              resolve_state = Type::ResolveState::Full;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  type_sp = std::make_shared<Type>(
+      die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
+      dwarf->GetUID(attrs.type.Reference()), encoding_data_type, &attrs.decl,
+      clang_type, resolve_state);
+
+  dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
+  return type_sp;
 }
 
 TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
