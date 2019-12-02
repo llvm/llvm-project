@@ -397,7 +397,9 @@ struct VerdefEntry {
 };
 
 struct VerdefSection : Section {
-  std::vector<VerdefEntry> Entries;
+  Optional<std::vector<VerdefEntry>> Entries;
+  Optional<yaml::BinaryRef> Content;
+
   llvm::yaml::Hex64 Info;
 
   VerdefSection() : Section(ChunkKind::Verdef) {}
