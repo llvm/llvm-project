@@ -5012,6 +5012,27 @@ defm VCMLA : N3VCP8ComplexTied<1, 0, "vcmla", null_frag>;
 defm VCADD : N3VCP8ComplexOdd<1, 0, 0, "vcadd", null_frag>;
 defm VCMLA : N3VCP8ComplexTiedLane<0, "vcmla", null_frag>;
 
+let Predicates = [HasNEON,HasV8_3a,HasFullFP16] in {
+  def : Pat<(v4f16 (int_arm_neon_vcadd_rot90 (v4f16 DPR:$Rn), (v4f16 DPR:$Rm))),
+            (VCADDv4f16 (v4f16 DPR:$Rn), (v4f16 DPR:$Rm), (i32 0))>;
+  def : Pat<(v4f16 (int_arm_neon_vcadd_rot270 (v4f16 DPR:$Rn), (v4f16 DPR:$Rm))),
+            (VCADDv4f16 (v4f16 DPR:$Rn), (v4f16 DPR:$Rm), (i32 1))>;
+  def : Pat<(v8f16 (int_arm_neon_vcadd_rot90 (v8f16 QPR:$Rn), (v8f16 QPR:$Rm))),
+            (VCADDv8f16 (v8f16 QPR:$Rn), (v8f16 QPR:$Rm), (i32 0))>;
+  def : Pat<(v8f16 (int_arm_neon_vcadd_rot270 (v8f16 QPR:$Rn), (v8f16 QPR:$Rm))),
+            (VCADDv8f16 (v8f16 QPR:$Rn), (v8f16 QPR:$Rm), (i32 1))>;
+}
+let Predicates = [HasNEON,HasV8_3a] in {
+  def : Pat<(v2f32 (int_arm_neon_vcadd_rot90 (v2f32 DPR:$Rn), (v2f32 DPR:$Rm))),
+            (VCADDv2f32 (v2f32 DPR:$Rn), (v2f32 DPR:$Rm), (i32 0))>;
+  def : Pat<(v2f32 (int_arm_neon_vcadd_rot270 (v2f32 DPR:$Rn), (v2f32 DPR:$Rm))),
+            (VCADDv2f32 (v2f32 DPR:$Rn), (v2f32 DPR:$Rm), (i32 1))>;
+  def : Pat<(v4f32 (int_arm_neon_vcadd_rot90 (v4f32 QPR:$Rn), (v4f32 QPR:$Rm))),
+            (VCADDv4f32 (v4f32 QPR:$Rn), (v4f32 QPR:$Rm), (i32 0))>;
+  def : Pat<(v4f32 (int_arm_neon_vcadd_rot270 (v4f32 QPR:$Rn), (v4f32 QPR:$Rm))),
+            (VCADDv4f32 (v4f32 QPR:$Rn), (v4f32 QPR:$Rm), (i32 1))>;
+}
+
 // Vector Subtract Operations.
 
 //   VSUB     : Vector Subtract (integer and floating-point)
