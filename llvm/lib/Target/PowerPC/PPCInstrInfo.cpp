@@ -3529,8 +3529,10 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
     ForwardKilledOperandReg = MI.getOperand(ConstantOpNo).getReg();
 
   unsigned Opc = MI.getOpcode();
-  bool SpecialShift32 =
-    Opc == PPC::SLW || Opc == PPC::SLWo || Opc == PPC::SRW || Opc == PPC::SRWo;
+  bool SpecialShift32 = Opc == PPC::SLW || Opc == PPC::SLWo ||
+                        Opc == PPC::SRW || Opc == PPC::SRWo ||
+                        Opc == PPC::SLW8 || Opc == PPC::SLW8o ||
+                        Opc == PPC::SRW8 || Opc == PPC::SRW8o;
   bool SpecialShift64 =
     Opc == PPC::SLD || Opc == PPC::SLDo || Opc == PPC::SRD || Opc == PPC::SRDo;
   bool SetCR = Opc == PPC::SLWo || Opc == PPC::SRWo ||
