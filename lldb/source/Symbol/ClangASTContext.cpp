@@ -562,47 +562,47 @@ uint32_t ClangASTContext::GetPluginVersion() { return 1; }
 lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
                                                    lldb_private::Module *module,
                                                    Target *target) {
-  if (ClangASTContextSupportsLanguage(language)) {
-    ArchSpec arch;
-    if (module)
-      arch = module->GetArchitecture();
-    else if (target)
-      arch = target->GetArchitecture();
+  if (!ClangASTContextSupportsLanguage(language))
+    return lldb::TypeSystemSP();
+  ArchSpec arch;
+  if (module)
+    arch = module->GetArchitecture();
+  else if (target)
+    arch = target->GetArchitecture();
 
-    if (arch.IsValid()) {
-      ArchSpec fixed_arch = arch;
-      // LLVM wants this to be set to iOS or MacOSX; if we're working on
-      // a bare-boards type image, change the triple for llvm's benefit.
-      if (fixed_arch.GetTriple().getVendor() == llvm::Triple::Apple &&
-          fixed_arch.GetTriple().getOS() == llvm::Triple::UnknownOS) {
-        if (fixed_arch.GetTriple().getArch() == llvm::Triple::arm ||
-            fixed_arch.GetTriple().getArch() == llvm::Triple::aarch64 ||
-            fixed_arch.GetTriple().getArch() == llvm::Triple::aarch64_32 ||
-            fixed_arch.GetTriple().getArch() == llvm::Triple::thumb) {
-          fixed_arch.GetTriple().setOS(llvm::Triple::IOS);
-        } else {
-          fixed_arch.GetTriple().setOS(llvm::Triple::MacOSX);
-        }
-      }
+  if (!arch.IsValid())
+    return lldb::TypeSystemSP();
 
-      if (module) {
-        std::shared_ptr<ClangASTContext> ast_sp(
-            new ClangASTContext(fixed_arch));
-        return ast_sp;
-      } else if (target && target->IsValid()) {
-        std::shared_ptr<ClangASTContextForExpressions> ast_sp(
-            new ClangASTContextForExpressions(*target, fixed_arch));
-        ast_sp->m_scratch_ast_source_up.reset(
-            new ClangASTSource(target->shared_from_this()));
-        lldbassert(ast_sp->getFileManager());
-        ast_sp->m_scratch_ast_source_up->InstallASTContext(
-            *ast_sp->getASTContext(), *ast_sp->getFileManager(), true);
-        llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
-            ast_sp->m_scratch_ast_source_up->CreateProxy());
-        ast_sp->SetExternalSource(proxy_ast_source);
-        return ast_sp;
-      }
+  ArchSpec fixed_arch = arch;
+  // LLVM wants this to be set to iOS or MacOSX; if we're working on
+  // a bare-boards type image, change the triple for llvm's benefit.
+  if (fixed_arch.GetTriple().getVendor() == llvm::Triple::Apple &&
+      fixed_arch.GetTriple().getOS() == llvm::Triple::UnknownOS) {
+    if (fixed_arch.GetTriple().getArch() == llvm::Triple::arm ||
+        fixed_arch.GetTriple().getArch() == llvm::Triple::aarch64 ||
+        fixed_arch.GetTriple().getArch() == llvm::Triple::aarch64_32 ||
+        fixed_arch.GetTriple().getArch() == llvm::Triple::thumb) {
+      fixed_arch.GetTriple().setOS(llvm::Triple::IOS);
+    } else {
+      fixed_arch.GetTriple().setOS(llvm::Triple::MacOSX);
     }
+  }
+
+  if (module) {
+    std::shared_ptr<ClangASTContext> ast_sp(new ClangASTContext(fixed_arch));
+    return ast_sp;
+  } else if (target && target->IsValid()) {
+    std::shared_ptr<ClangASTContextForExpressions> ast_sp(
+        new ClangASTContextForExpressions(*target, fixed_arch));
+    ast_sp->m_scratch_ast_source_up.reset(
+        new ClangASTSource(target->shared_from_this()));
+    lldbassert(ast_sp->getFileManager());
+    ast_sp->m_scratch_ast_source_up->InstallASTContext(
+        *ast_sp->getASTContext(), *ast_sp->getFileManager(), true);
+    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
+        ast_sp->m_scratch_ast_source_up->CreateProxy());
+    ast_sp->SetExternalSource(proxy_ast_source);
+    return ast_sp;
   }
   return lldb::TypeSystemSP();
 }
