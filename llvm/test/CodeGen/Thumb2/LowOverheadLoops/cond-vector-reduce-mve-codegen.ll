@@ -154,11 +154,11 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 ; CHECK-NEXT: vldrwt.u32
 ; CHECK-NEXT: vldrwt.u32
 ; CHECK:      mov [[ELEMS_OUT:r[0-9]+]], [[ELEMS]]
+; CHECK:      sub{{.*}} [[ELEMS]],{{.*}}#4
 ; CHECK:      vpsttt
 ; CHECK-NEXT: vcmpt.i32	eq, {{.*}}, zr
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r3]
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r2]
-; CHECK:      sub{{.*}} [[ELEMS]],{{.*}}#4
 ; CHECK:      le lr, [[LOOP]]
 ; CHECK:      vctp.32 [[ELEMS_OUT]]
 ; CHECK:      vpsel

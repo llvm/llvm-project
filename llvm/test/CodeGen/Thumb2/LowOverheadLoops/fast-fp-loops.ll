@@ -39,14 +39,11 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmul.f32 q0, q1, q0
-; CHECK-NEXT:    vstrw.32 q0, [r0]
-; CHECK-NEXT:    adds r1, #16
-; CHECK-NEXT:    adds r2, #16
-; CHECK-NEXT:    adds r0, #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r2], #16
 ; CHECK-NEXT:    subs r3, #4
+; CHECK-NEXT:    vmul.f32 q0, q1, q0
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB0_5
 ; CHECK-NEXT:    b .LBB0_11
 ; CHECK-NEXT:  .LBB0_6: @ %for.body.preheader.new
@@ -236,13 +233,11 @@ define arm_aapcs_vfpcc float @fast_float_mac(float* nocapture readonly %b, float
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q2, [r0]
-; CHECK-NEXT:    vldrwt.u32 q3, [r1]
 ; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    adds r0, #16
-; CHECK-NEXT:    adds r1, #16
 ; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
+; CHECK-NEXT:    vldrwt.u32 q3, [r1], #16
 ; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vfma.f32 q0, q3, q2
 ; CHECK-NEXT:    le lr, .LBB1_2

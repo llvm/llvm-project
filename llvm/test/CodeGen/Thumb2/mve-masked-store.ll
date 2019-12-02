@@ -111,8 +111,7 @@ define i8* @masked_v4i32_pre(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vstrwt.32 q1, [r0, #4]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrwt.32 q1, [r0, #4]!
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v4i32_pre:
@@ -122,8 +121,7 @@ define i8* @masked_v4i32_pre(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
 ; CHECK-BE-NEXT:    vpt.s32 gt, q2, zr
-; CHECK-BE-NEXT:    vstrwt.32 q1, [r0, #4]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrwt.32 q1, [r0, #4]!
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4
@@ -142,8 +140,7 @@ define i8* @masked_v4i32_post(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vstrwt.32 q1, [r0]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrwt.32 q1, [r0], #4
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v4i32_post:
@@ -153,8 +150,7 @@ define i8* @masked_v4i32_post(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
 ; CHECK-BE-NEXT:    vpt.s32 gt, q2, zr
-; CHECK-BE-NEXT:    vstrwt.32 q1, [r0]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrwt.32 q1, [r0], #4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4
@@ -334,8 +330,7 @@ define i8* @masked_v8i16_pre(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vstrht.16 q1, [r0, #4]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrht.16 q1, [r0, #4]!
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v8i16_pre:
@@ -345,8 +340,7 @@ define i8* @masked_v8i16_pre(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
 ; CHECK-BE-NEXT:    vpt.s16 gt, q2, zr
-; CHECK-BE-NEXT:    vstrht.16 q1, [r0, #4]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrht.16 q1, [r0, #4]!
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4
@@ -365,8 +359,7 @@ define i8* @masked_v8i16_post(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vstrht.16 q1, [r0]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrht.16 q1, [r0], #4
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v8i16_post:
@@ -376,8 +369,7 @@ define i8* @masked_v8i16_post(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
 ; CHECK-BE-NEXT:    vpt.s16 gt, q2, zr
-; CHECK-BE-NEXT:    vstrht.16 q1, [r0]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrht.16 q1, [r0], #4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4
@@ -416,8 +408,7 @@ define i8* @masked_v16i8_pre(i8* %y, i8* %x, <16 x i8> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
-; CHECK-LE-NEXT:    vstrbt.8 q1, [r0, #4]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrbt.8 q1, [r0, #4]!
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v16i8_pre:
@@ -427,8 +418,7 @@ define i8* @masked_v16i8_pre(i8* %y, i8* %x, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.8 q2, q0
 ; CHECK-BE-NEXT:    vpt.s8 gt, q2, zr
-; CHECK-BE-NEXT:    vstrbt.8 q1, [r0, #4]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrbt.8 q1, [r0, #4]!
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4
@@ -447,8 +437,7 @@ define i8* @masked_v16i8_post(i8* %y, i8* %x, <16 x i8> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
-; CHECK-LE-NEXT:    vstrbt.8 q1, [r0]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrbt.8 q1, [r0], #4
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v16i8_post:
@@ -458,8 +447,7 @@ define i8* @masked_v16i8_post(i8* %y, i8* %x, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.8 q2, q0
 ; CHECK-BE-NEXT:    vpt.s8 gt, q2, zr
-; CHECK-BE-NEXT:    vstrbt.8 q1, [r0]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrbt.8 q1, [r0], #4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4
@@ -591,8 +579,7 @@ define i8* @masked_v4f32_pre(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vstrwt.32 q1, [r0, #4]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrwt.32 q1, [r0, #4]!
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v4f32_pre:
@@ -602,8 +589,7 @@ define i8* @masked_v4f32_pre(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
 ; CHECK-BE-NEXT:    vpt.s32 gt, q2, zr
-; CHECK-BE-NEXT:    vstrwt.32 q1, [r0, #4]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrwt.32 q1, [r0, #4]!
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4
@@ -622,8 +608,7 @@ define i8* @masked_v4f32_post(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vstrwt.32 q1, [r0]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrwt.32 q1, [r0], #4
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v4f32_post:
@@ -633,8 +618,7 @@ define i8* @masked_v4f32_post(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
 ; CHECK-BE-NEXT:    vpt.s32 gt, q2, zr
-; CHECK-BE-NEXT:    vstrwt.32 q1, [r0]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrwt.32 q1, [r0], #4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4
@@ -904,8 +888,7 @@ define i8* @masked_v8f16_pre(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vstrht.16 q1, [r0, #4]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrht.16 q1, [r0, #4]!
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v8f16_pre:
@@ -915,8 +898,7 @@ define i8* @masked_v8f16_pre(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
 ; CHECK-BE-NEXT:    vpt.s16 gt, q2, zr
-; CHECK-BE-NEXT:    vstrht.16 q1, [r0, #4]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrht.16 q1, [r0, #4]!
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4
@@ -935,8 +917,7 @@ define i8* @masked_v8f16_post(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vstrht.16 q1, [r0]
-; CHECK-LE-NEXT:    adds r0, #4
+; CHECK-LE-NEXT:    vstrht.16 q1, [r0], #4
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v8f16_post:
@@ -946,8 +927,7 @@ define i8* @masked_v8f16_post(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
 ; CHECK-BE-NEXT:    vpt.s16 gt, q2, zr
-; CHECK-BE-NEXT:    vstrht.16 q1, [r0]
-; CHECK-BE-NEXT:    adds r0, #4
+; CHECK-BE-NEXT:    vstrht.16 q1, [r0], #4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %z = getelementptr inbounds i8, i8* %y, i32 4

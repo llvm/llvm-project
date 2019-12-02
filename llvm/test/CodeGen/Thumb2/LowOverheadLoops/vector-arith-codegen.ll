@@ -9,23 +9,21 @@ define dso_local i32 @mul_reduce_add(i32* noalias nocapture readonly %a, i32* no
 ; CHECK-NEXT:    moveq r0, #0
 ; CHECK-NEXT:    bxeq lr
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrw.u32 q2, [r1]
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
 ; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    vmul.i32 q0, q2, q0
-; CHECK-NEXT:    adds r0, #16
-; CHECK-NEXT:    adds r1, #16
+; CHECK-NEXT:    vmul.i32 q1, q2, q1
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
+; CHECK-NEXT:    vadd.i32 q1, q1, q0
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %middle.block
 ; CHECK-NEXT:    vctp.32 r3
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -83,8 +81,7 @@ define dso_local i32 @mul_reduce_add_const(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    adds r0, #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-NEXT:    letp lr, .LBB1_1
@@ -144,8 +141,7 @@ define dso_local i32 @add_reduce_add_const(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    adds r0, #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-NEXT:    letp lr, .LBB2_1
@@ -201,12 +197,10 @@ define dso_local void @vector_mul_const(i32* noalias nocapture %a, i32* noalias 
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vmul.i32 q0, q0, r2
-; CHECK-NEXT:    vstrw.32 q0, [r0]
-; CHECK-NEXT:    adds r1, #16
-; CHECK-NEXT:    adds r0, #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    subs r3, #4
+; CHECK-NEXT:    vmul.i32 q0, q0, r2
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -255,12 +249,10 @@ define dso_local void @vector_add_const(i32* noalias nocapture %a, i32* noalias 
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q0, q0, r2
-; CHECK-NEXT:    vstrw.32 q0, [r0]
-; CHECK-NEXT:    adds r1, #16
-; CHECK-NEXT:    adds r0, #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    subs r3, #4
+; CHECK-NEXT:    vadd.i32 q0, q0, r2
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB4_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -369,14 +361,11 @@ define dso_local arm_aapcs_vfpcc void @vector_mul_vector_i16(i16* noalias nocapt
 ; CHECK-NEXT:    dlstp.16 lr, r3
 ; CHECK-NEXT:  .LBB6_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q0, [r1]
-; CHECK-NEXT:    vldrh.u16 q1, [r2]
-; CHECK-NEXT:    vmul.i16 q0, q1, q0
-; CHECK-NEXT:    vstrh.16 q0, [r0]
-; CHECK-NEXT:    adds r1, #16
-; CHECK-NEXT:    adds r2, #16
-; CHECK-NEXT:    adds r0, #16
+; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
+; CHECK-NEXT:    vldrh.u16 q1, [r2], #16
 ; CHECK-NEXT:    subs r3, #8
+; CHECK-NEXT:    vmul.i16 q0, q1, q0
+; CHECK-NEXT:    vstrh.16 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB6_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}

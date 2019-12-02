@@ -633,6 +633,8 @@ void TargetLoweringBase::initActions() {
          IM != (unsigned)ISD::LAST_INDEXED_MODE; ++IM) {
       setIndexedLoadAction(IM, VT, Expand);
       setIndexedStoreAction(IM, VT, Expand);
+      setIndexedMaskedLoadAction(IM, VT, Expand);
+      setIndexedMaskedStoreAction(IM, VT, Expand);
     }
 
     // Most backends expect to see the node which just returns the value loaded.

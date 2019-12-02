@@ -1351,11 +1351,27 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm7Offset(SDNode *Op, SDValue N,
                                                  SDValue &OffImm,
                                                  unsigned Shift) {
   unsigned Opcode = Op->getOpcode();
-  ISD::MemIndexedMode AM = (Opcode == ISD::LOAD)
-                               ? cast<LoadSDNode>(Op)->getAddressingMode()
-                               : cast<StoreSDNode>(Op)->getAddressingMode();
+  ISD::MemIndexedMode AM;
+  switch (Opcode) {
+  case ISD::LOAD:
+    AM = cast<LoadSDNode>(Op)->getAddressingMode();
+    break;
+  case ISD::STORE:
+    AM = cast<StoreSDNode>(Op)->getAddressingMode();
+    break;
+  case ISD::MLOAD:
+    AM = cast<MaskedLoadSDNode>(Op)->getAddressingMode();
+    break;
+  case ISD::MSTORE:
+    AM = cast<MaskedStoreSDNode>(Op)->getAddressingMode();
+    break;
+  default:
+    llvm_unreachable("Unexpected Opcode for Imm7Offset");
+  }
+
   int RHSC;
-  if (isScaledConstantInRange(N, 1 << Shift, 0, 0x80, RHSC)) { // 7 bits.
+  // 7 bit constant, shifted by Shift.
+  if (isScaledConstantInRange(N, 1 << Shift, 0, 0x80, RHSC)) {
     OffImm =
         ((AM == ISD::PRE_INC) || (AM == ISD::POST_INC))
             ? CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32)
@@ -1625,58 +1641,93 @@ bool ARMDAGToDAGISel::tryT2IndexedLoad(SDNode *N) {
 }
 
 bool ARMDAGToDAGISel::tryMVEIndexedLoad(SDNode *N) {
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-  ISD::MemIndexedMode AM = LD->getAddressingMode();
-  if (AM == ISD::UNINDEXED)
-    return false;
-  EVT LoadedVT = LD->getMemoryVT();
-  if (!LoadedVT.isVector())
-    return false;
-  bool isSExtLd = LD->getExtensionType() == ISD::SEXTLOAD;
-  SDValue Offset;
-  bool isPre = (AM == ISD::PRE_INC) || (AM == ISD::PRE_DEC);
+  EVT LoadedVT;
   unsigned Opcode = 0;
-  unsigned Align = LD->getAlignment();
-  bool IsLE = Subtarget->isLittle();
+  bool isSExtLd, isPre;
+  unsigned Align;
+  ARMVCC::VPTCodes Pred;
+  SDValue PredReg;
+  SDValue Chain, Base, Offset;
 
+  if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
+    ISD::MemIndexedMode AM = LD->getAddressingMode();
+    if (AM == ISD::UNINDEXED)
+      return false;
+    LoadedVT = LD->getMemoryVT();
+    if (!LoadedVT.isVector())
+      return false;
+
+    Chain = LD->getChain();
+    Base = LD->getBasePtr();
+    Offset = LD->getOffset();
+    Align = LD->getAlignment();
+    isSExtLd = LD->getExtensionType() == ISD::SEXTLOAD;
+    isPre = (AM == ISD::PRE_INC) || (AM == ISD::PRE_DEC);
+    Pred = ARMVCC::None;
+    PredReg = CurDAG->getRegister(0, MVT::i32);
+  } else if (MaskedLoadSDNode *LD = dyn_cast<MaskedLoadSDNode>(N)) {
+    ISD::MemIndexedMode AM = LD->getAddressingMode();
+    if (AM == ISD::UNINDEXED)
+      return false;
+    LoadedVT = LD->getMemoryVT();
+    if (!LoadedVT.isVector())
+      return false;
+
+    Chain = LD->getChain();
+    Base = LD->getBasePtr();
+    Offset = LD->getOffset();
+    Align = LD->getAlignment();
+    isSExtLd = LD->getExtensionType() == ISD::SEXTLOAD;
+    isPre = (AM == ISD::PRE_INC) || (AM == ISD::PRE_DEC);
+    Pred = ARMVCC::Then;
+    PredReg = LD->getMask();
+  } else
+    llvm_unreachable("Expected a Load or a Masked Load!");
+
+  // We allow LE non-masked loads to change the type (for example use a vldrb.8
+  // as opposed to a vldrw.32). This can allow extra addressing modes or
+  // alignments for what is otherwise an equivalent instruction.
+  bool CanChangeType = Subtarget->isLittle() && !isa<MaskedLoadSDNode>(N);
+
+  SDValue NewOffset;
   if (Align >= 2 && LoadedVT == MVT::v4i16 &&
-      SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 1)) {
+      SelectT2AddrModeImm7Offset(N, Offset, NewOffset, 1)) {
     if (isSExtLd)
       Opcode = isPre ? ARM::MVE_VLDRHS32_pre : ARM::MVE_VLDRHS32_post;
     else
       Opcode = isPre ? ARM::MVE_VLDRHU32_pre : ARM::MVE_VLDRHU32_post;
   } else if (LoadedVT == MVT::v8i8 &&
-             SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 0)) {
+             SelectT2AddrModeImm7Offset(N, Offset, NewOffset, 0)) {
     if (isSExtLd)
       Opcode = isPre ? ARM::MVE_VLDRBS16_pre : ARM::MVE_VLDRBS16_post;
     else
       Opcode = isPre ? ARM::MVE_VLDRBU16_pre : ARM::MVE_VLDRBU16_post;
   } else if (LoadedVT == MVT::v4i8 &&
-             SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 0)) {
+             SelectT2AddrModeImm7Offset(N, Offset, NewOffset, 0)) {
     if (isSExtLd)
       Opcode = isPre ? ARM::MVE_VLDRBS32_pre : ARM::MVE_VLDRBS32_post;
     else
       Opcode = isPre ? ARM::MVE_VLDRBU32_pre : ARM::MVE_VLDRBU32_post;
   } else if (Align >= 4 &&
-             (IsLE || LoadedVT == MVT::v4i32 || LoadedVT == MVT::v4f32) &&
-             SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 2))
+             (CanChangeType || LoadedVT == MVT::v4i32 ||
+              LoadedVT == MVT::v4f32) &&
+             SelectT2AddrModeImm7Offset(N, Offset, NewOffset, 2))
     Opcode = isPre ? ARM::MVE_VLDRWU32_pre : ARM::MVE_VLDRWU32_post;
   else if (Align >= 2 &&
-           (IsLE || LoadedVT == MVT::v8i16 || LoadedVT == MVT::v8f16) &&
-           SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 1))
+           (CanChangeType || LoadedVT == MVT::v8i16 ||
+            LoadedVT == MVT::v8f16) &&
+           SelectT2AddrModeImm7Offset(N, Offset, NewOffset, 1))
     Opcode = isPre ? ARM::MVE_VLDRHU16_pre : ARM::MVE_VLDRHU16_post;
-  else if ((IsLE || LoadedVT == MVT::v16i8) &&
-           SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 0))
+  else if ((CanChangeType || LoadedVT == MVT::v16i8) &&
+           SelectT2AddrModeImm7Offset(N, Offset, NewOffset, 0))
     Opcode = isPre ? ARM::MVE_VLDRBU8_pre : ARM::MVE_VLDRBU8_post;
   else
     return false;
 
-  SDValue Chain = LD->getChain();
-  SDValue Base = LD->getBasePtr();
-  SDValue Ops[] = {Base, Offset,
-                   CurDAG->getTargetConstant(ARMVCC::None, SDLoc(N), MVT::i32),
-                   CurDAG->getRegister(0, MVT::i32), Chain};
-  SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), LD->getValueType(0),
+  SDValue Ops[] = {Base, NewOffset,
+                   CurDAG->getTargetConstant(Pred, SDLoc(N), MVT::i32), PredReg,
+                   Chain};
+  SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), N->getValueType(0),
                                        MVT::i32, MVT::Other, Ops);
   transferMemOperands(N, New);
   ReplaceUses(SDValue(N, 0), SDValue(New, 1));
@@ -3292,6 +3343,11 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     // Other cases are autogenerated.
     break;
   }
+  case ISD::MLOAD:
+    if (Subtarget->hasMVEIntegerOps() && tryMVEIndexedLoad(N))
+      return;
+    // Other cases are autogenerated.
+    break;
   case ARMISD::WLS:
   case ARMISD::LE: {
     SDValue Ops[] = { N->getOperand(1),
