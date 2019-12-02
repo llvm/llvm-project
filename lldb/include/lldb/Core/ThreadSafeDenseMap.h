@@ -62,4 +62,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadSafeSTLMap_h_
+#endif // liblldb_ThreadSafeDenseMap_h_
