@@ -259,7 +259,7 @@ define void @test_atomicrmw(i32* %p) {
 }
 
 ; FNATTR: define void @test_volatile(i32* %x)
-; ATTRIBUTOR: define void @test_volatile(i32* nofree %x)
+; ATTRIBUTOR: define void @test_volatile(i32* nofree align 4 %x)
 define void @test_volatile(i32* %x) {
 entry:
   %gep = getelementptr i32, i32* %x, i64 1
