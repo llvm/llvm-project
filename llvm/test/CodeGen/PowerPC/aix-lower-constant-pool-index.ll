@@ -84,4 +84,4 @@ entry:
 ; 64LARGE-ASM:         blr
 
 ; CHECK: .toc
-; CHECK-NOT: .tc
+; CHECK: .tc .LCPI0_0[TC],.LCPI0_0
