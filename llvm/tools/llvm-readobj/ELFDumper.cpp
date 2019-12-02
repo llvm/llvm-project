@@ -151,6 +151,24 @@ struct DynRegionInfo {
   }
 };
 
+namespace {
+struct VerdAux {
+  unsigned Offset;
+  std::string Name;
+};
+
+struct VerDef {
+  unsigned Offset;
+  unsigned Version;
+  unsigned Flags;
+  unsigned Ndx;
+  unsigned Cnt;
+  unsigned Hash;
+  std::string Name;
+  std::vector<VerdAux> AuxV;
+};
+} // namespace
+
 template <typename ELFT> class ELFDumper : public ObjDumper {
 public:
   ELFDumper(const object::ELFObjectFile<ELFT> *ObjF, ScopedPrinter &Writer);
@@ -324,7 +342,105 @@ public:
   const DynRegionInfo &getDynamicTableRegion() const { return DynamicTable; }
   const Elf_Hash *getHashTable() const { return HashTable; }
   const Elf_GnuHash *getGnuHashTable() const { return GnuHashTable; }
+
+  Expected<std::vector<VerDef>>
+  getVersionDefinitions(const Elf_Shdr *Sec) const;
 };
+
+template <class ELFT>
+Expected<std::vector<VerDef>>
+ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr *Sec) const {
+  const ELFFile<ELFT> *Obj = ObjF->getELFFile();
+  unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
+
+  Expected<const Elf_Shdr *> StrTabSecOrErr = Obj->getSection(Sec->sh_link);
+  if (!StrTabSecOrErr)
+    return createError(
+        "invalid section linked to SHT_GNU_verdef section with index " +
+        Twine(SecNdx) + ": " + toString(StrTabSecOrErr.takeError()));
+
+  Expected<StringRef> StrTabOrErr = Obj->getStringTable(*StrTabSecOrErr);
+  if (!StrTabOrErr)
+    return createError(
+        "invalid string table linked to SHT_GNU_verdef section with index " +
+        Twine(SecNdx) + ": " + toString(StrTabOrErr.takeError()));
+
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj->getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return createError(
+        "cannot read content of SHT_GNU_verdef section with index " +
+        Twine(SecNdx) + ": " + toString(ContentsOrErr.takeError()));
+
+  const uint8_t *Start = ContentsOrErr->data();
+  const uint8_t *End = Start + ContentsOrErr->size();
+
+  auto ExtractNextAux = [&](const uint8_t *&VerdauxBuf,
+                            unsigned VerDefNdx) -> Expected<VerdAux> {
+    if (VerdauxBuf + sizeof(Elf_Verdaux) > End)
+      return createError("invalid SHT_GNU_verdef section with index " +
+                         Twine(SecNdx) + ": version definition " +
+                         Twine(VerDefNdx) +
+                         " refers to an auxiliary entry that goes past the end "
+                         "of the section");
+
+    auto *Verdaux = reinterpret_cast<const Elf_Verdaux *>(VerdauxBuf);
+    VerdauxBuf += Verdaux->vda_next;
+
+    VerdAux Aux;
+    Aux.Offset = VerdauxBuf - Start;
+    if (Verdaux->vda_name <= StrTabOrErr->size())
+      Aux.Name = StrTabOrErr->drop_front(Verdaux->vda_name);
+    else
+      Aux.Name = "<invalid vda_name: " + to_string(Verdaux->vda_name) + ">";
+    return Aux;
+  };
+
+  std::vector<VerDef> Ret;
+  const uint8_t *VerdefBuf = Start;
+  for (unsigned I = 1; I <= /*VerDefsNum=*/Sec->sh_info; ++I) {
+    if (VerdefBuf + sizeof(Elf_Verdef) > End)
+      return createError("invalid SHT_GNU_verdef section with index " +
+                         Twine(SecNdx) + ": version definition " + Twine(I) +
+                         " goes past the end of the section");
+
+    if (uintptr_t(VerdefBuf) % sizeof(uint32_t) != 0)
+      return createError(
+          "invalid SHT_GNU_verdef section with index " + Twine(SecNdx) +
+          ": found a misaligned version definition entry at offset 0x" +
+          Twine::utohexstr(VerdefBuf - Start));
+
+    const Elf_Verdef *D = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
+    VerDef &VD = *Ret.emplace(Ret.end());
+    VD.Offset = VerdefBuf - Start;
+    VD.Version = D->vd_version;
+    VD.Flags = D->vd_flags;
+    VD.Ndx = D->vd_ndx;
+    VD.Cnt = D->vd_cnt;
+    VD.Hash = D->vd_hash;
+
+    const uint8_t *VerdauxBuf = VerdefBuf + D->vd_aux;
+    for (unsigned J = 0; J < D->vd_cnt; ++J) {
+      if (uintptr_t(VerdauxBuf) % sizeof(uint32_t) != 0)
+        return createError("invalid SHT_GNU_verdef section with index " +
+                           Twine(SecNdx) +
+                           ": found a misaligned auxiliary entry at offset 0x" +
+                           Twine::utohexstr(VerdauxBuf - Start));
+
+      Expected<VerdAux> AuxOrErr = ExtractNextAux(VerdauxBuf, I);
+      if (!AuxOrErr)
+        return AuxOrErr.takeError();
+
+      if (J == 0)
+        VD.Name = AuxOrErr->Name;
+      else
+        VD.AuxV.push_back(*AuxOrErr);
+    }
+
+    VerdefBuf += D->vd_next;
+  }
+
+  return Ret;
+}
 
 template <class ELFT>
 void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
@@ -3901,42 +4017,26 @@ void GNUStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
   if (!Sec)
     return;
 
-  unsigned VerDefsNum = Sec->sh_info;
-  printGNUVersionSectionProlog(OS, "Version definition", VerDefsNum, Obj, Sec,
+  printGNUVersionSectionProlog(OS, "Version definition", Sec->sh_info, Obj, Sec,
                                this->FileName);
 
-  const Elf_Shdr *StrTabSec =
-      unwrapOrError(this->FileName, Obj->getSection(Sec->sh_link));
-  StringRef StringTable(
-      reinterpret_cast<const char *>(Obj->base() + StrTabSec->sh_offset),
-      (size_t)StrTabSec->sh_size);
-
-  const uint8_t *VerdefBuf =
-      unwrapOrError(this->FileName, Obj->getSectionContents(Sec)).data();
-  const uint8_t *Begin = VerdefBuf;
-
-  while (VerDefsNum--) {
-    const Elf_Verdef *Verdef = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
-    OS << format("  0x%04x: Rev: %u  Flags: %s  Index: %u  Cnt: %u",
-                 VerdefBuf - Begin, (unsigned)Verdef->vd_version,
-                 versionFlagToString(Verdef->vd_flags).c_str(),
-                 (unsigned)Verdef->vd_ndx, (unsigned)Verdef->vd_cnt);
-
-    const uint8_t *VerdauxBuf = VerdefBuf + Verdef->vd_aux;
-    const Elf_Verdaux *Verdaux =
-        reinterpret_cast<const Elf_Verdaux *>(VerdauxBuf);
-    OS << format("  Name: %s\n",
-                 StringTable.drop_front(Verdaux->vda_name).data());
-
-    for (unsigned I = 1; I < Verdef->vd_cnt; ++I) {
-      VerdauxBuf += Verdaux->vda_next;
-      Verdaux = reinterpret_cast<const Elf_Verdaux *>(VerdauxBuf);
-      OS << format("  0x%04x: Parent %u: %s\n", VerdauxBuf - Begin, I,
-                   StringTable.drop_front(Verdaux->vda_name).data());
-    }
-
-    VerdefBuf += Verdef->vd_next;
+  Expected<std::vector<VerDef>> V = this->dumper()->getVersionDefinitions(Sec);
+  if (!V) {
+    this->reportUniqueWarning(V.takeError());
+    return;
   }
+
+  for (const VerDef &Def : *V) {
+    OS << format("  0x%04x: Rev: %u  Flags: %s  Index: %u  Cnt: %u  Name: %s\n",
+                 Def.Offset, Def.Version,
+                 versionFlagToString(Def.Flags).c_str(), Def.Ndx, Def.Cnt,
+                 Def.Name.data());
+    unsigned I = 0;
+    for (const VerdAux &Aux : Def.AuxV)
+      OS << format("  0x%04x: Parent %u: %s\n", Aux.Offset, ++I,
+                   Aux.Name.data());
+  }
+
   OS << '\n';
 }
 
@@ -5713,44 +5813,25 @@ void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
   if (!Sec)
     return;
 
-  const uint8_t *SecStartAddress =
-      reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
-  const uint8_t *SecEndAddress = SecStartAddress + Sec->sh_size;
-  const uint8_t *VerdefBuf = SecStartAddress;
-  const Elf_Shdr *StrTab =
-      unwrapOrError(this->FileName, Obj->getSection(Sec->sh_link));
+  Expected<std::vector<VerDef>> V = this->dumper()->getVersionDefinitions(Sec);
+  if (!V) {
+    this->reportUniqueWarning(V.takeError());
+    return;
+  }
 
-  unsigned VerDefsNum = Sec->sh_info;
-  while (VerDefsNum--) {
-    if (VerdefBuf + sizeof(Elf_Verdef) > SecEndAddress)
-      // FIXME: report_fatal_error is not a good way to report error. We should
-      // emit a parsing error here and below.
-      report_fatal_error("invalid offset in the section");
-
-    const Elf_Verdef *Verdef = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
+  for (const VerDef &D : *V) {
     DictScope Def(W, "Definition");
-    W.printNumber("Version", Verdef->vd_version);
-    W.printFlags("Flags", Verdef->vd_flags, makeArrayRef(SymVersionFlags));
-    W.printNumber("Index", Verdef->vd_ndx);
-    W.printNumber("Hash", Verdef->vd_hash);
-    W.printString("Name", StringRef(reinterpret_cast<const char *>(
-                              Obj->base() + StrTab->sh_offset +
-                              Verdef->getAux()->vda_name)));
-    if (!Verdef->vd_cnt)
-      report_fatal_error("at least one definition string must exist");
-    if (Verdef->vd_cnt > 2)
-      report_fatal_error("more than one predecessor is not expected");
+    W.printNumber("Version", D.Version);
+    W.printFlags("Flags", D.Flags, makeArrayRef(SymVersionFlags));
+    W.printNumber("Index", D.Ndx);
+    W.printNumber("Hash", D.Hash);
+    W.printString("Name", D.Name.c_str());
 
-    if (Verdef->vd_cnt == 2) {
-      const uint8_t *VerdauxBuf =
-          VerdefBuf + Verdef->vd_aux + Verdef->getAux()->vda_next;
-      const Elf_Verdaux *Verdaux =
-          reinterpret_cast<const Elf_Verdaux *>(VerdauxBuf);
-      W.printString("Predecessor",
-                    StringRef(reinterpret_cast<const char *>(
-                        Obj->base() + StrTab->sh_offset + Verdaux->vda_name)));
-    }
-    VerdefBuf += Verdef->vd_next;
+    if (D.AuxV.empty())
+      continue;
+    W.printList(
+        "Predecessors", D.AuxV,
+        [](raw_ostream &OS, const VerdAux &Aux) { OS << Aux.Name.c_str(); });
   }
 }
 
