@@ -379,3 +379,23 @@ TEST(FileSpecTest, RemoveLastPathComponent) {
   EXPECT_FALSE(fs_windows.RemoveLastPathComponent());
   EXPECT_STREQ("C:", fs_windows.GetCString());
 }
+
+TEST(FileSpecTest, Equal) {
+  auto Eq = [](const char *a, const char *b, bool full) {
+    return FileSpec::Equal(PosixSpec(a), PosixSpec(b), full);
+  };
+  EXPECT_TRUE(Eq("/foo/bar", "/foo/bar", true));
+  EXPECT_TRUE(Eq("/foo/bar", "/foo/bar", false));
+
+  EXPECT_FALSE(Eq("/foo/bar", "/foo/baz", true));
+  EXPECT_FALSE(Eq("/foo/bar", "/foo/baz", false));
+
+  EXPECT_FALSE(Eq("/bar/foo", "/baz/foo", true));
+  EXPECT_FALSE(Eq("/bar/foo", "/baz/foo", false));
+
+  EXPECT_FALSE(Eq("/bar/foo", "foo", true));
+  EXPECT_TRUE(Eq("/bar/foo", "foo", false));
+
+  EXPECT_FALSE(Eq("foo", "/bar/foo", true));
+  EXPECT_TRUE(Eq("foo", "/bar/foo", false));
+}
