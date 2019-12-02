@@ -1456,10 +1456,10 @@ static void remapMacroPath(
     const std::map<std::string, std::string, std::greater<std::string>>
         &MacroPrefixMap) {
   for (const auto &Entry : MacroPrefixMap)
-    if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second,
-                                             llvm::sys::path::Style::native,
-                                             true))
+    if (Path.startswith(Entry.first)) {
+      Path = (Twine(Entry.second) + Path.substr(Entry.first.size())).str();
       break;
+    }
 }
 
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
