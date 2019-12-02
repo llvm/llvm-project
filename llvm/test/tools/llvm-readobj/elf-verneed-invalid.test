@@ -1,5 +1,4 @@
-## Here we test how llvm-readelf/llvm-readobj behave when inputs have
-## invalid versioning sections.
+## Test how llvm-readobj/llvm-readelf tools handle invalid SHT_GNU_verneed sections.
 
 ## In the first case we have a SHT_GNU_versym section that refers to
 ## a version listed in a SHT_GNU_verneed section. That version has an
