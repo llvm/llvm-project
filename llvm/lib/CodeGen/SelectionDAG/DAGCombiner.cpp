@@ -8724,6 +8724,10 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   if (ISD::isBuildVectorAllZeros(Mask.getNode()))
     return Chain;
 
+  // Try transforming N to an indexed store.
+  if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 
@@ -8747,6 +8751,10 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   // Zap masked loads with a zero mask.
   if (ISD::isBuildVectorAllZeros(Mask.getNode()))
     return CombineTo(N, MLD->getPassThru(), MLD->getChain());
+
+  // Try transforming N to an indexed load.
+  if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
+    return SDValue(N, 0);
 
   return SDValue();
 }
@@ -9506,11 +9514,10 @@ static SDValue tryToFoldExtOfMaskedLoad(SelectionDAG &DAG,
 
   SDLoc dl(Ld);
   SDValue PassThru = DAG.getNode(ExtOpc, dl, VT, Ld->getPassThru());
-  SDValue NewLoad = DAG.getMaskedLoad(VT, dl, Ld->getChain(),
-                                      Ld->getBasePtr(), Ld->getMask(),
-                                      PassThru, Ld->getMemoryVT(),
-                                      Ld->getMemOperand(), ExtLoadType,
-                                      Ld->isExpandingLoad());
+  SDValue NewLoad = DAG.getMaskedLoad(
+      VT, dl, Ld->getChain(), Ld->getBasePtr(), Ld->getOffset(), Ld->getMask(),
+      PassThru, Ld->getMemoryVT(), Ld->getMemOperand(), Ld->getAddressingMode(),
+      ExtLoadType, Ld->isExpandingLoad());
   DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), SDValue(NewLoad.getNode(), 1));
   return NewLoad;
 }
@@ -13612,12 +13619,22 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use,
   EVT VT;
   unsigned AS;
 
-  if (LoadSDNode *LD  = dyn_cast<LoadSDNode>(Use)) {
+  if (LoadSDNode *LD = dyn_cast<LoadSDNode>(Use)) {
     if (LD->isIndexed() || LD->getBasePtr().getNode() != N)
       return false;
     VT = LD->getMemoryVT();
     AS = LD->getAddressSpace();
-  } else if (StoreSDNode *ST  = dyn_cast<StoreSDNode>(Use)) {
+  } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(Use)) {
+    if (ST->isIndexed() || ST->getBasePtr().getNode() != N)
+      return false;
+    VT = ST->getMemoryVT();
+    AS = ST->getAddressSpace();
+  } else if (MaskedLoadSDNode *LD = dyn_cast<MaskedLoadSDNode>(Use)) {
+    if (LD->isIndexed() || LD->getBasePtr().getNode() != N)
+      return false;
+    VT = LD->getMemoryVT();
+    AS = LD->getAddressSpace();
+  } else if (MaskedStoreSDNode *ST = dyn_cast<MaskedStoreSDNode>(Use)) {
     if (ST->isIndexed() || ST->getBasePtr().getNode() != N)
       return false;
     VT = ST->getMemoryVT();
@@ -13651,6 +13668,49 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use,
                                    VT.getTypeForEVT(*DAG.getContext()), AS);
 }
 
+static bool getCombineLoadStoreParts(SDNode *N, unsigned Inc, unsigned Dec,
+                                     bool &IsLoad, bool &IsMasked, SDValue &Ptr,
+                                     const TargetLowering &TLI) {
+  if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
+    if (LD->isIndexed())
+      return false;
+    EVT VT = LD->getMemoryVT();
+    if (!TLI.isIndexedLoadLegal(Inc, VT) && !TLI.isIndexedLoadLegal(Dec, VT))
+      return false;
+    Ptr = LD->getBasePtr();
+  } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
+    if (ST->isIndexed())
+      return false;
+    EVT VT = ST->getMemoryVT();
+    if (!TLI.isIndexedStoreLegal(Inc, VT) && !TLI.isIndexedStoreLegal(Dec, VT))
+      return false;
+    Ptr = ST->getBasePtr();
+    IsLoad = false;
+  } else if (MaskedLoadSDNode *LD = dyn_cast<MaskedLoadSDNode>(N)) {
+    if (LD->isIndexed())
+      return false;
+    EVT VT = LD->getMemoryVT();
+    if (!TLI.isIndexedMaskedLoadLegal(Inc, VT) &&
+        !TLI.isIndexedMaskedLoadLegal(Dec, VT))
+      return false;
+    Ptr = LD->getBasePtr();
+    IsMasked = true;
+  } else if (MaskedStoreSDNode *ST = dyn_cast<MaskedStoreSDNode>(N)) {
+    if (ST->isIndexed())
+      return false;
+    EVT VT = ST->getMemoryVT();
+    if (!TLI.isIndexedMaskedStoreLegal(Inc, VT) &&
+        !TLI.isIndexedMaskedStoreLegal(Dec, VT))
+      return false;
+    Ptr = ST->getBasePtr();
+    IsLoad = false;
+    IsMasked = true;
+  } else {
+    return false;
+  }
+  return true;
+}
+
 /// Try turning a load/store into a pre-indexed load/store when the base
 /// pointer is an add or subtract and it has other uses besides the load/store.
 /// After the transformation, the new indexed load/store has effectively folded
@@ -13660,29 +13720,12 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   if (Level < AfterLegalizeDAG)
     return false;
 
-  bool isLoad = true;
+  bool IsLoad = true;
+  bool IsMasked = false;
   SDValue Ptr;
-  EVT VT;
-  if (LoadSDNode *LD  = dyn_cast<LoadSDNode>(N)) {
-    if (LD->isIndexed())
-      return false;
-    VT = LD->getMemoryVT();
-    if (!TLI.isIndexedLoadLegal(ISD::PRE_INC, VT) &&
-        !TLI.isIndexedLoadLegal(ISD::PRE_DEC, VT))
-      return false;
-    Ptr = LD->getBasePtr();
-  } else if (StoreSDNode *ST  = dyn_cast<StoreSDNode>(N)) {
-    if (ST->isIndexed())
-      return false;
-    VT = ST->getMemoryVT();
-    if (!TLI.isIndexedStoreLegal(ISD::PRE_INC, VT) &&
-        !TLI.isIndexedStoreLegal(ISD::PRE_DEC, VT))
-      return false;
-    Ptr = ST->getBasePtr();
-    isLoad = false;
-  } else {
+  if (!getCombineLoadStoreParts(N, ISD::PRE_INC, ISD::PRE_DEC, IsLoad, IsMasked,
+                                Ptr, TLI))
     return false;
-  }
 
   // If the pointer is not an add/sub, or if it doesn't have multiple uses, bail
   // out.  There is no reason to make this a preinc/predec.
@@ -13724,8 +13767,9 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
     return false;
 
   // Check #2.
-  if (!isLoad) {
-    SDValue Val = cast<StoreSDNode>(N)->getValue();
+  if (!IsLoad) {
+    SDValue Val = IsMasked ? cast<MaskedStoreSDNode>(N)->getValue()
+                           : cast<StoreSDNode>(N)->getValue();
 
     // Would require a copy.
     if (Val == BasePtr)
@@ -13801,18 +13845,26 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
     return false;
 
   SDValue Result;
-  if (isLoad)
-    Result = DAG.getIndexedLoad(SDValue(N,0), SDLoc(N),
-                                BasePtr, Offset, AM);
-  else
-    Result = DAG.getIndexedStore(SDValue(N,0), SDLoc(N),
-                                 BasePtr, Offset, AM);
+  if (!IsMasked) {
+    if (IsLoad)
+      Result = DAG.getIndexedLoad(SDValue(N, 0), SDLoc(N), BasePtr, Offset, AM);
+    else
+      Result =
+          DAG.getIndexedStore(SDValue(N, 0), SDLoc(N), BasePtr, Offset, AM);
+  } else {
+    if (IsLoad)
+      Result = DAG.getIndexedMaskedLoad(SDValue(N, 0), SDLoc(N), BasePtr,
+                                        Offset, AM);
+    else
+      Result = DAG.getIndexedMaskedStore(SDValue(N, 0), SDLoc(N), BasePtr,
+                                         Offset, AM);
+  }
   ++PreIndexedNodes;
   ++NodesCombined;
   LLVM_DEBUG(dbgs() << "\nReplacing.4 "; N->dump(&DAG); dbgs() << "\nWith: ";
              Result.getNode()->dump(&DAG); dbgs() << '\n');
   WorklistRemover DeadNodes(*this);
-  if (isLoad) {
+  if (IsLoad) {
     DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Result.getValue(0));
     DAG.ReplaceAllUsesOfValueWith(SDValue(N, 1), Result.getValue(2));
   } else {
@@ -13866,7 +13918,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
 
     // We can now generate the new expression.
     SDValue NewOp1 = DAG.getConstant(CNV, DL, CN->getValueType(0));
-    SDValue NewOp2 = Result.getValue(isLoad ? 1 : 0);
+    SDValue NewOp2 = Result.getValue(IsLoad ? 1 : 0);
 
     SDValue NewUse = DAG.getNode(Opcode,
                                  DL,
@@ -13876,7 +13928,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   }
 
   // Replace the uses of Ptr with uses of the updated base value.
-  DAG.ReplaceAllUsesOfValueWith(Ptr, Result.getValue(isLoad ? 1 : 0));
+  DAG.ReplaceAllUsesOfValueWith(Ptr, Result.getValue(IsLoad ? 1 : 0));
   deleteAndRecombine(Ptr.getNode());
   AddToWorklist(Result.getNode());
 
@@ -13891,29 +13943,12 @@ bool DAGCombiner::CombineToPostIndexedLoadStore(SDNode *N) {
   if (Level < AfterLegalizeDAG)
     return false;
 
-  bool isLoad = true;
+  bool IsLoad = true;
+  bool IsMasked = false;
   SDValue Ptr;
-  EVT VT;
-  if (LoadSDNode *LD  = dyn_cast<LoadSDNode>(N)) {
-    if (LD->isIndexed())
-      return false;
-    VT = LD->getMemoryVT();
-    if (!TLI.isIndexedLoadLegal(ISD::POST_INC, VT) &&
-        !TLI.isIndexedLoadLegal(ISD::POST_DEC, VT))
-      return false;
-    Ptr = LD->getBasePtr();
-  } else if (StoreSDNode *ST  = dyn_cast<StoreSDNode>(N)) {
-    if (ST->isIndexed())
-      return false;
-    VT = ST->getMemoryVT();
-    if (!TLI.isIndexedStoreLegal(ISD::POST_INC, VT) &&
-        !TLI.isIndexedStoreLegal(ISD::POST_DEC, VT))
-      return false;
-    Ptr = ST->getBasePtr();
-    isLoad = false;
-  } else {
+  if (!getCombineLoadStoreParts(N, ISD::POST_INC, ISD::POST_DEC, IsLoad, IsMasked,
+                                Ptr, TLI))
     return false;
-  }
 
   if (Ptr.getNode()->hasOneUse())
     return false;
@@ -13949,7 +13984,7 @@ bool DAGCombiner::CombineToPostIndexedLoadStore(SDNode *N) {
 
         // If all the uses are load / store addresses, then don't do the
         // transformation.
-        if (Use->getOpcode() == ISD::ADD || Use->getOpcode() == ISD::SUB){
+        if (Use->getOpcode() == ISD::ADD || Use->getOpcode() == ISD::SUB) {
           bool RealUse = false;
           for (SDNode *UseUse : Use->uses()) {
             if (!canFoldInAddressingMode(Use, UseUse, DAG, TLI))
@@ -13975,18 +14010,24 @@ bool DAGCombiner::CombineToPostIndexedLoadStore(SDNode *N) {
       Worklist.push_back(Op);
       if (!SDNode::hasPredecessorHelper(N, Visited, Worklist) &&
           !SDNode::hasPredecessorHelper(Op, Visited, Worklist)) {
-        SDValue Result = isLoad
-          ? DAG.getIndexedLoad(SDValue(N,0), SDLoc(N),
-                               BasePtr, Offset, AM)
-          : DAG.getIndexedStore(SDValue(N,0), SDLoc(N),
-                                BasePtr, Offset, AM);
+        SDValue Result;
+        if (!IsMasked)
+          Result = IsLoad ? DAG.getIndexedLoad(SDValue(N, 0), SDLoc(N), BasePtr,
+                                               Offset, AM)
+                          : DAG.getIndexedStore(SDValue(N, 0), SDLoc(N),
+                                                BasePtr, Offset, AM);
+        else
+          Result = IsLoad ? DAG.getIndexedMaskedLoad(SDValue(N, 0), SDLoc(N),
+                                                     BasePtr, Offset, AM)
+                          : DAG.getIndexedMaskedStore(SDValue(N, 0), SDLoc(N),
+                                                      BasePtr, Offset, AM);
         ++PostIndexedNodes;
         ++NodesCombined;
         LLVM_DEBUG(dbgs() << "\nReplacing.5 "; N->dump(&DAG);
                    dbgs() << "\nWith: "; Result.getNode()->dump(&DAG);
                    dbgs() << '\n');
         WorklistRemover DeadNodes(*this);
-        if (isLoad) {
+        if (IsLoad) {
           DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Result.getValue(0));
           DAG.ReplaceAllUsesOfValueWith(SDValue(N, 1), Result.getValue(2));
         } else {
@@ -13998,7 +14039,7 @@ bool DAGCombiner::CombineToPostIndexedLoadStore(SDNode *N) {
 
         // Replace the uses of Use with uses of the updated base value.
         DAG.ReplaceAllUsesOfValueWith(SDValue(Op, 0),
-                                      Result.getValue(isLoad ? 1 : 0));
+                                      Result.getValue(IsLoad ? 1 : 0));
         deleteAndRecombine(Op);
         return true;
       }

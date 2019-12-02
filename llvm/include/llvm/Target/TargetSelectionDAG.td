@@ -224,13 +224,13 @@ def SDTIStore : SDTypeProfile<1, 3, [       // indexed store
   SDTCisSameAs<0, 2>, SDTCisPtrTy<0>, SDTCisPtrTy<3>
 ]>;
 
-def SDTMaskedStore: SDTypeProfile<0, 3, [       // masked store
-  SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisVec<2>, SDTCisSameNumEltsAs<0, 2>
+def SDTMaskedStore: SDTypeProfile<0, 4, [       // masked store
+  SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisPtrTy<2>, SDTCisVec<3>, SDTCisSameNumEltsAs<0, 3>
 ]>;
 
-def SDTMaskedLoad: SDTypeProfile<1, 3, [       // masked load
-  SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisVec<2>, SDTCisSameAs<0, 3>,
-  SDTCisSameNumEltsAs<0, 2>
+def SDTMaskedLoad: SDTypeProfile<1, 4, [       // masked load
+  SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisPtrTy<2>, SDTCisVec<3>, SDTCisSameAs<0, 4>,
+  SDTCisSameNumEltsAs<0, 3>
 ]>;
 
 def SDTVecShuffle : SDTypeProfile<1, 2, [

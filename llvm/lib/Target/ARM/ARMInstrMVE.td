@@ -5332,6 +5332,10 @@ class MVE_vector_offset_store_typed<ValueType Ty, Instruction Opcode,
                                     PatFrag StoreKind, int shift>
   : Pat<(StoreKind (Ty MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<shift>:$addr),
         (Opcode MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<shift>:$addr)>;
+class MVE_vector_offset_maskedstore_typed<ValueType Ty, Instruction Opcode,
+                                          PatFrag StoreKind, int shift>
+  : Pat<(StoreKind (Ty MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<shift>:$addr, VCCR:$pred),
+        (Opcode MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<shift>:$addr, (i32 1), VCCR:$pred)>;
 
 multiclass MVE_vector_offset_store<Instruction RegImmInst, PatFrag StoreKind,
                                    int shift> {
@@ -5363,7 +5367,7 @@ def aligned16_post_store : PatFrag<(ops node:$val, node:$ptr, node:$offset),
 
 
 def maskedload8 : PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
-                          (masked_ld node:$ptr, node:$pred, node:$passthru), [{
+                          (masked_ld node:$ptr, undef, node:$pred, node:$passthru), [{
   auto *Ld = cast<MaskedLoadSDNode>(N);
   return Ld->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
@@ -5382,7 +5386,7 @@ def extmaskedload8 : PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
   return ScalarVT.isInteger() && Ld->getExtensionType() == ISD::EXTLOAD;
 }]>;
 def alignedmaskedload16: PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
-                                 (masked_ld node:$ptr, node:$pred, node:$passthru), [{
+                                 (masked_ld node:$ptr, undef, node:$pred, node:$passthru), [{
   auto *Ld = cast<MaskedLoadSDNode>(N);
   EVT ScalarVT = Ld->getMemoryVT().getScalarType();
   return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && Ld->getAlignment() >= 2;
@@ -5402,14 +5406,14 @@ def extmaskedload16 : PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
   return ScalarVT.isInteger() && Ld->getExtensionType() == ISD::EXTLOAD;
 }]>;
 def alignedmaskedload32: PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
-                                 (masked_ld node:$ptr, node:$pred, node:$passthru), [{
+                                 (masked_ld node:$ptr, undef, node:$pred, node:$passthru), [{
   auto *Ld = cast<MaskedLoadSDNode>(N);
   EVT ScalarVT = Ld->getMemoryVT().getScalarType();
   return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && Ld->getAlignment() >= 4;
 }]>;
 
 def maskedstore8 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
-                           (masked_st node:$val, node:$ptr, node:$pred), [{
+                           (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
 def truncatingmaskedstore8 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
@@ -5417,7 +5421,7 @@ def truncatingmaskedstore8 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
   return cast<MaskedStoreSDNode>(N)->isTruncatingStore();
 }]>;
 def maskedstore16 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
-                            (masked_st node:$val, node:$ptr, node:$pred), [{
+                            (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
   return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlignment() >= 2;
@@ -5428,11 +5432,40 @@ def truncatingmaskedstore16 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
   return cast<MaskedStoreSDNode>(N)->isTruncatingStore();
 }]>;
 def maskedstore32 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
-                            (masked_st node:$val, node:$ptr, node:$pred), [{
+                            (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
   return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && St->getAlignment() >= 4;
 }]>;
+
+
+def pre_maskedstore : PatFrag<(ops node:$val, node:$base, node:$offset, node:$mask),
+                              (masked_st node:$val, node:$base, node:$offset, node:$mask), [{
+  ISD::MemIndexedMode AM = cast<MaskedStoreSDNode>(N)->getAddressingMode();
+  return AM == ISD::PRE_INC || AM == ISD::PRE_DEC;
+}]>;
+def post_maskedstore : PatFrag<(ops node:$val, node:$base, node:$offset, node:$mask),
+                               (masked_st node:$val, node:$base, node:$offset, node:$mask), [{
+  ISD::MemIndexedMode AM = cast<MaskedStoreSDNode>(N)->getAddressingMode();
+  return AM == ISD::POST_INC || AM == ISD::POST_DEC;
+}]>;
+def aligned32_pre_maskedstore : PatFrag<(ops node:$val, node:$ptr, node:$offset, node:$mask),
+                                        (pre_maskedstore node:$val, node:$ptr, node:$offset, node:$mask), [{
+  return cast<MaskedStoreSDNode>(N)->getAlignment() >= 4;
+}]>;
+def aligned32_post_maskedstore : PatFrag<(ops node:$val, node:$ptr, node:$offset, node:$mask),
+                                         (post_maskedstore node:$val, node:$ptr, node:$offset, node:$mask), [{
+  return cast<MaskedStoreSDNode>(N)->getAlignment() >= 4;
+}]>;
+def aligned16_pre_maskedstore : PatFrag<(ops node:$val, node:$ptr, node:$offset, node:$mask),
+                                        (pre_maskedstore node:$val, node:$ptr, node:$offset, node:$mask), [{
+  return cast<MaskedStoreSDNode>(N)->getAlignment() >= 2;
+}]>;
+def aligned16_post_maskedstore : PatFrag<(ops node:$val, node:$ptr, node:$offset, node:$mask),
+                                         (post_maskedstore node:$val, node:$ptr, node:$offset, node:$mask), [{
+  return cast<MaskedStoreSDNode>(N)->getAlignment() >= 2;
+}]>;
+
 
 let Predicates = [HasMVEInt, IsLE] in {
   // Stores
@@ -5515,19 +5548,26 @@ let Predicates = [HasMVEInt] in {
   def : MVE_vector_maskedstore_typed<v8f16, MVE_VSTRHU16, maskedstore16, 1>;
   def : MVE_vector_maskedstore_typed<v4i32, MVE_VSTRWU32, maskedstore32, 2>;
   def : MVE_vector_maskedstore_typed<v4f32, MVE_VSTRWU32, maskedstore32, 2>;
-  // Truncating stores
-  def : Pat<(truncatingmaskedstore8 (v8i16 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
-            (MVE_VSTRB16 MQPR:$val, t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
-  def : Pat<(truncatingmaskedstore8 (v4i32 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
-            (MVE_VSTRB32 MQPR:$val, t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
-  def : Pat<(truncatingmaskedstore16 (v4i32 MQPR:$val), t2addrmode_imm7<1>:$addr, VCCR:$pred),
-            (MVE_VSTRH32 MQPR:$val, t2addrmode_imm7<1>:$addr, (i32 1), VCCR:$pred)>;
+
+  // Pre/Post inc masked stores
+  def : MVE_vector_offset_maskedstore_typed<v16i8, MVE_VSTRBU8_pre, pre_maskedstore, 0>;
+  def : MVE_vector_offset_maskedstore_typed<v16i8, MVE_VSTRBU8_post, post_maskedstore, 0>;
+  def : MVE_vector_offset_maskedstore_typed<v8i16, MVE_VSTRHU16_pre, aligned16_pre_maskedstore, 1>;
+  def : MVE_vector_offset_maskedstore_typed<v8i16, MVE_VSTRHU16_post, aligned16_post_maskedstore, 1>;
+  def : MVE_vector_offset_maskedstore_typed<v8f16, MVE_VSTRHU16_pre, aligned16_pre_maskedstore, 1>;
+  def : MVE_vector_offset_maskedstore_typed<v8f16, MVE_VSTRHU16_post, aligned16_post_maskedstore, 1>;
+  def : MVE_vector_offset_maskedstore_typed<v4i32, MVE_VSTRWU32_pre, aligned32_pre_maskedstore, 2>;
+  def : MVE_vector_offset_maskedstore_typed<v4i32, MVE_VSTRWU32_post, aligned32_post_maskedstore, 2>;
+  def : MVE_vector_offset_maskedstore_typed<v4f32, MVE_VSTRWU32_pre, aligned32_pre_maskedstore, 2>;
+  def : MVE_vector_offset_maskedstore_typed<v4f32, MVE_VSTRWU32_post, aligned32_post_maskedstore, 2>;
+
   // Aligned masked loads
   def : MVE_vector_maskedload_typed<v16i8, MVE_VLDRBU8, maskedload8, 0>;
   def : MVE_vector_maskedload_typed<v8i16, MVE_VLDRHU16, alignedmaskedload16, 1>;
   def : MVE_vector_maskedload_typed<v8f16, MVE_VLDRHU16, alignedmaskedload16, 1>;
   def : MVE_vector_maskedload_typed<v4i32, MVE_VLDRWU32, alignedmaskedload32, 2>;
   def : MVE_vector_maskedload_typed<v4f32, MVE_VLDRWU32, alignedmaskedload32, 2>;
+
   // Extending masked loads.
   def : Pat<(v8i16 (sextmaskedload8 t2addrmode_imm7<0>:$addr, VCCR:$pred,
                     (v8i16 NEONimmAllZerosV))),
@@ -5569,6 +5609,37 @@ let MinAlignment = 2 in {
                                        (pre_truncstvi16 node:$val, node:$base, node:$offset)>;
 }
 
+def pre_truncmaskedst : PatFrag<(ops node:$val, node:$base, node:$offset, node:$pred),
+                                (masked_st node:$val, node:$base, node:$offset, node:$pred), [{
+  ISD::MemIndexedMode AM = cast<MaskedStoreSDNode>(N)->getAddressingMode();
+  return AM == ISD::PRE_INC || AM == ISD::PRE_DEC;
+}]>;
+def pre_truncmaskedstvi8 : PatFrag<(ops node:$val, node:$base, node:$offset, node:$pred),
+                                   (pre_truncmaskedst node:$val, node:$base, node:$offset, node:$pred), [{
+  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+def pre_truncmaskedstvi16_align2 : PatFrag<(ops node:$val, node:$base, node:$offset, node:$pred),
+                                           (pre_truncmaskedst node:$val, node:$base, node:$offset, node:$pred), [{
+  auto *St = cast<MaskedStoreSDNode>(N);
+  EVT ScalarVT = St->getMemoryVT().getScalarType();
+  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlignment() >= 2;
+}]>;
+def post_truncmaskedst : PatFrag<(ops node:$val, node:$base, node:$offset, node:$postd),
+                                (masked_st node:$val, node:$base, node:$offset, node:$postd), [{
+  ISD::MemIndexedMode AM = cast<MaskedStoreSDNode>(N)->getAddressingMode();
+  return AM == ISD::POST_INC || AM == ISD::POST_DEC;
+}]>;
+def post_truncmaskedstvi8 : PatFrag<(ops node:$val, node:$base, node:$offset, node:$postd),
+                                   (post_truncmaskedst node:$val, node:$base, node:$offset, node:$postd), [{
+  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+def post_truncmaskedstvi16_align2 : PatFrag<(ops node:$val, node:$base, node:$offset, node:$postd),
+                                           (post_truncmaskedst node:$val, node:$base, node:$offset, node:$postd), [{
+  auto *St = cast<MaskedStoreSDNode>(N);
+  EVT ScalarVT = St->getMemoryVT().getScalarType();
+  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlignment() >= 2;
+}]>;
+
 let Predicates = [HasMVEInt] in {
   def : Pat<(truncstorevi8 (v8i16 MQPR:$val), taddrmode_imm7<0>:$addr),
             (MVE_VSTRB16 MQPR:$val, taddrmode_imm7<0>:$addr)>;
@@ -5590,6 +5661,27 @@ let Predicates = [HasMVEInt] in {
             (MVE_VSTRB32_pre MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<0>:$addr)>;
   def : Pat<(pre_truncstvi16_align2 (v4i32 MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<1>:$addr),
             (MVE_VSTRH32_pre MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<1>:$addr)>;
+
+  def : Pat<(truncatingmaskedstore8 (v8i16 MQPR:$val), taddrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRB16 MQPR:$val, taddrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(truncatingmaskedstore8 (v4i32 MQPR:$val), taddrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRB32 MQPR:$val, taddrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(truncatingmaskedstore16 (v4i32 MQPR:$val), taddrmode_imm7<1>:$addr, VCCR:$pred),
+            (MVE_VSTRH32 MQPR:$val, taddrmode_imm7<1>:$addr, (i32 1), VCCR:$pred)>;
+
+  def : Pat<(post_truncmaskedstvi8 (v8i16 MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<0>:$addr, VCCR:$pred),
+            (MVE_VSTRB16_post MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(post_truncmaskedstvi8 (v4i32 MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<0>:$addr, VCCR:$pred),
+            (MVE_VSTRB32_post MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(post_truncmaskedstvi16_align2 (v4i32 MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<1>:$addr, VCCR:$pred),
+            (MVE_VSTRH32_post MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<1>:$addr, (i32 1), VCCR:$pred)>;
+
+  def : Pat<(pre_truncmaskedstvi8 (v8i16 MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<0>:$addr, VCCR:$pred),
+            (MVE_VSTRB16_pre MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(pre_truncmaskedstvi8 (v4i32 MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<0>:$addr, VCCR:$pred),
+            (MVE_VSTRB32_pre MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(pre_truncmaskedstvi16_align2 (v4i32 MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<1>:$addr, VCCR:$pred),
+            (MVE_VSTRH32_pre MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<1>:$addr, (i32 1), VCCR:$pred)>;
 }
 
 
