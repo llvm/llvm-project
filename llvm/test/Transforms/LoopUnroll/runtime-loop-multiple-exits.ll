@@ -578,10 +578,10 @@ define void @test8() {
 ; PROLOG:      %lcmp.mod = icmp eq i64
 ; PROLOG-NEXT: br i1 %lcmp.mod, label %innerH.prol.loopexit, label %innerH.prol.preheader
 ; PROLOG: latch.6:
-; PROLOG-NEXT: %tmp4.7 = add nuw nsw i64 %tmp3, 8
 ; PROLOG-NEXT: br i1 false, label %outerloop.loopexit.loopexit, label %latch.7
-; PROLOG: latch.7
-; PROLOG-NEXT: %tmp6.7 = icmp ult i64 %tmp4.7, 100
+; PROLOG: latch.7:
+; PROLOG-NEXT: %tmp4.7 = add nuw nsw i64 %tmp3, 8
+; PROLOG-NEXT: %tmp6.7 = icmp ult i64 %tmp3, 92
 ; PROLOG-NEXT: br i1 %tmp6.7, label %innerH, label %exit.unr-lcssa
 bb:
   br label %outerloop

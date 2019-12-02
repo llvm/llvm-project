@@ -28,7 +28,7 @@ define void @mat_vec_sext_i16(i16** nocapture readonly %A, i16* nocapture readon
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP2]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP3]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.vctp32(i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2]] = sub i32 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i16* [[TMP6]] to <4 x i16>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* [[TMP8]], i32 2, <4 x i1> [[TMP1]], <4 x i16> undef)
@@ -140,7 +140,7 @@ define void @mat_vec_i32(i32** nocapture readonly %A, i32* nocapture readonly %B
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP2]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP3]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.vctp32(i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2]] = sub i32 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP8]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)

@@ -20,6 +20,62 @@ using namespace clang::driver::tools;
 
 using namespace llvm::opt;
 
+void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
+                                  const InputInfo &Output,
+                                  const InputInfoList &Inputs,
+                                  const ArgList &Args,
+                                  const char *LinkingOutput) const {
+  ArgStringList CmdArgs;
+
+  const bool IsArch32Bit = getToolChain().getTriple().isArch32Bit();
+  const bool IsArch64Bit = getToolChain().getTriple().isArch64Bit();
+  // Only support 32 and 64 bit.
+  if (!IsArch32Bit && !IsArch64Bit)
+    llvm_unreachable("Unsupported bit width value.");
+
+  // Specify the mode in which the as(1) command operates.
+  if (IsArch32Bit) {
+    CmdArgs.push_back("-a32");
+  } else {
+    // Must be 64-bit, otherwise asserted already.
+    CmdArgs.push_back("-a64");
+  }
+
+  // Accept an undefined symbol as an extern so that an error message is not
+  // displayed. Otherwise, undefined symbols are flagged with error messages.
+  // FIXME: This should be removed when the assembly generation from the
+  // compiler is able to write externs properly.
+  CmdArgs.push_back("-u");
+
+  // Accept any mixture of instructions.
+  // On Power for AIX and Linux, this behaviour matches that of GCC for both the
+  // user-provided assembler source case and the compiler-produced assembler
+  // source case. Yet XL with user-provided assembler source would not add this.
+  CmdArgs.push_back("-many");
+
+  Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
+
+  // Specify assembler output file.
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
+  if (Output.isFilename()) {
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(Output.getFilename());
+  }
+
+  // Specify assembler input file.
+  // The system assembler on AIX takes exactly one input file. The driver is
+  // expected to invoke as(1) separately for each assembler source input file.
+  if (Inputs.size() != 1)
+    llvm_unreachable("Invalid number of input files.");
+  const InputInfo &II = Inputs[0];
+  assert((II.isFilename() || II.isNothing()) && "Invalid input.");
+  if (II.isFilename())
+    CmdArgs.push_back(II.getFilename());
+
+  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
+  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+}
+
 void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs, const ArgList &Args,
@@ -42,7 +98,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } 
+  }
 
   // Set linking mode (i.e., 32/64-bit) and the address of
   // text and data sections based on arch bit width.
@@ -92,11 +148,12 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 
-/// AIX - AIX tool chain which can call ld(1) directly.
-// TODO: Enable direct call to as(1).
+/// AIX - AIX tool chain which can call as(1) and ld(1) directly.
 AIX::AIX(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : ToolChain(D, Triple, Args) {
   getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
 }
+
+auto AIX::buildAssembler() const -> Tool * { return new aix::Assembler(*this); }
 
 auto AIX::buildLinker() const -> Tool * { return new aix::Linker(*this); }

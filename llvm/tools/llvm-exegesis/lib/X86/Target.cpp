@@ -513,6 +513,7 @@ ConstantInliner::loadImplicitRegAndFinalize(unsigned Opcode, unsigned Value) {
           .addReg(0)        // IndexReg
           .addImm(0)        // Disp
           .addReg(0));      // Segment
+  add(releaseStackSpace(4));
   return std::move(Instructions);
 }
 
