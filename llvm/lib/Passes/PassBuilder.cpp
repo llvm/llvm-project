@@ -400,21 +400,25 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
 
   // Hoisting of scalars and load expressions.
-  if (EnableGVNHoist)
-    FPM.addPass(GVNHoistPass());
+  if (Level > O1) {
+    if (EnableGVNHoist)
+      FPM.addPass(GVNHoistPass());
 
-  // Global value numbering based sinking.
-  if (EnableGVNSink) {
-    FPM.addPass(GVNSinkPass());
-    FPM.addPass(SimplifyCFGPass());
+    // Global value numbering based sinking.
+    if (EnableGVNSink) {
+      FPM.addPass(GVNSinkPass());
+      FPM.addPass(SimplifyCFGPass());
+    }
   }
 
   // Speculative execution if the target has divergent branches; otherwise nop.
-  FPM.addPass(SpeculativeExecutionPass());
+  if (Level > O1) {
+    FPM.addPass(SpeculativeExecutionPass());
 
-  // Optimize based on known information about branches, and cleanup afterward.
-  FPM.addPass(JumpThreadingPass());
-  FPM.addPass(CorrelatedValuePropagationPass());
+    // Optimize based on known information about branches, and cleanup afterward.
+    FPM.addPass(JumpThreadingPass());
+    FPM.addPass(CorrelatedValuePropagationPass());
+  }
   FPM.addPass(SimplifyCFGPass());
   if (Level == O3)
     FPM.addPass(AggressiveInstCombinePass());
@@ -428,10 +432,12 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // For PGO use pipeline, try to optimize memory intrinsics such as memcpy
   // using the size value profile. Don't perform this when optimizing for size.
   if (PGOOpt && PGOOpt->Action == PGOOptions::IRUse &&
-      !isOptimizingForSize(Level))
+      !isOptimizingForSize(Level) && Level > O1)
     FPM.addPass(PGOMemOPSizeOpt());
 
-  FPM.addPass(TailCallElimPass());
+  // TODO: Investigate the cost/benefit of tail call elimination on debugging.
+  if (Level > O1)
+    FPM.addPass(TailCallElimPass());
   FPM.addPass(SimplifyCFGPass());
 
   // Form canonically associated expression trees, and simplify the trees using
@@ -458,6 +464,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Rotate Loop - disable header duplication at -Oz
   LPM1.addPass(LoopRotatePass(Level != Oz));
+  // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap));
   LPM1.addPass(SimpleLoopUnswitchPass());
   LPM2.addPass(IndVarSimplifyPass());
@@ -525,18 +532,21 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Re-consider control flow based optimizations after redundancy elimination,
   // redo DCE, etc.
-  FPM.addPass(JumpThreadingPass());
-  FPM.addPass(CorrelatedValuePropagationPass());
-  FPM.addPass(DSEPass());
-  FPM.addPass(createFunctionToLoopPassAdaptor(
-      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
-      EnableMSSALoopDependency, DebugLogging));
+  if (Level > O1) {
+    FPM.addPass(JumpThreadingPass());
+    FPM.addPass(CorrelatedValuePropagationPass());
+    FPM.addPass(DSEPass());
+    FPM.addPass(createFunctionToLoopPassAdaptor(
+        LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
+        EnableMSSALoopDependency, DebugLogging));
+  }
 
   for (auto &C : ScalarOptimizerLateEPCallbacks)
     C(FPM, Level);
 
   // Finally, do an expensive DCE pass to catch all the dead code exposed by
   // the simplifications and basic cleanup after all the simplifications.
+  // TODO: Investigate if this is too expensive.
   FPM.addPass(ADCEPass());
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
