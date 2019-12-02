@@ -37,6 +37,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/SpecialCaseList.h"
 
 using namespace llvm;
 
@@ -60,6 +61,11 @@ static cl::opt<unsigned>
     MaxUsesToExploreCapture(
         "max-uses-to-explore-capture", cl::init(20), cl::Hidden,
         cl::desc("Maximum number of uses to explore for a capture query."));
+
+static cl::list<std::string> ClABIListFiles(
+    "strat-blacklist",
+    cl::desc("File listing native ABI functions and how the pass treats them"),
+    cl::Hidden);
 
 // Boilerplate for legacy and new pass managers
 
@@ -130,7 +136,75 @@ TapirRaceDetectPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
   return PreservedAnalyses::all();
 }
 
+// Copied from DataFlowSanitizer.cpp
+static StringRef GetGlobalTypeString(const GlobalValue &G) {
+  // Types of GlobalVariables are always pointer types.
+  Type *GType = G.getValueType();
+  // For now we support blacklisting struct types only.
+  if (StructType *SGType = dyn_cast<StructType>(GType)) {
+    if (!SGType->isLiteral())
+      return SGType->getName();
+  }
+  return "<unknown type>";
+}
+
 namespace {
+
+// Copied and adapted from DataFlowSanitizer.cpp
+class StratABIList {
+  std::unique_ptr<SpecialCaseList> SCL;
+
+ public:
+  StratABIList() = default;
+
+  void set(std::unique_ptr<SpecialCaseList> List) { SCL = std::move(List); }
+
+  /// Returns whether either this function or its source file are listed in the
+  /// given category.
+  bool isIn(const Function &F, StringRef Category = StringRef()) const {
+    return isIn(*F.getParent(), Category) ||
+           SCL->inSection("cilk", "fun", F.getName(), Category);
+  }
+
+  /// Returns whether this type is listed in the given category.
+  bool isIn(const Type &Ty, StringRef Category = StringRef()) const {
+    const Type *ElTy = &Ty;
+    // Strip any levels of pointer type.
+    while (const PointerType *PtrTy = dyn_cast<PointerType>(ElTy))
+      ElTy = PtrTy->getElementType();
+    // We only handle struct types right now.
+    if (const StructType *STy = dyn_cast<StructType>(ElTy))
+      if (STy->hasName())
+        return SCL->inSection("cilk", "type", STy->getName(), Category);
+    return false;
+  }
+
+  bool isIn(const GlobalVariable &GV, StringRef Category = StringRef()) const {
+    return isIn(*GV.getParent(), Category) ||
+        SCL->inSection("cilk", "global", GV.getName(), Category);
+  }
+
+  /// Returns whether this global alias is listed in the given category.
+  ///
+  /// If GA aliases a function, the alias's name is matched as a function name
+  /// would be.  Similarly, aliases of globals are matched like globals.
+  bool isIn(const GlobalAlias &GA, StringRef Category = StringRef()) const {
+    if (isIn(*GA.getParent(), Category))
+      return true;
+
+    if (isa<FunctionType>(GA.getValueType()))
+      return SCL->inSection("cilk", "fun", GA.getName(), Category);
+
+    return SCL->inSection("cilk", "global", GA.getName(), Category) ||
+           SCL->inSection("cilk", "type", GetGlobalTypeString(GA),
+                          Category);
+  }
+
+  /// Returns whether this module is listed in the given category.
+  bool isIn(const Module &M, StringRef Category = StringRef()) const {
+    return SCL->inSection("cilk", "src", M.getModuleIdentifier(), Category);
+  }
+};
 
 // Structure to record the set of child tasks that might be in parallel with
 // this spindle, ignoring back edges of loops.
@@ -207,6 +281,11 @@ public:
       : DL(DL), DT(DT), TI(TI), LI(LI), DI(DI), AA(DI.getAA()), SE(SE),
         TLI(TLI), AccessToObjs(AccessToObjs), MPTasksInLoop(LI) {
     TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
+
+    std::vector<std::string> AllABIListFiles;
+    AllABIListFiles.insert(AllABIListFiles.end(), ClABIListFiles.begin(),
+                           ClABIListFiles.end());
+    ABIList.set(SpecialCaseList::createOrDie(AllABIListFiles));
   }
 
   void addFunctionArgument(Value *Arg);
@@ -278,6 +357,9 @@ private:
   // /// We need to check that all of the pointers in this list are disjoint
   // /// at runtime. Using std::unique_ptr to make using move ctor simpler.
   // DenseMap<const Loop *, RuntimePointerChecking *> AllPtrRtChecking;
+
+  // ABI list for blacklisting.
+  StratABIList ABIList;
 };
 
 } // end anonymous namespace
@@ -471,6 +553,26 @@ void AccessPtrAnalysis::addAccess(Instruction *I) {
   // The AST can handle LoadInst, StoreInst, VAArgInst, AnyMemSetInst,
   // AnyMemTransferInst, and function calls.
   if (checkInstructionForRace(I, TLI)) {
+
+    // Exclude calls to functions in the blacklist.
+    if (const CallBase *Call = dyn_cast<CallBase>(I)) {
+      if (const Function *CF = Call->getCalledFunction())
+        if (ABIList.isIn(*CF))
+          return;
+    } else {
+      MemoryLocation Loc = MemoryLocation::get(I);
+      if (Loc.Ptr) {
+        if (const Value *UnderlyingObj = GetUnderlyingObject(Loc.Ptr, DL, 0)) {
+          if (const GlobalVariable *GV =
+              dyn_cast<GlobalVariable>(UnderlyingObj))
+            if (ABIList.isIn(*GV))
+              return;
+          if (ABIList.isIn(*UnderlyingObj->getType()))
+            return;
+        }
+      }
+    }
+
     // AST.add(I);
     SmallVector<GeneralAccess, 1> GA;
     GetGeneralAccesses(I, GA, DI.getAA(), TLI);

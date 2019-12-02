@@ -28,6 +28,7 @@ class Loop;
 class LoopInfo;
 class RuntimePointerChecking;
 class ScalarEvolution;
+class StratABIList;
 class TargetLibraryInfo;
 class TaskInfo;
 
@@ -173,14 +174,18 @@ public:
                  RaceType::Opaque, Racer);
     }
 
-    RaceType getRaceType(const Instruction *I) const {
+    RaceType getRaceType(const Instruction *I,
+        const SmallPtrSetImpl<const Value *> *Filter = nullptr) const {
       if (!count(I))
         return RaceType::None;
       RaceType RT = RaceType::None;
 
       // Union the recorded race types
-      for (RaceData &RD : lookup(I))
+      for (RaceData &RD : lookup(I)) {
+        if (Filter && RD.Racer.isValid() && Filter->count(RD.Racer.I))
+          continue;
         RT = unionRaceTypes(RD.Type, RT);
+      }
       return RT;
     }
   };
@@ -190,6 +195,8 @@ public:
   using AccessToUnderlyingObjMap =
     DenseMap<MemAccessInfo, SmallPtrSet<Value *, 1>>;
 
+  using FilterTy = const SmallPtrSetImpl<const Value *>;
+
   RaceInfo(Function *F, DominatorTree &DT, LoopInfo &LI, TaskInfo &TI,
            DependenceInfo &DI, ScalarEvolution &SE,
            const TargetLibraryInfo *TLI);
@@ -198,26 +205,31 @@ public:
     return Result[I];
   }
 
-  RaceType getRaceType(const Instruction *I) const {
-    return Result.getRaceType(I);
+  RaceType getRaceType(const Instruction *I, FilterTy *Filter = nullptr) const {
+    return Result.getRaceType(I, Filter);
   }
-  bool mightRace(const Instruction *I) const {
-    return isRace(getRaceType(I));
+  bool mightRace(const Instruction *I, FilterTy *Filter = nullptr) const {
+    return isRace(getRaceType(I, Filter));
   }
-  bool mightRaceLocally(const Instruction *I) const {
-    return isLocalRace(getRaceType(I));
+  bool mightRaceLocally(const Instruction *I,
+                        FilterTy *Filter = nullptr) const {
+    return isLocalRace(getRaceType(I, Filter));
   }
-  bool mightRaceViaAncestor(const Instruction *I) const {
-    return isRaceViaAncestor(getRaceType(I));
+  bool mightRaceViaAncestor(const Instruction *I,
+                            FilterTy *Filter = nullptr) const {
+    return isRaceViaAncestor(getRaceType(I, Filter));
   }
-  bool mightRaceViaAncestorRef(const Instruction *I) const {
-    return isRaceViaAncestorRef(getRaceType(I));
+  bool mightRaceViaAncestorRef(const Instruction *I,
+                               FilterTy *Filter = nullptr) const {
+    return isRaceViaAncestorRef(getRaceType(I, Filter));
   }
-  bool mightRaceViaAncestorMod(const Instruction *I) const {
-    return isRaceViaAncestorMod(getRaceType(I));
+  bool mightRaceViaAncestorMod(const Instruction *I,
+                               FilterTy *Filter = nullptr) const {
+    return isRaceViaAncestorMod(getRaceType(I, Filter));
   }
-  bool mightRaceOpaquely(const Instruction *I) const {
-    return isOpaqueRace(getRaceType(I));
+  bool mightRaceOpaquely(const Instruction *I,
+                         FilterTy *Filter = nullptr) const {
+    return isOpaqueRace(getRaceType(I, Filter));
   }
 
   const ObjectMRTy &getObjectMRForRace() const {
