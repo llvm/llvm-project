@@ -799,10 +799,11 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
         break;
       }
     if (!s)
-      symtab->forEachSymbol([&](Symbol *sym) {
-        if (!s && canSuggestExternCForCXX(name, sym->getName()))
+      for (Symbol *sym : symtab->symbols())
+        if (canSuggestExternCForCXX(name, sym->getName())) {
           s = sym;
-      });
+          break;
+        }
     if (s) {
       pre_hint = " to declare ";
       post_hint = " as extern \"C\"?";
