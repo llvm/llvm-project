@@ -1831,7 +1831,7 @@ void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 //
 
 /// Use this to get a StringMap to all registered named options
-/// (e.g. -help). Note \p Map Should be an empty StringMap.
+/// (e.g. -help).
 ///
 /// \return A reference to the StringMap used by the cl APIs to parse options.
 ///
