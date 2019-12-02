@@ -3177,7 +3177,7 @@ void Target::StopHook::SetThreadSpecifier(ThreadSpec *specifier) {
 
 void Target::StopHook::GetDescription(Stream *s,
                                       lldb::DescriptionLevel level) const {
-  int indent_level = s->GetIndentLevel();
+  unsigned indent_level = s->GetIndentLevel();
 
   s->SetIndentLevel(indent_level + 2);
 
