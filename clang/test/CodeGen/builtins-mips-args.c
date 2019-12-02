@@ -1,5 +1,6 @@
 // REQUIRES: mips-registered-target
-// RUN: %clang_cc1 -triple mips-unknown-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple mips-unknown-linux-gnu -target-feature +dspr2 \
+// RUN:            -fsyntax-only -verify %s
 
 void foo() {
   // MIPS DSP Rev 1
