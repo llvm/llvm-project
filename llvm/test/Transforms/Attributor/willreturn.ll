@@ -1,4 +1,3 @@
-; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefix=FNATTR
 ; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 
 
@@ -9,8 +8,6 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 
 ; TEST 1 (positive case)
-; FNATTR: Function Attrs: noinline norecurse nounwind readnone uwtable
-; FNATTR-NEXT: define void @only_return()
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; ATTRIBUTOR-NEXT: define void @only_return()
 define void @only_return() #0 {
@@ -25,8 +22,6 @@ define void @only_return() #0 {
 ;    return n<=1? n : fib(n-1) + fib(n-2);
 ; }
 
-; FNATTR: Function Attrs: noinline nounwind readnone uwtable
-; FNATTR-NEXT: define i32 @fib(i32 %0)
 ; FIXME: missing willreturn
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define i32 @fib(i32 %0) local_unnamed_addr
@@ -56,9 +51,6 @@ define i32 @fib(i32 %0) local_unnamed_addr #0 {
 ; }
 ; fact_maybe_not(-1) doesn't stop.
 
-; FNATTR: Function Attrs: noinline norecurse nounwind readnone uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define i32 @fact_maybe_not_halt(i32 %0) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define i32 @fact_maybe_not_halt(i32 %0) local_unnamed_addr
@@ -93,8 +85,6 @@ define i32 @fact_maybe_not_halt(i32 %0) local_unnamed_addr #0 {
 ; }
 
 ; FIXME: missing willreturn
-; FNATTR: Function Attrs: noinline norecurse nounwind readnone uwtable
-; FNATTR-NEXT: define i32 @fact_loop(i32 %0)
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define i32 @fact_loop(i32 %0) local_unnamed_addr
 define i32 @fact_loop(i32 %0) local_unnamed_addr #0 {
@@ -123,9 +113,6 @@ define i32 @fact_loop(i32 %0) local_unnamed_addr #0 {
 ;     mutual_recursion1();
 ; }
 
-; FNATTR: Function Attrs: noinline nounwind readnone uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @mutual_recursion1(i1 %c)
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @mutual_recursion1(i1 %c)
@@ -139,9 +126,6 @@ end:
 }
 
 
-; FNATTR: Function Attrs: noinline nounwind readnone uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @mutual_recursion2(i1 %c)
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @mutual_recursion2(i1 %c)
@@ -153,15 +137,10 @@ define void @mutual_recursion2(i1 %c) #0 {
 
 ; TEST 5 (negative case)
 ; call exit/abort (has noreturn attribute)
-; FNATTR: Function Attrs: noreturn
-; FNATTR-NEXT: declare void @exit(i32) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: noreturn
 ; ATTRIBUTOR-NEXT: declare void @exit(i32) local_unnamed_add
 declare void @exit(i32 %0) local_unnamed_addr noreturn
 
-; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @only_exit()
 ; ATTRIBUTOR: Function Attrs: noinline noreturn nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @only_exit() local_unnamed_addr
@@ -180,9 +159,6 @@ define void @only_exit() local_unnamed_addr #0 {
 ;     }
 ;     return;
 ; }
-; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_addr
@@ -210,14 +186,10 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 ; TEST 6 (positive case)
 ; Call intrinsic function
 ; FIXME: missing willreturn
-; FNATTRS: Function Attrs: noinline readnone speculatable
-; FNATTRS-NEXT: declare float @llvm.floor.f32(float %0)
 ; ATTRIBUTOR: Function Attrs: nounwind readnone speculatable
 ; ATTRIBUTOR-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)
 
-; FNATTRS: Function Attrs: noinline nounwind readnone uwtable
-; FNATTRS-NEXT: define void @call_floor(float %a)
 ; FIXME: missing willreturn
 ; ATTRIBUTOR: Function Attrs: noinline nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define void @call_floor(float %a)
@@ -230,17 +202,11 @@ define void @call_floor(float %a) #0 {
 ; TEST 7 (negative case)
 ; Call function declaration without willreturn
 
-; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: declare void @maybe_noreturn()
 ; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: declare void @maybe_noreturn()
 declare void @maybe_noreturn() #0
 
-; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @call_maybe_noreturn()
 ; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @call_maybe_noreturn()
@@ -253,14 +219,10 @@ define void @call_maybe_noreturn() #0 {
 ; TEST 8 (positive case)
 ; Check propagation.
 
-; FNATTR: Function Attrs: norecurse willreturn
-; FNATTR-NEXT: declare void @will_return()
 ; ATTRIBUTOR: Function Attrs: norecurse willreturn
 ; ATTRIBUTOR-NEXT: declare void @will_return()
 declare void @will_return() willreturn norecurse
 
-; FNATTR: Function Attrs: noinline norecurse nounwind uwtable
-; FNATTR-NEXT: define void @f1()
 ; ATTRIBUTOR: Function Attrs: noinline norecurse nounwind uwtable willreturn
 ; ATTRIBUTOR-NEXT: define void @f1()
 define void @f1() #0 {
@@ -268,8 +230,6 @@ define void @f1() #0 {
     ret void
 }
 
-; FNATTR: Function Attrs: noinline norecurse nounwind uwtable
-; FNATTR-NEXT: define void @f2()
 ; ATTRIBUTOR: Function Attrs: noinline norecurse nounwind uwtable willreturn
 ; ATTRIBUTOR-NEXT: define void @f2()
 define void @f2() #0 {
@@ -281,9 +241,6 @@ define void @f2() #0 {
 ; TEST 9 (negative case)
 ; call willreturn function in endless loop.
 
-; FNATTR: Function Attrs: noinline norecurse nounwind uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @call_will_return_but_has_loop()
 ; ATTRIBUTOR: Function Attrs: noinline norecurse noreturn nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @call_will_return_but_has_loop()
@@ -300,14 +257,10 @@ label2:
 ; TEST 10 (positive case)
 ; invoke a function with willreturn
 
-; FNATTR: Function Attrs: noinline uwtable willreturn
-; FNATTR-NEXT: declare i1 @maybe_raise_exception()
 ; ATTRIBUTOR: Function Attrs: noinline uwtable willreturn
 ; ATTRIBUTOR-NEXT: declare i1 @maybe_raise_exception()
 declare i1 @maybe_raise_exception() #1 willreturn
 
-; FNATTR: Function Attrs: nounwind
-; FNATTR-NEXT: define void @invoke_test()
 ; ATTRIBUTOR: Function Attrs: nounwind willreturn
 ; ATTRIBUTOR-NEXT: define void @invoke_test()
 define void @invoke_test() personality i32 (...)* @__gxx_personality_v0 {
@@ -335,8 +288,6 @@ declare i32 @__gxx_personality_v0(...)
 ; }
 
 ; FIXME: missing willreturn
-; FNATTR: Function Attrs: noinline norecurse nounwind readonly uwtable
-; FNATTR-NEXT: define i32 @loop_constant_trip_count(i32* nocapture readonly %0)
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readonly uwtable
 ; ATTRIBUTOR-NEXT: define i32 @loop_constant_trip_count(i32* nocapture nofree readonly %0)
 define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
@@ -367,9 +318,6 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ;     }
 ;     return ans;
 ; }
-; FNATTR: Function Attrs: noinline norecurse nounwind readonly uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readonly uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture nofree readonly %2, i32 %3) local_unnamed_addr
@@ -406,8 +354,6 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, 
 
 
 ; FIXME: missing willreturn
-; FNATTR: Function Attrs: noinline norecurse nounwind readonly uwtable
-; FNATTR-NEXT: define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1)
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readonly uwtable
 ; ATTRIBUTOR-NEXT: define i32 @loop_trip_dec(i32 %0, i32* nocapture nofree readonly %1) local_unnamed_addr
 
@@ -437,8 +383,6 @@ define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr
 ; TEST 14 (positive case)
 ; multiple return
 
-; FNATTR: Function Attrs: noinline norecurse nounwind readnone uwtable
-; FNATTR-NEXT: define i32 @multiple_return(i32 %a)
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; ATTRIBUTOR-NEXT: define i32 @multiple_return(i32 %a)
 define i32 @multiple_return(i32 %a) #0 {
@@ -455,8 +399,6 @@ f:
 ; unreachable exit
 
 ; 15.1 (positive case)
-; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NEXT: define void @unreachable_exit_positive1()
 ; ATTRIBUTOR: Function Attrs: noinline norecurse nounwind uwtable willreturn
 ; ATTRIBUTOR-NEXT: define void @unreachable_exit_positive1()
 define void @unreachable_exit_positive1() #0 {
@@ -469,8 +411,6 @@ unreachable_label:
 }
 
 ; FIXME: missing willreturn
-; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NEXT: define i32 @unreachable_exit_positive2(i32 %0)
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define i32 @unreachable_exit_positive2(i32 %0)
 define i32 @unreachable_exit_positive2(i32) local_unnamed_addr #0 {
@@ -497,9 +437,6 @@ unreachable_label:
 
 ;15.2
 
-; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @unreachable_exit_negative1()
 ; ATTRIBUTOR: Function Attrs: noinline noreturn nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @unreachable_exit_negative1()
@@ -512,9 +449,6 @@ unreachable_label:
   unreachable
 }
 
-; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @unreachable_exit_negative2()
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @unreachable_exit_negative2()
@@ -531,15 +465,10 @@ unreachable_label:
   unreachable
 }
 
-; FNATTR: Function Attrs: noreturn nounwind
-; FNATTR-NEXT: declare void @llvm.eh.sjlj.longjmp(i8*)
 ; ATTRIBUTOR: Function Attrs: noreturn nounwind
 ; ATTRIBUTOR-NEXT: declare void @llvm.eh.sjlj.longjmp(i8*)
 declare void @llvm.eh.sjlj.longjmp(i8*)
 
-; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #3 {
 ; ATTRIBUTOR: Function Attrs: noinline noreturn nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr
