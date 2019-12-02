@@ -211,7 +211,7 @@ body:             |
   ; CHECK:   renamable $r4 = t2ADDrr renamable $r0, renamable $r12, 14, $noreg, $noreg
   ; CHECK:   renamable $r12 = t2ADDri killed renamable $r12, 16, 14, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 16, 14, $noreg
-  ; CHECK:   renamable $q0 = MVE_VMULt1i8 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMULi8 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
   ; CHECK:   MVE_VSTRBU8 killed renamable $q0, killed renamable $r4, 0, 0, killed $noreg :: (store 16 into %ir.scevgep1, align 1)
   ; CHECK:   $lr = MVE_LETP renamable $lr, %bb.2
   ; CHECK: bb.3.for.cond.cleanup:
@@ -252,7 +252,7 @@ body:             |
     renamable $r4 = t2ADDrr renamable $r0, renamable $r12, 14, $noreg, $noreg
     renamable $r12 = t2ADDri killed renamable $r12, 16, 14, $noreg, $noreg
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 16, 14, $noreg
-    renamable $q0 = MVE_VMULt1i8 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+    renamable $q0 = MVE_VMULi8 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
     MVE_VPST 8, implicit $vpr
     MVE_VSTRBU8 killed renamable $q0, killed renamable $r4, 0, 1, killed renamable $vpr :: (store 16 into %ir.scevgep1, align 1)
     renamable $lr = t2LoopDec killed renamable $lr, 1
@@ -325,7 +325,7 @@ body:             |
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
   ; CHECK:   renamable $q0 = MVE_VLDRHU16 renamable $r1, 0, 0, $noreg :: (load 16 from %ir.lsr.iv57, align 2)
   ; CHECK:   renamable $q1 = MVE_VLDRHU16 renamable $r2, 0, 0, $noreg :: (load 16 from %ir.lsr.iv24, align 2)
-  ; CHECK:   renamable $q0 = MVE_VMULt1i16 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMULi16 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
   ; CHECK:   MVE_VSTRHU16 killed renamable $q0, renamable $r0, 0, 0, killed $noreg :: (store 16 into %ir.lsr.iv1, align 2)
   ; CHECK:   renamable $r1, dead $cpsr = tADDi8 killed renamable $r1, 16, 14, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tADDi8 killed renamable $r2, 16, 14, $noreg
@@ -358,7 +358,7 @@ body:             |
     MVE_VPST 4, implicit $vpr
     renamable $q0 = MVE_VLDRHU16 renamable $r1, 0, 1, renamable $vpr :: (load 16 from %ir.lsr.iv57, align 2)
     renamable $q1 = MVE_VLDRHU16 renamable $r2, 0, 1, renamable $vpr :: (load 16 from %ir.lsr.iv24, align 2)
-    renamable $q0 = MVE_VMULt1i16 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+    renamable $q0 = MVE_VMULi16 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
     MVE_VPST 8, implicit $vpr
     MVE_VSTRHU16 killed renamable $q0, renamable $r0, 0, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1, align 2)
     renamable $r1, dead $cpsr = tADDi8 killed renamable $r1, 16, 14, $noreg
@@ -441,7 +441,7 @@ body:             |
   ; CHECK:   renamable $q1 = MVE_VLDRWU32 renamable $r0, 0, 0, $noreg :: (load 16 from %ir.lsr.iv24, align 4)
   ; CHECK:   renamable $q2 = MVE_VLDRWU32 renamable $r1, 0, 0, killed $noreg :: (load 16 from %ir.lsr.iv1, align 4)
   ; CHECK:   $r3 = tMOVr $r2, 14, $noreg
-  ; CHECK:   renamable $q1 = nsw MVE_VMULt1i32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
+  ; CHECK:   renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
   ; CHECK:   renamable $r0, dead $cpsr = tADDi8 killed renamable $r0, 16, 14, $noreg
   ; CHECK:   renamable $r1, dead $cpsr = tADDi8 killed renamable $r1, 16, 14, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed $r2, 4, 14, $noreg
@@ -490,7 +490,7 @@ body:             |
     renamable $q1 = MVE_VLDRWU32 renamable $r0, 0, 1, renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4)
     renamable $q2 = MVE_VLDRWU32 renamable $r1, 0, 1, killed renamable $vpr :: (load 16 from %ir.lsr.iv1, align 4)
     $r3 = tMOVr $r2, 14, $noreg
-    renamable $q1 = nsw MVE_VMULt1i32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
+    renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
     renamable $r0, dead $cpsr = tADDi8 killed renamable $r0, 16, 14, $noreg
     renamable $r1, dead $cpsr = tADDi8 killed renamable $r1, 16, 14, $noreg
     renamable $r2, dead $cpsr = tSUBi8 killed $r2, 4, 14, $noreg

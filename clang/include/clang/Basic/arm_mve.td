@@ -32,6 +32,7 @@ foreach n = [ 2, 4 ] in {
 let params = T.Int in {
 def vaddq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (add $a, $b)>;
 def vsubq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (sub $a, $b)>;
+def vmulq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (mul $a, $b)>;
 }
 
 let params = T.Float in {
@@ -39,6 +40,8 @@ def vaddqf: Intrinsic<Vector, (args Vector:$a, Vector:$b), (fadd $a, $b)>,
             NameOverride<"vaddq">;
 def vsubqf: Intrinsic<Vector, (args Vector:$a, Vector:$b), (fsub $a, $b)>,
             NameOverride<"vsubq">;
+def vmulqf: Intrinsic<Vector, (args Vector:$a, Vector:$b), (fmul $a, $b)>,
+            NameOverride<"vmulq">;
 }
 
 let params = T.Usual in {
@@ -56,6 +59,9 @@ def vaddq_m: Intrinsic<
 def vsubq_m: Intrinsic<
     Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
     (IRInt<"sub_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vmulq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mul_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
 }
 
 let params = T.Int in {
