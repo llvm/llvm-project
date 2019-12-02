@@ -185,16 +185,18 @@ Stream &Stream::operator<<(int64_t sval) {
 }
 
 // Get the current indentation level
-int Stream::GetIndentLevel() const { return m_indent_level; }
+unsigned Stream::GetIndentLevel() const { return m_indent_level; }
 
 // Set the current indentation level
-void Stream::SetIndentLevel(int indent_level) { m_indent_level = indent_level; }
+void Stream::SetIndentLevel(unsigned indent_level) {
+  m_indent_level = indent_level;
+}
 
 // Increment the current indentation level
-void Stream::IndentMore(int amount) { m_indent_level += amount; }
+void Stream::IndentMore(unsigned amount) { m_indent_level += amount; }
 
 // Decrement the current indentation level
-void Stream::IndentLess(int amount) {
+void Stream::IndentLess(unsigned amount) {
   if (m_indent_level >= amount)
     m_indent_level -= amount;
   else
