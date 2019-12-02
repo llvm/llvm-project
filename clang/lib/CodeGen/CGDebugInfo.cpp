@@ -476,10 +476,12 @@ CGDebugInfo::createFile(StringRef FileName,
 }
 
 std::string CGDebugInfo::remapDIPath(StringRef Path) const {
+  SmallString<256> p = Path;
   for (const auto &Entry : DebugPrefixMap)
-    if (Path.startswith(Entry.first))
-      return (Twine(Entry.second) + Path.substr(Entry.first.size())).str();
-  return Path.str();
+    if (llvm::sys::path::replace_path_prefix(
+            p, Entry.first, Entry.second, llvm::sys::path::Style::native, true))
+      break;
+  return p.str();
 }
 
 unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
