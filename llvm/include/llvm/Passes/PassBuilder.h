@@ -151,6 +151,10 @@ public:
 
     /// Optimize quickly without destroying debuggability.
     ///
+    /// FIXME: The current and historical behavior of this level does *not*
+    /// agree with this goal, but we would like to move toward this goal in the
+    /// future.
+    ///
     /// This level is tuned to produce a result from the optimizer as quickly
     /// as possible and to avoid destroying debuggability. This tends to result
     /// in a very good development mode where the compiled code will be
@@ -160,9 +164,9 @@ public:
     /// debugging of the resulting binary.
     ///
     /// As an example, complex loop transformations such as versioning,
-    /// vectorization, or fusion don't make sense here due to the degree to
-    /// which the executed code differs from the source code, and the compile time
-    /// cost.
+    /// vectorization, or fusion might not make sense here due to the degree to
+    /// which the executed code would differ from the source code, and the
+    /// potential compile time cost.
     O1,
 
     /// Optimize for fast execution as much as possible without triggering

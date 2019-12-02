@@ -39,10 +39,16 @@ attributes #0 = { optnone noinline }
 ; IR passes run at -O1 and higher.
 ; OPT-O1-DAG: Skipping pass 'Aggressive Dead Code Elimination'
 ; OPT-O1-DAG: Skipping pass 'Combine redundant instructions'
+; OPT-O1-DAG: Skipping pass 'Dead Store Elimination'
 ; OPT-O1-DAG: Skipping pass 'Early CSE'
+; OPT-O1-DAG: Skipping pass 'Jump Threading'
+; OPT-O1-DAG: Skipping pass 'MemCpy Optimization'
 ; OPT-O1-DAG: Skipping pass 'Reassociate expressions'
 ; OPT-O1-DAG: Skipping pass 'Simplify the CFG'
 ; OPT-O1-DAG: Skipping pass 'Sparse Conditional Constant Propagation'
+; OPT-O1-DAG: Skipping pass 'SROA'
+; OPT-O1-DAG: Skipping pass 'Tail Call Elimination'
+; OPT-O1-DAG: Skipping pass 'Value Propagation'
 
 ; Additional IR passes run at -O2 and higher.
 ; OPT-O2O3-DAG: Skipping pass 'Global Value Numbering'

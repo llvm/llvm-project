@@ -19,8 +19,8 @@ test(one_field);
 // CHECK: define double @_Z7forward9one_field(double returned %{{.*}})
 //
 // CHECK: define void @_Z14test_one_fieldv()
-// CHECK: %[[call:.*]] = call double @_Z13def_one_fieldv()
-// CHECK: call void @_Z3use9one_field(double %[[call]])
+// CHECK: %[[call:.*]] = tail call double @_Z13def_one_fieldv()
+// CHECK: tail call void @_Z3use9one_field(double %[[call]])
 // CHECK: ret void
 //
 // CHECK: declare void @_Z3use9one_field(double)
@@ -82,8 +82,8 @@ test(empty);
 // CHECK: define void @_Z7forward5empty()
 //
 // CHECK: define void @_Z10test_emptyv()
-// CHECK: call void @_Z9def_emptyv()
-// CHECK: call void @_Z3use5empty()
+// CHECK: tail call void @_Z9def_emptyv()
+// CHECK: tail call void @_Z3use5empty()
 // CHECK: ret void
 //
 // CHECK: declare void @_Z3use5empty()
@@ -96,8 +96,8 @@ test(one_bitfield);
 // CHECK: define i32 @_Z7forward12one_bitfield(i32 returned %{{.*}})
 //
 // CHECK: define void @_Z17test_one_bitfieldv()
-// CHECK: %[[call:.*]] = call i32 @_Z16def_one_bitfieldv()
-// CHECK: call void @_Z3use12one_bitfield(i32 %[[call]])
+// CHECK: %[[call:.*]] = tail call i32 @_Z16def_one_bitfieldv()
+// CHECK: tail call void @_Z3use12one_bitfield(i32 %[[call]])
 // CHECK: ret void
 //
 // CHECK: declare void @_Z3use12one_bitfield(i32)
