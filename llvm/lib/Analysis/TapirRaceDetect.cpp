@@ -1186,7 +1186,7 @@ void AccessPtrAnalysis::checkForRacesHelper(
           if (const Argument *A = dyn_cast<Argument>(Obj)) {
             // Check if the attributes on the argument preclude a race with the
             // caller.
-            if (A->hasByValAttr() || A->hasNoAliasAttr() ||
+            if (A->hasByValAttr() || // A->hasNoAliasAttr() ||
                 A->hasStructRetAttr() || A->hasInAllocaAttr())
               continue;
 
