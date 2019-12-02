@@ -175,6 +175,7 @@ private:
   Value *optimizeMemCmp(CallInst *CI, IRBuilder<> &B);
   Value *optimizeBCmp(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemCmpBCmpCommon(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeMemCCpy(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemPCpy(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemCpy(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemMove(CallInst *CI, IRBuilder<> &B);
