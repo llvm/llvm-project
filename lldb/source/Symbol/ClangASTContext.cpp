@@ -971,11 +971,6 @@ ClangASTContext::GetBasicTypeEnumeration(ConstString name) {
   return eBasicTypeInvalid;
 }
 
-CompilerType ClangASTContext::GetBasicType(ConstString name) {
-  lldb::BasicType basic_type = ClangASTContext::GetBasicTypeEnumeration(name);
-  return GetBasicType(basic_type);
-}
-
 uint32_t ClangASTContext::GetPointerByteSize() {
   if (m_pointer_byte_size == 0)
     if (auto size = GetBasicType(lldb::eBasicTypeVoid)

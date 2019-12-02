@@ -152,8 +152,6 @@ public:
 
   CompilerType GetBasicType(lldb::BasicType type);
 
-  CompilerType GetBasicType(ConstString name);
-
   static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
 
   CompilerType GetBuiltinTypeForDWARFEncodingAndBitSize(const char *type_name,
