@@ -1919,7 +1919,7 @@ void RaceInfo::print(raw_ostream &OS) const {
     return;
   }
   RaceType OverallRT = getOverallRaceType();
-  OS << "Overall race type:";
+  OS << "Overall race type: ";
   printRaceType(OverallRT, OS);
   OS << "\n";
   for (auto Res : Result) {

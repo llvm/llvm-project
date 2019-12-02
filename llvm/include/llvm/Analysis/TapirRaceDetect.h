@@ -98,11 +98,11 @@ public:
   }
   static void printRaceType(RaceInfo::RaceType RT, raw_ostream &OS) {
     if (RaceInfo::isLocalRace(RT))
-      OS << " Local";
+      OS << "Local";
     if (RaceInfo::isRaceViaAncestor(RT)) {
       if (RaceInfo::isLocalRace(RT))
-        OS << ",";
-      OS << " Via Ancestor";
+        OS << ", ";
+      OS << "Via Ancestor";
       if (RaceInfo::isRaceViaAncestorMod(RT))
         OS << " Mod";
       if (RaceInfo::isRaceViaAncestorRef(RT))
@@ -110,8 +110,8 @@ public:
     }
     if (RaceInfo::isOpaqueRace(RT)) {
       if (RaceInfo::isLocalRace(RT) || RaceInfo::isRaceViaAncestor(RT))
-        OS << ",";
-      OS << " Opaque";
+        OS << ", ";
+      OS << "Opaque";
     }
   }
 
