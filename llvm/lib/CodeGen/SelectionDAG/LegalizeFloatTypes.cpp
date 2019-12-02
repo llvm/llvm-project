@@ -267,18 +267,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FADD(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCBRT(SDNode *N) {
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  SDValue Op = GetSoftenedFloat(N->getOperand(0));
-  TargetLowering::MakeLibCallOptions CallOptions;
-  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
-  return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
+  return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
                                            RTLIB::CBRT_F32,
                                            RTLIB::CBRT_F64,
                                            RTLIB::CBRT_F80,
                                            RTLIB::CBRT_F128,
-                                           RTLIB::CBRT_PPCF128),
-                         NVT, Op, CallOptions, SDLoc(N)).first;
+                                           RTLIB::CBRT_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCEIL(SDNode *N) {
