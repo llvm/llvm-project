@@ -20,7 +20,8 @@ namespace bugprone {
 void SuspiciousSemicolonCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       stmt(anyOf(ifStmt(hasThen(nullStmt().bind("semi")),
-                        unless(hasElse(stmt()))),
+                        unless(hasElse(stmt())),
+                        unless(isConstexpr())),
                  forStmt(hasBody(nullStmt().bind("semi"))),
                  cxxForRangeStmt(hasBody(nullStmt().bind("semi"))),
                  whileStmt(hasBody(nullStmt().bind("semi")))))
