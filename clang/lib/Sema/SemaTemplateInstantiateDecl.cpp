@@ -930,6 +930,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
       SemaRef.inferObjCARCLifetime(Var))
     Var->setInvalidDecl();
 
+  if (SemaRef.getLangOpts().OpenCL)
+    SemaRef.deduceOpenCLAddressSpace(Var);
+
   // Substitute the nested name specifier, if any.
   if (SubstQualifier(D, Var))
     return nullptr;

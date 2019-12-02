@@ -32,12 +32,14 @@ B *test_dynamic_cast(B *p) {
 __constant _Thread_local int a = 1;
 // expected-error@-1 {{C++ for OpenCL version 1.0 does not support the '_Thread_local' storage class specifier}}
 // expected-warning@-2 {{'_Thread_local' is a C11 extension}}
-
+// expected-error@-3 {{thread-local storage is not supported for the current target}}
 __constant __thread int b = 2;
 // expected-error@-1 {{C++ for OpenCL version 1.0 does not support the '__thread' storage class specifier}}
+// expected-error@-2 {{thread-local storage is not supported for the current target}}
 kernel void test_storage_classes() {
   register int x;
   // expected-error@-1 {{C++ for OpenCL version 1.0 does not support the 'register' storage class specifier}}
   thread_local int y;
   // expected-error@-1 {{C++ for OpenCL version 1.0 does not support the 'thread_local' storage class specifier}}
+  // expected-error@-2 {{thread-local storage is not supported for the current target}}
 }
