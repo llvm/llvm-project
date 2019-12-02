@@ -409,6 +409,12 @@ ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr *Sec) const {
           ": found a misaligned version definition entry at offset 0x" +
           Twine::utohexstr(VerdefBuf - Start));
 
+    unsigned Version = *reinterpret_cast<const Elf_Half *>(VerdefBuf);
+    if (Version != 1)
+      return createError("unable to dump SHT_GNU_verdef section with index " +
+                         Twine(SecNdx) + ": version " + Twine(Version) +
+                         " is not yet supported");
+
     const Elf_Verdef *D = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
     VerDef &VD = *Ret.emplace(Ret.end());
     VD.Offset = VerdefBuf - Start;
