@@ -105,6 +105,26 @@ defm vornq_m: predicated_bit_op_fp<"orn_predicated">;
 defm vorrq_m: predicated_bit_op_fp<"orr_predicated">;
 }
 
+// Predicated intrinsics - Int types only
+let params = T.Int in {
+def vminq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"min_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vmaxq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"max_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+}
+
+// Predicated intrinsics - Float types only
+let params = T.Float in {
+def vminnmq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"min_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vmaxnmq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"max_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+}
+
 let params = T.Int in {
 def vminvq: Intrinsic<Scalar, (args Scalar:$prev, Vector:$vec),
     (Scalar (IRInt<"minv", [Vector], 1> $prev, $vec))>;
@@ -171,6 +191,54 @@ let params = T.Float in {
   defm: compare<"ge", fcmp_ge>;
   defm: compare<"lt", fcmp_lt>;
   defm: compare<"le", fcmp_le>;
+}
+
+let params = T.Signed in {
+  def vminq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                               (select (icmp_sle $a, $b), $a, $b)>;
+  def vmaxq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                               (select (icmp_sge $a, $b), $a, $b)>;
+}
+let params = T.Unsigned in {
+  def vminqu: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                (select (icmp_ule $a, $b), $a, $b)>,
+              NameOverride<"vminq">;
+  def vmaxqu: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                (select (icmp_uge $a, $b), $a, $b)>,
+              NameOverride<"vmaxq">;
+}
+let params = T.Float in {
+  def vminnmq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                               (IRIntBase<"minnum", [Vector]> $a, $b)>;
+  def vmaxnmq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                               (IRIntBase<"maxnum", [Vector]> $a, $b)>;
+}
+
+def vpselq: Intrinsic<Vector, (args Vector:$t, Vector:$f, Predicate:$pred),
+                      (select $pred, $t, $f)> { let params = T.Usual; }
+def vpselq_64: Intrinsic<
+    Vector, (args Vector:$t, Vector:$f, PredOf<u32>:$pred),
+            (bitcast (select $pred, (bitcast $t, VecOf<u32>),
+                                    (bitcast $f, VecOf<u32>)), Vector)>,
+    NameOverride<"vpselq"> { let params = T.All64; }
+
+let params = [Void], pnt = PNT_None in {
+
+  multiclass vctp<Type pred, string intname> {
+    def "": Intrinsic<pred, (args u32:$val),
+        (u16 (IRInt<"pred_v2i", [pred]> (IRIntBase<intname> $val)))>;
+    def _m: Intrinsic<pred, (args u32:$val, pred:$inpred),
+        (u16 (IRInt<"pred_v2i", [pred]> (and $inpred,
+                                         (IRIntBase<intname> $val))))>;
+  }
+  defm vctp8q:  vctp<PredOf<u8>,  "arm_mve_vctp8">;
+  defm vctp16q: vctp<PredOf<u16>, "arm_mve_vctp16">;
+  defm vctp32q: vctp<PredOf<u32>, "arm_mve_vctp32">;
+  defm vctp64q: vctp<PredOf<u64>, "arm_mve_vctp64">;
+
+  def vpnot: Intrinsic<PredOf<u8>, (args unpromoted<PredOf<u8>>:$pred),
+                       (xor $pred, (u16 65535))>;
+
 }
 
 multiclass contiguous_load<string mnemonic, PrimitiveType memtype,

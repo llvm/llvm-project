@@ -450,12 +450,19 @@ TEST(RenameTest, Renameable) {
       )cpp",
        "used outside main file", HeaderFile, Index},
 
-      {R"cpp(// disallow -- symbol is not indexable.
+      {R"cpp(// disallow -- symbol in annonymous namespace in header is not indexable.
         namespace {
         class Unin^dexable {};
         }
       )cpp",
        "not eligible for indexing", HeaderFile, Index},
+
+      {R"cpp(// allow -- symbol in annonymous namespace in non-header file is indexable.
+        namespace {
+        class [[F^oo]] {};
+        }
+      )cpp",
+       nullptr, !HeaderFile, Index},
 
       {R"cpp(// disallow -- namespace symbol isn't supported
         namespace n^s {}

@@ -19,7 +19,7 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1, !dbg !9
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64, !dbg !9
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1, !dbg !9
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4, !dbg !9
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 3, !dbg !9
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]], !dbg !9
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1, !dbg !9
@@ -29,8 +29,8 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr float, float* [[B:%.*]], i64 [[TMP5]], !dbg !9
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt float* [[SCEVGEP4]], [[A]], !dbg !9
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt float* [[SCEVGEP]], [[B]], !dbg !9
-; CHECK-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]], !dbg !9
-; CHECK-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]], !dbg !9
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]], !dbg !9
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]], !dbg !9
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[N]], 3, !dbg !9
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = zext i32 [[TMP6]] to i64, !dbg !9
@@ -49,10 +49,10 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg !9
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !dbg !9, !llvm.loop !15
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP6]], 0
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP6]], 0, !dbg !9
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]], !dbg !9
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ], !dbg !9
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg !9
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], !dbg !9
@@ -69,6 +69,28 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK-NEXT:    br label [[FOR_END]], !dbg !18
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 undef, !dbg !18
+;
+; FORCED_OPTSIZE-LABEL: @foo(
+; FORCED_OPTSIZE-NEXT:  entry:
+; FORCED_OPTSIZE-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0, !dbg !4
+; FORCED_OPTSIZE-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]], !dbg !4
+; FORCED_OPTSIZE:       for.body.preheader:
+; FORCED_OPTSIZE-NEXT:    br label [[FOR_BODY:%.*]], !dbg !9
+; FORCED_OPTSIZE:       for.body:
+; FORCED_OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ], !dbg !9
+; FORCED_OPTSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 [[INDVARS_IV]], !dbg !9
+; FORCED_OPTSIZE-NEXT:    [[TMP0:%.*]] = load float, float* [[ARRAYIDX]], align 4, !dbg !9
+; FORCED_OPTSIZE-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], 3.000000e+00, !dbg !9
+; FORCED_OPTSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[INDVARS_IV]], !dbg !9
+; FORCED_OPTSIZE-NEXT:    store float [[MUL]], float* [[ARRAYIDX2]], align 4, !dbg !9
+; FORCED_OPTSIZE-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1, !dbg !9
+; FORCED_OPTSIZE-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32, !dbg !9
+; FORCED_OPTSIZE-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]], !dbg !9
+; FORCED_OPTSIZE-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]], !dbg !9
+; FORCED_OPTSIZE:       for.end.loopexit:
+; FORCED_OPTSIZE-NEXT:    br label [[FOR_END]], !dbg !10
+; FORCED_OPTSIZE:       for.end:
+; FORCED_OPTSIZE-NEXT:    ret i32 undef, !dbg !10
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0, !dbg !6
@@ -164,7 +186,7 @@ loopexit:
 
 define dso_local void @forced_optsize(i64* noalias nocapture readonly %x_p, i64* noalias nocapture readonly %y_p, i64* noalias nocapture %z_p) minsize optsize {
 ;
-; FORCED_OPTSIZE: remark: <unknown>:0:0: Code-size may be reduced by not forcing vectorization, or by source-code modifications eliminating the need for runtime checks (e.g., adding 'restrict').
+; xFORCED_OPTSIZE: remark: <unknown>:0:0: Code-size may be reduced by not forcing vectorization, or by source-code modifications eliminating the need for runtime checks (e.g., adding 'restrict').
 ; FORCED_OPTSIZE-LABEL: @forced_optsize(
 ; FORCED_OPTSIZE:       vector.body:
 ;

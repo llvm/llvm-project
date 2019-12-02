@@ -580,6 +580,13 @@ void ARMTargetInfo::getTargetDefinesARMV82A(const LangOptions &Opts,
   getTargetDefinesARMV81A(Opts, Builder);
 }
 
+void ARMTargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
+                                            MacroBuilder &Builder) const {
+  // Also include the ARMv8.2-A defines
+  Builder.defineMacro("__ARM_FEATURE_COMPLEX", "1");
+  getTargetDefinesARMV82A(Opts, Builder);
+}
+
 void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   // Target identification.
@@ -808,6 +815,11 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case llvm::ARM::ArchKind::ARMV8_2A:
     getTargetDefinesARMV82A(Opts, Builder);
+    break;
+  case llvm::ARM::ArchKind::ARMV8_3A:
+  case llvm::ARM::ArchKind::ARMV8_4A:
+  case llvm::ARM::ArchKind::ARMV8_5A:
+    getTargetDefinesARMV83A(Opts, Builder);
     break;
   }
 }

@@ -43,6 +43,7 @@
 #define GOOD30(args...)   std::cout << args;
 #define GOOD31(X)         A*X=2
 #define GOOD32(X)         std::vector<X>
+#define GOOD33(x)         if (!a__##x) a_##x = &f(#x)
 
 // These are allowed for now..
 #define MAYBE1            *12.34

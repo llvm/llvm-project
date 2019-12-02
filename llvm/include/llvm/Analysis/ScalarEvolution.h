@@ -1922,6 +1922,13 @@ public:
   ScalarEvolution run(Function &F, FunctionAnalysisManager &AM);
 };
 
+/// Verifier pass for the \c ScalarEvolutionAnalysis results.
+class ScalarEvolutionVerifierPass
+    : public PassInfoMixin<ScalarEvolutionVerifierPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionPrinterPass
     : public PassInfoMixin<ScalarEvolutionPrinterPass> {

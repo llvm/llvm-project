@@ -446,6 +446,10 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_fmlsl : AdvSIMD_FP16FML_Intrinsic;
   def int_aarch64_neon_fmlal2 : AdvSIMD_FP16FML_Intrinsic;
   def int_aarch64_neon_fmlsl2 : AdvSIMD_FP16FML_Intrinsic;
+
+  // v8.3-A Floating-point complex add
+  def int_aarch64_neon_vcadd_rot90  : AdvSIMD_2VectorArg_Intrinsic;
+  def int_aarch64_neon_vcadd_rot270 : AdvSIMD_2VectorArg_Intrinsic;
 }
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".

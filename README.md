@@ -4,6 +4,11 @@ This directory and its subdirectories contain source code for LLVM,
 a toolkit for the construction of highly optimized compilers,
 optimizers, and runtime environments.
 
+The README briefly describes how to get started with building LLVM.
+For more information on how to contribute to the LLVM project, please
+take a look at the
+[Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+
 ## Getting Started with the LLVM System
 
 Taken from https://llvm.org/docs/GettingStarted.html.

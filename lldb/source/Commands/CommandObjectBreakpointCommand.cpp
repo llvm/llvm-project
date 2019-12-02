@@ -674,10 +674,10 @@ protected:
             if (baton) {
               result.GetOutputStream().Printf("Breakpoint %s:\n",
                                               id_str.GetData());
-              result.GetOutputStream().IndentMore();
-              baton->GetDescription(&result.GetOutputStream(),
-                                    eDescriptionLevelFull);
-              result.GetOutputStream().IndentLess();
+              baton->GetDescription(result.GetOutputStream().AsRawOstream(),
+                                    eDescriptionLevelFull,
+                                    result.GetOutputStream().GetIndentLevel() +
+                                        2);
             } else {
               result.AppendMessageWithFormat(
                   "Breakpoint %s does not have an associated command.\n",

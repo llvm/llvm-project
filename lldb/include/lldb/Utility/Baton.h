@@ -12,6 +12,8 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 #include <memory>
 
 namespace lldb_private {
@@ -37,8 +39,9 @@ public:
 
   virtual void *data() = 0;
 
-  virtual void GetDescription(Stream *s,
-                              lldb::DescriptionLevel level) const = 0;
+  virtual void GetDescription(llvm::raw_ostream &s,
+                              lldb::DescriptionLevel level,
+                              unsigned indentation) const = 0;
 };
 
 class UntypedBaton : public Baton {
@@ -50,7 +53,8 @@ public:
   }
 
   void *data() override { return m_data; }
-  void GetDescription(Stream *s, lldb::DescriptionLevel level) const override;
+  void GetDescription(llvm::raw_ostream &s, lldb::DescriptionLevel level,
+                      unsigned indentation) const override;
 
   void *m_data; // Leave baton public for easy access
 };
@@ -63,7 +67,8 @@ public:
   const T *getItem() const { return Item.get(); }
 
   void *data() override { return Item.get(); }
-  void GetDescription(Stream *s, lldb::DescriptionLevel level) const override {}
+  void GetDescription(llvm::raw_ostream &s, lldb::DescriptionLevel level,
+                      unsigned indentation) const override {}
 
 protected:
   std::unique_ptr<T> Item;

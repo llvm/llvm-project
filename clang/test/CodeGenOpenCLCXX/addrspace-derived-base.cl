@@ -69,3 +69,14 @@ void pr43145_3(int n) {
   // CHECK: bitcast i8 addrspace(4)* %add.ptr1 to %class.B2 addrspace(4)*
   // CHECK: call {{.*}} @_ZNU3AS42B26getRefEv
 }
+
+// Implicit conversion of derived to base.
+
+void functionWithBaseArgPtr(class B2 *b) {}
+void functionWithBaseArgRef(class B2 &b) {}
+
+void pr43145_4() {
+  Derived d;
+  functionWithBaseArgPtr(&d);
+  functionWithBaseArgRef(d);
+}

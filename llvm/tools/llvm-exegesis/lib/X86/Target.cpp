@@ -439,6 +439,9 @@ struct ConstantInliner {
 
   std::vector<MCInst> popFlagAndFinalize();
 
+  std::vector<MCInst> loadImplicitRegAndFinalize(unsigned Opcode,
+                                                 unsigned Value);
+
 private:
   ConstantInliner &add(const MCInst &Inst) {
     Instructions.push_back(Inst);
@@ -496,6 +499,21 @@ std::vector<MCInst> ConstantInliner::loadX87FPAndFinalize(unsigned Reg) {
 std::vector<MCInst> ConstantInliner::popFlagAndFinalize() {
   initStack(8);
   add(MCInstBuilder(X86::POPF64));
+  return std::move(Instructions);
+}
+
+std::vector<MCInst>
+ConstantInliner::loadImplicitRegAndFinalize(unsigned Opcode, unsigned Value) {
+  add(allocateStackSpace(4));
+  add(fillStackSpace(X86::MOV32mi, 0, Value)); // Mask all FP exceptions
+  add(MCInstBuilder(Opcode)
+          // Address = ESP
+          .addReg(X86::RSP) // BaseReg
+          .addImm(1)        // ScaleAmt
+          .addReg(0)        // IndexReg
+          .addImm(0)        // Disp
+          .addReg(0));      // Segment
+  add(releaseStackSpace(4));
   return std::move(Instructions);
 }
 
@@ -699,6 +717,12 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
   }
   if (Reg == X86::EFLAGS)
     return CI.popFlagAndFinalize();
+  if (Reg == X86::MXCSR)
+    return CI.loadImplicitRegAndFinalize(
+              STI.getFeatureBits()[X86::FeatureAVX] ? X86::VLDMXCSR
+                                                    : X86::LDMXCSR, 0x1f80);
+  if (Reg == X86::FPCW)
+    return CI.loadImplicitRegAndFinalize(X86::FLDCW16m, 0x37f);
   return {}; // Not yet implemented.
 }
 
