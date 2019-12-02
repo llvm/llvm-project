@@ -243,3 +243,33 @@ for:
 exit:
   ret void
 }
+
+; TODO: We should be able to sink %tmp38 after %tmp60.
+define void @instruction_with_2_FOR_operands() {
+; CHECK-LABEL: define void @instruction_with_2_FOR_operands(
+; CHECK-NEXT: bb:
+; CHECK-NEXT:   br label %bb13
+
+; CHECK-LABEL: bb13:
+; CHECK:         br i1 %tmp12, label %bb13, label %bb74
+
+; CHECK-LABEL: bb74:
+; CHECK-NEXT:    ret void
+;
+bb:
+  br label %bb13
+
+bb13:                                             ; preds = %bb13, %bb
+  %tmp37 = phi float [ %tmp60, %bb13 ], [ undef, %bb ]
+  %tmp27 = phi float [ %tmp49, %bb13 ], [ undef, %bb ]
+  %indvars.iv = phi i64 [ %indvars.iv.next, %bb13 ], [ 0, %bb ]
+  %tmp38 = fmul fast float %tmp37, %tmp27
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %tmp49 = load float, float* undef, align 4
+  %tmp60 = load float, float* undef, align 4
+  %tmp12 = icmp slt i64 %indvars.iv, undef
+  br i1 %tmp12, label %bb13, label %bb74
+
+bb74:                                             ; preds = %bb13
+  ret void
+}
