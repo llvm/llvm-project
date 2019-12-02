@@ -27,6 +27,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -303,7 +304,7 @@ public:
 } // anonymous namespace
 
 int main(int argc, const char **argv) {
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  llvm::InitLLVM X(argc, argv);
 
   cl::HideUnrelatedOptions(ClangOffloadWrapperCategory);
   cl::SetVersionPrinter([](raw_ostream &OS) {

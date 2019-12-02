@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TableGenBackends.h" // Declares all backends.
 #include "ClangASTEmitters.h"
+#include "TableGenBackends.h" // Declares all backends.
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
@@ -349,8 +350,7 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
 }
 
 int main(int argc, char **argv) {
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  PrettyStackTraceProgram X(argc, argv);
+  llvm::InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv);
 
   llvm_shutdown_obj Y;

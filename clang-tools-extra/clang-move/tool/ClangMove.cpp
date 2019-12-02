@@ -15,6 +15,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -94,7 +95,7 @@ cl::opt<bool> DumpDecls(
 } // namespace
 
 int main(int argc, const char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+  llvm::InitLLVM X(argc, argv);
   tooling::CommonOptionsParser OptionsParser(argc, argv, ClangMoveCategory);
 
   if (OldDependOnNew && NewDependOnOld) {

@@ -24,6 +24,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
@@ -608,7 +609,7 @@ private:
 } // end anonymous namespace
 
 int main(int argc, const char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+  llvm::InitLLVM X(argc, argv);
 
   ClangRefactorTool RefactorTool;
 
