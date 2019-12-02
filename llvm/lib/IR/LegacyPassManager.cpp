@@ -1776,16 +1776,10 @@ LLVM_DUMP_METHOD void PMStack::dump() const {
 void ModulePass::assignPassManager(PMStack &PMS,
                                    PassManagerType PreferredType) {
   // Find Module Pass Manager
-  while (!PMS.empty()) {
-    PassManagerType TopPMType = PMS.top()->getPassManagerType();
-    if (TopPMType == PreferredType)
-      break; // We found desired pass manager
-    else if (TopPMType > PMT_ModulePassManager)
-      PMS.pop();    // Pop children pass managers
-    else
-      break;
-  }
-  assert(!PMS.empty() && "Unable to find appropriate Pass Manager");
+  PassManagerType T;
+  while ((T = PMS.top()->getPassManagerType()) > PMT_ModulePassManager &&
+         T != PreferredType)
+    PMS.pop();
   PMS.top()->add(this);
 }
 
@@ -1793,21 +1787,15 @@ void ModulePass::assignPassManager(PMStack &PMS,
 /// in the PM Stack and add self into that manager.
 void FunctionPass::assignPassManager(PMStack &PMS,
                                      PassManagerType PreferredType) {
-
   // Find Function Pass Manager
-  while (!PMS.empty()) {
-    if (PMS.top()->getPassManagerType() > PMT_FunctionPassManager)
-      PMS.pop();
-    else
-      break;
-  }
+  while (PMS.top()->getPassManagerType() > PMT_FunctionPassManager)
+    PMS.pop();
 
   // Create new Function Pass Manager if needed.
   FPPassManager *FPP;
   if (PMS.top()->getPassManagerType() == PMT_FunctionPassManager) {
     FPP = (FPPassManager *)PMS.top();
   } else {
-    assert(!PMS.empty() && "Unable to create Function Pass Manager");
     PMDataManager *PMD = PMS.top();
 
     // [1] Create new Function Pass Manager
