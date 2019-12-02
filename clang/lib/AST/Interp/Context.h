@@ -34,16 +34,6 @@ class Program;
 class State;
 enum PrimType : unsigned;
 
-/// Wrapper around interpreter termination results.
-enum class InterpResult {
-  /// Interpreter successfully computed a value.
-  Success,
-  /// Interpreter encountered an error and quit.
-  Fail,
-  /// Interpreter encountered an unimplemented feature, AST fallback.
-  Bail,
-};
-
 /// Holds all information required to evaluate constexpr code in a module.
 class Context {
 public:
@@ -54,15 +44,13 @@ public:
   ~Context();
 
   /// Checks if a function is a potential constant expression.
-  InterpResult isPotentialConstantExpr(State &Parent,
-                                       const FunctionDecl *FnDecl);
+  bool isPotentialConstantExpr(State &Parent, const FunctionDecl *FnDecl);
 
   /// Evaluates a toplevel expression as an rvalue.
-  InterpResult evaluateAsRValue(State &Parent, const Expr *E, APValue &Result);
+  bool evaluateAsRValue(State &Parent, const Expr *E, APValue &Result);
 
   /// Evaluates a toplevel initializer.
-  InterpResult evaluateAsInitializer(State &Parent, const VarDecl *VD,
-                                     APValue &Result);
+  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
 
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
@@ -78,16 +66,14 @@ public:
 
 private:
   /// Runs a function.
-  InterpResult Run(State &Parent, Function *Func, APValue &Result);
+  bool Run(State &Parent, Function *Func, APValue &Result);
 
   /// Checks a result fromt the interpreter.
-  InterpResult Check(State &Parent, llvm::Expected<bool> &&R);
+  bool Check(State &Parent, llvm::Expected<bool> &&R);
 
 private:
   /// Current compilation context.
   ASTContext &Ctx;
-  /// Flag to indicate if the use of the interpreter is mandatory.
-  bool ForceInterp;
   /// Interpreter stack, shared across invocations.
   InterpStack Stk;
   /// Constexpr program.
