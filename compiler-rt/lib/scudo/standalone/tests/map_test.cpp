@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "common.h"
+#include "tests/scudo_unit_test.h"
 
-#include "gtest/gtest.h"
+#include "common.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -31,11 +31,10 @@ TEST(ScudoMapTest, MapNoAccessUnmap) {
 
 TEST(ScudoMapTest, MapUnmap) {
   const scudo::uptr Size = 4 * scudo::getPageSizeCached();
-  scudo::MapPlatformData Data = {};
-  void *P = scudo::map(nullptr, Size, MappingName, 0, &Data);
+  void *P = scudo::map(nullptr, Size, MappingName, 0, nullptr);
   EXPECT_NE(P, nullptr);
   memset(P, 0xaa, Size);
-  scudo::unmap(P, Size, 0, &Data);
+  scudo::unmap(P, Size, 0, nullptr);
   EXPECT_DEATH(memset(P, 0xbb, Size), "");
 }
 

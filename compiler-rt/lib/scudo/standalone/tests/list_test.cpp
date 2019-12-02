@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "scudo/standalone/list.h"
-#include "gtest/gtest.h"
+#include "tests/scudo_unit_test.h"
+
+#include "list.h"
 
 struct ListItem {
   ListItem *Next;
