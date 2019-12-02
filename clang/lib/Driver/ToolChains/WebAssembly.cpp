@@ -92,10 +92,10 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   C.addCommand(std::make_unique<Command>(JA, *this, Linker, CmdArgs, Inputs));
 
-  // When optimizing, if wasm-opt is in the PATH, run wasm-opt.
+  // When optimizing, if wasm-opt is available, run it.
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (llvm::ErrorOr<std::string> WasmOptPath =
-           llvm::sys::findProgramByName("wasm-opt")) {
+    auto WasmOptPath = getToolChain().GetProgramPath("wasm-opt");
+    if (WasmOptPath != "wasm-opt") {
       StringRef OOpt = "s";
       if (A->getOption().matches(options::OPT_O4) ||
           A->getOption().matches(options::OPT_Ofast))
@@ -106,7 +106,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         OOpt = A->getValue();
 
       if (OOpt != "0") {
-        const char *WasmOpt = Args.MakeArgString(*WasmOptPath);
+        const char *WasmOpt = Args.MakeArgString(WasmOptPath);
         ArgStringList CmdArgs;
         CmdArgs.push_back(Output.getFilename());
         CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
