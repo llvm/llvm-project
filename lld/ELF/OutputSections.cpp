@@ -272,7 +272,12 @@ template <class ELFT> void OutputSection::maybeCompress() {
   // Write section contents to a temporary buffer and compress it.
   std::vector<uint8_t> buf(size);
   writeTo<ELFT>(buf.data());
-  if (Error e = zlib::compress(toStringRef(buf), compressedData))
+  // We chose 1 as the default compression level because it is the fastest. If
+  // -O2 is given, we use level 6 to compress debug info more by ~15%. We found
+  // that level 7 to 9 doesn't make much difference (~1% more compression) while
+  // they take significant amount of time (~2x), so level 6 seems enough.
+  if (Error e = zlib::compress(toStringRef(buf), compressedData,
+                               config->optimize >= 2 ? 6 : 1))
     fatal("compress failed: " + llvm::toString(std::move(e)));
 
   // Update section headers.
