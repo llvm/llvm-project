@@ -23,12 +23,16 @@ func @vector_transfer_ops(%arg0: memref<?x?xf32>) {
 }
 
 // CHECK-LABEL: @vector_broadcast
-func @vector_broadcast(%a: f32, %b: vector<16xf32>) -> vector<8x16xf32> {
+func @vector_broadcast(%a: f32, %b: vector<16xf32>, %c: vector<1x16xf32>, %d: vector<8x1xf32>) -> vector<8x16xf32> {
   //      CHECK: vector.broadcast %{{.*}} : f32 to vector<16xf32>
   %0 = vector.broadcast %a : f32 to vector<16xf32>
   //      CHECK-NEXT: vector.broadcast %{{.*}} : vector<16xf32> to vector<8x16xf32>
   %1 = vector.broadcast %b : vector<16xf32> to vector<8x16xf32>
-  return %1 : vector<8x16xf32>
+  //      CHECK-NEXT: vector.broadcast %{{.*}} : vector<1x16xf32> to vector<8x16xf32>
+  %2 = vector.broadcast %c : vector<1x16xf32> to vector<8x16xf32>
+  //      CHECK-NEXT: vector.broadcast %{{.*}} : vector<8x1xf32> to vector<8x16xf32>
+  %3 = vector.broadcast %d : vector<8x1xf32> to vector<8x16xf32>
+  return %3 : vector<8x16xf32>
 }
 
 // CHECK-LABEL: @extractelement

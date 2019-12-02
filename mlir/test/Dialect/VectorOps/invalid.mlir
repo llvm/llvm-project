@@ -9,6 +9,20 @@ func @broadcast_rank_too_high(%arg0: vector<4x4xf32>) {
 
 // -----
 
+func @broadcast_dim1_mismatch(%arg0: vector<7xf32>) {
+  // expected-error@+1 {{vector.broadcast' op dimension mismatch (7 vs. 3)}}
+  %1 = vector.broadcast %arg0 : vector<7xf32> to vector<3xf32>
+}
+
+// -----
+
+func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
+  // expected-error@+1 {{vector.broadcast' op dimension mismatch (4 vs. 1)}}
+  %1 = vector.broadcast %arg0 : vector<4x8xf32> to vector<1x8xf32>
+}
+
+// -----
+
 func @extract_element_vector_type(%arg0: index) {
   // expected-error@+1 {{expected vector type}}
   %1 = vector.extractelement %arg0[] : index
