@@ -407,8 +407,12 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
         llvm::join(Inputs.CompileCommand.CommandLine, " "));
     // Rebuild the preamble and the AST.
     StoreDiags CompilerInvocationDiagConsumer;
+    std::vector<std::string> CC1Args;
     std::unique_ptr<CompilerInvocation> Invocation =
         buildCompilerInvocation(Inputs, CompilerInvocationDiagConsumer);
+    // Log cc1 args even (especially!) if creating invocation failed.
+    if (!CC1Args.empty())
+      vlog("cc1 args: {0}", llvm::join(CC1Args, " "));
     std::vector<Diag> CompilerInvocationDiags =
         CompilerInvocationDiagConsumer.take();
     if (!Invocation) {
