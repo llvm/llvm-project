@@ -136,6 +136,15 @@ TEST(SelectionTest, CommonAncestor) {
       },
       {
           R"cpp(
+            int x(int);
+            #define M(foo) x(foo)
+            int a = 42;
+            int b = M([[^a]]);
+          )cpp",
+          "DeclRefExpr",
+      },
+      {
+          R"cpp(
             void foo();
             #define CALL_FUNCTION(X) X()
             void bar() { CALL_FUNCTION([[f^o^o]]); }
@@ -378,6 +387,7 @@ TEST(SelectionTest, Selected) {
             $C[[return]];
           }]] else [[{^
           }]]]]
+          char z;
         }
       )cpp",
       R"cpp(
@@ -386,10 +396,10 @@ TEST(SelectionTest, Selected) {
           void foo(^$C[[unique_ptr<$C[[unique_ptr<$C[[int]]>]]>]]^ a) {}
       )cpp",
       R"cpp(int a = [[5 >^> 1]];)cpp",
-      R"cpp([[
+      R"cpp(
         #define ECHO(X) X
-        ECHO(EC^HO([[$C[[int]]) EC^HO(a]]));
-      ]])cpp",
+        ECHO(EC^HO($C[[int]]) EC^HO(a));
+      )cpp",
       R"cpp( $C[[^$C[[int]] a^]]; )cpp",
       R"cpp( $C[[^$C[[int]] a = $C[[5]]^]]; )cpp",
   };
@@ -426,6 +436,56 @@ TEST(SelectionTest, PathologicalPreprocessor) {
 
   EXPECT_EQ("BreakStmt", T.commonAncestor()->kind());
   EXPECT_EQ("WhileStmt", T.commonAncestor()->Parent->kind());
+}
+
+TEST(SelectionTest, IncludedFile) {
+  const char *Case = R"cpp(
+    void test() {
+#include "Exp^and.inc"
+        break;
+    }
+  )cpp";
+  Annotations Test(Case);
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["Expand.inc"] = "while(1)\n";
+  auto AST = TU.build();
+  auto T = makeSelectionTree(Case, AST);
+
+  EXPECT_EQ("WhileStmt", T.commonAncestor()->kind());
+}
+
+TEST(SelectionTest, MacroArgExpansion) {
+  // If a macro arg is expanded several times, we consider them all selected.
+  const char *Case = R"cpp(
+    int mul(int, int);
+    #define SQUARE(X) mul(X, X);
+    int nine = SQUARE(^3);
+  )cpp";
+  Annotations Test(Case);
+  auto AST = TestTU::withCode(Test.code()).build();
+  auto T = makeSelectionTree(Case, AST);
+  // Unfortunately, this makes the common ancestor the CallExpr...
+  // FIXME: hack around this by picking one?
+  EXPECT_EQ("CallExpr", T.commonAncestor()->kind());
+  EXPECT_FALSE(T.commonAncestor()->Selected);
+  EXPECT_EQ(2u, T.commonAncestor()->Children.size());
+  for (const auto* N : T.commonAncestor()->Children) {
+    EXPECT_EQ("IntegerLiteral", N->kind());
+    EXPECT_TRUE(N->Selected);
+  }
+
+  // Verify that the common assert() macro doesn't suffer from this.
+  // (This is because we don't associate the stringified token with the arg).
+  Case = R"cpp(
+    void die(const char*);
+    #define assert(x) (x ? (void)0 : die(#x)
+    void foo() { assert(^42); }
+  )cpp";
+  Test = Annotations(Case);
+  AST = TestTU::withCode(Test.code()).build();
+  T = makeSelectionTree(Case, AST);
+
+  EXPECT_EQ("IntegerLiteral", T.commonAncestor()->kind());
 }
 
 TEST(SelectionTest, Implicit) {
