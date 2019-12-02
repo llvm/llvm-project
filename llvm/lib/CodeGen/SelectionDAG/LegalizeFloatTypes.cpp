@@ -794,6 +794,8 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_TO_FP16:  // Same as FP_ROUND for softening purposes
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:    Res = SoftenFloatOp_FP_ROUND(N); break;
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:  Res = SoftenFloatOp_FP_TO_XINT(N); break;
   case ISD::STRICT_LROUND:
@@ -905,8 +907,12 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_BR_CC(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT(SDNode *N) {
-  bool Signed = N->getOpcode() == ISD::FP_TO_SINT;
-  EVT SVT = N->getOperand(0).getValueType();
+  bool IsStrict = N->isStrictFPOpcode();
+  bool Signed = N->getOpcode() == ISD::FP_TO_SINT ||
+                N->getOpcode() == ISD::STRICT_FP_TO_SINT;
+
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
+  EVT SVT = Op.getValueType();
   EVT RVT = N->getValueType(0);
   EVT NVT = EVT();
   SDLoc dl(N);
@@ -922,18 +928,26 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT(SDNode *N) {
     NVT = (MVT::SimpleValueType)IntVT;
     // The type needs to big enough to hold the result.
     if (NVT.bitsGE(RVT))
-      LC = Signed ? RTLIB::getFPTOSINT(SVT, NVT):RTLIB::getFPTOUINT(SVT, NVT);
+      LC = Signed ? RTLIB::getFPTOSINT(SVT, NVT) : RTLIB::getFPTOUINT(SVT, NVT);
   }
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_XINT!");
 
-  SDValue Op = GetSoftenedFloat(N->getOperand(0));
+  Op = GetSoftenedFloat(Op);
+  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   TargetLowering::MakeLibCallOptions CallOptions;
-  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
-  SDValue Res = TLI.makeLibCall(DAG, LC, NVT, Op, CallOptions, dl).first;
+  CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
+  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
+                                                    CallOptions, dl, Chain);
 
   // Truncate the result if the libcall returns a larger type.
-  return DAG.getNode(ISD::TRUNCATE, dl, RVT, Res);
+  SDValue Res = DAG.getNode(ISD::TRUNCATE, dl, RVT, Tmp.first);
+
+  if (!IsStrict)
+    return Res;
+
+  ReplaceValueWith(SDValue(N, 1), Tmp.second);
+  ReplaceValueWith(SDValue(N, 0), Res);
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_SELECT_CC(SDNode *N) {
