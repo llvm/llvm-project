@@ -96,22 +96,6 @@ def find_triple_in_ir(lines, verbose=False):
     return None
 
 
-def find_run_lines(test, lines, verbose=False):
-    raw_lines = [m.group(1)
-                 for m in [common.RUN_LINE_RE.match(l) for l in lines] if m]
-    run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
-    for l in raw_lines[1:]:
-        if run_lines[-1].endswith("\\"):
-            run_lines[-1] = run_lines[-1].rstrip("\\") + " " + l
-        else:
-            run_lines.append(l)
-    if verbose:
-        log('Found {} RUN lines:'.format(len(run_lines)))
-        for l in run_lines:
-            log('  RUN: {}'.format(l))
-    return run_lines
-
-
 def build_run_list(test, run_lines, verbose=False):
     run_list = []
     all_prefixes = []
@@ -296,7 +280,6 @@ def should_add_line_to_output(input_line, prefix_set):
 
 
 def update_test_file(args, test):
-    log('Scanning for RUN lines in test file: {}'.format(test), args.verbose)
     with open(test) as fd:
         input_lines = [l.rstrip() for l in fd]
 
@@ -313,7 +296,7 @@ def update_test_file(args, test):
         return
 
     triple_in_ir = find_triple_in_ir(input_lines, args.verbose)
-    run_lines = find_run_lines(test, input_lines, args.verbose)
+    run_lines = common.find_run_lines(test, input_lines)
     run_list, common_prefixes = build_run_list(test, run_lines, args.verbose)
 
     simple_functions = find_functions_with_one_bb(input_lines, args.verbose)
