@@ -293,8 +293,6 @@ void DWARFASTParserSwift::GetClangType(lldb_private::CompileUnit &comp_unit,
   LanguageSet clang_languages = ClangASTContext::GetSupportedLanguagesForTypes();
   // Search any modules referenced by DWARF.
   llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  // Well-formed clang modules never form cycles; guard against corrupted ones.
-  searched_symbol_files.insert(&sym_file);
   auto old_size = clang_types.GetSize();
   sym_file.ForEachExternalModule(
       comp_unit, searched_symbol_files, [&](Module &module) -> bool {
