@@ -30,7 +30,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -817,7 +816,7 @@ static void PrintVersion(raw_ostream &OS) {
 }
 
 int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   cl::HideUnrelatedOptions(ClangOffloadBundlerCategory);
   cl::SetVersionPrinter(PrintVersion);

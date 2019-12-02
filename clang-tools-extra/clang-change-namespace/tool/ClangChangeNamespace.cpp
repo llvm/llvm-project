@@ -37,7 +37,6 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -99,7 +98,7 @@ llvm::ErrorOr<std::vector<std::string>> GetWhiteListedSymbolPatterns() {
 } // anonymous namespace
 
 int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   tooling::CommonOptionsParser OptionsParser(argc, argv,
                                              ChangeNamespaceCategory);
   const auto &Files = OptionsParser.getSourcePathList();

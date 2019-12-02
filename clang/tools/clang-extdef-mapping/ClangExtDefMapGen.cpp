@@ -20,7 +20,6 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Signals.h"
 #include <sstream>
 #include <string>
@@ -114,7 +113,8 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
 int main(int argc, const char **argv) {
   // Print a stack trace if we signal out.
-  llvm::InitLLVM X(argc, argv);
+  sys::PrintStackTraceOnErrorSignal(argv[0], false);
+  PrettyStackTraceProgram X(argc, argv);
 
   const char *Overview = "\nThis tool collects the USR name and location "
                          "of external definitions in the source files "
