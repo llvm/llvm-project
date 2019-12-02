@@ -175,6 +175,9 @@ public:
       RelSet Flags;
       Visitor(TargetFinder &Outer, RelSet Flags) : Outer(Outer), Flags(Flags) {}
 
+      void VisitCallExpr(const CallExpr *CE) {
+        Outer.add(CE->getCalleeDecl(), Flags);
+      }
       void VisitDeclRefExpr(const DeclRefExpr *DRE) {
         const Decl *D = DRE->getDecl();
         // UsingShadowDecl allows us to record the UsingDecl.
