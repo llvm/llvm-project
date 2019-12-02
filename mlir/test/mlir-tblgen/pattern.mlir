@@ -24,6 +24,22 @@ func @verifyZeroArg() -> i32 {
   return %0 : i32
 }
 
+// CHECK-LABEL: testIgnoreArgMatch
+// CHECK-SAME: (%{{[a-z0-9]*}}: i32, %[[ARG1:[a-z0-9]*]]: i32
+func @testIgnoreArgMatch(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32) {
+  // CHECK: "test.ignore_arg_match_dst"(%[[ARG1]]) {f = 15 : i64}
+  "test.ignore_arg_match_src"(%arg0, %arg1, %arg2) {d = 42, e = 24, f = 15} : (i32, i32, i32) -> ()
+
+  // CHECK: test.ignore_arg_match_src
+  // Not match because wrong type for $c.
+  "test.ignore_arg_match_src"(%arg0, %arg1, %arg3) {d = 42, e = 24, f = 15} : (i32, i32, f32) -> ()
+
+  // CHECK: test.ignore_arg_match_src
+  // Not match because wrong type for $f.
+  "test.ignore_arg_match_src"(%arg0, %arg1, %arg2) {d = 42 : i32, e = 24, f = 15} : (i32, i32, i32) -> ()
+  return
+}
+
 // CHECK-LABEL: verifyInterleavedOperandAttribute
 // CHECK-SAME:    %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
 func @verifyInterleavedOperandAttribute(%arg0: i32, %arg1: i32) {
