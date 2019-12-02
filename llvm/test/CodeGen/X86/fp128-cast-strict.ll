@@ -5,6 +5,7 @@
 ; RUN: llc < %s -disable-strictnode-mutation -mtriple=x86_64-linux-gnu -mattr=+avx | FileCheck %s --check-prefixes=X64,X64-AVX
 ; RUN: llc < %s -disable-strictnode-mutation -mtriple=x86_64-linux-android -mattr=+avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
 ; RUN: llc < %s -disable-strictnode-mutation -mtriple=x86_64-linux-gnu -mattr=+avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
+; RUN: llc < %s -disable-strictnode-mutation -mtriple=i686-linux-gnu -mattr=-sse | FileCheck %s --check-prefixes=X86
 
 ; Check soft floating point conversion function calls.
 
@@ -31,6 +32,28 @@ define void @TestFPExtF32_F128() nounwind strictfp {
 ; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
+;
+; X86-LABEL: TestFPExtF32_F128:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    flds vf32
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __extendsftf2
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, vf128+8
+; X86-NEXT:    movl %edx, vf128+12
+; X86-NEXT:    movl %eax, vf128
+; X86-NEXT:    movl %ecx, vf128+4
+; X86-NEXT:    addl $24, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
 entry:
   %0 = load float, float* @vf32, align 4
   %conv = call fp128 @llvm.experimental.constrained.fpext.f128.f32(float %0, metadata !"fpexcept.strict") #0
@@ -56,6 +79,28 @@ define void @TestFPExtF64_F128() nounwind strictfp {
 ; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
+;
+; X86-LABEL: TestFPExtF64_F128:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    fldl vf64
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __extenddftf2
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, vf128+8
+; X86-NEXT:    movl %edx, vf128+12
+; X86-NEXT:    movl %eax, vf128
+; X86-NEXT:    movl %ecx, vf128+4
+; X86-NEXT:    addl $40, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
 entry:
   %0 = load double, double* @vf64, align 8
   %conv = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double %0, metadata !"fpexcept.strict") #0
@@ -83,6 +128,28 @@ define void @TestFPExtF80_F128() nounwind strictfp {
 ; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
 ; X64-AVX-NEXT:    addq $24, %rsp
 ; X64-AVX-NEXT:    retq
+;
+; X86-LABEL: TestFPExtF80_F128:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    fldt vf80
+; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __extendxftf2
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, vf128+8
+; X86-NEXT:    movl %edx, vf128+12
+; X86-NEXT:    movl %eax, vf128
+; X86-NEXT:    movl %ecx, vf128+4
+; X86-NEXT:    addl $40, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
 entry:
   %0 = load x86_fp80, x86_fp80* @vf80, align 8
   %conv = call fp128 @llvm.experimental.constrained.fpext.f128.f80(x86_fp80 %0, metadata !"fpexcept.strict") #0
@@ -108,6 +175,19 @@ define void @TestFPTruncF128_F32() nounwind strictfp {
 ; X64-AVX-NEXT:    vmovss %xmm0, {{.*}}(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
+;
+; X86-LABEL: TestFPTruncF128_F32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl vf128+12
+; X86-NEXT:    pushl vf128+8
+; X86-NEXT:    pushl vf128+4
+; X86-NEXT:    pushl vf128
+; X86-NEXT:    calll __trunctfsf2
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    fstps vf32
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
 entry:
   %0 = load fp128, fp128* @vf128, align 16
   %conv = call float @llvm.experimental.constrained.fptrunc.f32.f128(fp128 %0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -133,6 +213,19 @@ define void @TestFPTruncF128_F64() nounwind strictfp {
 ; X64-AVX-NEXT:    vmovsd %xmm0, {{.*}}(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
+;
+; X86-LABEL: TestFPTruncF128_F64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl vf128+12
+; X86-NEXT:    pushl vf128+8
+; X86-NEXT:    pushl vf128+4
+; X86-NEXT:    pushl vf128
+; X86-NEXT:    calll __trunctfdf2
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    fstpl vf64
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
 entry:
   %0 = load fp128, fp128* @vf128, align 16
   %conv = call double @llvm.experimental.constrained.fptrunc.f64.f128(fp128 %0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -158,6 +251,19 @@ define void @TestFPTruncF128_F80() nounwind strictfp {
 ; X64-AVX-NEXT:    fstpt {{.*}}(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
+;
+; X86-LABEL: TestFPTruncF128_F80:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl vf128+12
+; X86-NEXT:    pushl vf128+8
+; X86-NEXT:    pushl vf128+4
+; X86-NEXT:    pushl vf128
+; X86-NEXT:    calll __trunctfxf2
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    fstpt vf80
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
 entry:
   %0 = load fp128, fp128* @vf128, align 16
   %conv = call x86_fp80 @llvm.experimental.constrained.fptrunc.f80.f128(fp128 %0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -173,6 +279,19 @@ define i8 @fptosi_i8(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptosi_i8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __fixtfsi
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
 entry:
   %conv = call i8 @llvm.experimental.constrained.fptosi.i8.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i8 %conv
@@ -186,6 +305,19 @@ define i16 @fptosi_i16(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptosi_i16:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __fixtfsi
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
 entry:
   %conv = call i16 @llvm.experimental.constrained.fptosi.i16.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i16 %conv
@@ -198,6 +330,17 @@ define i32 @fptosi_i32(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    callq __fixtfsi
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptosi_i32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __fixtfsi
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
 entry:
   %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i32 %conv
@@ -210,6 +353,17 @@ define i64 @fptosi_i64(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    callq __fixtfdi
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptosi_i64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __fixtfdi
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
 entry:
   %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i64 %conv
@@ -222,6 +376,35 @@ define i128 @fptosi_i128(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    callq __fixtfti
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptosi_i128:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $20, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll __fixtfti
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    movl (%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
+; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $20, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl $4
 entry:
   %conv = call i128 @llvm.experimental.constrained.fptosi.i128.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i128 %conv
@@ -235,6 +418,19 @@ define i8 @fptoui_i8(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptoui_i8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __fixunstfsi
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
 entry:
   %conv = call i8 @llvm.experimental.constrained.fptoui.i8.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i8 %conv
@@ -248,6 +444,19 @@ define i16 @fptoui_i16(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptoui_i16:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __fixunstfsi
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
 entry:
   %conv = call i16 @llvm.experimental.constrained.fptoui.i16.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i16 %conv
@@ -260,6 +469,17 @@ define i32 @fptoui_i32(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    callq __fixunstfsi
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptoui_i32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __fixunstfsi
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
 entry:
   %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i32 %conv
@@ -272,6 +492,17 @@ define i64 @fptoui_i64(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    callq __fixunstfdi
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptoui_i64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __fixunstfdi
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
 entry:
   %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i64 %conv
@@ -284,6 +515,35 @@ define i128 @fptoui_i128(fp128 %x) nounwind strictfp {
 ; X64-NEXT:    callq __fixunstfti
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: fptoui_i128:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $20, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll __fixunstfti
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    movl (%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
+; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $20, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl $4
 entry:
   %conv = call i128 @llvm.experimental.constrained.fptoui.i128.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i128 %conv
