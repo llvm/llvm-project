@@ -1150,7 +1150,7 @@ Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilder<> &B) {
   }
 
   Value *NewN =
-      ConstantInt::get(N->getType(), std::min(Pos + 1, N->getZExtValue()));
+      ConstantInt::get(N->getType(), std::min(uint64_t(Pos + 1), N->getZExtValue()));
   // memccpy -> llvm.memcpy
   B.CreateMemCpy(Dst, 1, Src, 1, NewN);
   return Pos + 1 <= N->getZExtValue()
