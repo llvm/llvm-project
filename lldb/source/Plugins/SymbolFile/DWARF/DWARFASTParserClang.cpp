@@ -1201,90 +1201,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   } break;
 
   case DW_TAG_array_type: {
-    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-                 DW_TAG_value_to_name(tag), type_name_cstr);
-
-    DWARFDIE type_die = attrs.type.Reference();
-    Type *element_type = dwarf->ResolveTypeUID(type_die, true);
-
-    if (element_type) {
-      auto array_info = ParseChildArrayInfo(die);
-      if (array_info) {
-        attrs.byte_stride = array_info->byte_stride;
-        attrs.bit_stride = array_info->bit_stride;
-      }
-      if (attrs.byte_stride == 0 && attrs.bit_stride == 0)
-        attrs.byte_stride = element_type->GetByteSize().getValueOr(0);
-      CompilerType array_element_type = element_type->GetForwardCompilerType();
-
-      if (ClangASTContext::IsCXXClassType(array_element_type) &&
-          !array_element_type.GetCompleteType()) {
-        ModuleSP module_sp = die.GetModule();
-        if (module_sp) {
-          if (die.GetCU()->GetProducer() == eProducerClang)
-            module_sp->ReportError(
-                "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
-                "class/union/struct element type DIE 0x%8.8x that is a "
-                "forward declaration, not a complete definition.\nTry "
-                "compiling the source file with -fstandalone-debug or "
-                "disable -gmodules",
-                die.GetOffset(), type_die.GetOffset());
-          else
-            module_sp->ReportError(
-                "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
-                "class/union/struct element type DIE 0x%8.8x that is a "
-                "forward declaration, not a complete definition.\nPlease "
-                "file a bug against the compiler and include the "
-                "preprocessed output for %s",
-                die.GetOffset(), type_die.GetOffset(),
-                GetUnitName(die).c_str());
-        }
-
-        // We have no choice other than to pretend that the element class
-        // type is complete. If we don't do this, clang will crash when
-        // trying to layout the class. Since we provide layout
-        // assistance, all ivars in this class and other classes will be
-        // fine, this is the best we can do short of crashing.
-        if (ClangASTContext::StartTagDeclarationDefinition(
-                array_element_type)) {
-          ClangASTContext::CompleteTagDeclarationDefinition(array_element_type);
-        } else {
-          module_sp->ReportError("DWARF DIE at 0x%8.8x was not able to "
-                                 "start its definition.\nPlease file a "
-                                 "bug and attach the file at the start "
-                                 "of this error message",
-                                 type_die.GetOffset());
-        }
-      }
-
-      uint64_t array_element_bit_stride =
-          attrs.byte_stride * 8 + attrs.bit_stride;
-      if (array_info && array_info->element_orders.size() > 0) {
-        uint64_t num_elements = 0;
-        auto end = array_info->element_orders.rend();
-        for (auto pos = array_info->element_orders.rbegin(); pos != end;
-             ++pos) {
-          num_elements = *pos;
-          clang_type = m_ast.CreateArrayType(array_element_type, num_elements,
-                                             attrs.is_vector);
-          array_element_type = clang_type;
-          array_element_bit_stride =
-              num_elements ? array_element_bit_stride * num_elements
-                           : array_element_bit_stride;
-        }
-      } else {
-        clang_type = m_ast.CreateArrayType(array_element_type, 0, attrs.is_vector);
-      }
-      ConstString empty_name;
-      type_sp = std::make_shared<Type>(
-          die.GetID(), dwarf, empty_name, array_element_bit_stride / 8, nullptr,
-          dwarf->GetUID(type_die), Type::eEncodingIsUID, &attrs.decl,
-          clang_type, Type::ResolveState::Full);
-      type_sp->SetEncodingType(element_type);
-      m_ast.SetMetadataAsUserID(clang_type.GetOpaqueQualType(), die.GetID());
-    }
-  } break;
-
+    type_sp = ParseArrayType(die, attrs);
+    break;
+  }
   case DW_TAG_ptr_to_member_type: {
     type_sp = ParsePointerToMemberType(die, attrs);
     break;
@@ -1301,6 +1220,95 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   // control flow in ParseTypeFromDWARF. Then, we could simply replace this
   // return statement with a call to llvm_unreachable.
   return UpdateSymbolContextScopeForType(sc, die, type_sp);
+}
+
+TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
+                                           ParsedDWARFTypeAttributes &attrs) {
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+
+  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
+               DW_TAG_value_to_name(tag), type_name_cstr);
+
+  DWARFDIE type_die = attrs.type.Reference();
+  Type *element_type = dwarf->ResolveTypeUID(type_die, true);
+
+  if (element_type) {
+    auto array_info = ParseChildArrayInfo(die);
+    if (array_info) {
+      attrs.byte_stride = array_info->byte_stride;
+      attrs.bit_stride = array_info->bit_stride;
+    }
+    if (attrs.byte_stride == 0 && attrs.bit_stride == 0)
+      attrs.byte_stride = element_type->GetByteSize().getValueOr(0);
+    CompilerType array_element_type = element_type->GetForwardCompilerType();
+
+    if (ClangASTContext::IsCXXClassType(array_element_type) &&
+        !array_element_type.GetCompleteType()) {
+      ModuleSP module_sp = die.GetModule();
+      if (module_sp) {
+        if (die.GetCU()->GetProducer() == eProducerClang)
+          module_sp->ReportError(
+              "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
+              "class/union/struct element type DIE 0x%8.8x that is a "
+              "forward declaration, not a complete definition.\nTry "
+              "compiling the source file with -fstandalone-debug or "
+              "disable -gmodules",
+              die.GetOffset(), type_die.GetOffset());
+        else
+          module_sp->ReportError(
+              "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
+              "class/union/struct element type DIE 0x%8.8x that is a "
+              "forward declaration, not a complete definition.\nPlease "
+              "file a bug against the compiler and include the "
+              "preprocessed output for %s",
+              die.GetOffset(), type_die.GetOffset(), GetUnitName(die).c_str());
+      }
+
+      // We have no choice other than to pretend that the element class
+      // type is complete. If we don't do this, clang will crash when
+      // trying to layout the class. Since we provide layout
+      // assistance, all ivars in this class and other classes will be
+      // fine, this is the best we can do short of crashing.
+      if (ClangASTContext::StartTagDeclarationDefinition(array_element_type)) {
+        ClangASTContext::CompleteTagDeclarationDefinition(array_element_type);
+      } else {
+        module_sp->ReportError("DWARF DIE at 0x%8.8x was not able to "
+                               "start its definition.\nPlease file a "
+                               "bug and attach the file at the start "
+                               "of this error message",
+                               type_die.GetOffset());
+      }
+    }
+
+    uint64_t array_element_bit_stride =
+        attrs.byte_stride * 8 + attrs.bit_stride;
+    CompilerType clang_type;
+    if (array_info && array_info->element_orders.size() > 0) {
+      uint64_t num_elements = 0;
+      auto end = array_info->element_orders.rend();
+      for (auto pos = array_info->element_orders.rbegin(); pos != end; ++pos) {
+        num_elements = *pos;
+        clang_type = m_ast.CreateArrayType(array_element_type, num_elements,
+                                           attrs.is_vector);
+        array_element_type = clang_type;
+        array_element_bit_stride = num_elements
+                                       ? array_element_bit_stride * num_elements
+                                       : array_element_bit_stride;
+      }
+    } else {
+      clang_type =
+          m_ast.CreateArrayType(array_element_type, 0, attrs.is_vector);
+    }
+    ConstString empty_name;
+    TypeSP type_sp = std::make_shared<Type>(
+        die.GetID(), dwarf, empty_name, array_element_bit_stride / 8, nullptr,
+        dwarf->GetUID(type_die), Type::eEncodingIsUID, &attrs.decl, clang_type,
+        Type::ResolveState::Full);
+    type_sp->SetEncodingType(element_type);
+    m_ast.SetMetadataAsUserID(clang_type.GetOpaqueQualType(), die.GetID());
+    return type_sp;
+  }
+  return nullptr;
 }
 
 TypeSP DWARFASTParserClang::ParsePointerToMemberType(
