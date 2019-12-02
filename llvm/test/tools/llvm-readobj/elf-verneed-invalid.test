@@ -81,16 +81,18 @@ DynamicSymbols:
 ## this situation properly.
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
-# RUN: llvm-readelf -V %t2 | FileCheck %s --check-prefix=GNU-NOLINK
-# RUN: llvm-readobj -V %t2 | FileCheck %s --check-prefix=LLVM-NOLINK
+# RUN: llvm-readelf -V %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=GNU-NOLINK
+# RUN: llvm-readobj -V %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=LLVM-NOLINK
 
 # GNU-NOLINK:      Version symbols section '.gnu.version' contains 2 entries:
 # GNU-NOLINK-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
 # GNU-NOLINK-NEXT:   000:   0 (*local*)       2 (bar)
 # GNU-NOLINK:      Version needs section '.gnu.version_r' contains 1 entries:
 # GNU-NOLINK-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 0 ()
-# GNU-NOLINK-NEXT:   0x0000: Version: 1  File: <invalid>  Cnt: 1
-# GNU-NOLINK-NEXT:   0x0010:   Name: <invalid>  Flags: none Version: 2
+# GNU-NOLINK-EMPTY:
+# GNU-NOLINK-NEXT:  warning: '[[FILE]]': invalid string table linked to SHT_GNU_verneed section with index 2: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
+# GNU-NOLINK-NEXT:   0x0000: Version: 1  File: <corrupt vn_file: 9>  Cnt: 1
+# GNU-NOLINK-NEXT:   0x0010:   Name: <corrupt>  Flags: none Version: 2
 
 # LLVM-NOLINK:      VersionSymbols [
 # LLVM-NOLINK:        Symbol {
@@ -104,17 +106,19 @@ DynamicSymbols:
 # LLVM-NOLINK-NEXT: ]
 
 # LLVM-NOLINK:      VersionRequirements [
+# LLVM-NOLINK-EMPTY:
+# LLVM-NOLINK-NEXT:  warning: '[[FILE]]': invalid string table linked to SHT_GNU_verneed section with index 2: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
 # LLVM-NOLINK-NEXT:   Dependency {
 # LLVM-NOLINK-NEXT:     Version: 1
 # LLVM-NOLINK-NEXT:     Count: 1
-# LLVM-NOLINK-NEXT:     FileName: <invalid>
+# LLVM-NOLINK-NEXT:     FileName: <corrupt vn_file: 9>
 # LLVM-NOLINK-NEXT:     Entries [
 # LLVM-NOLINK-NEXT:       Entry {
 # LLVM-NOLINK-NEXT:         Hash: 0
 # LLVM-NOLINK-NEXT:         Flags [ (0x0)
 # LLVM-NOLINK-NEXT:         ]
 # LLVM-NOLINK-NEXT:         Index: 2
-# LLVM-NOLINK-NEXT:         Name: <invalid>
+# LLVM-NOLINK-NEXT:         Name: <corrupt>
 # LLVM-NOLINK-NEXT:       }
 # LLVM-NOLINK-NEXT:     ]
 # LLVM-NOLINK-NEXT:   }
@@ -212,14 +216,14 @@ DynamicSymbols:
 # LLVM-OFFSET-EQ-NEXT:   Dependency {
 # LLVM-OFFSET-EQ-NEXT:     Version: 1
 # LLVM-OFFSET-EQ-NEXT:     Count: 1
-# LLVM-OFFSET-EQ-NEXT:     FileName: <invalid>
+# LLVM-OFFSET-EQ-NEXT:     FileName: <corrupt vn_file: 1>
 # LLVM-OFFSET-EQ-NEXT:     Entries [
 # LLVM-OFFSET-EQ-NEXT:       Entry {
 # LLVM-OFFSET-EQ-NEXT:         Hash: 0
 # LLVM-OFFSET-EQ-NEXT:         Flags [ (0x0)
 # LLVM-OFFSET-EQ-NEXT:         ]
 # LLVM-OFFSET-EQ-NEXT:         Index: 0
-# LLVM-OFFSET-EQ-NEXT:         Name: <invalid>
+# LLVM-OFFSET-EQ-NEXT:         Name: <corrupt>
 # LLVM-OFFSET-EQ-NEXT:       }
 # LLVM-OFFSET-EQ-NEXT:     ]
 # LLVM-OFFSET-EQ-NEXT:   }
@@ -227,8 +231,8 @@ DynamicSymbols:
 
 # GNU-OFFSET-EQ:      Version needs section '.gnu.version_r' contains 1 entries:
 # GNU-OFFSET-EQ-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 1 (.mystrtab)
-# GNU-OFFSET-EQ-NEXT:   0x0000: Version: 1  File: <invalid>  Cnt: 1
-# GNU-OFFSET-EQ-NEXT:   0x0010:   Name: <invalid>  Flags: none  Version: 0
+# GNU-OFFSET-EQ-NEXT:   0x0000: Version: 1  File: <corrupt vn_file: 1>  Cnt: 1
+# GNU-OFFSET-EQ-NEXT:   0x0010:   Name: <corrupt>  Flags: none  Version: 0
 
 --- !ELF
 FileHeader:
@@ -268,14 +272,14 @@ DynamicSymbols:
 # LLVM-OFFSET-GR-NEXT:   Dependency {
 # LLVM-OFFSET-GR-NEXT:     Version: 1
 # LLVM-OFFSET-GR-NEXT:     Count: 1
-# LLVM-OFFSET-GR-NEXT:     FileName: <invalid>
+# LLVM-OFFSET-GR-NEXT:     FileName: <corrupt vn_file: 1>
 # LLVM-OFFSET-GR-NEXT:     Entries [
 # LLVM-OFFSET-GR-NEXT:       Entry {
 # LLVM-OFFSET-GR-NEXT:         Hash: 0
 # LLVM-OFFSET-GR-NEXT:         Flags [ (0x0)
 # LLVM-OFFSET-GR-NEXT:         ]
 # LLVM-OFFSET-GR-NEXT:         Index: 0
-# LLVM-OFFSET-GR-NEXT:         Name: <invalid>
+# LLVM-OFFSET-GR-NEXT:         Name: <corrupt>
 # LLVM-OFFSET-GR-NEXT:       }
 # LLVM-OFFSET-GR-NEXT:     ]
 # LLVM-OFFSET-GR-NEXT:   }
@@ -283,8 +287,8 @@ DynamicSymbols:
 
 # GNU-OFFSET-GR:      Version needs section '.gnu.version_r' contains 1 entries:
 # GNU-OFFSET-GR-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 1 (.mystrtab)
-# GNU-OFFSET-GR-NEXT:   0x0000: Version: 1  File: <invalid>  Cnt: 1
-# GNU-OFFSET-GR-NEXT:   0x0010:   Name: <invalid>  Flags: none  Version: 0
+# GNU-OFFSET-GR-NEXT:   0x0000: Version: 1  File: <corrupt vn_file: 1>  Cnt: 1
+# GNU-OFFSET-GR-NEXT:   0x0010:   Name: <corrupt>  Flags: none  Version: 0
 
 --- !ELF
 FileHeader:
@@ -310,5 +314,209 @@ Sections:
             Hash:  0
             Flags: 0
             Other: 0
+DynamicSymbols:
+  - Name: foo
+
+## Check that we report a warning when sh_link references a non-existent section.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-readobj --sections -V %t6 2>&1 | FileCheck %s -DFILE=%t6 --implicit-check-not="warning:" --check-prefix=INVALID-LINK-LLVM
+# RUN: llvm-readelf --sections -V %t6 2>&1 | FileCheck %s -DFILE=%t6 --implicit-check-not="warning:" --check-prefix=INVALID-LINK-GNU
+
+# INVALID-LINK-LLVM:       VersionRequirements [
+# INVALID-LINK-LLVM-EMPTY:
+# INVALID-LINK-LLVM-NEXT:  warning: '[[FILE]]': invalid section linked to SHT_GNU_verneed section with index 1: invalid section index: 255
+# INVALID-LINK-LLVM-NEXT:   Dependency {
+# INVALID-LINK-LLVM-NEXT:     Version: 1
+# INVALID-LINK-LLVM-NEXT:     Count: 1
+# INVALID-LINK-LLVM-NEXT:     FileName: <corrupt vn_file: 1>
+# INVALID-LINK-LLVM-NEXT:     Entries [
+# INVALID-LINK-LLVM-NEXT:       Entry {
+# INVALID-LINK-LLVM-NEXT:         Hash: 0
+# INVALID-LINK-LLVM-NEXT:         Flags [ (0x0)
+# INVALID-LINK-LLVM-NEXT:         ]
+# INVALID-LINK-LLVM-NEXT:         Index: 0
+# INVALID-LINK-LLVM-NEXT:         Name: <corrupt>
+# INVALID-LINK-LLVM-NEXT:       }
+# INVALID-LINK-LLVM-NEXT:     ]
+# INVALID-LINK-LLVM-NEXT:   }
+# INVALID-LINK-LLVM-NEXT: ]
+
+# INVALID-LINK-GNU:       Version needs section '.gnu.version_r' contains 1 entries:
+# INVALID-LINK-GNU-EMPTY:
+# INVALID-LINK-GNU-NEXT:  warning: '[[FILE]]': invalid section linked to SHT_GNU_verneed section with index 1: invalid section index: 255
+# INVALID-LINK-GNU-NEXT:  Addr: 0000000000000000 Offset: 0x000040 Link: 255 (<corrupt>)
+# INVALID-LINK-GNU-NEXT:   0x0000: Version: 1 File: <corrupt vn_file: 1> Cnt: 1
+# INVALID-LINK-GNU-NEXT:   0x0010: Name: <corrupt> Flags: none Version: 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    Link:  0xFF
+    Dependencies:
+      - Version: 1
+        File:    foo
+        Entries:
+          - Name:  'foo'
+            Hash:  0
+            Flags: 0
+            Other: 0
+DynamicSymbols:
+  - Name: foo
+
+## Check that we report a warning when we can't read the content of the SHT_GNU_verneed section.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readobj --sections -V %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DATA
+# RUN: llvm-readelf --sections -V %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DATA
+
+# INVALID-DATA: warning: '[[FILE]]': cannot read content of SHT_GNU_verneed section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that cannot be represented
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    Link:  .dynstr
+    ShOffset: 0xFFFFFFFF
+## Triggers creation of the .dynstr.
+DynamicSymbols:
+  - Name: foo
+
+## Check that we report a warning when a SHT_GNU_verneed section contains a version dependency
+## that goes past the end of the section.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-readobj --sections -V %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=DEP-PAST-END
+# RUN: llvm-readelf --sections -V %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=DEP-PAST-END
+
+# DEP-PAST-END: warning: '[[FILE]]': invalid SHT_GNU_verneed section with index 1: version dependency 1 goes past the end of the section
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    Link:  .dynstr
+    ShSize: 0x1
+    Dependencies:
+      - Version: 1
+        File:    foo
+        Entries:
+          - Name:  'foo'
+            Hash:  0
+            Flags: 0
+            Other: 0
+DynamicSymbols:
+  - Name: foo
+
+## Check we report a warning when a version dependency is not correctly aligned in memory.
+
+# RUN: yaml2obj --docnum=9 %s -o %t9
+# RUN: llvm-readobj --sections -V %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=MISALIGNED-DEP
+# RUN: llvm-readelf --sections -V %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=MISALIGNED-DEP
+
+# MISALIGNED-DEP: warning: '[[FILE]]': invalid SHT_GNU_verneed section with index 1: found a misaligned version dependency entry at offset 0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Type: Fill
+    Size: 0x1
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    Link:  .dynstr
+    Dependencies:
+      - Version: 1
+        File:    foo
+        Entries:
+          - Name:  'foo'
+            Hash:  0
+            Flags: 0
+            Other: 0
+DynamicSymbols:
+  - Name: foo
+
+## Check that we report a warning when a SHT_GNU_verneed section contains a dependency definition
+## that refers to an auxiliary entry that goes past the end of the section.
+
+# RUN: yaml2obj --docnum=10 %s -o %t10
+# RUN: llvm-readobj --sections -V %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=AUX-PAST-END
+# RUN: llvm-readelf --sections -V %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=AUX-PAST-END
+
+# AUX-PAST-END: warning: '[[FILE]]': invalid SHT_GNU_verneed section with index 1: version dependency 1 refers to an auxiliary entry that goes past the end of the section
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    Link:  .dynstr
+    ShSize: 21
+    Dependencies:
+      - Version: 1
+        File:    foo
+        Entries:
+          - Name:  'foo'
+            Hash:  0
+            Flags: 0
+            Other: 0
+DynamicSymbols:
+  - Name: foo
+
+## Check we report a warning when an auxiliary entry is not correctly aligned in memory.
+
+# RUN: yaml2obj %s --docnum=11 -o %t11
+# RUN: llvm-readobj -V %t11 2>&1 | FileCheck %s --check-prefix=MISALIGNED-AUX -DFILE=%t11
+# RUN: llvm-readelf -V %t11 2>&1 | FileCheck %s --check-prefix=MISALIGNED-AUX -DFILE=%t11
+
+# MISALIGNED-AUX: warning: '[[FILE]]': invalid SHT_GNU_verneed section with index 1: found a misaligned auxiliary entry at offset 0x11
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    Link:  .dynstr
+## The byte offset to the auxiliary entry is 0x11, i.e. it is not correctly aligned in memory.
+    Content: "0100010001000000110000000000000000000000"
 DynamicSymbols:
   - Name: foo
