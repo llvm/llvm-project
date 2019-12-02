@@ -13,6 +13,12 @@
 # CHECK-LABEL: Name: .debug_types.dwo
 # CHECK-NEXT: Type: dwarf-types-dwo
 
+# CHECK-LABEL: Name: .debug_rnglists
+# CHECK-NEXT: Type: dwarf-rnglists
+
+# CHECK-LABEL: Name: .debug_rnglists.dwo
+# CHECK-NEXT: Type: dwarf-rnglists-dwo
+
 # CHECK-LABEL: Name: .debug_names
 # CHECK-NEXT: Type: dwarf-names
 
@@ -55,6 +61,14 @@ Sections:
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D
   - Name:            .debug_types.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_rnglists
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_rnglists.dwo
     Type:            SHT_PROGBITS
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D
