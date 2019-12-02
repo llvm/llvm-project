@@ -787,6 +787,76 @@ bool ObjectFilePECOFF::IsStripped() {
   return false;
 }
 
+SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
+                                             const section_header_t &sect) {
+  ConstString const_sect_name(sect_name);
+  static ConstString g_code_sect_name(".code");
+  static ConstString g_CODE_sect_name("CODE");
+  static ConstString g_data_sect_name(".data");
+  static ConstString g_DATA_sect_name("DATA");
+  static ConstString g_bss_sect_name(".bss");
+  static ConstString g_BSS_sect_name("BSS");
+
+  if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
+      ((const_sect_name == g_code_sect_name) ||
+       (const_sect_name == g_CODE_sect_name))) {
+    return eSectionTypeCode;
+  }
+  if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
+             ((const_sect_name == g_data_sect_name) ||
+              (const_sect_name == g_DATA_sect_name))) {
+    if (sect.size == 0 && sect.offset == 0)
+      return eSectionTypeZeroFill;
+    else
+      return eSectionTypeData;
+  }
+  if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
+             ((const_sect_name == g_bss_sect_name) ||
+              (const_sect_name == g_BSS_sect_name))) {
+    if (sect.size == 0)
+      return eSectionTypeZeroFill;
+    else
+      return eSectionTypeData;
+  }
+
+  SectionType section_type =
+      llvm::StringSwitch<SectionType>(sect_name)
+          .Case(".debug", eSectionTypeDebug)
+          .Case(".stabstr", eSectionTypeDataCString)
+          .Case(".reloc", eSectionTypeOther)
+          .Case(".debug_abbrev", eSectionTypeDWARFDebugAbbrev)
+          .Case(".debug_aranges", eSectionTypeDWARFDebugAranges)
+          .Case(".debug_frame", eSectionTypeDWARFDebugFrame)
+          .Case(".debug_info", eSectionTypeDWARFDebugInfo)
+          .Case(".debug_line", eSectionTypeDWARFDebugLine)
+          .Case(".debug_loc", eSectionTypeDWARFDebugLoc)
+          .Case(".debug_loclists", eSectionTypeDWARFDebugLocLists)
+          .Case(".debug_macinfo", eSectionTypeDWARFDebugMacInfo)
+          .Case(".debug_names", eSectionTypeDWARFDebugNames)
+          .Case(".debug_pubnames", eSectionTypeDWARFDebugPubNames)
+          .Case(".debug_pubtypes", eSectionTypeDWARFDebugPubTypes)
+          .Case(".debug_ranges", eSectionTypeDWARFDebugRanges)
+          .Case(".debug_str", eSectionTypeDWARFDebugStr)
+          .Case(".debug_types", eSectionTypeDWARFDebugTypes)
+          .Case(".eh_frame", eSectionTypeEHFrame)
+          .Case(".gosymtab", eSectionTypeGoSymtab)
+          .Default(eSectionTypeInvalid);
+  if (section_type != eSectionTypeInvalid)
+    return section_type;
+
+  if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_CODE)
+    return eSectionTypeCode;
+  if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA)
+    return eSectionTypeData;
+  if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA) {
+    if (sect.size == 0)
+      return eSectionTypeZeroFill;
+    else
+      return eSectionTypeData;
+  }
+  return eSectionTypeOther;
+}
+
 void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
   if (m_sections_up)
     return;
@@ -810,104 +880,9 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     const uint32_t nsects = m_sect_headers.size();
     ModuleSP module_sp(GetModule());
     for (uint32_t idx = 0; idx < nsects; ++idx) {
-      ConstString const_sect_name(GetSectionName(m_sect_headers[idx]));
-      static ConstString g_code_sect_name(".code");
-      static ConstString g_CODE_sect_name("CODE");
-      static ConstString g_data_sect_name(".data");
-      static ConstString g_DATA_sect_name("DATA");
-      static ConstString g_bss_sect_name(".bss");
-      static ConstString g_BSS_sect_name("BSS");
-      static ConstString g_debug_sect_name(".debug");
-      static ConstString g_reloc_sect_name(".reloc");
-      static ConstString g_stab_sect_name(".stab");
-      static ConstString g_stabstr_sect_name(".stabstr");
-      static ConstString g_sect_name_dwarf_debug_abbrev(".debug_abbrev");
-      static ConstString g_sect_name_dwarf_debug_aranges(".debug_aranges");
-      static ConstString g_sect_name_dwarf_debug_frame(".debug_frame");
-      static ConstString g_sect_name_dwarf_debug_info(".debug_info");
-      static ConstString g_sect_name_dwarf_debug_line(".debug_line");
-      static ConstString g_sect_name_dwarf_debug_loc(".debug_loc");
-      static ConstString g_sect_name_dwarf_debug_loclists(".debug_loclists");
-      static ConstString g_sect_name_dwarf_debug_macinfo(".debug_macinfo");
-      static ConstString g_sect_name_dwarf_debug_names(".debug_names");
-      static ConstString g_sect_name_dwarf_debug_pubnames(".debug_pubnames");
-      static ConstString g_sect_name_dwarf_debug_pubtypes(".debug_pubtypes");
-      static ConstString g_sect_name_dwarf_debug_ranges(".debug_ranges");
-      static ConstString g_sect_name_dwarf_debug_str(".debug_str");
-      static ConstString g_sect_name_dwarf_debug_types(".debug_types");
-      static ConstString g_sect_name_eh_frame(".eh_frame");
-      static ConstString g_sect_name_go_symtab(".gosymtab");
-      SectionType section_type = eSectionTypeOther;
-      if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
-          ((const_sect_name == g_code_sect_name) ||
-           (const_sect_name == g_CODE_sect_name))) {
-        section_type = eSectionTypeCode;
-      } else if (m_sect_headers[idx].flags &
-                     llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
-                 ((const_sect_name == g_data_sect_name) ||
-                  (const_sect_name == g_DATA_sect_name))) {
-        if (m_sect_headers[idx].size == 0 && m_sect_headers[idx].offset == 0)
-          section_type = eSectionTypeZeroFill;
-        else
-          section_type = eSectionTypeData;
-      } else if (m_sect_headers[idx].flags &
-                     llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
-                 ((const_sect_name == g_bss_sect_name) ||
-                  (const_sect_name == g_BSS_sect_name))) {
-        if (m_sect_headers[idx].size == 0)
-          section_type = eSectionTypeZeroFill;
-        else
-          section_type = eSectionTypeData;
-      } else if (const_sect_name == g_debug_sect_name) {
-        section_type = eSectionTypeDebug;
-      } else if (const_sect_name == g_stabstr_sect_name) {
-        section_type = eSectionTypeDataCString;
-      } else if (const_sect_name == g_reloc_sect_name) {
-        section_type = eSectionTypeOther;
-      } else if (const_sect_name == g_sect_name_dwarf_debug_abbrev)
-        section_type = eSectionTypeDWARFDebugAbbrev;
-      else if (const_sect_name == g_sect_name_dwarf_debug_aranges)
-        section_type = eSectionTypeDWARFDebugAranges;
-      else if (const_sect_name == g_sect_name_dwarf_debug_frame)
-        section_type = eSectionTypeDWARFDebugFrame;
-      else if (const_sect_name == g_sect_name_dwarf_debug_info)
-        section_type = eSectionTypeDWARFDebugInfo;
-      else if (const_sect_name == g_sect_name_dwarf_debug_line)
-        section_type = eSectionTypeDWARFDebugLine;
-      else if (const_sect_name == g_sect_name_dwarf_debug_loc)
-        section_type = eSectionTypeDWARFDebugLoc;
-      else if (const_sect_name == g_sect_name_dwarf_debug_loclists)
-        section_type = eSectionTypeDWARFDebugLocLists;
-      else if (const_sect_name == g_sect_name_dwarf_debug_macinfo)
-        section_type = eSectionTypeDWARFDebugMacInfo;
-      else if (const_sect_name == g_sect_name_dwarf_debug_names)
-        section_type = eSectionTypeDWARFDebugNames;
-      else if (const_sect_name == g_sect_name_dwarf_debug_pubnames)
-        section_type = eSectionTypeDWARFDebugPubNames;
-      else if (const_sect_name == g_sect_name_dwarf_debug_pubtypes)
-        section_type = eSectionTypeDWARFDebugPubTypes;
-      else if (const_sect_name == g_sect_name_dwarf_debug_ranges)
-        section_type = eSectionTypeDWARFDebugRanges;
-      else if (const_sect_name == g_sect_name_dwarf_debug_str)
-        section_type = eSectionTypeDWARFDebugStr;
-      else if (const_sect_name == g_sect_name_dwarf_debug_types)
-        section_type = eSectionTypeDWARFDebugTypes;
-      else if (const_sect_name == g_sect_name_eh_frame)
-        section_type = eSectionTypeEHFrame;
-      else if (const_sect_name == g_sect_name_go_symtab)
-        section_type = eSectionTypeGoSymtab;
-      else if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE) {
-        section_type = eSectionTypeCode;
-      } else if (m_sect_headers[idx].flags &
-                 llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA) {
-        section_type = eSectionTypeData;
-      } else if (m_sect_headers[idx].flags &
-                 llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA) {
-        if (m_sect_headers[idx].size == 0)
-          section_type = eSectionTypeZeroFill;
-        else
-          section_type = eSectionTypeData;
-      }
+      llvm::StringRef sect_name = GetSectionName(m_sect_headers[idx]);
+      ConstString const_sect_name(sect_name);
+      SectionType section_type = GetSectionType(sect_name, m_sect_headers[idx]);
 
       SectionSP section_sp(new Section(
           module_sp,       // Module to which this section belongs
