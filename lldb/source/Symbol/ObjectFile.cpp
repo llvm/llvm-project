@@ -360,6 +360,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeDWARFDebugPubTypes:
           case eSectionTypeDWARFDebugRanges:
           case eSectionTypeDWARFDebugRngLists:
+          case eSectionTypeDWARFDebugRngListsDwo:
           case eSectionTypeDWARFDebugStr:
           case eSectionTypeDWARFDebugStrDwo:
           case eSectionTypeDWARFDebugStrOffsets:

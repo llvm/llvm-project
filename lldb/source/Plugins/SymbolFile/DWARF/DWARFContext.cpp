@@ -81,7 +81,8 @@ const DWARFDataExtractor &DWARFContext::getOrLoadRangesData() {
 }
 
 const DWARFDataExtractor &DWARFContext::getOrLoadRngListsData() {
-  return LoadOrGetSection(eSectionTypeDWARFDebugRngLists, llvm::None,
+  return LoadOrGetSection(eSectionTypeDWARFDebugRngLists,
+                          eSectionTypeDWARFDebugRngListsDwo,
                           m_data_debug_rnglists);
 }
 
