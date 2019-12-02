@@ -1443,6 +1443,9 @@ bool ArchSpec::IsAlwaysThumbInstructions() const {
         GetCore() == ArchSpec::Core::eCore_thumbv6m) {
       return true;
     }
+    // Windows on ARM is always thumb.
+    if (GetTriple().isOSWindows())
+      return true;
   }
   return false;
 }
