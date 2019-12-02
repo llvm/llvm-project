@@ -709,7 +709,10 @@ void bar(X *x) {
 
   auto Parsed = TU.build();
   for (const auto &D : Parsed.getDiagnostics()) {
-    EXPECT_EQ(D.Fixes.size(), 1u);
+    if (D.Fixes.size() != 1) {
+      ADD_FAILURE() << "D.Fixes.size() != 1";
+      continue;
+    }
     EXPECT_EQ(D.Fixes[0].Message,
               std::string("Add include \"a.h\" for symbol X"));
   }
