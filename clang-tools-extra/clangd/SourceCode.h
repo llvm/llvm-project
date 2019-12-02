@@ -223,6 +223,9 @@ struct Edit {
   /// Checks whether the Replacements are applicable to given Code.
   bool canApplyTo(llvm::StringRef Code) const;
 };
+/// A mapping from absolute file path (the one used for accessing the underlying
+/// VFS) to edits.
+using FileEdits = llvm::StringMap<Edit>;
 
 /// Formats the edits and code around it according to Style. Changes
 /// Replacements to formatted ones if succeeds.

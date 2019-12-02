@@ -77,9 +77,7 @@ public:
   struct Effect {
     /// A message to be displayed to the user.
     llvm::Optional<std::string> ShowMessage;
-    /// A mapping from file path(the one used for accessing the underlying VFS)
-    /// to edits.
-    llvm::StringMap<Edit> ApplyEdits;
+    FileEdits ApplyEdits;
 
     static Effect showMessage(StringRef S) {
       Effect E;
