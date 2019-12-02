@@ -117,51 +117,60 @@ public:
 
   using MemAccessInfo = PointerIntPair<const Value *, 1, bool>;
 
+  // Struct to store data about a race.
   struct RaceData {
-    // const Value *Ptr = nullptr;
     MemAccessInfo Access = { nullptr, false };
     unsigned OperandNum = static_cast<unsigned>(-1);
     RaceType Type = RaceType::None;
+    GeneralAccess Racer;
 
-    RaceData() {}
-    RaceData(MemAccessInfo Access, unsigned OperandNum, const RaceType RT)
-        : Access(Access), OperandNum(OperandNum), Type(RT) {}
+    RaceData() = default;
+    RaceData(MemAccessInfo Access, unsigned OperandNum, const RaceType RT,
+             GeneralAccess Racer = GeneralAccess())
+        : Access(Access), OperandNum(OperandNum), Type(RT),
+          Racer(Racer) {}
 
     const Value *getPtr() const { return Access.getPointer(); }
   };
 
-  // using ResultTy = DenseMap<const Instruction *, RaceType>;
+  // Map to store race results.
   struct ResultTy :
     public DenseMap<const Instruction *, SmallVector<RaceData, 4>> {
 
     void recordRace(const Instruction *I, MemAccessInfo Access,
-                    unsigned OperandNum, const RaceType RT) {
+                    unsigned OperandNum, const RaceType RT,
+                    const GeneralAccess &Racer) {
       if (!count(I)) {
-        (*this)[I].push_back(RaceData(Access, OperandNum, RT));
+        (*this)[I].push_back(RaceData(Access, OperandNum, RT, Racer));
         return;
       }
       for (RaceData &RD : (*this)[I])
-        if ((RD.Access == Access) && (RD.OperandNum == OperandNum)) {
+        if ((RD.Access == Access) && (RD.OperandNum == OperandNum) &&
+            (RD.Racer == Racer)) {
           RD.Type = unionRaceTypes(RD.Type, RT);
           return;
         }
-      (*this)[I].push_back(RaceData(Access, OperandNum, RT));
+      (*this)[I].push_back(RaceData(Access, OperandNum, RT, Racer));
     }
-    void recordLocalRace(const GeneralAccess &GA) {
+    void recordLocalRace(const GeneralAccess &GA,
+                         const GeneralAccess &Racer) {
       recordRace(GA.I, MemAccessInfo(GA.getPtr(), GA.isMod()), GA.OperandNum,
-                 RaceType::Local);
+                 RaceType::Local, Racer);
     }
-    void recordRaceViaAncestorRef(const GeneralAccess &GA) {
+    void recordRaceViaAncestorRef(const GeneralAccess &GA,
+                                  const GeneralAccess &Racer) {
       recordRace(GA.I, MemAccessInfo(GA.getPtr(), GA.isMod()), GA.OperandNum,
-                 RaceType::ViaAncestorRef);
+                 RaceType::ViaAncestorRef, Racer);
     }
-    void recordRaceViaAncestorMod(const GeneralAccess &GA) {
+    void recordRaceViaAncestorMod(const GeneralAccess &GA,
+                                  const GeneralAccess &Racer) {
       recordRace(GA.I, MemAccessInfo(GA.getPtr(), GA.isMod()), GA.OperandNum,
-                 RaceType::ViaAncestorMod);
+                 RaceType::ViaAncestorMod, Racer);
     }
-    void recordOpaqueRace(const GeneralAccess &GA) {
+    void recordOpaqueRace(const GeneralAccess &GA,
+                          const GeneralAccess &Racer) {
       recordRace(GA.I, MemAccessInfo(GA.getPtr(), GA.isMod()), GA.OperandNum,
-                 RaceType::Opaque);
+                 RaceType::Opaque, Racer);
     }
 
     RaceType getRaceType(const Instruction *I) const {

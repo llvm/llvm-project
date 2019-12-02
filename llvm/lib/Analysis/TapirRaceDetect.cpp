@@ -236,7 +236,8 @@ private:
                              unsigned MaxUsesToExplore) const;
 
   void recordLocalRace(const GeneralAccess &GA, RaceInfo::ResultTy &Result,
-                       RaceInfo::ObjectMRTy &ObjectMRForRace);
+                       RaceInfo::ObjectMRTy &ObjectMRForRace,
+                       const GeneralAccess &Competitor);
   const DataLayout &DL;
   DominatorTree &DT;
   TaskInfo &TI;
@@ -288,7 +289,7 @@ static bool checkInstructionForRace(const Instruction *I,
       isa<AnyMemSetInst>(I) || isa<AnyMemTransferInst>(I))
     return true;
 
-  if (isa<CallBase>(I)) {
+  if (const CallBase *Call = dyn_cast<CallBase>(I)) {
     // Ignore debug info intrinsics
     if (isa<DbgInfoIntrinsic>(I))
       return false;
@@ -318,7 +319,6 @@ static bool checkInstructionForRace(const Instruction *I,
     // We can assume allocation functions are safe.
     if (AssumeSafeMalloc && isAllocationFn(I, TLI)) {
       // Check if this is a realloc, because we have to handle those specially.
-      const CallBase *Call = cast<CallBase>(I);
       LibFunc F;
       bool FoundLibFunc = TLI->getLibFunc(*Call->getCalledFunction(), F);
       if (FoundLibFunc && ((F == LibFunc_realloc || F == LibFunc_reallocf)))
@@ -329,7 +329,7 @@ static bool checkInstructionForRace(const Instruction *I,
     // If this call occurs in a termination block of the program, ignore it.
     if (IgnoreTerminationCalls &&
         isa<UnreachableInst>(I->getParent()->getTerminator())) {
-      const Function *CF = cast<CallBase>(I)->getCalledFunction();
+      const Function *CF = Call->getCalledFunction();
       // If this is an ordinary function call in a terminating block, ignore it.
       if (!CF->hasFnAttribute(Attribute::NoReturn))
         return false;
@@ -1049,8 +1049,9 @@ static void setObjectMRForRace(RaceInfo::ObjectMRTy &ObjectMRForRace,
 
 void AccessPtrAnalysis::recordLocalRace(const GeneralAccess &GA,
                                         RaceInfo::ResultTy &Result,
-                                        RaceInfo::ObjectMRTy &ObjectMRForRace) {
-  Result.recordLocalRace(GA);
+                                        RaceInfo::ObjectMRTy &ObjectMRForRace,
+                                        const GeneralAccess &Racer) {
+  Result.recordLocalRace(GA, Racer);
 
   if (!GA.getPtr())
     return;
@@ -1064,12 +1065,25 @@ void AccessPtrAnalysis::recordLocalRace(const GeneralAccess &GA,
 
 static void recordAncestorRace(const GeneralAccess &GA, const Value *Ptr,
                                RaceInfo::ResultTy &Result,
-                               RaceInfo::ObjectMRTy &ObjectMRForRace) {
+                               RaceInfo::ObjectMRTy &ObjectMRForRace,
+                               const GeneralAccess &Racer = GeneralAccess()) {
   if (GA.isMod()) {
-    Result.recordRaceViaAncestorRef(GA);
+    Result.recordRaceViaAncestorRef(GA, Racer);
     setObjectMRForRace(ObjectMRForRace, Ptr, ModRefInfo::Ref);
   }
-  Result.recordRaceViaAncestorMod(GA);
+  Result.recordRaceViaAncestorMod(GA, Racer);
+  setObjectMRForRace(ObjectMRForRace, Ptr, ModRefInfo::Mod);
+}
+
+static void recordOpaqueRace(const GeneralAccess &GA, const Value *Ptr,
+                             RaceInfo::ResultTy &Result,
+                             RaceInfo::ObjectMRTy &ObjectMRForRace,
+                             const GeneralAccess &Racer = GeneralAccess()) {
+  if (GA.isMod()) {
+    Result.recordOpaqueRace(GA, Racer);
+    setObjectMRForRace(ObjectMRForRace, Ptr, ModRefInfo::Ref);
+  }
+  Result.recordOpaqueRace(GA, Racer);
   setObjectMRForRace(ObjectMRForRace, Ptr, ModRefInfo::Mod);
 }
 
@@ -1123,8 +1137,8 @@ void AccessPtrAnalysis::evaluateMaybeParallelAccesses(
   if (LocalRace) {
     LLVM_DEBUG(dbgs() << "Local race found:\n"
                << "  I1 =" << *GA1.I << "\n  I2 =" << *GA2.I << "\n");
-    recordLocalRace(GA1, Result, ObjectMRForRace);
-    recordLocalRace(GA2, Result, ObjectMRForRace);
+    recordLocalRace(GA1, Result, ObjectMRForRace, GA2);
+    recordLocalRace(GA2, Result, ObjectMRForRace, GA1);
   }
 }
 
@@ -1151,16 +1165,16 @@ void AccessPtrAnalysis::checkForRacesHelper(
          depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
     LLVM_DEBUG(dbgs() << "Testing Spindle@" << S->getEntry()->getName()
                << "\n");
-    for (GeneralAccess GA1 : SpindleAccessMap[S]) {
-      if (GA1.getPtr()) {
+    for (GeneralAccess GA : SpindleAccessMap[S]) {
+      if (GA.getPtr()) {
         LLVM_DEBUG({
-            dbgs() << "GA1 Underlying objects:\n";
-            for (Value *Obj : AccessToObjs[MemAccessInfo(GA1.getPtr(),
-                                                         GA1.isMod())])
+            dbgs() << "GA Underlying objects:\n";
+            for (Value *Obj : AccessToObjs[MemAccessInfo(GA.getPtr(),
+                                                         GA.isMod())])
               dbgs() << "    " << *Obj << "\n";
           });
-        for (Value *Obj : AccessToObjs[MemAccessInfo(GA1.getPtr(),
-                                                     GA1.isMod())]) {
+        for (Value *Obj : AccessToObjs[MemAccessInfo(GA.getPtr(),
+                                                     GA.isMod())]) {
           if (isa<AllocaInst>(Obj))
             // Races on alloca'd objects are checked locally.
             continue;
@@ -1178,9 +1192,9 @@ void AccessPtrAnalysis::checkForRacesHelper(
 
             // Otherwise record the possible race with an ancestor.
             LLVM_DEBUG(dbgs() << "Setting race via ancestor:\n"
-                       << "  GA.I: " << *GA1.I << "\n"
+                       << "  GA.I: " << *GA.I << "\n"
                        << "  Arg: " << *A << "\n");
-            recordAncestorRace(GA1, A, Result, ObjectMRForRace);
+            recordAncestorRace(GA, A, Result, ObjectMRForRace);
             continue;
           }
 
@@ -1191,20 +1205,20 @@ void AccessPtrAnalysis::checkForRacesHelper(
             if (!GV->hasPrivateLinkage() && !GV->hasInternalLinkage()) {
               // Races are only possible with ancestor functions in this module.
               LLVM_DEBUG(dbgs() << "Setting race via private/internal global:\n"
-                         << "  GA.I: " << *GA1.I << "\n"
+                         << "  GA.I: " << *GA.I << "\n"
                          << "  GV: " << *GV << "\n");
               // TODO: Add suppressions for private and internal global
               // variables, then record this as a potential ancestor race
               // instead of an opaque race
               //
-              // recordAncestorRace(GA1, GV, Result, ObjectMRForRace);
-              Result.recordOpaqueRace(GA1);
+              // recordAncestorRace(GA, GV, Result, ObjectMRForRace);
+              recordOpaqueRace(GA, GV, Result, ObjectMRForRace);
             } else {
               // Record the possible opaque race.
               LLVM_DEBUG(dbgs() << "Setting opaque race:\n"
-                         << "  GA.I: " << *GA1.I << "\n"
+                         << "  GA.I: " << *GA.I << "\n"
                          << "  GV: " << *GV << "\n");
-              Result.recordOpaqueRace(GA1);
+              recordOpaqueRace(GA, GV, Result, ObjectMRForRace);
             }
             continue;
           }
@@ -1212,9 +1226,9 @@ void AccessPtrAnalysis::checkForRacesHelper(
           if (isa<ConstantExpr>(Obj)) {
             // Record the possible opaque race.
             LLVM_DEBUG(dbgs() << "Setting opaque race:\n"
-                       << "  GA.I: " << *GA1.I << "\n"
+                       << "  GA.I: " << *GA.I << "\n"
                        << "  Obj: " << *Obj << "\n");
-            Result.recordOpaqueRace(GA1);
+            recordOpaqueRace(GA, Obj, Result, ObjectMRForRace);
             continue;
           }
 
@@ -1224,15 +1238,15 @@ void AccessPtrAnalysis::checkForRacesHelper(
 
           // Record the possible opaque race.
           LLVM_DEBUG(dbgs() << "Setting opaque race:\n"
-                     << "  GA.I: " << *GA1.I << "\n"
+                     << "  GA.I: " << *GA.I << "\n"
                      << "  Obj: " << *Obj << "\n");
-          Result.recordOpaqueRace(GA1);
+          recordOpaqueRace(GA, Obj, Result, ObjectMRForRace);
         }
       }
     }
     for (const Task *MPT : MPTasks.TaskList[S]) {
-      LLVM_DEBUG(dbgs() << "Testing against Task@"
-                 << MPT->getEntry()->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "Testing against Task@" << MPT->getEntry()->getName()
+                 << "\n");
       for (const Task *SubMPT : depth_first(MPT))
         for (GeneralAccess GA1 : SpindleAccessMap[S])
           for (GeneralAccess GA2 : TaskAccessMap[SubMPT])
@@ -1430,8 +1444,8 @@ void RTPtrCheckAnalysis::collectStridedAccess(Value *MemAccess) {
   else
     CastedBECount = SE->getZeroExtendExpr(BETakenCount, StrideExpr->getType());
   const SCEV *StrideMinusBETaken = SE->getMinusSCEV(CastedStride, CastedBECount);
-  // Since TripCount == BackEdgeTakenCount + 1, checking:
-  // "Stride >= TripCount" is equivalent to checking:
+  // Since TripCount == BackEdgeTakenCount + 1, checking
+  // Stride >= TripCount is equivalent to checking
   // Stride - BETakenCount > 0
   if (SE->isKnownPositive(StrideMinusBETaken)) {
     LLVM_DEBUG(
@@ -1818,8 +1832,9 @@ void AccessPtrAnalysis::processAccessPtrs(
               !(AssumeSafeMalloc && (isAllocationFn(Call, TLI) ||
                                      isFreeCall(Call, TLI)))) {
             LLVM_DEBUG(dbgs() << "Setting opaque race:\n" << "  GA.I: "
-                       << *GA.I << "\n");
-            Result.recordOpaqueRace(GA);
+                       << *GA.I << "\n"
+                       << "  no explicit racer\n");
+            Result.recordOpaqueRace(GA, GeneralAccess());
           }
         }
       }
@@ -1836,15 +1851,13 @@ void AccessPtrAnalysis::processAccessPtrs(
           Argument *Arg = cast<Argument>(ArgPtr);
           if (isModSet(MRI) && !Arg->onlyReadsMemory()) {
             LLVM_DEBUG(dbgs() << "  Mod is set.\n");
-            // recordAncestorRace(GA, ArgPtr, Result, ObjectMRForRace);
-            Result.recordRaceViaAncestorRef(GA);
-            Result.recordRaceViaAncestorMod(GA);
+            Result.recordRaceViaAncestorRef(GA, GeneralAccess());
+            Result.recordRaceViaAncestorMod(GA, GeneralAccess());
             setObjectMRForRace(ObjectMRForRace, ArgPtr, ModRefInfo::ModRef);
           }
           if (isRefSet(MRI)) {
             LLVM_DEBUG(dbgs() << "  Ref is set.\n");
-            // recordAncestorRace(GA, ArgPtr, Result, ObjectMRForRace);
-            Result.recordRaceViaAncestorMod(GA);
+            Result.recordRaceViaAncestorMod(GA, GeneralAccess());
             setObjectMRForRace(ObjectMRForRace, ArgPtr, ModRefInfo::Mod);
           }
         } else {
@@ -1853,15 +1866,13 @@ void AccessPtrAnalysis::processAccessPtrs(
             Argument *Arg = cast<Argument>(ArgPtr);
             if (GA.isMod() && !Arg->onlyReadsMemory()) {
               LLVM_DEBUG(dbgs() << "  Mod is set.\n");
-              // recordAncestorRace(GA, ArgPtr, Result, ObjectMRForRace);
-              Result.recordRaceViaAncestorRef(GA);
-              Result.recordRaceViaAncestorMod(GA);
+              Result.recordRaceViaAncestorRef(GA, GeneralAccess());
+              Result.recordRaceViaAncestorMod(GA, GeneralAccess());
               setObjectMRForRace(ObjectMRForRace, ArgPtr, ModRefInfo::ModRef);
             }
             if (GA.isRef()) {
               LLVM_DEBUG(dbgs() << "  Ref is set.\n");
-              // recordAncestorRace(GA, ArgPtr, Result, ObjectMRForRace);
-              Result.recordRaceViaAncestorMod(GA);
+              Result.recordRaceViaAncestorMod(GA, GeneralAccess());
               setObjectMRForRace(ObjectMRForRace, ArgPtr, ModRefInfo::Mod);
             }
           }
@@ -1931,6 +1942,26 @@ void RaceInfo::print(raw_ostream &OS) const {
         OS << "    null";
       OS << "\n    ";
       printRaceType(RD.Type, OS);
+      if (RD.Racer.isValid()) {
+        OS << "\n    Racer:";
+        OS << "\n      I = " << *RD.Racer.I;
+        OS << "\n      Loc = ";
+        if (!RD.Racer.Loc)
+          OS << "nullptr";
+        else if (RD.Racer.Loc->Ptr == RD.getPtr())
+          OS << "same pointer";
+        else
+          OS << *RD.Racer.Loc->Ptr;
+        OS << "\n      OperandNum = ";
+        if (RD.Racer.OperandNum == static_cast<unsigned>(-1))
+          OS << "none";
+        else
+          OS << RD.Racer.OperandNum;
+        OS << "\n      ModRef = " << (RD.Racer.isMod() ? "Mod " : "")
+           << (RD.Racer.isRef() ? "Ref" : "");
+      }
+      else
+        OS << "\n    Opaque racer";
       OS << "\n";
     }
   }
