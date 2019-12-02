@@ -321,7 +321,9 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
           return make_error<JITLinkError>("Anonymous external symbol at "
                                           "index " +
                                           Twine(KV.first));
-        NSym.GraphSymbol = &G->addExternalSymbol(*NSym.Name, 0);
+        NSym.GraphSymbol = &G->addExternalSymbol(
+            *NSym.Name, 0,
+            NSym.Desc & MachO::N_WEAK_REF ? Linkage::Weak : Linkage::Strong);
       }
       break;
     case MachO::N_ABS:

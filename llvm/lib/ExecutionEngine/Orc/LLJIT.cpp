@@ -56,7 +56,9 @@ Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
 
 Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
                                                         StringRef Name) {
-  return ES->lookup(JITDylibSearchList({{&JD, true}}), ES->intern(Name));
+  return ES->lookup(
+      makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols),
+      ES->intern(Name));
 }
 
 std::unique_ptr<ObjectLayer>
