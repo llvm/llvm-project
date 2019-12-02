@@ -1874,7 +1874,10 @@ TEST(CompletionTest, CompletionTokenRange) {
     Annotations TestCode(Text);
     auto Results = completions(Server, TestCode.code(), TestCode.point());
 
-    EXPECT_EQ(Results.Completions.size(), 1u);
+    if (Results.Completions.size() != 1) {
+      ADD_FAILURE() << "Results.Completions.size() != 1";
+      continue;
+    }
     EXPECT_THAT(Results.Completions.front().CompletionTokenRange,
                 TestCode.range());
   }
