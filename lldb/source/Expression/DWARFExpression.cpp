@@ -146,7 +146,7 @@ void DWARFExpression::GetDescription(Stream *s, lldb::DescriptionLevel level,
           // We have a new base address
           if (count > 0)
             s->PutCString(", ");
-          *s << "base_addr = " << end_addr_offset;
+          s->Format("base_addr = {0:x}", end_addr_offset);
         }
       }
 
