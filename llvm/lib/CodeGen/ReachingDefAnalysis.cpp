@@ -194,9 +194,19 @@ MachineInstr* ReachingDefAnalysis::getReachingMIDef(MachineInstr *MI, int PhysRe
   return getInstFromId(MI->getParent(), getReachingDef(MI, PhysReg));
 }
 
+bool ReachingDefAnalysis::hasSameReachingDef(MachineInstr *A, MachineInstr *B,
+                                             int PhysReg) {
+  MachineBasicBlock *ParentA = A->getParent();
+  MachineBasicBlock *ParentB = B->getParent();
+  if (ParentA != ParentB)
+    return false;
+
+  return getReachingDef(A, PhysReg) == getReachingDef(B, PhysReg);
+}
+
 MachineInstr *ReachingDefAnalysis::getInstFromId(MachineBasicBlock *MBB,
                                                  int InstId) {
-  assert(MBB->getNumber() < MBBReachingDefs.size() &&
+  assert(static_cast<size_t>(MBB->getNumber()) < MBBReachingDefs.size() &&
          "Unexpected basic block number.");
   assert(InstId < static_cast<int>(MBB->size()) &&
          "Unexpected instruction id.");
@@ -216,14 +226,31 @@ int ReachingDefAnalysis::getClearance(MachineInstr *MI, MCPhysReg PhysReg) {
   return InstIds[MI] - getReachingDef(MI, PhysReg);
 }
 
-bool ReachingDefAnalysis::hasSameReachingDef(MachineInstr *A, MachineInstr *B,
-                                             int PhysReg) {
-  MachineBasicBlock *ParentA = A->getParent();
-  MachineBasicBlock *ParentB = B->getParent();
-  if (ParentA != ParentB)
-    return false;
+void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, int PhysReg,
+                                        SmallVectorImpl<MachineInstr*> &Uses) {
+  MachineBasicBlock *MBB = Def->getParent();
+  MachineBasicBlock::iterator MI = MachineBasicBlock::iterator(Def);
+  while (++MI != MBB->end()) {
+    for (auto &MO : MI->operands()) {
+      if (!MO.isReg() || !MO.isUse() || MO.getReg() != PhysReg)
+        continue;
 
-  return getReachingDef(A, PhysReg) == getReachingDef(B, PhysReg);
+      // If/when we find a new reaching def, we know that there's no more uses
+      // of 'Def'.
+      if (getReachingMIDef(&*MI, PhysReg) != Def)
+        return;
+
+      Uses.push_back(&*MI);
+      if (MO.isKill())
+        return;
+    }
+  }
+}
+
+unsigned ReachingDefAnalysis::getNumUses(MachineInstr *Def, int PhysReg) {
+  SmallVector<MachineInstr*, 4> Uses;
+  getReachingLocalUses(Def, PhysReg, Uses);
+  return Uses.size();
 }
 
 bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI, int PhysReg) {
