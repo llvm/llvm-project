@@ -690,7 +690,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSQRT,        MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f128, LibCall);
 
-    setOperationAction(ISD::FP_EXTEND, MVT::f128, Custom);
+    setOperationAction(ISD::FP_EXTEND,        MVT::f128, Custom);
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f128, Custom);
     // We need to custom handle any FP_ROUND with an f128 input, but
     // LegalizeDAG uses the result type to know when to run a custom handler.
     // So we have to list all legal floating point result types here.
@@ -19714,9 +19715,11 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
+  bool IsStrict = Op->isStrictFPOpcode();
+
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
-  SDValue In = Op.getOperand(0);
+  SDValue In = Op.getOperand(IsStrict ? 1 : 0);
   MVT SVT = In.getSimpleValueType();
 
   if (VT == MVT::f128) {
@@ -19725,6 +19728,8 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   }
 
   assert(SVT == MVT::v2f32 && "Only customize MVT::v2f32 type legalization!");
+  // FIXME: Strict fp.
+  assert(!IsStrict && "Strict FP not supported yet!");
 
   return DAG.getNode(X86ISD::VFPEXT, DL, VT,
                      DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4f32,
@@ -19732,8 +19737,10 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
+  bool IsStrict = Op->isStrictFPOpcode();
+
   MVT VT = Op.getSimpleValueType();
-  SDValue In = Op.getOperand(0);
+  SDValue In = Op.getOperand(IsStrict ? 1 : 0);
   MVT SVT = In.getSimpleValueType();
 
   // It's legal except when f128 is involved
@@ -19745,17 +19752,17 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   // FP_ROUND node has a second operand indicating whether it is known to be
   // precise. That doesn't take part in the LibCall so we can't directly use
   // LowerF128Call.
-  MakeLibCallOptions CallOptions;
-  return makeLibCall(DAG, LC, VT, In, CallOptions, SDLoc(Op)).first;
-}
 
-// FIXME: This is a hack to allow FP_ROUND to be marked Custom without breaking
-// the default expansion of STRICT_FP_ROUND.
-static SDValue LowerSTRICT_FP_ROUND(SDValue Op, SelectionDAG &DAG) {
-  // FIXME: Need to form a libcall with an input chain for f128.
-  assert(Op.getOperand(0).getValueType() != MVT::f128 &&
-         "Don't know how to handle f128 yet!");
-  return Op;
+  SDLoc dl(Op);
+  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+  MakeLibCallOptions CallOptions;
+  std::pair<SDValue, SDValue> Tmp = makeLibCall(DAG, LC, VT, In, CallOptions,
+                                                dl, Chain);
+
+  if (IsStrict)
+    return DAG.getMergeValues({ Tmp.first, Tmp.second }, dl);
+
+  return Tmp.first;
 }
 
 /// Depending on uarch and/or optimizing for size, we might prefer to use a
@@ -27773,9 +27780,21 @@ SDValue X86TargetLowering::LowerGC_TRANSITION_END(SDValue Op,
 
 SDValue X86TargetLowering::LowerF128Call(SDValue Op, SelectionDAG &DAG,
                                          RTLIB::Libcall Call) const {
-  SmallVector<SDValue, 2> Ops(Op->op_begin(), Op->op_end());
+
+  bool IsStrict = Op->isStrictFPOpcode();
+  unsigned Offset = IsStrict ? 1 : 0;
+  SmallVector<SDValue, 2> Ops(Op->op_begin() + Offset, Op->op_end());
+
+  SDLoc dl(Op);
+  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
   MakeLibCallOptions CallOptions;
-  return makeLibCall(DAG, Call, MVT::f128, Ops, CallOptions, SDLoc(Op)).first;
+  std::pair<SDValue, SDValue> Tmp = makeLibCall(DAG, Call, MVT::f128, Ops,
+                                                CallOptions, dl, Chain);
+
+  if (IsStrict)
+    return DAG.getMergeValues({ Tmp.first, Tmp.second }, dl);
+
+  return Tmp.first;
 }
 
 /// Provide custom lowering hooks for some operations.
@@ -27825,9 +27844,10 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::STRICT_FP_TO_UINT:  return LowerFP_TO_INT(Op, DAG);
-  case ISD::FP_EXTEND:          return LowerFP_EXTEND(Op, DAG);
-  case ISD::FP_ROUND:           return LowerFP_ROUND(Op, DAG);
-  case ISD::STRICT_FP_ROUND:    return LowerSTRICT_FP_ROUND(Op, DAG);
+  case ISD::FP_EXTEND:
+  case ISD::STRICT_FP_EXTEND:   return LowerFP_EXTEND(Op, DAG);
+  case ISD::FP_ROUND:
+  case ISD::STRICT_FP_ROUND:    return LowerFP_ROUND(Op, DAG);
   case ISD::LOAD:               return LowerLoad(Op, Subtarget, DAG);
   case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
   case ISD::FADD:
