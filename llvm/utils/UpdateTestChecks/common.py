@@ -61,7 +61,7 @@ def invoke_tool(exe, cmd_args, ir):
 RUN_LINE_RE = re.compile(r'^\s*(?://|[;#])\s*RUN:\s*(.*)$')
 CHECK_PREFIX_RE = re.compile(r'--?check-prefix(?:es)?[= ](\S+)')
 PREFIX_RE = re.compile('^[a-zA-Z0-9_-]+$')
-CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL|-SAME)?:')
+CHECK_RE = re.compile(r'^\s*(?://|[;#])\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL|-SAME)?:')
 
 OPT_FUNCTION_RE = re.compile(
     r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*'
