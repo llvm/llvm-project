@@ -142,7 +142,7 @@ TEST(CodeMoverUtils, BasicTest) {
         EXPECT_FALSE(isSafeToMoveBefore(*SI_A5, *Entry->getTerminator(), DT, PDT, DI));
 
         // Moving PHINode is not supported.
-        EXPECT_FALSE(isSafeToMoveBefore(PN, *PN.getPrevNode(), DT, PDT, DI));
+        EXPECT_FALSE(isSafeToMoveBefore(PN, *PN.getNextNode()->getNextNode(), DT, PDT, DI));
 
         // Cannot move non-PHINode before PHINode.
         EXPECT_FALSE(isSafeToMoveBefore(*PN.getNextNode(), PN, DT, PDT, DI));
