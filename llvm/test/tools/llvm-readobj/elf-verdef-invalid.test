@@ -235,7 +235,7 @@ DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
-## Check how we handle the case when a version definition entry has an unsupported version.
+## Check how we handle a version definition entry with an unsupported version.
 
 # RUN: yaml2obj %s --docnum=9 -o %t9
 # RUN: llvm-readobj -V %t9 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-VERSION -DFILE=%t9
