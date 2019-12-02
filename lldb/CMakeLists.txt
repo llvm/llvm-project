@@ -153,7 +153,8 @@ if (NOT LLDB_DISABLE_PYTHON)
           "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/Logger.py")
 
   create_python_package("utils"
-    FILES "${LLDB_SOURCE_DIR}/examples/python/symbolication.py")
+    FILES "${LLDB_SOURCE_DIR}/examples/python/in_call_stack.py"
+          "${LLDB_SOURCE_DIR}/examples/python/symbolication.py")
 
   if(APPLE)
     create_python_package("macosx"
