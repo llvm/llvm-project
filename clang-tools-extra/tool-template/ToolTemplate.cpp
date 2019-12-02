@@ -44,7 +44,6 @@
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 
@@ -89,7 +88,7 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static cl::OptionCategory ToolTemplateCategory("tool-template options");
 
 int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
       argc, argv, ToolTemplateCategory);

@@ -36,7 +36,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -296,7 +295,8 @@ static StringRef ExceptionCodeToString(DWORD ExceptionCode) {
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  llvm::InitLLVM X(argc, argv);
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
   ToolName = argv[0];
