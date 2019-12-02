@@ -13,8 +13,8 @@ define void @foo_v4i32_v4i32(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i32> *%src
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i32> @llvm.masked.load.v4i32(<4 x i32>* %src, i32 4, <4 x i1> %1, <4 x i32> undef)
-  call void @llvm.masked.store.v4i32(<4 x i32> %2, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  %2 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %src, i32 4, <4 x i1> %1, <4 x i32> undef)
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %2, <4 x i32>* %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
@@ -29,9 +29,9 @@ define void @foo_sext_v4i32_v4i8(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i8> *%
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i8> @llvm.masked.load.v4i8(<4 x i8>* %src, i32 1, <4 x i1> %1, <4 x i8> undef)
+  %2 = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %src, i32 1, <4 x i1> %1, <4 x i8> undef)
   %3 = sext <4 x i8> %2 to <4 x i32>
-  call void @llvm.masked.store.v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
@@ -46,9 +46,9 @@ define void @foo_sext_v4i32_v4i16(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i16> 
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i16> @llvm.masked.load.v4i16(<4 x i16>* %src, i32 2, <4 x i1> %1, <4 x i16> undef)
+  %2 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %src, i32 2, <4 x i1> %1, <4 x i16> undef)
   %3 = sext <4 x i16> %2 to <4 x i32>
-  call void @llvm.masked.store.v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
@@ -63,9 +63,9 @@ define void @foo_zext_v4i32_v4i8(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i8> *%
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i8> @llvm.masked.load.v4i8(<4 x i8>* %src, i32 1, <4 x i1> %1, <4 x i8> undef)
+  %2 = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %src, i32 1, <4 x i1> %1, <4 x i8> undef)
   %3 = zext <4 x i8> %2 to <4 x i32>
-  call void @llvm.masked.store.v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
@@ -80,9 +80,9 @@ define void @foo_zext_v4i32_v4i16(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i16> 
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i16> @llvm.masked.load.v4i16(<4 x i16>* %src, i32 2, <4 x i1> %1, <4 x i16> undef)
+  %2 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %src, i32 2, <4 x i1> %1, <4 x i16> undef)
   %3 = zext <4 x i16> %2 to <4 x i32>
-  call void @llvm.masked.store.v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
@@ -234,9 +234,9 @@ define void @foo_sext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 entry:
   %0 = load <2 x i32>, <2 x i32>* %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer
-  %2 = call <2 x i32> @llvm.masked.load.v2i32(<2 x i32>* %src, i32 4, <2 x i1> %1, <2 x i32> undef)
+  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %src, i32 4, <2 x i1> %1, <2 x i32> undef)
   %3 = sext <2 x i32> %2 to <2 x i64>
-  call void @llvm.masked.store.v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 8, <2 x i1> %1)
+  call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 8, <2 x i1> %1)
   ret void
 }
 
@@ -392,9 +392,9 @@ define void @foo_sext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 entry:
   %0 = load <2 x i32>, <2 x i32>* %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer
-  %2 = call <2 x i32> @llvm.masked.load.v2i32(<2 x i32>* %src, i32 2, <2 x i1> %1, <2 x i32> undef)
+  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %src, i32 2, <2 x i1> %1, <2 x i32> undef)
   %3 = sext <2 x i32> %2 to <2 x i64>
-  call void @llvm.masked.store.v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 4, <2 x i1> %1)
+  call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 4, <2 x i1> %1)
   ret void
 }
 
@@ -549,9 +549,9 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 entry:
   %0 = load <2 x i32>, <2 x i32>* %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer
-  %2 = call <2 x i32> @llvm.masked.load.v2i32(<2 x i32>* %src, i32 4, <2 x i1> %1, <2 x i32> undef)
+  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %src, i32 4, <2 x i1> %1, <2 x i32> undef)
   %3 = zext <2 x i32> %2 to <2 x i64>
-  call void @llvm.masked.store.v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 8, <2 x i1> %1)
+  call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 8, <2 x i1> %1)
   ret void
 }
 
@@ -710,9 +710,9 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 entry:
   %0 = load <2 x i32>, <2 x i32>* %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer
-  %2 = call <2 x i32> @llvm.masked.load.v2i32(<2 x i32>* %src, i32 2, <2 x i1> %1, <2 x i32> undef)
+  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %src, i32 2, <2 x i1> %1, <2 x i32> undef)
   %3 = zext <2 x i32> %2 to <2 x i64>
-  call void @llvm.masked.store.v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 4, <2 x i1> %1)
+  call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 4, <2 x i1> %1)
   ret void
 }
 
@@ -727,8 +727,8 @@ define void @foo_v8i16_v8i16(<8 x i16> *%dest, <8 x i16> *%mask, <8 x i16> *%src
 entry:
   %0 = load <8 x i16>, <8 x i16>* %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x i16> @llvm.masked.load.v8i16(<8 x i16>* %src, i32 2, <8 x i1> %1, <8 x i16> undef)
-  call void @llvm.masked.store.v8i16(<8 x i16> %2, <8 x i16>* %dest, i32 2, <8 x i1> %1)
+  %2 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %src, i32 2, <8 x i1> %1, <8 x i16> undef)
+  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %2, <8 x i16>* %dest, i32 2, <8 x i1> %1)
   ret void
 }
 
@@ -743,9 +743,9 @@ define void @foo_sext_v8i16_v8i8(<8 x i16> *%dest, <8 x i16> *%mask, <8 x i8> *%
 entry:
   %0 = load <8 x i16>, <8 x i16>* %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x i8> @llvm.masked.load.v8i8(<8 x i8>* %src, i32 1, <8 x i1> %1, <8 x i8> undef)
+  %2 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %src, i32 1, <8 x i1> %1, <8 x i8> undef)
   %3 = sext <8 x i8> %2 to <8 x i16>
-  call void @llvm.masked.store.v8i16(<8 x i16> %3, <8 x i16>* %dest, i32 2, <8 x i1> %1)
+  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %3, <8 x i16>* %dest, i32 2, <8 x i1> %1)
   ret void
 }
 
@@ -760,9 +760,9 @@ define void @foo_zext_v8i16_v8i8(<8 x i16> *%dest, <8 x i16> *%mask, <8 x i8> *%
 entry:
   %0 = load <8 x i16>, <8 x i16>* %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x i8> @llvm.masked.load.v8i8(<8 x i8>* %src, i32 1, <8 x i1> %1, <8 x i8> undef)
+  %2 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %src, i32 1, <8 x i1> %1, <8 x i8> undef)
   %3 = zext <8 x i8> %2 to <8 x i16>
-  call void @llvm.masked.store.v8i16(<8 x i16> %3, <8 x i16>* %dest, i32 2, <8 x i1> %1)
+  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %3, <8 x i16>* %dest, i32 2, <8 x i1> %1)
   ret void
 }
 
@@ -777,8 +777,8 @@ define void @foo_v16i8_v16i8(<16 x i8> *%dest, <16 x i8> *%mask, <16 x i8> *%src
 entry:
   %0 = load <16 x i8>, <16 x i8>* %mask, align 1
   %1 = icmp sgt <16 x i8> %0, zeroinitializer
-  %2 = call <16 x i8> @llvm.masked.load.v16i8(<16 x i8>* %src, i32 1, <16 x i1> %1, <16 x i8> undef)
-  call void @llvm.masked.store.v16i8(<16 x i8> %2, <16 x i8>* %dest, i32 1, <16 x i1> %1)
+  %2 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %src, i32 1, <16 x i1> %1, <16 x i8> undef)
+  call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %2, <16 x i8>* %dest, i32 1, <16 x i1> %1)
   ret void
 }
 
@@ -793,9 +793,9 @@ define void @foo_trunc_v8i8_v8i16(<8 x i8> *%dest, <8 x i16> *%mask, <8 x i16> *
 entry:
   %0 = load <8 x i16>, <8 x i16>* %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x i16> @llvm.masked.load.v8i16(<8 x i16>* %src, i32 2, <8 x i1> %1, <8 x i16> undef)
+  %2 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %src, i32 2, <8 x i1> %1, <8 x i16> undef)
   %3 = trunc <8 x i16> %2 to <8 x i8>
-  call void @llvm.masked.store.v8i8(<8 x i8> %3, <8 x i8>* %dest, i32 1, <8 x i1> %1)
+  call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %3, <8 x i8>* %dest, i32 1, <8 x i1> %1)
   ret void
 }
 
@@ -810,9 +810,9 @@ define void @foo_trunc_v4i8_v4i32(<4 x i8> *%dest, <4 x i32> *%mask, <4 x i32> *
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i32> @llvm.masked.load.v4i32(<4 x i32>* %src, i32 4, <4 x i1> %1, <4 x i32> undef)
+  %2 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %src, i32 4, <4 x i1> %1, <4 x i32> undef)
   %3 = trunc <4 x i32> %2 to <4 x i8>
-  call void @llvm.masked.store.v4i8(<4 x i8> %3, <4 x i8>* %dest, i32 1, <4 x i1> %1)
+  call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %3, <4 x i8>* %dest, i32 1, <4 x i1> %1)
   ret void
 }
 
@@ -827,9 +827,9 @@ define void @foo_trunc_v4i16_v4i32(<4 x i16> *%dest, <4 x i32> *%mask, <4 x i32>
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i32> @llvm.masked.load.v4i32(<4 x i32>* %src, i32 4, <4 x i1> %1, <4 x i32> undef)
+  %2 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %src, i32 4, <4 x i1> %1, <4 x i32> undef)
   %3 = trunc <4 x i32> %2 to <4 x i16>
-  call void @llvm.masked.store.v4i16(<4 x i16> %3, <4 x i16>* %dest, i32 2, <4 x i1> %1)
+  call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> %3, <4 x i16>* %dest, i32 2, <4 x i1> %1)
   ret void
 }
 
@@ -844,8 +844,8 @@ define void @foo_v4f32_v4f32(<4 x float> *%dest, <4 x i32> *%mask, <4 x float> *
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %src, i32 4, <4 x i1> %1, <4 x float> undef)
-  call void @llvm.masked.store.v4f32(<4 x float> %2, <4 x float>* %dest, i32 4, <4 x i1> %1)
+  %2 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %src, i32 4, <4 x i1> %1, <4 x float> undef)
+  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %2, <4 x float>* %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
@@ -860,8 +860,8 @@ define void @foo_v8f16_v8f16(<8 x half> *%dest, <8 x i16> *%mask, <8 x half> *%s
 entry:
   %0 = load <8 x i16>, <8 x i16>* %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x half> @llvm.masked.load.v8f16(<8 x half>* %src, i32 2, <8 x i1> %1, <8 x half> undef)
-  call void @llvm.masked.store.v8f16(<8 x half> %2, <8 x half>* %dest, i32 2, <8 x i1> %1)
+  %2 = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %src, i32 2, <8 x i1> %1, <8 x half> undef)
+  call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %2, <8 x half>* %dest, i32 2, <8 x i1> %1)
   ret void
 }
 
@@ -991,9 +991,9 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 entry:
   %0 = load <4 x i16>, <4 x i16>* %mask, align 2
   %1 = icmp sgt <4 x i16> %0, zeroinitializer
-  %2 = call <4 x half> @llvm.masked.load.v4f16(<4 x half>* %src, i32 2, <4 x i1> %1, <4 x half> undef)
+  %2 = call <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>* %src, i32 2, <4 x i1> %1, <4 x half> undef)
   %3 = fpext <4 x half> %2 to <4 x float>
-  call void @llvm.masked.store.v4f32(<4 x float> %3, <4 x float>* %dest, i32 2, <4 x i1> %1)
+  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %3, <4 x float>* %dest, i32 2, <4 x i1> %1)
   ret void
 }
 
@@ -1123,29 +1123,29 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 entry:
   %0 = load <4 x i16>, <4 x i16>* %mask, align 2
   %1 = icmp sgt <4 x i16> %0, zeroinitializer
-  %2 = call <4 x half> @llvm.masked.load.v4f16(<4 x half>* %src, i32 2, <4 x i1> %1, <4 x half> undef)
+  %2 = call <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>* %src, i32 2, <4 x i1> %1, <4 x half> undef)
   %3 = fpext <4 x half> %2 to <4 x float>
-  call void @llvm.masked.store.v4f32(<4 x float> %3, <4 x float>* %dest, i32 1, <4 x i1> %1)
+  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %3, <4 x float>* %dest, i32 1, <4 x i1> %1)
   ret void
 }
 
-declare void @llvm.masked.store.v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v8f16(<8 x half>, <8 x half>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)
-declare <16 x i8> @llvm.masked.load.v16i8(<16 x i8>*, i32, <16 x i1>, <16 x i8>)
-declare <8 x i16> @llvm.masked.load.v8i16(<8 x i16>*, i32, <8 x i1>, <8 x i16>)
-declare <2 x i32> @llvm.masked.load.v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
-declare <4 x i32> @llvm.masked.load.v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
-declare <4 x float> @llvm.masked.load.v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
-declare <4 x half> @llvm.masked.load.v4f16(<4 x half>*, i32, <4 x i1>, <4 x half>)
-declare <8 x half> @llvm.masked.load.v8f16(<8 x half>*, i32, <8 x i1>, <8 x half>)
+declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i1>)
+declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
+declare void @llvm.masked.store.v8f16.p0v8f16(<8 x half>, <8 x half>*, i32, <8 x i1>)
+declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)
+declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32, <16 x i1>, <16 x i8>)
+declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32, <8 x i1>, <8 x i16>)
+declare <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
+declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
+declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
+declare <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>*, i32, <4 x i1>, <4 x half>)
+declare <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>*, i32, <8 x i1>, <8 x half>)
 
-declare void @llvm.masked.store.v8i8(<8 x i8>, <8 x i8>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v4i8(<4 x i8>, <4 x i8>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v4i16(<4 x i16>, <4 x i16>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v2i64(<2 x i64>, <2 x i64>*, i32, <2 x i1>)
-declare <4 x i16> @llvm.masked.load.v4i16(<4 x i16>*, i32, <4 x i1>, <4 x i16>)
-declare <4 x i8> @llvm.masked.load.v4i8(<4 x i8>*, i32, <4 x i1>, <4 x i8>)
-declare <8 x i8> @llvm.masked.load.v8i8(<8 x i8>*, i32, <8 x i1>, <8 x i8>)
+declare void @llvm.masked.store.v8i8.p0v8i8(<8 x i8>, <8 x i8>*, i32, <8 x i1>)
+declare void @llvm.masked.store.v4i8.p0v4i8(<4 x i8>, <4 x i8>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v4i16.p0v4i16(<4 x i16>, <4 x i16>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v2i64.p0v2i64(<2 x i64>, <2 x i64>*, i32, <2 x i1>)
+declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32, <4 x i1>, <4 x i16>)
+declare <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>*, i32, <4 x i1>, <4 x i8>)
+declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32, <8 x i1>, <8 x i8>)
