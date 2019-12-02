@@ -2971,6 +2971,16 @@ struct AADereferenceableImpl : AADereferenceable {
     return TrackUse;
   }
 
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    ChangeStatus Change = AADereferenceable::manifest(A);
+    if (isAssumedNonNull() && hasAttr(Attribute::DereferenceableOrNull)) {
+      removeAttrs({Attribute::DereferenceableOrNull});
+      return ChangeStatus::CHANGED;
+    }
+    return Change;
+  }
+
   void getDeducedAttributes(LLVMContext &Ctx,
                             SmallVectorImpl<Attribute> &Attrs) const override {
     // TODO: Add *_globally support
