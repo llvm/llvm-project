@@ -15,7 +15,7 @@
 #include "system_error"
 #include "__undef_macros"
 
-#if defined(__unix__) && !defined(__ANDROID__) && defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
 #pragma comment(lib, "pthread")
 #endif
 
