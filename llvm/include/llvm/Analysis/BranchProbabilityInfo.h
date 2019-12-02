@@ -34,6 +34,7 @@ namespace llvm {
 class Function;
 class LoopInfo;
 class raw_ostream;
+class PostDominatorTree;
 class TargetLibraryInfo;
 class Value;
 
@@ -187,8 +188,10 @@ private:
   /// Track the set of blocks that always lead to a cold call.
   SmallPtrSet<const BasicBlock *, 16> PostDominatedByColdCall;
 
-  void updatePostDominatedByUnreachable(const BasicBlock *BB);
-  void updatePostDominatedByColdCall(const BasicBlock *BB);
+  void computePostDominatedByUnreachable(const Function &F,
+                                         PostDominatorTree *PDT);
+  void computePostDominatedByColdCall(const Function &F,
+                                      PostDominatorTree *PDT);
   bool calcUnreachableHeuristics(const BasicBlock *BB);
   bool calcMetadataWeights(const BasicBlock *BB);
   bool calcColdCallHeuristics(const BasicBlock *BB);
