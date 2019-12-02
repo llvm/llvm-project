@@ -533,7 +533,6 @@ private:
   SDValue SoftenFloatOp_Unary(SDNode *N, RTLIB::Libcall LC);
   SDValue SoftenFloatOp_BITCAST(SDNode *N);
   SDValue SoftenFloatOp_BR_CC(SDNode *N);
-  SDValue SoftenFloatOp_FP_EXTEND(SDNode *N);
   SDValue SoftenFloatOp_FP_ROUND(SDNode *N);
   SDValue SoftenFloatOp_FP_TO_XINT(SDNode *N);
   SDValue SoftenFloatOp_LROUND(SDNode *N);
