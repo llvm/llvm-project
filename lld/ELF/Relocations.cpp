@@ -1818,7 +1818,7 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
       return true;
     rel.sym = &t->destination;
     // TODO Restore addend on all targets.
-    if (config->emachine == EM_AARCH64)
+    if (config->emachine == EM_AARCH64 || config->emachine == EM_PPC64)
       rel.addend = t->addend;
     if (rel.sym->isInPlt())
       rel.expr = toPlt(rel.expr);
@@ -1897,12 +1897,14 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
             rel.sym = t->getThunkTargetSym();
             rel.expr = fromPlt(rel.expr);
 
-            // On AArch64, a jump/call relocation may be encoded as STT_SECTION
-            // + non-zero addend, clear the addend after redirection.
+            // On AArch64 and PPC64, a jump/call relocation may be encoded as
+            // STT_SECTION + non-zero addend, clear the addend after
+            // redirection.
             //
             // The addend of R_PPC_PLTREL24 should be ignored after changing to
             // R_PC.
             if (config->emachine == EM_AARCH64 ||
+                config->emachine == EM_PPC64 ||
                 (config->emachine == EM_PPC && rel.type == R_PPC_PLTREL24))
               rel.addend = 0;
           }

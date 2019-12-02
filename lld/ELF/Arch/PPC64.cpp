@@ -899,7 +899,7 @@ void PPC64::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
 }
 
 bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                       uint64_t branchAddr, const Symbol &s, int64_t /*a*/) const {
+                       uint64_t branchAddr, const Symbol &s, int64_t a) const {
   if (type != R_PPC64_REL14 && type != R_PPC64_REL24)
     return false;
 
@@ -916,7 +916,7 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   // a range-extending thunk.
   // See the comment in getRelocTargetVA() about R_PPC64_CALL.
   return !inBranchRange(type, branchAddr,
-                        s.getVA() +
+                        s.getVA(a) +
                             getPPC64GlobalEntryToLocalEntryOffset(s.stOther));
 }
 
