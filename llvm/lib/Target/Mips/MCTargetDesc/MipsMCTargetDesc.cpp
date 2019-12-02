@@ -12,6 +12,7 @@
 
 #include "MipsMCTargetDesc.h"
 #include "MipsAsmBackend.h"
+#include "MipsBaseInfo.h"
 #include "MipsELFStreamer.h"
 #include "MipsInstPrinter.h"
 #include "MipsMCAsmInfo.h"
