@@ -1917,6 +1917,7 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
 
     MachineInstrBuilder MIB = BuildMI(*MBB, Br.MI, Br.MI->getDebugLoc(),
                                       TII->get(ARM::t2LE));
+    // Swapped a t2Bcc for a t2LE, so no need to update the size of the block.
     MIB.add(Br.MI->getOperand(0));
     Br.MI->eraseFromParent();
     Br.MI = MIB;
@@ -1975,21 +1976,20 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
             .addMBB(DestBB, Br.MI->getOperand(0).getTargetFlags());
 
     Cmp.MI->eraseFromParent();
-    BBInfoVector &BBInfo = BBUtils->getBBInfo();
-    BBInfo[MBB->getNumber()].Size -= 2;
 
     if (Br.MI->getOpcode() == ARM::tBcc) {
       Br.MI->eraseFromParent();
       Br.MI = NewBR;
-    } else if (&MBB->back() != Br.MI) {
-      // We've generated an LE and already erased the original conditional
-      // branch. The CBN?Z is now used to branch to the other successor, so an
-      // unconditional branch terminator is now redundant.
+      BBUtils->adjustBBSize(MBB, -2);
+    } else if (MBB->back().getOpcode() != ARM::t2LE) {
+      // An LE has been generated, but it's not the terminator - that is an
+      // unconditional branch. However, the logic has now been reversed with the
+      // CBN?Z being the conditional branch and the LE being the unconditional
+      // branch. So this means we can remove the redundant unconditional branch
+      // at the end of the block.
       MachineInstr *LastMI = &MBB->back();
-      if (LastMI != Br.MI) {
-        BBInfo[MBB->getNumber()].Size -= LastMI->getDesc().getSize();
-        LastMI->eraseFromParent();
-      }
+      BBUtils->adjustBBSize(MBB, -LastMI->getDesc().getSize());
+      LastMI->eraseFromParent();
     }
     BBUtils->adjustBBOffsetsAfter(MBB);
     ++NumCBZ;
