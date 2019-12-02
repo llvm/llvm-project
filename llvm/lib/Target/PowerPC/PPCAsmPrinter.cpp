@@ -1603,7 +1603,8 @@ void PPCDarwinAsmPrinter::EmitStartOfAsmFile(Module &M) {
     // FIXME: why is power8 missing here?
     "ppc64",
     "ppc64le",
-    "power9"
+    "power9",
+    "future"
   };
 
   // Get the numerically largest directive.

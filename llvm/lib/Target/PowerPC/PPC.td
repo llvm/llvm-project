@@ -51,6 +51,8 @@ def DirectivePwr6x
 def DirectivePwr7: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR7", "">;
 def DirectivePwr8: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR8", "">;
 def DirectivePwr9: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR9", "">;
+def DirectivePwrFuture
+    : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR_FUTURE", "">;
 
 def Feature64Bit     : SubtargetFeature<"64bit","Has64BitSupport", "true",
                                         "Enable 64-bit instructions">;
@@ -239,6 +241,13 @@ def ProcessorFeatures {
        FeatureVectorsUseTwoUnits, FeaturePPCPreRASched, FeaturePPCPostRASched];
   list<SubtargetFeature> Power9FeatureList =
       !listconcat(Power8FeatureList, Power9SpecificFeatures);
+
+  // For future CPU we assume that all of the existing features from Power 9
+  // still exist.
+  list<SubtargetFeature> FutureSpecificFeatures =
+      [];
+  list<SubtargetFeature> FutureFeatureList =
+      !listconcat(Power9FeatureList, FutureSpecificFeatures);
 }
 
 // Note: Future features to add when support is extended to more
@@ -441,6 +450,9 @@ def : ProcessorModel<"pwr6x", G5Model,
 def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.Power7FeatureList>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.Power8FeatureList>;
 def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.Power9FeatureList>;
+// No scheduler model for future CPU.
+def : ProcessorModel<"future", NoSchedModel,
+                  ProcessorFeatures.FutureFeatureList>;
 def : Processor<"ppc", G3Itineraries, [Directive32, FeatureHardFloat,
                                        FeatureMFTB]>;
 def : Processor<"ppc32", G3Itineraries, [Directive32, FeatureHardFloat,
