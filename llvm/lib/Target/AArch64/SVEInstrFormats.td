@@ -1633,18 +1633,26 @@ class sve2_fp_convert_precision<bits<4> opc, string asm,
   let Constraints = "$Zd = $_Zd";
 }
 
-multiclass sve2_fp_convert_down_narrow<string asm> {
+multiclass sve2_fp_convert_down_narrow<string asm, string op> {
   def _StoH : sve2_fp_convert_precision<0b1000, asm, ZPR16, ZPR32>;
   def _DtoS : sve2_fp_convert_precision<0b1110, asm, ZPR32, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv8f16, !cast<SDPatternOperator>(op # _f16f32), nxv8f16, nxv16i1, nxv4f32, !cast<Instruction>(NAME # _StoH)>;
+  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv16i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
-multiclass sve2_fp_convert_up_long<string asm> {
+multiclass sve2_fp_convert_up_long<string asm, string op> {
   def _HtoS : sve2_fp_convert_precision<0b1001, asm, ZPR32, ZPR16>;
   def _StoD : sve2_fp_convert_precision<0b1111, asm, ZPR64, ZPR32>;
+
+  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f16), nxv4f32, nxv16i1, nxv8f16, !cast<Instruction>(NAME # _HtoS)>;
+  def : SVE_3_Op_Pat<nxv2f64, !cast<SDPatternOperator>(op # _f64f32), nxv2f64, nxv16i1, nxv4f32, !cast<Instruction>(NAME # _StoD)>;
 }
 
-multiclass sve2_fp_convert_down_odd_rounding<string asm> {
+multiclass sve2_fp_convert_down_odd_rounding_top<string asm, string op> {
   def _DtoS : sve2_fp_convert_precision<0b0010, asm, ZPR32, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv16i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1830,6 +1838,16 @@ class sve_fp_2op_p_zd<bits<7> opc, string asm, RegisterOperand i_zprtype,
   let ElementSize = size;
 }
 
+multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
+                           RegisterOperand i_zprtype,
+                           RegisterOperand o_zprtype,
+                           SDPatternOperator op, ValueType vt1,
+                           ValueType vt2, ValueType vt3, ElementSizeEnum Sz> {
+  def NAME : sve_fp_2op_p_zd<opc, asm, i_zprtype, o_zprtype, Sz>;
+
+  def : SVE_3_Op_Pat<vt1, op, vt1, vt2, vt3, !cast<Instruction>(NAME)>;
+}
+
 multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm, SDPatternOperator op> {
   def _H : sve_fp_2op_p_zd<{ 0b01, opc }, asm, ZPR16, ZPR16, ElementSizeH>;
   def _S : sve_fp_2op_p_zd<{ 0b10, opc }, asm, ZPR32, ZPR32, ElementSizeS>;
@@ -1844,6 +1862,11 @@ multiclass sve2_fp_flogb<string asm> {
   def _H : sve_fp_2op_p_zd<0b0011010, asm, ZPR16, ZPR16, ElementSizeH>;
   def _S : sve_fp_2op_p_zd<0b0011100, asm, ZPR32, ZPR32, ElementSizeS>;
   def _D : sve_fp_2op_p_zd<0b0011110, asm, ZPR64, ZPR64, ElementSizeD>;
+}
+
+multiclass sve2_fp_convert_down_odd_rounding<string asm, string op> {
+  def _DtoS : sve_fp_2op_p_zd<0b0001010, asm, ZPR64, ZPR32, ElementSizeD>;
+  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv16i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
 //===----------------------------------------------------------------------===//
