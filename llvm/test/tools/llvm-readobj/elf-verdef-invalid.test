@@ -91,7 +91,7 @@ Sections:
     Link:    .dynstr
     Info:    0x1
     Entries:
-      - Version:    0
+      - Version:    1
         Flags:      0
         VersionNdx: 0
         Hash:       0
@@ -122,7 +122,7 @@ Sections:
     Link:    .dynstr
     Info:    0x1
     Entries:
-      - Version:    0
+      - Version:    1
         Flags:      0
         VersionNdx: 0
         Hash:       0
@@ -141,7 +141,7 @@ DynamicSymbols:
 
 # PAST-STRTAB-END-LLVM:      VersionDefinitions [
 # PAST-STRTAB-END-LLVM-NEXT:   Definition {
-# PAST-STRTAB-END-LLVM-NEXT:     Version: 0
+# PAST-STRTAB-END-LLVM-NEXT:     Version: 1
 # PAST-STRTAB-END-LLVM-NEXT:     Flags [ (0x0)
 # PAST-STRTAB-END-LLVM-NEXT:     ]
 # PAST-STRTAB-END-LLVM-NEXT:     Index: 0
@@ -153,7 +153,7 @@ DynamicSymbols:
 
 # PAST-STRTAB-END-GNU:      Version definition section '.gnu.version_d' contains 1 entries:
 # PAST-STRTAB-END-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 2 (.strtab)
-# PAST-STRTAB-END-GNU-NEXT:   0x0000: Rev: 0  Flags: none  Index: 0  Cnt: 1  Name: <invalid vda_name: 5>
+# PAST-STRTAB-END-GNU-NEXT:   0x0000: Rev: 1  Flags: none  Index: 0  Cnt: 1  Name: <invalid vda_name: 5>
 
 --- !ELF
 FileHeader:
@@ -167,7 +167,7 @@ Sections:
     Link:    .strtab
     Info:    0x1
     Entries:
-      - Version:    0
+      - Version:    1
         Flags:      0
         VersionNdx: 0
         Hash:       0
@@ -200,7 +200,7 @@ Sections:
     Link: .dynstr
     Info: 0x1
     Entries:
-      - Version:    0
+      - Version:    1
         Flags:      0
         VersionNdx: 0
         Hash:       0
@@ -230,7 +230,35 @@ Sections:
     Link:  .dynstr
     Info:  0x1
 ## The byte offset to the auxiliary entry is 0x13, i.e. it is not correctly aligned in memory.
-    Content: "0000000000000100000000001300000000000000"
+    Content: "0100000000000100000000001300000000000000"
 DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
+
+## Check how we handle the case when a version definition entry has an unsupported version.
+
+# RUN: yaml2obj %s --docnum=9 -o %t9
+# RUN: llvm-readobj -V %t9 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-VERSION -DFILE=%t9
+# RUN: llvm-readelf -V %t9 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-VERSION -DFILE=%t9
+
+# UNSUPPORTED-VERSION: warning: '[[FILE]]': unable to dump SHT_GNU_verdef section with index 1: version 65278 is not yet supported
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
+    Link: .dynstr
+    Info: 0x1
+    Entries:
+      - Version:    0xfefe
+        Flags:      0
+        VersionNdx: 0
+        Hash:       0
+        Names: []
+DynamicSymbols:
+  - Name: foo
