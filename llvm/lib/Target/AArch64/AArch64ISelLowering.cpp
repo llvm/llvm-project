@@ -1336,6 +1336,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::UUNPKHI:           return "AArch64ISD::UUNPKHI";
   case AArch64ISD::UUNPKLO:           return "AArch64ISD::UUNPKLO";
   case AArch64ISD::INSR:              return "AArch64ISD::INSR";
+  case AArch64ISD::GLD1:              return "AArch64ISD::GLD1";
+  case AArch64ISD::GLD1_SCALED:       return "AArch64ISD::GLD1_SCALED";
   }
   return nullptr;
 }
@@ -11760,6 +11762,85 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(MinOffset, DL, MVT::i64));
 }
 
+// Returns an SVE type that ContentTy can be trivially sign or zero extended
+// into.
+static MVT getSVEContainerType(EVT ContentTy) {
+  assert(ContentTy.isSimple() && "No SVE containers for extended types");
+
+  switch (ContentTy.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("No known SVE container for this MVT type");
+  case MVT::nxv2i8:
+  case MVT::nxv2i16:
+  case MVT::nxv2i32:
+  case MVT::nxv2i64:
+  case MVT::nxv2f32:
+  case MVT::nxv2f64:
+    return MVT::nxv2i64;
+  case MVT::nxv4i8:
+  case MVT::nxv4i16:
+  case MVT::nxv4i32:
+  case MVT::nxv4f32:
+    return MVT::nxv4i32;
+  }
+}
+
+static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
+                                       unsigned Opcode) {
+  EVT RetVT = N->getValueType(0);
+  assert(RetVT.isScalableVector() &&
+         "Gather loads are only possible for SVE vectors");
+
+  SDLoc DL(N);
+  MVT RetElVT = RetVT.getVectorElementType().getSimpleVT();
+  unsigned NumElements = AArch64::SVEBitsPerBlock / RetElVT.getSizeInBits();
+
+  EVT MaxVT = llvm::MVT::getScalableVectorVT(RetElVT, NumElements);
+  if (RetVT.getSizeInBits().getKnownMinSize() >
+      MaxVT.getSizeInBits().getKnownMinSize())
+    return SDValue();
+
+  // Depending on the addressing mode, this is either a pointer or a vector of
+  // pointers (that fits into one register)
+  const SDValue Base = N->getOperand(3);
+  // Depending on the addressing mode, this is either a single offset or a
+  // vector of offsets  (that fits into one register)
+  const SDValue Offset = N->getOperand(4);
+
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(Base.getValueType()) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(Offset.getValueType()))
+    return SDValue();
+
+  // Return value type that is representable in hardware
+  EVT HwRetVt = getSVEContainerType(RetVT);
+
+  // Keep the original output value type around - this will better inform
+  // optimisations (e.g. instruction folding when load is followed by
+  // zext/sext). This will only be used for ints, so the value for FPs
+  // doesn't matter.
+  SDValue OutVT = DAG.getValueType(RetVT);
+  if (RetVT.isFloatingPoint())
+    OutVT = DAG.getValueType(HwRetVt);
+
+  SDVTList VTs = DAG.getVTList(HwRetVt, MVT::Other);
+  SDValue Ops[] = {N->getOperand(0), // Chain
+                   N->getOperand(2), // Pg
+                   Base, Offset, OutVT};
+
+  SDValue Load = DAG.getNode(Opcode, DL, VTs, Ops);
+  SDValue LoadChain = SDValue(Load.getNode(), 1);
+
+  if (RetVT.isInteger() && (RetVT != HwRetVt))
+    Load = DAG.getNode(ISD::TRUNCATE, DL, RetVT, Load.getValue(0));
+
+  // If the original return value was FP, bitcast accordingly. Doing it here
+  // means that we can avoid adding TableGen patterns for FPs.
+  if (RetVT.isFloatingPoint())
+    Load = DAG.getNode(ISD::BITCAST, DL, RetVT, Load.getValue(0));
+
+  return DAG.getMergeValues({Load, LoadChain}, DL);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -11846,6 +11927,10 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_neon_st3lane:
     case Intrinsic::aarch64_neon_st4lane:
       return performNEONPostLDSTCombine(N, DCI, DAG);
+    case Intrinsic::aarch64_sve_ld1_gather:
+      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1);
+    case Intrinsic::aarch64_sve_ld1_gather_index:
+      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SCALED);
     default:
       break;
     }
