@@ -29,6 +29,7 @@ namespace llvm {
 namespace clang {
 namespace CodeGen {
   class AggValueSlot;
+  class CodeGenFunction;
   struct CGBitFieldInfo;
 
 /// RValue - This trivial value class is used to represent the result of an
@@ -319,11 +320,13 @@ public:
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
 
   // simple lvalue
-  llvm::Value *getPointer() const {
+  llvm::Value *getPointer(CodeGenFunction &CGF) const {
     assert(isSimple());
     return V;
   }
-  Address getAddress() const { return Address(getPointer(), getAlignment()); }
+  Address getAddress(CodeGenFunction &CGF) const {
+    return Address(getPointer(CGF), getAlignment());
+  }
   void setAddress(Address address) {
     assert(isSimple());
     V = address.getPointer();
@@ -427,8 +430,8 @@ public:
     return R;
   }
 
-  RValue asAggregateRValue() const {
-    return RValue::getAggregate(getAddress(), isVolatileQualified());
+  RValue asAggregateRValue(CodeGenFunction &CGF) const {
+    return RValue::getAggregate(getAddress(CGF), isVolatileQualified());
   }
 };
 
@@ -536,14 +539,12 @@ public:
     return AV;
   }
 
-  static AggValueSlot forLValue(const LValue &LV,
-                                IsDestructed_t isDestructed,
-                                NeedsGCBarriers_t needsGC,
-                                IsAliased_t isAliased,
-                                Overlap_t mayOverlap,
-                                IsZeroed_t isZeroed = IsNotZeroed,
-                       IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
-    return forAddr(LV.getAddress(), LV.getQuals(), isDestructed, needsGC,
+  static AggValueSlot
+  forLValue(const LValue &LV, CodeGenFunction &CGF, IsDestructed_t isDestructed,
+            NeedsGCBarriers_t needsGC, IsAliased_t isAliased,
+            Overlap_t mayOverlap, IsZeroed_t isZeroed = IsNotZeroed,
+            IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
+    return forAddr(LV.getAddress(CGF), LV.getQuals(), isDestructed, needsGC,
                    isAliased, mayOverlap, isZeroed, isChecked);
   }
 
