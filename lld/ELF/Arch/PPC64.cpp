@@ -205,7 +205,8 @@ public:
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
   void writeGotHeader(uint8_t *buf) const override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                  uint64_t branchAddr, const Symbol &s) const override;
+                  uint64_t branchAddr, const Symbol &s,
+                  int64_t a) const override;
   uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
@@ -898,7 +899,7 @@ void PPC64::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
 }
 
 bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                       uint64_t branchAddr, const Symbol &s) const {
+                       uint64_t branchAddr, const Symbol &s, int64_t /*a*/) const {
   if (type != R_PPC64_REL14 && type != R_PPC64_REL24)
     return false;
 

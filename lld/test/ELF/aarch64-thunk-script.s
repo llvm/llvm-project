@@ -15,6 +15,8 @@
 _start:
  // Need thunk to high_target@plt
  bl high_target
+ // Need thunk to .text_high+4
+ bl .text_high+4
  ret
 
  .section .text_high, "ax", %progbits
@@ -28,14 +30,21 @@ high_target:
 // CHECK: Disassembly of section .text_low:
 // CHECK-EMPTY:
 // CHECK-NEXT: _start:
-// CHECK-NEXT:     2000:       bl      #0x8 <__AArch64AbsLongThunk_high_target>
+// CHECK-NEXT:     2000:       bl      #0x10 <__AArch64AbsLongThunk_high_target>
+// CHECK-NEXT:     2004:       bl      #0x1c <__AArch64AbsLongThunk_>
 // CHECK-NEXT:                 ret
 // CHECK: __AArch64AbsLongThunk_high_target:
-// CHECK-NEXT:     2008:       ldr     x16, #0x8
+// CHECK-NEXT:     2010:       ldr     x16, #0x8
 // CHECK-NEXT:                 br      x16
 // CHECK: $d:
-// CHECK-NEXT:     2010:       00 20 00 08     .word   0x08002000
-// CHECK-NEXT:     2014:       00 00 00 00     .word   0x00000000
+// CHECK-NEXT:     2018:       00 20 00 08     .word   0x08002000
+// CHECK-NEXT:     201c:       00 00 00 00     .word   0x00000000
+// CHECK:      __AArch64AbsLongThunk_:
+// CHECK-NEXT:     2020:       ldr x16, #0x8
+// CHECK-NEXT:     2024:       br x16
+// CHECK:      $d:
+// CHECK-NEXT:     2028:       04 20 00 08     .word   0x08002004
+// CHECK-NEXT:     202c:       00 00 00 00     .word   0x00000000
 // CHECK: Disassembly of section .text_high:
 // CHECK-EMPTY:
 // CHECK-NEXT: high_target:
