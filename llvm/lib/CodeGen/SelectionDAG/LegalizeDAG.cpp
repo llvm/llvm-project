@@ -3692,7 +3692,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
 
     SDValue Result = DAG.getBuildVector(Node->getValueType(0), dl, Scalars);
-    ReplaceNode(SDValue(Node, 0), Result);
+    Results.push_back(Result);
     break;
   }
   case ISD::VECREDUCE_FADD:
