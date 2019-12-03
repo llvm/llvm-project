@@ -38,7 +38,7 @@ define float @f(float %val) nounwind {
 define double @d(double %val) nounwind {
 ; SSE-LABEL: d:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    xorpd %xmm1, %xmm1
 ; SSE-NEXT:    ucomisd %xmm1, %xmm0
 ; SSE-NEXT:    jb .LBB1_2
 ; SSE-NEXT:  # %bb.1: # %.split
@@ -49,7 +49,7 @@ define double @d(double %val) nounwind {
 ;
 ; AVX-LABEL: d:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; AVX-NEXT:    jb .LBB1_2
 ; AVX-NEXT:  # %bb.1: # %.split
