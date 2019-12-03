@@ -58,7 +58,7 @@ struct BindArgument {
 
   // If this argument required a capture, a value indicating how it was
   // captured.
-  CaptureMode CaptureMode = CM_None;
+  CaptureMode CM = CM_None;
 
   // The exact spelling of this argument in the source code.
   StringRef SourceTokens;
@@ -85,7 +85,7 @@ struct BindArgument {
 struct CallableInfo {
   CallableType Type = CT_Other;
   CallableMaterializationKind Materialization = CMK_Other;
-  CaptureMode CaptureMode = CM_None;
+  CaptureMode CM = CM_None;
   StringRef SourceTokens;
   std::string CaptureIdentifier;
   std::string UsageIdentifier;
@@ -148,11 +148,11 @@ initializeBindArgumentForCallExpr(const MatchFinder::MatchResult &Result,
   // std::ref(x) means to capture x by reference.
   if (isCallExprNamed(CE, "boost::ref") || isCallExprNamed(CE, "std::ref")) {
     B.Kind = BK_Other;
-    B.CaptureMode = CM_ByRef;
+    B.CM = CM_ByRef;
     B.UsageIdentifier = getSourceTextForExpr(Result, CE->getArg(0));
   } else {
     B.Kind = BK_CallExpr;
-    B.CaptureMode = CM_InitExpression;
+    B.CM = CM_InitExpression;
     B.UsageIdentifier = "capture" + llvm::utostr(CaptureIndex++);
   }
   B.CaptureIdentifier = B.UsageIdentifier;
@@ -187,7 +187,7 @@ static bool tryCaptureAsLocalVariable(const MatchFinder::MatchResult &Result,
   if (!VD || !VD->isLocalVarDeclOrParm())
     return false;
 
-  B.CaptureMode = CM_ByValue;
+  B.CM = CM_ByValue;
   B.UsageIdentifier = getSourceTextForExpr(Result, E);
   B.CaptureIdentifier = B.UsageIdentifier;
   return true;
@@ -203,7 +203,7 @@ static bool tryCaptureAsMemberVariable(const MatchFinder::MatchResult &Result,
 
   E = E->IgnoreImplicit();
   if (isa<CXXThisExpr>(E)) {
-    B.CaptureMode = CM_ByValue;
+    B.CM = CM_ByValue;
     B.UsageIdentifier = getSourceTextForExpr(Result, E);
     B.CaptureIdentifier = "this";
     return true;
@@ -216,7 +216,7 @@ static bool tryCaptureAsMemberVariable(const MatchFinder::MatchResult &Result,
   if (!ME->isLValue() || !isa<FieldDecl>(ME->getMemberDecl()))
     return false;
 
-  B.CaptureMode = CM_ByValue;
+  B.CM = CM_ByValue;
   B.UsageIdentifier = getSourceTextForExpr(Result, E);
   B.CaptureIdentifier = "this";
   return true;
@@ -272,11 +272,11 @@ buildBindArguments(const MatchFinder::MatchResult &Result,
     // safe.
     B.Kind = BK_Other;
     if (IsObjectPtr) {
-      B.CaptureMode = CM_InitExpression;
+      B.CM = CM_InitExpression;
       B.UsageIdentifier = "ObjectPtr";
       B.CaptureIdentifier = B.UsageIdentifier;
     } else if (anyDescendantIsLocal(B.E)) {
-      B.CaptureMode = CM_InitExpression;
+      B.CM = CM_InitExpression;
       B.CaptureIdentifier = "capture" + llvm::utostr(CaptureIndex++);
       B.UsageIdentifier = B.CaptureIdentifier;
     }
@@ -336,9 +336,9 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
 
     Stream << Delimiter;
 
-    if (B.Kind == BK_Placeholder || B.CaptureMode != CM_None)
+    if (B.Kind == BK_Placeholder || B.CM != CM_None)
       Stream << B.UsageIdentifier;
-    else if (B.CaptureMode == CM_None)
+    else if (B.CM == CM_None)
       Stream << B.SourceTokens;
 
     Delimiter = ", ";
@@ -502,12 +502,12 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
       getCallMethodDecl(Result, LP.Callable.Type, LP.Callable.Materialization);
   LP.Callable.SourceTokens = getSourceTextForExpr(Result, CalleeExpr);
   if (LP.Callable.Materialization == CMK_VariableRef) {
-    LP.Callable.CaptureMode = CM_ByValue;
+    LP.Callable.CM = CM_ByValue;
     LP.Callable.UsageIdentifier = getSourceTextForExpr(Result, CalleeExpr);
     LP.Callable.CaptureIdentifier =
         getSourceTextForExpr(Result, ignoreTemporariesAndPointers(CalleeExpr));
   } else if (LP.Callable.Materialization == CMK_CallExpression) {
-    LP.Callable.CaptureMode = CM_InitExpression;
+    LP.Callable.CM = CM_InitExpression;
     LP.Callable.UsageIdentifier = "Func";
     LP.Callable.CaptureIdentifier = "Func";
     LP.Callable.CaptureInitializer = getSourceTextForExpr(Result, CalleeExpr);
@@ -548,17 +548,17 @@ static void emitCaptureList(const LambdaProperties &LP,
   llvm::StringSet<> CaptureSet;
   bool AnyCapturesEmitted = false;
 
-  AnyCapturesEmitted = emitCapture(CaptureSet, "", LP.Callable.CaptureMode,
+  AnyCapturesEmitted = emitCapture(CaptureSet, "", LP.Callable.CM,
                                    LP.Callable.CaptureIdentifier,
                                    LP.Callable.CaptureInitializer, Stream);
 
   for (const BindArgument &B : LP.BindArguments) {
-    if (B.CaptureMode == CM_None || !B.IsUsed)
+    if (B.CM == CM_None || !B.IsUsed)
       continue;
 
     StringRef Delimiter = AnyCapturesEmitted ? ", " : "";
 
-    if (emitCapture(CaptureSet, Delimiter, B.CaptureMode, B.CaptureIdentifier,
+    if (emitCapture(CaptureSet, Delimiter, B.CM, B.CaptureIdentifier,
                     B.SourceTokens, Stream))
       AnyCapturesEmitted = true;
   }
@@ -632,7 +632,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
     Stream << MethodDecl->getName();
   } else {
     Stream << " { return ";
-    switch (LP.Callable.CaptureMode) {
+    switch (LP.Callable.CM) {
     case CM_ByValue:
     case CM_ByRef:
       if (LP.Callable.UsageIdentifier != LP.Callable.CaptureIdentifier) {
