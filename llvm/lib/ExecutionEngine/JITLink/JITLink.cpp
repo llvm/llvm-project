@@ -266,6 +266,16 @@ void LinkGraph::dump(raw_ostream &OS,
        << "\n";
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LF) {
+  switch (LF) {
+  case SymbolLookupFlags::RequiredSymbol:
+    return OS << "RequiredSymbol";
+  case SymbolLookupFlags::WeaklyReferencedSymbol:
+    return OS << "WeaklyReferencedSymbol";
+  }
+  llvm_unreachable("Unrecognized lookup flags");
+}
+
 void JITLinkAsyncLookupContinuation::anchor() {}
 
 JITLinkContext::~JITLinkContext() {}

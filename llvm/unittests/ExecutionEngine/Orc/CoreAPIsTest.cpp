@@ -43,8 +43,9 @@ TEST_F(CoreAPIsStandardTest, BasicSuccessfulLookup) {
         FooMR = std::make_shared<MaterializationResponsibility>(std::move(R));
       })));
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Ready,
-            OnCompletion, NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, OnCompletion,
+            NoDependenciesToRegister);
 
   EXPECT_FALSE(OnCompletionRun) << "Should not have been resolved yet";
 
@@ -67,7 +68,7 @@ TEST_F(CoreAPIsStandardTest, ExecutionSessionFailQuery) {
     OnCompletionRun = true;
   };
 
-  AsynchronousSymbolQuery Q(SymbolNameSet({Foo}), SymbolState::Ready,
+  AsynchronousSymbolQuery Q(SymbolLookupSet(Foo), SymbolState::Ready,
                             OnCompletion);
 
   ES.legacyFailQuery(Q,
@@ -84,8 +85,8 @@ TEST_F(CoreAPIsStandardTest, EmptyLookup) {
     OnCompletionRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {}, SymbolState::Ready,
-            OnCompletion, NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(),
+            SymbolState::Ready, OnCompletion, NoDependenciesToRegister);
 
   EXPECT_TRUE(OnCompletionRun) << "OnCompletion was not run for empty query";
 }
@@ -131,7 +132,8 @@ TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
 
   bool OnCompletionRun = false;
   ES.lookup(
-      JITDylibSearchList({{&JD, false}}), {Foo, Baz}, SymbolState::Ready,
+      LookupKind::Static, makeJITDylibSearchOrder(&JD),
+      SymbolLookupSet({Foo, Baz}), SymbolState::Ready,
       [&](Expected<SymbolMap> Result) {
         cantFail(Result.takeError());
         OnCompletionRun = true;
@@ -179,7 +181,7 @@ TEST_F(CoreAPIsStandardTest, ChainedJITDylibLookup) {
   bool OnCompletionRun = false;
 
   auto Q = std::make_shared<AsynchronousSymbolQuery>(
-      SymbolNameSet({Foo}), SymbolState::Ready,
+      SymbolLookupSet({Foo}), SymbolState::Ready,
       [&](Expected<SymbolMap> Result) {
         cantFail(std::move(Result));
         OnCompletionRun = true;
@@ -200,8 +202,8 @@ TEST_F(CoreAPIsStandardTest, LookupWithHiddenSymbols) {
   cantFail(JD2.define(absoluteSymbols({{Bar, QuxSym}})));
 
   /// Try a blocking lookup.
-  auto Result = cantFail(
-      ES.lookup(JITDylibSearchList({{&JD, false}, {&JD2, false}}), {Foo, Bar}));
+  auto Result = cantFail(ES.lookup(makeJITDylibSearchOrder({&JD, &JD2}),
+                                   SymbolLookupSet({Foo, Bar})));
 
   EXPECT_EQ(Result.size(), 2U) << "Unexpected number of results";
   EXPECT_EQ(Result.count(Foo), 1U) << "Missing result for \"Foo\"";
@@ -226,9 +228,9 @@ TEST_F(CoreAPIsStandardTest, LookupFlagsTest) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
   cantFail(JD.define(std::move(MU)));
 
-  SymbolNameSet Names({Foo, Bar, Baz});
-
-  auto SymbolFlags = cantFail(JD.lookupFlags(Names));
+  auto SymbolFlags = cantFail(JD.lookupFlags(
+      LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
+      SymbolLookupSet({Foo, Bar, Baz})));
 
   EXPECT_EQ(SymbolFlags.size(), 2U)
       << "Returned symbol flags contains unexpected results";
@@ -245,20 +247,24 @@ TEST_F(CoreAPIsStandardTest, LookupWithGeneratorFailure) {
 
   class BadGenerator : public JITDylib::DefinitionGenerator {
   public:
-    Expected<SymbolNameSet> tryToGenerate(JITDylib &,
-                                          const SymbolNameSet &) override {
+    Error tryToGenerate(LookupKind K, JITDylib &, JITDylibLookupFlags,
+                        const SymbolLookupSet &) override {
       return make_error<StringError>("BadGenerator", inconvertibleErrorCode());
     }
   };
 
   JD.addGenerator(std::make_unique<BadGenerator>());
 
-  EXPECT_THAT_ERROR(JD.lookupFlags({Foo}).takeError(), Failed<StringError>())
+  EXPECT_THAT_ERROR(
+      JD.lookupFlags(LookupKind::Static,
+                     JITDylibLookupFlags::MatchExportedSymbolsOnly,
+                     SymbolLookupSet(Foo))
+          .takeError(),
+      Failed<StringError>())
       << "Generator failure did not propagate through lookupFlags";
 
   EXPECT_THAT_ERROR(
-      ES.lookup(JITDylibSearchList({{&JD, false}}), SymbolNameSet({Foo}))
-          .takeError(),
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo)).takeError(),
       Failed<StringError>())
       << "Generator failure did not propagate through lookup";
 }
@@ -269,7 +275,8 @@ TEST_F(CoreAPIsStandardTest, TestBasicAliases) {
                                     {Qux, {Bar, JITSymbolFlags::Weak}}})));
   cantFail(JD.define(absoluteSymbols({{Qux, QuxSym}})));
 
-  auto Result = ES.lookup(JITDylibSearchList({{&JD, false}}), {Baz, Qux});
+  auto Result =
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Baz, Qux}));
   EXPECT_TRUE(!!Result) << "Unexpected lookup failure";
   EXPECT_EQ(Result->count(Baz), 1U) << "No result for \"baz\"";
   EXPECT_EQ(Result->count(Qux), 1U) << "No result for \"qux\"";
@@ -284,7 +291,8 @@ TEST_F(CoreAPIsStandardTest, TestChainedAliases) {
   cantFail(JD.define(symbolAliases(
       {{Baz, {Bar, BazSym.getFlags()}}, {Bar, {Foo, BarSym.getFlags()}}})));
 
-  auto Result = ES.lookup(JITDylibSearchList({{&JD, false}}), {Bar, Baz});
+  auto Result =
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Bar, Baz}));
   EXPECT_TRUE(!!Result) << "Unexpected lookup failure";
   EXPECT_EQ(Result->count(Bar), 1U) << "No result for \"bar\"";
   EXPECT_EQ(Result->count(Baz), 1U) << "No result for \"baz\"";
@@ -303,7 +311,7 @@ TEST_F(CoreAPIsStandardTest, TestBasicReExports) {
 
   cantFail(JD2.define(reexports(JD, {{Bar, {Foo, BarSym.getFlags()}}})));
 
-  auto Result = cantFail(ES.lookup(JITDylibSearchList({{&JD2, false}}), Bar));
+  auto Result = cantFail(ES.lookup(makeJITDylibSearchOrder(&JD2), Bar));
   EXPECT_EQ(Result.getAddress(), FooSym.getAddress())
       << "Re-export Bar for symbol Foo should match FooSym's address";
 }
@@ -329,7 +337,7 @@ TEST_F(CoreAPIsStandardTest, TestThatReExportsDontUnnecessarilyMaterialize) {
   cantFail(JD2.define(reexports(
       JD, {{Baz, {Foo, BazSym.getFlags()}}, {Qux, {Bar, QuxSym.getFlags()}}})));
 
-  auto Result = cantFail(ES.lookup(JITDylibSearchList({{&JD2, false}}), Baz));
+  auto Result = cantFail(ES.lookup(makeJITDylibSearchOrder(&JD2), Baz));
   EXPECT_EQ(Result.getAddress(), FooSym.getAddress())
       << "Re-export Baz for symbol Foo should match FooSym's address";
 
@@ -344,13 +352,16 @@ TEST_F(CoreAPIsStandardTest, TestReexportsGenerator) {
 
   auto Filter = [this](SymbolStringPtr Name) { return Name != Bar; };
 
-  JD.addGenerator(std::make_unique<ReexportsGenerator>(JD2, false, Filter));
+  JD.addGenerator(std::make_unique<ReexportsGenerator>(
+      JD2, JITDylibLookupFlags::MatchExportedSymbolsOnly, Filter));
 
-  auto Flags = cantFail(JD.lookupFlags({Foo, Bar, Baz}));
+  auto Flags = cantFail(JD.lookupFlags(
+      LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
+      SymbolLookupSet({Foo, Bar, Baz})));
   EXPECT_EQ(Flags.size(), 1U) << "Unexpected number of results";
   EXPECT_EQ(Flags[Foo], FooSym.getFlags()) << "Unexpected flags for Foo";
 
-  auto Result = cantFail(ES.lookup(JITDylibSearchList({{&JD, false}}), Foo));
+  auto Result = cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), Foo));
 
   EXPECT_EQ(Result.getAddress(), FooSym.getAddress())
       << "Incorrect reexported symbol address";
@@ -370,8 +381,9 @@ TEST_F(CoreAPIsStandardTest, TestTrivialCircularDependency) {
     FooReady = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Ready,
-            OnCompletion, NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet({Foo}), SymbolState::Ready, OnCompletion,
+            NoDependenciesToRegister);
 
   FooR->addDependenciesForAll({{&JD, SymbolNameSet({Foo})}});
   EXPECT_THAT_ERROR(FooR->notifyResolved({{Foo, FooSym}}), Succeeded())
@@ -430,11 +442,13 @@ TEST_F(CoreAPIsStandardTest, TestCircularDependenceInOneJITDylib) {
 
   // Issue lookups for Foo. Use NoDependenciesToRegister: We're going to add
   // the dependencies manually below.
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Resolved,
             std::move(OnFooResolution), NoDependenciesToRegister);
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Ready,
-            std::move(OnFooReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, std::move(OnFooReady),
+            NoDependenciesToRegister);
 
   bool BarResolved = false;
   bool BarReady = false;
@@ -448,11 +462,13 @@ TEST_F(CoreAPIsStandardTest, TestCircularDependenceInOneJITDylib) {
     BarReady = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Bar}, SymbolState::Resolved,
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Bar), SymbolState::Resolved,
             std::move(OnBarResolution), NoDependenciesToRegister);
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Bar}, SymbolState::Ready,
-            std::move(OnBarReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Bar), SymbolState::Ready, std::move(OnBarReady),
+            NoDependenciesToRegister);
 
   bool BazResolved = false;
   bool BazReady = false;
@@ -467,11 +483,13 @@ TEST_F(CoreAPIsStandardTest, TestCircularDependenceInOneJITDylib) {
     BazReady = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Baz}, SymbolState::Resolved,
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Baz), SymbolState::Resolved,
             std::move(OnBazResolution), NoDependenciesToRegister);
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Baz}, SymbolState::Ready,
-            std::move(OnBazReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Baz), SymbolState::Ready, std::move(OnBazReady),
+            NoDependenciesToRegister);
 
   // Add a circular dependency: Foo -> Bar, Bar -> Baz, Baz -> Foo.
   FooR->addDependenciesForAll({{&JD, SymbolNameSet({Bar})}});
@@ -551,8 +569,9 @@ TEST_F(CoreAPIsStandardTest, FailureInDependency) {
     OnFooReadyRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Ready,
-            std::move(OnFooReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, std::move(OnFooReady),
+            NoDependenciesToRegister);
 
   bool OnBarReadyRun = false;
   auto OnBarReady = [&](Expected<SymbolMap> Result) {
@@ -560,8 +579,9 @@ TEST_F(CoreAPIsStandardTest, FailureInDependency) {
     OnBarReadyRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Bar}, SymbolState::Ready,
-            std::move(OnBarReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Bar), SymbolState::Ready, std::move(OnBarReady),
+            NoDependenciesToRegister);
 
   // Add a dependency by Foo on Bar.
   FooR->addDependenciesForAll({{&JD, SymbolNameSet({Bar})}});
@@ -614,8 +634,9 @@ TEST_F(CoreAPIsStandardTest, FailureInCircularDependency) {
     OnFooReadyRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Ready,
-            std::move(OnFooReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, std::move(OnFooReady),
+            NoDependenciesToRegister);
 
   bool OnBarReadyRun = false;
   auto OnBarReady = [&](Expected<SymbolMap> Result) {
@@ -623,8 +644,9 @@ TEST_F(CoreAPIsStandardTest, FailureInCircularDependency) {
     OnBarReadyRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Bar}, SymbolState::Ready,
-            std::move(OnBarReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Bar), SymbolState::Ready, std::move(OnBarReady),
+            NoDependenciesToRegister);
 
   // Add a dependency by Foo on Bar and vice-versa.
   FooR->addDependenciesForAll({{&JD, SymbolNameSet({Bar})}});
@@ -678,8 +700,9 @@ TEST_F(CoreAPIsStandardTest, AddDependencyOnFailedSymbol) {
     OnFooReadyRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Ready,
-            std::move(OnFooReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, std::move(OnFooReady),
+            NoDependenciesToRegister);
 
   bool OnBarReadyRun = false;
   auto OnBarReady = [&](Expected<SymbolMap> Result) {
@@ -687,8 +710,9 @@ TEST_F(CoreAPIsStandardTest, AddDependencyOnFailedSymbol) {
     OnBarReadyRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Bar}, SymbolState::Ready,
-            std::move(OnBarReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Bar), SymbolState::Ready, std::move(OnBarReady),
+            NoDependenciesToRegister);
 
   // Fail bar.
   BarR->failMaterialization();
@@ -742,8 +766,9 @@ TEST_F(CoreAPIsStandardTest, FailAfterMaterialization) {
     OnFooReadyRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Ready,
-            std::move(OnFooReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, std::move(OnFooReady),
+            NoDependenciesToRegister);
 
   bool OnBarReadyRun = false;
   auto OnBarReady = [&](Expected<SymbolMap> Result) {
@@ -751,8 +776,9 @@ TEST_F(CoreAPIsStandardTest, FailAfterMaterialization) {
     OnBarReadyRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Bar}, SymbolState::Ready,
-            std::move(OnBarReady), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Bar), SymbolState::Ready, std::move(OnBarReady),
+            NoDependenciesToRegister);
 
   // Add a dependency by Foo on Bar and vice-versa.
   FooR->addDependenciesForAll({{&JD, SymbolNameSet({Bar})}});
@@ -854,8 +880,6 @@ TEST_F(CoreAPIsStandardTest, AddAndMaterializeLazySymbol) {
   cantFail(JD.define(MU));
   cantFail(JD.define(absoluteSymbols({{Bar, BarSym}})));
 
-  SymbolNameSet Names({Foo});
-
   bool OnCompletionRun = false;
 
   auto OnCompletion = [&](Expected<SymbolMap> Result) {
@@ -867,8 +891,9 @@ TEST_F(CoreAPIsStandardTest, AddAndMaterializeLazySymbol) {
     OnCompletionRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), Names, SymbolState::Ready,
-            std::move(OnCompletion), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, std::move(OnCompletion),
+            NoDependenciesToRegister);
 
   EXPECT_TRUE(FooMaterialized) << "Foo was not materialized";
   EXPECT_TRUE(BarDiscarded) << "Bar was not discarded";
@@ -910,8 +935,9 @@ TEST_F(CoreAPIsStandardTest, TestBasicWeakSymbolMaterialization) {
     OnCompletionRun = true;
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Bar}, SymbolState::Ready,
-            std::move(OnCompletion), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Bar), SymbolState::Ready, std::move(OnCompletion),
+            NoDependenciesToRegister);
 
   EXPECT_TRUE(OnCompletionRun) << "OnCompletion not run";
   EXPECT_TRUE(BarMaterialized) << "Bar was not materialized at all";
@@ -938,13 +964,13 @@ TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
       });
 
   cantFail(JD.define(MU));
-  cantFail(ES.lookup(JITDylibSearchList({{&JD, false}}), Foo));
+  cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), Foo));
 
   // Assert that materialization is complete by now.
   ExpectNoMoreMaterialization = true;
 
   // Look up bar to verify that no further materialization happens.
-  auto BarResult = cantFail(ES.lookup(JITDylibSearchList({{&JD, false}}), Bar));
+  auto BarResult = cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), Bar));
   EXPECT_EQ(BarResult.getAddress(), BarSym.getAddress())
       << "Expected Bar == BarSym";
 }
@@ -955,19 +981,19 @@ TEST_F(CoreAPIsStandardTest, GeneratorTest) {
   class TestGenerator : public JITDylib::DefinitionGenerator {
   public:
     TestGenerator(SymbolMap Symbols) : Symbols(std::move(Symbols)) {}
-    Expected<SymbolNameSet> tryToGenerate(JITDylib &JD,
-                                          const SymbolNameSet &Names) {
+    Error tryToGenerate(LookupKind K, JITDylib &JD,
+                        JITDylibLookupFlags JDLookupFlags,
+                        const SymbolLookupSet &Names) {
       SymbolMap NewDefs;
-      SymbolNameSet NewNames;
 
-      for (auto &Name : Names) {
-        if (Symbols.count(Name)) {
+      for (const auto &KV : Names) {
+        const auto &Name = KV.first;
+        if (Symbols.count(Name))
           NewDefs[Name] = Symbols[Name];
-          NewNames.insert(Name);
-        }
       }
+
       cantFail(JD.define(absoluteSymbols(std::move(NewDefs))));
-      return NewNames;
+      return Error::success();
     };
 
   private:
@@ -976,8 +1002,8 @@ TEST_F(CoreAPIsStandardTest, GeneratorTest) {
 
   JD.addGenerator(std::make_unique<TestGenerator>(SymbolMap({{Bar, BarSym}})));
 
-  auto Result =
-      cantFail(ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo, Bar}));
+  auto Result = cantFail(
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo, Bar})));
 
   EXPECT_EQ(Result.count(Bar), 1U) << "Expected to find fallback def for 'bar'";
   EXPECT_EQ(Result[Bar].getAddress(), BarSym.getAddress())
@@ -995,7 +1021,7 @@ TEST_F(CoreAPIsStandardTest, FailResolution) {
   cantFail(JD.define(MU));
 
   SymbolNameSet Names({Foo, Bar});
-  auto Result = ES.lookup(JITDylibSearchList({{&JD, false}}), Names);
+  auto Result = ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet(Names));
 
   EXPECT_FALSE(!!Result) << "Expected failure";
   if (!Result) {
@@ -1028,8 +1054,8 @@ TEST_F(CoreAPIsStandardTest, FailEmissionAfterResolution) {
         cantFail(R.notifyResolved(SymbolMap({{Foo, FooSym}, {Bar, BarSym}})));
 
         ES.lookup(
-            JITDylibSearchList({{&JD, false}}), SymbolNameSet({Baz}),
-            SymbolState::Resolved,
+            LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet({Baz}), SymbolState::Resolved,
             [&R](Expected<SymbolMap> Result) {
               // Called when "baz" is resolved. We don't actually depend
               // on or care about baz, but use it to trigger failure of
@@ -1046,8 +1072,8 @@ TEST_F(CoreAPIsStandardTest, FailEmissionAfterResolution) {
 
   cantFail(JD.define(MU));
 
-  SymbolNameSet Names({Foo, Bar});
-  auto Result = ES.lookup(JITDylibSearchList({{&JD, false}}), Names);
+  auto Result =
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo, Bar}));
 
   EXPECT_THAT_EXPECTED(std::move(Result), Failed())
       << "Unexpected success while trying to test error propagation";
@@ -1066,8 +1092,8 @@ TEST_F(CoreAPIsStandardTest, FailAfterPartialResolution) {
 
   bool QueryHandlerRun = false;
   ES.lookup(
-      JITDylibSearchList({{&JD, false}}), SymbolNameSet({Foo, Bar}),
-      SymbolState::Resolved,
+      LookupKind::Static, makeJITDylibSearchOrder(&JD),
+      SymbolLookupSet({Foo, Bar}), SymbolState::Resolved,
       [&](Expected<SymbolMap> Result) {
         EXPECT_THAT_EXPECTED(std::move(Result), Failed())
             << "Expected query to fail";
@@ -1087,8 +1113,7 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithUnthreadedMaterialization) {
 
   cantFail(JD.define(MU));
 
-  auto FooLookupResult =
-      cantFail(ES.lookup(JITDylibSearchList({{&JD, false}}), Foo));
+  auto FooLookupResult = cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), Foo));
 
   EXPECT_EQ(FooLookupResult.getAddress(), FooSym.getAddress())
       << "lookup returned an incorrect address";
@@ -1108,8 +1133,7 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
-  auto FooLookupResult =
-      cantFail(ES.lookup(JITDylibSearchList({{&JD, false}}), Foo));
+  auto FooLookupResult = cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), Foo));
 
   EXPECT_EQ(FooLookupResult.getAddress(), FooSym.getAddress())
       << "lookup returned an incorrect address";
@@ -1157,16 +1181,14 @@ TEST_F(CoreAPIsStandardTest, TestGetRequestedSymbolsAndReplace) {
   EXPECT_FALSE(FooMaterialized) << "Foo should not be materialized yet";
   EXPECT_FALSE(BarMaterialized) << "Bar should not be materialized yet";
 
-  auto FooSymResult =
-      cantFail(ES.lookup(JITDylibSearchList({{&JD, false}}), Foo));
+  auto FooSymResult = cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), Foo));
   EXPECT_EQ(FooSymResult.getAddress(), FooSym.getAddress())
       << "Address mismatch for Foo";
 
   EXPECT_TRUE(FooMaterialized) << "Foo should be materialized now";
   EXPECT_FALSE(BarMaterialized) << "Bar still should not be materialized";
 
-  auto BarSymResult =
-      cantFail(ES.lookup(JITDylibSearchList({{&JD, false}}), Bar));
+  auto BarSymResult = cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), Bar));
   EXPECT_EQ(BarSymResult.getAddress(), BarSym.getAddress())
       << "Address mismatch for Bar";
   EXPECT_TRUE(BarMaterialized) << "Bar should be materialized now";
@@ -1186,7 +1208,8 @@ TEST_F(CoreAPIsStandardTest, TestMaterializationResponsibilityDelegation) {
 
   cantFail(JD.define(MU));
 
-  auto Result = ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo, Bar});
+  auto Result =
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo, Bar}));
 
   EXPECT_TRUE(!!Result) << "Result should be a success value";
   EXPECT_EQ(Result->count(Foo), 1U) << "\"Foo\" entry missing";
@@ -1216,8 +1239,9 @@ TEST_F(CoreAPIsStandardTest, TestMaterializeWeakSymbol) {
     cantFail(std::move(Result));
   };
 
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Ready,
-            std::move(OnCompletion), NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet({Foo}), SymbolState::Ready, std::move(OnCompletion),
+            NoDependenciesToRegister);
 
   auto MU2 = std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{Foo, JITSymbolFlags::Exported}}),
