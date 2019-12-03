@@ -9,7 +9,6 @@
 #ifndef liblldb_CommandReturnObject_h_
 #define liblldb_CommandReturnObject_h_
 
-#include "lldb/Core/STLUtils.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StreamTee.h"
