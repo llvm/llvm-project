@@ -3329,6 +3329,19 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (match(Arg, m_Intrinsic<Intrinsic::arm_mve_pred_v2i>(m_Value(ArgArg))) &&
         II->getType() == ArgArg->getType())
       return replaceInstUsesWith(*II, ArgArg);
+    Constant *XorMask;
+    if (match(Arg,
+              m_Xor(m_Intrinsic<Intrinsic::arm_mve_pred_v2i>(m_Value(ArgArg)),
+                    m_Constant(XorMask))) &&
+        II->getType() == ArgArg->getType()) {
+      if (auto *CI = dyn_cast<ConstantInt>(XorMask)) {
+        if (CI->getValue().trunc(16).isAllOnesValue()) {
+          auto TrueVector = Builder.CreateVectorSplat(
+              II->getType()->getVectorNumElements(), Builder.getTrue());
+          return BinaryOperator::Create(Instruction::Xor, ArgArg, TrueVector);
+        }
+      }
+    }
     KnownBits ScalarKnown(32);
     if (SimplifyDemandedBits(II, 0, APInt::getLowBitsSet(32, 16),
                              ScalarKnown, 0))
