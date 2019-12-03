@@ -147,22 +147,6 @@ public:
     return OpI - InstrI->operands_begin();
   }
 
-  /// VirtRegInfo - Information about a virtual register used by a set of operands.
-  ///
-  struct VirtRegInfo {
-    /// Reads - One of the operands read the virtual register.  This does not
-    /// include undef or internal use operands, see MO::readsReg().
-    bool Reads;
-
-    /// Writes - One of the operands writes the virtual register.
-    bool Writes;
-
-    /// Tied - Uses and defs must use the same register. This can be because of
-    /// a two-address constraint, or there may be a partial redefinition of a
-    /// sub-register.
-    bool Tied;
-  };
-
   /// Information about how a physical register Reg is used by a set of
   /// operands.
   struct PhysRegInfo {
@@ -196,17 +180,6 @@ public:
     /// There is a use operand of reg or a super-register with kill flag set.
     bool Killed;
   };
-
-  /// analyzeVirtReg - Analyze how the current instruction or bundle uses a
-  /// virtual register.  This function should not be called after operator++(),
-  /// it expects a fresh iterator.
-  ///
-  /// @param Reg The virtual register to analyze.
-  /// @param Ops When set, this vector will receive an (MI, OpNum) entry for
-  ///            each operand referring to Reg.
-  /// @returns A filled-in RegInfo struct.
-  VirtRegInfo analyzeVirtReg(unsigned Reg,
-           SmallVectorImpl<std::pair<MachineInstr*, unsigned> > *Ops = nullptr);
 
   /// analyzePhysReg - Analyze how the current instruction or bundle uses a
   /// physical register.  This function should not be called after operator++(),
@@ -256,6 +229,35 @@ public:
   const MachineOperand &operator* () const { return deref(); }
   const MachineOperand *operator->() const { return &deref(); }
 };
+
+/// VirtRegInfo - Information about a virtual register used by a set of
+/// operands.
+///
+struct VirtRegInfo {
+  /// Reads - One of the operands read the virtual register.  This does not
+  /// include undef or internal use operands, see MO::readsReg().
+  bool Reads;
+
+  /// Writes - One of the operands writes the virtual register.
+  bool Writes;
+
+  /// Tied - Uses and defs must use the same register. This can be because of
+  /// a two-address constraint, or there may be a partial redefinition of a
+  /// sub-register.
+  bool Tied;
+};
+
+/// AnalyzeVirtRegInBundle - Analyze how the current instruction or bundle uses
+/// a virtual register.  This function should not be called after operator++(),
+/// it expects a fresh iterator.
+///
+/// @param Reg The virtual register to analyze.
+/// @param Ops When set, this vector will receive an (MI, OpNum) entry for
+///            each operand referring to Reg.
+/// @returns A filled-in RegInfo struct.
+VirtRegInfo AnalyzeVirtRegInBundle(
+    MachineInstr &MI, unsigned Reg,
+    SmallVectorImpl<std::pair<MachineInstr *, unsigned>> *Ops = nullptr);
 
 } // End llvm namespace
 
