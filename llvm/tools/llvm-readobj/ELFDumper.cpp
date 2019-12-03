@@ -672,6 +672,9 @@ private:
   bool checkPTDynamic(const Elf_Phdr &Phdr, const Elf_Shdr &Sec);
   void printProgramHeaders(const ELFO *Obj);
   void printSectionMapping(const ELFO *Obj);
+  void printGNUVersionSectionProlog(const ELFFile<ELFT> *Obj,
+                                    const typename ELFT::Shdr *Sec,
+                                    const Twine &Label, unsigned EntriesNum);
 };
 
 template <class ELFT>
@@ -3921,18 +3924,26 @@ void GNUStyle<ELFT>::printDynamicRelocations(const ELFO *Obj) {
 }
 
 template <class ELFT>
-static void printGNUVersionSectionProlog(formatted_raw_ostream &OS,
-                                         const Twine &Name, unsigned EntriesNum,
-                                         const ELFFile<ELFT> *Obj,
-                                         const typename ELFT::Shdr *Sec,
-                                         StringRef FileName) {
-  StringRef SecName = unwrapOrError(FileName, Obj->getSectionName(Sec));
-  OS << Name << " section '" << SecName << "' "
+void GNUStyle<ELFT>::printGNUVersionSectionProlog(
+    const ELFFile<ELFT> *Obj, const typename ELFT::Shdr *Sec,
+    const Twine &Label, unsigned EntriesNum) {
+  StringRef SecName = unwrapOrError(this->FileName, Obj->getSectionName(Sec));
+  OS << Label << " section '" << SecName << "' "
      << "contains " << EntriesNum << " entries:\n";
 
-  const typename ELFT::Shdr *SymTab =
-      unwrapOrError(FileName, Obj->getSection(Sec->sh_link));
-  StringRef SymTabName = unwrapOrError(FileName, Obj->getSectionName(SymTab));
+  unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
+  StringRef SymTabName = "<corrupt>";
+
+  Expected<const typename ELFT::Shdr *> SymTabOrErr =
+      Obj->getSection(Sec->sh_link);
+  if (SymTabOrErr)
+    SymTabName =
+        unwrapOrError(this->FileName, Obj->getSectionName(*SymTabOrErr));
+  else
+    this->reportUniqueWarning(createError(
+        "invalid section linked to SHT_GNU_verdef section with index " +
+        Twine(SecNdx) + ": " + toString(SymTabOrErr.takeError())));
+
   OS << " Addr: " << format_hex_no_prefix(Sec->sh_addr, 16)
      << "  Offset: " << format_hex(Sec->sh_offset, 8)
      << "  Link: " << Sec->sh_link << " (" << SymTabName << ")\n";
@@ -3945,8 +3956,7 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
     return;
 
   unsigned Entries = Sec->sh_size / sizeof(Elf_Versym);
-  printGNUVersionSectionProlog(OS, "Version symbols", Entries, Obj, Sec,
-                               this->FileName);
+  printGNUVersionSectionProlog(Obj, Sec, "Version symbols", Entries);
 
   const uint8_t *VersymBuf =
       reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
@@ -4017,8 +4027,7 @@ void GNUStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
   if (!Sec)
     return;
 
-  printGNUVersionSectionProlog(OS, "Version definition", Sec->sh_info, Obj, Sec,
-                               this->FileName);
+  printGNUVersionSectionProlog(Obj, Sec, "Version definition", Sec->sh_info);
 
   Expected<std::vector<VerDef>> V = this->dumper()->getVersionDefinitions(Sec);
   if (!V) {
@@ -4047,8 +4056,7 @@ void GNUStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
     return;
 
   unsigned VerneedNum = Sec->sh_info;
-  printGNUVersionSectionProlog(OS, "Version needs", VerneedNum, Obj, Sec,
-                               this->FileName);
+  printGNUVersionSectionProlog(Obj, Sec, "Version needs", VerneedNum);
 
   ArrayRef<uint8_t> SecData =
       unwrapOrError(this->FileName, Obj->getSectionContents(Sec));
