@@ -1141,10 +1141,11 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
   // declared.
   SourceLocation Loc = Ty->getDecl()->getLocation();
 
+  uint32_t Align = getDeclAlignIfRequired(Ty->getDecl(), CGM.getContext());
   // Typedefs are derived from some other type.
   return DBuilder.createTypedef(Underlying, Ty->getDecl()->getName(),
                                 getOrCreateFile(Loc), getLineNumber(Loc),
-                                getDeclContextDescriptor(Ty->getDecl()));
+                                getDeclContextDescriptor(Ty->getDecl()), Align);
 }
 
 static unsigned getDwarfCC(CallingConv CC) {
