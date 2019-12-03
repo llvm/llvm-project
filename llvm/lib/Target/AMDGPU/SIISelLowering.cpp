@@ -97,12 +97,12 @@ static cl::opt<bool> DisableLoopAlignment(
 
 static bool hasFP32Denormals(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  return Info->getMode().FP32Denormals;
+  return Info->getMode().allFP32Denormals();
 }
 
 static bool hasFP64FP16Denormals(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  return Info->getMode().FP64FP16Denormals;
+  return Info->getMode().allFP64FP16Denormals();
 }
 
 static unsigned findFirstFreeSGPR(CCState &CCInfo) {
@@ -783,6 +783,7 @@ bool SITargetLowering::isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode,
           (Opcode == ISD::FMA && Subtarget->hasFmaMixInsts())) &&
     DestVT.getScalarType() == MVT::f32 &&
     SrcVT.getScalarType() == MVT::f16 &&
+    // TODO: This probably only requires no input flushing?
     !hasFP32Denormals(DAG.getMachineFunction());
 }
 

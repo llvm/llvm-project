@@ -8,7 +8,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -30,7 +31,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: false
+    fp64-fp16-input-denormals: false
+    fp64-fp16-output-denormals: false
 
 body: |
   bb.0:
@@ -52,7 +54,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
 
 body: |
   bb.0:
@@ -74,7 +77,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
+    fp32-input-denormals: false
+    fp32-output-denormals: false
 
 body: |
   bb.0:
@@ -96,7 +100,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -118,7 +123,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: false
+    fp64-fp16-input-denormals: false
+    fp64-fp16-output-denormals: false
 
 body: |
   bb.0:
@@ -140,7 +146,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -162,7 +169,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: false
+    fp64-fp16-input-denormals: false
+    fp64-fp16-output-denormals: false
 
 body: |
   bb.0:
@@ -184,7 +192,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
 
 body: |
   bb.0:
@@ -207,8 +216,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
-
+    fp32-input-denormals: false
+    fp32-output-denormals: false
 
 body: |
   bb.0:
@@ -230,7 +239,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
 
 body: |
   bb.0:
@@ -252,7 +262,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
+    fp32-input-denormals: false
+    fp32-output-denormals: false
 
 body: |
   bb.0:
@@ -274,7 +285,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
 
 body: |
   bb.0:
@@ -299,7 +311,8 @@ legalized:       true
 regBankSelected: true
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
+    fp32-input-denormals: false
+    fp32-output-denormals: false
 
 body: |
   bb.0:

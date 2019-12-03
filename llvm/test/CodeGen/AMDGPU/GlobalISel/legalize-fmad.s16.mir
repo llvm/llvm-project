@@ -7,7 +7,8 @@
 name: test_fmad_s16_flush
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: false
+    fp64-fp16-input-denormals: false
+    fp64-fp16-output-denormals: false
 
 body: |
   bb.0:
@@ -66,7 +67,8 @@ body: |
 name: test_fmad_v2s16_flush
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: false
+    fp64-fp16-input-denormals: false
+    fp64-fp16-output-denormals: false
 
 body: |
   bb.0:
@@ -162,7 +164,8 @@ body: |
 name: test_fmad_v4s16_flush
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: false
+    fp64-fp16-input-denormals: false
+    fp64-fp16-output-denormals: false
 
 body: |
   bb.0:
@@ -332,7 +335,8 @@ body: |
 name: test_fmad_s16_denorm
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -392,7 +396,8 @@ body: |
 name: test_fmad_s16_denorm_flags
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -452,7 +457,8 @@ body: |
 name: test_fmad_v2s16_denorm
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -550,7 +556,8 @@ body: |
 name: test_fmad_v2s16_denorm_flags
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -648,7 +655,8 @@ body: |
 name: test_fmad_v4s16_denorm
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -822,7 +830,8 @@ body: |
 name: test_fmad_v4s16_denorm_flags
 machineFunctionInfo:
   mode:
-    fp64-fp16-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
