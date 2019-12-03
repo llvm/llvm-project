@@ -1015,6 +1015,16 @@ let Predicates = [HasMVEFloat] in {
             (v4f32 (MVE_VMAXNMf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2)))>;
   def : Pat<(v8f16 (fmaxnum (v8f16 MQPR:$val1), (v8f16 MQPR:$val2))),
             (v8f16 (MVE_VMAXNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2)))>;
+  def : Pat<(v4f32 (int_arm_mve_max_predicated (v4f32 MQPR:$val1), (v4f32 MQPR:$val2),
+                          (v4i1 VCCR:$mask), (v4f32 MQPR:$inactive))),
+            (v4f32 (MVE_VMAXNMf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2),
+                          (i32 1), (v4i1 VCCR:$mask),
+                          (v4f32 MQPR:$inactive)))>;
+  def : Pat<(v8f16 (int_arm_mve_max_predicated (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
+                          (v8i1 VCCR:$mask), (v8f16 MQPR:$inactive))),
+            (v8f16 (MVE_VMAXNMf32 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
+                          (i32 1), (v8i1 VCCR:$mask),
+                          (v8f16 MQPR:$inactive)))>;
 }
 
 def MVE_VMINNMf32 : MVE_VMINMAXNM<"vminnm", "f32", 0b0, 0b1>;
@@ -1025,6 +1035,16 @@ let Predicates = [HasMVEFloat] in {
             (v4f32 (MVE_VMINNMf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2)))>;
   def : Pat<(v8f16 (fminnum (v8f16 MQPR:$val1), (v8f16 MQPR:$val2))),
             (v8f16 (MVE_VMINNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2)))>;
+  def : Pat<(v4f32 (int_arm_mve_min_predicated (v4f32 MQPR:$val1), (v4f32 MQPR:$val2),
+                          (v4i1 VCCR:$mask), (v4f32 MQPR:$inactive))),
+            (v4f32 (MVE_VMINNMf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2),
+                          (i32 1), (v4i1 VCCR:$mask),
+                          (v4f32 MQPR:$inactive)))>;
+  def : Pat<(v8f16 (int_arm_mve_min_predicated (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
+                          (v8i1 VCCR:$mask), (v8f16 MQPR:$inactive))),
+            (v8f16 (MVE_VMINNMf32 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
+                          (i32 1), (v8i1 VCCR:$mask),
+                          (v8f16 MQPR:$inactive)))>;
 }
 
 
@@ -1042,47 +1062,44 @@ class MVE_VMINMAX<string iname, string suffix, bit U, bits<2> size,
   let Inst{4} = bit_4;
 }
 
-multiclass MVE_VMINMAX_all_sizes<string iname, bit bit_4> {
-  def s8  : MVE_VMINMAX<iname, "s8",  0b0, 0b00, bit_4>;
-  def s16 : MVE_VMINMAX<iname, "s16", 0b0, 0b01, bit_4>;
-  def s32 : MVE_VMINMAX<iname, "s32", 0b0, 0b10, bit_4>;
-  def u8  : MVE_VMINMAX<iname, "u8",  0b1, 0b00, bit_4>;
-  def u16 : MVE_VMINMAX<iname, "u16", 0b1, 0b01, bit_4>;
-  def u32 : MVE_VMINMAX<iname, "u32", 0b1, 0b10, bit_4>;
+multiclass MVE_VMINMAX_m<string iname, bit bit_4, MVEVectorVTInfo VTI,
+                      SDNode unpred_op, Intrinsic pred_int> {
+  def "" : MVE_VMINMAX<iname, VTI.Suffix, VTI.Unsigned, VTI.Size, bit_4>;
+
+  let Predicates = [HasMVEInt] in {
+    // Unpredicated min/max
+    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
+
+    // Predicated min/max
+    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 1), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive)))>;
+  }
 }
 
-defm MVE_VMAX : MVE_VMINMAX_all_sizes<"vmax", 0b0>;
-defm MVE_VMIN : MVE_VMINMAX_all_sizes<"vmin", 0b1>;
+multiclass MVE_VMAX<MVEVectorVTInfo VTI>
+  : MVE_VMINMAX_m<"vmax", 0b0, VTI, !if(VTI.Unsigned, umax, smax), int_arm_mve_max_predicated>;
+multiclass MVE_VMIN<MVEVectorVTInfo VTI>
+  : MVE_VMINMAX_m<"vmin", 0b1, VTI, !if(VTI.Unsigned, umin, smin), int_arm_mve_min_predicated>;
 
-let Predicates = [HasMVEInt] in {
-  def : Pat<(v16i8 (smin (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
-            (v16i8 (MVE_VMINs8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
-  def : Pat<(v8i16 (smin (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
-            (v8i16 (MVE_VMINs16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
-  def : Pat<(v4i32 (smin (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))),
-            (v4i32 (MVE_VMINs32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)))>;
+defm MVE_VMINs8   : MVE_VMIN<MVE_v16s8>;
+defm MVE_VMINs16  : MVE_VMIN<MVE_v8s16>;
+defm MVE_VMINs32  : MVE_VMIN<MVE_v4s32>;
+defm MVE_VMINu8   : MVE_VMIN<MVE_v16u8>;
+defm MVE_VMINu16  : MVE_VMIN<MVE_v8u16>;
+defm MVE_VMINu32  : MVE_VMIN<MVE_v4u32>;
 
-  def : Pat<(v16i8 (smax (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
-            (v16i8 (MVE_VMAXs8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
-  def : Pat<(v8i16 (smax (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
-            (v8i16 (MVE_VMAXs16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
-  def : Pat<(v4i32 (smax (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))),
-            (v4i32 (MVE_VMAXs32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)))>;
-
-  def : Pat<(v16i8 (umin (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
-            (v16i8 (MVE_VMINu8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
-  def : Pat<(v8i16 (umin (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
-            (v8i16 (MVE_VMINu16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
-  def : Pat<(v4i32 (umin (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))),
-            (v4i32 (MVE_VMINu32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)))>;
-
-  def : Pat<(v16i8 (umax (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
-            (v16i8 (MVE_VMAXu8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
-  def : Pat<(v8i16 (umax (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
-            (v8i16 (MVE_VMAXu16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
-  def : Pat<(v4i32 (umax (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))),
-            (v4i32 (MVE_VMAXu32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)))>;
-}
+defm MVE_VMAXs8   : MVE_VMAX<MVE_v16s8>;
+defm MVE_VMAXs16  : MVE_VMAX<MVE_v8s16>;
+defm MVE_VMAXs32  : MVE_VMAX<MVE_v4s32>;
+defm MVE_VMAXu8   : MVE_VMAX<MVE_v16u8>;
+defm MVE_VMAXu16  : MVE_VMAX<MVE_v8u16>;
+defm MVE_VMAXu32  : MVE_VMAX<MVE_v4u32>;
 
 // end of mve_comp instructions
 

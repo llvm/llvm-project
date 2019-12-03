@@ -105,6 +105,26 @@ defm vornq_m: predicated_bit_op_fp<"orn_predicated">;
 defm vorrq_m: predicated_bit_op_fp<"orr_predicated">;
 }
 
+// Predicated intrinsics - Int types only
+let params = T.Int in {
+def vminq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"min_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vmaxq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"max_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+}
+
+// Predicated intrinsics - Float types only
+let params = T.Float in {
+def vminnmq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"min_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vmaxnmq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"max_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+}
+
 let params = T.Int in {
 def vminvq: Intrinsic<Scalar, (args Scalar:$prev, Vector:$vec),
     (Scalar (IRInt<"minv", [Vector], 1> $prev, $vec))>;
@@ -172,6 +192,28 @@ let params = T.Float in {
   defm: compare<"lt", fcmp_lt>;
   defm: compare<"le", fcmp_le>;
 }
+
+let params = T.Signed in {
+  def vminq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                               (select (icmp_sle $a, $b), $a, $b)>;
+  def vmaxq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                               (select (icmp_sge $a, $b), $a, $b)>;
+}
+let params = T.Unsigned in {
+  def vminqu: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                (select (icmp_ule $a, $b), $a, $b)>,
+              NameOverride<"vminq">;
+  def vmaxqu: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                (select (icmp_uge $a, $b), $a, $b)>,
+              NameOverride<"vmaxq">;
+}
+let params = T.Float in {
+  def vminnmq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                               (IRIntBase<"minnum", [Vector]> $a, $b)>;
+  def vmaxnmq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                               (IRIntBase<"maxnum", [Vector]> $a, $b)>;
+}
+
 
 multiclass contiguous_load<string mnemonic, PrimitiveType memtype,
                            list<Type> same_size, list<Type> wider> {
