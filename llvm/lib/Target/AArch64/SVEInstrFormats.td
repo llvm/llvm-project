@@ -5293,8 +5293,11 @@ class sve_mem_32b_gld_sv<bits<4> opc, bit xs, bit scaled, string asm,
 }
 
 multiclass sve_mem_32b_gld_sv_32_scaled<bits<4> opc, string asm,
+                                        SDPatternOperator sxtw_op,
+                                        SDPatternOperator uxtw_op,
                                         RegisterOperand sxtw_opnd,
-                                        RegisterOperand uxtw_opnd> {
+                                        RegisterOperand uxtw_opnd,
+                                        ValueType vt> {
   def _UXTW_SCALED_REAL : sve_mem_32b_gld_sv<opc, 0, 1, asm, uxtw_opnd>;
   def _SXTW_SCALED_REAL : sve_mem_32b_gld_sv<opc, 1, 1, asm, sxtw_opnd>;
 
@@ -5302,11 +5305,19 @@ multiclass sve_mem_32b_gld_sv_32_scaled<bits<4> opc, string asm,
                   (!cast<Instruction>(NAME # _UXTW_SCALED_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
                   (!cast<Instruction>(NAME # _SXTW_SCALED_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
+
+  def : Pat<(nxv4i32 (uxtw_op (nxv4i1 PPR:$gp), GPR64sp:$base, (nxv4i32 ZPR:$indices), vt)),
+            (!cast<Instruction>(NAME # _UXTW_SCALED_REAL) PPR:$gp, GPR64sp:$base, ZPR:$indices)>;
+  def : Pat<(nxv4i32 (sxtw_op (nxv4i1 PPR:$gp), GPR64sp:$base, (nxv4i32 ZPR:$indices), vt)),
+            (!cast<Instruction>(NAME # _SXTW_SCALED_REAL) PPR:$gp, GPR64sp:$base, ZPR:$indices)>;
 }
 
 multiclass sve_mem_32b_gld_vs_32_unscaled<bits<4> opc, string asm,
+                                          SDPatternOperator sxtw_op,
+                                          SDPatternOperator uxtw_op,
                                           RegisterOperand sxtw_opnd,
-                                          RegisterOperand uxtw_opnd> {
+                                          RegisterOperand uxtw_opnd,
+                                          ValueType vt> {
   def _UXTW_REAL : sve_mem_32b_gld_sv<opc, 0, 0, asm, uxtw_opnd>;
   def _SXTW_REAL : sve_mem_32b_gld_sv<opc, 1, 0, asm, sxtw_opnd>;
 
@@ -5314,6 +5325,11 @@ multiclass sve_mem_32b_gld_vs_32_unscaled<bits<4> opc, string asm,
                   (!cast<Instruction>(NAME # _UXTW_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
                   (!cast<Instruction>(NAME # _SXTW_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
+
+  def : Pat<(nxv4i32 (uxtw_op (nxv4i1 PPR:$gp), GPR64sp:$base, (nxv4i32 ZPR:$offsets), vt)),
+            (!cast<Instruction>(NAME # _UXTW_REAL) PPR:$gp, GPR64sp:$base, ZPR:$offsets)>;
+  def : Pat<(nxv4i32 (sxtw_op (nxv4i1 PPR:$gp), GPR64sp:$base, (nxv4i32 ZPR:$offsets), vt)),
+            (!cast<Instruction>(NAME # _SXTW_REAL) PPR:$gp, GPR64sp:$base, ZPR:$offsets)>;
 }
 
 
@@ -5585,8 +5601,11 @@ class sve_mem_64b_gld_sv<bits<4> opc, bit xs, bit scaled, bit lsl, string asm,
 }
 
 multiclass sve_mem_64b_gld_sv_32_scaled<bits<4> opc, string asm,
+                                        SDPatternOperator sxtw_op,
+                                        SDPatternOperator uxtw_op,
                                         RegisterOperand sxtw_opnd,
-                                        RegisterOperand uxtw_opnd> {
+                                        RegisterOperand uxtw_opnd,
+                                        ValueType vt> {
   def _UXTW_SCALED_REAL : sve_mem_64b_gld_sv<opc, 0, 1, 0, asm, uxtw_opnd>;
   def _SXTW_SCALED_REAL : sve_mem_64b_gld_sv<opc, 1, 1, 0, asm, sxtw_opnd>;
 
@@ -5594,11 +5613,19 @@ multiclass sve_mem_64b_gld_sv_32_scaled<bits<4> opc, string asm,
                   (!cast<Instruction>(NAME # _UXTW_SCALED_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
                   (!cast<Instruction>(NAME # _SXTW_SCALED_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
+
+  def : Pat<(nxv2i64 (uxtw_op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$indices), vt)),
+            (!cast<Instruction>(NAME # _UXTW_SCALED_REAL) PPR:$gp, GPR64sp:$base, ZPR:$indices)>;
+  def : Pat<(nxv2i64 (sxtw_op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$indices), vt)),
+            (!cast<Instruction>(NAME # _SXTW_SCALED_REAL) PPR:$gp, GPR64sp:$base, ZPR:$indices)>;
 }
 
 multiclass sve_mem_64b_gld_vs_32_unscaled<bits<4> opc, string asm,
+                                          SDPatternOperator sxtw_op,
+                                          SDPatternOperator uxtw_op,
                                           RegisterOperand sxtw_opnd,
-                                          RegisterOperand uxtw_opnd> {
+                                          RegisterOperand uxtw_opnd,
+                                          ValueType vt> {
   def _UXTW_REAL : sve_mem_64b_gld_sv<opc, 0, 0, 0, asm, uxtw_opnd>;
   def _SXTW_REAL : sve_mem_64b_gld_sv<opc, 1, 0, 0, asm, sxtw_opnd>;
 
@@ -5606,6 +5633,11 @@ multiclass sve_mem_64b_gld_vs_32_unscaled<bits<4> opc, string asm,
                   (!cast<Instruction>(NAME # _UXTW_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
                   (!cast<Instruction>(NAME # _SXTW_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
+
+  def : Pat<(nxv2i64 (uxtw_op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$offsets), vt)),
+            (!cast<Instruction>(NAME # _UXTW_REAL) PPR:$gp, GPR64sp:$base, ZPR:$offsets)>;
+  def : Pat<(nxv2i64 (sxtw_op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$offsets), vt)),
+            (!cast<Instruction>(NAME # _SXTW_REAL) PPR:$gp, GPR64sp:$base, ZPR:$offsets)>;
 }
 
 multiclass sve_mem_64b_gld_sv2_64_scaled<bits<4> opc, string asm,
