@@ -122,8 +122,7 @@ void DataVisualization::Categories::Enable(ConstString category,
                                            TypeCategoryMap::Position pos) {
   if (GetFormatManager().GetCategory(category)->IsEnabled())
     GetFormatManager().DisableCategory(category);
-  GetFormatManager().EnableCategory(
-      category, pos, std::initializer_list<lldb::LanguageType>());
+  GetFormatManager().EnableCategory(category, pos, {});
 }
 
 void DataVisualization::Categories::Enable(lldb::LanguageType lang_type) {
