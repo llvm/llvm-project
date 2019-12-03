@@ -37,7 +37,6 @@ namespace syntax {
 enum class NodeKind : uint16_t {
   Leaf,
   TranslationUnit,
-  TopLevelDeclaration,
 
   // Expressions
   UnknownExpression,
@@ -57,7 +56,11 @@ enum class NodeKind : uint16_t {
   ReturnStatement,
   RangeBasedForStatement,
   ExpressionStatement,
-  CompoundStatement
+  CompoundStatement,
+
+  // Declarations
+  UnknownDeclaration,
+  SimpleDeclaration,
 };
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeKind K);
@@ -99,20 +102,6 @@ public:
   TranslationUnit() : Tree(NodeKind::TranslationUnit) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::TranslationUnit;
-  }
-};
-
-/// FIXME: this node is temporary and will be replaced with nodes for various
-///        'declarations' and 'declarators' from the C/C++ grammar
-///
-/// Represents any top-level declaration. Only there to give the syntax tree a
-/// bit of structure until we implement syntax nodes for declarations and
-/// declarators.
-class TopLevelDeclaration final : public Tree {
-public:
-  TopLevelDeclaration() : Tree(NodeKind::TopLevelDeclaration) {}
-  static bool classof(const Node *N) {
-    return N->kind() == NodeKind::TopLevelDeclaration;
   }
 };
 
@@ -313,6 +302,38 @@ public:
   syntax::Leaf *rbrace();
 };
 
+/// A declaration that can appear at the top-level. Note that this does *not*
+/// correspond 1-to-1 to clang::Decl. Syntax trees distinguish between top-level
+/// declarations (e.g. namespace definitions) and declarators (e.g. variables,
+/// typedefs, etc.). Declarators are stored inside SimpleDeclaration.
+class Declaration : public Tree {
+public:
+  Declaration(NodeKind K) : Tree(K) {}
+  static bool classof(const Node *N) {
+    return NodeKind::UnknownDeclaration <= N->kind() &&
+           N->kind() <= NodeKind::SimpleDeclaration;
+  }
+};
+
+/// Declaration of an unknown kind, e.g. not yet supported in syntax trees.
+class UnknownDeclaration final : public Declaration {
+public:
+  UnknownDeclaration() : Declaration(NodeKind::UnknownDeclaration) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::UnknownDeclaration;
+  }
+};
+
+/// Groups multiple declarators (e.g. variables, typedefs, etc.) together. All
+/// grouped declarators share the same declaration specifiers (e.g. 'int' or
+/// 'typedef').
+class SimpleDeclaration final : public Declaration {
+public:
+  SimpleDeclaration() : Declaration(NodeKind::SimpleDeclaration) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::SimpleDeclaration;
+  }
+};
 } // namespace syntax
 } // namespace clang
 #endif

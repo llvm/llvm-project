@@ -130,7 +130,7 @@ void foo() {}
     )cpp",
           R"txt(
 *: TranslationUnit
-|-TopLevelDeclaration
+|-SimpleDeclaration
 | |-int
 | |-main
 | |-(
@@ -138,7 +138,7 @@ void foo() {}
 | `-CompoundStatement
 |   |-{
 |   `-}
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-void
   |-foo
   |-(
@@ -157,7 +157,7 @@ int main() {
         )cpp",
           R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-int
   |-main
   |-(
@@ -202,7 +202,7 @@ void test() {
 )cpp",
        R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-void
   |-test
   |-(
@@ -224,7 +224,7 @@ void test() {
       {"void test() { int a = 10; }",
        R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-void
   |-test
   |-(
@@ -232,16 +232,18 @@ void test() {
   `-CompoundStatement
     |-{
     |-DeclarationStatement
-    | |-int
-    | |-a
-    | |-=
-    | |-10
+    | |-SimpleDeclaration
+    | | |-int
+    | | |-a
+    | | |-=
+    | | `-UnknownExpression
+    | |   `-10
     | `-;
     `-}
 )txt"},
       {"void test() { ; }", R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-void
   |-test
   |-(
@@ -263,7 +265,7 @@ void test() {
 )cpp",
        R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-void
   |-test
   |-(
@@ -299,7 +301,7 @@ void test() {
 )cpp",
        R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-void
   |-test
   |-(
@@ -329,7 +331,7 @@ int test() { return 1; }
       )cpp",
        R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-int
   |-test
   |-(
@@ -352,7 +354,7 @@ void test() {
       )cpp",
        R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-void
   |-test
   |-(
@@ -360,18 +362,21 @@ void test() {
   `-CompoundStatement
     |-{
     |-DeclarationStatement
-    | |-int
-    | |-a
-    | |-[
-    | |-3
-    | |-]
+    | |-SimpleDeclaration
+    | | |-int
+    | | |-a
+    | | |-[
+    | | |-UnknownExpression
+    | | | `-3
+    | | `-]
     | `-;
     |-RangeBasedForStatement
     | |-for
     | |-(
-    | |-int
-    | |-x
-    | |-:
+    | |-SimpleDeclaration
+    | | |-int
+    | | |-x
+    | | `-:
     | |-UnknownExpression
     | | `-a
     | |-)
@@ -384,7 +389,7 @@ void test() {
       // counterpart.
       {"void main() { foo: return 100; }", R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-void
   |-main
   |-(
@@ -411,7 +416,7 @@ void test() {
     )cpp",
        R"txt(
 *: TranslationUnit
-`-TopLevelDeclaration
+`-SimpleDeclaration
   |-void
   |-test
   |-(
@@ -444,7 +449,70 @@ void test() {
     |   | `-)
     |   `-;
     `-}
-)txt"}};
+)txt"},
+      // Multiple declarators group into a single SimpleDeclaration.
+      {R"cpp(
+      int *a, b;
+  )cpp",
+       R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-int
+  |-*
+  |-a
+  |-,
+  |-b
+  `-;
+  )txt"},
+      {R"cpp(
+    typedef int *a, b;
+  )cpp",
+       R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-typedef
+  |-int
+  |-*
+  |-a
+  |-,
+  |-b
+  `-;
+  )txt"},
+      // Multiple declarators inside a statement.
+      {R"cpp(
+void foo() {
+      int *a, b;
+      typedef int *ta, tb;
+}
+  )cpp",
+       R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-foo
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-DeclarationStatement
+    | |-SimpleDeclaration
+    | | |-int
+    | | |-*
+    | | |-a
+    | | |-,
+    | | `-b
+    | `-;
+    |-DeclarationStatement
+    | |-SimpleDeclaration
+    | | |-typedef
+    | | |-int
+    | | |-*
+    | | |-ta
+    | | |-,
+    | | `-tb
+    | `-;
+    `-}
+  )txt"}};
 
   for (const auto &T : Cases) {
     auto *Root = buildTree(T.first);
