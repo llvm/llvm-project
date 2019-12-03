@@ -314,6 +314,11 @@ def ARMCCgt : PatLeaf<(i32 12)>;
 def ARMCCle : PatLeaf<(i32 13)>;
 def ARMCCal : PatLeaf<(i32 14)>;
 
+// VCC predicates. See ARMVCC::VPTCodes
+def ARMVCCNone : PatLeaf<(i32 0)>;
+def ARMVCCThen : PatLeaf<(i32 1)>;
+def ARMVCCElse : PatLeaf<(i32 2)>;
+
 //===----------------------------------------------------------------------===//
 //  ARM specific transformation functions and pattern fragments.
 //
