@@ -345,9 +345,10 @@ void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src,
     }
   }
 
-  AggValueSlot srcAgg = AggValueSlot::forLValue(
-      src, CGF, AggValueSlot::IsDestructed, needsGC(type),
-      AggValueSlot::IsAliased, AggValueSlot::MayOverlap);
+  AggValueSlot srcAgg =
+    AggValueSlot::forLValue(src, AggValueSlot::IsDestructed,
+                            needsGC(type), AggValueSlot::IsAliased,
+                            AggValueSlot::MayOverlap);
   EmitCopy(type, Dest, srcAgg);
 }
 
@@ -385,7 +386,7 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
   ASTContext &Ctx = CGF.getContext();
   LValue Array = CGF.EmitLValue(E->getSubExpr());
   assert(Array.isSimple() && "initializer_list array not a simple lvalue");
-  Address ArrayPtr = Array.getAddress(CGF);
+  Address ArrayPtr = Array.getAddress();
 
   const ConstantArrayType *ArrayType =
       Ctx.getAsConstantArrayType(E->getSubExpr()->getType());
@@ -687,7 +688,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
                                       CodeGenFunction::TCK_Load);
     // FIXME: Do we also need to handle property references here?
     if (LV.isSimple())
-      CGF.EmitDynamicCast(LV.getAddress(CGF), cast<CXXDynamicCastExpr>(E));
+      CGF.EmitDynamicCast(LV.getAddress(), cast<CXXDynamicCastExpr>(E));
     else
       CGF.CGM.ErrorUnsupported(E, "non-simple lvalue dynamic_cast");
 
@@ -722,7 +723,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
 
     LValue SourceLV = CGF.EmitLValue(E->getSubExpr());
     Address SourceAddress =
-        Builder.CreateElementBitCast(SourceLV.getAddress(CGF), CGF.Int8Ty);
+        Builder.CreateElementBitCast(SourceLV.getAddress(), CGF.Int8Ty);
     Address DestAddress =
         Builder.CreateElementBitCast(Dest.getAddress(), CGF.Int8Ty);
     llvm::Value *SizeVal = llvm::ConstantInt::get(
@@ -1162,7 +1163,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     }
 
     EmitCopy(E->getLHS()->getType(),
-             AggValueSlot::forLValue(LHS, CGF, AggValueSlot::IsDestructed,
+             AggValueSlot::forLValue(LHS, AggValueSlot::IsDestructed,
                                      needsGC(E->getLHS()->getType()),
                                      AggValueSlot::IsAliased,
                                      AggValueSlot::MayOverlap),
@@ -1183,9 +1184,11 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   }
 
   // Codegen the RHS so that it stores directly into the LHS.
-  AggValueSlot LHSSlot = AggValueSlot::forLValue(
-      LHS, CGF, AggValueSlot::IsDestructed, needsGC(E->getLHS()->getType()),
-      AggValueSlot::IsAliased, AggValueSlot::MayOverlap);
+  AggValueSlot LHSSlot =
+    AggValueSlot::forLValue(LHS, AggValueSlot::IsDestructed,
+                            needsGC(E->getLHS()->getType()),
+                            AggValueSlot::IsAliased,
+                            AggValueSlot::MayOverlap);
   // A non-volatile aggregate destination might have volatile member.
   if (!LHSSlot.isVolatile() &&
       CGF.hasVolatileMember(E->getLHS()->getType()))
@@ -1317,7 +1320,7 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
               llvm::Constant::getNullValue(CGF.Int8PtrTy),
               CharUnits::One()); // placeholder
 
-        CGF.pushDestroy(EHCleanup, LV.getAddress(CGF), CurField->getType(),
+        CGF.pushDestroy(EHCleanup, LV.getAddress(), CurField->getType(),
                         CGF.getDestroyer(DtorKind), false);
         Cleanups.push_back(CGF.EHStack.stable_begin());
       }
@@ -1405,11 +1408,12 @@ AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
     CGF.EmitComplexExprIntoLValue(E, LV, /*isInit*/ true);
     return;
   case TEK_Aggregate:
-    CGF.EmitAggExpr(
-        E, AggValueSlot::forLValue(LV, CGF, AggValueSlot::IsDestructed,
-                                   AggValueSlot::DoesNotNeedGCBarriers,
-                                   AggValueSlot::IsNotAliased,
-                                   AggValueSlot::MayOverlap, Dest.isZeroed()));
+    CGF.EmitAggExpr(E, AggValueSlot::forLValue(LV,
+                                               AggValueSlot::IsDestructed,
+                                      AggValueSlot::DoesNotNeedGCBarriers,
+                                               AggValueSlot::IsNotAliased,
+                                               AggValueSlot::MayOverlap,
+                                               Dest.isZeroed()));
     return;
   case TEK_Scalar:
     if (LV.isSimple()) {
@@ -1445,7 +1449,7 @@ void AggExprEmitter::EmitNullInitializationToLValue(LValue lv) {
     // There's a potential optimization opportunity in combining
     // memsets; that would be easy for arrays, but relatively
     // difficult for structures with the current code.
-    CGF.EmitNullInitialization(lv.getAddress(CGF), lv.getType());
+    CGF.EmitNullInitialization(lv.getAddress(), lv.getType());
   }
 }
 
@@ -1602,7 +1606,7 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
           = field->getType().isDestructedType()) {
       assert(LV.isSimple());
       if (CGF.needsEHCleanup(dtorKind)) {
-        CGF.pushDestroy(EHCleanup, LV.getAddress(CGF), field->getType(),
+        CGF.pushDestroy(EHCleanup, LV.getAddress(), field->getType(),
                         CGF.getDestroyer(dtorKind), false);
         addCleanup(CGF.EHStack.stable_begin());
         pushedCleanup = true;
@@ -1613,7 +1617,7 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
     // else, clean it up for -O0 builds and general tidiness.
     if (!pushedCleanup && LV.isSimple())
       if (llvm::GetElementPtrInst *GEP =
-              dyn_cast<llvm::GetElementPtrInst>(LV.getPointer(CGF)))
+            dyn_cast<llvm::GetElementPtrInst>(LV.getPointer()))
         if (GEP->use_empty())
           GEP->eraseFromParent();
   }
@@ -1695,8 +1699,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
     if (InnerLoop) {
       // If the subexpression is an ArrayInitLoopExpr, share its cleanup.
       auto elementSlot = AggValueSlot::forLValue(
-          elementLV, CGF, AggValueSlot::IsDestructed,
-          AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+          elementLV, AggValueSlot::IsDestructed,
+          AggValueSlot::DoesNotNeedGCBarriers,
+          AggValueSlot::IsNotAliased,
           AggValueSlot::DoesNotOverlap);
       AggExprEmitter(CGF, elementSlot, false)
           .VisitArrayInitLoopExpr(InnerLoop, outerBegin);
@@ -1859,10 +1864,10 @@ LValue CodeGenFunction::EmitAggExprToLValue(const Expr *E) {
   assert(hasAggregateEvaluationKind(E->getType()) && "Invalid argument!");
   Address Temp = CreateMemTemp(E->getType());
   LValue LV = MakeAddrLValue(Temp, E->getType());
-  EmitAggExpr(E, AggValueSlot::forLValue(
-                     LV, *this, AggValueSlot::IsNotDestructed,
-                     AggValueSlot::DoesNotNeedGCBarriers,
-                     AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap));
+  EmitAggExpr(E, AggValueSlot::forLValue(LV, AggValueSlot::IsNotDestructed,
+                                         AggValueSlot::DoesNotNeedGCBarriers,
+                                         AggValueSlot::IsNotAliased,
+                                         AggValueSlot::DoesNotOverlap));
   return LV;
 }
 
@@ -1911,8 +1916,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
                                         bool isVolatile) {
   assert(!Ty->isAnyComplexType() && "Shouldn't happen for complex");
 
-  Address DestPtr = Dest.getAddress(*this);
-  Address SrcPtr = Src.getAddress(*this);
+  Address DestPtr = Dest.getAddress();
+  Address SrcPtr = Src.getAddress();
 
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *RT = Ty->getAs<RecordType>()) {
