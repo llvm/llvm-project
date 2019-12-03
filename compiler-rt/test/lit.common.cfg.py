@@ -498,3 +498,9 @@ elif config.use_lld and (not config.has_lld):
 
 config.clang = " " + " ".join(run_wrapper + [config.compile_wrapper, config.clang]) + " "
 config.target_cflags = " " + " ".join(target_cflags + extra_cflags) + " "
+
+if config.host_os == 'NetBSD':
+  nb_commands_dir = os.path.join(config.compiler_rt_src_root,
+                                 "test", "sanitizer_common", "netbsd_commands")
+  config.netbsd_noaslr_prefix = ('sh ' +
+                                 os.path.join(nb_commands_dir, 'run_noaslr.sh'))
