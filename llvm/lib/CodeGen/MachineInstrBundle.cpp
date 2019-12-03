@@ -278,22 +278,18 @@ bool llvm::finalizeBundles(MachineFunction &MF) {
   return Changed;
 }
 
-//===----------------------------------------------------------------------===//
-// MachineOperand iterator
-//===----------------------------------------------------------------------===//
-
-MachineOperandIteratorBase::VirtRegInfo
-MachineOperandIteratorBase::analyzeVirtReg(unsigned Reg,
-                    SmallVectorImpl<std::pair<MachineInstr*, unsigned> > *Ops) {
-  VirtRegInfo RI = { false, false, false };
-  for(; isValid(); ++*this) {
-    MachineOperand &MO = deref();
+VirtRegInfo llvm::AnalyzeVirtRegInBundle(
+    MachineInstr &MI, unsigned Reg,
+    SmallVectorImpl<std::pair<MachineInstr *, unsigned>> *Ops) {
+  VirtRegInfo RI = {false, false, false};
+  for (MIBundleOperands O(MI); O.isValid(); ++O) {
+    MachineOperand &MO = *O;
     if (!MO.isReg() || MO.getReg() != Reg)
       continue;
 
     // Remember each (MI, OpNo) that refers to Reg.
     if (Ops)
-      Ops->push_back(std::make_pair(MO.getParent(), getOperandNo()));
+      Ops->push_back(std::make_pair(MO.getParent(), O.getOperandNo()));
 
     // Both defs and uses can read virtual registers.
     if (MO.readsReg()) {
@@ -305,11 +301,16 @@ MachineOperandIteratorBase::analyzeVirtReg(unsigned Reg,
     // Only defs can write.
     if (MO.isDef())
       RI.Writes = true;
-    else if (!RI.Tied && MO.getParent()->isRegTiedToDefOperand(getOperandNo()))
+    else if (!RI.Tied &&
+             MO.getParent()->isRegTiedToDefOperand(O.getOperandNo()))
       RI.Tied = true;
   }
   return RI;
 }
+
+//===----------------------------------------------------------------------===//
+// MachineOperand iterator
+//===----------------------------------------------------------------------===//
 
 MachineOperandIteratorBase::PhysRegInfo
 MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
