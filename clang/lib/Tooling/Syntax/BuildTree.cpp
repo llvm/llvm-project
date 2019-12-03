@@ -209,6 +209,8 @@ private:
     };
 
     /// Maps from the start token to a subtree starting at that token.
+    /// Keys in the map are pointers into the array of expanded tokens, so
+    /// pointer order corresponds to the order of preprocessor tokens.
     /// FIXME: storing the end tokens is redundant.
     /// FIXME: the key of a map is redundant, it is also stored in NodeForRange.
     std::map<const syntax::Token *, NodeAndRole> Trees;
