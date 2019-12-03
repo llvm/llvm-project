@@ -98,7 +98,7 @@ void DpuRank::SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
 
 Dpu::Dpu(DpuRank *rank, dpu_t *dpu, FILE *stdout_file_)
     : m_rank(rank), m_dpu(dpu), printf_enable(false),
-      printf_buffer_last_addr((uint32_t)LLDB_INVALID_ADDRESS),
+      printf_buffer_last_idx((uint32_t)LLDB_INVALID_ADDRESS),
       printf_buffer_var_addr((uint32_t)LLDB_INVALID_ADDRESS) {
   nr_threads = m_rank->GetNrThreads();
   nr_of_work_registers_per_thread =
@@ -318,39 +318,40 @@ bool Dpu::PrepareStepOverPrintfBkp(
     inst_to_replace_with = open_print_sequence_inst;
 
     if (printf_buffer_var_addr != (uint32_t)LLDB_INVALID_ADDRESS) {
-      if (!ReadWRAM(printf_buffer_var_addr, &printf_buffer_last_addr,
-                    sizeof(printf_buffer_last_addr)))
+      if (!ReadWRAM(printf_buffer_var_addr, &printf_buffer_last_idx,
+                    sizeof(printf_buffer_last_idx)))
         return false;
     }
   } else if (current_pc == close_print_sequence_addr) {
     inst_to_replace_with = close_print_sequence_inst;
     if (printf_buffer_var_addr != (uint32_t)LLDB_INVALID_ADDRESS &&
-        printf_buffer_last_addr != (uint32_t)LLDB_INVALID_ADDRESS) {
-      uint32_t printf_buffer_current_addr;
-      if (!ReadWRAM(printf_buffer_var_addr, &printf_buffer_current_addr,
-                    sizeof(printf_buffer_current_addr)))
+        printf_buffer_last_idx != (uint32_t)LLDB_INVALID_ADDRESS) {
+      uint32_t printf_buffer_current_idx;
+      if (!ReadWRAM(printf_buffer_var_addr, &printf_buffer_current_idx,
+                    sizeof(printf_buffer_current_idx)))
         return false;
 
       size_t mram_buffer_size;
-      if (printf_buffer_current_addr <= printf_buffer_last_addr) {
+      if (printf_buffer_current_idx <= printf_buffer_last_idx) {
         mram_buffer_size = printf_buffer_size;
       } else {
-        mram_buffer_size = printf_buffer_current_addr - printf_buffer_last_addr;
+        mram_buffer_size = printf_buffer_current_idx - printf_buffer_last_idx;
       }
       uint8_t *mram_buffer = (uint8_t *)malloc(mram_buffer_size);
       if (mram_buffer == NULL)
         return false;
       if (mram_buffer_size == printf_buffer_size) {
-        uint32_t buffer_index = printf_buffer_last_addr - printf_buffer_address;
-        if (!ReadMRAM(printf_buffer_last_addr, mram_buffer,
-                      printf_buffer_size - buffer_index))
+        if (!ReadMRAM(printf_buffer_last_idx, mram_buffer,
+                      printf_buffer_size - printf_buffer_last_idx))
           return false;
-        if (!ReadMRAM(printf_buffer_address, &mram_buffer[buffer_index],
-                      printf_buffer_current_addr - printf_buffer_address))
+        if (!ReadMRAM(printf_buffer_address,
+                      &mram_buffer[printf_buffer_last_idx],
+                      printf_buffer_current_idx))
           return false;
 
       } else {
-        if (!ReadMRAM(printf_buffer_last_addr, mram_buffer, mram_buffer_size))
+        if (!ReadMRAM(printf_buffer_last_idx + printf_buffer_address,
+                      mram_buffer, mram_buffer_size))
           return false;
       }
 

@@ -132,7 +132,7 @@ private:
   bool printf_enable = false;
   lldb::addr_t open_print_sequence_addr, close_print_sequence_addr;
   dpuinstruction_t open_print_sequence_inst, close_print_sequence_inst;
-  uint32_t printf_buffer_last_addr, printf_buffer_var_addr,
+  uint32_t printf_buffer_last_idx, printf_buffer_var_addr,
       printf_buffer_address, printf_buffer_size;
   FILE *stdout_file;
 };
