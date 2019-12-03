@@ -352,7 +352,12 @@ if (WIN32 AND LIBUNWIND_ENABLE_STATIC AND NOT LIBUNWIND_ENABLE_SHARED)
 endif()
 
 if (LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
-  add_definitions(-D_LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
+  if (LIBUNWIND_HAS_DL_LIB)
+    add_definitions(-D_LIBUNWIND_LINK_DL_LIB)
+  endif()
+  if (LIBUNWIND_HAS_PTHREAD_LIB)
+    add_definitions(-D_LIBUNWIND_LINK_PTHREAD_LIB)
+  endif()
 endif()
 
 #===============================================================================
