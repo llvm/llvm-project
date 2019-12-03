@@ -363,6 +363,9 @@ Function *HotColdSplitting::extractColdRegion(
     }
     CI->setIsNoInline();
 
+    if (OrigF->hasSection())
+      OutF->setSection(OrigF->getSection());
+
     markFunctionCold(*OutF, BFI != nullptr);
 
     LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
