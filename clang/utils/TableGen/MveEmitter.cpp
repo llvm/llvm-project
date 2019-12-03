@@ -1208,14 +1208,16 @@ Result::Ptr MveEmitter::getCodeForArg(unsigned ArgNum, const Type *ArgType,
   Result::Ptr V =
       std::make_shared<BuiltinArgResult>(ArgNum, isa<PointerType>(ArgType));
 
-  if (const auto *ST = dyn_cast<ScalarType>(ArgType)) {
-    if (Promote && ST->isInteger() && ST->sizeInBits() < 32)
+  if (Promote) {
+    if (const auto *ST = dyn_cast<ScalarType>(ArgType)) {
+      if (ST->isInteger() && ST->sizeInBits() < 32)
+        V = std::make_shared<IntCastResult>(getScalarType("u32"), V);
+    } else if (const auto *PT = dyn_cast<PredicateType>(ArgType)) {
       V = std::make_shared<IntCastResult>(getScalarType("u32"), V);
-  } else if (const auto *PT = dyn_cast<PredicateType>(ArgType)) {
-    V = std::make_shared<IntCastResult>(getScalarType("u32"), V);
-    V = std::make_shared<IRIntrinsicResult>("arm_mve_pred_i2v",
-                                            std::vector<const Type *>{PT},
-                                            std::vector<Result::Ptr>{V});
+      V = std::make_shared<IRIntrinsicResult>("arm_mve_pred_i2v",
+                                              std::vector<const Type *>{PT},
+                                              std::vector<Result::Ptr>{V});
+    }
   }
 
   return V;
