@@ -175,12 +175,17 @@ public:
   /// All tokens produced by the preprocessor after all macro replacements,
   /// directives, etc. Source locations found in the clang AST will always
   /// point to one of these tokens.
+  /// Tokens are in TU order (per SourceManager::isBeforeInTranslationUnit()).
   /// FIXME: figure out how to handle token splitting, e.g. '>>' can be split
   ///        into two '>' tokens by the parser. However, TokenBuffer currently
   ///        keeps it as a single '>>' token.
   llvm::ArrayRef<syntax::Token> expandedTokens() const {
     return ExpandedTokens;
   }
+
+  /// Returns the subrange of expandedTokens() corresponding to the closed
+  /// token range R.
+  llvm::ArrayRef<syntax::Token> expandedTokens(SourceRange R) const;
 
   /// Find the subrange of spelled tokens that produced the corresponding \p
   /// Expanded tokens.
