@@ -85,7 +85,7 @@ llvm::DenseSet<const Decl *> locateDeclAt(ParsedAST &AST,
   // range of the Decl. This would avoid allowing rename on unrelated tokens.
   //   ^class Foo {} // SelectionTree returns CXXRecordDecl,
   //                 // we don't attempt to trigger rename on this position.
-  // FIXME: make this work on destructors, e.g. "~F^oo()".
+  // FIXME: Make this work on destructors, e.g. "~F^oo()".
   if (const auto *D = SelectedNode->ASTNode.get<Decl>()) {
     if (D->getLocation() != TokenStartLoc)
       return {};
@@ -171,14 +171,14 @@ llvm::Optional<ReasonToReject> renameable(const Decl &RenameDecl,
 
   // Blacklist symbols that are not supported yet in cross-file mode due to the
   // limitations of our index.
-  // FIXME: renaming templates requries to rename all related specializations,
-  //        our index doesn't have this information.
+  // FIXME: Renaming templates requires to rename all related specializations,
+  // our index doesn't have this information.
   if (RenameDecl.getDescribedTemplate())
     return ReasonToReject::UnsupportedSymbol;
 
-  // FIXME: renaming virtual methods requires to rename all overridens in
-  //        subclasses, our index doesn't have this information.
-  // Note: within-file rename does support this through the AST.
+  // FIXME: Renaming virtual methods requires to rename all overridens in
+  // subclasses, our index doesn't have this information.
+  // Note: Within-file rename does support this through the AST.
   if (const auto *S = llvm::dyn_cast<CXXMethodDecl>(&RenameDecl)) {
     if (S->isVirtual())
       return ReasonToReject::UnsupportedSymbol;
@@ -220,7 +220,7 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
       ND.getDescribedTemplate() ? *ND.getDescribedTemplate() : ND;
   // getUSRsForDeclaration will find other related symbols, e.g. virtual and its
   // overriddens, primary template and all explicit specializations.
-  // FIXME: get rid of the remaining tooling APIs.
+  // FIXME: Get rid of the remaining tooling APIs.
   std::vector<std::string> RenameUSRs = tooling::getUSRsForDeclaration(
       tooling::getCanonicalSymbolDeclaration(&RenameDecl), AST.getASTContext());
   llvm::DenseSet<SymbolID> TargetIDs;
@@ -285,7 +285,7 @@ Range toRange(const SymbolLocation &L) {
   return R;
 }
 
-// Return all rename occurrences (per the index) outside of the main file,
+// Return all rename occurrences (using the index) outside of the main file,
 // grouped by the absolute file path.
 llvm::Expected<llvm::StringMap<std::vector<Range>>>
 findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
@@ -295,7 +295,7 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
 
   // Absolute file path => rename occurrences in that file.
   llvm::StringMap<std::vector<Range>> AffectedFiles;
-  // FIXME: make the limit customizable.
+  // FIXME: Make the limit customizable.
   static constexpr size_t MaxLimitFiles = 50;
   bool HasMore = Index.refs(RQuest, [&](const Ref &R) {
     if (AffectedFiles.size() > MaxLimitFiles)
@@ -334,10 +334,10 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
 // as the file content we rename on, and fallback to file content on disk if
 // there is no dirty buffer.
 //
-// FIXME: add range patching heuristics to detect staleness of the index, and
-//        report to users.
-// FIXME: our index may return implicit references, which are non-eligitble
-//        for rename, we should filter out these references.
+// FIXME: Add range patching heuristics to detect staleness of the index, and
+// report to users.
+// FIXME: Our index may return implicit references, which are not eligible for
+// rename, we should filter out these references.
 llvm::Expected<FileEdits> renameOutsideFile(
     const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
     llvm::StringRef NewName, const SymbolIndex &Index,
@@ -400,7 +400,7 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
   SourceLocation SourceLocationBeg =
       SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
           RInputs.Pos, SM, AST.getASTContext().getLangOpts()));
-  // FIXME: renaming macros is not supported yet, the macro-handling code should
+  // FIXME: Renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
   if (locateMacroAt(SourceLocationBeg, AST.getPreprocessor()))
     return makeError(ReasonToReject::UnsupportedSymbol);
@@ -421,7 +421,7 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
   if (Reject)
     return makeError(*Reject);
 
-  // We have two implemenations of the rename:
+  // We have two implementations of the rename:
   //   - AST-based rename: used for renaming local symbols, e.g. variables
   //     defined in a function body;
   //   - index-based rename: used for renaming non-local symbols, and not
@@ -435,15 +435,15 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
     return MainFileRenameEdit.takeError();
 
   if (!RInputs.AllowCrossFile) {
-    // within-file rename, just return the main file results.
+    // Within-file rename: just return the main file results.
     return FileEdits(
         {std::make_pair(RInputs.MainFilePath,
                         Edit{MainFileCode, std::move(*MainFileRenameEdit)})});
   }
 
   FileEdits Results;
-  // renameable safely guards us that at this point we are renaming a local
-  // symbol if we don't have index,
+  // Renameable safely guards us that at this point we are renaming a local
+  // symbol if we don't have index.
   if (RInputs.Index) {
     auto OtherFilesEdits =
         renameOutsideFile(*RenameDecl, RInputs.MainFilePath, RInputs.NewName,
