@@ -452,25 +452,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FNEG(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDLoc dl(N);
 
-  EVT FloatVT = N->getValueType(0);
-  if (FloatVT == MVT::f32 || FloatVT == MVT::f64 || FloatVT == MVT::f128) {
-    // Expand Y = FNEG(X) -> Y = X ^ sign mask
-    APInt SignMask = APInt::getSignMask(NVT.getSizeInBits());
-    return DAG.getNode(ISD::XOR, dl, NVT, GetSoftenedFloat(N->getOperand(0)),
-                       DAG.getConstant(SignMask, dl, NVT));
-  }
-
-  // Expand Y = FNEG(X) -> Y = SUB -0.0, X
-  SDValue Ops[2] = { DAG.getConstantFP(-0.0, dl, N->getValueType(0)),
-                     GetSoftenedFloat(N->getOperand(0)) };
-  TargetLowering::MakeLibCallOptions CallOptions;
-  return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
-                                           RTLIB::SUB_F32,
-                                           RTLIB::SUB_F64,
-                                           RTLIB::SUB_F80,
-                                           RTLIB::SUB_F128,
-                                           RTLIB::SUB_PPCF128),
-                         NVT, Ops, CallOptions, dl).first;
+  // Expand Y = FNEG(X) -> Y = X ^ sign mask
+  APInt SignMask = APInt::getSignMask(NVT.getSizeInBits());
+  return DAG.getNode(ISD::XOR, dl, NVT, GetSoftenedFloat(N->getOperand(0)),
+                     DAG.getConstant(SignMask, dl, NVT));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
