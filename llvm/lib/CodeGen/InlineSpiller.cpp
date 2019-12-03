@@ -850,8 +850,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     // Skip non-Defs, including undef uses and internal reads.
     if (MO->isUse())
       continue;
-    MIBundleOperands::PhysRegInfo RI =
-        MIBundleOperands(*FoldMI).analyzePhysReg(Reg, &TRI);
+    PhysRegInfo RI = AnalyzePhysRegInBundle(*FoldMI, Reg, &TRI);
     if (RI.FullyDefined)
       continue;
     // FoldMI does not define this physreg. Remove the LI segment.
