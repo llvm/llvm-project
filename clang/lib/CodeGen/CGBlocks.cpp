@@ -1076,7 +1076,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
                           /*RefersToEnclosingVariableOrCapture*/ CI.isNested(),
                           type.getNonReferenceType(), VK_LValue,
                           SourceLocation());
-      src = EmitDeclRefLValue(&declRef).getAddress();
+      src = EmitDeclRefLValue(&declRef).getAddress(*this);
     };
 
     // For byrefs, we just write the pointer to the byref struct into
