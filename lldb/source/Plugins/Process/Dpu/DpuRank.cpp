@@ -86,24 +86,6 @@ Dpu *DpuRank::GetDpuFromSliceIdAndDpuId(unsigned int slice_id,
   return nullptr;
 }
 
-bool DpuRank::StopDpus() {
-  for (Dpu *dpu : m_dpus) {
-    bool success = dpu->StopThreads(true);
-    if (!success)
-      return false;
-  }
-  return true;
-}
-
-bool DpuRank::ResumeDpus() {
-  for (Dpu *dpu : m_dpus) {
-    bool success = dpu->ResumeThreads(false);
-    if (!success)
-      return false;
-  }
-  return true;
-}
-
 Dpu *DpuRank::GetDpu(size_t index) {
   return index < m_dpus.size() ? m_dpus[index] : nullptr;
 }

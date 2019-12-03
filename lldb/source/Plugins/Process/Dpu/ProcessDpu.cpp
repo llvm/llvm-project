@@ -142,6 +142,10 @@ ProcessDpu::Factory::Attach(
   if (dpu == nullptr)
     return Status("Cannot find the DPU in the rank ").ToError();
 
+  Dpu *dpu_neighbor = rank->GetDpuFromSliceIdAndDpuId(slice_id, dpu_id ^ 0x1);
+  if (dpu_neighbor == nullptr)
+    return Status("Cannot find the DPU neighbor in the rank ").ToError();
+
   uint64_t structure_value =
       ::strtoll(std::getenv("UPMEM_LLDB_STRUCTURE_VALUE"), NULL, 10);
   uint64_t slice_target =
@@ -151,9 +155,12 @@ ProcessDpu::Factory::Attach(
   success = dpu->SaveSliceContext(structure_value, slice_target);
   if (!success)
     return Status("Cannot save the DPU slice context ").ToError();
-  success = rank->StopDpus();
+  success = dpu->StopThreads(true);
   if (!success)
-    return Status("Cannot stop all DPUs of the rank").ToError();
+    return Status("Cannot stop the DPU ").ToError();
+  success = dpu_neighbor->StopThreads(true);
+  if (!success)
+    return Status("Cannot stop the DPU neighbor ").ToError();
 
   dpu->SetAttachSession();
 
@@ -297,9 +304,17 @@ Status ProcessDpu::Halt() {
 Status ProcessDpu::Detach() {
   Status error;
   bool success;
-  success = m_rank->ResumeDpus();
+  Dpu *dpu_neighbor = m_rank->GetDpuFromSliceIdAndDpuId(
+      m_dpu->GetSliceID(), m_dpu->GetDpuID() ^ 0x1);
+  if (dpu_neighbor == nullptr)
+    return Status("Cannot find the DPU neighbor in the rank");
+
+  success = m_dpu->ResumeThreads(false);
   if (!success)
-    return Status("Cannot resume all dpus of rank");
+    return Status("Cannot resume the DPU");
+  success = dpu_neighbor->ResumeThreads(false);
+  if (!success)
+    return Status("Cannot resume the DPU neighbor");
 
   success = m_dpu->RestoreSliceContext();
   if (!success)
