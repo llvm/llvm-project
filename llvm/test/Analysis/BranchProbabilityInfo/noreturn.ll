@@ -79,6 +79,32 @@ exit:
   ret i32 %b
 }
 
+define i32 @test4(i32 %a, i32 %b) {
+; CHECK: Printing analysis {{.*}} for function 'test4'
+; Make sure we handle loops post-dominated by unreachables.
+entry:
+  %cond1 = icmp eq i32 %a, 42
+  br i1 %cond1, label %header, label %exit
+; CHECK: edge entry -> header probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK: edge entry -> exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
+
+header:
+  br label %body
+
+body:
+  %cond2 = icmp eq i32 %a, 42
+  br i1 %cond2, label %header, label %abort
+; CHECK: edge body -> header probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge body -> abort probability is 0x40000000 / 0x80000000 = 50.00%
+
+abort:
+  call void @abort() noreturn
+  unreachable
+
+exit:
+  ret i32 %b
+}
+
 @_ZTIi = external global i8*
 
 ; CHECK-LABEL: throwSmallException
