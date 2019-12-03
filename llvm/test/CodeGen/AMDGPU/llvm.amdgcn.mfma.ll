@@ -1297,8 +1297,30 @@ bb:
 ; GCN-LABEL: {{^}}test_mfma_f32_32x32x1f32_vecarg:
 ; GCN-DAG:         v_mov_b32_e32 [[TWO:v[0-9]+]], 2.0
 ; GCN-DAG:         v_mov_b32_e32 [[ONE:v[0-9]+]], 1.0
-; GCN-COUNT-8:     global_load_dwordx4
-; GCN-COUNT-16:    v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         global_load_dwordx4
+; GCN-DAG:         global_load_dwordx4
+; GCN-DAG:         global_load_dwordx4
+; GCN-DAG:         global_load_dwordx4
+; GCN-DAG:         global_load_dwordx4
+; GCN-DAG:         global_load_dwordx4
+; GCN-DAG:         global_load_dwordx4
+; GCN-DAG:         global_load_dwordx4
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GCN:             v_mfma_f32_32x32x1f32 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GCN-COUNT-32:    v_accvgpr_read_b32
 ; GCN-COUNT-8:     global_store_dwordx4
