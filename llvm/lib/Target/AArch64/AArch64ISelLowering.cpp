@@ -828,6 +828,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       if (isTypeLegal(VT) && VT.getVectorElementType() != MVT::i1)
         setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
     }
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
   }
 
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
@@ -1333,6 +1335,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::SUNPKLO:           return "AArch64ISD::SUNPKLO";
   case AArch64ISD::UUNPKHI:           return "AArch64ISD::UUNPKHI";
   case AArch64ISD::UUNPKLO:           return "AArch64ISD::UUNPKLO";
+  case AArch64ISD::INSR:              return "AArch64ISD::INSR";
   }
   return nullptr;
 }
@@ -2883,6 +2886,16 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_uunpklo:
     return DAG.getNode(AArch64ISD::UUNPKLO, dl, Op.getValueType(),
                        Op.getOperand(1));
+
+  case Intrinsic::aarch64_sve_insr: {
+    SDValue Scalar = Op.getOperand(2);
+    EVT ScalarTy = Scalar.getValueType();
+    if ((ScalarTy == MVT::i8) || (ScalarTy == MVT::i16))
+      Scalar = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, Scalar);
+
+    return DAG.getNode(AArch64ISD::INSR, dl, Op.getValueType(),
+                       Op.getOperand(1), Scalar);
+  }
 
   case Intrinsic::localaddress: {
     const auto &MF = DAG.getMachineFunction();
