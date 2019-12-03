@@ -9,8 +9,6 @@
 #ifndef liblldb_ValueObjectSyntheticFilter_h_
 #define liblldb_ValueObjectSyntheticFilter_h_
 
-#include "lldb/Core/ThreadSafeSTLMap.h"
-#include "lldb/Core/ThreadSafeSTLVector.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
@@ -135,19 +133,24 @@ protected:
   lldb::SyntheticChildrenSP m_synth_sp;
   std::unique_ptr<SyntheticChildrenFrontEnd> m_synth_filter_up;
 
-  typedef ThreadSafeSTLMap<uint32_t, ValueObject *> ByIndexMap;
-  typedef ThreadSafeSTLMap<const char *, uint32_t> NameToIndexMap;
-  typedef ThreadSafeSTLVector<lldb::ValueObjectSP> SyntheticChildrenCache;
+  typedef std::map<uint32_t, ValueObject *> ByIndexMap;
+  typedef std::map<const char *, uint32_t> NameToIndexMap;
+  typedef std::vector<lldb::ValueObjectSP> SyntheticChildrenCache;
 
   typedef ByIndexMap::iterator ByIndexIterator;
   typedef NameToIndexMap::iterator NameToIndexIterator;
 
+  std::mutex m_child_mutex;
+  /// Guarded by m_child_mutex;
   ByIndexMap m_children_byindex;
+  /// Guarded by m_child_mutex;
   NameToIndexMap m_name_toindex;
+  /// Guarded by m_child_mutex;
+  SyntheticChildrenCache m_synthetic_children_cache;
+
   uint32_t m_synthetic_children_count; // FIXME use the ValueObject's
                                        // ChildrenManager instead of a special
                                        // purpose solution
-  SyntheticChildrenCache m_synthetic_children_cache;
 
   ConstString m_parent_type_name;
 

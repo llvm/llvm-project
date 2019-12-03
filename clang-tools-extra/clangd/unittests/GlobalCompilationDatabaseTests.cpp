@@ -105,9 +105,8 @@ TEST_F(OverlayCDBTest, GetCompileCommand) {
 TEST_F(OverlayCDBTest, GetFallbackCommand) {
   OverlayCDB CDB(Base.get(), {"-DA=4"});
   EXPECT_THAT(CDB.getFallbackCommand(testPath("bar.cc")).CommandLine,
-              ElementsAre(EndsWith("clang"), "-DA=2", testPath("bar.cc"),
-                          "-DA=4", "-fsyntax-only",
-                          StartsWith("-resource-dir")));
+              ElementsAre("clang", "-DA=2", testPath("bar.cc"), "-DA=4",
+                          "-fsyntax-only", StartsWith("-resource-dir")));
 }
 
 TEST_F(OverlayCDBTest, NoBase) {

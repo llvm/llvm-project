@@ -1,4 +1,6 @@
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.3-a+fp16 %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon \
+// RUN:  -target-feature +v8.3a -target-feature +fullfp16 -S -emit-llvm -o - %s \
+// RUN:  | FileCheck %s
 
 #include <arm_neon.h>
 

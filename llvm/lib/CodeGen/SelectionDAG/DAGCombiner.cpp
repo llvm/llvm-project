@@ -131,6 +131,7 @@ namespace {
     const TargetLowering &TLI;
     CombineLevel Level;
     CodeGenOpt::Level OptLevel;
+    bool LegalDAG = false;
     bool LegalOperations = false;
     bool LegalTypes = false;
     bool ForCodeSize;
@@ -177,6 +178,12 @@ namespace {
     void AddUsersToWorklist(SDNode *N) {
       for (SDNode *Node : N->uses())
         AddToWorklist(Node);
+    }
+
+    /// Convenient shorthand to add a node and all of its user to the worklist.
+    void AddToWorklistWithUsers(SDNode *N) {
+      AddUsersToWorklist(N);
+      AddToWorklist(N);
     }
 
     // Prune potentially dangling nodes. This is called after
@@ -1395,6 +1402,7 @@ bool DAGCombiner::recursivelyDeleteUnusedNodes(SDNode *N) {
 void DAGCombiner::Run(CombineLevel AtLevel) {
   // set the instance variables, so that the various visit routines may use it.
   Level = AtLevel;
+  LegalDAG = Level >= AfterLegalizeDAG;
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
@@ -1421,14 +1429,13 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
 
     // If this combine is running after legalizing the DAG, re-legalize any
     // nodes pulled off the worklist.
-    if (Level == AfterLegalizeDAG) {
+    if (LegalDAG) {
       SmallSetVector<SDNode *, 16> UpdatedNodes;
       bool NIsValid = DAG.LegalizeOp(N, UpdatedNodes);
 
-      for (SDNode *LN : UpdatedNodes) {
-        AddUsersToWorklist(LN);
-        AddToWorklist(LN);
-      }
+      for (SDNode *LN : UpdatedNodes)
+        AddToWorklistWithUsers(LN);
+
       if (!NIsValid)
         continue;
     }
@@ -5332,7 +5339,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     }
   }
 
-  if (Level >= AfterLegalizeTypes) {
+  if (LegalTypes) {
     // Attempt to propagate the AND back up to the leaves which, if they're
     // loads, can be combined to narrow loads and the AND node can be removed.
     // Perform after legalization so that extend nodes will already be
@@ -13364,9 +13371,8 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
     if (CFP1) {
       APFloat CVal = CFP1->getValueAPF();
       CVal.changeSign();
-      if (Level >= AfterLegalizeDAG &&
-          (TLI.isFPImmLegal(CVal, VT, ForCodeSize) ||
-           TLI.isOperationLegal(ISD::ConstantFP, VT)))
+      if (LegalDAG && (TLI.isFPImmLegal(CVal, VT, ForCodeSize) ||
+                       TLI.isOperationLegal(ISD::ConstantFP, VT)))
         return DAG.getNode(
             ISD::FMUL, SDLoc(N), VT, N0.getOperand(0),
             DAG.getNode(ISD::FNEG, SDLoc(N), VT, N0.getOperand(1)),
@@ -16989,8 +16995,7 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
   AddToWorklist(EVE);
   // Since we're explicitly calling ReplaceAllUses, add the new node to the
   // worklist explicitly as well.
-  AddUsersToWorklist(Load.getNode()); // Add users too
-  AddToWorklist(Load.getNode());
+  AddToWorklistWithUsers(Load.getNode());
   ++OpsNarrowed;
   return SDValue(EVE, 0);
 }
@@ -20510,7 +20515,7 @@ SDValue DAGCombiner::BuildLogBase2(SDValue V, const SDLoc &DL) {
 ///   Result = N X_i + X_i (N - N A X_i)
 SDValue DAGCombiner::BuildDivEstimate(SDValue N, SDValue Op,
                                       SDNodeFlags Flags) {
-  if (Level >= AfterLegalizeDAG)
+  if (LegalDAG)
     return SDValue();
 
   // TODO: Handle half and/or extended types?
@@ -20649,7 +20654,7 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
 /// Op can be zero.
 SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
                                            bool Reciprocal) {
-  if (Level >= AfterLegalizeDAG)
+  if (LegalDAG)
     return SDValue();
 
   // TODO: Handle half and/or extended types?

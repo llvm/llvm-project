@@ -40,7 +40,8 @@ public:
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
                 int32_t index, unsigned relOff) const override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                  uint64_t branchAddr, const Symbol &s) const override;
+                  uint64_t branchAddr, const Symbol &s,
+                  int64_t a) const override;
   uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   bool usesOnlyLowPageBits(RelType type) const override;
@@ -230,13 +231,14 @@ void AArch64::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
 }
 
 bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                         uint64_t branchAddr, const Symbol &s) const {
+                         uint64_t branchAddr, const Symbol &s,
+                         int64_t a) const {
   // ELF for the ARM 64-bit architecture, section Call and Jump relocations
   // only permits range extension thunks for R_AARCH64_CALL26 and
   // R_AARCH64_JUMP26 relocation types.
   if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26)
     return false;
-  uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
+  uint64_t dst = expr == R_PLT_PC ? s.getPltVA() : s.getVA(a);
   return !inBranchRange(type, branchAddr, dst);
 }
 

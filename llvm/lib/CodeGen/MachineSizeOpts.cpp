@@ -107,14 +107,16 @@ struct MachineBasicBlockBFIAdapter {
 
 bool llvm::shouldOptimizeForSize(const MachineFunction *MF,
                                  ProfileSummaryInfo *PSI,
-                                 const MachineBlockFrequencyInfo *MBFI) {
+                                 const MachineBlockFrequencyInfo *MBFI,
+                                 PGSOQueryType QueryType) {
   return shouldFuncOptimizeForSizeImpl<MachineBasicBlockBFIAdapter>(
-      MF, PSI, MBFI);
+      MF, PSI, MBFI, QueryType);
 }
 
 bool llvm::shouldOptimizeForSize(const MachineBasicBlock *MBB,
                                  ProfileSummaryInfo *PSI,
-                                 const MachineBlockFrequencyInfo *MBFI) {
+                                 const MachineBlockFrequencyInfo *MBFI,
+                                 PGSOQueryType QueryType) {
   return shouldOptimizeForSizeImpl<MachineBasicBlockBFIAdapter>(
-      MBB, PSI, MBFI);
+      MBB, PSI, MBFI, QueryType);
 }

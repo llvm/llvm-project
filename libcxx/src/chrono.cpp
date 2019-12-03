@@ -37,7 +37,7 @@
 #endif
 #endif
 
-#if defined(__unix__) && defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#if defined(__ELF__) && defined(_LIBCPP_LINK_RT_LIB)
 #pragma comment(lib, "rt")
 #endif
 

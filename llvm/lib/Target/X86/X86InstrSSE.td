@@ -5542,7 +5542,7 @@ let ExeDomain = SSEPackedDouble in {
 
 // FP round - roundss, roundps, roundsd, roundpd
 let Predicates = [HasAVX, NoVLX] in {
-  let ExeDomain = SSEPackedSingle in {
+  let ExeDomain = SSEPackedSingle, Uses = [MXCSR], mayRaiseFPException = 1 in {
     // Intrinsic form
     defm VROUNDPS  : sse41_fp_unop_p<0x08, "vroundps", f128mem, VR128, v4f32,
                                      loadv4f32, X86VRndScale, SchedWriteFRnd.XMM>,
@@ -5552,7 +5552,7 @@ let Predicates = [HasAVX, NoVLX] in {
                                    VEX, VEX_L, VEX_WIG;
   }
 
-  let ExeDomain = SSEPackedDouble in {
+  let ExeDomain = SSEPackedDouble, Uses = [MXCSR], mayRaiseFPException = 1 in {
     defm VROUNDPD  : sse41_fp_unop_p<0x09, "vroundpd", f128mem, VR128, v2f64,
                                      loadv2f64, X86VRndScale, SchedWriteFRnd.XMM>,
                                    VEX, VEX_WIG;
@@ -5564,9 +5564,9 @@ let Predicates = [HasAVX, NoVLX] in {
 let Predicates = [UseAVX] in {
   defm VROUND  : sse41_fp_binop_s<0x0A, 0x0B, "vround", SchedWriteFRnd.Scl,
                                   v4f32, v2f64, X86RndScales, 0>,
-                                  VEX_4V, VEX_LIG, VEX_WIG;
+                                  VEX_4V, VEX_LIG, VEX_WIG, SIMD_EXC;
   defm VROUND  : avx_fp_unop_rm<0x0A, 0x0B, "vround", SchedWriteFRnd.Scl>,
-                                VEX_4V, VEX_LIG, VEX_WIG;
+                                VEX_4V, VEX_LIG, VEX_WIG, SIMD_EXC;
 }
 
 let Predicates = [UseAVX] in {
@@ -7326,12 +7326,12 @@ multiclass f16c_ps2ph<RegisterClass RC, X86MemOperand x86memop,
 }
 
 let Predicates = [HasF16C, NoVLX] in {
-  defm VCVTPH2PS  : f16c_ph2ps<VR128, f64mem, WriteCvtPH2PS>;
-  defm VCVTPH2PSY : f16c_ph2ps<VR256, f128mem, WriteCvtPH2PSY>, VEX_L;
+  defm VCVTPH2PS  : f16c_ph2ps<VR128, f64mem, WriteCvtPH2PS>, SIMD_EXC;
+  defm VCVTPH2PSY : f16c_ph2ps<VR256, f128mem, WriteCvtPH2PSY>, VEX_L, SIMD_EXC;
   defm VCVTPS2PH  : f16c_ps2ph<VR128, f64mem, WriteCvtPS2PH,
-                               WriteCvtPS2PHSt>;
+                               WriteCvtPS2PHSt>, SIMD_EXC;
   defm VCVTPS2PHY : f16c_ps2ph<VR256, f128mem, WriteCvtPS2PHY,
-                               WriteCvtPS2PHYSt>, VEX_L;
+                               WriteCvtPS2PHYSt>, VEX_L, SIMD_EXC;
 
   // Pattern match vcvtph2ps of a scalar i64 load.
   def : Pat<(v4f32 (X86cvtph2ps (bc_v8i16 (v2i64 (X86vzload64 addr:$src))))),

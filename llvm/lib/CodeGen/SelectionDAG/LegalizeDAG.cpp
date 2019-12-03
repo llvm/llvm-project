@@ -3692,7 +3692,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
 
     SDValue Result = DAG.getBuildVector(Node->getValueType(0), dl, Scalars);
-    ReplaceNode(SDValue(Node, 0), Result);
+    Results.push_back(Result);
     break;
   }
   case ISD::VECREDUCE_FADD:
@@ -3720,7 +3720,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_VOID:
     // FIXME: Custom lowering for these operations shouldn't return null!
-    break;
+    // Return true so that we don't call ConvertNodeToLibcall which also won't
+    // do anything.
+    return true;
   }
 
   if (!TLI.isStrictFPEnabled() && Results.empty() && Node->isStrictFPOpcode()) {

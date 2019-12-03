@@ -1779,14 +1779,19 @@ static int64_t getPCBias(RelType type) {
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
                                                 Relocation &rel, uint64_t src) {
   std::vector<Thunk *> *thunkVec = nullptr;
+  int64_t addend = rel.addend + getPCBias(rel.type);
 
-  // We use (section, offset) pair to find the thunk position if possible so
-  // that we create only one thunk for aliased symbols or ICFed sections.
+  // We use a ((section, offset), addend) pair to find the thunk position if
+  // possible so that we create only one thunk for aliased symbols or ICFed
+  // sections. There may be multiple relocations sharing the same (section,
+  // offset + addend) pair. We may revert the relocation back to its original
+  // non-Thunk target, so we cannot fold offset + addend.
   if (auto *d = dyn_cast<Defined>(rel.sym))
     if (!d->isInPlt() && d->section)
-      thunkVec = &thunkedSymbolsBySection[{d->section->repl, d->value}];
+      thunkVec = &thunkedSymbolsBySectionAndAddend[{
+          {d->section->repl, d->value}, addend}];
   if (!thunkVec)
-    thunkVec = &thunkedSymbols[rel.sym];
+    thunkVec = &thunkedSymbols[{rel.sym, addend}];
 
   // Check existing Thunks for Sym to see if they can be reused
   for (Thunk *t : *thunkVec)
@@ -1813,6 +1818,9 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
                               rel.sym->getVA(rel.addend) + getPCBias(rel.type)))
       return true;
     rel.sym = &t->destination;
+    // TODO Restore addend on all targets.
+    if (config->emachine == EM_AARCH64)
+      rel.addend = t->addend;
     if (rel.sym->isInPlt())
       rel.expr = toPlt(rel.expr);
   }
@@ -1868,7 +1876,7 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
               continue;
 
             if (!target->needsThunk(rel.expr, rel.type, isec->file, src,
-                                    *rel.sym))
+                                    *rel.sym, rel.addend))
               continue;
 
             Thunk *t;
@@ -1890,9 +1898,13 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
             rel.sym = t->getThunkTargetSym();
             rel.expr = fromPlt(rel.expr);
 
+            // On AArch64, a jump/call relocation may be encoded as STT_SECTION
+            // + non-zero addend, clear the addend after redirection.
+            //
             // The addend of R_PPC_PLTREL24 should be ignored after changing to
             // R_PC.
-            if (config->emachine == EM_PPC && rel.type == R_PPC_PLTREL24)
+            if (config->emachine == EM_AARCH64 ||
+                (config->emachine == EM_PPC && rel.type == R_PPC_PLTREL24))
               rel.addend = 0;
           }
 

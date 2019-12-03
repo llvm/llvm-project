@@ -61,7 +61,7 @@ def invoke_tool(exe, cmd_args, ir):
 RUN_LINE_RE = re.compile(r'^\s*(?://|[;#])\s*RUN:\s*(.*)$')
 CHECK_PREFIX_RE = re.compile(r'--?check-prefix(?:es)?[= ](\S+)')
 PREFIX_RE = re.compile('^[a-zA-Z0-9_-]+$')
-CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL|-SAME)?:')
+CHECK_RE = re.compile(r'^\s*(?://|[;#])\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL|-SAME)?:')
 
 OPT_FUNCTION_RE = re.compile(
     r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*'
@@ -110,7 +110,7 @@ def find_run_lines(test, lines):
   run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
   for l in raw_lines[1:]:
     if run_lines[-1].endswith('\\'):
-      run_lines[-1] = run_lines[-1].rstrip('\\' + ' ' + l)
+      run_lines[-1] = run_lines[-1].rstrip('\\') + ' ' + l
     else:
       run_lines.append(l)
   debug('Found {} RUN lines in {}:'.format(len(run_lines), test))

@@ -42,8 +42,8 @@ def main(builtin_params = {}):
         maxFailures = opts.maxFailures,
         echo_all_commands = opts.echoAllCommands)
 
-    tests = lit.discovery.find_tests_for_inputs(litConfig, opts.test_paths)
-    if not tests:
+    discovered_tests = lit.discovery.find_tests_for_inputs(litConfig, opts.test_paths)
+    if not discovered_tests:
         sys.stderr.write('Did not disover any tests for provided path(s).\n')
         sys.exit(2)
 
@@ -59,16 +59,15 @@ def main(builtin_params = {}):
             litConfig.maxIndividualTestTime = opts.maxIndividualTestTime
 
     if opts.showSuites or opts.showTests:
-        print_suites_or_tests(tests, opts)
+        print_suites_or_tests(discovered_tests, opts)
         return
 
-    numTotalTests = len(tests)
-
     if opts.filter:
-        tests = [t for t in tests if opts.filter.search(t.getFullName())]
-        if not tests:
+        filtered_tests = [t for t in discovered_tests if
+                          opts.filter.search(t.getFullName())]
+        if not filtered_tests:
             sys.stderr.write('Filter did not match any tests '
-                             '(of %d discovered).  ' % numTotalTests)
+                             '(of %d discovered).  ' % len(discovered_tests))
             if opts.allow_empty_runs:
                 sys.stderr.write('Suppressing error because '
                                  "'--allow-empty-runs' was specified.\n")
@@ -77,34 +76,37 @@ def main(builtin_params = {}):
                 sys.stderr.write("Use '--allow-empty-runs' to suppress this "
                                  'error.\n')
                 sys.exit(2)
+    else:
+        filtered_tests = discovered_tests
 
-    determine_order(tests, opts.order)
+    determine_order(filtered_tests, opts.order)
 
     if opts.shard:
         (run, shards) = opts.shard
-        tests = filter_by_shard(tests, run, shards, litConfig)
-        if not tests:
+        filtered_tests = filter_by_shard(filtered_tests, run, shards, litConfig)
+        if not filtered_tests:
             sys.stderr.write('Shard does not contain any tests.  Consider '
                              'decreasing the number of shards.\n')
             sys.exit(0)
 
     if opts.max_tests:
-        tests = tests[:opts.max_tests]
+        filtered_tests = filtered_tests[:opts.max_tests]
 
-    opts.numWorkers = min(len(tests), opts.numWorkers)
+    opts.numWorkers = min(len(filtered_tests), opts.numWorkers)
 
     start = time.time()
-    run_tests(tests, litConfig, opts, numTotalTests)
+    run_tests(filtered_tests, litConfig, opts, len(discovered_tests))
     elapsed = time.time() - start
 
-    executed_tests = [t for t in tests if t.result]
+    executed_tests = [t for t in filtered_tests if t.result]
 
     print_summary(executed_tests, elapsed, opts)
 
     if opts.output_path:
-        write_test_results(tests, litConfig, elapsed, opts.output_path)
+        #TODO(yln): pass in discovered_tests
+        write_test_results(executed_tests, litConfig, elapsed, opts.output_path)
     if opts.xunit_output_file:
-        write_test_results_xunit(tests, opts)
+        write_test_results_xunit(executed_tests, opts)
 
     if litConfig.numErrors:
         sys.stderr.write('\n%d error(s) in tests.\n' % litConfig.numErrors)

@@ -1368,8 +1368,10 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
   }
 
   // 1 urem X -> zext(X != 1)
-  if (match(Op0, m_One()))
-    return CastInst::CreateZExtOrBitCast(Builder.CreateICmpNE(Op1, Op0), Ty);
+  if (match(Op0, m_One())) {
+    Value *Cmp = Builder.CreateICmpNE(Op1, ConstantInt::get(Ty, 1));
+    return CastInst::CreateZExtOrBitCast(Cmp, Ty);
+  }
 
   // X urem C -> X < C ? X : X - C, where C >= signbit.
   if (match(Op1, m_Negative())) {
