@@ -566,7 +566,8 @@ void BreakpointOptions::GetDescription(Stream *s,
   if (m_callback_baton_sp.get()) {
     if (level != eDescriptionLevelBrief) {
       s->EOL();
-      m_callback_baton_sp->GetDescription(s, level);
+      m_callback_baton_sp->GetDescription(s->AsRawOstream(), level,
+                                          s->GetIndentLevel());
     }
   }
   if (!m_condition_text.empty()) {
@@ -578,35 +579,33 @@ void BreakpointOptions::GetDescription(Stream *s,
 }
 
 void BreakpointOptions::CommandBaton::GetDescription(
-    Stream *s, lldb::DescriptionLevel level) const {
+    llvm::raw_ostream &s, lldb::DescriptionLevel level,
+    unsigned indentation) const {
   const CommandData *data = getItem();
 
   if (level == eDescriptionLevelBrief) {
-    s->Printf(", commands = %s",
-              (data && data->user_source.GetSize() > 0) ? "yes" : "no");
+    s << ", commands = "
+      << ((data && data->user_source.GetSize() > 0) ? "yes" : "no");
     return;
   }
 
-  s->IndentMore();
-  s->Indent("Breakpoint commands");
+  indentation += 2;
+  s.indent(indentation);
+  s << "Breakpoint commands";
   if (data->interpreter != eScriptLanguageNone)
-    s->Printf(" (%s):\n",
-              ScriptInterpreter::LanguageToString(data->interpreter).c_str());
+    s << llvm::formatv(" ({0}):\n",
+                       ScriptInterpreter::LanguageToString(data->interpreter));
   else
-    s->PutCString(":\n");
+    s << ":\n";
 
-  s->IndentMore();
+  indentation += 2;
   if (data && data->user_source.GetSize() > 0) {
-    const size_t num_strings = data->user_source.GetSize();
-    for (size_t i = 0; i < num_strings; ++i) {
-      s->Indent(data->user_source.GetStringAtIndex(i));
-      s->EOL();
+    for (llvm::StringRef str : data->user_source) {
+      s.indent(indentation);
+      s << str << "\n";
     }
-  } else {
-    s->PutCString("No commands.\n");
-  }
-  s->IndentLess();
-  s->IndentLess();
+  } else
+    s << "No commands.\n";
 }
 
 void BreakpointOptions::SetCommandDataCallback(

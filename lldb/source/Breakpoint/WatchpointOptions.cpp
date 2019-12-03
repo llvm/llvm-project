@@ -121,7 +121,8 @@ void WatchpointOptions::GetCallbackDescription(
     Stream *s, lldb::DescriptionLevel level) const {
   if (m_callback_baton_sp.get()) {
     s->EOL();
-    m_callback_baton_sp->GetDescription(s, level);
+    m_callback_baton_sp->GetDescription(s->AsRawOstream(), level,
+                                        s->GetIndentLevel());
   }
 }
 
@@ -156,27 +157,26 @@ void WatchpointOptions::GetDescription(Stream *s,
 }
 
 void WatchpointOptions::CommandBaton::GetDescription(
-    Stream *s, lldb::DescriptionLevel level) const {
+    llvm::raw_ostream &s, lldb::DescriptionLevel level,
+    unsigned indentation) const {
   const CommandData *data = getItem();
 
   if (level == eDescriptionLevelBrief) {
-    s->Printf(", commands = %s",
-              (data && data->user_source.GetSize() > 0) ? "yes" : "no");
+    s << ", commands = %s"
+      << ((data && data->user_source.GetSize() > 0) ? "yes" : "no");
     return;
   }
 
-  s->IndentMore();
-  s->Indent("watchpoint commands:\n");
+  indentation += 2;
+  s.indent(indentation);
+  s << "watchpoint commands:\n";
 
-  s->IndentMore();
+  indentation += 2;
   if (data && data->user_source.GetSize() > 0) {
     for (const std::string &line : data->user_source) {
-      s->Indent(line);
-      s->EOL();
+      s.indent(indentation);
+      s << line << "\n";
     }
-  } else {
-    s->PutCString("No commands.\n");
-  }
-  s->IndentLess();
-  s->IndentLess();
+  } else
+    s << "No commands.\n";
 }
