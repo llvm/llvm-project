@@ -606,3 +606,13 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
   return
 }
+
+// -----
+
+func @create_mask() {
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  // expected-error@+1 {{must specify an operand for each result vector dimension}}
+  %0 = vector.create_mask %c3, %c2 : vector<4x3x7xi1>
+  return
+}

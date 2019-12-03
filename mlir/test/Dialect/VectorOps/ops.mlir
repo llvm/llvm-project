@@ -124,3 +124,15 @@ func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x8x5xf32>
   return
 }
+
+// CHECK-LABEL: create_vector_mask
+func @create_vector_mask() {
+  // CHECK:      %[[C2:.*]] = constant 2 : index
+  %c2 = constant 2 : index
+  // CHECK-NEXT: %[[C3:.*]] = constant 3 : index
+  %c3 = constant 3 : index
+  // CHECK-NEXT: vector.create_mask %[[C3]], %[[C2]] : vector<4x3xi1>
+  %0 = vector.create_mask %c3, %c2 : vector<4x3xi1>
+
+  return
+}
