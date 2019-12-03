@@ -180,6 +180,12 @@ namespace {
         AddToWorklist(Node);
     }
 
+    /// Convenient shorthand to add a node and all of its user to the worklist.
+    void AddToWorklistWithUsers(SDNode *N) {
+      AddUsersToWorklist(N);
+      AddToWorklist(N);
+    }
+
     // Prune potentially dangling nodes. This is called after
     // any visit to a node, but should also be called during a visit after any
     // failed combine which may have created a DAG node.
@@ -1427,10 +1433,9 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       SmallSetVector<SDNode *, 16> UpdatedNodes;
       bool NIsValid = DAG.LegalizeOp(N, UpdatedNodes);
 
-      for (SDNode *LN : UpdatedNodes) {
-        AddUsersToWorklist(LN);
-        AddToWorklist(LN);
-      }
+      for (SDNode *LN : UpdatedNodes)
+        AddToWorklistWithUsers(LN);
+
       if (!NIsValid)
         continue;
     }
@@ -16990,8 +16995,7 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
   AddToWorklist(EVE);
   // Since we're explicitly calling ReplaceAllUses, add the new node to the
   // worklist explicitly as well.
-  AddUsersToWorklist(Load.getNode()); // Add users too
-  AddToWorklist(Load.getNode());
+  AddToWorklistWithUsers(Load.getNode());
   ++OpsNarrowed;
   return SDValue(EVE, 0);
 }
