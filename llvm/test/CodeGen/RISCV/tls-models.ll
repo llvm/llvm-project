@@ -3,16 +3,17 @@
 ; RUN:     | FileCheck -check-prefix=RV32-PIC %s
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic < %s \
 ; RUN:     | FileCheck -check-prefix=RV64-PIC %s
-; RUN: llc -mtriple=riscv32 < %s | FileCheck -check-prefix=NOPIC %s
-; RUN: llc -mtriple=riscv64 < %s | FileCheck -check-prefix=NOPIC %s
+; RUN: llc -mtriple=riscv32 < %s | FileCheck -check-prefix=RV32-NOPIC %s
+; RUN: llc -mtriple=riscv64 < %s | FileCheck -check-prefix=RV64-NOPIC %s
 
 ; Check that TLS symbols are lowered correctly based on the specified
-; model.
+; model. Make sure they're external to avoid them all being optimised to Local
+; Exec for the executable.
 
-@unspecified = thread_local global i32 42
-@ld = thread_local(localdynamic) global i32 42
-@ie = thread_local(initialexec) global i32 42
-@le = thread_local(localexec) global i32 42
+@unspecified = external thread_local global i32
+@ld = external thread_local(localdynamic) global i32
+@ie = external thread_local(initialexec) global i32
+@le = external thread_local(localexec) global i32
 
 
 ; No model specified
@@ -44,12 +45,23 @@ define i32* @f1() nounwind {
 ; RV64-PIC-NEXT:    addi sp, sp, 16
 ; RV64-PIC-NEXT:    ret
 ;
-; NOPIC-LABEL: f1:
-; NOPIC:       # %bb.0: # %entry
-; NOPIC-NEXT:    lui a0, %tprel_hi(unspecified)
-; NOPIC-NEXT:    add a0, a0, tp, %tprel_add(unspecified)
-; NOPIC-NEXT:    addi a0, a0, %tprel_lo(unspecified)
-; NOPIC-NEXT:    ret
+; RV32-NOPIC-LABEL: f1:
+; RV32-NOPIC:       # %bb.0: # %entry
+; RV32-NOPIC-NEXT:  .LBB0_1: # %entry
+; RV32-NOPIC-NEXT:    # Label of block must be emitted
+; RV32-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(unspecified)
+; RV32-NOPIC-NEXT:    lw a0, %pcrel_lo(.LBB0_1)(a0)
+; RV32-NOPIC-NEXT:    add a0, a0, tp
+; RV32-NOPIC-NEXT:    ret
+;
+; RV64-NOPIC-LABEL: f1:
+; RV64-NOPIC:       # %bb.0: # %entry
+; RV64-NOPIC-NEXT:  .LBB0_1: # %entry
+; RV64-NOPIC-NEXT:    # Label of block must be emitted
+; RV64-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(unspecified)
+; RV64-NOPIC-NEXT:    ld a0, %pcrel_lo(.LBB0_1)(a0)
+; RV64-NOPIC-NEXT:    add a0, a0, tp
+; RV64-NOPIC-NEXT:    ret
 entry:
   ret i32* @unspecified
 }
@@ -84,12 +96,23 @@ define i32* @f2() nounwind {
 ; RV64-PIC-NEXT:    addi sp, sp, 16
 ; RV64-PIC-NEXT:    ret
 ;
-; NOPIC-LABEL: f2:
-; NOPIC:       # %bb.0: # %entry
-; NOPIC-NEXT:    lui a0, %tprel_hi(ld)
-; NOPIC-NEXT:    add a0, a0, tp, %tprel_add(ld)
-; NOPIC-NEXT:    addi a0, a0, %tprel_lo(ld)
-; NOPIC-NEXT:    ret
+; RV32-NOPIC-LABEL: f2:
+; RV32-NOPIC:       # %bb.0: # %entry
+; RV32-NOPIC-NEXT:  .LBB1_1: # %entry
+; RV32-NOPIC-NEXT:    # Label of block must be emitted
+; RV32-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ld)
+; RV32-NOPIC-NEXT:    lw a0, %pcrel_lo(.LBB1_1)(a0)
+; RV32-NOPIC-NEXT:    add a0, a0, tp
+; RV32-NOPIC-NEXT:    ret
+;
+; RV64-NOPIC-LABEL: f2:
+; RV64-NOPIC:       # %bb.0: # %entry
+; RV64-NOPIC-NEXT:  .LBB1_1: # %entry
+; RV64-NOPIC-NEXT:    # Label of block must be emitted
+; RV64-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ld)
+; RV64-NOPIC-NEXT:    ld a0, %pcrel_lo(.LBB1_1)(a0)
+; RV64-NOPIC-NEXT:    add a0, a0, tp
+; RV64-NOPIC-NEXT:    ret
 entry:
   ret i32* @ld
 }
@@ -116,12 +139,23 @@ define i32* @f3() nounwind {
 ; RV64-PIC-NEXT:    add a0, a0, tp
 ; RV64-PIC-NEXT:    ret
 ;
-; NOPIC-LABEL: f3:
-; NOPIC:       # %bb.0: # %entry
-; NOPIC-NEXT:    lui a0, %tprel_hi(ie)
-; NOPIC-NEXT:    add a0, a0, tp, %tprel_add(ie)
-; NOPIC-NEXT:    addi a0, a0, %tprel_lo(ie)
-; NOPIC-NEXT:    ret
+; RV32-NOPIC-LABEL: f3:
+; RV32-NOPIC:       # %bb.0: # %entry
+; RV32-NOPIC-NEXT:  .LBB2_1: # %entry
+; RV32-NOPIC-NEXT:    # Label of block must be emitted
+; RV32-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ie)
+; RV32-NOPIC-NEXT:    lw a0, %pcrel_lo(.LBB2_1)(a0)
+; RV32-NOPIC-NEXT:    add a0, a0, tp
+; RV32-NOPIC-NEXT:    ret
+;
+; RV64-NOPIC-LABEL: f3:
+; RV64-NOPIC:       # %bb.0: # %entry
+; RV64-NOPIC-NEXT:  .LBB2_1: # %entry
+; RV64-NOPIC-NEXT:    # Label of block must be emitted
+; RV64-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ie)
+; RV64-NOPIC-NEXT:    ld a0, %pcrel_lo(.LBB2_1)(a0)
+; RV64-NOPIC-NEXT:    add a0, a0, tp
+; RV64-NOPIC-NEXT:    ret
 entry:
   ret i32* @ie
 }
@@ -144,12 +178,19 @@ define i32* @f4() nounwind {
 ; RV64-PIC-NEXT:    addi a0, a0, %tprel_lo(le)
 ; RV64-PIC-NEXT:    ret
 ;
-; NOPIC-LABEL: f4:
-; NOPIC:       # %bb.0: # %entry
-; NOPIC-NEXT:    lui a0, %tprel_hi(le)
-; NOPIC-NEXT:    add a0, a0, tp, %tprel_add(le)
-; NOPIC-NEXT:    addi a0, a0, %tprel_lo(le)
-; NOPIC-NEXT:    ret
+; RV32-NOPIC-LABEL: f4:
+; RV32-NOPIC:       # %bb.0: # %entry
+; RV32-NOPIC-NEXT:    lui a0, %tprel_hi(le)
+; RV32-NOPIC-NEXT:    add a0, a0, tp, %tprel_add(le)
+; RV32-NOPIC-NEXT:    addi a0, a0, %tprel_lo(le)
+; RV32-NOPIC-NEXT:    ret
+;
+; RV64-NOPIC-LABEL: f4:
+; RV64-NOPIC:       # %bb.0: # %entry
+; RV64-NOPIC-NEXT:    lui a0, %tprel_hi(le)
+; RV64-NOPIC-NEXT:    add a0, a0, tp, %tprel_add(le)
+; RV64-NOPIC-NEXT:    addi a0, a0, %tprel_lo(le)
+; RV64-NOPIC-NEXT:    ret
 entry:
   ret i32* @le
 }
