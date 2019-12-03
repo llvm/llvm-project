@@ -1381,8 +1381,12 @@ lto::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
                               StringRef RemarksPasses, StringRef RemarksFormat,
                               bool RemarksWithHotness, int Count) {
   std::string Filename = RemarksFilename;
+  // For ThinLTO, file.opt.<format> becomes
+  // file.opt.<format>.thin.<num>.<format>.
   if (!Filename.empty() && Count != -1)
-    Filename += ".thin." + llvm::utostr(Count) + ".yaml";
+    Filename =
+        (Twine(Filename) + ".thin." + llvm::utostr(Count) + "." + RemarksFormat)
+            .str();
 
   auto ResultOrErr = llvm::setupOptimizationRemarks(
       Context, Filename, RemarksPasses, RemarksFormat, RemarksWithHotness);

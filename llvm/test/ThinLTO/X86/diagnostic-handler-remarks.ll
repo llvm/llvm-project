@@ -51,6 +51,19 @@
 ; YAML2-NEXT:   - String:          ')'
 ; YAML2-NEXT: ...
 
+; The file extension depends on the format of the remarks
+; RUN: rm -f %t.bitstream.thin.0.bitstream %t.bitstream.thin.1.bitstream
+; RUN: llvm-lto -thinlto-action=run \
+; RUN:          -lto-pass-remarks-output=%t.bitstream \
+; RUN:          -lto-pass-remarks-filter=inline \
+; RUN:          -lto-pass-remarks-format=bitstream \
+; RUN:          -exported-symbol _func2 \
+; RUN:          -exported-symbol _main %t1.bc %t2.bc 2>&1 | \
+; RUN:     FileCheck %s -allow-empty
+; RUN: llvm-bcanalyzer %t.bitstream.thin.0.bitstream
+; RUN: llvm-bcanalyzer %t.bitstream.thin.1.bitstream
+; CHECK-NOT: remark:
+; CHECK-NOT: llvm-lto:
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
