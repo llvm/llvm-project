@@ -871,16 +871,11 @@ int runOrcLazyJIT(const char *ProgName) {
 
   // Run main.
   auto MainSym = ExitOnErr(J->lookup("main"));
-  typedef int (*MainFnPtr)(int, const char *[]);
-  std::vector<const char *> ArgV;
-  for (auto &Arg : Args)
-    ArgV.push_back(Arg.c_str());
-  ArgV.push_back(nullptr);
 
-  int ArgC = ArgV.size() - 1;
-  auto Main =
-      reinterpret_cast<MainFnPtr>(static_cast<uintptr_t>(MainSym.getAddress()));
-  auto Result = Main(ArgC, (const char **)ArgV.data());
+  typedef int (*MainFnPtr)(int, char *[]);
+  auto Result = orc::runAsMain(
+      jitTargetAddressToFunction<MainFnPtr>(MainSym.getAddress()), Args,
+      StringRef("lli"));
 
   // Wait for -entry-point threads.
   for (auto &AltEntryThread : AltEntryThreads)
