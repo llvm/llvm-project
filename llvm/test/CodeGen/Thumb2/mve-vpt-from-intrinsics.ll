@@ -27,7 +27,7 @@ define arm_aapcs_vfpcc <8 x i16> @test_vpnot(<8 x i16> %v, <8 x i16> %w, <8 x i1
 ; CHECK-NEXT:    vaddt.i16 q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = call <8 x i1> @llvm.arm.vctp16(i32 %n)
+  %0 = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
   %1 = call i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1> %0)
   %2 = trunc i32 %1 to i16
   %3 = xor i16 %2, -1
@@ -40,5 +40,5 @@ entry:
 declare i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1>)
 declare <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32)
 declare <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16>, <8 x i16>, <8 x i1>, <8 x i16>)
-declare <8 x i1> @llvm.arm.vctp16(i32)
+declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 
