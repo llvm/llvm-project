@@ -1387,6 +1387,9 @@ public:
   VPLoopInfo &getVPLoopInfo() { return VPLInfo; }
   const VPLoopInfo &getVPLoopInfo() const { return VPLInfo; }
 
+  /// Dump the plan to stderr (for debugging).
+  void dump() const;
+
 private:
   /// Add to the given dominator tree the header block and every new basic block
   /// that was created between it and the latch block, inclusive.
@@ -1398,20 +1401,20 @@ private:
 /// VPlanPrinter prints a given VPlan to a given output stream. The printing is
 /// indented and follows the dot format.
 class VPlanPrinter {
-  friend inline raw_ostream &operator<<(raw_ostream &OS, VPlan &Plan);
+  friend inline raw_ostream &operator<<(raw_ostream &OS, const VPlan &Plan);
   friend inline raw_ostream &operator<<(raw_ostream &OS,
                                         const struct VPlanIngredient &I);
 
 private:
   raw_ostream &OS;
-  VPlan &Plan;
+  const VPlan &Plan;
   unsigned Depth = 0;
   unsigned TabWidth = 2;
   std::string Indent;
   unsigned BID = 0;
   SmallDenseMap<const VPBlockBase *, unsigned> BlockID;
 
-  VPlanPrinter(raw_ostream &O, VPlan &P) : OS(O), Plan(P) {}
+  VPlanPrinter(raw_ostream &O, const VPlan &P) : OS(O), Plan(P) {}
 
   /// Handle indentation.
   void bumpIndent(int b) { Indent = std::string((Depth += b) * TabWidth, ' '); }
@@ -1458,12 +1461,11 @@ inline raw_ostream &operator<<(raw_ostream &OS, const VPlanIngredient &I) {
   return OS;
 }
 
-inline raw_ostream &operator<<(raw_ostream &OS, VPlan &Plan) {
+inline raw_ostream &operator<<(raw_ostream &OS, const VPlan &Plan) {
   VPlanPrinter Printer(OS, Plan);
   Printer.dump();
   return OS;
 }
-
 
 //===----------------------------------------------------------------------===//
 // VPlan Utilities

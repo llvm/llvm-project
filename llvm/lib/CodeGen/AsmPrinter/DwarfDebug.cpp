@@ -1208,10 +1208,10 @@ void DwarfDebug::endModule() {
   emitDebugStr();
 
   if (useSplitDwarf())
-    // Handles debug_loc.dwo / debug_loclists.dwo section emission
+    // Emit debug_loc.dwo/debug_loclists.dwo section.
     emitDebugLocDWO();
   else
-    // Handles debug_loc / debug_loclists section emission
+    // Emit debug_loc/debug_loclists section.
     emitDebugLoc();
 
   // Corresponding abbreviations into a abbrev section.

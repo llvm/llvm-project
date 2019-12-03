@@ -828,6 +828,7 @@ name:            inc_store_with_dep
 # CHECK-NEXT:  $noreg = FAULTING_OP 3, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 16, $noreg, $esi
 # CHECK-NEXT: JMP_1 %bb.1
 # CHECK: bb.1.not_null
+# CHECK-NOT: liveins: {{.*}} $eflags
 
 alignment:       16
 tracksRegLiveness: true

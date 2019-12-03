@@ -121,6 +121,11 @@ def GlobalVar : SubsetSubject<Var,
 def InlineFunction : SubsetSubject<Function,
                              [{S->isInlineSpecified()}], "inline functions">;
 
+def FunctionTmpl
+    : SubsetSubject<Function, [{S->getTemplatedKind() ==
+                                 FunctionDecl::TK_FunctionTemplate}],
+                    "function templates">;
+
 // FIXME: this hack is needed because DeclNodes.td defines the base Decl node
 // type to be a class, not a definition. This makes it impossible to create an
 // attribute subject which accepts a Decl. Normally, this is not a problem,
@@ -296,6 +301,7 @@ def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
 def HIP : LangOpt<"HIP">;
+def SYCL : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"COnly", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
@@ -1054,6 +1060,13 @@ def CUDAShared : InheritableAttr {
   let Subjects = SubjectList<[Var]>;
   let LangOpts = [CUDA];
   let Documentation = [Undocumented];
+}
+
+def SYCLKernel : InheritableAttr {
+  let Spellings = [Clang<"sycl_kernel">];
+  let Subjects = SubjectList<[FunctionTmpl]>;
+  let LangOpts = [SYCL];
+  let Documentation = [SYCLKernelDocs];
 }
 
 def C11NoReturn : InheritableAttr {

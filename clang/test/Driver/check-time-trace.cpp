@@ -12,7 +12,7 @@
 // CHECK-NEXT: "pid":
 // CHECK-NEXT: "tid":
 // CHECK-NEXT: "ts":
-// CHECK: "name": "clang"
+// CHECK: "name": "clang{{.*}}"
 // CHECK: "name": "process_name"
 
 template <typename T>

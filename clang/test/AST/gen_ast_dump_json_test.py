@@ -180,7 +180,7 @@ def process_file(source_file, clang_binary, cmdline_filters, cmdline_opts,
         
             filter_json(j, filters, out_asts)
         
-    with tempfile.NamedTemporaryFile("w") as f:
+    with tempfile.NamedTemporaryFile("w", delete=False) as f:
         with open(source_file, "r") as srcf:
             for line in srcf.readlines():
                 # copy up to the note:
@@ -201,6 +201,7 @@ def process_file(source_file, clang_binary, cmdline_filters, cmdline_opts,
                     
             f.write(out_str)
         f.flush()
+        f.close()
         if do_update:
             print("Updating json appended source file to %s." % source_file)
             copyfile(f.name, source_file)
@@ -209,6 +210,7 @@ def process_file(source_file, clang_binary, cmdline_filters, cmdline_opts,
             dest_path = '%s-json%s%s' % (partition[0], partition[1], partition[2])
             print("Writing json appended source file to %s." % dest_path)
             copyfile(f.name, dest_path)
+        os.remove(f.name)
     return 0
 
 

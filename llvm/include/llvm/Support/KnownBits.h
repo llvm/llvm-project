@@ -107,6 +107,18 @@ public:
     Zero.setSignBit();
   }
 
+  /// Return the minimal value possible given these KnownBits.
+  APInt getMinValue() const {
+    // Assume that all bits that aren't known-ones are zeros.
+    return One;
+  }
+
+  /// Return the maximal value possible given these KnownBits.
+  APInt getMaxValue() const {
+    // Assume that all bits that aren't known-zeros are ones.
+    return ~Zero;
+  }
+
   /// Truncate the underlying known Zero and One bits. This is equivalent
   /// to truncating the value we're tracking.
   KnownBits trunc(unsigned BitWidth) const {

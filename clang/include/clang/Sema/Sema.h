@@ -3907,6 +3907,9 @@ public:
   /// Add the given method to the list of globally-known methods.
   void addMethodToGlobalList(ObjCMethodList *List, ObjCMethodDecl *Method);
 
+  /// Returns default addr space for method qualifiers.
+  LangAS getDefaultCXXMethodAddrSpace() const;
+
 private:
   /// AddMethodToGlobalPool - Add an instance or factory method to the global
   /// pool. See descriptoin of AddInstanceMethodToGlobalPool.

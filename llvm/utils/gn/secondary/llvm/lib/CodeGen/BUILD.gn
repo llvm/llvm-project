@@ -182,6 +182,7 @@ static_library("CodeGen") {
     "TargetSchedule.cpp",
     "TargetSubtargetInfo.cpp",
     "TwoAddressInstructionPass.cpp",
+    "TypePromotion.cpp",
     "UnreachableBlockElim.cpp",
     "ValueTypes.cpp",
     "VirtRegMap.cpp",

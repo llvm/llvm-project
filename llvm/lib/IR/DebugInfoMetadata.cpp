@@ -23,6 +23,9 @@
 
 using namespace llvm;
 
+const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
+    std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
+
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, ArrayRef<Metadata *> MDs,
                        bool ImplicitCode)

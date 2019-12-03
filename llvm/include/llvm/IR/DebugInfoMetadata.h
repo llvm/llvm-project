@@ -3253,6 +3253,89 @@ public:
   }
 };
 
+/// Identifies a unique instance of a variable.
+///
+/// Storage for identifying a potentially inlined instance of a variable,
+/// or a fragment thereof. This guarantees that exactly one variable instance
+/// may be identified by this class, even when that variable is a fragment of
+/// an aggregate variable and/or there is another inlined instance of the same
+/// source code variable nearby.
+/// This class does not necessarily uniquely identify that variable: it is
+/// possible that a DebugVariable with different parameters may point to the
+/// same variable instance, but not that one DebugVariable points to multiple
+/// variable instances.
+class DebugVariable {
+  using FragmentInfo = DIExpression::FragmentInfo;
+
+  const DILocalVariable *Variable;
+  Optional<FragmentInfo> Fragment;
+  const DILocation *InlinedAt;
+
+  /// Fragment that will overlap all other fragments. Used as default when
+  /// caller demands a fragment.
+  static const FragmentInfo DefaultFragment;
+
+public:
+  DebugVariable(const DILocalVariable *Var, Optional<FragmentInfo> FragmentInfo,
+                const DILocation *InlinedAt)
+      : Variable(Var), Fragment(FragmentInfo), InlinedAt(InlinedAt) {}
+
+  DebugVariable(const DILocalVariable *Var, const DIExpression *DIExpr,
+                const DILocation *InlinedAt)
+      : Variable(Var),
+        Fragment(DIExpr ? DIExpr->getFragmentInfo() : NoneType()),
+        InlinedAt(InlinedAt) {}
+
+  const DILocalVariable *getVariable() const { return Variable; }
+  const Optional<FragmentInfo> getFragment() const { return Fragment; }
+  const DILocation *getInlinedAt() const { return InlinedAt; }
+
+  const FragmentInfo getFragmentOrDefault() const {
+    return Fragment.getValueOr(DefaultFragment);
+  }
+
+  static bool isDefaultFragment(const FragmentInfo F) {
+    return F == DefaultFragment;
+  }
+
+  bool operator==(const DebugVariable &Other) const {
+    return std::tie(Variable, Fragment, InlinedAt) ==
+           std::tie(Other.Variable, Other.Fragment, Other.InlinedAt);
+  }
+
+  bool operator<(const DebugVariable &Other) const {
+    return std::tie(Variable, Fragment, InlinedAt) <
+           std::tie(Other.Variable, Other.Fragment, Other.InlinedAt);
+  }
+};
+
+template <> struct DenseMapInfo<DebugVariable> {
+  using FragmentInfo = DIExpression::FragmentInfo;
+
+  /// Empty key: no key should be generated that has no DILocalVariable.
+  static inline DebugVariable getEmptyKey() {
+    return DebugVariable(nullptr, NoneType(), nullptr);
+  }
+
+  /// Difference in tombstone is that the Optional is meaningful.
+  static inline DebugVariable getTombstoneKey() {
+    return DebugVariable(nullptr, {{0, 0}}, nullptr);
+  }
+
+  static unsigned getHashValue(const DebugVariable &D) {
+    unsigned HV = 0;
+    const Optional<FragmentInfo> Fragment = D.getFragment();
+    if (Fragment)
+      HV = DenseMapInfo<FragmentInfo>::getHashValue(*Fragment);
+
+    return hash_combine(D.getVariable(), HV, D.getInlinedAt());
+  }
+
+  static bool isEqual(const DebugVariable &A, const DebugVariable &B) {
+    return A == B;
+  }
+};
+
 } // end namespace llvm
 
 #undef DEFINE_MDNODE_GET_UNPACK_IMPL
