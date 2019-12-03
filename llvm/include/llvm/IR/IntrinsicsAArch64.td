@@ -990,6 +990,15 @@ class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
+class AdvSIMD_GatherLoad_VecTorBase_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [
+                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                  llvm_anyvector_ty,
+                  llvm_i64_ty
+                ],
+                [IntrReadMem, IntrArgMemOnly]>;
+
 //
 // Integer arithmetic
 //
@@ -1228,6 +1237,9 @@ def int_aarch64_sve_ld1_gather_uxtw : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
 //  to 64 bits
 def int_aarch64_sve_ld1_gather_sxtw_index : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
 def int_aarch64_sve_ld1_gather_uxtw_index : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+
+// vector base + immediate index
+def int_aarch64_sve_ld1_gather_imm : AdvSIMD_GatherLoad_VecTorBase_Intrinsic;
 
 //
 // SVE2 - Non-widening pairwise arithmetic

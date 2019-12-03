@@ -35,6 +35,6 @@ protected:
   curses::ApplicationAP m_app_ap;
 };
 
-}; // namespace lldb_private
+} // namespace lldb_private
 
 #endif // liblldb_IOHandlerCursesGUI_h_

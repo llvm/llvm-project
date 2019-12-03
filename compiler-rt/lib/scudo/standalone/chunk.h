@@ -91,8 +91,7 @@ inline AtomicPackedHeader *getAtomicHeader(void *Ptr) {
                                                 getHeaderSize());
 }
 
-inline
-const AtomicPackedHeader *getConstAtomicHeader(const void *Ptr) {
+inline const AtomicPackedHeader *getConstAtomicHeader(const void *Ptr) {
   return reinterpret_cast<const AtomicPackedHeader *>(
       reinterpret_cast<uptr>(Ptr) - getHeaderSize());
 }
@@ -118,9 +117,8 @@ inline void storeHeader(u32 Cookie, void *Ptr,
   atomic_store_relaxed(getAtomicHeader(Ptr), NewPackedHeader);
 }
 
-inline
-void loadHeader(u32 Cookie, const void *Ptr,
-                UnpackedHeader *NewUnpackedHeader) {
+inline void loadHeader(u32 Cookie, const void *Ptr,
+                       UnpackedHeader *NewUnpackedHeader) {
   PackedHeader NewPackedHeader = atomic_load_relaxed(getConstAtomicHeader(Ptr));
   *NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
   if (UNLIKELY(NewUnpackedHeader->Checksum !=
@@ -141,8 +139,8 @@ inline void compareExchangeHeader(u32 Cookie, void *Ptr,
     reportHeaderRace(Ptr);
 }
 
-inline
-bool isValid(u32 Cookie, const void *Ptr, UnpackedHeader *NewUnpackedHeader) {
+inline bool isValid(u32 Cookie, const void *Ptr,
+                    UnpackedHeader *NewUnpackedHeader) {
   PackedHeader NewPackedHeader = atomic_load_relaxed(getConstAtomicHeader(Ptr));
   *NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
   return NewUnpackedHeader->Checksum ==
