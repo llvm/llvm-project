@@ -102,20 +102,11 @@ TEST_F(OverlayCDBTest, GetCompileCommand) {
               Contains("-DA=3"));
 }
 
-// Remove -isysroot injected on mac, if present, to simplify tests.
-std::vector<std::string> stripSysroot(std::vector<std::string> Cmd) {
-  // Allow -isysroot injection on Mac.
-  if (Cmd.size() > 2 && Cmd[Cmd.size() - 2] == "-isysroot")
-    Cmd.resize(Cmd.size() - 2);
-  return Cmd;
-}
-
 TEST_F(OverlayCDBTest, GetFallbackCommand) {
   OverlayCDB CDB(Base.get(), {"-DA=4"});
-  EXPECT_THAT(
-      stripSysroot(CDB.getFallbackCommand(testPath("bar.cc")).CommandLine),
-      ElementsAre(EndsWith("clang"), "-DA=2", testPath("bar.cc"), "-DA=4",
-                  "-fsyntax-only", StartsWith("-resource-dir")));
+  EXPECT_THAT(CDB.getFallbackCommand(testPath("bar.cc")).CommandLine,
+              ElementsAre("clang", "-DA=2", testPath("bar.cc"), "-DA=4",
+                          "-fsyntax-only", StartsWith("-resource-dir")));
 }
 
 TEST_F(OverlayCDBTest, NoBase) {
@@ -126,10 +117,9 @@ TEST_F(OverlayCDBTest, NoBase) {
   EXPECT_THAT(CDB.getCompileCommand(testPath("bar.cc"))->CommandLine,
               Contains("-DA=5"));
 
-  EXPECT_THAT(
-      stripSysroot(CDB.getFallbackCommand(testPath("foo.cc")).CommandLine),
-      ElementsAre(EndsWith("clang"), testPath("foo.cc"), "-DA=6",
-                  "-fsyntax-only"));
+  EXPECT_THAT(CDB.getFallbackCommand(testPath("foo.cc")).CommandLine,
+              ElementsAre(EndsWith("clang"), testPath("foo.cc"), "-DA=6",
+                          "-fsyntax-only"));
 }
 
 TEST_F(OverlayCDBTest, Watch) {

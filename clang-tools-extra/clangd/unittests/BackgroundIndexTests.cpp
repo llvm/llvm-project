@@ -527,13 +527,6 @@ TEST_F(BackgroundIndexTest, UncompilableFiles) {
   }
 }
 
-MATCHER_P(HasPrefix, Prefix, "") {
-  auto Arg = arg; // Force copy.
-  if (Arg.size() > Prefix.size())
-    Arg.resize(Prefix.size());
-  return Arg == Prefix;
-}
-
 TEST_F(BackgroundIndexTest, CmdLineHash) {
   MockFSProvider FS;
   llvm::StringMap<std::string> Storage;
@@ -549,7 +542,7 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
   FS.Files[testPath("A.h")] = "";
   Cmd.Filename = "../A.cc";
   Cmd.Directory = testPath("build");
-  Cmd.CommandLine = {"/bin/clang++", "../A.cc", "-fsyntax-only"};
+  Cmd.CommandLine = {"clang++", "../A.cc", "-fsyntax-only"};
   CDB.setCompileCommand(testPath("build/../A.cc"), Cmd);
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
 
@@ -559,14 +552,13 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
 
   {
     tooling::CompileCommand CmdStored = *MSS.loadShard(testPath("A.cc"))->Cmd;
-    // Accept prefix because -isysroot gets added on mac.
-    EXPECT_THAT(CmdStored.CommandLine, HasPrefix(Cmd.CommandLine));
+    EXPECT_EQ(CmdStored.CommandLine, Cmd.CommandLine);
     EXPECT_EQ(CmdStored.Directory, Cmd.Directory);
   }
 
   // FIXME: Changing compile commands should be enough to invalidate the cache.
   FS.Files[testPath("A.cc")] = " ";
-  Cmd.CommandLine = {"/bin/clang++", "../A.cc", "-Dfoo", "-fsyntax-only"};
+  Cmd.CommandLine = {"clang++", "../A.cc", "-Dfoo", "-fsyntax-only"};
   CDB.setCompileCommand(testPath("build/../A.cc"), Cmd);
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
 
@@ -574,7 +566,6 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
 
   {
     tooling::CompileCommand CmdStored = *MSS.loadShard(testPath("A.cc"))->Cmd;
-    EXPECT_THAT(CmdStored.CommandLine, HasPrefix(Cmd.CommandLine));
     EXPECT_EQ(CmdStored.CommandLine, Cmd.CommandLine);
     EXPECT_EQ(CmdStored.Directory, Cmd.Directory);
   }
