@@ -12,6 +12,14 @@
 
 using namespace lldb_private;
 
+static FileSpec PosixSpec(llvm::StringRef path) {
+  return FileSpec(path, FileSpec::Style::posix);
+}
+
+static FileSpec WindowsSpec(llvm::StringRef path) {
+  return FileSpec(path, FileSpec::Style::windows);
+}
+
 TEST(FileSpecTest, FileAndDirectoryComponents) {
   FileSpec fs_posix("/foo/bar", FileSpec::Style::posix);
   EXPECT_STREQ("/foo/bar", fs_posix.GetCString());
@@ -106,8 +114,7 @@ TEST(FileSpecTest, AppendPathComponent) {
 }
 
 TEST(FileSpecTest, CopyByAppendingPathComponent) {
-  FileSpec fs = FileSpec("/foo", FileSpec::Style::posix)
-                    .CopyByAppendingPathComponent("bar");
+  FileSpec fs = PosixSpec("/foo").CopyByAppendingPathComponent("bar");
   EXPECT_STREQ("/foo/bar", fs.GetCString());
   EXPECT_STREQ("/foo", fs.GetDirectory().GetCString());
   EXPECT_STREQ("bar", fs.GetFilename().GetCString());
@@ -136,9 +143,7 @@ TEST(FileSpecTest, PrependPathComponent) {
 }
 
 TEST(FileSpecTest, EqualSeparator) {
-  FileSpec backward("C:\\foo\\bar", FileSpec::Style::windows);
-  FileSpec forward("C:/foo/bar", FileSpec::Style::windows);
-  EXPECT_EQ(forward, backward);
+  EXPECT_EQ(WindowsSpec("C:\\foo\\bar"), WindowsSpec("C:/foo/bar"));
 }
 
 TEST(FileSpecTest, EqualDotsWindows) {
@@ -153,9 +158,8 @@ TEST(FileSpecTest, EqualDotsWindows) {
   };
 
   for (const auto &test : tests) {
-    FileSpec one(test.first, FileSpec::Style::windows);
-    FileSpec two(test.second, FileSpec::Style::windows);
-    EXPECT_EQ(one, two);
+    SCOPED_TRACE(llvm::Twine(test.first) + " <=> " + test.second);
+    EXPECT_EQ(WindowsSpec(test.first), WindowsSpec(test.second));
   }
 }
 
@@ -169,9 +173,8 @@ TEST(FileSpecTest, EqualDotsPosix) {
   };
 
   for (const auto &test : tests) {
-    FileSpec one(test.first, FileSpec::Style::posix);
-    FileSpec two(test.second, FileSpec::Style::posix);
-    EXPECT_EQ(one, two);
+    SCOPED_TRACE(llvm::Twine(test.first) + " <=> " + test.second);
+    EXPECT_EQ(PosixSpec(test.first), PosixSpec(test.second));
   }
 }
 
@@ -183,9 +186,8 @@ TEST(FileSpecTest, EqualDotsPosixRoot) {
   };
 
   for (const auto &test : tests) {
-    FileSpec one(test.first, FileSpec::Style::posix);
-    FileSpec two(test.second, FileSpec::Style::posix);
-    EXPECT_EQ(one, two);
+    SCOPED_TRACE(llvm::Twine(test.first) + " <=> " + test.second);
+    EXPECT_EQ(PosixSpec(test.first), PosixSpec(test.second));
   }
 }
 
@@ -200,7 +202,7 @@ TEST(FileSpecTest, GuessPathStyle) {
   EXPECT_EQ(llvm::None, FileSpec::GuessPathStyle("foo/bar.txt"));
 }
 
-TEST(FileSpecTest, GetNormalizedPath) {
+TEST(FileSpecTest, GetPath) {
   std::pair<const char *, const char *> posix_tests[] = {
       {"/foo/.././bar", "/bar"},
       {"/foo/./../bar", "/bar"},
@@ -230,8 +232,7 @@ TEST(FileSpecTest, GetNormalizedPath) {
   };
   for (auto test : posix_tests) {
     SCOPED_TRACE(llvm::Twine("test.first = ") + test.first);
-    EXPECT_EQ(test.second,
-              FileSpec(test.first, FileSpec::Style::posix).GetPath());
+    EXPECT_EQ(test.second, PosixSpec(test.first).GetPath());
   }
 
   std::pair<const char *, const char *> windows_tests[] = {
@@ -262,9 +263,8 @@ TEST(FileSpecTest, GetNormalizedPath) {
       {R"(..\..\foo)", R"(..\..\foo)"},
   };
   for (auto test : windows_tests) {
-    EXPECT_EQ(test.second,
-              FileSpec(test.first, FileSpec::Style::windows).GetPath())
-        << "Original path: " << test.first;
+    SCOPED_TRACE(llvm::Twine("test.first = ") + test.first);
+    EXPECT_EQ(test.second, WindowsSpec(test.first).GetPath());
   }
 }
 
@@ -315,8 +315,8 @@ TEST(FileSpecTest, IsRelative) {
     "/foo/../.",
   };
   for (const auto &path: not_relative) {
-    FileSpec spec(path, FileSpec::Style::posix);
-    EXPECT_FALSE(spec.IsRelative());
+    SCOPED_TRACE(path);
+    EXPECT_FALSE(PosixSpec(path).IsRelative());
   }
   llvm::StringRef is_relative[] = {
     ".",
@@ -333,8 +333,8 @@ TEST(FileSpecTest, IsRelative) {
     "./foo/bar.c"
   };
   for (const auto &path: is_relative) {
-    FileSpec spec(path, FileSpec::Style::posix);
-    EXPECT_TRUE(spec.IsRelative());
+    SCOPED_TRACE(path);
+    EXPECT_TRUE(PosixSpec(path).IsRelative());
   }
 }
 
