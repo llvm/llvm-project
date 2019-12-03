@@ -70,11 +70,15 @@ struct BasicBlockBFIAdapter {
 } // end anonymous namespace
 
 bool llvm::shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
-                                 BlockFrequencyInfo *BFI) {
-  return shouldFuncOptimizeForSizeImpl<BasicBlockBFIAdapter>(F, PSI, BFI);
+                                 BlockFrequencyInfo *BFI,
+                                 PGSOQueryType QueryType) {
+  return shouldFuncOptimizeForSizeImpl<BasicBlockBFIAdapter>(F, PSI, BFI,
+                                                             QueryType);
 }
 
 bool llvm::shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
-                                 BlockFrequencyInfo *BFI) {
-  return shouldOptimizeForSizeImpl<BasicBlockBFIAdapter>(BB, PSI, BFI);
+                                 BlockFrequencyInfo *BFI,
+                                 PGSOQueryType QueryType) {
+  return shouldOptimizeForSizeImpl<BasicBlockBFIAdapter>(BB, PSI, BFI,
+                                                         QueryType);
 }

@@ -424,6 +424,8 @@ namespace clang {
     template<typename T>
     void mergeMergeable(Mergeable<T> *D);
 
+    void mergeMergeable(LifetimeExtendedTemporaryDecl *D);
+
     void mergeTemplatePattern(RedeclarableTemplateDecl *D,
                               RedeclarableTemplateDecl *Existing,
                               DeclID DsID, bool IsKeyDecl);
@@ -2358,6 +2360,7 @@ void ASTDeclReader::VisitLifetimeExtendedTemporaryDecl(
   if (Record.readInt())
     D->Value = new (D->getASTContext()) APValue(Record.readAPValue());
   D->ManglingNumber = Record.readInt();
+  mergeMergeable(D);
 }
 
 std::pair<uint64_t, uint64_t>
@@ -2553,6 +2556,25 @@ static bool allowODRLikeMergeInC(NamedDecl *ND) {
   if (isa<EnumConstantDecl>(ND))
     return true;
   return false;
+}
+
+/// Attempts to merge LifetimeExtendedTemporaryDecl with
+/// identical class definitions from two different modules.
+void ASTDeclReader::mergeMergeable(LifetimeExtendedTemporaryDecl *D) {
+  // If modules are not available, there is no reason to perform this merge.
+  if (!Reader.getContext().getLangOpts().Modules)
+    return;
+
+  LifetimeExtendedTemporaryDecl *LETDecl = D;
+
+  LifetimeExtendedTemporaryDecl *&LookupResult =
+      Reader.LETemporaryForMerging[std::make_pair(
+          LETDecl->getExtendingDecl(), LETDecl->getManglingNumber())];
+  if (LookupResult)
+    Reader.getContext().setPrimaryMergedDecl(LETDecl,
+                                             LookupResult->getCanonicalDecl());
+  else
+    LookupResult = LETDecl;
 }
 
 /// Attempts to merge the given declaration (D) with another declaration

@@ -13,7 +13,7 @@
 #include "__undef_macros"
 
 #ifndef _LIBCPP_HAS_NO_THREADS
-#if defined(__unix__) && !defined(__ANDROID__) && defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
 #pragma comment(lib, "pthread")
 #endif
 #endif

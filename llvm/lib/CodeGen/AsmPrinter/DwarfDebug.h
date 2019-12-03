@@ -508,6 +508,8 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// Emit macros into a debug macinfo section.
   void emitDebugMacinfo();
+  /// Emit macros into a debug macinfo.dwo section.
+  void emitDebugMacinfoDWO();
   void emitMacro(DIMacro &M);
   void emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U);
   void handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U);

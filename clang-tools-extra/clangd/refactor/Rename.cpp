@@ -283,7 +283,7 @@ Range toRange(const SymbolLocation &L) {
   R.end.line = L.End.line();
   R.end.character = L.End.column();
   return R;
-};
+}
 
 // Return all rename occurrences (per the index) outside of the main file,
 // grouped by the absolute file path.

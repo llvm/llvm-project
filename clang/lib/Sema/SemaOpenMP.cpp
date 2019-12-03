@@ -5445,7 +5445,7 @@ void Sema::markOpenMPDeclareVariantFuncsReferenced(SourceLocation Loc,
          Func->specific_attrs<OMPDeclareVariantAttr>()) {
       // TODO: add checks for active OpenMP context where possible.
       Expr *VariantRef = A->getVariantFuncRef();
-      auto *DRE = dyn_cast<DeclRefExpr>(VariantRef->IgnoreParenImpCasts());
+      auto *DRE = cast<DeclRefExpr>(VariantRef->IgnoreParenImpCasts());
       auto *F = cast<FunctionDecl>(DRE->getDecl());
       if (!F->isDefined() && F->isTemplateInstantiation())
         InstantiateFunctionDefinition(Loc, F->getFirstDecl());

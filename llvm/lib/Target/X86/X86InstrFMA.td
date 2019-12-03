@@ -95,7 +95,8 @@ multiclass fma3p_rm_132<bits<8> opc, string OpcodeStr, RegisterClass RC,
                    Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
-let Constraints = "$src1 = $dst", hasSideEffects = 0, isCommutable = 1 in
+let Constraints = "$src1 = $dst", hasSideEffects = 0, isCommutable = 1,
+    Uses = [MXCSR], mayRaiseFPException = 1 in
 multiclass fma3p_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                        string OpcodeStr, string PackTy, string Suff,
                        PatFrag MemFrag128, PatFrag MemFrag256,
@@ -237,7 +238,7 @@ multiclass fma3s_rm_132<bits<8> opc, string OpcodeStr,
 }
 
 let Constraints = "$src1 = $dst", isCommutable = 1, isCodeGenOnly = 1,
-    hasSideEffects = 0 in
+    hasSideEffects = 0, Uses = [MXCSR], mayRaiseFPException = 1 in
 multiclass fma3s_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                        string OpStr, string PackTy, string Suff,
                        SDNode OpNode, RegisterClass RC,
@@ -263,7 +264,8 @@ multiclass fma3s_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 // the lowest element of the FMA*_Int instruction. Even though such analysis
 // may be not implemented yet we allow the routines doing the actual commute
 // transformation to decide if one or another instruction is commutable or not.
-let Constraints = "$src1 = $dst", isCommutable = 1, hasSideEffects = 0 in
+let Constraints = "$src1 = $dst", isCommutable = 1, hasSideEffects = 0,
+    Uses = [MXCSR], mayRaiseFPException = 1 in
 multiclass fma3s_rm_int<bits<8> opc, string OpcodeStr,
                         Operand memopr, RegisterClass RC,
                         X86FoldableSchedWrite sched> {
@@ -384,6 +386,7 @@ defm : scalar_fma_patterns<X86Fnmsub, "VFNMSUB", "SD", X86Movsd, v2f64, f64, FR6
 // FMA4 - AMD 4 operand Fused Multiply-Add instructions
 //===----------------------------------------------------------------------===//
 
+let Uses = [MXCSR], mayRaiseFPException = 1 in
 multiclass fma4s<bits<8> opc, string OpcodeStr, RegisterClass RC,
                  X86MemOperand x86memop, ValueType OpVT, SDNode OpNode,
                  PatFrag mem_frag, X86FoldableSchedWrite sched> {
@@ -425,7 +428,8 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
 
 multiclass fma4s_int<bits<8> opc, string OpcodeStr, Operand memop,
                      ValueType VT, X86FoldableSchedWrite sched> {
-let isCodeGenOnly = 1, hasSideEffects = 0 in {
+let isCodeGenOnly = 1, hasSideEffects = 0,
+    Uses = [MXCSR], mayRaiseFPException = 1 in {
   def rr_Int : FMA4S_Int<opc, MRMSrcRegOp4, (outs VR128:$dst),
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
@@ -458,6 +462,7 @@ let isCodeGenOnly = 1, hasSideEffects = 0 in {
 } // isCodeGenOnly = 1
 }
 
+let Uses = [MXCSR], mayRaiseFPException = 1 in
 multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                  ValueType OpVT128, ValueType OpVT256,
                  PatFrag ld_frag128, PatFrag ld_frag256,

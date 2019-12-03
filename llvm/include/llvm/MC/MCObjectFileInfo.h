@@ -111,6 +111,7 @@ protected:
   MCSection *DwarfLineDWOSection = nullptr;
   MCSection *DwarfLocDWOSection = nullptr;
   MCSection *DwarfStrOffDWOSection = nullptr;
+  MCSection *DwarfMacinfoDWOSection = nullptr;
 
   /// The DWARF v5 string offset and address table sections.
   MCSection *DwarfStrOffSection = nullptr;
@@ -302,6 +303,9 @@ public:
   }
   MCSection *getDwarfLoclistsDWOSection() const {
     return DwarfLoclistsDWOSection;
+  }
+  MCSection *getDwarfMacinfoDWOSection() const {
+    return DwarfMacinfoDWOSection;
   }
   MCSection *getDwarfCUIndexSection() const { return DwarfCUIndexSection; }
   MCSection *getDwarfTUIndexSection() const { return DwarfTUIndexSection; }
