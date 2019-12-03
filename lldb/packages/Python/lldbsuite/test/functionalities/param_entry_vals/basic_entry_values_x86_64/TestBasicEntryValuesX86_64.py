@@ -6,8 +6,7 @@ supported_platforms = ["linux"]
 supported_platforms.extend(lldbplatformutil.getDarwinOSTriples())
 
 lldbinline.MakeInlineTest(__file__, globals(),
-        [decorators.skipIf(bugnumber="llvm.org/pr44059"),
-         decorators.skipUnlessPlatform(supported_platforms),
+        [decorators.skipUnlessPlatform(supported_platforms),
          decorators.skipIf(compiler="clang", compiler_version=['<', '10.0']),
          decorators.skipUnlessArch('x86_64'),
          decorators.skipUnlessHasCallSiteInfo,
