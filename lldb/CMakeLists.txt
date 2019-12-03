@@ -119,26 +119,20 @@ if (NOT LLDB_DISABLE_PYTHON)
       "${lldb_scripts_dir}/lldb.py"
       "${lldb_python_build_path}/__init__.py")
 
-  if(APPLE)
-    SET(lldb_python_heap_dir "${lldb_python_build_path}/macosx/heap")
-    add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_heap_dir}
-      COMMAND ${CMAKE_COMMAND} -E copy
-        "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/heap_find.cpp"
-        "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/Makefile"
-        ${lldb_python_heap_dir})
-  endif()
-
-  function(create_python_package target pkg_dir)
-    cmake_parse_arguments(ARG "" "" "FILES" ${ARGN})
+  function(create_python_package pkg_dir)
+    cmake_parse_arguments(ARG "NOINIT" "" "FILES" ${ARGN})
     if(ARG_FILES)
       set(copy_cmd COMMAND ${CMAKE_COMMAND} -E copy ${ARG_FILES} ${pkg_dir})
     endif()
-    add_custom_command(TARGET ${target} POST_BUILD VERBATIM
+    if(NOT ARG_NOINIT)
+      set(init_cmd COMMAND ${PYTHON_EXECUTABLE}
+          "${LLDB_SOURCE_DIR}/scripts/Python/createPythonInit.py"
+          "${pkg_dir}" ${ARG_FILES})
+    endif()
+    add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
       COMMAND ${CMAKE_COMMAND} -E make_directory ${pkg_dir}
       ${copy_cmd}
-      COMMAND ${PYTHON_EXECUTABLE} "${LLDB_SOURCE_DIR}/scripts/Python/createPythonInit.py"
-        ${pkg_dir} ${ARG_FILES}
+      ${init_cmd}
       WORKING_DIRECTORY ${lldb_python_build_path})
   endfunction()
 
@@ -146,28 +140,32 @@ if (NOT LLDB_DISABLE_PYTHON)
     COMMAND ${CMAKE_COMMAND} -E copy
       "${LLDB_SOURCE_DIR}/source/Interpreter/embedded_interpreter.py" ${lldb_python_build_path})
 
-  create_python_package(finish_swig "formatters/cpp"
+  # Distribute the examples as python packages.
+  create_python_package("formatters/cpp"
     FILES "${LLDB_SOURCE_DIR}/examples/synthetic/gnu_libstdcpp.py"
           "${LLDB_SOURCE_DIR}/examples/synthetic/libcxx.py")
-  # Make an empty __init__.py in lldb/runtime as this is required for
-  # Python to recognize lldb.runtime as a valid package (and hence,
-  # lldb.runtime.objc as a valid contained package)
-  create_python_package(finish_swig "runtime")
-  # Having these files copied here ensure that lldb/formatters is a
-  # valid package itself
-  create_python_package(finish_swig "formatters"
+
+  create_python_package("formatters"
     FILES "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/cache.py"
           "${LLDB_SOURCE_DIR}/examples/summaries/synth.py"
           "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/metrics.py"
           "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/attrib_fromdict.py"
           "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/Logger.py")
-  create_python_package(finish_swig "utils"
+
+  create_python_package("utils"
     FILES "${LLDB_SOURCE_DIR}/examples/python/symbolication.py")
+
   if(APPLE)
-    create_python_package(finish_swig "macosx"
+    create_python_package("macosx"
       FILES "${LLDB_SOURCE_DIR}/examples/python/crashlog.py"
             "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap.py")
-    create_python_package(finish_swig "diagnose"
+
+    create_python_package("macosx/heap"
+      FILES "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/heap_find.cpp"
+            "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/Makefile"
+            NOINIT)
+
+    create_python_package("diagnose"
       FILES "${LLDB_SOURCE_DIR}/examples/python/diagnose_unwind.py"
             "${LLDB_SOURCE_DIR}/examples/python/diagnose_nsstring.py")
   endif()
