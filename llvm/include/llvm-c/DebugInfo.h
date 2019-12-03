@@ -874,7 +874,7 @@ LLVMMetadataRef
 LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef Builder, LLVMMetadataRef Type,
                            const char *Name, size_t NameLen,
                            LLVMMetadataRef File, unsigned LineNo,
-                           LLVMMetadataRef Scope);
+                           LLVMMetadataRef Scope, uint32_t AlignInBits);
 
 /**
  * Create debugging information entry to establish inheritance relationship
