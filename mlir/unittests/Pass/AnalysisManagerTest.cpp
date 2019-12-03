@@ -114,4 +114,37 @@ TEST(AnalysisManagerTest, FineGrainChildFunctionAnalysisPreservation) {
   EXPECT_FALSE(am.getCachedChildAnalysis<OtherAnalysis>(func1).hasValue());
 }
 
+/// Test analyses with custom invalidation logic.
+struct TestAnalysisSet {};
+
+struct CustomInvalidatingAnalysis {
+  CustomInvalidatingAnalysis(Operation *) {}
+
+  bool isInvalidated(const AnalysisManager::PreservedAnalyses &pa) {
+    return !pa.isPreserved<TestAnalysisSet>();
+  }
+};
+
+TEST(AnalysisManagerTest, CustomInvalidation) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  // Create a function and a module.
+  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  AnalysisManager am = mam;
+
+  detail::PreservedAnalyses pa;
+
+  // Check that the analysis is invalidated properly.
+  am.getAnalysis<CustomInvalidatingAnalysis>();
+  am.invalidate(pa);
+  EXPECT_FALSE(am.getCachedAnalysis<CustomInvalidatingAnalysis>().hasValue());
+
+  // Check that the analysis is preserved properly.
+  am.getAnalysis<CustomInvalidatingAnalysis>();
+  pa.preserve<TestAnalysisSet>();
+  am.invalidate(pa);
+  EXPECT_TRUE(am.getCachedAnalysis<CustomInvalidatingAnalysis>().hasValue());
+}
 } // end namespace
