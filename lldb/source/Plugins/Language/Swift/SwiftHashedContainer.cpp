@@ -447,7 +447,7 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
       auto scratch_ctx = scratch_ctx_reader.get();
       if (!scratch_ctx)
         return;
-      auto *runtime = SwiftLanguageRuntime::Get(*m_process);
+      auto *runtime = SwiftLanguageRuntime::Get(m_process);
       if (!runtime)
         return;
       std::vector<SwiftASTContext::TupleElement> tuple_elements{
@@ -671,7 +671,7 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   if (!process_sp)
     return nullptr;
 
-  SwiftLanguageRuntime *swift_runtime = SwiftLanguageRuntime::Get(*process_sp);
+  SwiftLanguageRuntime *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
   if (!swift_runtime)
     return nullptr;
 

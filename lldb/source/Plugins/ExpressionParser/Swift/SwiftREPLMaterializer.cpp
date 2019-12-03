@@ -56,7 +56,7 @@ static lldb::addr_t FixupResilientGlobal(lldb::addr_t var_addr,
                                          lldb::ProcessSP process_sp,
                                          Status &error) {
   if (process_sp)
-    if (auto *runtime = SwiftLanguageRuntime::Get(*process_sp)) {
+    if (auto *runtime = SwiftLanguageRuntime::Get(process_sp)) {
       if (!runtime->IsStoredInlineInBuffer(compiler_type)) {
         if (var_addr != LLDB_INVALID_ADDRESS) {
           size_t ptr_size = process_sp->GetAddressByteSize();

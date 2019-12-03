@@ -64,8 +64,7 @@ ExtractSomeIfAny(ValueObject *optional,
     return nullptr;
 
   auto process_sp = optional->GetProcessSP();
-  SwiftLanguageRuntime *swift_runtime =
-      process_sp ? SwiftLanguageRuntime::Get(*process_sp) : nullptr;
+  auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
 
   SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy;
   if (SwiftASTContext::IsNonTriviallyManagedReferenceType(

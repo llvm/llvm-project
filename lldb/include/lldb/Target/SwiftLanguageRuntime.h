@@ -73,7 +73,8 @@ public:
     return ClassID == &ID || LanguageRuntime::isA(ClassID);
   }
 
-  // Static Functions
+  /// Static Functions.
+  /// \{
   static void Initialize();
 
   static void Terminate();
@@ -87,15 +88,22 @@ public:
     return runtime->isA(&ID);
   }
 
-  static SwiftLanguageRuntime *Get(Process &process) {
-    return llvm::cast_or_null<SwiftLanguageRuntime>(
-        process.GetLanguageRuntime(lldb::eLanguageTypeSwift));
+  static SwiftLanguageRuntime *Get(Process *process) {
+    return process ? llvm::cast_or_null<SwiftLanguageRuntime>(
+                         process->GetLanguageRuntime(lldb::eLanguageTypeSwift))
+                   : nullptr;
+  }
+
+  static SwiftLanguageRuntime *Get(lldb::ProcessSP process_sp) {
+    return SwiftLanguageRuntime::Get(process_sp.get());
   }
 
   static lldb::BreakpointPreconditionSP
-  GetBreakpointExceptionPrecondition(lldb::LanguageType language, bool throw_bp);
+  GetBreakpointExceptionPrecondition(lldb::LanguageType language,
+                                     bool throw_bp);
+  /// \}
 
-  // PluginInterface protocol
+  /// PluginInterface protocol.
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

@@ -3221,7 +3221,7 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   Target *target = frame_sp->CalculateTarget().get();
   ValueObjectSP error_valobj_sp;
 
-  auto *runtime = Get(*process_sp);
+  auto *runtime = Get(process_sp);
   if (!runtime)
     return error_valobj_sp;
 
