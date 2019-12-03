@@ -1,0 +1,7 @@
+[
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/has_include_if_elif2.cpp -IInputs",
+  "file": "DIR/has_include_if_elif2.cpp"
+}
+]

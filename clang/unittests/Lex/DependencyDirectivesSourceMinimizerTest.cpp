@@ -328,12 +328,17 @@ TEST(MinimizeSourceToDependencyDirectivesTest, EmptyIfdef) {
   SmallVector<char, 128> Out;
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#ifdef A\n"
+                                                    "void skip();\n"
                                                     "#elif B\n"
                                                     "#elif C\n"
                                                     "#else D\n"
                                                     "#endif\n",
                                                     Out));
-  EXPECT_STREQ("", Out.data());
+  EXPECT_STREQ("#ifdef A\n"
+               "#elif B\n"
+               "#elif C\n"
+               "#endif\n",
+               Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, Pragma) {
@@ -507,6 +512,12 @@ TEST(MinimizeSourceToDependencyDirectivesTest, PoundWarningAndError) {
   for (auto Source : {
            "#warning \\\n#include <t.h>\n",
            "#error \\\n#include <t.h>\n",
+       }) {
+    ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
+    EXPECT_STREQ("", Out.data());
+  }
+
+  for (auto Source : {
            "#if MACRO\n#warning '\n#endif\n",
            "#if MACRO\n#warning \"\n#endif\n",
            "#if MACRO\n#warning /*\n#endif\n",
@@ -515,7 +526,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, PoundWarningAndError) {
            "#if MACRO\n#error /*\n#endif\n",
        }) {
     ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
-    EXPECT_STREQ("", Out.data());
+    EXPECT_STREQ("#if MACRO\n#endif\n", Out.data());
   }
 }
 
@@ -543,7 +554,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, CharacterLiteralPrefixL) {
 #include <test.h>
 )";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
-  EXPECT_STREQ("#include <test.h>\n", Out.data());
+  EXPECT_STREQ("#if DEBUG\n#endif\n#include <test.h>\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, CharacterLiteralPrefixU) {
