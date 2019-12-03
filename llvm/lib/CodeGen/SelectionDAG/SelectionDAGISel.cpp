@@ -148,16 +148,16 @@ static cl::opt<bool>
 ViewLegalizeTypesDAGs("view-legalize-types-dags", cl::Hidden,
           cl::desc("Pop up a window to show dags before legalize types"));
 static cl::opt<bool>
-ViewLegalizeDAGs("view-legalize-dags", cl::Hidden,
-          cl::desc("Pop up a window to show dags before legalize"));
+    ViewDAGCombineLT("view-dag-combine-lt-dags", cl::Hidden,
+                     cl::desc("Pop up a window to show dags before the post "
+                              "legalize types dag combine pass"));
+static cl::opt<bool>
+    ViewLegalizeDAGs("view-legalize-dags", cl::Hidden,
+                     cl::desc("Pop up a window to show dags before legalize"));
 static cl::opt<bool>
 ViewDAGCombine2("view-dag-combine2-dags", cl::Hidden,
           cl::desc("Pop up a window to show dags before the second "
                    "dag combine pass"));
-static cl::opt<bool>
-ViewDAGCombineLT("view-dag-combine-lt-dags", cl::Hidden,
-          cl::desc("Pop up a window to show dags before the post legalize types"
-                   " dag combine pass"));
 static cl::opt<bool>
 ViewISelDAGs("view-isel-dags", cl::Hidden,
           cl::desc("Pop up a window to show isel dags as they are selected"));
@@ -168,12 +168,10 @@ static cl::opt<bool>
 ViewSUnitDAGs("view-sunit-dags", cl::Hidden,
       cl::desc("Pop up a window to show SUnit dags after they are processed"));
 #else
-static const bool ViewDAGCombine1 = false,
-                  ViewLegalizeTypesDAGs = false, ViewLegalizeDAGs = false,
-                  ViewDAGCombine2 = false,
-                  ViewDAGCombineLT = false,
-                  ViewISelDAGs = false, ViewSchedDAGs = false,
-                  ViewSUnitDAGs = false;
+static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
+                  ViewDAGCombineLT = false, ViewLegalizeDAGs = false,
+                  ViewDAGCombine2 = false, ViewISelDAGs = false,
+                  ViewSchedDAGs = false, ViewSUnitDAGs = false;
 #endif
 
 //===---------------------------------------------------------------------===//
@@ -790,8 +788,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                        FuncInfo->MBB->getBasicBlock()->getName());
 #endif
 #ifdef NDEBUG
-  if (ViewDAGCombine1 || ViewLegalizeTypesDAGs || ViewLegalizeDAGs ||
-      ViewDAGCombine2 || ViewDAGCombineLT || ViewISelDAGs || ViewSchedDAGs ||
+  if (ViewDAGCombine1 || ViewLegalizeTypesDAGs || ViewDAGCombineLT ||
+      ViewLegalizeDAGs || ViewDAGCombine2 || ViewISelDAGs || ViewSchedDAGs ||
       ViewSUnitDAGs)
 #endif
   {
