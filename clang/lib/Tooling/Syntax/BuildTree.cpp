@@ -66,7 +66,7 @@ public:
   void markExprChild(Expr *Child, NodeRole Role);
 
   /// Set role for a token starting at \p Loc.
-  void markChildToken(SourceLocation Loc, tok::TokenKind Kind, NodeRole R);
+  void markChildToken(SourceLocation Loc, NodeRole R);
 
   /// Finish building the tree and consume the root node.
   syntax::TranslationUnit *finalize() && {
@@ -255,11 +255,10 @@ public:
   bool WalkUpFromCompoundStmt(CompoundStmt *S) {
     using NodeRole = syntax::NodeRole;
 
-    Builder.markChildToken(S->getLBracLoc(), tok::l_brace, NodeRole::OpenParen);
+    Builder.markChildToken(S->getLBracLoc(), NodeRole::OpenParen);
     for (auto *Child : S->body())
       Builder.markStmtChild(Child, NodeRole::CompoundStatement_statement);
-    Builder.markChildToken(S->getRBracLoc(), tok::r_brace,
-                           NodeRole::CloseParen);
+    Builder.markChildToken(S->getRBracLoc(), NodeRole::CloseParen);
 
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::CompoundStatement);
@@ -323,7 +322,7 @@ public:
   }
 
   bool WalkUpFromSwitchStmt(SwitchStmt *S) {
-    Builder.markChildToken(S->getSwitchLoc(), tok::kw_switch,
+    Builder.markChildToken(S->getSwitchLoc(),
                            syntax::NodeRole::IntroducerKeyword);
     Builder.markStmtChild(S->getBody(), syntax::NodeRole::BodyStatement);
     Builder.foldNode(Builder.getStmtRange(S),
@@ -332,7 +331,7 @@ public:
   }
 
   bool WalkUpFromCaseStmt(CaseStmt *S) {
-    Builder.markChildToken(S->getKeywordLoc(), tok::kw_case,
+    Builder.markChildToken(S->getKeywordLoc(),
                            syntax::NodeRole::IntroducerKeyword);
     Builder.markExprChild(S->getLHS(), syntax::NodeRole::CaseStatement_value);
     Builder.markStmtChild(S->getSubStmt(), syntax::NodeRole::BodyStatement);
@@ -342,7 +341,7 @@ public:
   }
 
   bool WalkUpFromDefaultStmt(DefaultStmt *S) {
-    Builder.markChildToken(S->getKeywordLoc(), tok::kw_default,
+    Builder.markChildToken(S->getKeywordLoc(),
                            syntax::NodeRole::IntroducerKeyword);
     Builder.markStmtChild(S->getSubStmt(), syntax::NodeRole::BodyStatement);
     Builder.foldNode(Builder.getStmtRange(S),
@@ -351,11 +350,10 @@ public:
   }
 
   bool WalkUpFromIfStmt(IfStmt *S) {
-    Builder.markChildToken(S->getIfLoc(), tok::kw_if,
-                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markChildToken(S->getIfLoc(), syntax::NodeRole::IntroducerKeyword);
     Builder.markStmtChild(S->getThen(),
                           syntax::NodeRole::IfStatement_thenStatement);
-    Builder.markChildToken(S->getElseLoc(), tok::kw_else,
+    Builder.markChildToken(S->getElseLoc(),
                            syntax::NodeRole::IfStatement_elseKeyword);
     Builder.markStmtChild(S->getElse(),
                           syntax::NodeRole::IfStatement_elseStatement);
@@ -365,8 +363,7 @@ public:
   }
 
   bool WalkUpFromForStmt(ForStmt *S) {
-    Builder.markChildToken(S->getForLoc(), tok::kw_for,
-                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markChildToken(S->getForLoc(), syntax::NodeRole::IntroducerKeyword);
     Builder.markStmtChild(S->getBody(), syntax::NodeRole::BodyStatement);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::ForStatement);
@@ -374,7 +371,7 @@ public:
   }
 
   bool WalkUpFromWhileStmt(WhileStmt *S) {
-    Builder.markChildToken(S->getWhileLoc(), tok::kw_while,
+    Builder.markChildToken(S->getWhileLoc(),
                            syntax::NodeRole::IntroducerKeyword);
     Builder.markStmtChild(S->getBody(), syntax::NodeRole::BodyStatement);
     Builder.foldNode(Builder.getStmtRange(S),
@@ -383,7 +380,7 @@ public:
   }
 
   bool WalkUpFromContinueStmt(ContinueStmt *S) {
-    Builder.markChildToken(S->getContinueLoc(), tok::kw_continue,
+    Builder.markChildToken(S->getContinueLoc(),
                            syntax::NodeRole::IntroducerKeyword);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::ContinueStatement);
@@ -391,7 +388,7 @@ public:
   }
 
   bool WalkUpFromBreakStmt(BreakStmt *S) {
-    Builder.markChildToken(S->getBreakLoc(), tok::kw_break,
+    Builder.markChildToken(S->getBreakLoc(),
                            syntax::NodeRole::IntroducerKeyword);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::BreakStatement);
@@ -399,7 +396,7 @@ public:
   }
 
   bool WalkUpFromReturnStmt(ReturnStmt *S) {
-    Builder.markChildToken(S->getReturnLoc(), tok::kw_return,
+    Builder.markChildToken(S->getReturnLoc(),
                            syntax::NodeRole::IntroducerKeyword);
     Builder.markExprChild(S->getRetValue(),
                           syntax::NodeRole::ReturnStatement_value);
@@ -409,8 +406,7 @@ public:
   }
 
   bool WalkUpFromCXXForRangeStmt(CXXForRangeStmt *S) {
-    Builder.markChildToken(S->getForLoc(), tok::kw_for,
-                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markChildToken(S->getForLoc(), syntax::NodeRole::IntroducerKeyword);
     Builder.markStmtChild(S->getBody(), syntax::NodeRole::BodyStatement);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::RangeBasedForStatement);
@@ -431,8 +427,7 @@ void syntax::TreeBuilder::foldNode(llvm::ArrayRef<syntax::Token> Range,
   Pending.foldChildren(Range, New);
 }
 
-void syntax::TreeBuilder::markChildToken(SourceLocation Loc,
-                                         tok::TokenKind Kind, NodeRole Role) {
+void syntax::TreeBuilder::markChildToken(SourceLocation Loc, NodeRole Role) {
   if (Loc.isInvalid())
     return;
   Pending.assignRole(*findToken(Loc), Role);
