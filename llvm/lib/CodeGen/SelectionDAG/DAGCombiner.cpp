@@ -131,6 +131,7 @@ namespace {
     const TargetLowering &TLI;
     CombineLevel Level;
     CodeGenOpt::Level OptLevel;
+    bool LegalDAG = false;
     bool LegalOperations = false;
     bool LegalTypes = false;
     bool ForCodeSize;
@@ -1395,6 +1396,7 @@ bool DAGCombiner::recursivelyDeleteUnusedNodes(SDNode *N) {
 void DAGCombiner::Run(CombineLevel AtLevel) {
   // set the instance variables, so that the various visit routines may use it.
   Level = AtLevel;
+  LegalDAG = Level >= AfterLegalizeDAG;
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
@@ -1421,7 +1423,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
 
     // If this combine is running after legalizing the DAG, re-legalize any
     // nodes pulled off the worklist.
-    if (Level == AfterLegalizeDAG) {
+    if (LegalDAG) {
       SmallSetVector<SDNode *, 16> UpdatedNodes;
       bool NIsValid = DAG.LegalizeOp(N, UpdatedNodes);
 
@@ -5332,7 +5334,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     }
   }
 
-  if (Level >= AfterLegalizeTypes) {
+  if (LegalTypes) {
     // Attempt to propagate the AND back up to the leaves which, if they're
     // loads, can be combined to narrow loads and the AND node can be removed.
     // Perform after legalization so that extend nodes will already be
@@ -13364,9 +13366,8 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
     if (CFP1) {
       APFloat CVal = CFP1->getValueAPF();
       CVal.changeSign();
-      if (Level >= AfterLegalizeDAG &&
-          (TLI.isFPImmLegal(CVal, VT, ForCodeSize) ||
-           TLI.isOperationLegal(ISD::ConstantFP, VT)))
+      if (LegalDAG && (TLI.isFPImmLegal(CVal, VT, ForCodeSize) ||
+                       TLI.isOperationLegal(ISD::ConstantFP, VT)))
         return DAG.getNode(
             ISD::FMUL, SDLoc(N), VT, N0.getOperand(0),
             DAG.getNode(ISD::FNEG, SDLoc(N), VT, N0.getOperand(1)),
@@ -20510,7 +20511,7 @@ SDValue DAGCombiner::BuildLogBase2(SDValue V, const SDLoc &DL) {
 ///   Result = N X_i + X_i (N - N A X_i)
 SDValue DAGCombiner::BuildDivEstimate(SDValue N, SDValue Op,
                                       SDNodeFlags Flags) {
-  if (Level >= AfterLegalizeDAG)
+  if (LegalDAG)
     return SDValue();
 
   // TODO: Handle half and/or extended types?
@@ -20649,7 +20650,7 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
 /// Op can be zero.
 SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
                                            bool Reciprocal) {
-  if (Level >= AfterLegalizeDAG)
+  if (LegalDAG)
     return SDValue();
 
   // TODO: Handle half and/or extended types?
