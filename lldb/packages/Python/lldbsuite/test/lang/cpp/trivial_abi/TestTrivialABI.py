@@ -18,6 +18,8 @@ class TestTrivialABI(TestBase):
 
     @skipUnlessSupportedTypeAttribute("trivial_abi")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
+                        bugnumber="llvm.org/pr44161")
     def test_call_trivial(self):
         """Test that we can print a variable & call a function with a trivial ABI class."""
         self.build()
@@ -27,6 +29,8 @@ class TestTrivialABI(TestBase):
     @skipUnlessSupportedTypeAttribute("trivial_abi")
     # fixed for SysV-x86_64 ABI, but not Windows-x86_64
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr36870")
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
+                        bugnumber="llvm.org/pr44161")
     def test_call_nontrivial(self):
         """Test that we can print a variable & call a function on the same class w/o the trivial ABI marker."""
         self.build()

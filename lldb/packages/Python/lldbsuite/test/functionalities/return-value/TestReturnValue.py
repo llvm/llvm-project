@@ -19,6 +19,9 @@ class ReturnValueTestCase(TestBase):
         return ("clang" in self.getCompiler() and self.getArchitecture() ==
             "aarch64" and self.getPlatform() == "linux")
 
+    def affected_by_pr44132(self):
+	return (self.getArchitecture() == "aarch64" and self.getPlatform() == "linux")
+
     # ABIMacOSX_arm can't fetch simple values inside a structure
     def affected_by_radar_34562999(self):
         return (self.getArchitecture() == 'armv7' or self.getArchitecture() == 'armv7k') and self.platformIsDarwin()
@@ -123,8 +126,8 @@ class ReturnValueTestCase(TestBase):
 
         #self.assertTrue(in_float == return_float)
 
-        if not self.affected_by_radar_34562999():
-            self.return_and_test_struct_value("return_one_int")
+        if not self.affected_by_radar_34562999() and not self.affected_by_pr44132():
+	    self.return_and_test_struct_value("return_one_int")
             self.return_and_test_struct_value("return_two_int")
             self.return_and_test_struct_value("return_three_int")
             self.return_and_test_struct_value("return_four_int")
@@ -182,10 +185,12 @@ class ReturnValueTestCase(TestBase):
 
         self.return_and_test_struct_value("return_vector_size_float32_8")
         self.return_and_test_struct_value("return_vector_size_float32_16")
-        self.return_and_test_struct_value("return_vector_size_float32_32")
+	if not self.affected_by_pr44132():
+		self.return_and_test_struct_value("return_vector_size_float32_32")
         self.return_and_test_struct_value("return_ext_vector_size_float32_2")
         self.return_and_test_struct_value("return_ext_vector_size_float32_4")
-        self.return_and_test_struct_value("return_ext_vector_size_float32_8")
+	if not self.affected_by_pr44132():
+		self.return_and_test_struct_value("return_ext_vector_size_float32_8")
 
     # limit the nested struct and class tests to only x86_64
     @skipIf(archs=no_match(['x86_64']))
