@@ -244,11 +244,11 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
   return UINT32_MAX;
 }
 
-void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
-                                       uint32_t line, bool check_inlines,
-                                       bool exact,
-                                       SymbolContextItem resolve_scope,
-                                       SymbolContextList &sc_list) {
+uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
+                                           uint32_t line, bool check_inlines,
+                                           bool exact,
+                                           SymbolContextItem resolve_scope,
+                                           SymbolContextList &sc_list) {
   // First find all of the file indexes that match our "file_spec". If
   // "file_spec" has an empty directory, then only compare the basenames when
   // finding file indexes
@@ -260,7 +260,7 @@ void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
   // If we are not looking for inlined functions and our file spec doesn't
   // match then we are done...
   if (!file_spec_matches_cu_file_spec && !check_inlines)
-    return;
+    return 0;
 
   uint32_t file_idx =
       GetSupportFiles().FindFileIndex(1, file_spec, true);
@@ -271,68 +271,84 @@ void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
 
   const size_t num_file_indexes = file_indexes.size();
   if (num_file_indexes == 0)
-    return;
+    return 0;
+
+  const uint32_t prev_size = sc_list.GetSize();
 
   SymbolContext sc(GetModule());
   sc.comp_unit = this;
 
-  if (line == 0)
-    return;
-  
-  if (file_spec_matches_cu_file_spec && !check_inlines) {
+  if (line != 0) {
+    LineTable *line_table = sc.comp_unit->GetLineTable();
+
+    if (line_table != nullptr) {
+      uint32_t found_line;
+      uint32_t line_idx;
+
+      if (num_file_indexes == 1) {
+        // We only have a single support file that matches, so use the line
+        // table function that searches for a line entries that match a single
+        // support file index
+        LineEntry line_entry;
+        line_idx = line_table->FindLineEntryIndexByFileIndex(
+            0, file_indexes.front(), line, exact, &line_entry);
+
+        // If "exact == true", then "found_line" will be the same as "line". If
+        // "exact == false", the "found_line" will be the closest line entry
+        // with a line number greater than "line" and we will use this for our
+        // subsequent line exact matches below.
+        found_line = line_entry.line;
+
+        while (line_idx != UINT32_MAX) {
+          // If they only asked for the line entry, then we're done, we can
+          // just copy that over. But if they wanted more than just the line
+          // number, fill it in.
+          if (resolve_scope == eSymbolContextLineEntry) {
+            sc.line_entry = line_entry;
+          } else {
+            line_entry.range.GetBaseAddress().CalculateSymbolContext(
+                &sc, resolve_scope);
+          }
+
+          sc_list.Append(sc);
+          line_idx = line_table->FindLineEntryIndexByFileIndex(
+              line_idx + 1, file_indexes.front(), found_line, true,
+              &line_entry);
+        }
+      } else {
+        // We found multiple support files that match "file_spec" so use the
+        // line table function that searches for a line entries that match a
+        // multiple support file indexes.
+        LineEntry line_entry;
+        line_idx = line_table->FindLineEntryIndexByFileIndex(
+            0, file_indexes, line, exact, &line_entry);
+
+        // If "exact == true", then "found_line" will be the same as "line". If
+        // "exact == false", the "found_line" will be the closest line entry
+        // with a line number greater than "line" and we will use this for our
+        // subsequent line exact matches below.
+        found_line = line_entry.line;
+
+        while (line_idx != UINT32_MAX) {
+          if (resolve_scope == eSymbolContextLineEntry) {
+            sc.line_entry = line_entry;
+          } else {
+            line_entry.range.GetBaseAddress().CalculateSymbolContext(
+                &sc, resolve_scope);
+          }
+
+          sc_list.Append(sc);
+          line_idx = line_table->FindLineEntryIndexByFileIndex(
+              line_idx + 1, file_indexes, found_line, true, &line_entry);
+        }
+      }
+    }
+  } else if (file_spec_matches_cu_file_spec && !check_inlines) {
     // only append the context if we aren't looking for inline call sites by
     // file and line and if the file spec matches that of the compile unit
     sc_list.Append(sc);
-    return;
   }
-
-  LineTable *line_table = sc.comp_unit->GetLineTable();
-
-  if (line_table == nullptr)
-    return;
-
-  uint32_t line_idx;
-  LineEntry line_entry;
-
-  if (num_file_indexes == 1) {
-    // We only have a single support file that matches, so use the line
-    // table function that searches for a line entries that match a single
-    // support file index
-    line_idx = line_table->FindLineEntryIndexByFileIndex(
-        0, file_indexes.front(), line, exact, &line_entry);
-  } else {
-    // We found multiple support files that match "file_spec" so use the
-    // line table function that searches for a line entries that match a
-    // multiple support file indexes.
-    line_idx = line_table->FindLineEntryIndexByFileIndex(0, file_indexes, line,
-                                                         exact, &line_entry);
-  }
-  
-  // If "exact == true", then "found_line" will be the same as "line". If
-  // "exact == false", the "found_line" will be the closest line entry
-  // with a line number greater than "line" and we will use this for our
-  // subsequent line exact matches below.
-  uint32_t found_line = line_entry.line;
-  
-  while (line_idx != UINT32_MAX) {
-    // If they only asked for the line entry, then we're done, we can
-    // just copy that over. But if they wanted more than just the line
-    // number, fill it in.
-    if (resolve_scope == eSymbolContextLineEntry) {
-      sc.line_entry = line_entry;
-    } else {
-      line_entry.range.GetBaseAddress().CalculateSymbolContext(&sc,
-                                                               resolve_scope);
-    }
-
-    sc_list.Append(sc);
-    if (num_file_indexes == 1)
-      line_idx = line_table->FindLineEntryIndexByFileIndex(
-          line_idx + 1, file_indexes.front(), found_line, true, &line_entry);
-    else
-      line_idx = line_table->FindLineEntryIndexByFileIndex(
-          line_idx + 1, file_indexes, found_line, true, &line_entry);
-  }
+  return sc_list.GetSize() - prev_size;
 }
 
 bool CompileUnit::GetIsOptimized() {
