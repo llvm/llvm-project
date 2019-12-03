@@ -614,53 +614,6 @@ bool SwiftASTManipulator::RewriteResult() {
   return true;
 }
 
-namespace {
-class AssignmentMaker {
-private:
-  llvm::SmallSet<swift::VarDecl *, 1> &m_persistent_vars;
-  swift::ASTContext &m_ast_context;
-  llvm::SmallVector<swift::ASTNode, 3> &m_elements;
-  llvm::SmallVectorImpl<swift::ASTNode>::iterator &m_ei;
-
-public:
-  void MakeOneAssignment(swift::VarDecl *var_decl, swift::Expr *initializer,
-                         swift::SourceLoc location) {
-    if (!m_persistent_vars.count(var_decl))
-      return;
-
-    swift::Type target_type = var_decl->getDeclContext()
-        ->mapTypeIntoContext(var_decl->getInterfaceType());
-    swift::LValueType *target_lvalue_type = swift::LValueType::get(target_type);
-
-    const bool implicit = true;
-    const swift::AccessSemantics uses_direct_property_access =
-        swift::AccessSemantics::Ordinary;
-
-    swift::DeclRefExpr *decl_ref = new (m_ast_context)
-        swift::DeclRefExpr(var_decl, swift::DeclNameLoc(location), implicit,
-                           uses_direct_property_access, target_lvalue_type);
-
-    swift::AssignExpr *assignment = new (m_ast_context)
-        swift::AssignExpr(decl_ref, location, initializer, implicit);
-
-    assignment->setType(m_ast_context.TheEmptyTupleType);
-
-    llvm::SmallVectorImpl<swift::ASTNode>::iterator next_iter = m_ei + 1;
-
-    swift::ASTNode assignment_node((swift::Expr *)assignment);
-
-    m_ei = m_elements.insert(next_iter, swift::ASTNode(assignment_node));
-  }
-
-  AssignmentMaker(llvm::SmallSet<swift::VarDecl *, 1> &persistent_vars,
-                  swift::ASTContext &ast_context,
-                  llvm::SmallVector<swift::ASTNode, 3> &elements,
-                  llvm::SmallVectorImpl<swift::ASTNode>::iterator &ei)
-      : m_persistent_vars(persistent_vars), m_ast_context(ast_context),
-        m_elements(elements), m_ei(ei) {}
-};
-}
-
 void SwiftASTManipulator::MakeDeclarationsPublic() {
   if (!IsValid())
     return;
