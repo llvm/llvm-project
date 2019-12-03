@@ -72,6 +72,8 @@ EXTERN uint64_t __lanemask_lt();
 // thread's lane number in the warp
 EXTERN uint64_t __lanemask_gt();
 
+EXTERN void llvm_amdgcn_s_barrier();
+
 // CU id
 EXTERN unsigned __smid();
 
@@ -99,38 +101,31 @@ INLINE uint32_t __kmpc_impl_smid() {
   return __smid();
 }
 
-INLINE uint64_t __kmpc_impl_ffs(uint64_t x) { return __builtin_ffsl(x); }
+INLINE uint64_t __kmpc_impl_ffs(uint64_t x) { return __ffsll(x); }
 
-INLINE uint64_t __kmpc_impl_popc(uint64_t x) { return __builtin_popcountl(x); }
+INLINE uint64_t __kmpc_impl_popc(uint64_t x) { return __popcll(x); }
 
 INLINE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return __ballot64(1);
 }
 
-EXTERN int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t Var,
-                                     int32_t SrcLane);
+INLINE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t Var,
+                                     int32_t SrcLane) {
+  return __shfl(Var, SrcLane, WARPSIZE);
+}
 
-EXTERN int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t Var,
-                                          uint32_t Delta, int32_t Width);
+INLINE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t Var,
+                                          uint32_t Delta, int32_t Width) {
+  return __shfl_down(Var, Delta, Width);
+}
 
-INLINE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
+INLINE void __kmpc_impl_syncthreads() { llvm_amdgcn_s_barrier(); }
 
 INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
   // we have protected the master warp from releasing from its barrier
   // due to a full workgroup barrier in the middle of a work function.
   // So it is ok to issue a full workgroup barrier here.
   __builtin_amdgcn_s_barrier();
-}
-
-// DEVICE versions of part of libc
-extern "C" {
-DEVICE __attribute__((noreturn)) void
-__assertfail(const char *, const char *, unsigned, const char *, size_t);
-INLINE static void __assert_fail(const char *__message, const char *__file,
-                                 unsigned int __line, const char *__function) {
-  __assertfail(__message, __file, __line, __function, sizeof(char));
-}
-DEVICE int printf(const char *, ...);
 }
 
 #endif
