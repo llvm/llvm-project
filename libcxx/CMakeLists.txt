@@ -565,7 +565,12 @@ function(cxx_add_basic_build_flags target)
   endif()
 
   if (LIBCXX_HAS_COMMENT_LIB_PRAGMA)
-    target_compile_definitions(${target} PRIVATE -D_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+    if (LIBCXX_HAS_PTHREAD_LIB)
+      target_compile_definitions(${target} PRIVATE -D_LIBCPP_LINK_PTHREAD_LIB)
+    endif()
+    if (LIBCXX_HAS_RT_LIB)
+      target_compile_definitions(${target} PRIVATE -D_LIBCPP_LINK_RT_LIB)
+    endif()
   endif()
 endfunction()
 
