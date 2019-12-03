@@ -21,8 +21,8 @@ static KnownBits computeForAddCarry(
   assert(!(CarryZero && CarryOne) &&
          "Carry can't be zero and one at the same time");
 
-  APInt PossibleSumZero = ~LHS.Zero + ~RHS.Zero + !CarryZero;
-  APInt PossibleSumOne = LHS.One + RHS.One + CarryOne;
+  APInt PossibleSumZero = LHS.getMaxValue() + RHS.getMaxValue() + !CarryZero;
+  APInt PossibleSumOne = LHS.getMinValue() + RHS.getMinValue() + CarryOne;
 
   // Compute known bits of the carry.
   APInt CarryKnownZero = ~(PossibleSumZero ^ LHS.Zero ^ RHS.Zero);

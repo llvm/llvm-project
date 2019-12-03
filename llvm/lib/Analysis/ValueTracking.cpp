@@ -915,7 +915,7 @@ static void computeKnownBitsFromShiftOperator(
   // If the shift amount could be greater than or equal to the bit-width of the
   // LHS, the value could be poison, but bail out because the check below is
   // expensive. TODO: Should we just carry on?
-  if ((~Known.Zero).uge(BitWidth)) {
+  if (Known.getMaxValue().uge(BitWidth)) {
     Known.resetAll();
     return;
   }
