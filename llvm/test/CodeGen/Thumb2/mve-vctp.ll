@@ -10,7 +10,7 @@ define void @vctp8(i32 %arg, <16 x i8> *%in, <16 x i8>* %out) {
 ; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vstrw.32 q0, [r2]
 ; CHECK-NEXT:    bx lr
-  %pred = call <16 x i1> @llvm.arm.vctp8(i32 %arg)
+  %pred = call <16 x i1> @llvm.arm.mve.vctp8(i32 %arg)
   %ld = load <16 x i8>, <16 x i8>* %in
   %res = select <16 x i1> %pred, <16 x i8> %ld, <16 x i8> zeroinitializer
   store <16 x i8> %res, <16 x i8>* %out
@@ -26,7 +26,7 @@ define void @vctp16(i32 %arg, <8 x i16> *%in, <8 x i16>* %out) {
 ; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vstrw.32 q0, [r2]
 ; CHECK-NEXT:    bx lr
-  %pred = call <8 x i1> @llvm.arm.vctp16(i32 %arg)
+  %pred = call <8 x i1> @llvm.arm.mve.vctp16(i32 %arg)
   %ld = load <8 x i16>, <8 x i16>* %in
   %res = select <8 x i1> %pred, <8 x i16> %ld, <8 x i16> zeroinitializer
   store <8 x i16> %res, <8 x i16>* %out
@@ -42,13 +42,13 @@ define void @vctp32(i32 %arg, <4 x i32> *%in, <4 x i32>* %out) {
 ; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vstrw.32 q0, [r2]
 ; CHECK-NEXT:    bx lr
-  %pred = call <4 x i1> @llvm.arm.vctp32(i32 %arg)
+  %pred = call <4 x i1> @llvm.arm.mve.vctp32(i32 %arg)
   %ld = load <4 x i32>, <4 x i32>* %in
   %res = select <4 x i1> %pred, <4 x i32> %ld, <4 x i32> zeroinitializer
   store <4 x i32> %res, <4 x i32>* %out
   ret void
 }
 
-declare <16 x i1> @llvm.arm.vctp8(i32)
-declare <8 x i1> @llvm.arm.vctp16(i32)
-declare <4 x i1> @llvm.arm.vctp32(i32)
+declare <16 x i1> @llvm.arm.mve.vctp8(i32)
+declare <8 x i1> @llvm.arm.mve.vctp16(i32)
+declare <4 x i1> @llvm.arm.mve.vctp32(i32)
