@@ -295,8 +295,8 @@ def FPSW : X86Reg<"fpsr", 0>;
 def FPCW : X86Reg<"fpcr", 0>;
 
 // SIMD Floating-point control register.
-// Note: We only model the current rounding modes and the IEEE masks.
-// IEEE flags, FTZ and DAZ are not modeled here.
+// Note: We only model the "Uses" of the control bits: current rounding modes,
+// DAZ, FTZ and exception masks. We don't model the "Defs" of flag bits.
 def MXCSR : X86Reg<"mxcsr", 0>;
 
 // Status flags register.
