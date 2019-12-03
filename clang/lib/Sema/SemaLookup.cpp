@@ -823,7 +823,8 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
         NewOpenCLBuiltin->addAttr(ConstAttr::CreateImplicit(Context));
       if (OpenCLBuiltin.IsConv)
         NewOpenCLBuiltin->addAttr(ConvergentAttr::CreateImplicit(Context));
-      if ((GenTypeMaxCnt > 1 || Len > 1) && !S.getLangOpts().OpenCLCPlusPlus)
+
+      if (!S.getLangOpts().OpenCLCPlusPlus)
         NewOpenCLBuiltin->addAttr(OverloadableAttr::CreateImplicit(Context));
 
       LR.addDecl(NewOpenCLBuiltin);
