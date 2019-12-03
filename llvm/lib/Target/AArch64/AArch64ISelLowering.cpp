@@ -1342,6 +1342,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::GLD1_UXTW:         return "AArch64ISD::GLD1_UXTW";
   case AArch64ISD::GLD1_SXTW_SCALED:  return "AArch64ISD::GLD1_SXTW_SCALED";
   case AArch64ISD::GLD1_UXTW_SCALED:  return "AArch64ISD::GLD1_UXTW_SCALED";
+  case AArch64ISD::GLD1_IMM:          return "AArch64ISD::GLD1_IMM";
   }
   return nullptr;
 }
@@ -11943,6 +11944,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SXTW_SCALED);
     case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW_SCALED);
+    case Intrinsic::aarch64_sve_ld1_gather_imm:
+      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_IMM);
     default:
       break;
     }
