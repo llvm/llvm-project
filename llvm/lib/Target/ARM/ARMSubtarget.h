@@ -229,8 +229,8 @@ protected:
   /// NoARM - True if subtarget does not support ARM mode execution.
   bool NoARM = false;
 
-  // ReservedGPRegisters[i] - R#i is not available as a general purpose register
-  BitVector ReservedGPRegisters;
+  /// ReserveR9 - True if R9 is not available as a general purpose register.
+  bool ReserveR9 = false;
 
   /// NoMovt - True if MOVT / MOVW pairs are not used for materialization of
   /// 32-bit imms (including global addresses).
@@ -763,9 +763,8 @@ public:
   bool isAClass() const { return ARMProcClass == AClass; }
   bool isReadTPHard() const { return ReadTPHard; }
 
-  bool isGPRegisterReserved(size_t i) const { return ReservedGPRegisters[i]; }
-  unsigned getNumGPRegistersReserved() const {
-    return ReservedGPRegisters.count();
+  bool isR9Reserved() const {
+    return isTargetMachO() ? (ReserveR9 || !HasV6Ops) : ReserveR9;
   }
 
   bool useR7AsFramePointer() const {
