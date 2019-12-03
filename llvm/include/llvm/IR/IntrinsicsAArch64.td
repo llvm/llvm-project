@@ -942,6 +942,42 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_i32_ty],
                 [IntrNoMem]>;
 
+class AdvSIMD_GatherLoad_64bitOffset_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [
+                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                  LLVMPointerToElt<0>,
+                  LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
+                ],
+                [IntrReadMem, IntrArgMemOnly]>;
+
+  class SVE2_3VectorArg_Long_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 LLVMSubdivide2VectorType<0>,
+                 LLVMSubdivide2VectorType<0>],
+                [IntrNoMem]>;
+
+  class SVE2_3VectorArgIndexed_Long_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 LLVMSubdivide2VectorType<0>,
+                 LLVMSubdivide2VectorType<0>,
+                 llvm_i32_ty],
+                [IntrNoMem]>;
+
+  // NOTE: There is no relationship between these intrinsics beyond an attempt
+  // to reuse currently identical class definitions.
+  class AdvSIMD_SVE_LOGB_Intrinsic  : AdvSIMD_SVE_CNT_Intrinsic;
+
+class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
+    : Intrinsic<[ llvm_anyvector_ty ],
+                [
+                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                  LLVMPointerToElt<0>, llvm_anyvector_ty
+                ],
+                [ IntrReadMem, IntrArgMemOnly ]>;
+
   // This class of intrinsics are not intended to be useful within LLVM IR but
   // are instead here to support some of the more regid parts of the ACLE.
   class Builtin_SVCVT<string name, LLVMType OUT, LLVMType IN>
@@ -1172,4 +1208,53 @@ def int_aarch64_sve_ucvtf_f64i32    : Builtin_SVCVT<"svcvt_f64_u32_m", llvm_nxv2
 
 def int_aarch64_sve_punpkhi : AdvSIMD_SVE_PUNPKHI_Intrinsic;
 def int_aarch64_sve_punpklo : AdvSIMD_SVE_PUNPKHI_Intrinsic;
+
+//
+// Gather loads:
+//
+
+// scalar + vector, 64 bit unscaled offsets
+def int_aarch64_sve_ld1_gather : AdvSIMD_GatherLoad_64bitOffset_Intrinsic;
+
+// scalar + vector, 64 bit scaled offsets
+def int_aarch64_sve_ld1_gather_index : AdvSIMD_GatherLoad_64bitOffset_Intrinsic;
+
+//  scalar + vector, 32 bit unscaled offsets, sign (sxtw) or zero (zxtw)
+//  extended to 64 bits
+def int_aarch64_sve_ld1_gather_sxtw : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+def int_aarch64_sve_ld1_gather_uxtw : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+
+//  scalar + vector, 32 bit scaled offsets, sign (sxtw) or zero (zxtw) extended
+//  to 64 bits
+def int_aarch64_sve_ld1_gather_sxtw_index : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+def int_aarch64_sve_ld1_gather_uxtw_index : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+
+//
+// SVE2 - Non-widening pairwise arithmetic
+//
+
+def int_aarch64_sve_faddp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_fmaxp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_fmaxnmp : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_fminp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_fminnmp : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+//
+// SVE2 - Floating-point widening multiply-accumulate
+//
+
+def int_aarch64_sve_fmlalb        : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_fmlalb_lane   : SVE2_3VectorArgIndexed_Long_Intrinsic;
+def int_aarch64_sve_fmlalt        : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_fmlalt_lane   : SVE2_3VectorArgIndexed_Long_Intrinsic;
+def int_aarch64_sve_fmlslb        : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_fmlslb_lane   : SVE2_3VectorArgIndexed_Long_Intrinsic;
+def int_aarch64_sve_fmlslt        : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_fmlslt_lane   : SVE2_3VectorArgIndexed_Long_Intrinsic;
+
+//
+// SVE2 - Floating-point integer binary logarithm
+//
+
+def int_aarch64_sve_flogb : AdvSIMD_SVE_LOGB_Intrinsic;
 }

@@ -3065,6 +3065,12 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   } else {
     FunctionTypeBits.HasExtQuals = 0;
   }
+
+  // Fill in the Ellipsis location info if present.
+  if (epi.Variadic) {
+    auto &EllipsisLoc = *getTrailingObjects<SourceLocation>();
+    EllipsisLoc = epi.EllipsisLoc;
+  }
 }
 
 bool FunctionProtoType::hasDependentExceptionSpec() const {
