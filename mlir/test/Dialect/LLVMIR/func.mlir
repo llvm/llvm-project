@@ -92,6 +92,27 @@ module {
 
   // CHECK: llvm.func @variadic_args(!llvm.i32, !llvm.i32, ...)
   llvm.func @variadic_args(!llvm.i32, !llvm.i32, ...)
+
+  //
+  // Check that functions can have linkage attributes.
+  //
+
+  // CHECK: llvm.func internal
+  llvm.func internal @internal_func() {
+    llvm.return
+  }
+
+  // CHECK: llvm.func weak
+  llvm.func weak @weak_linkage() {
+    llvm.return
+  }
+
+  // Omit the `external` linkage, which is the default, in the custom format.
+  // Check that it is present in the generic format using its numeric value.
+  //
+  // CHECK: llvm.func @external_func
+  // GENERIC: linkage = 10
+  llvm.func external @external_func()
 }
 
 // -----
@@ -187,4 +208,18 @@ module {
 module {
   // expected-error@+1 {{variadic arguments must be in the end of the argument list}}
   llvm.func @variadic_inside(%arg0: !llvm.i32, ..., %arg1: !llvm.i32)
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{external functions must have 'external' or 'extern_weak' linkage}}
+  llvm.func internal @internal_external_func()
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{functions cannot have 'common' linkage}}
+  llvm.func common @common_linkage_func()
 }
