@@ -1,9 +1,9 @@
-; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s
+; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s
 ;
-; This file is the same as noreturn_async.ll but with a personality which
-; indicates that the exception handler *cannot* catch asynchronous exceptions.
-; As a consequence, invokes to noreturn and nounwind functions are translated
-; to calls followed by an unreachable.
+; This file is the same as noreturn_sync.ll but with a personality which
+; indicates that the exception handler *can* catch asynchronous exceptions. As
+; a consequence, invokes to noreturn and nounwind functions are not translated
+; to calls followed by an unreachable but the unwind edge is considered live.
 ;
 ; https://reviews.llvm.org/D59978#inline-586873
 ;
@@ -12,7 +12,7 @@
 ; This test is also a reminder of how we handle (=ignore) stackoverflow exception handling.
 ;
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
+target triple = "x86_64-pc-windows-msvc19.16.27032"
 
 @"??_C@_0BG@CMNEKHOP@Exception?5NOT?5caught?6?$AA@" = linkonce_odr dso_local unnamed_addr constant [22 x i8] c"Exception NOT caught\0A\00", align 1
 @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@" = linkonce_odr dso_local unnamed_addr constant [18 x i8] c"Exception caught\0A\00", align 1
@@ -33,18 +33,22 @@ entry:
 }
 
 
-; CHECK:       Function Attrs: nofree noreturn nosync nounwind
-; CHECK-NEXT:   @"?catchoverflow@@YAHXZ"()
-define dso_local i32 @"?catchoverflow@@YAHXZ"()  personality i8* bitcast (i32 (...)* @__gcc_personality_v0 to i8*) {
+; CHECK-NOT:    nounwind
+; CHECK-NOT:    noreturn
+; CHECK:        define
+; CHECK-SAME:   @"?catchoverflow@@YAHXZ"()
+define dso_local i32 @"?catchoverflow@@YAHXZ"()  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
-  invoke void @"?overflow@@YAXXZ"() 
+; CHECK: invoke void @"?overflow@@YAXXZ"()
+; CHECK:          to label %invoke.cont unwind label %catch.dispatch
+  invoke void @"?overflow@@YAXXZ"()
           to label %invoke.cont unwind label %catch.dispatch
-; CHECK:      call void @"?overflow@@YAXXZ"()
-; CHECK-NEXT: unreachable
 
 invoke.cont:                                      ; preds = %entry
+; CHECK:      invoke.cont:
+; CHECK-NEXT: unreachable
   br label %invoke.cont1
 
 catch.dispatch:                                   ; preds = %invoke.cont, %entry
@@ -92,7 +96,7 @@ entry:
 ; CHECK-NOT:    noreturn
 ; CHECK:        define
 ; CHECK-SAME:   @"?catchoverflow@@YAHXZ_may_throw"()
-define dso_local i32 @"?catchoverflow@@YAHXZ_may_throw"()  personality i8* bitcast (i32 (...)* @__gcc_personality_v0 to i8*) {
+define dso_local i32 @"?catchoverflow@@YAHXZ_may_throw"()  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
@@ -131,7 +135,7 @@ return:                                           ; preds = %__try.cont, %__exce
   ret i32 %3
 }
 
-declare dso_local i32 @__gcc_personality_v0(...)
+declare dso_local i32 @__C_specific_handler(...)
 
 declare dso_local i32 @printf(i8* %_Format, ...)
 
