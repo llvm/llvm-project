@@ -307,10 +307,10 @@
 // CHECK-REQ: error: instruction requires: pa
 // CHECK-REQ-NEXT:  ldrab x0, [x1]
   ldraa x0, [x1]!
-// CHECK-NEXT: ldraa x0, [x1]!  // encoding: [0x20,0x0c,0x20,0xf8]
+// CHECK-NEXT: ldraa x0, [x1, #0]!  // encoding: [0x20,0x0c,0x20,0xf8]
 // CHECK-REQ: error: instruction requires: pa
 // CHECK-REQ-NEXT:  ldraa x0, [x1]!
   ldrab x0, [x1]!
-// CHECK-NEXT: ldrab x0, [x1]!  // encoding: [0x20,0x0c,0xa0,0xf8]
+// CHECK-NEXT: ldrab x0, [x1, #0]!  // encoding: [0x20,0x0c,0xa0,0xf8]
 // CHECK-REQ: error: instruction requires: pa
 // CHECK-REQ-NEXT:  ldrab x0, [x1]!
