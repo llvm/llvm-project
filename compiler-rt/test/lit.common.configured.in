@@ -42,6 +42,7 @@ set_default("android_serial", "@ANDROID_SERIAL_FOR_TESTING@")
 set_default("android_files_to_push", [])
 set_default("have_rpc_xdr_h", @HAVE_RPC_XDR_H@)
 set_default("gwp_asan", @COMPILER_RT_HAS_GWP_ASAN_PYBOOL@)
+set_default("expensive_checks", @LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL@)
 config.available_features.add('target-is-%s' % config.target_arch)
 
 if config.enable_per_target_runtime_dir:
