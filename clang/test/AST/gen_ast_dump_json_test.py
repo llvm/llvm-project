@@ -180,7 +180,7 @@ def process_file(source_file, clang_binary, cmdline_filters, cmdline_opts,
         
             filter_json(j, filters, out_asts)
         
-    with tempfile.NamedTemporaryFile("w", delete=False) as f:
+    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
         with open(source_file, "r") as srcf:
             for line in srcf.readlines():
                 # copy up to the note:
