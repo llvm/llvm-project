@@ -2723,25 +2723,6 @@ static bool isSuitableForMask(MachineInstr *&MI, unsigned SrcReg,
   return false;
 }
 
-/// getSwappedCondition - assume the flags are set by MI(a,b), return
-/// the condition code if we modify the instructions such that flags are
-/// set by MI(b,a).
-inline static ARMCC::CondCodes getSwappedCondition(ARMCC::CondCodes CC) {
-  switch (CC) {
-  default: return ARMCC::AL;
-  case ARMCC::EQ: return ARMCC::EQ;
-  case ARMCC::NE: return ARMCC::NE;
-  case ARMCC::HS: return ARMCC::LS;
-  case ARMCC::LO: return ARMCC::HI;
-  case ARMCC::HI: return ARMCC::LO;
-  case ARMCC::LS: return ARMCC::HS;
-  case ARMCC::GE: return ARMCC::LE;
-  case ARMCC::LT: return ARMCC::GT;
-  case ARMCC::GT: return ARMCC::LT;
-  case ARMCC::LE: return ARMCC::GE;
-  }
-}
-
 /// getCmpToAddCondition - assume the flags are set by CMP(a,b), return
 /// the condition code if we modify the instructions such that flags are
 /// set by ADD(a,b,X).
