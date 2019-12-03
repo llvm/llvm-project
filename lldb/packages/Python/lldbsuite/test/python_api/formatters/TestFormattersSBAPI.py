@@ -68,17 +68,17 @@ class SBFormattersAPITestCase(TestBase):
         self.expect("frame variable foo.E",
                     substrs=['b8cca70a'])
 
-        format.format = lldb.eFormatOctal
+        format.SetFormat(lldb.eFormatOctal)
         category.AddTypeFormat(lldb.SBTypeNameSpecifier("int"), format)
         self.expect("frame variable foo.A",
-                    substrs=['01'])
+                    substrs=[' 01'])
         self.expect("frame variable foo.E",
                     substrs=['b8cca70a'])
 
         category.DeleteTypeFormat(lldb.SBTypeNameSpecifier("int"))
         category.DeleteTypeFormat(lldb.SBTypeNameSpecifier("long"))
         self.expect("frame variable foo.A", matching=False,
-                    substrs=['01'])
+                    substrs=[' 01'])
         self.expect("frame variable foo.E", matching=False,
                     substrs=['b8cca70a'])
 
@@ -90,10 +90,13 @@ class SBFormattersAPITestCase(TestBase):
             new_category.IsValid(),
             "getting a non-existing category worked")
         new_category = self.dbg.CreateCategory("foobar")
-        new_category.enabled = True
+        new_category.SetEnabled(True)
         new_category.AddTypeSummary(
             lldb.SBTypeNameSpecifier(
-                "^.*t$", True), summary)
+                "^.*t$",
+                True,  # is_regexp
+            ), summary)
+
         self.expect("frame variable foo.A",
                     substrs=['hello world'])
         self.expect("frame variable foo.E", matching=False,
@@ -102,7 +105,7 @@ class SBFormattersAPITestCase(TestBase):
                     substrs=['hello world'])
         self.expect("frame variable foo.F",
                     substrs=['hello world'])
-        new_category.enabled = False
+        new_category.SetEnabled(False)
         self.expect("frame variable foo.A", matching=False,
                     substrs=['hello world'])
         self.expect("frame variable foo.E", matching=False,
@@ -379,7 +382,7 @@ class SBFormattersAPITestCase(TestBase):
             lldb.SBTypeSummary.CreateWithScriptCode("return 'hello scripted world';"))
         self.expect("frame variable foo", matching=False,
                     substrs=['hello scripted world'])
-        new_category.enabled = True
+        new_category.SetEnabled(True)
         self.expect("frame variable foo", matching=True,
                     substrs=['hello scripted world'])
 
