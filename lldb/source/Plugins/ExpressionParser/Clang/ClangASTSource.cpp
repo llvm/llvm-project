@@ -363,7 +363,6 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
       TypeList types;
 
       ConstString name(tag_decl->getName().str().c_str());
-      CompilerDeclContext namespace_decl;
 
       const ModuleList &module_list = m_target->GetImages();
 
