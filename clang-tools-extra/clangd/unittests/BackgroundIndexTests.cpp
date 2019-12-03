@@ -527,6 +527,13 @@ TEST_F(BackgroundIndexTest, UncompilableFiles) {
   }
 }
 
+MATCHER_P(HasPrefix, Prefix, "") {
+  auto Arg = arg; // Force copy.
+  if (Arg.size() > Prefix.size())
+    Arg.resize(Prefix.size());
+  return Arg == Prefix;
+}
+
 TEST_F(BackgroundIndexTest, CmdLineHash) {
   MockFSProvider FS;
   llvm::StringMap<std::string> Storage;
@@ -552,7 +559,8 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
 
   {
     tooling::CompileCommand CmdStored = *MSS.loadShard(testPath("A.cc"))->Cmd;
-    EXPECT_EQ(CmdStored.CommandLine, Cmd.CommandLine);
+    // Accept prefix because -isysroot gets added on mac.
+    EXPECT_THAT(CmdStored.CommandLine, HasPrefix(Cmd.CommandLine));
     EXPECT_EQ(CmdStored.Directory, Cmd.Directory);
   }
 
@@ -566,6 +574,7 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
 
   {
     tooling::CompileCommand CmdStored = *MSS.loadShard(testPath("A.cc"))->Cmd;
+    EXPECT_THAT(CmdStored.CommandLine, HasPrefix(Cmd.CommandLine));
     EXPECT_EQ(CmdStored.CommandLine, Cmd.CommandLine);
     EXPECT_EQ(CmdStored.Directory, Cmd.Directory);
   }
