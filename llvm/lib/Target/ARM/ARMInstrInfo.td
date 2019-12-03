@@ -297,6 +297,23 @@ class RegConstraint<string C> {
   string Constraints = C;
 }
 
+// ARMCC condition codes. See ARMCC::CondCodes
+def ARMCCeq : PatLeaf<(i32 0)>;
+def ARMCCne : PatLeaf<(i32 1)>;
+def ARMCChs : PatLeaf<(i32 2)>;
+def ARMCClo : PatLeaf<(i32 3)>;
+def ARMCCmi : PatLeaf<(i32 4)>;
+def ARMCCpl : PatLeaf<(i32 5)>;
+def ARMCCvs : PatLeaf<(i32 6)>;
+def ARMCCvc : PatLeaf<(i32 7)>;
+def ARMCChi : PatLeaf<(i32 8)>;
+def ARMCCls : PatLeaf<(i32 9)>;
+def ARMCCge : PatLeaf<(i32 10)>;
+def ARMCClt : PatLeaf<(i32 11)>;
+def ARMCCgt : PatLeaf<(i32 12)>;
+def ARMCCle : PatLeaf<(i32 13)>;
+def ARMCCal : PatLeaf<(i32 14)>;
+
 //===----------------------------------------------------------------------===//
 //  ARM specific transformation functions and pattern fragments.
 //
