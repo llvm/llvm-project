@@ -711,9 +711,9 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
   else if (!match(TrueVal, m_Sub(m_Specific(A), m_Specific(B))))
     return nullptr;
 
-  // If sub is used anywhere else, we wouldn't be able to eliminate it
-  // afterwards.
-  if (!TrueVal->hasOneUse())
+  // If we are adding a negate and the sub and icmp are used anywhere else, we
+  // would end up with more instructions.
+  if (IsNegative && !TrueVal->hasOneUse() && !ICI->hasOneUse())
     return nullptr;
 
   // (a > b) ? a - b : 0 -> usub.sat(a, b)
