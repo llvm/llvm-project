@@ -169,10 +169,12 @@ TEST_F(TestClangASTContext, TestGetBasicTypeFromName) {
   EXPECT_EQ(GetBasicQualType(eBasicTypeNullPtr), GetBasicQualType("nullptr"));
 }
 
-void VerifyEncodingAndBitSize(clang::ASTContext *context,
+void VerifyEncodingAndBitSize(ClangASTContext &clang_context,
                               lldb::Encoding encoding, unsigned int bit_size) {
-  CompilerType type = ClangASTContext::GetBuiltinTypeForEncodingAndBitSize(
-      context, encoding, bit_size);
+  clang::ASTContext *context = clang_context.getASTContext();
+
+  CompilerType type =
+      clang_context.GetBuiltinTypeForEncodingAndBitSize(encoding, bit_size);
   EXPECT_TRUE(type.IsValid());
 
   QualType qtype = ClangUtil::GetQualType(type);
@@ -206,8 +208,6 @@ void VerifyEncodingAndBitSize(clang::ASTContext *context,
 }
 
 TEST_F(TestClangASTContext, TestBuiltinTypeForEncodingAndBitSize) {
-  clang::ASTContext *context = m_ast->getASTContext();
-
   // Make sure we can get types of every possible size in every possible
   // encoding.
   // We can't make any guarantee about which specific type we get, because the
@@ -215,20 +215,20 @@ TEST_F(TestClangASTContext, TestBuiltinTypeForEncodingAndBitSize) {
   // isn't that specific.  We only need to make sure the compiler hands us some
   // type that
   // is both a builtin type and matches the requested bit size.
-  VerifyEncodingAndBitSize(context, eEncodingSint, 8);
-  VerifyEncodingAndBitSize(context, eEncodingSint, 16);
-  VerifyEncodingAndBitSize(context, eEncodingSint, 32);
-  VerifyEncodingAndBitSize(context, eEncodingSint, 64);
-  VerifyEncodingAndBitSize(context, eEncodingSint, 128);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingSint, 8);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingSint, 16);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingSint, 32);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingSint, 64);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingSint, 128);
 
-  VerifyEncodingAndBitSize(context, eEncodingUint, 8);
-  VerifyEncodingAndBitSize(context, eEncodingUint, 16);
-  VerifyEncodingAndBitSize(context, eEncodingUint, 32);
-  VerifyEncodingAndBitSize(context, eEncodingUint, 64);
-  VerifyEncodingAndBitSize(context, eEncodingUint, 128);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingUint, 8);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingUint, 16);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingUint, 32);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingUint, 64);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingUint, 128);
 
-  VerifyEncodingAndBitSize(context, eEncodingIEEE754, 32);
-  VerifyEncodingAndBitSize(context, eEncodingIEEE754, 64);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 32);
+  VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
 }
 
 TEST_F(TestClangASTContext, TestIsClangType) {
