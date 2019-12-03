@@ -15,7 +15,7 @@ entry:
 define i1 @true_s(float %x, float %y) {
 ; MIPS32-LABEL: true_s:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $2, $zero, 65535
+; MIPS32-NEXT:    ori $2, $zero, 1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -233,7 +233,7 @@ entry:
 define i1 @true_d(double %x, double %y) {
 ; MIPS32-LABEL: true_d:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $2, $zero, 65535
+; MIPS32-NEXT:    ori $2, $zero, 1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
