@@ -215,9 +215,11 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
       return std::move(E);
   }
 
-  if (DynSymTab)
-    if (Error E = dumpSymbols(DynSymTab, Y->DynamicSymbols))
+  if (DynSymTab) {
+    Y->DynamicSymbols.emplace();
+    if (Error E = dumpSymbols(DynSymTab, *Y->DynamicSymbols))
       return std::move(E);
+  }
 
   for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
