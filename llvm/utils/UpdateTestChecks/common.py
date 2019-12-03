@@ -14,12 +14,17 @@ else:
 ##### Common utilities for update_*test_checks.py
 
 
+_verbose = False
+
 def parse_commandline_args(parser):
   parser.add_argument('-v', '--verbose', action='store_true',
                       help='Show verbose output')
   parser.add_argument('-u', '--update-only', action='store_true',
                       help='Only update test if it was already autogened')
-  return parser.parse_args()
+  args = parser.parse_args()
+  global _verbose
+  _verbose = args.verbose
+  return args
 
 def should_add_line_to_output(input_line, prefix_set):
   # Skip any blank comment lines in the IR.
@@ -53,7 +58,7 @@ def invoke_tool(exe, cmd_args, ir):
 
 ##### LLVM IR parser
 
-RUN_LINE_RE = re.compile(r'^\s*[;#]\s*RUN:\s*(.*)$')
+RUN_LINE_RE = re.compile(r'^\s*(?://|[;#])\s*RUN:\s*(.*)$')
 CHECK_PREFIX_RE = re.compile(r'--?check-prefix(?:es)?[= ](\S+)')
 PREFIX_RE = re.compile('^[a-zA-Z0-9_-]+$')
 CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL|-SAME)?:')
@@ -90,6 +95,28 @@ def warn(msg, test_file=None):
   if test_file:
     msg = '{}: {}'.format(msg, test_file)
   print('WARNING: {}'.format(msg), file=sys.stderr)
+
+def debug(*args, **kwargs):
+  # Python2 does not allow def debug(*args, file=sys.stderr, **kwargs):
+  if 'file' not in kwargs:
+    kwargs['file'] = sys.stderr
+  if _verbose:
+    print(*args, **kwargs)
+
+def find_run_lines(test, lines):
+  debug('Scanning for RUN lines in test file:', test)
+  raw_lines = [m.group(1)
+               for m in [RUN_LINE_RE.match(l) for l in lines] if m]
+  run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
+  for l in raw_lines[1:]:
+    if run_lines[-1].endswith('\\'):
+      run_lines[-1] = run_lines[-1].rstrip('\\' + ' ' + l)
+    else:
+      run_lines.append(l)
+  debug('Found {} RUN lines in {}:'.format(len(run_lines), test))
+  for l in run_lines:
+    debug('  RUN: {}'.format(l))
+  return run_lines
 
 def scrub_body(body):
   # Scrub runs of whitespace out of the assembly, but leave the leading
