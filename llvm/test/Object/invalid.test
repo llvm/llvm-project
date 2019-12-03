@@ -637,13 +637,13 @@ Sections:
 Symbols:
   - Name: foo
 
-## Check that we report an error if SHT_GNU_versym has invalid
+## Check that we report a warning if SHT_GNU_versym has invalid
 ## sh_entsize value (3 instead of 2) when trying to access the entries.
 
 # RUN: yaml2obj %s --docnum=30 -o %t30
-# RUN: not llvm-readobj -V %t30 2>&1 | FileCheck -DFILE=%t30 --check-prefix=INVALID-VER-SHENTSIZE %s
+# RUN: llvm-readobj -V %t30 2>&1 | FileCheck -DFILE=%t30 --check-prefix=INVALID-VER-SHENTSIZE %s
 
-# INVALID-VER-SHENTSIZE: error: '[[FILE]]': section [index 1] has invalid sh_entsize: expected 2, but got 3
+# INVALID-VER-SHENTSIZE: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
 
 --- !ELF
 FileHeader:
@@ -657,6 +657,7 @@ Sections:
     Type:    SHT_GNU_versym
     EntSize: 0x0000000000000003
     Entries: [ ]
+    Link:    .dynsym
 ## Needed to trigger creation of .dynsym.
 DynamicSymbols:
   - Name:    foo

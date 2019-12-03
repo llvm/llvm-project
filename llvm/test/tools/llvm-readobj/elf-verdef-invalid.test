@@ -275,6 +275,7 @@ DynamicSymbols:
 # INVALID-VERDEF-LLVM-NEXT:      Name:
 # INVALID-VERDEF-LLVM-NEXT:    }
 # INVALID-VERDEF-LLVM-NEXT:    Symbol {
+# INVALID-VERDEF-LLVM-NEXT:    Version: 2
 # INVALID-VERDEF-LLVM-EMPTY:
 # INVALID-VERDEF-LLVM-NEXT:  error: '[[FILE]]': invalid SHT_GNU_verdef section with index 2: version definition 1 goes past the end of the section
 
