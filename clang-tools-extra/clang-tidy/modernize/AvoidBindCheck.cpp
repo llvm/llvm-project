@@ -473,9 +473,9 @@ getCallableMaterialization(const MatchFinder::MatchResult &Result) {
     return CMK_Function;
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(NoTemporaries)) {
-    if (const auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl()))
+    if (isa<FunctionDecl>(DRE->getDecl()))
       return CMK_Function;
-    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+    if (isa<VarDecl>(DRE->getDecl()))
       return CMK_VariableRef;
   }
 
