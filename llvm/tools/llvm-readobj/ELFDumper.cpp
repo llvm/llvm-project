@@ -167,6 +167,23 @@ struct VerDef {
   std::string Name;
   std::vector<VerdAux> AuxV;
 };
+
+struct VernAux {
+  unsigned Hash;
+  unsigned Flags;
+  unsigned Other;
+  unsigned Offset;
+  std::string Name;
+};
+
+struct VerNeed {
+  unsigned Version;
+  unsigned Cnt;
+  unsigned Offset;
+  std::string File;
+  std::vector<VernAux> AuxV;
+};
+
 } // namespace
 
 template <typename ELFT> class ELFDumper : public ObjDumper {
@@ -345,7 +362,40 @@ public:
 
   Expected<std::vector<VerDef>>
   getVersionDefinitions(const Elf_Shdr *Sec) const;
+  Expected<std::vector<VerNeed>>
+  getVersionDependencies(const Elf_Shdr *Sec) const;
 };
+
+static StringRef getSecTypeName(unsigned Type) {
+  if (Type == ELF::SHT_GNU_versym)
+    return "SHT_GNU_versym";
+  if (Type == ELF::SHT_GNU_verdef)
+    return "SHT_GNU_verdef";
+  if (Type == ELF::SHT_GNU_verneed)
+    return "SHT_GNU_verneed";
+  llvm_unreachable("unexpected section type");
+}
+
+template <class ELFT>
+static Expected<StringRef> getLinkAsStrtab(const ELFFile<ELFT> *Obj,
+                                           const typename ELFT::Shdr *Sec,
+                                           unsigned SecNdx) {
+  Expected<const typename ELFT::Shdr *> StrTabSecOrErr =
+      Obj->getSection(Sec->sh_link);
+  if (!StrTabSecOrErr)
+    return createError("invalid section linked to " +
+                       getSecTypeName(Sec->sh_type) + " section with index " +
+                       Twine(SecNdx) + ": " +
+                       toString(StrTabSecOrErr.takeError()));
+
+  Expected<StringRef> StrTabOrErr = Obj->getStringTable(*StrTabSecOrErr);
+  if (!StrTabOrErr)
+    return createError("invalid string table linked to " +
+                       getSecTypeName(Sec->sh_type) + " section with index " +
+                       Twine(SecNdx) + ": " +
+                       toString(StrTabOrErr.takeError()));
+  return *StrTabOrErr;
+}
 
 template <class ELFT>
 Expected<std::vector<VerDef>>
@@ -353,17 +403,9 @@ ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr *Sec) const {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
   unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
 
-  Expected<const Elf_Shdr *> StrTabSecOrErr = Obj->getSection(Sec->sh_link);
-  if (!StrTabSecOrErr)
-    return createError(
-        "invalid section linked to SHT_GNU_verdef section with index " +
-        Twine(SecNdx) + ": " + toString(StrTabSecOrErr.takeError()));
-
-  Expected<StringRef> StrTabOrErr = Obj->getStringTable(*StrTabSecOrErr);
+  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, Sec, SecNdx);
   if (!StrTabOrErr)
-    return createError(
-        "invalid string table linked to SHT_GNU_verdef section with index " +
-        Twine(SecNdx) + ": " + toString(StrTabOrErr.takeError()));
+    return StrTabOrErr.takeError();
 
   Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj->getSectionContents(Sec);
   if (!ContentsOrErr)
@@ -445,6 +487,90 @@ ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr *Sec) const {
     VerdefBuf += D->vd_next;
   }
 
+  return Ret;
+}
+
+template <class ELFT>
+Expected<std::vector<VerNeed>>
+ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr *Sec) const {
+  const ELFFile<ELFT> *Obj = ObjF->getELFFile();
+  unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
+
+  StringRef StrTab;
+  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, Sec, SecNdx);
+  if (!StrTabOrErr)
+    ELFDumperStyle->reportUniqueWarning(StrTabOrErr.takeError());
+  else
+    StrTab = *StrTabOrErr;
+
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj->getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return createError(
+        "cannot read content of SHT_GNU_verneed section with index " +
+        Twine(SecNdx) + ": " + toString(ContentsOrErr.takeError()));
+
+  const uint8_t *Start = ContentsOrErr->data();
+  const uint8_t *End = Start + ContentsOrErr->size();
+  const uint8_t *VerneedBuf = Start;
+
+  std::vector<VerNeed> Ret;
+  for (unsigned I = 1; I <= /*VerneedNum=*/Sec->sh_info; ++I) {
+    if (VerneedBuf + sizeof(Elf_Verdef) > End)
+      return createError("invalid SHT_GNU_verneed section with index " +
+                         Twine(SecNdx) + ": version dependency " + Twine(I) +
+                         " goes past the end of the section");
+
+    if (uintptr_t(VerneedBuf) % sizeof(uint32_t) != 0)
+      return createError(
+          "invalid SHT_GNU_verneed section with index " + Twine(SecNdx) +
+          ": found a misaligned version dependency entry at offset 0x" +
+          Twine::utohexstr(VerneedBuf - Start));
+
+    const Elf_Verneed *Verneed =
+        reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
+
+    VerNeed &VN = *Ret.emplace(Ret.end());
+    VN.Version = Verneed->vn_version;
+    VN.Cnt = Verneed->vn_cnt;
+    VN.Offset = VerneedBuf - Start;
+
+    if (Verneed->vn_file < StrTab.size())
+      VN.File = StrTab.drop_front(Verneed->vn_file);
+    else
+      VN.File = "<corrupt vn_file: " + to_string(Verneed->vn_file) + ">";
+
+    const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
+    for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
+      if (uintptr_t(VernauxBuf) % sizeof(uint32_t) != 0)
+        return createError("invalid SHT_GNU_verneed section with index " +
+                           Twine(SecNdx) +
+                           ": found a misaligned auxiliary entry at offset 0x" +
+                           Twine::utohexstr(VernauxBuf - Start));
+
+      if (VernauxBuf + sizeof(Elf_Vernaux) > End)
+        return createError(
+            "invalid SHT_GNU_verneed section with index " + Twine(SecNdx) +
+            ": version dependency " + Twine(I) +
+            " refers to an auxiliary entry that goes past the end "
+            "of the section");
+
+      const Elf_Vernaux *Vernaux =
+          reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
+
+      VernAux &Aux = *VN.AuxV.emplace(VN.AuxV.end());
+      Aux.Hash = Vernaux->vna_hash;
+      Aux.Flags = Vernaux->vna_flags;
+      Aux.Other = Vernaux->vna_other;
+      Aux.Offset = VernauxBuf - Start;
+      if (StrTab.size() <= Vernaux->vna_name)
+        Aux.Name = "<corrupt>";
+      else
+        Aux.Name = StrTab.drop_front(Vernaux->vna_name);
+
+      VernauxBuf += Vernaux->vna_next;
+    }
+    VerneedBuf += Verneed->vn_next;
+  }
   return Ret;
 }
 
@@ -3946,9 +4072,10 @@ void GNUStyle<ELFT>::printGNUVersionSectionProlog(
     SymTabName =
         unwrapOrError(this->FileName, Obj->getSectionName(*SymTabOrErr));
   else
-    this->reportUniqueWarning(createError(
-        "invalid section linked to SHT_GNU_verdef section with index " +
-        Twine(SecNdx) + ": " + toString(SymTabOrErr.takeError())));
+    this->reportUniqueWarning(
+        createError("invalid section linked to " +
+                    getSecTypeName(Sec->sh_type) + " section with index " +
+                    Twine(SecNdx) + ": " + toString(SymTabOrErr.takeError())));
 
   OS << " Addr: " << format_hex_no_prefix(Sec->sh_addr, 16)
      << "  Offset: " << format_hex(Sec->sh_offset, 8)
@@ -4064,45 +4191,20 @@ void GNUStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
   unsigned VerneedNum = Sec->sh_info;
   printGNUVersionSectionProlog(Obj, Sec, "Version needs", VerneedNum);
 
-  ArrayRef<uint8_t> SecData =
-      unwrapOrError(this->FileName, Obj->getSectionContents(Sec));
+  Expected<std::vector<VerNeed>> V =
+      this->dumper()->getVersionDependencies(Sec);
+  if (!V) {
+    this->reportUniqueWarning(V.takeError());
+    return;
+  }
 
-  const Elf_Shdr *StrTabSec =
-      unwrapOrError(this->FileName, Obj->getSection(Sec->sh_link));
-  StringRef StringTable = {
-      reinterpret_cast<const char *>(Obj->base() + StrTabSec->sh_offset),
-      (size_t)StrTabSec->sh_size};
-
-  const uint8_t *VerneedBuf = SecData.data();
-  for (unsigned I = 0; I < VerneedNum; ++I) {
-    const Elf_Verneed *Verneed =
-        reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
-
-    StringRef File = StringTable.size() > Verneed->vn_file
-                         ? StringTable.drop_front(Verneed->vn_file)
-                         : "<invalid>";
-
-    OS << format("  0x%04x: Version: %u  File: %s  Cnt: %u\n",
-                 reinterpret_cast<const uint8_t *>(Verneed) - SecData.begin(),
-                 (unsigned)Verneed->vn_version, File.data(),
-                 (unsigned)Verneed->vn_cnt);
-
-    const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
-    for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
-      const Elf_Vernaux *Vernaux =
-          reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
-
-      StringRef Name = StringTable.size() > Vernaux->vna_name
-                           ? StringTable.drop_front(Vernaux->vna_name)
-                           : "<invalid>";
-
-      OS << format("  0x%04x:   Name: %s  Flags: %s  Version: %u\n",
-                   reinterpret_cast<const uint8_t *>(Vernaux) - SecData.begin(),
-                   Name.data(), versionFlagToString(Vernaux->vna_flags).c_str(),
-                   (unsigned)Vernaux->vna_other);
-      VernauxBuf += Vernaux->vna_next;
-    }
-    VerneedBuf += Verneed->vn_next;
+  for (const VerNeed &VN : *V) {
+    OS << format("  0x%04x: Version: %u  File: %s  Cnt: %u\n", VN.Offset,
+                 VN.Version, VN.File.data(), VN.Cnt);
+    for (const VernAux &Aux : VN.AuxV)
+      OS << format("  0x%04x:   Name: %s  Flags: %s  Version: %u\n", Aux.Offset,
+                   Aux.Name.data(), versionFlagToString(Aux.Flags).c_str(),
+                   Aux.Other);
   }
   OS << '\n';
 }
@@ -5853,45 +5955,27 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
   if (!Sec)
     return;
 
-  const uint8_t *SecData =
-      reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
-  const Elf_Shdr *StrTabSec =
-      unwrapOrError(this->FileName, Obj->getSection(Sec->sh_link));
-  StringRef StringTable = {
-      reinterpret_cast<const char *>(Obj->base() + StrTabSec->sh_offset),
-      (size_t)StrTabSec->sh_size};
+  Expected<std::vector<VerNeed>> V =
+      this->dumper()->getVersionDependencies(Sec);
+  if (!V) {
+    this->reportUniqueWarning(V.takeError());
+    return;
+  }
 
-  const uint8_t *VerneedBuf = SecData;
-  unsigned VerneedNum = Sec->sh_info;
-  for (unsigned I = 0; I < VerneedNum; ++I) {
-    const Elf_Verneed *Verneed =
-        reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
+  for (const VerNeed &VN : *V) {
     DictScope Entry(W, "Dependency");
-    W.printNumber("Version", Verneed->vn_version);
-    W.printNumber("Count", Verneed->vn_cnt);
+    W.printNumber("Version", VN.Version);
+    W.printNumber("Count", VN.Cnt);
+    W.printString("FileName", VN.File.c_str());
 
-    StringRef FileName = StringTable.size() > Verneed->vn_file
-                             ? StringTable.drop_front(Verneed->vn_file)
-                             : "<invalid>";
-    W.printString("FileName", FileName.data());
-
-    const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
     ListScope L(W, "Entries");
-    for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
-      const Elf_Vernaux *Vernaux =
-          reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
+    for (const VernAux &Aux : VN.AuxV) {
       DictScope Entry(W, "Entry");
-      W.printNumber("Hash", Vernaux->vna_hash);
-      W.printFlags("Flags", Vernaux->vna_flags, makeArrayRef(SymVersionFlags));
-      W.printNumber("Index", Vernaux->vna_other);
-
-      StringRef Name = StringTable.size() > Vernaux->vna_name
-                           ? StringTable.drop_front(Vernaux->vna_name)
-                           : "<invalid>";
-      W.printString("Name", Name.data());
-      VernauxBuf += Vernaux->vna_next;
+      W.printNumber("Hash", Aux.Hash);
+      W.printFlags("Flags", Aux.Flags, makeArrayRef(SymVersionFlags));
+      W.printNumber("Index", Aux.Other);
+      W.printString("Name", Aux.Name.c_str());
     }
-    VerneedBuf += Verneed->vn_next;
   }
 }
 
