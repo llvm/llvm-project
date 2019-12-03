@@ -441,6 +441,9 @@ void DWARFContext::dump(
     if (Explicit || !getDebugMacro()->empty()) {
       OS << "\n.debug_macinfo contents:\n";
       getDebugMacro()->dump(OS);
+    } else if (ExplicitDWO || !getDebugMacroDWO()->empty()) {
+      OS << "\n.debug_macinfo.dwo contents:\n";
+      getDebugMacroDWO()->dump(OS);
     }
   }
 
@@ -795,6 +798,17 @@ const DWARFDebugFrame *DWARFContext::getEHFrame() {
   DebugFrame.reset(new DWARFDebugFrame(getArch(), true /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
+}
+
+const DWARFDebugMacro *DWARFContext::getDebugMacroDWO() {
+  if (MacroDWO)
+    return MacroDWO.get();
+
+  DataExtractor MacinfoDWOData(DObj->getMacinfoDWOSection(), isLittleEndian(),
+                               0);
+  MacroDWO.reset(new DWARFDebugMacro());
+  MacroDWO->parse(MacinfoDWOData);
+  return MacroDWO.get();
 }
 
 const DWARFDebugMacro *DWARFContext::getDebugMacro() {
@@ -1500,6 +1514,7 @@ class DWARFObjInMemory final : public DWARFObject {
   StringRef ArangesSection;
   StringRef StrSection;
   StringRef MacinfoSection;
+  StringRef MacinfoDWOSection;
   StringRef AbbrevDWOSection;
   StringRef StrDWOSection;
   StringRef CUIndexSection;
@@ -1519,6 +1534,7 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("debug_aranges", &ArangesSection)
         .Case("debug_str", &StrSection)
         .Case("debug_macinfo", &MacinfoSection)
+        .Case("debug_macinfo.dwo", &MacinfoDWOSection)
         .Case("debug_abbrev.dwo", &AbbrevDWOSection)
         .Case("debug_str.dwo", &StrDWOSection)
         .Case("debug_cu_index", &CUIndexSection)
@@ -1845,6 +1861,7 @@ public:
     return RnglistsSection;
   }
   StringRef getMacinfoSection() const override { return MacinfoSection; }
+  StringRef getMacinfoDWOSection() const override { return MacinfoDWOSection; }
   const DWARFSection &getPubnamesSection() const override { return PubnamesSection; }
   const DWARFSection &getPubtypesSection() const override { return PubtypesSection; }
   const DWARFSection &getGnuPubnamesSection() const override {
