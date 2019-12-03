@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Metadata.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -2896,5 +2897,42 @@ TEST_F(DistinctMDOperandPlaceholderTest, TrackingMDRefAndDistinctMDNode) {
   }
 }
 #endif
+
+typedef MetadataTest DebugVariableTest;
+TEST_F(DebugVariableTest, DenseMap) {
+  DenseMap<DebugVariable, uint64_t> DebugVariableMap;
+
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+  DIType *Type = getDerivedType();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+
+  DILocation *InlinedLoc = DILocation::get(Context, 2, 7, Scope);
+
+  DILocalVariable *VarA =
+      DILocalVariable::get(Context, Scope, "A", File, 5, Type, 2, Flags, 8);
+  DILocalVariable *VarB =
+      DILocalVariable::get(Context, Scope, "B", File, 7, Type, 3, Flags, 8);
+
+  DebugVariable DebugVariableA(VarA, NoneType(), nullptr);
+  DebugVariable DebugVariableInlineA(VarA, NoneType(), InlinedLoc);
+  DebugVariable DebugVariableB(VarB, NoneType(), nullptr);
+  DebugVariable DebugVariableFragB(VarB, {{16, 16}}, nullptr);
+
+  DebugVariableMap.insert({DebugVariableA, 2});
+  DebugVariableMap.insert({DebugVariableInlineA, 3});
+  DebugVariableMap.insert({DebugVariableB, 6});
+  DebugVariableMap.insert({DebugVariableFragB, 12});
+
+  EXPECT_EQ(DebugVariableMap.count(DebugVariableA), 1);
+  EXPECT_EQ(DebugVariableMap.count(DebugVariableInlineA), 1);
+  EXPECT_EQ(DebugVariableMap.count(DebugVariableB), 1);
+  EXPECT_EQ(DebugVariableMap.count(DebugVariableFragB), 1);
+
+  EXPECT_EQ(DebugVariableMap.find(DebugVariableA)->second, 2);
+  EXPECT_EQ(DebugVariableMap.find(DebugVariableInlineA)->second, 3);
+  EXPECT_EQ(DebugVariableMap.find(DebugVariableB)->second, 6);
+  EXPECT_EQ(DebugVariableMap.find(DebugVariableFragB)->second, 12);
+}
 
 } // end namespace
