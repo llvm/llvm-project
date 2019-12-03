@@ -974,32 +974,6 @@ SDValue DAGTypeLegalizer::JoinIntegers(SDValue Lo, SDValue Hi) {
   return DAG.getNode(ISD::OR, dlHi, NVT, Lo, Hi);
 }
 
-/// Convert the node into a libcall with the same prototype.
-SDValue DAGTypeLegalizer::LibCallify(RTLIB::Libcall LC, SDNode *N,
-                                     bool isSigned) {
-  TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(isSigned);
-  unsigned NumOps = N->getNumOperands();
-  SDLoc dl(N);
-  if (NumOps == 0) {
-    return TLI.makeLibCall(DAG, LC, N->getValueType(0), None, CallOptions,
-                           dl).first;
-  } else if (NumOps == 1) {
-    SDValue Op = N->getOperand(0);
-    return TLI.makeLibCall(DAG, LC, N->getValueType(0), Op, CallOptions,
-                           dl).first;
-  } else if (NumOps == 2) {
-    SDValue Ops[2] = { N->getOperand(0), N->getOperand(1) };
-    return TLI.makeLibCall(DAG, LC, N->getValueType(0), Ops, CallOptions,
-                           dl).first;
-  }
-  SmallVector<SDValue, 8> Ops(NumOps);
-  for (unsigned i = 0; i < NumOps; ++i)
-    Ops[i] = N->getOperand(i);
-
-  return TLI.makeLibCall(DAG, LC, N->getValueType(0), Ops, CallOptions, dl).first;
-}
-
 /// Promote the given target boolean to a target boolean of the given type.
 /// A target boolean is an integer value, not necessarily of type i1, the bits
 /// of which conform to getBooleanContents.
