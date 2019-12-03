@@ -277,27 +277,18 @@ public:
   /// padding of a base class?
   ///
   /// This decision cannot be changed without breaking platform ABI
-  /// compatibility, and yet it is tied to language guarantees which
-  /// the committee has so far seen fit to strengthen no less than
-  /// three separate times:
-  ///   - originally, there were no restrictions at all;
-  ///   - C++98 declared that objects could not be allocated in the
-  ///     tail padding of a POD type;
-  ///   - C++03 extended the definition of POD to include classes
-  ///     containing member pointers; and
-  ///   - C++11 greatly broadened the definition of POD to include
-  ///     all trivial standard-layout classes.
-  /// Each of these changes technically took several existing
-  /// platforms and made them permanently non-conformant.
+  /// compatibility. In ISO C++98, tail padding reuse was only permitted for
+  /// non-POD base classes, but that restriction was removed retroactively by
+  /// DR 43, and tail padding reuse is always permitted in all de facto C++
+  /// language modes. However, many platforms use a variant of the old C++98
+  /// rule for compatibility.
   enum TailPaddingUseRules {
     /// The tail-padding of a base class is always theoretically
-    /// available, even if it's POD.  This is not strictly conforming
-    /// in any language mode.
+    /// available, even if it's POD.
     AlwaysUseTailPadding,
 
     /// Only allocate objects in the tail padding of a base class if
     /// the base class is not POD according to the rules of C++ TR1.
-    /// This is non-strictly conforming in C++11 mode.
     UseTailPaddingUnlessPOD03,
 
     /// Only allocate objects in the tail padding of a base class if
