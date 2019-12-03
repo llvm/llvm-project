@@ -1,8 +1,17 @@
 ; RUN: llc < %s -march=sparc -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=BE
 ; RUN: llc < %s -march=sparcel -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=EL
-; RUN: llc < %s -march=sparc -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
+; RUN: llc < %s -march=sparc -mattr=-hard-quad-float -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
 ; RUN: llc < %s -march=sparcel -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=EL
 
+; XFAIL: *
+; This test currently fails with expensive checks enabled, for more details see
+; https://bugs.llvm.org/show_bug.cgi?id=44091.
+; *** Bad machine code: Expected a register operand. ***
+; - function:    f128_compare
+; - basic block: %bb.0 entry (0x63f4028)
+; - instruction: CMPrr killed %21:intregs, 0, implicit-def $icc
+; - operand 1:   0
+; NB: When this is fixed the verifier should not be run by default in the CL above.
 
 ; CHECK-LABEL: f128_ops:
 ; CHECK:      ldd
