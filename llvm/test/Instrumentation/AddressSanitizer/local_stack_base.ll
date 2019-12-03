@@ -18,8 +18,8 @@ entry:
   ; CHECK: %asan_local_stack_base = alloca i64
   ; CHECK: %[[ALLOCA:.*]] = ptrtoint i8* %MyAlloca to i64
   ; CHECK: %[[PHI:.*]] = phi i64 {{.*}} %[[ALLOCA]],
-  ; CHECK: store i64 %[[PHI]], i64* %asan_local_stack_base, !dbg
-  ; CHECK: call void @llvm.dbg.declare(metadata i64* %asan_local_stack_base, metadata !13, metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)), !dbg !14
+  ; CHECK: store i64 %[[PHI]], i64* %asan_local_stack_base
+  ; CHECK: call void @llvm.dbg.declare(metadata i64* %asan_local_stack_base, metadata !12, metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)), !dbg !13
   %0 = load i32, i32* %i.addr, align 4, !dbg !14
   %add = add nsw i32 %0, 2, !dbg !15
   ret i32 %add, !dbg !16

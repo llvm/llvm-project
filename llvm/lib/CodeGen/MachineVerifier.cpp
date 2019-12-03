@@ -1610,13 +1610,23 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
   } else if (MONum < MCID.getNumOperands()) {
     const MCOperandInfo &MCOI = MCID.OpInfo[MONum];
     // Don't check if it's the last operand in a variadic instruction. See,
-    // e.g., LDM_RET in the arm back end.
-    if (MO->isReg() &&
-        !(MI->isVariadic() && MONum == MCID.getNumOperands()-1)) {
-      if (MO->isDef() && !MCOI.isOptionalDef())
-        report("Explicit operand marked as def", MO, MONum);
-      if (MO->isImplicit())
-        report("Explicit operand marked as implicit", MO, MONum);
+    // e.g., LDM_RET in the arm back end. Check non-variadic operands only.
+    bool IsOptional = MI->isVariadic() && MONum == MCID.getNumOperands() - 1;
+    if (!IsOptional) {
+      if (MO->isReg()) {
+        if (MO->isDef() && !MCOI.isOptionalDef())
+          report("Explicit operand marked as def", MO, MONum);
+        if (MO->isImplicit())
+          report("Explicit operand marked as implicit", MO, MONum);
+      }
+
+      // Check that an instruction has register operands only as expected.
+      if (MCOI.OperandType == MCOI::OPERAND_REGISTER &&
+          !MO->isReg() && !MO->isFI())
+        report("Expected a register operand.", MO, MONum);
+      if ((MCOI.OperandType == MCOI::OPERAND_IMMEDIATE ||
+           MCOI.OperandType == MCOI::OPERAND_PCREL) && MO->isReg())
+        report("Expected a non-register operand.", MO, MONum);
     }
 
     int TiedTo = MCID.getOperandConstraint(MONum, MCOI::TIED_TO);

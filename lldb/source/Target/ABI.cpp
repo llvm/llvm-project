@@ -63,24 +63,6 @@ bool ABI::GetRegisterInfoByName(ConstString name, RegisterInfo &info) {
   return false;
 }
 
-bool ABI::GetRegisterInfoByKind(RegisterKind reg_kind, uint32_t reg_num,
-                                RegisterInfo &info) {
-  if (reg_kind < eRegisterKindEHFrame || reg_kind >= kNumRegisterKinds)
-    return false;
-
-  uint32_t count = 0;
-  const RegisterInfo *register_info_array = GetRegisterInfoArray(count);
-  if (register_info_array) {
-    for (uint32_t i = 0; i < count; ++i) {
-      if (register_info_array[i].kinds[reg_kind] == reg_num) {
-        info = register_info_array[i];
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
                                         bool persistent) const {
   if (!ast_type.IsValid())
@@ -228,4 +210,21 @@ std::unique_ptr<llvm::MCRegisterInfo> ABI::MakeMCRegisterInfo(const ArchSpec &ar
       target->createMCRegInfo(triple));
   assert(info_up);
   return info_up;
+}
+
+void ABI::AugmentRegisterInfo(RegisterInfo &info) {
+  if (info.kinds[eRegisterKindEHFrame] != LLDB_INVALID_REGNUM &&
+      info.kinds[eRegisterKindDWARF] != LLDB_INVALID_REGNUM)
+    return;
+
+  RegisterInfo abi_info;
+  if (!GetRegisterInfoByName(ConstString(info.name), abi_info))
+    return;
+
+  if (info.kinds[eRegisterKindEHFrame] == LLDB_INVALID_REGNUM)
+    info.kinds[eRegisterKindEHFrame] = abi_info.kinds[eRegisterKindEHFrame];
+  if (info.kinds[eRegisterKindDWARF] == LLDB_INVALID_REGNUM)
+    info.kinds[eRegisterKindDWARF] = abi_info.kinds[eRegisterKindDWARF];
+  if (info.kinds[eRegisterKindGeneric] == LLDB_INVALID_REGNUM)
+    info.kinds[eRegisterKindGeneric] = abi_info.kinds[eRegisterKindGeneric];
 }

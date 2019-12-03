@@ -211,7 +211,7 @@ def main():
     InsertHeaderToVimBuffer(include_fixer_context, text)
     print("Added #include {0} for {1}.".format(selected, symbol))
   except Exception as error:
-    print(error.message, file=sys.stderr)
+    print(error, file=sys.stderr)
   return
 
 
