@@ -79,13 +79,13 @@
 // RUN: %clang %s -### -fuse-ld=lld \
 // RUN:     -target i686-unknown-windows-msvc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix CHECK-WINDOWS-MSVC-LLD
-// CHECK-WINDOWS-MSVC-LLD: "{{.*}}lld-link"
+// CHECK-WINDOWS-MSVC-LLD: "{{.*}}lld-link{{\.exe"|"}}
 // CHECK-WINDOWS-MSVC-LLD-SAME: "-out:{{.*}}"
 
 // RUN: %clang %s -### -fuse-ld=lld-link \
 // RUN:     -target i686-unknown-windows-msvc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix CHECK-WINDOWS-MSVC-LLD-LINK
-// CHECK-WINDOWS-MSVC-LLD-LINK: "{{.*}}lld-link"
+// CHECK-WINDOWS-MSVC-LLD-LINK: "{{.*}}lld-link{{\.exe"|"}}
 // CHECK-WINDOWS-MSVC-LLD-LINK-SAME: "-out:{{.*}}"
 
 // RUN: %clang %s -### -fuse-ld=bfd \
