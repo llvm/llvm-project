@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 -mattr=+mmx -stop-after finalize-isel -o - %s | FileCheck %s
+; RUN: llc -march=x86-64 -mattr=+mmx,+fma,+f16c -stop-after finalize-isel -o - %s | FileCheck %s
 ; This test ensures that the MXCSR is implicitly used by MMX FP instructions.
 
 define x86_mmx @mxcsr_mmx(<4 x float> %a0) {
@@ -15,8 +15,31 @@ define x86_mmx @mxcsr_mmx(<4 x float> %a0) {
   ret x86_mmx %5
 }
 
+define half @mxcsr_f16c(float %a) {
+; CHECK: VCVTPS2PH{{.*}}mxcsr
+; CHECK: VCVTPH2PS{{.*}}mxcsr
+  %res = fptrunc float %a to half
+  ret half %res
+}
+
+define <4 x float> @mxcsr_fma_ss(<4 x float> %a, <4 x float> %b) {
+; CHECK: VFMADD{{.*}}mxcsr
+  %res = call <4 x float> @llvm.x86.fma.vfmadd.ss(<4 x float> %b, <4 x float> %a, <4 x float>
+%a)
+  ret <4 x float> %res
+}
+
+define <4 x float> @mxcsr_fma_ps(<4 x float> %a, <4 x float> %b) {
+; CHECK: VFMADD{{.*}}mxcsr
+  %res = call <4 x float> @llvm.x86.fma.vfmadd.ps(<4 x float> %b, <4 x float> %a, <4 x float>
+%a)
+  ret <4 x float> %res
+}
+
 declare x86_mmx @llvm.x86.sse.cvtps2pi(<4 x float>)
 declare<4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, x86_mmx)
 declare x86_mmx @llvm.x86.sse.cvttps2pi(<4 x float>)
 declare <2 x double> @llvm.x86.sse.cvtpi2pd(x86_mmx)
 declare x86_mmx @llvm.x86.sse.cvtpd2pi(<2 x double>)
+declare <4 x float> @llvm.x86.fma.vfmadd.ss(<4 x float>, <4 x float>, <4 x float>)
+declare <4 x float> @llvm.x86.fma.vfmadd.ps(<4 x float>, <4 x float>, <4 x float>)
