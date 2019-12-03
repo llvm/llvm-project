@@ -15,6 +15,7 @@
 #include "ASTStructExtractor.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionHelper.h"
+#include "ClangExpressionSourceCode.h"
 #include "ClangExpressionVariable.h"
 #include "IRForTarget.h"
 
@@ -37,11 +38,14 @@ namespace lldb_private {
 /// the objects needed to parse and interpret or JIT an expression.  It uses
 /// the Clang parser to produce LLVM IR from the expression.
 class ClangUserExpression : public LLVMUserExpression {
+  // LLVM RTTI support
+  static char ID;
+
 public:
-  /// LLVM-style RTTI support.
-  static bool classof(const Expression *E) {
-    return E->getKind() == eKindClangUserExpression;
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || LLVMUserExpression::isA(ClassID);
   }
+  static bool classof(const Expression *obj) { return obj->isA(&ID); }
 
   enum { kDefaultTimeout = 500000u };
 
@@ -187,7 +191,6 @@ private:
                     lldb::addr_t struct_address,
                     DiagnosticManager &diagnostic_manager) override;
 
-  std::vector<std::string> GetModulesToImport(ExecutionContext &exe_ctx);
   void CreateSourceCode(DiagnosticManager &diagnostic_manager,
                         ExecutionContext &exe_ctx,
                         std::vector<std::string> modules_to_import,
@@ -218,13 +221,17 @@ private:
   /// The language type of the current expression.
   lldb::LanguageType m_expr_lang = lldb::eLanguageTypeUnknown;
   /// The include directories that should be used when parsing the expression.
-  std::vector<ConstString> m_include_directories;
+  std::vector<std::string> m_include_directories;
 
   /// The absolute character position in the transformed source code where the
   /// user code (as typed by the user) starts. If the variable is empty, then we
   /// were not able to calculate this position.
   llvm::Optional<size_t> m_user_expression_start_pos;
   ResultDelegate m_result_delegate;
+  ClangPersistentVariables *m_clang_state;
+  std::unique_ptr<ClangExpressionSourceCode> m_source_code;
+  /// File name used for the expression.
+  std::string m_filename;
 
   /// The object (if any) in which context the expression is evaluated.
   /// See the comment to `UserExpression::Evaluate` for details.

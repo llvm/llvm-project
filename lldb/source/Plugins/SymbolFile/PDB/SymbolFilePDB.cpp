@@ -58,6 +58,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::pdb;
 
+char SymbolFilePDB::ID;
+
 namespace {
 lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
   switch (lang) {
@@ -1580,9 +1582,10 @@ void SymbolFilePDB::FindTypesByName(
   }
 }
 
-void SymbolFilePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                              LanguageSet languages,
-                              lldb_private::TypeMap &types) {}
+void SymbolFilePDB::FindTypes(
+    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
+    llvm::DenseSet<SymbolFile *> &searched_symbol_files,
+    lldb_private::TypeMap &types) {}
 
 void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
                                          uint32_t type_mask,

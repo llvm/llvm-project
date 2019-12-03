@@ -215,12 +215,12 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
 
   // We've not seen this before. Fill it in.
   ++NumFileCacheMisses;
-  auto &NamedFileEnt = *SeenFileInsertResult.first;
-  assert(!NamedFileEnt.second && "should be newly-created");
+  auto *NamedFileEnt = &*SeenFileInsertResult.first;
+  assert(!NamedFileEnt->second && "should be newly-created");
 
   // Get the null-terminated file name as stored as the key of the
   // SeenFileEntries map.
-  StringRef InterndFileName = NamedFileEnt.first();
+  StringRef InterndFileName = NamedFileEnt->first();
 
   // Look up the directory for the file.  When looking up something like
   // sys/foo.h we'll discover all of the search directories that have a 'sys'
@@ -230,7 +230,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   auto DirInfoOrErr = getDirectoryFromFile(*this, Filename, CacheFailure);
   if (!DirInfoOrErr) { // Directory doesn't exist, file can't exist.
     if (CacheFailure)
-      NamedFileEnt.second = DirInfoOrErr.getError();
+      NamedFileEnt->second = DirInfoOrErr.getError();
     else
       SeenFileEntries.erase(Filename);
 
@@ -249,7 +249,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   if (statError) {
     // There's no real file at the given path.
     if (CacheFailure)
-      NamedFileEnt.second = statError;
+      NamedFileEnt->second = statError;
     else
       SeenFileEntries.erase(Filename);
 
@@ -262,20 +262,24 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   // This occurs when one dir is symlinked to another, for example.
   FileEntry &UFE = UniqueRealFiles[Status.getUniqueID()];
 
-  NamedFileEnt.second = &UFE;
+  NamedFileEnt->second = &UFE;
 
   // If the name returned by getStatValue is different than Filename, re-intern
   // the name.
   if (Status.getName() != Filename) {
-    auto &NamedFileEnt =
+    auto &NewNamedFileEnt =
         *SeenFileEntries.insert({Status.getName(), &UFE}).first;
-    assert((*NamedFileEnt.second).get<FileEntry *>() == &UFE &&
+    assert((*NewNamedFileEnt.second).get<FileEntry *>() == &UFE &&
            "filename from getStatValue() refers to wrong file");
-    InterndFileName = NamedFileEnt.first().data();
+    InterndFileName = NewNamedFileEnt.first().data();
     // In addition to re-interning the name, construct a redirecting seen file
     // entry, that will point to the name the filesystem actually wants to use.
     StringRef *Redirect = new (CanonicalNameStorage) StringRef(InterndFileName);
-    SeenFileInsertResult.first->second = Redirect;
+    auto SeenFileInsertResultIt = SeenFileEntries.find(Filename);
+    assert(SeenFileInsertResultIt != SeenFileEntries.end() &&
+           "unexpected SeenFileEntries cache miss");
+    SeenFileInsertResultIt->second = Redirect;
+    NamedFileEnt = &*SeenFileInsertResultIt;
   }
 
   if (UFE.isValid()) { // Already have an entry with this inode, return it.

@@ -43,6 +43,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
+
 #include <cstdio>
 #include <thread>
 
@@ -169,6 +170,10 @@ static FunctionNameType getFunctionNameFlags() {
 static cl::opt<bool> DumpAST("dump-ast",
                              cl::desc("Dump AST restored from symbols."),
                              cl::sub(SymbolsSubcommand));
+static cl::opt<bool>
+    DumpClangAST("dump-clang-ast",
+                 cl::desc("Dump clang AST restored from symbols."),
+                 cl::sub(SymbolsSubcommand));
 
 static cl::opt<bool> Verify("verify", cl::desc("Verify symbol information."),
                             cl::sub(SymbolsSubcommand));
@@ -188,6 +193,7 @@ static Error findTypes(lldb_private::Module &Module);
 static Error findVariables(lldb_private::Module &Module);
 static Error dumpModule(lldb_private::Module &Module);
 static Error dumpAST(lldb_private::Module &Module);
+static Error dumpClangAST(lldb_private::Module &Module);
 static Error verify(lldb_private::Module &Module);
 
 static Expected<Error (*)(lldb_private::Module &)> getAction();
@@ -522,7 +528,7 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
     Symfile.FindTypes(ConstString(Name), ContextPtr, UINT32_MAX, SearchedFiles,
                       Map);
   else
-    Module.FindTypes(parseCompilerContext(), languages, Map);
+    Module.FindTypes(parseCompilerContext(), languages, SearchedFiles, Map);
 
   outs() << formatv("Found {0} types:\n", Map.GetSize());
   StreamString Stream;
@@ -581,11 +587,11 @@ Error opts::symbols::dumpModule(lldb_private::Module &Module) {
 Error opts::symbols::dumpAST(lldb_private::Module &Module) {
   Module.ParseAllDebugSymbols();
 
-  auto symfile = Module.GetSymbolFile();
+  SymbolFile *symfile = Module.GetSymbolFile();
   if (!symfile)
     return make_string_error("Module has no symbol file.");
 
-  auto type_system_or_err =
+  llvm::Expected<TypeSystem &> type_system_or_err =
       symfile->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!type_system_or_err)
     return make_string_error("Can't retrieve ClangASTContext");
@@ -599,11 +605,35 @@ Error opts::symbols::dumpAST(lldb_private::Module &Module) {
   if (!ast_ctx)
     return make_string_error("Can't retrieve AST context.");
 
-  auto tu = ast_ctx->getTranslationUnitDecl();
+  clang::TranslationUnitDecl *tu = ast_ctx->getTranslationUnitDecl();
   if (!tu)
     return make_string_error("Can't retrieve translation unit declaration.");
 
   tu->print(outs());
+
+  return Error::success();
+}
+
+Error opts::symbols::dumpClangAST(lldb_private::Module &Module) {
+  Module.ParseAllDebugSymbols();
+
+  SymbolFile *symfile = Module.GetSymbolFile();
+  if (!symfile)
+    return make_string_error("Module has no symbol file.");
+
+  llvm::Expected<TypeSystem &> type_system_or_err =
+      symfile->GetTypeSystemForLanguage(eLanguageTypeObjC_plus_plus);
+  if (!type_system_or_err)
+    return make_string_error("Can't retrieve ClangASTContext");
+
+  auto *clang_ast_ctx =
+      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+  if (!clang_ast_ctx)
+    return make_string_error("Retrieved TypeSystem was not a ClangASTContext");
+
+  StreamString Stream;
+  clang_ast_ctx->DumpFromSymbolFile(Stream, Name);
+  outs() << Stream.GetData() << "\n";
 
   return Error::success();
 }
@@ -684,6 +714,16 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
           "-regex, -context, -name, -file and -line options are not "
           "applicable for dumping AST.");
     return dumpAST;
+  }
+
+  if (DumpClangAST) {
+    if (Find != FindType::None)
+      return make_string_error("Cannot both search and dump clang AST.");
+    if (Regex || !Context.empty() || !File.empty() || Line != 0)
+      return make_string_error(
+          "-regex, -context, -name, -file and -line options are not "
+          "applicable for dumping clang AST.");
+    return dumpClangAST;
   }
 
   if (Regex && !Context.empty())

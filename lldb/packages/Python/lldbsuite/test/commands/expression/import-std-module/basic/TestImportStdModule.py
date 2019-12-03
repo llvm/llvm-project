@@ -11,12 +11,8 @@ class ImportStdModule(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # FIXME: This should work on more setups, so remove these
-    # skipIf's in the future.
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
-    @skipIf(oslist=no_match(["linux"]))
-    @skipIf(debug_info=no_match(["dwarf"]))
     def test(self):
         self.build()
 
@@ -34,12 +30,8 @@ class ImportStdModule(TestBase):
         self.expect("expr char char_a = 'b'; char char_b = 'a'; std::swap(char_a, char_b); char_a",
                     substrs=["(char) $3 = 'a'"])
 
-    # FIXME: This should work on more setups, so remove these
-    # skipIf's in the future.
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
-    @skipIf(oslist=no_match(["linux"]))
-    @skipIf(debug_info=no_match(["dwarf"]))
     def test_non_cpp_language(self):
         self.build()
 

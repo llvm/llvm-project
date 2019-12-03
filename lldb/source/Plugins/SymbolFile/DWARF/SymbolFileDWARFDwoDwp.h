@@ -13,7 +13,17 @@
 #include "SymbolFileDWARFDwp.h"
 
 class SymbolFileDWARFDwoDwp : public SymbolFileDWARFDwo {
+  /// LLVM RTTI support.
+  static char ID;
+
 public:
+  /// LLVM RTTI support.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || SymbolFileDWARFDwo::isA(ClassID);
+  }
+  static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
+  /// \}
   SymbolFileDWARFDwoDwp(SymbolFileDWARFDwp *dwp_symfile,
                         lldb::ObjectFileSP objfile, DWARFCompileUnit &dwarf_cu,
                         uint64_t dwo_id);

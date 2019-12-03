@@ -40,6 +40,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char SymbolFileDWARFDebugMap::ID;
+
 // Subclass lldb_private::Module so we can intercept the
 // "Module::GetObjectFile()" (so we can fixup the object file sections) and
 // also for "Module::GetSymbolFile()" (so we can fixup the symbol file id.
@@ -653,6 +655,17 @@ bool SymbolFileDWARFDebugMap::ParseDebugMacros(CompileUnit &comp_unit) {
   return false;
 }
 
+bool SymbolFileDWARFDebugMap::ForEachExternalModule(
+    CompileUnit &comp_unit,
+    llvm::DenseSet<lldb_private::SymbolFile *> &visited_symbol_files,
+    llvm::function_ref<bool(Module &)> f) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
+  if (oso_dwarf)
+    return oso_dwarf->ForEachExternalModule(comp_unit, visited_symbol_files, f);
+  return false;
+}
+
 bool SymbolFileDWARFDebugMap::ParseSupportFiles(CompileUnit &comp_unit,
                                                 FileSpecList &support_files) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -1203,10 +1216,12 @@ void SymbolFileDWARFDebugMap::FindTypes(
   });
 }
 
-void SymbolFileDWARFDebugMap::FindTypes(llvm::ArrayRef<CompilerContext> context,
-                                        LanguageSet languages, TypeMap &types) {
+void SymbolFileDWARFDebugMap::FindTypes(
+    llvm::ArrayRef<CompilerContext> context, LanguageSet languages,
+    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
+    TypeMap &types) {
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    oso_dwarf->FindTypes(context, languages, types);
+    oso_dwarf->FindTypes(context, languages, searched_symbol_files, types);
     return false;
   });
 }

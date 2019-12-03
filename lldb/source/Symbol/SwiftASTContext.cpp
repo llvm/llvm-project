@@ -3318,11 +3318,12 @@ public:
       decl_context.push_back({CompilerContextKind::Module, module_cs});
     // Swift doesn't keep track of submodules.
     decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
-    decl_context.push_back({GetCompilerContextKind(kind), name_cs});
+    decl_context.push_back({GetCompilerContextKind(kind), ConstString(name)});
+    llvm::DenseSet<SymbolFile *> searched_symbol_files;
     auto search = [&](Module &module) {
-      return module.FindTypes(decl_context,
-                              ClangASTContext::GetSupportedLanguagesForTypes(),
-                              clang_types);
+      module.FindTypes(decl_context,
+                       ClangASTContext::GetSupportedLanguagesForTypes(),
+                       searched_symbol_files, clang_types);
     };
     if (Module *module = m_swift_ast_ctx.GetModule())
       search(*module);

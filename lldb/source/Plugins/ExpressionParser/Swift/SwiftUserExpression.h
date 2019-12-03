@@ -39,11 +39,13 @@ class SwiftExpressionParser;
 /// uses the Clang parser to produce LLVM IR from the expression.
 //----------------------------------------------------------------------
 class SwiftUserExpression : public LLVMUserExpression {
+  // LLVM RTTI support
+  static char ID;
 public:
-  /// LLVM-style RTTI support.
-  static bool classof(const Expression *E) {
-    return E->getKind() == eKindSwiftUserExpression;
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || LLVMUserExpression::isA(ClassID);
   }
+  static bool classof(const Expression *obj) { return obj->isA(&ID); }
   enum { kDefaultTimeout = 500000u };
 
   class SwiftUserExpressionHelper : public ExpressionTypeSystemHelper {

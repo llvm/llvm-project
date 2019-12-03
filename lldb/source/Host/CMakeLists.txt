@@ -79,7 +79,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
 else()
   add_host_subdirectory(posix
     posix/DomainSocket.cpp
-    posix/FileSystem.cpp
+    posix/FileSystemPosix.cpp
     posix/HostInfoPosix.cpp
     posix/HostProcessPosix.cpp
     posix/HostThreadPosix.cpp

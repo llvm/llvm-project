@@ -26,6 +26,7 @@
 # SWIFTFLAGS_EXTRAS :=
 # SPLIT_DEBUG_SYMBOLS := YES
 # CROSS_COMPILE :=
+# USE_PRIVATE_MODULE_CACHE := YES
 #
 # And test/functionalities/archives/Makefile:
 # MAKE_DSYM := NO
@@ -353,10 +354,17 @@ CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
 $(warning failed to set the shared clang module cache dir)
 endif
 
-SWIFT_MODULE_CACHE_FLAGS ?= -module-cache-path $(CLANG_MODULE_CACHE_DIR)
+ifeq "$(USE_PRIVATE_MODULE_CACHE)" "YES"
+THE_CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/private-module-cache
+else
+THE_CLANG_MODULE_CACHE_DIR := $(CLANG_MODULE_CACHE_DIR)
+endif
+
+SWIFT_MODULE_CACHE_FLAGS ?= -module-cache-path $(THE_CLANG_MODULE_CACHE_DIR)
 SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
 
-MODULE_BASE_FLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
+MODULE_BASE_FLAGS := -fmodules -gmodules -fmodules-cache-path=$(THE_CLANG_MODULE_CACHE_DIR)
+
 MANDATORY_MODULE_BUILD_CFLAGS := $(MODULE_BASE_FLAGS) -gmodules
 # Build flags for building with C++ modules.
 # -glldb is necessary for emitting information about what modules were imported.

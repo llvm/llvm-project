@@ -893,9 +893,10 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
 
           Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES));
           if (log != nullptr)
-            LLDB_LOGF(log,
-                      "module changed: %p, removing from global module list",
-                      static_cast<void *>(module_sp.get()));
+            LLDB_LOGF(
+                log, "%p '%s' module changed: removing from global module list",
+                static_cast<void *>(module_sp.get()),
+                module_sp->GetFileSpec().GetFilename().GetCString());
 
           shared_module_list.Remove(module_sp);
           module_sp.reset();

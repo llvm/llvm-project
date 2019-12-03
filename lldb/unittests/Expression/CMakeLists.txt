@@ -5,9 +5,10 @@ if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
 endif()
 
 add_lldb_unittest(ExpressionTests
+  ClangParserTest.cpp
   DiagnosticManagerTest.cpp
   DWARFExpressionTest.cpp
-  ClangParserTest.cpp
+  CppModuleConfigurationTest.cpp
 
   ${SWIFT_SOURCES}
 

@@ -44,12 +44,14 @@
 
 using namespace lldb_private;
 
+char SwiftUserExpression::ID;
+
 SwiftUserExpression::SwiftUserExpression(
     ExecutionContextScope &exe_scope, llvm::StringRef expr,
     llvm::StringRef prefix, lldb::LanguageType language,
     ResultType desired_type, const EvaluateExpressionOptions &options)
     : LLVMUserExpression(exe_scope, expr, prefix, language, desired_type,
-                         options, eKindSwiftUserExpression),
+                         options),
       m_type_system_helper(*m_target_wp.lock().get()),
       m_result_delegate(exe_scope.CalculateTarget(), *this, false),
       m_error_delegate(exe_scope.CalculateTarget(), *this, true),
