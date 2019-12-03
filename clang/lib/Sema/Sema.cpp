@@ -1290,6 +1290,12 @@ NamedDecl *Sema::getCurFunctionOrMethodDecl() {
   return nullptr;
 }
 
+LangAS Sema::getDefaultCXXMethodAddrSpace() const {
+  if (getLangOpts().OpenCL)
+    return LangAS::opencl_generic;
+  return LangAS::Default;
+}
+
 void Sema::EmitCurrentDiagnostic(unsigned DiagID) {
   // FIXME: It doesn't make sense to me that DiagID is an incoming argument here
   // and yet we also use the current diag ID on the DiagnosticsEngine. This has
