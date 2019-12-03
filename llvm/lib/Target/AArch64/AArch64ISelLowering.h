@@ -196,6 +196,8 @@ enum NodeType : unsigned {
   UUNPKHI,
   UUNPKLO,
 
+  INSR,
+
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LD3post,

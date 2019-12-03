@@ -16,6 +16,13 @@ kernel void test_pure_attr(read_only image1d_t img) {
   float4 resf = read_imagef(img, 42);
 }
 
+// Test that builtins with only one prototype are mangled.
+// CHECK-LABEL: @test_mangling
+// CHECK: call i32 @_Z12get_local_idj
+kernel void test_mangling() {
+  size_t lid = get_local_id(0);
+}
+
 // CHECK: attributes [[ATTR_CONST]] =
 // CHECK-SAME: readnone
 // CHECK: attributes [[ATTR_PURE]] =
