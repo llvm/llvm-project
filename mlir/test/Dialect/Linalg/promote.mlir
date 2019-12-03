@@ -17,9 +17,9 @@ module {
     %c2 = constant 2 : index
     %c0 = constant 0 : index
     %c1 = constant 1 : index
-    %3 = view %A[%M, %K][%c0] : memref<?xi8> to memref<?x?xf32, #map0>
-    %4 = view %A[%K, %N][%c0] : memref<?xi8> to memref<?x?xf32, #map0>
-    %5 = view %A[%M, %N][%c0] : memref<?xi8> to memref<?x?xf32, #map0>
+    %3 = view %A[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32, #map0>
+    %4 = view %A[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32, #map0>
+    %5 = view %A[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32, #map0>
     %6 = dim %3, 0 : memref<?x?xf32, #map0>
     %7 = dim %3, 1 : memref<?x?xf32, #map0>
     %8 = dim %4, 1 : memref<?x?xf32, #map0>

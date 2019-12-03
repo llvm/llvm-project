@@ -621,7 +621,7 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %[[ARG0]], %{{.*}}[3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: llvm.mul %{{.*}}, %[[ARG1]]
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
-  %1 = view %0[%arg0, %arg1][%arg2]
+  %1 = view %0[%arg2][%arg0, %arg1]
     : memref<2048xi8> to memref<?x?xf32, (d0, d1)[s0, s1] -> (d0 * s0 + d1 + s1)>
 
   // Test two dynamic sizes and static offset.
@@ -637,7 +637,7 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %arg0, %{{.*}}[3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: llvm.mul %{{.*}}, %[[ARG1]]
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
-  %2 = view %0[%arg0, %arg1][]
+  %2 = view %0[][%arg0, %arg1]
     : memref<2048xi8> to memref<?x?xf32, (d0, d1)[s0] -> (d0 * s0 + d1)>
 
   // Test one dynamic size and dynamic offset.
@@ -653,7 +653,7 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: llvm.mul %{{.*}}, %[[ARG1]]
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
-  %3 = view %0[%arg1][%arg2]
+  %3 = view %0[%arg2][%arg1]
     : memref<2048xi8> to memref<4x?xf32, (d0, d1)[s0, s1] -> (d0 * s0 + d1 + s1)>
 
   // Test one dynamic size and static offset.
@@ -670,7 +670,7 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %[[ARG0]], %{{.*}}[3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: llvm.mlir.constant(4 : index) : !llvm.i64
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
-  %4 = view %0[%arg0][]
+  %4 = view %0[][%arg0]
     : memref<2048xi8> to memref<?x16xf32, (d0, d1) -> (d0 * 4 + d1)>
 
   // Test static sizes and static offset.
@@ -703,7 +703,7 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %[[ARG0]], %{{.*}}[3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: llvm.mul %[[STRIDE_1]], %[[ARG1]] : !llvm.i64
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
-  %6 = view %0[%arg0, %arg1][%arg2]
+  %6 = view %0[%arg2][%arg0, %arg1]
     : memref<2048xi8> to memref<?x?xf32, (d0, d1)[s0, s1] -> (d0 * s0 + d1 + s1)>
 
   return

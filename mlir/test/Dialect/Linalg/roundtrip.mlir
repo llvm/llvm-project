@@ -25,12 +25,12 @@ func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index
   %0 = muli %arg0, %arg0 : index
   %1 = alloc (%0) : memref<?xi8>
   %2 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
-  %3 = view %1[%arg0, %arg0][%c0] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %3 = view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
   %4 = linalg.slice %3[%2, %2] : memref<?x?xf32, offset: ?, strides: [?, 1]>, !linalg.range, !linalg.range, memref<?x?xf32, offset: ?, strides: [?, 1]>
   %5 = linalg.slice %3[%2, %arg2] : memref<?x?xf32, offset: ?, strides: [?, 1]>, !linalg.range, index, memref<?xf32, offset: ?, strides: [1]>
   %6 = linalg.slice %3[%arg2, %2] : memref<?x?xf32, offset: ?, strides: [?, 1]>, index, !linalg.range, memref<?xf32, offset: ?, strides: [1]>
   %7 = linalg.slice %3[%arg2, %arg3] : memref<?x?xf32, offset: ?, strides: [?, 1]>, index, index, memref<f32>
-  %8 = view %1[%arg0, %arg0][%c0] : memref<?xi8> to memref<?x?xvector<4x4xf32>, offset: ?, strides: [?, 1]>
+  %8 = view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xvector<4x4xf32>, offset: ?, strides: [?, 1]>
   dealloc %1 : memref<?xi8>
   return
 }

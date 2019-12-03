@@ -65,9 +65,9 @@ func @matmul() -> f32 {
   %bB = call @alloc_filled_f32(%c160, %f1) : (index, f32) -> (memref<?xi8>)
   %bC = call @alloc_filled_f32(%c100, %f10) : (index, f32) -> (memref<?xi8>)
 
-  %A = view %bA[%c10, %c16][] : memref<?xi8> to memref<?x?xf32, #strided2D>
-  %B = view %bB[%c16, %c10][] : memref<?xi8> to memref<?x?xf32, #strided2D>
-  %C = view %bC[%c10, %c10][] : memref<?xi8> to memref<?x?xf32, #strided2D>
+  %A = view %bA[][%c10, %c16] : memref<?xi8> to memref<?x?xf32, #strided2D>
+  %B = view %bB[][%c16, %c10] : memref<?xi8> to memref<?x?xf32, #strided2D>
+  %C = view %bC[][%c10, %c10] : memref<?xi8> to memref<?x?xf32, #strided2D>
 
   linalg.matmul(%A, %B, %C) : memref<?x?xf32, #strided2D>, memref<?x?xf32, #strided2D>, memref<?x?xf32, #strided2D>
   %res = load %C[%c6, %c7] : memref<?x?xf32, #strided2D>

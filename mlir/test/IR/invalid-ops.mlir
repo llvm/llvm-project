@@ -780,7 +780,7 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8>
   // expected-error@+1 {{incorrect dynamic strides}}
-  %1 = view %0[%arg0, %arg1][]
+  %1 = view %0[][%arg0, %arg1]
     : memref<2048xi8> to
       memref<?x?x4xf32, (d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>
   return
@@ -794,6 +794,17 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %1 = view %0[%arg0][]
     : memref<2048xi8> to
       memref<16x4x?xf32, (d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>
+  return
+}
+
+// -----
+
+func @multiple_offsets(%arg0: index) {
+  %0 = alloc() : memref<2048xi8>
+  // expected-error@+1 {{expects 0 or 1 offset operand}}
+  %1 = view %0[%arg0, %arg0][%arg0]
+    : memref<2048xi8> to
+      memref<?x?x4xf32, (d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>
   return
 }
 

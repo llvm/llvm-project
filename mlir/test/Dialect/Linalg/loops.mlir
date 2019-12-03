@@ -16,9 +16,9 @@
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %A = view %arg0[%M, %K][%c0] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-  %B = view %arg0[%K, %N][%c0] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-  %C = view %arg0[%M, %N][%c0] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %A = view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %B = view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %C = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
   linalg.matmul(%A, %B, %C) : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>
   return
 }
@@ -42,9 +42,9 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %2 = view %arg0[%M, %N][%c0] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-  %3 = view %arg0[%M][%c0] : memref<?xi8> to memref<?xf32, offset: ?, strides: [1]>
-  %4 = view %arg0[%N][%c0] : memref<?xi8> to memref<?xf32, offset: ?, strides: [1]>
+  %2 = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %3 = view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32, offset: ?, strides: [1]>
+  %4 = view %arg0[%c0][%N] : memref<?xi8> to memref<?xf32, offset: ?, strides: [1]>
   linalg.matvec(%2, %3, %4) : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?xf32, offset: ?, strides: [1]>, memref<?xf32, offset: ?, strides: [1]>
   return
 }
@@ -66,8 +66,8 @@ func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
 func @dot(%arg0: memref<?xi8>, %M: index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %1 = view %arg0[%M][%c0] : memref<?xi8> to memref<?xf32, offset: ?, strides: [1]>
-  %2 = view %arg0[%M][%c0] : memref<?xi8> to memref<?xf32, offset: ?, strides: [1]>
+  %1 = view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32, offset: ?, strides: [1]>
+  %2 = view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32, offset: ?, strides: [1]>
   %3 = view %arg0[][] : memref<?xi8> to memref<f32>
   linalg.dot(%1, %2, %3) : memref<?xf32, offset: ?, strides: [1]>, memref<?xf32, offset: ?, strides: [1]>, memref<f32>
   return
