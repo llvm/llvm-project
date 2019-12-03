@@ -1122,6 +1122,11 @@ public:
   /// point for skipping past a simple-declaration.
   void SkipMalformedDecl();
 
+  /// The location of the first statement inside an else that might
+  /// have a missleading indentation. If there is no
+  /// MisleadingIndentationChecker on an else active, this location is invalid.
+  SourceLocation MisleadingIndentationElseLoc;
+
 private:
   //===--------------------------------------------------------------------===//
   // Lexing and parsing of C++ inline methods.
