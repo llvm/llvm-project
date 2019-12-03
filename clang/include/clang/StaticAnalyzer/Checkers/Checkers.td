@@ -1343,6 +1343,11 @@ def ReportStmts : Checker<"ReportStmts">,
   HelpText<"Emits a warning for every statement.">,
   Documentation<NotDocumented>;
 
+def DebugIteratorModeling : Checker<"DebugIteratorModeling">,
+  HelpText<"Check the analyzer's understanding of C++ iterators">,
+  Dependencies<[IteratorModeling]>,
+  Documentation<NotDocumented>;
+
 } // end "debug"
 
 

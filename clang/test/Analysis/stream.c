@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.unix.Stream -analyzer-store region -verify %s
 
 typedef __typeof__(sizeof(int)) size_t;
+typedef __typeof__(sizeof(int)) fpos_t;
 typedef struct _IO_FILE FILE;
 #define SEEK_SET	0	/* Seek from beginning of file.  */
 #define SEEK_CUR	1	/* Seek from current position.  */
@@ -9,36 +10,93 @@ extern FILE *fopen(const char *path, const char *mode);
 extern FILE *tmpfile(void);
 extern int fclose(FILE *fp);
 extern size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+extern size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 extern int fseek (FILE *__stream, long int __off, int __whence);
 extern long int ftell (FILE *__stream);
 extern void rewind (FILE *__stream);
+extern int fgetpos(FILE *stream, fpos_t *pos);
+extern int fsetpos(FILE *stream, const fpos_t *pos);
+extern void clearerr(FILE *stream);
+extern int feof(FILE *stream);
+extern int ferror(FILE *stream);
+extern int fileno(FILE *stream);
 
-void f1(void) {
+void check_fread() {
+  FILE *fp = tmpfile();
+  fread(0, 0, 0, fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_fwrite() {
+  FILE *fp = tmpfile();
+  fwrite(0, 0, 0, fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_fseek() {
+  FILE *fp = tmpfile();
+  fseek(fp, 0, 0); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_ftell() {
+  FILE *fp = tmpfile();
+  ftell(fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_rewind() {
+  FILE *fp = tmpfile();
+  rewind(fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_fgetpos() {
+  FILE *fp = tmpfile();
+  fpos_t pos;
+  fgetpos(fp, &pos); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_fsetpos() {
+  FILE *fp = tmpfile();
+  fpos_t pos;
+  fsetpos(fp, &pos); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_clearerr() {
+  FILE *fp = tmpfile();
+  clearerr(fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_feof() {
+  FILE *fp = tmpfile();
+  feof(fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_ferror() {
+  FILE *fp = tmpfile();
+  ferror(fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_fileno() {
+  FILE *fp = tmpfile();
+  fileno(fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void f_open(void) {
   FILE *p = fopen("foo", "r");
   char buf[1024];
   fread(buf, 1, 1, p); // expected-warning {{Stream pointer might be NULL}}
   fclose(p);
 }
 
-void f2(void) {
-  FILE *p = fopen("foo", "r");
-  fseek(p, 1, SEEK_SET); // expected-warning {{Stream pointer might be NULL}}
-  fclose(p);
-}
-
-void f3(void) {
-  FILE *p = fopen("foo", "r");
-  ftell(p); // expected-warning {{Stream pointer might be NULL}}
-  fclose(p);
-}
-
-void f4(void) {
-  FILE *p = fopen("foo", "r");
-  rewind(p); // expected-warning {{Stream pointer might be NULL}}
-  fclose(p);
-}
-
-void f5(void) {
+void f_seek(void) {
   FILE *p = fopen("foo", "r");
   if (!p)
     return;
@@ -47,26 +105,20 @@ void f5(void) {
   fclose(p);
 }
 
-void f6(void) {
+void f_double_close(void) {
   FILE *p = fopen("foo", "r");
   fclose(p); 
   fclose(p); // expected-warning {{Try to close a file Descriptor already closed. Cause undefined behaviour}}
 }
 
-void f7(void) {
-  FILE *p = tmpfile();
-  ftell(p); // expected-warning {{Stream pointer might be NULL}}
-  fclose(p);
-}
-
-void f8(int c) {
+void f_leak(int c) {
   FILE *p = fopen("foo.c", "r");
   if(c)
     return; // expected-warning {{Opened File never closed. Potential Resource leak}}
   fclose(p);
 }
 
-FILE *f9(void) {
+FILE *f_null_checked(void) {
   FILE *p = fopen("foo.c", "r");
   if (p)
     return p; // no-warning
@@ -82,4 +134,3 @@ void pr7831(FILE *fp) {
 void pr8081(FILE *stream, long offset, int whence) {
   fseek(stream, offset, whence);
 }
-
