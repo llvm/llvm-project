@@ -86,11 +86,12 @@ DynamicSymbols:
 
 # GNU-NOLINK:      Version symbols section '.gnu.version' contains 2 entries:
 # GNU-NOLINK-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
-# GNU-NOLINK-NEXT:   000:   0 (*local*)       2 (bar)
+# GNU-NOLINK-NEXT:   000:   0 (*local*)
+# GNU-NOLINK-NEXT: warning: '[[FILE]]': invalid string table linked to SHT_GNU_verneed section with index 2: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
+# GNU-NOLINK-NEXT:   2 (<corrupt>)
+# GNU-NOLINK-EMPTY:
 # GNU-NOLINK:      Version needs section '.gnu.version_r' contains 1 entries:
 # GNU-NOLINK-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 0 ()
-# GNU-NOLINK-EMPTY:
-# GNU-NOLINK-NEXT:  warning: '[[FILE]]': invalid string table linked to SHT_GNU_verneed section with index 2: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
 # GNU-NOLINK-NEXT:   0x0000: Version: 1  File: <corrupt vn_file: 9>  Cnt: 1
 # GNU-NOLINK-NEXT:   0x0010:   Name: <corrupt>  Flags: none Version: 2
 
@@ -100,14 +101,14 @@ DynamicSymbols:
 # LLVM-NOLINK-NEXT:     Name:
 # LLVM-NOLINK-NEXT:   }
 # LLVM-NOLINK-NEXT:   Symbol {
+# LLVM-NOLINK-EMPTY:
+# LLVM-NOLINK-NEXT:  warning: '[[FILE]]': invalid string table linked to SHT_GNU_verneed section with index 2: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
 # LLVM-NOLINK-NEXT:     Version: 2
-# LLVM-NOLINK-NEXT:     Name: foo@bar
+# LLVM-NOLINK-NEXT:     Name: foo@<corrupt>
 # LLVM-NOLINK-NEXT:   }
 # LLVM-NOLINK-NEXT: ]
 
 # LLVM-NOLINK:      VersionRequirements [
-# LLVM-NOLINK-EMPTY:
-# LLVM-NOLINK-NEXT:  warning: '[[FILE]]': invalid string table linked to SHT_GNU_verneed section with index 2: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
 # LLVM-NOLINK-NEXT:   Dependency {
 # LLVM-NOLINK-NEXT:     Version: 1
 # LLVM-NOLINK-NEXT:     Count: 1
@@ -155,14 +156,12 @@ DynamicSymbols:
     Binding: STB_GLOBAL
 
 ## We can't parse misaligned auxiliary version records.
-## Here we have a SHT_GNU_verneed section aligned by 1 byte.
-## This makes the first auxiliary record offset % 4 be non-zero.
 
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: not llvm-readelf -V %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=BROKEN-AUX
 # RUN: not llvm-readobj -V %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=BROKEN-AUX
 
-# BROKEN-AUX: error: '[[FILE]]': SHT_GNU_verneed: the vn_aux field of the entry with index 0 references a misaligned auxiliary record
+# BROKEN-AUX: error: '[[FILE]]': invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
 
 --- !ELF
 FileHeader:
@@ -176,19 +175,14 @@ Sections:
     Flags:   [ SHF_ALLOC ]
     Link:    .dynsym
     Entries: [ 2 ]
-  - Name:  .gnu.version_r
-    Type:  SHT_GNU_verneed
-    Flags: [ SHF_ALLOC ]
-    Info:  1
-    AddressAlign: 1
-    Dependencies:
-      - Version: 1
-        File:    somefile
-        Entries:
-          - Name:  'bar'
-            Hash:  0
-            Flags: 0
-            Other: 2
+  - Name:         .gnu.version_r
+    Type:         SHT_GNU_verneed
+    Flags:        [ SHF_ALLOC ]
+    Info:         1
+    Link:         .dynstr
+    AddressAlign: 4
+## The byte offset to the auxiliary entry is 0x11, i.e. it is not correctly aligned in memory.
+    Content: "0100010001000000110000000000000000000000"
 DynamicSymbols:
   - Name: foo
 
@@ -551,3 +545,63 @@ Sections:
             Other: 0
 DynamicSymbols:
   - Name: foo
+
+## In this case SHT_GNU_verneed is linked to a custom dynamic string table, which is not
+## called ".dynstr". Check we handle this case properly.
+
+# RUN: yaml2obj --docnum=13 %s -o %t13
+# RUN: llvm-readelf -V %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=GNU-CUSTOM-DYNSTR
+# RUN: llvm-readobj -V %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=LLVM-CUSTOM-DYNSTR
+
+# GNU-CUSTOM-DYNSTR:      Version symbols section '.gnu.version' contains 2 entries:
+# GNU-CUSTOM-DYNSTR-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 6 (.dynsym)
+# GNU-CUSTOM-DYNSTR-NEXT:   000:   0 (*local*)       2 (bcdefghij)
+# GNU-CUSTOM-DYNSTR:      Version needs section '.gnu.version_r' contains 1 entries:
+# GNU-CUSTOM-DYNSTR-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 3 (.custom.dynstr)
+# GNU-CUSTOM-DYNSTR-NEXT:   0x0000: Version: 1  File: j  Cnt: 1
+# GNU-CUSTOM-DYNSTR-NEXT:   0x0010:   Name: bcdefghij  Flags: none  Version: 2
+
+# LLVM-CUSTOM-DYNSTR:      VersionSymbols [
+# LLVM-CUSTOM-DYNSTR:      Symbol {
+# LLVM-CUSTOM-DYNSTR:        Version: 2
+# LLVM-CUSTOM-DYNSTR-NEXT:   Name: foo@bcdefghij
+
+# LLVM-CUSTOM-DYNSTR:      VersionRequirements [
+# LLVM-CUSTOM-DYNSTR:        Dependency {
+# LLVM-CUSTOM-DYNSTR:          Entries [
+# LLVM-CUSTOM-DYNSTR:            Entry {
+# LLVM-CUSTOM-DYNSTR:              Index: 2
+# LLVM-CUSTOM-DYNSTR-NEXT:          Name: bcdefghij
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    Flags:   [ SHF_ALLOC ]
+    Link:    .dynsym
+    Entries: [ 0, 2 ]
+  - Name:         .gnu.version_r
+    Type:         SHT_GNU_verneed
+    Flags:        [ SHF_ALLOC ]
+    Link:         .custom.dynstr
+    Info:         1
+    AddressAlign: 4
+    Dependencies:
+      - Version: 1
+        File:    zed
+        Entries:
+          - Name:  'bar'
+            Hash:  0
+            Flags: 0
+            Other: 2
+  - Name: .custom.dynstr
+    Type: SHT_STRTAB
+    Content: "6162636465666768696a00" ## 'a','b','c','d','e','f','g','h','i','j',NIL
+DynamicSymbols:
+  - Name:    foo
+    Binding: STB_GLOBAL
