@@ -112,7 +112,7 @@ public:
 private:
   using TokenRange = llvm::ArrayRef<T>;
   struct RangeLess {
-    bool operator()(llvm::ArrayRef<T> L, llvm::ArrayRef<T> R) {
+    bool operator()(llvm::ArrayRef<T> L, llvm::ArrayRef<T> R) const {
       return L.begin() < R.begin();
     }
   };
