@@ -175,3 +175,28 @@ func @contraction4x4_ikj(%arg0 : vector<4x2xf32>, %arg1 : vector<2x4xf32>,
 
   return %0 : vector<4x4xf32>
 }
+
+// CHECK-LABEL: func @vector_transfers
+// CHECK-COUNT-2: vector.transfer_read
+// CHECK-COUNT-8: vector.strided_slice
+// CHECK-COUNT-4: addf
+// CHECK-COUNT-4: vector.insert_strided_slice
+//         CHECK: vector.transfer_write
+
+func @vector_transfers(%arg0: index, %arg1: index) {
+  %cst = constant 0.000000e+00 : f32
+  %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %cst_0 = constant 1.000000e+00 : f32
+  %cst_1 = constant 2.000000e+00 : f32
+  affine.for %arg2 = 0 to %arg0 step 4 {
+    affine.for %arg3 = 0 to %arg1 step 4 {
+      %4 = vector.transfer_read %0[%arg2, %arg3], %cst  {permutation_map = (d0, d1) -> (d0, d1)} : memref<?x?xf32>, vector<4x4xf32>
+      %5 = vector.transfer_read %1[%arg2, %arg3], %cst  {permutation_map = (d0, d1) -> (d0, d1)} : memref<?x?xf32>, vector<4x4xf32>
+      %6 = addf %4, %5 : vector<4x4xf32>
+      vector.transfer_write %6, %2[%arg2, %arg3] {permutation_map = (d0, d1) -> (d0, d1)} : vector<4x4xf32>, memref<?x?xf32>
+    }
+  }
+  return
+}
