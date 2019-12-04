@@ -93,6 +93,15 @@
 
 # MISSING-FILE: error: [[FILE]]: {{[Nn]}}o such file or directory
 
+## Create and Replace member of thin archive:
+# RUN: llvm-ar rcT %t/thin.a %t/1.o %t/2.o %t/3.o
+# RUN: yaml2obj %s -o %t/1.o --docnum=4
+# RUN: llvm-ar rT %t/thin.a %t/1.o
+# RUN: llvm-ar t %t/thin.a | FileCheck %s --check-prefix=SINGLE
+
+# RUN: llvm-nm --print-armap %t/thin.a \
+# RUN:   | FileCheck %s --check-prefix=SINGLE-SYM
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
