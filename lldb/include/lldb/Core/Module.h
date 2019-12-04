@@ -190,7 +190,7 @@ public:
   lldb::ModuleSP CalculateSymbolContextModule() override;
 
   void
-  GetDescription(Stream *s,
+  GetDescription(llvm::raw_ostream &s,
                  lldb::DescriptionLevel level = lldb::eDescriptionLevelFull);
 
   /// Get the module path and object name.

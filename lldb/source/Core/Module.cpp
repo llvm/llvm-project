@@ -1091,34 +1091,35 @@ std::string Module::GetSpecificationDescription() const {
   return spec;
 }
 
-void Module::GetDescription(Stream *s, lldb::DescriptionLevel level) {
+void Module::GetDescription(llvm::raw_ostream &s,
+                            lldb::DescriptionLevel level) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   if (level >= eDescriptionLevelFull) {
     if (m_arch.IsValid())
-      s->Printf("(%s) ", m_arch.GetArchitectureName());
+      s << llvm::formatv("({0}) ", m_arch.GetArchitectureName());
   }
 
   if (level == eDescriptionLevelBrief) {
     const char *filename = m_file.GetFilename().GetCString();
     if (filename)
-      s->PutCString(filename);
+      s << filename;
   } else {
     char path[PATH_MAX];
     if (m_file.GetPath(path, sizeof(path)))
-      s->PutCString(path);
+      s << path;
   }
 
   const char *object_name = m_object_name.GetCString();
   if (object_name)
-    s->Printf("(%s)", object_name);
+    s << llvm::formatv("({0})", object_name);
 }
 
 void Module::ReportError(const char *format, ...) {
   if (format && format[0]) {
     StreamString strm;
     strm.PutCString("error: ");
-    GetDescription(&strm, lldb::eDescriptionLevelBrief);
+    GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
     strm.PutChar(' ');
     va_list args;
     va_start(args, format);
@@ -1149,7 +1150,7 @@ void Module::ReportErrorIfModifyDetected(const char *format, ...) {
       if (format) {
         StreamString strm;
         strm.PutCString("error: the object file ");
-        GetDescription(&strm, lldb::eDescriptionLevelFull);
+        GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
         strm.PutCString(" has been modified\n");
 
         va_list args;
@@ -1175,7 +1176,7 @@ void Module::ReportWarning(const char *format, ...) {
   if (format && format[0]) {
     StreamString strm;
     strm.PutCString("warning: ");
-    GetDescription(&strm, lldb::eDescriptionLevelFull);
+    GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
     strm.PutChar(' ');
 
     va_list args;
@@ -1196,7 +1197,7 @@ void Module::ReportWarning(const char *format, ...) {
 void Module::LogMessage(Log *log, const char *format, ...) {
   if (log != nullptr) {
     StreamString log_message;
-    GetDescription(&log_message, lldb::eDescriptionLevelFull);
+    GetDescription(log_message.AsRawOstream(), lldb::eDescriptionLevelFull);
     log_message.PutCString(": ");
     va_list args;
     va_start(args, format);
@@ -1209,7 +1210,7 @@ void Module::LogMessage(Log *log, const char *format, ...) {
 void Module::LogMessageVerboseBacktrace(Log *log, const char *format, ...) {
   if (log != nullptr) {
     StreamString log_message;
-    GetDescription(&log_message, lldb::eDescriptionLevelFull);
+    GetDescription(log_message.AsRawOstream(), lldb::eDescriptionLevelFull);
     log_message.PutCString(": ");
     va_list args;
     va_start(args, format);
