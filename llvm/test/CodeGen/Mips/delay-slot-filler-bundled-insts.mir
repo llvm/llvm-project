@@ -2,6 +2,17 @@
 ## Check that the delay-slot filler does not attempt to split BUNDLE instructions
 # RUN: llc %s -start-before=mips-delay-slot-filler -stop-after=mips-delay-slot-filler \
 # RUN:   -verify-machineinstrs -o - | FileCheck %s
+## Check that we can emit assembly for input with BUNDLE instructions:
+# RUN: llc %s -start-before=mips-delay-slot-filler -verify-machineinstrs -o - | FileCheck %s -check-prefix ASM
+
+# ASM:  # %bb.0:
+# ASM-NEXT: daddiu	$sp, $sp, -16
+# ASM-NEXT: sd	$ra, 8($sp)
+## BUNDLE should be emitted in order:
+# ASM-NEXT: daddiu	$sp, $sp, -16
+# ASM-NEXT: daddiu	$sp, $sp, 16
+# ASM-NEXT: beqz	$4, .LBB0_2
+# ASM-NEXT: nop
 --- |
   target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
   target triple = "mips64-unknown-freebsd"
