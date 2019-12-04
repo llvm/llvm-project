@@ -18,6 +18,9 @@
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefixes=RELOC,DEBUG
 # RUN: llvm-readobj -r %t.stripped | FileCheck %s --check-prefix=RELOC
 
+# RUN: llvm-strip --strip-debug %t -o %t.stripped2
+# RUN: cmp %t.stripped %t.stripped2
+
 # RELOC:      Relocations [
 # RELOC-NEXT:   Section __text {
 # RELOC-NEXT:     0x0 0 0 0 X86_64_RELOC_UNSIGNED 0 -
