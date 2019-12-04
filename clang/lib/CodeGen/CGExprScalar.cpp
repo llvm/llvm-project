@@ -4023,13 +4023,13 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     LValue LV = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
     LV.getQuals().removePtrAuth();
     llvm::Value *RV = CGF.EmitPointerAuthQualify(ptrauth, E->getRHS(),
-                                                 LV.getAddress());
+                                                 LV.getAddress(CGF));
     CGF.EmitNullabilityCheck(LV, RV, E->getExprLoc());
     CGF.EmitStoreThroughLValue(RValue::get(RV), LV);
 
     if (Ignore) return nullptr;
     RV = CGF.EmitPointerAuthUnqualify(ptrauth, RV, LV.getType(),
-                                      LV.getAddress(), /*nonnull*/ false);
+                                      LV.getAddress(CGF), /*nonnull*/ false);
     return RV;
   }
 
