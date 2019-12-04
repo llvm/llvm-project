@@ -5584,18 +5584,26 @@ multiclass sve_mem_64b_gld_vs_32_unscaled<bits<4> opc, string asm,
 }
 
 multiclass sve_mem_64b_gld_sv2_64_scaled<bits<4> opc, string asm,
-                                         RegisterOperand zprext> {
+                                         SDPatternOperator op,
+                                         RegisterOperand zprext, ValueType vt> {
   def _SCALED_REAL : sve_mem_64b_gld_sv<opc, 1, 1, 1, asm, zprext>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
                   (!cast<Instruction>(NAME # _SCALED_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm), 0>;
+
+  def : Pat<(nxv2i64 (op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$indices), vt)),
+                     (!cast<Instruction>(NAME # _SCALED_REAL) PPR:$gp, GPR64sp:$base, ZPR:$indices)>;
 }
 
-multiclass sve_mem_64b_gld_vs2_64_unscaled<bits<4> opc, string asm> {
+multiclass sve_mem_64b_gld_vs2_64_unscaled<bits<4> opc, string asm,
+                                           SDPatternOperator op, ValueType vt> {
   def _REAL : sve_mem_64b_gld_sv<opc, 1, 0, 1, asm, ZPR64ExtLSL8>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
                   (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, ZPR64ExtLSL8:$Zm), 0>;
+
+  def : Pat<(nxv2i64 (op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$offsets), vt)),
+            (!cast<Instruction>(NAME # _REAL) PPR:$gp, GPR64sp:$base, ZPR:$offsets)>;
 }
 
 class sve_mem_64b_gld_vi<bits<4> opc, string asm, Operand imm_ty>
