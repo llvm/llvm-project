@@ -114,12 +114,21 @@ Error RangeListEntry::extract(DWARFDataExtractor Data, uint64_t End,
 
 DWARFAddressRangesVector DWARFDebugRnglist::getAbsoluteRanges(
     llvm::Optional<object::SectionedAddress> BaseAddr, DWARFUnit &U) const {
+  return getAbsoluteRanges(BaseAddr, [&](uint32_t Index) {
+    return U.getAddrOffsetSectionItem(Index);
+  });
+}
+
+DWARFAddressRangesVector DWARFDebugRnglist::getAbsoluteRanges(
+    Optional<object::SectionedAddress> BaseAddr,
+    function_ref<Optional<object::SectionedAddress>(uint32_t)>
+        LookupPooledAddress) const {
   DWARFAddressRangesVector Res;
   for (const RangeListEntry &RLE : Entries) {
     if (RLE.EntryKind == dwarf::DW_RLE_end_of_list)
       break;
     if (RLE.EntryKind == dwarf::DW_RLE_base_addressx) {
-      BaseAddr = U.getAddrOffsetSectionItem(RLE.Value0);
+      BaseAddr = LookupPooledAddress(RLE.Value0);
       if (!BaseAddr)
         BaseAddr = {RLE.Value0, -1ULL};
       continue;
@@ -152,7 +161,7 @@ DWARFAddressRangesVector DWARFDebugRnglist::getAbsoluteRanges(
       E.HighPC = E.LowPC + RLE.Value1;
       break;
     case dwarf::DW_RLE_startx_length: {
-      auto Start = U.getAddrOffsetSectionItem(RLE.Value0);
+      auto Start = LookupPooledAddress(RLE.Value0);
       if (!Start)
         Start = {0, -1ULL};
       E.SectionIndex = Start->SectionIndex;
