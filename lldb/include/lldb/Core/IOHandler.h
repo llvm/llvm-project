@@ -456,43 +456,6 @@ protected:
   bool m_user_response;
 };
 
-class IOHandlerCursesGUI : public IOHandler {
-public:
-  IOHandlerCursesGUI(Debugger &debugger);
-
-  ~IOHandlerCursesGUI() override;
-
-  void Run() override;
-
-  void Cancel() override;
-
-  bool Interrupt() override;
-
-  void GotEOF() override;
-
-  void Activate() override;
-
-  void Deactivate() override;
-
-protected:
-  curses::ApplicationAP m_app_ap;
-};
-
-class IOHandlerCursesValueObjectList : public IOHandler {
-public:
-  IOHandlerCursesValueObjectList(Debugger &debugger,
-                                 ValueObjectList &valobj_list);
-
-  ~IOHandlerCursesValueObjectList() override;
-
-  void Run() override;
-
-  void GotEOF() override;
-
-protected:
-  ValueObjectList m_valobj_list;
-};
-
 class IOHandlerStack {
 public:
   IOHandlerStack() = default;
