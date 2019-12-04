@@ -126,12 +126,7 @@ public:
 
   llvm::MCRegisterInfo &GetMCRegisterInfo() { return *m_mc_register_info_up; }
 
-  virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
-
-  bool GetRegisterInfoByName(ConstString name, RegisterInfo &info);
-
-  bool GetRegisterInfoByKind(lldb::RegisterKind reg_kind, uint32_t reg_num,
-                             RegisterInfo &info);
+  virtual void AugmentRegisterInfo(RegisterInfo &info);
 
   virtual bool GetPointerReturnRegister(const char *&name) { return false; }
 
@@ -142,6 +137,10 @@ protected:
       : m_process_wp(process_sp), m_mc_register_info_up(std::move(info_up)) {
     assert(m_mc_register_info_up && "ABI must have MCRegisterInfo");
   }
+
+  bool GetRegisterInfoByName(ConstString name, RegisterInfo &info);
+
+  virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
 
   /// Utility function to construct a MCRegisterInfo using the ArchSpec triple.
   /// Plugins wishing to customize the construction can construct the
