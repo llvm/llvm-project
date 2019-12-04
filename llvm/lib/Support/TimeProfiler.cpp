@@ -13,7 +13,6 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include <cassert>
 #include <chrono>
@@ -33,14 +32,14 @@ typedef std::pair<std::string, CountAndDurationType>
     NameAndCountAndDurationType;
 
 struct Entry {
-  TimePointType Start;
+  const TimePointType Start;
   TimePointType End;
-  std::string Name;
-  std::string Detail;
+  const std::string Name;
+  const std::string Detail;
 
   Entry(TimePointType &&S, TimePointType &&E, std::string &&N, std::string &&Dt)
       : Start(std::move(S)), End(std::move(E)), Name(std::move(N)),
-        Detail(std::move(Dt)){};
+        Detail(std::move(Dt)) {}
 
   // Calculate timings for FlameGraph. Cast time points to microsecond precision
   // rather than casting duration. This avoid truncation issues causing inner
@@ -60,9 +59,8 @@ struct Entry {
 
 struct TimeTraceProfiler {
   TimeTraceProfiler(unsigned TimeTraceGranularity = 0)
-      : TimeTraceGranularity(TimeTraceGranularity) {
-    StartTime = steady_clock::now();
-  }
+      : StartTime(steady_clock::now()),
+        TimeTraceGranularity(TimeTraceGranularity) {}
 
   void begin(std::string Name, llvm::function_ref<std::string()> Detail) {
     Stack.emplace_back(steady_clock::now(), TimePointType(), std::move(Name),
@@ -180,10 +178,10 @@ struct TimeTraceProfiler {
   SmallVector<Entry, 16> Stack;
   SmallVector<Entry, 128> Entries;
   StringMap<CountAndDurationType> CountAndTotalPerName;
-  TimePointType StartTime;
+  const TimePointType StartTime;
 
   // Minimum time granularity (in microseconds)
-  unsigned TimeTraceGranularity;
+  const unsigned TimeTraceGranularity;
 };
 
 void timeTraceProfilerInitialize(unsigned TimeTraceGranularity) {
