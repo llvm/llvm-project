@@ -304,15 +304,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = tryDecodeInst(DecoderTableSDWA1064, MI, QW, Address);
       if (Res) { IsSDWA = true;  break; }
 
-      // Some GFX9 subtargets repurposed the v_mad_mix_f32, v_mad_mixlo_f16 and
-      // v_mad_mixhi_f16 for FMA variants. Try to decode using this special
-      // table first so we print the correct name.
-
-      if (STI.getFeatureBits()[AMDGPU::FeatureFmaMixInsts]) {
-        Res = tryDecodeInst(DecoderTableGFX9_DL64, MI, QW, Address);
-        if (Res) break;
-      }
-
       if (STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem]) {
         Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address);
         if (Res)
