@@ -198,14 +198,6 @@ VALUE_PROF_KIND(IPVK_Last, IPVK_MemOPSize, "last")
 #undef VALUE_PROF_KIND
 /* VALUE_PROF_KIND end */
 
-#undef COVMAP_V2_OR_V3
-#ifdef COVMAP_V2
-#define COVMAP_V2_OR_V3
-#endif
-#ifdef COVMAP_V3
-#define COVMAP_V2_OR_V3
-#endif
-
 /* COVMAP_FUNC_RECORD start */
 /* Definition of member fields of the function record structure in coverage
  * map.
@@ -222,30 +214,16 @@ COVMAP_FUNC_RECORD(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), \
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
                    NameValue.size()))
-#endif
-#ifdef COVMAP_V2_OR_V3
+#else
 COVMAP_FUNC_RECORD(const int64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
-                   llvm::ConstantInt::get( \
-                     llvm::Type::getInt64Ty(Ctx), NameHash))
+                   llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
+                   llvm::IndexedInstrProf::ComputeHash(NameValue)))
 #endif
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), DataSize, \
-                   llvm::ConstantInt::get( \
-                     llvm::Type::getInt32Ty(Ctx), CoverageMapping.size()))
+                   llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx),\
+                   CoverageMapping.size()))
 COVMAP_FUNC_RECORD(const uint64_t, llvm::Type::getInt64Ty(Ctx), FuncHash, \
-                   llvm::ConstantInt::get( \
-                     llvm::Type::getInt64Ty(Ctx), FuncHash))
-#ifdef COVMAP_V3
-COVMAP_FUNC_RECORD(const uint64_t, llvm::Type::getInt64Ty(Ctx), FilenamesRef, \
-                   llvm::ConstantInt::get( \
-                     llvm::Type::getInt64Ty(Ctx), FilenamesRef))
-COVMAP_FUNC_RECORD(const char, \
-                   llvm::ArrayType::get(llvm::Type::getInt8Ty(Ctx), \
-                                        CoverageMapping.size()), \
-                   CoverageMapping,
-                   llvm::ConstantDataArray::getRaw( \
-                     CoverageMapping, CoverageMapping.size(), \
-                     llvm::Type::getInt8Ty(Ctx)))
-#endif
+                   llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), FuncHash))
 #undef COVMAP_FUNC_RECORD
 /* COVMAP_FUNC_RECORD end.  */
 
@@ -258,7 +236,7 @@ COVMAP_FUNC_RECORD(const char, \
 #define INSTR_PROF_DATA_DEFINED
 #endif
 COVMAP_HEADER(uint32_t, Int32Ty, NRecords, \
-              llvm::ConstantInt::get(Int32Ty, NRecords))
+              llvm::ConstantInt::get(Int32Ty,  FunctionRecords.size()))
 COVMAP_HEADER(uint32_t, Int32Ty, FilenamesSize, \
               llvm::ConstantInt::get(Int32Ty, FilenamesSize))
 COVMAP_HEADER(uint32_t, Int32Ty, CoverageSize, \
@@ -289,9 +267,6 @@ INSTR_PROF_SECT_ENTRY(IPSK_vnodes, \
 INSTR_PROF_SECT_ENTRY(IPSK_covmap, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON), \
                       INSTR_PROF_COVMAP_COFF, "__LLVM_COV,")
-INSTR_PROF_SECT_ENTRY(IPSK_covfun, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_COVFUN_COMMON), \
-                      INSTR_PROF_COVFUN_COFF, "__LLVM_COV,")
 INSTR_PROF_SECT_ENTRY(IPSK_orderfile, \
                       INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON), \
                       INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COFF), "__DATA,")
@@ -658,8 +633,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_RAW_VERSION 5
 /* Indexed profile format version (start from 1). */
 #define INSTR_PROF_INDEX_VERSION 5
-/* Coverage mapping format version (start from 0). */
-#define INSTR_PROF_COVMAP_VERSION 3
+/* Coverage mapping format vresion (start from 0). */
+#define INSTR_PROF_COVMAP_VERSION 2
 
 /* Profile version is always of type uint64_t. Reserve the upper 8 bits in the
  * version for other variants of profile. We set the lowest bit of the upper 8
@@ -686,7 +661,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
 #define INSTR_PROF_COVMAP_COMMON __llvm_covmap
-#define INSTR_PROF_COVFUN_COMMON __llvm_covfun
 #define INSTR_PROF_ORDERFILE_COMMON __llvm_orderfile
 /* Windows section names. Because these section names contain dollar characters,
  * they must be quoted.
@@ -697,7 +671,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALS_COFF ".lprfv$M"
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
 #define INSTR_PROF_COVMAP_COFF ".lcovmap$M"
-#define INSTR_PROF_COVFUN_COFF ".lcovfun$M"
 #define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"
 
 #ifdef _WIN32
@@ -712,7 +685,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Value profile nodes section. */
 #define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_VNODES_COFF
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COFF
-#define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_COVFUN_COFF
 #define INSTR_PROF_ORDERFILE_SECT_NAME INSTR_PROF_ORDERFILE_COFF
 #else
 /* Runtime section names and name strings.  */
@@ -726,7 +698,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Value profile nodes section. */
 #define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON)
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON)
-#define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVFUN_COMMON)
 /* Order file instrumentation. */
 #define INSTR_PROF_ORDERFILE_SECT_NAME                                         \
   INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON)
@@ -781,5 +752,3 @@ typedef struct InstrProfValueData {
 #else
 #undef INSTR_PROF_DATA_DEFINED
 #endif
-
-#undef COVMAP_V2_OR_V3
