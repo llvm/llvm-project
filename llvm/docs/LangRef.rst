@@ -3334,6 +3334,9 @@ Poison value behavior is defined in terms of value *dependence*:
    be different if the terminator had transferred control to a different
    successor.
 -  Dependence is transitive.
+-  Vector elements may be independently poisoned. Therefore, transforms
+   on instructions such as shufflevector must be careful to propagate
+   poison across values or elements only as allowed by the original code.
 
 An instruction that *depends* on a poison value, produces a poison value
 itself. A poison value may be relaxed into an
@@ -8448,10 +8451,13 @@ Semantics:
 The elements of the two input vectors are numbered from left to right
 across both of the vectors. The shuffle mask operand specifies, for each
 element of the result vector, which element of the two input vectors the
-result element gets. If the shuffle mask is undef, the result vector is
-undef. If any element of the mask operand is undef, that element of the
-result is undef. If the shuffle mask selects an undef element from one
-of the input vectors, the resulting element is undef.
+result element gets.
+
+If the shuffle mask is undef, the result vector is undef. If any element
+of the mask operand is undef, that element of the result is undef. If the
+shuffle mask selects an undef element from one of the input vectors, the
+resulting element is undef. An undef mask element prevents a poisoned
+vector element from propagating.
 
 For scalable vectors, the only valid mask values at present are
 ``zeroinitializer`` and ``undef``, since we cannot write all indices as
