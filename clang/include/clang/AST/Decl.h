@@ -1964,6 +1964,14 @@ public:
 
   void setRangeEnd(SourceLocation E) { EndRangeLoc = E; }
 
+  /// Returns the location of the ellipsis of a variadic function.
+  SourceLocation getEllipsisLoc() const {
+    const auto *FPT = getType()->getAs<FunctionProtoType>();
+    if (FPT && FPT->isVariadic())
+      return FPT->getEllipsisLoc();
+    return SourceLocation();
+  }
+
   SourceRange getSourceRange() const override LLVM_READONLY;
 
   // Function definitions.
@@ -2387,6 +2395,12 @@ public:
   /// function return type. This may omit qualifiers and other information with
   /// limited representation in the AST.
   SourceRange getReturnTypeSourceRange() const;
+
+  /// Attempt to compute an informative source range covering the
+  /// function parameters, including the ellipsis of a variadic function.
+  /// The source range excludes the parentheses, and is invalid if there are
+  /// no parameters and no ellipsis.
+  SourceRange getParametersSourceRange() const;
 
   /// Get the declared return type, which may differ from the actual return
   /// type if the return type is deduced.
