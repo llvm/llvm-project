@@ -9,6 +9,8 @@
 
 // Ensure that functions marked as signal frames are reported as such.
 
+// UNSUPPORTED: libunwind-arm-ehabi
+
 #include <assert.h>
 #include <stdlib.h>
 #include <libunwind.h>
@@ -20,9 +22,7 @@ void test() {
   unw_getcontext(&uc);
   unw_init_local(&cursor, &uc);
   assert(unw_step(&cursor) > 0);
-#if !defined(_LIBUNWIND_ARM_EHABI)
   assert(unw_is_signal_frame(&cursor));
-#endif
 }
 
 int main() {
