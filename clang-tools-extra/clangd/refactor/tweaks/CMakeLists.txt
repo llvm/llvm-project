@@ -15,6 +15,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   AnnotateHighlightings.cpp
   DumpAST.cpp
   DefineInline.cpp
+  DefineOutline.cpp
   ExpandAutoType.cpp
   ExpandMacro.cpp
   ExtractFunction.cpp
