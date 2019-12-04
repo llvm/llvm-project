@@ -9,7 +9,9 @@
 // The implementation for the data dependence graph.
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/DDG.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -179,19 +181,28 @@ using BasicBlockListType = SmallVector<BasicBlock *, 8>;
 
 DataDependenceGraph::DataDependenceGraph(Function &F, DependenceInfo &D)
     : DependenceGraphInfo(F.getName().str(), D) {
+  // Put the basic blocks in program order for correct dependence
+  // directions.
   BasicBlockListType BBList;
-  for (auto &BB : F.getBasicBlockList())
-    BBList.push_back(&BB);
+  for (auto &SCC : make_range(scc_begin(&F), scc_end(&F)))
+    for (BasicBlock * BB : SCC)
+      BBList.push_back(BB);
+  std::reverse(BBList.begin(), BBList.end());
   DDGBuilder(*this, D, BBList).populate();
 }
 
-DataDependenceGraph::DataDependenceGraph(const Loop &L, DependenceInfo &D)
+DataDependenceGraph::DataDependenceGraph(Loop &L, LoopInfo &LI,
+                                         DependenceInfo &D)
     : DependenceGraphInfo(Twine(L.getHeader()->getParent()->getName() + "." +
                                 L.getHeader()->getName())
                               .str(),
                           D) {
+  // Put the basic blocks in program order for correct dependence
+  // directions.
+  LoopBlocksDFS DFS(&L);
+  DFS.perform(&LI);
   BasicBlockListType BBList;
-  for (BasicBlock *BB : L.blocks())
+  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO()))
     BBList.push_back(BB);
   DDGBuilder(*this, D, BBList).populate();
 }
@@ -259,7 +270,7 @@ DDGAnalysis::Result DDGAnalysis::run(Loop &L, LoopAnalysisManager &AM,
                                      LoopStandardAnalysisResults &AR) {
   Function *F = L.getHeader()->getParent();
   DependenceInfo DI(F, &AR.AA, &AR.SE, &AR.LI);
-  return std::make_unique<DataDependenceGraph>(L, DI);
+  return std::make_unique<DataDependenceGraph>(L, AR.LI, DI);
 }
 AnalysisKey DDGAnalysis::Key;
 
