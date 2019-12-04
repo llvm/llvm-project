@@ -1868,6 +1868,110 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
     })cpp");
 }
 
+TEST_F(DefineOutlineTest, FailsWithoutSource) {
+  FileName = "Test.hpp";
+  llvm::StringRef Test = "void fo^o() { return; }";
+  llvm::StringRef Expected =
+      "fail: Couldn't find a suitable implementation file.";
+  EXPECT_EQ(apply(Test), Expected);
+}
+
+TEST_F(DefineOutlineTest, ApplyTest) {
+  llvm::StringMap<std::string> EditedFiles;
+  ExtraFiles["Test.cpp"] = "";
+  FileName = "Test.hpp";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      // Simple check
+      {
+          "void fo^o() { return; }",
+          "void foo() ;",
+          "void foo() { return; }",
+      },
+      // Templated function.
+      {
+          "template <typename T> void fo^o(T, T x) { return; }",
+          "template <typename T> void foo(T, T x) ;",
+          "template <typename T> void foo(T, T x) { return; }",
+      },
+      {
+          "template <typename> void fo^o() { return; }",
+          "template <typename> void foo() ;",
+          "template <typename> void foo() { return; }",
+      },
+      // Template specialization.
+      {
+          R"cpp(
+            template <typename> void foo();
+            template <> void fo^o<int>() { return; })cpp",
+          R"cpp(
+            template <typename> void foo();
+            template <> void foo<int>() ;)cpp",
+          "template <> void foo<int>() { return; }",
+      },
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, HandleMacros) {
+  llvm::StringMap<std::string> EditedFiles;
+  ExtraFiles["Test.cpp"] = "";
+  FileName = "Test.hpp";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {R"cpp(
+          #define BODY { return; }
+          void f^oo()BODY)cpp",
+       R"cpp(
+          #define BODY { return; }
+          void foo();)cpp",
+       "void foo()BODY"},
+
+      {R"cpp(
+          #define BODY return;
+          void f^oo(){BODY})cpp",
+       R"cpp(
+          #define BODY return;
+          void foo();)cpp",
+       "void foo(){BODY}"},
+
+      {R"cpp(
+          #define TARGET void foo()
+          [[TARGET]]{ return; })cpp",
+       R"cpp(
+          #define TARGET void foo()
+          TARGET;)cpp",
+       "TARGET{ return; }"},
+
+      {R"cpp(
+          #define TARGET foo
+          void [[TARGET]](){ return; })cpp",
+       R"cpp(
+          #define TARGET foo
+          void TARGET();)cpp",
+       "void TARGET(){ return; }"},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
