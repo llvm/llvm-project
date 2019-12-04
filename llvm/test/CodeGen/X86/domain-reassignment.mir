@@ -167,7 +167,7 @@ body:             |
   bb.1.if:
     successors: %bb.3(0x80000000)
 
-    %14 = VCMPSSZrr %7, %8, 0
+    %14 = VCMPSSZrr %7, %8, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 
@@ -177,7 +177,7 @@ body:             |
 
   bb.2.else:
     successors: %bb.3(0x80000000)
-    %12 = VCMPSSZrr %9, %10, 0
+    %12 = VCMPSSZrr %9, %10, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 
@@ -292,7 +292,7 @@ body:             |
     %3 = COPY $zmm2
     %4 = COPY $zmm3
 
-    %5 = VCMPPDZrri %3, %4, 0
+    %5 = VCMPPDZrri %3, %4, 0, implicit $mxcsr
     %6 = COPY %5
     %7 = COPY %6.sub_8bit
 
@@ -411,7 +411,7 @@ body:             |
     %3 = COPY $zmm2
     %4 = COPY $zmm3
 
-    %5 = VCMPPSZrri %3, %4, 0
+    %5 = VCMPPSZrri %3, %4, 0, implicit $mxcsr
     %6 = COPY %5
     %7 = COPY %6.sub_16bit
 
