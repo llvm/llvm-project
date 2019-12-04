@@ -221,10 +221,10 @@ let Predicates = [HasSVE] in {
   defm INSR_ZV : sve_int_perm_insrv<"insr", AArch64insr>;
   def  EXT_ZZI : sve_int_perm_extract_i<"ext">;
 
-  defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit">;
-  defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb">;
-  defm REVH_ZPmZ : sve_int_perm_rev_revh<"revh">;
-  defm REVW_ZPmZ : sve_int_perm_rev_revw<"revw">;
+  defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", int_aarch64_sve_rbit>;
+  defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", int_aarch64_sve_revb, bswap>;
+  defm REVH_ZPmZ : sve_int_perm_rev_revh<"revh", int_aarch64_sve_revh>;
+  defm REVW_ZPmZ : sve_int_perm_rev_revw<"revw", int_aarch64_sve_revw>;
 
   defm REV_PP : sve_int_perm_reverse_p<"rev">;
   defm REV_ZZ : sve_int_perm_reverse_z<"rev">;

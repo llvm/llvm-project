@@ -318,6 +318,15 @@ class SVE_4_Op_Imm_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
 
 def SVEDup0Undef : ComplexPattern<i64, 0, "SelectDupZeroOrUndef", []>;
 
+//
+// Common but less generic patterns.
+//
+
+class SVE_1_Op_AllActive_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
+                             Instruction inst, Instruction ptrue>
+: Pat<(vtd (op vt1:$Op1)),
+      (inst (IMPLICIT_DEF), (ptrue 31), $Op1)>;
+
 //===----------------------------------------------------------------------===//
 // SVE Predicate Misc Group
 //===----------------------------------------------------------------------===//
@@ -4837,26 +4846,46 @@ class sve_int_perm_rev<bits<2> sz8_64, bits<2> opc, string asm,
   let ElementSize = zprty.ElementSize;
 }
 
-multiclass sve_int_perm_rev_rbit<string asm> {
+multiclass sve_int_perm_rev_rbit<string asm, SDPatternOperator op> {
   def _B : sve_int_perm_rev<0b00, 0b11, asm, ZPR8>;
   def _H : sve_int_perm_rev<0b01, 0b11, asm, ZPR16>;
   def _S : sve_int_perm_rev<0b10, 0b11, asm, ZPR32>;
   def _D : sve_int_perm_rev<0b11, 0b11, asm, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i8, nxv16i1, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i1,  nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve_int_perm_rev_revb<string asm> {
+multiclass sve_int_perm_rev_revb<string asm,
+                                 SDPatternOperator int_op,
+                                 SDPatternOperator ir_op> {
   def _H : sve_int_perm_rev<0b01, 0b00, asm, ZPR16>;
   def _S : sve_int_perm_rev<0b10, 0b00, asm, ZPR32>;
   def _D : sve_int_perm_rev<0b11, 0b00, asm, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv8i16, int_op, nxv8i16, nxv8i1,  nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, int_op, nxv4i32, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, int_op, nxv2i64, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
+
+  def : SVE_1_Op_AllActive_Pat<nxv8i16, ir_op, nxv8i16, !cast<Instruction>(NAME # _H), PTRUE_H>;
+  def : SVE_1_Op_AllActive_Pat<nxv4i32, ir_op, nxv4i32, !cast<Instruction>(NAME # _S), PTRUE_S>;
+  def : SVE_1_Op_AllActive_Pat<nxv2i64, ir_op, nxv2i64, !cast<Instruction>(NAME # _D), PTRUE_D>;
 }
 
-multiclass sve_int_perm_rev_revh<string asm> {
+multiclass sve_int_perm_rev_revh<string asm, SDPatternOperator op> {
   def _S : sve_int_perm_rev<0b10, 0b01, asm, ZPR32>;
   def _D : sve_int_perm_rev<0b11, 0b01, asm, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve_int_perm_rev_revw<string asm> {
+multiclass sve_int_perm_rev_revw<string asm, SDPatternOperator op> {
   def _D : sve_int_perm_rev<0b11, 0b10, asm, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve_int_perm_cpy_r<bits<2> sz8_64, string asm, ZPRRegOp zprty,
