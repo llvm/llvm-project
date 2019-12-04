@@ -880,6 +880,20 @@ Examining Variables
                </td>
          </tr>
 
+         <tr>
+               <td class="header" colspan="2">Print an array of integers in memory, assuming we have a pointer like "int *ptr".</td>
+         </tr>
+         <tr>
+               <td class="content">
+                  <b>(gdb)</b> p *ptr@10
+                  <br>
+               </td>
+               <td class="content">
+                  <b>(lldb)</b> parray 10 ptr
+                  <br>
+               </td>
+         </tr>
+
       </tbody>
    </table>
 
