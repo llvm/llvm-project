@@ -150,14 +150,13 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
-    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[COPY]](s32), [[COPY1]]
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
     ; MIPS32: [[COPY5:%[0-9]+]]:_(s32) = COPY [[C]](s32)
     ; MIPS32: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY4]], [[COPY5]]
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY6:%[0-9]+]]:_(s32) = COPY [[XOR]](s32)
-    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C1]]
+    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C]]
     ; MIPS32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[COPY2]], [[COPY3]]
     ; MIPS32: $v0 = COPY [[SELECT]](s32)
     ; MIPS32: RetRA implicit $v0

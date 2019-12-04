@@ -3,6 +3,8 @@
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=thumbv7-apple-ios5.0 -target-abi apcs-gnu | FileCheck --check-prefix=CHECKIOS5 %s
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=wasm32-unknown-unknown \
 //RUN:   | FileCheck --check-prefix=CHECKARM %s
+//RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-unknown-fuchsia | FileCheck --check-prefix=CHECKFUCHSIA %s
+//RUN: %clang_cc1 %s -emit-llvm -o - -triple=aarch64-unknown-fuchsia | FileCheck --check-prefix=CHECKFUCHSIA %s
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=i386-pc-win32 -fno-rtti | FileCheck --check-prefix=CHECKMS %s
 // FIXME: these tests crash on the bots when run with -triple=x86_64-pc-win32
 
@@ -45,6 +47,11 @@ B::~B() { }
 // CHECKIOS5-LABEL: define %class.B* @_ZN1BD2Ev(%class.B* %this)
 // CHECKIOS5-LABEL: define %class.B* @_ZN1BD1Ev(%class.B* %this)
 
+// CHECKFUCHSIA-LABEL: define %class.B* @_ZN1BC2EPi(%class.B* returned %this, i32* %i)
+// CHECKFUCHSIA-LABEL: define %class.B* @_ZN1BC1EPi(%class.B* returned %this, i32* %i)
+// CHECKFUCHSIA-LABEL: define %class.B* @_ZN1BD2Ev(%class.B* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.B* @_ZN1BD1Ev(%class.B* returned %this)
+
 // CHECKMS-LABEL: define dso_local x86_thiscallcc %class.B* @"??0B@@QAE@PAH@Z"(%class.B* returned %this, i32* %i)
 // CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1B@@UAE@XZ"(%class.B* %this)
 
@@ -83,6 +90,14 @@ C::~C() { }
 // CHECKIOS5-LABEL: define void @_ZN1CD0Ev(%class.C* %this)
 // CHECKIOS5-LABEL: define void @_ZThn8_N1CD0Ev(%class.C* %this)
 
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZN1CC2EPiPc(%class.C* returned %this, i32* %i, i8* %c)
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZN1CC1EPiPc(%class.C* returned %this, i32* %i, i8* %c)
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZN1CD2Ev(%class.C* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZN1CD1Ev(%class.C* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZThn16_N1CD1Ev(%class.C* %this)
+// CHECKFUCHSIA-LABEL: define void @_ZN1CD0Ev(%class.C* %this)
+// CHECKFUCHSIA-LABEL: define void @_ZThn16_N1CD0Ev(%class.C* %this)
+
 // CHECKMS-LABEL: define dso_local x86_thiscallcc %class.C* @"??0C@@QAE@PAHPAD@Z"(%class.C* returned %this, i32* %i, i8* %c)
 // CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1C@@UAE@XZ"(%class.C* %this)
 
@@ -110,6 +125,11 @@ D::~D() { }
 // CHECKIOS5-LABEL: define %class.D* @_ZN1DD2Ev(%class.D* %this, i8** %vtt)
 // CHECKIOS5-LABEL: define %class.D* @_ZN1DD1Ev(%class.D* %this)
 
+// CHECKFUCHSIA-LABEL: define %class.D* @_ZN1DC2Ev(%class.D* returned %this, i8** %vtt)
+// CHECKFUCHSIA-LABEL: define %class.D* @_ZN1DC1Ev(%class.D* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.D* @_ZN1DD2Ev(%class.D* returned %this, i8** %vtt)
+// CHECKFUCHSIA-LABEL: define %class.D* @_ZN1DD1Ev(%class.D* returned %this)
+
 // CHECKMS-LABEL: define dso_local x86_thiscallcc %class.D* @"??0D@@QAE@XZ"(%class.D* returned %this, i32 %is_most_derived)
 // CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1D@@UAE@XZ"(%class.D* %this)
 
@@ -127,15 +147,15 @@ void test_destructor() {
   e2->~E();
 }
 
-// CHECKARM-LABEL: define void @_Z15test_destructorv()
+// CHECKARM-LABEL,CHECKFUCHSIA-LABEL: define void @_Z15test_destructorv()
 
 // Verify that virtual calls to destructors are not marked with a 'returned'
 // this parameter at the call site...
-// CHECKARM: [[VFN:%.*]] = getelementptr inbounds %class.E* (%class.E*)*, %class.E* (%class.E*)**
-// CHECKARM: [[THUNK:%.*]] = load %class.E* (%class.E*)*, %class.E* (%class.E*)** [[VFN]]
-// CHECKARM: call %class.E* [[THUNK]](%class.E* %
+// CHECKARM,CHECKFUCHSIA: [[VFN:%.*]] = getelementptr inbounds %class.E* (%class.E*)*, %class.E* (%class.E*)**
+// CHECKARM,CHECKFUCHSIA: [[THUNK:%.*]] = load %class.E* (%class.E*)*, %class.E* (%class.E*)** [[VFN]]
+// CHECKARM,CHECKFUCHSIA: call %class.E* [[THUNK]](%class.E* %
 
 // ...but static calls create declarations with 'returned' this
-// CHECKARM: {{%.*}} = call %class.E* @_ZN1ED1Ev(%class.E* %
+// CHECKARM,CHECKFUCHSIA: {{%.*}} = call %class.E* @_ZN1ED1Ev(%class.E* %
 
-// CHECKARM: declare %class.E* @_ZN1ED1Ev(%class.E* returned)
+// CHECKARM,CHECKFUCHSIA: declare %class.E* @_ZN1ED1Ev(%class.E* returned)

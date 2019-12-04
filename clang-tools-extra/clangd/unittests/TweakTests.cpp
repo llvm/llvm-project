@@ -269,7 +269,7 @@ TEST_F(ExtractVariableTest, Test) {
   EXPECT_UNAVAILABLE(UnavailableCases);
 
   // vector of pairs of input and output strings
-  const std::vector<std::pair<llvm::StringLiteral, llvm::StringLiteral>>
+  const std::vector<std::pair<std::string, std::string>>
       InputOutputs = {
           // extraction from variable declaration/assignment
           {R"cpp(void varDecl() {
@@ -321,17 +321,10 @@ TEST_F(ExtractVariableTest, Test) {
                    if(1)
                     LOOP(5 + [[3]])
                  })cpp",
-           /*FIXME: It should be extracted like this. SelectionTree needs to be
-             * fixed for macros.
             R"cpp(#define LOOP(x) while (1) {a = x;}
-                void f(int a) {
-                  auto dummy = 3; if(1)
-                   LOOP(5 + dummy)
-                })cpp"},*/
-           R"cpp(#define LOOP(x) while (1) {a = x;}
                  void f(int a) {
-                   auto dummy = LOOP(5 + 3); if(1)
-                    dummy
+                   auto dummy = 3; if(1)
+                    LOOP(5 + dummy)
                  })cpp"},
           {R"cpp(#define LOOP(x) do {x;} while(1);
                  void f(int a) {
@@ -644,13 +637,18 @@ void f(const int c) {
   )cpp";
   EXPECT_EQ(apply(TemplateFailInput), "unavailable");
 
-  // FIXME: This should be extractable after selectionTree works correctly for
-  // macros (currently it doesn't select anything for the following case)
-  std::string MacroFailInput = R"cpp(
+  std::string MacroInput = R"cpp(
     #define F(BODY) void f() { BODY }
     F ([[int x = 0;]])
   )cpp";
-  EXPECT_EQ(apply(MacroFailInput), "unavailable");
+  std::string MacroOutput = R"cpp(
+    #define F(BODY) void f() { BODY }
+    void extracted() {
+int x = 0;
+}
+F (extracted();)
+  )cpp";
+  EXPECT_EQ(apply(MacroInput), MacroOutput);
 
   // Shouldn't crash.
   EXPECT_EQ(apply("void f([[int a]]);"), "unavailable");
@@ -1809,6 +1807,273 @@ TEST_F(DefineInlineTest, QualifyWithUsingDirectives) {
   EXPECT_EQ(apply(Test), Expected) << Test;
 }
 
+TWEAK_TEST(DefineOutline);
+TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
+  FileName = "Test.cpp";
+  // Not available unless in a header file.
+  EXPECT_UNAVAILABLE(R"cpp(
+    [[void [[f^o^o]]() [[{
+      return;
+    }]]]])cpp");
+
+  FileName = "Test.hpp";
+  // Not available unless function name or fully body is selected.
+  EXPECT_UNAVAILABLE(R"cpp(
+    // Not a definition
+    vo^i[[d^ ^f]]^oo();
+
+    [[vo^id ]]foo[[()]] {[[
+      [[(void)(5+3);
+      return;]]
+    }]])cpp");
+
+  // Available even if there are no implementation files.
+  EXPECT_AVAILABLE(R"cpp(
+    [[void [[f^o^o]]() [[{
+      return;
+    }]]]])cpp");
+
+  // Not available for out-of-line methods.
+  EXPECT_UNAVAILABLE(R"cpp(
+    class Bar {
+      void baz();
+    };
+
+    [[void [[Bar::[[b^a^z]]]]() [[{
+      return;
+    }]]]])cpp");
+
+  // Basic check for function body and signature.
+  EXPECT_AVAILABLE(R"cpp(
+    class Bar {
+      [[void [[f^o^o]]() [[{ return; }]]]]
+    };
+
+    void foo();
+    [[void [[f^o^o]]() [[{
+      return;
+    }]]]])cpp");
+
+  // Not available on defaulted/deleted members.
+  EXPECT_UNAVAILABLE(R"cpp(
+    class Foo {
+      Fo^o() = default;
+      F^oo(const Foo&) = delete;
+    };)cpp");
+
+  // Not available within templated classes, as it is hard to spell class name
+  // out-of-line in such cases.
+  EXPECT_UNAVAILABLE(R"cpp(
+    template <typename> struct Foo { void fo^o(){} };
+    })cpp");
+}
+
+TEST_F(DefineOutlineTest, FailsWithoutSource) {
+  FileName = "Test.hpp";
+  llvm::StringRef Test = "void fo^o() { return; }";
+  llvm::StringRef Expected =
+      "fail: Couldn't find a suitable implementation file.";
+  EXPECT_EQ(apply(Test), Expected);
+}
+
+TEST_F(DefineOutlineTest, ApplyTest) {
+  llvm::StringMap<std::string> EditedFiles;
+  ExtraFiles["Test.cpp"] = "";
+  FileName = "Test.hpp";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      // Simple check
+      {
+          "void fo^o() { return; }",
+          "void foo() ;",
+          "void foo() { return; }",
+      },
+      // Templated function.
+      {
+          "template <typename T> void fo^o(T, T x) { return; }",
+          "template <typename T> void foo(T, T x) ;",
+          "template <typename T> void foo(T, T x) { return; }",
+      },
+      {
+          "template <typename> void fo^o() { return; }",
+          "template <typename> void foo() ;",
+          "template <typename> void foo() { return; }",
+      },
+      // Template specialization.
+      {
+          R"cpp(
+            template <typename> void foo();
+            template <> void fo^o<int>() { return; })cpp",
+          R"cpp(
+            template <typename> void foo();
+            template <> void foo<int>() ;)cpp",
+          "template <> void foo<int>() { return; }",
+      },
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, HandleMacros) {
+  llvm::StringMap<std::string> EditedFiles;
+  ExtraFiles["Test.cpp"] = "";
+  FileName = "Test.hpp";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {R"cpp(
+          #define BODY { return; }
+          void f^oo()BODY)cpp",
+       R"cpp(
+          #define BODY { return; }
+          void foo();)cpp",
+       "void foo()BODY"},
+
+      {R"cpp(
+          #define BODY return;
+          void f^oo(){BODY})cpp",
+       R"cpp(
+          #define BODY return;
+          void foo();)cpp",
+       "void foo(){BODY}"},
+
+      {R"cpp(
+          #define TARGET void foo()
+          [[TARGET]]{ return; })cpp",
+       R"cpp(
+          #define TARGET void foo()
+          TARGET;)cpp",
+       "TARGET{ return; }"},
+
+      {R"cpp(
+          #define TARGET foo
+          void [[TARGET]](){ return; })cpp",
+       R"cpp(
+          #define TARGET foo
+          void TARGET();)cpp",
+       "void TARGET(){ return; }"},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, QualifyReturnValue) {
+  FileName = "Test.hpp";
+  ExtraFiles["Test.cpp"] = "";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {R"cpp(
+        namespace a { class Foo; }
+        using namespace a;
+        Foo fo^o() { return; })cpp",
+       R"cpp(
+        namespace a { class Foo; }
+        using namespace a;
+        Foo foo() ;)cpp",
+       "a::Foo foo() { return; }"},
+      {R"cpp(
+        namespace a {
+          class Foo {
+            class Bar {};
+            Bar fo^o() { return {}; }
+          };
+        })cpp",
+       R"cpp(
+        namespace a {
+          class Foo {
+            class Bar {};
+            Bar foo() ;
+          };
+        })cpp",
+       "a::Foo::Bar a::Foo::foo() { return {}; }\n"},
+      {R"cpp(
+        class Foo;
+        Foo fo^o() { return; })cpp",
+       R"cpp(
+        class Foo;
+        Foo foo() ;)cpp",
+       "Foo foo() { return; }"},
+  };
+  llvm::StringMap<std::string> EditedFiles;
+  for (auto &Case : Cases) {
+    apply(Case.Test, &EditedFiles);
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, QualifyFunctionName) {
+  FileName = "Test.hpp";
+  struct {
+    llvm::StringRef TestHeader;
+    llvm::StringRef TestSource;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {
+          R"cpp(
+            namespace a {
+              namespace b {
+                class Foo {
+                  void fo^o() {}
+                };
+              }
+            })cpp",
+          "",
+          R"cpp(
+            namespace a {
+              namespace b {
+                class Foo {
+                  void foo() ;
+                };
+              }
+            })cpp",
+          "void a::b::Foo::foo() {}\n",
+      },
+      {
+          "namespace a { namespace b { void f^oo() {} } }",
+          "namespace a{}",
+          "namespace a { namespace b { void foo() ; } }",
+          "namespace a{void b::foo() {} }",
+      },
+      {
+          "namespace a { namespace b { void f^oo() {} } }",
+          "using namespace a;",
+          "namespace a { namespace b { void foo() ; } }",
+          // FIXME: Take using namespace directives in the source file into
+          // account. This can be spelled as b::foo instead.
+          "using namespace a;void a::b::foo() {} ",
+      },
+  };
+  llvm::StringMap<std::string> EditedFiles;
+  for (auto &Case : Cases) {
+    ExtraFiles["Test.cpp"] = Case.TestSource;
+    EXPECT_EQ(apply(Case.TestHeader, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)))
+        << Case.TestHeader;
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

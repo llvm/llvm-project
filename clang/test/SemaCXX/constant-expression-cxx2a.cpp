@@ -18,6 +18,7 @@ namespace std {
 [[nodiscard]] void *operator new(std::size_t, std::align_val_t, const std::nothrow_t&) noexcept;
 [[nodiscard]] void *operator new[](std::size_t, const std::nothrow_t&) noexcept;
 [[nodiscard]] void *operator new[](std::size_t, std::align_val_t, const std::nothrow_t&) noexcept;
+[[nodiscard]] void *operator new[](std::size_t, std::align_val_t);
 void operator delete(void*, const std::nothrow_t&) noexcept;
 void operator delete(void*, std::align_val_t, const std::nothrow_t&) noexcept;
 void operator delete[](void*, const std::nothrow_t&) noexcept;
@@ -1050,7 +1051,7 @@ namespace dynamic_alloc {
     // Ensure that we don't try to evaluate these for overflow and crash. These
     // are all value-dependent expressions.
     p = new char[n];
-    p = new (n) char[n];
+    p = new ((std::align_val_t)n) char[n];
     p = new char(n);
   }
 }

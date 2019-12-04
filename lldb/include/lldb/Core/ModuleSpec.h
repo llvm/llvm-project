@@ -207,7 +207,7 @@ public:
       if (dumped_something)
         strm.PutCString(", ");
       strm.Printf("arch = ");
-      m_arch.DumpTriple(strm);
+      m_arch.DumpTriple(strm.AsRawOstream());
       dumped_something = true;
     }
     if (m_uuid.IsValid()) {

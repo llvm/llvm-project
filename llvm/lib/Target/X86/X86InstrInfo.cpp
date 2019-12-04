@@ -1761,10 +1761,11 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VCMPPSZ128rrik:
   case X86::VCMPPDZ256rrik:
   case X86::VCMPPSZ256rrik: {
-    unsigned Imm = MI.getOperand(MI.getNumOperands() - 1).getImm() & 0x1f;
+    unsigned Imm =
+                MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 0x1f;
     Imm = X86::getSwappedVCMPImm(Imm);
     auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(MI.getNumOperands() - 1).setImm(Imm);
+    WorkingMI.getOperand(MI.getNumExplicitOperands() - 1).setImm(Imm);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
   }

@@ -103,6 +103,12 @@ public:
     /// of these details is necessarily final yet.
     WebAssembly,
 
+    /// The Fuchsia ABI is a modified version of the Itanium ABI.
+    ///
+    /// The relevant changes from the Itanium ABI are:
+    ///   - constructors and destructors return 'this', as in ARM.
+    Fuchsia,
+
     /// The Microsoft ABI is the ABI used by Microsoft Visual Studio (and
     /// compatible compilers).
     ///
@@ -133,6 +139,7 @@ public:
   /// Does this ABI generally fall into the Itanium family of ABIs?
   bool isItaniumFamily() const {
     switch (getKind()) {
+    case Fuchsia:
     case GenericAArch64:
     case GenericItanium:
     case GenericARM:
@@ -152,6 +159,7 @@ public:
   /// Is this ABI an MSVC-compatible ABI?
   bool isMicrosoft() const {
     switch (getKind()) {
+    case Fuchsia:
     case GenericAArch64:
     case GenericItanium:
     case GenericARM:
@@ -182,6 +190,7 @@ public:
     case WebAssembly:
       // WebAssembly doesn't require any special alignment for member functions.
       return false;
+    case Fuchsia:
     case GenericARM:
     case GenericAArch64:
     case GenericMIPS:
@@ -257,6 +266,7 @@ public:
   /// done on a generic Itanium platform.
   bool canKeyFunctionBeInline() const {
     switch (getKind()) {
+    case Fuchsia:
     case GenericARM:
     case iOS64:
     case WebAssembly:
@@ -309,6 +319,7 @@ public:
 
     // iOS on ARM64 and WebAssembly use the C++11 POD rules.  They do not honor
     // the Itanium exception about classes with over-large bitfields.
+    case Fuchsia:
     case iOS64:
     case WebAssembly:
     case WatchOS:

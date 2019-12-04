@@ -1953,6 +1953,15 @@ struct FormatStyle {
   /// \endcode
   bool SpacesInAngles;
 
+  /// If ``true``, spaces will be inserted around if/for/switch/while
+  /// conditions.
+  /// \code
+  ///    true:                                  false:
+  ///    if ( a )  { ... }              vs.     if (a) { ... }
+  ///    while ( i < 5 )  { ... }               while (i < 5) { ... }
+  /// \endcode
+  bool SpacesInConditionalStatement;
+
   /// If ``true``, spaces are inserted inside container literals (e.g.
   /// ObjC and Javascript array and dict literals).
   /// \code{.js}
@@ -2155,6 +2164,7 @@ struct FormatStyle {
            SpaceInEmptyParentheses == R.SpaceInEmptyParentheses &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
+           SpacesInConditionalStatement == R.SpacesInConditionalStatement &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
            SpacesInCStyleCastParentheses == R.SpacesInCStyleCastParentheses &&
            SpacesInParentheses == R.SpacesInParentheses &&

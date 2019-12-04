@@ -4,7 +4,7 @@
 // RUN: %hmaptool write %S/Inputs/framework-public-includes-private/a.hmap.json %t/a.hmap
 // RUN: %hmaptool write %S/Inputs/framework-public-includes-private/z.hmap.json %t/z.hmap
 
-// RUN: sed -e "s@TEST_DIR@%/S/Inputs/framework-public-includes-private@g" \
+// RUN: sed -e "s@TEST_DIR@%{/S:regex_replacement}/Inputs/framework-public-includes-private@g" \
 // RUN:   %S/Inputs/framework-public-includes-private/z.yaml > %t/z.yaml
 
 // The output with and without modules should be the same, without modules first.

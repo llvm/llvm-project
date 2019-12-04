@@ -127,4 +127,18 @@ TEST(KnownBitsTest, AddSubExhaustive) {
   TestAddSubExhaustive(false);
 }
 
+TEST(KnownBitsTest, GetMinMaxVal) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    APInt Min = APInt::getMaxValue(Bits);
+    APInt Max = APInt::getMinValue(Bits);
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      Min = APIntOps::umin(Min, N);
+      Max = APIntOps::umax(Max, N);
+    });
+    EXPECT_EQ(Min, Known.getMinValue());
+    EXPECT_EQ(Max, Known.getMaxValue());
+  });
+}
+
 } // end anonymous namespace

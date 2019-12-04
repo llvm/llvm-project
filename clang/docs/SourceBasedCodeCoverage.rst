@@ -302,3 +302,37 @@ Drawbacks and limitations
   If the call to ``may_throw()`` propagates an exception into ``f``, the code
   coverage tool may mark the ``return`` statement as executed even though it is
   not. A call to ``longjmp()`` can have similar effects.
+
+Clang implementation details
+============================
+
+This section may be of interest to those wishing to understand or improve
+the clang code coverage implementation.
+
+Gap regions
+-----------
+
+Gap regions are source regions with counts. A reporting tool cannot set a line
+execution count to the count from a gap region unless that region is the only
+one on a line.
+
+Gap regions are used to eliminate unnatural artifacts in coverage reports, such
+as red "unexecuted" highlights present at the end of an otherwise covered line,
+or blue "executed" highlights present at the start of a line that is otherwise
+not executed.
+
+Switch statements
+-----------------
+
+The region mapping for a switch body consists of a gap region that covers the
+entire body (starting from the '{' in 'switch (...) {', and terminating where the
+last case ends). This gap region has a zero count: this causes "gap" areas in
+between case statements, which contain no executable code, to appear uncovered.
+
+When a switch case is visited, the parent region is extended: if the parent
+region has no start location, its start location becomes the start of the case.
+This is used to support switch statements without a ``CompoundStmt`` body, in
+which the switch body and the single case share a count.
+
+For switches with ``CompoundStmt`` bodies, a new region is created at the start
+of each switch case.

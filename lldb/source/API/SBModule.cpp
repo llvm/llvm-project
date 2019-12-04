@@ -245,7 +245,7 @@ bool SBModule::GetDescription(SBStream &description) {
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
-    module_sp->GetDescription(&strm);
+    module_sp->GetDescription(strm.AsRawOstream());
   } else
     strm.PutCString("No value");
 

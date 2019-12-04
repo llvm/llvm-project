@@ -214,8 +214,7 @@ public:
     ValidatorContainer::RegexMatchForEachCallback m_validator_regex;
   };
 
-  TypeCategoryImpl(IFormatChangeListener *clist, ConstString name,
-                   std::initializer_list<lldb::LanguageType> langs = {});
+  TypeCategoryImpl(IFormatChangeListener *clist, ConstString name);
 
   template <typename T> void ForEach(const ForEachCallbacks<T> &foreach) {
     GetTypeFormatsContainer()->ForEach(foreach.GetFormatExactCallback());
@@ -358,8 +357,6 @@ public:
   lldb::LanguageType GetLanguageAtIndex(size_t idx);
 
   void AddLanguage(lldb::LanguageType lang);
-
-  bool HasLanguage(lldb::LanguageType lang);
 
   std::string GetDescription();
 

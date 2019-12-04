@@ -1105,6 +1105,20 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             ('%/T', tmpDir.replace('\\', '/')),
             ])
 
+    # "%{/[STpst]:regex_replacement}" should be normalized like "%/[STpst]" but we're
+    # also in a regex replacement context of a s@@@ regex.
+    def regex_escape(s):
+        s = s.replace('@', '\@')
+        s = s.replace('&', '\&')
+        return s
+    substitutions.extend([
+            ('%{/s:regex_replacement}', regex_escape(sourcepath.replace('\\', '/'))),
+            ('%{/S:regex_replacement}', regex_escape(sourcedir.replace('\\', '/'))),
+            ('%{/p:regex_replacement}', regex_escape(sourcedir.replace('\\', '/'))),
+            ('%{/t:regex_replacement}', regex_escape(tmpBase.replace('\\', '/')) + '.tmp'),
+            ('%{/T:regex_replacement}', regex_escape(tmpDir.replace('\\', '/'))),
+            ])
+
     # "%:[STpst]" are normalized paths without colons and without a leading
     # slash.
     substitutions.extend([
