@@ -40,6 +40,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
+#include "gmock/gmock.h"
 #include <cassert>
 #include <cstdlib>
 #include <gmock/gmock.h>
@@ -661,6 +662,20 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("not_mapped")),
               ValueIs(SameRange(findSpelled("not_mapped"))));
+}
+
+TEST_F(TokenBufferTest, ExpandedTokensForRange) {
+  recordTokens(R"cpp(
+    #define SIGN(X) X##_washere
+    A SIGN(B) C SIGN(D) E SIGN(F) G
+  )cpp");
+
+  SourceRange R(findExpanded("C").front().location(),
+                findExpanded("F_washere").front().location());
+  // Sanity check: expanded and spelled tokens are stored separately.
+  EXPECT_THAT(Buffer.expandedTokens(R),
+              SameRange(findExpanded("C D_washere E F_washere")));
+  EXPECT_THAT(Buffer.expandedTokens(SourceRange()), testing::IsEmpty());
 }
 
 TEST_F(TokenBufferTest, ExpansionStartingAt) {
