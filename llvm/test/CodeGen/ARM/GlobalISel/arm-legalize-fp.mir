@@ -1131,10 +1131,9 @@ body:             |
     ; SOFT-NOT: G_FCMP
     ; For soft float we just need to return a '-1' constant, but the truncation
     ; to 1 bit is converted by the combiner to the following masking sequence.
-    ; SOFT: [[R:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; SOFT: [[MASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; SOFT: [[RCOPY:%[0-9]+]]:_(s32) = COPY [[R]](s32)
-    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_AND [[RCOPY]], [[MASK]]
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_AND [[RCOPY]], [[R]]
     ; SOFT-NOT: G_FCMP
     ; CHECK: $r0 = COPY [[REXT]]
 ...
@@ -1853,11 +1852,10 @@ body:             |
     ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(true), [[X]](s64), [[Y]]
     ; HARD: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     ; SOFT-NOT: G_FCMP
-    ; SOFT: [[R:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
     ; The result needs to be truncated, and the combiner turns the truncation
     ; into the following masking sequence.
     ; SOFT: [[MASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; SOFT: [[RCOPY:%[0-9]+]]:_(s32) = COPY [[R]]
+    ; SOFT: [[RCOPY:%[0-9]+]]:_(s32) = COPY [[MASK]]
     ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_AND [[RCOPY]], [[MASK]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)

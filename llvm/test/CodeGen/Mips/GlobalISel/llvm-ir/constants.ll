@@ -71,7 +71,7 @@ entry:
 define zeroext i1 @i1_true() {
 ; MIPS32-LABEL: i1_true:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $1, $zero, 65535
+; MIPS32-NEXT:    ori $1, $zero, 1
 ; MIPS32-NEXT:    andi $2, $1, 1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

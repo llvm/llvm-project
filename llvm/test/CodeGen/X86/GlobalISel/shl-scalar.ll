@@ -162,7 +162,7 @@ define i1 @test_shl_i1_imm1(i32 %arg1) {
 ; X64-LABEL: test_shl_i1_imm1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movb $-1, %cl
+; X64-NEXT:    movb $1, %cl
 ; X64-NEXT:    andb $1, %cl
 ; X64-NEXT:    shlb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
