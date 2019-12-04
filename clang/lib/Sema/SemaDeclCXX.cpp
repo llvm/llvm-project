@@ -11829,7 +11829,7 @@ void Sema::ActOnFinishCXXMemberDecls() {
   }
 }
 
-void Sema::ActOnFinishCXXNonNestedClass(Decl *D) {
+void Sema::ActOnFinishCXXNonNestedClass() {
   referenceDLLExportedClassMethods();
 
   if (!DelayedDllExportMemberFunctions.empty()) {
