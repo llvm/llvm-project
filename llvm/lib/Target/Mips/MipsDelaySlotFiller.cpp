@@ -695,6 +695,12 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
       continue;
     }
 
+    if (CurrI->isBundle()) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE ": ignoring BUNDLE instruction: ";
+                 CurrI->dump());
+      continue;
+    }
+
     if (terminateSearch(*CurrI)) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE ": should terminate search: ";
                  CurrI->dump());
