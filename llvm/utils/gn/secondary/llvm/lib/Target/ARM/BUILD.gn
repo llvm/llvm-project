@@ -69,7 +69,6 @@ static_library("LLVMARMCodeGen") {
     "ARMBasicBlockInfo.cpp",
     "ARMCallLowering.cpp",
     "ARMCallingConv.cpp",
-    "ARMCodeGenPrepare.cpp",
     "ARMConstantIslandPass.cpp",
     "ARMConstantPoolValue.cpp",
     "ARMExpandPseudoInsts.cpp",
