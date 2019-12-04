@@ -1130,7 +1130,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
   // --arch <ARCH> as part of the shell invocation
   // to do that job on OSX.
 
-  if (launch_info.GetShell() == nullptr) {
+  if (launch_info.GetShell() == FileSpec()) {
     // We don't need to do this for ARM, and we really shouldn't now that we
     // have multiple CPU subtypes and no posix_spawnattr call that allows us
     // to set which CPU subtype to launch...

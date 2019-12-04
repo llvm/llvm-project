@@ -9,22 +9,32 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <fstream>
 #include <stdlib.h>
 #include <string>
+#include <tuple>
 
 using namespace llvm;
 
 namespace {
+
+MATCHER(StringEquality, "Checks if two char* are equal as strings") {
+  return std::string(std::get<0>(arg)) == std::string(std::get<1>(arg));
+}
 
 class TempEnvVar {
  public:
@@ -778,119 +788,90 @@ TEST(CommandLineTest, ResponseFileWindows) {
 }
 
 TEST(CommandLineTest, ResponseFiles) {
-  llvm::SmallString<128> TestDir;
-  std::error_code EC =
-    llvm::sys::fs::createUniqueDirectory("unittest", TestDir);
-  EXPECT_TRUE(!EC);
+  vfs::InMemoryFileSystem FS;
+  FS.setCurrentWorkingDirectory("/");
 
   // Create included response file of first level.
-  llvm::SmallString<128> IncludedFileName;
-  llvm::sys::path::append(IncludedFileName, TestDir, "resp1");
-  std::ofstream IncludedFile(IncludedFileName.c_str());
-  EXPECT_TRUE(IncludedFile.is_open());
-  IncludedFile << "-option_1 -option_2\n"
-                  "@incdir/resp2\n"
-                  "-option_3=abcd\n"
-                  "@incdir/resp3\n"
-                  "-option_4=efjk\n";
-  IncludedFile.close();
+  llvm::StringRef IncludedFileName = "resp1";
+  FS.addFile(IncludedFileName, 0,
+             llvm::MemoryBuffer::getMemBuffer("-option_1 -option_2\n"
+                                              "@incdir/resp2\n"
+                                              "-option_3=abcd\n"
+                                              "@incdir/resp3\n"
+                                              "-option_4=efjk\n"));
 
   // Directory for included file.
-  llvm::SmallString<128> IncDir;
-  llvm::sys::path::append(IncDir, TestDir, "incdir");
-  EC = llvm::sys::fs::create_directory(IncDir);
-  EXPECT_TRUE(!EC);
+  llvm::StringRef IncDir = "incdir";
 
   // Create included response file of second level.
   llvm::SmallString<128> IncludedFileName2;
   llvm::sys::path::append(IncludedFileName2, IncDir, "resp2");
-  std::ofstream IncludedFile2(IncludedFileName2.c_str());
-  EXPECT_TRUE(IncludedFile2.is_open());
-  IncludedFile2 << "-option_21 -option_22\n";
-  IncludedFile2 << "-option_23=abcd\n";
-  IncludedFile2.close();
+  FS.addFile(IncludedFileName2, 0,
+             MemoryBuffer::getMemBuffer("-option_21 -option_22\n"
+                                        "-option_23=abcd\n"));
+  llvm::errs() << "Added: " << IncludedFileName2 << '\n';
 
   // Create second included response file of second level.
   llvm::SmallString<128> IncludedFileName3;
   llvm::sys::path::append(IncludedFileName3, IncDir, "resp3");
-  std::ofstream IncludedFile3(IncludedFileName3.c_str());
-  EXPECT_TRUE(IncludedFile3.is_open());
-  IncludedFile3 << "-option_31 -option_32\n";
-  IncludedFile3 << "-option_33=abcd\n";
-  IncludedFile3.close();
+  FS.addFile(IncludedFileName3, 0,
+             MemoryBuffer::getMemBuffer("-option_31 -option_32\n"
+                                        "-option_33=abcd\n"));
 
   // Prepare 'file' with reference to response file.
   SmallString<128> IncRef;
   IncRef.append(1, '@');
-  IncRef.append(IncludedFileName.c_str());
-  llvm::SmallVector<const char *, 4> Argv =
-                          { "test/test", "-flag_1", IncRef.c_str(), "-flag_2" };
+  IncRef.append(IncludedFileName);
+  llvm::SmallVector<const char *, 4> Argv = {"test/test", "-flag_1",
+                                             IncRef.c_str(), "-flag_2"};
 
   // Expand response files.
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
-  bool Res = llvm::cl::ExpandResponseFiles(
-                    Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true);
-  EXPECT_TRUE(Res);
-  EXPECT_EQ(Argv.size(), 13U);
-  EXPECT_STREQ(Argv[0], "test/test");
-  EXPECT_STREQ(Argv[1], "-flag_1");
-  EXPECT_STREQ(Argv[2], "-option_1");
-  EXPECT_STREQ(Argv[3], "-option_2");
-  EXPECT_STREQ(Argv[4], "-option_21");
-  EXPECT_STREQ(Argv[5], "-option_22");
-  EXPECT_STREQ(Argv[6], "-option_23=abcd");
-  EXPECT_STREQ(Argv[7], "-option_3=abcd");
-  EXPECT_STREQ(Argv[8], "-option_31");
-  EXPECT_STREQ(Argv[9], "-option_32");
-  EXPECT_STREQ(Argv[10], "-option_33=abcd");
-  EXPECT_STREQ(Argv[11], "-option_4=efjk");
-  EXPECT_STREQ(Argv[12], "-flag_2");
-
-  llvm::sys::fs::remove(IncludedFileName3);
-  llvm::sys::fs::remove(IncludedFileName2);
-  llvm::sys::fs::remove(IncDir);
-  llvm::sys::fs::remove(IncludedFileName);
-  llvm::sys::fs::remove(TestDir);
+  ASSERT_TRUE(llvm::cl::ExpandResponseFiles(
+      Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true, FS,
+      /*CurrentDir=*/StringRef("/")));
+  EXPECT_THAT(Argv, testing::Pointwise(
+                        StringEquality(),
+                        {"test/test", "-flag_1", "-option_1", "-option_2",
+                         "-option_21", "-option_22", "-option_23=abcd",
+                         "-option_3=abcd", "-option_31", "-option_32",
+                         "-option_33=abcd", "-option_4=efjk", "-flag_2"}));
 }
 
 TEST(CommandLineTest, RecursiveResponseFiles) {
-  SmallString<128> TestDir;
-  std::error_code EC = sys::fs::createUniqueDirectory("unittest", TestDir);
-  EXPECT_TRUE(!EC);
+  vfs::InMemoryFileSystem FS;
+  FS.setCurrentWorkingDirectory("/");
 
-  SmallString<128> SelfFilePath;
-  sys::path::append(SelfFilePath, TestDir, "self.rsp");
-  std::string SelfFileRef = std::string("@") + SelfFilePath.c_str();
+  StringRef SelfFilePath = "self.rsp";
+  std::string SelfFileRef = ("@" + SelfFilePath).str();
 
-  SmallString<128> NestedFilePath;
-  sys::path::append(NestedFilePath, TestDir, "nested.rsp");
-  std::string NestedFileRef = std::string("@") + NestedFilePath.c_str();
+  StringRef NestedFilePath = "nested.rsp";
+  std::string NestedFileRef = ("@" + NestedFilePath).str();
 
-  SmallString<128> FlagFilePath;
-  sys::path::append(FlagFilePath, TestDir, "flag.rsp");
-  std::string FlagFileRef = std::string("@") + FlagFilePath.c_str();
+  StringRef FlagFilePath = "flag.rsp";
+  std::string FlagFileRef = ("@" + FlagFilePath).str();
 
-  std::ofstream SelfFile(SelfFilePath.str());
-  EXPECT_TRUE(SelfFile.is_open());
+  std::string SelfFileContents;
+  raw_string_ostream SelfFile(SelfFileContents);
   SelfFile << "-option_1\n";
   SelfFile << FlagFileRef << "\n";
   SelfFile << NestedFileRef << "\n";
   SelfFile << SelfFileRef << "\n";
-  SelfFile.close();
+  FS.addFile(SelfFilePath, 0, MemoryBuffer::getMemBuffer(SelfFile.str()));
 
-  std::ofstream NestedFile(NestedFilePath.str());
-  EXPECT_TRUE(NestedFile.is_open());
+  std::string NestedFileContents;
+  raw_string_ostream NestedFile(NestedFileContents);
   NestedFile << "-option_2\n";
   NestedFile << FlagFileRef << "\n";
   NestedFile << SelfFileRef << "\n";
   NestedFile << NestedFileRef << "\n";
-  NestedFile.close();
+  FS.addFile(NestedFilePath, 0, MemoryBuffer::getMemBuffer(NestedFile.str()));
 
-  std::ofstream FlagFile(FlagFilePath.str());
-  EXPECT_TRUE(FlagFile.is_open());
+  std::string FlagFileContents;
+  raw_string_ostream FlagFile(FlagFileContents);
   FlagFile << "-option_x\n";
-  FlagFile.close();
+  FS.addFile(FlagFilePath, 0, MemoryBuffer::getMemBuffer(FlagFile.str()));
 
   // Ensure:
   // Recursive expansion terminates
@@ -905,47 +886,42 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 #else
   cl::TokenizerCallback Tokenizer = cl::TokenizeGNUCommandLine;
 #endif
-  bool Res = cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false);
-  EXPECT_FALSE(Res);
+  ASSERT_FALSE(cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, FS,
+                                       /*CurrentDir=*/llvm::StringRef("/")));
 
-  EXPECT_EQ(Argv.size(), 9U);
-  EXPECT_STREQ(Argv[0], "test/test");
-  EXPECT_STREQ(Argv[1], "-option_1");
-  EXPECT_STREQ(Argv[2], "-option_x");
-  EXPECT_STREQ(Argv[3], "-option_2");
-  EXPECT_STREQ(Argv[4], "-option_x");
-  EXPECT_STREQ(Argv[5], SelfFileRef.c_str());
-  EXPECT_STREQ(Argv[6], NestedFileRef.c_str());
-  EXPECT_STREQ(Argv[7], SelfFileRef.c_str());
-  EXPECT_STREQ(Argv[8], "-option_3");
+  EXPECT_THAT(Argv,
+              testing::Pointwise(StringEquality(),
+                                 {"test/test", "-option_1", "-option_x",
+                                  "-option_2", "-option_x", SelfFileRef.c_str(),
+                                  NestedFileRef.c_str(), SelfFileRef.c_str(),
+                                  "-option_3"}));
 }
 
 TEST(CommandLineTest, ResponseFilesAtArguments) {
-  SmallString<128> TestDir;
-  std::error_code EC = sys::fs::createUniqueDirectory("unittest", TestDir);
-  EXPECT_TRUE(!EC);
+  vfs::InMemoryFileSystem FS;
+  FS.setCurrentWorkingDirectory("/");
 
-  SmallString<128> ResponseFilePath;
-  sys::path::append(ResponseFilePath, TestDir, "test.rsp");
+  StringRef ResponseFilePath = "test.rsp";
 
-  std::ofstream ResponseFile(ResponseFilePath.c_str());
-  EXPECT_TRUE(ResponseFile.is_open());
+  std::string ResponseFileContents;
+  raw_string_ostream ResponseFile(ResponseFileContents);
   ResponseFile << "-foo" << "\n";
   ResponseFile << "-bar" << "\n";
-  ResponseFile.close();
+  FS.addFile(ResponseFilePath, 0,
+             MemoryBuffer::getMemBuffer(ResponseFile.str()));
 
   // Ensure we expand rsp files after lots of non-rsp arguments starting with @.
   constexpr size_t NON_RSP_AT_ARGS = 64;
   SmallVector<const char *, 4> Argv = {"test/test"};
   Argv.append(NON_RSP_AT_ARGS, "@non_rsp_at_arg");
-  std::string ResponseFileRef = std::string("@") + ResponseFilePath.c_str();
+  std::string ResponseFileRef = ("@" + ResponseFilePath).str();
   Argv.push_back(ResponseFileRef.c_str());
 
   BumpPtrAllocator A;
   StringSaver Saver(A);
-  bool Res = cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
-                                     false, false);
-  EXPECT_FALSE(Res);
+  ASSERT_FALSE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
+                                       false, false, FS,
+                                       /*CurrentDir=*/StringRef("/")));
 
   // ASSERT instead of EXPECT to prevent potential out-of-bounds access.
   ASSERT_EQ(Argv.size(), 1 + NON_RSP_AT_ARGS + 2);
@@ -955,6 +931,28 @@ TEST(CommandLineTest, ResponseFilesAtArguments) {
     EXPECT_STREQ(Argv[i], "@non_rsp_at_arg");
   EXPECT_STREQ(Argv[i++], "-foo");
   EXPECT_STREQ(Argv[i++], "-bar");
+}
+
+TEST(CommandLineTest, ResponseFileRelativePath) {
+  vfs::InMemoryFileSystem FS;
+
+  StringRef OuterFile = "//net/dir/outer.rsp";
+  StringRef OuterFileContents = "@inner.rsp";
+  FS.addFile(OuterFile, 0, MemoryBuffer::getMemBuffer(OuterFileContents));
+
+  StringRef InnerFile = "//net/dir/inner.rsp";
+  StringRef InnerFileContents = "-flag";
+  FS.addFile(InnerFile, 0, MemoryBuffer::getMemBuffer(InnerFileContents));
+
+  SmallVector<const char *, 2> Argv = {"test/test", "@dir/outer.rsp"};
+
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  ASSERT_TRUE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
+                                      false, true, FS,
+                                      /*CurrentDir=*/StringRef("//net")));
+  EXPECT_THAT(Argv,
+              testing::Pointwise(StringEquality(), {"test/test", "-flag"}));
 }
 
 TEST(CommandLineTest, SetDefautValue) {

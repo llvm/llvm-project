@@ -19,6 +19,7 @@ static_library("Tooling") {
     "CommonOptionsParser.cpp",
     "CompilationDatabase.cpp",
     "Execution.cpp",
+    "ExpandResponseFilesCompilationDatabase.cpp",
     "FileMatchTrie.cpp",
     "FixIt.cpp",
     "GuessTargetAndModeCompilationDatabase.cpp",

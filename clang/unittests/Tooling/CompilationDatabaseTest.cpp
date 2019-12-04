@@ -859,5 +859,35 @@ TEST_F(TargetAndModeTest, TargetAndMode) {
             "clang++ --driver-mode=g++ bar.cpp -D bar.cpp");
 }
 
+class ExpandResponseFilesTest : public MemDBTest {
+public:
+  ExpandResponseFilesTest() : FS(new llvm::vfs::InMemoryFileSystem) {}
+
+protected:
+  void addFile(StringRef File, StringRef Content) {
+    ASSERT_TRUE(
+        FS->addFile(File, 0, llvm::MemoryBuffer::getMemBufferCopy(Content)));
+  }
+
+  std::string getCommand(llvm::StringRef F) {
+    auto Results = expandResponseFiles(std::make_unique<MemCDB>(Entries), FS)
+                       ->getCompileCommands(path(F));
+    if (Results.empty())
+      return "none";
+    return llvm::join(Results[0].CommandLine, " ");
+  }
+
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS;
+};
+
+TEST_F(ExpandResponseFilesTest, ExpandResponseFiles) {
+  addFile(path(StringRef("rsp1.rsp")), "-Dflag");
+
+  add("foo.cpp", "clang", "@rsp1.rsp");
+  add("bar.cpp", "clang", "-Dflag");
+  EXPECT_EQ(getCommand("foo.cpp"), "clang foo.cpp -D foo.cpp -Dflag");
+  EXPECT_EQ(getCommand("bar.cpp"), "clang bar.cpp -D bar.cpp -Dflag");
+}
+
 } // end namespace tooling
 } // end namespace clang
