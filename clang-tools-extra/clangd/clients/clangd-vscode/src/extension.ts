@@ -83,21 +83,15 @@ export function activate(context: vscode.ExtensionContext) {
   }
   const serverOptions: vscodelc.ServerOptions = clangd;
 
-  // Note that CUDA ('.cu') files are special. When opening files of all other
-  // extensions, VSCode would load clangd automatically. This is achieved by
-  // having a corresponding 'onLanguage:...' activation event in package.json.
-  // However, VSCode does not have CUDA as a supported language yet, so we
-  // cannot add a corresponding activationEvent for CUDA files and clangd will
-  // *not* load itself automatically on '.cu' files.
-  const cudaFilePattern: string = '**/*.{' + [ 'cu' ].join() + '}';
   const clientOptions: vscodelc.LanguageClientOptions = {
         // Register the server for c-family and cuda files.
         documentSelector: [
             { scheme: 'file', language: 'c' },
             { scheme: 'file', language: 'cpp' },
+            // cuda is not supported by vscode, but our extension does.
+            { scheme: 'file', language: 'cuda' },
             { scheme: 'file', language: 'objective-c'},
-            { scheme: 'file', language: 'objective-cpp'},
-            { scheme: 'file', pattern: cudaFilePattern },
+            { scheme: 'file', language: 'objective-cpp'}
         ],
         synchronize: !syncFileEvents ? undefined : {
         // FIXME: send sync file events when clangd provides implemenatations.
@@ -111,10 +105,10 @@ export function activate(context: vscode.ExtensionContext) {
                                                 serverOptions, clientOptions);
   if (getConfig<boolean>('semanticHighlighting')) {
     const semanticHighlightingFeature =
-      new semanticHighlighting.SemanticHighlightingFeature(clangdClient,
-        context);
+        new semanticHighlighting.SemanticHighlightingFeature(clangdClient,
+                                                             context);
     context.subscriptions.push(
-      vscode.Disposable.from(semanticHighlightingFeature));
+        vscode.Disposable.from(semanticHighlightingFeature));
     clangdClient.registerFeature(semanticHighlightingFeature);
   }
   console.log('Clang Language Server is now active!');
