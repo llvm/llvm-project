@@ -222,7 +222,6 @@ inferTargetAndDriverMode(std::unique_ptr<CompilationDatabase> Base);
 
 /// Returns a wrapped CompilationDatabase that will expand all rsp(response)
 /// files on commandline returned by underlying database.
-/// Note: This may change the working directory of FS.
 std::unique_ptr<CompilationDatabase>
 expandResponseFiles(std::unique_ptr<CompilationDatabase> Base,
                     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
