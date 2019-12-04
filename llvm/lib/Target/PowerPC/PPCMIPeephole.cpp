@@ -18,6 +18,7 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
 #include "PPCInstrBuilder.h"
@@ -804,6 +805,143 @@ bool PPCMIPeephole::simplifyCode(void) {
       case PPC::RLDICR: {
         Simplified |= emitRLDICWhenLoweringJumpTables(MI) ||
                       combineSEXTAndSHL(MI, ToErase);
+        break;
+      }
+      case PPC::RLWINM:
+      case PPC::RLWINMo:
+      case PPC::RLWINM8:
+      case PPC::RLWINM8o: {
+        unsigned FoldingReg = MI.getOperand(1).getReg();
+        if (!Register::isVirtualRegister(FoldingReg))
+          break;
+
+        MachineInstr *SrcMI = MRI->getVRegDef(FoldingReg);
+        if (SrcMI->getOpcode() != PPC::RLWINM &&
+            SrcMI->getOpcode() != PPC::RLWINMo &&
+            SrcMI->getOpcode() != PPC::RLWINM8 &&
+            SrcMI->getOpcode() != PPC::RLWINM8o)
+          break;
+        assert((MI.getOperand(2).isImm() && MI.getOperand(3).isImm() &&
+                MI.getOperand(4).isImm() && SrcMI->getOperand(2).isImm() &&
+                SrcMI->getOperand(3).isImm() && SrcMI->getOperand(4).isImm()) &&
+               "Invalid PPC::RLWINM Instruction!");
+        uint64_t SHSrc = SrcMI->getOperand(2).getImm();
+        uint64_t SHMI = MI.getOperand(2).getImm();
+        uint64_t MBSrc = SrcMI->getOperand(3).getImm();
+        uint64_t MBMI = MI.getOperand(3).getImm();
+        uint64_t MESrc = SrcMI->getOperand(4).getImm();
+        uint64_t MEMI = MI.getOperand(4).getImm();
+
+        assert((MEMI < 32 && MESrc < 32 && MBMI < 32 && MBSrc < 32) &&
+               "Invalid PPC::RLWINM Instruction!");
+
+        // If MBMI is bigger than MEMI, we always can not get run of ones.
+        // RotatedSrcMask non-wrap:
+        //                 0........31|32........63
+        // RotatedSrcMask:   B---E        B---E
+        // MaskMI:         -----------|--E  B------
+        // Result:           -----          ---      (Bad candidate)
+        //
+        // RotatedSrcMask wrap:
+        //                 0........31|32........63
+        // RotatedSrcMask: --E   B----|--E    B----
+        // MaskMI:         -----------|--E  B------
+        // Result:         ---   -----|---    -----  (Bad candidate)
+        //
+        // One special case is RotatedSrcMask is a full set mask.
+        // RotatedSrcMask full:
+        //                 0........31|32........63
+        // RotatedSrcMask: ------EB---|-------EB---
+        // MaskMI:         -----------|--E  B------
+        // Result:         -----------|---  -------  (Good candidate)
+
+        // Mark special case.
+        bool SrcMaskFull = (MBSrc - MESrc == 1) || (MBSrc == 0 && MESrc == 31);
+
+        // For other MBMI > MEMI cases, just return.
+        if ((MBMI > MEMI) && !SrcMaskFull)
+          break;
+
+        // Handle MBMI <= MEMI cases.
+        APInt MaskMI = APInt::getBitsSetWithWrap(32, 32 - MEMI - 1, 32 - MBMI);
+        // In MI, we only need low 32 bits of SrcMI, just consider about low 32
+        // bit of SrcMI mask. Note that in APInt, lowerest bit is at index 0,
+        // while in PowerPC ISA, lowerest bit is at index 63.
+        APInt MaskSrc =
+            APInt::getBitsSetWithWrap(32, 32 - MESrc - 1, 32 - MBSrc);
+        // Current APInt::getBitsSetWithWrap sets all bits to 0 if loBit is
+        // equal to highBit.
+        // If MBSrc - MESrc == 1, we expect a full set mask instead of Null.
+        if (SrcMaskFull && (MBSrc - MESrc == 1))
+          MaskSrc.setAllBits();
+
+        APInt RotatedSrcMask = MaskSrc.rotl(SHMI);
+        APInt FinalMask = RotatedSrcMask & MaskMI;
+        uint32_t NewMB, NewME;
+
+        // If final mask is 0, MI result should be 0 too.
+        if (FinalMask.isNullValue()) {
+          bool Is64Bit = (MI.getOpcode() == PPC::RLWINM8 ||
+                          MI.getOpcode() == PPC::RLWINM8o);
+
+          LLVM_DEBUG(dbgs() << "Replace Instr: ");
+          LLVM_DEBUG(MI.dump());
+
+          if (MI.getOpcode() == PPC::RLWINM || MI.getOpcode() == PPC::RLWINM8) {
+            // Replace MI with "LI 0"
+            MI.RemoveOperand(4);
+            MI.RemoveOperand(3);
+            MI.RemoveOperand(2);
+            MI.getOperand(1).ChangeToImmediate(0);
+            MI.setDesc(TII->get(Is64Bit ? PPC::LI8 : PPC::LI));
+          } else {
+            // Replace MI with "ANDIo reg, 0"
+            MI.RemoveOperand(4);
+            MI.RemoveOperand(3);
+            MI.getOperand(2).setImm(0);
+            MI.setDesc(TII->get(Is64Bit ? PPC::ANDIo8 : PPC::ANDIo));
+          }
+          Simplified = true;
+          NumRotatesCollapsed++;
+
+          LLVM_DEBUG(dbgs() << "With: ");
+          LLVM_DEBUG(MI.dump());
+        } else if (isRunOfOnes((unsigned)(FinalMask.getZExtValue()), NewMB,
+                               NewME) || SrcMaskFull) {
+          // If FoldingReg has only one use and it it not RLWINMo and
+          // RLWINM8o, safe to delete its def SrcMI. Otherwise keep it.
+          if (MRI->hasOneNonDBGUse(FoldingReg) &&
+              (SrcMI->getOpcode() == PPC::RLWINM ||
+               SrcMI->getOpcode() == PPC::RLWINM8)) {
+            ToErase = SrcMI;
+            LLVM_DEBUG(dbgs() << "Delete dead instruction: ");
+            LLVM_DEBUG(SrcMI->dump());
+          }
+
+          LLVM_DEBUG(dbgs() << "Converting Instr: ");
+          LLVM_DEBUG(MI.dump());
+
+          uint16_t NewSH = (SHSrc + SHMI) % 32;
+          MI.getOperand(2).setImm(NewSH);
+          // If SrcMI mask is full, no need to update MBMI and MEMI.
+          if (!SrcMaskFull) {
+            MI.getOperand(3).setImm(NewMB);
+            MI.getOperand(4).setImm(NewME);
+          }
+          MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
+          if (SrcMI->getOperand(1).isKill()) {
+            MI.getOperand(1).setIsKill(true);
+            SrcMI->getOperand(1).setIsKill(false);
+          } else
+            // About to replace MI.getOperand(1), clear its kill flag.
+            MI.getOperand(1).setIsKill(false);
+
+          Simplified = true;
+          NumRotatesCollapsed++;
+
+          LLVM_DEBUG(dbgs() << "To: ");
+          LLVM_DEBUG(MI.dump());
+        }
         break;
       }
       }
