@@ -3630,7 +3630,8 @@ class sve_int_cterm<bit sz, bit opc, string asm, RegisterClass rt>
 }
 
 class sve_int_while_rr<bits<2> sz8_64, bits<4> opc, string asm,
-                       RegisterClass gprty, PPRRegOp pprty>
+                       RegisterClass gprty, PPRRegOp pprty,
+                       ValueType vt, SDPatternOperator op>
 : I<(outs pprty:$Pd), (ins gprty:$Rn, gprty:$Rm),
   asm, "\t$Pd, $Rn, $Rm",
   "", []>, Sched<[]> {
@@ -3650,18 +3651,28 @@ class sve_int_while_rr<bits<2> sz8_64, bits<4> opc, string asm,
   let Defs = [NZCV];
 }
 
-multiclass sve_int_while4_rr<bits<3> opc, string asm> {
-  def _B : sve_int_while_rr<0b00, { 0, opc }, asm, GPR32, PPR8>;
-  def _H : sve_int_while_rr<0b01, { 0, opc }, asm, GPR32, PPR16>;
-  def _S : sve_int_while_rr<0b10, { 0, opc }, asm, GPR32, PPR32>;
-  def _D : sve_int_while_rr<0b11, { 0, opc }, asm, GPR32, PPR64>;
+multiclass sve_int_while4_rr<bits<3> opc, string asm, SDPatternOperator op> {
+  def _B : sve_int_while_rr<0b00, { 0, opc }, asm, GPR32, PPR8, nxv16i1, op>;
+  def _H : sve_int_while_rr<0b01, { 0, opc }, asm, GPR32, PPR16, nxv8i1, op>;
+  def _S : sve_int_while_rr<0b10, { 0, opc }, asm, GPR32, PPR32, nxv4i1, op>;
+  def _D : sve_int_while_rr<0b11, { 0, opc }, asm, GPR32, PPR64, nxv2i1, op>;
+
+  def : SVE_2_Op_Pat<nxv16i1, op, i32, i32, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i1, op, i32, i32, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i1, op, i32, i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i1, op, i32, i32, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve_int_while8_rr<bits<3> opc, string asm> {
-  def _B : sve_int_while_rr<0b00, { 1, opc }, asm, GPR64, PPR8>;
-  def _H : sve_int_while_rr<0b01, { 1, opc }, asm, GPR64, PPR16>;
-  def _S : sve_int_while_rr<0b10, { 1, opc }, asm, GPR64, PPR32>;
-  def _D : sve_int_while_rr<0b11, { 1, opc }, asm, GPR64, PPR64>;
+multiclass sve_int_while8_rr<bits<3> opc, string asm, SDPatternOperator op> {
+  def _B : sve_int_while_rr<0b00, { 1, opc }, asm, GPR64, PPR8, nxv16i1, op>;
+  def _H : sve_int_while_rr<0b01, { 1, opc }, asm, GPR64, PPR16, nxv8i1, op>;
+  def _S : sve_int_while_rr<0b10, { 1, opc }, asm, GPR64, PPR32, nxv4i1, op>;
+  def _D : sve_int_while_rr<0b11, { 1, opc }, asm, GPR64, PPR64, nxv2i1, op>;
+
+  def : SVE_2_Op_Pat<nxv16i1, op, i64, i64, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i1, op, i64, i64, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i1, op, i64, i64, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i1, op, i64, i64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_while_rr<bits<2> sz8_64, bits<1> rw, string asm,

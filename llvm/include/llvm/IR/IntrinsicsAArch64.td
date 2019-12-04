@@ -989,6 +989,10 @@ class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
 // SVE
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
+  class AdvSIMD_SVE_WHILE_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [llvm_anyint_ty, LLVMMatchType<1>],
+                [IntrNoMem]>;
 
 class AdvSIMD_GatherLoad_VecTorBase_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -1098,6 +1102,19 @@ def int_aarch64_sve_sxtw : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_uxtb : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_uxth : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_uxtw : AdvSIMD_Merged1VectorArg_Intrinsic;
+
+//
+// While comparisons
+//
+
+def int_aarch64_sve_whilele : AdvSIMD_SVE_WHILE_Intrinsic;
+def int_aarch64_sve_whilelo : AdvSIMD_SVE_WHILE_Intrinsic;
+def int_aarch64_sve_whilels : AdvSIMD_SVE_WHILE_Intrinsic;
+def int_aarch64_sve_whilelt : AdvSIMD_SVE_WHILE_Intrinsic;
+def int_aarch64_sve_whilege : AdvSIMD_SVE_WHILE_Intrinsic;
+def int_aarch64_sve_whilegt : AdvSIMD_SVE_WHILE_Intrinsic;
+def int_aarch64_sve_whilehs : AdvSIMD_SVE_WHILE_Intrinsic;
+def int_aarch64_sve_whilehi : AdvSIMD_SVE_WHILE_Intrinsic;
 
 //
 // Floating-point arithmetic

@@ -769,15 +769,15 @@ let Predicates = [HasSVE] in {
   defm FCMEQ_PPzZ0 : sve_fp_2op_p_pd<0b100, "fcmeq">;
   defm FCMNE_PPzZ0 : sve_fp_2op_p_pd<0b110, "fcmne">;
 
-  defm WHILELT_PWW : sve_int_while4_rr<0b010, "whilelt">;
-  defm WHILELE_PWW : sve_int_while4_rr<0b011, "whilele">;
-  defm WHILELO_PWW : sve_int_while4_rr<0b110, "whilelo">;
-  defm WHILELS_PWW : sve_int_while4_rr<0b111, "whilels">;
+  defm WHILELT_PWW : sve_int_while4_rr<0b010, "whilelt", int_aarch64_sve_whilelt>;
+  defm WHILELE_PWW : sve_int_while4_rr<0b011, "whilele", int_aarch64_sve_whilele>;
+  defm WHILELO_PWW : sve_int_while4_rr<0b110, "whilelo", int_aarch64_sve_whilelo>;
+  defm WHILELS_PWW : sve_int_while4_rr<0b111, "whilels", int_aarch64_sve_whilels>;
 
-  defm WHILELT_PXX : sve_int_while8_rr<0b010, "whilelt">;
-  defm WHILELE_PXX : sve_int_while8_rr<0b011, "whilele">;
-  defm WHILELO_PXX : sve_int_while8_rr<0b110, "whilelo">;
-  defm WHILELS_PXX : sve_int_while8_rr<0b111, "whilels">;
+  defm WHILELT_PXX : sve_int_while8_rr<0b010, "whilelt", int_aarch64_sve_whilelt>;
+  defm WHILELE_PXX : sve_int_while8_rr<0b011, "whilele", int_aarch64_sve_whilele>;
+  defm WHILELO_PXX : sve_int_while8_rr<0b110, "whilelo", int_aarch64_sve_whilelo>;
+  defm WHILELS_PXX : sve_int_while8_rr<0b111, "whilels", int_aarch64_sve_whilels>;
 
   def CTERMEQ_WW : sve_int_cterm<0b0, 0b0, "ctermeq", GPR32>;
   def CTERMNE_WW : sve_int_cterm<0b0, 0b1, "ctermne", GPR32>;
@@ -1511,15 +1511,16 @@ let Predicates = [HasSVE2] in {
   defm TBX_ZZZ  : sve2_int_perm_tbx<"tbx">;
 
   // SVE2 integer compare scalar count and limit
-  defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege">;
-  defm WHILEGT_PWW : sve_int_while4_rr<0b001, "whilegt">;
-  defm WHILEHS_PWW : sve_int_while4_rr<0b100, "whilehs">;
-  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi">;
+  defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege", null_frag>;
+  defm WHILEGT_PWW : sve_int_while4_rr<0b001, "whilegt", null_frag>;
+  defm WHILEHS_PWW : sve_int_while4_rr<0b100, "whilehs", null_frag>;
+  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi", null_frag>;
 
-  defm WHILEGE_PXX : sve_int_while8_rr<0b000, "whilege">;
-  defm WHILEGT_PXX : sve_int_while8_rr<0b001, "whilegt">;
-  defm WHILEHS_PXX : sve_int_while8_rr<0b100, "whilehs">;
-  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi">;
+  defm WHILEGE_PXX : sve_int_while8_rr<0b000, "whilege", null_frag>;
+  defm WHILEGT_PXX : sve_int_while8_rr<0b001, "whilegt", null_frag>;
+  defm WHILEHS_PXX : sve_int_while8_rr<0b100, "whilehs", null_frag>;
+  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", null_frag>;
+
 
   // SVE2 pointer conflict compare
   defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr">;
