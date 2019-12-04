@@ -44,7 +44,7 @@ body:             |
     %3(s1) = G_CONSTANT i1 1
     G_STORE %3(s1), %4(p0) :: (store 1)
     ; CHECK-NOT: G_CONSTANT i1
-    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: {{%[0-9]+}}:_(s1) = G_TRUNC [[EXT]](s32)
     ; CHECK-NOT: G_CONSTANT i1
 

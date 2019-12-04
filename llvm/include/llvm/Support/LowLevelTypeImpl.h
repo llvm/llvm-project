@@ -137,6 +137,8 @@ public:
                       : LLT::scalar(NewEltSize);
   }
 
+  bool isByteSized() const { return (getSizeInBits() & 7) == 0; }
+
   unsigned getScalarSizeInBits() const {
     assert(RawData != 0 && "Invalid Type");
     if (!IsVector) {
