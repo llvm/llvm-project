@@ -1,13 +1,39 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify %s -fcxx-exceptions
 
 namespace std {
-  struct strong_ordering {
+  struct strong_ordering { // expected-note 3{{candidate}}
     int n;
     constexpr operator int() const { return n; }
     static const strong_ordering less, equal, greater;
   };
   constexpr strong_ordering strong_ordering::less{-1},
       strong_ordering::equal{0}, strong_ordering::greater{1};
+
+  struct weak_ordering {
+    int n;
+    constexpr weak_ordering(int n) : n(n) {}
+    constexpr weak_ordering(strong_ordering o) : n(o.n) {}
+    constexpr operator int() const { return n; }
+    static const weak_ordering less, equivalent, greater;
+  };
+  constexpr weak_ordering weak_ordering::less{-1},
+      weak_ordering::equivalent{0}, weak_ordering::greater{1};
+
+  struct partial_ordering {
+    double d;
+    constexpr partial_ordering(double d) : d(d) {}
+    constexpr partial_ordering(strong_ordering o) : d(o.n) {}
+    constexpr partial_ordering(weak_ordering o) : d(o.n) {}
+    constexpr operator double() const { return d; }
+    static const partial_ordering less, equivalent, greater, unordered;
+  };
+  constexpr partial_ordering partial_ordering::less{-1},
+      partial_ordering::equivalent{0}, partial_ordering::greater{1},
+      partial_ordering::unordered{__builtin_nan("")};
+
+  static_assert(!(partial_ordering::unordered < 0));
+  static_assert(!(partial_ordering::unordered == 0));
+  static_assert(!(partial_ordering::unordered > 0));
 }
 
 namespace Deletedness {
@@ -59,7 +85,7 @@ namespace Deletedness {
   // expected-note@#base {{deleted comparison function for base class 'E'}}
   // expected-note@#base {{implied comparison for base class 'F' is ambiguous}}
   template<typename T> struct Cmp : T { // #base
-    std::strong_ordering operator<=>(const Cmp&) const = default; // expected-note 5{{here}}
+    std::strong_ordering operator<=>(const Cmp&) const = default; // #cmp expected-note 5{{here}}
   };
 
   void use(...);
@@ -72,10 +98,80 @@ namespace Deletedness {
       Cmp<D2>() <=> Cmp<D2>(), // expected-error {{deleted}}
       Cmp<E>() <=> Cmp<E>(), // expected-error {{deleted}}
       Cmp<F>() <=> Cmp<F>(), // expected-error {{deleted}}
-      Cmp<G1>() <=> Cmp<G1>(), // FIXME: ok but synthesized body is ill-formed
-      Cmp<G2>() <=> Cmp<G2>(), // FIXME: ok but synthesized body is ill-formed
-      Cmp<H>() <=> Cmp<H>(), // FIXME: ok but synthesized body is ill-formed
+      // FIXME: The following three errors are not very good.
+      // expected-error@#cmp {{value of type 'void' is not contextually convertible to 'bool'}}
+      Cmp<G1>() <=> Cmp<G1>(), // expected-note-re {{in defaulted three-way comparison operator for '{{.*}}Cmp<{{.*}}G1>' first required here}}j
+      // expected-error@#cmp {{value of type 'void' is not contextually convertible to 'bool'}}
+      Cmp<G2>() <=> Cmp<G2>(), // expected-note-re {{in defaulted three-way comparison operator for '{{.*}}Cmp<{{.*}}G2>' first required here}}j
+      // expected-error@#cmp {{no matching conversion for static_cast from 'void' to 'std::strong_ordering'}}
+      Cmp<H>() <=> Cmp<H>(), // expected-note-re {{in defaulted three-way comparison operator for '{{.*}}Cmp<{{.*}}H>' first required here}}j
       0
     );
   }
+}
+
+namespace Synthesis {
+  enum Result { False, True, Mu };
+
+  constexpr bool toBool(Result R) {
+    if (R == Mu) throw "should not ask this question";
+    return R == True;
+  }
+
+  struct Val {
+    Result equal, less;
+    constexpr bool operator==(const Val&) const { return toBool(equal); }
+    constexpr bool operator<(const Val&) const { return toBool(less); }
+  };
+
+  template<typename T> struct Cmp {
+    Val val;
+    friend T operator<=>(const Cmp&, const Cmp&) = default; // expected-note {{deleted}}
+  };
+
+  template<typename T> constexpr auto cmp(Result equal, Result less = Mu, Result reverse_less = Mu) {
+    return Cmp<T>{equal, less} <=> Cmp<T>{Mu, reverse_less};
+  }
+
+  static_assert(cmp<std::strong_ordering>(True) == 0);
+  static_assert(cmp<std::strong_ordering>(False, True) < 0);
+  static_assert(cmp<std::strong_ordering>(False, False) > 0);
+
+  static_assert(cmp<std::weak_ordering>(True) == 0);
+  static_assert(cmp<std::weak_ordering>(False, True) < 0);
+  static_assert(cmp<std::weak_ordering>(False, False) > 0);
+
+  static_assert(cmp<std::partial_ordering>(True) == 0);
+  static_assert(cmp<std::partial_ordering>(False, True) < 0);
+  static_assert(cmp<std::partial_ordering>(False, False, True) > 0);
+  static_assert(!(cmp<std::partial_ordering>(False, False, False) > 0));
+  static_assert(!(cmp<std::partial_ordering>(False, False, False) == 0));
+  static_assert(!(cmp<std::partial_ordering>(False, False, False) < 0));
+
+  // No synthesis is performed for a custom return type, even if it can be
+  // converted from a standard ordering.
+  struct custom_ordering {
+    custom_ordering(std::strong_ordering o);
+  };
+  void f(Cmp<custom_ordering> c) {
+    c <=> c; // expected-error {{deleted}}
+  }
+}
+
+namespace Preference {
+  struct A {
+    A(const A&) = delete; // expected-note {{deleted}}
+    // "usable" candidate that can't actually be called
+    friend void operator<=>(A, A); // expected-note {{passing}}
+    // Callable candidates for synthesis not considered.
+    friend bool operator==(A, A);
+    friend bool operator<(A, A);
+  };
+
+  struct B {
+    B();
+    A a;
+    std::strong_ordering operator<=>(const B&) const = default; // expected-error {{call to deleted constructor of 'Preference::A'}}
+  };
+  bool x = B() < B(); // expected-note {{in defaulted three-way comparison operator for 'Preference::B' first required here}}
 }

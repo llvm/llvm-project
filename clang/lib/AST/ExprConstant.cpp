@@ -6830,6 +6830,36 @@ public:
     return StmtVisitorTy::Visit(Source);
   }
 
+  bool VisitPseudoObjectExpr(const PseudoObjectExpr *E) {
+    for (const Expr *SemE : E->semantics()) {
+      if (auto *OVE = dyn_cast<OpaqueValueExpr>(SemE)) {
+        // FIXME: We can't handle the case where an OpaqueValueExpr is also the
+        // result expression: there could be two different LValues that would
+        // refer to the same object in that case, and we can't model that.
+        if (SemE == E->getResultExpr())
+          return Error(E);
+
+        // Unique OVEs get evaluated if and when we encounter them when
+        // emitting the rest of the semantic form, rather than eagerly.
+        if (OVE->isUnique())
+          continue;
+
+        LValue LV;
+        if (!Evaluate(Info.CurrentCall->createTemporary(
+                          OVE, getStorageType(Info.Ctx, OVE), false, LV),
+                      Info, OVE->getSourceExpr()))
+          return false;
+      } else if (SemE == E->getResultExpr()) {
+        if (!StmtVisitorTy::Visit(SemE))
+          return false;
+      } else {
+        if (!EvaluateIgnoredValue(Info, SemE))
+          return false;
+      }
+    }
+    return true;
+  }
+
   bool VisitCallExpr(const CallExpr *E) {
     APValue Result;
     if (!handleCallExpr(E, Result, nullptr))

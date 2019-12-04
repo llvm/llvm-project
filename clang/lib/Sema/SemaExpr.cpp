@@ -15416,9 +15416,8 @@ static OdrUseContext isOdrUseContext(Sema &SemaRef) {
 }
 
 static bool isImplicitlyDefinableConstexprFunction(FunctionDecl *Func) {
-  CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Func);
   return Func->isConstexpr() &&
-         (Func->isImplicitlyInstantiable() || (MD && !MD->isUserProvided()));
+         (Func->isImplicitlyInstantiable() || !Func->isUserProvided());
 }
 
 /// Mark a function referenced, and check whether it is odr-used
@@ -15564,6 +15563,12 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
             DefineImplicitLambdaToFunctionPointerConversion(Loc, Conversion);
         } else if (MethodDecl->isVirtual() && getLangOpts().AppleKext)
           MarkVTableUsed(Loc, MethodDecl->getParent());
+      }
+
+      if (Func->isDefaulted() && !Func->isDeleted()) {
+        DefaultedComparisonKind DCK = getDefaultedComparisonKind(Func);
+        if (DCK != DefaultedComparisonKind::None)
+          DefineDefaultedComparison(Loc, Func, DCK);
       }
 
       // Implicit instantiation of function templates and member functions of
