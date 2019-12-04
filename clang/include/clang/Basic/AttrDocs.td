@@ -253,6 +253,79 @@ any option of a multiversioned function is undefined.
   }];
 }
 
+def SYCLKernelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sycl_kernel`` attribute specifies that a function template will be used
+to outline device code and to generate an OpenCL kernel.
+Here is a code example of the SYCL program, which demonstrates the compiler's
+outlining job:
+.. code-block:: c++
+
+  int foo(int x) { return ++x; }
+
+  using namespace cl::sycl;
+  queue Q;
+  buffer<int, 1> a(range<1>{1024});
+  Q.submit([&](handler& cgh) {
+    auto A = a.get_access<access::mode::write>(cgh);
+    cgh.parallel_for<init_a>(range<1>{1024}, [=](id<1> index) {
+      A[index] = index[0] + foo(42);
+    });
+  }
+
+A C++ function object passed to the ``parallel_for`` is called a "SYCL kernel".
+A SYCL kernel defines the entry point to the "device part" of the code. The
+compiler will emit all symbols accessible from a "kernel". In this code
+example, the compiler will emit "foo" function.  More details about the
+compilation of functions for the device part can be found in the SYCL 1.2.1
+specification Section 6.4.
+To show to the compiler entry point to the "device part" of the code, the SYCL
+runtime can use the ``sycl_kernel`` attribute in the following way:
+.. code-block:: c++
+namespace cl {
+namespace sycl {
+class handler {
+  template <typename KernelName, typename KernelType/*, ...*/>
+  __attribute__((sycl_kernel)) void sycl_kernel_function(KernelType KernelFuncObj) {
+    // ...
+    KernelFuncObj();
+  }
+
+  template <typename KernelName, typename KernelType, int Dims>
+  void parallel_for(range<Dims> NumWorkItems, KernelType KernelFunc) {
+#ifdef __SYCL_DEVICE_ONLY__
+    sycl_kernel_function<KernelName, KernelType, Dims>(KernelFunc);
+#else
+    // Host implementation
+#endif
+  }
+};
+} // namespace sycl
+} // namespace cl
+
+The compiler will also generate an OpenCL kernel using the function marked with
+the ``sycl_kernel`` attribute.
+Here is the list of SYCL device compiler expectations with regard to the
+function marked with the ``sycl_kernel`` attribute:
+
+- The function must be a template with at least two type template parameters.
+  The compiler generates an OpenCL kernel and uses the first template parameter
+  as a unique name for the generated OpenCL kernel. The host application uses
+  this unique name to invoke the OpenCL kernel generated for the SYCL kernel
+  specialized by this name and second template parameter ``KernelType`` (which
+  might be an unnamed function object type).
+- The function must have at least one parameter. The first parameter is
+  required to be a function object type (named or unnamed i.e. lambda). The
+  compiler uses function object type fields to generate OpenCL kernel
+  parameters.
+- The function must return void. The compiler reuses the body of marked functions to
+  generate the OpenCL kernel body, and the OpenCL kernel must return `void`.
+
+The SYCL kernel in the previous code sample meets these expectations.
+  }];
+}
+
 def C11NoReturnDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
