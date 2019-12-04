@@ -241,8 +241,8 @@ struct TransposeOpLowering : public ConversionPattern {
           // Generate an adaptor for the remapped operands of the TransposeOp.
           // This allows for using the nice named accessors that are generated
           // by the ODS.
-          toy::TransposeOpOperandAdaptor tranposeAdaptor(memRefOperands);
-          Value *input = tranposeAdaptor.input();
+          toy::TransposeOpOperandAdaptor transposeAdaptor(memRefOperands);
+          Value *input = transposeAdaptor.input();
 
           // Transpose the elements by generating a load from the reverse
           // indices.
