@@ -120,6 +120,7 @@ static int GetOperation(HistoryOperation op) {
     case HistoryOperation::Newest:
       return H_LAST;
   }
+  llvm_unreachable("Fully covered switch!");
 }
 
 
