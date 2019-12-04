@@ -717,22 +717,6 @@ bool LoopInterchangeLegality::findInductionAndReductions(
   return true;
 }
 
-static bool containsSafePHI(BasicBlock *Block, bool isOuterLoopExitBlock) {
-  for (PHINode &PHI : Block->phis()) {
-    // Reduction lcssa phi will have only 1 incoming block that from loop latch.
-    if (PHI.getNumIncomingValues() > 1)
-      return false;
-    Instruction *Ins = dyn_cast<Instruction>(PHI.getIncomingValue(0));
-    if (!Ins)
-      return false;
-    // Incoming value for lcssa phi's in outer loop exit can only be inner loop
-    // exits lcssa phi else it would not be tightly nested.
-    if (!isa<PHINode>(Ins) && isOuterLoopExitBlock)
-      return false;
-  }
-  return true;
-}
-
 // This function indicates the current limitations in the transform as a result
 // of which we do not proceed.
 bool LoopInterchangeLegality::currentLimitations() {
@@ -831,21 +815,6 @@ bool LoopInterchangeLegality::currentLimitations() {
     return true;
   }
 
-  // TODO: We only handle LCSSA PHI's corresponding to reduction for now.
-  BasicBlock *InnerExit = InnerLoop->getExitBlock();
-  if (!containsSafePHI(InnerExit, false)) {
-    LLVM_DEBUG(
-        dbgs() << "Can only handle LCSSA PHIs in inner loops currently.\n");
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "NoLCSSAPHIOuterInner",
-                                      InnerLoop->getStartLoc(),
-                                      InnerLoop->getHeader())
-             << "Only inner loops with LCSSA PHIs can be interchange "
-                "currently.";
-    });
-    return true;
-  }
-
   // TODO: Current limitation: Since we split the inner loop latch at the point
   // were induction variable is incremented (induction.next); We cannot have
   // more than 1 user of induction.next since it would result in broken code
@@ -921,6 +890,28 @@ bool LoopInterchangeLegality::currentLimitations() {
   return false;
 }
 
+// We currently only support LCSSA PHI nodes in the inner loop exit, if their
+// users are either reduction PHIs or PHIs outside the outer loop (which means
+// the we are only interested in the final value after the loop).
+static bool
+areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
+                              SmallPtrSetImpl<PHINode *> &Reductions) {
+  BasicBlock *InnerExit = OuterL->getUniqueExitBlock();
+  for (PHINode &PHI : InnerExit->phis()) {
+    // Reduction lcssa phi will have only 1 incoming block that from loop latch.
+    if (PHI.getNumIncomingValues() > 1)
+      return false;
+    if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
+          PHINode *PN = dyn_cast<PHINode>(U);
+          return !PN || (Reductions.find(PN) == Reductions.end() &&
+                         OuterL->contains(PN->getParent()));
+        })) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // We currently support LCSSA PHI nodes in the outer loop exit, if their
 // incoming values do not come from the outer loop latch or if the
 // outer loop latch has a single predecessor. In that case, the value will
@@ -928,7 +919,7 @@ bool LoopInterchangeLegality::currentLimitations() {
 // will still be true after interchanging. If we have multiple predecessor,
 // that may not be the case, e.g. because the outer loop latch may be executed
 // if the inner loop is not executed.
-static bool areLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
+static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   BasicBlock *LoopNestExit = OuterLoop->getUniqueExitBlock();
   for (PHINode &PHI : LoopNestExit->phis()) {
     //  FIXME: We currently are not able to detect floating point reductions
@@ -1013,7 +1004,19 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
-  if (!areLoopExitPHIsSupported(OuterLoop, InnerLoop)) {
+  if (!areInnerLoopExitPHIsSupported(OuterLoop, InnerLoop,
+                                     OuterInnerReductions)) {
+    LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop exit.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedExitPHI",
+                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getHeader())
+             << "Found unsupported PHI node in loop exit.";
+    });
+    return false;
+  }
+
+  if (!areOuterLoopExitPHIsSupported(OuterLoop, InnerLoop)) {
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in outer loop exit.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedExitPHI",
