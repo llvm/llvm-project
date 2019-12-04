@@ -170,6 +170,46 @@ protected:
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
 
 private:
+  struct BitfieldInfo {
+    uint64_t bit_size;
+    uint64_t bit_offset;
+
+    BitfieldInfo()
+        : bit_size(LLDB_INVALID_ADDRESS), bit_offset(LLDB_INVALID_ADDRESS) {}
+
+    void Clear() {
+      bit_size = LLDB_INVALID_ADDRESS;
+      bit_offset = LLDB_INVALID_ADDRESS;
+    }
+
+    bool IsValid() const {
+      return (bit_size != LLDB_INVALID_ADDRESS) &&
+             (bit_offset != LLDB_INVALID_ADDRESS);
+    }
+
+    bool NextBitfieldOffsetIsValid(const uint64_t next_bit_offset) const {
+      if (IsValid()) {
+        // This bitfield info is valid, so any subsequent bitfields must not
+        // overlap and must be at a higher bit offset than any previous bitfield
+        // + size.
+        return (bit_size + bit_offset) <= next_bit_offset;
+      } else {
+        // If the this BitfieldInfo is not valid, then any offset isOK
+        return true;
+      }
+    }
+  };
+
+  void
+  ParseSingleMember(const DWARFDIE &die, const DWARFDIE &parent_die,
+                    lldb_private::CompilerType &class_clang_type,
+                    const lldb::LanguageType class_language,
+                    std::vector<int> &member_accessibilities,
+                    lldb::AccessType &default_accessibility,
+                    DelayedPropertyList &delayed_properties,
+                    lldb_private::ClangASTImporter::LayoutInfo &layout_info,
+                    BitfieldInfo &last_field_info);
+
   bool CompleteRecordType(const DWARFDIE &die, lldb_private::Type *type,
                           lldb_private::CompilerType &clang_type);
   bool CompleteEnumType(const DWARFDIE &die, lldb_private::Type *type,
