@@ -54,8 +54,6 @@ public:
 
     bool LineIsValid(uint32_t line);
 
-    bool FileSpecMatches(const FileSpec &file_spec);
-
     const FileSpec &GetFileSpec() { return m_file_spec; }
 
     uint32_t GetSourceMapModificationID() const { return m_source_map_mod_id; }

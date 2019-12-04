@@ -403,13 +403,11 @@ SearchFilterByModule::~SearchFilterByModule() = default;
 
 bool SearchFilterByModule::ModulePasses(const ModuleSP &module_sp) {
   return (module_sp &&
-          FileSpec::Equal(module_sp->GetFileSpec(), m_module_spec, false));
+          FileSpec::Match(m_module_spec, module_sp->GetFileSpec()));
 }
 
 bool SearchFilterByModule::ModulePasses(const FileSpec &spec) {
-  // Do a full match only if "spec" has a directory
-  const bool full_match = (bool)spec.GetDirectory();
-  return FileSpec::Equal(spec, m_module_spec, full_match);
+  return FileSpec::Match(m_module_spec, spec);
 }
 
 bool SearchFilterByModule::AddressPasses(Address &address) {
@@ -443,8 +441,7 @@ void SearchFilterByModule::Search(Searcher &searcher) {
   const size_t num_modules = target_modules.GetSize();
   for (size_t i = 0; i < num_modules; i++) {
     Module *module = target_modules.GetModulePointerAtIndexUnlocked(i);
-    const bool full_match = (bool)m_module_spec.GetDirectory();
-    if (FileSpec::Equal(m_module_spec, module->GetFileSpec(), full_match)) {
+    if (FileSpec::Match(m_module_spec, module->GetFileSpec())) {
       SymbolContext matchingContext(m_target_sp, module->shared_from_this());
       Searcher::CallbackReturn shouldContinue;
 

@@ -243,9 +243,8 @@ void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
   // "file_spec" has an empty directory, then only compare the basenames when
   // finding file indexes
   std::vector<uint32_t> file_indexes;
-  const bool full_match = (bool)file_spec.GetDirectory();
   bool file_spec_matches_cu_file_spec =
-      FileSpec::Equal(file_spec, this->GetPrimaryFile(), full_match);
+      FileSpec::Match(file_spec, this->GetPrimaryFile());
 
   // If we are not looking for inlined functions and our file spec doesn't
   // match then we are done...

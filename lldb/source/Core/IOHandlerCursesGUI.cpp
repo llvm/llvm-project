@@ -3322,7 +3322,7 @@ public:
           if (context_changed)
             m_selected_line = m_pc_line;
 
-          if (m_file_sp && m_file_sp->FileSpecMatches(m_sc.line_entry.file)) {
+          if (m_file_sp && m_file_sp->GetFileSpec() == m_sc.line_entry.file) {
             // Same file, nothing to do, we should either have the lines or not
             // (source file missing)
             if (m_selected_line >= static_cast<size_t>(m_first_visible_line)) {

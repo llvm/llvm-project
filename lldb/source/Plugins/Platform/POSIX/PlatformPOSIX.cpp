@@ -235,7 +235,7 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
 
   if (IsHost()) {
-    if (FileSpec::Equal(source, destination, true))
+    if (source == destination)
       return Status();
     // cp src dst
     // chown uid:gid dst
@@ -307,7 +307,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
   if (dst_path.empty())
     return Status("unable to get file path for destination");
   if (IsHost()) {
-    if (FileSpec::Equal(source, destination, true))
+    if (source == destination)
       return Status("local scenario->source and destination are the same file "
                     "path: no operation performed");
     // cp src dst
