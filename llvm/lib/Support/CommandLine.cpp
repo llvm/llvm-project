@@ -24,7 +24,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
@@ -43,7 +42,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <map>
-#include <string>
 using namespace llvm;
 using namespace cl;
 
@@ -1047,12 +1045,14 @@ static bool hasUTF8ByteOrderMark(ArrayRef<char> S) {
   return (S.size() >= 3 && S[0] == '\xef' && S[1] == '\xbb' && S[2] == '\xbf');
 }
 
-// FName must be an absolute path.
-static llvm::Error ExpandResponseFile(
-    StringRef FName, StringSaver &Saver, TokenizerCallback Tokenizer,
-    SmallVectorImpl<const char *> &NewArgv, bool MarkEOLs, bool RelativeNames,
-    llvm::vfs::FileSystem &FS) {
-  assert(sys::path::is_absolute(FName));
+static llvm::Error ExpandResponseFile(StringRef FName, StringSaver &Saver,
+                               TokenizerCallback Tokenizer,
+                               SmallVectorImpl<const char *> &NewArgv,
+                               bool MarkEOLs, bool RelativeNames,
+                               llvm::vfs::FileSystem &FS) {
+  llvm::ErrorOr<std::string> CurrDirOrErr = FS.getCurrentWorkingDirectory();
+  if (!CurrDirOrErr)
+    return llvm::errorCodeToError(CurrDirOrErr.getError());
   llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufOrErr =
       FS.getBufferForFile(FName);
   if (!MemBufOrErr)
@@ -1078,28 +1078,28 @@ static llvm::Error ExpandResponseFile(
   // Tokenize the contents into NewArgv.
   Tokenizer(Str, Saver, NewArgv, MarkEOLs);
 
-  if (!RelativeNames)
-    return Error::success();
-  llvm::StringRef BasePath = llvm::sys::path::parent_path(FName);
   // If names of nested response files should be resolved relative to including
   // file, replace the included response file names with their full paths
   // obtained by required resolution.
-  for (auto &Arg : NewArgv) {
-    // Skip non-rsp file arguments.
-    if (!Arg || Arg[0] != '@')
-      continue;
+  if (RelativeNames)
+    for (unsigned I = 0; I < NewArgv.size(); ++I)
+      if (NewArgv[I]) {
+        StringRef Arg = NewArgv[I];
+        if (Arg.front() == '@') {
+          StringRef FileName = Arg.drop_front();
+          if (llvm::sys::path::is_relative(FileName)) {
+            SmallString<128> ResponseFile;
+            ResponseFile.append(1, '@');
+            if (llvm::sys::path::is_relative(FName)) {
+              ResponseFile.append(CurrDirOrErr.get());
+            }
+            llvm::sys::path::append(
+                ResponseFile, llvm::sys::path::parent_path(FName), FileName);
+            NewArgv[I] = Saver.save(ResponseFile.c_str()).data();
+          }
+        }
+      }
 
-    StringRef FileName(Arg + 1);
-    // Skip if non-relative.
-    if (!llvm::sys::path::is_relative(FileName))
-      continue;
-
-    SmallString<128> ResponseFile;
-    ResponseFile.push_back('@');
-    ResponseFile.append(BasePath);
-    llvm::sys::path::append(ResponseFile, FileName);
-    Arg = Saver.save(ResponseFile.c_str()).data();
-  }
   return Error::success();
 }
 
@@ -1107,11 +1107,10 @@ static llvm::Error ExpandResponseFile(
 /// StringSaver and tokenization strategy.
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames, llvm::vfs::FileSystem &FS,
-                             llvm::Optional<llvm::StringRef> CurrentDir) {
+                             bool RelativeNames, llvm::vfs::FileSystem &FS) {
   bool AllExpanded = true;
   struct ResponseFileRecord {
-    std::string File;
+    const char *File;
     size_t End;
   };
 
@@ -1145,17 +1144,6 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     }
 
     const char *FName = Arg + 1;
-    // Note that CurrentDir is only used for top-level rsp files, the rest will
-    // always have an absolute path deduced from the containing file.
-    SmallString<128> CurrDir;
-    if (llvm::sys::path::is_relative(FName)) {
-      if (!CurrentDir)
-        llvm::sys::fs::current_path(CurrDir);
-      else
-        CurrDir = *CurrentDir;
-      llvm::sys::path::append(CurrDir, FName);
-      FName = CurrDir.c_str();
-    }
     auto IsEquivalent = [FName, &FS](const ResponseFileRecord &RFile) {
       llvm::ErrorOr<llvm::vfs::Status> LHS = FS.status(FName);
       if (!LHS) {
@@ -1218,12 +1206,6 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
 
 bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
                         SmallVectorImpl<const char *> &Argv) {
-  SmallString<128> AbsPath;
-  if (sys::path::is_relative(CfgFile)) {
-    llvm::sys::fs::current_path(AbsPath);
-    llvm::sys::path::append(AbsPath, CfgFile);
-    CfgFile = AbsPath.str();
-  }
   if (llvm::Error Err =
           ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
                              /*MarkEOLs*/ false, /*RelativeNames*/ true,
