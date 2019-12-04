@@ -13,8 +13,8 @@ def check_target(target):
 
 
 def compute_dpu_pid(region_id, rank_id, slice_id, dpu_id):
-    return dpu_id + (slice_id << 16) + (rank_id << 32) + (region_id << 48) \
-        + 0x80000000
+    return dpu_id + 100 * (slice_id + 100 * (rank_id + 100 *
+                                             (region_id + 100)))
 
 
 def get_value_from_command(debugger, command, base):
@@ -42,18 +42,20 @@ def get_object_from_command(command, debugger, target, name, object_type,
     addr = 0
     try:
         addr = int(command, base)
-    except:
-        success, addr = get_value_from_command(debugger, command, base)
-        if not(success) and not(re.match(".*\..*\..*\..*", command) is None):
-            dpus = dpu_list(debugger, None, None, None)
-            addr = next((dpu[0] for dpu in dpus
-                         if (command ==
-                             str(dpu[1]) + "." + str(dpu[2]) + "." +
-                             str(dpu[3]) + "." + str(dpu[4]))),
-                        0)
-            if addr == 0:
-                print("Could not interpret command '" + command + "'")
-                return None
+        return target.CreateValueFromExpression(
+            name, "(" + object_type + ")" + str(addr))
+
+    success, addr = get_value_from_command(debugger, command, base)
+    if not(success) and not(re.match(r'.*\..*\..*\..*', command) is None):
+        dpus = dpu_list(debugger, None, None, None)
+        addr = next((dpu[0] for dpu in dpus
+                     if (command ==
+                         str(dpu[1]) + "." + str(dpu[2]) + "." +
+                         str(dpu[3]) + "." + str(dpu[4]))),
+                    0)
+        if addr == 0:
+            print("Could not interpret command '" + command + "'")
+            return None
     return target.CreateValueFromExpression(
         name, "(" + object_type + ")" + str(addr))
 

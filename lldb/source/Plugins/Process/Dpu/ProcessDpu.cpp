@@ -124,10 +124,13 @@ ProcessDpu::Factory::Attach(
   LLDB_LOG(log, "attaching to pid = {0:x}", pid);
 
   unsigned int region_id, rank_id, slice_id, dpu_id;
-  region_id = (pid >> 48) & 0xffff;
-  rank_id = (pid >> 32) & 0xffff;
-  slice_id = (pid >> 16) & 0x7fff;
-  dpu_id = pid & 0xffff;
+  dpu_id = pid % 100;
+  pid /= 100;
+  slice_id = pid % 100;
+  pid /= 100;
+  rank_id = pid % 100;
+  pid /= 100;
+  region_id = pid % 100;
 
   char profile[256];
   sprintf(profile, "backend=hw,rankPath=/dev/dpu_region%u/dpu_rank%u",
@@ -142,25 +145,31 @@ ProcessDpu::Factory::Attach(
   if (dpu == nullptr)
     return Status("Cannot find the DPU in the rank ").ToError();
 
-  Dpu *dpu_neighbor = rank->GetDpuFromSliceIdAndDpuId(slice_id, dpu_id ^ 0x1);
-  if (dpu_neighbor == nullptr)
-    return Status("Cannot find the DPU neighbor in the rank ").ToError();
-
+  char *structure_value_ptr = std::getenv("UPMEM_LLDB_STRUCTURE_VALUE");
+  char *slice_target_ptr = std::getenv("UPMEM_LLDB_SLICE_TARGET");
   uint64_t structure_value =
-      ::strtoll(std::getenv("UPMEM_LLDB_STRUCTURE_VALUE"), NULL, 10);
+      structure_value_ptr == NULL ? 0ULL : ::strtoll(, NULL, 10);
   uint64_t slice_target =
-      ::strtoll(std::getenv("UPMEM_LLDB_SLICE_TARGET"), NULL, 10);
+      slice_target_ptr == NULL
+          ? 0ULL
+          : ::strtoll(std::getenv("UPMEM_LLDB_SLICE_TARGET"), NULL, 10);
   LLDB_LOG(log, "saving slice context ({0:x}, {1:x})", structure_value,
            slice_target);
+
   success = dpu->SaveSliceContext(structure_value, slice_target);
   if (!success)
     return Status("Cannot save the DPU slice context ").ToError();
+
   success = dpu->StopThreads(true);
   if (!success)
     return Status("Cannot stop the DPU ").ToError();
-  success = dpu_neighbor->StopThreads(true);
-  if (!success)
-    return Status("Cannot stop the DPU neighbor ").ToError();
+
+  Dpu *dpu_neighbor = rank->GetDpuFromSliceIdAndDpuId(slice_id, dpu_id ^ 0x1);
+  if (dpu_neighbor != nullptr) {
+    success = dpu_neighbor->StopThreads(true);
+    if (!success)
+      return Status("Cannot stop the DPU neighbor ").ToError();
+  }
 
   dpu->SetAttachSession();
 
