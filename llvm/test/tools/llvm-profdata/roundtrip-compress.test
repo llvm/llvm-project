@@ -7,4 +7,4 @@ RUN: diff %t.1.proftext %S/Inputs/sample-profile.proftext
 RUN: llvm-profdata merge --sample --binary -output=%t.2.profdata %S/Inputs/sample-profile.proftext
 RUN: llvm-profdata merge --sample --extbinary -compress-all-sections -output=%t.3.profdata %t.2.profdata
 RUN: llvm-profdata merge --sample --text -output=%t.2.proftext %t.3.profdata
-RUN: diff %t.2.proftext %S/Inputs/sample-profile.proftext
+RUN: diff --strip-trailing-cr %t.2.proftext %S/Inputs/sample-profile.proftext
