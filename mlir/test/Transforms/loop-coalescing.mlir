@@ -40,6 +40,38 @@ func @one_3d_nest() {
   return
 }
 
+// Check that there is no chasing the replacement of value uses by ensuring
+// multiple uses of loop induction variables get rewritten to the same values.
+
+// CHECK-LABEL: @multi_use
+func @multi_use() {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c10 = constant 10 : index
+  // CHECK: loop.for %[[iv:.*]] =
+  loop.for %i = %c1 to %c10 step %c1 {
+    loop.for %j = %c1 to %c10 step %c1 {
+      loop.for %k = %c1 to %c10 step %c1 {
+        // CHECK: %[[k_unshifted:.*]] = remis %[[iv]], %[[k_extent:.*]]
+        // CHECK: %[[ij:.*]] = divis %[[iv]], %[[k_extent]]
+        // CHECK: %[[j_unshifted:.*]] = remis %[[ij]], %[[j_extent:.*]]
+        // CHECK: %[[i_unshifted:.*]] = divis %[[ij]], %[[j_extent]]
+        // CHECK: %[[k:.*]] = addi %[[k_unshifted]]
+        // CHECK: %[[j:.*]] = addi %[[j_unshifted]]
+        // CHECK: %[[i:.*]] = addi %[[i_unshifted]]
+
+        // CHECK: "use1"(%[[i]], %[[j]], %[[k]])
+        "use1"(%i,%j,%k) : (index,index,index) -> ()
+        // CHECK: "use2"(%[[i]], %[[k]], %[[j]])
+        "use2"(%i,%k,%j) : (index,index,index) -> ()
+        // CHECK: "use3"(%[[k]], %[[j]], %[[i]])
+        "use3"(%k,%j,%i) : (index,index,index) -> ()
+      }
+    }
+  }
+  return
+}
+
 func @unnormalized_loops() {
   // CHECK: %[[orig_step_i:.*]] = constant 2
   // CHECK: %[[orig_step_j:.*]] = constant 3
