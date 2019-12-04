@@ -28,7 +28,7 @@
 #ifndef _OMPTARGET_NVPTX_DEBUG_H_
 #define _OMPTARGET_NVPTX_DEBUG_H_
 
-#include "device_environment.h"
+#include "common/device_environment.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // set desired level of debugging
@@ -128,7 +128,7 @@
 
 #if OMPTARGET_NVPTX_DEBUG || OMPTARGET_NVPTX_TEST || OMPTARGET_NVPTX_WARNING
 #include <stdio.h>
-#include "support.h"
+#include "common/support.h"
 
 template <typename... Arguments>
 NOINLINE static void log(const char *fmt, Arguments... parameters) {
