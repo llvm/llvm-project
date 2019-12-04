@@ -504,7 +504,7 @@ type DITypedef struct {
 	File    Metadata
 	Line    int
 	Context Metadata
-  AlignInBits unit32
+  AlignInBits uint32
 }
 
 // CreateTypedef creates typedef type debug metadata.
