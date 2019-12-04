@@ -30,6 +30,7 @@ DynamicSymbols:
 ## Specifying both `Size` and symbols at the same time is not allowed for .dynsym.
 
 # RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE2
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE2
 
 # CASE2: yaml2obj: error: cannot specify both `Size` and `DynamicSymbols` for symbol table section '.dynsym'
 
@@ -50,9 +51,25 @@ DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0x100
+  - Name: .dynsym2
+    Type: SHT_DYNSYM
+    Size: 0x100
+DynamicSymbols: []
+
 ## Specifying both `Content` and symbols at the same time is not allowed for .dynsym.
 
-# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE3
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE3
+# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE3
 
 # CASE3: yaml2obj: error: cannot specify both `Content` and `DynamicSymbols` for symbol table section '.dynsym'
 
@@ -63,18 +80,33 @@ FileHeader:
   Type:    ET_DYN
   Machine: EM_X86_64
 Sections:
-  - Name: .dynsym
-    Type: SHT_DYNSYM
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
     Content: "00"
-  - Name: .dynsym2
-    Type: SHT_DYNSYM
+  - Name:    .dynsym2
+    Type:    SHT_DYNSYM
     Content: "00"
 DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Content: "00"
+  - Name:    .dynsym2
+    Type:    SHT_DYNSYM
+    Content: "00"
+DynamicSymbols: []
+
 ## Check we can use just `Content` to emit custom data in the symbol table section.
-# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: yaml2obj --docnum=6 %s -o %t4
 # RUN: llvm-readobj --section-data -S %t4 | FileCheck %s --check-prefix=CASE4
 
 # CASE4:      Name: .dynsym
@@ -106,7 +138,7 @@ Sections:
 
 ## Check we can use just `Size` to emit custom data filled with zeroes
 ## in the symbol table section.
-# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: yaml2obj --docnum=7 %s -o %t5
 # RUN: llvm-readobj --section-data -S %t5 | FileCheck %s --check-prefix=CASE5
 
 # CASE5:      Name: .dynsym
@@ -140,7 +172,7 @@ Sections:
 ## than content size. In this case zeroes are added as padding
 ## after after the specified content.
 
-# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: yaml2obj --docnum=8 %s -o %t6
 # RUN: llvm-readobj %t6 --section-data -S | FileCheck %s --check-prefix=CASE6
 
 # CASE6:      Name: .dynsym
@@ -174,7 +206,7 @@ Sections:
 ## Check we can specify both `Size` and `Content` when size is
 ## equal to content size.
 
-# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: yaml2obj --docnum=9 %s -o %t7
 # RUN: llvm-readobj --section-data -S %t7 | FileCheck %s --check-prefix=CASE7
 
 # CASE7:       Name: .dynsym

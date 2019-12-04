@@ -613,12 +613,10 @@ void Module::FindCompileUnits(const FileSpec &path,
   const size_t num_compile_units = GetNumCompileUnits();
   SymbolContext sc;
   sc.module_sp = shared_from_this();
-  const bool compare_directory = (bool)path.GetDirectory();
   for (size_t i = 0; i < num_compile_units; ++i) {
     sc.comp_unit = GetCompileUnitAtIndex(i).get();
     if (sc.comp_unit) {
-      if (FileSpec::Equal(sc.comp_unit->GetPrimaryFile(), path,
-                          compare_directory))
+      if (FileSpec::Match(path, sc.comp_unit->GetPrimaryFile()))
         sc_list.Append(sc);
     }
   }
@@ -1561,19 +1559,13 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
   }
 
   const FileSpec &file_spec = module_ref.GetFileSpec();
-  if (file_spec) {
-    if (!FileSpec::Equal(file_spec, m_file, (bool)file_spec.GetDirectory()) &&
-        !FileSpec::Equal(file_spec, m_platform_file,
-                         (bool)file_spec.GetDirectory()))
-      return false;
-  }
+  if (!FileSpec::Match(file_spec, m_file) &&
+      !FileSpec::Match(file_spec, m_platform_file))
+    return false;
 
   const FileSpec &platform_file_spec = module_ref.GetPlatformFileSpec();
-  if (platform_file_spec) {
-    if (!FileSpec::Equal(platform_file_spec, GetPlatformFileSpec(),
-                         (bool)platform_file_spec.GetDirectory()))
-      return false;
-  }
+  if (!FileSpec::Match(platform_file_spec, GetPlatformFileSpec()))
+    return false;
 
   const ArchSpec &arch = module_ref.GetArchitecture();
   if (arch.IsValid()) {

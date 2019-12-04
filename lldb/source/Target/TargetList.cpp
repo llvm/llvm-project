@@ -457,15 +457,12 @@ TargetSP TargetList::FindTargetWithExecutableAndArchitecture(
     const FileSpec &exe_file_spec, const ArchSpec *exe_arch_ptr) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   TargetSP target_sp;
-  bool full_match = (bool)exe_file_spec.GetDirectory();
-
   collection::const_iterator pos, end = m_target_list.end();
   for (pos = m_target_list.begin(); pos != end; ++pos) {
     Module *exe_module = (*pos)->GetExecutableModulePointer();
 
     if (exe_module) {
-      if (FileSpec::Equal(exe_file_spec, exe_module->GetFileSpec(),
-                          full_match)) {
+      if (FileSpec::Match(exe_file_spec, exe_module->GetFileSpec())) {
         if (exe_arch_ptr) {
           if (!exe_arch_ptr->IsCompatibleMatch(exe_module->GetArchitecture()))
             continue;

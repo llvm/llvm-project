@@ -399,3 +399,24 @@ TEST(FileSpecTest, Equal) {
   EXPECT_FALSE(Eq("foo", "/bar/foo", true));
   EXPECT_TRUE(Eq("foo", "/bar/foo", false));
 }
+
+TEST(FileSpecTest, Match) {
+  auto Match = [](const char *pattern, const char *file) {
+    return FileSpec::Match(PosixSpec(pattern), PosixSpec(file));
+  };
+  EXPECT_TRUE(Match("/foo/bar", "/foo/bar"));
+  EXPECT_FALSE(Match("/foo/bar", "/oof/bar"));
+  EXPECT_FALSE(Match("/foo/bar", "/foo/baz"));
+  EXPECT_FALSE(Match("/foo/bar", "bar"));
+  EXPECT_FALSE(Match("/foo/bar", ""));
+
+  EXPECT_TRUE(Match("bar", "/foo/bar"));
+  EXPECT_FALSE(Match("bar", "/foo/baz"));
+  EXPECT_TRUE(Match("bar", "bar"));
+  EXPECT_FALSE(Match("bar", "baz"));
+  EXPECT_FALSE(Match("bar", ""));
+
+  EXPECT_TRUE(Match("", "/foo/bar"));
+  EXPECT_TRUE(Match("", ""));
+
+}

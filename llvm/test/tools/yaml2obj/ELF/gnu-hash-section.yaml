@@ -32,9 +32,7 @@ Sections:
     Type:  SHT_GNU_HASH
     Content: "001122"
 ## Used to trigger .dynsym creation.
-DynamicSymbols:
-  - Name:    foo
-    Binding: STB_GLOBAL
+DynamicSymbols: []
 
 ## Check we can use "Header", "BloomFilter", "HashBuckets" and "HashValues" keys to describe
 ## the hash section. Check we can set sh_link to any arbitrary value. Check both ELFCLASS32 and 64 bit output.

@@ -404,8 +404,8 @@ Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
                                         bool request_hardware) {
   SearchFilterSP filter_sp(
       new SearchFilterForUnconstrainedSearches(shared_from_this()));
-  BreakpointResolverSP resolver_sp(
-      new BreakpointResolverAddress(nullptr, file_addr, file_spec));
+  BreakpointResolverSP resolver_sp(new BreakpointResolverAddress(
+      nullptr, file_addr, file_spec ? *file_spec : FileSpec()));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
 }
@@ -1425,8 +1425,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
       ModuleList added_modules;
       executable_objfile->GetDependentModules(dependent_files);
       for (uint32_t i = 0; i < dependent_files.GetSize(); i++) {
-        FileSpec dependent_file_spec(
-            dependent_files.GetFileSpecPointerAtIndex(i));
+        FileSpec dependent_file_spec(dependent_files.GetFileSpecAtIndex(i));
         FileSpec platform_dependent_file_spec;
         if (m_platform_sp)
           m_platform_sp->GetFileWithUUID(dependent_file_spec, nullptr,

@@ -75,15 +75,6 @@ FileSpec::FileSpec(llvm::StringRef path, Style style) : m_style(style) {
 FileSpec::FileSpec(llvm::StringRef path, const llvm::Triple &triple)
     : FileSpec{path, triple.isOSWindows() ? Style::windows : Style::posix} {}
 
-// Copy constructor
-FileSpec::FileSpec(const FileSpec *rhs) : m_directory(), m_filename() {
-  if (rhs)
-    *this = *rhs;
-}
-
-// Virtual destructor in case anyone inherits from this class.
-FileSpec::~FileSpec() {}
-
 namespace {
 /// Safely get a character at the specified index.
 ///
@@ -306,6 +297,14 @@ bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
     return a == b;
 
   return a.FileEquals(b);
+}
+
+bool FileSpec::Match(const FileSpec &pattern, const FileSpec &file) {
+  if (pattern.GetDirectory())
+    return pattern == file;
+  if (pattern.GetFilename())
+    return pattern.FileEquals(file);
+  return true;
 }
 
 llvm::Optional<FileSpec::Style> FileSpec::GuessPathStyle(llvm::StringRef absolute_path) {
