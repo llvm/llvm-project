@@ -126,7 +126,7 @@ class JSONNodeDumper
   ASTNameGenerator ASTNameGen;
   PrintingPolicy PrintPolicy;
   const comments::CommandTraits *Traits;
-  StringRef LastLocFilename;
+  StringRef LastLocFilename, LastLocPresumedFilename;
   unsigned LastLocLine, LastLocPresumedLine;
 
   using InnerAttrVisitor = ConstAttrVisitor<JSONNodeDumper>;
