@@ -734,7 +734,7 @@ bool DynamicLoaderMacOSXDYLD::InitializeFromAllImageInfos() {
       if (!module_sp->IsLoadedInTarget(&target)) {
         if (log) {
           StreamString s;
-          module_sp->GetDescription(&s);
+          module_sp->GetDescription(s.AsRawOstream());
           LLDB_LOGF(log, "Unloading pre-run module: %s.", s.GetData());
         }
         not_loaded_modules.Append(module_sp);

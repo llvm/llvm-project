@@ -4094,7 +4094,7 @@ void Target::TargetEventData::Dump(Stream *s) const {
     if (i != 0)
       *s << ", ";
     m_module_list.GetModuleAtIndex(i)->GetDescription(
-        s, lldb::eDescriptionLevelBrief);
+        s->AsRawOstream(), lldb::eDescriptionLevelBrief);
   }
 }
 
