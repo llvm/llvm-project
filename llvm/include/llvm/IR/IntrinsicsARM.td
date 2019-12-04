@@ -840,6 +840,14 @@ def int_arm_mve_mulh_predicated: Intrinsic<[llvm_anyvector_ty],
 def int_arm_mve_rmulh_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
    [IntrNoMem]>;
+def int_arm_mve_mull_int_predicated: Intrinsic<[llvm_anyvector_ty],
+   [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty,
+    LLVMMatchType<1>],
+   [IntrNoMem]>;
+def int_arm_mve_mull_poly_predicated: Intrinsic<[llvm_anyvector_ty],
+   [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty,
+    LLVMMatchType<1>],
+   [IntrNoMem]>;
 
 defm int_arm_mve_minv: IntrinsicSignSuffix<[llvm_i32_ty],
    [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
@@ -928,6 +936,12 @@ def int_arm_mve_vmulh: Intrinsic<
 def int_arm_mve_vrmulh: Intrinsic<
    [llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+def int_arm_mve_vmull: Intrinsic<
+   [llvm_anyvector_ty],
+   [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty], [IntrNoMem]>;
+def int_arm_mve_vmull_poly: Intrinsic<
+   [llvm_anyvector_ty],
+   [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty], [IntrNoMem]>;
 
 // Intrinsic with a predicated and a non-predicated case. The predicated case
 // has two additional parameters: inactive (the value for inactive lanes, can

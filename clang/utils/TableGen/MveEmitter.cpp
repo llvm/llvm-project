@@ -143,7 +143,7 @@ public:
   virtual std::string llvmName() const {
     PrintFatalError("no LLVM type name available for type " + cName());
   }
-  virtual std::string acleSuffix() const {
+  virtual std::string acleSuffix(std::string) const {
     PrintFatalError("no ACLE suffix available for this type");
   }
 };
@@ -180,7 +180,7 @@ public:
   std::string cName() const override { return "void"; }
 
   static bool classof(const Type *T) { return T->typeKind() == TypeKind::Void; }
-  std::string acleSuffix() const override { return ""; }
+  std::string acleSuffix(std::string) const override { return ""; }
 };
 
 class PointerType : public Type {
@@ -266,8 +266,9 @@ public:
     }
     return "Int" + utostr(Bits) + "Ty";
   }
-  std::string acleSuffix() const override {
-    return "_" + toLetter(Kind) + utostr(Bits);
+  std::string acleSuffix(std::string overrideLetter) const override {
+    return "_" + (overrideLetter.size() ? overrideLetter : toLetter(Kind))
+               + utostr(Bits);
   }
   bool isInteger() const { return Kind != ScalarTypeKind::Float; }
   bool requiresFloat() const override { return !isInteger(); }
@@ -1093,6 +1094,16 @@ const Type *MveEmitter::getType(DagInit *D, const Type *Param) {
     PrintFatalError("Cannot find a type to satisfy CopyKind");
   }
 
+  if (Op->getName() == "CTO_DoubleSize") {
+    const ScalarType *STKind = cast<ScalarType>(getType(D->getArg(0), Param));
+    for (const auto &kv : ScalarTypes) {
+      const ScalarType *RT = kv.second.get();
+      if (RT->kind() == STKind->kind() && RT->sizeInBits() == 2*STKind->sizeInBits())
+        return RT;
+    }
+    PrintFatalError("Cannot find a type to satisfy DoubleSize");
+  }
+
   PrintFatalError("Bad operator in type dag expression");
 }
 
@@ -1251,7 +1262,8 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
   StringRef BaseName =
       (R->isSubClassOf("NameOverride") ? R->getValueAsString("basename")
                                        : R->getName());
-  FullName = (Twine(BaseName) + Param->acleSuffix()).str();
+  StringRef overrideLetter = R->getValueAsString("overrideKindLetter");
+  FullName = (Twine(BaseName) + Param->acleSuffix(overrideLetter)).str();
 
   // Derive the intrinsic's polymorphic name, by removing components from the
   // full name as specified by its 'pnt' member ('polymorphic name type'),
