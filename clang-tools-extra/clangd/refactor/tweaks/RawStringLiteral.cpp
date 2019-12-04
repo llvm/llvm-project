@@ -91,7 +91,7 @@ Expected<Tweak::Effect> RawStringLiteral::apply(const Selection &Inputs) {
   auto &SM = Inputs.AST.getSourceManager();
   auto Reps = tooling::Replacements(
       tooling::Replacement(SM, Str, ("R\"(" + Str->getBytes() + ")\"").str(),
-                           Inputs.AST.getASTContext().getLangOpts()));
+                           Inputs.AST.getLangOpts()));
   return Effect::mainFileEdit(SM, std::move(Reps));
 }
 
