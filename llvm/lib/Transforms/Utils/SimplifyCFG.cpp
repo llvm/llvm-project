@@ -1395,7 +1395,7 @@ HoistTerminator:
   for (auto DIVariableInst : UndefDVIs) {
     DbgVariableIntrinsic *DVI = DIVariableInst.second;
     DVI->moveBefore(BI);
-    if (Value *V = DVI->getVariableLocation())
+    if (DVI->getVariableLocation())
       setDbgVariableUndef(DVI);
   }
 
