@@ -184,7 +184,6 @@ TEST_F(PatternMatchTest, SpecificIntUGT) {
 
 TEST_F(PatternMatchTest, SignbitZeroChecks) {
   Type *IntTy = IRB.getInt32Ty();
-  unsigned BitWidth = IntTy->getScalarSizeInBits();
 
   Value *Zero = ConstantInt::get(IntTy, 0);
   Value *One = ConstantInt::get(IntTy, 1);
