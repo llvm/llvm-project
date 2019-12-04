@@ -47,6 +47,10 @@ def vornq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (or $a, (not $b))>;
 def vorrq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (or $a, $b)>;
 def vsubq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (sub $a, $b)>;
 def vmulq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (mul $a, $b)>;
+def vmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                             (IRInt<"vmulh", [Vector]> $a, $b)>;
+def vrmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                             (IRInt<"vrmulh", [Vector]> $a, $b)>;
 }
 
 let params = T.Float in {
@@ -113,6 +117,12 @@ def vminq_m: Intrinsic<
 def vmaxq_m: Intrinsic<
     Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
     (IRInt<"max_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vmulhq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vrmulhq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"rmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
 }
 
 // Predicated intrinsics - Float types only
