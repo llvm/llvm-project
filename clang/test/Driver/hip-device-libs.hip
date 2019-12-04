@@ -22,7 +22,6 @@
 
 // COM: {{"[^"]*clang[^"]*"}}
 // COM-SAME: "-mlink-builtin-bitcode" "{{.*}}hip.amdgcn.bc"
-// COM-SAME: "-mlink-builtin-bitcode" "{{.*}}opencl.amdgcn.bc"
 // COM-SAME: "-mlink-builtin-bitcode" "{{.*}}ocml.amdgcn.bc"
 // COM-SAME: "-mlink-builtin-bitcode" "{{.*}}ockl.amdgcn.bc"
 // FLUSHD-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_on.amdgcn.bc"
