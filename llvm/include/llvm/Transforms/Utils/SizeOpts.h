@@ -21,6 +21,7 @@ using namespace llvm;
 
 extern cl::opt<bool> EnablePGSO;
 extern cl::opt<bool> PGSOLargeWorkingSetSizeOnly;
+extern cl::opt<bool> PGSOIRPassOrTestOnly;
 extern cl::opt<bool> PGSOColdCodeOnly;
 extern cl::opt<bool> ForcePGSO;
 extern cl::opt<int> PgsoCutoffInstrProf;
@@ -34,8 +35,9 @@ class Function;
 class ProfileSummaryInfo;
 
 enum class PGSOQueryType {
-  IRPass,  // A query call from an IR-level transform pass.
-  Other,   // Others.
+  IRPass, // A query call from an IR-level transform pass.
+  Test,   // A query call from a unit test.
+  Other,  // Others.
 };
 
 template<typename AdapterT, typename FuncT, typename BFIT>
@@ -47,6 +49,11 @@ bool shouldFuncOptimizeForSizeImpl(const FuncT *F, ProfileSummaryInfo *PSI,
   if (ForcePGSO)
     return true;
   if (!EnablePGSO)
+    return false;
+  // Temporarily enable size optimizations only for the IR pass or test query
+  // sites for gradual commit/rollout. This is to be removed later.
+  if (PGSOIRPassOrTestOnly && !(QueryType == PGSOQueryType::IRPass ||
+                                QueryType == PGSOQueryType::Test))
     return false;
   if (PGSOColdCodeOnly ||
       (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize())) {
@@ -67,6 +74,11 @@ bool shouldOptimizeForSizeImpl(const BlockT *BB, ProfileSummaryInfo *PSI,
   if (ForcePGSO)
     return true;
   if (!EnablePGSO)
+    return false;
+  // Temporarily enable size optimizations only for the IR pass or test query
+  // sites for gradual commit/rollout. This is to be removed later.
+  if (PGSOIRPassOrTestOnly && !(QueryType == PGSOQueryType::IRPass ||
+                                QueryType == PGSOQueryType::Test))
     return false;
   if (PGSOColdCodeOnly ||
       (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize())) {
