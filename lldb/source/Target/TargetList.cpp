@@ -144,9 +144,9 @@ Status TargetList::CreateTargetInternal(
               StreamString platform_arch_strm;
               StreamString module_arch_strm;
 
-              platform_arch.DumpTriple(platform_arch_strm);
+              platform_arch.DumpTriple(platform_arch_strm.AsRawOstream());
               matching_module_spec.GetArchitecture().DumpTriple(
-                  module_arch_strm);
+                  module_arch_strm.AsRawOstream());
               error.SetErrorStringWithFormat(
                   "the specified architecture '%s' is not compatible with '%s' "
                   "in '%s'",

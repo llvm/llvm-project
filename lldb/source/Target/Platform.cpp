@@ -406,7 +406,7 @@ void Platform::GetStatus(Stream &strm) {
   if (arch.IsValid()) {
     if (!arch.GetTriple().str().empty()) {
       strm.Printf("    Triple: ");
-      arch.DumpTriple(strm);
+      arch.DumpTriple(strm.AsRawOstream());
       strm.EOL();
     }
   }
