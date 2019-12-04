@@ -9,7 +9,7 @@ class TestTargetSourceMap(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(archs="aarch64", oslist="linux", debug_info="dwo",
+    @skipIf(archs="aarch64", oslist="linux",
             bugnumber="https://bugs.llvm.org/show_bug.cgi?id=44180")
     def test_source_map(self):
         # Set the target soure map to map "./" to the current test directory.
