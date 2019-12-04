@@ -78,7 +78,7 @@ static void DumpTargetInfo(uint32_t target_idx, Target *target,
   uint32_t properties = 0;
   if (target_arch.IsValid()) {
     strm.Printf("%sarch=", properties++ > 0 ? ", " : " ( ");
-    target_arch.DumpTriple(strm);
+    target_arch.DumpTriple(strm.AsRawOstream());
     properties++;
   }
   PlatformSP platform_sp(target->GetPlatform());
@@ -1291,7 +1291,7 @@ static void DumpModuleArchitecture(Stream &strm, Module *module,
     StreamString arch_strm;
 
     if (full_triple)
-      module->GetArchitecture().DumpTriple(arch_strm);
+      module->GetArchitecture().DumpTriple(arch_strm.AsRawOstream());
     else
       arch_strm.PutCString(module->GetArchitecture().GetArchitectureName());
     std::string arch_str = arch_strm.GetString();
