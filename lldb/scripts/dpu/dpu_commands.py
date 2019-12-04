@@ -42,20 +42,18 @@ def get_object_from_command(command, debugger, target, name, object_type,
     addr = 0
     try:
         addr = int(command, base)
-        return target.CreateValueFromExpression(
-            name, "(" + object_type + ")" + str(addr))
-
-    success, addr = get_value_from_command(debugger, command, base)
-    if not(success) and not(re.match(r'.*\..*\..*\..*', command) is None):
-        dpus = dpu_list(debugger, None, None, None)
-        addr = next((dpu[0] for dpu in dpus
-                     if (command ==
-                         str(dpu[1]) + "." + str(dpu[2]) + "." +
-                         str(dpu[3]) + "." + str(dpu[4]))),
-                    0)
-        if addr == 0:
-            print("Could not interpret command '" + command + "'")
-            return None
+    except ValueError:
+        success, addr = get_value_from_command(debugger, command, base)
+        if not(success) and not(re.match(r'.*\..*\..*\..*', command) is None):
+            dpus = dpu_list(debugger, None, None, None)
+            addr = next((dpu[0] for dpu in dpus
+                         if (command ==
+                             str(dpu[1]) + "." + str(dpu[2]) + "." +
+                             str(dpu[3]) + "." + str(dpu[4]))),
+                        0)
+            if addr == 0:
+                print("Could not interpret command '" + command + "'")
+                return None
     return target.CreateValueFromExpression(
         name, "(" + object_type + ")" + str(addr))
 
