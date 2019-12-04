@@ -133,6 +133,15 @@ enum class CursorLocation {
   /// session
   BlockEnd
 };
+
+/// Operation for the history.
+enum class HistoryOperation {
+  Oldest,
+  Older,
+  Current,
+  Newer,
+  Newest
+};
 }
 
 using namespace line_editor;
@@ -258,11 +267,7 @@ private:
   StringList GetInputAsStringList(int line_count = UINT32_MAX);
 
   /// Replaces the current multi-line session with the next entry from history.
-  /// When the parameter is
-  /// true it will take the next earlier entry from history, when it is false it
-  /// takes the next most
-  /// recent.
-  unsigned char RecallHistory(bool earlier);
+  unsigned char RecallHistory(HistoryOperation op);
 
   /// Character reading implementation for EditLine that supports our multi-line
   /// editing trickery.
