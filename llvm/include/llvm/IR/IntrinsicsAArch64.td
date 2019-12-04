@@ -1063,6 +1063,15 @@ def int_aarch64_sve_clz : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_cnt : AdvSIMD_SVE_CNT_Intrinsic;
 
 //
+// Reversal
+//
+
+def int_aarch64_sve_rbit : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_revb : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_revh : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_revw : AdvSIMD_Merged1VectorArg_Intrinsic;
+
+//
 // Permutations and selection
 //
 
