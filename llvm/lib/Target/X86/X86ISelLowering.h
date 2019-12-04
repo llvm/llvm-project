@@ -79,6 +79,9 @@ namespace llvm {
       /// X86 compare and logical compare instructions.
       CMP, COMI, UCOMI,
 
+      /// X86 strict FP compare instructions.
+      STRICT_FCMP, STRICT_FCMPS,
+
       /// X86 bit-test instructions.
       BT,
 
@@ -1340,6 +1343,7 @@ namespace llvm {
     SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSTRICT_FSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
@@ -1480,17 +1484,18 @@ namespace llvm {
     /// Emit nodes that will be selected as "cmp Op0,Op1", or something
     /// equivalent, for use with the given x86 condition code.
     SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC, const SDLoc &dl,
-                    SelectionDAG &DAG) const;
+                    SelectionDAG &DAG, SDValue Chain = SDValue(),
+                    bool IsSignaling = false) const;
 
     /// Convert a comparison if required by the subtarget.
     SDValue ConvertCmpIfNecessary(SDValue Cmp, SelectionDAG &DAG) const;
 
     /// Emit flags for the given setcc condition and operands. Also returns the
     /// corresponding X86 condition code constant in X86CC.
-    SDValue emitFlagsForSetcc(SDValue Op0, SDValue Op1,
-                              ISD::CondCode CC, const SDLoc &dl,
-                              SelectionDAG &DAG,
-                              SDValue &X86CC) const;
+    SDValue emitFlagsForSetcc(SDValue Op0, SDValue Op1, ISD::CondCode CC,
+                              const SDLoc &dl, SelectionDAG &DAG,
+                              SDValue &X86CC, SDValue &Chain,
+                              bool IsSignaling) const;
 
     /// Check if replacement of SQRT with RSQRT should be disabled.
     bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override;

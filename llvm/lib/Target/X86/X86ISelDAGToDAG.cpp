@@ -542,6 +542,10 @@ static bool isLegalMaskCompare(SDNode *N, const X86Subtarget *Subtarget) {
     // this happens we will use 512-bit operations and the mask will not be
     // zero extended.
     EVT OpVT = N->getOperand(0).getValueType();
+    // The first operand of X86ISD::CMPM is chain, so we need to get the second
+    // operand.
+    if (Opcode == X86ISD::CMPM)
+      OpVT = N->getOperand(1).getValueType();
     if (OpVT.is256BitVector() || OpVT.is128BitVector())
       return Subtarget->hasVLX();
 
