@@ -1699,7 +1699,7 @@ Emit OpenMP code only for SIMD-based constructs.
 
 .. option:: -foptimization-record-file=<arg>
 
-Specify the file name of any generated YAML optimization record
+Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.
 
 .. option:: -foptimize-sibling-calls, -fno-optimize-sibling-calls
 
