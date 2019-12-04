@@ -64,11 +64,11 @@ ConstantRange ConstantRange::fromKnownBits(const KnownBits &Known,
   // For unsigned ranges, or signed ranges with known sign bit, create a simple
   // range between the smallest and largest possible value.
   if (!IsSigned || Known.isNegative() || Known.isNonNegative())
-    return ConstantRange(Known.One, ~Known.Zero + 1);
+    return ConstantRange(Known.getMinValue(), Known.getMaxValue() + 1);
 
   // If we don't know the sign bit, pick the lower bound as a negative number
   // and the upper bound as a non-negative one.
-  APInt Lower = Known.One, Upper = ~Known.Zero;
+  APInt Lower = Known.getMinValue(), Upper = Known.getMaxValue();
   Lower.setSignBit();
   Upper.clearSignBit();
   return ConstantRange(Lower, Upper + 1);

@@ -3350,20 +3350,20 @@ SelectionDAG::OverflowKind SelectionDAG::computeOverflowKind(SDValue N0,
     KnownBits N0Known = computeKnownBits(N0);
 
     bool overflow;
-    (void)(~N0Known.Zero).uadd_ov(~N1Known.Zero, overflow);
+    (void)N0Known.getMaxValue().uadd_ov(N1Known.getMaxValue(), overflow);
     if (!overflow)
       return OFK_Never;
   }
 
   // mulhi + 1 never overflow
   if (N0.getOpcode() == ISD::UMUL_LOHI && N0.getResNo() == 1 &&
-      (~N1Known.Zero & 0x01) == ~N1Known.Zero)
+      (N1Known.getMaxValue() & 0x01) == N1Known.getMaxValue())
     return OFK_Never;
 
   if (N1.getOpcode() == ISD::UMUL_LOHI && N1.getResNo() == 1) {
     KnownBits N0Known = computeKnownBits(N0);
 
-    if ((~N0Known.Zero & 0x01) == ~N0Known.Zero)
+    if ((N0Known.getMaxValue() & 0x01) == N0Known.getMaxValue())
       return OFK_Never;
   }
 
