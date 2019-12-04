@@ -358,6 +358,16 @@ def am_indexed7s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S128", []>;
 def am_indexedu6s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedU6S128", []>;
 def am_indexeds9s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedS9S128", []>;
 
+def UImmS2XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() / 2, SDLoc(N), MVT::i64);
+}]>;
+def UImmS4XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() / 4, SDLoc(N), MVT::i64);
+}]>;
+def UImmS8XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() / 8, SDLoc(N), MVT::i64);
+}]>;
+
 // uimm5sN predicate - True if the immediate is a multiple of N in the range
 // [0 * N, 32 * N].
 def UImm5s2Operand : UImmScaledMemoryIndexed<5, 2>;
@@ -365,17 +375,20 @@ def UImm5s4Operand : UImmScaledMemoryIndexed<5, 4>;
 def UImm5s8Operand : UImmScaledMemoryIndexed<5, 8>;
 
 def uimm5s2 : Operand<i64>, ImmLeaf<i64,
-                [{ return Imm >= 0 && Imm < (32*2) && ((Imm % 2) == 0); }]> {
+                [{ return Imm >= 0 && Imm < (32*2) && ((Imm % 2) == 0); }],
+                UImmS2XForm> {
   let ParserMatchClass = UImm5s2Operand;
   let PrintMethod = "printImmScale<2>";
 }
 def uimm5s4 : Operand<i64>, ImmLeaf<i64,
-                [{ return Imm >= 0 && Imm < (32*4) && ((Imm % 4) == 0); }]> {
+                [{ return Imm >= 0 && Imm < (32*4) && ((Imm % 4) == 0); }],
+                UImmS4XForm> {
   let ParserMatchClass = UImm5s4Operand;
   let PrintMethod = "printImmScale<4>";
 }
 def uimm5s8 : Operand<i64>, ImmLeaf<i64,
-                [{ return Imm >= 0 && Imm < (32*8) && ((Imm % 8) == 0); }]> {
+                [{ return Imm >= 0 && Imm < (32*8) && ((Imm % 8) == 0); }],
+                UImmS8XForm> {
   let ParserMatchClass = UImm5s8Operand;
   let PrintMethod = "printImmScale<8>";
 }
