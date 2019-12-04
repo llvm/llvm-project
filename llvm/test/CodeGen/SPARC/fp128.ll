@@ -1,6 +1,6 @@
 ; RUN: llc < %s -march=sparc -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=BE
 ; RUN: llc < %s -march=sparcel -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=EL
-; RUN: llc < %s -march=sparc -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
+; RUN: llc < %s -march=sparc -mattr=-hard-quad-float -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
 ; RUN: llc < %s -march=sparcel -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=EL
 
 ; XFAIL: *
@@ -11,6 +11,7 @@
 ; - basic block: %bb.0 entry (0x63f4028)
 ; - instruction: CMPrr killed %21:intregs, 0, implicit-def $icc
 ; - operand 1:   0
+; NB: When this is fixed the verifier should not be run by default in the CL above.
 
 ; CHECK-LABEL: f128_ops:
 ; CHECK:      ldd
