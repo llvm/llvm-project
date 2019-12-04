@@ -24,7 +24,7 @@
 #include "common/debug.h"     // debug
 #include "interface.h" // interfaces with omp, compiler, and user
 #include "common/state-queue.h"
-#include "support.h"
+#include "common/support.h"
 
 #define OMPTARGET_NVPTX_VERSION 1.1
 
