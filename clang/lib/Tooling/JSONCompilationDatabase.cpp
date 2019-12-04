@@ -168,7 +168,9 @@ class JSONCompilationDatabasePlugin : public CompilationDatabasePlugin {
     auto Base = JSONCompilationDatabase::loadFromFile(
         JSONDatabasePath, ErrorMessage, JSONCommandLineSyntax::AutoDetect);
     return Base ? inferTargetAndDriverMode(
-                      inferMissingCompileCommands(std::move(Base)))
+                      inferMissingCompileCommands(expandResponseFiles(
+                          std::move(Base),
+                          llvm::vfs::createPhysicalFileSystem().release())))
                 : nullptr;
   }
 };
