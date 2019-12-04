@@ -581,10 +581,7 @@ SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   int64_t Offset = N->getOffset();
   MVT XLenVT = Subtarget.getXLenVT();
 
-  // Non-PIC TLS lowering should always use the LocalExec model.
-  TLSModel::Model Model = isPositionIndependent()
-                              ? getTargetMachine().getTLSModel(N->getGlobal())
-                              : TLSModel::LocalExec;
+  TLSModel::Model Model = getTargetMachine().getTLSModel(N->getGlobal());
 
   SDValue Addr;
   switch (Model) {
