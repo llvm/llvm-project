@@ -9541,6 +9541,19 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), SRA);
 }
 
+static bool IsSVECntIntrinsic(SDValue S) {
+  switch(getIntrinsicID(S.getNode())) {
+  default:
+    break;
+  case Intrinsic::aarch64_sve_cntb:
+  case Intrinsic::aarch64_sve_cnth:
+  case Intrinsic::aarch64_sve_cntw:
+  case Intrinsic::aarch64_sve_cntd:
+    return true;
+  }
+  return false;
+}
+
 static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
@@ -9551,8 +9564,17 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   if (!isa<ConstantSDNode>(N->getOperand(1)))
     return SDValue();
 
+  SDValue N0 = N->getOperand(0);
   ConstantSDNode *C = cast<ConstantSDNode>(N->getOperand(1));
   const APInt &ConstValue = C->getAPIntValue();
+
+  // Allow the scaling to be folded into the `cnt` instruction by preventing
+  // the scaling to be obscured here. This makes it easier to pattern match.
+  if (IsSVECntIntrinsic(N0) ||
+     (N0->getOpcode() == ISD::TRUNCATE &&
+      (IsSVECntIntrinsic(N0->getOperand(0)))))
+       if (ConstValue.sge(1) && ConstValue.sle(16))
+         return SDValue();
 
   // Multiplication of a power of two plus/minus one can be done more
   // cheaply as as shift+add/sub. For now, this is true unilaterally. If
@@ -9564,7 +9586,6 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   // e.g. 6=3*2=(2+1)*2.
   // TODO: consider lowering more cases, e.g. C = 14, -6, -14 or even 45
   // which equals to (1+2)*16-(1+2).
-  SDValue N0 = N->getOperand(0);
   // TrailingZeroes is used to test if the mul can be lowered to
   // shift+add+shift.
   unsigned TrailingZeroes = ConstValue.countTrailingZeros();
