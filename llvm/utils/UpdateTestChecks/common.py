@@ -110,7 +110,7 @@ def find_run_lines(test, lines):
   run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
   for l in raw_lines[1:]:
     if run_lines[-1].endswith('\\'):
-      run_lines[-1] = run_lines[-1].rstrip('\\' + ' ' + l)
+      run_lines[-1] = run_lines[-1].rstrip('\\') + ' ' + l
     else:
       run_lines.append(l)
   debug('Found {} RUN lines in {}:'.format(len(run_lines), test))
