@@ -1486,8 +1486,7 @@ const lldb::ABISP &Process::GetABI() {
   return m_abi_sp;
 }
 
-std::vector<LanguageRuntime *>
-Process::GetLanguageRuntimes(bool retry_if_null) {
+std::vector<LanguageRuntime *> Process::GetLanguageRuntimes() {
   std::vector<LanguageRuntime *> language_runtimes;
 
   if (m_finalizing)
@@ -1500,15 +1499,14 @@ Process::GetLanguageRuntimes(bool retry_if_null) {
   // yet or the proper condition for loading wasn't yet met (e.g. libc++.so
   // hadn't been loaded).
   for (const lldb::LanguageType lang_type : Language::GetSupportedLanguages()) {
-    if (LanguageRuntime *runtime = GetLanguageRuntime(lang_type, retry_if_null))
+    if (LanguageRuntime *runtime = GetLanguageRuntime(lang_type))
       language_runtimes.emplace_back(runtime);
   }
 
   return language_runtimes;
 }
 
-LanguageRuntime *Process::GetLanguageRuntime(lldb::LanguageType language,
-                                             bool retry_if_null) {
+LanguageRuntime *Process::GetLanguageRuntime(lldb::LanguageType language) {
   if (m_finalizing)
     return nullptr;
 
@@ -1517,7 +1515,7 @@ LanguageRuntime *Process::GetLanguageRuntime(lldb::LanguageType language,
   std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntimeCollection::iterator pos;
   pos = m_language_runtimes.find(language);
-  if (pos == m_language_runtimes.end() || (retry_if_null && !pos->second)) {
+  if (pos == m_language_runtimes.end() || !pos->second) {
     lldb::LanguageRuntimeSP runtime_sp(
         LanguageRuntime::FindPlugin(this, language));
 
