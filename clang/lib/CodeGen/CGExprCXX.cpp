@@ -133,7 +133,7 @@ RValue CodeGenFunction::EmitCXXPseudoDestructorExpr(
       BaseQuals = PTy->getPointeeType().getQualifiers();
     } else {
       LValue BaseLV = EmitLValue(BaseExpr);
-      BaseValue = BaseLV.getAddress();
+      BaseValue = BaseLV.getAddress(*this);
       QualType BaseTy = BaseExpr->getType();
       BaseQuals = BaseTy.getQualifiers();
     }
@@ -271,11 +271,11 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     assert(ReturnValue.isNull() && "Constructor shouldn't have return value");
     CallArgList Args;
     commonEmitCXXMemberOrOperatorCall(
-        *this, Ctor, This.getPointer(), /*ImplicitParam=*/nullptr,
+        *this, Ctor, This.getPointer(*this), /*ImplicitParam=*/nullptr,
         /*ImplicitParamTy=*/QualType(), CE, Args, nullptr);
 
     EmitCXXConstructorCall(Ctor, Ctor_Complete, /*ForVirtualBase=*/false,
-                           /*Delegating=*/false, This.getAddress(), Args,
+                           /*Delegating=*/false, This.getAddress(*this), Args,
                            AggValueSlot::DoesNotOverlap, CE->getExprLoc(),
                            /*NewPointerIsChecked=*/false);
     return RValue::get(nullptr);
@@ -293,7 +293,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
                                (*(CE->arg_begin() + 1))->getType())
                          : EmitLValue(*CE->arg_begin());
         EmitAggregateAssign(This, RHS, CE->getType());
-        return RValue::get(This.getPointer());
+        return RValue::get(This.getPointer(*this));
       }
       llvm_unreachable("unknown trivial member function");
     }
@@ -328,7 +328,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     if (IsImplicitObjectCXXThis || isa<DeclRefExpr>(IOA))
       SkippedChecks.set(SanitizerKind::Null, true);
   }
-  EmitTypeCheck(CodeGenFunction::TCK_MemberCall, CallLoc, This.getPointer(),
+  EmitTypeCheck(CodeGenFunction::TCK_MemberCall, CallLoc,
+                This.getPointer(*this),
                 C.getRecordType(CalleeDecl->getParent()),
                 /*Alignment=*/CharUnits::Zero(), SkippedChecks);
 
@@ -345,9 +346,9 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
            "Destructor shouldn't have explicit parameters");
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
     if (UseVirtualCall) {
-      CGM.getCXXABI().EmitVirtualDestructorCall(
-          *this, Dtor, Dtor_Complete, This.getAddress(),
-          cast<CXXMemberCallExpr>(CE));
+      CGM.getCXXABI().EmitVirtualDestructorCall(*this, Dtor, Dtor_Complete,
+                                                This.getAddress(*this),
+                                                cast<CXXMemberCallExpr>(CE));
     } else {
       GlobalDecl GD(Dtor, Dtor_Complete);
       CGCallee Callee;
@@ -362,7 +363,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
 
       QualType ThisTy =
           IsArrow ? Base->getType()->getPointeeType() : Base->getType();
-      EmitCXXDestructorCall(GD, Callee, This.getPointer(), ThisTy,
+      EmitCXXDestructorCall(GD, Callee, This.getPointer(*this), ThisTy,
                             /*ImplicitParam=*/nullptr,
                             /*ImplicitParamTy=*/QualType(), nullptr);
     }
@@ -374,15 +375,14 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
 
   CGCallee Callee;
   if (UseVirtualCall) {
-    Callee = CGCallee::forVirtual(CE, MD, This.getAddress(), Ty);
+    Callee = CGCallee::forVirtual(CE, MD, This.getAddress(*this), Ty);
   } else {
     if (SanOpts.has(SanitizerKind::CFINVCall) &&
         MD->getParent()->isDynamicClass()) {
       llvm::Value *VTable;
       const CXXRecordDecl *RD;
-      std::tie(VTable, RD) =
-          CGM.getCXXABI().LoadVTablePtr(*this, This.getAddress(),
-                                        CalleeDecl->getParent());
+      std::tie(VTable, RD) = CGM.getCXXABI().LoadVTablePtr(
+          *this, This.getAddress(*this), CalleeDecl->getParent());
       EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getBeginLoc());
     }
 
@@ -401,12 +401,12 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (MD->isVirtual()) {
     Address NewThisAddr =
         CGM.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
-            *this, CalleeDecl, This.getAddress(), UseVirtualCall);
+            *this, CalleeDecl, This.getAddress(*this), UseVirtualCall);
     This.setAddress(NewThisAddr);
   }
 
   return EmitCXXMemberOrOperatorCall(
-      CalleeDecl, Callee, ReturnValue, This.getPointer(),
+      CalleeDecl, Callee, ReturnValue, This.getPointer(*this),
       /*ImplicitParam=*/nullptr, QualType(), CE, RtlArgs);
 }
 
@@ -428,7 +428,7 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   if (BO->getOpcode() == BO_PtrMemI)
     This = EmitPointerWithAlignment(BaseExpr);
   else
-    This = EmitLValue(BaseExpr).getAddress();
+    This = EmitLValue(BaseExpr).getAddress(*this);
 
   EmitTypeCheck(TCK_MemberCall, E->getExprLoc(), This.getPointer(),
                 QualType(MPT->getClass(), 0));
@@ -2103,7 +2103,7 @@ static bool isGLValueFromPointerDeref(const Expr *E) {
 static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
                                          llvm::Type *StdTypeInfoPtrTy) {
   // Get the vtable pointer.
-  Address ThisPtr = CGF.EmitLValue(E).getAddress();
+  Address ThisPtr = CGF.EmitLValue(E).getAddress(CGF);
 
   QualType SrcRecordTy = E->getType();
 
