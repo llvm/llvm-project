@@ -11,12 +11,12 @@
 # CHECK:      Section Headers:
 # CHECK-NEXT:  [Nr] Name      Type     Address          Off    Size
 # CHECK-NEXT:  [ 0]           NULL     0000000000000000 000000 000000
-# CHECK-NEXT:  [ 1] .dynstr   STRTAB   0000000000000100 000040 000009
-# CHECK-NEXT:  [ 2] .dynsym   DYNSYM   0000000000000150 000049 000030
-# CHECK-NEXT:  [ 3] .symtab   SYMTAB   0000000000000000 000079 000018
-# CHECK-NEXT:  [ 4] .strtab   STRTAB   0000000000000000 000091 000001
-# CHECK-NEXT:  [ 5] .shstrtab STRTAB   0000000000000000 000092 000035
-# CHECK-NEXT:  [ 6] .text.foo PROGBITS 0000000000000200 0000c7 000000
+# CHECK-NEXT:  [ 1] .dynstr   STRTAB   0000000000000100 000040 000001
+# CHECK-NEXT:  [ 2] .dynsym   DYNSYM   0000000000000150 000041 000018
+# CHECK-NEXT:  [ 3] .symtab   SYMTAB   0000000000000000 000059 000018
+# CHECK-NEXT:  [ 4] .strtab   STRTAB   0000000000000000 000071 000001
+# CHECK-NEXT:  [ 5] .shstrtab STRTAB   0000000000000000 000072 000035
+# CHECK-NEXT:  [ 6] .text.foo PROGBITS 0000000000000200 0000a7 000000
 
 --- !ELF
 FileHeader:
@@ -40,10 +40,6 @@ Sections:
   - Name:    .text.foo
     Type:    SHT_PROGBITS
     Address: 0x200
-## Symbol is required for the .dynsym to be generated.
-DynamicSymbols:
-  - Name:    _Z3fooi
-    Binding: STB_GLOBAL
 
 ## Check that yaml2obj creates empty .dynstr and .dynsym sections for
 ## the case when no dynamic symbols were specified and Content wasn't set,
