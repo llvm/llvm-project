@@ -629,9 +629,10 @@ public:
     return MinVecRegSize;
   }
 
-  /// Check if ArrayType or StructType is isomorphic to some VectorType.
-  /// Accepts homogeneous aggregate of vectors like
-  /// { <2 x float>, <2 x float> }
+  /// Check if homogeneous aggregate is isomorphic to some VectorType.
+  /// Accepts homogeneous multidimensional aggregate of scalars/vectors like
+  /// {[4 x i16], [4 x i16]}, { <2 x float>, <2 x float> },
+  /// {{{i16, i16}, {i16, i16}}, {{i16, i16}, {i16, i16}}} and so on.
   ///
   /// \returns number of elements in vector if isomorphism exists, 0 otherwise.
   unsigned canMapToVector(Type *T, const DataLayout &DL) const;
@@ -3088,20 +3089,22 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 }
 
 unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
-  unsigned N;
-  Type *EltTy;
-  auto *ST = dyn_cast<StructType>(T);
-  if (ST) {
-    N = ST->getNumElements();
-    EltTy = *ST->element_begin();
-  } else {
-    N = cast<ArrayType>(T)->getNumElements();
-    EltTy = cast<ArrayType>(T)->getElementType();
-  }
+  unsigned N = 1;
+  Type *EltTy = T;
 
-  if (auto *VT = dyn_cast<VectorType>(EltTy)) {
-    EltTy = VT->getElementType();
-    N *= VT->getNumElements();
+  while (isa<CompositeType>(EltTy)) {
+    if (auto *ST = dyn_cast<StructType>(EltTy)) {
+      // Check that struct is homogeneous.
+      for (const auto *Ty : ST->elements())
+        if (Ty != *ST->element_begin())
+          return 0;
+      N *= ST->getNumElements();
+      EltTy = *ST->element_begin();
+    } else {
+      auto *SeqT = cast<SequentialType>(EltTy);
+      N *= SeqT->getNumElements();
+      EltTy = SeqT->getElementType();
+    }
   }
 
   if (!isValidElementType(EltTy))
@@ -3109,12 +3112,6 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
   uint64_t VTSize = DL.getTypeStoreSizeInBits(VectorType::get(EltTy, N));
   if (VTSize < MinVecRegSize || VTSize > MaxVecRegSize || VTSize != DL.getTypeStoreSizeInBits(T))
     return 0;
-  if (ST) {
-    // Check that struct is homogeneous.
-    for (const auto *Ty : ST->elements())
-      if (Ty != *ST->element_begin())
-        return 0;
-  }
   return N;
 }
 
@@ -6940,57 +6937,54 @@ private:
 ///  %rb = insertelement <4 x float> %ra, float %s1, i32 1
 ///  %rc = insertelement <4 x float> %rb, float %s2, i32 2
 ///  %rd = insertelement <4 x float> %rc, float %s3, i32 3
-///  starting from the last insertelement instruction.
+///  starting from the last insertelement or insertvalue instruction.
 ///
-/// Returns true if it matches
-static bool findBuildVector(InsertElementInst *LastInsertElem,
-                            TargetTransformInfo *TTI,
-                            SmallVectorImpl<Value *> &BuildVectorOpds,
-                            int &UserCost) {
-  UserCost = 0;
-  Value *V = nullptr;
-  do {
-    if (auto *CI = dyn_cast<ConstantInt>(LastInsertElem->getOperand(2))) {
-      UserCost += TTI->getVectorInstrCost(Instruction::InsertElement,
-                                          LastInsertElem->getType(),
-                                          CI->getZExtValue());
-    }
-    BuildVectorOpds.push_back(LastInsertElem->getOperand(1));
-    V = LastInsertElem->getOperand(0);
-    if (isa<UndefValue>(V))
-      break;
-    LastInsertElem = dyn_cast<InsertElementInst>(V);
-    if (!LastInsertElem || !LastInsertElem->hasOneUse())
-      return false;
-  } while (true);
-  std::reverse(BuildVectorOpds.begin(), BuildVectorOpds.end());
-  return true;
-}
-
-/// Like findBuildVector, but looks for construction of aggregate.
-/// Accepts homegeneous aggregate of vectors like { <2 x float>, <2 x float> }.
+/// Also recognize aggregates like {<2 x float>, <2 x float>},
+/// {{float, float}, {float, float}}, [2 x {float, float}] and so on.
+/// See llvm/test/Transforms/SLPVectorizer/X86/pr42022.ll for examples.
+///
+/// Assume LastInsertInst is of InsertElementInst or InsertValueInst type.
 ///
 /// \return true if it matches.
-static bool findBuildAggregate(InsertValueInst *IV, TargetTransformInfo *TTI,
+static bool findBuildAggregate(Value *LastInsertInst, TargetTransformInfo *TTI,
                                SmallVectorImpl<Value *> &BuildVectorOpds,
                                int &UserCost) {
+  assert((isa<InsertElementInst>(LastInsertInst) ||
+          isa<InsertValueInst>(LastInsertInst)) &&
+         "Expected insertelement or insertvalue instruction!");
   UserCost = 0;
   do {
-    if (auto *IE = dyn_cast<InsertElementInst>(IV->getInsertedValueOperand())) {
+    Value *InsertedOperand;
+    if (auto *IE = dyn_cast<InsertElementInst>(LastInsertInst)) {
+      InsertedOperand = IE->getOperand(1);
+      LastInsertInst = IE->getOperand(0);
+      if (auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2))) {
+        UserCost += TTI->getVectorInstrCost(Instruction::InsertElement,
+                                            IE->getType(), CI->getZExtValue());
+      }
+    } else {
+      auto *IV = cast<InsertValueInst>(LastInsertInst);
+      InsertedOperand = IV->getInsertedValueOperand();
+      LastInsertInst = IV->getAggregateOperand();
+    }
+    if (isa<InsertElementInst>(InsertedOperand) ||
+        isa<InsertValueInst>(InsertedOperand)) {
       int TmpUserCost;
-      SmallVector<Value *, 4> TmpBuildVectorOpds;
-      if (!findBuildVector(IE, TTI, TmpBuildVectorOpds, TmpUserCost))
+      SmallVector<Value *, 8> TmpBuildVectorOpds;
+      if (!findBuildAggregate(InsertedOperand, TTI, TmpBuildVectorOpds,
+                              TmpUserCost))
         return false;
-      BuildVectorOpds.append(TmpBuildVectorOpds.rbegin(), TmpBuildVectorOpds.rend());
+      BuildVectorOpds.append(TmpBuildVectorOpds.rbegin(),
+                             TmpBuildVectorOpds.rend());
       UserCost += TmpUserCost;
     } else {
-      BuildVectorOpds.push_back(IV->getInsertedValueOperand());
+      BuildVectorOpds.push_back(InsertedOperand);
     }
-    Value *V = IV->getAggregateOperand();
-    if (isa<UndefValue>(V))
+    if (isa<UndefValue>(LastInsertInst))
       break;
-    IV = dyn_cast<InsertValueInst>(V);
-    if (!IV || !IV->hasOneUse())
+    if ((!isa<InsertValueInst>(LastInsertInst) &&
+         !isa<InsertElementInst>(LastInsertInst)) ||
+        !LastInsertInst->hasOneUse())
       return false;
   } while (true);
   std::reverse(BuildVectorOpds.begin(), BuildVectorOpds.end());
@@ -7177,7 +7171,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
                                                    BasicBlock *BB, BoUpSLP &R) {
   int UserCost;
   SmallVector<Value *, 16> BuildVectorOpds;
-  if (!findBuildVector(IEI, TTI, BuildVectorOpds, UserCost) ||
+  if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, UserCost) ||
       (llvm::all_of(BuildVectorOpds,
                     [](Value *V) { return isa<ExtractElementInst>(V); }) &&
        isShuffle(BuildVectorOpds)))
