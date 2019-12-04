@@ -2004,7 +2004,7 @@ TEST_F(DefineOutlineTest, QualifyReturnValue) {
             Bar foo() ;
           };
         })cpp",
-       "a::Foo::Bar foo() { return {}; }\n"},
+       "a::Foo::Bar a::Foo::foo() { return {}; }\n"},
       {R"cpp(
         class Foo;
         Foo fo^o() { return; })cpp",
@@ -2022,6 +2022,58 @@ TEST_F(DefineOutlineTest, QualifyReturnValue) {
   }
 }
 
+TEST_F(DefineOutlineTest, QualifyFunctionName) {
+  FileName = "Test.hpp";
+  struct {
+    llvm::StringRef TestHeader;
+    llvm::StringRef TestSource;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {
+          R"cpp(
+            namespace a {
+              namespace b {
+                class Foo {
+                  void fo^o() {}
+                };
+              }
+            })cpp",
+          "",
+          R"cpp(
+            namespace a {
+              namespace b {
+                class Foo {
+                  void foo() ;
+                };
+              }
+            })cpp",
+          "void a::b::Foo::foo() {}\n",
+      },
+      {
+          "namespace a { namespace b { void f^oo() {} } }",
+          "namespace a{}",
+          "namespace a { namespace b { void foo() ; } }",
+          "namespace a{void b::foo() {} }",
+      },
+      {
+          "namespace a { namespace b { void f^oo() {} } }",
+          "using namespace a;",
+          "namespace a { namespace b { void foo() ; } }",
+          // FIXME: Take using namespace directives in the source file into
+          // account. This can be spelled as b::foo instead.
+          "using namespace a;void a::b::foo() {} ",
+      },
+  };
+  llvm::StringMap<std::string> EditedFiles;
+  for (auto &Case : Cases) {
+    ExtraFiles["Test.cpp"] = Case.TestSource;
+    EXPECT_EQ(apply(Case.TestHeader, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)))
+        << Case.TestHeader;
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
