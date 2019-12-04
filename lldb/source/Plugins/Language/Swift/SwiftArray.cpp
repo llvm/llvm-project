@@ -331,8 +331,7 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     if (error.Fail() || argmetadata_ptr == LLDB_INVALID_ADDRESS)
       return nullptr;
 
-    SwiftLanguageRuntime *swift_runtime =
-        SwiftLanguageRuntime::Get(*process_sp);
+    auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
     if (!swift_runtime)
       return nullptr;
 
@@ -416,8 +415,7 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
       ProcessSP process_sp(valobj.GetProcessSP());
       if (!process_sp)
         return nullptr;
-      SwiftLanguageRuntime *swift_runtime =
-          SwiftLanguageRuntime::Get(*process_sp);
+      auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
       if (!swift_runtime)
         return nullptr;
       lldb::addr_t masked_storage_location =

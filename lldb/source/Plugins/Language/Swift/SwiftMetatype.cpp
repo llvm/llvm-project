@@ -38,7 +38,7 @@ bool lldb_private::formatters::swift::SwiftMetatype_SummaryProvider(
       return true;
     }
   } else {
-    auto swift_runtime = SwiftLanguageRuntime::Get(*valobj.GetProcessSP());
+    auto swift_runtime = SwiftLanguageRuntime::Get(valobj.GetProcessSP());
     if (!swift_runtime)
       return false;
     SwiftLanguageRuntime::MetadataPromiseSP metadata_promise_sp =
