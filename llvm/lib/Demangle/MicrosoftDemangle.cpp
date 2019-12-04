@@ -23,9 +23,7 @@
 
 #include <array>
 #include <cctype>
-#include <cstdint>
 #include <cstdio>
-#include <string>
 #include <tuple>
 
 using namespace llvm;
