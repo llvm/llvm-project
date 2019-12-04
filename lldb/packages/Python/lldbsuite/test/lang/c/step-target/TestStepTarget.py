@@ -32,7 +32,7 @@ class TestStepTarget(TestBase):
         break_in_main = target.BreakpointCreateBySourceRegex(
             'Break here to try targetted stepping', self.main_source_spec)
         self.assertTrue(break_in_main, VALID_BREAKPOINT)
-        self.assertTrue(break_in_main.GetNumLocations() > 0, "Has locations.")
+        self.assertGreater(break_in_main.GetNumLocations(), 0, "Has locations.")
 
         # Now launch the process, and do not stop at entry point.
         process = target.LaunchSimple(
@@ -60,7 +60,7 @@ class TestStepTarget(TestBase):
         thread.StepInto("lotsOfArgs", self.end_line, error)
         frame = thread.frames[0]
 
-        self.assertTrue(frame.name == "lotsOfArgs", "Stepped to lotsOfArgs.")
+        self.assertEqual(frame.name, "lotsOfArgs", "Stepped to lotsOfArgs.")
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_end_line_bad_name(self):
@@ -71,8 +71,7 @@ class TestStepTarget(TestBase):
         error = lldb.SBError()
         thread.StepInto("lotsOfArgssss", self.end_line, error)
         frame = thread.frames[0]
-        self.assertTrue(
-            frame.line_entry.line == self.end_line,
+        self.assertEqual(frame.line_entry.line, self.end_line,
             "Stepped to the block end.")
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
@@ -84,7 +83,7 @@ class TestStepTarget(TestBase):
         error = lldb.SBError()
         thread.StepInto("modifyInt", self.end_line, error)
         frame = thread.frames[0]
-        self.assertTrue(frame.name == "modifyInt", "Stepped to modifyInt.")
+        self.assertEqual(frame.name, "modifyInt", "Stepped to modifyInt.")
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_command_and_block(self):
@@ -100,7 +99,7 @@ class TestStepTarget(TestBase):
             "thread step-in command succeeded.")
 
         frame = thread.frames[0]
-        self.assertTrue(frame.name == "lotsOfArgs", "Stepped to lotsOfArgs.")
+        self.assertEqual(frame.name, "lotsOfArgs", "Stepped to lotsOfArgs.")
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_command_and_block_and_bad_name(self):
@@ -117,9 +116,8 @@ class TestStepTarget(TestBase):
 
         frame = thread.frames[0]
 
-        self.assertTrue(frame.name == "main", "Stepped back out to main.")
+        self.assertEqual(frame.name, "main", "Stepped back out to main.")
         # end_line is set to the line after the containing block.  Check that
         # we got there:
-        self.assertTrue(
-            frame.line_entry.line == self.end_line,
+        self.assertEqual(frame.line_entry.line, self.end_line,
             "Got out of the block")
