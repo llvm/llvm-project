@@ -5357,7 +5357,8 @@ class sve_mem_32b_gld_vi<bits<4> opc, string asm, Operand imm_ty>
   let Uses = !if(!eq(opc{0}, 1), [FFR], []);
 }
 
-multiclass sve_mem_32b_gld_vi_32_ptrs<bits<4> opc, string asm, Operand imm_ty> {
+multiclass sve_mem_32b_gld_vi_32_ptrs<bits<4> opc, string asm, Operand imm_ty,
+                                      SDPatternOperator op, ValueType vt> {
   def _IMM_REAL : sve_mem_32b_gld_vi<opc, asm, imm_ty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
@@ -5366,6 +5367,9 @@ multiclass sve_mem_32b_gld_vi_32_ptrs<bits<4> opc, string asm, Operand imm_ty> {
                   (!cast<Instruction>(NAME # _IMM_REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, imm_ty:$imm5), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
                   (!cast<Instruction>(NAME # _IMM_REAL) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, 0), 1>;
+
+  def : Pat<(nxv4i32 (op (nxv4i1 PPR:$gp), (nxv4i32 ZPR:$ptrs), imm_ty:$index, vt)),
+            (!cast<Instruction>(NAME # _IMM_REAL) PPR:$gp, ZPR:$ptrs, imm_ty:$index)>;
 }
 
 class sve_mem_prfm_si<bits<2> msz, string asm>
@@ -5687,7 +5691,8 @@ class sve_mem_64b_gld_vi<bits<4> opc, string asm, Operand imm_ty>
   let Uses = !if(!eq(opc{0}, 1), [FFR], []);
 }
 
-multiclass sve_mem_64b_gld_vi_64_ptrs<bits<4> opc, string asm, Operand imm_ty> {
+multiclass sve_mem_64b_gld_vi_64_ptrs<bits<4> opc, string asm, Operand imm_ty,
+                                      SDPatternOperator op, ValueType vt> {
   def _IMM_REAL : sve_mem_64b_gld_vi<opc, asm, imm_ty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
@@ -5696,6 +5701,9 @@ multiclass sve_mem_64b_gld_vi_64_ptrs<bits<4> opc, string asm, Operand imm_ty> {
                  (!cast<Instruction>(NAME # _IMM_REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, imm_ty:$imm5), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
                   (!cast<Instruction>(NAME # _IMM_REAL) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, 0), 1>;
+
+  def : Pat<(nxv2i64 (op (nxv2i1 PPR:$gp), (nxv2i64 ZPR:$ptrs), imm_ty:$index, vt)),
+            (!cast<Instruction>(NAME # _IMM_REAL) PPR:$gp, ZPR:$ptrs, imm_ty:$index)>;
 }
 
 // bit lsl is '0' if the offsets are extended (uxtw/sxtw), '1' if shifted (lsl)
