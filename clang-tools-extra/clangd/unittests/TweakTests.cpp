@@ -1807,6 +1807,67 @@ TEST_F(DefineInlineTest, QualifyWithUsingDirectives) {
   EXPECT_EQ(apply(Test), Expected) << Test;
 }
 
+TWEAK_TEST(DefineOutline);
+TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
+  FileName = "Test.cpp";
+  // Not available unless in a header file.
+  EXPECT_UNAVAILABLE(R"cpp(
+    [[void [[f^o^o]]() [[{
+      return;
+    }]]]])cpp");
+
+  FileName = "Test.hpp";
+  // Not available unless function name or fully body is selected.
+  EXPECT_UNAVAILABLE(R"cpp(
+    // Not a definition
+    vo^i[[d^ ^f]]^oo();
+
+    [[vo^id ]]foo[[()]] {[[
+      [[(void)(5+3);
+      return;]]
+    }]])cpp");
+
+  // Available even if there are no implementation files.
+  EXPECT_AVAILABLE(R"cpp(
+    [[void [[f^o^o]]() [[{
+      return;
+    }]]]])cpp");
+
+  // Not available for out-of-line methods.
+  EXPECT_UNAVAILABLE(R"cpp(
+    class Bar {
+      void baz();
+    };
+
+    [[void [[Bar::[[b^a^z]]]]() [[{
+      return;
+    }]]]])cpp");
+
+  // Basic check for function body and signature.
+  EXPECT_AVAILABLE(R"cpp(
+    class Bar {
+      [[void [[f^o^o]]() [[{ return; }]]]]
+    };
+
+    void foo();
+    [[void [[f^o^o]]() [[{
+      return;
+    }]]]])cpp");
+
+  // Not available on defaulted/deleted members.
+  EXPECT_UNAVAILABLE(R"cpp(
+    class Foo {
+      Fo^o() = default;
+      F^oo(const Foo&) = delete;
+    };)cpp");
+
+  // Not available within templated classes, as it is hard to spell class name
+  // out-of-line in such cases.
+  EXPECT_UNAVAILABLE(R"cpp(
+    template <typename> struct Foo { void fo^o(){} };
+    })cpp");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
