@@ -86,12 +86,6 @@ void TypeCategoryImpl::AddLanguage(lldb::LanguageType lang) {
   m_languages.push_back(lang);
 }
 
-bool TypeCategoryImpl::HasLanguage(lldb::LanguageType lang) {
-  const auto iter = std::find(m_languages.begin(), m_languages.end(), lang),
-             end = m_languages.end();
-  return (iter != end);
-}
-
 bool TypeCategoryImpl::Get(ValueObject &valobj,
                            const FormattersMatchVector &candidates,
                            lldb::TypeFormatImplSP &entry, uint32_t *reason) {

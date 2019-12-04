@@ -358,8 +358,6 @@ public:
 
   void AddLanguage(lldb::LanguageType lang);
 
-  bool HasLanguage(lldb::LanguageType lang);
-
   std::string GetDescription();
 
   bool AnyMatches(ConstString type_name,
