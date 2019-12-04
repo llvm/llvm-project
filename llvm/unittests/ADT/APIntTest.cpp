@@ -2845,4 +2845,21 @@ TEST(APIntTest, GetMostSignificantDifferentBitExaustive) {
   }
 }
 
+TEST(APIntTest, SignbitZeroChecks) {
+  EXPECT_TRUE(APInt(8, -1).isNegative());
+  EXPECT_FALSE(APInt(8, -1).isNonNegative());
+  EXPECT_FALSE(APInt(8, -1).isStrictlyPositive());
+  EXPECT_TRUE(APInt(8, -1).isNonPositive());
+
+  EXPECT_FALSE(APInt(8, 0).isNegative());
+  EXPECT_TRUE(APInt(8, 0).isNonNegative());
+  EXPECT_FALSE(APInt(8, 0).isStrictlyPositive());
+  EXPECT_TRUE(APInt(8, 0).isNonPositive());
+
+  EXPECT_FALSE(APInt(8, 1).isNegative());
+  EXPECT_TRUE(APInt(8, 1).isNonNegative());
+  EXPECT_TRUE(APInt(8, 1).isStrictlyPositive());
+  EXPECT_FALSE(APInt(8, 1).isNonPositive());
+}
+
 } // end anonymous namespace

@@ -182,6 +182,30 @@ TEST_F(PatternMatchTest, SpecificIntUGT) {
           .match(NegOne));
 }
 
+TEST_F(PatternMatchTest, SignbitZeroChecks) {
+  Type *IntTy = IRB.getInt32Ty();
+  unsigned BitWidth = IntTy->getScalarSizeInBits();
+
+  Value *Zero = ConstantInt::get(IntTy, 0);
+  Value *One = ConstantInt::get(IntTy, 1);
+  Value *NegOne = ConstantInt::get(IntTy, -1);
+
+  EXPECT_TRUE(m_Negative().match(NegOne));
+  EXPECT_FALSE(m_NonNegative().match(NegOne));
+  EXPECT_FALSE(m_StrictlyPositive().match(NegOne));
+  EXPECT_TRUE(m_NonPositive().match(NegOne));
+
+  EXPECT_FALSE(m_Negative().match(Zero));
+  EXPECT_TRUE(m_NonNegative().match(Zero));
+  EXPECT_FALSE(m_StrictlyPositive().match(Zero));
+  EXPECT_TRUE(m_NonPositive().match(Zero));
+
+  EXPECT_FALSE(m_Negative().match(One));
+  EXPECT_TRUE(m_NonNegative().match(One));
+  EXPECT_TRUE(m_StrictlyPositive().match(One));
+  EXPECT_FALSE(m_NonPositive().match(One));
+}
+
 TEST_F(PatternMatchTest, SpecificIntUGE) {
   Type *IntTy = IRB.getInt32Ty();
   unsigned BitWidth = IntTy->getScalarSizeInBits();
