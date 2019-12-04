@@ -308,6 +308,14 @@ bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
   return a.FileEquals(b);
 }
 
+bool FileSpec::Match(const FileSpec &pattern, const FileSpec &file) {
+  if (pattern.GetDirectory())
+    return pattern == file;
+  if (pattern.GetFilename())
+    return pattern.FileEquals(file);
+  return true;
+}
+
 llvm::Optional<FileSpec::Style> FileSpec::GuessPathStyle(llvm::StringRef absolute_path) {
   if (absolute_path.startswith("/"))
     return Style::posix;

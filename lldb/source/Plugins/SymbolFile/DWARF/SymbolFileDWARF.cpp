@@ -1950,9 +1950,8 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
       if (!dc_cu)
         continue;
 
-      const bool full_match = (bool)file_spec.GetDirectory();
       bool file_spec_matches_cu_file_spec =
-          FileSpec::Equal(file_spec, dc_cu->GetPrimaryFile(), full_match);
+          FileSpec::Match(file_spec, dc_cu->GetPrimaryFile());
       if (check_inlines || file_spec_matches_cu_file_spec) {
         SymbolContext sc(m_objfile_sp->GetModule());
         sc.comp_unit = dc_cu;
