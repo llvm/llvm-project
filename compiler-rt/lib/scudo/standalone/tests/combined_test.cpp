@@ -32,6 +32,12 @@ template <class Config> static void testAllocator() {
                                                            Deleter);
   Allocator->reset();
 
+  EXPECT_FALSE(Allocator->isOwned(&Mutex));
+  EXPECT_FALSE(Allocator->isOwned(&Allocator));
+  scudo::u64 StackVariable = 0x42424242U;
+  EXPECT_FALSE(Allocator->isOwned(&StackVariable));
+  EXPECT_EQ(StackVariable, 0x42424242U);
+
   constexpr scudo::uptr MinAlignLog = FIRST_32_SECOND_64(3U, 4U);
 
   // This allocates and deallocates a bunch of chunks, with a wide range of
@@ -46,6 +52,7 @@ template <class Config> static void testAllocator() {
         const scudo::uptr Size = (1U << SizeLog) + Delta;
         void *P = Allocator->allocate(Size, Origin, Align);
         EXPECT_NE(P, nullptr);
+        EXPECT_TRUE(Allocator->isOwned(P));
         EXPECT_TRUE(scudo::isAligned(reinterpret_cast<scudo::uptr>(P), Align));
         EXPECT_LE(Size, Allocator->getUsableSize(P));
         memset(P, 0xaa, Size);
