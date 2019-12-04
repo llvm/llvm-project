@@ -29,6 +29,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
@@ -1964,10 +1965,13 @@ bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
 /// with nullptrs in the Argv vector.
 /// \param [in] RelativeNames true if names of nested response files must be
 /// resolved relative to including file.
+/// \param [in] FS File system used for all file access when running the tool.
 /// \return true if all @files were expanded successfully or there were none.
-bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
-                         SmallVectorImpl<const char *> &Argv,
-                         bool MarkEOLs = false, bool RelativeNames = false);
+bool ExpandResponseFiles(
+    StringSaver &Saver, TokenizerCallback Tokenizer,
+    SmallVectorImpl<const char *> &Argv, bool MarkEOLs = false,
+    bool RelativeNames = false,
+    llvm::vfs::FileSystem &FS = *llvm::vfs::getRealFileSystem());
 
 /// Mark all options not part of this category as cl::ReallyHidden.
 ///
