@@ -59,6 +59,7 @@ public:
     createMemoryDependencyEdges();
     createAndConnectRootNode();
     createPiBlocks();
+    sortNodesTopologically();
   }
 
   /// Create fine grained nodes. These are typically atomic nodes that
@@ -84,6 +85,9 @@ public:
   /// the dependence graph into an acyclic graph.
   void createPiBlocks();
 
+  /// Topologically sort the graph nodes.
+  void sortNodesTopologically();
+
 protected:
   /// Create the root node of the graph.
   virtual NodeType &createRootNode() = 0;
@@ -103,6 +107,10 @@ protected:
 
   /// Create a rooted edge going from \p Src to \p Tgt .
   virtual EdgeType &createRootedEdge(NodeType &Src, NodeType &Tgt) = 0;
+
+  /// Given a pi-block node, return a vector of all the nodes contained within
+  /// it.
+  virtual const NodeListType &getNodesInPiBlock(const NodeType &N) = 0;
 
   /// Deallocate memory of edge \p E.
   virtual void destroyEdge(EdgeType &E) { delete &E; }
