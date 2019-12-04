@@ -5,17 +5,17 @@ define dso_local void @jsimd_idct_ifast_neon_intrinsic(i8* nocapture readonly %d
 ; CHECK-LABEL: jsimd_idct_ifast_neon_intrinsic:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr q0, [x1, #32]
-; CHECK-NEXT:    ldr q1, [x0, #32]
-; CHECK-NEXT:    ldr q2, [x1, #96]
+; CHECK-NEXT:    ldr q1, [x1, #96]
+; CHECK-NEXT:    ldr q2, [x0, #32]
 ; CHECK-NEXT:    ldr q3, [x0, #96]
 ; CHECK-NEXT:    ldr x8, [x2, #48]
-; CHECK-NEXT:    mul v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mla v1.8h, v3.8h, v2.8h
 ; CHECK-NEXT:    mov w9, w3
-; CHECK-NEXT:    str q1, [x8, x9]
+; CHECK-NEXT:    mul v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    mul v1.8h, v3.8h, v1.8h
+; CHECK-NEXT:    add v2.8h, v0.8h, v1.8h
+; CHECK-NEXT:    str q2, [x8, x9]
 ; CHECK-NEXT:    ldr x8, [x2, #56]
-; CHECK-NEXT:    mls v0.8h, v3.8h, v2.8h
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    str q0, [x8, x9]
 ; CHECK-NEXT:    ret
 entry:
