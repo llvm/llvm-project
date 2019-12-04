@@ -57,6 +57,17 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
       return createResolverError(E.Value0, E.Kind);
     return None;
   }
+  case dwarf::DW_LLE_startx_endx: {
+    Optional<SectionedAddress> LowPC = LookupAddr(E.Value0);
+    if (!LowPC)
+      return createResolverError(E.Value0, E.Kind);
+    Optional<SectionedAddress> HighPC = LookupAddr(E.Value1);
+    if (!HighPC)
+      return createResolverError(E.Value1, E.Kind);
+    return DWARFLocationExpression{
+        DWARFAddressRange{LowPC->Address, HighPC->Address, LowPC->SectionIndex},
+        E.Loc};
+  }
   case dwarf::DW_LLE_startx_length: {
     Optional<SectionedAddress> LowPC = LookupAddr(E.Value0);
     if (!LowPC)
@@ -78,9 +89,14 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
       Range.SectionIndex = E.SectionIndex;
     return DWARFLocationExpression{Range, E.Loc};
   }
+  case dwarf::DW_LLE_default_location:
+    return DWARFLocationExpression{None, E.Loc};
   case dwarf::DW_LLE_base_address:
     Base = SectionedAddress{E.Value0, E.SectionIndex};
     return None;
+  case dwarf::DW_LLE_start_end:
+    return DWARFLocationExpression{
+        DWARFAddressRange{E.Value0, E.Value1, E.SectionIndex}, E.Loc};
   case dwarf::DW_LLE_start_length:
     return DWARFLocationExpression{
         DWARFAddressRange{E.Value0, E.Value0 + E.Value1, E.SectionIndex},
@@ -127,7 +143,10 @@ bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,
 
       DIDumpOptions RangeDumpOpts(DumpOpts);
       RangeDumpOpts.DisplayRawContents = false;
-      Loc.get()->Range->dump(OS, Data.getAddressSize(), RangeDumpOpts, &Obj);
+      if (Loc.get()->Range)
+        Loc.get()->Range->dump(OS, Data.getAddressSize(), RangeDumpOpts, &Obj);
+      else
+        OS << "<default>";
     }
     if (!Loc)
       consumeError(Loc.takeError());
@@ -269,6 +288,10 @@ Error DWARFDebugLoclists::visitLocationList(
     case dwarf::DW_LLE_base_addressx:
       E.Value0 = Data.getULEB128(C);
       break;
+    case dwarf::DW_LLE_startx_endx:
+      E.Value0 = Data.getULEB128(C);
+      E.Value1 = Data.getULEB128(C);
+      break;
     case dwarf::DW_LLE_startx_length:
       E.Value0 = Data.getULEB128(C);
       // Pre-DWARF 5 has different interpretation of the length field. We have
@@ -283,16 +306,19 @@ Error DWARFDebugLoclists::visitLocationList(
       E.Value1 = Data.getULEB128(C);
       E.SectionIndex = SectionedAddress::UndefSection;
       break;
+    case dwarf::DW_LLE_default_location:
+      break;
     case dwarf::DW_LLE_base_address:
       E.Value0 = Data.getRelocatedAddress(C, &E.SectionIndex);
+      break;
+    case dwarf::DW_LLE_start_end:
+      E.Value0 = Data.getRelocatedAddress(C, &E.SectionIndex);
+      E.Value1 = Data.getRelocatedAddress(C);
       break;
     case dwarf::DW_LLE_start_length:
       E.Value0 = Data.getRelocatedAddress(C, &E.SectionIndex);
       E.Value1 = Data.getULEB128(C);
       break;
-    case dwarf::DW_LLE_startx_endx:
-    case dwarf::DW_LLE_default_location:
-    case dwarf::DW_LLE_start_end:
     default:
       cantFail(C.takeError());
       return createStringError(errc::illegal_byte_sequence,
@@ -333,9 +359,14 @@ void DWARFDebugLoclists::dumpRawEntry(const DWARFLocationEntry &Entry,
   OS << format("%-*s(", MaxEncodingStringLength, EncodingString.data());
   unsigned FieldSize = 2 + 2 * Data.getAddressSize();
   switch (Entry.Kind) {
+  case dwarf::DW_LLE_end_of_list:
+  case dwarf::DW_LLE_default_location:
+    break;
+  case dwarf::DW_LLE_startx_endx:
   case dwarf::DW_LLE_startx_length:
-  case dwarf::DW_LLE_start_length:
   case dwarf::DW_LLE_offset_pair:
+  case dwarf::DW_LLE_start_end:
+  case dwarf::DW_LLE_start_length:
     OS << format_hex(Entry.Value0, FieldSize) << ", "
        << format_hex(Entry.Value1, FieldSize);
     break;
@@ -343,13 +374,12 @@ void DWARFDebugLoclists::dumpRawEntry(const DWARFLocationEntry &Entry,
   case dwarf::DW_LLE_base_address:
     OS << format_hex(Entry.Value0, FieldSize);
     break;
-  case dwarf::DW_LLE_end_of_list:
-    break;
   }
   OS << ')';
   switch (Entry.Kind) {
-  case dwarf::DW_LLE_start_length:
   case dwarf::DW_LLE_base_address:
+  case dwarf::DW_LLE_start_end:
+  case dwarf::DW_LLE_start_length:
     DWARFFormValue::dumpAddressSection(Obj, OS, DumpOpts, Entry.SectionIndex);
     break;
   default:
