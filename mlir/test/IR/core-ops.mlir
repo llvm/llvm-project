@@ -371,8 +371,83 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = exp %arg1 : f32
   %97 = exp %f : f32
 
+  // CHECK: %{{[0-9]+}} = exp %cst_8 : vector<4xf32>
+  %98 = exp %vcf32 : vector<4xf32>
+
   // CHECK: %{{[0-9]+}} = exp %arg0 : tensor<4x4x?xf32>
-  %98 = exp %t : tensor<4x4x?xf32>
+  %99 = exp %t : tensor<4x4x?xf32>
+
+  // CHECK: %{{[0-9]+}} = absf %arg1 : f32
+  %100 = "std.absf"(%f) : (f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = absf %arg1 : f32
+  %101 = absf %f : f32
+
+  // CHECK: %{{[0-9]+}} = absf %cst_8 : vector<4xf32>
+  %102 = absf %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = absf %arg0 : tensor<4x4x?xf32>
+  %103 = absf %t : tensor<4x4x?xf32>
+
+  // CHECK: %{{[0-9]+}} = ceilf %arg1 : f32
+  %104 = "std.ceilf"(%f) : (f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = ceilf %arg1 : f32
+  %105 = ceilf %f : f32
+
+  // CHECK: %{{[0-9]+}} = ceilf %cst_8 : vector<4xf32>
+  %106 = ceilf %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = ceilf %arg0 : tensor<4x4x?xf32>
+  %107 = ceilf %t : tensor<4x4x?xf32>
+
+  // CHECK: %{{[0-9]+}} = cos %arg1 : f32
+  %108 = "std.cos"(%f) : (f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = cos %arg1 : f32
+  %109 = cos %f : f32
+
+  // CHECK: %{{[0-9]+}} = cos %cst_8 : vector<4xf32>
+  %110 = cos %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = cos %arg0 : tensor<4x4x?xf32>
+  %111 = cos %t : tensor<4x4x?xf32>
+
+  // CHECK: %{{[0-9]+}} = negf %arg1 : f32
+  %112 = "std.negf"(%f) : (f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = negf %arg1 : f32
+  %113 = negf %f : f32
+
+  // CHECK: %{{[0-9]+}} = negf %cst_8 : vector<4xf32>
+  %114 = negf %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = negf %arg0 : tensor<4x4x?xf32>
+  %115 = negf %t : tensor<4x4x?xf32>
+
+  // CHECK: %{{[0-9]+}} = copysign %arg1, %arg1 : f32
+  %116 = "std.copysign"(%f, %f) : (f32, f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = copysign %arg1, %arg1 : f32
+  %117 = copysign %f, %f : f32
+
+  // CHECK: %{{[0-9]+}} = copysign %cst_8, %cst_8 : vector<4xf32>
+  %118 = copysign %vcf32, %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = copysign %arg0, %arg0 : tensor<4x4x?xf32>
+  %119 = copysign %t, %t : tensor<4x4x?xf32>
+
+  // CHECK: %{{[0-9]+}} = tanh %arg1 : f32
+  %120 = "std.tanh"(%f) : (f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = tanh %arg1 : f32
+  %121 = tanh %f : f32
+
+  // CHECK: %{{[0-9]+}} = tanh %cst_8 : vector<4xf32>
+  %122 = tanh %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = tanh %arg0 : tensor<4x4x?xf32>
+  %123 = tanh %t : tensor<4x4x?xf32>
   return
 }
 
