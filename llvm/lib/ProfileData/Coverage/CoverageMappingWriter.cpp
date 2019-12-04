@@ -11,11 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingWriter.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -36,31 +34,12 @@ CoverageFilenamesSectionWriter::CoverageFilenamesSectionWriter(
 #endif
 }
 
-void CoverageFilenamesSectionWriter::write(raw_ostream &OS, bool Compress) {
-  std::string FilenamesStr;
-  {
-    raw_string_ostream FilenamesOS{FilenamesStr};
-    for (const auto &Filename : Filenames) {
-      encodeULEB128(Filename.size(), FilenamesOS);
-      FilenamesOS << Filename;
-    }
-  }
-
-  SmallString<128> CompressedStr;
-  bool doCompression =
-      Compress && zlib::isAvailable() && DoInstrProfNameCompression;
-  if (doCompression)
-    cantFail(
-        zlib::compress(FilenamesStr, CompressedStr, zlib::BestSizeCompression));
-
-  // ::= <num-filenames>
-  //     <uncompressed-len>
-  //     <compressed-len-or-zero>
-  //     (<compressed-filenames> | <uncompressed-filenames>)
+void CoverageFilenamesSectionWriter::write(raw_ostream &OS) {
   encodeULEB128(Filenames.size(), OS);
-  encodeULEB128(FilenamesStr.size(), OS);
-  encodeULEB128(doCompression ? CompressedStr.size() : 0U, OS);
-  OS << (doCompression ? StringRef(CompressedStr) : StringRef(FilenamesStr));
+  for (const auto &Filename : Filenames) {
+    encodeULEB128(Filename.size(), OS);
+    OS << Filename;
+  }
 }
 
 namespace {
