@@ -20,8 +20,6 @@
 #define LLVM_SUPPORT_COMMANDLINE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1968,15 +1966,12 @@ bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
 /// \param [in] RelativeNames true if names of nested response files must be
 /// resolved relative to including file.
 /// \param [in] FS File system used for all file access when running the tool.
-/// \param [in] CurrentDir Path used to resolve relative rsp files. If set to
-/// None, process' cwd is used instead.
 /// \return true if all @files were expanded successfully or there were none.
 bool ExpandResponseFiles(
     StringSaver &Saver, TokenizerCallback Tokenizer,
     SmallVectorImpl<const char *> &Argv, bool MarkEOLs = false,
     bool RelativeNames = false,
-    llvm::vfs::FileSystem &FS = *llvm::vfs::getRealFileSystem(),
-    llvm::Optional<llvm::StringRef> CurrentDir = llvm::None);
+    llvm::vfs::FileSystem &FS = *llvm::vfs::getRealFileSystem());
 
 /// Mark all options not part of this category as cl::ReallyHidden.
 ///

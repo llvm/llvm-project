@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -48,6 +47,12 @@ public:
 private:
   std::vector<CompileCommand> expand(std::vector<CompileCommand> Cmds) const {
     for (auto &Cmd : Cmds) {
+      // FIXME: we should rather propagate the current directory into
+      // ExpandResponseFiles as well in addition to FS.
+      if (std::error_code EC = FS->setCurrentWorkingDirectory(Cmd.Directory)) {
+        llvm::consumeError(llvm::errorCodeToError(EC));
+        continue;
+      }
       bool SeenRSPFile = false;
       llvm::SmallVector<const char *, 20> Argv;
       Argv.reserve(Cmd.CommandLine.size());
@@ -59,8 +64,7 @@ private:
         continue;
       llvm::BumpPtrAllocator Alloc;
       llvm::StringSaver Saver(Alloc);
-      llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, *FS,
-                                    llvm::StringRef(Cmd.Directory));
+      llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, *FS);
       Cmd.CommandLine.assign(Argv.begin(), Argv.end());
     }
     return Cmds;
