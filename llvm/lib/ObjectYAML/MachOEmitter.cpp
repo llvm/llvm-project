@@ -515,7 +515,8 @@ Error UniversalWriter::writeMachO(raw_ostream &OS) {
   if (auto Err = writeFatArchs(OS))
     return Err;
   auto &FatFile = *ObjectFile.FatMachO;
-  assert(FatFile.FatArchs.size() == FatFile.Slices.size());
+  assert(FatFile.FatArchs.size() >= FatFile.Slices.size() &&
+         "Cannot write Slices if not decribed in FatArches");
   for (size_t i = 0; i < FatFile.Slices.size(); i++) {
     ZeroToOffset(OS, FatFile.FatArchs[i].offset);
     MachOWriter Writer(FatFile.Slices[i]);

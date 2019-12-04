@@ -567,7 +567,7 @@ public:
     if (I == Events.end())
       return;
     const EventInfo &info = I->second;
-    for (const auto Checker : info.Checkers)
+    for (const auto &Checker : info.Checkers)
       Checker(&event);
   }
 

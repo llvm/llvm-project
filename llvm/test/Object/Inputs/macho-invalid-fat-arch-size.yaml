@@ -1,0 +1,12 @@
+--- !fat-mach-o
+FatHeader:       
+  magic:           0xCAFEBABE
+  nfat_arch:       1
+FatArchs:        
+  - cputype:         0x00000007
+    cpusubtype:      0x00000003
+    offset:          0x000000000000020
+    size:            32
+    align:           2
+Slices:
+...

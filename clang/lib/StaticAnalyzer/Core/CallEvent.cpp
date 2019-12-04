@@ -1309,6 +1309,8 @@ RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
         }
 
         const ObjCMethodDecl *MD = Val.getValue();
+        if (MD && !MD->hasBody())
+          MD = MD->getCanonicalDecl();
         if (CanBeSubClassed)
           return RuntimeDefinition(MD, Receiver);
         else
