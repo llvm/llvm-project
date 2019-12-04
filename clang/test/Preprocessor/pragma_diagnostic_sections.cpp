@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wall -Wunused-macros -Wunused-parameter -Wno-uninitialized -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wall -Wunused-macros -Wunused-parameter -Wno-uninitialized -Wno-misleading-indentation -verify %s
 
 // rdar://8365684
 struct S {
