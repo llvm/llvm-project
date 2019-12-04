@@ -344,16 +344,6 @@ public:
   getVersionDependencies(const Elf_Shdr *Sec) const;
 };
 
-static StringRef getSecTypeName(unsigned Type) {
-  if (Type == ELF::SHT_GNU_versym)
-    return "SHT_GNU_versym";
-  if (Type == ELF::SHT_GNU_verdef)
-    return "SHT_GNU_verdef";
-  if (Type == ELF::SHT_GNU_verneed)
-    return "SHT_GNU_verneed";
-  llvm_unreachable("unexpected section type");
-}
-
 template <class ELFT>
 static Expected<StringRef> getLinkAsStrtab(const ELFFile<ELFT> *Obj,
                                            const typename ELFT::Shdr *Sec,
@@ -362,15 +352,17 @@ static Expected<StringRef> getLinkAsStrtab(const ELFFile<ELFT> *Obj,
       Obj->getSection(Sec->sh_link);
   if (!StrTabSecOrErr)
     return createError("invalid section linked to " +
-                       getSecTypeName(Sec->sh_type) + " section with index " +
-                       Twine(SecNdx) + ": " +
+                       object::getELFSectionTypeName(
+                           Obj->getHeader()->e_machine, Sec->sh_type) +
+                       " section with index " + Twine(SecNdx) + ": " +
                        toString(StrTabSecOrErr.takeError()));
 
   Expected<StringRef> StrTabOrErr = Obj->getStringTable(*StrTabSecOrErr);
   if (!StrTabOrErr)
     return createError("invalid string table linked to " +
-                       getSecTypeName(Sec->sh_type) + " section with index " +
-                       Twine(SecNdx) + ": " +
+                       object::getELFSectionTypeName(
+                           Obj->getHeader()->e_machine, Sec->sh_type) +
+                       " section with index " + Twine(SecNdx) + ": " +
                        toString(StrTabOrErr.takeError()));
   return *StrTabOrErr;
 }
@@ -3997,8 +3989,10 @@ void GNUStyle<ELFT>::printGNUVersionSectionProlog(
   else
     this->reportUniqueWarning(
         createError("invalid section linked to " +
-                    getSecTypeName(Sec->sh_type) + " section with index " +
-                    Twine(SecNdx) + ": " + toString(SymTabOrErr.takeError())));
+                    object::getELFSectionTypeName(Obj->getHeader()->e_machine,
+                                                  Sec->sh_type) +
+                    " section with index " + Twine(SecNdx) + ": " +
+                    toString(SymTabOrErr.takeError())));
 
   OS << " Addr: " << format_hex_no_prefix(Sec->sh_addr, 16)
      << "  Offset: " << format_hex(Sec->sh_offset, 8)
