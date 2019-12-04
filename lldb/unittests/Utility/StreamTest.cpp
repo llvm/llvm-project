@@ -387,15 +387,6 @@ TEST_F(StreamTest, ShiftOperatorStrings) {
   EXPECT_EQ("cstring\nllvm::StringRef\n", TakeValue());
 }
 
-TEST_F(StreamTest, ShiftOperatorInts) {
-  s << std::numeric_limits<int8_t>::max() << " ";
-  s << std::numeric_limits<int16_t>::max() << " ";
-  s << std::numeric_limits<int32_t>::max() << " ";
-  s << std::numeric_limits<int64_t>::max();
-  EXPECT_EQ(40U, s.GetWrittenBytes());
-  EXPECT_EQ("127 32767 2147483647 9223372036854775807", TakeValue());
-}
-
 TEST_F(StreamTest, ShiftOperatorPtr) {
   // This test is a bit tricky because pretty much everything related to
   // pointer printing seems to lead to UB or IB. So let's make the most basic
