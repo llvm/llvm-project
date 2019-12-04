@@ -204,6 +204,13 @@ enum NodeType : unsigned {
   UUNPKHI,
   UUNPKLO,
 
+  CLASTA_N,
+  CLASTB_N,
+  LASTA,
+  LASTB,
+  REV,
+  TBL,
+
   INSR,
   PTRUE,
 
