@@ -64,6 +64,7 @@ bool getEnableNoSignedZerosFPMath();
 bool getEnableNoTrappingFPMath();
 
 DenormalMode::DenormalModeKind getDenormalFPMath();
+DenormalMode::DenormalModeKind getDenormalFP32Math();
 
 bool getEnableHonorSignDependentRoundingFPMath();
 
