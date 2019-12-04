@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include <cassert>
 #include <chrono>
 #include <string>
@@ -58,8 +59,8 @@ struct Entry {
 };
 
 struct TimeTraceProfiler {
-  TimeTraceProfiler(unsigned TimeTraceGranularity = 0)
-      : StartTime(steady_clock::now()),
+  TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "")
+      : StartTime(steady_clock::now()), ProcName(ProcName),
         TimeTraceGranularity(TimeTraceGranularity) {}
 
   void begin(std::string Name, llvm::function_ref<std::string()> Detail) {
@@ -167,7 +168,7 @@ struct TimeTraceProfiler {
       J.attribute("ts", 0);
       J.attribute("ph", "M");
       J.attribute("name", "process_name");
-      J.attributeObject("args", [&] { J.attribute("name", "clang"); });
+      J.attributeObject("args", [&] { J.attribute("name", ProcName); });
     });
 
     J.arrayEnd();
@@ -179,15 +180,18 @@ struct TimeTraceProfiler {
   SmallVector<Entry, 128> Entries;
   StringMap<CountAndDurationType> CountAndTotalPerName;
   const TimePointType StartTime;
+  const std::string ProcName;
 
   // Minimum time granularity (in microseconds)
   const unsigned TimeTraceGranularity;
 };
 
-void timeTraceProfilerInitialize(unsigned TimeTraceGranularity) {
+void timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
+                                 StringRef ProcName) {
   assert(TimeTraceProfilerInstance == nullptr &&
          "Profiler should not be initialized");
-  TimeTraceProfilerInstance = new TimeTraceProfiler(TimeTraceGranularity);
+  TimeTraceProfilerInstance = new TimeTraceProfiler(
+      TimeTraceGranularity, llvm::sys::path::filename(ProcName));
 }
 
 void timeTraceProfilerCleanup() {

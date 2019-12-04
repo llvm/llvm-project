@@ -932,6 +932,12 @@ public:
     return TheModuleLoader.HadFatalFailure;
   }
 
+  /// Retrieve the number of Directives that have been processed by the
+  /// Preprocessor.
+  unsigned getNumDirectives() const {
+    return NumDirectives;
+  }
+
   /// True if we are currently preprocessing a #if or #elif directive
   bool isParsingIfOrElifDirective() const {
     return ParsingIfOrElifDirective;

@@ -457,6 +457,18 @@ public:
     Stats.get(S);
   }
 
+  // Returns true if the pointer provided was allocated by the current
+  // allocator instance, which is compliant with tcmalloc's ownership concept.
+  // A corrupted chunk will not be reported as owned, which is WAI.
+  bool isOwned(const void *Ptr) {
+    initThreadMaybe();
+    if (!Ptr || !isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment))
+      return false;
+    Chunk::UnpackedHeader Header;
+    return Chunk::isValid(Cookie, Ptr, &Header) &&
+           Header.State == Chunk::State::Allocated;
+  }
+
 private:
   using SecondaryT = typename Params::Secondary;
   typedef typename PrimaryT::SizeClassMap SizeClassMap;
@@ -467,6 +479,9 @@ private:
   static const uptr MaxAlignment = 1UL << MaxAlignmentLog;
   static const uptr MaxAllowedMallocSize =
       FIRST_32_SECOND_64(1UL << 31, 1ULL << 40);
+
+  static_assert(MinAlignment >= sizeof(Chunk::PackedHeader),
+                "Minimal alignment must at least cover a chunk header.");
 
   // Constants used by the chunk iteration mechanism.
   static const u32 BlockMarker = 0x44554353U;

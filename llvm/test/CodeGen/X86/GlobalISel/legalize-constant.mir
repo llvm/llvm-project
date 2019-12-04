@@ -18,7 +18,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; X32-LABEL: name: test_constant
-    ; X32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; X32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; X32: $eax = COPY [[C]](s32)
     ; X32: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 8
     ; X32: $al = COPY [[C1]](s8)
@@ -32,7 +32,7 @@ body:             |
     ; X32: $rax = COPY [[MV]](s64)
     ; X32: RET 0
     ; X64-LABEL: name: test_constant
-    ; X64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; X64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; X64: $eax = COPY [[C]](s32)
     ; X64: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 8
     ; X64: $al = COPY [[C1]](s8)

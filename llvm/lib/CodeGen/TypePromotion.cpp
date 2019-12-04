@@ -1,4 +1,4 @@
-//===----- ARMCodeGenPrepare.cpp ------------------------------------------===//
+//===----- TypePromotion.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,23 +7,25 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass inserts intrinsics to handle small types that would otherwise be
-/// promoted during legalization. Here we can manually promote types or insert
-/// intrinsics which can handle narrow types that aren't supported by the
-/// register classes.
-//
+/// This is an opcode based type promotion pass for small types that would
+/// otherwise be promoted during legalisation. This works around the limitations
+/// of selection dag for cyclic regions. The search begins from icmp
+/// instructions operands where a tree, consisting of non-wrapping or safe
+/// wrapping instructions, is built, checked and promoted if possible.
+///
 //===----------------------------------------------------------------------===//
 
-#include "ARM.h"
-#include "ARMSubtarget.h"
-#include "ARMTargetMachine.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -32,26 +34,19 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
-#define DEBUG_TYPE "arm-codegenprepare"
+#define DEBUG_TYPE "type-promotion"
+#define PASS_NAME "Type Promotion"
 
 using namespace llvm;
 
 static cl::opt<bool>
-DisableCGP("arm-disable-cgp", cl::Hidden, cl::init(true),
-           cl::desc("Disable ARM specific CodeGenPrepare pass"));
-
-static cl::opt<bool>
-EnableDSP("arm-enable-scalar-dsp", cl::Hidden, cl::init(false),
-          cl::desc("Use DSP instructions for scalar operations"));
-
-static cl::opt<bool>
-EnableDSPWithImms("arm-enable-scalar-dsp-imms", cl::Hidden, cl::init(false),
-                   cl::desc("Use DSP instructions for scalar operations\
-                            with immediate operands"));
+DisablePromotion("disable-type-promotion", cl::Hidden, cl::init(true),
+                 cl::desc("Disable type promotion pass"));
 
 // The goal of this pass is to enable more efficient code generation for
 // operations on narrow types (i.e. types with < 32-bits) and this is a
@@ -111,7 +106,6 @@ class IRPromoter {
   SmallPtrSet<Instruction*, 4> InstsToRemove;
   DenseMap<Value*, SmallVector<Type*, 4>> TruncTysMap;
   SmallPtrSet<Value*, 8> Promoted;
-  Module *M = nullptr;
   LLVMContext &Ctx;
   // The type we promote to: always i32
   IntegerType *ExtTy = nullptr;
@@ -134,11 +128,10 @@ class IRPromoter {
   void Cleanup(void);
 
 public:
-  IRPromoter(Module *M) : M(M), Ctx(M->getContext()),
-                          ExtTy(Type::getInt32Ty(Ctx)) { }
+  IRPromoter(Module *M) : Ctx(M->getContext()) { }
 
 
-  void Mutate(Type *OrigTy,
+  void Mutate(Type *OrigTy, unsigned PromotedWidth,
               SetVector<Value*> &Visited,
               SmallPtrSetImpl<Value*> &Sources,
               SmallPtrSetImpl<Instruction*> &Sinks,
@@ -146,30 +139,29 @@ public:
               SmallPtrSetImpl<Instruction*> &SafeWrap);
 };
 
-class ARMCodeGenPrepare : public FunctionPass {
-  const ARMSubtarget *ST = nullptr;
+class TypePromotion : public FunctionPass {
   IRPromoter *Promoter = nullptr;
-  std::set<Value*> AllVisited;
+  SmallPtrSet<Value*, 16> AllVisited;
   SmallPtrSet<Instruction*, 8> SafeToPromote;
   SmallPtrSet<Instruction*, 4> SafeWrap;
 
   bool isSafeWrap(Instruction *I);
   bool isSupportedValue(Value *V);
   bool isLegalToPromote(Value *V);
-  bool TryToPromote(Value *V);
+  bool TryToPromote(Value *V, unsigned PromotedWidth);
 
 public:
   static char ID;
   static unsigned TypeSize;
   Type *OrigTy = nullptr;
 
-  ARMCodeGenPrepare() : FunctionPass(ID) {}
+  TypePromotion() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
   }
 
-  StringRef getPassName() const override { return "ARM IR optimizations"; }
+  StringRef getPassName() const override { return PASS_NAME; }
 
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
@@ -188,19 +180,19 @@ static bool GenerateSignBits(Value *V) {
 }
 
 static bool EqualTypeSize(Value *V) {
-  return V->getType()->getScalarSizeInBits() == ARMCodeGenPrepare::TypeSize;
+  return V->getType()->getScalarSizeInBits() == TypePromotion::TypeSize;
 }
 
 static bool LessOrEqualTypeSize(Value *V) {
-  return V->getType()->getScalarSizeInBits() <= ARMCodeGenPrepare::TypeSize;
+  return V->getType()->getScalarSizeInBits() <= TypePromotion::TypeSize;
 }
 
 static bool GreaterThanTypeSize(Value *V) {
-  return V->getType()->getScalarSizeInBits() > ARMCodeGenPrepare::TypeSize;
+  return V->getType()->getScalarSizeInBits() > TypePromotion::TypeSize;
 }
 
 static bool LessThanTypeSize(Value *V) {
-  return V->getType()->getScalarSizeInBits() < ARMCodeGenPrepare::TypeSize;
+  return V->getType()->getScalarSizeInBits() < TypePromotion::TypeSize;
 }
 
 /// Some instructions can use 8- and 16-bit operands, and we don't need to
@@ -278,7 +270,7 @@ static bool isSink(Value *V) {
 }
 
 /// Return whether this instruction can safely wrap.
-bool ARMCodeGenPrepare::isSafeWrap(Instruction *I) {
+bool TypePromotion::isSafeWrap(Instruction *I) {
   // We can support a, potentially, wrapping instruction (I) if:
   // - It is only used by an unsigned icmp.
   // - The icmp uses a constant.
@@ -374,7 +366,7 @@ bool ARMCodeGenPrepare::isSafeWrap(Instruction *I) {
   Total += OverflowConst->getValue().getBitWidth() < 32 ?
     OverflowConst->getValue().abs().zext(32) : OverflowConst->getValue().abs();
 
-  APInt Max = APInt::getAllOnesValue(ARMCodeGenPrepare::TypeSize);
+  APInt Max = APInt::getAllOnesValue(TypePromotion::TypeSize);
 
   if (Total.getBitWidth() > Max.getBitWidth()) {
     if (Total.ugt(Max.zext(Total.getBitWidth())))
@@ -385,7 +377,7 @@ bool ARMCodeGenPrepare::isSafeWrap(Instruction *I) {
   } else if (Total.ugt(Max))
     return false;
 
-  LLVM_DEBUG(dbgs() << "ARM CGP: Allowing safe overflow for " << *I << "\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for " << *I << "\n");
   SafeWrap.insert(I);
   return true;
 }
@@ -422,32 +414,12 @@ static bool isPromotedResultSafe(Value *V) {
   return cast<Instruction>(V)->hasNoUnsignedWrap();
 }
 
-/// Return the intrinsic for the instruction that can perform the same
-/// operation but on a narrow type. This is using the parallel dsp intrinsics
-/// on scalar values.
-static Intrinsic::ID getNarrowIntrinsic(Instruction *I) {
-  // Whether we use the signed or unsigned versions of these intrinsics
-  // doesn't matter because we're not using the GE bits that they set in
-  // the APSR.
-  switch(I->getOpcode()) {
-  default:
-    break;
-  case Instruction::Add:
-    return ARMCodeGenPrepare::TypeSize == 16 ? Intrinsic::arm_uadd16 :
-      Intrinsic::arm_uadd8;
-  case Instruction::Sub:
-    return ARMCodeGenPrepare::TypeSize == 16 ? Intrinsic::arm_usub16 :
-      Intrinsic::arm_usub8;
-  }
-  llvm_unreachable("unhandled opcode for narrow intrinsic");
-}
-
 void IRPromoter::ReplaceAllUsersOfWith(Value *From, Value *To) {
   SmallVector<Instruction*, 4> Users;
   Instruction *InstTo = dyn_cast<Instruction>(To);
   bool ReplacedAll = true;
 
-  LLVM_DEBUG(dbgs() << "ARM CGP: Replacing " << *From << " with " << *To
+  LLVM_DEBUG(dbgs() << "IR Promotion: Replacing " << *From << " with " << *To
              << "\n");
 
   for (Use &U : From->uses()) {
@@ -468,7 +440,7 @@ void IRPromoter::ReplaceAllUsersOfWith(Value *From, Value *To) {
 }
 
 void IRPromoter::PrepareWrappingAdds() {
-  LLVM_DEBUG(dbgs() << "ARM CGP: Prepare underflowing adds.\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Prepare wrapping adds.\n");
   IRBuilder<> Builder{Ctx};
 
   // For adds that safely wrap and use a negative immediate as operand 1, we
@@ -479,7 +451,7 @@ void IRPromoter::PrepareWrappingAdds() {
     if (I->getOpcode() != Instruction::Add)
       continue;
 
-    LLVM_DEBUG(dbgs() << "ARM CGP: Adjusting " << *I << "\n");
+    LLVM_DEBUG(dbgs() << "IR Promotion: Adjusting " << *I << "\n");
     assert((isa<ConstantInt>(I->getOperand(1)) &&
             cast<ConstantInt>(I->getOperand(1))->isNegative()) &&
            "Wrapping should have a negative immediate as the second operand");
@@ -494,7 +466,7 @@ void IRPromoter::PrepareWrappingAdds() {
     }
     InstsToRemove.insert(I);
     I->replaceAllUsesWith(NewVal);
-    LLVM_DEBUG(dbgs() << "ARM CGP: New equivalent: " << *NewVal << "\n");
+    LLVM_DEBUG(dbgs() << "IR Promotion: New equivalent: " << *NewVal << "\n");
   }
   for (auto *I : NewInsts)
     Visited->insert(I);
@@ -505,7 +477,7 @@ void IRPromoter::ExtendSources() {
 
   auto InsertZExt = [&](Value *V, Instruction *InsertPt) {
     assert(V->getType() != ExtTy && "zext already extends to i32");
-    LLVM_DEBUG(dbgs() << "ARM CGP: Inserting ZExt for " << *V << "\n");
+    LLVM_DEBUG(dbgs() << "IR Promotion: Inserting ZExt for " << *V << "\n");
     Builder.SetInsertPoint(InsertPt);
     if (auto *I = dyn_cast<Instruction>(V))
       Builder.SetCurrentDebugLocation(I->getDebugLoc());
@@ -523,7 +495,7 @@ void IRPromoter::ExtendSources() {
   };
 
   // Now, insert extending instructions between the sources and their users.
-  LLVM_DEBUG(dbgs() << "ARM CGP: Promoting sources:\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Promoting sources:\n");
   for (auto V : *Sources) {
     LLVM_DEBUG(dbgs() << " - " << *V << "\n");
     if (auto *I = dyn_cast<Instruction>(V))
@@ -539,7 +511,7 @@ void IRPromoter::ExtendSources() {
 }
 
 void IRPromoter::PromoteTree() {
-  LLVM_DEBUG(dbgs() << "ARM CGP: Mutating the tree..\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Mutating the tree..\n");
 
   IRBuilder<> Builder{Ctx};
 
@@ -570,38 +542,10 @@ void IRPromoter::PromoteTree() {
       Promoted.insert(I);
     }
   }
-
-  // Finally, any instructions that should be promoted but haven't yet been,
-  // need to be handled using intrinsics.
-  for (auto *V : *Visited) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      continue;
-
-    if (Sources->count(I) || Sinks->count(I))
-      continue;
-
-    if (!shouldPromote(I) || SafeToPromote->count(I) || NewInsts.count(I))
-      continue;
-
-    assert(EnableDSP && "DSP intrinisc insertion not enabled!");
-
-    // Replace unsafe instructions with appropriate intrinsic calls.
-    LLVM_DEBUG(dbgs() << "ARM CGP: Inserting DSP intrinsic for "
-               << *I << "\n");
-    Function *DSPInst =
-      Intrinsic::getDeclaration(M, getNarrowIntrinsic(I));
-    Builder.SetInsertPoint(I);
-    Builder.SetCurrentDebugLocation(I->getDebugLoc());
-    Value *Args[] = { I->getOperand(0), I->getOperand(1) };
-    CallInst *Call = Builder.CreateCall(DSPInst, Args);
-    NewInsts.insert(Call);
-    ReplaceAllUsersOfWith(I, Call);
-  }
 }
 
 void IRPromoter::TruncateSinks() {
-  LLVM_DEBUG(dbgs() << "ARM CGP: Fixing up the sinks:\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Fixing up the sinks:\n");
 
   IRBuilder<> Builder{Ctx};
 
@@ -612,7 +556,7 @@ void IRPromoter::TruncateSinks() {
     if ((!Promoted.count(V) && !NewInsts.count(V)) || Sources->count(V))
       return nullptr;
 
-    LLVM_DEBUG(dbgs() << "ARM CGP: Creating " << *TruncTy << " Trunc for "
+    LLVM_DEBUG(dbgs() << "IR Promotion: Creating " << *TruncTy << " Trunc for "
                << *V << "\n");
     Builder.SetInsertPoint(cast<Instruction>(V));
     auto *Trunc = dyn_cast<Instruction>(Builder.CreateTrunc(V, TruncTy));
@@ -624,7 +568,7 @@ void IRPromoter::TruncateSinks() {
   // Fix up any stores or returns that use the results of the promoted
   // chain.
   for (auto I : *Sinks) {
-    LLVM_DEBUG(dbgs() << "ARM CGP: For Sink: " << *I << "\n");
+    LLVM_DEBUG(dbgs() << "IR Promotion: For Sink: " << *I << "\n");
 
     // Handle calls separately as we need to iterate over arg operands.
     if (auto *Call = dyn_cast<CallInst>(I)) {
@@ -661,7 +605,7 @@ void IRPromoter::TruncateSinks() {
 }
 
 void IRPromoter::Cleanup() {
-  LLVM_DEBUG(dbgs() << "ARM CGP: Cleanup..\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Cleanup..\n");
   // Some zexts will now have become redundant, along with their trunc
   // operands, so remove them
   for (auto V : *Visited) {
@@ -674,7 +618,7 @@ void IRPromoter::Cleanup() {
 
     Value *Src = ZExt->getOperand(0);
     if (ZExt->getSrcTy() == ZExt->getDestTy()) {
-      LLVM_DEBUG(dbgs() << "ARM CGP: Removing unnecessary cast: " << *ZExt
+      LLVM_DEBUG(dbgs() << "IR Promotion: Removing unnecessary cast: " << *ZExt
                  << "\n");
       ReplaceAllUsersOfWith(ZExt, Src);
       continue;
@@ -693,7 +637,7 @@ void IRPromoter::Cleanup() {
   }
 
   for (auto *I : InstsToRemove) {
-    LLVM_DEBUG(dbgs() << "ARM CGP: Removing " << *I << "\n");
+    LLVM_DEBUG(dbgs() << "IR Promotion: Removing " << *I << "\n");
     I->dropAllReferences();
     I->eraseFromParent();
   }
@@ -707,7 +651,7 @@ void IRPromoter::Cleanup() {
 }
 
 void IRPromoter::ConvertTruncs() {
-  LLVM_DEBUG(dbgs() << "ARM CGP: Converting truncs..\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Converting truncs..\n");
   IRBuilder<> Builder{Ctx};
 
   for (auto *V : *Visited) {
@@ -731,17 +675,18 @@ void IRPromoter::ConvertTruncs() {
   }
 }
 
-void IRPromoter::Mutate(Type *OrigTy,
+void IRPromoter::Mutate(Type *OrigTy, unsigned PromotedWidth,
                         SetVector<Value*> &Visited,
                         SmallPtrSetImpl<Value*> &Sources,
                         SmallPtrSetImpl<Instruction*> &Sinks,
                         SmallPtrSetImpl<Instruction*> &SafeToPromote,
                         SmallPtrSetImpl<Instruction*> &SafeWrap) {
-  LLVM_DEBUG(dbgs() << "ARM CGP: Promoting use-def chains to from "
-             << ARMCodeGenPrepare::TypeSize << " to 32-bits\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Promoting use-def chains to from "
+             << TypePromotion::TypeSize << " to 32-bits\n");
 
   assert(isa<IntegerType>(OrigTy) && "expected integer type");
   this->OrigTy = cast<IntegerType>(OrigTy);
+  ExtTy = IntegerType::get(Ctx, PromotedWidth);
   assert(OrigTy->getPrimitiveSizeInBits() < ExtTy->getPrimitiveSizeInBits() &&
          "original type not smaller than extended type");
 
@@ -779,9 +724,7 @@ void IRPromoter::Mutate(Type *OrigTy,
   // Insert zext instructions between sources and their users.
   ExtendSources();
 
-  // Promote visited instructions, mutating their types in place. Also insert
-  // DSP intrinsics, if enabled, for adds and subs which would be unsafe to
-  // promote.
+  // Promote visited instructions, mutating their types in place.
   PromoteTree();
 
   // Convert any truncs, that aren't sources, into AND masks.
@@ -794,14 +737,14 @@ void IRPromoter::Mutate(Type *OrigTy,
   // clear the data structures.
   Cleanup();
 
-  LLVM_DEBUG(dbgs() << "ARM CGP: Mutation complete\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Mutation complete\n");
 }
 
 /// We accept most instructions, as well as Arguments and ConstantInsts. We
 /// Disallow casts other than zext and truncs and only allow calls if their
 /// return value is zeroext. We don't allow opcodes that can introduce sign
 /// bits.
-bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
+bool TypePromotion::isSupportedValue(Value *V) {
   if (auto *I = dyn_cast<Instruction>(V)) {
     switch (I->getOpcode()) {
     default:
@@ -849,7 +792,7 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
 /// Check that the type of V would be promoted and that the original type is
 /// smaller than the targeted promoted type. Check that we're not trying to
 /// promote something larger than our base 'TypeSize' type.
-bool ARMCodeGenPrepare::isLegalToPromote(Value *V) {
+bool TypePromotion::isLegalToPromote(Value *V) {
 
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
@@ -862,47 +805,20 @@ bool ARMCodeGenPrepare::isLegalToPromote(Value *V) {
     SafeToPromote.insert(I);
     return true;
   }
-
-  if (I->getOpcode() != Instruction::Add && I->getOpcode() != Instruction::Sub)
-    return false;
-
-  // If promotion is not safe, can we use a DSP instruction to natively
-  // handle the narrow type?
-  if (!ST->hasDSP() || !EnableDSP || !isSupportedType(I))
-    return false;
-
-  if (ST->isThumb() && !ST->hasThumb2())
-    return false;
-
-  // TODO
-  // Would it be profitable? For Thumb code, these parallel DSP instructions
-  // are only Thumb-2, so we wouldn't be able to dual issue on Cortex-M33. For
-  // Cortex-A, specifically Cortex-A72, the latency is double and throughput is
-  // halved. They also do not take immediates as operands.
-  for (auto &Op : I->operands()) {
-    if (isa<Constant>(Op)) {
-      if (!EnableDSPWithImms)
-        return false;
-    }
-  }
-  LLVM_DEBUG(dbgs() << "ARM CGP: Will use an intrinsic for: " << *I << "\n");
-  return true;
+  return false;
 }
 
-bool ARMCodeGenPrepare::TryToPromote(Value *V) {
+bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
   OrigTy = V->getType();
   TypeSize = OrigTy->getPrimitiveSizeInBits();
-  if (TypeSize > 16 || TypeSize < 8)
-    return false;
-
   SafeToPromote.clear();
   SafeWrap.clear();
 
   if (!isSupportedValue(V) || !shouldPromote(V) || !isLegalToPromote(V))
     return false;
 
-  LLVM_DEBUG(dbgs() << "ARM CGP: TryToPromote: " << *V << ", TypeSize = "
-             << TypeSize << "\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: TryToPromote: " << *V << ", from "
+             << TypeSize << " bits to " << PromotedWidth << "\n");
 
   SetVector<Value*> WorkList;
   SmallPtrSet<Value*, 8> Sources;
@@ -923,7 +839,7 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
       return true;
 
     if (!isSupportedValue(V) || (shouldPromote(V) && !isLegalToPromote(V))) {
-      LLVM_DEBUG(dbgs() << "ARM CGP: Can't handle: " << *V << "\n");
+      LLVM_DEBUG(dbgs() << "IR Promotion: Can't handle: " << *V << "\n");
       return false;
     }
 
@@ -979,7 +895,7 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
     }
   }
 
-  LLVM_DEBUG(dbgs() << "ARM CGP: Visited nodes:\n";
+  LLVM_DEBUG(dbgs() << "IR Promotion: Visited nodes:\n";
              for (auto *I : CurrentVisited)
                I->dump();
              );
@@ -995,28 +911,31 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
   if (ToPromote < 2)
     return false;
 
-  Promoter->Mutate(OrigTy, CurrentVisited, Sources, Sinks, SafeToPromote,
-                   SafeWrap);
+  Promoter->Mutate(OrigTy, PromotedWidth, CurrentVisited, Sources, Sinks,
+                   SafeToPromote, SafeWrap);
   return true;
 }
 
-bool ARMCodeGenPrepare::doInitialization(Module &M) {
+bool TypePromotion::doInitialization(Module &M) {
   Promoter = new IRPromoter(&M);
   return false;
 }
 
-bool ARMCodeGenPrepare::runOnFunction(Function &F) {
-  if (skipFunction(F) || DisableCGP)
+bool TypePromotion::runOnFunction(Function &F) {
+  if (skipFunction(F) || DisablePromotion)
     return false;
 
-  auto *TPC = &getAnalysis<TargetPassConfig>();
+  LLVM_DEBUG(dbgs() << "IR Promotion: Running on " << F.getName() << "\n");
+
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC)
     return false;
 
-  const TargetMachine &TM = TPC->getTM<TargetMachine>();
-  ST = &TM.getSubtarget<ARMSubtarget>(F);
   bool MadeChange = false;
-  LLVM_DEBUG(dbgs() << "ARM CGP: Running on " << F.getName() << "\n");
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  const TargetMachine &TM = TPC->getTM<TargetMachine>();
+  const TargetSubtargetInfo *SubtargetInfo = TM.getSubtargetImpl(F);
+  const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
 
   // Search up from icmps to try to promote their operands.
   for (BasicBlock &BB : F) {
@@ -1025,18 +944,30 @@ bool ARMCodeGenPrepare::runOnFunction(Function &F) {
       if (AllVisited.count(&I))
         continue;
 
-      if (isa<ICmpInst>(I)) {
-        auto &CI = cast<ICmpInst>(I);
+      if (!isa<ICmpInst>(&I))
+        continue;
 
-        // Skip signed or pointer compares
-        if (CI.isSigned() || !isa<IntegerType>(CI.getOperand(0)->getType()))
-          continue;
+      auto *ICmp = cast<ICmpInst>(&I);
+      // Skip signed or pointer compares
+      if (ICmp->isSigned() ||
+          !isa<IntegerType>(ICmp->getOperand(0)->getType()))
+        continue;
 
-        LLVM_DEBUG(dbgs() << "ARM CGP: Searching from: " << CI << "\n");
+      LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << *ICmp << "\n");
 
-        for (auto &Op : CI.operands()) {
-          if (auto *I = dyn_cast<Instruction>(Op))
-            MadeChange |= TryToPromote(I);
+      for (auto &Op : ICmp->operands()) {
+        if (auto *I = dyn_cast<Instruction>(Op)) {
+          EVT SrcVT = TLI->getValueType(DL, I->getType());
+          if (SrcVT.isSimple() && TLI->isTypeLegal(SrcVT.getSimpleVT()))
+            break;
+
+          if (TLI->getTypeAction(ICmp->getContext(), SrcVT) !=
+              TargetLowering::TypePromoteInteger)
+            break;
+
+          EVT PromotedVT = TLI->getTypeToTransformTo(ICmp->getContext(), SrcVT);
+          MadeChange |= TryToPromote(I, PromotedVT.getSizeInBits());
+          break;
         }
       }
     }
@@ -1046,24 +977,22 @@ bool ARMCodeGenPrepare::runOnFunction(Function &F) {
                });
   }
   if (MadeChange)
-    LLVM_DEBUG(dbgs() << "After ARMCodeGenPrepare: " << F << "\n");
+    LLVM_DEBUG(dbgs() << "After TypePromotion: " << F << "\n");
 
   return MadeChange;
 }
 
-bool ARMCodeGenPrepare::doFinalization(Module &M) {
+bool TypePromotion::doFinalization(Module &M) {
   delete Promoter;
   return false;
 }
 
-INITIALIZE_PASS_BEGIN(ARMCodeGenPrepare, DEBUG_TYPE,
-                      "ARM IR optimizations", false, false)
-INITIALIZE_PASS_END(ARMCodeGenPrepare, DEBUG_TYPE, "ARM IR optimizations",
-                    false, false)
+INITIALIZE_PASS_BEGIN(TypePromotion, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_END(TypePromotion, DEBUG_TYPE, PASS_NAME, false, false)
 
-char ARMCodeGenPrepare::ID = 0;
-unsigned ARMCodeGenPrepare::TypeSize = 0;
+char TypePromotion::ID = 0;
+unsigned TypePromotion::TypeSize = 0;
 
-FunctionPass *llvm::createARMCodeGenPreparePass() {
-  return new ARMCodeGenPrepare();
+FunctionPass *llvm::createTypePromotionPass() {
+  return new TypePromotion();
 }

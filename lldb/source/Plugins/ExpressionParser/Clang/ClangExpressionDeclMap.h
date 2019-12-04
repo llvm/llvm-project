@@ -458,6 +458,23 @@ private:
                            unsigned current_id, SymbolContext &sym_ctx,
                            CompilerDeclContext &namespace_decl);
 
+  /// Searches for functions in the given SymbolContextList.
+  ///
+  /// \param[in] sc_list
+  ///     The SymbolContextList to search.
+  ///
+  /// \param[in] frame_decl_context
+  ///     The current DeclContext of the current frame.
+  ///
+  /// \return
+  ///     A SymbolContextList with any found functions in the front and
+  ///     any unknown SymbolContexts which are not functions in the back.
+  ///     The SymbolContexts for the functions are ordered by how close they are
+  ///     to the DeclContext for the given frame DeclContext.
+  SymbolContextList SearchFunctionsInSymbolContexts(
+      const SymbolContextList &sc_list,
+      const CompilerDeclContext &frame_decl_context);
+
   /// Looks up a function.
   ///
   /// \param[in] context

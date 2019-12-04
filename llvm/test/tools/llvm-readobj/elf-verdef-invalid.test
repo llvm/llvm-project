@@ -52,7 +52,7 @@ Sections:
 # RUN: llvm-readobj -V %t3 2>&1 | FileCheck %s --check-prefix=INVALID-DATA -DFILE=%t3
 # RUN: llvm-readelf -V %t3 2>&1 | FileCheck %s --check-prefix=INVALID-DATA -DFILE=%t3
 
-# INVALID-DATA: warning: '[[FILE]]': cannot read content of SHT_GNU_verdef section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that cannot be represented
+# INVALID-DATA: warning: '[[FILE]]': cannot read content of SHT_GNU_verdef section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x230)
 
 --- !ELF
 FileHeader:

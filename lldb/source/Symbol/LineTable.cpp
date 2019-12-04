@@ -34,11 +34,9 @@ void LineTable::InsertLineEntry(lldb::addr_t file_addr, uint32_t line,
               is_start_of_basic_block, is_prologue_end, is_epilogue_begin,
               is_terminal_entry);
 
-  entry_collection::iterator begin_pos = m_entries.begin();
-  entry_collection::iterator end_pos = m_entries.end();
   LineTable::Entry::LessThanBinaryPredicate less_than_bp(this);
   entry_collection::iterator pos =
-      upper_bound(begin_pos, end_pos, entry, less_than_bp);
+      llvm::upper_bound(m_entries, entry, less_than_bp);
 
   //  Stream s(stdout);
   //  s << "\n\nBefore:\n";
@@ -289,8 +287,6 @@ uint32_t LineTable::FindLineEntryIndexByFileIndex(
     uint32_t line, bool exact, LineEntry *line_entry_ptr) {
 
   const size_t count = m_entries.size();
-  std::vector<uint32_t>::const_iterator begin_pos = file_indexes.begin();
-  std::vector<uint32_t>::const_iterator end_pos = file_indexes.end();
   size_t best_match = UINT32_MAX;
 
   for (size_t idx = start_idx; idx < count; ++idx) {
@@ -299,7 +295,7 @@ uint32_t LineTable::FindLineEntryIndexByFileIndex(
     if (m_entries[idx].is_terminal_entry)
       continue;
 
-    if (find(begin_pos, end_pos, m_entries[idx].file_idx) == end_pos)
+    if (llvm::find(file_indexes, m_entries[idx].file_idx) == file_indexes.end())
       continue;
 
     // Exact match always wins.  Otherwise try to find the closest line > the

@@ -1191,6 +1191,59 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   return false;
 }
 
+namespace {
+
+enum MisleadingStatementKind { MSK_if, MSK_else, MSK_for, MSK_while };
+
+struct MisleadingIndentationChecker {
+  Parser &P;
+  SourceLocation StmtLoc;
+  SourceLocation PrevLoc;
+  unsigned NumDirectives;
+  MisleadingStatementKind Kind;
+  bool NeedsChecking;
+  bool ShouldSkip;
+  MisleadingIndentationChecker(Parser &P, MisleadingStatementKind K,
+                               SourceLocation SL)
+      : P(P), StmtLoc(SL), PrevLoc(P.getCurToken().getLocation()),
+        NumDirectives(P.getPreprocessor().getNumDirectives()), Kind(K),
+        NeedsChecking(true), ShouldSkip(P.getCurToken().is(tok::l_brace)) {
+    if (!P.MisleadingIndentationElseLoc.isInvalid()) {
+      StmtLoc = P.MisleadingIndentationElseLoc;
+      P.MisleadingIndentationElseLoc = SourceLocation();
+    }
+    if (Kind == MSK_else && !ShouldSkip)
+      P.MisleadingIndentationElseLoc = SL;
+  }
+  void Check() {
+    NeedsChecking = false;
+    Token Tok = P.getCurToken();
+    if (ShouldSkip || NumDirectives != P.getPreprocessor().getNumDirectives() ||
+        Tok.isOneOf(tok::semi, tok::r_brace) || Tok.isAnnotation() ||
+        Tok.getLocation().isMacroID() || PrevLoc.isMacroID() ||
+        StmtLoc.isMacroID() ||
+        (Kind == MSK_else && P.MisleadingIndentationElseLoc.isInvalid())) {
+      P.MisleadingIndentationElseLoc = SourceLocation();
+      return;
+    }
+
+    SourceManager &SM = P.getPreprocessor().getSourceManager();
+    unsigned PrevColNum = SM.getSpellingColumnNumber(PrevLoc);
+    unsigned CurColNum = SM.getSpellingColumnNumber(Tok.getLocation());
+    unsigned StmtColNum = SM.getSpellingColumnNumber(StmtLoc);
+
+    if (PrevColNum != 0 && CurColNum != 0 && StmtColNum != 0 &&
+        ((PrevColNum > StmtColNum && PrevColNum == CurColNum) ||
+         !Tok.isAtStartOfLine()) && SM.getPresumedLineNumber(StmtLoc) !=
+          SM.getPresumedLineNumber(Tok.getLocation())) {
+      P.Diag(Tok.getLocation(), diag::warn_misleading_indentation)
+          << Kind;
+      P.Diag(StmtLoc, diag::note_previous_statement);
+    }
+  }
+};
+
+}
 
 /// ParseIfStatement
 ///       if-statement: [C99 6.8.4.1]
@@ -1265,6 +1318,8 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   //
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
+  MisleadingIndentationChecker MIChecker(*this, MSK_if, IfLoc);
+
   // Read the 'then' stmt.
   SourceLocation ThenStmtLoc = Tok.getLocation();
 
@@ -1277,6 +1332,9 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
         /*ShouldEnter=*/ConstexprCondition && !*ConstexprCondition);
     ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc);
   }
+
+  if (Tok.isNot(tok::kw_else))
+    MIChecker.Check();
 
   // Pop the 'if' scope if needed.
   InnerScope.Exit();
@@ -1305,11 +1363,16 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     ParseScope InnerScope(this, Scope::DeclScope, C99orCXX,
                           Tok.is(tok::l_brace));
 
+    MisleadingIndentationChecker MIChecker(*this, MSK_else, ElseLoc);
+
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Sema::ExpressionEvaluationContext::DiscardedStatement, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other,
         /*ShouldEnter=*/ConstexprCondition && *ConstexprCondition);
     ElseStmt = ParseStatement();
+
+    if (ElseStmt.isUsable())
+      MIChecker.Check();
 
     // Pop the 'else' scope if needed.
     InnerScope.Exit();
@@ -1484,9 +1547,13 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   //
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
+  MisleadingIndentationChecker MIChecker(*this, MSK_while, WhileLoc);
+
   // Read the body statement.
   StmtResult Body(ParseStatement(TrailingElseLoc));
 
+  if (Body.isUsable())
+    MIChecker.Check();
   // Pop the body scope if needed.
   InnerScope.Exit();
   WhileScope.Exit();
@@ -1918,8 +1985,13 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
   if (C99orCXXorObjC)
     getCurScope()->decrementMSManglingNumber();
 
+  MisleadingIndentationChecker MIChecker(*this, MSK_for, ForLoc);
+
   // Read the body statement.
   StmtResult Body(ParseStatement(TrailingElseLoc));
+
+  if (Body.isUsable())
+    MIChecker.Check();
 
   // Pop the body scope if needed.
   InnerScope.Exit();

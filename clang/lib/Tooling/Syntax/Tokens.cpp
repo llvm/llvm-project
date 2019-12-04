@@ -119,6 +119,22 @@ llvm::StringRef FileRange::text(const SourceManager &SM) const {
   return Text.substr(Begin, length());
 }
 
+llvm::ArrayRef<syntax::Token> TokenBuffer::expandedTokens(SourceRange R) const {
+  if (R.isInvalid())
+    return {};
+  const Token *Begin =
+      llvm::partition_point(expandedTokens(), [&](const syntax::Token &T) {
+        return SourceMgr->isBeforeInTranslationUnit(T.location(), R.getBegin());
+      });
+  const Token *End =
+      llvm::partition_point(expandedTokens(), [&](const syntax::Token &T) {
+        return !SourceMgr->isBeforeInTranslationUnit(R.getEnd(), T.location());
+      });
+  if (Begin > End)
+    return {};
+  return {Begin, End};
+}
+
 std::pair<const syntax::Token *, const TokenBuffer::Mapping *>
 TokenBuffer::spelledForExpandedToken(const syntax::Token *Expanded) const {
   assert(Expanded);

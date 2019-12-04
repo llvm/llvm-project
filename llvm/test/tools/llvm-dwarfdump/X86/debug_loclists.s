@@ -1,13 +1,44 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o %t
-# RUN: llvm-dwarfdump %t | FileCheck %s
+# RUN: llvm-dwarfdump -debug-info -debug-loclists %t \
+# RUN:   | FileCheck %s --check-prefix=REGULAR --check-prefix=BOTH
+# RUN: llvm-dwarfdump -debug-info -debug-loclists --verbose %t \
+# RUN:   | FileCheck %s --check-prefix=VERBOSE --check-prefix=BOTH
 
 
-# CHECK:          DW_AT_location        (0x0000000c
-# CHECK-NEXT:        [0x0000000000000000, 0x0000000000000001): DW_OP_reg0 RAX
-# CHECK-NEXT:        [0x0000000000000001, 0x0000000000000002): DW_OP_reg1 RDX
-# CHECK-NEXT:        [0x0000000000000002, 0x0000000000000003): DW_OP_reg2 RCX
-# CHECK-NEXT:        [0x0000000000000003, 0x0000000000000004): DW_OP_reg3 RBX
-# CHECK-NEXT:        DW_LLE_startx_length (0x000000000000dead, 0x0000000000000001): DW_OP_reg4 RSI)
+# BOTH:          DW_AT_location {{.*}}(0x0000000c
+
+# REGULAR-NEXT:      [0x0000000000000000, 0x0000000000000001): DW_OP_reg0 RAX
+# VERBOSE-NEXT:      [0x0000000000000000, 0x0000000000000001) ".text": DW_OP_reg0 RAX
+
+# REGULAR-NEXT:      [0x0000000000000001, 0x0000000000000002): DW_OP_reg1 RDX
+# VERBOSE-NEXT:      [0x0000000000000001, 0x0000000000000002) ".text": DW_OP_reg1 RDX
+
+# REGULAR-NEXT:      [0x0000000000000002, 0x0000000000000003): DW_OP_reg2 RCX
+# VERBOSE-NEXT:      [0x0000000000000002, 0x0000000000000003) ".text": DW_OP_reg2 RCX
+
+# REGULAR-NEXT:      [0x0000000000000003, 0x0000000000000004): DW_OP_reg3 RBX
+# VERBOSE-NEXT:      [0x0000000000000003, 0x0000000000000004) ".text": DW_OP_reg3 RBX
+
+# BOTH-NEXT:      DW_LLE_startx_length (0x000000000000dead, 0x0000000000000001): DW_OP_reg4 RSI)
+
+# BOTH: locations list header: length = 0x00000034, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# BOTH-NEXT: 0x0000000c:
+# BOTH-NEXT:     DW_LLE_startx_length   (0x0000000000000000, 0x0000000000000001): DW_OP_reg0 RAX
+# BOTH-NEXT:     DW_LLE_offset_pair     (0x0000000000000001, 0x0000000000000002): DW_OP_reg1 RDX
+
+# REGULAR-NEXT:  [0x0000000000000002, 0x0000000000000003): DW_OP_reg2 RCX
+# VERBOSE-NEXT:  DW_LLE_start_length    (0x0000000000000002, 0x0000000000000001) ".text"
+# VERBOSE-NEXT:            => [0x0000000000000002, 0x0000000000000003) ".text": DW_OP_reg2 RCX
+
+# VERBOSE-NEXT:  DW_LLE_base_address    (0x0000000000000003) ".text"
+
+# REGULAR-NEXT:  [0x0000000000000003, 0x0000000000000004): DW_OP_reg3 RBX
+# VERBOSE-NEXT:  DW_LLE_offset_pair     (0x0000000000000000, 0x0000000000000001)
+# VERBOSE-NEXT:            => [0x0000000000000003, 0x0000000000000004) ".text": DW_OP_reg3 RBX
+
+# BOTH-NEXT:     DW_LLE_startx_length   (0x000000000000dead, 0x0000000000000001): DW_OP_reg4 RSI
+
+# VERBOSE-NEXT:  DW_LLE_end_of_list     ()
 
 
         .text

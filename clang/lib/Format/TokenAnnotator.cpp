@@ -2592,6 +2592,13 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
           Right.ParameterCount > 0);
 }
 
+/// Returns \c true if the token is followed by a boolean condition, \c false
+/// otherwise.
+static bool isKeywordWithCondition(const FormatToken &Tok) {
+  return Tok.isOneOf(tok::kw_if, tok::kw_for, tok::kw_while, tok::kw_switch,
+                     tok::kw_constexpr);
+};
+
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Left,
                                           const FormatToken &Right) {
@@ -2610,6 +2617,15 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       (Left.is(tok::l_brace) && Left.BlockKind != BK_Block &&
        Right.is(tok::r_brace) && Right.BlockKind != BK_Block))
     return Style.SpaceInEmptyParentheses;
+  if (Style.SpacesInConditionalStatement) {
+    if (Left.is(tok::l_paren) && Left.Previous &&
+        isKeywordWithCondition(*Left.Previous))
+      return true;
+    if (Right.is(tok::r_paren) && Right.MatchingParen &&
+        Right.MatchingParen->Previous &&
+        isKeywordWithCondition(*Right.MatchingParen->Previous))
+      return true;
+  }
   if (Left.is(tok::l_paren) || Right.is(tok::r_paren))
     return (Right.is(TT_CastRParen) ||
             (Left.MatchingParen && Left.MatchingParen->is(TT_CastRParen)))
@@ -3044,7 +3060,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // The identifier might actually be a macro name such as ALWAYS_INLINE. If
     // this turns out to be too lenient, add analysis of the identifier itself.
     return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
-  if (Right.is(tok::coloncolon) && !Left.isOneOf(tok::l_brace, tok::comment))
+  if (Right.is(tok::coloncolon) &&
+      !Left.isOneOf(tok::l_brace, tok::comment, tok::l_paren))
     return (Left.is(TT_TemplateOpener) &&
             Style.Standard < FormatStyle::LS_Cpp11) ||
            !(Left.isOneOf(tok::l_paren, tok::r_paren, tok::l_square,

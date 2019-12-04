@@ -917,6 +917,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
         /*IsVariadic=*/false, /*IsCXXMethod=*/true));
     EPI.HasTrailingReturn = true;
     EPI.TypeQuals.addConst();
+    LangAS AS = getDefaultCXXMethodAddrSpace();
+    if (AS != LangAS::Default)
+      EPI.TypeQuals.addAddressSpace(AS);
+
     // C++1y [expr.prim.lambda]:
     //   The lambda return type is 'auto', which is replaced by the
     //   trailing-return type if provided and/or deduced from 'return'
