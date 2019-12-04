@@ -20,11 +20,15 @@ struct Derived : public Base {
   // PGOGEN-DAG: {{.*}}add{{.*}}%pgocount, 1
   // PGOGEN-DAG: store{{.*}}@__profc__ZN7DerivedC2Ev
 
-  // Check that coverage mapping has 6 function records including
+  // Check that coverage mapping has 5 function records including
   // the defaulted Derived::Derived(const Derived), and Derived::Derived()
   // methds.
-  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }, [5 x
-  // <{{.*}}>],
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }
 };
 
 Derived dd;
