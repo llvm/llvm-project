@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-std-to-llvm -convert-std-to-llvm-use-alloca=1 %s | FileCheck %s --check-prefix=ALLOCA
 
 // CHECK-LABEL: func @check_arguments(%arg0: !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">, %arg1: !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">, %arg2: !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">)
 func @check_arguments(%static: memref<10x20xf32>, %dynamic : memref<?x?xf32>, %mixed : memref<10x?xf32>) {
@@ -20,6 +21,7 @@ func @check_static_return(%static : memref<32x18xf32>) -> memref<32x18xf32> {
 }
 
 // CHECK-LABEL: func @zero_d_alloc() -> !llvm<"{ float*, float*, i64 }"> {
+// ALLOCA-LABEL: func @zero_d_alloc() -> !llvm<"{ float*, float*, i64 }"> {
 func @zero_d_alloc() -> memref<f32> {
 // CHECK-NEXT:  llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm<"float*">
@@ -34,6 +36,10 @@ func @zero_d_alloc() -> memref<f32> {
 // CHECK-NEXT:  llvm.insertvalue %[[ptr]], %{{.*}}[1] : !llvm<"{ float*, float*, i64 }">
 // CHECK-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // CHECK-NEXT:  llvm.insertvalue %[[c0]], %{{.*}}[2] : !llvm<"{ float*, float*, i64 }">
+
+// ALLOCA-NOT: malloc
+//     ALLOCA: alloca
+// ALLOCA-NOT: malloc
   %0 = alloc() : memref<f32>
   return %0 : memref<f32>
 }
