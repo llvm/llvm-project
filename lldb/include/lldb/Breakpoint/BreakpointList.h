@@ -67,8 +67,10 @@ public:
   ///   The breakpoint name for which to search.
   ///
   /// \result
-  ///   \bfalse if the input name was not a legal breakpoint name.
-  bool FindBreakpointsByName(const char *name, BreakpointList &matching_bps);
+  ///   error if the input name was not a legal breakpoint name, vector
+  ///   of breakpoints otherwise.
+  llvm::Expected<std::vector<lldb::BreakpointSP>>
+  FindBreakpointsByName(const char *name);
 
   /// Returns the number of elements in this breakpoint list.
   ///
