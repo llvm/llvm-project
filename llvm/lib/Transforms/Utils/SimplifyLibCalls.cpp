@@ -1735,7 +1735,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
     // TODO: This whole transformation should be backend specific (e.g. some
     //       backends might prefer libcalls or the limit for the exponent might
     //       be different) and it should also consider optimizing for size.
-    APFloat LimF(ExpoF->getSemantics(), 33.0),
+    APFloat LimF(ExpoF->getSemantics(), 33),
             ExpoA(abs(*ExpoF));
     if (ExpoA.compare(LimF) == APFloat::cmpLessThan) {
       // This transformation applies to integer or integer+0.5 exponents only.
