@@ -147,12 +147,11 @@ ProcessDpu::Factory::Attach(
 
   char *structure_value_ptr = std::getenv("UPMEM_LLDB_STRUCTURE_VALUE");
   char *slice_target_ptr = std::getenv("UPMEM_LLDB_SLICE_TARGET");
-  uint64_t structure_value =
-      structure_value_ptr == NULL ? 0ULL : ::strtoll(, NULL, 10);
+  uint64_t structure_value = structure_value_ptr == NULL
+                                 ? 0ULL
+                                 : ::strtoll(structure_value_ptr, NULL, 10);
   uint64_t slice_target =
-      slice_target_ptr == NULL
-          ? 0ULL
-          : ::strtoll(std::getenv("UPMEM_LLDB_SLICE_TARGET"), NULL, 10);
+      slice_target_ptr == NULL ? 0ULL : ::strtoll(slice_target_ptr, NULL, 10);
   LLDB_LOG(log, "saving slice context ({0:x}, {1:x})", structure_value,
            slice_target);
 
