@@ -7,6 +7,8 @@ class StaticInitializers(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(archs="aarch64", oslist="linux",
+                        bugnumber="https://bugs.llvm.org/show_bug.cgi?id=44053")
     def test(self):
         """ Test a static initializer. """
         self.build()
