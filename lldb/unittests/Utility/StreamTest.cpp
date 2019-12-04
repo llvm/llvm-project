@@ -36,6 +36,98 @@ struct BinaryStreamTest : StreamTest {
 };
 }
 
+TEST_F(StreamTest, AddressPrefix) {
+  s.Address(0x1, 1, "foo");
+  EXPECT_EQ("foo0x01", TakeValue());
+}
+
+TEST_F(StreamTest, AddressEmptyPrefix) {
+  s.Address(0x1, 1, nullptr);
+  EXPECT_EQ("0x01", TakeValue());
+  s.Address(0x1, 1, "");
+  EXPECT_EQ("0x01", TakeValue());
+}
+
+TEST_F(StreamTest, AddressSuffix) {
+  s.Address(0x1, 1, nullptr, "foo");
+  EXPECT_EQ("0x01foo", TakeValue());
+}
+
+TEST_F(StreamTest, AddressNoSuffix) {
+  s.Address(0x1, 1, nullptr, nullptr);
+  EXPECT_EQ("0x01", TakeValue());
+  s.Address(0x1, 1, nullptr, "");
+  EXPECT_EQ("0x01", TakeValue());
+}
+
+TEST_F(StreamTest, AddressPrefixAndSuffix) {
+  s.Address(0x1, 1, "foo", "bar");
+  EXPECT_EQ("foo0x01bar", TakeValue());
+}
+
+TEST_F(StreamTest, AddressSize) {
+  s.Address(0x0, 0);
+  EXPECT_EQ("0x0", TakeValue());
+  s.Address(0x1, 0);
+  EXPECT_EQ("0x1", TakeValue());
+
+  s.Address(0x1, 1);
+  EXPECT_EQ("0x01", TakeValue());
+  s.Address(0xf1, 1);
+  EXPECT_EQ("0xf1", TakeValue());
+  s.Address(0xff, 1);
+  EXPECT_EQ("0xff", TakeValue());
+  s.Address(0x100, 1);
+  EXPECT_EQ("0x100", TakeValue());
+
+  s.Address(0xf00, 4);
+  EXPECT_EQ("0x00000f00", TakeValue());
+  s.Address(0x100, 8);
+  EXPECT_EQ("0x0000000000000100", TakeValue());
+  s.Address(0x100, 10);
+  EXPECT_EQ("0x00000000000000000100", TakeValue());
+  s.Address(0x1234, 10);
+  EXPECT_EQ("0x00000000000000001234", TakeValue());
+}
+
+TEST_F(StreamTest, AddressRange) {
+  s.AddressRange(0x100, 0x101, 2);
+  EXPECT_EQ("[0x0100-0x0101)", TakeValue());
+}
+
+TEST_F(StreamTest, AddressRangeEmptyRange) {
+  s.AddressRange(0x100, 0x100, 2);
+  EXPECT_EQ("[0x0100-0x0100)", TakeValue());
+  s.AddressRange(0x0, 0x0, 2);
+  EXPECT_EQ("[0x0000-0x0000)", TakeValue());
+}
+
+TEST_F(StreamTest, AddressRangeInvalidRange) {
+  s.AddressRange(0x100, 0x0FF, 2);
+  EXPECT_EQ("[0x0100-0x00ff)", TakeValue());
+  s.AddressRange(0x100, 0x0, 2);
+  EXPECT_EQ("[0x0100-0x0000)", TakeValue());
+}
+
+TEST_F(StreamTest, AddressRangeSize) {
+  s.AddressRange(0x100, 0x101, 0);
+  EXPECT_EQ("[0x100-0x101)", TakeValue());
+  s.AddressRange(0x100, 0x101, 2);
+  EXPECT_EQ("[0x0100-0x0101)", TakeValue());
+  s.AddressRange(0x100, 0x101, 4);
+  EXPECT_EQ("[0x00000100-0x00000101)", TakeValue());
+
+  s.AddressRange(0x100, 0x101, 4);
+  EXPECT_EQ("[0x00000100-0x00000101)", TakeValue());
+  s.AddressRange(0x1, 0x101, 4);
+  EXPECT_EQ("[0x00000001-0x00000101)", TakeValue());
+  s.AddressRange(0x101, 0x1, 4);
+  EXPECT_EQ("[0x00000101-0x00000001)", TakeValue());
+
+  s.AddressRange(0x1, 0x101, 1);
+  EXPECT_EQ("[0x01-0x101)", TakeValue());
+}
+
 TEST_F(StreamTest, ChangingByteOrder) {
   s.SetByteOrder(lldb::eByteOrderPDP);
   EXPECT_EQ(lldb::eByteOrderPDP, s.GetByteOrder());
