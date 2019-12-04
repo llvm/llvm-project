@@ -12555,6 +12555,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpacesInParentheses);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
   CHECK_PARSE_BOOL(SpacesInAngles);
+  CHECK_PARSE_BOOL(SpacesInConditionalStatement);
   CHECK_PARSE_BOOL(SpaceInEmptyBlock);
   CHECK_PARSE_BOOL(SpaceInEmptyParentheses);
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
@@ -14878,6 +14879,22 @@ TEST_F(FormatTest, AmbersandInLamda) {
   verifyFormat("auto lambda = [&a = a]() { a = 2; };", AlignStyle);
   AlignStyle.PointerAlignment = FormatStyle::PAS_Right;
   verifyFormat("auto lambda = [&a = a]() { a = 2; };", AlignStyle);
+}
+
+ TEST_F(FormatTest, SpacesInConditionalStatement) {
+  FormatStyle Spaces = getLLVMStyle();
+  Spaces.SpacesInConditionalStatement = true;
+  verifyFormat("for ( int i = 0; i; i++ )\n  continue;", Spaces);
+  verifyFormat("if ( !a )\n  return;", Spaces);
+  verifyFormat("if ( a )\n  return;", Spaces);
+  verifyFormat("if constexpr ( a )\n  return;", Spaces);
+  verifyFormat("switch ( a )\ncase 1:\n  return;", Spaces);
+  verifyFormat("while ( a )\n  return;", Spaces);
+  verifyFormat("while ( (a && b) )\n  return;", Spaces);
+  verifyFormat("do {\n} while ( 1 != 0 );", Spaces);
+  // Check that space on the left of "::" is inserted as expected at beginning
+  // of condition.
+  verifyFormat("while ( ::func() )\n  return;", Spaces);
 }
 
 TEST_F(FormatTest, AlternativeOperators) {
