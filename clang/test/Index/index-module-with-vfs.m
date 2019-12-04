@@ -6,7 +6,7 @@ void foo() {
 }
 
 // RUN: rm -rf %t.cache
-// RUN: sed -e "s@INPUT_DIR@%/S/Inputs@g" -e "s@OUT_DIR@%/t@g" %S/Inputs/vfsoverlay.yaml > %t.yaml
+// RUN: sed -e "s@INPUT_DIR@%{/S:regex_replacement}/Inputs@g" -e "s@OUT_DIR@%{/t:regex_replacement}@g" %S/Inputs/vfsoverlay.yaml > %t.yaml
 // RUN: c-index-test -index-file %s -fmodules-cache-path=%t.cache -fmodules -F %t -I %t \
 // RUN:              -ivfsoverlay %t.yaml -Xclang -fdisable-module-hash | FileCheck %s
 
