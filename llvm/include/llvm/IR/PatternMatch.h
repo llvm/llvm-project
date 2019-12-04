@@ -366,7 +366,7 @@ inline api_pred_ty<is_negative> m_Negative(const APInt *&V) {
 struct is_nonnegative {
   bool isValue(const APInt &C) { return C.isNonNegative(); }
 };
-/// Match an integer or vector of nonnegative values.
+/// Match an integer or vector of non-negative values.
 /// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_nonnegative> m_NonNegative() {
   return cst_pred_ty<is_nonnegative>();
@@ -374,6 +374,28 @@ inline cst_pred_ty<is_nonnegative> m_NonNegative() {
 inline api_pred_ty<is_nonnegative> m_NonNegative(const APInt *&V) {
   return V;
 }
+
+struct is_strictlypositive {
+  bool isValue(const APInt &C) { return C.isStrictlyPositive(); }
+};
+/// Match an integer or vector of strictly positive values.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_strictlypositive> m_StrictlyPositive() {
+  return cst_pred_ty<is_strictlypositive>();
+}
+inline api_pred_ty<is_strictlypositive> m_StrictlyPositive(const APInt *&V) {
+  return V;
+}
+
+struct is_nonpositive {
+  bool isValue(const APInt &C) { return C.isNonPositive(); }
+};
+/// Match an integer or vector of non-positive values.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_nonpositive> m_NonPositive() {
+  return cst_pred_ty<is_nonpositive>();
+}
+inline api_pred_ty<is_nonpositive> m_NonPositive(const APInt *&V) { return V; }
 
 struct is_one {
   bool isValue(const APInt &C) { return C.isOneValue(); }

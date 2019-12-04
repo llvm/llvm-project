@@ -389,6 +389,11 @@ public:
   /// \returns true if this APInt is positive.
   bool isStrictlyPositive() const { return isNonNegative() && !isNullValue(); }
 
+  /// Determine if this APInt Value is non-positive (<= 0).
+  ///
+  /// \returns true if this APInt is non-positive.
+  bool isNonPositive() const { return !isStrictlyPositive(); }
+
   /// Determine if all bits are set
   ///
   /// This checks to see if the value has all bits of the APInt are set or not.
