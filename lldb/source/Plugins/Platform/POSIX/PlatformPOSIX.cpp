@@ -223,7 +223,7 @@ static uint32_t chown_file(Platform *platform, const char *path,
     command.Printf(":%d", gid);
   command.Printf("%s", path);
   int status;
-  platform->RunShellCommand(command.GetData(), nullptr, &status, nullptr,
+  platform->RunShellCommand(command.GetData(), FileSpec(), &status, nullptr,
                             nullptr, std::chrono::seconds(10));
   return status;
 }
@@ -248,7 +248,7 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
     StreamString command;
     command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
-    RunShellCommand(command.GetData(), nullptr, &status, nullptr, nullptr,
+    RunShellCommand(command.GetData(), FileSpec(), &status, nullptr, nullptr,
                     std::chrono::seconds(10));
     if (status != 0)
       return Status("unable to perform copy");
@@ -278,7 +278,7 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
                        GetHostname(), dst_path.c_str());
       LLDB_LOGF(log, "[PutFile] Running command: %s\n", command.GetData());
       int retcode;
-      Host::RunShellCommand(command.GetData(), nullptr, &retcode, nullptr,
+      Host::RunShellCommand(command.GetData(), FileSpec(), &retcode, nullptr,
                             nullptr, std::chrono::minutes(1));
       if (retcode == 0) {
         // Don't chown a local file for a remote system
@@ -314,7 +314,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
     StreamString cp_command;
     cp_command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
-    RunShellCommand(cp_command.GetData(), nullptr, &status, nullptr, nullptr,
+    RunShellCommand(cp_command.GetData(), FileSpec(), &status, nullptr, nullptr,
                     std::chrono::seconds(10));
     if (status != 0)
       return Status("unable to perform copy");
@@ -335,7 +335,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
                        dst_path.c_str());
       LLDB_LOGF(log, "[GetFile] Running command: %s\n", command.GetData());
       int retcode;
-      Host::RunShellCommand(command.GetData(), nullptr, &retcode, nullptr,
+      Host::RunShellCommand(command.GetData(), FileSpec(), &retcode, nullptr,
                             nullptr, std::chrono::minutes(1));
       if (retcode == 0)
         return Status();

@@ -75,15 +75,6 @@ FileSpec::FileSpec(llvm::StringRef path, Style style) : m_style(style) {
 FileSpec::FileSpec(llvm::StringRef path, const llvm::Triple &triple)
     : FileSpec{path, triple.isOSWindows() ? Style::windows : Style::posix} {}
 
-// Copy constructor
-FileSpec::FileSpec(const FileSpec *rhs) : m_directory(), m_filename() {
-  if (rhs)
-    *this = *rhs;
-}
-
-// Virtual destructor in case anyone inherits from this class.
-FileSpec::~FileSpec() {}
-
 namespace {
 /// Safely get a character at the specified index.
 ///
