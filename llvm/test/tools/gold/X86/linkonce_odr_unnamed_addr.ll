@@ -4,6 +4,7 @@
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: opt -module-summary %p/Inputs/linkonce_odr_unnamed_addr.ll -o %t2.o
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    %t.o %t2.o -o %t3.o
 ; RUN: llvm-dis %t.o.1.promote.bc -o - | FileCheck %s
@@ -12,6 +13,7 @@
 ; conservative and not auto hide.
 ; RUN: llc %p/Inputs/linkonce_odr_unnamed_addr.ll -o %t2native.o -filetype=obj
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    %t.o %t2native.o -o %t3.o
 ; RUN: llvm-dis %t.o.1.promote.bc -o - | FileCheck %s --check-prefix=NOSUMMARY
