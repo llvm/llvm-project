@@ -215,6 +215,9 @@ extern char &SIAddIMGInitID;
 void initializeAMDGPUPerfHintAnalysisPass(PassRegistry &);
 extern char &AMDGPUPerfHintAnalysisID;
 
+void initializeAMDGPURegPressAnalysisPass(PassRegistry &);
+extern char &AMDGPURegPressAnalysisID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
