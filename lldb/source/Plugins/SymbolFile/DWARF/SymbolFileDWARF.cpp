@@ -684,21 +684,6 @@ DWARFDebugRanges *SymbolFileDWARF::GetDebugRanges() {
   return m_ranges.get();
 }
 
-DWARFDebugRngLists *SymbolFileDWARF::GetDebugRngLists() {
-  if (!m_rnglists) {
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
-                       static_cast<void *>(this));
-
-    if (m_context.getOrLoadRngListsData().GetByteSize() > 0)
-      m_rnglists.reset(new DWARFDebugRngLists());
-
-    if (m_rnglists)
-      m_rnglists->Extract(m_context);
-  }
-  return m_rnglists.get();
-}
-
 lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
   CompUnitSP cu_sp;
   CompileUnit *comp_unit = (CompileUnit *)dwarf_cu.GetUserData();
