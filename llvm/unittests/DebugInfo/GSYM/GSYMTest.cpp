@@ -20,8 +20,10 @@
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 #include <string>
 
 using namespace llvm;
@@ -1301,4 +1303,101 @@ TEST(GSYMTest, TestGsymReader) {
     VerifyFunctionInfoError(GR, Func2Addr+FuncSize,
                             "address 0x1030 not in GSYM");
   }
+}
+
+TEST(GSYMTest, TestGsymLookups) {
+  // Test creating a GSYM file with a function that has a inline information.
+  // Verify that lookups work correctly. Lookups do not decode the entire
+  // FunctionInfo or InlineInfo, they only extract information needed for the
+  // lookup to happen which avoids allocations which can slow down
+  // symbolication.
+  GsymCreator GC;
+  FunctionInfo FI(0x1000, 0x100, GC.insertString("main"));
+  const auto ByteOrder = support::endian::system_endianness();
+  FI.OptLineTable = LineTable();
+  const uint32_t MainFileIndex = GC.insertFile("/tmp/main.c");
+  const uint32_t FooFileIndex = GC.insertFile("/tmp/foo.h");
+  FI.OptLineTable->push(LineEntry(0x1000, MainFileIndex, 5));
+  FI.OptLineTable->push(LineEntry(0x1010, FooFileIndex, 10));
+  FI.OptLineTable->push(LineEntry(0x1012, FooFileIndex, 20));
+  FI.OptLineTable->push(LineEntry(0x1014, FooFileIndex, 11));
+  FI.OptLineTable->push(LineEntry(0x1016, FooFileIndex, 30));
+  FI.OptLineTable->push(LineEntry(0x1018, FooFileIndex, 12));
+  FI.OptLineTable->push(LineEntry(0x1020, MainFileIndex, 8));
+  FI.Inline = InlineInfo();
+
+  FI.Inline->Name = GC.insertString("inline1");
+  FI.Inline->CallFile = MainFileIndex;
+  FI.Inline->CallLine = 6;
+  FI.Inline->Ranges.insert(AddressRange(0x1010, 0x1020));
+  InlineInfo Inline2;
+  Inline2.Name = GC.insertString("inline2");
+  Inline2.CallFile = FooFileIndex;
+  Inline2.CallLine = 33;
+  Inline2.Ranges.insert(AddressRange(0x1012, 0x1014));
+  FI.Inline->Children.emplace_back(Inline2);
+  InlineInfo Inline3;
+  Inline3.Name = GC.insertString("inline3");
+  Inline3.CallFile = FooFileIndex;
+  Inline3.CallLine = 35;
+  Inline3.Ranges.insert(AddressRange(0x1016, 0x1018));
+  FI.Inline->Children.emplace_back(Inline3);
+  GC.addFunctionInfo(std::move(FI));
+  Error FinalizeErr = GC.finalize(llvm::nulls());
+  ASSERT_FALSE(FinalizeErr);
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  llvm::Error Err = GC.encode(FW);
+  ASSERT_FALSE((bool)Err);
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_TRUE(bool(GR));
+
+  // Verify inline info is correct when doing lookups.
+  auto LR = GR->lookup(0x1000);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5}));
+  LR = GR->lookup(0x100F);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5}));
+
+  LR = GR->lookup(0x1010);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 10},
+                         SourceLocation{"main", "/tmp", "main.c", 6}));
+
+  LR = GR->lookup(0x1012);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline2", "/tmp", "foo.h", 20},
+                         SourceLocation{"inline1", "/tmp", "foo.h", 33},
+                         SourceLocation{"main", "/tmp", "main.c", 6}));
+
+  LR = GR->lookup(0x1014);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 11},
+                         SourceLocation{"main", "/tmp", "main.c", 6}));
+
+  LR = GR->lookup(0x1016);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline3", "/tmp", "foo.h", 30},
+                         SourceLocation{"inline1", "/tmp", "foo.h", 35},
+                         SourceLocation{"main", "/tmp", "main.c", 6}));
+
+  LR = GR->lookup(0x1018);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 12},
+                         SourceLocation{"main", "/tmp", "main.c", 6}));
+
+  LR = GR->lookup(0x1020);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 8}));
 }

@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
+#include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/Support/DataExtractor.h"
@@ -144,4 +145,105 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
   O.writeU32(InfoType::EndOfList);
   O.writeU32(0);
   return FuncInfoOffset;
+}
+
+
+llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
+                                                  const GsymReader &GR,
+                                                  uint64_t FuncAddr,
+                                                  uint64_t Addr) {
+  LookupResult LR;
+  LR.LookupAddr = Addr;
+  LR.FuncRange.Start = FuncAddr;
+  uint64_t Offset = 0;
+  LR.FuncRange.End = FuncAddr + Data.getU32(&Offset);
+  uint32_t NameOffset = Data.getU32(&Offset);
+  // The "lookup" functions doesn't report errors as accurately as the "decode"
+  // function as it is meant to be fast. For more accurage errors we could call
+  // "decode".
+  if (!Data.isValidOffset(Offset))
+    return createStringError(std::errc::io_error,
+                              "FunctionInfo data is truncated");
+  // This function will be called with the result of a binary search of the
+  // address table, we must still make sure the address does not fall into a
+  // gap between functions are after the last function.
+  if (Addr >= LR.FuncRange.End)
+    return createStringError(std::errc::io_error,
+        "address 0x%" PRIx64 " is not in GSYM", Addr);
+
+  if (NameOffset == 0)
+    return createStringError(std::errc::io_error,
+        "0x%8.8" PRIx64 ": invalid FunctionInfo Name value 0x00000000",
+        Offset - 4);
+  LR.FuncName = GR.getString(NameOffset);
+  bool Done = false;
+  Optional<LineEntry> LineEntry;
+  Optional<DataExtractor> InlineInfoData;
+  while (!Done) {
+    if (!Data.isValidOffsetForDataOfSize(Offset, 8))
+      return createStringError(std::errc::io_error,
+                               "FunctionInfo data is truncated");
+    const uint32_t InfoType = Data.getU32(&Offset);
+    const uint32_t InfoLength = Data.getU32(&Offset);
+    const StringRef InfoBytes = Data.getData().substr(Offset, InfoLength);
+    if (InfoLength != InfoBytes.size())
+      return createStringError(std::errc::io_error,
+                               "FunctionInfo data is truncated");
+    DataExtractor InfoData(InfoBytes, Data.isLittleEndian(),
+                           Data.getAddressSize());
+    switch (InfoType) {
+      case InfoType::EndOfList:
+        Done = true;
+        break;
+
+      case InfoType::LineTableInfo:
+        if (auto ExpectedLE = LineTable::lookup(InfoData, FuncAddr, Addr))
+          LineEntry = ExpectedLE.get();
+        else
+          return ExpectedLE.takeError();
+        break;
+
+      case InfoType::InlineInfo:
+        // We will parse the inline info after our line table, but only if
+        // we have a line entry.
+        InlineInfoData = InfoData;
+        break;
+
+      default:
+        break;
+    }
+    Offset += InfoLength;
+  }
+
+  if (!LineEntry) {
+    // We don't have a valid line entry for our address, fill in our source
+    // location as best we can and return.
+    SourceLocation SrcLoc;
+    SrcLoc.Name = LR.FuncName;
+    LR.Locations.push_back(SrcLoc);
+    return LR;
+  }
+
+  Optional<FileEntry> LineEntryFile = GR.getFile(LineEntry->File);
+  if (!LineEntryFile)
+    return createStringError(std::errc::invalid_argument,
+                              "failed to extract file[%" PRIu32 "]",
+                              LineEntry->File);
+
+  SourceLocation SrcLoc;
+  SrcLoc.Name = LR.FuncName;
+  SrcLoc.Dir = GR.getString(LineEntryFile->Dir);
+  SrcLoc.Base = GR.getString(LineEntryFile->Base);
+  SrcLoc.Line = LineEntry->Line;
+  LR.Locations.push_back(SrcLoc);
+  // If we don't have inline information, we are done.
+  if (!InlineInfoData)
+    return LR;
+  // We have inline information. Try to augment the lookup result with this
+  // data.
+  llvm::Error Err = InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr,
+                                       LR.Locations);
+  if (Err)
+    return std::move(Err);
+  return LR;
 }
