@@ -615,7 +615,7 @@ public:
     if (isa<MemberPointerType>(E->getType())) // never sugared
       return CGF.CGM.getMemberPointerConstant(E);
 
-    return EmitLValue(E->getSubExpr()).getPointer();
+    return EmitLValue(E->getSubExpr()).getPointer(CGF);
   }
   Value *VisitUnaryDeref(const UnaryOperator *E) {
     if (E->getType()->isVoidType())
@@ -1979,7 +1979,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_LValueBitCast:
   case CK_ObjCObjectLValueCast: {
-    Address Addr = EmitLValue(E).getAddress();
+    Address Addr = EmitLValue(E).getAddress(CGF);
     Addr = Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(DestTy));
     LValue LV = CGF.MakeAddrLValue(Addr, DestTy);
     return EmitLoadOfLValue(LV, CE->getExprLoc());
@@ -1987,7 +1987,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_LValueToRValueBitCast: {
     LValue SourceLVal = CGF.EmitLValue(E);
-    Address Addr = Builder.CreateElementBitCast(SourceLVal.getAddress(),
+    Address Addr = Builder.CreateElementBitCast(SourceLVal.getAddress(CGF),
                                                 CGF.ConvertTypeForMem(DestTy));
     LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
     DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
@@ -2105,7 +2105,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_ArrayToPointerDecay:
     return CGF.EmitArrayToPointerDecay(E).getPointer();
   case CK_FunctionToPointerDecay:
-    return EmitLValue(E).getPointer();
+    return EmitLValue(E).getPointer(CGF);
 
   case CK_NullToPointer:
     if (MustVisitNullValue(E))
@@ -2370,14 +2370,14 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     if (isInc && type->isBooleanType()) {
       llvm::Value *True = CGF.EmitToMemory(Builder.getTrue(), type);
       if (isPre) {
-        Builder.CreateStore(True, LV.getAddress(), LV.isVolatileQualified())
-          ->setAtomic(llvm::AtomicOrdering::SequentiallyConsistent);
+        Builder.CreateStore(True, LV.getAddress(CGF), LV.isVolatileQualified())
+            ->setAtomic(llvm::AtomicOrdering::SequentiallyConsistent);
         return Builder.getTrue();
       }
       // For atomic bool increment, we just store true and return it for
       // preincrement, do an atomic swap with true for postincrement
       return Builder.CreateAtomicRMW(
-          llvm::AtomicRMWInst::Xchg, LV.getPointer(), True,
+          llvm::AtomicRMWInst::Xchg, LV.getPointer(CGF), True,
           llvm::AtomicOrdering::SequentiallyConsistent);
     }
     // Special case for atomic increment / decrement on integers, emit
@@ -2394,8 +2394,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
         llvm::Instruction::Sub;
       llvm::Value *amt = CGF.EmitToMemory(
           llvm::ConstantInt::get(ConvertType(type), 1, true), type);
-      llvm::Value *old = Builder.CreateAtomicRMW(aop,
-          LV.getPointer(), amt, llvm::AtomicOrdering::SequentiallyConsistent);
+      llvm::Value *old =
+          Builder.CreateAtomicRMW(aop, LV.getPointer(CGF), amt,
+                                  llvm::AtomicOrdering::SequentiallyConsistent);
       return isPre ? Builder.CreateBinOp(op, old, amt) : old;
     }
     value = EmitLoadOfLValue(LV, E->getExprLoc());
@@ -2936,7 +2937,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
                                  E->getExprLoc()),
             LHSTy);
         Value *OldVal = Builder.CreateAtomicRMW(
-            AtomicOp, LHSLV.getPointer(), Amt,
+            AtomicOp, LHSLV.getPointer(CGF), Amt,
             llvm::AtomicOrdering::SequentiallyConsistent);
 
         // Since operation is atomic, the result type is guaranteed to be the
@@ -3982,7 +3983,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   case Qualifiers::OCL_Weak:
     RHS = Visit(E->getRHS());
     LHS = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
-    RHS = CGF.EmitARCStoreWeak(LHS.getAddress(), RHS, Ignore);
+    RHS = CGF.EmitARCStoreWeak(LHS.getAddress(CGF), RHS, Ignore);
     break;
 
   case Qualifiers::OCL_None:
@@ -4543,7 +4544,7 @@ LValue CodeGenFunction::EmitObjCIsaExpr(const ObjCIsaExpr *E) {
   if (BaseExpr->isRValue()) {
     Addr = Address(EmitScalarExpr(BaseExpr), getPointerAlign());
   } else {
-    Addr = EmitLValue(BaseExpr).getAddress();
+    Addr = EmitLValue(BaseExpr).getAddress(*this);
   }
 
   // Cast the address to Class*.

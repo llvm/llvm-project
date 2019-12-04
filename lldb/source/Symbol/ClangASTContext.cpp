@@ -15,24 +15,6 @@
 #include <string>
 #include <vector>
 
-
-// Clang headers like to use NDEBUG inside of them to enable/disable debug
-// related features using "#ifndef NDEBUG" preprocessor blocks to do one thing
-// or another. This is bad because it means that if clang was built in release
-// mode, it assumes that you are building in release mode which is not always
-// the case. You can end up with functions that are defined as empty in header
-// files when NDEBUG is not defined, and this can cause link errors with the
-// clang .a files that you have since you might be missing functions in the .a
-// file. So we have to define NDEBUG when including clang headers to avoid any
-// mismatches. This is covered by rdar://problem/8691220
-
-#if !defined(NDEBUG) && !defined(LLVM_NDEBUG_OFF)
-#define LLDB_DEFINED_NDEBUG_FOR_CLANG
-#define NDEBUG
-// Need to include assert.h so it is as clang would expect it to be (disabled)
-#include <assert.h>
-#endif
-
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/Attr.h"
@@ -53,13 +35,6 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Sema/Sema.h"
-
-#ifdef LLDB_DEFINED_NDEBUG_FOR_CLANG
-#undef NDEBUG
-#undef LLDB_DEFINED_NDEBUG_FOR_CLANG
-// Need to re-include assert.h so it is as _we_ would expect it to be (enabled)
-#include <assert.h>
-#endif
 
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"

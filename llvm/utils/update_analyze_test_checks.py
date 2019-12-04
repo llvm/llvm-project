@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """A script to generate FileCheck statements for 'opt' analysis tests.
 

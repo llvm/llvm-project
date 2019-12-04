@@ -25,10 +25,10 @@ void f(); // So that the namespace isn't empty.
 // 5
 // 6
 // 7
-// CHECK-MESSAGES: :[[@LINE+2]]:1: warning: namespace 'MACRO' not terminated with
-// CHECK-MESSAGES: :[[@LINE-10]]:11: note: namespace 'MACRO' starts here
+// CHECK-MESSAGES: :[[@LINE+2]]:1: warning: namespace 'macro_expansion' not terminated with
+// CHECK-MESSAGES: :[[@LINE-10]]:11: note: namespace 'macro_expansion' starts here
 }
-// CHECK-FIXES: }  // namespace MACRO
+// CHECK-FIXES: }  // namespace macro_expansion
 
 namespace short1 {
 namespace short2 {

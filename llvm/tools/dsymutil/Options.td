@@ -97,7 +97,7 @@ def output: Separate<["--", "-"], "o">,
   MetaVarName<"<filename>">,
   HelpText<"Specify the output file. Defaults to <input file>.dwarf">,
   Group<grp_general>;
-def: Separate<["-"], "out">,
+def: Separate<["--", "-"], "out">,
   Alias<output>,
   HelpText<"Alias for --o">,
   Group<grp_general>;

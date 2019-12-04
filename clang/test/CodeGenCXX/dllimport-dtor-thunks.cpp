@@ -19,9 +19,9 @@ struct __declspec(dllimport) ImportOverrideVDtor : public BaseClass {
   virtual ~ImportOverrideVDtor() {}
 };
 
-// Virtually inherits from a non-dllimport base class. This time we need to call
-// the complete destructor and emit it inline. It's not exported from the DLL,
-// and it must be emitted.
+// Virtually inherits from a non-dllimport base class. In this case, we can
+// expect the DLL to provide a definition of the complete dtor. See
+// dllexport-dtor-thunks.cpp.
 struct __declspec(dllimport) ImportVBaseOverrideVDtor
     : public virtual BaseClass {
   virtual ~ImportVBaseOverrideVDtor() {}

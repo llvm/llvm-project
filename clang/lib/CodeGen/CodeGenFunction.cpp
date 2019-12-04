@@ -976,7 +976,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         LValue ThisFieldLValue = EmitLValueForLambdaField(LambdaThisCaptureField);
         if (!LambdaThisCaptureField->getType()->isPointerType()) {
           // If the enclosing object was captured by value, just use its address.
-          CXXThisValue = ThisFieldLValue.getAddress().getPointer();
+          CXXThisValue = ThisFieldLValue.getAddress(*this).getPointer();
         } else {
           // Load the lvalue pointed to by the field, since '*this' was captured
           // by reference.
@@ -2013,11 +2013,11 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
 Address CodeGenFunction::EmitVAListRef(const Expr* E) {
   if (getContext().getBuiltinVaListType()->isArrayType())
     return EmitPointerWithAlignment(E);
-  return EmitLValue(E).getAddress();
+  return EmitLValue(E).getAddress(*this);
 }
 
 Address CodeGenFunction::EmitMSVAListRef(const Expr *E) {
-  return EmitLValue(E).getAddress();
+  return EmitLValue(E).getAddress(*this);
 }
 
 void CodeGenFunction::EmitDeclRefExprDbgValue(const DeclRefExpr *E,

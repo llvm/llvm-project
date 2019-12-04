@@ -2597,7 +2597,7 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
 static bool isKeywordWithCondition(const FormatToken &Tok) {
   return Tok.isOneOf(tok::kw_if, tok::kw_for, tok::kw_while, tok::kw_switch,
                      tok::kw_constexpr);
-};
+}
 
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Left,

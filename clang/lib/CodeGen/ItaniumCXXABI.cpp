@@ -487,6 +487,19 @@ public:
   bool shouldRTTIBeUnique() const override { return false; }
 };
 
+class FuchsiaCXXABI final : public ItaniumCXXABI {
+public:
+  explicit FuchsiaCXXABI(CodeGen::CodeGenModule &CGM)
+      : ItaniumCXXABI(CGM) {}
+
+private:
+  bool HasThisReturn(GlobalDecl GD) const override {
+    return isa<CXXConstructorDecl>(GD.getDecl()) ||
+           (isa<CXXDestructorDecl>(GD.getDecl()) &&
+            GD.getDtorType() != Dtor_Deleting);
+  }
+};
+
 class WebAssemblyCXXABI final : public ItaniumCXXABI {
 public:
   explicit WebAssemblyCXXABI(CodeGen::CodeGenModule &CGM)
@@ -515,6 +528,9 @@ CodeGen::CGCXXABI *CodeGen::CreateItaniumCXXABI(CodeGenModule &CGM) {
 
   case TargetCXXABI::iOS64:
     return new iOS64CXXABI(CGM);
+
+  case TargetCXXABI::Fuchsia:
+    return new FuchsiaCXXABI(CGM);
 
   // Note that AArch64 uses the generic ItaniumCXXABI class since it doesn't
   // include the other 32-bit ARM oddities: constructor/destructor return values

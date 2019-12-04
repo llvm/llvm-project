@@ -4,7 +4,7 @@
 // RUN: %hmaptool write %S/Inputs/double-quotes/a.hmap.json %t/a.hmap
 // RUN: %hmaptool write %S/Inputs/double-quotes/x.hmap.json %t/x.hmap
 
-// RUN: sed -e "s@TEST_DIR@%/S/Inputs/double-quotes@g" \
+// RUN: sed -e "s@TEST_DIR@%{/S:regex_replacement}/Inputs/double-quotes@g" \
 // RUN:   %S/Inputs/double-quotes/z.yaml > %t/z.yaml
 
 // The output with and without modules should be the same

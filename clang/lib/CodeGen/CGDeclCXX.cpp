@@ -54,10 +54,11 @@ static void EmitDeclInit(CodeGenFunction &CGF, const VarDecl &D,
     CGF.EmitComplexExprIntoLValue(Init, lv, /*isInit*/ true);
     return;
   case TEK_Aggregate:
-    CGF.EmitAggExpr(Init, AggValueSlot::forLValue(lv,AggValueSlot::IsDestructed,
-                                          AggValueSlot::DoesNotNeedGCBarriers,
-                                                  AggValueSlot::IsNotAliased,
-                                                  AggValueSlot::DoesNotOverlap));
+    CGF.EmitAggExpr(Init,
+                    AggValueSlot::forLValue(lv, CGF, AggValueSlot::IsDestructed,
+                                            AggValueSlot::DoesNotNeedGCBarriers,
+                                            AggValueSlot::IsNotAliased,
+                                            AggValueSlot::DoesNotOverlap));
     return;
   }
   llvm_unreachable("bad evaluation kind");

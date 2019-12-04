@@ -1114,8 +1114,8 @@ struct CounterCoverageMappingBuilder
         // Make a region for the body of the switch.  If the body starts with
         // a case, that case will reuse this region; otherwise, this covers
         // the unreachable code at the beginning of the switch body.
-        size_t Index =
-            pushRegion(Counter::getZero(), getStart(CS->body_front()));
+        size_t Index = pushRegion(Counter::getZero(), getStart(CS));
+        getRegion().setGap(true);
         for (const auto *Child : CS->children())
           Visit(Child);
 

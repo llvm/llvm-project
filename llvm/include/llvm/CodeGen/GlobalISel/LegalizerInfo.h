@@ -1157,6 +1157,12 @@ public:
   virtual bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                                  MachineIRBuilder &MIRBuilder) const;
 
+  /// Return the opcode (SEXT/ZEXT/ANYEXT) that should be performed while
+  /// widening a constant of type SmallTy which targets can override.
+  /// For eg, the DAG does (SmallTy.isByteSized() ? G_SEXT : G_ZEXT) which
+  /// will be the default.
+  virtual unsigned getExtOpcodeForWideningConstant(LLT SmallTy) const;
+
 private:
   /// Determine what action should be taken to legalize the given generic
   /// instruction opcode, type-index and type. Requires computeTables to have

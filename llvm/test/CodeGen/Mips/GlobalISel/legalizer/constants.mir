@@ -131,10 +131,9 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: i1_true
-    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
+    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; MIPS32: $v0 = COPY [[AND]](s32)
     ; MIPS32: RetRA implicit $v0
     %0:_(s1) = G_CONSTANT i1 true

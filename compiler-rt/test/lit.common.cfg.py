@@ -477,6 +477,9 @@ if config.asan_shadow_scale:
 else:
   config.available_features.add("shadow-scale-3")
 
+if config.expensive_checks:
+  config.available_features.add("expensive_checks")
+
 # Propagate the LLD/LTO into the clang config option, so nothing else is needed.
 run_wrapper = []
 target_cflags = [getattr(config, 'target_cflags', None)]
