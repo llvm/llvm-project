@@ -156,7 +156,7 @@ namespace test6 {
     void get(B **ptr) {
       // It's okay if at some point we figure out how to diagnose this
       // at instantiation time.
-      *ptr = field;
+      *ptr = field; // expected-error {{assigning to 'test6::B *' from incompatible type 'test6::A *}}
     }
   };
 }

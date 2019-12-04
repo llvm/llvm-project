@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-string-integer-assignment %t
+// RUN: %check_clang_tidy %s bugprone-string-integer-assignment %t -- -- -fno-delayed-template-parsing
 
 namespace std {
 template<typename T>
@@ -103,6 +103,8 @@ struct S {
   static constexpr T t = 0x8000;
   std::string s;
   void f(char c) { s += c | static_cast<int>(t); }
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: an integer is interpreted as a chara
+  // CHECK-FIXES: {{^}}  void f(char c) { s += std::to_string(c | static_cast<int>(t)); } 
 };
 
 template S<int>;

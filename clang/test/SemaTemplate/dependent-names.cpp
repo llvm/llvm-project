@@ -273,9 +273,6 @@ namespace PR10187 {
       }
       int e[10];
     };
-    void g() {
-      S<int>().f(); // expected-note {{here}}
-    }
   }
 
   namespace A2 {
