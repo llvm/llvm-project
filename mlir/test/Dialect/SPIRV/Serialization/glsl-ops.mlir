@@ -6,6 +6,8 @@ spv.module "Logical" "GLSL450" {
     %0 = spv.GLSL.Exp %arg0 : f32
     // CHECK: {{%.*}} = spv.GLSL.FMax {{%.*}}, {{%.*}} : f32
     %1 = spv.GLSL.FMax %arg0, %arg1 : f32
+    // CHECK: {{%.*}} = spv.GLSL.Sqrt {{%.*}} : f32
+    %2 = spv.GLSL.Sqrt %arg0 : f32
     spv.Return
   }
 }

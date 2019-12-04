@@ -71,3 +71,39 @@ func @fmaxf64(%arg0 : f64, %arg1 : f64) -> () {
   %2 = spv.GLSL.FMax %arg0, %arg1 : f64
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.InverseSqrt
+//===----------------------------------------------------------------------===//
+
+func @inversesqrt(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.InverseSqrt {{%.*}} : f32
+  %2 = spv.GLSL.InverseSqrt %arg0 : f32
+  return
+}
+
+func @inversesqrtvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.InverseSqrt {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.InverseSqrt %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Sqrt
+//===----------------------------------------------------------------------===//
+
+func @sqrt(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Sqrt {{%.*}} : f32
+  %2 = spv.GLSL.Sqrt %arg0 : f32
+  return
+}
+
+func @sqrtvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Sqrt {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Sqrt %arg0 : vector<3xf16>
+  return
+}
