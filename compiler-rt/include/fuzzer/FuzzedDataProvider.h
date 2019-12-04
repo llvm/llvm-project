@@ -263,6 +263,12 @@ class FuzzedDataProvider {
     // which seems to be a natural choice for other implementations as well.
     // To increase the odds even more, we also call |shrink_to_fit| below.
     std::vector<T> result(size);
+    if (size == 0) {
+      if (num_bytes_to_consume != 0)
+        abort();
+      return result;
+    }
+
     std::memcpy(result.data(), data_ptr_, num_bytes_to_consume);
     Advance(num_bytes_to_consume);
 
