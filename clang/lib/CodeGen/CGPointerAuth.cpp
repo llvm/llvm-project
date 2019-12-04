@@ -198,7 +198,7 @@ emitLoadOfOrigPointerRValue(CodeGenFunction &CGF, const LValue &lv,
   auto value = CGF.EmitLoadOfScalar(lv, loc);
   CGPointerAuthInfo authInfo;
   if (auto ptrauth = lv.getQuals().getPointerAuth()) {
-    authInfo = CGF.EmitPointerAuthInfo(ptrauth, lv.getAddress());
+    authInfo = CGF.EmitPointerAuthInfo(ptrauth, lv.getAddress(CGF));
   } else {
     authInfo = getPointerAuthInfoForType(CGF.CGM, lv.getType());
   }

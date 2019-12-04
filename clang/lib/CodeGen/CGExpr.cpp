@@ -1777,7 +1777,8 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
     LV.getQuals().removePtrAuth();
     auto value = EmitLoadOfLValue(LV, Loc).getScalarVal();
     return RValue::get(EmitPointerAuthUnqualify(ptrauth, value,
-                                                LV.getType(), LV.getAddress(),
+                                                LV.getType(),
+                                                LV.getAddress(*this),
                                                 /*known nonnull*/ false));
   }
 
@@ -1962,7 +1963,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
   // Handle __ptrauth qualification by re-signing the value.
   if (auto pointerAuth = Dst.getQuals().getPointerAuth()) {
     Src = RValue::get(EmitPointerAuthQualify(pointerAuth, Src.getScalarVal(),
-                                             Dst.getType(), Dst.getAddress(),
+                                             Dst.getType(),
+                                             Dst.getAddress(*this),
                                              /*known nonnull*/ false));
   }
 
@@ -4803,7 +4805,7 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
       LValue CopiedLV = LV;
       CopiedLV.getQuals().removePtrAuth();
       llvm::Value *RV = EmitPointerAuthQualify(ptrauth, E->getRHS(),
-                                               CopiedLV.getAddress());
+                                               CopiedLV.getAddress(*this));
       EmitNullabilityCheck(CopiedLV, RV, E->getExprLoc());
       EmitStoreThroughLValue(RValue::get(RV), CopiedLV);
       return LV;
