@@ -139,7 +139,7 @@ namespace {
     const LValue &getAtomicLValue() const { return LVal; }
     llvm::Value *getAtomicPointer() const {
       if (LVal.isSimple())
-        return LVal.getPointer(CGF);
+        return LVal.getPointer();
       else if (LVal.isBitField())
         return LVal.getBitFieldPointer();
       else if (LVal.isVectorElt())
@@ -343,7 +343,7 @@ bool AtomicInfo::requiresMemSetZero(llvm::Type *type) const {
 
 bool AtomicInfo::emitMemSetZeroIfNecessary() const {
   assert(LVal.isSimple());
-  llvm::Value *addr = LVal.getPointer(CGF);
+  llvm::Value *addr = LVal.getPointer();
   if (!requiresMemSetZero(addr->getType()->getPointerElementType()))
     return false;
 
@@ -1628,7 +1628,7 @@ Address AtomicInfo::materializeRValue(RValue rvalue) const {
   LValue TempLV = CGF.MakeAddrLValue(CreateTempAlloca(), getAtomicType());
   AtomicInfo Atomics(CGF, TempLV);
   Atomics.emitCopyIntoMemory(rvalue);
-  return TempLV.getAddress(CGF);
+  return TempLV.getAddress();
 }
 
 llvm::Value *AtomicInfo::convertRValueToInt(RValue RVal) const {
@@ -1975,8 +1975,8 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
   // If this is an aggregate r-value, it should agree in type except
   // maybe for address-space qualification.
   assert(!rvalue.isAggregate() ||
-         rvalue.getAggregateAddress().getElementType() ==
-             dest.getAddress(*this).getElementType());
+         rvalue.getAggregateAddress().getElementType()
+           == dest.getAddress().getElementType());
 
   AtomicInfo atomics(*this, dest);
   LValue LVal = atomics.getAtomicLValue();
@@ -2043,10 +2043,10 @@ std::pair<RValue, llvm::Value *> CodeGenFunction::EmitAtomicCompareExchange(
   // maybe for address-space qualification.
   assert(!Expected.isAggregate() ||
          Expected.getAggregateAddress().getElementType() ==
-             Obj.getAddress(*this).getElementType());
+             Obj.getAddress().getElementType());
   assert(!Desired.isAggregate() ||
          Desired.getAggregateAddress().getElementType() ==
-             Obj.getAddress(*this).getElementType());
+             Obj.getAddress().getElementType());
   AtomicInfo Atomics(*this, Obj);
 
   return Atomics.EmitAtomicCompareExchange(Expected, Desired, Success, Failure,
@@ -2086,11 +2086,13 @@ void CodeGenFunction::EmitAtomicInit(Expr *init, LValue dest) {
     }
 
     // Evaluate the expression directly into the destination.
-    AggValueSlot slot = AggValueSlot::forLValue(
-        dest, *this, AggValueSlot::IsNotDestructed,
-        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
-        AggValueSlot::DoesNotOverlap,
-        Zeroed ? AggValueSlot::IsZeroed : AggValueSlot::IsNotZeroed);
+    AggValueSlot slot = AggValueSlot::forLValue(dest,
+                                        AggValueSlot::IsNotDestructed,
+                                        AggValueSlot::DoesNotNeedGCBarriers,
+                                        AggValueSlot::IsNotAliased,
+                                        AggValueSlot::DoesNotOverlap,
+                                        Zeroed ? AggValueSlot::IsZeroed :
+                                                 AggValueSlot::IsNotZeroed);
 
     EmitAggExpr(init, slot);
     return;
