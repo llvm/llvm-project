@@ -1880,6 +1880,9 @@ TEST_F(DefineOutlineTest, ApplyTest) {
   llvm::StringMap<std::string> EditedFiles;
   ExtraFiles["Test.cpp"] = "";
   FileName = "Test.hpp";
+  // Template body is not parsed until instantiation time on windows, which
+  // results in arbitrary failures as function body becomes NULL.
+  ExtraArgs.push_back("-fno-delayed-template-parsing");
 
   struct {
     llvm::StringRef Test;
