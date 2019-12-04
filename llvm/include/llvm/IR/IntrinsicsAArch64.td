@@ -970,6 +970,14 @@ class AdvSIMD_GatherLoad_64bitOffset_Intrinsic
   // to reuse currently identical class definitions.
   class AdvSIMD_SVE_LOGB_Intrinsic  : AdvSIMD_SVE_CNT_Intrinsic;
 
+class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
+    : Intrinsic<[ llvm_anyvector_ty ],
+                [
+                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                  LLVMPointerToElt<0>, llvm_anyvector_ty
+                ],
+                [ IntrReadMem, IntrArgMemOnly ]>;
+
   // This class of intrinsics are not intended to be useful within LLVM IR but
   // are instead here to support some of the more regid parts of the ACLE.
   class Builtin_SVCVT<string name, LLVMType OUT, LLVMType IN>
@@ -1210,6 +1218,16 @@ def int_aarch64_sve_ld1_gather : AdvSIMD_GatherLoad_64bitOffset_Intrinsic;
 
 // scalar + vector, 64 bit scaled offsets
 def int_aarch64_sve_ld1_gather_index : AdvSIMD_GatherLoad_64bitOffset_Intrinsic;
+
+//  scalar + vector, 32 bit unscaled offsets, sign (sxtw) or zero (zxtw)
+//  extended to 64 bits
+def int_aarch64_sve_ld1_gather_sxtw : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+def int_aarch64_sve_ld1_gather_uxtw : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+
+//  scalar + vector, 32 bit scaled offsets, sign (sxtw) or zero (zxtw) extended
+//  to 64 bits
+def int_aarch64_sve_ld1_gather_sxtw_index : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+def int_aarch64_sve_ld1_gather_uxtw_index : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
 
 //
 // SVE2 - Non-widening pairwise arithmetic
