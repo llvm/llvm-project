@@ -423,8 +423,7 @@ void ThreadPlanCallFunction::SetBreakpoints() {
       }
     }
     if (GetExpressionLanguage() == eLanguageTypeSwift) {
-      SwiftLanguageRuntime *swift_runtime =
-          SwiftLanguageRuntime::Get(*process_sp);
+      auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
       if (swift_runtime) {
         ConstString backstop_name = swift_runtime->GetErrorBackstopName();
         if (!backstop_name.IsEmpty()) {
