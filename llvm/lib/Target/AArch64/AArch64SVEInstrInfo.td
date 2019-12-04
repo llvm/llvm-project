@@ -199,8 +199,8 @@ let Predicates = [HasSVE] in {
 
   defm SPLICE_ZPZ : sve_int_perm_splice<"splice">;
   defm COMPACT_ZPZ : sve_int_perm_compact<"compact">;
-  defm INSR_ZR : sve_int_perm_insrs<"insr">;
-  defm INSR_ZV : sve_int_perm_insrv<"insr">;
+  defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
+  defm INSR_ZV : sve_int_perm_insrv<"insr", AArch64insr>;
   def  EXT_ZZI : sve_int_perm_extract_i<"ext">;
 
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit">;
@@ -876,18 +876,18 @@ let Predicates = [HasSVE] in {
   defm ASR_ZPmI  : sve_int_bin_pred_shift_imm_right<0b0000, "asr">;
   defm LSR_ZPmI  : sve_int_bin_pred_shift_imm_right<0b0001, "lsr">;
   defm LSL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0011, "lsl">;
-  defm ASRD_ZPmI : sve_int_bin_pred_shift_imm_right<0b0100, "asrd">;
+  defm ASRD_ZPmI : sve_int_bin_pred_shift_imm_right<0b0100, "asrd", int_aarch64_sve_asrd>;
 
-  defm ASR_ZPmZ  : sve_int_bin_pred_shift<0b000, "asr">;
-  defm LSR_ZPmZ  : sve_int_bin_pred_shift<0b001, "lsr">;
-  defm LSL_ZPmZ  : sve_int_bin_pred_shift<0b011, "lsl">;
-  defm ASRR_ZPmZ : sve_int_bin_pred_shift<0b100, "asrr">;
-  defm LSRR_ZPmZ : sve_int_bin_pred_shift<0b101, "lsrr">;
-  defm LSLR_ZPmZ : sve_int_bin_pred_shift<0b111, "lslr">;
+  defm ASR_ZPmZ  : sve_int_bin_pred_shift<0b000, "asr", int_aarch64_sve_asr>;
+  defm LSR_ZPmZ  : sve_int_bin_pred_shift<0b001, "lsr", int_aarch64_sve_lsr>;
+  defm LSL_ZPmZ  : sve_int_bin_pred_shift<0b011, "lsl", int_aarch64_sve_lsl>;
+  defm ASRR_ZPmZ : sve_int_bin_pred_shift<0b100, "asrr", null_frag>;
+  defm LSRR_ZPmZ : sve_int_bin_pred_shift<0b101, "lsrr", null_frag>;
+  defm LSLR_ZPmZ : sve_int_bin_pred_shift<0b111, "lslr", null_frag>;
 
-  defm ASR_WIDE_ZPmZ : sve_int_bin_pred_shift_wide<0b000, "asr">;
-  defm LSR_WIDE_ZPmZ : sve_int_bin_pred_shift_wide<0b001, "lsr">;
-  defm LSL_WIDE_ZPmZ : sve_int_bin_pred_shift_wide<0b011, "lsl">;
+  defm ASR_WIDE_ZPmZ : sve_int_bin_pred_shift_wide<0b000, "asr", int_aarch64_sve_asr_wide>;
+  defm LSR_WIDE_ZPmZ : sve_int_bin_pred_shift_wide<0b001, "lsr", int_aarch64_sve_lsr_wide>;
+  defm LSL_WIDE_ZPmZ : sve_int_bin_pred_shift_wide<0b011, "lsl", int_aarch64_sve_lsl_wide>;
 
   defm FCVT_ZPmZ_StoH   : sve_fp_2op_p_zd<0b1001000, "fcvt",   ZPR32, ZPR16, int_aarch64_sve_fcvt_f16f32,    nxv8f16, nxv16i1, nxv4f32, ElementSizeS>;
   defm FCVT_ZPmZ_HtoS   : sve_fp_2op_p_zd<0b1001001, "fcvt",   ZPR16, ZPR32, int_aarch64_sve_fcvt_f32f16,    nxv4f32, nxv16i1, nxv8f16, ElementSizeS>;
