@@ -68,13 +68,13 @@ TEST_F(SizeOptsTest, Test) {
   BasicBlock *BB3 = BB1->getSingleSuccessor();
 
   EXPECT_TRUE(PSI.hasProfileSummary());
-  EXPECT_FALSE(shouldOptimizeForSize(F, &PSI, BFI_F));
-  EXPECT_TRUE(shouldOptimizeForSize(G, &PSI, BFI_G));
-  EXPECT_FALSE(shouldOptimizeForSize(H, &PSI, BFI_H));
-  EXPECT_FALSE(shouldOptimizeForSize(&BB0, &PSI, BFI_F));
-  EXPECT_FALSE(shouldOptimizeForSize(BB1, &PSI, BFI_F));
-  EXPECT_TRUE(shouldOptimizeForSize(BB2, &PSI, BFI_F));
-  EXPECT_FALSE(shouldOptimizeForSize(BB3, &PSI, BFI_F));
+  EXPECT_FALSE(shouldOptimizeForSize(F, &PSI, BFI_F, PGSOQueryType::Test));
+  EXPECT_TRUE(shouldOptimizeForSize(G, &PSI, BFI_G, PGSOQueryType::Test));
+  EXPECT_FALSE(shouldOptimizeForSize(H, &PSI, BFI_H, PGSOQueryType::Test));
+  EXPECT_FALSE(shouldOptimizeForSize(&BB0, &PSI, BFI_F, PGSOQueryType::Test));
+  EXPECT_FALSE(shouldOptimizeForSize(BB1, &PSI, BFI_F, PGSOQueryType::Test));
+  EXPECT_TRUE(shouldOptimizeForSize(BB2, &PSI, BFI_F, PGSOQueryType::Test));
+  EXPECT_FALSE(shouldOptimizeForSize(BB3, &PSI, BFI_F, PGSOQueryType::Test));
 }
 
 const char* SizeOptsTest::IRString = R"IR(

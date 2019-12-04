@@ -1839,6 +1839,8 @@ void PPCAIXAsmPrinter::EmitEndOfAsmFile(Module &M) {
   MCSectionXCOFF *TOCBaseSection = OutStreamer->getContext().getXCOFFSection(
       StringRef("TOC"), XCOFF::XMC_TC0, XCOFF::XTY_SD, XCOFF::C_HIDEXT,
       SectionKind::getData());
+  // The TOC-base always has 0 size, but 4 byte alignment.
+  TOCBaseSection->setAlignment(Align(4));
   // Switch to section to emit TOC base.
   OutStreamer->SwitchSection(TOCBaseSection);
 

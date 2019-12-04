@@ -241,3 +241,10 @@ void func_multiple_addr(void) {
   __private private_int_t var5; // expected-warning {{multiple identical address spaces specified for type}}
   __private private_int_t *var6;// expected-warning {{multiple identical address spaces specified for type}}
 }
+
+void func_with_array_param(const unsigned data[16]);
+
+__kernel void k() {
+  unsigned data[16];
+  func_with_array_param(data);
+}

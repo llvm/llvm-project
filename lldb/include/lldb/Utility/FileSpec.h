@@ -75,18 +75,6 @@ public:
 
   explicit FileSpec(llvm::StringRef path, const llvm::Triple &triple);
 
-  /// Copy constructor
-  ///
-  /// Makes a copy of the uniqued directory and filename strings from \a rhs
-  /// if it is not nullptr.
-  ///
-  /// \param[in] rhs
-  ///     A const FileSpec object pointer to copy if non-nullptr.
-  FileSpec(const FileSpec *rhs);
-
-  /// Destructor.
-  ~FileSpec();
-
   bool DirectoryEquals(const FileSpec &other) const;
 
   bool FileEquals(const FileSpec &other) const;
@@ -194,6 +182,12 @@ public:
   static int Compare(const FileSpec &lhs, const FileSpec &rhs, bool full);
 
   static bool Equal(const FileSpec &a, const FileSpec &b, bool full);
+
+  /// Match FileSpec \a pattern against FileSpec \a file. If \a pattern has a
+  /// directory component, then the \a file must have the same directory
+  /// component. Otherwise, just it matches just the filename. An empty \a
+  /// pattern matches everything.
+  static bool Match(const FileSpec &pattern, const FileSpec &file);
 
   /// Attempt to guess path style for a given path string. It returns a style,
   /// if it was able to make a reasonable guess, or None if it wasn't. The guess

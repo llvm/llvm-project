@@ -613,12 +613,10 @@ void Module::FindCompileUnits(const FileSpec &path,
   const size_t num_compile_units = GetNumCompileUnits();
   SymbolContext sc;
   sc.module_sp = shared_from_this();
-  const bool compare_directory = (bool)path.GetDirectory();
   for (size_t i = 0; i < num_compile_units; ++i) {
     sc.comp_unit = GetCompileUnitAtIndex(i).get();
     if (sc.comp_unit) {
-      if (FileSpec::Equal(sc.comp_unit->GetPrimaryFile(), path,
-                          compare_directory))
+      if (FileSpec::Match(path, sc.comp_unit->GetPrimaryFile()))
         sc_list.Append(sc);
     }
   }
@@ -1061,34 +1059,35 @@ std::string Module::GetSpecificationDescription() const {
   return spec;
 }
 
-void Module::GetDescription(Stream *s, lldb::DescriptionLevel level) {
+void Module::GetDescription(llvm::raw_ostream &s,
+                            lldb::DescriptionLevel level) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   if (level >= eDescriptionLevelFull) {
     if (m_arch.IsValid())
-      s->Printf("(%s) ", m_arch.GetArchitectureName());
+      s << llvm::formatv("({0}) ", m_arch.GetArchitectureName());
   }
 
   if (level == eDescriptionLevelBrief) {
     const char *filename = m_file.GetFilename().GetCString();
     if (filename)
-      s->PutCString(filename);
+      s << filename;
   } else {
     char path[PATH_MAX];
     if (m_file.GetPath(path, sizeof(path)))
-      s->PutCString(path);
+      s << path;
   }
 
   const char *object_name = m_object_name.GetCString();
   if (object_name)
-    s->Printf("(%s)", object_name);
+    s << llvm::formatv("({0})", object_name);
 }
 
 void Module::ReportError(const char *format, ...) {
   if (format && format[0]) {
     StreamString strm;
     strm.PutCString("error: ");
-    GetDescription(&strm, lldb::eDescriptionLevelBrief);
+    GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
     strm.PutChar(' ');
     va_list args;
     va_start(args, format);
@@ -1119,7 +1118,7 @@ void Module::ReportErrorIfModifyDetected(const char *format, ...) {
       if (format) {
         StreamString strm;
         strm.PutCString("error: the object file ");
-        GetDescription(&strm, lldb::eDescriptionLevelFull);
+        GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
         strm.PutCString(" has been modified\n");
 
         va_list args;
@@ -1145,7 +1144,7 @@ void Module::ReportWarning(const char *format, ...) {
   if (format && format[0]) {
     StreamString strm;
     strm.PutCString("warning: ");
-    GetDescription(&strm, lldb::eDescriptionLevelFull);
+    GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
     strm.PutChar(' ');
 
     va_list args;
@@ -1166,7 +1165,7 @@ void Module::ReportWarning(const char *format, ...) {
 void Module::LogMessage(Log *log, const char *format, ...) {
   if (log != nullptr) {
     StreamString log_message;
-    GetDescription(&log_message, lldb::eDescriptionLevelFull);
+    GetDescription(log_message.AsRawOstream(), lldb::eDescriptionLevelFull);
     log_message.PutCString(": ");
     va_list args;
     va_start(args, format);
@@ -1179,7 +1178,7 @@ void Module::LogMessage(Log *log, const char *format, ...) {
 void Module::LogMessageVerboseBacktrace(Log *log, const char *format, ...) {
   if (log != nullptr) {
     StreamString log_message;
-    GetDescription(&log_message, lldb::eDescriptionLevelFull);
+    GetDescription(log_message.AsRawOstream(), lldb::eDescriptionLevelFull);
     log_message.PutCString(": ");
     va_list args;
     va_start(args, format);
@@ -1560,19 +1559,13 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
   }
 
   const FileSpec &file_spec = module_ref.GetFileSpec();
-  if (file_spec) {
-    if (!FileSpec::Equal(file_spec, m_file, (bool)file_spec.GetDirectory()) &&
-        !FileSpec::Equal(file_spec, m_platform_file,
-                         (bool)file_spec.GetDirectory()))
-      return false;
-  }
+  if (!FileSpec::Match(file_spec, m_file) &&
+      !FileSpec::Match(file_spec, m_platform_file))
+    return false;
 
   const FileSpec &platform_file_spec = module_ref.GetPlatformFileSpec();
-  if (platform_file_spec) {
-    if (!FileSpec::Equal(platform_file_spec, GetPlatformFileSpec(),
-                         (bool)platform_file_spec.GetDirectory()))
-      return false;
-  }
+  if (!FileSpec::Match(platform_file_spec, GetPlatformFileSpec()))
+    return false;
 
   const ArchSpec &arch = module_ref.GetArchitecture();
   if (arch.IsValid()) {

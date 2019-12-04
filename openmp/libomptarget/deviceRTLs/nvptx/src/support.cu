@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "support.h"
+#include "common/support.h"
 #include "common/debug.h"
 #include "omptarget-nvptx.h"
 

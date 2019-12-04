@@ -160,30 +160,6 @@ Stream &Stream::operator<<(const void *p) {
   return *this;
 }
 
-// Stream a int8_t "sval" out to this stream.
-Stream &Stream::operator<<(int8_t sval) {
-  Printf("%i", static_cast<int>(sval));
-  return *this;
-}
-
-// Stream a int16_t "sval" out to this stream.
-Stream &Stream::operator<<(int16_t sval) {
-  Printf("%i", static_cast<int>(sval));
-  return *this;
-}
-
-// Stream a int32_t "sval" out to this stream.
-Stream &Stream::operator<<(int32_t sval) {
-  Printf("%i", static_cast<int>(sval));
-  return *this;
-}
-
-// Stream a int64_t "sval" out to this stream.
-Stream &Stream::operator<<(int64_t sval) {
-  Printf("%" PRIi64, sval);
-  return *this;
-}
-
 // Get the current indentation level
 unsigned Stream::GetIndentLevel() const { return m_indent_level; }
 

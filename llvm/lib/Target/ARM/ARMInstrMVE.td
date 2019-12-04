@@ -3623,8 +3623,8 @@ defm MVE_VMULLu32 : MVE_VMULL_multi<"vmull", "u32", 0b1, 0b10, "@earlyclobber $Q
 defm MVE_VMULLp8  : MVE_VMULL_multi<"vmull", "p8",  0b0, 0b11>;
 defm MVE_VMULLp16 : MVE_VMULL_multi<"vmull", "p16", 0b1, 0b11>;
 
-class MVE_VxMULH<string iname, string suffix, bit U, bits<2> size,
-                 bit round, list<dag> pattern=[]>
+class MVE_VxMULH<string iname, string suffix, bit U, bits<2> size, bit round,
+                 list<dag> pattern=[]>
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
                    (ins MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm",
                    vpred_r, "", pattern> {
@@ -3640,19 +3640,45 @@ class MVE_VxMULH<string iname, string suffix, bit U, bits<2> size,
   let Inst{0} = 0b1;
 }
 
-def MVE_VMULHs8   : MVE_VxMULH<"vmulh",  "s8",  0b0, 0b00, 0b0>;
-def MVE_VMULHs16  : MVE_VxMULH<"vmulh",  "s16", 0b0, 0b01, 0b0>;
-def MVE_VMULHs32  : MVE_VxMULH<"vmulh",  "s32", 0b0, 0b10, 0b0>;
-def MVE_VMULHu8   : MVE_VxMULH<"vmulh",  "u8",  0b1, 0b00, 0b0>;
-def MVE_VMULHu16  : MVE_VxMULH<"vmulh",  "u16", 0b1, 0b01, 0b0>;
-def MVE_VMULHu32  : MVE_VxMULH<"vmulh",  "u32", 0b1, 0b10, 0b0>;
+multiclass MVE_VxMULH_m<string iname, MVEVectorVTInfo VTI, SDNode unpred_op,
+                        Intrinsic pred_int, bit round> {
+  def "" : MVE_VxMULH<iname, VTI.Suffix, VTI.Unsigned, VTI.Size, round>;
 
-def MVE_VRMULHs8  : MVE_VxMULH<"vrmulh", "s8",  0b0, 0b00, 0b1>;
-def MVE_VRMULHs16 : MVE_VxMULH<"vrmulh", "s16", 0b0, 0b01, 0b1>;
-def MVE_VRMULHs32 : MVE_VxMULH<"vrmulh", "s32", 0b0, 0b10, 0b1>;
-def MVE_VRMULHu8  : MVE_VxMULH<"vrmulh", "u8",  0b1, 0b00, 0b1>;
-def MVE_VRMULHu16 : MVE_VxMULH<"vrmulh", "u16", 0b1, 0b01, 0b1>;
-def MVE_VRMULHu32 : MVE_VxMULH<"vrmulh", "u32", 0b1, 0b10, 0b1>;
+  let Predicates = [HasMVEInt] in {
+    // Unpredicated multiply returning high bits
+    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
+
+    // Predicated multiply returning high bits
+    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            ARMVCCThen, (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive)))>;
+  }
+}
+
+multiclass MVE_VMULT<string iname, MVEVectorVTInfo VTI, bit round>
+  : MVE_VxMULH_m<iname, VTI, !if(round, int_arm_mve_vrmulh, int_arm_mve_vmulh),
+                 !if(round, int_arm_mve_rmulh_predicated,
+                            int_arm_mve_mulh_predicated),
+                 round>;
+
+defm MVE_VMULHs8   : MVE_VMULT<"vmulh",  MVE_v16s8, 0b0>;
+defm MVE_VMULHs16  : MVE_VMULT<"vmulh",  MVE_v8s16, 0b0>;
+defm MVE_VMULHs32  : MVE_VMULT<"vmulh",  MVE_v4s32, 0b0>;
+defm MVE_VMULHu8   : MVE_VMULT<"vmulh",  MVE_v16u8, 0b0>;
+defm MVE_VMULHu16  : MVE_VMULT<"vmulh",  MVE_v8u16, 0b0>;
+defm MVE_VMULHu32  : MVE_VMULT<"vmulh",  MVE_v4u32, 0b0>;
+
+defm MVE_VRMULHs8  : MVE_VMULT<"vrmulh", MVE_v16s8, 0b1>;
+defm MVE_VRMULHs16 : MVE_VMULT<"vrmulh", MVE_v8s16, 0b1>;
+defm MVE_VRMULHs32 : MVE_VMULT<"vrmulh", MVE_v4s32, 0b1>;
+defm MVE_VRMULHu8  : MVE_VMULT<"vrmulh", MVE_v16u8, 0b1>;
+defm MVE_VRMULHu16 : MVE_VMULT<"vrmulh", MVE_v8u16, 0b1>;
+defm MVE_VRMULHu32 : MVE_VMULT<"vrmulh", MVE_v4u32, 0b1>;
 
 class MVE_VxMOVxN<string iname, string suffix, bit bit_28, bit bit_17,
                   bits<2> size, bit T, list<dag> pattern=[]>

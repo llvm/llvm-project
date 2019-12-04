@@ -52,6 +52,4 @@ Sections:
   - Name:    .symtab
     Type:    SHT_SYMTAB
     Address: 0x4000
-DynamicSymbols:
-  - Name:    foo
-    Binding: STB_GLOBAL
+DynamicSymbols: []

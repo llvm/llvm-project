@@ -134,7 +134,7 @@ void Variable::Dump(Stream *s, bool show_context) const {
       s->PutCString("thread local");
       break;
     default:
-      *s << "??? (" << m_scope << ')';
+      s->AsRawOstream() << "??? (" << m_scope << ')';
     }
   }
 

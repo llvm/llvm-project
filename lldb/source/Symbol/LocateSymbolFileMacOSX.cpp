@@ -595,7 +595,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
         }
         Status error = Host::RunShellCommand(
             command.GetData(),
-            NULL,            // current working directory
+            FileSpec(),      // current working directory
             &exit_status,    // Exit status
             &signo,          // Signal int *
             &command_output, // Command output

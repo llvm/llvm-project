@@ -1880,6 +1880,9 @@ TEST_F(DefineOutlineTest, ApplyTest) {
   llvm::StringMap<std::string> EditedFiles;
   ExtraFiles["Test.cpp"] = "";
   FileName = "Test.hpp";
+  // Template body is not parsed until instantiation time on windows, which
+  // results in arbitrary failures as function body becomes NULL.
+  ExtraArgs.push_back("-fno-delayed-template-parsing");
 
   struct {
     llvm::StringRef Test;
@@ -1972,6 +1975,108 @@ TEST_F(DefineOutlineTest, HandleMacros) {
   }
 }
 
+TEST_F(DefineOutlineTest, QualifyReturnValue) {
+  FileName = "Test.hpp";
+  ExtraFiles["Test.cpp"] = "";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {R"cpp(
+        namespace a { class Foo; }
+        using namespace a;
+        Foo fo^o() { return; })cpp",
+       R"cpp(
+        namespace a { class Foo; }
+        using namespace a;
+        Foo foo() ;)cpp",
+       "a::Foo foo() { return; }"},
+      {R"cpp(
+        namespace a {
+          class Foo {
+            class Bar {};
+            Bar fo^o() { return {}; }
+          };
+        })cpp",
+       R"cpp(
+        namespace a {
+          class Foo {
+            class Bar {};
+            Bar foo() ;
+          };
+        })cpp",
+       "a::Foo::Bar a::Foo::foo() { return {}; }\n"},
+      {R"cpp(
+        class Foo;
+        Foo fo^o() { return; })cpp",
+       R"cpp(
+        class Foo;
+        Foo foo() ;)cpp",
+       "Foo foo() { return; }"},
+  };
+  llvm::StringMap<std::string> EditedFiles;
+  for (auto &Case : Cases) {
+    apply(Case.Test, &EditedFiles);
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, QualifyFunctionName) {
+  FileName = "Test.hpp";
+  struct {
+    llvm::StringRef TestHeader;
+    llvm::StringRef TestSource;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {
+          R"cpp(
+            namespace a {
+              namespace b {
+                class Foo {
+                  void fo^o() {}
+                };
+              }
+            })cpp",
+          "",
+          R"cpp(
+            namespace a {
+              namespace b {
+                class Foo {
+                  void foo() ;
+                };
+              }
+            })cpp",
+          "void a::b::Foo::foo() {}\n",
+      },
+      {
+          "namespace a { namespace b { void f^oo() {} } }",
+          "namespace a{}",
+          "namespace a { namespace b { void foo() ; } }",
+          "namespace a{void b::foo() {} }",
+      },
+      {
+          "namespace a { namespace b { void f^oo() {} } }",
+          "using namespace a;",
+          "namespace a { namespace b { void foo() ; } }",
+          // FIXME: Take using namespace directives in the source file into
+          // account. This can be spelled as b::foo instead.
+          "using namespace a;void a::b::foo() {} ",
+      },
+  };
+  llvm::StringMap<std::string> EditedFiles;
+  for (auto &Case : Cases) {
+    ExtraFiles["Test.cpp"] = Case.TestSource;
+    EXPECT_EQ(apply(Case.TestHeader, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)))
+        << Case.TestHeader;
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
