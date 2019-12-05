@@ -238,7 +238,7 @@ public:
     // FIXME: We might want to consider moving method definitions below class
     // definition even if we are inside a source file.
     if (!isHeaderFile(Sel.AST.getSourceManager().getFilename(Sel.Cursor),
-                      Sel.AST.getASTContext().getLangOpts()))
+                      Sel.AST.getLangOpts()))
       return false;
 
     Source = getSelectedFunction(Sel.ASTSelection.commonAncestor());
@@ -306,9 +306,8 @@ public:
     // FIXME: We should also get rid of inline qualifier.
     const tooling::Replacement DeleteFuncBody(
         Sel.AST.getSourceManager(),
-        CharSourceRange::getTokenRange(
-            *toHalfOpenFileRange(SM, Sel.AST.getASTContext().getLangOpts(),
-                                 Source->getBody()->getSourceRange())),
+        CharSourceRange::getTokenRange(*toHalfOpenFileRange(
+            SM, Sel.AST.getLangOpts(), Source->getBody()->getSourceRange())),
         ";");
     auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(),
                                      tooling::Replacements(DeleteFuncBody));

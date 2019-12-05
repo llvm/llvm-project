@@ -367,8 +367,7 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   SourceLocation StartLoc = Macro.Info->getDefinitionLoc();
   SourceLocation EndLoc = Macro.Info->getDefinitionEndLoc();
   if (EndLoc.isValid()) {
-    EndLoc = Lexer::getLocForEndOfToken(EndLoc, 0, SM,
-                                        AST.getASTContext().getLangOpts());
+    EndLoc = Lexer::getLocForEndOfToken(EndLoc, 0, SM, AST.getLangOpts());
     bool Invalid;
     StringRef Buffer = SM.getBufferData(SM.getFileID(StartLoc), &Invalid);
     if (!Invalid) {
@@ -391,7 +390,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   const SourceManager &SM = AST.getSourceManager();
   llvm::Optional<HoverInfo> HI;
   SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
+      getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
 
   if (auto Deduced = getDeducedType(AST.getASTContext(), SourceLocationBeg)) {
     // Find the corresponding decl to populate kind and fetch documentation.
@@ -435,9 +434,8 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
           tooling::applyAllReplacements(HI->Definition, Replacements))
     HI->Definition = *Formatted;
 
-  HI->SymRange =
-      getTokenRange(AST.getASTContext().getSourceManager(),
-                    AST.getASTContext().getLangOpts(), SourceLocationBeg);
+  HI->SymRange = getTokenRange(AST.getASTContext().getSourceManager(),
+                               AST.getLangOpts(), SourceLocationBeg);
   return HI;
 }
 
