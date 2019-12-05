@@ -2272,6 +2272,9 @@ public:
   /// true through IsAligned.
   bool isReplaceableGlobalAllocationFunction(bool *IsAligned = nullptr) const;
 
+  /// Determine if this function provides the implementation of a system Builtin
+  bool isReplaceableSystemFunction() const;
+
   /// Determine whether this is a destroying operator delete.
   bool isDestroyingOperatorDelete() const;
 

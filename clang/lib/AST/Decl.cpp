@@ -3003,6 +3003,15 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(bool *IsAligned) const 
   return Params == FPT->getNumParams();
 }
 
+bool FunctionDecl::isReplaceableSystemFunction() const {
+  FunctionDecl const *Definition;
+  if (hasBody(Definition)) {
+    const SourceManager &SM = getASTContext().getSourceManager();
+    return SM.isInSystemHeader(Definition->getLocation());
+  }
+  return false;
+}
+
 bool FunctionDecl::isDestroyingOperatorDelete() const {
   // C++ P0722:
   //   Within a class C, a single object deallocation function with signature
@@ -3164,6 +3173,12 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
   // This function has the name of a known C library
   // function. Determine whether it actually refers to the C library
   // function or whether it just has the same name.
+
+  // If a system-level body was provided, use it instead of the intrinsic. Some
+  // C library do that to implement fortified version.
+  if (isReplaceableSystemFunction()) {
+    return 0;
+  }
 
   // If this is a static function, it's not a builtin.
   if (!ConsiderWrapperFunctions && getStorageClass() == SC_Static)
