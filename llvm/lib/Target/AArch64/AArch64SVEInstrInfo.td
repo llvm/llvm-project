@@ -788,11 +788,11 @@ let Predicates = [HasSVE] in {
   def ADDVL_XXI : sve_int_arith_vl<0b0, "addvl">;
   def ADDPL_XXI : sve_int_arith_vl<0b1, "addpl">;
 
-  defm CNTB_XPiI : sve_int_count<0b000, "cntb">;
-  defm CNTH_XPiI : sve_int_count<0b010, "cnth">;
-  defm CNTW_XPiI : sve_int_count<0b100, "cntw">;
-  defm CNTD_XPiI : sve_int_count<0b110, "cntd">;
-  defm CNTP_XPP : sve_int_pcount_pred<0b0000, "cntp">;
+  defm CNTB_XPiI : sve_int_count<0b000, "cntb", int_aarch64_sve_cntb>;
+  defm CNTH_XPiI : sve_int_count<0b010, "cnth", int_aarch64_sve_cnth>;
+  defm CNTW_XPiI : sve_int_count<0b100, "cntw", int_aarch64_sve_cntw>;
+  defm CNTD_XPiI : sve_int_count<0b110, "cntd", int_aarch64_sve_cntd>;
+  defm CNTP_XPP : sve_int_pcount_pred<0b0000, "cntp", int_aarch64_sve_cntp>;
 
   defm INCB_XPiI : sve_int_pred_pattern_a<0b000, "incb">;
   defm DECB_XPiI : sve_int_pred_pattern_a<0b001, "decb">;
