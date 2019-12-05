@@ -288,29 +288,29 @@ public:
   void addSymbols(ThunkSection &isec) override;
 
 protected:
-  PPC64LongBranchThunk(Symbol &dest) : Thunk(dest, 0) {}
+  PPC64LongBranchThunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
 };
 
 class PPC64PILongBranchThunk final : public PPC64LongBranchThunk {
 public:
-  PPC64PILongBranchThunk(Symbol &dest) : PPC64LongBranchThunk(dest) {
+  PPC64PILongBranchThunk(Symbol &dest, int64_t addend)
+      : PPC64LongBranchThunk(dest, addend) {
     assert(!dest.isPreemptible);
-    if (dest.isInPPC64Branchlt())
-      return;
-
-    in.ppc64LongBranchTarget->addEntry(dest);
-    mainPart->relaDyn->addReloc(
-        {target->relativeRel, in.ppc64LongBranchTarget,
-         dest.getPPC64LongBranchOffset(), true, &dest,
-         getPPC64GlobalEntryToLocalEntryOffset(dest.stOther)});
+    if (Optional<uint32_t> index =
+            in.ppc64LongBranchTarget->addEntry(&dest, addend)) {
+      mainPart->relaDyn->addReloc(
+          {target->relativeRel, in.ppc64LongBranchTarget, *index * UINT64_C(8),
+           true, &dest,
+           addend + getPPC64GlobalEntryToLocalEntryOffset(dest.stOther)});
+    }
   }
 };
 
 class PPC64PDLongBranchThunk final : public PPC64LongBranchThunk {
 public:
-  PPC64PDLongBranchThunk(Symbol &dest) : PPC64LongBranchThunk(dest) {
-    if (!dest.isInPPC64Branchlt())
-      in.ppc64LongBranchTarget->addEntry(dest);
+  PPC64PDLongBranchThunk(Symbol &dest, int64_t addend)
+      : PPC64LongBranchThunk(dest, addend) {
+    in.ppc64LongBranchTarget->addEntry(&dest, addend);
   }
 };
 
@@ -785,7 +785,8 @@ void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
 }
 
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
-  int64_t offset = destination.getPPC64LongBranchTableVA() - getPPC64TocBase();
+  int64_t offset = in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
+                   getPPC64TocBase();
   writePPCLoadAndBranch(buf, offset);
 }
 
@@ -901,15 +902,15 @@ static Thunk *addThunkPPC32(const InputSection &isec, const Relocation &rel,
   return make<PPC32PltCallStub>(isec, rel, s);
 }
 
-static Thunk *addThunkPPC64(RelType type, Symbol &s) {
+static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
   assert(type == R_PPC64_REL24 && "unexpected relocation type for thunk");
   if (s.isInPlt())
     return make<PPC64PltCallStub>(s);
 
   if (config->picThunk)
-    return make<PPC64PILongBranchThunk>(s);
+    return make<PPC64PILongBranchThunk>(s, a);
 
-  return make<PPC64PDLongBranchThunk>(s);
+  return make<PPC64PDLongBranchThunk>(s, a);
 }
 
 Thunk *addThunk(const InputSection &isec, Relocation &rel) {
@@ -929,7 +930,7 @@ Thunk *addThunk(const InputSection &isec, Relocation &rel) {
     return addThunkPPC32(isec, rel, s);
 
   if (config->emachine == EM_PPC64)
-    return addThunkPPC64(rel.type, s);
+    return addThunkPPC64(rel.type, s, a);
 
   llvm_unreachable("add Thunk only supported for ARM, Mips and PowerPC");
 }
