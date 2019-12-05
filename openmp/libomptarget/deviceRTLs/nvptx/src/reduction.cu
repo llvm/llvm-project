@@ -233,7 +233,7 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
                           : /*Master thread only*/ 1;
   uint32_t TeamId = GetBlockIdInKernel();
   uint32_t NumTeams = GetNumberOfBlocksInKernel();
-  __shared__ volatile bool IsLastTeam;
+  SHARED volatile bool IsLastTeam;
 
   // Team masters of all teams write to the scratchpad.
   if (ThreadId == 0) {
@@ -403,8 +403,8 @@ INLINE static uint32_t roundToWarpsize(uint32_t s) {
   return (s & ~(unsigned)(WARPSIZE - 1));
 }
 
-__device__ static volatile uint32_t IterCnt = 0;
-__device__ static volatile uint32_t Cnt = 0;
+DEVICE static volatile uint32_t IterCnt = 0;
+DEVICE static volatile uint32_t Cnt = 0;
 EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     kmp_Ident *loc, int32_t global_tid, void *global_buffer,
     int32_t num_of_records, void *reduce_data, kmp_ShuffleReductFctPtr shflFct,
@@ -426,8 +426,8 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
                          : /*Master thread only*/ 1;
   uint32_t TeamId = GetBlockIdInKernel();
   uint32_t NumTeams = GetNumberOfBlocksInKernel();
-  __shared__ unsigned Bound;
-  __shared__ unsigned ChunkTeamCount;
+  SHARED unsigned Bound;
+  SHARED unsigned ChunkTeamCount;
 
   // Block progress for teams greater than the current upper
   // limit. We always only allow a number of teams less or equal

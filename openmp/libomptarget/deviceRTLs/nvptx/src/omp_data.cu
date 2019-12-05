@@ -17,27 +17,27 @@
 // global device environment
 ////////////////////////////////////////////////////////////////////////////////
 
-__device__ omptarget_device_environmentTy omptarget_device_environment;
+DEVICE omptarget_device_environmentTy omptarget_device_environment;
 
 ////////////////////////////////////////////////////////////////////////////////
 // global data holding OpenMP state information
 ////////////////////////////////////////////////////////////////////////////////
 
-__device__
+DEVICE
     omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
         omptarget_nvptx_device_State[MAX_SM];
 
-__device__ omptarget_nvptx_SimpleMemoryManager
+DEVICE omptarget_nvptx_SimpleMemoryManager
     omptarget_nvptx_simpleMemoryManager;
-__device__ __shared__ uint32_t usedMemIdx;
-__device__ __shared__ uint32_t usedSlotIdx;
+DEVICE SHARED uint32_t usedMemIdx;
+DEVICE SHARED uint32_t usedSlotIdx;
 
-__device__ __shared__ uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
-__device__ __shared__ uint16_t threadLimit;
-__device__ __shared__ uint16_t threadsInTeam;
-__device__ __shared__ uint16_t nThreads;
+DEVICE SHARED uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
+DEVICE SHARED uint16_t threadLimit;
+DEVICE SHARED uint16_t threadsInTeam;
+DEVICE SHARED uint16_t nThreads;
 // Pointer to this team's OpenMP state object
-__device__ __shared__
+DEVICE SHARED
     omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -45,24 +45,24 @@ __device__ __shared__
 // communicate with the workers.  Since it is in shared memory, there is one
 // copy of these variables for each kernel, instance, and team.
 ////////////////////////////////////////////////////////////////////////////////
-volatile __device__ __shared__ omptarget_nvptx_WorkFn omptarget_nvptx_workFn;
+volatile DEVICE SHARED omptarget_nvptx_WorkFn omptarget_nvptx_workFn;
 
 ////////////////////////////////////////////////////////////////////////////////
 // OpenMP kernel execution parameters
 ////////////////////////////////////////////////////////////////////////////////
-__device__ __shared__ uint32_t execution_param;
+DEVICE SHARED uint32_t execution_param;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Data sharing state
 ////////////////////////////////////////////////////////////////////////////////
-__device__ __shared__ DataSharingStateTy DataSharingState;
+DEVICE SHARED DataSharingStateTy DataSharingState;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scratchpad for teams reduction.
 ////////////////////////////////////////////////////////////////////////////////
-__device__ __shared__ void *ReductionScratchpadPtr;
+DEVICE SHARED void *ReductionScratchpadPtr;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Data sharing related variables.
 ////////////////////////////////////////////////////////////////////////////////
-__device__ __shared__ omptarget_nvptx_SharedArgs omptarget_nvptx_globalArgs;
+DEVICE SHARED omptarget_nvptx_SharedArgs omptarget_nvptx_globalArgs;
