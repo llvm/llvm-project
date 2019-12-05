@@ -312,8 +312,8 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
     const auto &SM = AST.getSourceManager();
     SourceLocation Loc =
         SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
-            Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts()));
-    auto Range = getTokenRange(SM, AST.getASTContext().getLangOpts(), Loc);
+            Pos, AST.getSourceManager(), AST.getLangOpts()));
+    auto Range = getTokenRange(SM, AST.getLangOpts(), Loc);
     if (!Range)
       return CB(llvm::None); // "rename" is not valid at the position.
 

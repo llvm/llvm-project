@@ -39,14 +39,13 @@ void instantiate_bad_scope_tmpl() {
 }
 
 #if __cplusplus < 201103L
-// FIXME: Diagnose this case. For now we produce undef in codegen.
 template <typename T, T FN()>
 T func_template() {
-  return FN();
+  return FN(); // expected-error 2{{builtin functions must be directly called}}
 }
 void inject_builtins() {
-  func_template<void *, __exception_info>();
-  func_template<unsigned long, __exception_code>();
+  func_template<void *, __exception_info>(); // expected-note {{instantiation of}}
+  func_template<unsigned long, __exception_code>(); // expected-note {{instantiation of}}
 }
 #endif
 

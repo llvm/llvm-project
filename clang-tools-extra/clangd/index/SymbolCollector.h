@@ -151,11 +151,12 @@ private:
   std::shared_ptr<GlobalCodeCompletionAllocator> CompletionAllocator;
   std::unique_ptr<CodeCompletionTUInfo> CompletionTUInfo;
   Options Opts;
-  using DeclRef = std::pair<SourceLocation, index::SymbolRoleSet>;
+  using SymbolRef = std::pair<SourceLocation, index::SymbolRoleSet>;
   // Symbols referenced from the current TU, flushed on finish().
   llvm::DenseSet<const NamedDecl *> ReferencedDecls;
   llvm::DenseSet<const IdentifierInfo *> ReferencedMacros;
-  llvm::DenseMap<const NamedDecl *, std::vector<DeclRef>> DeclRefs;
+  llvm::DenseMap<const NamedDecl *, std::vector<SymbolRef>> DeclRefs;
+  llvm::DenseMap<SymbolID, std::vector<SymbolRef>> MacroRefs;
   // Maps canonical declaration provided by clang to canonical declaration for
   // an index symbol, if clangd prefers a different declaration than that
   // provided by clang. For example, friend declaration might be considered

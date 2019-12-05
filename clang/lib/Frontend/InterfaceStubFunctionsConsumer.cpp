@@ -195,6 +195,10 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
     case Decl::Kind::TemplateTemplateParm:
     case Decl::Kind::ClassTemplatePartialSpecialization:
     case Decl::Kind::IndirectField:
+    case Decl::Kind::ConstructorUsingShadow:
+    case Decl::Kind::CXXDeductionGuide:
+    case Decl::Kind::NamespaceAlias:
+    case Decl::Kind::UnresolvedUsingTypename:
       return true;
     case Decl::Kind::Var: {
       // Bail on any VarDecl that either has no named symbol.

@@ -1026,8 +1026,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
           return false;
       } else {
         FileSpec module_file_spec(m_module_spec);
-        if (!FileSpec::Equal(module_file_spec, sc.module_sp->GetFileSpec(),
-                             false))
+        if (!FileSpec::Match(module_file_spec, sc.module_sp->GetFileSpec()))
           return false;
       }
     }
@@ -1046,8 +1045,8 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
             sc.block->GetInlinedFunctionInfo();
         if (inline_info != nullptr) {
           was_inlined = true;
-          if (!FileSpec::Equal(inline_info->GetDeclaration().GetFile(),
-                               *(m_file_spec_up.get()), false))
+          if (!FileSpec::Match(*m_file_spec_up,
+                               inline_info->GetDeclaration().GetFile()))
             return false;
         }
       }
@@ -1055,8 +1054,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
       // Next check the comp unit, but only if the SymbolContext was not
       // inlined.
       if (!was_inlined && sc.comp_unit != nullptr) {
-        if (!FileSpec::Equal(sc.comp_unit->GetPrimaryFile(), *m_file_spec_up,
-                             false))
+        if (!FileSpec::Match(*m_file_spec_up, sc.comp_unit->GetPrimaryFile()))
           return false;
       }
     }

@@ -230,19 +230,19 @@ static FileSpec LocateExecutableSymbolFileDsym(const ModuleSpec &module_spec) {
 
 ModuleSpec Symbols::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
   ModuleSpec result;
-  const FileSpec *exec_fspec = module_spec.GetFileSpecPtr();
+  const FileSpec &exec_fspec = module_spec.GetFileSpec();
   const ArchSpec *arch = module_spec.GetArchitecturePtr();
   const UUID *uuid = module_spec.GetUUIDPtr();
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
       func_cat, "LocateExecutableObjectFile (file = %s, arch = %s, uuid = %p)",
-      exec_fspec ? exec_fspec->GetFilename().AsCString("<NULL>") : "<NULL>",
+      exec_fspec ? exec_fspec.GetFilename().AsCString("<NULL>") : "<NULL>",
       arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
 
   ModuleSpecList module_specs;
   ModuleSpec matched_module_spec;
   if (exec_fspec &&
-      ObjectFile::GetModuleSpecifications(*exec_fspec, 0, 0, module_specs) &&
+      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0, module_specs) &&
       module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
     result.GetFileSpec() = exec_fspec;
   } else {

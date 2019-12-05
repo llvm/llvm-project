@@ -275,6 +275,12 @@ CsectGroup &XCOFFObjectWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
            "We should have only one TOC-base, and it should be the first csect "
            "in this CsectGroup.");
     return TOCCsects;
+  case XCOFF::XMC_TC:
+    assert(XCOFF::XTY_SD == MCSec->getCSectType() &&
+           "Only an initialized csect can contain TC entry.");
+    assert(!TOCCsects.empty() &&
+           "We should at least have a TOC-base in this CsectGroup.");
+    return TOCCsects;
   default:
     report_fatal_error("Unhandled mapping of csect to section.");
   }

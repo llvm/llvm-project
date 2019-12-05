@@ -54,6 +54,11 @@ if config.shared_libs:
     lit_config.warning("unable to inject shared library path on '{}'".format(
         platform.system()))
 
+# Propagate LLDB_CAPTURE_REPRODUCER
+if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
+  config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
+      'LLDB_CAPTURE_REPRODUCER']
+
 # Clean the module caches in the test build directory. This is necessary in an
 # incremental build whenever clang changes underneath, so doing it once per
 # lit.py invocation is close enough.

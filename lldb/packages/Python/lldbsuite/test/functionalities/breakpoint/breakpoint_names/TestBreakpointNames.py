@@ -155,8 +155,13 @@ class BreakpointNames(TestBase):
     def do_check_using_names(self):
         """Use Python APIs to check names work in place of breakpoint ID's."""
 
+        # Create a dummy breakpoint to use up ID 1
+        _ = self.target.BreakpointCreateByLocation(self.main_file_spec, 30)
+
+        # Create a breakpiont to test with
         bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
         bkpt_name = "ABreakpoint"
+        bkpt_id = bkpt.GetID()
         other_bkpt_name= "_AnotherBreakpoint"
 
         # Add a name and make sure we match it:
@@ -169,6 +174,7 @@ class BreakpointNames(TestBase):
         self.assertTrue(bkpts.GetSize() == 1, "One breakpoint matched.")
         found_bkpt = bkpts.GetBreakpointAtIndex(0)
         self.assertTrue(bkpt.GetID() == found_bkpt.GetID(),"The right breakpoint.")
+        self.assertTrue(bkpt.GetID() == bkpt_id,"With the same ID as before.")
 
         retval = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand("break disable %s"%(bkpt_name), retval)

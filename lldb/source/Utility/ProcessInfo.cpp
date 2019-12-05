@@ -49,7 +49,7 @@ llvm::StringRef ProcessInfo::GetNameAsStringRef() const {
 void ProcessInfo::Dump(Stream &s, Platform *platform) const {
   s << "Executable: " << GetName() << "\n";
   s << "Triple: ";
-  m_arch.DumpTriple(s);
+  m_arch.DumpTriple(s.AsRawOstream());
   s << "\n";
 
   s << "Arguments:\n";
@@ -137,7 +137,7 @@ void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {
 
   if (m_arch.IsValid()) {
     s.Printf("   arch = ");
-    m_arch.DumpTriple(s);
+    m_arch.DumpTriple(s.AsRawOstream());
     s.EOL();
   }
 
@@ -189,7 +189,7 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
 
     StreamString arch_strm;
     if (m_arch.IsValid())
-      m_arch.DumpTriple(arch_strm);
+      m_arch.DumpTriple(arch_strm.AsRawOstream());
 
     auto print = [&](bool (ProcessInstanceInfo::*isValid)() const,
                      uint32_t (ProcessInstanceInfo::*getID)() const,

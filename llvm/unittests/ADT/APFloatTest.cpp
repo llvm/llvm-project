@@ -520,9 +520,9 @@ TEST(APFloatTest, FMA) {
 
   // Test x87 extended precision case from http://llvm.org/PR20728.
   {
-    APFloat M1(APFloat::x87DoubleExtended(), 1.0);
-    APFloat M2(APFloat::x87DoubleExtended(), 1.0);
-    APFloat A(APFloat::x87DoubleExtended(), 3.0);
+    APFloat M1(APFloat::x87DoubleExtended(), 1);
+    APFloat M2(APFloat::x87DoubleExtended(), 1);
+    APFloat A(APFloat::x87DoubleExtended(), 3);
 
     bool losesInfo = false;
     M1.fusedMultiplyAdd(M1, A, APFloat::rmNearestTiesToEven);
@@ -600,9 +600,9 @@ TEST(APFloatTest, Denormal) {
   {
     const char *MinNormalStr = "1.17549435082228750797e-38";
     EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), MinNormalStr).isDenormal());
-    EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), 0.0).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), 0).isDenormal());
 
-    APFloat Val2(APFloat::IEEEsingle(), 2.0e0);
+    APFloat Val2(APFloat::IEEEsingle(), 2);
     APFloat T(APFloat::IEEEsingle(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
@@ -612,9 +612,9 @@ TEST(APFloatTest, Denormal) {
   {
     const char *MinNormalStr = "2.22507385850720138309e-308";
     EXPECT_FALSE(APFloat(APFloat::IEEEdouble(), MinNormalStr).isDenormal());
-    EXPECT_FALSE(APFloat(APFloat::IEEEdouble(), 0.0).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::IEEEdouble(), 0).isDenormal());
 
-    APFloat Val2(APFloat::IEEEdouble(), 2.0e0);
+    APFloat Val2(APFloat::IEEEdouble(), 2);
     APFloat T(APFloat::IEEEdouble(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
@@ -624,9 +624,9 @@ TEST(APFloatTest, Denormal) {
   {
     const char *MinNormalStr = "3.36210314311209350626e-4932";
     EXPECT_FALSE(APFloat(APFloat::x87DoubleExtended(), MinNormalStr).isDenormal());
-    EXPECT_FALSE(APFloat(APFloat::x87DoubleExtended(), 0.0).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::x87DoubleExtended(), 0).isDenormal());
 
-    APFloat Val2(APFloat::x87DoubleExtended(), 2.0e0);
+    APFloat Val2(APFloat::x87DoubleExtended(), 2);
     APFloat T(APFloat::x87DoubleExtended(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
@@ -636,9 +636,9 @@ TEST(APFloatTest, Denormal) {
   {
     const char *MinNormalStr = "3.36210314311209350626267781732175260e-4932";
     EXPECT_FALSE(APFloat(APFloat::IEEEquad(), MinNormalStr).isDenormal());
-    EXPECT_FALSE(APFloat(APFloat::IEEEquad(), 0.0).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::IEEEquad(), 0).isDenormal());
 
-    APFloat Val2(APFloat::IEEEquad(), 2.0e0);
+    APFloat Val2(APFloat::IEEEquad(), 2);
     APFloat T(APFloat::IEEEquad(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
@@ -1153,8 +1153,8 @@ TEST(APFloatTest, makeNaN) {
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 TEST(APFloatTest, SemanticsDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEsingle(), 0.0f).convertToDouble(), "Float semantics are not IEEEdouble");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), 0.0 ).convertToFloat(),  "Float semantics are not IEEEsingle");
+  EXPECT_DEATH(APFloat(APFloat::IEEEsingle(), 0).convertToDouble(), "Float semantics are not IEEEdouble");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), 0).convertToFloat(),  "Float semantics are not IEEEsingle");
 }
 
 TEST(APFloatTest, StringDecimalDeath) {

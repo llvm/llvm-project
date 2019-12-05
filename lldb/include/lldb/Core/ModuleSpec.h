@@ -207,7 +207,7 @@ public:
       if (dumped_something)
         strm.PutCString(", ");
       strm.Printf("arch = ");
-      m_arch.DumpTriple(strm);
+      m_arch.DumpTriple(strm.AsRawOstream());
       dumped_something = true;
     }
     if (m_uuid.IsValid()) {
@@ -251,24 +251,18 @@ public:
     if (match_module_spec.GetObjectName() &&
         match_module_spec.GetObjectName() != GetObjectName())
       return false;
-    if (match_module_spec.GetFileSpecPtr()) {
-      const FileSpec &fspec = match_module_spec.GetFileSpec();
-      if (!FileSpec::Equal(fspec, GetFileSpec(),
-                           !fspec.GetDirectory().IsEmpty()))
-        return false;
-    }
-    if (GetPlatformFileSpec() && match_module_spec.GetPlatformFileSpecPtr()) {
-      const FileSpec &fspec = match_module_spec.GetPlatformFileSpec();
-      if (!FileSpec::Equal(fspec, GetPlatformFileSpec(),
-                           !fspec.GetDirectory().IsEmpty()))
-        return false;
+    if (!FileSpec::Match(match_module_spec.GetFileSpec(), GetFileSpec()))
+      return false;
+    if (GetPlatformFileSpec() &&
+        !FileSpec::Match(match_module_spec.GetPlatformFileSpec(),
+                         GetPlatformFileSpec())) {
+      return false;
     }
     // Only match the symbol file spec if there is one in this ModuleSpec
-    if (GetSymbolFileSpec() && match_module_spec.GetSymbolFileSpecPtr()) {
-      const FileSpec &fspec = match_module_spec.GetSymbolFileSpec();
-      if (!FileSpec::Equal(fspec, GetSymbolFileSpec(),
-                           !fspec.GetDirectory().IsEmpty()))
-        return false;
+    if (GetSymbolFileSpec() &&
+        !FileSpec::Match(match_module_spec.GetSymbolFileSpec(),
+                         GetSymbolFileSpec())) {
+      return false;
     }
     if (match_module_spec.GetArchitecturePtr()) {
       if (exact_arch_match) {

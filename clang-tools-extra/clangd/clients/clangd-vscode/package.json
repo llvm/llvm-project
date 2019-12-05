@@ -23,6 +23,7 @@
     "activationEvents": [
         "onLanguage:c",
         "onLanguage:cpp",
+        "onLanguage:cuda",
         "onLanguage:objective-c",
         "onLanguage:objective-cpp",
         "onCommand:clangd-vscode.activate"
@@ -64,6 +65,13 @@
                     "**/MSVC/*/include/**"
                 ],
                 "firstLine": "^/[/*].*-\\*-\\s*C\\+\\+\\s*-\\*-.*"
+            },
+            {
+                "id": "cuda",
+                "extensions": [
+                    ".cu",
+                    ".cuh"
+                ]
             }
         ],
         "configuration": {

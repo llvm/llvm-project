@@ -62,6 +62,16 @@
 
 # MISSING-FILE: error: [[FILE]]: {{[nN]}}o such file or directory
 
+## Create and append members to a thin archive:
+# RUN: llvm-ar qcT %t/thin-multiple.a %t/1.o
+# RUN: llvm-ar qcT %t/thin-multiple.a %t/2.o
+# RUN: llvm-ar t %t/thin-multiple.a \
+# RUN:   | FileCheck %s --check-prefix=MULTIPLE
+
+# RUN: llvm-ar qcT %t/thin-same.a %t/1.o %t/1.o
+# RUN: llvm-ar t %t/thin-same.a \
+# RUN:   | FileCheck %s --check-prefix=SAME
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64

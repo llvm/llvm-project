@@ -343,9 +343,8 @@ void HIPToolChain::addClangTargetOptions(
     else
       WaveFrontSizeBC = "oclc_wavefrontsize64_off.amdgcn.bc";
 
-    BCLibs.append({"hip.amdgcn.bc", "opencl.amdgcn.bc", "ocml.amdgcn.bc",
-                   "ockl.amdgcn.bc", "oclc_finite_only_off.amdgcn.bc",
-                   FlushDenormalControlBC,
+    BCLibs.append({"hip.amdgcn.bc", "ocml.amdgcn.bc", "ockl.amdgcn.bc",
+                   "oclc_finite_only_off.amdgcn.bc", FlushDenormalControlBC,
                    "oclc_correctly_rounded_sqrt_on.amdgcn.bc",
                    "oclc_unsafe_math_off.amdgcn.bc", ISAVerBC,
                    WaveFrontSizeBC});

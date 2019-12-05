@@ -31,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <string>
 #include <utility>
@@ -218,6 +219,12 @@ std::unique_ptr<CompilationDatabase>
 /// by underlying database.
 std::unique_ptr<CompilationDatabase>
 inferTargetAndDriverMode(std::unique_ptr<CompilationDatabase> Base);
+
+/// Returns a wrapped CompilationDatabase that will expand all rsp(response)
+/// files on commandline returned by underlying database.
+std::unique_ptr<CompilationDatabase>
+expandResponseFiles(std::unique_ptr<CompilationDatabase> Base,
+                    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
 } // namespace tooling
 } // namespace clang

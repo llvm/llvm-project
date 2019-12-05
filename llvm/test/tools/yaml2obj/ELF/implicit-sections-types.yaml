@@ -27,9 +27,7 @@ FileHeader:
 ## Needed to force the creation of the .symtab.
 Symbols: []
 ## Needed to force the creation of the .dynsym and .dynstr.
-DynamicSymbols:
-  - Name:    foo
-  - Binding: STB_GLOBAL
+DynamicSymbols: []
 
 ## Check we can set any arbitrary types when describing sections
 ## that are usually implicit.

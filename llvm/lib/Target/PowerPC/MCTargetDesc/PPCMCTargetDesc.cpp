@@ -247,7 +247,10 @@ public:
   PPCTargetXCOFFStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
   void emitTCEntry(const MCSymbol &S) override {
-    // Object writing TOC entries not supported yet.
+    const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
+    const unsigned PointerSize = MAI->getCodePointerSize();
+    Streamer.EmitValueToAlignment(PointerSize);
+    Streamer.EmitSymbolValue(&S, PointerSize);
   }
 
   void emitMachine(StringRef CPU) override {

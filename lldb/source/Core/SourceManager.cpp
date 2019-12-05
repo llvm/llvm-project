@@ -64,7 +64,8 @@ SourceManager::~SourceManager() {}
 
 SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   bool same_as_previous =
-      m_last_file_sp && m_last_file_sp->FileSpecMatches(file_spec);
+      m_last_file_sp &&
+      FileSpec::Match(file_spec, m_last_file_sp->GetFileSpec());
 
   DebuggerSP debugger_sp(m_debugger_wp.lock());
   FileSP file_sp;
@@ -600,10 +601,6 @@ void SourceManager::File::FindLinesMatchingRegex(
       match_lines.push_back(line_no);
     }
   }
-}
-
-bool SourceManager::File::FileSpecMatches(const FileSpec &file_spec) {
-  return FileSpec::Equal(m_file_spec, file_spec, false);
 }
 
 bool lldb_private::operator==(const SourceManager::File &lhs,

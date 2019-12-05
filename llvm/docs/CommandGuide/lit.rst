@@ -406,17 +406,38 @@ PRE-DEFINED SUBSTITUTIONS
 :program:`lit` provides various patterns that can be used with the RUN command.
 These are defined in TestRunner.py. The base set of substitutions are:
 
- ========== ==============
-  Macro      Substitution
- ========== ==============
- %s         source path (path to the file currently being run)
- %S         source dir (directory of the file currently being run)
- %p         same as %S
- %{pathsep} path separator
- %t         temporary file name unique to the test
- %T         parent directory of %t (not unique, deprecated, do not use)
- %%         %
- ========== ==============
+ ======================= ==============
+  Macro                   Substitution
+ ======================= ==============
+ %s                      source path (path to the file currently being run)
+ %S                      source dir (directory of the file currently being run)
+ %p                      same as %S
+ %{pathsep}              path separator
+ %t                      temporary file name unique to the test
+ %basename_t             The last path component of %t but without the ``.tmp`` extension
+ %T                      parent directory of %t (not unique, deprecated, do not use)
+ %%                      %
+ %/s                     %s but ``\`` is replaced by ``/``
+ %/S                     %S but ``\`` is replaced by ``/``
+ %/p                     %p but ``\`` is replaced by ``/``
+ %/t                     %t but ``\`` is replaced by ``/``
+ %/T                     %T but ``\`` is replaced by ``/``
+ %{/s:regex_replacement} %/s but escaped for use in the replacement of a ``s@@@`` command in sed
+ %{/S:regex_replacement} %/S but escaped for use in the replacement of a ``s@@@`` command in sed
+ %{/p:regex_replacement} %/p but escaped for use in the replacement of a ``s@@@`` command in sed
+ %{/t:regex_replacement} %/t but escaped for use in the replacement of a ``s@@@`` command in sed
+ %{/T:regex_replacement} %/T but escaped for use in the replacement of a ``s@@@`` command in sed
+ %:s                     On Windows, %/s but a ``:`` is removed if its the second character.
+                         Otherwise, %s but with a single leading ``/`` removed.
+ %:S                     On Windows, %/S but a ``:`` is removed if its the second character.
+                         Otherwise, %S but with a single leading ``/`` removed.
+ %:p                     On Windows, %/p but a ``:`` is removed if its the second character.
+                         Otherwise, %p but with a single leading ``/`` removed.
+ %:t                     On Windows, %/t but a ``:`` is removed if its the second character.
+                         Otherwise, %t but with a single leading ``/`` removed.
+ %:T                     On Windows, %/T but a ``:`` is removed if its the second character.
+                         Otherwise, %T but with a single leading ``/`` removed.
+ ======================= ==============
 
 Other substitutions are provided that are variations on this base set and
 further substitution patterns can be defined by each test module. See the

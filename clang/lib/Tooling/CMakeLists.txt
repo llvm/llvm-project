@@ -17,6 +17,7 @@ add_clang_library(clangTooling
   CommonOptionsParser.cpp
   CompilationDatabase.cpp
   Execution.cpp
+  ExpandResponseFilesCompilationDatabase.cpp
   FileMatchTrie.cpp
   FixIt.cpp
   GuessTargetAndModeCompilationDatabase.cpp

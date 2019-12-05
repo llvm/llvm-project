@@ -1047,8 +1047,13 @@ void CodeGenFunction::ExpandTypeFromArgs(
     auto imagValue = *AI++;
     EmitStoreOfComplex(ComplexPairTy(realValue, imagValue), LV, /*init*/ true);
   } else {
+    // Call EmitStoreOfScalar except when the lvalue is a bitfield to emit a
+    // primitive store.
     assert(isa<NoExpansion>(Exp.get()));
-    EmitStoreThroughLValue(RValue::get(*AI++), LV);
+    if (LV.isBitField())
+      EmitStoreThroughLValue(RValue::get(*AI++), LV);
+    else
+      EmitStoreOfScalar(*AI++, LV);
   }
 }
 

@@ -28,7 +28,7 @@
 ; DWARF5: .debug_info contents:
 ; DWARF5: Compile Unit:{{.*}}version = 0x0005
 ; DWARF5-NOT: Compile Unit
-; DWARF5: DW_TAG_compile_unit
+; DWARF5: DW_TAG_skeleton_unit
 ; DWARF5-NOT: DW_TAG_{{.*}}
 ; DWARF5: DW_AT_GNU_dwo_name{{.*}}test.dwo
 ; DWARF5: DW_AT_addr_base{{.*}}0x00000008

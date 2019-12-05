@@ -127,6 +127,7 @@ void OptionGroupPythonClassWithDict::OptionParsingStarting(
   // the user didn't pass any -k -v pairs.  We want to be able to warn if these
   // were passed when the function they passed won't use them.
   m_dict_sp.reset();
+  m_name.clear();
 }
 
 Status OptionGroupPythonClassWithDict::OptionParsingFinished(

@@ -155,51 +155,28 @@ define i8 @n8(i8 %x, i1 %y, i8 %z) {
   ret i8 %t2
 }
 
-; Subtraction can be negated if the first operand can be negated
-; x - (y - z) -> x - y + z -> x + (-y) + z
-define i8 @t9(i8 %x, i8 %y, i8 %z) {
+; Subtraction can be negated by swapping its operands.
+; x - (y - z) -> x - y + z -> x + (z - y)
+define i8 @t9(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t9(
-; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Z:%.*]]
-; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T11:%.*]] = add i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T11]], [[X:%.*]]
-; CHECK-NEXT:    ret i8 [[T2]]
+; CHECK-NEXT:    [[T01:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[T01]]
 ;
-  %t0 = sub i8 0, %z
-  call void @use8(i8 %t0)
-  %t1 = sub i8 %t0, %y
-  %t2 = sub i8 %x, %t1
-  ret i8 %t2
+  %t0 = sub i8 %y, %x
+  %t1 = sub i8 0, %t0
+  ret i8 %t1
 }
 define i8 @n10(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @n10(
-; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Z:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[T0]], [[Y:%.*]]
-; CHECK-NEXT:    call void @use8(i8 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
-; CHECK-NEXT:    ret i8 [[T2]]
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 0, [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
 ;
-  %t0 = sub i8 0, %z
+  %t0 = sub i8 %y, %x
   call void @use8(i8 %t0)
-  %t1 = sub i8 %t0, %y
-  call void @use8(i8 %t1)
-  %t2 = sub i8 %x, %t1
-  ret i8 %t2
-}
-define i8 @n11(i8 %x, i8 %y, i8 %z) {
-; CHECK-LABEL: @n11(
-; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Z:%.*]]
-; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = add i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
-; CHECK-NEXT:    ret i8 [[T2]]
-;
-  %t0 = sub i8 0, %z
-  call void @use8(i8 %t0)
-  %t1 = sub i8 %y, %t0
-  %t2 = sub i8 %x, %t1
-  ret i8 %t2
+  %t1 = sub i8 0, %t0
+  ret i8 %t1
 }
 
 ; Addition can be negated if both operands can be negated
@@ -286,6 +263,114 @@ define i8 @n16(i8 %x, i8 %y, i8 %z) {
   %t0 = sub i8 0, %y
   call void @use8(i8 %t0)
   %t1 = mul i8 %t0, %z
+  call void @use8(i8 %t1)
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+
+; Phi can be negated if all incoming values can be negated
+define i8 @t16(i1 %c, i8 %x) {
+; CHECK-LABEL: @t16(
+; CHECK-NEXT:  begin:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[X:%.*]], [[THEN]] ], [ 42, [[ELSE]] ]
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+begin:
+  br i1 %c, label %then, label %else
+then:
+  %y = sub i8 0, %x
+  br label %end
+else:
+  br label %end
+end:
+  %z = phi i8 [ %y, %then], [ -42, %else ]
+  %n = sub i8 0, %z
+  ret i8 %n
+}
+define i8 @n17(i1 %c, i8 %x) {
+; CHECK-LABEL: @n17(
+; CHECK-NEXT:  begin:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[Y:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[Y]], [[THEN]] ], [ -42, [[ELSE]] ]
+; CHECK-NEXT:    call void @use8(i8 [[Z]])
+; CHECK-NEXT:    [[N:%.*]] = sub i8 0, [[Z]]
+; CHECK-NEXT:    ret i8 [[N]]
+;
+begin:
+  br i1 %c, label %then, label %else
+then:
+  %y = sub i8 0, %x
+  br label %end
+else:
+  br label %end
+end:
+  %z = phi i8 [ %y, %then], [ -42, %else ]
+  call void @use8(i8 %z)
+  %n = sub i8 0, %z
+  ret i8 %n
+}
+define i8 @n19(i1 %c, i8 %x, i8 %y) {
+; CHECK-LABEL: @n19(
+; CHECK-NEXT:  begin:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[Z]], [[THEN]] ], [ [[Y:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[N:%.*]] = sub i8 0, [[R]]
+; CHECK-NEXT:    ret i8 [[N]]
+;
+begin:
+  br i1 %c, label %then, label %else
+then:
+  %z = sub i8 0, %x
+  br label %end
+else:
+  br label %end
+end:
+  %r = phi i8 [ %z, %then], [ %y, %else ]
+  %n = sub i8 0, %r
+  ret i8 %n
+}
+
+; truncation can be negated if it's operand can be negated
+define i8 @t20(i8 %x, i16 %y) {
+; CHECK-LABEL: @t20(
+; CHECK-NEXT:    [[T0:%.*]] = shl i16 -42, [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = trunc i16 [[T0]] to i8
+; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = shl i16 -42, %y
+  %t1 = trunc i16 %t0 to i8
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+define i8 @n21(i8 %x, i16 %y) {
+; CHECK-LABEL: @n21(
+; CHECK-NEXT:    [[T0:%.*]] = shl i16 -42, [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = trunc i16 [[T0]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = shl i16 -42, %y
+  %t1 = trunc i16 %t0 to i8
   call void @use8(i8 %t1)
   %t2 = sub i8 %x, %t1
   ret i8 %t2

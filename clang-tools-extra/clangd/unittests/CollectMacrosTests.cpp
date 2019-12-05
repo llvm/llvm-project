@@ -88,7 +88,7 @@ TEST(CollectMainFileMacros, SelectedMacros) {
         break;
 
       auto Loc = getBeginningOfIdentifier(ExpectedRefs.begin()->start, SM,
-                                          AST.getASTContext().getLangOpts());
+                                          AST.getLangOpts());
       auto Macro = locateMacroAt(Loc, PP);
       assert(Macro);
       auto SID = getSymbolID(Macro->Name, Macro->Info, SM);

@@ -233,6 +233,68 @@ define fp128 @f33(fp128 %x, fp128 %y) {
   ret fp128 %tmp
 }
 
+; Verify that "nnan" minnum/maxnum calls are transformed to
+; compare+select sequences instead of libcalls.
+define float @f34(float %x, float %y) {
+; CHECK-LABEL: f34:
+; CHECK: cebr %f0, %f2
+; CHECK: blr %r14
+; CHECK: ler %f0, %f2
+; CHECK: br %r14
+  %tmp = call nnan float @llvm.minnum.f32(float %x, float %y)
+  ret float %tmp
+}
+
+define double @f35(double %x, double %y) {
+; CHECK-LABEL: f35:
+; CHECK: cdbr %f0, %f2
+; CHECK: blr %r14
+; CHECK: ldr %f0, %f2
+; CHECK: br %r14
+  %tmp = call nnan double @llvm.minnum.f64(double %x, double %y)
+  ret double %tmp
+}
+
+define fp128 @f36(fp128 %x, fp128 %y) {
+; CHECK-LABEL: f36:
+; CHECK: cxbr
+; CHECK: jl
+; CHECK: lxr
+; CHECK: br %r14
+  %tmp = call nnan fp128 @llvm.minnum.f128(fp128 %x, fp128 %y)
+  ret fp128 %tmp
+}
+
+define float @f37(float %x, float %y) {
+; CHECK-LABEL: f37:
+; CHECK: cebr %f0, %f2
+; CHECK: bhr %r14
+; CHECK: ler %f0, %f2
+; CHECK: br %r14
+  %tmp = call nnan float @llvm.maxnum.f32(float %x, float %y)
+  ret float %tmp
+}
+
+define double @f38(double %x, double %y) {
+; CHECK-LABEL: f38:
+; CHECK: cdbr %f0, %f2
+; CHECK: bhr %r14
+; CHECK: ldr %f0, %f2
+; CHECK: br %r14
+  %tmp = call nnan double @llvm.maxnum.f64(double %x, double %y)
+  ret double %tmp
+}
+
+define fp128 @f39(fp128 %x, fp128 %y) {
+; CHECK-LABEL: f39:
+; CHECK: cxbr
+; CHECK: jh
+; CHECK: lxr
+; CHECK: br %r14
+  %tmp = call nnan fp128 @llvm.maxnum.f128(fp128 %x, fp128 %y)
+  ret fp128 %tmp
+}
+
 declare float @llvm.powi.f32(float, i32)
 declare double @llvm.powi.f64(double, i32)
 declare fp128 @llvm.powi.f128(fp128, i32)

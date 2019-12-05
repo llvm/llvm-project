@@ -50,12 +50,6 @@ void MCXCOFFStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                       XCOFF::C_HIDEXT);
   Symbol->setCommon(Size, ByteAlignment);
 
-  // Need to add this symbol to the current Fragment which will belong to the
-  // containing CSECT.
-  auto *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
-  assert(F && "Expected a valid section with a fragment set.");
-  Symbol->setFragment(F);
-
   // Emit the alignment and storage for the variable to the section.
   EmitValueToAlignment(ByteAlignment);
   EmitZeros(Size);

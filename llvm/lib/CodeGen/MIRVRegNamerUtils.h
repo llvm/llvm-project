@@ -84,7 +84,7 @@ public:
 
   /// Same as the above, but sets a BBNum depending on BB traversal that
   /// will be used as prefix for the vreg names.
-  bool renameVRegs(MachineBasicBlock *MBB, unsigned BBNum = 0);
+  bool renameVRegs(MachineBasicBlock *MBB, unsigned BBNum);
 
   unsigned getCurrentBBNumber() const { return CurrentBBNumber; }
 };
