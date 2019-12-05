@@ -1,10 +1,16 @@
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -x c++ -emit-llvm %s -o - -femit-all-decls | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fopenmp-version=45 -x c++ -emit-llvm %s -o - -femit-all-decls | FileCheck %s --check-prefix CHECK --check-prefix OMP45
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls | FileCheck %s --check-prefix CHECK --check-prefix OMP45
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fopenmp-version=50 -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix OMP50
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix OMP50
 
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -x c++ -emit-llvm %s -o - -femit-all-decls | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fopenmp-version=45 -x c++ -emit-llvm %s -o - -femit-all-decls | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fopenmp-version=50 -x c++ -emit-llvm %s -o - -femit-all-decls | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
@@ -45,10 +51,13 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i)
     ;
 // CHECK: call void @__kmpc_taskgroup(%struct.ident_t* [[DEFLOC]], i32 [[GTID]])
-// CHECK: [[TASKV:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i32 1, i64 80, i64 24, i32 (i32, i8*)* bitcast (i32 (i32, [[TDP_TY:%.+]]*)* [[TASK3:@.+]] to i32 (i32, i8*)*))
+// OMP45: [[TASKV:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i32 1, i64 80, i64 24, i32 (i32, i8*)* bitcast (i32 (i32, [[TDP_TY:%.+]]*)* [[TASK3:@.+]] to i32 (i32, i8*)*))
+// OMP50: [[TASKV:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i32 1, i64 80, i64 32, i32 (i32, i8*)* bitcast (i32 (i32, [[TDP_TY:%.+]]*)* [[TASK3:@.+]] to i32 (i32, i8*)*))
 // CHECK: [[TASK:%.+]] = bitcast i8* [[TASKV]] to [[TDP_TY]]*
 // CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds [[TDP_TY]], [[TDP_TY]]* [[TASK]], i32 0, i32 0
-// CHECK: [[IF:%.+]] = icmp ne i32 %{{.+}}, 0
+// OMP45: [[IF:%.+]] = icmp ne i32 %{{.+}}, 0
+// OMP50: [[IF_VAL:%.+]] = load i8, i8* %
+// OMP50: [[IF:%.+]] = trunc i8 [[IF_VAL]] to i1
 // CHECK: [[IF_INT:%.+]] = sext i1 [[IF]] to i32
 // CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], [[TD_TY]]* [[TASK_DATA]], i32 0, i32 5
 // CHECK: store i64 0, i64* [[DOWN]],
