@@ -625,6 +625,13 @@ $InactiveCode[[]]      int Inactive3;
 $InactiveCode[[]]      #else
       int $Variable[[Active2]];
       #endif
+    )cpp",
+      // Argument to 'sizeof...'
+      R"cpp(
+      template <typename... $TemplateParameter[[Elements]]>
+      struct $Class[[TupleSize]] {
+        static const int $StaticField[[size]] = sizeof...($TemplateParameter[[Elements]]);
+      };
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);
