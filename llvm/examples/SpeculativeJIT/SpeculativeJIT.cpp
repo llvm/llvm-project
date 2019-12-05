@@ -76,12 +76,12 @@ public:
 
   ExecutionSession &getES() { return *ES; }
 
-  Error addModule(JITDylib &JD, ThreadSafeModule TSM) {
-    return CODLayer.add(JD, std::move(TSM));
+  Error addModule(ThreadSafeModule TSM) {
+    return CODLayer.add(MainJD, std::move(TSM));
   }
 
   Expected<JITEvaluatedSymbol> lookup(StringRef UnmangledName) {
-    return ES->lookup({&ES->getMainJITDylib()}, Mangle(UnmangledName));
+    return ES->lookup({&MainJD}, Mangle(UnmangledName));
   }
 
   ~SpeculativeJIT() { CompileThreads.wait(); }
@@ -101,15 +101,15 @@ private:
       std::unique_ptr<LazyCallThroughManager> LCTMgr,
       IndirectStubsManagerBuilderFunction ISMBuilder,
       std::unique_ptr<DynamicLibrarySearchGenerator> ProcessSymbolsGenerator)
-      : ES(std::move(ES)), DL(std::move(DL)), LCTMgr(std::move(LCTMgr)),
+      : ES(std::move(ES)), DL(std::move(DL)),
+        MainJD(this->ES->createJITDylib("<main>")), LCTMgr(std::move(LCTMgr)),
         CompileLayer(*this->ES, ObjLayer,
                      ConcurrentIRCompiler(std::move(JTMB))),
         S(Imps, *this->ES),
         SpeculateLayer(*this->ES, CompileLayer, S, Mangle, BlockFreqQuery()),
         CODLayer(*this->ES, SpeculateLayer, *this->LCTMgr,
                  std::move(ISMBuilder)) {
-    this->ES->getMainJITDylib().addGenerator(
-        std::move(ProcessSymbolsGenerator));
+    MainJD.addGenerator(std::move(ProcessSymbolsGenerator));
     this->CODLayer.setImplMap(&Imps);
     this->ES->setDispatchMaterialization(
 
@@ -119,9 +119,9 @@ private:
           auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
           CompileThreads.async(std::move(Work));
         });
-    ExitOnErr(S.addSpeculationRuntime(this->ES->getMainJITDylib(), Mangle));
+    ExitOnErr(S.addSpeculationRuntime(MainJD, Mangle));
     LocalCXXRuntimeOverrides CXXRuntimeoverrides;
-    ExitOnErr(CXXRuntimeoverrides.enable(this->ES->getMainJITDylib(), Mangle));
+    ExitOnErr(CXXRuntimeoverrides.enable(MainJD, Mangle));
   }
 
   static std::unique_ptr<SectionMemoryManager> createMemMgr() {
@@ -132,6 +132,8 @@ private:
   DataLayout DL;
   MangleAndInterner Mangle{*ES, DL};
   ThreadPool CompileThreads{NumThreads};
+
+  JITDylib &MainJD;
 
   Triple TT;
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
@@ -172,8 +174,7 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
-    ExitOnErr(SJ->addModule(SJ->getES().getMainJITDylib(),
-                            ThreadSafeModule(std::move(M), std::move(Ctx))));
+    ExitOnErr(SJ->addModule(ThreadSafeModule(std::move(M), std::move(Ctx))));
   }
 
   auto MainSym = ExitOnErr(SJ->lookup("main"));

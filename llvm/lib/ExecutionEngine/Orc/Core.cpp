@@ -1854,12 +1854,6 @@ void JITDylib::transferEmittedNodeDependencies(
 
 ExecutionSession::ExecutionSession(std::shared_ptr<SymbolStringPool> SSP)
     : SSP(SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>()) {
-  // Construct the main dylib.
-  JDs.push_back(std::unique_ptr<JITDylib>(new JITDylib(*this, "<main>")));
-}
-
-JITDylib &ExecutionSession::getMainJITDylib() {
-  return runSessionLocked([this]() -> JITDylib & { return *JDs.front(); });
 }
 
 JITDylib *ExecutionSession::getJITDylibByName(StringRef Name) {
@@ -1871,14 +1865,11 @@ JITDylib *ExecutionSession::getJITDylibByName(StringRef Name) {
   });
 }
 
-JITDylib &ExecutionSession::createJITDylib(std::string Name,
-                                           bool AddToMainDylibSearchOrder) {
+JITDylib &ExecutionSession::createJITDylib(std::string Name) {
   assert(!getJITDylibByName(Name) && "JITDylib with that name already exists");
   return runSessionLocked([&, this]() -> JITDylib & {
     JDs.push_back(
         std::unique_ptr<JITDylib>(new JITDylib(*this, std::move(Name))));
-    if (AddToMainDylibSearchOrder)
-      JDs.front()->addToSearchOrder(*JDs.back());
     return *JDs.back();
   });
 }

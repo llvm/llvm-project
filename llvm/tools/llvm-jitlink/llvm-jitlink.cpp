@@ -397,7 +397,8 @@ static std::unique_ptr<jitlink::JITLinkMemoryManager> createMemoryManager() {
 }
 
 Session::Session(Triple TT)
-    : MemMgr(createMemoryManager()), ObjLayer(ES, *MemMgr), TT(std::move(TT)) {
+    : MainJD(ES.createJITDylib("<main>")), MemMgr(createMemoryManager()),
+      ObjLayer(ES, *MemMgr), TT(std::move(TT)) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -560,7 +561,7 @@ Error loadProcessSymbols(Session &S) {
   auto FilterMainEntryPoint = [InternedEntryPointName](SymbolStringPtr Name) {
     return Name != InternedEntryPointName;
   };
-  S.ES.getMainJITDylib().addGenerator(
+  S.MainJD.addGenerator(
       ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
           GlobalPrefix, FilterMainEntryPoint)));
 
@@ -589,10 +590,9 @@ Error loadObjects(Session &S) {
   LLVM_DEBUG(dbgs() << "Creating JITDylibs...\n");
   {
     // Create a "main" JITLinkDylib.
-    auto &MainJD = S.ES.getMainJITDylib();
-    IdxToJLD[0] = &MainJD;
-    S.JDSearchOrder.push_back(&MainJD);
-    LLVM_DEBUG(dbgs() << "  0: " << MainJD.getName() << "\n");
+    IdxToJLD[0] = &S.MainJD;
+    S.JDSearchOrder.push_back(&S.MainJD);
+    LLVM_DEBUG(dbgs() << "  0: " << S.MainJD.getName() << "\n");
 
     // Add any extra JITLinkDylibs from the command line.
     std::string JDNamePrefix("lib");
