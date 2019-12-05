@@ -266,6 +266,8 @@ public:
   AssertingVH(ValueTy *P) : ThePtr(GetAsValue(P)) {}
 #endif
 
+  AssertingVH(const AssertingVH<ValueTy> &) = default;
+
   operator ValueTy*() const {
     return getValPtr();
   }
