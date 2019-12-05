@@ -10,11 +10,11 @@
 #define LLVM_TOOLS_DSYMUTIL_DECLCONTEXT_H
 
 #include "CompileUnit.h"
-#include "NonRelocatableStringpool.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/Support/Path.h"
 

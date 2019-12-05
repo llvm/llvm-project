@@ -1,4 +1,4 @@
-//===- NonRelocatableStringpool.h - A simple stringpool  --------*- C++ -*-===//
+//===- llvm/CodeGen/NonRelocatableStringpool.h - A simple stringpool  -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,26 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H
-#define LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H
+#ifndef LLVM_CODEGEN_NONRELOCATABLESTRINGPOOL_H
+#define LLVM_CODEGEN_NONRELOCATABLESTRINGPOOL_H
 
-#include "SymbolMap.h"
-
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/Support/Allocator.h"
 #include <cstdint>
 #include <vector>
 
 namespace llvm {
-namespace dsymutil {
 
 /// A string table that doesn't need relocations.
 ///
-/// We are doing a final link, no need for a string table that has relocation
-/// entries for every reference to it. This class provides this ability by just
-/// associating offsets with strings.
+/// Use this class when a string table doesn't need relocations.
+/// This class provides this ability by just associating offsets with strings.
 class NonRelocatableStringpool {
 public:
   /// Entries are stored into the StringMap and simply linked together through
@@ -34,10 +28,11 @@ public:
   using MapTy = StringMap<DwarfStringPoolEntry, BumpPtrAllocator>;
 
   NonRelocatableStringpool(
-      SymbolMapTranslator Translator = SymbolMapTranslator())
+      std::function<StringRef(StringRef Input)> Translator = nullptr,
+      bool PutEmptyString = false)
       : Translator(Translator) {
-    // Legacy dsymutil puts an empty string at the start of the line table.
-    EmptyString = getEntry("");
+    if (PutEmptyString)
+      EmptyString = getEntry("");
   }
 
   DwarfStringPoolEntryRef getEntry(StringRef S);
@@ -65,7 +60,7 @@ private:
   uint32_t CurrentEndOffset = 0;
   unsigned NumEntries = 0;
   DwarfStringPoolEntryRef EmptyString;
-  SymbolMapTranslator Translator;
+  std::function<StringRef(StringRef Input)> Translator;
 };
 
 /// Helper for making strong types.
@@ -75,15 +70,14 @@ public:
   explicit StrongType(Args... A) : T(std::forward<Args>(A)...) {}
 };
 
-/// It's very easy to introduce bugs by passing the wrong string pool in the
-/// dwarf linker. By using strong types the interface enforces that the right
+/// It's very easy to introduce bugs by passing the wrong string pool.
+/// By using strong types the interface enforces that the right
 /// kind of pool is used.
 struct UniqueTag {};
 struct OffsetsTag {};
 using UniquingStringPool = StrongType<NonRelocatableStringpool, UniqueTag>;
 using OffsetsStringPool = StrongType<NonRelocatableStringpool, OffsetsTag>;
 
-} // end namespace dsymutil
 } // end namespace llvm
 
-#endif // LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H
+#endif // LLVM_CODEGEN_NONRELOCATABLESTRINGPOOL_H

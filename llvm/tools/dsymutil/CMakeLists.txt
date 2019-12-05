@@ -28,7 +28,6 @@ add_llvm_tool(dsymutil
   DwarfStreamer.cpp
   MachODebugMapParser.cpp
   MachOUtils.cpp
-  NonRelocatableStringpool.cpp
   SymbolMap.cpp
 
   DEPENDS
