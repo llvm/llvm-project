@@ -33,8 +33,7 @@ class TestScriptedResolver(TestBase):
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_command_line(self):
-        """ Make sure we are called at the right depths depending on what we return
-            from __get_depth__"""
+        """ Test setting a resolver breakpoint from the command line """
         self.build()
         self.do_test_cli()
 
@@ -202,6 +201,23 @@ class TestScriptedResolver(TestBase):
 
         lldbutil.run_break_set_by_script(self, "resolver.Resolver", extra_options="-k symbol -v break_on_me")
 
+        # Make sure setting a resolver breakpoint doesn't pollute further breakpoint setting
+        # by checking the description of a regular file & line breakpoint to make sure it
+        # doesn't mention the Python Resolver function:
+        bkpt_no = lldbutil.run_break_set_by_file_and_line(self, "main.c", 12)
+        bkpt = target.FindBreakpointByID(bkpt_no)
+        strm = lldb.SBStream()
+        bkpt.GetDescription(strm, False)
+        used_resolver = "I am a python breakpoint resolver" in strm.GetData()
+        self.assertFalse(used_resolver, "Found the resolver description in the file & line breakpoint description.")
+
+        # Also make sure the breakpoint was where we expected:
+        bp_loc = bkpt.GetLocationAtIndex(0)
+        bp_sc = bp_loc.GetAddress().GetSymbolContext(lldb.eSymbolContextEverything)
+        bp_se = bp_sc.GetLineEntry()
+        self.assertEqual(bp_se.GetLine(), 12, "Got the right line number")
+        self.assertEqual(bp_se.GetFileSpec().GetFilename(), "main.c", "Got the right filename")
+        
     def do_test_bad_options(self):
         target = self.make_target_and_import()
 
