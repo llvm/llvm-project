@@ -11,8 +11,8 @@
 ; RUN: llvm-dis %t1.imported.bc -o - | FileCheck %s --check-prefix=IMPORT
 ; RUN: llvm-lto -thinlto-action=optimize %t1.imported.bc -o - | llvm-dis - -o - | FileCheck %s --check-prefix=OPTIMIZE
 
-; IMPORT: @gFoo.llvm.0 = internal unnamed_addr global i32 1, align 4, !dbg !0
-; IMPORT-NEXT: @gBar = internal local_unnamed_addr global i32 2, align 4, !dbg !5
+; IMPORT: @gFoo.llvm.0 = internal unnamed_addr global i32 0, align 4, !dbg !0
+; IMPORT-NEXT: @gBar = internal local_unnamed_addr global i32 0, align 4, !dbg !5
 ; IMPORT: !DICompileUnit({{.*}})
 
 ; STATS:  2 module-summary-index - Number of live global variables marked write only 
