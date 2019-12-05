@@ -1060,6 +1060,16 @@ class sve_int_pred_log<bits<4> opc, string asm>
                       !strconcat(asm, "\t$Pd, $Pg/z, $Pn, $Pm"));
 
   let Defs = !if(!eq (opc{2}, 1), [NZCV], []);
+
+}
+
+multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op> {
+  def NAME : sve_int_pred_log<opc, asm>;
+
+  def : SVE_3_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, nxv16i1, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv8i1, op, nxv8i1, nxv8i1, nxv8i1, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv4i1, op, nxv4i1, nxv4i1, nxv4i1, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv2i1, op, nxv2i1, nxv2i1, nxv2i1, !cast<Instruction>(NAME)>;
 }
 
 
