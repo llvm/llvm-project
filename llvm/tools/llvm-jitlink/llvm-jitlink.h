@@ -26,6 +26,7 @@ namespace llvm {
 
 struct Session {
   orc::ExecutionSession ES;
+  orc::JITDylib &MainJD;
   std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr;
   orc::ObjectLinkingLayer ObjLayer;
   std::vector<orc::JITDylib *> JDSearchOrder;

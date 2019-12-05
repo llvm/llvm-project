@@ -1,0 +1,25 @@
+# RUN: llvm-ifs -action write-ifs -o - %s | FileCheck --check-prefixes=CHECK-DEFAULT %s
+# RUN: llvm-ifs -action write-ifs -o - %s %S/weak.ifs | FileCheck --check-prefixes=CHECK-MERGE %s
+
+# CHECK-DEFAULT: --- !experimental-ifs-v1
+# CHECK-DEFAULT-NEXT: IfsVersion:      1.2
+# CHECK-DEFAULT-NEXT: Triple:          ''
+# CHECK-DEFAULT-NEXT: ObjectFileFormat: ELF
+# CHECK-DEFAULT-NEXT: Symbols:         {}
+# CHECK-DEFAULT-NEXT: ...
+
+# CHECK-MERGE: --- !experimental-ifs-v1
+# CHECK-MERGE-NEXT: IfsVersion: 1.0
+# CHECK-MERGE-NEXT: Triple: x86_64-unknown-linux-gnu
+# CHECK-MERGE-NEXT: ObjectFileFormat: ELF
+# CHECK-MERGE-NEXT: Symbols:
+# CHECK-MERGE-DAG:   _Z8weakFuncv: { Type: Func, Weak: true }
+# CHECK-MERGE-DAG:   _Z10strongFuncv: { Type: Func }
+# CHECK-MERGE: ...
+
+--- !experimental-ifs-v1
+IfsVersion:      1.2
+Triple:          ''
+ObjectFileFormat: ELF
+Symbols:         {}
+...

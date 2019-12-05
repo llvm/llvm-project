@@ -1281,6 +1281,13 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::UMINV:             return "AArch64ISD::UMINV";
   case AArch64ISD::SMAXV:             return "AArch64ISD::SMAXV";
   case AArch64ISD::UMAXV:             return "AArch64ISD::UMAXV";
+  case AArch64ISD::SMAXV_PRED:        return "AArch64ISD::SMAXV_PRED";
+  case AArch64ISD::UMAXV_PRED:        return "AArch64ISD::UMAXV_PRED";
+  case AArch64ISD::SMINV_PRED:        return "AArch64ISD::SMINV_PRED";
+  case AArch64ISD::UMINV_PRED:        return "AArch64ISD::UMINV_PRED";
+  case AArch64ISD::ORV_PRED:          return "AArch64ISD::ORV_PRED";
+  case AArch64ISD::EORV_PRED:         return "AArch64ISD::EORV_PRED";
+  case AArch64ISD::ANDV_PRED:         return "AArch64ISD::ANDV_PRED";
   case AArch64ISD::NOT:               return "AArch64ISD::NOT";
   case AArch64ISD::BIT:               return "AArch64ISD::BIT";
   case AArch64ISD::CBZ:               return "AArch64ISD::CBZ";
@@ -10520,6 +10527,34 @@ static SDValue combineAcrossLanesIntrinsic(unsigned Opc, SDNode *N,
                      DAG.getConstant(0, dl, MVT::i64));
 }
 
+static SDValue LowerSVEIntReduction(SDNode *N, unsigned Opc,
+                                    SelectionDAG &DAG) {
+  SDLoc dl(N);
+  LLVMContext &Ctx = *DAG.getContext();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  EVT VT = N->getValueType(0);
+  SDValue Pred = N->getOperand(1);
+  SDValue Data = N->getOperand(2);
+  EVT DataVT = Data.getValueType();
+
+  if (DataVT.getVectorElementType().isScalarInteger() &&
+      (VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64)) {
+    if (!TLI.isTypeLegal(DataVT))
+      return SDValue();
+
+    EVT OutputVT = EVT::getVectorVT(Ctx, VT,
+      AArch64::NeonBitsPerVector / VT.getSizeInBits());
+    SDValue Reduce = DAG.getNode(Opc, dl, OutputVT, Pred, Data);
+    SDValue Zero = DAG.getConstant(0, dl, MVT::i64);
+    SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Reduce, Zero);
+
+    return Result;
+  }
+
+  return SDValue();
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -10574,6 +10609,20 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_crc32h:
   case Intrinsic::aarch64_crc32ch:
     return tryCombineCRC32(0xffff, N, DAG);
+  case Intrinsic::aarch64_sve_smaxv:
+    return LowerSVEIntReduction(N, AArch64ISD::SMAXV_PRED, DAG);
+  case Intrinsic::aarch64_sve_umaxv:
+    return LowerSVEIntReduction(N, AArch64ISD::UMAXV_PRED, DAG);
+  case Intrinsic::aarch64_sve_sminv:
+    return LowerSVEIntReduction(N, AArch64ISD::SMINV_PRED, DAG);
+  case Intrinsic::aarch64_sve_uminv:
+    return LowerSVEIntReduction(N, AArch64ISD::UMINV_PRED, DAG);
+  case Intrinsic::aarch64_sve_orv:
+    return LowerSVEIntReduction(N, AArch64ISD::ORV_PRED, DAG);
+  case Intrinsic::aarch64_sve_eorv:
+    return LowerSVEIntReduction(N, AArch64ISD::EORV_PRED, DAG);
+  case Intrinsic::aarch64_sve_andv:
+    return LowerSVEIntReduction(N, AArch64ISD::ANDV_PRED, DAG);
   }
   return SDValue();
 }

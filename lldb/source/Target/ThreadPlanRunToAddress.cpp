@@ -97,7 +97,7 @@ void ThreadPlanRunToAddress::GetDescription(Stream *s,
       s->Printf("run to addresses: ");
 
     for (size_t i = 0; i < num_addresses; i++) {
-      s->Address(m_addresses[i], sizeof(addr_t));
+      DumpAddress(s->AsRawOstream(), m_addresses[i], sizeof(addr_t));
       s->Printf(" ");
     }
   } else {
@@ -116,7 +116,7 @@ void ThreadPlanRunToAddress::GetDescription(Stream *s,
         s->Indent();
       }
 
-      s->Address(m_addresses[i], sizeof(addr_t));
+      DumpAddress(s->AsRawOstream(), m_addresses[i], sizeof(addr_t));
       s->Printf(" using breakpoint: %d - ", m_break_ids[i]);
       Breakpoint *breakpoint =
           m_thread.CalculateTarget()->GetBreakpointByID(m_break_ids[i]).get();
@@ -143,7 +143,7 @@ bool ThreadPlanRunToAddress::ValidatePlan(Stream *error) {
       all_bps_good = false;
       if (error) {
         error->Printf("Could not set breakpoint for address: ");
-        error->Address(m_addresses[i], sizeof(addr_t));
+        DumpAddress(error->AsRawOstream(), m_addresses[i], sizeof(addr_t));
         error->Printf("\n");
       }
     }

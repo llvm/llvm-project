@@ -36,8 +36,8 @@ bool VMRange::ContainsRange(const VMRange::collection &coll,
 }
 
 void VMRange::Dump(Stream *s, lldb::addr_t offset, uint32_t addr_width) const {
-  s->AddressRange(offset + GetBaseAddress(), offset + GetEndAddress(),
-                  addr_width);
+  DumpAddressRange(s->AsRawOstream(), offset + GetBaseAddress(),
+                   offset + GetEndAddress(), addr_width);
 }
 
 bool lldb_private::operator==(const VMRange &lhs, const VMRange &rhs) {

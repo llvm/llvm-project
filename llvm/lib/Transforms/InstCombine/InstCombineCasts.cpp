@@ -1622,6 +1622,11 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
   Value *X;
   Instruction *Op = dyn_cast<Instruction>(FPT.getOperand(0));
   if (Op && Op->hasOneUse()) {
+    // FIXME: The FMF should propagate from the fptrunc, not the source op.
+    IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+    if (isa<FPMathOperator>(Op))
+      Builder.setFastMathFlags(Op->getFastMathFlags());
+
     if (match(Op, m_FNeg(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTrunc(X, Ty);
 
@@ -1630,6 +1635,24 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
       if (isa<BinaryOperator>(Op))
         return BinaryOperator::CreateFNegFMF(InnerTrunc, Op);
       return UnaryOperator::CreateFNegFMF(InnerTrunc, Op);
+    }
+
+    // If we are truncating a select that has an extended operand, we can
+    // narrow the other operand and do the select as a narrow op.
+    Value *Cond, *X, *Y;
+    if (match(Op, m_Select(m_Value(Cond), m_FPExt(m_Value(X)), m_Value(Y))) &&
+        X->getType() == Ty) {
+      // fptrunc (select Cond, (fpext X), Y --> select Cond, X, (fptrunc Y)
+      Value *NarrowY = Builder.CreateFPTrunc(Y, Ty);
+      Value *Sel = Builder.CreateSelect(Cond, X, NarrowY, "narrow.sel", Op);
+      return replaceInstUsesWith(FPT, Sel);
+    }
+    if (match(Op, m_Select(m_Value(Cond), m_Value(Y), m_FPExt(m_Value(X)))) &&
+        X->getType() == Ty) {
+      // fptrunc (select Cond, Y, (fpext X) --> select Cond, (fptrunc Y), X
+      Value *NarrowY = Builder.CreateFPTrunc(Y, Ty);
+      Value *Sel = Builder.CreateSelect(Cond, NarrowY, X, "narrow.sel", Op);
+      return replaceInstUsesWith(FPT, Sel);
     }
   }
 

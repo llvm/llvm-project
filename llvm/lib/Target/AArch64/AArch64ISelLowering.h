@@ -155,6 +155,14 @@ enum NodeType : unsigned {
   SMAXV,
   UMAXV,
 
+  SMAXV_PRED,
+  UMAXV_PRED,
+  SMINV_PRED,
+  UMINV_PRED,
+  ORV_PRED,
+  EORV_PRED,
+  ANDV_PRED,
+
   // Vector bitwise negation
   NOT,
 

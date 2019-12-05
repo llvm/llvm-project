@@ -868,7 +868,7 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
       IsCompatibleMatch(other) && GetCore() == ArchSpec::eCore_arm_generic &&
       other.GetCore() != ArchSpec::eCore_arm_generic) {
     m_core = other.GetCore();
-    CoreUpdated(true);
+    CoreUpdated(false);
   }
   if (GetFlags() == 0) {
     SetFlags(other.GetFlags());

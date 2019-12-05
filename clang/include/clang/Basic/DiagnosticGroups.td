@@ -1109,6 +1109,9 @@ def SpirCompat : DiagGroup<"spir-compat">;
 // Warning for the experimental-isel options.
 def ExperimentalISel : DiagGroup<"experimental-isel">;
 
+// Warning for the experimental float control options.
+def ExperimentalFloatControl : DiagGroup<"experimental-float-control">;
+
 // A warning group specifically for warnings related to function
 // multiversioning.
 def FunctionMultiVersioning : DiagGroup<"function-multiversion">;

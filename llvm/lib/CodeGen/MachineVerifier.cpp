@@ -124,8 +124,8 @@ namespace {
     void addRegWithSubRegs(RegVector &RV, unsigned Reg) {
       RV.push_back(Reg);
       if (Register::isPhysicalRegister(Reg))
-        for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs)
-          RV.push_back(*SubRegs);
+        for (const MCPhysReg &SubReg : TRI->subregs(Reg))
+          RV.push_back(SubReg);
     }
 
     struct BBInfo {
@@ -802,18 +802,16 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
         report("MBB live-in list contains non-physical register", MBB);
         continue;
       }
-      for (MCSubRegIterator SubRegs(LI.PhysReg, TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs)
-        regsLive.insert(*SubRegs);
+      for (const MCPhysReg &SubReg : TRI->subregs_inclusive(LI.PhysReg))
+        regsLive.insert(SubReg);
     }
   }
 
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   BitVector PR = MFI.getPristineRegs(*MF);
   for (unsigned I : PR.set_bits()) {
-    for (MCSubRegIterator SubRegs(I, TRI, /*IncludeSelf=*/true);
-         SubRegs.isValid(); ++SubRegs)
-      regsLive.insert(*SubRegs);
+    for (const MCPhysReg &SubReg : TRI->subregs_inclusive(I))
+      regsLive.insert(SubReg);
   }
 
   regsKilled.clear();
@@ -2016,9 +2014,9 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
         bool Bad = !isReserved(Reg);
         // We are fine if just any subregister has a defined value.
         if (Bad) {
-          for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid();
-               ++SubRegs) {
-            if (regsLive.count(*SubRegs)) {
+
+          for (const MCPhysReg &SubReg : TRI->subregs(Reg)) {
+            if (regsLive.count(SubReg)) {
               Bad = false;
               break;
             }
@@ -2036,9 +2034,8 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             if (!Register::isPhysicalRegister(MOP.getReg()))
               continue;
 
-            for (MCSubRegIterator SubRegs(MOP.getReg(), TRI); SubRegs.isValid();
-                 ++SubRegs) {
-              if (*SubRegs == Reg) {
+            for (const MCPhysReg &SubReg : TRI->subregs(MOP.getReg())) {
+              if (SubReg == Reg) {
                 Bad = false;
                 break;
               }

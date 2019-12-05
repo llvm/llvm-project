@@ -216,6 +216,41 @@ TEST(ArchSpecTest, MergeFrom) {
     EXPECT_EQ(llvm::Triple::EnvironmentType::UnknownEnvironment,
               A.GetTriple().getEnvironment());
   }
+  {
+    ArchSpec A("arm--linux-eabihf");
+    ArchSpec B("armv8l--linux-gnueabihf");
+
+    EXPECT_TRUE(A.IsValid());
+    EXPECT_TRUE(B.IsValid());
+
+    EXPECT_EQ(llvm::Triple::ArchType::arm, A.GetTriple().getArch());
+    EXPECT_EQ(llvm::Triple::ArchType::arm, B.GetTriple().getArch());
+
+    EXPECT_EQ(ArchSpec::eCore_arm_generic, A.GetCore());
+    EXPECT_EQ(ArchSpec::eCore_arm_armv8l, B.GetCore());
+
+    EXPECT_EQ(llvm::Triple::VendorType::UnknownVendor,
+              A.GetTriple().getVendor());
+    EXPECT_EQ(llvm::Triple::VendorType::UnknownVendor,
+              B.GetTriple().getVendor());
+
+    EXPECT_EQ(llvm::Triple::OSType::Linux, A.GetTriple().getOS());
+    EXPECT_EQ(llvm::Triple::OSType::Linux, B.GetTriple().getOS());
+
+    EXPECT_EQ(llvm::Triple::EnvironmentType::EABIHF,
+              A.GetTriple().getEnvironment());
+    EXPECT_EQ(llvm::Triple::EnvironmentType::GNUEABIHF,
+              B.GetTriple().getEnvironment());
+
+    A.MergeFrom(B);
+    EXPECT_EQ(llvm::Triple::ArchType::arm, A.GetTriple().getArch());
+    EXPECT_EQ(ArchSpec::eCore_arm_armv8l, A.GetCore());
+    EXPECT_EQ(llvm::Triple::VendorType::UnknownVendor,
+              A.GetTriple().getVendor());
+    EXPECT_EQ(llvm::Triple::OSType::Linux, A.GetTriple().getOS());
+    EXPECT_EQ(llvm::Triple::EnvironmentType::EABIHF,
+              A.GetTriple().getEnvironment());
+  }
 }
 
 TEST(ArchSpecTest, MergeFromMachOUnknown) {

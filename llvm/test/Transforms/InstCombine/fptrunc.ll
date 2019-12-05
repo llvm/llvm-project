@@ -48,3 +48,91 @@ define <2 x half> @fmul_constant_op1(<2 x float> %x) {
   %r = fptrunc <2 x float> %bo to <2 x half>
   ret <2 x half> %r
 }
+
+define float @fptrunc_select_true_val(float %x, double %y, i1 %cond) {
+; CHECK-LABEL: @fptrunc_select_true_val(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[Y:%.*]] to float
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select fast i1 [[COND:%.*]], float [[TMP1]], float [[X:%.*]]
+; CHECK-NEXT:    ret float [[NARROW_SEL]]
+;
+  %e = fpext float %x to double
+  %sel = select fast i1 %cond, double %y, double %e
+  %r = fptrunc double %sel to float
+  ret float %r
+}
+
+define <2 x float> @fptrunc_select_false_val(<2 x float> %x, <2 x double> %y, <2 x i1> %cond) {
+; CHECK-LABEL: @fptrunc_select_false_val(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x double> [[Y:%.*]] to <2 x float>
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select nnan <2 x i1> [[COND:%.*]], <2 x float> [[X:%.*]], <2 x float> [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[NARROW_SEL]]
+;
+  %e = fpext <2 x float> %x to <2 x double>
+  %sel = select nnan <2 x i1> %cond, <2 x double> %e, <2 x double> %y
+  %r = fptrunc <2 x double> %sel to <2 x float>
+  ret <2 x float> %r
+}
+
+declare void @use(float)
+
+define half @fptrunc_select_true_val_extra_use(half %x, float %y, i1 %cond) {
+; CHECK-LABEL: @fptrunc_select_true_val_extra_use(
+; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to float
+; CHECK-NEXT:    call void @use(float [[E]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[Y:%.*]] to half
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select ninf i1 [[COND:%.*]], half [[TMP1]], half [[X]]
+; CHECK-NEXT:    ret half [[NARROW_SEL]]
+;
+  %e = fpext half %x to float
+  call void @use(float %e)
+  %sel = select ninf i1 %cond, float %y, float %e
+  %r = fptrunc float %sel to half
+  ret half %r
+}
+
+; Negative test - this would require an extra instruction.
+
+define half @fptrunc_select_true_val_extra_use_2(half %x, float %y, i1 %cond) {
+; CHECK-LABEL: @fptrunc_select_true_val_extra_use_2(
+; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to float
+; CHECK-NEXT:    [[SEL:%.*]] = select ninf i1 [[COND:%.*]], float [[Y:%.*]], float [[E]]
+; CHECK-NEXT:    call void @use(float [[SEL]])
+; CHECK-NEXT:    [[R:%.*]] = fptrunc float [[SEL]] to half
+; CHECK-NEXT:    ret half [[R]]
+;
+  %e = fpext half %x to float
+  %sel = select ninf i1 %cond, float %y, float %e
+  call void @use(float %sel)
+  %r = fptrunc float %sel to half
+  ret half %r
+}
+
+; Negative test - the extend must be from the same source type as the result of the trunc.
+
+define float @fptrunc_select_true_val_type_mismatch(half %x, double %y, i1 %cond) {
+; CHECK-LABEL: @fptrunc_select_true_val_type_mismatch(
+; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to double
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], double [[Y:%.*]], double [[E]]
+; CHECK-NEXT:    [[R:%.*]] = fptrunc double [[SEL]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e = fpext half %x to double
+  %sel = select i1 %cond, double %y, double %e
+  %r = fptrunc double %sel to float
+  ret float %r
+}
+
+; Negative test - but given enough FMF, should this be folded?
+
+define float @fptrunc_select_true_val_type_mismatch_fast(half %x, double %y, i1 %cond) {
+; CHECK-LABEL: @fptrunc_select_true_val_type_mismatch_fast(
+; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to double
+; CHECK-NEXT:    [[SEL:%.*]] = select fast i1 [[COND:%.*]], double [[Y:%.*]], double [[E]]
+; CHECK-NEXT:    [[R:%.*]] = fptrunc double [[SEL]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e = fpext half %x to double
+  %sel = select fast i1 %cond, double %y, double %e
+  %r = fptrunc double %sel to float
+  ret float %r
+}

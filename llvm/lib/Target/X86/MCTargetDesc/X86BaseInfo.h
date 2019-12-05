@@ -101,6 +101,248 @@ namespace X86 {
 
     COND_INVALID
   };
+
+  // The classification for the first instruction in macro fusion.
+  enum class FirstMacroFusionInstKind {
+    // TEST
+    Test,
+    // CMP
+    Cmp,
+    // AND
+    And,
+    // ADD, SUB
+    AddSub,
+    // INC, DEC
+    IncDec,
+    // Not valid as a first macro fusion instruction
+    Invalid
+  };
+
+  enum class SecondMacroFusionInstKind {
+    // JA, JB and variants.
+    AB,
+    // JE, JL, JG and variants.
+    ELG,
+    // JS, JP, JO and variants
+    SPO,
+    // Not a fusible jump.
+    Invalid,
+  };
+
+  /// classifyFirstOpcodeInMacroFusion - return the type of the first
+  /// instruction in macro-fusion.
+  inline FirstMacroFusionInstKind
+  classifyFirstOpcodeInMacroFusion(unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      return FirstMacroFusionInstKind::Invalid;
+    // TEST
+    case X86::TEST16i16:
+    case X86::TEST16mr:
+    case X86::TEST16ri:
+    case X86::TEST16rr:
+    case X86::TEST32i32:
+    case X86::TEST32mr:
+    case X86::TEST32ri:
+    case X86::TEST32rr:
+    case X86::TEST64i32:
+    case X86::TEST64mr:
+    case X86::TEST64ri32:
+    case X86::TEST64rr:
+    case X86::TEST8i8:
+    case X86::TEST8mr:
+    case X86::TEST8ri:
+    case X86::TEST8rr:
+      return FirstMacroFusionInstKind::Test;
+    case X86::AND16i16:
+    case X86::AND16ri:
+    case X86::AND16ri8:
+    case X86::AND16rm:
+    case X86::AND16rr:
+    case X86::AND16rr_REV:
+    case X86::AND32i32:
+    case X86::AND32ri:
+    case X86::AND32ri8:
+    case X86::AND32rm:
+    case X86::AND32rr:
+    case X86::AND32rr_REV:
+    case X86::AND64i32:
+    case X86::AND64ri32:
+    case X86::AND64ri8:
+    case X86::AND64rm:
+    case X86::AND64rr:
+    case X86::AND64rr_REV:
+    case X86::AND8i8:
+    case X86::AND8ri:
+    case X86::AND8ri8:
+    case X86::AND8rm:
+    case X86::AND8rr:
+    case X86::AND8rr_REV:
+      return FirstMacroFusionInstKind::And;
+    // CMP
+    case X86::CMP16i16:
+    case X86::CMP16mr:
+    case X86::CMP16ri:
+    case X86::CMP16ri8:
+    case X86::CMP16rm:
+    case X86::CMP16rr:
+    case X86::CMP16rr_REV:
+    case X86::CMP32i32:
+    case X86::CMP32mr:
+    case X86::CMP32ri:
+    case X86::CMP32ri8:
+    case X86::CMP32rm:
+    case X86::CMP32rr:
+    case X86::CMP32rr_REV:
+    case X86::CMP64i32:
+    case X86::CMP64mr:
+    case X86::CMP64ri32:
+    case X86::CMP64ri8:
+    case X86::CMP64rm:
+    case X86::CMP64rr:
+    case X86::CMP64rr_REV:
+    case X86::CMP8i8:
+    case X86::CMP8mr:
+    case X86::CMP8ri:
+    case X86::CMP8ri8:
+    case X86::CMP8rm:
+    case X86::CMP8rr:
+    case X86::CMP8rr_REV:
+      return FirstMacroFusionInstKind::Cmp;
+    // ADD
+    case X86::ADD16i16:
+    case X86::ADD16ri:
+    case X86::ADD16ri8:
+    case X86::ADD16rm:
+    case X86::ADD16rr:
+    case X86::ADD16rr_REV:
+    case X86::ADD32i32:
+    case X86::ADD32ri:
+    case X86::ADD32ri8:
+    case X86::ADD32rm:
+    case X86::ADD32rr:
+    case X86::ADD32rr_REV:
+    case X86::ADD64i32:
+    case X86::ADD64ri32:
+    case X86::ADD64ri8:
+    case X86::ADD64rm:
+    case X86::ADD64rr:
+    case X86::ADD64rr_REV:
+    case X86::ADD8i8:
+    case X86::ADD8ri:
+    case X86::ADD8ri8:
+    case X86::ADD8rm:
+    case X86::ADD8rr:
+    case X86::ADD8rr_REV:
+    // SUB
+    case X86::SUB16i16:
+    case X86::SUB16ri:
+    case X86::SUB16ri8:
+    case X86::SUB16rm:
+    case X86::SUB16rr:
+    case X86::SUB16rr_REV:
+    case X86::SUB32i32:
+    case X86::SUB32ri:
+    case X86::SUB32ri8:
+    case X86::SUB32rm:
+    case X86::SUB32rr:
+    case X86::SUB32rr_REV:
+    case X86::SUB64i32:
+    case X86::SUB64ri32:
+    case X86::SUB64ri8:
+    case X86::SUB64rm:
+    case X86::SUB64rr:
+    case X86::SUB64rr_REV:
+    case X86::SUB8i8:
+    case X86::SUB8ri:
+    case X86::SUB8ri8:
+    case X86::SUB8rm:
+    case X86::SUB8rr:
+    case X86::SUB8rr_REV:
+      return FirstMacroFusionInstKind::AddSub;
+    // INC
+    case X86::INC16r:
+    case X86::INC16r_alt:
+    case X86::INC32r:
+    case X86::INC32r_alt:
+    case X86::INC64r:
+    case X86::INC8r:
+    // DEC
+    case X86::DEC16r:
+    case X86::DEC16r_alt:
+    case X86::DEC32r:
+    case X86::DEC32r_alt:
+    case X86::DEC64r:
+    case X86::DEC8r:
+      return FirstMacroFusionInstKind::IncDec;
+    }
+  }
+
+  /// classifySecondCondCodeInMacroFusion - return the type of the second
+  /// instruction in macro-fusion.
+  inline SecondMacroFusionInstKind
+  classifySecondCondCodeInMacroFusion(X86::CondCode CC) {
+    if (CC == X86::COND_INVALID)
+      return SecondMacroFusionInstKind::Invalid;
+
+    switch (CC) {
+    default:
+      return SecondMacroFusionInstKind::Invalid;
+    // JE,JZ
+    case X86::COND_E:
+    // JNE,JNZ
+    case X86::COND_NE:
+    // JL,JNGE
+    case X86::COND_L:
+    // JLE,JNG
+    case X86::COND_LE:
+    // JG,JNLE
+    case X86::COND_G:
+    // JGE,JNL
+    case X86::COND_GE:
+      return SecondMacroFusionInstKind::ELG;
+    // JB,JC
+    case X86::COND_B:
+    // JNA,JBE
+    case X86::COND_BE:
+    // JA,JNBE
+    case X86::COND_A:
+    // JAE,JNC,JNB
+    case X86::COND_AE:
+      return SecondMacroFusionInstKind::AB;
+    // JS
+    case X86::COND_S:
+    // JNS
+    case X86::COND_NS:
+    // JP,JPE
+    case X86::COND_P:
+    // JNP,JPO
+    case X86::COND_NP:
+    // JO
+    case X86::COND_O:
+    // JNO
+    case X86::COND_NO:
+      return SecondMacroFusionInstKind::SPO;
+    }
+  }
+
+  inline bool isMacroFused(FirstMacroFusionInstKind FirstKind,
+                           SecondMacroFusionInstKind SecondKind) {
+    switch (FirstKind) {
+    case X86::FirstMacroFusionInstKind::Test:
+    case X86::FirstMacroFusionInstKind::And:
+      return true;
+    case X86::FirstMacroFusionInstKind::Cmp:
+    case X86::FirstMacroFusionInstKind::AddSub:
+      return SecondKind == X86::SecondMacroFusionInstKind::AB ||
+             SecondKind == X86::SecondMacroFusionInstKind::ELG;
+    case X86::FirstMacroFusionInstKind::IncDec:
+      return SecondKind == X86::SecondMacroFusionInstKind::ELG;
+    case X86::FirstMacroFusionInstKind::Invalid:
+      return false;
+    }
+    llvm_unreachable("unknown fusion type");
+  }
 } // end namespace X86;
 
 /// X86II - This namespace holds all of the target specific flags that

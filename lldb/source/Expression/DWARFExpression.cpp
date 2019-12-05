@@ -2929,8 +2929,9 @@ void DWARFExpression::PrintDWARFLocationList(
     s.PutCString("\n            ");
     s.Indent();
     if (cu)
-      s.AddressRange(start_addr + base_addr, end_addr + base_addr,
-                     cu->GetAddressByteSize(), nullptr, ": ");
+      DumpAddressRange(s.AsRawOstream(), start_addr + base_addr,
+                       end_addr + base_addr, cu->GetAddressByteSize(), nullptr,
+                       ": ");
     uint32_t loc_length = debug_loc_data.GetU16(&offset);
 
     DataExtractor locationData(debug_loc_data, offset, loc_length);

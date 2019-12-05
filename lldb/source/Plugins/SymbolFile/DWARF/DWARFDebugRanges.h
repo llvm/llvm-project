@@ -48,27 +48,4 @@ protected:
   range_map m_range_map;
 };
 
-// DWARF v5 .debug_rnglists section.
-class DWARFDebugRngLists final : public DWARFDebugRangesBase {
-  struct RngListEntry {
-    uint8_t encoding;
-    uint64_t value0;
-    uint64_t value1;
-  };
-
-public:
-  void Extract(lldb_private::DWARFContext &context) override;
-  bool FindRanges(const DWARFUnit *cu, dw_offset_t debug_ranges_offset,
-                  DWARFRangeList &range_list) const override;
-  uint64_t GetOffset(size_t Index) const;
-
-protected:
-  bool ExtractRangeList(const lldb_private::DWARFDataExtractor &data,
-                        uint8_t addrSize, lldb::offset_t *offset_ptr,
-                        std::vector<RngListEntry> &list);
-
-  std::vector<uint64_t> Offsets;
-  std::map<dw_offset_t, std::vector<RngListEntry>> m_range_map;
-};
-
 #endif // SymbolFileDWARF_DWARFDebugRanges_h_

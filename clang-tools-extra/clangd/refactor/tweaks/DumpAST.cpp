@@ -61,7 +61,7 @@ REGISTER_TWEAK(DumpAST)
 llvm::Expected<Tweak::Effect> DumpAST::apply(const Selection &Inputs) {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
-  Node->dump(OS, Inputs.AST.getASTContext().getSourceManager());
+  Node->dump(OS, Inputs.AST.getSourceManager());
   return Effect::showMessage(std::move(OS.str()));
 }
 

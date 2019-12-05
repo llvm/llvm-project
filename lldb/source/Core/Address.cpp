@@ -418,13 +418,13 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
       section_sp->DumpName(s);
       s->Printf(" + %" PRIu64, m_offset);
     } else {
-      s->Address(m_offset, addr_size);
+      DumpAddress(s->AsRawOstream(), m_offset, addr_size);
     }
     break;
 
   case DumpStyleSectionPointerOffset:
     s->Printf("(Section *)%p + ", static_cast<void *>(section_sp.get()));
-    s->Address(m_offset, addr_size);
+    DumpAddress(s->AsRawOstream(), m_offset, addr_size);
     break;
 
   case DumpStyleModuleWithFileAddress:
@@ -444,7 +444,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
         return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size);
       return false;
     }
-    s->Address(file_addr, addr_size);
+    DumpAddress(s->AsRawOstream(), file_addr, addr_size);
     if (style == DumpStyleModuleWithFileAddress && section_sp)
       s->PutChar(']');
   } break;
@@ -472,7 +472,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
         return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size);
       return false;
     }
-    s->Address(load_addr, addr_size);
+    DumpAddress(s->AsRawOstream(), load_addr, addr_size);
   } break;
 
   case DumpStyleResolvedDescription:
@@ -754,7 +754,8 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
             if (dereferenced_addr.Dump(&strm, exe_scope,
                                        DumpStyleResolvedDescription,
                                        DumpStyleInvalid, addr_size)) {
-              s->Address(dereferenced_load_addr, addr_size, " -> ", " ");
+              DumpAddress(s->AsRawOstream(), dereferenced_load_addr, addr_size,
+                          " -> ", " ");
               s->Write(strm.GetString().data(), strm.GetSize());
               return true;
             }

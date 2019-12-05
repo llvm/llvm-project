@@ -200,7 +200,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
   return false;
 }
 
-static DWARFRangeList GetRangesOrReportError(const DWARFUnit &unit,
+static DWARFRangeList GetRangesOrReportError(DWARFUnit &unit,
                                              const DWARFDebugInfoEntry &die,
                                              const DWARFFormValue &value) {
   llvm::Expected<DWARFRangeList> expected_ranges =
@@ -223,7 +223,7 @@ static DWARFRangeList GetRangesOrReportError(const DWARFUnit &unit,
 // Gets the valid address ranges for a given DIE by looking for a
 // DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
 bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
-    const DWARFUnit *cu, const char *&name, const char *&mangled,
+    DWARFUnit *cu, const char *&name, const char *&mangled,
     DWARFRangeList &ranges, int &decl_file, int &decl_line, int &decl_column,
     int &call_file, int &call_line, int &call_column,
     DWARFExpression *frame_base) const {
@@ -766,7 +766,7 @@ bool DWARFDebugInfoEntry::GetAttributeAddressRange(
 }
 
 size_t DWARFDebugInfoEntry::GetAttributeAddressRanges(
-    const DWARFUnit *cu, DWARFRangeList &ranges, bool check_hi_lo_pc,
+    DWARFUnit *cu, DWARFRangeList &ranges, bool check_hi_lo_pc,
     bool check_specification_or_abstract_origin) const {
   ranges.Clear();
 
@@ -1012,8 +1012,7 @@ DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
   return storage.c_str();
 }
 
-bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
-                                        const DWARFUnit *cu,
+bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address, DWARFUnit *cu,
                                         DWARFDebugInfoEntry **function_die,
                                         DWARFDebugInfoEntry **block_die) {
   bool found_address = false;

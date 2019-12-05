@@ -422,6 +422,10 @@ int main(int argc, char *argv[]) {
       Stub.SOName = TargetStub->SOName;
       Stub.NeededLibs = TargetStub->NeededLibs;
     } else {
+      Stub.ObjectFileFormat = !Stub.ObjectFileFormat.empty()
+                                  ? Stub.ObjectFileFormat
+                                  : TargetStub->ObjectFileFormat;
+
       if (Stub.IfsVersion != TargetStub->IfsVersion) {
         if (Stub.IfsVersion.getMajor() != IFSVersionCurrent.getMajor()) {
           WithColor::error()
@@ -434,7 +438,8 @@ int main(int argc, char *argv[]) {
         if (TargetStub->IfsVersion > Stub.IfsVersion)
           Stub.IfsVersion = TargetStub->IfsVersion;
       }
-      if (Stub.ObjectFileFormat != TargetStub->ObjectFileFormat) {
+      if (Stub.ObjectFileFormat != TargetStub->ObjectFileFormat &&
+          !TargetStub->ObjectFileFormat.empty()) {
         WithColor::error() << "Interface Stub: ObjectFileFormat Mismatch."
                            << "\nFilenames: " << PreviousInputFilePath << " "
                            << InputFilePath << "\nObjectFileFormat Values: "
@@ -442,7 +447,7 @@ int main(int argc, char *argv[]) {
                            << TargetStub->ObjectFileFormat << "\n";
         return -1;
       }
-      if (Stub.Triple != TargetStub->Triple) {
+      if (Stub.Triple != TargetStub->Triple && !TargetStub->Triple.empty()) {
         WithColor::error() << "Interface Stub: Triple Mismatch."
                            << "\nFilenames: " << PreviousInputFilePath << " "
                            << InputFilePath
@@ -494,13 +499,8 @@ int main(int argc, char *argv[]) {
         return -1;
       }
       if (Symbol.Weak != SI->second.Weak) {
-        // TODO: Add conflict resolution for Weak vs non-Weak.
-        WithColor::error() << "Interface Stub: Weak Mismatch for "
-                           << Symbol.Name << ".\nFilename: " << InputFilePath
-                           << "\nWeak Values: " << SI->second.Weak << " "
-                           << Symbol.Weak << "\n";
-
-        return -1;
+        Symbol.Weak = false;
+        continue;
       }
       // TODO: Not checking Warning. Will be dropped.
     }

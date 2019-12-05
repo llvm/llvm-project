@@ -150,6 +150,30 @@ bool Constant::isOneValue() const {
   return false;
 }
 
+bool Constant::isNotOneValue() const {
+  // Check for 1 integers
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
+    return !CI->isOneValue();
+
+  // Check for FP which are bitcasted from 1 integers
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
+    return !CFP->getValueAPF().bitcastToAPInt().isOneValue();
+
+  // Check that vectors don't contain 1
+  if (this->getType()->isVectorTy()) {
+    unsigned NumElts = this->getType()->getVectorNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = this->getAggregateElement(i);
+      if (!Elt || !Elt->isNotOneValue())
+        return false;
+    }
+    return true;
+  }
+
+  // It *may* contain 1, we can't tell.
+  return false;
+}
+
 bool Constant::isMinSignedValue() const {
   // Check for INT_MIN integers
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))

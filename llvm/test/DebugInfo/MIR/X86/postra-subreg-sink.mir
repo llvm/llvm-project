@@ -69,7 +69,10 @@ body:             |
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $edi
   ; CHECK:   DBG_VALUE $edi, $noreg, ![[BARVAR]]
+  ; CHECK-NEXT:   DBG_VALUE $edi, $noreg, ![[ARGVAR]]
+  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, ![[BAZVAR]]
   ; CHECK-NEXT:   renamable $cl = MOV8ri 1
+  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, ![[FOOVAR]]
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK: bb.1.return:
   ; CHECK:   liveins: $cl, $edi

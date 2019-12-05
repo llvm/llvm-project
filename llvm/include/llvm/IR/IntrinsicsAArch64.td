@@ -927,6 +927,16 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorOfBitcastsToInt<0>],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_CNTB_Intrinsic
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_i32_ty],
+                [IntrNoMem]>;
+
+  class AdvSIMD_SVE_CNTP_Intrinsic
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_anyvector_ty, LLVMMatchType<0>],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_DOT_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -989,7 +999,20 @@ class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
 // SVE
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
-  class AdvSIMD_SVE_WHILE_Intrinsic
+
+class AdvSIMD_SVE_Int_Reduce_Intrinsic
+  : Intrinsic<[LLVMVectorElementType<0>],
+              [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+               llvm_anyvector_ty],
+              [IntrNoMem]>;
+
+class AdvSIMD_SVE_SADDV_Reduce_Intrinsic
+  : Intrinsic<[llvm_i64_ty],
+              [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+               llvm_anyvector_ty],
+              [IntrNoMem]>;
+
+class AdvSIMD_SVE_WHILE_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [llvm_anyint_ty, LLVMMatchType<1>],
                 [IntrNoMem]>;
@@ -1032,6 +1055,18 @@ def int_aarch64_sve_msb        : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_mla        : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_mls        : AdvSIMD_Pred3VectorArg_Intrinsic;
 
+def int_aarch64_sve_saddv      : AdvSIMD_SVE_SADDV_Reduce_Intrinsic;
+def int_aarch64_sve_uaddv      : AdvSIMD_SVE_SADDV_Reduce_Intrinsic;
+
+def int_aarch64_sve_smaxv      : AdvSIMD_SVE_Int_Reduce_Intrinsic;
+def int_aarch64_sve_umaxv      : AdvSIMD_SVE_Int_Reduce_Intrinsic;
+def int_aarch64_sve_sminv      : AdvSIMD_SVE_Int_Reduce_Intrinsic;
+def int_aarch64_sve_uminv      : AdvSIMD_SVE_Int_Reduce_Intrinsic;
+
+def int_aarch64_sve_orv        : AdvSIMD_SVE_Int_Reduce_Intrinsic;
+def int_aarch64_sve_eorv       : AdvSIMD_SVE_Int_Reduce_Intrinsic;
+def int_aarch64_sve_andv       : AdvSIMD_SVE_Int_Reduce_Intrinsic;
+
 def int_aarch64_sve_abs : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_neg : AdvSIMD_Merged1VectorArg_Intrinsic;
 
@@ -1059,6 +1094,17 @@ def int_aarch64_sve_lsr_wide : AdvSIMD_SVE_ShiftWide_Intrinsic;
 def int_aarch64_sve_cls : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_clz : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_cnt : AdvSIMD_SVE_CNT_Intrinsic;
+
+//
+// Counting elements
+//
+
+def int_aarch64_sve_cntb : AdvSIMD_SVE_CNTB_Intrinsic;
+def int_aarch64_sve_cnth : AdvSIMD_SVE_CNTB_Intrinsic;
+def int_aarch64_sve_cntw : AdvSIMD_SVE_CNTB_Intrinsic;
+def int_aarch64_sve_cntd : AdvSIMD_SVE_CNTB_Intrinsic;
+
+def int_aarch64_sve_cntp : AdvSIMD_SVE_CNTP_Intrinsic;
 
 //
 // Reversal

@@ -145,8 +145,8 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
   if (log) {
     StreamString s;
-    s.Address(
-        m_thread.GetRegisterContext()->GetPC(),
+    DumpAddress(
+        s.AsRawOstream(), m_thread.GetRegisterContext()->GetPC(),
         m_thread.CalculateTarget()->GetArchitecture().GetAddressByteSize());
     LLDB_LOGF(log, "ThreadPlanStepInRange reached %s.", s.GetData());
   }
