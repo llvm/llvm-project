@@ -40,7 +40,9 @@ struct AndroidConfig {
   using SizeClassMap = AndroidSizeClassMap;
 #if SCUDO_CAN_USE_PRIMARY64
   // 1GB regions
-  typedef SizeClassAllocator64<SizeClassMap, 30U> Primary;
+  typedef SizeClassAllocator64<SizeClassMap, 30U,
+                               /*MaySupportMemoryTagging=*/true>
+      Primary;
 #else
   // 512KB regions
   typedef SizeClassAllocator32<SizeClassMap, 19U> Primary;
