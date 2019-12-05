@@ -4660,6 +4660,8 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     Res = ActOnOpenMPMasterTaskLoopSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
     AllowedNameModifiers.push_back(OMPD_taskloop);
+    if (LangOpts.OpenMP >= 50)
+      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_parallel_master_taskloop:
     Res = ActOnOpenMPParallelMasterTaskLoopDirective(
@@ -10688,6 +10690,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
         CaptureRegion = OMPD_parallel;
       break;
     case OMPD_taskloop_simd:
+    case OMPD_master_taskloop_simd:
       if (OpenMPVersion <= 45)
         break;
       if (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)
@@ -10707,7 +10710,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_task:
     case OMPD_taskloop:
     case OMPD_master_taskloop:
-    case OMPD_master_taskloop_simd:
     case OMPD_target_data:
     case OMPD_simd:
     case OMPD_for_simd:
