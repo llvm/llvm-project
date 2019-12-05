@@ -18,8 +18,9 @@
 // CHECK-SAME: "-o" [[OPT_803_BC:".*-gfx803-optimized.*bc"]]
 
 // CHECK: [[LLC: ".*llc"]] [[OPT_803_BC]]
-// CHECK-SAME: "-mtriple=amdgcn-amd-amdhsa" "-filetype=obj"
+// CHECK-SAME: "-mtriple=amdgcn-amd-amdhsa"
 // CHECK-SAME: {{.*}} "-mcpu=gfx803"
+// CHECK-SAME: "-filetype=obj"
 // CHECK-SAME: "-amdgpu-function-calls=0" "-o" {{".*-gfx803-.*o"}}
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
@@ -33,6 +34,7 @@
 // CHECK-SAME: "-o" [[OPT_900_BC:".*-gfx900-optimized.*bc"]]
 
 // CHECK: [[LLC]] [[OPT_900_BC]]
-// CHECK-SAME: "-mtriple=amdgcn-amd-amdhsa" "-filetype=obj"
+// CHECK-SAME: "-mtriple=amdgcn-amd-amdhsa"
 // CHECK-SAME: {{.*}} "-mcpu=gfx900"
+// CHECk-SAME: "-filetype=obj"
 // CHECK-SAME: "-amdgpu-function-calls=0" "-o" {{".*-gfx900-.*o"}}
