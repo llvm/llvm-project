@@ -371,10 +371,6 @@ bool SymbolFilePDB::ParseSupportFiles(
     support_files.AppendIfUnique(spec);
   }
 
-  // LLDB uses the DWARF-like file numeration (one based),
-  // the zeroth file is the compile unit itself
-  support_files.Insert(0, comp_unit.GetPrimaryFile());
-
   return true;
 }
 
@@ -1881,9 +1877,7 @@ void SymbolFilePDB::BuildSupportFileIdToSupportFileIndexMap(
   if (!source_files)
     return;
 
-  // LLDB uses the DWARF-like file numeration (one based)
-  int index = 1;
-
+  int index = 0;
   while (auto file = source_files->getNext()) {
     uint32_t source_id = file->getUniqueId();
     index_map[source_id] = index++;
