@@ -11,6 +11,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
 
 #include <string>
@@ -76,28 +77,27 @@ void Stream::QuotedCString(const char *cstr, const char *format) {
 
 // Put an address "addr" out to the stream with optional prefix and suffix
 // strings.
-void Stream::Address(uint64_t addr, uint32_t addr_size, const char *prefix,
-                     const char *suffix) {
+void lldb_private::DumpAddress(llvm::raw_ostream &s, uint64_t addr,
+                               uint32_t addr_size, const char *prefix,
+                               const char *suffix) {
   if (prefix == nullptr)
     prefix = "";
   if (suffix == nullptr)
     suffix = "";
-  //    int addr_width = m_addr_size << 1;
-  //    Printf ("%s0x%0*" PRIx64 "%s", prefix, addr_width, addr, suffix);
-  Printf("%s0x%0*" PRIx64 "%s", prefix, addr_size * 2, addr, suffix);
+  s << prefix << llvm::format_hex(addr, 2 + 2 * addr_size) << suffix;
 }
 
 // Put an address range out to the stream with optional prefix and suffix
 // strings.
-void Stream::AddressRange(uint64_t lo_addr, uint64_t hi_addr,
-                          uint32_t addr_size, const char *prefix,
-                          const char *suffix) {
+void lldb_private::DumpAddressRange(llvm::raw_ostream &s, uint64_t lo_addr,
+                                    uint64_t hi_addr, uint32_t addr_size,
+                                    const char *prefix, const char *suffix) {
   if (prefix && prefix[0])
-    PutCString(prefix);
-  Address(lo_addr, addr_size, "[");
-  Address(hi_addr, addr_size, "-", ")");
+    s << prefix;
+  DumpAddress(s, lo_addr, addr_size, "[");
+  DumpAddress(s, hi_addr, addr_size, "-", ")");
   if (suffix && suffix[0])
-    PutCString(suffix);
+    s << suffix;
 }
 
 size_t Stream::PutChar(char ch) { return Write(&ch, 1); }

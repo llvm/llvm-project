@@ -85,6 +85,9 @@
 // CHECK-PROFILE-DIR-UNUSED-NOT: "-coverage-data-file" "abc
 // CHECK-PROFILE-DIR-NEITHER-NOT: argument unused
 
+// RUN: %clang_cl -### /c --coverage /Fo/foo/bar.obj -- %s 2>&1 | FileCheck -check-prefix=CHECK-GCNO-LOCATION %s
+// CHECK-GCNO-LOCATION: "-coverage-notes-file" "{{.*}}/foo/bar.gcno"
+
 // RUN: %clang -### -fprofile-arcs -ftest-coverage %s 2>&1 | FileCheck -check-prefix=CHECK-u %s
 // RUN: %clang -### --coverage %s 2>&1 | FileCheck -check-prefix=CHECK-u %s
 // CHECK-u-NOT: "-u{{.*}}"

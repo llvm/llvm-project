@@ -65,7 +65,7 @@ void ThreadPlanStepInstruction::GetDescription(Stream *s,
     PrintFailureIfAny();
   } else {
     s->Printf("Stepping one instruction past ");
-    s->Address(m_instruction_addr, sizeof(addr_t));
+    DumpAddress(s->AsRawOstream(), m_instruction_addr, sizeof(addr_t));
     if (!m_start_has_symbol)
       s->Printf(" which has no symbol");
 
@@ -182,14 +182,16 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
             s.PutCString("Stepped in to: ");
             addr_t stop_addr =
                 m_thread.GetStackFrameAtIndex(0)->GetRegisterContext()->GetPC();
-            s.Address(stop_addr, m_thread.CalculateTarget()
-                                     ->GetArchitecture()
-                                     .GetAddressByteSize());
+            DumpAddress(s.AsRawOstream(), stop_addr,
+                        m_thread.CalculateTarget()
+                            ->GetArchitecture()
+                            .GetAddressByteSize());
             s.PutCString(" stepping out to: ");
             addr_t return_addr = return_frame->GetRegisterContext()->GetPC();
-            s.Address(return_addr, m_thread.CalculateTarget()
-                                       ->GetArchitecture()
-                                       .GetAddressByteSize());
+            DumpAddress(s.AsRawOstream(), return_addr,
+                        m_thread.CalculateTarget()
+                            ->GetArchitecture()
+                            .GetAddressByteSize());
             LLDB_LOGF(log, "%s.", s.GetData());
           }
 
