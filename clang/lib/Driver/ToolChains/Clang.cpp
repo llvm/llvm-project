@@ -914,7 +914,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
   if ((Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S)) &&
       (EmitCovNotes || EmitCovData) && Output.isFilename()) {
     SmallString<128> OutputFilename;
-    if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
+    if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT__SLASH_Fo))
+      OutputFilename = FinalOutput->getValue();
+    else if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
       OutputFilename = FinalOutput->getValue();
     else
       OutputFilename = llvm::sys::path::filename(Output.getBaseInput());
