@@ -9,7 +9,7 @@
 // This file contains the implementation of data sharing environments/
 //
 //===----------------------------------------------------------------------===//
-#include "omptarget-nvptx.h"
+#include "common/omptarget.h"
 #include "target_impl.h"
 #include <stdio.h>
 
