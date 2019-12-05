@@ -57,9 +57,10 @@ public:
 
     VRegRenamer Renamer(MF.getRegInfo());
 
+    unsigned BBIndex = 0;
     ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
     for (auto &MBB : RPOT)
-      Changed |= Renamer.renameVRegs(MBB);
+      Changed |= Renamer.renameVRegs(MBB, BBIndex++);
 
     return Changed;
   }
