@@ -1,12 +1,8 @@
-# RUN: not llvm-ifs -action write-ifs -o - %s %S/func.ifs 2>&1 | \
+# RUN: llvm-ifs -action write-ifs -o - %s %S/func.ifs 2>&1 | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
-# Here we are testing to see if two symbols with identical names will fail to
-# merge in conflict due to one being weak and one not. Eventually this will work
-# when llvm-ifs has support for resolving these kinds of conflicts.
-# CHECK-IFS: error: Interface Stub: Weak Mismatch for a.
-# CHECK-IFS-NEXT: Filename:
-# CHECK-IFS-NEXT: Weak Values: 1 0
+# CHECK-IFS: Symbols:
+# CHECK-IFS-NEXT: a: { Type: Func, Weak: true }
 
 --- !experimental-ifs-v1
 IfsVersion: 1.0
