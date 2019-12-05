@@ -99,7 +99,7 @@ runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos) {
 llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
                                     Position Pos, llvm::StringRef NewName) {
   llvm::Optional<llvm::Expected<FileEdits>> Result;
-  Server.rename(File, Pos, NewName, /*WantFormat=*/true, capture(Result));
+  Server.rename(File, Pos, NewName, /*WantFormat=*/false, capture(Result));
   return std::move(*Result);
 }
 
