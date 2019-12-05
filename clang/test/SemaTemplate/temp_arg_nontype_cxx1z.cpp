@@ -393,3 +393,12 @@ namespace PR42362 {
   template<auto (&...F)()> struct Z<F...>::Q {};
   Z<f, f, f>::Q q;
 }
+
+namespace FunctionConversion {
+  struct a { void c(char *) noexcept; };
+  template<void (a::*f)(char*)> void g() {
+    using T = decltype(f);
+    using T = void (a::*)(char*); // (not 'noexcept')
+  }
+  template void g<&a::c>();
+}
