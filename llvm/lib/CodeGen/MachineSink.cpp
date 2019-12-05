@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SetVector.h"
@@ -127,6 +128,24 @@ namespace {
     /// current block.
     DenseSet<DebugVariable> SeenDbgVars;
 
+    /// A set of DBG_VALUEs, indexed by their DebugVariable. Refers to the
+    /// original / non-sunk DBG_VALUE, which should be cloned to the final
+    /// sunk location.
+    using SinkingVarSet = DenseMap<DebugVariable, MachineInstr *>;
+
+    /// Record of variable locations to re-create after the sinking of a
+    /// vreg definition completes.
+    struct SunkDebugDef {
+      SinkingVarSet InstsToSink; /// Set of DBG_VALUEs to recreate.
+      MachineInstr *MI;          /// Location to place DBG_VALUEs.
+    };
+
+    /// Map sunk vreg to the final destination of the vreg def, and the
+    /// DBG_VALUEs that were attached to it. We need only create one new
+    /// DBG_VALUE even if the defining instruction sinks through multiple
+    /// blocks.
+    DenseMap<unsigned, SunkDebugDef> SunkDebugDefs;
+
   public:
     static char ID; // Pass identification
 
@@ -184,6 +203,11 @@ namespace {
     /// to the copy source.
     void SalvageUnsunkDebugUsersOfCopy(MachineInstr &,
                                        MachineBasicBlock *TargetBlock);
+
+    /// Re-insert any DBG_VALUE instructions that had their operands sunk
+    /// in this function.
+    void reinsertSunkDebugDefs(MachineFunction &MF);
+
     bool AllUsesDominatedByBlock(unsigned Reg, MachineBasicBlock *MBB,
                                  MachineBasicBlock *DefMBB,
                                  bool &BreakPHIEdge, bool &LocalUse) const;
@@ -316,6 +340,33 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
   return true;
 }
 
+void MachineSinking::reinsertSunkDebugDefs(MachineFunction &MF) {
+  // Re-insert any DBG_VALUEs sunk.
+  for (auto &Iterator : SunkDebugDefs) {
+    SunkDebugDef Def = Iterator.second;
+    unsigned VReg = Iterator.first;
+
+    MachineBasicBlock::iterator DestLoc = Def.MI->getIterator();
+    MachineBasicBlock *MBB = Def.MI->getParent();
+
+    // Place DBG_VALUEs immediately after the sunk instruction.
+    ++DestLoc;
+
+    // Collect the DBG_VALUEs being sunk and put them in a deterministic order.
+    using VarInstPair = std::pair<DebugVariable, MachineInstr *>;
+    SmallVector<VarInstPair, 16> InstsToSink;
+    for (auto &SunkLoc : Def.InstsToSink)
+      InstsToSink.push_back(SunkLoc);
+    llvm::sort(InstsToSink);
+
+    for (auto &SunkLoc : InstsToSink) {
+      MachineInstr *NewDbgMI = MF.CloneMachineInstr(SunkLoc.second);
+      NewDbgMI->getOperand(0).setReg(VReg);
+      MBB->insert(DestLoc, NewDbgMI);
+    }
+  }
+}
+
 bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -365,6 +416,9 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   for (auto I : RegsToClearKillFlags)
     MRI->clearKillFlags(I);
   RegsToClearKillFlags.clear();
+
+  reinsertSunkDebugDefs(MF);
+  SunkDebugDefs.clear();
 
   return EverMadeChange;
 }
@@ -983,25 +1037,34 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     ++InsertPos;
 
   // Collect debug users of any vreg that this inst defines.
-  SmallVector<MachineInstr *, 4> DbgUsersToSink;
   for (auto &MO : MI.operands()) {
     if (!MO.isReg() || !MO.isDef() || !MO.getReg().isVirtual())
       continue;
+
+    // If no DBG_VALUE uses this reg, skip further analysis.
     if (!SeenDbgUsers.count(MO.getReg()))
       continue;
 
-    // Sink any users that don't pass any other DBG_VALUEs for this variable.
+    SunkDebugDef &SunkDef = SunkDebugDefs[MO.getReg()];
+    SunkDef.MI = &MI;
+
+    // Record that these DBG_VALUEs refer to this sinking vreg, so that they
+    // can be re-specified after sinking completes. Try copy-propagating
+    // the original location too.
     auto &Users = SeenDbgUsers[MO.getReg()];
     for (auto &User : Users) {
       MachineInstr *DbgMI = User.getPointer();
-      if (User.getInt()) {
-        // This DBG_VALUE would re-order assignments. If we can't copy-propagate
-        // it, it can't be recovered. Set it undef.
-        if (!attemptDebugCopyProp(MI, *DbgMI))
-          DbgMI->getOperand(0).setReg(0);
-      } else {
-        DbgUsersToSink.push_back(DbgMI);
-      }
+      DebugVariable Var(DbgMI->getDebugVariable(), DbgMI->getDebugExpression(),
+                        DbgMI->getDebugLoc()->getInlinedAt());
+      // If we can't copy-propagate the original DBG_VALUE, mark it undef, as
+      // its operand will not be available.
+      if (!attemptDebugCopyProp(MI, *DbgMI))
+        DbgMI->getOperand(0).setReg(0);
+
+      // Debug users that don't pass any other DBG_VALUEs for this variable
+      // can be sunk.
+      if (!User.getInt())
+        SunkDef.InstsToSink.insert({Var, DbgMI});
     }
   }
 
@@ -1011,6 +1074,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   if (MI.getMF()->getFunction().getSubprogram() && MI.isCopy())
     SalvageUnsunkDebugUsersOfCopy(MI, SuccToSinkTo);
 
+  SmallVector<MachineInstr *, 4> DbgUsersToSink; // Deliberately empty
   performSink(MI, *SuccToSinkTo, InsertPos, DbgUsersToSink);
 
   // Conservatively, clear any kill flags, since it's possible that they are no
