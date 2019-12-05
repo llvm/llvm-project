@@ -40,6 +40,8 @@ class MCExpr;
 class MCSymbol;
 class MDNode;
 
+enum class UnitKind { Skeleton, Full };
+
 class DwarfCompileUnit final : public DwarfUnit {
   /// A numeric ID unique among all CUs in the module
   unsigned UniqueID;
@@ -104,7 +106,8 @@ class DwarfCompileUnit final : public DwarfUnit {
 
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
-                   DwarfDebug *DW, DwarfFile *DWU);
+                   DwarfDebug *DW, DwarfFile *DWU,
+                   UnitKind Kind = UnitKind::Full);
 
   bool hasRangeLists() const { return HasRangeLists; }
   unsigned getUniqueID() const { return UniqueID; }
