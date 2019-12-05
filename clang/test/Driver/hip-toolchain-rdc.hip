@@ -40,13 +40,14 @@
 // CHECK-SAME: "-o" [[OPT_BC_DEV1:".*-gfx803-optimized.*bc"]]
 
 // CHECK: [[LLC: ".*llc"]] [[OPT_BC_DEV1]] "-mtriple=amdgcn-amd-amdhsa"
+// CHECK-SAME: "-mcpu=gfx803"
 // CHECK-SAME: "-filetype=obj"
-// CHECK-SAME: "-mcpu=gfx803" "-o" [[OBJ_DEV1:".*-gfx803-.*o"]]
+// CHECK-SAME: "-o" [[OBJ_DEV1:".*-gfx803-.*o"]]
 
 // CHECK: [[LLD: ".*lld"]] "-flavor" "gnu" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV1:.*out]]" [[OBJ_DEV1]]
 
-// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" 
+// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
@@ -72,8 +73,9 @@
 // CHECK-SAME: "-o" [[OPT_BC_DEV2:".*-gfx900-optimized.*bc"]]
 
 // CHECK: [[LLC]] [[OPT_BC_DEV2]] "-mtriple=amdgcn-amd-amdhsa"
+// CHECk-SAME: "-mcpu=gfx900"
 // CHECK-SAME: "-filetype=obj"
-// CHECK-SAME: "-mcpu=gfx900" "-o" [[OBJ_DEV2:".*-gfx900-.*o"]]
+// CHECK-SAME: "-o" [[OBJ_DEV2:".*-gfx900-.*o"]]
 
 // CHECK: [[LLD]] "-flavor" "gnu" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV2:.*out]]" [[OBJ_DEV2]]
