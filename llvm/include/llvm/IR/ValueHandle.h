@@ -264,9 +264,8 @@ public:
 #else
   AssertingVH() : ThePtr(nullptr) {}
   AssertingVH(ValueTy *P) : ThePtr(GetAsValue(P)) {}
-#endif
-
   AssertingVH(const AssertingVH<ValueTy> &) = default;
+#endif
 
   operator ValueTy*() const {
     return getValPtr();
