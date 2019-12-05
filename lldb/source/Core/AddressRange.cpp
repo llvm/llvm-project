@@ -161,7 +161,8 @@ bool AddressRange::Dump(Stream *s, Target *target, Address::DumpStyle style,
     s->PutChar('[');
     m_base_addr.Dump(s, target, style, fallback_style);
     s->PutChar('-');
-    s->Address(m_base_addr.GetOffset() + GetByteSize(), addr_size);
+    DumpAddress(s->AsRawOstream(), m_base_addr.GetOffset() + GetByteSize(),
+                addr_size);
     s->PutChar(')');
     return true;
     break;
@@ -185,7 +186,8 @@ bool AddressRange::Dump(Stream *s, Target *target, Address::DumpStyle style,
         s->Printf("%s", module_sp->GetFileSpec().GetFilename().AsCString(
                             "<Unknown>"));
     }
-    s->AddressRange(vmaddr, vmaddr + GetByteSize(), addr_size);
+    DumpAddressRange(s->AsRawOstream(), vmaddr, vmaddr + GetByteSize(),
+                     addr_size);
     return true;
   } else if (fallback_style != Address::DumpStyleInvalid) {
     return Dump(s, target, fallback_style, Address::DumpStyleInvalid);
