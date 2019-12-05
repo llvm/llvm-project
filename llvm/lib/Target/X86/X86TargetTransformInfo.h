@@ -78,6 +78,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       X86::FeatureSlowUAMem16,
       X86::FeaturePreferMaskRegisters,
       X86::FeatureInsertVZEROUPPER,
+      X86::FeatureUseGLMDivSqrtCosts,
 
       // Perf-tuning flags.
       X86::FeatureHasFastGather,
@@ -89,10 +90,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
 
       // CPU name enums. These just follow CPU string.
       X86::ProcIntelAtom,
-      X86::ProcIntelGLM,
-      X86::ProcIntelGLP,
       X86::ProcIntelSLM,
-      X86::ProcIntelTRM,
   };
 
 public:
