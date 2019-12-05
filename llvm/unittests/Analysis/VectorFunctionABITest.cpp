@@ -89,7 +89,7 @@ private:
 protected:
   // Referencies to the parser output field.
   unsigned &VF = Info.Shape.VF;
-  VFISAKind &ISA = Info.Shape.ISA;
+  VFISAKind &ISA = Info.ISA;
   SmallVector<VFParameter, 8> &Parameters = Info.Shape.Parameters;
   StringRef &ScalarName = Info.ScalarName;
   StringRef &VectorName = Info.VectorName;
