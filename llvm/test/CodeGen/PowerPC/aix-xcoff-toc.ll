@@ -28,6 +28,14 @@ define void @bar() {
   ret void
 }
 
+; We initialize a csect when we first reference an external global, so make sure we don't run into problems when we see it again.
+define void @bar2() {
+  store i32 0, i32* @a, align 4
+  store i64 0, i64* @b, align 8
+  store i16 0, i16* @c, align 2
+  ret void
+}
+
 ; CHECK-NOT: .comm a
 ; CHECK-NOT: .lcomm a
 ; CHECK-NOT: .comm b
@@ -55,7 +63,7 @@ define void @bar() {
 
 ; SYM:       File: {{.*}}aix-xcoff-toc.ll.tmp.o
 ; SYM:       Symbol {{[{][[:space:]] *}}Index: [[#INDX:]]{{[[:space:]] *}}Name: TOC
-; SYM-NEXT:    Value (RelocatableAddress): 0x54
+; SYM-NEXT:    Value (RelocatableAddress): 0x8C
 ; SYM-NEXT:    Section: .data
 ; SYM-NEXT:    Type: 0x0
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
@@ -75,7 +83,7 @@ define void @bar() {
 ; SYM-NEXT:  Symbol {
 ; SYM-NEXT:    Index: [[#INDX+2]]
 ; SYM-NEXT:    Name: a
-; SYM-NEXT:    Value (RelocatableAddress): 0x54
+; SYM-NEXT:    Value (RelocatableAddress): 0x8C
 ; SYM-NEXT:    Section: .data
 ; SYM-NEXT:    Type: 0x0
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
@@ -95,7 +103,7 @@ define void @bar() {
 ; SYM-NEXT:  Symbol {
 ; SYM-NEXT:    Index: [[#INDX+4]]
 ; SYM-NEXT:    Name: b
-; SYM-NEXT:    Value (RelocatableAddress): 0x58
+; SYM-NEXT:    Value (RelocatableAddress): 0x90
 ; SYM-NEXT:    Section: .data
 ; SYM-NEXT:    Type: 0x0
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
@@ -115,7 +123,7 @@ define void @bar() {
 ; SYM-NEXT:  Symbol {
 ; SYM-NEXT:    Index: [[#INDX+6]]
 ; SYM-NEXT:    Name: c
-; SYM-NEXT:    Value (RelocatableAddress): 0x5C
+; SYM-NEXT:    Value (RelocatableAddress): 0x94
 ; SYM-NEXT:    Section: .data
 ; SYM-NEXT:    Type: 0x0
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
@@ -135,7 +143,7 @@ define void @bar() {
 ; SYM-NEXT:  Symbol {
 ; SYM-NEXT:    Index: [[#INDX+8]]
 ; SYM-NEXT:    Name: globa
-; SYM-NEXT:    Value (RelocatableAddress): 0x60
+; SYM-NEXT:    Value (RelocatableAddress): 0x98
 ; SYM-NEXT:    Section: .data
 ; SYM-NEXT:    Type: 0x0
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
@@ -155,7 +163,7 @@ define void @bar() {
 ; SYM-NEXT:  Symbol {
 ; SYM-NEXT:    Index: [[#INDX+10]]
 ; SYM-NEXT:    Name: ptr
-; SYM-NEXT:    Value (RelocatableAddress): 0x64
+; SYM-NEXT:    Value (RelocatableAddress): 0x9C
 ; SYM-NEXT:    Section: .data
 ; SYM-NEXT:    Type: 0x0
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
@@ -175,7 +183,7 @@ define void @bar() {
 ; SYM-NEXT:  Symbol {
 ; SYM-NEXT:    Index: [[#INDX+12]]
 ; SYM-NEXT:    Name: bar
-; SYM-NEXT:    Value (RelocatableAddress): 0x68
+; SYM-NEXT:    Value (RelocatableAddress): 0xA0
 ; SYM-NEXT:    Section: .data
 ; SYM-NEXT:    Type: 0x0
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
@@ -195,7 +203,7 @@ define void @bar() {
 ; SYM-NEXT:  Symbol {
 ; SYM-NEXT:    Index: [[#INDX+14]]
 ; SYM-NEXT:    Name: foo
-; SYM-NEXT:    Value (RelocatableAddress): 0x6C
+; SYM-NEXT:    Value (RelocatableAddress): 0xA4
 ; SYM-NEXT:    Section: .data
 ; SYM-NEXT:    Type: 0x0
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
