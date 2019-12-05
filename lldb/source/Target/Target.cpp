@@ -728,11 +728,17 @@ void Target::ConfigureBreakpointName(
 }
 
 void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
-  BreakpointList bkpts_with_name(false);
-  m_breakpoint_list.FindBreakpointsByName(bp_name.GetName().AsCString(),
-                                          bkpts_with_name);
+  llvm::Expected<std::vector<BreakpointSP>> expected_vector =
+      m_breakpoint_list.FindBreakpointsByName(bp_name.GetName().AsCString());
 
-  for (auto bp_sp : bkpts_with_name.Breakpoints())
+  if (!expected_vector) {
+    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS),
+             "invalid breakpoint name: {}",
+             llvm::toString(expected_vector.takeError()));
+    return;
+  }
+
+  for (auto bp_sp : *expected_vector)
     bp_name.ConfigureBreakpoint(bp_sp);
 }
 

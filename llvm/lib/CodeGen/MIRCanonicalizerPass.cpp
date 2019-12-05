@@ -49,10 +49,6 @@ static cl::opt<unsigned>
                                cl::value_desc("N"),
                                cl::desc("Function number to canonicalize."));
 
-static cl::opt<unsigned> CanonicalizeBasicBlockNumber(
-    "canon-nth-basicblock", cl::Hidden, cl::init(~0u), cl::value_desc("N"),
-    cl::desc("BasicBlock number to canonicalize."));
-
 namespace {
 
 class MIRCanonicalizer : public MachineFunctionPass {
@@ -374,24 +370,7 @@ static bool doDefKillClear(MachineBasicBlock *MBB) {
 }
 
 static bool runOnBasicBlock(MachineBasicBlock *MBB,
-                            std::vector<StringRef> &bbNames,
-                            unsigned &basicBlockNum, VRegRenamer &Renamer) {
-
-  if (CanonicalizeBasicBlockNumber != ~0U) {
-    if (CanonicalizeBasicBlockNumber != basicBlockNum++)
-      return false;
-    LLVM_DEBUG(dbgs() << "\n Canonicalizing BasicBlock " << MBB->getName()
-                      << "\n";);
-  }
-
-  if (llvm::find(bbNames, MBB->getName()) != bbNames.end()) {
-    LLVM_DEBUG({
-      dbgs() << "Found potentially duplicate BasicBlocks: " << MBB->getName()
-             << "\n";
-    });
-    return false;
-  }
-
+                            unsigned BasicBlockNum, VRegRenamer &Renamer) {
   LLVM_DEBUG({
     dbgs() << "\n\n  NEW BASIC BLOCK: " << MBB->getName() << "  \n\n";
     dbgs() << "\n\n================================================\n\n";
@@ -399,7 +378,6 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
 
   bool Changed = false;
 
-  bbNames.push_back(MBB->getName());
   LLVM_DEBUG(dbgs() << "\n\n NEW BASIC BLOCK: " << MBB->getName() << "\n\n";);
 
   LLVM_DEBUG(dbgs() << "MBB Before Canonical Copy Propagation:\n";
@@ -412,8 +390,10 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
   Changed |= rescheduleCanonically(IdempotentInstCount, MBB);
   LLVM_DEBUG(dbgs() << "MBB After Scheduling:\n"; MBB->dump(););
 
-  Changed |= Renamer.renameVRegs(MBB);
+  Changed |= Renamer.renameVRegs(MBB, BasicBlockNum);
 
+  // TODO: Consider dropping this. Dropping kill defs is probably not
+  // semantically sound.
   Changed |= doDefKillClear(MBB);
 
   LLVM_DEBUG(dbgs() << "Updated MachineBasicBlock:\n"; MBB->dump();
@@ -445,16 +425,12 @@ bool MIRCanonicalizer::runOnMachineFunction(MachineFunction &MF) {
            : RPOList) { dbgs() << MBB->getName() << "\n"; } dbgs()
       << "\n\n================================================\n\n";);
 
-  std::vector<StringRef> BBNames;
-
   unsigned BBNum = 0;
-
   bool Changed = false;
-
   MachineRegisterInfo &MRI = MF.getRegInfo();
   VRegRenamer Renamer(MRI);
   for (auto MBB : RPOList)
-    Changed |= runOnBasicBlock(MBB, BBNames, BBNum, Renamer);
+    Changed |= runOnBasicBlock(MBB, BBNum++, Renamer);
 
   return Changed;
 }

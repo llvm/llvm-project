@@ -16,6 +16,7 @@
 #include "SourceCode.h"
 #include "SymbolLocation.h"
 #include "URI.h"
+#include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -345,41 +346,50 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
                                            const MacroInfo *MI,
                                            index::SymbolRoleSet Roles,
                                            SourceLocation Loc) {
-  if (!Opts.CollectMacro)
-    return true;
   assert(PP.get());
 
   const auto &SM = PP->getSourceManager();
   auto DefLoc = MI->getDefinitionLoc();
+  auto SpellingLoc = SM.getSpellingLoc(Loc);
+  bool IsMainFileSymbol = SM.isInMainFile(SM.getExpansionLoc(DefLoc));
 
   // Builtin macros don't have useful locations and aren't needed in completion.
   if (MI->isBuiltinMacro())
     return true;
 
-  // Skip main-file symbols if we are not collecting them.
-  bool IsMainFileSymbol = SM.isInMainFile(SM.getExpansionLoc(DefLoc));
-  if (IsMainFileSymbol && !Opts.CollectMainFileSymbols)
-    return false;
-
   // Also avoid storing predefined macros like __DBL_MIN__.
   if (SM.isWrittenInBuiltinFile(DefLoc))
     return true;
+
+  auto ID = getSymbolID(Name->getName(), MI, SM);
+  if (!ID)
+    return true;
+
+  // Do not store references to main-file macros.
+  if ((static_cast<unsigned>(Opts.RefFilter) & Roles) && !IsMainFileSymbol &&
+      (Opts.RefsInHeaders || SM.getFileID(SpellingLoc) == SM.getMainFileID()))
+    MacroRefs[*ID].push_back({Loc, Roles});
+
+  // Collect symbols.
+  if (!Opts.CollectMacro)
+    return true;
+
+  // Skip main-file macros if we are not collecting them.
+  if (IsMainFileSymbol && !Opts.CollectMainFileSymbols)
+    return false;
 
   // Mark the macro as referenced if this is a reference coming from the main
   // file. The macro may not be an interesting symbol, but it's cheaper to check
   // at the end.
   if (Opts.CountReferences &&
       (Roles & static_cast<unsigned>(index::SymbolRole::Reference)) &&
-      SM.getFileID(SM.getSpellingLoc(Loc)) == SM.getMainFileID())
+      SM.getFileID(SpellingLoc) == SM.getMainFileID())
     ReferencedMacros.insert(Name);
+
   // Don't continue indexing if this is a mere reference.
   // FIXME: remove macro with ID if it is undefined.
   if (!(Roles & static_cast<unsigned>(index::SymbolRole::Declaration) ||
         Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
-    return true;
-
-  auto ID = getSymbolID(Name->getName(), MI, SM);
-  if (!ID)
     return true;
 
   // Only collect one instance in case there are multiple.
@@ -485,10 +495,10 @@ void SymbolCollector::finish() {
           IncRef(*ID);
     }
   }
-
   // Fill in IncludeHeaders.
   // We delay this until end of TU so header guards are all resolved.
-  // Symbols in slabs aren' mutable, so insert() has to walk all the strings :-(
+  // Symbols in slabs aren' mutable, so insert() has to walk all the strings
+  // :-(
   llvm::SmallString<256> QName;
   for (const auto &Entry : IncludeFiles)
     if (const Symbol *S = Symbols.find(Entry.first)) {
@@ -518,25 +528,34 @@ void SymbolCollector::finish() {
     }
     return Found->second;
   };
+  auto CollectRef =
+      [&](SymbolID ID,
+          const std::pair<SourceLocation, index::SymbolRoleSet> &LocAndRole) {
+        auto FileID = SM.getFileID(LocAndRole.first);
+        // FIXME: use the result to filter out references.
+        shouldIndexFile(FileID);
+        if (auto FileURI = GetURI(FileID)) {
+          auto Range =
+              getTokenRange(LocAndRole.first, SM, ASTCtx->getLangOpts());
+          Ref R;
+          R.Location.Start = Range.first;
+          R.Location.End = Range.second;
+          R.Location.FileURI = FileURI->c_str();
+          R.Kind = toRefKind(LocAndRole.second);
+          Refs.insert(ID, R);
+        }
+      };
+  // Populate Refs slab from MacroRefs.
+  for (const auto &IDAndRefs : MacroRefs) {
+    for (const auto &LocAndRole : IDAndRefs.second)
+      CollectRef(IDAndRefs.first, LocAndRole);
+  }
   // Populate Refs slab from DeclRefs.
   if (auto MainFileURI = GetURI(SM.getMainFileID())) {
     for (const auto &It : DeclRefs) {
       if (auto ID = getSymbolID(It.first)) {
-        for (const auto &LocAndRole : It.second) {
-          auto FileID = SM.getFileID(LocAndRole.first);
-          // FIXME: use the result to filter out references.
-          shouldIndexFile(FileID);
-          if (auto FileURI = GetURI(FileID)) {
-            auto Range =
-                getTokenRange(LocAndRole.first, SM, ASTCtx->getLangOpts());
-            Ref R;
-            R.Location.Start = Range.first;
-            R.Location.End = Range.second;
-            R.Location.FileURI = FileURI->c_str();
-            R.Kind = toRefKind(LocAndRole.second);
-            Refs.insert(*ID, R);
-          }
-        }
+        for (const auto &LocAndRole : It.second)
+          CollectRef(*ID, LocAndRole);
       }
     }
   }

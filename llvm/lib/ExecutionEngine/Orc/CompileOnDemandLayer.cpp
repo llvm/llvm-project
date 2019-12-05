@@ -172,8 +172,8 @@ CompileOnDemandLayer::PerDylibResources &
 CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
   auto I = DylibResources.find(&TargetD);
   if (I == DylibResources.end()) {
-    auto &ImplD = getExecutionSession().createJITDylib(
-        TargetD.getName() + ".impl", false);
+    auto &ImplD =
+        getExecutionSession().createJITDylib(TargetD.getName() + ".impl");
     TargetD.withSearchOrderDo(
         [&](const JITDylibSearchOrder &TargetSearchOrder) {
           auto NewSearchOrder = TargetSearchOrder;

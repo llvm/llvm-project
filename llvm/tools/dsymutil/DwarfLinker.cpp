@@ -760,43 +760,143 @@ unsigned DwarfLinker::shouldKeepDIE(RelocationManager &RelocMgr,
   return Flags;
 }
 
-/// Mark the passed DIE as well as all the ones it depends on
-/// as kept.
-///
-/// This function is called by lookForDIEsToKeep on DIEs that are
-/// newly discovered to be needed in the link. It recursively calls
-/// back to lookForDIEsToKeep while adding TF_DependencyWalk to the
-/// TraversalFlags to inform it that it's not doing the primary DIE
-/// tree walk.
-void DwarfLinker::keepDIEAndDependencies(
-    RelocationManager &RelocMgr, RangesTy &Ranges, const UnitListTy &Units,
-    const DWARFDie &Die, CompileUnit::DIEInfo &MyInfo,
-    const DebugMapObject &DMO, CompileUnit &CU, bool UseODR) {
-  DWARFUnit &Unit = CU.getOrigUnit();
-  MyInfo.Keep = true;
+namespace {
+/// The  distinct types of work performed by the work loop.
+enum class WorklistItemType {
+  /// Given a DIE, look for DIEs to be kept.
+  LookForDIEsToKeep,
+  /// Given a DIE, look for children of this DIE to be kept.
+  LookForChildDIEsToKeep,
+  /// Given a DIE, look for DIEs referencing this DIE to be kept.
+  LookForRefDIEsToKeep,
+  /// Given a DIE, look for parent DIEs to be kept.
+  LookForParentDIEsToKeep,
+  /// Given a DIE, update its incompleteness based on whether its children are
+  /// incomplete.
+  UpdateChildIncompleteness,
+  /// Given a DIE, update its incompleteness based on whether the DIEs it
+  /// references are incomplete.
+  UpdateRefIncompleteness,
+};
 
-  // We're looking for incomplete types.
-  MyInfo.Incomplete = Die.getTag() != dwarf::DW_TAG_subprogram &&
-                      Die.getTag() != dwarf::DW_TAG_member &&
-                      dwarf::toUnsigned(Die.find(dwarf::DW_AT_declaration), 0);
+/// This class represents an item in the work list. The type defines what kind
+/// of work needs to be performed when processing the current item. The flags
+/// and info fields are optional based on the type.
+struct WorklistItem {
+  WorklistItemType Type;
+  DWARFDie Die;
+  CompileUnit &CU;
+  unsigned Flags;
+  unsigned AncestorIdx = 0;
+  CompileUnit::DIEInfo *OtherInfo = nullptr;
 
-  // First mark all the parent chain as kept.
-  unsigned AncestorIdx = MyInfo.ParentIdx;
-  while (!CU.getInfo(AncestorIdx).Keep) {
-    unsigned ODRFlag = UseODR ? TF_ODR : 0;
-    lookForDIEsToKeep(RelocMgr, Ranges, Units, Unit.getDIEAtIndex(AncestorIdx),
-                      DMO, CU,
-                      TF_ParentWalk | TF_Keep | TF_DependencyWalk | ODRFlag);
-    AncestorIdx = CU.getInfo(AncestorIdx).ParentIdx;
+  WorklistItem(DWARFDie Die, CompileUnit &CU, unsigned Flags,
+               WorklistItemType T = WorklistItemType::LookForDIEsToKeep)
+      : Type(T), Die(Die), CU(CU), Flags(Flags){};
+
+  WorklistItem(DWARFDie Die, CompileUnit &CU, WorklistItemType T,
+               CompileUnit::DIEInfo *OtherInfo = nullptr)
+      : Type(T), Die(Die), CU(CU), OtherInfo(OtherInfo){};
+
+  WorklistItem(unsigned AncestorIdx, CompileUnit &CU, unsigned Flags)
+      : Type(WorklistItemType::LookForParentDIEsToKeep), CU(CU), Flags(Flags),
+        AncestorIdx(AncestorIdx){};
+};
+} // namespace
+
+/// Helper that updates the completeness of the current DIE based on the
+/// completeness of one of its children. It depends on the incompleteness of
+/// the children already being computed.
+static void updateChildIncompleteness(const DWARFDie &Die, CompileUnit &CU,
+                                      CompileUnit::DIEInfo &ChildInfo) {
+  switch (Die.getTag()) {
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_class_type:
+    break;
+  default:
+    return;
   }
 
-  // Then we need to mark all the DIEs referenced by this DIE's
-  // attributes as kept.
+  unsigned Idx = CU.getOrigUnit().getDIEIndex(Die);
+  CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
+
+  if (ChildInfo.Incomplete || ChildInfo.Prune)
+    MyInfo.Incomplete = true;
+}
+
+/// Helper that updates the completeness of the current DIE based on the
+/// completeness of the DIEs it references. It depends on the incompleteness of
+/// the referenced DIE already being computed.
+static void updateRefIncompleteness(const DWARFDie &Die, CompileUnit &CU,
+                                    CompileUnit::DIEInfo &RefInfo) {
+  switch (Die.getTag()) {
+  case dwarf::DW_TAG_typedef:
+  case dwarf::DW_TAG_member:
+  case dwarf::DW_TAG_reference_type:
+  case dwarf::DW_TAG_ptr_to_member_type:
+  case dwarf::DW_TAG_pointer_type:
+    break;
+  default:
+    return;
+  }
+
+  unsigned Idx = CU.getOrigUnit().getDIEIndex(Die);
+  CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
+
+  if (MyInfo.Incomplete)
+    return;
+
+  if (RefInfo.Incomplete)
+    MyInfo.Incomplete = true;
+}
+
+/// Look at the children of the given DIE and decide whether they should be
+/// kept.
+static void lookForChildDIEsToKeep(const DWARFDie &Die, CompileUnit &CU,
+                                   unsigned Flags,
+                                   SmallVectorImpl<WorklistItem> &Worklist) {
+  // The TF_ParentWalk flag tells us that we are currently walking up the
+  // parent chain of a required DIE, and we don't want to mark all the children
+  // of the parents as kept (consider for example a DW_TAG_namespace node in
+  // the parent chain). There are however a set of DIE types for which we want
+  // to ignore that directive and still walk their children.
+  if (dieNeedsChildrenToBeMeaningful(Die.getTag()))
+    Flags &= ~DwarfLinker::TF_ParentWalk;
+
+  // We're finished if this DIE has no children or we're walking the parent
+  // chain.
+  if (!Die.hasChildren() || (Flags & DwarfLinker::TF_ParentWalk))
+    return;
+
+  // Add children in reverse order to the worklist to effectively process them
+  // in order.
+  for (auto Child : reverse(Die.children())) {
+    // Add a worklist item before every child to calculate incompleteness right
+    // after the current child is processed.
+    unsigned Idx = CU.getOrigUnit().getDIEIndex(Child);
+    CompileUnit::DIEInfo &ChildInfo = CU.getInfo(Idx);
+    Worklist.emplace_back(Die, CU, WorklistItemType::UpdateChildIncompleteness,
+                          &ChildInfo);
+    Worklist.emplace_back(Child, CU, Flags);
+  }
+}
+
+/// Look at DIEs referenced by the given DIE and decide whether they should be
+/// kept. All DIEs referenced though attributes should be kept.
+static void lookForRefDIEsToKeep(const DWARFDie &Die, CompileUnit &CU,
+                                 unsigned Flags, DwarfLinker &Linker,
+                                 const UnitListTy &Units,
+                                 const DebugMapObject &DMO,
+                                 SmallVectorImpl<WorklistItem> &Worklist) {
+  bool UseOdr = (Flags & DwarfLinker::TF_DependencyWalk)
+                    ? (Flags & DwarfLinker::TF_ODR)
+                    : CU.hasODR();
+  DWARFUnit &Unit = CU.getOrigUnit();
   DWARFDataExtractor Data = Unit.getDebugInfoExtractor();
   const auto *Abbrev = Die.getAbbreviationDeclarationPtr();
   uint64_t Offset = Die.getOffset() + getULEB128Size(Abbrev->getCode());
 
-  // Mark all DIEs referenced through attributes as kept.
+  SmallVector<std::pair<DWARFDie, CompileUnit &>, 4> ReferencedDIEs;
   for (const auto &AttrSpec : Abbrev->attributes()) {
     DWARFFormValue Val(AttrSpec.Form);
     if (!Val.isFormClass(DWARFFormValue::FC_Reference) ||
@@ -809,7 +909,7 @@ void DwarfLinker::keepDIEAndDependencies(
     Val.extractValue(Data, &Offset, Unit.getFormParams(), &Unit);
     CompileUnit *ReferencedCU;
     if (auto RefDie =
-            resolveDIEReference(*this, DMO, Units, Val, Die, ReferencedCU)) {
+            resolveDIEReference(Linker, DMO, Units, Val, Die, ReferencedCU)) {
       uint32_t RefIdx = ReferencedCU->getOrigUnit().getDIEIndex(RefDie);
       CompileUnit::DIEInfo &Info = ReferencedCU->getInfo(RefIdx);
       bool IsModuleRef = Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset() &&
@@ -817,12 +917,14 @@ void DwarfLinker::keepDIEAndDependencies(
       // If the referenced DIE has a DeclContext that has already been
       // emitted, then do not keep the one in this CU. We'll link to
       // the canonical DIE in cloneDieReferenceAttribute.
+      //
       // FIXME: compatibility with dsymutil-classic. UseODR shouldn't
       // be necessary and could be advantageously replaced by
       // ReferencedCU->hasODR() && CU.hasODR().
+      //
       // FIXME: compatibility with dsymutil-classic. There is no
       // reason not to unique ref_addr references.
-      if (AttrSpec.Form != dwarf::DW_FORM_ref_addr && (UseODR || IsModuleRef) &&
+      if (AttrSpec.Form != dwarf::DW_FORM_ref_addr && (UseOdr || IsModuleRef) &&
           Info.Ctxt &&
           Info.Ctxt != ReferencedCU->getInfo(Info.ParentIdx).Ctxt &&
           Info.Ctxt->getCanonicalDIEOffset() && isODRAttribute(AttrSpec.Attr))
@@ -832,107 +934,104 @@ void DwarfLinker::keepDIEAndDependencies(
       if (!(isODRAttribute(AttrSpec.Attr) && Info.Ctxt &&
             Info.Ctxt->getCanonicalDIEOffset()))
         Info.Prune = false;
-
-      unsigned ODRFlag = UseODR ? TF_ODR : 0;
-      lookForDIEsToKeep(RelocMgr, Ranges, Units, RefDie, DMO, *ReferencedCU,
-                        TF_Keep | TF_DependencyWalk | ODRFlag);
-
-      // The incomplete property is propagated if the current DIE is complete
-      // but references an incomplete DIE.
-      if (Info.Incomplete && !MyInfo.Incomplete &&
-          (Die.getTag() == dwarf::DW_TAG_typedef ||
-           Die.getTag() == dwarf::DW_TAG_member ||
-           Die.getTag() == dwarf::DW_TAG_reference_type ||
-           Die.getTag() == dwarf::DW_TAG_ptr_to_member_type ||
-           Die.getTag() == dwarf::DW_TAG_pointer_type))
-        MyInfo.Incomplete = true;
+      ReferencedDIEs.emplace_back(RefDie, *ReferencedCU);
     }
+  }
+
+  unsigned ODRFlag = UseOdr ? DwarfLinker::TF_ODR : 0;
+
+  // Add referenced DIEs in reverse order to the worklist to effectively
+  // process them in order.
+  for (auto &P : reverse(ReferencedDIEs)) {
+    // Add a worklist item before every child to calculate incompleteness right
+    // after the current child is processed.
+    uint32_t RefIdx = P.second.getOrigUnit().getDIEIndex(P.first);
+    CompileUnit::DIEInfo &Info = P.second.getInfo(RefIdx);
+    Worklist.emplace_back(Die, CU, WorklistItemType::UpdateRefIncompleteness,
+                          &Info);
+    Worklist.emplace_back(P.first, P.second,
+                          DwarfLinker::TF_Keep |
+                              DwarfLinker::TF_DependencyWalk | ODRFlag);
   }
 }
 
-namespace {
-/// This class represents an item in the work list. In addition to it's obvious
-/// purpose of representing the state associated with a particular run of the
-/// work loop, it also serves as a marker to indicate that we should run the
-/// "continuation" code.
-///
-/// Originally, the latter was lambda which allowed arbitrary code to be run.
-/// Because we always need to run the exact same code, it made more sense to
-/// use a boolean and repurpose the already existing DIE field.
-struct WorklistItem {
-  DWARFDie Die;
-  unsigned Flags;
-  bool IsContinuation;
-  CompileUnit::DIEInfo *ChildInfo = nullptr;
-
-  /// Construct a classic worklist item.
-  WorklistItem(DWARFDie Die, unsigned Flags)
-      : Die(Die), Flags(Flags), IsContinuation(false){};
-
-  /// Creates a continuation marker.
-  WorklistItem(DWARFDie Die) : Die(Die), IsContinuation(true){};
-};
-} // namespace
-
-// Helper that updates the completeness of the current DIE. It depends on the
-// fact that the incompletness of its children is already computed.
-static void updateIncompleteness(const DWARFDie &Die,
-                                 CompileUnit::DIEInfo &ChildInfo,
-                                 CompileUnit &CU) {
-  // Only propagate incomplete members.
-  if (Die.getTag() != dwarf::DW_TAG_structure_type &&
-      Die.getTag() != dwarf::DW_TAG_class_type)
+/// Look at the parent of the given DIE and decide whether they should be kept.
+static void lookForParentDIEsToKeep(unsigned AncestorIdx, CompileUnit &CU,
+                                    unsigned Flags,
+                                    SmallVectorImpl<WorklistItem> &Worklist) {
+  // Stop if we encounter an ancestor that's already marked as kept.
+  if (CU.getInfo(AncestorIdx).Keep)
     return;
 
-  unsigned Idx = CU.getOrigUnit().getDIEIndex(Die);
-  CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
-
-  if (MyInfo.Incomplete)
-    return;
-
-  if (ChildInfo.Incomplete || ChildInfo.Prune)
-    MyInfo.Incomplete = true;
+  DWARFUnit &Unit = CU.getOrigUnit();
+  DWARFDie ParentDIE = Unit.getDIEAtIndex(AncestorIdx);
+  Worklist.emplace_back(CU.getInfo(AncestorIdx).ParentIdx, CU, Flags);
+  Worklist.emplace_back(ParentDIE, CU, Flags);
 }
 
-/// Recursively walk the \p DIE tree and look for DIEs to
-/// keep. Store that information in \p CU's DIEInfo.
+/// Recursively walk the \p DIE tree and look for DIEs to keep. Store that
+/// information in \p CU's DIEInfo.
 ///
-/// This function is the entry point of the DIE selection
-/// algorithm. It is expected to walk the DIE tree in file order and
-/// (though the mediation of its helper) call hasValidRelocation() on
-/// each DIE that might be a 'root DIE' (See DwarfLinker class
-/// comment).
-/// While walking the dependencies of root DIEs, this function is
-/// also called, but during these dependency walks the file order is
-/// not respected. The TF_DependencyWalk flag tells us which kind of
-/// traversal we are currently doing.
+/// This function is the entry point of the DIE selection algorithm. It is
+/// expected to walk the DIE tree in file order and (though the mediation of
+/// its helper) call hasValidRelocation() on each DIE that might be a 'root
+/// DIE' (See DwarfLinker class comment).
+///
+/// While walking the dependencies of root DIEs, this function is also called,
+/// but during these dependency walks the file order is not respected. The
+/// TF_DependencyWalk flag tells us which kind of traversal we are currently
+/// doing.
+///
+/// The recursive algorithm is implemented iteratively as a work list because
+/// very deep recursion could exhaust the stack for large projects. The work
+/// list acts as a scheduler for different types of work that need to be
+/// performed.
+///
+/// The recursive nature of the algorithm is simulated by running the "main"
+/// algorithm (LookForDIEsToKeep) followed by either looking at more DIEs
+/// (LookForChildDIEsToKeep, LookForRefDIEsToKeep, LookForParentDIEsToKeep) or
+/// fixing up a computed property (UpdateChildIncompleteness,
+/// UpdateRefIncompleteness).
 ///
 /// The return value indicates whether the DIE is incomplete.
 void DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
                                     RangesTy &Ranges, const UnitListTy &Units,
                                     const DWARFDie &Die,
-                                    const DebugMapObject &DMO, CompileUnit &CU,
+                                    const DebugMapObject &DMO, CompileUnit &Cu,
                                     unsigned Flags) {
   // LIFO work list.
   SmallVector<WorklistItem, 4> Worklist;
-  Worklist.emplace_back(Die, Flags);
+  Worklist.emplace_back(Die, Cu, Flags);
 
   while (!Worklist.empty()) {
     WorklistItem Current = Worklist.back();
     Worklist.pop_back();
 
-    if (Current.IsContinuation) {
-      updateIncompleteness(Current.Die, *Current.ChildInfo, CU);
+    // Look at the worklist type to decide what kind of work to perform.
+    switch (Current.Type) {
+    case WorklistItemType::UpdateChildIncompleteness:
+      updateChildIncompleteness(Current.Die, Current.CU, *Current.OtherInfo);
       continue;
+    case WorklistItemType::UpdateRefIncompleteness:
+      updateRefIncompleteness(Current.Die, Current.CU, *Current.OtherInfo);
+      continue;
+    case WorklistItemType::LookForChildDIEsToKeep:
+      lookForChildDIEsToKeep(Current.Die, Current.CU, Current.Flags, Worklist);
+      continue;
+    case WorklistItemType::LookForRefDIEsToKeep:
+      lookForRefDIEsToKeep(Current.Die, Current.CU, Current.Flags, *this, Units,
+                           DMO, Worklist);
+      continue;
+    case WorklistItemType::LookForParentDIEsToKeep:
+      lookForParentDIEsToKeep(Current.AncestorIdx, Current.CU, Current.Flags,
+                              Worklist);
+      continue;
+    case WorklistItemType::LookForDIEsToKeep:
+      break;
     }
 
-    unsigned Idx = CU.getOrigUnit().getDIEIndex(Current.Die);
-    CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
-
-    // At this point we are guaranteed to have a continuation marker before us
-    // in the worklist, except for the last DIE.
-    if (!Worklist.empty())
-      Worklist.back().ChildInfo = &MyInfo;
+    unsigned Idx = Current.CU.getOrigUnit().getDIEIndex(Current.Die);
+    CompileUnit::DIEInfo &MyInfo = Current.CU.getInfo(Idx);
 
     if (MyInfo.Prune)
       continue;
@@ -946,41 +1045,41 @@ void DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
     // We must not call shouldKeepDIE while called from keepDIEAndDependencies,
     // because it would screw up the relocation finding logic.
     if (!(Current.Flags & TF_DependencyWalk))
-      Current.Flags = shouldKeepDIE(RelocMgr, Ranges, Current.Die, DMO, CU,
-                                    MyInfo, Current.Flags);
+      Current.Flags = shouldKeepDIE(RelocMgr, Ranges, Current.Die, DMO,
+                                    Current.CU, MyInfo, Current.Flags);
+
+    // Finish by looking for child DIEs. Because of the LIFO worklist we need
+    // to schedule that work before any subsequent items are added to the
+    // worklist.
+    Worklist.emplace_back(Current.Die, Current.CU, Current.Flags,
+                          WorklistItemType::LookForChildDIEsToKeep);
+
+    if (AlreadyKept || !(Current.Flags & TF_Keep))
+      continue;
 
     // If it is a newly kept DIE mark it as well as all its dependencies as
     // kept.
-    if (!AlreadyKept && (Current.Flags & TF_Keep)) {
-      bool UseOdr = (Current.Flags & TF_DependencyWalk)
-                        ? (Current.Flags & TF_ODR)
-                        : CU.hasODR();
-      keepDIEAndDependencies(RelocMgr, Ranges, Units, Current.Die, MyInfo, DMO,
-                             CU, UseOdr);
-    }
+    MyInfo.Keep = true;
 
-    // The TF_ParentWalk flag tells us that we are currently walking up
-    // the parent chain of a required DIE, and we don't want to mark all
-    // the children of the parents as kept (consider for example a
-    // DW_TAG_namespace node in the parent chain). There are however a
-    // set of DIE types for which we want to ignore that directive and still
-    // walk their children.
-    if (dieNeedsChildrenToBeMeaningful(Current.Die.getTag()))
-      Current.Flags &= ~TF_ParentWalk;
+    // We're looking for incomplete types.
+    MyInfo.Incomplete =
+        Current.Die.getTag() != dwarf::DW_TAG_subprogram &&
+        Current.Die.getTag() != dwarf::DW_TAG_member &&
+        dwarf::toUnsigned(Current.Die.find(dwarf::DW_AT_declaration), 0);
 
-    if (!Current.Die.hasChildren() || (Current.Flags & TF_ParentWalk))
-      continue;
+    // After looking at the parent chain, look for referenced DIEs. Because of
+    // the LIFO worklist we need to schedule that work before any subsequent
+    // items are added to the worklist.
+    Worklist.emplace_back(Current.Die, Current.CU, Current.Flags,
+                          WorklistItemType::LookForRefDIEsToKeep);
 
-    // Add children in reverse order to the worklist to effectively process
-    // them in order.
-    for (auto Child : reverse(Current.Die.children())) {
-      // Add continuation marker before every child to calculate incompleteness
-      // after the last child is processed. We can't store this information in
-      // the same item because we might have to process other continuations
-      // first.
-      Worklist.emplace_back(Current.Die);
-      Worklist.emplace_back(Child, Current.Flags);
-    }
+    bool UseOdr = (Current.Flags & TF_DependencyWalk) ? (Current.Flags & TF_ODR)
+                                                      : Current.CU.hasODR();
+    unsigned ODRFlag = UseOdr ? TF_ODR : 0;
+    unsigned ParFlags = TF_ParentWalk | TF_Keep | TF_DependencyWalk | ODRFlag;
+
+    // Now schedule the parent walk.
+    Worklist.emplace_back(MyInfo.ParentIdx, Current.CU, ParFlags);
   }
 }
 

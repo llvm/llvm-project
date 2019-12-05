@@ -39,6 +39,7 @@ using ::testing::Contains;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Field;
+using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
@@ -214,7 +215,8 @@ public:
       CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
         if (PragmaHandler)
           CI.getPreprocessor().addCommentHandler(PragmaHandler);
-        return createIndexingASTConsumer(DataConsumer, Opts, CI.getPreprocessorPtr());
+        return createIndexingASTConsumer(DataConsumer, Opts,
+                                         CI.getPreprocessorPtr());
       }
 
       bool BeginInvocation(CompilerInstance &CI) override {
@@ -577,15 +579,16 @@ o]]();
 
 TEST_F(SymbolCollectorTest, Refs) {
   Annotations Header(R"(
-  class $foo[[Foo]] {
+  #define MACRO(X) (X + 1)
+  class Foo {
   public:
-    $foo[[Foo]]() {}
-    $foo[[Foo]](int);
+    Foo() {}
+    Foo(int);
   };
-  class $bar[[Bar]];
-  void $func[[func]]();
+  class Bar;
+  void func();
 
-  namespace $ns[[NS]] {} // namespace ref is ignored
+  namespace NS {} // namespace ref is ignored
   )");
   Annotations Main(R"(
   class $bar[[Bar]] {};
@@ -598,19 +601,20 @@ TEST_F(SymbolCollectorTest, Refs) {
     $func[[func]]();
     int abc = 0;
     $foo[[Foo]] foo2 = abc;
+    abc = $macro[[MACRO]](1);
   }
   )");
   Annotations SymbolsOnlyInMainCode(R"(
+  #define FUNC(X) (X+1)
   int a;
   void b() {}
-  static const int c = 0;
+  static const int c = FUNC(1);
   class d {};
   )");
   CollectorOpts.RefFilter = RefKind::All;
+  CollectorOpts.CollectMacro = true;
   runSymbolCollector(Header.code(),
                      (Main.code() + SymbolsOnlyInMainCode.code()).str());
-  auto HeaderSymbols = TestTU::withHeaderCode(Header.code()).headerSymbols();
-
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Foo").ID,
                                   HaveRanges(Main.ranges("foo")))));
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Bar").ID,
@@ -618,12 +622,82 @@ TEST_F(SymbolCollectorTest, Refs) {
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "func").ID,
                                   HaveRanges(Main.ranges("func")))));
   EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(Symbols, "NS").ID, _))));
-  // Symbols *only* in the main file (a, b, c) had no refs collected.
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "MACRO").ID,
+                                  HaveRanges(Main.ranges("macro")))));
+  // Symbols *only* in the main file (a, b, c, FUNC) had no refs collected.
   auto MainSymbols =
       TestTU::withHeaderCode(SymbolsOnlyInMainCode.code()).headerSymbols();
   EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "a").ID, _))));
   EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "b").ID, _))));
   EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "c").ID, _))));
+  EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "FUNC").ID, _))));
+}
+
+TEST_F(SymbolCollectorTest, MacroRefInHeader) {
+  Annotations Header(R"(
+  #define $foo[[FOO]](X) (X + 1)
+  #define $bar[[BAR]](X) (X + 2)
+
+  // Macro defined multiple times.
+  #define $ud1[[UD]] 1
+  int ud_1 = $ud1[[UD]];
+  #undef UD
+
+  #define $ud2[[UD]] 2
+  int ud_2 = $ud2[[UD]];
+  #undef UD
+
+  // Macros from token concatenations not included.
+  #define $concat[[CONCAT]](X) X##A()
+  #define $prepend[[PREPEND]](X) MACRO##X()
+  #define $macroa[[MACROA]]() 123
+  int B = $concat[[CONCAT]](MACRO);
+  int D = $prepend[[PREPEND]](A);
+
+  void fff() {
+    int abc = $foo[[FOO]](1) + $bar[[BAR]]($foo[[FOO]](1));
+  }
+  )");
+  CollectorOpts.RefFilter = RefKind::All;
+  CollectorOpts.RefsInHeaders = true;
+  // Need this to get the SymbolID for macros for tests.
+  CollectorOpts.CollectMacro = true;
+
+  runSymbolCollector(Header.code(), "");
+
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "FOO").ID,
+                                  HaveRanges(Header.ranges("foo")))));
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "BAR").ID,
+                                  HaveRanges(Header.ranges("bar")))));
+  // No unique ID for multiple symbols named UD. Check for ranges only.
+  EXPECT_THAT(Refs, Contains(Pair(_, HaveRanges(Header.ranges("ud1")))));
+  EXPECT_THAT(Refs, Contains(Pair(_, HaveRanges(Header.ranges("ud2")))));
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "CONCAT").ID,
+                                  HaveRanges(Header.ranges("concat")))));
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "PREPEND").ID,
+                                  HaveRanges(Header.ranges("prepend")))));
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "MACROA").ID,
+                                  HaveRanges(Header.ranges("macroa")))));
+}
+
+TEST_F(SymbolCollectorTest, MacroRefWithoutCollectingSymbol) {
+  Annotations Header(R"(
+  #define $foo[[FOO]](X) (X + 1)
+  int abc = $foo[[FOO]](1);
+  )");
+  CollectorOpts.RefFilter = RefKind::All;
+  CollectorOpts.RefsInHeaders = true;
+  CollectorOpts.CollectMacro = false;
+  runSymbolCollector(Header.code(), "");
+  EXPECT_THAT(Refs, Contains(Pair(_, HaveRanges(Header.ranges("foo")))));
+}
+
+TEST_F(SymbolCollectorTest, MacrosWithRefFilter) {
+  Annotations Header("#define $macro[[MACRO]](X) (X + 1)");
+  Annotations Main("void foo() { int x = $macro[[MACRO]](1); }");
+  CollectorOpts.RefFilter = RefKind::Unknown;
+  runSymbolCollector(Header.code(), Main.code());
+  EXPECT_THAT(Refs, IsEmpty());
 }
 
 TEST_F(SymbolCollectorTest, NameReferences) {
@@ -675,21 +749,26 @@ TEST_F(SymbolCollectorTest, HeaderAsMainFile) {
   TestFileName = testPath("foo.hh");
   runSymbolCollector("", Header.code());
   EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Foo"), QName("Func")));
-  EXPECT_THAT(Refs, UnorderedElementsAre(Pair(findSymbol(Symbols, "Foo").ID,
-                                  HaveRanges(Header.ranges("Foo"))),
-                             Pair(findSymbol(Symbols, "Func").ID,
-                                  HaveRanges(Header.ranges("Func")))));
+  EXPECT_THAT(Refs,
+              UnorderedElementsAre(Pair(findSymbol(Symbols, "Foo").ID,
+                                        HaveRanges(Header.ranges("Foo"))),
+                                   Pair(findSymbol(Symbols, "Func").ID,
+                                        HaveRanges(Header.ranges("Func")))));
 }
 
 TEST_F(SymbolCollectorTest, RefsInHeaders) {
   CollectorOpts.RefFilter = RefKind::All;
   CollectorOpts.RefsInHeaders = true;
+  CollectorOpts.CollectMacro = true;
   Annotations Header(R"(
-  class [[Foo]] {};
+  #define $macro[[MACRO]](x) (x+1)
+  class $foo[[Foo]] {};
   )");
   runSymbolCollector(Header.code(), "");
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Foo").ID,
-                                  HaveRanges(Header.ranges()))));
+                                  HaveRanges(Header.ranges("foo")))));
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "MACRO").ID,
+                                  HaveRanges(Header.ranges("macro")))));
 }
 
 TEST_F(SymbolCollectorTest, Relations) {
@@ -704,7 +783,7 @@ TEST_F(SymbolCollectorTest, Relations) {
               Contains(Relation{Base.ID, RelationKind::BaseOf, Derived.ID}));
 }
 
-TEST_F(SymbolCollectorTest, References) {
+TEST_F(SymbolCollectorTest, CountReferences) {
   const std::string Header = R"(
     class W;
     class X {};

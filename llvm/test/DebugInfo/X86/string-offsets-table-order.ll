@@ -12,11 +12,11 @@
 ; in different order.
 
 ; CHECK: .debug_info contents:
-; CHECK:   DW_TAG_compile_unit
+; CHECK:   DW_TAG_skeleton_unit
 ; CHECK:     DW_AT_comp_dir [DW_FORM_strx1] (indexed (00000000) string = "X3")
-; CHECK:   DW_TAG_compile_unit
+; CHECK:   DW_TAG_skeleton_unit
 ; CHECK:     DW_AT_comp_dir [DW_FORM_strx1] (indexed (00000001) string = "X2")
-; CHECK:   DW_TAG_compile_unit
+; CHECK:   DW_TAG_skeleton_unit
 ; CHECK:     DW_AT_comp_dir [DW_FORM_strx1] (indexed (00000002) string = "X1")
 ; CHECK: .debug_info.dwo contents:
 

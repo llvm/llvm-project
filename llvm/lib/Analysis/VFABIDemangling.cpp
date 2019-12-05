@@ -402,8 +402,8 @@ Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName) {
     assert(Parameters.back().ParamKind == VFParamKind::GlobalPredicate &&
            "The global predicate must be the last parameter");
 
-  const VFShape Shape({VF, IsScalable, ISA, Parameters});
-  return VFInfo({Shape, ScalarName, VectorName});
+  const VFShape Shape({VF, IsScalable, Parameters});
+  return VFInfo({Shape, ScalarName, VectorName, ISA});
 }
 
 VFParamKind VFABI::getVFParamKindFromString(const StringRef Token) {

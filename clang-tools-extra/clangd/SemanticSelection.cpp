@@ -30,7 +30,7 @@ llvm::Expected<std::vector<Range>> getSemanticRanges(ParsedAST &AST,
                                                      Position Pos) {
   std::vector<Range> Result;
   const auto &SM = AST.getSourceManager();
-  const auto &LangOpts = AST.getASTContext().getLangOpts();
+  const auto &LangOpts = AST.getLangOpts();
 
   auto FID = SM.getMainFileID();
   auto Offset = positionToOffset(SM.getBufferData(FID), Pos);

@@ -7861,6 +7861,11 @@ public:
     // either copied into the closure object's field that represents the '*this'
     // or refers to '*this'.
     if (isLambdaCallOperator(Info.CurrentCall->Callee)) {
+      // Ensure we actually have captured 'this'. (an error will have
+      // been previously reported if not).
+      if (!Info.CurrentCall->LambdaThisCaptureField)
+        return false;
+
       // Update 'Result' to refer to the data member/field of the closure object
       // that represents the '*this' capture.
       if (!HandleLValueMember(Info, E, Result,

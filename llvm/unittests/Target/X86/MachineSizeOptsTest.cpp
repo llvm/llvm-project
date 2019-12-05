@@ -113,13 +113,13 @@ TEST_F(MachineSizeOptsTest, Test) {
   ASSERT_TRUE(iter == BB0.succ_end());
   MachineBasicBlock *BB3 = *BB1->succ_begin();
   ASSERT_TRUE(BB3 == *BB2->succ_begin());
-  EXPECT_FALSE(shouldOptimizeForSize(F, &PSI, MBFI_F));
-  EXPECT_TRUE(shouldOptimizeForSize(G, &PSI, MBFI_G));
-  EXPECT_FALSE(shouldOptimizeForSize(H, &PSI, MBFI_H));
-  EXPECT_FALSE(shouldOptimizeForSize(&BB0, &PSI, MBFI_F));
-  EXPECT_FALSE(shouldOptimizeForSize(BB1, &PSI, MBFI_F));
-  EXPECT_TRUE(shouldOptimizeForSize(BB2, &PSI, MBFI_F));
-  EXPECT_FALSE(shouldOptimizeForSize(BB3, &PSI, MBFI_F));
+  EXPECT_FALSE(shouldOptimizeForSize(F, &PSI, MBFI_F, PGSOQueryType::Test));
+  EXPECT_TRUE(shouldOptimizeForSize(G, &PSI, MBFI_G, PGSOQueryType::Test));
+  EXPECT_FALSE(shouldOptimizeForSize(H, &PSI, MBFI_H, PGSOQueryType::Test));
+  EXPECT_FALSE(shouldOptimizeForSize(&BB0, &PSI, MBFI_F, PGSOQueryType::Test));
+  EXPECT_FALSE(shouldOptimizeForSize(BB1, &PSI, MBFI_F, PGSOQueryType::Test));
+  EXPECT_TRUE(shouldOptimizeForSize(BB2, &PSI, MBFI_F, PGSOQueryType::Test));
+  EXPECT_FALSE(shouldOptimizeForSize(BB3, &PSI, MBFI_F, PGSOQueryType::Test));
 }
 
 const char* MachineSizeOptsTest::MIRString = R"MIR(

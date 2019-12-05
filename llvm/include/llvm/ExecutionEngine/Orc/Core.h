@@ -1079,10 +1079,6 @@ public:
     return F();
   }
 
-  /// Get the "main" JITDylib, which is created automatically on construction of
-  /// the ExecutionSession.
-  JITDylib &getMainJITDylib();
-
   /// Return a pointer to the "name" JITDylib.
   /// Ownership of JITDylib remains within Execution Session
   JITDylib *getJITDylibByName(StringRef Name);
@@ -1092,8 +1088,7 @@ public:
   /// The JITDylib Name is required to be unique. Clients should verify that
   /// names are not being re-used (e.g. by calling getJITDylibByName) if names
   /// are based on user input.
-  JITDylib &createJITDylib(std::string Name,
-                           bool AddToMainDylibSearchOrder = true);
+  JITDylib &createJITDylib(std::string Name);
 
   /// Allocate a module key for a new module to add to the JIT.
   VModuleKey allocateVModule() {

@@ -180,7 +180,7 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
 
     if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2015)) {
       if (Opts.CPlusPlus2a)
-        Builder.defineMacro("_MSVC_LANG", "201704L");
+        Builder.defineMacro("_MSVC_LANG", "201705L");
       else if (Opts.CPlusPlus17)
         Builder.defineMacro("_MSVC_LANG", "201703L");
       else if (Opts.CPlusPlus14)

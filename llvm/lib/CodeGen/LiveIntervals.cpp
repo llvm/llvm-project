@@ -1072,9 +1072,9 @@ private:
       // Kill flags shouldn't be used while live intervals exist, they will be
       // reinserted by VirtRegRewriter.
       if (MachineInstr *KillMI = LIS.getInstructionFromIndex(OldIdxIn->end))
-        for (MIBundleOperands MO(*KillMI); MO.isValid(); ++MO)
-          if (MO->isReg() && MO->isUse())
-            MO->setIsKill(false);
+        for (MachineOperand &MOP : mi_bundle_ops(*KillMI))
+          if (MOP.isReg() && MOP.isUse())
+            MOP.setIsKill(false);
 
       // Is there a def before NewIdx which is not OldIdx?
       LiveRange::iterator Next = std::next(OldIdxIn);

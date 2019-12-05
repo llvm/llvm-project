@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -3212,7 +3213,8 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       S, *I, *PartId, *TaskT, S.getDirectiveKind(), CodeGen, Data.Tied,
       Data.NumberOfParts);
   OMPLexicalScope Scope(*this, S, llvm::None,
-                        !isOpenMPParallelDirective(S.getDirectiveKind()));
+                        !isOpenMPParallelDirective(S.getDirectiveKind()) &&
+                            !isOpenMPSimdDirective(S.getDirectiveKind()));
   TaskGen(*this, OutlinedFn, Data);
 }
 
@@ -5104,10 +5106,7 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
       CGF.incrementProfileCounter(&S);
     }
 
-    if (isOpenMPSimdDirective(S.getDirectiveKind())) {
-      CGF.EmitOMPSimdInit(S);
-      (void)CGF.EmitOMPLinearClauseInit(S);
-    }
+    (void)CGF.EmitOMPLinearClauseInit(S);
 
     OMPPrivateScope LoopScope(CGF);
     // Emit helper vars inits.
@@ -5143,13 +5142,24 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
       CGF.EmitIgnoredExpr(S.getCalcLastIteration());
     }
 
-    CGF.EmitOMPInnerLoop(S, LoopScope.requiresCleanups(), S.getCond(),
-                         S.getInc(),
-                         [&S](CodeGenFunction &CGF) {
-                           CGF.EmitOMPLoopBody(S, JumpDest());
-                           CGF.EmitStopPoint(&S);
-                         },
-                         [](CodeGenFunction &) {});
+    {
+      OMPLexicalScope Scope(CGF, S, OMPD_taskloop, /*EmitPreInitStmt=*/false);
+      emitCommonSimdLoop(
+          CGF, S,
+          [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+            if (isOpenMPSimdDirective(S.getDirectiveKind()))
+              CGF.EmitOMPSimdInit(S);
+          },
+          [&S, &LoopScope](CodeGenFunction &CGF, PrePostActionTy &) {
+            CGF.EmitOMPInnerLoop(
+                S, LoopScope.requiresCleanups(), S.getCond(), S.getInc(),
+                [&S](CodeGenFunction &CGF) {
+                  CGF.EmitOMPLoopBody(S, CodeGenFunction::JumpDest());
+                  CGF.EmitStopPoint(&S);
+                },
+                [](CodeGenFunction &) {});
+          });
+    }
     // Emit: if (PreCond) - end.
     if (ContBlock) {
       CGF.EmitBranch(ContBlock);
@@ -5203,6 +5213,7 @@ void CodeGenFunction::EmitOMPTaskLoopDirective(const OMPTaskLoopDirective &S) {
 
 void CodeGenFunction::EmitOMPTaskLoopSimdDirective(
     const OMPTaskLoopSimdDirective &S) {
+  OMPLexicalScope Scope(*this, S);
   EmitOMPTaskLoopBasedDirective(S);
 }
 
@@ -5222,7 +5233,7 @@ void CodeGenFunction::EmitOMPMasterTaskLoopSimdDirective(
     Action.Enter(CGF);
     EmitOMPTaskLoopBasedDirective(S);
   };
-  OMPLexicalScope Scope(*this, S, llvm::None, /*EmitPreInitStmt=*/false);
+  OMPLexicalScope Scope(*this, S);
   CGM.getOpenMPRuntime().emitMasterRegion(*this, CodeGen, S.getBeginLoc());
 }
 

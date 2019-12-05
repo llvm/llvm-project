@@ -789,7 +789,12 @@ TEST(CommandLineTest, ResponseFileWindows) {
 
 TEST(CommandLineTest, ResponseFiles) {
   vfs::InMemoryFileSystem FS;
-  FS.setCurrentWorkingDirectory("/");
+#ifdef _WIN32
+  const char *TestRoot = "C:\\";
+#else
+  const char *TestRoot = "/";
+#endif
+  FS.setCurrentWorkingDirectory(TestRoot);
 
   // Create included response file of first level.
   llvm::StringRef IncludedFileName = "resp1";
@@ -809,7 +814,6 @@ TEST(CommandLineTest, ResponseFiles) {
   FS.addFile(IncludedFileName2, 0,
              MemoryBuffer::getMemBuffer("-option_21 -option_22\n"
                                         "-option_23=abcd\n"));
-  llvm::errs() << "Added: " << IncludedFileName2 << '\n';
 
   // Create second included response file of second level.
   llvm::SmallString<128> IncludedFileName3;
@@ -830,7 +834,7 @@ TEST(CommandLineTest, ResponseFiles) {
   llvm::StringSaver Saver(A);
   ASSERT_TRUE(llvm::cl::ExpandResponseFiles(
       Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true, FS,
-      /*CurrentDir=*/StringRef("/")));
+      /*CurrentDir=*/StringRef(TestRoot)));
   EXPECT_THAT(Argv, testing::Pointwise(
                         StringEquality(),
                         {"test/test", "-flag_1", "-option_1", "-option_2",
@@ -841,7 +845,12 @@ TEST(CommandLineTest, ResponseFiles) {
 
 TEST(CommandLineTest, RecursiveResponseFiles) {
   vfs::InMemoryFileSystem FS;
-  FS.setCurrentWorkingDirectory("/");
+#ifdef _WIN32
+  const char *TestRoot = "C:\\";
+#else
+  const char *TestRoot = "/";
+#endif
+  FS.setCurrentWorkingDirectory(TestRoot);
 
   StringRef SelfFilePath = "self.rsp";
   std::string SelfFileRef = ("@" + SelfFilePath).str();
@@ -886,8 +895,9 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 #else
   cl::TokenizerCallback Tokenizer = cl::TokenizeGNUCommandLine;
 #endif
-  ASSERT_FALSE(cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, FS,
-                                       /*CurrentDir=*/llvm::StringRef("/")));
+  ASSERT_FALSE(
+      cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, FS,
+                              /*CurrentDir=*/llvm::StringRef(TestRoot)));
 
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(),
@@ -899,7 +909,12 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 
 TEST(CommandLineTest, ResponseFilesAtArguments) {
   vfs::InMemoryFileSystem FS;
-  FS.setCurrentWorkingDirectory("/");
+#ifdef _WIN32
+  const char *TestRoot = "C:\\";
+#else
+  const char *TestRoot = "/";
+#endif
+  FS.setCurrentWorkingDirectory(TestRoot);
 
   StringRef ResponseFilePath = "test.rsp";
 
@@ -921,7 +936,7 @@ TEST(CommandLineTest, ResponseFilesAtArguments) {
   StringSaver Saver(A);
   ASSERT_FALSE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
                                        false, false, FS,
-                                       /*CurrentDir=*/StringRef("/")));
+                                       /*CurrentDir=*/StringRef(TestRoot)));
 
   // ASSERT instead of EXPECT to prevent potential out-of-bounds access.
   ASSERT_EQ(Argv.size(), 1 + NON_RSP_AT_ARGS + 2);
@@ -935,12 +950,18 @@ TEST(CommandLineTest, ResponseFilesAtArguments) {
 
 TEST(CommandLineTest, ResponseFileRelativePath) {
   vfs::InMemoryFileSystem FS;
+#ifdef _WIN32
+  const char *TestRoot = "C:\\";
+#else
+  const char *TestRoot = "//net";
+#endif
+  FS.setCurrentWorkingDirectory(TestRoot);
 
-  StringRef OuterFile = "//net/dir/outer.rsp";
+  StringRef OuterFile = "dir/outer.rsp";
   StringRef OuterFileContents = "@inner.rsp";
   FS.addFile(OuterFile, 0, MemoryBuffer::getMemBuffer(OuterFileContents));
 
-  StringRef InnerFile = "//net/dir/inner.rsp";
+  StringRef InnerFile = "dir/inner.rsp";
   StringRef InnerFileContents = "-flag";
   FS.addFile(InnerFile, 0, MemoryBuffer::getMemBuffer(InnerFileContents));
 
@@ -950,7 +971,7 @@ TEST(CommandLineTest, ResponseFileRelativePath) {
   StringSaver Saver(A);
   ASSERT_TRUE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
                                       false, true, FS,
-                                      /*CurrentDir=*/StringRef("//net")));
+                                      /*CurrentDir=*/StringRef(TestRoot)));
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(), {"test/test", "-flag"}));
 }

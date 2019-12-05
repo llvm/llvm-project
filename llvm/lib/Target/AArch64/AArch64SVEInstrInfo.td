@@ -46,7 +46,7 @@ let Predicates = [HasSVE] in {
   defm AND_ZZZ : sve_int_bin_cons_log<0b00, "and", and>;
   defm ORR_ZZZ : sve_int_bin_cons_log<0b01, "orr", or>;
   defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor", xor>;
-  defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", int_aarch64_sve_bic>;
+  defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", int_aarch64_sve_bic_base>;
 
   defm ADD_ZPmZ   : sve_int_bin_pred_arit_0<0b000, "add", int_aarch64_sve_add>;
   defm SUB_ZPmZ   : sve_int_bin_pred_arit_0<0b001, "sub", int_aarch64_sve_sub>;
@@ -55,7 +55,7 @@ let Predicates = [HasSVE] in {
   defm ORR_ZPmZ : sve_int_bin_pred_log<0b000, "orr", int_aarch64_sve_or>;
   defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor", int_aarch64_sve_xor>;
   defm AND_ZPmZ : sve_int_bin_pred_log<0b010, "and", int_aarch64_sve_and>;
-  defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic", int_aarch64_sve_bic_pred>;
+  defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic", int_aarch64_sve_bic>;
 
   defm ADD_ZI   : sve_int_arith_imm0<0b000, "add">;
   defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub">;
@@ -262,21 +262,21 @@ let Predicates = [HasSVE] in {
   defm PFIRST  : sve_int_pfirst<0b00000, "pfirst">;
   defm PNEXT   : sve_int_pnext<0b00110, "pnext">;
 
-  def AND_PPzPP   : sve_int_pred_log<0b0000, "and">;
-  def BIC_PPzPP   : sve_int_pred_log<0b0001, "bic">;
-  def EOR_PPzPP   : sve_int_pred_log<0b0010, "eor">;
-  def SEL_PPPP    : sve_int_pred_log<0b0011, "sel">;
-  def ANDS_PPzPP  : sve_int_pred_log<0b0100, "ands">;
-  def BICS_PPzPP  : sve_int_pred_log<0b0101, "bics">;
-  def EORS_PPzPP  : sve_int_pred_log<0b0110, "eors">;
-  def ORR_PPzPP   : sve_int_pred_log<0b1000, "orr">;
-  def ORN_PPzPP   : sve_int_pred_log<0b1001, "orn">;
-  def NOR_PPzPP   : sve_int_pred_log<0b1010, "nor">;
-  def NAND_PPzPP  : sve_int_pred_log<0b1011, "nand">;
-  def ORRS_PPzPP  : sve_int_pred_log<0b1100, "orrs">;
-  def ORNS_PPzPP  : sve_int_pred_log<0b1101, "orns">;
-  def NORS_PPzPP  : sve_int_pred_log<0b1110, "nors">;
-  def NANDS_PPzPP : sve_int_pred_log<0b1111, "nands">;
+  defm AND_PPzPP   : sve_int_pred_log<0b0000, "and", int_aarch64_sve_and>;
+  defm BIC_PPzPP   : sve_int_pred_log<0b0001, "bic", int_aarch64_sve_bic>;
+  defm EOR_PPzPP   : sve_int_pred_log<0b0010, "eor", int_aarch64_sve_eor>;
+  defm SEL_PPPP    : sve_int_pred_log<0b0011, "sel", vselect>;
+  defm ANDS_PPzPP  : sve_int_pred_log<0b0100, "ands", int_aarch64_sve_ands>;
+  defm BICS_PPzPP  : sve_int_pred_log<0b0101, "bics", int_aarch64_sve_bics>;
+  defm EORS_PPzPP  : sve_int_pred_log<0b0110, "eors", int_aarch64_sve_eors>;
+  defm ORR_PPzPP   : sve_int_pred_log<0b1000, "orr", int_aarch64_sve_orr>;
+  defm ORN_PPzPP   : sve_int_pred_log<0b1001, "orn", int_aarch64_sve_orn>;
+  defm NOR_PPzPP   : sve_int_pred_log<0b1010, "nor", int_aarch64_sve_nor>;
+  defm NAND_PPzPP  : sve_int_pred_log<0b1011, "nand", int_aarch64_sve_nand>;
+  defm ORRS_PPzPP  : sve_int_pred_log<0b1100, "orrs", int_aarch64_sve_orrs>;
+  defm ORNS_PPzPP  : sve_int_pred_log<0b1101, "orns", int_aarch64_sve_orns>;
+  defm NORS_PPzPP  : sve_int_pred_log<0b1110, "nors", int_aarch64_sve_nors>;
+  defm NANDS_PPzPP : sve_int_pred_log<0b1111, "nands", int_aarch64_sve_nands>;
 
   defm CLASTA_RPZ : sve_int_perm_clast_rz<0, "clasta">;
   defm CLASTB_RPZ : sve_int_perm_clast_rz<1, "clastb">;
@@ -769,15 +769,15 @@ let Predicates = [HasSVE] in {
   defm FCMEQ_PPzZ0 : sve_fp_2op_p_pd<0b100, "fcmeq">;
   defm FCMNE_PPzZ0 : sve_fp_2op_p_pd<0b110, "fcmne">;
 
-  defm WHILELT_PWW : sve_int_while4_rr<0b010, "whilelt">;
-  defm WHILELE_PWW : sve_int_while4_rr<0b011, "whilele">;
-  defm WHILELO_PWW : sve_int_while4_rr<0b110, "whilelo">;
-  defm WHILELS_PWW : sve_int_while4_rr<0b111, "whilels">;
+  defm WHILELT_PWW : sve_int_while4_rr<0b010, "whilelt", int_aarch64_sve_whilelt>;
+  defm WHILELE_PWW : sve_int_while4_rr<0b011, "whilele", int_aarch64_sve_whilele>;
+  defm WHILELO_PWW : sve_int_while4_rr<0b110, "whilelo", int_aarch64_sve_whilelo>;
+  defm WHILELS_PWW : sve_int_while4_rr<0b111, "whilels", int_aarch64_sve_whilels>;
 
-  defm WHILELT_PXX : sve_int_while8_rr<0b010, "whilelt">;
-  defm WHILELE_PXX : sve_int_while8_rr<0b011, "whilele">;
-  defm WHILELO_PXX : sve_int_while8_rr<0b110, "whilelo">;
-  defm WHILELS_PXX : sve_int_while8_rr<0b111, "whilels">;
+  defm WHILELT_PXX : sve_int_while8_rr<0b010, "whilelt", int_aarch64_sve_whilelt>;
+  defm WHILELE_PXX : sve_int_while8_rr<0b011, "whilele", int_aarch64_sve_whilele>;
+  defm WHILELO_PXX : sve_int_while8_rr<0b110, "whilelo", int_aarch64_sve_whilelo>;
+  defm WHILELS_PXX : sve_int_while8_rr<0b111, "whilels", int_aarch64_sve_whilels>;
 
   def CTERMEQ_WW : sve_int_cterm<0b0, 0b0, "ctermeq", GPR32>;
   def CTERMNE_WW : sve_int_cterm<0b0, 0b1, "ctermne", GPR32>;
@@ -788,11 +788,11 @@ let Predicates = [HasSVE] in {
   def ADDVL_XXI : sve_int_arith_vl<0b0, "addvl">;
   def ADDPL_XXI : sve_int_arith_vl<0b1, "addpl">;
 
-  defm CNTB_XPiI : sve_int_count<0b000, "cntb">;
-  defm CNTH_XPiI : sve_int_count<0b010, "cnth">;
-  defm CNTW_XPiI : sve_int_count<0b100, "cntw">;
-  defm CNTD_XPiI : sve_int_count<0b110, "cntd">;
-  defm CNTP_XPP : sve_int_pcount_pred<0b0000, "cntp">;
+  defm CNTB_XPiI : sve_int_count<0b000, "cntb", int_aarch64_sve_cntb>;
+  defm CNTH_XPiI : sve_int_count<0b010, "cnth", int_aarch64_sve_cnth>;
+  defm CNTW_XPiI : sve_int_count<0b100, "cntw", int_aarch64_sve_cntw>;
+  defm CNTD_XPiI : sve_int_count<0b110, "cntd", int_aarch64_sve_cntd>;
+  defm CNTP_XPP : sve_int_pcount_pred<0b0000, "cntp", int_aarch64_sve_cntp>;
 
   defm INCB_XPiI : sve_int_pred_pattern_a<0b000, "incb">;
   defm DECB_XPiI : sve_int_pred_pattern_a<0b001, "decb">;
@@ -1511,15 +1511,16 @@ let Predicates = [HasSVE2] in {
   defm TBX_ZZZ  : sve2_int_perm_tbx<"tbx">;
 
   // SVE2 integer compare scalar count and limit
-  defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege">;
-  defm WHILEGT_PWW : sve_int_while4_rr<0b001, "whilegt">;
-  defm WHILEHS_PWW : sve_int_while4_rr<0b100, "whilehs">;
-  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi">;
+  defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege", null_frag>;
+  defm WHILEGT_PWW : sve_int_while4_rr<0b001, "whilegt", null_frag>;
+  defm WHILEHS_PWW : sve_int_while4_rr<0b100, "whilehs", null_frag>;
+  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi", null_frag>;
 
-  defm WHILEGE_PXX : sve_int_while8_rr<0b000, "whilege">;
-  defm WHILEGT_PXX : sve_int_while8_rr<0b001, "whilegt">;
-  defm WHILEHS_PXX : sve_int_while8_rr<0b100, "whilehs">;
-  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi">;
+  defm WHILEGE_PXX : sve_int_while8_rr<0b000, "whilege", null_frag>;
+  defm WHILEGT_PXX : sve_int_while8_rr<0b001, "whilegt", null_frag>;
+  defm WHILEHS_PXX : sve_int_while8_rr<0b100, "whilehs", null_frag>;
+  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", null_frag>;
+
 
   // SVE2 pointer conflict compare
   defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr">;
