@@ -26,6 +26,10 @@
 #include <inttypes.h>
 #include <sys/sysctl.h>
 
+#if __has_feature(ptrauth_calls)
+#include <ptrauth.h>
+#endif
+
 // Break only in privileged or user mode
 // (PAC bits in the DBGWVRn_EL1 watchpoint control register)
 #define S_USER ((uint32_t)(2u << 1))
@@ -93,7 +97,11 @@ uint32_t DNBArchMachARM64::GetCPUType() { return CPU_TYPE_ARM64; }
 uint64_t DNBArchMachARM64::GetPC(uint64_t failValue) {
   // Get program counter
   if (GetGPRState(false) == KERN_SUCCESS)
+#if defined(__LP64__)
+    return arm_thread_state64_get_pc(m_state.context.gpr);
+#else
     return m_state.context.gpr.__pc;
+#endif
   return failValue;
 }
 
@@ -101,7 +109,17 @@ kern_return_t DNBArchMachARM64::SetPC(uint64_t value) {
   // Get program counter
   kern_return_t err = GetGPRState(false);
   if (err == KERN_SUCCESS) {
+#if defined(__LP64__)
+#if __has_feature(ptrauth_calls)
+    // The incoming value could be garbage.  Strip it to avoid
+    // trapping when it gets resigned in the thread state.
+    value = (uint64_t) ptrauth_strip((void*) value, ptrauth_key_function_pointer);
+    value = (uint64_t) ptrauth_sign_unauthenticated((void*) value, ptrauth_key_function_pointer, 0);
+#endif
+    arm_thread_state64_set_pc_fptr (m_state.context.gpr, (void*) value);
+#else
     m_state.context.gpr.__pc = value;
+#endif
     err = SetGPRState();
   }
   return err == KERN_SUCCESS;
@@ -110,7 +128,11 @@ kern_return_t DNBArchMachARM64::SetPC(uint64_t value) {
 uint64_t DNBArchMachARM64::GetSP(uint64_t failValue) {
   // Get stack pointer
   if (GetGPRState(false) == KERN_SUCCESS)
+#if defined(__LP64__)
+    return arm_thread_state64_get_sp(m_state.context.gpr);
+#else
     return m_state.context.gpr.__sp;
+#endif
   return failValue;
 }
 
@@ -167,8 +189,15 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
         x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[0], x[11],
         x[12], x[13], x[14], x[15], x[16], x[17], x[18], x[19], x[20], x[21],
         x[22], x[23], x[24], x[25], x[26], x[27], x[28],
+#if defined(__LP64__)
+        (uint64_t) arm_thread_state64_get_fp (m_state.context.gpr),
+        (uint64_t) arm_thread_state64_get_lr (m_state.context.gpr),
+        (uint64_t) arm_thread_state64_get_sp (m_state.context.gpr),
+        (uint64_t) arm_thread_state64_get_pc (m_state.context.gpr),
+#else
         m_state.context.gpr.__fp, m_state.context.gpr.__lr,
         m_state.context.gpr.__sp, m_state.context.gpr.__pc,
+#endif
         m_state.context.gpr.__cpsr);
   }
   m_state.SetError(set, Read, kret);
@@ -564,12 +593,20 @@ kern_return_t DNBArchMachARM64::EnableHardwareSingleStep(bool enable) {
   if (enable) {
     DNBLogThreadedIf(LOG_STEP,
                      "%s: Setting MDSCR_EL1 Single Step bit at pc 0x%llx",
+#if defined(__LP64__)
+                     __FUNCTION__, (uint64_t)arm_thread_state64_get_pc (m_state.context.gpr));
+#else
                      __FUNCTION__, (uint64_t)m_state.context.gpr.__pc);
+#endif
     m_state.dbg.__mdscr_el1 |= SS_ENABLE;
   } else {
     DNBLogThreadedIf(LOG_STEP,
                      "%s: Clearing MDSCR_EL1 Single Step bit at pc 0x%llx",
+#if defined(__LP64__)
+                     __FUNCTION__, (uint64_t)arm_thread_state64_get_pc (m_state.context.gpr));
+#else
                      __FUNCTION__, (uint64_t)m_state.context.gpr.__pc);
+#endif
     m_state.dbg.__mdscr_el1 &= ~(SS_ENABLE);
   }
 
@@ -1409,10 +1446,28 @@ const DNBRegisterInfo DNBArchMachARM64::g_gpr_registers[] = {
     DEFINE_GPR_IDX(26, x26, NULL, INVALID_NUB_REGNUM),
     DEFINE_GPR_IDX(27, x27, NULL, INVALID_NUB_REGNUM),
     DEFINE_GPR_IDX(28, x28, NULL, INVALID_NUB_REGNUM),
-    DEFINE_GPR_NAME(fp, "x29", GENERIC_REGNUM_FP),
-    DEFINE_GPR_NAME(lr, "x30", GENERIC_REGNUM_RA),
-    DEFINE_GPR_NAME(sp, "xsp", GENERIC_REGNUM_SP),
-    DEFINE_GPR_NAME(pc, NULL, GENERIC_REGNUM_PC),
+    // For the G/g packet we want to show where the offset into the regctx
+    // is for fp/lr/sp/pc, but we cannot directly access them on arm64e
+    // devices (and therefore can't offsetof() them)) - add the offset based
+    // on the last accessible register by hand for advertising the location
+    // in the regctx to lldb.  We'll go through the accessor functions when
+    // we read/write them here.
+    {
+       e_regSetGPR, gpr_fp, "fp", "x29", Uint, Hex, 8, GPR_OFFSET_IDX(28) + 8,
+       dwarf_fp, dwarf_fp, GENERIC_REGNUM_FP, debugserver_gpr_fp, NULL, NULL
+    },
+    {
+       e_regSetGPR, gpr_lr, "lr", "x30", Uint, Hex, 8, GPR_OFFSET_IDX(28) + 16,
+       dwarf_lr, dwarf_lr, GENERIC_REGNUM_RA, debugserver_gpr_lr, NULL, NULL
+    },
+    {
+       e_regSetGPR, gpr_sp, "sp", "xsp", Uint, Hex, 8, GPR_OFFSET_IDX(28) + 24,
+       dwarf_sp, dwarf_sp, GENERIC_REGNUM_SP, debugserver_gpr_sp, NULL, NULL
+    },
+    {
+       e_regSetGPR, gpr_pc, "pc", NULL, Uint, Hex, 8, GPR_OFFSET_IDX(28) + 32,
+       dwarf_pc, dwarf_pc, GENERIC_REGNUM_PC, debugserver_gpr_pc, NULL, NULL
+    },
 
     // in armv7 we specify that writing to the CPSR should invalidate r8-12, sp,
     // lr.
@@ -1769,7 +1824,20 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
     switch (set) {
     case e_regSetGPR:
       if (reg <= gpr_pc) {
+#if defined(__LP64__)
+        if (reg == gpr_pc)
+          value->value.uint64 = arm_thread_state64_get_pc (m_state.context.gpr);
+        else if (reg == gpr_lr)
+          value->value.uint64 = arm_thread_state64_get_lr (m_state.context.gpr);
+        else if (reg == gpr_sp)
+          value->value.uint64 = arm_thread_state64_get_sp (m_state.context.gpr);
+        else if (reg == gpr_fp)
+          value->value.uint64 = arm_thread_state64_get_fp (m_state.context.gpr);
+        else
         value->value.uint64 = m_state.context.gpr.__x[reg];
+#else
+        value->value.uint64 = m_state.context.gpr.__x[reg];
+#endif
         return true;
       } else if (reg == gpr_cpsr) {
         value->value.uint32 = m_state.context.gpr.__cpsr;
@@ -1859,7 +1927,27 @@ bool DNBArchMachARM64::SetRegisterValue(uint32_t set, uint32_t reg,
     switch (set) {
     case e_regSetGPR:
       if (reg <= gpr_pc) {
+#if defined(__LP64__)
+          uint64_t signed_value = value->value.uint64;
+#if __has_feature(ptrauth_calls)
+          // The incoming value could be garbage.  Strip it to avoid
+          // trapping when it gets resigned in the thread state.
+          signed_value = (uint64_t) ptrauth_strip((void*) signed_value, ptrauth_key_function_pointer);
+          signed_value = (uint64_t) ptrauth_sign_unauthenticated((void*) signed_value, ptrauth_key_function_pointer, 0);
+#endif
+        if (reg == gpr_pc) 
+         arm_thread_state64_set_pc_fptr (m_state.context.gpr, (void*) signed_value);
+        else if (reg == gpr_lr)
+          arm_thread_state64_set_lr_fptr (m_state.context.gpr, (void*) signed_value);
+        else if (reg == gpr_sp)
+          arm_thread_state64_set_sp (m_state.context.gpr, value->value.uint64);
+        else if (reg == gpr_fp)
+          arm_thread_state64_set_fp (m_state.context.gpr, value->value.uint64);
+        else
+          m_state.context.gpr.__x[reg] = value->value.uint64;
+#else
         m_state.context.gpr.__x[reg] = value->value.uint64;
+#endif
         success = true;
       } else if (reg == gpr_cpsr) {
         m_state.context.gpr.__cpsr = value->value.uint32;
