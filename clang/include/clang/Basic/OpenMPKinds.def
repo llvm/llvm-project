@@ -44,9 +44,6 @@
 #ifndef OPENMP_PARALLEL_FOR_SIMD_CLAUSE
 #  define OPENMP_PARALLEL_FOR_SIMD_CLAUSE(Name)
 #endif
-#ifndef OPENMP_PARALLEL_MASTER_CLAUSE
-#  define OPENMP_PARALLEL_MASTER_CLAUSE(Name)
-#endif
 #ifndef OPENMP_PARALLEL_SECTIONS_CLAUSE
 #  define OPENMP_PARALLEL_SECTIONS_CLAUSE(Name)
 #endif
@@ -260,7 +257,6 @@ OPENMP_DIRECTIVE_EXT(target_parallel_for, "target parallel for")
 OPENMP_DIRECTIVE_EXT(target_update, "target update")
 OPENMP_DIRECTIVE_EXT(parallel_for, "parallel for")
 OPENMP_DIRECTIVE_EXT(parallel_for_simd, "parallel for simd")
-OPENMP_DIRECTIVE_EXT(parallel_master, "parallel master")
 OPENMP_DIRECTIVE_EXT(parallel_sections, "parallel sections")
 OPENMP_DIRECTIVE_EXT(for_simd, "for simd")
 OPENMP_DIRECTIVE_EXT(cancellation_point, "cancellation point")
@@ -504,18 +500,6 @@ OPENMP_PARALLEL_FOR_SIMD_CLAUSE(linear)
 OPENMP_PARALLEL_FOR_SIMD_CLAUSE(aligned)
 OPENMP_PARALLEL_FOR_SIMD_CLAUSE(ordered)
 OPENMP_PARALLEL_FOR_SIMD_CLAUSE(allocate)
-
-// Clauses allowed for OpenMP directive 'parallel master'.
-OPENMP_PARALLEL_MASTER_CLAUSE(if)
-OPENMP_PARALLEL_MASTER_CLAUSE(num_threads)
-OPENMP_PARALLEL_MASTER_CLAUSE(default)
-OPENMP_PARALLEL_MASTER_CLAUSE(private)
-OPENMP_PARALLEL_MASTER_CLAUSE(firstprivate)
-OPENMP_PARALLEL_MASTER_CLAUSE(shared)
-OPENMP_PARALLEL_MASTER_CLAUSE(copyin)
-OPENMP_PARALLEL_MASTER_CLAUSE(reduction)
-OPENMP_PARALLEL_MASTER_CLAUSE(proc_bind)
-OPENMP_PARALLEL_MASTER_CLAUSE(allocate)
 
 // Clauses allowed for OpenMP directive 'parallel sections'.
 OPENMP_PARALLEL_SECTIONS_CLAUSE(if)
@@ -1147,7 +1131,6 @@ OPENMP_MATCH_KIND(implementation)
 #undef OPENMP_PARALLEL_CLAUSE
 #undef OPENMP_PARALLEL_FOR_CLAUSE
 #undef OPENMP_PARALLEL_FOR_SIMD_CLAUSE
-#undef OPENMP_PARALLEL_MASTER_CLAUSE
 #undef OPENMP_PARALLEL_SECTIONS_CLAUSE
 #undef OPENMP_TASK_CLAUSE
 #undef OPENMP_ATOMIC_CLAUSE

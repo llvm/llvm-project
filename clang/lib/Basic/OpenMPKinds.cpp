@@ -536,16 +536,6 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
       break;
     }
     break;
-  case OMPD_parallel_master:
-    switch (CKind) {
-#define OPENMP_PARALLEL_MASTER_CLAUSE(Name)                                    \
-    case OMPC_##Name:                                                          \
-      return true;
-#include "clang/Basic/OpenMPKinds.def"
-    default:
-      break;
-    }
-    break;
   case OMPD_parallel_sections:
     switch (CKind) {
 #define OPENMP_PARALLEL_SECTIONS_CLAUSE(Name)                                  \
@@ -1021,7 +1011,6 @@ bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_teams_distribute_parallel_for_simd ||
          DKind == OMPD_target_teams_distribute_parallel_for ||
          DKind == OMPD_target_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_parallel_master ||
          DKind == OMPD_parallel_master_taskloop ||
          DKind == OMPD_parallel_master_taskloop_simd;
 }
@@ -1120,7 +1109,6 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_parallel:
   case OMPD_parallel_for:
   case OMPD_parallel_for_simd:
-  case OMPD_parallel_master:
   case OMPD_parallel_sections:
   case OMPD_distribute_parallel_for:
   case OMPD_distribute_parallel_for_simd:

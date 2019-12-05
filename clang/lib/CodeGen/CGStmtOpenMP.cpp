@@ -2897,17 +2897,13 @@ void CodeGenFunction::EmitOMPSingleDirective(const OMPSingleDirective &S) {
   }
 }
 
-static void emitMaster(CodeGenFunction &CGF, const OMPExecutableDirective &S) {
+void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
     CGF.EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
   };
-  CGF.CGM.getOpenMPRuntime().emitMasterRegion(CGF, CodeGen, S.getBeginLoc());
-}
-
-void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
   OMPLexicalScope Scope(*this, S, OMPD_unknown);
-  emitMaster(*this, S);
+  CGM.getOpenMPRuntime().emitMasterRegion(*this, CodeGen, S.getBeginLoc());
 }
 
 void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
@@ -2949,35 +2945,6 @@ void CodeGenFunction::EmitOMPParallelForSimdDirective(
   };
   emitCommonOMPParallelDirective(*this, S, OMPD_simd, CodeGen,
                                  emitEmptyBoundParameters);
-}
-
-void CodeGenFunction::EmitOMPParallelMasterDirective(
-    const OMPParallelMasterDirective &S) {
-  // Emit directive as a combined directive that consists of two implicit
-  // directives: 'parallel' with 'master' directive.
-  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
-    Action.Enter(CGF);
-    OMPPrivateScope PrivateScope(CGF);
-    bool Copyins = CGF.EmitOMPCopyinClause(S);
-    (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
-    if (Copyins) {
-      // Emit implicit barrier to synchronize threads and avoid data races on
-      // propagation master's thread values of threadprivate variables to local
-      // instances of that variables of all other implicit threads.
-      CGF.CGM.getOpenMPRuntime().emitBarrierCall(
-          CGF, S.getBeginLoc(), OMPD_unknown, /*EmitChecks=*/false,
-          /*ForceSimpleCall=*/true);
-    }
-    CGF.EmitOMPPrivateClause(S, PrivateScope);
-    CGF.EmitOMPReductionClauseInit(S, PrivateScope);
-    (void)PrivateScope.Privatize();
-    emitMaster(CGF, S);
-    CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_parallel);
-  };
-  emitCommonOMPParallelDirective(*this, S, OMPD_master, CodeGen,
-                                 emitEmptyBoundParameters);
-  emitPostUpdateForReductionClause(*this, S,
-                                   [](CodeGenFunction &) { return nullptr; });
 }
 
 void CodeGenFunction::EmitOMPParallelSectionsDirective(

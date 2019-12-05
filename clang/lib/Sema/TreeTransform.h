@@ -8044,17 +8044,6 @@ StmtResult TreeTransform<Derived>::TransformOMPParallelForSimdDirective(
 }
 
 template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformOMPParallelMasterDirective(
-    OMPParallelMasterDirective *D) {
-  DeclarationNameInfo DirName;
-  getDerived().getSema().StartOpenMPDSABlock(OMPD_parallel_master, DirName,
-                                             nullptr, D->getBeginLoc());
-  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
-  getDerived().getSema().EndOpenMPDSABlock(Res.get());
-  return Res;
-}
-
-template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPParallelSectionsDirective(
     OMPParallelSectionsDirective *D) {
   DeclarationNameInfo DirName;
