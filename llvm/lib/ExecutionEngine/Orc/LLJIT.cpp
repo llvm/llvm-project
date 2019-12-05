@@ -105,7 +105,7 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     : ES(S.ES ? std::move(S.ES) : std::make_unique<ExecutionSession>()),
-      Main(this->ES->getMainJITDylib()), DL(""),
+      Main(this->ES->createJITDylib("<main>")), DL(""),
       ObjLinkingLayer(createObjectLinkingLayer(S, *ES)),
       ObjTransformLayer(*this->ES, *ObjLinkingLayer), CtorRunner(Main),
       DtorRunner(Main) {
