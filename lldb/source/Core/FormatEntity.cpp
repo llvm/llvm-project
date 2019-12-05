@@ -414,9 +414,10 @@ static bool RunScriptFormatKeyword(Stream &s, const SymbolContext *sc,
   return false;
 }
 
-static bool DumpAddress(Stream &s, const SymbolContext *sc,
-                        const ExecutionContext *exe_ctx, const Address &addr,
-                        bool print_file_addr_or_load_addr) {
+static bool DumpAddressAndContent(Stream &s, const SymbolContext *sc,
+                                  const ExecutionContext *exe_ctx,
+                                  const Address &addr,
+                                  bool print_file_addr_or_load_addr) {
   Target *target = Target::GetTargetFromContexts(exe_ctx, sc);
   addr_t vaddr = LLDB_INVALID_ADDRESS;
   if (exe_ctx && !target->GetSectionLoadList().IsEmpty())
@@ -1145,9 +1146,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::AddressFile:
   case Entry::Type::AddressLoad:
   case Entry::Type::AddressLoadOrFile:
-    return (addr != nullptr && addr->IsValid() &&
-            DumpAddress(s, sc, exe_ctx, *addr,
-                        entry.type == Entry::Type::AddressLoadOrFile));
+    return (
+        addr != nullptr && addr->IsValid() &&
+        DumpAddressAndContent(s, sc, exe_ctx, *addr,
+                              entry.type == Entry::Type::AddressLoadOrFile));
 
   case Entry::Type::ProcessID:
     if (exe_ctx) {
@@ -1415,7 +1417,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (frame) {
         const Address &pc_addr = frame->GetFrameCodeAddress();
         if (pc_addr.IsValid()) {
-          if (DumpAddress(s, sc, exe_ctx, pc_addr, false))
+          if (DumpAddressAndContent(s, sc, exe_ctx, pc_addr, false))
             return true;
         }
       }
@@ -1827,7 +1829,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
       if (entry.type == Entry::Type::LineEntryEndAddress)
         addr.Slide(sc->line_entry.range.GetByteSize());
-      if (DumpAddress(s, sc, exe_ctx, addr, false))
+      if (DumpAddressAndContent(s, sc, exe_ctx, addr, false))
         return true;
     }
     return false;

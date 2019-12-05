@@ -128,8 +128,8 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
 
   if (log) {
     StreamString s;
-    s.Address(
-        m_thread.GetRegisterContext()->GetPC(),
+    DumpAddress(
+        s.AsRawOstream(), m_thread.GetRegisterContext()->GetPC(),
         m_thread.CalculateTarget()->GetArchitecture().GetAddressByteSize());
     LLDB_LOGF(log, "ThreadPlanStepOverRange reached %s.", s.GetData());
   }

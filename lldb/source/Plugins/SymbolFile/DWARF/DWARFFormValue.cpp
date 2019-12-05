@@ -333,7 +333,7 @@ void DWARFFormValue::Dump(Stream &s) const {
 
   switch (m_form) {
   case DW_FORM_addr:
-    s.Address(uvalue, sizeof(uint64_t));
+    DumpAddress(s.AsRawOstream(), uvalue, sizeof(uint64_t));
     break;
   case DW_FORM_flag:
   case DW_FORM_data1:
@@ -409,10 +409,11 @@ void DWARFFormValue::Dump(Stream &s) const {
     assert(m_unit); // Unit must be valid for DW_FORM_ref_addr objects or we
                     // will get this wrong
     if (m_unit->GetVersion() <= 2)
-      s.Address(uvalue, sizeof(uint64_t) * 2);
+      DumpAddress(s.AsRawOstream(), uvalue, sizeof(uint64_t) * 2);
     else
-      s.Address(uvalue, 4 * 2); // 4 for DWARF32, 8 for DWARF64, but we don't
-                                // support DWARF64 yet
+      DumpAddress(s.AsRawOstream(), uvalue,
+                  4 * 2); // 4 for DWARF32, 8 for DWARF64, but we don't
+                          // support DWARF64 yet
     break;
   }
   case DW_FORM_ref1:
