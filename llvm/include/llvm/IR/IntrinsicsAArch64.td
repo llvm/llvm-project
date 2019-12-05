@@ -927,6 +927,16 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorOfBitcastsToInt<0>],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_CNTB_Intrinsic
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_i32_ty],
+                [IntrNoMem]>;
+
+  class AdvSIMD_SVE_CNTP_Intrinsic
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_anyvector_ty, LLVMMatchType<0>],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_DOT_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -1059,6 +1069,17 @@ def int_aarch64_sve_lsr_wide : AdvSIMD_SVE_ShiftWide_Intrinsic;
 def int_aarch64_sve_cls : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_clz : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_cnt : AdvSIMD_SVE_CNT_Intrinsic;
+
+//
+// Counting elements
+//
+
+def int_aarch64_sve_cntb : AdvSIMD_SVE_CNTB_Intrinsic;
+def int_aarch64_sve_cnth : AdvSIMD_SVE_CNTB_Intrinsic;
+def int_aarch64_sve_cntw : AdvSIMD_SVE_CNTB_Intrinsic;
+def int_aarch64_sve_cntd : AdvSIMD_SVE_CNTB_Intrinsic;
+
+def int_aarch64_sve_cntp : AdvSIMD_SVE_CNTP_Intrinsic;
 
 //
 // Reversal
