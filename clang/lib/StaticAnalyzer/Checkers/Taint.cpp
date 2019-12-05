@@ -37,9 +37,7 @@ void taint::printTaint(ProgramStateRef State, raw_ostream &Out, const char *NL,
     Out << I.first << " : " << I.second << NL;
 }
 
-void dumpTaint(ProgramStateRef State) {
-  printTaint(State, llvm::errs());
-}
+void dumpTaint(ProgramStateRef State) { printTaint(State, llvm::errs()); }
 
 ProgramStateRef taint::addTaint(ProgramStateRef State, const Stmt *S,
                                 const LocationContext *LCtx,
@@ -64,8 +62,8 @@ ProgramStateRef taint::addTaint(ProgramStateRef State, SVal V,
   // region of the parent region.
   if (auto LCV = V.getAs<nonloc::LazyCompoundVal>()) {
     if (Optional<SVal> binding =
-            State->getStateManager().getStoreManager()
-                                    .getDefaultBinding(*LCV)) {
+            State->getStateManager().getStoreManager().getDefaultBinding(
+                *LCV)) {
       if (SymbolRef Sym = binding->getAsSymbol())
         return addPartialTaint(State, Sym, LCV->getRegion(), Kind);
     }
@@ -90,6 +88,32 @@ ProgramStateRef taint::addTaint(ProgramStateRef State, SymbolRef Sym,
     Sym = SC->getOperand();
 
   ProgramStateRef NewState = State->set<TaintMap>(Sym, Kind);
+  assert(NewState);
+  return NewState;
+}
+
+ProgramStateRef taint::removeTaint(ProgramStateRef State, SVal V) {
+  SymbolRef Sym = V.getAsSymbol();
+  if (Sym)
+    return removeTaint(State, Sym);
+
+  const MemRegion *R = V.getAsRegion();
+  return removeTaint(State, R);
+}
+
+ProgramStateRef taint::removeTaint(ProgramStateRef State, const MemRegion *R) {
+  if (const SymbolicRegion *SR = dyn_cast_or_null<SymbolicRegion>(R))
+    return removeTaint(State, SR->getSymbol());
+  return State;
+}
+
+ProgramStateRef taint::removeTaint(ProgramStateRef State, SymbolRef Sym) {
+  // If this is a symbol cast, remove the cast before adding the taint. Taint
+  // is cast agnostic.
+  while (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
+    Sym = SC->getOperand();
+
+  ProgramStateRef NewState = State->remove<TaintMap>(Sym);
   assert(NewState);
   return NewState;
 }
@@ -157,7 +181,8 @@ bool taint::isTainted(ProgramStateRef State, SymbolRef Sym, TaintTagType Kind) {
 
   // Traverse all the symbols this symbol depends on to see if any are tainted.
   for (SymExpr::symbol_iterator SI = Sym->symbol_begin(),
-                                SE = Sym->symbol_end(); SI != SE; ++SI) {
+                                SE = Sym->symbol_end();
+       SI != SE; ++SI) {
     if (!isa<SymbolData>(*SI))
       continue;
 
