@@ -31,13 +31,16 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/GCStrategy.h"
+#include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -52,6 +55,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -248,6 +252,8 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
+  AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+  AU.addRequired<ProfileSummaryInfoWrapperPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -1684,6 +1690,10 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   }
 
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  MBFI = (PSI && PSI->hasProfileSummary()) ?
+         &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
+         nullptr;
 }
 
 namespace {
@@ -2913,8 +2923,10 @@ static void emitBasicBlockLoopComments(const MachineBasicBlock &MBB,
 void AsmPrinter::setupCodePaddingContext(const MachineBasicBlock &MBB,
                                          MCCodePaddingContext &Context) const {
   assert(MF != nullptr && "Machine function must be valid");
+  bool OptForSize = MF->getFunction().hasOptSize() ||
+                    llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
   Context.IsPaddingActive = !MF->hasInlineAsm() &&
-                            !MF->getFunction().hasOptSize() &&
+                            !OptForSize &&
                             TM.getOptLevel() != CodeGenOpt::None;
   Context.IsBasicBlockReachableViaFallthrough =
       std::find(MBB.pred_begin(), MBB.pred_end(), MBB.getPrevNode()) !=

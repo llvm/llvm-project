@@ -25,6 +25,8 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -32,6 +34,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -246,6 +249,12 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   static char ID;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
 private:
   using MemOpMap = DenseMap<MemOpKey, SmallVector<MachineInstr *, 16>>;
@@ -681,6 +690,11 @@ bool X86OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
   TRI = MF.getSubtarget<X86Subtarget>().getRegisterInfo();
+  auto *PSI =
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto *MBFI = (PSI && PSI->hasProfileSummary()) ?
+               &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
+               nullptr;
 
   // Process all basic blocks.
   for (auto &MBB : MF) {
@@ -699,7 +713,9 @@ bool X86OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
 
     // Remove redundant address calculations. Do it only for -Os/-Oz since only
     // a code size gain is expected from this part of the pass.
-    if (MF.getFunction().hasOptSize())
+    bool OptForSize = MF.getFunction().hasOptSize() ||
+                      llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
+    if (OptForSize)
       Changed |= removeRedundantAddrCalc(LEAs);
   }
 
