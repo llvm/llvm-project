@@ -162,11 +162,6 @@ uint64_t Symbol::getGotPltOffset() const {
   return (pltIndex + target->gotPltHeaderEntriesNum) * config->wordsize;
 }
 
-uint64_t Symbol::getPPC64LongBranchOffset() const {
-  assert(ppc64BranchltIndex != 0xffff);
-  return ppc64BranchltIndex * config->wordsize;
-}
-
 uint64_t Symbol::getPltVA() const {
   PltSection *plt = isInIplt ? in.iplt : in.plt;
   uint64_t outVA =
@@ -177,12 +172,6 @@ uint64_t Symbol::getPltVA() const {
   if (config->emachine == EM_MIPS && isMicroMips())
     outVA |= 1;
   return outVA;
-}
-
-uint64_t Symbol::getPPC64LongBranchTableVA() const {
-  assert(ppc64BranchltIndex != 0xffff);
-  return in.ppc64LongBranchTarget->getVA() +
-         ppc64BranchltIndex * config->wordsize;
 }
 
 uint64_t Symbol::getSize() const {
