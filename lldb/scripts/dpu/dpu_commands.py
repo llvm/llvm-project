@@ -89,7 +89,7 @@ def get_nb_slices_and_nb_dpus_per_slice(rank, target):
 
 
 def get_dpu_program_path(dpu):
-    program_path = dpu.GetChildMemberWithName("runtime_context") \
+    program_path = dpu.GetChildMemberWithName("program") \
                       .GetChildMemberWithName("program_path")
     if program_path.GetChildAtIndex(0).GetValue() is None:
         return None

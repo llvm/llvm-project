@@ -29,6 +29,7 @@
 
 extern "C" {
 #include <dpu.h>
+#include <dpu_debug.h>
 }
 
 namespace lldb_private {

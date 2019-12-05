@@ -1,6 +1,6 @@
 #define NB_THREAD 16
 
-#define TASKLETS_INITIALIZER TASKLETS(NB_THREAD, main, 1024, 0)
+#define TASKLETS_INITIALIZER TASKLETS(NB_THREAD, main, 1024)
 #include <rt.h>
 
 #include <defs.h>

@@ -27,6 +27,7 @@
 
 extern "C" {
 #include <dpu.h>
+#include <dpu_description.h>
 }
 
 #include "Dpu.h"

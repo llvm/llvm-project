@@ -29,6 +29,13 @@
 
 extern "C" {
 #include <dpu.h>
+#include <dpu_custom.h>
+#include <dpu_debug.h>
+#include <dpu_log.h>
+#include <dpu_management.h>
+#include <dpu_memory.h>
+#include <dpu_program.h>
+#include <dpu_runner.h>
 }
 
 using namespace lldb;
@@ -91,7 +98,7 @@ bool Dpu::SetPrintfSequenceAddrs(const uint32_t _open_print_sequence_addr,
 }
 
 bool Dpu::SetPrintfSequenceAddrsFromRuntimeInfo() {
-  dpu_runtime_context_t *runtime = dpu_get_runtime_context(m_dpu);
+  dpu_program_t *runtime = dpu_get_program(m_dpu);
   lldb::addr_t _open_print_sequence_addr = runtime->open_print_sequence_addr;
   lldb::addr_t _close_print_sequence_addr = runtime->close_print_sequence_addr;
   if (_open_print_sequence_addr != (lldb::addr_t)LLDB_INVALID_ADDRESS &&
@@ -109,8 +116,8 @@ bool Dpu::SetPrintfSequenceAddrsFromRuntimeInfo() {
 bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   ModuleSP elf_mod(new Module(elf_file_path, k_dpu_arch));
 
-  dpu_api_status_t status =
-      dpu_load_individual(m_dpu, elf_file_path.GetCString());
+  struct dpu_set_t set = dpu_set_from_dpu(m_dpu);
+  dpu_api_status_t status = dpu_load(set, elf_file_path.GetCString(), NULL);
   if (status != DPU_API_SUCCESS)
     return false;
 

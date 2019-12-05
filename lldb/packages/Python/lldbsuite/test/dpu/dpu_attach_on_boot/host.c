@@ -1,43 +1,25 @@
 #include <dpu.h>
 
 int main() {
-  struct dpu_rank_t *dpu_rank;
+  struct dpu_set_t set;
+  struct dpu_set_t rank;
+  struct dpu_set_t dpu;
 
-  if (dpu_alloc("backend=hw,cycleAccurate=true", &dpu_rank) != DPU_API_SUCCESS) {
-    return -1;
-  }
+  DPU_ASSERT(
+      dpu_alloc(DPU_ALLOCATE_ALL, "backend=hw,cycleAccurate=true", &set));
 
-  struct dpu_t *dpu = dpu_get(dpu_rank, 0, 0);
+  DPU_RANK_FOREACH(set, rank) { break; }
 
-  if (dpu_load_all(dpu_rank, DPU_EXE) != DPU_API_SUCCESS) {
-    dpu_free(dpu_rank);
-    return -2;
-  }
+  DPU_FOREACH(set, dpu) { break; }
 
-  dpu_api_status_t status = dpu_boot_individual(dpu, SYNCHRONOUS);
-  if (status != DPU_API_SUCCESS) {
-    dpu_free(dpu_rank);
-    return status;
-  }
+  DPU_ASSERT(dpu_load(rank, DPU_EXE, NULL));
 
-  status = dpu_boot_all(dpu_rank, SYNCHRONOUS);
-  if (status != DPU_API_SUCCESS) {
-    dpu_free(dpu_rank);
-    return status;
-  }
+  DPU_ASSERT(dpu_launch(dpu, DPU_SYNCHRONOUS));
+  DPU_ASSERT(dpu_launch(rank, DPU_SYNCHRONOUS));
+  DPU_ASSERT(dpu_launch(dpu, DPU_SYNCHRONOUS));
+  DPU_ASSERT(dpu_launch(rank, DPU_SYNCHRONOUS));
 
-  status = dpu_boot_individual(dpu, SYNCHRONOUS);
-  if (status != DPU_API_SUCCESS) {
-    dpu_free(dpu_rank);
-    return status;
-  }
+  DPU_ASSERT(dpu_free(set));
 
-  status = dpu_boot_all(dpu_rank, SYNCHRONOUS);
-  if (status != DPU_API_SUCCESS) {
-    dpu_free(dpu_rank);
-    return status;
-  }
-
-  dpu_free(dpu_rank);
   return 0;
 }

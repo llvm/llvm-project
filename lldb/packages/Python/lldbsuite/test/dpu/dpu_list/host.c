@@ -1,26 +1,17 @@
 #include <dpu.h>
 
 int main() {
-  struct dpu_rank_t *dpu_rank;
+  struct dpu_set_t set;
+  struct dpu_set_t dpu;
 
-  if (dpu_alloc("backend=hw,cycleAccurate=true", &dpu_rank) != DPU_API_SUCCESS) {
-    if (dpu_alloc("backend=simulator", &dpu_rank) != DPU_API_SUCCESS)
-    	return -1;
+  if (dpu_alloc(1, "backend=hw,cycleAccurate=true", &set) != DPU_API_SUCCESS) {
+    DPU_ASSERT(dpu_alloc(1, "backend=simulator", &set));
   }
 
-  struct dpu_t *dpu = dpu_get(dpu_rank, 0, 0);
+  DPU_ASSERT(dpu_load(dpu, DPU_EXE, NULL));
+  DPU_ASSERT(dpu_launch(dpu, DPU_SYNCHRONOUS));
 
-  if (dpu_load_individual(dpu, DPU_EXE) != DPU_API_SUCCESS) {
-    dpu_free(dpu_rank);
-    return -2;
-  }
+  DPU_ASSERT(dpu_free(set));
 
-  dpu_api_status_t status = dpu_boot_individual(dpu, SYNCHRONOUS);
-  if (status != DPU_API_SUCCESS) {
-    dpu_free(dpu_rank);
-    return status;
-  }
-
-  dpu_free(dpu_rank);
   return 0;
 }

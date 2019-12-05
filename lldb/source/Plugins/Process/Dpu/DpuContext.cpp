@@ -28,6 +28,7 @@
 
 extern "C" {
 #include <dpu.h>
+#include <dpu_debug.h>
 }
 
 using namespace lldb;

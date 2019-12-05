@@ -27,6 +27,10 @@
 
 extern "C" {
 #include <dpu.h>
+#include <dpu_config.h>
+#include <dpu_debug.h>
+#include <dpu_description.h>
+#include <dpu_management.h>
 }
 
 using namespace lldb;
@@ -49,9 +53,11 @@ bool DpuRank::Open(char *profile, FILE *stdout_file) {
 
   nr_threads = m_desc->dpu.nr_of_threads;
 
-  struct dpu_t *dpu;
-  DPU_FOREACH(m_rank, dpu) {
-    m_dpus.push_back(new Dpu(this, dpu, stdout_file));
+  struct dpu_set_t rank = dpu_set_from_rank(&m_rank);
+  struct dpu_set_t dpu;
+
+  DPU_FOREACH(rank, dpu) {
+    m_dpus.push_back(new Dpu(this, dpu.dpu, stdout_file));
   }
 
   return true;
