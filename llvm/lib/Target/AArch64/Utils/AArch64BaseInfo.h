@@ -652,8 +652,8 @@ namespace AArch64 {
 // in index i*P of a <n x (M*P) x t> vector.  The other elements of the
 // <n x (M*P) x t> vector (such as index 1) are undefined.
 static constexpr unsigned SVEBitsPerBlock = 128;
+const unsigned NeonBitsPerVector = 128;
 } // end namespace AArch64
-
 } // end namespace llvm
 
 #endif
