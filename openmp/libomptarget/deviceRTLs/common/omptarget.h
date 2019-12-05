@@ -1,4 +1,4 @@
-//===---- omptarget-nvptx.h - NVPTX OpenMP GPU initialization ---- CUDA -*-===//
+//===---- omptarget.h - OpenMP GPU initialization ---------------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __OMPTARGET_NVPTX_H
-#define __OMPTARGET_NVPTX_H
+#ifndef OMPTARGET_H
+#define OMPTARGET_H
 
 // std includes
 #include <inttypes.h>
@@ -383,6 +383,6 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int globalThreadId);
 // inlined implementation
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "omptarget-nvptxi.h"
+#include "common/omptargeti.h"
 
 #endif

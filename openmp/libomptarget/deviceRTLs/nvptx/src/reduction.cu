@@ -14,7 +14,7 @@
 #include <complex.h>
 #include <stdio.h>
 
-#include "omptarget-nvptx.h"
+#include "common/omptarget.h"
 #include "target_impl.h"
 
 EXTERN
