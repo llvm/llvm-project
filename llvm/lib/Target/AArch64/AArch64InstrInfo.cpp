@@ -4214,6 +4214,40 @@ static MachineInstr *genFusedMultiplyAcc(
                           FMAInstKind::Accumulator);
 }
 
+/// genNeg - Helper to generate an intermediate negation of the second operand
+/// of Root
+static Register genNeg(MachineFunction &MF, MachineRegisterInfo &MRI,
+                       const TargetInstrInfo *TII, MachineInstr &Root,
+                       SmallVectorImpl<MachineInstr *> &InsInstrs,
+                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
+                       unsigned MnegOpc, const TargetRegisterClass *RC) {
+  Register NewVR = MRI.createVirtualRegister(RC);
+  MachineInstrBuilder MIB =
+      BuildMI(MF, Root.getDebugLoc(), TII->get(MnegOpc), NewVR)
+          .add(Root.getOperand(2));
+  InsInstrs.push_back(MIB);
+
+  assert(InstrIdxForVirtReg.empty());
+  InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
+
+  return NewVR;
+}
+
+/// genFusedMultiplyAccNeg - Helper to generate fused multiply accumulate
+/// instructions with an additional negation of the accumulator
+static MachineInstr *genFusedMultiplyAccNeg(
+    MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
+    MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
+    unsigned MaddOpc, unsigned MnegOpc, const TargetRegisterClass *RC) {
+  assert(IdxMulOpd == 1);
+
+  Register NewVR =
+      genNeg(MF, MRI, TII, Root, InsInstrs, InstrIdxForVirtReg, MnegOpc, RC);
+  return genFusedMultiply(MF, MRI, TII, Root, InsInstrs, IdxMulOpd, MaddOpc, RC,
+                          FMAInstKind::Accumulator, &NewVR);
+}
+
 /// genFusedMultiplyIdx - Helper to generate fused multiply accumulate
 /// instructions.
 ///
@@ -4224,6 +4258,22 @@ static MachineInstr *genFusedMultiplyIdx(
     unsigned IdxMulOpd, unsigned MaddOpc, const TargetRegisterClass *RC) {
   return genFusedMultiply(MF, MRI, TII, Root, InsInstrs, IdxMulOpd, MaddOpc, RC,
                           FMAInstKind::Indexed);
+}
+
+/// genFusedMultiplyAccNeg - Helper to generate fused multiply accumulate
+/// instructions with an additional negation of the accumulator
+static MachineInstr *genFusedMultiplyIdxNeg(
+    MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
+    MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
+    unsigned MaddOpc, unsigned MnegOpc, const TargetRegisterClass *RC) {
+  assert(IdxMulOpd == 1);
+
+  Register NewVR =
+      genNeg(MF, MRI, TII, Root, InsInstrs, InstrIdxForVirtReg, MnegOpc, RC);
+
+  return genFusedMultiply(MF, MRI, TII, Root, InsInstrs, IdxMulOpd, MaddOpc, RC,
+                          FMAInstKind::Indexed, &NewVR);
 }
 
 /// genMaddR - Generate madd instruction and combine mul and add using
@@ -4528,9 +4578,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     break;
 
   case MachineCombinerPattern::MULSUBv8i8_OP1:
-    Opc = AArch64::MLSv8i8;
+    Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;
-    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv8i8,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv8i8_OP2:
     Opc = AArch64::MLSv8i8;
@@ -4538,9 +4590,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
   case MachineCombinerPattern::MULSUBv16i8_OP1:
-    Opc = AArch64::MLSv16i8;
+    Opc = AArch64::MLAv16i8;
     RC = &AArch64::FPR128RegClass;
-    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv16i8,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv16i8_OP2:
     Opc = AArch64::MLSv16i8;
@@ -4548,9 +4602,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
   case MachineCombinerPattern::MULSUBv4i16_OP1:
-    Opc = AArch64::MLSv4i16;
+    Opc = AArch64::MLAv4i16;
     RC = &AArch64::FPR64RegClass;
-    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv4i16,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv4i16_OP2:
     Opc = AArch64::MLSv4i16;
@@ -4558,9 +4614,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
   case MachineCombinerPattern::MULSUBv8i16_OP1:
-    Opc = AArch64::MLSv8i16;
+    Opc = AArch64::MLAv8i16;
     RC = &AArch64::FPR128RegClass;
-    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv8i16,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv8i16_OP2:
     Opc = AArch64::MLSv8i16;
@@ -4568,9 +4626,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
   case MachineCombinerPattern::MULSUBv2i32_OP1:
-    Opc = AArch64::MLSv2i32;
+    Opc = AArch64::MLAv2i32;
     RC = &AArch64::FPR64RegClass;
-    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv2i32,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv2i32_OP2:
     Opc = AArch64::MLSv2i32;
@@ -4578,9 +4638,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
   case MachineCombinerPattern::MULSUBv4i32_OP1:
-    Opc = AArch64::MLSv4i32;
+    Opc = AArch64::MLAv4i32;
     RC = &AArch64::FPR128RegClass;
-    MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv4i32,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv4i32_OP2:
     Opc = AArch64::MLSv4i32;
@@ -4630,9 +4692,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     break;
 
   case MachineCombinerPattern::MULSUBv4i16_indexed_OP1:
-    Opc = AArch64::MLSv4i16_indexed;
+    Opc = AArch64::MLAv4i16_indexed;
     RC = &AArch64::FPR64RegClass;
-    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyIdxNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv4i16,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv4i16_indexed_OP2:
     Opc = AArch64::MLSv4i16_indexed;
@@ -4640,9 +4704,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
   case MachineCombinerPattern::MULSUBv8i16_indexed_OP1:
-    Opc = AArch64::MLSv8i16_indexed;
+    Opc = AArch64::MLAv8i16_indexed;
     RC = &AArch64::FPR128RegClass;
-    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyIdxNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv8i16,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv8i16_indexed_OP2:
     Opc = AArch64::MLSv8i16_indexed;
@@ -4650,9 +4716,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
   case MachineCombinerPattern::MULSUBv2i32_indexed_OP1:
-    Opc = AArch64::MLSv2i32_indexed;
+    Opc = AArch64::MLAv2i32_indexed;
     RC = &AArch64::FPR64RegClass;
-    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyIdxNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv2i32,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv2i32_indexed_OP2:
     Opc = AArch64::MLSv2i32_indexed;
@@ -4660,9 +4728,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
   case MachineCombinerPattern::MULSUBv4i32_indexed_OP1:
-    Opc = AArch64::MLSv4i32_indexed;
+    Opc = AArch64::MLAv4i32_indexed;
     RC = &AArch64::FPR128RegClass;
-    MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    MUL = genFusedMultiplyIdxNeg(MF, MRI, TII, Root, InsInstrs,
+                                 InstrIdxForVirtReg, 1, Opc, AArch64::NEGv4i32,
+                                 RC);
     break;
   case MachineCombinerPattern::MULSUBv4i32_indexed_OP2:
     Opc = AArch64::MLSv4i32_indexed;
