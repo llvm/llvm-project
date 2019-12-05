@@ -907,8 +907,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
         continue;
       }
-      if (!salvageDebugInfo(*Inst))
-        replaceDbgUsesWithUndef(Inst);
+
+      salvageDebugInfoOrMarkUndef(*Inst);
       removeMSSA(Inst);
       Inst->eraseFromParent();
       Changed = true;
