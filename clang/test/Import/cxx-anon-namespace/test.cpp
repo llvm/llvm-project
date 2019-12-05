@@ -8,7 +8,7 @@
 // CHECK: F.cpp:1:1
 // The nested anonymous namespace.
 // CHECK-NEXT: NamespaceDecl
-// CHECK-SAME: <invalid sloc>
+// CHECK-SAME: line:21:11
 // CHECK: FunctionDecl
 // CHECK-SAME: func4
 // CHECK-NEXT: CompoundStmt
