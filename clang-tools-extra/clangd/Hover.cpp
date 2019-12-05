@@ -434,7 +434,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
           tooling::applyAllReplacements(HI->Definition, Replacements))
     HI->Definition = *Formatted;
 
-  HI->SymRange = getTokenRange(AST.getASTContext().getSourceManager(),
+  HI->SymRange = getTokenRange(AST.getSourceManager(),
                                AST.getLangOpts(), SourceLocationBeg);
   return HI;
 }
