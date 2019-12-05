@@ -38,12 +38,18 @@ config.test_source_root = os.path.dirname(__file__)
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = os.path.join(config.lldb_obj_root, 'test')
 
+
 # Begin Swift mod.
 # Swift's libReflection builds without ASAN, which causes a known
 # false positive in std::vector. If sanitizers are off, this is just
 # a no-op
 config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0'
 # End Swift mod.
+
+# Propagate LLDB_CAPTURE_REPRODUCER
+if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
+  config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
+      'LLDB_CAPTURE_REPRODUCER']
 
 llvm_config.use_default_substitutions()
 toolchain.use_lldb_substitutions(config)
