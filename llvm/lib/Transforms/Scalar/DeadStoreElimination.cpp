@@ -17,6 +17,7 @@
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -100,6 +101,7 @@ static void
 deleteDeadInstruction(Instruction *I, BasicBlock::iterator *BBI,
                       MemoryDependenceResults &MD, const TargetLibraryInfo &TLI,
                       InstOverlapIntervalsTy &IOL, OrderedBasicBlock &OBB,
+                      MapVector<Instruction *, bool> &ThrowableInst,
                       SmallSetVector<const Value *, 16> *ValueSet = nullptr) {
   SmallVector<Instruction*, 32> NowDeadInsts;
 
@@ -113,6 +115,10 @@ deleteDeadInstruction(Instruction *I, BasicBlock::iterator *BBI,
   // Before we touch this instruction, remove it from memdep!
   do {
     Instruction *DeadInst = NowDeadInsts.pop_back_val();
+    // Mark the DeadInst as dead in the list of throwable instructions.
+    auto It = ThrowableInst.find(DeadInst);
+    if (It != ThrowableInst.end())
+      ThrowableInst[It->first] = false;
     ++NumFastOther;
 
     // Try to preserve debug information attached to the dead instruction.
@@ -145,6 +151,12 @@ deleteDeadInstruction(Instruction *I, BasicBlock::iterator *BBI,
       DeadInst->eraseFromParent();
   } while (!NowDeadInsts.empty());
   *BBI = NewIter;
+  // Pop dead entries from back of ThrowableInst till we find an alive entry.
+  for (auto It = ThrowableInst.rbegin();
+       It != ThrowableInst.rend() && !It->second;) {
+    ++It;
+    ThrowableInst.pop_back();
+  }
 }
 
 /// Does this instruction write some memory?  This only returns true for things
@@ -657,7 +669,8 @@ static void findUnconditionalPreds(SmallVectorImpl<BasicBlock *> &Blocks,
 static bool handleFree(CallInst *F, AliasAnalysis *AA,
                        MemoryDependenceResults *MD, DominatorTree *DT,
                        const TargetLibraryInfo *TLI,
-                       InstOverlapIntervalsTy &IOL, OrderedBasicBlock &OBB) {
+                       InstOverlapIntervalsTy &IOL, OrderedBasicBlock &OBB,
+                       MapVector<Instruction *, bool> &ThrowableInst) {
   bool MadeChange = false;
 
   MemoryLocation Loc = MemoryLocation(F->getOperand(0));
@@ -691,7 +704,8 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
 
       // DCE instructions only used to calculate that store.
       BasicBlock::iterator BBI(Dependency);
-      deleteDeadInstruction(Dependency, &BBI, *MD, *TLI, IOL, OBB);
+      deleteDeadInstruction(Dependency, &BBI, *MD, *TLI, IOL, OBB,
+                            ThrowableInst);
       ++NumFastStores;
       MadeChange = true;
 
@@ -748,8 +762,8 @@ static void removeAccessedObjects(const MemoryLocation &LoadedLoc,
 static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
                            MemoryDependenceResults *MD,
                            const TargetLibraryInfo *TLI,
-                           InstOverlapIntervalsTy &IOL,
-                           OrderedBasicBlock &OBB) {
+                           InstOverlapIntervalsTy &IOL, OrderedBasicBlock &OBB,
+                           MapVector<Instruction *, bool> &ThrowableInst) {
   bool MadeChange = false;
 
   // Keep track of all of the stack objects that are dead at the end of the
@@ -810,7 +824,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
                    << '\n');
 
         // DCE instructions only used to calculate that store.
-        deleteDeadInstruction(Dead, &BBI, *MD, *TLI, IOL, OBB,
+        deleteDeadInstruction(Dead, &BBI, *MD, *TLI, IOL, OBB, ThrowableInst,
                               &DeadStackObjects);
         ++NumFastStores;
         MadeChange = true;
@@ -822,7 +836,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
     if (isInstructionTriviallyDead(&*BBI, TLI)) {
       LLVM_DEBUG(dbgs() << "DSE: Removing trivially dead instruction:\n  DEAD: "
                         << *&*BBI << '\n');
-      deleteDeadInstruction(&*BBI, &BBI, *MD, *TLI, IOL, OBB,
+      deleteDeadInstruction(&*BBI, &BBI, *MD, *TLI, IOL, OBB, ThrowableInst,
                             &DeadStackObjects);
       ++NumFastOther;
       MadeChange = true;
@@ -1029,7 +1043,8 @@ static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
                                const DataLayout &DL,
                                const TargetLibraryInfo *TLI,
                                InstOverlapIntervalsTy &IOL,
-                               OrderedBasicBlock &OBB) {
+                               OrderedBasicBlock &OBB,
+                               MapVector<Instruction *, bool> &ThrowableInst) {
   // Must be a store instruction.
   StoreInst *SI = dyn_cast<StoreInst>(Inst);
   if (!SI)
@@ -1045,7 +1060,7 @@ static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
           dbgs() << "DSE: Remove Store Of Load from same pointer:\n  LOAD: "
                  << *DepLoad << "\n  STORE: " << *SI << '\n');
 
-      deleteDeadInstruction(SI, &BBI, *MD, *TLI, IOL, OBB);
+      deleteDeadInstruction(SI, &BBI, *MD, *TLI, IOL, OBB, ThrowableInst);
       ++NumRedundantStores;
       return true;
     }
@@ -1063,7 +1078,7 @@ static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
           dbgs() << "DSE: Remove null store to the calloc'ed object:\n  DEAD: "
                  << *Inst << "\n  OBJECT: " << *UnderlyingPointer << '\n');
 
-      deleteDeadInstruction(SI, &BBI, *MD, *TLI, IOL, OBB);
+      deleteDeadInstruction(SI, &BBI, *MD, *TLI, IOL, OBB, ThrowableInst);
       ++NumRedundantStores;
       return true;
     }
@@ -1078,7 +1093,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
   bool MadeChange = false;
 
   OrderedBasicBlock OBB(&BB);
-  Instruction *LastThrowing = nullptr;
+  MapVector<Instruction *, bool> ThrowableInst;
 
   // A map of interval maps representing partially-overwritten value parts.
   InstOverlapIntervalsTy IOL;
@@ -1087,7 +1102,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
   for (BasicBlock::iterator BBI = BB.begin(), BBE = BB.end(); BBI != BBE; ) {
     // Handle 'free' calls specially.
     if (CallInst *F = isFreeCall(&*BBI, TLI)) {
-      MadeChange |= handleFree(F, AA, MD, DT, TLI, IOL, OBB);
+      MadeChange |= handleFree(F, AA, MD, DT, TLI, IOL, OBB, ThrowableInst);
       // Increment BBI after handleFree has potentially deleted instructions.
       // This ensures we maintain a valid iterator.
       ++BBI;
@@ -1097,7 +1112,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
     Instruction *Inst = &*BBI++;
 
     if (Inst->mayThrow()) {
-      LastThrowing = Inst;
+      ThrowableInst[Inst] = true;
       continue;
     }
 
@@ -1106,7 +1121,8 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       continue;
 
     // eliminateNoopStore will update in iterator, if necessary.
-    if (eliminateNoopStore(Inst, BBI, AA, MD, DL, TLI, IOL, OBB)) {
+    if (eliminateNoopStore(Inst, BBI, AA, MD, DL, TLI, IOL, OBB,
+                           ThrowableInst)) {
       MadeChange = true;
       continue;
     }
@@ -1149,6 +1165,12 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       if (!DepLoc.Ptr)
         break;
 
+      // Find the last throwable instruction not removed by call to
+      // deleteDeadInstruction.
+      Instruction *LastThrowing = nullptr;
+      if (!ThrowableInst.empty())
+        LastThrowing = ThrowableInst.back().first;
+
       // Make sure we don't look past a call which might throw. This is an
       // issue because MemoryDependenceAnalysis works in the wrong direction:
       // it finds instructions which dominate the current instruction, rather than
@@ -1188,7 +1210,8 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                             << "\n  KILLER: " << *Inst << '\n');
 
           // Delete the store and now-dead instructions that feed it.
-          deleteDeadInstruction(DepWrite, &BBI, *MD, *TLI, IOL, OBB);
+          deleteDeadInstruction(DepWrite, &BBI, *MD, *TLI, IOL, OBB,
+                                ThrowableInst);
           ++NumFastStores;
           MadeChange = true;
 
@@ -1270,8 +1293,10 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
             OBB.replaceInstruction(DepWrite, SI);
 
             // Delete the old stores and now-dead instructions that feed them.
-            deleteDeadInstruction(Inst, &BBI, *MD, *TLI, IOL, OBB);
-            deleteDeadInstruction(DepWrite, &BBI, *MD, *TLI, IOL, OBB);
+            deleteDeadInstruction(Inst, &BBI, *MD, *TLI, IOL, OBB,
+                                  ThrowableInst);
+            deleteDeadInstruction(DepWrite, &BBI, *MD, *TLI, IOL, OBB,
+                                  ThrowableInst);
             MadeChange = true;
 
             // We erased DepWrite and Inst (Loc); start over.
@@ -1306,7 +1331,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
   // If this block ends in a return, unwind, or unreachable, all allocas are
   // dead at its end, which means stores to them are also dead.
   if (BB.getTerminator()->getNumSuccessors() == 0)
-    MadeChange |= handleEndBlock(BB, AA, MD, TLI, IOL, OBB);
+    MadeChange |= handleEndBlock(BB, AA, MD, TLI, IOL, OBB, ThrowableInst);
 
   return MadeChange;
 }
