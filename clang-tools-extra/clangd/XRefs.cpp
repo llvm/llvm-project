@@ -191,10 +191,10 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
 
   // Macros are simple: there's no declaration/definition distinction.
   // As a consequence, there's no need to look them up in the index either.
-  SourceLocation MaybeMacroLocation = SM.getMacroArgExpandedLocation(
+  SourceLocation IdentStartLoc = SM.getMacroArgExpandedLocation(
       getBeginningOfIdentifier(Pos, AST.getSourceManager(), AST.getLangOpts()));
   std::vector<LocatedSymbol> Result;
-  if (auto M = locateMacroAt(MaybeMacroLocation, AST.getPreprocessor())) {
+  if (auto M = locateMacroAt(IdentStartLoc, AST.getPreprocessor())) {
     if (auto Loc = makeLocation(AST.getASTContext(),
                                 M->Info->getDefinitionLoc(), *MainFilePath)) {
       LocatedSymbol Macro;
@@ -234,6 +234,18 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
   for (const Decl *D : getDeclAtPosition(AST, SourceLoc, Relations)) {
     const Decl *Def = getDefinition(D);
     const Decl *Preferred = Def ? Def : D;
+
+    // If we're at the point of declaration of a template specialization,
+    // it's more useful to navigate to the template declaration.
+    if (SM.getMacroArgExpandedLocation(Preferred->getLocation()) ==
+        IdentStartLoc) {
+      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Preferred)) {
+        D = CTSD->getSpecializedTemplate();
+        Def = getDefinition(D);
+        Preferred = Def ? Def : D;
+      }
+    }
+
     auto Loc = makeLocation(AST.getASTContext(),
                             spellingLocIfSpelled(findName(Preferred), SM),
                             *MainFilePath);
@@ -373,8 +385,8 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   // different kinds, deduplicate them.
   std::vector<DocumentHighlight> Result;
   for (const auto &Ref : References) {
-    if (auto Range = getTokenRange(AST.getSourceManager(),
-                                   AST.getLangOpts(), Ref.Loc)) {
+    if (auto Range =
+            getTokenRange(AST.getSourceManager(), AST.getLangOpts(), Ref.Loc)) {
       DocumentHighlight DH;
       DH.range = *Range;
       if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
