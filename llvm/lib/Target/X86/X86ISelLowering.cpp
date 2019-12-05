@@ -1986,7 +1986,7 @@ bool X86TargetLowering::useLoadStackGuardNode() const {
 
 bool X86TargetLowering::useStackGuardXorFP() const {
   // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
-  return Subtarget.getTargetTriple().isOSMSVCRT();
+  return Subtarget.getTargetTriple().isOSMSVCRT() && !Subtarget.isTargetMachO();
 }
 
 SDValue X86TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
