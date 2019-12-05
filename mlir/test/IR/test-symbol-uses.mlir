@@ -2,6 +2,7 @@
 
 // Symbol references to the module itself don't affect uses of symbols within
 // its table.
+// expected-remark@below {{symbol_removable function successfully erased}}
 module attributes {sym.outside_use = @symbol_foo } {
   // expected-remark@+1 {{function has 2 uses}}
   func @symbol_foo()
@@ -17,6 +18,9 @@ module attributes {sym.outside_use = @symbol_foo } {
       z_other_non_symbol_attr
     } : () -> ()
   }
+
+  // expected-remark@below {{function has no uses}}
+  func @symbol_removable()
 
   // expected-remark@+1 {{function has 1 use}}
   func @symbol_baz()

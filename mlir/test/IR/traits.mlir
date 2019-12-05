@@ -218,6 +218,17 @@ func @foo() {
 
 // -----
 
+// Test that operation with the SymbolTable Trait fails with  too many blocks.
+// expected-error@+1 {{Operations with a 'SymbolTable' must have exactly one block}}
+"test.symbol_scope"() ({
+  ^entry:
+    "test.finish" () : () -> ()
+  ^other:
+    "test.finish" () : () -> ()
+}) : () -> ()
+
+// -----
+
 func @failedMissingOperandSizeAttr(%arg: i32) {
   // expected-error @+1 {{requires 1D vector attribute 'operand_segment_sizes'}}
   "test.attr_sized_operands"(%arg, %arg, %arg, %arg) : (i32, i32, i32, i32) -> ()
