@@ -11624,7 +11624,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
              MI.getOpcode() == PPC::ANDIo_1_GT_BIT8) {
     unsigned Opcode = (MI.getOpcode() == PPC::ANDIo_1_EQ_BIT8 ||
                        MI.getOpcode() == PPC::ANDIo_1_GT_BIT8)
-                          ? PPC::ANDIo8
+                          ? PPC::ANDI8o
                           : PPC::ANDIo;
     bool isEQ = (MI.getOpcode() == PPC::ANDIo_1_EQ_BIT ||
                  MI.getOpcode() == PPC::ANDIo_1_EQ_BIT8);

@@ -1836,8 +1836,8 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
 
   int NewOpC = -1;
   int MIOpC = MI->getOpcode();
-  if (MIOpC == PPC::ANDIo || MIOpC == PPC::ANDIo8 ||
-      MIOpC == PPC::ANDISo || MIOpC == PPC::ANDISo8)
+  if (MIOpC == PPC::ANDIo || MIOpC == PPC::ANDI8o ||
+      MIOpC == PPC::ANDISo || MIOpC == PPC::ANDIS8o)
     NewOpC = MIOpC;
   else {
     NewOpC = PPC::getRecordFormOpcode(MIOpC);
@@ -1945,7 +1945,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
         Mask >>= MBInLoHWord ? 0 : 16;
         NewOpC = MIOpC == PPC::RLWINM ?
           (MBInLoHWord ? PPC::ANDIo : PPC::ANDISo) :
-          (MBInLoHWord ? PPC::ANDIo8 :PPC::ANDISo8);
+          (MBInLoHWord ? PPC::ANDI8o :PPC::ANDIS8o);
       } else if (MRI->use_empty(GPRRes) && (ME == 31) &&
                  (ME - MB + 1 == SH) && (MB >= 16)) {
         // If we are rotating by the exact number of bits as are in the mask
@@ -1953,7 +1953,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
         // that's just an andis. (as long as the GPR result has no uses).
         Mask = ((1LLU << 32) - 1) & ~((1LLU << (32 - SH)) - 1);
         Mask >>= 16;
-        NewOpC = MIOpC == PPC::RLWINM ? PPC::ANDISo :PPC::ANDISo8;
+        NewOpC = MIOpC == PPC::RLWINM ? PPC::ANDISo :PPC::ANDIS8o;
       }
       // If we've set the mask, we can transform.
       if (Mask != ~0LLU) {
@@ -1966,7 +1966,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
       int64_t MB = MI->getOperand(3).getImm();
       if (MB >= 48) {
         uint64_t Mask = (1LLU << (63 - MB + 1)) - 1;
-        NewOpC = PPC::ANDIo8;
+        NewOpC = PPC::ANDI8o;
         MI->RemoveOperand(3);
         MI->getOperand(2).setImm(Mask);
         NumRcRotatesConvertedToRcAnd++;
@@ -2306,7 +2306,7 @@ void PPCInstrInfo::replaceInstrWithLI(MachineInstr &MI,
 
   // Replace the instruction.
   if (LII.SetCR) {
-    MI.setDesc(get(LII.Is64Bit ? PPC::ANDIo8 : PPC::ANDIo));
+    MI.setDesc(get(LII.Is64Bit ? PPC::ANDI8o : PPC::ANDIo));
     // Set the immediate.
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
         .addImm(LII.Imm).addReg(PPC::CR0, RegState::ImplicitDefine);
@@ -3083,7 +3083,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
     switch(Opc) {
     default: llvm_unreachable("Unknown opcode");
     case PPC::ANDo: III.ImmOpcode = PPC::ANDIo; break;
-    case PPC::AND8o: III.ImmOpcode = PPC::ANDIo8; break;
+    case PPC::AND8o: III.ImmOpcode = PPC::ANDI8o; break;
     case PPC::OR: III.ImmOpcode = PPC::ORI; break;
     case PPC::OR8: III.ImmOpcode = PPC::ORI8; break;
     case PPC::XOR: III.ImmOpcode = PPC::XORI; break;
@@ -4067,8 +4067,8 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
   case PPC::ORIS:
   case PPC::XORI:
   case PPC::XORIS:
-  case PPC::ANDIo8:
-  case PPC::ANDISo8:
+  case PPC::ANDI8o:
+  case PPC::ANDIS8o:
   case PPC::ORI8:
   case PPC::ORIS8:
   case PPC::XORI8:
