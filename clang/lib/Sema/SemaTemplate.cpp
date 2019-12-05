@@ -6968,100 +6968,73 @@ Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
 
   ValueDecl *VD = Arg.getAsDecl();
 
-  if (VD->getDeclContext()->isRecord() &&
-      (isa<CXXMethodDecl>(VD) || isa<FieldDecl>(VD) ||
-       isa<IndirectFieldDecl>(VD))) {
-    // If the value is a class member, we might have a pointer-to-member.
-    // Determine whether the non-type template template parameter is of
-    // pointer-to-member type. If so, we need to build an appropriate
-    // expression for a pointer-to-member, since a "normal" DeclRefExpr
-    // would refer to the member itself.
-    if (ParamType->isMemberPointerType()) {
-      QualType ClassType
-        = Context.getTypeDeclType(cast<RecordDecl>(VD->getDeclContext()));
-      NestedNameSpecifier *Qualifier
-        = NestedNameSpecifier::Create(Context, nullptr, false,
-                                      ClassType.getTypePtr());
-      CXXScopeSpec SS;
-      SS.MakeTrivial(Context, Qualifier, Loc);
-
-      // The actual value-ness of this is unimportant, but for
-      // internal consistency's sake, references to instance methods
-      // are r-values.
-      ExprValueKind VK = VK_LValue;
-      if (isa<CXXMethodDecl>(VD) && cast<CXXMethodDecl>(VD)->isInstance())
-        VK = VK_RValue;
-
-      ExprResult RefExpr = BuildDeclRefExpr(VD,
-                                            VD->getType().getNonReferenceType(),
-                                            VK,
-                                            Loc,
-                                            &SS);
-      if (RefExpr.isInvalid())
-        return ExprError();
-
-      RefExpr = CreateBuiltinUnaryOp(Loc, UO_AddrOf, RefExpr.get());
-
-      // We might need to perform a trailing qualification conversion, since
-      // the element type on the parameter could be more qualified than the
-      // element type in the expression we constructed, and likewise for a
-      // function conversion.
-      bool ObjCLifetimeConversion;
-      QualType Ignored;
-      if (IsFunctionConversion(RefExpr.get()->getType(), ParamType, Ignored) ||
-          IsQualificationConversion(RefExpr.get()->getType(),
-                                    ParamType.getUnqualifiedType(), false,
-                                    ObjCLifetimeConversion))
-        RefExpr = ImpCastExprToType(RefExpr.get(),
-                                    ParamType.getUnqualifiedType(), CK_NoOp);
-
-      // FIXME: We need to perform derived-to-base or base-to-derived
-      // pointer-to-member conversions here too.
-      assert(!RefExpr.isInvalid() &&
-             Context.hasSameType(RefExpr.get()->getType(),
-                                 ParamType.getUnqualifiedType()));
-      return RefExpr;
-    }
+  CXXScopeSpec SS;
+  if (ParamType->isMemberPointerType()) {
+    // If this is a pointer to member, we need to use a qualified name to
+    // form a suitable pointer-to-member constant.
+    assert(VD->getDeclContext()->isRecord() &&
+           (isa<CXXMethodDecl>(VD) || isa<FieldDecl>(VD) ||
+            isa<IndirectFieldDecl>(VD)));
+    QualType ClassType
+      = Context.getTypeDeclType(cast<RecordDecl>(VD->getDeclContext()));
+    NestedNameSpecifier *Qualifier
+      = NestedNameSpecifier::Create(Context, nullptr, false,
+                                    ClassType.getTypePtr());
+    SS.MakeTrivial(Context, Qualifier, Loc);
   }
 
-  QualType T = VD->getType().getNonReferenceType();
+  ExprResult RefExpr = BuildDeclarationNameExpr(
+      SS, DeclarationNameInfo(VD->getDeclName(), Loc), VD);
+  if (RefExpr.isInvalid())
+    return ExprError();
 
-  if (ParamType->isPointerType()) {
-    // When the non-type template parameter is a pointer, take the
-    // address of the declaration.
-    ExprResult RefExpr = BuildDeclRefExpr(VD, T, VK_LValue, Loc);
+  // For a pointer, the argument declaration is the pointee. Take its address.
+  QualType ElemT(RefExpr.get()->getType()->getArrayElementTypeNoTypeQual(), 0);
+  if (ParamType->isPointerType() && !ElemT.isNull() &&
+      Context.hasSimilarType(ElemT, ParamType->getPointeeType())) {
+    // Decay an array argument if we want a pointer to its first element.
+    RefExpr = DefaultFunctionArrayConversion(RefExpr.get());
     if (RefExpr.isInvalid())
       return ExprError();
+  } else if (ParamType->isPointerType() || ParamType->isMemberPointerType()) {
+    // For any other pointer, take the address (or form a pointer-to-member).
+    RefExpr = CreateBuiltinUnaryOp(Loc, UO_AddrOf, RefExpr.get());
+    if (RefExpr.isInvalid())
+      return ExprError();
+  } else {
+    assert(ParamType->isReferenceType() &&
+           "unexpected type for decl template argument");
+  }
 
-    if (!Context.hasSameUnqualifiedType(ParamType->getPointeeType(), T) &&
-        (T->isFunctionType() || T->isArrayType())) {
-      // Decay functions and arrays unless we're forming a pointer to array.
-      RefExpr = DefaultFunctionArrayConversion(RefExpr.get());
-      if (RefExpr.isInvalid())
-        return ExprError();
+  // At this point we should have the right value category.
+  assert(ParamType->isReferenceType() == RefExpr.get()->isLValue() &&
+         "value kind mismatch for non-type template argument");
 
-      return RefExpr;
+  // The type of the template parameter can differ from the type of the
+  // argument in various ways; convert it now if necessary.
+  QualType DestExprType = ParamType.getNonLValueExprType(Context);
+  if (!Context.hasSameType(RefExpr.get()->getType(), DestExprType)) {
+    CastKind CK;
+    QualType Ignored;
+    if (Context.hasSimilarType(RefExpr.get()->getType(), DestExprType) ||
+        IsFunctionConversion(RefExpr.get()->getType(), DestExprType, Ignored)) {
+      CK = CK_NoOp;
+    } else if (ParamType->isVoidPointerType() &&
+               RefExpr.get()->getType()->isPointerType()) {
+      CK = CK_BitCast;
+    } else {
+      // FIXME: Pointers to members can need conversion derived-to-base or
+      // base-to-derived conversions. We currently don't retain enough
+      // information to convert properly (we need to track a cast path or
+      // subobject number in the template argument).
+      llvm_unreachable(
+          "unexpected conversion required for non-type template argument");
     }
-
-    // Take the address of everything else
-    return CreateBuiltinUnaryOp(Loc, UO_AddrOf, RefExpr.get());
+    RefExpr = ImpCastExprToType(RefExpr.get(), DestExprType, CK,
+                                RefExpr.get()->getValueKind());
   }
 
-  ExprValueKind VK = VK_RValue;
-
-  // If the non-type template parameter has reference type, qualify the
-  // resulting declaration reference with the extra qualifiers on the
-  // type that the reference refers to.
-  if (const ReferenceType *TargetRef = ParamType->getAs<ReferenceType>()) {
-    VK = VK_LValue;
-    T = Context.getQualifiedType(T,
-                              TargetRef->getPointeeType().getQualifiers());
-  } else if (isa<FunctionDecl>(VD)) {
-    // References to functions are always lvalues.
-    VK = VK_LValue;
-  }
-
-  return BuildDeclRefExpr(VD, T, VK, Loc);
+  return RefExpr;
 }
 
 /// Construct a new expression that refers to the given
