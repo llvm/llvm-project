@@ -137,6 +137,7 @@ _ZNK4llvm9StringRef6substrEmm.exit:
 ; CHECK: bc 12, eq, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NEXT: [[TRUE]]
+; CHECK-NEXT: # in Loop: Header
 ; CHECK-NEXT: addi {{r[0-9]+}}, {{r[0-9]+}}, 0
 ; CHECK-NEXT: [[SUCCESSOR]]
 }
