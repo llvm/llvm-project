@@ -1461,6 +1461,8 @@ public:
     return *this;
   }
 
+  TreeItem(const TreeItem &) = default;
+
   size_t GetDepth() const {
     if (m_parent)
       return 1 + m_parent->GetDepth();

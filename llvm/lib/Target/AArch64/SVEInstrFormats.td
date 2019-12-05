@@ -504,11 +504,17 @@ class sve_int_pcount_pred<bits<2> sz8_64, bits<4> opc, string asm,
   let Inst{4-0}   = Rd;
 }
 
-multiclass sve_int_pcount_pred<bits<4> opc, string asm> {
+multiclass sve_int_pcount_pred<bits<4> opc, string asm,
+                               SDPatternOperator int_op> {
   def _B : sve_int_pcount_pred<0b00, opc, asm, PPR8>;
   def _H : sve_int_pcount_pred<0b01, opc, asm, PPR16>;
   def _S : sve_int_pcount_pred<0b10, opc, asm, PPR32>;
   def _D : sve_int_pcount_pred<0b11, opc, asm, PPR64>;
+
+  def : SVE_2_Op_Pat<i64, int_op, nxv16i1, nxv16i1, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<i64, int_op, nxv8i1,  nxv8i1,  !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<i64, int_op, nxv4i1,  nxv4i1,  !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<i64, int_op, nxv2i1,  nxv2i1,  !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -533,13 +539,16 @@ class sve_int_count<bits<3> opc, string asm>
   let Inst{4-0}   = Rd;
 }
 
-multiclass sve_int_count<bits<3> opc, string asm> {
+multiclass sve_int_count<bits<3> opc, string asm, SDPatternOperator op> {
   def NAME : sve_int_count<opc, asm>;
 
   def : InstAlias<asm # "\t$Rd, $pattern",
                   (!cast<Instruction>(NAME) GPR64:$Rd, sve_pred_enum:$pattern, 1), 1>;
   def : InstAlias<asm # "\t$Rd",
                   (!cast<Instruction>(NAME) GPR64:$Rd, 0b11111, 1), 2>;
+
+  def : Pat<(i64 (op sve_pred_enum:$pattern)),
+            (!cast<Instruction>(NAME) sve_pred_enum:$pattern, 1)>;
 }
 
 class sve_int_countvlv<bits<5> opc, string asm, ZPRRegOp zprty>
@@ -1060,6 +1069,16 @@ class sve_int_pred_log<bits<4> opc, string asm>
                       !strconcat(asm, "\t$Pd, $Pg/z, $Pn, $Pm"));
 
   let Defs = !if(!eq (opc{2}, 1), [NZCV], []);
+
+}
+
+multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op> {
+  def NAME : sve_int_pred_log<opc, asm>;
+
+  def : SVE_3_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, nxv16i1, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv8i1, op, nxv8i1, nxv8i1, nxv8i1, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv4i1, op, nxv4i1, nxv4i1, nxv4i1, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv2i1, op, nxv2i1, nxv2i1, nxv2i1, !cast<Instruction>(NAME)>;
 }
 
 

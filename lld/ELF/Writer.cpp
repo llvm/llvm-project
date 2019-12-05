@@ -2188,6 +2188,9 @@ std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs(Partition &part) {
   if (config->zWxneeded)
     addHdr(PT_OPENBSD_WXNEEDED, PF_X);
 
+  if (OutputSection *cmd = findSection(".note.gnu.property", partNo))
+    addHdr(PT_GNU_PROPERTY, PF_R)->add(cmd);
+
   // Create one PT_NOTE per a group of contiguous SHT_NOTE sections with the
   // same alignment.
   PhdrEntry *note = nullptr;
