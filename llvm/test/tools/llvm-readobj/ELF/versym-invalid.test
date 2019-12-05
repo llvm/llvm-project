@@ -218,3 +218,47 @@ Sections:
 DynamicSymbols:
   - Name: foo
   - Name: bar
+
+## Version index in a SHT_GNU_versym section overflows the version map.
+## Check we report it when trying to dump dynamic symbols.
+
+# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: llvm-readobj --dyn-syms %t8 2>&1 \
+# RUN:   | FileCheck -DFILE=%t8 --implicit-check-not=warning --check-prefix=VERSION-OVERFLOW-LLVM %s
+# RUN: llvm-readelf --dyn-syms %t8 2>&1 \
+# RUN:   | FileCheck -DFILE=%t8 --implicit-check-not=warning --check-prefix=VERSION-OVERFLOW-GNU %s
+
+# VERSION-OVERFLOW-LLVM:       DynamicSymbols [
+# VERSION-OVERFLOW-LLVM-EMPTY:
+# VERSION-OVERFLOW-LLVM-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 255 which is missing
+# VERSION-OVERFLOW-LLVM-NEXT:    Symbol {
+# VERSION-OVERFLOW-LLVM-NEXT:      Name: @<corrupt> (0)
+# VERSION-OVERFLOW-LLVM:       warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 254 which is missing
+# VERSION-OVERFLOW-LLVM-NEXT:    Symbol {
+# VERSION-OVERFLOW-LLVM-NEXT:      Name: foo@<corrupt> (5)
+# VERSION-OVERFLOW-LLVM:         Symbol {
+# VERSION-OVERFLOW-LLVM-NEXT:      Name: bar@<corrupt> (1)
+
+# VERSION-OVERFLOW-GNU:       Symbol table '.dynsym' contains 3 entries:
+# VERSION-OVERFLOW-GNU-NEXT:   Num:    Value          Size Type    Bind   Vis       Ndx Name
+# VERSION-OVERFLOW-GNU-EMPTY:
+# VERSION-OVERFLOW-GNU-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 255 which is missing
+# VERSION-OVERFLOW-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND @<corrupt>
+# VERSION-OVERFLOW-GNU-EMPTY:
+# VERSION-OVERFLOW-GNU-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 254 which is missing
+# VERSION-OVERFLOW-GNU-NEXT:      1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo@<corrupt>
+# VERSION-OVERFLOW-GNU-NEXT:      2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND bar@<corrupt
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    Entries: [ 0xFF, 0xFE, 0xFF ]
+DynamicSymbols:
+  - Name: foo
+  - Name: bar

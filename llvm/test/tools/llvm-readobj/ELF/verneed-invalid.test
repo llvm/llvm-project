@@ -10,7 +10,7 @@
 
 # GNU-VERNEED-NAME:      Version symbols section '.gnu.version' contains 2 entries:
 # GNU-VERNEED-NAME-NEXT:  Addr: 0000000000200210  Offset: 0x000040  Link: 5 (.dynsym)
-# GNU-VERNEED-NAME-NEXT:   000:   0 (*local*)       2 (*invalid*)
+# GNU-VERNEED-NAME-NEXT:   000:   0 (*local*)       2 (<corrupt>)
 
 # GNU-VERNEED-NAME:      Version needs section '.gnu.version_r' contains 1 entries:
 # GNU-VERNEED-NAME-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 6 (.dynstr)
@@ -86,9 +86,9 @@ DynamicSymbols:
 
 # GNU-NOLINK:      Version symbols section '.gnu.version' contains 2 entries:
 # GNU-NOLINK-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
-# GNU-NOLINK-NEXT:   000:   0 (*local*)
+# GNU-NOLINK-EMPTY:
 # GNU-NOLINK-NEXT: warning: '[[FILE]]': invalid string table linked to SHT_GNU_verneed section with index 2: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
-# GNU-NOLINK-NEXT:   2 (<corrupt>)
+# GNU-NOLINK-NEXT:   000:   0 (*local*) 2 (<corrupt>)
 # GNU-NOLINK-EMPTY:
 # GNU-NOLINK:      Version needs section '.gnu.version_r' contains 1 entries:
 # GNU-NOLINK-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 0 ()
@@ -158,10 +158,23 @@ DynamicSymbols:
 ## We can't parse misaligned auxiliary version records.
 
 # RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: not llvm-readelf -V %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=BROKEN-AUX
-# RUN: not llvm-readobj -V %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=BROKEN-AUX
+# RUN: llvm-readelf -V %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=BROKEN-AUX-GNU
+# RUN: llvm-readobj -V %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=BROKEN-AUX-LLVM
 
-# BROKEN-AUX: error: '[[FILE]]': invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
+# BROKEN-AUX-GNU:       Version symbols section '.gnu.version' contains 1 entries:
+# BROKEN-AUX-GNU-NEXT:   Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
+# BROKEN-AUX-GNU-EMPTY:
+# BROKEN-AUX-GNU-NEXT:  warning: '[[FILE]]': unable to get a version for entry 0 of SHT_GNU_versym section with index 1: invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
+# BROKEN-AUX-GNU-NEXT:   000:   2 (<corrupt>)
+
+# BROKEN-AUX-LLVM:       VersionSymbols [
+# BROKEN-AUX-LLVM-NEXT:    Symbol {
+# BROKEN-AUX-LLVM-NEXT:      Version: 2
+# BROKEN-AUX-LLVM-EMPTY:
+# BROKEN-AUX-LLVM-NEXT:  warning: '[[FILE]]': invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
+# BROKEN-AUX-LLVM-NEXT:      Name: @<corrupt>
+# BROKEN-AUX-LLVM-NEXT:    }
+# BROKEN-AUX-LLVM-NEXT:  ]
 
 --- !ELF
 FileHeader:
