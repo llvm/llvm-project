@@ -17,7 +17,7 @@
 // global data tables
 ////////////////////////////////////////////////////////////////////////////////
 
-extern __device__
+extern DEVICE
     omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
         omptarget_nvptx_device_State[MAX_SM];
 

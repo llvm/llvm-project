@@ -77,7 +77,7 @@ private:
   uint32_t nArgs;
 };
 
-extern __device__ __shared__ omptarget_nvptx_SharedArgs
+extern DEVICE SHARED omptarget_nvptx_SharedArgs
     omptarget_nvptx_globalArgs;
 
 // Data structure to keep in shared memory that traces the current slot, stack,
@@ -107,7 +107,7 @@ struct __kmpc_data_sharing_master_slot_static {
   void *DataEnd;
   char Data[DS_Slot_Size];
 };
-extern __device__ __shared__ DataSharingStateTy DataSharingState;
+extern DEVICE SHARED DataSharingStateTy DataSharingState;
 
 ////////////////////////////////////////////////////////////////////////////////
 // task ICV and (implicit & explicit) task state
@@ -259,9 +259,9 @@ private:
       workDescrForActiveParallel; // one, ONLY for the active par
   uint64_t lastprivateIterBuffer;
 
-  __align__(16)
-      __kmpc_data_sharing_worker_slot_static worker_rootS[WARPSIZE];
-  __align__(16) __kmpc_data_sharing_master_slot_static master_rootS[1];
+  ALIGN(16)
+  __kmpc_data_sharing_worker_slot_static worker_rootS[WARPSIZE];
+  ALIGN(16) __kmpc_data_sharing_master_slot_static master_rootS[1];
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -326,7 +326,7 @@ private:
 /// Memory manager for statically allocated memory.
 class omptarget_nvptx_SimpleMemoryManager {
 private:
-  __align__(128) struct MemDataTy {
+  ALIGN(128) struct MemDataTy {
     volatile unsigned keys[OMP_STATE_COUNT];
   } MemData[MAX_SM];
 
@@ -345,20 +345,20 @@ public:
 // global data tables
 ////////////////////////////////////////////////////////////////////////////////
 
-extern __device__ omptarget_nvptx_SimpleMemoryManager
+extern DEVICE omptarget_nvptx_SimpleMemoryManager
     omptarget_nvptx_simpleMemoryManager;
-extern __device__ __shared__ uint32_t usedMemIdx;
-extern __device__ __shared__ uint32_t usedSlotIdx;
-extern __device__ __shared__ uint8_t
+extern DEVICE SHARED uint32_t usedMemIdx;
+extern DEVICE SHARED uint32_t usedSlotIdx;
+extern DEVICE SHARED uint8_t
     parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
-extern __device__ __shared__ uint16_t threadLimit;
-extern __device__ __shared__ uint16_t threadsInTeam;
-extern __device__ __shared__ uint16_t nThreads;
-extern __device__ __shared__
+extern DEVICE SHARED uint16_t threadLimit;
+extern DEVICE SHARED uint16_t threadsInTeam;
+extern DEVICE SHARED uint16_t nThreads;
+extern DEVICE SHARED
     omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
 
-extern __device__ __shared__ uint32_t execution_param;
-extern __device__ __shared__ void *ReductionScratchpadPtr;
+extern DEVICE SHARED uint32_t execution_param;
+extern DEVICE SHARED void *ReductionScratchpadPtr;
 
 ////////////////////////////////////////////////////////////////////////////////
 // work function (outlined parallel/simd functions) and arguments.
@@ -366,7 +366,7 @@ extern __device__ __shared__ void *ReductionScratchpadPtr;
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef void *omptarget_nvptx_WorkFn;
-extern volatile __device__ __shared__ omptarget_nvptx_WorkFn
+extern volatile DEVICE SHARED omptarget_nvptx_WorkFn
     omptarget_nvptx_workFn;
 
 ////////////////////////////////////////////////////////////////////////////////

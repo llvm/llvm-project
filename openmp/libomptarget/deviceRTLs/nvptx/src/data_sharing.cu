@@ -97,7 +97,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
 
   DSPRINT0(DSFLAG, "Entering __kmpc_data_sharing_environment_begin\n");
 
-  // If the runtime has been elided, used __shared__ memory for master-worker
+  // If the runtime has been elided, used shared memory for master-worker
   // data sharing.
   if (!IsOMPRuntimeInitialized)
     return (void *)&DataSharingState;
@@ -300,7 +300,7 @@ __kmpc_get_data_sharing_environment_frame(int32_t SourceThreadID,
                                           int16_t IsOMPRuntimeInitialized) {
   DSPRINT0(DSFLAG, "Entering __kmpc_get_data_sharing_environment_frame\n");
 
-  // If the runtime has been elided, use __shared__ memory for master-worker
+  // If the runtime has been elided, use shared memory for master-worker
   // data sharing.  We're reusing the statically allocated data structure
   // that is used for standard data sharing.
   if (!IsOMPRuntimeInitialized)
