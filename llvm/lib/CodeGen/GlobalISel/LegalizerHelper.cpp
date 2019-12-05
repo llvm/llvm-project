@@ -2117,7 +2117,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
       default:
         llvm_unreachable("Unexpected opcode");
       case TargetOpcode::G_LOAD:
-        MIRBuilder.buildAnyExt(DstReg, TmpReg);
+        MIRBuilder.buildExtOrTrunc(TargetOpcode::G_ANYEXT, DstReg, TmpReg);
         break;
       case TargetOpcode::G_SEXTLOAD:
         MIRBuilder.buildSExt(DstReg, TmpReg);
