@@ -298,8 +298,8 @@ static size_t getHashSize() {
 // sets is empty, or some input files didn't have .note.gnu.property sections),
 // we don't create this section.
 GnuPropertySection::GnuPropertySection()
-    : SyntheticSection(llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE, 4,
-                       ".note.gnu.property") {}
+    : SyntheticSection(llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
+                       config->wordsize, ".note.gnu.property") {}
 
 void GnuPropertySection::writeTo(uint8_t *buf) {
   uint32_t featureAndType = config->emachine == EM_AARCH64
