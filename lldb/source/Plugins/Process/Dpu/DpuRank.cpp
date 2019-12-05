@@ -28,7 +28,6 @@
 
 extern "C" {
 #include <dpu.h>
-#include <dpu_log.h>
 }
 
 using namespace lldb;
