@@ -577,18 +577,28 @@ int64_t DataExtractor::GetMaxS64(offset_t *offset_ptr, size_t byte_size) const {
 uint64_t DataExtractor::GetMaxU64Bitfield(offset_t *offset_ptr, size_t size,
                                           uint32_t bitfield_bit_size,
                                           uint32_t bitfield_bit_offset) const {
+  assert(bitfield_bit_size <= 64);
   uint64_t uval64 = GetMaxU64(offset_ptr, size);
-  if (bitfield_bit_size > 0) {
-    int32_t lsbcount = bitfield_bit_offset;
-    if (m_byte_order == eByteOrderBig)
-      lsbcount = size * 8 - bitfield_bit_offset - bitfield_bit_size;
-    if (lsbcount > 0)
-      uval64 >>= lsbcount;
-    uint64_t bitfield_mask = ((1ul << bitfield_bit_size) - 1);
-    if (!bitfield_mask && bitfield_bit_offset == 0 && bitfield_bit_size == 64)
-      return uval64;
-    uval64 &= bitfield_mask;
-  }
+
+  if (bitfield_bit_size == 0)
+    return uval64;
+
+  int32_t lsbcount = bitfield_bit_offset;
+  if (m_byte_order == eByteOrderBig)
+    lsbcount = size * 8 - bitfield_bit_offset - bitfield_bit_size;
+
+  if (lsbcount > 0)
+    uval64 >>= lsbcount;
+
+  uint64_t bitfield_mask =
+      (bitfield_bit_size == 64
+           ? std::numeric_limits<uint64_t>::max()
+           : ((static_cast<uint64_t>(1) << bitfield_bit_size) - 1));
+  if (!bitfield_mask && bitfield_bit_offset == 0 && bitfield_bit_size == 64)
+    return uval64;
+
+  uval64 &= bitfield_mask;
+
   return uval64;
 }
 
