@@ -55,28 +55,30 @@
 # BTIDYN:      0x0000000070000001 (AARCH64_BTI_PLT)
 # BTIDYN-NOT:  0x0000000070000003 (AARCH64_PAC_PLT)
 
-# BTISO: 0000000000010310 func2:
-# BTISO-NEXT:    10310: bl      #48 <func3@plt>
-# BTISO-NEXT:    10314: ret
+# BTISO: 0000000000010348 func2:
+# BTISO-NEXT:    10348: bl      #56 <func3@plt>
+# BTISO-NEXT:           ret
+# BTISO: 0000000000010350 func3:
+# BTISO-NEXT:    10350: ret
 # BTISO: Disassembly of section .plt:
-# BTISO: 0000000000010320 .plt:
-# BTISO-NEXT:    10320: bti     c
-# BTISO-NEXT:    10324: stp     x16, x30, [sp, #-16]!
-# BTISO-NEXT:    10328: adrp    x16, #131072
-# BTISO-NEXT:    1032c: ldr     x17, [x16, #1072]
-# BTISO-NEXT:    10330: add     x16, x16, #1072
-# BTISO-NEXT:    10334: br      x17
-# BTISO-NEXT:    10338: nop
-# BTISO-NEXT:    1033c: nop
-# BTISO: 0000000000010340 func3@plt:
-# BTISO-NEXT:    10340: adrp    x16, #131072
-# BTISO-NEXT:    10344: ldr     x17, [x16, #1080]
-# BTISO-NEXT:    10348: add     x16, x16, #1080
-# BTISO-NEXT:    1034c: br      x17
+# BTISO: 0000000000010360 .plt:
+# BTISO-NEXT:    10360: bti     c
+# BTISO-NEXT:           stp     x16, x30, [sp, #-16]!
+# BTISO-NEXT:           adrp    x16, #131072
+# BTISO-NEXT:           ldr     x17, [x16, #1136]
+# BTISO-NEXT:           add     x16, x16, #1136
+# BTISO-NEXT:           br      x17
+# BTISO-NEXT:           nop
+# BTISO-NEXT:           nop
+# BTISO: 0000000000010380 func3@plt:
+# BTISO-NEXT:    10380: adrp    x16, #131072
+# BTISO-NEXT:           ldr     x17, [x16, #1144]
+# BTISO-NEXT:           add     x16, x16, #1144
+# BTISO-NEXT:           br      x17
 
 # SOGOTPLT2: Hex dump of section '.got.plt'
-# SOGOTPLT2-NEXT:  0x00030420 00000000 00000000 00000000 00000000
-# SOGOTPLT2-NEXT:  0x00030430 00000000 00000000 20030100 00000000
+# SOGOTPLT2-NEXT:  0x00030460 00000000 00000000 00000000 00000000
+# SOGOTPLT2-NEXT:  0x00030470 00000000 00000000 60030100 00000000
 
 ## Build an executable with all relocatable inputs having the BTI
 ## .note.gnu.property. We expect a bti c in front of all PLT entries as the
@@ -89,26 +91,26 @@
 # RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %t.exe | FileCheck --check-prefix=EXECBTI %s
 
 # EXECBTI: Disassembly of section .text:
-# EXECBTI: 0000000000210310 func1:
-# EXECBTI-NEXT:   210310: bl      #48 <func2@plt>
-# EXECBTI-NEXT:   210314: ret
+# EXECBTI: 0000000000210348 func1:
+# EXECBTI-NEXT:   210348: bl    #40 <func2@plt>
+# EXECBTI-NEXT:           ret
 # EXECBTI: Disassembly of section .plt:
-# EXECBTI: 0000000000210320 .plt:
-# EXECBTI-NEXT:   210320: bti     c
-# EXECBTI-NEXT:   210324: stp     x16, x30, [sp, #-16]!
-# EXECBTI-NEXT:   210328: adrp    x16, #131072
-# EXECBTI-NEXT:   21032c: ldr     x17, [x16, #1112]
-# EXECBTI-NEXT:   210330: add     x16, x16, #1112
-# EXECBTI-NEXT:   210334: br      x17
-# EXECBTI-NEXT:   210338: nop
-# EXECBTI-NEXT:   21033c: nop
-# EXECBTI: 0000000000210340 func2@plt:
-# EXECBTI-NEXT:   210340: bti     c
-# EXECBTI-NEXT:   210344: adrp    x16, #131072
-# EXECBTI-NEXT:   210348: ldr     x17, [x16, #1120]
-# EXECBTI-NEXT:   21034c: add     x16, x16, #1120
-# EXECBTI-NEXT:   210350: br      x17
-# EXECBTI-NEXT:   210354: nop
+# EXECBTI: 0000000000210350 .plt:
+# EXECBTI-NEXT:   210350: bti   c
+# EXECBTI-NEXT:           stp   x16, x30, [sp, #-16]!
+# EXECBTI-NEXT:           adrp  x16, #131072
+# EXECBTI-NEXT:           ldr   x17, [x16, #1160]
+# EXECBTI-NEXT:           add   x16, x16, #1160
+# EXECBTI-NEXT:           br    x17
+# EXECBTI-NEXT:           nop
+# EXECBTI-NEXT:           nop
+# EXECBTI: 0000000000210370 func2@plt:
+# EXECBTI-NEXT:   210370: bti   c
+# EXECBTI-NEXT:           adrp  x16, #131072
+# EXECBTI-NEXT:           ldr   x17, [x16, #1168]
+# EXECBTI-NEXT:           add   x16, x16, #1168
+# EXECBTI-NEXT:           br    x17
+# EXECBTI-NEXT:           nop
 
 ## We expect the same for PIE, as the address of an ifunc can escape
 # RUN: ld.lld --pie %t.o %t.so %t2.so -o %tpie.exe
@@ -117,26 +119,26 @@
 # RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %tpie.exe | FileCheck --check-prefix=PIE %s
 
 # PIE: Disassembly of section .text:
-# PIE: 0000000000010310 func1:
-# PIE-NEXT:    10310: bl      #48 <func2@plt>
-# PIE-NEXT:    10314: ret
+# PIE: 0000000000010348 func1:
+# PIE-NEXT:    10348: bl     #40 <func2@plt>
+# PIE-NEXT:           ret
 # PIE: Disassembly of section .plt:
-# PIE: 0000000000010320 .plt:
-# PIE-NEXT:    10320: bti     c
-# PIE-NEXT:    10324: stp     x16, x30, [sp, #-16]!
-# PIE-NEXT:    10328: adrp    x16, #131072
-# PIE-NEXT:    1032c: ldr     x17, [x16, #1112]
-# PIE-NEXT:    10330: add     x16, x16, #1112
-# PIE-NEXT:    10334: br      x17
-# PIE-NEXT:    10338: nop
-# PIE-NEXT:    1033c: nop
-# PIE: 0000000000010340 func2@plt:
-# PIE-NEXT:    10340: bti     c
-# PIE-NEXT:    10344: adrp    x16, #131072
-# PIE-NEXT:    10348: ldr     x17, [x16, #1120]
-# PIE-NEXT:    1034c: add     x16, x16, #1120
-# PIE-NEXT:    10350: br      x17
-# PIE-NEXT:    10354: nop
+# PIE: 0000000000010350 .plt:
+# PIE-NEXT:    10350: bti    c
+# PIE-NEXT:           stp    x16, x30, [sp, #-16]!
+# PIE-NEXT:           adrp   x16, #131072
+# PIE-NEXT:           ldr    x17, [x16, #1160]
+# PIE-NEXT:           add    x16, x16, #1160
+# PIE-NEXT:           br     x17
+# PIE-NEXT:           nop
+# PIE-NEXT:           nop
+# PIE: 0000000000010370 func2@plt:
+# PIE-NEXT:    10370: bti    c
+# PIE-NEXT:           adrp   x16, #131072
+# PIE-NEXT:           ldr    x17, [x16, #1168]
+# PIE-NEXT:           add    x16, x16, #1168
+# PIE-NEXT:           br     x17
+# PIE-NEXT:           nop
 
 ## Build and executable with not all relocatable inputs having the BTI
 ## .note.property, expect no bti c and no .note.gnu.property entry
@@ -148,24 +150,24 @@
 # NOEX: Disassembly of section .text:
 # NOEX: 00000000002102e0 func1:
 # NOEX-NEXT:   2102e0: bl      #48 <func2@plt>
-# NOEX-NEXT:   2102e4: ret
+# NOEX-NEXT:           ret
 # NOEX: 00000000002102e8 func3:
 # NOEX-NEXT:   2102e8: ret
 # NOEX: Disassembly of section .plt:
 # NOEX: 00000000002102f0 .plt:
 # NOEX-NEXT:   2102f0: stp     x16, x30, [sp, #-16]!
-# NOEX-NEXT:   2102f4: adrp    x16, #131072
-# NOEX-NEXT:   2102f8: ldr     x17, [x16, #1024]
-# NOEX-NEXT:   2102fc: add     x16, x16, #1024
-# NOEX-NEXT:   210300: br      x17
-# NOEX-NEXT:   210304: nop
-# NOEX-NEXT:   210308: nop
-# NOEX-NEXT:   21030c: nop
+# NOEX-NEXT:           adrp    x16, #131072
+# NOEX-NEXT:           ldr     x17, [x16, #1024]
+# NOEX-NEXT:           add     x16, x16, #1024
+# NOEX-NEXT:           br      x17
+# NOEX-NEXT:           nop
+# NOEX-NEXT:           nop
+# NOEX-NEXT:           nop
 # NOEX: 0000000000210310 func2@plt:
 # NOEX-NEXT:   210310: adrp    x16, #131072
-# NOEX-NEXT:   210314: ldr     x17, [x16, #1032]
-# NOEX-NEXT:   210318: add     x16, x16, #1032
-# NOEX-NEXT:   21031c: br      x17
+# NOEX-NEXT:           ldr     x17, [x16, #1032]
+# NOEX-NEXT:           add     x16, x16, #1032
+# NOEX-NEXT:           br      x17
 
 ## Force BTI entries with the --force-bti command line option. Expect a warning
 ## from the file without the .note.gnu.property.
@@ -180,28 +182,28 @@
 # RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %tforcebti.exe | FileCheck --check-prefix=FORCE %s
 
 # FORCE: Disassembly of section .text:
-# FORCE: 0000000000210338 func1:
-# FORCE-NEXT:   210338: bl      #56 <func2@plt>
-# FORCE-NEXT:   21033c: ret
-# FORCE: 0000000000210340 func3:
-# FORCE-NEXT:   210340: ret
+# FORCE: 0000000000210370 func1:
+# FORCE-NEXT:   210370: bl      #48 <func2@plt>
+# FORCE-NEXT:           ret
+# FORCE: 0000000000210378 func3:
+# FORCE-NEXT:   210378: ret
 # FORCE: Disassembly of section .plt:
-# FORCE: 0000000000210350 .plt:
-# FORCE-NEXT:   210350: bti     c
-# FORCE-NEXT:   210354: stp     x16, x30, [sp, #-16]!
-# FORCE-NEXT:   210358: adrp    x16, #131072
-# FORCE-NEXT:   21035c: ldr     x17, [x16, #1144]
-# FORCE-NEXT:   210360: add     x16, x16, #1144
-# FORCE-NEXT:   210364: br      x17
-# FORCE-NEXT:   210368: nop
-# FORCE-NEXT:   21036c: nop
-# FORCE: 0000000000210370 func2@plt:
-# FORCE-NEXT:   210370: bti     c
-# FORCE-NEXT:   210374: adrp    x16, #131072
-# FORCE-NEXT:   210378: ldr     x17, [x16, #1152]
-# FORCE-NEXT:   21037c: add     x16, x16, #1152
-# FORCE-NEXT:   210380: br      x17
-# FORCE-NEXT:   210384: nop
+# FORCE: 0000000000210380 .plt:
+# FORCE-NEXT:   210380: bti     c
+# FORCE-NEXT:           stp     x16, x30, [sp, #-16]!
+# FORCE-NEXT:           adrp    x16, #131072
+# FORCE-NEXT:           ldr     x17, [x16, #1192]
+# FORCE-NEXT:           add     x16, x16, #1192
+# FORCE-NEXT:           br      x17
+# FORCE-NEXT:           nop
+# FORCE-NEXT:           nop
+# FORCE: 00000000002103a0 func2@plt:
+# FORCE-NEXT:   2103a0: bti     c
+# FORCE-NEXT:           adrp    x16, #131072
+# FORCE-NEXT:           ldr     x17, [x16, #1200]
+# FORCE-NEXT:           add     x16, x16, #1200
+# FORCE-NEXT:           br      x17
+# FORCE-NEXT:           nop
 
 .section ".note.gnu.property", "a"
 .long 4
