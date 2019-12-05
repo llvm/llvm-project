@@ -90,7 +90,10 @@ inline MachineBasicBlock::const_instr_iterator getBundleEnd(
 ///     ...
 ///   }
 ///
-class MIBundleOperandIteratorBase {
+template <typename ValueT>
+class MIBundleOperandIteratorBase
+    : public iterator_facade_base<MIBundleOperandIteratorBase<ValueT>,
+                                  std::forward_iterator_tag, ValueT> {
   MachineBasicBlock::instr_iterator InstrI, InstrE;
   MachineInstr::mop_iterator OpI, OpE;
 
@@ -99,8 +102,10 @@ class MIBundleOperandIteratorBase {
   void advance() {
     while (OpI == OpE) {
       // Don't advance off the basic block, or into a new bundle.
-      if (++InstrI == InstrE || !InstrI->isInsideBundle())
+      if (++InstrI == InstrE || !InstrI->isInsideBundle()) {
+        InstrI = InstrE;
         break;
+      }
       OpI = InstrI->operands_begin();
       OpE = InstrI->operands_end();
     }
@@ -120,7 +125,11 @@ protected:
     advance();
   }
 
-  MachineOperand &deref() const { return *OpI; }
+  /// Constructor for an iterator past the last iteration: both instruction
+  /// iterators point to the end of the BB and OpI == OpE.
+  explicit MIBundleOperandIteratorBase(MachineBasicBlock::instr_iterator InstrE,
+                                       MachineInstr::mop_iterator OpE)
+      : InstrI(InstrE), InstrE(InstrE), OpI(OpE), OpE(OpE) {}
 
 public:
   /// isValid - Returns true until all the operands have been visited.
@@ -133,6 +142,16 @@ public:
     advance();
   }
 
+  ValueT &operator*() const { return *OpI; }
+  ValueT *operator->() const { return &*OpI; }
+
+  bool operator==(const MIBundleOperandIteratorBase &Arg) const {
+    // Iterators are equal, if InstrI matches and either OpIs match or OpI ==
+    // OpE match for both. The second condition allows us to construct an 'end'
+    // iterator, without finding the last instruction in a bundle up-front.
+    return InstrI == Arg.InstrI &&
+           (OpI == Arg.OpI || (OpI == OpE && Arg.OpI == Arg.OpE));
+  }
   /// getOperandNo - Returns the number of the current operand relative to its
   /// instruction.
   ///
@@ -144,23 +163,54 @@ public:
 /// MIBundleOperands - Iterate over all operands in a bundle of machine
 /// instructions.
 ///
-class MIBundleOperands : public MIBundleOperandIteratorBase {
+class MIBundleOperands : public MIBundleOperandIteratorBase<MachineOperand> {
+  /// Constructor for an iterator past the last iteration.
+  MIBundleOperands(MachineBasicBlock::instr_iterator InstrE,
+                   MachineInstr::mop_iterator OpE)
+      : MIBundleOperandIteratorBase(InstrE, OpE) {}
+
 public:
   MIBundleOperands(MachineInstr &MI) : MIBundleOperandIteratorBase(MI) {}
-  MachineOperand &operator* () const { return deref(); }
-  MachineOperand *operator->() const { return &deref(); }
+
+  /// Returns an iterator past the last iteration.
+  static MIBundleOperands end(const MachineBasicBlock &MBB) {
+    return {const_cast<MachineBasicBlock &>(MBB).instr_end(),
+            const_cast<MachineBasicBlock &>(MBB).instr_begin()->operands_end()};
+  }
 };
 
 /// ConstMIBundleOperands - Iterate over all operands in a const bundle of
 /// machine instructions.
 ///
-class ConstMIBundleOperands : public MIBundleOperandIteratorBase {
+class ConstMIBundleOperands
+    : public MIBundleOperandIteratorBase<const MachineOperand> {
+
+  /// Constructor for an iterator past the last iteration.
+  ConstMIBundleOperands(MachineBasicBlock::instr_iterator InstrE,
+                        MachineInstr::mop_iterator OpE)
+      : MIBundleOperandIteratorBase(InstrE, OpE) {}
+
 public:
   ConstMIBundleOperands(const MachineInstr &MI)
       : MIBundleOperandIteratorBase(const_cast<MachineInstr &>(MI)) {}
-  const MachineOperand &operator* () const { return deref(); }
-  const MachineOperand *operator->() const { return &deref(); }
+
+  /// Returns an iterator past the last iteration.
+  static ConstMIBundleOperands end(const MachineBasicBlock &MBB) {
+    return {const_cast<MachineBasicBlock &>(MBB).instr_end(),
+            const_cast<MachineBasicBlock &>(MBB).instr_begin()->operands_end()};
+  }
 };
+
+inline iterator_range<ConstMIBundleOperands>
+const_mi_bundle_ops(const MachineInstr &MI) {
+  return make_range(ConstMIBundleOperands(MI),
+                    ConstMIBundleOperands::end(*MI.getParent()));
+}
+
+inline iterator_range<MIBundleOperands> mi_bundle_ops(MachineInstr &MI) {
+  return make_range(MIBundleOperands(MI),
+                    MIBundleOperands::end(*MI.getParent()));
+}
 
 /// VirtRegInfo - Information about a virtual register used by a set of
 /// operands.
