@@ -869,7 +869,7 @@ bool DevirtIndex::tryFindVirtualCallTargets(
         LocalFound = true;
       }
       if (!GlobalValue::isAvailableExternallyLinkage(S->linkage()))
-        VS = cast<GlobalVarSummary>(S.get());
+        VS = cast<GlobalVarSummary>(S->getBaseObject());
     }
     if (!VS->isLive())
       continue;
