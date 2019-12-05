@@ -3,7 +3,7 @@
 
 ; CHECK: .debug_info contents:
 ; CHECK: .debug_info.dwo contents:
-; CHECK: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000004
+; CHECK: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000010
 ; CHECK:          [0x0000000000000001, 0x000000000000000c) ".text"
 ; CHECK:          [0x000000000000000e, 0x0000000000000013) ".text")
 

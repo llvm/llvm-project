@@ -4,7 +4,7 @@
 ## Ensure bogus empty section names are not printed when dumping
 ## rnglists that reference debug_addr when it is not present (such as in .dwo files)
 
-# CHECK:       DW_AT_ranges [DW_FORM_rnglistx]   (indexed (0x0) rangelist = 0x00000004
+# CHECK:       DW_AT_ranges [DW_FORM_rnglistx]   (indexed (0x0) rangelist = 0x00000010
 # CHECK-NEXT:    [0x0000000000000000, 0x0000000000000001)
 # CHECK-NEXT:    [0x0000000000000000, 0x0000000000000002))
 

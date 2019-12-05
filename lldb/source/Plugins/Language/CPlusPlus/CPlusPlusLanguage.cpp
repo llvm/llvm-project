@@ -284,46 +284,34 @@ public:
   }
 };
 
-/// Given a mangled function `Mangled`, replace all the primitive function type
-/// arguments of `Search` with type `Replace`.
-class TypeSubstitutor
-    : public llvm::itanium_demangle::AbstractManglingParser<TypeSubstitutor,
+template <typename Derived>
+class ManglingSubstitutor
+    : public llvm::itanium_demangle::AbstractManglingParser<Derived,
                                                             NodeAllocator> {
-  /// Input character until which we have constructed the respective output
-  /// already
-  const char *Written;
+  using Base =
+      llvm::itanium_demangle::AbstractManglingParser<Derived, NodeAllocator>;
 
-  llvm::StringRef Search;
-  llvm::StringRef Replace;
-  llvm::SmallString<128> Result;
+public:
+  ManglingSubstitutor() : Base(nullptr, nullptr) {}
 
-  /// Whether we have performed any substitutions.
-  bool Substituted;
+  template<typename... Ts>
+  ConstString substitute(llvm::StringRef Mangled, Ts &&... Vals) {
+    this->getDerived().reset(Mangled, std::forward<Ts>(Vals)...);
+    return substituteImpl(Mangled);
+  }
 
-  void reset(llvm::StringRef Mangled, llvm::StringRef Search,
-             llvm::StringRef Replace) {
-    AbstractManglingParser::reset(Mangled.begin(), Mangled.end());
+
+protected:
+  void reset(llvm::StringRef Mangled) {
+    Base::reset(Mangled.begin(), Mangled.end());
     Written = Mangled.begin();
-    this->Search = Search;
-    this->Replace = Replace;
     Result.clear();
     Substituted = false;
   }
 
-  void appendUnchangedInput() {
-    Result += llvm::StringRef(Written, First - Written);
-    Written = First;
-  }
-
-public:
-  TypeSubstitutor() : AbstractManglingParser(nullptr, nullptr) {}
-
-  ConstString substitute(llvm::StringRef Mangled, llvm::StringRef From,
-                         llvm::StringRef To) {
+  ConstString substituteImpl(llvm::StringRef Mangled) {
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
-
-    reset(Mangled, From, To);
-    if (parse() == nullptr) {
+    if (this->parse() == nullptr) {
       LLDB_LOG(log, "Failed to substitute mangling in {0}", Mangled);
       return ConstString();
     }
@@ -336,20 +324,69 @@ public:
     return ConstString(Result);
   }
 
-  llvm::itanium_demangle::Node *parseType() {
-    if (llvm::StringRef(First, numLeft()).startswith(Search)) {
-      // We found a match. Append unmodified input up to this point.
-      appendUnchangedInput();
+  void trySubstitute(llvm::StringRef From, llvm::StringRef To) {
+    if (!llvm::StringRef(currentParserPos(), this->numLeft()).startswith(From))
+      return;
 
-      // And then perform the replacement.
-      Result += Replace;
-      Written += Search.size();
-      Substituted = true;
-    }
-    return AbstractManglingParser::parseType();
+    // We found a match. Append unmodified input up to this point.
+    appendUnchangedInput();
+
+    // And then perform the replacement.
+    Result += To;
+    Written += From.size();
+    Substituted = true;
+  }
+
+private:
+  /// Input character until which we have constructed the respective output
+  /// already.
+  const char *Written;
+
+  llvm::SmallString<128> Result;
+
+  /// Whether we have performed any substitutions.
+  bool Substituted;
+
+  const char *currentParserPos() const { return this->First; }
+
+  void appendUnchangedInput() {
+    Result +=
+        llvm::StringRef(Written, std::distance(Written, currentParserPos()));
+    Written = currentParserPos();
+  }
+
+};
+
+/// Given a mangled function `Mangled`, replace all the primitive function type
+/// arguments of `Search` with type `Replace`.
+class TypeSubstitutor : public ManglingSubstitutor<TypeSubstitutor> {
+  llvm::StringRef Search;
+  llvm::StringRef Replace;
+
+public:
+  void reset(llvm::StringRef Mangled, llvm::StringRef Search,
+             llvm::StringRef Replace) {
+    ManglingSubstitutor::reset(Mangled);
+    this->Search = Search;
+    this->Replace = Replace;
+  }
+
+  llvm::itanium_demangle::Node *parseType() {
+    trySubstitute(Search, Replace);
+    return ManglingSubstitutor::parseType();
   }
 };
-}
+
+class CtorDtorSubstitutor : public ManglingSubstitutor<CtorDtorSubstitutor> {
+public:
+  llvm::itanium_demangle::Node *
+  parseCtorDtorName(llvm::itanium_demangle::Node *&SoFar, NameState *State) {
+    trySubstitute("C1", "C2");
+    trySubstitute("D1", "D2");
+    return ManglingSubstitutor::parseCtorDtorName(SoFar, State);
+  }
+};
+} // namespace
 
 uint32_t CPlusPlusLanguage::FindAlternateFunctionManglings(
     const ConstString mangled_name, std::set<ConstString> &alternates) {
@@ -396,6 +433,10 @@ uint32_t CPlusPlusLanguage::FindAlternateFunctionManglings(
   if (ConstString ulong_fixup =
           TS.substitute(mangled_name.GetStringRef(), "y", "m"))
     alternates.insert(ulong_fixup);
+
+  if (ConstString ctor_fixup =
+          CtorDtorSubstitutor().substitute(mangled_name.GetStringRef()))
+    alternates.insert(ctor_fixup);
 
   return alternates.size() - start_size;
 }

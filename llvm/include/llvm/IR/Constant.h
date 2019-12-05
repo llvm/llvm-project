@@ -53,6 +53,10 @@ public:
   /// Returns true if the value is one.
   bool isOneValue() const;
 
+  /// Return true if the value is not the one value, or,
+  /// for vectors, does not contain one value elements.
+  bool isNotOneValue() const;
+
   /// Return true if this is the value that would be returned by
   /// getAllOnesValue.
   bool isAllOnesValue() const;
@@ -64,7 +68,8 @@ public:
   /// Return true if the value is negative zero or null value.
   bool isZeroValue() const;
 
-  /// Return true if the value is not the smallest signed value.
+  /// Return true if the value is not the smallest signed value, or,
+  /// for vectors, does not contain smallest signed value elements.
   bool isNotMinSignedValue() const;
 
   /// Return true if the value is the smallest signed value.

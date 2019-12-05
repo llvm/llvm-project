@@ -629,7 +629,7 @@ DWARFUnit::findRnglistFromOffset(uint64_t Offset) {
 Expected<DWARFAddressRangesVector>
 DWARFUnit::findRnglistFromIndex(uint32_t Index) {
   if (auto Offset = getRnglistOffset(Index))
-    return findRnglistFromOffset(*Offset + RangeSectionBase);
+    return findRnglistFromOffset(*Offset);
 
   if (RngListTable)
     return createStringError(errc::invalid_argument,

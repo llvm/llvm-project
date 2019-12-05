@@ -190,6 +190,34 @@ public:
     FEA_On
   };
 
+  // Values of the following enumerations correspond to metadata arguments
+  // specified for constrained floating-point intrinsics:
+  // http://llvm.org/docs/LangRef.html#constrained-floating-point-intrinsics.
+
+  /// Possible rounding modes.
+  enum FPRoundingModeKind {
+    /// Rounding to nearest, corresponds to "round.tonearest".
+    FPR_ToNearest,
+    /// Rounding toward -Inf, corresponds to "round.downward".
+    FPR_Downward,
+    /// Rounding toward +Inf, corresponds to "round.upward".
+    FPR_Upward,
+    /// Rounding toward zero, corresponds to "round.towardzero".
+    FPR_TowardZero,
+    /// Is determined by runtime environment, corresponds to "round.dynamic".
+    FPR_Dynamic
+  };
+
+  /// Possible floating point exception behavior.
+  enum FPExceptionModeKind {
+    /// Assume that floating-point exceptions are masked.
+    FPE_Ignore,
+    /// Transformations do not cause new exceptions but may hide some.
+    FPE_MayTrap,
+    /// Strictly preserve the floating-point exception semantics.
+    FPE_Strict
+  };
+
   enum class LaxVectorConversionKind {
     /// Permit no implicit vector bitcasts.
     None,

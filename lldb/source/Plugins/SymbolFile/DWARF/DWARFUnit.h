@@ -216,12 +216,23 @@ public:
 
   /// Return a list of address ranges resulting from a (possibly encoded)
   /// range list starting at a given offset in the appropriate ranges section.
-  llvm::Expected<DWARFRangeList> FindRnglistFromOffset(dw_offset_t offset) const;
+  llvm::Expected<DWARFRangeList> FindRnglistFromOffset(dw_offset_t offset);
 
   /// Return a list of address ranges retrieved from an encoded range
   /// list whose offset is found via a table lookup given an index (DWARF v5
   /// and later).
-  llvm::Expected<DWARFRangeList> FindRnglistFromIndex(uint32_t index) const;
+  llvm::Expected<DWARFRangeList> FindRnglistFromIndex(uint32_t index);
+
+  /// Return a rangelist's offset based on an index. The index designates
+  /// an entry in the rangelist table's offset array and is supplied by
+  /// DW_FORM_rnglistx.
+  llvm::Optional<uint64_t> GetRnglistOffset(uint32_t Index) const {
+    if (!m_rnglist_table)
+      return llvm::None;
+    if (llvm::Optional<uint64_t> off = m_rnglist_table->getOffsetEntry(Index))
+      return *off + m_ranges_base;
+    return llvm::None;
+  }
 
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
@@ -288,6 +299,9 @@ protected:
   dw_offset_t m_line_table_offset = DW_INVALID_OFFSET;
 
   dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
+
+  llvm::Optional<llvm::DWARFDebugRnglistTable> m_rnglist_table;
+
   const DIERef::Section m_section;
 
 private:

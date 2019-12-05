@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "ClangdServer.h"
+#include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
 #include "index/Ref.h"
@@ -575,7 +577,7 @@ TEST(RenameTest, MainFileReferencesOnly) {
             expectedResult(Code, NewName));
 }
 
-TEST(RenameTests, CrossFile) {
+TEST(CrossFileRenameTests, DirtyBuffer) {
   Annotations FooCode("class [[Foo]] {};");
   std::string FooPath = testPath("foo.cc");
   Annotations FooDirtyBuffer("class [[Foo]] {};\n// this is dirty buffer");
@@ -656,6 +658,155 @@ TEST(RenameTests, CrossFile) {
   EXPECT_FALSE(Results);
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("too many occurrences"));
+}
+
+TEST(CrossFileRenameTests, WithUpToDateIndex) {
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-xc++"};
+  class IgnoreDiagnostics : public DiagnosticsConsumer {
+  void onDiagnosticsReady(PathRef File,
+                          std::vector<Diag> Diagnostics) override {}
+  } DiagConsumer;
+  // rename is runnning on the "^" point in FooH, and "[[]]" ranges are the
+  // expcted rename occurrences.
+  struct Case {
+    llvm::StringRef FooH;
+    llvm::StringRef FooCC;
+  } Cases [] = {
+    {
+      // classes.
+      R"cpp(
+        class [[Fo^o]] {
+          [[Foo]]();
+          ~[[Foo]]();
+        };
+      )cpp",
+      R"cpp(
+        #include "foo.h"
+        [[Foo]]::[[Foo]]() {}
+        [[Foo]]::~[[Foo]]() {}
+
+        void func() {
+          [[Foo]] foo;
+        }
+      )cpp",
+    },
+    {
+      // class methods.
+      R"cpp(
+        class Foo {
+          void [[f^oo]]();
+        };
+      )cpp",
+      R"cpp(
+        #include "foo.h"
+        void Foo::[[foo]]() {}
+
+        void func(Foo* p) {
+          p->[[foo]]();
+        }
+      )cpp",
+    },
+    {
+      // functions.
+      R"cpp(
+        void [[f^oo]]();
+      )cpp",
+      R"cpp(
+        #include "foo.h"
+        void [[foo]]() {}
+
+        void func() {
+          [[foo]]();
+        }
+      )cpp",
+    },
+    {
+      // typedefs.
+      R"cpp(
+      typedef int [[IN^T]];
+      [[INT]] foo();
+      )cpp",
+      R"cpp(
+        #include "foo.h"
+        [[INT]] foo() {}
+      )cpp",
+    },
+    {
+      // usings.
+      R"cpp(
+      using [[I^NT]] = int;
+      [[INT]] foo();
+      )cpp",
+      R"cpp(
+        #include "foo.h"
+        [[INT]] foo() {}
+      )cpp",
+    },
+    {
+      // variables.
+      R"cpp(
+      static const int [[VA^R]] = 123;
+      )cpp",
+      R"cpp(
+        #include "foo.h"
+        int s = [[VAR]];
+      )cpp",
+    },
+    {
+      // scope enums.
+      R"cpp(
+      enum class [[K^ind]] { ABC };
+      )cpp",
+      R"cpp(
+        #include "foo.h"
+        [[Kind]] ff() {
+          return [[Kind]]::ABC;
+        }
+      )cpp",
+    },
+    {
+      // enum constants.
+      R"cpp(
+      enum class Kind { [[A^BC]] };
+      )cpp",
+      R"cpp(
+        #include "foo.h"
+        Kind ff() {
+          return Kind::[[ABC]];
+        }
+      )cpp",
+    },
+  };
+
+  for (const auto& T : Cases) {
+    Annotations FooH(T.FooH);
+    Annotations FooCC(T.FooCC);
+    std::string FooHPath = testPath("foo.h");
+    std::string FooCCPath = testPath("foo.cc");
+
+    MockFSProvider FS;
+    FS.Files[FooHPath] = FooH.code();
+    FS.Files[FooCCPath] = FooCC.code();
+
+    auto ServerOpts = ClangdServer::optsForTest();
+    ServerOpts.CrossFileRename = true;
+    ServerOpts.BuildDynamicSymbolIndex = true;
+    ClangdServer Server(CDB, FS, DiagConsumer, ServerOpts);
+
+    // Add all files to clangd server to make sure the dynamic index has been
+    // built.
+    runAddDocument(Server, FooHPath, FooH.code());
+    runAddDocument(Server, FooCCPath, FooCC.code());
+
+    llvm::StringRef NewName = "NewName";
+    auto FileEditsList =
+        llvm::cantFail(runRename(Server, FooHPath, FooH.point(), NewName));
+    EXPECT_THAT(applyEdits(std::move(FileEditsList)),
+                UnorderedElementsAre(
+                    Pair(Eq(FooHPath), Eq(expectedResult(T.FooH, NewName))),
+                    Pair(Eq(FooCCPath), Eq(expectedResult(T.FooCC, NewName)))));
+  }
 }
 
 TEST(CrossFileRenameTests, CrossFileOnLocalSymbol) {

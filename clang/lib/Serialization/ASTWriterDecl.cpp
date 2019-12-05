@@ -559,6 +559,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.AddSourceLocation(D->getEndLoc());
 
   Record.push_back(D->getODRHash());
+  Record.push_back(D->usesFPIntrin());
 
   Record.push_back(D->getTemplatedKind());
   switch (D->getTemplatedKind()) {

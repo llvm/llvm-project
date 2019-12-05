@@ -859,8 +859,7 @@ void LiveDebugValues::insertTransferDebugPair(
     unsigned NewReg) {
   const MachineInstr *DebugInstr = &VarLocIDs[OldVarID].MI;
 
-  auto ProcessVarLoc = [&MI, &OpenRanges, &Transfers, &DebugInstr,
-                        &VarLocIDs](VarLoc &VL) {
+  auto ProcessVarLoc = [&MI, &OpenRanges, &Transfers, &VarLocIDs](VarLoc &VL) {
     unsigned LocId = VarLocIDs.insert(VL);
 
     // Close this variable's previous location range.
