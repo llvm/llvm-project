@@ -1842,55 +1842,6 @@ public:
   }
 };
 
-/// This represents '#pragma omp parallel master' directive.
-///
-/// \code
-/// #pragma omp parallel master private(a,b)
-/// \endcode
-/// In this example directive '#pragma omp parallel master' has clauses
-/// 'private' with the variables 'a' and 'b'
-///
-class OMPParallelMasterDirective : public OMPExecutableDirective {
-  friend class ASTStmtReader;
-
-  OMPParallelMasterDirective(SourceLocation StartLoc, SourceLocation EndLoc,
-                             unsigned NumClauses)
-      : OMPExecutableDirective(this, OMPParallelMasterDirectiveClass,
-                               OMPD_parallel_master, StartLoc, EndLoc,
-                               NumClauses, 1) {}
-
-  explicit OMPParallelMasterDirective(unsigned NumClauses)
-      : OMPExecutableDirective(this, OMPParallelMasterDirectiveClass,
-                               OMPD_parallel_master, SourceLocation(),
-                               SourceLocation(), NumClauses, 1) {}
-
-public:
-  /// Creates directive with a list of \a Clauses.
-  ///
-  /// \param C AST context.
-  /// \param StartLoc Starting location of the directive kind.
-  /// \param EndLoc Ending Location of the directive.
-  /// \param Clauses List of clauses.
-  /// \param AssociatedStmt Statement, associated with the directive.
-  ///
-  static OMPParallelMasterDirective *
-  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt);
-
-  /// Creates an empty directive with the place for \a NumClauses
-  /// clauses.
-  ///
-  /// \param C AST context.
-  /// \param NumClauses Number of clauses.
-  ///
-  static OMPParallelMasterDirective *
-  CreateEmpty(const ASTContext &C, unsigned NumClauses, EmptyShell);
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == OMPParallelMasterDirectiveClass;
-  }
-};
-
 /// This represents '#pragma omp parallel sections' directive.
 ///
 /// \code
