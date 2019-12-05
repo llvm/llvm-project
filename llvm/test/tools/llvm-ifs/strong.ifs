@@ -1,0 +1,17 @@
+# RUN: llvm-ifs -action write-ifs -o - %s %S/strong.ifs | FileCheck %s --check-prefixes=CHECK-IFS
+
+# CHECK-IFS: --- !experimental-ifs-v1
+# CHECK-IFS-NEXT: IfsVersion: 1.0
+# CHECK-IFS-NEXT: Triple: x86_64-unknown-linux-gnu
+# CHECK-IFS-NEXT: ObjectFileFormat: ELF
+# CHECK-IFS-NEXT: Symbols:
+# CHECK-IFS-DAG:   _Z8weakFuncv: { Type: Func }
+# CHECK-IFS: ...
+
+--- !experimental-ifs-v1
+IfsVersion: 1.0
+Triple: x86_64-unknown-linux-gnu
+ObjectFileFormat: ELF
+Symbols:
+  _Z8weakFuncv: { Type: Func }
+...
