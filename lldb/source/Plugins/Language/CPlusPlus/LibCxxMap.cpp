@@ -94,6 +94,8 @@ public:
   MapIterator(ValueObject *entry, size_t depth = 0)
       : m_entry(entry), m_max_depth(depth), m_error(false) {}
 
+  MapIterator &operator=(const MapIterator &) = default;
+
   ValueObjectSP value() { return m_entry.GetEntry(); }
 
   ValueObjectSP advance(size_t count) {
