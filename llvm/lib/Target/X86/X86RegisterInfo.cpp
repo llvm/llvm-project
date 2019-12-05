@@ -530,23 +530,20 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   Reserved.set(X86::MXCSR);
 
   // Set the stack-pointer register and its aliases as reserved.
-  for (MCSubRegIterator I(X86::RSP, this, /*IncludeSelf=*/true); I.isValid();
-       ++I)
-    Reserved.set(*I);
+  for (const MCPhysReg &SubReg : subregs_inclusive(X86::RSP))
+    Reserved.set(SubReg);
 
   // Set the Shadow Stack Pointer as reserved.
   Reserved.set(X86::SSP);
 
   // Set the instruction pointer register and its aliases as reserved.
-  for (MCSubRegIterator I(X86::RIP, this, /*IncludeSelf=*/true); I.isValid();
-       ++I)
-    Reserved.set(*I);
+  for (const MCPhysReg &SubReg : subregs_inclusive(X86::RIP))
+    Reserved.set(SubReg);
 
   // Set the frame-pointer register and its aliases as reserved if needed.
   if (TFI->hasFP(MF)) {
-    for (MCSubRegIterator I(X86::RBP, this, /*IncludeSelf=*/true); I.isValid();
-         ++I)
-      Reserved.set(*I);
+    for (const MCPhysReg &SubReg : subregs_inclusive(X86::RBP))
+      Reserved.set(SubReg);
   }
 
   // Set the base-pointer register and its aliases as reserved if needed.
@@ -559,9 +556,8 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
         "this calling convention.");
 
     Register BasePtr = getX86SubSuperRegister(getBaseRegister(), 64);
-    for (MCSubRegIterator I(BasePtr, this, /*IncludeSelf=*/true);
-         I.isValid(); ++I)
-      Reserved.set(*I);
+    for (const MCPhysReg &SubReg : subregs_inclusive(BasePtr))
+      Reserved.set(SubReg);
   }
 
   // Mark the segment registers as reserved.
