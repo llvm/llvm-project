@@ -1058,11 +1058,13 @@ RedeclarePropertyAccessor(ASTContext &Context, ObjCImplementationDecl *Impl,
                           SourceLocation PropertyLoc) {
   ObjCMethodDecl *Decl = AccessorDecl;
   ObjCMethodDecl *ImplDecl = ObjCMethodDecl::Create(
-      Context, AtLoc, PropertyLoc, Decl->getSelector(), Decl->getReturnType(),
+      Context, AtLoc.isValid() ? AtLoc : Decl->getBeginLoc(),
+      PropertyLoc.isValid() ? PropertyLoc : Decl->getEndLoc(),
+      Decl->getSelector(), Decl->getReturnType(),
       Decl->getReturnTypeSourceInfo(), Impl, Decl->isInstanceMethod(),
-      Decl->isVariadic(), Decl->isPropertyAccessor(), /* isSynthesized*/ true,
-      Decl->isImplicit(), Decl->isDefined(), Decl->getImplementationControl(),
-      Decl->hasRelatedResultType());
+      Decl->isVariadic(), Decl->isPropertyAccessor(),
+      /* isSynthesized*/ true, Decl->isImplicit(), Decl->isDefined(),
+      Decl->getImplementationControl(), Decl->hasRelatedResultType());
   ImplDecl->getMethodFamily();
   if (Decl->hasAttrs())
     ImplDecl->setAttrs(Decl->getAttrs());
