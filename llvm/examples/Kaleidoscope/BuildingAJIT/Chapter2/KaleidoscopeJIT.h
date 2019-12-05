@@ -45,15 +45,17 @@ private:
   MangleAndInterner Mangle;
   ThreadSafeContext Ctx;
 
+  JITDylib &MainJD;
+
 public:
   KaleidoscopeJIT(JITTargetMachineBuilder JTMB, DataLayout DL)
       : ObjectLayer(ES,
                     []() { return std::make_unique<SectionMemoryManager>(); }),
         CompileLayer(ES, ObjectLayer, ConcurrentIRCompiler(std::move(JTMB))),
-        OptimizeLayer(ES, CompileLayer, optimizeModule),
-        DL(std::move(DL)), Mangle(ES, this->DL),
-        Ctx(std::make_unique<LLVMContext>()) {
-    ES.getMainJITDylib().addGenerator(
+        OptimizeLayer(ES, CompileLayer, optimizeModule), DL(std::move(DL)),
+        Mangle(ES, this->DL), Ctx(std::make_unique<LLVMContext>()),
+        MainJD(ES.createJITDylib("<main>")) {
+    MainJD.addGenerator(
         cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
             DL.getGlobalPrefix())));
   }
@@ -76,12 +78,11 @@ public:
   }
 
   Error addModule(std::unique_ptr<Module> M) {
-    return OptimizeLayer.add(ES.getMainJITDylib(),
-                             ThreadSafeModule(std::move(M), Ctx));
+    return OptimizeLayer.add(MainJD, ThreadSafeModule(std::move(M), Ctx));
   }
 
   Expected<JITEvaluatedSymbol> lookup(StringRef Name) {
-    return ES.lookup({&ES.getMainJITDylib()}, Mangle(Name.str()));
+    return ES.lookup({&MainJD}, Mangle(Name.str()));
   }
 
 private:
