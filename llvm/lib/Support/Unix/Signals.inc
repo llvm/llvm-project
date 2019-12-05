@@ -361,15 +361,15 @@ static RETSIGTYPE SignalHandler(int Sig) {
   {
     RemoveFilesToRemove();
 
+    if (Sig == SIGPIPE)
+      if (auto OldOneShotPipeFunction =
+              OneShotPipeSignalFunction.exchange(nullptr))
+        return OldOneShotPipeFunction();
+
     if (std::find(std::begin(IntSigs), std::end(IntSigs), Sig)
         != std::end(IntSigs)) {
       if (auto OldInterruptFunction = InterruptFunction.exchange(nullptr))
         return OldInterruptFunction();
-
-      if (Sig == SIGPIPE)
-        if (auto OldOneShotPipeFunction =
-                OneShotPipeSignalFunction.exchange(nullptr))
-          return OldOneShotPipeFunction();
 
       raise(Sig);   // Execute the default handler.
       return;
