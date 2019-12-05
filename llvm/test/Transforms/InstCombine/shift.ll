@@ -1628,7 +1628,12 @@ define i32 @ashr_select_xor_false(i32 %x, i1 %cond) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=4871
 define i177 @lshr_out_of_range(i177 %Y, i177** %A2) {
 ; CHECK-LABEL: @lshr_out_of_range(
-; CHECK-NEXT:    store i177** [[A2:%.*]], i177*** undef, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i177 [[Y:%.*]], -1
+; CHECK-NEXT:    [[B4:%.*]] = sext i1 [[TMP1]] to i177
+; CHECK-NEXT:    [[C8:%.*]] = icmp ult i177 [[B4]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[C8]] to i64
+; CHECK-NEXT:    [[G18:%.*]] = getelementptr i177*, i177** [[A2:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    store i177** [[G18]], i177*** undef, align 8
 ; CHECK-NEXT:    ret i177 0
 ;
   %B5 = udiv i177 %Y, -1
@@ -1649,6 +1654,18 @@ define i177 @lshr_out_of_range(i177 %Y, i177** %A2) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=5032
 define void @ashr_out_of_range(i177* %A) {
 ; CHECK-LABEL: @ashr_out_of_range(
+; CHECK-NEXT:    [[L:%.*]] = load i177, i177* [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L]], -1
+; CHECK-NEXT:    [[B2:%.*]] = select i1 [[TMP1]], i64 -1, i64 -2
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, i177* [[A]], i64 [[B2]]
+; CHECK-NEXT:    [[L7:%.*]] = load i177, i177* [[G11]], align 4
+; CHECK-NEXT:    [[B36:%.*]] = select i1 [[TMP1]], i177 0, i177 [[L7]]
+; CHECK-NEXT:    [[C17:%.*]] = icmp sgt i177 [[B36]], [[L7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[C17]] to i64
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, i177* [[G11]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i177 [[L7]], -1
+; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP3]], i177 0, i177 [[L7]]
+; CHECK-NEXT:    store i177 [[B28]], i177* [[G62]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %L = load i177, i177* %A

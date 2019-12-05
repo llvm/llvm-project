@@ -890,6 +890,10 @@ Instruction *InstCombiner::foldAddWithConstant(BinaryOperator &Add) {
   if (match(Op0, m_ZExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
     return SelectInst::Create(X, AddOne(Op1C), Op1);
+  // sext(bool) + C -> bool ? C - 1 : C
+  if (match(Op0, m_SExt(m_Value(X))) &&
+      X->getType()->getScalarSizeInBits() == 1)
+    return SelectInst::Create(X, SubOne(Op1C), Op1);
 
   // ~X + C --> (C-1) - X
   if (match(Op0, m_Not(m_Value(X))))
@@ -1287,12 +1291,6 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     // -A + B --> B - A
     return BinaryOperator::CreateSub(RHS, A);
   }
-
-  // Canonicalize sext to zext for better value tracking potential.
-  // add A, sext(B) --> sub A, zext(B)
-  if (match(&I, m_c_Add(m_Value(A), m_OneUse(m_SExt(m_Value(B))))) &&
-      B->getType()->isIntOrIntVectorTy(1))
-    return BinaryOperator::CreateSub(A, Builder.CreateZExt(B, Ty));
 
   // A + -B  -->  A - B
   if (match(RHS, m_Neg(m_Value(B))))
@@ -1920,6 +1918,14 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
         Y->getType()->getScalarSizeInBits() == 1) {
       Value *Zext = Builder.CreateZExt(Y, I.getType());
       BinaryOperator *Add = BinaryOperator::CreateAdd(Op0, Zext);
+      Add->setHasNoSignedWrap(I.hasNoSignedWrap());
+      return Add;
+    }
+    // sub [nsw] X, zext(bool Y) -> add [nsw] X, sext(bool Y)
+    // 'nuw' is dropped in favor of the canonical form.
+    if (match(Op1, m_ZExt(m_Value(Y))) && Y->getType()->isIntOrIntVectorTy(1)) {
+      Value *Sext = Builder.CreateSExt(Y, I.getType());
+      BinaryOperator *Add = BinaryOperator::CreateAdd(Op0, Sext);
       Add->setHasNoSignedWrap(I.hasNoSignedWrap());
       return Add;
     }
