@@ -9134,7 +9134,7 @@ void ClangASTContext::DumpFromSymbolFile(Stream &s,
 
 void ClangASTContext::DumpValue(
     lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,
-    lldb::Format format, const DataExtractor &data,
+    lldb::Format format, const lldb_private::DataExtractor &data,
     lldb::offset_t data_byte_offset, size_t data_byte_size,
     uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset, bool show_types,
     bool show_summary, bool verbose, uint32_t depth) {
