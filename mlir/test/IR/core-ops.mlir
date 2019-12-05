@@ -565,6 +565,11 @@ func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64
   // CHECK: {{%.*}} = memref_cast {{%.*}} : memref<64x16x4xf32, #[[BASE_MAP3]]> to memref<64x16x4xf32, #[[BASE_MAP0]]>
   %3 = memref_cast %2 : memref<64x16x4xf32, offset: ?, strides: [?, ?, ?]> to memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]>
 
+  // CHECK: memref_cast %{{.*}} : memref<4xf32> to memref<*xf32>
+  %4 = memref_cast %1 : memref<4xf32> to memref<*xf32>
+
+  // CHECK: memref_cast %{{.*}} : memref<*xf32> to memref<4xf32>
+  %5 = memref_cast %4 : memref<*xf32> to memref<4xf32>
   return
 }
 

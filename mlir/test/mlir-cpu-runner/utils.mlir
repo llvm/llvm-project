@@ -7,7 +7,8 @@ func @print_0d() {
   %f = constant 2.00000e+00 : f32
   %A = alloc() : memref<f32>
   store %f, %A[]: memref<f32>
-  call @print_memref_0d_f32(%A): (memref<f32>) -> ()
+  %U = memref_cast %A :  memref<f32> to memref<*xf32>
+  call @print_memref_f32(%U): (memref<*xf32>) -> ()
   dealloc %A : memref<f32>
   return
 }
@@ -18,7 +19,8 @@ func @print_1d() {
   %A = alloc() : memref<16xf32>
   %B = memref_cast %A: memref<16xf32> to memref<?xf32>
   linalg.fill(%B, %f) : memref<?xf32>, f32
-  call @print_memref_1d_f32(%B): (memref<?xf32>) -> ()
+  %U = memref_cast %B :  memref<?xf32> to memref<*xf32>
+  call @print_memref_f32(%U): (memref<*xf32>) -> ()
   dealloc %A : memref<16xf32>
   return
 }
@@ -34,8 +36,8 @@ func @print_3d() {
 
   %c2 = constant 2 : index
   store %f4, %B[%c2, %c2, %c2]: memref<?x?x?xf32>
-
-  call @print_memref_3d_f32(%B): (memref<?x?x?xf32>) -> ()
+  %U = memref_cast %B : memref<?x?x?xf32> to memref<*xf32>
+  call @print_memref_f32(%U): (memref<*xf32>) -> ()
   dealloc %A : memref<3x4x5xf32>
   return
 }
@@ -46,10 +48,7 @@ func @print_3d() {
 //    PRINT-3D-NEXT: 2,    2,    4,    2,    2
 //    PRINT-3D-NEXT: 2,    2,    2,    2,    2
 
-func @print_memref_0d_f32(memref<f32>)
-func @print_memref_1d_f32(memref<?xf32>)
-func @print_memref_3d_f32(memref<?x?x?xf32>)
-
+func @print_memref_f32(memref<*xf32>)
 
 !vector_type_C = type vector<4x4xf32>
 !matrix_type_CC = type memref<1x1x!vector_type_C>

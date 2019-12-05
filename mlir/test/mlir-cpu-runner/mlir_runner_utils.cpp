@@ -148,15 +148,41 @@ template <typename T, int N> void printMemRef(StridedMemRefType<T, N> &M) {
   std::cout << std::endl;
 }
 
-template <typename T> void printZeroDMemRef(StridedMemRefType<T, 0> &M) {
+template <typename T> void printMemRef(StridedMemRefType<T, 0> &M) {
   std::cout << "\nMemref base@ = " << M.data << " rank = " << 0
             << " offset = " << M.offset << " data = [";
   MemRefDataPrinter<T, 0>::print(std::cout, M.data, 0, M.offset);
   std::cout << "]" << std::endl;
 }
 
+extern "C" void
+print_memref_vector_4x4xf32(StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
+  printMemRef(*M);
+}
+
+extern "C" void print_memref_f32(UnrankedMemRefType *M) {
+  printUnrankedMemRefMetaData(std::cout, *M);
+  int rank = M->rank;
+  void *ptr = M->descriptor;
+
+#define MEMREF_CASE(RANK)                                                      \
+  case RANK:                                                                   \
+    printMemRef(*(static_cast<StridedMemRefType<float, RANK> *>(ptr)));        \
+    break
+
+  switch (rank) {
+    MEMREF_CASE(0);
+    MEMREF_CASE(1);
+    MEMREF_CASE(2);
+    MEMREF_CASE(3);
+    MEMREF_CASE(4);
+  default:
+    assert(0 && "Unsupported rank to print");
+  }
+}
+
 extern "C" void print_memref_0d_f32(StridedMemRefType<float, 0> *M) {
-  printZeroDMemRef(*M);
+  printMemRef(*M);
 }
 extern "C" void print_memref_1d_f32(StridedMemRefType<float, 1> *M) {
   printMemRef(*M);
@@ -168,10 +194,5 @@ extern "C" void print_memref_3d_f32(StridedMemRefType<float, 3> *M) {
   printMemRef(*M);
 }
 extern "C" void print_memref_4d_f32(StridedMemRefType<float, 4> *M) {
-  printMemRef(*M);
-}
-
-extern "C" void
-print_memref_vector_4x4xf32(StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
   printMemRef(*M);
 }

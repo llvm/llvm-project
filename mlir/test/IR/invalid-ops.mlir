@@ -978,3 +978,34 @@ func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16,
   %0 = memref_cast %arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]> to memref<12x4x16xf32, offset:16, strides:[64, 16, 1]>
   return
 }
+
+// -----
+
+// incompatible element types
+func @invalid_memref_cast() {
+  %0 = alloc() : memref<2x5xf32, 0>
+  // expected-error@+1 {{operand type 'memref<2x5xf32>' and result type 'memref<*xi32>' are cast incompatible}}
+  %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xi32> 
+  return
+}
+
+// -----
+
+// incompatible memory space
+func @invalid_memref_cast() {
+  %0 = alloc() : memref<2x5xf32, 0>
+  // expected-error@+1 {{operand type 'memref<2x5xf32>' and result type 'memref<*xf32>' are cast incompatible}}
+  %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xf32, 1> 
+  return
+}
+
+// -----
+
+// unranked to unranked
+func @invalid_memref_cast() {
+  %0 = alloc() : memref<2x5xf32, 0>
+  %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xf32, 0> 
+  // expected-error@+1 {{operand type 'memref<*xf32>' and result type 'memref<*xf32>' are cast incompatible}}
+  %2 = memref_cast %1 : memref<*xf32, 0> to memref<*xf32, 0> 
+  return
+}

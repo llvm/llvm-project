@@ -371,6 +371,30 @@ func @memref_cast_mixed_to_mixed(%mixed : memref<42x?xf32>) {
   return
 }
 
+// CHECK-LABEL: func @memref_cast_ranked_to_unranked
+func @memref_cast_ranked_to_unranked(%arg : memref<42x2x?xf32>) {
+// CHECK-NEXT: %[[ld:.*]] = llvm.load %{{.*}} : !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }*">
+// CHECK-DAG:  %[[c:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// CHECK-DAG:  %[[p:.*]] = llvm.alloca %[[c]] x !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }"> : (!llvm.i64) -> !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }*">
+// CHECK-DAG:  llvm.store %[[ld]], %[[p]] : !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }*">
+// CHECK-DAG:  %[[p2:.*]] = llvm.bitcast %2 : !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }*"> to !llvm<"i8*">
+// CHECK-DAG:  %[[r:.*]] = llvm.mlir.constant(3 : i64) : !llvm.i64
+// CHECK    :  llvm.mlir.undef : !llvm<"{ i64, i8* }">
+// CHECK-DAG:  llvm.insertvalue %[[r]], %{{.*}}[0] : !llvm<"{ i64, i8* }">
+// CHECK-DAG:  llvm.insertvalue %[[p2]], %{{.*}}[1] : !llvm<"{ i64, i8* }">
+  %0 = memref_cast %arg : memref<42x2x?xf32> to memref<*xf32>
+  return
+}
+
+// CHECK-LABEL: func @memref_cast_unranked_to_ranked
+func @memref_cast_unranked_to_ranked(%arg : memref<*xf32>) {
+// CHECK: %[[ld:.*]] = llvm.load %{{.*}} : !llvm<"{ i64, i8* }*">
+// CHECK-NEXT: %[[p:.*]] = llvm.extractvalue %[[ld]][1] : !llvm<"{ i64, i8* }">
+// CHECK-NEXT: llvm.bitcast %[[p]] : !llvm<"i8*"> to !llvm<"{ float*, float*, i64, [4 x i64], [4 x i64] }*">
+  %0 = memref_cast %arg : memref<*xf32> to memref<?x?x10x2xf32>
+  return
+}
+
 // CHECK-LABEL: func @mixed_memref_dim(%arg0: !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }*">) {
 func @mixed_memref_dim(%mixed : memref<42x?x?x13x?xf32>) {
 //  CHECK-NEXT:  %[[ld:.*]] = llvm.load %{{.*}} : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }*">

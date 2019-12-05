@@ -22,9 +22,10 @@ func @main() {
     store %sum, %kernel_dst[%tz, %ty, %tx] : memref<?x?x?xf32>
     gpu.return
   }
-  call @print_memref_3d_f32(%dst) : (memref<?x?x?xf32>) -> ()
+  %U = memref_cast %dst : memref<?x?x?xf32> to memref<*xf32>
+  call @print_memref_f32(%U) : (memref<*xf32>) -> ()
   return
 }
 
 func @mcuMemHostRegisterMemRef3dFloat(%ptr : memref<?x?x?xf32>)
-func @print_memref_3d_f32(%ptr : memref<?x?x?xf32>)
+func @print_memref_f32(%ptr : memref<*xf32>)
