@@ -265,6 +265,7 @@ public:
   void setConstrainedFPCallAttr(CallInst *I) {
     if (!I->hasFnAttr(Attribute::StrictFP))
       I->addAttribute(AttributeList::FunctionIndex, Attribute::StrictFP);
+    setConstrainedFPFunctionAttr();
   }
 
   //===--------------------------------------------------------------------===//
