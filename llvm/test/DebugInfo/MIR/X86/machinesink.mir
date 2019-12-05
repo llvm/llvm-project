@@ -9,6 +9,9 @@
 # Test two checks DBG_VALUEs do not sink past a DBG_VALUE in the same block
 # that redefines the variable location, while three checks that copy-propagation
 # happens in the same scenario.
+#
+# Test four: if we sink a DBG_VALUE via an intermediate block, no spurious
+# DBG_VALUE $noreg's should appear along the way.
 --- |
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
@@ -41,6 +44,22 @@
   entry:
     br label %block1
   block1:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  define void @test4(i32* nocapture readonly %p) local_unnamed_addr !dbg !301 {
+  ; Stripped
+  entry:
+    br label %block1
+  block1:
+    br label %block2
+  block2:
+    br label %exit
+  combined:
+    br label %branch1
+  branch1:
     br label %exit
   exit:
     ret void
@@ -81,10 +100,15 @@
   !202 = !{!203}
   !203 = !DILocalVariable(name: "r", arg: 1, scope: !201, file: !2, line: 2, type: !12)
   !204 = !DILocation(line: 1, column: 1, scope: !201)
+  !301 = distinct !DISubprogram(name: "test2", scope: !2, file: !2, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !1, retainedNodes: !302)
+  !302 = !{!303}
+  !303 = !DILocalVariable(name: "s", arg: 1, scope: !301, file: !2, line: 2, type: !12)
+  !304 = !DILocation(line: 1, column: 1, scope: !301)
 
   ; CHECK: [[VARNUM:![0-9]+]] = !DILocalVariable(name: "p",
   ; CHECK: [[VAR2NUM:![0-9]+]] = !DILocalVariable(name: "q",
   ; CHECK: [[VAR3NUM:![0-9]+]] = !DILocalVariable(name: "r",
+  ; CHECK: [[VAR4NUM:![0-9]+]] = !DILocalVariable(name: "s",
 
 ...
 ---
@@ -232,6 +256,88 @@ body:             |
     JMP_1 %bb.2.exit
 
   bb.2.exit:
+    $rax = MOV64rr %2
+    RET 0
+...
+---
+name:            test4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '%2' }
+  - { reg: '$rsi', virtual-reg: '%2' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1.block1, %bb.2.block2
+    liveins: $rdi, $esi
+
+    ; The DBG_VALUE here should sink through several blocks, but not leave any
+    ; additional DBG_VALUE $noregs on its way.
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK:       [[TEST4VREG:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT:  CMP32ri $esi, 0
+    ; CHECK-NEXT:  DBG_VALUE $noreg, $noreg, [[VAR4NUM]]
+    ; CHECK-NEXT:  JCC_1 %bb.1, 4
+    ; CHECK-NEXT:  JMP_1
+
+    %2:gr64 = COPY $rdi
+    %5:gr64 = ADD64ri8 %2, 1, implicit-def dead $eflags
+    CMP32ri $esi, 0, implicit-def $eflags
+    DBG_VALUE %5, $noreg, !303, !17, debug-location !304
+    JCC_1 %bb.1.block1, 4, implicit $eflags
+    JMP_1 %bb.2.block2
+
+  bb.1.block1:
+    successors: %bb.3.combined
+    liveins: $esi
+
+    ; CHECK-LABEL: bb.1.block1
+    ; CHECK-NOT:   DBG_VALUE
+    ; CHECK:       JMP_1 %bb.3
+
+    JMP_1 %bb.3.combined
+
+  bb.2.block2:
+    successors: %bb.3.combined
+    liveins: $esi
+
+    ; CHECK-LABEL: bb.2.block2
+    ; CHECK-NOT:   DBG_VALUE
+    ; CHECK:       JMP_1 %bb.3
+
+    JMP_1 %bb.3.combined
+
+  bb.3.combined:
+    successors: %bb.4.branch1, %bb.5.exit
+    liveins: $esi
+
+    ; CHECK-LABEL: bb.3.combined
+    ; CHECK-NOT:   DBG_VALUE
+    ; CHECK:       JCC_1 %bb.4, 4, implicit $eflags
+    ; CHECK-NEXT:  JMP_1 %bb.5
+
+    CMP32ri $esi, 1, implicit-def $eflags
+    JCC_1 %bb.4.branch1, 4, implicit $eflags
+    JMP_1 %bb.5.exit
+
+  bb.4.branch1:
+    successors: %bb.5.exit
+
+    ; This block should receive the sunk copy and DBG_VALUE.
+    ; CHECK-LABEL: bb.4.branch1:
+    ; CHECK-NOT:   DBG_VALUE
+    ; CHECK:       [[TEST4VREG2:%[0-9]+]]:gr64 = ADD64ri8 [[TEST4VREG]], 1
+    ; CHECK-NEXT:  DBG_VALUE [[TEST4VREG2]], $noreg, [[VAR4NUM]]
+    ; CHECK-NEXT:  ADD64ri8
+    ; CHECK:       JMP_1 %bb.5
+
+    %1:gr64 = ADD64ri8 %5, 4, implicit-def dead $eflags
+    JMP_1 %bb.5.exit
+
+  bb.5.exit:
+    ; CHECK-LABEL: bb.5.exit
+    ; CHECK-NOT:   DBG_VALUE
+    ; CHECK:       RET 0
+
     $rax = MOV64rr %2
     RET 0
 ...
