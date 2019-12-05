@@ -221,8 +221,8 @@ void RegScavenger::forward() {
         // Ideally we would like a way to model this, but leaving the
         // insert_subreg around causes both correctness and performance issues.
         bool SubUsed = false;
-        for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs)
-          if (isRegUsed(*SubRegs)) {
+        for (const MCPhysReg &SubReg : TRI->subregs(Reg))
+          if (isRegUsed(SubReg)) {
             SubUsed = true;
             break;
           }
