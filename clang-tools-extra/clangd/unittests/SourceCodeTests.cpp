@@ -358,7 +358,7 @@ Bar* bar;
     auto AST = TestTU::withCode(TestCase.code()).build();
     const auto &SourceMgr = AST.getSourceManager();
     SourceLocation Actual = getBeginningOfIdentifier(
-        TestCase.points().back(), SourceMgr, AST.getASTContext().getLangOpts());
+        TestCase.points().back(), SourceMgr, AST.getLangOpts());
     Position ActualPos = offsetToPosition(
         TestCase.code(),
         SourceMgr.getFileOffset(SourceMgr.getSpellingLoc(Actual)));
@@ -482,7 +482,7 @@ TEST(SourceCodeTests, GetMacros) {
   TestTU TU = TestTU::withCode(Code.code());
   auto AST = TU.build();
   auto Loc = getBeginningOfIdentifier(Code.point(), AST.getSourceManager(),
-                                      AST.getASTContext().getLangOpts());
+                                      AST.getLangOpts());
   auto Result = locateMacroAt(Loc, AST.getPreprocessor());
   ASSERT_TRUE(Result);
   EXPECT_THAT(*Result, MacroName("MACRO"));
@@ -548,7 +548,7 @@ TEST(SourceCodeTests, HalfOpenFileRange) {
   ParsedAST AST = TestTU::withCode(Test.code()).build();
   llvm::errs() << Test.code();
   const SourceManager &SM = AST.getSourceManager();
-  const LangOptions &LangOpts = AST.getASTContext().getLangOpts();
+  const LangOptions &LangOpts = AST.getLangOpts();
   // Turn a SourceLocation into a pair of positions
   auto SourceRangeToRange = [&SM](SourceRange SrcRange) {
     return Range{sourceLocToPosition(SM, SrcRange.getBegin()),
@@ -588,8 +588,7 @@ TEST(SourceCodeTests, HalfOpenFileRangePathologicalPreprocessor) {
   const auto &Body = cast<CompoundStmt>(Func.getBody());
   const auto &Loop = cast<WhileStmt>(*Body->child_begin());
   llvm::Optional<SourceRange> Range = toHalfOpenFileRange(
-      AST.getSourceManager(), AST.getASTContext().getLangOpts(),
-      Loop->getSourceRange());
+      AST.getSourceManager(), AST.getLangOpts(), Loop->getSourceRange());
   ASSERT_TRUE(Range) << "Failed to get file range";
   EXPECT_EQ(AST.getSourceManager().getFileOffset(Range->getBegin()),
             Test.llvm::Annotations::range().Begin);

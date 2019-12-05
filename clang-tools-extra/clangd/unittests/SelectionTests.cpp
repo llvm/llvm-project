@@ -40,7 +40,7 @@ Range nodeRange(const SelectionTree::Node *N, ParsedAST &AST) {
   if (!N)
     return Range{};
   const SourceManager &SM = AST.getSourceManager();
-  const LangOptions &LangOpts = AST.getASTContext().getLangOpts();
+  const LangOptions &LangOpts = AST.getLangOpts();
   StringRef Buffer = SM.getBufferData(SM.getMainFileID());
   if (llvm::isa_and_nonnull<TranslationUnitDecl>(N->ASTNode.get<Decl>()))
     return Range{Position{}, offsetToPosition(Buffer, Buffer.size())};

@@ -397,9 +397,8 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
 
     return (*Content)->getBuffer().str();
   };
-  SourceLocation SourceLocationBeg =
-      SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
-          RInputs.Pos, SM, AST.getASTContext().getLangOpts()));
+  SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
+      getBeginningOfIdentifier(RInputs.Pos, SM, AST.getLangOpts()));
   // FIXME: Renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
   if (locateMacroAt(SourceLocationBeg, AST.getPreprocessor()))

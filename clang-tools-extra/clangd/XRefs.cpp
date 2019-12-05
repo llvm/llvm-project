@@ -191,9 +191,8 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
 
   // Macros are simple: there's no declaration/definition distinction.
   // As a consequence, there's no need to look them up in the index either.
-  SourceLocation MaybeMacroLocation =
-      SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
-          Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts()));
+  SourceLocation MaybeMacroLocation = SM.getMacroArgExpandedLocation(
+      getBeginningOfIdentifier(Pos, AST.getSourceManager(), AST.getLangOpts()));
   std::vector<LocatedSymbol> Result;
   if (auto M = locateMacroAt(MaybeMacroLocation, AST.getPreprocessor())) {
     if (auto Loc = makeLocation(AST.getASTContext(),
@@ -366,7 +365,7 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   auto References = findRefs(
       getDeclAtPosition(AST,
                         SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
-                            Pos, SM, AST.getASTContext().getLangOpts())),
+                            Pos, SM, AST.getLangOpts())),
                         Relations),
       AST);
 
@@ -374,9 +373,8 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   // different kinds, deduplicate them.
   std::vector<DocumentHighlight> Result;
   for (const auto &Ref : References) {
-    if (auto Range =
-            getTokenRange(AST.getASTContext().getSourceManager(),
-                          AST.getASTContext().getLangOpts(), Ref.Loc)) {
+    if (auto Range = getTokenRange(AST.getASTContext().getSourceManager(),
+                                   AST.getLangOpts(), Ref.Loc)) {
       DocumentHighlight DH;
       DH.range = *Range;
       if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
@@ -404,7 +402,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     return Results;
   }
   auto Loc = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
+      getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
   // TODO: should we handle macros, too?
   // We also show references to the targets of using-decls, so we include
   // DeclRelation::Underlying.
@@ -424,8 +422,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
                                  }),
                      MainFileRefs.end());
   for (const auto &Ref : MainFileRefs) {
-    if (auto Range =
-            getTokenRange(SM, AST.getASTContext().getLangOpts(), Ref.Loc)) {
+    if (auto Range = getTokenRange(SM, AST.getLangOpts(), Ref.Loc)) {
       Location Result;
       Result.range = *Range;
       Result.uri = URIForFile::canonicalize(*MainFilePath, *MainFilePath);
@@ -470,7 +467,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
   auto Loc = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
+      getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
 
   std::vector<SymbolDetails> Results;
 
@@ -646,7 +643,7 @@ static void fillSuperTypes(const CXXRecordDecl &CXXRD, ASTContext &ASTCtx,
 const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
   SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
+      getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
   DeclRelationSet Relations =
       DeclRelation::TemplatePattern | DeclRelation::Underlying;
   auto Decls = getDeclAtPosition(AST, SourceLocationBeg, Relations);

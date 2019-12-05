@@ -77,6 +77,10 @@ public:
     return getASTContext().getSourceManager();
   }
 
+  const LangOptions &getLangOpts() const {
+    return getASTContext().getLangOpts();
+  }
+
   /// This function returns top-level decls present in the main file of the AST.
   /// The result does not include the decls that come from the preamble.
   /// (These should be const, but RecursiveASTVisitor requires Decl*).
