@@ -3147,8 +3147,7 @@ Instruction *InstCombiner::visitFreeze(FreezeInst &I) {
 /// beginning of DestBlock, which can only happen if it's safe to move the
 /// instruction past all of the instructions between it and the end of its
 /// block.
-static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock,
-                                 InstCombiner::BuilderTy &Builder) {
+static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   assert(I->hasOneUse() && "Invariants didn't hold!");
   BasicBlock *SrcBlock = I->getParent();
 
@@ -3182,24 +3181,6 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock,
       if (Scan->mayWriteToMemory())
         return false;
   }
-
-  // If this instruction was providing nonnull guarantees insert assumptions for
-  // nonnull call site arguments.
-  if (auto CS = dyn_cast<CallBase>(I)) {
-    for (unsigned Idx = 0; Idx != CS->getNumArgOperands(); Idx++)
-      if (CS->paramHasAttr(Idx, Attribute::NonNull) ||
-          (CS->paramHasAttr(Idx, Attribute::Dereferenceable) &&
-           !llvm::NullPointerIsDefined(CS->getFunction(),
-                                       CS->getArgOperand(Idx)
-                                           ->getType()
-                                           ->getPointerAddressSpace()))) {
-        Value *V = CS->getArgOperand(Idx);
-
-        Builder.SetInsertPoint(I->getParent(), I->getIterator());
-        Builder.CreateAssumption(Builder.CreateIsNotNull(V));
-      }
-  }
-
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(&*InsertPos);
   ++NumSunkInst;
@@ -3334,7 +3315,7 @@ bool InstCombiner::run() {
         // otherwise), we can keep going.
         if (UserIsSuccessor && UserParent->getUniquePredecessor()) {
           // Okay, the CFG is simple enough, try to sink this instruction.
-          if (TryToSinkInstruction(I, UserParent, Builder)) {
+          if (TryToSinkInstruction(I, UserParent)) {
             LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
             MadeIRChange = true;
             // We'll add uses of the sunk instruction below, but since sinking
