@@ -20,6 +20,8 @@ void malloc_disable(void);
 int malloc_iterate(uintptr_t base, size_t size,
                    void (*callback)(uintptr_t base, size_t size, void *arg),
                    void *arg);
+void *valloc(size_t size);
+void *pvalloc(size_t size);
 }
 
 // Note that every C allocation function in the test binary will be fulfilled
