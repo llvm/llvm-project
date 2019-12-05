@@ -95,13 +95,15 @@ void DWARFDebugRanges::Dump(Stream &s,
     } else if (begin == LLDB_INVALID_ADDRESS) {
       // A base address selection entry
       base_addr = end;
-      s.Address(base_addr, sizeof(dw_addr_t), " Base address = ");
+      DumpAddress(s.AsRawOstream(), base_addr, sizeof(dw_addr_t),
+                  " Base address = ");
     } else {
       // Convert from offset to an address
       dw_addr_t begin_addr = begin + base_addr;
       dw_addr_t end_addr = end + base_addr;
 
-      s.AddressRange(begin_addr, end_addr, sizeof(dw_addr_t), nullptr);
+      DumpAddressRange(s.AsRawOstream(), begin_addr, end_addr,
+                       sizeof(dw_addr_t), nullptr);
     }
   }
 }

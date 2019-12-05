@@ -44,8 +44,8 @@ void Block::GetDescription(Stream *s, Function *function,
     s->Printf(", range%s = ", num_ranges > 1 ? "s" : "");
     for (size_t i = 0; i < num_ranges; ++i) {
       const Range &range = m_ranges.GetEntryRef(i);
-      s->AddressRange(base_addr + range.GetRangeBase(),
-                      base_addr + range.GetRangeEnd(), 4);
+      DumpAddressRange(s->AsRawOstream(), base_addr + range.GetRangeBase(),
+                       base_addr + range.GetRangeEnd(), 4);
     }
   }
 
@@ -87,8 +87,8 @@ void Block::Dump(Stream *s, addr_t base_addr, int32_t depth,
         *s << '!';
       else
         *s << ' ';
-      s->AddressRange(base_addr + range.GetRangeBase(),
-                      base_addr + range.GetRangeEnd(), 4);
+      DumpAddressRange(s->AsRawOstream(), base_addr + range.GetRangeBase(),
+                       base_addr + range.GetRangeEnd(), 4);
     }
   }
   s->EOL();
@@ -160,8 +160,8 @@ void Block::DumpAddressRanges(Stream *s, lldb::addr_t base_addr) {
     size_t num_ranges = m_ranges.GetSize();
     for (size_t i = 0; i < num_ranges; ++i) {
       const Range &range = m_ranges.GetEntryRef(i);
-      s->AddressRange(base_addr + range.GetRangeBase(),
-                      base_addr + range.GetRangeEnd(), 4);
+      DumpAddressRange(s->AsRawOstream(), base_addr + range.GetRangeBase(),
+                       base_addr + range.GetRangeEnd(), 4);
     }
   }
 }
