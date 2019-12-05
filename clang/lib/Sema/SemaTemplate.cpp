@@ -7004,15 +7004,21 @@ Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
 
       // We might need to perform a trailing qualification conversion, since
       // the element type on the parameter could be more qualified than the
-      // element type in the expression we constructed.
+      // element type in the expression we constructed, and likewise for a
+      // function conversion.
       bool ObjCLifetimeConversion;
-      if (IsQualificationConversion(((Expr*) RefExpr.get())->getType(),
+      QualType Ignored;
+      if (IsFunctionConversion(RefExpr.get()->getType(), ParamType, Ignored) ||
+          IsQualificationConversion(RefExpr.get()->getType(),
                                     ParamType.getUnqualifiedType(), false,
                                     ObjCLifetimeConversion))
-        RefExpr = ImpCastExprToType(RefExpr.get(), ParamType.getUnqualifiedType(), CK_NoOp);
+        RefExpr = ImpCastExprToType(RefExpr.get(),
+                                    ParamType.getUnqualifiedType(), CK_NoOp);
 
+      // FIXME: We need to perform derived-to-base or base-to-derived
+      // pointer-to-member conversions here too.
       assert(!RefExpr.isInvalid() &&
-             Context.hasSameType(((Expr*) RefExpr.get())->getType(),
+             Context.hasSameType(RefExpr.get()->getType(),
                                  ParamType.getUnqualifiedType()));
       return RefExpr;
     }
