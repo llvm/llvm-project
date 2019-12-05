@@ -432,6 +432,7 @@ TEST_F(VFShapeAPITest, Parameters_ValidOpenMPLinear) {
 }
 
 TEST_F(VFShapeAPITest, Parameters_Invalid) {
+#ifndef NDEBUG
   // Wrong order is checked by an asseretion: make sure that the
   // assertion is not removed.
   EXPECT_DEATH(validParams({{1, VFParamKind::Vector}}),
@@ -439,6 +440,7 @@ TEST_F(VFShapeAPITest, Parameters_Invalid) {
   EXPECT_DEATH(
       validParams({{1, VFParamKind::Vector}, {0, VFParamKind::Vector}}),
       "Broken parameter list.");
+#endif
 
   // GlobalPredicate is not unique
   EXPECT_FALSE(validParams({{0, VFParamKind::Vector},
