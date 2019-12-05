@@ -122,6 +122,25 @@ literal)")cpp";
   EXPECT_EQ(apply(Input), Output);
 }
 
+TWEAK_TEST(ObjCLocalizeStringLiteral);
+TEST_F(ObjCLocalizeStringLiteralTest, Test) {
+  ExtraArgs.push_back("-x");
+  ExtraArgs.push_back("objective-c");
+
+  // Ensure the the action can be initiated in the string literal.
+  EXPECT_AVAILABLE(R"(id x = ^[[@[[^"^t^est^"]]]];)");
+
+  // Ensure that the action can't be initiated in other places.
+  EXPECT_UNAVAILABLE(R"([[i^d ^[[x]] ^= @"test";^]])");
+
+  // Ensure that the action is not available for regular C strings.
+  EXPECT_UNAVAILABLE(R"(const char * x= "^test";)");
+
+  const char *Input = R"(id x = [[@"test"]];)";
+  const char *Output = R"(id x = NSLocalizedString(@"test", @"");)";
+  EXPECT_EQ(apply(Input), Output);
+}
+
 TWEAK_TEST(DumpAST);
 TEST_F(DumpASTTest, Test) {
   EXPECT_AVAILABLE("^int f^oo() { re^turn 2 ^+ 2; }");
