@@ -1622,6 +1622,11 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
   Value *X;
   Instruction *Op = dyn_cast<Instruction>(FPT.getOperand(0));
   if (Op && Op->hasOneUse()) {
+    // FIXME: The FMF should propagate from the fptrunc, not the source op.
+    IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+    if (isa<FPMathOperator>(Op))
+      Builder.setFastMathFlags(Op->getFastMathFlags());
+
     if (match(Op, m_FNeg(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTrunc(X, Ty);
 
