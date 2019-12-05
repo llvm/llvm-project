@@ -805,8 +805,9 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
     }
     return 0;
   }
-
-  bool capture = input_args.hasArg(OPT_capture);
+  // BEGIN SWIFT
+  bool capture = true; // input_args.hasArg(OPT_capture);
+  // END SWIFT
   auto *capture_path = input_args.getLastArg(OPT_capture_path);
 
   // BEGIN SWIFT
