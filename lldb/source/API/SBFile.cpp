@@ -100,17 +100,17 @@ SBError SBFile::Close() {
 
 SBFile::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFile, operator bool);
-  return LLDB_RECORD_RESULT(IsValid());
+  return IsValid();
 }
 
 bool SBFile::operator!() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFile, operator!);
-  return LLDB_RECORD_RESULT(!IsValid());
+  return !IsValid();
 }
 
 FileSP SBFile::GetFile() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(FileSP, SBFile, GetFile);
-  return m_opaque_sp;
+  return LLDB_RECORD_RESULT(m_opaque_sp);
 }
 
 namespace lldb_private {
