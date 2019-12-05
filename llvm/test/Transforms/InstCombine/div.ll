@@ -522,8 +522,7 @@ define <2 x i8> @sdiv_negated_dividend_constant_divisor_vec_undef(<2 x i8> %x) {
 
 define <2 x i64> @sdiv_negated_dividend_constant_divisor_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @sdiv_negated_dividend_constant_divisor_vec(
-; CHECK-NEXT:    [[DIV1:%.*]] = sdiv <2 x i64> [[X:%.*]], <i64 3, i64 4>
-; CHECK-NEXT:    [[DIV:%.*]] = sub nsw <2 x i64> zeroinitializer, [[DIV1]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i64> [[X:%.*]], <i64 -3, i64 -4>
 ; CHECK-NEXT:    ret <2 x i64> [[DIV]]
 ;
   %neg = sub nsw <2 x i64> zeroinitializer, %x
@@ -533,8 +532,7 @@ define <2 x i64> @sdiv_negated_dividend_constant_divisor_vec(<2 x i64> %x) {
 
 define <2 x i64> @sdiv_exact_negated_dividend_constant_divisor_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @sdiv_exact_negated_dividend_constant_divisor_vec(
-; CHECK-NEXT:    [[DIV1:%.*]] = sdiv exact <2 x i64> [[X:%.*]], <i64 3, i64 4>
-; CHECK-NEXT:    [[DIV:%.*]] = sub nsw <2 x i64> zeroinitializer, [[DIV1]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact <2 x i64> [[X:%.*]], <i64 -3, i64 -4>
 ; CHECK-NEXT:    ret <2 x i64> [[DIV]]
 ;
   %neg = sub nsw <2 x i64> zeroinitializer, %x
@@ -860,8 +858,7 @@ define i32 @test_exact_nsw_exact(i32 %x) {
 
 define <2 x i64> @test_exact_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @test_exact_vec(
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact <2 x i64> [[X:%.*]], <i64 3, i64 4>
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw <2 x i64> zeroinitializer, [[DIV]]
+; CHECK-NEXT:    [[NEG:%.*]] = sdiv exact <2 x i64> [[X:%.*]], <i64 -3, i64 -4>
 ; CHECK-NEXT:    ret <2 x i64> [[NEG]]
 ;
   %div = sdiv exact <2 x i64> %x, <i64 3, i64 4>
