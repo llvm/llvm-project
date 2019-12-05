@@ -224,8 +224,7 @@ define i64 @sll(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    srli a4, a0, 1
 ; RV32I-NEXT:    srl a3, a4, a3
 ; RV32I-NEXT:    or a1, a1, a3
-; RV32I-NEXT:    sll a2, a0, a2
-; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    sll a0, a0, a2
 ; RV32I-NEXT:    ret
   %1 = shl i64 %a, %b
   ret i64 %1
@@ -311,8 +310,7 @@ define i64 @srl(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    slli a4, a1, 1
 ; RV32I-NEXT:    sll a3, a4, a3
 ; RV32I-NEXT:    or a0, a0, a3
-; RV32I-NEXT:    srl a2, a1, a2
-; RV32I-NEXT:    mv a1, a2
+; RV32I-NEXT:    srl a1, a1, a2
 ; RV32I-NEXT:    ret
   %1 = lshr i64 %a, %b
   ret i64 %1
