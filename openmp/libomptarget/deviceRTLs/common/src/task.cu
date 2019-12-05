@@ -27,7 +27,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "omptarget-nvptx.h"
+#include "common/omptarget.h"
 
 EXTERN kmp_TaskDescr *__kmpc_omp_task_alloc(
     kmp_Ident *loc,     // unused

@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "omptarget-nvptx.h"
+#include "common/omptarget.h"
 
 // Timer precision is 1ns
 #define TIMER_PRECISION ((double)1E-9)
