@@ -182,6 +182,10 @@ public:
     }
   }
 
+  MachineBlockFrequencyInfo *getBFI() {
+    return MBFI;
+  }
+
 private:
   MachineFunction &MF;
 
