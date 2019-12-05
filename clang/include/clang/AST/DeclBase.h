@@ -1534,10 +1534,13 @@ class DeclContext {
 
     /// Store the ODRHash after first calculation.
     uint64_t HasODRHash : 1;
+
+    /// Indicates if the function uses Floating Point Constrained Intrinsics
+    uint64_t UsesFPIntrin : 1;
   };
 
   /// Number of non-inherited bits in FunctionDeclBitfields.
-  enum { NumFunctionDeclBits = 25 };
+  enum { NumFunctionDeclBits = 26 };
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
@@ -1554,7 +1557,7 @@ class DeclContext {
     /// exactly 64 bits and thus the width of NumCtorInitializers
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
-    uint64_t NumCtorInitializers : 23;
+    uint64_t NumCtorInitializers : 22;
     uint64_t IsInheritingConstructor : 1;
 
     /// Whether this constructor has a trail-allocated explicit specifier.
