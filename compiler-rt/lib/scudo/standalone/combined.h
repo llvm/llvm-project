@@ -221,11 +221,13 @@ public:
     if (UNLIKELY(ZeroContents && ClassId))
       memset(Block, 0, PrimaryT::getSizeByClassId(ClassId));
 
+    const uptr UnalignedUserPtr =
+        reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize();
+    const uptr UserPtr = roundUpTo(UnalignedUserPtr, Alignment);
+
     Chunk::UnpackedHeader Header = {};
-    uptr UserPtr = reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize();
-    if (UNLIKELY(!isAligned(UserPtr, Alignment))) {
-      const uptr AlignedUserPtr = roundUpTo(UserPtr, Alignment);
-      const uptr Offset = AlignedUserPtr - UserPtr;
+    if (UNLIKELY(UnalignedUserPtr != UserPtr)) {
+      const uptr Offset = UserPtr - UnalignedUserPtr;
       DCHECK_GE(Offset, 2 * sizeof(u32));
       // The BlockMarker has no security purpose, but is specifically meant for
       // the chunk iteration function that can be used in debugging situations.
@@ -233,7 +235,6 @@ public:
       // based on its block address.
       reinterpret_cast<u32 *>(Block)[0] = BlockMarker;
       reinterpret_cast<u32 *>(Block)[1] = static_cast<u32>(Offset);
-      UserPtr = AlignedUserPtr;
       Header.Offset = (Offset >> MinAlignmentLog) & Chunk::OffsetMask;
     }
     Header.ClassId = ClassId & Chunk::ClassIdMask;
