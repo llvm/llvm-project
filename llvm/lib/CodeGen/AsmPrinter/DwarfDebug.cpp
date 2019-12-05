@@ -1000,6 +1000,7 @@ void DwarfDebug::beginModule() {
   // Create the symbol that points to the first entry following the debug
   // address table (.debug_addr) header.
   AddrPool.setLabel(Asm->createTempSymbol("addr_table_base"));
+  DebugLocs.setSym(Asm->createTempSymbol("loclists_table_base"));
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
     // FIXME: Move local imported entities into a list attached to the
@@ -1163,7 +1164,6 @@ void DwarfDebug::finalizeModuleInfo() {
         U.addRnglistsBase();
 
       if (!DebugLocs.getLists().empty()) {
-        DebugLocs.setSym(Asm->createTempSymbol("loclists_table_base"));
         if (!useSplitDwarf())
           U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_loclists_base,
                             DebugLocs.getSym(),
