@@ -50,7 +50,7 @@ std::unique_ptr<RefSlab> buildRefSlab(const Annotations &Code,
 }
 
 std::vector<
-    std::pair</*InitialCode*/ std::string, /*CodeAfterRename*/ std::string>>
+    std::pair</*FilePath*/ std::string, /*CodeAfterRename*/ std::string>>
 applyEdits(FileEdits FE) {
   std::vector<std::pair<std::string, std::string>> Results;
   for (auto &It : FE)
