@@ -373,7 +373,7 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   // different kinds, deduplicate them.
   std::vector<DocumentHighlight> Result;
   for (const auto &Ref : References) {
-    if (auto Range = getTokenRange(AST.getASTContext().getSourceManager(),
+    if (auto Range = getTokenRange(AST.getSourceManager(),
                                    AST.getLangOpts(), Ref.Loc)) {
       DocumentHighlight DH;
       DH.range = *Range;
