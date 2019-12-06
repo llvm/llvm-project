@@ -133,6 +133,7 @@ if(COMPILER_RT_HAS_SCUDO_STANDALONE)
     CFLAGS ${SCUDO_CFLAGS}
     PARENT_TARGET scudo_standalone)
 
+  add_subdirectory(benchmarks)
   if(COMPILER_RT_INCLUDE_TESTS)
     add_subdirectory(tests)
   endif()

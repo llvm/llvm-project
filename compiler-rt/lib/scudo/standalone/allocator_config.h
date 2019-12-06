@@ -64,6 +64,7 @@ struct AndroidSvelteConfig {
   using TSDRegistryT = TSDRegistrySharedT<A, 1U>; // Shared, only 1 TSD.
 };
 
+#if SCUDO_CAN_USE_PRIMARY64
 struct FuchsiaConfig {
   // 1GB Regions
   typedef SizeClassAllocator64<DefaultSizeClassMap, 30U> Primary;
@@ -71,6 +72,7 @@ struct FuchsiaConfig {
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 8U>; // Shared, max 8 TSDs.
 };
+#endif
 
 #if SCUDO_ANDROID
 typedef AndroidConfig Config;
