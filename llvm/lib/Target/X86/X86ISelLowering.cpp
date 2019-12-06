@@ -19047,8 +19047,9 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     // of a signed i64.  Let Thresh be the FP equivalent of
     // 0x8000000000000000ULL.
     //
-    //  Adjust i32 = (Value < Thresh) ? 0 : 0x80000000;
-    //  FistSrc    = (Value < Thresh) ? Value : (Value - Thresh);
+    //  Adjust = (Value < Thresh) ? 0 : 0x80000000;
+    //  FltOfs = (Value < Thresh) ? 0 : 0x80000000;
+    //  FistSrc = (Value - FltOfs);
     //  Fist-to-mem64 FistSrc
     //  Add 0 or 0x800...0ULL to the 64-bit result, which is equivalent
     //  to XOR'ing the high 32 bits with Adjust.
@@ -19056,7 +19057,6 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     // Being a power of 2, Thresh is exactly representable in all FP formats.
     // For X87 we'd like to use the smallest FP type for this constant, but
     // for DAG type consistency we have to match the FP operand type.
-    // FIXME: This code generates a spurious inexact exception for 1.0.
 
     APFloat Thresh(APFloat::IEEEsingle(), APInt(32, 0x5f000000));
     LLVM_ATTRIBUTE_UNUSED APFloat::opStatus Status = APFloat::opOK;
@@ -19082,18 +19082,16 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                            DAG.getConstant(0, DL, MVT::i64),
                            DAG.getConstant(APInt::getSignMask(64),
                                            DL, MVT::i64));
-    SDValue Sub;
-    if (IsStrict) {
-      Sub = DAG.getNode(ISD::STRICT_FSUB, DL, { TheVT, MVT::Other},
-                        { Chain, Value, ThreshVal });
-      Chain = Sub.getValue(1);
-    } else
-      Sub = DAG.getNode(ISD::FSUB, DL, TheVT, Value, ThreshVal);
+    SDValue FltOfs = DAG.getSelect(DL, TheVT, Cmp,
+                                   DAG.getConstantFP(0.0, DL, TheVT),
+                                   ThreshVal);
 
-    Cmp = DAG.getSetCC(DL, getSetCCResultType(DAG.getDataLayout(),
-                                              *DAG.getContext(), TheVT),
-                       Value, ThreshVal, ISD::SETLT);
-    Value = DAG.getSelect(DL, TheVT, Cmp, Value, Sub);
+    if (IsStrict) {
+      Value = DAG.getNode(ISD::STRICT_FSUB, DL, { TheVT, MVT::Other},
+                          { Chain, Value, FltOfs });
+      Chain = Value.getValue(1);
+    } else
+      Value = DAG.getNode(ISD::FSUB, DL, TheVT, Value, FltOfs);
   }
 
   MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, SSFI);
