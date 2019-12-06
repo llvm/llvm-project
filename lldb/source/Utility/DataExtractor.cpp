@@ -985,8 +985,7 @@ uint32_t DataExtractor::Skip_LEB128(offset_t *offset_ptr) const {
 lldb::offset_t DataExtractor::PutToLog(Log *log, offset_t start_offset,
                                        offset_t length, uint64_t base_addr,
                                        uint32_t num_per_line,
-                                       DataExtractor::Type type,
-                                       const char *format) const {
+                                       DataExtractor::Type type) const {
   if (log == nullptr)
     return start_offset;
 
@@ -1010,29 +1009,29 @@ lldb::offset_t DataExtractor::PutToLog(Log *log, offset_t start_offset,
 
     switch (type) {
     case TypeUInt8:
-      sstr.Printf(format ? format : " %2.2x", GetU8(&offset));
+      sstr.Printf(" %2.2x", GetU8(&offset));
       break;
     case TypeChar: {
       char ch = GetU8(&offset);
-      sstr.Printf(format ? format : " %c", isprint(ch) ? ch : ' ');
+      sstr.Printf(" %c", isprint(ch) ? ch : ' ');
     } break;
     case TypeUInt16:
-      sstr.Printf(format ? format : " %4.4x", GetU16(&offset));
+      sstr.Printf(" %4.4x", GetU16(&offset));
       break;
     case TypeUInt32:
-      sstr.Printf(format ? format : " %8.8x", GetU32(&offset));
+      sstr.Printf(" %8.8x", GetU32(&offset));
       break;
     case TypeUInt64:
-      sstr.Printf(format ? format : " %16.16" PRIx64, GetU64(&offset));
+      sstr.Printf(" %16.16" PRIx64, GetU64(&offset));
       break;
     case TypePointer:
-      sstr.Printf(format ? format : " 0x%" PRIx64, GetAddress(&offset));
+      sstr.Printf(" 0x%" PRIx64, GetAddress(&offset));
       break;
     case TypeULEB128:
-      sstr.Printf(format ? format : " 0x%" PRIx64, GetULEB128(&offset));
+      sstr.Printf(" 0x%" PRIx64, GetULEB128(&offset));
       break;
     case TypeSLEB128:
-      sstr.Printf(format ? format : " %" PRId64, GetSLEB128(&offset));
+      sstr.Printf(" %" PRId64, GetSLEB128(&offset));
       break;
     }
   }
