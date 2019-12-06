@@ -1,4 +1,4 @@
-//===- NonRelocatableStringpool.cpp - A simple stringpool  ----------------===//
+//===-- llvm/CodeGen/NonRelocatableStringpool.cpp - A simple stringpool  --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NonRelocatableStringpool.h"
+#include "llvm/CodeGen/NonRelocatableStringpool.h"
 
 namespace llvm {
-namespace dsymutil {
 
 DwarfStringPoolEntryRef NonRelocatableStringpool::getEntry(StringRef S) {
   if (S.empty() && !Strings.empty())
@@ -52,5 +51,4 @@ NonRelocatableStringpool::getEntriesForEmission() const {
   return Result;
 }
 
-} // namespace dsymutil
 } // namespace llvm
