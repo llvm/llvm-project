@@ -416,7 +416,7 @@ void XCOFFObjectWriter::writeSymbolName(const StringRef &SymbolName) {
     W.write<int32_t>(0);
     W.write<uint32_t>(Strings.getOffset(SymbolName));
   } else {
-    char Name[XCOFF::NameSize];
+    char Name[XCOFF::NameSize+1];
     std::strncpy(Name, SymbolName.data(), XCOFF::NameSize);
     ArrayRef<char> NameRef(Name, XCOFF::NameSize);
     W.write(NameRef);
