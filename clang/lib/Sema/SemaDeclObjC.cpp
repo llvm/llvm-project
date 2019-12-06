@@ -4918,6 +4918,9 @@ Decl *Sema::ActOnMethodDeclaration(
     }
   }
 
+  // Insert the invisible arguments, self and _cmd!
+  ObjCMethod->createImplicitParams(Context, ObjCMethod->getClassInterface());
+
   ActOnDocumentableDecl(ObjCMethod);
 
   return ObjCMethod;
