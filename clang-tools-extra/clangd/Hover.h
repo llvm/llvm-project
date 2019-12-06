@@ -28,7 +28,7 @@ struct HoverInfo {
   /// - template <ParamType Name = DefaultType> class Foo {};
   struct Param {
     /// The pretty-printed parameter type, e.g. "int", or "typename" (in
-    /// TemplateParameters)
+    /// TemplateParameters), might be None for macro parameters.
     llvm::Optional<std::string> Type;
     /// None for unnamed parameters.
     llvm::Optional<std::string> Name;
@@ -53,9 +53,7 @@ struct HoverInfo {
   /// Name of the symbol, does not contain any "::".
   std::string Name;
   llvm::Optional<Range> SymRange;
-  /// Scope containing the symbol. e.g, "global namespace", "function x::Y"
-  /// - None for deduced types, e.g "auto", "decltype" keywords.
-  SymbolKind Kind;
+  index::SymbolKind Kind;
   std::string Documentation;
   /// Source code containing the definition of the symbol.
   std::string Definition;
