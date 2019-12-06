@@ -683,6 +683,16 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O,
     O << " " << VPlanIngredient(IV) << "\\l\"";
 }
 
+void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent) const {
+  O << " +\n" << Indent << "\"WIDEN-GEP ";
+  O << (IsPtrLoopInvariant ? "Inv" : "Var");
+  size_t IndicesNumber = IsIndexLoopInvariant.size();
+  for (size_t I = 0; I < IndicesNumber; ++I)
+    O << "[" << (IsIndexLoopInvariant[I] ? "Inv" : "Var") << "]";
+  O << "\\l\"";
+  O << " +\n" << Indent << "\"  "  << VPlanIngredient(GEP) << "\\l\"";
+}
+
 void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent) const {
   O << " +\n" << Indent << "\"WIDEN-PHI " << VPlanIngredient(Phi) << "\\l\"";
 }
