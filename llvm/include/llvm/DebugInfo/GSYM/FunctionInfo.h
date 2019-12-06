@@ -12,6 +12,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
+#include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include <tuple>
@@ -21,6 +22,7 @@ namespace llvm {
 class raw_ostream;
 namespace gsym {
 
+class GsymReader;
 /// Function information in GSYM files encodes information for one contiguous
 /// address range. If a function has discontiguous address ranges, they will
 /// need to be encoded using multiple FunctionInfo objects.
@@ -139,6 +141,33 @@ struct FunctionInfo {
   /// \returns An error object that indicates failure or the offset of the
   /// function info that was successfully written into the stream.
   llvm::Expected<uint64_t> encode(FileWriter &O) const;
+
+
+  /// Lookup an address within a FunctionInfo object's data stream.
+  ///
+  /// Instead of decoding an entire FunctionInfo object when doing lookups,
+  /// we can decode only the information we need from the FunctionInfo's data
+  /// for the specific address. The lookup result information is returned as
+  /// a LookupResult.
+  ///
+  /// \param Data The binary stream to read the data from. This object must
+  /// have the data for the object starting at offset zero. The data
+  /// can contain more data than needed.
+  ///
+  /// \param GR The GSYM reader that contains the string and file table that
+  /// will be used to fill in information in the returned result.
+  ///
+  /// \param FuncAddr The function start address decoded from the GsymReader.
+  ///
+  /// \param Addr The address to lookup.
+  ///
+  /// \returns An LookupResult or an error describing the issue that was
+  /// encountered during decoding. An error should only be returned if the
+  /// address is not contained in the FunctionInfo or if the data is corrupted.
+  static llvm::Expected<LookupResult> lookup(DataExtractor &Data,
+                                             const GsymReader &GR,
+                                             uint64_t FuncAddr,
+                                             uint64_t Addr);
 
   uint64_t startAddress() const { return Range.Start; }
   uint64_t endAddress() const { return Range.End; }

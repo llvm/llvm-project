@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMDebugInfoGSYM
   GsymReader.cpp
   InlineInfo.cpp
   LineTable.cpp
+  LookupResult.cpp
   Range.cpp
 
   ADDITIONAL_HEADER_DIRS
