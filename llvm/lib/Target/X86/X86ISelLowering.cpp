@@ -593,8 +593,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSINCOS, VT, Expand);
 
       // Handle constrained floating-point operations of scalar.
-      setOperationAction(ISD::STRICT_FMUL     , VT, Legal);
-      setOperationAction(ISD::STRICT_FDIV     , VT, Legal);
       setOperationAction(ISD::STRICT_FSQRT    , VT, Legal);
       setOperationAction(ISD::STRICT_FP_EXTEND, VT, Legal);
       // FIXME: When the target is 64-bit, STRICT_FP_ROUND will be overwritten
@@ -623,13 +621,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     } else // SSE immediates.
       addLegalFPImmediate(APFloat(+0.0)); // xorpd
   }
-
-  // FIXME: Mark these legal to prevent them from being expanded to a
-  // libcall in LegalizeDAG. They'll be mutated by X86ISelDAGToDAG::Select.
+  // Handle constrained floating-point operations of scalar.
   setOperationAction(ISD::STRICT_FADD, MVT::f32, Legal);
   setOperationAction(ISD::STRICT_FADD, MVT::f64, Legal);
   setOperationAction(ISD::STRICT_FSUB, MVT::f32, Legal);
   setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FMUL, MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FMUL, MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FDIV, MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FDIV, MVT::f64, Legal);
 
   // We don't support FMA.
   setOperationAction(ISD::FMA, MVT::f64, Expand);
@@ -864,6 +864,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FADD,        MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FSUB,        MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FSUB,        MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FMUL,        MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FMUL,        MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FDIV,        MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FDIV,        MVT::v2f64, Legal);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
@@ -1160,6 +1164,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FADD,        MVT::v4f64, Legal);
     setOperationAction(ISD::STRICT_FSUB,        MVT::v8f32, Legal);
     setOperationAction(ISD::STRICT_FSUB,        MVT::v4f64, Legal);
+    setOperationAction(ISD::STRICT_FMUL,        MVT::v8f32, Legal);
+    setOperationAction(ISD::STRICT_FMUL,        MVT::v4f64, Legal);
+    setOperationAction(ISD::STRICT_FDIV,        MVT::v8f32, Legal);
+    setOperationAction(ISD::STRICT_FDIV,        MVT::v4f64, Legal);
 
     if (!Subtarget.hasAVX512())
       setOperationAction(ISD::BITCAST, MVT::v32i1, Custom);
@@ -1429,6 +1437,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FADD,     MVT::v8f64, Legal);
     setOperationAction(ISD::STRICT_FSUB,     MVT::v16f32, Legal);
     setOperationAction(ISD::STRICT_FSUB,     MVT::v8f64, Legal);
+    setOperationAction(ISD::STRICT_FMUL,     MVT::v16f32, Legal);
+    setOperationAction(ISD::STRICT_FMUL,     MVT::v8f64, Legal);
+    setOperationAction(ISD::STRICT_FDIV,     MVT::v16f32, Legal);
+    setOperationAction(ISD::STRICT_FDIV,     MVT::v8f64, Legal);
 
     setTruncStoreAction(MVT::v8i64,   MVT::v8i8,   Legal);
     setTruncStoreAction(MVT::v8i64,   MVT::v8i16,  Legal);
