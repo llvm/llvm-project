@@ -190,19 +190,16 @@ ComparisonCategories::getPossibleResultsForType(ComparisonCategoryType Type) {
   using CCT = ComparisonCategoryType;
   using CCR = ComparisonCategoryResult;
   std::vector<CCR> Values;
-  Values.reserve(6);
-  Values.push_back(CCR::Equivalent);
+  Values.reserve(4);
   bool IsStrong = (Type == CCT::StrongEquality || Type == CCT::StrongOrdering);
   if (IsStrong)
-    Values.push_back(CCR::Equal);
+  Values.push_back(IsStrong ? CCR::Equal : CCR::Equivalent);
   if (Type == CCT::StrongOrdering || Type == CCT::WeakOrdering ||
       Type == CCT::PartialOrdering) {
     Values.push_back(CCR::Less);
     Values.push_back(CCR::Greater);
   } else {
-    Values.push_back(CCR::Nonequivalent);
-    if (IsStrong)
-      Values.push_back(CCR::Nonequal);
+    Values.push_back(IsStrong ? CCR::Nonequal : CCR::Nonequivalent);
   }
   if (Type == CCT::PartialOrdering)
     Values.push_back(CCR::Unordered);
