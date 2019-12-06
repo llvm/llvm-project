@@ -1,4 +1,4 @@
-//===--- omptarget-nvptx.cu - NVPTX OpenMP GPU initialization ---- CUDA -*-===//
+//===--- omptarget.cu - OpenMP GPU initialization ---------------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "omptarget-nvptx.h"
+#include "common/omptarget.h"
 #include "target_impl.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // global data tables
 ////////////////////////////////////////////////////////////////////////////////
 
-extern __device__
+extern DEVICE
     omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
         omptarget_nvptx_device_State[MAX_SM];
 

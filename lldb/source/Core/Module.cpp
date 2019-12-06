@@ -1511,7 +1511,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
               return false;
             }
             StreamString scripting_stream;
-            scripting_fspec.Dump(&scripting_stream);
+            scripting_fspec.Dump(scripting_stream.AsRawOstream());
             const bool can_reload = true;
             const bool init_lldb_globals = false;
             bool did_load = script_interpreter->LoadScriptingModule(

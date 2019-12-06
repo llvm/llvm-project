@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,expected-cxx11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,expected-cxx11 -std=c++11 %s
 
 namespace BooleanFalse {
 int* j = false;
@@ -191,4 +191,24 @@ namespace macros {
     assert(&x && "expecting null pointer");
     // expected-warning@-1{{address of 'x' will always evaluate to 'true'}}
   }
+}
+
+namespace Template {
+  // FIXME: These cases should not warn.
+  template<int *p> void f() { if (p) {} } // expected-warning 2{{will always evaluate to 'true'}} expected-cxx11-warning {{implicit conversion of nullptr}}
+  template<int (*p)[3]> void g() { if (p) {} } // expected-warning 2{{will always evaluate to 'true'}} expected-cxx11-warning {{implicit conversion of nullptr}}
+  template<int (*p)()> void h() { if (p) {} }
+
+  int a, b[3], c[3][3], d();
+  template void f<&a>(); // expected-note {{instantiation of}}
+  template void f<b>(); // expected-note {{instantiation of}}
+#if __cplusplus >= 201103L
+  template void f<(int*)nullptr>(); // expected-note {{instantiation of}}
+#endif
+  template void g<&b>(); // expected-note {{instantiation of}}
+  template void g<c>(); // expected-note {{instantiation of}}
+#if __cplusplus >= 201103L
+  template void g<(int(*)[3])nullptr>(); // expected-note {{instantiation of}}
+#endif
+  template void h<d>();
 }

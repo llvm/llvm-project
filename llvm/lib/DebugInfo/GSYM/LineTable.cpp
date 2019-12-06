@@ -262,8 +262,8 @@ llvm::Expected<LineTable> LineTable::decode(DataExtractor &Data,
 // Parse the line table on the fly and find the row we are looking for.
 // We will need to determine if we need to cache the line table by calling
 // LineTable::parseAllEntries(...) or just call this function each time.
-// There is a CPU vs memory tradeoff we will need to determine.
-LineEntry LineTable::lookup(DataExtractor &Data, uint64_t BaseAddr, uint64_t Addr) {
+// There is a CPU vs memory tradeoff we will need to determined.
+Expected<LineEntry> LineTable::lookup(DataExtractor &Data, uint64_t BaseAddr, uint64_t Addr) {
   LineEntry Result;
   llvm::Error Err = parse(Data, BaseAddr,
                           [Addr, &Result](const LineEntry &Row) -> bool {
@@ -277,7 +277,13 @@ LineEntry LineTable::lookup(DataExtractor &Data, uint64_t BaseAddr, uint64_t Add
     }
     return true; // Keep parsing till we find the right row.
   });
-  return Result;
+  if (Err)
+    return std::move(Err);
+  if (Result.isValid())
+    return Result;
+  return createStringError(std::errc::invalid_argument,
+                           "address 0x%" PRIx64 " is not in the line table",
+                           Addr);
 }
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const LineTable &LT) {

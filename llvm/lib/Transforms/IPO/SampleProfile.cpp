@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -33,6 +34,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -136,6 +139,16 @@ static cl::opt<bool> ProfileAccurateForSymsInList(
     cl::init(true),
     cl::desc("For symbols in profile symbol list, regard their profiles to "
              "be accurate. It may be overriden by profile-sample-accurate. "));
+
+static cl::opt<bool> ProfileMergeInlinee(
+    "sample-profile-merge-inlinee", cl::Hidden, cl::init(false),
+    cl::desc("Merge past inlinee's profile to outline version if sample "
+             "profile loader decided not to inline a call site."));
+
+static cl::opt<bool> ProfileTopDownLoad(
+    "sample-profile-top-down-load", cl::Hidden, cl::init(false),
+    cl::desc("Do profile annotation and inlining for functions in top-down "
+             "order of call graph during sample profile loading."));
 
 namespace {
 
@@ -286,7 +299,7 @@ public:
 
   bool doInitialization(Module &M);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
-                   ProfileSummaryInfo *_PSI);
+                   ProfileSummaryInfo *_PSI, CallGraph *CG);
 
   void dump() { Reader->dump(); }
 
@@ -318,6 +331,7 @@ protected:
   void propagateWeights(Function &F);
   uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges, Edge *UnknownEdge);
   void buildEdges(Function &F);
+  std::vector<Function *> buildFunctionOrder(Module &M, CallGraph *CG);
   bool propagateThroughEdges(Function &F, bool UpdateBlockCount);
   void computeDominanceAndLoopInfo(Function &F);
   void clearFunctionData();
@@ -1008,9 +1022,26 @@ bool SampleProfileLoader::inlineHotFunctions(
     if (!Callee || Callee->isDeclaration())
       continue;
     const FunctionSamples *FS = Pair.getSecond();
-    auto pair =
-        notInlinedCallInfo.try_emplace(Callee, NotInlinedProfileInfo{0});
-    pair.first->second.entryCount += FS->getEntrySamples();
+    if (FS->getTotalSamples() == 0 && FS->getEntrySamples() == 0) {
+      continue;
+    }
+
+    if (ProfileMergeInlinee) {
+      // Use entry samples as head samples during the merge, as inlinees
+      // don't have head samples.
+      assert(FS->getHeadSamples() == 0 && "Expect 0 head sample for inlinee");
+      const_cast<FunctionSamples *>(FS)->addHeadSamples(FS->getEntrySamples());
+
+      // Note that we have to do the merge right after processing function.
+      // This allows OutlineFS's profile to be used for annotation during
+      // top-down processing of functions' annotation.
+      FunctionSamples *OutlineFS = Reader->getOrCreateSamplesFor(*Callee);
+      OutlineFS->merge(*FS);
+    } else {
+      auto pair =
+          notInlinedCallInfo.try_emplace(Callee, NotInlinedProfileInfo{0});
+      pair.first->second.entryCount += FS->getEntrySamples();
+    }
   }
   return Changed;
 }
@@ -1674,6 +1705,33 @@ INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(SampleProfileLoaderLegacyPass, "sample-profile",
                     "Sample Profile loader", false, false)
 
+std::vector<Function *>
+SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
+  std::vector<Function *> FunctionOrderList;
+  FunctionOrderList.reserve(M.size());
+
+  if (!ProfileTopDownLoad || CG == nullptr) {
+    for (Function &F : M)
+      if (!F.isDeclaration())
+        FunctionOrderList.push_back(&F);
+    return FunctionOrderList;
+  }
+
+  assert(&CG->getModule() == &M);
+  scc_iterator<CallGraph *> CGI = scc_begin(CG);
+  while (!CGI.isAtEnd()) {
+    for (CallGraphNode *node : *CGI) {
+      auto F = node->getFunction();
+      if (F && !F->isDeclaration())
+        FunctionOrderList.push_back(F);
+    }
+    ++CGI;
+  }
+
+  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
+  return FunctionOrderList;
+}
+
 bool SampleProfileLoader::doInitialization(Module &M) {
   auto &Ctx = M.getContext();
 
@@ -1711,7 +1769,7 @@ ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
 }
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
-                                      ProfileSummaryInfo *_PSI) {
+                                      ProfileSummaryInfo *_PSI, CallGraph *CG) {
   GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
   if (!ProfileIsValid)
     return false;
@@ -1746,11 +1804,11 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   }
 
   bool retval = false;
-  for (auto &F : M)
-    if (!F.isDeclaration()) {
-      clearFunctionData();
-      retval |= runOnFunction(F, AM);
-    }
+  for (auto F : buildFunctionOrder(M, CG)) {
+    assert(!F->isDeclaration());
+    clearFunctionData();
+    retval |= runOnFunction(*F, AM);
+  }
 
   // Account for cold calls not inlined....
   for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
@@ -1765,7 +1823,7 @@ bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
   TTIWP = &getAnalysis<TargetTransformInfoWrapperPass>();
   ProfileSummaryInfo *PSI =
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  return SampleLoader.runOnModule(M, nullptr, PSI);
+  return SampleLoader.runOnModule(M, nullptr, PSI, nullptr);
 }
 
 bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
@@ -1849,7 +1907,8 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
   SampleLoader.doInitialization(M);
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
-  if (!SampleLoader.runOnModule(M, &AM, PSI))
+  CallGraph &CG = AM.getResult<CallGraphAnalysis>(M);
+  if (!SampleLoader.runOnModule(M, &AM, PSI, &CG))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

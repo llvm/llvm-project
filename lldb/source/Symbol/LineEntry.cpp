@@ -51,7 +51,7 @@ bool LineEntry::IsValid() const {
 bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
   if (file) {
     if (show_fullpaths)
-      file.Dump(s);
+      file.Dump(s->AsRawOstream());
     else
       file.GetFilename().Dump(s);
 

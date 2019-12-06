@@ -3589,6 +3589,8 @@ class BoundSecondMatcher {
     GTEST_LOG_(FATAL) << "BoundSecondMatcher should never be assigned.";
   }
 
+  BoundSecondMatcher(const BoundSecondMatcher &) = default;
+
  private:
   template <typename T>
   class Impl : public MatcherInterface<T> {

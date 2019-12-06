@@ -550,6 +550,30 @@ OMPParallelForSimdDirective::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPParallelForSimdDirective(CollapsedNum, NumClauses);
 }
 
+OMPParallelMasterDirective *OMPParallelMasterDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt) {
+  unsigned Size =
+      llvm::alignTo(sizeof(OMPParallelMasterDirective), alignof(OMPClause *));
+  void *Mem =
+      C.Allocate(Size + sizeof(OMPClause *) * Clauses.size() + sizeof(Stmt *));
+  auto *Dir =
+      new (Mem) OMPParallelMasterDirective(StartLoc, EndLoc, Clauses.size());
+  Dir->setClauses(Clauses);
+  Dir->setAssociatedStmt(AssociatedStmt);
+  return Dir;
+}
+
+OMPParallelMasterDirective *OMPParallelMasterDirective::CreateEmpty(const ASTContext &C,
+                                                        unsigned NumClauses,
+                                                        EmptyShell) {
+  unsigned Size =
+      llvm::alignTo(sizeof(OMPParallelMasterDirective), alignof(OMPClause *));
+  void *Mem =
+      C.Allocate(Size + sizeof(OMPClause *) * NumClauses + sizeof(Stmt *));
+  return new (Mem) OMPParallelMasterDirective(NumClauses);
+}
+
 OMPParallelSectionsDirective *OMPParallelSectionsDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, bool HasCancel) {

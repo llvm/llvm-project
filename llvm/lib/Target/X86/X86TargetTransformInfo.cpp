@@ -188,7 +188,7 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::FDIV,  MVT::v2f64, 65 }, // divpd
   };
 
-  if (ST->isGLM())
+  if (ST->useGLMDivSqrtCosts())
     if (const auto *Entry = CostTableLookup(GLMCostTable, ISD,
                                             LT.second))
       return LT.first * Entry->Cost;
@@ -2202,7 +2202,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     MVT MTy = LT.second;
 
     // Attempt to lookup cost.
-    if (ST->isGLM())
+    if (ST->useGLMDivSqrtCosts())
       if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
         return LT.first * Entry->Cost;
 

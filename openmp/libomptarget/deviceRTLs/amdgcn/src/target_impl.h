@@ -22,6 +22,8 @@
 #define DEVICE __attribute__((device))
 #define INLINE inline DEVICE
 #define NOINLINE __attribute__((noinline)) DEVICE
+#define SHARED __attribute__((shared))
+#define ALIGN(N) __attribute__((aligned(N)))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options

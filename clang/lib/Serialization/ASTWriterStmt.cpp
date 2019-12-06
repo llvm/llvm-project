@@ -401,7 +401,25 @@ void ASTStmtWriter::VisitConceptSpecializationExpr(
   Record.AddASTTemplateArgumentListInfo(E->getTemplateArgsAsWritten());
   for (const TemplateArgument &Arg : TemplateArgs)
     Record.AddTemplateArgument(Arg);
-  Record.push_back(E->isSatisfied());
+  const ASTConstraintSatisfaction &Satisfaction = E->getSatisfaction();
+  Record.push_back(Satisfaction.IsSatisfied);
+  if (!Satisfaction.IsSatisfied) {
+    Record.push_back(Satisfaction.NumRecords);
+    for (const auto &DetailRecord : Satisfaction) {
+      Record.AddStmt(const_cast<Expr *>(DetailRecord.first));
+      auto *E = DetailRecord.second.dyn_cast<Expr *>();
+      Record.push_back(E == nullptr);
+      if (E)
+        Record.AddStmt(E);
+      else {
+        auto *Diag = DetailRecord.second.get<std::pair<SourceLocation,
+                                                       StringRef> *>();
+        Record.AddSourceLocation(Diag->first);
+        Record.AddString(Diag->second);
+      }
+    }
+  }
+
   Code = serialization::EXPR_CONCEPT_SPECIALIZATION;
 }
 
@@ -2101,6 +2119,14 @@ void ASTStmtWriter::VisitOMPParallelForSimdDirective(
     OMPParallelForSimdDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_PARALLEL_FOR_SIMD_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPParallelMasterDirective(
+    OMPParallelMasterDirective *D) {
+  VisitStmt(D);
+  Record.push_back(D->getNumClauses());
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_PARALLEL_MASTER_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPParallelSectionsDirective(

@@ -901,19 +901,8 @@ void llvm::computeDeadSymbolsWithConstProp(
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
     bool ImportEnabled) {
   computeDeadSymbols(Index, GUIDPreservedSymbols, isPrevailing);
-  if (ImportEnabled) {
+  if (ImportEnabled)
     Index.propagateAttributes(GUIDPreservedSymbols);
-  } else {
-    // If import is disabled we should drop read/write-only attribute
-    // from all summaries to prevent internalization.
-    for (auto &P : Index)
-      for (auto &S : P.second.SummaryList)
-        if (auto *GVS = dyn_cast<GlobalVarSummary>(S.get())) {
-          GVS->setReadOnly(false);
-          GVS->setWriteOnly(false);
-        }
-  }
-  Index.setWithAttributePropagation();
 }
 
 /// Compute the set of summaries needed for a ThinLTO backend compilation of

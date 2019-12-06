@@ -18,6 +18,8 @@
 #define DEVICE __device__
 #define INLINE __forceinline__ DEVICE
 #define NOINLINE __noinline__ DEVICE
+#define SHARED __shared__
+#define ALIGN(N) __align__(N)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options

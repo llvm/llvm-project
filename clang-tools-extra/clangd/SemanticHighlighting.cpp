@@ -258,6 +258,25 @@ public:
     return true;
   }
 
+  bool VisitDependentTemplateSpecializationTypeLoc(
+      DependentTemplateSpecializationTypeLoc L) {
+    H.addToken(L.getTemplateNameLoc(), HighlightingKind::DependentType);
+    return true;
+  }
+
+  // findExplicitReferences will walk nested-name-specifiers and
+  // find anything that can be resolved to a Decl. However, non-leaf
+  // components of nested-name-specifiers which are dependent names
+  // (kind "Identifier") cannot be resolved to a decl, so we visit
+  // them here.
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Q) {
+    if (NestedNameSpecifier *NNS = Q.getNestedNameSpecifier()) {
+      if (NNS->getKind() == NestedNameSpecifier::Identifier)
+        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::DependentType);
+    }
+    return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(Q);
+  }
+
 private:
   HighlightingsBuilder &H;
 };

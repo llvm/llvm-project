@@ -533,8 +533,11 @@ define i177 @ossfuzz_9880(i177 %X) {
 ; CHECK-LABEL: @ossfuzz_9880(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i177, align 8
 ; CHECK-NEXT:    [[L1:%.*]] = load i177, i177* [[A]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L1]], 0
-; CHECK-NEXT:    [[B1:%.*]] = zext i1 [[TMP1]] to i177
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L1]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i177
+; CHECK-NEXT:    [[B14:%.*]] = add i177 [[L1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i177 [[B14]], -1
+; CHECK-NEXT:    [[B1:%.*]] = zext i1 [[TMP3]] to i177
 ; CHECK-NEXT:    ret i177 [[B1]]
 ;
   %A = alloca i177
