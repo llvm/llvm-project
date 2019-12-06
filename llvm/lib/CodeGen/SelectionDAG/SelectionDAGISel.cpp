@@ -27,10 +27,8 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
-#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/FastISel.h"
@@ -336,8 +334,6 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
   if (UseMBPI && OptLevel != CodeGenOpt::None)
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
-  AU.addRequired<ProfileSummaryInfoWrapperPass>();
-  LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -440,17 +436,14 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
   LoopInfo *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
-  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto *BFI = (PSI && PSI->hasProfileSummary()) ?
-              &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() :
-              nullptr;
 
   LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
 
   SplitCriticalSideEffectEdges(const_cast<Function &>(Fn), DT, LI);
 
   CurDAG->init(*MF, *ORE, this, LibInfo,
-               getAnalysisIfAvailable<LegacyDivergenceAnalysis>(), PSI, BFI);
+               getAnalysisIfAvailable<LegacyDivergenceAnalysis>(),
+               nullptr, nullptr);
   FuncInfo->set(Fn, *MF, CurDAG);
   SwiftError->setFunction(*MF);
 

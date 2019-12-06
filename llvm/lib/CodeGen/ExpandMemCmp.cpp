@@ -13,8 +13,6 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -23,7 +21,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Transforms/Utils/SizeOpts.h"
 
 using namespace llvm;
 
@@ -724,8 +721,7 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
 ///  %phi.res = phi i32 [ %48, %loadbb3 ], [ %11, %res_block ]
 ///  ret i32 %phi.res
 static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
-                         const TargetLowering *TLI, const DataLayout *DL,
-                         ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
+                         const TargetLowering *TLI, const DataLayout *DL) {
   NumMemCmpCalls++;
 
   // Early exit from expansion if -Oz.
@@ -746,20 +742,18 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   // TTI call to check if target would like to expand memcmp. Also, get the
   // available load sizes.
   const bool IsUsedForZeroCmp = isOnlyUsedInZeroEqualityComparison(CI);
-  bool OptForSize = CI->getFunction()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
-  auto Options = TTI->enableMemCmpExpansion(OptForSize,
+  auto Options = TTI->enableMemCmpExpansion(CI->getFunction()->hasOptSize(),
                                             IsUsedForZeroCmp);
   if (!Options) return false;
 
   if (MemCmpEqZeroNumLoadsPerBlock.getNumOccurrences())
     Options.NumLoadsPerBlock = MemCmpEqZeroNumLoadsPerBlock;
 
-  if (OptForSize &&
+  if (CI->getFunction()->hasOptSize() &&
       MaxLoadsPerMemcmpOptSize.getNumOccurrences())
     Options.MaxNumLoads = MaxLoadsPerMemcmpOptSize;
 
-  if (!OptForSize && MaxLoadsPerMemcmp.getNumOccurrences())
+  if (!CI->getFunction()->hasOptSize() && MaxLoadsPerMemcmp.getNumOccurrences())
     Options.MaxNumLoads = MaxLoadsPerMemcmp;
 
   MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL);
@@ -805,11 +799,7 @@ public:
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     const TargetTransformInfo *TTI =
         &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-    auto *BFI = (PSI && PSI->hasProfileSummary()) ?
-           &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() :
-           nullptr;
-    auto PA = runImpl(F, TLI, TTI, TL, PSI, BFI);
+    auto PA = runImpl(F, TLI, TTI, TL);
     return !PA.areAllPreserved();
   }
 
@@ -817,26 +807,22 @@ private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
     FunctionPass::getAnalysisUsage(AU);
   }
 
   PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
                             const TargetTransformInfo *TTI,
-                            const TargetLowering* TL,
-                            ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI);
+                            const TargetLowering* TL);
   // Returns true if a change was made.
   bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
                   const TargetTransformInfo *TTI, const TargetLowering* TL,
-                  const DataLayout& DL, ProfileSummaryInfo *PSI,
-                  BlockFrequencyInfo *BFI);
+                  const DataLayout& DL);
 };
 
 bool ExpandMemCmpPass::runOnBlock(
     BasicBlock &BB, const TargetLibraryInfo *TLI,
     const TargetTransformInfo *TTI, const TargetLowering* TL,
-    const DataLayout& DL, ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
+    const DataLayout& DL) {
   for (Instruction& I : BB) {
     CallInst *CI = dyn_cast<CallInst>(&I);
     if (!CI) {
@@ -845,7 +831,7 @@ bool ExpandMemCmpPass::runOnBlock(
     LibFunc Func;
     if (TLI->getLibFunc(ImmutableCallSite(CI), Func) &&
         (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
-        expandMemCmp(CI, TTI, TL, &DL, PSI, BFI)) {
+        expandMemCmp(CI, TTI, TL, &DL)) {
       return true;
     }
   }
@@ -855,12 +841,11 @@ bool ExpandMemCmpPass::runOnBlock(
 
 PreservedAnalyses ExpandMemCmpPass::runImpl(
     Function &F, const TargetLibraryInfo *TLI, const TargetTransformInfo *TTI,
-    const TargetLowering* TL, ProfileSummaryInfo *PSI,
-    BlockFrequencyInfo *BFI) {
+    const TargetLowering* TL) {
   const DataLayout& DL = F.getParent()->getDataLayout();
   bool MadeChanges = false;
   for (auto BBIt = F.begin(); BBIt != F.end();) {
-    if (runOnBlock(*BBIt, TLI, TTI, TL, DL, PSI, BFI)) {
+    if (runOnBlock(*BBIt, TLI, TTI, TL, DL)) {
       MadeChanges = true;
       // If changes were made, restart the function from the beginning, since
       // the structure of the function was changed.
@@ -879,8 +864,6 @@ INITIALIZE_PASS_BEGIN(ExpandMemCmpPass, "expandmemcmp",
                       "Expand memcmp() to load/stores", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
-INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(ExpandMemCmpPass, "expandmemcmp",
                     "Expand memcmp() to load/stores", false, false)
 
