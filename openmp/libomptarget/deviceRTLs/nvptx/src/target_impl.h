@@ -163,4 +163,8 @@ INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
                : "memory");
 }
 
+INLINE void __kmpc_impl_threadfence(void) { __threadfence(); }
+INLINE void __kmpc_impl_threadfence_block(void) { __threadfence_block(); }
+INLINE void __kmpc_impl_threadfence_system(void) { __threadfence_system(); }
+
 #endif
