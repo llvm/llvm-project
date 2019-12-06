@@ -792,6 +792,16 @@ public:
     return const_cast<Expr *>(this)->IgnoreImplicit();
   }
 
+  /// Skip past any implicit AST nodes which might surround this expression
+  /// until reaching a fixed point. Same as IgnoreImplicit, except that it
+  /// also skips over implicit calls to constructors and conversion functions.
+  ///
+  /// FIXME: Should IgnoreImplicit do this?
+  Expr *IgnoreImplicitAsWritten() LLVM_READONLY;
+  const Expr *IgnoreImplicitAsWritten() const {
+    return const_cast<Expr *>(this)->IgnoreImplicitAsWritten();
+  }
+
   /// Skip past any parentheses which might surround this expression until
   /// reaching a fixed point. Skips:
   /// * ParenExpr

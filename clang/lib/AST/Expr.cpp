@@ -2893,6 +2893,13 @@ static Expr *IgnoreImplicitSingleStep(Expr *E) {
   return E;
 }
 
+static Expr *IgnoreImplicitAsWrittenSingleStep(Expr *E) {
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    return ICE->getSubExprAsWritten();
+
+  return IgnoreImplicitSingleStep(E);
+}
+
 static Expr *IgnoreParensSingleStep(Expr *E) {
   if (auto *PE = dyn_cast<ParenExpr>(E))
     return PE->getSubExpr();
@@ -2970,6 +2977,10 @@ Expr *Expr::IgnoreCasts() {
 
 Expr *Expr::IgnoreImplicit() {
   return IgnoreExprNodes(this, IgnoreImplicitSingleStep);
+}
+
+Expr *Expr::IgnoreImplicitAsWritten() {
+  return IgnoreExprNodes(this, IgnoreImplicitAsWrittenSingleStep);
 }
 
 Expr *Expr::IgnoreParens() {
