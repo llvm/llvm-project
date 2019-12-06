@@ -3808,7 +3808,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                          "the only memory argument");
   }
 
-  if (!IsSibcall)
+  if (!IsSibcall && !IsMustTail)
     Chain = DAG.getCALLSEQ_START(Chain, NumBytesToPush,
                                  NumBytes - NumBytesToPush, dl);
 
@@ -4093,7 +4093,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SmallVector<SDValue, 8> Ops;
 
-  if (!IsSibcall && isTailCall) {
+  if (!IsSibcall && isTailCall && !IsMustTail) {
     Chain = DAG.getCALLSEQ_END(Chain,
                                DAG.getIntPtrConstant(NumBytesToPop, dl, true),
                                DAG.getIntPtrConstant(0, dl, true), InFlag, dl);
