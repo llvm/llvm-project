@@ -95,7 +95,6 @@ class CXXRecordDecl;
 class DiagnosticsEngine;
 class Expr;
 class FixedPointSemantics;
-class GlobalDecl;
 class MangleContext;
 class MangleNumberingContext;
 class MaterializeTemporaryExpr;
@@ -2820,16 +2819,6 @@ public:
   /// function declaration or file name. Used by SourceLocExpr and
   /// PredefinedExpr to cache evaluated results.
   StringLiteral *getPredefinedStringLiteralFromCache(StringRef Key) const;
-
-  /// Parses the target attributes passed in, and returns only the ones that are
-  /// valid feature names.
-  TargetAttr::ParsedTargetAttr
-  filterFunctionTargetAttrs(const TargetAttr *TD) const;
-
-  void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
-                             const FunctionDecl *) const;
-  void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
-                             GlobalDecl GD) const;
 
   //===--------------------------------------------------------------------===//
   //                    Statistics

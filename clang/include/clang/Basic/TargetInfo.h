@@ -945,14 +945,12 @@ public:
   bool validateInputConstraint(MutableArrayRef<ConstraintInfo> OutputConstraints,
                                ConstraintInfo &info) const;
 
-  virtual bool validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
-                                  StringRef /*Constraint*/,
+  virtual bool validateOutputSize(StringRef /*Constraint*/,
                                   unsigned /*Size*/) const {
     return true;
   }
 
-  virtual bool validateInputSize(const llvm::StringMap<bool> &FeatureMap,
-                                 StringRef /*Constraint*/,
+  virtual bool validateInputSize(StringRef /*Constraint*/,
                                  unsigned /*Size*/) const {
     return true;
   }
