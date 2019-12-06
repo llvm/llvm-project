@@ -90,12 +90,12 @@ Error registerMachOStubsAndGOT(Session &S, LinkGraph &G) {
   for (auto &Sec : G.sections()) {
     LLVM_DEBUG({
       dbgs() << "  Section \"" << Sec.getName() << "\": "
-             << (Sec.symbols_empty() ? "empty. skipping." : "processing...")
+             << (llvm::empty(Sec.symbols()) ? "empty. skipping." : "processing...")
              << "\n";
     });
 
     // Skip empty sections.
-    if (Sec.symbols_empty())
+    if (llvm::empty(Sec.symbols()))
       continue;
 
     if (FileInfo.SectionInfos.count(Sec.getName()))
