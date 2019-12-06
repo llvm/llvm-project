@@ -212,7 +212,7 @@ DEVICE void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   if (Rank == 0) {
     parallelLevel[GetWarpId()] +=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
-    __threadfence();
+    __kmpc_impl_threadfence();
   }
   __kmpc_impl_syncwarp(Mask);
 }
@@ -224,7 +224,7 @@ DEVICE void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   if (Rank == 0) {
     parallelLevel[GetWarpId()] -=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
-    __threadfence();
+    __kmpc_impl_threadfence();
   }
   __kmpc_impl_syncwarp(Mask);
 }
