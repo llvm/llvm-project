@@ -1162,12 +1162,11 @@ DEF_TRAVERSE_TYPELOC(LValueReferenceType,
 DEF_TRAVERSE_TYPELOC(RValueReferenceType,
                      { TRY_TO(TraverseTypeLoc(TL.getPointeeLoc())); })
 
+// FIXME: location of base class?
 // We traverse this in the type case as well, but how is it not reached through
 // the pointee type?
 DEF_TRAVERSE_TYPELOC(MemberPointerType, {
-  auto *TSI = TL.getClassTInfo();
-  assert(TSI);
-  TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
+  TRY_TO(TraverseType(QualType(TL.getTypePtr()->getClass(), 0)));
   TRY_TO(TraverseTypeLoc(TL.getPointeeLoc()));
 })
 
