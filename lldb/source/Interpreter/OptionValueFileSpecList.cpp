@@ -33,7 +33,7 @@ void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
         strm.Indent();
         strm.Printf("[%u]: ", i);
       }
-      m_current_value.GetFileSpecAtIndex(i).Dump(&strm);
+      m_current_value.GetFileSpecAtIndex(i).Dump(strm.AsRawOstream());
       if (one_line)
         strm << ' ';
     }

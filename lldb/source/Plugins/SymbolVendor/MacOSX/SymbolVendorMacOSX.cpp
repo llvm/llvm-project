@@ -42,7 +42,7 @@ static bool UUIDsMatch(Module *module, ObjectFile *ofile,
       if (feedback_strm) {
         feedback_strm->PutCString(
             "warning: failed to get the uuid for object file: '");
-        ofile->GetFileSpec().Dump(feedback_strm);
+        ofile->GetFileSpec().Dump(feedback_strm->AsRawOstream());
         feedback_strm->PutCString("\n");
       }
       return false;
@@ -57,11 +57,11 @@ static bool UUIDsMatch(Module *module, ObjectFile *ofile,
           "warning: UUID mismatch detected between modules:\n    ");
       module->GetUUID().Dump(feedback_strm);
       feedback_strm->PutChar(' ');
-      module->GetFileSpec().Dump(feedback_strm);
+      module->GetFileSpec().Dump(feedback_strm->AsRawOstream());
       feedback_strm->PutCString("\n    ");
       dsym_uuid.Dump(feedback_strm);
       feedback_strm->PutChar(' ');
-      ofile->GetFileSpec().Dump(feedback_strm);
+      ofile->GetFileSpec().Dump(feedback_strm->AsRawOstream());
       feedback_strm->EOL();
     }
   }

@@ -3891,7 +3891,7 @@ void RSModuleDescriptor::Dump(Stream &strm) const {
   int indent = strm.GetIndentLevel();
 
   strm.Indent();
-  m_module->GetFileSpec().Dump(&strm);
+  m_module->GetFileSpec().Dump(strm.AsRawOstream());
   strm.Indent(m_module->GetNumCompileUnits() ? "Debug info loaded."
                                              : "Debug info does not exist.");
   strm.EOL();
