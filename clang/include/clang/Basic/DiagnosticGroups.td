@@ -1057,7 +1057,11 @@ def ASM : DiagGroup<"asm", [
 def SourceUsesOpenMP : DiagGroup<"source-uses-openmp">;
 def OpenMPClauses : DiagGroup<"openmp-clauses">;
 def OpenMPLoopForm : DiagGroup<"openmp-loop-form">;
-def OpenMPTarget : DiagGroup<"openmp-target">;
+def OpenMPMapping : DiagGroup<"openmp-mapping">;
+def OpenMPTarget : DiagGroup<"openmp-target", [OpenMPMapping]>;
+def OpenMP : DiagGroup<"openmp", [
+    SourceUsesOpenMP, OpenMPClauses, OpenMPLoopForm, OpenMPTarget, OpenMPMapping
+  ]>;
 
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;

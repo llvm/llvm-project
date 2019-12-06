@@ -9577,7 +9577,7 @@ def err_omp_linear_distribute_var_non_loop_iteration : Error<
   "only loop iteration variables are allowed in 'linear' clause in distribute directives">;
 def warn_omp_non_trivial_type_mapped : Warning<
   "Non-trivial type %0 is mapped, only trivial types are guaranteed to be mapped correctly">,
-  InGroup<DiagGroup<"openmp-mapping">>;
+  InGroup<OpenMPMapping>;
 def err_omp_requires_clause_redeclaration : Error <
   "Only one %0 clause can appear on a requires directive in a single translation unit">;
 def note_omp_requires_previous_clause : Note <
