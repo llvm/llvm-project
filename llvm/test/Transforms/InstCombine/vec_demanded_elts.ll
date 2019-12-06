@@ -175,8 +175,7 @@ define <4 x i32> @inselt_shuf_no_demand_multiuse(i32 %a0, i32 %a1, <4 x i32> %b)
 ; CHECK-NEXT:    [[OUT0:%.*]] = insertelement <4 x i32> undef, i32 [[A0:%.*]], i32 0
 ; CHECK-NEXT:    [[OUT01:%.*]] = insertelement <4 x i32> [[OUT0]], i32 [[A1:%.*]], i32 1
 ; CHECK-NEXT:    [[FOO:%.*]] = add <4 x i32> [[OUT01]], [[B:%.*]]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[FOO]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    ret <4 x i32> [[SHUFFLE]]
+; CHECK-NEXT:    ret <4 x i32> [[FOO]]
 ;
   %out0 = insertelement <4 x i32> undef, i32 %a0, i32 0
   %out01 = insertelement <4 x i32> %out0, i32 %a1, i32 1
@@ -190,8 +189,7 @@ define <4 x i32> @inselt_shuf_no_demand_multiuse(i32 %a0, i32 %a1, <4 x i32> %b)
 define <4 x float> @inselt_shuf_no_demand_bogus_insert_index_in_chain(float %a1, float %a2, float %a3, i32 %variable_index) {
 ; CHECK-LABEL: @inselt_shuf_no_demand_bogus_insert_index_in_chain(
 ; CHECK-NEXT:    [[OUT12:%.*]] = insertelement <4 x float> undef, float [[A2:%.*]], i32 [[VARIABLE_INDEX:%.*]]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[OUT12]], <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+; CHECK-NEXT:    ret <4 x float> [[OUT12]]
 ;
   %out1 = insertelement <4 x float> undef, float %a1, i32 1
   %out12 = insertelement <4 x float> %out1, float %a2, i32 %variable_index ; something unexpected
@@ -216,8 +214,7 @@ define <3 x i8> @shuf_add(<3 x i8> %x) {
 define <3 x i8> @shuf_sub(<3 x i8> %x) {
 ; CHECK-LABEL: @shuf_sub(
 ; CHECK-NEXT:    [[BO:%.*]] = sub <3 x i8> <i8 1, i8 undef, i8 3>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i8> [[BO]], <3 x i8> undef, <3 x i32> <i32 0, i32 undef, i32 2>
-; CHECK-NEXT:    ret <3 x i8> [[R]]
+; CHECK-NEXT:    ret <3 x i8> [[BO]]
 ;
   %bo = sub nuw <3 x i8> <i8 1, i8 2, i8 3>, %x
   %r = shufflevector <3 x i8> %bo, <3 x i8> undef, <3 x i32> <i32 0, i32 undef, i32 2>

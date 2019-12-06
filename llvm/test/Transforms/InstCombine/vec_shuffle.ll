@@ -61,8 +61,7 @@ define float @test6(<4 x float> %X) {
 
 define <4 x float> @test7(<4 x float> %x) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK-NEXT:    ret <4 x float> [[X:%.*]]
 ;
   %r = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> < i32 0, i32 1, i32 6, i32 7 >
   ret <4 x float> %r
