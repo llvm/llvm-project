@@ -418,6 +418,62 @@ func @dyn_shape_fold(%L : index, %M : index) -> (memref<? x ? x i32>, memref<? x
   return %c, %d : memref<? x ? x i32>, memref<? x ? x f32>
 }
 
+#map1 = (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)
+#map2 = (d0, d1, d2)[s0, s1, s2] -> (d0 * s2 + d1 * s1 + d2 + s0)
+
+// CHECK-LABEL: func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index,
+func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, %M : index, %N : index, %K : index) {
+// CHECK-SAME: [[M:arg[0-9]+]]: index
+// CHECK-SAME: [[N:arg[0-9]+]]: index
+// CHECK-SAME: [[K:arg[0-9]+]]: index
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %1 = alloc(%arg1, %arg2) : memref<?x8x?xf32>
+  %2 = dim %1, 2 : memref<?x8x?xf32>
+  affine.for %arg3 = 0 to %2 {
+    %3 = alloc(%arg0) : memref<?xi8>
+    %ub = dim %3, 0 : memref<?xi8>
+    affine.for %arg4 = 0 to %ub {
+      %s = dim %0, 0 : memref<?x?xf32>
+      %v = std.view %3[%c0][%arg4, %s] : memref<?xi8> to memref<?x?xf32, #map1>
+      %sv = std.subview %0[%c0, %c0][%s,%arg4][%c1,%c1] : memref<?x?xf32> to memref<?x?xf32, #map1>
+      %l = dim %v, 1 : memref<?x?xf32, #map1>
+      %u = dim %sv, 0 : memref<?x?xf32, #map1>
+      affine.for %arg5 = %l to %u {
+        "foo"() : () -> ()
+      }
+    }
+  }
+  // CHECK-NEXT: %c0 = constant 0 : index
+  // CHECK-NEXT: %c1 = constant 1 : index
+  // CHECK-NEXT: affine.for %arg7 = 0 to %arg2 {
+  // CHECK-NEXT:   affine.for %arg8 = 0 to %arg0 {
+  // CHECK-NEXT:     affine.for %arg9 = %arg0 to %arg0 {
+  // CHECK-NEXT:       "foo"() : () -> ()
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:   }
+  // CHECK-NEXT: }
+
+  %A = view %BUF[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %B = view %BUF[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %C = view %BUF[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+
+  %M_ = dim %A, 0 : memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %K_ = dim %A, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %N_ = dim %C, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
+  loop.for %i = %c0 to %M_ step %c1 {
+    loop.for %j = %c0 to %N_ step %c1 {
+      loop.for %k = %c0 to %K_ step %c1 {
+      }
+    }
+  }
+  // CHECK: loop.for %{{.*}} = %c0 to %[[M]] step %c1 {
+  // CHECK:   loop.for %arg8 = %c0 to %[[N]] step %c1 {
+  // CHECK:     loop.for %arg9 = %c0 to %[[K]] step %c1 {
+  return
+}
+
 // CHECK-LABEL: func @merge_constants
 func @merge_constants() -> (index, index) {
   // CHECK-NEXT: %c42 = constant 42 : index
@@ -743,7 +799,7 @@ func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
   load %4[%c0, %c0, %c0] : memref<?x?x?xf32,
        (d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)>
 
-  // Test: subview offset operands are folded correctly w.r.t. base strides. 
+  // Test: subview offset operands are folded correctly w.r.t. base strides.
   // CHECK: std.subview %[[ALLOC0]][][][] : memref<8x16x4xf32, #[[BASE_MAP0]]> to memref<7x11x2xf32, #[[SUBVIEW_MAP1]]>
   %5 = subview %0[%c1, %c2, %c7][%c7, %c11, %c2][%c1, %c1, %c1]
     : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)> to

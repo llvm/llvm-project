@@ -46,10 +46,7 @@ func @materialize_read_1d_partially_specialized(%dyn1 : index, %dyn2 : index, %d
   }
   // CHECK: %[[tensor:[0-9]+]] = alloc
   // CHECK-NOT: {{.*}} dim %[[tensor]], 0
-  // CHECK: {{.*}} dim %[[tensor]], 1
-  // CHECK: {{.*}} dim %[[tensor]], 2
   // CHECK-NOT: {{.*}} dim %[[tensor]], 3
-  // CHECK: {{.*}} dim %[[tensor]], 4
   return
 }
 
@@ -66,36 +63,32 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:    affine.for %[[I1:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:      affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:        affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  //      CHECK:          %[[D0:.*]] = dim %{{.*}}, 0 : memref<?x?x?x?xf32>
-  // CHECK-NEXT:          %[[D1:.*]] = dim %{{.*}}, 1 : memref<?x?x?x?xf32>
-  // CHECK-NEXT:          %[[D2:.*]] = dim %{{.*}}, 2 : memref<?x?x?x?xf32>
-  // CHECK-NEXT:          %[[D3:.*]] = dim %{{.*}}, 3 : memref<?x?x?x?xf32>
   //      CHECK:          %[[ALLOC:.*]] = alloc() : memref<5x4x3xf32>
   // CHECK-NEXT:          %[[VECTOR_VIEW:.*]] = vector.type_cast %[[ALLOC]] : memref<5x4x3xf32>
   // CHECK-NEXT:          loop.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
   // CHECK-NEXT:            loop.for %[[I5:.*]] = %[[C0]] to %[[C4]] step %[[C1]] {
   // CHECK-NEXT:              loop.for %[[I6:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
   // CHECK-NEXT:                {{.*}} = affine.apply #[[ADD]](%[[I0]], %[[I4]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%[[D0]]]
+  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%{{.*}}]
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}} : index
   // CHECK-NEXT:                {{.*}} = select
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
   // CHECK-NEXT:                %[[L0:.*]] = select
   //
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%[[D1]]]
+  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%{{.*}}]
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}} : index
   // CHECK-NEXT:                {{.*}} = select
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
   // CHECK-NEXT:                %[[L1:.*]] = select
   //
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%[[D2]]]
+  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%{{.*}}]
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}} : index
   // CHECK-NEXT:                {{.*}} = select
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
   // CHECK-NEXT:                %[[L2:.*]] = select
   //
   // CHECK-NEXT:                {{.*}} = affine.apply #[[ADD]](%[[I3]], %[[I6]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%[[D3]]]
+  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%{{.*}}]
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}} : index
   // CHECK-NEXT:                {{.*}} = select
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
@@ -144,10 +137,6 @@ func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:    affine.for %[[I1:.*]] = 0 to %{{.*}} step 4 {
   // CHECK-NEXT:      affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:        affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  //      CHECK:          %[[D0:.*]] = dim %{{.*}}, 0 : memref<?x?x?x?xf32>
-  // CHECK-NEXT:          %[[D1:.*]] = dim %{{.*}}, 1 : memref<?x?x?x?xf32>
-  // CHECK-NEXT:          %[[D2:.*]] = dim %{{.*}}, 2 : memref<?x?x?x?xf32>
-  // CHECK-NEXT:          %[[D3:.*]] = dim %{{.*}}, 3 : memref<?x?x?x?xf32>
   // CHECK:               %[[ALLOC:.*]] = alloc() : memref<5x4x3xf32>
   // CHECK-NEXT:          %[[VECTOR_VIEW:.*]] = vector.type_cast {{.*}} : memref<5x4x3xf32>
   //      CHECK:          store %{{.*}}, {{.*}} : memref<vector<5x4x3xf32>>
@@ -155,27 +144,27 @@ func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:            loop.for %[[I5:.*]] = %[[C0]] to %[[C4]] step %[[C1]] {
   // CHECK-NEXT:              loop.for %[[I6:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
   // CHECK-NEXT:                {{.*}} = affine.apply #[[ADD]](%[[I0]], %[[I4]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%[[D0]]]
+  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%{{.*}}]
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, {{.*}} : index
   // CHECK-NEXT:                {{.*}} = select {{.*}}, {{.*}}, {{.*}} : index
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
   // CHECK-NEXT:                %[[S0:.*]] = select {{.*}}, %[[C0]], {{.*}} : index
   //
   // CHECK-NEXT:                {{.*}} = affine.apply #[[ADD]](%[[I1]], %[[I5]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%[[D1]]]
+  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%{{.*}}]
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, {{.*}} : index
   // CHECK-NEXT:                {{.*}} = select {{.*}}, {{.*}}, {{.*}} : index
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
   // CHECK-NEXT:                %[[S1:.*]] = select {{.*}}, %[[C0]], {{.*}} : index
   //
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%[[D2]]]
+  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%{{.*}}]
   // CHECK-NEXT:                {{.*}} = cmpi "slt", %[[I2]], %{{.*}} : index
   // CHECK-NEXT:                {{.*}} = select {{.*}}, %[[I2]], {{.*}} : index
   // CHECK-NEXT:                {{.*}} = cmpi "slt", %[[I2]], %[[C0]] : index
   // CHECK-NEXT:                %[[S2:.*]] = select {{.*}}, %[[C0]], {{.*}} : index
   //
   // CHECK-NEXT:                {{.*}} = affine.apply #[[ADD]](%[[I3]], %[[I6]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%[[D3]]]
+  // CHECK-NEXT:                {{.*}} = affine.apply #[[SUB]]()[%{{.*}}]
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, {{.*}} : index
   // CHECK-NEXT:                {{.*}} = select {{.*}}, {{.*}}, {{.*}} : index
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
