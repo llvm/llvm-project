@@ -18557,10 +18557,10 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   SDValue Chain = DAG.getStore(
       DAG.getEntryNode(), dl, ValueToStore, StackSlot,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI));
-  return BuildFILD(Op, SrcVT, Chain, StackSlot, DAG);
+  return BuildFILD(Op, SrcVT, Chain, StackSlot, DAG).first;
 }
 
-SDValue X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
+std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
                                      SDValue StackSlot,
                                      SelectionDAG &DAG) const {
   // Build the FILD
@@ -18589,9 +18589,9 @@ SDValue X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
   SDValue Result =
       DAG.getMemIntrinsicNode(useSSE ? X86ISD::FILD_FLAG : X86ISD::FILD, DL,
                               Tys, FILDOps, SrcVT, LoadMMO);
+  Chain = Result.getValue(1);
 
   if (useSSE) {
-    Chain = Result.getValue(1);
     SDValue InFlag = Result.getValue(2);
 
     // FIXME: Currently the FST is glued to the FILD_FLAG. This
@@ -18613,9 +18613,10 @@ SDValue X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
     Result = DAG.getLoad(
         Op.getValueType(), DL, Chain, StackSlot,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI));
+    Chain = Result.getValue(1);
   }
 
-  return Result;
+  return { Result, Chain };
 }
 
 /// Horizontal vector math instructions may be slower than normal math with
@@ -18927,8 +18928,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
                                   StackSlot, MachinePointerInfo());
     SDValue Store2 = DAG.getStore(Store1, dl, DAG.getConstant(0, dl, MVT::i32),
                                   OffsetSlot, MachinePointerInfo());
-    SDValue Fild = BuildFILD(Op, MVT::i64, Store2, StackSlot, DAG);
-    return Fild;
+    return BuildFILD(Op, MVT::i64, Store2, StackSlot, DAG).first;
   }
 
   assert(SrcVT == MVT::i64 && "Unexpected type in UINT_TO_FP");
@@ -43480,10 +43480,10 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
     if (Ld->isSimple() && !VT.isVector() &&
         ISD::isNON_EXTLoad(Op0.getNode()) && Op0.hasOneUse() &&
         !Subtarget.is64Bit() && LdVT == MVT::i64) {
-      SDValue FILDChain = Subtarget.getTargetLowering()->BuildFILD(
+      std::pair<SDValue, SDValue> Tmp = Subtarget.getTargetLowering()->BuildFILD(
           SDValue(N, 0), LdVT, Ld->getChain(), Op0, DAG);
-      DAG.ReplaceAllUsesOfValueWith(Op0.getValue(1), FILDChain.getValue(1));
-      return FILDChain;
+      DAG.ReplaceAllUsesOfValueWith(Op0.getValue(1), Tmp.second);
+      return Tmp.first;
     }
   }
 
