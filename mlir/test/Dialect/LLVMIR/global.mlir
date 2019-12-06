@@ -161,3 +161,19 @@ llvm.mlir.global internal @g(43 : i64) : !llvm.i64 {
   %c = llvm.mlir.constant(42 : i64) : !llvm.i64
   llvm.return %c : !llvm.i64
 }
+
+// -----
+
+llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : !llvm.i64
+func @mismatch_addr_space_implicit_global() {
+  // expected-error @+1 {{op the type must be a pointer to the type of the referred global}}
+  llvm.mlir.addressof @g : !llvm<"i64*">
+}
+
+// -----
+
+llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : !llvm.i64
+func @mismatch_addr_space() {
+  // expected-error @+1 {{op the type must be a pointer to the type of the referred global}}
+  llvm.mlir.addressof @g : !llvm<"i64 addrspace(4)*">
+}
