@@ -1006,6 +1006,64 @@ bool AArch64InstructionSelector::selectCompareBranch(
   return true;
 }
 
+/// Returns the element immediate value of a vector shift operand if found.
+/// This needs to detect a splat-like operation, e.g. a G_BUILD_VECTOR.
+static Optional<int64_t> getVectorShiftImm(Register Reg,
+                                           MachineRegisterInfo &MRI) {
+  const LLT Ty = MRI.getType(Reg);
+  assert(Ty.isVector() && "Expected a *vector* shift operand");
+  MachineInstr *OpMI = MRI.getVRegDef(Reg);
+  assert(OpMI && "Expected to find a vreg def for vector shift operand");
+  if (OpMI->getOpcode() != TargetOpcode::G_BUILD_VECTOR)
+    return None;
+
+  // Check all operands are identical immediates.
+  int64_t ImmVal = 0;
+  for (unsigned Idx = 1; Idx < OpMI->getNumOperands(); ++Idx) {
+    auto VRegAndVal = getConstantVRegValWithLookThrough(OpMI->getOperand(Idx).getReg(), MRI);
+    if (!VRegAndVal)
+      return None;
+
+    if (Idx == 1)
+      ImmVal = VRegAndVal->Value;
+    if (ImmVal != VRegAndVal->Value)
+      return None;
+  }
+
+  return ImmVal;
+}
+
+/// Matches and returns the shift immediate value for a SHL instruction given
+/// a shift operand.
+static Optional<int64_t> getVectorSHLImm(LLT SrcTy, Register Reg, MachineRegisterInfo &MRI) {
+  Optional<int64_t> ShiftImm = getVectorShiftImm(Reg, MRI);
+  if (!ShiftImm)
+    return None;
+  // Check the immediate is in range for a SHL.
+  int64_t Imm = *ShiftImm;
+  if (Imm < 0)
+    return None;
+  switch (SrcTy.getElementType().getSizeInBits()) {
+  case 8:
+    if (Imm > 7)
+      return None;
+    break;
+  case 16:
+    if (Imm > 15)
+      return None;
+    break;
+  case 32:
+    if (Imm > 31)
+      return None;
+    break;
+  case 64:
+    if (Imm > 63)
+      return None;
+    break;
+  }
+  return Imm;
+}
+
 bool AArch64InstructionSelector::selectVectorSHL(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_SHL);
@@ -1017,21 +1075,29 @@ bool AArch64InstructionSelector::selectVectorSHL(
   if (!Ty.isVector())
     return false;
 
+  // Check if we have a vector of constants on RHS that we can select as the
+  // immediate form.
+  Optional<int64_t> ImmVal = getVectorSHLImm(Ty, Src2Reg, MRI);
+
   unsigned Opc = 0;
   if (Ty == LLT::vector(2, 64)) {
-    Opc = AArch64::USHLv2i64;
+    Opc = ImmVal ? AArch64::SHLv2i64_shift : AArch64::USHLv2i64;
   } else if (Ty == LLT::vector(4, 32)) {
-    Opc = AArch64::USHLv4i32;
+    Opc = ImmVal ? AArch64::SHLv4i32_shift : AArch64::USHLv4i32;
   } else if (Ty == LLT::vector(2, 32)) {
-    Opc = AArch64::USHLv2i32;
+    Opc = ImmVal ? AArch64::SHLv2i32_shift : AArch64::USHLv2i32;
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled G_SHL type");
     return false;
   }
 
   MachineIRBuilder MIB(I);
-  auto UShl = MIB.buildInstr(Opc, {DstReg}, {Src1Reg, Src2Reg});
-  constrainSelectedInstRegOperands(*UShl, TII, TRI, RBI);
+  auto Shl = MIB.buildInstr(Opc, {DstReg}, {Src1Reg});
+  if (ImmVal)
+    Shl.addImm(*ImmVal);
+  else
+    Shl.addUse(Src2Reg);
+  constrainSelectedInstRegOperands(*Shl, TII, TRI, RBI);
   I.eraseFromParent();
   return true;
 }
