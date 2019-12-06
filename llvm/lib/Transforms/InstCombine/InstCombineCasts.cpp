@@ -926,34 +926,31 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext,
   // icmp ne A, B is equal to xor A, B when A and B only really have one bit.
   // It is also profitable to transform icmp eq into not(xor(A, B)) because that
   // may lead to additional simplifications.
-  if (Cmp->isEquality() && ZType == CmpOpType) {
-    if (IntegerType *ITy = dyn_cast<IntegerType>(ZType)) {
-      KnownBits KnownOp0 = computeKnownBits(Op0, 0, &Zext);
-      KnownBits KnownOp1 = computeKnownBits(Op1, 0, &Zext);
+  if (!isa<IntegerType>(ZType) || !Cmp->isEquality() || ZType != CmpOpType)
+    return nullptr;
 
-      if (KnownOp0.Zero == KnownOp1.Zero && KnownOp0.One == KnownOp1.One) {
-        APInt KnownBits = KnownOp0.Zero | KnownOp0.One;
-        APInt UnknownBit = ~KnownBits;
-        if (UnknownBit.countPopulation() == 1) {
-          if (!DoTransform) return Cmp;
+  KnownBits KnownOp0 = computeKnownBits(Op0, 0, &Zext);
+  KnownBits KnownOp1 = computeKnownBits(Op1, 0, &Zext);
+  if (KnownOp0.Zero == KnownOp1.Zero && KnownOp0.One == KnownOp1.One) {
+    APInt KnownBits = KnownOp0.Zero | KnownOp0.One;
+    APInt UnknownBit = ~KnownBits;
+    if (UnknownBit.countPopulation() == 1) {
+      if (!DoTransform) return Cmp;
 
-          Value *Result = Builder.CreateXor(Op0, Op1);
+      Value *Result = Builder.CreateXor(Op0, Op1);
 
-          // Mask off any bits that are set and won't be shifted away.
-          if (KnownOp0.One.uge(UnknownBit))
-            Result = Builder.CreateAnd(Result,
-                                       ConstantInt::get(ITy, UnknownBit));
+      // Mask off any bits that are set and won't be shifted away.
+      if (KnownOp0.One.uge(UnknownBit))
+        Result = Builder.CreateAnd(Result, ConstantInt::get(ZType, UnknownBit));
 
-          // Shift the bit we're testing down to the lsb.
-          Result = Builder.CreateLShr(
-              Result, ConstantInt::get(ITy, UnknownBit.countTrailingZeros()));
+      // Shift the bit we're testing down to the lsb.
+      Result = Builder.CreateLShr(
+          Result, ConstantInt::get(ZType, UnknownBit.countTrailingZeros()));
 
-          if (Pred == ICmpInst::ICMP_EQ)
-            Result = Builder.CreateXor(Result, ConstantInt::get(ITy, 1));
-          Result->takeName(Cmp);
-          return replaceInstUsesWith(Zext, Result);
-        }
-      }
+      if (Pred == ICmpInst::ICMP_EQ)
+        Result = Builder.CreateXor(Result, ConstantInt::get(ZType, 1));
+      Result->takeName(Cmp);
+      return replaceInstUsesWith(Zext, Result);
     }
   }
 
