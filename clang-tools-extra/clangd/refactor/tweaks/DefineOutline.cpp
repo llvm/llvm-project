@@ -323,7 +323,7 @@ private:
   const FunctionDecl *Source = nullptr;
 };
 
-REGISTER_TWEAK(DefineOutline);
+REGISTER_TWEAK(DefineOutline)
 
 } // namespace
 } // namespace clangd
