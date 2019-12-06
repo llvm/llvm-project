@@ -221,6 +221,25 @@ namespace llvm {
     }
   };
 
+  /// Constrained floating point compare intrinsics.
+  class ConstrainedFPCmpIntrinsic : public ConstrainedFPIntrinsic {
+  public:
+    FCmpInst::Predicate getPredicate() const;
+
+    // Methods for support type inquiry through isa, cast, and dyn_cast:
+    static bool classof(const IntrinsicInst *I) {
+      switch (I->getIntrinsicID()) {
+      case Intrinsic::experimental_constrained_fcmp:
+      case Intrinsic::experimental_constrained_fcmps:
+        return true;
+      default: return false;
+      }
+    }
+    static bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+  };
+
   /// This class represents an intrinsic that is based on a binary operation.
   /// This includes op.with.overflow and saturating add/sub intrinsics.
   class BinaryOpIntrinsic : public IntrinsicInst {

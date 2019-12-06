@@ -58,7 +58,8 @@ enum NodeType : unsigned {
   ICMP,
 
   // Floating-point comparisons.  The two operands are the values to compare.
-  FCMP,
+  // Regular and strict (quiet and signaling) versions.
+  FCMP, STRICT_FCMP, STRICT_FCMPS,
 
   // Test under mask.  The first operand is ANDed with the second operand
   // and the condition codes are set on the result.  The third operand is
@@ -248,9 +249,10 @@ enum NodeType : unsigned {
   // Compare floating-point vector operands 0 and 1 to produce the usual 0/-1
   // vector result.  VFCMPE is for "ordered and equal", VFCMPH for "ordered and
   // greater than" and VFCMPHE for "ordered and greater than or equal to".
-  VFCMPE,
-  VFCMPH,
-  VFCMPHE,
+  // Regular and strict (quiet and signaling) versions.
+  VFCMPE, STRICT_VFCMPE, STRICT_VFCMPES,
+  VFCMPH, STRICT_VFCMPH, STRICT_VFCMPHS,
+  VFCMPHE, STRICT_VFCMPHE, STRICT_VFCMPHES,
 
   // Likewise, but also set the condition codes on the result.
   VFCMPES,
@@ -261,8 +263,8 @@ enum NodeType : unsigned {
   VFTCI,
 
   // Extend the even f32 elements of vector operand 0 to produce a vector
-  // of f64 elements.
-  VEXTEND,
+  // of f64 elements.  Regular and strict versions.
+  VEXTEND, STRICT_VEXTEND,
 
   // Round the f64 elements of vector operand 0 to f32s and store them in the
   // even elements of the result.
@@ -531,11 +533,15 @@ private:
   // Implement LowerOperation for individual opcodes.
   SDValue getVectorCmp(SelectionDAG &DAG, unsigned Opcode,
                        const SDLoc &DL, EVT VT,
-                       SDValue CmpOp0, SDValue CmpOp1) const;
+                       SDValue CmpOp0, SDValue CmpOp1, SDValue Chain) const;
   SDValue lowerVectorSETCC(SelectionDAG &DAG, const SDLoc &DL,
                            EVT VT, ISD::CondCode CC,
-                           SDValue CmpOp0, SDValue CmpOp1) const;
+                           SDValue CmpOp0, SDValue CmpOp1,
+                           SDValue Chain = SDValue(),
+                           bool IsSignaling = false) const;
   SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSTRICT_FSETCC(SDValue Op, SelectionDAG &DAG,
+                             bool IsSignaling) const;
   SDValue lowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGlobalAddress(GlobalAddressSDNode *Node,

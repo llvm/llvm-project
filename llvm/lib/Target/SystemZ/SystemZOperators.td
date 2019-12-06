@@ -258,6 +258,10 @@ def z_pcrel_offset      : SDNode<"SystemZISD::PCREL_OFFSET",
 def z_iabs              : SDNode<"SystemZISD::IABS", SDTIntUnaryOp, []>;
 def z_icmp              : SDNode<"SystemZISD::ICMP", SDT_ZICmp>;
 def z_fcmp              : SDNode<"SystemZISD::FCMP", SDT_ZCmp>;
+def z_strict_fcmp       : SDNode<"SystemZISD::STRICT_FCMP", SDT_ZCmp,
+                                 [SDNPHasChain]>;
+def z_strict_fcmps      : SDNode<"SystemZISD::STRICT_FCMPS", SDT_ZCmp,
+                                 [SDNPHasChain]>;
 def z_tm                : SDNode<"SystemZISD::TM", SDT_ZICmp>;
 def z_br_ccmask_1       : SDNode<"SystemZISD::BR_CCMASK", SDT_ZBRCCMask,
                                  [SDNPHasChain]>;
@@ -328,12 +332,26 @@ def z_vicmpes           : SDNode<"SystemZISD::VICMPES", SDT_ZVecBinaryCC>;
 def z_vicmphs           : SDNode<"SystemZISD::VICMPHS", SDT_ZVecBinaryCC>;
 def z_vicmphls          : SDNode<"SystemZISD::VICMPHLS", SDT_ZVecBinaryCC>;
 def z_vfcmpe            : SDNode<"SystemZISD::VFCMPE", SDT_ZVecBinaryConv>;
+def z_strict_vfcmpe     : SDNode<"SystemZISD::STRICT_VFCMPE",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+def z_strict_vfcmpes    : SDNode<"SystemZISD::STRICT_VFCMPES",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
 def z_vfcmph            : SDNode<"SystemZISD::VFCMPH", SDT_ZVecBinaryConv>;
+def z_strict_vfcmph     : SDNode<"SystemZISD::STRICT_VFCMPH",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+def z_strict_vfcmphs    : SDNode<"SystemZISD::STRICT_VFCMPHS",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
 def z_vfcmphe           : SDNode<"SystemZISD::VFCMPHE", SDT_ZVecBinaryConv>;
+def z_strict_vfcmphe    : SDNode<"SystemZISD::STRICT_VFCMPHE",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+def z_strict_vfcmphes   : SDNode<"SystemZISD::STRICT_VFCMPHES",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
 def z_vfcmpes           : SDNode<"SystemZISD::VFCMPES", SDT_ZVecBinaryConvCC>;
 def z_vfcmphs           : SDNode<"SystemZISD::VFCMPHS", SDT_ZVecBinaryConvCC>;
 def z_vfcmphes          : SDNode<"SystemZISD::VFCMPHES", SDT_ZVecBinaryConvCC>;
 def z_vextend           : SDNode<"SystemZISD::VEXTEND", SDT_ZVecUnaryConv>;
+def z_strict_vextend    : SDNode<"SystemZISD::STRICT_VEXTEND",
+                                 SDT_ZVecUnaryConv, [SDNPHasChain]>;
 def z_vround            : SDNode<"SystemZISD::VROUND", SDT_ZVecUnaryConv>;
 def z_vtm               : SDNode<"SystemZISD::VTM", SDT_ZCmp>;
 def z_vfae_cc           : SDNode<"SystemZISD::VFAE_CC", SDT_ZVecTernaryIntCC>;
@@ -706,6 +724,23 @@ def any_fnms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 
 // Floating-point negative absolute.
 def fnabs : PatFrag<(ops node:$ptr), (fneg (fabs node:$ptr))>;
+
+// Strict floating-point fragments.
+def z_any_fcmp    : PatFrags<(ops node:$lhs, node:$rhs),
+                             [(z_strict_fcmp node:$lhs, node:$rhs),
+                              (z_fcmp node:$lhs, node:$rhs)]>;
+def z_any_vfcmpe  : PatFrags<(ops node:$lhs, node:$rhs),
+                             [(z_strict_vfcmpe node:$lhs, node:$rhs),
+                              (z_vfcmpe node:$lhs, node:$rhs)]>;
+def z_any_vfcmph  : PatFrags<(ops node:$lhs, node:$rhs),
+                             [(z_strict_vfcmph node:$lhs, node:$rhs),
+                              (z_vfcmph node:$lhs, node:$rhs)]>;
+def z_any_vfcmphe : PatFrags<(ops node:$lhs, node:$rhs),
+                             [(z_strict_vfcmphe node:$lhs, node:$rhs),
+                              (z_vfcmphe node:$lhs, node:$rhs)]>;
+def z_any_vextend : PatFrags<(ops node:$src),
+                             [(z_strict_vextend node:$src),
+                              (z_vextend node:$src)]>;
 
 // Create a unary operator that loads from memory and then performs
 // the given operation on it.
