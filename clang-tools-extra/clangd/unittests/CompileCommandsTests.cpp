@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CompileCommands.h"
+#include "TestFS.h"
 
 #include "llvm/ADT/StringExtras.h"
 
@@ -30,32 +31,34 @@ using ::testing::Not;
 // Other tests just verify presence/absence of certain args.
 TEST(CommandMangler, Everything) {
   auto Mangler = CommandMangler::forTests();
-  Mangler.ClangPath = "/fake/bin/clang";
-  Mangler.ResourceDir = "/fake/resources";
-  Mangler.Sysroot = "/fake/sysroot";
+  Mangler.ClangPath = testPath("fake/clang");
+  Mangler.ResourceDir = testPath("fake/resources");
+  Mangler.Sysroot = testPath("fake/sysroot");
   std::vector<std::string> Cmd = {"clang++", "-Xclang", "-load", "-Xclang",
                                   "plugin",  "-MF",     "dep",   "foo.cc"};
   Mangler.adjust(Cmd);
-  EXPECT_THAT(Cmd, ElementsAre("/fake/bin/clang++", "foo.cc", "-fsyntax-only",
-                               "-resource-dir=/fake/resources", "-isysroot",
-                               "/fake/sysroot"));
+  EXPECT_THAT(Cmd, ElementsAre(testPath("fake/clang++"), "foo.cc",
+                               "-fsyntax-only",
+                               "-resource-dir=" + testPath("fake/resources"),
+                               "-isysroot", testPath("fake/sysroot")));
 }
 
 TEST(CommandMangler, ResourceDir) {
   auto Mangler = CommandMangler::forTests();
-  Mangler.ResourceDir = "/fake/resources";
+  Mangler.ResourceDir = testPath("fake/resources");
   std::vector<std::string> Cmd = {"clang++", "foo.cc"};
   Mangler.adjust(Cmd);
-  EXPECT_THAT(Cmd, Contains("-resource-dir=/fake/resources"));
+  EXPECT_THAT(Cmd, Contains("-resource-dir=" + testPath("fake/resources")));
 }
 
 TEST(CommandMangler, Sysroot) {
   auto Mangler = CommandMangler::forTests();
-  Mangler.Sysroot = "/fake/sysroot";
+  Mangler.Sysroot = testPath("fake/sysroot");
 
   std::vector<std::string> Cmd = {"clang++", "foo.cc"};
   Mangler.adjust(Cmd);
-  EXPECT_THAT(llvm::join(Cmd, " "), HasSubstr("-isysroot /fake/sysroot"));
+  EXPECT_THAT(llvm::join(Cmd, " "),
+              HasSubstr("-isysroot " + testPath("fake/sysroot")));
 }
 
 TEST(CommandMangler, StripPlugins) {
@@ -78,19 +81,19 @@ TEST(CommandMangler, StripOutput) {
 
 TEST(CommandMangler, ClangPath) {
   auto Mangler = CommandMangler::forTests();
-  Mangler.ClangPath = "/fake/clang";
+  Mangler.ClangPath = testPath("fake/clang");
 
   std::vector<std::string> Cmd = {"clang++", "foo.cc"};
   Mangler.adjust(Cmd);
-  EXPECT_EQ("/fake/clang++", Cmd.front());
+  EXPECT_EQ(testPath("fake/clang++"), Cmd.front());
 
   Cmd = {"unknown-binary", "foo.cc"};
   Mangler.adjust(Cmd);
   EXPECT_EQ("unknown-binary", Cmd.front());
 
-  Cmd = {"/path/clang++", "foo.cc"};
+  Cmd = {testPath("path/clang++"), "foo.cc"};
   Mangler.adjust(Cmd);
-  EXPECT_EQ("/path/clang++", Cmd.front());
+  EXPECT_EQ(testPath("path/clang++"), Cmd.front());
 }
 
 } // namespace
