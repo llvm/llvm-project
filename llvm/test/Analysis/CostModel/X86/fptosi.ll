@@ -41,9 +41,9 @@ define i32 @fptosi_double_i64(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptosi_double_i64'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptosi double undef to i64
-; SLM-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V2I64 = fptosi <2 x double> undef to <2 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %V4I64 = fptosi <4 x double> undef to <4 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %V8I64 = fptosi <8 x double> undef to <8 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I64 = fptosi <2 x double> undef to <2 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %V4I64 = fptosi <4 x double> undef to <4 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %V8I64 = fptosi <8 x double> undef to <8 x i64>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptosi_double_i64'
@@ -170,9 +170,9 @@ define i32 @fptosi_double_i8(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptosi_double_i8'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptosi double undef to i8
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I8 = fptosi <2 x double> undef to <2 x i8>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %V4I8 = fptosi <4 x double> undef to <4 x i8>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %V8I8 = fptosi <8 x double> undef to <8 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I8 = fptosi <2 x double> undef to <2 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4I8 = fptosi <4 x double> undef to <4 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V8I8 = fptosi <8 x double> undef to <8 x i8>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptosi_double_i8'
@@ -224,10 +224,10 @@ define i32 @fptosi_float_i64(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptosi_float_i64'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptosi float undef to i64
-; SLM-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V2I64 = fptosi <2 x float> undef to <2 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %V4I64 = fptosi <4 x float> undef to <4 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %V8I64 = fptosi <8 x float> undef to <8 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %V16I64 = fptosi <16 x float> undef to <16 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I64 = fptosi <2 x float> undef to <2 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %V4I64 = fptosi <4 x float> undef to <4 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %V8I64 = fptosi <8 x float> undef to <8 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 103 for instruction: %V16I64 = fptosi <16 x float> undef to <16 x i64>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptosi_float_i64'
@@ -342,9 +342,9 @@ define i32 @fptosi_float_i8(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptosi_float_i8'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptosi float undef to i8
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V4I8 = fptosi <4 x float> undef to <4 x i8>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %V8I8 = fptosi <8 x float> undef to <8 x i8>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %V16I8 = fptosi <16 x float> undef to <16 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V4I8 = fptosi <4 x float> undef to <4 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %V8I8 = fptosi <8 x float> undef to <8 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 87 for instruction: %V16I8 = fptosi <16 x float> undef to <16 x i8>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptosi_float_i8'
