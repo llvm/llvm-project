@@ -4010,6 +4010,14 @@ ExpectedDecl ASTNodeImporter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
 
   ToMethod->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(ToMethod);
+
+  // Implicit params are declared when Sema encounters the definition but this
+  // never happens when the method is imported. Manually declare the implicit
+  // params now that the MethodDecl knows its class interface.
+  if (D->getSelfDecl())
+    ToMethod->createImplicitParams(Importer.getToContext(),
+                                   ToMethod->getClassInterface());
+
   return ToMethod;
 }
 
