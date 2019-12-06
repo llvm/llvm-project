@@ -959,28 +959,6 @@ TEST(ClangdTests, PreambleVFSStatCache) {
 }
 #endif
 
-TEST_F(ClangdVFSTest, FlagsWithPlugins) {
-  MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB;
-  CDB.ExtraClangFlags = {
-      "-Xclang",
-      "-add-plugin",
-      "-Xclang",
-      "random-plugin",
-  };
-  OverlayCDB OCDB(&CDB);
-  ClangdServer Server(OCDB, FS, DiagConsumer, ClangdServer::optsForTest());
-
-  auto FooCpp = testPath("foo.cpp");
-  const auto SourceContents = "int main() { return 0; }";
-  FS.Files[FooCpp] = FooCpp;
-  Server.addDocument(FooCpp, SourceContents);
-  auto Result = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
-  EXPECT_NE(Result, "<no-ast>");
-}
-
 TEST_F(ClangdVFSTest, FallbackWhenPreambleIsNotReady) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;

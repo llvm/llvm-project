@@ -58,6 +58,11 @@ namespace opts {
                    "--section-groups and --elf-hash-histogram."));
   cl::alias AllShort("a", cl::desc("Alias for --all"), cl::aliasopt(All));
 
+  // --dependent-libraries
+  cl::opt<bool>
+      DependentLibraries("dependent-libraries",
+                         cl::desc("Display the dependent libraries section"));
+
   // --headers -e
   cl::opt<bool>
       Headers("headers",
@@ -489,6 +494,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer,
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
   if (Obj->isELF()) {
+    if (opts::DependentLibraries)
+      Dumper->printDependentLibs();
     if (opts::ELFLinkerOptions)
       Dumper->printELFLinkerOptions();
     if (opts::ArchSpecificInfo)

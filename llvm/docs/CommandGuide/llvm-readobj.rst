@@ -152,6 +152,10 @@ The following options are implemented only for the ELF file format.
 
  Display demangled symbol names in the output.
 
+.. option:: --dependent-libraries
+
+ Display the dependent libraries section.
+
 .. option:: --dyn-relocations
 
  Display the dynamic relocation entries.

@@ -25,7 +25,7 @@ public:
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes.
   static void VPInstructionsToVPRecipes(
-      VPlanPtr &Plan,
+      Loop *OrigLoop, VPlanPtr &Plan,
       LoopVectorizationLegality::InductionList *Inductions,
       SmallPtrSetImpl<Instruction *> &DeadInstructions);
 };

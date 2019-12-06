@@ -726,6 +726,13 @@ def imm0_127 : Operand<i32>, ImmLeaf<i32, [{
   let PrintMethod = "printImm";
 }
 
+def imm0_127_64b : Operand<i64>, ImmLeaf<i64, [{
+  return ((uint64_t)Imm) < 128;
+}]> {
+  let ParserMatchClass = Imm0_127Operand;
+  let PrintMethod = "printImm";
+}
+
 // NOTE: These imm0_N operands have to be of type i64 because i64 is the size
 // for all shift-amounts.
 

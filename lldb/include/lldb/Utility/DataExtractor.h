@@ -188,16 +188,11 @@ public:
   ///     The type of objects to use when dumping data from this
   ///     object. See DataExtractor::Type.
   ///
-  /// \param[in] type_format
-  ///     The optional format to use for the \a type objects. If this
-  ///     is nullptr, the default format for the \a type will be used.
-  ///
   /// \return
   ///     The offset at which dumping ended.
   lldb::offset_t PutToLog(Log *log, lldb::offset_t offset,
                           lldb::offset_t length, uint64_t base_addr,
-                          uint32_t num_per_line, Type type,
-                          const char *type_format = nullptr) const;
+                          uint32_t num_per_line, Type type) const;
 
   /// Extract an arbitrary number of bytes in the specified byte order.
   ///

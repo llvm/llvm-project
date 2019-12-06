@@ -728,8 +728,6 @@ void IRExecutionUnit::CollectCandidateCPlusPlusNames(
         if (best_alternate_mangled_name) {
           CPP_specs.push_back(best_alternate_mangled_name);
         }
-
-        CPP_specs.push_back(SearchSpec(demangled, lldb::eFunctionNameTypeFull));
       }
     }
 

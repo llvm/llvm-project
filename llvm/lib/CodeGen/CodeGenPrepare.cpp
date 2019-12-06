@@ -375,6 +375,7 @@ class TypePromotionTransaction;
     bool optimizeSwitchInst(SwitchInst *SI);
     bool optimizeExtractElementInst(Instruction *Inst);
     bool dupRetToEnableTailCallOpts(BasicBlock *BB, bool &ModifiedDT);
+    bool fixupDbgValue(Instruction *I);
     bool placeDbgValues(Function &F);
     bool canFormExtLd(const SmallVectorImpl<Instruction *> &MovedExts,
                       LoadInst *&LI, Instruction *&Inst, bool HasPromoted);
@@ -2002,6 +2003,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
     case Intrinsic::ctlz:
       // If counting zeros is expensive, try to avoid it.
       return despeculateCountZeros(II, TLI, DL, ModifiedDT);
+    case Intrinsic::dbg_value:
+      return fixupDbgValue(II);
     }
 
     if (TLI) {
@@ -7203,6 +7206,28 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
   MadeChange |= dupRetToEnableTailCallOpts(&BB, ModifiedDT);
 
   return MadeChange;
+}
+
+// Some CGP optimizations may move or alter what's computed in a block. Check
+// whether a dbg.value intrinsic could be pointed at a more appropriate operand.
+bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
+  assert(isa<DbgValueInst>(I));
+  DbgValueInst &DVI = *cast<DbgValueInst>(I);
+
+  // Does this dbg.value refer to a sunk address calculation?
+  Value *Location = DVI.getVariableLocation();
+  WeakTrackingVH SunkAddrVH = SunkAddrs[Location];
+  Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
+  if (SunkAddr) {
+    // Point dbg.value at locally computed address, which should give the best
+    // opportunity to be accurately lowered. This update may change the type of
+    // pointer being referred to; however this makes no difference to debugging
+    // information, and we can't generate bitcasts that may affect codegen.
+    DVI.setOperand(0, MetadataAsValue::get(DVI.getContext(),
+                                           ValueAsMetadata::get(SunkAddr)));
+    return true;
+  }
+  return false;
 }
 
 // llvm.dbg.value is far away from the value then iSel may not be able

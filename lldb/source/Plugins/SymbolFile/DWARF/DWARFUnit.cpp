@@ -287,16 +287,25 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
 
   DWARFAttributes attributes;
   size_t num_attributes = cu_die.GetAttributes(this, attributes);
+
+  // Extract DW_AT_addr_base first, as other attributes may need it.
+  for (size_t i = 0; i < num_attributes; ++i) {
+    if (attributes.AttributeAtIndex(i) != DW_AT_addr_base)
+      continue;
+    DWARFFormValue form_value;
+    if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+      addr_base = form_value.Unsigned();
+      SetAddrBase(*addr_base);
+      break;
+    }
+  }
+
   for (size_t i = 0; i < num_attributes; ++i) {
     dw_attr_t attr = attributes.AttributeAtIndex(i);
     DWARFFormValue form_value;
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
-    case DW_AT_addr_base:
-      addr_base = form_value.Unsigned();
-      SetAddrBase(*addr_base);
-      break;
     case DW_AT_rnglists_base:
       ranges_base = form_value.Unsigned();
       SetRangesBase(*ranges_base);
@@ -358,10 +367,12 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   else if (gnu_addr_base)
     dwo_cu->SetAddrBase(*gnu_addr_base);
 
-  if (ranges_base)
-    dwo_cu->SetRangesBase(*ranges_base);
-  else if (gnu_ranges_base)
+  if (GetVersion() <= 4 && gnu_ranges_base)
     dwo_cu->SetRangesBase(*gnu_ranges_base);
+  else if (m_dwo_symbol_file->GetDWARFContext()
+               .getOrLoadRngListsData()
+               .GetByteSize() > 0)
+    dwo_cu->SetRangesBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
 
   for (size_t i = 0; i < m_dwo_symbol_file->DebugInfo()->GetNumUnits(); ++i) {
     DWARFUnit *unit = m_dwo_symbol_file->DebugInfo()->GetUnitAtIndex(i);
@@ -883,7 +894,7 @@ uint32_t DWARFUnit::GetHeaderByteSize() const {
 llvm::Expected<DWARFRangeList>
 DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   if (GetVersion() <= 4) {
-    const DWARFDebugRangesBase *debug_ranges = m_dwarf.GetDebugRanges();
+    const DWARFDebugRanges *debug_ranges = m_dwarf.GetDebugRanges();
     if (!debug_ranges)
       return llvm::make_error<llvm::object::GenericBinaryError>(
           "No debug_ranges section");

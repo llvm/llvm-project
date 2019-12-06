@@ -53,6 +53,7 @@ public:
   virtual void printUnwindInfo() = 0;
 
   // Only implemented for ELF at this time.
+  virtual void printDependentLibs() {}
   virtual void printDynamicRelocations() { }
   virtual void printDynamicTable() { }
   virtual void printNeededLibraries() { }

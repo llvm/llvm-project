@@ -41,6 +41,7 @@ add_clang_library(clangDaemon
   ClangdServer.cpp
   CodeComplete.cpp
   CodeCompletionStrings.cpp
+  CompileCommands.cpp
   Compiler.cpp
   Context.cpp
   Diagnostics.cpp
