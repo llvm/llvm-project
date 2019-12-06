@@ -235,6 +235,7 @@ protected:
   friend class ThreadGDBRemote;
   friend class GDBRemoteCommunicationClient;
   friend class GDBRemoteRegisterContext;
+  friend class UnwindWasm;
 
   /// Broadcaster event bits definitions.
   enum {

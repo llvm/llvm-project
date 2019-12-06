@@ -161,14 +161,14 @@ public:
   bool Evaluate(ExecutionContextScope *exe_scope,
                 lldb::addr_t loclist_base_load_addr,
                 const Value *initial_value_ptr, const Value *object_address_ptr,
-                Value &result, Status *error_ptr) const;
+                uint64_t byte_size, Value &result, Status *error_ptr) const;
 
   /// Wrapper for the static evaluate function that uses member variables to
   /// populate many operands
   bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                 lldb::addr_t loclist_base_load_addr,
                 const Value *initial_value_ptr, const Value *object_address_ptr,
-                Value &result, Status *error_ptr) const;
+                uint64_t byte_size, Value &result, Status *error_ptr) const;
 
   /// Evaluate a DWARF location expression in a particular context
   ///
@@ -211,6 +211,10 @@ public:
   ///     A value to put on top of the interpreter stack before evaluating
   ///     the expression, if the expression is parametrized.  Can be NULL.
   ///
+  /// \param[in] byte_size
+  ///     The size, in bytes, of the result of the expression to evaluate.
+  ///     Currently only used for WebAssembly targets.
+  ///
   /// \param[in] result
   ///     A value into which the result of evaluating the expression is
   ///     to be placed.
@@ -226,8 +230,8 @@ public:
                        const DWARFUnit *dwarf_cu,
                        const lldb::RegisterKind reg_set,
                        const Value *initial_value_ptr,
-                       const Value *object_address_ptr, Value &result,
-                       Status *error_ptr);
+                       const Value *object_address_ptr, uint64_t byte_size,
+                       Value &result, Status *error_ptr);
 
   bool GetExpressionData(DataExtractor &data) const {
     data = m_data;

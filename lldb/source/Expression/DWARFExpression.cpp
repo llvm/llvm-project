@@ -36,6 +36,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
+#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
+#include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 
 using namespace lldb;
@@ -914,7 +916,8 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
                            parent_frame->GetRegisterContext().get(),
                            /*loclist_base_addr=*/LLDB_INVALID_ADDRESS,
                            /*initial_value_ptr=*/nullptr,
-                           /*object_address_ptr=*/nullptr, result, error_ptr)) {
+                           /*object_address_ptr=*/nullptr, 0, result,
+                           error_ptr)) {
     LLDB_LOG(log,
              "Evaluate_DW_OP_entry_value: call site param evaluation failed");
     return false;
@@ -927,18 +930,20 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
 bool DWARFExpression::Evaluate(ExecutionContextScope *exe_scope,
                                lldb::addr_t loclist_base_load_addr,
                                const Value *initial_value_ptr,
-                               const Value *object_address_ptr, Value &result,
+                               const Value *object_address_ptr,
+                               uint64_t byte_size, Value &result,
                                Status *error_ptr) const {
   ExecutionContext exe_ctx(exe_scope);
   return Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, initial_value_ptr,
-                  object_address_ptr, result, error_ptr);
+                  object_address_ptr, byte_size, result, error_ptr);
 }
 
 bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
                                RegisterContext *reg_ctx,
                                lldb::addr_t loclist_base_load_addr,
                                const Value *initial_value_ptr,
-                               const Value *object_address_ptr, Value &result,
+                               const Value *object_address_ptr,
+                               uint64_t byte_size, Value &result,
                                Status *error_ptr) const {
   ModuleSP module_sp = m_module_wp.lock();
 
@@ -994,7 +999,8 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
           return DWARFExpression::Evaluate(
               exe_ctx, reg_ctx, module_sp,
               DataExtractor(m_data, offset, length), m_dwarf_cu, m_reg_kind,
-              initial_value_ptr, object_address_ptr, result, error_ptr);
+              initial_value_ptr, object_address_ptr, byte_size, result,
+              error_ptr);
         }
         offset += length;
       }
@@ -1007,7 +1013,8 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
   // Not a location list, just a single expression.
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, m_data,
                                    m_dwarf_cu, m_reg_kind, initial_value_ptr,
-                                   object_address_ptr, result, error_ptr);
+                                   object_address_ptr, byte_size, result,
+                                   error_ptr);
 }
 
 bool DWARFExpression::Evaluate(
@@ -1015,7 +1022,7 @@ bool DWARFExpression::Evaluate(
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
     const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind,
     const Value *initial_value_ptr, const Value *object_address_ptr,
-    Value &result, Status *error_ptr) {
+    uint64_t byte_size, Value &result, Status *error_ptr) {
 
   if (opcodes.GetByteSize() == 0) {
     if (error_ptr)
@@ -1032,8 +1039,16 @@ bool DWARFExpression::Evaluate(
     process = exe_ctx->GetProcessPtr();
     frame = exe_ctx->GetFramePtr();
   }
+
   if (reg_ctx == nullptr && frame)
     reg_ctx = frame->GetRegisterContext().get();
+
+  const llvm::Triple::ArchType machine =
+      frame->CalculateTarget()->GetArchitecture().GetMachine();
+  bool isWasm = (machine == llvm::Triple::wasm32); // wasm64 not supported yet.
+  process_gdb_remote::GDBRemoteCommunicationClient *gdb_comm = isWasm
+      ? &((process_gdb_remote::ProcessGDBRemote *)process)->GetGDBRemote()
+	  : nullptr;
 
   if (initial_value_ptr)
     stack.push_back(*initial_value_ptr);
@@ -1690,6 +1705,38 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top stack entry, adds it to the unsigned LEB128
     // constant operand and pushes the result.
     case DW_OP_plus_uconst:
+      if (isWasm) {
+        if (byte_size < 4) {
+          byte_size = 4; // default to 32 bit
+        }
+
+        const uint64_t uconst_value = opcodes.GetULEB128(&offset);
+
+        // Get current user-space stack frame pointer
+        Scalar value;
+        if (!frame || !frame->GetFrameBaseValue(value, error_ptr) ||
+            value.GetType() != Scalar::e_ulonglong) {
+          return false;
+	    }
+
+        if (byte_size <= 4096) {
+          uint8_t buffer[4096];
+          int frame_index = frame->GetConcreteFrameIndex();
+          if (!gdb_comm->WasmReadMemory(
+                  frame_index, value.ULongLong() + uconst_value, buffer,
+                  byte_size)) {
+            return false;
+          }
+          stack.push_back({buffer, static_cast<int>(byte_size)});
+        } else {
+          if (error_ptr)
+            error_ptr->SetErrorString("DW_OP_plus_uconst value size shouldn't "
+                                      "be bigger than 4096 bytes.");
+          return false;
+        }
+        break;
+      }
+
       if (stack.empty()) {
         if (error_ptr)
           error_ptr->SetErrorString(
@@ -2570,6 +2617,37 @@ bool DWARFExpression::Evaluate(
 
       stack.back().GetScalar() = tls_load_addr;
       stack.back().SetValueType(Value::eValueTypeLoadAddress);
+    } break;
+
+    case DW_OP_WASM_location: {
+      if (isWasm) {
+        int frame_index = frame->GetConcreteFrameIndex();
+        uint64_t wasm_op = opcodes.GetULEB128(&offset);
+        uint64_t index = opcodes.GetULEB128(&offset);
+        uint64_t value = 0;
+        switch (wasm_op) {
+        case 0: // Local
+          if (!gdb_comm->GetWasmLocal(frame_index, index, value)) {
+            return false;
+          }
+          break;
+        case 1: // Global
+          if (!gdb_comm->GetWasmGlobal(frame_index, index, value)) {
+            return false;
+          }
+          break;
+        case 2: // Operand Stack
+          if (!gdb_comm->GetWasmStackValue(frame_index, index, value)) {
+            return false;
+          }
+          break;
+        default:
+          return false;
+        }
+        stack.push_back(Scalar(value));
+      } else {
+        return false;
+      }
     } break;
 
     // OPCODE: DW_OP_addrx (DW_OP_GNU_addr_index is the legacy name.)

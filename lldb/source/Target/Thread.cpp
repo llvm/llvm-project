@@ -9,6 +9,7 @@
 #include "lldb/Target/Thread.h"
 #include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "Plugins/Process/Utility/UnwindMacOSXFrameBackchain.h"
+#include "Plugins/Process/Utility/UnwindWasm.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
@@ -2063,6 +2064,10 @@ Unwind *Thread::GetUnwinder() {
     case llvm::Triple::hexagon:
     case llvm::Triple::arc:
       m_unwinder_up.reset(new UnwindLLDB(*this));
+      break;
+
+    case llvm::Triple::wasm32:
+      m_unwinder_up.reset(new UnwindWasm(*this));
       break;
 
     default:

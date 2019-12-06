@@ -75,6 +75,7 @@ public:
 
 protected:
   friend class ThreadGDBRemote;
+  friend class UnwindWasm;
 
   bool ReadRegisterBytes(const RegisterInfo *reg_info, DataExtractor &data);
 

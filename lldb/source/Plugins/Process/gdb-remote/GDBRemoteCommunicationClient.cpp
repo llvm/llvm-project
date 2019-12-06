@@ -2680,6 +2680,138 @@ bool GDBRemoteCommunicationClient::GetThreadStopInfo(
   return false;
 }
 
+bool GDBRemoteCommunicationClient::GetWasmGlobal(int frame_index, int index,
+                                                 uint64_t &value) {
+  StreamString packet;
+  packet.PutCString("qWasmGlobal:");
+  packet.Printf("%d;%d", frame_index, index);
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response, false) !=
+      PacketResult::Success) {
+    return false;
+  }
+
+  if (!response.IsNormalResponse()) {
+    return false;
+  }
+
+  DataBufferSP buffer_sp(
+      new DataBufferHeap(response.GetStringRef().size() / 2, 0));
+  response.GetHexBytes(buffer_sp->GetData(), '\xcc');
+  if (buffer_sp->GetByteSize() == sizeof(value)) {
+    memcpy((uint8_t *)(&value), buffer_sp->GetBytes(),
+           buffer_sp->GetByteSize());
+    return true;
+  }
+
+  return false;
+}
+
+bool GDBRemoteCommunicationClient::GetWasmLocal(int frame_index, int index,
+                                                uint64_t &value) {
+  StreamString packet;
+  packet.Printf("qWasmLocal:");
+  packet.Printf("%d;%d", frame_index, index);
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response, false) !=
+      PacketResult::Success) {
+    return false;
+  }
+
+  if (!response.IsNormalResponse()) {
+    return false;
+  }
+
+  DataBufferSP buffer_sp(
+      new DataBufferHeap(response.GetStringRef().size() / 2, 0));
+  response.GetHexBytes(buffer_sp->GetData(), '\xcc');
+  if (buffer_sp->GetByteSize() == sizeof(value)) {
+    memcpy((uint8_t *)(&value), buffer_sp->GetBytes(),
+           buffer_sp->GetByteSize());
+    return true;
+  }
+
+  return false;
+}
+
+bool GDBRemoteCommunicationClient::GetWasmStackValue(int frame_index, int index,
+                                                     uint64_t &value) {
+  StreamString packet;
+  packet.PutCString("qWasmStackValue:");
+  packet.Printf("%d;%d", frame_index, index);
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response, false) !=
+      PacketResult::Success) {
+    return false;
+  }
+
+  if (!response.IsNormalResponse()) {
+    return false;
+  }
+
+  DataBufferSP buffer_sp(
+      new DataBufferHeap(response.GetStringRef().size() / 2, 0));
+  response.GetHexBytes(buffer_sp->GetData(), '\xcc');
+  if (buffer_sp->GetByteSize() == sizeof(value)) {
+    memcpy((uint8_t *)(&value), buffer_sp->GetBytes(),
+           buffer_sp->GetByteSize());
+    return true;
+  }
+
+  return false;
+}
+
+bool GDBRemoteCommunicationClient::WasmReadMemory(int frame_index, 
+                                                  lldb::addr_t addr, void *buf,
+                                                  size_t size) {
+  char packet[64];
+  int packet_len =
+      ::snprintf(packet, sizeof(packet), "qWasmMem:%d;%" PRIx64 ";%" PRIx64,
+                 frame_index, static_cast<uint64_t>(addr),
+                 static_cast<uint64_t>(size));
+  assert(packet_len + 1 < (int)sizeof(packet));
+  UNUSED_IF_ASSERT_DISABLED(packet_len);
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet, response, true) ==
+      PacketResult::Success) {
+    if (response.IsNormalResponse()) {
+      return size ==
+             response.GetHexBytes(llvm::MutableArrayRef<uint8_t>(
+                                      static_cast<uint8_t*>(buf), size),
+                                  '\xdd');
+    }
+  }
+  return false;
+}
+
+bool GDBRemoteCommunicationClient::GetWasmCallStack(
+    std::vector<lldb::addr_t> &call_stack_pcs) {
+  call_stack_pcs.clear();
+  StreamString packet;
+  packet.Printf("qWasmCallStack");
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response, false) !=
+      PacketResult::Success) {
+    return false;
+  }
+
+  if (!response.IsNormalResponse()) {
+    return false;
+  }
+
+  addr_t buf[1024 / sizeof(addr_t)];
+  size_t bytes = response.GetHexBytes(
+      llvm::MutableArrayRef<uint8_t>((uint8_t *)buf, sizeof(buf)), '\xdd');
+  if (bytes == 0) {
+    return false;
+  }
+
+  for (size_t i = 0; i < bytes / sizeof(addr_t); i++) {
+    call_stack_pcs.push_back(buf[i]);
+  }
+  return true;
+}
+
 uint8_t GDBRemoteCommunicationClient::SendGDBStoppointTypePacket(
     GDBStoppointType type, bool insert, addr_t addr, uint32_t length) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));

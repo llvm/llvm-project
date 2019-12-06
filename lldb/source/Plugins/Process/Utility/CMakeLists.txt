@@ -52,6 +52,7 @@ add_lldb_library(lldbPluginProcessUtility PLUGIN
   ThreadMemory.cpp
   UnwindLLDB.cpp
   UnwindMacOSXFrameBackchain.cpp
+  UnwindWasm.cpp
 
   LINK_LIBS
     lldbBreakpoint

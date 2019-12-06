@@ -17,6 +17,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
@@ -29,6 +30,9 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
+
+#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
+#include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
 
 #include <memory>
 #include <string>
@@ -563,8 +567,29 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         Process *process = exe_ctx->GetProcessPtr();
 
         if (process) {
-          const size_t bytes_read =
-              process->ReadMemory(address, dst, byte_size, error);
+          bool isWasm = false;
+          StackFrame *frame = exe_ctx->GetFramePtr();
+          if (frame) {
+            const llvm::Triple::ArchType machine =
+                frame->CalculateTarget()->GetArchitecture().GetMachine();
+             isWasm = (machine == llvm::Triple::wasm32); // wasm64 not supported
+          }
+
+          size_t bytes_read = 0;
+
+          if (isWasm) {
+            process_gdb_remote::GDBRemoteCommunicationClient *gdb_comm =
+                &((process_gdb_remote::ProcessGDBRemote *)process)
+                     ->GetGDBRemote();
+            int frame_index = frame->GetConcreteFrameIndex();
+            if (gdb_comm->WasmReadMemory(frame_index, address, dst,
+                                         byte_size)) {
+              bytes_read = byte_size;
+            }
+          } else {
+            bytes_read = process->ReadMemory(address, dst, byte_size, error);
+          }
+
           if (bytes_read != byte_size)
             error.SetErrorStringWithFormat(
                 "read memory from 0x%" PRIx64 " failed (%u of %u bytes read)",

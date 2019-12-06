@@ -1507,7 +1507,7 @@ RegisterContextLLDB::SavedLocationForRegister(
     cfa_val.SetValueType(Value::eValueTypeLoadAddress);
     Value result;
     Status error;
-    if (dwarfexpr.Evaluate(&exe_ctx, this, 0, &cfa_val, nullptr, result,
+    if (dwarfexpr.Evaluate(&exe_ctx, this, 0, &cfa_val, nullptr, 0, result,
                            &error)) {
       addr_t val;
       val = result.GetScalar().ULongLong();
@@ -1858,7 +1858,7 @@ bool RegisterContextLLDB::ReadFrameAddress(
     dwarfexpr.SetRegisterKind(row_register_kind);
     Value result;
     Status error;
-    if (dwarfexpr.Evaluate(&exe_ctx, this, 0, nullptr, nullptr, result,
+    if (dwarfexpr.Evaluate(&exe_ctx, this, 0, nullptr, nullptr, 0, result,
                            &error)) {
       address = result.GetScalar().ULongLong();
 
