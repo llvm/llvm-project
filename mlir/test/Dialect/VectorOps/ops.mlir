@@ -114,10 +114,8 @@ func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
   %1 = vector.contract #contraction_trait1 %arg0, %arg1, %arg3
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x8x5xf32>
   // Test contraction with optional vector mask arguments.
-  %lhs_mask = vector.make_index_tuple %arg4, %arg4, %arg4, %arg4
-    : tuple<index, index, index, index>
-  %rhs_mask = vector.make_index_tuple %arg4, %arg4, %arg4, %arg4
-    : tuple<index, index, index, index>
+  %lhs_mask = vector.constant_mask [7, 8, 16, 15] : vector<7x8x16x15xi1>
+  %rhs_mask = vector.constant_mask [8, 16, 7, 5] : vector<8x16x7x5xi1>
   // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]} {{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x8x5xf32>
   %2 = vector.contract #contraction_trait1 %arg0, %arg1, %arg3, %lhs_mask,
                                            %rhs_mask

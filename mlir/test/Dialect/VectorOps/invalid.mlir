@@ -597,10 +597,8 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
 func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
                   %arg2: vector<8x15x5xf32>, %arg3 :  vector<8x15x8x5xf32>,
                   %arg4 : index) {
-  %lhs_mask = vector.make_index_tuple %arg4, %arg4, %arg4, %arg4
-    : tuple<index, index, index, index>
-  %rhs_mask = vector.make_index_tuple %arg4, %arg4, %arg4, %arg4
-    : tuple<index, index, index, index>
+  %lhs_mask = vector.constant_mask [7, 8, 16, 15] : vector<7x8x16x15xi1>
+  %rhs_mask = vector.constant_mask [8, 16, 7, 5] : vector<8x16x7x5xi1>
   // expected-error@+1 {{expected zero or exactly 2 vector mask operands}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2, %lhs_mask
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
