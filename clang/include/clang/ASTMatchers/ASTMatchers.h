@@ -689,6 +689,31 @@ AST_POLYMORPHIC_MATCHER_P(
                              Builder);
 }
 
+/// Causes all nested matchers to be matched with the specified traversal kind.
+///
+/// Given
+/// \code
+///   void foo()
+///   {
+///       int i = 3.0;
+///   }
+/// \endcode
+/// The matcher
+/// \code
+///   traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
+///     varDecl(hasInitializer(floatLiteral().bind("init")))
+///   )
+/// \endcode
+/// matches the variable declaration with "init" bound to the "3.0".
+template <typename T>
+internal::Matcher<T> traverse(ast_type_traits::TraversalKind TK,
+                              const internal::Matcher<T> &InnerMatcher) {
+  return internal::DynTypedMatcher::constructRestrictedWrapper(
+             new internal::TraversalMatcher<T>(TK, InnerMatcher),
+             InnerMatcher.getID().first)
+      .template unconditionalConvertTo<T>();
+}
+
 /// Matches expressions that match InnerMatcher after any implicit AST
 /// nodes are stripped off.
 ///
