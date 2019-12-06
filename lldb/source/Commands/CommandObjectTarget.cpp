@@ -1349,7 +1349,7 @@ static void DumpFullpath(Stream &strm, const FileSpec *file_spec_ptr,
       strm.Printf("%-*s", width, fullpath.c_str());
       return;
     } else {
-      file_spec_ptr->Dump(&strm);
+      file_spec_ptr->Dump(strm.AsRawOstream());
       return;
     }
   }

@@ -211,7 +211,7 @@ public:
   ///
   /// \param[in] s
   ///     The stream to which to dump the object description.
-  void Dump(Stream *s) const;
+  void Dump(llvm::raw_ostream &s) const;
 
   Style GetPathStyle() const;
 
