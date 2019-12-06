@@ -873,6 +873,12 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1,
   // Don't break the bitcode reader hack.
   if (isa<ConstantExpr>(Mask)) return nullptr;
 
+  // Do not iterate on scalable vector. The num of elements is unknown at
+  // compile-time.
+  VectorType *ValTy = cast<VectorType>(V1->getType());
+  if (ValTy->isScalable())
+    return nullptr;
+
   unsigned SrcNumElts = V1->getType()->getVectorNumElements();
 
   // Loop over the shuffle mask, evaluating each element.
