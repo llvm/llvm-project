@@ -70,7 +70,8 @@ def main():
   # Get the current text.
   encoding = vim.eval("&encoding")
   buf = get_buffer(encoding)
-  text = '\n'.join(buf)
+  # Join the buffer into a single string with a terminating newline
+  text = '\n'.join(buf) + '\n'
 
   # Determine range to format.
   if vim.eval('exists("l:lines")') == '1':
@@ -129,7 +130,10 @@ def main():
   else:
     lines = stdout.decode(encoding).split('\n')
     output = json.loads(lines[0])
-    lines = lines[1:]
+    # Strip off the trailing newline (added above).
+    # This maintains trailing empty lines present in the buffer if
+    # the -lines specification requests them to remain unchanged.
+    lines = lines[1:-1]
     sequence = difflib.SequenceMatcher(None, buf, lines)
     for op in reversed(sequence.get_opcodes()):
       if op[0] is not 'equal':
