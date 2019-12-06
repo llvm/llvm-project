@@ -27,7 +27,6 @@ executable("dsymutil") {
     "DwarfStreamer.cpp",
     "MachODebugMapParser.cpp",
     "MachOUtils.cpp",
-    "NonRelocatableStringpool.cpp",
     "SymbolMap.cpp",
     "dsymutil.cpp",
   ]
