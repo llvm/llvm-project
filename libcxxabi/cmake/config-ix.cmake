@@ -71,8 +71,16 @@ endif()
 check_cxx_compiler_flag(-nostdinc++ LIBCXXABI_HAS_NOSTDINCXX_FLAG)
 
 # Check libraries
-check_library_exists(dl dladdr "" LIBCXXABI_HAS_DL_LIB)
-check_library_exists(pthread pthread_once "" LIBCXXABI_HAS_PTHREAD_LIB)
-check_library_exists(c __cxa_thread_atexit_impl ""
-  LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
-check_library_exists(System write "" LIBCXXABI_HAS_SYSTEM_LIB)
+if(FUCHSIA)
+  set(LIBCXXABI_HAS_DL_LIB NO)
+  set(LIBCXXABI_HAS_PTHREAD_LIB NO)
+  check_library_exists(c __cxa_thread_atexit_impl ""
+    LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
+  set(LIBCXXABI_HAS_SYSTEM_LIB NO)
+else()
+  check_library_exists(dl dladdr "" LIBCXXABI_HAS_DL_LIB)
+  check_library_exists(pthread pthread_once "" LIBCXXABI_HAS_PTHREAD_LIB)
+  check_library_exists(c __cxa_thread_atexit_impl ""
+    LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
+  check_library_exists(System write "" LIBCXXABI_HAS_SYSTEM_LIB)
+endif()
