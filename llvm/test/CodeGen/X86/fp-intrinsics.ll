@@ -1278,18 +1278,15 @@ define i32 @f20u(double %x) #0 {
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE-NEXT:    xorl %ecx, %ecx
+; X86-SSE-NEXT:    ucomisd %xmm0, %xmm1
+; X86-SSE-NEXT:    setbe %cl
+; X86-SSE-NEXT:    shll $31, %ecx
 ; X86-SSE-NEXT:    movapd %xmm0, %xmm2
 ; X86-SSE-NEXT:    cmpltsd %xmm1, %xmm2
-; X86-SSE-NEXT:    movapd %xmm2, %xmm3
-; X86-SSE-NEXT:    andpd %xmm0, %xmm2
-; X86-SSE-NEXT:    xorl %eax, %eax
-; X86-SSE-NEXT:    ucomisd %xmm0, %xmm1
-; X86-SSE-NEXT:    subsd %xmm1, %xmm0
-; X86-SSE-NEXT:    andnpd %xmm0, %xmm3
-; X86-SSE-NEXT:    orpd %xmm3, %xmm2
-; X86-SSE-NEXT:    cvttsd2si %xmm2, %ecx
-; X86-SSE-NEXT:    setbe %al
-; X86-SSE-NEXT:    shll $31, %eax
+; X86-SSE-NEXT:    andnpd %xmm1, %xmm2
+; X86-SSE-NEXT:    subsd %xmm2, %xmm0
+; X86-SSE-NEXT:    cvttsd2si %xmm0, %eax
 ; X86-SSE-NEXT:    xorl %ecx, %eax
 ; X86-SSE-NEXT:    retl
 ;
@@ -1326,14 +1323,14 @@ define i64 @f20u64(double %x) #0 {
 ; X87-NEXT:    .cfi_def_cfa_offset 24
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{\.LCPI.*}}
-; X87-NEXT:    fld %st(1)
-; X87-NEXT:    fsub %st(1), %st
 ; X87-NEXT:    xorl %edx, %edx
+; X87-NEXT:    fucomi %st(1), %st
+; X87-NEXT:    setbe %dl
+; X87-NEXT:    fldz
 ; X87-NEXT:    fxch %st(1)
-; X87-NEXT:    fucompi %st(2), %st
 ; X87-NEXT:    fcmovnbe %st(1), %st
 ; X87-NEXT:    fstp %st(1)
-; X87-NEXT:    setbe %dl
+; X87-NEXT:    fsubrp %st, %st(1)
 ; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -1355,14 +1352,11 @@ define i64 @f20u64(double %x) #0 {
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    movapd %xmm0, %xmm2
-; X86-SSE-NEXT:    subsd %xmm1, %xmm2
+; X86-SSE-NEXT:    cmpltsd %xmm1, %xmm2
+; X86-SSE-NEXT:    andnpd %xmm1, %xmm2
 ; X86-SSE-NEXT:    movapd %xmm0, %xmm3
-; X86-SSE-NEXT:    cmpltsd %xmm1, %xmm3
-; X86-SSE-NEXT:    movapd %xmm3, %xmm4
-; X86-SSE-NEXT:    andnpd %xmm2, %xmm4
-; X86-SSE-NEXT:    andpd %xmm0, %xmm3
-; X86-SSE-NEXT:    orpd %xmm4, %xmm3
-; X86-SSE-NEXT:    movlpd %xmm3, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    subsd %xmm2, %xmm3
+; X86-SSE-NEXT:    movsd %xmm3, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
@@ -1384,32 +1378,29 @@ define i64 @f20u64(double %x) #0 {
 ; SSE-LABEL: f20u64:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    xorl %ecx, %ecx
+; SSE-NEXT:    ucomisd %xmm1, %xmm0
+; SSE-NEXT:    setae %cl
+; SSE-NEXT:    shlq $63, %rcx
 ; SSE-NEXT:    movapd %xmm0, %xmm2
 ; SSE-NEXT:    cmpltsd %xmm1, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm3
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    ucomisd %xmm1, %xmm0
-; SSE-NEXT:    subsd %xmm1, %xmm0
-; SSE-NEXT:    andnpd %xmm0, %xmm3
-; SSE-NEXT:    orpd %xmm3, %xmm2
-; SSE-NEXT:    cvttsd2si %xmm2, %rcx
-; SSE-NEXT:    setae %al
-; SSE-NEXT:    shlq $63, %rax
+; SSE-NEXT:    andnpd %xmm1, %xmm2
+; SSE-NEXT:    subsd %xmm2, %xmm0
+; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    xorq %rcx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: f20u64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vcmpltsd %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm3
-; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm3, %xmm2
-; AVX1-NEXT:    vcvttsd2si %xmm2, %rcx
-; AVX1-NEXT:    xorl %eax, %eax
+; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vucomisd %xmm1, %xmm0
-; AVX1-NEXT:    setae %al
-; AVX1-NEXT:    shlq $63, %rax
+; AVX1-NEXT:    setae %cl
+; AVX1-NEXT:    shlq $63, %rcx
+; AVX1-NEXT:    vcmpltsd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vandnpd %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rax
 ; AVX1-NEXT:    xorq %rcx, %rax
 ; AVX1-NEXT:    retq
 ;
