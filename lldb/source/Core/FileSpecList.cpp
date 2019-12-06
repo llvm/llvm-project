@@ -47,7 +47,7 @@ void FileSpecList::Clear() { m_files.clear(); }
 void FileSpecList::Dump(Stream *s, const char *separator_cstr) const {
   collection::const_iterator pos, end = m_files.end();
   for (pos = m_files.begin(); pos != end; ++pos) {
-    pos->Dump(s);
+    pos->Dump(s->AsRawOstream());
     if (separator_cstr && ((pos + 1) != end))
       s->PutCString(separator_cstr);
   }

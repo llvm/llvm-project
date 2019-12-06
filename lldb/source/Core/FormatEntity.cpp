@@ -2310,7 +2310,7 @@ bool FormatEntity::FormatFileSpec(const FileSpec &file_spec, Stream &s,
                                   llvm::StringRef variable_name,
                                   llvm::StringRef variable_format) {
   if (variable_name.empty() || variable_name.equals(".fullpath")) {
-    file_spec.Dump(&s);
+    file_spec.Dump(s.AsRawOstream());
     return true;
   } else if (variable_name.equals(".basename")) {
     s.PutCString(file_spec.GetFilename().AsCString(""));

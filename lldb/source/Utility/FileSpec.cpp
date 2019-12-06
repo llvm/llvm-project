@@ -252,7 +252,7 @@ bool FileSpec::operator<(const FileSpec &rhs) const {
 
 // Dump a FileSpec object to a stream
 Stream &lldb_private::operator<<(Stream &s, const FileSpec &f) {
-  f.Dump(&s);
+  f.Dump(s.AsRawOstream());
   return s;
 }
 
@@ -321,14 +321,12 @@ llvm::Optional<FileSpec::Style> FileSpec::GuessPathStyle(llvm::StringRef absolut
 // Dump the object to the supplied stream. If the object contains a valid
 // directory name, it will be displayed followed by a directory delimiter, and
 // the filename.
-void FileSpec::Dump(Stream *s) const {
-  if (s) {
-    std::string path{GetPath(true)};
-    s->PutCString(path);
-    char path_separator = GetPreferredPathSeparator(m_style);
-    if (!m_filename && !path.empty() && path.back() != path_separator)
-      s->PutChar(path_separator);
-  }
+void FileSpec::Dump(llvm::raw_ostream &s) const {
+  std::string path{GetPath(true)};
+  s << path;
+  char path_separator = GetPreferredPathSeparator(m_style);
+  if (!m_filename && !path.empty() && path.back() != path_separator)
+    s << path_separator;
 }
 
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }

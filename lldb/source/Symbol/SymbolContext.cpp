@@ -184,7 +184,7 @@ void SymbolContext::GetDescription(Stream *s, lldb::DescriptionLevel level,
                                    Target *target) const {
   if (module_sp) {
     s->Indent("     Module: file = \"");
-    module_sp->GetFileSpec().Dump(s);
+    module_sp->GetFileSpec().Dump(s->AsRawOstream());
     *s << '"';
     if (module_sp->GetArchitecture().IsValid())
       s->Printf(", arch = \"%s\"",
@@ -310,7 +310,7 @@ void SymbolContext::Dump(Stream *s, Target *target) const {
   s->Indent();
   *s << "Module       = " << module_sp.get() << ' ';
   if (module_sp)
-    module_sp->GetFileSpec().Dump(s);
+    module_sp->GetFileSpec().Dump(s->AsRawOstream());
   s->EOL();
   s->Indent();
   *s << "CompileUnit  = " << comp_unit;
