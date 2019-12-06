@@ -41,9 +41,9 @@ define i32 @fptoui_double_i64(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptoui_double_i64'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = fptoui double undef to i64
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2I64 = fptoui <2 x double> undef to <2 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %V4I64 = fptoui <4 x double> undef to <4 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %V8I64 = fptoui <8 x double> undef to <8 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V2I64 = fptoui <2 x double> undef to <2 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %V4I64 = fptoui <4 x double> undef to <4 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %V8I64 = fptoui <8 x double> undef to <8 x i64>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptoui_double_i64'
@@ -84,9 +84,9 @@ define i32 @fptoui_double_i32(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptoui_double_i32'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptoui double undef to i32
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I32 = fptoui <2 x double> undef to <2 x i32>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %V4I32 = fptoui <4 x double> undef to <4 x i32>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %V8I32 = fptoui <8 x double> undef to <8 x i32>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I32 = fptoui <2 x double> undef to <2 x i32>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4I32 = fptoui <4 x double> undef to <4 x i32>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V8I32 = fptoui <8 x double> undef to <8 x i32>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptoui_double_i32'
@@ -127,9 +127,9 @@ define i32 @fptoui_double_i16(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptoui_double_i16'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = fptoui double undef to i16
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I16 = fptoui <2 x double> undef to <2 x i16>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %V4I16 = fptoui <4 x double> undef to <4 x i16>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %V8I16 = fptoui <8 x double> undef to <8 x i16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I16 = fptoui <2 x double> undef to <2 x i16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4I16 = fptoui <4 x double> undef to <4 x i16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V8I16 = fptoui <8 x double> undef to <8 x i16>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptoui_double_i16'
@@ -170,9 +170,9 @@ define i32 @fptoui_double_i8(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptoui_double_i8'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptoui double undef to i8
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I8 = fptoui <2 x double> undef to <2 x i8>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %V4I8 = fptoui <4 x double> undef to <4 x i8>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %V8I8 = fptoui <8 x double> undef to <8 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I8 = fptoui <2 x double> undef to <2 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4I8 = fptoui <4 x double> undef to <4 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V8I8 = fptoui <8 x double> undef to <8 x i8>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptoui_double_i8'
@@ -224,10 +224,10 @@ define i32 @fptoui_float_i64(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptoui_float_i64'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = fptoui float undef to i64
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2I64 = fptoui <2 x float> undef to <2 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %V4I64 = fptoui <4 x float> undef to <4 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %V8I64 = fptoui <8 x float> undef to <8 x i64>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 199 for instruction: %V16I64 = fptoui <16 x float> undef to <16 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V2I64 = fptoui <2 x float> undef to <2 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %V4I64 = fptoui <4 x float> undef to <4 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %V8I64 = fptoui <8 x float> undef to <8 x i64>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %V16I64 = fptoui <16 x float> undef to <16 x i64>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptoui_float_i64'
@@ -270,9 +270,9 @@ define i32 @fptoui_float_i32(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptoui_float_i32'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptoui float undef to i32
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V4I32 = fptoui <4 x float> undef to <4 x i32>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %V8I32 = fptoui <8 x float> undef to <8 x i32>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %V16I32 = fptoui <16 x float> undef to <16 x i32>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V4I32 = fptoui <4 x float> undef to <4 x i32>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %V8I32 = fptoui <8 x float> undef to <8 x i32>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 87 for instruction: %V16I32 = fptoui <16 x float> undef to <16 x i32>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptoui_float_i32'
@@ -313,9 +313,9 @@ define i32 @fptoui_float_i16(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptoui_float_i16'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = fptoui float undef to i16
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V4I16 = fptoui <4 x float> undef to <4 x i16>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %V8I16 = fptoui <8 x float> undef to <8 x i16>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %V16I16 = fptoui <16 x float> undef to <16 x i16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V4I16 = fptoui <4 x float> undef to <4 x i16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %V8I16 = fptoui <8 x float> undef to <8 x i16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 87 for instruction: %V16I16 = fptoui <16 x float> undef to <16 x i16>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptoui_float_i16'
@@ -356,9 +356,9 @@ define i32 @fptoui_float_i8(i32 %arg) {
 ;
 ; SLM-LABEL: 'fptoui_float_i8'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptoui float undef to i8
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V4I8 = fptoui <4 x float> undef to <4 x i8>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %V8I8 = fptoui <8 x float> undef to <8 x i8>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %V16I8 = fptoui <16 x float> undef to <16 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V4I8 = fptoui <4 x float> undef to <4 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %V8I8 = fptoui <8 x float> undef to <8 x i8>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 87 for instruction: %V16I8 = fptoui <16 x float> undef to <16 x i8>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'fptoui_float_i8'
