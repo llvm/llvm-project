@@ -1,4 +1,4 @@
-//===--------- support.cu - NVPTX OpenMP support functions ------- CUDA -*-===//
+//===--------- support.cu - GPU OpenMP support functions --------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
