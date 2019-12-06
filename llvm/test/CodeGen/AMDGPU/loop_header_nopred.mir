@@ -9,9 +9,9 @@ name:            loop_header_nopred
 body:             |
   ; GCN-LABEL: name: loop_header_nopred
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   S_CBRANCH_VCCZ %bb.3, implicit $vcc
-  ; GCN:   S_BRANCH %bb.2
+  ; GCN:   successors: %bb.1(0x80000000)
+  ; GCN:   S_INST_PREFETCH 1
+  ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.6 (align 64):
   ; GCN:   successors: %bb.7(0x04000000), %bb.1(0x7c000000)
   ; GCN:   S_CBRANCH_VCCNZ %bb.7, implicit $vcc

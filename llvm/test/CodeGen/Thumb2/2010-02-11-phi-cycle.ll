@@ -31,9 +31,14 @@ return:                                           ; preds = %bb, %entry
 
 define i32 @test_dead_cycle(i32 %n) nounwind {
 ; CHECK-LABEL: test_dead_cycle:
+; CHECK: subs
+; also check for duplicate induction variables (radar 7645034)
+; CHECK: subs r{{.*}}, #1
+; CHECK-NOT: subs r{{.*}}, #1
 ; CHECK: bl
 ; CHECK-NOT: mov
 ; CHECK: bl
+; CHECK: pop
 entry:
   %0 = icmp eq i32 %n, 1                          ; <i1> [#uses=1]
   br i1 %0, label %return, label %bb.nph
@@ -58,10 +63,6 @@ bb1:                                              ; preds = %bb
   br label %bb2
 
 bb2:                                              ; preds = %bb1, %bb
-; also check for duplicate induction variables (radar 7645034)
-; CHECK: subs r{{.*}}, #1
-; CHECK-NOT: subs r{{.*}}, #1
-; CHECK: pop
   %u.0 = phi i64 [ %ins, %bb1 ], [ %u.17, %bb ]   ; <i64> [#uses=2]
   %indvar.next = add i32 %indvar, 1               ; <i32> [#uses=2]
   %exitcond = icmp eq i32 %indvar.next, %tmp      ; <i1> [#uses=1]

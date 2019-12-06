@@ -330,13 +330,14 @@ endif:
 
 ; GCN-LABEL: {{^}}divergent_inside_uniform:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_scc1 [[ENDIF_LABEL:[0-9_A-Za-z]+]]
+; GCN: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
+; GCN: [[ENDIF_LABEL:[0-9_A-Za-z]+]]:
+; GCN: [[IF_LABEL]]:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN: ; mask branch [[ENDIF_LABEL]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
-; GCN: [[ENDIF_LABEL]]:
 ; GCN: s_endpgm
 define amdgpu_kernel void @divergent_inside_uniform(i32 addrspace(1)* %out, i32 %cond) {
 entry:

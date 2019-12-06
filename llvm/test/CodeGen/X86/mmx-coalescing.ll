@@ -16,17 +16,14 @@ define i32 @test(%SA* %pSA, i16* %A, i32 %B, i32 %C, i32 %D, i8* %E) {
 ; CHECK-NEXT:  # %bb.2: # %if.B
 ; CHECK-NEXT:    pshufw $238, %mm0, %mm0 # mm0 = mm0[2,3,2,3]
 ; CHECK-NEXT:    movq %mm0, %rax
-; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    jne .LBB0_4
+; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_1: # %if.A
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movd %edx, %mm1
 ; CHECK-NEXT:    psllq %mm1, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    jne .LBB0_4
-; CHECK-NEXT:  # %bb.3: # %if.C
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  .LBB0_3: # %if.C
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: # %merge
