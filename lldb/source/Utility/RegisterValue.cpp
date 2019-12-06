@@ -8,7 +8,6 @@
 
 #include "lldb/Utility/RegisterValue.h"
 
-#include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -330,6 +329,35 @@ static bool ParseVectorEncoding(const RegisterInfo *reg_info,
   return true;
 }
 
+static bool UInt64ValueIsValidForByteSize(uint64_t uval64,
+                                          size_t total_byte_size) {
+  if (total_byte_size > 8)
+    return false;
+
+  if (total_byte_size == 8)
+    return true;
+
+  const uint64_t max =
+      (static_cast<uint64_t>(1) << static_cast<uint64_t>(total_byte_size * 8)) -
+      1;
+  return uval64 <= max;
+}
+
+static bool SInt64ValueIsValidForByteSize(int64_t sval64,
+                                          size_t total_byte_size) {
+  if (total_byte_size > 8)
+    return false;
+
+  if (total_byte_size == 8)
+    return true;
+
+  const int64_t max = (static_cast<int64_t>(1)
+                       << static_cast<uint64_t>(total_byte_size * 8 - 1)) -
+                      1;
+  const int64_t min = ~(max);
+  return min <= sval64 && sval64 <= max;
+}
+
 Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
                                          llvm::StringRef value_str) {
   Status error;
@@ -368,7 +396,7 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
       break;
     }
 
-    if (!Args::UInt64ValueIsValidForByteSize(uval64, byte_size)) {
+    if (!UInt64ValueIsValidForByteSize(uval64, byte_size)) {
       error.SetErrorStringWithFormat(
           "value 0x%" PRIx64
           " is too large to fit in a %u byte unsigned integer value",
@@ -397,7 +425,7 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
       break;
     }
 
-    if (!Args::SInt64ValueIsValidForByteSize(ival64, byte_size)) {
+    if (!SInt64ValueIsValidForByteSize(ival64, byte_size)) {
       error.SetErrorStringWithFormat(
           "value 0x%" PRIx64
           " is too large to fit in a %u byte signed integer value",
