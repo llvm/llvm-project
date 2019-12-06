@@ -12,7 +12,6 @@
 #include "DeclContext.h"
 #include "DwarfStreamer.h"
 #include "MachOUtils.h"
-#include "NonRelocatableStringpool.h"
 #include "dsymutil.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -36,6 +35,7 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/Config/config.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
@@ -2701,12 +2701,12 @@ bool DwarfLinker::link(const DebugMap &Map) {
 
   // This Dwarf string pool which is only used for uniquing. This one should
   // never be used for offsets as its not thread-safe or predictable.
-  UniquingStringPool UniquingStringPool;
+  UniquingStringPool UniquingStringPool(nullptr, true);
 
   // This Dwarf string pool which is used for emission. It must be used
   // serially as the order of calling getStringOffset matters for
   // reproducibility.
-  OffsetsStringPool OffsetsStringPool(Options.Translator);
+  OffsetsStringPool OffsetsStringPool(Options.Translator, true);
 
   // ODR Contexts for the link.
   DeclContextTree ODRContexts;
