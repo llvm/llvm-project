@@ -82,6 +82,24 @@ namespace clang {
     BackendConsumer *BackendCon;
   };
 
+  static void reportOptRecordError(Error E, DiagnosticsEngine &Diags,
+                                   const CodeGenOptions CodeGenOpts) {
+    handleAllErrors(
+        std::move(E),
+      [&](const RemarkSetupFileError &E) {
+          Diags.Report(diag::err_cannot_open_file)
+              << CodeGenOpts.OptRecordFile << E.message();
+        },
+      [&](const RemarkSetupPatternError &E) {
+          Diags.Report(diag::err_drv_optimization_remark_pattern)
+              << E.message() << CodeGenOpts.OptRecordPasses;
+        },
+      [&](const RemarkSetupFormatError &E) {
+          Diags.Report(diag::err_drv_optimization_remark_format)
+              << CodeGenOpts.OptRecordFormat;
+        });
+    }
+
   class BackendConsumer : public ASTConsumer {
     using LinkModule = CodeGenAction::LinkModule;
 
@@ -268,29 +286,16 @@ namespace clang {
         CodeGenOpts, this));
 
       Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
-          setupOptimizationRemarks(Ctx, CodeGenOpts.OptRecordFile,
-                                   CodeGenOpts.OptRecordPasses,
-                                   CodeGenOpts.OptRecordFormat,
-                                   CodeGenOpts.DiagnosticsWithHotness,
-                                   CodeGenOpts.DiagnosticsHotnessThreshold);
+          setupOptimizationRemarks(
+              Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
+              CodeGenOpts.OptRecordFormat, CodeGenOpts.DiagnosticsWithHotness,
+              CodeGenOpts.DiagnosticsHotnessThreshold);
 
       if (Error E = OptRecordFileOrErr.takeError()) {
-        handleAllErrors(
-            std::move(E),
-            [&](const RemarkSetupFileError &E) {
-              Diags.Report(diag::err_cannot_open_file)
-                  << CodeGenOpts.OptRecordFile << E.message();
-            },
-            [&](const RemarkSetupPatternError &E) {
-              Diags.Report(diag::err_drv_optimization_remark_pattern)
-                  << E.message() << CodeGenOpts.OptRecordPasses;
-            },
-            [&](const RemarkSetupFormatError &E) {
-              Diags.Report(diag::err_drv_optimization_remark_format)
-                  << CodeGenOpts.OptRecordFormat;
-            });
+        reportOptRecordError(std::move(E), Diags, CodeGenOpts);
         return;
       }
+
       std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
           std::move(*OptRecordFileOrErr);
 
@@ -1046,6 +1051,8 @@ void CodeGenAction::ExecuteAction() {
   if (getCurrentFileKind().getLanguage() == Language::LLVM_IR) {
     BackendAction BA = static_cast<BackendAction>(Act);
     CompilerInstance &CI = getCompilerInstance();
+    auto &CodeGenOpts = CI.getCodeGenOpts();
+    auto &Diagnostics = CI.getDiagnostics();
     std::unique_ptr<raw_pwrite_stream> OS =
         GetOutputStream(CI, getCurrentFile(), BA);
     if (BA != Backend_EmitNothing && !OS)
@@ -1064,23 +1071,41 @@ void CodeGenAction::ExecuteAction() {
 
     const TargetOptions &TargetOpts = CI.getTargetOpts();
     if (TheModule->getTargetTriple() != TargetOpts.Triple) {
-      CI.getDiagnostics().Report(SourceLocation(),
-                                 diag::warn_fe_override_module)
+      Diagnostics.Report(SourceLocation(),
+                         diag::warn_fe_override_module)
           << TargetOpts.Triple;
       TheModule->setTargetTriple(TargetOpts.Triple);
     }
 
-    EmbedBitcode(TheModule.get(), CI.getCodeGenOpts(),
+    EmbedBitcode(TheModule.get(), CodeGenOpts,
                  MainFile->getMemBufferRef());
 
     LLVMContext &Ctx = TheModule->getContext();
     Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler,
-                                      &CI.getDiagnostics());
+                                      &Diagnostics);
 
-    EmitBackendOutput(CI.getDiagnostics(), CI.getHeaderSearchOpts(),
-                      CI.getCodeGenOpts(), TargetOpts, CI.getLangOpts(),
+    Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
+        setupOptimizationRemarks(
+            Ctx, CodeGenOpts.OptRecordFile,
+            CodeGenOpts.OptRecordPasses,
+            CodeGenOpts.OptRecordFormat,
+            CodeGenOpts.DiagnosticsWithHotness,
+            CodeGenOpts.DiagnosticsHotnessThreshold);
+
+    if (Error E = OptRecordFileOrErr.takeError()) {
+      reportOptRecordError(std::move(E), Diagnostics, CodeGenOpts);
+      return;
+    }
+    std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
+      std::move(*OptRecordFileOrErr);
+
+    EmitBackendOutput(Diagnostics, CI.getHeaderSearchOpts(),
+                      CodeGenOpts, TargetOpts, CI.getLangOpts(),
                       CI.getTarget().getDataLayout(), TheModule.get(), BA,
                       std::move(OS));
+
+    if (OptRecordFile)
+      OptRecordFile->keep();
     return;
   }
 
