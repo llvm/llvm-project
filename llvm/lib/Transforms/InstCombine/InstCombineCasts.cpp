@@ -863,19 +863,15 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext,
         (Pred == ICmpInst::ICMP_SGT && Op1C->isAllOnesValue())) {
       if (!DoTransform) return Cmp;
 
-      Value *In = Op0;
       Value *ShAmt = ConstantInt::get(CmpOpType,
                                       CmpOpType->getScalarSizeInBits() - 1);
-      In = Builder.CreateLShr(In, ShAmt, In->getName() + ".lobit");
-      if (CmpOpType != ZType)
-        In = Builder.CreateIntCast(In, ZType, false /*ZExt*/);
+      Value *Sh = Builder.CreateLShr(Op0, ShAmt, Op0->getName() + ".lobit");
+      Value *Cast = Builder.CreateIntCast(Sh, ZType, false /*ZExt*/);
+      // Invert low bit if testing for positive.
+      if (Pred == ICmpInst::ICMP_SGT)
+        Cast = Builder.CreateXor(Cast, ConstantInt::get(CmpOpType, 1));
 
-      if (Pred == ICmpInst::ICMP_SGT) {
-        Constant *One = ConstantInt::get(CmpOpType, 1);
-        In = Builder.CreateXor(In, One, In->getName() + ".not");
-      }
-
-      return replaceInstUsesWith(Zext, In);
+      return replaceInstUsesWith(Zext, Cast);
     }
 
     // zext (X == 0) to i32 --> X^1      iff X has only the low bit set.
