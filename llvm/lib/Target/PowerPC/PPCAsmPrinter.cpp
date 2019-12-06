@@ -1883,18 +1883,20 @@ PPCAIXAsmPrinter::getMCSymbolForTOCPseudoMO(const MachineOperand &MO) {
   // declaration of a function, then XSym is an external referenced symbol.
   // Hence we may need to explictly create a MCSectionXCOFF for it so that we
   // can return its symbol later.
-  if (GO->isDeclaration() && !XSym->hasContainingCsect()) {
-    // Make sure the storage class is set.
-    const XCOFF::StorageClass SC =
-        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
-    XSym->setStorageClass(SC);
+  if (GO->isDeclaration()) {
+    if (!XSym->hasContainingCsect()) {
+      // Make sure the storage class is set.
+      const XCOFF::StorageClass SC =
+          TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
+      XSym->setStorageClass(SC);
 
-    MCSectionXCOFF *Csect = OutStreamer->getContext().getXCOFFSection(
-        XSym->getName(), isa<Function>(GO) ? XCOFF::XMC_DS : XCOFF::XMC_UA,
-        XCOFF::XTY_ER, SC, SectionKind::getMetadata());
-    XSym->setContainingCsect(Csect);
+      MCSectionXCOFF *Csect = OutStreamer->getContext().getXCOFFSection(
+          XSym->getName(), isa<Function>(GO) ? XCOFF::XMC_DS : XCOFF::XMC_UA,
+          XCOFF::XTY_ER, SC, SectionKind::getMetadata());
+      XSym->setContainingCsect(Csect);
+    }
 
-    return Csect->getQualNameSymbol();
+    return XSym->getContainingCsect()->getQualNameSymbol();
   }
 
   // Handle initialized global variables.

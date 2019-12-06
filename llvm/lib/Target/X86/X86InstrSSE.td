@@ -2667,18 +2667,18 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in {
 }
 
 // Binary Arithmetic instructions
-defm ADD : basic_sse12_fp_binop_p<0x58, "add", fadd, SchedWriteFAddSizes>,
-           basic_sse12_fp_binop_s<0x58, "add", fadd, SchedWriteFAddSizes>,
+defm ADD : basic_sse12_fp_binop_p<0x58, "add", any_fadd, SchedWriteFAddSizes>,
+           basic_sse12_fp_binop_s<0x58, "add", any_fadd, SchedWriteFAddSizes>,
            basic_sse12_fp_binop_s_int<0x58, "add", null_frag, SchedWriteFAddSizes>;
-defm MUL : basic_sse12_fp_binop_p<0x59, "mul", fmul, SchedWriteFMulSizes>,
-           basic_sse12_fp_binop_s<0x59, "mul", fmul, SchedWriteFMulSizes>,
+defm MUL : basic_sse12_fp_binop_p<0x59, "mul", any_fmul, SchedWriteFMulSizes>,
+           basic_sse12_fp_binop_s<0x59, "mul", any_fmul, SchedWriteFMulSizes>,
            basic_sse12_fp_binop_s_int<0x59, "mul", null_frag, SchedWriteFMulSizes>;
 let isCommutable = 0 in {
-  defm SUB : basic_sse12_fp_binop_p<0x5C, "sub", fsub, SchedWriteFAddSizes>,
-             basic_sse12_fp_binop_s<0x5C, "sub", fsub, SchedWriteFAddSizes>,
+  defm SUB : basic_sse12_fp_binop_p<0x5C, "sub", any_fsub, SchedWriteFAddSizes>,
+             basic_sse12_fp_binop_s<0x5C, "sub", any_fsub, SchedWriteFAddSizes>,
              basic_sse12_fp_binop_s_int<0x5C, "sub", null_frag, SchedWriteFAddSizes>;
-  defm DIV : basic_sse12_fp_binop_p<0x5E, "div", fdiv, SchedWriteFDivSizes>,
-             basic_sse12_fp_binop_s<0x5E, "div", fdiv, SchedWriteFDivSizes>,
+  defm DIV : basic_sse12_fp_binop_p<0x5E, "div", any_fdiv, SchedWriteFDivSizes>,
+             basic_sse12_fp_binop_s<0x5E, "div", any_fdiv, SchedWriteFDivSizes>,
              basic_sse12_fp_binop_s_int<0x5E, "div", null_frag, SchedWriteFDivSizes>;
   defm MAX : basic_sse12_fp_binop_p<0x5F, "max", X86fmax, SchedWriteFCmpSizes>,
              basic_sse12_fp_binop_s<0x5F, "max", X86fmax, SchedWriteFCmpSizes>,
@@ -2773,15 +2773,15 @@ multiclass scalar_math_patterns<SDNode Op, string OpcPrefix, SDNode Move,
   }
 }
 
-defm : scalar_math_patterns<fadd, "ADDSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
-defm : scalar_math_patterns<fsub, "SUBSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
-defm : scalar_math_patterns<fmul, "MULSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
-defm : scalar_math_patterns<fdiv, "DIVSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
+defm : scalar_math_patterns<any_fadd, "ADDSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
+defm : scalar_math_patterns<any_fsub, "SUBSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
+defm : scalar_math_patterns<any_fmul, "MULSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
+defm : scalar_math_patterns<any_fdiv, "DIVSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
 
-defm : scalar_math_patterns<fadd, "ADDSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
-defm : scalar_math_patterns<fsub, "SUBSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
-defm : scalar_math_patterns<fmul, "MULSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
-defm : scalar_math_patterns<fdiv, "DIVSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
+defm : scalar_math_patterns<any_fadd, "ADDSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
+defm : scalar_math_patterns<any_fsub, "SUBSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
+defm : scalar_math_patterns<any_fmul, "MULSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
+defm : scalar_math_patterns<any_fdiv, "DIVSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
 
 /// Unop Arithmetic
 /// In addition, we also have a special variant of the scalar form here to

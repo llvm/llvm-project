@@ -56,7 +56,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       src/data_sharing.cu
       src/libcall.cu
       ${devicertl_common_directory}/src/loop.cu
-      src/omptarget-nvptx.cu
+      ${devicertl_common_directory}/src/omptarget.cu
       src/parallel.cu
       src/reduction.cu
       src/support.cu

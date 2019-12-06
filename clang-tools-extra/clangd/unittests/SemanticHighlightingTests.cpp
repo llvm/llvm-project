@@ -407,8 +407,8 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       }
     )cpp",
       R"cpp(
-      template<typename $TemplateParameter[[T]],
-        void ($TemplateParameter[[T]]::*$TemplateParameter[[method]])(int)>
+      template<typename $TemplateParameter[[T]], 
+        void (T::*$TemplateParameter[[method]])(int)>
       struct $Class[[G]] {
         void $Method[[foo]](
             $TemplateParameter[[T]] *$Parameter[[O]]) {
@@ -625,6 +625,30 @@ $InactiveCode[[]]      int Inactive3;
 $InactiveCode[[]]      #else
       int $Variable[[Active2]];
       #endif
+    )cpp",
+      // Argument to 'sizeof...'
+      R"cpp(
+      template <typename... $TemplateParameter[[Elements]]>
+      struct $Class[[TupleSize]] {
+        static const int $StaticField[[size]] =
+sizeof...($TemplateParameter[[Elements]]);
+      };
+    )cpp",
+      // More dependent types
+      R"cpp(
+      template <typename $TemplateParameter[[T]]>
+      struct $Class[[Waldo]] {
+        using $Typedef[[Location1]] = typename $TemplateParameter[[T]]
+            ::$DependentType[[Resolver]]::$DependentType[[Location]];
+        using $Typedef[[Location2]] = typename $TemplateParameter[[T]]
+            ::template $DependentType[[Resolver]]<$TemplateParameter[[T]]>
+            ::$DependentType[[Location]];
+        using $Typedef[[Location3]] = typename $TemplateParameter[[T]]
+            ::$DependentType[[Resolver]]
+            ::template $DependentType[[Location]]<$TemplateParameter[[T]]>;
+        static const int $StaticField[[Value]] = $TemplateParameter[[T]]
+            ::$DependentType[[Resolver]]::$DependentName[[Value]];
+      };
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

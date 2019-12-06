@@ -1,9 +1,8 @@
 //===- GsymReader.h ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -94,27 +93,44 @@ public:
 
   /// Get the full function info for an address.
   ///
+  /// This should be called when a client will store a copy of the complete
+  /// FunctionInfo for a given address. For one off lookups, use the lookup()
+  /// function below.
+  ///
+  /// Symbolication server processes might want to parse the entire function
+  /// info for a given address and cache it if the process stays around to
+  /// service many symbolication addresses, like for parsing profiling
+  /// information.
+  ///
   /// \param Addr A virtual address from the orignal object file to lookup.
+  ///
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing to lookup the
-  /// address,
+  /// address.
   llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
+
+  /// Lookup an address in the a GSYM.
+  ///
+  /// Lookup just the information needed for a specific address \a Addr. This
+  /// function is faster that calling getFunctionInfo() as it will only return
+  /// information that pertains to \a Addr and allows the parsing to skip any
+  /// extra information encoded for other addresses. For example the line table
+  /// parsing can stop when a matching LineEntry has been fouhnd, and the
+  /// InlineInfo can stop parsing early once a match has been found and also
+  /// skip information that doesn't match. This avoids memory allocations and
+  /// is much faster for lookups.
+  ///
+  /// \param Addr A virtual address from the orignal object file to lookup.
+  /// \returns An expected LookupResult that contains only the information
+  /// needed for the current address, or an error object that indicates reason
+  /// for failing to lookup the address.
+  llvm::Expected<LookupResult> lookup(uint64_t Addr) const;
 
   /// Get a string from the string table.
   ///
   /// \param Offset The string table offset for the string to retrieve.
   /// \returns The string from the strin table.
   StringRef getString(uint32_t Offset) const { return StrTab[Offset]; }
-
-protected:
-  /// Gets an address from the address table.
-  ///
-  /// Addresses are stored as offsets frrom the gsym::Header::BaseAddress.
-  ///
-  /// \param Index A index into the address table.
-  /// \returns A resolved virtual address for adddress in the address table
-  /// or llvm::None if Index is out of bounds.
-  Optional<uint64_t> getAddress(size_t Index) const;
 
   /// Get the a file entry for the suppplied file index.
   ///
@@ -130,6 +146,16 @@ protected:
       return Files[Index];
     return llvm::None;
   }
+
+protected:
+  /// Gets an address from the address table.
+  ///
+  /// Addresses are stored as offsets frrom the gsym::Header::BaseAddress.
+  ///
+  /// \param Index A index into the address table.
+  /// \returns A resolved virtual address for adddress in the address table
+  /// or llvm::None if Index is out of bounds.
+  Optional<uint64_t> getAddress(size_t Index) const;
 
   /// Get an appropriate address info offsets array.
   ///

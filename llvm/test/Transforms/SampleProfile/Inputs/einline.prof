@@ -1,7 +1,7 @@
 _Z3foov:200:100
- 1: _Z3barv:0
+ 1: _ZL3barv:0
  2: no_inline:100
- 3: _Z3barv:100
+ 3: _ZL3barv:100
 recursive:200:100
  1: recursive:100
  2: recursive:100

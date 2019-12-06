@@ -1421,22 +1421,32 @@ bool llvm::LowerDbgDeclare(Function &F) {
         }))
       continue;
 
-    for (auto &AIUse : AI->uses()) {
-      User *U = AIUse.getUser();
-      if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
-        if (AIUse.getOperandNo() == 1)
-          ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
-      } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
-        ConvertDebugDeclareToDebugValue(DDI, LI, DIB);
-      } else if (CallInst *CI = dyn_cast<CallInst>(U)) {
-        // This is a call by-value or some other instruction that takes a
-        // pointer to the variable. Insert a *value* intrinsic that describes
-        // the variable by dereferencing the alloca.
-        DebugLoc NewLoc = getDebugValueLoc(DDI, nullptr);
-        auto *DerefExpr =
-            DIExpression::append(DDI->getExpression(), dwarf::DW_OP_deref);
-        DIB.insertDbgValueIntrinsic(AI, DDI->getVariable(), DerefExpr, NewLoc,
-                                    CI);
+    SmallVector<const Value *, 8> WorkList;
+    WorkList.push_back(AI);
+    while (!WorkList.empty()) {
+      const Value *V = WorkList.pop_back_val();
+      for (auto &AIUse : V->uses()) {
+        User *U = AIUse.getUser();
+        if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
+          if (AIUse.getOperandNo() == 1)
+            ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
+        } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
+          ConvertDebugDeclareToDebugValue(DDI, LI, DIB);
+        } else if (CallInst *CI = dyn_cast<CallInst>(U)) {
+          // This is a call by-value or some other instruction that takes a
+          // pointer to the variable. Insert a *value* intrinsic that describes
+          // the variable by dereferencing the alloca.
+          if (!CI->isLifetimeStartOrEnd()) {
+            DebugLoc NewLoc = getDebugValueLoc(DDI, nullptr);
+            auto *DerefExpr =
+                DIExpression::append(DDI->getExpression(), dwarf::DW_OP_deref);
+            DIB.insertDbgValueIntrinsic(AI, DDI->getVariable(), DerefExpr,
+                                        NewLoc, CI);
+          }
+        } else if (BitCastInst *BI = dyn_cast<BitCastInst>(U)) {
+          if (BI->getType()->isPointerTy())
+            WorkList.push_back(BI);
+        }
       }
     }
     DDI->eraseFromParent();

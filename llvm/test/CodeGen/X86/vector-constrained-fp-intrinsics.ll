@@ -115,10 +115,10 @@ define <4 x double> @constrained_vector_fdiv_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fdiv_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movapd {{.*#+}} xmm2 = [1.0E+1,1.0E+1]
-; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
-; CHECK-NEXT:    divpd %xmm2, %xmm0
 ; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [3.0E+0,4.0E+0]
 ; CHECK-NEXT:    divpd %xmm2, %xmm1
+; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
+; CHECK-NEXT:    divpd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_fdiv_v4f64:
@@ -507,10 +507,10 @@ entry:
 define <4 x double> @constrained_vector_fmul_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fmul_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [1.7976931348623157E+308,1.7976931348623157E+308]
-; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [2.0E+0,3.0E+0]
-; CHECK-NEXT:    mulpd %xmm1, %xmm0
-; CHECK-NEXT:    mulpd {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [1.7976931348623157E+308,1.7976931348623157E+308]
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [4.0E+0,5.0E+0]
+; CHECK-NEXT:    mulpd %xmm0, %xmm1
+; CHECK-NEXT:    mulpd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_fmul_v4f64:
@@ -644,10 +644,10 @@ entry:
 define <4 x double> @constrained_vector_fadd_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fadd_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [1.7976931348623157E+308,1.7976931348623157E+308]
-; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,1.0000000000000001E-1]
-; CHECK-NEXT:    addpd %xmm1, %xmm0
-; CHECK-NEXT:    addpd {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [1.7976931348623157E+308,1.7976931348623157E+308]
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [2.0E+0,2.0000000000000001E-1]
+; CHECK-NEXT:    addpd %xmm0, %xmm1
+; CHECK-NEXT:    addpd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_fadd_v4f64:
@@ -784,10 +784,10 @@ entry:
 define <4 x double> @constrained_vector_fsub_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fsub_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-1.7976931348623157E+308,-1.7976931348623157E+308]
-; CHECK-NEXT:    movapd %xmm1, %xmm0
-; CHECK-NEXT:    subpd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [-1.7976931348623157E+308,-1.7976931348623157E+308]
+; CHECK-NEXT:    movapd %xmm0, %xmm1
 ; CHECK-NEXT:    subpd {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    subpd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_fsub_v4f64:

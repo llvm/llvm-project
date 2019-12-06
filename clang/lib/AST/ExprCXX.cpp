@@ -107,7 +107,7 @@ CXXRewrittenBinaryOperator::getDecomposedForm() const {
     return Result;
 
   // Otherwise, we expect a <=> to now be on the LHS.
-  E = Result.LHS->IgnoreImplicit();
+  E = Result.LHS->IgnoreImplicitAsWritten();
   if (auto *BO = dyn_cast<BinaryOperator>(E)) {
     assert(BO->getOpcode() == BO_Cmp);
     Result.LHS = BO->getLHS();
@@ -1769,18 +1769,19 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(ASTContext &C,
     NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
     SourceLocation ConceptNameLoc, NamedDecl *FoundDecl,
     ConceptDecl *NamedConcept, const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    ArrayRef<TemplateArgument> ConvertedArgs, Optional<bool> IsSatisfied)
+    ArrayRef<TemplateArgument> ConvertedArgs,
+    const ConstraintSatisfaction *Satisfaction)
     : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary,
            /*TypeDependent=*/false,
            // All the flags below are set in setTemplateArguments.
-           /*ValueDependent=*/!IsSatisfied.hasValue(),
-           /*InstantiationDependent=*/false,
+           /*ValueDependent=*/!Satisfaction, /*InstantiationDependent=*/false,
            /*ContainsUnexpandedParameterPacks=*/false),
       NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
       ConceptNameLoc(ConceptNameLoc), FoundDecl(FoundDecl),
-      NamedConcept(NamedConcept, IsSatisfied ? *IsSatisfied : true),
-      NumTemplateArgs(ConvertedArgs.size()) {
-
+      NamedConcept(NamedConcept), NumTemplateArgs(ConvertedArgs.size()),
+      Satisfaction(Satisfaction ?
+                   ASTConstraintSatisfaction::Create(C, *Satisfaction) :
+                   nullptr) {
   setTemplateArguments(ArgsAsWritten, ConvertedArgs);
 }
 
@@ -1827,13 +1828,13 @@ ConceptSpecializationExpr::Create(ASTContext &C, NestedNameSpecifierLoc NNS,
                                   ConceptDecl *NamedConcept,
                                const ASTTemplateArgumentListInfo *ArgsAsWritten,
                                   ArrayRef<TemplateArgument> ConvertedArgs,
-                                  Optional<bool> IsSatisfied) {
+                                  const ConstraintSatisfaction *Satisfaction) {
   void *Buffer = C.Allocate(totalSizeToAlloc<TemplateArgument>(
                                 ConvertedArgs.size()));
   return new (Buffer) ConceptSpecializationExpr(C, NNS, TemplateKWLoc,
                                                 ConceptNameLoc, FoundDecl,
                                                 NamedConcept, ArgsAsWritten,
-                                                ConvertedArgs, IsSatisfied);
+                                                ConvertedArgs, Satisfaction);
 }
 
 ConceptSpecializationExpr *

@@ -1,9 +1,8 @@
 //===- GsymReader.cpp -----------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -259,6 +258,21 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
                                 "address 0x%" PRIx64 " not in GSYM", Addr);
     }
   }
+  return createStringError(std::errc::invalid_argument,
+                           "failed to extract address[%" PRIu64 "]",
+                           *AddressIndex);
+}
+
+llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
+  Expected<uint64_t> AddressIndex = getAddressIndex(Addr);
+  if (!AddressIndex)
+    return AddressIndex.takeError();
+  // Address info offsets size should have been checked in parse().
+  assert(*AddressIndex < AddrInfoOffsets.size());
+  auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
+  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset), Endian, 4);
+  if (Optional<uint64_t> OptAddr = getAddress(*AddressIndex))
+    return FunctionInfo::lookup(Data, *this, *OptAddr, Addr);
   return createStringError(std::errc::invalid_argument,
                            "failed to extract address[%" PRIu64 "]",
                            *AddressIndex);

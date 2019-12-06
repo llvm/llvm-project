@@ -358,6 +358,15 @@ public:
     return getSamplesFor(CanonName);
   }
 
+  /// Return the samples collected for function \p F, create empty
+  /// FunctionSamples if it doesn't exist.
+  FunctionSamples *getOrCreateSamplesFor(const Function &F) {
+    std::string FGUID;
+    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+    CanonName = getRepInFormat(CanonName, getFormat(), FGUID);
+    return &Profiles[CanonName];
+  }
+
   /// Return the samples collected for function \p F.
   virtual FunctionSamples *getSamplesFor(StringRef Fname) {
     if (Remapper) {

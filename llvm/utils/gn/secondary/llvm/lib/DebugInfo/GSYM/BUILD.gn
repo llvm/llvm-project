@@ -12,6 +12,7 @@ static_library("GSYM") {
     "Header.cpp",
     "InlineInfo.cpp",
     "LineTable.cpp",
+    "LookupResult.cpp",
     "Range.cpp",
   ]
 }

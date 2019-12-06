@@ -87,9 +87,6 @@ public:
   // Version definition index.
   uint16_t versionId;
 
-  // An index into the .branch_lt section on PPC64.
-  uint16_t ppc64BranchltIndex = -1;
-
   // Symbol binding. This is not overwritten by replace() to track
   // changes during resolution. In particular:
   //  - An undefined weak is still weak when it resolves to a shared library.
@@ -181,7 +178,6 @@ public:
 
   bool isInGot() const { return gotIndex != -1U; }
   bool isInPlt() const { return pltIndex != -1U; }
-  bool isInPPC64Branchlt() const { return ppc64BranchltIndex != 0xffff; }
 
   uint64_t getVA(int64_t addend = 0) const;
 
@@ -190,8 +186,6 @@ public:
   uint64_t getGotPltOffset() const;
   uint64_t getGotPltVA() const;
   uint64_t getPltVA() const;
-  uint64_t getPPC64LongBranchTableVA() const;
-  uint64_t getPPC64LongBranchOffset() const;
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
 

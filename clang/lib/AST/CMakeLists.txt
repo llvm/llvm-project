@@ -14,6 +14,7 @@ clang_tablegen(Opcodes.inc
 
 add_clang_library(clangAST
   APValue.cpp
+  ASTConcept.cpp
   ASTConsumer.cpp
   ASTContext.cpp
   ASTDiagnostic.cpp

@@ -581,9 +581,6 @@ public:
   /// Return the number of symbols in this section.
   SymbolSet::size_type symbols_size() { return Symbols.size(); }
 
-  /// Return true if this section contains no symbols.
-  bool symbols_empty() const { return Symbols.empty(); }
-
 private:
   void addSymbol(Symbol &Sym) {
     assert(!Symbols.count(&Sym) && "Symbol is already in this section");
@@ -618,21 +615,21 @@ class SectionRange {
 public:
   SectionRange() = default;
   SectionRange(const Section &Sec) {
-    if (Sec.symbols_empty())
+    if (llvm::empty(Sec.blocks()))
       return;
-    First = Last = *Sec.symbols().begin();
-    for (auto *Sym : Sec.symbols()) {
-      if (Sym->getAddress() < First->getAddress())
-        First = Sym;
-      if (Sym->getAddress() > Last->getAddress())
-        Last = Sym;
+    First = Last = *Sec.blocks().begin();
+    for (auto *B : Sec.blocks()) {
+      if (B->getAddress() < First->getAddress())
+        First = B;
+      if (B->getAddress() > Last->getAddress())
+        Last = B;
     }
   }
-  Symbol *getFirstSymbol() const {
+  Block *getFirstBlock() const {
     assert((!Last || First) && "First can not be null if end is non-null");
     return First;
   }
-  Symbol *getLastSymbol() const {
+  Block *getLastBlock() const {
     assert((First || !Last) && "Last can not be null if start is non-null");
     return Last;
   }
@@ -641,17 +638,16 @@ public:
     return !First;
   }
   JITTargetAddress getStart() const {
-    return First ? First->getBlock().getAddress() : 0;
+    return First ? First->getAddress() : 0;
   }
   JITTargetAddress getEnd() const {
-    return Last ? Last->getBlock().getAddress() + Last->getBlock().getSize()
-                : 0;
+    return Last ? Last->getAddress() + Last->getSize() : 0;
   }
   uint64_t getSize() const { return getEnd() - getStart(); }
 
 private:
-  Symbol *First = nullptr;
-  Symbol *Last = nullptr;
+  Block *First = nullptr;
+  Block *Last = nullptr;
 };
 
 class LinkGraph {

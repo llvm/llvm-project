@@ -1,14 +1,14 @@
 //===- InlineInfo.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
+#include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/Support/DataExtractor.h"
 #include <algorithm>
@@ -58,6 +58,108 @@ llvm::Optional<InlineInfo::InlineArray> InlineInfo::getInlineStack(uint64_t Addr
   if (getInlineStackHelper(*this, Addr, Result))
     return Result;
   return llvm::None;
+}
+
+/// Skip an InlineInfo object in the specified data at the specified offset.
+///
+/// Used during the InlineInfo::lookup() call to quickly skip child InlineInfo
+/// objects where the addres ranges isn't contained in the InlineInfo object
+/// or its children. This avoids allocations by not appending child InlineInfo
+/// objects to the InlineInfo::Children array.
+///
+/// \param Data The binary stream to read the data from.
+///
+/// \param Offset The byte offset within \a Data.
+///
+/// \param SkippedRanges If true, address ranges have already been skipped.
+
+static bool skip(DataExtractor &Data, uint64_t &Offset, bool SkippedRanges) {
+  if (!SkippedRanges) {
+    if (AddressRanges::skip(Data, Offset) == 0)
+      return false;
+  }
+  bool HasChildren = Data.getU8(&Offset) != 0;
+  Data.getU32(&Offset); // Skip Inline.Name.
+  Data.getULEB128(&Offset); // Skip Inline.CallFile.
+  Data.getULEB128(&Offset); // Skip Inline.CallLine.
+  if (HasChildren) {
+    while (skip(Data, Offset, false /* SkippedRanges */))
+      /* Do nothing */;
+  }
+  // We skipped a valid InlineInfo.
+  return true;
+}
+
+/// A Lookup helper functions.
+///
+/// Used during the InlineInfo::lookup() call to quickly only parse an
+/// InlineInfo object if the address falls within this object. This avoids
+/// allocations by not appending child InlineInfo objects to the
+/// InlineInfo::Children array and also skips any InlineInfo objects that do
+/// not contain the address we are looking up.
+///
+/// \param Data The binary stream to read the data from.
+///
+/// \param Offset The byte offset within \a Data.
+///
+/// \param BaseAddr The address that the relative address range offsets are
+///                 relative to.
+
+static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
+                   uint64_t BaseAddr, uint64_t Addr, SourceLocations &SrcLocs,
+                   llvm::Error &Err) {
+  InlineInfo Inline;
+  Inline.Ranges.decode(Data, BaseAddr, Offset);
+  if (Inline.Ranges.empty())
+    return true;
+  // Check if the address is contained within the inline information, and if
+  // not, quickly skip this InlineInfo object and all its children.
+  if (!Inline.Ranges.contains(Addr)) {
+    skip(Data, Offset, true /* SkippedRanges */);
+    return false;
+  }
+
+  // The address range is contained within this InlineInfo, add the source
+  // location for this InlineInfo and any children that contain the address.
+  bool HasChildren = Data.getU8(&Offset) != 0;
+  Inline.Name = Data.getU32(&Offset);
+  Inline.CallFile = (uint32_t)Data.getULEB128(&Offset);
+  Inline.CallLine = (uint32_t)Data.getULEB128(&Offset);
+  if (HasChildren) {
+    // Child address ranges are encoded relative to the first address in the
+    // parent InlineInfo object.
+    const auto ChildBaseAddr = Inline.Ranges[0].Start;
+    bool Done = false;
+    while (!Done)
+      Done = lookup(GR, Data, Offset, ChildBaseAddr, Addr, SrcLocs, Err);
+  }
+
+  Optional<FileEntry> CallFile = GR.getFile(Inline.CallFile);
+  if (!CallFile) {
+    Err = createStringError(std::errc::invalid_argument,
+                            "failed to extract file[%" PRIu32 "]",
+                            Inline.CallFile);
+    return false;
+  }
+
+  SourceLocation SrcLoc;
+  SrcLoc.Name = SrcLocs.back().Name;
+  SrcLoc.Dir = GR.getString(CallFile->Dir);
+  SrcLoc.Base = GR.getString(CallFile->Base);
+  SrcLoc.Line = Inline.CallLine;
+  SrcLocs.back().Name = GR.getString(Inline.Name);
+  SrcLocs.push_back(SrcLoc);
+  return true;
+}
+
+llvm::Error InlineInfo::lookup(const GsymReader &GR, DataExtractor &Data,
+                               uint64_t BaseAddr, uint64_t Addr,
+                               SourceLocations &SrcLocs) {
+  // Call our recursive helper function starting at offset zero.
+  uint64_t Offset = 0;
+  llvm::Error Err = Error::success();
+  ::lookup(GR, Data, Offset, BaseAddr, Addr, SrcLocs, Err);
+  return Err;
 }
 
 /// Decode an InlineInfo in Data at the specified offset.

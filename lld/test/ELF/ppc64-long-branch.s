@@ -1,94 +1,82 @@
 # REQUIRES: ppc
+# RUN: echo 'SECTIONS { \
+# RUN:       .text_low 0x2000: { *(.text_low) } \
+# RUN:       .text_high 0x2002000 : { *(.text_high) } \
+# RUN:       }' > %t.script
 
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: ld.lld --no-toc-optimize -z separate-code %t.o -o %t
-# RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
-# RUN: llvm-readelf -x .branch_lt %t | FileCheck %s -check-prefix=BRANCH-LE
+# RUN: llvm-mc -filetype=obj -triple=ppc64le %s -o %t.o
+# RUN: ld.lld -T %t.script %t.o -o %t
+# RUN: llvm-readelf -S -r %t | FileCheck --check-prefix=SEC %s
+# RUN: llvm-readelf -x .branch_lt %t | FileCheck --check-prefix=BRANCH-LE %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
-# RUN: ld.lld --no-toc-optimize -z separate-code %t.o -o %t
-# RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
-# RUN: llvm-readelf -x .branch_lt %t | FileCheck %s -check-prefix=BRANCH-BE
+# RUN: llvm-mc -filetype=obj -triple=ppc64 %s -o %t.o
+# RUN: ld.lld -T %t.script %t.o -o %t
+# RUN: llvm-readelf -S -r %t | FileCheck --check-prefix=SEC %s
+# RUN: llvm-readelf -x .branch_lt %t | FileCheck --check-prefix=BRANCH-BE %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-        .text
-        .abiversion 2
-        .protected callee
-        .globl callee
-        .p2align 4
-        .type callee,@function
-callee:
-.Lfunc_gep0:
-    addis 2, 12, .TOC.-.Lfunc_gep0@ha
-    addi 2, 2, .TOC.-.Lfunc_gep0@l
-.Lfunc_lep0:
-    .localentry callee, .Lfunc_lep0-.Lfunc_gep0
-    addis 4, 2, .LC0@toc@ha
-    ld    4, .LC0@toc@l(4)
-    lwz   3, 0(4)
-    blr
+# SEC: Name       Type     Address          Off     Size   ES Flg Lk Inf Al
+# SEC: .got       PROGBITS 0000000002002028 2002028 000008 00  WA  0   0  8
+# SEC: .branch_lt PROGBITS 0000000002002030 2002030 000018 00  WA  0   0  8
 
-        .space 0x2000000
+# SEC: There are no relocations in this file.
 
-        .protected _start
-        .global _start
-        .p2align 4
-        .type _start,@function
+## high@localentry (high+8), .text_high+16 and .text_low+8
+# BRANCH-LE:      0x02002030 08200002 00000000 10200002 00000000
+# BRANCH-LE-NEXT: 0x02002040 08200000 00000000
+# BRANCH-BE:      0x02002030 00000000 02002008 00000000 02002010
+# BRANCH-BE-NEXT: 0x02002040 00000000 00002008
+
+# CHECK:      _start:
+# CHECK-NEXT:     2000:       bl .+24
+# CHECK-NEXT:                 bl .+20
+# CHECK-NEXT:                 bl .+16
+# CHECK-NEXT:                 bl .+33554428
+
+## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32760
+# CHECK:      __long_branch_high:
+# CHECK-NEXT:     2018:       addis 12, 2, 0
+# CHECK-NEXT:                 ld 12, -32760(12)
+# CHECK-NEXT:                 mtctr 12
+# CHECK-NEXT:                 bctr
+
+## &.branch_lt[1] - .TOC. = .branch_lt - (.got+0x8000) = -32752
+# CHECK:      __long_branch_:
+# CHECK-NEXT:     2028:       addis 12, 2, 0
+# CHECK-NEXT:                 ld 12, -32752(12)
+# CHECK-NEXT:                 mtctr 12
+# CHECK-NEXT:                 bctr
+
+.section .text_low, "ax", %progbits
+.globl _start
 _start:
-.Lfunc_begin1:
-.Lfunc_gep1:
-    addis 2, 12, .TOC.-.Lfunc_gep1@ha
-    addi 2, 2, .TOC.-.Lfunc_gep1@l
-.Lfunc_lep1:
-    .localentry	_start, .Lfunc_lep1-.Lfunc_gep1
-    mflr 0
-    std  0, 16(1)
-    stdu 1, -32(1)
-    bl callee
-    bl callee
-    addi 1, 1, 32
-    ld   0, 16(1)
-    mtlr 0
+bl high          # Need a thunk
+bl high          # Need a thunk
+bl high          # Need a thunk
+bl high
+bl .text_high+16 # Need a thunk
+blr
 
-        .section        .toc,"aw",@progbits
-.LC0:
-       .tc a[TC],a
-
-
-        .data
-        .type a,@object
-        .globl a
-        .p2align 2
-a:
-        .long 11
-        .size a, 4
-
-# NM: 0000000012028000 d .TOC.
-
-# Without --toc-optimize, compute the address of .toc[0] first. .toc[0] stores
-# the address of a.
-# .TOC. - callee = 0x12030000 - 0x10010000 = (514<<16) - 32768
-# CHECK: callee:
-# CHECK:   10010000:       addis 2, 12, 514
-# CHECK:   10010004:       addi 2, 2, -32768
-# CHECK:   10010008:       addis 4, 2, 0
-
-# __long_branch_callee - . = 0x12010050 - 0x12010034 = 20
-# __long_branch_callee is not a PLT call stub. Calling it does not need TOC
-# restore, so it doesn't have to be followed by a nop.
-# CHECK: _start:
-# CHECK:   12010034:       bl .+20
-# CHECK:   12010038:       bl .+16
-
-# BRANCH-LE:     section '.branch_lt':
-# BRANCH-LE-NEXT: 0x12030018 08000110 00000000
-# BRANCH-BE:     section '.branch_lt':
-# BRANCH-BE-NEXT: 0x12030018 00000000 10010008
-
-# .branch_lt - .TOC. = 0x12030018 - 0x12028000 = (1<<16) - 32744
-# CHECK:     __long_branch_callee:
-# CHECK-NEXT: 12010048:       addis 12, 2, 1
+# CHECK:      Disassembly of section .text_high:
+# CHECK-EMPTY:
+# CHECK-NEXT: high:
+# CHECK-NEXT:  2002000:       addis 2, 12, 1
+# CHECK-NEXT:                 addi 2, 2, -32728
+# CHECK-NEXT:                 bl .-33554432
+# CHECK-NEXT:                 bl .+12
+# CHECK:      __long_branch_:
+# CHECK-NEXT:  2002018:       addis 12, 2, 0
 # CHECK-NEXT:                 ld 12, -32744(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
+
+.section .text_high, "ax", %progbits
+.globl high
+high:
+addis 2, 12, .TOC.-high@ha
+addi 2, 2, .TOC.-high@l
+.localentry high, 8
+bl .text_low+8
+bl .text_low+8 # Need a thunk
+blr
