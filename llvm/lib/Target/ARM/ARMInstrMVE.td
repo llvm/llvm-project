@@ -2529,32 +2529,32 @@ class MVE_VQSHL_imm<string suffix, dag imm>
   let Inst{10-8} = 0b111;
 }
 
-def MVE_VSLIimms8 : MVE_VQSHL_imm<"s8", (ins imm0_7:$imm)> {
+def MVE_VQSHLimms8 : MVE_VQSHL_imm<"s8", (ins imm0_7:$imm)> {
   let Inst{28} = 0b0;
   let Inst{21-19} = 0b001;
 }
 
-def MVE_VSLIimmu8 : MVE_VQSHL_imm<"u8", (ins imm0_7:$imm)> {
+def MVE_VQSHLimmu8 : MVE_VQSHL_imm<"u8", (ins imm0_7:$imm)> {
   let Inst{28} = 0b1;
   let Inst{21-19} = 0b001;
 }
 
-def MVE_VSLIimms16 : MVE_VQSHL_imm<"s16", (ins imm0_15:$imm)> {
+def MVE_VQSHLimms16 : MVE_VQSHL_imm<"s16", (ins imm0_15:$imm)> {
   let Inst{28} = 0b0;
   let Inst{21-20} = 0b01;
 }
 
-def MVE_VSLIimmu16 : MVE_VQSHL_imm<"u16", (ins imm0_15:$imm)> {
+def MVE_VQSHLimmu16 : MVE_VQSHL_imm<"u16", (ins imm0_15:$imm)> {
   let Inst{28} = 0b1;
   let Inst{21-20} = 0b01;
 }
 
-def MVE_VSLIimms32 : MVE_VQSHL_imm<"s32", (ins imm0_31:$imm)> {
+def MVE_VQSHLimms32 : MVE_VQSHL_imm<"s32", (ins imm0_31:$imm)> {
   let Inst{28} = 0b0;
   let Inst{21} = 0b1;
 }
 
-def MVE_VSLIimmu32 : MVE_VQSHL_imm<"u32", (ins imm0_31:$imm)> {
+def MVE_VQSHLimmu32 : MVE_VQSHL_imm<"u32", (ins imm0_31:$imm)> {
   let Inst{28} = 0b1;
   let Inst{21} = 0b1;
 }
