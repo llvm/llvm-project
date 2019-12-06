@@ -234,7 +234,7 @@ if.end:
   %c = add i64 %y, 47
   call void @f13(i64 %c)
 ; CHECK: adds
-; CHECK: adcs
+; CHECK-NEXT: adcs
 ; CHECK: bl
   ret void
 }
