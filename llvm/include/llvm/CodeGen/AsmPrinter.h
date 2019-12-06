@@ -59,7 +59,6 @@ class MachineModuleInfo;
 class MachineOptimizationRemarkEmitter;
 class MCAsmInfo;
 class MCCFIInstruction;
-struct MCCodePaddingContext;
 class MCContext;
 class MCExpr;
 class MCInst;
@@ -696,8 +695,6 @@ private:
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &S);
   /// Emit GlobalAlias or GlobalIFunc.
   void emitGlobalIndirectSymbol(Module &M, const GlobalIndirectSymbol &GIS);
-  void setupCodePaddingContext(const MachineBasicBlock &MBB,
-                               MCCodePaddingContext &Context) const;
 };
 
 } // end namespace llvm

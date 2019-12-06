@@ -85,7 +85,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCCodePadder.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
@@ -2923,21 +2922,6 @@ static void emitBasicBlockLoopComments(const MachineBasicBlock &MBB,
   PrintChildLoopComment(OS, Loop, AP.getFunctionNumber());
 }
 
-void AsmPrinter::setupCodePaddingContext(const MachineBasicBlock &MBB,
-                                         MCCodePaddingContext &Context) const {
-  assert(MF != nullptr && "Machine function must be valid");
-  bool OptForSize = MF->getFunction().hasOptSize() ||
-                    llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
-  Context.IsPaddingActive = !MF->hasInlineAsm() &&
-                            !OptForSize &&
-                            TM.getOptLevel() != CodeGenOpt::None;
-  Context.IsBasicBlockReachableViaFallthrough =
-      std::find(MBB.pred_begin(), MBB.pred_end(), MBB.getPrevNode()) !=
-      MBB.pred_end();
-  Context.IsBasicBlockReachableViaBranch =
-      MBB.pred_size() > 0 && !isBlockOnlyReachableByFallthrough(&MBB);
-}
-
 /// EmitBasicBlockStart - This method prints the label for the specified
 /// MachineBasicBlock, an alignment (if present) and a comment describing
 /// it if appropriate.
@@ -2954,9 +2938,6 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
   const Align Alignment = MBB.getAlignment();
   if (Alignment != Align::None())
     EmitAlignment(Alignment);
-  MCCodePaddingContext Context;
-  setupCodePaddingContext(MBB, Context);
-  OutStreamer->EmitCodePaddingBasicBlockStart(Context);
 
   // If the block has its address taken, emit any labels that were used to
   // reference the block.  It is possible that there is more than one label
@@ -3004,11 +2985,7 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
   }
 }
 
-void AsmPrinter::EmitBasicBlockEnd(const MachineBasicBlock &MBB) {
-  MCCodePaddingContext Context;
-  setupCodePaddingContext(MBB, Context);
-  OutStreamer->EmitCodePaddingBasicBlockEnd(Context);
-}
+void AsmPrinter::EmitBasicBlockEnd(const MachineBasicBlock &MBB) {}
 
 void AsmPrinter::EmitVisibility(MCSymbol *Sym, unsigned Visibility,
                                 bool IsDefinition) const {

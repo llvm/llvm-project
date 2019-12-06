@@ -12,7 +12,6 @@ add_llvm_component_library(LLVMMC
   MCAsmStreamer.cpp
   MCAssembler.cpp
   MCCodeEmitter.cpp
-  MCCodePadder.cpp
   MCCodeView.cpp
   MCContext.cpp
   MCDwarf.cpp
