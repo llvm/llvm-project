@@ -265,7 +265,7 @@ func @failedOperandSizeAttrWrongTotalSize(%arg: i32) {
 // -----
 
 func @failedOperandSizeAttrWrongCount(%arg: i32) {
-  // expected-error @+1 {{'operand_segment_sizes' attribute for specifiying operand segments must have 4 elements}}
+  // expected-error @+1 {{'operand_segment_sizes' attribute for specifying operand segments must have 4 elements}}
   "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[2, 1, 1]>: vector<3xi32>} : (i32, i32, i32, i32) -> ()
 }
 
@@ -315,7 +315,7 @@ func @failedResultSizeAttrWrongTotalSize() {
 // -----
 
 func @failedResultSizeAttrWrongCount() {
-  // expected-error @+1 {{'result_segment_sizes' attribute for specifiying result segments must have 4 elements}}
+  // expected-error @+1 {{'result_segment_sizes' attribute for specifying result segments must have 4 elements}}
   %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[2, 1, 1]>: vector<3xi32>} : () -> (i32, i32, i32, i32)
 }
 

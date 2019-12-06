@@ -109,7 +109,7 @@ TEST(StructsGenTest, ClassofMissingFalse) {
   llvm::SmallVector<mlir::NamedAttribute, 3> newValues(
       expectedValues.begin() + 1, expectedValues.end());
 
-  // Make a new DictionaryAttr and validate it is not a validte TestStruct.
+  // Make a new DictionaryAttr and validate it is not a validate TestStruct.
   auto badDictionary = mlir::DictionaryAttr::get(newValues, &context);
   ASSERT_FALSE(test::TestStruct::classof(badDictionary));
 }

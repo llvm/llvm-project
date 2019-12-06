@@ -375,7 +375,7 @@ private:
     return mlir::success();
   }
 
-  /// Emit a coinstant for a literal/constant array. It will be emitted as a
+  /// Emit a constant for a literal/constant array. It will be emitted as a
   /// flattened array of data in an Attribute attached to a `toy.constant`
   /// operation. See documentation on [Attributes](LangRef.md#attributes) for
   /// more details. Here is an excerpt:
