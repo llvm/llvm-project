@@ -1,4 +1,4 @@
-//===---- parallel.cu - NVPTX OpenMP parallel implementation ----- CUDA -*-===//
+//===---- parallel.cu - GPU OpenMP parallel implementation ------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
