@@ -136,7 +136,7 @@ def main():
     lines = lines[1:-1]
     sequence = difflib.SequenceMatcher(None, buf, lines)
     for op in reversed(sequence.get_opcodes()):
-      if op[0] is not 'equal':
+      if op[0] != 'equal':
         vim.current.buffer[op[1]:op[2]] = lines[op[3]:op[4]]
     if output.get('IncompleteFormat'):
       print('clang-format: incomplete (syntax errors)')
