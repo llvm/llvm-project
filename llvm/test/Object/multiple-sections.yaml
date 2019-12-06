@@ -4,6 +4,7 @@
 # Test that multiple sections with the same type does not trigger an error.
 
 # CHECK: ElfHeader {
+# CHECK: VersionSymbols [
 # CHECK: VersionDefinitions [
 # CHECK: VersionRequirements [
 # CHECK: CGProfile [
@@ -23,10 +24,12 @@ Sections:
     EntSize:         24
   - Name:            .versym
     Type:            SHT_GNU_versym
-    Entries:         [ ]
+    Entries:         [ 0 ]
+    Link:            .dynsym
   - Name:            .versym2
     Type:            SHT_GNU_versym
-    Entries:         [ ]
+    Entries:         [ 0 ]
+    Link:            .dynsym
   - Name:            .verdef
     Type:            SHT_GNU_verdef
     Info:            0x0000000000000000
@@ -59,4 +62,5 @@ Sections:
     Content:         ''
 Symbols:         
   - Name:            f
+DynamicSymbols: []
 ...

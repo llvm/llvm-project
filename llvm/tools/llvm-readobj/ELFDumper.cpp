@@ -339,6 +339,9 @@ public:
   const Elf_Hash *getHashTable() const { return HashTable; }
   const Elf_GnuHash *getGnuHashTable() const { return GnuHashTable; }
 
+  Expected<ArrayRef<Elf_Versym>> getVersionTable(const Elf_Shdr *Sec,
+                                                 ArrayRef<Elf_Sym> *SymTab,
+                                                 StringRef *StrTab) const;
   Expected<std::vector<VerDef>>
   getVersionDefinitions(const Elf_Shdr *Sec) const;
   Expected<std::vector<VerNeed>>
@@ -366,6 +369,90 @@ static Expected<StringRef> getLinkAsStrtab(const ELFFile<ELFT> *Obj,
                        " section with index " + Twine(SecNdx) + ": " +
                        toString(StrTabOrErr.takeError()));
   return *StrTabOrErr;
+}
+
+// Returns the linked symbol table and associated string table for a given section.
+template <class ELFT>
+static Expected<std::pair<typename ELFT::SymRange, StringRef>>
+getLinkAsSymtab(const ELFFile<ELFT> *Obj, const typename ELFT::Shdr *Sec,
+                   unsigned SecNdx, unsigned ExpectedType) {
+  Expected<const typename ELFT::Shdr *> SymtabOrErr =
+      Obj->getSection(Sec->sh_link);
+  if (!SymtabOrErr)
+    return createError("invalid section linked to " +
+                       object::getELFSectionTypeName(
+                           Obj->getHeader()->e_machine, Sec->sh_type) +
+                       " section with index " + Twine(SecNdx) + ": " +
+                       toString(SymtabOrErr.takeError()));
+
+  if ((*SymtabOrErr)->sh_type != ExpectedType)
+    return createError(
+        "invalid section linked to " +
+        object::getELFSectionTypeName(Obj->getHeader()->e_machine,
+                                      Sec->sh_type) +
+        " section with index " + Twine(SecNdx) + ": expected " +
+        object::getELFSectionTypeName(Obj->getHeader()->e_machine,
+                                      ExpectedType) +
+        ", but got " +
+        object::getELFSectionTypeName(Obj->getHeader()->e_machine,
+                                      (*SymtabOrErr)->sh_type));
+
+  Expected<StringRef> StrTabOrErr =
+      getLinkAsStrtab(Obj, *SymtabOrErr, Sec->sh_link);
+  if (!StrTabOrErr)
+    return createError(
+        "can't get a string table for the symbol table linked to " +
+        object::getELFSectionTypeName(Obj->getHeader()->e_machine,
+                                      Sec->sh_type) +
+        " section with index " + Twine(SecNdx) + ": " +
+        toString(StrTabOrErr.takeError()));
+
+  Expected<typename ELFT::SymRange> SymsOrErr = Obj->symbols(*SymtabOrErr);
+  if (!SymsOrErr)
+    return createError(
+        "unable to read symbols from the symbol table with index " +
+        Twine(Sec->sh_link) + ": " + toString(SymsOrErr.takeError()));
+
+  return std::make_pair(*SymsOrErr, *StrTabOrErr);
+}
+
+template <class ELFT>
+Expected<ArrayRef<typename ELFT::Versym>>
+ELFDumper<ELFT>::getVersionTable(const Elf_Shdr *Sec, ArrayRef<Elf_Sym> *SymTab,
+                                 StringRef *StrTab) const {
+  assert((!SymTab && !StrTab) || (SymTab && StrTab));
+  const ELFFile<ELFT> *Obj = ObjF->getELFFile();
+  unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
+
+  if (uintptr_t(Obj->base() + Sec->sh_offset) % sizeof(uint16_t) != 0)
+    return createError("the SHT_GNU_versym section with index " +
+                       Twine(SecNdx) + " is misaligned");
+
+  Expected<ArrayRef<Elf_Versym>> VersionsOrErr =
+      Obj->template getSectionContentsAsArray<Elf_Versym>(Sec);
+  if (!VersionsOrErr)
+    return createError(
+        "cannot read content of SHT_GNU_versym section with index " +
+        Twine(SecNdx) + ": " + toString(VersionsOrErr.takeError()));
+
+  Expected<std::pair<ArrayRef<Elf_Sym>, StringRef>> SymTabOrErr =
+      getLinkAsSymtab(Obj, Sec, SecNdx, SHT_DYNSYM);
+  if (!SymTabOrErr) {
+    ELFDumperStyle->reportUniqueWarning(SymTabOrErr.takeError());
+    return *VersionsOrErr;
+  }
+
+  if (SymTabOrErr->first.size() != VersionsOrErr->size())
+    ELFDumperStyle->reportUniqueWarning(
+        createError("SHT_GNU_versym section with index " + Twine(SecNdx) +
+                    ": the number of entries (" + Twine(VersionsOrErr->size()) +
+                    ") does not match the number of symbols (" +
+                    Twine(SymTabOrErr->first.size()) +
+                    ") in the symbol table with index " + Twine(Sec->sh_link)));
+
+  if (SymTab)
+    std::tie(*SymTab, *StrTab) = *SymTabOrErr;
+  return *VersionsOrErr;
 }
 
 template <class ELFT>
@@ -4013,23 +4100,24 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
   if (!Sec)
     return;
 
-  unsigned Entries = Sec->sh_size / sizeof(Elf_Versym);
-  printGNUVersionSectionProlog(Obj, Sec, "Version symbols", Entries);
-
-  const uint8_t *VersymBuf =
-      reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
-  const ELFDumper<ELFT> *Dumper = this->dumper();
+  printGNUVersionSectionProlog(Obj, Sec, "Version symbols",
+                               Sec->sh_size / sizeof(Elf_Versym));
+  Expected<ArrayRef<Elf_Versym>> VerTableOrErr =
+      this->dumper()->getVersionTable(Sec, /*SymTab=*/nullptr,
+                                      /*StrTab=*/nullptr);
+  if (!VerTableOrErr) {
+    this->reportUniqueWarning(VerTableOrErr.takeError());
+    return;
+  }
 
   // readelf prints 4 entries per line.
+  uint64_t Entries = VerTableOrErr->size();
   for (uint64_t VersymRow = 0; VersymRow < Entries; VersymRow += 4) {
     OS << "  " << format_hex_no_prefix(VersymRow, 3) << ":";
 
-    for (uint64_t VersymIndex = 0;
-         (VersymIndex < 4) && (VersymIndex + VersymRow) < Entries;
-         ++VersymIndex) {
-      const Elf_Versym *Versym =
-          reinterpret_cast<const Elf_Versym *>(VersymBuf);
-      switch (Versym->vs_index) {
+    for (uint64_t I = 0; (I < 4) && (I + VersymRow) < Entries; ++I) {
+      unsigned Version = (*VerTableOrErr)[VersymRow + I].vs_index;
+      switch (Version) {
       case 0:
         OS << "   0 (*local*)    ";
         break;
@@ -4039,18 +4127,17 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
       default:
         bool IsDefault = true;
         std::string VersionName =
-            Dumper->getSymbolVersionByIndex(Versym->vs_index, IsDefault);
+            this->dumper()->getSymbolVersionByIndex(Version, IsDefault);
 
         if (!VersionName.empty())
           VersionName = "(" + VersionName + ")";
         else
           VersionName = "(*invalid*)";
 
-        OS << format("%4x%c", Versym->vs_index & VERSYM_VERSION,
-                     Versym->vs_index & VERSYM_HIDDEN ? 'h' : ' ');
+        OS << format("%4x%c", Version & VERSYM_VERSION,
+                     Version & VERSYM_HIDDEN ? 'h' : ' ');
         OS << left_justify(VersionName, 13);
       }
-      VersymBuf += sizeof(Elf_Versym);
     }
     OS << '\n';
   }
@@ -5834,20 +5921,23 @@ void LLVMStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
   if (!Sec)
     return;
 
-  const uint8_t *VersymBuf =
-      reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
-  const ELFDumper<ELFT> *Dumper = this->dumper();
-  StringRef StrTable = Dumper->getDynamicStringTable();
+  StringRef StrTable;
+  ArrayRef<Elf_Sym> Syms;
+  Expected<ArrayRef<Elf_Versym>> VerTableOrErr =
+      this->dumper()->getVersionTable(Sec, &Syms, &StrTable);
+  if (!VerTableOrErr) {
+    this->reportUniqueWarning(VerTableOrErr.takeError());
+    return;
+  }
 
-  // Same number of entries in the dynamic symbol table (DT_SYMTAB).
-  for (const Elf_Sym &Sym : Dumper->dynamic_symbols()) {
+  if (StrTable.empty() || Syms.empty() || Syms.size() != VerTableOrErr->size())
+    return;
+
+  for (size_t I = 0, E = Syms.size(); I < E; ++I) {
     DictScope S(W, "Symbol");
-    const Elf_Versym *Versym = reinterpret_cast<const Elf_Versym *>(VersymBuf);
-    std::string FullSymbolName =
-        Dumper->getFullSymbolName(&Sym, StrTable, true /* IsDynamic */);
-    W.printNumber("Version", Versym->vs_index & VERSYM_VERSION);
-    W.printString("Name", FullSymbolName);
-    VersymBuf += sizeof(Elf_Versym);
+    W.printNumber("Version", (*VerTableOrErr)[I].vs_index & VERSYM_VERSION);
+    W.printString("Name", this->dumper()->getFullSymbolName(
+                              &Syms[I], StrTable, /*IsDynamic=*/true));
   }
 }
 
