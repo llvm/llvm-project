@@ -1521,16 +1521,15 @@ let Predicates = [HasSVE2] in {
   defm TBX_ZZZ  : sve2_int_perm_tbx<"tbx">;
 
   // SVE2 integer compare scalar count and limit
-  defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege", null_frag>;
-  defm WHILEGT_PWW : sve_int_while4_rr<0b001, "whilegt", null_frag>;
-  defm WHILEHS_PWW : sve_int_while4_rr<0b100, "whilehs", null_frag>;
-  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi", null_frag>;
+  defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege", int_aarch64_sve_whilege>;
+  defm WHILEGT_PWW : sve_int_while4_rr<0b001, "whilegt", int_aarch64_sve_whilegt>;
+  defm WHILEHS_PWW : sve_int_while4_rr<0b100, "whilehs", int_aarch64_sve_whilehs>;
+  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi", int_aarch64_sve_whilehi>;
 
-  defm WHILEGE_PXX : sve_int_while8_rr<0b000, "whilege", null_frag>;
-  defm WHILEGT_PXX : sve_int_while8_rr<0b001, "whilegt", null_frag>;
-  defm WHILEHS_PXX : sve_int_while8_rr<0b100, "whilehs", null_frag>;
-  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", null_frag>;
-
+  defm WHILEGE_PXX : sve_int_while8_rr<0b000, "whilege", int_aarch64_sve_whilege>;
+  defm WHILEGT_PXX : sve_int_while8_rr<0b001, "whilegt", int_aarch64_sve_whilegt>;
+  defm WHILEHS_PXX : sve_int_while8_rr<0b100, "whilehs", int_aarch64_sve_whilehs>;
+  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", int_aarch64_sve_whilehi>;
 
   // SVE2 pointer conflict compare
   defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr">;
