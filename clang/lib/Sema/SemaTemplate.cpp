@@ -3214,8 +3214,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
 
   TemplateDecl *Template = Name.getAsTemplateDecl();
   if (!Template || isa<FunctionTemplateDecl>(Template) ||
-      isa<VarTemplateDecl>(Template) ||
-      isa<ConceptDecl>(Template)) {
+      isa<VarTemplateDecl>(Template) || isa<ConceptDecl>(Template)) {
     // We might have a substituted template template parameter pack. If so,
     // build a template specialization type for it.
     if (Name.getAsSubstTemplateTemplateParmPack())
@@ -3231,7 +3230,8 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
   // template.
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(Template, TemplateLoc, TemplateArgs,
-                                false, Converted))
+                                false, Converted,
+                                /*UpdateArgsWithConversion=*/true))
     return QualType();
 
   QualType CanonType;
@@ -3239,6 +3239,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
   bool InstantiationDependent = false;
   if (TypeAliasTemplateDecl *AliasTemplate =
           dyn_cast<TypeAliasTemplateDecl>(Template)) {
+
     // Find the canonical type for this type alias template specialization.
     TypeAliasDecl *Pattern = AliasTemplate->getTemplatedDecl();
     if (Pattern->isInvalidDecl())
@@ -3876,7 +3877,8 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
   // template.
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(VarTemplate, TemplateNameLoc, TemplateArgs,
-                                false, Converted))
+                                false, Converted,
+                                /*UpdateArgsWithConversion=*/true))
     return true;
 
   // Find the variable template (partial) specialization declaration that
@@ -4047,7 +4049,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   if (CheckTemplateArgumentList(
           Template, TemplateNameLoc,
           const_cast<TemplateArgumentListInfo &>(TemplateArgs), false,
-          Converted))
+          Converted, /*UpdateArgsWithConversion=*/true))
     return true;
 
   // Find the variable template specialization declaration that
@@ -4238,7 +4240,7 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
                                 /*UpdateArgsWithConversion=*/false))
     return ExprError();
 
-  Optional<bool> IsSatisfied;
+  ConstraintSatisfaction Satisfaction;
   bool AreArgsDependent = false;
   for (TemplateArgument &Arg : Converted) {
     if (Arg.isDependent()) {
@@ -4246,25 +4248,21 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
       break;
     }
   }
-  if (!AreArgsDependent) {
-    InstantiatingTemplate Inst(*this, ConceptNameLoc,
-        InstantiatingTemplate::ConstraintsCheck{}, NamedConcept, Converted,
-        SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameLoc,
-                    TemplateArgs->getRAngleLoc()));
-    MultiLevelTemplateArgumentList MLTAL;
-    MLTAL.addOuterTemplateArguments(Converted);
-    bool Satisfied;
-    if (CalculateConstraintSatisfaction(NamedConcept, MLTAL,
-                                        NamedConcept->getConstraintExpr(),
-                                        Satisfied))
+  if (!AreArgsDependent &&
+      CheckConstraintSatisfaction(NamedConcept,
+                                  {NamedConcept->getConstraintExpr()},
+                                  Converted,
+                                  SourceRange(SS.isSet() ? SS.getBeginLoc() :
+                                                           ConceptNameLoc,
+                                              TemplateArgs->getRAngleLoc()),
+                                  Satisfaction))
       return ExprError();
-    IsSatisfied = Satisfied;
-  }
+
   return ConceptSpecializationExpr::Create(Context,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
       TemplateKWLoc, ConceptNameLoc, FoundDecl, NamedConcept,
       ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs), Converted,
-      IsSatisfied);
+      AreArgsDependent ? nullptr : &Satisfaction);
 }
 
 ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
@@ -5210,7 +5208,11 @@ bool Sema::CheckTemplateArgumentList(
     TemplateDecl *Template, SourceLocation TemplateLoc,
     TemplateArgumentListInfo &TemplateArgs, bool PartialTemplateArgs,
     SmallVectorImpl<TemplateArgument> &Converted,
-    bool UpdateArgsWithConversions) {
+    bool UpdateArgsWithConversions, bool *ConstraintsNotSatisfied) {
+
+  if (ConstraintsNotSatisfied)
+    *ConstraintsNotSatisfied = false;
+
   // Make a copy of the template arguments for processing.  Only make the
   // changes at the end when successful in matching the arguments to the
   // template.
@@ -5325,7 +5327,6 @@ bool Sema::CheckTemplateArgumentList(
       if ((*Param)->isTemplateParameterPack() && !ArgumentPack.empty())
         Converted.push_back(
             TemplateArgument::CreatePackCopy(Context, ArgumentPack));
-
       return false;
     }
 
@@ -5463,6 +5464,15 @@ bool Sema::CheckTemplateArgumentList(
   // to caller.
   if (UpdateArgsWithConversions)
     TemplateArgs = std::move(NewArgs);
+
+  if (!PartialTemplateArgs &&
+      EnsureTemplateArgumentListConstraints(
+        Template, Converted, SourceRange(TemplateLoc,
+                                         TemplateArgs.getRAngleLoc()))) {
+    if (ConstraintsNotSatisfied)
+      *ConstraintsNotSatisfied = true;
+    return true;
+  }
 
   return false;
 }
@@ -7777,7 +7787,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   // template.
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(ClassTemplate, TemplateNameLoc,
-                                TemplateArgs, false, Converted))
+                                TemplateArgs, false, Converted,
+                                /*UpdateArgsWithConversion=*/true))
     return true;
 
   // Find the class template (partial) specialization declaration that
@@ -9024,7 +9035,8 @@ DeclResult Sema::ActOnExplicitInstantiation(
   // template.
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(ClassTemplate, TemplateNameLoc,
-                                TemplateArgs, false, Converted))
+                                TemplateArgs, false, Converted,
+                                /*UpdateArgsWithConversion=*/true))
     return true;
 
   // Find the class template specialization declaration that

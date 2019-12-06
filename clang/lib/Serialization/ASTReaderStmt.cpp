@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Serialization/ASTReader.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
@@ -742,14 +743,33 @@ void ASTStmtReader::VisitConceptSpecializationExpr(
   E->TemplateKWLoc = Record.readSourceLocation();
   E->ConceptNameLoc = Record.readSourceLocation();
   E->FoundDecl = ReadDeclAs<NamedDecl>();
-  E->NamedConcept.setPointer(ReadDeclAs<ConceptDecl>());
+  E->NamedConcept = ReadDeclAs<ConceptDecl>();
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
       Record.readASTTemplateArgumentListInfo();
   llvm::SmallVector<TemplateArgument, 4> Args;
   for (unsigned I = 0; I < NumTemplateArgs; ++I)
     Args.push_back(Record.readTemplateArgument());
   E->setTemplateArguments(ArgsAsWritten, Args);
-  E->NamedConcept.setInt(Record.readInt() == 1);
+  ConstraintSatisfaction Satisfaction;
+  Satisfaction.IsSatisfied = Record.readInt();
+  if (!Satisfaction.IsSatisfied) {
+    unsigned NumDetailRecords = Record.readInt();
+    for (unsigned i = 0; i != NumDetailRecords; ++i) {
+      Expr *ConstraintExpr = Record.readExpr();
+      bool IsDiagnostic = Record.readInt();
+      if (IsDiagnostic) {
+        SourceLocation DiagLocation = Record.readSourceLocation();
+        std::string DiagMessage = Record.readString();
+        Satisfaction.Details.emplace_back(
+            ConstraintExpr, new (Record.getContext())
+                                ConstraintSatisfaction::SubstitutionDiagnostic{
+                                    DiagLocation, DiagMessage});
+      } else
+        Satisfaction.Details.emplace_back(ConstraintExpr, Record.readExpr());
+    }
+  }
+  E->Satisfaction = ASTConstraintSatisfaction::Create(Record.getContext(),
+                                                      Satisfaction);
 }
 
 void ASTStmtReader::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
