@@ -1,10 +1,16 @@
-// RUN: %clang_cc1 -verify -fopenmp -ast-print %s -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -124,11 +130,16 @@ int main(int argc, char **argv) {
 
 #pragma omp target
 #pragma omp teams
+#ifdef OMP5
+#pragma omp distribute simd private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) reduction(+ : h) dist_schedule(static, b) if(simd:argc)
+#else
 #pragma omp distribute simd private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) reduction(+ : h) dist_schedule(static, b)
+#endif // OMP5
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
             a++;
-// CHECK: #pragma omp distribute simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) reduction(+: h) dist_schedule(static, b)
+// OMP45: #pragma omp distribute simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) reduction(+: h) dist_schedule(static, b)
+// OMP50: #pragma omp distribute simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) reduction(+: h) dist_schedule(static, b) if(simd: argc)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: for (int j = 0; j < 10; ++j)
 // CHECK-NEXT: a++;
@@ -136,11 +147,16 @@ int main(int argc, char **argv) {
   int i;
 #pragma omp target
 #pragma omp teams
+#ifdef OMP5
+#pragma omp distribute simd aligned(x:8) linear(i:2) safelen(8) simdlen(8) if(argc)
+#else
 #pragma omp distribute simd aligned(x:8) linear(i:2) safelen(8) simdlen(8)
+#endif // OMP5
   for (i = 0; i < 100; i++)
     for (int j = 0; j < 200; j++)
       a += h + x[j];
-// CHECK: #pragma omp distribute simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8)
+// OMP45: #pragma omp distribute simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8)
+// OMP50: #pragma omp distribute simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8) if(argc)
 // CHECK-NEXT: for (i = 0; i < 100; i++)
 // CHECK-NEXT: for (int j = 0; j < 200; j++)
 // CHECK-NEXT: a += h + x[j];
