@@ -29,10 +29,10 @@ ASTConstraintSatisfaction::ASTConstraintSatisfaction(const ASTContext &C,
                                          Detail.second.get<Expr *>())};
     else {
       auto &SubstitutionDiagnostic =
-          *Detail.second.get<std::pair<SourceLocation, std::string> *>();
+          *Detail.second.get<std::pair<SourceLocation, StringRef> *>();
       unsigned MessageSize = SubstitutionDiagnostic.second.size();
       char *Mem = new (C) char[MessageSize];
-      memcpy(Mem, SubstitutionDiagnostic.second.c_str(), MessageSize);
+      memcpy(Mem, SubstitutionDiagnostic.second.data(), MessageSize);
       auto *NewSubstDiag = new (C) std::pair<SourceLocation, StringRef>(
           SubstitutionDiagnostic.first, StringRef(Mem, MessageSize));
       new (getTrailingObjects<UnsatisfiedConstraintRecord>() + I)
