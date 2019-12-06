@@ -113,8 +113,14 @@ class LLDBTestResult(unittest2.TextTestResult):
         """
         import inspect
         import os.path
-        folder = inspect.getfile(test.__class__)
-        folder = os.path.dirname(folder)
+        # Use test.test_filename if the test was created with
+        # lldbinline.MakeInlineTest().
+        if hasattr(test, 'test_filename'):
+            start_path = test.test_filename
+        else:
+            start_path = inspect.getfile(test.__class__)
+
+        folder = os.path.dirname(start_path)
         while folder != '/':
             categories_file_name = os.path.join(folder, ".categories")
             if os.path.exists(categories_file_name):
@@ -127,6 +133,7 @@ class LLDBTestResult(unittest2.TextTestResult):
             else:
                 folder = os.path.dirname(folder)
                 continue
+        raise Exception("Did not find a .categories file, starting at: %s" % start_path)
 
 
     def getCategoriesForTest(self, test):
