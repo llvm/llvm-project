@@ -883,7 +883,7 @@ uint32_t DWARFUnit::GetHeaderByteSize() const {
 llvm::Expected<DWARFRangeList>
 DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   if (GetVersion() <= 4) {
-    const DWARFDebugRangesBase *debug_ranges = m_dwarf.GetDebugRanges();
+    const DWARFDebugRanges *debug_ranges = m_dwarf.GetDebugRanges();
     if (!debug_ranges)
       return llvm::make_error<llvm::object::GenericBinaryError>(
           "No debug_ranges section");
