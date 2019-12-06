@@ -10,28 +10,33 @@
 define void @repeated_tail_dup(i1 %a1, i1 %a2, i32* %a4, i32* %a5, i8* %a6, i32 %a7) #0 align 2 {
 ; CHECK-LABEL: repeated_tail_dup:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    je .LBB0_3
+; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %land.lhs.true
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $10, (%rdx)
 ; CHECK-NEXT:  .LBB0_6: # %dup2
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $2, (%rcx)
 ; CHECK-NEXT:    testl %r9d, %r9d
 ; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:  .LBB0_1: # %for.cond
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  .LBB0_3: # %if.end56
+; CHECK-NEXT:  # %bb.3: # %if.end56
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb $1, %sil
 ; CHECK-NEXT:    je .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %if.then64
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movb $1, (%r8)
 ; CHECK-NEXT:    testl %r9d, %r9d
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:    jmp .LBB0_8
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_5: # %if.end70
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $12, (%rdx)
 ; CHECK-NEXT:    jmp .LBB0_6
 ; CHECK-NEXT:  .LBB0_8: # %for.end

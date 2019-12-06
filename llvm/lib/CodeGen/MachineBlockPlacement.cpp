@@ -1074,6 +1074,11 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
   if (!shouldTailDuplicate(Succ))
     return false;
 
+  // The result of canTailDuplicate.
+  bool Duplicate = true;
+  // Number of possible duplication.
+  unsigned int NumDup = 0;
+
   // For CFG checking.
   SmallPtrSet<const MachineBasicBlock *, 4> Successors(BB->succ_begin(),
                                                        BB->succ_end());
@@ -1120,9 +1125,50 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
         // to trellises created by tail-duplication, so we just look for the
         // CFG.
         continue;
-      return false;
+      Duplicate = false;
+      continue;
     }
+    NumDup++;
   }
+
+  // No possible duplication in current filter set.
+  if (NumDup == 0)
+    return false;
+
+  // This is mainly for function exit BB.
+  // The integrated tail duplication is really designed for increasing
+  // fallthrough from predecessors from Succ to its successors. We may need
+  // other machanism to handle different cases.
+  if (Succ->succ_size() == 0)
+    return true;
+
+  // Plus the already placed predecessor.
+  NumDup++;
+
+  // If the duplication candidate has more unplaced predecessors than
+  // successors, the extra duplication can't bring more fallthrough.
+  //
+  //     Pred1 Pred2 Pred3
+  //         \   |   /
+  //          \  |  /
+  //           \ | /
+  //            Dup
+  //            / \
+  //           /   \
+  //       Succ1  Succ2
+  //
+  // In this example Dup has 2 successors and 3 predecessors, duplication of Dup
+  // can increase the fallthrough from Pred1 to Succ1 and from Pred2 to Succ2,
+  // but the duplication into Pred3 can't increase fallthrough.
+  //
+  // A small number of extra duplication may not hurt too much. We need a better
+  // heuristic to handle it.
+  //
+  // FIXME: we should selectively tail duplicate a BB into part of its
+  // predecessors.
+  if ((NumDup > Succ->succ_size()) || !Duplicate)
+    return false;
+
   return true;
 }
 
@@ -1418,9 +1464,10 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
   bool BadCFGConflict = false;
 
   for (MachineBasicBlock *Pred : Succ->predecessors()) {
-    if (Pred == Succ || BlockToChain[Pred] == &SuccChain ||
+    BlockChain *PredChain = BlockToChain[Pred];
+    if (Pred == Succ || PredChain == &SuccChain ||
         (BlockFilter && !BlockFilter->count(Pred)) ||
-        BlockToChain[Pred] == &Chain ||
+        PredChain == &Chain || Pred != *std::prev(PredChain->end()) ||
         // This check is redundant except for look ahead. This function is
         // called for lookahead by isProfitableToTailDup when BB hasn't been
         // placed yet.
@@ -1722,7 +1769,9 @@ void MachineBlockPlacement::buildChain(
     MachineBasicBlock* BestSucc = Result.BB;
     bool ShouldTailDup = Result.ShouldTailDup;
     if (allowTailDupPlacement())
-      ShouldTailDup |= (BestSucc && shouldTailDuplicate(BestSucc));
+      ShouldTailDup |= (BestSucc && canTailDuplicateUnplacedPreds(BB, BestSucc,
+                                                                  Chain,
+                                                                  BlockFilter));
 
     // If an immediate successor isn't available, look for the best viable
     // block among those we've identified as not violating the loop's CFG at
