@@ -626,12 +626,20 @@ template <typename IT, int ST>
 class TC {
   int ii, iii, kk;
 public:
+  enum { myconstant = 42 };
+  int ub();
   int dotest_lt(IT begin, IT end) {
 #pragma omp parallel
 // expected-error@+3 3 {{the loop initializer expression depends on the current loop control variable}}
 // expected-error@+2 6 {{the loop condition expression depends on the current loop control variable}}
 #pragma omp for
   for (ii = ii * 10 + 25; ii < ii / ii - 23; ii += 1)
+    ;
+
+// Check that member function calls and enum constants in the condition is
+// handled.
+#pragma omp for
+  for (ii = 0; ii < ub() + this->myconstant; ii += 1) // expected-no-error
     ;
 
 #pragma omp parallel
