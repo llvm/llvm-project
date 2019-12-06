@@ -581,9 +581,6 @@ public:
   /// Return the number of symbols in this section.
   SymbolSet::size_type symbols_size() { return Symbols.size(); }
 
-  /// Return true if this section contains no symbols.
-  bool symbols_empty() const { return Symbols.empty(); }
-
 private:
   void addSymbol(Symbol &Sym) {
     assert(!Symbols.count(&Sym) && "Symbol is already in this section");
@@ -618,7 +615,7 @@ class SectionRange {
 public:
   SectionRange() = default;
   SectionRange(const Section &Sec) {
-    if (Sec.symbols_empty())
+    if (llvm::empty(Sec.symbols()))
       return;
     First = Last = *Sec.symbols().begin();
     for (auto *Sym : Sec.symbols()) {
