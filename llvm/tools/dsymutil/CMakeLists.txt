@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   MC
   Object
+  CodeGen
   Option
   Remarks
   Support
