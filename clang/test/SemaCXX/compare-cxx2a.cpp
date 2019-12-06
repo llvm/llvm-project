@@ -361,6 +361,11 @@ void test_user_conv() {
   }
 }
 
+struct X {
+  constexpr const Conv<int, -1> operator<=>(X) { return {}; }
+};
+static_assert(X() < X());
+
 } // namespace TestUserDefinedConvSeq
 
 void test_array_conv() {
