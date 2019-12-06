@@ -27,7 +27,6 @@ class MachineFunction;
 class MachineLoopInfo;
 class MachineModuleInfo;
 class MachineRegisterInfo;
-class ProfileSummaryInfo;
 class raw_ostream;
 class TargetInstrInfo;
 class TargetRegisterInfo;
@@ -40,7 +39,6 @@ class TargetRegisterInfo;
                           bool CommonHoist,
                           MBFIWrapper &FreqInfo,
                           const MachineBranchProbabilityInfo &ProbInfo,
-                          ProfileSummaryInfo *PSI,
                           // Min tail length to merge. Defaults to commandline
                           // flag. Ignored for optsize.
                           unsigned MinTailLength = 0);
@@ -147,7 +145,6 @@ class TargetRegisterInfo;
                                   const BlockFrequency Freq) const;
       void view(const Twine &Name, bool isSimple = true);
       uint64_t getEntryFreq() const;
-      const MachineBlockFrequencyInfo &getMBFI() { return MBFI; }
 
     private:
       const MachineBlockFrequencyInfo &MBFI;
@@ -157,7 +154,6 @@ class TargetRegisterInfo;
   private:
     MBFIWrapper &MBBFreqInfo;
     const MachineBranchProbabilityInfo &MBPI;
-    ProfileSummaryInfo *PSI;
 
     bool TailMergeBlocks(MachineFunction &MF);
     bool TryTailMergeBlocks(MachineBasicBlock* SuccBB,

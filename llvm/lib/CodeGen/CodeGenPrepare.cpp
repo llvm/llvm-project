@@ -90,7 +90,6 @@
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
-#include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -257,7 +256,6 @@ class TypePromotionTransaction;
     const LoopInfo *LI;
     std::unique_ptr<BlockFrequencyInfo> BFI;
     std::unique_ptr<BranchProbabilityInfo> BPI;
-    ProfileSummaryInfo *PSI;
 
     /// As we scan instructions optimizing them, this is the next instruction
     /// to optimize. Transforms that can invalidate this should update it.
@@ -300,7 +298,7 @@ class TypePromotionTransaction;
     /// Keep track of SExt promoted.
     ValueToSExts ValToSExtendedUses;
 
-    /// True if the function has the OptSize attribute.
+    /// True if optimizing for size.
     bool OptSize;
 
     /// DataLayout for the Function being processed.
@@ -437,8 +435,10 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   BPI.reset(new BranchProbabilityInfo(F, *LI));
   BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   OptSize = F.hasOptSize();
+
+  ProfileSummaryInfo *PSI =
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   if (ProfileGuidedSectionPrefix) {
     if (PSI->isFunctionHotInCallGraph(&F, *BFI))
       F.setSectionPrefix(".hot");
@@ -457,9 +457,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
       // bypassSlowDivision may create new BBs, but we don't want to reapply the
       // optimization to those blocks.
       BasicBlock* Next = BB->getNextNode();
-      // F.hasOptSize is already checked in the outer if statement.
-      if (!llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths);
+      EverMadeChange |= bypassSlowDivision(BB, BypassWidths);
       BB = Next;
     }
   }
@@ -1940,8 +1938,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
   // cold block.  This interacts with our handling for loads and stores to
   // ensure that we can fold all uses of a potential addressing computation
   // into their uses.  TODO: generalize this to work over profiling data
-  bool OptForSize = OptSize || llvm::shouldOptimizeForSize(BB, PSI, BFI.get());
-  if (!OptForSize && CI->hasFnAttr(Attribute::Cold))
+  if (!OptSize && CI->hasFnAttr(Attribute::Cold))
     for (auto &Arg : CI->arg_operands()) {
       if (!Arg->getType()->isPointerTy())
         continue;
@@ -2878,24 +2875,16 @@ class AddressingModeMatcher {
   /// When true, IsProfitableToFoldIntoAddressingMode always returns true.
   bool IgnoreProfitability;
 
-  /// True if we are optimizing for size.
-  bool OptSize;
-
-  ProfileSummaryInfo *PSI;
-  BlockFrequencyInfo *BFI;
-
   AddressingModeMatcher(
       SmallVectorImpl<Instruction *> &AMI, const TargetLowering &TLI,
       const TargetRegisterInfo &TRI, Type *AT, unsigned AS, Instruction *MI,
       ExtAddrMode &AM, const SetOfInstrs &InsertedInsts,
       InstrToOrigTy &PromotedInsts, TypePromotionTransaction &TPT,
-      std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP,
-      bool OptSize, ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI)
+      std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP)
       : AddrModeInsts(AMI), TLI(TLI), TRI(TRI),
         DL(MI->getModule()->getDataLayout()), AccessTy(AT), AddrSpace(AS),
         MemoryInst(MI), AddrMode(AM), InsertedInsts(InsertedInsts),
-        PromotedInsts(PromotedInsts), TPT(TPT), LargeOffsetGEP(LargeOffsetGEP),
-        OptSize(OptSize), PSI(PSI), BFI(BFI) {
+        PromotedInsts(PromotedInsts), TPT(TPT), LargeOffsetGEP(LargeOffsetGEP) {
     IgnoreProfitability = false;
   }
 
@@ -2913,14 +2902,12 @@ public:
         const TargetLowering &TLI, const TargetRegisterInfo &TRI,
         const SetOfInstrs &InsertedInsts, InstrToOrigTy &PromotedInsts,
         TypePromotionTransaction &TPT,
-        std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP,
-        bool OptSize, ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
+        std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP) {
     ExtAddrMode Result;
 
     bool Success = AddressingModeMatcher(AddrModeInsts, TLI, TRI, AccessTy, AS,
                                          MemoryInst, Result, InsertedInsts,
-                                         PromotedInsts, TPT, LargeOffsetGEP,
-                                         OptSize, PSI, BFI)
+                                         PromotedInsts, TPT, LargeOffsetGEP)
                        .matchAddr(V, 0);
     (void)Success; assert(Success && "Couldn't select *anything*?");
     return Result;
@@ -4531,8 +4518,7 @@ static bool FindAllMemoryUses(
     Instruction *I,
     SmallVectorImpl<std::pair<Instruction *, unsigned>> &MemoryUses,
     SmallPtrSetImpl<Instruction *> &ConsideredInsts, const TargetLowering &TLI,
-    const TargetRegisterInfo &TRI, bool OptSize, ProfileSummaryInfo *PSI,
-    BlockFrequencyInfo *BFI, int SeenInsts = 0) {
+    const TargetRegisterInfo &TRI, int SeenInsts = 0) {
   // If we already considered this instruction, we're done.
   if (!ConsideredInsts.insert(I).second)
     return false;
@@ -4540,6 +4526,8 @@ static bool FindAllMemoryUses(
   // If this is an obviously unfoldable instruction, bail out.
   if (!MightBeFoldableInst(I))
     return true;
+
+  const bool OptSize = I->getFunction()->hasOptSize();
 
   // Loop over all the uses, recursively processing them.
   for (Use &U : I->uses()) {
@@ -4581,9 +4569,7 @@ static bool FindAllMemoryUses(
     if (CallInst *CI = dyn_cast<CallInst>(UserI)) {
       // If this is a cold call, we can sink the addressing calculation into
       // the cold path.  See optimizeCallInst
-      bool OptForSize = OptSize ||
-          llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
-      if (!OptForSize && CI->hasFnAttr(Attribute::Cold))
+      if (!OptSize && CI->hasFnAttr(Attribute::Cold))
         continue;
 
       InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledValue());
@@ -4595,8 +4581,8 @@ static bool FindAllMemoryUses(
       continue;
     }
 
-    if (FindAllMemoryUses(UserI, MemoryUses, ConsideredInsts, TLI, TRI, OptSize,
-                          PSI, BFI, SeenInsts))
+    if (FindAllMemoryUses(UserI, MemoryUses, ConsideredInsts, TLI, TRI,
+                          SeenInsts))
       return true;
   }
 
@@ -4684,8 +4670,7 @@ isProfitableToFoldIntoAddressingMode(Instruction *I, ExtAddrMode &AMBefore,
   // the use is just a particularly nice way of sinking it.
   SmallVector<std::pair<Instruction*,unsigned>, 16> MemoryUses;
   SmallPtrSet<Instruction*, 16> ConsideredInsts;
-  if (FindAllMemoryUses(I, MemoryUses, ConsideredInsts, TLI, TRI, OptSize,
-                        PSI, BFI))
+  if (FindAllMemoryUses(I, MemoryUses, ConsideredInsts, TLI, TRI))
     return false;  // Has a non-memory, non-foldable use!
 
   // Now that we know that all uses of this instruction are part of a chain of
@@ -4721,7 +4706,7 @@ isProfitableToFoldIntoAddressingMode(Instruction *I, ExtAddrMode &AMBefore,
         TPT.getRestorationPoint();
     AddressingModeMatcher Matcher(
         MatchedAddrModeInsts, TLI, TRI, AddressAccessTy, AS, MemoryInst, Result,
-        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI, BFI);
+        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP);
     Matcher.IgnoreProfitability = true;
     bool Success = Matcher.matchAddr(Address, 0);
     (void)Success; assert(Success && "Couldn't select *anything*?");
@@ -4827,8 +4812,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
                                                                       0);
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
         V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *TRI,
-        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
-        BFI.get());
+        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP);
 
     GetElementPtrInst *GEP = LargeOffsetGEP.first;
     if (GEP && !NewGEPBases.count(GEP)) {
@@ -6046,9 +6030,7 @@ bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
 /// turn it into a branch.
 bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // If branch conversion isn't desirable, exit early.
-  if (DisableSelectToBranch ||
-      OptSize || llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI.get()) ||
-      !TLI)
+  if (DisableSelectToBranch || OptSize || !TLI)
     return false;
 
   // Find all consecutive select instructions that share the same condition.

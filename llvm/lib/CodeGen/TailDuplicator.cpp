@@ -19,16 +19,13 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -80,8 +77,6 @@ static cl::opt<unsigned> TailDupLimit("tail-dup-limit", cl::init(~0U),
 
 void TailDuplicator::initMF(MachineFunction &MFin, bool PreRegAlloc,
                             const MachineBranchProbabilityInfo *MBPIin,
-                            const MachineBlockFrequencyInfo *MBFIin,
-                            ProfileSummaryInfo *PSIin,
                             bool LayoutModeIn, unsigned TailDupSizeIn) {
   MF = &MFin;
   TII = MF->getSubtarget().getInstrInfo();
@@ -89,8 +84,6 @@ void TailDuplicator::initMF(MachineFunction &MFin, bool PreRegAlloc,
   MRI = &MF->getRegInfo();
   MMI = &MF->getMMI();
   MBPI = MBPIin;
-  MBFI = MBFIin;
-  PSI = PSIin;
   TailDupSize = TailDupSizeIn;
 
   assert(MBPI != nullptr && "Machine Branch Probability Info required");
@@ -562,14 +555,14 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // duplicate only one, because one branch instruction can be eliminated to
   // compensate for the duplication.
   unsigned MaxDuplicateCount;
-  bool OptForSize = MF->getFunction().hasOptSize() ||
-                    llvm::shouldOptimizeForSize(&TailBB, PSI, MBFI);
-  if (TailDupSize == 0)
+  if (TailDupSize == 0 &&
+      TailDuplicateSize.getNumOccurrences() == 0 &&
+      MF->getFunction().hasOptSize())
+    MaxDuplicateCount = 1;
+  else if (TailDupSize == 0)
     MaxDuplicateCount = TailDuplicateSize;
   else
     MaxDuplicateCount = TailDupSize;
-  if (OptForSize)
-    MaxDuplicateCount = 1;
 
   // If the block to be duplicated ends in an unanalyzable fallthrough, don't
   // duplicate it.

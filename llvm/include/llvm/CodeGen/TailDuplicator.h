@@ -25,13 +25,11 @@
 namespace llvm {
 
 class MachineBasicBlock;
-class MachineBlockFrequencyInfo;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineInstr;
 class MachineModuleInfo;
 class MachineRegisterInfo;
-class ProfileSummaryInfo;
 class TargetRegisterInfo;
 
 /// Utility class to perform tail duplication.
@@ -42,8 +40,6 @@ class TailDuplicator {
   const MachineModuleInfo *MMI;
   MachineRegisterInfo *MRI;
   MachineFunction *MF;
-  const MachineBlockFrequencyInfo *MBFI;
-  ProfileSummaryInfo *PSI;
   bool PreRegAlloc;
   bool LayoutMode;
   unsigned TailDupSize;
@@ -69,8 +65,6 @@ public:
   ///     default implies using the command line value TailDupSize.
   void initMF(MachineFunction &MF, bool PreRegAlloc,
               const MachineBranchProbabilityInfo *MBPI,
-              const MachineBlockFrequencyInfo *MBFI,
-              ProfileSummaryInfo *PSI,
               bool LayoutMode, unsigned TailDupSize = 0);
 
   bool tailDuplicateBlocks();

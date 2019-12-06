@@ -19,7 +19,6 @@
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -214,7 +213,6 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineBlockFrequencyInfo>();
       AU.addRequired<MachineBranchProbabilityInfo>();
-      AU.addRequired<ProfileSummaryInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -436,7 +434,6 @@ char &llvm::IfConverterID = IfConverter::ID;
 
 INITIALIZE_PASS_BEGIN(IfConverter, DEBUG_TYPE, "If Converter", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(IfConverter, DEBUG_TYPE, "If Converter", false, false)
 
 bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
@@ -449,8 +446,6 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   BranchFolder::MBFIWrapper MBFI(getAnalysis<MachineBlockFrequencyInfo>());
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
-  ProfileSummaryInfo *PSI =
-      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
 
@@ -461,7 +456,7 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
   bool BFChange = false;
   if (!PreRegAlloc) {
     // Tail merge tend to expose more if-conversion opportunities.
-    BranchFolder BF(true, false, MBFI, *MBPI, PSI);
+    BranchFolder BF(true, false, MBFI, *MBPI);
     auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
     BFChange = BF.OptimizeFunction(
         MF, TII, ST.getRegisterInfo(),
@@ -603,7 +598,7 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
   BBAnalysis.clear();
 
   if (MadeChange && IfCvtBranchFold) {
-    BranchFolder BF(false, false, MBFI, *MBPI, PSI);
+    BranchFolder BF(false, false, MBFI, *MBPI);
     auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
     BF.OptimizeFunction(
         MF, TII, MF.getSubtarget().getRegisterInfo(),

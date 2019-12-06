@@ -33,7 +33,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -42,7 +41,6 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/TailDuplicator.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -365,8 +363,6 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// A handle to the post dominator tree.
   MachinePostDominatorTree *MPDT;
 
-  ProfileSummaryInfo *PSI;
-
   /// Duplicator used to duplicate tails during placement.
   ///
   /// Placement decisions can open up new tail duplication opportunities, but
@@ -542,7 +538,6 @@ public:
     if (TailDupPlacement)
       AU.addRequired<MachinePostDominatorTree>();
     AU.addRequired<MachineLoopInfo>();
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -560,7 +555,6 @@ INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(MachineBlockPlacement, DEBUG_TYPE,
                     "Branch Probability Basic Block Placement", false, false)
 
@@ -2081,10 +2075,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   // i.e. when the layout predecessor does not fallthrough to the loop header.
   // In practice this never happens though: there always seems to be a preheader
   // that can fallthrough and that is also placed before the header.
-  bool OptForSize = F->getFunction().hasOptSize() ||
-                    llvm::shouldOptimizeForSize(L.getHeader(), PSI,
-                                                &MBFI->getMBFI());
-  if (OptForSize)
+  if (F->getFunction().hasOptSize())
     return L.getHeader();
 
   MachineBasicBlock *OldTop = nullptr;
@@ -2840,11 +2831,6 @@ void MachineBlockPlacement::alignBlocks() {
     if (Freq < (LoopHeaderFreq * ColdProb))
       continue;
 
-    // If the global profiles indicates so, don't align it.
-    if (llvm::shouldOptimizeForSize(ChainBB, PSI, &MBFI->getMBFI()) &&
-        !TLI->alignLoopsWithOptSize())
-      continue;
-
     // Check for the existence of a non-layout predecessor which would benefit
     // from aligning this block.
     MachineBasicBlock *LayoutPred =
@@ -3052,7 +3038,6 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
   MPDT = nullptr;
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
 
   // Initialize PreferredLoopExit to nullptr here since it may never be set if
   // there are no MachineLoops.
@@ -3083,13 +3068,10 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   if (allowTailDupPlacement()) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();
-    bool OptForSize = MF.getFunction().hasOptSize() ||
-                      llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
-    if (OptForSize)
+    if (MF.getFunction().hasOptSize())
       TailDupSize = 1;
     bool PreRegAlloc = false;
-    TailDup.initMF(MF, PreRegAlloc, MBPI, &MBFI->getMBFI(), PSI,
-                   /* LayoutMode */ true, TailDupSize);
+    TailDup.initMF(MF, PreRegAlloc, MBPI, /* LayoutMode */ true, TailDupSize);
     precomputeTriangleChains();
   }
 
@@ -3105,7 +3087,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   if (MF.size() > 3 && EnableTailMerge) {
     unsigned TailMergeSize = TailDupSize + 1;
     BranchFolder BF(/*EnableTailMerge=*/true, /*CommonHoist=*/false, *MBFI,
-                    *MBPI, PSI, TailMergeSize);
+                    *MBPI, TailMergeSize);
 
     auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
     if (BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo(),
