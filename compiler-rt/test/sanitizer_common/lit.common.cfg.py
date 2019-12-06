@@ -81,3 +81,6 @@ if not config.parallelism_group:
 if config.tool_name == 'lsan' and config.host_os == 'Darwin':
   lit_config.note('LSan sanitizer_common tests disabled')
   config.unsupported = True
+
+if config.host_os == 'NetBSD':
+  config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))

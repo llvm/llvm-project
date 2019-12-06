@@ -45,3 +45,6 @@ if config.host_arch in ['mips64', 'mips64el']:
   config.substitutions.append( ('CHECK-%short-stack', 'CHECK-SHORT-STACK'))
 else:
   config.substitutions.append( ('CHECK-%short-stack', 'CHECK-FULL-STACK'))
+
+if config.host_os == 'NetBSD':
+  config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))
