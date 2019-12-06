@@ -555,6 +555,14 @@ void DwarfExpression::addFragmentOffset(const DIExpression *Expr) {
   OffsetInBits = FragmentOffset;
 }
 
+void DwarfExpression::addTargetIndexLocation(unsigned Index, int64_t Offset) {
+  assert(LocationKind == Implicit || LocationKind == Unknown);
+  LocationKind = Implicit;
+  emitOp(dwarf::DW_OP_WASM_location);
+  emitUnsigned(Index);
+  emitSigned(Offset);
+}
+
 void DwarfExpression::emitLegacySExt(unsigned FromBits) {
   // (((X >> (FromBits - 1)) * (~0)) << FromBits) | X
   emitOp(dwarf::DW_OP_dup);

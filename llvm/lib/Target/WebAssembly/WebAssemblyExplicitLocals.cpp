@@ -17,6 +17,7 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
+#include "WebAssemblyDebugValueManager.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
@@ -261,6 +262,8 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
             .addImm(LocalId)
             .addReg(MI.getOperand(2).getReg());
 
+        WebAssemblyDebugValueManager(&MI).replaceWithLocal(LocalId);
+
         MI.eraseFromParent();
         Changed = true;
         continue;
@@ -290,6 +293,9 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           } else {
             unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
             unsigned Opc = getLocalSetOpcode(RC);
+
+            WebAssemblyDebugValueManager(&MI).replaceWithLocal(LocalId);
+
             BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
                 .addImm(LocalId)
                 .addReg(NewReg);

@@ -26,7 +26,7 @@ class DbgValueLoc {
   const DIExpression *Expression;
 
   /// Type of entry that this represents.
-  enum EntryType { E_Location, E_Integer, E_ConstantFP, E_ConstantInt };
+  enum EntryType { E_Location, E_Integer, E_ConstantFP, E_ConstantInt, E_TargetIndexLocation };
   enum EntryType EntryKind;
 
   /// Either a constant,
@@ -36,8 +36,12 @@ class DbgValueLoc {
     const ConstantInt *CIP;
   } Constant;
 
-  /// Or a location in the machine frame.
-  MachineLocation Loc;
+   union {
+     // Or a location in the machine frame.
+     MachineLocation Loc;
+     // Or a location from target specific location.
+     TargetIndexLocation TIL;
+   };
 
 public:
   DbgValueLoc(const DIExpression *Expr, int64_t i)
@@ -56,8 +60,11 @@ public:
       : Expression(Expr), EntryKind(E_Location), Loc(Loc) {
     assert(cast<DIExpression>(Expr)->isValid());
   }
+  DbgValueLoc(const DIExpression *Expr, TargetIndexLocation Loc)
+      : Expression(Expr), EntryKind(E_TargetIndexLocation), TIL(Loc) {}
 
   bool isLocation() const { return EntryKind == E_Location; }
+  bool isTargetIndexLocation() const { return EntryKind == E_TargetIndexLocation; }
   bool isInt() const { return EntryKind == E_Integer; }
   bool isConstantFP() const { return EntryKind == E_ConstantFP; }
   bool isConstantInt() const { return EntryKind == E_ConstantInt; }
@@ -65,6 +72,7 @@ public:
   const ConstantFP *getConstantFP() const { return Constant.CFP; }
   const ConstantInt *getConstantInt() const { return Constant.CIP; }
   MachineLocation getLoc() const { return Loc; }
+  TargetIndexLocation getTargetIndexLocation() const { return TIL; }    
   bool isFragment() const { return getExpression()->isFragment(); }
   bool isEntryVal() const { return getExpression()->isEntryValue(); }
   const DIExpression *getExpression() const { return Expression; }
@@ -85,6 +93,19 @@ public:
       Expression->dump();
   }
 #endif
+};
+
+struct TargetIndexLocation {
+  int Index;
+  int Offset;
+
+  TargetIndexLocation() = default;
+  TargetIndexLocation(unsigned Idx, int64_t Offset)
+      : Index(Idx), Offset(Offset) {}
+
+  bool operator==(const TargetIndexLocation &Other) const {
+    return Index == Other.Index && Offset == Other.Offset;
+  }
 };
 
 /// This struct describes location entries emitted in the .debug_loc
@@ -162,6 +183,8 @@ inline bool operator==(const DbgValueLoc &A,
   switch (A.EntryKind) {
   case DbgValueLoc::E_Location:
     return A.Loc == B.Loc;
+  case DbgValueLoc::E_TargetIndexLocation:
+    return A.TIL == B.TIL;    
   case DbgValueLoc::E_Integer:
     return A.Constant.Int == B.Constant.Int;
   case DbgValueLoc::E_ConstantFP:

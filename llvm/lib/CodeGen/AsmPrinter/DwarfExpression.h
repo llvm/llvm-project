@@ -334,9 +334,13 @@ public:
   /// If applicable, emit an empty DW_OP_piece / DW_OP_bit_piece to advance to
   /// the fragment described by \c Expr.
   void addFragmentOffset(const DIExpression *Expr);
-
+  
   void emitLegacySExt(unsigned FromBits);
   void emitLegacyZExt(unsigned FromBits);
+
+  /// Emit location information expressed via target's index + offset
+  /// It is an extension for WebAssembly locals, globals and operand stack.
+  void addTargetIndexLocation(unsigned Index, int64_t Offset);
 };
 
 /// DwarfExpression implementation for .debug_loc entries.
