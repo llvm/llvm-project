@@ -12,7 +12,7 @@ namespace std {
 
 // Check that we compare subobjects in the right order.
 struct Log {
-  char buff[8] = {};
+  char buff[10] = {};
   int n = 0;
   constexpr void add(char c) { buff[n++] = c; }
   constexpr bool operator==(const char *p) const { return __builtin_strcmp(p, buff) == 0; }
@@ -24,22 +24,37 @@ template<char C> struct B {
   constexpr std::strong_ordering operator<=>(const B&) const { log->add(C); return {0}; }
 };
 
-struct C : B<'a'>, B<'b'> {
-  B<'c'> c;
-  B<'d'> d;
-  // FIXME: Test arrays once we handle them properly.
+template<typename T> constexpr bool check(bool which, const char *str) {
+  Log log;
+  T c(&log);
+  (void)(which ? c == c : c <=> c);
+  return log == str;
+}
 
-  constexpr C(Log *p) : B<'a'>{p}, B<'b'>{p}, c{p}, d{p} {}
+struct C : B<'a'>, B<'b'> {
+  B<'r'> r[3];
+  B<'c'> c;
+  B<'s'> s[2];
+  B<'d'> d;
+
+  constexpr C(Log *p) : B<'a'>{p}, B<'b'>{p}, r{p, p, p}, c{p}, s{p, p}, d{p} {}
 
   bool operator==(const C&) const = default;
   std::strong_ordering operator<=>(const C&) const = default;
 };
 
-constexpr bool check(bool which) {
-  Log log;
-  C c(&log);
-  (void)(which ? c == c : c <=> c);
-  return log == "abcd";
-}
-static_assert(check(false));
-static_assert(check(true));
+static_assert(check<C>(false, "abrrrcssd"));
+static_assert(check<C>(true, "abrrrcssd"));
+
+struct D {
+  B<'x'> x;
+  B<'y'> y[2];
+
+  constexpr D(Log *p) : x{p}, y{p, p} {}
+
+  bool operator==(const D&) const = default;
+  std::strong_ordering operator<=>(const D&) const = default;
+};
+
+static_assert(check<D>(false, "xyy"));
+static_assert(check<D>(true, "xyy"));
