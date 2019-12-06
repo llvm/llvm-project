@@ -37,6 +37,8 @@ class Configuration(LibcxxConfiguration):
         super(Configuration, self).configure_features()
         if not self.get_lit_bool('enable_exceptions', True):
             self.config.available_features.add('libcxxabi-no-exceptions')
+        if self.get_lit_bool('arm_ehabi', False):
+            self.config.available_features.add('libunwind-arm-ehabi')
 
     def configure_compile_flags(self):
         self.cxx.compile_flags += ['-DLIBUNWIND_NO_TIMER']
@@ -65,4 +67,12 @@ class Configuration(LibcxxConfiguration):
         pass
 
     def configure_compile_flags_rtti(self):
+        pass
+
+    def configure_link_flags_cxx_library(self):
+        # libunwind tests should not link with libc++
+        pass
+
+    def configure_link_flags_abi_library(self):
+        # libunwind tests should not link with libc++abi
         pass
