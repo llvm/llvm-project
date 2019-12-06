@@ -2400,9 +2400,15 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
     unsigned Width = LT.second.getVectorNumElements();
     Index = Index % Width;
 
-    // Floating point scalars are already located in index #0.
-    if (ScalarType->isFloatingPointTy() && Index == 0)
-      return 0;
+    if (Index == 0) {
+      // Floating point scalars are already located in index #0.
+      if (ScalarType->isFloatingPointTy())
+        return 0;
+
+      // Assume movd/movq XMM <-> GPR is relatively cheap on all targets.
+      if (ScalarType->isIntegerTy())
+        return 1;
+    }
 
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Unexpected vector opcode");
