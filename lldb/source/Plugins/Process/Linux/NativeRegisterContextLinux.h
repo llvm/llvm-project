@@ -28,6 +28,9 @@ public:
   CreateHostNativeRegisterContextLinux(const ArchSpec &target_arch,
                                        NativeThreadProtocol &native_thread);
 
+  // Invalidates cached values in register context data structures
+  virtual void InvalidateAllRegisters(){}
+
 protected:
   lldb::ByteOrder GetByteOrder() const;
 
