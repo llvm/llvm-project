@@ -231,7 +231,7 @@ func @outerproduct_add(%arg0: vector<2xf32>, %arg1: vector<3xf32>, %arg2: vector
 //          CHECK:   llvm.return {{.*}} : !llvm<"[2 x <3 x float>]">
 
 func @extract_vec_2d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<3x16xf32> {
-  %0 = vector.extractelement %arg0[0 : i32]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0 : i32]: vector<4x3x16xf32>
   return %0 : vector<3x16xf32>
 }
 // CHECK-LABEL: extract_vec_2d_from_vec_3d
@@ -239,7 +239,7 @@ func @extract_vec_2d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<3x16xf32> 
 //       CHECK:   llvm.return %{{.*}} : !llvm<"[3 x <16 x float>]">
 
 func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
-  %0 = vector.extractelement %arg0[0 : i32, 0 : i32, 0 : i32]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0 : i32, 0 : i32, 0 : i32]: vector<4x3x16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: extract_element_from_vec_3d

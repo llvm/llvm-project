@@ -35,25 +35,25 @@ func @vector_broadcast(%a: f32, %b: vector<16xf32>, %c: vector<1x16xf32>, %d: ve
   return %3 : vector<8x16xf32>
 }
 
-// CHECK-LABEL: @extractelement
-func @extractelement(%arg0: vector<4x8x16xf32>) -> (vector<8x16xf32>, vector<16xf32>, f32) {
-  //      CHECK: vector.extractelement {{.*}}[3 : i32] : vector<4x8x16xf32>
-  %1 = vector.extractelement %arg0[3 : i32] : vector<4x8x16xf32>
-  // CHECK-NEXT: vector.extractelement {{.*}}[3 : i32, 3 : i32] : vector<4x8x16xf32>
-  %2 = vector.extractelement %arg0[3 : i32, 3 : i32] : vector<4x8x16xf32>
-  // CHECK-NEXT: vector.extractelement {{.*}}[3 : i32, 3 : i32, 3 : i32] : vector<4x8x16xf32>
-  %3 = vector.extractelement %arg0[3 : i32, 3 : i32, 3 : i32] : vector<4x8x16xf32>
+// CHECK-LABEL: @extract
+func @extract(%arg0: vector<4x8x16xf32>) -> (vector<8x16xf32>, vector<16xf32>, f32) {
+  //      CHECK: vector.extract {{.*}}[3 : i32] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[3 : i32] : vector<4x8x16xf32>
+  // CHECK-NEXT: vector.extract {{.*}}[3 : i32, 3 : i32] : vector<4x8x16xf32>
+  %2 = vector.extract %arg0[3 : i32, 3 : i32] : vector<4x8x16xf32>
+  // CHECK-NEXT: vector.extract {{.*}}[3 : i32, 3 : i32, 3 : i32] : vector<4x8x16xf32>
+  %3 = vector.extract %arg0[3 : i32, 3 : i32, 3 : i32] : vector<4x8x16xf32>
   return %1, %2, %3 : vector<8x16xf32>, vector<16xf32>, f32
 }
 
-// CHECK-LABEL: @insertelement
-func @insertelement(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>, %res: vector<4x8x16xf32>) {
-  //      CHECK: vector.insertelement %{{.*}}, %{{.*}}[3 : i32] : vector<8x16xf32> into vector<4x8x16xf32>
-  %1 = vector.insertelement %c, %res[3 : i32] : vector<8x16xf32> into vector<4x8x16xf32>
-  //      CHECK: vector.insertelement %{{.*}}, %{{.*}}[3 : i32, 3 : i32] : vector<16xf32> into vector<4x8x16xf32>
-  %2 = vector.insertelement %b, %res[3 : i32, 3 : i32] : vector<16xf32> into vector<4x8x16xf32>
-  //      CHECK: vector.insertelement %{{.*}}, %{{.*}}[3 : i32, 3 : i32, 3 : i32] : f32 into vector<4x8x16xf32>
-  %3 = vector.insertelement %a, %res[3 : i32, 3 : i32, 3 : i32] : f32 into vector<4x8x16xf32>
+// CHECK-LABEL: @insert
+func @insert(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>, %res: vector<4x8x16xf32>) {
+  //      CHECK: vector.insert %{{.*}}, %{{.*}}[3 : i32] : vector<8x16xf32> into vector<4x8x16xf32>
+  %1 = vector.insert %c, %res[3 : i32] : vector<8x16xf32> into vector<4x8x16xf32>
+  //      CHECK: vector.insert %{{.*}}, %{{.*}}[3 : i32, 3 : i32] : vector<16xf32> into vector<4x8x16xf32>
+  %2 = vector.insert %b, %res[3 : i32, 3 : i32] : vector<16xf32> into vector<4x8x16xf32>
+  //      CHECK: vector.insert %{{.*}}, %{{.*}}[3 : i32, 3 : i32, 3 : i32] : f32 into vector<4x8x16xf32>
+  %3 = vector.insert %a, %res[3 : i32, 3 : i32, 3 : i32] : f32 into vector<4x8x16xf32>
   return
 }
 
