@@ -387,7 +387,10 @@ public:
     if (FS != iter->second.end())
       return &FS->second;
     // If we cannot find exact match of the callee name, return the FS with
-    // the max total count.
+    // the max total count. Only do this when CalleeName is not provided, 
+    // i.e., only for indirect calls.
+    if (!CalleeName.empty()) 
+      return nullptr;
     uint64_t MaxTotalSamples = 0;
     const FunctionSamples *R = nullptr;
     for (const auto &NameFS : iter->second)
