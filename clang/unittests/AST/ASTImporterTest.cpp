@@ -5590,6 +5590,30 @@ TEST_P(ConflictingDeclsWithLiberalStrategy, DISABLED_VarTemplateDecl) {
   CheckImportedAsNew<VarTemplateDecl>(Result, ToTU, Pattern);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImplicitlyDeclareSelf) {
+  Decl *FromTU = getTuDecl(R"(
+                           __attribute__((objc_root_class))
+                           @interface Root
+                           @end
+                           @interface C : Root
+                             -(void)method;
+                           @end
+                           @implementation C
+                             -(void)method {}
+                           @end
+                           )",
+                           Lang_OBJCXX, "input.mm");
+  auto *FromMethod = LastDeclMatcher<ObjCMethodDecl>().match(
+      FromTU, namedDecl(hasName("method")));
+  ASSERT_TRUE(FromMethod);
+  auto ToMethod = Import(FromMethod, Lang_OBJCXX);
+  ASSERT_TRUE(ToMethod);
+
+  // Both methods should have their implicit parameters.
+  EXPECT_TRUE(FromMethod->getSelfDecl() != nullptr);
+  EXPECT_TRUE(ToMethod->getSelfDecl() != nullptr);
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, SVEBuiltins,
                         ::testing::Values(ArgVector{"-target",
                                                     "aarch64-linux-gnu"}), );
