@@ -57,7 +57,7 @@ endif ()
 # some of these generated headers. This approach is copied from Clang's main
 # CMakeLists.txt, so it should kept in sync the code in Clang which was added
 # in llvm-svn 308844.
-if(LLVM_ENABLE_MODULES AND NOT LLDB_BUILT_STANDALONE)
+if(NOT LLDB_BUILT_STANDALONE)
   list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
 endif()
 
