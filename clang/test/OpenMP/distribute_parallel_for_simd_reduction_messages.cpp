@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s -Wno-openmp-mapping -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void xxx(int argc) {

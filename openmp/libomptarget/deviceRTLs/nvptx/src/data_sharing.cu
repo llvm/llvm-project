@@ -211,7 +211,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
   }
 
   // FIXME: Need to see the impact of doing it here.
-  __threadfence_block();
+  __kmpc_impl_threadfence_block();
 
   DSPRINT0(DSFLAG, "Exiting __kmpc_data_sharing_environment_begin\n");
 
@@ -289,7 +289,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
   }
 
   // FIXME: Need to see the impact of doing it here.
-  __threadfence_block();
+  __kmpc_impl_threadfence_block();
 
   DSPRINT0(DSFLAG, "Exiting __kmpc_data_sharing_environment_end\n");
   return;
@@ -357,7 +357,7 @@ EXTERN void __kmpc_data_sharing_init_stack_spmd() {
   if (GetThreadIdInBlock() == 0)
     data_sharing_init_stack_common();
 
-  __threadfence_block();
+  __kmpc_impl_threadfence_block();
 }
 
 INLINE static void* data_sharing_push_stack_common(size_t PushSize) {
@@ -474,7 +474,7 @@ EXTERN void *__kmpc_data_sharing_push_stack(size_t DataSize,
 EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
   ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Expected initialized runtime.");
 
-  __threadfence_block();
+  __kmpc_impl_threadfence_block();
 
   if (GetThreadIdInBlock() % WARPSIZE == 0) {
     unsigned WID = GetWarpId();
@@ -555,7 +555,7 @@ EXTERN void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
   ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
           "Must be called only in the target master thread.");
   *frame = omptarget_nvptx_simpleMemoryManager.Acquire(buf, size);
-  __threadfence();
+  __kmpc_impl_threadfence();
 }
 
 EXTERN void __kmpc_restore_team_static_memory(int16_t isSPMDExecutionMode,
@@ -569,7 +569,7 @@ EXTERN void __kmpc_restore_team_static_memory(int16_t isSPMDExecutionMode,
     }
     return;
   }
-  __threadfence();
+  __kmpc_impl_threadfence();
   ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
           "Must be called only in the target master thread.");
   omptarget_nvptx_simpleMemoryManager.Release();

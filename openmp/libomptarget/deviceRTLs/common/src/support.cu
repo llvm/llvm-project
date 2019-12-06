@@ -1,4 +1,4 @@
-//===--------- support.cu - NVPTX OpenMP support functions ------- CUDA -*-===//
+//===--------- support.cu - GPU OpenMP support functions --------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -212,7 +212,7 @@ DEVICE void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   if (Rank == 0) {
     parallelLevel[GetWarpId()] +=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
-    __threadfence();
+    __kmpc_impl_threadfence();
   }
   __kmpc_impl_syncwarp(Mask);
 }
@@ -224,7 +224,7 @@ DEVICE void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   if (Rank == 0) {
     parallelLevel[GetWarpId()] -=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
-    __threadfence();
+    __kmpc_impl_threadfence();
   }
   __kmpc_impl_syncwarp(Mask);
 }

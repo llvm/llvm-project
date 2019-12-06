@@ -100,6 +100,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FNEG:        R = SoftenFloatRes_FNEG(N); break;
     case ISD::STRICT_FP_EXTEND:
     case ISD::FP_EXTEND:   R = SoftenFloatRes_FP_EXTEND(N); break;
+    case ISD::STRICT_FP_ROUND:
     case ISD::FP_ROUND:    R = SoftenFloatRes_FP_ROUND(N); break;
     case ISD::FP16_TO_FP:  R = SoftenFloatRes_FP16_TO_FP(N); break;
     case ISD::STRICT_FPOW:

@@ -241,7 +241,7 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
     char *scratchpad = GetTeamsReductionScratchpad();
 
     scratchFct(reduce_data, scratchpad, TeamId, NumTeams);
-    __threadfence();
+    __kmpc_impl_threadfence();
 
     // atomicInc increments 'timestamp' and has a range [0, NumTeams-1].
     // It resets 'timestamp' back to 0 once the last team increments
@@ -389,7 +389,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_simple(kmp_Ident *loc,
 EXTERN void
 __kmpc_nvptx_teams_end_reduce_nowait_simple(kmp_Ident *loc, int32_t global_tid,
                                             kmp_CriticalName *crit) {
-  __threadfence_system();
+  __kmpc_impl_threadfence_system();
   (void)atomicExch((uint32_t *)crit, 0);
 }
 
@@ -446,7 +446,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
       lgcpyFct(global_buffer, ModBockId, reduce_data);
     else
       lgredFct(global_buffer, ModBockId, reduce_data);
-    __threadfence_system();
+    __kmpc_impl_threadfence_system();
 
     // Increment team counter.
     // This counter is incremented by all teams in the current

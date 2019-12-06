@@ -1,4 +1,4 @@
-//===------------ sync.h - NVPTX OpenMP synchronizations --------- CUDA -*-===//
+//===------------ sync.cu - GPU OpenMP synchronizations ---------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -133,7 +133,7 @@ EXTERN void __kmpc_end_single(kmp_Ident *loc, int32_t global_tid) {
 
 EXTERN void __kmpc_flush(kmp_Ident *loc) {
   PRINT0(LD_IO, "call kmpc_flush\n");
-  __threadfence();
+  __kmpc_impl_threadfence();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
