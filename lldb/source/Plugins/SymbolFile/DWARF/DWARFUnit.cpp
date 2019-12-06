@@ -287,16 +287,25 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
 
   DWARFAttributes attributes;
   size_t num_attributes = cu_die.GetAttributes(this, attributes);
+
+  // Extract DW_AT_addr_base first, as other attributes may need it.
+  for (size_t i = 0; i < num_attributes; ++i) {
+    if (attributes.AttributeAtIndex(i) != DW_AT_addr_base)
+      continue;
+    DWARFFormValue form_value;
+    if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+      addr_base = form_value.Unsigned();
+      SetAddrBase(*addr_base);
+      break;
+    }
+  }
+
   for (size_t i = 0; i < num_attributes; ++i) {
     dw_attr_t attr = attributes.AttributeAtIndex(i);
     DWARFFormValue form_value;
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
-    case DW_AT_addr_base:
-      addr_base = form_value.Unsigned();
-      SetAddrBase(*addr_base);
-      break;
     case DW_AT_rnglists_base:
       ranges_base = form_value.Unsigned();
       SetRangesBase(*ranges_base);
