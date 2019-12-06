@@ -32,7 +32,7 @@ TEST(Hover, Structured) {
        [](HoverInfo &HI) {
          HI.NamespaceScope = "";
          HI.Name = "foo";
-         HI.Kind = SymbolKind::Function;
+         HI.Kind = index::SymbolKind::Function;
          HI.Documentation = "Best foo ever.";
          HI.Definition = "void foo()";
          HI.ReturnType = "void";
@@ -49,7 +49,7 @@ TEST(Hover, Structured) {
        [](HoverInfo &HI) {
          HI.NamespaceScope = "ns1::ns2::";
          HI.Name = "foo";
-         HI.Kind = SymbolKind::Function;
+         HI.Kind = index::SymbolKind::Function;
          HI.Documentation = "Best foo ever.";
          HI.Definition = "void foo()";
          HI.ReturnType = "void";
@@ -68,7 +68,7 @@ TEST(Hover, Structured) {
          HI.NamespaceScope = "ns1::ns2::";
          HI.LocalScope = "Foo::";
          HI.Name = "bar";
-         HI.Kind = SymbolKind::Field;
+         HI.Kind = index::SymbolKind::Field;
          HI.Definition = "int bar";
          HI.Type = "int";
        }},
@@ -86,7 +86,7 @@ TEST(Hover, Structured) {
          HI.NamespaceScope = "ns1::ns2::";
          HI.LocalScope = "Foo::foo::";
          HI.Name = "bar";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Definition = "int bar";
          HI.Type = "int";
        }},
@@ -102,7 +102,7 @@ TEST(Hover, Structured) {
          HI.NamespaceScope = "ns1::(anonymous)::";
          HI.LocalScope = "(anonymous struct)::";
          HI.Name = "bar";
-         HI.Kind = SymbolKind::Field;
+         HI.Kind = index::SymbolKind::Field;
          HI.Definition = "int bar";
          HI.Type = "int";
        }},
@@ -114,7 +114,7 @@ TEST(Hover, Structured) {
        [](HoverInfo &HI) {
          HI.NamespaceScope = "";
          HI.Name = "foo";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Definition = "Foo<int, char, bool> foo = Foo<int, char, bool>(5)";
          HI.Type = "Foo<int, char, bool>";
        }},
@@ -126,7 +126,7 @@ TEST(Hover, Structured) {
        [](HoverInfo &HI) {
          HI.NamespaceScope = "";
          HI.Name = "vector";
-         HI.Kind = SymbolKind::Class;
+         HI.Kind = index::SymbolKind::Class;
          HI.Definition = "template <typename T> class vector {}";
          HI.TemplateParameters = {
              {std::string("typename"), std::string("T"), llvm::None},
@@ -145,7 +145,7 @@ TEST(Hover, Structured) {
        [](HoverInfo &HI) {
          HI.NamespaceScope = "";
          HI.Name = "Foo";
-         HI.Kind = SymbolKind::Class;
+         HI.Kind = index::SymbolKind::Class;
          HI.Definition =
              R"cpp(template <template <typename, bool...> class C, typename = char, int = 0,
           bool Q = false, class... Ts>
@@ -175,7 +175,7 @@ class Foo {})cpp";
        [](HoverInfo &HI) {
          HI.NamespaceScope = "";
          HI.Name = "foo";
-         HI.Kind = SymbolKind::Function;
+         HI.Kind = index::SymbolKind::Function;
          HI.Definition =
              R"cpp(template <template <typename, bool...> class C, typename = char, int = 0,
           bool Q = false, class... Ts>
@@ -204,7 +204,7 @@ void foo())cpp";
        [](HoverInfo &HI) {
          HI.NamespaceScope = "";
          HI.Name = "foo";
-         HI.Kind = SymbolKind::Function;
+         HI.Kind = index::SymbolKind::Function;
          HI.Definition = "Foo<bool, true, false> foo(int, bool T = false)";
          HI.ReturnType = "Foo<bool, true, false>";
          HI.Type = "Foo<bool, true, false> (int, bool)";
@@ -225,7 +225,7 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.LocalScope = "foo::";
          HI.Name = "c";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Definition = "auto *c = &b";
          HI.Type = "class (lambda) **";
          HI.ReturnType = "bool";
@@ -246,7 +246,7 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.LocalScope = "foo::";
          HI.Name = "bar";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Parameter;
          HI.Definition = "decltype(lamb) &bar";
          HI.Type = "decltype(lamb) &";
          HI.ReturnType = "bool";
@@ -267,7 +267,7 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.LocalScope = "foo::";
          HI.Name = "bar";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Parameter;
          HI.Definition = "decltype(lamb) bar";
          HI.Type = "class (lambda)";
          HI.ReturnType = "bool";
@@ -290,7 +290,7 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.LocalScope = "foo::";
          HI.Name = "lamb";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Definition = "auto lamb = [&bar](int T, bool B) -> bool {}";
          HI.Type = "class (lambda)";
          HI.ReturnType = "bool";
@@ -310,7 +310,7 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.LocalScope = "foo::(anonymous class)::operator()::";
          HI.Name = "test";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Definition = "int test";
          HI.Type = "int";
        }},
@@ -322,7 +322,7 @@ void foo())cpp";
        [](HoverInfo &HI) {
          HI.Name = "X<T *>";
          HI.NamespaceScope = "";
-         HI.Kind = SymbolKind::Class;
+         HI.Kind = index::SymbolKind::Class;
          HI.Definition = "template <typename T> class X<T *> {}";
        }},
       // Constructor of partially-specialized class template
@@ -334,7 +334,7 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.Name = "X";
          HI.LocalScope = "X<T *>::"; // FIXME: X<T *, void>::
-         HI.Kind = SymbolKind::Constructor;
+         HI.Kind = index::SymbolKind::Constructor;
          HI.ReturnType = "X<T *>";
          HI.Definition = "X()";
          HI.Parameters.emplace();
@@ -344,7 +344,7 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.Name = "~X";
          HI.LocalScope = "X::";
-         HI.Kind = SymbolKind::Constructor;
+         HI.Kind = index::SymbolKind::Destructor;
          HI.ReturnType = "void";
          HI.Definition = "~X()";
          HI.Parameters.emplace();
@@ -358,7 +358,7 @@ void foo())cpp";
         )cpp",
        [](HoverInfo &HI) {
          HI.Name = "class (lambda)";
-         HI.Kind = SymbolKind::Class;
+         HI.Kind = index::SymbolKind::Class;
        }},
       // auto on template instantiation
       {R"cpp(
@@ -369,7 +369,7 @@ void foo())cpp";
         )cpp",
        [](HoverInfo &HI) {
          HI.Name = "class Foo<int>";
-         HI.Kind = SymbolKind::Class;
+         HI.Kind = index::SymbolKind::Class;
        }},
       // auto on specialized template
       {R"cpp(
@@ -381,7 +381,7 @@ void foo())cpp";
         )cpp",
        [](HoverInfo &HI) {
          HI.Name = "class Foo<int>";
-         HI.Kind = SymbolKind::Class;
+         HI.Kind = index::SymbolKind::Class;
        }},
 
       // macro
@@ -391,7 +391,7 @@ void foo())cpp";
         [[MAC^RO]](int, double d, bool z = false);
         )cpp",
        [](HoverInfo &HI) {
-         HI.Name = "MACRO", HI.Kind = SymbolKind::String,
+         HI.Name = "MACRO", HI.Kind = index::SymbolKind::Macro,
          HI.Definition = "#define MACRO(x, y, z) void foo(x, y, z);";
        }},
 
@@ -403,7 +403,7 @@ void foo())cpp";
        [](HoverInfo &HI) {
          HI.Name = "bar";
          HI.Definition = "int bar = add(1, 2)";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Type = "int";
          HI.NamespaceScope = "";
          HI.Value = "3";
@@ -414,7 +414,7 @@ void foo())cpp";
        [](HoverInfo &HI) {
          HI.Name = "bar";
          HI.Definition = "int bar = sizeof(char)";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Type = "int";
          HI.NamespaceScope = "";
          HI.Value = "1";
@@ -428,7 +428,7 @@ void foo())cpp";
        [](HoverInfo &HI) {
          HI.Name = "bar";
          HI.Definition = "int bar = Add<1, 2>::result";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Type = "int";
          HI.NamespaceScope = "";
          HI.Value = "3";
@@ -442,7 +442,7 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.LocalScope = "Color::";
          HI.Definition = "GREEN";
-         HI.Kind = SymbolKind::EnumMember;
+         HI.Kind = index::SymbolKind::EnumConstant;
          HI.Type = "enum Color";
          HI.Value = "1"; // Numeric when hovering on the enumerator name.
        }},
@@ -455,7 +455,7 @@ void foo())cpp";
          HI.Name = "x";
          HI.NamespaceScope = "";
          HI.Definition = "enum Color x = GREEN";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Type = "enum Color";
          HI.Value = "GREEN (1)"; // Symbolic when hovering on an expression.
        }},
@@ -470,7 +470,7 @@ void foo())cpp";
        [](HoverInfo &HI) {
          HI.Name = "result";
          HI.Definition = "static constexpr int result = a + b";
-         HI.Kind = SymbolKind::Property;
+         HI.Kind = index::SymbolKind::StaticProperty;
          HI.Type = "const int";
          HI.NamespaceScope = "";
          HI.LocalScope = "Add<a, b>::";
@@ -483,7 +483,7 @@ void foo())cpp";
        [](HoverInfo &HI) {
          HI.Name = "answer";
          HI.Definition = "constexpr int answer()";
-         HI.Kind = SymbolKind::Function;
+         HI.Kind = index::SymbolKind::Function;
          HI.Type = "int ()";
          HI.ReturnType = "int";
          HI.Parameters.emplace();
@@ -496,7 +496,7 @@ void foo())cpp";
        [](HoverInfo &HI) {
          HI.Name = "bar";
          HI.Definition = "const char *bar = \"1234\"";
-         HI.Kind = SymbolKind::Variable;
+         HI.Kind = index::SymbolKind::Variable;
          HI.Type = "const char *";
          HI.NamespaceScope = "";
          HI.Value = "&\"1234\"[0]";
