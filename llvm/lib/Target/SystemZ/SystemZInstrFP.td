@@ -467,16 +467,16 @@ let Uses = [FPC], mayRaiseFPException = 1 in {
 // f64 multiplication of two FP32 registers.
 let Uses = [FPC], mayRaiseFPException = 1 in
   def MDEBR : BinaryRRE<"mdebr", 0xB30C, null_frag, FP64, FP32>;
-def : Pat<(any_fmul (f64 (fpextend FP32:$src1)),
-                    (f64 (fpextend FP32:$src2))),
+def : Pat<(any_fmul (f64 (any_fpextend FP32:$src1)),
+                    (f64 (any_fpextend FP32:$src2))),
           (MDEBR (INSERT_SUBREG (f64 (IMPLICIT_DEF)),
                                 FP32:$src1, subreg_h32), FP32:$src2)>;
 
 // f64 multiplication of an FP32 register and an f32 memory.
 let Uses = [FPC], mayRaiseFPException = 1 in
   def MDEB : BinaryRXE<"mdeb", 0xED0C, null_frag, FP64, load, 4>;
-def : Pat<(any_fmul (f64 (fpextend FP32:$src1)),
-                    (f64 (extloadf32 bdxaddr12only:$addr))),
+def : Pat<(any_fmul (f64 (any_fpextend FP32:$src1)),
+                    (f64 (any_extloadf32 bdxaddr12only:$addr))),
           (MDEB (INSERT_SUBREG (f64 (IMPLICIT_DEF)), FP32:$src1, subreg_h32),
                 bdxaddr12only:$addr)>;
 
@@ -484,8 +484,8 @@ def : Pat<(any_fmul (f64 (fpextend FP32:$src1)),
 let Uses = [FPC], mayRaiseFPException = 1 in
   def MXDBR : BinaryRRE<"mxdbr", 0xB307, null_frag, FP128, FP64>;
 let Predicates = [FeatureNoVectorEnhancements1] in
-  def : Pat<(any_fmul (f128 (fpextend FP64:$src1)),
-                      (f128 (fpextend FP64:$src2))),
+  def : Pat<(any_fmul (f128 (any_fpextend FP64:$src1)),
+                      (f128 (any_fpextend FP64:$src2))),
             (MXDBR (INSERT_SUBREG (f128 (IMPLICIT_DEF)),
                                   FP64:$src1, subreg_h64), FP64:$src2)>;
 
@@ -493,8 +493,8 @@ let Predicates = [FeatureNoVectorEnhancements1] in
 let Uses = [FPC], mayRaiseFPException = 1 in
   def MXDB : BinaryRXE<"mxdb", 0xED07, null_frag, FP128, load, 8>;
 let Predicates = [FeatureNoVectorEnhancements1] in
-  def : Pat<(any_fmul (f128 (fpextend FP64:$src1)),
-                      (f128 (extloadf64 bdxaddr12only:$addr))),
+  def : Pat<(any_fmul (f128 (any_fpextend FP64:$src1)),
+                      (f128 (any_extloadf64 bdxaddr12only:$addr))),
             (MXDB (INSERT_SUBREG (f128 (IMPLICIT_DEF)), FP64:$src1, subreg_h64),
                   bdxaddr12only:$addr)>;
 
