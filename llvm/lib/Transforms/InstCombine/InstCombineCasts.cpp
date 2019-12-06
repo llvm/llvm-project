@@ -846,32 +846,27 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
 
 Instruction *InstCombiner::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext,
                                              bool DoTransform) {
-  Value *Op0 = Cmp->getOperand(0);
-  Value *Op1 = Cmp->getOperand(1);
-  ICmpInst::Predicate Pred = Cmp->getPredicate();
-  Type *ZType = Zext.getType();
-  Type *CmpOpType = Op0->getType();
-
   // If we are just checking for a icmp eq of a single bit and zext'ing it
   // to an integer, then shift the bit to the appropriate place and then
   // cast to integer to avoid the comparison.
-  const APInt *Op1C;
-  if (match(Op1, m_APInt(Op1C))) {
+  const APInt *Op1CV;
+  if (match(Cmp->getOperand(1), m_APInt(Op1CV))) {
+
     // zext (x <s  0) to i32 --> x>>u31      true if signbit set.
     // zext (x >s -1) to i32 --> (x>>u31)^1  true if signbit clear.
-    if ((Pred == ICmpInst::ICMP_SLT && Op1C->isNullValue()) ||
-        (Pred == ICmpInst::ICMP_SGT && Op1C->isAllOnesValue())) {
+    if ((Cmp->getPredicate() == ICmpInst::ICMP_SLT && Op1CV->isNullValue()) ||
+        (Cmp->getPredicate() == ICmpInst::ICMP_SGT && Op1CV->isAllOnesValue())) {
       if (!DoTransform) return Cmp;
 
-      Value *In = Op0;
-      Value *ShAmt = ConstantInt::get(CmpOpType,
-                                      CmpOpType->getScalarSizeInBits() - 1);
-      In = Builder.CreateLShr(In, ShAmt, In->getName() + ".lobit");
-      if (CmpOpType != ZType)
-        In = Builder.CreateIntCast(In, ZType, false /*ZExt*/);
+      Value *In = Cmp->getOperand(0);
+      Value *Sh = ConstantInt::get(In->getType(),
+                                   In->getType()->getScalarSizeInBits() - 1);
+      In = Builder.CreateLShr(In, Sh, In->getName() + ".lobit");
+      if (In->getType() != Zext.getType())
+        In = Builder.CreateIntCast(In, Zext.getType(), false /*ZExt*/);
 
-      if (Pred == ICmpInst::ICMP_SGT) {
-        Constant *One = ConstantInt::get(CmpOpType, 1);
+      if (Cmp->getPredicate() == ICmpInst::ICMP_SGT) {
+        Constant *One = ConstantInt::get(In->getType(), 1);
         In = Builder.CreateXor(In, One, In->getName() + ".not");
       }
 
@@ -886,42 +881,42 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext,
     // zext (X != 0) to i32 --> X>>1     iff X has only the 2nd bit set.
     // zext (X != 1) to i32 --> X^1      iff X has only the low bit set.
     // zext (X != 2) to i32 --> (X>>1)^1 iff X has only the 2nd bit set.
-    if ((Op1C->isNullValue() || Op1C->isPowerOf2()) &&
+    if ((Op1CV->isNullValue() || Op1CV->isPowerOf2()) &&
         // This only works for EQ and NE
         Cmp->isEquality()) {
       // If Op1C some other power of two, convert:
-      KnownBits Known = computeKnownBits(Op0, 0, &Zext);
+      KnownBits Known = computeKnownBits(Cmp->getOperand(0), 0, &Zext);
 
       APInt KnownZeroMask(~Known.Zero);
       if (KnownZeroMask.isPowerOf2()) { // Exactly 1 possible 1?
         if (!DoTransform) return Cmp;
 
-        bool isNE = Pred == ICmpInst::ICMP_NE;
-        if (!Op1C->isNullValue() && (*Op1C != KnownZeroMask)) {
+        bool isNE = Cmp->getPredicate() == ICmpInst::ICMP_NE;
+        if (!Op1CV->isNullValue() && (*Op1CV != KnownZeroMask)) {
           // (X&4) == 2 --> false
           // (X&4) != 2 --> true
-          Constant *Res = ConstantInt::get(ZType, isNE);
+          Constant *Res = ConstantInt::get(Zext.getType(), isNE);
           return replaceInstUsesWith(Zext, Res);
         }
 
         uint32_t ShAmt = KnownZeroMask.logBase2();
-        Value *In = Op0;
+        Value *In = Cmp->getOperand(0);
         if (ShAmt) {
           // Perform a logical shr by shiftamt.
           // Insert the shift to put the result in the low bit.
-          In = Builder.CreateLShr(In, ConstantInt::get(CmpOpType, ShAmt),
+          In = Builder.CreateLShr(In, ConstantInt::get(In->getType(), ShAmt),
                                   In->getName() + ".lobit");
         }
 
-        if (!Op1C->isNullValue() == isNE) { // Toggle the low bit.
-          Constant *One = ConstantInt::get(CmpOpType, 1);
+        if (!Op1CV->isNullValue() == isNE) { // Toggle the low bit.
+          Constant *One = ConstantInt::get(In->getType(), 1);
           In = Builder.CreateXor(In, One);
         }
 
-        if (ZType == CmpOpType)
+        if (Zext.getType() == In->getType())
           return replaceInstUsesWith(Zext, In);
 
-        Value *IntCast = Builder.CreateIntCast(In, ZType, false);
+        Value *IntCast = Builder.CreateIntCast(In, Zext.getType(), false);
         return replaceInstUsesWith(Zext, IntCast);
       }
     }
@@ -930,29 +925,32 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext,
   // icmp ne A, B is equal to xor A, B when A and B only really have one bit.
   // It is also profitable to transform icmp eq into not(xor(A, B)) because that
   // may lead to additional simplifications.
-  if (Cmp->isEquality() && ZType == CmpOpType) {
-    if (IntegerType *ITy = dyn_cast<IntegerType>(ZType)) {
-      KnownBits KnownOp0 = computeKnownBits(Op0, 0, &Zext);
-      KnownBits KnownOp1 = computeKnownBits(Op1, 0, &Zext);
+  if (Cmp->isEquality() && Zext.getType() == Cmp->getOperand(0)->getType()) {
+    if (IntegerType *ITy = dyn_cast<IntegerType>(Zext.getType())) {
+      Value *LHS = Cmp->getOperand(0);
+      Value *RHS = Cmp->getOperand(1);
 
-      if (KnownOp0.Zero == KnownOp1.Zero && KnownOp0.One == KnownOp1.One) {
-        APInt KnownBits = KnownOp0.Zero | KnownOp0.One;
+      KnownBits KnownLHS = computeKnownBits(LHS, 0, &Zext);
+      KnownBits KnownRHS = computeKnownBits(RHS, 0, &Zext);
+
+      if (KnownLHS.Zero == KnownRHS.Zero && KnownLHS.One == KnownRHS.One) {
+        APInt KnownBits = KnownLHS.Zero | KnownLHS.One;
         APInt UnknownBit = ~KnownBits;
         if (UnknownBit.countPopulation() == 1) {
           if (!DoTransform) return Cmp;
 
-          Value *Result = Builder.CreateXor(Op0, Op1);
+          Value *Result = Builder.CreateXor(LHS, RHS);
 
           // Mask off any bits that are set and won't be shifted away.
-          if (KnownOp0.One.uge(UnknownBit))
+          if (KnownLHS.One.uge(UnknownBit))
             Result = Builder.CreateAnd(Result,
-                                       ConstantInt::get(ITy, UnknownBit));
+                                        ConstantInt::get(ITy, UnknownBit));
 
           // Shift the bit we're testing down to the lsb.
           Result = Builder.CreateLShr(
-              Result, ConstantInt::get(ITy, UnknownBit.countTrailingZeros()));
+               Result, ConstantInt::get(ITy, UnknownBit.countTrailingZeros()));
 
-          if (Pred == ICmpInst::ICMP_EQ)
+          if (Cmp->getPredicate() == ICmpInst::ICMP_EQ)
             Result = Builder.CreateXor(Result, ConstantInt::get(ITy, 1));
           Result->takeName(Cmp);
           return replaceInstUsesWith(Zext, Result);
