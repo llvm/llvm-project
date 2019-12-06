@@ -31,6 +31,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -587,6 +588,7 @@ public:
     VPInterleaveSC,
     VPPredInstPHISC,
     VPReplicateSC,
+    VPWidenGEPSC,
     VPWidenIntOrFpInductionSC,
     VPWidenMemoryInstructionSC,
     VPWidenPHISC,
@@ -744,6 +746,36 @@ public:
     End++;
     return true;
   }
+
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent) const override;
+};
+
+/// A recipe for handling GEP instructions.
+class VPWidenGEPRecipe : public VPRecipeBase {
+private:
+  GetElementPtrInst *GEP;
+  bool IsPtrLoopInvariant;
+  SmallBitVector IsIndexLoopInvariant;
+
+public:
+  VPWidenGEPRecipe(GetElementPtrInst *GEP, Loop *OrigLoop)
+      : VPRecipeBase(VPWidenGEPSC), GEP(GEP),
+        IsIndexLoopInvariant(GEP->getNumIndices(), false) {
+    IsPtrLoopInvariant = OrigLoop->isLoopInvariant(GEP->getPointerOperand());
+    for (auto Index : enumerate(GEP->indices()))
+      IsIndexLoopInvariant[Index.index()] =
+          OrigLoop->isLoopInvariant(Index.value().get());
+  }
+  ~VPWidenGEPRecipe() override = default;
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPRecipeBase *V) {
+    return V->getVPRecipeID() == VPRecipeBase::VPWidenGEPSC;
+  }
+
+  /// Generate the gep nodes.
+  void execute(VPTransformState &State) override;
 
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent) const override;

@@ -20,6 +20,8 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/Index/IndexSymbol.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace clangd {
@@ -298,7 +300,7 @@ HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
     HI.Name = printName(Ctx, *ND);
   }
 
-  HI.Kind = indexSymbolKindToSymbolKind(index::getSymbolInfo(D).Kind);
+  HI.Kind = index::getSymbolInfo(D).Kind;
 
   // Fill in template params.
   if (const TemplateDecl *TD = D->getDescribedTemplate()) {
@@ -347,7 +349,7 @@ HoverInfo getHoverContents(QualType T, const Decl *D, ASTContext &ASTCtx,
   OS.flush();
 
   if (D) {
-    HI.Kind = indexSymbolKindToSymbolKind(index::getSymbolInfo(D).Kind);
+    HI.Kind = index::getSymbolInfo(D).Kind;
     enhanceFromIndex(HI, D, Index);
   }
   return HI;
@@ -358,8 +360,7 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   HoverInfo HI;
   SourceManager &SM = AST.getSourceManager();
   HI.Name = Macro.Name;
-  HI.Kind = indexSymbolKindToSymbolKind(
-      index::getSymbolInfoForMacro(*Macro.Info).Kind);
+  HI.Kind = index::SymbolKind::Macro;
   // FIXME: Populate documentation
   // FIXME: Pupulate parameters
 

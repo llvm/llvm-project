@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "NamespaceCommentCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -46,30 +48,48 @@ static bool locationsInSameFile(const SourceManager &Sources,
          Sources.getFileID(Loc1) == Sources.getFileID(Loc2);
 }
 
-static std::string getNamespaceComment(const NamespaceDecl *ND,
-                                       bool InsertLineBreak) {
-  std::string Fix = "// namespace";
-  if (!ND->isAnonymousNamespace())
-    Fix.append(" ").append(ND->getNameAsString());
-  if (InsertLineBreak)
-    Fix.append("\n");
-  return Fix;
-}
+static llvm::Optional<std::string>
+getNamespaceNameAsWritten(SourceLocation &Loc, const SourceManager &Sources,
+                          const LangOptions &LangOpts) {
+  // Loc should be at the begin of the namespace decl (usually, `namespace`
+  // token). We skip the first token right away, but in case of `inline
+  // namespace` or `namespace a::inline b` we can see both `inline` and
+  // `namespace` keywords, which we just ignore. Nested parens/squares before
+  // the opening brace can result from attributes.
+  std::string Result;
+  int Nesting = 0;
+  while (llvm::Optional<Token> T = utils::lexer::findNextTokenSkippingComments(
+             Loc, Sources, LangOpts)) {
+    Loc = T->getLocation();
+    if (T->is(tok::l_brace))
+      break;
 
-static std::string getNamespaceComment(const std::string &NameSpaceName,
-                                       bool InsertLineBreak) {
-  std::string Fix = "// namespace ";
-  Fix.append(NameSpaceName);
-  if (InsertLineBreak)
-    Fix.append("\n");
-  return Fix;
+    if (T->isOneOf(tok::l_square, tok::l_paren)) {
+      ++Nesting;
+    } else if (T->isOneOf(tok::r_square, tok::r_paren)) {
+      --Nesting;
+    } else if (Nesting == 0) {
+      if (T->is(tok::raw_identifier)) {
+        StringRef ID = T->getRawIdentifier();
+        if (ID != "namespace" && ID != "inline")
+          Result.append(ID);
+      } else if (T->is(tok::coloncolon)) {
+        Result.append("::");
+      } else { // Any other kind of token is unexpected here.
+        return llvm::None;
+      }
+    }
+  }
+  return Result;
 }
 
 void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ND = Result.Nodes.getNodeAs<NamespaceDecl>("namespace");
   const SourceManager &Sources = *Result.SourceManager;
 
-  if (!locationsInSameFile(Sources, ND->getBeginLoc(), ND->getRBraceLoc()))
+  // Ignore namespaces inside macros and namespaces split across files.
+  if (ND->getBeginLoc().isMacroID() ||
+      !locationsInSameFile(Sources, ND->getBeginLoc(), ND->getRBraceLoc()))
     return;
 
   // Don't require closing comments for namespaces spanning less than certain
@@ -80,44 +100,32 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Find next token after the namespace closing brace.
-  SourceLocation AfterRBrace = ND->getRBraceLoc().getLocWithOffset(1);
+  SourceLocation AfterRBrace = Lexer::getLocForEndOfToken(
+      ND->getRBraceLoc(), /*Offset=*/0, Sources, getLangOpts());
   SourceLocation Loc = AfterRBrace;
-  Token Tok;
-  SourceLocation LBracketLocation = ND->getLocation();
-  SourceLocation NestedNamespaceBegin = LBracketLocation;
+  SourceLocation LBraceLoc = ND->getBeginLoc();
 
   // Currently for nested namepsace (n1::n2::...) the AST matcher will match foo
   // then bar instead of a single match. So if we got a nested namespace we have
   // to skip the next ones.
   for (const auto &EndOfNameLocation : Ends) {
-    if (Sources.isBeforeInTranslationUnit(NestedNamespaceBegin,
-                                          EndOfNameLocation))
+    if (Sources.isBeforeInTranslationUnit(ND->getLocation(), EndOfNameLocation))
       return;
   }
 
-  // Ignore macros
-  if (!ND->getLocation().isMacroID()) {
-    while (Lexer::getRawToken(LBracketLocation, Tok, Sources, getLangOpts()) ||
-           !Tok.is(tok::l_brace)) {
-      LBracketLocation = LBracketLocation.getLocWithOffset(1);
-    }
+  llvm::Optional<std::string> NamespaceNameAsWritten =
+      getNamespaceNameAsWritten(LBraceLoc, Sources, getLangOpts());
+  if (!NamespaceNameAsWritten)
+    return;
+
+  if (NamespaceNameAsWritten->empty() != ND->isAnonymousNamespace()) {
+    // Apparently, we didn't find the correct namespace name. Give up.
+    return;
   }
 
-  // FIXME: This probably breaks on comments between the namespace and its '{'.
-  auto TextRange =
-      Lexer::getAsCharRange(SourceRange(NestedNamespaceBegin, LBracketLocation),
-                            Sources, getLangOpts());
-  StringRef NestedNamespaceName =
-      Lexer::getSourceText(TextRange, Sources, getLangOpts())
-          .rtrim('{') // Drop the { itself.
-          .rtrim();   // Drop any whitespace before it.
-  bool IsNested = NestedNamespaceName.contains(':');
+  Ends.push_back(LBraceLoc);
 
-  if (IsNested)
-    Ends.push_back(LBracketLocation);
-  else
-    NestedNamespaceName = ND->getName();
-
+  Token Tok;
   // Skip whitespace until we find the next token.
   while (Lexer::getRawToken(Loc, Tok, Sources, getLangOpts()) ||
          Tok.is(tok::semi)) {
@@ -143,13 +151,9 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
       StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5] : "";
       StringRef Anonymous = Groups.size() > 3 ? Groups[3] : "";
 
-      if (IsNested && NestedNamespaceName == NamespaceNameInComment) {
-        // C++17 nested namespace.
-        return;
-      } else if ((ND->isAnonymousNamespace() &&
-                  NamespaceNameInComment.empty()) ||
-                 (ND->getNameAsString() == NamespaceNameInComment &&
-                  Anonymous.empty())) {
+      if ((ND->isAnonymousNamespace() && NamespaceNameInComment.empty()) ||
+          (*NamespaceNameAsWritten == NamespaceNameInComment &&
+           Anonymous.empty())) {
         // Check if the namespace in the comment is the same.
         // FIXME: Maybe we need a strict mode, where we always fix namespace
         // comments with different format.
@@ -177,10 +181,16 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
     // multi-line or there may be other tokens behind it.
   }
 
-  std::string NamespaceName =
-      ND->isAnonymousNamespace()
-          ? "anonymous namespace"
-          : ("namespace '" + NestedNamespaceName.str() + "'");
+  std::string NamespaceNameForDiag =
+      ND->isAnonymousNamespace() ? "anonymous namespace"
+                                 : ("namespace '" + *NamespaceNameAsWritten + "'");
+
+  std::string Fix(SpacesBeforeComments, ' ');
+  Fix.append("// namespace");
+  if (!ND->isAnonymousNamespace())
+    Fix.append(" ").append(*NamespaceNameAsWritten);
+  if (NeedLineBreak)
+    Fix.append("\n");
 
   // Place diagnostic at an old comment, or closing brace if we did not have it.
   SourceLocation DiagLoc =
@@ -188,16 +198,12 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
           ? OldCommentRange.getBegin()
           : ND->getRBraceLoc();
 
-  diag(DiagLoc, Message)
-      << NamespaceName
-      << FixItHint::CreateReplacement(
-             CharSourceRange::getCharRange(OldCommentRange),
-             std::string(SpacesBeforeComments, ' ') +
-                 (IsNested
-                      ? getNamespaceComment(NestedNamespaceName, NeedLineBreak)
-                      : getNamespaceComment(ND, NeedLineBreak)));
+  diag(DiagLoc, Message) << NamespaceNameForDiag
+                         << FixItHint::CreateReplacement(
+                                CharSourceRange::getCharRange(OldCommentRange),
+                                Fix);
   diag(ND->getLocation(), "%0 starts here", DiagnosticIDs::Note)
-      << NamespaceName;
+      << NamespaceNameForDiag;
 }
 
 } // namespace readability

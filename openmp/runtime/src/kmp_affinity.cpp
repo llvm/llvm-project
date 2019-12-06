@@ -5300,7 +5300,7 @@ void __kmp_balanced_affinity(kmp_info_t *th, int nthreads) {
   }
 }
 
-#if KMP_OS_LINUX
+#if KMP_OS_LINUX || KMP_OS_FREEBSD
 // We don't need this entry for Windows because
 // there is GetProcessAffinityMask() api
 //

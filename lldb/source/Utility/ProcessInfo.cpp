@@ -119,7 +119,7 @@ void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {
   if (m_executable) {
     s.Printf("   name = %s\n", m_executable.GetFilename().GetCString());
     s.PutCString("   file = ");
-    m_executable.Dump(&s);
+    m_executable.Dump(s.AsRawOstream());
     s.EOL();
   }
   const uint32_t argc = m_arguments.GetArgumentCount();

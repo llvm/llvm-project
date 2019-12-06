@@ -519,7 +519,7 @@ void BreakpointLocation::GetDescription(Stream *s,
       if (sc.module_sp) {
         s->EOL();
         s->Indent("module = ");
-        sc.module_sp->GetFileSpec().Dump(s);
+        sc.module_sp->GetFileSpec().Dump(s->AsRawOstream());
       }
 
       if (sc.comp_unit != nullptr) {

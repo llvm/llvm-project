@@ -9,8 +9,10 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 
+#include "CompileCommands.h"
 #include "Function.h"
 #include "Path.h"
+#include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
@@ -19,7 +21,6 @@
 #include <vector>
 
 namespace clang {
-
 namespace clangd {
 
 class Logger;
@@ -118,15 +119,17 @@ std::unique_ptr<GlobalCompilationDatabase>
 getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
                        std::unique_ptr<GlobalCompilationDatabase> Base);
 
+
 /// Wraps another compilation database, and supports overriding the commands
 /// using an in-memory mapping.
 class OverlayCDB : public GlobalCompilationDatabase {
 public:
   // Base may be null, in which case no entries are inherited.
   // FallbackFlags are added to the fallback compile command.
+  // Adjuster is applied to all commands, fallback or not.
   OverlayCDB(const GlobalCompilationDatabase *Base,
              std::vector<std::string> FallbackFlags = {},
-             llvm::Optional<std::string> ResourceDir = llvm::None);
+             tooling::ArgumentsAdjuster Adjuster = nullptr);
 
   llvm::Optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
@@ -142,7 +145,7 @@ private:
   mutable std::mutex Mutex;
   llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
   const GlobalCompilationDatabase *Base;
-  std::string ResourceDir;
+  tooling::ArgumentsAdjuster ArgsAdjuster;
   std::vector<std::string> FallbackFlags;
   CommandChanged::Subscription BaseChanged;
 };

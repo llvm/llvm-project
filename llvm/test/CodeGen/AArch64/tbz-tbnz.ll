@@ -153,7 +153,7 @@ if.then2:
   br i1 %tst3, label %if.then3, label %if.end
 
 ; CHECK: tst x0, x1, lsl #63
-; CHECK: b.ge
+; CHECK: b.lt
 
 if.then3:
   %shifted_op2 = shl i64 %val2, 62

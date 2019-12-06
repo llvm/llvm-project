@@ -168,12 +168,12 @@ normal:
 define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-APPLE-LABEL: foo_loop:
 ; CHECK-APPLE: mov x0, x21
+; CHECK-APPLE: fcmp
+; CHECK-APPLE: b.gt
 ; CHECK-APPLE: cbz
 ; CHECK-APPLE: mov w0, #16
 ; CHECK-APPLE: malloc
 ; CHECK-APPLE: strb w{{.*}}, [x0, #8]
-; CHECK-APPLE: fcmp
-; CHECK-APPLE: b.le
 ; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE: ret
 

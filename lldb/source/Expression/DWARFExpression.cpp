@@ -131,7 +131,7 @@ void DWARFExpression::GetDescription(Stream *s, lldb::DescriptionLevel level,
           s->PutCString(", ");
         VMRange addr_range(curr_base_addr + begin_addr_offset,
                            curr_base_addr + end_addr_offset);
-        addr_range.Dump(s, 0, 8);
+        addr_range.Dump(s->AsRawOstream(), 0, 8);
         s->PutChar('{');
         lldb::offset_t location_length = m_data.GetU16(&offset);
         DumpLocation(s, offset, location_length, level, abi);

@@ -1,7 +1,11 @@
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 supported_toolchains = []
-if (target_os != "win") {
+# FIXME: On macOS, stage2_unix currently doesn't copy libc++ headers to
+# the out dir, but clang relies on them on mac to compile code that uses C++
+# standard library headers. scudo needs C++ standard library headers, so disable
+# this on mac until stage2_unix correctly copies libc++ headers.
+if (target_os != "win" && target_os != "mac")  {
   supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
 if (android_ndk_path != "") {

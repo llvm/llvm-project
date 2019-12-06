@@ -6118,7 +6118,7 @@ bool Sema::inferObjCARCLifetime(ValueDecl *decl) {
 }
 
 void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
-  if (Decl->getType().getQualifiers().hasAddressSpace())
+  if (Decl->getType().hasAddressSpace())
     return;
   if (VarDecl *Var = dyn_cast<VarDecl>(Decl)) {
     QualType Type = Var->getType();
@@ -6132,7 +6132,7 @@ void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
     // type has no address space yet, deduce it now.
     if (auto DT = dyn_cast<DecayedType>(Type)) {
       auto OrigTy = DT->getOriginalType();
-      if (!OrigTy.getQualifiers().hasAddressSpace() && OrigTy->isArrayType()) {
+      if (!OrigTy.hasAddressSpace() && OrigTy->isArrayType()) {
         // Add the address space to the original array type and then propagate
         // that to the element type through `getAsArrayType`.
         OrigTy = Context.getAddrSpaceQualType(OrigTy, ImplAS);
@@ -16094,7 +16094,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   }
 
   // TR 18037 does not allow fields to be declared with address space
-  if (T.getQualifiers().hasAddressSpace() || T->isDependentAddressSpaceType() ||
+  if (T.hasAddressSpace() || T->isDependentAddressSpaceType() ||
       T->getBaseElementTypeUnsafe()->isDependentAddressSpaceType()) {
     Diag(Loc, diag::err_field_with_address_space);
     Record->setInvalidDecl();

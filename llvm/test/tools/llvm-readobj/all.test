@@ -53,6 +53,7 @@ Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
     Entries: [ 0 ]
+    Link:    .dynsym
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
     Info:    0x0
@@ -111,3 +112,4 @@ ProgramHeaders:
     Sections:
       - Section: .note.gnu.build-id
 Symbols: []
+DynamicSymbols: []

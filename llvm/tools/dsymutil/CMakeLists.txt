@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   MC
   Object
+  CodeGen
   Option
   Remarks
   Support
@@ -28,7 +29,6 @@ add_llvm_tool(dsymutil
   DwarfStreamer.cpp
   MachODebugMapParser.cpp
   MachOUtils.cpp
-  NonRelocatableStringpool.cpp
   SymbolMap.cpp
 
   DEPENDS

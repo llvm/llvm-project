@@ -70,8 +70,15 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    movb %dh, %dl
 ; CHECK-NEXT:    jne .LBB0_16
+; CHECK-NEXT:    jmp .LBB0_6
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  # %bb.6: # %for.cond35
+; CHECK-NEXT:  .LBB0_3: # %if.then
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    movl $.str, (%esp)
+; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
+; CHECK-NEXT:    # implicit-def: $eax
+; CHECK-NEXT:  .LBB0_6: # %for.cond35
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    je .LBB0_7
@@ -96,22 +103,10 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_20
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_3: # %if.then
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl $.str, (%esp)
-; CHECK-NEXT:    calll printf
-; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
-; CHECK-NEXT:    # implicit-def: $eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB0_11
-; CHECK-NEXT:    jmp .LBB0_7
-; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_8: # %if.end21
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    # implicit-def: $ebp
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    je .LBB0_13
-; CHECK-NEXT:    jmp .LBB0_10
+; CHECK-NEXT:    jmp .LBB0_9
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_7: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    xorl %edi, %edi
@@ -127,11 +122,11 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # in Loop: Header=BB0_20 Depth=2
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_20
-; CHECK-NEXT:  # %bb.9: # %ae
+; CHECK-NEXT:  .LBB0_9: # %ae
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_10
-; CHECK-NEXT:  .LBB0_13: # %if.end26
+; CHECK-NEXT:  # %bb.13: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %dl, %dl

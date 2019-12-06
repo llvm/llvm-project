@@ -1046,6 +1046,9 @@ public:
     ID.AddPointer(getAsOpaquePtr());
   }
 
+  /// Check if this type has any address space qualifier.
+  inline bool hasAddressSpace() const;
+
   /// Return the address space of this type.
   inline LangAS getAddressSpace() const;
 
@@ -6274,6 +6277,11 @@ inline void QualType::removeLocalCVRQualifiers(unsigned Mask) {
 
   // Fast path: we don't need to touch the slow qualifiers.
   removeLocalFastQualifiers(Mask);
+}
+
+/// Check if this type has any address space qualifier.
+inline bool QualType::hasAddressSpace() const {
+  return getQualifiers().hasAddressSpace();
 }
 
 /// Return the address space of this type.

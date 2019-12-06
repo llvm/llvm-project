@@ -428,6 +428,11 @@ public:
   /// new unrolled loop, where UF is the unroll factor.
   using VectorParts = SmallVector<Value *, 2>;
 
+  /// Vectorize a single GetElementPtrInst based on information gathered and
+  /// decisions taken during planning.
+  void widenGEP(GetElementPtrInst *GEP, unsigned UF, unsigned VF,
+                bool IsPtrLoopInvariant, SmallBitVector &IsIndexLoopInvariant);
+
   /// Vectorize a single PHINode in a block. This method handles the induction
   /// variable canonicalization. It supports both VF = 1 for unrolled loops and
   /// arbitrary length vectors.
@@ -3961,6 +3966,75 @@ void InnerLoopVectorizer::fixNonInductionPHIs() {
   }
 }
 
+void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, unsigned UF,
+                                   unsigned VF, bool IsPtrLoopInvariant,
+                                   SmallBitVector &IsIndexLoopInvariant) {
+  // Construct a vector GEP by widening the operands of the scalar GEP as
+  // necessary. We mark the vector GEP 'inbounds' if appropriate. A GEP
+  // results in a vector of pointers when at least one operand of the GEP
+  // is vector-typed. Thus, to keep the representation compact, we only use
+  // vector-typed operands for loop-varying values.
+
+  if (VF > 1 && IsPtrLoopInvariant && IsIndexLoopInvariant.all()) {
+    // If we are vectorizing, but the GEP has only loop-invariant operands,
+    // the GEP we build (by only using vector-typed operands for
+    // loop-varying values) would be a scalar pointer. Thus, to ensure we
+    // produce a vector of pointers, we need to either arbitrarily pick an
+    // operand to broadcast, or broadcast a clone of the original GEP.
+    // Here, we broadcast a clone of the original.
+    //
+    // TODO: If at some point we decide to scalarize instructions having
+    //       loop-invariant operands, this special case will no longer be
+    //       required. We would add the scalarization decision to
+    //       collectLoopScalars() and teach getVectorValue() to broadcast
+    //       the lane-zero scalar value.
+    auto *Clone = Builder.Insert(GEP->clone());
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *EntryPart = Builder.CreateVectorSplat(VF, Clone);
+      VectorLoopValueMap.setVectorValue(GEP, Part, EntryPart);
+      addMetadata(EntryPart, GEP);
+    }
+  } else {
+    // If the GEP has at least one loop-varying operand, we are sure to
+    // produce a vector of pointers. But if we are only unrolling, we want
+    // to produce a scalar GEP for each unroll part. Thus, the GEP we
+    // produce with the code below will be scalar (if VF == 1) or vector
+    // (otherwise). Note that for the unroll-only case, we still maintain
+    // values in the vector mapping with initVector, as we do for other
+    // instructions.
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      // The pointer operand of the new GEP. If it's loop-invariant, we
+      // won't broadcast it.
+      auto *Ptr = IsPtrLoopInvariant
+                      ? GEP->getPointerOperand()
+                      : getOrCreateVectorValue(GEP->getPointerOperand(), Part);
+
+      // Collect all the indices for the new GEP. If any index is
+      // loop-invariant, we won't broadcast it.
+      SmallVector<Value *, 4> Indices;
+      for (auto Index : enumerate(GEP->indices())) {
+        Value *User = Index.value().get();
+        if (IsIndexLoopInvariant[Index.index()])
+          Indices.push_back(User);
+        else
+          Indices.push_back(getOrCreateVectorValue(User, Part));
+      }
+
+      // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
+      // but it should be a vector, otherwise.
+      auto *NewGEP =
+          GEP->isInBounds()
+              ? Builder.CreateInBoundsGEP(GEP->getSourceElementType(), Ptr,
+                                          Indices)
+              : Builder.CreateGEP(GEP->getSourceElementType(), Ptr, Indices);
+      assert((VF == 1 || NewGEP->getType()->isVectorTy()) &&
+             "NewGEP is not a pointer vector");
+      VectorLoopValueMap.setVectorValue(GEP, Part, NewGEP);
+      addMetadata(NewGEP, GEP);
+    }
+  }
+}
+
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
                                               unsigned VF) {
   PHINode *P = cast<PHINode>(PN);
@@ -4063,76 +4137,8 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
   switch (I.getOpcode()) {
   case Instruction::Br:
   case Instruction::PHI:
+  case Instruction::GetElementPtr:
     llvm_unreachable("This instruction is handled by a different recipe.");
-  case Instruction::GetElementPtr: {
-    // Construct a vector GEP by widening the operands of the scalar GEP as
-    // necessary. We mark the vector GEP 'inbounds' if appropriate. A GEP
-    // results in a vector of pointers when at least one operand of the GEP
-    // is vector-typed. Thus, to keep the representation compact, we only use
-    // vector-typed operands for loop-varying values.
-    auto *GEP = cast<GetElementPtrInst>(&I);
-
-    if (VF > 1 && OrigLoop->hasLoopInvariantOperands(GEP)) {
-      // If we are vectorizing, but the GEP has only loop-invariant operands,
-      // the GEP we build (by only using vector-typed operands for
-      // loop-varying values) would be a scalar pointer. Thus, to ensure we
-      // produce a vector of pointers, we need to either arbitrarily pick an
-      // operand to broadcast, or broadcast a clone of the original GEP.
-      // Here, we broadcast a clone of the original.
-      //
-      // TODO: If at some point we decide to scalarize instructions having
-      //       loop-invariant operands, this special case will no longer be
-      //       required. We would add the scalarization decision to
-      //       collectLoopScalars() and teach getVectorValue() to broadcast
-      //       the lane-zero scalar value.
-      auto *Clone = Builder.Insert(GEP->clone());
-      for (unsigned Part = 0; Part < UF; ++Part) {
-        Value *EntryPart = Builder.CreateVectorSplat(VF, Clone);
-        VectorLoopValueMap.setVectorValue(&I, Part, EntryPart);
-        addMetadata(EntryPart, GEP);
-      }
-    } else {
-      // If the GEP has at least one loop-varying operand, we are sure to
-      // produce a vector of pointers. But if we are only unrolling, we want
-      // to produce a scalar GEP for each unroll part. Thus, the GEP we
-      // produce with the code below will be scalar (if VF == 1) or vector
-      // (otherwise). Note that for the unroll-only case, we still maintain
-      // values in the vector mapping with initVector, as we do for other
-      // instructions.
-      for (unsigned Part = 0; Part < UF; ++Part) {
-        // The pointer operand of the new GEP. If it's loop-invariant, we
-        // won't broadcast it.
-        auto *Ptr =
-            OrigLoop->isLoopInvariant(GEP->getPointerOperand())
-                ? GEP->getPointerOperand()
-                : getOrCreateVectorValue(GEP->getPointerOperand(), Part);
-
-        // Collect all the indices for the new GEP. If any index is
-        // loop-invariant, we won't broadcast it.
-        SmallVector<Value *, 4> Indices;
-        for (auto &U : make_range(GEP->idx_begin(), GEP->idx_end())) {
-          if (OrigLoop->isLoopInvariant(U.get()))
-            Indices.push_back(U.get());
-          else
-            Indices.push_back(getOrCreateVectorValue(U.get(), Part));
-        }
-
-        // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
-        // but it should be a vector, otherwise.
-        auto *NewGEP =
-            GEP->isInBounds()
-                ? Builder.CreateInBoundsGEP(GEP->getSourceElementType(), Ptr,
-                                            Indices)
-                : Builder.CreateGEP(GEP->getSourceElementType(), Ptr, Indices);
-        assert((VF == 1 || NewGEP->getType()->isVectorTy()) &&
-               "NewGEP is not a pointer vector");
-        VectorLoopValueMap.setVectorValue(&I, Part, NewGEP);
-        addMetadata(NewGEP, GEP);
-      }
-    }
-
-    break;
-  }
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
@@ -6831,7 +6837,6 @@ bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
     case Instruction::FPTrunc:
     case Instruction::FRem:
     case Instruction::FSub:
-    case Instruction::GetElementPtr:
     case Instruction::ICmp:
     case Instruction::IntToPtr:
     case Instruction::Load:
@@ -6896,12 +6901,13 @@ bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
 
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
     return false;
-
   // If this ingredient's recipe is to be recorded, keep its recipe a singleton
   // to avoid having to split recipes later.
   bool IsSingleton = Ingredient2Recipe.count(I);
 
-  // Success: widen this instruction. We optimize the common case where
+  // Success: widen this instruction.
+
+  // Use the default widening recipe. We optimize the common case where
   // consecutive instructions can be represented by a single recipe.
   if (!IsSingleton && !VPBB->empty() && LastExtensibleRecipe == &VPBB->back() &&
       LastExtensibleRecipe->appendInstruction(I))
@@ -6999,7 +7005,23 @@ bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
     return true;
   }
 
-  // Check if Instr is to be widened by a general VPWidenRecipe.
+  // Handle GEP widening.
+  if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Instr)) {
+    auto Scalarize = [&](unsigned VF) {
+      return CM.isScalarWithPredication(Instr, VF) ||
+             CM.isScalarAfterVectorization(Instr, VF) ||
+             CM.isProfitableToScalarize(Instr, VF);
+    };
+    if (LoopVectorizationPlanner::getDecisionAndClampRange(Scalarize, Range))
+      return false;
+    VPWidenGEPRecipe *Recipe = new VPWidenGEPRecipe(GEP, OrigLoop);
+    setRecipe(Instr, Recipe);
+    VPBB->appendRecipe(Recipe);
+    return true;
+  }
+
+  // Check if Instr is to be widened by a general VPWidenRecipe, after
+  // having first checked for specific widening recipes.
   if (tryToWiden(Instr, VPBB, Range))
     return true;
 
@@ -7241,7 +7263,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
 
   SmallPtrSet<Instruction *, 1> DeadInstructions;
   VPlanHCFGTransforms::VPInstructionsToVPRecipes(
-      Plan, Legal->getInductionVars(), DeadInstructions);
+      OrigLoop, Plan, Legal->getInductionVars(), DeadInstructions);
 
   return Plan;
 }
@@ -7269,6 +7291,11 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent) const {
 void VPWidenRecipe::execute(VPTransformState &State) {
   for (auto &Instr : make_range(Begin, End))
     State.ILV->widenInstruction(Instr);
+}
+
+void VPWidenGEPRecipe::execute(VPTransformState &State) {
+  State.ILV->widenGEP(GEP, State.UF, State.VF, IsPtrLoopInvariant,
+                      IsIndexLoopInvariant);
 }
 
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {

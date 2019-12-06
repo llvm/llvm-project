@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s -Wno-openmp-mapping -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void xxx(int argc) {

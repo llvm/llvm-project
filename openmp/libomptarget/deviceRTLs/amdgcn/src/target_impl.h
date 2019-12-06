@@ -124,6 +124,10 @@ INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
   __builtin_amdgcn_s_barrier();
 }
 
+EXTERN void __kmpc_impl_threadfence(void);
+EXTERN void __kmpc_impl_threadfence_block(void);
+EXTERN void __kmpc_impl_threadfence_system(void);
+
 // DEVICE versions of part of libc
 extern "C" {
 DEVICE __attribute__((noreturn)) void

@@ -532,8 +532,7 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
   llvm::StringMap<std::string> Storage;
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
-  OverlayCDB CDB(/*Base=*/nullptr, /*FallbackFlags=*/{},
-                 /*ResourceDir=*/std::string(""));
+  OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex Idx(Context::empty(), FS, CDB,
                       [&](llvm::StringRef) { return &MSS; });
 
