@@ -1,0 +1,74 @@
+## Check that we can use the --dependent-libraries option
+## to dump SHT_LLVM_DEPENDENT_LIBRARIES sections.
+
+## Check how we dump a file that has a single valid SHT_LLVM_DEPENDENT_LIBRARIES
+## section with multiple entries.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --dependent-libraries %t1 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK:      DependentLibs [
+# CHECK-NEXT:   foo
+# CHECK-NEXT:   bar
+# CHECK-NEXT:   foo
+# CHECK-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:      .deplibs
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Libraries: [ foo, bar, foo ]
+
+## Now, check how we dump a mix of valid, empty and invalid SHT_LLVM_DEPENDENT_LIBRARIES sections.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --dependent-libraries %t2 2>&1 | FileCheck %s --check-prefix=MIX -DFILE=%t2
+
+# MIX:       DependentLibs [
+# MIX-EMPTY:
+# MIX-NEXT:   warning: '[[FILE]]': SHT_LLVM_DEPENDENT_LIBRARIES section at index 1 is broken: the content is not null-terminated
+# MIX-NEXT:   abc
+# MIX-EMPTY:
+# MIX-NEXT:   warning: '[[FILE]]': SHT_LLVM_DEPENDENT_LIBRARIES section at index 4 is broken: section [index 4] has a sh_offset (0xffff0000) + sh_size (0x4) that is greater than the file size (0x2c0)
+# MIX-NEXT:   bar
+# MIX-NEXT:   xxx
+# MIX-NEXT:  ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+## Case 1: test we report a warning for a non-null-terminated section.
+  - Name:      .deplibs.nonul
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Content:   "666f6f" ## 'f', 'o', 'o'
+## Case 2: test we can dump an entry from a valid section that has a single entry.
+  - Name:      .deplibs.single
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Libraries: [ abc ]
+## Case 3: test we do not display warnings for an empty section.
+  - Name:      .deplibs.empty
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Content:   ""
+## Case 4: test we report a warning when the section offset is invalid.
+  - Name:      .deplibs.broken.shoffset
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Libraries: [ yyy ]
+    ShOffset:  0xffff0000
+## Case 5: test we can dump all entries from a valid section that has more than one entry.
+  - Name:      .deplibs.multiple
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Libraries: [ bar, xxx ]
+
+## llvm-readelf doesn't support --dependent-libraries yet.
+# RUN: llvm-readelf --dependent-libraries %t1 2>&1 | FileCheck %s --check-prefix=READELF
+
+# READELF: printDependentLibs not implemented!
