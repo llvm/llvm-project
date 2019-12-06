@@ -4709,6 +4709,8 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_distribute_simd:
     Res = ActOnOpenMPDistributeSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    if (LangOpts.OpenMP >= 50)
+      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_target_parallel_for_simd:
     Res = ActOnOpenMPTargetParallelForSimdDirective(
@@ -10763,6 +10765,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_data:
     case OMPD_simd:
     case OMPD_for_simd:
+    case OMPD_distribute_simd:
       // Do not capture if-clause expressions.
       break;
     case OMPD_threadprivate:
@@ -10789,7 +10792,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_distribute:
     case OMPD_ordered:
     case OMPD_atomic:
-    case OMPD_distribute_simd:
     case OMPD_teams_distribute:
     case OMPD_teams_distribute_simd:
     case OMPD_requires:
