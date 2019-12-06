@@ -2,22 +2,30 @@
 
 // -----
 
+func @broadcast_to_scalar(%arg0: f32) -> f32 {
+  // expected-error@+1 {{'vector.broadcast' op result #0 must be vector of any type values, but got 'f32'}}
+  %0 = vector.broadcast %arg0 : f32 to f32
+  return %0 : f32
+}
+
+// -----
+
 func @broadcast_rank_too_high(%arg0: vector<4x4xf32>) {
-  // expected-error@+1 {{source rank higher than destination rank}}
+  // expected-error@+1 {{'vector.broadcast' op source rank higher than destination rank}}
   %1 = vector.broadcast %arg0 : vector<4x4xf32> to vector<4xf32>
 }
 
 // -----
 
 func @broadcast_dim1_mismatch(%arg0: vector<7xf32>) {
-  // expected-error@+1 {{vector.broadcast' op dimension mismatch (7 vs. 3)}}
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch (7 vs. 3)}}
   %1 = vector.broadcast %arg0 : vector<7xf32> to vector<3xf32>
 }
 
 // -----
 
 func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
-  // expected-error@+1 {{vector.broadcast' op dimension mismatch (4 vs. 1)}}
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch (4 vs. 1)}}
   %1 = vector.broadcast %arg0 : vector<4x8xf32> to vector<1x8xf32>
 }
 
