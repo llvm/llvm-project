@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Core
   MC
+  Option
   Support
   )
 

@@ -32,23 +32,25 @@ namespace clang {
 /// is non-null, emits an error if the argument is given, but non-integral.
 int getLastArgIntValue(const llvm::opt::ArgList &Args,
                        llvm::opt::OptSpecifier Id, int Default,
-                       DiagnosticsEngine *Diags = nullptr);
+                       DiagnosticsEngine *Diags = nullptr, unsigned Base = 0);
 
 inline int getLastArgIntValue(const llvm::opt::ArgList &Args,
                               llvm::opt::OptSpecifier Id, int Default,
-                              DiagnosticsEngine &Diags) {
-  return getLastArgIntValue(Args, Id, Default, &Diags);
+                              DiagnosticsEngine &Diags, unsigned Base = 0) {
+  return getLastArgIntValue(Args, Id, Default, &Diags, Base);
 }
 
 uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
                                llvm::opt::OptSpecifier Id, uint64_t Default,
-                               DiagnosticsEngine *Diags = nullptr);
+                               DiagnosticsEngine *Diags = nullptr,
+                               unsigned Base = 0);
 
 inline uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
                                       llvm::opt::OptSpecifier Id,
                                       uint64_t Default,
-                                      DiagnosticsEngine &Diags) {
-  return getLastArgUInt64Value(Args, Id, Default, &Diags);
+                                      DiagnosticsEngine &Diags,
+                                      unsigned Base = 0) {
+  return getLastArgUInt64Value(Args, Id, Default, &Diags, Base);
 }
 
 } // namespace clang
