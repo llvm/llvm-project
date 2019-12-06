@@ -18,4 +18,4 @@
 type = Tool
 name = dsymutil
 parent = Tools
-required_libraries = AsmPrinter DebugInfoDWARF MC Object Support all-targets
+required_libraries = AsmPrinter DebugInfoDWARF MC Object CodeGen Support all-targets
