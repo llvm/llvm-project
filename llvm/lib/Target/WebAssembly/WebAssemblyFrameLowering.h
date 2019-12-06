@@ -19,6 +19,7 @@
 
 namespace llvm {
 class MachineFrameInfo;
+class MachineInstr;
 
 class WebAssemblyFrameLowering final : public TargetFrameLowering {
 public:
@@ -48,7 +49,7 @@ public:
   bool needsPrologForEH(const MachineFunction &MF) const;
 
   /// Write SP back to __stack_pointer global.
-  void writeSPToGlobal(unsigned SrcReg, MachineFunction &MF,
+  MachineInstr* writeSPToGlobal(unsigned SrcReg, MachineFunction &MF,
                        MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator &InsertStore,
                        const DebugLoc &DL) const;

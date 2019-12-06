@@ -140,6 +140,16 @@ WebAssemblyRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return Regs[TFI->hasFP(MF)][TT.isArch64Bit()];
 }
 
+FrameBaseLocation
+WebAssemblyRegisterInfo::getFrameBaseLocation(const MachineFunction &MF) const {
+  const WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  FrameBaseLocation Loc;
+  Loc.Kind = FrameBaseLocation::TargetIndex;
+  signed Local = MFI.SPInstr != nullptr ? MFI.SPLocal : -1;
+  Loc.TI = {0, Local};
+  return Loc;
+}
+
 const TargetRegisterClass *
 WebAssemblyRegisterInfo::getPointerRegClass(const MachineFunction &MF,
                                             unsigned Kind) const {

@@ -20,13 +20,32 @@
 namespace llvm {
 class AsmPrinter;
 
+struct TargetIndexLocation {
+  int Index;
+  int Offset;
+
+  TargetIndexLocation() = default;
+  TargetIndexLocation(unsigned Idx, int64_t Offset)
+      : Index(Idx), Offset(Offset) {}
+
+  bool operator==(const TargetIndexLocation &Other) const {
+    return Index == Other.Index && Offset == Other.Offset;
+  }
+};
+
 /// A single location or constant.
 class DbgValueLoc {
   /// Any complex address location expression for this DbgValueLoc.
   const DIExpression *Expression;
 
   /// Type of entry that this represents.
-  enum EntryType { E_Location, E_Integer, E_ConstantFP, E_ConstantInt, E_TargetIndexLocation };
+  enum EntryType {
+    E_Location,
+    E_Integer,
+    E_ConstantFP,
+    E_ConstantInt,
+    E_TargetIndexLocation
+  };
   enum EntryType EntryKind;
 
   /// Either a constant,
@@ -64,7 +83,9 @@ public:
       : Expression(Expr), EntryKind(E_TargetIndexLocation), TIL(Loc) {}
 
   bool isLocation() const { return EntryKind == E_Location; }
-  bool isTargetIndexLocation() const { return EntryKind == E_TargetIndexLocation; }
+  bool isTargetIndexLocation() const {
+    return EntryKind == E_TargetIndexLocation;
+  }
   bool isInt() const { return EntryKind == E_Integer; }
   bool isConstantFP() const { return EntryKind == E_ConstantFP; }
   bool isConstantInt() const { return EntryKind == E_ConstantInt; }
@@ -93,19 +114,6 @@ public:
       Expression->dump();
   }
 #endif
-};
-
-struct TargetIndexLocation {
-  int Index;
-  int Offset;
-
-  TargetIndexLocation() = default;
-  TargetIndexLocation(unsigned Idx, int64_t Offset)
-      : Index(Idx), Offset(Offset) {}
-
-  bool operator==(const TargetIndexLocation &Other) const {
-    return Index == Other.Index && Offset == Other.Offset;
-  }
 };
 
 /// This struct describes location entries emitted in the .debug_loc

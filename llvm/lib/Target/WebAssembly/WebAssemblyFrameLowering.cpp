@@ -26,6 +26,7 @@
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -122,14 +123,14 @@ bool WebAssemblyFrameLowering::needsSPWriteback(
   return needsSPForLocalFrame(MF) && !CanUseRedZone;
 }
 
-void WebAssemblyFrameLowering::writeSPToGlobal(
+MachineInstr *WebAssemblyFrameLowering::writeSPToGlobal(
     unsigned SrcReg, MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator &InsertStore, const DebugLoc &DL) const {
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
   const char *ES = "__stack_pointer";
   auto *SPSymbol = MF.createExternalSymbolName(ES);
-  BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::GLOBAL_SET_I32))
+  return BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::GLOBAL_SET_I32))
       .addExternalSymbol(SPSymbol)
       .addReg(SrcReg);
 }
@@ -218,7 +219,8 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(WebAssembly::SP32);
   }
   if (StackSize && needsSPWriteback(MF)) {
-    writeSPToGlobal(WebAssembly::SP32, MF, MBB, InsertPt, DL);
+    auto FI = MF.getInfo<WebAssemblyFunctionInfo>();
+    FI->SPInstr = writeSPToGlobal(WebAssembly::SP32, MF, MBB, InsertPt, DL);
   }
 }
 

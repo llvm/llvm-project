@@ -27,6 +27,8 @@ namespace yaml {
 struct WebAssemblyFunctionInfo;
 }
 
+class MachineInstr;
+
 /// This class is derived from MachineFunctionInfo and contains private
 /// WebAssembly-specific information for each MachineFunction.
 class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
@@ -60,7 +62,9 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   bool CFGStackified = false;
 
 public:
-  explicit WebAssemblyFunctionInfo(MachineFunction &MF) : MF(MF) {}
+  explicit WebAssemblyFunctionInfo(MachineFunction &MF)
+      : MF(MF), SPVReg(WebAssembly::NoRegister), SPInstr(nullptr), SPLocal(-1) {
+  }
   ~WebAssemblyFunctionInfo() override;
   void initializeBaseYamlFields(const yaml::WebAssemblyFunctionInfo &YamlMFI);
 
@@ -134,6 +138,10 @@ public:
 
   bool isCFGStackified() const { return CFGStackified; }
   void setCFGStackified(bool Value = true) { CFGStackified = Value; }
+
+  unsigned SPVReg;
+  MachineInstr *SPInstr;
+  unsigned SPLocal;
 };
 
 void computeLegalValueVTs(const Function &F, const TargetMachine &TM, Type *Ty,
