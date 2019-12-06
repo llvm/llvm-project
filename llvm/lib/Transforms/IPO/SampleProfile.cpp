@@ -150,6 +150,15 @@ static cl::opt<bool> ProfileTopDownLoad(
     cl::desc("Do profile annotation and inlining for functions in top-down "
              "order of call graph during sample profile loading."));
 
+static cl::opt<bool> ProfileSizeInline(
+    "sample-profile-inline-size", cl::Hidden, cl::init(false),
+    cl::desc("Inline cold call sites in profile loader if it's beneficial "
+             "for code size."));
+
+static cl::opt<int> SampleColdCallSiteThreshold(
+    "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
+    cl::desc("Threshold for inlining cold callsites"));
+
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -319,6 +328,8 @@ protected:
   bool inlineCallInstruction(Instruction *I);
   bool inlineHotFunctions(Function &F,
                           DenseSet<GlobalValue::GUID> &InlinedGUIDs);
+  // Inline cold/small functions in addition to hot ones
+  bool shouldInlineColdCallee(Instruction &CallInst);
   void printEdgeWeight(raw_ostream &OS, Edge E);
   void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
   void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
@@ -899,6 +910,21 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
   return false;
 }
 
+bool SampleProfileLoader::shouldInlineColdCallee(Instruction &CallInst) {
+  if (!ProfileSizeInline)
+    return false;
+
+  Function *Callee = CallSite(&CallInst).getCalledFunction();
+  if (Callee == nullptr)
+    return false;
+
+  InlineCost Cost =
+      getInlineCost(cast<CallBase>(CallInst), getInlineParams(),
+                    GetTTI(*Callee), GetAC, None, nullptr, nullptr);
+
+  return Cost.getCost() <= SampleColdCallSiteThreshold;
+}
+
 /// Iteratively inline hot callsites of a function.
 ///
 /// Iteratively traverse all callsites of the function \p F, and find if
@@ -931,20 +957,26 @@ bool SampleProfileLoader::inlineHotFunctions(
     SmallVector<Instruction *, 10> CIS;
     for (auto &BB : F) {
       bool Hot = false;
-      SmallVector<Instruction *, 10> Candidates;
+      SmallVector<Instruction *, 10> AllCandidates;
+      SmallVector<Instruction *, 10> ColdCandidates;
       for (auto &I : BB.getInstList()) {
         const FunctionSamples *FS = nullptr;
         if ((isa<CallInst>(I) || isa<InvokeInst>(I)) &&
             !isa<IntrinsicInst>(I) && (FS = findCalleeFunctionSamples(I))) {
-          Candidates.push_back(&I);
+          AllCandidates.push_back(&I);
           if (FS->getEntrySamples() > 0)
             localNotInlinedCallSites.try_emplace(&I, FS);
           if (callsiteIsHot(FS, PSI))
             Hot = true;
+          else if (shouldInlineColdCallee(I))
+            ColdCandidates.push_back(&I);
         }
       }
       if (Hot) {
-        CIS.insert(CIS.begin(), Candidates.begin(), Candidates.end());
+        CIS.insert(CIS.begin(), AllCandidates.begin(), AllCandidates.end());
+      }
+      else {
+        CIS.insert(CIS.begin(), ColdCandidates.begin(), ColdCandidates.end());
       }
     }
     for (auto I : CIS) {
