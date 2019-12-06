@@ -48,7 +48,6 @@ class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
 class MachineBasicBlock;
-class MachineBlockFrequencyInfo;
 class MachineConstantPoolValue;
 class MachineDominatorTree;
 class MachineFunction;
@@ -70,7 +69,6 @@ class MCSymbol;
 class MCTargetOptions;
 class MDNode;
 class Module;
-class ProfileSummaryInfo;
 class raw_ostream;
 class RemarkStreamer;
 class StackMaps;
@@ -109,10 +107,6 @@ public:
 
   /// Optimization remark emitter.
   MachineOptimizationRemarkEmitter *ORE;
-
-  MachineBlockFrequencyInfo *MBFI;
-
-  ProfileSummaryInfo *PSI;
 
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().

@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -40,8 +38,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfo>();
-    AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -79,11 +75,7 @@ bool TailDuplicateBase::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   auto MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
-  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto *MBFI = (PSI && PSI->hasProfileSummary()) ?
-               &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
-               nullptr;
-  Duplicator.initMF(MF, PreRegAlloc, MBPI, MBFI, PSI, /*LayoutMode=*/false);
+  Duplicator.initMF(MF, PreRegAlloc, MBPI, /*LayoutMode=*/false);
 
   bool MadeChange = false;
   while (Duplicator.tailDuplicateBlocks())
