@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILECOMMANDS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILECOMMANDS_H
 
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -46,3 +48,5 @@ private:
 
 } // namespace clangd
 } // namespace clang
+
+#endif
