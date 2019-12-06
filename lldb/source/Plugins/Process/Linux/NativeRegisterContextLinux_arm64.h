@@ -40,6 +40,8 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
+  void InvalidateAllRegisters() override;
+
   // Hardware breakpoints/watchpoint management functions
 
   uint32_t NumSupportedHardwareBreakpoints() override;
@@ -77,11 +79,6 @@ public:
   enum DREGType { eDREGTypeWATCH = 0, eDREGTypeBREAK };
 
 protected:
-  Status DoReadRegisterValue(uint32_t offset, const char *reg_name,
-                             uint32_t size, RegisterValue &value) override;
-
-  Status DoWriteRegisterValue(uint32_t offset, const char *reg_name,
-                              const RegisterValue &value) override;
 
   Status ReadGPR() override;
 
@@ -125,8 +122,17 @@ private:
     uint32_t fpcr;
   };
 
-  uint64_t m_gpr_arm64[k_num_gpr_registers_arm64]; // 64-bit general purpose
-                                                   // registers.
+  struct GPR {
+    uint64_t x[31];
+    uint64_t sp;
+    uint64_t pc;
+    uint64_t pstate;
+  };
+
+  bool m_gpr_is_valid;
+  bool m_fpu_is_valid;
+
+  GPR m_gpr_arm64; // 64-bit general purpose registers.
   RegInfo m_reg_info;
   FPU m_fpr; // floating-point registers including extended register sets.
 
