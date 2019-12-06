@@ -10,6 +10,8 @@
 #define LLVM_DEBUGINFO_GSYM_INLINEINFO_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/GSYM/LineEntry.h"
+#include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/Support/Error.h"
 #include <stdint.h>
@@ -21,6 +23,7 @@ class raw_ostream;
 
 namespace gsym {
 
+class GsymReader;
 /// Inline information stores the name of the inline function along with
 /// an array of address ranges. It also stores the call file and call line
 /// that called this inline function. This allows us to unwind inline call
@@ -73,6 +76,52 @@ struct InlineInfo {
   bool isValid() const { return !Ranges.empty(); }
 
   using InlineArray = std::vector<const InlineInfo *>;
+
+  /// Lookup a single address within the inline info data.
+  ///
+  /// Clients have the option to decode an entire InlineInfo object (using
+  /// InlineInfo::decode() ) or just find the matching inline info using this
+  /// function. The benefit of using this function is that only the information
+  /// needed for the lookup will be extracted, other info can be skipped and
+  /// parsing can stop as soon as the deepest match is found. This allows
+  /// symbolication tools to be fast and efficient and avoid allocation costs
+  /// when doing lookups.
+  ///
+  /// This function will augment the SourceLocations array \a SrcLocs with any
+  /// inline information that pertains to \a Addr. If no inline information
+  /// exists for \a Addr, then \a SrcLocs will be left untouched. If there is
+  /// inline information for \a Addr, then \a SrcLocs will be modifiied to
+  /// contain the deepest most inline function's SourceLocation at index zero
+  /// in the array and proceed up the the concrete function source file and
+  /// line at the end of the array.
+  ///
+  /// \param GR The GSYM reader that contains the string and file table that
+  /// will be used to fill in the source locations.
+  ///
+  /// \param Data The binary stream to read the data from. This object must
+  /// have the data for the LineTable object starting at offset zero. The data
+  /// can contain more data than needed.
+  ///
+  /// \param BaseAddr The base address to use when decoding the line table.
+  /// This will be the FunctionInfo's start address and will be used to
+  /// decode the correct addresses for the inline information.
+  ///
+  /// \param Addr The address to lookup.
+  ///
+  /// \param SrcLocs The inline source locations that matches \a Addr. This
+  ///                array must be initialized with the matching line entry
+  ///                from the line table upon entry. The name of the concrete
+  ///                function must be supplied since it will get pushed to
+  ///                the last SourceLocation entry and the inline information
+  ///                will fill in the source file and line from the inline
+  ///                information.
+  ///
+  /// \returns An error if the inline information is corrupt, or
+  ///          Error::success() for all other cases, even when no information
+  ///          is added to \a SrcLocs.
+  static llvm::Error lookup(const GsymReader &GR, DataExtractor &Data,
+                            uint64_t BaseAddr, uint64_t Addr,
+                            SourceLocations &SrcLocs);
 
   /// Lookup an address in the InlineInfo object
   ///

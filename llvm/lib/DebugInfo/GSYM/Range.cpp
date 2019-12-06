@@ -100,3 +100,15 @@ void AddressRanges::decode(DataExtractor &Data, uint64_t BaseAddr,
   for (auto &Range : Ranges)
     Range.decode(Data, BaseAddr, Offset);
 }
+
+void AddressRange::skip(DataExtractor &Data, uint64_t &Offset) {
+  Data.getULEB128(&Offset);
+  Data.getULEB128(&Offset);
+}
+
+uint64_t AddressRanges::skip(DataExtractor &Data, uint64_t &Offset) {
+  uint64_t NumRanges = Data.getULEB128(&Offset);
+  for (uint64_t I=0; I<NumRanges; ++I)
+    AddressRange::skip(Data, Offset);
+  return NumRanges;
+}

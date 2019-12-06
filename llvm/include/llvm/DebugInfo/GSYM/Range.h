@@ -61,6 +61,14 @@ struct AddressRange {
   void decode(DataExtractor &Data, uint64_t BaseAddr, uint64_t &Offset);
   void encode(FileWriter &O, uint64_t BaseAddr) const;
   /// @}
+
+  /// Skip an address range object in the specified data a the specified
+  /// offset.
+  ///
+  /// \param Data The binary stream to read the data from.
+  ///
+  /// \param Offset The byte offset within \a Data.
+  static void skip(DataExtractor &Data, uint64_t &Offset);
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const AddressRange &R);
@@ -100,6 +108,16 @@ public:
   void decode(DataExtractor &Data, uint64_t BaseAddr, uint64_t &Offset);
   void encode(FileWriter &O, uint64_t BaseAddr) const;
   /// @}
+
+  /// Skip an address range object in the specified data a the specified
+  /// offset.
+  ///
+  /// \param Data The binary stream to read the data from.
+  ///
+  /// \param Offset The byte offset within \a Data.
+  ///
+  /// \returns The number of address ranges that were skipped.
+  static uint64_t skip(DataExtractor &Data, uint64_t &Offset);
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const AddressRanges &AR);
