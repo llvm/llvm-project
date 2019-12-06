@@ -50,7 +50,7 @@ static cl::alias OutputFileAlias("o", cl::desc("Alias for -output"),
 
 static cl::opt<bool>
     ReplaceInput("in-place",
-                 cl::desc("WARNING: This option will replace your input file"
+                 cl::desc("WARNING: This option will replace your input file "
                           "with the reduced version!"));
 
 // Parses IR into a Module and verifies it
