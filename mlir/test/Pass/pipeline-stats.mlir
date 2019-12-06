@@ -3,16 +3,16 @@
 
 // LIST: Pass statistics report
 // LIST: TestStatisticPass
-// LIST-NEXT:  (S) 8 num-ops - Number of operations counted
+// LIST-NEXT:  (S) {{0|8}} num-ops - Number of operations counted
 // LIST-NOT: Verifier
 
 // PIPELINE: Pass statistics report
 // PIPELINE: 'func' Pipeline
 // PIPELINE-NEXT:   TestStatisticPass
-// PIPELINE-NEXT:     (S) 4 num-ops - Number of operations counted
+// PIPELINE-NEXT:     (S) {{0|4}} num-ops - Number of operations counted
 // PIPELINE-NEXT:   Verifier
 // PIPELINE-NEXT:   TestStatisticPass
-// PIPELINE-NEXT:     (S) 4 num-ops - Number of operations counted
+// PIPELINE-NEXT:     (S) {{0|4}} num-ops - Number of operations counted
 // PIPELINE-NEXT:   Verifier
 // PIPELINE-NEXT: Verifier
 
