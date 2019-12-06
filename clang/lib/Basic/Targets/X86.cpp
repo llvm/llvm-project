@@ -1731,21 +1731,24 @@ bool X86TargetInfo::validateAsmConstraint(
   }
 }
 
-bool X86TargetInfo::validateOutputSize(StringRef Constraint,
+bool X86TargetInfo::validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
+                                       StringRef Constraint,
                                        unsigned Size) const {
   // Strip off constraint modifiers.
   while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
     Constraint = Constraint.substr(1);
 
-  return validateOperandSize(Constraint, Size);
+  return validateOperandSize(FeatureMap, Constraint, Size);
 }
 
-bool X86TargetInfo::validateInputSize(StringRef Constraint,
+bool X86TargetInfo::validateInputSize(const llvm::StringMap<bool> &FeatureMap,
+                                      StringRef Constraint,
                                       unsigned Size) const {
-  return validateOperandSize(Constraint, Size);
+  return validateOperandSize(FeatureMap, Constraint, Size);
 }
 
-bool X86TargetInfo::validateOperandSize(StringRef Constraint,
+bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
+                                        StringRef Constraint,
                                         unsigned Size) const {
   switch (Constraint[0]) {
   default:
@@ -1770,7 +1773,7 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
     case 'z':
     case '0':
       // XMM0
-      if (SSELevel >= SSE1)
+      if (FeatureMap.lookup("sse"))
         return Size <= 128U;
       return false;
     case 'i':
@@ -1784,10 +1787,10 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
     LLVM_FALLTHROUGH;
   case 'v':
   case 'x':
-    if (SSELevel >= AVX512F)
+    if (FeatureMap.lookup("avx512f"))
       // 512-bit zmm registers can be used if target supports AVX512F.
       return Size <= 512U;
-    else if (SSELevel >= AVX)
+    else if (FeatureMap.lookup("avx"))
       // 256-bit ymm registers can be used if target supports AVX.
       return Size <= 256U;
     return Size <= 128U;
