@@ -712,6 +712,30 @@ public:
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 
+    if (DirectiveID.getString() == ".import_module") {
+      auto SymName = expectIdent();
+      if (SymName.empty())
+        return true;
+      if (expect(AsmToken::Comma, ","))
+        return true;
+      auto ImportModule = expectIdent();
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      WasmSym->setImportModule(ImportModule);
+      TOut.emitImportModule(WasmSym, ImportModule);
+    }
+
+    if (DirectiveID.getString() == ".import_name") {
+      auto SymName = expectIdent();
+      if (SymName.empty())
+        return true;
+      if (expect(AsmToken::Comma, ","))
+        return true;
+      auto ImportName = expectIdent();
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      WasmSym->setImportName(ImportName);
+      TOut.emitImportName(WasmSym, ImportName);
+    }
+
     if (DirectiveID.getString() == ".eventtype") {
       auto SymName = expectIdent();
       if (SymName.empty())

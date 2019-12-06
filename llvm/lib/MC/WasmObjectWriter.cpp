@@ -1452,7 +1452,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
         Flags |= wasm::WASM_SYMBOL_EXPORTED;
       }
     }
-    if (WS.getName() != WS.getImportName())
+    if (WS.hasImportName())
       Flags |= wasm::WASM_SYMBOL_EXPLICIT_NAME;
 
     wasm::WasmSymbolInfo Info;
