@@ -15,6 +15,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -25,6 +26,10 @@ STATISTIC(ReadOnlyLiveGVars,
           "Number of live global variables marked read only");
 STATISTIC(WriteOnlyLiveGVars,
           "Number of live global variables marked write only");
+
+static cl::opt<bool> PropagateAttrs("propagate-attrs", cl::init(true),
+                                    cl::Hidden,
+                                    cl::desc("Propagate attributes in index"));
 
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
@@ -157,6 +162,8 @@ static void propagateAttributesToRefs(GlobalValueSummary *S) {
 // See internalizeGVsAfterImport.
 void ModuleSummaryIndex::propagateAttributes(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+  if (!PropagateAttrs)
+    return;
   for (auto &P : *this)
     for (auto &S : P.second.SummaryList) {
       if (!isGlobalValueLive(S.get()))
@@ -183,6 +190,7 @@ void ModuleSummaryIndex::propagateAttributes(
         }
       propagateAttributesToRefs(S.get());
     }
+  setWithAttributePropagation();
   if (llvm::AreStatisticsEnabled())
     for (auto &P : *this)
       if (P.second.SummaryList.size())
