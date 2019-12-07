@@ -1092,7 +1092,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
 
     // Only support the following globals:
     //  . static variables
-    //  . non-static global variables
+    //  . non-static weak or non-weak global variables
     // Essentially means:
     //  . .bcc/.data/.rodata DataSec entities only contain static data
     //  . Other DataSec entities contain static or initialized global data.
@@ -1101,12 +1101,13 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     //    corresponding ELF section flags.
     auto Linkage = Global.getLinkage();
     if (Linkage != GlobalValue::InternalLinkage &&
-        Linkage != GlobalValue::ExternalLinkage)
+        Linkage != GlobalValue::ExternalLinkage &&
+        Linkage != GlobalValue::WeakAnyLinkage)
       continue;
 
-    uint32_t GVarInfo = Linkage == GlobalValue::ExternalLinkage
-                            ? BTF::VAR_GLOBAL_ALLOCATED
-                            : BTF::VAR_STATIC;
+    uint32_t GVarInfo = Linkage == GlobalValue::InternalLinkage
+                            ? BTF::VAR_STATIC
+                            : BTF::VAR_GLOBAL_ALLOCATED;
     auto VarEntry =
         std::make_unique<BTFKindVar>(Global.getName(), GVTypeId, GVarInfo);
     uint32_t VarId = addType(std::move(VarEntry));
