@@ -30,6 +30,79 @@ body:             |
 
 ...
 ---
+name:            shl_v2i32_imm
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+liveins:
+  - { reg: '$d0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: shl_v2i32_imm
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[SHLv2i32_shift:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY]], 24
+    ; CHECK: $d0 = COPY [[SHLv2i32_shift]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<2 x s32>) = COPY $d0
+    %2:gpr(s32) = G_CONSTANT i32 24
+    %1:fpr(<2 x s32>) = G_BUILD_VECTOR %2(s32), %2(s32)
+    %3:fpr(<2 x s32>) = G_SHL %0, %1(<2 x s32>)
+    $d0 = COPY %3(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            shl_v2i32_imm_out_of_range
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+liveins:
+  - { reg: '$d0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: shl_v2i32_imm_out_of_range
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 40
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[MOVi32imm]], %subreg.ssub
+    ; CHECK: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, [[MOVi32imm]]
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr]].dsub
+    ; CHECK: [[USHLv2i32_:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY]], [[COPY1]]
+    ; CHECK: $d0 = COPY [[USHLv2i32_]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<2 x s32>) = COPY $d0
+    %2:gpr(s32) = G_CONSTANT i32 40
+    %1:fpr(<2 x s32>) = G_BUILD_VECTOR %2(s32), %2(s32)
+    %3:fpr(<2 x s32>) = G_SHL %0, %1(<2 x s32>)
+    $d0 = COPY %3(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...
+---
 name:            shl_v4i32
 alignment:       4
 legalized:       true
@@ -59,6 +132,40 @@ body:             |
 
 ...
 ---
+name:            shl_v4i32_imm
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+liveins:
+  - { reg: '$q0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: shl_v4i32_imm
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[SHLv4i32_shift:%[0-9]+]]:fpr128 = SHLv4i32_shift [[COPY]], 24
+    ; CHECK: $q0 = COPY [[SHLv4i32_shift]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<4 x s32>) = COPY $q0
+    %2:gpr(s32) = G_CONSTANT i32 24
+    %1:fpr(<4 x s32>) = G_BUILD_VECTOR %2(s32), %2(s32), %2(s32), %2(s32)
+    %3:fpr(<4 x s32>) = G_SHL %0, %1(<4 x s32>)
+    $q0 = COPY %3(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
 name:            shl_v2i64
 alignment:       4
 legalized:       true
@@ -84,6 +191,79 @@ body:             |
     %1:fpr(<2 x s64>) = COPY $q1
     %2:fpr(<2 x s64>) = G_SHL %0, %1(<2 x s64>)
     $q0 = COPY %2(<2 x s64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            shl_v2i64_imm
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+liveins:
+  - { reg: '$q0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: shl_v2i64_imm
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[SHLv2i64_shift:%[0-9]+]]:fpr128 = SHLv2i64_shift [[COPY]], 24
+    ; CHECK: $q0 = COPY [[SHLv2i64_shift]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<2 x s64>) = COPY $q0
+    %2:gpr(s64) = G_CONSTANT i64 24
+    %1:fpr(<2 x s64>) = G_BUILD_VECTOR %2(s64), %2(s64)
+    %3:fpr(<2 x s64>) = G_SHL %0, %1(<2 x s64>)
+    $q0 = COPY %3(<2 x s64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            shl_v2i64_imm_out_of_range
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+liveins:
+  - { reg: '$q0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: shl_v2i64_imm_out_of_range
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 70
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[SUBREG_TO_REG]], %subreg.dsub
+    ; CHECK: [[INSvi64gpr:%[0-9]+]]:fpr128 = INSvi64gpr [[INSERT_SUBREG]], 1, [[SUBREG_TO_REG]]
+    ; CHECK: [[USHLv2i64_:%[0-9]+]]:fpr128 = USHLv2i64 [[COPY]], [[INSvi64gpr]]
+    ; CHECK: $q0 = COPY [[USHLv2i64_]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<2 x s64>) = COPY $q0
+    %2:gpr(s64) = G_CONSTANT i64 70
+    %1:fpr(<2 x s64>) = G_BUILD_VECTOR %2(s64), %2(s64)
+    %3:fpr(<2 x s64>) = G_SHL %0, %1(<2 x s64>)
+    $q0 = COPY %3(<2 x s64>)
     RET_ReallyLR implicit $q0
 
 ...
