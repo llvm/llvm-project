@@ -309,6 +309,33 @@ match(MatcherT Matcher, ASTContext &Context) {
   return std::move(Callback.Nodes);
 }
 
+inline SmallVector<BoundNodes, 1>
+matchDynamic(internal::DynTypedMatcher Matcher,
+             const ast_type_traits::DynTypedNode &Node, ASTContext &Context) {
+  internal::CollectMatchesCallback Callback;
+  MatchFinder Finder;
+  Finder.addDynamicMatcher(Matcher, &Callback);
+  Finder.match(Node, Context);
+  return std::move(Callback.Nodes);
+}
+
+template <typename NodeT>
+SmallVector<BoundNodes, 1> matchDynamic(internal::DynTypedMatcher Matcher,
+                                        const NodeT &Node,
+                                        ASTContext &Context) {
+  return matchDynamic(Matcher, ast_type_traits::DynTypedNode::create(Node),
+                      Context);
+}
+
+inline SmallVector<BoundNodes, 1>
+matchDynamic(internal::DynTypedMatcher Matcher, ASTContext &Context) {
+  internal::CollectMatchesCallback Callback;
+  MatchFinder Finder;
+  Finder.addDynamicMatcher(Matcher, &Callback);
+  Finder.matchAST(Context);
+  return std::move(Callback.Nodes);
+}
+
 } // end namespace ast_matchers
 } // end namespace clang
 
