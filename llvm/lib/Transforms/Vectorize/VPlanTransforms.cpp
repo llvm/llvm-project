@@ -1,4 +1,4 @@
-//===-- VPlanHCFGTransforms.cpp - Utility VPlan to VPlan transforms -------===//
+//===-- VPlanTransforms.cpp - Utility VPlan to VPlan transforms -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,12 +11,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "VPlanHCFGTransforms.h"
+#include "VPlanTransforms.h"
 #include "llvm/ADT/PostOrderIterator.h"
 
 using namespace llvm;
 
-void VPlanHCFGTransforms::VPInstructionsToVPRecipes(
+void VPlanTransforms::VPInstructionsToVPRecipes(
     Loop *OrigLoop, VPlanPtr &Plan,
     LoopVectorizationLegality::InductionList *Inductions,
     SmallPtrSetImpl<Instruction *> &DeadInstructions) {
