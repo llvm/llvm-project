@@ -177,9 +177,11 @@ public:
     return false;
   }
 
-  bool validateOutputSize(StringRef Constraint, unsigned Size) const override;
+  bool validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
+                          StringRef Constraint, unsigned Size) const override;
 
-  bool validateInputSize(StringRef Constraint, unsigned Size) const override;
+  bool validateInputSize(const llvm::StringMap<bool> &FeatureMap,
+                         StringRef Constraint, unsigned Size) const override;
 
   virtual bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
@@ -191,8 +193,8 @@ public:
     return true;
   };
 
-
-  virtual bool validateOperandSize(StringRef Constraint, unsigned Size) const;
+  virtual bool validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
+                                   StringRef Constraint, unsigned Size) const;
 
   std::string convertConstraint(const char *&Constraint) const override;
   const char *getClobbers() const override {
@@ -368,7 +370,8 @@ public:
     return -1;
   }
 
-  bool validateOperandSize(StringRef Constraint, unsigned Size) const override {
+  bool validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
+                           StringRef Constraint, unsigned Size) const override {
     switch (Constraint[0]) {
     default:
       break;
@@ -386,7 +389,7 @@ public:
       return Size <= 64;
     }
 
-    return X86TargetInfo::validateOperandSize(Constraint, Size);
+    return X86TargetInfo::validateOperandSize(FeatureMap, Constraint, Size);
   }
 
   void setMaxAtomicWidth() override {
