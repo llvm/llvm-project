@@ -537,19 +537,19 @@ let Uses = [FPC], mayRaiseFPException = 1, Defs = [CC] in {
 //===----------------------------------------------------------------------===//
 
 let Uses = [FPC], mayRaiseFPException = 1, Defs = [CC], CCValues = 0xF in {
-  def CEBR : CompareRRE<"cebr", 0xB309, z_fcmp, FP32,  FP32>;
-  def CDBR : CompareRRE<"cdbr", 0xB319, z_fcmp, FP64,  FP64>;
-  def CXBR : CompareRRE<"cxbr", 0xB349, z_fcmp, FP128, FP128>;
+  def CEBR : CompareRRE<"cebr", 0xB309, z_any_fcmp, FP32,  FP32>;
+  def CDBR : CompareRRE<"cdbr", 0xB319, z_any_fcmp, FP64,  FP64>;
+  def CXBR : CompareRRE<"cxbr", 0xB349, z_any_fcmp, FP128, FP128>;
 
-  def CEB : CompareRXE<"ceb", 0xED09, z_fcmp, FP32, load, 4>;
-  def CDB : CompareRXE<"cdb", 0xED19, z_fcmp, FP64, load, 8>;
+  def CEB : CompareRXE<"ceb", 0xED09, z_any_fcmp, FP32, load, 4>;
+  def CDB : CompareRXE<"cdb", 0xED19, z_any_fcmp, FP64, load, 8>;
 
-  def KEBR : CompareRRE<"kebr", 0xB308, null_frag, FP32,  FP32>;
-  def KDBR : CompareRRE<"kdbr", 0xB318, null_frag, FP64,  FP64>;
-  def KXBR : CompareRRE<"kxbr", 0xB348, null_frag, FP128, FP128>;
+  def KEBR : CompareRRE<"kebr", 0xB308, z_strict_fcmps, FP32,  FP32>;
+  def KDBR : CompareRRE<"kdbr", 0xB318, z_strict_fcmps, FP64,  FP64>;
+  def KXBR : CompareRRE<"kxbr", 0xB348, z_strict_fcmps, FP128, FP128>;
 
-  def KEB : CompareRXE<"keb", 0xED08, null_frag, FP32, load, 4>;
-  def KDB : CompareRXE<"kdb", 0xED18, null_frag, FP64, load, 8>;
+  def KEB : CompareRXE<"keb", 0xED08, z_strict_fcmps, FP32, load, 4>;
+  def KDB : CompareRXE<"kdb", 0xED18, z_strict_fcmps, FP64, load, 8>;
 }
 
 // Test Data Class.
