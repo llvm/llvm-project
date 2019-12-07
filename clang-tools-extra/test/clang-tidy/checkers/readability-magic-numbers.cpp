@@ -2,6 +2,7 @@
 // RUN: -config='{CheckOptions: \
 // RUN:  [{key: readability-magic-numbers.IgnoredIntegerValues, value: "0;1;2;10;100;"}, \
 // RUN:   {key: readability-magic-numbers.IgnoredFloatingPointValues, value: "3.14;2.71828;9.81;10000.0;101.0;0x1.2p3"}, \
+// RUN:   {key: readability-magic-numbers.IgnoreBitFieldsWidths, value: 0}, \
 // RUN:   {key: readability-magic-numbers.IgnorePowersOf2IntegerValues, value: 1}]}' \
 // RUN: --
 
@@ -78,6 +79,23 @@ int getAnswer() {
   return -3; // FILENOTFOUND
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: 3 is a magic number; consider replacing it with a named constant [readability-magic-numbers]
 }
+
+struct HardwareGateway {
+   unsigned int Some: 5;
+   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 5 is a magic number; consider replacing it with a named constant [readability-magic-numbers]
+   unsigned int Bits: 7;
+   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 7 is a magic number; consider replacing it with a named constant [readability-magic-numbers]
+   unsigned int: 6;
+   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 6 is a magic number; consider replacing it with a named constant [readability-magic-numbers]
+   unsigned int Flag: 1; // no warning since this is suppressed by IgnoredIntegerValues rule
+   unsigned int: 0;      // no warning since this is suppressed by IgnoredIntegerValues rule
+   unsigned int Rest: 13;
+   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 13 is a magic number; consider replacing it with a named constant [readability-magic-numbers]
+   //
+   unsigned int Another[3];
+   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: 3 is a magic number; consider replacing it with a named constant [readability-magic-numbers]
+};
+
 
 /*
  * Clean code
