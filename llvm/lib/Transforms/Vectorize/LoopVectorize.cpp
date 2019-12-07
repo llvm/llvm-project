@@ -58,8 +58,8 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanHCFGBuilder.h"
-#include "VPlanHCFGTransforms.h"
 #include "VPlanPredicator.h"
+#include "VPlanTransforms.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -7262,9 +7262,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   }
 
   SmallPtrSet<Instruction *, 1> DeadInstructions;
-  VPlanHCFGTransforms::VPInstructionsToVPRecipes(
+  VPlanTransforms::VPInstructionsToVPRecipes(
       OrigLoop, Plan, Legal->getInductionVars(), DeadInstructions);
-
   return Plan;
 }
 
