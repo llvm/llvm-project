@@ -9,6 +9,8 @@
 #ifndef liblldb_GDBRemote_h_
 #define liblldb_GDBRemote_h_
 
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
@@ -69,7 +71,6 @@ struct GDBRemotePacket {
     std::string data;
   };
 
-  void Serialize(llvm::raw_ostream &strm) const;
   void Dump(Stream &strm) const;
 
   BinaryData packet;
@@ -82,6 +83,46 @@ private:
   llvm::StringRef GetTypeStr() const;
 };
 
+namespace repro {
+class PacketRecorder : public AbstractRecorder {
+public:
+  PacketRecorder(const FileSpec &filename, std::error_code &ec)
+      : AbstractRecorder(filename, ec) {}
+
+  static llvm::Expected<std::unique_ptr<PacketRecorder>>
+  Create(const FileSpec &filename);
+
+  void Record(const GDBRemotePacket &packet);
+};
+
+class GDBRemoteProvider : public repro::Provider<GDBRemoteProvider> {
+public:
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+
+  GDBRemoteProvider(const FileSpec &directory) : Provider(directory) {}
+
+  llvm::raw_ostream *GetHistoryStream();
+  PacketRecorder *GetNewPacketRecorder();
+
+  void SetCallback(std::function<void()> callback) {
+    m_callback = std::move(callback);
+  }
+
+  void Keep() override;
+  void Discard() override;
+
+  static char ID;
+
+private:
+  std::function<void()> m_callback;
+  std::unique_ptr<llvm::raw_fd_ostream> m_stream_up;
+  std::vector<std::unique_ptr<PacketRecorder>> m_packet_recorders;
+};
+
+} // namespace repro
 } // namespace lldb_private
 
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(lldb_private::GDBRemotePacket)
