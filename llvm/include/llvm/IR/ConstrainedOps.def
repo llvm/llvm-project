@@ -20,6 +20,11 @@
 #define FUNCTION INSTRUCTION
 #endif
 
+// Likewise for compare instructions.
+#ifndef CMP_INSTRUCTION
+#define CMP_INSTRUCTION INSTRUCTION
+#endif
+
 // Arguments of the entries are:
 // - instruction or intrinsic function name.
 // - Number of original instruction/intrinsic arguments.
@@ -39,6 +44,11 @@ INSTRUCTION(FPExt,        1, 0, experimental_constrained_fpext,      FP_EXTEND)
 INSTRUCTION(FPToSI,       1, 0, experimental_constrained_fptosi,     FP_TO_SINT)
 INSTRUCTION(FPToUI,       1, 0, experimental_constrained_fptoui,     FP_TO_UINT)
 INSTRUCTION(FPTrunc,      1, 1, experimental_constrained_fptrunc,    FP_ROUND)
+
+// These are definitions for compare instructions (signaling and quiet version).
+// Both of these match to FCmp / SETCC.
+CMP_INSTRUCTION(FCmp,     2, 0, experimental_constrained_fcmp,       FSETCC)
+CMP_INSTRUCTION(FCmp,     2, 0, experimental_constrained_fcmps,      FSETCCS)
 
 // Theses are definitions for intrinsic functions, that are converted into
 // constrained intrinsics.
@@ -69,3 +79,4 @@ FUNCTION(trunc,           1, 1, experimental_constrained_trunc,      FTRUNC)
 
 #undef INSTRUCTION
 #undef FUNCTION
+#undef CMP_INSTRUCTION

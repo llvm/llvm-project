@@ -743,8 +743,18 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
                                                      [ LLVMMatchType<0>,
                                                        llvm_metadata_ty,
                                                        llvm_metadata_ty ]>;
+
+  // Constrained floating-point comparison (quiet and signaling variants).
+  // Third operand is the predicate represented as a metadata string.
+  def int_experimental_constrained_fcmp
+      : Intrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
+                  [ llvm_anyfloat_ty, LLVMMatchType<0>,
+                    llvm_metadata_ty, llvm_metadata_ty ]>;
+  def int_experimental_constrained_fcmps
+      : Intrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
+                  [ llvm_anyfloat_ty, LLVMMatchType<0>,
+                    llvm_metadata_ty, llvm_metadata_ty ]>;
 }
-// FIXME: Add intrinsic for fcmp.
 // FIXME: Consider maybe adding intrinsics for sitofp, uitofp.
 
 //===------------------------- Expect Intrinsics --------------------------===//
