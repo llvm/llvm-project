@@ -1,10 +1,12 @@
 // RUN: %clang_cc1 -std=c++2a -verify %s
 
-struct Good {
-  bool operator==(const Good&) const = default;
-  bool operator!=(const Good&) const = default;
-  friend bool operator==(const Good&, const Good&) = default;
-  friend bool operator!=(const Good&, const Good&) = default;
+struct Good1 {
+  bool operator==(const Good1&) const = default;
+  bool operator!=(const Good1&) const = default;
+};
+struct Good2 {
+  friend bool operator==(const Good2&, const Good2&) = default;
+  friend bool operator!=(const Good2&, const Good2&) = default;
 };
 
 enum Bool : bool {};
