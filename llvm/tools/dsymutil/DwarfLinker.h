@@ -10,33 +10,17 @@
 #define LLVM_TOOLS_DSYMUTIL_DWARFLINKER_H
 
 #include "BinaryHolder.h"
-#include "CompileUnit.h"
 #include "DebugMap.h"
-#include "DeclContext.h"
 #include "DwarfStreamer.h"
 #include "LinkUtils.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFOptCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFOptDeclContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFOptimizer.h"
 
 namespace llvm {
 namespace dsymutil {
 
-/// Partial address range for debug map objects. Besides an offset, only the
-/// HighPC is stored. The structure is stored in a map where the LowPC is the
-/// key.
-struct DebugMapObjectRange {
-  /// Function HighPC.
-  uint64_t HighPC;
-  /// Offset to apply to the linked address.
-  int64_t Offset;
-
-  DebugMapObjectRange(uint64_t EndPC, int64_t Offset)
-      : HighPC(EndPC), Offset(Offset) {}
-
-  DebugMapObjectRange() : HighPC(0), Offset(0) {}
-};
-
-/// Map LowPC to DebugMapObjectRange.
-using RangesTy = std::map<uint64_t, DebugMapObjectRange>;
 using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
 
 /// The core of the Dwarf linking logic.
@@ -89,7 +73,7 @@ private:
                               OffsetsStringPool &StringPool);
 
   /// Keeps track of relocations.
-  class RelocationManager {
+  class RelocationManager : public AddressesMap {
     struct ValidReloc {
       uint64_t Offset;
       uint32_t Size;
@@ -117,13 +101,50 @@ private:
     /// cheap lookup during the root DIE selection and during DIE cloning.
     unsigned NextValidReloc = 0;
 
+    RangesTy AddressRanges;
+
   public:
-    RelocationManager(DwarfLinker &Linker) : Linker(Linker) {}
+    RelocationManager(DwarfLinker &Linker, const object::ObjectFile &Obj,
+                      const DebugMapObject &DMO)
+        : Linker(Linker) {
+      findValidRelocsInDebugInfo(Obj, DMO);
 
-    bool hasValidRelocs() const { return !ValidRelocs.empty(); }
+      // Iterate over the debug map entries and put all the ones that are
+      // functions (because they have a size) into the Ranges map. This map is
+      // very similar to the FunctionRanges that are stored in each unit, with 2
+      // notable differences:
+      //
+      //  1. Obviously this one is global, while the other ones are per-unit.
+      //
+      //  2. This one contains not only the functions described in the DIE
+      //     tree, but also the ones that are only in the debug map.
+      //
+      // The latter information is required to reproduce dsymutil's logic while
+      // linking line tables. The cases where this information matters look like
+      // bugs that need to be investigated, but for now we need to reproduce
+      // dsymutil's behavior.
+      // FIXME: Once we understood exactly if that information is needed,
+      // maybe totally remove this (or try to use it to do a real
+      // -gline-tables-only on Darwin.
+      for (const auto &Entry : DMO.symbols()) {
+        const auto &Mapping = Entry.getValue();
+        if (Mapping.Size && Mapping.ObjectAddress)
+          AddressRanges[*Mapping.ObjectAddress] = ObjFileAddressRange(
+              *Mapping.ObjectAddress + Mapping.Size,
+              int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
+      }
+    }
+    virtual ~RelocationManager () override {
+        clear();
+    }
 
-    /// Reset the NextValidReloc counter.
-    void resetValidRelocs() { NextValidReloc = 0; }
+    virtual bool areRelocationsResolved() const override { return true; }
+
+    bool hasValidRelocs(bool resetRelocsPtr = true) override {
+      if (resetRelocsPtr)
+        NextValidReloc = 0;
+      return !ValidRelocs.empty();
+    }
 
     /// \defgroup FindValidRelocations Translate debug map into a list
     /// of relevant relocations
@@ -141,32 +162,43 @@ private:
                               const DebugMapObject &DMO);
     /// @}
 
-    bool hasValidRelocation(uint64_t StartOffset, uint64_t EndOffset,
-                            CompileUnit::DIEInfo &Info);
+    bool hasValidRelocationAt(uint64_t StartOffset, uint64_t EndOffset,
+                              CompileUnit::DIEInfo &Info) override;
 
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
-                          bool IsLittleEndian);
+                          bool IsLittleEndian) override;
+
+    RangesTy &getValidAddressRanges() override { return AddressRanges; }
+
+    void clear() override {
+      AddressRanges.clear();
+      ValidRelocs.clear();
+      NextValidReloc = 0;
+    }
   };
 
   /// Keeps track of data associated with one object during linking.
   struct LinkContext {
+    DwarfLinker &Linker;
     DebugMapObject &DMO;
-    const object::ObjectFile *ObjectFile;
-    RelocationManager RelocMgr;
+    const object::ObjectFile *ObjectFile = nullptr;
+    std::unique_ptr<RelocationManager> RelocMgr;
     std::unique_ptr<DWARFContext> DwarfContext;
     RangesTy Ranges;
     UnitListTy CompileUnits;
 
     LinkContext(const DebugMap &Map, DwarfLinker &Linker, DebugMapObject &DMO)
-        : DMO(DMO), RelocMgr(Linker) {
+        : Linker(Linker), DMO(DMO) {
       // Swift ASTs are not object files.
       if (DMO.getType() == MachO::N_AST) {
         ObjectFile = nullptr;
         return;
       }
-      auto ErrOrObj = Linker.loadObject(DMO, Map);
-      ObjectFile = ErrOrObj ? &*ErrOrObj : nullptr;
-      DwarfContext = ObjectFile ? DWARFContext::create(*ObjectFile) : nullptr;
+      if (auto ErrOrObj = Linker.loadObject(DMO, Map)) {
+        ObjectFile = &*ErrOrObj;
+        DwarfContext = DWARFContext::create(*ObjectFile);
+        RelocMgr.reset(new RelocationManager(Linker, *ObjectFile, DMO));
+      }
     }
 
     /// Clear part of the context that's no longer needed when we're done with
@@ -175,6 +207,7 @@ private:
       DwarfContext.reset(nullptr);
       CompileUnits.clear();
       Ranges.clear();
+      RelocMgr->clear();
     }
   };
 
