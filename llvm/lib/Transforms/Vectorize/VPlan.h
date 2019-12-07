@@ -641,7 +641,6 @@ public:
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
 class VPInstruction : public VPUser, public VPRecipeBase {
-  friend class VPlanHCFGTransforms;
   friend class VPlanSlp;
 
 public:

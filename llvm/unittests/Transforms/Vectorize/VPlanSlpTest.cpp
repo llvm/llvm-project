@@ -8,7 +8,6 @@
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanHCFGBuilder.h"
-#include "../lib/Transforms/Vectorize/VPlanHCFGTransforms.h"
 #include "VPlanTestBase.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "gtest/gtest.h"
