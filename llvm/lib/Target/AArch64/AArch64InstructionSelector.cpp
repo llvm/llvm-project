@@ -1043,6 +1043,9 @@ static Optional<int64_t> getVectorSHLImm(LLT SrcTy, Register Reg, MachineRegiste
   if (Imm < 0)
     return None;
   switch (SrcTy.getElementType().getSizeInBits()) {
+  default:
+    LLVM_DEBUG(dbgs() << "Unhandled element type for vector shift");
+    return None;
   case 8:
     if (Imm > 7)
       return None;
