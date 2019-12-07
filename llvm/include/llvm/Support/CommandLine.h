@@ -471,6 +471,43 @@ struct sub {
   template <class Opt> void apply(Opt &O) const { O.addSubCommand(Sub); }
 };
 
+// Specify a callback function to be called when an option is seen.
+// Can be used to set other options automatically.
+template <typename R, typename Ty> struct cb {
+  std::function<R(Ty)> CB;
+
+  cb(std::function<R(Ty)> CB) : CB(CB) {}
+
+  template <typename Opt> void apply(Opt &O) const { O.setCallback(CB); }
+};
+
+namespace detail {
+template <typename F>
+struct callback_traits : public callback_traits<decltype(&F::operator())> {};
+
+template <typename R, typename C, typename... Args>
+struct callback_traits<R (C::*)(Args...) const> {
+  using result_type = R;
+  using arg_type = typename std::tuple_element<0, std::tuple<Args...>>::type;
+  static_assert(sizeof...(Args) == 1, "callback function must have one and only one parameter");
+  static_assert(std::is_same<result_type, void>::value,
+                "callback return type must be void");
+  static_assert(
+      std::is_lvalue_reference<arg_type>::value &&
+          std::is_const<typename std::remove_reference<arg_type>::type>::value,
+      "callback arg_type must be a const lvalue reference");
+};
+} // namespace detail
+
+template <typename F>
+cb<typename detail::callback_traits<F>::result_type,
+   typename detail::callback_traits<F>::arg_type>
+callback(F CB) {
+  using result_type = typename detail::callback_traits<F>::result_type;
+  using arg_type = typename detail::callback_traits<F>::arg_type;
+  return cb<result_type, arg_type>(CB);
+}
+
 //===----------------------------------------------------------------------===//
 // OptionValue class
 
@@ -1344,6 +1381,7 @@ class opt : public Option,
       return true; // Parse error!
     this->setValue(Val);
     this->setPosition(pos);
+    Callback(Val);
     return false;
   }
 
@@ -1402,6 +1440,7 @@ public:
 
   template <class T> DataType &operator=(const T &Val) {
     this->setValue(Val);
+    Callback(Val);
     return this->getValue();
   }
 
@@ -1411,6 +1450,14 @@ public:
     apply(this, Ms...);
     done();
   }
+
+  void setCallback(
+      std::function<void(const typename ParserClass::parser_data_type &)> CB) {
+    Callback = CB;
+  }
+
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
+      [](const typename ParserClass::parser_data_type &) {};
 };
 
 extern template class opt<unsigned>;
@@ -1550,6 +1597,7 @@ class list : public Option, public list_storage<DataType, StorageClass> {
     list_storage<DataType, StorageClass>::addValue(Val);
     setPosition(pos);
     Positions.push_back(pos);
+    Callback(Val);
     return false;
   }
 
@@ -1596,6 +1644,14 @@ public:
     apply(this, Ms...);
     done();
   }
+
+  void setCallback(
+      std::function<void(const typename ParserClass::parser_data_type &)> CB) {
+    Callback = CB;
+  }
+
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
+      [](const typename ParserClass::parser_data_type &) {};
 };
 
 // multi_val - Modifier to set the number of additional values.
@@ -1696,6 +1752,7 @@ class bits : public Option, public bits_storage<DataType, Storage> {
     this->addValue(Val);
     setPosition(pos);
     Positions.push_back(pos);
+    Callback(Val);
     return false;
   }
 
