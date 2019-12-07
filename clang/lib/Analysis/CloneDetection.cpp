@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/CloneDetection.h"
-
+#include "clang/AST/Attr.h"
 #include "clang/AST/DataCollection.h"
 #include "clang/AST/DeclTemplate.h"
 #include "llvm/Support/MD5.h"
