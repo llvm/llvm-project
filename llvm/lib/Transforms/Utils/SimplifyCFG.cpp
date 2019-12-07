@@ -2274,9 +2274,8 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, const DataLayout &DL,
         EdgeBB->getInstList().insert(InsertPt, N);
 
       // Register the new instruction with the assumption cache if necessary.
-      if (auto *II = dyn_cast_or_null<IntrinsicInst>(N))
-        if (II->getIntrinsicID() == Intrinsic::assume)
-          AC->registerAssumption(II);
+      if (AC && match(N, m_Intrinsic<Intrinsic::assume>()))
+        AC->registerAssumption(cast<IntrinsicInst>(N));
     }
 
     // Loop over all of the edges from PredBB to BB, changing them to branch
