@@ -1731,24 +1731,21 @@ bool X86TargetInfo::validateAsmConstraint(
   }
 }
 
-bool X86TargetInfo::validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
-                                       StringRef Constraint,
+bool X86TargetInfo::validateOutputSize(StringRef Constraint,
                                        unsigned Size) const {
   // Strip off constraint modifiers.
   while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
     Constraint = Constraint.substr(1);
 
-  return validateOperandSize(FeatureMap, Constraint, Size);
+  return validateOperandSize(Constraint, Size);
 }
 
-bool X86TargetInfo::validateInputSize(const llvm::StringMap<bool> &FeatureMap,
-                                      StringRef Constraint,
+bool X86TargetInfo::validateInputSize(StringRef Constraint,
                                       unsigned Size) const {
-  return validateOperandSize(FeatureMap, Constraint, Size);
+  return validateOperandSize(Constraint, Size);
 }
 
-bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
-                                        StringRef Constraint,
+bool X86TargetInfo::validateOperandSize(StringRef Constraint,
                                         unsigned Size) const {
   switch (Constraint[0]) {
   default:
@@ -1773,7 +1770,7 @@ bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
     case 'z':
     case '0':
       // XMM0
-      if (FeatureMap.lookup("sse"))
+      if (SSELevel >= SSE1)
         return Size <= 128U;
       return false;
     case 'i':
@@ -1787,10 +1784,10 @@ bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
     LLVM_FALLTHROUGH;
   case 'v':
   case 'x':
-    if (FeatureMap.lookup("avx512f"))
+    if (SSELevel >= AVX512F)
       // 512-bit zmm registers can be used if target supports AVX512F.
       return Size <= 512U;
-    else if (FeatureMap.lookup("avx"))
+    else if (SSELevel >= AVX)
       // 256-bit ymm registers can be used if target supports AVX.
       return Size <= 256U;
     return Size <= 128U;
