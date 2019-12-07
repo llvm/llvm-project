@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
@@ -950,4 +951,53 @@ TEST(Local, RemoveUnreachableBlocks) {
   };
 
   runWithDomTree(*M, "f", checkRUBlocksRetVal);
+}
+
+TEST(Local, SimplifyCFGWithNullAC) {
+  LLVMContext Ctx;
+
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    declare void @true_path()
+    declare void @false_path()
+    declare void @llvm.assume(i1 %cond);
+
+    define i32 @foo(i1, i32) {
+    entry:
+      %cmp = icmp sgt i32 %1, 0
+      br i1 %cmp, label %if.bb1, label %then.bb1
+    if.bb1:
+      call void @true_path()
+      br label %test.bb
+    then.bb1:
+      call void @false_path()
+      br label %test.bb
+    test.bb:
+      %phi = phi i1 [1, %if.bb1], [%0, %then.bb1]
+      call void @llvm.assume(i1 %0)
+      br i1 %phi, label %if.bb2, label %then.bb2
+    if.bb2:
+      ret i32 %1
+    then.bb2:
+      ret i32 0
+    }
+  )");
+
+  Function &F = *cast<Function>(M->getNamedValue("foo"));
+  TargetTransformInfo TTI(M->getDataLayout());
+
+  SimplifyCFGOptions Options{};
+  Options.setAssumptionCache(nullptr);
+
+  // Obtain BasicBlock of interest to this test, %test.bb.
+  BasicBlock *TestBB = nullptr;
+  for (BasicBlock &BB : F) {
+    if (BB.getName().equals("test.bb")) {
+      TestBB = &BB;
+      break;
+    }
+  }
+  ASSERT_TRUE(TestBB);
+
+  // %test.bb is expected to be simplified by FoldCondBranchOnPHI.
+  EXPECT_TRUE(simplifyCFG(TestBB, TTI, Options));
 }
