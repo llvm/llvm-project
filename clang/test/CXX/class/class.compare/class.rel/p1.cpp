@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=c++2a -verify %s
 
 struct Good {
+  int operator<=>(const Good&) const;
+
   bool operator<(const Good&) const = default;
   bool operator>(const Good&) const = default;
   friend bool operator<=(const Good&, const Good&) = default;
