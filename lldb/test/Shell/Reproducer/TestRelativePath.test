@@ -1,3 +1,4 @@
+# UNSUPPORTED: system-windows
 # This tests relative capture paths.
 
 # RUN: mkdir -p %t
