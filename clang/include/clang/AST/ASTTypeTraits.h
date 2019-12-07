@@ -16,10 +16,7 @@
 #define LLVM_CLANG_AST_ASTTYPETRAITS_H
 
 #include "clang/AST/ASTFwd.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/OpenMPClause.h"
-#include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
