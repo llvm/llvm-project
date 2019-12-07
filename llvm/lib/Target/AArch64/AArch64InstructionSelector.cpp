@@ -1010,8 +1010,7 @@ bool AArch64InstructionSelector::selectCompareBranch(
 /// This needs to detect a splat-like operation, e.g. a G_BUILD_VECTOR.
 static Optional<int64_t> getVectorShiftImm(Register Reg,
                                            MachineRegisterInfo &MRI) {
-  const LLT Ty = MRI.getType(Reg);
-  assert(Ty.isVector() && "Expected a *vector* shift operand");
+  assert(MRI.getType(Reg).isVector() && "Expected a *vector* shift operand");
   MachineInstr *OpMI = MRI.getVRegDef(Reg);
   assert(OpMI && "Expected to find a vreg def for vector shift operand");
   if (OpMI->getOpcode() != TargetOpcode::G_BUILD_VECTOR)
