@@ -90,6 +90,9 @@ Non-comprehensive list of changes in this release
   ``-cfguard-nochecks`` option. Note that this feature should always be used 
   with optimizations enabled.
 
+* ``Callbacks`` have been added to ``CommandLine Options``.  These can
+  be used to validate of selectively enable other options.
+
 Changes to the LLVM IR
 ----------------------
 
