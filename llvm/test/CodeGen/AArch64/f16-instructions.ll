@@ -1,14 +1,14 @@
-; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra -frame-pointer=all | FileCheck %s --check-prefix=CHECK-CVT --check-prefix=CHECK-COMMON
-; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fullfp16 -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra -frame-pointer=all | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-FP16
+; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra -frame-pointer=non-leaf | FileCheck %s --check-prefix=CHECK-CVT --check-prefix=CHECK-COMMON
+; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fullfp16 -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra -frame-pointer=non-leaf | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-FP16
 
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple \
-; RUN: -asm-verbose=false -disable-post-ra -frame-pointer=all -global-isel \
+; RUN: -asm-verbose=false -disable-post-ra -frame-pointer=non-leaf -global-isel \
 ; RUN: -global-isel-abort=2 -pass-remarks-missed=gisel-* 2>&1 | FileCheck %s \
 ; RUN: --check-prefixes=FALLBACK,GISEL-CVT,GISEL
 
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fullfp16 \
 ; RUN: -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra \
-; RUN: -frame-pointer=all -global-isel -global-isel-abort=2 \
+; RUN: -frame-pointer=non-leaf -global-isel -global-isel-abort=2 \
 ; RUN: -pass-remarks-missed=gisel-* 2>&1 | FileCheck %s \
 ; RUN: --check-prefixes=FALLBACK-FP16,GISEL-FP16,GISEL
 
