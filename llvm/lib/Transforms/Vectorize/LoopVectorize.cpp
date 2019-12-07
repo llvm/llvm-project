@@ -3556,17 +3556,27 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
   // among all unrolled iterations, due to the order of their construction.
   Value *PreviousLastPart = getOrCreateVectorValue(Previous, UF - 1);
 
-  // Set the insertion point after the previous value if it is an instruction.
+  // Find and set the insertion point after the previous value if it is an
+  // instruction.
+  BasicBlock::iterator InsertPt;
   // Note that the previous value may have been constant-folded so it is not
-  // guaranteed to be an instruction in the vector loop. Also, if the previous
-  // value is a phi node, we should insert after all the phi nodes to avoid
-  // breaking basic block verification.
-  if (LI->getLoopFor(LoopVectorBody)->isLoopInvariant(PreviousLastPart) ||
-      isa<PHINode>(PreviousLastPart))
-    Builder.SetInsertPoint(&*LoopVectorBody->getFirstInsertionPt());
-  else
-    Builder.SetInsertPoint(
-        &*++BasicBlock::iterator(cast<Instruction>(PreviousLastPart)));
+  // guaranteed to be an instruction in the vector loop.
+  // FIXME: Loop invariant values do not form recurrences. We should deal with
+  //        them earlier.
+  if (LI->getLoopFor(LoopVectorBody)->isLoopInvariant(PreviousLastPart))
+    InsertPt = LoopVectorBody->getFirstInsertionPt();
+  else {
+    Instruction *PreviousInst = cast<Instruction>(PreviousLastPart);
+    if (isa<PHINode>(PreviousLastPart))
+      // If the previous value is a phi node, we should insert after all the phi
+      // nodes in the block containing the PHI to avoid breaking basic block
+      // verification. Note that the basic block may be different to
+      // LoopVectorBody, in case we predicate the loop.
+      InsertPt = PreviousInst->getParent()->getFirstInsertionPt();
+    else
+      InsertPt = ++PreviousInst->getIterator();
+  }
+  Builder.SetInsertPoint(&*InsertPt);
 
   // We will construct a vector for the recurrence by combining the values for
   // the current and previous iterations. This is the required shuffle mask.
