@@ -2647,8 +2647,8 @@ static unsigned getVectorComparison(ISD::CondCode CC, CmpMode Mode) {
     case CmpMode::FP:          return SystemZISD::VFCMPE;
     case CmpMode::StrictFP:    return SystemZISD::STRICT_VFCMPE;
     case CmpMode::SignalingFP: return SystemZISD::STRICT_VFCMPES;
-    default:                   llvm_unreachable("Bad mode");
     }
+    llvm_unreachable("Bad mode");
 
   case ISD::SETOGE:
   case ISD::SETGE:
@@ -2657,8 +2657,8 @@ static unsigned getVectorComparison(ISD::CondCode CC, CmpMode Mode) {
     case CmpMode::FP:          return SystemZISD::VFCMPHE;
     case CmpMode::StrictFP:    return SystemZISD::STRICT_VFCMPHE;
     case CmpMode::SignalingFP: return SystemZISD::STRICT_VFCMPHES;
-    default:                   llvm_unreachable("Bad mode");
     }
+    llvm_unreachable("Bad mode");
 
   case ISD::SETOGT:
   case ISD::SETGT:
@@ -2667,8 +2667,8 @@ static unsigned getVectorComparison(ISD::CondCode CC, CmpMode Mode) {
     case CmpMode::FP:          return SystemZISD::VFCMPH;
     case CmpMode::StrictFP:    return SystemZISD::STRICT_VFCMPH;
     case CmpMode::SignalingFP: return SystemZISD::STRICT_VFCMPHS;
-    default:                   llvm_unreachable("Bad mode");
     }
+    llvm_unreachable("Bad mode");
 
   case ISD::SETUGT:
     switch (Mode) {
@@ -2676,8 +2676,8 @@ static unsigned getVectorComparison(ISD::CondCode CC, CmpMode Mode) {
     case CmpMode::FP:          return 0;
     case CmpMode::StrictFP:    return 0;
     case CmpMode::SignalingFP: return 0;
-    default:                   llvm_unreachable("Bad mode");
     }
+    llvm_unreachable("Bad mode");
 
   default:
     return 0;
