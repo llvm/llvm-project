@@ -253,7 +253,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target
-#pragma omp teams distribute simd aligned (a, b) // expected-error {{argument of aligned clause should be array, pointer, reference to array or reference to pointer, not 'S1'}} expected-error {{argument of aligned clause should be array, pointer, reference to array or reference to pointer, not 'S2'}} expected-error {{incomplete type 'S1' where a complete type is required}} expected-warning {{Non-trivial type 'const S2' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp teams distribute simd aligned (a, b) // expected-error {{argument of aligned clause should be array, pointer, reference to array or reference to pointer, not 'S1'}} expected-error {{argument of aligned clause should be array, pointer, reference to array or reference to pointer, not 'S2'}} expected-error {{incomplete type 'S1' where a complete type is required}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target
