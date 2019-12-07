@@ -14916,7 +14916,7 @@ static bool checkTypeMappable(SourceLocation SL, SourceRange SR, Sema &SemaRef,
     return false;
   }
   if (FullCheck && !SemaRef.CurContext->isDependentContext() &&
-      !QTy.isTrivialType(SemaRef.Context))
+      !QTy.isTriviallyCopyableType(SemaRef.Context))
     SemaRef.Diag(SL, diag::warn_omp_non_trivial_type_mapped) << QTy << SR;
   return true;
 }

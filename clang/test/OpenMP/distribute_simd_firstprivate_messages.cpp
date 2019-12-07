@@ -111,7 +111,7 @@ int foomain(int argc, char **argv) {
     ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(z, a, b) // expected-error {{firstprivate variable with incomplete type 'S1'}} expected-warning {{Non-trivial type 'const S2' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp distribute simd firstprivate(z, a, b) // expected-error {{firstprivate variable with incomplete type 'S1'}} expected-warning {{Type 'const S2' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target
@@ -121,7 +121,7 @@ int foomain(int argc, char **argv) {
     ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}} expected-warning {{Non-trivial type 'S4' is mapped, only trivial types are guaranteed to be mapped correctly}} expected-warning {{Non-trivial type 'S5' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp distribute simd firstprivate(e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}} expected-warning {{Type 'S4' is not trivially copyable and not guaranteed to be mapped correctly}} expected-warning {{Type 'S5' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target
@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}} expected-error {{incomplete type 'S1' where a complete type is required}} expected-warning {{Non-trivial type 'const S2' is mapped, only trivial types are guaranteed to be mapped correctly}} expected-warning {{Non-trivial type 'const S3' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp distribute simd firstprivate(a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}} expected-error {{incomplete type 'S1' where a complete type is required}} expected-warning {{Type 'const S2' is not trivially copyable and not guaranteed to be mapped correctly}} expected-warning {{Type 'const S3' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target
@@ -248,12 +248,12 @@ int main(int argc, char **argv) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(ba) // expected-warning {{Non-trivial type 'const S2 [5]' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp distribute simd firstprivate(ba) // expected-warning {{Type 'const S2 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(ca) // expected-warning {{Non-trivial type 'const S3 [5]' is mapped, only trivial types are guaranteed to be mapped correctl}}
+#pragma omp distribute simd firstprivate(ca) // expected-warning {{Type 'const S3 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target
@@ -284,12 +284,12 @@ int main(int argc, char **argv) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}} expected-warning {{Non-trivial type 'S4' is mapped, only trivial types are guaranteed to be mapped correctly}} expected-warning {{Non-trivial type 'S5' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp distribute simd firstprivate(e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}} expected-warning {{Type 'S4' is not trivially copyable and not guaranteed to be mapped correctly}} expected-warning {{Type 'S5' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(m) // expected-warning {{Non-trivial type 'S3' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp distribute simd firstprivate(m) // expected-warning {{Type 'S3' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target
@@ -321,13 +321,13 @@ int main(int argc, char **argv) {
 // expected-error@+3 {{lastprivate variable cannot be firstprivate}} expected-note@+3 {{defined as lastprivate}}
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd lastprivate(g) firstprivate(g) //expected-warning {{Non-trivial type 'S5' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp distribute simd lastprivate(g) firstprivate(g) //expected-warning {{Type 'S5' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i)
     foo();
 // expected-error@+3 {{lastprivate variable cannot be firstprivate}} expected-note@+3 {{defined as lastprivate}}
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd lastprivate(n) firstprivate(n) // expected-error {{calling a private constructor of class 'S6'}} expected-warning {{Non-trivial type 'S6' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp distribute simd lastprivate(n) firstprivate(n) // expected-error {{calling a private constructor of class 'S6'}} expected-warning {{Type 'S6' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel
