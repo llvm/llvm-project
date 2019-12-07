@@ -806,17 +806,10 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
     }
     return 0;
   }
-
-  bool capture = input_args.hasArg(OPT_capture);
-  auto *capture_path = input_args.getLastArg(OPT_capture_path);
-
   // BEGIN SWIFT
-  if (!getenv("LLDB_REPRODUCER_DISABLE_CAPTURE")) {
-    // Always enable capture unless explicitly disabled by the
-    // LLDB_REPRODUCER_DISABLE_CAPTURE environment variable.
-    capture = true;
-  }
+  bool capture = true; // input_args.hasArg(OPT_capture);
   // END SWIFT
+  auto *capture_path = input_args.getLastArg(OPT_capture_path);
 
   if (capture || capture_path) {
     if (capture_path) {
