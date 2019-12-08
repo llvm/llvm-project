@@ -37,7 +37,7 @@ using namespace llvm;
 #define DEBUG_TYPE "armtti"
 
 static cl::opt<bool> EnableMaskedLoadStores(
-  "enable-arm-maskedldst", cl::Hidden, cl::init(false),
+  "enable-arm-maskedldst", cl::Hidden, cl::init(true),
   cl::desc("Enable the generation of masked loads and stores"));
 
 static cl::opt<bool> DisableLowOverheadLoops(

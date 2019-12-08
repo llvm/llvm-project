@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -enable-arm-maskedldst < %s -S -o - | FileCheck %s --check-prefix=CHECK
-; RUN: opt -loop-vectorize -enable-arm-maskedldst -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-COST
+; RUN: opt -loop-vectorize < %s -S -o - | FileCheck %s --check-prefix=CHECK
+; RUN: opt -loop-vectorize -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-COST
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-none-eabi"
