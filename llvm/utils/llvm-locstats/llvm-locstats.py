@@ -25,12 +25,12 @@ def locstats_output(
   variables_total_locstats,
   variables_with_loc,
   scope_bytes_covered,
-  scope_bytes_from_first_def,
+  scope_bytes,
   variables_coverage_map
   ):
 
   pc_ranges_covered = int(ceil(scope_bytes_covered * 100.0)
-              / scope_bytes_from_first_def)
+              / scope_bytes)
   variables_coverage_per_map = {}
   for cov_bucket in coverage_buckets():
     variables_coverage_per_map[cov_bucket] = \
@@ -99,7 +99,7 @@ def Main():
   variables_total_locstats = None
   variables_with_loc = None
   variables_scope_bytes_covered = None
-  variables_scope_bytes_from_first_def = None
+  variables_scope_bytes = None
   variables_scope_bytes_entry_values = None
   variables_coverage_map = {}
   binary = results.file_name
@@ -130,7 +130,7 @@ def Main():
       json_parsed['total vars procesed by location statistics']
     variables_scope_bytes_covered = \
       json_parsed['vars scope bytes covered']
-    variables_scope_bytes_from_first_def = \
+    variables_scope_bytes = \
       json_parsed['vars scope bytes total']
     if not results.ignore_debug_entry_values:
       for cov_bucket in coverage_buckets():
@@ -152,7 +152,7 @@ def Main():
       json_parsed['total params procesed by location statistics']
     variables_scope_bytes_covered = \
       json_parsed['formal params scope bytes covered']
-    variables_scope_bytes_from_first_def = \
+    variables_scope_bytes = \
       json_parsed['formal params scope bytes total']
     if not results.ignore_debug_entry_values:
       for cov_bucket in coverage_buckets():
@@ -177,7 +177,7 @@ def Main():
       json_parsed['total variables procesed by location statistics']
     variables_scope_bytes_covered = \
       json_parsed['scope bytes covered']
-    variables_scope_bytes_from_first_def = \
+    variables_scope_bytes = \
       json_parsed['scope bytes total']
     if not results.ignore_debug_entry_values:
       for cov_bucket in coverage_buckets():
@@ -200,7 +200,7 @@ def Main():
     variables_total_locstats,
     variables_with_loc,
     variables_scope_bytes_covered,
-    variables_scope_bytes_from_first_def,
+    variables_scope_bytes,
     variables_coverage_map
     )
 

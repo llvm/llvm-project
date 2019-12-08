@@ -71,7 +71,7 @@ public:
   ~StackOption() override { this->removeArgument(); }
 
   template <class DT> StackOption<T> &operator=(const DT &V) {
-    this->setValue(V);
+    Base::operator=(V);
     return *this;
   }
 };
@@ -1722,4 +1722,66 @@ TEST(CommandLineTest, OptionErrorMessageSuggest) {
 
   cl::ResetAllOptionOccurrences();
 }
-}  // anonymous namespace
+
+TEST(CommandLineTest, Callback) {
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptA("a", cl::desc("option a"));
+  StackOption<bool> OptB(
+      "b", cl::desc("option b -- This option turns on option a"),
+      cl::callback([&](const bool &) { OptA = true; }));
+  StackOption<bool> OptC(
+      "c", cl::desc("option c -- This option turns on options a and b"),
+      cl::callback([&](const bool &) { OptB = true; }));
+  StackOption<std::string, cl::list<std::string>> List(
+      "list",
+      cl::desc("option list -- This option turns on options a, b, and c when "
+               "'foo' is included in list"),
+      cl::CommaSeparated,
+      cl::callback([&](const std::string &Str) {
+        if (Str == "foo")
+          OptC = true;
+      }));
+
+  const char *args1[] = {"prog", "-a"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args1));
+  EXPECT_TRUE(OptA);
+  EXPECT_FALSE(OptB);
+  EXPECT_FALSE(OptC);
+  EXPECT_TRUE(List.size() == 0);
+  cl::ResetAllOptionOccurrences();
+
+  const char *args2[] = {"prog", "-b"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args2));
+  EXPECT_TRUE(OptA);
+  EXPECT_TRUE(OptB);
+  EXPECT_FALSE(OptC);
+  EXPECT_TRUE(List.size() == 0);
+  cl::ResetAllOptionOccurrences();
+
+  const char *args3[] = {"prog", "-c"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args3));
+  EXPECT_TRUE(OptA);
+  EXPECT_TRUE(OptB);
+  EXPECT_TRUE(OptC);
+  EXPECT_TRUE(List.size() == 0);
+  cl::ResetAllOptionOccurrences();
+
+  const char *args4[] = {"prog", "--list=foo,bar"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args4));
+  EXPECT_TRUE(OptA);
+  EXPECT_TRUE(OptB);
+  EXPECT_TRUE(OptC);
+  EXPECT_TRUE(List.size() == 2);
+  cl::ResetAllOptionOccurrences();
+
+  const char *args5[] = {"prog", "--list=bar"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args5));
+  EXPECT_FALSE(OptA);
+  EXPECT_FALSE(OptB);
+  EXPECT_FALSE(OptC);
+  EXPECT_TRUE(List.size() == 1);
+
+  cl::ResetAllOptionOccurrences();
+}
+} // anonymous namespace

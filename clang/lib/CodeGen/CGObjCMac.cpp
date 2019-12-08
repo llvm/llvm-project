@@ -4027,7 +4027,7 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
 llvm::Function *
 CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
                                       const ObjCContainerDecl *CD) {
-  auto I = DirectMethodDefinitions.find(OMD);
+  auto I = DirectMethodDefinitions.find(OMD->getCanonicalDecl());
   if (I != DirectMethodDefinitions.end())
     return I->second;
 
@@ -4040,7 +4040,7 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
   llvm::Function *Method =
       llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
                              Name.str(), &CGM.getModule());
-  DirectMethodDefinitions.insert(std::make_pair(OMD, Method));
+  DirectMethodDefinitions.insert(std::make_pair(OMD->getCanonicalDecl(), Method));
 
   return Method;
 }

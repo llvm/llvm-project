@@ -183,7 +183,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
     if (!Data.isValidOffsetForDataOfSize(Offset, 8))
       return createStringError(std::errc::io_error,
                                "FunctionInfo data is truncated");
-    const uint32_t InfoType = Data.getU32(&Offset);
+    const uint32_t IT = Data.getU32(&Offset);
     const uint32_t InfoLength = Data.getU32(&Offset);
     const StringRef InfoBytes = Data.getData().substr(Offset, InfoLength);
     if (InfoLength != InfoBytes.size())
@@ -191,7 +191,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
                                "FunctionInfo data is truncated");
     DataExtractor InfoData(InfoBytes, Data.isLittleEndian(),
                            Data.getAddressSize());
-    switch (InfoType) {
+    switch (IT) {
       case InfoType::EndOfList:
         Done = true;
         break;

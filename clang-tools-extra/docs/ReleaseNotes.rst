@@ -173,6 +173,12 @@ Improvements to clang-tidy
   Finds classes, structs, and unions that contain redundant member
   access specifiers.
 
+- Improved :doc:`readability-magic-numbers
+  <clang-tidy/checks/readability-magic-numbers>` check.
+
+  The check now supports the ``IgnoreBitFieldsWidths`` option to suppress
+  the warning for numbers used to specify bit field widths.
+
 - New :doc:`readability-make-member-function-const
   <clang-tidy/checks/readability-make-member-function-const>` check.
 

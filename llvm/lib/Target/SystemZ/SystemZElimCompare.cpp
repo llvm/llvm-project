@@ -295,6 +295,11 @@ bool SystemZElimCompare::convertToLoadAndTest(
   MIB.setMemRefs(MI.memoperands());
   MI.eraseFromParent();
 
+  // Mark instruction as raising an FP exception if applicable.  We already
+  // verified earlier that this move is valid.
+  if (Compare.mayRaiseFPException())
+    MIB.setMIFlag(MachineInstr::MIFlag::FPExcept);
+
   return true;
 }
 
@@ -311,6 +316,18 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
   int Opcode = (ConvOpc ? ConvOpc : MI.getOpcode());
   const MCInstrDesc &Desc = TII->get(Opcode);
   unsigned MIFlags = Desc.TSFlags;
+
+  // If Compare may raise an FP exception, we can only eliminate it
+  // if MI itself would have already raised the exception.
+  if (Compare.mayRaiseFPException()) {
+    // If the caller will change MI to use ConvOpc, only test whether
+    // ConvOpc is suitable; it is on the caller to set the MI flag.
+    if (ConvOpc && !Desc.mayRaiseFPException())
+      return false;
+    // If the caller will not change MI, we test the MI flag here.
+    if (!ConvOpc && !MI.mayRaiseFPException())
+      return false;
+  }
 
   // See which compare-style condition codes are available.
   unsigned ReusableCCMask = SystemZII::getCompareZeroCCMask(MIFlags);
@@ -453,6 +470,12 @@ bool SystemZElimCompare::optimizeCompareZero(
       break;
     CCRefs |= getRegReferences(MI, SystemZ::CC);
     if (CCRefs.Use && CCRefs.Def)
+      break;
+    // Eliminating a Compare that may raise an FP exception will move
+    // raising the exception to some earlier MI.  We cannot do this if
+    // there is anything in between that might change exception flags.
+    if (Compare.mayRaiseFPException() &&
+        (MI.isCall() || MI.hasUnmodeledSideEffects()))
       break;
   }
 

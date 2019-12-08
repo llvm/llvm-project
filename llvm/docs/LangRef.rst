@@ -15629,6 +15629,113 @@ The result produced is a floating point value extended to be larger in size
 than the operand. All restrictions that apply to the fpext instruction also
 apply to this intrinsic.
 
+'``llvm.experimental.constrained.fcmp``' and '``llvm.experimental.constrained.fcmps``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <ty2>
+      @llvm.experimental.constrained.fcmp(<type> <op1>, <type> <op2>,
+                                          metadata <condition code>,
+                                          metadata <exception behavior>)
+      declare <ty2>
+      @llvm.experimental.constrained.fcmps(<type> <op1>, <type> <op2>,
+                                           metadata <condition code>,
+                                           metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.fcmp``' and
+'``llvm.experimental.constrained.fcmps``' intrinsics return a boolean
+value or vector of boolean values based on comparison of its operands.
+
+If the operands are floating-point scalars, then the result type is a
+boolean (:ref:`i1 <t_integer>`).
+
+If the operands are floating-point vectors, then the result type is a
+vector of boolean with the same number of elements as the operands being
+compared.
+
+The '``llvm.experimental.constrained.fcmp``' intrinsic performs a quiet
+comparison operation while the '``llvm.experimental.constrained.fcmps``'
+intrinsic performs a signaling comparison operation.
+
+Arguments:
+""""""""""
+
+The first two arguments to the '``llvm.experimental.constrained.fcmp``'
+and '``llvm.experimental.constrained.fcmps``' intrinsics must be
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
+of floating-point values. Both arguments must have identical types.
+
+The third argument is the condition code indicating the kind of comparison
+to perform. It must be a metadata string with one of the following values:
+
+- "``oeq``": ordered and equal
+- "``ogt``": ordered and greater than
+- "``oge``": ordered and greater than or equal
+- "``olt``": ordered and less than
+- "``ole``": ordered and less than or equal
+- "``one``": ordered and not equal
+- "``ord``": ordered (no nans)
+- "``ueq``": unordered or equal
+- "``ugt``": unordered or greater than
+- "``uge``": unordered or greater than or equal
+- "``ult``": unordered or less than
+- "``ule``": unordered or less than or equal
+- "``une``": unordered or not equal
+- "``uno``": unordered (either nans)
+
+*Ordered* means that neither operand is a NAN while *unordered* means
+that either operand may be a NAN.
+
+The fourth argument specifies the exception behavior as described above.
+
+Semantics:
+""""""""""
+
+``op1`` and ``op2`` are compared according to the condition code given
+as the third argument. If the operands are vectors, then the
+vectors are compared element by element. Each comparison performed
+always yields an :ref:`i1 <t_integer>` result, as follows:
+
+- "``oeq``": yields ``true`` if both operands are not a NAN and ``op1``
+  is equal to ``op2``.
+- "``ogt``": yields ``true`` if both operands are not a NAN and ``op1``
+  is greater than ``op2``.
+- "``oge``": yields ``true`` if both operands are not a NAN and ``op1``
+  is greater than or equal to ``op2``.
+- "``olt``": yields ``true`` if both operands are not a NAN and ``op1``
+  is less than ``op2``.
+- "``ole``": yields ``true`` if both operands are not a NAN and ``op1``
+  is less than or equal to ``op2``.
+- "``one``": yields ``true`` if both operands are not a NAN and ``op1``
+  is not equal to ``op2``.
+- "``ord``": yields ``true`` if both operands are not a NAN.
+- "``ueq``": yields ``true`` if either operand is a NAN or ``op1`` is
+  equal to ``op2``.
+- "``ugt``": yields ``true`` if either operand is a NAN or ``op1`` is
+  greater than ``op2``.
+- "``uge``": yields ``true`` if either operand is a NAN or ``op1`` is
+  greater than or equal to ``op2``.
+- "``ult``": yields ``true`` if either operand is a NAN or ``op1`` is
+  less than ``op2``.
+- "``ule``": yields ``true`` if either operand is a NAN or ``op1`` is
+  less than or equal to ``op2``.
+- "``une``": yields ``true`` if either operand is a NAN or ``op1`` is
+  not equal to ``op2``.
+- "``uno``": yields ``true`` if either operand is a NAN.
+
+The quiet comparison operation performed by
+'``llvm.experimental.constrained.fcmp``' will only raise an exception
+if either operand is a SNAN.  The signaling comparison operation
+performed by '``llvm.experimental.constrained.fcmps``' will raise an
+exception if either operand is a NAN (QNAN or SNAN).
+
 Constrained libm-equivalent Intrinsics
 --------------------------------------
 

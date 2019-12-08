@@ -111,3 +111,8 @@ Options
    Boolean value indicating whether to accept all floating point values without
    warning. Default value is `false`.
 
+.. option:: IgnoreBitFieldsWidths
+
+   Boolean value indicating whether to accept magic numbers as bit field widths
+   without warning. This is useful for example for register definitions which
+   are generated from hardware specifications. Default value is `true`.
