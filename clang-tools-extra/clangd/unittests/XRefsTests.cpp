@@ -450,7 +450,22 @@ TEST(LocateSymbol, All) {
           +^+x;
         }
       )cpp",
-  };
+
+      R"cpp(// Declaration of explicit template specialization
+        template <typename T>
+        struct $decl[[Foo]] {};
+
+        template <>
+        struct Fo^o<int> {};
+      )cpp",
+
+      R"cpp(// Declaration of partial template specialization
+        template <typename T>
+        struct $decl[[Foo]] {};
+
+        template <typename T>
+        struct Fo^o<T*> {};
+      )cpp"};
   for (const char *Test : Tests) {
     Annotations T(Test);
     llvm::Optional<Range> WantDecl;
