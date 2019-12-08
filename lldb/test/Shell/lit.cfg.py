@@ -103,6 +103,9 @@ if 'native' in config.available_features:
 if config.lldb_enable_python:
     config.available_features.add('python')
 
+if config.lldb_enable_lua:
+    config.available_features.add('lua')
+
 if config.lldb_enable_lzma:
     config.available_features.add('lzma')
 
