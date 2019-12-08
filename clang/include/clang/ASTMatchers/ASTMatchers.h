@@ -6566,7 +6566,7 @@ AST_MATCHER(CXXNewExpr, isArray) {
 /// \code
 ///   MyClass *p1 = new MyClass[10];
 /// \endcode
-/// cxxNewExpr(hasArraySize(intgerLiteral(equals(10))))
+/// cxxNewExpr(hasArraySize(integerLiteral(equals(10))))
 ///   matches the expression 'new MyClass[10]'.
 AST_MATCHER_P(CXXNewExpr, hasArraySize, internal::Matcher<Expr>, InnerMatcher) {
   return Node.isArray() && *Node.getArraySize() &&
