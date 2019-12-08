@@ -642,11 +642,13 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
   return BaseCost * BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
 }
 
-int ARMTTIImpl::getArithmeticInstrCost(
-    unsigned Opcode, Type *Ty, TTI::OperandValueKind Op1Info,
-    TTI::OperandValueKind Op2Info, TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo,
-    ArrayRef<const Value *> Args) {
+int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
+                                       TTI::OperandValueKind Op1Info,
+                                       TTI::OperandValueKind Op2Info,
+                                       TTI::OperandValueProperties Opd1PropInfo,
+                                       TTI::OperandValueProperties Opd2PropInfo,
+                                       ArrayRef<const Value *> Args,
+                                       const Instruction *CxtI) {
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
@@ -713,6 +715,33 @@ int ARMTTIImpl::getArithmeticInstrCost(
 
     return Cost;
   }
+
+  // If this operation is a shift on arm/thumb2, it might well be folded into
+  // the following instruction, hence having a cost of 0.
+  auto LooksLikeAFreeShift = [&]() {
+    if (ST->isThumb1Only() || Ty->isVectorTy())
+      return false;
+
+    if (!CxtI || !CxtI->hasOneUse() || !CxtI->isShift())
+      return false;
+    if (Op2Info != TargetTransformInfo::OK_UniformConstantValue)
+      return false;
+
+    // Folded into a ADC/ADD/AND/BIC/CMP/EOR/MVN/ORR/ORN/RSB/SBC/SUB
+    switch (cast<Instruction>(CxtI->user_back())->getOpcode()) {
+    case Instruction::Add:
+    case Instruction::Sub:
+    case Instruction::And:
+    case Instruction::Xor:
+    case Instruction::Or:
+    case Instruction::ICmp:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (LooksLikeAFreeShift())
+    return 0;
 
   int BaseCost = ST->hasMVEIntegerOps() && Ty->isVectorTy()
                      ? ST->getMVEVectorCostFactor()
