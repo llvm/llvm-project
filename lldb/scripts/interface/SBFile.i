@@ -38,6 +38,7 @@ public:
         }
     }
 
+#ifdef SWIGPYTHON
     %pythoncode {
         @classmethod
         def Create(cls, file, borrow=False, force_io_methods=False):
@@ -61,6 +62,7 @@ public:
                 else:
                     return cls(file)
     }
+#endif
 
     ~SBFile ();
 

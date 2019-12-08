@@ -43,6 +43,7 @@ public:
     uint32_t
     GetBitfieldSizeInBits();
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
         type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
@@ -51,6 +52,7 @@ public:
         is_bitfield = property(IsBitfield, None, doc='''A read only property that returns true if this member is a bitfield.''')
         bitfield_bit_size = property(GetBitfieldSizeInBits, None, doc='''A read only property that returns the bitfield size in bits for this member as an integer, or zero if this member is not a bitfield.''')
     %}
+#endif
 
 protected:
     std::unique_ptr<lldb_private::TypeMemberImpl> m_opaque_ap;
@@ -312,6 +314,7 @@ public:
 
     bool operator!=(lldb::SBType &rhs);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def template_arg_array(self):
             num_args = self.num_template_args
@@ -408,6 +411,7 @@ public:
         members = property(get_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeMember objects that represent all of the base classes, virtual base classes and fields for this type in ascending bit offset order.''')
         enum_members = property(get_enum_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeEnumMember objects that represent the enum members for this type.''')
         %}
+#endif
 
 };
 
@@ -462,6 +466,7 @@ public:
 
     ~SBTypeList();
 
+#ifdef SWIGPYTHON
     %pythoncode%{
     def __iter__(self):
         '''Iterate over all types in a lldb.SBTypeList object.'''
@@ -471,6 +476,7 @@ public:
         '''Return the number of types in a lldb.SBTypeList object.'''
         return self.GetSize()
     %}
+#endif
 };
 
 } // namespace lldb

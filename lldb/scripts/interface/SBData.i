@@ -134,6 +134,7 @@ public:
     bool
     SetDataFromDoubleArray (double* array, size_t array_len);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
 
         class read_data_helper:
@@ -287,6 +288,7 @@ public:
         byte_order = property(GetByteOrder, SetByteOrder, doc='''A read/write property getting and setting the endianness of this SBData (data.byte_order = lldb.eByteOrderLittle).''')
         size = property(GetByteSize, None, doc='''A read only property that returns the size the same result as GetByteSize().''')
     %}
+#endif
 
 };
 

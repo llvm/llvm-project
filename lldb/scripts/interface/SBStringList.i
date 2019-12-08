@@ -41,6 +41,7 @@ public:
     void
     Clear ();
 
+#ifdef SWIGPYTHON
     %pythoncode%{
     def __iter__(self):
         '''Iterate over all strings in a lldb.SBStringList object.'''
@@ -50,6 +51,7 @@ public:
         '''Return the number of strings in a lldb.SBStringList object.'''
         return self.GetSize()
     %}
+#endif
 };
 
 } // namespace lldb

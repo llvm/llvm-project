@@ -105,6 +105,7 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         value = property(GetError, None, doc='''A read only property that returns the same result as GetError().''')
         fail = property(Fail, None, doc='''A read only property that returns the same result as Fail().''')
@@ -112,6 +113,7 @@ public:
         description = property(GetCString, None, doc='''A read only property that returns the same result as GetCString().''')
         type = property(GetType, None, doc='''A read only property that returns the same result as GetType().''')
     %}
+#endif
 
 };
 

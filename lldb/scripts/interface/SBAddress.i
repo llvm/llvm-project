@@ -63,12 +63,14 @@ public:
 
     explicit operator bool() const;
 
+#ifdef SWIGPYTHON
     // operator== is a free function, which swig does not handle, so we inject
     // our own equality operator here
     %pythoncode%{
     def __eq__(self, other):
       return not self.__ne__(other)
     %}
+#endif
 
     bool operator!=(const SBAddress &rhs) const;
 
@@ -138,6 +140,7 @@ public:
     lldb::SBLineEntry
     GetLineEntry ();
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def __get_load_addr_property__ (self):
             '''Get the load address for a lldb.SBAddress using the current target.'''
@@ -173,6 +176,7 @@ public:
         file_addr = property(GetFileAddress, None, doc='''A read only property that returns file address for the section as an integer. This is the address that represents the address as it is found in the object file that defines it.''')
         load_addr = property(__get_load_addr_property__, __set_load_addr_property__, doc='''A read/write property that gets/sets the SBAddress using load address. The setter resolves SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command) and not in Python based commands, or breakpoint commands.''')
     %}
+#endif
 
 };
 

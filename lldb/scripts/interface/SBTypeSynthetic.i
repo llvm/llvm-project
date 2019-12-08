@@ -63,11 +63,13 @@ namespace lldb {
         bool
         operator != (lldb::SBTypeSynthetic &rhs);
 
+#ifdef SWIGPYTHON
         %pythoncode %{
             options = property(GetOptions, SetOptions)
             contains_code = property(IsClassCode, None)
             synthetic_data = property(GetData, None)
         %}
+#endif
 
     };
 
