@@ -76,10 +76,12 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         startFrame = 0
         # Verify we get all stack frames with no arguments
-        stackFrames = self.get_stackFrames()
+        (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount()
         frameCount = len(stackFrames)
         self.assertTrue(frameCount >= 20,
                         'verify we get at least 20 frames for all frames')
+        self.assertTrue(totalFrames == frameCount,
+                        'verify we get correct value for totalFrames count')
         self.verify_stackFrames(startFrame, stackFrames)
 
         # Verify all stack frames by specifying startFrame = 0 and levels not
@@ -133,11 +135,15 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         # Verify we cap things correctly when we ask for too many frames
         startFrame = 5
         levels = 1000
-        stackFrames = self.get_stackFrames(startFrame=startFrame,
-                                           levels=levels)
+        (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
+                                            startFrame=startFrame,
+                                            levels=levels)
         self.assertTrue(len(stackFrames) == frameCount - startFrame,
                         ('verify less than 1000 frames with startFrame=%i and'
                          ' levels=%i') % (startFrame, levels))
+        self.assertTrue(totalFrames == frameCount,
+                        'verify we get correct value for totalFrames count '
+                        'when requested frames not from 0 index')
         self.verify_stackFrames(startFrame, stackFrames)
 
         # Verify level=0 works with non-zerp start frame
