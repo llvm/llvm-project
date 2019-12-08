@@ -142,6 +142,11 @@ static cl::opt<unsigned> ConstpoolPromotionMaxTotal(
     cl::desc("Maximum size of ALL constants to promote into a constant pool"),
     cl::init(128));
 
+static cl::opt<unsigned>
+MVEMaxSupportedInterleaveFactor("mve-max-interleave-factor", cl::Hidden,
+  cl::desc("Maximum interleave factor for MVE VLDn to generate."),
+  cl::init(2));
+
 // The APCS parameter registers.
 static const MCPhysReg GPRArgRegs[] = {
   ARM::R0, ARM::R1, ARM::R2, ARM::R3
@@ -16786,7 +16791,7 @@ unsigned ARMTargetLowering::getMaxSupportedInterleaveFactor() const {
   if (Subtarget->hasNEON())
     return 4;
   if (Subtarget->hasMVEIntegerOps())
-    return 4;
+    return MVEMaxSupportedInterleaveFactor;
   return TargetLoweringBase::getMaxSupportedInterleaveFactor();
 }
 
