@@ -1,5 +1,5 @@
 # Test of the llmv-dwarfdump --statistics with split dwarf (dwo files)
-# (version 3).
+# (version >= 3).
 #
 # Create a directory in which to put all files, so .o file can find .dwo file.
 RUN: rm -rf %t && mkdir -p %t
@@ -69,7 +69,7 @@ RUN: llvm-dwarfdump --statistics statistics-fib.split-dwarf.o | FileCheck %s
 # }
 #
 
-CHECK: "version":3
+CHECK: "version":4
 CHECK: "source functions":3
 CHECK: "source functions with location":3
 CHECK: "inlined functions":7
@@ -80,7 +80,7 @@ CHECK: "source variables":30
 # Ideally the value below would be 33 but currently it's not.
 CHECK: "variables with location":22
 CHECK: "call site entries":7
-CHECK: "scope bytes total":2702
+CHECK: "scope bytes total":2817
 CHECK: "scope bytes covered":1160
 CHECK: "total function size":594
 CHECK: "total inlined function size":345

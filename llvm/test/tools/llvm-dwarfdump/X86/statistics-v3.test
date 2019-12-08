@@ -1,4 +1,4 @@
-# Test of the llmv-dwarfdump --statistics newly added stats (version 3).
+# Test of the llmv-dwarfdump --statistics newly added stats (version >= 3).
 #
 RUN: llvm-mc -triple x86_64-unknown-linux-gnu %S/Inputs/statistics-fib.s -filetype=obj -o %t-statistics-fib.o
 RUN: llvm-dwarfdump --statistics %t-statistics-fib.o | FileCheck %s
@@ -64,7 +64,7 @@ RUN: llvm-dwarfdump --statistics %t-statistics-fib.o | FileCheck %s
 # }
 #
 
-CHECK: "version":3
+CHECK: "version":4
 CHECK: "source functions":3
 CHECK: "source functions with location":3
 CHECK: "inlined functions":8
@@ -75,7 +75,7 @@ CHECK: "source variables":33
 # Ideally the value below would be 33 but currently it's not.
 CHECK: "variables with location":24
 CHECK: "call site entries":8
-CHECK: "scope bytes total":2958
+CHECK: "scope bytes total":3072
 CHECK: "scope bytes covered":1188
 CHECK: "total function size":636
 CHECK: "total inlined function size":388
