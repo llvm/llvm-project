@@ -94,6 +94,13 @@ public:
   bool areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                        const MachineInstr &MIb) const override;
 
+
+  std::pair<unsigned, unsigned>
+  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
+
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableDirectMachineOperandTargetFlags() const override;
+
 protected:
   const RISCVSubtarget &STI;
 };
