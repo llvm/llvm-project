@@ -18,9 +18,11 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -355,9 +357,22 @@ llvm::Expected<FileEdits> renameOutsideFile(
       elog("Fail to read file content: {0}", AffectedFileCode.takeError());
       continue;
     }
+    auto RenameRanges =
+        adjustRenameRanges(*AffectedFileCode, RenameDecl.getNameAsString(),
+                           std::move(FileAndOccurrences.second),
+                           RenameDecl.getASTContext().getLangOpts());
+    if (!RenameRanges) {
+      // Our heuristice fails to adjust rename ranges to the current state of
+      // the file, it is most likely the index is stale, so we give up the
+      // entire rename.
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("Index results don't match the content of file {0} "
+                        "(the index may be stale)",
+                        FilePath),
+          llvm::inconvertibleErrorCode());
+    }
     auto RenameEdit =
-        buildRenameEdit(FilePath, *AffectedFileCode,
-                        std::move(FileAndOccurrences.second), NewName);
+        buildRenameEdit(FilePath, *AffectedFileCode, *RenameRanges, NewName);
     if (!RenameEdit) {
       return llvm::make_error<llvm::StringError>(
           llvm::formatv("fail to build rename edit for file {0}: {1}", FilePath,
@@ -368,6 +383,44 @@ llvm::Expected<FileEdits> renameOutsideFile(
       Results.insert({FilePath, std::move(*RenameEdit)});
   }
   return Results;
+}
+
+// A simple edit is eithor changing line or column, but not both.
+bool impliesSimpleEdit(const Position &LHS, const Position &RHS) {
+  return LHS.line == RHS.line || LHS.character == RHS.character;
+}
+
+// Performs a DFS to enumerate all possible near-miss matches.
+// It finds the locations where the indexed occurrences are now spelled in
+// Lexed occurrences, a near miss is defined as:
+//   - a near miss maps all of the **name** occurrences from the index onto a
+//     *subset* of lexed occurrences (we allow a single name refers to more
+//     than one symbol)
+//   - all indexed occurrences must be mapped, and Result must be distinct and
+//     preseve order (only support detecting simple edits to ensure a
+//     robust mapping)
+//   - each indexed -> lexed occurrences mapping correspondence may change the
+//     *line* or *column*, but not both (increases chance of a robust mapping)
+void findNearMiss(
+    std::vector<size_t> &PartialMatch, ArrayRef<Range> IndexedRest,
+    ArrayRef<Range> LexedRest, int LexedIndex, int &Fuel,
+    llvm::function_ref<void(const std::vector<size_t> &)> MatchedCB) {
+  if (--Fuel < 0)
+    return;
+  if (IndexedRest.size() > LexedRest.size())
+    return;
+  if (IndexedRest.empty()) {
+    MatchedCB(PartialMatch);
+    return;
+  }
+  if (impliesSimpleEdit(IndexedRest.front().start, LexedRest.front().start)) {
+    PartialMatch.push_back(LexedIndex);
+    findNearMiss(PartialMatch, IndexedRest.drop_front(), LexedRest.drop_front(),
+                 LexedIndex + 1, Fuel, MatchedCB);
+    PartialMatch.pop_back();
+  }
+  findNearMiss(PartialMatch, IndexedRest, LexedRest.drop_front(),
+               LexedIndex + 1, Fuel, MatchedCB);
 }
 
 } // namespace
@@ -502,6 +555,113 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
       return std::move(Err);
   }
   return Edit(InitialCode, std::move(RenameEdit));
+}
+
+// Details:
+//  - lex the draft code to get all rename candidates, this yields a superset
+//    of candidates.
+//  - apply range patching heuristics to generate "authoritative" occurrences,
+//    cases we consider:
+//      (a) index returns a subset of candidates, we use the indexed results.
+//        - fully equal, we are sure the index is up-to-date
+//        - proper subset, index is correct in most cases? there may be false
+//          positives (e.g. candidates got appended), but rename is still safe
+//      (b) index returns non-candidate results, we attempt to map the indexed
+//          ranges onto candidates in a plausible way (e.g. guess that lines
+//          were inserted). If such a "near miss" is found, the rename is still
+//          possible
+llvm::Optional<std::vector<Range>>
+adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
+                   std::vector<Range> Indexed, const LangOptions &LangOpts) {
+  assert(!Indexed.empty());
+  std::vector<Range> Lexed =
+      collectIdentifierRanges(Identifier, DraftCode, LangOpts);
+  llvm::sort(Indexed);
+  llvm::sort(Lexed);
+  return getMappedRanges(Indexed, Lexed);
+}
+
+llvm::Optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
+                                                   ArrayRef<Range> Lexed) {
+  assert(!Indexed.empty());
+  assert(std::is_sorted(Indexed.begin(), Indexed.end()));
+  assert(std::is_sorted(Lexed.begin(), Lexed.end()));
+
+  if (Indexed.size() > Lexed.size()) {
+    vlog("The number of lexed occurrences is less than indexed occurrences");
+    return llvm::None;
+  }
+  // Fast check for the special subset case.
+  if (std::includes(Indexed.begin(), Indexed.end(), Lexed.begin(), Lexed.end()))
+    return Indexed.vec();
+
+  std::vector<size_t> Best;
+  size_t BestCost = std::numeric_limits<size_t>::max();
+  bool HasMultiple = 0;
+  std::vector<size_t> ResultStorage;
+  int Fuel = 10000;
+  findNearMiss(ResultStorage, Indexed, Lexed, 0, Fuel,
+               [&](const std::vector<size_t> &Matched) {
+                 size_t MCost =
+                     renameRangeAdjustmentCost(Indexed, Lexed, Matched);
+                 if (MCost < BestCost) {
+                   BestCost = MCost;
+                   Best = std::move(Matched);
+                   HasMultiple = false; // reset
+                   return;
+                 }
+                 if (MCost == BestCost)
+                   HasMultiple = true;
+               });
+  if (HasMultiple) {
+    vlog("The best near miss is not unique.");
+    return llvm::None;
+  }
+  if (Best.empty()) {
+    vlog("Didn't find a near miss.");
+    return llvm::None;
+  }
+  std::vector<Range> Mapped;
+  for (auto I : Best)
+    Mapped.push_back(Lexed[I]);
+  return Mapped;
+}
+
+// The cost is the sum of the implied edit sizes between successive diffs, only
+// simple edits are considered:
+//   - insert/remove a line (change line offset)
+//   - insert/remove a character on an existing line (change column offset)
+//
+// Example I, total result is 1 + 1 = 2.
+//   diff[0]: line + 1 <- insert a line before edit 0.
+//   diff[1]: line + 1
+//   diff[2]: line + 1
+//   diff[3]: line + 2 <- insert a line before edits 2 and 3.
+//
+// Example II, total result is 1 + 1 + 1 = 3.
+//   diff[0]: line + 1  <- insert a line before edit 0.
+//   diff[1]: column + 1 <- remove a line between edits 0 and 1, and insert a
+//   character on edit 1.
+size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed, ArrayRef<Range> Lexed,
+                                 ArrayRef<size_t> MappedIndex) {
+  assert(Indexed.size() == MappedIndex.size());
+  assert(std::is_sorted(Indexed.begin(), Indexed.end()));
+  assert(std::is_sorted(Lexed.begin(), Lexed.end()));
+
+  int LastLine = -1;
+  int LastDLine = 0, LastDColumn = 0;
+  int Cost = 0;
+  for (size_t I = 0; I < Indexed.size(); ++I) {
+    int DLine = Indexed[I].start.line - Lexed[MappedIndex[I]].start.line;
+    int DColumn =
+        Indexed[I].start.character - Lexed[MappedIndex[I]].start.character;
+    int Line = Indexed[I].start.line;
+    if (Line != LastLine)
+      LastDColumn = 0; // colmun offsets don't carry cross lines.
+    Cost += abs(DLine - LastDLine) + abs(DColumn - LastDColumn);
+    std::tie(LastLine, LastDLine, LastDColumn) = std::tie(Line, DLine, DColumn);
+  }
+  return Cost;
 }
 
 } // namespace clangd
