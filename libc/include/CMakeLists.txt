@@ -28,3 +28,13 @@ add_gen_header(
   DEPENDS
     llvm_libc_common_h
 )
+
+add_gen_header(
+  errno_h
+  DEF_FILE errno.h.def
+  PARAMS
+    platform_errno=../config/${LIBC_TARGET_OS}/errno.h.in
+  GEN_HDR errno.h
+  DATA_FILES
+    ../config/${LIBC_TARGET_OS}/errno.h.in
+)
