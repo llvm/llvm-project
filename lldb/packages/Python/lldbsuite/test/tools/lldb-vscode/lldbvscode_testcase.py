@@ -132,15 +132,29 @@ class VSCodeTestCaseBase(TestBase):
                                     key, key_path, d))
         return value
 
-    def get_stackFrames(self, threadId=None, startFrame=None, levels=None,
-                        dump=False):
+    def get_stackFrames_and_totalFramesCount(self, threadId=None, startFrame=None, 
+                        levels=None, dump=False):
         response = self.vscode.request_stackTrace(threadId=threadId,
                                                   startFrame=startFrame,
                                                   levels=levels,
                                                   dump=dump)
         if response:
-            return self.get_dict_value(response, ['body', 'stackFrames'])
-        return None
+            stackFrames = self.get_dict_value(response, ['body', 'stackFrames'])
+            totalFrames = self.get_dict_value(response, ['body', 'totalFrames'])
+            self.assertTrue(totalFrames > 0,
+                    'verify totalFrames count is provided by extension that supports '
+                    'async frames loading')
+            return (stackFrames, totalFrames)
+        return (None, 0)
+
+    def get_stackFrames(self, threadId=None, startFrame=None, levels=None,
+                        dump=False):
+        (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
+                                                threadId=threadId,
+                                                startFrame=startFrame,
+                                                levels=levels,
+                                                dump=dump)
+        return stackFrames
 
     def get_source_and_line(self, threadId=None, frameIndex=0):
         stackFrames = self.get_stackFrames(threadId=threadId,
