@@ -3,13 +3,18 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
 # RUN: llvm-symbolizer 0 --obj=%t.o | FileCheck %s --check-prefix=LINKAGE
+# RUN: llvm-symbolizer 0 -f --obj=%t.o | FileCheck %s --check-prefix=LINKAGE
 # RUN: llvm-symbolizer 0 --functions --obj=%t.o | FileCheck %s --check-prefix=LINKAGE
+# RUN: llvm-symbolizer 0 -f=linkage --obj=%t.o | FileCheck %s --check-prefix=LINKAGE
 # RUN: llvm-symbolizer 0 --functions=linkage --obj=%t.o | FileCheck %s --check-prefix=LINKAGE
+# RUN: llvm-symbolizer 0 -f=short --obj=%t.o | FileCheck %s --check-prefix=SHORT
 # RUN: llvm-symbolizer 0 --functions=short --obj=%t.o | FileCheck %s --check-prefix=SHORT
+# RUN: llvm-symbolizer 0 -f=none --obj=%t.o | FileCheck %s --check-prefix=NONE
 # RUN: llvm-symbolizer 0 --functions=none --obj=%t.o | FileCheck %s --check-prefix=NONE
 
 ## Characterise behaviour for no '=' sign. llvm-symbolizer treats the next option as an
 ## input address, and just prints it.
+# RUN: llvm-symbolizer 0 -f none --obj=%t.o | FileCheck %s --check-prefixes=LINKAGE,ERR
 # RUN: llvm-symbolizer 0 --functions none --obj=%t.o | FileCheck %s --check-prefixes=LINKAGE,ERR
 
 # LINKAGE:      {{^}}foo(int){{$}}

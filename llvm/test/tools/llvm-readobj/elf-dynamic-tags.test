@@ -1,7 +1,11 @@
-# Show that all non-machine specific tags can be read and printed correctly.
-# RUN: yaml2obj %s > %t
+## Show that all non-machine specific tags can be read and printed correctly.
+## Also show that -d is an alias for --dynamic-table.
+
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --dynamic-table %t | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readobj -d %t | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readelf --dynamic-table %t | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readelf -d %t | FileCheck %s --check-prefix=GNU
 
 # LLVM:      DynamicSection [ (61 entries)
 # LLVM-NEXT:   Tag                Type                 Name/Value
