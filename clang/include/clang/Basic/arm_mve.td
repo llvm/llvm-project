@@ -522,6 +522,33 @@ defm vstrhq: scatter_offset_both<!listconcat(T.All16, T.Int32), u16, 1>;
 defm vstrwq: scatter_offset_both<T.All32, u32, 2>;
 defm vstrdq: scatter_offset_both<T.Int64, u64, 3>;
 
+multiclass PredicatedImmediateVectorShift<
+    Immediate immtype, string predIntrName, list<dag> unsignedFlag = []> {
+  foreach predIntr = [IRInt<predIntrName, [Vector, Predicate]>] in {
+    def _m_n: Intrinsic<Vector, (args Vector:$inactive, Vector:$v,
+                                      immtype:$sh, Predicate:$pred),
+       !con((predIntr $v, $sh), !dag(predIntr, unsignedFlag, ?),
+            (predIntr $pred, $inactive))>;
+    def _x_n: Intrinsic<Vector, (args Vector:$v, immtype:$sh,
+                                      Predicate:$pred),
+       !con((predIntr $v, $sh), !dag(predIntr, unsignedFlag, ?),
+            (predIntr $pred, (undef Vector)))>;
+  }
+}
+
+let params = T.Int in {
+  def vshlq_n: Intrinsic<Vector, (args Vector:$v, imm_0toNm1:$sh),
+                         (shl $v, (splat (Scalar $sh)))>;
+  defm vshlq: PredicatedImmediateVectorShift<imm_0toNm1, "shl_imm_predicated">;
+
+  let pnt = PNT_NType in {
+    def vshrq_n: Intrinsic<Vector, (args Vector:$v, imm_1toN:$sh),
+                            (immshr $v, $sh, (unsignedflag Scalar))>;
+    defm vshrq: PredicatedImmediateVectorShift<imm_1toN, "shr_imm_predicated",
+                                     [(unsignedflag Scalar)]>;
+  }
+}
+
 // Base class for the scalar shift intrinsics.
 class ScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
   Intrinsic<argtype, !con((args argtype:$value), shiftCountArg), shiftCodeGen> {
