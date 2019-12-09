@@ -46,7 +46,8 @@ int64_t clamp(int64_t Value, int64_t Low, int64_t High) {
   return std::min(High, std::max(Low, Value));
 }
 
-static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size, unsigned AlignmentInBytes) {
+static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
+                             Align AlignmentInBytes) {
   ConstantInt *Byte;
   switch (CGF.getLangOpts().getTrivialAutoVarInit()) {
   case LangOptions::TrivialAutoVarInitKind::Uninitialized:
@@ -2359,12 +2360,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Size = EmitScalarExpr(E->getArg(0));
     const TargetInfo &TI = getContext().getTargetInfo();
     // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
-    unsigned SuitableAlignmentInBytes =
+    const Align SuitableAlignmentInBytes =
         CGM.getContext()
             .toCharUnitsFromBits(TI.getSuitableAlign())
-            .getQuantity();
+            .getAsAlign();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
-    AI->setAlignment(MaybeAlign(SuitableAlignmentInBytes));
+    AI->setAlignment(SuitableAlignmentInBytes);
     initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
     return RValue::get(AI);
   }
@@ -2374,10 +2375,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *AlignmentInBitsValue = EmitScalarExpr(E->getArg(1));
     auto *AlignmentInBitsCI = cast<ConstantInt>(AlignmentInBitsValue);
     unsigned AlignmentInBits = AlignmentInBitsCI->getZExtValue();
-    unsigned AlignmentInBytes =
-        CGM.getContext().toCharUnitsFromBits(AlignmentInBits).getQuantity();
+    const Align AlignmentInBytes =
+        CGM.getContext().toCharUnitsFromBits(AlignmentInBits).getAsAlign();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
-    AI->setAlignment(MaybeAlign(AlignmentInBytes));
+    AI->setAlignment(AlignmentInBytes);
     initializeAlloca(*this, AI, Size, AlignmentInBytes);
     return RValue::get(AI);
   }
@@ -12335,7 +12336,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__stosb: {
     // We treat __stosb as a volatile memset - it may not generate "rep stosb"
     // instruction, but it will create a memset that won't be optimized away.
-    return Builder.CreateMemSet(Ops[0], Ops[1], Ops[2], 1, true);
+    return Builder.CreateMemSet(Ops[0], Ops[1], Ops[2], Align::None(), true);
   }
   case X86::BI__ud2:
     // llvm.trap makes a ud2a instruction on x86.

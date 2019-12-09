@@ -2801,7 +2801,7 @@ private:
       Constant *Size = ConstantInt::get(SizeTy, NewEndOffset - NewBeginOffset);
       CallInst *New = IRB.CreateMemSet(
           getNewAllocaSlicePtr(IRB, OldPtr->getType()), II.getValue(), Size,
-          getSliceAlign(), II.isVolatile());
+          MaybeAlign(getSliceAlign()), II.isVolatile());
       if (AATags)
         New->setAAMetadata(AATags);
       LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");

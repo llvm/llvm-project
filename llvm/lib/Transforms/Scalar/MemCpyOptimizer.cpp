@@ -388,16 +388,12 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     StartPtr = Range.StartPtr;
 
     // Determine alignment
-    unsigned Alignment = Range.Alignment;
-    if (Alignment == 0) {
-      Type *EltType =
-        cast<PointerType>(StartPtr->getType())->getElementType();
-      Alignment = DL.getABITypeAlignment(EltType);
-    }
+    const Align Alignment = DL.getValueOrABITypeAlignment(
+        MaybeAlign(Range.Alignment),
+        cast<PointerType>(StartPtr->getType())->getElementType());
 
-    AMemSet =
-      Builder.CreateMemSet(StartPtr, ByteVal, Range.End-Range.Start, Alignment);
-
+    AMemSet = Builder.CreateMemSet(StartPtr, ByteVal, Range.End - Range.Start,
+                                   Alignment);
     LLVM_DEBUG(dbgs() << "Replace stores:\n"; for (Instruction *SI
                                                    : Range.TheStores) dbgs()
                                               << *SI << '\n';
@@ -683,12 +679,11 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
     auto *T = V->getType();
     if (T->isAggregateType()) {
       uint64_t Size = DL.getTypeStoreSize(T);
-      unsigned Align = SI->getAlignment();
-      if (!Align)
-        Align = DL.getABITypeAlignment(T);
+      const Align MA =
+          DL.getValueOrABITypeAlignment(MaybeAlign(SI->getAlignment()), T);
       IRBuilder<> Builder(SI);
       auto *M =
-          Builder.CreateMemSet(SI->getPointerOperand(), ByteVal, Size, Align);
+          Builder.CreateMemSet(SI->getPointerOperand(), ByteVal, Size, MA);
 
       LLVM_DEBUG(dbgs() << "Promoting " << *SI << " to " << *M << "\n");
 
@@ -1058,7 +1053,7 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Builder.CreateMemSet(
       Builder.CreateGEP(Dest->getType()->getPointerElementType(), Dest,
                         SrcSize),
-      MemSet->getOperand(1), MemsetLen, Align);
+      MemSet->getOperand(1), MemsetLen, MaybeAlign(Align));
 
   MD->removeInstruction(MemSet);
   MemSet->eraseFromParent();
@@ -1126,8 +1121,8 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   }
 
   IRBuilder<> Builder(MemCpy);
-  Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
-                       CopySize, MemCpy->getDestAlignment());
+  Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1), CopySize,
+                       MaybeAlign(MemCpy->getDestAlignment()));
   return true;
 }
 
@@ -1154,7 +1149,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
                                            M->getModule()->getDataLayout())) {
         IRBuilder<> Builder(M);
         Builder.CreateMemSet(M->getRawDest(), ByteVal, M->getLength(),
-                             M->getDestAlignment(), false);
+                             MaybeAlign(M->getDestAlignment()), false);
         MD->removeInstruction(M);
         M->eraseFromParent();
         ++NumCpyToSet;
