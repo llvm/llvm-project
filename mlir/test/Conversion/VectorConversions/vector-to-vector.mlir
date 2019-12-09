@@ -2,11 +2,11 @@
 
 // CHECK-LABEL: func @add4x2
 //      CHECK: %[[V1:.*]] = vector.strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[V2:.*]] = vector.strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[V3:.*]] = vector.strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[V2:.*]] = vector.strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[A1:.*]] = addf %[[V1]], %[[V2]] : vector<2x2xf32>
+// CHECK-NEXT: %[[V3:.*]] = vector.strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[V4:.*]] = vector.strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A1:.*]] = addf %[[V1]], %[[V3]] : vector<2x2xf32>
-// CHECK-NEXT: %[[A2:.*]] = addf %[[V2]], %[[V4]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A2:.*]] = addf %[[V3]], %[[V4]] : vector<2x2xf32>
 // CHECK-NEXT: %[[R1:.*]] = vector.insert_strided_slice %[[A1]], %{{.*}}  {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
 // CHECK-NEXT: %[[R2:.*]] = vector.insert_strided_slice %[[A2]], %[[R1]]  {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
 // CHECK-NEXT: return %[[R2:.*]] : vector<4x2xf32>
@@ -16,38 +16,55 @@ func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
 }
 
 // CHECK-LABEL: func @add4x4
-//      CHECK: vector.strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: addf %{{.*}}, %{{.*}} : vector<2x2xf32>
-// CHECK-NEXT: addf %{{.*}}, %{{.*}} : vector<2x2xf32>
-// CHECK-NEXT: addf %{{.*}}, %{{.*}} : vector<2x2xf32>
-// CHECK-NEXT: addf %{{.*}}, %{{.*}} : vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: vector.strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A1:.*]] = addf %{{.*}}, %{{.*}} : vector<2x2xf32>
-// CHECK-NEXT: %[[A2:.*]] = addf %{{.*}}, %{{.*}} : vector<2x2xf32>
-// CHECK-NEXT: %[[A3:.*]] = addf %{{.*}}, %{{.*}} : vector<2x2xf32>
-// CHECK-NEXT: %[[A4:.*]] = addf %{{.*}}, %{{.*}} : vector<2x2xf32>
+
+//      CHECK: %[[V1:.*]] = vector.strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[V2:.*]] = vector.strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[A1:.*]] = addf %[[V1]], %[[V2]] : vector<2x2xf32>
+
+// CHECK-NEXT: %[[V3:.*]] = vector.strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[V4:.*]] = vector.strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[A2:.*]] = addf %[[V3]], %[[V4]] : vector<2x2xf32>
+
+// CHECK-NEXT: %[[V5:.*]] = vector.strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[V6:.*]] = vector.strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[A3:.*]] = addf %[[V5]], %[[V6]] : vector<2x2xf32>
+
+// CHECK-NEXT: %[[V7:.*]] = vector.strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[V8:.*]] = vector.strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[A4:.*]] = addf %[[V7]], %[[V8]] : vector<2x2xf32>
+
 // CHECK-NEXT: %[[R1:.*]] = vector.insert_strided_slice %[[A1]], %{{.*}}  {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 // CHECK-NEXT: %[[R2:.*]] = vector.insert_strided_slice %[[A2]], %[[R1]]  {offsets = [0, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 // CHECK-NEXT: %[[R3:.*]] = vector.insert_strided_slice %[[A3]], %[[R2]]  {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 // CHECK-NEXT: %[[R4:.*]] = vector.insert_strided_slice %[[A4]], %[[R3]]  {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
-// CHECK-NEXT: return %[[R4:.*]] : vector<4x4xf32>
+
+// CHECK-NEXT: %[[V9:.*]] = vector.strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[V10:.*]] = vector.strided_slice %[[R4]] {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[A5:.*]] = addf %[[V9]], %[[V10]] : vector<2x2xf32>
+
+// CHECK-NEXT: %[[V11:.*]] = vector.strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[V12:.*]] = vector.strided_slice %[[R4]] {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[A6:.*]] = addf %[[V11]], %[[V12]] : vector<2x2xf32>
+
+// CHECK-NEXT: %[[V13:.*]] = vector.strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[V14:.*]] = vector.strided_slice %[[R4]] {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[A7:.*]] = addf %[[V13]], %[[V14]] : vector<2x2xf32>
+
+// CHECK-NEXT: %[[V15:.*]] = vector.strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[V16:.*]] = vector.strided_slice %[[R4]] {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[A8:.*]] = addf %[[V15]], %[[V16]] : vector<2x2xf32>
+
+// CHECK-NEXT: %[[R5:.*]] = vector.insert_strided_slice %[[A5]], %{{.*}}  {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK-NEXT: %[[R6:.*]] = vector.insert_strided_slice %[[A6]], %[[R5]]  {offsets = [0, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK-NEXT: %[[R7:.*]] = vector.insert_strided_slice %[[A7]], %[[R6]]  {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK-NEXT: %[[R8:.*]] = vector.insert_strided_slice %[[A8]], %[[R7]]  {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK-NEXT: return %[[R8]] : vector<4x4xf32>
 
 func @add4x4(%0: vector<4x4xf32>, %1: vector<4x4xf32>) -> vector<4x4xf32> {
   %2 = addf %0, %1: vector<4x4xf32>
   %3 = addf %1, %2: vector<4x4xf32>
   return %3: vector<4x4xf32>
 }
-
 
 #contraction_accesses0 = [
   (i, j, k) -> (i, k),
@@ -131,7 +148,6 @@ func @contraction4x4_ijk(%arg0 : vector<4x6xf32>, %arg1 : vector<6x4xf32>,
   return %0 : vector<4x4xf32>
 }
 
-
 #contraction_accesses1 = [
   (i, k, j) -> (i, k),
   (i, k, j) -> (k, j),
@@ -192,8 +208,14 @@ func @contraction4x4_ikj(%arg0 : vector<4x2xf32>, %arg1 : vector<2x4xf32>,
 
 // CHECK-LABEL: func @vector_transfers
 // CHECK-COUNT-2: vector.transfer_read
-// CHECK-COUNT-8: vector.strided_slice
-// CHECK-COUNT-4: addf
+// CHECK-COUNT-2: vector.strided_slice
+// CHECK-COUNT-1: addf
+// CHECK-COUNT-2: vector.strided_slice
+// CHECK-COUNT-1: addf
+// CHECK-COUNT-2: vector.strided_slice
+// CHECK-COUNT-1: addf
+// CHECK-COUNT-2: vector.strided_slice
+// CHECK-COUNT-1: addf
 // CHECK-COUNT-4: vector.insert_strided_slice
 //         CHECK: vector.transfer_write
 
