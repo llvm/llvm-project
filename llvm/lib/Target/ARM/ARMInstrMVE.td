@@ -2689,28 +2689,38 @@ def MVE_VSHL_immi32 : MVE_VSHL_imm<"i32", (ins imm0_31:$imm)> {
   let Inst{21} = 0b1;
 }
 
-let Predicates = [HasMVEInt] in {
-  def : Pat<(v4i32 (ARMvshlImm (v4i32 MQPR:$src), imm0_31:$imm)),
-            (v4i32 (MVE_VSHL_immi32 (v4i32 MQPR:$src), imm0_31:$imm))>;
-  def : Pat<(v8i16 (ARMvshlImm (v8i16 MQPR:$src), imm0_15:$imm)),
-            (v8i16 (MVE_VSHL_immi16 (v8i16 MQPR:$src), imm0_15:$imm))>;
-  def : Pat<(v16i8 (ARMvshlImm (v16i8 MQPR:$src), imm0_7:$imm)),
-            (v16i8 (MVE_VSHL_immi8 (v16i8 MQPR:$src), imm0_7:$imm))>;
+multiclass MVE_immediate_shift_patterns_inner<
+    MVEVectorVTInfo VTI, Operand imm_operand_type, SDNode unpred_op,
+    Intrinsic pred_int, Instruction inst, list<int> unsignedFlag = []> {
 
-  def : Pat<(v4i32 (ARMvshruImm (v4i32 MQPR:$src), imm0_31:$imm)),
-            (v4i32 (MVE_VSHR_immu32 (v4i32 MQPR:$src), imm0_31:$imm))>;
-  def : Pat<(v8i16 (ARMvshruImm (v8i16 MQPR:$src), imm0_15:$imm)),
-            (v8i16 (MVE_VSHR_immu16 (v8i16 MQPR:$src), imm0_15:$imm))>;
-  def : Pat<(v16i8 (ARMvshruImm (v16i8 MQPR:$src), imm0_7:$imm)),
-            (v16i8 (MVE_VSHR_immu8 (v16i8 MQPR:$src), imm0_7:$imm))>;
+  def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$src), imm_operand_type:$imm)),
+            (VTI.Vec (inst (VTI.Vec MQPR:$src), imm_operand_type:$imm))>;
 
-  def : Pat<(v4i32 (ARMvshrsImm (v4i32 MQPR:$src), imm0_31:$imm)),
-            (v4i32 (MVE_VSHR_imms32 (v4i32 MQPR:$src), imm0_31:$imm))>;
-  def : Pat<(v8i16 (ARMvshrsImm (v8i16 MQPR:$src), imm0_15:$imm)),
-            (v8i16 (MVE_VSHR_imms16 (v8i16 MQPR:$src), imm0_15:$imm))>;
-  def : Pat<(v16i8 (ARMvshrsImm (v16i8 MQPR:$src), imm0_7:$imm)),
-            (v16i8 (MVE_VSHR_imms8 (v16i8 MQPR:$src), imm0_7:$imm))>;
+  def : Pat<(VTI.Vec !con((pred_int (VTI.Vec MQPR:$src), imm_operand_type:$imm),
+                          !dag(pred_int, unsignedFlag, ?),
+                          (pred_int (VTI.Pred VCCR:$mask),
+                                   (VTI.Vec MQPR:$inactive)))),
+            (VTI.Vec (inst (VTI.Vec MQPR:$src), imm_operand_type:$imm,
+                           ARMVCCThen, (VTI.Pred VCCR:$mask),
+                           (VTI.Vec MQPR:$inactive)))>;
 }
+
+multiclass MVE_immediate_shift_patterns<MVEVectorVTInfo VTI,
+                                        Operand imm_operand_type> {
+  defm : MVE_immediate_shift_patterns_inner<VTI, imm_operand_type,
+      ARMvshlImm, int_arm_mve_shl_imm_predicated,
+      !cast<Instruction>("MVE_VSHL_immi" # VTI.BitsSuffix)>;
+  defm : MVE_immediate_shift_patterns_inner<VTI, imm_operand_type,
+      ARMvshruImm, int_arm_mve_shr_imm_predicated,
+      !cast<Instruction>("MVE_VSHR_immu" # VTI.BitsSuffix), [1]>;
+  defm : MVE_immediate_shift_patterns_inner<VTI, imm_operand_type,
+      ARMvshrsImm, int_arm_mve_shr_imm_predicated,
+      !cast<Instruction>("MVE_VSHR_imms" # VTI.BitsSuffix), [0]>;
+}
+
+defm : MVE_immediate_shift_patterns<MVE_v16i8, imm0_7>;
+defm : MVE_immediate_shift_patterns<MVE_v8i16, imm0_15>;
+defm : MVE_immediate_shift_patterns<MVE_v4i32, imm0_31>;
 
 // end of mve_shift instructions
 
