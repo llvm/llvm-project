@@ -1877,17 +1877,20 @@ void CodeGenModule::ConstructAttributeList(
         if (Fn->isNoReturn())
           FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
 
-        if (const auto *NBA = TargetDecl->getAttr<NoBuiltinAttr>()) {
-          bool HasWildcard = llvm::is_contained(NBA->builtinNames(), "*");
-          if (HasWildcard)
-            FuncAttrs.addAttribute("no-builtins");
-          else
-            for (StringRef BuiltinName : NBA->builtinNames()) {
-              SmallString<32> AttributeName;
-              AttributeName += "no-builtin-";
-              AttributeName += BuiltinName;
-              FuncAttrs.addAttribute(AttributeName);
-            }
+        const auto *NBA = Fn->getAttr<NoBuiltinAttr>();
+        bool HasWildcard = NBA && llvm::is_contained(NBA->builtinNames(), "*");
+        if (getLangOpts().NoBuiltin || HasWildcard)
+          FuncAttrs.addAttribute("no-builtins");
+        else {
+          auto AddNoBuiltinAttr = [&FuncAttrs](StringRef BuiltinName) {
+            SmallString<32> AttributeName;
+            AttributeName += "no-builtin-";
+            AttributeName += BuiltinName;
+            FuncAttrs.addAttribute(AttributeName);
+          };
+          llvm::for_each(getLangOpts().NoBuiltinFuncs, AddNoBuiltinAttr);
+          if (NBA)
+            llvm::for_each(NBA->builtinNames(), AddNoBuiltinAttr);
         }
       }
     }
