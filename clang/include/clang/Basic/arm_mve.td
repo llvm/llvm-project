@@ -51,6 +51,21 @@ def vmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                              (IRInt<"vmulh", [Vector]> $a, $b)>;
 def vrmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                              (IRInt<"vrmulh", [Vector]> $a, $b)>;
+def vmullbq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
+                                      (IRInt<"vmull", [DblVector, Vector]>
+                                       $a, $b, 0)>;
+def vmulltq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
+                                      (IRInt<"vmull", [DblVector, Vector]>
+                                       $a, $b, 1)>;
+}
+
+let params = T.Poly, overrideKindLetter = "p" in {
+def vmullbq_poly: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
+                                       (IRInt<"vmull_poly", [DblVector, Vector]>
+                                        $a, $b, 0)>;
+def vmulltq_poly: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
+                                       (IRInt<"vmull_poly", [DblVector, Vector]>
+                                        $a, $b, 1)>;
 }
 
 let params = T.Float in {
@@ -123,6 +138,25 @@ def vmulhq_m: Intrinsic<
 def vrmulhq_m: Intrinsic<
     Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
     (IRInt<"rmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vmullbq_int_m: Intrinsic<
+    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mull_int_predicated", [DblVector, Vector, Predicate]> $a, $b, 0,
+     $pred, $inactive)>;
+def vmulltq_int_m: Intrinsic<
+    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mull_int_predicated", [DblVector, Vector, Predicate]> $a, $b, 1,
+     $pred, $inactive)>;
+}
+
+let params = T.Poly, overrideKindLetter = "p" in {
+def vmullbq_poly_m: Intrinsic<
+    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mull_poly_predicated", [DblVector, Vector, Predicate]> $a, $b, 0,
+     $pred, $inactive)>;
+def vmulltq_poly_m: Intrinsic<
+    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mull_poly_predicated", [DblVector, Vector, Predicate]> $a, $b, 1,
+     $pred, $inactive)>;
 }
 
 // Predicated intrinsics - Float types only
