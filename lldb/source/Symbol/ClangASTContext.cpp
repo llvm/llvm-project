@@ -4079,6 +4079,11 @@ ClangASTContext::GetTypeInfo(lldb::opaque_compiler_type_t type,
                                   ->getUnderlyingType()
                                   .getAsOpaquePtr())
         .GetTypeInfo(pointee_or_element_clang_type);
+  case clang::Type::Atomic:
+    return CompilerType(this, llvm::cast<clang::AtomicType>(qual_type)
+                                  ->getValueType()
+                                  .getAsOpaquePtr())
+        .GetTypeInfo(pointee_or_element_clang_type);
   case clang::Type::UnresolvedUsing:
     return 0;
 
@@ -4773,6 +4778,13 @@ ClangASTContext::GetRValueReferenceType(lldb::opaque_compiler_type_t type) {
     return CompilerType();
 }
 
+CompilerType ClangASTContext::GetAtomicType(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return CompilerType();
+  return CompilerType(
+      this, getASTContext()->getAtomicType(GetQualType(type)).getAsOpaquePtr());
+}
+
 CompilerType
 ClangASTContext::AddConstModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
@@ -5384,6 +5396,11 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
                                   ->getUnderlyingType()
                                   .getAsOpaquePtr())
         .GetFormat();
+  case clang::Type::Atomic:
+    return CompilerType(this, llvm::cast<clang::AtomicType>(qual_type)
+                                  ->getValueType()
+                                  .getAsOpaquePtr())
+        .GetFormat();
   case clang::Type::DependentSizedArray:
   case clang::Type::DependentSizedExtVector:
   case clang::Type::UnresolvedUsing:
@@ -5399,7 +5416,6 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::TemplateSpecialization:
   case clang::Type::DeducedTemplateSpecialization:
-  case clang::Type::Atomic:
   case clang::Type::Adjusted:
   case clang::Type::Pipe:
     break;

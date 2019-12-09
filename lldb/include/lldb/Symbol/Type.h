@@ -80,7 +80,9 @@ public:
     eEncodingIsLValueReferenceUID, ///< This type is L value reference to a type
                                    /// whose UID is m_encoding_uid
     eEncodingIsRValueReferenceUID, ///< This type is R value reference to a type
-                                   /// whose UID is m_encoding_uid
+                                   /// whose UID is m_encoding_uid,
+    eEncodingIsAtomicUID,          ///< This type is the type whose UID is
+                                   /// m_encoding_uid as an atomic type.
     eEncodingIsSyntheticUID
   };
 
