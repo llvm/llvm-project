@@ -100,6 +100,7 @@ public:
                    bool locals,
                    bool statics);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def get_range_at_index(self, idx):
             if idx < self.GetNumRanges():
@@ -153,6 +154,7 @@ public:
         ranges = property(get_ranges_array, None, doc='''A read only property that returns a list() object that contains all of the address ranges for the block.''')
         num_ranges = property(GetNumRanges, None, doc='''A read only property that returns the same result as GetNumRanges().''')
     %}
+#endif
 
 };
 
