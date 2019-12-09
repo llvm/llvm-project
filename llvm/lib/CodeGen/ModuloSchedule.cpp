@@ -1190,7 +1190,7 @@ void ModuloScheduleExpander::rewriteScheduledInstr(
 bool ModuloScheduleExpander::isLoopCarried(MachineInstr &Phi) {
   if (!Phi.isPHI())
     return false;
-  unsigned DefCycle = Schedule.getCycle(&Phi);
+  int DefCycle = Schedule.getCycle(&Phi);
   int DefStage = Schedule.getStage(&Phi);
 
   unsigned InitVal = 0;
@@ -1199,7 +1199,7 @@ bool ModuloScheduleExpander::isLoopCarried(MachineInstr &Phi) {
   MachineInstr *Use = MRI.getVRegDef(LoopVal);
   if (!Use || Use->isPHI())
     return true;
-  unsigned LoopCycle = Schedule.getCycle(Use);
+  int LoopCycle = Schedule.getCycle(Use);
   int LoopStage = Schedule.getStage(Use);
   return (LoopCycle > DefCycle) || (LoopStage <= DefStage);
 }
