@@ -644,6 +644,8 @@ public:
   CompilerType
   GetRValueReferenceType(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType GetAtomicType(lldb::opaque_compiler_type_t type) override;
+
   CompilerType AddConstModifier(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;

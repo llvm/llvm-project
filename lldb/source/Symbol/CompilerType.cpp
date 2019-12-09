@@ -427,6 +427,12 @@ CompilerType CompilerType::GetRValueReferenceType() const {
     return CompilerType();
 }
 
+CompilerType CompilerType::GetAtomicType() const {
+  if (IsValid())
+    return m_type_system->GetAtomicType(m_type);
+  return CompilerType();
+}
+
 CompilerType CompilerType::AddConstModifier() const {
   if (IsValid())
     return m_type_system->AddConstModifier(m_type);
