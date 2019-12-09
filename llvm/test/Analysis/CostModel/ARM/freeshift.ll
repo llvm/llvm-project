@@ -3,17 +3,17 @@
 
 define void @shl(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'shl'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %as = shl i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %as = shl i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ac = add i32 %b, %as
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ss = shl i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ss = shl i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sc = sub i32 %b, %ss
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xs = shl i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %xs = shl i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xc = xor i32 %b, %xs
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ns = shl i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ns = shl i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc = and i32 %b, %ns
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %os = shl i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %os = shl i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %oc = or i32 %b, %os
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %is = shl i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %is = shl i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ic = icmp eq i32 %b, %is
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -34,17 +34,17 @@ define void @shl(i32 %a, i32 %b) {
 
 define void @ashr(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'ashr'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %as = ashr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %as = ashr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ac = add i32 %b, %as
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ss = ashr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ss = ashr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sc = sub i32 %b, %ss
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xs = ashr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %xs = ashr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xc = xor i32 %b, %xs
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ns = ashr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ns = ashr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc = and i32 %b, %ns
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %os = ashr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %os = ashr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %oc = or i32 %b, %os
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %is = ashr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %is = ashr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ic = icmp eq i32 %b, %is
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -65,17 +65,17 @@ define void @ashr(i32 %a, i32 %b) {
 
 define void @lshr(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'lshr'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %as = lshr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %as = lshr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ac = add i32 %b, %as
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ss = lshr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ss = lshr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sc = sub i32 %b, %ss
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xs = lshr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %xs = lshr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xc = xor i32 %b, %xs
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ns = lshr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ns = lshr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc = and i32 %b, %ns
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %os = lshr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %os = lshr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %oc = or i32 %b, %os
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %is = lshr i32 %a, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %is = lshr i32 %a, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ic = icmp eq i32 %b, %is
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;

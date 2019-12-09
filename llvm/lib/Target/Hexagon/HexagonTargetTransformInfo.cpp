@@ -236,17 +236,18 @@ unsigned HexagonTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }
 
-unsigned HexagonTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-      TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
-      TTI::OperandValueProperties Opd1PropInfo,
-      TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value*> Args) {
+unsigned HexagonTTIImpl::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
+    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) {
   if (Ty->isVectorTy()) {
     std::pair<int, MVT> LT = TLI.getTypeLegalizationCost(DL, Ty);
     if (LT.second.isFloatingPoint())
       return LT.first + FloatFactor * getTypeNumElements(Ty);
   }
   return BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
-                                       Opd1PropInfo, Opd2PropInfo, Args);
+                                       Opd1PropInfo, Opd2PropInfo, Args, CxtI);
 }
 
 unsigned HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
