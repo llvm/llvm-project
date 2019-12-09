@@ -1106,7 +1106,7 @@ body:             |
     %0 = COPY $x3
     %2 = LI 88
     %3 = SLDo %0, killed %2, implicit-def $cr0
-    ; CHECK: ANDIo8 %0, 0, implicit-def $cr0
+    ; CHECK: ANDI8o %0, 0, implicit-def $cr0
     ; CHECK-LATE: andi. 5, 3, 0
     %4 = COPY killed $cr0
     %5 = ISEL8 %1, %0, %4.sub_eq
@@ -1212,7 +1212,7 @@ body:             |
     %0 = COPY $x3
     %2 = LI 64
     %3 = SRDo %0, killed %2, implicit-def $cr0
-    ; CHECK: ANDIo8 %0, 0, implicit-def $cr0
+    ; CHECK: ANDI8o %0, 0, implicit-def $cr0
     ; CHECK-LATE: andi. 5, 3, 0
     %4 = COPY killed $cr0
     %5 = ISEL8 %1, %0, %4.sub_eq
