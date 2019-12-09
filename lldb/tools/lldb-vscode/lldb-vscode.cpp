@@ -2166,6 +2166,8 @@ void request_stackTrace(const llvm::json::Object &request) {
         break;
       stackFrames.emplace_back(CreateStackFrame(frame));
     }
+    const auto totalFrames = thread.GetNumFrames();
+    body.try_emplace("totalFrames", totalFrames);
   }
   body.try_emplace("stackFrames", std::move(stackFrames));
   response.try_emplace("body", std::move(body));
