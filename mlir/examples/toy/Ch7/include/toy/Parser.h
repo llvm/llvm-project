@@ -613,7 +613,7 @@ private:
   /// `struct` keyword, followed by a block containing a list of variable
   /// declarations.
   ///
-  /// definition ::= `struct` identifer `{` decl+ `}`
+  /// definition ::= `struct` identifier `{` decl+ `}`
   std::unique_ptr<StructAST> parseStruct() {
     auto loc = lexer.getLastLocation();
     lexer.consume(tok_struct);

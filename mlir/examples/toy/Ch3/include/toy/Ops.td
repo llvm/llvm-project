@@ -49,7 +49,7 @@ class Toy_Op<string mnemonic, list<OpTrait> traits = []> :
 // and may be removed if dead.
 def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
   // Provide a summary and description for this operation. This can be used to
-  // auto-generate documenatation of the operations within our dialect.
+  // auto-generate documentation of the operations within our dialect.
   let summary = "constant";
   let description = [{
     Constant operation turns a literal into an SSA value. The data is attached

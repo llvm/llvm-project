@@ -42,7 +42,7 @@ func @slice_depth1_loop_nest_with_offsets() {
 // -----
 
 // Slices at loop depth 1 should only slice the loop bounds of the first loop.
-// Slices at loop detph 2 should slice loop bounds of both loops.
+// Slices at loop depth 2 should slice loop bounds of both loops.
 // CHECK-LABEL: func @slice_depth2_loop_nest() {
 func @slice_depth2_loop_nest() {
   %0 = alloc() : memref<100x100xf32>

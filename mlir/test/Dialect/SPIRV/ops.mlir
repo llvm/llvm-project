@@ -927,7 +927,7 @@ func @shift_left_logical_invalid_result_type(%arg0: i32, %arg1 : i16) -> i16 {
 // spv.ShiftRightArithmetic
 //===----------------------------------------------------------------------===//
 
-func @shift_right_aritmethic(%arg0: vector<4xi32>, %arg1 : vector<4xi8>) -> vector<4xi32> {
+func @shift_right_arithmetic(%arg0: vector<4xi32>, %arg1 : vector<4xi8>) -> vector<4xi32> {
   // CHECK: {{%.*}} = spv.ShiftRightArithmetic {{%.*}}, {{%.*}} : vector<4xi32>, vector<4xi8>
   %0 = spv.ShiftRightArithmetic %arg0, %arg1: vector<4xi32>, vector<4xi8>
   spv.ReturnValue %0 : vector<4xi32>

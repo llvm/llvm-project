@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -pass-pipeline='func(canonicalize)' | FileCheck %s
 
 //===----------------------------------------------------------------------===//
-// spv.AccsessChain
+// spv.AccessChain
 //===----------------------------------------------------------------------===//
 
 func @combine_full_access_chain() -> f32 {

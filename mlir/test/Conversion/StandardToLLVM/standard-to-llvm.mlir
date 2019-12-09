@@ -20,7 +20,7 @@ func @strided_memref(%ind: index) {
 // -----
 
 // This should not crash. The first operation cannot be converted, so the
-// secound should not match. This attempts to convert `return` to `llvm.return`
+// second should not match. This attempts to convert `return` to `llvm.return`
 // and complains about non-LLVM types.
 func @unknown_source() -> i32 {
   %0 = "foo"() : () -> i32

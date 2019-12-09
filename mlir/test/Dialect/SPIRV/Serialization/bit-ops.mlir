@@ -36,7 +36,7 @@ spv.module "Logical" "GLSL450" {
     %0 = spv.ShiftLeftLogical %arg0, %arg1: i32, i16
     spv.ReturnValue %0 : i32
   }
-  func @shift_right_aritmethic(%arg0: vector<4xi32>, %arg1 : vector<4xi8>) -> vector<4xi32> {
+  func @shift_right_arithmetic(%arg0: vector<4xi32>, %arg1 : vector<4xi8>) -> vector<4xi32> {
     // CHECK: {{%.*}} = spv.ShiftRightArithmetic {{%.*}}, {{%.*}} : vector<4xi32>, vector<4xi8>
     %0 = spv.ShiftRightArithmetic %arg0, %arg1: vector<4xi32>, vector<4xi8>
     spv.ReturnValue %0 : vector<4xi32>
