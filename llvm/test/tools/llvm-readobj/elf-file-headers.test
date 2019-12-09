@@ -1,5 +1,7 @@
 # RUN: yaml2obj %s --docnum=1 -o %t.i386
 # RUN: llvm-readobj -h %t.i386 | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix I386
+# RUN: llvm-readobj --file-header %t.i386 | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix I386
+# RUN: llvm-readobj --file-headers %t.i386 | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix I386
 
 #      I386:File: [[FILE]]
 # I386-NEXT:Format: ELF32-i386
@@ -44,6 +46,10 @@ FileHeader:
 # RUN: yaml2obj %s --docnum=2 -o %t.x86-64
 # RUN: llvm-readobj -h %t.x86-64 \
 # RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.x86-64 --check-prefix X86-64
+# RUN: llvm-readobj --file-header %t.x86-64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.x86-64 --check-prefix X86-64
+# RUN: llvm-readobj --file-headers %t.x86-64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.x86-64 --check-prefix X86-64
 
 #      X86-64:File: [[FILE]]
 # X86-64-NEXT:Format: ELF64-x86-64
@@ -87,6 +93,10 @@ FileHeader:
 
 # RUN: yaml2obj %s --docnum=3 -o %t.lanai
 # RUN: llvm-readobj -h %t.lanai \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.lanai --check-prefix LANAI
+# RUN: llvm-readobj --file-header %t.lanai \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.lanai --check-prefix LANAI
+# RUN: llvm-readobj --file-headers %t.lanai \
 # RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.lanai --check-prefix LANAI
 
 --- !ELF

@@ -1,5 +1,6 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump --all-headers %t | FileCheck %s
+# RUN: llvm-objdump -x %t | FileCheck %s
 
 ## Note: --all-headers (-x) is an alias for --archive-headers --file-headers
 ## --section-headers --private-headers --reloc --syms (-afhprt). Test for them

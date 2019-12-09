@@ -4,8 +4,6 @@ RUN: llvm-readobj -r %p/Inputs/bad-relocs.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix BAD-COFF-RELOCS
 RUN: llvm-readobj -r %p/Inputs/relocs-no-symtab.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix BAD-COFF-RELOCS
-RUN: llvm-readobj -r %p/Inputs/trivial.obj.elf-i386 \
-RUN:   | FileCheck %s -check-prefix ELF
 RUN: llvm-readobj -r %p/Inputs/trivial.obj.macho-i386 \
 RUN:   | FileCheck %s -check-prefix MACHO-I386
 RUN: llvm-readobj -r %p/Inputs/trivial.obj.macho-x86-64 \
@@ -32,15 +30,6 @@ BAD-COFF-RELOCS-NEXT:   Section (1) sec {
 BAD-COFF-RELOCS-NEXT:     0xDEADBEEF IMAGE_REL_I386_ABSOLUTE -
 BAD-COFF-RELOCS-NEXT:   }
 BAD-COFF-RELOCS-NEXT: ]
-
-ELF:      Relocations [
-ELF-NEXT:   Section (2) .rel.text {
-ELF-NEXT:     0xC R_386_GOTPC _GLOBAL_OFFSET_TABLE_ 0x0
-ELF-NEXT:     0x12 R_386_GOTOFF .L.str 0x0
-ELF-NEXT:     0x1A R_386_PLT32 puts 0x0
-ELF-NEXT:     0x1F R_386_PLT32 SomeOtherFunction 0x0
-ELF-NEXT:   }
-ELF-NEXT: ]
 
 MACHO-I386:      Relocations [
 MACHO-I386-NEXT:   Section __text {
