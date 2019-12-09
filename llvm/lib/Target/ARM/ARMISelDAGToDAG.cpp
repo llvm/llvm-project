@@ -233,6 +233,22 @@ private:
   void SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
                          uint16_t OpcodeWithNoCarry, bool Add, bool Predicated);
 
+  /// Select MVE complex vector addition intrinsic
+  /// OpcodesInt are opcodes for non-halving addition of complex integer vectors
+  /// OpcodesHInt are opcodes for halving addition of complex integer vectors
+  /// OpcodesFP are opcodes for addition of complex floating point vectors
+  void SelectMVE_VCADD(SDNode *N, const uint16_t *OpcodesInt,
+                       const uint16_t *OpcodesHInt, const uint16_t *OpcodesFP,
+                       bool Predicated);
+
+  /// Select MVE complex vector multiplication intrinsic
+  void SelectMVE_VCMUL(SDNode *N, uint16_t OpcodeF16, uint16_t OpcodeF32,
+                       bool Predicated);
+
+  /// Sekect NVE complex vector multiply-add intrinsic
+  void SelectMVE_VCMLA(SDNode *N, uint16_t OpcodeF16, uint16_t OpcodeF32,
+                       bool Predicated);
+
   /// SelectMVE_VLD - Select MVE interleaving load intrinsics. NumVecs
   /// should be 2 or 4. The opcode array specifies the instructions
   /// used for 8, 16 and 32-bit lane sizes respectively, and each
@@ -2517,6 +2533,138 @@ void ARMDAGToDAGISel::SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
   CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
 }
 
+/// Convert an SDValue to a boolean value. SDVal must be a compile-time constant
+static bool SDValueToConstBool(SDValue SDVal) {
+  ConstantSDNode *SDValConstant = dyn_cast<ConstantSDNode>(SDVal);
+  assert(SDValConstant && "expected a compile-time constant");
+  uint64_t Value = SDValConstant->getZExtValue();
+  assert((Value == 0 || Value == 1) && "expected value 0 or 1");
+  return Value;
+}
+
+/// Select an opcode based on a floating point vector type. One opcode
+/// corresponds to 16-bit floating point element type, the other to two 32-bit
+/// element type.
+/// Other types are not allowed
+static uint16_t SelectFPOpcode(EVT VT, uint16_t OpcodeF16, uint16_t OpcodeF32) {
+  assert(VT.isFloatingPoint() && VT.isVector() &&
+         "expected a floating-point vector");
+  switch (VT.getVectorElementType().getSizeInBits()) {
+  case 16:
+    return OpcodeF16;
+  case 32:
+    return OpcodeF32;
+  default:
+    llvm_unreachable("bad vector element size");
+  }
+}
+
+void ARMDAGToDAGISel::SelectMVE_VCADD(SDNode *N, const uint16_t *OpcodesInt,
+                                      const uint16_t *OpcodesHInt,
+                                      const uint16_t *OpcodesFP,
+                                      bool Predicated) {
+  EVT VT = N->getValueType(0);
+  SDLoc Loc(N);
+
+  bool IsHalved = SDValueToConstBool(N->getOperand(1));
+  bool IsAngle270 = SDValueToConstBool(N->getOperand(2));
+  bool IsFP = VT.isFloatingPoint();
+  if (IsHalved)
+    assert(!IsFP && "vhcaddq requires integer vector type");
+
+  uint16_t Opcode;
+  if (IsFP) {
+    Opcode = SelectFPOpcode(VT, OpcodesFP[0], OpcodesFP[1]);
+  } else {
+    const uint16_t *Opcodes = IsHalved ? OpcodesHInt : OpcodesInt;
+    switch (VT.getVectorElementType().getSizeInBits()) {
+    case 8:
+      Opcode = Opcodes[0];
+      break;
+    case 16:
+      Opcode = Opcodes[1];
+      break;
+    case 32:
+      Opcode = Opcodes[2];
+      break;
+    default:
+      llvm_unreachable("bad vector element size");
+   }
+  }
+
+  int FirstInputOp = Predicated ? 4 : 3;
+  SmallVector<SDValue, 8> Ops;
+  // Vectors
+  Ops.push_back(N->getOperand(FirstInputOp));
+  Ops.push_back(N->getOperand(FirstInputOp + 1));
+  // Rotation
+  Ops.push_back(CurDAG->getTargetConstant(IsAngle270, Loc, MVT::i32));
+
+  if (Predicated)
+    AddMVEPredicateToOps(Ops, Loc,
+                         N->getOperand(FirstInputOp + 2),  // predicate
+                         N->getOperand(FirstInputOp - 1)); // inactive
+  else
+    AddEmptyMVEPredicateToOps(Ops, Loc, VT);
+
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+}
+
+static uint32_t GetCMulRotation(SDValue V) {
+  const ConstantSDNode *RotConstant = dyn_cast<ConstantSDNode>(V);
+  assert(RotConstant && "expected a compile-time constant");
+  uint64_t RotValue = RotConstant->getZExtValue();
+  assert(RotValue < 4 && "expected value in range [0, 3]");
+  return RotValue;
+}
+
+void ARMDAGToDAGISel::SelectMVE_VCMUL(SDNode *N, uint16_t OpcodeF16,
+                                      uint16_t OpcodeF32, bool Predicated) {
+  EVT VT = N->getValueType(0);
+  SDLoc Loc(N);
+
+  int FirstInputOp = Predicated ? 3 : 2;
+  SmallVector<SDValue, 8> Ops;
+  // Vectors
+  Ops.push_back(N->getOperand(FirstInputOp));
+  Ops.push_back(N->getOperand(FirstInputOp + 1));
+  // Rotation
+  uint32_t RotValue = GetCMulRotation(N->getOperand(1));
+  Ops.push_back(CurDAG->getTargetConstant(RotValue, Loc, MVT::i32));
+
+  if (Predicated)
+    AddMVEPredicateToOps(Ops, Loc,
+                         N->getOperand(FirstInputOp + 2),  // predicate
+                         N->getOperand(FirstInputOp - 1)); // inactive
+  else
+    AddEmptyMVEPredicateToOps(Ops, Loc, VT);
+
+  uint16_t Opcode = SelectFPOpcode(VT, OpcodeF16, OpcodeF32);
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+}
+
+void ARMDAGToDAGISel::SelectMVE_VCMLA(SDNode *N, uint16_t OpcodeF16,
+                                      uint16_t OpcodeF32, bool Predicated) {
+  SDLoc Loc(N);
+
+  SmallVector<SDValue, 8> Ops;
+  // The 3 vector operands
+  for (int i = 2; i < 5; ++i)
+    Ops.push_back(N->getOperand(i));
+  // Rotation
+  uint32_t RotValue = GetCMulRotation(N->getOperand(1));
+  Ops.push_back(CurDAG->getTargetConstant(RotValue, Loc, MVT::i32));
+
+  if (Predicated)
+    AddMVEPredicateToOps(Ops, Loc, N->getOperand(5));
+  else
+    AddEmptyMVEPredicateToOps(Ops, Loc);
+
+  EVT VT = N->getValueType(0);
+  uint16_t Opcode = SelectFPOpcode(VT, OpcodeF16, OpcodeF32);
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+}
+
 void ARMDAGToDAGISel::SelectMVE_VLD(SDNode *N, unsigned NumVecs,
                                     const uint16_t *const *Opcodes) {
   EVT VT = N->getValueType(0);
@@ -4361,6 +4509,36 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       SelectMVE_VADCSBC(N, ARM::MVE_VADC, ARM::MVE_VADCI, true,
                         IntNo == Intrinsic::arm_mve_vadc_predicated);
       return;
+
+    case Intrinsic::arm_mve_vcaddq:
+    case Intrinsic::arm_mve_vcaddq_predicated: {
+      static const uint16_t OpcodesInt[] = {
+        ARM::MVE_VCADDi8, ARM::MVE_VCADDi16, ARM::MVE_VCADDi32,
+      };
+      static const uint16_t OpcodesHInt[] = {
+        ARM::MVE_VHCADDs8, ARM::MVE_VHCADDs16, ARM::MVE_VHCADDs32,
+      };
+      static const uint16_t OpcodesFP[] = {
+        ARM::MVE_VCADDf16, ARM::MVE_VCADDf32,
+      };
+
+      SelectMVE_VCADD(N, OpcodesInt, OpcodesHInt,
+                      OpcodesFP, IntNo == Intrinsic::arm_mve_vcaddq_predicated);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vcmulq:
+    case Intrinsic::arm_mve_vcmulq_predicated:
+      SelectMVE_VCMUL(N, ARM::MVE_VCMULf16, ARM::MVE_VCMULf32,
+                      IntNo == Intrinsic::arm_mve_vcmulq_predicated);
+      return;
+
+    case Intrinsic::arm_mve_vcmlaq:
+    case Intrinsic::arm_mve_vcmlaq_predicated:
+      SelectMVE_VCMLA(N, ARM::MVE_VCMLAf16, ARM::MVE_VCMLAf32,
+                      IntNo == Intrinsic::arm_mve_vcmlaq_predicated);
+      return;
+
     }
     break;
   }

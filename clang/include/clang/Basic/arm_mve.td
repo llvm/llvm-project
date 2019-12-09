@@ -596,6 +596,68 @@ def vadciq_m: Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
          (xval $pair, 0))>;
 }
 
+multiclass VectorComplexAddPred<dag halving, dag angle> {
+  def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
+     (IRInt<"vcaddq", [Vector]> halving, angle, $a, $b)>;
+  def _m : Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
+                              Predicate:$pred),
+     (IRInt<"vcaddq_predicated", [Vector, Predicate]>
+       halving, angle, $inactive, $a, $b, $pred)>;
+  def _x : Intrinsic<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
+     (IRInt<"vcaddq_predicated", [Vector, Predicate]>
+       halving, angle, (undef Vector), $a, $b, $pred)>;
+}
+
+multiclass VectorComplexMulPred<dag angle> {
+  def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
+    (IRInt<"vcmulq", [Vector]> angle, $a, $b)>;
+  def _m : Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
+                              Predicate:$pred),
+    (IRInt<"vcmulq_predicated", [Vector, Predicate]> angle, $inactive, $a, $b,
+      $pred)>;
+  def _x : Intrinsic<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"vcmulq_predicated", [Vector, Predicate]> angle, (undef Vector), $a,
+      $b, $pred)>;
+}
+
+multiclass VectorComplexMLAPred<dag angle> {
+  def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b, Vector:$c),
+    (IRInt<"vcmlaq", [Vector]> angle, $a, $b, $c)>;
+  def _m : Intrinsic<Vector, (args Vector:$a, Vector:$b, Vector:$c,
+                                   Predicate:$pred),
+    (IRInt<"vcmlaq_predicated", [Vector, Predicate]> angle, $a, $b, $c, $pred)>;
+}
+
+multiclass VectorComplexAddAngle<dag halving> {
+  defm _rot90 : VectorComplexAddPred<halving, (u32 0)>;
+  defm _rot270 : VectorComplexAddPred<halving, (u32 1)>;
+}
+
+multiclass VectorComplexMulAngle {
+  defm ""      : VectorComplexMulPred<(u32 0)>;
+  defm _rot90  : VectorComplexMulPred<(u32 1)>;
+  defm _rot180 : VectorComplexMulPred<(u32 2)>;
+  defm _rot270 : VectorComplexMulPred<(u32 3)>;
+}
+
+multiclass VectorComplexMLAAngle {
+  defm ""      : VectorComplexMLAPred<(u32 0)>;
+  defm _rot90  : VectorComplexMLAPred<(u32 1)>;
+  defm _rot180 : VectorComplexMLAPred<(u32 2)>;
+  defm _rot270 : VectorComplexMLAPred<(u32 3)>;
+}
+
+let params = T.Usual in
+defm vcaddq : VectorComplexAddAngle<(u32 0)>;
+
+let params = T.Signed in
+defm vhcaddq : VectorComplexAddAngle<(u32 1)>;
+
+let params = T.Float in {
+defm vcmulq : VectorComplexMulAngle;
+defm vcmlaq : VectorComplexMLAAngle;
+}
+
 foreach desttype = T.All in {
   // We want a vreinterpretq between every pair of supported vector types
   // _except_ that there shouldn't be one from a type to itself.
