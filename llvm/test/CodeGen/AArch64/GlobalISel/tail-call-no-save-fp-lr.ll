@@ -2,7 +2,7 @@
 ; RUN: llc %s -verify-machineinstrs -mtriple aarch64-apple-darwin -global-isel -global-isel-abort=1 -frame-pointer=non-leaf -o - 2>&1 | FileCheck %s
 
 ; Check that we get a tail call to foo without saving fp/lr.
-define void @bar(i32 %a) #1 {
+define void @bar(i32 %a) {
 ; CHECK-LABEL: bar:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    b _zoo
@@ -18,6 +18,3 @@ define void @zoo(i32 %a) {
 entry:
   ret void
 }
-
-attributes #1 = { "frame-pointer"="all" }
-
