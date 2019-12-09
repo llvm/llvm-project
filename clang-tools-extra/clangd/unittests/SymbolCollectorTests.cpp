@@ -718,6 +718,29 @@ TEST_F(SymbolCollectorTest, NameReferences) {
                                   HaveRanges(Header.ranges()))));
 }
 
+TEST_F(SymbolCollectorTest, RefsOnMacros) {
+  // Refs collected from SymbolCollector behave in the same way as
+  // AST-based xrefs.
+  CollectorOpts.RefFilter = RefKind::All;
+  CollectorOpts.RefsInHeaders = true;
+  Annotations Header(R"(
+    #define TYPE(X) X
+    #define FOO Foo
+    #define CAT(X, Y) X##Y
+    class [[Foo]] {};
+    void test() {
+      TYPE([[Foo]]) foo;
+      [[FOO]] foo2;
+      TYPE(TYPE([[Foo]])) foo3;
+      [[CAT]](Fo, o) foo4;
+    }
+  )");
+  CollectorOpts.RefFilter = RefKind::All;
+  runSymbolCollector(Header.code(), "");
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Foo").ID,
+                                  HaveRanges(Header.ranges()))));
+}
+
 TEST_F(SymbolCollectorTest, HeaderAsMainFile) {
   CollectorOpts.RefFilter = RefKind::All;
   Annotations Header(R"(
