@@ -7551,15 +7551,57 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   }
 }
 
+/// If \p DescribedReg overlaps with the MOVrr instruction's destination
+/// register then, if possible, describe the value in terms of the source
+/// register.
+static Optional<ParamLoadedValue>
+describeMOVrrLoadedValue(const MachineInstr &MI, Register DescribedReg,
+                         const TargetRegisterInfo *TRI) {
+  Register DestReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+
+  auto Expr = DIExpression::get(MI.getMF()->getFunction().getContext(), {});
+
+  // If the described register is the destination, just return the source.
+  if (DestReg == DescribedReg)
+    return ParamLoadedValue(MachineOperand::CreateReg(SrcReg, false), Expr);
+
+  // If the described register is a sub-register of the destination register,
+  // then pick out the source register's corresponding sub-register.
+  if (unsigned SubRegIdx = TRI->getSubRegIndex(DestReg, DescribedReg)) {
+    unsigned SrcSubReg = TRI->getSubReg(SrcReg, SubRegIdx);
+    return ParamLoadedValue(MachineOperand::CreateReg(SrcSubReg, false), Expr);
+  }
+
+  // The remaining case to consider is when the described register is a
+  // super-register of the destination register. MOV8rr and MOV16rr does not
+  // write to any of the other bytes in the register, meaning that we'd have to
+  // describe the value using a combination of the source register and the
+  // non-overlapping bits in the described register, which is not currently
+  // possible.
+  if (MI.getOpcode() == X86::MOV8rr || MI.getOpcode() == X86::MOV16rr ||
+      !TRI->isSuperRegister(DestReg, DescribedReg))
+    return None;
+
+  assert(MI.getOpcode() == X86::MOV32rr && "Unexpected super-register case");
+  return ParamLoadedValue(MachineOperand::CreateReg(SrcReg, false), Expr);
+}
+
 Optional<ParamLoadedValue>
-X86InstrInfo::describeLoadedValue(const MachineInstr &MI) const {
+X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
   const MachineOperand *Op = nullptr;
   DIExpression *Expr = nullptr;
+
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
 
   switch (MI.getOpcode()) {
   case X86::LEA32r:
   case X86::LEA64r:
   case X86::LEA64_32r: {
+    // We may need to describe a 64-bit parameter with a 32-bit LEA.
+    if (!TRI->isSuperRegisterEq(MI.getOperand(0).getReg(), Reg))
+      return None;
+
     // Operand 4 could be global address. For now we do not support
     // such situation.
     if (!MI.getOperand(4).isImm() || !MI.getOperand(2).isImm())
@@ -7567,7 +7609,6 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI) const {
 
     const MachineOperand &Op1 = MI.getOperand(1);
     const MachineOperand &Op2 = MI.getOperand(3);
-    const TargetRegisterInfo *TRI = &getRegisterInfo();
     assert(Op2.isReg() && (Op2.getReg() == X86::NoRegister ||
                            Register::isPhysicalRegister(Op2.getReg())));
 
@@ -7634,15 +7675,53 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI) const {
   case X86::MOV32ri:
   case X86::MOV64ri:
   case X86::MOV64ri32:
+    // MOV32ri may be used for producing zero-extended 32-bit immediates in
+    // 64-bit parameters, so we need to consider super-registers.
+    if (!TRI->isSuperRegisterEq(MI.getOperand(0).getReg(), Reg))
+      return None;
     return ParamLoadedValue(MI.getOperand(1), Expr);
+  case X86::MOV8rr:
+  case X86::MOV16rr:
+  case X86::MOV32rr:
+  case X86::MOV64rr:
+    return describeMOVrrLoadedValue(MI, Reg, TRI);
   case X86::XOR32rr: {
+    // 64-bit parameters are zero-materialized using XOR32rr, so also consider
+    // super-registers.
+    if (!TRI->isSuperRegisterEq(MI.getOperand(0).getReg(), Reg))
+      return None;
     if (MI.getOperand(1).getReg() == MI.getOperand(2).getReg())
       return ParamLoadedValue(MachineOperand::CreateImm(0), Expr);
     return None;
   }
+  case X86::MOVSX64rr32: {
+    // We may need to describe the lower 32 bits of the MOVSX; for example, in
+    // cases like this:
+    //
+    //  $ebx = [...]
+    //  $rdi = MOVSX64rr32 $ebx
+    //  $esi = MOV32rr $edi
+    if (!TRI->isSubRegisterEq(MI.getOperand(0).getReg(), Reg))
+      return None;
+
+    Expr = DIExpression::get(MI.getMF()->getFunction().getContext(), {});
+
+    // If the described register is the destination register we need to
+    // sign-extend the source register from 32 bits. The other case we handle
+    // is when the described register is the 32-bit sub-register of the
+    // destination register, in case we just need to return the source
+    // register.
+    if (Reg == MI.getOperand(0).getReg())
+      Expr = DIExpression::appendExt(Expr, 32, 64, true);
+    else
+      assert(X86MCRegisterClasses[X86::GR32RegClassID].contains(Reg) &&
+             "Unhandled sub-register case for MOVSX64rr32");
+
+    return ParamLoadedValue(MI.getOperand(1), Expr);
+  }
   default:
     assert(!MI.isMoveImmediate() && "Unexpected MoveImm instruction");
-    return TargetInstrInfo::describeLoadedValue(MI);
+    return TargetInstrInfo::describeLoadedValue(MI, Reg);
   }
 }
 

@@ -455,8 +455,8 @@ public:
     return MI.getOperand(3).getReg();
   }
 
-  Optional<DestSourcePair> isAddImmediate(const MachineInstr &MI,
-                                          int64_t &Offset) const override;
+  Optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
+                                      Register Reg) const override;
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the
