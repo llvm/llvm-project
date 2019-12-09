@@ -564,7 +564,7 @@ public:
     return Result::asValue();
   }
   bool hasIntegerValue() const override { return Immediate; }
-  virtual std::string getIntegerValue(const std::string &IntType) {
+  std::string getIntegerValue(const std::string &IntType) override {
     return "GetIntegerConstantValue<" + IntType + ">(E->getArg(" +
            utostr(ArgNum) + "), getContext())";
   }
