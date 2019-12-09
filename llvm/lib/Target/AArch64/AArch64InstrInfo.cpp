@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -6448,16 +6447,10 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   return None;
 }
 
-Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
-                                                      Register Reg) const {
+Optional<DestSourcePair>
+AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
+                                 int64_t &Offset) const {
   int Sign = 1;
-  int64_t Offset = 0;
-
-  // TODO: Handle cases where Reg is a super- or sub-register of the
-  // destination register.
-  if (Reg != MI.getOperand(0).getReg())
-    return None;
-
   switch (MI.getOpcode()) {
   default:
     return None;
@@ -6481,60 +6474,14 @@ Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
     Offset = Offset << Shift;
   }
   }
-  return RegImmPair{MI.getOperand(1).getReg(), Offset};
-}
-
-/// If the given ORR instruction is a copy, and \p DescribedReg overlaps with
-/// the destination register then, if possible, describe the value in terms of
-/// the source register.
-static Optional<ParamLoadedValue>
-describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
-                       const TargetInstrInfo *TII,
-                       const TargetRegisterInfo *TRI) {
-  auto DestSrc = TII->isCopyInstr(MI);
-  if (!DestSrc)
-    return None;
-
-  Register DestReg = DestSrc->Destination->getReg();
-  Register SrcReg = DestSrc->Source->getReg();
-
-  auto Expr = DIExpression::get(MI.getMF()->getFunction().getContext(), {});
-
-  // If the described register is the destination, just return the source.
-  if (DestReg == DescribedReg)
-    return ParamLoadedValue(MachineOperand::CreateReg(SrcReg, false), Expr);
-
-  // ORRWrs zero-extends to 64-bits, so we need to consider such cases.
-  if (MI.getOpcode() == AArch64::ORRWrs &&
-      TRI->isSuperRegister(DestReg, DescribedReg))
-    return ParamLoadedValue(MachineOperand::CreateReg(SrcReg, false), Expr);
-
-  // We may need to describe the lower part of a ORRXrs move.
-  if (MI.getOpcode() == AArch64::ORRXrs &&
-      TRI->isSubRegister(DestReg, DescribedReg)) {
-    Register SrcSubReg = TRI->getSubReg(SrcReg, AArch64::sub_32);
-    return ParamLoadedValue(MachineOperand::CreateReg(SrcSubReg, false), Expr);
-  }
-
-  assert(!TRI->isSuperOrSubRegisterEq(DestReg, DescribedReg) &&
-         "Unhandled ORR[XW]rs copy case");
-
-  return None;
+  return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
 }
 
 Optional<ParamLoadedValue>
-AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI,
-                                      Register Reg) const {
-  const MachineFunction *MF = MI.getMF();
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case AArch64::MOVZWi:
-  case AArch64::MOVZXi: {
-    // MOVZWi may be used for producing zero-extended 32-bit immediates in
-    // 64-bit parameters, so we need to consider super-registers.
-    if (!TRI->isSuperRegisterEq(MI.getOperand(0).getReg(), Reg))
-      return None;
-
+  case AArch64::MOVZXi:
     if (!MI.getOperand(1).isImm())
       return None;
     int64_t Immediate = MI.getOperand(1).getImm();
@@ -6542,12 +6489,7 @@ AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI,
     return ParamLoadedValue(MachineOperand::CreateImm(Immediate << Shift),
                             nullptr);
   }
-  case AArch64::ORRWrs:
-  case AArch64::ORRXrs:
-    return describeORRLoadedValue(MI, Reg, this, TRI);
-  }
-
-  return TargetInstrInfo::describeLoadedValue(MI, Reg);
+  return TargetInstrInfo::describeLoadedValue(MI);
 }
 
 #define GET_INSTRINFO_HELPERS
