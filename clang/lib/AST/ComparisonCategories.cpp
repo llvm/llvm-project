@@ -59,7 +59,7 @@ ComparisonCategoryInfo::ValueInfo *ComparisonCategoryInfo::lookupValueInfo(
   // a new entry representing it.
   DeclContextLookupResult Lookup = Record->getCanonicalDecl()->lookup(
       &Ctx.Idents.get(ComparisonCategories::getResultString(ValueKind)));
-  if (Lookup.size() != 1 || !isa<VarDecl>(Lookup.front()))
+  if (Lookup.empty() || !isa<VarDecl>(Lookup.front()))
     return nullptr;
   Objects.emplace_back(ValueKind, cast<VarDecl>(Lookup.front()));
   return &Objects.back();
@@ -70,7 +70,7 @@ static const NamespaceDecl *lookupStdNamespace(const ASTContext &Ctx,
   if (!StdNS) {
     DeclContextLookupResult Lookup =
         Ctx.getTranslationUnitDecl()->lookup(&Ctx.Idents.get("std"));
-    if (Lookup.size() == 1)
+    if (!Lookup.empty())
       StdNS = dyn_cast<NamespaceDecl>(Lookup.front());
   }
   return StdNS;
@@ -81,7 +81,7 @@ static CXXRecordDecl *lookupCXXRecordDecl(const ASTContext &Ctx,
                                           ComparisonCategoryType Kind) {
   StringRef Name = ComparisonCategories::getCategoryString(Kind);
   DeclContextLookupResult Lookup = StdNS->lookup(&Ctx.Idents.get(Name));
-  if (Lookup.size() == 1)
+  if (!Lookup.empty())
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Lookup.front()))
       return RD;
   return nullptr;
