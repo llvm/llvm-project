@@ -639,6 +639,11 @@ def TestOpWithVariadicResultsAndFolder: TEST_Op<"op_with_variadic_results_and_fo
   let hasFolder = 1;
 }
 
+def TestCommutativeOp : TEST_Op<"op_commutative", [Commutative]> {
+  let arguments = (ins I32:$op1, I32:$op2, I32:$op3, I32:$op4);
+  let results = (outs I32);
+}
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (Symbol Binding)
 
