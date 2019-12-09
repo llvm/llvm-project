@@ -7103,7 +7103,6 @@ public:
     ResultList Results;
 
     switch (DCK) {
-    default:
     case DefaultedComparisonKind::None:
       llvm_unreachable("not a defaulted comparison");
 
@@ -7118,6 +7117,7 @@ public:
           ParamLvalType, getDerived().getCompleteObject()));
       return Results;
     }
+    llvm_unreachable("");
   }
 
 protected:
@@ -7593,7 +7593,6 @@ private:
       return StmtError();
 
     switch (DCK) {
-    default:
     case DefaultedComparisonKind::None:
       llvm_unreachable("not a defaulted comparison");
 
@@ -7660,6 +7659,7 @@ private:
       //   Otherwise, the operator function yields x @ y.
       return Op.get();
     }
+    llvm_unreachable("");
   }
 
   /// Build "static_cast<R>(E)".
