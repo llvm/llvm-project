@@ -114,6 +114,7 @@ public:
     bool
     operator != (const lldb::SBFunction &rhs) const;
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def get_instructions_from_current_target (self):
             return self.GetInstructions (target)
@@ -127,6 +128,7 @@ public:
         prologue_size = property(GetPrologueByteSize, None, doc='''A read only property that returns the size in bytes of the prologue instructions as an unsigned integer.''')
         type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the return type (lldb.SBType) for this function.''')
     %}
+#endif
 
 };
 

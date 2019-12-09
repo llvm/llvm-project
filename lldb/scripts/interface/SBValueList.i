@@ -101,6 +101,7 @@ public:
     lldb::SBValue
     GetFirstValueByName (const char* name) const;
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all values in a lldb.SBValueList object.'''
@@ -140,6 +141,7 @@ public:
                 return matches
 
     %}
+#endif
 
 
 };

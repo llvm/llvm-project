@@ -53,10 +53,12 @@ namespace lldb {
         bool
         operator != (lldb::SBTypeNameSpecifier &rhs);
 
+#ifdef SWIGPYTHON
         %pythoncode %{
             name = property(GetName)
             is_regex = property(IsRegex)
         %}
+#endif
 
 
     };
