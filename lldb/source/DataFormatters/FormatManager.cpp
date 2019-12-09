@@ -585,11 +585,6 @@ ConstString FormatManager::GetTypeForCache(ValueObject &valobj,
 std::vector<lldb::LanguageType>
 FormatManager::GetCandidateLanguages(ValueObject &valobj) {
   lldb::LanguageType lang_type = valobj.GetObjectRuntimeLanguage();
-  return GetCandidateLanguages(lang_type);
-}
-
-std::vector<lldb::LanguageType>
-FormatManager::GetCandidateLanguages(lldb::LanguageType lang_type) {
   switch (lang_type) {
   case lldb::eLanguageTypeSwift:
     return {lldb::eLanguageTypeSwift, lldb::eLanguageTypeObjC};
@@ -607,6 +602,7 @@ FormatManager::GetCandidateLanguages(lldb::LanguageType lang_type) {
   default:
     return {lang_type};
   }
+  llvm_unreachable("Fully covered switch");
 }
 
 LanguageCategory *
