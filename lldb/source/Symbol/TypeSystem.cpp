@@ -89,6 +89,10 @@ TypeSystem::GetRValueReferenceType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
+CompilerType TypeSystem::GetAtomicType(lldb::opaque_compiler_type_t type) {
+  return CompilerType();
+}
+
 CompilerType TypeSystem::AddConstModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }

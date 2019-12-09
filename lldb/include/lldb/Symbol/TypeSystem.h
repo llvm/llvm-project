@@ -228,6 +228,8 @@ public:
   virtual CompilerType
   GetRValueReferenceType(lldb::opaque_compiler_type_t type);
 
+  virtual CompilerType GetAtomicType(lldb::opaque_compiler_type_t type);
+
   virtual CompilerType AddConstModifier(lldb::opaque_compiler_type_t type);
 
   virtual CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type);
