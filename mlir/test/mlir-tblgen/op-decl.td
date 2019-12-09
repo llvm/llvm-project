@@ -42,15 +42,15 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect]> {
 
 // CHECK-LABEL: NS::AOp declarations
 
-// CHECK:  class AOpOperandAdaptor {
-// CHECK:  public:
-// CHECK:    AOpOperandAdaptor(ArrayRef<Value *> values);
-// CHECK:    ArrayRef<Value *> getODSOperands(unsigned index);
-// CHECK:    Value *a();
-// CHECK:    ArrayRef<Value *> b();
-// CHECK:  private:
-// CHECK:    ArrayRef<Value *> tblgen_operands;
-// CHECK:  };
+// CHECK: class AOpOperandAdaptor {
+// CHECK: public:
+// CHECK:   AOpOperandAdaptor(ArrayRef<Value *> values);
+// CHECK:   ArrayRef<Value *> getODSOperands(unsigned index);
+// CHECK:   Value *a();
+// CHECK:   ArrayRef<Value *> b();
+// CHECK: private:
+// CHECK:   ArrayRef<Value *> tblgen_operands;
+// CHECK: };
 
 // CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNResults<1>::Impl, OpTrait::HasNoSideEffect, OpTrait::AtLeastNOperands<1>::Impl
 // CHECK: public:
@@ -63,7 +63,9 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect]> {
 // CHECK:   Operation::result_range getODSResults(unsigned index);
 // CHECK:   Value *r();
 // CHECK:   Region &someRegion();
+// CHECK:   IntegerAttr attr1Attr()
 // CHECK:   APInt attr1();
+// CHECK:   FloatAttr attr2Attr()
 // CHECK:   Optional< APFloat > attr2();
 // CHECK:   static void build(Value *val);
 // CHECK:   static void build(Builder *tblgen_builder, OperationState &tblgen_state, Type r, ArrayRef<Type> s, Value *a, ValueRange b, IntegerAttr attr1, /*optional*/FloatAttr attr2);
