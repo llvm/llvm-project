@@ -6804,8 +6804,8 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
 template<typename Integer>
 static Integer GetIntegerConstantValue(const Expr *E, ASTContext &Context) {
   llvm::APSInt IntVal;
-  bool IsConst = E->isIntegerConstantExpr(IntVal, Context);
-  assert(IsConst && "Sema should have checked this was a constant");
+  assert(E->isIntegerConstantExpr(IntVal, Context) &&
+         "Sema should have checked this was a constant");
   return IntVal.getExtValue();
 }
 
