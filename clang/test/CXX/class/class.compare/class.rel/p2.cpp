@@ -2,16 +2,23 @@
 
 namespace Rel {
   struct A {
-    int operator<=>(A) const;
+    int n;
+    constexpr int operator<=>(A a) const { return n - a.n; }
     friend bool operator<(const A&, const A&) = default;
     friend bool operator<=(const A&, const A&) = default;
     friend bool operator>(const A&, const A&) = default;
     friend bool operator>=(const A&, const A&) = default;
   };
-  bool a1 = A() < A();
-  bool a2 = A() <= A();
-  bool a3 = A() > A();
-  bool a4 = A() >= A();
+  static_assert(A{0} < A{1});
+  static_assert(A{1} < A{1}); // expected-error {{failed}}
+  static_assert(A{0} <= A{1});
+  static_assert(A{1} <= A{1});
+  static_assert(A{2} <= A{1}); // expected-error {{failed}}
+  static_assert(A{1} > A{0});
+  static_assert(A{1} > A{1}); // expected-error {{failed}}
+  static_assert(A{1} >= A{0});
+  static_assert(A{1} >= A{1});
+  static_assert(A{1} >= A{2}); // expected-error {{failed}}
 
   struct B {
     bool operator<=>(B) const = delete; // expected-note 4{{deleted here}} expected-note-re 8{{candidate {{.*}} deleted}}
@@ -37,10 +44,12 @@ namespace Rel {
 // Under P2002R0, operator!= follows these rules too.
 namespace NotEqual {
   struct A {
-    bool operator==(A) const;
+    int n;
+    constexpr bool operator==(A a) const { return n == a.n; }
     friend bool operator!=(const A&, const A&) = default;
   };
-  bool a = A() != A();
+  static_assert(A{1} != A{2});
+  static_assert(A{1} != A{1}); // expected-error {{failed}}
 
   struct B {
     bool operator==(B) const = delete; // expected-note {{deleted here}} expected-note-re 2{{candidate {{.*}} deleted}}

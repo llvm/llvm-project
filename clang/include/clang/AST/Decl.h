@@ -2115,6 +2115,16 @@ public:
     FunctionDeclBits.IsExplicitlyDefaulted = ED;
   }
 
+  /// True if this method is user-declared and was not
+  /// deleted or defaulted on its first declaration.
+  bool isUserProvided() const {
+    auto *DeclAsWritten = this;
+    if (FunctionDecl *Pattern = getTemplateInstantiationPattern())
+      DeclAsWritten = Pattern;
+    return !(DeclAsWritten->isDeleted() ||
+             DeclAsWritten->getCanonicalDecl()->isDefaulted());
+  }
+
   /// Whether falling off this function implicitly returns null/zero.
   /// If a more specific implicit return value is required, front-ends
   /// should synthesize the appropriate return statements.
