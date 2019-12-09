@@ -596,6 +596,7 @@ public:
                             const SBFileSpecList &module_list,
                             const SBFileSpecList &comp_unit_list);
 
+#ifdef SWIGPYTHON
 %typemap(in) (const char **symbol_name, uint32_t num_names) {
   using namespace lldb_private;
   /* Check if is a list  */
@@ -622,11 +623,7 @@ public:
     return NULL;
   }
 }
-
-//%typecheck(SWIG_TYPECHECK_STRING_ARRAY) (const char *symbol_name[], uint32_t num_names) {
-//    $1 = 1;
-//    $2 = 1;
-//}
+#endif
 
     lldb::SBBreakpoint
     BreakpointCreateByNames (const char **symbol_name,
