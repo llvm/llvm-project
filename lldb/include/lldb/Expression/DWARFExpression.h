@@ -254,21 +254,12 @@ private:
   /// \param[in] abi
   ///     An optional ABI plug-in that can be used to resolve register
   ///     names.
-  void DumpLocation(Stream *s, lldb::offset_t offset, lldb::offset_t length,
+  void DumpLocation(Stream *s, const DataExtractor &data,
                     lldb::DescriptionLevel level, ABI *abi) const;
 
-  bool GetLocation(lldb::addr_t func_load_addr, lldb::addr_t pc,
-                   lldb::offset_t &offset, lldb::offset_t &len);
-
-  static bool AddressRangeForLocationListEntry(
-      const DWARFUnit *dwarf_cu, const DataExtractor &debug_loc_data,
-      lldb::offset_t *offset_ptr, lldb::addr_t &low_pc, lldb::addr_t &high_pc);
-
-  bool GetOpAndEndOffsets(StackFrame &frame, lldb::offset_t &op_offset,
-                          lldb::offset_t &end_offset);
-
-  void RelocateLowHighPC(lldb::addr_t base_address, lldb::addr_t func_load_addr,
-                         lldb::addr_t &low_pc, lldb::addr_t &high_pc) const;
+  llvm::Optional<DataExtractor>
+  GetLocationExpression(lldb::addr_t load_function_start,
+                        lldb::addr_t addr) const;
 
   /// Module which defined this expression.
   lldb::ModuleWP m_module_wp;
