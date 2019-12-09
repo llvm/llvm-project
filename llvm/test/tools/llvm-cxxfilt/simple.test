@@ -4,7 +4,7 @@
 ## elsewhere.
 
 RUN: llvm-cxxfilt -n _Z1fi abc | FileCheck %s
-RUN: echo "Mangled _Z1fi and _Z3foov in string." | llvm-cxxfilt \
+RUN: echo "Mangled _Z1fi and _Z3foov in string." | llvm-cxxfilt -n \
 RUN:   | FileCheck %s --check-prefix=CHECK-STRING
 RUN: llvm-cxxfilt -n "CLI remains mangled _Z1fi" \
 RUN:   | FileCheck %s --check-prefix=CHECK-MANGLED
