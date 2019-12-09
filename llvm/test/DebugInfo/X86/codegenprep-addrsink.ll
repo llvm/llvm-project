@@ -9,17 +9,12 @@
 ; memory instruction. Test that the one before does _not_ get updated (as that
 ; would either make it use-before-def or shift when the variable appears), and
 ; that the dbg.value after the memory instruction does get updated.
-;
-; Due to placeDbgValues, the dbg.values currently get shifted up a few
-; instructions.
 
 define dso_local i8 @foo(i32 *%p, i32 %cond) !dbg !7 {
 entry:
-; The first dbg.value of %arith, in the 'next' block, will be moved up here
-; by placeDbgValues,
+; There should be no dbg.values in this block.
 ; CHECK-LABEL: entry:
-; CHECK:       dbg.value(metadata i8* %arith, metadata ![[DIVAR:[0-9]+]],
-; CHECK-SAME:    metadata !DIExpression()
+; CHECK-NOT:   dbg.value
   %casted = bitcast i32 *%p to i8*
   %arith = getelementptr i8, i8 *%casted, i32 3
   %load1 = load i8, i8 *%arith
@@ -30,12 +25,14 @@ next:
 ; Address calcs should be duplicated into this block. One dbg.value should be
 ; updated, and the other should not.
 ; CHECK-LABEL: next:
-; CHECK:       %[[CASTVAR:[0-9a-zA-Z]+]] = bitcast i32* %p to i8*
+; CHECK:       dbg.value(metadata i8* %arith, metadata ![[DIVAR:[0-9]+]],
+; CHECK-SAME:    metadata !DIExpression()
+; CHECK-NEXT:  %[[CASTVAR:[0-9a-zA-Z]+]] = bitcast i32* %p to i8*
 ; CHECK-NEXT:  %[[GEPVAR:[0-9a-zA-Z]+]] = getelementptr i8, i8* %[[CASTVAR]],
 ; CHECK-SAME:                             i64 3
+; CHECK-NEXT:  %loaded = load i8, i8* %[[GEPVAR]]
 ; CHECK-NEXT:  call void @llvm.dbg.value(metadata i8* %[[GEPVAR]],
 ; CHECK-SAME:                            metadata ![[DIVAR]],
-; CHECK-NEXT:  %loaded = load i8, i8* %[[GEPVAR]]
   call void @llvm.dbg.value(metadata i8 *%arith, metadata !12, metadata !DIExpression()), !dbg !14
   %loaded = load i8, i8 *%arith
   call void @llvm.dbg.value(metadata i8 *%arith, metadata !12, metadata !DIExpression()), !dbg !14
