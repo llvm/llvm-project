@@ -17,8 +17,8 @@ struct G { bool operator==(G) const = delete; }; // expected-note {{deleted here
 
 template<typename T> struct X {
   X();
-  bool operator==(const X&) const = default; // #x expected-note 3{{deleted here}}
-  T t; // expected-note 2{{because there is no viable comparison function for member 't'}}
+  bool operator==(const X&) const = default; // #x expected-note 4{{deleted here}}
+  T t; // expected-note 3{{because there is no viable comparison function for member 't'}}
        // expected-note@-1 {{because it would invoke a deleted comparison function for member 't'}}
 };
 
@@ -43,4 +43,7 @@ void test() {
   void(X<F>() == X<F>()); // expected-note {{in defaulted equality comparison operator for 'X<F>' first required here}}
 
   void(X<G>() == X<G>()); // expected-error {{cannot be compared because its 'operator==' is implicitly deleted}}
+
+  void(X<A[3]>() == X<A[3]>()); // expected-error {{cannot be compared because its 'operator==' is implicitly deleted}}
+  void(X<B[3]>() == X<B[3]>());
 }
