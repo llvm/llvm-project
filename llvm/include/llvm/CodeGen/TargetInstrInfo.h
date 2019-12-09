@@ -72,6 +72,14 @@ struct DestSourcePair {
       : Destination(&Dest), Source(&Src) {}
 };
 
+/// Used to describe a register and immediate addition.
+struct RegImmPair {
+  Register Reg;
+  int64_t Imm;
+
+  RegImmPair(Register Reg, int64_t Imm) : Reg(Reg), Imm(Imm) {}
+};
+
 //---------------------------------------------------------------------------
 ///
 /// TargetInstrInfo - Interface to description of machine instruction set
@@ -950,11 +958,11 @@ public:
   }
 
   /// If the specific machine instruction is an instruction that adds an
-  /// immediate value to its source operand and stores it in destination,
-  /// return destination and source registers as machine operands along with
-  /// \c Offset which has been added.
-  virtual Optional<DestSourcePair> isAddImmediate(const MachineInstr &MI,
-                                                  int64_t &Offset) const {
+  /// immediate value and a physical register, and stores the result in
+  /// the given physical register \c Reg, return a pair of the source
+  /// register and the offset which has been added.
+  virtual Optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
+                                              Register Reg) const {
     return None;
   }
 
@@ -1789,9 +1797,10 @@ public:
   }
 
   /// Produce the expression describing the \p MI loading a value into
-  /// the parameter's forwarding register.
-  virtual Optional<ParamLoadedValue>
-  describeLoadedValue(const MachineInstr &MI) const;
+  /// the physical register \p Reg. This hook should only be used with
+  /// \p MIs belonging to VReg-less functions.
+  virtual Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
+                                                         Register Reg) const;
 
 private:
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

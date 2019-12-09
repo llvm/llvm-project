@@ -901,12 +901,15 @@ public:
   /// \p Args is an optional argument which holds the instruction operands
   /// values so the TTI can analyze those values searching for special
   /// cases or optimizations based on those values.
+  /// \p CxtI is the optional original context instruction, if one exists, to
+  /// provide even more information.
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, OperandValueKind Opd1Info = OK_AnyValue,
       OperandValueKind Opd2Info = OK_AnyValue,
       OperandValueProperties Opd1PropInfo = OP_None,
       OperandValueProperties Opd2PropInfo = OP_None,
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>()) const;
+      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      const Instruction *CxtI = nullptr) const;
 
   /// \return The cost of a shuffle instruction of kind Kind and of type Tp.
   /// The index and subtype parameters are used by the subvector insertion and
@@ -1309,12 +1312,11 @@ public:
   virtual unsigned getMaxPrefetchIterationsAhead() const = 0;
 
   virtual unsigned getMaxInterleaveFactor(unsigned VF) = 0;
-  virtual unsigned
-  getArithmeticInstrCost(unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,
-                         OperandValueKind Opd2Info,
-                         OperandValueProperties Opd1PropInfo,
-                         OperandValueProperties Opd2PropInfo,
-                         ArrayRef<const Value *> Args) = 0;
+  virtual unsigned getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,
+      OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
+      OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+      const Instruction *CxtI = nullptr) = 0;
   virtual int getShuffleCost(ShuffleKind Kind, Type *Tp, int Index,
                              Type *SubTp) = 0;
   virtual int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
@@ -1709,14 +1711,15 @@ public:
                                             BlockFrequencyInfo *BFI) override {
     return Impl.getEstimatedNumberOfCaseClusters(SI, JTSize, PSI, BFI);
   }
-  unsigned
-  getArithmeticInstrCost(unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,
-                         OperandValueKind Opd2Info,
-                         OperandValueProperties Opd1PropInfo,
-                         OperandValueProperties Opd2PropInfo,
-                         ArrayRef<const Value *> Args) override {
+  unsigned getArithmeticInstrCost(unsigned Opcode, Type *Ty,
+                                  OperandValueKind Opd1Info,
+                                  OperandValueKind Opd2Info,
+                                  OperandValueProperties Opd1PropInfo,
+                                  OperandValueProperties Opd2PropInfo,
+                                  ArrayRef<const Value *> Args,
+                                  const Instruction *CxtI = nullptr) override {
     return Impl.getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
-                                       Opd1PropInfo, Opd2PropInfo, Args);
+                                       Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }
   int getShuffleCost(ShuffleKind Kind, Type *Tp, int Index,
                      Type *SubTp) override {

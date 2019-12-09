@@ -169,12 +169,13 @@ unsigned X86TTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return 2;
 }
 
-int X86TTIImpl::getArithmeticInstrCost(
-    unsigned Opcode, Type *Ty,
-    TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,
-    TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo,
-    ArrayRef<const Value *> Args) {
+int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
+                                       TTI::OperandValueKind Op1Info,
+                                       TTI::OperandValueKind Op2Info,
+                                       TTI::OperandValueProperties Opd1PropInfo,
+                                       TTI::OperandValueProperties Opd2PropInfo,
+                                       ArrayRef<const Value *> Args,
+                                       const Instruction *CxtI) {
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
