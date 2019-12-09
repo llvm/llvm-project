@@ -2,6 +2,9 @@
 
 // CHECK-DAG: #[[STRIDED_1D:.*]] = (d0)[s0] -> (d0 + s0)
 // CHECK-DAG: #[[STRIDED_2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
+// CHECK-DAG: #[[mk:.*]] = (d0, d1, d2) -> (d0, d2)
+// CHECK-DAG: #[[kn:.*]] = (d0, d1, d2) -> (d2, d1)
+// CHECK-DAG: #[[mn:.*]] = (d0, d1, d2) -> (d0, d1)
 
 func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
           %y: memref<?xf32, offset: ?, strides: [1]>,
@@ -158,3 +161,33 @@ func @fusion_test(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK      :           loop.for %{{.*}} = %[[c0]] to %{{.*}} step %[[c4]] {
 // CHECK      :             linalg.matmul(%{{.*}}, %{{.*}}, %{{.*}}) : memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>
 
+#matmul_trait = {
+  indexing_maps = [
+    (m, n, k) -> (m, k),
+    (m, n, k) -> (k, n),
+    (m, n, k) -> (m, n)
+  ],
+  n_views = [2, 1],
+  iterator_types = ["parallel", "parallel", "reduction"],
+  __internal_linalg_transform__ = "_marked_matmul_"
+}
+func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
+                         %C: memref<8x32xf32>) {
+  linalg.generic #matmul_trait %A, %B, %C {
+    ^bb(%a: f32, %b: f32, %c: f32) :
+      %d = mulf %a, %b: f32
+      %e = addf %c, %d: f32
+      linalg.yield %e : f32
+  } : memref<8x16xf32>, memref<16x32xf32>, memref<8x32xf32>
+  return
+}
+
+// CHECK-LABEL: func @vectorization_test
+//       CHECK: vector.type_cast %{{.*}} : memref<8x16xf32> to memref<vector<8x16xf32>>
+//       CHECK: load %{{.*}}[] : memref<vector<8x16xf32>>
+//       CHECK: vector.type_cast %{{.*}} : memref<16x32xf32> to memref<vector<16x32xf32>>
+//       CHECK: load %{{.*}}[] : memref<vector<16x32xf32>>
+//       CHECK: vector.type_cast %{{.*}} : memref<8x32xf32> to memref<vector<8x32xf32>>
+//       CHECK: load %{{.*}}[] : memref<vector<8x32xf32>>
+//       CHECK: vector.contract {indexing_maps = [#[[mk]], #[[kn]], #[[mn]]], iterator_types = ["parallel", "parallel", "reduction"]} %{{.*}}, %{{.*}}, %{{.*}} : vector<8x16xf32>, vector<16x32xf32> into vector<8x32xf32>
+//       CHECK: store %{{.*}}, %{{.*}}[] : memref<vector<8x32xf32>>
