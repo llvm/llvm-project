@@ -21,7 +21,7 @@ target triple = "x86_64-pc-linux-gnu"
 ;CHECK: call void @llvm.masked.store
 
 ; Function Attrs: nofree norecurse nounwind uwtable
-define dso_local void @fold_tail(i32* noalias nocapture %p, i32* noalias nocapture readonly %q1, i32* noalias nocapture readonly %q2, 
+define dso_local void @fold_tail(i32* noalias nocapture %p, i32* noalias nocapture readonly %q1, i32* noalias nocapture readonly %q2,
 i32 %guard) local_unnamed_addr #0 {
 entry:
   %0 = sext i32 %guard to i64
@@ -113,7 +113,7 @@ define void @assume_safety(i32* nocapture, i32* nocapture readonly, i32* nocaptu
 ;CHECK: call void @llvm.masked.store
 
 ; Function Attrs: nofree norecurse nounwind uwtable
-define dso_local void @fold_tail_and_assume_safety(i32* noalias nocapture %p, i32* noalias nocapture readonly %q1, i32* noalias nocapture readonly %q2, 
+define dso_local void @fold_tail_and_assume_safety(i32* noalias nocapture %p, i32* noalias nocapture readonly %q1, i32* noalias nocapture readonly %q2,
 i32 %guard) local_unnamed_addr #0 {
 entry:
   %0 = sext i32 %guard to i64
@@ -143,7 +143,7 @@ for.inc:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !11
 }
 
-attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}
