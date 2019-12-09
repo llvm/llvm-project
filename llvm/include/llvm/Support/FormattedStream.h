@@ -105,11 +105,17 @@ public:
   /// \param NewCol - The column to move to.
   formatted_raw_ostream &PadToColumn(unsigned NewCol);
 
-  /// getColumn - Return the column number
-  unsigned getColumn() { return Position.first; }
+  unsigned getColumn() {
+    // Calculate current position, taking buffer contents into account.
+    ComputePosition(getBufferStart(), GetNumBytesInBuffer());
+    return Position.first;
+  }
 
-  /// getLine - Return the line number
-  unsigned getLine() { return Position.second; }
+  unsigned getLine() {
+    // Calculate current position, taking buffer contents into account.
+    ComputePosition(getBufferStart(), GetNumBytesInBuffer());
+    return Position.second;
+  }
 
   raw_ostream &resetColor() override {
     TheStream->resetColor();
