@@ -333,117 +333,121 @@ bool PPCMIPeephole::simplifyCode(void) {
         // is identified by an immediate value of 0 or 3.
         int Immed = MI.getOperand(3).getImm();
 
-        if (Immed != 1) {
+        if (Immed == 1)
+          break;
 
-          // For each of these simplifications, we need the two source
-          // regs to match.  Unfortunately, MachineCSE ignores COPY and
-          // SUBREG_TO_REG, so for example we can see
-          //   XXPERMDI t, SUBREG_TO_REG(s), SUBREG_TO_REG(s), immed.
-          // We have to look through chains of COPY and SUBREG_TO_REG
-          // to find the real source values for comparison.
-          unsigned TrueReg1 =
-            TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
-          unsigned TrueReg2 =
-            TRI->lookThruCopyLike(MI.getOperand(2).getReg(), MRI);
+        // For each of these simplifications, we need the two source
+        // regs to match.  Unfortunately, MachineCSE ignores COPY and
+        // SUBREG_TO_REG, so for example we can see
+        //   XXPERMDI t, SUBREG_TO_REG(s), SUBREG_TO_REG(s), immed.
+        // We have to look through chains of COPY and SUBREG_TO_REG
+        // to find the real source values for comparison.
+        unsigned TrueReg1 =
+          TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
+        unsigned TrueReg2 =
+          TRI->lookThruCopyLike(MI.getOperand(2).getReg(), MRI);
 
-          if (TrueReg1 == TrueReg2 && Register::isVirtualRegister(TrueReg1)) {
-            MachineInstr *DefMI = MRI->getVRegDef(TrueReg1);
-            unsigned DefOpc = DefMI ? DefMI->getOpcode() : 0;
+        if (!(TrueReg1 == TrueReg2 && Register::isVirtualRegister(TrueReg1)))
+          break;
 
-            // If this is a splat fed by a splatting load, the splat is
-            // redundant. Replace with a copy. This doesn't happen directly due
-            // to code in PPCDAGToDAGISel.cpp, but it can happen when converting
-            // a load of a double to a vector of 64-bit integers.
-            auto isConversionOfLoadAndSplat = [=]() -> bool {
-              if (DefOpc != PPC::XVCVDPSXDS && DefOpc != PPC::XVCVDPUXDS)
-                return false;
-              unsigned DefReg =
-                TRI->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
-              if (Register::isVirtualRegister(DefReg)) {
-                MachineInstr *LoadMI = MRI->getVRegDef(DefReg);
-                if (LoadMI && LoadMI->getOpcode() == PPC::LXVDSX)
-                  return true;
-              }
-              return false;
-            };
-            if (DefMI && (Immed == 0 || Immed == 3)) {
-              if (DefOpc == PPC::LXVDSX || isConversionOfLoadAndSplat()) {
-                LLVM_DEBUG(dbgs() << "Optimizing load-and-splat/splat "
-                                     "to load-and-splat/copy: ");
-                LLVM_DEBUG(MI.dump());
-                BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
-                        MI.getOperand(0).getReg())
-                    .add(MI.getOperand(1));
-                ToErase = &MI;
-                Simplified = true;
-              }
-            }
+        MachineInstr *DefMI = MRI->getVRegDef(TrueReg1);
 
-            // If this is a splat or a swap fed by another splat, we
-            // can replace it with a copy.
-            if (DefOpc == PPC::XXPERMDI) {
-              unsigned DefReg1 = DefMI->getOperand(1).getReg();
-              unsigned DefReg2 = DefMI->getOperand(2).getReg();
-              unsigned DefImmed = DefMI->getOperand(3).getImm();
+        if (!DefMI)
+          break;
 
-              // If the two inputs are not the same register, check to see if
-              // they originate from the same virtual register after only
-              // copy-like instructions.
-              if (DefReg1 != DefReg2) {
-                unsigned FeedReg1 = TRI->lookThruCopyLike(DefReg1, MRI);
-                unsigned FeedReg2 = TRI->lookThruCopyLike(DefReg2, MRI);
+        unsigned DefOpc = DefMI->getOpcode();
 
-                if (FeedReg1 != FeedReg2 ||
-                    Register::isPhysicalRegister(FeedReg1))
-                  break;
-              }
-
-              if (DefImmed == 0 || DefImmed == 3) {
-                LLVM_DEBUG(dbgs() << "Optimizing splat/swap or splat/splat "
-                                     "to splat/copy: ");
-                LLVM_DEBUG(MI.dump());
-                BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
-                        MI.getOperand(0).getReg())
-                    .add(MI.getOperand(1));
-                ToErase = &MI;
-                Simplified = true;
-              }
-
-              // If this is a splat fed by a swap, we can simplify modify
-              // the splat to splat the other value from the swap's input
-              // parameter.
-              else if ((Immed == 0 || Immed == 3) && DefImmed == 2) {
-                LLVM_DEBUG(dbgs() << "Optimizing swap/splat => splat: ");
-                LLVM_DEBUG(MI.dump());
-                MI.getOperand(1).setReg(DefReg1);
-                MI.getOperand(2).setReg(DefReg2);
-                MI.getOperand(3).setImm(3 - Immed);
-                Simplified = true;
-              }
-
-              // If this is a swap fed by a swap, we can replace it
-              // with a copy from the first swap's input.
-              else if (Immed == 2 && DefImmed == 2) {
-                LLVM_DEBUG(dbgs() << "Optimizing swap/swap => copy: ");
-                LLVM_DEBUG(MI.dump());
-                BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
-                        MI.getOperand(0).getReg())
-                    .add(DefMI->getOperand(1));
-                ToErase = &MI;
-                Simplified = true;
-              }
-            } else if ((Immed == 0 || Immed == 3) && DefOpc == PPC::XXPERMDIs &&
-                       (DefMI->getOperand(2).getImm() == 0 ||
-                        DefMI->getOperand(2).getImm() == 3)) {
-              // Splat fed by another splat - switch the output of the first
-              // and remove the second.
-              DefMI->getOperand(0).setReg(MI.getOperand(0).getReg());
-              ToErase = &MI;
-              Simplified = true;
-              LLVM_DEBUG(dbgs() << "Removing redundant splat: ");
-              LLVM_DEBUG(MI.dump());
-            }
+        // If this is a splat fed by a splatting load, the splat is
+        // redundant. Replace with a copy. This doesn't happen directly due
+        // to code in PPCDAGToDAGISel.cpp, but it can happen when converting
+        // a load of a double to a vector of 64-bit integers.
+        auto isConversionOfLoadAndSplat = [=]() -> bool {
+          if (DefOpc != PPC::XVCVDPSXDS && DefOpc != PPC::XVCVDPUXDS)
+            return false;
+          unsigned FeedReg1 =
+            TRI->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
+          if (Register::isVirtualRegister(FeedReg1)) {
+            MachineInstr *LoadMI = MRI->getVRegDef(FeedReg1);
+            if (LoadMI && LoadMI->getOpcode() == PPC::LXVDSX)
+              return true;
           }
+          return false;
+        };
+        if ((Immed == 0 || Immed == 3) &&
+            (DefOpc == PPC::LXVDSX || isConversionOfLoadAndSplat())) {
+          LLVM_DEBUG(dbgs() << "Optimizing load-and-splat/splat "
+                               "to load-and-splat/copy: ");
+          LLVM_DEBUG(MI.dump());
+          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                  MI.getOperand(0).getReg())
+              .add(MI.getOperand(1));
+          ToErase = &MI;
+          Simplified = true;
+        }
+
+        // If this is a splat or a swap fed by another splat, we
+        // can replace it with a copy.
+        if (DefOpc == PPC::XXPERMDI) {
+          unsigned DefReg1 = DefMI->getOperand(1).getReg();
+          unsigned DefReg2 = DefMI->getOperand(2).getReg();
+          unsigned DefImmed = DefMI->getOperand(3).getImm();
+
+          // If the two inputs are not the same register, check to see if
+          // they originate from the same virtual register after only
+          // copy-like instructions.
+          if (DefReg1 != DefReg2) {
+            unsigned FeedReg1 = TRI->lookThruCopyLike(DefReg1, MRI);
+            unsigned FeedReg2 = TRI->lookThruCopyLike(DefReg2, MRI);
+
+            if (!(FeedReg1 == FeedReg2 &&
+                  Register::isVirtualRegister(FeedReg1)))
+              break;
+          }
+
+          if (DefImmed == 0 || DefImmed == 3) {
+            LLVM_DEBUG(dbgs() << "Optimizing splat/swap or splat/splat "
+                                 "to splat/copy: ");
+            LLVM_DEBUG(MI.dump());
+            BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                    MI.getOperand(0).getReg())
+                .add(MI.getOperand(1));
+            ToErase = &MI;
+            Simplified = true;
+          }
+
+          // If this is a splat fed by a swap, we can simplify modify
+          // the splat to splat the other value from the swap's input
+          // parameter.
+          else if ((Immed == 0 || Immed == 3) && DefImmed == 2) {
+            LLVM_DEBUG(dbgs() << "Optimizing swap/splat => splat: ");
+            LLVM_DEBUG(MI.dump());
+            MI.getOperand(1).setReg(DefReg1);
+            MI.getOperand(2).setReg(DefReg2);
+            MI.getOperand(3).setImm(3 - Immed);
+            Simplified = true;
+          }
+
+          // If this is a swap fed by a swap, we can replace it
+          // with a copy from the first swap's input.
+          else if (Immed == 2 && DefImmed == 2) {
+            LLVM_DEBUG(dbgs() << "Optimizing swap/swap => copy: ");
+            LLVM_DEBUG(MI.dump());
+            BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                    MI.getOperand(0).getReg())
+                .add(DefMI->getOperand(1));
+            ToErase = &MI;
+            Simplified = true;
+          }
+        } else if ((Immed == 0 || Immed == 3) && DefOpc == PPC::XXPERMDIs &&
+                   (DefMI->getOperand(2).getImm() == 0 ||
+                    DefMI->getOperand(2).getImm() == 3)) {
+          // Splat fed by another splat - switch the output of the first
+          // and remove the second.
+          DefMI->getOperand(0).setReg(MI.getOperand(0).getReg());
+          ToErase = &MI;
+          Simplified = true;
+          LLVM_DEBUG(dbgs() << "Removing redundant splat: ");
+          LLVM_DEBUG(MI.dump());
         }
         break;
       }
