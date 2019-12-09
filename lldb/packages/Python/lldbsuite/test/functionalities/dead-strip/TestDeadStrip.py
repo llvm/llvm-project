@@ -15,14 +15,8 @@ class DeadStripTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    @expectedFailureAll(debug_info="dwo", bugnumber="llvm.org/pr25087")
-    @expectedFailureAll(
-        oslist=["linux"],
-        debug_info="gmodules",
-        bugnumber="llvm.org/pr27865")
-    # The -dead_strip linker option isn't supported on FreeBSD versions of ld.
-    @skipIfFreeBSD
+    @expectedFailureAll(oslist=no_match(lldbplatformutil.getDarwinOSTriples()),
+            bugnumber="llvm.org/pr24778 llvm.org/pr25087 llvm.org/pr27865")
     def test(self):
         """Test breakpoint works correctly with dead-code stripping."""
         self.build()
