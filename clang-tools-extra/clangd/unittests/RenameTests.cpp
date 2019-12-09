@@ -14,9 +14,11 @@
 #include "index/Ref.h"
 #include "refactor/Rename.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -24,7 +26,9 @@ namespace {
 
 using testing::Eq;
 using testing::Pair;
+using testing::IsEmpty;
 using testing::UnorderedElementsAre;
+using testing::UnorderedElementsAreArray;
 
 // Build a RefSlab from all marked ranges in the annotation. The ranges are
 // assumed to associate with the given SymbolName.
@@ -851,6 +855,300 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
   EXPECT_EQ(applyEdits(FileEdits{{T.code(), std::move(*Edit)}}).front().second,
             expectedResult(Code, expectedResult(T, "abc")));
+}
+
+TEST(CrossFileRenameTests, adjustRenameRanges) {
+  // Ranges in IndexedCode indicate the indexed occurrences;
+  // ranges in DraftCode indicate the expected mapped result, empty indicates
+  // we expect no matched result found.
+  struct {
+    llvm::StringRef IndexedCode;
+    llvm::StringRef DraftCode;
+  } Tests[] = {
+    {
+      // both line and column are changed, not a near miss.
+      R"cpp(
+        int [[x]] = 0;
+      )cpp",
+      R"cpp(
+        // insert a line.
+        double x = 0;
+      )cpp",
+    },
+    {
+      // subset.
+      R"cpp(
+        int [[x]] = 0;
+      )cpp",
+      R"cpp(
+        int [[x]] = 0;
+        {int x = 0; }
+      )cpp",
+    },
+    {
+      // shift columns.
+      R"cpp(int [[x]] = 0; void foo(int x);)cpp",
+      R"cpp(double [[x]] = 0; void foo(double x);)cpp",
+    },
+    {
+      // shift lines.
+      R"cpp(
+        int [[x]] = 0;
+        void foo(int x);
+      )cpp",
+      R"cpp(
+        // insert a line.
+        int [[x]] = 0;
+        void foo(int x);
+      )cpp",
+    },
+  };
+  LangOptions LangOpts;
+  LangOpts.CPlusPlus = true;
+  for (const auto &T : Tests) {
+    Annotations Draft(T.DraftCode);
+    auto ActualRanges = adjustRenameRanges(
+        Draft.code(), "x", Annotations(T.IndexedCode).ranges(), LangOpts);
+    if (!ActualRanges)
+       EXPECT_THAT(Draft.ranges(), testing::IsEmpty());
+    else
+      EXPECT_THAT(Draft.ranges(),
+                  testing::UnorderedElementsAreArray(*ActualRanges))
+          << T.DraftCode;
+  }
+}
+
+TEST(RangePatchingHeuristic, GetMappedRanges) {
+  // ^ in LexedCode marks the ranges we expect to be mapped; no ^ indicates
+  // there are no mapped ranges.
+  struct {
+    llvm::StringRef IndexedCode;
+    llvm::StringRef LexedCode;
+  } Tests[] = {
+    {
+      // no lexed ranges.
+      "[[]]",
+      "",
+    },
+    {
+      // both line and column are changed, not a near miss.
+      R"([[]])",
+      R"(
+        [[]]
+      )",
+    },
+    {
+      // subset.
+      "[[]]",
+      "^[[]]  [[]]"
+    },
+    {
+      // shift columns.
+      "[[]]   [[]]",
+      "  ^[[]]   ^[[]]  [[]]"
+    },
+    {
+      R"(
+        [[]]
+
+        [[]] [[]]
+      )",
+      R"(
+        // insert a line
+        ^[[]]
+
+        ^[[]] ^[[]]
+      )",
+    },
+    {
+      R"(
+        [[]]
+
+        [[]] [[]]
+      )",
+      R"(
+        // insert a line
+        ^[[]]
+          ^[[]]  ^[[]] // column is shifted.
+      )",
+    },
+    {
+      R"(
+        [[]]
+
+        [[]] [[]]
+      )",
+      R"(
+        // insert a line
+        [[]]
+
+          [[]]  [[]] // not mapped (both line and column are changed).
+      )",
+    },
+    {
+      R"(
+        [[]]
+                [[]]
+
+                   [[]]
+                  [[]]
+
+        }
+      )",
+      R"(
+        // insert a new line
+        ^[[]]
+                ^[[]]
+             [[]] // additional range
+                   ^[[]]
+                  ^[[]]
+            [[]] // additional range
+      )",
+    },
+    {
+      // non-distinct result (two best results), not a near miss
+      R"(
+        [[]]
+            [[]]
+            [[]]
+      )",
+      R"(
+        [[]]
+        [[]]
+            [[]]
+            [[]]
+      )",
+    }
+  };
+  for (const auto &T : Tests) {
+    auto Lexed = Annotations(T.LexedCode);
+    auto LexedRanges = Lexed.ranges();
+    std::vector<Range> ExpectedMatches;
+    for (auto P : Lexed.points()) {
+      auto Match = llvm::find_if(LexedRanges, [&P](const Range& R) {
+        return R.start == P;
+      });
+      ASSERT_NE(Match, LexedRanges.end());
+      ExpectedMatches.push_back(*Match);
+    }
+
+    auto Mapped =
+        getMappedRanges(Annotations(T.IndexedCode).ranges(), LexedRanges);
+    if (!Mapped)
+      EXPECT_THAT(ExpectedMatches, IsEmpty());
+    else
+      EXPECT_THAT(ExpectedMatches, UnorderedElementsAreArray(*Mapped))
+          << T.IndexedCode;
+  }
+}
+
+TEST(CrossFileRenameTests, adjustmentCost) {
+  struct {
+    llvm::StringRef RangeCode;
+    size_t ExpectedCost;
+  } Tests[] = {
+    {
+      R"(
+        $idx[[]]$lex[[]] // diff: 0
+      )",
+      0,
+    },
+    {
+      R"(
+        $idx[[]]
+        $lex[[]] // line diff: +1
+                       $idx[[]]
+                       $lex[[]] // line diff: +1
+        $idx[[]]
+        $lex[[]] // line diff: +1
+
+          $idx[[]]
+
+          $lex[[]] // line diff: +2
+      )",
+      1 + 1
+    },
+    {
+       R"(
+        $idx[[]]
+        $lex[[]] // line diff: +1
+                       $idx[[]]
+
+                       $lex[[]] // line diff: +2
+        $idx[[]]
+
+
+        $lex[[]] // line diff: +3
+      )",
+      1 + 1 + 1
+    },
+    {
+       R"(
+        $idx[[]]
+
+
+        $lex[[]] // line diff: +3
+                       $idx[[]]
+
+                       $lex[[]] // line diff: +2
+        $idx[[]]
+        $lex[[]] // line diff: +1
+      )",
+      3 + 1 + 1
+    },
+    {
+      R"(
+        $idx[[]]
+        $lex[[]] // line diff: +1
+                       $lex[[]] // line diff: -2
+
+                       $idx[[]]
+        $idx[[]]
+
+
+        $lex[[]] // line diff: +3
+      )",
+      1 + 3 + 5
+    },
+    {
+      R"(
+                       $idx[[]] $lex[[]] // column diff: +1
+        $idx[[]]$lex[[]] // diff: 0
+      )",
+      1
+    },
+    {
+      R"(
+        $idx[[]]
+        $lex[[]] // diff: +1
+                       $idx[[]] $lex[[]] // column diff: +1
+        $idx[[]]$lex[[]] // diff: 0
+      )",
+      1 + 1 + 1
+    },
+    {
+      R"(
+        $idx[[]] $lex[[]] // column diff: +1
+      )",
+      1
+    },
+    {
+      R"(
+        // column diffs: +1, +2, +3
+        $idx[[]] $lex[[]] $idx[[]]  $lex[[]] $idx[[]]   $lex[[]]
+      )",
+      1 + 1 + 1,
+    },
+  };
+  for (const auto &T : Tests) {
+    Annotations C(T.RangeCode);
+    std::vector<size_t> MappedIndex;
+    for (size_t I = 0; I < C.ranges("lex").size(); ++I)
+      MappedIndex.push_back(I);
+    EXPECT_EQ(renameRangeAdjustmentCost(C.ranges("idx"), C.ranges("lex"),
+                                        MappedIndex),
+              T.ExpectedCost) << T.RangeCode;
+  }
 }
 
 } // namespace
