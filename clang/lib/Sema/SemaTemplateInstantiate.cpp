@@ -672,13 +672,23 @@ void Sema::PrintInstantiationStack() {
       break;
 
     case CodeSynthesisContext::DefiningSynthesizedFunction: {
-      // FIXME: For synthesized members other than special members, produce a note.
-      auto *MD = dyn_cast<CXXMethodDecl>(Active->Entity);
-      auto CSM = MD ? getSpecialMember(MD) : CXXInvalid;
-      if (CSM != CXXInvalid) {
+      // FIXME: For synthesized functions that are not defaulted,
+      // produce a note.
+      auto *FD = dyn_cast<FunctionDecl>(Active->Entity);
+      DefaultedFunctionKind DFK =
+          FD ? getDefaultedFunctionKind(FD) : DefaultedFunctionKind();
+      if (DFK.isSpecialMember()) {
+        auto *MD = cast<CXXMethodDecl>(FD);
         Diags.Report(Active->PointOfInstantiation,
                      diag::note_member_synthesized_at)
-          << CSM << Context.getTagDeclType(MD->getParent());
+            << MD->isExplicitlyDefaulted() << DFK.asSpecialMember()
+            << Context.getTagDeclType(MD->getParent());
+      } else if (DFK.isComparison()) {
+        Diags.Report(Active->PointOfInstantiation,
+                     diag::note_comparison_synthesized_at)
+            << (int)DFK.asComparison()
+            << Context.getTagDeclType(
+                   cast<CXXRecordDecl>(FD->getLexicalDeclContext()));
       }
       break;
     }

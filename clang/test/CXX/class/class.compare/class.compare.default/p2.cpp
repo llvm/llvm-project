@@ -14,7 +14,7 @@ struct A2 {
   bool operator==(const A2&) const;
   bool operator!=(const A2&) const = default;
 
-  bool operator<=>(const A2&) const;
+  int operator<=>(const A2&) const;
   bool operator<(const A2&) const = default;
   bool operator<=(const A2&) const = default;
   bool operator>(const A2&) const = default;
