@@ -56,13 +56,13 @@ ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
 // DWARFExpression constructor
 DWARFExpression::DWARFExpression()
     : m_module_wp(), m_data(), m_dwarf_cu(nullptr),
-      m_reg_kind(eRegisterKindDWARF), m_loclist_slide(LLDB_INVALID_ADDRESS) {}
+      m_reg_kind(eRegisterKindDWARF) {}
 
 DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
                                  const DataExtractor &data,
                                  const DWARFUnit *dwarf_cu)
     : m_module_wp(), m_data(data), m_dwarf_cu(dwarf_cu),
-      m_reg_kind(eRegisterKindDWARF), m_loclist_slide(LLDB_INVALID_ADDRESS) {
+      m_reg_kind(eRegisterKindDWARF) {
   if (module_sp)
     m_module_wp = module_sp;
 }
@@ -94,8 +94,9 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
              nullptr);
 }
 
-void DWARFExpression::SetLocationListSlide(addr_t slide) {
-  m_loclist_slide = slide;
+void DWARFExpression::SetLocationListAddresses(addr_t cu_file_addr,
+                                               addr_t func_file_addr) {
+  m_loclist_addresses = LoclistAddresses{cu_file_addr, func_file_addr};
 }
 
 int DWARFExpression::GetRegisterKind() { return m_reg_kind; }
@@ -105,7 +106,7 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
 }
 
 bool DWARFExpression::IsLocationList() const {
-  return m_loclist_slide != LLDB_INVALID_ADDRESS;
+  return bool(m_loclist_addresses);
 }
 
 void DWARFExpression::GetDescription(Stream *s, lldb::DescriptionLevel level,
@@ -614,46 +615,43 @@ bool DWARFExpression::LinkThreadLocalStorage(
   return true;
 }
 
-bool DWARFExpression::LocationListContainsAddress(
-    lldb::addr_t loclist_base_addr, lldb::addr_t addr) const {
-  if (addr == LLDB_INVALID_ADDRESS)
+bool DWARFExpression::LocationListContainsAddress(addr_t func_load_addr,
+                                                  lldb::addr_t addr) const {
+  if (func_load_addr == LLDB_INVALID_ADDRESS || addr == LLDB_INVALID_ADDRESS)
     return false;
 
-  if (IsLocationList()) {
-    lldb::offset_t offset = 0;
+  if (!IsLocationList())
+    return false;
 
-    if (loclist_base_addr == LLDB_INVALID_ADDRESS)
-      return false;
+  lldb::offset_t offset = 0;
+  lldb::addr_t base_address = m_loclist_addresses->cu_file_addr;
+  while (m_data.ValidOffset(offset)) {
+    // We need to figure out what the value is for the location.
+    addr_t lo_pc = LLDB_INVALID_ADDRESS;
+    addr_t hi_pc = LLDB_INVALID_ADDRESS;
+    if (!AddressRangeForLocationListEntry(m_dwarf_cu, m_data, &offset, lo_pc,
+                                          hi_pc))
+      break;
 
-    while (m_data.ValidOffset(offset)) {
-      // We need to figure out what the value is for the location.
-      addr_t lo_pc = LLDB_INVALID_ADDRESS;
-      addr_t hi_pc = LLDB_INVALID_ADDRESS;
-      if (!AddressRangeForLocationListEntry(m_dwarf_cu, m_data, &offset, lo_pc,
-                                            hi_pc))
-        break;
+    if (lo_pc == 0 && hi_pc == 0)
+      break;
 
-      if (lo_pc == 0 && hi_pc == 0)
-        break;
-
-      if ((m_data.GetAddressByteSize() == 4 && (lo_pc == UINT32_MAX)) ||
-          (m_data.GetAddressByteSize() == 8 && (lo_pc == UINT64_MAX))) {
-        loclist_base_addr = hi_pc + m_loclist_slide;
-        continue;
-      }
-      lo_pc += loclist_base_addr - m_loclist_slide;
-      hi_pc += loclist_base_addr - m_loclist_slide;
-
-      if (lo_pc <= addr && addr < hi_pc)
-        return true;
-
-      offset += m_data.GetU16(&offset);
+    if ((m_data.GetAddressByteSize() == 4 && (lo_pc == UINT32_MAX)) ||
+        (m_data.GetAddressByteSize() == 8 && (lo_pc == UINT64_MAX))) {
+      base_address = hi_pc;
+      continue;
     }
+    RelocateLowHighPC(base_address, func_load_addr, lo_pc, hi_pc);
+
+    if (lo_pc <= addr && addr < hi_pc)
+      return true;
+
+    offset += m_data.GetU16(&offset);
   }
   return false;
 }
 
-bool DWARFExpression::GetLocation(addr_t base_addr, addr_t pc,
+bool DWARFExpression::GetLocation(addr_t func_load_addr, addr_t pc,
                                   lldb::offset_t &offset,
                                   lldb::offset_t &length) {
   offset = 0;
@@ -662,9 +660,8 @@ bool DWARFExpression::GetLocation(addr_t base_addr, addr_t pc,
     return true;
   }
 
-  if (base_addr != LLDB_INVALID_ADDRESS && pc != LLDB_INVALID_ADDRESS) {
-    addr_t curr_base_addr = base_addr;
-
+  if (func_load_addr != LLDB_INVALID_ADDRESS && pc != LLDB_INVALID_ADDRESS) {
+    addr_t base_address = m_loclist_addresses->cu_file_addr;
     while (m_data.ValidOffset(offset)) {
       // We need to figure out what the value is for the location.
       addr_t lo_pc = LLDB_INVALID_ADDRESS;
@@ -678,13 +675,11 @@ bool DWARFExpression::GetLocation(addr_t base_addr, addr_t pc,
 
       if ((m_data.GetAddressByteSize() == 4 && (lo_pc == UINT32_MAX)) ||
           (m_data.GetAddressByteSize() == 8 && (lo_pc == UINT64_MAX))) {
-        curr_base_addr = hi_pc + m_loclist_slide;
+        base_address = hi_pc;
         continue;
       }
 
-      lo_pc += curr_base_addr - m_loclist_slide;
-      hi_pc += curr_base_addr - m_loclist_slide;
-
+      RelocateLowHighPC(base_address, func_load_addr, lo_pc, hi_pc);
       length = m_data.GetU16(&offset);
 
       if (length > 0 && lo_pc <= pc && pc < hi_pc)
@@ -700,12 +695,12 @@ bool DWARFExpression::GetLocation(addr_t base_addr, addr_t pc,
 
 bool DWARFExpression::DumpLocationForAddress(Stream *s,
                                              lldb::DescriptionLevel level,
-                                             addr_t base_addr, addr_t address,
-                                             ABI *abi) {
+                                             addr_t func_load_addr,
+                                             addr_t address, ABI *abi) {
   lldb::offset_t offset = 0;
   lldb::offset_t length = 0;
 
-  if (GetLocation(base_addr, address, offset, length)) {
+  if (GetLocation(func_load_addr, address, offset, length)) {
     if (length > 0) {
       DumpLocation(s, offset, length, level, abi);
       return true;
@@ -936,7 +931,7 @@ bool DWARFExpression::Evaluate(ExecutionContextScope *exe_scope,
 
 bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
                                RegisterContext *reg_ctx,
-                               lldb::addr_t loclist_base_load_addr,
+                               lldb::addr_t func_load_addr,
                                const Value *initial_value_ptr,
                                const Value *object_address_ptr, Value &result,
                                Status *error_ptr) const {
@@ -958,15 +953,14 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
       pc = reg_ctx_sp->GetPC();
     }
 
-    if (loclist_base_load_addr != LLDB_INVALID_ADDRESS) {
+    if (func_load_addr != LLDB_INVALID_ADDRESS) {
       if (pc == LLDB_INVALID_ADDRESS) {
         if (error_ptr)
           error_ptr->SetErrorString("Invalid PC in frame.");
         return false;
       }
 
-      addr_t curr_loclist_base_load_addr = loclist_base_load_addr;
-
+      addr_t base_address = m_loclist_addresses->cu_file_addr;
       while (m_data.ValidOffset(offset)) {
         // We need to figure out what the value is for the location.
         addr_t lo_pc = LLDB_INVALID_ADDRESS;
@@ -982,12 +976,11 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
              (lo_pc == UINT32_MAX)) ||
             (m_data.GetAddressByteSize() == 8 &&
              (lo_pc == UINT64_MAX))) {
-          curr_loclist_base_load_addr = hi_pc + m_loclist_slide;
+          base_address = hi_pc;
           continue;
         }
-        lo_pc += curr_loclist_base_load_addr - m_loclist_slide;
-        hi_pc += curr_loclist_base_load_addr - m_loclist_slide;
 
+        RelocateLowHighPC(base_address, func_load_addr, lo_pc, hi_pc);
         uint16_t length = m_data.GetU16(&offset);
 
         if (length > 0 && lo_pc <= pc && pc < hi_pc) {
@@ -2968,6 +2961,20 @@ bool DWARFExpression::GetOpAndEndOffsets(StackFrame &frame,
   op_offset = opcodes_offset;
   end_offset = opcodes_offset + opcodes_length;
   return true;
+}
+
+void DWARFExpression::RelocateLowHighPC(addr_t base_address,
+                                        addr_t func_load_addr, addr_t &low_pc,
+                                        addr_t &high_pc) const {
+  // How this works:
+  // base_address is the current base address, as known in the file. low_pc and
+  // high_pc are relative to that. First, we relocate the base address by
+  // applying the load bias (the difference between an address in the file and
+  // the actual address in memory). Then we relocate low_pc and high_pc based on
+  // that.
+  base_address += func_load_addr - m_loclist_addresses->func_file_addr;
+  low_pc += base_address;
+  high_pc += base_address;
 }
 
 bool DWARFExpression::MatchesOperand(StackFrame &frame,
