@@ -1973,6 +1973,12 @@ TEST_F(DefineOutlineTest, ApplyTest) {
             template <> void foo<int>() ;)cpp",
           "template <> void foo<int>() { return; }",
       },
+      // Default args.
+      {
+          "void fo^o(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) {}",
+          "void foo(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) ;",
+          "void foo(int x, int y , int , int (*foo)(int) ) {}",
+      },
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);

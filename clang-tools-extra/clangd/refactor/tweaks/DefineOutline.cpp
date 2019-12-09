@@ -10,6 +10,7 @@
 #include "FindTarget.h"
 #include "HeaderSourceSwitch.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "Path.h"
 #include "Selection.h"
 #include "SourceCode.h"
@@ -21,11 +22,15 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Driver/Types.h"
 #include "clang/Format/Format.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
@@ -133,12 +138,14 @@ getFunctionSourceAfterReplacements(const FunctionDecl *FD,
 
 // Creates a modified version of function definition that can be inserted at a
 // different location, qualifies return value and function name to achieve that.
-// Contains function signature, body and template parameters if applicable.
-// No need to qualify parameters, as they are looked up in the context
-// containing the function/method.
+// Contains function signature, except defaulted parameter arguments, body and
+// template parameters if applicable. No need to qualify parameters, as they are
+// looked up in the context containing the function/method.
 llvm::Expected<std::string>
-getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace) {
-  auto &SM = FD->getASTContext().getSourceManager();
+getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
+                      const syntax::TokenBuffer &TokBuf) {
+  auto &AST = FD->getASTContext();
+  auto &SM = AST.getSourceManager();
   auto TargetContext = findContextForNS(TargetNamespace, FD->getDeclContext());
   if (!TargetContext)
     return llvm::createStringError(
@@ -169,13 +176,37 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace) {
       }
     }
     const NamedDecl *ND = Ref.Targets.front();
-    const std::string Qualifier =
-        getQualification(FD->getASTContext(), *TargetContext,
-                         SM.getLocForStartOfFile(SM.getMainFileID()), ND);
+    const std::string Qualifier = getQualification(
+        AST, *TargetContext, SM.getLocForStartOfFile(SM.getMainFileID()), ND);
     if (auto Err = QualifierInsertions.add(
             tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier)))
       Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
   });
+
+  // Get rid of default arguments, since they should not be specified in
+  // out-of-line definition.
+  for (const auto *PVD : FD->parameters()) {
+    if (PVD->hasDefaultArg()) {
+      // Deletion range initially spans the initializer, excluding the `=`.
+      auto DelRange = CharSourceRange::getTokenRange(PVD->getDefaultArgRange());
+      // Get all tokens before the default argument.
+      auto Tokens = TokBuf.expandedTokens(PVD->getSourceRange())
+                        .take_while([&SM, &DelRange](const syntax::Token &Tok) {
+                          return SM.isBeforeInTranslationUnit(
+                              Tok.location(), DelRange.getBegin());
+                        });
+      // Find the last `=` before the default arg.
+      auto Tok =
+          llvm::find_if(llvm::reverse(Tokens), [](const syntax::Token &Tok) {
+            return Tok.kind() == tok::equal;
+          });
+      assert(Tok != Tokens.rend());
+      DelRange.setBegin(Tok->location());
+      if (auto Err =
+              QualifierInsertions.add(tooling::Replacement(SM, DelRange, "")))
+        Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+    }
+  }
 
   if (Errors)
     return std::move(Errors);
@@ -290,8 +321,8 @@ public:
     if (!InsertionPoint)
       return InsertionPoint.takeError();
 
-    auto FuncDef =
-        getFunctionSourceCode(Source, InsertionPoint->EnclosingNamespace);
+    auto FuncDef = getFunctionSourceCode(
+        Source, InsertionPoint->EnclosingNamespace, Sel.AST.getTokens());
     if (!FuncDef)
       return FuncDef.takeError();
 
