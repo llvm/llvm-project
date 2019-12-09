@@ -25,13 +25,6 @@ class ConstVariableTestCase(TestBase):
     @expectedFailureAll(oslist=["freebsd", "linux"], compiler="icc")
     @expectedFailureAll(archs=['mips', 'mipsel', 'mips64', 'mips64el'])
     @expectedFailureAll(
-        oslist=["linux"],
-        archs=[
-            'arm',
-            'aarch64'],
-        triple=no_match(".*-android"),
-        bugnumber="llvm.org/pr27883")
-    @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     @expectedFailureNetBSD
