@@ -5,11 +5,11 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-none-eabi"
 
 ; CHECK-LABEL: test
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 1 For instruction:   %and515 = shl i32 %l41, 3
+; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %and515 = shl i32 %l41, 3
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF 1 For instruction:   %l45 = and i32 %and515, 131072
 ; CHECK-COST: LV: Found an estimated cost of 2 for VF 4 For instruction:   %and515 = shl i32 %l41, 3
 ; CHECK-COST: LV: Found an estimated cost of 2 for VF 4 For instruction:   %l45 = and i32 %and515, 131072
-; CHECK: vector.body
+; CHECK-NOT: vector.body
 
 define void @test([101 x i32] *%src, i32 %N) #0 {
 entry:

@@ -129,7 +129,7 @@ public:
   bool isUnaryOp() const { return isUnaryOp(getOpcode()); }
   bool isBinaryOp() const { return isBinaryOp(getOpcode()); }
   bool isIntDivRem() const { return isIntDivRem(getOpcode()); }
-  bool isShift() { return isShift(getOpcode()); }
+  bool isShift() const { return isShift(getOpcode()); }
   bool isCast() const { return isCast(getOpcode()); }
   bool isFuncletPad() const { return isFuncletPad(getOpcode()); }
   bool isExceptionalTerminator() const {

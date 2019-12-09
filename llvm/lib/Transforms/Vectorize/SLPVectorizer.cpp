@@ -3420,13 +3420,13 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
 
       SmallVector<const Value *, 4> Operands(VL0->operand_values());
       int ScalarEltCost = TTI->getArithmeticInstrCost(
-          E->getOpcode(), ScalarTy, Op1VK, Op2VK, Op1VP, Op2VP, Operands);
+          E->getOpcode(), ScalarTy, Op1VK, Op2VK, Op1VP, Op2VP, Operands, VL0);
       if (NeedToShuffleReuses) {
         ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
       }
       int ScalarCost = VecTy->getNumElements() * ScalarEltCost;
-      int VecCost = TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, Op1VK,
-                                                Op2VK, Op1VP, Op2VP, Operands);
+      int VecCost = TTI->getArithmeticInstrCost(
+          E->getOpcode(), VecTy, Op1VK, Op2VK, Op1VP, Op2VP, Operands, VL0);
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
     case Instruction::GetElementPtr: {

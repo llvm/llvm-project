@@ -338,10 +338,13 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   }
 }
 
-int GCNTTIImpl::getArithmeticInstrCost(
-    unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
-    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args ) {
+int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
+                                       TTI::OperandValueKind Opd1Info,
+                                       TTI::OperandValueKind Opd2Info,
+                                       TTI::OperandValueProperties Opd1PropInfo,
+                                       TTI::OperandValueProperties Opd2PropInfo,
+                                       ArrayRef<const Value *> Args,
+                                       const Instruction *CxtI) {
   EVT OrigTy = TLI->getValueType(DL, Ty);
   if (!OrigTy.isSimple()) {
     return BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
@@ -801,7 +804,7 @@ unsigned GCNTTIImpl::getUserCost(const User *U,
   case Instruction::FNeg: {
     return getArithmeticInstrCost(I->getOpcode(), I->getType(),
                                   TTI::OK_AnyValue, TTI::OK_AnyValue,
-                                  TTI::OP_None, TTI::OP_None, Operands);
+                                  TTI::OP_None, TTI::OP_None, Operands, I);
   }
   default:
     break;
