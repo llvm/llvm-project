@@ -597,3 +597,28 @@ bool RISCVInstrInfo::areMemAccessesTriviallyDisjoint(
   }
   return false;
 }
+
+std::pair<unsigned, unsigned>
+RISCVInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  const unsigned Mask = RISCVII::MO_DIRECT_FLAG_MASK;
+  return std::make_pair(TF & Mask, TF & ~Mask);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+  using namespace RISCVII;
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_CALL, "riscv-call"},
+      {MO_PLT, "riscv-plt"},
+      {MO_LO, "riscv-lo"},
+      {MO_HI, "riscv-hi"},
+      {MO_PCREL_LO, "riscv-pcrel-lo"},
+      {MO_PCREL_HI, "riscv-pcrel-hi"},
+      {MO_GOT_HI, "riscv-got-hi"},
+      {MO_TPREL_LO, "riscv-tprel-lo"},
+      {MO_TPREL_HI, "riscv-tprel-hi"},
+      {MO_TPREL_ADD, "riscv-tprel-add"},
+      {MO_TLS_GOT_HI, "riscv-tls-got-hi"},
+      {MO_TLS_GD_HI, "riscv-tls-gd-hi"}};
+  return makeArrayRef(TargetFlags);
+}
