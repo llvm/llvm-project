@@ -15,6 +15,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/ASTUnresolvedSet.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"

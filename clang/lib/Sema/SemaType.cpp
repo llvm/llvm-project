@@ -1980,7 +1980,7 @@ bool Sema::CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc) {
 static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType) {
   if (!PointeeType->isUndeducedAutoType() && !PointeeType->isDependentType() &&
       !PointeeType->isSamplerT() &&
-      !PointeeType.getQualifiers().hasAddressSpace())
+      !PointeeType.hasAddressSpace())
     PointeeType = S.getASTContext().getAddrSpaceQualType(
         PointeeType,
         S.getLangOpts().OpenCLCPlusPlus || S.getLangOpts().OpenCLVersion == 200

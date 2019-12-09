@@ -1532,7 +1532,7 @@ define arm_aapcs_vfpcc float @half_half_mac(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    b .LBB9_6
 ; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    vldr s0, .LCPI9_0
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    b .LBB9_9
 ; CHECK-NEXT:  .LBB9_4: @ %for.body.preheader.new
 ; CHECK-NEXT:    subs r2, r2, r4
 ; CHECK-NEXT:    movs r3, #1
@@ -1693,7 +1693,7 @@ define arm_aapcs_vfpcc float @half_half_acc(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    b .LBB10_6
 ; CHECK-NEXT:  .LBB10_3:
 ; CHECK-NEXT:    vldr s0, .LCPI10_0
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    b .LBB10_9
 ; CHECK-NEXT:  .LBB10_4: @ %for.body.preheader.new
 ; CHECK-NEXT:    subs r2, r2, r4
 ; CHECK-NEXT:    movs r3, #1
@@ -1854,7 +1854,7 @@ define arm_aapcs_vfpcc float @half_short_mac(half* nocapture readonly %a, i16* n
 ; CHECK-NEXT:    b .LBB11_6
 ; CHECK-NEXT:  .LBB11_3:
 ; CHECK-NEXT:    vldr s0, .LCPI11_0
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    b .LBB11_9
 ; CHECK-NEXT:  .LBB11_4: @ %for.body.preheader.new
 ; CHECK-NEXT:    subs r2, r2, r7
 ; CHECK-NEXT:    movs r3, #1

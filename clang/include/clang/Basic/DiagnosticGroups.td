@@ -113,7 +113,7 @@ def UndefinedVarTemplate : DiagGroup<"undefined-var-template">;
 def UndefinedFuncTemplate : DiagGroup<"undefined-func-template">;
 def MissingNoEscape : DiagGroup<"missing-noescape">;
 
-def DefaultedComparison : DiagGroup<"defaulted-comparison">;
+def DefaultedFunctionDeleted : DiagGroup<"defaulted-function-deleted">;
 def DeleteIncomplete : DiagGroup<"delete-incomplete">;
 def DeleteNonAbstractNonVirtualDtor : DiagGroup<"delete-non-abstract-non-virtual-dtor">;
 def DeleteAbstractNonVirtualDtor : DiagGroup<"delete-abstract-non-virtual-dtor">;
@@ -1057,7 +1057,11 @@ def ASM : DiagGroup<"asm", [
 def SourceUsesOpenMP : DiagGroup<"source-uses-openmp">;
 def OpenMPClauses : DiagGroup<"openmp-clauses">;
 def OpenMPLoopForm : DiagGroup<"openmp-loop-form">;
-def OpenMPTarget : DiagGroup<"openmp-target">;
+def OpenMPMapping : DiagGroup<"openmp-mapping">;
+def OpenMPTarget : DiagGroup<"openmp-target", [OpenMPMapping]>;
+def OpenMP : DiagGroup<"openmp", [
+    SourceUsesOpenMP, OpenMPClauses, OpenMPLoopForm, OpenMPTarget, OpenMPMapping
+  ]>;
 
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;

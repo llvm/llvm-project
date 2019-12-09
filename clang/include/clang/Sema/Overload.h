@@ -935,7 +935,17 @@ class Sema;
       }
 
       bool isAcceptableCandidate(const FunctionDecl *FD) {
-        return AllowRewrittenCandidates || !isRewrittenOperator(FD);
+        if (!OriginalOperator)
+          return true;
+
+        // For an overloaded operator, we can have candidates with a different
+        // name in our unqualified lookup set. Make sure we only consider the
+        // ones we're supposed to.
+        OverloadedOperatorKind OO =
+            FD->getDeclName().getCXXOverloadedOperator();
+        return OO && (OO == OriginalOperator ||
+                      (AllowRewrittenCandidates &&
+                       OO == getRewrittenOverloadedOperator(OriginalOperator)));
       }
 
       /// Determine the kind of rewrite that should be performed for this
@@ -1026,6 +1036,12 @@ class Sema;
       uintptr_t Key = reinterpret_cast<uintptr_t>(F->getCanonicalDecl());
       Key |= static_cast<uintptr_t>(PO);
       return Functions.insert(Key).second;
+    }
+
+    /// Exclude a function from being considered by overload resolution.
+    void exclude(Decl *F) {
+      isNewCandidate(F, OverloadCandidateParamOrder::Normal);
+      isNewCandidate(F, OverloadCandidateParamOrder::Reversed);
     }
 
     /// Clear out all of the candidates.

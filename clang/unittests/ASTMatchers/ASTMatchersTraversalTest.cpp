@@ -1595,6 +1595,91 @@ TEST(IgnoringImplicit, DoesNotMatchIncorrectly) {
       notMatches("class C {}; C a = C();", varDecl(has(cxxConstructExpr()))));
 }
 
+TEST(Traversal, traverseMatcher) {
+
+  StringRef VarDeclCode = R"cpp(
+void foo()
+{
+  int i = 3.0;
+}
+)cpp";
+
+  auto Matcher = varDecl(hasInitializer(floatLiteral()));
+
+  EXPECT_TRUE(
+      notMatches(VarDeclCode, traverse(ast_type_traits::TK_AsIs, Matcher)));
+  EXPECT_TRUE(
+      matches(VarDeclCode,
+              traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
+                       Matcher)));
+}
+
+TEST(Traversal, traverseMatcherNesting) {
+
+  StringRef Code = R"cpp(
+float bar(int i)
+{
+  return i;
+}
+
+void foo()
+{
+  bar(bar(3.0));
+}
+)cpp";
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
+               callExpr(has(callExpr(traverse(
+                   ast_type_traits::TK_AsIs,
+                   callExpr(has(implicitCastExpr(has(floatLiteral())))))))))));
+}
+
+TEST(Traversal, traverseMatcherThroughImplicit) {
+  StringRef Code = R"cpp(
+struct S {
+  S(int x);
+};
+
+void constructImplicit() {
+  int a = 8;
+  S s(a);
+}
+  )cpp";
+
+  auto Matcher = traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
+                          implicitCastExpr());
+
+  // Verfiy that it does not segfault
+  EXPECT_FALSE(matches(Code, Matcher));
+}
+
+TEST(Traversal, traverseMatcherThroughMemoization) {
+
+  StringRef Code = R"cpp(
+void foo()
+{
+  int i = 3.0;
+}
+  )cpp";
+
+  auto Matcher = varDecl(hasInitializer(floatLiteral()));
+
+  // Matchers such as hasDescendant memoize their result regarding AST
+  // nodes. In the matcher below, the first use of hasDescendant(Matcher)
+  // fails, and the use of it inside the traverse() matcher should pass
+  // causing the overall matcher to be a true match.
+  // This test verifies that the first false result is not re-used, which
+  // would cause the overall matcher to be incorrectly false.
+
+  EXPECT_TRUE(matches(
+      Code, functionDecl(anyOf(
+                hasDescendant(Matcher),
+                traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
+                         functionDecl(hasDescendant(Matcher)))))));
+}
+
 TEST(IgnoringImpCasts, MatchesImpCasts) {
   // This test checks that ignoringImpCasts matches when implicit casts are
   // present and its inner matcher alone does not match.

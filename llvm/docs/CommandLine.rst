@@ -996,6 +996,31 @@ This section describes the basic attributes that you can specify on options.
 * The **cl::cat** attribute specifies the option category that the option
   belongs to. The category should be a `cl::OptionCategory`_ object.
 
+.. _cl::callback:
+
+* The **cl::callback** attribute specifies a callback function that is
+  called when an option is seen, and can be used to set other options,
+  as in option B implies option A.  If the option is a `cl::list`_,
+  and `cl::CommaSeparated`_ is also specified, the callback will fire
+  once for each value.  This could be used to validate combinations or
+  selectively set other options.
+
+  .. code-block:: c++
+
+    cl::opt<bool> OptA("a", cl::desc("option a"));
+    cl::opt<bool> OptB(
+        "b", cl::desc("option b -- This option turns on option a"),
+        cl::callback([&](const bool &) { OptA = true; }));
+    cl::list<std::string, cl::list<std::string>> List(
+      "list",
+      cl::desc("option list -- This option turns on options a when "
+               "'foo' is included in list"),
+      cl::CommaSeparated,
+      cl::callback([&](const std::string &Str) {
+        if (Str == "foo")
+          OptA = true;
+      }));
+
 Option Modifiers
 ----------------
 

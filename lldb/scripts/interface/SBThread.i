@@ -402,6 +402,7 @@ public:
     bool
     SafeToCallFunctions ();
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all frames in a lldb.SBThread object.'''
@@ -451,6 +452,7 @@ public:
         is_suspended = property(IsSuspended, None, doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
         is_stopped = property(IsStopped, None, doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
     %}
+#endif
 
 };
 

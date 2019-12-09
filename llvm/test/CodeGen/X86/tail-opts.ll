@@ -242,75 +242,68 @@ define fastcc void @c_expand_expr_stmt(%union.tree_node* %expr) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB3_17
+; CHECK-NEXT:    jne .LBB3_9
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movb 0, %bl
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB3_16
+; CHECK-NEXT:    jne .LBB3_8
 ; CHECK-NEXT:  # %bb.2: # %bb.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB3_16
+; CHECK-NEXT:    je .LBB3_8
 ; CHECK-NEXT:  # %bb.3: # %lvalue_p.exit
 ; CHECK-NEXT:    movq 0, %rax
 ; CHECK-NEXT:    movzbl (%rax), %ecx
 ; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    je .LBB3_12
+; CHECK-NEXT:    je .LBB3_10
 ; CHECK-NEXT:  # %bb.4: # %lvalue_p.exit
 ; CHECK-NEXT:    cmpl $2, %ecx
-; CHECK-NEXT:    jne .LBB3_5
-; CHECK-NEXT:  # %bb.6: # %bb.i1
+; CHECK-NEXT:    jne .LBB3_15
+; CHECK-NEXT:  # %bb.5: # %bb.i1
 ; CHECK-NEXT:    movq 32(%rax), %rax
 ; CHECK-NEXT:    movzbl 16(%rax), %ecx
 ; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    je .LBB3_10
-; CHECK-NEXT:  # %bb.7: # %bb.i1
+; CHECK-NEXT:    je .LBB3_13
+; CHECK-NEXT:  # %bb.6: # %bb.i1
 ; CHECK-NEXT:    cmpl $2, %ecx
-; CHECK-NEXT:    jne .LBB3_8
-; CHECK-NEXT:  # %bb.9: # %bb.i.i
+; CHECK-NEXT:    jne .LBB3_15
+; CHECK-NEXT:  # %bb.7: # %bb.i.i
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    callq lvalue_p
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB3_15
-; CHECK-NEXT:    jmp .LBB3_17
-; CHECK-NEXT:  .LBB3_16: # %bb1
+; CHECK-NEXT:    jmp .LBB3_16
+; CHECK-NEXT:  .LBB3_8: # %bb1
 ; CHECK-NEXT:    cmpb $23, %bl
-; CHECK-NEXT:  .LBB3_17: # %bb3
-; CHECK-NEXT:  .LBB3_12: # %bb2.i3
-; CHECK-NEXT:    movq 8(%rax), %rax
-; CHECK-NEXT:    movb 16(%rax), %cl
+; CHECK-NEXT:  .LBB3_9: # %bb3
+; CHECK-NEXT:  .LBB3_15:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpb $23, %cl
-; CHECK-NEXT:    je .LBB3_14
-; CHECK-NEXT:  # %bb.13: # %bb2.i3
-; CHECK-NEXT:    cmpb $16, %cl
-; CHECK-NEXT:    je .LBB3_14
-; CHECK-NEXT:    jmp .LBB3_17
-; CHECK-NEXT:  .LBB3_5:
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  .LBB3_16: # %lvalue_p.exit4
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB3_15
-; CHECK-NEXT:    jmp .LBB3_17
-; CHECK-NEXT:  .LBB3_10: # %bb2.i.i2
-; CHECK-NEXT:    movq 8(%rax), %rax
-; CHECK-NEXT:    movb 16(%rax), %cl
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpb $16, %cl
-; CHECK-NEXT:    je .LBB3_14
-; CHECK-NEXT:  # %bb.11: # %bb2.i.i2
-; CHECK-NEXT:    cmpb $23, %cl
-; CHECK-NEXT:    je .LBB3_14
-; CHECK-NEXT:    jmp .LBB3_17
-; CHECK-NEXT:  .LBB3_8:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:  .LBB3_14: # %lvalue_p.exit4
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB3_17
-; CHECK-NEXT:  .LBB3_15: # %lvalue_p.exit4
+; CHECK-NEXT:    jne .LBB3_9
+; CHECK-NEXT:  # %bb.17: # %lvalue_p.exit4
 ; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:  .LBB3_10: # %bb2.i3
+; CHECK-NEXT:    movq 8(%rax), %rax
+; CHECK-NEXT:    movb 16(%rax), %cl
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpb $23, %cl
+; CHECK-NEXT:    je .LBB3_16
+; CHECK-NEXT:  # %bb.11: # %bb2.i3
+; CHECK-NEXT:    cmpb $16, %cl
+; CHECK-NEXT:    je .LBB3_16
+; CHECK-NEXT:    jmp .LBB3_9
+; CHECK-NEXT:  .LBB3_13: # %bb2.i.i2
+; CHECK-NEXT:    movq 8(%rax), %rax
+; CHECK-NEXT:    movb 16(%rax), %cl
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpb $16, %cl
+; CHECK-NEXT:    je .LBB3_16
+; CHECK-NEXT:  # %bb.14: # %bb2.i.i2
+; CHECK-NEXT:    cmpb $23, %cl
+; CHECK-NEXT:    je .LBB3_16
+; CHECK-NEXT:    jmp .LBB3_9
 entry:
   %tmp4 = load i8, i8* null, align 8                  ; <i8> [#uses=3]
   switch i8 %tmp4, label %bb3 [

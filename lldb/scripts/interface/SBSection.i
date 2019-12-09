@@ -114,6 +114,7 @@ public:
     bool
     operator != (const lldb::SBSection &rhs);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all subsections in a lldb.SBSection object.'''
@@ -136,6 +137,7 @@ public:
         type = property(GetSectionType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSectionType") that represents the type of this section (code, data, etc.).''')
         target_byte_size = property(GetTargetByteSize, None, doc='''A read only property that returns the size of a target byte represented by this section as a number of host bytes.''')
     %}
+#endif
 
 private:
 

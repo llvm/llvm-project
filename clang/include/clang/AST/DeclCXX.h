@@ -1995,16 +1995,6 @@ public:
     return const_cast<CXXMethodDecl*>(this)->getMostRecentDecl();
   }
 
-  /// True if this method is user-declared and was not
-  /// deleted or defaulted on its first declaration.
-  bool isUserProvided() const {
-    auto *DeclAsWritten = this;
-    if (auto *Pattern = getTemplateInstantiationPattern())
-      DeclAsWritten = cast<CXXMethodDecl>(Pattern);
-    return !(DeclAsWritten->isDeleted() ||
-             DeclAsWritten->getCanonicalDecl()->isDefaulted());
-  }
-
   void addOverriddenMethod(const CXXMethodDecl *MD);
 
   using method_iterator = const CXXMethodDecl *const *;

@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -fopenmp-version=50 -DOMP50 -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -fopenmp-version=50 -DOMP50 -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4,expectedw %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4,expectedw %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,expectedw %s -fopenmp-version=50 -DOMP50 -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,expectedw %s -fopenmp-version=50 -DOMP50 -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized -Wno-openmp-loop-form
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized -Wno-openmp
 
 static int sii;
 // expected-note@+1 {{defined as threadprivate or thread local}}
@@ -318,7 +320,7 @@ int test_iteration_spaces() {
   for (int (*p)[4] = lb; p < lb + 8; ++p) {
   }
 
-  // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+  // expectedw-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp simd
   for (int a{0}; a<10; ++a) {
   }
@@ -399,19 +401,19 @@ int test_with_random_access_iterator() {
   #pragma omp simd
   for (GoodIter I = begin; I >= end; --I)
     ++I;
-  // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+  // expectedw-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp simd
   for (GoodIter I(begin); I < end; ++I)
     ++I;
-  // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+  // expectedw-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp simd
   for (GoodIter I(nullptr); I < end; ++I)
     ++I;
-  // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+  // expectedw-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp simd
   for (GoodIter I(0); I < end; ++I)
     ++I;
-  // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+  // expectedw-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp simd
   for (GoodIter I(1,2); I < end; ++I)
     ++I;
@@ -466,7 +468,7 @@ int test_with_random_access_iterator() {
     ++I;
 
   // Initializer is constructor without params.
-  // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+  // expectedw-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp simd
   for (Iter0 I; I < end0; ++I)
     ++I;
@@ -486,7 +488,7 @@ int test_with_random_access_iterator() {
   // Initializer is constructor with all default params.
   // expected-error@+4 {{invalid operands to binary expression ('Iter1' and 'float')}}
   // expected-error@+3 {{could not calculate number of iterations calling 'operator-' with upper and lower loop bounds}}
-  // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+  // expectedw-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp simd
   for (Iter1 I; I < end1; ++I) {
   }

@@ -171,8 +171,7 @@ entry:
 
   ; X64-LABEL: func_cf_tail
   ; X64:       leaq	target_func(%rip), %rax
-  ; X64:       movq __guard_dispatch_icall_fptr(%rip), %rcx
-  ; X64:       rex64 jmpq *%rcx            # TAILCALL
+  ; X64:       rex64 jmpq *__guard_dispatch_icall_fptr(%rip)         # TAILCALL
   ; X64-NOT:   callq
 }
 
@@ -205,7 +204,6 @@ entry:
   ; X64:            movq (%rcx), %rax
   ; X64-NEXT:       movq 8(%rax), %rax
   ; X64-NEXT:       movq __guard_dispatch_icall_fptr(%rip), %rdx
-  ; X64-NEXT:       addq $40, %rsp
   ; X64-NEXT:       rex64 jmpq *%rdx            # TAILCALL
   ; X64-NOT:   callq
 }

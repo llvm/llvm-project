@@ -259,7 +259,7 @@ int main(int argc, char **argv) {
 
 
 #pragma omp target
-#pragma omp teams distribute simd linear (a, b) // expected-error {{incomplete type 'S1' where a complete type is required}} expected-error {{linear variable with incomplete type 'S1'}} expected-error {{argument of a linear clause should be of integral or pointer type, not 'S2'}} expected-warning {{Non-trivial type 'const S2' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp teams distribute simd linear (a, b) // expected-error {{incomplete type 'S1' where a complete type is required}} expected-error {{linear variable with incomplete type 'S1'}} expected-error {{argument of a linear clause should be of integral or pointer type, not 'S2'}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target
@@ -267,7 +267,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target
-#pragma omp teams distribute simd linear(e, g) // expected-error {{argument of a linear clause should be of integral or pointer type, not 'S4'}} expected-error {{argument of a linear clause should be of integral or pointer type, not 'S5'}} expected-warning {{Non-trivial type 'S4' is mapped, only trivial types are guaranteed to be mapped correctly}} expected-warning {{Non-trivial type 'S5' is mapped, only trivial types are guaranteed to be mapped correctly}}
+#pragma omp teams distribute simd linear(e, g) // expected-error {{argument of a linear clause should be of integral or pointer type, not 'S4'}} expected-error {{argument of a linear clause should be of integral or pointer type, not 'S5'}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target

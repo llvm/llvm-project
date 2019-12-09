@@ -101,6 +101,7 @@ namespace lldb {
         bool
         operator != (lldb::SBTypeSummary &rhs);
 
+#ifdef SWIGPYTHON
         %pythoncode %{
             options = property(GetOptions, SetOptions)
             is_summary_string = property(IsSummaryString)
@@ -108,6 +109,7 @@ namespace lldb {
             is_function_name = property(IsFunctionCode)
             summary_data = property(GetData)
         %}
+#endif
 
     };
 

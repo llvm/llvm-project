@@ -8,6 +8,7 @@
 
 #include "Query.h"
 #include "QuerySession.h"
+#include "clang/AST/ASTDumper.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/TextDiagnostic.h"
@@ -128,7 +129,11 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
         }
         if (QS.DetailedASTOutput) {
           OS << "Binding for \"" << BI->first << "\":\n";
-          BI->second.dump(OS, AST->getSourceManager());
+          const ASTContext &Ctx = AST->getASTContext();
+          const SourceManager &SM = Ctx.getSourceManager();
+          ASTDumper Dumper(OS, &Ctx.getCommentCommandTraits(), &SM,
+                SM.getDiagnostics().getShowColors(), Ctx.getPrintingPolicy());
+          Dumper.Visit(BI->second);
           OS << "\n";
         }
       }

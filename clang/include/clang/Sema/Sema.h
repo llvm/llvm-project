@@ -3310,12 +3310,21 @@ public:
                                      const UnresolvedSetImpl &Fns,
                                      Expr *input, bool RequiresADL = true);
 
+  void LookupOverloadedBinOp(OverloadCandidateSet &CandidateSet,
+                             OverloadedOperatorKind Op,
+                             const UnresolvedSetImpl &Fns,
+                             ArrayRef<Expr *> Args, bool RequiresADL = true);
   ExprResult CreateOverloadedBinOp(SourceLocation OpLoc,
                                    BinaryOperatorKind Opc,
                                    const UnresolvedSetImpl &Fns,
                                    Expr *LHS, Expr *RHS,
                                    bool RequiresADL = true,
-                                   bool AllowRewrittenCandidates = true);
+                                   bool AllowRewrittenCandidates = true,
+                                   FunctionDecl *DefaultedFn = nullptr);
+  ExprResult BuildSynthesizedThreeWayComparison(SourceLocation OpLoc,
+                                                const UnresolvedSetImpl &Fns,
+                                                Expr *LHS, Expr *RHS,
+                                                FunctionDecl *DefaultedFn);
 
   ExprResult CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
                                                 SourceLocation RLoc,
@@ -5310,6 +5319,9 @@ public:
                                  InheritedConstructorInfo *ICI = nullptr,
                                  bool Diagnose = false);
 
+  /// Produce notes explaining why a defaulted function was defined as deleted.
+  void DiagnoseDeletedDefaultedFunction(FunctionDecl *FD);
+
   /// Declare the implicit default constructor for the given class.
   ///
   /// \param ClassDecl The class declaration into which the implicit
@@ -6509,6 +6521,8 @@ public:
 
   bool CheckExplicitlyDefaultedComparison(FunctionDecl *MD,
                                           DefaultedComparisonKind DCK);
+  void DefineDefaultedComparison(SourceLocation Loc, FunctionDecl *FD,
+                                 DefaultedComparisonKind DCK);
 
   //===--------------------------------------------------------------------===//
   // C++ Derived Classes

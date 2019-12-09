@@ -971,6 +971,7 @@ public:
     lldb::SBValue
     EvaluateExpression (const char *expr, const lldb::SBExpressionOptions &options);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         class modules_access(object):
             '''A helper object that will lazily hand out lldb.SBModule objects for a target when supplied an index, or by full or partial path.'''
@@ -1066,5 +1067,6 @@ public:
         code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
         platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')
     %}
+#endif
 };
 } // namespace lldb

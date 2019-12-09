@@ -330,6 +330,12 @@ namespace ISD {
     /// It is used to limit optimizations while the DAG is being optimized.
     STRICT_FP_EXTEND,
 
+    /// STRICT_FSETCC/STRICT_FSETCCS - Constrained versions of SETCC, used
+    /// for floating-point operands only.  STRICT_FSETCC performs a quiet
+    /// comparison operation, while STRICT_FSETCCS performs a signaling
+    /// comparison operation.
+    STRICT_FSETCC, STRICT_FSETCCS,
+
     /// FMA - Perform a * b + c with no intermediate rounding step.
     FMA,
 

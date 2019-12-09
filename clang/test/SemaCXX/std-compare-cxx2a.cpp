@@ -27,7 +27,7 @@ struct partial_ordering {
 } // namespace std
 
 auto missing_member_test() {
-  // expected-error@+1 {{standard library implementation of 'std::partial_ordering' is not supported; member 'equivalent' is missing}}
+  // expected-error@+1 {{standard library implementation of 'std::partial_ordering' is not supported; member 'less' is missing}}
   return (1.0 <=> 1.0);
 }
 
@@ -35,13 +35,13 @@ namespace std {
 inline namespace __1 {
 struct strong_ordering {
   long long value;
-  static const strong_ordering equivalent; // expected-note {{declared here}}
+  static const strong_ordering equal; // expected-note {{declared here}}
 };
 } // namespace __1
 } // namespace std
 
 auto test_non_constexpr_var() {
-  // expected-error@+1 {{standard library implementation of 'std::strong_ordering' is not supported; member 'equivalent' does not have expected form}}
+  // expected-error@+1 {{standard library implementation of 'std::strong_ordering' is not supported; member 'equal' does not have expected form}}
   return (1 <=> 0);
 }
 

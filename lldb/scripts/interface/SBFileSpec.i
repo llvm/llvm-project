@@ -80,6 +80,7 @@ public:
     void
     AppendPathComponent (const char *file_or_directory);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def __get_fullpath__(self):
             spec_dir = self.GetDirectory()
@@ -97,6 +98,7 @@ public:
         dirname = property(GetDirectory, None, doc='''A read only property that returns the path directory name as a python string.''')
         exists = property(Exists, None, doc='''A read only property that returns a boolean value that indicates if the file exists.''')
     %}
+#endif
 
 };
 

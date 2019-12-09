@@ -165,6 +165,7 @@ public:
     void
     SkipLLDBInitFiles (bool b);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def SetOutputFileHandle(self, file, transfer_ownership):
             "DEPRECATED, use SetOutputFile"
@@ -187,6 +188,7 @@ public:
                 file = sys.stderr
             self.SetErrorFile(SBFile.Create(file, borrow=True))
     %}
+#endif
 
 
     %extend {
@@ -514,6 +516,7 @@ n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
     lldb::SBError
     RunREPL (lldb::LanguageType language, const char *repl_options);
 
+#ifdef SWIGPYTHON
     %pythoncode%{
     def __iter__(self):
         '''Iterate over all targets in a lldb.SBDebugger object.'''
@@ -523,6 +526,7 @@ n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
         '''Return the number of targets in a lldb.SBDebugger object.'''
         return self.GetNumTargets()
     %}
+#endif
 
 }; // class SBDebugger
 

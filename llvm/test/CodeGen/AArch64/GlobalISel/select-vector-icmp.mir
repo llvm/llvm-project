@@ -2293,17 +2293,17 @@ body:             |
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[MOVi32imm]], %subreg.ssub
     ; CHECK: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, [[MOVi32imm]]
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr]].dsub
-    ; CHECK: [[USHLv2i32_:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY]], [[COPY2]]
+    ; CHECK: [[SHLv2i32_shift:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY]], 16
     ; CHECK: [[NEGv2i32_:%[0-9]+]]:fpr64 = NEGv2i32 [[COPY2]]
-    ; CHECK: [[SSHLv2i32_:%[0-9]+]]:fpr64 = SSHLv2i32 [[USHLv2i32_]], [[NEGv2i32_]]
+    ; CHECK: [[SSHLv2i32_:%[0-9]+]]:fpr64 = SSHLv2i32 [[SHLv2i32_shift]], [[NEGv2i32_]]
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 16
     ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVi32imm1]], %subreg.ssub
     ; CHECK: [[INSvi32gpr1:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG1]], 1, [[MOVi32imm1]]
     ; CHECK: [[COPY3:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr1]].dsub
-    ; CHECK: [[USHLv2i32_1:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY1]], [[COPY3]]
+    ; CHECK: [[SHLv2i32_shift1:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY1]], 16
     ; CHECK: [[NEGv2i32_1:%[0-9]+]]:fpr64 = NEGv2i32 [[COPY3]]
-    ; CHECK: [[SSHLv2i32_1:%[0-9]+]]:fpr64 = SSHLv2i32 [[USHLv2i32_1]], [[NEGv2i32_1]]
+    ; CHECK: [[SSHLv2i32_1:%[0-9]+]]:fpr64 = SSHLv2i32 [[SHLv2i32_shift1]], [[NEGv2i32_1]]
     ; CHECK: [[CMGTv2i32_:%[0-9]+]]:fpr64 = CMGTv2i32 [[SSHLv2i32_]], [[SSHLv2i32_1]]
     ; CHECK: $d0 = COPY [[CMGTv2i32_]]
     ; CHECK: RET_ReallyLR implicit $d0
@@ -2591,17 +2591,17 @@ body:             |
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[MOVi32imm]], %subreg.ssub
     ; CHECK: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, [[MOVi32imm]]
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr]].dsub
-    ; CHECK: [[USHLv2i32_:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY]], [[COPY2]]
+    ; CHECK: [[SHLv2i32_shift:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY]], 16
     ; CHECK: [[NEGv2i32_:%[0-9]+]]:fpr64 = NEGv2i32 [[COPY2]]
-    ; CHECK: [[SSHLv2i32_:%[0-9]+]]:fpr64 = SSHLv2i32 [[USHLv2i32_]], [[NEGv2i32_]]
+    ; CHECK: [[SSHLv2i32_:%[0-9]+]]:fpr64 = SSHLv2i32 [[SHLv2i32_shift]], [[NEGv2i32_]]
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 16
     ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVi32imm1]], %subreg.ssub
     ; CHECK: [[INSvi32gpr1:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG1]], 1, [[MOVi32imm1]]
     ; CHECK: [[COPY3:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr1]].dsub
-    ; CHECK: [[USHLv2i32_1:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY1]], [[COPY3]]
+    ; CHECK: [[SHLv2i32_shift1:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY1]], 16
     ; CHECK: [[NEGv2i32_1:%[0-9]+]]:fpr64 = NEGv2i32 [[COPY3]]
-    ; CHECK: [[SSHLv2i32_1:%[0-9]+]]:fpr64 = SSHLv2i32 [[USHLv2i32_1]], [[NEGv2i32_1]]
+    ; CHECK: [[SSHLv2i32_1:%[0-9]+]]:fpr64 = SSHLv2i32 [[SHLv2i32_shift1]], [[NEGv2i32_1]]
     ; CHECK: [[CMGEv2i32_:%[0-9]+]]:fpr64 = CMGEv2i32 [[SSHLv2i32_]], [[SSHLv2i32_1]]
     ; CHECK: $d0 = COPY [[CMGEv2i32_]]
     ; CHECK: RET_ReallyLR implicit $d0
@@ -2889,17 +2889,17 @@ body:             |
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[MOVi32imm]], %subreg.ssub
     ; CHECK: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, [[MOVi32imm]]
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr]].dsub
-    ; CHECK: [[USHLv2i32_:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY]], [[COPY2]]
+    ; CHECK: [[SHLv2i32_shift:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY]], 16
     ; CHECK: [[NEGv2i32_:%[0-9]+]]:fpr64 = NEGv2i32 [[COPY2]]
-    ; CHECK: [[SSHLv2i32_:%[0-9]+]]:fpr64 = SSHLv2i32 [[USHLv2i32_]], [[NEGv2i32_]]
+    ; CHECK: [[SSHLv2i32_:%[0-9]+]]:fpr64 = SSHLv2i32 [[SHLv2i32_shift]], [[NEGv2i32_]]
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 16
     ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVi32imm1]], %subreg.ssub
     ; CHECK: [[INSvi32gpr1:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG1]], 1, [[MOVi32imm1]]
     ; CHECK: [[COPY3:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr1]].dsub
-    ; CHECK: [[USHLv2i32_1:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY1]], [[COPY3]]
+    ; CHECK: [[SHLv2i32_shift1:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY1]], 16
     ; CHECK: [[NEGv2i32_1:%[0-9]+]]:fpr64 = NEGv2i32 [[COPY3]]
-    ; CHECK: [[SSHLv2i32_1:%[0-9]+]]:fpr64 = SSHLv2i32 [[USHLv2i32_1]], [[NEGv2i32_1]]
+    ; CHECK: [[SSHLv2i32_1:%[0-9]+]]:fpr64 = SSHLv2i32 [[SHLv2i32_shift1]], [[NEGv2i32_1]]
     ; CHECK: [[CMGTv2i32_:%[0-9]+]]:fpr64 = CMGTv2i32 [[SSHLv2i32_1]], [[SSHLv2i32_]]
     ; CHECK: $d0 = COPY [[CMGTv2i32_]]
     ; CHECK: RET_ReallyLR implicit $d0
@@ -3187,17 +3187,17 @@ body:             |
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[MOVi32imm]], %subreg.ssub
     ; CHECK: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, [[MOVi32imm]]
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr]].dsub
-    ; CHECK: [[USHLv2i32_:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY]], [[COPY2]]
+    ; CHECK: [[SHLv2i32_shift:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY]], 16
     ; CHECK: [[NEGv2i32_:%[0-9]+]]:fpr64 = NEGv2i32 [[COPY2]]
-    ; CHECK: [[SSHLv2i32_:%[0-9]+]]:fpr64 = SSHLv2i32 [[USHLv2i32_]], [[NEGv2i32_]]
+    ; CHECK: [[SSHLv2i32_:%[0-9]+]]:fpr64 = SSHLv2i32 [[SHLv2i32_shift]], [[NEGv2i32_]]
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 16
     ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVi32imm1]], %subreg.ssub
     ; CHECK: [[INSvi32gpr1:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG1]], 1, [[MOVi32imm1]]
     ; CHECK: [[COPY3:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr1]].dsub
-    ; CHECK: [[USHLv2i32_1:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY1]], [[COPY3]]
+    ; CHECK: [[SHLv2i32_shift1:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY1]], 16
     ; CHECK: [[NEGv2i32_1:%[0-9]+]]:fpr64 = NEGv2i32 [[COPY3]]
-    ; CHECK: [[SSHLv2i32_1:%[0-9]+]]:fpr64 = SSHLv2i32 [[USHLv2i32_1]], [[NEGv2i32_1]]
+    ; CHECK: [[SSHLv2i32_1:%[0-9]+]]:fpr64 = SSHLv2i32 [[SHLv2i32_shift1]], [[NEGv2i32_1]]
     ; CHECK: [[CMGEv2i32_:%[0-9]+]]:fpr64 = CMGEv2i32 [[SSHLv2i32_1]], [[SSHLv2i32_]]
     ; CHECK: $d0 = COPY [[CMGEv2i32_]]
     ; CHECK: RET_ReallyLR implicit $d0

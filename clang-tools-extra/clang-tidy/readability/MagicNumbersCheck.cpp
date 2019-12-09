@@ -21,12 +21,12 @@
 using namespace clang::ast_matchers;
 using namespace clang::ast_type_traits;
 
-namespace {
+namespace clang {
 
-bool isUsedToInitializeAConstant(const MatchFinder::MatchResult &Result,
-                                 const DynTypedNode &Node) {
+static bool isUsedToInitializeAConstant(const MatchFinder::MatchResult &Result,
+                                        const DynTypedNode &Node) {
 
-  const auto *AsDecl = Node.get<clang::DeclaratorDecl>();
+  const auto *AsDecl = Node.get<DeclaratorDecl>();
   if (AsDecl) {
     if (AsDecl->getType().isConstQualified())
       return true;
@@ -34,7 +34,7 @@ bool isUsedToInitializeAConstant(const MatchFinder::MatchResult &Result,
     return AsDecl->isImplicit();
   }
 
-  if (Node.get<clang::EnumConstantDecl>() != nullptr)
+  if (Node.get<EnumConstantDecl>() != nullptr)
     return true;
 
   return llvm::any_of(Result.Context->getParents(Node),
@@ -43,9 +43,18 @@ bool isUsedToInitializeAConstant(const MatchFinder::MatchResult &Result,
                       });
 }
 
-} // namespace
+static bool isUsedToDefineABitField(const MatchFinder::MatchResult &Result,
+                                    const DynTypedNode &Node) {
+  const auto *AsFieldDecl = Node.get<FieldDecl>();
+  if (AsFieldDecl && AsFieldDecl->isBitField())
+    return true;
 
-namespace clang {
+  return llvm::any_of(Result.Context->getParents(Node),
+                      [&Result](const DynTypedNode &Parent) {
+                        return isUsedToDefineABitField(Result, Parent);
+                      });
+}
+
 namespace tidy {
 namespace readability {
 
@@ -56,6 +65,7 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreAllFloatingPointValues(
           Options.get("IgnoreAllFloatingPointValues", false)),
+      IgnoreBitFieldsWidths(Options.get("IgnoreBitFieldsWidths", true)),
       IgnorePowersOf2IntegerValues(
           Options.get("IgnorePowersOf2IntegerValues", false)) {
   // Process the set of ignored integer values.
@@ -163,6 +173,16 @@ bool MagicNumbersCheck::isSyntheticValue(const SourceManager *SourceManager,
       SourceManager->getBuffer(FileOffset.first)->getBufferIdentifier();
 
   return BufferIdentifier.empty();
+}
+
+bool MagicNumbersCheck::isBitFieldWidth(
+    const clang::ast_matchers::MatchFinder::MatchResult &Result,
+    const IntegerLiteral &Literal) const {
+  return IgnoreBitFieldsWidths &&
+         llvm::any_of(Result.Context->getParents(Literal),
+                      [&Result](const DynTypedNode &Parent) {
+                        return isUsedToDefineABitField(Result, Parent);
+                      });
 }
 
 } // namespace readability

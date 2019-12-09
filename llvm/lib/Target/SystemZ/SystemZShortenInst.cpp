@@ -313,6 +313,14 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
       Changed |= shortenOn01(MI, SystemZ::CEBR);
       break;
 
+    case SystemZ::WFKDB:
+      Changed |= shortenOn01(MI, SystemZ::KDBR);
+      break;
+
+    case SystemZ::WFKSB:
+      Changed |= shortenOn01(MI, SystemZ::KEBR);
+      break;
+
     case SystemZ::VL32:
       // For z13 we prefer LDE over LE to avoid partial register dependencies.
       Changed |= shortenOn0(MI, SystemZ::LDE32);

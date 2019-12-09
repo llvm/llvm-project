@@ -74,6 +74,7 @@ public:
     bool
     TestEmulation (lldb::SBStream &output_stream, const char *test_file);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def __mnemonic_property__ (self):
             return self.GetMnemonic (target)
@@ -93,6 +94,7 @@ public:
         size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes for this instruction as an integer.''')
         is_branch = property(DoesBranch, None, doc='''A read only property that returns a boolean value that indicates if this instruction is a branch instruction.''')
     %}
+#endif
 
 
 };
