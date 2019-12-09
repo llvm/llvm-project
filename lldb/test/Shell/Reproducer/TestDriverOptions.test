@@ -1,16 +1,19 @@
 # Check that errors are propagated to the driver.
 #
-# RUN: env LLDB_REPRODUCER_DISABLE_CAPTURE=1 not %lldb --capture --capture-path %t/bogus/bogus 2>&1 | FileCheck %s --check-prefix INVALID-CAPTURE
-# RUN: env LLDB_REPRODUCER_DISABLE_CAPTURE=1 not %lldb --replay %t/bogus/bogus  2>&1 | FileCheck %s --check-prefix INVALID-REPLAY
+# RUN: not %lldb --capture --capture-path %t/bogus/bogus 2>&1 | FileCheck %s --check-prefix INVALID-CAPTURE
+# RUN: not %lldb --replay %t/bogus/bogus  2>&1 | FileCheck %s --check-prefix INVALID-REPLAY
 #
 # INVALID-CAPTURE: unable to create reproducer directory
 # INVALID-REPLAY: unable to load reproducer index
 
 # Check that all option combination work as expected.
 #
-# RUN: env LLDB_REPRODUCER_DISABLE_CAPTURE=1 %lldb --capture --capture-path %t.repro -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
-# RUN: env LLDB_REPRODUCER_DISABLE_CAPTURE=1 %lldb --capture -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
-# RUN: env LLDB_REPRODUCER_DISABLE_CAPTURE=1 %lldb --capture-path %t.repro -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix WARNING --check-prefix STATUS-CAPTURE
+# RUN: %lldb --capture --capture-path %t.repro -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
+# RUN: %lldb --capture -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
+#
+# BEGIN SWIFT-LLDB CHANGE (--capture does not need to be specified, as it's on by default)
+# RUN: %lldb --capture-path %t.repro -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
+# END SWIFT-LLDB-CHANGE
 #
 # NO-WARNING-NOT: warning: -capture-path specified without -capture
 # WARNING: warning: -capture-path specified without -capture
