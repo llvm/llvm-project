@@ -1,6 +1,58 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spv.CompositeConstruct
+//===----------------------------------------------------------------------===//
+
+func @composite_construct_vector(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<3xf32> {
+  // CHECK: spv.CompositeConstruct {{%.*}}, {{%.*}}, {{%.*}} : vector<3xf32>
+  %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : vector<3xf32>
+  return %0: vector<3xf32>
+}
+
+// -----
+
+func @composite_construct_struct(%arg0: vector<3xf32>, %arg1: !spv.array<4xf32>, %arg2 : !spv.struct<f32>) -> !spv.struct<vector<3xf32>, !spv.array<4xf32>, !spv.struct<f32>> {
+  // CHECK: spv.CompositeConstruct %arg0, %arg1, %arg2 : !spv.struct<vector<3xf32>, !spv.array<4 x f32>, !spv.struct<f32>>
+  %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : !spv.struct<vector<3xf32>, !spv.array<4xf32>, !spv.struct<f32>>
+  return %0: !spv.struct<vector<3xf32>, !spv.array<4xf32>, !spv.struct<f32>>
+}
+
+// -----
+
+func @composite_construct_empty_struct() -> !spv.struct<> {
+  // CHECK: spv.CompositeConstruct : !spv.struct<>
+  %0 = spv.CompositeConstruct : !spv.struct<>
+  return %0: !spv.struct<>
+}
+
+// -----
+
+func @composite_construct_invalid_num_of_elements(%arg0: f32) -> f32 {
+  // expected-error @+1 {{result type must be a composite type, but provided 'f32'}}
+  %0 = spv.CompositeConstruct %arg0 : f32
+  return %0: f32
+}
+
+// -----
+
+func @composite_construct_invalid_result_type(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<3xf32> {
+  // expected-error @+1 {{has incorrect number of operands: expected 3, but provided 2}}
+  %0 = spv.CompositeConstruct %arg0, %arg2 : vector<3xf32>
+  return %0: vector<3xf32>
+}
+
+// -----
+
+func @composite_construct_invalid_operand_type(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<3xi32> {
+  // expected-error @+1 {{operand type mismatch: expected operand type 'i32', but provided 'f32'}}
+  %0 = "spv.CompositeConstruct" (%arg0, %arg1, %arg2) : (f32, f32, f32) -> vector<3xi32>
+  return %0: vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spv.CompositeExtractOp
 //===----------------------------------------------------------------------===//
 
