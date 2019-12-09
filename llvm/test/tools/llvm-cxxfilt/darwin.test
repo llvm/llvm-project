@@ -1,4 +1,0 @@
-REQUIRES: system-darwin
-
-RUN: llvm-cxxfilt __Z1fv | FileCheck %s
-CHECK: f()
