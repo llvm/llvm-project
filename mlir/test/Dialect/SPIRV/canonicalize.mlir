@@ -187,6 +187,54 @@ func @iadd_zero(%arg0: i32) -> (i32, i32) {
   return %0, %1: i32, i32
 }
 
+// CHECK-LABEL: @const_fold_scalar_iadd_normal
+func @const_fold_scalar_iadd_normal() -> (i32, i32, i32) {
+  %c5 = spv.constant 5 : i32
+  %cn8 = spv.constant -8 : i32
+
+  // CHECK: spv.constant 10
+  // CHECK: spv.constant -16
+  // CHECK: spv.constant -3
+  %0 = spv.IAdd %c5, %c5 : i32
+  %1 = spv.IAdd %cn8, %cn8 : i32
+  %2 = spv.IAdd %c5, %cn8 : i32
+  return %0, %1, %2: i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_iadd_flow
+func @const_fold_scalar_iadd_flow() -> (i32, i32, i32, i32) {
+  %c1 = spv.constant 1 : i32
+  %c2 = spv.constant 2 : i32
+  %c3 = spv.constant 4294967295 : i32  // 2^32 - 1: 0xffff ffff
+  %c4 = spv.constant -2147483648 : i32 // -2^31   : 0x8000 0000
+  %c5 = spv.constant -1 : i32          //         : 0xffff ffff
+  %c6 = spv.constant -2 : i32          //         : 0xffff fffe
+
+  // 0x0000 0001 + 0xffff ffff = 0x1 0000 0000 -> 0x0000 0000
+  // CHECK: spv.constant 0
+  %0 = spv.IAdd %c1, %c3 : i32
+  // 0x0000 0002 + 0xffff ffff = 0x1 0000 0001 -> 0x0000 0001
+  // CHECK: spv.constant 1
+  %1 = spv.IAdd %c2, %c3 : i32
+  // 0x8000 0000 + 0xffff ffff = 0x1 7fff ffff -> 0x7fff ffff
+  // CHECK: spv.constant 2147483647
+  %2 = spv.IAdd %c4, %c5 : i32
+  // 0x8000 0000 + 0xffff fffe = 0x1 7fff fffe -> 0x7fff fffe
+  // CHECK: spv.constant 2147483646
+  %3 = spv.IAdd %c4, %c6 : i32
+  return %0, %1, %2, %3: i32, i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_vector_iadd
+func @const_fold_vector_iadd() -> vector<3xi32> {
+  %vc1 = spv.constant dense<[42, -55, 127]> : vector<3xi32>
+  %vc2 = spv.constant dense<[-3, -15, 28]> : vector<3xi32>
+
+  // CHECK: spv.constant dense<[39, -70, 155]>
+  %0 = spv.IAdd %vc1, %vc2 : vector<3xi32>
+  return %0: vector<3xi32>
+}
+
 // -----
 
 //===----------------------------------------------------------------------===//
@@ -203,6 +251,113 @@ func @imul_zero_one(%arg0: i32) -> (i32, i32) {
   %1 = spv.IMul %one, %arg0 : i32
   // CHECK: return %[[ZERO]], %[[ARG]]
   return %0, %1: i32, i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_imul_normal
+func @const_fold_scalar_imul_normal() -> (i32, i32, i32) {
+  %c5 = spv.constant 5 : i32
+  %cn8 = spv.constant -8 : i32
+  %c7 = spv.constant 7 : i32
+
+  // CHECK: spv.constant 35
+  // CHECK: spv.constant -40
+  // CHECK: spv.constant -56
+  %0 = spv.IMul %c7, %c5 : i32
+  %1 = spv.IMul %c5, %cn8 : i32
+  %2 = spv.IMul %cn8, %c7 : i32
+  return %0, %1, %2: i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_imul_flow
+func @const_fold_scalar_imul_flow() -> (i32, i32, i32) {
+  %c1 = spv.constant 2 : i32
+  %c2 = spv.constant 4 : i32
+  %c3 = spv.constant 4294967295 : i32  // 2^32 - 1 : 0xffff ffff
+  %c4 = spv.constant -2147483649 : i32 // -2^31 - 1: 0x7fff ffff
+
+  // (0xffff ffff << 1) = 0x1 ffff fffe -> 0xffff fffe
+  // CHECK: %[[CST2:.*]] = spv.constant -2
+  %0 = spv.IMul %c1, %c3 : i32
+  // (0x7fff ffff << 1) = 0x0 ffff fffe -> 0xffff fffe
+  %1 = spv.IMul %c1, %c4 : i32
+  // (0x7fff ffff << 2) = 0x1 ffff fffc -> 0xffff fffc
+  // CHECK: %[[CST4:.*]] = spv.constant -4
+  %2 = spv.IMul %c4, %c2 : i32
+  // CHECK: return %[[CST2]], %[[CST2]], %[[CST4]]
+  return %0, %1, %2: i32, i32, i32
+}
+
+
+// CHECK-LABEL: @const_fold_vector_imul
+func @const_fold_vector_imul() -> vector<3xi32> {
+  %vc1 = spv.constant dense<[42, -55, 127]> : vector<3xi32>
+  %vc2 = spv.constant dense<[-3, -15, 28]> : vector<3xi32>
+
+  // CHECK: spv.constant dense<[-126, 825, 3556]>
+  %0 = spv.IMul %vc1, %vc2 : vector<3xi32>
+  return %0: vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.ISub
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @isub_x_x
+func @isub_x_x(%arg0: i32) -> i32 {
+  // CHECK: spv.constant 0
+  %0 = spv.ISub %arg0, %arg0: i32
+  return %0: i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_isub_normal
+func @const_fold_scalar_isub_normal() -> (i32, i32, i32) {
+  %c5 = spv.constant 5 : i32
+  %cn8 = spv.constant -8 : i32
+  %c7 = spv.constant 7 : i32
+
+  // CHECK: spv.constant 2
+  // CHECK: spv.constant 13
+  // CHECK: spv.constant -15
+  %0 = spv.ISub %c7, %c5 : i32
+  %1 = spv.ISub %c5, %cn8 : i32
+  %2 = spv.ISub %cn8, %c7 : i32
+  return %0, %1, %2: i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_isub_flow
+func @const_fold_scalar_isub_flow() -> (i32, i32, i32, i32) {
+  %c1 = spv.constant 0 : i32
+  %c2 = spv.constant 1 : i32
+  %c3 = spv.constant 4294967295 : i32  // 2^32 - 1 : 0xffff ffff
+  %c4 = spv.constant -2147483649 : i32 // -2^31 - 1: 0x7fff ffff
+  %c5 = spv.constant -1 : i32          //          : 0xffff ffff
+  %c6 = spv.constant -2 : i32          //          : 0xffff fffe
+
+  // 0x0000 0000 - 0xffff ffff -> 0x0000 0000 + 0x0000 0001 = 0x0000 0001
+  // CHECK: spv.constant 1
+  %0 = spv.ISub %c1, %c3 : i32
+  // 0x0000 0001 - 0xffff ffff -> 0x0000 0001 + 0x0000 0001 = 0x0000 0002
+  // CHECK: spv.constant 2
+  %1 = spv.ISub %c2, %c3 : i32
+  // 0xffff ffff - 0x7fff ffff -> 0xffff ffff + 0x8000 0001 = 0x1 8000 0000
+  // CHECK: spv.constant -2147483648
+  %2 = spv.ISub %c5, %c4 : i32
+  // 0xffff fffe - 0x7fff ffff -> 0xffff fffe + 0x8000 0001 = 0x1 7fff ffff
+  // CHECK: spv.constant 2147483647
+  %3 = spv.ISub %c6, %c4 : i32
+  return %0, %1, %2, %3: i32, i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_vector_isub
+func @const_fold_vector_isub() -> vector<3xi32> {
+  %vc1 = spv.constant dense<[42, -55, 127]> : vector<3xi32>
+  %vc2 = spv.constant dense<[-3, -15, 28]> : vector<3xi32>
+
+  // CHECK: spv.constant dense<[45, -40, 99]>
+  %0 = spv.ISub %vc1, %vc2 : vector<3xi32>
+  return %0: vector<3xi32>
 }
 
 // -----
