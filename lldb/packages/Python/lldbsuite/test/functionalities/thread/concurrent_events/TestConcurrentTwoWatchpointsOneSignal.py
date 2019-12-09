@@ -15,7 +15,6 @@ class ConcurrentTwoWatchpointsOneSignal(ConcurrentEventsBase):
     @skipIfFreeBSD  # timing out on buildbot
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
-    @expectedFailureAll(bugnumber="llvm.org/pr35228", archs=["arm", "aarch64"])
     @expectedFailureNetBSD
     @add_test_categories(["watchpoint"])
     def test(self):

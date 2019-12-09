@@ -1,4 +1,6 @@
 RUN: llvm-symbolizer --inlining --obj=%p/Inputs/dwarfdump-inl-test.elf-x86-64 0x8dc 0xa05 0x987 | FileCheck %s
+RUN: llvm-symbolizer -i --obj=%p/Inputs/dwarfdump-inl-test.elf-x86-64 0x8dc 0xa05 0x987 | FileCheck %s
+RUN: llvm-symbolizer --inlines --obj=%p/Inputs/dwarfdump-inl-test.elf-x86-64 0x8dc 0xa05 0x987 | FileCheck %s
 
 CHECK:      inlined_h
 CHECK-NEXT: dwarfdump-inl-test.h:2

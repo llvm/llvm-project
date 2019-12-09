@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf \
 ; RUN:   -disable-mve-tail-predication=false -loop-vectorize -S < %s | \
-; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
+; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=-mve \
 ; RUN:   -disable-mve-tail-predication=false -loop-vectorize \

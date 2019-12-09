@@ -7230,42 +7230,46 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
   return false;
 }
 
-// llvm.dbg.value is far away from the value then iSel may not be able
-// handle it properly. iSel will drop llvm.dbg.value if it can not
-// find a node corresponding to the value.
+// A llvm.dbg.value may be using a value before its definition, due to
+// optimizations in this pass and others. Scan for such dbg.values, and rescue
+// them by moving the dbg.value to immediately after the value definition.
+// FIXME: Ideally this should never be necessary, and this has the potential
+// to re-order dbg.value intrinsics.
 bool CodeGenPrepare::placeDbgValues(Function &F) {
   bool MadeChange = false;
+  DominatorTree DT(F);
+
   for (BasicBlock &BB : F) {
-    Instruction *PrevNonDbgInst = nullptr;
     for (BasicBlock::iterator BI = BB.begin(), BE = BB.end(); BI != BE;) {
       Instruction *Insn = &*BI++;
       DbgValueInst *DVI = dyn_cast<DbgValueInst>(Insn);
-      // Leave dbg.values that refer to an alloca alone. These
-      // intrinsics describe the address of a variable (= the alloca)
-      // being taken.  They should not be moved next to the alloca
-      // (and to the beginning of the scope), but rather stay close to
-      // where said address is used.
-      if (!DVI || (DVI->getValue() && isa<AllocaInst>(DVI->getValue()))) {
-        PrevNonDbgInst = Insn;
+      if (!DVI)
         continue;
-      }
 
       Instruction *VI = dyn_cast_or_null<Instruction>(DVI->getValue());
-      if (VI && VI != PrevNonDbgInst && !VI->isTerminator()) {
-        // If VI is a phi in a block with an EHPad terminator, we can't insert
-        // after it.
-        if (isa<PHINode>(VI) && VI->getParent()->getTerminator()->isEHPad())
-          continue;
-        LLVM_DEBUG(dbgs() << "Moving Debug Value before :\n"
-                          << *DVI << ' ' << *VI);
-        DVI->removeFromParent();
-        if (isa<PHINode>(VI))
-          DVI->insertBefore(&*VI->getParent()->getFirstInsertionPt());
-        else
-          DVI->insertAfter(VI);
-        MadeChange = true;
-        ++NumDbgValueMoved;
-      }
+
+      if (!VI || VI->isTerminator())
+        continue;
+
+      // If VI is a phi in a block with an EHPad terminator, we can't insert
+      // after it.
+      if (isa<PHINode>(VI) && VI->getParent()->getTerminator()->isEHPad())
+        continue;
+
+      // If the defining instruction dominates the dbg.value, we do not need
+      // to move the dbg.value.
+      if (DT.dominates(VI, DVI))
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Moving Debug Value before :\n"
+                        << *DVI << ' ' << *VI);
+      DVI->removeFromParent();
+      if (isa<PHINode>(VI))
+        DVI->insertBefore(&*VI->getParent()->getFirstInsertionPt());
+      else
+        DVI->insertAfter(VI);
+      MadeChange = true;
+      ++NumDbgValueMoved;
     }
   }
   return MadeChange;

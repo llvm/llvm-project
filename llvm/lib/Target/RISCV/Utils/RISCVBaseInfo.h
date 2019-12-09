@@ -48,20 +48,26 @@ enum {
   InstFormatMask = 31
 };
 
+// RISC-V Specific Machine Operand Flags
 enum {
-  MO_None,
-  MO_CALL,
-  MO_PLT,
-  MO_LO,
-  MO_HI,
-  MO_PCREL_LO,
-  MO_PCREL_HI,
-  MO_GOT_HI,
-  MO_TPREL_LO,
-  MO_TPREL_HI,
-  MO_TPREL_ADD,
-  MO_TLS_GOT_HI,
-  MO_TLS_GD_HI,
+  MO_None = 0,
+  MO_CALL = 1,
+  MO_PLT = 2,
+  MO_LO = 3,
+  MO_HI = 4,
+  MO_PCREL_LO = 5,
+  MO_PCREL_HI = 6,
+  MO_GOT_HI = 7,
+  MO_TPREL_LO = 8,
+  MO_TPREL_HI = 9,
+  MO_TPREL_ADD = 10,
+  MO_TLS_GOT_HI = 11,
+  MO_TLS_GD_HI = 12,
+
+  // Used to differentiate between target-specific "direct" flags and "bitmask"
+  // flags. A machine operand can only have one "direct" flag, but can have
+  // multiple "bitmask" flags.
+  MO_DIRECT_FLAG_MASK = 15
 };
 } // namespace RISCVII
 

@@ -522,6 +522,33 @@ defm vstrhq: scatter_offset_both<!listconcat(T.All16, T.Int32), u16, 1>;
 defm vstrwq: scatter_offset_both<T.All32, u32, 2>;
 defm vstrdq: scatter_offset_both<T.Int64, u64, 3>;
 
+multiclass PredicatedImmediateVectorShift<
+    Immediate immtype, string predIntrName, list<dag> unsignedFlag = []> {
+  foreach predIntr = [IRInt<predIntrName, [Vector, Predicate]>] in {
+    def _m_n: Intrinsic<Vector, (args Vector:$inactive, Vector:$v,
+                                      immtype:$sh, Predicate:$pred),
+       !con((predIntr $v, $sh), !dag(predIntr, unsignedFlag, ?),
+            (predIntr $pred, $inactive))>;
+    def _x_n: Intrinsic<Vector, (args Vector:$v, immtype:$sh,
+                                      Predicate:$pred),
+       !con((predIntr $v, $sh), !dag(predIntr, unsignedFlag, ?),
+            (predIntr $pred, (undef Vector)))>;
+  }
+}
+
+let params = T.Int in {
+  def vshlq_n: Intrinsic<Vector, (args Vector:$v, imm_0toNm1:$sh),
+                         (shl $v, (splat (Scalar $sh)))>;
+  defm vshlq: PredicatedImmediateVectorShift<imm_0toNm1, "shl_imm_predicated">;
+
+  let pnt = PNT_NType in {
+    def vshrq_n: Intrinsic<Vector, (args Vector:$v, imm_1toN:$sh),
+                            (immshr $v, $sh, (unsignedflag Scalar))>;
+    defm vshrq: PredicatedImmediateVectorShift<imm_1toN, "shr_imm_predicated",
+                                     [(unsignedflag Scalar)]>;
+  }
+}
+
 // Base class for the scalar shift intrinsics.
 class ScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
   Intrinsic<argtype, !con((args argtype:$value), shiftCountArg), shiftCodeGen> {
@@ -594,6 +621,68 @@ def vadciq_m: Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
              0, $pred):$pair,
          (store (and 1, (lshr (xval $pair, 1), 29)), $carry),
          (xval $pair, 0))>;
+}
+
+multiclass VectorComplexAddPred<dag halving, dag angle> {
+  def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
+     (IRInt<"vcaddq", [Vector]> halving, angle, $a, $b)>;
+  def _m : Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
+                              Predicate:$pred),
+     (IRInt<"vcaddq_predicated", [Vector, Predicate]>
+       halving, angle, $inactive, $a, $b, $pred)>;
+  def _x : Intrinsic<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
+     (IRInt<"vcaddq_predicated", [Vector, Predicate]>
+       halving, angle, (undef Vector), $a, $b, $pred)>;
+}
+
+multiclass VectorComplexMulPred<dag angle> {
+  def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
+    (IRInt<"vcmulq", [Vector]> angle, $a, $b)>;
+  def _m : Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
+                              Predicate:$pred),
+    (IRInt<"vcmulq_predicated", [Vector, Predicate]> angle, $inactive, $a, $b,
+      $pred)>;
+  def _x : Intrinsic<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"vcmulq_predicated", [Vector, Predicate]> angle, (undef Vector), $a,
+      $b, $pred)>;
+}
+
+multiclass VectorComplexMLAPred<dag angle> {
+  def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b, Vector:$c),
+    (IRInt<"vcmlaq", [Vector]> angle, $a, $b, $c)>;
+  def _m : Intrinsic<Vector, (args Vector:$a, Vector:$b, Vector:$c,
+                                   Predicate:$pred),
+    (IRInt<"vcmlaq_predicated", [Vector, Predicate]> angle, $a, $b, $c, $pred)>;
+}
+
+multiclass VectorComplexAddAngle<dag halving> {
+  defm _rot90 : VectorComplexAddPred<halving, (u32 0)>;
+  defm _rot270 : VectorComplexAddPred<halving, (u32 1)>;
+}
+
+multiclass VectorComplexMulAngle {
+  defm ""      : VectorComplexMulPred<(u32 0)>;
+  defm _rot90  : VectorComplexMulPred<(u32 1)>;
+  defm _rot180 : VectorComplexMulPred<(u32 2)>;
+  defm _rot270 : VectorComplexMulPred<(u32 3)>;
+}
+
+multiclass VectorComplexMLAAngle {
+  defm ""      : VectorComplexMLAPred<(u32 0)>;
+  defm _rot90  : VectorComplexMLAPred<(u32 1)>;
+  defm _rot180 : VectorComplexMLAPred<(u32 2)>;
+  defm _rot270 : VectorComplexMLAPred<(u32 3)>;
+}
+
+let params = T.Usual in
+defm vcaddq : VectorComplexAddAngle<(u32 0)>;
+
+let params = T.Signed in
+defm vhcaddq : VectorComplexAddAngle<(u32 1)>;
+
+let params = T.Float in {
+defm vcmulq : VectorComplexMulAngle;
+defm vcmlaq : VectorComplexMLAAngle;
 }
 
 foreach desttype = T.All in {

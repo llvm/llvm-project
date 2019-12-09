@@ -1,0 +1,375 @@
+## Check llvm-readobj and llvm-readelf print relocations as expected.
+
+## Show that ELF64 is dumped correctly.
+# RUN: yaml2obj %s --docnum=1 -o %t64
+# RUN: llvm-readobj -r %t64 \
+# RUN:   | FileCheck %s --check-prefix=LLVM-64 --strict-whitespace --match-full-lines
+# RUN: llvm-readobj --relocs %t64 \
+# RUN:   | FileCheck %s --check-prefix=LLVM-64 --strict-whitespace --match-full-lines
+# RUN: llvm-readobj --relocations %t64 \
+# RUN:   | FileCheck %s --check-prefix=LLVM-64 --strict-whitespace --match-full-lines
+
+#      LLVM-64:Relocations [
+# LLVM-64-NEXT:  Section (2) .rel.text {
+# LLVM-64-NEXT:    0x0 R_X86_64_NONE rel_0 0x0
+# LLVM-64-NEXT:    0x1 R_X86_64_PC32 rel_neg 0x0
+# LLVM-64-NEXT:    0x5 R_X86_64_PLT32 rel_pos 0x0
+# LLVM-64-NEXT:    0x9 R_X86_64_64 rel_64 0x0
+# LLVM-64-NEXT:  }
+# LLVM-64-NEXT:  Section (3) .rela.text {
+# LLVM-64-NEXT:    0x0 R_X86_64_NONE rela_0 0x0
+# LLVM-64-NEXT:    0x1 R_X86_64_PC32 rela_neg 0xFFFFFFFFFFFFFFFF
+# LLVM-64-NEXT:    0x5 R_X86_64_PLT32 rela_pos 0x2
+# LLVM-64-NEXT:    0xFFFFFFFFFFFFFFFF R_X86_64_64 rela_minneg 0x8000000000000000
+# LLVM-64-NEXT:    0x9 R_X86_64_32S rela_maxpos 0x7FFFFFFFFFFFFFFF
+# LLVM-64-NEXT:  }
+# LLVM-64-NEXT:]
+
+# RUN: llvm-readelf -r %t64 \
+# RUN:   | FileCheck %s --check-prefix=GNU-64 --strict-whitespace --match-full-lines
+# RUN: llvm-readelf --relocs %t64 \
+# RUN:   | FileCheck %s --check-prefix=GNU-64 --strict-whitespace --match-full-lines
+# RUN: llvm-readelf --relocations %t64 \
+# RUN:   | FileCheck %s --check-prefix=GNU-64 --strict-whitespace --match-full-lines
+
+#      GNU-64:Relocation section '.rel.text' at offset 0x51 contains 4 entries:
+# GNU-64-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
+# GNU-64-NEXT:0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 rel_0
+# GNU-64-NEXT:0000000000000001  0000000200000002 R_X86_64_PC32          0000000000000001 rel_neg
+# GNU-64-NEXT:0000000000000005  0000000300000004 R_X86_64_PLT32         0000000000000002 rel_pos
+# GNU-64-NEXT:0000000000000009  0000000400000001 R_X86_64_64            ffffffffffffffff rel_64
+# GNU-64-EMPTY:
+# GNU-64-NEXT:Relocation section '.rela.text' at offset 0x91 contains 5 entries:
+# GNU-64-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# GNU-64-NEXT:0000000000000000  0000000500000000 R_X86_64_NONE          0000000000000000 rela_0 + 0
+# GNU-64-NEXT:0000000000000001  0000000600000002 R_X86_64_PC32          0000000000000001 rela_neg - 1
+# GNU-64-NEXT:0000000000000005  0000000700000004 R_X86_64_PLT32         0000000000000002 rela_pos + 2
+# GNU-64-NEXT:ffffffffffffffff  0000000800000001 R_X86_64_64            0000000000000003 rela_minneg - 8000000000000000
+# GNU-64-NEXT:0000000000000009  000000090000000b R_X86_64_32S           ffffffffffffffff rela_maxpos + 7fffffffffffffff
+
+## Show that --expand-relocs expands the relocation dump for LLVM style only
+## (and not GNU).
+# RUN: llvm-readobj -r --expand-relocs %t64 \
+# RUN:   | FileCheck %s --check-prefix=LLVM-EXPAND-64 --match-full-lines --strict-whitespace
+# RUN: llvm-readelf -r --expand-relocs %t64 \
+# RUN:   | FileCheck %s --check-prefix=GNU-64 --match-full-lines --strict-whitespace
+
+#      LLVM-EXPAND-64:Relocations [
+# LLVM-EXPAND-64-NEXT:  Section (2) .rel.text {
+# LLVM-EXPAND-64-NEXT:    Relocation {
+# LLVM-EXPAND-64-NEXT:      Offset: 0x0
+# LLVM-EXPAND-64-NEXT:      Type: R_X86_64_NONE (0)
+# LLVM-EXPAND-64-NEXT:      Symbol: rel_0 (1)
+# LLVM-EXPAND-64-NEXT:      Addend: 0x0
+# LLVM-EXPAND-64-NEXT:    }
+# LLVM-EXPAND-64-NEXT:    Relocation {
+# LLVM-EXPAND-64-NEXT:      Offset: 0x1
+# LLVM-EXPAND-64-NEXT:      Type: R_X86_64_PC32 (2)
+# LLVM-EXPAND-64-NEXT:      Symbol: rel_neg (2)
+# LLVM-EXPAND-64-NEXT:      Addend: 0x0
+# LLVM-EXPAND-64-NEXT:    }
+# LLVM-EXPAND-64-NEXT:    Relocation {
+# LLVM-EXPAND-64-NEXT:      Offset: 0x5
+# LLVM-EXPAND-64-NEXT:      Type: R_X86_64_PLT32 (4)
+# LLVM-EXPAND-64-NEXT:      Symbol: rel_pos (3)
+# LLVM-EXPAND-64-NEXT:      Addend: 0x0
+# LLVM-EXPAND-64-NEXT:    }
+# LLVM-EXPAND-64-NEXT:    Relocation {
+# LLVM-EXPAND-64-NEXT:      Offset: 0x9
+# LLVM-EXPAND-64-NEXT:      Type: R_X86_64_64 (1)
+# LLVM-EXPAND-64-NEXT:      Symbol: rel_64 (4)
+# LLVM-EXPAND-64-NEXT:      Addend: 0x0
+# LLVM-EXPAND-64-NEXT:    }
+# LLVM-EXPAND-64-NEXT:  }
+# LLVM-EXPAND-64-NEXT:  Section (3) .rela.text {
+# LLVM-EXPAND-64-NEXT:    Relocation {
+# LLVM-EXPAND-64-NEXT:      Offset: 0x0
+# LLVM-EXPAND-64-NEXT:      Type: R_X86_64_NONE (0)
+# LLVM-EXPAND-64-NEXT:      Symbol: rela_0 (5)
+# LLVM-EXPAND-64-NEXT:      Addend: 0x0
+# LLVM-EXPAND-64-NEXT:    }
+# LLVM-EXPAND-64-NEXT:    Relocation {
+# LLVM-EXPAND-64-NEXT:      Offset: 0x1
+# LLVM-EXPAND-64-NEXT:      Type: R_X86_64_PC32 (2)
+# LLVM-EXPAND-64-NEXT:      Symbol: rela_neg (6)
+# LLVM-EXPAND-64-NEXT:      Addend: 0xFFFFFFFFFFFFFFFF
+# LLVM-EXPAND-64-NEXT:    }
+# LLVM-EXPAND-64-NEXT:    Relocation {
+# LLVM-EXPAND-64-NEXT:      Offset: 0x5
+# LLVM-EXPAND-64-NEXT:      Type: R_X86_64_PLT32 (4)
+# LLVM-EXPAND-64-NEXT:      Symbol: rela_pos (7)
+# LLVM-EXPAND-64-NEXT:      Addend: 0x2
+# LLVM-EXPAND-64-NEXT:    }
+# LLVM-EXPAND-64-NEXT:    Relocation {
+# LLVM-EXPAND-64-NEXT:      Offset: 0xFFFFFFFFFFFFFFFF
+# LLVM-EXPAND-64-NEXT:      Type: R_X86_64_64 (1)
+# LLVM-EXPAND-64-NEXT:      Symbol: rela_minneg (8)
+# LLVM-EXPAND-64-NEXT:      Addend: 0x8000000000000000
+# LLVM-EXPAND-64-NEXT:    }
+# LLVM-EXPAND-64-NEXT:    Relocation {
+# LLVM-EXPAND-64-NEXT:      Offset: 0x9
+# LLVM-EXPAND-64-NEXT:      Type: R_X86_64_32S (11)
+# LLVM-EXPAND-64-NEXT:      Symbol: rela_maxpos (9)
+# LLVM-EXPAND-64-NEXT:      Addend: 0x7FFFFFFFFFFFFFFF
+# LLVM-EXPAND-64-NEXT:    }
+# LLVM-EXPAND-64-NEXT:  }
+# LLVM-EXPAND-64-NEXT:]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Content: '00FFFFFFFF020000001234567890ABCDEF'
+  - Name: .rel.text
+    Type: SHT_REL
+    Info: .text
+    Relocations:
+      - Offset: 0x0
+        Symbol: rel_0
+        Type:   R_X86_64_NONE
+      - Offset: 0x1
+        Symbol: rel_neg
+        Type:   R_X86_64_PC32
+      - Offset: 0x5
+        Symbol: rel_pos
+        Type:   R_X86_64_PLT32
+      - Offset: 0x9
+        Symbol: rel_64
+        Type:   R_X86_64_64
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+    Relocations:
+      - Offset: 0x0
+        Symbol: rela_0
+        Type:   R_X86_64_NONE
+        Addend: 0
+      - Offset: 0x1
+        Symbol: rela_neg
+        Type:   R_X86_64_PC32
+        Addend: -1
+      - Offset: 0x5
+        Symbol: rela_pos
+        Type:   R_X86_64_PLT32
+        Addend: 2
+      - Offset: 0xFFFFFFFFFFFFFFFF
+        Symbol: rela_minneg
+        Type:   R_X86_64_64
+        Addend: -9223372036854775808 ## Min 64-bit signed.
+      - Offset: 0x9
+        Symbol: rela_maxpos
+        Type:   R_X86_64_32S
+        Addend: 9223372036854775807 ## Max 64-bit signed.
+Symbols:
+  - Name:    rel_0
+    Section: .text
+    Value:   0
+  - Name:     rel_neg
+    Section: .text
+    Value:   1
+  - Name:    rel_pos
+    Section: .text
+    Value:   2
+  - Name:    rel_64
+    Section: .text
+    Value:   0xFFFFFFFFFFFFFFFF
+  - Name:    rela_0
+    Section: .text
+    Value:   0
+  - Name:    rela_neg
+    Section: .text
+    Value:   1
+  - Name:    rela_pos
+    Section: .text
+    Value:   2
+  - Name:    rela_minneg
+    Section: .text
+    Value:   3
+  - Name:    rela_maxpos
+    Section: .text
+    Value:   0xFFFFFFFFFFFFFFFF
+
+## Show that ELF32 is dumped correctly.
+# RUN: yaml2obj %s --docnum=2 -o %t32
+# RUN: llvm-readobj -r %t32 \
+# RUN:   | FileCheck %s --check-prefix=LLVM-32 --strict-whitespace --match-full-lines
+# RUN: llvm-readobj --relocs %t32 \
+# RUN:   | FileCheck %s --check-prefix=LLVM-32 --strict-whitespace --match-full-lines
+# RUN: llvm-readobj --relocations %t32 \
+# RUN:   | FileCheck %s --check-prefix=LLVM-32 --strict-whitespace --match-full-lines
+
+#      LLVM-32:Relocations [
+# LLVM-32-NEXT:  Section (2) .rel.text {
+# LLVM-32-NEXT:    0x0 R_386_NONE rel_0 0x0
+# LLVM-32-NEXT:    0x1 R_386_PC32 rel_neg 0x0
+# LLVM-32-NEXT:    0x5 R_386_PLT32 rel_pos 0x0
+# LLVM-32-NEXT:  }
+# LLVM-32-NEXT:  Section (3) .rela.text {
+# LLVM-32-NEXT:    0x0 R_386_NONE rela_0 0x0
+# LLVM-32-NEXT:    0x1 R_386_PC32 rela_neg 0xFFFFFFFF
+# LLVM-32-NEXT:    0x5 R_386_PLT32 rela_pos 0x2
+# LLVM-32-NEXT:    0xFFFFFFFF R_386_32 rela_minneg 0x80000000
+# LLVM-32-NEXT:    0x9 R_386_GOT32 rela_maxpos 0x7FFFFFFF
+# LLVM-32-NEXT:  }
+# LLVM-32-NEXT:]
+
+# RUN: llvm-readelf -r %t32 \
+# RUN:   | FileCheck %s --check-prefix=GNU-32 --strict-whitespace --match-full-lines
+# RUN: llvm-readelf --relocs %t32 \
+# RUN:   | FileCheck %s --check-prefix=GNU-32 --strict-whitespace --match-full-lines
+# RUN: llvm-readelf --relocations %t32 \
+# RUN:   | FileCheck %s --check-prefix=GNU-32 --strict-whitespace --match-full-lines
+
+#      GNU-32:Relocation section '.rel.text' at offset 0x3d contains 3 entries:
+# GNU-32-NEXT: Offset     Info    Type                Sym. Value  Symbol's Name
+# GNU-32-NEXT:00000000  00000100 R_386_NONE             00000000   rel_0
+# GNU-32-NEXT:00000001  00000202 R_386_PC32             00000001   rel_neg
+# GNU-32-NEXT:00000005  00000304 R_386_PLT32            ffffffff   rel_pos
+# GNU-32-EMPTY:
+# GNU-32-NEXT:Relocation section '.rela.text' at offset 0x55 contains 5 entries:
+# GNU-32-NEXT: Offset     Info    Type                Sym. Value  Symbol's Name + Addend
+# GNU-32-NEXT:00000000  00000400 R_386_NONE             00000000   rela_0 + 0
+# GNU-32-NEXT:00000001  00000502 R_386_PC32             00000001   rela_neg - 1
+# GNU-32-NEXT:00000005  00000604 R_386_PLT32            00000002   rela_pos + 2
+# GNU-32-NEXT:ffffffff  00000701 R_386_32               00000003   rela_minneg - 80000000
+# GNU-32-NEXT:00000009  00000803 R_386_GOT32            ffffffff   rela_maxpos + 7fffffff
+
+## Show that --expand-relocs expands the relocation dump for LLVM style only
+## (and not GNU).
+# RUN: llvm-readobj -r --expand-relocs %t32 \
+# RUN:   | FileCheck %s --check-prefix=LLVM-EXPAND-32 --strict-whitespace --match-full-lines
+# RUN: llvm-readelf -r --expand-relocs %t32 \
+# RUN:   | FileCheck %s --check-prefix=GNU-32 --strict-whitespace --match-full-lines
+
+#      LLVM-EXPAND-32:Relocations [
+# LLVM-EXPAND-32-NEXT:  Section (2) .rel.text {
+# LLVM-EXPAND-32-NEXT:    Relocation {
+# LLVM-EXPAND-32-NEXT:      Offset: 0x0
+# LLVM-EXPAND-32-NEXT:      Type: R_386_NONE (0)
+# LLVM-EXPAND-32-NEXT:      Symbol: rel_0 (1)
+# LLVM-EXPAND-32-NEXT:      Addend: 0x0
+# LLVM-EXPAND-32-NEXT:    }
+# LLVM-EXPAND-32-NEXT:    Relocation {
+# LLVM-EXPAND-32-NEXT:      Offset: 0x1
+# LLVM-EXPAND-32-NEXT:      Type: R_386_PC32 (2)
+# LLVM-EXPAND-32-NEXT:      Symbol: rel_neg (2)
+# LLVM-EXPAND-32-NEXT:      Addend: 0x0
+# LLVM-EXPAND-32-NEXT:    }
+# LLVM-EXPAND-32-NEXT:    Relocation {
+# LLVM-EXPAND-32-NEXT:      Offset: 0x5
+# LLVM-EXPAND-32-NEXT:      Type: R_386_PLT32 (4)
+# LLVM-EXPAND-32-NEXT:      Symbol: rel_pos (3)
+# LLVM-EXPAND-32-NEXT:      Addend: 0x0
+# LLVM-EXPAND-32-NEXT:    }
+# LLVM-EXPAND-32-NEXT:  }
+# LLVM-EXPAND-32-NEXT:  Section (3) .rela.text {
+# LLVM-EXPAND-32-NEXT:    Relocation {
+# LLVM-EXPAND-32-NEXT:      Offset: 0x0
+# LLVM-EXPAND-32-NEXT:      Type: R_386_NONE (0)
+# LLVM-EXPAND-32-NEXT:      Symbol: rela_0 (4)
+# LLVM-EXPAND-32-NEXT:      Addend: 0x0
+# LLVM-EXPAND-32-NEXT:    }
+# LLVM-EXPAND-32-NEXT:    Relocation {
+# LLVM-EXPAND-32-NEXT:      Offset: 0x1
+# LLVM-EXPAND-32-NEXT:      Type: R_386_PC32 (2)
+# LLVM-EXPAND-32-NEXT:      Symbol: rela_neg (5)
+# LLVM-EXPAND-32-NEXT:      Addend: 0xFFFFFFFF
+# LLVM-EXPAND-32-NEXT:    }
+# LLVM-EXPAND-32-NEXT:    Relocation {
+# LLVM-EXPAND-32-NEXT:      Offset: 0x5
+# LLVM-EXPAND-32-NEXT:      Type: R_386_PLT32 (4)
+# LLVM-EXPAND-32-NEXT:      Symbol: rela_pos (6)
+# LLVM-EXPAND-32-NEXT:      Addend: 0x2
+# LLVM-EXPAND-32-NEXT:    }
+# LLVM-EXPAND-32-NEXT:    Relocation {
+# LLVM-EXPAND-32-NEXT:      Offset: 0xFFFFFFFF
+# LLVM-EXPAND-32-NEXT:      Type: R_386_32 (1)
+# LLVM-EXPAND-32-NEXT:      Symbol: rela_minneg (7)
+# LLVM-EXPAND-32-NEXT:      Addend: 0x80000000
+# LLVM-EXPAND-32-NEXT:    }
+# LLVM-EXPAND-32-NEXT:    Relocation {
+# LLVM-EXPAND-32-NEXT:      Offset: 0x9
+# LLVM-EXPAND-32-NEXT:      Type: R_386_GOT32 (3)
+# LLVM-EXPAND-32-NEXT:      Symbol: rela_maxpos (8)
+# LLVM-EXPAND-32-NEXT:      Addend: 0x7FFFFFFF
+# LLVM-EXPAND-32-NEXT:    }
+# LLVM-EXPAND-32-NEXT:  }
+# LLVM-EXPAND-32-NEXT:]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Content: '00FFFFFFFF02000000'
+  - Name: .rel.text
+    Type: SHT_REL
+    Info: .text
+    Relocations:
+      - Offset: 0x0
+        Symbol: rel_0
+        Type:   R_386_NONE
+      - Offset: 0x1
+        Symbol: rel_neg
+        Type:   R_386_PC32
+      - Offset: 0x5
+        Symbol: rel_pos
+        Type:   R_386_PLT32
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+    Relocations:
+      - Offset: 0x0
+        Symbol: rela_0
+        Type:   R_386_NONE
+        Addend: 0
+      - Offset: 0x1
+        Symbol: rela_neg
+        Type:   R_386_PC32
+        Addend: -1
+      - Offset: 0x5
+        Symbol: rela_pos
+        Type:   R_386_PLT32
+        Addend: 2
+      - Offset: 0xFFFFFFFF
+        Symbol: rela_minneg
+        Type:   R_386_32
+        Addend: -2147483648 ## Min 32-bit signed.
+      - Offset: 0x9
+        Symbol: rela_maxpos
+        Type:   R_386_GOT32
+        Addend: 2147483647 ## Max 32-bit signed.
+Symbols:
+  - Name:    rel_0
+    Section: .text
+    Value:   0
+  - Name:    rel_neg
+    Section: .text
+    Value:   1
+  - Name:    rel_pos
+    Section: .text
+    Value:   0xFFFFFFFF
+  - Name:    rela_0
+    Section: .text
+    Value:   0
+  - Name:    rela_neg
+    Section: .text
+    Value:   1
+  - Name:    rela_pos
+    Section: .text
+    Value:   2
+  - Name:    rela_minneg
+    Section: .text
+    Value:   3
+  - Name:    rela_maxpos
+    Section: .text
+    Value:   0xFFFFFFFF

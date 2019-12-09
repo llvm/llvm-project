@@ -276,10 +276,9 @@ bool SymbolCollector::handleDeclOccurence(
   // Mark D as referenced if this is a reference coming from the main file.
   // D may not be an interesting symbol, but it's cheaper to check at the end.
   auto &SM = ASTCtx->getSourceManager();
-  auto SpellingLoc = SM.getSpellingLoc(Loc);
   if (Opts.CountReferences &&
       (Roles & static_cast<unsigned>(index::SymbolRole::Reference)) &&
-      SM.getFileID(SpellingLoc) == SM.getMainFileID())
+      SM.getFileID(SM.getSpellingLoc(Loc)) == SM.getMainFileID())
     ReferencedDecls.insert(ND);
 
   auto ID = getSymbolID(ND);
@@ -312,9 +311,14 @@ bool SymbolCollector::handleDeclOccurence(
       !shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
     return true;
   // Do not store references to main-file symbols.
+  // Unlike other fields, e.g. Symbols (which use spelling locations), we use
+  // file locations for references (as it aligns the behavior of clangd's
+  // AST-based xref).
+  // FIXME: we should try to use the file locations for other fields.
   if (CollectRef && !IsMainFileOnly && !isa<NamespaceDecl>(ND) &&
-      (Opts.RefsInHeaders || SM.getFileID(SpellingLoc) == SM.getMainFileID()))
-    DeclRefs[ND].emplace_back(SpellingLoc, Roles);
+      (Opts.RefsInHeaders ||
+       SM.getFileID(SM.getFileLoc(Loc)) == SM.getMainFileID()))
+    DeclRefs[ND].emplace_back(SM.getFileLoc(Loc), Roles);
   // Don't continue indexing if this is a mere reference.
   if (IsOnlyRef)
     return true;

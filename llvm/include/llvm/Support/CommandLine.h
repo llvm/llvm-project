@@ -1794,6 +1794,14 @@ public:
     apply(this, Ms...);
     done();
   }
+
+  void setCallback(
+      std::function<void(const typename ParserClass::parser_data_type &)> CB) {
+    Callback = CB;
+  }
+
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
+      [](const typename ParserClass::parser_data_type &) {};
 };
 
 //===----------------------------------------------------------------------===//
