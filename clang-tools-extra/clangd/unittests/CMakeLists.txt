@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   support
+  AllTargetsInfos
   )
 
 get_filename_component(CLANGD_SOURCE_DIR
