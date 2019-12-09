@@ -277,11 +277,16 @@ class mve_addr_q_shift<int shift> : MemOperand {
 
 // A family of classes wrapping up information about the vector types
 // used by MVE.
-class MVEVectorVTInfo<ValueType vec, ValueType pred, bits<2> size,
-                      string suffixletter, bit unsigned> {
+class MVEVectorVTInfo<ValueType vec, ValueType dblvec, ValueType pred,
+                      bits<2> size, string suffixletter, bit unsigned> {
   // The LLVM ValueType representing the vector, so we can use it in
   // ISel patterns.
   ValueType Vec = vec;
+
+  // The LLVM ValueType representing a vector with elements double the size
+  // of those in Vec, so we can use it in ISel patterns. It is up to the
+  // invoker of this class to ensure that this is a correct choice.
+  ValueType DblVec = dblvec;
 
   // An LLVM ValueType representing a corresponding vector of
   // predicate bits, for use in ISel patterns that handle an IR
@@ -309,34 +314,40 @@ class MVEVectorVTInfo<ValueType vec, ValueType pred, bits<2> size,
 
   // The suffix used in assembly language on an instruction operating
   // on this lane if it only cares about number of bits.
-  string BitsSuffix = !cast<string>(LaneBits);
+  string BitsSuffix = !if(!eq(suffixletter, "p"),
+                          !if(!eq(unsigned, 0b0), "8", "16"),
+                          !cast<string>(LaneBits));
 
   // The suffix used on an instruction that mentions the whole type.
   string Suffix = suffixletter ## BitsSuffix;
 }
 
 // Integer vector types that don't treat signed and unsigned differently.
-def MVE_v16i8 : MVEVectorVTInfo<v16i8, v16i1, 0b00, "i",  ?>;
-def MVE_v8i16 : MVEVectorVTInfo<v8i16, v8i1,  0b01, "i", ?>;
-def MVE_v4i32 : MVEVectorVTInfo<v4i32, v4i1,  0b10, "i", ?>;
-def MVE_v2i64 : MVEVectorVTInfo<v2i64, v4i1,  0b11, "i", ?>;
+def MVE_v16i8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, 0b00, "i", ?>;
+def MVE_v8i16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  0b01, "i", ?>;
+def MVE_v4i32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  0b10, "i", ?>;
+def MVE_v2i64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  0b11, "i", ?>;
 
 // Explicitly signed and unsigned integer vectors. They map to the
 // same set of LLVM ValueTypes as above, but are represented
 // differently in assembly and instruction encodings.
-def MVE_v16s8 : MVEVectorVTInfo<v16i8, v16i1, 0b00, "s",  0b0>;
-def MVE_v8s16 : MVEVectorVTInfo<v8i16, v8i1,  0b01, "s", 0b0>;
-def MVE_v4s32 : MVEVectorVTInfo<v4i32, v4i1,  0b10, "s", 0b0>;
-def MVE_v2s64 : MVEVectorVTInfo<v2i64, v4i1,  0b11, "s", 0b0>;
-def MVE_v16u8 : MVEVectorVTInfo<v16i8, v16i1, 0b00, "u",  0b1>;
-def MVE_v8u16 : MVEVectorVTInfo<v8i16, v8i1,  0b01, "u", 0b1>;
-def MVE_v4u32 : MVEVectorVTInfo<v4i32, v4i1,  0b10, "u", 0b1>;
-def MVE_v2u64 : MVEVectorVTInfo<v2i64, v4i1,  0b11, "u", 0b1>;
+def MVE_v16s8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, 0b00, "s", 0b0>;
+def MVE_v8s16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  0b01, "s", 0b0>;
+def MVE_v4s32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  0b10, "s", 0b0>;
+def MVE_v2s64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  0b11, "s", 0b0>;
+def MVE_v16u8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, 0b00, "u", 0b1>;
+def MVE_v8u16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  0b01, "u", 0b1>;
+def MVE_v4u32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  0b10, "u", 0b1>;
+def MVE_v2u64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  0b11, "u", 0b1>;
 
 // FP vector types.
-def MVE_v8f16 : MVEVectorVTInfo<v8f16, v8i1,  0b01, "f", ?>;
-def MVE_v4f32 : MVEVectorVTInfo<v4f32, v4i1,  0b10, "f", ?>;
-def MVE_v2f64 : MVEVectorVTInfo<v2f64, v4i1,  0b11, "f", ?>;
+def MVE_v8f16 : MVEVectorVTInfo<v8f16, v4f32, v8i1,  0b01, "f", ?>;
+def MVE_v4f32 : MVEVectorVTInfo<v4f32, v2f64, v4i1,  0b10, "f", ?>;
+def MVE_v2f64 : MVEVectorVTInfo<v2f64, ?,     v4i1,  0b11, "f", ?>;
+
+// Polynomial vector types.
+def MVE_v16p8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, 0b11, "p", 0b0>;
+def MVE_v8p16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  0b11, "p", 0b1>;
 
 // --------- Start of base classes for the instructions themselves
 
@@ -3616,24 +3627,71 @@ class MVE_VMULL<string iname, string suffix, bit bit_28, bits<2> bits_21_20,
   let Inst{0} = 0b0;
 }
 
-multiclass MVE_VMULL_multi<string iname, string suffix,
-                           bit bit_28, bits<2> bits_21_20, string cstr=""> {
-  def bh : MVE_VMULL<iname # "b", suffix, bit_28, bits_21_20, 0b0, cstr>;
-  def th : MVE_VMULL<iname # "t", suffix, bit_28, bits_21_20, 0b1, cstr>;
+multiclass MVE_VMULL_m<MVEVectorVTInfo VTI,
+                       SDNode unpred_op, Intrinsic pred_int,
+                       bit Top, string cstr=""> {
+  def "" : MVE_VMULL<"vmull" # !if(Top, "t", "b"), VTI.Suffix, VTI.Unsigned,
+                     VTI.Size, Top, cstr>;
+
+  let Predicates = [HasMVEInt] in {
+    // Unpredicated multiply
+    def : Pat<(VTI.DblVec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 Top))),
+              (VTI.DblVec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
+
+    // Predicated multiply
+    def : Pat<(VTI.DblVec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 Top),
+                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+              (VTI.DblVec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            ARMVCCThen, (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive)))>;
+  }
 }
 
-// For integer multiplies, bits 21:20 encode size, and bit 28 signedness.
-// For polynomial multiplies, bits 21:20 take the unused value 0b11, and
-// bit 28 switches to encoding the size.
+// For polynomial multiplies, the size bits take the unused value 0b11, and
+// the unsigned bit switches to encoding the size.
 
-defm MVE_VMULLs8  : MVE_VMULL_multi<"vmull", "s8",  0b0, 0b00>;
-defm MVE_VMULLs16 : MVE_VMULL_multi<"vmull", "s16", 0b0, 0b01>;
-defm MVE_VMULLs32 : MVE_VMULL_multi<"vmull", "s32", 0b0, 0b10, "@earlyclobber $Qd">;
-defm MVE_VMULLu8  : MVE_VMULL_multi<"vmull", "u8",  0b1, 0b00>;
-defm MVE_VMULLu16 : MVE_VMULL_multi<"vmull", "u16", 0b1, 0b01>;
-defm MVE_VMULLu32 : MVE_VMULL_multi<"vmull", "u32", 0b1, 0b10, "@earlyclobber $Qd">;
-defm MVE_VMULLp8  : MVE_VMULL_multi<"vmull", "p8",  0b0, 0b11>;
-defm MVE_VMULLp16 : MVE_VMULL_multi<"vmull", "p16", 0b1, 0b11>;
+defm MVE_VMULLBs8  : MVE_VMULL_m<MVE_v16s8, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b0>;
+defm MVE_VMULLTs8  : MVE_VMULL_m<MVE_v16s8, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b1>;
+defm MVE_VMULLBs16 : MVE_VMULL_m<MVE_v8s16, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b0>;
+defm MVE_VMULLTs16 : MVE_VMULL_m<MVE_v8s16, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b1>;
+defm MVE_VMULLBs32 : MVE_VMULL_m<MVE_v4s32, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b0,
+                                 "@earlyclobber $Qd">;
+defm MVE_VMULLTs32 : MVE_VMULL_m<MVE_v4s32, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b1,
+                                 "@earlyclobber $Qd">;
+
+defm MVE_VMULLBu8  : MVE_VMULL_m<MVE_v16u8, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b0>;
+defm MVE_VMULLTu8  : MVE_VMULL_m<MVE_v16u8, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b1>;
+defm MVE_VMULLBu16 : MVE_VMULL_m<MVE_v8u16, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b0>;
+defm MVE_VMULLTu16 : MVE_VMULL_m<MVE_v8u16, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b1>;
+defm MVE_VMULLBu32 : MVE_VMULL_m<MVE_v4u32, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b0,
+                                 "@earlyclobber $Qd">;
+defm MVE_VMULLTu32 : MVE_VMULL_m<MVE_v4u32, int_arm_mve_vmull,
+                                 int_arm_mve_mull_int_predicated, 0b1,
+                                 "@earlyclobber $Qd">;
+
+defm MVE_VMULLBp8  : MVE_VMULL_m<MVE_v16p8, int_arm_mve_vmull_poly,
+                                 int_arm_mve_mull_poly_predicated, 0b0>;
+defm MVE_VMULLTp8  : MVE_VMULL_m<MVE_v16p8, int_arm_mve_vmull_poly,
+                                 int_arm_mve_mull_poly_predicated, 0b1>;
+defm MVE_VMULLBp16 : MVE_VMULL_m<MVE_v8p16, int_arm_mve_vmull_poly,
+                                 int_arm_mve_mull_poly_predicated, 0b0>;
+defm MVE_VMULLTp16 : MVE_VMULL_m<MVE_v8p16, int_arm_mve_vmull_poly,
+                                 int_arm_mve_mull_poly_predicated, 0b1>;
 
 class MVE_VxMULH<string iname, string suffix, bit U, bits<2> size, bit round,
                  list<dag> pattern=[]>
