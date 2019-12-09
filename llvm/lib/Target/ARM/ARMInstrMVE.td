@@ -2718,9 +2718,11 @@ multiclass MVE_immediate_shift_patterns<MVEVectorVTInfo VTI,
       !cast<Instruction>("MVE_VSHR_imms" # VTI.BitsSuffix), [0]>;
 }
 
-defm : MVE_immediate_shift_patterns<MVE_v16i8, imm0_7>;
-defm : MVE_immediate_shift_patterns<MVE_v8i16, imm0_15>;
-defm : MVE_immediate_shift_patterns<MVE_v4i32, imm0_31>;
+let Predicates = [HasMVEInt] in {
+  defm : MVE_immediate_shift_patterns<MVE_v16i8, imm0_7>;
+  defm : MVE_immediate_shift_patterns<MVE_v8i16, imm0_15>;
+  defm : MVE_immediate_shift_patterns<MVE_v4i32, imm0_31>;
+}
 
 // end of mve_shift instructions
 
