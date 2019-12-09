@@ -2286,7 +2286,7 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
     // Get the required features for the callee.
 
     const TargetAttr *TD = TargetDecl->getAttr<TargetAttr>();
-    TargetAttr::ParsedTargetAttr ParsedAttr = CGM.filterFunctionTargetAttrs(TD);
+    ParsedTargetAttr ParsedAttr = CGM.filterFunctionTargetAttrs(TD);
 
     SmallVector<StringRef, 1> ReqFeatures;
     llvm::StringMap<bool> CalleeFeatureMap;

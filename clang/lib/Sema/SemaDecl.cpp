@@ -9746,7 +9746,7 @@ bool Sema::shouldLinkDependentDeclWithPrevious(Decl *D, Decl *PrevDecl) {
 static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
   const auto *TA = FD->getAttr<TargetAttr>();
   assert(TA && "MultiVersion Candidate requires a target attribute");
-  TargetAttr::ParsedTargetAttr ParseInfo = TA->parse();
+  ParsedTargetAttr ParseInfo = TA->parse();
   const TargetInfo &TargetInfo = S.Context.getTargetInfo();
   enum ErrType { Feature = 0, Architecture = 1 };
 
@@ -9997,7 +9997,7 @@ static bool CheckTargetCausesMultiVersioning(
     bool &Redeclaration, NamedDecl *&OldDecl, bool &MergeTypeWithPrevious,
     LookupResult &Previous) {
   const auto *OldTA = OldFD->getAttr<TargetAttr>();
-  TargetAttr::ParsedTargetAttr NewParsed = NewTA->parse();
+  ParsedTargetAttr NewParsed = NewTA->parse();
   // Sort order doesn't matter, it just needs to be consistent.
   llvm::sort(NewParsed.Features);
 
@@ -10041,8 +10041,7 @@ static bool CheckTargetCausesMultiVersioning(
     return true;
   }
 
-  TargetAttr::ParsedTargetAttr OldParsed =
-      OldTA->parse(std::less<std::string>());
+  ParsedTargetAttr OldParsed = OldTA->parse(std::less<std::string>());
 
   if (OldParsed == NewParsed) {
     S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
@@ -10095,7 +10094,7 @@ static bool CheckMultiVersionAdditionalDecl(
     return true;
   }
 
-  TargetAttr::ParsedTargetAttr NewParsed;
+  ParsedTargetAttr NewParsed;
   if (NewTA) {
     NewParsed = NewTA->parse();
     llvm::sort(NewParsed.Features);
@@ -10122,8 +10121,7 @@ static bool CheckMultiVersionAdditionalDecl(
         return false;
       }
 
-      TargetAttr::ParsedTargetAttr CurParsed =
-          CurTA->parse(std::less<std::string>());
+      ParsedTargetAttr CurParsed = CurTA->parse(std::less<std::string>());
       if (CurParsed == NewParsed) {
         S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
         S.Diag(CurFD->getLocation(), diag::note_previous_declaration);
