@@ -10,7 +10,10 @@
 #
 # RUN: %lldb --capture --capture-path %t.repro -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
 # RUN: %lldb --capture -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
-# RUN: %lldb --capture-path %t.repro -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix WARNING --check-prefix STATUS-CAPTURE
+#
+# BEGIN SWIFT-LLDB CHANGE (--capture does not need to be specified, as it's on by default)
+# RUN: %lldb --capture-path %t.repro -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
+# END SWIFT-LLDB-CHANGE
 #
 # NO-WARNING-NOT: warning: -capture-path specified without -capture
 # WARNING: warning: -capture-path specified without -capture
