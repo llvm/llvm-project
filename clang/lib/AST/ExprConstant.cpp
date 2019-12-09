@@ -7132,6 +7132,13 @@ public:
         return false;
       return DerivedSuccess(DestValue, E);
     }
+
+    case CK_AddressSpaceConversion: {
+      APValue Value;
+      if (!Evaluate(Value, Info, E->getSubExpr()))
+        return false;
+      return DerivedSuccess(Value, E);
+    }
     }
 
     return Error(E);
