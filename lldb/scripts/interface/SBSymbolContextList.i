@@ -60,6 +60,7 @@ public:
     void
     Clear();
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all symbol contexts in a lldb.SBSymbolContextList
@@ -129,6 +130,7 @@ public:
         line_entries = property(get_line_entry_array, None, doc='''Returns a list() of lldb.SBLineEntry objects, one for each line entry in each SBSymbolContext object in this list.''')
         symbols = property(get_symbol_array, None, doc='''Returns a list() of lldb.SBSymbol objects, one for each symbol in each SBSymbolContext object in this list.''')
     %}
+#endif
 
 };
 

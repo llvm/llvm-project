@@ -116,7 +116,7 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
   }
 }
 
-/// Prin the currently live registers to OS.
+/// Print the currently live registers to OS.
 void LivePhysRegs::print(raw_ostream &OS) const {
   OS << "Live Registers:";
   if (!TRI) {

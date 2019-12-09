@@ -61,10 +61,12 @@ namespace lldb {
         bool
         operator != (lldb::SBTypeFormat &rhs);
 
+#ifdef SWIGPYTHON
         %pythoncode %{
             format = property(GetFormat, SetFormat)
             options = property(GetOptions, SetOptions)
         %}
+#endif
 
     };
 

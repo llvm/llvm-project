@@ -285,6 +285,7 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def get_all_variables(self):
             return self.GetVariables(True,True,True,True)
@@ -355,6 +356,7 @@ public:
         reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
         parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')
     %}
+#endif
 };
 
 } // namespace lldb

@@ -72,6 +72,7 @@ public:
     bool
     operator != (const lldb::SBSymbol &rhs) const;
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def get_instructions_from_current_target (self):
             return self.GetInstructions (target)
@@ -86,6 +87,7 @@ public:
         external = property(IsExternal, None, doc='''A read only property that returns a boolean value that indicates if this symbol is externally visiable (exported) from the module that contains it.''')
         synthetic = property(IsSynthetic, None, doc='''A read only property that returns a boolean value that indicates if this symbol was synthetically created from information in module that contains it.''')
     %}
+#endif
 
 };
 

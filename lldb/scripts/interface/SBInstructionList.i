@@ -66,6 +66,7 @@ public:
     bool
     DumpEmulationForAllInstructions (const char *triple);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all instructions in a lldb.SBInstructionList
@@ -97,6 +98,7 @@ public:
                         closest_inst = inst
             return None
     %}
+#endif
 
 };
 

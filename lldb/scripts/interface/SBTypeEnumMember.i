@@ -43,12 +43,14 @@ public:
     GetDescription (lldb::SBStream &description,
                     lldb::DescriptionLevel description_level);
 
+#ifdef SWIGPYTHON
     %pythoncode %{
         name = property(GetName, None, doc='''A read only property that returns the name for this enum member as a string.''')
         type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this enum member.''')
         signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this enum member as a signed integer.''')
         unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this enum member as a unsigned integer.''')
     %}
+#endif
 
 protected:
     friend class SBType;

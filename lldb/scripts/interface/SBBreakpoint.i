@@ -249,6 +249,7 @@ public:
     bool
     IsHardware ();
 
+#ifdef SWIGPYTHON
     %pythoncode %{
 
         class locations_access(object):
@@ -295,6 +296,7 @@ public:
         one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
         num_locations = property(GetNumLocations, None, doc='''A read only property that returns the count of locations of this breakpoint.''')
     %}
+#endif
 
 
 };
