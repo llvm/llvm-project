@@ -44,7 +44,7 @@ class Toy_Op<string mnemonic, list<OpTrait> traits = []> :
 // Toy Operations
 //===----------------------------------------------------------------------===//
 
-// We define a toy operation by inherting from our base 'Toy_Op' class above.
+// We define a toy operation by inheriting from our base 'Toy_Op' class above.
 // Here we provide the mnemonic and a list of traits for the operation. The
 // constant operation is marked as 'NoSideEffect' as it is a pure operation
 // and may be removed if dead.
