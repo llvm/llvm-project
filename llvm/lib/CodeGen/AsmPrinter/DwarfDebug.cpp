@@ -595,7 +595,6 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
               Implicit.push_back(FwdReg);
             else
               Explicit.push_back(FwdReg);
-            break;
           }
         }
       }
@@ -640,39 +639,33 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     for (auto Reg : concat<unsigned>(ExplicitFwdRegDefs, ImplicitFwdRegDefs))
       ForwardedRegWorklist.erase(Reg);
 
-    // The describeLoadedValue() hook currently does not have any information
-    // about which register it should describe in case of multiple defines, so
-    // for now we only handle instructions where a forwarded register is (at
-    // least partially) defined by the instruction's single explicit define.
-    if (I->getNumExplicitDefs() != 1 || ExplicitFwdRegDefs.empty())
-      continue;
-    unsigned ParamFwdReg = ExplicitFwdRegDefs[0];
-
-    if (auto ParamValue = TII->describeLoadedValue(*I)) {
-      if (ParamValue->first.isImm()) {
-        int64_t Val = ParamValue->first.getImm();
-        DbgValueLoc DbgLocVal(ParamValue->second, Val);
-        finishCallSiteParam(DbgLocVal, ParamFwdReg);
-      } else if (ParamValue->first.isReg()) {
-        Register RegLoc = ParamValue->first.getReg();
-       // TODO: For now, there is no use of describing the value loaded into the
-       //       register that is also the source registers (e.g. $r0 = add $r0, x).
-       if (ParamFwdReg == RegLoc)
-         continue;
-
-        unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
-        Register FP = TRI->getFrameRegister(*MF);
-        bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
-        if (TRI->isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
-          DbgValueLoc DbgLocVal(ParamValue->second,
-                                MachineLocation(RegLoc,
-                                                /*IsIndirect=*/IsSPorFP));
+    for (auto ParamFwdReg : ExplicitFwdRegDefs) {
+      if (auto ParamValue = TII->describeLoadedValue(*I, ParamFwdReg)) {
+        if (ParamValue->first.isImm()) {
+          int64_t Val = ParamValue->first.getImm();
+          DbgValueLoc DbgLocVal(ParamValue->second, Val);
           finishCallSiteParam(DbgLocVal, ParamFwdReg);
-        // TODO: Add support for entry value plus an expression.
-        } else if (ShouldTryEmitEntryVals &&
-                   ParamValue->second->getNumElements() == 0) {
-          ForwardedRegWorklist.insert(RegLoc);
-          RegsForEntryValues[RegLoc] = ParamFwdReg;
+        } else if (ParamValue->first.isReg()) {
+          Register RegLoc = ParamValue->first.getReg();
+          // TODO: For now, there is no use of describing the value loaded into the
+          //       register that is also the source registers (e.g. $r0 = add $r0, x).
+          if (ParamFwdReg == RegLoc)
+            continue;
+
+          unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+          Register FP = TRI->getFrameRegister(*MF);
+          bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
+          if (TRI->isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
+            DbgValueLoc DbgLocVal(ParamValue->second,
+                                  MachineLocation(RegLoc,
+                                                  /*IsIndirect=*/IsSPorFP));
+            finishCallSiteParam(DbgLocVal, ParamFwdReg);
+          // TODO: Add support for entry value plus an expression.
+          } else if (ShouldTryEmitEntryVals &&
+                     ParamValue->second->getNumElements() == 0) {
+            ForwardedRegWorklist.insert(RegLoc);
+            RegsForEntryValues[RegLoc] = ParamFwdReg;
+          }
         }
       }
     }
