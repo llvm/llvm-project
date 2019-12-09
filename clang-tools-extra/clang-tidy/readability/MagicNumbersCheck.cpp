@@ -122,10 +122,21 @@ bool MagicNumbersCheck::isConstant(const MatchFinder::MatchResult &Result,
   return llvm::any_of(
       Result.Context->getParents(ExprResult),
       [&Result](const DynTypedNode &Parent) {
-        return isUsedToInitializeAConstant(Result, Parent) ||
-               // Ignore this instance, because this match reports the location
-               // where the template is defined, not where it is instantiated.
-               Parent.get<SubstNonTypeTemplateParmExpr>();
+        if (isUsedToInitializeAConstant(Result, Parent))
+          return true;
+
+        // Ignore this instance, because this match reports the location
+        // where the template is defined, not where it is instantiated.
+        if (Parent.get<SubstNonTypeTemplateParmExpr>())
+          return true;
+
+        // Don't warn on string user defined literals:
+        // std::string s = "Hello World"s;
+        if (const auto *UDL = Parent.get<UserDefinedLiteral>())
+          if (UDL->getLiteralOperatorKind() == UserDefinedLiteral::LOK_String)
+            return true;
+
+        return false;
       });
 }
 

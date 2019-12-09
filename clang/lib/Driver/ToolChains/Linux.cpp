@@ -888,20 +888,25 @@ static std::string DetectLibcxxIncludePath(llvm::vfs::FileSystem &vfs,
 void Linux::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const {
   const std::string& SysRoot = computeSysRoot();
-  const std::string LibCXXIncludePathCandidates[] = {
-      DetectLibcxxIncludePath(getVFS(), getDriver().Dir + "/../include/c++"),
-      // If this is a development, non-installed, clang, libcxx will
-      // not be found at ../include/c++ but it likely to be found at
-      // one of the following two locations:
-      DetectLibcxxIncludePath(getVFS(), SysRoot + "/usr/local/include/c++"),
-      DetectLibcxxIncludePath(getVFS(), SysRoot + "/usr/include/c++") };
-  for (const auto &IncludePath : LibCXXIncludePathCandidates) {
+  auto AddIncludePath = [&](std::string Path) {
+    std::string IncludePath = DetectLibcxxIncludePath(getVFS(), Path);
     if (IncludePath.empty() || !getVFS().exists(IncludePath))
-      continue;
-    // Use the first candidate that exists.
+      return false;
     addSystemInclude(DriverArgs, CC1Args, IncludePath);
+    return true;
+  };
+  // Android never uses the libc++ headers installed alongside the toolchain,
+  // which are generally incompatible with the NDK libraries anyway.
+  if (!getTriple().isAndroid())
+    if (AddIncludePath(getDriver().Dir + "/../include/c++"))
+      return;
+  // If this is a development, non-installed, clang, libcxx will
+  // not be found at ../include/c++ but it likely to be found at
+  // one of the following two locations:
+  if (AddIncludePath(SysRoot + "/usr/local/include/c++"))
     return;
-  }
+  if (AddIncludePath(SysRoot + "/usr/include/c++"))
+    return;
 }
 
 void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,

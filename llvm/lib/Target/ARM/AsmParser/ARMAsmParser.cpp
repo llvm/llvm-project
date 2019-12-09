@@ -7895,10 +7895,10 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   case ARM::MVE_VQDMULLs32bh:
   case ARM::MVE_VQDMULLs32th:
   case ARM::MVE_VCMULf32:
-  case ARM::MVE_VMULLs32bh:
-  case ARM::MVE_VMULLs32th:
-  case ARM::MVE_VMULLu32bh:
-  case ARM::MVE_VMULLu32th: {
+  case ARM::MVE_VMULLBs32:
+  case ARM::MVE_VMULLTs32:
+  case ARM::MVE_VMULLBu32:
+  case ARM::MVE_VMULLTu32: {
     if (Operands[3]->getReg() == Operands[4]->getReg()) {
       return Error (Operands[3]->getStartLoc(),
                     "Qd register and Qn register can't be identical");

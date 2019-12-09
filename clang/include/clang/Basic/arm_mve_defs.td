@@ -190,6 +190,7 @@ def CTO_Pred: ComplexTypeOp;
 class CTO_Tuple<int n_>: ComplexTypeOp { int n = n_; }
 class CTO_Pointer<bit const_>: ComplexTypeOp { bit const = const_; }
 def CTO_CopyKind: ComplexTypeOp;
+def CTO_DoubleSize: ComplexTypeOp;
 
 // -----------------------------------------------------------------------------
 // Instances of Type intended to be used directly in the specification of an
@@ -264,6 +265,11 @@ class CPtr<Type t>: ComplexType<(CTO_Pointer<1> t)>;
 // matches that of s.
 class CopyKind<Type s, Type k>: ComplexType<(CTO_CopyKind s, k)>;
 
+// DoubleSize<k> expects k to be a scalar type. It returns a scalar type
+// whose kind (signed, unsigned or float) matches that of k, and whose size
+// is double that of k, if possible.
+class DoubleSize<Type k>: ComplexType<(CTO_DoubleSize k)>;
+
 // Unsigned<t> expects t to be a scalar type, and expands to the unsigned
 // integer scalar of the same size. So it returns u16 if you give it s16 or
 // f16 (or u16 itself).
@@ -273,6 +279,10 @@ class Unsigned<Type t>: ComplexType<(CTO_CopyKind t, u32)>;
 // Scalar and Vector.
 def UScalar: Unsigned<Scalar>;
 def UVector: VecOf<UScalar>;
+
+// DblVector expands to a vector of scalars of size twice the size of
+// Scalar.
+def DblVector: VecOf<DoubleSize<Scalar>>;
 
 // -----------------------------------------------------------------------------
 // Internal definitions for specifying immediate arguments for an intrinsic.
@@ -405,6 +415,10 @@ class Intrinsic<Type ret_, dag args_, dag codegen_> {
 
   // True if the builtin has to avoid evaluating its arguments.
   bit nonEvaluating = 0;
+
+  // Use to override the suffix letter to make e.g.vfooq_p16
+  // with an override suffix letter of "p".
+  string overrideKindLetter = "";
 }
 
 // Sometimes you have to use two separate Intrinsic declarations to
@@ -433,6 +447,7 @@ def T {
   list<Type> Int16 = [s16, u16];
   list<Type> Int32 = [s32, u32];
   list<Type> Int64 = [s64, u64];
+  list<Type> Poly = [u8, u16]; // Actually p8 and p16
   list<Type> All8 = Int8;
   list<Type> All16 = Int16 # [f16];
   list<Type> All32 = Int32 # [f32];

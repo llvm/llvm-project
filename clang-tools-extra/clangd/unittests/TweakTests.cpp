@@ -1973,6 +1973,30 @@ TEST_F(DefineOutlineTest, ApplyTest) {
             template <> void foo<int>() ;)cpp",
           "template <> void foo<int>() { return; }",
       },
+      // Default args.
+      {
+          "void fo^o(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) {}",
+          "void foo(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) ;",
+          "void foo(int x, int y , int , int (*foo)(int) ) {}",
+      },
+      // Ctor initializers.
+      {
+          R"cpp(
+              class Foo {
+                int y = 2;
+                F^oo(int z) __attribute__((weak)) : bar(2){}
+                int bar;
+                int z = 2;
+              };)cpp",
+          R"cpp(
+              class Foo {
+                int y = 2;
+                Foo(int z) __attribute__((weak)) ;
+                int bar;
+                int z = 2;
+              };)cpp",
+          "Foo::Foo(int z) __attribute__((weak)) : bar(2){}\n",
+      },
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);

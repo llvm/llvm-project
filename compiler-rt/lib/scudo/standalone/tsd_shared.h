@@ -51,6 +51,7 @@ template <class Allocator, u32 MaxTSDCount> struct TSDRegistrySharedT {
     unmap(reinterpret_cast<void *>(TSDs),
           sizeof(TSD<Allocator>) * NumberOfTSDs);
     setCurrentTSD(nullptr);
+    pthread_key_delete(PThreadKey);
   }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
