@@ -190,3 +190,14 @@ int useRoot(Root *r) {
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty2]"
   return [r getInt] + [r intProperty] + [r intProperty2];
 }
+
+__attribute__((objc_root_class))
+@interface RootDeclOnly
+@property(direct, readonly) int intProperty;
+@end
+
+int useRootDeclOnly(RootDeclOnly *r) {
+  // CHECK-LABEL: define i32 @useRootDeclOnly
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[RootDeclOnly intProperty]"
+  return [r intProperty];
+}
