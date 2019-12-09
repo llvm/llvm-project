@@ -66,6 +66,13 @@ func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
 
 // -----
 
+func @extract_precise_position_overflow(%arg0: vector<4x8x16xf32>) {
+  // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
+  %1 = vector.extract %arg0[3 : i32, 7 : i32, 16 : i32] : vector<4x8x16xf32>
+}
+
+// -----
+
 func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
   %1 = vector.extract %arg0[0 : i32, 0 : i32, -1 : i32] : vector<4x8x16xf32>
@@ -104,6 +111,13 @@ func @insert_vector_type(%a: f32, %b: vector<4x8x16xf32>) {
 func @insert_position_overflow(%a: f32, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding dest vector dimension}}
   %1 = vector.insert %a, %b[0 : i32, 0 : i32, -1 : i32] : f32 into vector<4x8x16xf32>
+}
+
+// -----
+
+func @insert_precise_position_overflow(%a: f32, %b: vector<4x8x16xf32>) {
+  // expected-error@+1 {{expected position attribute #1 to be a non-negative integer smaller than the corresponding dest vector dimension}}
+  %1 = vector.insert %a, %b[4 : i32, 7 : i32, 15 : i32] : f32 into vector<4x8x16xf32>
 }
 
 // -----
