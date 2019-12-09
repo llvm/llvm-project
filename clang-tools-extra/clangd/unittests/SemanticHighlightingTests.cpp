@@ -407,8 +407,8 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       }
     )cpp",
       R"cpp(
-      template<typename $TemplateParameter[[T]], 
-        void (T::*$TemplateParameter[[method]])(int)>
+      template<typename $TemplateParameter[[T]],
+        void ($TemplateParameter[[T]]::*$TemplateParameter[[method]])(int)>
       struct $Class[[G]] {
         void $Method[[foo]](
             $TemplateParameter[[T]] *$Parameter[[O]]) {
