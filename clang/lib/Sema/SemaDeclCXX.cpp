@@ -7103,6 +7103,7 @@ public:
     ResultList Results;
 
     switch (DCK) {
+    default:
     case DefaultedComparisonKind::None:
       llvm_unreachable("not a defaulted comparison");
 
@@ -7592,6 +7593,7 @@ private:
       return StmtError();
 
     switch (DCK) {
+    default:
     case DefaultedComparisonKind::None:
       llvm_unreachable("not a defaulted comparison");
 
