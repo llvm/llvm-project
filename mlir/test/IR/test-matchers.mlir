@@ -30,3 +30,13 @@ func @test1(%a: f32, %b: f32, %c: f32) {
 //       CHECK:   Pattern mul(a, add(b, c)) matched 0 times
 //       CHECK:   Pattern mul(mul(a, *), add(a, c)) matched 1 times
 //       CHECK:   Pattern mul(mul(a, *), add(c, b)) matched 0 times
+
+func @test2(%a: f32) -> f32 {
+  %0 = constant 1.0: f32
+  %1 = addf %a, %0: f32
+  %2 = mulf %a, %1: f32
+  return %2: f32
+}
+
+// CHECK-LABEL: test2
+//       CHECK:   Pattern add(add(a, constant), a) matched and bound constant to: 1.000000e+00
