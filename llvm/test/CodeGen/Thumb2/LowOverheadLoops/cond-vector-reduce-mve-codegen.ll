@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -enable-arm-maskedldst=true -disable-mve-tail-predication=false --verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -disable-mve-tail-predication=false --verify-machineinstrs %s -o - | FileCheck %s
 
 ; CHECK-LABEL: vpsel_mul_reduce_add
 ; CHECK:      dls lr, lr
