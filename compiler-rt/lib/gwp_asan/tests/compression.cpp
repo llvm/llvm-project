@@ -52,13 +52,13 @@ TEST(GwpAsanCompressionTest, MultiByteVarInt) {
   EXPECT_EQ(Compressed[1], 0x80);
   EXPECT_EQ(Compressed[2], 0x01);
 
-  Uncompressed = 0xff010ff0;
+  Uncompressed = 0x7f010ff0;
   EXPECT_EQ(5u, pack(&Uncompressed, 1u, Compressed, sizeof(Compressed)));
-  EXPECT_EQ(Compressed[0], 0xe0); // +0xff010ff0 => 0x1FE021FE0 in zigzag
+  EXPECT_EQ(Compressed[0], 0xe0); // +0x7f010ff0 => 0xFE021FE0 in zigzag
   EXPECT_EQ(Compressed[1], 0xbf);
   EXPECT_EQ(Compressed[2], 0x88);
   EXPECT_EQ(Compressed[3], 0xf0);
-  EXPECT_EQ(Compressed[4], 0x1f);
+  EXPECT_EQ(Compressed[4], 0x0f);
 }
 
 TEST(GwpAsanCompressionTest, CorrectDifference) {
@@ -159,12 +159,21 @@ void runPackUnpack(uintptr_t *Test, size_t NumEntries) {
 }
 
 TEST(GwpAsanCompressionTest, UncompressVarInt) {
-  uint8_t Compressed[] = {0x00, 0xaa, 0xaf, 0xd0, 0xda, 0x24};
+  uint8_t Compressed[] = {0x00, 0xaa, 0xaf, 0xd0, 0xda, 0x04};
   uintptr_t Uncompressed[2];
 
   EXPECT_EQ(2u, unpack(Compressed, sizeof(Compressed), Uncompressed, 2u));
   EXPECT_EQ(Uncompressed[0], 0x00u);
-  EXPECT_EQ(Uncompressed[1], 0x125aa0bd5u);
+  EXPECT_EQ(Uncompressed[1], 0x25aa0bd5u);
+}
+
+TEST(GwpAsanCompressionTest, UncompressVarIntUnderflow) {
+  uint8_t Compressed[] = {0x00, 0xab, 0xaf, 0xd0, 0xda, 0x04};
+  uintptr_t Uncompressed[2];
+
+  EXPECT_EQ(2u, unpack(Compressed, sizeof(Compressed), Uncompressed, 2u));
+  EXPECT_EQ(Uncompressed[0], 0x00u);
+  EXPECT_EQ(Uncompressed[1], UINTPTR_MAX - 0x25aa0bd5u);
 }
 
 TEST(GwpAsanCompressionTest, CompressUncompressAscending) {
@@ -188,7 +197,7 @@ TEST(GwpAsanCompressionTest, CompressUncompressZigZag) {
 }
 
 TEST(GwpAsanCompressionTest, CompressUncompressVarInt) {
-  uintptr_t Test[] = {0x1981561, 0x18560, 0x125ab9135, 0x1232562};
+  uintptr_t Test[] = {0x1981561, 0x18560, 0x25ab9135, 0x1232562};
   runPackUnpack(Test, sizeof(Test) / sizeof(uintptr_t));
 }
 
