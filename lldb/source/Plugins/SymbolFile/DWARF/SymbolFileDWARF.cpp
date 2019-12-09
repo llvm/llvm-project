@@ -3362,9 +3362,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
                 location = DWARFExpression(module, data, die.GetCU());
                 assert(func_low_pc != LLDB_INVALID_ADDRESS);
-                location.SetLocationListSlide(
-                    func_low_pc -
-                    attributes.CompileUnitAtIndex(i)->GetBaseAddress());
+                location.SetLocationListAddresses(
+                    attributes.CompileUnitAtIndex(i)->GetBaseAddress(),
+                    func_low_pc);
               }
             }
           } break;
