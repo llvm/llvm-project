@@ -10,14 +10,16 @@ namespace std {
 }
 
 struct A {
-  int a, b, c;
+  int a, b[3], c;
   std::strong_ordering operator<=>(const A&) const = default;
 };
 
-static_assert(A{1, 2, 3} <= A{1, 2, 3});
-static_assert(A{1, 2, 3} <= A{0, 20, 3}); // expected-error {{failed}}
-static_assert(A{1, 2, 3} <= A{1, 0, 30}); // expected-error {{failed}}
-static_assert(A{1, 2, 3} <= A{1, 2, 0}); // expected-error {{failed}}
+static_assert(A{1, 2, 3, 4, 5} <= A{1, 2, 3, 4, 5});
+static_assert(A{1, 2, 3, 4, 5} <= A{0, 20, 3, 4, 5}); // expected-error {{failed}}
+static_assert(A{1, 2, 3, 4, 5} <= A{1, 0, 30, 4, 5}); // expected-error {{failed}}
+static_assert(A{1, 2, 3, 4, 5} <= A{1, 2, 0, 40, 5}); // expected-error {{failed}}
+static_assert(A{1, 2, 3, 4, 5} <= A{1, 2, 3, 0, 50}); // expected-error {{failed}}
+static_assert(A{1, 2, 3, 4, 5} <= A{1, 2, 3, 4, 0}); // expected-error {{failed}}
 
 struct reverse_compare {
   int n;
@@ -26,10 +28,12 @@ struct reverse_compare {
 };
 
 struct B {
-  int a, b, c;
+  int a, b[3], c;
   friend reverse_compare operator<=>(const B&, const B&) = default;
 };
-static_assert(B{1, 2, 3} >= B{1, 2, 3});
-static_assert(B{1, 2, 3} >= B{0, 20, 3}); // expected-error {{failed}}
-static_assert(B{1, 2, 3} >= B{1, 0, 30}); // expected-error {{failed}}
-static_assert(B{1, 2, 3} >= B{1, 2, 0}); // expected-error {{failed}}
+static_assert(B{1, 2, 3, 4, 5} >= B{1, 2, 3, 4, 5});
+static_assert(B{1, 2, 3, 4, 5} >= B{0, 20, 3, 4, 5}); // expected-error {{failed}}
+static_assert(B{1, 2, 3, 4, 5} >= B{1, 0, 30, 4, 5}); // expected-error {{failed}}
+static_assert(B{1, 2, 3, 4, 5} >= B{1, 2, 0, 40, 5}); // expected-error {{failed}}
+static_assert(B{1, 2, 3, 4, 5} >= B{1, 2, 3, 0, 50}); // expected-error {{failed}}
+static_assert(B{1, 2, 3, 4, 5} >= B{1, 2, 3, 4, 0}); // expected-error {{failed}}

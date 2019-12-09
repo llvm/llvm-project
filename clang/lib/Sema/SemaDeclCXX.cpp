@@ -7442,6 +7442,7 @@ class DefaultedComparisonSynthesizer
                                         StmtListResult, StmtResult,
                                         std::pair<ExprResult, ExprResult>> {
   SourceLocation Loc;
+  unsigned ArrayDepth = 0;
 
 public:
   using Base = DefaultedComparisonVisitor;
@@ -7467,29 +7468,56 @@ public:
     case DefaultedComparisonKind::None:
       llvm_unreachable("not a defaulted comparison");
 
-    case DefaultedComparisonKind::Equal:
+    case DefaultedComparisonKind::Equal: {
       // C++2a [class.eq]p3:
       //   [...] compar[e] the corresponding elements [...] until the first
       //   index i where xi == yi yields [...] false. If no such index exists,
       //   V is true. Otherwise, V is false.
       //
       // Join the comparisons with '&&'s and return the result. Use a right
-      // fold because that short-circuits more naturally.
-      for (Stmt *EAsStmt : llvm::reverse(Stmts.Stmts)) {
-        Expr *E = cast<Expr>(EAsStmt);
-        if (RetVal.isUnset()) {
-          RetVal = E;
+      // fold (traversing the conditions right-to-left), because that
+      // short-circuits more naturally.
+      auto OldStmts = std::move(Stmts.Stmts);
+      Stmts.Stmts.clear();
+      ExprResult CmpSoFar;
+      // Finish a particular comparison chain.
+      auto FinishCmp = [&] {
+        if (Expr *Prior = CmpSoFar.get()) {
+          // Convert the last expression to 'return ...;'
+          if (RetVal.isUnset() && Stmts.Stmts.empty())
+            RetVal = CmpSoFar;
+          // Convert any prior comparison to 'if (!(...)) return false;'
+          else if (Stmts.add(buildIfNotCondReturnFalse(Prior)))
+            return true;
+          CmpSoFar = ExprResult();
+        }
+        return false;
+      };
+      for (Stmt *EAsStmt : llvm::reverse(OldStmts)) {
+        Expr *E = dyn_cast<Expr>(EAsStmt);
+        if (!E) {
+          // Found an array comparison.
+          if (FinishCmp() || Stmts.add(EAsStmt))
+            return StmtError();
           continue;
         }
-        RetVal = S.CreateBuiltinBinOp(Loc, BO_LAnd, E, RetVal.get());
-        if (RetVal.isInvalid())
+
+        if (CmpSoFar.isUnset()) {
+          CmpSoFar = E;
+          continue;
+        }
+        CmpSoFar = S.CreateBuiltinBinOp(Loc, BO_LAnd, E, CmpSoFar.get());
+        if (CmpSoFar.isInvalid())
           return StmtError();
       }
+      if (FinishCmp())
+        return StmtError();
+      std::reverse(Stmts.Stmts.begin(), Stmts.Stmts.end());
       //   If no such index exists, V is true.
       if (RetVal.isUnset())
         RetVal = S.ActOnCXXBoolLiteral(Loc, tok::kw_true);
-      Stmts.Stmts.clear();
       break;
+    }
 
     case DefaultedComparisonKind::ThreeWay: {
       // Per C++2a [class.spaceship]p3, as a fallback add:
@@ -7579,7 +7607,100 @@ private:
   // FIXME: When expanding a subobject, register a note in the code synthesis
   // stack to say which subobject we're comparing.
 
-  // FIXME: Build a loop for an array subobject.
+  StmtResult buildIfNotCondReturnFalse(ExprResult Cond) {
+    if (Cond.isInvalid())
+      return StmtError();
+
+    ExprResult NotCond = S.CreateBuiltinUnaryOp(Loc, UO_LNot, Cond.get());
+    if (NotCond.isInvalid())
+      return StmtError();
+
+    ExprResult False = S.ActOnCXXBoolLiteral(Loc, tok::kw_false);
+    assert(!False.isInvalid() && "should never fail");
+    StmtResult ReturnFalse = S.BuildReturnStmt(Loc, False.get());
+    if (ReturnFalse.isInvalid())
+      return StmtError();
+
+    return S.ActOnIfStmt(Loc, false, nullptr,
+                         S.ActOnCondition(nullptr, Loc, NotCond.get(),
+                                          Sema::ConditionKind::Boolean),
+                         ReturnFalse.get(), SourceLocation(), nullptr);
+  }
+
+  StmtResult visitSubobjectArray(QualType Type, llvm::APInt Size,
+                                 ExprPair Subobj) {
+    QualType SizeType = S.Context.getSizeType();
+    Size = Size.zextOrTrunc(S.Context.getTypeSize(SizeType));
+
+    // Build 'size_t i$n = 0'.
+    IdentifierInfo *IterationVarName = nullptr;
+    {
+      SmallString<8> Str;
+      llvm::raw_svector_ostream OS(Str);
+      OS << "i" << ArrayDepth;
+      IterationVarName = &S.Context.Idents.get(OS.str());
+    }
+    VarDecl *IterationVar = VarDecl::Create(
+        S.Context, S.CurContext, Loc, Loc, IterationVarName, SizeType,
+        S.Context.getTrivialTypeSourceInfo(SizeType, Loc), SC_None);
+    llvm::APInt Zero(S.Context.getTypeSize(SizeType), 0);
+    IterationVar->setInit(
+        IntegerLiteral::Create(S.Context, Zero, SizeType, Loc));
+    Stmt *Init = new (S.Context) DeclStmt(DeclGroupRef(IterationVar), Loc, Loc);
+
+    auto IterRef = [&] {
+      ExprResult Ref = S.BuildDeclarationNameExpr(
+          CXXScopeSpec(), DeclarationNameInfo(IterationVarName, Loc),
+          IterationVar);
+      assert(!Ref.isInvalid() && "can't reference our own variable?");
+      return Ref.get();
+    };
+
+    // Build 'i$n != Size'.
+    ExprResult Cond = S.CreateBuiltinBinOp(
+        Loc, BO_NE, IterRef(),
+        IntegerLiteral::Create(S.Context, Size, SizeType, Loc));
+    assert(!Cond.isInvalid() && "should never fail");
+
+    // Build '++i$n'.
+    ExprResult Inc = S.CreateBuiltinUnaryOp(Loc, UO_PreInc, IterRef());
+    assert(!Inc.isInvalid() && "should never fail");
+
+    // Build 'a[i$n]' and 'b[i$n]'.
+    auto Index = [&](ExprResult E) {
+      if (E.isInvalid())
+        return ExprError();
+      return S.CreateBuiltinArraySubscriptExpr(E.get(), Loc, IterRef(), Loc);
+    };
+    Subobj.first = Index(Subobj.first);
+    Subobj.second = Index(Subobj.second);
+
+    // Compare the array elements.
+    ++ArrayDepth;
+    StmtResult Substmt = visitSubobject(Type, Subobj);
+    --ArrayDepth;
+
+    if (Substmt.isInvalid())
+      return StmtError();
+
+    // For the inner level of an 'operator==', build 'if (!cmp) return false;'.
+    // For outer levels or for an 'operator<=>' we already have a suitable
+    // statement that returns as necessary.
+    if (Expr *ElemCmp = dyn_cast<Expr>(Substmt.get())) {
+      assert(DCK == DefaultedComparisonKind::Equal &&
+             "should have non-expression statement");
+      Substmt = buildIfNotCondReturnFalse(ElemCmp);
+      if (Substmt.isInvalid())
+        return StmtError();
+    }
+
+    // Build 'for (...) ...'
+    return S.ActOnForStmt(Loc, Loc, Init,
+                          S.ActOnCondition(nullptr, Loc, Cond.get(),
+                                           Sema::ConditionKind::Boolean),
+                          S.MakeFullDiscardedValueExpr(Inc.get()), Loc,
+                          Substmt.get());
+  }
 
   StmtResult visitExpandedSubobject(QualType Type, ExprPair Obj) {
     UnresolvedSet<4> Fns; // FIXME: Track this.
