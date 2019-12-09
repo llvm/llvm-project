@@ -13,6 +13,7 @@ module attributes {gpu.container_module} {
       // CHECK: spv.Return
       return
     }
+    // CHECK: attributes {capabilities = ["Shader"], extensions = ["SPV_KHR_storage_buffer_storage_class"]}
   }
 
   func @foo() {
