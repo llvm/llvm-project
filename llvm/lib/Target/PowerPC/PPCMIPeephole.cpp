@@ -908,7 +908,7 @@ bool PPCMIPeephole::simplifyCode(void) {
             MI.RemoveOperand(4);
             MI.RemoveOperand(3);
             MI.getOperand(2).setImm(0);
-            MI.setDesc(TII->get(Is64Bit ? PPC::ANDIo8 : PPC::ANDIo));
+            MI.setDesc(TII->get(Is64Bit ? PPC::ANDI8o : PPC::ANDIo));
           }
           Simplified = true;
           NumRotatesCollapsed++;
