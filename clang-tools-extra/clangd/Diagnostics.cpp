@@ -74,8 +74,9 @@ bool mentionsMainFile(const Diag &D) {
 }
 
 bool isBlacklisted(const Diag &D) {
-  // clang will always fail to MS ASM as we don't link in desc + asm parser.
-  if (D.ID == clang::diag::err_msasm_unable_to_create_target)
+  // clang will always fail parsing MS ASM, we don't link in desc + asm parser.
+  if (D.ID == clang::diag::err_msasm_unable_to_create_target ||
+      D.ID == clang::diag::err_msasm_unsupported_arch)
     return true;
   return false;
 }
