@@ -7809,6 +7809,92 @@ static SDValue LowerVECTOR_SHUFFLE_i1(SDValue Op, SelectionDAG &DAG,
                      DAG.getConstant(ARMCC::NE, dl, MVT::i32));
 }
 
+static SDValue LowerVECTOR_SHUFFLEUsingMovs(SDValue Op,
+                                            ArrayRef<int> ShuffleMask,
+                                            SelectionDAG &DAG) {
+  // Attempt to lower the vector shuffle using as many whole register movs as
+  // possible. This is useful for types smaller than 32bits, which would
+  // often otherwise become a series for grp movs.
+  SDLoc dl(Op);
+  EVT VT = Op.getValueType();
+  if (VT.getScalarSizeInBits() >= 32)
+    return SDValue();
+
+  assert((VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v16i8) &&
+         "Unexpected vector type");
+  int NumElts = VT.getVectorNumElements();
+  int QuarterSize = NumElts / 4;
+  // The four final parts of the vector, as i32's
+  SDValue Parts[4];
+
+  // Look for full lane vmovs like <0,1,2,3> or <u,5,6,7> etc, (but not
+  // <u,u,u,u>), returning the vmov lane index
+  auto getMovIdx = [](ArrayRef<int> ShuffleMask, int Start, int Length) {
+    // Detect which mov lane this would be from the first non-undef element.
+    int MovIdx = -1;
+    for (int i = 0; i < Length; i++) {
+      if (ShuffleMask[Start + i] >= 0) {
+        if (ShuffleMask[Start + i] % Length != i)
+          return -1;
+        MovIdx = ShuffleMask[Start + i] / Length;
+        break;
+      }
+    }
+    // If all items are undef, leave this for other combines
+    if (MovIdx == -1)
+      return -1;
+    // Check the remaining values are the correct part of the same mov
+    for (int i = 1; i < Length; i++) {
+      if (ShuffleMask[Start + i] >= 0 &&
+          (ShuffleMask[Start + i] / Length != MovIdx ||
+           ShuffleMask[Start + i] % Length != i))
+        return -1;
+    }
+    return MovIdx;
+  };
+
+  for (int Part = 0; Part < 4; ++Part) {
+    // Does this part look like a mov
+    int Elt = getMovIdx(ShuffleMask, Part * QuarterSize, QuarterSize);
+    if (Elt != -1) {
+      SDValue Input = Op->getOperand(0);
+      if (Elt >= 4) {
+        Input = Op->getOperand(1);
+        Elt -= 4;
+      }
+      SDValue BitCast = DAG.getBitcast(MVT::v4i32, Input);
+      Parts[Part] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, BitCast,
+                                DAG.getConstant(Elt, dl, MVT::i32));
+    }
+  }
+
+  // Nothing interesting found, just return
+  if (!Parts[0] && !Parts[1] && !Parts[2] && !Parts[3])
+    return SDValue();
+
+  // The other parts need to be built with the old shuffle vector, cast to a
+  // v4i32 and extract_vector_elts
+  if (!Parts[0] || !Parts[1] || !Parts[2] || !Parts[3]) {
+    SmallVector<int, 16> NewShuffleMask;
+    for (int Part = 0; Part < 4; ++Part)
+      for (int i = 0; i < QuarterSize; i++)
+        NewShuffleMask.push_back(
+            Parts[Part] ? -1 : ShuffleMask[Part * QuarterSize + i]);
+    SDValue NewShuffle = DAG.getVectorShuffle(
+        VT, dl, Op->getOperand(0), Op->getOperand(1), NewShuffleMask);
+    SDValue BitCast = DAG.getBitcast(MVT::v4i32, NewShuffle);
+
+    for (int Part = 0; Part < 4; ++Part)
+      if (!Parts[Part])
+        Parts[Part] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
+                                  BitCast, DAG.getConstant(Part, dl, MVT::i32));
+  }
+  // Build a vector out of the various parts and bitcast it back to the original
+  // type.
+  SDValue NewVec = DAG.getBuildVector(MVT::v4i32, dl, Parts);
+  return DAG.getBitcast(VT, NewVec);
+}
+
 static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const ARMSubtarget *ST) {
   SDValue V1 = Op.getOperand(0);
@@ -8001,6 +8087,10 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   if (ST->hasNEON() && VT == MVT::v8i8)
     if (SDValue NewOp = LowerVECTOR_SHUFFLEv8i8(Op, ShuffleMask, DAG))
+      return NewOp;
+
+  if (ST->hasMVEIntegerOps())
+    if (SDValue NewOp = LowerVECTOR_SHUFFLEUsingMovs(Op, ShuffleMask, DAG))
       return NewOp;
 
   return SDValue();

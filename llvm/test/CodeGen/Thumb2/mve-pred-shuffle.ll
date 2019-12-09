@@ -260,9 +260,8 @@ define <8 x i16> @shuffle4_v8i16(<8 x i16> %src, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vmov.u16 r0, q0[0]
 ; CHECK-NEXT:    vdup.16 q1, r0
-; CHECK-NEXT:    vmov.u16 r0, q0[1]
-; CHECK-NEXT:    vmov.16 q1[7], r0
 ; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov.f32 s7, s0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vcmp.i16 ne, q1, zr
