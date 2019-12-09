@@ -1121,16 +1121,35 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
 }
 
 Optional<ParamLoadedValue>
-TargetInstrInfo::describeLoadedValue(const MachineInstr &MI) const {
+TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
+                                     Register Reg) const {
   const MachineFunction *MF = MI.getMF();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   DIExpression *Expr = DIExpression::get(MF->getFunction().getContext(), {});
   int64_t Offset;
 
+  // To simplify the sub-register handling, verify that we only need to
+  // consider physical registers.
+  assert(MF->getProperties().hasProperty(
+      MachineFunctionProperties::Property::NoVRegs));
+
   if (auto DestSrc = isCopyInstr(MI)) {
-    return ParamLoadedValue(*DestSrc->Source, Expr);
-  } else if (auto DestSrc = isAddImmediate(MI, Offset)) {
+    Register DestReg = DestSrc->Destination->getReg();
+
+    if (Reg == DestReg)
+      return ParamLoadedValue(*DestSrc->Source, Expr);
+
+    // Cases where super- or sub-registers needs to be described should
+    // be handled by the target's hook implementation.
+    assert(!TRI->isSuperOrSubRegisterEq(Reg, DestReg) &&
+           "TargetInstrInfo::describeLoadedValue can't describe super- or "
+           "sub-regs for copy instructions");
+    return None;
+  } else if (auto RegImm = isAddImmediate(MI, Reg)) {
+    Register SrcReg = RegImm->Reg;
+    Offset = RegImm->Imm;
     Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset, Offset);
-    return ParamLoadedValue(*DestSrc->Source, Expr);
+    return ParamLoadedValue(MachineOperand::CreateReg(SrcReg, false), Expr);
   } else if (MI.hasOneMemOperand()) {
     // Only describe memory which provably does not escape the function. As
     // described in llvm.org/PR43343, escaped memory may be clobbered by the
@@ -1145,10 +1164,14 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI) const {
     if (!PSV || PSV->mayAlias(&MFI))
       return None;
 
-    const auto &TRI = MF->getSubtarget().getRegisterInfo();
     const MachineOperand *BaseOp;
     if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
       return None;
+
+    assert(MI.getNumExplicitDefs() == 1 &&
+           "Can currently only handle mem instructions with a single define");
+
+    // TODO: In what way do we need to take Reg into consideration here?
 
     SmallVector<uint64_t, 8> Ops;
     DIExpression::appendOffset(Ops, Offset);
