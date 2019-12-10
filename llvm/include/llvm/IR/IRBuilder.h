@@ -449,15 +449,15 @@ public:
   /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
-  CallInst *CreateMemSet(Value *Ptr, Value *Val, uint64_t Size, unsigned Align,
-                         bool isVolatile = false, MDNode *TBAATag = nullptr,
-                         MDNode *ScopeTag = nullptr,
+  CallInst *CreateMemSet(Value *Ptr, Value *Val, uint64_t Size,
+                         MaybeAlign Align, bool isVolatile = false,
+                         MDNode *TBAATag = nullptr, MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr) {
     return CreateMemSet(Ptr, Val, getInt64(Size), Align, isVolatile,
                         TBAATag, ScopeTag, NoAliasTag);
   }
 
-  CallInst *CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
+  CallInst *CreateMemSet(Value *Ptr, Value *Val, Value *Size, MaybeAlign Align,
                          bool isVolatile = false, MDNode *TBAATag = nullptr,
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
