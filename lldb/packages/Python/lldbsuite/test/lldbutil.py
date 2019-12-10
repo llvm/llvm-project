@@ -778,6 +778,8 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
     test.assertTrue(process,
                     "Could not create a valid process for %s: %s"%(target.GetExecutable().GetFilename(),
                     error.GetCString()))
+    test.assertFalse(error.Fail(),
+                     "Process launch failed: %s" % (error.GetCString()))
 
     # Frame #0 should be at our breakpoint.
     threads = get_threads_stopped_at_breakpoint(
