@@ -137,7 +137,7 @@ void TypeNodeEmitter::emitFallbackDefine(StringRef macroName,
 void TypeNodeEmitter::emitNodeInvocations() {
   TypeNode lastType;
 
-  visitTypeNodeHierarchy(Records, [&](TypeNode type, TypeNode base) {
+  visitASTNodeHierarchy<TypeNode>(Records, [&](TypeNode type, TypeNode base) {
     // If this is the Type node itself, skip it; it can't be handled
     // uniformly by metaprograms because it doesn't have a base.
     if (!base) return;
