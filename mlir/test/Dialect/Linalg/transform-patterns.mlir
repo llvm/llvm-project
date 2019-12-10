@@ -5,6 +5,8 @@
 // CHECK-DAG: #[[mk:.*]] = (d0, d1, d2) -> (d0, d2)
 // CHECK-DAG: #[[kn:.*]] = (d0, d1, d2) -> (d2, d1)
 // CHECK-DAG: #[[mn:.*]] = (d0, d1, d2) -> (d0, d1)
+// CHECK-DAG: #[[nm:.*]] = (d0, d1, d2) -> (d1, d0)
+// CHECK-DAG: #[[km:.*]] = (d0, d1, d2) -> (d2, d0)
 
 func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
           %y: memref<?xf32, offset: ?, strides: [1]>,
@@ -191,3 +193,53 @@ func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 //       CHECK: load %{{.*}}[] : memref<vector<8x32xf32>>
 //       CHECK: vector.contract {indexing_maps = [#[[mk]], #[[kn]], #[[mn]]], iterator_types = ["parallel", "parallel", "reduction"]} %{{.*}}, %{{.*}}, %{{.*}} : vector<8x16xf32>, vector<16x32xf32> into vector<8x32xf32>
 //       CHECK: store %{{.*}}, %{{.*}}[] : memref<vector<8x32xf32>>
+func @fma(%a: f32, %b: f32, %c: f32) -> f32 {
+          %d = mulf %a, %b: f32
+          %e = addf %c, %d: f32
+          return %e: f32
+        }
+#matmul_accesses = [
+          (m, n, k) -> (m, k),
+          (m, n, k) -> (k, n),
+          (m, n, k) -> (m, n)
+]
+#generic_matmul_trait = {
+          fun = @fma,
+          indexing_maps = #matmul_accesses,
+          library_call = "linalg_matmul",
+          n_views = [2, 1],
+          iterator_types = ["parallel", "parallel", "reduction"]
+        }
+
+func @permute_generic(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+           %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+           %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+  linalg.generic #generic_matmul_trait %A, %B, %C : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>
+
+  return
+}
+// CHECK-LABEL : func @fma
+// CHECK-LABEL : func @permute_generic
+// CHECK       : linalg.generic {fun = @fma, indexing_maps = [#[[kn]], #[[nm]], #[[km]]], iterator_types = ["parallel", "reduction", "parallel"], library_call = "linalg_matmul", n_views = [2, 1]} %{{.*}}, %{{.*}}, %{{.*}} : memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>
+
+func @fma_indexed(%i: index, %j: index, %k: index, %a: f32, %b: f32, %c: f32) -> f32 {
+          %d = mulf %a, %b: f32
+          %e = addf %c, %d: f32
+          return %e: f32
+}
+#indexed_matmul_trait = {
+          fun = @fma_indexed,
+          indexing_maps = #matmul_accesses,
+          library_call = "linalg_matmul_indexed",
+          n_views = [2, 1],
+          iterator_types = ["parallel", "parallel", "reduction"]
+}
+func @permute_generic_indexed(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+           %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+           %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+  linalg.indexed_generic #indexed_matmul_trait %A, %B, %C : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>
+  return
+}
+// CHECK-LABEL : func @fma_indexed
+// CHECK-LABEL : func @permute_generic_indexed
+// CHECK       : linalg.indexed_generic {fun = @fma, indexing_maps = [#[[kn]], #[[nm]], #[[km]]], iterator_types = ["parallel", "reduction", "parallel"], library_call = "linalg_matmul_indexed", n_views = [2, 1]} %{{.*}}, %{{.*}}, %{{.*}} : memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>
