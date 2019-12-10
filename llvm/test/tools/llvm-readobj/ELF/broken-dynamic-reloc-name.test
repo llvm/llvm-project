@@ -6,14 +6,12 @@
 # RUN: llvm-readelf --dyn-relocations %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=GNU
 
 # LLVM:      Dynamic Relocations {
-# LLVM-EMPTY:
 # LLVM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: st_name (0x1234) is past the end of the string table of size 0x1
 # LLVM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
 # LLVM-NEXT: }
 
 # GNU:      'RELA' relocation section at offset {{.+}} contains 24 bytes:
 # GNU-NEXT: Offset           Info             Type          Symbol's Value   Symbol's Name + Addend
-# GNU-EMPTY:
 # GNU-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: st_name (0x1234) is past the end of the string table of size 0x1
 # GNU-NEXT: 0000000000000000 0000000100000000 R_X86_64_NONE 0000000000000000 <corrupt> + 0
 
