@@ -995,6 +995,46 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   delete Id12;
 }
 
+TEST(InstructionsTest, GetSplat) {
+  // Create the elements for various constant vectors.
+  LLVMContext Ctx;
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Constant *CU = UndefValue::get(Int32Ty);
+  Constant *C0 = ConstantInt::get(Int32Ty, 0);
+  Constant *C1 = ConstantInt::get(Int32Ty, 1);
+
+  Constant *Splat0 = ConstantVector::get({C0, C0, C0, C0});
+  Constant *Splat1 = ConstantVector::get({C1, C1, C1, C1 ,C1});
+  Constant *Splat0Undef = ConstantVector::get({C0, CU, C0, CU});
+  Constant *Splat1Undef = ConstantVector::get({CU, CU, C1, CU});
+  Constant *NotSplat = ConstantVector::get({C1, C1, C0, C1 ,C1});
+  Constant *NotSplatUndef = ConstantVector::get({CU, C1, CU, CU ,C0});
+
+  // Default - undefs are not allowed.
+  EXPECT_EQ(Splat0->getSplatValue(), C0);
+  EXPECT_EQ(Splat1->getSplatValue(), C1);
+  EXPECT_EQ(Splat0Undef->getSplatValue(), nullptr);
+  EXPECT_EQ(Splat1Undef->getSplatValue(), nullptr);
+  EXPECT_EQ(NotSplat->getSplatValue(), nullptr);
+  EXPECT_EQ(NotSplatUndef->getSplatValue(), nullptr);
+
+  // Disallow undefs explicitly.
+  EXPECT_EQ(Splat0->getSplatValue(false), C0);
+  EXPECT_EQ(Splat1->getSplatValue(false), C1);
+  EXPECT_EQ(Splat0Undef->getSplatValue(false), nullptr);
+  EXPECT_EQ(Splat1Undef->getSplatValue(false), nullptr);
+  EXPECT_EQ(NotSplat->getSplatValue(false), nullptr);
+  EXPECT_EQ(NotSplatUndef->getSplatValue(false), nullptr);
+
+  // Allow undefs.
+  EXPECT_EQ(Splat0->getSplatValue(true), C0);
+  EXPECT_EQ(Splat1->getSplatValue(true), C1);
+  EXPECT_EQ(Splat0Undef->getSplatValue(true), C0);
+  EXPECT_EQ(Splat1Undef->getSplatValue(true), C1);
+  EXPECT_EQ(NotSplat->getSplatValue(true), nullptr);
+  EXPECT_EQ(NotSplatUndef->getSplatValue(true), nullptr);
+}
+
 TEST(InstructionsTest, SkipDebug) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
