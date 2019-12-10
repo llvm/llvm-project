@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/IOHandlerCursesGUI.h"
+#include "lldb/Host/Config.h"
 
 #ifndef LLDB_DISABLE_CURSES
 #include <curses.h>

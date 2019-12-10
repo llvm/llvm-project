@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/API/SBHostOS.h"
 #include "SBReproducerPrivate.h"
 #include "lldb/API/SBError.h"
-#include "lldb/API/SBHostOS.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
