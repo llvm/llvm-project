@@ -1078,9 +1078,16 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
   SourceLocation RLoc;
   // Parse with IsAddressOfOperand set to true to parse methods as DeclRefExprs
   // instead of MemberExprs.
-  ExprResult AssociatedFunction =
-      ParseOpenMPParensExpr(getOpenMPDirectiveName(OMPD_declare_variant), RLoc,
-                            /*IsAddressOfOperand=*/true);
+  ExprResult AssociatedFunction;
+  {
+    // Do not mark function as is used to prevent its emission if this is the
+    // only place where it is used.
+    EnterExpressionEvaluationContext Unevaluated(
+        Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+    AssociatedFunction = ParseOpenMPParensExpr(
+        getOpenMPDirectiveName(OMPD_declare_variant), RLoc,
+        /*IsAddressOfOperand=*/true);
+  }
   if (!AssociatedFunction.isUsable()) {
     if (!Tok.is(tok::annot_pragma_openmp_end))
       while (!SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch))

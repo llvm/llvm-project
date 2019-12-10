@@ -385,8 +385,13 @@ static void instantiateOMPDeclareVariantAttr(
   };
 
   ExprResult VariantFuncRef;
-  if (Expr *E = Attr.getVariantFuncRef())
+  if (Expr *E = Attr.getVariantFuncRef()) {
+    // Do not mark function as is used to prevent its emission if this is the
+    // only place where it is used.
+    EnterExpressionEvaluationContext Unevaluated(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
     VariantFuncRef = Subst(E);
+  }
 
   // Check function/variant ref.
   Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
