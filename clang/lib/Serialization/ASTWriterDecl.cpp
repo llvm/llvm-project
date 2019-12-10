@@ -658,14 +658,13 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   VisitNamedDecl(D);
   // FIXME: convert to LazyStmtPtr?
   // Unlike C/C++, method bodies will never be in header files.
-  bool HasBodyStuff = D->getBody() != nullptr     ||
-                      D->getSelfDecl() != nullptr || D->getCmdDecl() != nullptr;
+  bool HasBodyStuff = D->getBody() != nullptr;
   Record.push_back(HasBodyStuff);
   if (HasBodyStuff) {
     Record.AddStmt(D->getBody());
-    Record.AddDeclRef(D->getSelfDecl());
-    Record.AddDeclRef(D->getCmdDecl());
   }
+  Record.AddDeclRef(D->getSelfDecl());
+  Record.AddDeclRef(D->getCmdDecl());
   Record.push_back(D->isInstanceMethod());
   Record.push_back(D->isVariadic());
   Record.push_back(D->isPropertyAccessor());
