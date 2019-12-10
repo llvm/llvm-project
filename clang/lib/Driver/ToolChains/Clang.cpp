@@ -3515,6 +3515,11 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   // Adjust the debug info kind for the given toolchain.
   TC.adjustDebugInfoKind(DebugInfoKind, Args);
 
+  // When emitting remarks, we need at least debug lines in the output.
+  if (shouldEmitRemarks(Args) &&
+      DebugInfoKind <= codegenoptions::DebugDirectivesOnly)
+    DebugInfoKind = codegenoptions::DebugLineTablesOnly;
+
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DWARFVersion,
                           DebuggerTuning);
 
