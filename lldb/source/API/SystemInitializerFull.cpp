@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemInitializerFull.h"
-
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/Host/Config.h"
 
 #if !defined(LLDB_DISABLE_PYTHON)
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"

@@ -17,8 +17,6 @@
 
 #cmakedefine LLDB_DISABLE_POSIX
 
-#define LLDB_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}"
-
 #cmakedefine01 HAVE_SYS_TYPES_H
 
 #cmakedefine01 HAVE_SYS_EVENT_H
@@ -36,5 +34,15 @@
 #endif
 
 #cmakedefine01 LLDB_ENABLE_LZMA
+
+#cmakedefine LLDB_DISABLE_CURSES
+
+#cmakedefine LLDB_DISABLE_LIBEDIT
+
+#cmakedefine LLDB_DISABLE_PYTHON
+
+#cmakedefine LLDB_PYTHON_HOME "${LLDB_PYTHON_HOME}"
+
+#define LLDB_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}"
 
 #endif // #ifndef LLDB_HOST_CONFIG_H
