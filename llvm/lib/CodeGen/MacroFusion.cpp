@@ -71,6 +71,14 @@ static bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
   if (!DAG.addEdge(&SecondSU, SDep(&FirstSU, SDep::Cluster)))
     return false;
 
+  // TODO - If we want to chain more than two instructions, we need to create
+  // artifical edges to make dependencies from the FirstSU also dependent
+  // on other chained instructions, and other chained instructions also
+  // dependent on the dependencies of the SecondSU, to prevent them from being
+  // scheduled into these chained instructions.
+  assert(hasLessThanNumFused(FirstSU, 2) &&
+         "Currently we only support chaining together two instructions");
+
   // Adjust the latency between both instrs.
   for (SDep &SI : FirstSU.Succs)
     if (SI.getSUnit() == &SecondSU)
