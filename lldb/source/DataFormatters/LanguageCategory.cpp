@@ -48,8 +48,8 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
   }
 
   ValueObject &valobj(match_data.GetValueObject());
-  bool result =
-      m_category_sp->Get(valobj, match_data.GetMatchesVector(), format_sp);
+  bool result = m_category_sp->Get(valobj.GetObjectRuntimeLanguage(),
+                                   match_data.GetMatchesVector(), format_sp);
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
     m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
@@ -71,8 +71,8 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
   }
 
   ValueObject &valobj(match_data.GetValueObject());
-  bool result =
-      m_category_sp->Get(valobj, match_data.GetMatchesVector(), format_sp);
+  bool result = m_category_sp->Get(valobj.GetObjectRuntimeLanguage(),
+                                   match_data.GetMatchesVector(), format_sp);
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
     m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
@@ -94,8 +94,8 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
   }
 
   ValueObject &valobj(match_data.GetValueObject());
-  bool result =
-      m_category_sp->Get(valobj, match_data.GetMatchesVector(), format_sp);
+  bool result = m_category_sp->Get(valobj.GetObjectRuntimeLanguage(),
+                                   match_data.GetMatchesVector(), format_sp);
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
     m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
@@ -117,8 +117,8 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
   }
 
   ValueObject &valobj(match_data.GetValueObject());
-  bool result =
-      m_category_sp->Get(valobj, match_data.GetMatchesVector(), format_sp);
+  bool result = m_category_sp->Get(valobj.GetObjectRuntimeLanguage(),
+                                   match_data.GetMatchesVector(), format_sp);
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
     m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
