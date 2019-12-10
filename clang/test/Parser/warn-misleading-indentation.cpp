@@ -206,3 +206,22 @@ void a3(int i) {
     }
     return;
 }
+
+void s(int num) {
+    {
+        if (1)
+            return;
+        else
+            return;
+        return;
+    }
+    if (0)
+#ifdef WITH_WARN
+// expected-note@-2 {{here}}
+#endif
+        return;
+        return;
+#ifdef WITH_WARN
+// expected-warning@-2 {{misleading indentation; statement is not part of the previous 'if'}}
+#endif
+}
