@@ -3956,19 +3956,9 @@ public:
     EPI.Variadic = isVariadic();
     EPI.EllipsisLoc = getEllipsisLoc();
     EPI.HasTrailingReturn = hasTrailingReturn();
-    EPI.ExceptionSpec.Type = getExceptionSpecType();
+    EPI.ExceptionSpec = getExceptionSpecInfo();
     EPI.TypeQuals = getMethodQuals();
     EPI.RefQualifier = getRefQualifier();
-    if (EPI.ExceptionSpec.Type == EST_Dynamic) {
-      EPI.ExceptionSpec.Exceptions = exceptions();
-    } else if (isComputedNoexcept(EPI.ExceptionSpec.Type)) {
-      EPI.ExceptionSpec.NoexceptExpr = getNoexceptExpr();
-    } else if (EPI.ExceptionSpec.Type == EST_Uninstantiated) {
-      EPI.ExceptionSpec.SourceDecl = getExceptionSpecDecl();
-      EPI.ExceptionSpec.SourceTemplate = getExceptionSpecTemplate();
-    } else if (EPI.ExceptionSpec.Type == EST_Unevaluated) {
-      EPI.ExceptionSpec.SourceDecl = getExceptionSpecDecl();
-    }
     EPI.ExtParameterInfos = getExtParameterInfosOrNull();
     return EPI;
   }
@@ -3998,6 +3988,23 @@ public:
   /// Return whether this function has an instantiation-dependent exception
   /// spec.
   bool hasInstantiationDependentExceptionSpec() const;
+
+  /// Return all the available information about this type's exception spec.
+  ExceptionSpecInfo getExceptionSpecInfo() const {
+    ExceptionSpecInfo Result;
+    Result.Type = getExceptionSpecType();
+    if (Result.Type == EST_Dynamic) {
+      Result.Exceptions = exceptions();
+    } else if (isComputedNoexcept(Result.Type)) {
+      Result.NoexceptExpr = getNoexceptExpr();
+    } else if (Result.Type == EST_Uninstantiated) {
+      Result.SourceDecl = getExceptionSpecDecl();
+      Result.SourceTemplate = getExceptionSpecTemplate();
+    } else if (Result.Type == EST_Unevaluated) {
+      Result.SourceDecl = getExceptionSpecDecl();
+    }
+    return Result;
+  }
 
   /// Return the number of types in the exception specification.
   unsigned getNumExceptions() const {
