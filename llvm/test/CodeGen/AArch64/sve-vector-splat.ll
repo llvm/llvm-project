@@ -93,3 +93,43 @@ define <vscale x 2 x i32> @sve_splat_2xi32(i32 %val) {
   %splat = shufflevector <vscale x 2 x i32> %ins, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i32> %splat
 }
+
+define <vscale x 2 x i1> @sve_splat_2xi1(i1 %val) {
+; CHECK-LABEL: @sve_splat_2xi1
+; CHECK: sbfx x8, x0, #0, #1
+; CHECK-NEXT: whilelo p0.d, xzr, x8
+; CHECK-NEXT: ret
+  %ins = insertelement <vscale x 2 x i1> undef, i1 %val, i32 0
+  %splat = shufflevector <vscale x 2 x i1> %ins, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x i1> %splat
+}
+
+define <vscale x 4 x i1> @sve_splat_4xi1(i1 %val) {
+; CHECK-LABEL: @sve_splat_4xi1
+; CHECK: sbfx x8, x0, #0, #1
+; CHECK-NEXT: whilelo p0.s, xzr, x8
+; CHECK-NEXT: ret
+  %ins = insertelement <vscale x 4 x i1> undef, i1 %val, i32 0
+  %splat = shufflevector <vscale x 4 x i1> %ins, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+  ret <vscale x 4 x i1> %splat
+}
+
+define <vscale x 8 x i1> @sve_splat_8xi1(i1 %val) {
+; CHECK-LABEL: @sve_splat_8xi1
+; CHECK: sbfx x8, x0, #0, #1
+; CHECK-NEXT: whilelo p0.h, xzr, x8
+; CHECK-NEXT: ret
+  %ins = insertelement <vscale x 8 x i1> undef, i1 %val, i32 0
+  %splat = shufflevector <vscale x 8 x i1> %ins, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
+  ret <vscale x 8 x i1> %splat
+}
+
+define <vscale x 16 x i1> @sve_splat_16xi1(i1 %val) {
+; CHECK-LABEL: @sve_splat_16xi1
+; CHECK: sbfx x8, x0, #0, #1
+; CHECK-NEXT: whilelo p0.b, xzr, x8
+; CHECK-NEXT: ret
+  %ins = insertelement <vscale x 16 x i1> undef, i1 %val, i32 0
+  %splat = shufflevector <vscale x 16 x i1> %ins, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
+  ret <vscale x 16 x i1> %splat
+}
