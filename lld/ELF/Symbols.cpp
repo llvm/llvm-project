@@ -331,6 +331,34 @@ void maybeWarnUnorderableSymbol(const Symbol *sym) {
     report(": unable to order discarded symbol: ");
 }
 
+// Returns true if a symbol can be replaced at load-time by a symbol
+// with the same name defined in other ELF executable or DSO.
+bool computeIsPreemptible(const Symbol &sym) {
+  assert(!sym.isLocal());
+
+  // Only symbols with default visibility that appear in dynsym can be
+  // preempted. Symbols with protected visibility cannot be preempted.
+  if (!sym.includeInDynsym() || sym.visibility != STV_DEFAULT)
+    return false;
+
+  // At this point copy relocations have not been created yet, so any
+  // symbol that is not defined locally is preemptible.
+  if (!sym.isDefined())
+    return true;
+
+  if (!config->shared)
+    return false;
+
+  // If the dynamic list is present, it specifies preemptable symbols in a DSO.
+  if (config->hasDynamicList)
+    return sym.inDynamicList;
+
+  // -Bsymbolic means that definitions are not preempted.
+  if (config->bsymbolic || (config->bsymbolicFunctions && sym.isFunc()))
+    return false;
+  return true;
+}
+
 static uint8_t getMinVisibility(uint8_t va, uint8_t vb) {
   if (va == STV_DEFAULT)
     return vb;

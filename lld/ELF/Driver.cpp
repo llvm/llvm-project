@@ -1989,6 +1989,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.
   if (config->icf != ICFLevel::None) {
+    // Compute isPreemptible early to be used by ICF. We may add more symbols
+    // later, so this loop cannot be merged with the later computeIsPreemptible
+    // pass which is used by scanRelocations().
+    for (Symbol *sym : symtab->symbols())
+      sym->isPreemptible = computeIsPreemptible(*sym);
     findKeepUniqueSections<ELFT>(args);
     doIcf<ELFT>();
   }
