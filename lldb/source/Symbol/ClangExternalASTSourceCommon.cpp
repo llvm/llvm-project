@@ -13,7 +13,7 @@
 
 using namespace lldb_private;
 
-uint64_t g_TotalSizeOfMetadata = 0;
+static uint64_t g_TotalSizeOfMetadata = 0;
 
 typedef llvm::DenseMap<clang::ExternalASTSource *,
                        ClangExternalASTSourceCommon *>
