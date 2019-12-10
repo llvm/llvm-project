@@ -43,7 +43,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
     return false;
 
   if (match_data.GetTypeForCache()) {
-    if (m_format_cache.GetFormat(match_data.GetTypeForCache(), format_sp))
+    if (m_format_cache.Get(match_data.GetTypeForCache(), format_sp))
       return format_sp.get() != nullptr;
   }
 
@@ -52,7 +52,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
       m_category_sp->Get(valobj, match_data.GetMatchesVector(), format_sp);
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
-    m_format_cache.SetFormat(match_data.GetTypeForCache(), format_sp);
+    m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
   }
   return result;
 }
@@ -66,7 +66,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
     return false;
 
   if (match_data.GetTypeForCache()) {
-    if (m_format_cache.GetSummary(match_data.GetTypeForCache(), format_sp))
+    if (m_format_cache.Get(match_data.GetTypeForCache(), format_sp))
       return format_sp.get() != nullptr;
   }
 
@@ -75,7 +75,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
       m_category_sp->Get(valobj, match_data.GetMatchesVector(), format_sp);
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
-    m_format_cache.SetSummary(match_data.GetTypeForCache(), format_sp);
+    m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
   }
   return result;
 }
@@ -89,7 +89,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
     return false;
 
   if (match_data.GetTypeForCache()) {
-    if (m_format_cache.GetSynthetic(match_data.GetTypeForCache(), format_sp))
+    if (m_format_cache.Get(match_data.GetTypeForCache(), format_sp))
       return format_sp.get() != nullptr;
   }
 
@@ -98,7 +98,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
       m_category_sp->Get(valobj, match_data.GetMatchesVector(), format_sp);
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
-    m_format_cache.SetSynthetic(match_data.GetTypeForCache(), format_sp);
+    m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
   }
   return result;
 }
@@ -112,7 +112,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
     return false;
 
   if (match_data.GetTypeForCache()) {
-    if (m_format_cache.GetValidator(match_data.GetTypeForCache(), format_sp))
+    if (m_format_cache.Get(match_data.GetTypeForCache(), format_sp))
       return format_sp.get() != nullptr;
   }
 
@@ -121,7 +121,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
       m_category_sp->Get(valobj, match_data.GetMatchesVector(), format_sp);
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
-    m_format_cache.SetValidator(match_data.GetTypeForCache(), format_sp);
+    m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
   }
   return result;
 }
@@ -141,7 +141,7 @@ bool LanguageCategory::GetHardcoded(FormatManager &fmt_mgr,
   }
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
-    m_format_cache.SetFormat(match_data.GetTypeForCache(), format_sp);
+    m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
   }
   return format_sp.get() != nullptr;
 }
@@ -161,7 +161,7 @@ bool LanguageCategory::GetHardcoded(FormatManager &fmt_mgr,
   }
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
-    m_format_cache.SetSummary(match_data.GetTypeForCache(), format_sp);
+    m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
   }
   return format_sp.get() != nullptr;
 }
@@ -181,7 +181,7 @@ bool LanguageCategory::GetHardcoded(FormatManager &fmt_mgr,
   }
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
-    m_format_cache.SetSynthetic(match_data.GetTypeForCache(), format_sp);
+    m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
   }
   return format_sp.get() != nullptr;
 }
@@ -201,7 +201,7 @@ bool LanguageCategory::GetHardcoded(FormatManager &fmt_mgr,
   }
   if (match_data.GetTypeForCache() &&
       (!format_sp || !format_sp->NonCacheable())) {
-    m_format_cache.SetValidator(match_data.GetTypeForCache(), format_sp);
+    m_format_cache.Set(match_data.GetTypeForCache(), format_sp);
   }
   return format_sp.get() != nullptr;
 }
