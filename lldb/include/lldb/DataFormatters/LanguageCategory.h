@@ -47,7 +47,6 @@ private:
   HardcodedFormatters::HardcodedFormatFinder m_hardcoded_formats;
   HardcodedFormatters::HardcodedSummaryFinder m_hardcoded_summaries;
   HardcodedFormatters::HardcodedSyntheticFinder m_hardcoded_synthetics;
-  HardcodedFormatters::HardcodedValidatorFinder m_hardcoded_validators;
 
   template <typename ImplSP>
   auto &GetHardcodedFinder();

@@ -62,8 +62,6 @@ protected:
 
   bool ShouldPrintValueObject();
 
-  bool ShouldPrintValidation();
-
   bool IsNil();
 
   bool IsUninitialized();
@@ -75,10 +73,6 @@ protected:
   bool IsInstancePointer();
 
   bool IsAggregate();
-
-  bool PrintValidationMarkerIfNeeded();
-
-  bool PrintValidationErrorIfNeeded();
 
   bool PrintLocationIfNeeded();
 
@@ -145,7 +139,6 @@ private:
   std::string m_summary;
   std::string m_error;
   bool m_val_summary_ok;
-  std::pair<TypeValidatorResult, std::string> m_validation;
 
   friend struct StringSummaryFormat;
 
