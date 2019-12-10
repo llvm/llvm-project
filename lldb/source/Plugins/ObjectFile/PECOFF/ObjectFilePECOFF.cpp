@@ -315,6 +315,7 @@ bool ObjectFilePECOFF::ParseHeader() {
           ParseCOFFOptionalHeader(&offset);
         ParseSectionHeaders(offset);
       }
+      m_data.SetAddressByteSize(GetAddressByteSize());
       return true;
     }
   }
