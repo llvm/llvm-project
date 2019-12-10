@@ -610,302 +610,93 @@ FormatManager::GetCategoryForLanguage(lldb::LanguageType lang_type) {
   return lang_category;
 }
 
-lldb::TypeFormatImplSP
-FormatManager::GetHardcodedFormat(FormattersMatchData &match_data) {
-  TypeFormatImplSP retval_sp;
-
+template <typename ImplSP>
+ImplSP FormatManager::GetHardcoded(FormattersMatchData &match_data) {
+  ImplSP retval_sp;
   for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
     if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
       if (lang_category->GetHardcoded(*this, match_data, retval_sp))
-        break;
+        return retval_sp;
     }
   }
+  return retval_sp;
+}
 
+template <typename ImplSP> ImplSP
+FormatManager::GetCached(ValueObject &valobj,
+                         lldb::DynamicValueType use_dynamic) {
+  ImplSP retval_sp;
+  FormattersMatchData match_data(valobj, use_dynamic);
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  if (match_data.GetTypeForCache()) {
+    LLDB_LOGF(log, "\n\n[%s] Looking into cache for type %s", __FUNCTION__,
+              match_data.GetTypeForCache().AsCString("<invalid>"));
+    if (m_format_cache.Get(match_data.GetTypeForCache(), retval_sp)) {
+      if (log) {
+        LLDB_LOGF(log, "[%s] Cache search success. Returning.", __FUNCTION__);
+        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
+                  m_format_cache.GetCacheHits(),
+                  m_format_cache.GetCacheMisses());
+      }
+      return retval_sp;
+    }
+    LLDB_LOGF(log, "[%s] Cache search failed. Going normal route",
+              __FUNCTION__);
+  }
+
+  m_categories_map.Get(match_data, retval_sp);
+  if (!retval_sp) {
+    LLDB_LOGF(log, "[%s] Search failed. Giving language a chance.",
+              __FUNCTION__);
+    for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
+      if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
+        if (lang_category->Get(match_data, retval_sp))
+          break;
+      }
+    }
+    if (retval_sp) {
+      LLDB_LOGF(log, "[%s] Language search success. Returning.", __FUNCTION__);
+      return retval_sp;
+    }
+  }
+  if (!retval_sp) {
+    LLDB_LOGF(log, "[%s] Search failed. Giving hardcoded a chance.", __FUNCTION__);
+    retval_sp = GetHardcoded<ImplSP>(match_data);
+  }
+
+  if (match_data.GetTypeForCache() && (!retval_sp || !retval_sp->NonCacheable())) {
+    LLDB_LOGF(log, "[%s] Caching %p for type %s", __FUNCTION__,
+              static_cast<void *>(retval_sp.get()),
+              match_data.GetTypeForCache().AsCString("<invalid>"));
+    m_format_cache.Set(match_data.GetTypeForCache(), retval_sp);
+  }
+  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
+            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
   return retval_sp;
 }
 
 lldb::TypeFormatImplSP
 FormatManager::GetFormat(ValueObject &valobj,
                          lldb::DynamicValueType use_dynamic) {
-  FormattersMatchData match_data(valobj, use_dynamic);
-
-  TypeFormatImplSP retval;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-  if (match_data.GetTypeForCache()) {
-    LLDB_LOGF(log,
-              "\n\n[FormatManager::GetFormat] Looking into cache for type %s",
-              match_data.GetTypeForCache().AsCString("<invalid>"));
-    if (m_format_cache.GetFormat(match_data.GetTypeForCache(), retval)) {
-      if (log) {
-        LLDB_LOGF(
-            log, "[FormatManager::GetFormat] Cache search success. Returning.");
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
-      }
-      return retval;
-    }
-    LLDB_LOGF(
-        log,
-        "[FormatManager::GetFormat] Cache search failed. Going normal route");
-  }
-
-  retval = m_categories_map.GetFormat(match_data);
-  if (!retval) {
-    LLDB_LOGF(log,
-              "[FormatManager::GetFormat] Search failed. Giving language a "
-              "chance.");
-    for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
-      if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
-        if (lang_category->Get(match_data, retval))
-          break;
-      }
-    }
-    if (retval) {
-      LLDB_LOGF(
-          log,
-          "[FormatManager::GetFormat] Language search success. Returning.");
-      return retval;
-    }
-  }
-  if (!retval) {
-    LLDB_LOGF(log, "[FormatManager::GetFormat] Search failed. Giving hardcoded "
-                   "a chance.");
-    retval = GetHardcodedFormat(match_data);
-  }
-
-  if (match_data.GetTypeForCache() && (!retval || !retval->NonCacheable())) {
-    LLDB_LOGF(log, "[FormatManager::GetFormat] Caching %p for type %s",
-              static_cast<void *>(retval.get()),
-              match_data.GetTypeForCache().AsCString("<invalid>"));
-    m_format_cache.SetFormat(match_data.GetTypeForCache(), retval);
-  }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
-  return retval;
-}
-
-lldb::TypeSummaryImplSP
-FormatManager::GetHardcodedSummaryFormat(FormattersMatchData &match_data) {
-  TypeSummaryImplSP retval_sp;
-
-  for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
-    if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
-      if (lang_category->GetHardcoded(*this, match_data, retval_sp))
-        break;
-    }
-  }
-
-  return retval_sp;
+  return GetCached<lldb::TypeFormatImplSP>(valobj, use_dynamic);
 }
 
 lldb::TypeSummaryImplSP
 FormatManager::GetSummaryFormat(ValueObject &valobj,
                                 lldb::DynamicValueType use_dynamic) {
-  FormattersMatchData match_data(valobj, use_dynamic);
-
-  TypeSummaryImplSP retval;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-  if (match_data.GetTypeForCache()) {
-    LLDB_LOGF(log,
-              "\n\n[FormatManager::GetSummaryFormat] Looking into cache "
-              "for type %s",
-              match_data.GetTypeForCache().AsCString("<invalid>"));
-    if (m_format_cache.GetSummary(match_data.GetTypeForCache(), retval)) {
-      if (log) {
-        LLDB_LOGF(log,
-                  "[FormatManager::GetSummaryFormat] Cache search success. "
-                  "Returning.");
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
-      }
-      return retval;
-    }
-    LLDB_LOGF(log, "[FormatManager::GetSummaryFormat] Cache search failed. "
-                   "Going normal route");
-  }
-
-  retval = m_categories_map.GetSummaryFormat(match_data);
-  if (!retval) {
-    LLDB_LOGF(log, "[FormatManager::GetSummaryFormat] Search failed. Giving "
-                   "language a chance.");
-    for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
-      if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
-        if (lang_category->Get(match_data, retval))
-          break;
-      }
-    }
-    if (retval) {
-      LLDB_LOGF(log, "[FormatManager::GetSummaryFormat] Language search "
-                     "success. Returning.");
-      return retval;
-    }
-  }
-  if (!retval) {
-    LLDB_LOGF(log, "[FormatManager::GetSummaryFormat] Search failed. Giving "
-                   "hardcoded a chance.");
-    retval = GetHardcodedSummaryFormat(match_data);
-  }
-
-  if (match_data.GetTypeForCache() && (!retval || !retval->NonCacheable())) {
-    LLDB_LOGF(log, "[FormatManager::GetSummaryFormat] Caching %p for type %s",
-              static_cast<void *>(retval.get()),
-              match_data.GetTypeForCache().AsCString("<invalid>"));
-    m_format_cache.SetSummary(match_data.GetTypeForCache(), retval);
-  }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
-  return retval;
-}
-
-lldb::SyntheticChildrenSP
-FormatManager::GetHardcodedSyntheticChildren(FormattersMatchData &match_data) {
-  SyntheticChildrenSP retval_sp;
-
-  for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
-    if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
-      if (lang_category->GetHardcoded(*this, match_data, retval_sp))
-        break;
-    }
-  }
-
-  return retval_sp;
+  return GetCached<lldb::TypeSummaryImplSP>(valobj, use_dynamic);
 }
 
 lldb::SyntheticChildrenSP
 FormatManager::GetSyntheticChildren(ValueObject &valobj,
                                     lldb::DynamicValueType use_dynamic) {
-  FormattersMatchData match_data(valobj, use_dynamic);
-
-  SyntheticChildrenSP retval;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-  if (match_data.GetTypeForCache()) {
-    LLDB_LOGF(log,
-              "\n\n[FormatManager::GetSyntheticChildren] Looking into "
-              "cache for type %s",
-              match_data.GetTypeForCache().AsCString("<invalid>"));
-    if (m_format_cache.GetSynthetic(match_data.GetTypeForCache(), retval)) {
-      if (log) {
-        LLDB_LOGF(log, "[FormatManager::GetSyntheticChildren] Cache search "
-                       "success. Returning.");
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
-      }
-      return retval;
-    }
-    LLDB_LOGF(log, "[FormatManager::GetSyntheticChildren] Cache search failed. "
-                   "Going normal route");
-  }
-
-  retval = m_categories_map.GetSyntheticChildren(match_data);
-  if (!retval) {
-    LLDB_LOGF(log,
-              "[FormatManager::GetSyntheticChildren] Search failed. Giving "
-              "language a chance.");
-    for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
-      if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
-        if (lang_category->Get(match_data, retval))
-          break;
-      }
-    }
-    if (retval) {
-      LLDB_LOGF(log, "[FormatManager::GetSyntheticChildren] Language search "
-                     "success. Returning.");
-      return retval;
-    }
-  }
-  if (!retval) {
-    LLDB_LOGF(log,
-              "[FormatManager::GetSyntheticChildren] Search failed. Giving "
-              "hardcoded a chance.");
-    retval = GetHardcodedSyntheticChildren(match_data);
-  }
-
-  if (match_data.GetTypeForCache() && (!retval || !retval->NonCacheable())) {
-    LLDB_LOGF(log,
-              "[FormatManager::GetSyntheticChildren] Caching %p for type %s",
-              static_cast<void *>(retval.get()),
-              match_data.GetTypeForCache().AsCString("<invalid>"));
-    m_format_cache.SetSynthetic(match_data.GetTypeForCache(), retval);
-  }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
-  return retval;
+  return GetCached<lldb::SyntheticChildrenSP>(valobj, use_dynamic);
 }
 
 lldb::TypeValidatorImplSP
 FormatManager::GetValidator(ValueObject &valobj,
                             lldb::DynamicValueType use_dynamic) {
-  FormattersMatchData match_data(valobj, use_dynamic);
-
-  TypeValidatorImplSP retval;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-  if (match_data.GetTypeForCache()) {
-    LLDB_LOGF(
-        log, "\n\n[FormatManager::GetValidator] Looking into cache for type %s",
-        match_data.GetTypeForCache().AsCString("<invalid>"));
-    if (m_format_cache.GetValidator(match_data.GetTypeForCache(), retval)) {
-      if (log) {
-        LLDB_LOGF(
-            log,
-            "[FormatManager::GetValidator] Cache search success. Returning.");
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
-      }
-      return retval;
-    }
-    LLDB_LOGF(log, "[FormatManager::GetValidator] Cache search failed. Going "
-                   "normal route");
-  }
-
-  retval = m_categories_map.GetValidator(match_data);
-  if (!retval) {
-    LLDB_LOGF(log, "[FormatManager::GetValidator] Search failed. Giving "
-                   "language a chance.");
-    for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
-      if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
-        if (lang_category->Get(match_data, retval))
-          break;
-      }
-    }
-    if (retval) {
-      LLDB_LOGF(log, "[FormatManager::GetValidator] Language search success. "
-                     "Returning.");
-      return retval;
-    }
-  }
-  if (!retval) {
-    LLDB_LOGF(log, "[FormatManager::GetValidator] Search failed. Giving "
-                   "hardcoded a chance.");
-    retval = GetHardcodedValidator(match_data);
-  }
-
-  if (match_data.GetTypeForCache() && (!retval || !retval->NonCacheable())) {
-    LLDB_LOGF(log, "[FormatManager::GetValidator] Caching %p for type %s",
-              static_cast<void *>(retval.get()),
-              match_data.GetTypeForCache().AsCString("<invalid>"));
-    m_format_cache.SetValidator(match_data.GetTypeForCache(), retval);
-  }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
-  return retval;
-}
-
-lldb::TypeValidatorImplSP
-FormatManager::GetHardcodedValidator(FormattersMatchData &match_data) {
-  TypeValidatorImplSP retval_sp;
-
-  for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
-    if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
-      if (lang_category->GetHardcoded(*this, match_data, retval_sp))
-        break;
-    }
-  }
-
-  return retval_sp;
+  return GetCached<lldb::TypeValidatorImplSP>(valobj, use_dynamic);
 }
 
 FormatManager::FormatManager()
