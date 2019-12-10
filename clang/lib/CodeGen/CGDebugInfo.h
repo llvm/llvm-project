@@ -726,8 +726,6 @@ public:
     Other.CGF = nullptr;
   }
 
-  ApplyDebugLocation &operator=(ApplyDebugLocation &&) = default;
-
   ~ApplyDebugLocation();
 
   /// Apply TemporaryLocation if it is valid. Otherwise switch
