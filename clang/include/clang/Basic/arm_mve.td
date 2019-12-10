@@ -683,16 +683,16 @@ def vadciq_m: Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
          (xval $pair, 0))>;
 }
 
-multiclass VectorComplexAddPred<dag halving, dag angle> {
+multiclass VectorComplexAddPred<dag not_halving, dag angle> {
   def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
-     (IRInt<"vcaddq", [Vector]> halving, angle, $a, $b)>;
+     (IRInt<"vcaddq", [Vector]> not_halving, angle, $a, $b)>;
   def _m : Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
                               Predicate:$pred),
      (IRInt<"vcaddq_predicated", [Vector, Predicate]>
-       halving, angle, $inactive, $a, $b, $pred)>;
+       not_halving, angle, $inactive, $a, $b, $pred)>;
   def _x : Intrinsic<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
      (IRInt<"vcaddq_predicated", [Vector, Predicate]>
-       halving, angle, (undef Vector), $a, $b, $pred)>;
+       not_halving, angle, (undef Vector), $a, $b, $pred)>;
 }
 
 multiclass VectorComplexMulPred<dag angle> {
@@ -715,9 +715,9 @@ multiclass VectorComplexMLAPred<dag angle> {
     (IRInt<"vcmlaq_predicated", [Vector, Predicate]> angle, $a, $b, $c, $pred)>;
 }
 
-multiclass VectorComplexAddAngle<dag halving> {
-  defm _rot90 : VectorComplexAddPred<halving, (u32 0)>;
-  defm _rot270 : VectorComplexAddPred<halving, (u32 1)>;
+multiclass VectorComplexAddAngle<dag not_halving> {
+  defm _rot90 : VectorComplexAddPred<not_halving, (u32 0)>;
+  defm _rot270 : VectorComplexAddPred<not_halving, (u32 1)>;
 }
 
 multiclass VectorComplexMulAngle {
@@ -735,10 +735,10 @@ multiclass VectorComplexMLAAngle {
 }
 
 let params = T.Usual in
-defm vcaddq : VectorComplexAddAngle<(u32 0)>;
+defm vcaddq : VectorComplexAddAngle<(u32 1)>;
 
 let params = T.Signed in
-defm vhcaddq : VectorComplexAddAngle<(u32 1)>;
+defm vhcaddq : VectorComplexAddAngle<(u32 0)>;
 
 let params = T.Float in {
 defm vcmulq : VectorComplexMulAngle;
