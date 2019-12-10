@@ -554,6 +554,8 @@ void Symbol::replace(const Symbol &newSym) {
 }
 
 void maybeWarnUnorderableSymbol(const Symbol *sym);
+bool computeIsPreemptible(const Symbol &sym);
+
 } // namespace elf
 } // namespace lld
 
