@@ -78,7 +78,7 @@ func @simple5c() {
 }
 
 func @simple5d() {
-  // CHECK: Composed map: (d0) -> ((d0 * 4 + 24) floordiv 3)
+  // CHECK: Composed map: (d0) -> ((d0 * 4) floordiv 3 + 8)
   "test_affine_map"() { affine_map = (d0) -> (d0 - 1) } : () -> ()
   "test_affine_map"() { affine_map = (d0) -> (d0 + 7) } : () -> ()
   "test_affine_map"() { affine_map = (d0) -> (d0 * 4) } : () -> ()

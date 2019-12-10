@@ -21,7 +21,7 @@
 // UNROLL-BY-4-DAG: [[MAP5:#map[0-9]+]] = (d0)[s0] -> (d0 + s0 + 1)
 // UNROLL-BY-4-DAG: [[MAP6:#map[0-9]+]] = (d0, d1) -> (d0 * 16 + d1)
 // UNROLL-BY-4-DAG: [[MAP11:#map[0-9]+]] = (d0) -> (d0)
-// UNROLL-BY-4-DAG: [[MAP_TRIP_COUNT_MULTIPLE_FOUR:#map[0-9]+]] = ()[s0, s1, s2] -> (s0 + ((-s0 + s1) floordiv 4) * 4, s0 + ((-s0 + s2) floordiv 4) * 4, s0 + ((-s0 + 1024) floordiv 4) * 4)
+// UNROLL-BY-4-DAG: [[MAP_TRIP_COUNT_MULTIPLE_FOUR:#map[0-9]+]] = ()[s0, s1, s2] -> (s0 + ((-s0 + s1) floordiv 4) * 4, s0 + ((-s0 + s2) floordiv 4) * 4, s0 + ((-s0) floordiv 4) * 4 + 1024)
 
 // UNROLL-FULL-LABEL: func @loop_nest_simplest() {
 func @loop_nest_simplest() {

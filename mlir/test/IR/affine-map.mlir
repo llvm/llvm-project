@@ -156,7 +156,7 @@
 #map48 = (i, j, k) -> (i * 64 floordiv 64, i * 512 floordiv 128, 4 * j mod 4, 4*j*4 mod 8)
 
 // Simplifications for mod using known GCD's of the LHS expr.
-// CHECK: #map{{[0-9]+}} = (d0, d1)[s0] -> (0, 0, 0, (d0 * 4 + 3) mod 2)
+// CHECK: #map{{[0-9]+}} = (d0, d1)[s0] -> (0, 0, 0, 1)
 #map49 = (i, j)[s0] -> ( (i * 4 + 8) mod 4, 32 * j * s0 * 8 mod 256, (4*i + (j * (s0 * 2))) mod 2, (4*i + 3) mod 2)
 
 // Floordiv, ceildiv divide by one.
@@ -179,6 +179,9 @@
 
 // CHECK: #map{{[0-9]+}} = () -> ()
 #map55 = () -> ()
+
+// CHECK: #map{{[0-9]+}} = (d0, d1) -> (d0, d0 * 2 + d1 * 4 + 2, 1, 2, (d0 * 4) mod 8)
+#map56 = (d0, d1) -> ((4*d0 + 2) floordiv 4, (4*d0 + 8*d1 + 5) floordiv 2, (2*d0 + 4*d1 + 3) mod 2, (3*d0 - 4) mod 3, (4*d0 + 8*d1) mod 8)
 
 // Single identity maps are removed.
 // CHECK: func @f0(memref<2x4xi8, 1>)
@@ -355,3 +358,6 @@ func @f54(memref<10xi32, #map54>)
 
 // CHECK: "foo.op"() {map = #map{{[0-9]+}}} : () -> ()
 "foo.op"() {map = #map55} : () -> ()
+
+// CHECK: func @f56(memref<1x1xi8, #map{{[0-9]+}}>)
+func @f56(memref<1x1xi8, #map56>)
