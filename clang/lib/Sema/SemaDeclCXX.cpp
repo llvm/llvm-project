@@ -7214,12 +7214,18 @@ protected:
 struct DefaultedComparisonInfo {
   bool Deleted = false;
   bool Constexpr = true;
+  ComparisonCategoryType Category = ComparisonCategoryType::StrongOrdering;
 
-  static DefaultedComparisonInfo deleted() { return {true, false}; }
+  static DefaultedComparisonInfo deleted() {
+    DefaultedComparisonInfo Deleted;
+    Deleted.Deleted = true;
+    return Deleted;
+  }
 
   bool add(const DefaultedComparisonInfo &R) {
     Deleted |= R.Deleted;
     Constexpr &= R.Constexpr;
+    Category = commonComparisonType(Category, R.Category);
     return Deleted;
   }
 };
@@ -7353,19 +7359,43 @@ private:
       //   A defaulted comparison function is constexpr-compatible if [...]
       //   no overlod resolution performed [...] results in a non-constexpr
       //   function.
-      if (FunctionDecl *FD = Best->Function) {
-        assert(!FD->isDeleted() && "wrong overload resolution result");
+      if (FunctionDecl *BestFD = Best->Function) {
+        assert(!BestFD->isDeleted() && "wrong overload resolution result");
         // If it's not constexpr, explain why not.
-        if (Diagnose == ExplainConstexpr && !FD->isConstexpr()) {
+        if (Diagnose == ExplainConstexpr && !BestFD->isConstexpr()) {
           if (Subobj.Kind != Subobject::CompleteObject)
             S.Diag(Subobj.Loc, diag::note_defaulted_comparison_not_constexpr)
               << Subobj.Kind << Subobj.Decl;
-          S.Diag(FD->getLocation(),
+          S.Diag(BestFD->getLocation(),
                  diag::note_defaulted_comparison_not_constexpr_here);
           // Bail out after explaining; we don't want any more notes.
           return Result::deleted();
         }
-        R.Constexpr &= FD->isConstexpr();
+        R.Constexpr &= BestFD->isConstexpr();
+      }
+
+      if (OO == OO_Spaceship && FD->getReturnType()->isUndeducedAutoType()) {
+        if (auto *BestFD = Best->Function) {
+          if (auto *Info = S.Context.CompCategories.lookupInfoForType(
+              BestFD->getCallResultType())) {
+            R.Category = Info->Kind;
+          } else {
+            if (Diagnose == ExplainDeleted) {
+              S.Diag(Subobj.Loc, diag::note_defaulted_comparison_cannot_deduce)
+                  << Subobj.Kind << Subobj.Decl
+                  << BestFD->getCallResultType().withoutLocalFastQualifiers();
+              S.Diag(BestFD->getLocation(),
+                     diag::note_defaulted_comparison_cannot_deduce_callee)
+                  << Subobj.Kind << Subobj.Decl;
+            }
+            return Result::deleted();
+          }
+        } else {
+          Optional<ComparisonCategoryType> Cat =
+              getComparisonCategoryForBuiltinCmp(Args[0]->getType());
+          assert(Cat && "no category for builtin comparison?");
+          R.Category = *Cat;
+        }
       }
 
       // Note that we might be rewriting to a different operator. That call is
@@ -7914,6 +7944,19 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
         << FD->getReturnTypeSourceRange();
     return true;
   }
+  // C++2a [class.spaceship]p2 [P2002R0]:
+  //   Let R be the declared return type [...]. If R is auto, [...]. Otherwise,
+  //   R shall not contain a placeholder type.
+  if (DCK == DefaultedComparisonKind::ThreeWay &&
+      FD->getDeclaredReturnType()->getContainedDeducedType() &&
+      !Context.hasSameType(FD->getDeclaredReturnType(),
+                           Context.getAutoDeductType())) {
+    Diag(FD->getLocation(),
+         diag::err_defaulted_comparison_deduced_return_type_not_auto)
+        << (int)DCK << FD->getDeclaredReturnType() << Context.AutoDeductTy
+        << FD->getReturnTypeSourceRange();
+    return true;
+  }
 
   // For a defaulted function in a dependent class, defer all remaining checks
   // until instantiation.
@@ -7955,7 +7998,21 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
     return false;
   }
 
-  // FIXME: Deduce the return type now.
+  // C++2a [class.spaceship]p2:
+  //   The return type is deduced as the common comparison type of R0, R1, ...
+  if (DCK == DefaultedComparisonKind::ThreeWay &&
+      FD->getDeclaredReturnType()->isUndeducedAutoType()) {
+    SourceLocation RetLoc = FD->getReturnTypeSourceRange().getBegin();
+    if (RetLoc.isInvalid())
+      RetLoc = FD->getBeginLoc();
+    // FIXME: Should we really care whether we have the complete type and the
+    // 'enumerator' constants here? A forward declaration seems sufficient.
+    QualType Cat = CheckComparisonCategoryType(Info.Category, RetLoc);
+    if (Cat.isNull())
+      return true;
+    Context.adjustDeducedFunctionResultType(
+        FD, SubstAutoType(FD->getDeclaredReturnType(), Cat));
+  }
 
   // C++2a [dcl.fct.def.default]p3 [P2002R0]:
   //   An explicitly-defaulted function that is not defined as deleted may be

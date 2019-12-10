@@ -50,6 +50,20 @@ enum class ComparisonCategoryType : unsigned char {
   Last = StrongOrdering
 };
 
+/// Determine the common comparison type, as defined in C++2a
+/// [class.spaceship]p4.
+inline ComparisonCategoryType commonComparisonType(ComparisonCategoryType A,
+                                                   ComparisonCategoryType B) {
+  if ((A == ComparisonCategoryType::StrongEquality) ^
+      (B == ComparisonCategoryType::StrongEquality))
+    return ComparisonCategoryType::WeakEquality;
+  return A < B ? A : B;
+}
+
+/// Get the comparison category that should be used when comparing values of
+/// type \c T.
+Optional<ComparisonCategoryType> getComparisonCategoryForBuiltinCmp(QualType T);
+
 /// An enumeration representing the possible results of a three-way
 /// comparison. These values map onto instances of comparison category types
 /// defined in the standard library. e.g. 'std::strong_ordering::less'.
