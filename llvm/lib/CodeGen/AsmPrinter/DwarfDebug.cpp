@@ -856,13 +856,10 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     // This CU is either a clang module DWO or a skeleton CU.
     NewCU.addUInt(Die, dwarf::DW_AT_GNU_dwo_id, dwarf::DW_FORM_data8,
                   DIUnit->getDWOId());
-    if (!DIUnit->getSplitDebugFilename().empty()) {
+    if (!DIUnit->getSplitDebugFilename().empty())
       // This is a prefabricated skeleton CU.
-      dwarf::Attribute attrDWOName = getDwarfVersion() >= 5
-                                         ? dwarf::DW_AT_dwo_name
-                                         : dwarf::DW_AT_GNU_dwo_name;
-      NewCU.addString(Die, attrDWOName, DIUnit->getSplitDebugFilename());
-    }
+      NewCU.addString(Die, dwarf::DW_AT_GNU_dwo_name,
+                      DIUnit->getSplitDebugFilename());
   }
 }
 // Create new DwarfCompileUnit for the given metadata node with tag
@@ -1104,13 +1101,10 @@ void DwarfDebug::finalizeModuleInfo() {
     bool HasSplitUnit = SkCU && !TheCU.getUnitDie().children().empty();
 
     if (HasSplitUnit) {
-      dwarf::Attribute attrDWOName = getDwarfVersion() >= 5
-                                         ? dwarf::DW_AT_dwo_name
-                                         : dwarf::DW_AT_GNU_dwo_name;
       finishUnitAttributes(TheCU.getCUNode(), TheCU);
-      TheCU.addString(TheCU.getUnitDie(), attrDWOName,
+      TheCU.addString(TheCU.getUnitDie(), dwarf::DW_AT_GNU_dwo_name,
                       Asm->TM.Options.MCOptions.SplitDwarfFile);
-      SkCU->addString(SkCU->getUnitDie(), attrDWOName,
+      SkCU->addString(SkCU->getUnitDie(), dwarf::DW_AT_GNU_dwo_name,
                       Asm->TM.Options.MCOptions.SplitDwarfFile);
       // Emit a unique identifier for this CU.
       uint64_t ID =
