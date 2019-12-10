@@ -32,6 +32,8 @@
 #define liblldb_Editline_h_
 #if defined(__cplusplus)
 
+#include "lldb/Host/Config.h"
+
 #if LLDB_EDITLINE_USE_WCHAR
 #include <codecvt>
 #endif
