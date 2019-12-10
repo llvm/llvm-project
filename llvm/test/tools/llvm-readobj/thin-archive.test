@@ -1,12 +1,9 @@
 # RUN: rm -f %t.a
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
-
-# Make copies of the test inputs for placing in the archive so that we can mess
-# about with them later on.
-# RUN: cp %p/ELF/Inputs/trivial.obj.elf-x86-64 %t/1.o
-# RUN: cp %p/ELF/Inputs/relocs.obj.elf-x86_64 %t/2.o
-# RUN: cp %p/COFF/Inputs/trivial.obj.coff-arm %t/3.o
+# RUN: yaml2obj --docnum=1 %s -o %t/1.o
+# RUN: yaml2obj --docnum=2 %s -o %t/2.o
+# RUN: yaml2obj --docnum=3 %s -o %t/3.o
 # RUN: llvm-ar rcT %t.a %t/1.o %t/2.o %t/3.o
 
 # Test that basic dumping works for all members.
@@ -16,30 +13,26 @@
 # LLVM: File: {{.*}}1.o
 # LLVM: Format: ELF64-x86-64
 # LLVM: ElfHeader {
-# LLVM:   SectionHeaderCount: 10
+# LLVM:   SectionHeaderCount: 3
 # LLVM: Sections [
 # LLVM: Relocations [
 # LLVM: Symbols [
 
 # GNU: ELF Header:
-# GNU:   Number of section headers: 10
+# GNU:   Number of section headers: 3
 # GNU: Section Headers:
-# GNU: Relocation section '.rela.text'
-# GNU: Symbol table '.symtab'
 
 # LLVM: File: {{.*}}2.o
-# LLVM: Format: ELF64-x86-64
+# LLVM: Format: ELF32-i386
 # LLVM: ElfHeader {
-# LLVM:   SectionHeaderCount: 8
+# LLVM:   SectionHeaderCount: 4
 # LLVM: Sections [
 # LLVM: Relocations [
 # LLVM: Symbols [
 
 # GNU: ELF Header:
-# GNU:   Number of section headers: 8
+# GNU:   Number of section headers: 4
 # GNU: Section Headers:
-# GNU: Relocation section '.rela.text'
-# GNU: Symbol table '.symtab'
 
 # LLVM: File: {{.*}}3.o
 # LLVM: Format: COFF-ARM
@@ -55,9 +48,9 @@
 # RUN: llvm-readobj --file-headers %t.a | FileCheck %s --check-prefix=RESIZED
 
 # RESIZED: File: {{.*}}1.o
-# RESIZED: SectionHeaderCount: 10
+# RESIZED: Format: ELF64-x86-64
 # RESIZED: File: {{.*}}2.o
-# RESIZED: SectionHeaderCount: 10
+# RESIZED: Format: ELF64-x86-64
 
 # Remove the second member and show that the first can still be dumped, but that the last isn't.
 # RUN: rm %t/2.o
@@ -65,6 +58,30 @@
 # RUN: FileCheck %s --check-prefix=ERR --input-file=%t.err
 
 # MISSING:     File: {{.*}}1.o
-# MISSING:     SectionHeaderCount: 10
+# MISSING:     Format: ELF64-x86-64
 # MISSING-NOT: File: {{.*}}3.o
 # ERR: error: '{{.*}}.a': '{{.*}}2.o': {{[Nn]}}o such file or directory
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARMNT
+  Characteristics: [  ]
+sections: []
+symbols: []
