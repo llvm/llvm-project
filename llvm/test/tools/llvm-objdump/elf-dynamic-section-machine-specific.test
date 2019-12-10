@@ -1,6 +1,6 @@
 ## Test that hexagon machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=1 -o %t.hex \
-# RUN:          %S/../llvm-readobj/Inputs/elf-dynamic-tags-machine-specific.yaml
+# RUN:          %S/../llvm-readobj/ELF/Inputs/elf-dynamic-tags-machine-specific.yaml
 # RUN: llvm-objdump -p %t.hex | FileCheck %s --check-prefix=HEXAGON
 
 # HEXAGON:      Dynamic Section:
@@ -13,7 +13,7 @@
 
 ## Test that MIPS machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=2 -o %t.mips \
-# RUN:          %S/../llvm-readobj/Inputs/elf-dynamic-tags-machine-specific.yaml
+# RUN:          %S/../llvm-readobj/ELF/Inputs/elf-dynamic-tags-machine-specific.yaml
 # RUN: llvm-objdump -p %t.mips | FileCheck %s --check-prefix=MIPS
 
 # MIPS:      Dynamic Section:
@@ -68,7 +68,7 @@
 
 ## Test that PPC machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=3 -o %t.ppc \
-# RUN:          %S/../llvm-readobj/Inputs/elf-dynamic-tags-machine-specific.yaml
+# RUN:          %S/../llvm-readobj/ELF/Inputs/elf-dynamic-tags-machine-specific.yaml
 # RUN: llvm-objdump -p %t.ppc | FileCheck %s --check-prefix=PPC
 
 # PPC:      Dynamic Section:
@@ -79,7 +79,7 @@
 
 ## Test that PPC64 machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=4 -o %t.ppc64 \
-# RUN:          %S/../llvm-readobj/Inputs/elf-dynamic-tags-machine-specific.yaml
+# RUN:          %S/../llvm-readobj/ELF/Inputs/elf-dynamic-tags-machine-specific.yaml
 # RUN: llvm-objdump -p %t.ppc64 | FileCheck %s --check-prefix=PPC64
 
 # PPC64:      Dynamic Section:
