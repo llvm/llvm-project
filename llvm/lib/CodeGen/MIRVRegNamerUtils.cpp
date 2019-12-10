@@ -69,7 +69,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     return 0;
   };
 
-  SmallVector<unsigned, 16> MIOperands = {MI.getOpcode()};
+  SmallVector<unsigned, 16> MIOperands = {MI.getOpcode(), MI.getFlags()};
   llvm::transform(MI.uses(), std::back_inserter(MIOperands), GetHashableMO);
 
   auto HashMI = hash_combine_range(MIOperands.begin(), MIOperands.end());
