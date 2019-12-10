@@ -413,9 +413,9 @@ Symbols:
 ## Check llvm-readobj reports it.
 
 # RUN: yaml2obj %s --docnum=20 -o %t20
-# RUN: not llvm-readobj -dt %t20 2>&1 | FileCheck -DFILE=%t20 --check-prefix=INVALID-VERSION %s
+# RUN: llvm-readobj -dt %t20 2>&1 | FileCheck -DFILE=%t20 --check-prefix=INVALID-VERSION %s
 
-# INVALID-VERSION: error: '[[FILE]]': Invalid version entry
+# INVALID-VERSION: warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 255 which is missing
 
 --- !ELF
 FileHeader:
