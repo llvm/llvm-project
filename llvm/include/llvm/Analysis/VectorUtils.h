@@ -173,8 +173,6 @@ void getVectorVariantNames(const CallInst &CI,
 /// Helper class used to find the vector functions associated to a
 /// scalar CallInst.
 class VFDatabase {
-  /// The CallInst for which we are looking for vector functions.
-  const CallInst &CI;
   /// The Module of the CallInst CI.
   const Module *M;
   /// List of vector functions descritors associated to the call
@@ -223,8 +221,8 @@ public:
 
   /// Constructor, requires a CallInst instance.
   VFDatabase(CallInst &CI)
-      : CI(CI), M(CI.getModule()),
-        ScalarToVectorMappings(VFDatabase::getMappings(CI)) {}
+      : M(CI.getModule()), ScalarToVectorMappings(VFDatabase::getMappings(CI)) {
+  }
   /// \defgroup VFDatabase query interface.
   ///
   /// @{
