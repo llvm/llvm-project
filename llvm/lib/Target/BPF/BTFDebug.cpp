@@ -1055,15 +1055,11 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
   // Collect all types referenced by globals.
   const Module *M = MMI->getModule();
   for (const GlobalVariable &Global : M->globals()) {
-    // Ignore external globals for now.
-    if (!Global.hasInitializer() && Global.hasExternalLinkage())
-      continue;
-
     // Decide the section name.
     StringRef SecName;
     if (Global.hasSection()) {
       SecName = Global.getSection();
-    } else {
+    } else if (Global.hasInitializer()) {
       // data, bss, or readonly sections
       if (Global.isConstant())
         SecName = ".rodata";
@@ -1093,24 +1089,32 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     // Only support the following globals:
     //  . static variables
     //  . non-static weak or non-weak global variables
-    // Essentially means:
-    //  . .bcc/.data/.rodata DataSec entities only contain static data
-    //  . Other DataSec entities contain static or initialized global data.
-    //    Initialized global data are mostly used for finding map key/value type
-    //    id's. Whether DataSec is readonly or not can be found from
-    //    corresponding ELF section flags.
+    //  . weak or non-weak extern global variables
+    // Whether DataSec is readonly or not can be found from corresponding ELF
+    // section flags. Whether a BTF_KIND_VAR is a weak symbol or not
+    // can be found from the corresponding ELF symbol table.
     auto Linkage = Global.getLinkage();
     if (Linkage != GlobalValue::InternalLinkage &&
         Linkage != GlobalValue::ExternalLinkage &&
-        Linkage != GlobalValue::WeakAnyLinkage)
+        Linkage != GlobalValue::WeakAnyLinkage &&
+        Linkage != GlobalValue::ExternalWeakLinkage)
       continue;
 
-    uint32_t GVarInfo = Linkage == GlobalValue::InternalLinkage
-                            ? BTF::VAR_STATIC
-                            : BTF::VAR_GLOBAL_ALLOCATED;
+    uint32_t GVarInfo;
+    if (Linkage == GlobalValue::InternalLinkage) {
+      GVarInfo = BTF::VAR_STATIC;
+    } else if (Global.hasInitializer()) {
+      GVarInfo = BTF::VAR_GLOBAL_ALLOCATED;
+    } else {
+      GVarInfo = BTF::VAR_GLOBAL_EXTERNAL;
+    }
+
     auto VarEntry =
         std::make_unique<BTFKindVar>(Global.getName(), GVTypeId, GVarInfo);
     uint32_t VarId = addType(std::move(VarEntry));
+
+    if (SecName.empty())
+      continue;
 
     // Find or create a DataSec
     if (DataSecEntries.find(SecName) == DataSecEntries.end()) {
@@ -1145,6 +1149,34 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
   return false;
 }
 
+void BTFDebug::processFuncPrototypes() {
+  const Module *M = MMI->getModule();
+  for (const Function &F : M->functions()) {
+    const DISubprogram *SP = F.getSubprogram();
+    if (!SP || SP->isDefinition())
+      continue;
+
+    uint32_t ProtoTypeId;
+    const std::unordered_map<uint32_t, StringRef> FuncArgNames;
+    visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
+
+    auto VarEntry =
+        std::make_unique<BTFKindVar>(SP->getName(), ProtoTypeId,
+                                     BTF::VAR_GLOBAL_EXTERNAL);
+    uint32_t VarId = addType(std::move(VarEntry));
+
+    StringRef SecName = F.getSection();
+    if (SecName.empty())
+      continue;
+
+    if (DataSecEntries.find(SecName) == DataSecEntries.end()) {
+      DataSecEntries[SecName] = std::make_unique<BTFKindDataSec>(Asm, SecName);
+    }
+
+    DataSecEntries[SecName]->addVar(VarId, Asm->getSymbol(&F), 8);
+  }
+}
+
 void BTFDebug::endModule() {
   // Collect MapDef globals if not collected yet.
   if (MapDefNotCollected) {
@@ -1154,6 +1186,9 @@ void BTFDebug::endModule() {
 
   // Collect global types/variables except MapDef globals.
   processGlobals(false);
+
+  processFuncPrototypes();
+
   for (auto &DataSec : DataSecEntries)
     addType(std::move(DataSec.second));
 
