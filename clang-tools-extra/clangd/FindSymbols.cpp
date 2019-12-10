@@ -131,7 +131,7 @@ namespace {
 llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
-  SourceLocation NameLoc = spellingLocIfSpelled(findName(&ND), SM);
+  SourceLocation NameLoc = nameLocation(ND, SM);
   // getFileLoc is a good choice for us, but we also need to make sure
   // sourceLocToPosition won't switch files, so we call getSpellingLoc on top of
   // that to make sure it does not switch files.
