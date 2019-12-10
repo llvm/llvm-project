@@ -22,6 +22,7 @@
 
 using namespace clang;
 using namespace CodeGen;
+using namespace llvm::omp;
 
 namespace {
 enum OpenMPRTLFunctionNVPTX {
