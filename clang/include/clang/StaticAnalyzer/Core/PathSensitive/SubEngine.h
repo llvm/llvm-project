@@ -149,14 +149,16 @@ public:
   }
 
   virtual ProgramStateRef
-  processPointerEscapedOnBind(ProgramStateRef State, SVal Loc, SVal Val, const LocationContext *LCtx) = 0;
+  processPointerEscapedOnBind(ProgramStateRef State, SVal Loc, SVal Val,
+                              const LocationContext *LCtx) = 0;
+
+  virtual ProgramStateRef notifyCheckersOfPointerEscape(
+      ProgramStateRef State, const InvalidatedSymbols *Invalidated,
+      ArrayRef<const MemRegion *> ExplicitRegions, const CallEvent *Call,
+      RegionAndSymbolInvalidationTraits &HTraits) = 0;
 
   virtual ProgramStateRef
-  notifyCheckersOfPointerEscape(ProgramStateRef State,
-                           const InvalidatedSymbols *Invalidated,
-                           ArrayRef<const MemRegion *> ExplicitRegions,
-                           const CallEvent *Call,
-                           RegionAndSymbolInvalidationTraits &HTraits) = 0;
+  processLocalRegionEscape(ProgramStateRef State, const MemRegion *R) const = 0;
 
   /// printJson - Called by ProgramStateManager to print checker-specific data.
   virtual void printJson(raw_ostream &Out, ProgramStateRef State,
