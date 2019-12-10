@@ -34,11 +34,11 @@ namespace clangd {
 /// in code is considered implementation detail.
 bool isImplementationDetail(const Decl *D);
 
-/// Find the identifier source location of the given D.
-///
-/// The returned location is usually the spelling location where the name of the
-/// decl occurs in the code.
-SourceLocation findName(const clang::Decl *D);
+/// Find the source location of the identifier for \p D.
+/// Transforms macro locations to locations spelled inside files. All code
+/// that needs locations of declaration names (e.g. the index) should go through
+/// this function.
+SourceLocation nameLocation(const clang::Decl &D, const SourceManager &SM);
 
 /// Returns the qualified name of ND. The scope doesn't contain unwritten scopes
 /// like inline namespaces.
