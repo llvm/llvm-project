@@ -13010,11 +13010,9 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       (getLangOpts().getFPRoundingMode() != LangOptions::FPR_ToNearest ||
        getLangOpts().getFPExceptionMode() != LangOptions::FPE_Ignore))
     // Mark the current function as usng floating point constrained intrinsics
-    if (FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext))
-{
+    if (FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext)) {
       F->setUsesFPIntrin(true);
-      printf("Enclosing function uses fp intrinsics\n");
-}
+    }
 
   // Some of the binary operations require promoting operands of half vector to
   // float vectors and truncating the result back to half vector. For now, we do
