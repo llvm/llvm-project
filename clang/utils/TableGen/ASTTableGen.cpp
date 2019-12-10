@@ -61,13 +61,11 @@ std::string clang::tblgen::StmtNode::getId() const {
 }
 
 // A map from a node to each of its child nodes.
-template <class NodeClass>
-using ChildMap = std::multimap<NodeClass, NodeClass>;
+using ChildMap = std::multimap<ASTNode, ASTNode>;
 
-template <class NodeClass>
-static void visitASTNodeRecursive(NodeClass node, NodeClass base,
-                                  const ChildMap<NodeClass> &map,
-                                  ASTNodeHierarchyVisitor<NodeClass> visit) {
+static void visitASTNodeRecursive(ASTNode node, ASTNode base,
+                                  const ChildMap &map,
+                                  ASTNodeHierarchyVisitor<ASTNode> visit) {
   visit(node, base);
 
   auto i = map.lower_bound(node), e = map.upper_bound(node);
@@ -76,10 +74,9 @@ static void visitASTNodeRecursive(NodeClass node, NodeClass base,
   }
 }
 
-template <class NodeClass>
 static void visitHierarchy(RecordKeeper &records,
                            StringRef nodeClassName,
-                           ASTNodeHierarchyVisitor<NodeClass> visit) {
+                           ASTNodeHierarchyVisitor<ASTNode> visit) {
   // Check for the node class, just as a sanity check.
   if (!records.getClass(nodeClassName)) {
     PrintFatalError(Twine("cannot find definition for node class ")
@@ -90,9 +87,9 @@ static void visitHierarchy(RecordKeeper &records,
   auto nodes = records.getAllDerivedDefinitions(nodeClassName);
 
   // Derive the child map.
-  ChildMap<NodeClass> hierarchy;
-  NodeClass root;
-  for (NodeClass node : nodes) {
+  ChildMap hierarchy;
+  ASTNode root;
+  for (ASTNode node : nodes) {
     if (auto base = node.getBase())
       hierarchy.insert(std::make_pair(base, node));
     else if (root)
@@ -105,26 +102,11 @@ static void visitHierarchy(RecordKeeper &records,
     PrintFatalError(Twine("no root node in ") + nodeClassName + " hierarchy");
 
   // Now visit the map recursively, starting at the root node.
-  visitASTNodeRecursive(root, NodeClass(), hierarchy, visit);
+  visitASTNodeRecursive(root, ASTNode(), hierarchy, visit);
 }
 
-void clang::tblgen::visitASTNodeHierarchy(RecordKeeper &records,
-                                          StringRef nodeClassName,
+void clang::tblgen::visitASTNodeHierarchyImpl(RecordKeeper &records,
+                                              StringRef nodeClassName,
                                       ASTNodeHierarchyVisitor<ASTNode> visit) {
   visitHierarchy(records, nodeClassName, visit);
-}
-
-void clang::tblgen::visitDeclNodeHierarchy(RecordKeeper &records,
-                                      ASTNodeHierarchyVisitor<DeclNode> visit) {
-  visitHierarchy(records, DeclNodeClassName, visit);
-}
-
-void clang::tblgen::visitTypeNodeHierarchy(RecordKeeper &records,
-                                      ASTNodeHierarchyVisitor<TypeNode> visit) {
-  visitHierarchy(records, TypeNodeClassName, visit);
-}
-
-void clang::tblgen::visitStmtNodeHierarchy(RecordKeeper &records,
-                                      ASTNodeHierarchyVisitor<StmtNode> visit) {
-  visitHierarchy(records, StmtNodeClassName, visit);
 }
