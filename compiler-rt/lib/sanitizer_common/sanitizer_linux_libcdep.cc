@@ -629,6 +629,10 @@ class DynamicSegment {
       last_symbol = Max(buckets[i], last_symbol);
     }
 
+    if (last_symbol < header->symoffset) {
+      return header->symoffset;
+    }
+
     // Walk the bucket's chain to add the chain length to the total.
     uint32_t chain_entry;
     do {

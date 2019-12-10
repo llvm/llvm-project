@@ -98,13 +98,20 @@ private:
   }
 
   /// Catch taint related bugs. Check if tainted data is passed to a
-  /// system call etc.
-  bool checkPre(const CallExpr *CE, CheckerContext &C) const;
+  /// system call etc. Returns true on matching.
+  bool checkPre(const CallExpr *CE, const FunctionDecl *FDecl, StringRef Name,
+                CheckerContext &C) const;
 
-  /// Add taint sources on a pre-visit.
-  void addSourcesPre(const CallExpr *CE, CheckerContext &C) const;
+  /// Add taint sources on a pre-visit. Returns true on matching.
+  bool addSourcesPre(const CallExpr *CE, const FunctionDecl *FDecl,
+                     StringRef Name, CheckerContext &C) const;
 
-  /// Propagate taint generated at pre-visit.
+  /// Mark filter's arguments not tainted on a pre-visit. Returns true on
+  /// matching.
+  bool addFiltersPre(const CallExpr *CE, StringRef Name,
+                     CheckerContext &C) const;
+
+  /// Propagate taint generated at pre-visit. Returns true on matching.
   bool propagateFromPre(const CallExpr *CE, CheckerContext &C) const;
 
   /// Check if the region the expression evaluates to is the standard input,
@@ -442,14 +449,26 @@ GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
 
 void GenericTaintChecker::checkPreStmt(const CallExpr *CE,
                                        CheckerContext &C) const {
+  const FunctionDecl *FDecl = C.getCalleeDecl(CE);
+  // Check for non-global functions.
+  if (!FDecl || FDecl->getKind() != Decl::Function)
+    return;
+
+  StringRef Name = C.getCalleeName(FDecl);
+  if (Name.empty())
+    return;
+
   // Check for taintedness related errors first: system call, uncontrolled
   // format string, tainted buffer size.
-  if (checkPre(CE, C))
+  if (checkPre(CE, FDecl, Name, C))
     return;
 
   // Marks the function's arguments and/or return value tainted if it present in
   // the list.
-  addSourcesPre(CE, C);
+  if (addSourcesPre(CE, FDecl, Name, C))
+    return;
+
+  addFiltersPre(CE, Name, C);
 }
 
 void GenericTaintChecker::checkPostStmt(const CallExpr *CE,
@@ -464,31 +483,46 @@ void GenericTaintChecker::printState(raw_ostream &Out, ProgramStateRef State,
   printTaint(State, Out, NL, Sep);
 }
 
-void GenericTaintChecker::addSourcesPre(const CallExpr *CE,
+bool GenericTaintChecker::addSourcesPre(const CallExpr *CE,
+                                        const FunctionDecl *FDecl,
+                                        StringRef Name,
                                         CheckerContext &C) const {
-  ProgramStateRef State = nullptr;
-  const FunctionDecl *FDecl = C.getCalleeDecl(CE);
-  if (!FDecl || FDecl->getKind() != Decl::Function)
-    return;
-
-  StringRef Name = C.getCalleeName(FDecl);
-  if (Name.empty())
-    return;
-
   // First, try generating a propagation rule for this function.
   TaintPropagationRule Rule = TaintPropagationRule::getTaintPropagationRule(
       this->CustomPropagations, FDecl, Name, C);
   if (!Rule.isNull()) {
-    State = Rule.process(CE, C);
-    if (!State)
-      return;
-    C.addTransition(State);
-    return;
+    ProgramStateRef State = Rule.process(CE, C);
+    if (State) {
+      C.addTransition(State);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool GenericTaintChecker::addFiltersPre(const CallExpr *CE, StringRef Name,
+                                        CheckerContext &C) const {
+  auto It = CustomFilters.find(Name);
+  if (It == CustomFilters.end())
+    return false;
+
+  ProgramStateRef State = C.getState();
+  const ArgVector &Args = It->getValue();
+  for (unsigned ArgNum : Args) {
+    if (ArgNum >= CE->getNumArgs())
+      continue;
+
+    const Expr *Arg = CE->getArg(ArgNum);
+    Optional<SVal> V = getPointedToSVal(C, Arg);
+    if (V)
+      State = removeTaint(State, *V);
   }
 
-  if (!State)
-    return;
-  C.addTransition(State);
+  if (State != C.getState()) {
+    C.addTransition(State);
+    return true;
+  }
+  return false;
 }
 
 bool GenericTaintChecker::propagateFromPre(const CallExpr *CE,
@@ -530,18 +564,11 @@ bool GenericTaintChecker::propagateFromPre(const CallExpr *CE,
 }
 
 bool GenericTaintChecker::checkPre(const CallExpr *CE,
+                                   const FunctionDecl *FDecl, StringRef Name,
                                    CheckerContext &C) const {
 
   if (checkUncontrolledFormatString(CE, C))
     return true;
-
-  const FunctionDecl *FDecl = C.getCalleeDecl(CE);
-  if (!FDecl || FDecl->getKind() != Decl::Function)
-    return false;
-
-  StringRef Name = C.getCalleeName(FDecl);
-  if (Name.empty())
-    return false;
 
   if (checkSystemCall(CE, Name, C))
     return true;
