@@ -832,7 +832,8 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
   Annotations Code("[[😂]]");
   auto LSPRange = Code.range();
   llvm::StringRef FilePath = "/test/TestTU.cpp";
-  auto Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, "abc");
+  llvm::StringRef NewName = "abc";
+  auto Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewName);
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
   ASSERT_EQ(1UL, Edit->Replacements.size());
   EXPECT_EQ(FilePath, Edit->Replacements.begin()->getFilePath());
@@ -840,7 +841,7 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
 
   // Test invalid range.
   LSPRange.end = {10, 0}; // out of range
-  Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, "abc");
+  Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewName);
   EXPECT_FALSE(Edit);
   EXPECT_THAT(llvm::toString(Edit.takeError()),
               testing::HasSubstr("fail to convert"));
@@ -851,10 +852,10 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
               [[range]]
       [[range]]
   )cpp");
-  Edit = buildRenameEdit(FilePath, T.code(), T.ranges(), "abc");
+  Edit = buildRenameEdit(FilePath, T.code(), T.ranges(), NewName);
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
   EXPECT_EQ(applyEdits(FileEdits{{T.code(), std::move(*Edit)}}).front().second,
-            expectedResult(Code, expectedResult(T, "abc")));
+            expectedResult(T, NewName));
 }
 
 TEST(CrossFileRenameTests, adjustRenameRanges) {
