@@ -535,6 +535,8 @@ class VarDecl;
     bool InitFunctionInstantiation(FunctionDecl *New, FunctionDecl *Tmpl);
     bool InitMethodInstantiation(CXXMethodDecl *New, CXXMethodDecl *Tmpl);
 
+    bool SubstDefaultedFunction(FunctionDecl *New, FunctionDecl *Tmpl);
+
     TemplateParameterList *
       SubstTemplateParams(TemplateParameterList *List);
 

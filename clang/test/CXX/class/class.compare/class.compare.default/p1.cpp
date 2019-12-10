@@ -44,3 +44,79 @@ template struct Dependent<Good>;
 
 struct Bad { using type = Dependent<Bad>&; };
 template struct Dependent<Bad>; // expected-note {{in instantiation of}}
+
+
+namespace std {
+  struct strong_ordering {
+    int n;
+    constexpr operator int() const { return n; }
+    static const strong_ordering equal, greater, less;
+  };
+  constexpr strong_ordering strong_ordering::equal = {0};
+  constexpr strong_ordering strong_ordering::greater = {1};
+  constexpr strong_ordering strong_ordering::less = {-1};
+}
+
+namespace LookupContext {
+  struct A {};
+
+  namespace N {
+    template <typename T> auto f() {
+      bool operator==(const T &, const T &);
+      bool operator<(const T &, const T &);
+      struct B {
+        T a;
+        std::strong_ordering operator<=>(const B &) const = default;
+      };
+      return B();
+    }
+
+    auto g() {
+      struct Cmp { Cmp(std::strong_ordering); };
+      Cmp operator<=>(const A&, const A&);
+      bool operator!=(const Cmp&, int);
+      struct B {
+        A a;
+        Cmp operator<=>(const B &) const = default;
+      };
+      return B();
+    }
+
+    auto h() {
+      struct B;
+      bool operator==(const B&, const B&);
+      bool operator!=(const B&, const B&); // expected-note 2{{best match}}
+      std::strong_ordering operator<=>(const B&, const B&);
+      bool operator<(const B&, const B&); // expected-note 2{{best match}}
+      bool operator<=(const B&, const B&); // expected-note 2{{best match}}
+      bool operator>(const B&, const B&); // expected-note 2{{best match}}
+      bool operator>=(const B&, const B&); // expected-note 2{{best match}}
+
+      struct B {
+        bool operator!=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
+        bool operator<(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
+        bool operator<=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
+        bool operator>(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
+        bool operator>=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
+      };
+      return B();
+    }
+  }
+
+  namespace M {
+    bool operator==(const A &, const A &) = delete;
+    bool operator<(const A &, const A &) = delete;
+    bool cmp = N::f<A>() < N::f<A>();
+
+    void operator<=>(const A &, const A &) = delete;
+    auto cmp2 = N::g() <=> N::g();
+
+    void use_h() {
+      N::h() != N::h(); // expected-error {{implicitly deleted}}
+      N::h() < N::h(); // expected-error {{implicitly deleted}}
+      N::h() <= N::h(); // expected-error {{implicitly deleted}}
+      N::h() > N::h(); // expected-error {{implicitly deleted}}
+      N::h() >= N::h(); // expected-error {{implicitly deleted}}
+    }
+  }
+}
