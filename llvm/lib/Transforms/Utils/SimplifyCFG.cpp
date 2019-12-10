@@ -13,7 +13,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -39,7 +38,6 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -1252,38 +1250,14 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
 
   Instruction *I1 = &*BB1_Itr++, *I2 = &*BB2_Itr++;
   // Skip debug info if it is not identical.
-
-  // If the terminator instruction is hoisted, and any variable locations have
-  // non-identical debug intrinsics, then those variable locations must be set
-  // as undef.
-  // FIXME: If each block contains identical debug variable intrinsics in a
-  // different order, they will be considered non-identical and be dropped.
-  MapVector<DebugVariable, DbgVariableIntrinsic *> UndefDVIs;
-
-  auto SkipDbgInfo = [&UndefDVIs](Instruction *&I,
-                                  BasicBlock::iterator &BB_Itr) {
-    while (isa<DbgInfoIntrinsic>(I)) {
-      if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(I))
-        UndefDVIs.insert(
-            {DebugVariable(DVI->getVariable(), DVI->getExpression(),
-                           DVI->getDebugLoc()->getInlinedAt()),
-             DVI});
-      I = &*BB_Itr++;
-    }
-  };
-
-  auto SkipNonIdenticalDbgInfo =
-      [&BB1_Itr, &BB2_Itr, &SkipDbgInfo](Instruction *&I1, Instruction *&I2) {
-        DbgInfoIntrinsic *DBI1 = dyn_cast<DbgInfoIntrinsic>(I1);
-        DbgInfoIntrinsic *DBI2 = dyn_cast<DbgInfoIntrinsic>(I2);
-        if (!DBI1 || !DBI2 || !DBI1->isIdenticalToWhenDefined(DBI2)) {
-          SkipDbgInfo(I1, BB1_Itr);
-          SkipDbgInfo(I2, BB2_Itr);
-        }
-      };
-
-  SkipNonIdenticalDbgInfo(I1, I2);
-
+  DbgInfoIntrinsic *DBI1 = dyn_cast<DbgInfoIntrinsic>(I1);
+  DbgInfoIntrinsic *DBI2 = dyn_cast<DbgInfoIntrinsic>(I2);
+  if (!DBI1 || !DBI2 || !DBI1->isIdenticalToWhenDefined(DBI2)) {
+    while (isa<DbgInfoIntrinsic>(I1))
+      I1 = &*BB1_Itr++;
+    while (isa<DbgInfoIntrinsic>(I2))
+      I2 = &*BB2_Itr++;
+  }
   // FIXME: Can we define a safety predicate for CallBr?
   if (isa<PHINode>(I1) || !I1->isIdenticalToWhenDefined(I2) ||
       (isa<InvokeInst>(I1) && !isSafeToHoistInvoke(BB1, BB2, I1, I2)) ||
@@ -1356,7 +1330,15 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
 
     I1 = &*BB1_Itr++;
     I2 = &*BB2_Itr++;
-    SkipNonIdenticalDbgInfo(I1, I2);
+    // Skip debug info if it is not identical.
+    DbgInfoIntrinsic *DBI1 = dyn_cast<DbgInfoIntrinsic>(I1);
+    DbgInfoIntrinsic *DBI2 = dyn_cast<DbgInfoIntrinsic>(I2);
+    if (!DBI1 || !DBI2 || !DBI1->isIdenticalToWhenDefined(DBI2)) {
+      while (isa<DbgInfoIntrinsic>(I1))
+        I1 = &*BB1_Itr++;
+      while (isa<DbgInfoIntrinsic>(I2))
+        I2 = &*BB2_Itr++;
+    }
   } while (I1->isIdenticalToWhenDefined(I2));
 
   return true;
@@ -1392,13 +1374,6 @@ HoistTerminator:
   }
 
   // Okay, it is safe to hoist the terminator.
-  for (auto DIVariableInst : UndefDVIs) {
-    DbgVariableIntrinsic *DVI = DIVariableInst.second;
-    DVI->moveBefore(BI);
-    if (DVI->getVariableLocation())
-      setDbgVariableUndef(DVI);
-  }
-
   Instruction *NT = I1->clone();
   BIParent->getInstList().insert(BI->getIterator(), NT);
   if (!NT->getType()->isVoidTy()) {
