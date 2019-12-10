@@ -37,6 +37,7 @@
 // CHECK-NEXT: debug.AnalysisOrder:EndFunction = false
 // CHECK-NEXT: debug.AnalysisOrder:LiveSymbols = false
 // CHECK-NEXT: debug.AnalysisOrder:NewAllocator = false
+// CHECK-NEXT: debug.AnalysisOrder:PointerEscape = false
 // CHECK-NEXT: debug.AnalysisOrder:PostCall = false
 // CHECK-NEXT: debug.AnalysisOrder:PostStmtArraySubscriptExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:PostStmtCXXNewExpr = false
@@ -97,4 +98,4 @@
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 94
+// CHECK-NEXT: num-entries = 95
