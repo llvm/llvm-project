@@ -5553,8 +5553,14 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       for (auto RegAndSize : SplitRegs) {
         auto FragmentExpr = DIExpression::createFragmentExpression(
           Expr, Offset, RegAndSize.second);
-        if (!FragmentExpr)
+        // If a valid fragment expression cannot be created, the variable's
+        // correct value cannot be determined and so it is set as Undef.
+        if (!FragmentExpr) {
+          SDDbgValue *SDV = DAG.getConstantDbgValue(
+              Variable, Expr, UndefValue::get(V->getType()), DL, SDNodeOrder);
+          DAG.AddDbgValue(SDV, nullptr, false);
           continue;
+        }
         assert(!IsDbgDeclare && "DbgDeclare operand is not in memory?");
         FuncInfo.ArgDbgValues.push_back(
           BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), false,
