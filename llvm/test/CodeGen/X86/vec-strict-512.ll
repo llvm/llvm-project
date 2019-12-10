@@ -10,6 +10,10 @@ declare <8 x double> @llvm.experimental.constrained.fmul.v8f64(<8 x double>, <8 
 declare <16 x float> @llvm.experimental.constrained.fmul.v16f32(<16 x float>, <16 x float>, metadata, metadata)
 declare <8 x double> @llvm.experimental.constrained.fdiv.v8f64(<8 x double>, <8 x double>, metadata, metadata)
 declare <16 x float> @llvm.experimental.constrained.fdiv.v16f32(<16 x float>, <16 x float>, metadata, metadata)
+declare <8 x double> @llvm.experimental.constrained.sqrt.v8f64(<8 x double>, metadata, metadata)
+declare <16 x float> @llvm.experimental.constrained.sqrt.v16f32(<16 x float>, metadata, metadata)
+declare <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f32(<8 x float>, metadata)
+declare <8 x float> @llvm.experimental.constrained.fptrunc.v8f32.v8f64(<8 x double>, metadata, metadata)
 
 define <8 x double> @f1(<8 x double> %a, <8 x double> %b) #0 {
 ; CHECK-LABEL: f1:
@@ -97,6 +101,54 @@ define <16 x float> @f8(<16 x float> %a, <16 x float> %b) #0 {
                                                                       metadata !"round.dynamic",
                                                                       metadata !"fpexcept.strict") #0
   ret <16 x float> %ret
+}
+
+define <8 x double> @f9(<8 x double> %a) #0 {
+; CHECK-LABEL: f9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsqrtpd %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ret = call <8 x double> @llvm.experimental.constrained.sqrt.v8f64(
+                              <8 x double> %a,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #0
+  ret <8 x double> %ret
+}
+
+
+define <16 x float> @f10(<16 x float> %a) #0 {
+; CHECK-LABEL: f10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsqrtps %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ret = call <16 x float> @llvm.experimental.constrained.sqrt.v16f32(
+                              <16 x float> %a,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #0
+  ret <16 x float > %ret
+}
+
+define <8 x double> @f11(<8 x float> %a) #0 {
+; CHECK-LABEL: f11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtps2pd %ymm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ret = call <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f32(
+                                <8 x float> %a,
+                                metadata !"fpexcept.strict") #0
+  ret <8 x double> %ret
+}
+
+define <8 x float> @f12(<8 x double> %a) #0 {
+; CHECK-LABEL: f12:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtpd2ps %zmm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ret = call <8 x float> @llvm.experimental.constrained.fptrunc.v8f32.v8f64(
+                                <8 x double> %a,
+                                metadata !"round.dynamic",
+                                metadata !"fpexcept.strict") #0
+  ret <8 x float> %ret
 }
 
 attributes #0 = { strictfp }

@@ -1219,18 +1219,18 @@ def VCVTSD2SSrm  : I<0x5A, MRMSrcMem, (outs FR32:$dst),
                      Sched<[WriteCvtSD2SS.Folded, WriteCvtSD2SS.ReadAfterFold]>, SIMD_EXC;
 }
 
-def : Pat<(f32 (fpround FR64:$src)),
+def : Pat<(f32 (any_fpround FR64:$src)),
             (VCVTSD2SSrr (f32 (IMPLICIT_DEF)), FR64:$src)>,
           Requires<[UseAVX]>;
 
 let isCodeGenOnly = 1 in {
 def CVTSD2SSrr  : SDI<0x5A, MRMSrcReg, (outs FR32:$dst), (ins FR64:$src),
                       "cvtsd2ss\t{$src, $dst|$dst, $src}",
-                      [(set FR32:$dst, (fpround FR64:$src))]>,
+                      [(set FR32:$dst, (any_fpround FR64:$src))]>,
                       Sched<[WriteCvtSD2SS]>, SIMD_EXC;
 def CVTSD2SSrm  : I<0x5A, MRMSrcMem, (outs FR32:$dst), (ins f64mem:$src),
                     "cvtsd2ss\t{$src, $dst|$dst, $src}",
-                    [(set FR32:$dst, (fpround (loadf64 addr:$src)))]>,
+                    [(set FR32:$dst, (any_fpround (loadf64 addr:$src)))]>,
                     XD, Requires<[UseSSE2, OptForSize]>,
                     Sched<[WriteCvtSD2SS.Folded]>, SIMD_EXC;
 }
@@ -1284,19 +1284,19 @@ def VCVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst),
                     Requires<[UseAVX, OptForSize]>, SIMD_EXC;
 } // isCodeGenOnly = 1, hasSideEffects = 0
 
-def : Pat<(f64 (fpextend FR32:$src)),
+def : Pat<(f64 (any_fpextend FR32:$src)),
     (VCVTSS2SDrr (f64 (IMPLICIT_DEF)), FR32:$src)>, Requires<[UseAVX]>;
-def : Pat<(fpextend (loadf32 addr:$src)),
+def : Pat<(any_fpextend (loadf32 addr:$src)),
     (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>, Requires<[UseAVX, OptForSize]>;
 
 let isCodeGenOnly = 1 in {
 def CVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst), (ins FR32:$src),
                    "cvtss2sd\t{$src, $dst|$dst, $src}",
-                   [(set FR64:$dst, (fpextend FR32:$src))]>,
+                   [(set FR64:$dst, (any_fpextend FR32:$src))]>,
                    XS, Requires<[UseSSE2]>, Sched<[WriteCvtSS2SD]>, SIMD_EXC;
 def CVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst), (ins f32mem:$src),
                    "cvtss2sd\t{$src, $dst|$dst, $src}",
-                   [(set FR64:$dst, (fpextend (loadf32 addr:$src)))]>,
+                   [(set FR64:$dst, (any_fpextend (loadf32 addr:$src)))]>,
                    XS, Requires<[UseSSE2, OptForSize]>,
                    Sched<[WriteCvtSS2SD.Folded]>, SIMD_EXC;
 } // isCodeGenOnly = 1
@@ -1335,13 +1335,13 @@ let Predicates = [UseAVX] in {
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128:$dst),
                    (v4f32 (scalar_to_vector
-                     (f32 (fpround (f64 (extractelt VR128:$src, (iPTR 0))))))))),
+                     (f32 (any_fpround (f64 (extractelt VR128:$src, (iPTR 0))))))))),
           (VCVTSD2SSrr_Int VR128:$dst, VR128:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128:$dst),
                    (v2f64 (scalar_to_vector
-                     (f64 (fpextend (f32 (extractelt VR128:$src, (iPTR 0))))))))),
+                     (f64 (any_fpextend (f32 (extractelt VR128:$src, (iPTR 0))))))))),
           (VCVTSS2SDrr_Int VR128:$dst, VR128:$src)>;
 
 def : Pat<(v4f32 (X86Movss
@@ -1389,13 +1389,13 @@ let Predicates = [UseSSE2] in {
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128:$dst),
                    (v4f32 (scalar_to_vector
-                     (f32 (fpround (f64 (extractelt VR128:$src, (iPTR 0))))))))),
+                     (f32 (any_fpround (f64 (extractelt VR128:$src, (iPTR 0))))))))),
           (CVTSD2SSrr_Int VR128:$dst, VR128:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128:$dst),
                    (v2f64 (scalar_to_vector
-                     (f64 (fpextend (f32 (extractelt VR128:$src, (iPTR 0))))))))),
+                     (f64 (any_fpextend (f32 (extractelt VR128:$src, (iPTR 0))))))))),
           (CVTSS2SDrr_Int VR128:$dst, VR128:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
@@ -1625,7 +1625,7 @@ def VCVTPS2PDrm : I<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f64mem:$src),
                     PS, VEX, Sched<[WriteCvtPS2PD.Folded]>, VEX_WIG;
 def VCVTPS2PDYrr : I<0x5A, MRMSrcReg, (outs VR256:$dst), (ins VR128:$src),
                      "vcvtps2pd\t{$src, $dst|$dst, $src}",
-                     [(set VR256:$dst, (v4f64 (fpextend (v4f32 VR128:$src))))]>,
+                     [(set VR256:$dst, (v4f64 (any_fpextend (v4f32 VR128:$src))))]>,
                      PS, VEX, VEX_L, Sched<[WriteCvtPS2PDY]>, VEX_WIG;
 def VCVTPS2PDYrm : I<0x5A, MRMSrcMem, (outs VR256:$dst), (ins f128mem:$src),
                      "vcvtps2pd\t{$src, $dst|$dst, $src}",
@@ -1740,9 +1740,9 @@ def CVTPD2PSrm : PDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                      Sched<[WriteCvtPD2PS.Folded]>, SIMD_EXC;
 
 let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(v4f32 (fpround (v4f64 VR256:$src))),
+  def : Pat<(v4f32 (any_fpround (v4f64 VR256:$src))),
             (VCVTPD2PSYrr VR256:$src)>;
-  def : Pat<(v4f32 (fpround (loadv4f64 addr:$src))),
+  def : Pat<(v4f32 (any_fpround (loadv4f64 addr:$src))),
             (VCVTPD2PSYrm addr:$src)>;
 }
 
@@ -3007,10 +3007,10 @@ multiclass sse2_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 
 // Square root.
-defm SQRT  : sse1_fp_unop_s<0x51, "sqrt", fsqrt, SchedWriteFSqrt, UseAVX>,
-             sse1_fp_unop_p<0x51, "sqrt", fsqrt, SchedWriteFSqrt, [HasAVX, NoVLX]>,
-             sse2_fp_unop_s<0x51, "sqrt", fsqrt, SchedWriteFSqrt64, UseAVX>,
-             sse2_fp_unop_p<0x51, "sqrt", fsqrt, SchedWriteFSqrt64>, SIMD_EXC;
+defm SQRT  : sse1_fp_unop_s<0x51, "sqrt", any_fsqrt, SchedWriteFSqrt, UseAVX>,
+             sse1_fp_unop_p<0x51, "sqrt", any_fsqrt, SchedWriteFSqrt, [HasAVX, NoVLX]>,
+             sse2_fp_unop_s<0x51, "sqrt", any_fsqrt, SchedWriteFSqrt64, UseAVX>,
+             sse2_fp_unop_p<0x51, "sqrt", any_fsqrt, SchedWriteFSqrt64>, SIMD_EXC;
 
 // Reciprocal approximations. Note that these typically require refinement
 // in order to obtain suitable precision.
@@ -3039,8 +3039,8 @@ multiclass scalar_unary_math_patterns<SDNode OpNode, string OpcPrefix, SDNode Mo
   }
 }
 
-defm : scalar_unary_math_patterns<fsqrt, "SQRTSS", X86Movss, v4f32, UseSSE1>;
-defm : scalar_unary_math_patterns<fsqrt, "SQRTSD", X86Movsd, v2f64, UseSSE2>;
+defm : scalar_unary_math_patterns<any_fsqrt, "SQRTSS", X86Movss, v4f32, UseSSE1>;
+defm : scalar_unary_math_patterns<any_fsqrt, "SQRTSD", X86Movsd, v2f64, UseSSE2>;
 
 multiclass scalar_unary_math_intr_patterns<Intrinsic Intr, string OpcPrefix,
                                            SDNode Move, ValueType VT,
