@@ -24,7 +24,7 @@ define i32 @vec_to_int() {
 ; CHECK-NEXT:    vldmia sp, {d16, d17} @ 16-byte Reload
 ; CHECK-NEXT:    vrev32.16 q9, q8
 ; CHECK-NEXT:    @ kill: def $d19 killed $d19 killed $q9
-; CHECK-NEXT:    vmov.32 r0, d19[1]
+; CHECK-NEXT:    vmov.32 r0, d19[0]
 ; CHECK-NEXT:    add sp, sp, #28
 ; CHECK-NEXT:    pop {r4}
 ; CHECK-NEXT:    bx lr
@@ -41,14 +41,17 @@ bb.1:
 define i16 @int_to_vec(i80 %in) {
 ; CHECK-LABEL: int_to_vec:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sub sp, sp, #4
-; CHECK-NEXT:    vmov.i32 q8, #0x0
-; CHECK-NEXT:    vrev32.16 q8, q8
-; CHECK-NEXT:    @ kill: def $d16 killed $d16 killed $q8
-; CHECK-NEXT:    vmov.u16 r3, d16[0]
-; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
-; CHECK-NEXT:    mov r0, r3
-; CHECK-NEXT:    add sp, sp, #4
+; CHECK-NEXT:    mov r3, r1
+; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    lsl r0, r0, #16
+; CHECK-NEXT:    orr r0, r0, r1, lsr #16
+; CHECK-NEXT:    @ implicit-def: $d16
+; CHECK-NEXT:    vmov.32 d16[0], r0
+; CHECK-NEXT:    @ implicit-def: $q9
+; CHECK-NEXT:    vmov.f64 d18, d16
+; CHECK-NEXT:    vrev32.16 q9, q9
+; CHECK-NEXT:    @ kill: def $d18 killed $d18 killed $q9
+; CHECK-NEXT:    vmov.u16 r0, d18[0]
 ; CHECK-NEXT:    bx lr
   %vec = bitcast i80 %in to <5 x i16>
   %e0 = extractelement <5 x i16> %vec, i32 0

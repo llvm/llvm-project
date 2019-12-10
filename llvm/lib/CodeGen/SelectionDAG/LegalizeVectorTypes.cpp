@@ -3457,7 +3457,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {
   switch (getTypeAction(InVT)) {
   case TargetLowering::TypeLegal:
     break;
-  case TargetLowering::TypePromoteInteger:
+  case TargetLowering::TypePromoteInteger: {
     // If the incoming type is a vector that is being promoted, then
     // we know that the elements are arranged differently and that we
     // must perform the conversion using a stack slot.
@@ -3466,11 +3466,24 @@ SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {
 
     // If the InOp is promoted to the same size, convert it.  Otherwise,
     // fall out of the switch and widen the promoted input.
-    InOp = GetPromotedInteger(InOp);
-    InVT = InOp.getValueType();
-    if (WidenVT.bitsEq(InVT))
-      return DAG.getNode(ISD::BITCAST, dl, WidenVT, InOp);
+    SDValue NInOp = GetPromotedInteger(InOp);
+    EVT NInVT = NInOp.getValueType();
+    if (WidenVT.bitsEq(NInVT)) {
+      // For big endian targets we need to shift the input integer or the
+      // interesting bits will end up at the wrong place.
+      if (DAG.getDataLayout().isBigEndian()) {
+        unsigned ShiftAmt = NInVT.getSizeInBits() - InVT.getSizeInBits();
+        EVT ShiftAmtTy = TLI.getShiftAmountTy(NInVT, DAG.getDataLayout());
+        assert(ShiftAmt < WidenVT.getSizeInBits() && "Too large shift amount!");
+        NInOp = DAG.getNode(ISD::SHL, dl, NInVT, NInOp,
+                           DAG.getConstant(ShiftAmt, dl, ShiftAmtTy));
+      }
+      return DAG.getNode(ISD::BITCAST, dl, WidenVT, NInOp);
+    }
+    InOp = NInOp;
+    InVT = NInVT;
     break;
+  }
   case TargetLowering::TypeSoftenFloat:
   case TargetLowering::TypePromoteFloat:
   case TargetLowering::TypeExpandInteger:
