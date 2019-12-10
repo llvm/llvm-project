@@ -3188,7 +3188,8 @@ TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   } else {
     // Instantiate the mapper variable.
     DeclarationNameInfo DirName;
-    SemaRef.StartOpenMPDSABlock(OMPD_declare_mapper, DirName, /*S=*/nullptr,
+    SemaRef.StartOpenMPDSABlock(llvm::omp::OMPD_declare_mapper, DirName,
+                                /*S=*/nullptr,
                                 (*D->clauselist_begin())->getBeginLoc());
     SemaRef.ActOnOpenMPDeclareMapperDirectiveVarDecl(
         NewDMD, /*S=*/nullptr, SubstMapperTy, D->getLocation(), VN);
