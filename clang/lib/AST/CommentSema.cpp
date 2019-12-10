@@ -676,9 +676,8 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
       D->hasAttr<UnavailableAttr>())
     return;
 
-  Diag(Command->getLocation(),
-       diag::warn_doc_deprecated_not_sync)
-    << Command->getSourceRange();
+  Diag(Command->getLocation(), diag::warn_doc_deprecated_not_sync)
+      << Command->getSourceRange() << Command->getCommandMarker();
 
   // Try to emit a fixit with a deprecation attribute.
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
