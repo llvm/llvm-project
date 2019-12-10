@@ -8,12 +8,16 @@
 
 import platform
 import os
+import posixpath
+import ntpath
 
 from libcxx.test import tracing
 from libcxx.util import executeCommand
 
-
 class Executor(object):
+    def __init__(self):
+        self.target_info = None
+
     def run(self, exe_path, cmd, local_cwd, file_deps=None, env=None):
         """Execute a command.
             Be very careful not to change shared state in this function.
@@ -29,6 +33,20 @@ class Executor(object):
         """
         raise NotImplementedError
 
+    def merge_environments(self, current_env, updated_env):
+        """Merges two execution environments.
+
+        If both environments contain the PATH variables, they are also merged
+        using the proper separator.
+        """
+        result_env = dict(current_env)
+        for k, v in updated_env.items():
+            if k == 'PATH' and self.target_info:
+                self.target_info.add_path(result_env, v)
+            else:
+                result_env[k] = v
+        return result_env
+
 
 class LocalExecutor(Executor):
     def __init__(self):
@@ -39,6 +57,10 @@ class LocalExecutor(Executor):
         cmd = cmd or [exe_path]
         if work_dir == '.':
             work_dir = os.getcwd()
+
+        if env:
+            env = self.merge_environments(os.environ, env)
+
         out, err, rc = executeCommand(cmd, cwd=work_dir, env=env)
         return (cmd, out, err, rc)
 
@@ -88,6 +110,7 @@ class TimeoutExecutor(PrefixExecutor):
 
 class RemoteExecutor(Executor):
     def __init__(self):
+        super(RemoteExecutor, self).__init__()
         self.local_run = executeCommand
 
     def remote_temp_dir(self):
@@ -120,7 +143,12 @@ class RemoteExecutor(Executor):
         target_cwd = None
         try:
             target_cwd = self.remote_temp_dir()
-            target_exe_path = os.path.join(target_cwd, 'libcxx_test.exe')
+            executable_name = 'libcxx_test.exe'
+            if self.target_info.is_windows():
+                target_exe_path = ntpath.join(target_cwd, executable_name)
+            else:
+                target_exe_path = posixpath.join(target_cwd, executable_name)
+
             if cmd:
                 # Replace exe_path with target_exe_path.
                 cmd = [c if c != exe_path else target_exe_path for c in cmd]
@@ -191,15 +219,29 @@ class SSHExecutor(RemoteExecutor):
         cmd = [scp, '-p', src, remote + ':' + dst]
         self.local_run(cmd)
 
+    def _export_command(self, env):
+        if not env:
+            return []
+
+        export_cmd = ['export']
+
+        for k, v in env.items():
+            v = v.replace('\\', '\\\\')
+            if k == 'PATH':
+                # Pick up the existing paths, so we don't lose any commands
+                if self.target_info and self.target_info.is_windows():
+                    export_cmd.append('PATH="%s;%PATH%"' % v)
+                else:
+                    export_cmd.append('PATH="%s:$PATH"' % v)
+            else:
+                export_cmd.append('"%s"="%s"' % (k, v))
+
+        return export_cmd
+
     def _execute_command_remote(self, cmd, remote_work_dir='.', env=None):
         remote = self.user_prefix + self.host
         ssh_cmd = [self.ssh_command, '-oBatchMode=yes', remote]
-        if env:
-            export_cmd = \
-                ['export'] + ['"%s"="%s"' % (k, v) for k, v in env.items()]
-        else:
-            export_cmd = []
-
+        export_cmd = self._export_command(env)
         remote_cmd = ' '.join(cmd)
         if export_cmd:
             remote_cmd = ' '.join(export_cmd) + ' && ' + remote_cmd
