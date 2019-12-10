@@ -4005,9 +4005,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           auto LV = I->getKnownLValue();
           auto AS = LV.getAddressSpace();
 
-          if ((!ArgInfo.getIndirectByVal() &&
-               (LV.getAlignment() >=
-                getContext().getTypeAlignInChars(I->Ty)))) {
+          if (!ArgInfo.getIndirectByVal() ||
+              (LV.getAlignment() < getContext().getTypeAlignInChars(I->Ty))) {
             NeedCopy = true;
           }
           if (!getLangOpts().OpenCL) {
