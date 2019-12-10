@@ -222,7 +222,8 @@ private:
   ConstString m_runtime_synths_category_name;
 
   template <typename ImplSP>
-  ImplSP GetCached(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
+  ImplSP Get(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
+  template <typename ImplSP> ImplSP GetCached(FormattersMatchData &match_data);
   template <typename ImplSP> ImplSP GetHardcoded(FormattersMatchData &);
 
   TypeCategoryMap &GetCategories() { return m_categories_map; }
