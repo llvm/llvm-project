@@ -52,7 +52,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool HasStackFrame = false;
 
   /// Amount of stack frame size, not including callee-saved registers.
-  unsigned LocalStackSize = 0;
+  uint64_t LocalStackSize = 0;
 
   /// The start and end frame indices for the SVE callee saves.
   int MinSVECSFrameIndex = 0;
@@ -170,8 +170,8 @@ public:
   bool isSplitCSR() const { return IsSplitCSR; }
   void setIsSplitCSR(bool s) { IsSplitCSR = s; }
 
-  void setLocalStackSize(unsigned Size) { LocalStackSize = Size; }
-  unsigned getLocalStackSize() const { return LocalStackSize; }
+  void setLocalStackSize(uint64_t Size) { LocalStackSize = Size; }
+  uint64_t getLocalStackSize() const { return LocalStackSize; }
 
   void setCalleeSavedStackSize(unsigned Size) {
     CalleeSavedStackSize = Size;

@@ -225,12 +225,12 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
   if (FrameIndices.find(&AI) != FrameIndices.end())
     return FrameIndices[&AI];
 
-  unsigned ElementSize = DL->getTypeAllocSize(AI.getAllocatedType());
-  unsigned Size =
+  uint64_t ElementSize = DL->getTypeAllocSize(AI.getAllocatedType());
+  uint64_t Size =
       ElementSize * cast<ConstantInt>(AI.getArraySize())->getZExtValue();
 
   // Always allocate at least one byte.
-  Size = std::max(Size, 1u);
+  Size = std::max<uint64_t>(Size, 1u);
 
   unsigned Alignment = AI.getAlignment();
   if (!Alignment)
