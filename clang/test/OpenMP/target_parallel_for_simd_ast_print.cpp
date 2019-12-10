@@ -1,10 +1,16 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping -DOMP5
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping -DOMP5
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -108,9 +114,14 @@ T tmain(T argc, T *argv) {
   // CHECK-NEXT: for (T i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 
+#ifdef OMP5
+#pragma omp target parallel for simd if(target:argc > 0) if (simd: argc)
+#else
 #pragma omp target parallel for simd if(target:argc > 0)
+#endif // OMP5
   for (T i = 0; i < 2; ++i) {}
-  // CHECK: #pragma omp target parallel for simd if(target: argc > 0)
+  // OMP45: #pragma omp target parallel for simd if(target: argc > 0)
+  // OMP50: #pragma omp target parallel for simd if(target: argc > 0) if(simd: argc)
   // CHECK-NEXT: for (T i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 
@@ -234,9 +245,14 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 
+#ifdef OMP5
+#pragma omp target parallel for simd if (parallel:argc > 0) if(simd: argc)
+#else
 #pragma omp target parallel for simd if (parallel:argc > 0)
+#endif // OMP5
   for (int i = 0; i < 2; ++i) {}
-  // CHECK: #pragma omp target parallel for simd if(parallel: argc > 0)
+  // OMP45: #pragma omp target parallel for simd if(parallel: argc > 0)
+  // OMP50: #pragma omp target parallel for simd if(parallel: argc > 0) if(simd: argc)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 

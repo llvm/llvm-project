@@ -4724,6 +4724,8 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
     AllowedNameModifiers.push_back(OMPD_target);
     AllowedNameModifiers.push_back(OMPD_parallel);
+    if (LangOpts.OpenMP >= 50)
+      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_target_simd:
     Res = ActOnOpenMPTargetSimdDirective(ClausesWithImplicit, AStmt, StartLoc,
@@ -10697,9 +10699,13 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   switch (CKind) {
   case OMPC_if:
     switch (DKind) {
+    case OMPD_target_parallel_for_simd:
+      if (OpenMPVersion >= 50 &&
+          (NameModifier == OMPD_unknown || NameModifier == OMPD_simd))
+        CaptureRegion = OMPD_parallel;
+      LLVM_FALLTHROUGH;
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
       // If this clause applies to the nested 'parallel' region, capture within
       // the 'target' region, otherwise do not capture.
       if (NameModifier == OMPD_unknown || NameModifier == OMPD_parallel)
