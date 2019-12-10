@@ -172,7 +172,7 @@ private:
   bool processLoopMemSet(MemSetInst *MSI, const SCEV *BECount);
 
   bool processLoopStridedStore(Value *DestPtr, unsigned StoreSize,
-                               unsigned StoreAlignment, Value *StoredVal,
+                               MaybeAlign StoreAlignment, Value *StoredVal,
                                Instruction *TheStore,
                                SmallPtrSetImpl<Instruction *> &Stores,
                                const SCEVAddRecExpr *Ev, const SCEV *BECount,
@@ -731,7 +731,8 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
 
     bool NegStride = StoreSize == -Stride;
 
-    if (processLoopStridedStore(StorePtr, StoreSize, HeadStore->getAlignment(),
+    if (processLoopStridedStore(StorePtr, StoreSize,
+                                MaybeAlign(HeadStore->getAlignment()),
                                 StoredVal, HeadStore, AdjacentStores, StoreEv,
                                 BECount, NegStride)) {
       TransformedStores.insert(AdjacentStores.begin(), AdjacentStores.end());
@@ -786,9 +787,9 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   SmallPtrSet<Instruction *, 1> MSIs;
   MSIs.insert(MSI);
   bool NegStride = SizeInBytes == -Stride;
-  return processLoopStridedStore(Pointer, (unsigned)SizeInBytes,
-                                 MSI->getDestAlignment(), SplatValue, MSI, MSIs,
-                                 Ev, BECount, NegStride, /*IsLoopMemset=*/true);
+  return processLoopStridedStore(
+      Pointer, (unsigned)SizeInBytes, MaybeAlign(MSI->getDestAlignment()),
+      SplatValue, MSI, MSIs, Ev, BECount, NegStride, /*IsLoopMemset=*/true);
 }
 
 /// mayLoopAccessLocation - Return true if the specified loop might access the
@@ -878,7 +879,7 @@ static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
 /// processLoopStridedStore - We see a strided store of some value.  If we can
 /// transform this into a memset or memset_pattern in the loop preheader, do so.
 bool LoopIdiomRecognize::processLoopStridedStore(
-    Value *DestPtr, unsigned StoreSize, unsigned StoreAlignment,
+    Value *DestPtr, unsigned StoreSize, MaybeAlign StoreAlignment,
     Value *StoredVal, Instruction *TheStore,
     SmallPtrSetImpl<Instruction *> &Stores, const SCEVAddRecExpr *Ev,
     const SCEV *BECount, bool NegStride, bool IsLoopMemset) {
@@ -945,8 +946,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   CallInst *NewCall;
   if (SplatValue) {
-    NewCall =
-        Builder.CreateMemSet(BasePtr, SplatValue, NumBytes, StoreAlignment);
+    NewCall = Builder.CreateMemSet(BasePtr, SplatValue, NumBytes,
+                                   MaybeAlign(StoreAlignment));
   } else {
     // Everything is emitted in default address space
     Type *Int8PtrTy = DestInt8PtrTy;

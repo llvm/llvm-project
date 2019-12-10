@@ -624,7 +624,7 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilder<> &B) {
 
   if (SrcLen == 0) {
     // strncpy(x, "", y) -> memset(align 1 x, '\0', y)
-    CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, 1);
+    CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, Align::None());
     AttrBuilder ArgAttrs(CI->getAttributes().getParamAttributes(0));
     NewCI->setAttributes(NewCI->getAttributes().addParamAttributes(
         CI->getContext(), 0, ArgAttrs));
@@ -1235,7 +1235,8 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilder<> &B) {
 
   // memset(p, v, n) -> llvm.memset(align 1 p, v, n)
   Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
-  CallInst *NewCI = B.CreateMemSet(CI->getArgOperand(0), Val, Size, 1);
+  CallInst *NewCI =
+      B.CreateMemSet(CI->getArgOperand(0), Val, Size, Align::None());
   NewCI->setAttributes(CI->getAttributes());
   return CI->getArgOperand(0);
 }
@@ -3290,8 +3291,8 @@ Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
 
   if (isFortifiedCallFoldable(CI, 3, 2)) {
     Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
-    CallInst *NewCI =
-        B.CreateMemSet(CI->getArgOperand(0), Val, CI->getArgOperand(2), 1);
+    CallInst *NewCI = B.CreateMemSet(CI->getArgOperand(0), Val,
+                                     CI->getArgOperand(2), Align::None());
     NewCI->setAttributes(CI->getAttributes());
     return CI->getArgOperand(0);
   }
