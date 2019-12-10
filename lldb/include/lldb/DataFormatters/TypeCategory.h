@@ -391,7 +391,7 @@ private:
 
   void Disable() { Enable(false, UINT32_MAX); }
 
-  bool IsApplicable(ValueObject &valobj);
+  bool IsApplicable(lldb::LanguageType lang);
 
   uint32_t GetLastEnabledPosition() { return m_enabled_position; }
 
