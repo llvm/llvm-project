@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1179,16 +1180,25 @@ int main(int argc, char **argv) {
   llvm::InitializeAllAsmParsers();
 
   Stem = sys::path::stem(ToolName);
-  if (Stem.contains_lower("dlltool"))
+  auto Is = [](StringRef Tool) {
+    // We need to recognize the following filenames.
+    //
+    // Lib.exe -> lib (see D44808, MSBuild runs Lib.exe)
+    // dlltool.exe -> dlltool
+    // arm-pokymllib32-linux-gnueabi-llvm-ar-10 -> ar
+    auto I = Stem.rfind_lower(Tool);
+    return I != StringRef::npos &&
+           (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
+  };
+
+  if (Is("dlltool"))
     return dlltoolDriverMain(makeArrayRef(argv, argc));
-
-  if (Stem.contains_lower("ranlib"))
+  if (Is("ranlib"))
     return ranlib_main(argc, argv);
-
-  if (Stem.contains_lower("lib"))
+  if (Is("lib"))
     return libDriverMain(makeArrayRef(argv, argc));
-
-  if (Stem.contains_lower("ar"))
+  if (Is("ar"))
     return ar_main(argc, argv);
+
   fail("not ranlib, ar, lib or dlltool");
 }
