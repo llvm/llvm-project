@@ -631,9 +631,9 @@ void test_deprecated_4(int a) __attribute__((unavailable));
 /// \deprecated
 void test_deprecated_5(int a);
 
-// expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}} expected-note@+3 {{add a deprecation attribute to the declaration to silence this warning}}
+// expected-warning@+2 {{declaration is marked with '@deprecated' command but does not have a deprecation attribute}} expected-note@+3 {{add a deprecation attribute to the declaration to silence this warning}}
 /// Aaa
-/// \deprecated
+/// @deprecated
 void test_deprecated_6(int a) {
 }
 
