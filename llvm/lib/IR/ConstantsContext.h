@@ -149,7 +149,7 @@ public:
   ShuffleVectorConstantExpr(Constant *C1, Constant *C2, Constant *C3)
   : ConstantExpr(VectorType::get(
                    cast<VectorType>(C1->getType())->getElementType(),
-                   cast<VectorType>(C3->getType())->getNumElements()),
+                   cast<VectorType>(C3->getType())->getElementCount()),
                  Instruction::ShuffleVector,
                  &Op<0>(), 3) {
     Op<0>() = C1;

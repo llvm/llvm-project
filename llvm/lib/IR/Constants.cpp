@@ -2211,7 +2211,7 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
   if (Constant *FC = ConstantFoldShuffleVectorInstruction(V1, V2, Mask))
     return FC;          // Fold a few common cases.
 
-  unsigned NElts = Mask->getType()->getVectorNumElements();
+  ElementCount NElts = Mask->getType()->getVectorElementCount();
   Type *EltTy = V1->getType()->getVectorElementType();
   Type *ShufTy = VectorType::get(EltTy, NElts);
 
