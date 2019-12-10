@@ -27,7 +27,7 @@
 
 namespace llvm {
 class APSInt;
-}
+} // namespace llvm
 
 namespace clang {
 class ASTContext;
@@ -872,8 +872,8 @@ public:
   bool scan(const SymExpr *sym);
 };
 
-} // end ento namespace
+} // namespace ento
 
-} // end clang namespace
+} // namespace clang
 
 #endif

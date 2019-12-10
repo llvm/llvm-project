@@ -41,7 +41,8 @@ void ProgramStateRelease(const ProgramState *state) {
     Mgr.freeStates.push_back(s);
   }
 }
-}}
+} // namespace ento
+} // namespace clang
 
 ProgramState::ProgramState(ProgramStateManager *mgr, const Environment& env,
                  StoreRef st, GenericDataMap gdm)
@@ -209,6 +210,13 @@ ProgramState::invalidateRegionsImpl(ValueList Values,
   ProgramStateRef newState = makeWithStore(newStore);
 
   if (CausedByPointerEscape) {
+    for (const MemRegion *R : Invalidated) {
+      if (!R->hasStackStorage())
+        continue;
+
+      newState = Eng.processLocalRegionEscape(newState, R->getBaseRegion());
+    }
+
     newState = Eng.notifyCheckersOfPointerEscape(newState, IS,
                                                  TopLevelInvalidated,
                                                  Call,
