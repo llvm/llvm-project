@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Config/llvm-config.h"
+#include "lldb/Host/Config.h"
 
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/PosixApi.h"
