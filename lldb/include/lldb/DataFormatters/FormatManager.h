@@ -189,9 +189,6 @@ public:
   GetCandidateLanguages(lldb::LanguageType lang_type);
 
 private:
-  static std::vector<lldb::LanguageType>
-  GetCandidateLanguages(ValueObject &valobj);
-
   static void GetPossibleMatches(ValueObject &valobj,
                                  CompilerType compiler_type, uint32_t reason,
                                  lldb::DynamicValueType use_dynamic,

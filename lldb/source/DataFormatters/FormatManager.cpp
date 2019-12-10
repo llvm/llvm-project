@@ -242,7 +242,8 @@ void FormatManager::GetPossibleMatches(
     }
   }
 
-  for (lldb::LanguageType language_type : GetCandidateLanguages(valobj)) {
+  for (lldb::LanguageType language_type :
+       GetCandidateLanguages(valobj.GetObjectRuntimeLanguage())) {
     if (Language *language = Language::FindPlugin(language_type)) {
       for (ConstString candidate :
            language->GetPossibleFormattersMatches(valobj, use_dynamic)) {
@@ -583,8 +584,7 @@ ConstString FormatManager::GetTypeForCache(ValueObject &valobj,
 }
 
 std::vector<lldb::LanguageType>
-FormatManager::GetCandidateLanguages(ValueObject &valobj) {
-  lldb::LanguageType lang_type = valobj.GetObjectRuntimeLanguage();
+FormatManager::GetCandidateLanguages(lldb::LanguageType lang_type) {
   switch (lang_type) {
   case lldb::eLanguageTypeSwift:
     return {lldb::eLanguageTypeSwift, lldb::eLanguageTypeObjC};
