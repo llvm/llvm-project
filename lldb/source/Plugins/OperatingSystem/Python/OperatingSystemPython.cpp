@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Host/Config.h"
+
 #ifndef LLDB_DISABLE_PYTHON
 
 #include "OperatingSystemPython.h"
