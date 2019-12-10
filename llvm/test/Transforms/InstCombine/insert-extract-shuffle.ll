@@ -721,3 +721,16 @@ define <4 x float> @insert_demanded_element_op1(<4 x float> %x, <4 x float> %y) 
   %s = shufflevector <4 x float> %y, <4 x float> %ins, <4 x i32> <i32 0, i32 7, i32 1, i32 4>
   ret <4 x float> %s
 }
+
+define <4 x float> @splat_constant(<4 x float> %x) {
+; CHECK-LABEL: @splat_constant(
+; CHECK-NEXT:    [[INS3:%.*]] = insertelement <4 x float> [[X:%.*]], float 3.000000e+00, i32 3
+; CHECK-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x float> [[INS3]], <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = fadd <4 x float> [[INS3]], [[SPLAT3]]
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %ins3 = insertelement <4 x float> %x, float 3.0, i32 3
+  %splat3 = shufflevector <4 x float> %ins3, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %r = fadd <4 x float> %ins3, %splat3
+  ret <4 x float> %r
+}
