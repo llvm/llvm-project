@@ -1591,6 +1591,13 @@ OpFoldResult IndexCastOp::fold(ArrayRef<Attribute> cstOperands) {
   auto cast = dyn_cast_or_null<IndexCastOp>(getOperand().getDefiningOp());
   if (cast && cast.getOperand().getType() == getType())
     return cast.getOperand();
+
+  // Fold IndexCast(constant) -> constant
+  // A little hack because we go through int.  Otherwise, the size
+  // of the constant might need to change.
+  if (auto value = cstOperands[0].dyn_cast_or_null<IntegerAttr>())
+    return IntegerAttr::get(getType(), value.getInt());
+
   return {};
 }
 
