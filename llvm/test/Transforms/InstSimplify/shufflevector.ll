@@ -247,3 +247,25 @@ define <2 x float> @PR32872(<2 x float> %x) {
   %tmp4 = shufflevector <4 x float> zeroinitializer, <4 x float> %tmp1, <2 x i32> <i32 4, i32 5>
   ret <2 x float> %tmp4
 }
+
+define <4 x float> @splat_constant(<4 x float> %x) {
+; CHECK-LABEL: @splat_constant(
+; CHECK-NEXT:    [[INS3:%.*]] = insertelement <4 x float> [[X:%.*]], float 4.200000e+01, i32 3
+; CHECK-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x float> [[INS3]], <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[SPLAT3]]
+;
+  %ins3 = insertelement <4 x float> %x, float 42.0, i32 3
+  %splat3 = shufflevector <4 x float> %ins3, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x float> %splat3
+}
+
+define <4 x float> @splat_constant_undef_elt(<4 x float> %x) {
+; CHECK-LABEL: @splat_constant_undef_elt(
+; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> [[X:%.*]], float 1.200000e+01, i32 1
+; CHECK-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x float> [[INS1]], <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 undef, i32 1>
+; CHECK-NEXT:    ret <4 x float> [[SPLAT1]]
+;
+  %ins1 = insertelement <4 x float> %x, float 12.0, i32 1
+  %splat1 = shufflevector <4 x float> %ins1, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 undef, i32 1>
+  ret <4 x float> %splat1
+}
