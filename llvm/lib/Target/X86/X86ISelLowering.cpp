@@ -591,13 +591,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSIN   , VT, Expand);
       setOperationAction(ISD::FCOS   , VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
-
-      // Handle constrained floating-point operations of scalar.
-      setOperationAction(ISD::STRICT_FSQRT    , VT, Legal);
-      setOperationAction(ISD::STRICT_FP_EXTEND, VT, Legal);
-      // FIXME: When the target is 64-bit, STRICT_FP_ROUND will be overwritten
-      // as Custom.
-      setOperationAction(ISD::STRICT_FP_ROUND, VT, Legal);
     }
   }
 
@@ -622,14 +615,19 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       addLegalFPImmediate(APFloat(+0.0)); // xorpd
   }
   // Handle constrained floating-point operations of scalar.
-  setOperationAction(ISD::STRICT_FADD, MVT::f32, Legal);
-  setOperationAction(ISD::STRICT_FADD, MVT::f64, Legal);
-  setOperationAction(ISD::STRICT_FSUB, MVT::f32, Legal);
-  setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
-  setOperationAction(ISD::STRICT_FMUL, MVT::f32, Legal);
-  setOperationAction(ISD::STRICT_FMUL, MVT::f64, Legal);
-  setOperationAction(ISD::STRICT_FDIV, MVT::f32, Legal);
-  setOperationAction(ISD::STRICT_FDIV, MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FADD,      MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FADD,      MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FSUB,      MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FSUB,      MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FMUL,      MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FMUL,      MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FDIV,      MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FDIV,      MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FP_ROUND,  MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FP_ROUND,  MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FSQRT,     MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FSQRT,     MVT::f64, Legal);
 
   // We don't support FMA.
   setOperationAction(ISD::FMA, MVT::f64, Expand);
@@ -857,17 +855,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
     setOperationAction(ISD::STORE,              MVT::v2f32, Custom);
 
-    // FIXME: Currently mutated to non-strict form in X86ISelDAGToDAG::Select,
-    // but its sufficient to pretend they're Legal since they will be someday.
-    setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FADD,        MVT::v4f32, Legal);
-    setOperationAction(ISD::STRICT_FADD,        MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FSUB,        MVT::v4f32, Legal);
-    setOperationAction(ISD::STRICT_FSUB,        MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FMUL,        MVT::v4f32, Legal);
-    setOperationAction(ISD::STRICT_FMUL,        MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FDIV,        MVT::v4f32, Legal);
-    setOperationAction(ISD::STRICT_FDIV,        MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FSQRT,       MVT::v4f32, Legal);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
@@ -1042,6 +1034,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // With AVX512, expanding (and promoting the shifts) is better.
     if (!Subtarget.hasAVX512())
       setOperationAction(ISD::ROTL,             MVT::v16i8, Custom);
+
+    setOperationAction(ISD::STRICT_FSQRT,       MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FADD,        MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FSUB,        MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FMUL,        MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FDIV,        MVT::v2f64, Legal);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSSE3()) {
@@ -1157,9 +1155,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
 
-    // FIXME: Currently mutated to non-strict form in X86ISelDAGToDAG::Select,
-    // but its sufficient to pretend they're Legal since they will be someday.
-    setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v8f32, Legal);
+    setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FADD,        MVT::v8f32, Legal);
     setOperationAction(ISD::STRICT_FADD,        MVT::v4f64, Legal);
     setOperationAction(ISD::STRICT_FSUB,        MVT::v8f32, Legal);
@@ -1168,6 +1164,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FMUL,        MVT::v4f64, Legal);
     setOperationAction(ISD::STRICT_FDIV,        MVT::v8f32, Legal);
     setOperationAction(ISD::STRICT_FDIV,        MVT::v4f64, Legal);
+    setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v4f64, Legal);
+    setOperationAction(ISD::STRICT_FSQRT,       MVT::v8f32, Legal);
+    setOperationAction(ISD::STRICT_FSQRT,       MVT::v4f64, Legal);
 
     if (!Subtarget.hasAVX512())
       setOperationAction(ISD::BITCAST, MVT::v32i1, Custom);
@@ -1430,17 +1429,18 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i32, Legal);
 
-    // FIXME: Currently mutated to non-strict form in X86ISelDAGToDAG::Select,
-    // but its sufficient to pretend their Legal since they will be someday.
-    setOperationAction(ISD::STRICT_FP_ROUND, MVT::v16f32, Legal);
-    setOperationAction(ISD::STRICT_FADD,     MVT::v16f32, Legal);
-    setOperationAction(ISD::STRICT_FADD,     MVT::v8f64, Legal);
-    setOperationAction(ISD::STRICT_FSUB,     MVT::v16f32, Legal);
-    setOperationAction(ISD::STRICT_FSUB,     MVT::v8f64, Legal);
-    setOperationAction(ISD::STRICT_FMUL,     MVT::v16f32, Legal);
-    setOperationAction(ISD::STRICT_FMUL,     MVT::v8f64, Legal);
-    setOperationAction(ISD::STRICT_FDIV,     MVT::v16f32, Legal);
-    setOperationAction(ISD::STRICT_FDIV,     MVT::v8f64, Legal);
+    setOperationAction(ISD::STRICT_FADD,      MVT::v16f32, Legal);
+    setOperationAction(ISD::STRICT_FADD,      MVT::v8f64,  Legal);
+    setOperationAction(ISD::STRICT_FSUB,      MVT::v16f32, Legal);
+    setOperationAction(ISD::STRICT_FSUB,      MVT::v8f64,  Legal);
+    setOperationAction(ISD::STRICT_FMUL,      MVT::v16f32, Legal);
+    setOperationAction(ISD::STRICT_FMUL,      MVT::v8f64,  Legal);
+    setOperationAction(ISD::STRICT_FDIV,      MVT::v16f32, Legal);
+    setOperationAction(ISD::STRICT_FDIV,      MVT::v8f64,  Legal);
+    setOperationAction(ISD::STRICT_FSQRT,     MVT::v16f32, Legal);
+    setOperationAction(ISD::STRICT_FSQRT,     MVT::v8f64,  Legal);
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v8f64,  Legal);
+    setOperationAction(ISD::STRICT_FP_ROUND,  MVT::v8f32,  Legal);
 
     setTruncStoreAction(MVT::v8i64,   MVT::v8i8,   Legal);
     setTruncStoreAction(MVT::v8i64,   MVT::v8i16,  Legal);
