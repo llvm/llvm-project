@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/raw_ostream.h"
 
-
 namespace llvm {
 /// VRegRenamer - This class is used for renaming vregs in a machine basic
 /// block according to semantics of the instruction.
@@ -75,8 +74,7 @@ public:
   unsigned createVirtualRegister(unsigned VReg);
 
   /// Create a vreg with name and return it.
-  unsigned createVirtualRegisterWithName(unsigned VReg,
-                                         const std::string &Name);
+  unsigned createVirtualRegisterWithLowerName(unsigned VReg, StringRef Name);
   /// Linearly traverse the MachineBasicBlock and rename each instruction's
   /// vreg definition based on the semantics of the instruction.
   /// Names are as follows bb<BBNum>_hash_[0-9]+
