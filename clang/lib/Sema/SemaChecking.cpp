@@ -5822,7 +5822,8 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
             "promotion from float to either float, double, or long double is "
             "the only expected cast here");
         IgnoreCast = true;
-      } else if (CastArg->getType()->isSpecificBuiltinType(BuiltinType::Half)) {
+      } else if (CastArg->getType()->isSpecificBuiltinType(BuiltinType::Half) &&
+                 !Context.getTargetInfo().useFP16ConversionIntrinsics()) {
         assert(
             (Cast->getType()->isSpecificBuiltinType(BuiltinType::Double) ||
              Cast->getType()->isSpecificBuiltinType(BuiltinType::Float) ||
