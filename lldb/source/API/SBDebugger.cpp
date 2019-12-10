@@ -316,9 +316,8 @@ SBError SBDebugger::SetInputFile(SBFile file) {
 
   FileSP file_sp = file.m_opaque_sp;
 
-  static std::unique_ptr<repro::MultiLoader<repro::CommandProvider>> loader =
-      repro::MultiLoader<repro::CommandProvider>::Create(
-          repro::Reproducer::Instance().GetLoader());
+  static std::unique_ptr<repro::CommandLoader> loader =
+      repro::CommandLoader::Create(repro::Reproducer::Instance().GetLoader());
   if (loader) {
     llvm::Optional<std::string> nextfile = loader->GetNextFile();
     FILE *fh = nextfile ? FileSystem::Instance().Fopen(nextfile->c_str(), "r")

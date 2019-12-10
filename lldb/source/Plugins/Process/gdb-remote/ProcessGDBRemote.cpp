@@ -279,9 +279,12 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    "async thread did exit");
 
   if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    repro::GDBRemoteProvider &provider =
-        g->GetOrCreate<repro::GDBRemoteProvider>();
-    m_gdb_comm.SetPacketRecorder(provider.GetNewPacketRecorder());
+    repro::ProcessGDBRemoteProvider &provider =
+        g->GetOrCreate<repro::ProcessGDBRemoteProvider>();
+    // Set the history stream to the stream owned by the provider.
+    m_gdb_comm.SetHistoryStream(provider.GetHistoryStream());
+    // Make sure to clear the stream again when we're finished.
+    provider.SetCallback([&]() { m_gdb_comm.SetHistoryStream(nullptr); });
   }
 
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_ASYNC));
@@ -3359,29 +3362,23 @@ Status ProcessGDBRemote::ConnectToReplayServer(repro::Loader *loader) {
   if (!loader)
     return Status("No loader provided.");
 
-  static std::unique_ptr<repro::MultiLoader<repro::GDBRemoteProvider>>
-      multi_loader = repro::MultiLoader<repro::GDBRemoteProvider>::Create(
-          repro::Reproducer::Instance().GetLoader());
-
-  if (!multi_loader)
-    return Status("No gdb remote provider found.");
-
-  llvm::Optional<std::string> history_file = multi_loader->GetNextFile();
+  // Construct replay history path.
+  FileSpec history_file =
+      loader->GetFile<repro::ProcessGDBRemoteProvider::Info>();
   if (!history_file)
-    return Status("No gdb remote packet log found.");
+    return Status("No provider for gdb-remote.");
+
+  // Enable replay mode.
+  m_replay_mode = true;
 
   // Load replay history.
-  if (auto error =
-          m_gdb_replay_server.LoadReplayHistory(FileSpec(*history_file)))
+  if (auto error = m_gdb_replay_server.LoadReplayHistory(history_file))
     return Status("Unable to load replay history");
 
   // Make a local connection.
   if (auto error = GDBRemoteCommunication::ConnectLocally(m_gdb_comm,
                                                           m_gdb_replay_server))
     return Status("Unable to connect to replay server");
-
-  // Enable replay mode.
-  m_replay_mode = true;
 
   // Start server thread.
   m_gdb_replay_server.StartAsyncThread();
