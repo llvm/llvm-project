@@ -110,10 +110,6 @@ bool LanguageCategory::GetHardcoded(FormatManager &fmt_mgr,
       break;
     }
   }
-  if (match_data.GetTypeForCache() &&
-      (!retval_sp || !retval_sp->NonCacheable())) {
-    m_format_cache.Set(match_data.GetTypeForCache(), retval_sp);
-  }
   return (bool)retval_sp;
 }
 
