@@ -17,21 +17,18 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
-#include <memory>
 
 namespace llvm {
 
 class MCAsmLayout;
 class MCAssembler;
 class MCCFIInstruction;
-class MCCodePadder;
 struct MCFixupKindInfo;
 class MCFragment;
 class MCInst;
 class MCObjectStreamer;
 class MCObjectTargetWriter;
 class MCObjectWriter;
-struct MCCodePaddingContext;
 class MCRelaxableFragment;
 class MCSubtargetInfo;
 class MCValue;
@@ -39,8 +36,6 @@ class raw_pwrite_stream;
 
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
-  std::unique_ptr<MCCodePadder> CodePadder;
-
 protected: // Can only create subclasses.
   MCAsmBackend(support::endianness Endian);
 
@@ -184,40 +179,6 @@ public:
   virtual bool isMicroMips(const MCSymbol *Sym) const {
     return false;
   }
-
-  /// Handles all target related code padding when starting to write a new
-  /// basic block to an object file.
-  ///
-  /// \param OS The streamer used for writing the padding data and function.
-  /// \param Context the context of the padding, Embeds the basic block's
-  /// parameters.
-  void handleCodePaddingBasicBlockStart(MCObjectStreamer *OS,
-                                        const MCCodePaddingContext &Context);
-  /// Handles all target related code padding after writing a block to an object
-  /// file.
-  ///
-  /// \param Context the context of the padding, Embeds the basic block's
-  /// parameters.
-  void handleCodePaddingBasicBlockEnd(const MCCodePaddingContext &Context);
-  /// Handles all target related code padding before writing a new instruction
-  /// to an object file.
-  ///
-  /// \param Inst the instruction.
-  void handleCodePaddingInstructionBegin(const MCInst &Inst);
-  /// Handles all target related code padding after writing an instruction to an
-  /// object file.
-  ///
-  /// \param Inst the instruction.
-  void handleCodePaddingInstructionEnd(const MCInst &Inst);
-
-  /// Relaxes a fragment (changes the size of the padding) according to target
-  /// requirements. The new size computation is done w.r.t a layout.
-  ///
-  /// \param PF The fragment to relax.
-  /// \param Layout Code layout information.
-  ///
-  /// \returns true iff any relaxation occurred.
-  bool relaxFragment(MCPaddingFragment *PF, MCAsmLayout &Layout);
 };
 
 } // end namespace llvm
