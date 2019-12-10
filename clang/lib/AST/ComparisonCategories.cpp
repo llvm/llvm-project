@@ -19,6 +19,41 @@
 
 using namespace clang;
 
+Optional<ComparisonCategoryType>
+clang::getComparisonCategoryForBuiltinCmp(QualType T) {
+  using CCT = ComparisonCategoryType;
+
+  if (const ComplexType *CT = T->getAs<ComplexType>()) {
+    if (CT->getElementType()->hasFloatingRepresentation())
+      return CCT::WeakEquality;
+    // FIXME: Remove this, consistent with P1959R0.
+    return CCT::StrongEquality;
+  }
+
+  if (T->isIntegralOrEnumerationType())
+    return CCT::StrongOrdering;
+
+  if (T->hasFloatingRepresentation())
+    return CCT::PartialOrdering;
+
+  // C++2a [expr.spaceship]p7: If the composite pointer type is a function
+  // pointer type, a pointer-to-member type, or std::nullptr_t, the
+  // result is of type std::strong_equality
+  if (T->isFunctionPointerType() || T->isMemberPointerType() ||
+      T->isNullPtrType())
+    // FIXME: This case was removed by P1959R0.
+    return CCT::StrongEquality;
+
+  // C++2a [expr.spaceship]p8: If the composite pointer type is an object
+  // pointer type, p <=> q is of type std::strong_ordering.
+  // Note: this assumes neither operand is a null pointer constant.
+  if (T->isPointerType())
+    return CCT::StrongOrdering;
+
+  // TODO: Extend support for operator<=> to ObjC types.
+  return llvm::None;
+}
+
 bool ComparisonCategoryInfo::ValueInfo::hasValidIntValue() const {
   assert(VD && "must have var decl");
   if (!VD->checkInitIsICE())
