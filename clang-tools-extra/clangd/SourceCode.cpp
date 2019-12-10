@@ -224,14 +224,6 @@ bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM) {
   return true;
 }
 
-SourceLocation spellingLocIfSpelled(SourceLocation Loc,
-                                    const SourceManager &SM) {
-  if (!isSpelledInSource(Loc, SM))
-    // Use the expansion location as spelling location is not interesting.
-    return SM.getExpansionRange(Loc).getBegin();
-  return SM.getSpellingLoc(Loc);
-}
-
 llvm::Optional<Range> getTokenRange(const SourceManager &SM,
                                     const LangOptions &LangOpts,
                                     SourceLocation TokLoc) {

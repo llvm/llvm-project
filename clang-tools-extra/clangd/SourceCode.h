@@ -107,12 +107,6 @@ SourceLocation includeHashLoc(FileID IncludedFile, const SourceManager &SM);
 ///     `-DName=foo`, the spelling location will be "<command line>".
 bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM);
 
-/// Returns the spelling location of the token at Loc if isSpelledInSource,
-/// otherwise its expansion location.
-/// FIXME: Most callers likely want some variant of "file location" instead.
-SourceLocation spellingLocIfSpelled(SourceLocation Loc,
-                                    const SourceManager &SM);
-
 /// Turns a token range into a half-open range and checks its correctness.
 /// The resulting range will have only valid source location on both sides, both
 /// of which are file locations.

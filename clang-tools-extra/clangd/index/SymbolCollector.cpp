@@ -82,7 +82,7 @@ static const char *PROTO_HEADER_COMMENT =
 // filters.
 bool isPrivateProtoDecl(const NamedDecl &ND) {
   const auto &SM = ND.getASTContext().getSourceManager();
-  auto Loc = spellingLocIfSpelled(findName(&ND), SM);
+  auto Loc = nameLocation(ND, SM);
   auto FileName = SM.getFilename(Loc);
   if (!FileName.endswith(".proto.h") && !FileName.endswith(".pb.h"))
     return false;
@@ -595,7 +595,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
     S.Flags |= Symbol::VisibleOutsideFile;
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
-  auto Loc = spellingLocIfSpelled(findName(&ND), SM);
+  auto Loc = nameLocation(ND, SM);
   assert(Loc.isValid() && "Invalid source location for NamedDecl");
   // FIXME: use the result to filter out symbols.
   shouldIndexFile(SM.getFileID(Loc));
@@ -656,7 +656,7 @@ void SymbolCollector::addDefinition(const NamedDecl &ND,
   Symbol S = DeclSym;
   std::string FileURI;
   const auto &SM = ND.getASTContext().getSourceManager();
-  auto Loc = spellingLocIfSpelled(findName(&ND), SM);
+  auto Loc = nameLocation(ND, SM);
   // FIXME: use the result to filter out symbols.
   shouldIndexFile(SM.getFileID(Loc));
   if (auto DefLoc =
