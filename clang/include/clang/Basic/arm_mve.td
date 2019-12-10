@@ -38,19 +38,66 @@ def "": Intrinsic<Vector, (args Vector:$a, Vector:$b),
    (bitcast (bitop (bitcast $a, UVector), (not (bitcast $b, UVector))), Vector)>;
 }
 
+let params = T.Signed in {
+def vqaddq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                              (IRIntBase<"sadd_sat", [Vector]> $a, $b)>;
+def vqsubq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                              (IRIntBase<"ssub_sat", [Vector]> $a, $b)>;
+}
+let params = T.Unsigned in {
+def vqaddq_u: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                (IRIntBase<"uadd_sat", [Vector]> $a, $b)>,
+              NameOverride<"vqaddq">;
+def vqsubq_u: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                (IRIntBase<"usub_sat", [Vector]> $a, $b)>,
+              NameOverride<"vqsubq">;
+}
+
+// Some intrinsics below are implemented not as IR fragments, but as
+// special-purpose IR intrinsics. This is because such a general form
+// (such as NEON uses) required a variable-width vector size, and we are
+// restricted to 128 bit. Although we can possibly get clever with lane
+// operations, the consequent IR representation would be very hard to
+// write sensibly. In particular, doubling a vector's width would be a
+// mess. Other intrinsics just don't translate nicely into IR.
 let params = T.Int in {
 def vaddq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (add $a, $b)>;
+def vhaddq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                              (IRInt<"vhadd", [Vector]> $a, $b)>;
+def vrhaddq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                               (IRInt<"vrhadd", [Vector]> $a, $b)>;
 def vandq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (and $a, $b)>;
 def vbicq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (and $a, (not $b))>;
 def veorq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (xor $a, $b)>;
 def vornq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (or $a, (not $b))>;
 def vorrq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (or $a, $b)>;
 def vsubq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (sub $a, $b)>;
+def vhsubq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                              (IRInt<"vhsub", [Vector]> $a, $b)>;
 def vmulq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (mul $a, $b)>;
 def vmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                             (IRInt<"vmulh", [Vector]> $a, $b)>;
+                              (IRInt<"vmulh", [Vector]> $a, $b)>;
 def vrmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                             (IRInt<"vrmulh", [Vector]> $a, $b)>;
+                               (IRInt<"vrmulh", [Vector]> $a, $b)>;
+def vqdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                (IRInt<"vqdmulh", [Vector]> $a, $b)>;
+def vqrdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                 (IRInt<"vqrdmulh", [Vector]> $a, $b)>;
+def vmullbq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
+                                      (IRInt<"vmull", [DblVector, Vector]>
+                                       $a, $b, 0)>;
+def vmulltq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
+                                      (IRInt<"vmull", [DblVector, Vector]>
+                                       $a, $b, 1)>;
+}
+
+let params = T.Poly, overrideKindLetter = "p" in {
+def vmullbq_poly: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
+                                       (IRInt<"vmull_poly", [DblVector, Vector]>
+                                        $a, $b, 0)>;
+def vmulltq_poly: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
+                                       (IRInt<"vmull_poly", [DblVector, Vector]>
+                                        $a, $b, 1)>;
 }
 
 let params = T.Float in {
@@ -123,6 +170,46 @@ def vmulhq_m: Intrinsic<
 def vrmulhq_m: Intrinsic<
     Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
     (IRInt<"rmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vqdmulhq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"qdmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vqrdmulhq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"qrdmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vmullbq_int_m: Intrinsic<
+    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mull_int_predicated", [DblVector, Vector, Predicate]> $a, $b, 0,
+     $pred, $inactive)>;
+def vmulltq_int_m: Intrinsic<
+    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mull_int_predicated", [DblVector, Vector, Predicate]> $a, $b, 1,
+     $pred, $inactive)>;
+def vqaddq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"qadd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vhaddq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"hadd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vrhaddq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"rhadd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vqsubq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"qsub_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+def vhsubq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"hsub_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+}
+
+let params = T.Poly, overrideKindLetter = "p" in {
+def vmullbq_poly_m: Intrinsic<
+    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mull_poly_predicated", [DblVector, Vector, Predicate]> $a, $b, 0,
+     $pred, $inactive)>;
+def vmulltq_poly_m: Intrinsic<
+    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"mull_poly_predicated", [DblVector, Vector, Predicate]> $a, $b, 1,
+     $pred, $inactive)>;
 }
 
 // Predicated intrinsics - Float types only
@@ -594,6 +681,68 @@ def vadciq_m: Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
              0, $pred):$pair,
          (store (and 1, (lshr (xval $pair, 1), 29)), $carry),
          (xval $pair, 0))>;
+}
+
+multiclass VectorComplexAddPred<dag halving, dag angle> {
+  def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
+     (IRInt<"vcaddq", [Vector]> halving, angle, $a, $b)>;
+  def _m : Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
+                              Predicate:$pred),
+     (IRInt<"vcaddq_predicated", [Vector, Predicate]>
+       halving, angle, $inactive, $a, $b, $pred)>;
+  def _x : Intrinsic<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
+     (IRInt<"vcaddq_predicated", [Vector, Predicate]>
+       halving, angle, (undef Vector), $a, $b, $pred)>;
+}
+
+multiclass VectorComplexMulPred<dag angle> {
+  def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
+    (IRInt<"vcmulq", [Vector]> angle, $a, $b)>;
+  def _m : Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
+                              Predicate:$pred),
+    (IRInt<"vcmulq_predicated", [Vector, Predicate]> angle, $inactive, $a, $b,
+      $pred)>;
+  def _x : Intrinsic<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"vcmulq_predicated", [Vector, Predicate]> angle, (undef Vector), $a,
+      $b, $pred)>;
+}
+
+multiclass VectorComplexMLAPred<dag angle> {
+  def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b, Vector:$c),
+    (IRInt<"vcmlaq", [Vector]> angle, $a, $b, $c)>;
+  def _m : Intrinsic<Vector, (args Vector:$a, Vector:$b, Vector:$c,
+                                   Predicate:$pred),
+    (IRInt<"vcmlaq_predicated", [Vector, Predicate]> angle, $a, $b, $c, $pred)>;
+}
+
+multiclass VectorComplexAddAngle<dag halving> {
+  defm _rot90 : VectorComplexAddPred<halving, (u32 0)>;
+  defm _rot270 : VectorComplexAddPred<halving, (u32 1)>;
+}
+
+multiclass VectorComplexMulAngle {
+  defm ""      : VectorComplexMulPred<(u32 0)>;
+  defm _rot90  : VectorComplexMulPred<(u32 1)>;
+  defm _rot180 : VectorComplexMulPred<(u32 2)>;
+  defm _rot270 : VectorComplexMulPred<(u32 3)>;
+}
+
+multiclass VectorComplexMLAAngle {
+  defm ""      : VectorComplexMLAPred<(u32 0)>;
+  defm _rot90  : VectorComplexMLAPred<(u32 1)>;
+  defm _rot180 : VectorComplexMLAPred<(u32 2)>;
+  defm _rot270 : VectorComplexMLAPred<(u32 3)>;
+}
+
+let params = T.Usual in
+defm vcaddq : VectorComplexAddAngle<(u32 0)>;
+
+let params = T.Signed in
+defm vhcaddq : VectorComplexAddAngle<(u32 1)>;
+
+let params = T.Float in {
+defm vcmulq : VectorComplexMulAngle;
+defm vcmlaq : VectorComplexMLAAngle;
 }
 
 foreach desttype = T.All in {

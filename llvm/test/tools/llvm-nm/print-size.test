@@ -1,5 +1,6 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-nm --print-size %t.o | FileCheck %s --strict-whitespace
+# RUN: llvm-nm -S %t.o | FileCheck %s --strict-whitespace
 
 !ELF
 FileHeader:

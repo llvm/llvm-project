@@ -127,12 +127,14 @@ public:
             bool UseMaskForGaps = false);
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
             const Instruction *I);
-  unsigned getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-            TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
-            TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
-            TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
-            TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
-            ArrayRef<const Value *> Args = ArrayRef<const Value *>());
+  unsigned getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty,
+      TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
+      TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
+      TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
+      TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
+      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      const Instruction *CxtI = nullptr);
   unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
             const Instruction *I = nullptr);
   unsigned getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);

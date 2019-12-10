@@ -5328,11 +5328,16 @@ ARMBaseInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
-Optional<DestSourcePair>
-ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
-                                 int64_t &Offset) const {
+Optional<RegImmPair> ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
+                                                      Register Reg) const {
   int Sign = 1;
   unsigned Opcode = MI.getOpcode();
+  int64_t Offset = 0;
+
+  // TODO: Handle cases where Reg is a super- or sub-register of the
+  // destination register.
+  if (Reg != MI.getOperand(0).getReg())
+    return None;
 
   // We describe SUBri or ADDri instructions.
   if (Opcode == ARM::SUBri)
@@ -5348,7 +5353,7 @@ ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
     return None;
 
   Offset = MI.getOperand(2).getImm() * Sign;
-  return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+  return RegImmPair{MI.getOperand(1).getReg(), Offset};
 }
 
 bool llvm::registerDefinedBetween(unsigned Reg,

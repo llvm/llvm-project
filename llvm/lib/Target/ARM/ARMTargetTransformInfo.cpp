@@ -37,7 +37,7 @@ using namespace llvm;
 #define DEBUG_TYPE "armtti"
 
 static cl::opt<bool> EnableMaskedLoadStores(
-  "enable-arm-maskedldst", cl::Hidden, cl::init(false),
+  "enable-arm-maskedldst", cl::Hidden, cl::init(true),
   cl::desc("Enable the generation of masked loads and stores"));
 
 static cl::opt<bool> DisableLowOverheadLoops(
@@ -642,58 +642,60 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
   return BaseCost * BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
 }
 
-int ARMTTIImpl::getArithmeticInstrCost(
-    unsigned Opcode, Type *Ty, TTI::OperandValueKind Op1Info,
-    TTI::OperandValueKind Op2Info, TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo,
-    ArrayRef<const Value *> Args) {
+int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
+                                       TTI::OperandValueKind Op1Info,
+                                       TTI::OperandValueKind Op2Info,
+                                       TTI::OperandValueProperties Opd1PropInfo,
+                                       TTI::OperandValueProperties Opd2PropInfo,
+                                       ArrayRef<const Value *> Args,
+                                       const Instruction *CxtI) {
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
-  const unsigned FunctionCallDivCost = 20;
-  const unsigned ReciprocalDivCost = 10;
-  static const CostTblEntry CostTbl[] = {
-    // Division.
-    // These costs are somewhat random. Choose a cost of 20 to indicate that
-    // vectorizing devision (added function call) is going to be very expensive.
-    // Double registers types.
-    { ISD::SDIV, MVT::v1i64, 1 * FunctionCallDivCost},
-    { ISD::UDIV, MVT::v1i64, 1 * FunctionCallDivCost},
-    { ISD::SREM, MVT::v1i64, 1 * FunctionCallDivCost},
-    { ISD::UREM, MVT::v1i64, 1 * FunctionCallDivCost},
-    { ISD::SDIV, MVT::v2i32, 2 * FunctionCallDivCost},
-    { ISD::UDIV, MVT::v2i32, 2 * FunctionCallDivCost},
-    { ISD::SREM, MVT::v2i32, 2 * FunctionCallDivCost},
-    { ISD::UREM, MVT::v2i32, 2 * FunctionCallDivCost},
-    { ISD::SDIV, MVT::v4i16,     ReciprocalDivCost},
-    { ISD::UDIV, MVT::v4i16,     ReciprocalDivCost},
-    { ISD::SREM, MVT::v4i16, 4 * FunctionCallDivCost},
-    { ISD::UREM, MVT::v4i16, 4 * FunctionCallDivCost},
-    { ISD::SDIV, MVT::v8i8,      ReciprocalDivCost},
-    { ISD::UDIV, MVT::v8i8,      ReciprocalDivCost},
-    { ISD::SREM, MVT::v8i8,  8 * FunctionCallDivCost},
-    { ISD::UREM, MVT::v8i8,  8 * FunctionCallDivCost},
-    // Quad register types.
-    { ISD::SDIV, MVT::v2i64, 2 * FunctionCallDivCost},
-    { ISD::UDIV, MVT::v2i64, 2 * FunctionCallDivCost},
-    { ISD::SREM, MVT::v2i64, 2 * FunctionCallDivCost},
-    { ISD::UREM, MVT::v2i64, 2 * FunctionCallDivCost},
-    { ISD::SDIV, MVT::v4i32, 4 * FunctionCallDivCost},
-    { ISD::UDIV, MVT::v4i32, 4 * FunctionCallDivCost},
-    { ISD::SREM, MVT::v4i32, 4 * FunctionCallDivCost},
-    { ISD::UREM, MVT::v4i32, 4 * FunctionCallDivCost},
-    { ISD::SDIV, MVT::v8i16, 8 * FunctionCallDivCost},
-    { ISD::UDIV, MVT::v8i16, 8 * FunctionCallDivCost},
-    { ISD::SREM, MVT::v8i16, 8 * FunctionCallDivCost},
-    { ISD::UREM, MVT::v8i16, 8 * FunctionCallDivCost},
-    { ISD::SDIV, MVT::v16i8, 16 * FunctionCallDivCost},
-    { ISD::UDIV, MVT::v16i8, 16 * FunctionCallDivCost},
-    { ISD::SREM, MVT::v16i8, 16 * FunctionCallDivCost},
-    { ISD::UREM, MVT::v16i8, 16 * FunctionCallDivCost},
-    // Multiplication.
-  };
-
   if (ST->hasNEON()) {
+    const unsigned FunctionCallDivCost = 20;
+    const unsigned ReciprocalDivCost = 10;
+    static const CostTblEntry CostTbl[] = {
+      // Division.
+      // These costs are somewhat random. Choose a cost of 20 to indicate that
+      // vectorizing devision (added function call) is going to be very expensive.
+      // Double registers types.
+      { ISD::SDIV, MVT::v1i64, 1 * FunctionCallDivCost},
+      { ISD::UDIV, MVT::v1i64, 1 * FunctionCallDivCost},
+      { ISD::SREM, MVT::v1i64, 1 * FunctionCallDivCost},
+      { ISD::UREM, MVT::v1i64, 1 * FunctionCallDivCost},
+      { ISD::SDIV, MVT::v2i32, 2 * FunctionCallDivCost},
+      { ISD::UDIV, MVT::v2i32, 2 * FunctionCallDivCost},
+      { ISD::SREM, MVT::v2i32, 2 * FunctionCallDivCost},
+      { ISD::UREM, MVT::v2i32, 2 * FunctionCallDivCost},
+      { ISD::SDIV, MVT::v4i16,     ReciprocalDivCost},
+      { ISD::UDIV, MVT::v4i16,     ReciprocalDivCost},
+      { ISD::SREM, MVT::v4i16, 4 * FunctionCallDivCost},
+      { ISD::UREM, MVT::v4i16, 4 * FunctionCallDivCost},
+      { ISD::SDIV, MVT::v8i8,      ReciprocalDivCost},
+      { ISD::UDIV, MVT::v8i8,      ReciprocalDivCost},
+      { ISD::SREM, MVT::v8i8,  8 * FunctionCallDivCost},
+      { ISD::UREM, MVT::v8i8,  8 * FunctionCallDivCost},
+      // Quad register types.
+      { ISD::SDIV, MVT::v2i64, 2 * FunctionCallDivCost},
+      { ISD::UDIV, MVT::v2i64, 2 * FunctionCallDivCost},
+      { ISD::SREM, MVT::v2i64, 2 * FunctionCallDivCost},
+      { ISD::UREM, MVT::v2i64, 2 * FunctionCallDivCost},
+      { ISD::SDIV, MVT::v4i32, 4 * FunctionCallDivCost},
+      { ISD::UDIV, MVT::v4i32, 4 * FunctionCallDivCost},
+      { ISD::SREM, MVT::v4i32, 4 * FunctionCallDivCost},
+      { ISD::UREM, MVT::v4i32, 4 * FunctionCallDivCost},
+      { ISD::SDIV, MVT::v8i16, 8 * FunctionCallDivCost},
+      { ISD::UDIV, MVT::v8i16, 8 * FunctionCallDivCost},
+      { ISD::SREM, MVT::v8i16, 8 * FunctionCallDivCost},
+      { ISD::UREM, MVT::v8i16, 8 * FunctionCallDivCost},
+      { ISD::SDIV, MVT::v16i8, 16 * FunctionCallDivCost},
+      { ISD::UDIV, MVT::v16i8, 16 * FunctionCallDivCost},
+      { ISD::SREM, MVT::v16i8, 16 * FunctionCallDivCost},
+      { ISD::UREM, MVT::v16i8, 16 * FunctionCallDivCost},
+      // Multiplication.
+    };
+
     if (const auto *Entry = CostTableLookup(CostTbl, ISDOpcode, LT.second))
       return LT.first * Entry->Cost;
 
@@ -713,6 +715,33 @@ int ARMTTIImpl::getArithmeticInstrCost(
 
     return Cost;
   }
+
+  // If this operation is a shift on arm/thumb2, it might well be folded into
+  // the following instruction, hence having a cost of 0.
+  auto LooksLikeAFreeShift = [&]() {
+    if (ST->isThumb1Only() || Ty->isVectorTy())
+      return false;
+
+    if (!CxtI || !CxtI->hasOneUse() || !CxtI->isShift())
+      return false;
+    if (Op2Info != TargetTransformInfo::OK_UniformConstantValue)
+      return false;
+
+    // Folded into a ADC/ADD/AND/BIC/CMP/EOR/MVN/ORR/ORN/RSB/SBC/SUB
+    switch (cast<Instruction>(CxtI->user_back())->getOpcode()) {
+    case Instruction::Add:
+    case Instruction::Sub:
+    case Instruction::And:
+    case Instruction::Xor:
+    case Instruction::Or:
+    case Instruction::ICmp:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (LooksLikeAFreeShift())
+    return 0;
 
   int BaseCost = ST->hasMVEIntegerOps() && Ty->isVectorTy()
                      ? ST->getMVEVectorCostFactor()

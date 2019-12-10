@@ -28,8 +28,11 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 using namespace clang;
+using namespace llvm::omp;
 
 //===----------------------------------------------------------------------===//
 // Stack of data-sharing attributes for variables
@@ -4152,13 +4155,17 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
   return false;
 }
 
+struct Kind2Unsigned {
+  using argument_type = OpenMPDirectiveKind;
+  unsigned operator()(argument_type DK) { return unsigned(DK); }
+};
 static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
                            ArrayRef<OMPClause *> Clauses,
                            ArrayRef<OpenMPDirectiveKind> AllowedNameModifiers) {
   bool ErrorFound = false;
   unsigned NamedModifiersNumber = 0;
-  SmallVector<const OMPIfClause *, OMPC_unknown + 1> FoundNameModifiers(
-      OMPD_unknown + 1);
+  llvm::IndexedMap<const OMPIfClause *, Kind2Unsigned> FoundNameModifiers;
+  FoundNameModifiers.resize(unsigned(OMPD_unknown) + 1);
   SmallVector<SourceLocation, 4> NameModifierLoc;
   for (const OMPClause *C : Clauses) {
     if (const auto *IC = dyn_cast_or_null<OMPIfClause>(C)) {

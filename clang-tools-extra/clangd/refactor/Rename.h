@@ -12,6 +12,7 @@
 #include "Path.h"
 #include "Protocol.h"
 #include "SourceCode.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"
 
@@ -54,6 +55,36 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
                                      llvm::StringRef InitialCode,
                                      std::vector<Range> Occurrences,
                                      llvm::StringRef NewName);
+
+/// Adjusts indexed occurrences to match the current state of the file.
+///
+/// The Index is not always up to date. Blindly editing at the locations
+/// reported by the index may mangle the code in such cases.
+/// This function determines whether the indexed occurrences can be applied to
+/// this file, and heuristically repairs the occurrences if necessary.
+///
+/// The API assumes that Indexed contains only named occurrences (each
+/// occurrence has the same length).
+llvm::Optional<std::vector<Range>>
+adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
+                   std::vector<Range> Indexed, const LangOptions &LangOpts);
+
+/// Calculates the lexed occurrences that the given indexed occurrences map to.
+/// Returns None if we don't find a mapping.
+///
+/// Exposed for testing only.
+///
+/// REQUIRED: Indexed and Lexed are sorted.
+llvm::Optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
+                                                   ArrayRef<Range> Lexed);
+/// Evaluates how good the mapped result is. 0 indicates a perfect match.
+///
+/// Exposed for testing only.
+///
+/// REQUIRED: Indexed and Lexed are sorted, Indexed and MappedIndex have the
+/// same size.
+size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed, ArrayRef<Range> Lexed,
+                                 ArrayRef<size_t> MappedIndex);
 
 } // namespace clangd
 } // namespace clang

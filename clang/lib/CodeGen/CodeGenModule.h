@@ -17,7 +17,6 @@
 #include "CodeGenTypeCache.h"
 #include "CodeGenTypes.h"
 #include "SanitizerMetadata.h"
-#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -77,6 +76,9 @@ class AnnotateAttr;
 class CXXDestructorDecl;
 class Module;
 class CoverageSourceInfo;
+class TargetAttr;
+class InitSegAttr;
+struct ParsedTargetAttr;
 
 namespace CodeGen {
 
@@ -1152,7 +1154,7 @@ public:
 
   /// Parses the target attributes passed in, and returns only the ones that are
   /// valid feature names.
-  TargetAttr::ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD);
+  ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD);
 
   // Fills in the supplied string map with the set of target features for the
   // passed in function.

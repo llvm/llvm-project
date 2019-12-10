@@ -12835,11 +12835,19 @@ void Sema::LookupOverloadedBinOp(OverloadCandidateSet &CandidateSet,
 ///
 /// \param LHS Left-hand argument.
 /// \param RHS Right-hand argument.
+/// \param PerformADL Whether to consider operator candidates found by ADL.
+/// \param AllowRewrittenCandidates Whether to consider candidates found by
+///        C++20 operator rewrites.
+/// \param DefaultedFn If we are synthesizing a defaulted operator function,
+///        the function in question. Such a function is never a candidate in
+///        our overload resolution. This also enables synthesizing a three-way
+///        comparison from < and == as described in C++20 [class.spaceship]p1.
 ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
                                        BinaryOperatorKind Opc,
                                        const UnresolvedSetImpl &Fns, Expr *LHS,
                                        Expr *RHS, bool PerformADL,
-                                       bool AllowRewrittenCandidates) {
+                                       bool AllowRewrittenCandidates,
+                                       FunctionDecl *DefaultedFn) {
   Expr *Args[2] = { LHS, RHS };
   LHS=RHS=nullptr; // Please use only Args instead of LHS/RHS couple
 
@@ -12906,6 +12914,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
   OverloadCandidateSet CandidateSet(
       OpLoc, OverloadCandidateSet::CSK_Operator,
       OverloadCandidateSet::OperatorRewriteInfo(Op, AllowRewrittenCandidates));
+  if (DefaultedFn)
+    CandidateSet.exclude(DefaultedFn);
   LookupOverloadedBinOp(CandidateSet, Op, Fns, Args, PerformADL);
 
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
@@ -13113,6 +13123,15 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
       if (Opc == BO_Comma)
         break;
 
+      // When defaulting an 'operator<=>', we can try to synthesize a three-way
+      // compare result using '==' and '<'.
+      if (DefaultedFn && Opc == BO_Cmp) {
+        ExprResult E = BuildSynthesizedThreeWayComparison(OpLoc, Fns, Args[0],
+                                                          Args[1], DefaultedFn);
+        if (E.isInvalid() || E.isUsable())
+          return E;
+      }
+
       // For class as left operand for assignment or compound assignment
       // operator do not fall through to handling in built-in, but report that
       // no overloaded assignment operator found
@@ -13192,6 +13211,111 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
 
   // We matched a built-in operator; build it.
   return CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
+}
+
+ExprResult Sema::BuildSynthesizedThreeWayComparison(
+    SourceLocation OpLoc, const UnresolvedSetImpl &Fns, Expr *LHS, Expr *RHS,
+    FunctionDecl *DefaultedFn) {
+  const ComparisonCategoryInfo *Info =
+      Context.CompCategories.lookupInfoForType(DefaultedFn->getReturnType());
+  // If we're not producing a known comparison category type, we can't
+  // synthesize a three-way comparison. Let the caller diagnose this.
+  if (!Info)
+    return ExprResult((Expr*)nullptr);
+
+  // If we ever want to perform this synthesis more generally, we will need to
+  // apply the temporary materialization conversion to the operands.
+  assert(LHS->isGLValue() && RHS->isGLValue() &&
+         "cannot use prvalue expressions more than once");
+  Expr *OrigLHS = LHS;
+  Expr *OrigRHS = RHS;
+
+  // Replace the LHS and RHS with OpaqueValueExprs; we're going to refer to
+  // each of them multiple times below.
+  LHS = new (Context)
+      OpaqueValueExpr(LHS->getExprLoc(), LHS->getType(), LHS->getValueKind(),
+                      LHS->getObjectKind(), LHS);
+  RHS = new (Context)
+      OpaqueValueExpr(RHS->getExprLoc(), RHS->getType(), RHS->getValueKind(),
+                      RHS->getObjectKind(), RHS);
+
+  ExprResult Eq = CreateOverloadedBinOp(OpLoc, BO_EQ, Fns, LHS, RHS, true, true,
+                                        DefaultedFn);
+  if (Eq.isInvalid())
+    return ExprError();
+
+  ExprResult Less;
+  if (Info->isOrdered()) {
+    Less = CreateOverloadedBinOp(OpLoc, BO_LT, Fns, LHS, RHS, true, true,
+                                 DefaultedFn);
+    if (Less.isInvalid())
+      return ExprError();
+  }
+
+  ExprResult Greater;
+  if (Info->isOrdered()) {
+    Greater = CreateOverloadedBinOp(OpLoc, BO_LT, Fns, RHS, LHS, true, true,
+                                    DefaultedFn);
+    if (Greater.isInvalid())
+      return ExprError();
+  }
+
+  // Form the list of comparisons we're going to perform.
+  struct Comparison {
+    ExprResult Cmp;
+    ComparisonCategoryResult Result;
+  } Comparisons[4] =
+  { {Eq, Info->isStrong() ? ComparisonCategoryResult::Equal
+                          : ComparisonCategoryResult::Equivalent},
+    {Less, ComparisonCategoryResult::Less},
+    {Greater, ComparisonCategoryResult::Greater},
+    {ExprResult(), ComparisonCategoryResult::Unordered},
+  };
+
+  int I;
+  if (Info->isEquality()) {
+    Comparisons[1].Result = Info->isStrong()
+                                ? ComparisonCategoryResult::Nonequal
+                                : ComparisonCategoryResult::Nonequivalent;
+    I = 1;
+  } else if (!Info->isPartial()) {
+    I = 2;
+  } else {
+    I = 3;
+  }
+
+  // Combine the comparisons with suitable conditional expressions.
+  ExprResult Result;
+  for (; I >= 0; --I) {
+    // Build a reference to the comparison category constant.
+    auto *VI = Info->lookupValueInfo(Comparisons[I].Result);
+    // FIXME: Missing a constant for a comparison category. Diagnose this?
+    if (!VI)
+      return ExprResult((Expr*)nullptr);
+    ExprResult ThisResult =
+        BuildDeclarationNameExpr(CXXScopeSpec(), DeclarationNameInfo(), VI->VD);
+    if (ThisResult.isInvalid())
+      return ExprError();
+
+    // Build a conditional unless this is the final case.
+    if (Result.get()) {
+      Result = ActOnConditionalOp(OpLoc, OpLoc, Comparisons[I].Cmp.get(),
+                                  ThisResult.get(), Result.get());
+      if (Result.isInvalid())
+        return ExprError();
+    } else {
+      Result = ThisResult;
+    }
+  }
+
+  // Build a PseudoObjectExpr to model the rewriting of an <=> operator, and to
+  // bind the OpaqueValueExprs before they're (repeatedly) used.
+  Expr *SyntacticForm = new (Context)
+      BinaryOperator(OrigLHS, OrigRHS, BO_Cmp, Result.get()->getType(),
+                     Result.get()->getValueKind(),
+                     Result.get()->getObjectKind(), OpLoc, FPFeatures);
+  Expr *SemanticForm[] = {LHS, RHS, Result.get()};
+  return PseudoObjectExpr::Create(Context, SyntacticForm, SemanticForm, 2);
 }
 
 ExprResult

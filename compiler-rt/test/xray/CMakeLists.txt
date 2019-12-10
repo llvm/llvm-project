@@ -25,17 +25,6 @@ if (COMPILER_RT_BUILD_XRAY AND COMPILER_RT_HAS_XRAY)
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
     list(APPEND XRAY_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
   endforeach()
-
-  # Add unit tests.
-  if(COMPILER_RT_INCLUDE_TESTS)
-    if(UNIX AND NOT APPLE)
-      configure_lit_site_cfg(
-        ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-        ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
-      list(APPEND XRAY_TEST_DEPS XRayUnitTests)
-      list(APPEND XRAY_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
-    endif()
-  endif()
 endif()
 
 add_lit_testsuite(check-xray "Running the XRay tests"

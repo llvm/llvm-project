@@ -585,8 +585,10 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
   // Don't extract because needs hoisting.
   EXPECT_THAT(apply(" [[int a = 5;]] a++; "), StartsWith("fail"));
-  // Don't extract return
-  EXPECT_THAT(apply(" if(true) [[return;]] "), StartsWith("fail"));
+  // Extract certain return
+  EXPECT_THAT(apply(" if(true) [[{ return; }]] "), HasSubstr("extracted"));
+  // Don't extract uncertain return
+  EXPECT_THAT(apply(" if(true) [[if (false) return;]] "), StartsWith("fail"));
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
@@ -694,6 +696,42 @@ TEST_F(ExtractFunctionTest, ControlFlow) {
   EXPECT_THAT(apply(" switch(1) { [[break;]] }"), StartsWith("fail"));
   EXPECT_THAT(apply(" for(;;) { [[while(1) break; break;]] }"),
               StartsWith("fail"));
+}
+
+TEST_F(ExtractFunctionTest, ExistingReturnStatement) {
+  Context = File;
+  const char* Before = R"cpp(
+    bool lucky(int N);
+    int getNum(bool Superstitious, int Min, int Max) {
+      if (Superstitious) [[{
+        for (int I = Min; I <= Max; ++I)
+          if (lucky(I))
+            return I;
+        return -1;
+      }]] else {
+        return (Min + Max) / 2;
+      }
+    }
+  )cpp";
+  // FIXME: min/max should be by value.
+  // FIXME: avoid emitting redundant braces
+  const char* After = R"cpp(
+    bool lucky(int N);
+    int extracted(int &Min, int &Max) {
+{
+        for (int I = Min; I <= Max; ++I)
+          if (lucky(I))
+            return I;
+        return -1;
+      }
+}
+int getNum(bool Superstitious, int Min, int Max) {
+      if (Superstitious) return extracted(Min, Max); else {
+        return (Min + Max) / 2;
+      }
+    }
+  )cpp";
+  EXPECT_EQ(apply(Before), After);
 }
 
 TWEAK_TEST(RemoveUsingNamespace);
@@ -1934,6 +1972,30 @@ TEST_F(DefineOutlineTest, ApplyTest) {
             template <typename> void foo();
             template <> void foo<int>() ;)cpp",
           "template <> void foo<int>() { return; }",
+      },
+      // Default args.
+      {
+          "void fo^o(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) {}",
+          "void foo(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) ;",
+          "void foo(int x, int y , int , int (*foo)(int) ) {}",
+      },
+      // Ctor initializers.
+      {
+          R"cpp(
+              class Foo {
+                int y = 2;
+                F^oo(int z) __attribute__((weak)) : bar(2){}
+                int bar;
+                int z = 2;
+              };)cpp",
+          R"cpp(
+              class Foo {
+                int y = 2;
+                Foo(int z) __attribute__((weak)) ;
+                int bar;
+                int z = 2;
+              };)cpp",
+          "Foo::Foo(int z) __attribute__((weak)) : bar(2){}\n",
       },
   };
   for (const auto &Case : Cases) {

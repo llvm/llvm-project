@@ -73,6 +73,14 @@ bool mentionsMainFile(const Diag &D) {
   return false;
 }
 
+bool isBlacklisted(const Diag &D) {
+  // clang will always fail parsing MS ASM, we don't link in desc + asm parser.
+  if (D.ID == clang::diag::err_msasm_unable_to_create_target ||
+      D.ID == clang::diag::err_msasm_unsupported_arch)
+    return true;
+  return false;
+}
+
 // Checks whether a location is within a half-open range.
 // Note that clang also uses closed source ranges, which this can't handle!
 bool locationInRange(SourceLocation L, CharSourceRange R,
@@ -642,7 +650,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 void StoreDiags::flushLastDiag() {
   if (!LastDiag)
     return;
-  if (mentionsMainFile(*LastDiag) &&
+  if (!isBlacklisted(*LastDiag) && mentionsMainFile(*LastDiag) &&
       (!LastDiagWasAdjusted ||
        // Only report the first diagnostic coming from each particular header.
        IncludeLinesWithErrors.insert(LastDiag->Range.start.line).second)) {

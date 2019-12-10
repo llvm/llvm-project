@@ -238,7 +238,8 @@ void FormatManager::GetPossibleMatches(
     }
   }
 
-  for (lldb::LanguageType language_type : GetCandidateLanguages(valobj)) {
+  for (lldb::LanguageType language_type :
+       GetCandidateLanguages(valobj.GetObjectRuntimeLanguage())) {
     if (Language *language = Language::FindPlugin(language_type)) {
       for (ConstString candidate :
            language->GetPossibleFormattersMatches(valobj, use_dynamic)) {
@@ -579,12 +580,6 @@ ConstString FormatManager::GetTypeForCache(ValueObject &valobj,
 }
 
 std::vector<lldb::LanguageType>
-FormatManager::GetCandidateLanguages(ValueObject &valobj) {
-  lldb::LanguageType lang_type = valobj.GetObjectRuntimeLanguage();
-  return GetCandidateLanguages(lang_type);
-}
-
-std::vector<lldb::LanguageType>
 FormatManager::GetCandidateLanguages(lldb::LanguageType lang_type) {
   switch (lang_type) {
   case lldb::eLanguageTypeC:
@@ -599,6 +594,7 @@ FormatManager::GetCandidateLanguages(lldb::LanguageType lang_type) {
   default:
     return {lang_type};
   }
+  llvm_unreachable("Fully covered switch");
 }
 
 LanguageCategory *

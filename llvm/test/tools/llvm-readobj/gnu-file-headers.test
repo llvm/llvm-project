@@ -1,8 +1,20 @@
 RUN: llvm-readelf -h %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF32
+RUN: llvm-readelf --file-header %p/Inputs/trivial.obj.elf-i386 \
+RUN:   | FileCheck %s -check-prefix ELF32
+RUN: llvm-readelf --file-headers %p/Inputs/trivial.obj.elf-i386 \
+RUN:   | FileCheck %s -check-prefix ELF32
 RUN: llvm-readelf -h %p/Inputs/trivial.obj.elf-x86-64 \
 RUN:   | FileCheck %s -check-prefix ELF64
+RUN: llvm-readelf --file-header %p/Inputs/trivial.obj.elf-x86-64 \
+RUN:   | FileCheck %s -check-prefix ELF64
+RUN: llvm-readelf --file-headers %p/Inputs/trivial.obj.elf-x86-64 \
+RUN:   | FileCheck %s -check-prefix ELF64
 RUN: llvm-readelf -h %p/Inputs/trivial.obj.elf-mipsel \
+RUN:   | FileCheck %s -check-prefix MIPSEL
+RUN: llvm-readelf --file-header %p/Inputs/trivial.obj.elf-mipsel \
+RUN:   | FileCheck %s -check-prefix MIPSEL
+RUN: llvm-readelf --file-headers %p/Inputs/trivial.obj.elf-mipsel \
 RUN:   | FileCheck %s -check-prefix MIPSEL
 
 ELF32:      ELF Header:

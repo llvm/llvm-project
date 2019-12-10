@@ -61,7 +61,9 @@ private:
       llvm::StringSaver Saver(Alloc);
       llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, *FS,
                                     llvm::StringRef(Cmd.Directory));
-      Cmd.CommandLine.assign(Argv.begin(), Argv.end());
+      // Don't assign directly, Argv aliases CommandLine.
+      std::vector<std::string> ExpandedArgv(Argv.begin(), Argv.end());
+      Cmd.CommandLine = std::move(ExpandedArgv);
     }
     return Cmds;
   }

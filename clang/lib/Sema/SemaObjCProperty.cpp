@@ -2498,6 +2498,9 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
     // A user declared getter will be synthesize when @synthesize of
     // the property with the same name is seen in the @implementation
     GetterMethod->setPropertyAccessor(true);
+
+  GetterMethod->createImplicitParams(Context,
+                                     GetterMethod->getClassInterface());
   property->setGetterMethodDecl(GetterMethod);
 
   // Skip setter if property is read-only.
@@ -2569,6 +2572,9 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       // A user declared setter will be synthesize when @synthesize of
       // the property with the same name is seen in the @implementation
       SetterMethod->setPropertyAccessor(true);
+
+    SetterMethod->createImplicitParams(Context,
+                                       SetterMethod->getClassInterface());
     property->setSetterMethodDecl(SetterMethod);
   }
   // Add any synthesized methods to the global pool. This allows us to

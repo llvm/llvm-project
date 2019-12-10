@@ -837,7 +837,36 @@ def int_arm_mve_mul_predicated: Intrinsic<[llvm_anyvector_ty],
 def int_arm_mve_mulh_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
    [IntrNoMem]>;
+def int_arm_mve_qdmulh_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
 def int_arm_mve_rmulh_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_qrdmulh_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_mull_int_predicated: Intrinsic<[llvm_anyvector_ty],
+   [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty,
+    LLVMMatchType<1>],
+   [IntrNoMem]>;
+def int_arm_mve_mull_poly_predicated: Intrinsic<[llvm_anyvector_ty],
+   [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty,
+    LLVMMatchType<1>],
+   [IntrNoMem]>;
+def int_arm_mve_qadd_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_hadd_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_rhadd_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_qsub_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_hsub_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
    [IntrNoMem]>;
 
@@ -917,9 +946,66 @@ def int_arm_mve_vadc_predicated: Intrinsic<
 def int_arm_mve_vmulh: Intrinsic<
    [llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+def int_arm_mve_vqdmulh: Intrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+def int_arm_mve_vhadd: Intrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+def int_arm_mve_vrhadd: Intrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+def int_arm_mve_vhsub: Intrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
 def int_arm_mve_vrmulh: Intrinsic<
    [llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+def int_arm_mve_vqrdmulh: Intrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+def int_arm_mve_vmull: Intrinsic<
+   [llvm_anyvector_ty],
+   [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty], [IntrNoMem]>;
+def int_arm_mve_vmull_poly: Intrinsic<
+   [llvm_anyvector_ty],
+   [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty], [IntrNoMem]>;
+
+// Intrinsic with a predicated and a non-predicated case. The predicated case
+// has two additional parameters: inactive (the value for inactive lanes, can
+// be undef) and predicate.
+multiclass MVEMXPredicated<list<LLVMType> rets, list<LLVMType> flags,
+                           list<LLVMType> params, LLVMType inactive,
+                           LLVMType predicate,
+                           list<IntrinsicProperty> props = []> {
+  def "":          Intrinsic<rets, flags # params, props>;
+  def _predicated: Intrinsic<rets, flags # [inactive] # params # [predicate],
+                             props>;
+}
+
+// The first two parameters are compile-time constants:
+// * Halving: is the a halving (vhcaddq) or non-halving (vcaddq) instruction
+// * Rotation angle: 0 mean 90 deg, 1 means 180 deg
+defm int_arm_mve_vcaddq : MVEMXPredicated<
+  [llvm_anyvector_ty],
+  [llvm_i32_ty, llvm_i32_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
+   LLVMMatchType<0>, llvm_anyvector_ty, [IntrNoMem]>;
+
+// The first operand of the following two intrinsics is the rotation angle
+// (must be a compile-time constant):
+// 0 - 0 deg
+// 1 - 90 deg
+// 2 - 180 deg
+// 3 - 270 deg
+defm int_arm_mve_vcmulq : MVEMXPredicated<
+  [llvm_anyvector_ty],
+  [llvm_i32_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
+   LLVMMatchType<0>, llvm_anyvector_ty, [IntrNoMem]>;
+
+defm int_arm_mve_vcmlaq : MVEPredicated<
+  [llvm_anyvector_ty],
+  [llvm_i32_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+   llvm_anyvector_ty, [IntrNoMem]>;
 
 def int_arm_mve_vld2q: Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_anyptr_ty], [IntrReadMem]>;
 def int_arm_mve_vld4q: Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [llvm_anyptr_ty], [IntrReadMem]>;

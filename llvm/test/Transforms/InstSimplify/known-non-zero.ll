@@ -7,8 +7,7 @@ define i64 @test0(i64 %x) {
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[A]], label [[EXIT:%.*]], label [[NON_ZERO:%.*]]
 ; CHECK:       non_zero:
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X]], 0
-; CHECK-NEXT:    br i1 [[B]], label [[UNREACHABLE:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 false, label [[UNREACHABLE:%.*]], label [[EXIT]]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -37,8 +36,7 @@ define i64 @test1(i64 %x) {
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[A]], label [[EXIT:%.*]], label [[NON_ZERO:%.*]]
 ; CHECK:       non_zero:
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i64 [[X]], 0
-; CHECK-NEXT:    br i1 [[B]], label [[EXIT]], label [[UNREACHABLE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[UNREACHABLE:%.*]]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -73,11 +71,9 @@ define i1 @test2(i64 %x, i1 %y) {
 ; CHECK:       two:
 ; CHECK-NEXT:    br label [[MAINBLOCK]]
 ; CHECK:       mainblock:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[X]], [[ONE]] ], [ 42, [[TWO]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[P]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ [[CMP]], [[MAINBLOCK]] ], [ true, [[START:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[MAINBLOCK]] ], [ true, [[START:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 start:
@@ -101,4 +97,51 @@ mainblock:
 exit:
   %res = phi i1 [ %cmp, %mainblock ], [ 1, %start ]
   ret i1 %res
+}
+
+
+; The code below exposed a bug similar to the one exposed by D60846, see the commit 6ea477590085.
+; In a nutshell, we should not replace %result.0 with 0 here.
+
+define zeroext i8 @update_phi_query_loc_in_recursive_call(i8* nocapture readonly %p){
+; CHECK-LABEL: @update_phi_query_loc_in_recursive_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[RESULT_0:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[CONV2:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[SHIFT_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ 1, [[FOR_BODY]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SHIFT_0]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i8 [[RESULT_0]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[SHIFT_0]], 3
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[CONV]], [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHL]] to i8
+; CHECK-NEXT:    [[CONV2]] = or i8 [[RESULT_0]], [[TMP1]]
+; CHECK-NEXT:    br label [[FOR_COND]]
+;
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.body, %entry
+  %result.0 = phi i8 [ 0, %entry ], [ %conv2, %for.body ]
+  %shift.0 = phi i32 [ 0, %entry ], [ 1, %for.body ]
+  %cmp = icmp eq i32 %shift.0, 0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  ret i8 %result.0
+
+for.body:                                         ; preds = %for.cond
+  %0 = load i8, i8* %p, align 1
+  %conv = zext i8 %0 to i32
+  %mul = shl nuw nsw i32 %shift.0, 3
+  %shl = shl nuw nsw i32 %conv, %mul
+  %1 = trunc i32 %shl to i8
+  %conv2 = or i8 %result.0, %1
+  %inc = add nuw nsw i32 %shift.0, 1
+  br label %for.cond
 }

@@ -1,5 +1,7 @@
 # RUN: llvm-nm -D %p/Inputs/shared-object-test.elf-i386 \
 # RUN:         | FileCheck %s -check-prefix ELF-32
+# RUN: llvm-nm --dynamic %p/Inputs/shared-object-test.elf-i386 \
+# RUN:         | FileCheck %s -check-prefix ELF-32
 
 # ELF-32-NOT: U
 # ELF-32: 000012c8 A __bss_start
@@ -11,6 +13,8 @@
 # ELF-32: 00000000 D tls_sym
 
 # RUN: llvm-nm -D %p/Inputs/shared-object-test.elf-x86-64 \
+# RUN:         | FileCheck %s -check-prefix ELF-64
+# RUN: llvm-nm --dynamic %p/Inputs/shared-object-test.elf-x86-64 \
 # RUN:         | FileCheck %s -check-prefix ELF-64
 
 # ELF-64-NOT: U

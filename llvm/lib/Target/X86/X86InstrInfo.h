@@ -522,8 +522,8 @@ public:
     return MI.getDesc().TSFlags & X86II::LOCK;
   }
 
-  Optional<ParamLoadedValue>
-  describeLoadedValue(const MachineInstr &MI) const override;
+  Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
+                                                 Register Reg) const override;
 
 protected:
   /// Commutes the operands in the given instruction by changing the operands

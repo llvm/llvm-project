@@ -5808,10 +5808,11 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
            << OrigArg->getType() << OrigArg->getSourceRange();
 
   // If this is an implicit conversion from float -> float, double, or
-  // long double, remove it.
+  // long double, or half -> half, float, double, or long double, remove it.
   if (ImplicitCastExpr *Cast = dyn_cast<ImplicitCastExpr>(OrigArg)) {
     // Only remove standard FloatCasts, leaving other casts inplace
     if (Cast->getCastKind() == CK_FloatingCast) {
+      bool IgnoreCast = false;
       Expr *CastArg = Cast->getSubExpr();
       if (CastArg->getType()->isSpecificBuiltinType(BuiltinType::Float)) {
         assert(
@@ -5820,6 +5821,19 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
              Cast->getType()->isSpecificBuiltinType(BuiltinType::LongDouble)) &&
             "promotion from float to either float, double, or long double is "
             "the only expected cast here");
+        IgnoreCast = true;
+      } else if (CastArg->getType()->isSpecificBuiltinType(BuiltinType::Half)) {
+        assert(
+            (Cast->getType()->isSpecificBuiltinType(BuiltinType::Double) ||
+             Cast->getType()->isSpecificBuiltinType(BuiltinType::Float) ||
+             Cast->getType()->isSpecificBuiltinType(BuiltinType::Half) ||
+             Cast->getType()->isSpecificBuiltinType(BuiltinType::LongDouble)) &&
+            "promotion from half to either half, float, double, or long double "
+            "is the only expected cast here");
+        IgnoreCast = true;
+      }
+
+      if (IgnoreCast) {
         Cast->setSubExpr(nullptr);
         TheCall->setArg(NumArgs-1, CastArg);
       }

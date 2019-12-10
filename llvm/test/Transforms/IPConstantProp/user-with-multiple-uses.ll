@@ -28,6 +28,3 @@ sw.default:
 return:
   ret i32 0
 }
-
-; CHECK: attributes #0 = { noreturn nounwind }
-; CHECK: attributes #1 = { nounwind }

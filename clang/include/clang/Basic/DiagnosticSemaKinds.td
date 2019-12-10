@@ -1732,7 +1732,10 @@ def note_ivar_decl : Note<"instance variable is declared here">;
 def note_bitfield_decl : Note<"bit-field is declared here">;
 def note_implicit_param_decl : Note<"%0 is an implicit parameter">;
 def note_member_synthesized_at : Note<
-  "in implicit %sub{select_special_member_kind}0 for %1 "
+  "in %select{implicit|defaulted}0 %sub{select_special_member_kind}1 for %2 "
+  "first required here">;
+def note_comparison_synthesized_at : Note<
+  "in defaulted %sub{select_defaulted_comparison_kind}0 for %1 "
   "first required here">;
 def err_missing_default_ctor : Error<
   "%select{constructor for %1 must explicitly initialize the|"

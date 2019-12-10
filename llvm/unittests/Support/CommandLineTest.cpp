@@ -1784,4 +1784,12 @@ TEST(CommandLineTest, Callback) {
 
   cl::ResetAllOptionOccurrences();
 }
+
+enum Enum { Val1, Val2 };
+static cl::bits<Enum> ExampleBits(
+    cl::desc("An example cl::bits to ensure it compiles"),
+    cl::values(
+      clEnumValN(Val1, "bits-val1", "The Val1 value"),
+      clEnumValN(Val1, "bits-val2", "The Val2 value")));
+
 } // anonymous namespace

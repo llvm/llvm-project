@@ -37,6 +37,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 
+using namespace llvm::omp;
+
 namespace clang {
 using namespace sema;
 

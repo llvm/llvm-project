@@ -329,6 +329,18 @@ public:
 static_assert(sizeof(ParamIdx) == sizeof(ParamIdx::SerialType),
               "ParamIdx does not fit its serialization type");
 
+/// Contains information gathered from parsing the contents of TargetAttr.
+struct ParsedTargetAttr {
+  std::vector<std::string> Features;
+  StringRef Architecture;
+  StringRef BranchProtection;
+  bool DuplicateArchitecture = false;
+  bool operator ==(const ParsedTargetAttr &Other) const {
+    return DuplicateArchitecture == Other.DuplicateArchitecture &&
+           Architecture == Other.Architecture && Features == Other.Features;
+  }
+};
+
 #include "clang/AST/Attrs.inc"
 
 inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
