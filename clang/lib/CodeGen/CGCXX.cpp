@@ -12,10 +12,11 @@
 
 // We might split this into multiple files if it gets too unwieldy
 
-#include "CodeGenModule.h"
 #include "CGCXXABI.h"
 #include "CodeGenFunction.h"
+#include "CodeGenModule.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
