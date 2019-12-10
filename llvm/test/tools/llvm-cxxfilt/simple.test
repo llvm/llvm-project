@@ -1,7 +1,7 @@
 ## Show that llvm-cxxfilt can handle basic demangling for command-line inputs,
 ## including when they are part of a string. Note that this test uses "-n"
-## because on darwin, the default for --strip-underscore is true, but false
-## elsewhere.
+## (alias for --no-strip-underscore) because on darwin, the default for
+## --strip-underscore is true, but false elsewhere.
 
 RUN: llvm-cxxfilt -n _Z1fi abc | FileCheck %s
 RUN: echo "Mangled _Z1fi and _Z3foov in string." | llvm-cxxfilt -n \
