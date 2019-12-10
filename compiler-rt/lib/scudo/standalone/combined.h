@@ -418,10 +418,11 @@ public:
     auto Lambda = [this, From, To, Callback, Arg](uptr Block) {
       if (Block < From || Block >= To)
         return;
-      uptr ChunkSize;
-      const uptr ChunkBase = getChunkFromBlock(Block, &ChunkSize);
-      if (ChunkBase != InvalidChunk)
-        Callback(ChunkBase, ChunkSize, Arg);
+      uptr Chunk;
+      Chunk::UnpackedHeader Header;
+      if (getChunkFromBlock(Block, &Chunk, &Header) &&
+          Header.State == Chunk::State::Allocated)
+        Callback(Chunk, getSize(reinterpret_cast<void *>(Chunk), &Header), Arg);
     };
     Primary.iterateOverBlocks(Lambda);
     Secondary.iterateOverBlocks(Lambda);
@@ -483,9 +484,7 @@ private:
   static_assert(MinAlignment >= sizeof(Chunk::PackedHeader),
                 "Minimal alignment must at least cover a chunk header.");
 
-  // Constants used by the chunk iteration mechanism.
   static const u32 BlockMarker = 0x44554353U;
-  static const uptr InvalidChunk = ~static_cast<uptr>(0);
 
   GlobalStats Stats;
   TSDRegistryT TSDRegistry;
@@ -593,20 +592,13 @@ private:
     }
   }
 
-  // This only cares about valid busy chunks. This might change in the future.
-  uptr getChunkFromBlock(uptr Block, uptr *Size) {
+  bool getChunkFromBlock(uptr Block, uptr *Chunk,
+                         Chunk::UnpackedHeader *Header) {
     u32 Offset = 0;
     if (reinterpret_cast<u32 *>(Block)[0] == BlockMarker)
       Offset = reinterpret_cast<u32 *>(Block)[1];
-    const uptr P = Block + Offset + Chunk::getHeaderSize();
-    const void *Ptr = reinterpret_cast<const void *>(P);
-    Chunk::UnpackedHeader Header;
-    if (!Chunk::isValid(Cookie, Ptr, &Header) ||
-        Header.State != Chunk::State::Allocated)
-      return InvalidChunk;
-    if (Size)
-      *Size = getSize(Ptr, &Header);
-    return P;
+    *Chunk = Block + Offset + Chunk::getHeaderSize();
+    return Chunk::isValid(Cookie, reinterpret_cast<void *>(*Chunk), Header);
   }
 
   uptr getStats(ScopedString *Str) {
