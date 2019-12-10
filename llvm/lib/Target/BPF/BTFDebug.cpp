@@ -1065,6 +1065,10 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
         SecName = ".rodata";
       else
         SecName = Global.getInitializer()->isZeroValue() ? ".bss" : ".data";
+    } else {
+      // extern variables without explicit section,
+      // put them into ".extern" section.
+      SecName = ".extern";
     }
 
     if (ProcessingMapDef != SecName.startswith(".maps"))
@@ -1113,8 +1117,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
         std::make_unique<BTFKindVar>(Global.getName(), GVTypeId, GVarInfo);
     uint32_t VarId = addType(std::move(VarEntry));
 
-    if (SecName.empty())
-      continue;
+    assert(!SecName.empty());
 
     // Find or create a DataSec
     if (DataSecEntries.find(SecName) == DataSecEntries.end()) {
@@ -1167,7 +1170,7 @@ void BTFDebug::processFuncPrototypes() {
 
     StringRef SecName = F.getSection();
     if (SecName.empty())
-      continue;
+      SecName = ".extern";
 
     if (DataSecEntries.find(SecName) == DataSecEntries.end()) {
       DataSecEntries[SecName] = std::make_unique<BTFKindDataSec>(Asm, SecName);
