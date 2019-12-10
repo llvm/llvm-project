@@ -197,9 +197,9 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
     ImplSP current_format;
     LLDB_LOGF(log, "[%s] Trying to use category %s", __FUNCTION__,
               category_sp->GetName());
-    if (!category_sp->Get(match_data.GetValueObject(),
-                          match_data.GetMatchesVector(), current_format,
-                          &reason_why))
+    if (!category_sp->Get(
+            match_data.GetValueObject().GetObjectRuntimeLanguage(),
+            match_data.GetMatchesVector(), current_format, &reason_why))
       continue;
 
     retval = std::move(current_format);
