@@ -101,10 +101,10 @@ bool TypeCategoryImpl::HasLanguage(lldb::LanguageType lang) {
   return (iter != end);
 }
 
-bool TypeCategoryImpl::Get(ValueObject &valobj,
+bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
                            lldb::TypeFormatImplSP &entry, uint32_t *reason) {
-  if (!IsEnabled() || !IsApplicable(valobj.GetObjectRuntimeLanguage()))
+  if (!IsEnabled() || !IsApplicable(lang))
     return false;
   if (GetTypeFormatsContainer()->Get(candidates, entry, reason))
     return true;
@@ -114,10 +114,10 @@ bool TypeCategoryImpl::Get(ValueObject &valobj,
   return regex;
 }
 
-bool TypeCategoryImpl::Get(ValueObject &valobj,
+bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
                            lldb::TypeSummaryImplSP &entry, uint32_t *reason) {
-  if (!IsEnabled() || !IsApplicable(valobj.GetObjectRuntimeLanguage()))
+  if (!IsEnabled() || !IsApplicable(lang))
     return false;
   if (GetTypeSummariesContainer()->Get(candidates, entry, reason))
     return true;
@@ -127,10 +127,10 @@ bool TypeCategoryImpl::Get(ValueObject &valobj,
   return regex;
 }
 
-bool TypeCategoryImpl::Get(ValueObject &valobj,
+bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
                            lldb::SyntheticChildrenSP &entry, uint32_t *reason) {
-  if (!IsEnabled() || !IsApplicable(valobj.GetObjectRuntimeLanguage()))
+  if (!IsEnabled() || !IsApplicable(lang))
     return false;
   TypeFilterImpl::SharedPointer filter_sp;
   uint32_t reason_filter = 0;
@@ -174,7 +174,7 @@ bool TypeCategoryImpl::Get(ValueObject &valobj,
   return false;
 }
 
-bool TypeCategoryImpl::Get(ValueObject &valobj,
+bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
                            lldb::TypeValidatorImplSP &entry, uint32_t *reason) {
   if (!IsEnabled())
