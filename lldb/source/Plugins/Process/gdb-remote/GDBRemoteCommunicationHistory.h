@@ -13,15 +13,11 @@
 #include <vector>
 
 #include "lldb/Utility/GDBRemote.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/lldb-public.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace lldb_private {
-namespace repro {
-class PacketRecorder;
-}
 namespace process_gdb_remote {
 
 /// The history keeps a circular buffer of GDB remote packets. The history is
@@ -45,7 +41,7 @@ public:
   void Dump(Log *log) const;
   bool DidDumpToLog() const { return m_dumped_to_log; }
 
-  void SetRecorder(repro::PacketRecorder *recorder) { m_recorder = recorder; }
+  void SetStream(llvm::raw_ostream *strm) { m_stream = strm; }
 
 private:
   uint32_t GetFirstSavedPacketIndex() const {
@@ -77,7 +73,7 @@ private:
   uint32_t m_curr_idx;
   uint32_t m_total_packet_count;
   mutable bool m_dumped_to_log;
-  repro::PacketRecorder *m_recorder = nullptr;
+  llvm::raw_ostream *m_stream = nullptr;
 };
 
 } // namespace process_gdb_remote

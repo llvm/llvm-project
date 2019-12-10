@@ -407,9 +407,10 @@ protected:
       return true;
     }
     case eReproducerProviderCommands: {
-      std::unique_ptr<repro::MultiLoader<repro::CommandProvider>> multi_loader =
-          repro::MultiLoader<repro::CommandProvider>::Create(loader);
-      if (!multi_loader) {
+      // Create a new command loader.
+      std::unique_ptr<repro::CommandLoader> command_loader =
+          repro::CommandLoader::Create(loader);
+      if (!command_loader) {
         SetError(result,
                  make_error<StringError>(llvm::inconvertibleErrorCode(),
                                          "Unable to create command loader."));
@@ -417,8 +418,9 @@ protected:
       }
 
       // Iterate over the command files and dump them.
-      llvm::Optional<std::string> command_file;
-      while ((command_file = multi_loader->GetNextFile())) {
+      while (true) {
+        llvm::Optional<std::string> command_file =
+            command_loader->GetNextFile();
         if (!command_file)
           break;
 
@@ -434,29 +436,24 @@ protected:
       return true;
     }
     case eReproducerProviderGDB: {
-      std::unique_ptr<repro::MultiLoader<repro::GDBRemoteProvider>>
-          multi_loader =
-              repro::MultiLoader<repro::GDBRemoteProvider>::Create(loader);
-      llvm::Optional<std::string> gdb_file;
-      while ((gdb_file = multi_loader->GetNextFile())) {
-        auto error_or_file = MemoryBuffer::getFile(*gdb_file);
-        if (auto err = error_or_file.getError()) {
-          SetError(result, errorCodeToError(err));
-          return false;
-        }
+      FileSpec gdb_file = loader->GetFile<ProcessGDBRemoteProvider::Info>();
+      auto error_or_file = MemoryBuffer::getFile(gdb_file.GetPath());
+      if (auto err = error_or_file.getError()) {
+        SetError(result, errorCodeToError(err));
+        return false;
+      }
 
-        std::vector<GDBRemotePacket> packets;
-        yaml::Input yin((*error_or_file)->getBuffer());
-        yin >> packets;
+      std::vector<GDBRemotePacket> packets;
+      yaml::Input yin((*error_or_file)->getBuffer());
+      yin >> packets;
 
-        if (auto err = yin.error()) {
-          SetError(result, errorCodeToError(err));
-          return false;
-        }
+      if (auto err = yin.error()) {
+        SetError(result, errorCodeToError(err));
+        return false;
+      }
 
-        for (GDBRemotePacket &packet : packets) {
-          packet.Dump(result.GetOutputStream());
-        }
+      for (GDBRemotePacket &packet : packets) {
+        packet.Dump(result.GetOutputStream());
       }
 
       result.SetStatus(eReturnStatusSuccessFinishResult);
