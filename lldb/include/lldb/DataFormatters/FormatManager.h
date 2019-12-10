@@ -209,14 +209,9 @@ private:
   ConstString m_vectortypes_category_name;
   ConstString m_runtime_synths_category_name;
 
-  lldb::TypeFormatImplSP GetHardcodedFormat(FormattersMatchData &);
-
-  lldb::TypeSummaryImplSP GetHardcodedSummaryFormat(FormattersMatchData &);
-
-  lldb::SyntheticChildrenSP
-  GetHardcodedSyntheticChildren(FormattersMatchData &);
-
-  lldb::TypeValidatorImplSP GetHardcodedValidator(FormattersMatchData &);
+  template <typename ImplSP>
+  ImplSP GetCached(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
+  template <typename ImplSP> ImplSP GetHardcoded(FormattersMatchData &);
 
   TypeCategoryMap &GetCategories() { return m_categories_map; }
 
