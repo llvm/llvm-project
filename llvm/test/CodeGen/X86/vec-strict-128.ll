@@ -14,6 +14,10 @@ declare <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double>, <2 
 declare <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fdiv.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.fdiv.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.sqrt.v2f64(<2 x double>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float>, metadata, metadata)
+declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
 
 define <2 x double> @f1(<2 x double> %a, <2 x double> %b) #0 {
 ; SSE-LABEL: f1:
@@ -141,6 +145,76 @@ define <4 x float> @f8(<4 x float> %a, <4 x float> %b) #0 {
                                                                     metadata !"round.dynamic",
                                                                     metadata !"fpexcept.strict") #0
   ret <4 x float> %ret
+}
+
+define <2 x double> @f9(<2 x double> %a) #0 {
+; SSE-LABEL: f9:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtpd %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: f9:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtpd %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %sqrt = call <2 x double> @llvm.experimental.constrained.sqrt.v2f64(
+                              <2 x double> %a,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #0
+  ret <2 x double> %sqrt
+}
+
+define <4 x float> @f10(<4 x float> %a) #0 {
+; SSE-LABEL: f10:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtps %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: f10:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtps %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %sqrt = call <4 x float> @llvm.experimental.constrained.sqrt.v4f32(
+                              <4 x float> %a,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #0
+  ret <4 x float > %sqrt
+}
+
+define <4 x float> @f11(<2 x double> %a0, <4 x float> %a1) #0 {
+; SSE-LABEL: f11:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cvtsd2ss %xmm0, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: f11:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtsd2ss %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %ext = extractelement <2 x double> %a0, i32 0
+  %cvt = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %ext,
+                                                                   metadata !"round.dynamic",
+                                                                   metadata !"fpexcept.strict")
+  %res = insertelement <4 x float> %a1, float %cvt, i32 0
+  ret <4 x float> %res
+}
+
+define <2 x double> @f12(<2 x double> %a0, <4 x float> %a1) #0 {
+; SSE-LABEL: f12:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cvtss2sd %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: f12:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtss2sd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %ext = extractelement <4 x float> %a1, i32 0
+  %cvt = call double @llvm.experimental.constrained.fpext.f64.f32(float %ext,
+                                                                  metadata !"fpexcept.strict") #0
+  %res = insertelement <2 x double> %a0, double %cvt, i32 0
+  ret <2 x double> %res
 }
 
 attributes #0 = { strictfp }
