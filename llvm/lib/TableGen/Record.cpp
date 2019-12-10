@@ -887,13 +887,18 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     if (LHSs && RHSs) {
       DefInit *LOp = dyn_cast<DefInit>(LHSs->getOperator());
       DefInit *ROp = dyn_cast<DefInit>(RHSs->getOperator());
-      if (!LOp || !ROp)
+      if ((!LOp && !isa<UnsetInit>(LHSs->getOperator())) ||
+          (!ROp && !isa<UnsetInit>(RHSs->getOperator())))
         break;
-      if (LOp->getDef() != ROp->getDef()) {
+      if (LOp && ROp && LOp->getDef() != ROp->getDef()) {
         PrintFatalError(Twine("Concatenated Dag operators do not match: '") +
                         LHSs->getAsString() + "' vs. '" + RHSs->getAsString() +
                         "'");
       }
+      Init *Op = LOp ? LOp : ROp;
+      if (!Op)
+        Op = UnsetInit::get();
+
       SmallVector<Init*, 8> Args;
       SmallVector<StringInit*, 8> ArgNames;
       for (unsigned i = 0, e = LHSs->getNumArgs(); i != e; ++i) {
@@ -904,7 +909,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
         Args.push_back(RHSs->getArg(i));
         ArgNames.push_back(RHSs->getArgName(i));
       }
-      return DagInit::get(LHSs->getOperator(), nullptr, Args, ArgNames);
+      return DagInit::get(Op, nullptr, Args, ArgNames);
     }
     break;
   }
