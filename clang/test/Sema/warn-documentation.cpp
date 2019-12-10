@@ -612,6 +612,12 @@ int test_tparam22;
 /// \deprecated Bbb
 void test_deprecated_1(int a) __attribute__((deprecated));
 
+#if __cplusplus >= 201402L
+/// Aaa
+/// \deprecated Bbb
+[[deprecated]] void test_deprecated_no_warning_std14(int a);
+#endif
+
 // We don't want \deprecated to warn about empty paragraph.  It is fine to use
 // \deprecated by itself without explanations.
 

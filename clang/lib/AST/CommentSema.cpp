@@ -688,17 +688,34 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
         FD->doesThisDeclarationHaveABody())
       return;
 
-    StringRef AttributeSpelling = "__attribute__((deprecated))";
+    const LangOptions &LO = FD->getASTContext().getLangOpts();
+    const bool DoubleSquareBracket = LO.CPlusPlus14 || LO.C2x;
+    StringRef AttributeSpelling =
+        DoubleSquareBracket ? "[[deprecated]]" : "__attribute__((deprecated))";
     if (PP) {
-      TokenValue Tokens[] = {
-        tok::kw___attribute, tok::l_paren, tok::l_paren,
-        PP->getIdentifierInfo("deprecated"),
-        tok::r_paren, tok::r_paren
-      };
-      StringRef MacroName = PP->getLastMacroWithSpelling(FD->getLocation(),
-                                                         Tokens);
-      if (!MacroName.empty())
-        AttributeSpelling = MacroName;
+      // Try to find a replacement macro:
+      // - In C2x/C++14 we prefer [[deprecated]].
+      // - If not found or an older C/C++ look for __attribute__((deprecated)).
+      StringRef MacroName;
+      if (DoubleSquareBracket) {
+        TokenValue Tokens[] = {tok::l_square, tok::l_square,
+                               PP->getIdentifierInfo("deprecated"),
+                               tok::r_square, tok::r_square};
+        MacroName = PP->getLastMacroWithSpelling(FD->getLocation(), Tokens);
+        if (!MacroName.empty())
+          AttributeSpelling = MacroName;
+      }
+
+      if (MacroName.empty()) {
+        TokenValue Tokens[] = {
+            tok::kw___attribute, tok::l_paren,
+            tok::l_paren,        PP->getIdentifierInfo("deprecated"),
+            tok::r_paren,        tok::r_paren};
+        StringRef MacroName =
+            PP->getLastMacroWithSpelling(FD->getLocation(), Tokens);
+        if (!MacroName.empty())
+          AttributeSpelling = MacroName;
+      }
     }
 
     SmallString<64> TextToInsert = AttributeSpelling;
