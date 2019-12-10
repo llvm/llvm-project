@@ -984,7 +984,9 @@ multiclass MVEMXPredicated<list<LLVMType> rets, list<LLVMType> flags,
 }
 
 // The first two parameters are compile-time constants:
-// * Halving: is the a halving (vhcaddq) or non-halving (vcaddq) instruction
+// * Halving: 0 means  halving (vhcaddq), 1 means non-halving (vcaddq) 
+//            instruction. Note: the flag is inverted to match the corresonding
+//            bit in the instruction encoding
 // * Rotation angle: 0 mean 90 deg, 1 means 180 deg
 defm int_arm_mve_vcaddq : MVEMXPredicated<
   [llvm_anyvector_ty],
