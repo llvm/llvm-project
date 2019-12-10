@@ -152,7 +152,7 @@ define i64* @test_load_auth_db_m256_pre(i64* %ptr, i64* %dst) {
 define i64* @test_load_auth_da_0_pre(i64* %ptr, i64* %dst) {
 ; CHECK-LABEL: test_load_auth_da_0_pre:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldraa x8, [x0]!
+; CHECK-NEXT:    ldraa x8, [x0, #0]!
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
