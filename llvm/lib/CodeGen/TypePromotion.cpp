@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -158,6 +159,7 @@ public:
   TypePromotion() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
 
@@ -681,8 +683,9 @@ void IRPromoter::Mutate(Type *OrigTy, unsigned PromotedWidth,
                         SmallPtrSetImpl<Instruction*> &Sinks,
                         SmallPtrSetImpl<Instruction*> &SafeToPromote,
                         SmallPtrSetImpl<Instruction*> &SafeWrap) {
-  LLVM_DEBUG(dbgs() << "IR Promotion: Promoting use-def chains to from "
-             << TypePromotion::TypeSize << " to 32-bits\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Promoting use-def chains from "
+             << TypePromotion::TypeSize << " to " << PromotedWidth
+             << "-bits\n");
 
   assert(isa<IntegerType>(OrigTy) && "expected integer type");
   this->OrigTy = cast<IntegerType>(OrigTy);
@@ -936,6 +939,8 @@ bool TypePromotion::runOnFunction(Function &F) {
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
   const TargetSubtargetInfo *SubtargetInfo = TM.getSubtargetImpl(F);
   const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
+  const TargetTransformInfo &TII =
+    getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   // Search up from icmps to try to promote their operands.
   for (BasicBlock &BB : F) {
@@ -966,6 +971,12 @@ bool TypePromotion::runOnFunction(Function &F) {
             break;
 
           EVT PromotedVT = TLI->getTypeToTransformTo(ICmp->getContext(), SrcVT);
+          if (TII.getRegisterBitWidth(false) < PromotedVT.getSizeInBits()) {
+            LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
+                       << "for promoted type\n");
+            break;
+          }
+
           MadeChange |= TryToPromote(I, PromotedVT.getSizeInBits());
           break;
         }
