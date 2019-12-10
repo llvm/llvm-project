@@ -1,0 +1,12 @@
+target select 0
+breakpoint set -f simple.c -l 12
+run
+target select 1
+breakpoint set -f simple.c -l 16
+run
+target select 0
+cont
+target select 1
+cont
+reproducer status
+reproducer generate
