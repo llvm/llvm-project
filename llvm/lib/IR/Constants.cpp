@@ -1442,24 +1442,41 @@ void ConstantVector::destroyConstantImpl() {
   getType()->getContext().pImpl->VectorConstants.remove(this);
 }
 
-Constant *Constant::getSplatValue() const {
+Constant *Constant::getSplatValue(bool AllowUndefs) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(this->getType()->getVectorElementType());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
-    return CV->getSplatValue();
+    return CV->getSplatValue(AllowUndefs);
   return nullptr;
 }
 
-Constant *ConstantVector::getSplatValue() const {
+Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
   // Check out first element.
   Constant *Elt = getOperand(0);
   // Then make sure all remaining elements point to the same value.
-  for (unsigned I = 1, E = getNumOperands(); I < E; ++I)
-    if (getOperand(I) != Elt)
+  for (unsigned I = 1, E = getNumOperands(); I < E; ++I) {
+    Constant *OpC = getOperand(I);
+    if (OpC == Elt)
+      continue;
+
+    // Strict mode: any mismatch is not a splat.
+    if (!AllowUndefs)
       return nullptr;
+
+    // Allow undefs mode: ignore undefined elements.
+    if (isa<UndefValue>(OpC))
+      continue;
+
+    // If we do not have a defined element yet, use the current operand.
+    if (isa<UndefValue>(Elt))
+      Elt = OpC;
+
+    if (OpC != Elt)
+      return nullptr;
+  }
   return Elt;
 }
 

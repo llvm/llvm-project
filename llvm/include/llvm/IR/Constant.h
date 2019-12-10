@@ -133,9 +133,10 @@ public:
   Constant *getAggregateElement(unsigned Elt) const;
   Constant *getAggregateElement(Constant *Elt) const;
 
-  /// If this is a splat vector constant, meaning that all of the elements have
-  /// the same value, return that value. Otherwise return 0.
-  Constant *getSplatValue() const;
+  /// If all elements of the vector constant have the same value, return that
+  /// value. Otherwise, return nullptr. Ignore undefined elements by setting
+  /// AllowUndefs to true.
+  Constant *getSplatValue(bool AllowUndefs = false) const;
 
   /// If C is a constant integer then return its value, otherwise C must be a
   /// vector of constant integers, all equal, and the common value is returned.
