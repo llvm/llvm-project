@@ -1,20 +1,20 @@
-RUN: llvm-readobj -r %p/Inputs/trivial.obj.coff-i386 \
+RUN: llvm-readobj -r %p/COFF/Inputs/trivial.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix COFF
-RUN: llvm-readobj -r %p/Inputs/bad-relocs.obj.coff-i386 \
+RUN: llvm-readobj -r %p/COFF/Inputs/bad-relocs.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix BAD-COFF-RELOCS
-RUN: llvm-readobj -r %p/Inputs/relocs-no-symtab.obj.coff-i386 \
+RUN: llvm-readobj -r %p/COFF/Inputs/relocs-no-symtab.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix BAD-COFF-RELOCS
-RUN: llvm-readobj -r %p/Inputs/trivial.obj.macho-i386 \
+RUN: llvm-readobj -r %p/MachO/Inputs/trivial.obj.macho-i386 \
 RUN:   | FileCheck %s -check-prefix MACHO-I386
-RUN: llvm-readobj -r %p/Inputs/trivial.obj.macho-x86-64 \
+RUN: llvm-readobj -r %p/MachO/Inputs/trivial.obj.macho-x86-64 \
 RUN:   | FileCheck %s -check-prefix MACHO-X86-64
-RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.macho-ppc \
+RUN: llvm-readobj -r --expand-relocs %p/MachO/Inputs/trivial.obj.macho-ppc \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC
-RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.macho-ppc64 \
+RUN: llvm-readobj -r --expand-relocs %p/MachO/Inputs/trivial.obj.macho-ppc64 \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC64
-RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.macho-arm \
+RUN: llvm-readobj -r --expand-relocs %p/MachO/Inputs/trivial.obj.macho-arm \
 RUN:   | FileCheck %s -check-prefix MACHO-ARM
-RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.wasm \
+RUN: llvm-readobj -r --expand-relocs %p/wasm/Inputs/trivial.obj.wasm \
 RUN:   | FileCheck %s -check-prefix WASM
 
 COFF:      Relocations [
