@@ -235,18 +235,18 @@ func @extract_vec_2d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<3x16xf32> 
   return %0 : vector<3x16xf32>
 }
 // CHECK-LABEL: extract_vec_2d_from_vec_3d
-//       CHECK:   llvm.extractvalue %{{.*}}[0 : i32] : !llvm<"[4 x [3 x <16 x float>]]">
-//       CHECK:   llvm.return %{{.*}} : !llvm<"[3 x <16 x float>]">
+//       CHECK:   llvm.extractvalue {{.*}}[0 : i32] : !llvm<"[4 x [3 x <16 x float>]]">
+//       CHECK:   llvm.return {{.*}} : !llvm<"[3 x <16 x float>]">
 
 func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
   %0 = vector.extract %arg0[0 : i32, 0 : i32, 0 : i32]: vector<4x3x16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: extract_element_from_vec_3d
-//       CHECK:   llvm.extractvalue %{{.*}}[0 : i32, 0 : i32] : !llvm<"[4 x [3 x <16 x float>]]">
+//       CHECK:   llvm.extractvalue {{.*}}[0 : i32, 0 : i32] : !llvm<"[4 x [3 x <16 x float>]]">
 //       CHECK:   llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK:   llvm.extractelement %{{.*}}[%{{.*}} : !llvm.i32] : !llvm<"<16 x float>">
-//       CHECK:   llvm.return %{{.*}} : !llvm.float
+//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i32] : !llvm<"<16 x float>">
+//       CHECK:   llvm.return {{.*}} : !llvm.float
 
 func @vector_type_cast(%arg0: memref<8x8x8xf32>) -> memref<vector<8x8x8xf32>> {
   %0 = vector.type_cast %arg0: memref<8x8x8xf32> to memref<vector<8x8x8xf32>>

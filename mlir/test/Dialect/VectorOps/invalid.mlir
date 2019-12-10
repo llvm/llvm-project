@@ -31,6 +31,41 @@ func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
 
 // -----
 
+func @shuffle_elt_type_mismatch(%arg0: vector<2xf32>, %arg1: vector<2xi32>) {
+  // expected-error@+1 {{'vector.shuffle' op failed to verify that second operand v2 and result have same element type}}
+  %1 = vector.shuffle %arg0, %arg1 [0 : i32, 1 : i32] : vector<2xf32>, vector<2xi32>
+}
+
+// -----
+
+func @shuffle_rank_mismatch(%arg0: vector<2xf32>, %arg1: vector<4x2xf32>) {
+  // expected-error@+1 {{'vector.shuffle' op rank mismatch}}
+  %1 = vector.shuffle %arg0, %arg1 [0 : i32, 1 : i32] : vector<2xf32>, vector<4x2xf32>
+}
+
+// -----
+
+func @shuffle_trailing_dim_size_mismatch(%arg0: vector<2x2xf32>, %arg1: vector<2x4xf32>) {
+  // expected-error@+1 {{'vector.shuffle' op dimension mismatch}}
+  %1 = vector.shuffle %arg0, %arg1 [0 : i32, 1 : i32] : vector<2x2xf32>, vector<2x4xf32>
+}
+
+// -----
+
+func @shuffle_index_out_of_range(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
+  // expected-error@+1 {{'vector.shuffle' op mask index #2 out of range}}
+  %1 = vector.shuffle %arg0, %arg1 [0 : i32, 4 : i32] : vector<2xf32>, vector<2xf32>
+}
+
+// -----
+
+func @shuffle_empty_mask(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
+  // expected-error@+1 {{custom op 'vector.shuffle' invalid mask length}}
+  %1 = vector.shuffle %arg0, %arg1 [] : vector<2xf32>, vector<2xf32>
+}
+
+// -----
+
 func @extract_vector_type(%arg0: index) {
   // expected-error@+1 {{expected vector type}}
   %1 = vector.extract %arg0[] : index
