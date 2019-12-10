@@ -5368,7 +5368,7 @@ SDValue PPCTargetLowering::FinishCall(
     return DAG.getNode(CallOpc, dl, MVT::Other, Ops);
   }
 
-  std::array<EVT, 2> ReturnTypes = {MVT::Other, MVT::Glue};
+  std::array<EVT, 2> ReturnTypes = {{MVT::Other, MVT::Glue}};
   Chain = DAG.getNode(CallOpc, dl, ReturnTypes, Ops);
   Glue = Chain.getValue(1);
 
