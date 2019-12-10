@@ -259,8 +259,9 @@ private:
   void loadDynamicTable(const ELFFile<ELFT> *Obj);
   void parseDynamicTable();
 
-  StringRef getSymbolVersion(const Elf_Sym *symb, bool &IsDefault) const;
-  void LoadVersionMap() const;
+  Expected<StringRef> getSymbolVersion(const Elf_Sym *symb,
+                                       bool &IsDefault) const;
+  Error LoadVersionMap() const;
 
   const object::ELFObjectFile<ELFT> *ObjF;
   DynRegionInfo DynRelRegion;
@@ -320,8 +321,8 @@ public:
                                            unsigned SectionIndex) const;
   Expected<std::string> getStaticSymbolName(uint32_t Index) const;
   std::string getDynamicString(uint64_t Value) const;
-  StringRef getSymbolVersionByIndex(uint32_t VersionSymbolIndex,
-                                    bool &IsDefault) const;
+  Expected<StringRef> getSymbolVersionByIndex(uint32_t VersionSymbolIndex,
+                                              bool &IsDefault) const;
 
   void printSymbolsHelper(bool IsDynamic) const;
   void printDynamicEntry(raw_ostream &OS, uint64_t Type, uint64_t Value) const;
@@ -970,14 +971,14 @@ std::error_code createELFDumper(const object::ObjectFile *Obj,
 
 } // end namespace llvm
 
-template <class ELFT> void ELFDumper<ELFT>::LoadVersionMap() const {
+template <class ELFT> Error ELFDumper<ELFT>::LoadVersionMap() const {
   // If there is no dynamic symtab or version table, there is nothing to do.
   if (!DynSymRegion.Addr || !SymbolVersionSection)
-    return;
+    return Error::success();
 
   // Has the VersionMap already been loaded?
   if (!VersionMap.empty())
-    return;
+    return Error::success();
 
   // The first two version indexes are reserved.
   // Index 0 is LOCAL, index 1 is GLOBAL.
@@ -994,7 +995,7 @@ template <class ELFT> void ELFDumper<ELFT>::LoadVersionMap() const {
     Expected<std::vector<VerDef>> Defs =
         this->getVersionDefinitions(SymbolVersionDefSection);
     if (!Defs)
-      reportError(Defs.takeError(), ObjF->getFileName());
+      return Defs.takeError();
     for (const VerDef &Def : *Defs)
       InsertEntry(Def.Ndx & ELF::VERSYM_VERSION, Def.Name, true);
   }
@@ -1003,16 +1004,18 @@ template <class ELFT> void ELFDumper<ELFT>::LoadVersionMap() const {
     Expected<std::vector<VerNeed>> Deps =
         this->getVersionDependencies(SymbolVersionNeedSection);
     if (!Deps)
-      reportError(Deps.takeError(), ObjF->getFileName());
+      return Deps.takeError();
     for (const VerNeed &Dep : *Deps)
       for (const VernAux &Aux : Dep.AuxV)
         InsertEntry(Aux.Other & ELF::VERSYM_VERSION, Aux.Name, false);
   }
+
+  return Error::success();
 }
 
 template <typename ELFT>
-StringRef ELFDumper<ELFT>::getSymbolVersion(const Elf_Sym *Sym,
-                                            bool &IsDefault) const {
+Expected<StringRef> ELFDumper<ELFT>::getSymbolVersion(const Elf_Sym *Sym,
+                                                      bool &IsDefault) const {
   // This is a dynamic symbol. Look in the GNU symbol version table.
   if (!SymbolVersionSection) {
     // No version table.
@@ -1056,8 +1059,9 @@ ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
 }
 
 template <typename ELFT>
-StringRef ELFDumper<ELFT>::getSymbolVersionByIndex(uint32_t SymbolVersionIndex,
-                                                   bool &IsDefault) const {
+Expected<StringRef>
+ELFDumper<ELFT>::getSymbolVersionByIndex(uint32_t SymbolVersionIndex,
+                                         bool &IsDefault) const {
   size_t VersionIndex = SymbolVersionIndex & VERSYM_VERSION;
 
   // Special markers for unversioned symbols.
@@ -1067,9 +1071,11 @@ StringRef ELFDumper<ELFT>::getSymbolVersionByIndex(uint32_t SymbolVersionIndex,
   }
 
   // Lookup this symbol in the version table.
-  LoadVersionMap();
+  if (Error E = LoadVersionMap())
+    return std::move(E);
   if (VersionIndex >= VersionMap.size() || !VersionMap[VersionIndex])
-    reportError(createError("Invalid version entry"), ObjF->getFileName());
+    return createError("SHT_GNU_versym section refers to a version index " +
+                       Twine(VersionIndex) + " which is missing");
 
   const VersionEntry &Entry = *VersionMap[VersionIndex];
   if (Entry.IsVerDef)
@@ -1107,10 +1113,15 @@ std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
     return SymbolName;
 
   bool IsDefault;
-  StringRef Version = getSymbolVersion(&*Symbol, IsDefault);
-  if (!Version.empty()) {
+  Expected<StringRef> VersionOrErr = getSymbolVersion(&*Symbol, IsDefault);
+  if (!VersionOrErr) {
+    ELFDumperStyle->reportUniqueWarning(VersionOrErr.takeError());
+    return SymbolName + "@<corrupt>";
+  }
+
+  if (!VersionOrErr->empty()) {
     SymbolName += (IsDefault ? "@@" : "@");
-    SymbolName += Version;
+    SymbolName += *VersionOrErr;
   }
   return SymbolName;
 }
@@ -4110,34 +4121,41 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
     return;
   }
 
+  ArrayRef<Elf_Versym> VerTable = *VerTableOrErr;
+  std::vector<StringRef> Versions;
+  for (size_t I = 0, E = VerTable.size(); I < E; ++I) {
+    unsigned Ndx = VerTable[I].vs_index;
+    if (Ndx == VER_NDX_LOCAL || Ndx == VER_NDX_GLOBAL) {
+      Versions.emplace_back(Ndx == VER_NDX_LOCAL ? "*local*" : "*global*");
+      continue;
+    }
+
+    bool IsDefault;
+    Expected<StringRef> NameOrErr =
+        this->dumper()->getSymbolVersionByIndex(Ndx, IsDefault);
+    if (!NameOrErr || NameOrErr->empty()) {
+      if (!NameOrErr) {
+        unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
+        this->reportUniqueWarning(createError(
+            "unable to get a version for entry " + Twine(I) +
+            " of SHT_GNU_versym section with index " + Twine(SecNdx) + ": " +
+            toString(NameOrErr.takeError())));
+      }
+      Versions.emplace_back("<corrupt>");
+      continue;
+    }
+    Versions.emplace_back(*NameOrErr);
+  }
+
   // readelf prints 4 entries per line.
-  uint64_t Entries = VerTableOrErr->size();
+  uint64_t Entries = VerTable.size();
   for (uint64_t VersymRow = 0; VersymRow < Entries; VersymRow += 4) {
     OS << "  " << format_hex_no_prefix(VersymRow, 3) << ":";
-
     for (uint64_t I = 0; (I < 4) && (I + VersymRow) < Entries; ++I) {
-      unsigned Version = (*VerTableOrErr)[VersymRow + I].vs_index;
-      switch (Version) {
-      case 0:
-        OS << "   0 (*local*)    ";
-        break;
-      case 1:
-        OS << "   1 (*global*)   ";
-        break;
-      default:
-        bool IsDefault = true;
-        std::string VersionName =
-            this->dumper()->getSymbolVersionByIndex(Version, IsDefault);
-
-        if (!VersionName.empty())
-          VersionName = "(" + VersionName + ")";
-        else
-          VersionName = "(*invalid*)";
-
-        OS << format("%4x%c", Version & VERSYM_VERSION,
-                     Version & VERSYM_HIDDEN ? 'h' : ' ');
-        OS << left_justify(VersionName, 13);
-      }
+      unsigned Ndx = VerTable[VersymRow + I].vs_index;
+      OS << format("%4x%c", Ndx & VERSYM_VERSION,
+                   Ndx & VERSYM_HIDDEN ? 'h' : ' ');
+      OS << left_justify("(" + std::string(Versions[VersymRow + I]) + ")", 13);
     }
     OS << '\n';
   }
