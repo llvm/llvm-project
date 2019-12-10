@@ -1741,7 +1741,8 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   return new ShuffleVectorInst(X, Y, ConstantVector::get(NewMask));
 }
 
-/// Try to replace a shuffle with an insertelement.
+/// Try to replace a shuffle with an insertelement or try to replace a shuffle
+/// operand with the operand of an insertelement.
 static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf) {
   Value *V0 = Shuf.getOperand(0), *V1 = Shuf.getOperand(1);
   SmallVector<int, 16> Mask = Shuf.getShuffleMask();
@@ -1752,6 +1753,31 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf) {
   int NumElts = Mask.size();
   if (NumElts != (int)(V0->getType()->getVectorNumElements()))
     return nullptr;
+
+  // This is a specialization of a fold in SimplifyDemandedVectorElts. We may
+  // not be able to handle it there if the insertelement has >1 use.
+  // If the shuffle has an insertelement operand but does not choose the
+  // inserted scalar element from that value, then we can replace that shuffle
+  // operand with the source vector of the insertelement.
+  Value *X;
+  uint64_t IdxC;
+  if (match(V0, m_InsertElement(m_Value(X), m_Value(), m_ConstantInt(IdxC)))) {
+    // shuf (inselt X, ?, IdxC), ?, Mask --> shuf X, ?, Mask
+    if (none_of(Mask, [IdxC](int MaskElt) { return MaskElt == (int)IdxC; })) {
+      Shuf.setOperand(0, X);
+      return &Shuf;
+    }
+  }
+  if (match(V1, m_InsertElement(m_Value(X), m_Value(), m_ConstantInt(IdxC)))) {
+    // Offset the index constant by the vector width because we are checking for
+    // accesses to the 2nd vector input of the shuffle.
+    IdxC += NumElts;
+    // shuf ?, (inselt X, ?, IdxC), Mask --> shuf ?, X, Mask
+    if (none_of(Mask, [IdxC](int MaskElt) { return MaskElt == (int)IdxC; })) {
+      Shuf.setOperand(1, X);
+      return &Shuf;
+    }
+  }
 
   // shuffle (insert ?, Scalar, IndexC), V1, Mask --> insert V1, Scalar, IndexC'
   auto isShufflingScalarIntoOp1 = [&](Value *&Scalar, ConstantInt *&IndexC) {
