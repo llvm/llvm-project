@@ -198,7 +198,6 @@ define dso_local void @vector_mul_const(i32* noalias nocapture %a, i32* noalias 
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
-; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vmul.i32 q0, q0, r2
 ; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB3_1
@@ -250,7 +249,6 @@ define dso_local void @vector_add_const(i32* noalias nocapture %a, i32* noalias 
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
-; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vadd.i32 q0, q0, r2
 ; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB4_1
@@ -308,7 +306,6 @@ define dso_local arm_aapcs_vfpcc void @vector_mul_vector_i8(i8* noalias nocaptur
 ; CHECK-NEXT:    vldrb.u8 q1, [r4]
 ; CHECK-NEXT:    add.w r4, r0, r12
 ; CHECK-NEXT:    add.w r12, r12, #16
-; CHECK-NEXT:    subs r3, #16
 ; CHECK-NEXT:    vmul.i8 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r4]
 ; CHECK-NEXT:    letp lr, .LBB5_1
@@ -363,7 +360,6 @@ define dso_local arm_aapcs_vfpcc void @vector_mul_vector_i16(i16* noalias nocapt
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r2], #16
-; CHECK-NEXT:    subs r3, #8
 ; CHECK-NEXT:    vmul.i16 q0, q1, q0
 ; CHECK-NEXT:    vstrh.16 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB6_1

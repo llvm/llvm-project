@@ -110,6 +110,13 @@ public:
   /// use or a live out.
   bool isRegUsedAfter(MachineInstr *MI, int PhysReg);
 
+  /// Provides the first instruction before MI that uses PhysReg
+  MachineInstr *getInstWithUseBefore(MachineInstr *MI, int PhysReg);
+
+  /// Provides all instructions before MI that uses PhysReg
+  void getAllInstWithUseBefore(MachineInstr *MI, int PhysReg,
+                               SmallVectorImpl<MachineInstr*> &Uses);
+
   /// Provides the clearance - the number of instructions since the closest
   /// reaching def instuction of PhysReg that reaches MI.
   int getClearance(MachineInstr *MI, MCPhysReg PhysReg);
