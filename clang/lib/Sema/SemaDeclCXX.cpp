@@ -6481,38 +6481,36 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
   bool HasMethodWithOverrideControl = false,
        HasOverridingMethodWithoutOverrideControl = false;
-  for (auto *M : Record->methods()) {
-    // FIXME: We could do this check for dependent types with non-dependent
-    // bases.
-    if (!Record->isDependentType()) {
-      // See if a method overloads virtual methods in a base
-      // class without overriding any.
-      if (!M->isStatic())
-        DiagnoseHiddenVirtualMethods(M);
-      if (M->hasAttr<OverrideAttr>())
-        HasMethodWithOverrideControl = true;
-      else if (M->size_overridden_methods() > 0)
-        HasOverridingMethodWithoutOverrideControl = true;
-    }
+  for (auto *D : Record->decls()) {
+    if (auto *M = dyn_cast<CXXMethodDecl>(D)) {
+      // FIXME: We could do this check for dependent types with non-dependent
+      // bases.
+      if (!Record->isDependentType()) {
+        // See if a method overloads virtual methods in a base
+        // class without overriding any.
+        if (!M->isStatic())
+          DiagnoseHiddenVirtualMethods(M);
+        if (M->hasAttr<OverrideAttr>())
+          HasMethodWithOverrideControl = true;
+        else if (M->size_overridden_methods() > 0)
+          HasOverridingMethodWithoutOverrideControl = true;
+      }
 
-    if (!isa<CXXDestructorDecl>(M))
-      CompleteMemberFunction(M);
+      if (!isa<CXXDestructorDecl>(M))
+        CompleteMemberFunction(M);
+    } else if (auto *F = dyn_cast<FriendDecl>(D)) {
+      CheckForDefaultedFunction(
+          dyn_cast_or_null<FunctionDecl>(F->getFriendDecl()));
+    }
   }
 
   if (HasMethodWithOverrideControl &&
       HasOverridingMethodWithoutOverrideControl) {
     // At least one method has the 'override' control declared.
-    // Diagnose all other overridden methods which do not have 'override' specified on them.
+    // Diagnose all other overridden methods which do not have 'override'
+    // specified on them.
     for (auto *M : Record->methods())
       DiagnoseAbsenceOfOverrideControl(M);
-  }
-
-  // Process any defaulted friends in the member-specification.
-  if (!Record->isDependentType()) {
-    for (FriendDecl *D : Record->friends()) {
-      CheckForDefaultedFunction(
-          dyn_cast_or_null<FunctionDecl>(D->getFriendDecl()));
-    }
   }
 
   // Check the defaulted secondary comparisons after any other member functions.
@@ -7868,7 +7866,9 @@ static void lookupOperatorsForDefaultedComparison(Sema &Self, Scope *S,
     Lookup(ExtraOp);
 
   // For 'operator<=>', we also form a 'cmp != 0' expression, and might
-  // synthesize a three-way comparison from '<' and '=='.
+  // synthesize a three-way comparison from '<' and '=='. In a dependent
+  // context, we also need to look up '==' in case we implicitly declare a
+  // defaulted 'operator=='.
   if (Op == OO_Spaceship) {
     Lookup(OO_ExclaimEqual);
     Lookup(OO_Less);
@@ -7904,9 +7904,13 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   for (const ParmVarDecl *Param : FD->parameters()) {
     if (!Param->getType()->isDependentType() &&
         !Context.hasSameType(Param->getType(), ExpectedParmType)) {
-      Diag(FD->getLocation(), diag::err_defaulted_comparison_param)
-          << (int)DCK << Param->getType() << ExpectedParmType
-          << Param->getSourceRange();
+      // Don't diagnose an implicit 'operator=='; we will have diagnosed the
+      // corresponding defaulted 'operator<=>' already.
+      if (!FD->isImplicit()) {
+        Diag(FD->getLocation(), diag::err_defaulted_comparison_param)
+            << (int)DCK << Param->getType() << ExpectedParmType
+            << Param->getSourceRange();
+      }
       return true;
     }
   }
@@ -7918,8 +7922,12 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       SourceLocation InsertLoc;
       if (FunctionTypeLoc Loc = MD->getFunctionTypeLoc())
         InsertLoc = getLocForEndOfToken(Loc.getRParenLoc());
-      Diag(MD->getLocation(), diag::err_defaulted_comparison_non_const)
-        << (int)DCK << FixItHint::CreateInsertion(InsertLoc, " const");
+      // Don't diagnose an implicit 'operator=='; we will have diagnosed the
+      // corresponding defaulted 'operator<=>' already.
+      if (!MD->isImplicit()) {
+        Diag(MD->getLocation(), diag::err_defaulted_comparison_non_const)
+          << (int)DCK << FixItHint::CreateInsertion(InsertLoc, " const");
+      }
 
       // Add the 'const' to the type to recover.
       const auto *FPT = MD->getType()->castAs<FunctionProtoType>();
@@ -7980,7 +7988,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       // This is really just a consequence of the general rule that you can
       // only delete a function on its first declaration.
       Diag(FD->getLocation(), diag::err_non_first_default_compare_deletes)
-          << (int)DCK;
+          << FD->isImplicit() << (int)DCK;
       DefaultedComparisonAnalyzer(*this, RD, FD, DCK,
                                   DefaultedComparisonAnalyzer::ExplainDeleted)
           .visit();
@@ -7988,7 +7996,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
     }
 
     SetDeclDeleted(FD, FD->getLocation());
-    if (!inTemplateInstantiation()) {
+    if (!inTemplateInstantiation() && !FD->isImplicit()) {
       Diag(FD->getLocation(), diag::warn_defaulted_comparison_deleted)
           << (int)DCK;
       DefaultedComparisonAnalyzer(*this, RD, FD, DCK,
@@ -8028,7 +8036,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
         !Info.Constexpr) {
       Diag(FD->getBeginLoc(),
            diag::err_incorrect_defaulted_comparison_constexpr)
-          << (int)DCK << FD->isConsteval();
+          << FD->isImplicit() << (int)DCK << FD->isConsteval();
       DefaultedComparisonAnalyzer(*this, RD, FD, DCK,
                                   DefaultedComparisonAnalyzer::ExplainConstexpr)
           .visit();
@@ -8049,6 +8057,20 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   }
 
   return false;
+}
+
+void Sema::DeclareImplicitEqualityComparison(CXXRecordDecl *RD,
+                                             FunctionDecl *Spaceship) {
+  Sema::CodeSynthesisContext Ctx;
+  Ctx.Kind = Sema::CodeSynthesisContext::DeclaringImplicitEqualityComparison;
+  Ctx.PointOfInstantiation = Spaceship->getEndLoc();
+  Ctx.Entity = Spaceship;
+  pushCodeSynthesisContext(Ctx);
+
+  if (FunctionDecl *EqualEqual = SubstSpaceshipAsEqualEqual(RD, Spaceship))
+    EqualEqual->setImplicit();
+
+  popCodeSynthesisContext();
 }
 
 void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
@@ -9330,6 +9352,44 @@ void Sema::ActOnFinishCXXMemberSpecification(
   CheckCompletedCXXClass(S, cast<CXXRecordDecl>(TagDecl));
 }
 
+/// Find the equality comparison functions that should be implicitly declared
+/// in a given class definition, per C++2a [class.compare.default]p3.
+static void findImplicitlyDeclaredEqualityComparisons(
+    ASTContext &Ctx, CXXRecordDecl *RD,
+    llvm::SmallVectorImpl<FunctionDecl *> &Spaceships) {
+  DeclarationName EqEq = Ctx.DeclarationNames.getCXXOperatorName(OO_EqualEqual);
+  if (!RD->lookup(EqEq).empty())
+    // Member operator== explicitly declared: no implicit operator==s.
+    return;
+
+  // Traverse friends looking for an '==' or a '<=>'.
+  for (FriendDecl *Friend : RD->friends()) {
+    FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(Friend->getFriendDecl());
+    if (!FD) continue;
+
+    if (FD->getOverloadedOperator() == OO_EqualEqual) {
+      // Friend operator== explicitly declared: no implicit operator==s.
+      Spaceships.clear();
+      return;
+    }
+
+    if (FD->getOverloadedOperator() == OO_Spaceship &&
+        FD->isExplicitlyDefaulted())
+      Spaceships.push_back(FD);
+  }
+
+  // Look for members named 'operator<=>'.
+  DeclarationName Cmp = Ctx.DeclarationNames.getCXXOperatorName(OO_Spaceship);
+  for (NamedDecl *ND : RD->lookup(Cmp)) {
+    // Note that we could find a non-function here (either a function template
+    // or a using-declaration). Neither case results in an implicit
+    // 'operator=='.
+    if (auto *FD = dyn_cast<FunctionDecl>(ND))
+      if (FD->isExplicitlyDefaulted())
+        Spaceships.push_back(FD);
+  }
+}
+
 /// AddImplicitlyDeclaredMembersToClass - Adds any implicitly-declared
 /// special functions, such as the default constructor, copy
 /// constructor, or destructor, to the given C++ class (C++
@@ -9406,6 +9466,20 @@ void Sema::AddImplicitlyDeclaredMembersToClass(CXXRecordDecl *ClassDecl) {
     if (ClassDecl->isDynamicClass() ||
         ClassDecl->needsOverloadResolutionForDestructor())
       DeclareImplicitDestructor(ClassDecl);
+  }
+
+  // C++2a [class.compare.default]p3:
+  //   If the member-specification does not explicitly declare any member or
+  //   friend named operator==, an == operator function is declared implicitly
+  //   for each defaulted three-way comparison operator function defined in the
+  //   member-specification
+  // FIXME: Consider doing this lazily.
+  if (getLangOpts().CPlusPlus2a) {
+    llvm::SmallVector<FunctionDecl*, 4> DefaultedSpaceships;
+    findImplicitlyDeclaredEqualityComparisons(Context, ClassDecl,
+                                              DefaultedSpaceships);
+    for (auto *FD : DefaultedSpaceships)
+      DeclareImplicitEqualityComparison(ClassDecl, FD);
   }
 }
 

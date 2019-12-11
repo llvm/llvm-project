@@ -3840,6 +3840,7 @@ def select_ovl_candidate_kind : TextSubstitution<
     "constructor (the implicit move constructor)|"
     "function (the implicit copy assignment operator)|"
     "function (the implicit move assignment operator)|"
+    "function (the implicit 'operator==' for this 'operator<=>)'|"
     "inherited constructor}0%select{| template| %2}1">;
 
 def note_ovl_candidate : Note<
@@ -8207,7 +8208,8 @@ def warn_defaulted_comparison_deleted : Warning<
   "explicitly defaulted %sub{select_defaulted_comparison_kind}0 is implicitly "
   "deleted">, InGroup<DefaultedFunctionDeleted>;
 def err_non_first_default_compare_deletes : Error<
-  "defaulting this %sub{select_defaulted_comparison_kind}0 "
+  "defaulting %select{this %sub{select_defaulted_comparison_kind}1|"
+  "the corresponding implicit 'operator==' for this defaulted 'operator<=>'}0 "
   "would delete it after its first declaration">;
 def note_defaulted_comparison_union : Note<
   "defaulted %0 is implicitly deleted because "
@@ -8237,14 +8239,19 @@ def note_defaulted_comparison_cannot_deduce : Note<
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
 def err_incorrect_defaulted_comparison_constexpr : Error<
-  "defaulted definition of %sub{select_defaulted_comparison_kind}0 "
-  "cannot be declared %select{constexpr|consteval}1 because it invokes "
-  "a non-constexpr comparison function">;
+  "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
+  "three-way comparison operator}0 "
+  "cannot be declared %select{constexpr|consteval}2 because "
+  "%select{it|the corresponding implicit 'operator=='}0 "
+  "invokes a non-constexpr comparison function">;
 def note_defaulted_comparison_not_constexpr : Note<
   "non-constexpr comparison function would be used to compare "
   "%select{|member %1|base class %1}0">;
 def note_defaulted_comparison_not_constexpr_here : Note<
   "non-constexpr comparison function declared here">;
+def note_in_declaration_of_implicit_equality_comparison : Note<
+  "while declaring the corresponding implicit 'operator==' "
+  "for this defaulted 'operator<=>'">;
 
 def ext_implicit_exception_spec_mismatch : ExtWarn<
   "function previously declared with an %select{explicit|implicit}0 exception "
