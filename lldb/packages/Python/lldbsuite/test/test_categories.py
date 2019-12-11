@@ -36,6 +36,7 @@ all_categories = {
     'flakey': 'Flakey test cases, i.e. tests that do not reliably pass at each execution',
     'darwin-log': 'Darwin log tests',
     'watchpoint': 'Watchpoint-related tests',
+    'lldb-vscode': 'Visual Studio Code debug adaptor tests',
 }
 
 
