@@ -867,6 +867,9 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
   LookupResult Result(*this, Name, NameLoc, LookupOrdinaryName);
   LookupParsedName(Result, S, &SS, !CurMethod);
 
+  if (SS.isInvalid())
+    return NameClassification::Error();
+
   // For unqualified lookup in a class template in MSVC mode, look into
   // dependent base classes where the primary class template is known.
   if (Result.empty() && SS.isEmpty() && getLangOpts().MSVCCompat) {
@@ -879,7 +882,7 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
   // synthesized instance variables), if we're in an Objective-C method.
   // FIXME: This lookup really, really needs to be folded in to the normal
   // unqualified lookup mechanism.
-  if (!SS.isSet() && CurMethod && !isResultTypeOrTemplate(Result, NextToken)) {
+  if (SS.isEmpty() && CurMethod && !isResultTypeOrTemplate(Result, NextToken)) {
     DeclResult Ivar = LookupIvarInObjCMethod(Result, S, Name);
     if (Ivar.isInvalid())
       return NameClassification::Error();
@@ -899,7 +902,7 @@ Corrected:
   case LookupResult::NotFound:
     // If an unqualified-id is followed by a '(', then we have a function
     // call.
-    if (!SS.isSet() && NextToken.is(tok::l_paren)) {
+    if (SS.isEmpty() && NextToken.is(tok::l_paren)) {
       // In C++, this is an ADL-only call.
       // FIXME: Reference?
       if (getLangOpts().CPlusPlus)
@@ -921,7 +924,7 @@ Corrected:
         return NameClassification::NonType(D);
     }
 
-    if (getLangOpts().CPlusPlus2a && !SS.isSet() && NextToken.is(tok::less)) {
+    if (getLangOpts().CPlusPlus2a && SS.isEmpty() && NextToken.is(tok::less)) {
       // In C++20 onwards, this could be an ADL-only call to a function
       // template, and we're required to assume that this is a template name.
       //
@@ -1063,7 +1066,7 @@ Corrected:
        hasAnyAcceptableTemplateNames(
            Result, /*AllowFunctionTemplates=*/true,
            /*AllowDependent=*/false,
-           /*AllowNonTemplateFunctions*/ !SS.isSet() &&
+           /*AllowNonTemplateFunctions*/ SS.isEmpty() &&
                getLangOpts().CPlusPlus2a))) {
     // C++ [temp.names]p3:
     //   After name lookup (3.4) finds that a name is a template-name or that
@@ -1092,7 +1095,7 @@ Corrected:
       IsFunctionTemplate = isa<FunctionTemplateDecl>(TD);
       IsVarTemplate = isa<VarTemplateDecl>(TD);
 
-      if (SS.isSet() && !SS.isInvalid())
+      if (SS.isNotEmpty())
         Template =
             Context.getQualifiedTemplateName(SS.getScopeRep(),
                                              /*TemplateKeyword=*/false, TD);
