@@ -574,17 +574,14 @@ ComplexPattern::ComplexPattern(Record *R) {
 // CodeGenIntrinsic Implementation
 //===----------------------------------------------------------------------===//
 
-CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC,
-                                             bool TargetOnly) {
+CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   std::vector<Record*> Defs = RC.getAllDerivedDefinitions("Intrinsic");
 
   Intrinsics.reserve(Defs.size());
 
-  for (unsigned I = 0, e = Defs.size(); I != e; ++I) {
-    bool isTarget = Defs[I]->getValueAsBit("isTarget");
-    if (isTarget == TargetOnly)
-      Intrinsics.push_back(CodeGenIntrinsic(Defs[I]));
-  }
+  for (unsigned I = 0, e = Defs.size(); I != e; ++I)
+    Intrinsics.push_back(CodeGenIntrinsic(Defs[I]));
+
   llvm::sort(Intrinsics,
              [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
                return std::tie(LHS.TargetPrefix, LHS.Name) <
