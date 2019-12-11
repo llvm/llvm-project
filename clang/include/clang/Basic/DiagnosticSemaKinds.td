@@ -8194,7 +8194,10 @@ def err_defaulted_comparison_out_of_class : Error<
   "definition">;
 def err_defaulted_comparison_param : Error<
   "invalid parameter type for defaulted %sub{select_defaulted_comparison_kind}0"
-  "%diff{; found $, expected $|}1,2">;
+  "; found %1, expected %2%select{| or %4}3">;
+def err_defaulted_comparison_param_mismatch : Error<
+  "parameters for defaulted %sub{select_defaulted_comparison_kind}0 "
+  "must have the same type%diff{ (found $ vs $)|}1,2">;
 def err_defaulted_comparison_non_const : Error<
   "defaulted member %sub{select_defaulted_comparison_kind}0 must be "
   "const-qualified">;
