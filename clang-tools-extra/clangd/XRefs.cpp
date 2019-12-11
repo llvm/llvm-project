@@ -131,15 +131,16 @@ SymbolLocation getPreferredLocation(const Location &ASTLoc,
 
 std::vector<const Decl *> getDeclAtPosition(ParsedAST &AST, SourceLocation Pos,
                                             DeclRelationSet Relations) {
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = AST.getSourceManager().getDecomposedSpellingLoc(Pos);
-  SelectionTree Selection(AST.getASTContext(), AST.getTokens(), Offset);
+  unsigned Offset = AST.getSourceManager().getDecomposedSpellingLoc(Pos).second;
   std::vector<const Decl *> Result;
-  if (const SelectionTree::Node *N = Selection.commonAncestor()) {
-    auto Decls = targetDecl(N->ASTNode, Relations);
-    Result.assign(Decls.begin(), Decls.end());
-  }
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Offset,
+                            Offset, [&](SelectionTree ST) {
+                              if (const SelectionTree::Node *N =
+                                      ST.commonAncestor())
+                                llvm::copy(targetDecl(N->ASTNode, Relations),
+                                           std::back_inserter(Result));
+                              return !Result.empty();
+                            });
   return Result;
 }
 
