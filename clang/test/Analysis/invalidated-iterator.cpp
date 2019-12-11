@@ -120,4 +120,3 @@ void assignment(std::vector<int> &V) {
   V.erase(i);
   auto j = V.cbegin(); // no-warning
 }
-

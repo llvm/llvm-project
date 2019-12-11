@@ -87,7 +87,7 @@ class IteratorModeling
     : public Checker<check::PostCall, check::PostStmt<MaterializeTemporaryExpr>,
                      check::Bind, check::LiveSymbols, check::DeadSymbols> {
 
-  void handleComparison(CheckerContext &C, const Expr *CE, const SVal &RetVal,
+  void handleComparison(CheckerContext &C, const Expr *CE, SVal RetVal,
                         const SVal &LVal, const SVal &RVal,
                         OverloadedOperatorKind Op) const;
   void processComparison(CheckerContext &C, ProgramStateRef State,
@@ -499,9 +499,9 @@ void IteratorModeling::checkDeadSymbols(SymbolReaper &SR,
 }
 
 void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
-                                        const SVal &RetVal, const SVal &LVal,
-                                        const SVal &RVal,
-                                        OverloadedOperatorKind Op) const {
+                                       SVal RetVal, const SVal &LVal,
+                                       const SVal &RVal,
+                                       OverloadedOperatorKind Op) const {
   // Record the operands and the operator of the comparison for the next
   // evalAssume, if the result is a symbolic expression. If it is a concrete
   // value (only one branch is possible), then transfer the state between
@@ -538,6 +538,16 @@ void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
     RPos = getIteratorPosition(State, RVal);
   }
 
+  // We cannot make assumpotions on `UnknownVal`. Let us conjure a symbol
+  // instead.
+  if (RetVal.isUnknown()) {
+    auto &SymMgr = C.getSymbolManager();
+    auto *LCtx = C.getLocationContext();
+    RetVal = nonloc::SymbolVal(SymMgr.conjureSymbol(
+        CE, LCtx, C.getASTContext().BoolTy, C.blockCount()));
+    State = State->BindExpr(CE, LCtx, RetVal);
+  }
+
   processComparison(C, State, LPos->getOffset(), RPos->getOffset(), RetVal, Op);
 }
 
@@ -559,7 +569,7 @@ void IteratorModeling::processComparison(CheckerContext &C,
   const auto ConditionVal = RetVal.getAs<DefinedSVal>();
   if (!ConditionVal)
     return;
-  
+
   if (auto StateTrue = relateSymbols(State, Sym1, Sym2, Op == OO_EqualEqual)) {
     StateTrue = StateTrue->assume(*ConditionVal, true);
     C.addTransition(StateTrue);

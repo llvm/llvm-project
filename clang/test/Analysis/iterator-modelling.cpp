@@ -1969,8 +1969,8 @@ void non_std_find(std::vector<int> &V, int e) {
   clang_analyzer_eval(clang_analyzer_container_end(V) ==
                       clang_analyzer_iterator_position(first)); // expected-warning@-1{{FALSE}} expected-warning@-1{{TRUE}}
   if (V.end() != first) {
-      clang_analyzer_eval(clang_analyzer_container_end(V) ==
-                        clang_analyzer_iterator_position(first)); // expected-warning@-1{{FALSE}} expected-warning@-1 0-1{{TRUE}} FIXME: should only expect FALSE in every case
+    clang_analyzer_eval(clang_analyzer_container_end(V) ==
+                        clang_analyzer_iterator_position(first)); // expected-warning@-1{{FALSE}}
   }
 }
 
