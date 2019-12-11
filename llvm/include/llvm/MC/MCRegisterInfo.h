@@ -324,6 +324,14 @@ public:
     return make_range({Reg, this}, mc_superreg_iterator::end());
   }
 
+  /// Return an iterator range over all sub- and super-registers of \p Reg,
+  /// including \p Reg.
+  detail::concat_range<const MCPhysReg, iterator_range<mc_subreg_iterator>,
+                       iterator_range<mc_superreg_iterator>>
+  sub_and_superregs_inclusive(MCRegister Reg) const {
+    return concat<const MCPhysReg>(subregs_inclusive(Reg), superregs(Reg));
+  }
+
   // These iterators are allowed to sub-class DiffListIterator and access
   // internal list pointers.
   friend class MCSubRegIterator;
