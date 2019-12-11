@@ -24,6 +24,7 @@
 #include "ARMSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
@@ -163,6 +164,7 @@ namespace {
     ReachingDefAnalysis       *RDA = nullptr;
     const ARMBaseInstrInfo    *TII = nullptr;
     MachineRegisterInfo       *MRI = nullptr;
+    const TargetRegisterInfo  *TRI = nullptr;
     std::unique_ptr<ARMBasicBlockUtils> BBUtils = nullptr;
 
   public:
@@ -199,6 +201,8 @@ namespace {
     bool RevertLoopDec(MachineInstr *MI, bool AllowFlags = false) const;
 
     void RevertLoopEnd(MachineInstr *MI, bool SkipCmp = false) const;
+
+    void RemoveLoopUpdate(LowOverheadLoop &LoLoop);
 
     void RemoveVPTBlocks(LowOverheadLoop &LoLoop);
 
@@ -383,6 +387,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
   MF->getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
   MRI = &MF->getRegInfo();
   TII = static_cast<const ARMBaseInstrInfo*>(ST.getInstrInfo());
+  TRI = ST.getRegisterInfo();
   BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(*MF));
   BBUtils->computeAllBlockSizes();
   BBUtils->adjustBBOffsetsAfter(&MF->front());
@@ -511,7 +516,7 @@ void ARMLowOverheadLoops::RevertWhile(MachineInstr *MI) const {
   MIB.addImm(0);
   MIB.addImm(ARMCC::AL);
   MIB.addReg(ARM::NoRegister);
-  
+
   MachineBasicBlock *DestBB = MI->getOperand(1).getMBB();
   unsigned BrOpc = BBUtils->isBBInRange(MI, DestBB, 254) ?
     ARM::tBcc : ARM::t2Bcc;
@@ -631,6 +636,70 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
   return &*MIB;
 }
 
+// Goal is to optimise and clean-up these loops:
+//
+//   vector.body:
+//     renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+//     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3(tied-def 0), 4
+//     ..
+//     $lr = MVE_DLSTP_32 renamable $r3
+//
+// The SUB is the old update of the loop iteration count expression, which
+// is no longer needed. This sub is removed when the element count, which is in
+// r3 in this example, is defined by an instruction in the loop, and it has
+// no uses.
+//
+void ARMLowOverheadLoops::RemoveLoopUpdate(LowOverheadLoop &LoLoop) {
+  Register ElemCount = LoLoop.VCTP->getOperand(1).getReg();
+  MachineInstr *LastInstrInBlock = &LoLoop.VCTP->getParent()->back();
+
+  LLVM_DEBUG(dbgs() << "ARM Loops: Trying to remove loop update stmt\n");
+
+  if (LoLoop.ML->getNumBlocks() != 1) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: single block loop expected\n");
+    return;
+  }
+
+  LLVM_DEBUG(dbgs() << "ARM Loops: Analyzing MO: ";
+             LoLoop.VCTP->getOperand(1).dump());
+
+  // Find the definition we are interested in removing, if there is one.
+  MachineInstr *Def = RDA->getReachingMIDef(LastInstrInBlock, ElemCount);
+  if (!Def)
+    return;
+
+  // Bail if we define CPSR and it is not dead
+  if (!Def->registerDefIsDead(ARM::CPSR, TRI)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: CPSR is not dead\n");
+    return;
+  }
+
+  // Bail if elemcount is used in exit blocks, i.e. if it is live-in.
+  if (isRegLiveInExitBlocks(LoLoop.ML, ElemCount)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Elemcount is live-out, can't remove stmt\n");
+    return;
+  }
+
+  // Bail if there are uses after this Def in the block.
+  SmallVector<MachineInstr*, 4> Uses;
+  RDA->getReachingLocalUses(Def, ElemCount, Uses);
+  if (Uses.size()) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Local uses in block, can't remove stmt\n");
+    return;
+  }
+
+  Uses.clear();
+  RDA->getAllInstWithUseBefore(Def, ElemCount, Uses);
+
+  // Remove Def if there are no uses, or if the only use is the VCTP
+  // instruction.
+  if (!Uses.size() || (Uses.size() == 1 && Uses[0] == LoLoop.VCTP)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Removing loop update instruction: ";
+               Def->dump());
+    Def->eraseFromParent();
+  }
+}
+
 void ARMLowOverheadLoops::RemoveVPTBlocks(LowOverheadLoop &LoLoop) {
   LLVM_DEBUG(dbgs() << "ARM Loops: Removing VCTP: " << *LoLoop.VCTP);
   LoLoop.VCTP->eraseFromParent();
@@ -703,8 +772,10 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
     RemoveDeadBranch(LoLoop.Start);
     LoLoop.End = ExpandLoopEnd(LoLoop);
     RemoveDeadBranch(LoLoop.End);
-    if (LoLoop.IsTailPredicationLegal())
+    if (LoLoop.IsTailPredicationLegal()) {
+      RemoveLoopUpdate(LoLoop);
       RemoveVPTBlocks(LoLoop);
+    }
   }
 }
 

@@ -1176,7 +1176,6 @@ define dso_local arm_aapcs_vfpcc void @test_v8i8_to_v8i16(i16* noalias nocapture
 ; CHECK-NEXT:    vldrb.u16 q0, [r4]
 ; CHECK-NEXT:    add.w r4, r2, r12
 ; CHECK-NEXT:    add.w r12, r12, #8
-; CHECK-NEXT:    subs r3, #8
 ; CHECK-NEXT:    vldrb.u16 q1, [r4]
 ; CHECK-NEXT:    vmul.i16 q0, q1, q0
 ; CHECK-NEXT:    vstrh.16 q0, [r0], #16

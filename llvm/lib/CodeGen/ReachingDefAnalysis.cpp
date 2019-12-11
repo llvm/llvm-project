@@ -227,7 +227,7 @@ int ReachingDefAnalysis::getClearance(MachineInstr *MI, MCPhysReg PhysReg) {
 }
 
 void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, int PhysReg,
-                                        SmallVectorImpl<MachineInstr*> &Uses) {
+    SmallVectorImpl<MachineInstr*> &Uses) {
   MachineBasicBlock *MBB = Def->getParent();
   MachineBasicBlock::iterator MI = MachineBasicBlock::iterator(Def);
   while (++MI != MBB->end()) {
@@ -272,3 +272,27 @@ bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI, int PhysReg) {
   return false;
 }
 
+MachineInstr *ReachingDefAnalysis::getInstWithUseBefore(MachineInstr *MI,
+    int PhysReg) {
+  auto I = MachineBasicBlock::reverse_iterator(MI);
+  auto E = MI->getParent()->rend();
+  I++;
+
+  for ( ; I != E; I++)
+    for (auto &MO : I->operands())
+      if (MO.isReg() && MO.isUse() && MO.getReg() == PhysReg)
+        return &*I;
+
+  return nullptr;
+}
+
+void ReachingDefAnalysis::getAllInstWithUseBefore(MachineInstr *MI,
+    int PhysReg, SmallVectorImpl<MachineInstr*> &Uses) {
+  MachineInstr *Use = nullptr;
+  MachineInstr *Pos = MI;
+
+  while ((Use = getInstWithUseBefore(Pos, PhysReg))) {
+    Uses.push_back(Use);
+    Pos = Use;
+  }
+}

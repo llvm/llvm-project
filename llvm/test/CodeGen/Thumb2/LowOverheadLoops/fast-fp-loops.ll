@@ -41,7 +41,6 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r2], #16
-; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vmul.f32 q0, q1, q0
 ; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB0_5
