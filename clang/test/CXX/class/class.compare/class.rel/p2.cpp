@@ -72,3 +72,13 @@ namespace NotEqual {
     bool operator!=(const Evil&) const = default; // expected-warning {{implicitly deleted}} expected-note {{would be the best match}}
   };
 }
+
+namespace Access {
+  class A {
+    int operator<=>(A) const; // expected-note {{private}}
+  };
+  struct B : A {
+    friend bool operator<(const B&, const B&) = default; // expected-warning {{implicitly deleted}}
+    // expected-note@-1 {{defaulted 'operator<' is implicitly deleted because it would invoke a private 'operator<=>' member of 'Access::A'}}
+  };
+}
