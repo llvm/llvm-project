@@ -452,6 +452,12 @@ static void print(const Twine &s) {
 
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
+  // Compute isPreemptible early. We may add more symbols later, so this loop
+  // cannot be merged with the later computeIsPreemptible() pass which is used
+  // by scanRelocations().
+  for (Symbol *sym : symtab->symbols())
+    sym->isPreemptible = computeIsPreemptible(*sym);
+
   // Collect sections to merge.
   for (InputSectionBase *sec : inputSections) {
     auto *s = cast<InputSection>(sec);
