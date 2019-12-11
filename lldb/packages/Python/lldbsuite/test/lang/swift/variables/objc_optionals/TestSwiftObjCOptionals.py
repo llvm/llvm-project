@@ -56,17 +56,20 @@ class TestSwiftObjCOptionalType(TestBase):
     def do_check_api(self):
         """Check formatting for T? and T! when T is an ObjC type"""
         optColor_Some = self.frame().FindVariable("optColor_Some")
+
+        # SwiftOptionalSyntheticFrontEnd passes GetNumChildren
+        # through to the .some object.  NSColor has no children.
         lldbutil.check_variable(
             self,
             optColor_Some,
             use_dynamic=False,
-            num_children=1)
+            num_children=0)
         uoptColor_Some = self.frame().FindVariable("uoptColor_Some")
         lldbutil.check_variable(
             self,
             uoptColor_Some,
             use_dynamic=False,
-            num_children=1)
+            num_children=0)
 
 if __name__ == '__main__':
     import atexit
