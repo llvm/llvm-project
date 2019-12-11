@@ -8719,20 +8719,18 @@ let Defs = [EFLAGS], Predicates = [HasAVX512] in {
 }
 
 let Defs = [EFLAGS], Predicates = [HasAVX512] in {
-  defm VUCOMISSZ : sse12_ord_cmp<0x2E, FR32X, X86cmp, f32, f32mem, loadf32,
+  defm VUCOMISSZ : sse12_ord_cmp<0x2E, FR32X, X86any_fcmp, f32, f32mem, loadf32,
                                  "ucomiss", SSEPackedSingle>, PS, EVEX, VEX_LIG,
                                  EVEX_CD8<32, CD8VT1>;
-  defm VUCOMISDZ : sse12_ord_cmp<0x2E, FR64X, X86cmp, f64, f64mem, loadf64,
+  defm VUCOMISDZ : sse12_ord_cmp<0x2E, FR64X, X86any_fcmp, f64, f64mem, loadf64,
                                   "ucomisd", SSEPackedDouble>, PD, EVEX,
                                   VEX_LIG, VEX_W, EVEX_CD8<64, CD8VT1>;
-  let Pattern = []<dag> in {
-    defm VCOMISSZ  : sse12_ord_cmp<0x2F, FR32X, undef, f32, f32mem, loadf32,
-                                   "comiss", SSEPackedSingle>, PS, EVEX, VEX_LIG,
-                                   EVEX_CD8<32, CD8VT1>;
-    defm VCOMISDZ  : sse12_ord_cmp<0x2F, FR64X, undef, f64, f64mem, loadf64,
-                                   "comisd", SSEPackedDouble>, PD, EVEX,
-                                    VEX_LIG, VEX_W, EVEX_CD8<64, CD8VT1>;
-  }
+  defm VCOMISSZ  : sse12_ord_cmp<0x2F, FR32X, X86strict_fcmps, f32, f32mem, loadf32,
+                                 "comiss", SSEPackedSingle>, PS, EVEX, VEX_LIG,
+                                 EVEX_CD8<32, CD8VT1>;
+  defm VCOMISDZ  : sse12_ord_cmp<0x2F, FR64X, X86strict_fcmps, f64, f64mem, loadf64,
+                                 "comisd", SSEPackedDouble>, PD, EVEX,
+                                  VEX_LIG, VEX_W, EVEX_CD8<64, CD8VT1>;
   let isCodeGenOnly = 1 in {
     defm VUCOMISSZ  : sse12_ord_cmp_int<0x2E, VR128X, X86ucomi, v4f32, ssmem,
                           sse_load_f32, "ucomiss", SSEPackedSingle>, PS, EVEX, VEX_LIG,
