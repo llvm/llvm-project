@@ -470,8 +470,7 @@ if (APPLE)
   find_library(FOUNDATION_LIBRARY Foundation)
   find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
   find_library(SECURITY_LIBRARY Security)
-
-  add_definitions( -DLIBXML2_DEFINED )
+  set(LLDB_ENABLE_LIBXML2 ON)
   list(APPEND system_libs xml2
        ${CURSES_LIBRARIES}
        ${FOUNDATION_LIBRARY}
@@ -481,7 +480,7 @@ if (APPLE)
        ${DEBUG_SYMBOLS_LIBRARY})
   include_directories(AFTER "${CMAKE_OSX_SYSROOT}/usr/include/libxml2")
 elseif(LIBXML2_FOUND AND LIBXML2_VERSION_STRING VERSION_GREATER 2.8)
-  add_definitions( -DLIBXML2_DEFINED )
+  set(LLDB_ENABLE_LIBXML2 ON)
   list(APPEND system_libs ${LIBXML2_LIBRARIES})
   include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
