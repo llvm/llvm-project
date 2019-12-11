@@ -26,12 +26,9 @@ using namespace llvm;
 namespace {
 class IntrinsicEmitter {
   RecordKeeper &Records;
-  bool TargetOnly;
-  std::string TargetPrefix;
 
 public:
-  IntrinsicEmitter(RecordKeeper &R, bool T)
-    : Records(R), TargetOnly(T) {}
+  IntrinsicEmitter(RecordKeeper &R) : Records(R) {}
 
   void run(raw_ostream &OS, bool Enums);
 
@@ -58,10 +55,7 @@ public:
 void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
   emitSourceFileHeader("Intrinsic Function Source Fragment", OS);
 
-  CodeGenIntrinsicTable Ints(Records, TargetOnly);
-
-  if (TargetOnly && !Ints.empty())
-    TargetPrefix = Ints[0].TargetPrefix;
+  CodeGenIntrinsicTable Ints(Records);
 
   EmitPrefix(OS);
 
@@ -588,11 +582,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
                                       raw_ostream &OS) {
   OS << "// Add parameter attributes that are not common to all intrinsics.\n";
   OS << "#ifdef GET_INTRINSIC_ATTRIBUTES\n";
-  if (TargetOnly)
-    OS << "static AttributeList getAttributes(LLVMContext &C, " << TargetPrefix
-       << "Intrinsic::ID id) {\n";
-  else
-    OS << "AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {\n";
+  OS << "AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {\n";
 
   // Compute the maximum number of attribute arguments and the map
   typedef std::map<const CodeGenIntrinsic*, unsigned,
@@ -625,12 +615,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
   OS << "  AttributeList AS[" << maxArgAttrs + 1 << "];\n";
   OS << "  unsigned NumAttrs = 0;\n";
   OS << "  if (id != 0) {\n";
-  OS << "    switch(IntrinsicsToAttributesMap[id - ";
-  if (TargetOnly)
-    OS << "Intrinsic::num_intrinsics";
-  else
-    OS << "1";
-  OS << "]) {\n";
+  OS << "    switch(IntrinsicsToAttributesMap[id - 1]) {\n";
   OS << "    default: llvm_unreachable(\"Invalid attribute number\");\n";
   for (UniqAttrMapTy::const_iterator I = UniqAttributes.begin(),
        E = UniqAttributes.end(); I != E; ++I) {
@@ -875,21 +860,12 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
   OS << "// in as TargetPrefix.  The result is assigned to 'IntrinsicID'.\n";
   OS << "#ifdef GET_LLVM_INTRINSIC_FOR_" << CompilerName << "_BUILTIN\n";
 
-  if (TargetOnly) {
-    OS << "static " << TargetPrefix << "Intrinsic::ID "
-       << "getIntrinsicFor" << CompilerName << "Builtin(const char "
-       << "*TargetPrefixStr, StringRef BuiltinNameStr) {\n";
-  } else {
-    OS << "Intrinsic::ID Intrinsic::getIntrinsicFor" << CompilerName
-       << "Builtin(const char "
-       << "*TargetPrefixStr, StringRef BuiltinNameStr) {\n";
-  }
+  OS << "Intrinsic::ID Intrinsic::getIntrinsicFor" << CompilerName
+     << "Builtin(const char "
+     << "*TargetPrefixStr, StringRef BuiltinNameStr) {\n";
 
   if (Table.Empty()) {
-    OS << "  return ";
-    if (!TargetPrefix.empty())
-      OS << "(" << TargetPrefix << "Intrinsic::ID)";
-    OS << "Intrinsic::not_intrinsic;\n";
+    OS << "  return Intrinsic::not_intrinsic;\n";
     OS << "}\n";
     OS << "#endif\n\n";
     return;
@@ -937,19 +913,15 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     OS << "  }\n";
   }
   OS << "  return ";
-  if (!TargetPrefix.empty())
-    OS << "(" << TargetPrefix << "Intrinsic::ID)";
   OS << "Intrinsic::not_intrinsic;\n";
   OS << "}\n";
   OS << "#endif\n\n";
 }
 
-void llvm::EmitIntrinsicEnums(RecordKeeper &RK, raw_ostream &OS,
-                              bool TargetOnly) {
-  IntrinsicEmitter(RK, TargetOnly).run(OS, /*Enums=*/true);
+void llvm::EmitIntrinsicEnums(RecordKeeper &RK, raw_ostream &OS) {
+  IntrinsicEmitter(RK).run(OS, /*Enums=*/true);
 }
 
-void llvm::EmitIntrinsicImpl(RecordKeeper &RK, raw_ostream &OS,
-                             bool TargetOnly) {
-  IntrinsicEmitter(RK, TargetOnly).run(OS, /*Enums=*/false);
+void llvm::EmitIntrinsicImpl(RecordKeeper &RK, raw_ostream &OS) {
+  IntrinsicEmitter(RK).run(OS, /*Enums=*/false);
 }
