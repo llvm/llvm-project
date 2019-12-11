@@ -41,6 +41,9 @@ COMPILER_RT_VISIBILITY uint32_t lprofBufferWriter(ProfDataWriter *This,
     size_t Length = IOVecs[I].ElmSize * IOVecs[I].NumElm;
     if (IOVecs[I].Data)
       memcpy(*Buffer, IOVecs[I].Data, Length);
+    else if (IOVecs[I].UseZeroPadding) {
+      /* Allocating the buffer should zero fill. */
+    }
     *Buffer += Length;
   }
   return 0;
@@ -85,7 +88,7 @@ lprofBufferIOWrite(ProfBufferIO *BufferIO, const uint8_t *Data, uint32_t Size) {
       return -1;
   }
   /* Special case, bypass the buffer completely. */
-  ProfDataIOVec IO[] = {{Data, sizeof(uint8_t), Size}};
+  ProfDataIOVec IO[] = {{Data, sizeof(uint8_t), Size, 0}};
   if (Size > BufferIO->BufferSz) {
     if (BufferIO->FileWriter->Write(BufferIO->FileWriter, IO, 1))
       return -1;
@@ -104,7 +107,7 @@ lprofBufferIOWrite(ProfBufferIO *BufferIO, const uint8_t *Data, uint32_t Size) {
 COMPILER_RT_VISIBILITY int lprofBufferIOFlush(ProfBufferIO *BufferIO) {
   if (BufferIO->CurOffset) {
     ProfDataIOVec IO[] = {
-        {BufferIO->BufferStart, sizeof(uint8_t), BufferIO->CurOffset}};
+        {BufferIO->BufferStart, sizeof(uint8_t), BufferIO->CurOffset, 0}};
     if (BufferIO->FileWriter->Write(BufferIO->FileWriter, IO, 1))
       return -1;
     BufferIO->CurOffset = 0;
@@ -259,11 +262,6 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   const uint64_t CountersSize = CountersEnd - CountersBegin;
   const uint64_t NamesSize = NamesEnd - NamesBegin;
 
-  /* Enough zeroes for padding. */
-  unsigned PageSize = getpagesize();
-  char *Zeroes = (char *)COMPILER_RT_ALLOCA(PageSize);
-  memset(Zeroes, 0, PageSize);
-
   /* Create the header. */
   __llvm_profile_header Header;
 
@@ -284,13 +282,13 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
   /* Write the data. */
   ProfDataIOVec IOVec[] = {
-      {&Header, sizeof(__llvm_profile_header), 1},
-      {DataBegin, sizeof(__llvm_profile_data), DataSize},
-      {Zeroes, sizeof(uint8_t), PaddingBytesBeforeCounters},
-      {CountersBegin, sizeof(uint64_t), CountersSize},
-      {Zeroes, sizeof(uint8_t), PaddingBytesAfterCounters},
-      {SkipNameDataWrite ? NULL : NamesBegin, sizeof(uint8_t), NamesSize},
-      {Zeroes, sizeof(uint8_t), PaddingBytesAfterNames}};
+      {&Header, sizeof(__llvm_profile_header), 1, 0},
+      {DataBegin, sizeof(__llvm_profile_data), DataSize, 0},
+      {NULL, sizeof(uint8_t), PaddingBytesBeforeCounters, 1},
+      {CountersBegin, sizeof(uint64_t), CountersSize, 0},
+      {NULL, sizeof(uint8_t), PaddingBytesAfterCounters, 1},
+      {SkipNameDataWrite ? NULL : NamesBegin, sizeof(uint8_t), NamesSize, 0},
+      {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1}};
   if (Writer->Write(Writer, IOVec, sizeof(IOVec) / sizeof(*IOVec)))
     return -1;
 
