@@ -183,6 +183,34 @@ supported include:
     Example: !dag(op, [a1, a2, ?], ["name1", "name2", "name3"]) results in
     (op a1:$name1, a2:$name2, ?:$name3).
 
+``!setop(dag, op)``
+    Return a DAG node with the same arguments as ``dag``, but with its
+    operator replaced with ``op``.
+
+    Example: ``!setop((foo 1, 2), bar)`` results in ``(bar 1, 2)``.
+
+``!getop(dag)``
+
+``!getop<type>(dag)``
+    Return the operator of the given DAG node.
+    Example: ``!getop((foo 1, 2))`` results in ``foo``.
+
+    The result of ``!getop`` can be used directly in a context where
+    any record value at all is acceptable (typically placing it into
+    another dag value). But in other contexts, it must be explicitly
+    cast to a particular class type. The ``!getop<type>`` syntax is
+    provided to make this easy.
+
+    For example, to assign the result to a class-typed value, you
+    could write either of these:
+      ``BaseClass b = !getop<BaseClass>(someDag);``
+
+      ``BaseClass b = !cast<BaseClass>(!getop(someDag));``
+
+    But to build a new dag node reusing the operator from another, no
+    cast is necessary:
+      ``dag d = !dag(!getop(someDag), args, names);``
+
 ``!listconcat(a, b, ...)``
     A list value that is the result of concatenating the 'a' and 'b' lists.
     The lists must have the same element type.
