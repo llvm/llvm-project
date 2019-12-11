@@ -535,14 +535,6 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
   }
 }
 
-DIE &DwarfDebug::constructSubprogramDefinitionDIE(const DISubprogram *SP) {
-  DICompileUnit *Unit = SP->getUnit();
-  assert(SP->isDefinition() && "Subprogram not a definition");
-  assert(Unit && "Subprogram definition without parent unit");
-  auto &CU = getOrCreateDwarfCompileUnit(Unit);
-  return *CU.getOrCreateSubprogramDIE(SP);
-}
-
 /// Try to interpret values loaded into registers that forward parameters
 /// for \p CallMI. Store parameters with interpreted value into \p Params.
 static void collectCallSiteParameters(const MachineInstr *CallMI,
@@ -753,15 +745,6 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
         if (!CalleeDecl || !CalleeDecl->getSubprogram())
           continue;
         CalleeSP = CalleeDecl->getSubprogram();
-
-        if (CalleeSP->isDefinition()) {
-          // Ensure that a subprogram DIE for the callee is available in the
-          // appropriate CU.
-          constructSubprogramDefinitionDIE(CalleeSP);
-        } else {
-          assert(CU.getDIE(CalleeSP) &&
-                 "Expected declaration subprogram DIE for callee");
-        }
       }
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
