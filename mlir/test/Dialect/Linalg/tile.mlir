@@ -213,9 +213,10 @@ func @fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: f32) {
 
 #id_2d = (i, j) -> (i, j)
 #pointwise_2d_trait = {
+  args_in = 2,
+  args_out = 1,
   indexing_maps = [#id_2d, #id_2d, #id_2d],
-  iterator_types = ["parallel", "parallel"],
-  n_views = [2, 1]
+  iterator_types = ["parallel", "parallel"]
 }
 
 func @pointwise(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,

@@ -4,9 +4,10 @@
 
 #id_1d = (i) -> (i)
 #pointwise_1d_trait = {
+  args_in = 1,
+  args_out = 1,
   indexing_maps = [#id_1d, #id_1d],
-  iterator_types = ["parallel"],
-  n_views = [1, 1]
+  iterator_types = ["parallel"]
 }
 func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) {
   linalg.indexed_generic #pointwise_1d_trait %operand, %result {
@@ -43,12 +44,13 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
 // TILE-0n25: linalg.indexed_generic
 
 #combined_indices_trait = {
+  args_in = 1,
+  args_out = 1,
   indexing_maps = [
     (i, j) -> (j, i + j),
     (i, j) -> (i, j)
   ],
-  iterator_types = ["parallel", "parallel"],
-  n_views = [1, 1]
+  iterator_types = ["parallel", "parallel"]
 }
 func @indexed_generic_matrix(%operand: memref<50x100xf32>, %result: memref<50x100xf32>) {
   linalg.indexed_generic #combined_indices_trait %operand, %result {

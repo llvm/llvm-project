@@ -222,7 +222,8 @@ func @foo(%0: f32, %1: f32, %2: f32) -> (f32, f32) {
   (i, j, k) -> (i, k, j)
 ]
 #trait = {
-  n_views = [1, 2],
+  args_in = 1,
+  args_out = 2,
   iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   fun = @foo,
@@ -247,7 +248,8 @@ func @generic_function(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1
 //       CHECK:       store %[[res]]#1, %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
 
 #trait2 = {
-  n_views = [1, 2],
+  args_in = 1,
+  args_out = 2,
   iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   library_call = "some_external_function_name_2",
@@ -280,7 +282,8 @@ func @indexed_foo(%i: index, %j: index, %k: index, %0: f32, %1: f32, %2: f32) ->
   return %i_float, %i_float : f32, f32
 }
 #trait3 = {
-  n_views = [1, 2],
+  args_in = 1,
+  args_out = 2,
   iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   fun = @indexed_foo,
@@ -310,7 +313,8 @@ func @indexed_generic_function(
 // CHECK:       store %[[res]]#1, %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
 
 #trait4 = {
-  n_views = [1, 2],
+  args_in = 1,
+  args_out = 2,
   iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   library_call = "some_external_function_name_2",

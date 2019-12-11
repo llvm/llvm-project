@@ -138,7 +138,8 @@ func @copy_transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %a
   (m, n, k) -> (m, n)
 ]
 #matmul_trait = {
-  n_views = [2, 1],
+  args_in = 2,
+  args_out = 1,
   iterator_types = ["parallel", "parallel", "reduction"],
   indexing_maps = #matmul_accesses,
   library_call = "external_outerproduct_matmul"
@@ -175,7 +176,8 @@ func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C
 
 
 #indexed_matmul_trait = {
-  n_views = [2, 1],
+  args_in = 2,
+  args_out = 1,
   iterator_types = ["parallel", "parallel", "reduction"],
   indexing_maps = #matmul_accesses,
   library_call = "external_indexed_outerproduct_matmul"
