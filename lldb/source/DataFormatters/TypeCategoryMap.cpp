@@ -208,11 +208,8 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
   LLDB_LOGF(log, "[%s] nothing found - returning empty SP", __FUNCTION__);
 }
 
-/// Explicit instantiations for the four types.
+/// Explicit instantiations for the three types.
 /// \{
-template void TypeCategoryMap::Get<lldb::TypeValidatorImplSP>(
-    FormattersMatchData &match_data, lldb::TypeValidatorImplSP &retval);
-
 template void
 TypeCategoryMap::Get<lldb::TypeFormatImplSP>(FormattersMatchData &match_data,
                                              lldb::TypeFormatImplSP &retval);

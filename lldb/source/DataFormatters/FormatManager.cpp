@@ -386,30 +386,6 @@ FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
   return synth_chosen_sp;
 }
 
-lldb::TypeValidatorImplSP
-FormatManager::GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp) {
-  if (!type_sp)
-    return lldb::TypeValidatorImplSP();
-  lldb::TypeValidatorImplSP validator_chosen_sp;
-  uint32_t num_categories = m_categories_map.GetCount();
-  lldb::TypeCategoryImplSP category_sp;
-  uint32_t prio_category = UINT32_MAX;
-  for (uint32_t category_id = 0; category_id < num_categories; category_id++) {
-    category_sp = GetCategoryAtIndex(category_id);
-    if (!category_sp->IsEnabled())
-      continue;
-    lldb::TypeValidatorImplSP validator_current_sp(
-        category_sp->GetValidatorForType(type_sp).get());
-    if (validator_current_sp &&
-        (validator_chosen_sp.get() == nullptr ||
-         (prio_category > category_sp->GetEnabledPosition()))) {
-      prio_category = category_sp->GetEnabledPosition();
-      validator_chosen_sp = validator_current_sp;
-    }
-  }
-  return validator_chosen_sp;
-}
-
 void FormatManager::ForEachCategory(TypeCategoryMap::ForEachCallback callback) {
   m_categories_map.ForEach(callback);
   std::lock_guard<std::recursive_mutex> guard(m_language_categories_mutex);
@@ -697,12 +673,6 @@ lldb::SyntheticChildrenSP
 FormatManager::GetSyntheticChildren(ValueObject &valobj,
                                     lldb::DynamicValueType use_dynamic) {
   return Get<lldb::SyntheticChildrenSP>(valobj, use_dynamic);
-}
-
-lldb::TypeValidatorImplSP
-FormatManager::GetValidator(ValueObject &valobj,
-                            lldb::DynamicValueType use_dynamic) {
-  return Get<lldb::TypeValidatorImplSP>(valobj, use_dynamic);
 }
 
 FormatManager::FormatManager()

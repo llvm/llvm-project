@@ -246,7 +246,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Execute the frontend actions.
   {
-    llvm::TimeTraceScope TimeScope("ExecuteCompiler", StringRef(""));
+    llvm::TimeTraceScope TimeScope("ExecuteCompiler");
     Success = ExecuteCompilerInvocation(Clang.get());
   }
 

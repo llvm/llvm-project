@@ -4,15 +4,13 @@
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --elf-linker-options %t1 2>&1 | FileCheck %s --check-prefix=CHECK -DFILE=%t1
 
-# CHECK:       LinkerOptions [
-# CHECK:         option 0: value 0
-# CHECK:         option 1: value 1
-# CHECK-EMPTY:
-# CHECK-NEXT:    warning: '[[FILE]]': SHT_LLVM_LINKER_OPTIONS section at index 2 is broken: an incomplete key-value pair was found. The last possible key was: "c"
-# CHECK-EMPTY:
-# CHECK-NEXT:    warning: '[[FILE]]': SHT_LLVM_LINKER_OPTIONS section at index 4 is broken: the content is not null-terminated
-# CHECK-NEXT:    option 3: value 3
-# CHECK-NEXT:  ]
+# CHECK:      LinkerOptions [
+# CHECK:        option 0: value 0
+# CHECK:        option 1: value 1
+# CHECK-NEXT:   warning: '[[FILE]]': SHT_LLVM_LINKER_OPTIONS section at index 2 is broken: an incomplete key-value pair was found. The last possible key was: "c"
+# CHECK-NEXT:   warning: '[[FILE]]': SHT_LLVM_LINKER_OPTIONS section at index 4 is broken: the content is not null-terminated
+# CHECK-NEXT:   option 3: value 3
+# CHECK-NEXT: ]
 
 --- !ELF
 FileHeader:

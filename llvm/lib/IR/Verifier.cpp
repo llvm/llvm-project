@@ -1843,6 +1843,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (Args.second && !CheckParam("number of elements", *Args.second))
       return;
   }
+
+  if (Attrs.hasFnAttribute("frame-pointer")) {
+    StringRef FP = Attrs.getAttribute(AttributeList::FunctionIndex,
+                                      "frame-pointer").getValueAsString();
+    if (FP != "all" && FP != "non-leaf" && FP != "none")
+      CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
+  }
 }
 
 void Verifier::verifyFunctionMetadata(

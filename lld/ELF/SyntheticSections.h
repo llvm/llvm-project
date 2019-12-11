@@ -1033,7 +1033,7 @@ public:
   // Thunk defines a symbol in this InputSection that can be used as target
   // of a relocation
   void addThunk(Thunk *t);
-  size_t getSize() const override { return size; }
+  size_t getSize() const override;
   void writeTo(uint8_t *buf) override;
   InputSection *getTargetInputSection() const;
   bool assignOffsets();

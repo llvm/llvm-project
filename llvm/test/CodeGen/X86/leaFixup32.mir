@@ -378,7 +378,6 @@ body:             |
     ; CHECK: liveins: $eax, $ebp, $ebx
     ; CHECK: $ebx = MOV32rr $ebp
     ; CHECK: $ebx = ADD32rr $ebx, $ebp, implicit-def $eflags
-    ; CHECK: $ebx = LEA32r killed $ebp, 1, $ebp, 0, $noreg
     ; CHECK: RETQ $ebx
     $ebx = LEA32r killed $ebp, 1, $ebp, 0, $noreg
     RETQ $ebx

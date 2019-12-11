@@ -808,6 +808,8 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
     }
     break;
   case OMPD_teams_distribute_simd:
+    if (OpenMPVersion < 50 && CKind == OMPC_if)
+      return false;
     switch (CKind) {
 #define OPENMP_TEAMS_DISTRIBUTE_SIMD_CLAUSE(Name)                              \
   case OMPC_##Name:                                                            \

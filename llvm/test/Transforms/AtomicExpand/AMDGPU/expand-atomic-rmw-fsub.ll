@@ -2,8 +2,8 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -atomic-expand %s | FileCheck -check-prefix=GCN %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -atomic-expand %s | FileCheck -check-prefix=GCN %s
 
-define float @test_atomicrmw_fadd_f32_flat(float* %ptr, float %value) {
-; GCN-LABEL: @test_atomicrmw_fadd_f32_flat(
+define float @test_atomicrmw_fsub_f32_flat(float* %ptr, float %value) {
+; GCN-LABEL: @test_atomicrmw_fsub_f32_flat(
 ; GCN-NEXT:    [[TMP1:%.*]] = load float, float* [[PTR:%.*]], align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:

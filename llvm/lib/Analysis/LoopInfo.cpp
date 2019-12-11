@@ -371,7 +371,7 @@ BranchInst *Loop::getLoopGuardBranch() const {
          "Expecting a loop with valid preheader and latch");
 
   // Loop should be in rotate form.
-  if (!isLoopExiting(Latch))
+  if (!isRotated())
     return nullptr;
 
   // Disallow loops with more than one unique exit block, as we do not verify

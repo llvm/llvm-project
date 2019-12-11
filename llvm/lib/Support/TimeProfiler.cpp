@@ -123,7 +123,9 @@ struct TimeTraceProfiler {
         J.attribute("ts", StartUs);
         J.attribute("dur", DurUs);
         J.attribute("name", E.Name);
-        J.attributeObject("args", [&] { J.attribute("detail", E.Detail); });
+        if (!E.Detail.empty()) {
+          J.attributeObject("args", [&] { J.attribute("detail", E.Detail); });
+        }
       });
     }
 

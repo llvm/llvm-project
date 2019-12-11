@@ -7,14 +7,12 @@
 # GNU-NEXT:   There are 3 section headers, starting at offset 0x58:
 # GNU:      Section Headers:
 # GNU-NEXT:  [Nr] Name
-# GNU-EMPTY:
 # GNU-NEXT:  error: '[[FILE]]': section header string table index 255 does not exist
 
 # LLVM:      ElfHeader {
 # LLVM:        StringTableSectionIndex: 255
 # LLVM-NEXT: }
 # LLVM-NEXT: Sections [
-# LLVM-EMPTY:
 # LLVM-NEXT: error: '[[FILE]]': section header string table index 255 does not exist
 
 --- !ELF

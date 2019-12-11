@@ -1405,10 +1405,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Shadow = ShadowBase + Offset
   /// Origin = (OriginBase + Offset) & ~3ULL
-  std::pair<Value *, Value *> getShadowOriginPtrUserspace(Value *Addr,
-                                                          IRBuilder<> &IRB,
-                                                          Type *ShadowTy,
-                                                          Align Alignment) {
+  std::pair<Value *, Value *>
+  getShadowOriginPtrUserspace(Value *Addr, IRBuilder<> &IRB, Type *ShadowTy,
+                              MaybeAlign Alignment) {
     Value *ShadowOffset = getShadowPtrOffset(Addr, IRB);
     Value *ShadowLong = ShadowOffset;
     uint64_t ShadowBase = MS.MapParams->ShadowBase;
@@ -1426,7 +1425,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       if (OriginBase != 0)
         OriginLong = IRB.CreateAdd(OriginLong,
                                    ConstantInt::get(MS.IntptrTy, OriginBase));
-      if (Alignment < kMinOriginAlignment) {
+      if (!Alignment || *Alignment < kMinOriginAlignment) {
         uint64_t Mask = kMinOriginAlignment.value() - 1;
         OriginLong =
             IRB.CreateAnd(OriginLong, ConstantInt::get(MS.IntptrTy, ~Mask));
@@ -1465,7 +1464,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   std::pair<Value *, Value *> getShadowOriginPtr(Value *Addr, IRBuilder<> &IRB,
                                                  Type *ShadowTy,
-                                                 Align Alignment,
+                                                 MaybeAlign Alignment,
                                                  bool isStore) {
     if (MS.CompileKernel)
       return getShadowOriginPtrKernel(Addr, IRB, ShadowTy, isStore);
@@ -2906,8 +2905,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value *V = I.getArgOperand(0);
     Value *Addr = I.getArgOperand(1);
-    const Align Alignment =
-        assumeAligned(cast<ConstantInt>(I.getArgOperand(2))->getZExtValue());
+    const MaybeAlign Alignment(
+        cast<ConstantInt>(I.getArgOperand(2))->getZExtValue());
     Value *Mask = I.getArgOperand(3);
     Value *Shadow = getShadow(V);
 
@@ -2923,21 +2922,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       insertShadowCheck(Mask, &I);
     }
 
-    IRB.CreateMaskedStore(Shadow, ShadowPtr, Alignment.value(), Mask);
+    IRB.CreateMaskedStore(Shadow, ShadowPtr, Alignment ? Alignment->value() : 0,
+                          Mask);
 
     if (MS.TrackOrigins) {
       auto &DL = F.getParent()->getDataLayout();
       paintOrigin(IRB, getOrigin(V), OriginPtr,
                   DL.getTypeStoreSize(Shadow->getType()),
-                  std::max(Alignment, kMinOriginAlignment));
+                  llvm::max(Alignment, kMinOriginAlignment));
     }
   }
 
   bool handleMaskedLoad(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Addr = I.getArgOperand(0);
-    const Align Alignment =
-        assumeAligned(cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
+    const MaybeAlign Alignment(
+        cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
     Value *Mask = I.getArgOperand(2);
     Value *PassThru = I.getArgOperand(3);
 
@@ -2946,8 +2946,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (PropagateShadow) {
       std::tie(ShadowPtr, OriginPtr) =
           getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ false);
-      setShadow(&I, IRB.CreateMaskedLoad(ShadowPtr, Alignment.value(), Mask,
-                                         getShadow(PassThru), "_msmaskedld"));
+      setShadow(&I, IRB.CreateMaskedLoad(
+                        ShadowPtr, Alignment ? Alignment->value() : 0, Mask,
+                        getShadow(PassThru), "_msmaskedld"));
     } else {
       setShadow(&I, getCleanShadow(&I));
     }
@@ -3316,15 +3317,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                "ByVal argument is not a pointer!");
         Size = DL.getTypeAllocSize(A->getType()->getPointerElementType());
         if (ArgOffset + Size > kParamTLSSize) break;
-        const Align ParamAlignment = assumeAligned(CS.getParamAlignment(i));
-        const Align Alignment = std::min(ParamAlignment, kShadowTLSAlignment);
+        const MaybeAlign ParamAlignment(CS.getParamAlignment(i));
+        MaybeAlign Alignment = llvm::None;
+        if (ParamAlignment)
+          Alignment = std::min(*ParamAlignment, kShadowTLSAlignment);
         Value *AShadowPtr =
             getShadowOriginPtr(A, IRB, IRB.getInt8Ty(), Alignment,
                                /*isStore*/ false)
                 .first;
 
-        Store = IRB.CreateMemCpy(ArgShadowBase, Alignment.value(), AShadowPtr,
-                                 Alignment.value(), Size);
+        Store = IRB.CreateMemCpy(ArgShadowBase,
+                                 Alignment ? Alignment->value() : 0, AShadowPtr,
+                                 Alignment ? Alignment->value() : 0, Size);
         // TODO(glider): need to copy origins.
       } else {
         Size = DL.getTypeAllocSize(A->getType());

@@ -6,15 +6,13 @@
 # RUN: llvm-readelf -V %t1 2>&1 | FileCheck -DFILE=%t1 %s --check-prefix=GNU-INVALID-LINK
 # RUN: llvm-readobj -V %t1 2>&1 | FileCheck -DFILE=%t1 %s --check-prefix=LLVM-INVALID-LINK
 
-# GNU-INVALID-LINK:       Version symbols section '.gnu.version' contains 0 entries:
-# GNU-INVALID-LINK-EMPTY:
-# GNU-INVALID-LINK-NEXT:  warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: invalid section index: 255
-# GNU-INVALID-LINK-NEXT:   Addr: 0000000000000000  Offset: 0x000040  Link: 255 (<corrupt>)
+# GNU-INVALID-LINK:      Version symbols section '.gnu.version' contains 0 entries:
+# GNU-INVALID-LINK-NEXT: warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: invalid section index: 255
+# GNU-INVALID-LINK-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 255 (<corrupt>)
 
-# LLVM-INVALID-LINK:       VersionSymbols [
-# LLVM-INVALID-LINK-EMPTY:
-# LLVM-INVALID-LINK-NEXT:  warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: invalid section index: 255
-# LLVM-INVALID-LINK-NEXT:  ]
+# LLVM-INVALID-LINK:      VersionSymbols [
+# LLVM-INVALID-LINK-NEXT: warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: invalid section index: 255
+# LLVM-INVALID-LINK-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -35,16 +33,14 @@ Sections:
 # RUN: llvm-readelf -V %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=INVALID-SYMBOL-TABLE-GNU
 # RUN: llvm-readobj -V %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=INVALID-SYMBOL-TABLE-LLVM
 
-# INVALID-SYMBOL-TABLE-GNU:       Version symbols section '.gnu.version' contains 1 entries:
-# INVALID-SYMBOL-TABLE-GNU-NEXT:   Addr: 0000000000000000  Offset: 0x000040  Link: 0 ()
-# INVALID-SYMBOL-TABLE-GNU-EMPTY:
-# INVALID-SYMBOL-TABLE-GNU-NEXT:   warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: expected SHT_DYNSYM, but got SHT_NULL
-# INVALID-SYMBOL-TABLE-GNU-NEXT:   000:   0 (*local*)
+# INVALID-SYMBOL-TABLE-GNU:      Version symbols section '.gnu.version' contains 1 entries:
+# INVALID-SYMBOL-TABLE-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 0 ()
+# INVALID-SYMBOL-TABLE-GNU-NEXT:  warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: expected SHT_DYNSYM, but got SHT_NULL
+# INVALID-SYMBOL-TABLE-GNU-NEXT:  000:   0 (*local*)
 
-# INVALID-SYMBOL-TABLE-LLVM:       VersionSymbols [
-# INVALID-SYMBOL-TABLE-LLVM-EMPTY:
-# INVALID-SYMBOL-TABLE-LLVM-NEXT:  warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: expected SHT_DYNSYM, but got SHT_NULL
-# INVALID-SYMBOL-TABLE-LLVM-NEXT:  ]
+# INVALID-SYMBOL-TABLE-LLVM:      VersionSymbols [
+# INVALID-SYMBOL-TABLE-LLVM-NEXT: warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: expected SHT_DYNSYM, but got SHT_NULL
+# INVALID-SYMBOL-TABLE-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -66,16 +62,14 @@ Sections:
 # RUN: llvm-readelf -V %t3 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=INVALID-STRING-TABLE-GNU
 # RUN: llvm-readobj -V %t3 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=INVALID-STRING-TABLE-LLVM
 
-# INVALID-STRING-TABLE-GNU:       Version symbols section '.gnu.version' contains 1 entries:
-# INVALID-STRING-TABLE-GNU-NEXT:   Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
-# INVALID-STRING-TABLE-GNU-EMPTY:
-# INVALID-STRING-TABLE-GNU-NEXT:   warning: '[[FILE]]': can't get a string table for the symbol table linked to SHT_GNU_versym section with index 1: invalid string table linked to SHT_DYNSYM section with index 5: invalid sh_type for string table section [index 2]: expected SHT_STRTAB, but got SHT_NULL
-# INVALID-STRING-TABLE-GNU-NEXT:   000:   0 (*local*)
+# INVALID-STRING-TABLE-GNU:      Version symbols section '.gnu.version' contains 1 entries:
+# INVALID-STRING-TABLE-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
+# INVALID-STRING-TABLE-GNU-NEXT:  warning: '[[FILE]]': can't get a string table for the symbol table linked to SHT_GNU_versym section with index 1: invalid string table linked to SHT_DYNSYM section with index 5: invalid sh_type for string table section [index 2]: expected SHT_STRTAB, but got SHT_NULL
+# INVALID-STRING-TABLE-GNU-NEXT:  000:   0 (*local*)
 
-# INVALID-STRING-TABLE-LLVM:       VersionSymbols [
-# INVALID-STRING-TABLE-LLVM-EMPTY:
-# INVALID-STRING-TABLE-LLVM-NEXT:  warning: '[[FILE]]': can't get a string table for the symbol table linked to SHT_GNU_versym section with index 1: invalid string table linked to SHT_DYNSYM section with index 5: invalid sh_type for string table section [index 2]: expected SHT_STRTAB, but got SHT_NULL
-# INVALID-STRING-TABLE-LLVM-NEXT:  ]
+# INVALID-STRING-TABLE-LLVM:      VersionSymbols [
+# INVALID-STRING-TABLE-LLVM-NEXT: warning: '[[FILE]]': can't get a string table for the symbol table linked to SHT_GNU_versym section with index 1: invalid string table linked to SHT_DYNSYM section with index 5: invalid sh_type for string table section [index 2]: expected SHT_STRTAB, but got SHT_NULL
+# INVALID-STRING-TABLE-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -98,15 +92,13 @@ DynamicSymbols: []
 # RUN: llvm-readelf -V %t4 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=MISALIGNED-GNU
 # RUN: llvm-readobj -V %t4 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=MISALIGNED-LLVM
 
-# MISALIGNED-GNU:       Version symbols section '.gnu.version' contains 0 entries:
-# MISALIGNED-GNU-NEXT:   Addr: 0000000000000000  Offset: 0x00ffff  Link: 0 ()
-# MISALIGNED-GNU-EMPTY:
-# MISALIGNED-GNU-NEXT:   warning: '[[FILE]]': the SHT_GNU_versym section with index 1 is misaligned
+# MISALIGNED-GNU:      Version symbols section '.gnu.version' contains 0 entries:
+# MISALIGNED-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x00ffff  Link: 0 ()
+# MISALIGNED-GNU-NEXT:  warning: '[[FILE]]': the SHT_GNU_versym section with index 1 is misaligned
 
-# MISALIGNED-LLVM:       VersionSymbols [
-# MISALIGNED-LLVM-EMPTY:
-# MISALIGNED-LLVM-NEXT:   warning: '[[FILE]]': the SHT_GNU_versym section with index 1 is misaligned
-# MISALIGNED-LLVM-NEXT:  ]
+# MISALIGNED-LLVM:      VersionSymbols [
+# MISALIGNED-LLVM-NEXT:  warning: '[[FILE]]': the SHT_GNU_versym section with index 1 is misaligned
+# MISALIGNED-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -126,15 +118,13 @@ Sections:
 # RUN: llvm-readelf -V %t5 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=INVALID-ENT-SIZE-GNU
 # RUN: llvm-readobj -V %t5 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=INVALID-ENT-SIZE-LLVM
 
-# INVALID-ENT-SIZE-GNU:       Version symbols section '.gnu.version' contains 1 entries:
-# INVALID-ENT-SIZE-GNU-NEXT:   Addr: 0000000000000000  Offset: 0x000040  Link: 0 ()
-# INVALID-ENT-SIZE-GNU-EMPTY:
-# INVALID-ENT-SIZE-GNU-NEXT:  warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
+# INVALID-ENT-SIZE-GNU:      Version symbols section '.gnu.version' contains 1 entries:
+# INVALID-ENT-SIZE-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 0 ()
+# INVALID-ENT-SIZE-GNU-NEXT: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
 
-# INVALID-ENT-SIZE-LLVM:       VersionSymbols [
-# INVALID-ENT-SIZE-LLVM-EMPTY:
-# INVALID-ENT-SIZE-LLVM-NEXT:  warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
-# INVALID-ENT-SIZE-LLVM-NEXT:  ]
+# INVALID-ENT-SIZE-LLVM:      VersionSymbols [
+# INVALID-ENT-SIZE-LLVM-NEXT: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
+# INVALID-ENT-SIZE-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -154,16 +144,14 @@ Sections:
 # RUN: llvm-readelf -V %t6 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=SYMBOLS-NUM-MISMATCH-GNU
 # RUN: llvm-readobj -V %t6 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=SYMBOLS-NUM-MISMATCH-LLVM
 
-# SYMBOLS-NUM-MISMATCH-GNU:       Version symbols section '.gnu.version' contains 2 entries:
-# SYMBOLS-NUM-MISMATCH-GNU-NEXT:   Addr: 0000000000000000  Offset: 0x000040  Link: 4 (.dynsym)
-# SYMBOLS-NUM-MISMATCH-GNU-EMPTY:
-# SYMBOLS-NUM-MISMATCH-GNU-NEXT:   warning: '[[FILE]]': SHT_GNU_versym section with index 1: the number of entries (2) does not match the number of symbols (3) in the symbol table with index 4
-# SYMBOLS-NUM-MISMATCH-GNU-NEXT:    000:   0 (*local*)       1 (*global*)
+# SYMBOLS-NUM-MISMATCH-GNU:      Version symbols section '.gnu.version' contains 2 entries:
+# SYMBOLS-NUM-MISMATCH-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 4 (.dynsym)
+# SYMBOLS-NUM-MISMATCH-GNU-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section with index 1: the number of entries (2) does not match the number of symbols (3) in the symbol table with index 4
+# SYMBOLS-NUM-MISMATCH-GNU-NEXT:   000:   0 (*local*)       1 (*global*)
 
-# SYMBOLS-NUM-MISMATCH-LLVM:       VersionSymbols [
-# SYMBOLS-NUM-MISMATCH-LLVM-EMPTY:
-# SYMBOLS-NUM-MISMATCH-LLVM-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section with index 1: the number of entries (2) does not match the number of symbols (3) in the symbol table with index 4
-# SYMBOLS-NUM-MISMATCH-LLVM-NEXT:  ]
+# SYMBOLS-NUM-MISMATCH-LLVM:      VersionSymbols [
+# SYMBOLS-NUM-MISMATCH-LLVM-NEXT: warning: '[[FILE]]': SHT_GNU_versym section with index 1: the number of entries (2) does not match the number of symbols (3) in the symbol table with index 4
+# SYMBOLS-NUM-MISMATCH-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -228,26 +216,23 @@ DynamicSymbols:
 # RUN: llvm-readelf --dyn-syms %t8 2>&1 \
 # RUN:   | FileCheck -DFILE=%t8 --implicit-check-not=warning --check-prefix=VERSION-OVERFLOW-GNU %s
 
-# VERSION-OVERFLOW-LLVM:       DynamicSymbols [
-# VERSION-OVERFLOW-LLVM-EMPTY:
-# VERSION-OVERFLOW-LLVM-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 255 which is missing
-# VERSION-OVERFLOW-LLVM-NEXT:    Symbol {
-# VERSION-OVERFLOW-LLVM-NEXT:      Name: @<corrupt> (0)
-# VERSION-OVERFLOW-LLVM:       warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 254 which is missing
-# VERSION-OVERFLOW-LLVM-NEXT:    Symbol {
-# VERSION-OVERFLOW-LLVM-NEXT:      Name: foo@<corrupt> (5)
-# VERSION-OVERFLOW-LLVM:         Symbol {
-# VERSION-OVERFLOW-LLVM-NEXT:      Name: bar@<corrupt> (1)
+# VERSION-OVERFLOW-LLVM:      DynamicSymbols [
+# VERSION-OVERFLOW-LLVM-NEXT: warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 255 which is missing
+# VERSION-OVERFLOW-LLVM-NEXT:   Symbol {
+# VERSION-OVERFLOW-LLVM-NEXT:     Name: @<corrupt> (0)
+# VERSION-OVERFLOW-LLVM:      warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 254 which is missing
+# VERSION-OVERFLOW-LLVM-NEXT:   Symbol {
+# VERSION-OVERFLOW-LLVM-NEXT:     Name: foo@<corrupt> (5)
+# VERSION-OVERFLOW-LLVM:        Symbol {
+# VERSION-OVERFLOW-LLVM-NEXT:     Name: bar@<corrupt> (1)
 
-# VERSION-OVERFLOW-GNU:       Symbol table '.dynsym' contains 3 entries:
-# VERSION-OVERFLOW-GNU-NEXT:   Num:    Value          Size Type    Bind   Vis       Ndx Name
-# VERSION-OVERFLOW-GNU-EMPTY:
-# VERSION-OVERFLOW-GNU-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 255 which is missing
-# VERSION-OVERFLOW-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND @<corrupt>
-# VERSION-OVERFLOW-GNU-EMPTY:
-# VERSION-OVERFLOW-GNU-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 254 which is missing
-# VERSION-OVERFLOW-GNU-NEXT:      1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo@<corrupt>
-# VERSION-OVERFLOW-GNU-NEXT:      2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND bar@<corrupt
+# VERSION-OVERFLOW-GNU:      Symbol table '.dynsym' contains 3 entries:
+# VERSION-OVERFLOW-GNU-NEXT:  Num:    Value          Size Type    Bind   Vis       Ndx Name
+# VERSION-OVERFLOW-GNU-NEXT: warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 255 which is missing
+# VERSION-OVERFLOW-GNU-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND @<corrupt>
+# VERSION-OVERFLOW-GNU-NEXT: warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 254 which is missing
+# VERSION-OVERFLOW-GNU-NEXT:     1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo@<corrupt>
+# VERSION-OVERFLOW-GNU-NEXT:     2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND bar@<corrupt
 
 --- !ELF
 FileHeader:

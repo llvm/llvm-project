@@ -169,12 +169,12 @@
 # NOEX-NEXT:           add     x16, x16, #1032
 # NOEX-NEXT:           br      x17
 
-## Force BTI entries with the --force-bti command line option. Expect a warning
+## Force BTI entries with the -z force-bti command line option. Expect a warning
 ## from the file without the .note.gnu.property.
 
-# RUN: ld.lld %t.o %t2.o --force-bti %t.so -o %tforcebti.exe 2>&1 | FileCheck --check-prefix=FORCE-WARN %s
+# RUN: ld.lld %t.o %t2.o -z force-bti %t.so -o %tforcebti.exe 2>&1 | FileCheck --check-prefix=FORCE-WARN %s
 
-# FORCE-WARN: aarch64-feature-bti.s.tmp2.o: --force-bti: file does not have BTI property
+# FORCE-WARN: aarch64-feature-bti.s.tmp2.o: -z force-bti: file does not have BTI property
 
 
 # RUN: llvm-readelf -n %tforcebti.exe | FileCheck --check-prefix=BTIPROP %s
