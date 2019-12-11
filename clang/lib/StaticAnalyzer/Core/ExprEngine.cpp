@@ -193,8 +193,6 @@ typedef llvm::ImmutableMap<ConstructedObjectKey, SVal>
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
                                  ObjectsUnderConstructionMap)
 
-REGISTER_SET_WITH_PROGRAMSTATE(EscapedLocals, const MemRegion *)
-
 //===----------------------------------------------------------------------===//
 // Engine construction and deletion.
 //===----------------------------------------------------------------------===//
@@ -725,12 +723,6 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
       SymReaper.markLive(MR);
   }
 
-  EscapedLocalsTy EscapedRegions = CleanedState->get<EscapedLocals>();
-  for (const MemRegion *MR : EscapedRegions) {
-    if (!SymReaper.isLiveRegion(MR))
-      CleanedState = CleanedState->remove<EscapedLocals>(MR);
-  }
-
   getCheckerManager().runCheckersForLiveSymbols(CleanedState, SymReaper);
 
   // Create a state in which dead bindings are removed from the environment
@@ -1200,11 +1192,6 @@ ProgramStateRef ExprEngine::escapeValue(ProgramStateRef State, SVal V,
       State->scanReachableSymbols<CollectReachableSymbolsCallback>(V);
   return getCheckerManager().runCheckersForPointerEscape(
       State, Scanner.getSymbols(), /*CallEvent*/ nullptr, K, nullptr);
-}
-
-ProgramStateRef ExprEngine::processLocalRegionEscape(ProgramStateRef State,
-                                                     const MemRegion *R) const {
-  return State->add<EscapedLocals>(R);
 }
 
 void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
@@ -2693,8 +2680,7 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
 
 // A value escapes in four possible cases:
 // (1) We are binding to something that is not a memory region.
-// (2) We are binding to a MemRegion that does not have stack storage
-//     or the stack storage is escaped.
+// (2) We are binding to a MemRegion that does not have stack storage.
 // (3) We are binding to a top-level parameter region with a non-trivial
 //     destructor. We won't see the destructor during analysis, but it's there.
 // (4) We are binding to a MemRegion with stack storage that the store
@@ -2705,7 +2691,7 @@ ExprEngine::processPointerEscapedOnBind(ProgramStateRef State, SVal Loc,
 
   // Cases (1) and (2).
   const MemRegion *MR = Loc.getAsRegion();
-  if (!MR || !MR->hasStackStorage() || State->contains<EscapedLocals>(MR))
+  if (!MR || !MR->hasStackStorage())
     return escapeValue(State, Val, PSK_EscapeOnBind);
 
   // Case (3).
