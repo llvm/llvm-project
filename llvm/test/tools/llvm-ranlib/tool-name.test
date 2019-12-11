@@ -1,0 +1,13 @@
+## Don't make symlinks on Windows.
+# UNSUPPORTED: system-windows
+
+# RUN: rm -rf %t
+# RUN: mkdir %t
+# RUN: ln -s llvm-ranlib %t/llvm-ranlib-9
+# RUN: ln -s llvm-ranlib %t/ranlib.exe
+
+# RUN: llvm-ranlib -h | FileCheck %s
+# RUN: %t/llvm-ranlib-9 -h | FileCheck %s
+# RUN: %t/ranlib.exe -h | FileCheck %s
+
+# CHECK: USAGE: llvm-ranlib
