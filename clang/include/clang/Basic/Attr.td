@@ -1607,6 +1607,14 @@ def BPFPreserveAccessIndex : InheritableAttr,
   let LangOpts = [COnly];
 }
 
+def WebAssemblyExportName : InheritableAttr,
+                            TargetSpecificAttr<TargetWebAssembly> {
+  let Spellings = [Clang<"export_name">];
+  let Args = [StringArgument<"ExportName">];
+  let Documentation = [WebAssemblyExportNameDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+}
+
 def WebAssemblyImportModule : InheritableAttr,
                               TargetSpecificAttr<TargetWebAssembly> {
   let Spellings = [Clang<"import_module">];

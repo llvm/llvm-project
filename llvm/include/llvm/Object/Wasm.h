@@ -280,6 +280,7 @@ private:
   uint32_t StartFunction = -1;
   bool HasLinkingSection = false;
   bool HasDylinkSection = false;
+  bool SeenCodeSection = false;
   wasm::WasmLinkingData LinkingData;
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedFunctions = 0;
