@@ -203,6 +203,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
 
   case DefaultTemplateArgumentChecking:
   case DeclaringSpecialMember:
+  case DeclaringImplicitEqualityComparison:
   case DefiningSynthesizedFunction:
   case ExceptionSpecEvaluation:
   case ConstraintSubstitution:
@@ -671,6 +672,11 @@ void Sema::PrintInstantiationStack() {
         << cast<CXXRecordDecl>(Active->Entity) << Active->SpecialMember;
       break;
 
+    case CodeSynthesisContext::DeclaringImplicitEqualityComparison:
+      Diags.Report(Active->Entity->getLocation(),
+                   diag::note_in_declaration_of_implicit_equality_comparison);
+      break;
+
     case CodeSynthesisContext::DefiningSynthesizedFunction: {
       // FIXME: For synthesized functions that are not defaulted,
       // produce a note.
@@ -772,6 +778,7 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
       return Active->DeductionInfo;
 
     case CodeSynthesisContext::DeclaringSpecialMember:
+    case CodeSynthesisContext::DeclaringImplicitEqualityComparison:
     case CodeSynthesisContext::DefiningSynthesizedFunction:
     case CodeSynthesisContext::RewritingOperatorAsSpaceship:
       // This happens in a context unrelated to template instantiation, so
