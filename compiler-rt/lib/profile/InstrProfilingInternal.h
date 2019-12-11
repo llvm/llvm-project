@@ -41,11 +41,18 @@ int __llvm_profile_write_buffer_internal(
 /*!
  * The data structure describing the data to be written by the
  * low level writer callback function.
+ *
+ * If \ref ProfDataIOVec.Data is null, and \ref ProfDataIOVec.UseZeroPadding is
+ * 0, the write is skipped (the writer simply advances ElmSize*NumElm bytes).
+ *
+ * If \ref ProfDataIOVec.Data is null, and \ref ProfDataIOVec.UseZeroPadding is
+ * nonzero, ElmSize*NumElm zero bytes are written.
  */
 typedef struct ProfDataIOVec {
   const void *Data;
   size_t ElmSize;
   size_t NumElm;
+  int UseZeroPadding;
 } ProfDataIOVec;
 
 struct ProfDataWriter;

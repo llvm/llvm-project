@@ -128,6 +128,8 @@ static uint32_t lprofVMOWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
                              __llvm_profile_offset, Length);
       if (Status != ZX_OK)
         return -1;
+    } else if (IOVecs[I].UseZeroPadding) {
+      /* Resizing the VMO should zero fill. */
     }
     __llvm_profile_offset += Length;
   }
