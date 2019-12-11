@@ -324,16 +324,20 @@ TEST(StringRefTest, Trim) {
   StringRef Str0("hello");
   StringRef Str1(" hello ");
   StringRef Str2("  hello  ");
+  StringRef Str3("\t\n\v\f\r  hello  \t\n\v\f\r");
 
   EXPECT_EQ(StringRef("hello"), Str0.rtrim());
   EXPECT_EQ(StringRef(" hello"), Str1.rtrim());
   EXPECT_EQ(StringRef("  hello"), Str2.rtrim());
+  EXPECT_EQ(StringRef("\t\n\v\f\r  hello"), Str3.rtrim());
   EXPECT_EQ(StringRef("hello"), Str0.ltrim());
   EXPECT_EQ(StringRef("hello "), Str1.ltrim());
   EXPECT_EQ(StringRef("hello  "), Str2.ltrim());
+  EXPECT_EQ(StringRef("hello  \t\n\v\f\r"), Str3.ltrim());
   EXPECT_EQ(StringRef("hello"), Str0.trim());
   EXPECT_EQ(StringRef("hello"), Str1.trim());
   EXPECT_EQ(StringRef("hello"), Str2.trim());
+  EXPECT_EQ(StringRef("hello"), Str3.trim());
 
   EXPECT_EQ(StringRef("ello"), Str0.trim("hhhhhhhhhhh"));
 
