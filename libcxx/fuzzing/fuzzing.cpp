@@ -457,6 +457,7 @@ static int regex_helper(const uint8_t *data, size_t size, std::regex::flag_type 
 {
     if (size > 0)
     {
+#ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
             std::string s((const char *)data, size);
@@ -464,6 +465,11 @@ static int regex_helper(const uint8_t *data, size_t size, std::regex::flag_type 
             return std::regex_match(s, re) ? 1 : 0;
         }
         catch (std::regex_error &ex) {}
+#else
+      ((void)data);
+      ((void)size);
+      ((void)flag);
+#endif
     }
     return 0;
 }
