@@ -462,6 +462,12 @@ int memcmp7 (char *a, size_t x, size_t y, size_t n) {
          memcmp(&a[x*y], a, n);
 }
 
+int memcmp8(char *a, size_t n) {
+  char *b = 0;
+  // Do not warn about the first argument!
+  return memcmp(a, b, n); // expected-warning{{Null pointer passed as 2nd argument to memory comparison function}}
+}
+
 //===----------------------------------------------------------------------===
 // bcopy()
 //===----------------------------------------------------------------------===

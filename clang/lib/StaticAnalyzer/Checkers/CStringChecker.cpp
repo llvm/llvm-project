@@ -1313,9 +1313,9 @@ void CStringChecker::evalMemcmp(CheckerContext &C, const CallExpr *CE) const {
     ProgramStateRef StSameBuf, StNotSameBuf;
     std::tie(StSameBuf, StNotSameBuf) = state->assume(SameBuf);
 
-    // If the two arguments might be the same buffer, we know the result is 0,
+    // If the two arguments are the same buffer, we know the result is 0,
     // and we only need to check one size.
-    if (StSameBuf) {
+    if (StSameBuf && !StNotSameBuf) {
       state = StSameBuf;
       state = CheckBufferAccess(C, state, Size, Left);
       if (state) {
@@ -1323,20 +1323,19 @@ void CStringChecker::evalMemcmp(CheckerContext &C, const CallExpr *CE) const {
                                     svalBuilder.makeZeroVal(CE->getType()));
         C.addTransition(state);
       }
+      return;
     }
 
-    // If the two arguments might be different buffers, we have to check the
-    // size of both of them.
-    if (StNotSameBuf) {
-      state = StNotSameBuf;
-      state = CheckBufferAccess(C, state, Size, Left, Right);
-      if (state) {
-        // The return value is the comparison result, which we don't know.
-        SVal CmpV = svalBuilder.conjureSymbolVal(nullptr, CE, LCtx,
-                                                 C.blockCount());
-        state = state->BindExpr(CE, LCtx, CmpV);
-        C.addTransition(state);
-      }
+    // If the two arguments might be different buffers, we have to check
+    // the size of both of them.
+    assert(StNotSameBuf);
+    state = CheckBufferAccess(C, state, Size, Left, Right);
+    if (state) {
+      // The return value is the comparison result, which we don't know.
+      SVal CmpV =
+          svalBuilder.conjureSymbolVal(nullptr, CE, LCtx, C.blockCount());
+      state = state->BindExpr(CE, LCtx, CmpV);
+      C.addTransition(state);
     }
   }
 }
