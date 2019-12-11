@@ -13,8 +13,6 @@
 
 using namespace lldb_private;
 
-static uint64_t g_TotalSizeOfMetadata = 0;
-
 typedef llvm::DenseMap<clang::ExternalASTSource *,
                        ClangExternalASTSourceCommon *>
     ASTSourceMap;
@@ -44,7 +42,6 @@ ClangExternalASTSourceCommon::Lookup(clang::ExternalASTSource *source) {
 
 ClangExternalASTSourceCommon::ClangExternalASTSourceCommon()
     : clang::ExternalASTSource() {
-  g_TotalSizeOfMetadata += m_metadata.size();
   std::unique_lock<std::mutex> guard;
   GetSourceMap(guard)[this] = this;
 }
@@ -52,7 +49,6 @@ ClangExternalASTSourceCommon::ClangExternalASTSourceCommon()
 ClangExternalASTSourceCommon::~ClangExternalASTSourceCommon() {
   std::unique_lock<std::mutex> guard;
   GetSourceMap(guard).erase(this);
-  g_TotalSizeOfMetadata -= m_metadata.size();
 }
 
 ClangASTMetadata *
@@ -65,10 +61,7 @@ ClangExternalASTSourceCommon::GetMetadata(const void *object) {
 
 void ClangExternalASTSourceCommon::SetMetadata(const void *object,
                                                ClangASTMetadata &metadata) {
-  uint64_t orig_size = m_metadata.size();
   m_metadata[object] = metadata;
-  uint64_t new_size = m_metadata.size();
-  g_TotalSizeOfMetadata += (new_size - orig_size);
 }
 
 bool ClangExternalASTSourceCommon::HasMetadata(const void *object) {
