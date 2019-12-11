@@ -176,7 +176,7 @@ public:
   };
   std::vector<TargetSet> Targets;
 
-  explicit CodeGenIntrinsicTable(const RecordKeeper &RC, bool TargetOnly);
+  explicit CodeGenIntrinsicTable(const RecordKeeper &RC);
   CodeGenIntrinsicTable() = default;
 
   bool empty() const { return Intrinsics.empty(); }
