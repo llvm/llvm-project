@@ -261,6 +261,11 @@ def vecspltisw : PatLeaf<(build_vector), [{
   return PPC::get_VSPLTI_elt(N, 4, *CurDAG).getNode() != nullptr;
 }], VSPLTISW_get_imm>;
 
+def immEQOneV : PatLeaf<(build_vector), [{
+  if (ConstantSDNode *C = cast<BuildVectorSDNode>(N)->getConstantSplatNode())
+    return C->isOne();
+  return false;
+}]>;
 //===----------------------------------------------------------------------===//
 // Helpers for defining instructions that directly correspond to intrinsics.
 
@@ -1091,6 +1096,20 @@ def : Pat<(v4f32 (vselect v4i32:$vA, v4f32:$vB, v4f32:$vC)),
           (VSEL $vC, $vB, $vA)>;
 def : Pat<(v2f64 (vselect v2i64:$vA, v2f64:$vB, v2f64:$vC)),
           (VSEL $vC, $vB, $vA)>;
+
+// Vector Integer Average Instructions
+def : Pat<(v4i32 (sra (sub v4i32:$vA, (vnot_ppc v4i32:$vB)),
+          (v4i32 (immEQOneV)))), (v4i32 (VAVGSW $vA, $vB))>;
+def : Pat<(v8i16 (sra (sub v8i16:$vA, (v8i16 (bitconvert(vnot_ppc v4i32:$vB)))),
+          (v8i16 (immEQOneV)))), (v8i16 (VAVGSH $vA, $vB))>;
+def : Pat<(v16i8 (sra (sub v16i8:$vA, (v16i8 (bitconvert(vnot_ppc v4i32:$vB)))),
+          (v16i8 (immEQOneV)))), (v16i8 (VAVGSB $vA, $vB))>;
+def : Pat<(v4i32 (srl (sub v4i32:$vA, (vnot_ppc v4i32:$vB)),
+          (v4i32 (immEQOneV)))), (v4i32 (VAVGUW $vA, $vB))>;
+def : Pat<(v8i16 (srl (sub v8i16:$vA, (v8i16 (bitconvert(vnot_ppc v4i32:$vB)))),
+          (v8i16 (immEQOneV)))), (v8i16 (VAVGUH $vA, $vB))>;
+def : Pat<(v16i8 (srl (sub v16i8:$vA, (v16i8 (bitconvert(vnot_ppc v4i32:$vB)))),
+          (v16i8 (immEQOneV)))), (v16i8 (VAVGUB $vA, $vB))>;
 
 } // end HasAltivec
 
