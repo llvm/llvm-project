@@ -25,6 +25,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -6589,7 +6590,9 @@ SDValue SelectionDAG::getMemIntrinsicNode(
   if (Align == 0)  // Ensure that codegen never sees alignment 0
     Align = getEVTAlignment(MemVT);
 
-  if (!Size)
+  if (!Size && MemVT.isScalableVector())
+    Size = MemoryLocation::UnknownSize;
+  else if (!Size)
     Size = MemVT.getStoreSize();
 
   MachineFunction &MF = getMachineFunction();
