@@ -7337,7 +7337,7 @@ private:
 
     OverloadCandidateSet::iterator Best;
     switch (CandidateSet.BestViableFunction(S, FD->getLocation(), Best)) {
-    case OR_Success:
+    case OR_Success: {
       // C++2a [class.compare.secondary]p2 [P2002R0]:
       //   The operator function [...] is defined as deleted if [...] the
       //   candidate selected by overload resolution is not a rewritten
@@ -7351,6 +7351,28 @@ private:
               << FD;
         }
         return Result::deleted();
+      }
+
+      // Throughout C++2a [class.compare]: if overload resolution does not
+      // result in a usable function, the candidate function is defined as
+      // deleted. This requires that we selected an accessible function.
+      //
+      // Note that this only considers the access of the function when named
+      // within the type of the subobject, and not the access path for any
+      // derived-to-base conversion.
+      CXXRecordDecl *ArgClass = Args[0]->getType()->getAsCXXRecordDecl();
+      if (ArgClass && Best->FoundDecl.getDecl() &&
+          Best->FoundDecl.getDecl()->isCXXClassMember()) {
+        QualType ObjectType = Subobj.Kind == Subobject::Member
+                                  ? Args[0]->getType()
+                                  : S.Context.getRecordType(RD);
+        if (!S.isMemberAccessibleForDeletion(
+                ArgClass, Best->FoundDecl, ObjectType, Subobj.Loc,
+                Diagnose == ExplainDeleted
+                    ? S.PDiag(diag::note_defaulted_comparison_inaccessible)
+                          << FD << Subobj.Kind << Subobj.Decl
+                    : S.PDiag()))
+          return Result::deleted();
       }
 
       // C++2a [class.compare.default]p3 [P2002R0]:
@@ -7399,6 +7421,7 @@ private:
       // Note that we might be rewriting to a different operator. That call is
       // not considered until we come to actually build the comparison function.
       break;
+    }
 
     case OR_Ambiguous:
       if (Diagnose == ExplainDeleted) {
@@ -8303,7 +8326,8 @@ bool SpecialMemberDeletionInfo::isAccessible(Subobject Subobj,
     objectTy = S.Context.getTypeDeclType(target->getParent());
   }
 
-  return S.isSpecialMemberAccessibleForDeletion(target, access, objectTy);
+  return S.isMemberAccessibleForDeletion(
+      target->getParent(), DeclAccessPair::make(target, access), objectTy);
 }
 
 /// Check whether we should delete a special member due to the implicit

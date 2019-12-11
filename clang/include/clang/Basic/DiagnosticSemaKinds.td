@@ -8220,6 +8220,10 @@ def note_defaulted_comparison_reference_member : Note<
 def note_defaulted_comparison_ambiguous : Note<
   "defaulted %0 is implicitly deleted because implied %select{|'==' |'<' }1"
   "comparison %select{|for member %3 |for base class %3 }2is ambiguous">;
+def note_defaulted_comparison_inaccessible : Note<
+  "defaulted %0 is implicitly deleted because it would invoke a "
+  "%select{private|protected}3 %4%select{ member of %6|"
+  " member of %6 to compare member %2| to compare base class %2}1">;
 def note_defaulted_comparison_calls_deleted : Note<
   "defaulted %0 is implicitly deleted because it would invoke a deleted "
   "comparison function%select{| for member %2| for base class %2}1">;
