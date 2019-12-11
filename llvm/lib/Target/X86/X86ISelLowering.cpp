@@ -2008,9 +2008,12 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       Subtarget.hasAVX512() &&
       (!isPowerOf2_32(VT.getVectorNumElements()) ||
        (VT.getVectorNumElements() > 16 && !Subtarget.hasBWI()) ||
-       (VT.getVectorNumElements() > 32 && !Subtarget.useBWIRegs()) ||
        (VT.getVectorNumElements() > 64 && Subtarget.hasBWI())))
     return MVT::i8;
+  // Split v64i1 vectors if we don't have v64i8 available.
+  if (VT == MVT::v64i1 && Subtarget.hasBWI() && !Subtarget.useAVX512Regs() &&
+      CC != CallingConv::X86_RegCall)
+    return MVT::v32i1;
   // FIXME: Should we just make these types legal and custom split operations?
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !EnableOldKNLABI &&
       Subtarget.useAVX512Regs() && !Subtarget.hasBWI())
@@ -2029,9 +2032,12 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       Subtarget.hasAVX512() &&
       (!isPowerOf2_32(VT.getVectorNumElements()) ||
        (VT.getVectorNumElements() > 16 && !Subtarget.hasBWI()) ||
-       (VT.getVectorNumElements() > 32 && !Subtarget.useBWIRegs()) ||
        (VT.getVectorNumElements() > 64 && Subtarget.hasBWI())))
     return VT.getVectorNumElements();
+  // Split v64i1 vectors if we don't have v64i8 available.
+  if (VT == MVT::v64i1 && Subtarget.hasBWI() && !Subtarget.useAVX512Regs() &&
+      CC != CallingConv::X86_RegCall)
+    return 2;
   // FIXME: Should we just make these types legal and custom split operations?
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !EnableOldKNLABI &&
       Subtarget.useAVX512Regs() && !Subtarget.hasBWI())
@@ -2047,12 +2053,20 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
       Subtarget.hasAVX512() &&
       (!isPowerOf2_32(VT.getVectorNumElements()) ||
        (VT.getVectorNumElements() > 16 && !Subtarget.hasBWI()) ||
-       (VT.getVectorNumElements() > 32 && !Subtarget.useBWIRegs()) ||
        (VT.getVectorNumElements() > 64 && Subtarget.hasBWI()))) {
     RegisterVT = MVT::i8;
     IntermediateVT = MVT::i1;
     NumIntermediates = VT.getVectorNumElements();
     return NumIntermediates;
+  }
+
+  // Split v64i1 vectors if we don't have v64i8 available.
+  if (VT == MVT::v64i1 && Subtarget.hasBWI() && !Subtarget.useAVX512Regs() &&
+      CC != CallingConv::X86_RegCall) {
+    RegisterVT = MVT::v32i1;
+    IntermediateVT = MVT::v32i1;
+    NumIntermediates = 2;
+    return 2;
   }
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
