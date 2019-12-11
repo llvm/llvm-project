@@ -1,0 +1,49 @@
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -o - %s | FileCheck %s
+--- |
+  define void @test_dbg_value() #0 { ret void }
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "llvm", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "dbg.ll", directory: "/tmp")
+  !2 = !{}
+  !5 = distinct !DISubprogram(name: "test_dbg_value", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+  !6 = !DISubroutineType(types: !2)
+  !7 = !DILocalVariable(name: "x", arg: 1, scope: !5, file: !1, line: 1, type: !8)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DILocation(line: 1, column: 1, scope: !5)
+---
+# Check we do not crash when checking $noreg debug operands.
+#
+# CHECK-LABEL: name: test_dbg_value
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $x0, $x1
+# CHECK:       $x10, renamable $x8 = LDPXi renamable $x0, 0 :: (load 8)
+# CHECK-NEXT:  renamable $x9 = LDRXui renamable $x0, 1 :: (load 8)
+# CHECK-NEXT:  STRXui renamable $x9, renamable $x0, 100 :: (store 8, align 4)
+# CHECK-NEXT:  DBG_VALUE $x9, $noreg
+# CHECK-NEXT:  renamable $x8 = ADDXrr $x8, $x8
+# CHECK-NEXT:  STPXi renamable $x8, killed $x10, renamable $x0, 10 :: (store 8, align 4)
+# CHECK-NEXT:  RET undef $lr
+name:           test_dbg_value
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load 8)
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store 8, align 4)
+    renamable $x9 = LDRXui renamable $x0, 1 :: (load 8)
+    STRXui renamable $x9, renamable $x0, 100 :: (store 8, align 4)
+    DBG_VALUE $x9, $noreg, !7, !DIExpression(DW_OP_plus_uconst, 32), debug-location !9
+    renamable $x8 = ADDXrr $x8, $x8
+    STRXui renamable $x8, renamable $x0, 10 :: (store 8, align 4)
+    RET undef $lr
+
+...
