@@ -26,11 +26,11 @@ define void @test_simple(i32 %n, ...) {
 
 ; CHECK: add [[GR_TOPTMP:x[0-9]+]], sp, #[[GR_BASE]]
 ; CHECK: add [[GR_TOP:x[0-9]+]], [[GR_TOPTMP]], #56
-; CHECK: str [[GR_TOP]], [x[[VA_LIST]], #8]
+
 
 ; CHECK: mov [[VR_TOPTMP:x[0-9]+]], sp
 ; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #128
-; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
+; CHECK: stp [[GR_TOP]], [[VR_TOP]], [x[[VA_LIST]], #8]
 
 ; CHECK: mov     [[GRVR:x[0-9]+]], #-56
 ; CHECK: movk    [[GRVR]], #65408, lsl #32
@@ -62,11 +62,10 @@ define void @test_fewargs(i32 %n, i32 %n1, i32 %n2, float %m, ...) {
 
 ; CHECK: add [[GR_TOPTMP:x[0-9]+]], sp, #[[GR_BASE]]
 ; CHECK: add [[GR_TOP:x[0-9]+]], [[GR_TOPTMP]], #40
-; CHECK: str [[GR_TOP]], [x[[VA_LIST]], #8]
 
 ; CHECK: mov [[VR_TOPTMP:x[0-9]+]], sp
 ; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #112
-; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
+; CHECK: stp [[GR_TOP]], [[VR_TOP]], [x[[VA_LIST]], #8]
 
 ; CHECK: mov  [[GRVR_OFFS:x[0-9]+]], #-40
 ; CHECK: movk [[GRVR_OFFS]], #65424, lsl #32

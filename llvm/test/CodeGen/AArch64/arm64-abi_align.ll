@@ -392,10 +392,8 @@ entry:
 define i32 @caller43() #3 {
 entry:
 ; CHECK-LABEL: caller43
-; CHECK-DAG: str {{q[0-9]+}}, [sp, #48]
-; CHECK-DAG: str {{q[0-9]+}}, [sp, #32]
-; CHECK-DAG: str {{q[0-9]+}}, [sp, #16]
-; CHECK-DAG: str {{q[0-9]+}}, [sp]
+; CHECK-DAG: stp q1, q0, [sp, #32]
+; CHECK-DAG: stp q1, q0, [sp]
 ; CHECK: add x1, sp, #32
 ; CHECK: mov x2, sp
 ; Space for s1 is allocated at sp+32
@@ -434,10 +432,8 @@ entry:
 ; CHECK-LABEL: caller43_stack
 ; CHECK: sub sp, sp, #112
 ; CHECK: add x29, sp, #96
-; CHECK-DAG: stur {{q[0-9]+}}, [x29, #-16]
-; CHECK-DAG: stur {{q[0-9]+}}, [x29, #-32]
-; CHECK-DAG: str {{q[0-9]+}}, [sp, #48]
-; CHECK-DAG: str {{q[0-9]+}}, [sp, #32]
+; CHECK-DAG: stp q1, q0, [x29, #-32]
+; CHECK-DAG: stp q1, q0, [sp, #32]
 ; Space for s1 is allocated at x29-32 = sp+64
 ; Space for s2 is allocated at sp+32
 ; CHECK: add x[[B:[0-9]+]], sp, #32
