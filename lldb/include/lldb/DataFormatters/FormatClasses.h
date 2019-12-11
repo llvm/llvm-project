@@ -17,7 +17,6 @@
 #include "lldb/DataFormatters/TypeFormat.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
-#include "lldb/DataFormatters/TypeValidator.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/lldb-enumerations.h"
@@ -40,7 +39,6 @@ public:
   typedef HardcodedFormatterFinders<TypeFormatImpl> HardcodedFormatFinder;
   typedef HardcodedFormatterFinders<TypeSummaryImpl> HardcodedSummaryFinder;
   typedef HardcodedFormatterFinders<SyntheticChildren> HardcodedSyntheticFinder;
-  typedef HardcodedFormatterFinders<TypeValidatorImpl> HardcodedValidatorFinder;
 };
 
 class FormattersMatchCandidate {

@@ -650,6 +650,9 @@ void FixupLEAPass::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
                 .addReg(DestReg)
                 .add(Index);
     LLVM_DEBUG(NewMI->dump(););
+
+    MBB.erase(I);
+    I = NewMI;
     return;
   }
 

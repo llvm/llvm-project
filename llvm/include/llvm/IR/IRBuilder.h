@@ -501,6 +501,17 @@ public:
                         isVolatile, TBAATag, TBAAStructTag, ScopeTag,
                         NoAliasTag);
   }
+  CallInst *CreateMemCpy(Value *Dst, MaybeAlign DstAlign, Value *Src,
+                         MaybeAlign SrcAlign, uint64_t Size,
+                         bool isVolatile = false, MDNode *TBAATag = nullptr,
+                         MDNode *TBAAStructTag = nullptr,
+                         MDNode *ScopeTag = nullptr,
+                         MDNode *NoAliasTag = nullptr) {
+    return CreateMemCpy(Dst, DstAlign ? DstAlign->value() : 0, Src,
+                        SrcAlign ? SrcAlign->value() : 0, getInt64(Size),
+                        isVolatile, TBAATag, TBAAStructTag, ScopeTag,
+                        NoAliasTag);
+  }
 
   CallInst *CreateMemCpy(Value *Dst, unsigned DstAlign, Value *Src,
                          unsigned SrcAlign, Value *Size,
@@ -508,6 +519,16 @@ public:
                          MDNode *TBAAStructTag = nullptr,
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
+  CallInst *CreateMemCpy(Value *Dst, MaybeAlign DstAlign, Value *Src,
+                         MaybeAlign SrcAlign, Value *Size,
+                         bool isVolatile = false, MDNode *TBAATag = nullptr,
+                         MDNode *TBAAStructTag = nullptr,
+                         MDNode *ScopeTag = nullptr,
+                         MDNode *NoAliasTag = nullptr) {
+    return CreateMemCpy(Dst, DstAlign ? DstAlign->value() : 0, Src,
+                        SrcAlign ? SrcAlign->value() : 0, Size, isVolatile,
+                        TBAATag, TBAAStructTag, ScopeTag, NoAliasTag);
+  }
 
   /// Create and insert an element unordered-atomic memcpy between the
   /// specified pointers.
@@ -1627,11 +1648,20 @@ public:
     LI->setAlignment(MaybeAlign(Align));
     return LI;
   }
+  LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
+                              const Twine &Name = "") {
+    return CreateAlignedLoad(Ty, Ptr, Align ? Align->value() : 0, Name);
+  }
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, unsigned Align,
                               bool isVolatile, const Twine &Name = "") {
     LoadInst *LI = CreateLoad(Ty, Ptr, isVolatile, Name);
     LI->setAlignment(MaybeAlign(Align));
     return LI;
+  }
+  LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
+                              bool isVolatile, const Twine &Name = "") {
+    return CreateAlignedLoad(Ty, Ptr, Align ? Align->value() : 0, isVolatile,
+                             Name);
   }
 
   // Deprecated [opaque pointer types]
@@ -1658,7 +1688,10 @@ public:
     SI->setAlignment(MaybeAlign(Align));
     return SI;
   }
-
+  StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, MaybeAlign Align,
+                                bool isVolatile = false) {
+    return CreateAlignedStore(Val, Ptr, Align ? Align->value() : 0, isVolatile);
+  }
   FenceInst *CreateFence(AtomicOrdering Ordering,
                          SyncScope::ID SSID = SyncScope::System,
                          const Twine &Name = "") {

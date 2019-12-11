@@ -260,7 +260,6 @@ class TypeEnumMemberImpl;
 class TypeEnumMemberListImpl;
 class TypeFormatImpl;
 class TypeNameSpecifierImpl;
-class TypeValidatorImpl;
 class UUID;
 class UnixSignals;
 class Unwind;
@@ -461,7 +460,6 @@ typedef std::shared_ptr<lldb_private::TypeNameSpecifierImpl>
     TypeNameSpecifierImplSP;
 typedef std::shared_ptr<lldb_private::TypeSummaryImpl> TypeSummaryImplSP;
 typedef std::shared_ptr<lldb_private::TypeSummaryOptions> TypeSummaryOptionsSP;
-typedef std::shared_ptr<lldb_private::TypeValidatorImpl> TypeValidatorImplSP;
 typedef std::shared_ptr<lldb_private::ScriptedSyntheticChildren>
     ScriptedSyntheticChildrenSP;
 typedef std::shared_ptr<lldb_private::UnixSignals> UnixSignalsSP;

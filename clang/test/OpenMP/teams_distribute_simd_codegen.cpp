@@ -140,12 +140,18 @@ int teams_local_arg(void) {
 #endif // CK2
 
 // Test host codegen.
-// RUN: %clang_cc1 -DCK3 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-64
+// RUN: %clang_cc1 -DCK3 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-64 --check-prefix OMP3_45
 // RUN: %clang_cc1 -DCK3 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK3 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-64
-// RUN: %clang_cc1 -DCK3 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-32
+// RUN: %clang_cc1 -DCK3 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-64 --check-prefix OMP3_45
+// RUN: %clang_cc1 -DCK3 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-32 --check-prefix OMP3_45
 // RUN: %clang_cc1 -DCK3 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK3 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-32
+// RUN: %clang_cc1 -DCK3 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-32 --check-prefix OMP3_45
+// RUN: %clang_cc1 -DCK3 -verify -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple powerpc64le-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-64 --check-prefix OMP3_50
+// RUN: %clang_cc1 -DCK3 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK3 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple powerpc64le-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-64 -check-prefix OMP3_50
+// RUN: %clang_cc1 -DCK3 -verify -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple i386-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-32 -check-prefix OMP3_50
+// RUN: %clang_cc1 -DCK3 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK3 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple i386-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK3 --check-prefix CK3-32 -check-prefix OMP3_50
 
 // RUN: %clang_cc1 -DCK3 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
 // RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
@@ -153,6 +159,12 @@ int teams_local_arg(void) {
 // RUN: %clang_cc1 -DCK3 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
 // RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK3 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK3 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK3 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK3 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK3 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK3 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY2 %s
 // SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
 #ifdef CK3
 
@@ -168,14 +180,19 @@ struct SS{
   // CK3: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* %{{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
   // CK3: call void @[[OFFL1:.+]]([[SSI]]* %{{.+}})
     #pragma omp target
+#ifdef OMP5
+    #pragma omp teams distribute simd if(b)
+#else
     #pragma omp teams distribute simd
+#endif // OMP5
     for(int i = 0; i < X; i++) {
       a[i] = (T)0;
     }
 
       // outlined target region
   // CK3: define internal void @[[OFFL1]]([[SSI]]* {{.+}})
-  // CK3: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 1, {{.+}} @[[OUTL1:.+]] to {{.+}}, {{.+}}, {{.+}})
+  // OMP3_45: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 1, {{.+}} @[[OUTL1:.+]] to {{.+}}, {{.+}}, {{.+}})
+  // OMP3_50: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 2, {{.+}} @[[OUTL1:.+]] to {{.+}}, {{.+}}, {{.+}}, {{.+}})
   // CK3: ret void
 
   // CK3: define internal void @[[OUTL1]]({{.+}})
@@ -192,16 +209,24 @@ int teams_template_struct(void) {
   return V.foo();
 
 }
-// CK3: !{!"llvm.loop.vectorize.enable", i1 true}
+// CK3-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
+// OMP3_45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP3_50-DAG: !{!"llvm.loop.vectorize.enable", i1 false}
 #endif // CK3
 
 // Test host codegen.
-// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-64
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-64 --check-prefix OMP4_45
 // RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-64
-// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-32
+// RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-64 --check-prefix OMP4_45
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-32 --check-prefix OMP4_45
 // RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-32
+// RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-32 --check-prefix OMP4_45
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple powerpc64le-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-64 --check-prefix OMP4_50
+// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple powerpc64le-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-64 --check-prefix OMP4_50
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple i386-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-32 --check-prefix OMP4_50
+// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple i386-unknown-unknown -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-32 --check-prefix OMP4_50
 
 // RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY3 %s
 // RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
@@ -209,6 +234,12 @@ int teams_template_struct(void) {
 // RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY3 %s
 // RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY3 %s
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY3 %s
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY3 %s
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY3 %s
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY3 %s
 // SIMD-ONLY3-NOT: {{__kmpc|__tgt}}
 
 #ifdef CK4
@@ -230,7 +261,11 @@ int main (int argc, char **argv) {
   int n = 100;
   int a[n];
 #pragma omp target
+#ifdef OMP5
+#pragma omp teams distribute simd if(simd:argc)
+#else
 #pragma omp teams distribute simd
+#endif // OMP5
   for(int i = 0; i < n; i++) {
     a[i] = 0;
   }
@@ -238,13 +273,15 @@ int main (int argc, char **argv) {
 }
 
 // CK4:  define {{.*}}i32 @{{[^,]+}}(i{{.+}}{{.+}} %[[ARGC:.+]], {{.+}})
-// CK4:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
+// OMP4_45:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
+// OMP4_50:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
 // CK4: call void @[[OFFL1:.+]]({{.+}})
 // CK4: {{%.+}} = call{{.*}} i32 @[[TMAIN:.+]]({{.+}})
 // CK4:  ret
 
 // CK4:  define {{.*}}void @[[OFFL1]]({{.+}})
-// CK4: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 3, {{.+}} @[[OUTL1:.+]] to {{.+}}, {{.+}}, {{.+}})
+// OMP4_45: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 3, {{.+}} @[[OUTL1:.+]] to {{.+}}, {{.+}}, {{.+}})
+// OMP4_50: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 4, {{.+}} @[[OUTL1:.+]] to {{.+}}, {{.+}}, {{.+}})
 // CK4: ret void
 
 // CK4: define internal void @[[OUTL1]]({{.+}})
@@ -278,7 +315,9 @@ int main (int argc, char **argv) {
 // CK4: call void @__kmpc_for_static_fini(
 // CK4: ret void
 
-// CK4: !{!"llvm.loop.vectorize.enable", i1 true}
+// CK4-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
+// OMP4_45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP5_50-DAG: !{!"llvm.loop.vectorize.enable", i1 false}
 #endif // CK4
 #endif
 

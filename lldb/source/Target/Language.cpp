@@ -134,11 +134,6 @@ Language::GetHardcodedSynthetics() {
   return {};
 }
 
-HardcodedFormatters::HardcodedValidatorFinder
-Language::GetHardcodedValidators() {
-  return {};
-}
-
 std::vector<ConstString>
 Language::GetPossibleFormattersMatches(ValueObject &valobj,
                                        lldb::DynamicValueType use_dynamic) {

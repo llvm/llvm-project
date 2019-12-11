@@ -286,17 +286,18 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
     Args.push_back(MDNode::get(Ctx, Vals));
   }
 
-  // Setting vectorize.enable
+  // vectorize.enable is set if:
+  // 1) loop hint vectorize.enable is set, or
+  // 2) it is implied when vectorize.predicate is set, or
+  // 3) it is implied when vectorize.width is set.
   if (Attrs.VectorizeEnable != LoopAttributes::Unspecified ||
-      IsVectorPredicateEnabled) {
-    Metadata *Vals[] = {
-        MDString::get(Ctx, "llvm.loop.vectorize.enable"),
-        ConstantAsMetadata::get(ConstantInt::get(
-            llvm::Type::getInt1Ty(Ctx),
-            IsVectorPredicateEnabled
-                ? true
-                : (Attrs.VectorizeEnable == LoopAttributes::Enable)))};
-    Args.push_back(MDNode::get(Ctx, Vals));
+      IsVectorPredicateEnabled ||
+      Attrs.VectorizeWidth > 1 ) {
+    bool AttrVal = Attrs.VectorizeEnable != LoopAttributes::Disable;
+    Args.push_back(
+        MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
+                          ConstantAsMetadata::get(ConstantInt::get(
+                              llvm::Type::getInt1Ty(Ctx), AttrVal))}));
   }
 
   if (FollowupHasTransforms)

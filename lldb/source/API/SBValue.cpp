@@ -391,25 +391,6 @@ const char *SBValue::GetObjectDescription() {
   return cstr;
 }
 
-const char *SBValue::GetTypeValidatorResult() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBValue, GetTypeValidatorResult);
-
-  const char *cstr = nullptr;
-  ValueLocker locker;
-  lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    const auto &validation(value_sp->GetValidationStatus());
-    if (TypeValidatorResult::Failure == validation.first) {
-      if (validation.second.empty())
-        cstr = "unknown error";
-      else
-        cstr = validation.second.c_str();
-    }
-  }
-
-  return cstr;
-}
-
 SBType SBValue::GetType() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBValue, GetType);
 
@@ -1585,7 +1566,6 @@ void RegisterMethods<SBValue>(Registry &R) {
   LLDB_REGISTER_METHOD(const char *, SBValue, GetValue, ());
   LLDB_REGISTER_METHOD(lldb::ValueType, SBValue, GetValueType, ());
   LLDB_REGISTER_METHOD(const char *, SBValue, GetObjectDescription, ());
-  LLDB_REGISTER_METHOD(const char *, SBValue, GetTypeValidatorResult, ());
   LLDB_REGISTER_METHOD(lldb::SBType, SBValue, GetType, ());
   LLDB_REGISTER_METHOD(bool, SBValue, GetValueDidChange, ());
   LLDB_REGISTER_METHOD(const char *, SBValue, GetSummary, ());

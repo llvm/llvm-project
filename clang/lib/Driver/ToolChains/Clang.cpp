@@ -3539,7 +3539,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 
   bool SplitDWARFInlining =
       Args.hasFlag(options::OPT_fsplit_dwarf_inlining,
-                   options::OPT_fno_split_dwarf_inlining, true);
+                   options::OPT_fno_split_dwarf_inlining, false);
 
   Args.ClaimAllArgs(options::OPT_g_Group);
 

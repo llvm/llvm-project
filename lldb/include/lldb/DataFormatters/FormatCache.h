@@ -24,12 +24,10 @@ private:
     bool m_format_cached : 1;
     bool m_summary_cached : 1;
     bool m_synthetic_cached : 1;
-    bool m_validator_cached : 1;
 
     lldb::TypeFormatImplSP m_format_sp;
     lldb::TypeSummaryImplSP m_summary_sp;
     lldb::SyntheticChildrenSP m_synthetic_sp;
-    lldb::TypeValidatorImplSP m_validator_sp;
 
   public:
     Entry();
@@ -38,17 +36,14 @@ private:
     bool IsFormatCached();
     bool IsSummaryCached();
     bool IsSyntheticCached();
-    bool IsValidatorCached();
 
     void Get(lldb::TypeFormatImplSP &);
     void Get(lldb::TypeSummaryImplSP &);
     void Get(lldb::SyntheticChildrenSP &);
-    void Get(lldb::TypeValidatorImplSP &);
 
     void Set(lldb::TypeFormatImplSP);
     void Set(lldb::TypeSummaryImplSP);
     void Set(lldb::SyntheticChildrenSP);
-    void Set(lldb::TypeValidatorImplSP);
   };
   typedef std::map<ConstString, Entry> CacheMap;
   CacheMap m_map;
@@ -66,7 +61,6 @@ public:
   void Set(ConstString type, lldb::TypeFormatImplSP &format_sp);
   void Set(ConstString type, lldb::TypeSummaryImplSP &summary_sp);
   void Set(ConstString type, lldb::SyntheticChildrenSP &synthetic_sp);
-  void Set(ConstString type, lldb::TypeValidatorImplSP &synthetic_sp);
 
   void Clear();
 

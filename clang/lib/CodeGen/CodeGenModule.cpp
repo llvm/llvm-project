@@ -2212,9 +2212,15 @@ llvm::Constant *CodeGenModule::EmitAnnotateAttr(llvm::GlobalValue *GV,
                  *UnitGV = EmitAnnotationUnit(L),
                  *LineNoCst = EmitAnnotationLineNo(L);
 
+  llvm::Constant *ASZeroGV = GV;
+  if (GV->getAddressSpace() != 0) {
+    ASZeroGV = llvm::ConstantExpr::getAddrSpaceCast(
+                   GV, GV->getValueType()->getPointerTo(0));
+  }
+
   // Create the ConstantStruct for the global annotation.
   llvm::Constant *Fields[4] = {
-    llvm::ConstantExpr::getBitCast(GV, Int8PtrTy),
+    llvm::ConstantExpr::getBitCast(ASZeroGV, Int8PtrTy),
     llvm::ConstantExpr::getBitCast(AnnoGV, Int8PtrTy),
     llvm::ConstantExpr::getBitCast(UnitGV, Int8PtrTy),
     LineNoCst

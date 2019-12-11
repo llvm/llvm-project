@@ -2419,7 +2419,7 @@ ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
   ClangExternalASTSourceCommon *external_source =
       ClangExternalASTSourceCommon::Lookup(ast->getExternalSource());
 
-  if (external_source && external_source->HasMetadata(object))
+  if (external_source)
     return external_source->GetMetadata(object);
   else
     return nullptr;

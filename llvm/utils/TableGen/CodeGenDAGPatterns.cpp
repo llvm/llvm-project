@@ -3028,8 +3028,7 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R,
     : Records(R), Target(R), LegalVTS(Target.getLegalValueTypes()),
       PatternRewriter(PatternRewriter) {
 
-  Intrinsics = CodeGenIntrinsicTable(Records, false);
-  TgtIntrinsics = CodeGenIntrinsicTable(Records, true);
+  Intrinsics = CodeGenIntrinsicTable(Records);
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();

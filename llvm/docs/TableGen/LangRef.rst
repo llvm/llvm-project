@@ -100,7 +100,8 @@ wide variety of meanings:
                :!or     !empty   !subst   !foreach   !strconcat
                :!cast   !listconcat       !size      !foldl
                :!isa    !dag     !le      !lt        !ge
-               :!gt     !ne      !mul     !listsplat
+               :!gt     !ne      !mul     !listsplat !setop
+               :!getop
 
 TableGen also has !cond operator that needs a slightly different
 syntax compared to other "bang operators":

@@ -91,19 +91,16 @@ define void @dog() #0 {
 ; ODR: [[OUTLINED]]:
 ; CHECK: .p2align 2
 ; CHECK-NEXT: [[OUTLINED]]:
-; CHECK: mov     w8, #1
-; CHECK-NEXT: str     w8, [sp, #28]
-; CHECK-NEXT: mov     w8, #2
-; CHECK-NEXT: str     w8, [sp, #24]
-; CHECK-NEXT: mov     w8, #3
-; CHECK-NEXT: str     w8, [sp, #20]
-; CHECK-NEXT: mov     w8, #4
-; CHECK-NEXT: str     w8, [sp, #16]
-; CHECK-NEXT: mov     w8, #5
-; CHECK-NEXT: str     w8, [sp, #12]
-; CHECK-NEXT: mov     w8, #6
-; CHECK-NEXT: str     w8, [sp, #8]
-; CHECK-NEXT: add     sp, sp, #32
-; CHECK-NEXT: ret
+; CHECK:      mov     w9, #1
+; CHECK-DAG: mov     w8, #2
+; CHECK-DAG: stp     w8, w9, [sp, #24]
+; CHECK-DAG: mov     w9, #3
+; CHECK-DAG: mov     w8, #4
+; CHECK-DAG: stp     w8, w9, [sp, #16]
+; CHECK-DAG: mov     w9, #5
+; CHECK-DAG: mov     w8, #6
+; CHECK-DAG: stp     w8, w9, [sp, #8]
+; CHECK-DAG: add     sp, sp, #32
+; CHECK-DAG: ret
 
 attributes #0 = { noredzone "target-cpu"="cyclone" "target-features"="+sse" }

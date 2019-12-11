@@ -2089,6 +2089,16 @@ TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthrough) {
       "                  'external-contents': '//root/foo/a'\n"
       "                }\n"
       "              ]\n"
+      "},\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '//root/bar/baz',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'a',\n"
+      "                  'external-contents': '//root/foo/a'\n"
+      "                }\n"
+      "              ]\n"
       "}\n"
       "]\n"
       "}",
@@ -2123,6 +2133,21 @@ TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthrough) {
   ASSERT_FALSE(EC);
 
   Status = FS->status("c");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
+
+  Status = FS->status("./bar/baz/a");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
+
+  EC = FS->setCurrentWorkingDirectory("//root/bar");
+  ASSERT_FALSE(EC);
+
+  Status = FS->status("./baz/a");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
+
+  Status = FS->status("../bar/baz/a");
   ASSERT_FALSE(Status.getError());
   EXPECT_TRUE(Status->exists());
 }

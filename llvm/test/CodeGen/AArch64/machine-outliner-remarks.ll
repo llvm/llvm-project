@@ -4,7 +4,7 @@
 ; CHECK-SAME: Bytes from outlining all occurrences (16) >=
 ; CHECK-SAME: Unoutlined instruction bytes (16)
 ; CHECK-SAME: (Also found at: <UNKNOWN LOCATION>)
-; CHECK: remark: <unknown>:0:0: Saved 48 bytes by outlining 14 instructions
+; CHECK: remark: <unknown>:0:0: Saved 36 bytes by outlining 11 instructions
 ; CHECK-SAME: from 2 locations. (Found at: <UNKNOWN LOCATION>,
 ; CHECK-SAME: <UNKNOWN LOCATION>)
 ; RUN: llc %s -enable-machine-outliner -mtriple=aarch64-unknown-unknown -o /dev/null -pass-remarks-missed=machine-outliner -pass-remarks-output=%t.yaml
@@ -38,10 +38,10 @@
 ; YAML-NEXT: Function:        OUTLINED_FUNCTION_0
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Saved '
-; YAML-NEXT:   - OutliningBenefit: '48'
+; YAML-NEXT:   - OutliningBenefit: '36'
 ; YAML-NEXT:   - String:          ' bytes by '
 ; YAML-NEXT:   - String:          'outlining '
-; YAML-NEXT:   - Length:          '14'
+; YAML-NEXT:   - Length:          '11'
 ; YAML-NEXT:   - String:          ' instructions '
 ; YAML-NEXT:   - String:          'from '
 ; YAML-NEXT:   - NumOccurrences:  '2'

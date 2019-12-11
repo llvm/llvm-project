@@ -3357,7 +3357,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                   die.GetCU());
             } else {
               DataExtractor data = DebugLocData();
-              const dw_offset_t offset = form_value.Unsigned();
+              dw_offset_t offset = form_value.Unsigned();
+              if (form_value.Form() == DW_FORM_loclistx)
+                offset = die.GetCU()->GetLoclistOffset(offset).getValueOr(-1);
               if (data.ValidOffset(offset)) {
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
                 location = DWARFExpression(module, data, die.GetCU());

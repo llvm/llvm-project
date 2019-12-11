@@ -134,7 +134,7 @@ GlobalModuleIndex::GlobalModuleIndex(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                        "' failed: " + toString(std::move(Err)));
   };
 
-  llvm::TimeTraceScope TimeScope("Module LoadIndex", StringRef(""));
+  llvm::TimeTraceScope TimeScope("Module LoadIndex");
   // Read the global index.
   bool InGlobalIndexBlock = false;
   bool Done = false;
@@ -770,7 +770,7 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
   }
 
   using namespace llvm;
-  llvm::TimeTraceScope TimeScope("Module WriteIndex", StringRef(""));
+  llvm::TimeTraceScope TimeScope("Module WriteIndex");
 
   // Emit the file header.
   Stream.Emit((unsigned)'B', 8);

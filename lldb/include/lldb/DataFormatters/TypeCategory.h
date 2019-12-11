@@ -67,7 +67,6 @@ private:
   typedef FormatterContainerPair<TypeFormatImpl> FormatContainer;
   typedef FormatterContainerPair<TypeSummaryImpl> SummaryContainer;
   typedef FormatterContainerPair<TypeFilterImpl> FilterContainer;
-  typedef FormatterContainerPair<TypeValidatorImpl> ValidatorContainer;
   typedef FormatterContainerPair<SyntheticChildren> SynthContainer;
 
 public:
@@ -85,9 +84,6 @@ public:
 
   typedef SynthContainer::ExactMatchContainerSP SynthContainerSP;
   typedef SynthContainer::RegexMatchContainerSP RegexSynthContainerSP;
-
-  typedef ValidatorContainer::ExactMatchContainerSP ValidatorContainerSP;
-  typedef ValidatorContainer::RegexMatchContainerSP RegexValidatorContainerSP;
 
   template <typename T> class ForEachCallbacks {
   public:
@@ -145,18 +141,6 @@ public:
       m_synth_regex = callback;
       return *this;
     }
-    template <typename U = TypeValidatorImpl>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetExact(ValidatorContainer::ExactMatchForEachCallback callback) {
-      m_validator_exact = callback;
-      return *this;
-    }
-    template <typename U = TypeValidatorImpl>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetWithRegex(ValidatorContainer::RegexMatchForEachCallback callback) {
-      m_validator_regex = callback;
-      return *this;
-    }
 
     FormatContainer::ExactMatchForEachCallback GetFormatExactCallback() const {
       return m_format_exact;
@@ -188,15 +172,6 @@ public:
       return m_synth_regex;
     }
 
-    ValidatorContainer::ExactMatchForEachCallback
-    GetValidatorExactCallback() const {
-      return m_validator_exact;
-    }
-    ValidatorContainer::RegexMatchForEachCallback
-    GetValidatorRegexCallback() const {
-      return m_validator_regex;
-    }
-
   private:
     FormatContainer::ExactMatchForEachCallback m_format_exact;
     FormatContainer::RegexMatchForEachCallback m_format_regex;
@@ -209,9 +184,6 @@ public:
 
     SynthContainer::ExactMatchForEachCallback m_synth_exact;
     SynthContainer::RegexMatchForEachCallback m_synth_regex;
-
-    ValidatorContainer::ExactMatchForEachCallback m_validator_exact;
-    ValidatorContainer::RegexMatchForEachCallback m_validator_regex;
   };
 
   TypeCategoryImpl(IFormatChangeListener *clist, ConstString name);
@@ -229,10 +201,6 @@ public:
 
     GetTypeSyntheticsContainer()->ForEach(foreach.GetSynthExactCallback());
     GetRegexTypeSyntheticsContainer()->ForEach(foreach.GetSynthRegexCallback());
-
-    GetTypeValidatorsContainer()->ForEach(foreach.GetValidatorExactCallback());
-    GetRegexTypeValidatorsContainer()->ForEach(
-        foreach.GetValidatorRegexCallback());
   }
 
   FormatContainerSP GetTypeFormatsContainer() {
@@ -277,9 +245,6 @@ public:
   SynthContainer::MapValueType
   GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp);
 
-  ValidatorContainer::MapValueType
-  GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp);
-
   lldb::TypeNameSpecifierImplSP
   GetTypeNameSpecifierForFormatAtIndex(size_t index);
 
@@ -310,19 +275,6 @@ public:
   lldb::TypeNameSpecifierImplSP
   GetTypeNameSpecifierForSyntheticAtIndex(size_t index);
 
-  ValidatorContainerSP GetTypeValidatorsContainer() {
-    return m_validator_cont.GetExactMatch();
-  }
-
-  RegexValidatorContainerSP GetRegexTypeValidatorsContainer() {
-    return m_validator_cont.GetRegexMatch();
-  }
-
-  ValidatorContainer::MapValueType GetValidatorAtIndex(size_t index);
-
-  lldb::TypeNameSpecifierImplSP
-  GetTypeNameSpecifierForValidatorAtIndex(size_t index);
-
   bool IsEnabled() const { return m_enabled; }
 
   uint32_t GetEnabledPosition() {
@@ -340,9 +292,6 @@ public:
 
   bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
            lldb::SyntheticChildrenSP &entry, uint32_t *reason = nullptr);
-
-  bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
-           lldb::TypeValidatorImplSP &entry, uint32_t *reason = nullptr);
 
   void Clear(FormatCategoryItems items = ALL_ITEM_TYPES);
 
@@ -373,7 +322,6 @@ private:
   SummaryContainer m_summary_cont;
   FilterContainer m_filter_cont;
   SynthContainer m_synth_cont;
-  ValidatorContainer m_validator_cont;
 
   bool m_enabled;
 
@@ -414,9 +362,6 @@ private:
   friend class FormattersContainer<lldb::RegularExpressionSP,
                                    ScriptedSyntheticChildren>;
 
-  friend class FormattersContainer<ConstString, TypeValidatorImpl>;
-  friend class FormattersContainer<lldb::RegularExpressionSP,
-                                   TypeValidatorImpl>;
 };
 
 } // namespace lldb_private

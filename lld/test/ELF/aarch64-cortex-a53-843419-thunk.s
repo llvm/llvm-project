@@ -3,16 +3,17 @@
 // RUN: echo "SECTIONS { \
 // RUN:          .text1 0x10000 : { *(.text.01) *(.text.02) *(.text.03) } \
 // RUN:          .text2 0x8010000 : { *(.text.04) } } " > %t.script
-// RUN: ld.lld --script %t.script -fix-cortex-a53-843419 -verbose %t.o -o %t2 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-PRINT %s
-// RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 | FileCheck %s
+// RUN: ld.lld --script %t.script -fix-cortex-a53-843419 -verbose %t.o -o %t2 \
+// RUN:   2>&1 | FileCheck -check-prefix=CHECK-PRINT %s
 
-// %t2 is 128 Megabytes, so delete it early.
+// RUN: llvm-objdump --no-show-raw-insn -triple=aarch64-linux-gnu -d %t2 | FileCheck %s
+
+/// %t2 is 128 Megabytes, so delete it early.
 // RUN: rm %t2
 
-// Test cases for Cortex-A53 Erratum 843419 that involve interactions with
-// range extension thunks. Both erratum fixes and range extension thunks need
-// precise address information and after creation alter address information.
+/// Test cases for Cortex-A53 Erratum 843419 that involve interactions with
+/// range extension thunks. Both erratum fixes and range extension thunks need
+/// precise address information and after creation alter address information.
 
 
         .section .text.01, "ax", %progbits
@@ -21,13 +22,15 @@
         .type _start, %function
 _start:
         bl far_away
-        // Thunk to far_away, size 16-bytes goes here.
+        /// Thunk to far_away, size 16-bytes goes here.
+        /// Thunk Section with patch enabled has its size rounded up to 4KiB
+        /// this leaves the address of following sections the same modulo 4 KiB
 
         .section .text.02, "ax", %progbits
-        .space 4096 - 28
+        .space 4096 - 12
 
-        // Erratum sequence will only line up at address 0 modulo 0xffc when
-        // Thunk is inserted.
+        /// Erratum sequence will only line up at address 0 modulo 0xffc when
+        /// Thunk is inserted.
         .section .text.03, "ax", %progbits
         .globl t3_ff8_ldr
         .type t3_ff8_ldr, %function
@@ -37,16 +40,15 @@ t3_ff8_ldr:
         ldr x0, [x0, :got_lo12:dat]
         ret
 
-// CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 10FFC in unpatched output.
-// CHECK: t3_ff8_ldr:
-// CHECK-NEXT:    10ffc:        00 00 04 90     adrp    x0, #134217728
-// CHECK-NEXT:    11000:        21 00 40 f9     ldr     x1, [x1]
-// CHECK-NEXT:    11004:        02 00 00 14     b       #8
-// CHECK-NEXT:    11008:        c0 03 5f d6     ret
-// CHECK: __CortexA53843419_11004:
-// CHECK-NEXT:    1100c:        00 04 40 f9     ldr     x0, [x0, #8]
-// CHECK-NEXT:    11010:        fe ff ff 17     b       #-8
-
+// CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 11FFC in unpatched output.
+// CHECK: 0000000000011ffc t3_ff8_ldr:
+// CHECK-NEXT: adrp    x0, #134213632
+// CHECK-NEXT: ldr     x1, [x1]
+// CHECK-NEXT: b       #8
+// CHECK-NEXT: ret
+// CHECK: 000000000001200c __CortexA53843419_12004:
+// CHECK-NEXT: ldr     x0, [x0, #8]
+// CHECK-NEXT: b       #-8
         .section .text.04, "ax", %progbits
         .globl far_away
         .type far_away, function

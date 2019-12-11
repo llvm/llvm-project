@@ -80,12 +80,12 @@
 # PACDYN-NOT:      0x0000000070000001 (AARCH64_BTI_PLT)
 # PACDYN:          0x0000000070000003 (AARCH64_PAC_PLT)
 
-## Turn on PAC entries with the --pac-plt command line option. There are no
+## Turn on PAC entries with the -z pac-plt command line option. There are no
 ## warnings in this case as the choice to use PAC in PLT entries is orthogonal
 ## to the choice of using PAC in relocatable objects. The presence of the PAC
 ## .note.gnu.property is an indication of preference by the relocatable object.
 
-# RUN: ld.lld %t.o %t2.o --pac-plt %t.so -o %tpacplt.exe
+# RUN: ld.lld %t.o %t2.o -z pac-plt %t.so -o %tpacplt.exe
 # RUN: llvm-readelf -n %tpacplt.exe | FileCheck --check-prefix=PACPROP %s
 # RUN: llvm-readelf --dynamic-table %tpacplt.exe | FileCheck --check-prefix PACDYN %s
 # RUN: llvm-objdump -d -mattr=+v8.3a --no-show-raw-insn %tpacplt.exe | FileCheck --check-prefix PACPLT %s

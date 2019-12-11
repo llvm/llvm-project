@@ -156,6 +156,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
 
           // signed or unsigned LEB 128 values
           case DW_FORM_addrx:
+          case DW_FORM_loclistx:
           case DW_FORM_rnglistx:
           case DW_FORM_sdata:
           case DW_FORM_udata:

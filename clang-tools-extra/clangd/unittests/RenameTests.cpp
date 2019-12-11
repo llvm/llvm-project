@@ -30,6 +30,18 @@ using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
+// Covnert a Range to a Ref.
+Ref refWithRange(const clangd::Range &Range, const std::string &URI) {
+  Ref Result;
+  Result.Kind = RefKind::Reference;
+  Result.Location.Start.setLine(Range.start.line);
+  Result.Location.Start.setColumn(Range.start.character);
+  Result.Location.End.setLine(Range.end.line);
+  Result.Location.End.setColumn(Range.end.character);
+  Result.Location.FileURI = URI.c_str();
+  return Result;
+}
+
 // Build a RefSlab from all marked ranges in the annotation. The ranges are
 // assumed to associate with the given SymbolName.
 std::unique_ptr<RefSlab> buildRefSlab(const Annotations &Code,
@@ -40,17 +52,9 @@ std::unique_ptr<RefSlab> buildRefSlab(const Annotations &Code,
   TU.HeaderCode = Code.code();
   auto Symbols = TU.headerSymbols();
   const auto &SymbolID = findSymbol(Symbols, SymbolName).ID;
-  for (const auto &Range : Code.ranges()) {
-    Ref R;
-    R.Kind = RefKind::Reference;
-    R.Location.Start.setLine(Range.start.line);
-    R.Location.Start.setColumn(Range.start.character);
-    R.Location.End.setLine(Range.end.line);
-    R.Location.End.setColumn(Range.end.character);
-    auto U = URI::create(Path).toString();
-    R.Location.FileURI = U.c_str();
-    Builder.insert(SymbolID, R);
-  }
+  std::string PathURI = URI::create(Path).toString();
+  for (const auto &Range : Code.ranges())
+    Builder.insert(SymbolID, refWithRange(Range, PathURI));
 
   return std::make_unique<RefSlab>(std::move(Builder).build());
 }
@@ -662,6 +666,54 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   EXPECT_FALSE(Results);
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("too many occurrences"));
+}
+
+TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
+  auto MainCode = Annotations("int [[^x]] = 2;");
+  auto MainFilePath = testPath("main.cc");
+  auto BarCode = Annotations("int [[x]];");
+  auto BarPath = testPath("bar.cc");
+  auto TU = TestTU::withCode(MainCode.code());
+  // Set a file "bar.cc" on disk.
+  TU.AdditionalFiles["bar.cc"] = BarCode.code();
+  auto AST = TU.build();
+  std::string BarPathURI = URI::create(BarPath).toString();
+  Ref XRefInBarCC = refWithRange(BarCode.range(), BarPathURI);
+  // The index will return duplicated refs, our code should be robost to handle
+  // it.
+  class DuplicatedXRefIndex : public SymbolIndex {
+  public:
+    DuplicatedXRefIndex(const Ref &ReturnedRef) : ReturnedRef(ReturnedRef) {}
+    bool refs(const RefsRequest &Req,
+              llvm::function_ref<void(const Ref &)> Callback) const override {
+      // Return two duplicated refs.
+      Callback(ReturnedRef);
+      Callback(ReturnedRef);
+      return false;
+    }
+
+    bool fuzzyFind(const FuzzyFindRequest &,
+                   llvm::function_ref<void(const Symbol &)>) const override {
+      return false;
+    }
+    void lookup(const LookupRequest &,
+                llvm::function_ref<void(const Symbol &)>) const override {}
+
+    void relations(const RelationsRequest &,
+                   llvm::function_ref<void(const SymbolID &, const Symbol &)>)
+        const override {}
+    size_t estimateMemoryUsage() const override { return 0; }
+    Ref ReturnedRef;
+  } DIndex(XRefInBarCC);
+  llvm::StringRef NewName = "newName";
+  auto Results = rename({MainCode.point(), NewName, AST, MainFilePath, &DIndex,
+                         /*CrossFile=*/true});
+  ASSERT_TRUE(bool(Results)) << Results.takeError();
+  EXPECT_THAT(
+      applyEdits(std::move(*Results)),
+      UnorderedElementsAre(
+          Pair(Eq(BarPath), Eq(expectedResult(BarCode, NewName))),
+          Pair(Eq(MainFilePath), Eq(expectedResult(MainCode, NewName)))));
 }
 
 TEST(CrossFileRenameTests, WithUpToDateIndex) {

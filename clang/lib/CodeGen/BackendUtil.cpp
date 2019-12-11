@@ -896,7 +896,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
   {
     PrettyStackTraceString CrashInfo("Per-function optimization");
-    llvm::TimeTraceScope TimeScope("PerFunctionPasses", StringRef(""));
+    llvm::TimeTraceScope TimeScope("PerFunctionPasses");
 
     PerFunctionPasses.doInitialization();
     for (Function &F : *TheModule)
@@ -907,13 +907,13 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
   {
     PrettyStackTraceString CrashInfo("Per-module optimization passes");
-    llvm::TimeTraceScope TimeScope("PerModulePasses", StringRef(""));
+    llvm::TimeTraceScope TimeScope("PerModulePasses");
     PerModulePasses.run(*TheModule);
   }
 
   {
     PrettyStackTraceString CrashInfo("Code generation");
-    llvm::TimeTraceScope TimeScope("CodeGenPasses", StringRef(""));
+    llvm::TimeTraceScope TimeScope("CodeGenPasses");
     CodeGenPasses.run(*TheModule);
   }
 
@@ -1499,7 +1499,7 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
                               BackendAction Action,
                               std::unique_ptr<raw_pwrite_stream> OS) {
 
-  llvm::TimeTraceScope TimeScope("Backend", StringRef(""));
+  llvm::TimeTraceScope TimeScope("Backend");
 
   std::unique_ptr<llvm::Module> EmptyModule;
   if (!CGOpts.ThinLTOIndexFile.empty()) {

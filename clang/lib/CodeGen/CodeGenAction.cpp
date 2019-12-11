@@ -249,7 +249,7 @@ namespace clang {
 
     void HandleTranslationUnit(ASTContext &C) override {
       {
-        llvm::TimeTraceScope TimeScope("Frontend", StringRef(""));
+        llvm::TimeTraceScope TimeScope("Frontend");
         PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
         if (FrontendTimesIsEnabled) {
           LLVMIRGenerationRefCount += 1;

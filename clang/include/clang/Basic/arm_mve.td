@@ -609,6 +609,24 @@ defm vstrhq: scatter_offset_both<!listconcat(T.All16, T.Int32), u16, 1>;
 defm vstrwq: scatter_offset_both<T.All32, u32, 2>;
 defm vstrdq: scatter_offset_both<T.Int64, u64, 3>;
 
+let params = T.Int in {
+  def vshlq_n: Intrinsic<Vector, (args Vector:$v, imm_0toNm1:$sh),
+                         (shl $v, (splat (Scalar $sh)))>;
+  defm vshlq: IntrinsicMX<Vector, (args Vector:$v, imm_0toNm1:$sh,
+                                        Predicate:$pred),
+      (IRInt<"shl_imm_predicated", [Vector, Predicate]>
+           $v, $sh, $pred, $inactive), "_n">;
+
+  let pnt = PNT_NType in {
+    def vshrq_n: Intrinsic<Vector, (args Vector:$v, imm_1toN:$sh),
+                            (immshr $v, $sh, (unsignedflag Scalar))>;
+    defm vshrq: IntrinsicMX<Vector, (args Vector:$v, imm_1toN:$sh,
+                                          Predicate:$pred),
+        (IRInt<"shr_imm_predicated", [Vector, Predicate]>
+             $v, $sh, (unsignedflag Scalar), $pred, $inactive), "_n">;
+  }
+}
+
 // Base class for the scalar shift intrinsics.
 class ScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
   Intrinsic<argtype, !con((args argtype:$value), shiftCountArg), shiftCodeGen> {
@@ -686,25 +704,17 @@ def vadciq_m: Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
 multiclass VectorComplexAddPred<dag not_halving, dag angle> {
   def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
      (IRInt<"vcaddq", [Vector]> not_halving, angle, $a, $b)>;
-  def _m : Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
-                              Predicate:$pred),
+  defm "" : IntrinsicMX<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
      (IRInt<"vcaddq_predicated", [Vector, Predicate]>
        not_halving, angle, $inactive, $a, $b, $pred)>;
-  def _x : Intrinsic<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
-     (IRInt<"vcaddq_predicated", [Vector, Predicate]>
-       not_halving, angle, (undef Vector), $a, $b, $pred)>;
 }
 
 multiclass VectorComplexMulPred<dag angle> {
   def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
     (IRInt<"vcmulq", [Vector]> angle, $a, $b)>;
-  def _m : Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
-                              Predicate:$pred),
+  defm "" : IntrinsicMX<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
     (IRInt<"vcmulq_predicated", [Vector, Predicate]> angle, $inactive, $a, $b,
       $pred)>;
-  def _x : Intrinsic<Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"vcmulq_predicated", [Vector, Predicate]> angle, (undef Vector), $a,
-      $b, $pred)>;
 }
 
 multiclass VectorComplexMLAPred<dag angle> {

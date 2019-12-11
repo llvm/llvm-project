@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
@@ -42,28 +43,23 @@ void LivePhysRegs::removeRegsInMask(const MachineOperand &MO,
 
 /// Remove defined registers and regmask kills from the set.
 void LivePhysRegs::removeDefs(const MachineInstr &MI) {
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (O->isReg()) {
-      if (!O->isDef() || O->isDebug())
-        continue;
-      Register Reg = O->getReg();
-      if (!Register::isPhysicalRegister(Reg))
-        continue;
-      removeReg(Reg);
-    } else if (O->isRegMask())
-      removeRegsInMask(*O);
+  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+    if (MOP.isRegMask()) {
+      removeRegsInMask(MOP);
+      continue;
+    }
+
+    if (MOP.isDef())
+      removeReg(MOP.getReg());
   }
 }
 
 /// Add uses to the set.
 void LivePhysRegs::addUses(const MachineInstr &MI) {
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (!O->isReg() || !O->readsReg() || O->isDebug())
+  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+    if (!MOP.isReg() || !MOP.readsReg())
       continue;
-    Register Reg = O->getReg();
-    if (!Register::isPhysicalRegister(Reg))
-      continue;
-    addReg(Reg);
+    addReg(MOP.getReg());
   }
 }
 

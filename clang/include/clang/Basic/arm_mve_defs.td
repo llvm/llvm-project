@@ -66,6 +66,10 @@ def xor: IRBuilder<"CreateXor">;
 def sub: IRBuilder<"CreateSub">;
 def shl: IRBuilder<"CreateShl">;
 def lshr: IRBuilder<"CreateLShr">;
+def immshr: CGHelperFn<"MVEImmediateShr"> {
+  let special_params = [IRBuilderIntParam<1, "unsigned">,
+                        IRBuilderIntParam<2, "bool">];
+}
 def fadd: IRBuilder<"CreateFAdd">;
 def fmul: IRBuilder<"CreateFMul">;
 def fsub: IRBuilder<"CreateFSub">;
@@ -318,8 +322,8 @@ def imm_simd_vmvn : Immediate<u32, IB_UEltValue> {
 //
 // imm_0toNm1 is the same but with the range offset by 1, i.e. 0 to N-1
 // inclusive.
-def imm_1toN : Immediate<u32, IB_EltBit<1>>;
-def imm_0toNm1 : Immediate<u32, IB_EltBit<0>>;
+def imm_1toN : Immediate<sint, IB_EltBit<1>>;
+def imm_0toNm1 : Immediate<sint, IB_EltBit<0>>;
 
 // imm_lane has to be the index of a vector lane in the main vector type, i.e
 // it can range from 0 to (128 / size of scalar)-1 inclusive. (e.g. vgetq_lane)
@@ -426,6 +430,30 @@ class Intrinsic<Type ret_, dag args_, dag codegen_> {
 
 class NameOverride<string basename_> {
   string basename = basename_;
+}
+
+// A wrapper to define both _m and _x versions of a predicated
+// intrinsic.
+multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
+                       string nameSuffix = "",
+                       PolymorphicNameType pnt_x = PNT_Type> {
+  // The _m variant takes an initial parameter called $inactive, which
+  // provides the input value of the output register, i.e. all the
+  // inactive lanes in the predicated operation take their values from
+  // this.
+  def "_m" # nameSuffix:
+     Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg>;
+
+  // The _x variant leaves off that parameter, and simply uses an
+  // undef value of the same type.
+  def "_x" # nameSuffix:
+     Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)> {
+    // Allow overriding of the polymorphic name type, because
+    // sometimes the _m and _x variants polymorph differently
+    // (typically because the type of the inactive parameter can be
+    // used as a disambiguator if it's present).
+    let pnt = pnt_x;
+  }
 }
 
 // -----------------------------------------------------------------------------
