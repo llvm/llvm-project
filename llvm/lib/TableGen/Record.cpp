@@ -788,6 +788,21 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
     if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
       return IntInit::get(LHSs->getValue().empty());
     break;
+
+  case GETOP:
+    if (DagInit *Dag = dyn_cast<DagInit>(LHS)) {
+      DefInit *DI = DefInit::get(Dag->getOperatorAsDef({}));
+      if (!DI->getType()->typeIsA(getType())) {
+        PrintFatalError(CurRec->getLoc(),
+                        Twine("Expected type '") +
+                        getType()->getAsString() + "', got '" +
+                        DI->getType()->getAsString() + "' in: " +
+                        getAsString() + "\n");
+      } else {
+        return DI;
+      }
+    }
+    break;
   }
   return const_cast<UnOpInit *>(this);
 }
@@ -809,6 +824,7 @@ std::string UnOpInit::getAsString() const {
   case TAIL: Result = "!tail"; break;
   case SIZE: Result = "!size"; break;
   case EMPTY: Result = "!empty"; break;
+  case GETOP: Result = "!getop"; break;
   }
   return Result + "(" + LHS->getAsString() + ")";
 }
@@ -980,6 +996,20 @@ Init *BinOpInit::Fold(Record *CurRec) const {
 
     break;
   }
+  case SETOP: {
+    DagInit *Dag = dyn_cast<DagInit>(LHS);
+    DefInit *Op = dyn_cast<DefInit>(RHS);
+    if (Dag && Op) {
+      SmallVector<Init*, 8> Args;
+      SmallVector<StringInit*, 8> ArgNames;
+      for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i) {
+        Args.push_back(Dag->getArg(i));
+        ArgNames.push_back(Dag->getArgName(i));
+      }
+      return DagInit::get(Op, nullptr, Args, ArgNames);
+    }
+    break;
+  }
   case ADD:
   case MUL:
   case AND:
@@ -1042,6 +1072,7 @@ std::string BinOpInit::getAsString() const {
   case LISTCONCAT: Result = "!listconcat"; break;
   case LISTSPLAT: Result = "!listsplat"; break;
   case STRCONCAT: Result = "!strconcat"; break;
+  case SETOP: Result = "!setop"; break;
   }
   return Result + "(" + LHS->getAsString() + ", " + RHS->getAsString() + ")";
 }
