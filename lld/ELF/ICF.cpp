@@ -259,6 +259,13 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, ArrayRef<RelTy> ra,
     if (!da || !db || da->scriptDefined || db->scriptDefined)
       return false;
 
+    // When comparing a pair of relocations, if they refer to different symbols,
+    // and either symbol is preemptible, the containing sections should be
+    // considered different. This is because even if the sections are identical
+    // in this DSO, they may not be after preemption.
+    if (da->isPreemptible || db->isPreemptible)
+      return false;
+
     // Relocations referring to absolute symbols are constant-equal if their
     // values are equal.
     if (!da->section && !db->section && da->value + addA == db->value + addB)

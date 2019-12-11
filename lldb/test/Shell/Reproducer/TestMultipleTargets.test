@@ -1,0 +1,23 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# This tests the replaying with multiple targets.
+
+# RUN: %clang_host %S/Inputs/simple.c -g -o %t.out
+
+# RUN: rm -rf %t.repro
+# RUN: %lldb -x -b --capture --capture-path %t.repro -o 'target create %t.out' -o 'target create %t.out' -s %S/Inputs/MultipleTargetsCapture.in  | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+# RUN: env FOO=BAR %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+
+# CHECK: Process [[TARGET0:[0-9]+]] stopped
+# CHECK: stop reason = breakpoint 1.1
+# CHECK: simple.c:12:5
+# CHECK: Process [[TARGET1:[0-9]+]] stopped
+# CHECK: stop reason = breakpoint 1.1
+# CHECK: simple.c:16:5
+# CHECK: Process [[TARGET0]] resuming
+# CHECK: Process [[TARGET0]] exited
+# CHECK: Process [[TARGET1]] resuming
+# CHECK: Process [[TARGET1]] exited
+
+# CAPTURE: Reproducer is in capture mode.
+# CAPTURE: Reproducer written

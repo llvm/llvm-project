@@ -146,8 +146,8 @@ def warn_doc_returns_attached_to_a_void_function : Warning<
 // \deprecated command
 
 def warn_doc_deprecated_not_sync : Warning<
-  "declaration is marked with '\\deprecated' command but does not have "
-  "a deprecation attribute">,
+  "declaration is marked with '%select{\\|@}0deprecated' command but does "
+  "not have a deprecation attribute">,
   InGroup<DocumentationDeprecatedSync>, DefaultIgnore;
 
 def note_add_deprecation_attr : Note<

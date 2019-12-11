@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wdocumentation-pedantic -fcomment-block-commands=foobar -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wdocumentation-pedantic -fcomment-block-commands=foobar -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN  %clang_cc1 -std=c++11 -fsyntax-only -Wdocumentation -Wdocumentation-pedantic -fcomment-block-commands=foobar -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck -DATTRIBUTE="__attribute__((deprecated))" %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -Wdocumentation -Wdocumentation-pedantic -fcomment-block-commands=foobar -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck --check-prefixes=CHECK,CHECK14 -DATTRIBUTE="[[deprecated]]" %s
 
 // expected-warning@+1 {{parameter 'ZZZZZZZZZZ' not found in the function declaration}} expected-note@+1 {{did you mean 'a'?}}
 /// \param ZZZZZZZZZZ Blah blah.
@@ -51,11 +52,57 @@ struct test_deprecated_6 {
   }
 };
 
+class PR43753 {
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  static void test_deprecated_static();
+
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  static auto test_deprecated_static_trailing_return() -> int;
+
+#if __cplusplus >= 201402L
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  static decltype(auto) test_deprecated_static_decltype_auto() { return 1; }
+#endif
+
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  void test_deprecated_const() const;
+
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  auto test_deprecated_trailing_return() -> int;
+
+#if __cplusplus >= 201402L
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  decltype(auto) test_deprecated_decltype_auto() const { return a; }
+
+private:
+  int a{0};
+#endif
+};
 #define MY_ATTR_DEPRECATED __attribute__((deprecated))
 
 // expected-warning@+1 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}} expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
 /// \deprecated
 void test_deprecated_9(int a);
+
+#if __cplusplus >= 201402L
+#define ATTRIBUTE_DEPRECATED [[deprecated]]
+
+// expected-warning@+1 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}} expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+/// \deprecated
+void test_deprecated_10(int a);
+#endif
 
 // rdar://12381408
 // expected-warning@+2  {{unknown command tag name 'retur'; did you mean 'return'?}}
@@ -76,17 +123,21 @@ int Bar();
 /// \encode PR18051
 int PR18051();
 
-// CHECK: fix-it:"{{.*}}":{5:12-5:22}:"a"
-// CHECK: fix-it:"{{.*}}":{9:12-9:15}:"aaa"
-// CHECK: fix-it:"{{.*}}":{13:13-13:23}:"T"
-// CHECK: fix-it:"{{.*}}":{18:13-18:18}:"SomeTy"
-// CHECK: fix-it:"{{.*}}":{25:25-25:25}:" __attribute__((deprecated))"
-// CHECK: fix-it:"{{.*}}":{29:30-29:30}:" __attribute__((deprecated))"
-// CHECK: fix-it:"{{.*}}":{34:27-34:27}:" __attribute__((deprecated))"
-// CHECK: fix-it:"{{.*}}":{38:27-38:27}:" __attribute__((deprecated))"
-// CHECK: fix-it:"{{.*}}":{46:27-46:27}:" __attribute__((deprecated))"
-// CHECK: fix-it:"{{.*}}":{50:27-50:27}:" __attribute__((deprecated))"
-// CHECK: fix-it:"{{.*}}":{58:30-58:30}:" MY_ATTR_DEPRECATED"
-// CHECK: fix-it:"{{.*}}":{63:6-63:11}:"return"
-// CHECK: fix-it:"{{.*}}":{67:6-67:11}:"foobar"
-// CHECK: fix-it:"{{.*}}":{76:6-76:12}:"endcode"
+// CHECK: fix-it:"{{.*}}":{6:12-6:22}:"a"
+// CHECK: fix-it:"{{.*}}":{10:12-10:15}:"aaa"
+// CHECK: fix-it:"{{.*}}":{14:13-14:23}:"T"
+// CHECK: fix-it:"{{.*}}":{19:13-19:18}:"SomeTy"
+// CHECK: fix-it:"{{.*}}":{26:1-26:1}:"[[ATTRIBUTE]] "
+// CHECK: fix-it:"{{.*}}":{30:1-30:1}:"[[ATTRIBUTE]] "
+// CHECK: fix-it:"{{.*}}":{35:3-35:3}:"[[ATTRIBUTE]] "
+// CHECK: fix-it:"{{.*}}":{39:3-39:3}:"[[ATTRIBUTE]] "
+// CHECK: fix-it:"{{.*}}":{47:3-47:3}:"[[ATTRIBUTE]] "
+// CHECK: fix-it:"{{.*}}":{51:3-51:3}:"[[ATTRIBUTE]] "
+// CHECK: fix-it:"{{.*}}":{76:3-76:3}:"[[ATTRIBUTE]] "
+// CHECK: fix-it:"{{.*}}":{81:3-81:3}:"[[ATTRIBUTE]] "
+// CHECK14: fix-it:"{{.*}}":{87:3-87:3}:"[[ATTRIBUTE]] "
+// CHECK: fix-it:"{{.*}}":{97:1-97:1}:"MY_ATTR_DEPRECATED "
+// CHECK14: fix-it:"{{.*}}":{104:1-104:1}:"ATTRIBUTE_DEPRECATED "
+// CHECK: fix-it:"{{.*}}":{110:6-110:11}:"return"
+// CHECK: fix-it:"{{.*}}":{114:6-114:11}:"foobar"
+// CHECK: fix-it:"{{.*}}":{123:6-123:12}:"endcode"

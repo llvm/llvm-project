@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 void foo() {
 }
@@ -55,13 +57,15 @@ int tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for simd if(parallel : argc) if (for:argc) // expected-error {{directive name modifier 'for' is not allowed for '#pragma omp target parallel for simd'}}
   for (i = 0; i < argc; ++i) foo();
+  #pragma omp target parallel for simd if(parallel : argc) if (simd:argc) // omp45-error {{directive name modifier 'simd' is not allowed for '#pragma omp target parallel for simd'}}
+  for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for simd if(target : argc) if (target :argc) // expected-error {{directive '#pragma omp target parallel for simd' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for simd if(parallel : argc) if (parallel :argc) // expected-error {{directive '#pragma omp target parallel for simd' cannot contain more than one 'if' clause with 'parallel' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target parallel for simd if(target : argc) if (argc) // expected-error {{expected  'parallel' directive name modifier}} expected-note {{previous clause with directive name modifier specified here}}
+  #pragma omp target parallel for simd if(target : argc) if (argc) // omp45-error {{expected 'parallel' directive name modifier}} omp50-error {{expected one of 'parallel' or 'simd' directive name modifiers}} expected-note {{previous clause with directive name modifier specified here}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target parallel for simd if(target : argc) if(parallel : argc) if (argc) // expected-error {{no more 'if' clause is allowed}} expected-note {{previous clause with directive name modifier specified here}} expected-note {{previous clause with directive name modifier specified here}}
+  #pragma omp target parallel for simd if(target : argc) if(parallel : argc) if (argc) // omp45-error {{no more 'if' clause is allowed}} omp50-error {{expected 'simd' directive name modifier}} expected-note {{previous clause with directive name modifier specified here}} expected-note {{previous clause with directive name modifier specified here}}
   for (i = 0; i < argc; ++i) foo();
 
   return 0;
@@ -101,13 +105,15 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for simd if(target : argc) if (for:argc) // expected-error {{directive name modifier 'for' is not allowed for '#pragma omp target parallel for simd'}}
   for (i = 0; i < argc; ++i) foo();
+  #pragma omp target parallel for simd if(target : argc) if (simd:argc) // omp45-error {{directive name modifier 'simd' is not allowed for '#pragma omp target parallel for simd'}}
+  for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for simd if(target : argc) if (target :argc) // expected-error {{directive '#pragma omp target parallel for simd' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for simd if(parallel : argc) if (parallel :argc) // expected-error {{directive '#pragma omp target parallel for simd' cannot contain more than one 'if' clause with 'parallel' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target parallel for simd if(target : argc) if (argc) // expected-error {{expected  'parallel' directive name modifier}} expected-note {{previous clause with directive name modifier specified here}}
+  #pragma omp target parallel for simd if(target : argc) if (argc) // omp45-error {{expected 'parallel' directive name modifier}} omp50-error {{expected one of 'parallel' or 'simd' directive name modifiers}} expected-note {{previous clause with directive name modifier specified here}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target parallel for simd if(target : argc) if(parallel : argc) if (argc) // expected-error {{no more 'if' clause is allowed}} expected-note {{previous clause with directive name modifier specified here}} expected-note {{previous clause with directive name modifier specified here}}
+  #pragma omp target parallel for simd if(target : argc) if(parallel : argc) if (argc) // omp45-error {{no more 'if' clause is allowed}} omp50-error {{expected 'simd' directive name modifier}} expected-note {{previous clause with directive name modifier specified here}} expected-note {{previous clause with directive name modifier specified here}}
   for (i = 0; i < argc; ++i) foo();
 
   return tmain(argc, argv);

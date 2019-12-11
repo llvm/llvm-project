@@ -4,9 +4,9 @@
 
 # Make copies of the test inputs for placing in the archive so that we can mess
 # about with them later on.
-# RUN: cp %p/Inputs/trivial.obj.elf-x86-64 %t/1.o
-# RUN: cp %p/Inputs/relocs.obj.elf-x86_64 %t/2.o
-# RUN: cp %p/Inputs/trivial.obj.coff-arm %t/3.o
+# RUN: cp %p/ELF/Inputs/trivial.obj.elf-x86-64 %t/1.o
+# RUN: cp %p/ELF/Inputs/relocs.obj.elf-x86_64 %t/2.o
+# RUN: cp %p/COFF/Inputs/trivial.obj.coff-arm %t/3.o
 # RUN: llvm-ar rcT %t.a %t/1.o %t/2.o %t/3.o
 
 # Test that basic dumping works for all members.

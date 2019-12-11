@@ -133,11 +133,11 @@ BitVector MachineFrameInfo::getPristineRegs(const MachineFunction &MF) const {
   return BV;
 }
 
-unsigned MachineFrameInfo::estimateStackSize(const MachineFunction &MF) const {
+uint64_t MachineFrameInfo::estimateStackSize(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
   unsigned MaxAlign = getMaxAlignment();
-  int Offset = 0;
+  int64_t Offset = 0;
 
   // This code is very, very similar to PEI::calculateFrameObjectOffsets().
   // It really should be refactored to share code. Until then, changes
@@ -147,7 +147,7 @@ unsigned MachineFrameInfo::estimateStackSize(const MachineFunction &MF) const {
     // Only estimate stack size of default stack.
     if (getStackID(i) != TargetStackID::Default)
       continue;
-    int FixedOff = -getObjectOffset(i);
+    int64_t FixedOff = -getObjectOffset(i);
     if (FixedOff > Offset) Offset = FixedOff;
   }
   for (unsigned i = 0, e = getObjectIndexEnd(); i != e; ++i) {
@@ -183,7 +183,7 @@ unsigned MachineFrameInfo::estimateStackSize(const MachineFunction &MF) const {
   unsigned AlignMask = StackAlign - 1;
   Offset = (Offset + AlignMask) & ~uint64_t(AlignMask);
 
-  return (unsigned)Offset;
+  return (uint64_t)Offset;
 }
 
 void MachineFrameInfo::computeMaxCallFrameSize(const MachineFunction &MF) {

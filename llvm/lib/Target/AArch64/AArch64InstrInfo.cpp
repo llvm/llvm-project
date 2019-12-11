@@ -3109,7 +3109,7 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
 
   const unsigned MaxEncodableValue = MaxEncoding << ShiftSize;
   do {
-    unsigned ThisVal = std::min<unsigned>(Offset, MaxEncodableValue);
+    uint64_t ThisVal = std::min<uint64_t>(Offset, MaxEncodableValue);
     unsigned LocalShiftSize = 0;
     if (ThisVal > MaxEncoding) {
       ThisVal = ThisVal >> ShiftSize;

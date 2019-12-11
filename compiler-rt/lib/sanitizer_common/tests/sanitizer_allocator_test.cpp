@@ -1404,4 +1404,15 @@ TEST(SanitizerCommon, ThreadedTwoLevelByteMap) {
   EXPECT_EQ((uptr)TestMapUnmapCallback::unmap_count, m.size1());
 }
 
+TEST(SanitizerCommon, LowLevelAllocatorShouldRoundUpSizeOnAlloc) {
+  // When allocating a memory block slightly bigger than a memory page and
+  // LowLevelAllocator calls MmapOrDie for the internal buffer, it should round
+  // the size up to the page size, so that subsequent calls to the allocator
+  // can use the remaining space in the last allocated page.
+  static LowLevelAllocator allocator;
+  char *ptr1 = (char *)allocator.Allocate(GetPageSizeCached() + 16);
+  char *ptr2 = (char *)allocator.Allocate(16);
+  EXPECT_EQ(ptr2, ptr1 + GetPageSizeCached() + 16);
+}
+
 #endif  // #if !SANITIZER_DEBUG

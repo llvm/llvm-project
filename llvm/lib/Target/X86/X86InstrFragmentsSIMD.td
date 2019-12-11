@@ -169,7 +169,7 @@ def X86vshiftimm : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
 
 def X86vshldq  : SDNode<"X86ISD::VSHLDQ",    X86vshiftimm>;
 def X86vshrdq  : SDNode<"X86ISD::VSRLDQ",    X86vshiftimm>;
-def X86cmpp    : SDNode<"X86ISD::CMPP",      SDTX86VFCMP>;
+def X86cmpp    : SDNode<"X86ISD::CMPP",      SDTX86VFCMP, [SDNPHasChain]>;
 def X86pcmpeq  : SDNode<"X86ISD::PCMPEQ", SDTIntBinOp, [SDNPCommutative]>;
 def X86pcmpgt  : SDNode<"X86ISD::PCMPGT", SDTIntBinOp>;
 
@@ -181,7 +181,7 @@ def X86CmpMaskCCScalar :
       SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisFP<1>, SDTCisSameAs<1, 2>,
                            SDTCisVT<3, i8>]>;
 
-def X86cmpm     : SDNode<"X86ISD::CMPM",     X86CmpMaskCC>;
+def X86cmpm     : SDNode<"X86ISD::CMPM",     X86CmpMaskCC, [SDNPHasChain]>;
 def X86cmpmSAE  : SDNode<"X86ISD::CMPM_SAE", X86CmpMaskCC>;
 def X86cmpms    : SDNode<"X86ISD::FSETCCM",   X86CmpMaskCCScalar>;
 def X86cmpmsSAE : SDNode<"X86ISD::FSETCCM_SAE",   X86CmpMaskCCScalar>;

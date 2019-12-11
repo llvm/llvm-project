@@ -44,7 +44,6 @@ bool hasHardwareCRC32() {
   __get_cpuid(1, &Eax, &Ebx, &Ecx, &Edx);
   return !!(Ecx & bit_SSE4_2);
 }
-
 #elif defined(__arm__) || defined(__aarch64__)
 #ifndef AT_HWCAP
 #define AT_HWCAP 16
@@ -65,6 +64,9 @@ bool hasHardwareCRC32() {
   return !!(getauxval(AT_HWCAP) & HWCAP_CRC32);
 #endif // SCUDO_FUCHSIA
 }
+#else
+// No hardware CRC32 implemented in Scudo for other architectures.
+bool hasHardwareCRC32() { return false; }
 #endif // defined(__x86_64__) || defined(__i386__)
 
 } // namespace scudo

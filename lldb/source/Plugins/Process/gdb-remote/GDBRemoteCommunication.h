@@ -27,6 +27,9 @@
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
+namespace repro {
+class PacketRecorder;
+}
 namespace process_gdb_remote {
 
 enum GDBStoppointType {
@@ -133,7 +136,8 @@ public:
                          // fork/exec to avoid having to connect/accept
 
   void DumpHistory(Stream &strm);
-  void SetHistoryStream(llvm::raw_ostream *strm);
+
+  void SetPacketRecorder(repro::PacketRecorder *recorder);
 
   static llvm::Error ConnectLocally(GDBRemoteCommunication &client,
                                     GDBRemoteCommunication &server);

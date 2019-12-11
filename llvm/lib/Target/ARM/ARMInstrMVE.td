@@ -2960,10 +2960,10 @@ multiclass MVE_VMUL_fp_m<MVEVectorVTInfo VTI>
 defm MVE_VMULf32 : MVE_VMUL_fp_m<MVE_v4f32>;
 defm MVE_VMULf16 : MVE_VMUL_fp_m<MVE_v8f16>;
 
-class MVE_VCMLA<string suffix, bit size, list<dag> pattern=[]>
+class MVE_VCMLA<string suffix, bit size>
   : MVEFloatArithNeon<"vcmla", suffix, size, (outs MQPR:$Qd),
                          (ins MQPR:$Qd_src, MQPR:$Qn, MQPR:$Qm, complexrotateop:$rot),
-                         "$Qd, $Qn, $Qm, $rot", vpred_n, "$Qd = $Qd_src", pattern> {
+                         "$Qd, $Qn, $Qm, $rot", vpred_n, "$Qd = $Qd_src", []> {
   bits<4> Qd;
   bits<4> Qn;
   bits<2> rot;
@@ -2980,8 +2980,32 @@ class MVE_VCMLA<string suffix, bit size, list<dag> pattern=[]>
   let Inst{4} = 0b0;
 }
 
-def MVE_VCMLAf16 : MVE_VCMLA<"f16", 0b0>;
-def MVE_VCMLAf32 : MVE_VCMLA<"f32", 0b1>;
+multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI, bit size> {
+  def "" : MVE_VCMLA<VTI.Suffix, size>;
+
+  let Predicates = [HasMVEFloat] in {
+    def : Pat<(VTI.Vec (int_arm_mve_vcmlaq
+                            imm:$rot, (VTI.Vec MQPR:$Qd_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qd_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            imm:$rot))>;
+
+    def : Pat<(VTI.Vec (int_arm_mve_vcmlaq_predicated
+                            imm:$rot, (VTI.Vec MQPR:$Qd_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qd_src), (VTI.Vec MQPR:$Qn),
+                            (VTI.Vec MQPR:$Qm), imm:$rot,
+                            ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+
+  }
+}
+
+defm MVE_VCMLAf16 : MVE_VCMLA_m<MVE_v8f16, 0b0>;
+defm MVE_VCMLAf32 : MVE_VCMLA_m<MVE_v4f32, 0b1>;
 
 class MVE_VADDSUBFMA_fp<string iname, string suffix, bit size, bit bit_4,
                         bit bit_8, bit bit_21, dag iops=(ins),
@@ -3056,10 +3080,10 @@ defm MVE_VADDf16 : MVE_VADD_fp_m<MVE_v8f16>;
 defm MVE_VSUBf32 : MVE_VSUB_fp_m<MVE_v4f32>;
 defm MVE_VSUBf16 : MVE_VSUB_fp_m<MVE_v8f16>;
 
-class MVE_VCADD<string suffix, bit size, string cstr="", list<dag> pattern=[]>
+class MVE_VCADD<string suffix, bit size, string cstr="">
   : MVEFloatArithNeon<"vcadd", suffix, size, (outs MQPR:$Qd),
                          (ins MQPR:$Qn, MQPR:$Qm, complexrotateopodd:$rot),
-                         "$Qd, $Qn, $Qm, $rot", vpred_r, cstr, pattern> {
+                         "$Qd, $Qn, $Qm, $rot", vpred_r, cstr, []> {
   bits<4> Qd;
   bits<4> Qn;
   bit rot;
@@ -3077,8 +3101,31 @@ class MVE_VCADD<string suffix, bit size, string cstr="", list<dag> pattern=[]>
   let Inst{4} = 0b0;
 }
 
-def MVE_VCADDf16 : MVE_VCADD<"f16", 0b0>;
-def MVE_VCADDf32 : MVE_VCADD<"f32", 0b1, "@earlyclobber $Qd">;
+multiclass MVE_VCADD_m<MVEVectorVTInfo VTI, bit size, string cstr=""> {
+  def "" : MVE_VCADD<VTI.Suffix, size, cstr>;
+
+  let Predicates = [HasMVEFloat] in {
+    def : Pat<(VTI.Vec (int_arm_mve_vcaddq (i32 1),
+                            imm:$rot, (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            imm:$rot))>;
+
+    def : Pat<(VTI.Vec (int_arm_mve_vcaddq_predicated (i32 1),
+                            imm:$rot, (VTI.Vec MQPR:$inactive),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            imm:$rot,
+                            ARMVCCThen, (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive)))>;
+
+  }
+}
+
+defm MVE_VCADDf16 : MVE_VCADD_m<MVE_v8f16, 0b0>;
+defm MVE_VCADDf32 : MVE_VCADD_m<MVE_v4f32, 0b1, "@earlyclobber $Qd">;
 
 class MVE_VABD_fp<string suffix, bit size>
   : MVE_float<"vabd", suffix, (outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm),
@@ -3690,10 +3737,10 @@ defm MVE_VQDMLSDHX  : MVE_VQxDMLxDH_multi<"vqdmlsdhx",  0b1, 0b0, 0b1>;
 defm MVE_VQRDMLSDH  : MVE_VQxDMLxDH_multi<"vqrdmlsdh",  0b0, 0b1, 0b1>;
 defm MVE_VQRDMLSDHX : MVE_VQxDMLxDH_multi<"vqrdmlsdhx", 0b1, 0b1, 0b1>;
 
-class MVE_VCMUL<string iname, string suffix, bit size, string cstr="", list<dag> pattern=[]>
+class MVE_VCMUL<string iname, string suffix, bit size, string cstr="">
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
                    (ins MQPR:$Qn, MQPR:$Qm, complexrotateop:$rot),
-                   "$Qd, $Qn, $Qm, $rot", vpred_r, cstr, pattern> {
+                   "$Qd, $Qn, $Qm, $rot", vpred_r, cstr, []> {
   bits<4> Qn;
   bits<2> rot;
 
@@ -3709,8 +3756,33 @@ class MVE_VCMUL<string iname, string suffix, bit size, string cstr="", list<dag>
   let Predicates = [HasMVEFloat];
 }
 
-def MVE_VCMULf16 : MVE_VCMUL<"vcmul", "f16", 0b0>;
-def MVE_VCMULf32 : MVE_VCMUL<"vcmul", "f32", 0b1, "@earlyclobber $Qd">;
+multiclass MVE_VCMUL_m<string iname, MVEVectorVTInfo VTI,
+                       bit size, string cstr=""> {
+  def "" : MVE_VCMUL<iname, VTI.Suffix, size, cstr>;
+
+
+  let Predicates = [HasMVEFloat] in {
+    def : Pat<(VTI.Vec (int_arm_mve_vcmulq
+                            imm:$rot, (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            imm:$rot))>;
+
+    def : Pat<(VTI.Vec (int_arm_mve_vcmulq_predicated
+                            imm:$rot, (VTI.Vec MQPR:$inactive),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            imm:$rot,
+                            ARMVCCThen, (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive)))>;
+
+  }
+}
+
+defm MVE_VCMULf16 : MVE_VCMUL_m<"vcmul", MVE_v8f16, 0b0>;
+defm MVE_VCMULf32 : MVE_VCMUL_m<"vcmul", MVE_v4f32, 0b1, "@earlyclobber $Qd">;
 
 class MVE_VMULL<string iname, string suffix, bit bit_28, bits<2> bits_21_20,
                 bit T, string cstr, list<dag> pattern=[]>
@@ -3938,10 +4010,10 @@ defm MVE_VCVTf32f16bh : MVE_VCVT_h2f_m<"vcvtb", 0b0>;
 defm MVE_VCVTf32f16th : MVE_VCVT_h2f_m<"vcvtt", 0b1>;
 
 class MVE_VxCADD<string iname, string suffix, bits<2> size, bit halve,
-                 string cstr="", list<dag> pattern=[]>
+                 string cstr="">
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
                    (ins MQPR:$Qn, MQPR:$Qm, complexrotateopodd:$rot),
-                   "$Qd, $Qn, $Qm, $rot", vpred_r, cstr, pattern> {
+                   "$Qd, $Qn, $Qm, $rot", vpred_r, cstr, []> {
   bits<4> Qn;
   bit rot;
 
@@ -3955,13 +4027,37 @@ class MVE_VxCADD<string iname, string suffix, bits<2> size, bit halve,
   let Inst{0} = 0b0;
 }
 
-def MVE_VCADDi8   : MVE_VxCADD<"vcadd", "i8", 0b00, 0b1>;
-def MVE_VCADDi16  : MVE_VxCADD<"vcadd", "i16", 0b01, 0b1>;
-def MVE_VCADDi32  : MVE_VxCADD<"vcadd", "i32", 0b10, 0b1, "@earlyclobber $Qd">;
+multiclass MVE_VxCADD_m<string iname, MVEVectorVTInfo VTI,
+                        bit halve, string cstr=""> {
+  def "" : MVE_VxCADD<iname, VTI.Suffix, VTI.Size, halve, cstr>;
 
-def MVE_VHCADDs8  : MVE_VxCADD<"vhcadd", "s8", 0b00, 0b0>;
-def MVE_VHCADDs16 : MVE_VxCADD<"vhcadd", "s16", 0b01, 0b0>;
-def MVE_VHCADDs32 : MVE_VxCADD<"vhcadd", "s32", 0b10, 0b0, "@earlyclobber $Qd">;
+  let Predicates = [HasMVEInt] in {
+    def : Pat<(VTI.Vec (int_arm_mve_vcaddq halve,
+                            imm:$rot, (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            imm:$rot))>;
+
+    def : Pat<(VTI.Vec (int_arm_mve_vcaddq_predicated halve,
+                            imm:$rot, (VTI.Vec MQPR:$inactive),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (VTI.Vec (!cast<Instruction>(NAME)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            imm:$rot,
+                            ARMVCCThen, (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive)))>;
+
+  }
+}
+
+defm MVE_VCADDi8   : MVE_VxCADD_m<"vcadd", MVE_v16i8, 0b1>;
+defm MVE_VCADDi16  : MVE_VxCADD_m<"vcadd", MVE_v8i16, 0b1>;
+defm MVE_VCADDi32  : MVE_VxCADD_m<"vcadd", MVE_v4i32, 0b1, "@earlyclobber $Qd">;
+
+defm MVE_VHCADDs8  : MVE_VxCADD_m<"vhcadd", MVE_v16s8, 0b0>;
+defm MVE_VHCADDs16 : MVE_VxCADD_m<"vhcadd", MVE_v8s16, 0b0>;
+defm MVE_VHCADDs32 : MVE_VxCADD_m<"vhcadd", MVE_v4s32, 0b0, "@earlyclobber $Qd">;
 
 class MVE_VADCSBC<string iname, bit I, bit subtract,
                   dag carryin, list<dag> pattern=[]>

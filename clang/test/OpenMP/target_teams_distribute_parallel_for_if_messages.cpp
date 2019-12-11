@@ -57,9 +57,9 @@ int tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for if(target : argc) if (target:argc) // expected-error {{directive '#pragma omp target teams distribute parallel for' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for if(parallel : argc) if (argc) // expected-error {{expected  'target' directive name modifier}} expected-note {{previous clause with directive name modifier specified here}}
+#pragma omp target teams distribute parallel for if(parallel : argc) if (argc) // expected-error {{expected 'target' directive name modifier}} expected-note {{previous clause with directive name modifier specified here}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for if(target: argc) if (argc) // expected-error {{expected  'parallel' directive name modifier}} expected-note {{previous clause with directive name modifier specified here}}
+#pragma omp target teams distribute parallel for if(target: argc) if (argc) // expected-error {{expected 'parallel' directive name modifier}} expected-note {{previous clause with directive name modifier specified here}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for if(distribute : argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute parallel for'}}
   for (i = 0; i < argc; ++i) foo();
@@ -107,9 +107,9 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for if(target: argc) if (target:argc) // expected-error {{directive '#pragma omp target teams distribute parallel for' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for if(parallel : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{expected  'target' directive name modifier}}
+#pragma omp target teams distribute parallel for if(parallel : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{expected 'target' directive name modifier}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{expected  'parallel' directive name modifier}}
+#pragma omp target teams distribute parallel for if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{expected 'parallel' directive name modifier}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for if(distribute : argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute parallel for'}}
   for (i = 0; i < argc; ++i) foo();

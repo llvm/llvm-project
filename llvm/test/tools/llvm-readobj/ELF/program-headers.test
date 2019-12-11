@@ -1,6 +1,6 @@
-# RUN: llvm-readobj --program-headers %p/../../Object/Inputs/program-headers.elf-i386 \
+# RUN: llvm-readobj --program-headers %p/../../../Object/Inputs/program-headers.elf-i386 \
 # RUN:     | FileCheck %s -check-prefix ELF-I386
-# RUN: llvm-readobj -l %p/../../Object/Inputs/program-headers.elf-i386 \
+# RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.elf-i386 \
 # RUN:     | FileCheck %s -check-prefix ELF-I386
 
 # ELF-I386:      ProgramHeaders [
@@ -32,7 +32,7 @@
 # ELF-I386-NEXT:   }
 # ELF-I386-NEXT: ]
 
-# RUN: llvm-readobj -l %p/../../Object/Inputs/program-headers.elf-x86-64 \
+# RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.elf-x86-64 \
 # RUN:     | FileCheck %s -check-prefix ELF-X86-64
 
 # ELF-X86-64:      ProgramHeaders [
@@ -76,7 +76,7 @@
 # ELF-X86-64-NEXT:   }
 # ELF-X86-64-NEXT: ]
 
-# RUN: llvm-readobj -l %p/../../Object/Inputs/program-headers.mips \
+# RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.mips \
 # RUN:     | FileCheck %s -check-prefix ELF-MIPS
 
 # ELF-MIPS:      Format: ELF32-mips
@@ -123,7 +123,7 @@
 # ELF-MIPS-NEXT:   }
 # ELF-MIPS-NEXT: ]
 
-# RUN: llvm-readobj -l %p/../../Object/Inputs/program-headers.mips64 \
+# RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.mips64 \
 # RUN:     | FileCheck %s -check-prefix ELF-MIPS64
 
 # ELF-MIPS64:      Format: ELF64-mips

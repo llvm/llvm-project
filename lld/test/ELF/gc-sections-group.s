@@ -1,7 +1,7 @@
 # REQUIRES: x86
 ## Check that group members are retained or discarded as a unit, and
-## non-SHF_ALLOC sections in a group are subject to garbage collection.
-## This is compatible with GNU ld.
+## non-SHF_ALLOC sections in a group are subject to garbage collection,
+## if at least one member has the SHF_ALLOC flag.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: ld.lld --gc-sections %t.o -o %t.dead

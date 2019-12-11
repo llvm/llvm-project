@@ -102,6 +102,11 @@ public:
   /// modified by the introduction of an implicit zero initializer.
   virtual void CompleteTentativeDefinition(VarDecl *D) {}
 
+  /// CompleteExternalDeclaration - Callback invoked at the end of a translation
+  /// unit to notify the consumer that the given external declaration should be
+  /// completed.
+  virtual void CompleteExternalDeclaration(VarDecl *D) {}
+
   /// Callback invoked when an MSInheritanceAttr has been attached to a
   /// CXXRecordDecl.
   virtual void AssignInheritanceModel(CXXRecordDecl *RD) {}

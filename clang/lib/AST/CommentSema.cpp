@@ -676,9 +676,8 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
       D->hasAttr<UnavailableAttr>())
     return;
 
-  Diag(Command->getLocation(),
-       diag::warn_doc_deprecated_not_sync)
-    << Command->getSourceRange();
+  Diag(Command->getLocation(), diag::warn_doc_deprecated_not_sync)
+      << Command->getSourceRange() << Command->getCommandMarker();
 
   // Try to emit a fixit with a deprecation attribute.
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
@@ -689,24 +688,41 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
         FD->doesThisDeclarationHaveABody())
       return;
 
-    StringRef AttributeSpelling = "__attribute__((deprecated))";
+    const LangOptions &LO = FD->getASTContext().getLangOpts();
+    const bool DoubleSquareBracket = LO.CPlusPlus14 || LO.C2x;
+    StringRef AttributeSpelling =
+        DoubleSquareBracket ? "[[deprecated]]" : "__attribute__((deprecated))";
     if (PP) {
-      TokenValue Tokens[] = {
-        tok::kw___attribute, tok::l_paren, tok::l_paren,
-        PP->getIdentifierInfo("deprecated"),
-        tok::r_paren, tok::r_paren
-      };
-      StringRef MacroName = PP->getLastMacroWithSpelling(FD->getLocation(),
-                                                         Tokens);
-      if (!MacroName.empty())
-        AttributeSpelling = MacroName;
+      // Try to find a replacement macro:
+      // - In C2x/C++14 we prefer [[deprecated]].
+      // - If not found or an older C/C++ look for __attribute__((deprecated)).
+      StringRef MacroName;
+      if (DoubleSquareBracket) {
+        TokenValue Tokens[] = {tok::l_square, tok::l_square,
+                               PP->getIdentifierInfo("deprecated"),
+                               tok::r_square, tok::r_square};
+        MacroName = PP->getLastMacroWithSpelling(FD->getLocation(), Tokens);
+        if (!MacroName.empty())
+          AttributeSpelling = MacroName;
+      }
+
+      if (MacroName.empty()) {
+        TokenValue Tokens[] = {
+            tok::kw___attribute, tok::l_paren,
+            tok::l_paren,        PP->getIdentifierInfo("deprecated"),
+            tok::r_paren,        tok::r_paren};
+        StringRef MacroName =
+            PP->getLastMacroWithSpelling(FD->getLocation(), Tokens);
+        if (!MacroName.empty())
+          AttributeSpelling = MacroName;
+      }
     }
 
-    SmallString<64> TextToInsert(" ");
-    TextToInsert += AttributeSpelling;
-    Diag(FD->getEndLoc(), diag::note_add_deprecation_attr)
-        << FixItHint::CreateInsertion(FD->getEndLoc().getLocWithOffset(1),
-                                      TextToInsert);
+    SmallString<64> TextToInsert = AttributeSpelling;
+    TextToInsert += " ";
+    SourceLocation Loc = FD->getSourceRange().getBegin();
+    Diag(Loc, diag::note_add_deprecation_attr)
+        << FixItHint::CreateInsertion(Loc, TextToInsert);
   }
 }
 

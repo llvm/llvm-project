@@ -498,6 +498,42 @@ static void addDependentLibrary(StringRef specifier, const InputFile *f) {
 }
 
 template <class ELFT>
+static void handleSectionGroup(ArrayRef<InputSectionBase *> sections,
+                               ArrayRef<typename ELFT::Word> entries) {
+  bool hasAlloc = false;
+  for (uint32_t index : entries.slice(1)) {
+    if (index >= sections.size())
+      return;
+    if (InputSectionBase *s = sections[index])
+      if (s != &InputSection::discarded && s->flags & SHF_ALLOC)
+        hasAlloc = true;
+  }
+
+  // If any member has the SHF_ALLOC flag, the whole group is subject to garbage
+  // collection. See the comment in markLive(). This rule retains .debug_types
+  // and .rela.debug_types.
+  if (!hasAlloc)
+    return;
+
+  // Connect the members in a circular doubly-linked list via
+  // nextInSectionGroup.
+  InputSectionBase *head;
+  InputSectionBase *prev = nullptr;
+  for (uint32_t index : entries.slice(1)) {
+    InputSectionBase *s = sections[index];
+    if (!s || s == &InputSection::discarded)
+      continue;
+    if (prev)
+      prev->nextInSectionGroup = s;
+    else
+      head = s;
+    prev = s;
+  }
+  if (prev)
+    prev->nextInSectionGroup = head;
+}
+
+template <class ELFT>
 void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
   const ELFFile<ELFT> &obj = this->getObj();
 
@@ -615,26 +651,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
             toString(linkSec));
   }
 
-  // For each secion group, connect its members in a circular doubly-linked list
-  // via nextInSectionGroup. See the comment in markLive().
-  for (ArrayRef<Elf_Word> entries : selectedGroups) {
-    InputSectionBase *head;
-    InputSectionBase *prev = nullptr;
-    for (uint32_t secIndex : entries.slice(1)) {
-      if (secIndex >= this->sections.size())
-        continue;
-      InputSectionBase *s = this->sections[secIndex];
-      if (!s || s == &InputSection::discarded)
-        continue;
-      if (prev)
-        prev->nextInSectionGroup = s;
-      else
-        head = s;
-      prev = s;
-    }
-    if (prev)
-      prev->nextInSectionGroup = head;
-  }
+  for (ArrayRef<Elf_Word> entries : selectedGroups)
+    handleSectionGroup<ELFT>(this->sections, entries);
 }
 
 // For ARM only, to set the EF_ARM_ABI_FLOAT_SOFT or EF_ARM_ABI_FLOAT_HARD

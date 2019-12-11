@@ -14,6 +14,7 @@ class MultilineCompletionTest(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
+    @skipIfDarwinEmbedded  # test is written to explicitly "run" the binary
     def test_basic_completion(self):
         """Test that we can complete a simple multiline expression"""
         self.build()

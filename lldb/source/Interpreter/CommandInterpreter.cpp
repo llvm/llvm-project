@@ -48,6 +48,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
+#include "lldb/Host/Config.h"
 #ifndef LLDB_DISABLE_LIBEDIT
 #include "lldb/Host/Editline.h"
 #endif
@@ -362,8 +363,8 @@ void CommandInterpreter::Initialize() {
                   "controlled by the type's author.");
       po->SetHelpLong("");
     }
-    CommandAlias *parray_alias = AddAlias("parray", cmd_obj_sp, 
-            "--element-count %1 --");
+    CommandAlias *parray_alias =
+        AddAlias("parray", cmd_obj_sp, "--element-count %1 --");
     if (parray_alias) {
         parray_alias->SetHelp
           ("parray <COUNT> <EXPRESSION> -- lldb will evaluate EXPRESSION "

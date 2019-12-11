@@ -156,7 +156,12 @@ bool isImplementationDetail(const Decl *D) {
                             D->getASTContext().getSourceManager());
 }
 
-SourceLocation findName(const clang::Decl *D) { return D->getLocation(); }
+SourceLocation nameLocation(const clang::Decl &D, const SourceManager &SM) {
+  auto L = D.getLocation();
+  if (isSpelledInSource(L, SM))
+    return SM.getSpellingLoc(L);
+  return SM.getExpansionLoc(L);
+}
 
 std::string printQualifiedName(const NamedDecl &ND) {
   std::string QName;

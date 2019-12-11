@@ -363,7 +363,7 @@ void XCOFFObjectWriter::writeSections(const MCAssembler &Asm,
       continue;
 
     assert(CurrentAddressLocation == Section->Address &&
-           "We should have no padding between sections.");
+           "Sections should be written consecutively.");
     for (const auto *Group : Section->Groups) {
       for (const auto &Csect : *Group) {
         if (uint32_t PaddingSize = Csect.Address - CurrentAddressLocation)
@@ -378,8 +378,10 @@ void XCOFFObjectWriter::writeSections(const MCAssembler &Asm,
     // the current section minus the the end virtual address of the last csect
     // in that section.
     if (uint32_t PaddingSize =
-            Section->Address + Section->Size - CurrentAddressLocation)
+            Section->Address + Section->Size - CurrentAddressLocation) {
       W.OS.write_zeros(PaddingSize);
+      CurrentAddressLocation += PaddingSize;
+    }
   }
 }
 

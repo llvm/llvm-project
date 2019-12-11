@@ -339,8 +339,21 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
     // The input is widened to the same size. Convert to the widened value.
     // Make sure that the outgoing value is not a vector, because this would
     // make us bitcast between two vectors which are legalized in different ways.
-    if (NOutVT.bitsEq(NInVT) && !NOutVT.isVector())
-      return DAG.getNode(ISD::BITCAST, dl, NOutVT, GetWidenedVector(InOp));
+    if (NOutVT.bitsEq(NInVT) && !NOutVT.isVector()) {
+      SDValue Res =
+        DAG.getNode(ISD::BITCAST, dl, NOutVT, GetWidenedVector(InOp));
+
+      // For big endian targets we need to shift the casted value or the
+      // interesting bits will end up at the wrong place.
+      if (DAG.getDataLayout().isBigEndian()) {
+        unsigned ShiftAmt = NInVT.getSizeInBits() - InVT.getSizeInBits();
+        EVT ShiftAmtTy = TLI.getShiftAmountTy(NOutVT, DAG.getDataLayout());
+        assert(ShiftAmt < NOutVT.getSizeInBits() && "Too large shift amount!");
+        Res = DAG.getNode(ISD::SRL, dl, NOutVT, Res,
+                          DAG.getConstant(ShiftAmt, dl, ShiftAmtTy));
+      }
+      return Res;
+    }
     // If the output type is also a vector and widening it to the same size
     // as the widened input type would be a legal type, we can widen the bitcast
     // and handle the promotion after.

@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef LLDB_DISABLE_PYTHON
+#include "lldb/Host/Config.h"
 
-// Python is disabled in this build
-
-#else
+#ifndef LLDB_DISABLE_PYTHON
 
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"

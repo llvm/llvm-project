@@ -898,9 +898,9 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
     }
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
-      Builder.CreateMemSet(MemSet->getRawDest(), MemSet->getValue(),
-                           MemSet->getLength(), MemSet->getDestAlignment(),
-                           MemSet->isVolatile());
+      Builder.CreateMemSet(
+          MemSet->getRawDest(), MemSet->getValue(), MemSet->getLength(),
+          MaybeAlign(MemSet->getDestAlignment()), MemSet->isVolatile());
       Intr->eraseFromParent();
       continue;
     }

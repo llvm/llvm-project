@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -Wdocumentation -Wdocumentation-pedantic -verify %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -Wdocumentation -Wdocumentation-pedantic -verify %s
 
 // This file contains lots of corner cases, so ensure that XML we generate is not invalid.
 // RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng %s | FileCheck %s -check-prefix=WRONG
@@ -611,6 +612,12 @@ int test_tparam22;
 /// \deprecated Bbb
 void test_deprecated_1(int a) __attribute__((deprecated));
 
+#if __cplusplus >= 201402L
+/// Aaa
+/// \deprecated Bbb
+[[deprecated]] void test_deprecated_no_warning_std14(int a);
+#endif
+
 // We don't want \deprecated to warn about empty paragraph.  It is fine to use
 // \deprecated by itself without explanations.
 
@@ -631,9 +638,9 @@ void test_deprecated_4(int a) __attribute__((unavailable));
 /// \deprecated
 void test_deprecated_5(int a);
 
-// expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}} expected-note@+3 {{add a deprecation attribute to the declaration to silence this warning}}
+// expected-warning@+2 {{declaration is marked with '@deprecated' command but does not have a deprecation attribute}} expected-note@+3 {{add a deprecation attribute to the declaration to silence this warning}}
 /// Aaa
-/// \deprecated
+/// @deprecated
 void test_deprecated_6(int a) {
 }
 
@@ -643,6 +650,44 @@ void test_deprecated_6(int a) {
 template<typename T>
 void test_deprecated_7(T aaa);
 
+class PR43753 {
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  static void test_deprecated_static();
+
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  static auto test_deprecated_static_trailing_return() -> int;
+
+#if __cplusplus >= 201402L
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  static decltype(auto) test_deprecated_static_decltype_auto() { return 1; }
+#endif
+
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  void test_deprecated_const() const;
+
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  auto test_deprecated_trailing_return() -> int;
+
+#if __cplusplus >= 201402L
+  // expected-warning@+2 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}}
+  // expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
+  /// \deprecated
+  decltype(auto) test_deprecated_decltype_auto() const { return a; }
+
+private:
+  int a{0};
+#endif
+};
 
 // rdar://12397511
 // expected-note@+2 {{previous command '\headerfile' here}}

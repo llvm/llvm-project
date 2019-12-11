@@ -269,6 +269,7 @@ module LLVM_IR {
   module * { export * }
 
   // These are intended for (repeated) textual inclusion.
+  textual header "IR/ConstrainedOps.def"
   textual header "IR/DebugInfoFlags.def"
   textual header "IR/Instruction.def"
   textual header "IR/Metadata.def"
