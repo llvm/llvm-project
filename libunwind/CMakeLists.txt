@@ -291,7 +291,29 @@ endif()
 add_cxx_compile_flags_if_supported(-fstrict-aliasing)
 add_cxx_compile_flags_if_supported(-EHsc)
 
+# Don't run the linker in this CMake check.
+#
+# The reason why this was added is that when building libunwind for
+# ARM Linux, we need to pass the -funwind-tables flag in order for it to
+# work properly with ARM EHABI.
+#
+# However, when performing CMake checks, adding this flag causes the check
+# to produce a false negative, because the compiler generates calls
+# to __aeabi_unwind_cpp_pr0, which is defined in libunwind itself,
+# which isn't built yet, so the linker complains about undefined symbols.
+#
+# This leads to libunwind not being built with this flag, which makes
+# libunwind quite useless in this setup.
+set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 add_compile_flags_if_supported(-funwind-tables)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+
+if (LIBUNWIND_USES_ARM_EHABI AND NOT LIBUNWIND_SUPPORTS_FUNWIND_TABLES_FLAG)
+  message(SEND_ERROR "The -funwind-tables flag must be supported "
+                     "because this target uses ARM Exception Handling ABI")
+endif()
+
 add_cxx_compile_flags_if_supported(-fno-exceptions)
 add_cxx_compile_flags_if_supported(-fno-rtti)
 
