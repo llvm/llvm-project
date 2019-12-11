@@ -627,9 +627,6 @@ protected:
                            const CallEvent *Call,
                            RegionAndSymbolInvalidationTraits &ITraits) override;
 
-  ProgramStateRef processLocalRegionEscape(ProgramStateRef State,
-                                           const MemRegion *R) const override;
-
   /// A simple wrapper when you only need to notify checkers of pointer-escape
   /// of a single value.
   ProgramStateRef escapeValue(ProgramStateRef State, SVal V,
