@@ -43,41 +43,34 @@ void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
 
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (O->isReg()) {
-      if (!O->isDef() || O->isDebug())
-        continue;
-      Register Reg = O->getReg();
-      if (!Register::isPhysicalRegister(Reg))
-        continue;
-      removeReg(Reg);
-    } else if (O->isRegMask())
-      removeRegsNotPreserved(O->getRegMask());
+  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+    if (MOP.isRegMask()) {
+      removeRegsNotPreserved(MOP.getRegMask());
+      continue;
+    }
+
+    if (MOP.isDef())
+      removeReg(MOP.getReg());
   }
 
   // Add uses to the set.
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (!O->isReg() || !O->readsReg() || O->isDebug())
+  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+    if (!MOP.isReg() || !MOP.readsReg())
       continue;
-    Register Reg = O->getReg();
-    if (!Register::isPhysicalRegister(Reg))
-      continue;
-    addReg(Reg);
+    addReg(MOP.getReg());
   }
 }
 
 void LiveRegUnits::accumulate(const MachineInstr &MI) {
   // Add defs, uses and regmask clobbers to the set.
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (O->isReg()) {
-      Register Reg = O->getReg();
-      if (!Register::isPhysicalRegister(Reg))
-        continue;
-      if (!O->isDef() && !O->readsReg())
-        continue;
-      addReg(Reg);
-    } else if (O->isRegMask())
-      addRegsInMask(O->getRegMask());
+  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+    if (MOP.isRegMask()) {
+      addRegsInMask(MOP.getRegMask());
+      continue;
+    }
+    if (!MOP.isDef() && !MOP.readsReg())
+      continue;
+    addReg(MOP.getReg());
   }
 }
 
