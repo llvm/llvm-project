@@ -51,12 +51,6 @@ public:
   static lldb::SyntheticChildrenSP
   GetSyntheticChildren(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
 
-  static lldb::TypeValidatorImplSP
-  GetValidator(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
-
-  static lldb::TypeValidatorImplSP
-  GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp);
-
   static bool
   AnyMatches(ConstString type_name,
              TypeCategoryImpl::FormatCategoryItems items =

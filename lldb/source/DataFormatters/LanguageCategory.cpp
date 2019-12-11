@@ -14,7 +14,6 @@
 #include "lldb/DataFormatters/TypeFormat.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
-#include "lldb/DataFormatters/TypeValidator.h"
 #include "lldb/Target/Language.h"
 
 using namespace lldb;
@@ -22,14 +21,12 @@ using namespace lldb_private;
 
 LanguageCategory::LanguageCategory(lldb::LanguageType lang_type)
     : m_category_sp(), m_hardcoded_formats(), m_hardcoded_summaries(),
-      m_hardcoded_synthetics(), m_hardcoded_validators(), m_format_cache(),
-      m_enabled(false) {
+      m_hardcoded_synthetics(), m_format_cache(), m_enabled(false) {
   if (Language *language_plugin = Language::FindPlugin(lang_type)) {
     m_category_sp = language_plugin->GetFormatters();
     m_hardcoded_formats = language_plugin->GetHardcodedFormats();
     m_hardcoded_summaries = language_plugin->GetHardcodedSummaries();
     m_hardcoded_synthetics = language_plugin->GetHardcodedSynthetics();
-    m_hardcoded_validators = language_plugin->GetHardcodedValidators();
   }
   Enable();
 }
@@ -58,11 +55,8 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
   return result;
 }
 
-/// Explicit instantiations for the four types.
+/// Explicit instantiations for the three types.
 /// \{
-template bool
-LanguageCategory::Get<lldb::TypeValidatorImplSP>(FormattersMatchData &,
-                                                 lldb::TypeValidatorImplSP &);
 template bool
 LanguageCategory::Get<lldb::TypeFormatImplSP>(FormattersMatchData &,
                                               lldb::TypeFormatImplSP &);
@@ -89,11 +83,6 @@ auto &LanguageCategory::GetHardcodedFinder<lldb::SyntheticChildrenSP>() {
   return m_hardcoded_synthetics;
 }
 
-template <>
-auto &LanguageCategory::GetHardcodedFinder<lldb::TypeValidatorImplSP>() {
-  return m_hardcoded_validators;
-}
-
 template <typename ImplSP>
 bool LanguageCategory::GetHardcoded(FormatManager &fmt_mgr,
                                     FormattersMatchData &match_data,
@@ -113,10 +102,8 @@ bool LanguageCategory::GetHardcoded(FormatManager &fmt_mgr,
   return (bool)retval_sp;
 }
 
-/// Explicit instantiations for the four types.
+/// Explicit instantiations for the three types.
 /// \{
-template bool LanguageCategory::GetHardcoded<lldb::TypeValidatorImplSP>(
-    FormatManager &, FormattersMatchData &, lldb::TypeValidatorImplSP &);
 template bool LanguageCategory::GetHardcoded<lldb::TypeFormatImplSP>(
     FormatManager &, FormattersMatchData &, lldb::TypeFormatImplSP &);
 template bool LanguageCategory::GetHardcoded<lldb::TypeSummaryImplSP>(

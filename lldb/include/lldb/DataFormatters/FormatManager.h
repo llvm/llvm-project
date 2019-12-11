@@ -118,9 +118,6 @@ public:
   lldb::ScriptedSyntheticChildrenSP
   GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp);
 
-  lldb::TypeValidatorImplSP
-  GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp);
-
   lldb::TypeFormatImplSP GetFormat(ValueObject &valobj,
                                    lldb::DynamicValueType use_dynamic);
 
@@ -129,9 +126,6 @@ public:
 
   lldb::SyntheticChildrenSP
   GetSyntheticChildren(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
-
-  lldb::TypeValidatorImplSP GetValidator(ValueObject &valobj,
-                                         lldb::DynamicValueType use_dynamic);
 
   bool
   AnyMatches(ConstString type_name,
