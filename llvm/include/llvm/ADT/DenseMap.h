@@ -1006,13 +1006,10 @@ public:
   }
 
   void grow(unsigned AtLeast) {
-    if (AtLeast >= InlineBuckets)
+    if (AtLeast > InlineBuckets)
       AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast-1));
 
     if (Small) {
-      if (AtLeast < InlineBuckets)
-        return; // Nothing to do.
-
       // First move the inline buckets into a temporary storage.
       AlignedCharArrayUnion<BucketT[InlineBuckets]> TmpStorage;
       BucketT *TmpBegin = reinterpret_cast<BucketT *>(TmpStorage.buffer);
@@ -1035,10 +1032,13 @@ public:
         P->getFirst().~KeyT();
       }
 
-      // Now make this map use the large rep, and move all the entries back
-      // into it.
-      Small = false;
-      new (getLargeRep()) LargeRep(allocateBuckets(AtLeast));
+      // AtLeast == InlineBuckets can happen if there are many tombstones,
+      // and grow() is used to remove them. Usually we always switch to the
+      // large rep here.
+      if (AtLeast > InlineBuckets) {
+        Small = false;
+        new (getLargeRep()) LargeRep(allocateBuckets(AtLeast));
+      }
       this->moveFromOldBuckets(TmpBegin, TmpEnd);
       return;
     }
