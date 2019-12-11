@@ -570,13 +570,11 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     }
   }
 
-  // We have fused multiply-addition for f32 and f64 but not f128.
-  setOperationAction(ISD::FMA, MVT::f32,  Legal);
-  setOperationAction(ISD::FMA, MVT::f64,  Legal);
-  if (Subtarget.hasVectorEnhancements1())
-    setOperationAction(ISD::FMA, MVT::f128, Legal);
-  else
+  // We only have fused f128 multiply-addition on vector registers.
+  if (!Subtarget.hasVectorEnhancements1()) {
     setOperationAction(ISD::FMA, MVT::f128, Expand);
+    setOperationAction(ISD::STRICT_FMA, MVT::f128, Expand);
+  }
 
   // We don't have a copysign instruction on vector registers.
   if (Subtarget.hasVectorEnhancements1())
