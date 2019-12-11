@@ -274,6 +274,7 @@ __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __tuple_indices<_Indices...>)
 }
 
 template <class _Fp>
+_LIBCPP_INLINE_VISIBILITY
 void* __thread_proxy(void* __vp)
 {
     // _Fp = std::tuple< unique_ptr<__thread_struct>, Functor, Args...>
