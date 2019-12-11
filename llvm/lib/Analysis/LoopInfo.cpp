@@ -366,8 +366,7 @@ BranchInst *Loop::getLoopGuardBranch() const {
     return nullptr;
 
   BasicBlock *Preheader = getLoopPreheader();
-  BasicBlock *Latch = getLoopLatch();
-  assert(Preheader && Latch &&
+  assert(Preheader && getLoopLatch() &&
          "Expecting a loop with valid preheader and latch");
 
   // Loop should be in rotate form.
