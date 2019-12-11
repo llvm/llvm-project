@@ -265,8 +265,7 @@ def nonext_masked_load :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
-         cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-         !cast<MaskedLoadSDNode>(N)->isNonTemporal();
+         cast<MaskedLoadSDNode>(N)->isUnindexed();
 }]>;
 // sign extending masked load fragments.
 def asext_masked_load :
@@ -314,21 +313,12 @@ def zext_masked_load_i32 :
   return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
 }]>;
 
-def non_temporal_load :
-   PatFrag<(ops node:$ptr, node:$pred, node:$def),
-           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
-   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
-          cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-          cast<MaskedLoadSDNode>(N)->isNonTemporal();
-}]>;
-
 // non-truncating masked store fragment.
 def nontrunc_masked_store :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   return !cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
-         cast<MaskedStoreSDNode>(N)->isUnindexed() &&
-         !cast<MaskedStoreSDNode>(N)->isNonTemporal();
+         cast<MaskedStoreSDNode>(N)->isUnindexed();
 }]>;
 // truncating masked store fragments.
 def trunc_masked_store :
@@ -351,14 +341,6 @@ def trunc_masked_store_i32 :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (trunc_masked_store node:$val, node:$ptr, node:$pred), [{
   return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
-}]>;
-
-def non_temporal_store :
-  PatFrag<(ops node:$val, node:$ptr, node:$pred),
-          (masked_st node:$val, node:$ptr, undef, node:$pred), [{
-  return !cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
-         cast<MaskedStoreSDNode>(N)->isUnindexed() &&
-         cast<MaskedStoreSDNode>(N)->isNonTemporal();
 }]>;
 
 // Node definitions.
