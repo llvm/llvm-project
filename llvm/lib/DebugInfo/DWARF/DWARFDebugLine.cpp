@@ -813,7 +813,7 @@ Error DWARFDebugLine::LineTable::parse(
         // column register of the state machine.
         State.Row.Isa = DebugLineData.getULEB128(OffsetPtr);
         if (OS)
-          *OS << " (" << State.Row.Isa << ")";
+          *OS << " (" << (uint64_t)State.Row.Isa << ")";
         break;
 
       default:

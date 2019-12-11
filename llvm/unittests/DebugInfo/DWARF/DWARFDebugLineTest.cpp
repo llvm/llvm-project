@@ -675,4 +675,56 @@ TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
   EXPECT_FALSE(Unrecoverable);
 }
 
+TEST_F(DebugLineBasicFixture, ParserPrintsStandardOpcodesWhenRequested) {
+  if (!setupGenerator())
+    return;
+
+  using ValLen = dwarfgen::LineTable::ValueAndLength;
+  LineTable &LT = Gen->addLineTable(DWARF32);
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addStandardOpcode(DW_LNS_advance_pc, {ValLen{11, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_advance_line, {ValLen{22, LineTable::SLEB}});
+  LT.addStandardOpcode(DW_LNS_set_file, {ValLen{33, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_set_column, {ValLen{44, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_negate_stmt, {});
+  LT.addStandardOpcode(DW_LNS_set_basic_block, {});
+  LT.addStandardOpcode(DW_LNS_const_add_pc, {});
+  LT.addStandardOpcode(DW_LNS_fixed_advance_pc, {ValLen{55, LineTable::Half}});
+  LT.addStandardOpcode(DW_LNS_set_prologue_end, {});
+  LT.addStandardOpcode(DW_LNS_set_epilogue_begin, {});
+  LT.addStandardOpcode(DW_LNS_set_isa, {ValLen{66, LineTable::ULEB}});
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  generate();
+
+  DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
+  std::string Output;
+  raw_string_ostream OS(Output);
+  Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS);
+  OS.flush();
+
+  EXPECT_FALSE(Recoverable);
+  EXPECT_FALSE(Unrecoverable);
+  auto InOutput = [&Output](char const *Str) {
+    return Output.find(Str) != std::string::npos;
+  };
+  EXPECT_TRUE(InOutput("0x0000002e: 01 DW_LNS_copy\n")) << Output;
+  EXPECT_TRUE(InOutput("0x0000002f: 02 DW_LNS_advance_pc (11)\n")) << Output;
+  // FIXME: The value printed after DW_LNS_advance_line is currently the result
+  // of the advance, but it should be the value being advanced by. See
+  // https://bugs.llvm.org/show_bug.cgi?id=44261 for details.
+  EXPECT_TRUE(InOutput("0x00000031: 03 DW_LNS_advance_line (23)\n")) << Output;
+  EXPECT_TRUE(InOutput("0x00000033: 04 DW_LNS_set_file (33)\n")) << Output;
+  EXPECT_TRUE(InOutput("0x00000035: 05 DW_LNS_set_column (44)\n")) << Output;
+  EXPECT_TRUE(InOutput("0x00000037: 06 DW_LNS_negate_stmt\n")) << Output;
+  EXPECT_TRUE(InOutput("0x00000038: 07 DW_LNS_set_basic_block\n")) << Output;
+  EXPECT_TRUE(
+      InOutput("0x00000039: 08 DW_LNS_const_add_pc (0x0000000000000011)\n"))
+      << Output;
+  EXPECT_TRUE(InOutput("0x0000003a: 09 DW_LNS_fixed_advance_pc (0x0037)\n"))
+      << Output;
+  EXPECT_TRUE(InOutput("0x0000003d: 0a DW_LNS_set_prologue_end\n")) << Output;
+  EXPECT_TRUE(InOutput("0x0000003e: 0b DW_LNS_set_epilogue_begin\n")) << Output;
+  EXPECT_TRUE(InOutput("0x0000003f: 0c DW_LNS_set_isa (66)\n")) << Output;
+}
+
 } // end anonymous namespace
