@@ -319,7 +319,12 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
                       RenameDecl.getQualifiedNameAsString()),
         llvm::inconvertibleErrorCode());
   }
-
+  // Sort and deduplicate the results, in case that index returns duplications.
+  for (auto &FileAndOccurrences : AffectedFiles) {
+    auto &Ranges = FileAndOccurrences.getValue();
+    llvm::sort(Ranges);
+    Ranges.erase(std::unique(Ranges.begin(), Ranges.end()), Ranges.end());
+  }
   return AffectedFiles;
 }
 
@@ -514,7 +519,11 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
                                      llvm::StringRef InitialCode,
                                      std::vector<Range> Occurrences,
                                      llvm::StringRef NewName) {
-  llvm::sort(Occurrences);
+  assert(std::is_sorted(Occurrences.begin(), Occurrences.end()));
+  assert(std::unique(Occurrences.begin(), Occurrences.end()) ==
+             Occurrences.end() &&
+         "Occurrences must be unique");
+
   // These two always correspond to the same position.
   Position LastPos{0, 0};
   size_t LastOffset = 0;
@@ -574,9 +583,9 @@ llvm::Optional<std::vector<Range>>
 adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
                    std::vector<Range> Indexed, const LangOptions &LangOpts) {
   assert(!Indexed.empty());
+  assert(std::is_sorted(Indexed.begin(), Indexed.end()));
   std::vector<Range> Lexed =
       collectIdentifierRanges(Identifier, DraftCode, LangOpts);
-  llvm::sort(Indexed);
   llvm::sort(Lexed);
   return getMappedRanges(Indexed, Lexed);
 }

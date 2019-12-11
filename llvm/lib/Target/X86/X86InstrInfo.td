@@ -142,6 +142,8 @@ def X86shld    : SDNode<"X86ISD::SHLD",     SDTIntShiftDOp>;
 def X86shrd    : SDNode<"X86ISD::SHRD",     SDTIntShiftDOp>;
 
 def X86cmp     : SDNode<"X86ISD::CMP" ,     SDTX86CmpTest>;
+def X86strict_fcmp : SDNode<"X86ISD::STRICT_FCMP", SDTX86CmpTest, [SDNPHasChain]>;
+def X86strict_fcmps : SDNode<"X86ISD::STRICT_FCMPS", SDTX86CmpTest, [SDNPHasChain]>;
 def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
 
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
@@ -375,6 +377,9 @@ class X86VMemOperand<RegisterClass RC, string printMethod,
 }
 
 def anymem : X86MemOperand<"printanymem">;
+def X86any_fcmp : PatFrags<(ops node:$lhs, node:$rhs),
+                          [(X86cmp node:$lhs, node:$rhs),
+                           (X86strict_fcmp node:$lhs, node:$rhs)]>;
 
 // FIXME: Right now we allow any size during parsing, but we might want to
 // restrict to only unsized memory.

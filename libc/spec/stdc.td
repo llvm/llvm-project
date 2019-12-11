@@ -170,7 +170,20 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec Errno = HeaderSpec<
+      "errno.h",
+      [
+        Macro<"errno">,
+        Macro<"EDOM">,
+        Macro<"EILSEQ">,
+        Macro<"ERANGE">,
+      ],
+      [], // Types
+      []  // Functions
+  >;
+
   let Headers = [
+    Errno,
     Math,
     String,
     StdIO,

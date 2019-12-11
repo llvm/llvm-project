@@ -296,7 +296,7 @@ public:
   llvm::CallInst *CreateMemSet(Address Dest, llvm::Value *Value,
                                llvm::Value *Size, bool IsVolatile = false) {
     return CreateMemSet(Dest.getPointer(), Value, Size,
-                        Dest.getAlignment().getQuantity(), IsVolatile);
+                        Dest.getAlignment().getAsAlign(), IsVolatile);
   }
 
   using CGBuilderBaseTy::CreatePreserveStructAccessIndex;

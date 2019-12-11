@@ -1137,6 +1137,13 @@ void Sema::ActOnEndOfTranslationUnit() {
       Consumer.CompleteTentativeDefinition(VD);
   }
 
+  for (auto D : ExternalDeclarations) {
+    if (!D || D->isInvalidDecl() || D->getPreviousDecl() || !D->isUsed())
+      continue;
+
+    Consumer.CompleteExternalDeclaration(D);
+  }
+
   // If there were errors, disable 'unused' warnings since they will mostly be
   // noise. Don't warn for a use from a module: either we should warn on all
   // file-scope declarations in modules or not at all, but whether the

@@ -181,6 +181,8 @@ endforeach()
 
 add_compiler_rt_resource_file(hwasan_blacklist hwasan_blacklist.txt hwasan)
 
+add_subdirectory("scripts")
+
 # if(COMPILER_RT_INCLUDE_TESTS)
 #   add_subdirectory(tests)
 # endif()

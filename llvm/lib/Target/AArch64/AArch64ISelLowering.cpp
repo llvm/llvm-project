@@ -825,7 +825,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // splat of 0 or undef) once vector selects supported in SVE codegen. See
     // D68877 for more details.
     for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
-      if (isTypeLegal(VT) && VT.getVectorElementType() != MVT::i1)
+      if (isTypeLegal(VT))
         setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
     }
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
@@ -7135,26 +7135,31 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
   switch (ElemVT.getSimpleVT().SimpleTy) {
   case MVT::i8:
   case MVT::i16:
+  case MVT::i32:
     SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i32);
-    break;
+    return DAG.getNode(AArch64ISD::DUP, dl, VT, SplatVal);
   case MVT::i64:
     SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i64);
-    break;
-  case MVT::i32:
-    // Fine as is
-    break;
-  // TODO: we can support splats of i1s and float types, but haven't added
-  // patterns yet.
-  case MVT::i1:
+    return DAG.getNode(AArch64ISD::DUP, dl, VT, SplatVal);
+  case MVT::i1: {
+    // The general case of i1.  There isn't any natural way to do this,
+    // so we use some trickery with whilelo.
+    // TODO: Add special cases for splat of constant true/false.
+    SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i64);
+    SplatVal = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::i64, SplatVal,
+                           DAG.getValueType(MVT::i1));
+    SDValue ID = DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, dl,
+                                       MVT::i64);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, VT, ID,
+                       DAG.getConstant(0, dl, MVT::i64), SplatVal);
+  }
+  // TODO: we can support float types, but haven't added patterns yet.
   case MVT::f16:
   case MVT::f32:
   case MVT::f64:
   default:
-    llvm_unreachable("Unsupported SPLAT_VECTOR input operand type");
-    break;
+    report_fatal_error("Unsupported SPLAT_VECTOR input operand type");
   }
-
-  return DAG.getNode(AArch64ISD::DUP, dl, VT, SplatVal);
 }
 
 static bool resolveBuildVector(BuildVectorSDNode *BVN, APInt &CnstBits,
@@ -8501,6 +8506,26 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(16);
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
     return true;
+  case Intrinsic::aarch64_sve_ldnt1: {
+    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(1)->getType());
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(PtrTy->getElementType());
+    Info.ptrVal = I.getArgOperand(1);
+    Info.offset = 0;
+    Info.align = MaybeAlign(DL.getABITypeAlignment(PtrTy->getElementType()));
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MONonTemporal;
+    return true;
+  }
+  case Intrinsic::aarch64_sve_stnt1: {
+    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(2)->getType());
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(PtrTy->getElementType());
+    Info.ptrVal = I.getArgOperand(2);
+    Info.offset = 0;
+    Info.align = MaybeAlign(DL.getABITypeAlignment(PtrTy->getElementType()));
+    Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MONonTemporal;
+    return true;
+  }
   default:
     break;
   }
@@ -10555,6 +10580,77 @@ static SDValue LowerSVEIntReduction(SDNode *N, unsigned Opc,
   return SDValue();
 }
 
+static SDValue tryConvertSVEWideCompare(SDNode *N, unsigned ReplacementIID,
+                                        bool Invert,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDValue Comparator = N->getOperand(3);
+  if (Comparator.getOpcode() == AArch64ISD::DUP ||
+      Comparator.getOpcode() == ISD::SPLAT_VECTOR) {
+    unsigned IID = getIntrinsicID(N);
+    EVT VT = N->getValueType(0);
+    EVT CmpVT = N->getOperand(2).getValueType();
+    SDValue Pred = N->getOperand(1);
+    SDValue Imm;
+    SDLoc DL(N);
+
+    switch (IID) {
+    default:
+      llvm_unreachable("Called with wrong intrinsic!");
+      break;
+
+    // Signed comparisons
+    case Intrinsic::aarch64_sve_cmpeq_wide:
+    case Intrinsic::aarch64_sve_cmpne_wide:
+    case Intrinsic::aarch64_sve_cmpge_wide:
+    case Intrinsic::aarch64_sve_cmpgt_wide:
+    case Intrinsic::aarch64_sve_cmplt_wide:
+    case Intrinsic::aarch64_sve_cmple_wide: {
+      if (auto *CN = dyn_cast<ConstantSDNode>(Comparator.getOperand(0))) {
+        int64_t ImmVal = CN->getSExtValue();
+        if (ImmVal >= -16 && ImmVal <= 15)
+          Imm = DAG.getConstant(ImmVal, DL, MVT::i32);
+        else
+          return SDValue();
+      }
+      break;
+    }
+    // Unsigned comparisons
+    case Intrinsic::aarch64_sve_cmphs_wide:
+    case Intrinsic::aarch64_sve_cmphi_wide:
+    case Intrinsic::aarch64_sve_cmplo_wide:
+    case Intrinsic::aarch64_sve_cmpls_wide:  {
+      if (auto *CN = dyn_cast<ConstantSDNode>(Comparator.getOperand(0))) {
+        uint64_t ImmVal = CN->getZExtValue();
+        if (ImmVal <= 127)
+          Imm = DAG.getConstant(ImmVal, DL, MVT::i32);
+        else
+          return SDValue();
+      }
+      break;
+    }
+    }
+
+    SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, CmpVT, Imm);
+    SDValue ID = DAG.getTargetConstant(ReplacementIID, DL, MVT::i64);
+    SDValue Op0, Op1;
+    if (Invert) {
+      Op0 = Splat;
+      Op1 = N->getOperand(2);
+    } else {
+      Op0 = N->getOperand(2);
+      Op1 = Splat;
+    }
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                       ID, Pred, Op0, Op1);
+  }
+
+  return SDValue();
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -10623,6 +10719,36 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return LowerSVEIntReduction(N, AArch64ISD::EORV_PRED, DAG);
   case Intrinsic::aarch64_sve_andv:
     return LowerSVEIntReduction(N, AArch64ISD::ANDV_PRED, DAG);
+  case Intrinsic::aarch64_sve_cmpeq_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpeq,
+                                    false, DCI, DAG);
+  case Intrinsic::aarch64_sve_cmpne_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpne,
+                                    false, DCI, DAG);
+  case Intrinsic::aarch64_sve_cmpge_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpge,
+                                    false, DCI, DAG);
+  case Intrinsic::aarch64_sve_cmpgt_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpgt,
+                                    false, DCI, DAG);
+  case Intrinsic::aarch64_sve_cmplt_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpgt,
+                                    true, DCI, DAG);
+  case Intrinsic::aarch64_sve_cmple_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpge,
+                                    true, DCI, DAG);
+  case Intrinsic::aarch64_sve_cmphs_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmphs,
+                                    false, DCI, DAG);
+  case Intrinsic::aarch64_sve_cmphi_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmphi,
+                                    false, DCI, DAG);
+  case Intrinsic::aarch64_sve_cmplo_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmphi, true,
+                                    DCI, DAG);
+  case Intrinsic::aarch64_sve_cmpls_wide:
+    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmphs, true,
+                                    DCI, DAG);
   }
   return SDValue();
 }
@@ -10763,6 +10889,48 @@ static SDValue splitStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
     Offset += EltOffset;
   }
   return NewST1;
+}
+
+static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT PtrTy = N->getOperand(3).getValueType();
+
+  EVT LoadVT = VT;
+  if (VT.isFloatingPoint())
+    LoadVT = VT.changeTypeToInteger();
+
+  auto *MINode = cast<MemIntrinsicSDNode>(N);
+  SDValue PassThru = DAG.getConstant(0, DL, LoadVT);
+  SDValue L = DAG.getMaskedLoad(VT, DL, MINode->getChain(),
+                                MINode->getOperand(3), DAG.getUNDEF(PtrTy),
+                                MINode->getOperand(2), PassThru,
+                                MINode->getMemoryVT(), MINode->getMemOperand(),
+                                ISD::UNINDEXED, ISD::NON_EXTLOAD, false);
+
+   if (VT.isFloatingPoint()) {
+     SDValue Ops[] = { DAG.getNode(ISD::BITCAST, DL, VT, L), L.getValue(1) };
+     return DAG.getMergeValues(Ops, DL);
+   }
+
+  return L;
+}
+
+static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  SDValue Data = N->getOperand(2);
+  EVT DataVT = Data.getValueType();
+  EVT PtrTy = N->getOperand(4).getValueType();
+
+  if (DataVT.isFloatingPoint())
+    Data = DAG.getNode(ISD::BITCAST, DL, DataVT.changeTypeToInteger(), Data);
+
+  auto *MINode = cast<MemIntrinsicSDNode>(N);
+  return DAG.getMaskedStore(MINode->getChain(), DL, Data, MINode->getOperand(4),
+                            DAG.getUNDEF(PtrTy), MINode->getOperand(3),
+                            MINode->getMemoryVT(), MINode->getMemOperand(),
+                            ISD::UNINDEXED, false, false);
 }
 
 /// Replace a splat of zeros to a vector store by scalar stores of WZR/XZR.  The
@@ -11981,6 +12149,10 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_neon_st3lane:
     case Intrinsic::aarch64_neon_st4lane:
       return performNEONPostLDSTCombine(N, DCI, DAG);
+    case Intrinsic::aarch64_sve_ldnt1:
+      return performLDNT1Combine(N, DAG);
+    case Intrinsic::aarch64_sve_stnt1:
+      return performSTNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_ld1_gather:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1);
     case Intrinsic::aarch64_sve_ld1_gather_index:

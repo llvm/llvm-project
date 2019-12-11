@@ -60,11 +60,10 @@ static bool IsApplicable(lldb::LanguageType category_lang,
   }
 }
 
-bool TypeCategoryImpl::IsApplicable(ValueObject &valobj) {
-  lldb::LanguageType valobj_lang = valobj.GetObjectRuntimeLanguage();
+bool TypeCategoryImpl::IsApplicable(lldb::LanguageType lang) {
   for (size_t idx = 0; idx < GetNumLanguages(); idx++) {
     const lldb::LanguageType category_lang = GetLanguageAtIndex(idx);
-    if (::IsApplicable(category_lang, valobj_lang))
+    if (::IsApplicable(category_lang, lang))
       return true;
   }
   return false;
@@ -86,10 +85,10 @@ void TypeCategoryImpl::AddLanguage(lldb::LanguageType lang) {
   m_languages.push_back(lang);
 }
 
-bool TypeCategoryImpl::Get(ValueObject &valobj,
+bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
                            lldb::TypeFormatImplSP &entry, uint32_t *reason) {
-  if (!IsEnabled() || !IsApplicable(valobj))
+  if (!IsEnabled() || !IsApplicable(lang))
     return false;
   if (GetTypeFormatsContainer()->Get(candidates, entry, reason))
     return true;
@@ -99,10 +98,10 @@ bool TypeCategoryImpl::Get(ValueObject &valobj,
   return regex;
 }
 
-bool TypeCategoryImpl::Get(ValueObject &valobj,
+bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
                            lldb::TypeSummaryImplSP &entry, uint32_t *reason) {
-  if (!IsEnabled() || !IsApplicable(valobj))
+  if (!IsEnabled() || !IsApplicable(lang))
     return false;
   if (GetTypeSummariesContainer()->Get(candidates, entry, reason))
     return true;
@@ -112,10 +111,10 @@ bool TypeCategoryImpl::Get(ValueObject &valobj,
   return regex;
 }
 
-bool TypeCategoryImpl::Get(ValueObject &valobj,
+bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
                            lldb::SyntheticChildrenSP &entry, uint32_t *reason) {
-  if (!IsEnabled() || !IsApplicable(valobj))
+  if (!IsEnabled() || !IsApplicable(lang))
     return false;
   TypeFilterImpl::SharedPointer filter_sp;
   uint32_t reason_filter = 0;
@@ -159,7 +158,7 @@ bool TypeCategoryImpl::Get(ValueObject &valobj,
   return false;
 }
 
-bool TypeCategoryImpl::Get(ValueObject &valobj,
+bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
                            lldb::TypeValidatorImplSP &entry, uint32_t *reason) {
   if (!IsEnabled())

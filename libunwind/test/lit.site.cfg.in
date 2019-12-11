@@ -19,6 +19,7 @@ config.executor                 = "@LIBUNWIND_EXECUTOR@"
 config.libunwind_shared         = @LIBUNWIND_ENABLE_SHARED@
 config.enable_shared            = @LIBCXX_ENABLE_SHARED@
 config.enable_exceptions        = @LIBUNWIND_ENABLE_EXCEPTIONS@
+config.arm_ehabi                = @LIBUNWIND_USES_ARM_EHABI@
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
 config.target_triple            = "@TARGET_TRIPLE@"
 config.use_target               = bool("@LIBUNWIND_TARGET_TRIPLE@")

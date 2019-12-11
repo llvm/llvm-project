@@ -14,8 +14,8 @@ RUN: llvm-readobj --all %t.a 2>&1 | FileCheck --check-prefix=NO-OUTPUT --allow-e
 NO-OUTPUT-NOT: {{.}}
 
 # Test case where no switches are specified.
-RUN: llvm-readobj %p/Inputs/trivial.obj.elf-x86-64 | FileCheck --check-prefix=HEADER %s
-RUN: llvm-readelf %p/Inputs/trivial.obj.elf-x86-64 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
+RUN: llvm-readobj %p/ELF/Inputs/trivial.obj.elf-x86-64 | FileCheck --check-prefix=HEADER %s
+RUN: llvm-readelf %p/ELF/Inputs/trivial.obj.elf-x86-64 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
 HEADER: File: {{.*}}trivial.obj.elf-x86-64
 HEADER: Format: ELF64-x86-64
 HEADER: Arch: x86_64

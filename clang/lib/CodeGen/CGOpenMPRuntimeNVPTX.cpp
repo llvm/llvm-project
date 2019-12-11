@@ -13,6 +13,7 @@
 
 #include "CGOpenMPRuntimeNVPTX.h"
 #include "CodeGenFunction.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
@@ -21,6 +22,7 @@
 
 using namespace clang;
 using namespace CodeGen;
+using namespace llvm::omp;
 
 namespace {
 enum OpenMPRTLFunctionNVPTX {

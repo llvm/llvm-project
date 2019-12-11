@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_OPENMPKINDS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 namespace clang {
 
@@ -58,14 +59,7 @@ template <typename VectorType, typename ScoreT> struct OpenMPCtxSelectorData {
 };
 
 /// OpenMP directives.
-enum OpenMPDirectiveKind {
-#define OPENMP_DIRECTIVE(Name) \
-  OMPD_##Name,
-#define OPENMP_DIRECTIVE_EXT(Name, Str) \
-  OMPD_##Name,
-#include "clang/Basic/OpenMPKinds.def"
-  OMPD_unknown
-};
+using OpenMPDirectiveKind = llvm::omp::Directive;
 
 /// OpenMP clauses.
 enum OpenMPClauseKind {
@@ -207,9 +201,6 @@ struct OpenMPScheduleTy final {
   OpenMPScheduleClauseModifier M1 = OMPC_SCHEDULE_MODIFIER_unknown;
   OpenMPScheduleClauseModifier M2 = OMPC_SCHEDULE_MODIFIER_unknown;
 };
-
-OpenMPDirectiveKind getOpenMPDirectiveKind(llvm::StringRef Str);
-const char *getOpenMPDirectiveName(OpenMPDirectiveKind Kind);
 
 OpenMPClauseKind getOpenMPClauseKind(llvm::StringRef Str);
 const char *getOpenMPClauseName(OpenMPClauseKind Kind);

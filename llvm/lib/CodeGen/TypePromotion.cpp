@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -45,7 +46,7 @@
 using namespace llvm;
 
 static cl::opt<bool>
-DisablePromotion("disable-type-promotion", cl::Hidden, cl::init(true),
+DisablePromotion("disable-type-promotion", cl::Hidden, cl::init(false),
                  cl::desc("Disable type promotion pass"));
 
 // The goal of this pass is to enable more efficient code generation for
@@ -158,6 +159,7 @@ public:
   TypePromotion() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
 
@@ -681,8 +683,9 @@ void IRPromoter::Mutate(Type *OrigTy, unsigned PromotedWidth,
                         SmallPtrSetImpl<Instruction*> &Sinks,
                         SmallPtrSetImpl<Instruction*> &SafeToPromote,
                         SmallPtrSetImpl<Instruction*> &SafeWrap) {
-  LLVM_DEBUG(dbgs() << "IR Promotion: Promoting use-def chains to from "
-             << TypePromotion::TypeSize << " to 32-bits\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Promoting use-def chains from "
+             << TypePromotion::TypeSize << " to " << PromotedWidth
+             << "-bits\n");
 
   assert(isa<IntegerType>(OrigTy) && "expected integer type");
   this->OrigTy = cast<IntegerType>(OrigTy);
@@ -899,16 +902,34 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
              for (auto *I : CurrentVisited)
                I->dump();
              );
+
+  // Check that promoting this at the IR level is most likely beneficial. It's
+  // more likely if we're operating over multiple blocks and handling wrapping
+  // instructions.
   unsigned ToPromote = 0;
+  unsigned NonFreeArgs = 0;
+  SmallPtrSet<BasicBlock*, 4> Blocks;
   for (auto *V : CurrentVisited) {
-    if (Sources.count(V))
+    if (auto *I = dyn_cast<Instruction>(V))
+      Blocks.insert(I->getParent());
+
+    if (Sources.count(V)) {
+      if (auto *Arg = dyn_cast<Argument>(V)) {
+        if (!Arg->hasZExtAttr() && !Arg->hasSExtAttr())
+          ++NonFreeArgs;
+      }
       continue;
+    }
+
     if (Sinks.count(cast<Instruction>(V)))
       continue;
+
     ++ToPromote;
   }
 
-  if (ToPromote < 2)
+  // DAG optimisations should be able to handle these cases better, especially
+  // for function arguments.
+  if (ToPromote < 2 || (Blocks.size() == 1 && (NonFreeArgs > SafeWrap.size())))
     return false;
 
   Promoter->Mutate(OrigTy, PromotedWidth, CurrentVisited, Sources, Sinks,
@@ -936,6 +957,8 @@ bool TypePromotion::runOnFunction(Function &F) {
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
   const TargetSubtargetInfo *SubtargetInfo = TM.getSubtargetImpl(F);
   const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
+  const TargetTransformInfo &TII =
+    getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   // Search up from icmps to try to promote their operands.
   for (BasicBlock &BB : F) {
@@ -966,6 +989,12 @@ bool TypePromotion::runOnFunction(Function &F) {
             break;
 
           EVT PromotedVT = TLI->getTypeToTransformTo(ICmp->getContext(), SrcVT);
+          if (TII.getRegisterBitWidth(false) < PromotedVT.getSizeInBits()) {
+            LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
+                       << "for promoted type\n");
+            break;
+          }
+
           MadeChange |= TryToPromote(I, PromotedVT.getSizeInBits());
           break;
         }

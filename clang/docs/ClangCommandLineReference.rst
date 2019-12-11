@@ -1699,9 +1699,14 @@ Emit OpenMP code only for SIMD-based constructs.
 
 .. option:: -foperator-arrow-depth=<arg>
 
-.. option:: -foptimization-record-file=<arg>
+.. option:: -foptimization-record-file=<file>
 
-Specify the file name of any generated YAML optimization record
+Implies -fsave-optimization-record. On Darwin platforms, this
+  cannot be used with multiple -arch <arch> options.
+
+.. option:: -foptimization-record-passes=<regex>
+
+Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)
 
 .. option:: -foptimize-sibling-calls, -fno-optimize-sibling-calls
 
@@ -1833,6 +1838,12 @@ Turn on loop reroller
 .. option:: -fsave-optimization-record, -fno-save-optimization-record
 
 Generate a YAML optimization record file
+
+.. program:: clang1
+.. option:: -fsave-optimization-record=<format>
+.. program:: clang
+
+Generate an optimization record file in a specific format.
 
 .. option:: -fseh-exceptions
 

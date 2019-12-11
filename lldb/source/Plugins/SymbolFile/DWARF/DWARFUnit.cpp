@@ -306,6 +306,9 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
+    case DW_AT_loclists_base:
+      SetLoclistsBase(form_value.Unsigned());
+      break;
     case DW_AT_rnglists_base:
       ranges_base = form_value.Unsigned();
       SetRangesBase(*ranges_base);
@@ -450,6 +453,23 @@ ParseListTableHeader(const llvm::DWARFDataExtractor &data, uint64_t offset,
   if (llvm::Error E = Table.extractHeaderAndOffsets(data, &offset))
     return std::move(E);
   return Table;
+}
+
+void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
+  m_loclists_base = loclists_base;
+
+  uint64_t header_size = llvm::DWARFListTableHeader::getHeaderSize(DWARF32);
+  if (loclists_base < header_size)
+    return;
+
+  m_loclist_table_header.emplace(".debug_loclists", "locations");
+  uint64_t offset = loclists_base - header_size;
+  if (llvm::Error E = m_loclist_table_header->extract(
+          m_dwarf.get_debug_loclists_data().GetAsLLVM(), &offset)) {
+    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "Failed to extract location list table at offset 0x%" PRIx64 ": %s",
+        loclists_base, toString(std::move(E)).c_str());
+  }
 }
 
 void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {

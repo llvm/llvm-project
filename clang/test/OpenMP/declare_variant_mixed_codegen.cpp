@@ -27,6 +27,7 @@
 // CHECK-DAG: ret i32 85
 // CHECK-DAG: ret i32 86
 // CHECK-DAG: ret i32 87
+// CHECK-DAG: ret i32 88
 // CHECK-NOT: ret i32 {{1|4|81|84}}
 
 #ifndef HEADER
@@ -45,8 +46,10 @@ int test();
 #pragma omp declare variant(test) match(implementation = {vendor(llvm)}, device={kind(cpu)})
 int call() { return 1; }
 
+static int stat_unused_no_emit() { return 1; }
 static int stat_unused_();
 #pragma omp declare variant(stat_unused_) match(implementation = {vendor(llvm)}, device={kind(cpu)})
+#pragma omp declare variant(stat_unused_no_emit) match(implementation = {vendor(xxx)}, device={kind(gpu)})
 static int stat_unused() { return 1; }
 
 static int stat_used_();
@@ -133,5 +136,13 @@ int fn_variant2() { return 1; }
 #pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm)}, device={kind(gpu)})
 #pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm)}, device={kind(fpga)})
 int fn2() { return 87; }
+
+#pragma omp declare variant(stat_unused_no_emit) match(implementation = {vendor(xxx)}, device={kind(gpu)})
+template <typename T>
+static T stat_unused_T() { return 88; }
+
+int bazzzzzzzz() {
+  return stat_unused_T<int>();
+}
 
 #endif // HEADER

@@ -1,0 +1,7 @@
+static_library("OpenMP") {
+  output_name = "LLVMFrontendOpenMP"
+
+  sources = [
+    "OMPConstants.cpp",
+  ]
+}

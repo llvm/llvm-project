@@ -397,7 +397,6 @@ bool AArch64RegisterInfo::needsFrameBaseReg(MachineInstr *MI,
 bool AArch64RegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                              unsigned BaseReg,
                                              int64_t Offset) const {
-  assert(Offset <= INT_MAX && "Offset too big to fit in int.");
   assert(MI && "Unable to get the legal offset for nil instruction.");
   StackOffset SaveOffset(Offset, MVT::i8);
   return isAArch64FrameOffsetLegal(*MI, SaveOffset) & AArch64FrameOffsetIsLegal;

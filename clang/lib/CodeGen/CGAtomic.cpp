@@ -350,7 +350,7 @@ bool AtomicInfo::emitMemSetZeroIfNecessary() const {
   CGF.Builder.CreateMemSet(
       addr, llvm::ConstantInt::get(CGF.Int8Ty, 0),
       CGF.getContext().toCharUnitsFromBits(AtomicSizeInBits).getQuantity(),
-      LVal.getAlignment().getQuantity());
+      LVal.getAlignment().getAsAlign());
   return true;
 }
 

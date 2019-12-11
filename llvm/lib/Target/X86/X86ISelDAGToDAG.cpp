@@ -542,6 +542,10 @@ static bool isLegalMaskCompare(SDNode *N, const X86Subtarget *Subtarget) {
     // this happens we will use 512-bit operations and the mask will not be
     // zero extended.
     EVT OpVT = N->getOperand(0).getValueType();
+    // The first operand of X86ISD::CMPM is chain, so we need to get the second
+    // operand.
+    if (Opcode == X86ISD::CMPM)
+      OpVT = N->getOperand(1).getValueType();
     if (OpVT.is256BitVector() || OpVT.is128BitVector())
       return Subtarget->hasVLX();
 
@@ -5218,14 +5222,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Res.getNode());
     SelectCode(Res.getNode());
     return;
-  }
-  case ISD::STRICT_FP_ROUND: {
-    // X87 instructions has enabled this strict fp operation.
-    bool UsingFp80 = Node->getSimpleValueType(0) == MVT::f80 ||
-                     Node->getOperand(1).getSimpleValueType() == MVT::f80;
-    if (UsingFp80 || (!Subtarget->hasSSE1() && Subtarget->hasX87()))
-      break;
-    LLVM_FALLTHROUGH;
   }
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:

@@ -768,6 +768,20 @@ def llvm_nxv4f32_ty : LLVMType<nxv4f32>;
 def llvm_nxv2f64_ty : LLVMType<nxv2f64>;
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
+
+  class AdvSIMD_1Vec_PredLoad_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMPointerTo<0>],
+                [IntrReadMem, IntrArgMemOnly]>;
+
+  class AdvSIMD_1Vec_PredStore_Intrinsic
+    : Intrinsic<[],
+                [llvm_anyvector_ty,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMPointerTo<0>],
+                [IntrArgMemOnly, NoCapture<2>]>;
+
   class AdvSIMD_Merged1VectorArg_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -959,15 +973,6 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_i32_ty],
                 [IntrNoMem]>;
 
-class AdvSIMD_GatherLoad_64bitOffset_Intrinsic
-    : Intrinsic<[llvm_anyvector_ty],
-                [
-                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  LLVMPointerToElt<0>,
-                  LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
-                ],
-                [IntrReadMem, IntrArgMemOnly]>;
-
   class SVE2_3VectorArg_Long_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -986,14 +991,6 @@ class AdvSIMD_GatherLoad_64bitOffset_Intrinsic
   // NOTE: There is no relationship between these intrinsics beyond an attempt
   // to reuse currently identical class definitions.
   class AdvSIMD_SVE_LOGB_Intrinsic  : AdvSIMD_SVE_CNT_Intrinsic;
-
-class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
-    : Intrinsic<[ llvm_anyvector_ty ],
-                [
-                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  LLVMPointerToElt<0>, llvm_anyvector_ty
-                ],
-                [ IntrReadMem, IntrArgMemOnly ]>;
 
   // This class of intrinsics are not intended to be useful within LLVM IR but
   // are instead here to support some of the more regid parts of the ACLE.
@@ -1024,6 +1021,23 @@ class AdvSIMD_SVE_WHILE_Intrinsic
                 [llvm_anyint_ty, LLVMMatchType<1>],
                 [IntrNoMem]>;
 
+class AdvSIMD_GatherLoad_64bitOffset_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [
+                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                  LLVMPointerToElt<0>,
+                  LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
+                ],
+                [IntrReadMem, IntrArgMemOnly]>;
+
+class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [
+                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                  LLVMPointerToElt<0>, llvm_anyvector_ty
+                ],
+                [IntrReadMem, IntrArgMemOnly]>;
+
 class AdvSIMD_GatherLoad_VecTorBase_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [
@@ -1032,6 +1046,18 @@ class AdvSIMD_GatherLoad_VecTorBase_Intrinsic
                   llvm_i64_ty
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
+
+//
+// Loads
+//
+
+def int_aarch64_sve_ldnt1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
+
+//
+// Stores
+//
+
+def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 
 //
 // Integer arithmetic

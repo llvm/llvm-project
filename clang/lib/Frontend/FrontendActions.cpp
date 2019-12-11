@@ -413,6 +413,8 @@ private:
       return "ExceptionSpecInstantiation";
     case CodeSynthesisContext::DeclaringSpecialMember:
       return "DeclaringSpecialMember";
+    case CodeSynthesisContext::DeclaringImplicitEqualityComparison:
+      return "DeclaringImplicitEqualityComparison";
     case CodeSynthesisContext::DefiningSynthesizedFunction:
       return "DefiningSynthesizedFunction";
     case CodeSynthesisContext::RewritingOperatorAsSpaceship:

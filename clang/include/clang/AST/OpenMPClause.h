@@ -111,7 +111,7 @@ class OMPClauseWithPreInit {
   Stmt *PreInit = nullptr;
 
   /// Region that captures the associated stmt.
-  OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
+  OpenMPDirectiveKind CaptureRegion = llvm::omp::OMPD_unknown;
 
 protected:
   OMPClauseWithPreInit(const OMPClause *This) {
@@ -119,7 +119,9 @@ protected:
   }
 
   /// Set pre-initialization statement for the clause.
-  void setPreInitStmt(Stmt *S, OpenMPDirectiveKind ThisRegion = OMPD_unknown) {
+  void
+  setPreInitStmt(Stmt *S,
+                 OpenMPDirectiveKind ThisRegion = llvm::omp::OMPD_unknown) {
     PreInit = S;
     CaptureRegion = ThisRegion;
   }
@@ -432,7 +434,7 @@ class OMPIfClause : public OMPClause, public OMPClauseWithPreInit {
   SourceLocation ColonLoc;
 
   /// Directive name modifier for the clause.
-  OpenMPDirectiveKind NameModifier = OMPD_unknown;
+  OpenMPDirectiveKind NameModifier = llvm::omp::OMPD_unknown;
 
   /// Name modifier location.
   SourceLocation NameModifierLoc;

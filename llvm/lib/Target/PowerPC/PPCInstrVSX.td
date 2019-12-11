@@ -1961,7 +1961,7 @@ def VectorExtractions {
       - The order of elements after the move to GPR is reversed, so we invert
         the bits of the index prior to truncating to the range 0-7
   */
-  dag BE_VBYTE_PERM_VEC = (v16i8 (LVSL ZERO8, (ANDIo8 $Idx, 8)));
+  dag BE_VBYTE_PERM_VEC = (v16i8 (LVSL ZERO8, (ANDI8o $Idx, 8)));
   dag BE_VBYTE_PERMUTE = (v16i8 (VPERM $S, $S, BE_VBYTE_PERM_VEC));
   dag BE_MV_VBYTE = (MFVSRD
                       (EXTRACT_SUBREG
@@ -1980,7 +1980,7 @@ def VectorExtractions {
         the bits of the index prior to truncating to the range 0-3
   */
   dag BE_VHALF_PERM_VEC = (v16i8 (LVSL ZERO8,
-                                       (RLDICR (ANDIo8 $Idx, 4), 1, 62)));
+                                       (RLDICR (ANDI8o $Idx, 4), 1, 62)));
   dag BE_VHALF_PERMUTE = (v16i8 (VPERM $S, $S, BE_VHALF_PERM_VEC));
   dag BE_MV_VHALF = (MFVSRD
                       (EXTRACT_SUBREG
@@ -1998,7 +1998,7 @@ def VectorExtractions {
         the bits of the index prior to truncating to the range 0-1
   */
   dag BE_VWORD_PERM_VEC = (v16i8 (LVSL ZERO8,
-                                       (RLDICR (ANDIo8 $Idx, 2), 2, 61)));
+                                       (RLDICR (ANDI8o $Idx, 2), 2, 61)));
   dag BE_VWORD_PERMUTE = (v16i8 (VPERM $S, $S, BE_VWORD_PERM_VEC));
   dag BE_MV_VWORD = (MFVSRD
                       (EXTRACT_SUBREG
@@ -2014,7 +2014,7 @@ def VectorExtractions {
       element indices.
   */
   dag BE_VDWORD_PERM_VEC = (v16i8 (LVSL ZERO8,
-                                        (RLDICR (ANDIo8 $Idx, 1), 3, 60)));
+                                        (RLDICR (ANDI8o $Idx, 1), 3, 60)));
   dag BE_VDWORD_PERMUTE = (v16i8 (VPERM $S, $S, BE_VDWORD_PERM_VEC));
   dag BE_VARIABLE_DWORD =
         (MFVSRD (EXTRACT_SUBREG

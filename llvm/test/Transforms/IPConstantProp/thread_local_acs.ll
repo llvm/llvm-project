@@ -1,5 +1,4 @@
 ; RUN: opt -ipconstprop -S < %s | FileCheck %s
-; RUN: opt -S -passes=attributor -aa-pipeline='basic-aa' -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=1 < %s | FileCheck %s
 ;
 ;    #include <threads.h>
 ;    thread_local int gtl = 0;

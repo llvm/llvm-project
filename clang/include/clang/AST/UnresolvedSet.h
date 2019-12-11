@@ -17,6 +17,7 @@
 #include "clang/AST/DeclAccessPair.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include <cstddef>
@@ -85,6 +86,8 @@ public:
   const_iterator begin() const { return const_iterator(decls().begin()); }
   const_iterator end() const { return const_iterator(decls().end()); }
 
+  ArrayRef<DeclAccessPair> pairs() const { return decls(); }
+
   void addDecl(NamedDecl *D) {
     addDecl(D, AS_none);
   }
@@ -124,6 +127,8 @@ public:
   unsigned size() const { return decls().size(); }
 
   void append(iterator I, iterator E) { decls().append(I.I, E.I); }
+
+  template<typename Iter> void assign(Iter I, Iter E) { decls().assign(I, E); }
 
   DeclAccessPair &operator[](unsigned I) { return decls()[I]; }
   const DeclAccessPair &operator[](unsigned I) const { return decls()[I]; }

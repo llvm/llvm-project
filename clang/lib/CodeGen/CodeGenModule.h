@@ -17,7 +17,6 @@
 #include "CodeGenTypeCache.h"
 #include "CodeGenTypes.h"
 #include "SanitizerMetadata.h"
-#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -77,6 +76,9 @@ class AnnotateAttr;
 class CXXDestructorDecl;
 class Module;
 class CoverageSourceInfo;
+class TargetAttr;
+class InitSegAttr;
+struct ParsedTargetAttr;
 
 namespace CodeGen {
 
@@ -1152,7 +1154,7 @@ public:
 
   /// Parses the target attributes passed in, and returns only the ones that are
   /// valid feature names.
-  TargetAttr::ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD);
+  ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD);
 
   // Fills in the supplied string map with the set of target features for the
   // passed in function.
@@ -1162,6 +1164,8 @@ public:
   StringRef getBlockMangledName(GlobalDecl GD, const BlockDecl *BD);
 
   void EmitTentativeDefinition(const VarDecl *D);
+
+  void EmitExternalDeclaration(const VarDecl *D);
 
   void EmitVTable(CXXRecordDecl *Class);
 
@@ -1398,6 +1402,7 @@ private:
   void EmitMultiVersionFunctionDefinition(GlobalDecl GD, llvm::GlobalValue *GV);
 
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
+  void EmitExternalVarDeclaration(const VarDecl *D);
   void EmitAliasDefinition(GlobalDecl GD);
   void emitIFuncDefinition(GlobalDecl GD);
   void emitCPUDispatchDefinition(GlobalDecl GD);

@@ -1498,7 +1498,7 @@ body:             |
     %1 = LI8 321
     %0 = COPY $x3
     %2 = AND8o %1, %0, implicit-def $cr0
-    ; CHECK: ANDIo8 %0, 321, implicit-def $cr0
+    ; CHECK: ANDI8o %0, 321, implicit-def $cr0
     ; CHECK-LATE: andi. 5, 3, 321
     %3 = COPY killed $cr0
     %4 = ISEL8 %1, %0, %3.sub_eq
@@ -3928,7 +3928,7 @@ body:             |
     %1 = COPY $x4
     %0 = LI8 -1
     %2 = RLDICLo %0, 53, 48, implicit-def $cr0
-    ; CHECK: ANDIo8 %0, 65535
+    ; CHECK: ANDI8o %0, 65535
     ; CHECK-LATE: li 3, -1
     ; CHECK-LATE: andi. 3, 3, 65535
     %3 = COPY killed $cr0
@@ -3983,7 +3983,7 @@ body:             |
     %0 = LI8 200
     %2 = RLDICLo %0, 61, 3, implicit-def $cr0
     ; CHECK: LI8 25
-    ; CHECK: ANDIo8 %0, 25
+    ; CHECK: ANDI8o %0, 25
     ; CHECK-LATE-NOT: andi.
     %3 = COPY killed $cr0
     %4 = ISEL8 %1, %2, %3.sub_eq
@@ -4036,7 +4036,7 @@ body:             |
     %1 = COPY $x4
     %0 = LI8 2
     %2 = RLDICLo %0, 32, 32, implicit-def $cr0
-    ; CHECK: ANDIo8 %0, 0
+    ; CHECK: ANDI8o %0, 0
     ; CHECK-LATE: li 3, 2
     ; CHECK-LATE: andi. 3, 3, 0
     %3 = COPY killed $cr0
@@ -4365,7 +4365,7 @@ body:             |
     %3 = LI -22
     %4 = RLWINMo %3, 5, 24, 31, implicit-def $cr0
     ; CHECK: LI -22
-    ; CHECK-NOT: ANDIo8 %3, 65514
+    ; CHECK-NOT: ANDI8o %3, 65514
     ; CHECK-LATE-NOT: andi.
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
@@ -4426,7 +4426,7 @@ body:             |
     %0 = COPY $x3
     %2 = LI8 -18
     %3 = RLWINM8o %2, 4, 20, 27, implicit-def $cr0
-    ; CHECK: ANDIo8 %2, 3808
+    ; CHECK: ANDI8o %2, 3808
     ; CHECK-LATE: li 3, -18
     ; CHECK-LATE: andi. 3, 3, 3808
     %7 = COPY killed $cr0

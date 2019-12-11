@@ -738,6 +738,7 @@ public:
 } // end anonymous namespace.
 
 #define GET_REGISTER_MATCHER
+#define GET_SUBTARGET_FEATURE_NAME
 #define GET_MATCHER_IMPLEMENTATION
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "RISCVGenAsmMatcher.inc"
@@ -786,16 +787,29 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                              uint64_t &ErrorInfo,
                                              bool MatchingInlineAsm) {
   MCInst Inst;
+  FeatureBitset MissingFeatures;
 
   auto Result =
-    MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
+    MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
+                         MatchingInlineAsm);
   switch (Result) {
   default:
     break;
   case Match_Success:
     return processInstruction(Inst, IDLoc, Operands, Out);
-  case Match_MissingFeature:
-    return Error(IDLoc, "instruction use requires an option to be enabled");
+  case Match_MissingFeature: {
+    assert(MissingFeatures.any() && "Unknown missing features!");
+    bool FirstFeature = true;
+    std::string Msg = "instruction requires the following:";
+    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
+      if (MissingFeatures[i]) {
+        Msg += FirstFeature ? " " : ", ";
+        Msg += getSubtargetFeatureName(i);
+        FirstFeature = false;
+      }
+    }
+    return Error(IDLoc, Msg);
+  }
   case Match_MnemonicFail: {
     FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
     std::string Suggestion = RISCVMnemonicSpellCheck(

@@ -789,7 +789,7 @@ define void @PR43833_simple(i32* %0, i32 %1) {
 ; ATTRIBUTOR_NPM-NEXT:    ret void
 ; ATTRIBUTOR_NPM:       8:
 ; ATTRIBUTOR_NPM-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
-; ATTRIBUTOR_NPM-NEXT:    tail call void @sink(i32* [[TMP6]])
+; ATTRIBUTOR_NPM-NEXT:    tail call void @sink(i32* nonnull [[TMP6]])
 ; ATTRIBUTOR_NPM-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
 ; ATTRIBUTOR_NPM-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
 ; ATTRIBUTOR_NPM-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]

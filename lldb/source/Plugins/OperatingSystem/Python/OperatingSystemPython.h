@@ -9,6 +9,8 @@
 #ifndef liblldb_OperatingSystemPython_h_
 #define liblldb_OperatingSystemPython_h_
 
+#include "lldb/Host/Config.h"
+
 #ifndef LLDB_DISABLE_PYTHON
 
 #include "lldb/Target/OperatingSystem.h"

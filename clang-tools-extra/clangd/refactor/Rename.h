@@ -51,6 +51,7 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs);
 /// Generates rename edits that replaces all given occurrences with the
 /// NewName.
 /// Exposed for testing only.
+/// REQUIRED: Occurrences is sorted and doesn't have duplicated ranges.
 llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
                                      llvm::StringRef InitialCode,
                                      std::vector<Range> Occurrences,
@@ -65,6 +66,7 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 ///
 /// The API assumes that Indexed contains only named occurrences (each
 /// occurrence has the same length).
+/// REQUIRED: Indexed is sorted.
 llvm::Optional<std::vector<Range>>
 adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
                    std::vector<Range> Indexed, const LangOptions &LangOpts);

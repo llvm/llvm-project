@@ -1164,6 +1164,18 @@ let Predicates = [HasSVE] in {
   // 16-element contiguous stores
   defm : pred_store<nxv16i8, nxv16i1, nontrunc_masked_store, ST1B_IMM>;
 
+  defm : pred_load<nxv16i8, nxv16i1, non_temporal_load, LDNT1B_ZRR>;
+  defm : pred_load<nxv8i16, nxv8i1,  non_temporal_load, LDNT1H_ZRR>;
+  defm : pred_load<nxv4i32, nxv4i1,  non_temporal_load, LDNT1W_ZRR>;
+  defm : pred_load<nxv2i64, nxv2i1,  non_temporal_load, LDNT1D_ZRR>;
+  defm : pred_load<nxv8f16, nxv8i1,  non_temporal_load, LDNT1H_ZRR>;
+  defm : pred_load<nxv4f32, nxv4i1,  non_temporal_load, LDNT1W_ZRR>;
+  defm : pred_load<nxv2f64, nxv2i1,  non_temporal_load, LDNT1D_ZRR>;
+
+  defm : pred_store<nxv16i8, nxv16i1, non_temporal_store, STNT1B_ZRR>;
+  defm : pred_store<nxv8i16, nxv8i1,  non_temporal_store, STNT1H_ZRR>;
+  defm : pred_store<nxv4i32, nxv4i1,  non_temporal_store, STNT1W_ZRR>;
+  defm : pred_store<nxv2i64, nxv2i1,  non_temporal_store, STNT1D_ZRR>;
 }
 
 let Predicates = [HasSVE2] in {

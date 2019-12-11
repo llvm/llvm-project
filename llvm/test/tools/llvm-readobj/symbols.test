@@ -1,17 +1,17 @@
-RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.coff-i386 \
+RUN: llvm-readobj --symbols %p/COFF/Inputs/trivial.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix COFF
-RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.elf-i386 \
+RUN: llvm-readobj --symbols %p/ELF/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.wasm \
+RUN: llvm-readobj --symbols %p/wasm/Inputs/trivial.obj.wasm \
 RUN:   | FileCheck %s -check-prefix WASM
 
 # Check flag aliases produce identical output.
-RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.elf-i386 > %t.symbols
-RUN: llvm-readobj --syms %p/Inputs/trivial.obj.elf-i386 > %t.syms
+RUN: llvm-readobj --symbols %p/ELF/Inputs/trivial.obj.elf-i386 > %t.symbols
+RUN: llvm-readobj --syms %p/ELF/Inputs/trivial.obj.elf-i386 > %t.syms
 RUN: cmp %t.symbols %t.syms
-RUN: llvm-readobj -t %p/Inputs/trivial.obj.elf-i386 > %t.t
+RUN: llvm-readobj -t %p/ELF/Inputs/trivial.obj.elf-i386 > %t.t
 RUN: cmp %t.symbols %t.t
-RUN: llvm-readelf -s -elf-output-style LLVM %p/Inputs/trivial.obj.elf-i386 > %t.lowers
+RUN: llvm-readelf -s -elf-output-style LLVM %p/ELF/Inputs/trivial.obj.elf-i386 > %t.lowers
 RUN: cmp %t.symbols %t.lowers
 
 COFF:      Symbols [

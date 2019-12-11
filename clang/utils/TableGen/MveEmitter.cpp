@@ -672,15 +672,13 @@ public:
       } else {
         OS << Arg->varname();
       }
-      Sep = ", ";
     }
     OS << ")";
   }
   void morePrerequisites(std::vector<Ptr> &output) const override {
     for (unsigned i = 0, e = Args.size(); i < e; ++i) {
       Ptr Arg = Args[i];
-      if (IntegerArgs.find(i) != IntegerArgs.end() &&
-          Arg->hasIntegerConstantValue())
+      if (IntegerArgs.find(i) != IntegerArgs.end())
         continue;
       output.push_back(Arg);
     }

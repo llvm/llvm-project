@@ -2024,7 +2024,8 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   }
   case tgtok::l_paren: {         // Value ::= '(' IDValue DagArgList ')'
     Lex.Lex();   // eat the '('
-    if (Lex.getCode() != tgtok::Id && Lex.getCode() != tgtok::XCast) {
+    if (Lex.getCode() != tgtok::Id && Lex.getCode() != tgtok::XCast &&
+        Lex.getCode() != tgtok::question) {
       TokError("expected identifier in dag init");
       return nullptr;
     }

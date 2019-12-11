@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef LLDB_DISABLE_PYTHON
+#include "lldb/Host/Config.h"
 
-// Python is disabled in this build
-
-#else
+#ifndef LLDB_DISABLE_PYTHON
 
 // LLDB Python header must be included first
 #include "lldb-python.h"

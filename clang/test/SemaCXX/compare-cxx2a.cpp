@@ -3,6 +3,9 @@
 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -fsyntax-only -pedantic -verify -Wsign-compare -std=c++2a %s
 
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -std=c++2a -x c++ %S/Inputs/std-compare.h -emit-pch -o %t.pch
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -fsyntax-only -pedantic -verify -Wsign-compare -std=c++2a %s -include-pch %t.pch
+
 #include "Inputs/std-compare.h"
 
 #define ASSERT_TYPE(...) static_assert(__is_same(__VA_ARGS__))

@@ -562,6 +562,18 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(D->getODRHash());
   Record.push_back(D->usesFPIntrin());
 
+  if (D->isDefaulted()) {
+    if (auto *FDI = D->getDefaultedFunctionInfo()) {
+      Record.push_back(FDI->getUnqualifiedLookups().size());
+      for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
+        Record.AddDeclRef(P.getDecl());
+        Record.push_back(P.getAccess());
+      }
+    } else {
+      Record.push_back(0);
+    }
+  }
+
   Record.push_back(D->getTemplatedKind());
   switch (D->getTemplatedKind()) {
   case FunctionDecl::TK_NonTemplate:

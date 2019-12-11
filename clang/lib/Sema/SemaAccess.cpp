@@ -1560,21 +1560,24 @@ Sema::AccessResult Sema::CheckUnresolvedMemberAccess(UnresolvedMemberExpr *E,
   return CheckAccess(*this, E->getMemberLoc(), Entity);
 }
 
-/// Is the given special member function accessible for the purposes of
-/// deciding whether to define a special member function as deleted?
-bool Sema::isSpecialMemberAccessibleForDeletion(CXXMethodDecl *decl,
-                                                AccessSpecifier access,
-                                                QualType objectType) {
+/// Is the given member accessible for the purposes of deciding whether to
+/// define a special member function as deleted?
+bool Sema::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
+                                         DeclAccessPair Found,
+                                         QualType ObjectType,
+                                         SourceLocation Loc,
+                                         const PartialDiagnostic &Diag) {
   // Fast path.
-  if (access == AS_public || !getLangOpts().AccessControl) return true;
+  if (Found.getAccess() == AS_public || !getLangOpts().AccessControl)
+    return true;
 
-  AccessTarget entity(Context, AccessTarget::Member, decl->getParent(),
-                      DeclAccessPair::make(decl, access), objectType);
+  AccessTarget Entity(Context, AccessTarget::Member, NamingClass, Found,
+                      ObjectType);
 
   // Suppress diagnostics.
-  entity.setDiag(PDiag());
+  Entity.setDiag(Diag);
 
-  switch (CheckAccess(*this, SourceLocation(), entity)) {
+  switch (CheckAccess(*this, Loc, Entity)) {
   case AR_accessible: return true;
   case AR_inaccessible: return false;
   case AR_dependent: llvm_unreachable("dependent for =delete computation");

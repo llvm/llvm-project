@@ -96,10 +96,10 @@ static InvokeInst *createInvokeHelper(Function *Invokee, BasicBlock *NormalDest,
   return II;
 }
 
-CallInst *IRBuilderBase::
-CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
-             bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
-             MDNode *NoAliasTag) {
+CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
+                                      MaybeAlign Align, bool isVolatile,
+                                      MDNode *TBAATag, MDNode *ScopeTag,
+                                      MDNode *NoAliasTag) {
   Ptr = getCastedInt8PtrValue(Ptr);
   Value *Ops[] = {Ptr, Val, Size, getInt1(isVolatile)};
   Type *Tys[] = { Ptr->getType(), Size->getType() };
@@ -108,8 +108,8 @@ CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
 
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
-  if (Align > 0)
-    cast<MemSetInst>(CI)->setDestAlignment(Align);
+  if (Align)
+    cast<MemSetInst>(CI)->setDestAlignment(Align->value());
 
   // Set the TBAA info if present.
   if (TBAATag)

@@ -48,6 +48,7 @@ class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
 class MachineBasicBlock;
+class MachineBlockFrequencyInfo;
 class MachineConstantPoolValue;
 class MachineDominatorTree;
 class MachineFunction;
@@ -58,7 +59,6 @@ class MachineModuleInfo;
 class MachineOptimizationRemarkEmitter;
 class MCAsmInfo;
 class MCCFIInstruction;
-struct MCCodePaddingContext;
 class MCContext;
 class MCExpr;
 class MCInst;
@@ -69,6 +69,7 @@ class MCSymbol;
 class MCTargetOptions;
 class MDNode;
 class Module;
+class ProfileSummaryInfo;
 class raw_ostream;
 class RemarkStreamer;
 class StackMaps;
@@ -107,6 +108,10 @@ public:
 
   /// Optimization remark emitter.
   MachineOptimizationRemarkEmitter *ORE;
+
+  MachineBlockFrequencyInfo *MBFI;
+
+  ProfileSummaryInfo *PSI;
 
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
@@ -690,8 +695,6 @@ private:
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &S);
   /// Emit GlobalAlias or GlobalIFunc.
   void emitGlobalIndirectSymbol(Module &M, const GlobalIndirectSymbol &GIS);
-  void setupCodePaddingContext(const MachineBasicBlock &MBB,
-                               MCCodePaddingContext &Context) const;
 };
 
 } // end namespace llvm
