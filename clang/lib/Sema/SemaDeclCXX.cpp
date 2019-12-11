@@ -7921,21 +7921,40 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   //   non-template function declared in the member-specification of C that is
   //    -- a non-static const member of C having one parameter of type
   //       const C&, or
-  //    -- a friend of C having two parameters of type const C&.
-  QualType ExpectedParmType =
-      Context.getLValueReferenceType(Context.getRecordType(RD).withConst());
+  //    -- a friend of C having two parameters of type const C& or two
+  //       parameters of type C.
+  QualType ExpectedParmType1 = Context.getRecordType(RD);
+  QualType ExpectedParmType2 =
+      Context.getLValueReferenceType(ExpectedParmType1.withConst());
+  if (isa<CXXMethodDecl>(FD))
+    ExpectedParmType1 = ExpectedParmType2;
   for (const ParmVarDecl *Param : FD->parameters()) {
     if (!Param->getType()->isDependentType() &&
-        !Context.hasSameType(Param->getType(), ExpectedParmType)) {
+        !Context.hasSameType(Param->getType(), ExpectedParmType1) &&
+        !Context.hasSameType(Param->getType(), ExpectedParmType2)) {
       // Don't diagnose an implicit 'operator=='; we will have diagnosed the
       // corresponding defaulted 'operator<=>' already.
       if (!FD->isImplicit()) {
         Diag(FD->getLocation(), diag::err_defaulted_comparison_param)
-            << (int)DCK << Param->getType() << ExpectedParmType
-            << Param->getSourceRange();
+            << (int)DCK << Param->getType() << ExpectedParmType1
+            << !isa<CXXMethodDecl>(FD)
+            << ExpectedParmType2 << Param->getSourceRange();
       }
       return true;
     }
+  }
+  if (FD->getNumParams() == 2 &&
+      !Context.hasSameType(FD->getParamDecl(0)->getType(),
+                           FD->getParamDecl(1)->getType())) {
+    if (!FD->isImplicit()) {
+      Diag(FD->getLocation(), diag::err_defaulted_comparison_param_mismatch)
+          << (int)DCK
+          << FD->getParamDecl(0)->getType()
+          << FD->getParamDecl(0)->getSourceRange()
+          << FD->getParamDecl(1)->getType()
+          << FD->getParamDecl(1)->getSourceRange();
+    }
+    return true;
   }
 
   // ... non-static const member ...
