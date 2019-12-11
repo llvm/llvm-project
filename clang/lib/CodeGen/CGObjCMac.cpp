@@ -1315,7 +1315,7 @@ private:
   /// EmitSelector - Return a Value*, of type ObjCTypes.SelectorPtrTy,
   /// for the given selector.
   llvm::Value *EmitSelector(CodeGenFunction &CGF, Selector Sel);
-  Address EmitSelectorAddr(CodeGenFunction &CGF, Selector Sel);
+  Address EmitSelectorAddr(Selector Sel);
 
 public:
   CGObjCMac(CodeGen::CodeGenModule &cgm);
@@ -1543,7 +1543,7 @@ private:
   /// EmitSelector - Return a Value*, of type ObjCTypes.SelectorPtrTy,
   /// for the given selector.
   llvm::Value *EmitSelector(CodeGenFunction &CGF, Selector Sel);
-  Address EmitSelectorAddr(CodeGenFunction &CGF, Selector Sel);
+  Address EmitSelectorAddr(Selector Sel);
 
   /// GetInterfaceEHType - Get the cached ehtype for the given Objective-C
   /// interface. The return value has type EHTypePtrTy.
@@ -1635,7 +1635,7 @@ public:
   llvm::Value *GetSelector(CodeGenFunction &CGF, Selector Sel) override
     { return EmitSelector(CGF, Sel); }
   Address GetAddrOfSelector(CodeGenFunction &CGF, Selector Sel) override
-    { return EmitSelectorAddr(CGF, Sel); }
+    { return EmitSelectorAddr(Sel); }
 
   /// The NeXT/Apple runtimes do not support typed selectors; just emit an
   /// untyped one.
@@ -1903,7 +1903,7 @@ llvm::Value *CGObjCMac::GetSelector(CodeGenFunction &CGF, Selector Sel) {
   return EmitSelector(CGF, Sel);
 }
 Address CGObjCMac::GetAddrOfSelector(CodeGenFunction &CGF, Selector Sel) {
-  return EmitSelectorAddr(CGF, Sel);
+  return EmitSelectorAddr(Sel);
 }
 llvm::Value *CGObjCMac::GetSelector(CodeGenFunction &CGF, const ObjCMethodDecl
                                     *Method) {
@@ -5263,11 +5263,11 @@ llvm::Value *CGObjCMac::EmitNSAutoreleasePoolClassRef(CodeGenFunction &CGF) {
 }
 
 llvm::Value *CGObjCMac::EmitSelector(CodeGenFunction &CGF, Selector Sel) {
-  return CGF.Builder.CreateLoad(EmitSelectorAddr(CGF, Sel));
+  return CGF.Builder.CreateLoad(EmitSelectorAddr(Sel));
 }
 
-Address CGObjCMac::EmitSelectorAddr(CodeGenFunction &CGF, Selector Sel) {
-  CharUnits Align = CGF.getPointerAlign();
+Address CGObjCMac::EmitSelectorAddr(Selector Sel) {
+  CharUnits Align = CGM.getPointerAlign();
 
   llvm::GlobalVariable *&Entry = SelectorReferences[Sel];
   if (!Entry) {
@@ -7607,7 +7607,7 @@ CGObjCNonFragileABIMac::GenerateMessageSendSuper(CodeGen::CodeGenFunction &CGF,
 
 llvm::Value *CGObjCNonFragileABIMac::EmitSelector(CodeGenFunction &CGF,
                                                   Selector Sel) {
-  Address Addr = EmitSelectorAddr(CGF, Sel);
+  Address Addr = EmitSelectorAddr(Sel);
 
   llvm::LoadInst* LI = CGF.Builder.CreateLoad(Addr);
   LI->setMetadata(CGM.getModule().getMDKindID("invariant.load"),
@@ -7615,11 +7615,9 @@ llvm::Value *CGObjCNonFragileABIMac::EmitSelector(CodeGenFunction &CGF,
   return LI;
 }
 
-Address CGObjCNonFragileABIMac::EmitSelectorAddr(CodeGenFunction &CGF,
-                                                 Selector Sel) {
+Address CGObjCNonFragileABIMac::EmitSelectorAddr(Selector Sel) {
   llvm::GlobalVariable *&Entry = SelectorReferences[Sel];
-
-  CharUnits Align = CGF.getPointerAlign();
+  CharUnits Align = CGM.getPointerAlign();
   if (!Entry) {
     llvm::Constant *Casted =
       llvm::ConstantExpr::getBitCast(GetMethodVarName(Sel),
