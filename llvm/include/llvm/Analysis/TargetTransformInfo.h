@@ -754,10 +754,10 @@ public:
   /// Return the expected cost of materialization for the given integer
   /// immediate of the specified type for a given instruction. The cost can be
   /// zero if the immediate can be folded into the specified instruction.
-  int getIntImmCost(unsigned Opc, unsigned Idx, const APInt &Imm,
-                    Type *Ty) const;
-  int getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                    Type *Ty) const;
+  int getIntImmCostInst(unsigned Opc, unsigned Idx, const APInt &Imm,
+                        Type *Ty) const;
+  int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
+                          Type *Ty) const;
 
   /// Return the expected cost for the given integer when optimising
   /// for size. This is different than the other integer immediate cost
@@ -1278,10 +1278,10 @@ public:
   virtual int getIntImmCodeSizeCost(unsigned Opc, unsigned Idx, const APInt &Imm,
                                     Type *Ty) = 0;
   virtual int getIntImmCost(const APInt &Imm, Type *Ty) = 0;
-  virtual int getIntImmCost(unsigned Opc, unsigned Idx, const APInt &Imm,
-                            Type *Ty) = 0;
-  virtual int getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                            Type *Ty) = 0;
+  virtual int getIntImmCostInst(unsigned Opc, unsigned Idx, const APInt &Imm,
+                                Type *Ty) = 0;
+  virtual int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                  const APInt &Imm, Type *Ty) = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const = 0;
   virtual const char* getRegisterClassName(unsigned ClassID) const = 0;
@@ -1638,13 +1638,13 @@ public:
   int getIntImmCost(const APInt &Imm, Type *Ty) override {
     return Impl.getIntImmCost(Imm, Ty);
   }
-  int getIntImmCost(unsigned Opc, unsigned Idx, const APInt &Imm,
-                    Type *Ty) override {
-    return Impl.getIntImmCost(Opc, Idx, Imm, Ty);
+  int getIntImmCostInst(unsigned Opc, unsigned Idx, const APInt &Imm,
+                        Type *Ty) override {
+    return Impl.getIntImmCostInst(Opc, Idx, Imm, Ty);
   }
-  int getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                    Type *Ty) override {
-    return Impl.getIntImmCost(IID, Idx, Imm, Ty);
+  int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
+                          Type *Ty) override {
+    return Impl.getIntImmCostIntrin(IID, Idx, Imm, Ty);
   }
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     return Impl.getNumberOfRegisters(ClassID);

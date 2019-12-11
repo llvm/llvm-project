@@ -355,13 +355,13 @@ public:
 
   unsigned getIntImmCost(const APInt &Imm, Type *Ty) { return TTI::TCC_Basic; }
 
-  unsigned getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                         Type *Ty) {
+  unsigned getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
+                             Type *Ty) {
     return TTI::TCC_Free;
   }
 
-  unsigned getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                         Type *Ty) {
+  unsigned getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                               const APInt &Imm, Type *Ty) {
     return TTI::TCC_Free;
   }
 

@@ -80,8 +80,8 @@ int AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   return std::max(1, Cost);
 }
 
-int AArch64TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx,
-                                  const APInt &Imm, Type *Ty) {
+int AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                      const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -146,8 +146,8 @@ int AArch64TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx,
   return AArch64TTIImpl::getIntImmCost(Imm, Ty);
 }
 
-int AArch64TTIImpl::getIntImmCost(Intrinsic::ID IID, unsigned Idx,
-                                  const APInt &Imm, Type *Ty) {
+int AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                        const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
