@@ -47,3 +47,68 @@ void test() {
   void(X<A[3]>() == X<A[3]>()); // expected-error {{cannot be compared because its 'operator==' is implicitly deleted}}
   void(X<B[3]>() == X<B[3]>());
 }
+
+namespace Access {
+  class A {
+    bool operator==(const A &) const; // expected-note 2{{implicitly declared private here}}
+  };
+  struct B : A { // expected-note 2{{because it would invoke a private 'operator==' to compare base class 'A'}}
+    bool operator==(const B &) const = default; // expected-warning {{deleted}}
+    friend bool operator==(const B &, const B &) = default; // expected-warning {{deleted}}
+  };
+
+  class C {
+  protected:
+    bool operator==(const C &) const; // expected-note 2{{declared protected here}}
+  };
+  struct D : C {
+    bool operator==(const D &) const = default;
+    friend bool operator==(const D &, const D&) = default;
+  };
+  struct E {
+    C c; // expected-note 2{{because it would invoke a protected 'operator==' member of 'Access::C' to compare member 'c'}}
+    bool operator==(const E &) const = default; // expected-warning {{deleted}}
+    friend bool operator==(const E &, const E &) = default; // expected-warning {{deleted}}
+  };
+
+  struct F : C {
+    using C::operator==;
+  };
+  struct G : F {
+    bool operator==(const G&) const = default;
+    friend bool operator==(const G&, const G&) = default;
+  };
+
+  struct H : C {
+  private:
+    using C::operator==; // expected-note 2{{declared private here}}
+  };
+  struct I : H { // expected-note 2{{private 'operator==' to compare base class 'H'}}
+    bool operator==(const I&) const = default; // expected-warning {{deleted}}
+    friend bool operator==(const I&, const I&) = default; // expected-warning {{deleted}}
+  };
+
+  class J {
+    bool operator==(const J&) const;
+    friend class K;
+  };
+  class K {
+    J j;
+    bool operator==(const K&) const = default;
+    friend bool operator==(const K&, const K&) = default;
+  };
+
+  struct X {
+    bool operator==(const X&) const; // expected-note {{ambiguity is between a regular call to this operator and a call with the argument order reversed}}
+  };
+  struct Y : private X { // expected-note {{private}}
+    using X::operator==;
+  };
+  struct Z : Y {
+    // Note: this function is not deleted. The selected operator== is
+    // accessible. But the derived-to-base conversion involves an inaccessible
+    // base class, which we don't check for until we define the function.
+    bool operator==(const Z&) const = default; // expected-error {{cannot cast 'const Access::Y' to its private base class 'const Access::X'}} expected-warning {{ambiguous}}
+  };
+  bool z = Z() == Z(); // expected-note {{first required here}}
+}

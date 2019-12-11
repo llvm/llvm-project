@@ -141,6 +141,29 @@ namespace Deletedness {
   }
 }
 
+namespace Access {
+  class A {
+    std::strong_ordering operator<=>(const A &) const; // expected-note {{here}}
+  public:
+    bool operator==(const A &) const;
+    bool operator<(const A &) const;
+  };
+  struct B {
+    A a; // expected-note {{would invoke a private 'operator<=>'}}
+    friend std::strong_ordering operator<=>(const B &, const B &) = default; // expected-warning {{deleted}}
+  };
+
+  class C {
+    std::strong_ordering operator<=>(const C &); // not viable (not const)
+    bool operator==(const C &) const; // expected-note {{here}}
+    bool operator<(const C &) const;
+  };
+  struct D {
+    C c; // expected-note {{would invoke a private 'operator=='}}
+    friend std::strong_ordering operator<=>(const D &, const D &) = default; // expected-warning {{deleted}}
+  };
+}
+
 namespace Synthesis {
   enum Result { False, True, Mu };
 
