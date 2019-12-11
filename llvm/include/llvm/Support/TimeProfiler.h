@@ -58,6 +58,10 @@ struct TimeTraceScope {
   TimeTraceScope(TimeTraceScope &&) = delete;
   TimeTraceScope &operator=(TimeTraceScope &&) = delete;
 
+  TimeTraceScope(StringRef Name) {
+    if (TimeTraceProfilerInstance != nullptr)
+      timeTraceProfilerBegin(Name, StringRef(""));
+  }
   TimeTraceScope(StringRef Name, StringRef Detail) {
     if (TimeTraceProfilerInstance != nullptr)
       timeTraceProfilerBegin(Name, Detail);
