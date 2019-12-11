@@ -473,13 +473,21 @@ class VarDecl;
 
 #include "clang/AST/DeclNodes.inc"
 
+    enum class RewriteKind { None, RewriteSpaceshipAsEqualEqual };
+
+    void adjustForRewrite(RewriteKind RK, FunctionDecl *Orig, QualType &T,
+                          TypeSourceInfo *&TInfo,
+                          DeclarationNameInfo &NameInfo);
+
     // A few supplemental visitor functions.
     Decl *VisitCXXMethodDecl(CXXMethodDecl *D,
                              TemplateParameterList *TemplateParams,
                              Optional<const ASTTemplateArgumentListInfo *>
-                                 ClassScopeSpecializationArgs = llvm::None);
+                                 ClassScopeSpecializationArgs = llvm::None,
+                             RewriteKind RK = RewriteKind::None);
     Decl *VisitFunctionDecl(FunctionDecl *D,
-                            TemplateParameterList *TemplateParams);
+                            TemplateParameterList *TemplateParams,
+                            RewriteKind RK = RewriteKind::None);
     Decl *VisitDecl(Decl *D);
     Decl *VisitVarDecl(VarDecl *D, bool InstantiatingVarTemplate,
                        ArrayRef<BindingDecl *> *Bindings = nullptr);
