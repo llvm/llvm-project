@@ -10705,8 +10705,10 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     switch (DKind) {
     case OMPD_target_parallel_for_simd:
       if (OpenMPVersion >= 50 &&
-          (NameModifier == OMPD_unknown || NameModifier == OMPD_simd))
+          (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)) {
         CaptureRegion = OMPD_parallel;
+        break;
+      }
       LLVM_FALLTHROUGH;
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:
