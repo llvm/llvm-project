@@ -170,25 +170,25 @@ void DependenceAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<LoopInfoWrapperPass>();
 }
 
-
 // Used to test the dependence analyzer.
-// Looks through the function, noting loads and stores.
+// Looks through the function, noting instructions that may access memory.
 // Calls depends() on every possible pair and prints out the result.
 // Ignores all other instructions.
 static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA) {
   auto *F = DA->getFunction();
   for (inst_iterator SrcI = inst_begin(F), SrcE = inst_end(F); SrcI != SrcE;
        ++SrcI) {
-    if (isa<StoreInst>(*SrcI) || isa<LoadInst>(*SrcI)) {
+    if (SrcI->mayReadOrWriteMemory()) {
       for (inst_iterator DstI = SrcI, DstE = inst_end(F);
            DstI != DstE; ++DstI) {
-        if (isa<StoreInst>(*DstI) || isa<LoadInst>(*DstI)) {
-          OS << "da analyze - ";
+        if (DstI->mayReadOrWriteMemory()) {
+          OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
+          OS << "  da analyze - ";
           if (auto D = DA->depends(&*SrcI, &*DstI, true)) {
             D->dump(OS);
             for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
               if (D->isSplitable(Level)) {
-                OS << "da analyze - split level = " << Level;
+                OS << "  da analyze - split level = " << Level;
                 OS << ", iteration = " << *DA->getSplitIteration(*D, Level);
                 OS << "!\n";
               }
@@ -3413,8 +3413,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   if (Src == Dst)
     PossiblyLoopIndependent = false;
 
-  if ((!Src->mayReadFromMemory() && !Src->mayWriteToMemory()) ||
-      (!Dst->mayReadFromMemory() && !Dst->mayWriteToMemory()))
+  if (!(Src->mayReadOrWriteMemory() && Dst->mayReadOrWriteMemory()))
     // if both instructions don't reference memory, there's no dependence
     return nullptr;
 
@@ -3785,8 +3784,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   return std::make_unique<FullDependence>(std::move(Result));
 }
-
-
 
 //===----------------------------------------------------------------------===//
 // getSplitIteration -
