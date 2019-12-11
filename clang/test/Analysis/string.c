@@ -97,7 +97,7 @@ void strlen_constant2(char x) {
 }
 
 size_t strlen_null() {
-  return strlen(0); // expected-warning{{Null pointer argument in call to string length function}}
+  return strlen(0); // expected-warning{{Null pointer passed as 1st argument to string length function}}
 }
 
 size_t strlen_fn() {
@@ -251,7 +251,7 @@ void strnlen_constant6(char x) {
 }
 
 size_t strnlen_null() {
-  return strnlen(0, 3); // expected-warning{{Null pointer argument in call to string length function}}
+  return strnlen(0, 3); // expected-warning{{Null pointer passed as 1st argument to string length function}}
 }
 
 size_t strnlen_fn() {
@@ -322,11 +322,11 @@ char *strcpy(char *restrict s1, const char *restrict s2);
 
 
 void strcpy_null_dst(char *x) {
-  strcpy(NULL, x); // expected-warning{{Null pointer argument in call to string copy function}}
+  strcpy(NULL, x); // expected-warning{{Null pointer passed as 1st argument to string copy function}}
 }
 
 void strcpy_null_src(char *x) {
-  strcpy(x, NULL); // expected-warning{{Null pointer argument in call to string copy function}}
+  strcpy(x, NULL); // expected-warning{{Null pointer passed as 2nd argument to string copy function}}
 }
 
 void strcpy_fn(char *x) {
@@ -424,15 +424,15 @@ char *strcat(char *restrict s1, const char *restrict s2);
 
 
 void strcat_null_dst(char *x) {
-  strcat(NULL, x); // expected-warning{{Null pointer argument in call to string copy function}}
+  strcat(NULL, x); // expected-warning{{Null pointer passed as 1st argument to string concatenation function}}
 }
 
 void strcat_null_src(char *x) {
-  strcat(x, NULL); // expected-warning{{Null pointer argument in call to string copy function}}
+  strcat(x, NULL); // expected-warning{{Null pointer passed as 2nd argument to string concatenation function}}
 }
 
 void strcat_fn(char *x) {
-  strcat(x, (char*)&strcat_fn); // expected-warning{{Argument to string copy function is the address of the function 'strcat_fn', which is not a null-terminated string}}
+  strcat(x, (char*)&strcat_fn); // expected-warning{{Argument to string concatenation function is the address of the function 'strcat_fn', which is not a null-terminated string}}
 }
 
 void strcat_effects(char *y) {
@@ -523,11 +523,11 @@ char *strncpy(char *restrict s1, const char *restrict s2, size_t n);
 
 
 void strncpy_null_dst(char *x) {
-  strncpy(NULL, x, 5); // expected-warning{{Null pointer argument in call to string copy function}}
+  strncpy(NULL, x, 5); // expected-warning{{Null pointer passed as 1st argument to string copy function}}
 }
 
 void strncpy_null_src(char *x) {
-  strncpy(x, NULL, 5); // expected-warning{{Null pointer argument in call to string copy function}}
+  strncpy(x, NULL, 5); // expected-warning{{Null pointer passed as 2nd argument to string copy function}}
 }
 
 void strncpy_fn(char *x) {
@@ -631,15 +631,15 @@ char *strncat(char *restrict s1, const char *restrict s2, size_t n);
 
 
 void strncat_null_dst(char *x) {
-  strncat(NULL, x, 4); // expected-warning{{Null pointer argument in call to string copy function}}
+  strncat(NULL, x, 4); // expected-warning{{Null pointer passed as 1st argument to string concatenation function}}
 }
 
 void strncat_null_src(char *x) {
-  strncat(x, NULL, 4); // expected-warning{{Null pointer argument in call to string copy function}}
+  strncat(x, NULL, 4); // expected-warning{{Null pointer passed as 2nd argument to string concatenation function}}
 }
 
 void strncat_fn(char *x) {
-  strncat(x, (char*)&strncat_fn, 4); // expected-warning{{Argument to string copy function is the address of the function 'strncat_fn', which is not a null-terminated string}}
+  strncat(x, (char*)&strncat_fn, 4); // expected-warning{{Argument to string concatenation function is the address of the function 'strncat_fn', which is not a null-terminated string}}
 }
 
 void strncat_effects(char *y) {
@@ -812,13 +812,13 @@ void strcmp_2() {
 void strcmp_null_0() {
   char *x = NULL;
   char *y = "123";
-  strcmp(x, y); // expected-warning{{Null pointer argument in call to string comparison function}}
+  strcmp(x, y); // expected-warning{{Null pointer passed as 1st argument to string comparison function}}
 }
 
 void strcmp_null_1() {
   char *x = "123";
   char *y = NULL;
-  strcmp(x, y); // expected-warning{{Null pointer argument in call to string comparison function}}
+  strcmp(x, y); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
 void strcmp_diff_length_0() {
@@ -865,6 +865,12 @@ void strcmp_union_function_pointer_cast(union argument a) {
   void (*fPtr)(union argument *) = (void (*)(union argument *))function_pointer_cast_helper;
 
   fPtr(&a);
+}
+
+int strcmp_null_argument(char *a) {
+  char *b = 0;
+  // Do not warn about the first argument!
+  return strcmp(a, b); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
 //===----------------------------------------------------------------------===
@@ -921,13 +927,13 @@ void strncmp_2() {
 void strncmp_null_0() {
   char *x = NULL;
   char *y = "123";
-  strncmp(x, y, 3); // expected-warning{{Null pointer argument in call to string comparison function}}
+  strncmp(x, y, 3); // expected-warning{{Null pointer passed as 1st argument to string comparison function}}
 }
 
 void strncmp_null_1() {
   char *x = "123";
   char *y = NULL;
-  strncmp(x, y, 3); // expected-warning{{Null pointer argument in call to string comparison function}}
+  strncmp(x, y, 3); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
 void strncmp_diff_length_0() {
@@ -974,6 +980,12 @@ void strncmp_diff_length_6() {
 
 void strncmp_embedded_null () {
 	clang_analyzer_eval(strncmp("ab\0zz", "ab\0yy", 4) == 0); // expected-warning{{TRUE}}
+}
+
+int strncmp_null_argument(char *a, size_t n) {
+  char *b = 0;
+  // Do not warn about the first argument!
+  return strncmp(a, b, n); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
 //===----------------------------------------------------------------------===
@@ -1030,13 +1042,13 @@ void strcasecmp_2() {
 void strcasecmp_null_0() {
   char *x = NULL;
   char *y = "123";
-  strcasecmp(x, y); // expected-warning{{Null pointer argument in call to string comparison function}}
+  strcasecmp(x, y); // expected-warning{{Null pointer passed as 1st argument to string comparison function}}
 }
 
 void strcasecmp_null_1() {
   char *x = "123";
   char *y = NULL;
-  strcasecmp(x, y); // expected-warning{{Null pointer argument in call to string comparison function}}
+  strcasecmp(x, y); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
 void strcasecmp_diff_length_0() {
@@ -1065,6 +1077,12 @@ void strcasecmp_diff_length_3() {
 
 void strcasecmp_embedded_null () {
 	clang_analyzer_eval(strcasecmp("ab\0zz", "ab\0yy") == 0); // expected-warning{{TRUE}}
+}
+
+int strcasecmp_null_argument(char *a) {
+  char *b = 0;
+  // Do not warn about the first argument!
+  return strcasecmp(a, b); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
 //===----------------------------------------------------------------------===
@@ -1121,13 +1139,13 @@ void strncasecmp_2() {
 void strncasecmp_null_0() {
   char *x = NULL;
   char *y = "123";
-  strncasecmp(x, y, 3); // expected-warning{{Null pointer argument in call to string comparison function}}
+  strncasecmp(x, y, 3); // expected-warning{{Null pointer passed as 1st argument to string comparison function}}
 }
 
 void strncasecmp_null_1() {
   char *x = "123";
   char *y = NULL;
-  strncasecmp(x, y, 3); // expected-warning{{Null pointer argument in call to string comparison function}}
+  strncasecmp(x, y, 3); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
 void strncasecmp_diff_length_0() {
@@ -1176,6 +1194,12 @@ void strncasecmp_embedded_null () {
 	clang_analyzer_eval(strncasecmp("ab\0zz", "ab\0yy", 4) == 0); // expected-warning{{TRUE}}
 }
 
+int strncasecmp_null_argument(char *a, size_t n) {
+  char *b = 0;
+  // Do not warn about the first argument!
+  return strncasecmp(a, b, n); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
+}
+
 //===----------------------------------------------------------------------===
 // strsep()
 //===----------------------------------------------------------------------===
@@ -1183,11 +1207,11 @@ void strncasecmp_embedded_null () {
 char *strsep(char **stringp, const char *delim);
 
 void strsep_null_delim(char *s) {
-  strsep(&s, NULL); // expected-warning{{Null pointer argument in call to strsep()}}
+  strsep(&s, NULL); // expected-warning{{Null pointer passed as 2nd argument to strsep()}}
 }
 
 void strsep_null_search() {
-  strsep(NULL, ""); // expected-warning{{Null pointer argument in call to strsep()}}
+  strsep(NULL, ""); // expected-warning{{Null pointer passed as 1st argument to strsep()}}
 }
 
 void strsep_return_original_pointer(char *s) {
@@ -1433,7 +1457,7 @@ void memset26_upper_UCHAR_MAX() {
 void bzero1_null() {
   char *a = NULL;
 
-  bzero(a, 10); // expected-warning{{Null pointer argument in call to memory clearance function}}
+  bzero(a, 10); // expected-warning{{Null pointer passed as 1st argument to memory clearance function}}
 }
 
 void bzero2_char_array_null() {
@@ -1453,7 +1477,7 @@ void bzero3_char_ptr_null() {
 void explicit_bzero1_null() {
   char *a = NULL;
 
-  explicit_bzero(a, 10); // expected-warning{{Null pointer argument in call to memory clearance function}}
+  explicit_bzero(a, 10); // expected-warning{{Null pointer passed as 1st argument to memory clearance function}}
 }
 
 void explicit_bzero2_clear_mypassword() {

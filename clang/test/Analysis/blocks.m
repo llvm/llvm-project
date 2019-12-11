@@ -47,6 +47,10 @@ typedef struct __aslmsg *aslmsg;
 aslclient asl_open(const char *ident, const char *facility, uint32_t opts);
 int asl_log(aslclient asl, aslmsg msg, int level, const char *format, ...) __attribute__((__format__ (__printf__, 4, 5)));
 
+struct Block_layout {
+  int flags;
+};
+
 //===----------------------------------------------------------------------===//
 // Begin actual test cases.
 //===----------------------------------------------------------------------===//
@@ -241,3 +245,8 @@ void call_block_with_fewer_arguments() {
   b(); // expected-warning {{Block taking 1 argument is called with fewer (0)}}
 }
 #endif
+
+int getBlockFlags() {
+  int x = 0;
+  return ((struct Block_layout *)^{ (void)x; })->flags; // no-warning
+}

@@ -1078,7 +1078,10 @@ void EmptyLocalizationContextChecker::checkASTDecl(
     AnalysisDeclContext *DCtx = Mgr.getAnalysisDeclContext(M);
 
     const Stmt *Body = M->getBody();
-    assert(Body);
+    if (!Body) {
+      assert(M->isSynthesizedAccessorStub());
+      continue;
+    }
 
     MethodCrawler MC(M->getCanonicalDecl(), BR, this, Mgr, DCtx);
     MC.VisitStmt(Body);
