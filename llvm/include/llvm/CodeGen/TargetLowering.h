@@ -3442,8 +3442,16 @@ public:
   /// Return 1 if we can compute the negated form of the specified expression
   /// for the same cost as the expression itself, or 2 if we can compute the
   /// negated form more cheaply than the expression itself. Else return 0.
+  ///
+  /// EnableUseCheck specifies whether the number of uses of a value affects
+  /// if negation is considered free. This is needed because the number of uses
+  /// of any value may change as we rewrite the expression. Therefore, when
+  /// called from getNegatedExpression(), we must explicitly set EnableUseCheck
+  /// to false to avoid getting a different answer than when called from other
+  /// contexts.
   virtual char isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
                                   bool LegalOperations, bool ForCodeSize,
+                                  bool EnableUseCheck = true,
                                   unsigned Depth = 0) const;
 
   /// If isNegatibleForFree returns true, return the newly negated expression.

@@ -41898,6 +41898,7 @@ static SDValue combineFneg(SDNode *N, SelectionDAG &DAG,
 char X86TargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
                                            bool LegalOperations,
                                            bool ForCodeSize,
+                                           bool EnableUseCheck,
                                            unsigned Depth) const {
   // fneg patterns are removable even if they have multiple uses.
   if (isFNEG(DAG, Op.getNode(), Depth))
@@ -41926,7 +41927,7 @@ char X86TargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
     // extra operand negations as well.
     for (int i = 0; i != 3; ++i) {
       char V = isNegatibleForFree(Op.getOperand(i), DAG, LegalOperations,
-                                  ForCodeSize, Depth + 1);
+                                  ForCodeSize, EnableUseCheck, Depth + 1);
       if (V == 2)
         return V;
     }
@@ -41935,7 +41936,8 @@ char X86TargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
   }
 
   return TargetLowering::isNegatibleForFree(Op, DAG, LegalOperations,
-                                            ForCodeSize, Depth);
+                                            ForCodeSize, EnableUseCheck,
+                                            Depth);
 }
 
 SDValue X86TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
@@ -41967,7 +41969,7 @@ SDValue X86TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     SmallVector<SDValue, 4> NewOps(Op.getNumOperands(), SDValue());
     for (int i = 0; i != 3; ++i) {
       char V = isNegatibleForFree(Op.getOperand(i), DAG, LegalOperations,
-                                  ForCodeSize, Depth + 1);
+                                  ForCodeSize, false, Depth + 1);
       if (V == 2)
         NewOps[i] = getNegatedExpression(Op.getOperand(i), DAG, LegalOperations,
                                          ForCodeSize, Depth + 1);
