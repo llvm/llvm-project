@@ -125,14 +125,12 @@ define i1 @unknownReturnTest(i8* %x) {
   ret i1 %null_check
 }
 
-; TODO: Make sure that if load/store happened, the pointer is nonnull.
+; Make sure that if load/store happened, the pointer is nonnull.
 
 define i32 @test_null_after_store(i32* %0) {
 ; CHECK-LABEL: @test_null_after_store(
 ; CHECK-NEXT:    store i32 123, i32* [[TMP0:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32* [[TMP0]], null
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 1, i32 2
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    ret i32 2
 ;
   store i32 123, i32* %0, align 4
   %2 = icmp eq i32* %0, null
@@ -142,10 +140,7 @@ define i32 @test_null_after_store(i32* %0) {
 
 define i32 @test_null_after_load(i32* %0) {
 ; CHECK-LABEL: @test_null_after_load(
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32* [[TMP0]], null
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 1
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 1
 ;
   %2 = load i32, i32* %0, align 4
   %3 = icmp eq i32* %0, null
