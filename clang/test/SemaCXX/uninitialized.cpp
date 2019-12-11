@@ -1449,3 +1449,12 @@ void if_switch_init_stmt(int k) {
 
   switch (int n; (n == k || k > 5)) {} // expected-warning {{uninitialized}} expected-note {{initialize}} expected-warning {{boolean}}
 }
+
+template<typename T> struct Outer {
+  struct Inner {
+    int a = 1;
+    int b;
+    Inner() : b(a) {}
+  };
+};
+Outer<int>::Inner outerinner;

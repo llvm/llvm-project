@@ -3807,7 +3807,7 @@ namespace {
 
     const CXXRecordDecl *RD = Constructor->getParent();
 
-    if (RD->getDescribedClassTemplate())
+    if (RD->isDependentContext())
       return;
 
     // Holds fields that are uninitialized.
