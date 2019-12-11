@@ -410,6 +410,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   for (auto VT : { MVT::f32, MVT::f64, MVT::f80, MVT::f128 }) {
     setOperationAction(ISD::SELECT, VT, Custom);
     setOperationAction(ISD::SETCC, VT, Custom);
+    setOperationAction(ISD::STRICT_FSETCC, VT, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, VT, Custom);
   }
   for (auto VT : { MVT::i8, MVT::i16, MVT::i32, MVT::i64 }) {
     if (VT == MVT::i64 && !Subtarget.is64Bit())
@@ -929,6 +931,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SETCC,              VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCC,      VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCCS,     VT, Custom);
       setOperationAction(ISD::CTPOP,              VT, Custom);
       setOperationAction(ISD::ABS,                VT, Custom);
 
@@ -1212,6 +1216,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
       setOperationAction(ISD::SETCC,           VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCC,   VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCCS,  VT, Custom);
       setOperationAction(ISD::CTPOP,           VT, Custom);
       setOperationAction(ISD::CTLZ,            VT, Custom);
 
@@ -1374,6 +1380,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SUB,              VT, Custom);
       setOperationAction(ISD::MUL,              VT, Custom);
       setOperationAction(ISD::SETCC,            VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCC,    VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCCS,   VT, Custom);
       setOperationAction(ISD::SELECT,           VT, Custom);
       setOperationAction(ISD::TRUNCATE,         VT, Custom);
       setOperationAction(ISD::UADDSAT,          VT, Custom);
@@ -1513,6 +1521,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ROTL,             VT, Custom);
       setOperationAction(ISD::ROTR,             VT, Custom);
       setOperationAction(ISD::SETCC,            VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCC,    VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCCS,   VT, Custom);
       setOperationAction(ISD::SELECT,           VT, Custom);
 
       // The condition codes aren't legal in SSE/AVX and under AVX512 we use
@@ -20264,14 +20274,20 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
 /// Emit nodes that will be selected as "cmp Op0,Op1", or something
 /// equivalent.
 SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
-                                   const SDLoc &dl, SelectionDAG &DAG) const {
+                                   const SDLoc &dl, SelectionDAG &DAG,
+                                   SDValue Chain, bool IsSignaling) const {
   if (isNullConstant(Op1))
     return EmitTest(Op0, X86CC, dl, DAG, Subtarget);
 
   EVT CmpVT = Op0.getValueType();
 
-  if (CmpVT.isFloatingPoint())
+  if (CmpVT.isFloatingPoint()) {
+    if (Chain)
+      return DAG.getNode(IsSignaling ? X86ISD::STRICT_FCMPS
+                                     : X86ISD::STRICT_FCMP,
+                         dl, {MVT::i32, MVT::Other}, {Chain, Op0, Op1});
     return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op0, Op1);
+  }
 
   assert((CmpVT == MVT::i8 || CmpVT == MVT::i16 ||
           CmpVT == MVT::i32 || CmpVT == MVT::i64) && "Unexpected VT!");
@@ -20333,16 +20349,19 @@ SDValue X86TargetLowering::ConvertCmpIfNecessary(SDValue Cmp,
                                                  SelectionDAG &DAG) const {
   // If the subtarget does not support the FUCOMI instruction, floating-point
   // comparisons have to be converted.
-  if (Subtarget.hasCMov() ||
-      Cmp.getOpcode() != X86ISD::CMP ||
-      !Cmp.getOperand(0).getValueType().isFloatingPoint() ||
-      !Cmp.getOperand(1).getValueType().isFloatingPoint())
+  bool IsCmp = Cmp.getOpcode() == X86ISD::CMP;
+  bool IsStrictCmp = Cmp.getOpcode() == X86ISD::STRICT_FCMP ||
+                     Cmp.getOpcode() == X86ISD::STRICT_FCMPS;
+
+  if (Subtarget.hasCMov() || (!IsCmp && !IsStrictCmp) ||
+      !Cmp.getOperand(IsStrictCmp ? 1 : 0).getValueType().isFloatingPoint() ||
+      !Cmp.getOperand(IsStrictCmp ? 2 : 1).getValueType().isFloatingPoint())
     return Cmp;
 
   // The instruction selector will select an FUCOM instruction instead of
   // FUCOMI, which writes the comparison result to FPSW instead of EFLAGS. Hence
   // build an SDNode sequence that transfers the result from FPSW into EFLAGS:
-  // (X86sahf (trunc (srl (X86fp_stsw (trunc (X86cmp ...)), 8))))
+  // (X86sahf (trunc (srl (X86fp_stsw (trunc (X86any_fcmp ...)), 8))))
   SDLoc dl(Cmp);
   SDValue TruncFPSW = DAG.getNode(ISD::TRUNCATE, dl, MVT::i16, Cmp);
   SDValue FNStSW = DAG.getNode(X86ISD::FNSTSW16r, dl, MVT::i16, TruncFPSW);
@@ -20586,7 +20605,7 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
 /// Turns an ISD::CondCode into a value suitable for SSE floating-point mask
 /// CMPs.
 static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
-                                   SDValue &Op1) {
+                                   SDValue &Op1, bool &IsAlwaysSignaling) {
   unsigned SSECC;
   bool Swap = false;
 
@@ -20624,6 +20643,22 @@ static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   }
   if (Swap)
     std::swap(Op0, Op1);
+
+  switch (SetCCOpcode) {
+  default:
+    IsAlwaysSignaling = true;
+    break;
+  case ISD::SETEQ:
+  case ISD::SETOEQ:
+  case ISD::SETUEQ:
+  case ISD::SETNE:
+  case ISD::SETONE:
+  case ISD::SETUNE:
+  case ISD::SETO:
+  case ISD::SETUO:
+    IsAlwaysSignaling = false;
+    break;
+  }
 
   return SSECC;
 }
@@ -20769,12 +20804,16 @@ static SDValue LowerVSETCCWithSUBUS(SDValue Op0, SDValue Op1, MVT VT,
 
 static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
-  SDValue Op0 = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
-  SDValue CC = Op.getOperand(2);
-  MVT VT = Op.getSimpleValueType();
+  bool IsStrict = Op.getOpcode() == ISD::STRICT_FSETCC ||
+                  Op.getOpcode() == ISD::STRICT_FSETCCS;
+  bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
+  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
+  SDValue Op0 = Op.getOperand(IsStrict ? 1 : 0);
+  SDValue Op1 = Op.getOperand(IsStrict ? 2 : 1);
+  SDValue CC = Op.getOperand(IsStrict ? 3 : 2);
+  MVT VT = Op->getSimpleValueType(0);
   ISD::CondCode Cond = cast<CondCodeSDNode>(CC)->get();
-  bool isFP = Op.getOperand(1).getSimpleValueType().isFloatingPoint();
+  bool isFP = Op1.getSimpleValueType().isFloatingPoint();
   SDLoc dl(Op);
 
   if (isFP) {
@@ -20795,34 +20834,74 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
       VT = Op0.getSimpleValueType();
     }
 
-    // In the two cases not handled by SSE compare predicates (SETUEQ/SETONE),
-    // emit two comparisons and a logic op to tie them together.
     SDValue Cmp;
-    unsigned SSECC = translateX86FSETCC(Cond, Op0, Op1);
-    if (SSECC >= 8 && !Subtarget.hasAVX()) {
-      // LLVM predicate is SETUEQ or SETONE.
-      unsigned CC0, CC1;
-      unsigned CombineOpc;
-      if (Cond == ISD::SETUEQ) {
-        CC0 = 3; // UNORD
-        CC1 = 0; // EQ
-        CombineOpc = X86ISD::FOR;
-      } else {
-        assert(Cond == ISD::SETONE);
-        CC0 = 7; // ORD
-        CC1 = 4; // NEQ
-        CombineOpc = X86ISD::FAND;
+    bool IsAlwaysSignaling;
+    unsigned SSECC = translateX86FSETCC(Cond, Op0, Op1, IsAlwaysSignaling);
+    if (!Subtarget.hasAVX()) {
+      // TODO: We could use following steps to handle a quiet compare with
+      // signaling encodings.
+      // 1. Get ordered masks from a quiet ISD::SETO
+      // 2. Use the masks to mask potential unordered elements in operand A, B
+      // 3. Get the compare results of masked A, B
+      // 4. Calculating final result using the mask and result from 3
+      // But currently, we just fall back to scalar operations.
+      if (IsStrict && IsAlwaysSignaling && !IsSignaling)
+        return SDValue();
+
+      // Insert an extra signaling instruction to raise exception.
+      if (IsStrict && !IsAlwaysSignaling && IsSignaling) {
+        SDValue SignalCmp = DAG.getNode(
+            Opc, dl, {VT, MVT::Other},
+            {Chain, Op0, Op1, DAG.getTargetConstant(1, dl, MVT::i8)}); // LT_OS
+        // FIXME: It seems we need to update the flags of all new strict nodes.
+        // Otherwise, mayRaiseFPException in MI will return false due to
+        // NoFPExcept = false by default. However, I didn't find it in other
+        // patches.
+        SignalCmp->setFlags(Op->getFlags());
+        Chain = SignalCmp.getValue(1);
       }
 
-      SDValue Cmp0 = DAG.getNode(Opc, dl, VT, Op0, Op1,
-                                 DAG.getTargetConstant(CC0, dl, MVT::i8));
-      SDValue Cmp1 = DAG.getNode(Opc, dl, VT, Op0, Op1,
-                                 DAG.getTargetConstant(CC1, dl, MVT::i8));
-      Cmp = DAG.getNode(CombineOpc, dl, VT, Cmp0, Cmp1);
+      // In the two cases not handled by SSE compare predicates (SETUEQ/SETONE),
+      // emit two comparisons and a logic op to tie them together.
+      if (SSECC >= 8) {
+        // LLVM predicate is SETUEQ or SETONE.
+        unsigned CC0, CC1;
+        unsigned CombineOpc;
+        if (Cond == ISD::SETUEQ) {
+          CC0 = 3; // UNORD
+          CC1 = 0; // EQ
+          CombineOpc = X86ISD::FOR;
+        } else {
+          assert(Cond == ISD::SETONE);
+          CC0 = 7; // ORD
+          CC1 = 4; // NEQ
+          CombineOpc = X86ISD::FAND;
+        }
+
+        SDValue Cmp0 = DAG.getNode(
+            Opc, dl, {VT, MVT::Other},
+            {Chain, Op0, Op1, DAG.getTargetConstant(CC0, dl, MVT::i8)});
+        SDValue Cmp1 = DAG.getNode(
+            Opc, dl, {VT, MVT::Other},
+            {Chain, Op0, Op1, DAG.getTargetConstant(CC1, dl, MVT::i8)});
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Cmp0.getValue(1),
+                            Cmp1.getValue(1));
+        Cmp = DAG.getNode(CombineOpc, dl, VT, Cmp0, Cmp1);
+      } else {
+        Cmp = DAG.getNode(
+            Opc, dl, {VT, MVT::Other},
+            {Chain, Op0, Op1, DAG.getTargetConstant(SSECC, dl, MVT::i8)});
+        Chain = Cmp.getValue(1);
+      }
     } else {
       // Handle all other FP comparisons here.
-      Cmp = DAG.getNode(Opc, dl, VT, Op0, Op1,
-                        DAG.getTargetConstant(SSECC, dl, MVT::i8));
+      if (IsStrict)
+        // Make a flip on already signaling CCs before setting bit 4 of AVX CC.
+        SSECC |= (IsAlwaysSignaling ^ IsSignaling) << 4;
+      Cmp = DAG.getNode(
+          Opc, dl, {VT, MVT::Other},
+          {Chain, Op0, Op1, DAG.getTargetConstant(SSECC, dl, MVT::i8)});
+      Chain = Cmp.getValue(1);
     }
 
     // If this is SSE/AVX CMPP, bitcast the result back to integer to match the
@@ -20831,8 +20910,13 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     if (Opc == X86ISD::CMPP)
       Cmp = DAG.getBitcast(Op.getSimpleValueType(), Cmp);
 
+    if (IsStrict)
+      return DAG.getMergeValues({Cmp, Chain}, dl);
+
     return Cmp;
   }
+
+  assert(!IsStrict && "Strict SETCC only handles FP operands.");
 
   MVT VTOp0 = Op0.getSimpleValueType();
   (void)VTOp0;
@@ -21143,8 +21227,9 @@ static SDValue EmitAVX512Test(SDValue Op0, SDValue Op1, ISD::CondCode CC,
 /// corresponding X86 condition code constant in X86CC.
 SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
                                              ISD::CondCode CC, const SDLoc &dl,
-                                             SelectionDAG &DAG,
-                                             SDValue &X86CC) const {
+                                             SelectionDAG &DAG, SDValue &X86CC,
+                                             SDValue &Chain,
+                                             bool IsSignaling) const {
   // Optimize to BT if possible.
   // Lower (X & (1 << N)) == 0 to BT(X, N).
   // Lower ((X >>u N) & 1) != 0 to BT(X, N).
@@ -21192,7 +21277,9 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
   if (CondCode == X86::COND_INVALID)
     return SDValue();
 
-  SDValue EFLAGS = EmitCmp(Op0, Op1, CondCode, dl, DAG);
+  SDValue EFLAGS = EmitCmp(Op0, Op1, CondCode, dl, DAG, Chain, IsSignaling);
+  if (Chain)
+    Chain = EFLAGS.getValue(1);
   EFLAGS = ConvertCmpIfNecessary(EFLAGS, DAG);
   X86CC = DAG.getTargetConstant(CondCode, dl, MVT::i8);
   return EFLAGS;
@@ -21200,19 +21287,26 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
 
 SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
-  MVT VT = Op.getSimpleValueType();
+  bool IsStrict = Op.getOpcode() == ISD::STRICT_FSETCC ||
+                  Op.getOpcode() == ISD::STRICT_FSETCCS;
+  MVT VT = Op->getSimpleValueType(0);
 
   if (VT.isVector()) return LowerVSETCC(Op, Subtarget, DAG);
 
   assert(VT == MVT::i8 && "SetCC type must be 8-bit integer");
-  SDValue Op0 = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
+  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+  SDValue Op0 = Op.getOperand(IsStrict ? 1 : 0);
+  SDValue Op1 = Op.getOperand(IsStrict ? 2 : 1);
   SDLoc dl(Op);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC =
+      cast<CondCodeSDNode>(Op.getOperand(IsStrict ? 3 : 2))->get();
 
   // Handle f128 first, since one possible outcome is a normal integer
   // comparison which gets handled by emitFlagsForSetcc.
   if (Op0.getValueType() == MVT::f128) {
+    // FIXME: We may need a strict version of softenSetCCOperands before
+    // supporting f128.
+    assert(!IsStrict && "Unhandled strict operation!");
     softenSetCCOperands(DAG, MVT::f128, Op0, Op1, CC, dl, Op0, Op1);
 
     // If softenSetCCOperands returned a scalar, use it.
@@ -21224,11 +21318,17 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   SDValue X86CC;
-  SDValue EFLAGS = emitFlagsForSetcc(Op0, Op1, CC, dl, DAG, X86CC);
+  SDValue EFLAGS = emitFlagsForSetcc(Op0, Op1, CC, dl, DAG, X86CC, Chain,
+                                     Op.getOpcode() == ISD::STRICT_FSETCCS);
   if (!EFLAGS)
     return SDValue();
 
-  return DAG.getNode(X86ISD::SETCC, dl, MVT::i8, X86CC, EFLAGS);
+  SDValue Res = DAG.getNode(X86ISD::SETCC, dl, MVT::i8, X86CC, EFLAGS);
+
+  if (IsStrict)
+    return DAG.getMergeValues({Res, Chain}, dl);
+
+  return Res;
 }
 
 SDValue X86TargetLowering::LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const {
@@ -21359,8 +21459,10 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
        (Subtarget.hasSSE1() && VT == MVT::f32)) &&
       VT == Cond.getOperand(0).getSimpleValueType() && Cond->hasOneUse()) {
     SDValue CondOp0 = Cond.getOperand(0), CondOp1 = Cond.getOperand(1);
-    unsigned SSECC = translateX86FSETCC(
-        cast<CondCodeSDNode>(Cond.getOperand(2))->get(), CondOp0, CondOp1);
+    bool IsAlwaysSignaling;
+    unsigned SSECC =
+        translateX86FSETCC(cast<CondCodeSDNode>(Cond.getOperand(2))->get(),
+                           CondOp0, CondOp1, IsAlwaysSignaling);
 
     if (Subtarget.hasAVX512()) {
       SDValue Cmp =
@@ -21449,7 +21551,9 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  if (Cond.getOpcode() == ISD::SETCC) {
+  if (Cond.getOpcode() == ISD::SETCC ||
+      Cond.getOpcode() == ISD::STRICT_FSETCC ||
+      Cond.getOpcode() == ISD::STRICT_FSETCCS) {
     if (SDValue NewCond = LowerSETCC(Cond, DAG)) {
       Cond = NewCond;
       // If the condition was updated, it's possible that the operands of the
@@ -22924,6 +23028,24 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   unsigned IntNo = Op.getConstantOperandVal(0);
   MVT VT = Op.getSimpleValueType();
   const IntrinsicData* IntrData = getIntrinsicWithoutChain(IntNo);
+
+  // We share some nodes between STRICT and non STRICT FP intrinsics.
+  // For these nodes, we need chain them to entry token if they are not called
+  // by STRICT FP intrinsics.
+  auto getProperNode = [&](unsigned Opcode, EVT VT, ArrayRef<SDValue> Ops) {
+    switch (Opcode) {
+    default:
+      return DAG.getNode(Opcode, dl, VT, Ops);
+    case X86ISD::CMPP:
+    case X86ISD::CMPM:
+      break;
+    }
+
+    SmallVector<SDValue, 6> NewOps = {DAG.getEntryNode()};
+    NewOps.append(Ops.begin(), Ops.end());
+    return DAG.getNode(Opcode, dl, {VT, MVT::Other}, NewOps);
+  };
+
   if (IntrData) {
     switch(IntrData->Type) {
     case INTR_TYPE_1OP: {
@@ -23012,8 +23134,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           return SDValue();
       }
 
-      return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
-                         Src1, Src2, Src3);
+      return getProperNode(IntrData->Opc0, Op.getValueType(),
+                           {Src1, Src2, Src3});
     }
     case INTR_TYPE_4OP:
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1),
@@ -23261,8 +23383,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           return SDValue();
       }
       //default rounding mode
-      return DAG.getNode(IntrData->Opc0, dl, MaskVT, Op.getOperand(1),
-                          Op.getOperand(2), CC);
+      return getProperNode(IntrData->Opc0, MaskVT,
+                           {Op.getOperand(1), Op.getOperand(2), CC});
     }
     case CMP_MASK_SCALAR_CC: {
       SDValue Src1 = Op.getOperand(1);
@@ -27902,7 +28024,9 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
   case ISD::FGETSIGN:           return LowerFGETSIGN(Op, DAG);
-  case ISD::SETCC:              return LowerSETCC(Op, DAG);
+  case ISD::SETCC:
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:     return LowerSETCC(Op, DAG);
   case ISD::SETCCCARRY:         return LowerSETCCCARRY(Op, DAG);
   case ISD::SELECT:             return LowerSELECT(Op, DAG);
   case ISD::BRCOND:             return LowerBRCOND(Op, DAG);
@@ -28804,6 +28928,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CALL:               return "X86ISD::CALL";
   case X86ISD::BT:                 return "X86ISD::BT";
   case X86ISD::CMP:                return "X86ISD::CMP";
+  case X86ISD::STRICT_FCMP:        return "X86ISD::STRICT_FCMP";
+  case X86ISD::STRICT_FCMPS:       return "X86ISD::STRICT_FCMPS";
   case X86ISD::COMI:               return "X86ISD::COMI";
   case X86ISD::UCOMI:              return "X86ISD::UCOMI";
   case X86ISD::CMPM:               return "X86ISD::CMPM";

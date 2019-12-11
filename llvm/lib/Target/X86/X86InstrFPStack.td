@@ -637,11 +637,17 @@ def FLDLN2 : I<0xD9, MRM_ED, (outs), (ins), "fldln2", []>;
 // Floating point compares.
 let SchedRW = [WriteFCom], Uses = [FPCW] in {
 def UCOM_Fpr32 : FpIf32<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
-                        [(set FPSW, (trunc (X86cmp RFP32:$lhs, RFP32:$rhs)))]>;
+                        [(set FPSW, (trunc (X86any_fcmp RFP32:$lhs, RFP32:$rhs)))]>;
 def UCOM_Fpr64 : FpIf64<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
-                        [(set FPSW, (trunc (X86cmp RFP64:$lhs, RFP64:$rhs)))]>;
+                        [(set FPSW, (trunc (X86any_fcmp RFP64:$lhs, RFP64:$rhs)))]>;
 def UCOM_Fpr80 : FpI_  <(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
-                        [(set FPSW, (trunc (X86cmp RFP80:$lhs, RFP80:$rhs)))]>;
+                        [(set FPSW, (trunc (X86any_fcmp RFP80:$lhs, RFP80:$rhs)))]>;
+def COM_Fpr32  : FpIf32<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
+                        [(set FPSW, (trunc (X86strict_fcmps RFP32:$lhs, RFP32:$rhs)))]>;
+def COM_Fpr64  : FpIf64<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
+                        [(set FPSW, (trunc (X86strict_fcmps RFP64:$lhs, RFP64:$rhs)))]>;
+def COM_Fpr80  : FpI_  <(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
+                        [(set FPSW, (trunc (X86strict_fcmps RFP80:$lhs, RFP80:$rhs)))]>;
 } // SchedRW
 } // mayRaiseFPException = 1
 
@@ -649,13 +655,22 @@ let SchedRW = [WriteFCom], mayRaiseFPException = 1 in {
 // CC = ST(0) cmp ST(i)
 let Defs = [EFLAGS, FPCW], Uses = [FPCW] in {
 def UCOM_FpIr32: FpI_<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
-                  [(set EFLAGS, (X86cmp RFP32:$lhs, RFP32:$rhs))]>,
+                  [(set EFLAGS, (X86any_fcmp RFP32:$lhs, RFP32:$rhs))]>,
                   Requires<[FPStackf32, HasCMov]>;
 def UCOM_FpIr64: FpI_<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
-                  [(set EFLAGS, (X86cmp RFP64:$lhs, RFP64:$rhs))]>,
+                  [(set EFLAGS, (X86any_fcmp RFP64:$lhs, RFP64:$rhs))]>,
                   Requires<[FPStackf64, HasCMov]>;
 def UCOM_FpIr80: FpI_<(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
-                  [(set EFLAGS, (X86cmp RFP80:$lhs, RFP80:$rhs))]>,
+                  [(set EFLAGS, (X86any_fcmp RFP80:$lhs, RFP80:$rhs))]>,
+                  Requires<[HasCMov]>;
+def COM_FpIr32: FpI_<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
+                  [(set EFLAGS, (X86strict_fcmps RFP32:$lhs, RFP32:$rhs))]>,
+                  Requires<[FPStackf32, HasCMov]>;
+def COM_FpIr64: FpI_<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
+                  [(set EFLAGS, (X86strict_fcmps RFP64:$lhs, RFP64:$rhs))]>,
+                  Requires<[FPStackf64, HasCMov]>;
+def COM_FpIr80: FpI_<(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
+                  [(set EFLAGS, (X86strict_fcmps RFP80:$lhs, RFP80:$rhs))]>,
                   Requires<[HasCMov]>;
 }
 

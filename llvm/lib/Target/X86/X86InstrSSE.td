@@ -1874,16 +1874,14 @@ let mayLoad = 1 in
 }
 
 let Defs = [EFLAGS] in {
-  defm VUCOMISS : sse12_ord_cmp<0x2E, FR32, X86cmp, f32, f32mem, loadf32,
+  defm VUCOMISS : sse12_ord_cmp<0x2E, FR32, X86any_fcmp, f32, f32mem, loadf32,
                                "ucomiss", SSEPackedSingle>, PS, VEX, VEX_LIG, VEX_WIG;
-  defm VUCOMISD : sse12_ord_cmp<0x2E, FR64, X86cmp, f64, f64mem, loadf64,
+  defm VUCOMISD : sse12_ord_cmp<0x2E, FR64, X86any_fcmp, f64, f64mem, loadf64,
                                "ucomisd", SSEPackedDouble>, PD, VEX, VEX_LIG, VEX_WIG;
-  let Pattern = []<dag> in {
-    defm VCOMISS  : sse12_ord_cmp<0x2F, FR32, undef, f32, f32mem, loadf32,
-                                "comiss", SSEPackedSingle>, PS, VEX, VEX_LIG, VEX_WIG;
-    defm VCOMISD  : sse12_ord_cmp<0x2F, FR64, undef, f64, f64mem, loadf64,
-                                "comisd", SSEPackedDouble>, PD, VEX, VEX_LIG, VEX_WIG;
-  }
+  defm VCOMISS  : sse12_ord_cmp<0x2F, FR32, X86strict_fcmps, f32, f32mem, loadf32,
+                               "comiss", SSEPackedSingle>, PS, VEX, VEX_LIG, VEX_WIG;
+  defm VCOMISD  : sse12_ord_cmp<0x2F, FR64, X86strict_fcmps, f64, f64mem, loadf64,
+                               "comisd", SSEPackedDouble>, PD, VEX, VEX_LIG, VEX_WIG;
 
   let isCodeGenOnly = 1 in {
     defm VUCOMISS  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v4f32, ssmem,
@@ -1896,17 +1894,14 @@ let Defs = [EFLAGS] in {
     defm VCOMISD  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v2f64, sdmem,
                        sse_load_f64, "comisd", SSEPackedDouble>, PD, VEX, VEX_LIG, VEX_WIG;
   }
-  defm UCOMISS  : sse12_ord_cmp<0x2E, FR32, X86cmp, f32, f32mem, loadf32,
+  defm UCOMISS  : sse12_ord_cmp<0x2E, FR32, X86any_fcmp, f32, f32mem, loadf32,
                                   "ucomiss", SSEPackedSingle>, PS;
-  defm UCOMISD  : sse12_ord_cmp<0x2E, FR64, X86cmp, f64, f64mem, loadf64,
+  defm UCOMISD  : sse12_ord_cmp<0x2E, FR64, X86any_fcmp, f64, f64mem, loadf64,
                                   "ucomisd", SSEPackedDouble>, PD;
-
-  let Pattern = []<dag> in {
-    defm COMISS  : sse12_ord_cmp<0x2F, FR32, undef, f32, f32mem, loadf32,
-                                    "comiss", SSEPackedSingle>, PS;
-    defm COMISD  : sse12_ord_cmp<0x2F, FR64, undef, f64, f64mem, loadf64,
-                                    "comisd", SSEPackedDouble>, PD;
-  }
+  defm COMISS   : sse12_ord_cmp<0x2F, FR32, X86strict_fcmps, f32, f32mem, loadf32,
+                                  "comiss", SSEPackedSingle>, PS;
+  defm COMISD   : sse12_ord_cmp<0x2F, FR64, X86strict_fcmps, f64, f64mem, loadf64,
+                                  "comisd", SSEPackedDouble>, PD;
 
   let isCodeGenOnly = 1 in {
     defm UCOMISS  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v4f32, ssmem,
