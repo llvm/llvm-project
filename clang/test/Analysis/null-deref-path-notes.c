@@ -13,40 +13,40 @@ void *memcpy(void *dest, const void *src, unsigned long count);
 
 void f1(char *source) {
   char *destination = 0; // expected-note{{'destination' initialized to a null pointer value}}
-  memcpy(destination + 0, source, 10); // expected-warning{{Null pointer argument in call to memory copy function}}
-                                       // expected-note@-1{{Null pointer argument in call to memory copy function}}
+  memcpy(destination + 0, source, 10); // expected-warning{{Null pointer passed as 1st argument to memory copy function}}
+                                       // expected-note@-1{{Null pointer passed as 1st argument to memory copy function}}
 }
 
 void f2(char *source) {
   char *destination = 0; // expected-note{{'destination' initialized to a null pointer value}}
-  memcpy(destination - 0, source, 10); // expected-warning{{Null pointer argument in call to memory copy function}}
-                                       // expected-note@-1{{Null pointer argument in call to memory copy function}}
+  memcpy(destination - 0, source, 10); // expected-warning{{Null pointer passed as 1st argument to memory copy function}}
+                                       // expected-note@-1{{Null pointer passed as 1st argument to memory copy function}}
 }
 
 void f3(char *source) {
   char *destination = 0; // expected-note{{'destination' initialized to a null pointer value}}
   destination = destination + 0; // expected-note{{Null pointer value stored to 'destination'}}
-  memcpy(destination, source, 10); // expected-warning{{Null pointer argument in call to memory copy function}}
-                                   // expected-note@-1{{Null pointer argument in call to memory copy function}}
+  memcpy(destination, source, 10); // expected-warning{{Null pointer passed as 1st argument to memory copy function}}
+                                   // expected-note@-1{{Null pointer passed as 1st argument to memory copy function}}
 }
 
 void f4(char *source) {
   char *destination = 0; // expected-note{{'destination' initialized to a null pointer value}}
   destination = destination - 0; // expected-note{{Null pointer value stored to 'destination'}}
-  memcpy(destination, source, 10); // expected-warning{{Null pointer argument in call to memory copy function}}
-                                   // expected-note@-1{{Null pointer argument in call to memory copy function}}
+  memcpy(destination, source, 10); // expected-warning{{Null pointer passed as 1st argument to memory copy function}}
+                                   // expected-note@-1{{Null pointer passed as 1st argument to memory copy function}}
 }
 
 void f5(char *source) {
   char *destination1 = 0; // expected-note{{'destination1' initialized to a null pointer value}}
   char *destination2 = destination1 + 0; // expected-note{{'destination2' initialized to a null pointer value}}
-  memcpy(destination2, source, 10); // expected-warning{{Null pointer argument in call to memory copy function}}
-                                    // expected-note@-1{{Null pointer argument in call to memory copy function}}
+  memcpy(destination2, source, 10); // expected-warning{{Null pointer passed as 1st argument to memory copy function}}
+                                    // expected-note@-1{{Null pointer passed as 1st argument to memory copy function}}
 }
 
 void f6(char *source) {
   char *destination1 = 0; // expected-note{{'destination1' initialized to a null pointer value}}
   char *destination2 = destination1 - 0; // expected-note{{'destination2' initialized to a null pointer value}}
-  memcpy(destination2, source, 10); // expected-warning{{Null pointer argument in call to memory copy function}}
-                                    // expected-note@-1{{Null pointer argument in call to memory copy function}}
+  memcpy(destination2, source, 10); // expected-warning{{Null pointer passed as 1st argument to memory copy function}}
+                                    // expected-note@-1{{Null pointer passed as 1st argument to memory copy function}}
 }
