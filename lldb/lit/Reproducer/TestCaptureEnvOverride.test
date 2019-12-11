@@ -14,7 +14,10 @@
 # RUN: LLDB_CAPTURE_REPRODUCER=off %lldb -b -o 'reproducer status' --capture | FileCheck %s --check-prefix OFF
 
 # RUN: LLDB_CAPTURE_REPRODUCER=bogus %lldb -b -o 'reproducer status' --capture | FileCheck %s --check-prefix CAPTURE
-# RUN: LLDB_CAPTURE_REPRODUCER=bogus %lldb -b -o 'reproducer status' | FileCheck %s --check-prefix OFF
+#
+# BEGIN SWIFT LLDB CHANGE (--capture is on by default)
+# RUN: LLDB_CAPTURE_REPRODUCER=bogus %lldb -b -o 'reproducer status' | FileCheck %s --check-prefix CAPTURE
+# END SWIFT LLDB CHANGE
 
 # CAPTURE: Reproducer is in capture mode.
 # OFF: Reproducer is off.
