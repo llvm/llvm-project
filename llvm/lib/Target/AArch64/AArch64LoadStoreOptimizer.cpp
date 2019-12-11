@@ -913,7 +913,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
              std::next(I), std::next(Paired)))
       assert(all_of(MI.operands(),
                     [this, &RenameReg](const MachineOperand &MOP) {
-                      return !MOP.isReg() ||
+                      return !MOP.isReg() || MOP.isDebug() ||
                              !TRI->regsOverlap(MOP.getReg(), *RenameReg);
                     }) &&
              "Rename register used between paired instruction, trashing the "
