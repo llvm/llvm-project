@@ -14,10 +14,9 @@ define void @fn9(i32* %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7,
 ; CHECK-NEXT:    stp w6, w5, [sp, #36]
 ; CHECK-NEXT:    str w7, [sp, #32]
 ; CHECK-NEXT:    str w8, [x0]
-; CHECK-NEXT:    ldr w8, [sp, #72]
-; CHECK-NEXT:    str w8, [sp, #20]
+; CHECK-NEXT:    ldr w9, [sp, #72]
 ; CHECK-NEXT:    ldr w8, [sp, #80]
-; CHECK-NEXT:    str w8, [sp, #16]
+; CHECK-NEXT:    stp w8, w9, [sp, #16]
 ; CHECK-NEXT:    add x8, sp, #72 ; =72
 ; CHECK-NEXT:    add x8, x8, #24 ; =24
 ; CHECK-NEXT:    str x8, [sp, #24]
@@ -65,22 +64,18 @@ define i32 @main() nounwind ssp {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96 ; =96
 ; CHECK-NEXT:    stp x29, x30, [sp, #80] ; 16-byte Folded Spill
-; CHECK-NEXT:    mov w8, #1
-; CHECK-NEXT:    str w8, [sp, #76]
+; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    mov w8, #2
-; CHECK-NEXT:    str w8, [sp, #72]
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    str w8, [sp, #68]
+; CHECK-NEXT:    stp w8, w9, [sp, #72]
+; CHECK-NEXT:    mov w9, #3
 ; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    str w8, [sp, #64]
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    str w8, [sp, #60]
+; CHECK-NEXT:    stp w8, w9, [sp, #64]
+; CHECK-NEXT:    mov w9, #5
 ; CHECK-NEXT:    mov w8, #6
-; CHECK-NEXT:    str w8, [sp, #56]
-; CHECK-NEXT:    mov w8, #7
-; CHECK-NEXT:    str w8, [sp, #52]
+; CHECK-NEXT:    stp w8, w9, [sp, #56]
+; CHECK-NEXT:    mov w9, #7
 ; CHECK-NEXT:    mov w8, #8
-; CHECK-NEXT:    str w8, [sp, #48]
+; CHECK-NEXT:    stp w8, w9, [sp, #48]
 ; CHECK-NEXT:    mov w8, #9
 ; CHECK-NEXT:    mov w9, #10
 ; CHECK-NEXT:    stp w9, w8, [sp, #40]
