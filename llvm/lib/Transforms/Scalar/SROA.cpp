@@ -2429,13 +2429,14 @@ private:
   ///
   /// You can optionally pass a type to this routine and if that type's ABI
   /// alignment is itself suitable, this will return zero.
-  unsigned getSliceAlign(Type *Ty = nullptr) {
-    unsigned NewAIAlign = NewAI.getAlignment();
-    if (!NewAIAlign)
-      NewAIAlign = DL.getABITypeAlignment(NewAI.getAllocatedType());
-    unsigned Align =
-        MinAlign(NewAIAlign, NewBeginOffset - NewAllocaBeginOffset);
-    return (Ty && Align == DL.getABITypeAlignment(Ty)) ? 0 : Align;
+  MaybeAlign getSliceAlign(Type *Ty = nullptr) {
+    const MaybeAlign NewAIAlign = DL.getValueOrABITypeAlignment(
+        MaybeAlign(NewAI.getAlignment()), NewAI.getAllocatedType());
+    const MaybeAlign Align =
+        commonAlignment(NewAIAlign, NewBeginOffset - NewAllocaBeginOffset);
+    return (Ty && Align && Align->value() == DL.getABITypeAlignment(Ty))
+               ? None
+               : Align;
   }
 
   unsigned getIndex(uint64_t Offset) {
@@ -2883,7 +2884,7 @@ private:
     assert((IsDest && II.getRawDest() == OldPtr) ||
            (!IsDest && II.getRawSource() == OldPtr));
 
-    unsigned SliceAlign = getSliceAlign();
+    MaybeAlign SliceAlign = getSliceAlign();
 
     // For unsplit intrinsics, we simply modify the source and destination
     // pointers in place. This isn't just an optimization, it is a matter of
@@ -2953,10 +2954,10 @@ private:
     // Compute the relative offset for the other pointer within the transfer.
     unsigned OffsetWidth = DL.getIndexSizeInBits(OtherAS);
     APInt OtherOffset(OffsetWidth, NewBeginOffset - BeginOffset);
-    unsigned OtherAlign =
-      IsDest ? II.getSourceAlignment() : II.getDestAlignment();
-    OtherAlign =  MinAlign(OtherAlign ? OtherAlign : 1,
-                           OtherOffset.zextOrTrunc(64).getZExtValue());
+    Align OtherAlign =
+        assumeAligned(IsDest ? II.getSourceAlignment() : II.getDestAlignment());
+    OtherAlign =
+        commonAlignment(OtherAlign, OtherOffset.zextOrTrunc(64).getZExtValue());
 
     if (EmitMemCpy) {
       // Compute the other pointer, folding as much as possible to produce
@@ -2969,7 +2970,7 @@ private:
       Constant *Size = ConstantInt::get(SizeTy, NewEndOffset - NewBeginOffset);
 
       Value *DestPtr, *SrcPtr;
-      unsigned DestAlign, SrcAlign;
+      MaybeAlign DestAlign, SrcAlign;
       // Note: IsDest is true iff we're copying into the new alloca slice
       if (IsDest) {
         DestPtr = OurPtr;
@@ -3016,9 +3017,9 @@ private:
 
     Value *SrcPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
                                    OtherPtr->getName() + ".");
-    unsigned SrcAlign = OtherAlign;
+    MaybeAlign SrcAlign = OtherAlign;
     Value *DstPtr = &NewAI;
-    unsigned DstAlign = SliceAlign;
+    MaybeAlign DstAlign = SliceAlign;
     if (!IsDest) {
       std::swap(SrcPtr, DstPtr);
       std::swap(SrcAlign, DstAlign);
@@ -3114,20 +3115,17 @@ private:
       Instruction *I = Uses.pop_back_val();
 
       if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-        unsigned LoadAlign = LI->getAlignment();
-        if (!LoadAlign)
-          LoadAlign = DL.getABITypeAlignment(LI->getType());
-        LI->setAlignment(MaybeAlign(std::min(LoadAlign, getSliceAlign())));
+        MaybeAlign LoadAlign = DL.getValueOrABITypeAlignment(
+            MaybeAlign(LI->getAlignment()), LI->getType());
+        LI->setAlignment(std::min(LoadAlign, getSliceAlign()));
         continue;
       }
       if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-        unsigned StoreAlign = SI->getAlignment();
-        if (!StoreAlign) {
           Value *Op = SI->getOperand(0);
-          StoreAlign = DL.getABITypeAlignment(Op->getType());
-        }
-        SI->setAlignment(MaybeAlign(std::min(StoreAlign, getSliceAlign())));
-        continue;
+          MaybeAlign StoreAlign = DL.getValueOrABITypeAlignment(
+              MaybeAlign(SI->getAlignment()), Op->getType());
+          SI->setAlignment(std::min(StoreAlign, getSliceAlign()));
+          continue;
       }
 
       assert(isa<BitCastInst>(I) || isa<AddrSpaceCastInst>(I) ||
