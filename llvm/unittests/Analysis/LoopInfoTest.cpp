@@ -285,6 +285,7 @@ TEST(LoopInfoTest, CanonicalLoop) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -343,6 +344,7 @@ TEST(LoopInfoTest, LoopWithInverseGuardSuccs) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -401,6 +403,7 @@ TEST(LoopInfoTest, LoopWithSwappedGuardCmp) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -459,6 +462,7 @@ TEST(LoopInfoTest, LoopWithInverseLatchSuccs) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -517,6 +521,7 @@ TEST(LoopInfoTest, LoopWithLatchCmpNE) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -576,6 +581,7 @@ TEST(LoopInfoTest, LoopWithGuardCmpSLE) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -631,6 +637,7 @@ TEST(LoopInfoTest, LoopNonConstantStep) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -689,6 +696,7 @@ TEST(LoopInfoTest, LoopUnsignedBounds) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -747,6 +755,7 @@ TEST(LoopInfoTest, DecreasingLoop) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -804,6 +813,7 @@ TEST(LoopInfoTest, CannotFindDirection) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -865,6 +875,7 @@ TEST(LoopInfoTest, ZextIndVar) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "indvars.iv");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -1037,6 +1048,7 @@ TEST(LoopInfoTest, UnguardedLoop) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), nullptr);
         EXPECT_FALSE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -1094,6 +1106,7 @@ TEST(LoopInfoTest, UnguardedLoopWithControlFlow) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -1164,6 +1177,7 @@ TEST(LoopInfoTest, LoopNest) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "j");
         EXPECT_EQ(L->getLoopGuardBranch(), OuterGuard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
 
         // Next two basic blocks are for.outer and for.inner.preheader - skip
         // them.
@@ -1188,6 +1202,7 @@ TEST(LoopInfoTest, LoopNest) {
         EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
         EXPECT_EQ(L->getLoopGuardBranch(), InnerGuard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -1269,6 +1284,7 @@ TEST(LoopInfoTest, AuxiliaryIV) {
             L->isAuxiliaryInductionVariable(Instruction_mulopcode, SE));
         EXPECT_EQ(L->getLoopGuardBranch(), Guard);
         EXPECT_TRUE(L->isGuarded());
+        EXPECT_TRUE(L->isRotated());
       });
 }
 
@@ -1443,5 +1459,44 @@ TEST(LoopInfoTest, LoopNonLatchUniqueExitBlocks) {
     Exits.clear();
     L->getUniqueNonLatchExitBlocks(Exits);
     EXPECT_TRUE(Exits.size() == 1);
+  });
+}
+
+// Test that a pointer-chasing loop is not rotated.
+TEST(LoopInfoTest, LoopNotRotated) {
+  const char *ModuleStr =
+      "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
+      "define void @foo(i32* %elem) {\n"
+      "entry:\n"
+      "  br label %while.cond\n"
+      "while.cond:\n"
+      "  %elem.addr.0 = phi i32* [ %elem, %entry ], [ %incdec.ptr, %while.body "
+      "]\n"
+      "  %tobool = icmp eq i32* %elem.addr.0, null\n"
+      "  br i1 %tobool, label %while.end, label %while.body\n"
+      "while.body:\n"
+      "  %incdec.ptr = getelementptr inbounds i32, i32* %elem.addr.0, i64 1\n"
+      "  br label %while.cond\n"
+      "while.end:\n"
+      "  ret void\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfo(*M, "foo", [&](Function &F, LoopInfo &LI) {
+    Function::iterator FI = F.begin();
+    // First basic block is entry - skip it.
+    BasicBlock *Header = &*(++FI);
+    assert(Header->getName() == "while.cond");
+    Loop *L = LI.getLoopFor(Header);
+    EXPECT_NE(L, nullptr);
+
+    // This loop is in simplified form.
+    EXPECT_TRUE(L->isLoopSimplifyForm());
+
+    // This loop is not rotated.
+    EXPECT_FALSE(L->isRotated());
   });
 }
