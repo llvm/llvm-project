@@ -100,3 +100,137 @@ __OMP_DIRECTIVE(unknown)
 #undef OMP_DIRECTIVE
 
 ///}
+
+/// Types used in runtime structs or runtime functions
+///
+///{
+
+#ifndef OMP_TYPE
+#define OMP_TYPE(VarName, InitValue)
+#endif
+
+#define __OMP_TYPE(VarName) OMP_TYPE(VarName, Type::get##VarName##Ty(Ctx))
+
+__OMP_TYPE(Void)
+__OMP_TYPE(Int8)
+__OMP_TYPE(Int32)
+__OMP_TYPE(Int8Ptr)
+__OMP_TYPE(Int32Ptr)
+
+#undef __OMP_TYPE
+#undef OMP_TYPE
+
+///}
+
+/// Struct and function types
+///
+///{
+
+#ifndef OMP_STRUCT_TYPE
+#define OMP_STRUCT_TYPE(VarName, StructName, ...)
+#endif
+
+#define __OMP_STRUCT_TYPE(VarName, Name, ...)                                  \
+  OMP_STRUCT_TYPE(VarName, "struct." #Name, __VA_ARGS__)
+
+__OMP_STRUCT_TYPE(Ident, ident_t, Int32, Int32, Int32, Int32, Int8Ptr)
+
+#undef __OMP_STRUCT_TYPE
+#undef OMP_STRUCT_TYPE
+
+#ifndef OMP_FUNCTION_TYPE
+#define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)
+#endif
+
+#define __OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                \
+  OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, __VA_ARGS__)
+
+__OMP_FUNCTION_TYPE(ParallelTask, true, Void, Int32Ptr, Int32Ptr)
+
+#undef __OMP_FUNCTION_TYPE
+#undef OMP_FUNCTION_TYPE
+
+///}
+
+/// Runtime library function (and their attributes)
+///
+///{
+
+#ifndef OMP_RTL
+#define OMP_RTL(Enum, Str, IsVarArg, ReturnType, ...)
+#endif
+
+#define __OMP_RTL(Name, IsVarArg, ReturnType, ...)                             \
+  OMP_RTL(OMPRTL_##Name, #Name, IsVarArg, ReturnType, __VA_ARGS__)
+
+__OMP_RTL(__kmpc_barrier, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_cancel_barrier, false, Int32, IdentPtr, Int32)
+__OMP_RTL(__kmpc_global_thread_num, false, Int32, IdentPtr)
+__OMP_RTL(__kmpc_fork_call, true, Void, IdentPtr, Int32, ParallelTaskPtr)
+__OMP_RTL(omp_get_thread_num, false, Int32, )
+
+#undef __OMP_RTL
+#undef OMP_RTL
+
+#define EnumAttr(Kind) Attribute::get(Ctx, Attribute::AttrKind::Kind)
+#define AttributeSet(...)                                                      \
+  AttributeSet::get(Ctx, ArrayRef<Attribute>({__VA_ARGS__}))
+
+#ifndef OMP_ATTRS_SET
+#define OMP_ATTRS_SET(VarName, AttrSet)
+#endif
+
+#define __OMP_ATTRS_SET(VarName, AttrSet) OMP_ATTRS_SET(VarName, AttrSet)
+
+__OMP_ATTRS_SET(GetterAttrs,
+                OptimisticAttributes
+                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(ReadOnly),
+                                   EnumAttr(NoSync), EnumAttr(NoFree))
+                    : AttributeSet(EnumAttr(NoUnwind)))
+
+#undef __OMP_ATTRS_SET
+#undef OMP_ATTRS_SET
+
+#ifndef OMP_RTL_ATTRS
+#define OMP_RTL_ATTRS(Enum, FnAttrSet, RetAttrSet, ArgAttrSets)
+#endif
+
+#define __OMP_RTL_ATTRS(Name, FnAttrSet, RetAttrSet, ArgAttrSets)              \
+  OMP_RTL_ATTRS(OMPRTL_##Name, FnAttrSet, RetAttrSet, ArgAttrSets)
+
+__OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_thread_num, GetterAttrs, AttributeSet(), {})
+
+#undef __OMP_RTL_ATTRS
+#undef OMP_RTL_ATTRS
+#undef AttributeSet
+#undef EnumAttr
+
+///}
+
+/// KMP ident_t bit flags
+///
+/// In accordance with the values in `openmp/runtime/src/kmp.h`.
+///
+///{
+
+#ifndef OMP_IDENT_FLAG
+#define OMP_IDENT_FLAG(Enum, Str, Value)
+#endif
+
+#define __OMP_IDENT_FLAG(Name, Value)                                          \
+  OMP_IDENT_FLAG(OMP_IDENT_FLAG_##Name, #Name, Value)
+
+__OMP_IDENT_FLAG(KMPC, 0x02)
+__OMP_IDENT_FLAG(BARRIER_EXPL, 0x20)
+__OMP_IDENT_FLAG(BARRIER_IMPL, 0x0040)
+__OMP_IDENT_FLAG(BARRIER_IMPL_MASK, 0x01C0)
+__OMP_IDENT_FLAG(BARRIER_IMPL_FOR, 0x0040)
+__OMP_IDENT_FLAG(BARRIER_IMPL_SECTIONS, 0x00C0)
+__OMP_IDENT_FLAG(BARRIER_IMPL_SINGLE, 0x0140)
+__OMP_IDENT_FLAG(BARRIER_IMPL_WORKSHARE, 0x01C0)
+
+#undef __OMP_IDENT_FLAG
+#undef OMP_IDENT_FLAG
+
+///}
