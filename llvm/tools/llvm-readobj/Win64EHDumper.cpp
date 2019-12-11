@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Win64EHDumper.h"
+#include "Error.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -111,6 +112,20 @@ static unsigned getNumUsedSlots(const UnwindCode &UnwindCode) {
   }
 }
 
+static std::error_code getSymbol(const COFFObjectFile &COFF, uint64_t VA,
+                                 object::SymbolRef &Sym) {
+  for (const auto &Symbol : COFF.symbols()) {
+    Expected<uint64_t> Address = Symbol.getAddress();
+    if (!Address)
+      return errorToErrorCode(Address.takeError());
+    if (*Address == VA) {
+      Sym = Symbol;
+      return readobj_error::success;
+    }
+  }
+  return readobj_error::unknown_symbol;
+}
+
 static std::string formatSymbol(const Dumper::Context &Ctx,
                                 const coff_section *Section, uint64_t Offset,
                                 uint32_t Displacement) {
@@ -131,9 +146,22 @@ static std::string formatSymbol(const Dumper::Context &Ctx,
       // TODO: Actually report errors helpfully.
       consumeError(Name.takeError());
     }
+  } else if (!getSymbol(Ctx.COFF, Ctx.COFF.getImageBase() + Displacement,
+                        Symbol)) {
+    Expected<StringRef> Name = Symbol.getName();
+    if (Name) {
+      OS << *Name;
+      OS << format(" (0x%" PRIX64 ")", Ctx.COFF.getImageBase() + Displacement);
+      return OS.str();
+    } else {
+      consumeError(Name.takeError());
+    }
   }
 
-  OS << format(" (0x%" PRIX64 ")", Offset);
+  if (Displacement > 0)
+    OS << format("(0x%" PRIX64 ")", Ctx.COFF.getImageBase() + Displacement);
+  else
+    OS << format("(0x%" PRIX64 ")", Offset);
   return OS.str();
 }
 
@@ -157,6 +185,18 @@ static std::error_code resolveRelocation(const Dumper::Context &Ctx,
     return errorToErrorCode(SI.takeError());
   ResolvedSection = Ctx.COFF.getCOFFSection(**SI);
   return std::error_code();
+}
+
+static const object::coff_section *
+getSectionContaining(const COFFObjectFile &COFF, uint64_t VA) {
+  for (const auto &Section : COFF.sections()) {
+    uint64_t Address = Section.getAddress();
+    uint64_t Size = Section.getSize();
+
+    if (VA >= Address && (VA - Address) <= Size)
+      return COFF.getCOFFSection(Section);
+  }
+  return nullptr;
 }
 
 namespace llvm {
@@ -284,9 +324,18 @@ void Dumper::printRuntimeFunction(const Context &Ctx,
   DictScope RFS(SW, "RuntimeFunction");
   printRuntimeFunctionEntry(Ctx, Section, SectionOffset, RF);
 
-  const coff_section *XData;
+  const coff_section *XData = nullptr;
   uint64_t Offset;
   resolveRelocation(Ctx, Section, SectionOffset + 8, XData, Offset);
+  Offset = Offset + RF.UnwindInfoOffset;
+
+  if (!XData) {
+    uint64_t Address = Ctx.COFF.getImageBase() + RF.UnwindInfoOffset;
+    XData = getSectionContaining(Ctx.COFF, Address);
+    if (!XData)
+      return;
+    Offset = RF.UnwindInfoOffset - XData->VirtualAddress;
+  }
 
   ArrayRef<uint8_t> Contents;
   if (Error E = Ctx.COFF.getSectionContents(XData, Contents))
@@ -295,7 +344,6 @@ void Dumper::printRuntimeFunction(const Context &Ctx,
   if (Contents.empty())
     return;
 
-  Offset = Offset + RF.UnwindInfoOffset;
   if (Offset > Contents.size())
     return;
 
