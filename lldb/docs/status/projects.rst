@@ -408,3 +408,12 @@ a sketch of this in the settings parsing code) was to be able to say:
   (lldb) settings set target{arch=x86_64}.process.thread{name=foo}...
 
 The exact details are still to be worked out, however.
+
+Resurrect Type Validators
+-------------------------
+
+This half-implemented feature was removed in
+https://reviews.llvm.org/D71310 but the general idea might still be
+useful: Type Validators look at a ValueObject, and make sure that
+there is nothing semantically wrong with the object's contents to
+easily catch corrupted data.
