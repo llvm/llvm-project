@@ -20,11 +20,10 @@ entry:
 ; CHECK:      # %bb.0:
 ; CHECK-DAG:   addis [[REG1:[0-9]+]], [[REG2:[0-9]+]], [[VAR1:[a-z0-9A-Z_.]+]]@toc@ha
 ; CHECK-DAG:   ld [[REG3:[0-9]+]], [[VAR1]]@toc@l([[REG1]])
-; CHECK-DAG:   lwz [[REG4:[0-9]+]], 0([[REG3]])
-; CHECK-DAG:   addic [[REG5:[0-9]+]], [[REG3]], -1
-; CHECK-DAG:   addze [[REG7:[0-9]+]], [[REG4]]
-; CHECK-DAG:   addis [[REG8:[0-9]+]], [[REG2]], [[VAR2:[a-z0-9A-Z_.]+]]@toc@ha
+; CHECK-DAG:   lbz [[REG4:[0-9]+]], 0([[REG3]])
+; CHECK-DAG:   addi [[REG7:[0-9]+]], [[REG4]]
 ; CHECK-DAG:   andi. [[REG9:[0-9]+]], [[REG7]], 5
+; CHECK-DAG:   addis [[REG8:[0-9]+]], [[REG2]], [[VAR2:[a-z0-9A-Z_.]+]]@toc@ha
 ; CHECK-DAG:   stb [[REG9]], [[VAR2]]@toc@l([[REG8]])
 ; CHECK:       blr
 }
