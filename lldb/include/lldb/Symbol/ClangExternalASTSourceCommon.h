@@ -128,7 +128,6 @@ public:
 
   ClangASTMetadata *GetMetadata(const void *object);
   void SetMetadata(const void *object, ClangASTMetadata &metadata);
-  bool HasMetadata(const void *object);
 
   static ClangExternalASTSourceCommon *Lookup(clang::ExternalASTSource *source);
 

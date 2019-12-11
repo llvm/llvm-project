@@ -53,8 +53,9 @@ ClangExternalASTSourceCommon::~ClangExternalASTSourceCommon() {
 
 ClangASTMetadata *
 ClangExternalASTSourceCommon::GetMetadata(const void *object) {
-  if (HasMetadata(object))
-    return &m_metadata[object];
+  auto It = m_metadata.find(object);
+  if (It != m_metadata.end())
+    return &It->second;
   else
     return nullptr;
 }
@@ -62,10 +63,6 @@ ClangExternalASTSourceCommon::GetMetadata(const void *object) {
 void ClangExternalASTSourceCommon::SetMetadata(const void *object,
                                                ClangASTMetadata &metadata) {
   m_metadata[object] = metadata;
-}
-
-bool ClangExternalASTSourceCommon::HasMetadata(const void *object) {
-  return m_metadata.find(object) != m_metadata.end();
 }
 
 void ClangASTMetadata::Dump(Stream *s) {
