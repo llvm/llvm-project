@@ -92,6 +92,15 @@ private:
   /// below that number.
   SmallVector<std::pair<unsigned, MCFragment *>, 1> SubsectionFragmentMap;
 
+  /// State for tracking labels that don't yet have Fragments
+  struct PendingLabel {
+    MCSymbol* Sym;
+    unsigned Subsection;
+    PendingLabel(MCSymbol* Sym, unsigned Subsection = 0)
+      : Sym(Sym), Subsection(Subsection) {}
+  };
+  SmallVector<PendingLabel, 2> PendingLabels;
+
 protected:
   SectionVariant Variant;
   SectionKind Kind;
@@ -187,6 +196,18 @@ public:
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
   virtual bool isVirtualSection() const = 0;
+
+  /// Add a pending label for the requested subsection. This label will be
+  /// associated with a fragment in flushPendingLabels()
+  void addPendingLabel(MCSymbol* label, unsigned Subsection = 0);
+
+  /// Associate all pending labels in a subsection with a fragment.
+  void flushPendingLabels(MCFragment *F, uint64_t FOffset = 0,
+			  unsigned Subsection = 0);
+
+  /// Associate all pending labels with empty data fragments. One fragment
+  /// will be created for each subsection as necessary.
+  void flushPendingLabels();
 };
 
 } // end namespace llvm
