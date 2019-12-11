@@ -1,5 +1,8 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=false %s -verify
+
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 %s -verify
+
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true %s 2>&1 | FileCheck %s
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -1969,4 +1972,30 @@ void non_std_find(std::vector<int> &V, int e) {
       clang_analyzer_eval(clang_analyzer_container_end(V) ==
                         clang_analyzer_iterator_position(first)); // expected-warning@-1{{FALSE}} expected-warning@-1 0-1{{TRUE}} FIXME: should only expect FALSE in every case
   }
+}
+
+void clang_analyzer_printState();
+
+void print_state(std::vector<int> &V) {
+  const auto i0 = V.cbegin();
+  clang_analyzer_printState();
+
+// CHECK:      "checker_messages": [
+// CHECK-NEXT:   { "checker": "alpha.cplusplus.IteratorModeling", "messages": [
+// CHECK-NEXT:     "Container Data :",
+// CHECK-NEXT:     "SymRegion{reg_$[[#]]<std::vector<int> & V>} : [ conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]} .. <Unknown> ]",
+// CHECK-NEXT:     "Iterator Positions :",
+// CHECK-NEXT:     "i0 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}"
+// CHECK-NEXT:   ]}
+
+  const auto i1 = V.cend();
+  clang_analyzer_printState();
+  
+// CHECK:      "checker_messages": [
+// CHECK-NEXT:   { "checker": "alpha.cplusplus.IteratorModeling", "messages": [
+// CHECK-NEXT:     "Container Data :",
+// CHECK-NEXT:     "SymRegion{reg_$[[#]]<std::vector<int> & V>} : [ conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]} .. conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]} ]",
+// CHECK-NEXT:     "Iterator Positions :",
+// CHECK-NEXT:     "i1 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}"
+// CHECK-NEXT:   ]}
 }
