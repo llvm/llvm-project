@@ -18,9 +18,7 @@ public:
     result = subcommand(dbg, "help");
     // Test also whether self-assignment is handled correctly.
     result = result;
-    if (!result.Succeeded())
-      return false;
-    return true;
+    return result.Succeeded();
   }
 };
 
