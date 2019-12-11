@@ -754,3 +754,76 @@ define float @test_ds_combine_float_int(i8* %0, i32 signext %1) {
   %30 = phi float [ 0.000000e+00, %2 ], [ %26, %6 ]
   ret float %30
 }
+
+; test_ds_lwa_prep:
+; long long test_ds_lwa_prep(char *p, int count) {
+;   long long i=0, res=0;
+;   int DISP1 = 4001;
+;   int DISP2 = 4002;
+;   int DISP3 = 4006;
+;   int DISP4 = 4010;
+;   for (; i < count ; i++) {
+;     long long x1 = *(int *)(p + i + DISP1);
+;     long long x2 = *(int *)(p + i + DISP2);
+;     long long x3 = *(int *)(p + i + DISP3);
+;     long long x4 = *(int *)(p + i + DISP4);
+;     res += x1*x2*x3*x4;
+;   }
+;   return res + count;
+; }
+
+define i64 @test_ds_lwa_prep(i8* %0, i32 signext %1) {
+; CHECK-LABEL: test_ds_lwa_prep:
+; CHECK:         li r6, 1
+; CHECK-NEXT:    li r7, 2
+; CHECK-NEXT:    li r8, 6
+; CHECK-NEXT:    li r9, 10
+; CHECK:       .LBB9_2: #
+; CHECK-NEXT:    lwax r11, r3, r6
+; CHECK-NEXT:    lwax r12, r3, r7
+; CHECK-NEXT:    lwax r0, r3, r8
+; CHECK-NEXT:    addi r10, r3, 1
+; CHECK-NEXT:    mulld r11, r12, r11
+; CHECK-NEXT:    lwax r3, r3, r9
+; CHECK-NEXT:    mulld r11, r11, r0
+; CHECK-NEXT:    maddld r5, r11, r3, r5
+; CHECK-NEXT:    mr r3, r10
+; CHECK-NEXT:    bdnz .LBB9_2
+
+  %3 = sext i32 %1 to i64
+  %4 = icmp sgt i32 %1, 0
+  br i1 %4, label %5, label %31
+
+5:                                                ; preds = %2, %5
+  %6 = phi i64 [ %29, %5 ], [ 0, %2 ]
+  %7 = phi i64 [ %28, %5 ], [ 0, %2 ]
+  %8 = getelementptr inbounds i8, i8* %0, i64 %6
+  %9 = getelementptr inbounds i8, i8* %8, i64 1
+  %10 = bitcast i8* %9 to i32*
+  %11 = load i32, i32* %10, align 4
+  %12 = sext i32 %11 to i64
+  %13 = getelementptr inbounds i8, i8* %8, i64 2
+  %14 = bitcast i8* %13 to i32*
+  %15 = load i32, i32* %14, align 4
+  %16 = sext i32 %15 to i64
+  %17 = getelementptr inbounds i8, i8* %8, i64 6
+  %18 = bitcast i8* %17 to i32*
+  %19 = load i32, i32* %18, align 4
+  %20 = sext i32 %19 to i64
+  %21 = getelementptr inbounds i8, i8* %8, i64 10
+  %22 = bitcast i8* %21 to i32*
+  %23 = load i32, i32* %22, align 4
+  %24 = sext i32 %23 to i64
+  %25 = mul nsw i64 %16, %12
+  %26 = mul nsw i64 %25, %20
+  %27 = mul nsw i64 %26, %24
+  %28 = add nsw i64 %27, %7
+  %29 = add nuw nsw i64 %6, 1
+  %30 = icmp eq i64 %29, %3
+  br i1 %30, label %31, label %5
+
+31:                                               ; preds = %5, %2
+  %32 = phi i64 [ 0, %2 ], [ %28, %5 ]
+  %33 = add nsw i64 %32, %3
+  ret i64 %33
+}
