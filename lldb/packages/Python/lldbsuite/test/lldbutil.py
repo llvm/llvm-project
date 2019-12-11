@@ -20,6 +20,7 @@ from lldbsuite.support import seven
 
 # LLDB modules
 import lldb
+from . import lldbtest_config
 
 
 # ===================================================
@@ -759,12 +760,17 @@ def run_to_breakpoint_make_target(test, exe_name = "a.out", in_cwd = True):
     # Create the target
     target = test.dbg.CreateTarget(exe)
     test.assertTrue(target, "Target: %s is not valid."%(exe_name))
+
+    # Set environment variables for the inferior.
+    if lldbtest_config.inferior_env:
+        test.runCmd('settings set target.env-vars {}'.format(lldbtest_config.inferior_env))
+
     return target
 
 def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None):
     # Launch the process, and do not stop at the entry point.
     if not launch_info:
-        launch_info = lldb.SBLaunchInfo(None)
+        launch_info = target.GetLaunchInfo()
         launch_info.SetWorkingDirectory(test.get_process_working_directory())
 
     error = lldb.SBError()
@@ -778,7 +784,11 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None):
     threads = get_threads_stopped_at_breakpoint(
                 process, bkpt)
 
-    test.assertTrue(len(threads) == 1, "Expected 1 thread to stop at breakpoint, %d did."%(len(threads)))
+    buf = '\n'
+    for i in range(launch_info.GetNumEnvironmentEntries()):
+        buf += 'Env: ' + launch_info.GetEnvironmentEntryAtIndex(i) + '\n'
+
+    test.assertTrue(len(threads) == 1, "Expected 1 thread to stop at breakpoint, %d did. Launch info: %s"%(len(threads), buf))
     thread = threads[0]
     return (target, process, thread, bkpt)
 
