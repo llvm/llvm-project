@@ -477,9 +477,6 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
     } else {
       Op = DAG.getNode(ISD::FP_EXTEND, SDLoc(N), MVT::f32, Op);
     }
-
-    if (getTypeAction(MVT::f32) == TargetLowering::TypeSoftenFloat)
-      AddToWorklist(Op.getNode());
   }
 
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat) {
