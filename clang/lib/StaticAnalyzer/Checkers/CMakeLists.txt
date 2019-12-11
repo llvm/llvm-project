@@ -28,6 +28,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   CXXSelfAssignmentChecker.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp
+  DebugIteratorModeling.cpp
   DeleteWithNonVirtualDtorChecker.cpp
   DereferenceChecker.cpp
   DirectIvarAssignment.cpp
@@ -42,7 +43,10 @@ add_clang_library(clangStaticAnalyzerCheckers
   GTestChecker.cpp
   IdenticalExprChecker.cpp
   InnerPointerChecker.cpp
-  IteratorChecker.cpp
+  InvalidatedIteratorChecker.cpp
+  Iterator.cpp
+  IteratorModeling.cpp
+  IteratorRangeChecker.cpp
   IvarInvalidationChecker.cpp
   LLVMConventionsChecker.cpp
   LocalizationChecker.cpp
@@ -51,6 +55,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   MallocChecker.cpp
   MallocOverflowSecurityChecker.cpp
   MallocSizeofChecker.cpp
+  MismatchedIteratorChecker.cpp
   MmapWriteExecChecker.cpp
   MIGChecker.cpp
   MoveChecker.cpp
