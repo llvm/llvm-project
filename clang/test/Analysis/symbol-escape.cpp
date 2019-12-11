@@ -31,12 +31,3 @@ C **indirect_escape_in_bitwise_op() {
   return Baz;
 }
 
-void save_ptr(int **);
-void delete_saved();
-
-void store_to_escaped_region() {
-  int *p;
-  save_ptr(&p);
-  p = new int;
-  delete_saved();
-} // no-warning
