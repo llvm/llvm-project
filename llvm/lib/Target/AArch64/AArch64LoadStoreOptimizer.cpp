@@ -813,7 +813,7 @@ static bool forAllMIsUntilDef(MachineInstr &MI, MCPhysReg DefReg,
     --Limit;
 
     bool isDef = any_of(I->operands(), [DefReg, TRI](MachineOperand &MOP) {
-      return MOP.isReg() && MOP.isDef() &&
+      return MOP.isReg() && MOP.isDef() && !MOP.isDebug() && MOP.getReg() &&
              TRI->regsOverlap(MOP.getReg(), DefReg);
     });
     if (!Fn(*I, isDef))
@@ -880,7 +880,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
             for (auto &MOP : MI.operands()) {
               // Rename the first explicit definition and all implicit
               // definitions matching RegToRename.
-              if (MOP.isReg() &&
+              if (MOP.isReg() && !MOP.isDebug() && MOP.getReg() &&
                   (!SeenDef || (MOP.isDef() && MOP.isImplicit())) &&
                   TRI->regsOverlap(MOP.getReg(), RegToRename)) {
                 assert((MOP.isImplicit() ||
@@ -892,7 +892,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
             }
           } else {
             for (auto &MOP : MI.operands()) {
-              if (MOP.isReg() && TRI->regsOverlap(MOP.getReg(), RegToRename)) {
+              if (MOP.isReg() && !MOP.isDebug() && MOP.getReg() &&
+                  TRI->regsOverlap(MOP.getReg(), RegToRename)) {
                 assert(MOP.isImplicit() ||
                        (MOP.isRenamable() && !MOP.isEarlyClobber()) &&
                            "Need renamable operands");
@@ -913,7 +914,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
              std::next(I), std::next(Paired)))
       assert(all_of(MI.operands(),
                     [this, &RenameReg](const MachineOperand &MOP) {
-                      return !MOP.isReg() || MOP.isDebug() ||
+                      return !MOP.isReg() || MOP.isDebug() || !MOP.getReg() ||
                              !TRI->regsOverlap(MOP.getReg(), *RenameReg);
                     }) &&
              "Rename register used between paired instruction, trashing the "
@@ -1348,7 +1349,8 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
   if (!getLdStRegOp(FirstMI).isKill() &&
       !any_of(FirstMI.operands(),
               [TRI, RegToRename](const MachineOperand &MOP) {
-                return MOP.isReg() && MOP.isImplicit() && MOP.isKill() &&
+                return MOP.isReg() && !MOP.isDebug() && MOP.getReg() &&
+                       MOP.isImplicit() && MOP.isKill() &&
                        TRI->regsOverlap(RegToRename, MOP.getReg());
               })) {
     LLVM_DEBUG(dbgs() << "  Operand not killed at " << FirstMI << "\n");
@@ -1384,7 +1386,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
     // For defs, check if we can rename the first def of RegToRename.
     if (FoundDef) {
       for (auto &MOP : MI.operands()) {
-        if (!MOP.isReg() || !MOP.isDef() ||
+        if (!MOP.isReg() || !MOP.isDef() || MOP.isDebug() || !MOP.getReg() ||
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
           continue;
         if (!canRenameMOP(MOP)) {
@@ -1397,7 +1399,8 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
       return true;
     } else {
       for (auto &MOP : MI.operands()) {
-        if (!MOP.isReg() || !TRI->regsOverlap(MOP.getReg(), RegToRename))
+        if (!MOP.isReg() || MOP.isDebug() || !MOP.getReg() ||
+            !TRI->regsOverlap(MOP.getReg(), RegToRename))
           continue;
 
         if (!canRenameMOP(MOP)) {
