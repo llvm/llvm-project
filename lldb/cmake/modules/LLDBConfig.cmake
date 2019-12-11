@@ -445,7 +445,6 @@ if (APPLE)
   find_library(SECURITY_LIBRARY Security)
   set(LLDB_ENABLE_LIBXML2 ON)
   list(APPEND system_libs xml2
-       ${CURSES_LIBRARIES}
        ${FOUNDATION_LIBRARY}
        ${CORE_FOUNDATION_LIBRARY}
        ${CORE_SERVICES_LIBRARY}
@@ -488,17 +487,10 @@ endif()
 
 if (NOT LLDB_DISABLE_CURSES)
     find_package(Curses REQUIRED)
-
     find_library(CURSES_PANEL_LIBRARY NAMES panel DOC "The curses panel library")
     if (NOT CURSES_PANEL_LIBRARY)
         message(FATAL_ERROR "A required curses' panel library not found.")
     endif ()
-
-    # Add panels to the library path
-    set (CURSES_LIBRARIES ${CURSES_LIBRARIES} ${CURSES_PANEL_LIBRARY})
-
-    list(APPEND system_libs ${CURSES_LIBRARIES})
-    include_directories(${CURSES_INCLUDE_DIR})
 endif ()
 
 if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
