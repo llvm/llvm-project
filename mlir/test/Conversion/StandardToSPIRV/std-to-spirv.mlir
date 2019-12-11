@@ -13,6 +13,20 @@ func @add_sub(%arg0 : i32, %arg1 : i32) {
   return
 }
 
+// CHECK-LABEL: @fadd_scalar
+func @fadd_scalar(%arg: f32) -> f32 {
+  // CHECK: spv.FAdd
+  %0 = addf %arg, %arg : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @fdiv_scalar
+func @fdiv_scalar(%arg: f32) -> f32 {
+  // CHECK: spv.FDiv
+  %0 = divf %arg, %arg : f32
+  return %0 : f32
+}
+
 // CHECK-LABEL: @fmul_scalar
 func @fmul_scalar(%arg: f32) -> f32 {
   // CHECK: spv.FMul
@@ -55,6 +69,20 @@ func @fmul_tensor(%arg: tensor<4xf32>) -> tensor<4xf32> {
   // CHECK: mulf
   %0 = mulf %arg, %arg : tensor<4xf32>
   return %0 : tensor<4xf32>
+}
+
+// CHECK-LABEL: @frem_scalar
+func @frem_scalar(%arg: f32) -> f32 {
+  // CHECK: spv.FRem
+  %0 = remf %arg, %arg : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @fsub_scalar
+func @fsub_scalar(%arg: f32) -> f32 {
+  // CHECK: spv.FSub
+  %0 = subf %arg, %arg : f32
+  return %0 : f32
 }
 
 // CHECK-LABEL: @div_rem
