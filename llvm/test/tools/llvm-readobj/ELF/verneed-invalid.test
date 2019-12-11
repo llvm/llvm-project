@@ -10,7 +10,7 @@
 
 # GNU-VERNEED-NAME:      Version symbols section '.gnu.version' contains 2 entries:
 # GNU-VERNEED-NAME-NEXT:  Addr: 0000000000200210  Offset: 0x000040  Link: 5 (.dynsym)
-# GNU-VERNEED-NAME-NEXT:   000:   0 (*local*)       2 (<corrupt>)
+# GNU-VERNEED-NAME-NEXT:   000:   0 (*local*)       2 ()
 
 # GNU-VERNEED-NAME:      Version needs section '.gnu.version_r' contains 1 entries:
 # GNU-VERNEED-NAME-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 6 (.dynstr)

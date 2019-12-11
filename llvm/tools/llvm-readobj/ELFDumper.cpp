@@ -4133,7 +4133,7 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
     bool IsDefault;
     Expected<StringRef> NameOrErr =
         this->dumper()->getSymbolVersionByIndex(Ndx, IsDefault);
-    if (!NameOrErr || NameOrErr->empty()) {
+    if (!NameOrErr) {
       if (!NameOrErr) {
         unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
         this->reportUniqueWarning(createError(
