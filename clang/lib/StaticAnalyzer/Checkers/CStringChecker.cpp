@@ -290,9 +290,9 @@ ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
       SmallString<80> buf;
       llvm::raw_svector_ostream OS(buf);
       assert(CurrentFunctionDescription);
-      OS << "Null pointer argument in call to " << CurrentFunctionDescription
-         << ' ' << IdxOfArg << llvm::getOrdinalSuffix(IdxOfArg)
-         << " parameter";
+      OS << "Null pointer passed as " << IdxOfArg
+         << llvm::getOrdinalSuffix(IdxOfArg) << " argument to "
+         << CurrentFunctionDescription;
 
       emitNullArgBug(C, stateNull, S, OS.str());
     }
@@ -1536,7 +1536,10 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
                                       bool ReturnEnd, bool IsBounded,
                                       ConcatFnKind appendK,
                                       bool returnPtr) const {
-  CurrentFunctionDescription = "string copy function";
+  if (appendK == ConcatFnKind::none)
+    CurrentFunctionDescription = "string copy function";
+  else
+    CurrentFunctionDescription = "string concatenation function";
   ProgramStateRef state = C.getState();
   const LocationContext *LCtx = C.getLocationContext();
 
