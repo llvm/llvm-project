@@ -809,8 +809,7 @@ namespace llvm {
     /// for the same cost as the expression itself, or 2 if we can compute the
     /// negated form more cheaply than the expression itself. Else return 0.
     char isNegatibleForFree(SDValue Op, SelectionDAG &DAG, bool LegalOperations,
-                            bool ForCodeSize, bool EnableUseCheck,
-                            unsigned Depth) const override;
+                            bool ForCodeSize, unsigned Depth) const override;
 
     /// If isNegatibleForFree returns true, return the newly negated expression.
     SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
