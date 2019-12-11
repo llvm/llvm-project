@@ -86,24 +86,4 @@ entry:
   ret float %1
 }
 
-; This would crash while trying getNegatedExpression().
-
-define float @negated_constant(float %x) {
-; FMA3-LABEL: negated_constant:
-; FMA3:       # %bb.0:
-; FMA3-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1
-; FMA3-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
-; FMA3-NEXT:    retq
-;
-; FMA4-LABEL: negated_constant:
-; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1
-; FMA4-NEXT:    vfmaddss %xmm1, {{.*}}(%rip), %xmm0, %xmm0
-; FMA4-NEXT:    retq
-  %m = fmul float %x, 42.0
-  %fma = call nsz float @llvm.fma.f32(float %x, float -42.0, float %m)
-  %nfma = fneg float %fma
-  ret float %nfma
-}
-
 declare float @llvm.fma.f32(float, float, float)
