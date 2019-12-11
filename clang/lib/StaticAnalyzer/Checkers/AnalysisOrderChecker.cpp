@@ -40,6 +40,7 @@ class AnalysisOrderChecker
                      check::EndFunction,
                      check::NewAllocator,
                      check::Bind,
+                     check::PointerEscape,
                      check::RegionChanges,
                      check::LiveSymbols> {
 
@@ -163,6 +164,15 @@ public:
                      const LocationContext *LCtx, const CallEvent *Call) const {
     if (isCallbackEnabled(State, "RegionChanges"))
       llvm::errs() << "RegionChanges\n";
+    return State;
+  }
+
+  ProgramStateRef checkPointerEscape(ProgramStateRef State,
+                                     const InvalidatedSymbols &Escaped,
+                                     const CallEvent *Call,
+                                     PointerEscapeKind Kind) const {
+    if (isCallbackEnabled(State, "PointerEscape"))
+      llvm::errs() << "PointerEscape\n";
     return State;
   }
 };

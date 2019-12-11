@@ -102,8 +102,8 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
         state = state->BindExpr(B, LCtx, Result);
       } else {
         // If we cannot evaluate the operation escape the operands.
-        state = escapeValue(state, LeftV, PSK_EscapeOther);
-        state = escapeValue(state, RightV, PSK_EscapeOther);
+        state = escapeValues(state, LeftV, PSK_EscapeOther);
+        state = escapeValues(state, RightV, PSK_EscapeOther);
       }
 
       Bldr.generateNode(B, *it, state);
@@ -275,7 +275,7 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
     V = evalMinus(V);
   state = state->BindExpr(CastE, LCtx, V);
   if (V.isUnknown() && !OrigV.isUnknown()) {
-    state = escapeValue(state, OrigV, PSK_EscapeOther);
+    state = escapeValues(state, OrigV, PSK_EscapeOther);
   }
   Bldr.generateNode(CastE, Pred, state);
 
