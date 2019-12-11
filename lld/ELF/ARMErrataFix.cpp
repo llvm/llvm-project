@@ -82,6 +82,10 @@ public:
   // Get the virtual address of the branch instruction at patcheeOffset.
   uint64_t getBranchAddr() const;
 
+  static bool classof(const SectionBase *d) {
+    return d->kind() == InputSectionBase::Synthetic && d->name ==".text.patch";
+  }
+
   // The Section we are patching.
   const InputSection *patchee;
   // The offset of the instruction in the Patchee section we are patching.
