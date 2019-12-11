@@ -35,6 +35,8 @@
 
 #cmakedefine01 LLDB_ENABLE_LZMA
 
+#cmakedefine LLDB_ENABLE_LIBXML2
+
 #cmakedefine LLDB_DISABLE_CURSES
 
 #cmakedefine LLDB_DISABLE_LIBEDIT
