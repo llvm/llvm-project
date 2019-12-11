@@ -1458,7 +1458,8 @@ define <4 x i8> @or_add_2_vars(<4 x i8> %v, <4 x i8> %v1) {
 
 define <4 x i32> @PR41419(<4 x i32> %v) {
 ; CHECK-LABEL: @PR41419(
-; CHECK-NEXT:    ret <4 x i32> [[V:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[V:%.*]], <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 2, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
 ;
   %s = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
   ret <4 x i32> %s
