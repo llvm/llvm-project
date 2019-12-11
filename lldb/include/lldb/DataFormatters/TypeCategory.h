@@ -332,16 +332,16 @@ public:
       return m_enabled_position;
   }
 
-  bool Get(ValueObject &valobj, const FormattersMatchVector &candidates,
+  bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
            lldb::TypeFormatImplSP &entry, uint32_t *reason = nullptr);
 
-  bool Get(ValueObject &valobj, const FormattersMatchVector &candidates,
+  bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
            lldb::TypeSummaryImplSP &entry, uint32_t *reason = nullptr);
 
-  bool Get(ValueObject &valobj, const FormattersMatchVector &candidates,
+  bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
            lldb::SyntheticChildrenSP &entry, uint32_t *reason = nullptr);
 
-  bool Get(ValueObject &valobj, const FormattersMatchVector &candidates,
+  bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
            lldb::TypeValidatorImplSP &entry, uint32_t *reason = nullptr);
 
   void Clear(FormatCategoryItems items = ALL_ITEM_TYPES);
