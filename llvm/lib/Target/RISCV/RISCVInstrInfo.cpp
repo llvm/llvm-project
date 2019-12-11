@@ -562,7 +562,8 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
 bool RISCVInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
     unsigned &Width, const TargetRegisterInfo *TRI) const {
-  assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
+  if (!LdSt.mayLoadOrStore())
+    return false;
 
   // Here we assume the standard RISC-V ISA, which uses a base+offset
   // addressing mode. You'll need to relax these conditions to support custom
