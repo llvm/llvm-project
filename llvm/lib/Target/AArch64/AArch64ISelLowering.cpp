@@ -8513,6 +8513,26 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(16);
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
     return true;
+  case Intrinsic::aarch64_sve_ldnt1: {
+    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(1)->getType());
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(PtrTy->getElementType());
+    Info.ptrVal = I.getArgOperand(1);
+    Info.offset = 0;
+    Info.align = MaybeAlign(DL.getABITypeAlignment(PtrTy->getElementType()));
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MONonTemporal;
+    return true;
+  }
+  case Intrinsic::aarch64_sve_stnt1: {
+    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(2)->getType());
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(PtrTy->getElementType());
+    Info.ptrVal = I.getArgOperand(2);
+    Info.offset = 0;
+    Info.align = MaybeAlign(DL.getABITypeAlignment(PtrTy->getElementType()));
+    Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MONonTemporal;
+    return true;
+  }
   default:
     break;
   }
@@ -10942,6 +10962,48 @@ static SDValue splitStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
   return NewST1;
 }
 
+static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT PtrTy = N->getOperand(3).getValueType();
+
+  EVT LoadVT = VT;
+  if (VT.isFloatingPoint())
+    LoadVT = VT.changeTypeToInteger();
+
+  auto *MINode = cast<MemIntrinsicSDNode>(N);
+  SDValue PassThru = DAG.getConstant(0, DL, LoadVT);
+  SDValue L = DAG.getMaskedLoad(LoadVT, DL, MINode->getChain(),
+                                MINode->getOperand(3), DAG.getUNDEF(PtrTy),
+                                MINode->getOperand(2), PassThru,
+                                MINode->getMemoryVT(), MINode->getMemOperand(),
+                                ISD::UNINDEXED, ISD::NON_EXTLOAD, false);
+
+   if (VT.isFloatingPoint()) {
+     SDValue Ops[] = { DAG.getNode(ISD::BITCAST, DL, VT, L), L.getValue(1) };
+     return DAG.getMergeValues(Ops, DL);
+   }
+
+  return L;
+}
+
+static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  SDValue Data = N->getOperand(2);
+  EVT DataVT = Data.getValueType();
+  EVT PtrTy = N->getOperand(4).getValueType();
+
+  if (DataVT.isFloatingPoint())
+    Data = DAG.getNode(ISD::BITCAST, DL, DataVT.changeTypeToInteger(), Data);
+
+  auto *MINode = cast<MemIntrinsicSDNode>(N);
+  return DAG.getMaskedStore(MINode->getChain(), DL, Data, MINode->getOperand(4),
+                            DAG.getUNDEF(PtrTy), MINode->getOperand(3),
+                            MINode->getMemoryVT(), MINode->getMemOperand(),
+                            ISD::UNINDEXED, false, false);
+}
+
 /// Replace a splat of zeros to a vector store by scalar stores of WZR/XZR.  The
 /// load store optimizer pass will merge them to store pair stores.  This should
 /// be better than a movi to create the vector zero followed by a vector store
@@ -12218,6 +12280,10 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_neon_st3lane:
     case Intrinsic::aarch64_neon_st4lane:
       return performNEONPostLDSTCombine(N, DCI, DAG);
+    case Intrinsic::aarch64_sve_ldnt1:
+      return performLDNT1Combine(N, DAG);
+    case Intrinsic::aarch64_sve_stnt1:
+      return performSTNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_ld1_gather:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1);
     case Intrinsic::aarch64_sve_ld1_gather_index:
