@@ -867,6 +867,12 @@ void strcmp_union_function_pointer_cast(union argument a) {
   fPtr(&a);
 }
 
+int strcmp_null_argument(char *a) {
+  char *b = 0;
+  // Do not warn about the first argument!
+  return strcmp(a, b); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
+}
+
 //===----------------------------------------------------------------------===
 // strncmp()
 //===----------------------------------------------------------------------===
@@ -976,6 +982,12 @@ void strncmp_embedded_null () {
 	clang_analyzer_eval(strncmp("ab\0zz", "ab\0yy", 4) == 0); // expected-warning{{TRUE}}
 }
 
+int strncmp_null_argument(char *a, size_t n) {
+  char *b = 0;
+  // Do not warn about the first argument!
+  return strncmp(a, b, n); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
+}
+
 //===----------------------------------------------------------------------===
 // strcasecmp()
 //===----------------------------------------------------------------------===
@@ -1065,6 +1077,12 @@ void strcasecmp_diff_length_3() {
 
 void strcasecmp_embedded_null () {
 	clang_analyzer_eval(strcasecmp("ab\0zz", "ab\0yy") == 0); // expected-warning{{TRUE}}
+}
+
+int strcasecmp_null_argument(char *a) {
+  char *b = 0;
+  // Do not warn about the first argument!
+  return strcasecmp(a, b); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
 //===----------------------------------------------------------------------===
@@ -1174,6 +1192,12 @@ void strncasecmp_diff_length_6() {
 
 void strncasecmp_embedded_null () {
 	clang_analyzer_eval(strncasecmp("ab\0zz", "ab\0yy", 4) == 0); // expected-warning{{TRUE}}
+}
+
+int strncasecmp_null_argument(char *a, size_t n) {
+  char *b = 0;
+  // Do not warn about the first argument!
+  return strncasecmp(a, b, n); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
 //===----------------------------------------------------------------------===
