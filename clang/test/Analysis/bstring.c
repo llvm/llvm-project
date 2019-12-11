@@ -148,12 +148,12 @@ void memcpy9() {
 
 void memcpy10() {
   char a[4] = {0};
-  memcpy(0, a, 4); // expected-warning{{Null pointer argument in call to memory copy function}}
+  memcpy(0, a, 4); // expected-warning{{Null pointer passed as 1st argument to memory copy function}}
 }
 
 void memcpy11() {
   char a[4] = {0};
-  memcpy(a, 0, 4); // expected-warning{{Null pointer argument in call to memory copy function}}
+  memcpy(a, 0, 4); // expected-warning{{Null pointer passed as 2nd argument to memory copy function}}
 }
 
 void memcpy12() {
@@ -173,7 +173,7 @@ void memcpy_unknown_size (size_t n) {
 
 void memcpy_unknown_size_warn (size_t n) {
   char a[4];
-  void *result = memcpy(a, 0, n); // expected-warning{{Null pointer argument in call to memory copy function}}
+  void *result = memcpy(a, 0, n); // expected-warning{{Null pointer passed as 2nd argument to memory copy function}}
   clang_analyzer_eval(result == a); // no-warning (above is fatal)
 }
 
@@ -268,12 +268,12 @@ void mempcpy9() {
 
 void mempcpy10() {
   char a[4] = {0};
-  mempcpy(0, a, 4); // expected-warning{{Null pointer argument in call to memory copy function}}
+  mempcpy(0, a, 4); // expected-warning{{Null pointer passed as 1st argument to memory copy function}}
 }
 
 void mempcpy11() {
   char a[4] = {0};
-  mempcpy(a, 0, 4); // expected-warning{{Null pointer argument in call to memory copy function}}
+  mempcpy(a, 0, 4); // expected-warning{{Null pointer passed as 2nd argument to memory copy function}}
 }
 
 void mempcpy12() {
@@ -327,7 +327,7 @@ void mempcpy16() {
 
 void mempcpy_unknown_size_warn (size_t n) {
   char a[4];
-  void *result = mempcpy(a, 0, n); // expected-warning{{Null pointer argument in call to memory copy function}}
+  void *result = mempcpy(a, 0, n); // expected-warning{{Null pointer passed as 2nd argument to memory copy function}}
   clang_analyzer_eval(result == a); // no-warning (above is fatal)
 }
 

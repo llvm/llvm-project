@@ -39,7 +39,7 @@ void bar() {
 
 void testConcreteNull() {
   int *x = 0;
-  memset(x, 0, 1); // expected-warning {{Null pointer argument in call to memory set function}}
+  memset(x, 0, 1); // expected-warning {{Null pointer passed as 1st argument to memory set function}}
 }
 
 void testStackArray() {
