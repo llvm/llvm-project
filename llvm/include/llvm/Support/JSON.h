@@ -714,7 +714,7 @@ public:
 ///         J.attribute("timestamp", int64_t(E.Time));
 ///         J.attributeArray("participants", [&] {
 ///           for (const Participant &P : E.Participants)
-///             J.string(P.toString());
+///             J.value(P.toString());
 ///         });
 ///       });
 ///   });
