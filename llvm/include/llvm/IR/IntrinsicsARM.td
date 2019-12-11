@@ -913,6 +913,14 @@ defm int_arm_mve_vstr_scatter_offset: MVEPredicated<
    [], [llvm_anyptr_ty, llvm_anyvector_ty, llvm_anyvector_ty,
    llvm_i32_ty, llvm_i32_ty], llvm_anyvector_ty, [IntrWriteMem]>;
 
+def int_arm_mve_shl_imm_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_shr_imm_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, // extra i32 is unsigned flag
+    llvm_anyvector_ty, LLVMMatchType<0>],
+   [IntrNoMem]>;
+
 // MVE scalar shifts.
 class ARM_MVE_qrshift_single<list<LLVMType> value,
                              list<LLVMType> saturate = []> :
