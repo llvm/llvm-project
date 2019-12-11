@@ -432,6 +432,30 @@ class NameOverride<string basename_> {
   string basename = basename_;
 }
 
+// A wrapper to define both _m and _x versions of a predicated
+// intrinsic.
+multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
+                       string nameSuffix = "",
+                       PolymorphicNameType pnt_x = PNT_Type> {
+  // The _m variant takes an initial parameter called $inactive, which
+  // provides the input value of the output register, i.e. all the
+  // inactive lanes in the predicated operation take their values from
+  // this.
+  def "_m" # nameSuffix:
+     Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg>;
+
+  // The _x variant leaves off that parameter, and simply uses an
+  // undef value of the same type.
+  def "_x" # nameSuffix:
+     Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)> {
+    // Allow overriding of the polymorphic name type, because
+    // sometimes the _m and _x variants polymorph differently
+    // (typically because the type of the inactive parameter can be
+    // used as a disambiguator if it's present).
+    let pnt = pnt_x;
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Convenience lists of parameter types. 'T' is just a container record, so you
 // can define a typical intrinsic with 'let Params = T.Usual', or similar,
