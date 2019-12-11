@@ -17,15 +17,13 @@ using namespace lldb_private;
 
 FormatCache::Entry::Entry()
     : m_format_cached(false), m_summary_cached(false),
-      m_synthetic_cached(false), m_validator_cached(false) {}
+      m_synthetic_cached(false) {}
 
 bool FormatCache::Entry::IsFormatCached() { return m_format_cached; }
 
 bool FormatCache::Entry::IsSummaryCached() { return m_summary_cached; }
 
 bool FormatCache::Entry::IsSyntheticCached() { return m_synthetic_cached; }
-
-bool FormatCache::Entry::IsValidatorCached() { return m_validator_cached; }
 
 void FormatCache::Entry::Get(lldb::TypeFormatImplSP &retval) {
   retval = m_format_sp;
@@ -37,10 +35,6 @@ void FormatCache::Entry::Get(lldb::TypeSummaryImplSP &retval) {
 
 void FormatCache::Entry::Get(lldb::SyntheticChildrenSP &retval) {
   retval = m_synthetic_sp;
-}
-
-void FormatCache::Entry::Get(lldb::TypeValidatorImplSP &retval) {
-  retval = m_validator_sp;
 }
 
 void FormatCache::Entry::Set(lldb::TypeFormatImplSP format_sp) {
@@ -56,11 +50,6 @@ void FormatCache::Entry::Set(lldb::TypeSummaryImplSP summary_sp) {
 void FormatCache::Entry::Set(lldb::SyntheticChildrenSP synthetic_sp) {
   m_synthetic_cached = true;
   m_synthetic_sp = synthetic_sp;
-}
-
-void FormatCache::Entry::Set(lldb::TypeValidatorImplSP validator_sp) {
-  m_validator_cached = true;
-  m_validator_sp = validator_sp;
 }
 
 FormatCache::FormatCache()
@@ -89,9 +78,6 @@ template<> bool FormatCache::Entry::IsCached<lldb::TypeSummaryImplSP> () {
 template<> bool FormatCache::Entry::IsCached<lldb::SyntheticChildrenSP>() {
   return IsSyntheticCached();
 }
-template<> bool FormatCache::Entry::IsCached<lldb::TypeValidatorImplSP>() {
-  return IsValidatorCached();
-}
 
 template <typename ImplSP>
 bool FormatCache::Get(ConstString type, ImplSP &format_impl_sp) {
@@ -111,11 +97,8 @@ bool FormatCache::Get(ConstString type, ImplSP &format_impl_sp) {
   return false;
 }
 
-/// Explicit instantiations for the four types.
+/// Explicit instantiations for the three types.
 /// \{
-template bool
-FormatCache::Get<lldb::TypeValidatorImplSP>(ConstString,
-                                            lldb::TypeValidatorImplSP &);
 template bool
 FormatCache::Get<lldb::TypeFormatImplSP>(ConstString, lldb::TypeFormatImplSP &);
 template bool
@@ -140,12 +123,6 @@ void FormatCache::Set(ConstString type,
                       lldb::SyntheticChildrenSP &synthetic_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   GetEntry(type).Set(synthetic_sp);
-}
-
-void FormatCache::Set(ConstString type,
-                      lldb::TypeValidatorImplSP &validator_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  GetEntry(type).Set(validator_sp);
 }
 
 void FormatCache::Clear() {
