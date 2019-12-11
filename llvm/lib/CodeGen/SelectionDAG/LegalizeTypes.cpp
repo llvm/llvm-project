@@ -204,7 +204,8 @@ bool DAGTypeLegalizer::run() {
   // non-leaves.
   for (SDNode &Node : DAG.allnodes()) {
     if (Node.getNumOperands() == 0) {
-      AddToWorklist(&Node);
+      Node.setNodeId(ReadyToProcess);
+      Worklist.push_back(&Node);
     } else {
       Node.setNodeId(Unanalyzed);
     }
