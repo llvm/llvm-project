@@ -121,6 +121,9 @@ class IteratorModeling
   void handleEraseAfter(CheckerContext &C, const SVal &Iter) const;
   void handleEraseAfter(CheckerContext &C, const SVal &Iter1,
                         const SVal &Iter2) const;
+  void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
+                  const char *Sep) const override;
+
 public:
   IteratorModeling() {}
 
@@ -1079,6 +1082,58 @@ void IteratorModeling::handleEraseAfter(CheckerContext &C, const SVal &Iter1,
                                       Pos2->getOffset(), BO_LT);
   C.addTransition(State);
 }
+
+void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
+                                  const char *NL, const char *Sep) const {
+
+  auto ContMap = State->get<ContainerMap>();
+
+  if (!ContMap.isEmpty()) {
+    Out << Sep << "Container Data :" << NL;
+    for (const auto Cont : ContMap) {
+      Cont.first->dumpToStream(Out);
+      Out << " : [ ";
+      const auto CData = Cont.second;
+      if (CData.getBegin())
+        CData.getBegin()->dumpToStream(Out);
+      else
+        Out << "<Unknown>";
+      Out << " .. ";
+      if (CData.getEnd())
+        CData.getEnd()->dumpToStream(Out);
+      else
+        Out << "<Unknown>";
+      Out << " ]" << NL;
+    }
+  }
+
+  auto SymbolMap = State->get<IteratorSymbolMap>();
+  auto RegionMap = State->get<IteratorRegionMap>();
+
+  if (!SymbolMap.isEmpty() || !RegionMap.isEmpty()) {
+    Out << Sep << "Iterator Positions :" << NL;
+    for (const auto Sym : SymbolMap) {
+      Sym.first->dumpToStream(Out);
+      Out << " : ";
+      const auto Pos = Sym.second;
+      Out << (Pos.isValid() ? "Valid" : "Invalid") << " ; Container == ";
+      Pos.getContainer()->dumpToStream(Out);
+      Out<<" ; Offset == ";
+      Pos.getOffset()->dumpToStream(Out);
+    }
+
+    for (const auto Reg : RegionMap) {
+      Reg.first->dumpToStream(Out);
+      Out << " : ";
+      const auto Pos = Reg.second;
+      Out << (Pos.isValid() ? "Valid" : "Invalid") << " ; Container == ";
+      Pos.getContainer()->dumpToStream(Out);
+      Out<<" ; Offset == ";
+      Pos.getOffset()->dumpToStream(Out);
+    }
+  }
+}
+
 
 namespace {
 
