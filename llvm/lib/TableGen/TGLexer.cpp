@@ -559,6 +559,8 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("listconcat", tgtok::XListConcat)
     .Case("listsplat", tgtok::XListSplat)
     .Case("strconcat", tgtok::XStrConcat)
+    .Case("setop", tgtok::XSetOp)
+    .Case("getop", tgtok::XGetOp)
     .Default(tgtok::Error);
 
   return Kind != tgtok::Error ? Kind : ReturnError(Start-1, "Unknown operator");
