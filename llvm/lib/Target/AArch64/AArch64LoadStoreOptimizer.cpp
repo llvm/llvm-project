@@ -906,6 +906,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
         };
     forAllMIsUntilDef(*I, RegToRename, TRI, LdStLimit, UpdateMIs);
 
+#if !defined(NDEBUG)
     // Make sure the register used for renaming is not used between the paired
     // instructions. That would trash the content before the new paired
     // instruction.
@@ -919,6 +920,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                     }) &&
              "Rename register used between paired instruction, trashing the "
              "content");
+#endif
   }
 
   // Insert our new paired instruction after whichever of the paired
