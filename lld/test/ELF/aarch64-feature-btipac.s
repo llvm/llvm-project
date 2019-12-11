@@ -109,13 +109,13 @@
 # NODYN-NOT:   0x0000000070000001 (AARCH64_BTI_PLT)
 # NODYN-NOT:   0x0000000070000003 (AARCH64_PAC_PLT)
 
-## Check that combination of --pac-plt and --force-bti warns for the file that
+## Check that combination of -z pac-plt and -z force-bti warns for the file that
 ## doesn't contain the BTI property, but generates PAC and BTI PLT sequences.
-## The --pac-plt doesn't warn as it is not required for correctness.
+## The -z pac-plt doesn't warn as it is not required for correctness.
 
-# RUN: ld.lld %t.o %t3.o %t.so --pac-plt --force-bti -o %t.exe 2>&1 | FileCheck --check-prefix=FORCE-WARN %s
+# RUN: ld.lld %t.o %t3.o %t.so -z pac-plt -z force-bti -o %t.exe 2>&1 | FileCheck --check-prefix=FORCE-WARN %s
 
-# FORCE-WARN: aarch64-feature-btipac.s.tmp3.o: --force-bti: file does not have BTI property
+# FORCE-WARN: aarch64-feature-btipac.s.tmp3.o: -z force-bti: file does not have BTI property
 
 # RUN: llvm-readelf -n %t.exe | FileCheck --check-prefix=BTIPACPROP %s
 # RUN: llvm-objdump -d -mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX %s

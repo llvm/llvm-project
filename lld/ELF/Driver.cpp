@@ -354,9 +354,9 @@ static void checkOptions() {
 
   if (config->emachine != EM_AARCH64) {
     if (config->pacPlt)
-      error("--pac-plt only supported on AArch64");
+      error("-z pac-plt only supported on AArch64");
     if (config->forceBTI)
-      error("--force-bti only supported on AArch64");
+      error("-z force-bti only supported on AArch64");
   }
 }
 
@@ -412,17 +412,18 @@ static GnuStackKind getZGnuStack(opt::InputArgList &args) {
 
 static bool isKnownZFlag(StringRef s) {
   return s == "combreloc" || s == "copyreloc" || s == "defs" ||
-         s == "execstack" || s == "global" || s == "hazardplt" ||
-         s == "ifunc-noplt" || s == "initfirst" || s == "interpose" ||
-         s == "keep-text-section-prefix" || s == "lazy" || s == "muldefs" ||
-         s == "separate-code" || s == "separate-loadable-segments" ||
-         s == "nocombreloc" || s == "nocopyreloc" || s == "nodefaultlib" ||
-         s == "nodelete" || s == "nodlopen" || s == "noexecstack" ||
-         s == "nognustack" ||
+         s == "execstack" || s == "force-bti" || s == "global" ||
+         s == "hazardplt" || s == "ifunc-noplt" || s == "initfirst" ||
+         s == "interpose" || s == "keep-text-section-prefix" || s == "lazy" ||
+         s == "muldefs" || s == "separate-code" ||
+         s == "separate-loadable-segments" || s == "nocombreloc" ||
+         s == "nocopyreloc" || s == "nodefaultlib" || s == "nodelete" ||
+         s == "nodlopen" || s == "noexecstack" || s == "nognustack" ||
          s == "nokeep-text-section-prefix" || s == "norelro" ||
          s == "noseparate-code" || s == "notext" || s == "now" ||
-         s == "origin" || s == "relro" || s == "retpolineplt" ||
-         s == "rodynamic" || s == "text" || s == "undefs" || s == "wxneeded" ||
+         s == "origin" || s == "pac-plt" || s == "relro" ||
+         s == "retpolineplt" || s == "rodynamic" || s == "text" ||
+         s == "undefs" || s == "wxneeded" ||
          s.startswith("common-page-size=") || s.startswith("max-page-size=") ||
          s.startswith("stack-size=");
 }
@@ -878,7 +879,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->fini = args.getLastArgValue(OPT_fini, "_fini");
   config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419);
   config->fixCortexA8 = args.hasArg(OPT_fix_cortex_a8);
-  config->forceBTI = args.hasArg(OPT_force_bti);
+  config->forceBTI = hasZOption(args, "force-bti");
   config->requireCET = args.hasArg(OPT_require_cet);
   config->gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   config->gnuUnique = args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
@@ -917,7 +918,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->optimize = args::getInteger(args, OPT_O, 1);
   config->orphanHandling = getOrphanHandling(args);
   config->outputFile = args.getLastArgValue(OPT_o);
-  config->pacPlt = args.hasArg(OPT_pac_plt);
+  config->pacPlt = hasZOption(args, "pac-plt");
   config->pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
   config->printIcfSections =
       args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
@@ -1704,7 +1705,7 @@ template <class ELFT> static uint32_t getAndFeatures() {
   for (InputFile *f : objectFiles) {
     uint32_t features = cast<ObjFile<ELFT>>(f)->andFeatures;
     if (config->forceBTI && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
-      warn(toString(f) + ": --force-bti: file does not have BTI property");
+      warn(toString(f) + ": -z force-bti: file does not have BTI property");
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
     } else if (!features && config->requireCET)
       error(toString(f) + ": --require-cet: file is not compatible with CET");
