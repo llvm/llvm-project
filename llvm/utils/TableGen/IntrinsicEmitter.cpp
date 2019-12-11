@@ -15,13 +15,20 @@
 #include "SequenceToOffsetTable.h"
 #include "TableGenBackends.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
-#include "llvm/TableGen/TableGenBackend.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
+#include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 using namespace llvm;
+
+cl::OptionCategory GenIntrinsicCat("Options for -gen-intrinsic-enums");
+cl::opt<std::string>
+    IntrinsicPrefix("intrinsic-prefix",
+                    cl::desc("Generate intrinsics with this target prefix"),
+                    cl::value_desc("target prefix"), cl::cat(GenIntrinsicCat));
 
 namespace {
 class IntrinsicEmitter {
@@ -57,12 +64,12 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
   CodeGenIntrinsicTable Ints(Records);
 
-  EmitPrefix(OS);
-
   if (Enums) {
     // Emit the enum information.
     EmitEnumInfo(Ints, OS);
   } else {
+    EmitPrefix(OS);
+
     // Emit the target metadata.
     EmitTargetInfo(Ints, OS);
 
@@ -83,9 +90,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit code to translate MS builtins into LLVM intrinsics.
     EmitIntrinsicToBuiltinMap(Ints, false, OS);
-  }
 
-  EmitSuffix(OS);
+    EmitSuffix(OS);
+  }
 }
 
 void IntrinsicEmitter::EmitPrefix(raw_ostream &OS) {
@@ -108,16 +115,63 @@ void IntrinsicEmitter::EmitSuffix(raw_ostream &OS) {
 
 void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS) {
-  OS << "// Enum values for Intrinsics.h\n";
-  OS << "#ifdef GET_INTRINSIC_ENUM_VALUES\n";
-  for (unsigned i = 0, e = Ints.size(); i != e; ++i) {
+  // Find the TargetSet for which to generate enums. There will be an initial
+  // set with an empty target prefix which will include target independent
+  // intrinsics like dbg.value.
+  const CodeGenIntrinsicTable::TargetSet *Set = nullptr;
+  for (const auto &Target : Ints.Targets) {
+    if (Target.Name == IntrinsicPrefix) {
+      Set = &Target;
+      break;
+    }
+  }
+  if (!Set) {
+    std::vector<std::string> KnownTargets;
+    for (const auto &Target : Ints.Targets)
+      if (!Target.Name.empty())
+        KnownTargets.push_back(Target.Name);
+    PrintFatalError("tried to generate intrinsics for unknown target " +
+                    IntrinsicPrefix +
+                    "\nKnown targets are: " + join(KnownTargets, ", ") + "\n");
+  }
+
+  // Generate a complete header for target specific intrinsics.
+  if (!IntrinsicPrefix.empty()) {
+    std::string UpperPrefix = StringRef(IntrinsicPrefix).upper();
+    OS << "#ifndef LLVM_IR_INTRINSIC_" << UpperPrefix << "_ENUMS_H\n";
+    OS << "#define LLVM_IR_INTRINSIC_" << UpperPrefix << "_ENUMS_H\n\n";
+    OS << "namespace llvm {\n";
+    OS << "namespace Intrinsic {\n";
+    OS << "enum " << UpperPrefix << "Intrinsics : unsigned {\n";
+  } else {
+    EmitPrefix(OS);
+  }
+
+  OS << "// Enum values for intrinsics\n";
+  for (unsigned i = Set->Offset, e = Set->Offset + Set->Count; i != e; ++i) {
     OS << "    " << Ints[i].EnumName;
-    OS << ((i != e-1) ? ", " : "  ");
+
+    // Assign a value to the first intrinsic in this target set so that all
+    // intrinsic ids are distinct.
+    if (i == Set->Offset)
+      OS << " = " << (Set->Offset + 1);
+
+    OS << ", ";
     if (Ints[i].EnumName.size() < 40)
-      OS << std::string(40-Ints[i].EnumName.size(), ' ');
+      OS.indent(40 - Ints[i].EnumName.size());
     OS << " // " << Ints[i].Name << "\n";
   }
-  OS << "#endif\n\n";
+
+  // Emit num_intrinsics into the target neutral enum.
+  if (IntrinsicPrefix.empty()) {
+    OS << "    num_intrinsics = " << (Ints.size() + 1) << "\n";
+    EmitSuffix(OS);
+  } else {
+    OS << "}; // enum\n";
+    OS << "} // namespace Intrinsic\n";
+    OS << "} // namespace llvm\n\n";
+    OS << "#endif\n";
+  }
 }
 
 void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
