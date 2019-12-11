@@ -756,6 +756,13 @@ public:
   /// - guarded by a loop guard branch.
   bool isGuarded() const { return (getLoopGuardBranch() != nullptr); }
 
+  /// Return true if the loop is rotated
+  bool isRotated() const {
+    assert(!isInvalid() && "Loop not in a valid state!");
+    BasicBlock *Latch = getLoopLatch();
+    return Latch && isLoopExiting(Latch);
+  }
+
   /// Return true if the loop induction variable starts at zero and increments
   /// by one each time through the loop.
   bool isCanonical(ScalarEvolution &SE) const;
