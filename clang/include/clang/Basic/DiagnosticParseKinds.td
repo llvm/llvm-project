@@ -63,7 +63,7 @@ def warn_null_statement : Warning<
 
 def warn_misleading_indentation : Warning<
   "misleading indentation; statement is not part of "
-  "the previous '%select{if|else|for|while|else if}0'">,
+  "the previous '%select{if|else|for|while}0'">,
   InGroup<MisleadingIndentation>, DefaultIgnore;
 def note_previous_statement : Note<
   "previous statement is here">;
