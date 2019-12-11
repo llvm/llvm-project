@@ -449,7 +449,7 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
       swift::IntegerLiteralExpr(swift::StringRef("1"), source_loc, true);
   false_body.push_back(one_expr);
   auto *equalequal_expr = new (ast_context) swift::UnresolvedDeclRefExpr(
-      equalequal_name, swift::DeclRefKind::BinaryOperator,
+      swift::DeclNameRef(equalequal_name), swift::DeclRefKind::BinaryOperator,
       swift::DeclNameLoc(source_loc));
   false_body.push_back(equalequal_expr);
   auto *zero_expr = new (ast_context)
