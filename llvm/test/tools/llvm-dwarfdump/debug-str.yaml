@@ -1,0 +1,22 @@
+## Show that llvm-dwarfdump dumps the .debug_str section when --debug-str is
+## specified.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfdump %t.o --debug-str | FileCheck %s
+
+# CHECK:      .debug_str contents:
+# CHECK-NEXT: 0x00000000: "some string"
+# CHECK-NEXT: 0x0000000c: "foo"
+# CHECK-NEXT: 0x00000010: ""
+# CHECK-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_str
+    Type: SHT_PROGBITS
+    Content: '736f6d6520737472696e6700666f6f0000' ## "some string\0foo\0\0"
