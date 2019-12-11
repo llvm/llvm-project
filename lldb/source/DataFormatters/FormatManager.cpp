@@ -622,11 +622,21 @@ ImplSP FormatManager::GetHardcoded(FormattersMatchData &match_data) {
   return retval_sp;
 }
 
-template <typename ImplSP> ImplSP
-FormatManager::GetCached(ValueObject &valobj,
-                         lldb::DynamicValueType use_dynamic) {
-  ImplSP retval_sp;
+template <typename ImplSP>
+ImplSP FormatManager::Get(ValueObject &valobj,
+                          lldb::DynamicValueType use_dynamic) {
   FormattersMatchData match_data(valobj, use_dynamic);
+  if (ImplSP retval_sp = GetCached<ImplSP>(match_data))
+    return retval_sp;
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  LLDB_LOGF(log, "[%s] Search failed. Giving hardcoded a chance.", __FUNCTION__);
+  return GetHardcoded<ImplSP>(match_data);
+}
+
+template <typename ImplSP>
+ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
+  ImplSP retval_sp;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
   if (match_data.GetTypeForCache()) {
     LLDB_LOGF(log, "\n\n[%s] Looking into cache for type %s", __FUNCTION__,
@@ -659,10 +669,6 @@ FormatManager::GetCached(ValueObject &valobj,
       return retval_sp;
     }
   }
-  if (!retval_sp) {
-    LLDB_LOGF(log, "[%s] Search failed. Giving hardcoded a chance.", __FUNCTION__);
-    retval_sp = GetHardcoded<ImplSP>(match_data);
-  }
 
   if (match_data.GetTypeForCache() && (!retval_sp || !retval_sp->NonCacheable())) {
     LLDB_LOGF(log, "[%s] Caching %p for type %s", __FUNCTION__,
@@ -678,25 +684,25 @@ FormatManager::GetCached(ValueObject &valobj,
 lldb::TypeFormatImplSP
 FormatManager::GetFormat(ValueObject &valobj,
                          lldb::DynamicValueType use_dynamic) {
-  return GetCached<lldb::TypeFormatImplSP>(valobj, use_dynamic);
+  return Get<lldb::TypeFormatImplSP>(valobj, use_dynamic);
 }
 
 lldb::TypeSummaryImplSP
 FormatManager::GetSummaryFormat(ValueObject &valobj,
                                 lldb::DynamicValueType use_dynamic) {
-  return GetCached<lldb::TypeSummaryImplSP>(valobj, use_dynamic);
+  return Get<lldb::TypeSummaryImplSP>(valobj, use_dynamic);
 }
 
 lldb::SyntheticChildrenSP
 FormatManager::GetSyntheticChildren(ValueObject &valobj,
                                     lldb::DynamicValueType use_dynamic) {
-  return GetCached<lldb::SyntheticChildrenSP>(valobj, use_dynamic);
+  return Get<lldb::SyntheticChildrenSP>(valobj, use_dynamic);
 }
 
 lldb::TypeValidatorImplSP
 FormatManager::GetValidator(ValueObject &valobj,
                             lldb::DynamicValueType use_dynamic) {
-  return GetCached<lldb::TypeValidatorImplSP>(valobj, use_dynamic);
+  return Get<lldb::TypeValidatorImplSP>(valobj, use_dynamic);
 }
 
 FormatManager::FormatManager()
