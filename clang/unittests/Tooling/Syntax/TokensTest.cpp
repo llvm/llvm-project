@@ -793,4 +793,45 @@ TEST_F(TokenBufferTest, macroExpansions) {
     ActualMacroRanges.push_back(Expansion->range(SM));
   EXPECT_EQ(ExpectedMacroRanges, ActualMacroRanges);
 }
+
+TEST_F(TokenBufferTest, Touching) {
+  llvm::Annotations Code("^i^nt^ ^a^b^=^1;^");
+  recordTokens(Code.code());
+
+  auto Touching = [&](int Index) {
+    SourceLocation Loc = SourceMgr->getComposedLoc(SourceMgr->getMainFileID(),
+                                                   Code.points()[Index]);
+    return spelledTokensTouching(Loc, Buffer);
+  };
+  auto Identifier = [&](int Index) {
+    SourceLocation Loc = SourceMgr->getComposedLoc(SourceMgr->getMainFileID(),
+                                                   Code.points()[Index]);
+    const syntax::Token *Tok = spelledIdentifierTouching(Loc, Buffer);
+    return Tok ? Tok->text(*SourceMgr) : "";
+  };
+
+  EXPECT_THAT(Touching(0), SameRange(findSpelled("int")));
+  EXPECT_EQ(Identifier(0), "");
+  EXPECT_THAT(Touching(1), SameRange(findSpelled("int")));
+  EXPECT_EQ(Identifier(1), "");
+  EXPECT_THAT(Touching(2), SameRange(findSpelled("int")));
+  EXPECT_EQ(Identifier(2), "");
+
+  EXPECT_THAT(Touching(3), SameRange(findSpelled("ab")));
+  EXPECT_EQ(Identifier(3), "ab");
+  EXPECT_THAT(Touching(4), SameRange(findSpelled("ab")));
+  EXPECT_EQ(Identifier(4), "ab");
+
+  EXPECT_THAT(Touching(5), SameRange(findSpelled("ab =")));
+  EXPECT_EQ(Identifier(5), "ab");
+
+  EXPECT_THAT(Touching(6), SameRange(findSpelled("= 1")));
+  EXPECT_EQ(Identifier(6), "");
+
+  EXPECT_THAT(Touching(7), SameRange(findSpelled(";")));
+  EXPECT_EQ(Identifier(7), "");
+
+  ASSERT_EQ(Code.points().size(), 8u);
+}
+
 } // namespace
