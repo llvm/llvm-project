@@ -293,3 +293,11 @@ NSString *ForceLocalized(NSString *str) { return str; }
   takesLocalizedString(@"not localized"); // expected-warning {{User-facing text should use localized string macro}}
 }
 @end
+
+@interface SynthesizedAccessors : NSObject
+@property (assign) NSObject *obj;
+@end
+
+@implementation SynthesizedAccessors
+// no-crash
+@end
