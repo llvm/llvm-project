@@ -363,6 +363,9 @@ namespace llvm {
         addParamAttr(ARG_DEST, Attribute::getWithAlignment(getContext(),
                                                            Align(Alignment)));
     }
+    void setDestAlignment(MaybeAlign Align) {
+      setDestAlignment(Align ? Align->value() : 0);
+    }
 
     void setLength(Value *L) {
       assert(getLength()->getType() == L->getType() &&
@@ -412,6 +415,9 @@ namespace llvm {
         BaseCL::addParamAttr(ARG_SOURCE,
                              Attribute::getWithAlignment(BaseCL::getContext(),
                                                          Align(Alignment)));
+    }
+    void setSourceAlignment(MaybeAlign Align) {
+      setSourceAlignment(Align ? Align->value() : 0);
     }
   };
 
