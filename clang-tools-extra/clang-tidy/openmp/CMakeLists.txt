@@ -11,4 +11,5 @@ add_clang_library(clangTidyOpenMPModule
   clangBasic
   clangTidy
   clangTidyUtils
+  LLVMFrontendOpenMP
   )
