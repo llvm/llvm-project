@@ -2500,7 +2500,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(nullptr);
   }
   case Builtin::BImemcpy:
-  case Builtin::BI__builtin_memcpy: {
+  case Builtin::BI__builtin_memcpy:
+  case Builtin::BImempcpy:
+  case Builtin::BI__builtin_mempcpy: {
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
     Address Src = EmitPointerWithAlignment(E->getArg(1));
     Value *SizeVal = EmitScalarExpr(E->getArg(2));
@@ -2509,7 +2511,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitNonNullArgCheck(RValue::get(Src.getPointer()), E->getArg(1)->getType(),
                         E->getArg(1)->getExprLoc(), FD, 1);
     Builder.CreateMemCpy(Dest, Src, SizeVal, false);
-    return RValue::get(Dest.getPointer());
+    if (BuiltinID == Builtin::BImempcpy ||
+        BuiltinID == Builtin::BI__builtin_mempcpy)
+      return RValue::get(Builder.CreateInBoundsGEP(Dest.getPointer(), SizeVal));
+    else
+      return RValue::get(Dest.getPointer());
   }
 
   case Builtin::BI__builtin_char_memchr:
