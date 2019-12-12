@@ -143,3 +143,55 @@ define void @unsound_readonly(i8* %ignored, i8* %escaped_then_written) {
   store i8 0, i8* %addr.ld
   ret void
 }
+
+; Byval but not readonly/none tests
+;
+;{
+declare void @escape_i8(i8* %ptr)
+
+; ATTRIBUTOR:      @byval_not_readonly_1
+; ATTRIBUTOR-SAME: i8* byval %written
+define void @byval_not_readonly_1(i8* byval %written) readonly {
+  call void @escape_i8(i8* %written)
+  ret void
+}
+
+; ATTRIBUTOR:      @byval_not_readonly_2
+; ATTRIBUTOR-SAME: i8* nocapture nofree nonnull writeonly byval dereferenceable(1) %written
+define void @byval_not_readonly_2(i8* byval %written) readonly {
+  store i8 0, i8* %written
+  ret void
+}
+
+; ATTRIBUTOR:      @byval_not_readnone_1
+; ATTRIBUTOR-SAME: i8* byval %written
+define void @byval_not_readnone_1(i8* byval %written) readnone {
+  call void @escape_i8(i8* %written)
+  ret void
+}
+
+; ATTRIBUTOR:      @byval_not_readnone_2
+; ATTRIBUTOR-SAME: i8* nocapture nofree nonnull writeonly byval dereferenceable(1) %written
+define void @byval_not_readnone_2(i8* byval %written) readnone {
+  store i8 0, i8* %written
+  ret void
+}
+
+; ATTRIBUTOR:      @byval_no_fnarg
+; ATTRIBUTOR-SAME: i8* nocapture nofree nonnull writeonly byval dereferenceable(1) %written
+define void @byval_no_fnarg(i8* byval %written) {
+  store i8 0, i8* %written
+  ret void
+}
+
+; ATTRIBUTOR: @testbyval
+; ATTRIBUTOR-SAME: i8* nocapture readonly %read_only
+define void @testbyval(i8* %read_only) {
+  call void @byval_not_readonly_1(i8* %read_only)
+  call void @byval_not_readonly_2(i8* %read_only)
+  call void @byval_not_readnone_1(i8* %read_only)
+  call void @byval_not_readnone_2(i8* %read_only)
+  call void @byval_no_fnarg(i8* %read_only)
+  ret void
+}
+;}
