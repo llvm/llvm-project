@@ -4,13 +4,13 @@
 # RUN: %lldb %t -o "target variable integer structure" -o exit | FileCheck %s
 
 # CHECK: (_Atomic(int)) integer = 14159
-# CHECK: (_Atomic(struct_type)) structure = {}
+# CHECK: (_Atomic(struct_type)) structure = (member = 71828)
 
         .data
 integer:
         .long 14159
 structure:
-        .byte 0
+        .long 71828
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code
@@ -53,10 +53,21 @@ structure:
         .byte   0                       # EOM(2)
         .byte   5                       # Abbreviation Code
         .byte   19                      # DW_TAG_structure_type
-        .byte   0                       # DW_CHILDREN_no
+        .byte   1                       # DW_CHILDREN_yes
         .byte   3                       # DW_AT_name
         .byte   8                       # DW_FORM_string
         .byte   11                      # DW_AT_byte_size
+        .byte   11                      # DW_FORM_data1
+        .byte   0                       # EOM(1)
+        .byte   0                       # EOM(2)
+        .byte   6                       # Abbreviation Code
+        .byte   13                      # DW_TAG_member
+        .byte   0                       # DW_CHILDREN_no
+        .byte   3                       # DW_AT_name
+        .byte   8                       # DW_FORM_string
+        .byte   73                      # DW_AT_type
+        .byte   19                      # DW_FORM_ref4
+        .byte   56                      # DW_AT_data_member_location
         .byte   11                      # DW_FORM_data1
         .byte   0                       # EOM(1)
         .byte   0                       # EOM(2)
@@ -99,6 +110,11 @@ structure:
 .Lstruct:
         .byte   5                       # Abbrev [5] DW_TAG_structure_type
         .asciz  "struct_type"           # DW_AT_name
-        .byte   0                       # DW_AT_byte_size
+        .byte   4                       # DW_AT_byte_size
+        .byte   6                       # Abbrev [6] DW_TAG_member
+        .asciz  "member"                # DW_AT_name
+        .long   .Lint                   # DW_AT_type
+        .byte   0                       # DW_AT_data_member_location
+        .byte   0                       # End Of Children Mark
         .byte   0                       # End Of Children Mark
 .Ldebug_info_end0:
