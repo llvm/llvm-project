@@ -3295,11 +3295,18 @@ void CGOpenMPRuntime::emitTaskyieldCall(CodeGenFunction &CGF,
                                         SourceLocation Loc) {
   if (!CGF.HaveInsertPoint())
     return;
-  // Build call __kmpc_omp_taskyield(loc, thread_id, 0);
-  llvm::Value *Args[] = {
-      emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
-      llvm::ConstantInt::get(CGM.IntTy, /*V=*/0, /*isSigned=*/true)};
-  CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_omp_taskyield), Args);
+  llvm::OpenMPIRBuilder *OMPBuilder = CGF.CGM.getOpenMPIRBuilder();
+  if (OMPBuilder) {
+    OMPBuilder->CreateTaskyield(CGF.Builder);
+  } else {
+    // Build call __kmpc_omp_taskyield(loc, thread_id, 0);
+    llvm::Value *Args[] = {
+        emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
+        llvm::ConstantInt::get(CGM.IntTy, /*V=*/0, /*isSigned=*/true)};
+    CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_omp_taskyield),
+                        Args);
+  }
+
   if (auto *Region = dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo))
     Region->emitUntiedSwitch(CGF);
 }
