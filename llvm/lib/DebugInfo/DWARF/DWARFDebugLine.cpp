@@ -461,6 +461,10 @@ void DWARFDebugLine::LineTable::dump(raw_ostream &OS,
       R.dump(OS);
     }
   }
+
+  // Terminate the table with a final blank line to clearly delineate it from
+  // later dumps.
+  OS << '\n';
 }
 
 void DWARFDebugLine::LineTable::clear() {
