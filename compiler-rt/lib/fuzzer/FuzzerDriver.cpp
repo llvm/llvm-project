@@ -280,7 +280,8 @@ static void RssThread(Fuzzer *F, size_t RssLimitMb) {
 }
 
 static void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
-  if (!RssLimitMb) return;
+  if (!RssLimitMb)
+    return;
   std::thread T(RssThread, F, RssLimitMb);
   T.detach();
 }
@@ -737,7 +738,11 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     if (U.size() <= Word::GetMaxSize())
       MD->AddWordToManualDictionary(Word(U.data(), U.size()));
 
+      // Threads are only supported by Chrome. Don't use them with emscripten
+      // for now.
+#if !LIBFUZZER_EMSCRIPTEN
   StartRssThread(F, Flags.rss_limit_mb);
+#endif // LIBFUZZER_EMSCRIPTEN
 
   Options.HandleAbrt = Flags.handle_abrt;
   Options.HandleBus = Flags.handle_bus;

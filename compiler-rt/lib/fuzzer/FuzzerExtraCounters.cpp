@@ -11,7 +11,7 @@
 #include "FuzzerDefs.h"
 
 #if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FREEBSD ||                \
-    LIBFUZZER_OPENBSD || LIBFUZZER_FUCHSIA
+    LIBFUZZER_OPENBSD || LIBFUZZER_FUCHSIA || LIBFUZZER_EMSCRIPTEN
 __attribute__((weak)) extern uint8_t __start___libfuzzer_extra_counters;
 __attribute__((weak)) extern uint8_t __stop___libfuzzer_extra_counters;
 
