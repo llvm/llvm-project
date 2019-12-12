@@ -12,7 +12,9 @@ func @print_0d() {
   dealloc %A : memref<f32>
   return
 }
-// PRINT-0D: Memref base@ = {{.*}} rank = 0 offset = 0 data = [2]
+// PRINT-0D: Unranked Memref rank = 0 descriptor@ = {{.*}}
+// PRINT-0D: Memref base@ = {{.*}} rank = 0 offset = 0 data =
+// PRINT-0D: [2]
 
 func @print_1d() {
   %f = constant 2.00000e+00 : f32
