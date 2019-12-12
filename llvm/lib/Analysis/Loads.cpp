@@ -150,7 +150,7 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
 
   // Require ABI alignment for loads without alignment specification
   const Align Alignment = DL.getValueOrABITypeAlignment(MA, Ty);
-  APInt AccessSize(DL.getIndexTypeSizeInBits(V->getType()),
+  APInt AccessSize(DL.getPointerTypeSizeInBits(V->getType()),
                    DL.getTypeStoreSize(Ty));
   return isDereferenceableAndAlignedPointer(V, Alignment, AccessSize, DL, CtxI,
                                             DT);

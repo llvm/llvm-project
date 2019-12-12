@@ -29,15 +29,15 @@ template <typename IRBuilderTy>
 Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
                      bool NoAssumptions = false) {
   GEPOperator *GEPOp = cast<GEPOperator>(GEP);
-  Type *IntPtrTy = DL.getIntPtrType(GEP->getType());
-  Value *Result = Constant::getNullValue(IntPtrTy);
+  Type *IntIdxTy = DL.getIndexType(GEP->getType());
+  Value *Result = Constant::getNullValue(IntIdxTy);
 
   // If the GEP is inbounds, we know that none of the addressing operations will
   // overflow in a signed sense.
   bool isInBounds = GEPOp->isInBounds() && !NoAssumptions;
 
   // Build a mask for high order bits.
-  unsigned IntPtrWidth = IntPtrTy->getScalarType()->getIntegerBitWidth();
+  unsigned IntPtrWidth = IntIdxTy->getScalarType()->getIntegerBitWidth();
   uint64_t PtrSizeMask =
       std::numeric_limits<uint64_t>::max() >> (64 - IntPtrWidth);
 
@@ -56,17 +56,17 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
         Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
 
         if (Size)
-          Result = Builder->CreateAdd(Result, ConstantInt::get(IntPtrTy, Size),
+          Result = Builder->CreateAdd(Result, ConstantInt::get(IntIdxTy, Size),
                                       GEP->getName()+".offs");
         continue;
       }
 
       // Splat the constant if needed.
-      if (IntPtrTy->isVectorTy() && !OpC->getType()->isVectorTy())
-        OpC = ConstantVector::getSplat(IntPtrTy->getVectorNumElements(), OpC);
+      if (IntIdxTy->isVectorTy() && !OpC->getType()->isVectorTy())
+        OpC = ConstantVector::getSplat(IntIdxTy->getVectorNumElements(), OpC);
 
-      Constant *Scale = ConstantInt::get(IntPtrTy, Size);
-      Constant *OC = ConstantExpr::getIntegerCast(OpC, IntPtrTy, true /*SExt*/);
+      Constant *Scale = ConstantInt::get(IntIdxTy, Size);
+      Constant *OC = ConstantExpr::getIntegerCast(OpC, IntIdxTy, true /*SExt*/);
       Scale =
           ConstantExpr::getMul(OC, Scale, false /*NUW*/, isInBounds /*NSW*/);
       // Emit an add instruction.
@@ -75,15 +75,15 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
     }
 
     // Splat the index if needed.
-    if (IntPtrTy->isVectorTy() && !Op->getType()->isVectorTy())
-      Op = Builder->CreateVectorSplat(IntPtrTy->getVectorNumElements(), Op);
+    if (IntIdxTy->isVectorTy() && !Op->getType()->isVectorTy())
+      Op = Builder->CreateVectorSplat(IntIdxTy->getVectorNumElements(), Op);
 
     // Convert to correct type.
-    if (Op->getType() != IntPtrTy)
-      Op = Builder->CreateIntCast(Op, IntPtrTy, true, Op->getName()+".c");
+    if (Op->getType() != IntIdxTy)
+      Op = Builder->CreateIntCast(Op, IntIdxTy, true, Op->getName()+".c");
     if (Size != 1) {
       // We'll let instcombine(mul) convert this to a shl if possible.
-      Op = Builder->CreateMul(Op, ConstantInt::get(IntPtrTy, Size),
+      Op = Builder->CreateMul(Op, ConstantInt::get(IntIdxTy, Size),
                               GEP->getName() + ".idx", false /*NUW*/,
                               isInBounds /*NSW*/);
     }
