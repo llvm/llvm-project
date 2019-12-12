@@ -25,8 +25,7 @@ cond.false:                                       ; preds = %entry
 define i32 @sh_trunc_sh(i64 %x) {
 ; CHECK-LABEL: sh_trunc_sh:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rldicl 3, 3, 51, 13
-; CHECK-NEXT:    srwi 3, 3, 4
+; CHECK-NEXT:    rldicl 3, 3, 47, 36
 ; CHECK-NEXT:    blr
   %s = lshr i64 %x, 13
   %t = trunc i64 %s to i32
