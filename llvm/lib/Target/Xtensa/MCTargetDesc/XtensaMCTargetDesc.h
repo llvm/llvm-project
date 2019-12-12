@@ -14,5 +14,44 @@
 
 #ifndef LLVM_LIB_TARGET_XTENSA_MCTARGETDESC_XTENSAMCTARGETDESC_H
 #define LLVM_LIB_TARGET_XTENSA_MCTARGETDESC_XTENSAMCTARGETDESC_H
+#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/TargetRegistry.h"
+
+namespace llvm {
+
+class MCAsmBackend;
+class MCCodeEmitter;
+class MCContext;
+class MCInstrInfo;
+class MCObjectTargetWriter;
+class MCObjectWriter;
+class MCRegisterInfo;
+class MCSubtargetInfo;
+class StringRef;
+class Target;
+class raw_ostream;
+
+extern Target TheXtensaTarget;
+
+MCCodeEmitter *createXtensaMCCodeEmitter(const MCInstrInfo &MCII,
+                                         const MCRegisterInfo &MRI,
+                                         MCContext &Ctx);
+
+MCAsmBackend *createXtensaMCAsmBackend(const Target &T,
+                                       const MCSubtargetInfo &STI,
+                                       const MCRegisterInfo &MRI,
+                                       const MCTargetOptions &Options);
+std::unique_ptr<MCObjectTargetWriter>
+createXtensaObjectWriter(uint8_t OSABI, bool IsLittleEndian);
+} // end namespace llvm
+
+// Defines symbolic names for Xtensa registers.
+// This defines a mapping from register name to register number.
+#define GET_REGINFO_ENUM
+#include "XtensaGenRegisterInfo.inc"
+
+// Defines symbolic names for the Xtensa instructions.
+#define GET_INSTRINFO_ENUM
+#include "XtensaGenInstrInfo.inc"
 
 #endif /* LLVM_LIB_TARGET_XTENSA_MCTARGETDESC_XTENSAMCTARGETDESC_H */
