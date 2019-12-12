@@ -142,17 +142,10 @@ public:
                                                         Consumer));
       break;
     case ScanningOutputFormat::Full:
-      Compiler.addDependencyCollector(std::make_shared<ModuleDepCollector>(
-          std::move(Opts), Compiler, Consumer));
+      Compiler.addDependencyCollector(
+          std::make_shared<ModuleDepCollector>(Compiler, Consumer));
       break;
     }
-
-    // Consider different header search and diagnostic options to create
-    // different modules. This avoids the unsound aliasing of module PCMs.
-    //
-    // TODO: Implement diagnostic bucketing and header search pruning to reduce
-    // the impact of strict context hashing.
-    Compiler.getHeaderSearchOpts().ModulesStrictContextHash = false;
 
     Consumer.handleContextHash(Compiler.getInvocation().getModuleHash());
 
