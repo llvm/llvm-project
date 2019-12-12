@@ -37,6 +37,104 @@ LBL0:
 # CHECK: encoding: [0x70,0x41,0xb0]
  addx8 a4, sp, a7
 
+# CHECK-INST:  ball    a1, a3, LBL0
+# CHECK: encoding: [0x37,0x41,A]
+ ball a1, a3, LBL0
+# CHECK-INST:  bany    a8, a13, LBL0
+# CHECK: encoding: [0xd7,0x88,A]
+ bany a8, a13, LBL0
+# CHECK-INST:  bbc     a8, a7, LBL0
+# CHECK: encoding: [0x77,0x58,A]
+ bbc a8, a7, LBL0
+# CHECK-INST:  bbci    a3, 16, LBL0
+# CHECK: encoding: [0x07,0x73,A]
+ bbci a3, 16, LBL0
+# CHECK-INST:  bbs     a12, a5, LBL0
+# CHECK: encoding: [0x57,0xdc,A]
+ bbs a12, a5, LBL0
+# CHECK-INST:  bbsi    a3, 16, LBL0
+# CHECK: encoding: [0x07,0xf3,A]
+ bbsi a3, 16, LBL0
+# CHECK-INST:  bnall   a7, a3, LBL0
+# CHECK: encoding: [0x37,0xc7,A]
+ bnall a7, a3, LBL0
+# CHECK-INST:  bnone   a2, a4, LBL0
+# CHECK: encoding: [0x47,0x02,A]
+ bnone a2, a4, LBL0
+ 
+# CHECK-INST:  beq     a1, a2, LBL0
+# CHECK: encoding: [0x27,0x11,A]
+ beq a1, a2, LBL0
+# CHECK-INST:  beq     a11, a5, LBL0
+# CHECK: encoding: [0x57,0x1b,A]
+ beq a11, a5, LBL0
+# CHECK-INST:  beqi    a1, 256, LBL0 
+# CHECK: encoding: [0x26,0xf1,A]
+ beqi a1, 256, LBL0
+# CHECK-INST:  beqi    a11, -1, LBL0 
+# CHECK: encoding: [0x26,0x0b,A]
+ beqi a11, -1, LBL0
+# CHECK-INST:  beqz    a8, LBL0  
+# CHECK: encoding: [0x16,0bAAAA1000,A]
+ beqz a8, LBL0
+# CHECK-INST:  bge     a14, a2, LBL0  
+# CHECK: encoding: [0x27,0xae,A]
+ bge a14, a2, LBL0
+# CHECK-INST:  bgei    a11, -1, LBL0  
+# CHECK: encoding: [0xe6,0x0b,A]
+ bgei a11, -1, LBL0
+# CHECK-INST:  bgei    a11, 128, LBL0  
+# CHECK: encoding: [0xe6,0xeb,A]
+ bgei a11, 128, LBL0
+# CHECK-INST:  bgeu    a14, a2, LBL0  
+# CHECK: encoding: [0x27,0xbe,A]
+ bgeu a14, a2, LBL0
+# CHECK-INST:  bgeui   a9, 32768, LBL0   
+# CHECK: encoding: [0xf6,0x09,A]
+ bgeui a9, 32768, LBL0
+# CHECK-INST:  bgeui   a7, 65536, LBL0   
+# CHECK: encoding: [0xf6,0x17,A]
+ bgeui a7, 65536, LBL0
+# CHECK-INST:  bgeui   a7, 64, LBL0   
+# CHECK: encoding: [0xf6,0xd7,A]
+ bgeui a7, 64, LBL0
+# CHECK-INST:  bgez    a8, LBL0   
+# CHECK: encoding: [0xd6,0bAAAA1000,A]
+ bgez a8, LBL0
+# CHECK-INST:  blt     a14, a2, LBL0  
+# CHECK: encoding: [0x27,0x2e,A]
+ blt a14, a2, LBL0
+# CHECK-INST:  blti    a12, -1, LBL0  
+# CHECK: encoding: [0xa6,0x0c,A]
+ blti a12, -1, LBL0
+# CHECK-INST:  blti    a0, 32, LBL0   
+# CHECK: encoding: [0xa6,0xc0,A]
+ blti a0, 32, LBL0
+# CHECK-INST:  bgeu    a13, a1, LBL0   
+# CHECK: encoding: [0x17,0xbd,A]
+ bgeu a13, a1, LBL0
+# CHECK-INST:  bltui   a7, 16, LBL0  
+# CHECK: encoding: [0xb6,0xb7,A]
+ bltui a7, 16, LBL0
+# CHECK-INST:  bltz    a6, LBL0  
+# CHECK: encoding: [0x96,0bAAAA0110,A]
+ bltz a6, LBL0
+# CHECK-INST:  bne     a3, a4, LBL0 
+# CHECK: encoding: [0x47,0x93,A]
+ bne a3, a4, LBL0
+# CHECK-INST:  bnei    a5, 12, LBL0 
+# CHECK: encoding: [0x66,0xa5,A]
+ bnei a5, 12, LBL0
+# CHECK-INST:  bnez    a5, LBL0 
+# CHECK: encoding: [0x56,0bAAAA0101,A]
+ bnez a5, LBL0	
+	
+# CHECK-INST:  call0   LBL0 
+# CHECK: encoding: [0bAA000101,A,A]
+ call0  LBL0
+# CHECK-INST:  callx0  a1  
+# CHECK: encoding: [0xc0,0x01,0x00]
+ callx0 a1
 # CHECK-INST:  dsync  
 # CHECK: encoding: [0x30,0x20,0x00]
  dsync
@@ -55,6 +153,13 @@ LBL0:
 # CHECK-INST:  isync 
 # CHECK: encoding: [0x00,0x20,0x00]
  isync
+  
+# CHECK-INST:  j       LBL0 
+# CHECK: encoding: [0bAA000110,A,A]
+ j LBL0
+# CHECK-INST:  jx      a2 
+# CHECK: encoding: [0xa0,0x02,0x00]
+ jx a2
 
 # CHECK-INST:  l8ui    a2, a1, 3
 # CHECK: encoding: [0x22,0x01,0x03]
@@ -68,6 +173,9 @@ LBL0:
 # CHECK-INST: l32i    a5, a1, 8
 # CHECK: encoding: [0x52,0x21,0x02]
  l32i a5, sp, 8
+# CHECK-INST: l32r    a6, LBL0 
+# CHECK: encoding: [0x61,A,A]
+ l32r a6, LBL0
  
 # CHECK-INST: memw 
 # CHECK: encoding: [0xc0,0x20,0x00]
@@ -103,6 +211,10 @@ LBL0:
 # CHECK: encoding: [0x60,0x45,0x20]
  or a4, a5, a6
   
+# CHECK-INST: ret
+# CHECK: encoding: [0x80,0x00,0x00]
+ ret
+  
 # CHECK-INST: rsr     a8, sar
 # CHECK: encoding: [0x80,0x03,0x03]
  rsr a8, sar
@@ -112,6 +224,7 @@ LBL0:
  # CHECK-INST: rsr     a8, sar
 # CHECK: encoding: [0x80,0x03,0x03]
  rsr a8, 3
+
 
 # CHECK-INST: rsync 
 # CHECK: encoding: [0x10,0x20,0x00] 
@@ -130,7 +243,7 @@ LBL0:
 # CHECK-INST: sll     a10, a11 
 # CHECK: encoding: [0x00,0xab,0xa1] 
  sll a10, a11
-
+ 
 # CHECK-INST: slli    a5, a1, 15
 # CHECK: encoding: [0x10,0x51,0x11]
  slli a5, a1, 15
@@ -170,7 +283,7 @@ LBL0:
 # CHECK-INST: ssr     a2
 # CHECK: encoding: [0x00,0x02,0x40]
  ssr a2
-
+ 
 # CHECK-INST: sub     a8, a2, a1 
 # CHECK: encoding: [0x10,0x82,0xc0] 
  sub  a8, a2, a1

@@ -16,6 +16,10 @@ addi a1, a2, 300
 addi a1, a2, -129
 # CHECK:      error: expected immediate in range [-128, 127]
 
+# imm1_16
+extui  a1, a2, 5, 17
+# CHECK:      error: expected immediate in range [1, 16]
+
 # imm8_sh8
 addmi a1, a2, 33 
 # CHECK:      error: expected immediate in range [-32768, 32512], first 8 bits should be zero
@@ -47,6 +51,14 @@ l16si a1, a2, 512
 # offset32m8
 l32i a1, a2, 1024
 # CHECK:      error: expected immediate in range [0, 1020], first 2 bits should be zero
+
+# b4const
+beqi a1, 257, LBL0
+# CHECK:      error: expected b4const immediate
+
+# b4constu
+bgeui a9, 32000, LBL0
+# CHECK:      error: expected b4constu immediate
 
 # Invalid number of operands
 addi a1, a2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
