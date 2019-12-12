@@ -23,6 +23,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/OpenMPKinds.h"
+#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
@@ -5183,6 +5184,29 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareSimdDirective(
   return DG;
 }
 
+static void setPrototype(Sema &S, FunctionDecl *FD, FunctionDecl *FDWithProto,
+                         QualType NewType) {
+  assert(NewType->isFunctionProtoType() &&
+         "Expected function type with prototype.");
+  assert(FD->getType()->isFunctionNoProtoType() &&
+         "Expected function with type with no prototype.");
+  assert(FDWithProto->getType()->isFunctionProtoType() &&
+         "Expected function with prototype.");
+  // Synthesize parameters with the same types.
+  FD->setType(NewType);
+  SmallVector<ParmVarDecl *, 16> Params;
+  for (const ParmVarDecl *P : FDWithProto->parameters()) {
+    auto *Param = ParmVarDecl::Create(S.getASTContext(), FD, SourceLocation(),
+                                      SourceLocation(), nullptr, P->getType(),
+                                      /*TInfo=*/nullptr, SC_None, nullptr);
+    Param->setScopeInfo(0, Params.size());
+    Param->setImplicit();
+    Params.push_back(Param);
+  }
+
+  FD->setParams(Params);
+}
+
 Optional<std::pair<FunctionDecl *, Expr *>>
 Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
                                         Expr *VariantRef, SourceRange SR) {
@@ -5281,7 +5305,9 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     if (ICS.isFailure()) {
       Diag(VariantRef->getExprLoc(),
            diag::err_omp_declare_variant_incompat_types)
-          << VariantRef->getType() << FnPtrType << VariantRef->getSourceRange();
+          << VariantRef->getType()
+          << ((Method && !Method->isStatic()) ? FnPtrType : FD->getType())
+          << VariantRef->getSourceRange();
       return None;
     }
     VariantRefCast = PerformImplicitConversion(
@@ -5319,6 +5345,24 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     Diag(VariantRef->getExprLoc(), diag::err_omp_function_expected)
         << VariantId << VariantRef->getSourceRange();
     return None;
+  }
+
+  // Check if function types are compatible in C.
+  if (!LangOpts.CPlusPlus) {
+    QualType NewType =
+        Context.mergeFunctionTypes(FD->getType(), NewFD->getType());
+    if (NewType.isNull()) {
+      Diag(VariantRef->getExprLoc(),
+           diag::err_omp_declare_variant_incompat_types)
+          << NewFD->getType() << FD->getType() << VariantRef->getSourceRange();
+      return None;
+    }
+    if (NewType->isFunctionProtoType()) {
+      if (FD->getType()->isFunctionNoProtoType())
+        setPrototype(*this, FD, NewFD, NewType);
+      else if (NewFD->getType()->isFunctionNoProtoType())
+        setPrototype(*this, NewFD, FD, NewType);
+    }
   }
 
   // Check if variant function is not marked with declare variant directive.
@@ -5381,10 +5425,9 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
 
   // Check general compatibility.
   if (areMultiversionVariantFunctionsCompatible(
-          FD, NewFD, PDiag(diag::err_omp_declare_variant_noproto),
-          PartialDiagnosticAt(
-              SR.getBegin(),
-              PDiag(diag::note_omp_declare_variant_specified_here) << SR),
+          FD, NewFD, PartialDiagnostic::NullDiagnostic(),
+          PartialDiagnosticAt(SourceLocation(),
+                              PartialDiagnostic::NullDiagnostic()),
           PartialDiagnosticAt(
               VariantRef->getExprLoc(),
               PDiag(diag::err_omp_declare_variant_doesnt_support)),
