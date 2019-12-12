@@ -9599,6 +9599,7 @@
 // PS4:#define __PTRDIFF_TYPE__ long int
 // PS4:#define __PTRDIFF_WIDTH__ 64
 // PS4:#define __REGISTER_PREFIX__
+// PS4:#define __SCE__ 1
 // PS4:#define __SCHAR_MAX__ 127
 // PS4:#define __SHRT_MAX__ 32767
 // PS4:#define __SIG_ATOMIC_MAX__ 2147483647
