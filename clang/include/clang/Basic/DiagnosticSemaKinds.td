@@ -9696,10 +9696,6 @@ def warn_omp_declare_variant_after_used : Warning<
 def warn_omp_declare_variant_after_emitted : Warning<
   "'#pragma omp declare variant' cannot be applied to the function that was defined already;"
   " the original function might be used">, InGroup<SourceUsesOpenMP>;
-def err_omp_declare_variant_noproto : Error<
-  "function with '#pragma omp declare variant' must have a prototype">;
-def note_omp_declare_variant_specified_here : Note<
-  "'#pragma omp declare variant' for function specified here">;
 def err_omp_declare_variant_doesnt_support : Error<
   "'#pragma omp declare variant' does not "
   "support %select{function templates|virtual functions|"

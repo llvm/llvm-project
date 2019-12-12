@@ -131,7 +131,7 @@ void h(C *hp, C *hp2, C *hq, C *lin) {
   b = 0;
 }
 
-// expected-error@+1 {{variant in '#pragma omp declare variant' with type '<overloaded function type>' is incompatible with type 'void (*)(int *, int *, int *, int *)'}}
+// expected-error@+1 {{variant in '#pragma omp declare variant' with type '<overloaded function type>' is incompatible with type 'void (int *, int *, int *, int *)'}}
 #pragma omp declare variant(barbar <int>) match(xxx = {})
 template <>
 void h(int *hp, int *hp2, int *hq, int *lin);
@@ -153,7 +153,7 @@ int overload(void);
 
 int fn1();
 int fn1(int);
-// expected-error@+1 {{variant in '#pragma omp declare variant' with type '<overloaded function type>' is incompatible with type 'int (*)(float)'}}
+// expected-error@+1 {{variant in '#pragma omp declare variant' with type '<overloaded function type>' is incompatible with type 'int (float)'}}
 #pragma omp declare variant(fn1) match(xxx = {})
 int overload1(float);
 
@@ -201,7 +201,7 @@ auto fn_deduced3() { return 0; }
 auto fn_deduced3();
 
 auto fn_deduced_variant2() { return 0; }
-// expected-error@+1 {{variant in '#pragma omp declare variant' with type 'int ()' is incompatible with type 'float (*)()'}}
+// expected-error@+1 {{variant in '#pragma omp declare variant' with type 'int ()' is incompatible with type 'float ()'}}
 #pragma omp declare variant(fn_deduced_variant2) match(xxx = {})
 float fn_deduced2();
 
@@ -231,6 +231,8 @@ struct SpecialFuncs {
   void bar(int);
 #pragma omp declare variant(SpecialFuncs::baz) match(xxx = {})
 #pragma omp declare variant(SpecialFuncs::bar) match(xxx = {})
+// expected-error@+1 {{variant in '#pragma omp declare variant' with type 'int (*)()' is incompatible with type 'void (SpecialFuncs::*)()'}}
+#pragma omp declare variant(fn_sc_variant1) match(xxx = {})
   void foo1();
   SpecialFuncs& foo(const SpecialFuncs&);
   SpecialFuncs& bar(SpecialFuncs&&);

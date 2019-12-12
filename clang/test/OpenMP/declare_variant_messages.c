@@ -80,11 +80,18 @@ int main();
 int b, c;
 
 int no_proto();
-
-// expected-error@+3 {{function with '#pragma omp declare variant' must have a prototype}}
-// expected-note@+1 {{'#pragma omp declare variant' for function specified here}}
 #pragma omp declare variant(no_proto) match(xxx={})
 int no_proto_too();
+
+int proto1(int);
+// expected-note@+2 {{previous declaration is here}}
+#pragma omp declare variant(proto1) match(xxx={})
+int diff_proto();
+// expected-error@+1 {{conflicting types for 'diff_proto'}}
+int diff_proto(double);
+
+#pragma omp declare variant(no_proto) match(xxx={})
+int diff_proto1(double);
 
 int after_use_variant(void);
 int after_use();
@@ -104,12 +111,12 @@ int defined1(void);
 
 
 int diff_cc_variant(void);
-// expected-error@+1 {{function with '#pragma omp declare variant' has a different calling convention}}
+// expected-error@+1 {{variant in '#pragma omp declare variant' with type 'int (void)' is incompatible with type 'int (void) __attribute__((vectorcall))'}}
 #pragma omp declare variant(diff_cc_variant) match(xxx={})
 __vectorcall int diff_cc(void);
 
 int diff_ret_variant(void);
-// expected-error@+1 {{function with '#pragma omp declare variant' has a different return type}}
+// expected-error@+1 {{variant in '#pragma omp declare variant' with type 'int (void)' is incompatible with type 'void (void)'}}
 #pragma omp declare variant(diff_ret_variant) match(xxx={})
 void diff_ret(void);
 

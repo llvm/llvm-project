@@ -9828,13 +9828,15 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     Linkage = 5,
   };
 
-  if (OldFD && !OldFD->getType()->getAs<FunctionProtoType>()) {
+  if (NoProtoDiagID.getDiagID() != 0 && OldFD &&
+      !OldFD->getType()->getAs<FunctionProtoType>()) {
     Diag(OldFD->getLocation(), NoProtoDiagID);
     Diag(NoteCausedDiagIDAt.first, NoteCausedDiagIDAt.second);
     return true;
   }
 
-  if (!NewFD->getType()->getAs<FunctionProtoType>())
+  if (NoProtoDiagID.getDiagID() != 0 &&
+      !NewFD->getType()->getAs<FunctionProtoType>())
     return Diag(NewFD->getLocation(), NoProtoDiagID);
 
   if (!TemplatesSupported &&
