@@ -8,7 +8,7 @@
 
 #include "lldb/Host/Config.h"
 
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
 
 #define EDITLINE_TEST_DUMP_OUTPUT 0
 

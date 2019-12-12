@@ -49,7 +49,7 @@
 #include "lldb/Utility/Timer.h"
 
 #include "lldb/Host/Config.h"
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
 #include "lldb/Host/Editline.h"
 #endif
 #include "lldb/Host/Host.h"

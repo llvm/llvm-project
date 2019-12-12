@@ -401,8 +401,8 @@ further by passing the appropriate cmake options, such as:
 
 ::
 
-  -DLLDB_DISABLE_LIBEDIT=1
   -DLLDB_DISABLE_PYTHON=1
+  -DLLDB_ENABLE_LIBEDIT=0
   -DLLDB_ENABLE_CURSES=0
   -DLLVM_ENABLE_TERMINFO=0
 
@@ -454,7 +454,7 @@ to prepare the cmake build with the following parameters:
   -DLLVM_TABLEGEN=<path-to-host>/bin/llvm-tblgen \
   -DCLANG_TABLEGEN=<path-to-host>/bin/clang-tblgen \
   -DLLDB_DISABLE_PYTHON=1 \
-  -DLLDB_DISABLE_LIBEDIT=1 \
+  -DLLDB_ENABLE_LIBEDIT=0 \
   -DLLDB_ENABLE_CURSES=0
 
 An alternative (and recommended) way to compile LLDB is with clang.
