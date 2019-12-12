@@ -117,3 +117,8 @@
 // RUN: %clang -target powerpc-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-POWERPC-SECUREPLT %s
 // CHECK-POWERPC-SECUREPLT: "-target-feature" "+secure-plt"
+
+// Check -fno-init-array
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CTORS %s
+// CHECK-CTORS: "-fno-use-init-array"

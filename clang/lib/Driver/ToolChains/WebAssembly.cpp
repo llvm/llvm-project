@@ -179,9 +179,9 @@ bool WebAssembly::HasNativeLLVMSupport() const { return true; }
 void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args,
                                         Action::OffloadKind) const {
-  if (DriverArgs.hasFlag(clang::driver::options::OPT_fuse_init_array,
-                         options::OPT_fno_use_init_array, true))
-    CC1Args.push_back("-fuse-init-array");
+  if (!DriverArgs.hasFlag(clang::driver::options::OPT_fuse_init_array,
+                          options::OPT_fno_use_init_array, true))
+    CC1Args.push_back("-fno-use-init-array");
 
   // '-pthread' implies atomics, bulk-memory, mutable-globals, and sign-ext
   if (DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread,
