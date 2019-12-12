@@ -1242,6 +1242,42 @@ let IntrProperties = [IntrNoMem, IntrWillReturn] in {
                                                       [llvm_anyvector_ty]>;
 }
 
+//===----- Matrix intrinsics ---------------------------------------------===//
+
+def int_matrix_transpose : Intrinsic<[llvm_anyvector_ty],
+                                     [LLVMMatchType<0>,
+                                     llvm_i32_ty,
+                                     llvm_i32_ty],
+                                     [IntrNoMem, IntrSpeculatable,
+                                      IntrWillReturn, ImmArg<1>, ImmArg<2>]>;
+
+def int_matrix_multiply : Intrinsic<[llvm_anyvector_ty],
+                                    [llvm_anyvector_ty,
+                                     llvm_anyvector_ty,
+                                     llvm_i32_ty,
+                                     llvm_i32_ty,
+                                     llvm_i32_ty],
+                                    [IntrNoMem, IntrSpeculatable,
+                                     IntrWillReturn, ImmArg<2>, ImmArg<3>,
+                                     ImmArg<4>]>;
+
+def int_matrix_columnwise_load : Intrinsic<[llvm_anyvector_ty],
+                                           [LLVMAnyPointerType<LLVMMatchType<0>>,
+                                            llvm_i32_ty,
+                                            llvm_i32_ty,
+                                            llvm_i32_ty],
+                                           [IntrReadMem, IntrWillReturn,
+                                            ImmArg<2>, ImmArg<3>]>;
+
+def int_matrix_columnwise_store : Intrinsic<[],
+                                            [llvm_anyvector_ty,
+                                             LLVMAnyPointerType<LLVMMatchType<0>>,
+                                             llvm_i32_ty,
+                                             llvm_i32_ty,
+                                             llvm_i32_ty],
+                                            [WriteOnly<1>, IntrWillReturn,
+                                             ImmArg<3>, ImmArg<4>]>;
+
 //===---------- Intrinsics to control hardware supported loops ----------===//
 
 // Specify that the value given is the number of iterations that the next loop
