@@ -32,6 +32,7 @@ class Scalar;
 namespace dpu {
 class Dpu;
 class DpuRank;
+class DpuContext;
 } // namespace dpu
 
 namespace process_dpu {

@@ -285,7 +285,7 @@ Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
     }
     SetState(lldb::StateType::eStateRunning, true);
     LLDB_LOG(log, "resuming threads");
-    if (!m_dpu->ResumeThreads())
+    if (!m_dpu->ResumeThreads(&resume_list))
       return Status("CNI cannot resume");
   } else {
     SetState(lldb::StateType::eStateStepping, true);
@@ -317,10 +317,10 @@ Status ProcessDpu::Detach() {
   if (dpu_neighbor == nullptr)
     return Status("Cannot find the DPU neighbor in the rank");
 
-  success = m_dpu->ResumeThreads(false);
+  success = m_dpu->ResumeThreads(NULL, false);
   if (!success)
     return Status("Cannot resume the DPU");
-  success = dpu_neighbor->ResumeThreads(false);
+  success = dpu_neighbor->ResumeThreads(NULL, false);
   if (!success)
     return Status("Cannot resume the DPU neighbor");
 

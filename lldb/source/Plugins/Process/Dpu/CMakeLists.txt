@@ -2,6 +2,8 @@ include_directories(${UPMEM_API_HEADERS})
 
 add_lldb_library(lldbPluginProcessDpu PLUGIN
   DpuRank.cpp
+  Dpu.cpp
+  DpuContext.cpp
   ProcessDpu.cpp
   RegisterContextDpu.cpp
   RegisterInfo_dpu.cpp
