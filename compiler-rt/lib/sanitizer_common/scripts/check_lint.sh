@@ -55,7 +55,7 @@ run_lint() {
   FILTER=$1
   shift
   TASK_LOG=$(${MKTEMP})
-  ${CPPLINT} --quiet --filter=${FILTER} "$@" 2>$TASK_LOG
+  ${CPPLINT} --filter=${FILTER} "$@" 2>$TASK_LOG
   if [ "$?" != "0" ]; then
     cat $TASK_LOG | grep -v "Done processing" | grep -v "Total errors found" \
       | grep -v "Skipping input" >> $ERROR_LOG
