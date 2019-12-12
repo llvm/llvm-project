@@ -51,21 +51,56 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("point"),
                                 typename='__ObjC.Point', num_children=2)
-        self.expect("ta v point", substrs=["x = 1", "y = 2"])
-        self.expect("ta v enumerator", substrs=[".yellow"])
-        self.expect("ta v pureSwiftStruct", substrs=["pure swift"])
-        self.expect("ta v swiftStructCMember",
+        self.expect("target variable point", substrs=["x = 1", "y = 2"])
+        self.expect("target variable enumerator", substrs=[".yellow"])
+        self.expect("target variable pureSwiftStruct", substrs=["pure swift"])
+        self.expect("target variable swiftStructCMember",
                     substrs=["point", "x = 3", "y = 4",
                              "sub", "x = 1", "y = 2", "z = 3",
                              "swift struct c member"])
-        self.expect("ta v typedef", substrs=["x = 5", "y = 6"])
-        self.expect("ta v union", substrs=["(DoubleLongUnion)", "long_val = 42"])
-        self.expect("ta v fromSubmodule",
+        self.expect("target variable typedef", substrs=["x = 5", "y = 6"])
+        self.expect("target variable union",
+                    substrs=["(DoubleLongUnion)", "long_val = 42"])
+        self.expect("target variable fromSubmodule",
                     substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"])
         process.Clear()
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()
 
+    @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
+    @swiftTest
+    # This test needs a working Remote Mirrors implementation.
+    @skipIf(oslist=['linux', 'windows'])
+    def test_dwarf_importer_exprs(self):
+        lldb.SBDebugger.MemoryPressureDetected()
+        self.runCmd("settings set symbols.use-swift-dwarfimporter true")
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('main.swift'))
+        lldbutil.check_variable(self,
+                                target.FindFirstGlobalVariable("pureSwift"),
+                                value="42")
+        lldbutil.check_variable(self,
+                                target.FindFirstGlobalVariable("point"),
+                                typename='__ObjC.Point', num_children=2)
+        self.expect("expr point", substrs=["x = 1", "y = 2"])
+        self.expect("expr enumerator", substrs=[".yellow"])
+        self.expect("expr pureSwiftStruct", substrs=["pure swift"])
+        self.expect("expr swiftStructCMember",
+                    substrs=["point", "x = 3", "y = 4",
+                             "sub", "x = 1", "y = 2", "z = 3",
+                             "swift struct c member"])
+        self.expect("expr typedef", substrs=["x = 5", "y = 6"])
+        # FIXME: lookup fails for:
+        #   a.union.unsafeMutableAddressor : __C.DoubleLongUnion
+        self.expect("expr union", error=True)
+        #self.expect("expr union", substrs=["(DoubleLongUnion)", "long_val = 42"])
+        self.expect("expr fromSubmodule",
+                    substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"])
+        process.Clear()
+        target.Clear()
+        lldb.SBDebugger.MemoryPressureDetected()
+        
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
     def test_negative(self):
@@ -81,7 +116,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
                                 target.FindFirstGlobalVariable("point"),
                                 typename="Point", num_children=2)
         # This works as a Clang type.
-        self.expect("ta v point", substrs=["x = 1", "y = 2"])
+        self.expect("target variable point", substrs=["x = 1", "y = 2"])
         # This can't be resolved.
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("swiftStructCMember"),
@@ -97,4 +132,3 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         process.Clear()
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()
-        self.runCmd("settings set symbols.use-swift-dwarfimporter true")
