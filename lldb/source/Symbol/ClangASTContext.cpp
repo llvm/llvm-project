@@ -1357,7 +1357,7 @@ CompilerType ClangASTContext::CreateRecordType(
 
   if (decl) {
     if (metadata)
-      SetMetadata(ast, decl, *metadata);
+      SetMetadata(decl, *metadata);
 
     if (access_type != eAccessNone)
       decl->setAccess(ConvertAccessTypeToAccessSpecifier(access_type));
@@ -1714,7 +1714,7 @@ CompilerType ClangASTContext::CreateObjCClass(const char *name,
       isInternal);
 
   if (decl && metadata)
-    SetMetadata(ast, decl, *metadata);
+    SetMetadata(decl, *metadata);
 
   return CompilerType(this, ast->getObjCInterfaceType(decl).getAsOpaquePtr());
 }
@@ -2418,10 +2418,11 @@ void ClangASTContext::SetMetadataAsUserID(const void *object,
   SetMetadata(object, meta_data);
 }
 
-void ClangASTContext::SetMetadata(clang::ASTContext *ast, const void *object,
+void ClangASTContext::SetMetadata(const void *object,
                                   ClangASTMetadata &metadata) {
   ClangExternalASTSourceCommon *external_source =
-      ClangExternalASTSourceCommon::Lookup(ast->getExternalSource());
+      ClangExternalASTSourceCommon::Lookup(
+          getASTContext()->getExternalSource());
 
   if (external_source)
     external_source->SetMetadata(object, metadata);
@@ -7682,7 +7683,7 @@ bool ClangASTContext::AddObjCClassProperty(
     return false;
 
   if (metadata)
-    ClangASTContext::SetMetadata(clang_ast, property_decl, *metadata);
+    ast->SetMetadata(property_decl, *metadata);
 
   class_interface_decl->addDecl(property_decl);
 
@@ -7765,7 +7766,7 @@ bool ClangASTContext::AddObjCClassProperty(
 
     if (getter) {
       if (metadata)
-        ClangASTContext::SetMetadata(clang_ast, getter, *metadata);
+        ast->SetMetadata(getter, *metadata);
 
       getter->setMethodParams(*clang_ast,
                               llvm::ArrayRef<clang::ParmVarDecl *>(),
@@ -7800,7 +7801,7 @@ bool ClangASTContext::AddObjCClassProperty(
 
     if (setter) {
       if (metadata)
-        ClangASTContext::SetMetadata(clang_ast, setter, *metadata);
+        ast->SetMetadata(setter, *metadata);
 
       llvm::SmallVector<clang::ParmVarDecl *, 1> params;
       params.push_back(clang::ParmVarDecl::Create(
