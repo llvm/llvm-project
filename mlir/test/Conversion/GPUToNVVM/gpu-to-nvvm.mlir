@@ -44,7 +44,7 @@ module attributes {gpu.kernel_module} {
       attributes { gpu.kernel } {
     %arg0 = constant 1.0 : f32
     // TODO(csigg): Check full IR expansion once lowering has settled.
-    // CHECK: nvvm.shfl.sync.down
+    // CHECK: nvvm.shfl.sync.bfly
     // CHECK: nvvm.barrier0
     // CHECK: llvm.fadd
     %result = "gpu.all_reduce"(%arg0) ({}) {op = "add"} : (f32) -> (f32)
@@ -61,7 +61,7 @@ module attributes {gpu.kernel_module} {
       attributes { gpu.kernel } {
     %arg0 = constant 1 : i32
     // TODO(csigg): Check full IR expansion once lowering has settled.
-    // CHECK: nvvm.shfl.sync.down
+    // CHECK: nvvm.shfl.sync.bfly
     // CHECK: nvvm.barrier0
     %result = "gpu.all_reduce"(%arg0) ({
     ^bb(%lhs : i32, %rhs : i32):
