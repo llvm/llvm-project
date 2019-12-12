@@ -512,7 +512,190 @@ void foo() {
     | | `-tb
     | `-;
     `-}
-  )txt"}};
+  )txt"},
+      {R"cpp(
+namespace a { namespace b {} }
+namespace a::b {}
+namespace {}
+
+namespace foo = a;
+    )cpp",
+       R"txt(
+*: TranslationUnit
+|-NamespaceDefinition
+| |-namespace
+| |-a
+| |-{
+| |-NamespaceDefinition
+| | |-namespace
+| | |-b
+| | |-{
+| | `-}
+| `-}
+|-NamespaceDefinition
+| |-namespace
+| |-a
+| |-::
+| |-b
+| |-{
+| `-}
+|-NamespaceDefinition
+| |-namespace
+| |-{
+| `-}
+`-NamespaceAliasDefinition
+  |-namespace
+  |-foo
+  |-=
+  |-a
+  `-;
+)txt"},
+      {R"cpp(
+namespace ns {}
+using namespace ::ns;
+    )cpp",
+       R"txt(
+*: TranslationUnit
+|-NamespaceDefinition
+| |-namespace
+| |-ns
+| |-{
+| `-}
+`-UsingNamespaceDirective
+  |-using
+  |-namespace
+  |-::
+  |-ns
+  `-;
+       )txt"},
+      {R"cpp(
+namespace ns { int a; }
+using ns::a;
+    )cpp",
+       R"txt(
+*: TranslationUnit
+|-NamespaceDefinition
+| |-namespace
+| |-ns
+| |-{
+| |-SimpleDeclaration
+| | |-int
+| | |-a
+| | `-;
+| `-}
+`-UsingDeclaration
+  |-using
+  |-ns
+  |-::
+  |-a
+  `-;
+       )txt"},
+      {R"cpp(
+template <class T> struct X {
+  using T::foo;
+  using typename T::bar;
+};
+    )cpp",
+       R"txt(
+*: TranslationUnit
+`-UnknownDeclaration
+  |-template
+  |-<
+  |-UnknownDeclaration
+  | |-class
+  | `-T
+  |->
+  |-struct
+  |-X
+  |-{
+  |-UsingDeclaration
+  | |-using
+  | |-T
+  | |-::
+  | |-foo
+  | `-;
+  |-UsingDeclaration
+  | |-using
+  | |-typename
+  | |-T
+  | |-::
+  | |-bar
+  | `-;
+  |-}
+  `-;
+       )txt"},
+      {R"cpp(
+using type = int;
+    )cpp",
+       R"txt(
+*: TranslationUnit
+`-TypeAliasDeclaration
+  |-using
+  |-type
+  |-=
+  |-int
+  `-;
+       )txt"},
+      {R"cpp(
+;
+    )cpp",
+       R"txt(
+*: TranslationUnit
+`-EmptyDeclaration
+  `-;
+       )txt"},
+      {R"cpp(
+static_assert(true, "message");
+static_assert(true);
+    )cpp",
+       R"txt(
+*: TranslationUnit
+|-StaticAssertDeclaration
+| |-static_assert
+| |-(
+| |-UnknownExpression
+| | `-true
+| |-,
+| |-UnknownExpression
+| | `-"message"
+| |-)
+| `-;
+`-StaticAssertDeclaration
+  |-static_assert
+  |-(
+  |-UnknownExpression
+  | `-true
+  |-)
+  `-;
+       )txt"},
+      {R"cpp(
+extern "C" int a;
+extern "C" { int b; int c; }
+    )cpp",
+       R"txt(
+*: TranslationUnit
+|-LinkageSpecificationDeclaration
+| |-extern
+| |-"C"
+| `-SimpleDeclaration
+|   |-int
+|   |-a
+|   `-;
+`-LinkageSpecificationDeclaration
+  |-extern
+  |-"C"
+  |-{
+  |-SimpleDeclaration
+  | |-int
+  | |-b
+  | `-;
+  |-SimpleDeclaration
+  | |-int
+  | |-c
+  | `-;
+  `-}
+       )txt"},
+  };
 
   for (const auto &T : Cases) {
     SCOPED_TRACE(T.first);
