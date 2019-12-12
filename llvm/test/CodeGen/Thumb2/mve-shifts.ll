@@ -383,8 +383,9 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @shru_qr_int8_t(<16 x i8> %src1, i8 %src2) {
 ; CHECK-LABEL: shru_qr_int8_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #0, r0
-; CHECK-NEXT:    vshl.u8 q0, r0
+; CHECK-NEXT:    vdup.8 q1, r0
+; CHECK-NEXT:    vneg.s8 q1, q1
+; CHECK-NEXT:    vshl.u8 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <16 x i8> undef, i8 %src2, i32 0
@@ -396,8 +397,9 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @shru_qr_int16_t(<8 x i16> %src1, i16 %src2) {
 ; CHECK-LABEL: shru_qr_int16_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #0, r0
-; CHECK-NEXT:    vshl.u16 q0, r0
+; CHECK-NEXT:    vdup.16 q1, r0
+; CHECK-NEXT:    vneg.s16 q1, q1
+; CHECK-NEXT:    vshl.u16 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <8 x i16> undef, i16 %src2, i32 0
@@ -409,8 +411,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @shru_qr_int32_t(<4 x i32> %src1, i32 %src2) {
 ; CHECK-LABEL: shru_qr_int32_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #0, r0
-; CHECK-NEXT:    vshl.u32 q0, r0
+; CHECK-NEXT:    vdup.32 q1, r0
+; CHECK-NEXT:    vneg.s32 q1, q1
+; CHECK-NEXT:    vshl.u32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <4 x i32> undef, i32 %src2, i32 0
@@ -446,8 +449,9 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @shrs_qr_int8_t(<16 x i8> %src1, i8 %src2) {
 ; CHECK-LABEL: shrs_qr_int8_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #0, r0
-; CHECK-NEXT:    vshl.s8 q0, r0
+; CHECK-NEXT:    vdup.8 q1, r0
+; CHECK-NEXT:    vneg.s8 q1, q1
+; CHECK-NEXT:    vshl.s8 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <16 x i8> undef, i8 %src2, i32 0
@@ -459,8 +463,9 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @shrs_qr_int16_t(<8 x i16> %src1, i16 %src2) {
 ; CHECK-LABEL: shrs_qr_int16_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #0, r0
-; CHECK-NEXT:    vshl.s16 q0, r0
+; CHECK-NEXT:    vdup.16 q1, r0
+; CHECK-NEXT:    vneg.s16 q1, q1
+; CHECK-NEXT:    vshl.s16 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <8 x i16> undef, i16 %src2, i32 0
@@ -472,8 +477,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @shrs_qr_int32_t(<4 x i32> %src1, i32 %src2) {
 ; CHECK-LABEL: shrs_qr_int32_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #0, r0
-; CHECK-NEXT:    vshl.s32 q0, r0
+; CHECK-NEXT:    vdup.32 q1, r0
+; CHECK-NEXT:    vneg.s32 q1, q1
+; CHECK-NEXT:    vshl.s32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <4 x i32> undef, i32 %src2, i32 0
