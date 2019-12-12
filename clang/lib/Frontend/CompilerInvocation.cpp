@@ -953,7 +953,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
         << Args.getLastArg(OPT_mthread_model)->getAsString(Args)
         << Opts.ThreadModel;
   Opts.TrapFuncName = Args.getLastArgValue(OPT_ftrap_function_EQ);
-  Opts.UseInitArray = Args.hasArg(OPT_fuse_init_array);
+  Opts.UseInitArray = !Args.hasArg(OPT_fno_use_init_array);
 
   Opts.FunctionSections = Args.hasFlag(OPT_ffunction_sections,
                                        OPT_fno_function_sections, false);

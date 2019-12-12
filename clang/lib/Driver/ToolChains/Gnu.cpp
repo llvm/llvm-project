@@ -2798,7 +2798,7 @@ void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
       getTriple().getArch() == llvm::Triple::riscv32 ||
       getTriple().getArch() == llvm::Triple::riscv64;
 
-  if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                         options::OPT_fno_use_init_array, UseInitArrayDefault))
-    CC1Args.push_back("-fuse-init-array");
+  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                          options::OPT_fno_use_init_array, UseInitArrayDefault))
+    CC1Args.push_back("-fno-use-init-array");
 }

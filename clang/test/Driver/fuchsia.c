@@ -16,7 +16,6 @@
 // CHECK-RISCV64: "-triple" "riscv64-unknown-fuchsia"
 // CHECK: "--mrelax-relocations"
 // CHECK: "-munwind-tables"
-// CHECK: "-fuse-init-array"
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
