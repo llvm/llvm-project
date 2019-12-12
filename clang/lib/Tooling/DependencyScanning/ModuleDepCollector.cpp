@@ -171,9 +171,9 @@ void ModuleDepCollectorPP::addModuleDep(
   for (const Module *Import : M->Imports) {
     if (Import->getTopLevelModule() != M->getTopLevelModule()) {
       if (AddedModules.insert(Import->getTopLevelModule()).second)
-        MD.ClangModuleDeps.push_back(
-            {Import->getTopLevelModuleName(),
-             Instance.getInvocation().getModuleHash()});
+        MD.ClangModuleDeps.push_back({Import->getTopLevelModuleName(),
+                                      Instance.getInvocation().getModuleHash(
+                                          Instance.getDiagnostics())});
       handleTopLevelModule(Import->getTopLevelModule());
     }
   }
