@@ -531,6 +531,7 @@ void foo())cpp";
     Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
+    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     auto AST = TU.build();
     ASSERT_TRUE(AST.getDiagnostics().empty());
 
