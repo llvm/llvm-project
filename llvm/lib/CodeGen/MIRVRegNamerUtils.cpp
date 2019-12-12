@@ -72,6 +72,17 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
   SmallVector<unsigned, 16> MIOperands = {MI.getOpcode(), MI.getFlags()};
   llvm::transform(MI.uses(), std::back_inserter(MIOperands), GetHashableMO);
 
+  for (const auto *Op : MI.memoperands()) {
+    MIOperands.push_back((unsigned)Op->getSize());
+    MIOperands.push_back((unsigned)Op->getFlags());
+    MIOperands.push_back((unsigned)Op->getOffset());
+    MIOperands.push_back((unsigned)Op->getOrdering());
+    MIOperands.push_back((unsigned)Op->getAddrSpace());
+    MIOperands.push_back((unsigned)Op->getSyncScopeID());
+    MIOperands.push_back((unsigned)Op->getBaseAlignment());
+    MIOperands.push_back((unsigned)Op->getFailureOrdering());
+  }
+
   auto HashMI = hash_combine_range(MIOperands.begin(), MIOperands.end());
   return std::to_string(HashMI).substr(0, 5);
 }
