@@ -30,57 +30,6 @@
 
 namespace lldb_private {
 
-class ClangASTMetrics {
-public:
-  static void DumpCounters(Log *log);
-  static void ClearLocalCounters() { local_counters = {0, 0, 0, 0, 0, 0}; }
-
-  static void RegisterVisibleQuery() {
-    ++global_counters.m_visible_query_count;
-    ++local_counters.m_visible_query_count;
-  }
-
-  static void RegisterLexicalQuery() {
-    ++global_counters.m_lexical_query_count;
-    ++local_counters.m_lexical_query_count;
-  }
-
-  static void RegisterLLDBImport() {
-    ++global_counters.m_lldb_import_count;
-    ++local_counters.m_lldb_import_count;
-  }
-
-  static void RegisterClangImport() {
-    ++global_counters.m_clang_import_count;
-    ++local_counters.m_clang_import_count;
-  }
-
-  static void RegisterDeclCompletion() {
-    ++global_counters.m_decls_completed_count;
-    ++local_counters.m_decls_completed_count;
-  }
-
-  static void RegisterRecordLayout() {
-    ++global_counters.m_record_layout_count;
-    ++local_counters.m_record_layout_count;
-  }
-
-private:
-  struct Counters {
-    uint64_t m_visible_query_count;
-    uint64_t m_lexical_query_count;
-    uint64_t m_lldb_import_count;
-    uint64_t m_clang_import_count;
-    uint64_t m_decls_completed_count;
-    uint64_t m_record_layout_count;
-  };
-
-  static Counters global_counters;
-  static Counters local_counters;
-
-  static void DumpCounters(Log *log, Counters &counters);
-};
-
 class ClangASTImporter {
 public:
   struct LayoutInfo {
