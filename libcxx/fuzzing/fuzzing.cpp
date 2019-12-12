@@ -39,6 +39,10 @@
 #include <cassert>
 //  If we had C++14, we could use the four iterator version of is_permutation and equal
 
+#ifndef _LIBCPP_VERSION
+#error These test should be built with libc++ only.
+#endif
+
 namespace fuzzing {
 
 //  This is a struct we can use to test the stable_XXX algorithms.
