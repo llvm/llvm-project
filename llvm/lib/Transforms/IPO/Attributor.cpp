@@ -465,13 +465,20 @@ bool IRPosition::hasAttr(ArrayRef<Attribute::AttrKind> AKs,
 }
 
 void IRPosition::getAttrs(ArrayRef<Attribute::AttrKind> AKs,
-                          SmallVectorImpl<Attribute> &Attrs) const {
-  for (const IRPosition &EquivIRP : SubsumingPositionIterator(*this))
+                          SmallVectorImpl<Attribute> &Attrs,
+                          bool IgnoreSubsumingPositions) const {
+  for (const IRPosition &EquivIRP : SubsumingPositionIterator(*this)) {
     for (Attribute::AttrKind AK : AKs) {
       const Attribute &Attr = EquivIRP.getAttr(AK);
       if (Attr.getKindAsEnum() == AK)
         Attrs.push_back(Attr);
     }
+    // The first position returned by the SubsumingPositionIterator is
+    // always the position itself. If we ignore subsuming positions we
+    // are done after the first iteration.
+    if (IgnoreSubsumingPositions)
+      break;
+  }
 }
 
 void IRPosition::verify() {
@@ -3773,6 +3780,14 @@ struct AANoCaptureArgument final : AANoCaptureImpl {
 struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
   AANoCaptureCallSiteArgument(const IRPosition &IRP) : AANoCaptureImpl(IRP) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    if (Argument *Arg = getAssociatedArgument())
+      if (Arg->hasByValAttr())
+        indicateOptimisticFixpoint();
+    AANoCaptureImpl::initialize(A);
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
@@ -4337,9 +4352,10 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
 
   /// Return the memory behavior information encoded in the IR for \p IRP.
   static void getKnownStateFromValue(const IRPosition &IRP,
-                                     BitIntegerState &State) {
+                                     BitIntegerState &State,
+                                     bool IgnoreSubsumingPositions = false) {
     SmallVector<Attribute, 2> Attrs;
-    IRP.getAttrs(AttrKinds, Attrs);
+    IRP.getAttrs(AttrKinds, Attrs, IgnoreSubsumingPositions);
     for (const Attribute &Attr : Attrs) {
       switch (Attr.getKindAsEnum()) {
       case Attribute::ReadNone:
@@ -4461,12 +4477,25 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    AAMemoryBehaviorFloating::initialize(A);
+    intersectAssumedBits(BEST_STATE);
+    const IRPosition &IRP = getIRPosition();
+    // TODO: Make IgnoreSubsumingPositions a property of an IRAttribute so we
+    // can query it when we use has/getAttr. That would allow us to reuse the
+    // initialize of the base class here.
+    bool HasByVal =
+        IRP.hasAttr({Attribute::ByVal}, /* IgnoreSubsumingPositions */ true);
+    getKnownStateFromValue(IRP, getState(),
+                           /* IgnoreSubsumingPositions */ HasByVal);
 
     // Initialize the use vector with all direct uses of the associated value.
     Argument *Arg = getAssociatedArgument();
-    if (!Arg || !Arg->getParent()->hasExactDefinition())
+    if (!Arg || !Arg->getParent()->hasExactDefinition()) {
       indicatePessimisticFixpoint();
+    } else {
+      // Initialize the use vector with all direct uses of the associated value.
+      for (const Use &U : Arg->uses())
+        Uses.insert(&U);
+    }
   }
 
   ChangeStatus manifest(Attributor &A) override {
@@ -4493,6 +4522,19 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
 struct AAMemoryBehaviorCallSiteArgument final : AAMemoryBehaviorArgument {
   AAMemoryBehaviorCallSiteArgument(const IRPosition &IRP)
       : AAMemoryBehaviorArgument(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    if (Argument *Arg = getAssociatedArgument()) {
+      if (Arg->hasByValAttr()) {
+        addKnownBits(NO_WRITES);
+        removeKnownBits(NO_READS);
+        removeAssumedBits(NO_READS);
+      }
+    } else {
+    }
+    AAMemoryBehaviorArgument::initialize(A);
+  }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -4640,11 +4682,17 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
 
   // First, check the function scope. We take the known information and we avoid
   // work if the assumed information implies the current assumed information for
-  // this attribute.
-  const auto &FnMemAA = A.getAAFor<AAMemoryBehavior>(*this, FnPos);
-  S.addKnownBits(FnMemAA.getKnown());
-  if ((S.getAssumed() & FnMemAA.getAssumed()) == S.getAssumed())
-    return ChangeStatus::UNCHANGED;
+  // this attribute. This is a valid for all but byval arguments.
+  Argument *Arg = IRP.getAssociatedArgument();
+  AAMemoryBehavior::base_t FnMemAssumedState =
+      AAMemoryBehavior::StateType::getWorstState();
+  if (!Arg || !Arg->hasByValAttr()) {
+    const auto &FnMemAA = A.getAAFor<AAMemoryBehavior>(*this, FnPos);
+    FnMemAssumedState = FnMemAA.getAssumed();
+    S.addKnownBits(FnMemAA.getKnown());
+    if ((S.getAssumed() & FnMemAA.getAssumed()) == S.getAssumed())
+      return ChangeStatus::UNCHANGED;
+  }
 
   // Make sure the value is not captured (except through "return"), if
   // it is, any information derived would be irrelevant anyway as we cannot
@@ -4652,7 +4700,7 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
   // to fall back to anythign less optimistic than the function state.
   const auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
   if (!ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
-    S.intersectAssumedBits(FnMemAA.getAssumed());
+    S.intersectAssumedBits(FnMemAssumedState);
     return ChangeStatus::CHANGED;
   }
 
