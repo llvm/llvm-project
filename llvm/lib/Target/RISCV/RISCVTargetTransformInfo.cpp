@@ -29,7 +29,7 @@ int RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
                                     getST()->is64Bit());
 }
 
-int RISCVTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
+int RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
                                 Type *Ty) {
   assert(Ty->isIntegerTy() &&
          "getIntImmCost can only estimate cost of materialising integers");
@@ -85,8 +85,8 @@ int RISCVTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
   return TTI::TCC_Free;
 }
 
-int RISCVTTIImpl::getIntImmCost(Intrinsic::ID IID, unsigned Idx,
-                                const APInt &Imm, Type *Ty) {
+int RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                      const APInt &Imm, Type *Ty) {
   // Prevent hoisting in unknown cases.
   return TTI::TCC_Free;
 }

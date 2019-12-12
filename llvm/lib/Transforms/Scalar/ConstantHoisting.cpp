@@ -14,7 +14,7 @@
 // cost. If the constant can be folded into the instruction (the cost is
 // TCC_Free) or the cost is just a simple operation (TCC_BASIC), then we don't
 // consider it expensive and leave it alone. This is the default behavior and
-// the default implementation of getIntImmCost will always return TCC_Free.
+// the default implementation of getIntImmCostInst will always return TCC_Free.
 //
 // If the cost is more than TCC_BASIC, then the integer constant can't be folded
 // into the instruction and it might be beneficial to hoist the constant.
@@ -362,11 +362,11 @@ void ConstantHoistingPass::collectConstantCandidates(
   // Ask the target about the cost of materializing the constant for the given
   // instruction and operand index.
   if (auto IntrInst = dyn_cast<IntrinsicInst>(Inst))
-    Cost = TTI->getIntImmCost(IntrInst->getIntrinsicID(), Idx,
-                              ConstInt->getValue(), ConstInt->getType());
+    Cost = TTI->getIntImmCostIntrin(IntrInst->getIntrinsicID(), Idx,
+                                    ConstInt->getValue(), ConstInt->getType());
   else
-    Cost = TTI->getIntImmCost(Inst->getOpcode(), Idx, ConstInt->getValue(),
-                              ConstInt->getType());
+    Cost = TTI->getIntImmCostInst(Inst->getOpcode(), Idx, ConstInt->getValue(),
+                                  ConstInt->getType());
 
   // Ignore cheap integer constants.
   if (Cost > TargetTransformInfo::TCC_Basic) {
@@ -416,7 +416,7 @@ void ConstantHoistingPass::collectConstantCandidates(
   // usually lowered to a load from constant pool. Such operation is unlikely
   // to be cheaper than compute it by <Base + Offset>, which can be lowered to
   // an ADD instruction or folded into Load/Store instruction.
-  int Cost = TTI->getIntImmCost(Instruction::Add, 1, Offset, PtrIntTy);
+  int Cost = TTI->getIntImmCostInst(Instruction::Add, 1, Offset, PtrIntTy);
   ConstCandVecType &ExprCandVec = ConstGEPCandMap[BaseGV];
   ConstCandMapType::iterator Itr;
   bool Inserted;
@@ -487,9 +487,10 @@ void ConstantHoistingPass::collectConstantCandidates(
   // Scan all operands.
   for (unsigned Idx = 0, E = Inst->getNumOperands(); Idx != E; ++Idx) {
     // The cost of materializing the constants (defined in
-    // `TargetTransformInfo::getIntImmCost`) for instructions which only take
-    // constant variables is lower than `TargetTransformInfo::TCC_Basic`. So
-    // it's safe for us to collect constant candidates from all IntrinsicInsts.
+    // `TargetTransformInfo::getIntImmCostInst`) for instructions which only
+    // take constant variables is lower than `TargetTransformInfo::TCC_Basic`.
+    // So it's safe for us to collect constant candidates from all
+    // IntrinsicInsts.
     if (canReplaceOperandWithVariable(Inst, Idx) || isa<IntrinsicInst>(Inst)) {
       collectConstantCandidates(ConstCandMap, Inst, Idx);
     }
@@ -577,7 +578,7 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
     for (auto User : ConstCand->Uses) {
       unsigned Opcode = User.Inst->getOpcode();
       unsigned OpndIdx = User.OpndIdx;
-      Cost += TTI->getIntImmCost(Opcode, OpndIdx, Value, Ty);
+      Cost += TTI->getIntImmCostInst(Opcode, OpndIdx, Value, Ty);
       LLVM_DEBUG(dbgs() << "Cost: " << Cost << "\n");
 
       for (auto C2 = S; C2 != E; ++C2) {
