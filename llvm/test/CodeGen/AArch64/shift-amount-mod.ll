@@ -666,3 +666,16 @@ define i64 @reg64_lshr_by_masked_negated_unfolded_add_b(i64 %val, i64 %a, i64 %b
   %shifted = lshr i64 %val, %negaaddbitwidthaddb
   ret i64 %shifted
 }
+
+define i32 @t(i64 %x) {
+; CHECK-LABEL: t:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr x8, x0, #13
+; CHECK-NEXT:    ubfx x0, x8, #4, #28
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %s = lshr i64 %x, 13
+  %t = trunc i64 %s to i32
+  %r = lshr i32 %t, 4
+  ret i32 %r
+}

@@ -1539,62 +1539,39 @@ struct AANoFreeFloating : AANoFreeImpl {
   /// See Abstract Attribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     const IRPosition &IRP = getIRPosition();
-    Function *F = IRP.getAnchorScope();
-
-    const AAIsDead &LivenessAA =
-        A.getAAFor<AAIsDead>(*this, IRPosition::function(*F));
 
     const auto &NoFreeAA =
         A.getAAFor<AANoFree>(*this, IRPosition::function_scope(IRP));
     if (NoFreeAA.isAssumedNoFree())
       return ChangeStatus::UNCHANGED;
 
-    SmallPtrSet<const Use *, 8> Visited;
-    SmallVector<const Use *, 8> Worklist;
-
     Value &AssociatedValue = getIRPosition().getAssociatedValue();
-    for (Use &U : AssociatedValue.uses())
-      Worklist.push_back(&U);
-
-    while (!Worklist.empty()) {
-      const Use *U = Worklist.pop_back_val();
-      if (!Visited.insert(U).second)
-        continue;
-
-      auto *UserI = U->getUser();
-      if (!UserI)
-        continue;
-
-      if (LivenessAA.isAssumedDead(cast<Instruction>(UserI)))
-        continue;
-
+    auto Pred = [&](const Use &U, bool &Follow) -> bool {
+      Instruction *UserI = cast<Instruction>(U.getUser());
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
-        if (CB->isBundleOperand(U))
-          return indicatePessimisticFixpoint();
-        if (!CB->isArgOperand(U))
-          continue;
-
-        unsigned ArgNo = CB->getArgOperandNo(U);
+        if (CB->isBundleOperand(&U))
+          return false;
+        if (!CB->isArgOperand(&U))
+          return true;
+        unsigned ArgNo = CB->getArgOperandNo(&U);
 
         const auto &NoFreeArg = A.getAAFor<AANoFree>(
             *this, IRPosition::callsite_argument(*CB, ArgNo));
-
-        if (NoFreeArg.isAssumedNoFree())
-          continue;
-
-        return indicatePessimisticFixpoint();
+        return NoFreeArg.isAssumedNoFree();
       }
 
       if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
           isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
-        for (Use &U : UserI->uses())
-          Worklist.push_back(&U);
-        continue;
+        Follow = true;
+        return true;
       }
 
       // Unknown user.
+      return false;
+    };
+    if (!A.checkForAllUses(Pred, *this, AssociatedValue))
       return indicatePessimisticFixpoint();
-    }
+
     return ChangeStatus::UNCHANGED;
   }
 };
@@ -3277,7 +3254,8 @@ struct AAAlignImpl : AAAlign {
   bool followUse(Attributor &A, const Use *U, const Instruction *I) {
     bool TrackUse = false;
 
-    unsigned int KnownAlign = getKnownAlignForUse(A, *this, getAssociatedValue(), U, I, TrackUse);
+    unsigned int KnownAlign =
+        getKnownAlignForUse(A, *this, getAssociatedValue(), U, I, TrackUse);
     takeKnownMaximum(KnownAlign);
 
     return TrackUse;
@@ -3973,14 +3951,14 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
       // callback calls).
       Value *ArgOp = ACS.getCallArgOperand(getArgNo());
       if (!ArgOp)
-       return false;
+        return false;
       // We can only propagate thread independent values through callbacks.
       // This is different to direct/indirect call sites because for them we
       // know the thread executing the caller and callee is the same. For
       // callbacks this is not guaranteed, thus a thread dependent value could
       // be different for the caller and callee, making it invalid to propagate.
       if (ACS.isCallbackCall())
-        if (auto *C =dyn_cast<Constant>(ArgOp))
+        if (auto *C = dyn_cast<Constant>(ArgOp))
           if (C->isThreadDependent())
             return false;
       return checkAndUpdate(A, *this, *ArgOp, SimplifiedAssociatedValue);
@@ -4225,54 +4203,36 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
   auto UsesCheck = [&](Instruction &I) {
     bool ValidUsesOnly = true;
     bool MustUse = true;
-
-    SmallPtrSet<const Use *, 8> Visited;
-    SmallVector<const Use *, 8> Worklist;
-
-    for (Use &U : I.uses())
-      Worklist.push_back(&U);
-
-    while (!Worklist.empty()) {
-      const Use *U = Worklist.pop_back_val();
-      if (!Visited.insert(U).second)
-        continue;
-
-      auto *UserI = U->getUser();
-
+    auto Pred = [&](const Use &U, bool &Follow) -> bool {
+      Instruction *UserI = cast<Instruction>(U.getUser());
       if (isa<LoadInst>(UserI))
-        continue;
+        return true;
       if (auto *SI = dyn_cast<StoreInst>(UserI)) {
-        if (SI->getValueOperand() == U->get()) {
+        if (SI->getValueOperand() == U.get()) {
           LLVM_DEBUG(dbgs()
                      << "[H2S] escaping store to memory: " << *UserI << "\n");
           ValidUsesOnly = false;
         } else {
           // A store into the malloc'ed memory is fine.
         }
-        continue;
+        return true;
       }
-
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
-        if (!CB->isArgOperand(U))
-          continue;
-
-        if (CB->isLifetimeStartOrEnd())
-          continue;
-
+        if (!CB->isArgOperand(&U) || CB->isLifetimeStartOrEnd())
+          return true;
         // Record malloc.
         if (isFreeCall(UserI, TLI)) {
           if (MustUse) {
-            FreesForMalloc[&I].insert(
-                cast<Instruction>(const_cast<User *>(UserI)));
+            FreesForMalloc[&I].insert(UserI);
           } else {
             LLVM_DEBUG(dbgs() << "[H2S] free potentially on different mallocs: "
                               << *UserI << "\n");
             ValidUsesOnly = false;
           }
-          continue;
+          return true;
         }
 
-        unsigned ArgNo = CB->getArgOperandNo(U);
+        unsigned ArgNo = CB->getArgOperandNo(&U);
 
         const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
             *this, IRPosition::callsite_argument(*CB, ArgNo));
@@ -4281,26 +4241,27 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
         const auto &ArgNoFreeAA = A.getAAFor<AANoFree>(
             *this, IRPosition::callsite_argument(*CB, ArgNo));
 
-        if (!NoCaptureAA.isAssumedNoCapture() || !ArgNoFreeAA.isAssumedNoFree()) {
+        if (!NoCaptureAA.isAssumedNoCapture() ||
+            !ArgNoFreeAA.isAssumedNoFree()) {
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
           ValidUsesOnly = false;
         }
-        continue;
+        return true;
       }
 
       if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
           isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
         MustUse &= !(isa<PHINode>(UserI) || isa<SelectInst>(UserI));
-        for (Use &U : UserI->uses())
-          Worklist.push_back(&U);
-        continue;
+        Follow = true;
+        return true;
       }
-
       // Unknown user for which we can not track uses further (in a way that
       // makes sense).
       LLVM_DEBUG(dbgs() << "[H2S] Unknown user: " << *UserI << "\n");
       ValidUsesOnly = false;
-    }
+      return true;
+    };
+    A.checkForAllUses(Pred, *this, I);
     return ValidUsesOnly;
   };
 
@@ -5598,8 +5559,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         // Call site argument attribute "align".
         getOrCreateAAFor<AAAlign>(CSArgPos);
 
-	// Call site argument attribute "nofree".
-	getOrCreateAAFor<AANoFree>(CSArgPos);
+        // Call site argument attribute "nofree".
+        getOrCreateAAFor<AANoFree>(CSArgPos);
       }
     }
     return true;

@@ -147,6 +147,10 @@ cl::opt<bool> EnableOrderFileInstrumentation(
     "enable-order-file-instrumentation", cl::init(false), cl::Hidden,
     cl::desc("Enable order file instrumentation (default = off)"));
 
+static cl::opt<bool>
+    EnableMatrix("enable-matrix", cl::init(false), cl::Hidden,
+                 cl::desc("Enable lowering of the matrix intrinsics"));
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -668,6 +672,14 @@ void PassManagerBuilder::populateModulePassManager(
 
   MPM.add(createFloat2IntPass());
   MPM.add(createLowerConstantIntrinsicsPass());
+
+  if (EnableMatrix) {
+    MPM.add(createLowerMatrixIntrinsicsPass());
+    // CSE the pointer arithmetic of the column vectors.  This allows alias
+    // analysis to establish no-aliasing between loads and stores of different
+    // columns of the same matrix.
+    MPM.add(createEarlyCSEPass(false));
+  }
 
   addExtensionsToPM(EP_VectorizerStart, MPM);
 

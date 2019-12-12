@@ -1615,5 +1615,6 @@ def : InstRW<[GenericWriteAtomic],
 def : InstRW<[GenericWriteAtomic],
     (instregex "^ATOMIC_CMP_SWAP_I(8|16|32|64)_POSTRA$")>;
 def : InstRW<[GenericWriteAtomic],
-    (instregex "^ATOMIC_LOAD_(ADD|SUB|AND|OR|XOR|NAND)_I(8|16|32|64)_POSTRA$")>;
+    (instregex "^ATOMIC_LOAD_(ADD|SUB|AND|OR|XOR|NAND|MIN|MAX|UMIN|UMAX)"
+               "_I(8|16|32|64)_POSTRA$")>;
 }

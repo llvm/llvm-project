@@ -132,12 +132,7 @@ public:
 
   void SetMetadataAsUserID(const void *object, lldb::user_id_t user_id);
 
-  void SetMetadata(const void *object, ClangASTMetadata &meta_data) {
-    SetMetadata(getASTContext(), object, meta_data);
-  }
-
-  static void SetMetadata(clang::ASTContext *ast, const void *object,
-                          ClangASTMetadata &meta_data);
+  void SetMetadata(const void *object, ClangASTMetadata &meta_data);
 
   ClangASTMetadata *GetMetadata(const void *object) {
     return GetMetadata(getASTContext(), object);

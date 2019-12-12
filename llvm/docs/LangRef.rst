@@ -14407,6 +14407,115 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
 
+Matrix Intrinsics
+-----------------
+
+Operations on matrixes requiring shape information (like number of rows/columns
+or the memory layout) can be expressed using the matrix intrinsics. Matrixes are
+embedded in a flat vector and the intrinsics take the dimensions as arguments.
+Currently column-major layout is assumed. The intrinsics support both integer
+and floating point matrixes.
+
+
+'``llvm.matrix.transpose.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare vectorty @llvm.matrix.transpose.*(vectorty %In, i32 <Rows>, i32 <Cols>)
+
+Overview:
+"""""""""
+
+The '``llvm.matrix.transpose.*``' intrinsic treats %In as containing a matrix
+with <Rows> rows and <Cols> columns and returns the transposed matrix embedded in
+the result vector.
+
+Arguments:
+""""""""""
+
+The <Rows> and <Cols> arguments must be constant integers. The vector argument
+%In and the returned vector must have <Rows> * <Cols> elements.
+
+'``llvm.matrix.multiply.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare vectorty @llvm.matrix.multiply.*(vectorty %A, vectorty %B, i32 <M>, i32 <N>, i32 <K>)
+
+Overview:
+"""""""""
+
+The '``llvm.matrix.multiply.*``' intrinsic treats %A as matrix with <M> rows and <K> columns, %B as
+matrix with <K> rows and <N> columns and multiplies them. The result matrix is returned embedded in the
+result vector.
+
+Arguments:
+""""""""""
+
+The <M>, <N> and <K> arguments must be constant integers.  The vector argument %A
+must have <M> * <K> elements, %B must have <K> * <N> elements and the returned
+vector must have <M> * <N> elements.
+
+
+'``llvm.matrix.columnwise.load.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare vectorty @llvm.matrix.columnwise.load.*(ptrty %Ptr, i32 %Stride, i32 <Rows>, i32 <Cols>)
+
+Overview:
+"""""""""
+
+The '``llvm.matrix.columnwise.load.*``' intrinsic loads a matrix with <Rows>
+rows and <Cols> columns, using a stride of %Stride between columns. For two
+consecutive columns A and B, %Stride refers to the distance (the number of
+elements) between the start of column A and the start of column B. The result
+matrix is returned embedded in the result vector. This allows for convenient
+loading of sub matrixes.
+
+Arguments:
+""""""""""
+
+The <Rows> and <Cols> arguments must be constant integers. The returned vector
+must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
+
+'``llvm.matrix.columnwise.store.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.matrix.columnwise.store.*(vectorty %In, ptrty %Ptr, i32 %Stride, i32 <Rows>, i32 <Cols>)
+
+Overview:
+"""""""""
+
+The '``llvm.matrix.columnwise.store.*``' intrinsic stores the matrix with
+<Rows> rows and <Cols> columns embedded in %In, using a stride of %Stride
+between columns. For two consecutive columns A and B, %Stride refers to the
+distance (the number of elements) between the start of column A and the start
+of column B.
+
+Arguments:
+""""""""""
+
+The <Rows> and <Cols> arguments must be constant integers. The vector argument
+%In must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
+
 Half Precision Floating-Point Intrinsics
 ----------------------------------------
 

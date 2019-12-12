@@ -217,7 +217,7 @@ private:
 /// examining source files other than the one in which the diagnostic is
 /// located, and in some use cases we cannot rely on such other files being
 /// mapped in the SourceMapper.
-bool ShouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
+bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
                               const Diagnostic &Info, ClangTidyContext &Context,
                               bool CheckMacroExpansion = true);
 

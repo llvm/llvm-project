@@ -1,0 +1,30 @@
+## Check how we print relocations.
+
+# RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.wasm \
+# RUN:   | FileCheck %s --check-prefix WASM
+
+# WASM:      Relocations [
+# WASM-NEXT:   Section (4) CODE {
+# WASM-NEXT:     Relocation {
+# WASM-NEXT:       Type: R_WASM_MEMORY_ADDR_SLEB (4)
+# WASM-NEXT:       Offset: 0x4
+# WASM-NEXT:       Symbol: .L.str
+# WASM-NEXT:       Addend: 0
+# WASM-NEXT:     }
+# WASM-NEXT:     Relocation {
+# WASM-NEXT:       Type: R_WASM_FUNCTION_INDEX_LEB (0)
+# WASM-NEXT:       Offset: 0xA
+# WASM-NEXT:       Symbol: puts
+# WASM-NEXT:     }
+# WASM-NEXT:     Relocation {
+# WASM-NEXT:       Type: R_WASM_FUNCTION_INDEX_LEB (0)
+# WASM-NEXT:       Offset: 0x11
+# WASM-NEXT:       Symbol: .LSomeOtherFunction_bitcast
+# WASM-NEXT:     }
+# WASM-NEXT:     Relocation {
+# WASM-NEXT:       Type: R_WASM_FUNCTION_INDEX_LEB (0)
+# WASM-NEXT:       Offset: 0x1E
+# WASM-NEXT:       Symbol: SomeOtherFunction
+# WASM-NEXT:     }
+# WASM-NEXT:   }
+# WASM-NEXT: ]

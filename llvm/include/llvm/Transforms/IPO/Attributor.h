@@ -1840,7 +1840,9 @@ struct DerefState : AbstractState {
   /// ```
   /// In that case, AccessedBytesMap is `{0:4, 4:4, 8:4, 40:4}`.
   /// AccessedBytesMap is std::map so it is iterated in accending order on
-  /// key(Offset). So KnownBytes will be updated like this: |Access | KnownBytes
+  /// key(Offset). So KnownBytes will be updated like this:
+  ///
+  /// |Access | KnownBytes
   /// |(0, 4)| 0 -> 4
   /// |(4, 4)| 4 -> 8
   /// |(8, 4)| 8 -> 12

@@ -95,7 +95,7 @@ unsigned VRegRenamer::createVirtualRegister(unsigned VReg) {
 
 bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
   std::vector<NamedVReg> VRegs;
-  std::string Prefix = "bb" + std::to_string(getCurrentBBNumber()) + "_";
+  std::string Prefix = "bb" + std::to_string(CurrentBBNumber) + "_";
   for (MachineInstr &Candidate : *MBB) {
     // Don't rename stores/branches.
     if (Candidate.mayStore() || Candidate.isBranch())
@@ -112,11 +112,6 @@ bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
   }
 
   return VRegs.size() ? doVRegRenaming(getVRegRenameMap(VRegs)) : false;
-}
-
-bool VRegRenamer::renameVRegs(MachineBasicBlock *MBB, unsigned BBNum) {
-  CurrentBBNumber = BBNum;
-  return renameInstsInMBB(MBB);
 }
 
 unsigned VRegRenamer::createVirtualRegisterWithLowerName(unsigned VReg,

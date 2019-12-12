@@ -188,8 +188,19 @@ inline bool operator!=(const SourceLocation &LHS, const SourceLocation &RHS) {
   return !(LHS == RHS);
 }
 
+// Ordering is meaningful only if LHS and RHS have the same FileID!
+// Otherwise use SourceManager::isBeforeInTranslationUnit().
 inline bool operator<(const SourceLocation &LHS, const SourceLocation &RHS) {
   return LHS.getRawEncoding() < RHS.getRawEncoding();
+}
+inline bool operator>(const SourceLocation &LHS, const SourceLocation &RHS) {
+  return LHS.getRawEncoding() > RHS.getRawEncoding();
+}
+inline bool operator<=(const SourceLocation &LHS, const SourceLocation &RHS) {
+  return LHS.getRawEncoding() <= RHS.getRawEncoding();
+}
+inline bool operator>=(const SourceLocation &LHS, const SourceLocation &RHS) {
+  return LHS.getRawEncoding() >= RHS.getRawEncoding();
 }
 
 /// A trivial tuple used to represent a source range.

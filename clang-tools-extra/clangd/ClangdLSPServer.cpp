@@ -566,6 +566,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"declarationProvider", true},
             {"definitionProvider", true},
             {"documentHighlightProvider", true},
+            {"documentLinkProvider",
+             llvm::json::Object{
+                 {"resolveProvider", false},
+             }},
             {"hoverProvider", true},
             {"renameProvider", std::move(RenameProvider)},
             {"selectionRangeProvider", true},
@@ -1200,6 +1204,25 @@ void ClangdLSPServer::onSelectionRange(
       });
 }
 
+void ClangdLSPServer::onDocumentLink(
+    const DocumentLinkParams &Params,
+    Callback<std::vector<DocumentLink>> Reply) {
+
+  // TODO(forster): This currently resolves all targets eagerly. This is slow,
+  // because it blocks on the preamble/AST being built. We could respond to the
+  // request faster by using string matching or the lexer to find the includes
+  // and resolving the targets lazily.
+  Server->documentLinks(
+      Params.textDocument.uri.file(),
+      [Reply = std::move(Reply)](
+          llvm::Expected<std::vector<DocumentLink>> Links) mutable {
+        if (!Links) {
+          return Reply(Links.takeError());
+        }
+        return Reply(std::move(Links));
+      });
+}
+
 ClangdLSPServer::ClangdLSPServer(
     class Transport &Transp, const FileSystemProvider &FSProvider,
     const clangd::CodeCompleteOptions &CCOpts,
@@ -1243,6 +1266,7 @@ ClangdLSPServer::ClangdLSPServer(
   MsgHandler->bind("textDocument/typeHierarchy", &ClangdLSPServer::onTypeHierarchy);
   MsgHandler->bind("typeHierarchy/resolve", &ClangdLSPServer::onResolveTypeHierarchy);
   MsgHandler->bind("textDocument/selectionRange", &ClangdLSPServer::onSelectionRange);
+  MsgHandler->bind("textDocument/documentLink", &ClangdLSPServer::onDocumentLink);
   // clang-format on
 }
 

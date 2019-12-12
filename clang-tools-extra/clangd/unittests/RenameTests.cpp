@@ -487,11 +487,10 @@ TEST(RenameTest, Renameable) {
           "not a supported kind", HeaderFile, Index},
 
       {
-
           R"cpp(
         struct X { X operator++(int); };
         void f(X x) {x+^+;})cpp",
-          "not a supported kind", HeaderFile, Index},
+          "no symbol", HeaderFile, Index},
 
       {R"cpp(// foo is declared outside the file.
         void fo^o() {}
@@ -720,24 +719,24 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags = {"-xc++"};
   class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(PathRef File,
-                          std::vector<Diag> Diagnostics) override {}
+    void onDiagnosticsReady(PathRef File,
+                            std::vector<Diag> Diagnostics) override {}
   } DiagConsumer;
   // rename is runnning on the "^" point in FooH, and "[[]]" ranges are the
-  // expcted rename occurrences.
+  // expected rename occurrences.
   struct Case {
     llvm::StringRef FooH;
     llvm::StringRef FooCC;
-  } Cases [] = {
-    {
-      // classes.
-      R"cpp(
+  } Cases[] = {
+      {
+          // classes.
+          R"cpp(
         class [[Fo^o]] {
           [[Foo]]();
           ~[[Foo]]();
         };
       )cpp",
-      R"cpp(
+          R"cpp(
         #include "foo.h"
         [[Foo]]::[[Foo]]() {}
         [[Foo]]::~[[Foo]]() {}
@@ -746,15 +745,15 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           [[Foo]] foo;
         }
       )cpp",
-    },
-    {
-      // class methods.
-      R"cpp(
+      },
+      {
+          // class methods.
+          R"cpp(
         class Foo {
           void [[f^oo]]();
         };
       )cpp",
-      R"cpp(
+          R"cpp(
         #include "foo.h"
         void Foo::[[foo]]() {}
 
@@ -762,13 +761,49 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           p->[[foo]]();
         }
       )cpp",
-    },
-    {
-      // functions.
-      R"cpp(
+      },
+      {
+          // Constructor.
+          R"cpp(
+        class [[Foo]] {
+          [[^Foo]]();
+          ~[[Foo]]();
+        };
+      )cpp",
+          R"cpp(
+        #include "foo.h"
+        [[Foo]]::[[Foo]]() {}
+        [[Foo]]::~[[Foo]]() {}
+
+        void func() {
+          [[Foo]] foo;
+        }
+      )cpp",
+      },
+      {
+          // Destructor (selecting before the identifier).
+          R"cpp(
+        class [[Foo]] {
+          [[Foo]]();
+          ~[[Foo^]]();
+        };
+      )cpp",
+          R"cpp(
+        #include "foo.h"
+        [[Foo]]::[[Foo]]() {}
+        [[Foo]]::~[[Foo]]() {}
+
+        void func() {
+          [[Foo]] foo;
+        }
+      )cpp",
+      },
+      {
+          // functions.
+          R"cpp(
         void [[f^oo]]();
       )cpp",
-      R"cpp(
+          R"cpp(
         #include "foo.h"
         void [[foo]]() {}
 
@@ -776,63 +811,63 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           [[foo]]();
         }
       )cpp",
-    },
-    {
-      // typedefs.
-      R"cpp(
+      },
+      {
+          // typedefs.
+          R"cpp(
       typedef int [[IN^T]];
       [[INT]] foo();
       )cpp",
-      R"cpp(
+          R"cpp(
         #include "foo.h"
         [[INT]] foo() {}
       )cpp",
-    },
-    {
-      // usings.
-      R"cpp(
+      },
+      {
+          // usings.
+          R"cpp(
       using [[I^NT]] = int;
       [[INT]] foo();
       )cpp",
-      R"cpp(
+          R"cpp(
         #include "foo.h"
         [[INT]] foo() {}
       )cpp",
-    },
-    {
-      // variables.
-      R"cpp(
+      },
+      {
+          // variables.
+          R"cpp(
       static const int [[VA^R]] = 123;
       )cpp",
-      R"cpp(
+          R"cpp(
         #include "foo.h"
         int s = [[VAR]];
       )cpp",
-    },
-    {
-      // scope enums.
-      R"cpp(
+      },
+      {
+          // scope enums.
+          R"cpp(
       enum class [[K^ind]] { ABC };
       )cpp",
-      R"cpp(
+          R"cpp(
         #include "foo.h"
         [[Kind]] ff() {
           return [[Kind]]::ABC;
         }
       )cpp",
-    },
-    {
-      // enum constants.
-      R"cpp(
+      },
+      {
+          // enum constants.
+          R"cpp(
       enum class Kind { [[A^BC]] };
       )cpp",
-      R"cpp(
+          R"cpp(
         #include "foo.h"
         Kind ff() {
           return Kind::[[ABC]];
         }
       )cpp",
-    },
+      },
   };
 
   for (const auto& T : Cases) {

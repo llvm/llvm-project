@@ -308,7 +308,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   const bool ArePtrs64bit = STI->getABI().ArePtrs64bit();
   DebugLoc DL = I->getDebugLoc();
 
-  unsigned LL, SC;
+  unsigned LL, SC, SLT, SLTu, OR, MOVN, MOVZ, SELNEZ, SELEQZ;
   unsigned BEQ = Mips::BEQ;
   unsigned SEOp = Mips::SEH;
 
@@ -316,15 +316,32 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
       LL = STI->hasMips32r6() ? Mips::LL_MMR6 : Mips::LL_MM;
       SC = STI->hasMips32r6() ? Mips::SC_MMR6 : Mips::SC_MM;
       BEQ = STI->hasMips32r6() ? Mips::BEQC_MMR6 : Mips::BEQ_MM;
+      SLT = Mips::SLT_MM;
+      SLTu = Mips::SLTu_MM;
+      OR = STI->hasMips32r6() ? Mips::OR_MMR6 : Mips::OR_MM;
+      MOVN = Mips::MOVN_I_MM;
+      MOVZ = Mips::MOVZ_I_MM;
+      SELNEZ = STI->hasMips32r6() ? Mips::SELNEZ_MMR6 : Mips::SELNEZ;
+      SELEQZ = STI->hasMips32r6() ? Mips::SELEQZ_MMR6 : Mips::SELEQZ;
   } else {
     LL = STI->hasMips32r6() ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
                             : (ArePtrs64bit ? Mips::LL64 : Mips::LL);
     SC = STI->hasMips32r6() ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
                             : (ArePtrs64bit ? Mips::SC64 : Mips::SC);
+    SLT = Mips::SLT;
+    SLTu = Mips::SLTu;
+    OR = Mips::OR;
+    MOVN = Mips::MOVN_I_I;
+    MOVZ = Mips::MOVZ_I_I;
+    SELNEZ = Mips::SELNEZ;
+    SELEQZ = Mips::SELEQZ;
   }
 
   bool IsSwap = false;
   bool IsNand = false;
+  bool IsMin = false;
+  bool IsMax = false;
+  bool IsUnsigned = false;
 
   unsigned Opcode = 0;
   switch (I->getOpcode()) {
@@ -369,6 +386,22 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     LLVM_FALLTHROUGH;
   case Mips::ATOMIC_LOAD_XOR_I16_POSTRA:
     Opcode = Mips::XOR;
+    break;
+  case Mips::ATOMIC_LOAD_UMIN_I8_POSTRA:
+  case Mips::ATOMIC_LOAD_UMIN_I16_POSTRA:
+    IsUnsigned = true;
+    LLVM_FALLTHROUGH;
+  case Mips::ATOMIC_LOAD_MIN_I8_POSTRA:
+  case Mips::ATOMIC_LOAD_MIN_I16_POSTRA:
+    IsMin = true;
+    break;
+  case Mips::ATOMIC_LOAD_UMAX_I8_POSTRA:
+  case Mips::ATOMIC_LOAD_UMAX_I16_POSTRA:
+    IsUnsigned = true;
+    LLVM_FALLTHROUGH;
+  case Mips::ATOMIC_LOAD_MAX_I8_POSTRA:
+  case Mips::ATOMIC_LOAD_MAX_I16_POSTRA:
+    IsMax = true;
     break;
   default:
     llvm_unreachable("Unknown subword atomic pseudo for expansion!");
@@ -415,6 +448,68 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
         .addReg(BinOpRes)
         .addReg(Mask);
+  } else if (IsMin || IsMax) {
+
+    assert(I->getNumOperands() == 10 &&
+           "Atomics min|max|umin|umax use an additional register");
+    Register Scratch4 = I->getOperand(9).getReg();
+
+    unsigned SLTScratch4 = IsUnsigned ? SLTu : SLT;
+    unsigned SELIncr = IsMax ? SELNEZ : SELEQZ;
+    unsigned SELOldVal = IsMax ? SELEQZ : SELNEZ;
+    unsigned MOVIncr = IsMax ? MOVN : MOVZ;
+
+    // For little endian we need to clear uninterested bits.
+    if (STI->isLittle()) {
+      // and OldVal, OldVal, Mask
+      // and Incr, Incr, Mask
+      BuildMI(loopMBB, DL, TII->get(Mips::AND), OldVal)
+          .addReg(OldVal)
+          .addReg(Mask);
+      BuildMI(loopMBB, DL, TII->get(Mips::AND), Incr).addReg(Incr).addReg(Mask);
+    }
+
+    // unsigned: sltu Scratch4, oldVal, Incr
+    // signed:   slt Scratch4, oldVal, Incr
+    BuildMI(loopMBB, DL, TII->get(SLTScratch4), Scratch4)
+        .addReg(OldVal)
+        .addReg(Incr);
+
+    if (STI->hasMips64r6() || STI->hasMips32r6()) {
+      // max: seleqz BinOpRes, OldVal, Scratch4
+      //      selnez Scratch4, Incr, Scratch4
+      //      or BinOpRes, BinOpRes, Scratch4
+      // min: selnqz BinOpRes, OldVal, Scratch4
+      //      seleqz Scratch4, Incr, Scratch4
+      //      or BinOpRes, BinOpRes, Scratch4
+      BuildMI(loopMBB, DL, TII->get(SELOldVal), BinOpRes)
+          .addReg(OldVal)
+          .addReg(Scratch4);
+      BuildMI(loopMBB, DL, TII->get(SELIncr), Scratch4)
+          .addReg(Incr)
+          .addReg(Scratch4);
+      BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
+          .addReg(BinOpRes)
+          .addReg(Scratch4);
+    } else {
+      // max: move BinOpRes, OldVal
+      //      movn BinOpRes, Incr, Scratch4, BinOpRes
+      // min: move BinOpRes, OldVal
+      //      movz BinOpRes, Incr, Scratch4, BinOpRes
+      BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
+          .addReg(OldVal)
+          .addReg(Mips::ZERO);
+      BuildMI(loopMBB, DL, TII->get(MOVIncr), BinOpRes)
+          .addReg(Incr)
+          .addReg(Scratch4)
+          .addReg(BinOpRes);
+    }
+
+    //  and BinOpRes, BinOpRes, Mask
+    BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
+        .addReg(BinOpRes)
+        .addReg(Mask);
+
   } else if (!IsSwap) {
     //  <binop> binopres, oldval, incr2
     //  and newval, binopres, mask
@@ -488,13 +583,20 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   const bool ArePtrs64bit = STI->getABI().ArePtrs64bit();
   DebugLoc DL = I->getDebugLoc();
 
-  unsigned LL, SC, ZERO, BEQ;
+  unsigned LL, SC, ZERO, BEQ, SLT, SLTu, OR, MOVN, MOVZ, SELNEZ, SELEQZ;
 
   if (Size == 4) {
     if (STI->inMicroMipsMode()) {
       LL = STI->hasMips32r6() ? Mips::LL_MMR6 : Mips::LL_MM;
       SC = STI->hasMips32r6() ? Mips::SC_MMR6 : Mips::SC_MM;
       BEQ = STI->hasMips32r6() ? Mips::BEQC_MMR6 : Mips::BEQ_MM;
+      SLT = Mips::SLT_MM;
+      SLTu = Mips::SLTu_MM;
+      OR = STI->hasMips32r6() ? Mips::OR_MMR6 : Mips::OR_MM;
+      MOVN = Mips::MOVN_I_MM;
+      MOVZ = Mips::MOVZ_I_MM;
+      SELNEZ = STI->hasMips32r6() ? Mips::SELNEZ_MMR6 : Mips::SELNEZ;
+      SELEQZ = STI->hasMips32r6() ? Mips::SELEQZ_MMR6 : Mips::SELEQZ;
     } else {
       LL = STI->hasMips32r6()
                ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
@@ -503,6 +605,13 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
                ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
                : (ArePtrs64bit ? Mips::SC64 : Mips::SC);
       BEQ = Mips::BEQ;
+      SLT = Mips::SLT;
+      SLTu = Mips::SLTu;
+      OR = Mips::OR;
+      MOVN = Mips::MOVN_I_I;
+      MOVZ = Mips::MOVZ_I_I;
+      SELNEZ = Mips::SELNEZ;
+      SELEQZ = Mips::SELEQZ;
     }
 
     ZERO = Mips::ZERO;
@@ -511,6 +620,13 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     SC = STI->hasMips64r6() ? Mips::SCD_R6 : Mips::SCD;
     ZERO = Mips::ZERO_64;
     BEQ = Mips::BEQ64;
+    SLT = Mips::SLT64;
+    SLTu = Mips::SLTu64;
+    OR = Mips::OR64;
+    MOVN = Mips::MOVN_I64_I64;
+    MOVZ = Mips::MOVZ_I64_I64;
+    SELNEZ = Mips::SELNEZ64;
+    SELEQZ = Mips::SELEQZ64;
   }
 
   Register OldVal = I->getOperand(0).getReg();
@@ -519,10 +635,15 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   Register Scratch = I->getOperand(3).getReg();
 
   unsigned Opcode = 0;
-  unsigned OR = 0;
   unsigned AND = 0;
   unsigned NOR = 0;
+
+  bool IsOr = false;
   bool IsNand = false;
+  bool IsMin = false;
+  bool IsMax = false;
+  bool IsUnsigned = false;
+
   switch (I->getOpcode()) {
   case Mips::ATOMIC_LOAD_ADD_I32_POSTRA:
     Opcode = Mips::ADDu;
@@ -545,7 +666,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     NOR = Mips::NOR;
     break;
   case Mips::ATOMIC_SWAP_I32_POSTRA:
-    OR = Mips::OR;
+    IsOr = true;
     break;
   case Mips::ATOMIC_LOAD_ADD_I64_POSTRA:
     Opcode = Mips::DADDu;
@@ -568,7 +689,23 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     NOR = Mips::NOR64;
     break;
   case Mips::ATOMIC_SWAP_I64_POSTRA:
-    OR = Mips::OR64;
+    IsOr = true;
+    break;
+  case Mips::ATOMIC_LOAD_UMIN_I32_POSTRA:
+  case Mips::ATOMIC_LOAD_UMIN_I64_POSTRA:
+    IsUnsigned = true;
+    LLVM_FALLTHROUGH;
+  case Mips::ATOMIC_LOAD_MIN_I32_POSTRA:
+  case Mips::ATOMIC_LOAD_MIN_I64_POSTRA:
+    IsMin = true;
+    break;
+  case Mips::ATOMIC_LOAD_UMAX_I32_POSTRA:
+  case Mips::ATOMIC_LOAD_UMAX_I64_POSTRA:
+    IsUnsigned = true;
+    LLVM_FALLTHROUGH;
+  case Mips::ATOMIC_LOAD_MAX_I32_POSTRA:
+  case Mips::ATOMIC_LOAD_MAX_I64_POSTRA:
+    IsMax = true;
     break;
   default:
     llvm_unreachable("Unknown pseudo atomic!");
@@ -592,7 +729,59 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   BuildMI(loopMBB, DL, TII->get(LL), OldVal).addReg(Ptr).addImm(0);
   assert((OldVal != Ptr) && "Clobbered the wrong ptr reg!");
   assert((OldVal != Incr) && "Clobbered the wrong reg!");
-  if (Opcode) {
+  if (IsMin || IsMax) {
+
+    assert(I->getNumOperands() == 5 &&
+           "Atomics min|max|umin|umax use an additional register");
+    Register Scratch2 = I->getOperand(4).getReg();
+
+    // On Mips64 result of slt is GPR32.
+    Register Scratch2_32 =
+        (Size == 8) ? STI->getRegisterInfo()->getSubReg(Scratch2, Mips::sub_32)
+                    : Scratch2;
+
+    unsigned SLTScratch2 = IsUnsigned ? SLTu : SLT;
+    unsigned SELIncr = IsMax ? SELNEZ : SELEQZ;
+    unsigned SELOldVal = IsMax ? SELEQZ : SELNEZ;
+    unsigned MOVIncr = IsMax ? MOVN : MOVZ;
+
+    // unsigned: sltu Scratch2, oldVal, Incr
+    // signed:   slt Scratch2, oldVal, Incr
+    BuildMI(loopMBB, DL, TII->get(SLTScratch2), Scratch2_32)
+        .addReg(OldVal)
+        .addReg(Incr);
+
+    if (STI->hasMips64r6() || STI->hasMips32r6()) {
+      // max: seleqz Scratch, OldVal, Scratch2
+      //      selnez Scratch2, Incr, Scratch2
+      //      or Scratch, Scratch, Scratch2
+      // min: selnez Scratch, OldVal, Scratch2
+      //      seleqz Scratch2, Incr, Scratch2
+      //      or Scratch, Scratch, Scratch2
+      BuildMI(loopMBB, DL, TII->get(SELOldVal), Scratch)
+          .addReg(OldVal)
+          .addReg(Scratch2);
+      BuildMI(loopMBB, DL, TII->get(SELIncr), Scratch2)
+          .addReg(Incr)
+          .addReg(Scratch2);
+      BuildMI(loopMBB, DL, TII->get(OR), Scratch)
+          .addReg(Scratch)
+          .addReg(Scratch2);
+    } else {
+      // max: move Scratch, OldVal
+      //      movn Scratch, Incr, Scratch2, Scratch
+      // min: move Scratch, OldVal
+      //      movz Scratch, Incr, Scratch2, Scratch
+      BuildMI(loopMBB, DL, TII->get(OR), Scratch)
+          .addReg(OldVal)
+          .addReg(ZERO);
+      BuildMI(loopMBB, DL, TII->get(MOVIncr), Scratch)
+          .addReg(Incr)
+          .addReg(Scratch2)
+          .addReg(Scratch);
+    }
+
+  } else if (Opcode) {
     BuildMI(loopMBB, DL, TII->get(Opcode), Scratch).addReg(OldVal).addReg(Incr);
   } else if (IsNand) {
     assert(AND && NOR &&
@@ -600,7 +789,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     BuildMI(loopMBB, DL, TII->get(AND), Scratch).addReg(OldVal).addReg(Incr);
     BuildMI(loopMBB, DL, TII->get(NOR), Scratch).addReg(ZERO).addReg(Scratch);
   } else {
-    assert(OR && "Unknown instruction for atomic pseudo expansion!");
+    assert(IsOr && OR && "Unknown instruction for atomic pseudo expansion!");
     BuildMI(loopMBB, DL, TII->get(OR), Scratch).addReg(Incr).addReg(ZERO);
   }
 
@@ -650,6 +839,14 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case Mips::ATOMIC_LOAD_OR_I16_POSTRA:
   case Mips::ATOMIC_LOAD_XOR_I8_POSTRA:
   case Mips::ATOMIC_LOAD_XOR_I16_POSTRA:
+  case Mips::ATOMIC_LOAD_MIN_I8_POSTRA:
+  case Mips::ATOMIC_LOAD_MIN_I16_POSTRA:
+  case Mips::ATOMIC_LOAD_MAX_I8_POSTRA:
+  case Mips::ATOMIC_LOAD_MAX_I16_POSTRA:
+  case Mips::ATOMIC_LOAD_UMIN_I8_POSTRA:
+  case Mips::ATOMIC_LOAD_UMIN_I16_POSTRA:
+  case Mips::ATOMIC_LOAD_UMAX_I8_POSTRA:
+  case Mips::ATOMIC_LOAD_UMAX_I16_POSTRA:
     return expandAtomicBinOpSubword(MBB, MBBI, NMBB);
   case Mips::ATOMIC_LOAD_ADD_I32_POSTRA:
   case Mips::ATOMIC_LOAD_SUB_I32_POSTRA:
@@ -658,6 +855,10 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case Mips::ATOMIC_LOAD_XOR_I32_POSTRA:
   case Mips::ATOMIC_LOAD_NAND_I32_POSTRA:
   case Mips::ATOMIC_SWAP_I32_POSTRA:
+  case Mips::ATOMIC_LOAD_MIN_I32_POSTRA:
+  case Mips::ATOMIC_LOAD_MAX_I32_POSTRA:
+  case Mips::ATOMIC_LOAD_UMIN_I32_POSTRA:
+  case Mips::ATOMIC_LOAD_UMAX_I32_POSTRA:
     return expandAtomicBinOp(MBB, MBBI, NMBB, 4);
   case Mips::ATOMIC_LOAD_ADD_I64_POSTRA:
   case Mips::ATOMIC_LOAD_SUB_I64_POSTRA:
@@ -666,6 +867,10 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case Mips::ATOMIC_LOAD_XOR_I64_POSTRA:
   case Mips::ATOMIC_LOAD_NAND_I64_POSTRA:
   case Mips::ATOMIC_SWAP_I64_POSTRA:
+  case Mips::ATOMIC_LOAD_MIN_I64_POSTRA:
+  case Mips::ATOMIC_LOAD_MAX_I64_POSTRA:
+  case Mips::ATOMIC_LOAD_UMIN_I64_POSTRA:
+  case Mips::ATOMIC_LOAD_UMAX_I64_POSTRA:
     return expandAtomicBinOp(MBB, MBBI, NMBB, 8);
   default:
     return Modified;

@@ -248,6 +248,31 @@ TokenBuffer::expansionStartingAt(const syntax::Token *Spelled) const {
   return E;
 }
 
+llvm::ArrayRef<syntax::Token>
+syntax::spelledTokensTouching(SourceLocation Loc,
+                              const syntax::TokenBuffer &Tokens) {
+  assert(Loc.isFileID());
+  llvm::ArrayRef<syntax::Token> All =
+      Tokens.spelledTokens(Tokens.sourceManager().getFileID(Loc));
+  // Comparing SourceLocations is well-defined within a FileID.
+  auto *Right = llvm::partition_point(
+      All, [&](const syntax::Token &Tok) { return Tok.location() < Loc; });
+  bool AcceptRight = Right != All.end() && Right->location() <= Loc;
+  bool AcceptLeft = Right != All.begin() && (Right - 1)->endLocation() >= Loc;
+  return llvm::makeArrayRef(Right - (AcceptLeft ? 1 : 0),
+                            Right + (AcceptRight ? 1 : 0));
+}
+
+const syntax::Token *
+syntax::spelledIdentifierTouching(SourceLocation Loc,
+                                  const syntax::TokenBuffer &Tokens) {
+  for (const syntax::Token &Tok : spelledTokensTouching(Loc, Tokens)) {
+    if (Tok.kind() == tok::identifier)
+      return &Tok;
+  }
+  return nullptr;
+}
+
 std::vector<const syntax::Token *>
 TokenBuffer::macroExpansions(FileID FID) const {
   auto FileIt = Files.find(FID);

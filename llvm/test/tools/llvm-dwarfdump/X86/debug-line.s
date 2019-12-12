@@ -43,6 +43,7 @@
 # CHECK-NEXT: 0x0000000000000002      1      0      1   0             0  is_stmt
 # CHECK-NEXT: 0x0000000000000002      1      4      3   0             0  is_stmt
 # CHECK-NEXT: 0x0000000000000024      1      4      3   5             6  basic_block prologue_end epilogue_begin end_sequence
+# CHECK-EMPTY:
 # CHECK-NEXT: debug_line[0x0000006d]
 # CHECK-NEXT: Line table prologue:
 # CHECK-NEXT:     total_length: 0x0000001b

@@ -295,7 +295,7 @@ private:
 
   syntax::Arena &Arena;
   Forest Pending;
-  llvm::DenseSet<Decl*> DeclsWithoutSemicolons;
+  llvm::DenseSet<Decl *> DeclsWithoutSemicolons;
 };
 
 namespace {
@@ -394,6 +394,18 @@ public:
     assert(!isImplicitExpr(E) && "should be handled by TraverseStmt");
     Builder.foldNode(Builder.getExprRange(E),
                      new (allocator()) syntax::UnknownExpression);
+    return true;
+  }
+
+  bool WalkUpFromNamespaceDecl(NamespaceDecl *S) {
+    auto Tokens = Builder.getRange(S);
+    if (Tokens.front().kind() == tok::coloncolon) {
+      // Handle nested namespace definitions. Those start at '::' token, e.g.
+      // namespace a^::b {}
+      // FIXME: build corresponding nodes for the name of this namespace.
+      return true;
+    }
+    Builder.foldNode(Tokens, new (allocator()) syntax::NamespaceDefinition);
     return true;
   }
 
@@ -504,6 +516,64 @@ public:
     return true;
   }
 
+  bool WalkUpFromEmptyDecl(EmptyDecl *S) {
+    Builder.foldNode(Builder.getRange(S),
+                     new (allocator()) syntax::EmptyDeclaration);
+    return true;
+  }
+
+  bool WalkUpFromStaticAssertDecl(StaticAssertDecl *S) {
+    Builder.markExprChild(S->getAssertExpr(),
+                          syntax::NodeRole::StaticAssertDeclaration_condition);
+    Builder.markExprChild(S->getMessage(),
+                          syntax::NodeRole::StaticAssertDeclaration_message);
+    Builder.foldNode(Builder.getRange(S),
+                     new (allocator()) syntax::StaticAssertDeclaration);
+    return true;
+  }
+
+  bool WalkUpFromLinkageSpecDecl(LinkageSpecDecl *S) {
+    Builder.foldNode(Builder.getRange(S),
+                     new (allocator()) syntax::LinkageSpecificationDeclaration);
+    return true;
+  }
+
+  bool WalkUpFromNamespaceAliasDecl(NamespaceAliasDecl *S) {
+    Builder.foldNode(Builder.getRange(S),
+                     new (allocator()) syntax::NamespaceAliasDefinition);
+    return true;
+  }
+
+  bool WalkUpFromUsingDirectiveDecl(UsingDirectiveDecl *S) {
+    Builder.foldNode(Builder.getRange(S),
+                     new (allocator()) syntax::UsingNamespaceDirective);
+    return true;
+  }
+
+  bool WalkUpFromUsingDecl(UsingDecl *S) {
+    Builder.foldNode(Builder.getRange(S),
+                     new (allocator()) syntax::UsingDeclaration);
+    return true;
+  }
+
+  bool WalkUpFromUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *S) {
+    Builder.foldNode(Builder.getRange(S),
+                     new (allocator()) syntax::UsingDeclaration);
+    return true;
+  }
+
+  bool WalkUpFromUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *S) {
+    Builder.foldNode(Builder.getRange(S),
+                     new (allocator()) syntax::UsingDeclaration);
+    return true;
+  }
+
+  bool WalkUpFromTypeAliasDecl(TypeAliasDecl *S) {
+    Builder.foldNode(Builder.getRange(S),
+                     new (allocator()) syntax::TypeAliasDeclaration);
+    return true;
+  }
+
 private:
   /// A small helper to save some typing.
   llvm::BumpPtrAllocator &allocator() { return Builder.allocator(); }
@@ -553,6 +623,9 @@ void syntax::TreeBuilder::markStmtChild(Stmt *Child, NodeRole Role) {
 }
 
 void syntax::TreeBuilder::markExprChild(Expr *Child, NodeRole Role) {
+  if (!Child)
+    return;
+
   Pending.assignRole(getExprRange(Child), Role);
 }
 

@@ -117,7 +117,7 @@ protected:
   // Member variables
   Terminal m_tty; ///< A terminal
   int m_tflags;   ///< Cached tflags information.
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
   std::unique_ptr<struct termios>
       m_termios_up; ///< Cached terminal state information.
 #endif

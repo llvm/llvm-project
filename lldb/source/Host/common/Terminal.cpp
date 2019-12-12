@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <signal.h>
 
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
 #include <termios.h>
 #endif
 
@@ -25,7 +25,7 @@ bool Terminal::IsATerminal() const { return m_fd >= 0 && ::isatty(m_fd); }
 
 bool Terminal::SetEcho(bool enabled) {
   if (FileDescriptorIsValid()) {
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
     if (IsATerminal()) {
       struct termios fd_termios;
       if (::tcgetattr(m_fd, &fd_termios) == 0) {
@@ -47,14 +47,14 @@ bool Terminal::SetEcho(bool enabled) {
         return ::tcsetattr(m_fd, TCSANOW, &fd_termios) == 0;
       }
     }
-#endif // #ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#endif // #if LLDB_ENABLE_TERMIOS
   }
   return false;
 }
 
 bool Terminal::SetCanonical(bool enabled) {
   if (FileDescriptorIsValid()) {
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
     if (IsATerminal()) {
       struct termios fd_termios;
       if (::tcgetattr(m_fd, &fd_termios) == 0) {
@@ -76,7 +76,7 @@ bool Terminal::SetCanonical(bool enabled) {
         return ::tcsetattr(m_fd, TCSANOW, &fd_termios) == 0;
       }
     }
-#endif // #ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#endif // #if LLDB_ENABLE_TERMIOS
   }
   return false;
 }
@@ -84,7 +84,7 @@ bool Terminal::SetCanonical(bool enabled) {
 // Default constructor
 TerminalState::TerminalState()
     : m_tty(), m_tflags(-1),
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
       m_termios_up(),
 #endif
       m_process_group(-1) {
@@ -96,7 +96,7 @@ TerminalState::~TerminalState() {}
 void TerminalState::Clear() {
   m_tty.Clear();
   m_tflags = -1;
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
   m_termios_up.reset();
 #endif
   m_process_group = -1;
@@ -111,13 +111,13 @@ bool TerminalState::Save(int fd, bool save_process_group) {
 #ifndef LLDB_DISABLE_POSIX
     m_tflags = ::fcntl(fd, F_GETFL, 0);
 #endif
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
     if (m_termios_up == nullptr)
       m_termios_up.reset(new struct termios);
     int err = ::tcgetattr(fd, m_termios_up.get());
     if (err != 0)
       m_termios_up.reset();
-#endif // #ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#endif // #if LLDB_ENABLE_TERMIOS
 #ifndef LLDB_DISABLE_POSIX
     if (save_process_group)
       m_process_group = ::tcgetpgrp(0);
@@ -127,7 +127,7 @@ bool TerminalState::Save(int fd, bool save_process_group) {
   } else {
     m_tty.Clear();
     m_tflags = -1;
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
     m_termios_up.reset();
 #endif
     m_process_group = -1;
@@ -144,10 +144,10 @@ bool TerminalState::Restore() const {
     if (TFlagsIsValid())
       fcntl(fd, F_SETFL, m_tflags);
 
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
     if (TTYStateIsValid())
       tcsetattr(fd, TCSANOW, m_termios_up.get());
-#endif // #ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#endif // #if LLDB_ENABLE_TERMIOS
 
     if (ProcessGroupIsValid()) {
       // Save the original signal handler.
@@ -176,7 +176,7 @@ bool TerminalState::TFlagsIsValid() const { return m_tflags != -1; }
 
 // Returns true if m_ttystate is valid
 bool TerminalState::TTYStateIsValid() const {
-#ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
+#if LLDB_ENABLE_TERMIOS
   return m_termios_up != nullptr;
 #else
   return false;

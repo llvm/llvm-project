@@ -25,36 +25,6 @@
 using namespace lldb_private;
 using namespace clang;
 
-ClangASTMetrics::Counters ClangASTMetrics::global_counters = {0, 0, 0, 0, 0, 0};
-ClangASTMetrics::Counters ClangASTMetrics::local_counters = {0, 0, 0, 0, 0, 0};
-
-void ClangASTMetrics::DumpCounters(Log *log,
-                                   ClangASTMetrics::Counters &counters) {
-  LLDB_LOGF(log, "  Number of visible Decl queries by name     : %" PRIu64,
-            counters.m_visible_query_count);
-  LLDB_LOGF(log, "  Number of lexical Decl queries             : %" PRIu64,
-            counters.m_lexical_query_count);
-  LLDB_LOGF(log, "  Number of imports initiated by LLDB        : %" PRIu64,
-            counters.m_lldb_import_count);
-  LLDB_LOGF(log, "  Number of imports conducted by Clang       : %" PRIu64,
-            counters.m_clang_import_count);
-  LLDB_LOGF(log, "  Number of Decls completed                  : %" PRIu64,
-            counters.m_decls_completed_count);
-  LLDB_LOGF(log, "  Number of records laid out                 : %" PRIu64,
-            counters.m_record_layout_count);
-}
-
-void ClangASTMetrics::DumpCounters(Log *log) {
-  if (!log)
-    return;
-
-  LLDB_LOGF(log, "== ClangASTMetrics output ==");
-  LLDB_LOGF(log, "-- Global metrics --");
-  DumpCounters(log, global_counters);
-  LLDB_LOGF(log, "-- Local metrics --");
-  DumpCounters(log, local_counters);
-}
-
 clang::QualType ClangASTImporter::CopyType(clang::ASTContext *dst_ast,
                                            clang::ASTContext *src_ast,
                                            clang::QualType type) {
@@ -628,8 +598,6 @@ void ClangASTImporter::CompleteDecl(clang::Decl *decl) {
 }
 
 bool ClangASTImporter::CompleteTagDecl(clang::TagDecl *decl) {
-  ClangASTMetrics::RegisterDeclCompletion();
-
   DeclOrigin decl_origin = GetDeclOrigin(decl);
 
   if (!decl_origin.Valid())
@@ -651,8 +619,6 @@ bool ClangASTImporter::CompleteTagDecl(clang::TagDecl *decl) {
 
 bool ClangASTImporter::CompleteTagDeclWithOrigin(clang::TagDecl *decl,
                                                  clang::TagDecl *origin_decl) {
-  ClangASTMetrics::RegisterDeclCompletion();
-
   clang::ASTContext *origin_ast_ctx = &origin_decl->getASTContext();
 
   if (!ClangASTContext::GetCompleteDecl(origin_ast_ctx, origin_decl))
@@ -675,8 +641,6 @@ bool ClangASTImporter::CompleteTagDeclWithOrigin(clang::TagDecl *decl,
 
 bool ClangASTImporter::CompleteObjCInterfaceDecl(
     clang::ObjCInterfaceDecl *interface_decl) {
-  ClangASTMetrics::RegisterDeclCompletion();
-
   DeclOrigin decl_origin = GetDeclOrigin(interface_decl);
 
   if (!decl_origin.Valid())
@@ -1037,8 +1001,6 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
 
 void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
                                                      clang::Decl *to) {
-  ClangASTMetrics::RegisterClangImport();
-
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   // Some decls shouldn't be tracked here because they were not created by

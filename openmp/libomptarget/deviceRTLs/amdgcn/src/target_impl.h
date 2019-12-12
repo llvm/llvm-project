@@ -16,8 +16,10 @@
 #error "amdgcn target_impl.h expects to be compiled under __AMDGCN__"
 #endif
 
-#include <stdint.h>
 #include "amdgcn_interface.h"
+
+#include <stddef.h>
+#include <stdint.h>
 
 #define DEVICE __attribute__((device))
 #define INLINE inline DEVICE

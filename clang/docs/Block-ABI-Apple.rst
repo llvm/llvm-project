@@ -152,7 +152,7 @@ would cause the following to be created on a 32-bit system:
     static struct __block_descriptor_1 {
         unsigned long int reserved;
         unsigned long int Block_size;
-    } __block_descriptor_1 = { 0, sizeof(struct __block_literal_1), __block_invoke_1 };
+    } __block_descriptor_1 = { 0, sizeof(struct __block_literal_1) };
 
 and where the ``Block`` literal itself appears:
 

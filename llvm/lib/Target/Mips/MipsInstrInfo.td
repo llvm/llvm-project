@@ -1925,6 +1925,18 @@ let usesCustomInserter = 1 in {
   def ATOMIC_CMP_SWAP_I16  : AtomicCmpSwap<atomic_cmp_swap_16, GPR32>;
   def ATOMIC_CMP_SWAP_I32  : AtomicCmpSwap<atomic_cmp_swap_32, GPR32>;
 
+  def ATOMIC_LOAD_MIN_I8   : Atomic2Ops<atomic_load_min_8, GPR32>;
+  def ATOMIC_LOAD_MIN_I16  : Atomic2Ops<atomic_load_min_16, GPR32>;
+  def ATOMIC_LOAD_MIN_I32  : Atomic2Ops<atomic_load_min_32, GPR32>;
+  def ATOMIC_LOAD_MAX_I8   : Atomic2Ops<atomic_load_max_8, GPR32>;
+  def ATOMIC_LOAD_MAX_I16  : Atomic2Ops<atomic_load_max_16, GPR32>;
+  def ATOMIC_LOAD_MAX_I32  : Atomic2Ops<atomic_load_max_32, GPR32>;
+  def ATOMIC_LOAD_UMIN_I8  : Atomic2Ops<atomic_load_umin_8, GPR32>;
+  def ATOMIC_LOAD_UMIN_I16 : Atomic2Ops<atomic_load_umin_16, GPR32>;
+  def ATOMIC_LOAD_UMIN_I32 : Atomic2Ops<atomic_load_umin_32, GPR32>;
+  def ATOMIC_LOAD_UMAX_I8  : Atomic2Ops<atomic_load_umax_8, GPR32>;
+  def ATOMIC_LOAD_UMAX_I16 : Atomic2Ops<atomic_load_umax_16, GPR32>;
+  def ATOMIC_LOAD_UMAX_I32 : Atomic2Ops<atomic_load_umax_32, GPR32>;
 }
 
 def ATOMIC_LOAD_ADD_I8_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
@@ -1953,6 +1965,19 @@ def ATOMIC_SWAP_I32_POSTRA : Atomic2OpsPostRA<GPR32>;
 def ATOMIC_CMP_SWAP_I8_POSTRA : AtomicCmpSwapSubwordPostRA<GPR32>;
 def ATOMIC_CMP_SWAP_I16_POSTRA : AtomicCmpSwapSubwordPostRA<GPR32>;
 def ATOMIC_CMP_SWAP_I32_POSTRA : AtomicCmpSwapPostRA<GPR32>;
+
+def ATOMIC_LOAD_MIN_I8_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
+def ATOMIC_LOAD_MIN_I16_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
+def ATOMIC_LOAD_MIN_I32_POSTRA  : Atomic2OpsPostRA<GPR32>;
+def ATOMIC_LOAD_MAX_I8_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
+def ATOMIC_LOAD_MAX_I16_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
+def ATOMIC_LOAD_MAX_I32_POSTRA  : Atomic2OpsPostRA<GPR32>;
+def ATOMIC_LOAD_UMIN_I8_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
+def ATOMIC_LOAD_UMIN_I16_POSTRA : Atomic2OpsSubwordPostRA<GPR32>;
+def ATOMIC_LOAD_UMIN_I32_POSTRA : Atomic2OpsPostRA<GPR32>;
+def ATOMIC_LOAD_UMAX_I8_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
+def ATOMIC_LOAD_UMAX_I16_POSTRA : Atomic2OpsSubwordPostRA<GPR32>;
+def ATOMIC_LOAD_UMAX_I32_POSTRA : Atomic2OpsPostRA<GPR32>;
 
 /// Pseudo instructions for loading and storing accumulator registers.
 let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {

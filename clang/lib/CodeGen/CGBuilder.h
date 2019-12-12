@@ -107,7 +107,7 @@ public:
   llvm::StoreInst *CreateStore(llvm::Value *Val, Address Addr,
                                bool IsVolatile = false) {
     return CreateAlignedStore(Val, Addr.getPointer(),
-                              Addr.getAlignment().getQuantity(), IsVolatile);
+                              Addr.getAlignment().getAsAlign(), IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateAlignedStore;
@@ -273,22 +273,22 @@ public:
   using CGBuilderBaseTy::CreateMemCpy;
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, llvm::Value *Size,
                                bool IsVolatile = false) {
-    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getQuantity(),
-                        Src.getPointer(), Src.getAlignment().getQuantity(),
-                        Size,IsVolatile);
+    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getAsAlign(),
+                        Src.getPointer(), Src.getAlignment().getAsAlign(), Size,
+                        IsVolatile);
   }
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, uint64_t Size,
                                bool IsVolatile = false) {
-    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getQuantity(),
-                        Src.getPointer(), Src.getAlignment().getQuantity(),
-                        Size, IsVolatile);
+    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getAsAlign(),
+                        Src.getPointer(), Src.getAlignment().getAsAlign(), Size,
+                        IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemMove;
   llvm::CallInst *CreateMemMove(Address Dest, Address Src, llvm::Value *Size,
                                 bool IsVolatile = false) {
-    return CreateMemMove(Dest.getPointer(), Dest.getAlignment().getQuantity(),
-                         Src.getPointer(), Src.getAlignment().getQuantity(),
+    return CreateMemMove(Dest.getPointer(), Dest.getAlignment().getAsAlign(),
+                         Src.getPointer(), Src.getAlignment().getAsAlign(),
                          Size, IsVolatile);
   }
 

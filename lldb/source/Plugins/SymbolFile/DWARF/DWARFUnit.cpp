@@ -377,6 +377,11 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
                .GetByteSize() > 0)
     dwo_cu->SetRangesBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
 
+  if (GetVersion() >= 5 &&
+      m_dwo_symbol_file->get_debug_loclists_data().GetByteSize() > 0)
+    dwo_cu->SetLoclistsBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
+  dwo_cu->SetBaseAddress(GetBaseAddress());
+
   for (size_t i = 0; i < m_dwo_symbol_file->DebugInfo()->GetNumUnits(); ++i) {
     DWARFUnit *unit = m_dwo_symbol_file->DebugInfo()->GetUnitAtIndex(i);
     SetDwoStrOffsetsBase(unit);
