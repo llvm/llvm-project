@@ -56,7 +56,8 @@ FUZZER_FLAG_STRING(merge_control_file,
                    "Specify a control file used for the merge process. "
                    "If a merge process gets killed it tries to leave this file "
                    "in a state suitable for resuming the merge. "
-                   "By default a temporary file will be used.")
+                   "By default a temporary file will be used."
+                   "The same file can be used for multistep merge process.")
 FUZZER_FLAG_INT(minimize_crash, 0, "If 1, minimizes the provided"
   " crash input. Use with -runs=N or -max_total_time=N to limit "
   "the number attempts."
