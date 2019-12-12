@@ -712,6 +712,18 @@ public:
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 
+    if (DirectiveID.getString() == ".export_name") {
+      auto SymName = expectIdent();
+      if (SymName.empty())
+        return true;
+      if (expect(AsmToken::Comma, ","))
+        return true;
+      auto ExportName = expectIdent();
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      WasmSym->setExportName(ExportName);
+      TOut.emitExportName(WasmSym, ExportName);
+    }
+
     if (DirectiveID.getString() == ".import_module") {
       auto SymName = expectIdent();
       if (SymName.empty())

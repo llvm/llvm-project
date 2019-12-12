@@ -33,11 +33,11 @@ void f3() {
 }
 
 void f4() {
-  strlcpy(NULL, "abcdef", 6); // expected-warning{{Null pointer argument in call to string copy function}}
+  strlcpy(NULL, "abcdef", 6); // expected-warning{{Null pointer passed as 1st argument to string copy function}}
 }
 
 void f5() {
-  strlcat(NULL, "abcdef", 6); // expected-warning{{Null pointer argument in call to string copy function}}
+  strlcat(NULL, "abcdef", 6); // expected-warning{{Null pointer passed as 1st argument to string concatenation function}}
 }
 
 void f6() {

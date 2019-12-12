@@ -151,6 +151,7 @@
 // CHECK-NEXT: WarnUnusedResult (SubjectMatchRule_objc_method, SubjectMatchRule_enum, SubjectMatchRule_record, SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: Weak (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record)
 // CHECK-NEXT: WeakRef (SubjectMatchRule_variable, SubjectMatchRule_function)
+// CHECK-NEXT: WebAssemblyExportName (SubjectMatchRule_function)
 // CHECK-NEXT: WebAssemblyImportModule (SubjectMatchRule_function)
 // CHECK-NEXT: WebAssemblyImportName (SubjectMatchRule_function)
 // CHECK-NEXT: WorkGroupSizeHint (SubjectMatchRule_function)

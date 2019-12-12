@@ -31,6 +31,7 @@ class TestTrivialABI(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr36870")
     @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
                         bugnumber="llvm.org/pr44161")
+    @expectedFailureAll(archs=["arm64", "arm64e"], bugnumber="<rdar://problem/57844240>")
     def test_call_nontrivial(self):
         """Test that we can print a variable & call a function on the same class w/o the trivial ABI marker."""
         self.build()

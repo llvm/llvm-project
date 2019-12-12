@@ -580,6 +580,24 @@ TEST(DenseMapCustomTest, SmallDenseMapGrowTest) {
   EXPECT_TRUE(map.find(32) == map.end());
 }
 
+TEST(DenseMapCustomTest, LargeSmallDenseMapCompaction) {
+  SmallDenseMap<unsigned, unsigned, 128, ContiguousDenseMapInfo> map;
+  // Fill to < 3/4 load.
+  for (unsigned i = 0; i < 95; ++i)
+    map[i] = i;
+  // And erase, leaving behind tombstones.
+  for (unsigned i = 0; i < 95; ++i)
+    map.erase(i);
+  // Fill further, so that less than 1/8 are empty, but still below 3/4 load.
+  for (unsigned i = 95; i < 128; ++i)
+    map[i] = i;
+
+  EXPECT_EQ(33u, map.size());
+  // Similar to the previous test, check for a non-existing element, as an
+  // indirect check that tombstones have been removed.
+  EXPECT_TRUE(map.find(0) == map.end());
+}
+
 TEST(DenseMapCustomTest, TryEmplaceTest) {
   DenseMap<int, std::unique_ptr<int>> Map;
   std::unique_ptr<int> P(new int(2));

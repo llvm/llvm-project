@@ -96,8 +96,11 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   }
 
   for (const auto &F : M) {
+    if (F.isIntrinsic())
+      continue;
+
     // Emit function type info for all undefined functions
-    if (F.isDeclarationForLinker() && !F.isIntrinsic()) {
+    if (F.isDeclarationForLinker()) {
       SmallVector<MVT, 4> Results;
       SmallVector<MVT, 4> Params;
       computeSignatureVTs(F.getFunctionType(), F, TM, Params, Results);
@@ -129,6 +132,13 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
         Sym->setImportName(Name);
         getTargetStreamer()->emitImportName(Sym, Name);
       }
+    }
+
+    if (F.hasFnAttribute("wasm-export-name")) {
+      auto *Sym = cast<MCSymbolWasm>(getSymbol(&F));
+      StringRef Name = F.getFnAttribute("wasm-export-name").getValueAsString();
+      Sym->setExportName(Name);
+      getTargetStreamer()->emitExportName(Sym, Name);
     }
   }
 

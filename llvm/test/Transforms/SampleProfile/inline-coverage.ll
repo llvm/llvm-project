@@ -16,7 +16,7 @@
 ;    11      return sum > 0 ? 0 : 1;
 ;    12    }
 ;
-; CHECK: remark: coverage.cc:10:12: inlined hot callee '_Z3fool' into 'main'
+; CHECK: remark: coverage.cc:10:12: previous inlining reattempted for hotness: '_Z3fool' into 'main'
 ; CHECK: remark: coverage.cc:9:21: Applied 23478 samples from profile (offset: 2.1)
 ; CHECK: remark: coverage.cc:10:16: Applied 23478 samples from profile (offset: 3)
 ; CHECK: remark: coverage.cc:4:10: Applied 31878 samples from profile (offset: 1)
