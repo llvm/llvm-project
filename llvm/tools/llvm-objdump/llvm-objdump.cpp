@@ -1134,6 +1134,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   std::map<SectionRef, SectionSymbolsTy> AllSymbols;
   SectionSymbolsTy AbsoluteSymbols;
   const StringRef FileName = Obj->getFileName();
+  const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(Obj);
   for (const SymbolRef &Symbol : Obj->symbols()) {
     uint64_t Address = unwrapOrError(Symbol.getAddress(), FileName);
 
@@ -1145,6 +1146,18 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     if (Obj->isELF()) {
       SymbolType = getElfSymbolType(Obj, Symbol);
       if (SymbolType == ELF::STT_SECTION)
+        continue;
+    }
+
+    // Don't ask a Mach-O STAB symbol for its section unless you know that 
+    // STAB symbol's section field refers to a valid section index. Otherwise
+    // the symbol may error trying to load a section that does not exist.
+    if (MachO) {
+      DataRefImpl SymDRI = Symbol.getRawDataRefImpl();
+      uint8_t NType = (MachO->is64Bit() ?
+                       MachO->getSymbol64TableEntry(SymDRI).n_type:
+                       MachO->getSymbolTableEntry(SymDRI).n_type);
+      if (NType & MachO::N_STAB)
         continue;
     }
 
@@ -1244,7 +1257,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     }
 
     StringRef SegmentName = "";
-    if (const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(Obj)) {
+    if (MachO) {
       DataRefImpl DR = Section.getRawDataRefImpl();
       SegmentName = MachO->getSectionFinalSegmentName(DR);
     }
@@ -1804,6 +1817,7 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
   }
 
   const StringRef FileName = O->getFileName();
+  const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(O);
   for (auto I = O->symbol_begin(), E = O->symbol_end(); I != E; ++I) {
     const SymbolRef &Symbol = *I;
     uint64_t Address = unwrapOrError(Symbol.getAddress(), FileName, ArchiveName,
@@ -1813,8 +1827,23 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
     SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName,
                                          ArchiveName, ArchitectureName);
     uint32_t Flags = Symbol.getFlags();
-    section_iterator Section = unwrapOrError(Symbol.getSection(), FileName,
+
+    // Don't ask a Mach-O STAB symbol for its section unless you know that 
+    // STAB symbol's section field refers to a valid section index. Otherwise
+    // the symbol may error trying to load a section that does not exist.
+    bool isSTAB = false;
+    if (MachO) {
+      DataRefImpl SymDRI = Symbol.getRawDataRefImpl();
+      uint8_t NType = (MachO->is64Bit() ?
+                       MachO->getSymbol64TableEntry(SymDRI).n_type:
+                       MachO->getSymbolTableEntry(SymDRI).n_type);
+      if (NType & MachO::N_STAB)
+        isSTAB = true;
+    }
+    section_iterator Section = isSTAB ? O->section_end() :
+                               unwrapOrError(Symbol.getSection(), FileName,
                                              ArchiveName, ArchitectureName);
+
     StringRef Name;
     if (Type == SymbolRef::ST_Debug && Section != O->section_end()) {
       if (Expected<StringRef> NameOrErr = Section->getName())
