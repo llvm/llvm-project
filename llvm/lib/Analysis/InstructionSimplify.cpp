@@ -137,6 +137,71 @@ static bool isSameCompare(Value *V, CmpInst::Predicate Pred, Value *LHS,
     CRHS == LHS;
 }
 
+/// Simplify comparison with true or false branch of select:
+///  %sel = select i1 %cond, i32 %tv, i32 %fv
+///  %cmp = icmp sle i32 %sel, %rhs
+/// Compose new comparison by substituting %sel with either %tv or %fv
+/// and see if it simplifies.
+static Value *simplifyCmpSelCase(CmpInst::Predicate Pred, Value *LHS,
+                                 Value *RHS, Value *Cond,
+                                 const SimplifyQuery &Q, unsigned MaxRecurse,
+                                 Constant *TrueOrFalse) {
+  Value *SimplifiedCmp = SimplifyCmpInst(Pred, LHS, RHS, Q, MaxRecurse);
+  if (SimplifiedCmp == Cond) {
+    // %cmp simplified to the select condition (%cond).
+    return TrueOrFalse;
+  } else if (!SimplifiedCmp && isSameCompare(Cond, Pred, LHS, RHS)) {
+    // It didn't simplify. However, if composed comparison is equivalent
+    // to the select condition (%cond) then we can replace it.
+    return TrueOrFalse;
+  }
+  return SimplifiedCmp;
+}
+
+/// Simplify comparison with true branch of select
+static Value *simplifyCmpSelTrueCase(CmpInst::Predicate Pred, Value *LHS,
+                                     Value *RHS, Value *Cond,
+                                     const SimplifyQuery &Q,
+                                     unsigned MaxRecurse) {
+  return simplifyCmpSelCase(Pred, LHS, RHS, Cond, Q, MaxRecurse,
+                            getTrue(Cond->getType()));
+}
+
+/// Simplify comparison with false branch of select
+static Value *simplifyCmpSelFalseCase(CmpInst::Predicate Pred, Value *LHS,
+                                      Value *RHS, Value *Cond,
+                                      const SimplifyQuery &Q,
+                                      unsigned MaxRecurse) {
+  return simplifyCmpSelCase(Pred, LHS, RHS, Cond, Q, MaxRecurse,
+                            getFalse(Cond->getType()));
+}
+
+/// We know comparison with both branches of select can be simplified, but they
+/// are not equal. This routine handles some logical simplifications.
+static Value *handleOtherCmpSelSimplifications(Value *TCmp, Value *FCmp,
+                                               Value *Cond,
+                                               const SimplifyQuery &Q,
+                                               unsigned MaxRecurse) {
+  // If the false value simplified to false, then the result of the compare
+  // is equal to "Cond && TCmp".  This also catches the case when the false
+  // value simplified to false and the true value to true, returning "Cond".
+  if (match(FCmp, m_Zero()))
+    if (Value *V = SimplifyAndInst(Cond, TCmp, Q, MaxRecurse))
+      return V;
+  // If the true value simplified to true, then the result of the compare
+  // is equal to "Cond || FCmp".
+  if (match(TCmp, m_One()))
+    if (Value *V = SimplifyOrInst(Cond, FCmp, Q, MaxRecurse))
+      return V;
+  // Finally, if the false value simplified to true and the true value to
+  // false, then the result of the compare is equal to "!Cond".
+  if (match(FCmp, m_One()) && match(TCmp, m_Zero()))
+    if (Value *V = SimplifyXorInst(
+            Cond, Constant::getAllOnesValue(Cond->getType()), Q, MaxRecurse))
+      return V;
+  return nullptr;
+}
+
 /// Does the given value dominate the specified phi node?
 static bool valueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
   Instruction *I = dyn_cast<Instruction>(V);
@@ -398,6 +463,12 @@ static Value *ThreadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
 /// In the case of a comparison with a select instruction, try to simplify the
 /// comparison by seeing whether both branches of the select result in the same
 /// value. Returns the common value if so, otherwise returns null.
+/// For example, if we have:
+///  %tmp = select i1 %cmp, i32 1, i32 2
+///  %cmp1 = icmp sle i32 %tmp, 3
+/// We can simplify %cmp1 to true, because both branches of select are
+/// less than 3. We compose new comparison by substituting %tmp with both
+/// branches of select and see if it can be simplified.
 static Value *ThreadCmpOverSelect(CmpInst::Predicate Pred, Value *LHS,
                                   Value *RHS, const SimplifyQuery &Q,
                                   unsigned MaxRecurse) {
@@ -418,32 +489,14 @@ static Value *ThreadCmpOverSelect(CmpInst::Predicate Pred, Value *LHS,
 
   // Now that we have "cmp select(Cond, TV, FV), RHS", analyse it.
   // Does "cmp TV, RHS" simplify?
-  Value *TCmp = SimplifyCmpInst(Pred, TV, RHS, Q, MaxRecurse);
-  if (TCmp == Cond) {
-    // It not only simplified, it simplified to the select condition.  Replace
-    // it with 'true'.
-    TCmp = getTrue(Cond->getType());
-  } else if (!TCmp) {
-    // It didn't simplify.  However if "cmp TV, RHS" is equal to the select
-    // condition then we can replace it with 'true'.  Otherwise give up.
-    if (!isSameCompare(Cond, Pred, TV, RHS))
-      return nullptr;
-    TCmp = getTrue(Cond->getType());
-  }
+  Value *TCmp = simplifyCmpSelTrueCase(Pred, TV, RHS, Cond, Q, MaxRecurse);
+  if (!TCmp)
+    return nullptr;
 
   // Does "cmp FV, RHS" simplify?
-  Value *FCmp = SimplifyCmpInst(Pred, FV, RHS, Q, MaxRecurse);
-  if (FCmp == Cond) {
-    // It not only simplified, it simplified to the select condition.  Replace
-    // it with 'false'.
-    FCmp = getFalse(Cond->getType());
-  } else if (!FCmp) {
-    // It didn't simplify.  However if "cmp FV, RHS" is equal to the select
-    // condition then we can replace it with 'false'.  Otherwise give up.
-    if (!isSameCompare(Cond, Pred, FV, RHS))
-      return nullptr;
-    FCmp = getFalse(Cond->getType());
-  }
+  Value *FCmp = simplifyCmpSelFalseCase(Pred, FV, RHS, Cond, Q, MaxRecurse);
+  if (!FCmp)
+    return nullptr;
 
   // If both sides simplified to the same value, then use it as the result of
   // the original comparison.
@@ -452,26 +505,8 @@ static Value *ThreadCmpOverSelect(CmpInst::Predicate Pred, Value *LHS,
 
   // The remaining cases only make sense if the select condition has the same
   // type as the result of the comparison, so bail out if this is not so.
-  if (Cond->getType()->isVectorTy() != RHS->getType()->isVectorTy())
-    return nullptr;
-  // If the false value simplified to false, then the result of the compare
-  // is equal to "Cond && TCmp".  This also catches the case when the false
-  // value simplified to false and the true value to true, returning "Cond".
-  if (match(FCmp, m_Zero()))
-    if (Value *V = SimplifyAndInst(Cond, TCmp, Q, MaxRecurse))
-      return V;
-  // If the true value simplified to true, then the result of the compare
-  // is equal to "Cond || FCmp".
-  if (match(TCmp, m_One()))
-    if (Value *V = SimplifyOrInst(Cond, FCmp, Q, MaxRecurse))
-      return V;
-  // Finally, if the false value simplified to true and the true value to
-  // false, then the result of the compare is equal to "!Cond".
-  if (match(FCmp, m_One()) && match(TCmp, m_Zero()))
-    if (Value *V =
-        SimplifyXorInst(Cond, Constant::getAllOnesValue(Cond->getType()),
-                        Q, MaxRecurse))
-      return V;
+  if (Cond->getType()->isVectorTy() == RHS->getType()->isVectorTy())
+    return handleOtherCmpSelSimplifications(TCmp, FCmp, Cond, Q, MaxRecurse);
 
   return nullptr;
 }
