@@ -7599,7 +7599,8 @@ public:
       // Per C++2a [class.spaceship]p3, as a fallback add:
       // return static_cast<R>(std::strong_ordering::equal);
       QualType StrongOrdering = S.CheckComparisonCategoryType(
-          ComparisonCategoryType::StrongOrdering, Loc);
+          ComparisonCategoryType::StrongOrdering, Loc,
+          Sema::ComparisonCategoryUsage::DefaultedOperator);
       if (StrongOrdering.isNull())
         return StmtError();
       VarDecl *EqualVD = S.Context.CompCategories.getInfoForType(StrongOrdering)
@@ -8057,7 +8058,8 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       RetLoc = FD->getBeginLoc();
     // FIXME: Should we really care whether we have the complete type and the
     // 'enumerator' constants here? A forward declaration seems sufficient.
-    QualType Cat = CheckComparisonCategoryType(Info.Category, RetLoc);
+    QualType Cat = CheckComparisonCategoryType(
+        Info.Category, RetLoc, ComparisonCategoryUsage::DefaultedOperator);
     if (Cat.isNull())
       return true;
     Context.adjustDeducedFunctionResultType(
@@ -10591,7 +10593,8 @@ struct InvalidSTLDiagnoser {
 } // namespace
 
 QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
-                                           SourceLocation Loc) {
+                                           SourceLocation Loc,
+                                           ComparisonCategoryUsage Usage) {
   assert(getLangOpts().CPlusPlus &&
          "Looking for comparison category type outside of C++.");
 
@@ -10620,7 +10623,7 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
     std::string NameForDiags = "std::";
     NameForDiags += ComparisonCategories::getCategoryString(Kind);
     Diag(Loc, diag::err_implied_comparison_category_type_not_found)
-        << NameForDiags;
+        << NameForDiags << (int)Usage;
     return QualType();
   }
 

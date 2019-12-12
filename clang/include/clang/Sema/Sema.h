@@ -5038,6 +5038,16 @@ private:
                                          IdentifierInfo *MemberOrBase);
 
 public:
+  enum class ComparisonCategoryUsage {
+    /// The '<=>' operator was used in an expression and a builtin operator
+    /// was selected.
+    OperatorInExpression,
+    /// A defaulted 'operator<=>' needed the comparison category. This
+    /// typically only applies to 'std::strong_ordering', due to the implicit
+    /// fallback return value.
+    DefaultedOperator,
+  };
+
   /// Lookup the specified comparison category types in the standard
   ///   library, an check the VarDecls possibly returned by the operator<=>
   ///   builtins for that type.
@@ -5045,7 +5055,8 @@ public:
   /// \return The type of the comparison category type corresponding to the
   ///   specified Kind, or a null type if an error occurs
   QualType CheckComparisonCategoryType(ComparisonCategoryType Kind,
-                                       SourceLocation Loc);
+                                       SourceLocation Loc,
+                                       ComparisonCategoryUsage Usage);
 
   /// Tests whether Ty is an instance of std::initializer_list and, if
   /// it is and Element is not NULL, assigns the element type to Element.

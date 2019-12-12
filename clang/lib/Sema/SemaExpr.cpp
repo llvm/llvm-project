@@ -10601,7 +10601,8 @@ static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
   assert(!Type.isNull() && "composite type for <=> has not been set");
 
   return S.CheckComparisonCategoryType(
-      *getComparisonCategoryForBuiltinCmp(Type), Loc);
+      *getComparisonCategoryForBuiltinCmp(Type), Loc,
+      Sema::ComparisonCategoryUsage::OperatorInExpression);
 }
 
 static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
@@ -10738,7 +10739,8 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       CCT = ComparisonCategoryType::StrongEquality;
     }
 
-    return CheckComparisonCategoryType(*CCT, Loc);
+    return CheckComparisonCategoryType(
+        *CCT, Loc, ComparisonCategoryUsage::OperatorInExpression);
   };
 
   if (!IsRelational && LHSIsNull != RHSIsNull) {
