@@ -231,7 +231,7 @@ let Predicates = [HasSVE] in {
   defm CPY_ZPmV : sve_int_perm_cpy_v<"cpy">;
 
   // Select elements from either vector (predicated)
-  defm SEL_ZPZZ    : sve_int_sel_vvv<"sel">;
+  defm SEL_ZPZZ    : sve_int_sel_vvv<"sel", vselect>;
 
   defm SPLICE_ZPZ : sve_int_perm_splice<"splice">;
   defm COMPACT_ZPZ : sve_int_perm_compact<"compact">;
