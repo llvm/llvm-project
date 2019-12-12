@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <mutex>
 #include <string>
 #include <vector>
 
