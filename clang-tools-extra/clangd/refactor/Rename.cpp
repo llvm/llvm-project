@@ -18,8 +18,10 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
@@ -83,21 +85,17 @@ llvm::DenseSet<const Decl *> locateDeclAt(ParsedAST &AST,
   if (!SelectedNode)
     return {};
 
-  // If the location points to a Decl, we check it is actually on the name
-  // range of the Decl. This would avoid allowing rename on unrelated tokens.
-  //   ^class Foo {} // SelectionTree returns CXXRecordDecl,
-  //                 // we don't attempt to trigger rename on this position.
-  // FIXME: Make this work on destructors, e.g. "~F^oo()".
-  if (const auto *D = SelectedNode->ASTNode.get<Decl>()) {
-    if (D->getLocation() != TokenStartLoc)
-      return {};
-  }
-
   llvm::DenseSet<const Decl *> Result;
   for (const auto *D :
        targetDecl(SelectedNode->ASTNode,
-                  DeclRelation::Alias | DeclRelation::TemplatePattern))
-    Result.insert(D);
+                  DeclRelation::Alias | DeclRelation::TemplatePattern)) {
+    const auto *ND = llvm::dyn_cast<NamedDecl>(D);
+    if (!ND)
+      continue;
+    // Get to CXXRecordDecl from constructor or destructor.
+    ND = tooling::getCanonicalSymbolDeclaration(ND);
+    Result.insert(ND);
+  }
   return Result;
 }
 
@@ -214,17 +212,16 @@ llvm::Error makeError(ReasonToReject Reason) {
 // Return all rename occurrences in the main file.
 std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
                                                       const NamedDecl &ND) {
-  // In theory, locateDeclAt should return the primary template. However, if the
-  // cursor is under the underlying CXXRecordDecl of the ClassTemplateDecl, ND
-  // will be the CXXRecordDecl, for this case, we need to get the primary
-  // template maunally.
-  const auto &RenameDecl =
-      ND.getDescribedTemplate() ? *ND.getDescribedTemplate() : ND;
+  // If the cursor is at the underlying CXXRecordDecl of the
+  // ClassTemplateDecl, ND will be the CXXRecordDecl. In this case, we need to
+  // get the primary template maunally.
   // getUSRsForDeclaration will find other related symbols, e.g. virtual and its
   // overriddens, primary template and all explicit specializations.
   // FIXME: Get rid of the remaining tooling APIs.
-  std::vector<std::string> RenameUSRs = tooling::getUSRsForDeclaration(
-      tooling::getCanonicalSymbolDeclaration(&RenameDecl), AST.getASTContext());
+  const auto RenameDecl =
+      ND.getDescribedTemplate() ? ND.getDescribedTemplate() : &ND;
+  std::vector<std::string> RenameUSRs =
+      tooling::getUSRsForDeclaration(RenameDecl, AST.getASTContext());
   llvm::DenseSet<SymbolID> TargetIDs;
   for (auto &USR : RenameUSRs)
     TargetIDs.insert(SymbolID(USR));
@@ -455,14 +452,21 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
 
     return (*Content)->getBuffer().str();
   };
-  SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(RInputs.Pos, SM, AST.getLangOpts()));
+  // Try to find the tokens adjacent to the cursor position.
+  auto Loc = sourceLocationInMainFile(SM, RInputs.Pos);
+  if (!Loc)
+    return Loc.takeError();
+  const syntax::Token *IdentifierToken =
+      spelledIdentifierTouching(*Loc, AST.getTokens());
+  // Renames should only triggered on identifiers.
+  if (!IdentifierToken)
+    return makeError(ReasonToReject::NoSymbolFound);
   // FIXME: Renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
-  if (locateMacroAt(SourceLocationBeg, AST.getPreprocessor()))
+  if (locateMacroAt(IdentifierToken->location(), AST.getPreprocessor()))
     return makeError(ReasonToReject::UnsupportedSymbol);
 
-  auto DeclsUnderCursor = locateDeclAt(AST, SourceLocationBeg);
+  auto DeclsUnderCursor = locateDeclAt(AST, IdentifierToken->location());
   if (DeclsUnderCursor.empty())
     return makeError(ReasonToReject::NoSymbolFound);
   if (DeclsUnderCursor.size() > 1)
