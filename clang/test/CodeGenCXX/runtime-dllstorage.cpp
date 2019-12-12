@@ -134,7 +134,7 @@ void l() {
 // CHECK-DYNAMIC-NODECL-IA-DAG: declare dllimport void @__cxa_guard_release(i64*)
 // CHECK-DYNAMIC-IMPORT-IA-DAG: declare dllimport void @__cxa_guard_release(i64*)
 // CHECK-DYNAMIC-EXPORT-IA-DAG: declare dllimport void @__cxa_guard_release(i64*)
-// CHECK-DYNAMIC-IA-DAG: declare dllimport void @_ZSt9terminatev()
+// CHECK-DYANMIC-IA-DAG: declare dllimport void @_ZSt9terminatev()
 // CHECK-DYNAMIC-NODECL-IA-DAG: declare dso_local void @_ZSt9terminatev()
 // CHECK-DYNAMIC-IMPORT-IA-DAG: declare dllimport void @_ZSt9terminatev()
 // CHECK-DYNAMIC-EXPORT-IA-DAG: declare dso_local dllexport void @_ZSt9terminatev()
