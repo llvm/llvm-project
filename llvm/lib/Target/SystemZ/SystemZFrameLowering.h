@@ -24,8 +24,10 @@ public:
 
   // Override TargetFrameLowering.
   bool isFPCloseToIncomingSP() const override { return false; }
-  const SpillSlot *getCalleeSavedSpillSlots(unsigned &NumEntries) const
-    override;
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
@@ -43,6 +45,8 @@ public:
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
+  int getFrameIndexReference(const MachineFunction &MF, int FI,
+                             unsigned &FrameReg) const override;
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
@@ -52,6 +56,9 @@ public:
   unsigned getRegSpillOffset(unsigned Reg) const {
     return RegSpillOffsets[Reg];
   }
+
+  // Get or create the frame index of where the old frame pointer is stored.
+  int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const;
 };
 } // end namespace llvm
 
