@@ -11814,7 +11814,8 @@ static SDValue PerformADDCombine(SDNode *N,
 /// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
 ///
 static SDValue PerformSUBCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const ARMSubtarget *Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
@@ -11823,7 +11824,27 @@ static SDValue PerformSUBCombine(SDNode *N,
     if (SDValue Result = combineSelectAndUse(N, N1, N0, DCI))
       return Result;
 
-  return SDValue();
+  if (!Subtarget->hasMVEIntegerOps() || !N->getValueType(0).isVector())
+    return SDValue();
+
+  // Fold (sub (ARMvmovImm 0), (ARMvdup x)) -> (ARMvdup (sub 0, x))
+  // so that we can readily pattern match more mve instructions which can use
+  // a scalar operand.
+  SDValue VDup = N->getOperand(1);
+  if (VDup->getOpcode() != ARMISD::VDUP)
+    return SDValue();
+
+  SDValue VMov = N->getOperand(0);
+  if (VMov->getOpcode() == ISD::BITCAST)
+    VMov = VMov->getOperand(0);
+
+  if (VMov->getOpcode() != ARMISD::VMOVIMM || !isZeroVector(VMov))
+    return SDValue();
+
+  SDLoc dl(N);
+  SDValue Negate = DCI.DAG.getNode(ISD::SUB, dl, MVT::i32, VMov->getOperand(0),
+                                   VDup->getOperand(0));
+  return DCI.DAG.getNode(ARMISD::VDUP, dl, N->getValueType(0), Negate);
 }
 
 /// PerformVMULCombine
@@ -14508,7 +14529,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::ADDE:    return PerformADDECombine(N, DCI, Subtarget);
   case ARMISD::UMLAL:   return PerformUMLALCombine(N, DCI.DAG, Subtarget);
   case ISD::ADD:        return PerformADDCombine(N, DCI, Subtarget);
-  case ISD::SUB:        return PerformSUBCombine(N, DCI);
+  case ISD::SUB:        return PerformSUBCombine(N, DCI, Subtarget);
   case ISD::MUL:        return PerformMULCombine(N, DCI, Subtarget);
   case ISD::OR:         return PerformORCombine(N, DCI, Subtarget);
   case ISD::XOR:        return PerformXORCombine(N, DCI, Subtarget);
@@ -14866,6 +14887,9 @@ bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
     case Instruction::Mul:
       return true;
     case Instruction::Sub:
+    case Instruction::Shl:
+    case Instruction::LShr:
+    case Instruction::AShr:
       return Operand == 1;
     default:
       return false;
