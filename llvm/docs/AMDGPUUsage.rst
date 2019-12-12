@@ -10,7 +10,7 @@ Introduction
 
 The AMDGPU backend provides ISA code generation for AMD GPUs, starting with the
 R600 family up until the current GCN families. It lives in the
-``lib/Target/AMDGPU`` directory.
+``llvm/lib/Target/AMDGPU`` directory.
 
 LLVM
 ====
@@ -72,7 +72,7 @@ specify the target triple:
 Processors
 ----------
 
-Use the ``clang -mcpu <Processor>`` option to specify the AMD GPU processor. The
+Use the ``clang -mcpu <Processor>`` option to specify the AMDGPU processor. The
 names from both the *Processor* and *Alternative Processor* can be used.
 
   .. table:: AMDGPU Processors
@@ -202,7 +202,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                       [on]                    - Ryzen 5 2400G
      ``gfx904``                  ``amdgcn``   dGPU  - xnack                   *TBA*
                                                       [off]
-                                                                              .. TODO
+                                                                              .. TODO::
                                                                                  Add product
                                                                                  names.
      ``gfx906``                  ``amdgcn``   dGPU  - xnack                   - Radeon Instinct MI50
@@ -213,7 +213,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                       [on]
      ``gfx909``                  ``amdgcn``   APU   - xnack                   *TBA* (Raven Ridge 2)
                                                       [on]
-                                                                              .. TODO
+                                                                              .. TODO::
                                                                                  Add product
                                                                                  names.
      **GCN GFX10** [AMD-GCN-GFX10]_
@@ -224,7 +224,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                       [off]
                                                     - cumode
                                                       [off]
-                                                                              .. TODO
+                                                                              .. TODO::
                                                                                  Add product
                                                                                  names.
      ``gfx1011``                 ``amdgcn``   dGPU  - xnack                   *TBA*
@@ -233,7 +233,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                       [off]
                                                     - cumode
                                                       [off]
-                                                                              .. TODO
+                                                                              .. TODO::
                                                                                  Add product
                                                                                  names.
      ``gfx1012``                 ``amdgcn``   dGPU  - xnack                   *TBA*
@@ -242,7 +242,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                       [off]
                                                     - cumode
                                                       [off]
-                                                                              .. TODO
+                                                                              .. TODO::
                                                                                  Add product
                                                                                  names.
      =========== =============== ============ ===== ================= ======= ======================
@@ -263,7 +263,7 @@ The target features supported by each processor, and the default value
 used if not specified explicitly, is listed in
 :ref:`amdgpu-processor-table`.
 
-Use the ``clang -m[no-]<TargetFeature>`` option to specify the AMD GPU
+Use the ``clang -m[no-]<TargetFeature>`` option to specify the AMDGPU
 target features.
 
 For example:
@@ -314,35 +314,134 @@ For example:
 Address Spaces
 --------------
 
-The AMDGPU backend uses the following address space mappings.
+The AMDGPU architecture supports a number of memory address spaces. The address
+space names use the OpenCL standard names, with some additions.
 
-The memory space names used in the table, aside from the region memory space, is
-from the OpenCL standard.
+The AMDGPU address spaces correspond to architecture-specific LLVM address
+space numbers used in LLVM IR.
 
-LLVM Address Space number is used throughout LLVM (for example, in LLVM IR).
+The AMDGPU address spaces are described in
+:ref:`amdgpu-address-spaces-table`. Only 64-bit process address spaces are
+supported for the ``amdgcn`` target.
 
-  .. table:: Address Space Mapping
-     :name: amdgpu-address-space-mapping-table
+  .. table:: AMDGPU Address Spaces
+     :name: amdgpu-address-spaces-table
 
-     ================== =================================
-     LLVM Address Space Memory Space
-     ================== =================================
-     0                  Generic (Flat)
-     1                  Global
-     2                  Region (GDS)
-     3                  Local (group/LDS)
-     4                  Constant
-     5                  Private (Scratch)
-     6                  Constant 32-bit
-     7                  Buffer Fat Pointer (experimental)
-     ================== =================================
+     ================================= =============== =========== ================ ======= ============================
+     ..                                                                                     64-Bit Process Address Space
+     --------------------------------- --------------- ----------- ---------------- ------------------------------------
+     Address Space Name                LLVM IR Address HSA Segment Hardware         Address NULL Value
+                                       Space Number    Name        Name             Size
+     ================================= =============== =========== ================ ======= ============================
+     Generic                           0               flat        flat             64      0x0000000000000000
+     Global                            1               global      global           64      0x0000000000000000
+     Region                            2               N/A         GDS              32      *not implemented for AMDHSA*
+     Local                             3               group       LDS              32      0xFFFFFFFF
+     Constant                          4               constant    *same as global* 64      0x0000000000000000
+     Private                           5               private     scratch          32      0x00000000
+     Constant 32-bit                   6               *TODO*
+     Buffer Fat Pointer (experimental) 7               *TODO*
+     ================================= =============== =========== ================ ======= ============================
 
-The buffer fat pointer is an experimental address space that is currently
-unsupported in the backend. It exposes a non-integral pointer that is in future
-intended to support the modelling of 128-bit buffer descriptors + a 32-bit
-offset into the buffer descriptor (in total encapsulating a 160-bit 'pointer'),
-allowing us to use normal LLVM load/store/atomic operations to model the buffer
-descriptors used heavily in graphics workloads targeting the backend.
+**Generic**
+  The generic address space uses the hardware flat address support available in
+  GFX7-GFX10. This uses two fixed ranges of virtual addresses (the private and
+  local apertures), that are outside the range of addressable global memory, to
+  map from a flat address to a private or local address.
+
+  FLAT instructions can take a flat address and access global, private
+  (scratch), and group (LDS) memory depending on if the address is within one
+  of the aperture ranges. Flat access to scratch requires hardware aperture
+  setup and setup in the kernel prologue (see
+  :ref:`amdgpu-amdhsa-flat-scratch`). Flat access to LDS requires hardware
+  aperture setup and M0 (GFX7-GFX8) register setup (see
+  :ref:`amdgpu-amdhsa-m0`).
+
+  To convert between a private or group address space address (termed a segment
+  address) and a flat address the base address of the corresponding aperture
+  can be used. For GFX7-GFX8 these are available in the
+  :ref:`amdgpu-amdhsa-hsa-aql-queue` the address of which can be obtained with
+  Queue Ptr SGPR (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`). For
+  GFX9-GFX10 the aperture base addresses are directly available as inline
+  constant registers ``SRC_SHARED_BASE/LIMIT`` and ``SRC_PRIVATE_BASE/LIMIT``.
+  In 64-bit address mode the aperture sizes are 2^32 bytes and the base is
+  aligned to 2^32 which makes it easier to convert from flat to segment or
+  segment to flat.
+
+  A global address space address has the same value when used as a flat address
+  so no conversion is needed.
+
+**Global and Constant**
+  The global and constant address spaces both use global virtual addresses,
+  which are the same virtual address space used by the CPU. However, some
+  virtual addresses may only be accessible to the CPU, some only accessible
+  by the GPU, and some by both.
+
+  Using the constant address space indicates that the data will not change
+  during the execution of the kernel. This allows scalar read instructions to
+  be used. The vector and scalar L1 caches are invalidated of volatile data
+  before each kernel dispatch execution to allow constant memory to change
+  values between kernel dispatches.
+
+**Region**
+  The region address space uses the hardware Global Data Store (GDS). All
+  wavefronts executing on the same device will access the same memory for any
+  given region address. However, the same region address accessed by wavefronts
+  executing on different devices will access different memory. It is higher
+  performance than global memory. It is allocated by the runtime. The data
+  store (DS) instructions can be used to access it.
+
+**Local**
+  The local address space uses the hardware Local Data Store (LDS) which is
+  automatically allocated when the hardware creates the wavefronts of a
+  work-group, and freed when all the wavefronts of a work-group have
+  terminated. All wavefronts belonging to the same work-group will access the
+  same memory for any given local address. However, the same local address
+  accessed by wavefronts belonging to different work-groups will access
+  different memory. It is higher performance than global memory. The data store
+  (DS) instructions can be used to access it.
+
+**Private**
+  The private address space uses the hardware scratch memory support which
+  automatically allocates memory when it creates a wavefront, and frees it when
+  a wavefronts terminates. The memory accessed by a lane of a wavefront for any
+  given private address will be different to the memory accessed by another lane
+  of the same or different wavefront for the same private address.
+
+  If a kernel dispatch uses scratch, then the hardware allocates memory from a
+  pool of backing memory allocated by the runtime for each wavefront. The lanes
+  of the wavefront access this using dword (4 byte) interleaving. The mapping
+  used from private address to backing memory address is:
+
+    ``wavefront-scratch-base +
+    ((private-address / 4) * wavefront-size * 4) +
+    (wavefront-lane-id * 4) + (private-address % 4)``
+
+  If each lane of a wavefront accesses the same private address, the
+  interleaving results in adjacent dwords being accessed and hence requires
+  fewer cache lines to be fetched.
+
+  There are different ways that the wavefront scratch base address is
+  determined by a wavefront (see
+  :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
+
+  Scratch memory can be accessed in an interleaved manner using buffer
+  instructions with the scratch buffer descriptor and per wavefront scratch
+  offset, by the scratch instructions, or by flat instructions. Multi-dword
+  access is not supported except by flat and scratch instructions in
+  GFX9-GFX10.
+
+**Constant 32-bit**
+  *TODO*
+
+**Buffer Fat Pointer**
+  The buffer fat pointer is an experimental address space that is currently
+  unsupported in the backend. It exposes a non-integral pointer that is in
+  the future intended to support the modelling of 128-bit buffer descriptors
+  plus a 32-bit offset into the buffer (in total encapsulating a 160-bit
+  *pointer*), allowing normal LLVM load/store/atomic operations to be used to
+  model the buffer descriptors used heavily in graphics workloads targeting
+  the backend.
 
 .. _amdgpu-memory-scopes:
 
@@ -355,8 +454,8 @@ backend memory model when the target triple OS is ``amdhsa`` (see
 
 The memory model supported is based on the HSA memory model [HSA]_ which is
 based in turn on HRF-indirect with scope inclusion [HRF]_. The happens-before
-relation is transitive over the synchonizes-with relation independent of scope,
-and synchonizes-with allows the memory scope instances to be inclusive (see
+relation is transitive over the synchronizes-with relation independent of scope,
+and synchronizes-with allows the memory scope instances to be inclusive (see
 table :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`).
 
 This is different to the OpenCL [OpenCL]_ memory model which does not have scope
@@ -448,8 +547,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
 *This section is WIP.*
 
-.. TODO
-   List AMDGPU intrinsics
+.. TODO::
+
+   List AMDGPU intrinsics.
 
 AMDGPU Attributes
 -----------------
@@ -541,14 +641,14 @@ The AMDGPU backend uses the following ELF header:
 
   * ``ELFCLASS32`` for ``r600`` architecture.
 
-  * ``ELFCLASS64`` for ``amdgcn`` architecture which only supports 64
-    bit applications.
+  * ``ELFCLASS64`` for ``amdgcn`` architecture which only supports 64-bit
+    process address space applications.
 
 ``e_ident[EI_DATA]``
   All AMDGPU targets use ``ELFDATA2LSB`` for little-endian byte ordering.
 
 ``e_ident[EI_OSABI]``
-  One of the following AMD GPU architecture specific OS ABIs
+  One of the following AMDGPU architecture specific OS ABIs
   (see :ref:`amdgpu-os-table`):
 
   * ``ELFOSABI_NONE`` for *unknown* OS.
@@ -560,7 +660,7 @@ The AMDGPU backend uses the following ELF header:
   * ``ELFOSABI_AMDGPU_MESA3D`` for ``mesa3D`` OS.
 
 ``e_ident[EI_ABIVERSION]``
-  The ABI version of the AMD GPU architecture specific OS ABI to which the code
+  The ABI version of the AMDGPU architecture specific OS ABI to which the code
   object conforms:
 
   * ``ELFABIVERSION_AMDGPU_HSA`` is used to specify the version of AMD HSA
@@ -577,7 +677,7 @@ The AMDGPU backend uses the following ELF header:
 
 
   ``ET_REL``
-    The type produced by the AMD GPU backend compiler as it is relocatable code
+    The type produced by the AMDGPU backend compiler as it is relocatable code
     object.
 
   ``ET_DYN``
@@ -860,7 +960,7 @@ Symbols include the following:
      ===================== ================== ================ ==================
      *link-name*           ``STT_OBJECT``     - ``.data``      Global variable
                                               - ``.rodata``
-					      - ``.bss``
+                                              - ``.bss``
      *link-name*\ ``.kd``  ``STT_OBJECT``     - ``.rodata``    Kernel descriptor
      *link-name*           ``STT_FUNC``       - ``.text``      Kernel entry point
      *link-name*           ``STT_OBJECT``     - SHN_AMDGPU_LDS Global variable in LDS
@@ -881,7 +981,8 @@ Global variable
   ``st_value`` field describes alignment requirements as it does for common
   symbols.
 
-  .. TODO
+  .. TODO::
+
      Add description of linked shared object symbols. Seems undefined symbols
      are marked as STT_NOTYPE.
 
@@ -905,12 +1006,12 @@ relocatable fields are:
 ``word32``
   This specifies a 32-bit field occupying 4 bytes with arbitrary byte
   alignment. These values use the same byte order as other word values in the
-  AMD GPU architecture.
+  AMDGPU architecture.
 
 ``word64``
   This specifies a 64-bit field occupying 8 bytes with arbitrary byte
   alignment. These values use the same byte order as other word values in the
-  AMD GPU architecture.
+  AMDGPU architecture.
 
 Following notations are used for specifying relocation calculations:
 
@@ -930,12 +1031,13 @@ Following notations are used for specifying relocation calculations:
 
 **S**
   Represents the value of the symbol whose index resides in the relocation
-  entry. Relocations not using this must specify a symbol index of ``STN_UNDEF``.
+  entry. Relocations not using this must specify a symbol index of
+  ``STN_UNDEF``.
 
 **B**
   Represents the base address of a loaded executable or shared object which is
-  the difference between the ELF address and the actual load address. Relocations
-  using this are only valid in executable or shared objects.
+  the difference between the ELF address and the actual load address.
+  Relocations using this are only valid in executable or shared objects.
 
 The following relocation types are supported:
 
@@ -968,7 +1070,7 @@ The following relocation types are supported:
 ``R_AMDGPU_ABS32_LO`` and ``R_AMDGPU_ABS32_HI`` are only supported by
 the ``mesa3d`` OS, which does not support ``R_AMDGPU_ABS64``.
 
-There is no current OS loader support for 32 bit programs and so
+There is no current OS loader support for 32-bit programs and so
 ``R_AMDGPU_ABS32`` is not used.
 
 .. _amdgpu-dwarf:
@@ -999,35 +1101,35 @@ The following address space mapping is used:
      *not supported*     Region (GDS)
      =================== =================
 
-See :ref:`amdgpu-address-spaces` for information on the memory space terminology
-used in the table.
+See :ref:`amdgpu-address-spaces` for information on the address space
+terminology used in the table.
 
 An ``address_class`` attribute is generated on pointer type DIEs to specify the
 DWARF address space of the value of the pointer when it is in the *private* or
 *local* address space. Otherwise the attribute is omitted.
 
-An ``XDEREF`` operation is generated in location list expressions for variables
-that are allocated in the *private* and *local* address space. Otherwise no
-``XDREF`` is omitted.
+An ``DW_OP_xderef`` operation is generated in location list expressions for
+variables that are allocated in the *private* and *local* address space.
+Otherwise, ``DW_OP_xderef`` is omitted.
 
 Register Mapping
 ~~~~~~~~~~~~~~~~
 
 *This section is WIP.*
 
-.. TODO
+.. TODO::
    Define DWARF register enumeration.
 
    If want to present a wavefront state then should expose vector registers as
-   64 wide (rather than per work-item view that LLVM uses). Either as separate
-   registers, or a 64x4 byte single register. In either case use a new LANE op
-   (akin to XDREF) to select the current lane usage in a location
-   expression. This would also allow scalar register spilling to vector register
-   lanes to be expressed (currently no debug information is being generated for
-   spilling). If choose a wide single register approach then use LANE in
-   conjunction with PIECE operation to select the dword part of the register for
-   the current lane. If the separate register approach then use LANE to select
-   the register.
+   64 dword wide (rather than per work-item view that LLVM uses). Either as
+   separate registers, or a 64x4 byte single register. In either case use a new
+   ``DW_OP_lane`` op (akin to ``DW_OP_xderef``) to select the current lane usage
+   in a location expression. This would also allow scalar register spilling to
+   vector register lanes to be expressed (currently no debug information is
+   being generated for spilling). If choose a wide single register approach then
+   use ``DW_OP_lane`` in conjunction with ``DW_OP_piece`` operation to select
+   the dword part of the register for the current lane. If the separate register
+   approach then use ``DW_OP_lane`` to select the register.
 
 Source Text
 ~~~~~~~~~~~
@@ -1166,9 +1268,10 @@ record (see :ref:`amdgpu-note-records-v2`).
 The metadata is specified as a YAML formatted string (see [YAML]_ and
 :doc:`YamlIO`).
 
-.. TODO
-   Is the string null terminated? It probably should not if YAML allows it to
-   contain null characters, otherwise it should be.
+.. TODO::
+
+  Is the string null terminated? It probably should not if YAML allows it to
+  contain null characters, otherwise it should be.
 
 The metadata is represented as a single YAML document comprised of the mapping
 defined in table :ref:`amdgpu-amdhsa-code-object-metadata-map-table-v2` and
@@ -1200,16 +1303,16 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                          where:
 
                                          ``ID``
-                                           A 32 bit integer as a unique id for
+                                           A 32-bit integer as a unique id for
                                            each printf function call
 
                                          ``N``
-                                           A 32 bit integer equal to the number
+                                           A 32-bit integer equal to the number
                                            of arguments of printf function call
                                            minus 1
 
                                          ``S[i]`` (where i = 0, 1, ... , N-1)
-                                           32 bit integers for the size in bytes
+                                           32-bit integers for the size in bytes
                                            of the i-th FormatString argument of
                                            the printf function call
 
@@ -1424,7 +1527,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                 - "U64"
                                                 - "F64"
 
-                                                .. TODO
+                                                .. TODO::
                                                    How can it be determined if a
                                                    vector type, and what size
                                                    vector?
@@ -1447,7 +1550,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                 - "Generic"
                                                 - "Region"
 
-                                                .. TODO
+                                                .. TODO::
                                                    Is GlobalBuffer only Global
                                                    or Constant? Is
                                                    DynamicSharedPointer always
@@ -1464,7 +1567,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                 - "WriteOnly"
                                                 - "ReadWrite"
 
-                                                .. TODO
+                                                .. TODO::
                                                    Does this apply to
                                                    GlobalBuffer?
      "ActualAccQual"   string                   The actual memory accesses
@@ -1503,7 +1606,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                 is pipe qualified. Only present
                                                 if "ValueKind" is "Pipe".
 
-                                                .. TODO
+                                                .. TODO::
                                                    Can GlobalBuffer be pipe
                                                    qualified?
      ================= ============== ========= ================================
@@ -1630,16 +1733,16 @@ same *vendor-name*.
                                                 where:
 
                                                 ``ID``
-                                                  A 32 bit integer as a unique id for
+                                                  A 32-bit integer as a unique id for
                                                   each printf function call
 
                                                 ``N``
-                                                  A 32 bit integer equal to the number
+                                                  A 32-bit integer equal to the number
                                                   of arguments of printf function call
                                                   minus 1
 
                                                 ``S[i]`` (where i = 0, 1, ... , N-1)
-                                                  32 bit integers for the size in bytes
+                                                  32-bit integers for the size in bytes
                                                   of the i-th FormatString argument of
                                                   the printf function call
 
@@ -1923,7 +2026,7 @@ same *vendor-name*.
                                                      - "u64"
                                                      - "f64"
 
-                                                     .. TODO
+                                                     .. TODO::
                                                         How can it be determined if a
                                                         vector type, and what size
                                                         vector?
@@ -1946,7 +2049,7 @@ same *vendor-name*.
                                                      - "generic"
                                                      - "region"
 
-                                                     .. TODO
+                                                     .. TODO::
                                                         Is "global_buffer" only "global"
                                                         or "constant"? Is
                                                         "dynamic_shared_pointer" always
@@ -1963,7 +2066,7 @@ same *vendor-name*.
                                                      - "write_only"
                                                      - "read_write"
 
-                                                     .. TODO
+                                                     .. TODO::
                                                         Does this apply to
                                                         "global_buffer"?
      ".actual_access"       string                   The actual memory accesses
@@ -2002,7 +2105,7 @@ same *vendor-name*.
                                                      is pipe qualified. Only present
                                                      if ".value_kind" is "pipe".
 
-                                                     .. TODO
+                                                     .. TODO::
                                                         Can "global_buffer" be pipe
                                                         qualified?
      ====================== ============== ========= ================================
@@ -2012,12 +2115,12 @@ same *vendor-name*.
 Kernel Dispatch
 ~~~~~~~~~~~~~~~
 
-The HSA architected queuing language (AQL) defines a user space memory interface
-that can be used to control the dispatch of kernels, in an agent independent
-way. An agent can have zero or more AQL queues created for it using the ROCm
-runtime, in which AQL packets (all of which are 64 bytes) can be placed. See the
-*HSA Platform System Architecture Specification* [HSA]_ for the AQL queue
-mechanics and packet layouts.
+The HSA architected queuing language (AQL) defines a user space memory
+interface that can be used to control the dispatch of kernels, in an agent
+independent way. An agent can have zero or more AQL queues created for it using
+the ROCm runtime, in which AQL packets (all of which are 64 bytes) can be
+placed. See the *HSA Platform System Architecture Specification* [HSA]_ for the
+AQL queue mechanics and packet layouts.
 
 The packet processor of a kernel agent is responsible for detecting and
 dispatching HSA kernels from the AQL queues associated with it. For AMD GPUs the
@@ -2034,21 +2137,21 @@ CPU host program, or from an HSA kernel executing on a GPU.
 1. A pointer to an AQL queue for the kernel agent on which the kernel is to be
    executed is obtained.
 2. A pointer to the kernel descriptor (see
-   :ref:`amdgpu-amdhsa-kernel-descriptor`) of the kernel to execute is
-   obtained. It must be for a kernel that is contained in a code object that that
-   was loaded by the ROCm runtime on the kernel agent with which the AQL queue is
+   :ref:`amdgpu-amdhsa-kernel-descriptor`) of the kernel to execute is obtained.
+   It must be for a kernel that is contained in a code object that that was
+   loaded by the ROCm runtime on the kernel agent with which the AQL queue is
    associated.
 3. Space is allocated for the kernel arguments using the ROCm runtime allocator
    for a memory region with the kernarg property for the kernel agent that will
    execute the kernel. It must be at least 16 byte aligned.
 4. Kernel argument values are assigned to the kernel argument memory
-   allocation. The layout is defined in the *HSA Programmer's Language Reference*
-   [HSA]_. For AMDGPU the kernel execution directly accesses the kernel argument
-   memory in the same way constant memory is accessed. (Note that the HSA
-   specification allows an implementation to copy the kernel argument contents to
-   another location that is accessed by the kernel.)
+   allocation. The layout is defined in the *HSA Programmer's Language
+   Reference* [HSA]_. For AMDGPU the kernel execution directly accesses the
+   kernel argument memory in the same way constant memory is accessed. (Note
+   that the HSA specification allows an implementation to copy the kernel
+   argument contents to another location that is accessed by the kernel.)
 5. An AQL kernel dispatch packet is created on the AQL queue. The ROCm runtime
-   api uses 64 bit atomic operations to reserve space in the AQL queue for the
+   api uses 64-bit atomic operations to reserve space in the AQL queue for the
    packet. The packet must be set up, and the final write must use an atomic
    store release to set the packet kind to ensure the packet contents are
    visible to the kernel agent. AQL defines a doorbell signal mechanism to
@@ -2074,89 +2177,10 @@ CPU host program, or from an HSA kernel executing on a GPU.
 10. When the kernel dispatch has completed execution, CP signals the completion
     signal specified in the kernel dispatch packet if not 0.
 
-.. _amdgpu-amdhsa-memory-spaces:
-
-Memory Spaces
-~~~~~~~~~~~~~
-
-The memory space properties are:
-
-  .. table:: AMDHSA Memory Spaces
-     :name: amdgpu-amdhsa-memory-spaces-table
-
-     ================= =========== ======== ======= ==================
-     Memory Space Name HSA Segment Hardware Address NULL Value
-                       Name        Name     Size
-     ================= =========== ======== ======= ==================
-     Private           private     scratch  32      0x00000000
-     Local             group       LDS      32      0xFFFFFFFF
-     Global            global      global   64      0x0000000000000000
-     Constant          constant    *same as 64      0x0000000000000000
-                                   global*
-     Generic           flat        flat     64      0x0000000000000000
-     Region            N/A         GDS      32      *not implemented
-                                                    for AMDHSA*
-     ================= =========== ======== ======= ==================
-
-The global and constant memory spaces both use global virtual addresses, which
-are the same virtual address space used by the CPU. However, some virtual
-addresses may only be accessible to the CPU, some only accessible by the GPU,
-and some by both.
-
-Using the constant memory space indicates that the data will not change during
-the execution of the kernel. This allows scalar read instructions to be
-used. The vector and scalar L1 caches are invalidated of volatile data before
-each kernel dispatch execution to allow constant memory to change values between
-kernel dispatches.
-
-The local memory space uses the hardware Local Data Store (LDS) which is
-automatically allocated when the hardware creates work-groups of wavefronts, and
-freed when all the wavefronts of a work-group have terminated. The data store
-(DS) instructions can be used to access it.
-
-The private memory space uses the hardware scratch memory support. If the kernel
-uses scratch, then the hardware allocates memory that is accessed using
-wavefront lane dword (4 byte) interleaving. The mapping used from private
-address to physical address is:
-
-  ``wavefront-scratch-base +
-  (private-address * wavefront-size * 4) +
-  (wavefront-lane-id * 4)``
-
-There are different ways that the wavefront scratch base address is determined
-by a wavefront (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`). This
-memory can be accessed in an interleaved manner using buffer instruction with
-the scratch buffer descriptor and per wavefront scratch offset, by the scratch
-instructions, or by flat instructions. If each lane of a wavefront accesses the
-same private address, the interleaving results in adjacent dwords being accessed
-and hence requires fewer cache lines to be fetched. Multi-dword access is not
-supported except by flat and scratch instructions in GFX9-GFX10.
-
-The generic address space uses the hardware flat address support available in
-GFX7-GFX10. This uses two fixed ranges of virtual addresses (the private and
-local apertures), that are outside the range of addressible global memory, to
-map from a flat address to a private or local address.
-
-FLAT instructions can take a flat address and access global, private (scratch)
-and group (LDS) memory depending in if the address is within one of the
-aperture ranges. Flat access to scratch requires hardware aperture setup and
-setup in the kernel prologue (see :ref:`amdgpu-amdhsa-flat-scratch`). Flat
-access to LDS requires hardware aperture setup and M0 (GFX7-GFX8) register setup
-(see :ref:`amdgpu-amdhsa-m0`).
-
-To convert between a segment address and a flat address the base address of the
-apertures address can be used. For GFX7-GFX8 these are available in the
-:ref:`amdgpu-amdhsa-hsa-aql-queue` the address of which can be obtained with
-Queue Ptr SGPR (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`). For
-GFX9-GFX10 the aperture base addresses are directly available as inline constant
-registers ``SRC_SHARED_BASE/LIMIT`` and ``SRC_PRIVATE_BASE/LIMIT``. In 64 bit
-address mode the aperture sizes are 2^32 bytes and the base is aligned to 2^32
-which makes it easier to convert from flat to segment or segment to flat.
-
 Image and Samplers
 ~~~~~~~~~~~~~~~~~~
 
-Image and sample handles created by the ROCm runtime are 64 bit addresses of a
+Image and sample handles created by the ROCm runtime are 64-bit addresses of a
 hardware 32 byte V# and 48 byte S# object respectively. In order to support the
 HSA ``query_sampler`` operations two extra dwords are used to store the HSA BRIG
 enumeration values for the queries that are not trivially deducible from the S#
@@ -2165,7 +2189,7 @@ representation.
 HSA Signals
 ~~~~~~~~~~~
 
-HSA signal handles created by the ROCm runtime are 64 bit addresses of a
+HSA signal handles created by the ROCm runtime are 64-bit addresses of a
 structure allocated in memory accessible from both the CPU and GPU. The
 structure is defined by the ROCm runtime and subject to change between releases
 (see [AMD-ROCm-github]_).
@@ -2408,7 +2432,7 @@ alignment.
      15:14   2 bits  FLOAT_ROUND_MODE_16_64          Wavefront starts execution
                                                      with specified rounding
                                                      denorm mode for half/double (16
-                                                     and 64 bit) floating point
+                                                     and 64-bit) floating point
                                                      precision floating point
                                                      operations.
 
@@ -2434,7 +2458,7 @@ alignment.
      19:18   2 bits  FLOAT_DENORM_MODE_16_64         Wavefront starts execution
                                                      with specified denorm mode
                                                      for half/double (16
-                                                     and 64 bit) floating point
+                                                     and 64-bit) floating point
                                                      precision floating point
                                                      operations.
 
@@ -2803,11 +2827,11 @@ SGPR0, the next enabled register is SGPR1 etc.; disabled registers do not have
 an SGPR number.
 
 The initial SGPRs comprise up to 16 User SRGPs that are set by CP and apply to
-all wavefronts of the grid. It is possible to specify more than 16 User SGPRs using
-the ``enable_sgpr_*`` bit fields, in which case only the first 16 are actually
-initialized. These are then immediately followed by the System SGPRs that are
-set up by ADC/SPI and can have different values for each wavefront of the grid
-dispatch.
+all wavefronts of the grid. It is possible to specify more than 16 User SGPRs
+using the ``enable_sgpr_*`` bit fields, in which case only the first 16 are
+actually initialized. These are then immediately followed by the System SGPRs
+that are set up by ADC/SPI and can have different values for each wavefront of
+the grid dispatch.
 
 SGPR register initial state is defined in
 :ref:`amdgpu-amdhsa-sgpr-register-set-up-order-table`.
@@ -2823,19 +2847,19 @@ SGPR register initial state is defined in
      First      Private Segment Buffer     4      V# that can be used, together
                 (enable_sgpr_private              with Scratch Wavefront Offset
                 _segment_buffer)                  as an offset, to access the
-                                                  private memory space using a
+                                                  private address space using a
                                                   segment address.
 
                                                   CP uses the value provided by
                                                   the runtime.
-     then       Dispatch Ptr               2      64 bit address of AQL dispatch
+     then       Dispatch Ptr               2      64-bit address of AQL dispatch
                 (enable_sgpr_dispatch_ptr)        packet for kernel dispatch
                                                   actually executing.
-     then       Queue Ptr                  2      64 bit address of amd_queue_t
+     then       Queue Ptr                  2      64-bit address of amd_queue_t
                 (enable_sgpr_queue_ptr)           object for AQL queue on which
                                                   the dispatch packet was
                                                   queued.
-     then       Kernarg Segment Ptr        2      64 bit address of Kernarg
+     then       Kernarg Segment Ptr        2      64-bit address of Kernarg
                 (enable_sgpr_kernarg              segment. This is directly
                 _segment_ptr)                     copied from the
                                                   kernarg_address in the kernel
@@ -2844,7 +2868,7 @@ SGPR register initial state is defined in
                                                   Having CP load it once avoids
                                                   loading it at the beginning of
                                                   every wavefront.
-     then       Dispatch Id                2      64 bit Dispatch ID of the
+     then       Dispatch Id                2      64-bit Dispatch ID of the
                 (enable_sgpr_dispatch_id)         dispatch packet being
                                                   executed.
      then       Flat Scratch Init          2      This is 2 SGPRs:
@@ -2852,7 +2876,7 @@ SGPR register initial state is defined in
                 _init)                            GFX6
                                                     Not supported.
                                                   GFX7-GFX8
-                                                    The first SGPR is a 32 bit
+                                                    The first SGPR is a 32-bit
                                                     byte offset from
                                                     ``SH_HIDDEN_PRIVATE_BASE_VIMID``
                                                     to per SPI base of memory
@@ -2886,7 +2910,7 @@ SGPR register initial state is defined in
                                                     access the scratch
                                                     aperture.
 
-                                                    The second SGPR is 32 bit
+                                                    The second SGPR is 32-bit
                                                     byte size of a single
                                                     work-item's scratch memory
                                                     usage. CP obtains this from
@@ -2911,7 +2935,7 @@ SGPR register initial state is defined in
                                                     wavefront.
                                                   GFX9-GFX10
                                                     This is the
-                                                    64 bit base address of the
+                                                    64-bit base address of the
                                                     per SPI scratch backing
                                                     memory managed by SPI for
                                                     the queue executing the
@@ -2928,7 +2952,7 @@ SGPR register initial state is defined in
                                                     SGPRn-5. It is used as the
                                                     FLAT SCRATCH BASE in flat
                                                     memory instructions.
-     then       Private Segment Size       1      The 32 bit byte size of a
+     then       Private Segment Size       1      The 32-bit byte size of a
                                                   (enable_sgpr_private single
                                                   work-item's
                                                   scratch_segment_size) memory
@@ -2950,7 +2974,7 @@ SGPR register initial state is defined in
                                                   may be needed for GFX9-GFX10 which
                                                   changes the meaning of the
                                                   Flat Scratch Init value.
-     then       Grid Work-Group Count X    1      32 bit count of the number of
+     then       Grid Work-Group Count X    1      32-bit count of the number of
                 (enable_sgpr_grid                 work-groups in the X dimension
                 _workgroup_count_X)               for the grid being
                                                   executed. Computed from the
@@ -2958,7 +2982,7 @@ SGPR register initial state is defined in
                                                   packet as ((grid_size.x +
                                                   workgroup_size.x - 1) /
                                                   workgroup_size.x).
-     then       Grid Work-Group Count Y    1      32 bit count of the number of
+     then       Grid Work-Group Count Y    1      32-bit count of the number of
                 (enable_sgpr_grid                 work-groups in the Y dimension
                 _workgroup_count_Y &&             for the grid being
                 less than 16 previous             executed. Computed from the
@@ -2969,7 +2993,7 @@ SGPR register initial state is defined in
 
                                                   Only initialized if <16
                                                   previous SGPRs initialized.
-     then       Grid Work-Group Count Z    1      32 bit count of the number of
+     then       Grid Work-Group Count Z    1      32-bit count of the number of
                 (enable_sgpr_grid                 work-groups in the Z dimension
                 _workgroup_count_Z &&             for the grid being
                 less than 16 previous             executed. Computed from the
@@ -2980,19 +3004,19 @@ SGPR register initial state is defined in
 
                                                   Only initialized if <16
                                                   previous SGPRs initialized.
-     then       Work-Group Id X            1      32 bit work-group id in X
+     then       Work-Group Id X            1      32-bit work-group id in X
                 (enable_sgpr_workgroup_id         dimension of grid for
                 _X)                               wavefront.
-     then       Work-Group Id Y            1      32 bit work-group id in Y
+     then       Work-Group Id Y            1      32-bit work-group id in Y
                 (enable_sgpr_workgroup_id         dimension of grid for
                 _Y)                               wavefront.
-     then       Work-Group Id Z            1      32 bit work-group id in Z
+     then       Work-Group Id Z            1      32-bit work-group id in Z
                 (enable_sgpr_workgroup_id         dimension of grid for
                 _Z)                               wavefront.
      then       Work-Group Info            1      {first_wavefront, 14'b0000,
                 (enable_sgpr_workgroup            ordered_append_term[10:0],
                 _info)                            threadgroup_size_in_wavefronts[5:0]}
-     then       Scratch Wavefront Offset   1      32 bit byte offset from base
+     then       Scratch Wavefront Offset   1      32-bit byte offset from base
                 (enable_sgpr_private              of scratch base of queue
                 _segment_wavefront_offset)        executing the kernel
                                                   dispatch. Must be used as an
@@ -3023,13 +3047,13 @@ VGPR register initial state is defined in
                 (kernel descriptor enable  of
                 field)                     VGPRs
      ========== ========================== ====== ==============================
-     First      Work-Item Id X             1      32 bit work item id in X
+     First      Work-Item Id X             1      32-bit work item id in X
                 (Always initialized)              dimension of work-group for
                                                   wavefront lane.
-     then       Work-Item Id Y             1      32 bit work item id in Y
+     then       Work-Item Id Y             1      32-bit work item id in Y
                 (enable_vgpr_workitem_id          dimension of work-group for
                 > 0)                              wavefront lane.
-     then       Work-Item Id Z             1      32 bit work item id in Z
+     then       Work-Item Id Z             1      32-bit work item id in Z
                 (enable_vgpr_workitem_id          dimension of work-group for
                 > 1)                              wavefront lane.
      ========== ========================== ====== ==============================
@@ -3041,15 +3065,16 @@ The setting of registers is done by GPU CP/ADC/SPI hardware as follows:
 2. Work-group Id registers X, Y, Z are set by ADC which supports any
    combination including none.
 3. Scratch Wavefront Offset is set by SPI in a per wavefront basis which is why
-   its value cannot included with the flat scratch init value which is per queue.
+   its value cannot included with the flat scratch init value which is per
+   queue.
 4. The VGPRs are set by SPI which only supports specifying either (X), (X, Y)
    or (X, Y, Z).
 
-Flat Scratch register pair are adjacent SGRRs so they can be moved as a 64 bit
+Flat Scratch register pair are adjacent SGRRs so they can be moved as a 64-bit
 value to the hardware required SGPRn-3 and SGPRn-4 respectively.
 
 The global segment can be accessed either using buffer instructions (GFX6 which
-has V# 64 bit address support), flat instructions (GFX7-GFX10), or global
+has V# 64-bit address support), flat instructions (GFX7-GFX10), or global
 instructions (GFX9-GFX10).
 
 If buffer operations are used then the compiler can generate a V# with the
@@ -3089,33 +3114,37 @@ Flat Scratch
 
 If the kernel may use flat operations to access scratch memory, the prolog code
 must set up FLAT_SCRATCH register pair (FLAT_SCRATCH_LO/FLAT_SCRATCH_HI which
-are in SGPRn-4/SGPRn-3). Initialization uses Flat Scratch Init and Scratch Wavefront
-Offset SGPR registers (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`):
+are in SGPRn-4/SGPRn-3). Initialization uses Flat Scratch Init and Scratch
+Wavefront Offset SGPR registers (see
+:ref:`amdgpu-amdhsa-initial-kernel-execution-state`):
 
 GFX6
   Flat scratch is not supported.
 
 GFX7-GFX8
-  1. The low word of Flat Scratch Init is 32 bit byte offset from
+
+  1. The low word of Flat Scratch Init is 32-bit byte offset from
      ``SH_HIDDEN_PRIVATE_BASE_VIMID`` to the base of scratch backing memory
      being managed by SPI for the queue executing the kernel dispatch. This is
      the same value used in the Scratch Segment Buffer V# base address. The
-     prolog must add the value of Scratch Wavefront Offset to get the wavefront's byte
-     scratch backing memory offset from ``SH_HIDDEN_PRIVATE_BASE_VIMID``. Since
-     FLAT_SCRATCH_LO is in units of 256 bytes, the offset must be right shifted
-     by 8 before moving into FLAT_SCRATCH_LO.
-  2. The second word of Flat Scratch Init is 32 bit byte size of a single
+     prolog must add the value of Scratch Wavefront Offset to get the
+     wavefront's byte scratch backing memory offset from
+     ``SH_HIDDEN_PRIVATE_BASE_VIMID``. Since FLAT_SCRATCH_LO is in units of 256
+     bytes, the offset must be right shifted by 8 before moving into
+     FLAT_SCRATCH_LO.
+  2. The second word of Flat Scratch Init is 32-bit byte size of a single
      work-items scratch memory usage. This is directly loaded from the kernel
      dispatch packet Private Segment Byte Size and rounded up to a multiple of
      DWORD. Having CP load it once avoids loading it at the beginning of every
-     wavefront. The prolog must move it to FLAT_SCRATCH_LO for use as FLAT SCRATCH
-     SIZE.
+     wavefront. The prolog must move it to FLAT_SCRATCH_LO for use as FLAT
+     SCRATCH SIZE.
 
 GFX9-GFX10
-  The Flat Scratch Init is the 64 bit address of the base of scratch backing
+  The Flat Scratch Init is the 64-bit address of the base of scratch backing
   memory being managed by SPI for the queue executing the kernel dispatch. The
-  prolog must add the value of Scratch Wavefront Offset and moved to the FLAT_SCRATCH
-  pair for use as the flat scratch base in flat memory instructions.
+  prolog must add the value of Scratch Wavefront Offset and moved to the
+  FLAT_SCRATCH pair for use as the flat scratch base in flat memory
+  instructions.
 
 .. _amdgpu-amdhsa-memory-model:
 
@@ -3123,10 +3152,7 @@ Memory Model
 ~~~~~~~~~~~~
 
 This section describes the mapping of LLVM memory model onto AMDGPU machine code
-(see :ref:`memmodel`). *The implementation is WIP.*
-
-.. TODO
-   Update when implementation complete.
+(see :ref:`memmodel`).
 
 The AMDGPU backend supports the memory synchronization scopes specified in
 :ref:`amdgpu-memory-scopes`.
@@ -3154,7 +3180,7 @@ The AMDGPU backend supports the following memory models:
     global and local address spaces. Only a fence specifying both global and
     local address space, and seq_cst instructions join the relationships. Since
     the LLVM ``memfence`` instruction does not allow an address space to be
-    specified the OpenCL fence has to convervatively assume both local and
+    specified the OpenCL fence has to conservatively assume both local and
     global address space was specified. However, optimizations can often be
     done to eliminate the additional ``s_waitcnt`` instructions when there are
     no intervening memory instructions which access the corresponding address
@@ -3181,13 +3207,13 @@ For GFX6-GFX9:
   global order and involve no caching. Completion is reported to a wavefront in
   execution order.
 * The LDS memory has multiple request queues shared by the SIMDs of a
-  CU. Therefore, the LDS operations performed by different wavefronts of a work-group
-  can be reordered relative to each other, which can result in reordering the
-  visibility of vector memory operations with respect to LDS operations of other
-  wavefronts in the same work-group. A ``s_waitcnt lgkmcnt(0)`` is required to
-  ensure synchronization between LDS operations and vector memory operations
-  between wavefronts of a work-group, but not between operations performed by the
-  same wavefront.
+  CU. Therefore, the LDS operations performed by different wavefronts of a
+  work-group can be reordered relative to each other, which can result in
+  reordering the visibility of vector memory operations with respect to LDS
+  operations of other wavefronts in the same work-group. A ``s_waitcnt
+  lgkmcnt(0)`` is required to ensure synchronization between LDS operations and
+  vector memory operations between wavefronts of a work-group, but not between
+  operations performed by the same wavefront.
 * The vector memory operations are performed as wavefront wide operations and
   completion is reported to a wavefront in execution order. The exception is
   that for GFX7-GFX9 ``flat_load/store/atomic`` instructions can report out of
@@ -3196,24 +3222,25 @@ For GFX6-GFX9:
 * The vector memory operations access a single vector L1 cache shared by all
   SIMDs a CU. Therefore, no special action is required for coherence between the
   lanes of a single wavefront, or for coherence between wavefronts in the same
-  work-group. A ``buffer_wbinvl1_vol`` is required for coherence between wavefronts
-  executing in different work-groups as they may be executing on different CUs.
+  work-group. A ``buffer_wbinvl1_vol`` is required for coherence between
+  wavefronts executing in different work-groups as they may be executing on
+  different CUs.
 * The scalar memory operations access a scalar L1 cache shared by all wavefronts
   on a group of CUs. The scalar and vector L1 caches are not coherent. However,
   scalar operations are used in a restricted way so do not impact the memory
-  model. See :ref:`amdgpu-amdhsa-memory-spaces`.
+  model. See :ref:`amdgpu-address-spaces`.
 * The vector and scalar memory operations use an L2 cache shared by all CUs on
   the same agent.
 * The L2 cache has independent channels to service disjoint ranges of virtual
   addresses.
 * Each CU has a separate request queue per channel. Therefore, the vector and
-  scalar memory operations performed by wavefronts executing in different work-groups
-  (which may be executing on different CUs) of an agent can be reordered
-  relative to each other. A ``s_waitcnt vmcnt(0)`` is required to ensure
-  synchronization between vector memory operations of different CUs. It ensures a
-  previous vector memory operation has completed before executing a subsequent
-  vector memory or LDS operation and so can be used to meet the requirements of
-  acquire and release.
+  scalar memory operations performed by wavefronts executing in different
+  work-groups (which may be executing on different CUs) of an agent can be
+  reordered relative to each other. A ``s_waitcnt vmcnt(0)`` is required to
+  ensure synchronization between vector memory operations of different CUs. It
+  ensures a previous vector memory operation has completed before executing a
+  subsequent vector memory or LDS operation and so can be used to meet the
+  requirements of acquire and release.
 * The L2 cache can be kept coherent with other agents on some targets, or ranges
   of virtual addresses can be set up to bypass it to ensure system coherence.
 
@@ -3234,45 +3261,45 @@ For GFX10:
   global order and involve no caching. Completion is reported to a wavefront in
   execution order.
 * The LDS memory has multiple request queues shared by the SIMDs of a
-  WGP. Therefore, the LDS operations performed by different wavefronts of a work-group
-  can be reordered relative to each other, which can result in reordering the
-  visibility of vector memory operations with respect to LDS operations of other
-  wavefronts in the same work-group. A ``s_waitcnt lgkmcnt(0)`` is required to
-  ensure synchronization between LDS operations and vector memory operations
-  between wavefronts of a work-group, but not between operations performed by the
-  same wavefront.
+  WGP. Therefore, the LDS operations performed by different wavefronts of a
+  work-group can be reordered relative to each other, which can result in
+  reordering the visibility of vector memory operations with respect to LDS
+  operations of other wavefronts in the same work-group. A ``s_waitcnt
+  lgkmcnt(0)`` is required to ensure synchronization between LDS operations and
+  vector memory operations between wavefronts of a work-group, but not between
+  operations performed by the same wavefront.
 * The vector memory operations are performed as wavefront wide operations.
   Completion of load/store/sample operations are reported to a wavefront in
   execution order of other load/store/sample operations performed by that
   wavefront.
 * The vector memory operations access a vector L0 cache. There is a single L0
-  cache per CU. Each SIMD of a CU accesses the same L0 cache.
-  Therefore, no special action is required for coherence between the lanes of a
-  single wavefront. However, a ``BUFFER_GL0_INV`` is required for coherence
-  between wavefronts executing in the same work-group as they may be executing on
-  SIMDs of different CUs that access different L0s. A ``BUFFER_GL0_INV`` is also
-  required for coherence between wavefronts executing in different work-groups as
-  they may be executing on different WGPs.
+  cache per CU. Each SIMD of a CU accesses the same L0 cache. Therefore, no
+  special action is required for coherence between the lanes of a single
+  wavefront. However, a ``BUFFER_GL0_INV`` is required for coherence between
+  wavefronts executing in the same work-group as they may be executing on SIMDs
+  of different CUs that access different L0s. A ``BUFFER_GL0_INV`` is also
+  required for coherence between wavefronts executing in different work-groups
+  as they may be executing on different WGPs.
 * The scalar memory operations access a scalar L0 cache shared by all wavefronts
   on a WGP. The scalar and vector L0 caches are not coherent. However, scalar
   operations are used in a restricted way so do not impact the memory model. See
-  :ref:`amdgpu-amdhsa-memory-spaces`.
+  :ref:`amdgpu-address-spaces`.
 * The vector and scalar memory L0 caches use an L1 cache shared by all WGPs on
   the same SA. Therefore, no special action is required for coherence between
   the wavefronts of a single work-group. However, a ``BUFFER_GL1_INV`` is
-  required for coherence between wavefronts executing in different work-groups as
-  they may be executing on different SAs that access different L1s.
+  required for coherence between wavefronts executing in different work-groups
+  as they may be executing on different SAs that access different L1s.
 * The L1 caches have independent quadrants to service disjoint ranges of virtual
   addresses.
 * Each L0 cache has a separate request queue per L1 quadrant. Therefore, the
   vector and scalar memory operations performed by different wavefronts, whether
   executing in the same or different work-groups (which may be executing on
   different CUs accessing different L0s), can be reordered relative to each
-  other. A ``s_waitcnt vmcnt(0) & vscnt(0)`` is required to ensure synchronization
-  between vector memory operations of different wavefronts. It ensures a previous
-  vector memory operation has completed before executing a subsequent vector
-  memory or LDS operation and so can be used to meet the requirements of acquire,
-  release and sequential consistency.
+  other. A ``s_waitcnt vmcnt(0) & vscnt(0)`` is required to ensure
+  synchronization between vector memory operations of different wavefronts. It
+  ensures a previous vector memory operation has completed before executing a
+  subsequent vector memory or LDS operation and so can be used to meet the
+  requirements of acquire, release and sequential consistency.
 * The L1 caches use an L2 cache shared by all SAs on the same agent.
 * The L2 cache has independent channels to service disjoint ranges of virtual
   addresses.
@@ -3288,10 +3315,10 @@ For GFX10:
 * The L2 cache can be kept coherent with other agents on some targets, or ranges
   of virtual addresses can be set up to bypass it to ensure system coherence.
 
-Private address space uses ``buffer_load/store`` using the scratch V# (GFX6-GFX8),
-or ``scratch_load/store`` (GFX9-GFX10). Since only a single thread is accessing the
-memory, atomic memory orderings are not meaningful and all accesses are treated
-as non-atomic.
+Private address space uses ``buffer_load/store`` using the scratch V#
+(GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX10). Since only a single thread
+is accessing the memory, atomic memory orderings are not meaningful and all
+accesses are treated as non-atomic.
 
 Constant address space uses ``buffer/global_load`` instructions (or equivalent
 scalar memory instructions). Since the constant address space contents do not
@@ -3321,50 +3348,51 @@ variables. Therefore the kernel machine code does not have to maintain the
 scalar L1 cache to ensure it is coherent with the vector L1 cache. The scalar
 and vector L1 caches are invalidated between kernel dispatches by CP since
 constant address space data may change between kernel dispatch executions. See
-:ref:`amdgpu-amdhsa-memory-spaces`.
+:ref:`amdgpu-address-spaces`.
 
-The one execption is if scalar writes are used to spill SGPR registers. In this
+The one exception is if scalar writes are used to spill SGPR registers. In this
 case the AMDGPU backend ensures the memory location used to spill is never
 accessed by vector memory operations at the same time. If scalar writes are used
 then a ``s_dcache_wb`` is inserted before the ``s_endpgm`` and before a function
 return since the locations may be used for vector memory instructions by a
-future wavefront that uses the same scratch area, or a function call that creates a
-frame at the same address, respectively. There is no need for a ``s_dcache_inv``
-as all scalar writes are write-before-read in the same thread.
+future wavefront that uses the same scratch area, or a function call that
+creates a frame at the same address, respectively. There is no need for a
+``s_dcache_inv`` as all scalar writes are write-before-read in the same thread.
 
-For GFX6-GFX9, scratch backing memory (which is used for the private address space)
-is accessed with MTYPE NC_NV (non-coherenent non-volatile). Since the private
-address space is only accessed by a single thread, and is always
+For GFX6-GFX9, scratch backing memory (which is used for the private address
+space) is accessed with MTYPE NC_NV (non-coherent non-volatile). Since the
+private address space is only accessed by a single thread, and is always
 write-before-read, there is never a need to invalidate these entries from the L1
 cache. Hence all cache invalidates are done as ``*_vol`` to only invalidate the
 volatile cache lines.
 
 For GFX10, scratch backing memory (which is used for the private address space)
-is accessed with MTYPE NC (non-coherenent). Since the private address space is
+is accessed with MTYPE NC (non-coherent). Since the private address space is
 only accessed by a single thread, and is always write-before-read, there is
 never a need to invalidate these entries from the L0 or L1 caches.
 
-For GFX10, wavefronts are executed in native mode with in-order reporting of loads
-and sample instructions. In this mode vmcnt reports completion of load, atomic
-with return and sample instructions in order, and the vscnt reports the
-completion of store and atomic without return in order. See ``MEM_ORDERED`` field
-in :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
+For GFX10, wavefronts are executed in native mode with in-order reporting of
+loads and sample instructions. In this mode vmcnt reports completion of load,
+atomic with return and sample instructions in order, and the vscnt reports the
+completion of store and atomic without return in order. See ``MEM_ORDERED``
+field in :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
 
 In GFX10, wavefronts can be executed in WGP or CU wavefront execution mode:
 
 * In WGP wavefront execution mode the wavefronts of a work-group are executed
   on the SIMDs of both CUs of the WGP. Therefore, explicit management of the per
-  CU L0 caches is required for work-group synchronization. Also accesses to L1 at
-  work-group scope need to be expicitly ordered as the accesses from different
-  CUs are not ordered.
+  CU L0 caches is required for work-group synchronization. Also accesses to L1
+  at work-group scope need to be explicitly ordered as the accesses from
+  different CUs are not ordered.
 * In CU wavefront execution mode the wavefronts of a work-group are executed on
   the SIMDs of a single CU of the WGP. Therefore, all global memory access by
   the work-group access the same L0 which in turn ensures L1 accesses are
   ordered and so do not require explicit management of the caches for
   work-group synchronization.
 
-See ``WGP_MODE`` field in :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`
-and :ref:`amdgpu-target-features`.
+See ``WGP_MODE`` field in
+:ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table` and
+:ref:`amdgpu-target-features`.
 
 On dGPU the kernarg backing memory is accessed as UC (uncached) to avoid needing
 to invalidate the L2 cache. For GFX6-GFX9, this also causes it to be treated as
@@ -3403,7 +3431,7 @@ agents.
                                               - constant
                                                          - nontemporal                   - nontemporal
 
-                                                           1. buffer/global/flat_stote      1. buffer/global/flat_store
+                                                           1. buffer/global/flat_store      1. buffer/global/flat_store
                                                               glc=1 slc=1                      slc=1
 
      store        *none*       *none*         - local    1. ds_store                     1. ds_store
@@ -3460,7 +3488,7 @@ agents.
                                                                                              and before any following
                                                                                              global/generic
                                                                                              load/load
-                                                                                             atomic/stote/store
+                                                                                             atomic/store/store
                                                                                              atomic/atomicrmw.
 
                                                                                          3. buffer_gl0_inv
@@ -3596,7 +3624,7 @@ agents.
                                                                                              and before any following
                                                                                              global/generic
                                                                                              load/load
-                                                                                             atomic/stote/store
+                                                                                             atomic/store/store
                                                                                              atomic/atomicrmw.
 
                                                                                          3. buffer_gl0_inv
@@ -5610,10 +5638,10 @@ Graphics pipelines support a much more flexible user data mapping:
 
   The placement of the global internal table remains fixed in the first *user
   data SGPR register*. Otherwise all parameters are optional, and can be mapped
-  to any desired *user data SGPR register*, with the following regstrictions:
+  to any desired *user data SGPR register*, with the following restrictions:
 
   * Draw Index, Vertex Offset, and Instance Offset can only be used by the first
-    activehardware stage in a graphics pipeline (i.e. where the API vertex
+    active hardware stage in a graphics pipeline (i.e. where the API vertex
     shader runs).
 
   * Application-controlled user data must be mapped into a contiguous range of
@@ -5630,10 +5658,11 @@ Graphics pipelines support a much more flexible user data mapping:
 Global Internal Table
 ~~~~~~~~~~~~~~~~~~~~~
 
-The global internal table is a table of *shader resource descriptors* (SRDs) that
-define how certain engine-wide, runtime-managed resources should be accessed
-from a shader. The majority of these resources have HW-defined formats, and it
-is up to the compiler to write/read data as required by the target hardware.
+The global internal table is a table of *shader resource descriptors* (SRDs)
+that define how certain engine-wide, runtime-managed resources should be
+accessed from a shader. The majority of these resources have HW-defined formats,
+and it is up to the compiler to write/read data as required by the target
+hardware.
 
 The following table illustrates the required format:
 
@@ -5760,7 +5789,8 @@ Instructions
 
 An instruction has the following :doc:`syntax<AMDGPUInstructionSyntax>`:
 
-    ``<``\ *opcode*\ ``>    <``\ *operand0*\ ``>, <``\ *operand1*\ ``>,...    <``\ *modifier0*\ ``> <``\ *modifier1*\ ``>...``
+  | ``<``\ *opcode*\ ``> <``\ *operand0*\ ``>, <``\ *operand1*\ ``>,...
+    <``\ *modifier0*\ ``> <``\ *modifier1*\ ``>...``
 
 :doc:`Operands<AMDGPUOperandSyntax>` are normally comma-separated while
 :doc:`modifiers<AMDGPUModifierSyntax>` are space-separated.
@@ -5768,14 +5798,14 @@ An instruction has the following :doc:`syntax<AMDGPUInstructionSyntax>`:
 The order of *operands* and *modifiers* is fixed.
 Most *modifiers* are optional and may be omitted.
 
-See detailed instruction syntax description for :doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`,
-:doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`, :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`
-and :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>`.
+See detailed instruction syntax description for
+:doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`, :doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`,
+:doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`, and :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>`.
 
 Note that features under development are not included in this description.
 
-For more information about instructions, their semantics and supported combinations of
-operands, refer to one of instruction set architecture manuals
+For more information about instructions, their semantics and supported
+combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_, [AMD-GCN-GFX9]_ and
 [AMD-GCN-GFX10]_.
 
@@ -5787,7 +5817,8 @@ Detailed description of operands may be found :doc:`here<AMDGPUOperandSyntax>`.
 Modifiers
 ~~~~~~~~~
 
-Detailed description of modifiers may be found :doc:`here<AMDGPUModifierSyntax>`.
+Detailed description of modifiers may be found
+:doc:`here<AMDGPUModifierSyntax>`.
 
 Instruction Examples
 ~~~~~~~~~~~~~~~~~~~~
@@ -5802,8 +5833,8 @@ DS
   ds_cmpst_f32 v2, v4, v6
   ds_min_rtn_f64 v[8:9], v2, v[4:5]
 
-
-For full list of supported instructions, refer to "LDS/GDS instructions" in ISA Manual.
+For full list of supported instructions, refer to "LDS/GDS instructions" in ISA
+Manual.
 
 FLAT
 ++++
@@ -5816,7 +5847,8 @@ FLAT
   flat_atomic_cmpswap v1, v[3:4], v[5:6] glc slc
   flat_atomic_fmax_x2 v[1:2], v[3:4], v[5:6] glc
 
-For full list of supported instructions, refer to "FLAT instructions" in ISA Manual.
+For full list of supported instructions, refer to "FLAT instructions" in ISA
+Manual.
 
 MUBUF
 +++++
@@ -5829,7 +5861,8 @@ MUBUF
   buffer_wbinvl1
   buffer_atomic_inc v1, v2, s[8:11], s4 idxen offset:4 slc
 
-For full list of supported instructions, refer to "MUBUF Instructions" in ISA Manual.
+For full list of supported instructions, refer to "MUBUF Instructions" in ISA
+Manual.
 
 SMRD/SMEM
 +++++++++
@@ -5842,7 +5875,8 @@ SMRD/SMEM
   s_dcache_inv_vol
   s_memtime s[4:5]
 
-For full list of supported instructions, refer to "Scalar Memory Operations" in ISA Manual.
+For full list of supported instructions, refer to "Scalar Memory Operations" in
+ISA Manual.
 
 SOP1
 ++++
@@ -5857,7 +5891,8 @@ SOP1
   s_swappc_b64 s[2:3], s[4:5]
   s_cbranch_join s[4:5]
 
-For full list of supported instructions, refer to "SOP1 Instructions" in ISA Manual.
+For full list of supported instructions, refer to "SOP1 Instructions" in ISA
+Manual.
 
 SOP2
 ++++
@@ -5874,7 +5909,8 @@ SOP2
   s_bfe_i64 s[2:3], s[4:5], s6
   s_cbranch_g_fork s[4:5], s[6:7]
 
-For full list of supported instructions, refer to "SOP2 Instructions" in ISA Manual.
+For full list of supported instructions, refer to "SOP2 Instructions" in ISA
+Manual.
 
 SOPC
 ++++
@@ -5886,7 +5922,8 @@ SOPC
   s_bitcmp0_b64 s[2:3], s4
   s_setvskip s3, s5
 
-For full list of supported instructions, refer to "SOPC Instructions" in ISA Manual.
+For full list of supported instructions, refer to "SOPC Instructions" in ISA
+Manual.
 
 SOPP
 ++++
@@ -5905,7 +5942,8 @@ SOPP
   s_sendmsg sendmsg(MSG_INTERRUPT)
   s_trap 1
 
-For full list of supported instructions, refer to "SOPP Instructions" in ISA Manual.
+For full list of supported instructions, refer to "SOPP Instructions" in ISA
+Manual.
 
 Unless otherwise mentioned, little verification is performed on the operands
 of SOPP Instructions, so it is up to the programmer to be familiar with the
@@ -5915,8 +5953,8 @@ VALU
 ++++
 
 For vector ALU instruction opcodes (VOP1, VOP2, VOP3, VOPC, VOP_DPP, VOP_SDWA),
-the assembler will automatically use optimal encoding based on its operands.
-To force specific encoding, one can add a suffix to the opcode of the instruction:
+the assembler will automatically use optimal encoding based on its operands. To
+force specific encoding, one can add a suffix to the opcode of the instruction:
 
 * _e32 for 32-bit VOP1/VOP2/VOPC
 * _e64 for 64-bit VOP3
@@ -5965,8 +6003,9 @@ VOP_SDWA examples:
 
 For full list of supported instructions, refer to "Vector ALU instructions".
 
-.. TODO
-   Remove once we switch to code object v3 by default.
+.. TODO::
+
+  Remove once we switch to code object v3 by default.
 
 .. _amdgpu-amdhsa-assembler-predefined-symbols-v2:
 
@@ -6051,7 +6090,7 @@ object that will be generated by the assembler.
 *major*, *minor*, and *stepping* are all integers that describe the instruction
 set architecture (ISA) version of the assembly program.
 
-*vendor* and *arch* are quoted strings.  *vendor* should always be equal to
+*vendor* and *arch* are quoted strings. *vendor* should always be equal to
 "AMD" and *arch* should always be equal to "AMDGPU".
 
 By default, the assembler will derive the ISA version, *vendor*, and *arch*
@@ -6062,17 +6101,18 @@ from the value of the -mcpu option that is passed to the assembler.
 .amdgpu_hsa_kernel (name)
 +++++++++++++++++++++++++
 
-This directives specifies that the symbol with given name is a kernel entry point
-(label) and the object should contain corresponding symbol of type STT_AMDGPU_HSA_KERNEL.
+This directives specifies that the symbol with given name is a kernel entry
+point (label) and the object should contain corresponding symbol of type
+STT_AMDGPU_HSA_KERNEL.
 
 .amd_kernel_code_t
 ++++++++++++++++++
 
 This directive marks the beginning of a list of key / value pairs that are used
 to specify the amd_kernel_code_t object that will be emitted by the assembler.
-The list must be terminated by the *.end_amd_kernel_code_t* directive.  For
-any amd_kernel_code_t values that are unspecified a default value will be
-used.  The default value for all keys is 0, with the following exceptions:
+The list must be terminated by the *.end_amd_kernel_code_t* directive. For any
+amd_kernel_code_t values that are unspecified a default value will be used. The
+default value for all keys is 0, with the following exceptions:
 
 - *amd_code_version_major* defaults to 1.
 - *amd_kernel_code_version_minor* defaults to 2.
@@ -6111,7 +6151,8 @@ Code Object V2 Example Source Code (-mattr=-code-object-v3)
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 
-.. code-block:: none
+.. code::
+   :number-lines:
 
    .hsa_code_object_version 1,0
    .hsa_code_object_isa
@@ -6368,51 +6409,52 @@ Code Object V3 Example Source Code (-mattr=+code-object-v3)
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 
-.. code-block:: none
+.. code::
+   :number-lines:
 
-  .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack" // optional
+   .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack" // optional
 
-  .text
-  .globl hello_world
-  .p2align 8
-  .type hello_world,@function
-  hello_world:
-    s_load_dwordx2 s[0:1], s[0:1] 0x0
-    v_mov_b32 v0, 3.14159
-    s_waitcnt lgkmcnt(0)
-    v_mov_b32 v1, s0
-    v_mov_b32 v2, s1
-    flat_store_dword v[1:2], v0
-    s_endpgm
-  .Lfunc_end0:
-    .size   hello_world, .Lfunc_end0-hello_world
+   .text
+   .globl hello_world
+   .p2align 8
+   .type hello_world,@function
+   hello_world:
+     s_load_dwordx2 s[0:1], s[0:1] 0x0
+     v_mov_b32 v0, 3.14159
+     s_waitcnt lgkmcnt(0)
+     v_mov_b32 v1, s0
+     v_mov_b32 v2, s1
+     flat_store_dword v[1:2], v0
+     s_endpgm
+   .Lfunc_end0:
+     .size   hello_world, .Lfunc_end0-hello_world
 
-  .rodata
-  .p2align 6
-  .amdhsa_kernel hello_world
-    .amdhsa_user_sgpr_kernarg_segment_ptr 1
-    .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
-    .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
-  .end_amdhsa_kernel
+   .rodata
+   .p2align 6
+   .amdhsa_kernel hello_world
+     .amdhsa_user_sgpr_kernarg_segment_ptr 1
+     .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
+     .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
+   .end_amdhsa_kernel
 
-  .amdgpu_metadata
-  ---
-  amdhsa.version:
-    - 1
-    - 0
-  amdhsa.kernels:
-    - .name: hello_world
-      .symbol: hello_world.kd
-      .kernarg_segment_size: 48
-      .group_segment_fixed_size: 0
-      .private_segment_fixed_size: 0
-      .kernarg_segment_align: 4
-      .wavefront_size: 64
-      .sgpr_count: 2
-      .vgpr_count: 3
-      .max_flat_workgroup_size: 256
-  ...
-  .end_amdgpu_metadata
+   .amdgpu_metadata
+   ---
+   amdhsa.version:
+     - 1
+     - 0
+   amdhsa.kernels:
+     - .name: hello_world
+       .symbol: hello_world.kd
+       .kernarg_segment_size: 48
+       .group_segment_fixed_size: 0
+       .private_segment_fixed_size: 0
+       .kernarg_segment_align: 4
+       .wavefront_size: 64
+       .sgpr_count: 2
+       .vgpr_count: 3
+       .max_flat_workgroup_size: 256
+   ...
+   .end_amdgpu_metadata
 
 If an assembly source file contains multiple kernels and/or functions, the
 :ref:`amdgpu-amdhsa-assembler-symbol-next_free_vgpr` and
@@ -6422,66 +6464,67 @@ kernels, where ``function1`` is only called from ``kernel1`` it is sufficient
 to group the function with the kernel that calls it and reset the symbols
 between the two connected components:
 
-.. code-block:: none
+.. code::
+   :number-lines:
 
-  .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack" // optional
+   .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack" // optional
 
-  // gpr tracking symbols are implicitly set to zero
+   // gpr tracking symbols are implicitly set to zero
 
-  .text
-  .globl kern0
-  .p2align 8
-  .type kern0,@function
-  kern0:
-    // ...
-    s_endpgm
-  .Lkern0_end:
-    .size   kern0, .Lkern0_end-kern0
+   .text
+   .globl kern0
+   .p2align 8
+   .type kern0,@function
+   kern0:
+     // ...
+     s_endpgm
+   .Lkern0_end:
+     .size   kern0, .Lkern0_end-kern0
 
-  .rodata
-  .p2align 6
-  .amdhsa_kernel kern0
-    // ...
-    .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
-    .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
-  .end_amdhsa_kernel
+   .rodata
+   .p2align 6
+   .amdhsa_kernel kern0
+     // ...
+     .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
+     .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
+   .end_amdhsa_kernel
 
-  // reset symbols to begin tracking usage in func1 and kern1
-  .set .amdgcn.next_free_vgpr, 0
-  .set .amdgcn.next_free_sgpr, 0
+   // reset symbols to begin tracking usage in func1 and kern1
+   .set .amdgcn.next_free_vgpr, 0
+   .set .amdgcn.next_free_sgpr, 0
 
-  .text
-  .hidden func1
-  .global func1
-  .p2align 2
-  .type func1,@function
-  func1:
-    // ...
-    s_setpc_b64 s[30:31]
-  .Lfunc1_end:
-  .size func1, .Lfunc1_end-func1
+   .text
+   .hidden func1
+   .global func1
+   .p2align 2
+   .type func1,@function
+   func1:
+     // ...
+     s_setpc_b64 s[30:31]
+   .Lfunc1_end:
+   .size func1, .Lfunc1_end-func1
 
-  .globl kern1
-  .p2align 8
-  .type kern1,@function
-  kern1:
-    // ...
-    s_getpc_b64 s[4:5]
-    s_add_u32 s4, s4, func1@rel32@lo+4
-    s_addc_u32 s5, s5, func1@rel32@lo+4
-    s_swappc_b64 s[30:31], s[4:5]
-    // ...
-    s_endpgm
-  .Lkern1_end:
-    .size   kern1, .Lkern1_end-kern1
+   .globl kern1
+   .p2align 8
+   .type kern1,@function
+   kern1:
+     // ...
+     s_getpc_b64 s[4:5]
+     s_add_u32 s4, s4, func1@rel32@lo+4
+     s_addc_u32 s5, s5, func1@rel32@lo+4
+     s_swappc_b64 s[30:31], s[4:5]
+     // ...
+     s_endpgm
+   .Lkern1_end:
+     .size   kern1, .Lkern1_end-kern1
 
-  .rodata
-  .p2align 6
-  .amdhsa_kernel kern1
-    // ...
-    .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
-    .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
-  .end_amdhsa_kernel
+   .rodata
+   .p2align 6
+   .amdhsa_kernel kern1
+     // ...
+     .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
+     .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
+   .end_amdhsa_kernel
 
 These symbols cannot identify connected components in order to automatically
 track the usage for each kernel. However, in some cases careful organization of
@@ -6499,9 +6542,7 @@ Additional Documentation
 .. [AMD-GCN-GFX7] `AMD Sea Islands Series ISA <http://developer.amd.com/wordpress/media/2013/07/AMD_Sea_Islands_Instruction_Set_Architecture.pdf>`_
 .. [AMD-GCN-GFX8] `AMD GCN3 Instruction Set Architecture <http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf>`__
 .. [AMD-GCN-GFX9] `AMD "Vega" Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
-.. [AMD-GCN-GFX10] AMD "Navi" Instruction Set Architecture *TBA*
-.. TODO
-   ttye Add link when made public.
+.. [AMD-GCN-GFX10] `AMD "RDNA 1.0" Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
 .. [AMD-ROCm] `ROCm: Open Platform for Development, Discovery and Education Around GPU Computing <http://gpuopen.com/compute-product/rocm/>`__
 .. [AMD-ROCm-github] `ROCm github <http://github.com/RadeonOpenCompute>`__
 .. [HSA] `Heterogeneous System Architecture (HSA) Foundation <http://www.hsafoundation.com/>`__
