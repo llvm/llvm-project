@@ -12,7 +12,7 @@
 #include "polly/CodeGen/RuntimeDebugBuilder.h"
 #include "polly/ScopInfo.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #include <sstream>
 
 using namespace llvm;
