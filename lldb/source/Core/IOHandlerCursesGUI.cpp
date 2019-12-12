@@ -9,7 +9,7 @@
 #include "lldb/Core/IOHandlerCursesGUI.h"
 #include "lldb/Host/Config.h"
 
-#ifndef LLDB_DISABLE_CURSES
+#if LLDB_ENABLE_CURSES
 #include <curses.h>
 #include <panel.h>
 #endif
@@ -31,7 +31,7 @@
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 
-#ifndef LLDB_DISABLE_CURSES
+#if LLDB_ENABLE_CURSES
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ValueObject.h"
@@ -74,7 +74,7 @@ using llvm::Optional;
 using llvm::StringRef;
 
 // we may want curses to be disabled for some builds for instance, windows
-#ifndef LLDB_DISABLE_CURSES
+#if LLDB_ENABLE_CURSES
 
 #define KEY_RETURN 10
 #define KEY_ESCAPE 27
@@ -4064,4 +4064,4 @@ bool IOHandlerCursesGUI::Interrupt() { return false; }
 
 void IOHandlerCursesGUI::GotEOF() {}
 
-#endif // LLDB_DISABLE_CURSES
+#endif // LLDB_ENABLE_CURSES

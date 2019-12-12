@@ -9,7 +9,7 @@ lldb_tablegen(CorePropertiesEnum.inc -gen-lldb-property-enum-defs
 set(LLDB_CURSES_LIBS)
 set(LLDB_LIBEDIT_LIBS)
 
-if (NOT LLDB_DISABLE_CURSES)
+if (LLDB_ENABLE_CURSES)
   list(APPEND LLDB_CURSES_LIBS ${CURSES_LIBRARIES} ${CURSES_PANEL_LIBRARY})
   if(LLVM_ENABLE_TERMINFO AND HAVE_TERMINFO)
     list(APPEND LLDB_CURSES_LIBS ${TERMINFO_LIBS})
@@ -102,6 +102,6 @@ if (NOT LLDB_DISABLE_LIBEDIT)
   target_include_directories(lldbCore PRIVATE ${libedit_INCLUDE_DIRS})
 endif()
 
-if (NOT LLDB_DISABLE_CURSES)
+if (LLDB_ENABLE_CURSES)
   target_include_directories(lldbCore PRIVATE ${CURSES_INCLUDE_DIR})
 endif()
