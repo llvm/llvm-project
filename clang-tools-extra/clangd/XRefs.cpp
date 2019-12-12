@@ -166,6 +166,26 @@ llvm::Optional<Location> makeLocation(ASTContext &AST, SourceLocation TokLoc,
 
 } // namespace
 
+std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
+  const auto &SM = AST.getSourceManager();
+  auto MainFilePath =
+      getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
+  if (!MainFilePath) {
+    elog("Failed to get a path for the main file, so no links");
+    return {};
+  }
+
+  std::vector<DocumentLink> Result;
+  for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
+    if (!Inc.Resolved.empty()) {
+      Result.push_back(DocumentLink(
+          {Inc.R, URIForFile::canonicalize(Inc.Resolved, *MainFilePath)}));
+    }
+  }
+
+  return Result;
+}
+
 std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
                                           const SymbolIndex *Index) {
   const auto &SM = AST.getSourceManager();
