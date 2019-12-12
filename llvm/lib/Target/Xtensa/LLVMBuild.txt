@@ -22,10 +22,11 @@ type = TargetGroup
 name = Xtensa
 parent = Target
 has_asmparser = 1
+has_asmprinter = 1
 
 [component_1]
 type = Library
 name = XtensaCodeGen
 parent = Xtensa
-required_libraries = CodeGen Core XtensaInfo Support Target
+required_libraries = AsmPrinter CodeGen Core MC XtensaDesc XtensaInfo Support Target
 add_to_library_groups = Xtensa
