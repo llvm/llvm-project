@@ -238,4 +238,18 @@ void c() {
   a d(b::e ? "" : "");
 }
 }
+
+// Ensure we don't warn on dependent constructor calls.
+namespace dependent_ctor {
+struct S {
+  S() = default;
+  S(const S &) = default;
+  S(int);
+};
+
+template <typename T>
+void foo(T &t) {
+  S s{t};
+}
+}
 #endif
