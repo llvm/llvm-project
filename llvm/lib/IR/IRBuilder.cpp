@@ -154,12 +154,21 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
   return CI;
 }
 
-CallInst *IRBuilderBase::
-CreateMemCpy(Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
-             Value *Size, bool isVolatile, MDNode *TBAATag,
-             MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
-  assert((DstAlign == 0 || isPowerOf2_32(DstAlign)) && "Must be 0 or a power of 2");
-  assert((SrcAlign == 0 || isPowerOf2_32(SrcAlign)) && "Must be 0 or a power of 2");
+CallInst *IRBuilderBase::CreateMemCpy(Value *Dst, unsigned DstAlign, Value *Src,
+                                      unsigned SrcAlign, Value *Size,
+                                      bool isVolatile, MDNode *TBAATag,
+                                      MDNode *TBAAStructTag, MDNode *ScopeTag,
+                                      MDNode *NoAliasTag) {
+  return CreateMemCpy(Dst, MaybeAlign(DstAlign), Src, MaybeAlign(SrcAlign),
+                      Size, isVolatile, TBAATag, TBAAStructTag, ScopeTag,
+                      NoAliasTag);
+}
+
+CallInst *IRBuilderBase::CreateMemCpy(Value *Dst, MaybeAlign DstAlign,
+                                      Value *Src, MaybeAlign SrcAlign,
+                                      Value *Size, bool isVolatile,
+                                      MDNode *TBAATag, MDNode *TBAAStructTag,
+                                      MDNode *ScopeTag, MDNode *NoAliasTag) {
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
 
@@ -171,10 +180,10 @@ CreateMemCpy(Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
   auto* MCI = cast<MemCpyInst>(CI);
-  if (DstAlign > 0)
-    MCI->setDestAlignment(DstAlign);
-  if (SrcAlign > 0)
-    MCI->setSourceAlignment(SrcAlign);
+  if (DstAlign)
+    MCI->setDestAlignment(*DstAlign);
+  if (SrcAlign)
+    MCI->setSourceAlignment(*SrcAlign);
 
   // Set the TBAA info if present.
   if (TBAATag)
@@ -234,12 +243,11 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
   return CI;
 }
 
-CallInst *IRBuilderBase::
-CreateMemMove(Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
-              Value *Size, bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
-              MDNode *NoAliasTag) {
-  assert((DstAlign == 0 || isPowerOf2_32(DstAlign)) && "Must be 0 or a power of 2");
-  assert((SrcAlign == 0 || isPowerOf2_32(SrcAlign)) && "Must be 0 or a power of 2");
+CallInst *IRBuilderBase::CreateMemMove(Value *Dst, MaybeAlign DstAlign,
+                                       Value *Src, MaybeAlign SrcAlign,
+                                       Value *Size, bool isVolatile,
+                                       MDNode *TBAATag, MDNode *ScopeTag,
+                                       MDNode *NoAliasTag) {
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
 
@@ -251,10 +259,10 @@ CreateMemMove(Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
   auto *MMI = cast<MemMoveInst>(CI);
-  if (DstAlign > 0)
-    MMI->setDestAlignment(DstAlign);
-  if (SrcAlign > 0)
-    MMI->setSourceAlignment(SrcAlign);
+  if (DstAlign)
+    MMI->setDestAlignment(*DstAlign);
+  if (SrcAlign)
+    MMI->setSourceAlignment(*SrcAlign);
 
   // Set the TBAA info if present.
   if (TBAATag)
