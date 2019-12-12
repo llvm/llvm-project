@@ -120,14 +120,17 @@ void ClangASTSource::InstallASTContext(ClangASTContext &clang_ast_context,
       // Update the scratch AST context's merger to reflect any new sources we
       // might have come across since the last time an expression was parsed.
 
-      auto scratch_ast_context = static_cast<ClangASTContextForExpressions*>(
-          m_target->GetScratchClangASTContext());
+      if (auto *clang_ast_context = ClangASTContext::GetScratch(*m_target)) {
 
-      scratch_ast_context->GetMergerUnchecked().AddSources(sources);
+        auto scratch_ast_context =
+            static_cast<ClangASTContextForExpressions *>(clang_ast_context);
 
-      sources.push_back({*scratch_ast_context->getASTContext(),
-                         *scratch_ast_context->getFileManager(),
-                         scratch_ast_context->GetOriginMap()});
+        scratch_ast_context->GetMergerUnchecked().AddSources(sources);
+
+        sources.push_back({*scratch_ast_context->getASTContext(),
+                           *scratch_ast_context->getFileManager(),
+                           scratch_ast_context->GetOriginMap()});
+      }
     }
 
     m_merger_up =
@@ -145,7 +148,7 @@ ClangASTSource::~ClangASTSource() {
   // demand by passing false to
   // Target::GetScratchClangASTContext(create_on_demand).
   ClangASTContext *scratch_clang_ast_context =
-      m_target->GetScratchClangASTContext(false);
+      ClangASTContext::GetScratch(*m_target, false);
 
   if (!scratch_clang_ast_context)
     return;

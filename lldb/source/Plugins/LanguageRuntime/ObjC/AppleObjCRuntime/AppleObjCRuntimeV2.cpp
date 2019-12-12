@@ -1309,7 +1309,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
     return DescriptorMapUpdateResult::Fail();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();
+  ClangASTContext *ast = ClangASTContext::GetScratch(process->GetTarget());
 
   if (!ast)
     return DescriptorMapUpdateResult::Fail();
@@ -1571,7 +1571,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     return DescriptorMapUpdateResult::Fail();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();
+  ClangASTContext *ast = ClangASTContext::GetScratch(process->GetTarget());
 
   if (!ast)
     return DescriptorMapUpdateResult::Fail();
@@ -2680,10 +2680,12 @@ class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
     const lldb::ABISP &abi = process_sp->GetABI();
     if (!abi) return;
 
-    CompilerType voidstar = process_sp->GetTarget()
-                                .GetScratchClangASTContext()
-                                ->GetBasicType(lldb::eBasicTypeVoid)
-                                .GetPointerType();
+    ClangASTContext *clang_ast_context =
+        ClangASTContext::GetScratch(process_sp->GetTarget());
+    if (!clang_ast_context)
+      return;
+    CompilerType voidstar =
+        clang_ast_context->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
 
     ValueList args;
     Value input_value;

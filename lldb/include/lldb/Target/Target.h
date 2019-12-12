@@ -1114,8 +1114,6 @@ public:
                                                  const char *name,
                                                  Status &error);
 
-  ClangASTContext *GetScratchClangASTContext(bool create_on_demand = true);
-
   lldb::ClangASTImporterSP GetClangASTImporter();
 
   /// Get the lock guarding the scratch typesystem from being re-initialized.

@@ -342,7 +342,10 @@ bool DynamicLoaderMacOSXDYLD::NotifyBreakpointHit(
     // get the values from the ABI:
 
     ClangASTContext *clang_ast_context =
-        process->GetTarget().GetScratchClangASTContext();
+        ClangASTContext::GetScratch(process->GetTarget());
+    if (!clang_ast_context)
+      return false;
+
     ValueList argument_values;
     Value input_value;
 

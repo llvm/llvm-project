@@ -461,9 +461,8 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::NSArrayMSyntheticFrontE
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
       m_id_type() {
   if (valobj_sp) {
-    auto *clang_ast_context = valobj_sp->GetExecutionContextRef()
-                                  .GetTargetSP()
-                                  ->GetScratchClangASTContext();
+    auto *clang_ast_context = ClangASTContext::GetScratch(
+        *valobj_sp->GetExecutionContextRef().GetTargetSP());
     if (clang_ast_context)
       m_id_type = CompilerType(
           clang_ast_context,
@@ -610,9 +609,8 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   if (valobj_sp) {
     CompilerType type = valobj_sp->GetCompilerType();
     if (type) {
-      auto *clang_ast_context = valobj_sp->GetExecutionContextRef()
-                                    .GetTargetSP()
-                                    ->GetScratchClangASTContext();
+      auto *clang_ast_context = ClangASTContext::GetScratch(
+          *valobj_sp->GetExecutionContextRef().GetTargetSP());
       if (clang_ast_context)
         m_id_type = CompilerType(clang_ast_context,
                                  clang_ast_context->getASTContext()
@@ -780,11 +778,15 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
   static const ConstString g_zero("[0]");
 
   if (idx == 0) {
-    CompilerType id_type(
-        m_backend.GetTargetSP()->GetScratchClangASTContext()->GetBasicType(
-            lldb::eBasicTypeObjCID));
-    return m_backend.GetSyntheticChildAtOffset(
-        m_backend.GetProcessSP()->GetAddressByteSize(), id_type, true, g_zero);
+    auto *clang_ast_context =
+        ClangASTContext::GetScratch(*m_backend.GetTargetSP());
+    if (clang_ast_context) {
+      CompilerType id_type(
+          clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID));
+      return m_backend.GetSyntheticChildAtOffset(
+          m_backend.GetProcessSP()->GetAddressByteSize(), id_type, true,
+          g_zero);
+    }
   }
   return lldb::ValueObjectSP();
 }
