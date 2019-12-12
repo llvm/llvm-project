@@ -123,6 +123,11 @@ may be
 .Cm none
 or
 .Cm zlib .
+The default compression level is 1 (fastest) as the debug info usually
+compresses well at that level, but if you want to compress it more,
+you can specify
+.Fl O2
+to set the compression level to 6.
 .It Fl -cref
 Output cross reference table.
 .It Fl -define-common , Fl d
@@ -330,7 +335,9 @@ Disable string merging.
 .It Cm 1
 Enable string merging.
 .It Cm 2
-Enable string tail merging.
+Enable string tail merging. If
+.Fl -compress-debug-sections
+is given, compress debug sections at compression level 6 instead of 1.
 .El
 .Pp
 .Fl O Ns Cm 1
