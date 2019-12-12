@@ -14,23 +14,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Statistic.h"
+#include "ARM.h"
+#include "ARMSubtarget.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/NoFolder.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/PassSupport.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/IR/PatternMatch.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
-#include "ARM.h"
-#include "ARMSubtarget.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 using namespace PatternMatch;

@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/IR/IntrinsicsMips.h"
 
 #define DEBUG_TYPE "mips-isel"
 

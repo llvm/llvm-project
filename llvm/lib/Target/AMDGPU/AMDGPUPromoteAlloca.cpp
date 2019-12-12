@@ -37,6 +37,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -268,7 +270,7 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
 Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
   const AMDGPUSubtarget &ST =
       AMDGPUSubtarget::get(*TM, *Builder.GetInsertBlock()->getParent());
-  Intrinsic::ID IntrID = Intrinsic::ID::not_intrinsic;
+  Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
 
   switch (N) {
   case 0:
