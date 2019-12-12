@@ -2310,6 +2310,15 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
     Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
+static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args) {
+  Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
+  Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
+  Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
+  Opts.PointerAuthIndirectGotos = Args.hasArg(OPT_fptrauth_indirect_gotos);
+  Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
+  Opts.SoftPointerAuth = Args.hasArg(OPT_fptrauth_soft);
+}
+
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
                                          const llvm::Triple &T,
                                          PreprocessorOptions &PPOpts,
@@ -3244,13 +3253,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     if (InlineArg->getOption().matches(options::OPT_fno_inline))
       Opts.NoInlineDefine = true;
 
-  Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
-  Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
-  Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
-  Opts.PointerAuthIndirectGotos = Args.hasArg(OPT_fptrauth_indirect_gotos);
-  Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
-  Opts.SoftPointerAuth = Args.hasArg(OPT_fptrauth_soft);
-
   Opts.FastMath = Args.hasArg(OPT_ffast_math) ||
       Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.FiniteMathOnly = Args.hasArg(OPT_ffinite_math_only) ||
@@ -3659,6 +3661,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args,
                         Res.getFileSystemOpts().WorkingDir);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
+
+  ParsePointerAuthArgs(LangOpts, Args);
 
   llvm::Triple T(Res.getTargetOpts().Triple);
   if (DashX.getFormat() == InputKind::Precompiled ||
