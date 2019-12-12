@@ -75,6 +75,11 @@ public:
 
   SanitizerMask getSupportedSanitizers() const override;
 
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

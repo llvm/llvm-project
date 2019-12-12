@@ -12,7 +12,6 @@
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64 %s
 
-// C-RV64-BAREMETAL-LP64: "-fuse-init-array"
 // C-RV64-BAREMETAL-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
 // C-RV64-BAREMETAL-LP64: "--sysroot={{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib{{/|\\\\}}crt0.o"
@@ -28,7 +27,6 @@
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-BAREMETAL-NOSYSROOT-LP64 %s
 
-// C-RV64-BAREMETAL-NOSYSROOT-LP64: "-fuse-init-array"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib{{/|\\\\}}crt0.o"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
@@ -43,7 +41,6 @@
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
 // RUN:   | FileCheck -check-prefix=CXX-RV64-BAREMETAL-LP64 %s
 
-// CXX-RV64-BAREMETAL-LP64: "-fuse-init-array"
 // CXX-RV64-BAREMETAL-LP64: "-internal-isystem" "{{.*}}Inputs/basic_riscv64_tree/riscv64-unknown-elf/include/c++{{/|\\\\}}8.0.1"
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
 // CXX-RV64-BAREMETAL-LP64: "--sysroot={{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf"
@@ -60,7 +57,6 @@
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=CXX-RV64-BAREMETAL-NOSYSROOT-LP64 %s
 
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-fuse-init-array"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-internal-isystem" "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/include/c++{{/|\\\\}}8.0.1"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib{{/|\\\\}}crt0.o"
@@ -76,7 +72,6 @@
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-LINUX-MULTI-LP64 %s
 
-// C-RV64-LINUX-MULTI-LP64: "-fuse-init-array"
 // C-RV64-LINUX-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/bin{{/|\\\\}}ld"
 // C-RV64-LINUX-MULTI-LP64: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
 // C-RV64-LINUX-MULTI-LP64: "-m" "elf64lriscv"
@@ -92,7 +87,6 @@
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-LINUX-MULTI-LP64D %s
 
-// C-RV64-LINUX-MULTI-LP64D: "-fuse-init-array"
 // C-RV64-LINUX-MULTI-LP64D: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/bin{{/|\\\\}}ld"
 // C-RV64-LINUX-MULTI-LP64D: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
 // C-RV64-LINUX-MULTI-LP64D: "-m" "elf64lriscv"
@@ -108,7 +102,6 @@
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64IMAC-BAREMETAL-MULTI-LP64 %s
 
-// C-RV64IMAC-BAREMETAL-MULTI-LP64: "-fuse-init-array"
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/bin{{/|\\\\}}ld"
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "-m" "elf64lriscv"
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib/rv64imac/lp64{{/|\\\\}}crt0.o"
@@ -124,7 +117,6 @@
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D %s
 
-// C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "-fuse-init-array"
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/bin{{/|\\\\}}ld"
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "-m" "elf64lriscv"
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib/rv64imafdc/lp64d{{/|\\\\}}crt0.o"
