@@ -70,8 +70,17 @@ struct SourceModule;
 CompilerType ToCompilerType(swift::Type qual_type);
 
 class SwiftASTContext : public TypeSystem {
+  // LLVM RTTI support
+  static char ID;
+
 public:
   typedef lldb_utility::Either<CompilerType, swift::Decl *> TypeOrDecl;
+
+  /// LLVM RTTI support
+  /// \{
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
+  /// \}
 
 private:
   struct EitherComparator {
@@ -111,11 +120,6 @@ public:
   private:
     LanguageFlags() = delete;
   };
-
-  // llvm casting support
-  static bool classof(const TypeSystem *ts) {
-    return ts->getKind() == TypeSystem::eKindSwift;
-  }
 
   /// Provide the global LLVMContext.
   static llvm::LLVMContext &GetGlobalLLVMContext();
@@ -894,7 +898,18 @@ protected:
 };
 
 class SwiftASTContextForExpressions : public SwiftASTContext {
+  // LLVM RTTI support
+  static char ID;
+
 public:
+  /// LLVM RTTI support
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || SwiftASTContext::isA(ClassID);
+  }
+  static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
+  /// \}
+
   SwiftASTContextForExpressions(std::string description, Target &target);
 
   virtual ~SwiftASTContextForExpressions() {}
