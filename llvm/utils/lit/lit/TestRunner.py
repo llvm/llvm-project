@@ -1304,20 +1304,6 @@ class IntegratedTestKeywordParser(object):
                 BooleanExpression.evaluate(s, [])
         return output
 
-    @staticmethod
-    def _handleRequiresAny(line_number, line, output):
-        """A custom parser to transform REQUIRES-ANY: into REQUIRES:"""
-
-        # Extract the conditions specified in REQUIRES-ANY: as written.
-        conditions = []
-        IntegratedTestKeywordParser._handleList(line_number, line, conditions)
-
-        # Output a `REQUIRES: a || b || c` expression in its place.
-        expression = ' || '.join(conditions)
-        IntegratedTestKeywordParser._handleBooleanExpr(line_number,
-                                                       expression, output)
-        return output
-
 def parseIntegratedTestScript(test, additional_parsers=[],
                               require_script=True):
     """parseIntegratedTestScript - Scan an LLVM/Clang style integrated test
@@ -1341,9 +1327,6 @@ def parseIntegratedTestScript(test, additional_parsers=[],
                                     initial_value=test.xfails),
         IntegratedTestKeywordParser('REQUIRES:', ParserKind.BOOLEAN_EXPR,
                                     initial_value=test.requires),
-        IntegratedTestKeywordParser('REQUIRES-ANY:', ParserKind.CUSTOM,
-                                    IntegratedTestKeywordParser._handleRequiresAny, 
-                                    initial_value=test.requires), 
         IntegratedTestKeywordParser('UNSUPPORTED:', ParserKind.BOOLEAN_EXPR,
                                     initial_value=test.unsupported),
         IntegratedTestKeywordParser('END.', ParserKind.TAG)

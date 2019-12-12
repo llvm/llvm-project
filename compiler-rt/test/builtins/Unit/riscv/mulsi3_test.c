@@ -1,4 +1,4 @@
-// REQUIRES-ANY: riscv32-target-arch
+// REQUIRES: riscv32-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- mulsi3_test.c - Test __mulsi3 -------------------------------------===//
 //

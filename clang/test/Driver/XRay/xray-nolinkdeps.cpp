@@ -4,5 +4,5 @@
 // RUN:     2>&1 | FileCheck --check-prefix ENABLE %s
 // ENABLE: clang_rt.xray
 // DISABLE-NOT: clang_rt.xray
-// REQUIRES-ANY: linux, freebsd
-// REQUIRES-ANY: amd64, x86_64, x86_64h, arm, aarch64, arm64
+// REQUIRES: linux || freebsd
+// REQUIRES: amd64 || x86_64 || x86_64h || arm || aarch64 || arm64
