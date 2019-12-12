@@ -1,6 +1,8 @@
-# Test case where input file does not exit.
-RUN: not llvm-readobj %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
-ENOENT: '{{.*}}.blah': {{[Nn]}}o such file or directory
+## Test case where input file does not exit.
+RUN: not llvm-readobj %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readobj %s
+RUN: not llvm-readelf %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readelf %s
+
+ENOENT: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}.blah': {{[Nn]}}o such file or directory
 
 # Test case where input file is too small to be a recognised object file.
 RUN: touch %t.empty
@@ -12,14 +14,6 @@ RUN: rm -f %t.a
 RUN: llvm-ar rc %t.a %t.empty
 RUN: llvm-readobj --all %t.a 2>&1 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
 NO-OUTPUT-NOT: {{.}}
-
-# Test case where no switches are specified.
-RUN: llvm-readobj %p/ELF/Inputs/trivial.obj.elf-x86-64 | FileCheck --check-prefix=HEADER %s
-RUN: llvm-readelf %p/ELF/Inputs/trivial.obj.elf-x86-64 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
-HEADER: File: {{.*}}trivial.obj.elf-x86-64
-HEADER: Format: ELF64-x86-64
-HEADER: Arch: x86_64
-HEADER: AddressSize: 64bit
 
 # Test case where switch it not recognised.
 RUN: not llvm-readobj --unknown-switch 2>&1 | FileCheck --check-prefix=UNKNOWN %s
