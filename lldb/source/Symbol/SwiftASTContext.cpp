@@ -167,6 +167,9 @@ std::recursive_mutex g_log_mutex;
 using namespace lldb;
 using namespace lldb_private;
 
+char SwiftASTContext::ID;
+char SwiftASTContextForExpressions::ID;
+
 CompilerType lldb_private::ToCompilerType(swift::Type qual_type) {
   return CompilerType(
       SwiftASTContext::GetSwiftASTContext(&qual_type->getASTContext()),
@@ -844,8 +847,7 @@ static std::string GetClangModulesCacheProperty() {
 
 SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
                                  Target *target)
-    : TypeSystem(TypeSystem::eKindSwift),
-      m_compiler_invocation_ap(new swift::CompilerInvocation()),
+    : TypeSystem(), m_compiler_invocation_ap(new swift::CompilerInvocation()),
       m_description(description) {
   // Set the dependency tracker.
   if (auto g = repro::Reproducer::Instance().GetGenerator()) {
@@ -980,7 +982,7 @@ static StringRef GetXcodeContentsPath() {
       const char *command = "xcrun -sdk macosx --show-sdk-path";
       lldb_private::Status error = Host::RunShellCommand(
           command, // shell command to run
-          NULL,    // current working directory
+          {},      // current working directory
           &status, // Put the exit status of the process in here
           &signo,  // Put the signal that caused the process to exit in here
           &output, // Get the output from the command and place it in this
@@ -1603,15 +1605,16 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
-  StreamString ss;
-  ss << "SwiftASTContext";
-  if (fallback)
-    ss << "ForExpressions";
-  ss << '(' << '"';
-  module.GetDescription(&ss, eDescriptionLevelBrief);
-  ss << '"' << ')';
-  ss.Flush();
-  std::string m_description(ss.GetString().str());
+  std::string m_description;
+  {
+    llvm::raw_string_ostream ss(m_description);
+    ss << "SwiftASTContext";
+    if (fallback)
+      ss << "ForExpressions";
+    ss << '(' << '"';
+    module.GetDescription(ss, eDescriptionLevelBrief);
+    ss << '"' << ')';
+  }
 
   ArchSpec arch = module.GetArchitecture();
 
@@ -1627,11 +1630,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES) &&
       main_compile_unit_sp &&
-      !FileSystem::Instance().Exists(*main_compile_unit_sp)) {
+      !FileSystem::Instance().Exists(main_compile_unit_sp->GetPrimaryFile())) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES,
                "Corresponding source not found for %s, loading module "
                "is unlikely to succeed",
-               main_compile_unit_sp->GetCString());
+               main_compile_unit_sp->GetPrimaryFile().GetCString());
   }
 
   llvm::Triple triple = arch.GetTriple();
@@ -1953,17 +1956,20 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       bool unique_message =
           target.RegisterSwiftContextMessageKey(module_uuid.GetAsString());
       if (unique_message) {
-        StreamString ss;
-        module_sp->GetDescription(&ss, eDescriptionLevelBrief);
-        if (module_swift_ast && module_swift_ast->HasFatalErrors())
-          ss << ": "
-             << module_swift_ast->GetFatalErrors().AsCString("unknown error");
-
-        target.GetDebugger().GetErrorStreamSP()->Printf(
-            "Error while loading Swift module:\n%s\n"
-            "Debug info from this module will be unavailable in the "
-            "debugger.\n\n",
-            ss.GetData());
+          std::string buf;
+          {
+            llvm::raw_string_ostream ss(buf);
+            module_sp->GetDescription(ss, eDescriptionLevelBrief);
+            if (module_swift_ast && module_swift_ast->HasFatalErrors())
+              ss << ": "
+                 << module_swift_ast->GetFatalErrors().AsCString(
+                        "unknown error");
+          }
+          target.GetDebugger().GetErrorStreamSP()->Printf(
+              "Error while loading Swift module:\n%s\n"
+              "Debug info from this module will be unavailable in the "
+              "debugger.\n\n",
+              buf.c_str());
       }
 
       continue;
@@ -4152,10 +4158,12 @@ void SwiftASTContext::LoadExtraDylibs(Process &process, Status &error) {
 }
 
 static std::string GetBriefModuleName(Module &module) {
-  StreamString ss;
-  module.GetDescription(&ss, eDescriptionLevelBrief);
-  ss.Flush();
-  return ss.GetString().str();
+  std::string name;
+  {
+    llvm::raw_string_ostream ss(name);
+    module.GetDescription(ss, eDescriptionLevelBrief);
+  }
+  return name;
 }
 
 bool SwiftASTContext::RegisterSectionModules(
