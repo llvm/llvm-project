@@ -87,6 +87,12 @@ dotest_cmd.extend(config.dotest_args_str.split(';'))
 if config.llvm_libs_dir:
   dotest_cmd += ['--env', 'LLVM_LIBS_DIR=' + config.llvm_libs_dir]
 
+# Forward ASan-specific environment variables to tests, as a test may load an
+# ASan-ified dylib.
+for env_var in ('ASAN_OPTIONS', 'DYLD_INSERT_LIBRARIES'):
+  if env_var in config.environment:
+    dotest_cmd += ['--inferior-env', env_var + '=' + config.environment[env_var]]
+
 if config.lldb_build_directory:
   dotest_cmd += ['--build-dir', config.lldb_build_directory]
 
