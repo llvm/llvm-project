@@ -5247,6 +5247,9 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       for (Expr *A : Args.slice(ArgIx)) {
         ExprResult Arg = DefaultVariadicArgumentPromotion(A, CallType, FDecl);
         Invalid |= Arg.isInvalid();
+        // Copy blocks to the heap.
+        if (A->getType()->isBlockPointerType())
+          maybeExtendBlockObject(Arg);
         AllArgs.push_back(Arg.get());
       }
     }
