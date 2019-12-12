@@ -1,0 +1,40 @@
+## Test how we print symbols.
+
+# RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.coff-i386 | FileCheck %s
+
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: @comp.id
+# CHECK-NEXT:    Value: 14766605
+# CHECK-NEXT:    Section:  IMAGE_SYM_ABSOLUTE (-1)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Null (0x0)
+# CHECK-NEXT:    StorageClass: Static (0x3)
+# CHECK-NEXT:    AuxSymbolCount: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:    Name: @feat.00
+# CHECK-NEXT:    Value: 2147484049
+# CHECK-NEXT:     Section:  IMAGE_SYM_ABSOLUTE (-1)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:    ComplexType: Null (0x0)
+# CHECK-NEXT:    StorageClass: Static (0x3)
+# CHECK-NEXT:     AuxSymbolCount: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .text
+# CHECK-NEXT:     Value: 0
+# CHECK-NEXT:     Section: .text (1)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Null (0x0)
+# CHECK-NEXT:     StorageClass: Static (0x3)
+# CHECK-NEXT:     AuxSymbolCount: 1
+# CHECK-NEXT:     AuxSectionDef {
+# CHECK-NEXT:       Length: 22
+# CHECK-NEXT:       RelocationCount: 3
+# CHECK-NEXT:       LineNumberCount: 0
+# CHECK-NEXT:       Checksum: 0x0
+# CHECK-NEXT:       Number: 1
+# CHECK-NEXT:       Selection: 0x0
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }

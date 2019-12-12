@@ -1,0 +1,76 @@
+## Check how we print sections.
+
+# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 \
+# RUN:   | FileCheck %s --check-prefix ELF
+# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-mipsel \
+# RUN:   | FileCheck %s --check-prefix ELF-MIPSEL
+
+## Check flag aliases produce identical output.
+# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 > %t.sections
+# RUN: llvm-readobj -S %p/Inputs/trivial.obj.elf-i386 > %t.uppers
+# RUN: cmp %t.sections %t.uppers
+# RUN: llvm-readobj -S %p/Inputs/trivial.obj.elf-i386 > %t.lowers
+# RUN: cmp %t.sections %t.lowers
+
+# ELF:      Sections [
+# ELF-NEXT:   Section {
+# ELF-NEXT:     Index: 0
+# ELF-NEXT:     Name:  (0)
+# ELF-NEXT:     Type: SHT_NULL (0x0)
+# ELF-NEXT:     Flags [ (0x0)
+# ELF-NEXT:     ]
+# ELF-NEXT:     Address: 0x0
+# ELF-NEXT:     Offset: 0x0
+# ELF-NEXT:     Size: 0
+# ELF-NEXT:     Link: 0
+# ELF-NEXT:     Info: 0
+# ELF-NEXT:     AddressAlignment: 0
+# ELF-NEXT:     EntrySize: 0
+# ELF-NEXT:   }
+# ELF-NEXT:   Section {
+# ELF-NEXT:     Index: 1
+# ELF-NEXT:     Name: .text (5)
+# ELF-NEXT:     Type: SHT_PROGBITS (0x1)
+# ELF-NEXT:     Flags [ (0x6)
+# ELF-NEXT:       SHF_ALLOC (0x2)
+# ELF-NEXT:       SHF_EXECINSTR (0x4)
+# ELF-NEXT:     ]
+# ELF-NEXT:     Address: 0x0
+# ELF-NEXT:     Offset: 0x40
+# ELF-NEXT:     Size: 42
+# ELF-NEXT:     Link: 0
+# ELF-NEXT:     Info: 0
+# ELF-NEXT:     AddressAlignment: 16
+# ELF-NEXT:     EntrySize: 0
+# ELF-NEXT:   }
+
+# ELF-MIPSEL:      Section {
+# ELF-MIPSEL:        Index: 4
+# ELF-MIPSEL-NEXT:   Name: .reginfo (27)
+# ELF-MIPSEL-NEXT:   Type: SHT_MIPS_REGINFO (0x70000006)
+# ELF-MIPSEL-NEXT:   Flags [ (0x2)
+# ELF-MIPSEL-NEXT:     SHF_ALLOC (0x2)
+# ELF-MIPSEL-NEXT:   ]
+# ELF-MIPSEL-NEXT:   Address: 0x0
+# ELF-MIPSEL-NEXT:   Offset: 0x34
+# ELF-MIPSEL-NEXT:   Size: 24
+# ELF-MIPSEL-NEXT:   Link: 0
+# ELF-MIPSEL-NEXT:   Info: 0
+# ELF-MIPSEL-NEXT:   AddressAlignment: 1
+# ELF-MIPSEL-NEXT:   EntrySize: 0
+# ELF-MIPSEL-NEXT: }
+# ELF-MIPSEL-NEXT: Section {
+# ELF-MIPSEL-NEXT:   Index: 5
+# ELF-MIPSEL-NEXT:   Name: .MIPS.abiflags (12)
+# ELF-MIPSEL-NEXT:   Type: SHT_MIPS_ABIFLAGS (0x7000002A)
+# ELF-MIPSEL-NEXT:   Flags [ (0x2)
+# ELF-MIPSEL-NEXT:     SHF_ALLOC (0x2)
+# ELF-MIPSEL-NEXT:   ]
+# ELF-MIPSEL-NEXT:   Address: 0x0
+# ELF-MIPSEL-NEXT:   Offset: 0x50
+# ELF-MIPSEL-NEXT:   Size: 24
+# ELF-MIPSEL-NEXT:   Link: 0
+# ELF-MIPSEL-NEXT:   Info: 0
+# ELF-MIPSEL-NEXT:   AddressAlignment: 8
+# ELF-MIPSEL-NEXT:   EntrySize: 0
+# ELF-MIPSEL-NEXT: }
