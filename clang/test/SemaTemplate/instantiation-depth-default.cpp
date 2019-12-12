@@ -4,6 +4,9 @@
 // increases our per-frame stack usage enough that this test no longer fits
 // within our normal stack space allocation.
 // UNSUPPORTED: asan
+//
+// The default stack size on NetBSD is too small for this test.
+// UNSUPPORTED: system-netbsd
 
 template<int N, typename T> struct X : X<N+1, T*> {};
 // expected-error-re@8 {{recursive template instantiation exceeded maximum depth of 1024{{$}}}}
