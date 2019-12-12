@@ -4202,54 +4202,36 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
   auto UsesCheck = [&](Instruction &I) {
     bool ValidUsesOnly = true;
     bool MustUse = true;
-
-    SmallPtrSet<const Use *, 8> Visited;
-    SmallVector<const Use *, 8> Worklist;
-
-    for (Use &U : I.uses())
-      Worklist.push_back(&U);
-
-    while (!Worklist.empty()) {
-      const Use *U = Worklist.pop_back_val();
-      if (!Visited.insert(U).second)
-        continue;
-
-      auto *UserI = U->getUser();
-
+    auto Pred = [&](const Use &U, bool &Follow) -> bool {
+      Instruction *UserI = cast<Instruction>(U.getUser());
       if (isa<LoadInst>(UserI))
-        continue;
+        return true;
       if (auto *SI = dyn_cast<StoreInst>(UserI)) {
-        if (SI->getValueOperand() == U->get()) {
+        if (SI->getValueOperand() == U.get()) {
           LLVM_DEBUG(dbgs()
                      << "[H2S] escaping store to memory: " << *UserI << "\n");
           ValidUsesOnly = false;
         } else {
           // A store into the malloc'ed memory is fine.
         }
-        continue;
+        return true;
       }
-
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
-        if (!CB->isArgOperand(U))
-          continue;
-
-        if (CB->isLifetimeStartOrEnd())
-          continue;
-
+        if (!CB->isArgOperand(&U) || CB->isLifetimeStartOrEnd())
+          return true;
         // Record malloc.
         if (isFreeCall(UserI, TLI)) {
           if (MustUse) {
-            FreesForMalloc[&I].insert(
-                cast<Instruction>(const_cast<User *>(UserI)));
+            FreesForMalloc[&I].insert(UserI);
           } else {
             LLVM_DEBUG(dbgs() << "[H2S] free potentially on different mallocs: "
                               << *UserI << "\n");
             ValidUsesOnly = false;
           }
-          continue;
+          return true;
         }
 
-        unsigned ArgNo = CB->getArgOperandNo(U);
+        unsigned ArgNo = CB->getArgOperandNo(&U);
 
         const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
             *this, IRPosition::callsite_argument(*CB, ArgNo));
@@ -4258,26 +4240,27 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
         const auto &ArgNoFreeAA = A.getAAFor<AANoFree>(
             *this, IRPosition::callsite_argument(*CB, ArgNo));
 
-        if (!NoCaptureAA.isAssumedNoCapture() || !ArgNoFreeAA.isAssumedNoFree()) {
+        if (!NoCaptureAA.isAssumedNoCapture() ||
+            !ArgNoFreeAA.isAssumedNoFree()) {
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
           ValidUsesOnly = false;
         }
-        continue;
+        return true;
       }
 
       if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
           isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
         MustUse &= !(isa<PHINode>(UserI) || isa<SelectInst>(UserI));
-        for (Use &U : UserI->uses())
-          Worklist.push_back(&U);
-        continue;
+        Follow = true;
+        return true;
       }
-
       // Unknown user for which we can not track uses further (in a way that
       // makes sense).
       LLVM_DEBUG(dbgs() << "[H2S] Unknown user: " << *UserI << "\n");
       ValidUsesOnly = false;
-    }
+      return true;
+    };
+    A.checkForAllUses(Pred, *this, I);
     return ValidUsesOnly;
   };
 
