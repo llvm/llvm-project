@@ -1564,7 +1564,7 @@ struct AANoFreeFloating : AANoFreeImpl {
           isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
         Follow = true;
         return true;
-      };
+      }
 
       // Unknown user.
       return false;
@@ -3254,7 +3254,8 @@ struct AAAlignImpl : AAAlign {
   bool followUse(Attributor &A, const Use *U, const Instruction *I) {
     bool TrackUse = false;
 
-    unsigned int KnownAlign = getKnownAlignForUse(A, *this, getAssociatedValue(), U, I, TrackUse);
+    unsigned int KnownAlign =
+        getKnownAlignForUse(A, *this, getAssociatedValue(), U, I, TrackUse);
     takeKnownMaximum(KnownAlign);
 
     return TrackUse;
@@ -3950,14 +3951,14 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
       // callback calls).
       Value *ArgOp = ACS.getCallArgOperand(getArgNo());
       if (!ArgOp)
-       return false;
+        return false;
       // We can only propagate thread independent values through callbacks.
       // This is different to direct/indirect call sites because for them we
       // know the thread executing the caller and callee is the same. For
       // callbacks this is not guaranteed, thus a thread dependent value could
       // be different for the caller and callee, making it invalid to propagate.
       if (ACS.isCallbackCall())
-        if (auto *C =dyn_cast<Constant>(ArgOp))
+        if (auto *C = dyn_cast<Constant>(ArgOp))
           if (C->isThreadDependent())
             return false;
       return checkAndUpdate(A, *this, *ArgOp, SimplifiedAssociatedValue);
@@ -5558,8 +5559,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         // Call site argument attribute "align".
         getOrCreateAAFor<AAAlign>(CSArgPos);
 
-	// Call site argument attribute "nofree".
-	getOrCreateAAFor<AANoFree>(CSArgPos);
+        // Call site argument attribute "nofree".
+        getOrCreateAAFor<AANoFree>(CSArgPos);
       }
     }
     return true;
