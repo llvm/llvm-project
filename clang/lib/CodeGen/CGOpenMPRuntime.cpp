@@ -1280,7 +1280,7 @@ bool CGOpenMPRuntime::tryEmitDeclareVariant(const GlobalDecl &NewGD,
   llvm::GlobalValue *Addr = CGM.GetGlobalValue(NewMangledName);
   if (Addr && !Addr->isDeclaration()) {
     const auto *D = cast<FunctionDecl>(OldGD.getDecl());
-    const CGFunctionInfo &FI = CGM.getTypes().arrangeGlobalDeclaration(OldGD);
+    const CGFunctionInfo &FI = CGM.getTypes().arrangeGlobalDeclaration(NewGD);
     llvm::Type *DeclTy = CGM.getTypes().GetFunctionType(FI);
 
     // Create a reference to the named value.  This ensures that it is emitted
