@@ -1,7 +1,7 @@
 // RUN: mlir-opt -convert-loops-to-gpu %s | FileCheck %s
 
 // CHECK-LABEL: @foo
-func @foo(%arg0: !linalg.buffer<?xf32>, %arg1 : index) {
+func @foo(%arg0: memref<?xf32>, %arg1 : index) {
   %c0 = constant 0 : index
   %c42 = constant 42 : index
   %c3 = constant 3 : index
