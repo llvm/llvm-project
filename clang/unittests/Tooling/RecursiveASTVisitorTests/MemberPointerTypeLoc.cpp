@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestVisitor.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace clang;
 
@@ -33,7 +34,7 @@ TEST(RecursiveASTVisitor, VisitTypeLocInMemberPointerTypeLoc) {
   MemberPointerTypeLocVisitor Visitor;
   Visitor.ExpectMatch("Bar", 4, 36);
   Visitor.ExpectMatch("T", 7, 23);
-  EXPECT_TRUE(Visitor.runOver(R"cpp(
+  llvm::StringLiteral Code = R"cpp(
      class Bar { void func(int); };
      class Foo {
        void bind(const char*, void(Bar::*Foo)(int)) {}
@@ -41,15 +42,17 @@ TEST(RecursiveASTVisitor, VisitTypeLocInMemberPointerTypeLoc) {
        template<typename T>
        void test(void(T::*Foo)());
      };
-  )cpp"));
+  )cpp";
+  EXPECT_TRUE(Visitor.runOver(Code));
 }
 
 TEST(RecursiveASTVisitor, NoCrash) {
   MemberPointerTypeLocVisitor Visitor;
-  EXPECT_FALSE(Visitor.runOver(R"cpp(
+  llvm::StringLiteral Code = R"cpp(
      // MemberPointerTypeLoc.getClassTInfo() is null.
      class a(b(a::*)) class
-  )cpp"));
+  )cpp";
+  EXPECT_FALSE(Visitor.runOver(Code));
 }
 
 } // end anonymous namespace
