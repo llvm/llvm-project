@@ -611,6 +611,17 @@ void ClangdServer::semanticRanges(PathRef File, Position Pos,
   WorkScheduler.runWithAST("SemanticRanges", File, std::move(Action));
 }
 
+void ClangdServer::documentLinks(PathRef File,
+                                 Callback<std::vector<DocumentLink>> CB) {
+  auto Action =
+      [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        CB(clangd::getDocumentLinks(InpAST->AST));
+      };
+  WorkScheduler.runWithAST("DocumentLinks", File, std::move(Action));
+}
+
 std::vector<std::pair<Path, std::size_t>>
 ClangdServer::getUsedBytesPerFile() const {
   return WorkScheduler.getUsedBytesPerFile();
