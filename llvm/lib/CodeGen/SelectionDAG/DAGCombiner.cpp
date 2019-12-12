@@ -7943,6 +7943,18 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
                                        InnerShift.getOperand(0), NewShiftAmt);
         return DAG.getNode(ISD::TRUNCATE, DL, VT, NewShift);
       }
+      // In the more general case, we can clear the high bits after the shift:
+      // srl (trunc (srl x, c1)), c2 --> trunc (and (srl x, (c1+c2)), Mask)
+      if (N0.hasOneUse() && InnerShift.hasOneUse() && c1 + c2 <= OpSizeInBits) {
+        SDLoc DL(N);
+        SDValue NewShiftAmt = DAG.getConstant(c1 + c2, DL, ShiftAmtVT);
+        SDValue NewShift = DAG.getNode(ISD::SRL, DL, InnerShiftVT,
+                                       InnerShift.getOperand(0), NewShiftAmt);
+        SDValue Mask = DAG.getConstant((1 << (InnerShiftSize - c2)) - 1, DL,
+                                       InnerShiftVT);
+        SDValue And = DAG.getNode(ISD::AND, DL, InnerShiftVT, NewShift, Mask);
+        return DAG.getNode(ISD::TRUNCATE, DL, VT, And);
+      }
     }
   }
 
