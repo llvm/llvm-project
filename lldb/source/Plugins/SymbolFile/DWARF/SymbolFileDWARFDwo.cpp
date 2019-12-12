@@ -139,7 +139,9 @@ SymbolFileDWARF &SymbolFileDWARFDwo::GetBaseSymbolFile() {
 
 DWARFExpression::LocationListFormat
 SymbolFileDWARFDwo::GetLocationListFormat() const {
-  return DWARFExpression::SplitDwarfLocationList;
+  return m_base_dwarf_cu.GetVersion() >= 5
+             ? DWARFExpression::LocLists
+             : DWARFExpression::SplitDwarfLocationList;
 }
 
 llvm::Expected<TypeSystem &>
