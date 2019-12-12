@@ -37,7 +37,7 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    def test_dwarf_importer(self):
+    def test(self):
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
 
         self.build()
@@ -52,12 +52,32 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
                                 num_children=0)
         self.expect("target var obj", substrs=["ObjCClass",
                                                "private_ivar", "42"])
-        # FIXME: This triggers an assertion in ClangImporter:
-        #        "ObjC property without getter"
-        #self.expect("target var swiftChild", substrs=["ObjCClass",
-        #                                              "private_ivar", "42"])
+
+        self.expect("target var swiftChild", substrs=["ObjCClass",
+                                                      "private_ivar", "42"])
         # This is a Clang type, since Clang doesn't generate DWARF for protocols.
         self.expect("target var -d no-dyn proto", substrs=["(id)", "proto"])
         # This is a Swift type.
         self.expect("target var -d run proto", substrs=["(ProtoImpl)", "proto"])
         self.expect("target var -O proto", substrs=["<ProtoImpl"])
+
+    @skipUnlessDarwin
+    @swiftTest
+    def test_expr(self):
+        self.runCmd("settings set symbols.use-swift-dwarfimporter true")
+
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('main.swift'))
+        lldbutil.check_variable(self,
+                                target.FindFirstGlobalVariable("pureSwift"),
+                                value="42")
+        lldbutil.check_variable(self,
+                                target.FindFirstGlobalVariable("obj"),
+                                typename="Swift.Optional<__ObjC.ObjCClass>",
+                                num_children=0)
+        self.expect("expr obj", substrs=["ObjCClass",
+                                         "private_ivar", "42"])
+        # FIXME: Removing this makes the expression below fail!
+        self.expect("target var swiftChild")
+        self.expect("expr swiftChild!.number", substrs=["42"])
