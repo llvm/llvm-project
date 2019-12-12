@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-std-to-llvm %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @empty() {
 // CHECK-NEXT:  llvm.return
@@ -423,6 +423,12 @@ func @ops(f32, f32, i32, i32) -> (f32, i32) {
   %13 = xor %arg2, %arg3 : i32
 // CHECK-NEXT: %13 = "llvm.intr.exp"(%arg0) : (!llvm.float) -> !llvm.float
   %14 = std.exp %arg0 : f32
+// CHECK-NEXT: %14 = llvm.call @tanhf(%arg0) : (!llvm.float) -> !llvm.float
+  %15 = std.tanh %arg0 : f32
+// CHECK-NEXT: %15 = llvm.mlir.constant(7.900000e-01 : f64) : !llvm.double
+  %16 = constant 7.9e-01 : f64
+// CHECK-NEXT: %16 = llvm.call @tanh(%15) : (!llvm.double) -> !llvm.double
+  %17 = std.tanh %16 : f64
 
   return %0, %4 : f32, i32
 }
@@ -787,4 +793,20 @@ func @subview_const_stride(%0 : memref<64x4xf32, (d0, d1) -> (d0 * 4 + d1)>, %ar
   %1 = subview %0[%arg0, %arg1][%arg0, %arg1][] :
     memref<64x4xf32, (d0, d1) -> (d0 * 4 + d1)> to memref<?x?xf32, (d0, d1)[s0] -> (d0 * 4 + d1 * 2 + s0)>
   return
+}
+
+// -----
+
+module {
+  func @check_tanh_func_added_only_once_to_symbol_table(%f: f32, %lf: f64) -> () {
+    %f0 = std.tanh %f : f32
+    %f1 = std.tanh %f0 : f32
+    %lf0 = std.tanh %lf : f64
+    %lf1 = std.tanh %lf0 : f64
+    return
+  }
+// CHECK: module {
+// CHECK: llvm.func @tanh(!llvm.double) -> !llvm.double
+// CHECK: llvm.func @tanhf(!llvm.float) -> !llvm.float
+// CHECK-LABEL: func @check_tanh_func_added_only_once_to_symbol_table
 }
