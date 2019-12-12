@@ -662,16 +662,16 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
                                                 bool AllowNonInbounds = false) {
   assert(V->getType()->isPtrOrPtrVectorTy());
 
-  Type *IntIdxTy = DL.getIndexType(V->getType())->getScalarType();
-  APInt Offset = APInt::getNullValue(IntIdxTy->getIntegerBitWidth());
+  Type *IntPtrTy = DL.getIntPtrType(V->getType())->getScalarType();
+  APInt Offset = APInt::getNullValue(IntPtrTy->getIntegerBitWidth());
 
   V = V->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds);
   // As that strip may trace through `addrspacecast`, need to sext or trunc
   // the offset calculated.
-  IntIdxTy = DL.getIndexType(V->getType())->getScalarType();
-  Offset = Offset.sextOrTrunc(IntIdxTy->getIntegerBitWidth());
+  IntPtrTy = DL.getIntPtrType(V->getType())->getScalarType();
+  Offset = Offset.sextOrTrunc(IntPtrTy->getIntegerBitWidth());
 
-  Constant *OffsetIntPtr = ConstantInt::get(IntIdxTy, Offset);
+  Constant *OffsetIntPtr = ConstantInt::get(IntPtrTy, Offset);
   if (V->getType()->isVectorTy())
     return ConstantVector::getSplat(V->getType()->getVectorNumElements(),
                                     OffsetIntPtr);
@@ -4032,7 +4032,7 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
       // The following transforms are only safe if the ptrtoint cast
       // doesn't truncate the pointers.
       if (Ops[1]->getType()->getScalarSizeInBits() ==
-          Q.DL.getPointerSizeInBits(AS)) {
+          Q.DL.getIndexSizeInBits(AS)) {
         auto PtrToIntOrZero = [GEPTy](Value *P) -> Value * {
           if (match(P, m_Zero()))
             return Constant::getNullValue(GEPTy);

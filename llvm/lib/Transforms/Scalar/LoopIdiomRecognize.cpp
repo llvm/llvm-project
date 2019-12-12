@@ -901,12 +901,12 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   SCEVExpander Expander(*SE, *DL, "loop-idiom");
 
   Type *DestInt8PtrTy = Builder.getInt8PtrTy(DestAS);
-  Type *IntIdxTy = DL->getIndexType(DestPtr->getType());
+  Type *IntPtr = Builder.getIntPtrTy(*DL, DestAS);
 
   const SCEV *Start = Ev->getStart();
   // Handle negative strided loops.
   if (NegStride)
-    Start = getStartForNegStride(Start, BECount, IntIdxTy, StoreSize, SE);
+    Start = getStartForNegStride(Start, BECount, IntPtr, StoreSize, SE);
 
   // TODO: ideally we should still be able to generate memset if SCEV expander
   // is taught to generate the dependencies at the latest point.
@@ -934,7 +934,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // Okay, everything looks good, insert the memset.
 
   const SCEV *NumBytesS =
-      getNumBytes(BECount, IntIdxTy, StoreSize, CurLoop, DL, SE);
+      getNumBytes(BECount, IntPtr, StoreSize, CurLoop, DL, SE);
 
   // TODO: ideally we should still be able to generate memset if SCEV expander
   // is taught to generate the dependencies at the latest point.
@@ -942,7 +942,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     return false;
 
   Value *NumBytes =
-      Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
+      Expander.expandCodeFor(NumBytesS, IntPtr, Preheader->getTerminator());
 
   CallInst *NewCall;
   if (SplatValue) {
@@ -955,7 +955,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Module *M = TheStore->getModule();
     StringRef FuncName = "memset_pattern16";
     FunctionCallee MSP = M->getOrInsertFunction(FuncName, Builder.getVoidTy(),
-                                                Int8PtrTy, Int8PtrTy, IntIdxTy);
+                                                Int8PtrTy, Int8PtrTy, IntPtr);
     inferLibFuncAttributes(M, FuncName, *TLI);
 
     // Otherwise we should form a memset_pattern16.  PatternValue is known to be
@@ -1022,11 +1022,11 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 
   const SCEV *StrStart = StoreEv->getStart();
   unsigned StrAS = SI->getPointerAddressSpace();
-  Type *IntIdxTy = Builder.getIntNTy(DL->getIndexSizeInBits(StrAS));
+  Type *IntPtrTy = Builder.getIntPtrTy(*DL, StrAS);
 
   // Handle negative strided loops.
   if (NegStride)
-    StrStart = getStartForNegStride(StrStart, BECount, IntIdxTy, StoreSize, SE);
+    StrStart = getStartForNegStride(StrStart, BECount, IntPtrTy, StoreSize, SE);
 
   // Okay, we have a strided store "p[i]" of a loaded value.  We can turn
   // this into a memcpy in the loop preheader now if we want.  However, this
@@ -1052,7 +1052,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 
   // Handle negative strided loops.
   if (NegStride)
-    LdStart = getStartForNegStride(LdStart, BECount, IntIdxTy, StoreSize, SE);
+    LdStart = getStartForNegStride(LdStart, BECount, IntPtrTy, StoreSize, SE);
 
   // For a memcpy, we have to make sure that the input array is not being
   // mutated by the loop.
@@ -1074,10 +1074,10 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   // Okay, everything is safe, we can transform this!
 
   const SCEV *NumBytesS =
-      getNumBytes(BECount, IntIdxTy, StoreSize, CurLoop, DL, SE);
+      getNumBytes(BECount, IntPtrTy, StoreSize, CurLoop, DL, SE);
 
   Value *NumBytes =
-      Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
+      Expander.expandCodeFor(NumBytesS, IntPtrTy, Preheader->getTerminator());
 
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:

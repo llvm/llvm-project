@@ -1678,8 +1678,8 @@ ConstantInt *CallAnalyzer::stripAndComputeInBoundsConstantOffsets(Value *&V) {
     assert(V->getType()->isPointerTy() && "Unexpected operand type!");
   } while (Visited.insert(V).second);
 
-  Type *IdxPtrTy = DL.getIndexType(V->getType());
-  return cast<ConstantInt>(ConstantInt::get(IdxPtrTy, Offset));
+  Type *IntPtrTy = DL.getIntPtrType(V->getContext(), AS);
+  return cast<ConstantInt>(ConstantInt::get(IntPtrTy, Offset));
 }
 
 /// Find dead blocks due to deleted CFG edges during inlining.

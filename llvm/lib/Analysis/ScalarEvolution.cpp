@@ -3495,7 +3495,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   const SCEV *BaseExpr = getSCEV(GEP->getPointerOperand());
   // getSCEV(Base)->getType() has the same address space as Base->getType()
   // because SCEV::getType() preserves the address space.
-  Type *IntIdxTy = getEffectiveSCEVType(BaseExpr->getType());
+  Type *IntPtrTy = getEffectiveSCEVType(BaseExpr->getType());
   // FIXME(PR23527): Don't blindly transfer the inbounds flag from the GEP
   // instruction to its SCEV, because the Instruction may be guarded by control
   // flow and the no-overflow bits may not be valid for the expression in any
@@ -3504,7 +3504,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   SCEV::NoWrapFlags Wrap = GEP->isInBounds() ? SCEV::FlagNSW
                                              : SCEV::FlagAnyWrap;
 
-  const SCEV *TotalOffset = getZero(IntIdxTy);
+  const SCEV *TotalOffset = getZero(IntPtrTy);
   // The array size is unimportant. The first thing we do on CurTy is getting
   // its element type.
   Type *CurTy = ArrayType::get(GEP->getSourceElementType(), 0);
@@ -3514,7 +3514,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
       // For a struct, add the member offset.
       ConstantInt *Index = cast<SCEVConstant>(IndexExpr)->getValue();
       unsigned FieldNo = Index->getZExtValue();
-      const SCEV *FieldOffset = getOffsetOfExpr(IntIdxTy, STy, FieldNo);
+      const SCEV *FieldOffset = getOffsetOfExpr(IntPtrTy, STy, FieldNo);
 
       // Add the field offset to the running total offset.
       TotalOffset = getAddExpr(TotalOffset, FieldOffset);
@@ -3525,9 +3525,9 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
       // Update CurTy to its element type.
       CurTy = cast<SequentialType>(CurTy)->getElementType();
       // For an array, add the element offset, explicitly scaled.
-      const SCEV *ElementSize = getSizeOfExpr(IntIdxTy, CurTy);
+      const SCEV *ElementSize = getSizeOfExpr(IntPtrTy, CurTy);
       // Getelementptr indices are signed.
-      IndexExpr = getTruncateOrSignExtend(IndexExpr, IntIdxTy);
+      IndexExpr = getTruncateOrSignExtend(IndexExpr, IntPtrTy);
 
       // Multiply the index by the element size to compute the element offset.
       const SCEV *LocalOffset = getMulExpr(IndexExpr, ElementSize, Wrap);
@@ -3786,7 +3786,7 @@ uint64_t ScalarEvolution::getTypeSizeInBits(Type *Ty) const {
 
 /// Return a type with the same bitwidth as the given type and which represents
 /// how SCEV will treat the given type, for which isSCEVable must return
-/// true. For pointer types, this is the pointer index sized integer type.
+/// true. For pointer types, this is the pointer-sized integer type.
 Type *ScalarEvolution::getEffectiveSCEVType(Type *Ty) const {
   assert(isSCEVable(Ty) && "Type is not SCEVable!");
 
@@ -3795,7 +3795,7 @@ Type *ScalarEvolution::getEffectiveSCEVType(Type *Ty) const {
 
   // The only other support type is pointer.
   assert(Ty->isPointerTy() && "Unexpected non-pointer non-integer type!");
-  return getDataLayout().getIndexType(Ty);
+  return getDataLayout().getIntPtrType(Ty);
 }
 
 Type *ScalarEvolution::getWiderType(Type *T1, Type *T2) const {
@@ -5726,15 +5726,6 @@ ScalarEvolution::getRangeRef(const SCEV *S,
       assert(SignHint == ScalarEvolution::HINT_RANGE_SIGNED &&
              "generalize as needed!");
       unsigned NS = ComputeNumSignBits(U->getValue(), DL, 0, &AC, nullptr, &DT);
-      // If the pointer size is larger than the index size type, this can cause
-      // NS to be larger than BitWidth. So compensate for this.
-      if (U->getType()->isPointerTy()) {
-        unsigned ptrSize = DL.getPointerTypeSizeInBits(U->getType());
-        int ptrIdxDiff = ptrSize - BitWidth;
-        if (ptrIdxDiff > 0 && ptrSize > BitWidth && NS > (unsigned)ptrIdxDiff)
-          NS -= ptrIdxDiff;
-      }
-
       if (NS > 1)
         ConservativeResult = ConservativeResult.intersectWith(
             ConstantRange(APInt::getSignedMinValue(BitWidth).ashr(NS - 1),

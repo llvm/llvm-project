@@ -222,9 +222,9 @@ public:
     // offsets on this pointer.
     // FIXME: Support a vector of pointers.
     assert(I.getType()->isPointerTy());
-    IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(I.getType()));
+    IntegerType *IntPtrTy = cast<IntegerType>(DL.getIntPtrType(I.getType()));
     IsOffsetKnown = true;
-    Offset = APInt(IntIdxTy->getBitWidth(), 0);
+    Offset = APInt(IntPtrTy->getBitWidth(), 0);
     PI.reset();
 
     // Enqueue the uses of this pointer.
