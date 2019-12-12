@@ -98,7 +98,7 @@ add_dependencies(lldbCore
 # TODO: Remove once we have better layering
 set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 4)
 
-if (NOT LLDB_DISABLE_LIBEDIT)
+if (LLDB_ENABLE_LIBEDIT)
   target_include_directories(lldbCore PRIVATE ${libedit_INCLUDE_DIRS})
 endif()
 

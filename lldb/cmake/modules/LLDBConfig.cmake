@@ -25,7 +25,7 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darw
 endif()
 
 set(default_disable_python OFF)
-set(default_disable_libedit OFF)
+set(default_enable_libedit ON)
 set(default_enable_curses ON)
 
 if(DEFINED LLVM_ENABLE_LIBEDIT AND NOT LLVM_ENABLE_LIBEDIT)
@@ -33,18 +33,18 @@ if(DEFINED LLVM_ENABLE_LIBEDIT AND NOT LLVM_ENABLE_LIBEDIT)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-  set(default_disable_libedit ON)
+  set(default_enable_libedit OFF)
   set(default_enable_curses OFF)
 elseif(CMAKE_SYSTEM_NAME MATCHES "Android")
   set(default_disable_python ON)
-  set(default_disable_libedit ON)
+  set(default_enable_libedit OFF)
   set(default_enable_curses OFF)
 elseif(IOS)
   set(default_disable_python ON)
 endif()
 
 option(LLDB_DISABLE_PYTHON "Disable Python scripting integration." ${default_disable_python})
-option(LLDB_DISABLE_LIBEDIT "Disable the use of editline." ${default_disable_libedit})
+option(LLDB_ENABLE_LIBEDIT "Disable the use of editline." ${default_enable_libedit})
 option(LLDB_ENABLE_CURSES "Disable Curses integration." ${default_enable_curses})
 option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)
 option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
@@ -109,7 +109,7 @@ if ((NOT MSVC) OR MSVC12)
 endif()
 
 
-if (NOT LLDB_DISABLE_LIBEDIT)
+if (LLDB_ENABLE_LIBEDIT)
   find_package(LibEdit REQUIRED)
 
   # Check if we libedit capable of handling wide characters (built with
