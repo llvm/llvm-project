@@ -1539,62 +1539,39 @@ struct AANoFreeFloating : AANoFreeImpl {
   /// See Abstract Attribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     const IRPosition &IRP = getIRPosition();
-    Function *F = IRP.getAnchorScope();
-
-    const AAIsDead &LivenessAA =
-        A.getAAFor<AAIsDead>(*this, IRPosition::function(*F));
 
     const auto &NoFreeAA =
         A.getAAFor<AANoFree>(*this, IRPosition::function_scope(IRP));
     if (NoFreeAA.isAssumedNoFree())
       return ChangeStatus::UNCHANGED;
 
-    SmallPtrSet<const Use *, 8> Visited;
-    SmallVector<const Use *, 8> Worklist;
-
     Value &AssociatedValue = getIRPosition().getAssociatedValue();
-    for (Use &U : AssociatedValue.uses())
-      Worklist.push_back(&U);
-
-    while (!Worklist.empty()) {
-      const Use *U = Worklist.pop_back_val();
-      if (!Visited.insert(U).second)
-        continue;
-
-      auto *UserI = U->getUser();
-      if (!UserI)
-        continue;
-
-      if (LivenessAA.isAssumedDead(cast<Instruction>(UserI)))
-        continue;
-
+    auto Pred = [&](const Use &U, bool &Follow) -> bool {
+      Instruction *UserI = cast<Instruction>(U.getUser());
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
-        if (CB->isBundleOperand(U))
-          return indicatePessimisticFixpoint();
-        if (!CB->isArgOperand(U))
-          continue;
-
-        unsigned ArgNo = CB->getArgOperandNo(U);
+        if (CB->isBundleOperand(&U))
+          return false;
+        if (!CB->isArgOperand(&U))
+          return true;
+        unsigned ArgNo = CB->getArgOperandNo(&U);
 
         const auto &NoFreeArg = A.getAAFor<AANoFree>(
             *this, IRPosition::callsite_argument(*CB, ArgNo));
-
-        if (NoFreeArg.isAssumedNoFree())
-          continue;
-
-        return indicatePessimisticFixpoint();
+        return NoFreeArg.isAssumedNoFree();
       }
 
       if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
           isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
-        for (Use &U : UserI->uses())
-          Worklist.push_back(&U);
-        continue;
-      }
+        Follow = true;
+        return true;
+      };
 
       // Unknown user.
+      return false;
+    };
+    if (!A.checkForAllUses(Pred, *this, AssociatedValue))
       return indicatePessimisticFixpoint();
-    }
+
     return ChangeStatus::UNCHANGED;
   }
 };
