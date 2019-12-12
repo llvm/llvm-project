@@ -34,6 +34,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
@@ -312,10 +313,29 @@ bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
+static cl::opt<bool> EmbedBitcode(
+    "lto-embed-bitcode", cl::init(false),
+    cl::desc("Embed LLVM bitcode in object files produced by LTO"));
+
+static void EmitBitcodeSection(Module &M, Config &Conf) {
+  if (!EmbedBitcode)
+    return;
+  SmallVector<char, 0> Buffer;
+  raw_svector_ostream OS(Buffer);
+  WriteBitcodeToFile(M, OS);
+
+  std::unique_ptr<MemoryBuffer> Buf(
+      new SmallVectorMemoryBuffer(std::move(Buffer)));
+  llvm::EmbedBitcodeInModule(M, Buf->getMemBufferRef(), /*EmbedBitcode*/ true,
+                             /*EmbedMarker*/ false, /*CmdArgs*/ nullptr);
+}
+
 void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
              unsigned Task, Module &Mod) {
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
+
+  EmitBitcodeSection(Mod, Conf);
 
   std::unique_ptr<ToolOutputFile> DwoOut;
   SmallString<1024> DwoFile(Conf.SplitDwarfOutput);
