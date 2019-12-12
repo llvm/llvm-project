@@ -62,8 +62,6 @@ public:
         return *this;
     }
 
-    __bit_reference(const __bit_reference&) = default;
-
     _LIBCPP_INLINE_VISIBILITY
     __bit_reference& operator=(const __bit_reference& __x) _NOEXCEPT
         {return operator=(static_cast<bool>(__x));}
@@ -150,7 +148,6 @@ private:
         : __seg_(__s), __mask_(__m) {}
 
     __bit_const_reference& operator=(const __bit_const_reference& __x);
-    __bit_const_reference(const __bit_const_reference&) = default;
 };
 
 // find
