@@ -766,8 +766,8 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
 Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
                          Type *ResultTy, Optional<unsigned> InRangeIndex,
                          const DataLayout &DL, const TargetLibraryInfo *TLI) {
-  Type *IntIdxTy = DL.getIndexType(ResultTy);
-  Type *IntIdxScalarTy = IntIdxTy->getScalarType();
+  Type *IntPtrTy = DL.getIntPtrType(ResultTy);
+  Type *IntPtrScalarTy = IntPtrTy->getScalarType();
 
   bool Any = false;
   SmallVector<Constant*, 32> NewIdxs;
@@ -775,11 +775,11 @@ Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
     if ((i == 1 ||
          !isa<StructType>(GetElementPtrInst::getIndexedType(
              SrcElemTy, Ops.slice(1, i - 1)))) &&
-        Ops[i]->getType()->getScalarType() != IntIdxScalarTy) {
+        Ops[i]->getType()->getScalarType() != IntPtrScalarTy) {
       Any = true;
       Type *NewType = Ops[i]->getType()->isVectorTy()
-                          ? IntIdxTy
-                          : IntIdxScalarTy;
+                          ? IntPtrTy
+                          : IntPtrTy->getScalarType();
       NewIdxs.push_back(ConstantExpr::getCast(CastInst::getCastOpcode(Ops[i],
                                                                       true,
                                                                       NewType,
@@ -839,7 +839,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   if (!Ptr->getType()->isPointerTy())
     return nullptr;
 
-  Type *IntIdxTy = DL.getIndexType(Ptr->getType());
+  Type *IntPtrTy = DL.getIntPtrType(Ptr->getType());
 
   // If this is a constant expr gep that is effectively computing an
   // "offsetof", fold it into 'cast int Size to T*' instead of 'gep 0, 0, 12'
@@ -850,7 +850,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
         // "inttoptr (sub (ptrtoint Ptr), V)"
         if (Ops.size() == 2 && ResElemTy->isIntegerTy(8)) {
           auto *CE = dyn_cast<ConstantExpr>(Ops[1]);
-          assert((!CE || CE->getType() == IntIdxTy) &&
+          assert((!CE || CE->getType() == IntPtrTy) &&
                  "CastGEPIndices didn't canonicalize index types!");
           if (CE && CE->getOpcode() == Instruction::Sub &&
               CE->getOperand(0)->isNullValue()) {
@@ -865,7 +865,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
         return nullptr;
       }
 
-  unsigned BitWidth = DL.getTypeSizeInBits(IntIdxTy);
+  unsigned BitWidth = DL.getTypeSizeInBits(IntPtrTy);
   APInt Offset =
       APInt(BitWidth,
             DL.getIndexedOffsetInType(
@@ -945,7 +945,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
         // The element size is 0. This may be [0 x Ty]*, so just use a zero
         // index for this level and proceed to the next level to see if it can
         // accommodate the offset.
-        NewIdxs.push_back(ConstantInt::get(IntIdxTy, 0));
+        NewIdxs.push_back(ConstantInt::get(IntPtrTy, 0));
       } else {
         // The element size is non-zero divide the offset by the element
         // size (rounding down), to compute the index at this level.
@@ -954,7 +954,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
         if (Overflow)
           break;
         Offset -= NewIdx * ElemSize;
-        NewIdxs.push_back(ConstantInt::get(IntIdxTy, NewIdx));
+        NewIdxs.push_back(ConstantInt::get(IntPtrTy, NewIdx));
       }
     } else {
       auto *STy = cast<StructType>(Ty);
