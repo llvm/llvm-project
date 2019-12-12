@@ -34,6 +34,9 @@ ArgVector getBasicRunOptionsForLanguage(Language Lang) {
   case Lang_CXX14:
     BasicArgs = {"-std=c++14", "-frtti"};
     break;
+  case Lang_CXX17:
+    BasicArgs = {"-std=c++17", "-frtti"};
+    break;
   case Lang_CXX2a:
     BasicArgs = {"-std=c++2a", "-frtti"};
     break;
