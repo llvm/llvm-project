@@ -1790,7 +1790,7 @@ define i32 @AtomicSwap32(i32 signext %newval) nounwind {
 ; MM32-NEXT:  $BB6_1: # %entry
 ; MM32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM32-NEXT:    ll $2, 0($1)
-; MM32-NEXT:    move $3, $4
+; MM32-NEXT:    or $3, $4, $zero
 ; MM32-NEXT:    sc $3, 0($1)
 ; MM32-NEXT:    beqzc $3, $BB6_1
 ; MM32-NEXT:  # %bb.2: # %entry
