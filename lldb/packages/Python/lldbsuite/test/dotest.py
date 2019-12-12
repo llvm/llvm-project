@@ -330,6 +330,10 @@ def parseOptionsAndInitTestdirs():
         configuration.skip_categories += test_categories.validate(
             args.skip_categories, False)
 
+    if args.xfail_categories:
+        configuration.xfail_categories += test_categories.validate(
+            args.xfail_categories, False)
+
     if args.E:
         os.environ['CFLAGS_EXTRAS'] = args.E
 
