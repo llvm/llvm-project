@@ -1,9 +1,8 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
-tablegen("IntrinsicEnums") {
+tablegen("Attributes") {
   visibility = [ ":public_tablegen" ]
-  args = [ "-gen-intrinsic-enums" ]
-  td_file = "Intrinsics.td"
+  args = [ "-gen-attrs" ]
 }
 
 tablegen("IntrinsicImpl") {
@@ -12,14 +11,155 @@ tablegen("IntrinsicImpl") {
   td_file = "Intrinsics.td"
 }
 
-tablegen("Attributes") {
+tablegen("IntrinsicEnums") {
   visibility = [ ":public_tablegen" ]
-  args = [ "-gen-attrs" ]
+  args = [ "-gen-intrinsic-enums" ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsAArch64") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsAArch64.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=aarch64",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsAMDGPU") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsAMDGPU.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=amdgcn",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsARM") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsARM.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=arm",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsBPF") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsBPF.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=bpf",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsHexagon") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsHexagon.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=hexagon",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsMips") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsMips.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=mips",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsNVPTX") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsNVPTX.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=nvvm",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsPowerPC") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsPowerPC.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=ppc",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsR600") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsR600.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=r600",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsRISCV") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsRISCV.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=riscv",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsS390") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsS390.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=s390",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsWebAssembly") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsWebAssembly.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=wasm",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsX86") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsX86.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=x86",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsXCore") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsXCore.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=xcore",
+  ]
+  td_file = "Intrinsics.td"
 }
 
 # Groups all tablegen() calls that create .inc files that are included in
-# IR's public headers.  //llvm/lib/Target has this as a public_dep, so targets
-# dependign on //llvm/lib/IR don't need to depend on this.  This exists
+# IR's public headers.  //llvm/lib/IR has this as a public_dep, so targets
+# depending on //llvm/lib/IR don't need to depend on this.  This exists
 # solely for targets that use IR's public headers but don't link against IR.
 group("public_tablegen") {
   public_deps = [
@@ -28,5 +168,22 @@ group("public_tablegen") {
 
     # IR's public headers include IntrinsicEnums.inc.
     ":IntrinsicEnums",
+
+    # FIXME: These are only included from .cpp files at first glance.
+    # Try removing them from the public_tablegen target.
+    ":IntrinsicsAArch64",
+    ":IntrinsicsAMDGPU",
+    ":IntrinsicsARM",
+    ":IntrinsicsBPF",
+    ":IntrinsicsHexagon",
+    ":IntrinsicsMips",
+    ":IntrinsicsNVPTX",
+    ":IntrinsicsPowerPC",
+    ":IntrinsicsR600",
+    ":IntrinsicsRISCV",
+    ":IntrinsicsS390",
+    ":IntrinsicsWebAssembly",
+    ":IntrinsicsX86",
+    ":IntrinsicsXCore",
   ]
 }
