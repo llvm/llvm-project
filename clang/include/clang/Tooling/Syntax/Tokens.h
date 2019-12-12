@@ -309,6 +309,17 @@ private:
   const SourceManager *SourceMgr;
 };
 
+/// The spelled tokens that overlap or touch a spelling location Loc.
+/// This always returns 0-2 tokens.
+llvm::ArrayRef<syntax::Token>
+spelledTokensTouching(SourceLocation Loc, const syntax::TokenBuffer &Tokens);
+
+/// The identifier token that overlaps or touches a spelling location Loc.
+/// If there is none, returns nullptr.
+const syntax::Token *
+spelledIdentifierTouching(SourceLocation Loc,
+                          const syntax::TokenBuffer &Tokens);
+
 /// Lex the text buffer, corresponding to \p FID, in raw mode and record the
 /// resulting spelled tokens. Does minimal post-processing on raw identifiers,
 /// setting the appropriate token kind (instead of the raw_identifier reported
