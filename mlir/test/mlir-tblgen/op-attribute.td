@@ -62,11 +62,11 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:     tblgen_state.addAttribute("cAttr", cAttr);
 
 // DEF:      void AOp::build(
-// DEF-SAME:   some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr
+// DEF:        some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr
 // DEF:        tblgen_state.addAttribute("aAttr", some-const-builder-call((*tblgen_builder), aAttr));
 
 // DEF:      void AOp::build(
-// DEF-SAME:   ArrayRef<NamedAttribute> attributes
+// DEF:        ArrayRef<NamedAttribute> attributes
 // DEF:      tblgen_state.addAttributes(attributes);
 
 // Test verify method
@@ -184,11 +184,7 @@ def DOp : NS_Op<"d_op", []> {
 }
 
 // DECL-LABEL: DOp declarations
-// DECL: static void build({{.*}}, APInt i32_attr, APFloat f64_attr,
-// DECL-SAME: StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr,
-// DECL-SAME: APInt dv_i32_attr, APFloat dv_f64_attr,
-// DECL-SAME: StringRef dv_str_attr = "abc", bool dv_bool_attr = true,
-// DECL-SAME: ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
+// DECL: static void build({{.*}}, APInt i32_attr, APFloat f64_attr, StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr, APInt dv_i32_attr, APFloat dv_f64_attr, StringRef dv_str_attr = "abc", bool dv_bool_attr = true, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
 // Test that only default valued attributes at the end of the arguments
 // list get default values in the builder signature
@@ -210,11 +206,7 @@ def EOp : NS_Op<"e_op", []> {
 }
 
 // DECL-LABEL: EOp declarations
-// DECL: static void build({{.*}}, APInt i32_attr, APInt dv_i32_attr,
-// DECL-SAME: APFloat f64_attr, APFloat dv_f64_attr,
-// DECL-SAME: StringRef str_attr, StringRef dv_str_attr,
-// DECL-SAME: bool bool_attr, bool dv_bool_attr,
-// DECL-SAME: ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
+// DECL: static void build({{.*}}, APInt i32_attr, APInt dv_i32_attr, APFloat f64_attr, APFloat dv_f64_attr, StringRef str_attr, StringRef dv_str_attr, bool bool_attr, bool dv_bool_attr, ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
 // Test mixing operands and attributes in arbitrary order
 // ---

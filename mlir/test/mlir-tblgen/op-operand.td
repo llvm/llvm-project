@@ -18,11 +18,11 @@ def OpA : NS_Op<"one_normal_operand_op", []> {
 // CHECK-NEXT: tblgen_operands = values
 
 // CHECK:      void OpA::build
-// CHECK-SAME:   Value *input
+// CHECK:        Value *input
 // CHECK:        tblgen_state.addOperands(input);
 
 // CHECK:      void OpA::build
-// CHECK-SAME:   ValueRange operands
+// CHECK:        ValueRange operands
 // CHECK:        assert(operands.size() == 1u && "mismatched number of parameters");
 // CHECK:        tblgen_state.addOperands(operands);
 
@@ -31,7 +31,7 @@ def OpB : NS_Op<"one_variadic_operand_op", []> {
 }
 
 // CHECK-LABEL: OpB::build
-// CHECK-SAME:    ValueRange input
+// CHECK:         ValueRange input
 // CHECK-NOT:     assert
 // CHECK:         tblgen_state.addOperands(input);
 
