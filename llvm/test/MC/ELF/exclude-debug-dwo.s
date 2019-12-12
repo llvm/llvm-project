@@ -5,7 +5,7 @@
 # CHECK: .debug_info.dwo        {{.*}} E
 # CHECK: .debug_types.dwo       {{.*}} E
 # CHECK: .debug_abbrev.dwo      {{.*}} E
-# CHECK: .debug_str.dwo         {{.*}} EMS
+# CHECK: .debug_str.dwo         {{.*}} MSE
 # CHECK: .debug_line.dwo        {{.*}} E
 # CHECK: .debug_loc.dwo         {{.*}} E
 # CHECK: .debug_str_offsets.dwo {{.*}} E
