@@ -1,4 +1,4 @@
-;===- ./lib/Target/Xtensa/LLVMBuild.txt ------------------------*- Conf -*--===;
+;===- ./lib/Target/AsmParser/LLVMBuild.txt --------------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -14,18 +14,9 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = AsmParser TargetInfo MCTargetDesc
-
 [component_0]
-type = TargetGroup
-name = Xtensa
-parent = Target
-has_asmparser = 1
-
-[component_1]
 type = Library
-name = XtensaCodeGen
+name = XtensaAsmParser
 parent = Xtensa
-required_libraries = CodeGen Core XtensaInfo Support Target
+required_libraries = XtensaDesc XtensaInfo MC MCParser Support
 add_to_library_groups = Xtensa

@@ -54,4 +54,7 @@ createXtensaObjectWriter(uint8_t OSABI, bool IsLittleEndian);
 #define GET_INSTRINFO_ENUM
 #include "XtensaGenInstrInfo.inc"
 
+#define GET_SUBTARGETINFO_ENUM
+#include "XtensaGenSubtargetInfo.inc"
+
 #endif /* LLVM_LIB_TARGET_XTENSA_MCTARGETDESC_XTENSAMCTARGETDESC_H */
