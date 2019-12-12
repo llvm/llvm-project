@@ -3,5 +3,6 @@ static_library("OpenMP") {
 
   sources = [
     "OMPConstants.cpp",
+    "OMPIRBuilder.cpp",
   ]
 }
