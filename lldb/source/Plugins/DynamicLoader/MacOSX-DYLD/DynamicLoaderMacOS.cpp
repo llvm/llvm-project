@@ -223,7 +223,10 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
     // get the values from the ABI:
 
     ClangASTContext *clang_ast_context =
-        process->GetTarget().GetScratchClangASTContext();
+        ClangASTContext::GetScratch(process->GetTarget());
+    if (!clang_ast_context)
+      return false;
+
     ValueList argument_values;
 
     Value mode_value;    // enum dyld_notify_mode { dyld_notify_adding=0,
