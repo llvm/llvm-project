@@ -130,6 +130,14 @@ EXTERN void __kmpc_impl_threadfence(void);
 EXTERN void __kmpc_impl_threadfence_block(void);
 EXTERN void __kmpc_impl_threadfence_system(void);
 
+// Calls to the AMDGCN layer (assuming 1D layout)
+EXTERN uint64_t __ockl_get_local_size(uint32_t);
+EXTERN uint64_t __ockl_get_num_groups(uint32_t);
+INLINE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
+INLINE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
+INLINE int GetNumberOfBlocksInKernel() { return __ockl_get_num_groups(0); }
+INLINE int GetNumberOfThreadsInBlock() { return __ockl_get_local_size(0); }
+
 // DEVICE versions of part of libc
 extern "C" {
 DEVICE __attribute__((noreturn)) void
