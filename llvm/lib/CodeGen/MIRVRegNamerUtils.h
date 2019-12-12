@@ -64,10 +64,6 @@ class VRegRenamer {
   /// Perform replacing of registers based on the <old,new> vreg map.
   bool doVRegRenaming(const std::map<unsigned, unsigned> &VRegRenameMap);
 
-public:
-  VRegRenamer() = delete;
-  VRegRenamer(MachineRegisterInfo &MRI) : MRI(MRI) {}
-
   /// createVirtualRegister - Given an existing vreg, create a named vreg to
   /// take its place. The name is determined by calling
   /// getInstructionOpcodeHash.
@@ -80,11 +76,16 @@ public:
   /// Names are as follows bb<BBNum>_hash_[0-9]+
   bool renameInstsInMBB(MachineBasicBlock *MBB);
 
+public:
+  VRegRenamer() = delete;
+  VRegRenamer(MachineRegisterInfo &MRI) : MRI(MRI) {}
+
   /// Same as the above, but sets a BBNum depending on BB traversal that
   /// will be used as prefix for the vreg names.
-  bool renameVRegs(MachineBasicBlock *MBB, unsigned BBNum);
-
-  unsigned getCurrentBBNumber() const { return CurrentBBNumber; }
+  bool renameVRegs(MachineBasicBlock *MBB, unsigned BBNum) {
+    CurrentBBNumber = BBNum;
+    return renameInstsInMBB(MBB);
+  }
 };
 
 } // namespace llvm
