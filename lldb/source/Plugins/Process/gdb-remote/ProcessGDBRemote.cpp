@@ -10,7 +10,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
 #include <netinet/in.h>
 #include <sys/mman.h>
 #include <sys/socket.h>

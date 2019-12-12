@@ -429,7 +429,7 @@ GDBRemoteCommunicationServerCommon::Handle_qsProcessInfo(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qUserName(
     StringExtractorGDBRemote &packet) {
-#if !defined(LLDB_DISABLE_POSIX)
+#if LLDB_ENABLE_POSIX
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
   LLDB_LOGF(log, "GDBRemoteCommunicationServerCommon::%s begin", __FUNCTION__);
 
@@ -452,7 +452,7 @@ GDBRemoteCommunicationServerCommon::Handle_qUserName(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qGroupName(
     StringExtractorGDBRemote &packet) {
-#if !defined(LLDB_DISABLE_POSIX)
+#if LLDB_ENABLE_POSIX
   // Packet format: "qGroupName:%i" where %i is the gid
   packet.SetFilePos(::strlen("qGroupName:"));
   uint32_t gid = packet.GetU32(UINT32_MAX);
