@@ -215,6 +215,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   SmallVector<MachineInstr *, 128> RetryList;
   do {
+    LLVM_DEBUG(dbgs() << "=== New Iteration ===\n");
     assert(RetryList.empty() && "Expected no instructions in RetryList");
     unsigned NumArtifacts = ArtifactList.size();
     while (!InstList.empty()) {
@@ -235,6 +236,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
         // legalizing InstList may generate artifacts that allow
         // ArtifactCombiner to combine away them.
         if (isArtifact(MI)) {
+          LLVM_DEBUG(dbgs() << ".. Not legalized, moving to artifacts retry\n");
           RetryList.push_back(&MI);
           continue;
         }
@@ -251,6 +253,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
         while (!RetryList.empty())
           ArtifactList.insert(RetryList.pop_back_val());
       } else {
+        LLVM_DEBUG(dbgs() << "No new artifacts created, not retrying!\n");
         MachineInstr *MI = *RetryList.begin();
         stopLegalizing(*MI);
         return false;
@@ -266,6 +269,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
       SmallVector<MachineInstr *, 4> DeadInstructions;
+      LLVM_DEBUG(dbgs() << "Trying to combine: " << MI);
       if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions,
                                             WrapperObserver)) {
         WorkListObserver.printNewInstrs();
@@ -280,8 +284,10 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       // If this was not an artifact (that could be combined away), this might
       // need special handling. Add it to InstList, so when it's processed
       // there, it has to be legal or specially handled.
-      else
+      else {
+        LLVM_DEBUG(dbgs() << ".. Not combined, moving to instructions list\n");
         InstList.insert(&MI);
+      }
     }
   } while (!InstList.empty());
 
