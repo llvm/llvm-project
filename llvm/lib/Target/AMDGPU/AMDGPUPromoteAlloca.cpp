@@ -274,17 +274,17 @@ Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
 
   switch (N) {
   case 0:
-    IntrID = IsAMDGCN ? Intrinsic::amdgcn_workitem_id_x
-      : Intrinsic::r600_read_tidig_x;
+    IntrID = IsAMDGCN ? (Intrinsic::ID)Intrinsic::amdgcn_workitem_id_x
+                      : (Intrinsic::ID)Intrinsic::r600_read_tidig_x;
     break;
   case 1:
-    IntrID = IsAMDGCN ? Intrinsic::amdgcn_workitem_id_y
-      : Intrinsic::r600_read_tidig_y;
+    IntrID = IsAMDGCN ? (Intrinsic::ID)Intrinsic::amdgcn_workitem_id_y
+                      : (Intrinsic::ID)Intrinsic::r600_read_tidig_y;
     break;
 
   case 2:
-    IntrID = IsAMDGCN ? Intrinsic::amdgcn_workitem_id_z
-      : Intrinsic::r600_read_tidig_z;
+    IntrID = IsAMDGCN ? (Intrinsic::ID)Intrinsic::amdgcn_workitem_id_z
+                      : (Intrinsic::ID)Intrinsic::r600_read_tidig_z;
     break;
   default:
     llvm_unreachable("invalid dimension");
