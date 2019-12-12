@@ -506,6 +506,24 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.Value = "&\"1234\"[0]";
        }},
+      {R"cpp(// Should not crash
+        template <typename T>
+        struct Tmpl {
+          Tmpl(int name);
+        };
+
+        template <typename A>
+        void boom(int name) {
+          new Tmpl<A>([[na^me]]);
+        })cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "name";
+         HI.Definition = "int name";
+         HI.Kind = index::SymbolKind::Parameter;
+         HI.Type = "int";
+         HI.NamespaceScope = "";
+         HI.LocalScope = "boom::";
+       }},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);

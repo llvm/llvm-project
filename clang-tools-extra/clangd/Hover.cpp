@@ -242,12 +242,13 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
   // FIXME: handle variadics.
 }
 
-llvm::Optional<std::string> printExprValue(const Expr *E, const ASTContext &Ctx) {
+llvm::Optional<std::string> printExprValue(const Expr *E,
+                                           const ASTContext &Ctx) {
   Expr::EvalResult Constant;
   // Evaluating [[foo]]() as "&foo" isn't useful, and prevents us walking up
   // to the enclosing call.
   QualType T = E->getType();
-  if (T->isFunctionType() || T->isFunctionPointerType() ||
+  if (T.isNull() || T->isFunctionType() || T->isFunctionPointerType() ||
       T->isFunctionReferenceType())
     return llvm::None;
   // Attempt to evaluate. If expr is dependent, evaluation crashes!
