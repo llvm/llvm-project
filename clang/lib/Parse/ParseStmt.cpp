@@ -1201,13 +1201,12 @@ struct MisleadingIndentationChecker {
   SourceLocation PrevLoc;
   unsigned NumDirectives;
   MisleadingStatementKind Kind;
-  bool NeedsChecking;
   bool ShouldSkip;
   MisleadingIndentationChecker(Parser &P, MisleadingStatementKind K,
                                SourceLocation SL)
       : P(P), StmtLoc(SL), PrevLoc(P.getCurToken().getLocation()),
         NumDirectives(P.getPreprocessor().getNumDirectives()), Kind(K),
-        NeedsChecking(true), ShouldSkip(P.getCurToken().is(tok::l_brace)) {
+        ShouldSkip(P.getCurToken().is(tok::l_brace)) {
     if (!P.MisleadingIndentationElseLoc.isInvalid()) {
       StmtLoc = P.MisleadingIndentationElseLoc;
       P.MisleadingIndentationElseLoc = SourceLocation();
@@ -1216,9 +1215,10 @@ struct MisleadingIndentationChecker {
       P.MisleadingIndentationElseLoc = SL;
   }
   void Check() {
-    NeedsChecking = false;
     Token Tok = P.getCurToken();
-    if (ShouldSkip || NumDirectives != P.getPreprocessor().getNumDirectives() ||
+    if (P.getActions().getDiagnostics().isIgnored(
+            diag::warn_misleading_indentation, Tok.getLocation()) ||
+        ShouldSkip || NumDirectives != P.getPreprocessor().getNumDirectives() ||
         Tok.isOneOf(tok::semi, tok::r_brace) || Tok.isAnnotation() ||
         Tok.getLocation().isMacroID() || PrevLoc.isMacroID() ||
         StmtLoc.isMacroID() ||
@@ -1226,6 +1226,8 @@ struct MisleadingIndentationChecker {
       P.MisleadingIndentationElseLoc = SourceLocation();
       return;
     }
+    if (Kind == MSK_else)
+      P.MisleadingIndentationElseLoc = SourceLocation();
 
     SourceManager &SM = P.getPreprocessor().getSourceManager();
     unsigned PrevColNum = SM.getSpellingColumnNumber(PrevLoc);
