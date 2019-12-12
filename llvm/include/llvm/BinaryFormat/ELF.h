@@ -767,6 +767,21 @@ enum {
 #include "ELFRelocs/MSP430.def"
 };
 
+// Xtensa specific e_flags
+enum : unsigned {
+  /* Four-bit Xtensa machine type field.  */
+  EF_XTENSA_MACH = 0x0000000f,
+  /* Various CPU types.  */
+  E_XTENSA_MACH = 0x00000000,
+  EF_XTENSA_XT_INSN = 0x00000100,
+  EF_XTENSA_XT_LIT = 0x00000200,
+};
+
+// ELF Relocation types for Xtensa
+enum {
+#include "ELFRelocs/Xtensa.def"
+};
+
 #undef ELF_RELOC
 
 // Section header.
