@@ -84,8 +84,6 @@ ClangExpressionDeclMap::~ClangExpressionDeclMap() {
 
 bool ClangExpressionDeclMap::WillParse(ExecutionContext &exe_ctx,
                                        Materializer *materializer) {
-  ClangASTMetrics::ClearLocalCounters();
-
   EnableParserVars();
   m_parser_vars->m_exe_ctx = exe_ctx;
 
@@ -127,11 +125,6 @@ void ClangExpressionDeclMap::InstallCodeGenerator(
 }
 
 void ClangExpressionDeclMap::DidParse() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
-  if (log)
-    ClangASTMetrics::DumpCounters(log);
-
   if (m_parser_vars) {
     for (size_t entity_index = 0, num_entities = m_found_entities.GetSize();
          entity_index < num_entities; ++entity_index) {
@@ -684,8 +677,6 @@ ClangASTContext *ClangExpressionDeclMap::GetClangASTContext() {
 void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context) {
   assert(m_ast_context);
-
-  ClangASTMetrics::RegisterVisibleQuery();
 
   const ConstString name(context.m_decl_name.getAsString().c_str());
 
