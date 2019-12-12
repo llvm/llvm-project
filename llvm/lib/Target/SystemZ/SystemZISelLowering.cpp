@@ -1418,7 +1418,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
 
     // ...and a similar frame index for the caller-allocated save area
     // that will be used to store the incoming registers.
-    int64_t RegSaveOffset = TFL->getOffsetOfLocalArea();
+    int64_t RegSaveOffset = -SystemZMC::CallFrameSize;
     unsigned RegSaveIndex = MFI.CreateFixedObject(1, RegSaveOffset, true);
     FuncInfo->setRegSaveFrameIndex(RegSaveIndex);
 
@@ -3203,14 +3203,10 @@ SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
-  // If the back chain frame index has not been allocated yet, do so.
-  SystemZMachineFunctionInfo *FI = MF.getInfo<SystemZMachineFunctionInfo>();
-  int BackChainIdx = FI->getFramePointerSaveIndex();
-  if (!BackChainIdx) {
-    // By definition, the frame address is the address of the back chain.
-    BackChainIdx = MFI.CreateFixedObject(8, -SystemZMC::CallFrameSize, false);
-    FI->setFramePointerSaveIndex(BackChainIdx);
-  }
+  // By definition, the frame address is the address of the back chain.
+  auto *TFL =
+      static_cast<const SystemZFrameLowering *>(Subtarget.getFrameLowering());
+  int BackChainIdx = TFL->getOrCreateFramePointerSaveIndex(MF);
   SDValue BackChain = DAG.getFrameIndex(BackChainIdx, PtrVT);
 
   // FIXME The frontend should detect this case.
