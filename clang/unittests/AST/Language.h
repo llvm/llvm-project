@@ -28,6 +28,7 @@ enum Language {
     Lang_CXX,
     Lang_CXX11,
     Lang_CXX14,
+    Lang_CXX17,
     Lang_CXX2a,
     Lang_OpenCL,
     Lang_OBJCXX
