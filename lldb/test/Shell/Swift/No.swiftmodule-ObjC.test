@@ -11,7 +11,6 @@
 # RUN: %target-swiftc -o %t/a.out %t/main.o %t/ObjCStuff.o
 # RUN: %lldb %t/a.out -s %s | FileCheck %S/Inputs/No.swiftmodule-ObjC.swift
 
-settings set symbols.use-swift-dwarfimporter true
 breakpoint set -p "break here"
 run
 frame variable -d no-dynamic
