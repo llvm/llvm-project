@@ -8973,6 +8973,12 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
       return true;
 
     ScalarCast = CK_IntegralCast;
+  } else if (VectorEltTy->isIntegralType(S.Context) &&
+             ScalarTy->isRealFloatingType()) {
+    if (S.Context.getTypeSize(VectorEltTy) == S.Context.getTypeSize(ScalarTy))
+      ScalarCast = CK_FloatingToIntegral;
+    else
+      return true;
   } else if (VectorEltTy->isRealFloatingType()) {
     if (ScalarTy->isRealFloatingType()) {
 
