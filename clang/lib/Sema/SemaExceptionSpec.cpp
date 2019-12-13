@@ -205,7 +205,7 @@ Sema::ResolveExceptionSpec(SourceLocation Loc, const FunctionProtoType *FPT) {
 
   // Compute or instantiate the exception specification now.
   if (SourceFPT->getExceptionSpecType() == EST_Unevaluated)
-    EvaluateImplicitExceptionSpec(Loc, cast<CXXMethodDecl>(SourceDecl));
+    EvaluateImplicitExceptionSpec(Loc, SourceDecl);
   else
     InstantiateExceptionSpec(Loc, SourceDecl);
 
@@ -1221,6 +1221,17 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     return mergeCanThrow(CT, canSubStmtsThrow(*this, BTE));
   }
 
+  case Expr::PseudoObjectExprClass: {
+    auto *POE = cast<PseudoObjectExpr>(S);
+    CanThrowResult CT = CT_Cannot;
+    for (const Expr *E : POE->semantics()) {
+      CT = mergeCanThrow(CT, canThrow(E));
+      if (CT == CT_Can)
+        break;
+    }
+    return CT;
+  }
+
     // ObjC message sends are like function calls, but never have exception
     // specs.
   case Expr::ObjCMessageExprClass:
@@ -1327,7 +1338,6 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::ObjCAvailabilityCheckExprClass:
   case Expr::OffsetOfExprClass:
   case Expr::PackExpansionExprClass:
-  case Expr::PseudoObjectExprClass:
   case Expr::SubstNonTypeTemplateParmExprClass:
   case Expr::SubstNonTypeTemplateParmPackExprClass:
   case Expr::FunctionParmPackExprClass:
@@ -1335,7 +1345,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
   case Expr::TypoExprClass:
-    // FIXME: Can any of the above throw?  If so, when?
+    // FIXME: Many of the above can throw.
     return CT_Cannot;
 
   case Expr::AddrLabelExprClass:
