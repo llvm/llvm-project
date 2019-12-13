@@ -338,6 +338,21 @@ void clang::FormatASTNodeDiagnosticArgument(
 
   switch (Kind) {
     default: llvm_unreachable("unknown ArgumentKind");
+    case DiagnosticsEngine::ak_addrspace: {
+      assert(Modifier.empty() && Argument.empty() &&
+             "Invalid modifier for Qualfiers argument");
+
+      auto S = Qualifiers::getAddrSpaceAsString(static_cast<LangAS>(Val));
+      if (S.empty()) {
+        OS << (Context.getLangOpts().OpenCL ? "default" : "generic");
+        OS << " address space";
+      } else {
+        OS << "address space";
+        OS << " '" << S << "'";
+      }
+      NeedQuotes = false;
+      break;
+    }
     case DiagnosticsEngine::ak_qual: {
       assert(Modifier.empty() && Argument.empty() &&
              "Invalid modifier for Qualfiers argument");
@@ -348,7 +363,7 @@ void clang::FormatASTNodeDiagnosticArgument(
         OS << "unqualified";
         NeedQuotes = false;
       } else {
-        OS << Q.getAsString();
+        OS << S;
       }
       break;
     }

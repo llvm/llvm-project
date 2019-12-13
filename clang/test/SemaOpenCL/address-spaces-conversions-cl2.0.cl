@@ -42,7 +42,7 @@ void f_glob(__global int *arg_glob) {}
 #if !__OPENCL_CPP_VERSION__
 // expected-note@-3{{passing argument to parameter 'arg_glob' here}}
 #else
-// expected-note-re@-5{{candidate function not viable: address space mismatch in 1st argument ('__{{generic|constant}} int *'), parameter type must be '__global int *'}}
+// expected-note-re@-5{{candidate function not viable: cannot pass pointer to address space '__{{generic|constant}}' as a pointer to address space '__global' in 1st argument}}
 #endif
 #endif
 
@@ -50,7 +50,7 @@ void f_loc(__local int *arg_loc) {}
 #if !__OPENCL_CPP_VERSION__
 // expected-note@-2{{passing argument to parameter 'arg_loc' here}}
 #else
-// expected-note-re@-4{{candidate function not viable: address space mismatch in 1st argument ('__{{global|generic|constant}} int *'), parameter type must be '__local int *'}}
+// expected-note-re@-4{{candidate function not viable: cannot pass pointer to address space '__{{global|generic|constant}}' as a pointer to address space '__local' in 1st argument}}
 #endif
 
 void f_const(__constant int *arg_const) {}
@@ -58,7 +58,7 @@ void f_const(__constant int *arg_const) {}
 #if !__OPENCL_CPP_VERSION__
 // expected-note@-3{{passing argument to parameter 'arg_const' here}}
 #else
-// expected-note-re@-5{{candidate function not viable: address space mismatch in 1st argument ('__{{global|generic}} int *'), parameter type must be '__constant int *'}}
+// expected-note-re@-5{{candidate function not viable: cannot pass pointer to address space '__{{global|generic}}' as a pointer to address space '__constant' in 1st argument}}
 #endif
 #endif
 
@@ -66,7 +66,7 @@ void f_priv(__private int *arg_priv) {}
 #if !__OPENCL_CPP_VERSION__
 // expected-note@-2{{passing argument to parameter 'arg_priv' here}}
 #else
-// expected-note-re@-4{{candidate function not viable: address space mismatch in 1st argument ('__{{global|generic|constant}} int *'), parameter type must be 'int *'}}
+// expected-note-re@-4{{candidate function not viable: cannot pass pointer to address space '__{{global|generic|constant}}' as a pointer to default address space in 1st argument}}
 #endif
 
 void f_gen(__generic int *arg_gen) {}
@@ -74,7 +74,7 @@ void f_gen(__generic int *arg_gen) {}
 #if !__OPENCL_CPP_VERSION__
 // expected-note@-3{{passing argument to parameter 'arg_gen' here}}
 #else
-// expected-note@-5{{candidate function not viable: address space mismatch in 1st argument ('__constant int *'), parameter type must be '__generic int *'}}
+// expected-note@-5{{candidate function not viable: cannot pass pointer to address space '__constant' as a pointer to address space '__generic' in 1st argument}}
 #endif
 #endif
 
