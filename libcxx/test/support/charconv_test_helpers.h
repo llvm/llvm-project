@@ -174,6 +174,10 @@ struct roundtrip_test_base
 
             r2 = from_chars(buf, r.ptr, x, args...);
 
+#ifdef TEST_COMPILER_C1XX
+    #pragma warning(push)
+    #pragma warning(disable: 4127) // conditional expression is constant
+#endif // TEST_COMPILER_C1XX
             if (std::is_signed<T>::value && v < 0 && std::is_unsigned<X>::value)
             {
                 assert(x == 0xc);
@@ -186,6 +190,9 @@ struct roundtrip_test_base
                 assert(r2.ptr == r.ptr);
                 assert(r2.ec == std::errc::result_out_of_range);
             }
+#ifdef TEST_COMPILER_C1XX
+    #pragma warning(pop)
+#endif // TEST_COMPILER_C1XX
         }
     }
 
