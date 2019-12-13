@@ -13,9 +13,7 @@
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 
-#include <cassert>
 #include <cstddef>
 
 #include <string.h>
