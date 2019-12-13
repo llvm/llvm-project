@@ -100,7 +100,7 @@ if 'native' in config.available_features:
         else:
             lit_config.warning("lit-cpuid failed: %s" % err)
 
-if not config.lldb_disable_python:
+if config.lldb_enable_python:
     config.available_features.add('python')
 
 if config.lldb_enable_lzma:

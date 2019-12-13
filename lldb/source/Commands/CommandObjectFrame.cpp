@@ -852,7 +852,7 @@ Process 1234 stopped
 
 bool CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
                                                 CommandReturnObject &result) {
-#ifndef LLDB_DISABLE_PYTHON
+#if LLDB_ENABLE_PYTHON
   if (m_options.m_class_name.empty()) {
     result.AppendErrorWithFormat(
         "%s needs a Python class name (-l argument).\n", m_cmd_name.c_str());
@@ -1106,7 +1106,7 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
                  CommandObjectSP(new CommandObjectFrameSelect(interpreter)));
   LoadSubCommand("variable",
                  CommandObjectSP(new CommandObjectFrameVariable(interpreter)));
-#ifndef LLDB_DISABLE_PYTHON
+#if LLDB_ENABLE_PYTHON
   LoadSubCommand("recognizer", CommandObjectSP(new CommandObjectFrameRecognizer(
                                    interpreter)));
 #endif

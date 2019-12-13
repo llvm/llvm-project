@@ -40,7 +40,7 @@ if (WIN32)
   add_definitions(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
 endif()
 
-if (NOT LLDB_DISABLE_PYTHON)
+if (LLDB_ENABLE_PYTHON)
   execute_process(
     COMMAND ${PYTHON_EXECUTABLE}
         -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(True, False, ''))"
@@ -91,7 +91,7 @@ if(LLDB_INCLUDE_TESTS)
   add_subdirectory(utils/lldb-dotest)
 endif()
 
-if (NOT LLDB_DISABLE_PYTHON)
+if (LLDB_ENABLE_PYTHON)
   get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
 
   if(LLDB_BUILD_FRAMEWORK)

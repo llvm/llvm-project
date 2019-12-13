@@ -4,7 +4,7 @@ endif()
 
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
-if(NOT LLDB_DISABLE_PYTHON)
+if(LLDB_ENABLE_PYTHON)
   get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
   set(lldb_python_wrapper ${lldb_scripts_dir}/LLDBWrapPython.cpp)
 endif()
@@ -154,7 +154,7 @@ endif()
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   # Only MSVC has the ABI compatibility problem and avoids using FindPythonLibs,
   # so only it needs to explicitly link against ${PYTHON_LIBRARY}
-  if (MSVC AND NOT LLDB_DISABLE_PYTHON)
+  if (MSVC AND LLDB_ENABLE_PYTHON)
     target_link_libraries(liblldb PRIVATE ${PYTHON_LIBRARY})
   endif()
 else()
