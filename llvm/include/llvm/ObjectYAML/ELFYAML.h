@@ -192,6 +192,9 @@ struct Section : public Chunk {
   // This can be used to override the sh_size field. It does not affect the
   // content written.
   Optional<llvm::yaml::Hex64> ShSize;
+
+  // This can be used to override the sh_flags field.
+  Optional<llvm::yaml::Hex64> ShFlags;
 };
 
 // Fill is a block of data which is placed outside of sections. It is
