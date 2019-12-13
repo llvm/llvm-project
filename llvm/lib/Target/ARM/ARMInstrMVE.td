@@ -5394,7 +5394,6 @@ class MVE_VPT<string suffix, bits<2> size, dag iops, string asm, list<dag> patte
   let Inst{4} = 0b0;
 
   let Defs = [VPR];
-  let validForTailPredication = 1;
 }
 
 class MVE_VPTt1<string suffix, bits<2> size, dag iops>
@@ -5406,7 +5405,6 @@ class MVE_VPTt1<string suffix, bits<2> size, dag iops>
   let Inst{5} = Qm{3};
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = fc{1};
-  let validForTailPredication = 1;
 }
 
 class MVE_VPTt1i<string suffix, bits<2> size>
@@ -5508,7 +5506,6 @@ class MVE_VPTf<string suffix, bit size, dag iops, string asm, list<dag> pattern=
 
   let Defs = [VPR];
   let Predicates = [HasMVEFloat];
-  let validForTailPredication = 1;
 }
 
 class MVE_VPTft1<string suffix, bit size>
