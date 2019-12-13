@@ -10,7 +10,7 @@
 ; CHECK: "vars entry value scope bytes covered":0
 ; CHECK: "total variables procesed by location statistics":6
 ; CHECK: "variables with 0% of its scope covered":1
-; CHECK: "variables with [1%,10%) of its scope covered":0
+; CHECK: "variables with (0%,10%) of its scope covered":0
 ; CHECK: "variables with [10%,20%) of its scope covered":0
 ; CHECK: "variables with [20%,30%) of its scope covered":0
 ; CHECK: "variables with [30%,40%) of its scope covered":0
@@ -22,7 +22,7 @@
 ; CHECK: "variables with [90%,100%) of its scope covered":0
 ; CHECK: "variables with 100% of its scope covered":3
 ; CHECK: "variables (excluding the debug entry values) with 0% of its scope covered":1
-; CHECK: "variables (excluding the debug entry values) with [1%,10%) of its scope covered":0
+; CHECK: "variables (excluding the debug entry values) with (0%,10%) of its scope covered":0
 ; CHECK: "variables (excluding the debug entry values) with [10%,20%) of its scope covered":0
 ; CHECK: "variables (excluding the debug entry values) with [20%,30%) of its scope covered":0
 ; CHECK: "variables (excluding the debug entry values) with [30%,40%) of its scope covered":0
@@ -35,7 +35,7 @@
 ; CHECK: "variables (excluding the debug entry values) with 100% of its scope covered":2
 ; CHECK: "total params procesed by location statistics":2
 ; CHECK: "params with 0% of its scope covered":0
-; CHECK: "params with [1%,10%) of its scope covered":0
+; CHECK: "params with (0%,10%) of its scope covered":0
 ; CHECK: "params with [10%,20%) of its scope covered":0
 ; CHECK: "params with [20%,30%) of its scope covered":0
 ; CHECK: "params with [30%,40%) of its scope covered":0
@@ -47,7 +47,7 @@
 ; CHECK: "params with [90%,100%) of its scope covered":0
 ; CHECK: "params with 100% of its scope covered":2
 ; CHECK: "params (excluding the debug entry values) with 0% of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with [1%,10%) of its scope covered":0
+; CHECK: "params (excluding the debug entry values) with (0%,10%) of its scope covered":0
 ; CHECK: "params (excluding the debug entry values) with [10%,20%) of its scope covered":0
 ; CHECK: "params (excluding the debug entry values) with [20%,30%) of its scope covered":0
 ; CHECK: "params (excluding the debug entry values) with [30%,40%) of its scope covered":0
@@ -60,7 +60,7 @@
 ; CHECK: "params (excluding the debug entry values) with 100% of its scope covered":1
 ; CHECK: "total vars procesed by location statistics":4
 ; CHECK: "vars with 0% of its scope covered":1
-; CHECK: "vars with [1%,10%) of its scope covered":0
+; CHECK: "vars with (0%,10%) of its scope covered":0
 ; CHECK: "vars with [10%,20%) of its scope covered":0
 ; CHECK: "vars with [20%,30%) of its scope covered":0
 ; CHECK: "vars with [30%,40%) of its scope covered":0
@@ -72,7 +72,7 @@
 ; CHECK: "vars with [90%,100%) of its scope covered":0
 ; CHECK: "vars with 100% of its scope covered":1
 ; CHECK: "vars (excluding the debug entry values) with 0% of its scope covered":1
-; CHECK: "vars (excluding the debug entry values) with [1%,10%) of its scope covered":0
+; CHECK: "vars (excluding the debug entry values) with (0%,10%) of its scope covered":0
 ; CHECK: "vars (excluding the debug entry values) with [10%,20%) of its scope covered":0
 ; CHECK: "vars (excluding the debug entry values) with [20%,30%) of its scope covered":0
 ; CHECK: "vars (excluding the debug entry values) with [30%,40%) of its scope covered":0

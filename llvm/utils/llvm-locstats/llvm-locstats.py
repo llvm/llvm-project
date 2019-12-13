@@ -15,7 +15,7 @@ from subprocess import Popen, PIPE
 
 def coverage_buckets():
   yield '0%'
-  yield '[1%,10%)'
+  yield '(0%,10%)'
   for start in range(10, 91, 10):
     yield '[{0}%,{1}%)'.format(start, start + 10)
   yield '100%'
