@@ -387,8 +387,7 @@ func @min_reduction_tree(%v : index) {
 #map6 = (d0,d1,d2) -> (d0 + d1 + d2)
 
 // CHECK-LABEL: func @affine_applies(
-func @affine_applies() {
-^bb0:
+func @affine_applies(%arg0 : index) {
 // CHECK: %[[c0:.*]] = constant 0 : index
   %zero = affine.apply #map0()
 
@@ -405,39 +404,25 @@ func @affine_applies() {
 // CHECK-NEXT: %[[v1:.*]] = addi %[[v0]], %[[c1]] : index
   %one = affine.apply #map3(%symbZero)[%zero]
 
-// CHECK-NEXT: %[[c103:.*]] = constant 103 : index
-// CHECK-NEXT: %[[c104:.*]] = constant 104 : index
-// CHECK-NEXT: %[[c105:.*]] = constant 105 : index
-// CHECK-NEXT: %[[c106:.*]] = constant 106 : index
-// CHECK-NEXT: %[[c107:.*]] = constant 107 : index
-// CHECK-NEXT: %[[c108:.*]] = constant 108 : index
-// CHECK-NEXT: %[[c109:.*]] = constant 109 : index
-  %103 = constant 103 : index
-  %104 = constant 104 : index
-  %105 = constant 105 : index
-  %106 = constant 106 : index
-  %107 = constant 107 : index
-  %108 = constant 108 : index
-  %109 = constant 109 : index
 // CHECK-NEXT: %[[c2:.*]] = constant 2 : index
-// CHECK-NEXT: %[[v2:.*]] = muli %[[c104]], %[[c2]] : index
-// CHECK-NEXT: %[[v3:.*]] = addi %[[c103]], %[[v2]] : index
+// CHECK-NEXT: %[[v2:.*]] = muli %arg0, %[[c2]] : index
+// CHECK-NEXT: %[[v3:.*]] = addi %arg0, %[[v2]] : index
 // CHECK-NEXT: %[[c3:.*]] = constant 3 : index
-// CHECK-NEXT: %[[v4:.*]] = muli %[[c105]], %[[c3]] : index
+// CHECK-NEXT: %[[v4:.*]] = muli %arg0, %[[c3]] : index
 // CHECK-NEXT: %[[v5:.*]] = addi %[[v3]], %[[v4]] : index
 // CHECK-NEXT: %[[c4:.*]] = constant 4 : index
-// CHECK-NEXT: %[[v6:.*]] = muli %[[c106]], %[[c4]] : index
+// CHECK-NEXT: %[[v6:.*]] = muli %arg0, %[[c4]] : index
 // CHECK-NEXT: %[[v7:.*]] = addi %[[v5]], %[[v6]] : index
 // CHECK-NEXT: %[[c5:.*]] = constant 5 : index
-// CHECK-NEXT: %[[v8:.*]] = muli %[[c107]], %[[c5]] : index
+// CHECK-NEXT: %[[v8:.*]] = muli %arg0, %[[c5]] : index
 // CHECK-NEXT: %[[v9:.*]] = addi %[[v7]], %[[v8]] : index
 // CHECK-NEXT: %[[c6:.*]] = constant 6 : index
-// CHECK-NEXT: %[[v10:.*]] = muli %[[c108]], %[[c6]] : index
+// CHECK-NEXT: %[[v10:.*]] = muli %arg0, %[[c6]] : index
 // CHECK-NEXT: %[[v11:.*]] = addi %[[v9]], %[[v10]] : index
 // CHECK-NEXT: %[[c7:.*]] = constant 7 : index
-// CHECK-NEXT: %[[v12:.*]] = muli %[[c109]], %[[c7]] : index
+// CHECK-NEXT: %[[v12:.*]] = muli %arg0, %[[c7]] : index
 // CHECK-NEXT: %[[v13:.*]] = addi %[[v11]], %[[v12]] : index
-  %four = affine.apply #map4(%103,%104,%105,%106)[%107,%108,%109]
+  %four = affine.apply #map4(%arg0, %arg0, %arg0, %arg0)[%arg0, %arg0, %arg0]
   return
 }
 

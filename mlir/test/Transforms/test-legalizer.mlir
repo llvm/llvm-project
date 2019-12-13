@@ -113,6 +113,16 @@ func @up_to_date_replacement(%arg: i8) -> i8 {
   return %repl_2 : i8
 }
 
+// CHECK-LABEL: func @remove_foldable_op
+// CHECK-SAME:                          (%[[ARG_0:[a-z0-9]*]]: i32)
+func @remove_foldable_op(%arg0 : i32) -> (i32) {
+  // CHECK-NEXT: return %[[ARG_0]]
+  %0 = "test.op_with_region_fold"(%arg0) ({
+    "foo.op_with_region_terminator"() : () -> ()
+  }) : (i32) -> (i32)
+  return %0 : i32
+}
+
 // -----
 
 func @fail_to_convert_illegal_op() -> i32 {
