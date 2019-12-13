@@ -28,6 +28,8 @@ class RenameThisSampleTestTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
+        # Set up your test case here. If your test doesn't need any set up then
+        # remove this method from your TestCase class.
 
     def sample_test(self):
         """You might use the test implementation in several ways, say so here."""
