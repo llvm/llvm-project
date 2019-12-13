@@ -8,8 +8,8 @@ declare i32 @test58_d(i64 )
 define i1 @test59(i8* %foo) {
 ; CHECK-LABEL: @test59(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, i8* [[FOO:%.*]], i32 8
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[GEP1]] to i32
-; CHECK-NEXT:    [[USE:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[GEP1]] to i40
+; CHECK-NEXT:    [[USE:%.*]] = zext i40 [[TMP1]] to i64
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]])
 ; CHECK-NEXT:    ret i1 true
 ;
