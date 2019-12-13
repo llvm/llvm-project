@@ -102,9 +102,9 @@ static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
     .EndsWith("Decl *", "Record.GetLocalDeclAs<" 
               + std::string(type, 0, type.size()-1) + ">(Record.readInt())")
-    .Case("TypeSourceInfo *", "Record.getTypeSourceInfo()")
+    .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
     .Case("Expr *", "Record.readExpr()")
-    .Case("IdentifierInfo *", "Record.getIdentifierInfo()")
+    .Case("IdentifierInfo *", "Record.readIdentifier()")
     .Case("StringRef", "Record.readString()")
     .Case("ParamIdx", "ParamIdx::deserialize(Record.readInt())")
     .Default("Record.readInt()");
@@ -585,7 +585,7 @@ namespace {
       OS << "      " << getLowerName() << "Ptr = Record.readExpr();\n";
       OS << "    else\n";
       OS << "      " << getLowerName()
-         << "Ptr = Record.getTypeSourceInfo();\n";
+         << "Ptr = Record.readTypeSourceInfo();\n";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
