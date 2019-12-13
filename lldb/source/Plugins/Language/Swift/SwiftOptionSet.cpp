@@ -28,15 +28,39 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
 
-bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
-    WouldEvenConsiderFormatting(CompilerType clang_type) {
-  SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(clang_type.GetTypeSystem());
-  if (!swift_ast_ctx)
-    return false;
+/// If this is a Clang enum wrapped in a Swift type, return the clang::EnumDecl.
+static clang::EnumDecl *GetAsEnumDecl(CompilerType swift_type) {
+  if (!swift_type)
+    return nullptr;
 
-  return clang_type.IsValid() &&
-         swift_ast_ctx->IsImportedType(clang_type, nullptr);
+  SwiftASTContext *swift_ast_ctx =
+      llvm::dyn_cast_or_null<SwiftASTContext>(swift_type.GetTypeSystem());
+  if (!swift_ast_ctx)
+    return nullptr;
+
+  CompilerType clang_type;
+  if (!swift_ast_ctx->IsImportedType(swift_type, &clang_type))
+    return nullptr;
+
+  if (!clang_type.IsValid())
+    return nullptr;
+
+  if (!llvm::isa<ClangASTContext>(clang_type.GetTypeSystem()))
+    return nullptr;
+
+  auto qual_type =
+      clang::QualType::getFromOpaquePtr(clang_type.GetOpaqueQualType());
+  if (qual_type->getTypeClass() != clang::Type::TypeClass::Enum)
+    return nullptr;
+
+  if (const clang::EnumType *enum_type = qual_type->getAs<clang::EnumType>())
+    return enum_type->getDecl();
+  return nullptr;
+}
+
+bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
+    WouldEvenConsiderFormatting(CompilerType swift_type) {
+  return GetAsEnumDecl(swift_type);
 }
 
 lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
@@ -56,55 +80,27 @@ static ConstString GetDisplayCaseName(::swift::ClangImporter *clang_importer,
   return ConstString(case_decl->getName());
 }
 
-static clang::EnumDecl *GetAsEnumDecl(const CompilerType &compiler_type) {
-  if (compiler_type.IsValid() &&
-      llvm::dyn_cast_or_null<ClangASTContext>(compiler_type.GetTypeSystem())) {
-    opaque_compiler_type_t clang_type = compiler_type.GetOpaqueQualType();
-    clang::QualType qual_type = clang::QualType::getFromOpaquePtr(clang_type);
-    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
-    switch (type_class) {
-    case clang::Type::TypeClass::Enum: {
-      if (const clang::EnumType *enum_type =
-              qual_type->getAs<clang::EnumType>())
-        return enum_type->getDecl();
-      break;
-    }
-    default:
-      break;
-    }
-  }
-
-  return nullptr;
-}
-
 void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     FillCasesIfNeeded() {
   if (m_cases.hasValue())
     return;
 
   m_cases = CasesVector();
-  SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(m_type.GetTypeSystem());
-
-  if (!swift_ast_ctx)
-    return;
-  CompilerType original_type;
-  if (!swift_ast_ctx->IsImportedType(m_type, &original_type))
-    return;
-  clang::EnumDecl *enum_decl = GetAsEnumDecl(original_type);
+  clang::EnumDecl *enum_decl = GetAsEnumDecl(m_type);
   if (!enum_decl)
     return;
 
+  SwiftASTContext *swift_ast_ctx =
+      llvm::dyn_cast_or_null<SwiftASTContext>(m_type.GetTypeSystem());
   ::swift::ClangImporter *clang_importer = swift_ast_ctx->GetClangImporter();
   auto iter = enum_decl->enumerator_begin(), end = enum_decl->enumerator_end();
   for (; iter != end; ++iter) {
     clang::EnumConstantDecl *case_decl = *iter;
     if (case_decl) {
       llvm::APInt case_init_val(case_decl->getInitVal());
-      // extend all cases to 64 bits so that equality check is fast
+      // Extend all cases to 64 bits so that equality check is fast
       // but if they are larger than 64, I am going to get out of that
-      // case
-      // and then pick it up again as unmatched data at the end
+      // case and then pick it up again as unmatched data at the end.
       if (case_init_val.getBitWidth() < 64)
         case_init_val = case_init_val.zext(64);
       if (case_init_val.getBitWidth() > 64)
