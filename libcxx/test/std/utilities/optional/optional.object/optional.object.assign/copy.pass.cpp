@@ -30,6 +30,7 @@ struct X
         if (throw_now)
             TEST_THROW(6);
     }
+    X& operator=(X const&) = default;
 };
 
 bool X::throw_now = false;

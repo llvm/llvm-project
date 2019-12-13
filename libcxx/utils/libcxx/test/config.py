@@ -917,8 +917,6 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wshadow')
         self.cxx.addWarningFlagIfSupported('-Wno-unused-command-line-argument')
         self.cxx.addWarningFlagIfSupported('-Wno-attributes')
-        self.cxx.addWarningFlagIfSupported('-Wno-deprecated-copy')
-        self.cxx.addWarningFlagIfSupported('-Wno-constant-evaluated')
         self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')
         self.cxx.addWarningFlagIfSupported('-Wno-c++11-extensions')
         self.cxx.addWarningFlagIfSupported('-Wno-user-defined-literals')
