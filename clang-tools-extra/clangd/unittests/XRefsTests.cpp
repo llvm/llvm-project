@@ -586,7 +586,11 @@ TEST(LocateSymbol, Ambiguous) {
       S<T>::ba$13^z(u);
     }
   )cpp");
-  auto AST = TestTU::withCode(T.code()).build();
+  auto TU = TestTU::withCode(T.code());
+  // FIXME: Go-to-definition in a template requires disabling delayed template
+  // parsing.
+  TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+  auto AST = TU.build();
   // Ordered assertions are deliberate: we expect a predictable order.
   EXPECT_THAT(locateSymbolAt(AST, T.point("1")), ElementsAre(Sym("str")));
   EXPECT_THAT(locateSymbolAt(AST, T.point("2")), ElementsAre(Sym("str")));
