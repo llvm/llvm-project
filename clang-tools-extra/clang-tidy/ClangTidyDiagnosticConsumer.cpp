@@ -521,6 +521,9 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
     case clang::DiagnosticsEngine::ak_attr:
       Builder << reinterpret_cast<Attr *>(Info.getRawArg(Index));
       break;
+    case clang::DiagnosticsEngine::ak_addrspace:
+      Builder << static_cast<LangAS>(Info.getRawArg(Index));
+      break;
     }
   }
 }
