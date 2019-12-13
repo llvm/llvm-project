@@ -164,3 +164,22 @@ define i32 @test10() {
   %B = ptrtoint double* %A to i32
   ret i32 %B
 }
+
+@X_as1 = addrspace(1) global [1000 x i8] zeroinitializer, align 16
+
+define i16 @constant_fold_custom_dl() {
+; CHECK-LABEL: @constant_fold_custom_dl(
+  ; CHECK: ret i16 ptrtoint
+
+entry:
+  %A = bitcast i8 addrspace(1)* getelementptr inbounds ([1000 x i8], [1000 x i8] addrspace(1)* @X_as1, i64 1, i64 0) to i8 addrspace(1)*
+  %B = bitcast i8 addrspace(1)* getelementptr inbounds ([1000 x i8], [1000 x i8] addrspace(1)* @X_as1, i64 0, i64 0) to i8 addrspace(1)*
+
+  %B2 = ptrtoint i8 addrspace(1)* %B to i16
+  %C = sub i16 0, %B2
+  %D = getelementptr i8, i8 addrspace(1)* %A, i16 %C
+  %E = ptrtoint i8 addrspace(1)* %D to i16
+
+  ret i16 %E
+}
+
