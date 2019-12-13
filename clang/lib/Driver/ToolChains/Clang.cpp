@@ -1373,6 +1373,132 @@ static bool isNoCommonDefault(const llvm::Triple &Triple) {
   }
 }
 
+static bool shouldEmitRemarks(const ArgList &Args) {
+  // -fsave-optimization-record enables it.
+  if (Args.hasFlag(options::OPT_fsave_optimization_record,
+                   options::OPT_fno_save_optimization_record, false))
+    return true;
+
+  // -fsave-optimization-record=<format> enables it as well.
+  if (Args.hasFlag(options::OPT_fsave_optimization_record_EQ,
+                   options::OPT_fno_save_optimization_record, false))
+    return true;
+
+  // -foptimization-record-file alone enables it too.
+  if (Args.hasFlag(options::OPT_foptimization_record_file_EQ,
+                   options::OPT_fno_save_optimization_record, false))
+    return true;
+
+  // -foptimization-record-passes alone enables it too.
+  if (Args.hasFlag(options::OPT_foptimization_record_passes_EQ,
+                   options::OPT_fno_save_optimization_record, false))
+    return true;
+  return false;
+}
+
+static bool hasMultipleInvocations(const llvm::Triple &Triple,
+                                   const ArgList &Args) {
+  // Supported only on Darwin where we invoke the compiler multiple times
+  // followed by an invocation to lipo.
+  if (!Triple.isOSDarwin())
+    return false;
+  // If more than one "-arch <arch>" is specified, we're targeting multiple
+  // architectures resulting in a fat binary.
+  return Args.getAllArgValues(options::OPT_arch).size() > 1;
+}
+
+static bool checkRemarksOptions(const Driver &D, const ArgList &Args,
+                                const llvm::Triple &Triple) {
+  // When enabling remarks, we need to error if:
+  // * The remark file is specified but we're targeting multiple architectures,
+  // which means more than one remark file is being generated.
+  bool hasMultipleInvocations = ::hasMultipleInvocations(Triple, Args);
+  bool hasExplicitOutputFile =
+      Args.getLastArg(options::OPT_foptimization_record_file_EQ);
+  if (hasMultipleInvocations && hasExplicitOutputFile) {
+    D.Diag(diag::err_drv_invalid_output_with_multiple_archs)
+        << "-foptimization-record-file";
+    return false;
+  }
+  return true;
+}
+
+static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                                 const llvm::Triple &Triple,
+                                 const InputInfo &Input, const JobAction &JA) {
+  CmdArgs.push_back("-opt-record-file");
+
+  const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
+  if (A) {
+    CmdArgs.push_back(A->getValue());
+  } else {
+    bool hasMultipleArchs =
+        Triple.isOSDarwin() && // Only supported on Darwin platforms.
+        Args.getAllArgValues(options::OPT_arch).size() > 1;
+    SmallString<128> F;
+
+    if (Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S)) {
+      if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
+        F = FinalOutput->getValue();
+    }
+
+    if (F.empty()) {
+      // Use the input filename.
+      F = llvm::sys::path::stem(Input.getBaseInput());
+
+      // If we're compiling for an offload architecture (i.e. a CUDA device),
+      // we need to make the file name for the device compilation different
+      // from the host compilation.
+      if (!JA.isDeviceOffloading(Action::OFK_None) &&
+          !JA.isDeviceOffloading(Action::OFK_Host)) {
+        llvm::sys::path::replace_extension(F, "");
+        F += Action::GetOffloadingFileNamePrefix(JA.getOffloadingDeviceKind(),
+                                                 Triple.normalize());
+        F += "-";
+        F += JA.getOffloadingArch();
+      }
+    }
+
+    // If we're having more than one "-arch", we should name the files
+    // differently so that every cc1 invocation writes to a different file.
+    // We're doing that by appending "-<arch>" with "<arch>" being the arch
+    // name from the triple.
+    if (hasMultipleArchs) {
+      // First, remember the extension.
+      SmallString<64> OldExtension = llvm::sys::path::extension(F);
+      // then, remove it.
+      llvm::sys::path::replace_extension(F, "");
+      // attach -<arch> to it.
+      F += "-";
+      F += Triple.getArchName();
+      // put back the extension.
+      llvm::sys::path::replace_extension(F, OldExtension);
+    }
+
+    std::string Extension = "opt.";
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+      Extension += A->getValue();
+    else
+      Extension += "yaml";
+
+    llvm::sys::path::replace_extension(F, Extension);
+    CmdArgs.push_back(Args.MakeArgString(F));
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
+    CmdArgs.push_back("-opt-record-passes");
+    CmdArgs.push_back(A->getValue());
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fsave_optimization_record_EQ)) {
+    CmdArgs.push_back("-opt-record-format");
+    CmdArgs.push_back(A->getValue());
+  }
+}
+
 namespace {
 void RenderARMABI(const llvm::Triple &Triple, const ArgList &Args,
                   ArgStringList &CmdArgs) {
@@ -5174,85 +5300,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fapple-pragma-pack");
 
   // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
-  if (Args.hasFlag(options::OPT_fsave_optimization_record,
-                   options::OPT_foptimization_record_file_EQ,
-                   options::OPT_fno_save_optimization_record, false) ||
-      Args.hasFlag(options::OPT_fsave_optimization_record_EQ,
-                   options::OPT_fno_save_optimization_record, false) ||
-      Args.hasFlag(options::OPT_foptimization_record_passes_EQ,
-                   options::OPT_fno_save_optimization_record, false)) {
-    CmdArgs.push_back("-opt-record-file");
-
-    const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
-    if (A) {
-      CmdArgs.push_back(A->getValue());
-    } else {
-      bool hasMultipleArchs =
-          Triple.isOSDarwin() && // Only supported on Darwin platforms.
-          Args.getAllArgValues(options::OPT_arch).size() > 1;
-      SmallString<128> F;
-
-      if (Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S)) {
-        if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
-          F = FinalOutput->getValue();
-      }
-
-      if (F.empty()) {
-        // Use the input filename.
-        F = llvm::sys::path::stem(Input.getBaseInput());
-
-        // If we're compiling for an offload architecture (i.e. a CUDA device),
-        // we need to make the file name for the device compilation different
-        // from the host compilation.
-        if (!JA.isDeviceOffloading(Action::OFK_None) &&
-            !JA.isDeviceOffloading(Action::OFK_Host)) {
-          llvm::sys::path::replace_extension(F, "");
-          F += Action::GetOffloadingFileNamePrefix(JA.getOffloadingDeviceKind(),
-                                                   Triple.normalize());
-          F += "-";
-          F += JA.getOffloadingArch();
-        }
-      }
-
-      // If we're having more than one "-arch", we should name the files
-      // differently so that every cc1 invocation writes to a different file.
-      // We're doing that by appending "-<arch>" with "<arch>" being the arch
-      // name from the triple.
-      if (hasMultipleArchs) {
-        // First, remember the extension.
-        SmallString<64> OldExtension = llvm::sys::path::extension(F);
-        // then, remove it.
-        llvm::sys::path::replace_extension(F, "");
-        // attach -<arch> to it.
-        F += "-";
-        F += Triple.getArchName();
-        // put back the extension.
-        llvm::sys::path::replace_extension(F, OldExtension);
-      }
-
-      std::string Extension = "opt.";
-      if (const Arg *A =
-              Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
-        Extension += A->getValue();
-      else
-        Extension += "yaml";
-
-      llvm::sys::path::replace_extension(F, Extension);
-      CmdArgs.push_back(Args.MakeArgString(F));
-    }
-
-    if (const Arg *A =
-            Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
-      CmdArgs.push_back("-opt-record-passes");
-      CmdArgs.push_back(A->getValue());
-    }
-
-    if (const Arg *A =
-            Args.getLastArg(options::OPT_fsave_optimization_record_EQ)) {
-      CmdArgs.push_back("-opt-record-format");
-      CmdArgs.push_back(A->getValue());
-    }
-  }
+  if (shouldEmitRemarks(Args) && checkRemarksOptions(D, Args, Triple))
+    renderRemarksOptions(Args, CmdArgs, Triple, Input, JA);
 
   bool RewriteImports = Args.hasFlag(options::OPT_frewrite_imports,
                                      options::OPT_fno_rewrite_imports, false);
