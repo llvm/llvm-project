@@ -11,12 +11,10 @@ define dso_local i16 @main() local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16 [[TMP1]], metadata !12, metadata !DIExpression()), !dbg !13
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @wibble(i16 [[TMP1]]), !dbg !14
 ; CHECK-NEXT:    [[TMP5]] = add nsw i16 [[TMP4]], [[TMP1]], !dbg !14
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16 [[TMP5]], metadata !12, metadata !DIExpression()), !dbg !13
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i16 @wibble(i16 [[TMP4]]), !dbg !14
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw i16 [[TMP6]], 3, !dbg !14
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i16 @wibble(i16 [[TMP7]]), !dbg !14
-; BUG: This dbg.value is expected to be placed directly after the add above.
-;      Otherwise variable "x" (!12) won't be described as having the correct value at the call to wibble just after the add.
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16 [[TMP5]], metadata !12, metadata !DIExpression()), !dbg !13
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[TMP5]], 17, !dbg !14
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[BB2]], label [[BB3:%.*]], !dbg !14
 ; CHECK:       bb3:

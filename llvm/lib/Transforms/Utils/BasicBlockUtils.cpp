@@ -284,20 +284,10 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // Add unreachable to now empty BB.
   new UnreachableInst(BB->getContext(), BB);
 
-  // Eliminate duplicate dbg.values describing the entry PHI node post-splice.
-  for (auto Incoming : IncomingValues) {
-    if (isa<Instruction>(*Incoming)) {
-      SmallVector<DbgValueInst *, 2> DbgValues;
-      SmallDenseSet<std::pair<DILocalVariable *, DIExpression *>, 2>
-          DbgValueSet;
-      llvm::findDbgValues(DbgValues, Incoming);
-      for (auto &DVI : DbgValues) {
-        auto R = DbgValueSet.insert({DVI->getVariable(), DVI->getExpression()});
-        if (!R.second)
-          DVI->eraseFromParent();
-      }
-    }
-  }
+  // Eliminate duplicate/redundant dbg.values. This seems to be a good place to
+  // do that since we might end up with redundant dbg.values describing the
+  // entry PHI node post-splice.
+  RemoveRedundantDbgInstrs(PredBB);
 
   // Inherit predecessors name if it exists.
   if (!PredBB->hasName())
