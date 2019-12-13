@@ -768,6 +768,20 @@ def llvm_nxv4f32_ty : LLVMType<nxv4f32>;
 def llvm_nxv2f64_ty : LLVMType<nxv2f64>;
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
+
+  class AdvSIMD_1Vec_PredLoad_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMPointerTo<0>],
+                [IntrReadMem, IntrArgMemOnly]>;
+
+  class AdvSIMD_1Vec_PredStore_Intrinsic
+    : Intrinsic<[],
+                [llvm_anyvector_ty,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMPointerTo<0>],
+                [IntrArgMemOnly, NoCapture<2>]>;
+
   class AdvSIMD_Merged1VectorArg_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -1049,6 +1063,18 @@ class AdvSIMD_1VectorArg_Imm_Intrinsic
                 [LLVMMatchType<0>,
                  llvm_i32_ty],
                 [IntrNoMem, ImmArg<1>]>;
+
+//
+// Loads
+//
+
+def int_aarch64_sve_ldnt1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
+
+//
+// Stores
+//
+
+def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 
 //
 // Integer arithmetic
