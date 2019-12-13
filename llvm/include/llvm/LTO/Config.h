@@ -117,12 +117,6 @@ struct Config {
   /// Statistics output file path.
   std::string StatsFile;
 
-  /// Time trace enabled
-  bool TimeTraceEnabled = false;
-
-  /// Time trace granularity
-  unsigned TimeTraceGranularity = 500;
-
   bool ShouldDiscardValueNames = true;
   DiagnosticHandlerFunction DiagHandler;
 
