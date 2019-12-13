@@ -2,7 +2,6 @@
 Test that we can lookup types correctly in the expression parser
 """
 
-from __future__ import print_function
 
 
 import lldb

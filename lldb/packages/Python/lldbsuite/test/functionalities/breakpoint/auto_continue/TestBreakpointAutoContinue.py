@@ -2,7 +2,6 @@
 Test that the breakpoint auto-continue flag works correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

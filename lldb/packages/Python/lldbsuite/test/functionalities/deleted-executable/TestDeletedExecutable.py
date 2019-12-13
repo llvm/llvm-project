@@ -2,7 +2,6 @@
 Test process attach when executable was deleted.
 """
 
-from __future__ import print_function
 
 
 import os

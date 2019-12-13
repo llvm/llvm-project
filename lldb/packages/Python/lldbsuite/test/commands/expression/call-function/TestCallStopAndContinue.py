@@ -2,7 +2,6 @@
 Test calling a function, stopping in the call, continue and gather the result on stop.
 """
 
-from __future__ import print_function
 
 
 import lldb

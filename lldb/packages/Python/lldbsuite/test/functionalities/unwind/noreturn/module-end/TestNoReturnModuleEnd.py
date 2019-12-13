@@ -3,7 +3,6 @@ Test that we properly display the backtrace when a noreturn function happens to
 be at the end of the stack.
 """
 
-from __future__ import print_function
 
 
 import lldb

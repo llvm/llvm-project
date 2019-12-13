@@ -6,7 +6,6 @@ These tests are currently only supported when running against Darwin
 targets.
 """
 
-from __future__ import print_function
 
 import lldb
 import platform

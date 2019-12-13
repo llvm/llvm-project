@@ -1,5 +1,4 @@
 """Test that we get thread names when interrupting a process."""
-from __future__ import print_function
 
 
 import time

@@ -1,6 +1,5 @@
 """Test passing structs to Objective-C methods."""
 
-from __future__ import print_function
 
 
 import lldb

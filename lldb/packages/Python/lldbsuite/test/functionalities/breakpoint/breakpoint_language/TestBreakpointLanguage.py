@@ -3,7 +3,6 @@ Test that the language option for breakpoints works correctly
 parser.
 """
 
-from __future__ import print_function
 
 
 import lldb

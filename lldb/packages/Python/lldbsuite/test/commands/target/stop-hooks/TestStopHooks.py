@@ -2,7 +2,6 @@
 Test that stop hooks trigger on "step-out"
 """
 
-from __future__ import print_function
 
 
 import lldb

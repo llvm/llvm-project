@@ -1,6 +1,5 @@
 """Test that DWARF types are trusted over module types"""
 
-from __future__ import print_function
 
 
 import unittest2

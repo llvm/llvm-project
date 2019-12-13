@@ -2,7 +2,6 @@
 Test watchpoint list, enable, disable, and delete commands.
 """
 
-from __future__ import print_function
 
 
 import lldb

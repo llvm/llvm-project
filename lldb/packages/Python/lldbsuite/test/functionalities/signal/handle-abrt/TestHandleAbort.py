@@ -1,6 +1,5 @@
 """Test that we can unwind out of a SIGABRT handler"""
 
-from __future__ import print_function
 
 
 

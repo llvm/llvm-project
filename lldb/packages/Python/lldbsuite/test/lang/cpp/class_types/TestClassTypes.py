@@ -1,6 +1,5 @@
 """Test breakpoint on a class constructor; and variable list the this object."""
 
-from __future__ import print_function
 
 
 import os

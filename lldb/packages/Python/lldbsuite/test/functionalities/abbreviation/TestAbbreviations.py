@@ -2,9 +2,6 @@
 Test some lldb command abbreviations and aliases for proper resolution.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

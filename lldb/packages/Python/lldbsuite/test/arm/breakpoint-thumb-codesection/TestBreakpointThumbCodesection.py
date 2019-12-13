@@ -2,7 +2,6 @@
 Test that breakpoints correctly work in an thumb function in an arbitrary
 named codesection.
 """
-from __future__ import print_function
 
 
 import lldb

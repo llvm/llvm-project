@@ -2,7 +2,6 @@
 Make sure the !N and !-N commands work properly.
 """
 
-from __future__ import print_function
 
 
 import lldb

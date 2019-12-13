@@ -1,6 +1,5 @@
 """Test that forward declaration of a data structure gets resolved correctly."""
 
-from __future__ import print_function
 
 
 import lldb

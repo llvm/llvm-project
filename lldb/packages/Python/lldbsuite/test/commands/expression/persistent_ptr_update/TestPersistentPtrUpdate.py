@@ -2,7 +2,6 @@
 Test that we can have persistent pointer variables
 """
 
-from __future__ import print_function
 
 
 import lldb

@@ -2,7 +2,6 @@
 Test that LLDB can emit JIT objects when the appropriate setting is enabled
 """
 
-from __future__ import print_function
 
 import os
 import lldb

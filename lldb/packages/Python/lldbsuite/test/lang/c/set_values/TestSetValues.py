@@ -1,6 +1,5 @@
 """Test settings and readings of program variables."""
 
-from __future__ import print_function
 
 
 import lldb

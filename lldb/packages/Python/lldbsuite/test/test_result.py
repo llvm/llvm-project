@@ -8,7 +8,6 @@ and results of a single test run.
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 
 # System modules
 import inspect

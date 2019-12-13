@@ -2,7 +2,6 @@
 Test that we work properly with classes with the trivial_abi attribute
 """
 
-from __future__ import print_function
 
 
 import lldb

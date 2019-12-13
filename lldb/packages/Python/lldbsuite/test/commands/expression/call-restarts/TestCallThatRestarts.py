@@ -2,7 +2,6 @@
 Test calling a function that hits a signal set to auto-restart, make sure the call completes.
 """
 
-from __future__ import print_function
 
 
 import lldb

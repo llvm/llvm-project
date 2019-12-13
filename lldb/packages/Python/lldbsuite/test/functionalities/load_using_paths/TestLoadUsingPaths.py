@@ -2,7 +2,6 @@
 Test that SBProcess.LoadImageUsingPaths works correctly.
 """
 
-from __future__ import print_function
 
 
 import os

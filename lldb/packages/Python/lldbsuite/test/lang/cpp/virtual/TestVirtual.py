@@ -2,8 +2,6 @@
 Test C++ virtual function and virtual inheritance.
 """
 
-from __future__ import print_function
-
 import os
 import re
 import lldb

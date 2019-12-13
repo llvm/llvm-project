@@ -2,7 +2,6 @@
 Test calling an expression without a target.
 """
 
-from __future__ import print_function
 
 
 import lldb

@@ -1,6 +1,5 @@
 """Show bitfields and check that they display correctly."""
 
-from __future__ import print_function
 
 
 import lldb

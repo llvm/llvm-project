@@ -1,6 +1,5 @@
 """Test that inline functions from modules are imported correctly"""
 
-from __future__ import print_function
 
 
 

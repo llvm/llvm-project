@@ -2,7 +2,6 @@
 Test SBLaunchInfo
 """
 
-from __future__ import print_function
 
 
 from lldbsuite.test.lldbtest import *

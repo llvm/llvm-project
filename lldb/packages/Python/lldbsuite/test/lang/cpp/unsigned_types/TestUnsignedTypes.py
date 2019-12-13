@@ -2,7 +2,6 @@
 Test that variables with unsigned types display correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

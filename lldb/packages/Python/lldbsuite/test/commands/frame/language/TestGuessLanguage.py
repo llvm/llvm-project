@@ -2,7 +2,6 @@
 Test the SB API SBFrame::GuessLanguage.
 """
 
-from __future__ import print_function
 
 
 import lldb

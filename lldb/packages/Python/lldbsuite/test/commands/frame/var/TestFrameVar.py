@@ -2,7 +2,6 @@
 Make sure the frame variable -g, -a, and -l flags work.
 """
 
-from __future__ import print_function
 
 
 import lldb

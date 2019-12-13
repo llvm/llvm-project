@@ -2,7 +2,6 @@
 Test the output of `frame diagnose` for dereferencing a bad reference
 """
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test.decorators import *

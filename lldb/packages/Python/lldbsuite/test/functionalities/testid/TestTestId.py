@@ -3,7 +3,6 @@ Add a test to verify our test instance returns something non-None for
 an id(). Other parts of the test running infrastructure are counting on this.
 """
 
-from __future__ import print_function
 from lldbsuite.test.lldbtest import TestBase
 
 class TestIdTestCase(TestBase):

@@ -1,4 +1,3 @@
-from __future__ import print_function
 from lldbsuite.test import lldbtest
 from lldbsuite.test import decorators
 

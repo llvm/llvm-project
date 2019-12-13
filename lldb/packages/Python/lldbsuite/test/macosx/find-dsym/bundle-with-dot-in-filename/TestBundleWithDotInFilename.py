@@ -1,6 +1,5 @@
 """Test that a dSYM can be found when a binary is in a bundle hnd has dots in the filename."""
 
-from __future__ import print_function
 
 #import unittest2
 import os.path

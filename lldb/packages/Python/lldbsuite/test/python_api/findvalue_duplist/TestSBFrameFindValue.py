@@ -1,6 +1,5 @@
 """Test that SBFrame::FindValue finds things but does not duplicate the entire variables list"""
 
-from __future__ import print_function
 
 
 import lldb

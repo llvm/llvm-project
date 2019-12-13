@@ -2,7 +2,6 @@
 Test Intel(R) MPX registers do not get overwritten by AVX data.
 """
 
-from __future__ import print_function
 
 
 import lldb
