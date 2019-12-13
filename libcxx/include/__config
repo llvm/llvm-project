@@ -881,6 +881,10 @@ typedef unsigned int   char32_t;
 #  endif
 #endif
 
+#ifndef _LIBCPP_DEBUG_LEVEL
+# define _LIBCPP_DEBUG_LEVEL 0
+#endif
+
 #ifdef _LIBCPP_DISABLE_EXTERN_TEMPLATE
 #define _LIBCPP_EXTERN_TEMPLATE(...)
 #define _LIBCPP_EXTERN_TEMPLATE2(...)
@@ -1253,6 +1257,14 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #    endif
 #  endif
 #endif
+
+#ifndef _LIBCPP_THREAD_SAFETY_ANNOTATION
+#  ifdef _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
+#    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x) __attribute__((x))
+#  else
+#    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
+#  endif
+#endif  // _LIBCPP_THREAD_SAFETY_ANNOTATION
 
 #if __has_attribute(require_constant_initialization)
 #  define _LIBCPP_SAFE_STATIC __attribute__((__require_constant_initialization__))
