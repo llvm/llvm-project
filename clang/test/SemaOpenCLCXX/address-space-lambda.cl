@@ -12,7 +12,7 @@ __kernel void test() {
   // Test lambda with default parameters
 //CHECK: CXXMethodDecl {{.*}} constexpr operator() 'void () const __generic'
   [&] {i++;} ();
-  __constant auto err = [&]() {}; //expected-note-re{{candidate function not viable: address space mismatch in 'this' argument ('__constant (lambda at {{.*}})'), parameter type must be 'const __generic (lambda at {{.*}})'}}
+  __constant auto err = [&]() {}; //expected-note{{candidate function not viable: 'this' object is in address space '__constant', but method expects object in address space '__generic'}}
   err();                          //expected-error-re{{no matching function for call to object of type '__constant (lambda at {{.*}})'}}
   // FIXME: There is very limited addr space functionality
   // we can test when taking lambda type from the object.
@@ -31,19 +31,19 @@ __kernel void test_qual() {
 //CHECK: |-CXXMethodDecl {{.*}} constexpr operator() 'void () const __generic'
   auto priv2 = []() __generic {};
   priv2();
-  auto priv3 = []() __global {}; //expected-note-re{{candidate function not viable: address space mismatch in 'this' argument ('(lambda at {{.*}})'), parameter type must be 'const __global (lambda at {{.*}})'}} //expected-note{{conversion candidate of type 'void (*)()'}}
+  auto priv3 = []() __global {}; //expected-note{{candidate function not viable: 'this' object is in default address space, but method expects object in address space '__global'}} //expected-note{{conversion candidate of type 'void (*)()'}}
   priv3(); //expected-error{{no matching function for call to object of type}}
 
-  __constant auto const1 = []() __private{}; //expected-note-re{{candidate function not viable: address space mismatch in 'this' argument ('__constant (lambda at {{.*}})'), parameter type must be 'const (lambda at {{.*}}'}} //expected-note{{conversion candidate of type 'void (*)()'}}
+  __constant auto const1 = []() __private{}; //expected-note{{candidate function not viable: 'this' object is in address space '__constant', but method expects object in default address space}} //expected-note{{conversion candidate of type 'void (*)()'}}
   const1(); //expected-error{{no matching function for call to object of type '__constant (lambda at}}
-  __constant auto const2 = []() __generic{}; //expected-note-re{{candidate function not viable: address space mismatch in 'this' argument ('__constant (lambda at {{.*}})'), parameter type must be 'const __generic (lambda at {{.*}}'}} //expected-note{{conversion candidate of type 'void (*)()'}}
+  __constant auto const2 = []() __generic{}; //expected-note{{candidate function not viable: 'this' object is in address space '__constant', but method expects object in address space '__generic'}} //expected-note{{conversion candidate of type 'void (*)()'}}
   const2(); //expected-error{{no matching function for call to object of type '__constant (lambda at}}
 //CHECK: |-CXXMethodDecl {{.*}} constexpr operator() 'void () const __constant'
   __constant auto const3 = []() __constant{};
   const3();
 
-  [&] () __global {} (); //expected-error{{no matching function for call to object of type '(lambda at}} expected-note-re{{candidate function not viable: address space mismatch in 'this' argument ('(lambda at {{.*}})'), parameter type must be 'const __global (lambda at {{.*}})'}}
-  [&] () __private {} (); //expected-error{{no matching function for call to object of type '(lambda at}} expected-note-re{{candidate function not viable: address space mismatch in 'this' argument ('(lambda at {{.*}})'), parameter type must be 'const (lambda at {{.*}})'}}
+  [&] () __global {} (); //expected-error{{no matching function for call to object of type '(lambda at}} expected-note{{candidate function not viable: 'this' object is in default address space, but method expects object in address space '__global'}}
+  [&] () __private {} (); //expected-error{{no matching function for call to object of type '(lambda at}} expected-note{{candidate function not viable: 'this' object is in default address space, but method expects object in default address space}}
 
   [&] __private {} (); //expected-error{{lambda requires '()' before attribute specifier}} expected-error{{expected body of lambda expression}}
 

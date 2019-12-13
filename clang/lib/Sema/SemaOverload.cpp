@@ -10013,10 +10013,17 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     Qualifiers ToQs = CToTy.getQualifiers();
 
     if (FromQs.getAddressSpace() != ToQs.getAddressSpace()) {
-      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_addrspace)
-          << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
-          << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
-          << ToTy << (unsigned)isObjectArgument << I + 1;
+      if (isObjectArgument)
+        S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_addrspace_this)
+            << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second
+            << FnDesc << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
+            << FromQs.getAddressSpace() << ToQs.getAddressSpace();
+      else
+        S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_addrspace)
+            << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second
+            << FnDesc << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
+            << FromQs.getAddressSpace() << ToQs.getAddressSpace()
+            << ToTy->isReferenceType() << I + 1;
       MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }
