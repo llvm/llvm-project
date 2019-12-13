@@ -23,6 +23,12 @@
 #endif
 #endif
 
+// Disable the tautological constant evaluation warnings for this test,
+// because it's explicitly testing those cases.
+#if TEST_HAS_WARNING("-Wconstant-evaluated") && defined(__clang__)
+#pragma clang diagnostic ignored "-Wconstant-evaluated"
+#endif
+
 template <bool> struct InTemplate {};
 
 int main(int, char**)

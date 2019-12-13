@@ -47,6 +47,12 @@
 #define TEST_HAS_EXTENSION(X) 0
 #endif
 
+#ifdef __has_warning
+#define TEST_HAS_WARNING(X) __has_warning(X)
+#else
+#define TEST_HAS_WARNING(X) 0
+#endif
+
 #ifdef __has_builtin
 #define TEST_HAS_BUILTIN(X) __has_builtin(X)
 #else
