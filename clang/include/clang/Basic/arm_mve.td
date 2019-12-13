@@ -79,16 +79,18 @@ def vmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                               (IRInt<"vmulh", [Vector]> $a, $b)>;
 def vrmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                                (IRInt<"vrmulh", [Vector]> $a, $b)>;
-def vqdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                (IRInt<"vqdmulh", [Vector]> $a, $b)>;
-def vqrdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                 (IRInt<"vqrdmulh", [Vector]> $a, $b)>;
 def vmullbq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
                                       (IRInt<"vmull", [DblVector, Vector]>
                                        $a, $b, 0)>;
 def vmulltq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
                                       (IRInt<"vmull", [DblVector, Vector]>
                                        $a, $b, 1)>;
+}
+let params = T.Signed in {
+def vqdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                (IRInt<"vqdmulh", [Vector]> $a, $b)>;
+def vqrdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                 (IRInt<"vqrdmulh", [Vector]> $a, $b)>;
 }
 
 let params = T.Poly, overrideKindLetter = "p" in {
@@ -135,11 +137,12 @@ def vabdq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                              (IRInt<"vabd", [Vector]> $a, $b)>;
 }
 
-multiclass VectorVectorArithmetic<string operation> {
+multiclass VectorVectorArithmetic<string operation, int wantXVariant = 1> {
   defm "" : IntrinsicMX<Vector, (args Vector:$a, Vector:$b,
                                  Predicate:$pred),
                                 (IRInt<operation, [Vector, Predicate]> $a, $b,
-                                 $pred, $inactive)>;
+                                 $pred, $inactive),
+                                wantXVariant>;
 }
 
 multiclass VectorVectorArithmeticBitcast<string operation> {
@@ -179,15 +182,17 @@ let params = T.Int in {
   defm vmaxq : VectorVectorArithmetic<"max_predicated">;
   defm vmulhq : VectorVectorArithmetic<"mulh_predicated">;
   defm vrmulhq : VectorVectorArithmetic<"rmulh_predicated">;
-  defm vqdmulhq : VectorVectorArithmetic<"qdmulh_predicated">;
-  defm vqrdmulhq : VectorVectorArithmetic<"qrdmulh_predicated">;
-  defm vqaddq : VectorVectorArithmetic<"qadd_predicated">;
+  defm vqaddq : VectorVectorArithmetic<"qadd_predicated", 0>;
   defm vhaddq : VectorVectorArithmetic<"hadd_predicated">;
   defm vrhaddq : VectorVectorArithmetic<"rhadd_predicated">;
-  defm vqsubq : VectorVectorArithmetic<"qsub_predicated">;
+  defm vqsubq : VectorVectorArithmetic<"qsub_predicated", 0>;
   defm vhsubq : VectorVectorArithmetic<"hsub_predicated">;
   defm vmullbq_int : DblVectorVectorArithmetic<"mull_int_predicated", (u32 0)>;
   defm vmulltq_int : DblVectorVectorArithmetic<"mull_int_predicated", (u32 1)>;
+}
+let params = T.Signed in {
+  defm vqdmulhq : VectorVectorArithmetic<"qdmulh_predicated", 0>;
+  defm vqrdmulhq : VectorVectorArithmetic<"qrdmulh_predicated", 0>;
 }
 
 let params = T.Poly, overrideKindLetter = "p" in {
@@ -594,7 +599,7 @@ let params = T.Int in {
   defm vshlq: IntrinsicMX<Vector, (args Vector:$v, imm_0toNm1:$sh,
                                         Predicate:$pred),
       (IRInt<"shl_imm_predicated", [Vector, Predicate]>
-           $v, $sh, $pred, $inactive), "_n">;
+           $v, $sh, $pred, $inactive), 1, "_n">;
 
   let pnt = PNT_NType in {
     def vshrq_n: Intrinsic<Vector, (args Vector:$v, imm_1toN:$sh),
@@ -602,7 +607,7 @@ let params = T.Int in {
     defm vshrq: IntrinsicMX<Vector, (args Vector:$v, imm_1toN:$sh,
                                           Predicate:$pred),
         (IRInt<"shr_imm_predicated", [Vector, Predicate]>
-             $v, $sh, (unsignedflag Scalar), $pred, $inactive), "_n">;
+             $v, $sh, (unsignedflag Scalar), $pred, $inactive), 1, "_n">;
   }
 }
 
