@@ -1865,38 +1865,44 @@ TEST_F(DefineInlineTest, QualifyWithUsingDirectives) {
 }
 
 TEST_F(DefineInlineTest, AddInline) {
+  ExtraArgs.push_back("-fno-delayed-template-parsing");
   llvm::StringMap<std::string> EditedFiles;
   ExtraFiles["a.h"] = "void foo();";
   apply(R"cpp(#include "a.h"
-              void fo^o() {})cpp", &EditedFiles);
+              void fo^o() {})cpp",
+        &EditedFiles);
   EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
                                testPath("a.h"), "inline void foo(){}")));
 
   // Check we put inline before cv-qualifiers.
   ExtraFiles["a.h"] = "const int foo();";
   apply(R"cpp(#include "a.h"
-              const int fo^o() {})cpp", &EditedFiles);
+              const int fo^o() {})cpp",
+        &EditedFiles);
   EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
                                testPath("a.h"), "inline const int foo(){}")));
 
   // No double inline.
   ExtraFiles["a.h"] = "inline void foo();";
   apply(R"cpp(#include "a.h"
-              inline void fo^o() {})cpp", &EditedFiles);
+              inline void fo^o() {})cpp",
+        &EditedFiles);
   EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
                                testPath("a.h"), "inline void foo(){}")));
 
   // Constexprs don't need "inline".
   ExtraFiles["a.h"] = "constexpr void foo();";
   apply(R"cpp(#include "a.h"
-              constexpr void fo^o() {})cpp", &EditedFiles);
+              constexpr void fo^o() {})cpp",
+        &EditedFiles);
   EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
                                testPath("a.h"), "constexpr void foo(){}")));
 
   // Class members don't need "inline".
   ExtraFiles["a.h"] = "struct Foo { void foo(); }";
   apply(R"cpp(#include "a.h"
-              void Foo::fo^o() {})cpp", &EditedFiles);
+              void Foo::fo^o() {})cpp",
+        &EditedFiles);
   EXPECT_THAT(EditedFiles,
               testing::ElementsAre(FileWithContents(
                   testPath("a.h"), "struct Foo { void foo(){} }")));
@@ -1905,7 +1911,8 @@ TEST_F(DefineInlineTest, AddInline) {
   ExtraFiles["a.h"] = "template <typename T> void foo();";
   apply(R"cpp(#include "a.h"
               template <typename T>
-              void fo^o() {})cpp", &EditedFiles);
+              void fo^o() {})cpp",
+        &EditedFiles);
   EXPECT_THAT(EditedFiles,
               testing::ElementsAre(FileWithContents(
                   testPath("a.h"), "template <typename T> void foo(){}")));
@@ -1916,7 +1923,8 @@ TEST_F(DefineInlineTest, AddInline) {
                             template <> void foo<int>();)cpp";
   apply(R"cpp(#include "a.h"
               template <>
-              void fo^o<int>() {})cpp", &EditedFiles);
+              void fo^o<int>() {})cpp",
+        &EditedFiles);
   EXPECT_THAT(EditedFiles,
               testing::ElementsAre(FileWithContents(testPath("a.h"),
                                                     R"cpp(
