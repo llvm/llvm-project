@@ -430,16 +430,16 @@ static void printLocationStats(raw_ostream &OS,
      << LocationStats[0];
   LLVM_DEBUG(llvm::dbgs() << Key << " with 0% of its scope covered: "
                           << LocationStats[0] << '\n');
-  OS << ",\"" << Key << " with 1-9% of its scope covered\":"
+  OS << ",\"" << Key << " with [1%,10%) of its scope covered\":"
      << LocationStats[1];
-  LLVM_DEBUG(llvm::dbgs() << Key << " with 1-9% of its scope covered: "
+  LLVM_DEBUG(llvm::dbgs() << Key << " with [1%,10%) of its scope covered: "
                           << LocationStats[1] << '\n');
   for (unsigned i = 2; i < NumOfCoverageCategories - 1; ++i) {
-    OS << ",\"" << Key << " with " << (i - 1) * 10 << "-" << i * 10 - 1
-       << "% of its scope covered\":" << LocationStats[i];
+    OS << ",\"" << Key << " with [" << (i - 1) * 10 << "%," << i * 10
+       << "%) of its scope covered\":" << LocationStats[i];
     LLVM_DEBUG(llvm::dbgs()
-               << Key << " with " << (i - 1) * 10 << "-" << i * 10 - 1
-               << "% of its scope covered: " << LocationStats[i]);
+               << Key << " with [" << (i - 1) * 10 << "%," << i * 10
+               << "%) of its scope covered: " << LocationStats[i]);
   }
   OS << ",\"" << Key << " with 100% of its scope covered\":"
      << LocationStats[NumOfCoverageCategories - 1];
