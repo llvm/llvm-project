@@ -22,10 +22,6 @@ class TestFrameVar(TestBase):
         self.build()
         self.do_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def do_test(self):
         exe = self.getBuildArtifact("a.out")
 

@@ -26,10 +26,6 @@ class TestUseClosestType(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.expr_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def run_and_check_expr(self, num_children, child_type):
         frame = self.thread.GetFrameAtIndex(0)
         result = frame.EvaluateExpression("struct Foo *$mine = (struct Foo *) malloc(sizeof(struct Foo)); $mine")

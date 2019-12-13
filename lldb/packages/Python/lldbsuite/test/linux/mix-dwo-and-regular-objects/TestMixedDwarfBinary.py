@@ -8,9 +8,6 @@ from lldbsuite.test import lldbutil
 class TestMixedDwarfBinary(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
     @add_test_categories(["dwo"])
     @skipUnlessPlatform(["linux"])

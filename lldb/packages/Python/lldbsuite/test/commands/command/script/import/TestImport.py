@@ -18,10 +18,6 @@ class ImportTestCase(TestBase):
         """Import some Python scripts by path and test them"""
         self.run_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def run_test(self):
         """Import some Python scripts by path and test them."""
 

@@ -20,10 +20,6 @@ class AddressBreakpointTestCase(TestBase):
         self.build()
         self.address_breakpoints()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def address_breakpoints(self):
         """Test address breakpoints set with shared library of SBAddress work correctly."""
         exe = self.getBuildArtifact("a.out")

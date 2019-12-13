@@ -25,10 +25,6 @@ class DynamicValueSameBaseTestCase(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.cpp")
         self.sample_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def sample_test(self):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                    "Break here to get started", self.main_source_file)

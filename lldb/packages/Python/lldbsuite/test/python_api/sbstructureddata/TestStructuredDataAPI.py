@@ -18,9 +18,6 @@ class TestStructuredDataAPI(TestBase):
     def test(self):
         self.structured_data_api_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @add_test_categories(['pyapi'])
     def structured_data_api_test(self):
         error = lldb.SBError()

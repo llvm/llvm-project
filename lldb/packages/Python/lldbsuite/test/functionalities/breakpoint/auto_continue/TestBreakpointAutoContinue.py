@@ -57,10 +57,6 @@ class BreakpointAutoContinue(TestBase):
 
         return process
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def simple_auto_continue(self):
         bpno = self.make_target_and_bkpt()
         process = self.launch_it(lldb.eStateExited)

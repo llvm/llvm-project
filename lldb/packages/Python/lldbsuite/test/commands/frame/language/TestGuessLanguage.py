@@ -26,10 +26,6 @@ class TestFrameGuessLanguage(TestBase):
         self.build()
         self.do_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def check_language(self, thread, frame_no, test_lang):
         frame = thread.frames[frame_no]
         self.assertTrue(frame.IsValid(), "Frame %d was not valid."%(frame_no))
