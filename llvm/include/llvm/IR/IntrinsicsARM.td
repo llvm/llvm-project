@@ -876,9 +876,18 @@ defm int_arm_mve_maxv: IntrinsicSignSuffix<[llvm_i32_ty],
    [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
 
 multiclass MVEPredicated<list<LLVMType> rets, list<LLVMType> params,
-                         LLVMType pred, list<IntrinsicProperty> props = []> {
+                         LLVMType pred = llvm_anyvector_ty,
+                         list<IntrinsicProperty> props = []> {
   def "": Intrinsic<rets, params, props>;
   def _predicated: Intrinsic<rets, params # [pred], props>;
+}
+multiclass MVEPredicatedM<list<LLVMType> rets, list<LLVMType> params,
+                          LLVMType pred = llvm_anyvector_ty,
+                          list<IntrinsicProperty> props = [IntrNoMem]> {
+  def "": Intrinsic<rets, params, props>;
+  def _predicated: Intrinsic<rets, params # [pred,
+      !if(!eq(!cast<string>(rets[0]), "llvm_anyvector_ty"),
+          LLVMMatchType<0>, rets[0])], props>;
 }
 
 defm int_arm_mve_vcvt_narrow: MVEPredicated<[llvm_v8f16_ty],
@@ -920,6 +929,16 @@ def int_arm_mve_shr_imm_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, // extra i32 is unsigned flag
     llvm_anyvector_ty, LLVMMatchType<0>],
    [IntrNoMem]>;
+
+defm int_arm_mve_vqshl_imm: MVEPredicatedM<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty /*shiftcount*/, llvm_i32_ty /*unsigned*/]>;
+defm int_arm_mve_vrshr_imm: MVEPredicatedM<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty /*shiftcount*/, llvm_i32_ty /*unsigned*/]>;
+defm int_arm_mve_vqshlu_imm: MVEPredicatedM<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty /*shiftcount*/]>;
+defm int_arm_mve_vshll_imm: MVEPredicatedM<[llvm_anyvector_ty],
+   [llvm_anyvector_ty, llvm_i32_ty /*shiftcount*/, llvm_i32_ty /*unsigned*/,
+                       llvm_i32_ty /*top-half*/]>;
 
 // MVE scalar shifts.
 class ARM_MVE_qrshift_single<list<LLVMType> value,

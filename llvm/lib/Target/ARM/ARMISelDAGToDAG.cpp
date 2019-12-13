@@ -159,6 +159,9 @@ public:
                              SDValue &OffReg, SDValue &ShImm);
   bool SelectT2AddrModeExclusive(SDValue N, SDValue &Base, SDValue &OffImm);
 
+  template<int Min, int Max>
+  bool SelectImmediateInRange(SDValue N, SDValue &OffImm);
+
   inline bool is_so_imm(unsigned Imm) const {
     return ARM_AM::getSOImmVal(Imm) != -1;
   }
@@ -1378,6 +1381,16 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm7Offset(SDNode *Op, SDValue N,
             ? CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32)
             : CurDAG->getTargetConstant(-RHSC * (1 << Shift), SDLoc(N),
                                         MVT::i32);
+    return true;
+  }
+  return false;
+}
+
+template <int Min, int Max>
+bool ARMDAGToDAGISel::SelectImmediateInRange(SDValue N, SDValue &OffImm) {
+  int Val;
+  if (isScaledConstantInRange(N, 1, Min, Max, Val)) {
+    OffImm = CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
     return true;
   }
   return false;

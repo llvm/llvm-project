@@ -935,7 +935,10 @@ def MVEShiftImm1_7AsmOperand: ImmAsmOperand<1,7> {
   // encodings allow.
   let DiagnosticString = "operand must be an immediate in the range [1,8]";
 }
-def mve_shift_imm1_7 : Operand<i32> {
+def mve_shift_imm1_7 : Operand<i32>,
+    // SelectImmediateInRange / isScaledConstantInRange uses a
+    // half-open interval, so the parameters <1,8> mean 1-7 inclusive
+    ComplexPattern<i32, 1, "SelectImmediateInRange<1,8>", [], []> {
   let ParserMatchClass = MVEShiftImm1_7AsmOperand;
   let EncoderMethod = "getMVEShiftImmOpValue";
 }
@@ -948,7 +951,10 @@ def MVEShiftImm1_15AsmOperand: ImmAsmOperand<1,15> {
   // encodings allow.
   let DiagnosticString = "operand must be an immediate in the range [1,16]";
 }
-def mve_shift_imm1_15 : Operand<i32> {
+def mve_shift_imm1_15 : Operand<i32>,
+    // SelectImmediateInRange / isScaledConstantInRange uses a
+    // half-open interval, so the parameters <1,16> mean 1-15 inclusive
+    ComplexPattern<i32, 1, "SelectImmediateInRange<1,16>", [], []> {
   let ParserMatchClass = MVEShiftImm1_15AsmOperand;
   let EncoderMethod = "getMVEShiftImmOpValue";
 }
