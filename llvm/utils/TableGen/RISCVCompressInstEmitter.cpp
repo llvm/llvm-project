@@ -728,6 +728,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       }
       ++OpNo;
     }
+    CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
     CaseStream << mergeCondAndCode(CondStream, CodeStream);
     PrevOp = CurOp;
   }
