@@ -135,91 +135,70 @@ def vabdq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                              (IRInt<"vabd", [Vector]> $a, $b)>;
 }
 
+multiclass VectorVectorArithmetic<string operation> {
+  defm "" : IntrinsicMX<Vector, (args Vector:$a, Vector:$b,
+                                 Predicate:$pred),
+                                (IRInt<operation, [Vector, Predicate]> $a, $b,
+                                 $pred, $inactive)>;
+}
+
+multiclass VectorVectorArithmeticBitcast<string operation> {
+  defm "" : IntrinsicMX<Vector, (args Vector:$a, Vector:$b,
+                                 Predicate:$pred),
+                                (bitcast (IRInt<operation, [UVector, Predicate]>
+                                          (bitcast $a, UVector),
+                                          (bitcast $b, UVector),
+                                          $pred,
+                                          (bitcast $inactive, UVector)), Vector)>;
+}
+
 // Predicated intrinsics
 let params = T.Usual in {
-def vabdq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"abd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vaddq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"add_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vsubq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"sub_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmulq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mul_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-defm vandq_m: predicated_bit_op_fp<"and_predicated">;
-defm vbicq_m: predicated_bit_op_fp<"bic_predicated">;
-defm veorq_m: predicated_bit_op_fp<"eor_predicated">;
-defm vornq_m: predicated_bit_op_fp<"orn_predicated">;
-defm vorrq_m: predicated_bit_op_fp<"orr_predicated">;
+  defm vabdq : VectorVectorArithmetic<"abd_predicated">;
+  defm vaddq : VectorVectorArithmetic<"add_predicated">;
+  defm vsubq : VectorVectorArithmetic<"sub_predicated">;
+  defm vmulq : VectorVectorArithmetic<"mul_predicated">;
+  defm vandq : VectorVectorArithmeticBitcast<"and_predicated">;
+  defm vbicq : VectorVectorArithmeticBitcast<"bic_predicated">;
+  defm veorq : VectorVectorArithmeticBitcast<"eor_predicated">;
+  defm vornq : VectorVectorArithmeticBitcast<"orn_predicated">;
+  defm vorrq : VectorVectorArithmeticBitcast<"orr_predicated">;
+}
+
+multiclass DblVectorVectorArithmetic<string operation, dag top> {
+  defm "" : IntrinsicMX<DblVector, (args Vector:$a, Vector:$b,
+                                    Predicate:$pred),
+                                   (IRInt<operation,
+                                          [DblVector, Vector, Predicate]>
+                                    $a, $b, top, $pred, $inactive)>;
 }
 
 // Predicated intrinsics - Int types only
 let params = T.Int in {
-def vminq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"min_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmaxq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"max_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmulhq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vrmulhq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"rmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vqdmulhq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"qdmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vqrdmulhq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"qrdmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmullbq_int_m: Intrinsic<
-    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mull_int_predicated", [DblVector, Vector, Predicate]> $a, $b, 0,
-     $pred, $inactive)>;
-def vmulltq_int_m: Intrinsic<
-    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mull_int_predicated", [DblVector, Vector, Predicate]> $a, $b, 1,
-     $pred, $inactive)>;
-def vqaddq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"qadd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vhaddq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"hadd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vrhaddq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"rhadd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vqsubq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"qsub_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vhsubq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"hsub_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+  defm vminq : VectorVectorArithmetic<"min_predicated">;
+  defm vmaxq : VectorVectorArithmetic<"max_predicated">;
+  defm vmulhq : VectorVectorArithmetic<"mulh_predicated">;
+  defm vrmulhq : VectorVectorArithmetic<"rmulh_predicated">;
+  defm vqdmulhq : VectorVectorArithmetic<"qdmulh_predicated">;
+  defm vqrdmulhq : VectorVectorArithmetic<"qrdmulh_predicated">;
+  defm vqaddq : VectorVectorArithmetic<"qadd_predicated">;
+  defm vhaddq : VectorVectorArithmetic<"hadd_predicated">;
+  defm vrhaddq : VectorVectorArithmetic<"rhadd_predicated">;
+  defm vqsubq : VectorVectorArithmetic<"qsub_predicated">;
+  defm vhsubq : VectorVectorArithmetic<"hsub_predicated">;
+  defm vmullbq_int : DblVectorVectorArithmetic<"mull_int_predicated", (u32 0)>;
+  defm vmulltq_int : DblVectorVectorArithmetic<"mull_int_predicated", (u32 1)>;
 }
 
 let params = T.Poly, overrideKindLetter = "p" in {
-def vmullbq_poly_m: Intrinsic<
-    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mull_poly_predicated", [DblVector, Vector, Predicate]> $a, $b, 0,
-     $pred, $inactive)>;
-def vmulltq_poly_m: Intrinsic<
-    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mull_poly_predicated", [DblVector, Vector, Predicate]> $a, $b, 1,
-     $pred, $inactive)>;
+  defm vmullbq_poly : DblVectorVectorArithmetic<"mull_poly_predicated", (u32 0)>;
+  defm vmulltq_poly : DblVectorVectorArithmetic<"mull_poly_predicated", (u32 1)>;
 }
 
 // Predicated intrinsics - Float types only
 let params = T.Float in {
-def vminnmq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"min_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmaxnmq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"max_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+  defm vminnmq : VectorVectorArithmetic<"min_predicated">;
+  defm vmaxnmq : VectorVectorArithmetic<"max_predicated">;
 }
 
 let params = T.Int in {

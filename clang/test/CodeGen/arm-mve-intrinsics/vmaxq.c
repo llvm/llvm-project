@@ -96,3 +96,51 @@ uint32x4_t test_vmaxq_m_u32(uint32x4_t inactive, uint32x4_t a, uint32x4_t b, mve
     return vmaxq_m_u32(inactive, a, b, p);
 #endif /* POLYMORPHIC */
 }
+
+// CHECK-LABEL: @test_vmaxq_x_u8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.arm.mve.max.predicated.v16i8.v16i1(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i1> [[TMP1]], <16 x i8> undef)
+// CHECK-NEXT:    ret <16 x i8> [[TMP2]]
+//
+int8x16_t test_vmaxq_x_u8(int8x16_t a, int8x16_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmaxq_x(a, b, p);
+#else /* POLYMORPHIC */
+    return vmaxq_x_s8(a, b, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vmaxq_x_u16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.arm.mve.max.predicated.v8i16.v8i1(<8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i1> [[TMP1]], <8 x i16> undef)
+// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+//
+uint16x8_t test_vmaxq_x_u16(uint16x8_t a, uint16x8_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmaxq_x(a, b, p);
+#else /* POLYMORPHIC */
+    return vmaxq_x_u16(a, b, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vmaxq_x_s32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.arm.mve.max.predicated.v4i32.v4i1(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i1> [[TMP1]], <4 x i32> undef)
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+//
+int32x4_t test_vmaxq_x_s32(int32x4_t a, int32x4_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmaxq_x(a, b, p);
+#else /* POLYMORPHIC */
+    return vmaxq_x_u32(a, b, p);
+#endif /* POLYMORPHIC */
+}
