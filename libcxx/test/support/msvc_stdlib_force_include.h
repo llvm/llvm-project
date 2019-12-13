@@ -88,5 +88,7 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #endif
 
 #define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
+#define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
+#define _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 #endif // SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_H

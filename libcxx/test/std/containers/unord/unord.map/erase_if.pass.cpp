@@ -24,7 +24,7 @@ M make (Init vals)
 {
     M ret;
     for (int v : vals)
-        ret[v] = v + 10;
+        ret[static_cast<typename M::key_type>(v)] = static_cast<typename M::mapped_type>(v + 10);
     return ret;
 }
 
