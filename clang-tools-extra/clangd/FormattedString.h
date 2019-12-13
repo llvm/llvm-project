@@ -70,6 +70,9 @@ public:
   Paragraph &addParagraph();
   /// Inserts a vertical space into the document.
   void addSpacer();
+  /// Adds a block of code. This translates to a ``` block in markdown. In plain
+  /// text representation, the code block will be surrounded by newlines.
+  void addCodeBlock(std::string Code, std::string Language = "cpp");
 
   std::string asMarkdown() const;
   std::string asPlainText() const;

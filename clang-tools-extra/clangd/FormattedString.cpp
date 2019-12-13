@@ -72,10 +72,10 @@ std::string renderInlineBlock(llvm::StringRef Input) {
   return "`" + std::move(R) + "`";
 }
 
-/// Render \p Input as markdown code block with a specified \p Language. The
-/// result is surrounded by >= 3 backticks. Although markdown also allows to use
-/// '~' for code blocks, they are never used.
-std::string renderCodeBlock(llvm::StringRef Input, llvm::StringRef Language) {
+/// Get marker required for \p Input to represent a markdown codeblock. It
+/// consists of at least 3 backticks(`). Although markdown also allows to use
+/// tilde(~) for code blocks, they are never used.
+std::string getMarkerForCodeBlock(llvm::StringRef Input) {
   // Count the maximum number of consecutive backticks in \p Input. We need to
   // start and end the code block with more.
   unsigned MaxBackticks = 0;
@@ -90,8 +90,7 @@ std::string renderCodeBlock(llvm::StringRef Input, llvm::StringRef Language) {
   }
   MaxBackticks = std::max(Backticks, MaxBackticks);
   // Use the corresponding number of backticks to start and end a code block.
-  std::string BlockMarker(/*Repeat=*/std::max(3u, MaxBackticks + 1), '`');
-  return BlockMarker + Language.str() + "\n" + Input.str() + "\n" + BlockMarker;
+  return std::string(/*Repeat=*/std::max(3u, MaxBackticks + 1), '`');
 }
 
 // Trims the input and concatanates whitespace blocks into a single ` `.
@@ -131,6 +130,26 @@ public:
   void renderPlainText(llvm::raw_ostream &OS) const override { OS << '\n'; }
 };
 
+class CodeBlock : public Block {
+public:
+  void renderMarkdown(llvm::raw_ostream &OS) const override {
+    std::string Marker = getMarkerForCodeBlock(Contents);
+    // No need to pad from previous blocks, as they should end with a new line.
+    OS << Marker << Language << '\n' << Contents << '\n' << Marker << '\n';
+  }
+
+  void renderPlainText(llvm::raw_ostream &OS) const override {
+    // In plaintext we want one empty line before and after codeblocks.
+    OS << '\n' << Contents << "\n\n";
+  }
+
+  CodeBlock(std::string Contents, std::string Language)
+      : Contents(std::move(Contents)), Language(std::move(Language)) {}
+
+private:
+  std::string Contents;
+  std::string Language;
+};
 } // namespace
 
 std::string Block::asMarkdown() const {
@@ -203,6 +222,11 @@ Paragraph &Document::addParagraph() {
 }
 
 void Document::addSpacer() { Children.push_back(std::make_unique<Spacer>()); }
+
+void Document::addCodeBlock(std::string Code, std::string Language) {
+  Children.emplace_back(
+      std::make_unique<CodeBlock>(std::move(Code), std::move(Language)));
+}
 
 std::string Document::asMarkdown() const {
   return renderBlocks(Children, &Block::renderMarkdown);
