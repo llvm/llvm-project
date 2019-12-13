@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s  -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s  -o - | FileCheck -check-prefix=CHECK -check-prefix=NOPCH %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-pch %s -o %t.ast
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -x ast -o - %t.ast | FileCheck -check-prefix=CHECK -check-prefix=PCH %s
 
 #define FNPTRKEY 0
 
@@ -82,9 +84,10 @@ struct InitiallyIncomplete;
 extern struct InitiallyIncomplete returns_initially_incomplete(void);
 // CHECK-LABEL: define void @use_while_incomplete()
 void use_while_incomplete() {
-  // CHECK:      [[VAR:%.*]] = alloca {}*,
-  // CHECK-NEXT: store {}*  bitcast ({ i8*, i32, i64, i64 }* @returns_initially_incomplete.ptrauth to {}*), {}** [[VAR]],
-  // CHECK-NEXT: ret void
+  // NOPCH:      [[VAR:%.*]] = alloca {}*,
+  // NOPCH-NEXT: store {}*  bitcast ({ i8*, i32, i64, i64 }* @returns_initially_incomplete.ptrauth to {}*), {}** [[VAR]],
+  // PCH:        [[VAR:%.*]] = alloca i64 ()*,
+  // PCH-NEXT:   store i64 ()*  bitcast ({ i8*, i32, i64, i64 }* @returns_initially_incomplete.ptrauth to i64 ()*), i64 ()** [[VAR]],
   struct InitiallyIncomplete (*fnptr)(void) = &returns_initially_incomplete;
 }
 struct InitiallyIncomplete { int x; };
