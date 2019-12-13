@@ -572,7 +572,7 @@ void AArch64PassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOpt::None && EnableAdvSIMDScalar) {
     addPass(createAArch64AdvSIMDScalar());
     // The AdvSIMD pass may produce copies that can be rewritten to
-    // be register coaleascer friendly.
+    // be register coalescer friendly.
     addPass(&PeepholeOptimizerID);
   }
 }
