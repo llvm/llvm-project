@@ -13,8 +13,6 @@
 
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/DemandedBits.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Transforms/Utils.h"
@@ -170,11 +168,6 @@ void InjectTLIMappingsLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addPreserved<TargetLibraryInfoWrapperPass>();
-  AU.addPreserved<ScalarEvolutionWrapperPass>();
-  AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<LoopAccessLegacyAnalysis>();
-  AU.addPreserved<DemandedBitsWrapperPass>();
-  AU.addPreserved<OptimizationRemarkEmitterWrapperPass>();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

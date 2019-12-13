@@ -16,7 +16,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
@@ -117,10 +116,10 @@ struct VFShape {
 
 /// Holds the VFShape for a specific scalar to vector function mapping.
 struct VFInfo {
-  VFShape Shape;          /// Classification of the vector function.
-  std::string ScalarName; /// Scalar Function Name.
-  std::string VectorName; /// Vector Function Name associated to this VFInfo.
-  VFISAKind ISA;          /// Instruction Set Architecture.
+  VFShape Shape;        // Classification of the vector function.
+  StringRef ScalarName; // Scalar Function Name.
+  StringRef VectorName; // Vector Function Name associated to this VFInfo.
+  VFISAKind ISA;        // Instruction Set Architecture.
 
   // Comparison operator.
   bool operator==(const VFInfo &Other) const {
@@ -167,79 +166,6 @@ static constexpr char const *MappingsAttrName = "vector-function-abi-variant";
 void getVectorVariantNames(const CallInst &CI,
                            SmallVectorImpl<std::string> &VariantMappings);
 } // end namespace VFABI
-
-/// The Vector Function Database.
-///
-/// Helper class used to find the vector functions associated to a
-/// scalar CallInst.
-class VFDatabase {
-  /// The Module of the CallInst CI.
-  const Module *M;
-  /// List of vector functions descritors associated to the call
-  /// instruction.
-  const SmallVector<VFInfo, 8> ScalarToVectorMappings;
-
-  /// Retreive the scalar-to-vector mappings associated to the rule of
-  /// a vector Function ABI.
-  static void getVFABIMappings(const CallInst &CI,
-                               SmallVectorImpl<VFInfo> &Mappings) {
-    const StringRef ScalarName = CI.getCalledFunction()->getName();
-    const StringRef S =
-        CI.getAttribute(AttributeList::FunctionIndex, VFABI::MappingsAttrName)
-            .getValueAsString();
-    if (S.empty())
-      return;
-
-    SmallVector<std::string, 8> ListOfStrings;
-    VFABI::getVectorVariantNames(CI, ListOfStrings);
-    for (const auto &MangledName : ListOfStrings) {
-      const Optional<VFInfo> Shape = VFABI::tryDemangleForVFABI(MangledName);
-      // A match is found via scalar and vector names, and also by
-      // ensuring that the variant described in the attribute has a
-      // corresponding definition or declaration of the vector
-      // function in the Module M.
-      if (Shape.hasValue() && (Shape.getValue().ScalarName == ScalarName)) {
-        assert(CI.getModule()->getFunction(Shape.getValue().VectorName) &&
-               "Vector function is missing.");
-        Mappings.push_back(Shape.getValue());
-      }
-    }
-  }
-
-public:
-  /// Retrieve all the VFInfo instances associated to the CallInst CI.
-  static SmallVector<VFInfo, 8> getMappings(const CallInst &CI) {
-    SmallVector<VFInfo, 8> Ret;
-
-    // Get mappings from the Vector Function ABI variants.
-    getVFABIMappings(CI, Ret);
-
-    // Other non-VFABI variants should be retrieved here.
-
-    return Ret;
-  }
-
-  /// Constructor, requires a CallInst instance.
-  VFDatabase(CallInst &CI)
-      : M(CI.getModule()), ScalarToVectorMappings(VFDatabase::getMappings(CI)) {
-  }
-  /// \defgroup VFDatabase query interface.
-  ///
-  /// @{
-  /// Retrieve the Function with VFShape \p Shape.
-  Function *getVectorizedFunction(const VFShape &Shape) const {
-    for (const auto &Info : ScalarToVectorMappings)
-      if (Info.Shape == Shape)
-        return M->getFunction(Info.VectorName);
-
-    return nullptr;
-  }
-  /// Checks if a function is vectorizable with VFShape \p Shape.
-  bool isFunctionVectorizable(const VFShape &Shape) const {
-    return getVectorizedFunction(Shape) != nullptr;
-  }
-  /// @}
-};
 
 template <typename T> class ArrayRef;
 class DemandedBits;
