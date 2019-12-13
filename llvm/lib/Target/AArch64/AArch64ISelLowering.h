@@ -907,6 +907,9 @@ private:
 
   bool shouldLocalize(const MachineInstr &MI,
                       const TargetTransformInfo *TTI) const override;
+
+  bool useSVEForFixedLengthVectors() const;
+  bool useSVEForFixedLengthVectorVT(MVT VT) const;
 };
 
 namespace AArch64 {

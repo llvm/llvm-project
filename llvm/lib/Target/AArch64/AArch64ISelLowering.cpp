@@ -184,6 +184,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv4f32, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv2f64, &AArch64::ZPRRegClass);
 
+    if (useSVEForFixedLengthVectors()) {
+      for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
+        if (useSVEForFixedLengthVectorVT(VT))
+          addRegisterClass(VT, &AArch64::ZPRRegClass);
+
+      for (MVT VT : MVT::fp_fixedlen_vector_valuetypes())
+        if (useSVEForFixedLengthVectorVT(VT))
+          addRegisterClass(VT, &AArch64::ZPRRegClass);
+    }
+
     for (auto VT : { MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64 }) {
       setOperationAction(ISD::SADDSAT, VT, Legal);
       setOperationAction(ISD::UADDSAT, VT, Legal);
@@ -3472,6 +3482,51 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::VSCALE:
     return LowerVSCALE(Op, DAG);
   }
+}
+
+bool AArch64TargetLowering::useSVEForFixedLengthVectors() const {
+  // Prefer NEON unless larger SVE registers are available.
+  return Subtarget->hasSVE() && Subtarget->getMinSVEVectorSizeInBits() >= 256;
+}
+
+bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(MVT VT) const {
+  assert(VT.isFixedLengthVector());
+  if (!useSVEForFixedLengthVectors())
+    return false;
+
+  // Fixed length predicates should be promoted to i8.
+  // NOTE: This is consistent with how NEON (and thus 64/128bit vectors) work.
+  if (VT.getVectorElementType() == MVT::i1)
+    return false;
+
+  // Don't use SVE for vectors we cannot scalarize if required.
+  switch (VT.getVectorElementType().SimpleTy) {
+  default:
+    return false;
+  case MVT::i8:
+  case MVT::i16:
+  case MVT::i32:
+  case MVT::i64:
+  case MVT::f16:
+  case MVT::f32:
+  case MVT::f64:
+    break;
+  }
+
+  // Ensure NEON MVTs only belong to a single register class.
+  if (VT.getSizeInBits() <= 128)
+    return false;
+
+  // Don't use SVE for types that don't fit.
+  if (VT.getSizeInBits() > Subtarget->getMinSVEVectorSizeInBits())
+    return false;
+
+  // TODO: Perhaps an artificial restriction, but worth having whilst getting
+  // the base fixed length SVE support in place.
+  if (!VT.isPow2VectorType())
+    return false;
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
