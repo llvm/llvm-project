@@ -2,7 +2,6 @@
 Test lldb breakpoint command for CPP methods & functions in a namespace.
 """
 
-from __future__ import print_function
 
 
 import lldb

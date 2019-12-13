@@ -2,7 +2,6 @@
 Test lldb breakpoint command add/list/delete.
 """
 
-from __future__ import print_function
 
 
 import lldb

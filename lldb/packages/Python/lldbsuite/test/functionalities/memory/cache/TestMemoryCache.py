@@ -2,7 +2,6 @@
 Test the MemoryCache L1 flush.
 """
 
-from __future__ import print_function
 
 
 import lldb

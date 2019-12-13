@@ -2,7 +2,6 @@
 Test breakpoint commands for a breakpoint ID with multiple locations.
 """
 
-from __future__ import print_function
 
 
 import lldb

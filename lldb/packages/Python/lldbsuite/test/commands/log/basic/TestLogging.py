@@ -2,7 +2,6 @@
 Test lldb logging.  This test just makes sure logging doesn't crash, and produces some output.
 """
 
-from __future__ import print_function
 
 
 import os

@@ -3,7 +3,6 @@ Test that we can compile expressions referring to
 absent weak symbols from a dylib.
 """
 
-from __future__ import print_function
 
 
 import os

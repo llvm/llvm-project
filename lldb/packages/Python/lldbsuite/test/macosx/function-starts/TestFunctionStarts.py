@@ -2,7 +2,6 @@
 Test that we read the function starts section.
 """
 
-from __future__ import print_function
 
 
 import lldb

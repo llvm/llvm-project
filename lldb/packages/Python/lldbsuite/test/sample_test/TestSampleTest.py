@@ -2,7 +2,6 @@
 Describe the purpose of the test class here.
 """
 
-from __future__ import print_function
 
 
 import lldb

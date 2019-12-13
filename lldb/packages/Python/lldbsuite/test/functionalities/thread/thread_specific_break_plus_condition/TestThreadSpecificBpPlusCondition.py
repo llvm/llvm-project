@@ -3,7 +3,6 @@ Test that we obey thread conditioned breakpoints and expression
 conditioned breakpoints simultaneously
 """
 
-from __future__ import print_function
 
 
 import lldb

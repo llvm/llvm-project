@@ -3,7 +3,6 @@
 Test that C++ supports wchar_t correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

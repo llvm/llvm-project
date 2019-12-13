@@ -2,7 +2,6 @@
 Tests that C++ member and static variables have correct layout and scope.
 """
 
-from __future__ import print_function
 
 
 import unittest2

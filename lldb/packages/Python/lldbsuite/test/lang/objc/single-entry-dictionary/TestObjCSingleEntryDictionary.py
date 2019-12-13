@@ -1,6 +1,5 @@
 """Test that we properly vend children for a single entry NSDictionary"""
 
-from __future__ import print_function
 
 
 import unittest2

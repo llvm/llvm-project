@@ -3,7 +3,6 @@
 Test lldb Obj-C exception support.
 """
 
-from __future__ import print_function
 
 
 import lldb

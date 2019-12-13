@@ -1,6 +1,5 @@
 """Test that corefiles with an LC_NOTE "kern ver str" load command is used."""
 
-from __future__ import print_function
 
 
 import os

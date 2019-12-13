@@ -3,7 +3,6 @@
 Test that C++ supports char8_t correctly.
 """
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test.decorators import *

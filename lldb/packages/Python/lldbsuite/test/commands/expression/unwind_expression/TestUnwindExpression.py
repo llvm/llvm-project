@@ -2,7 +2,6 @@
 Test stopping at a breakpoint in an expression, and unwinding from there.
 """
 
-from __future__ import print_function
 
 
 import unittest2

@@ -1,6 +1,5 @@
 """Test that C++ global variables can be inspected by name and also their mangled name."""
 
-from __future__ import print_function
 
 
 from lldbsuite.test.decorators import *

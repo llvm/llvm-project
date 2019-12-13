@@ -2,7 +2,6 @@
 Test that nested persistent types work.
 """
 
-from __future__ import print_function
 
 
 import lldb

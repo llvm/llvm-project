@@ -1,7 +1,6 @@
 """
 Test breakpoint command with AT_comp_dir set to symbolic link.
 """
-from __future__ import print_function
 
 
 import os

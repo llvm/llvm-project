@@ -1,6 +1,5 @@
 """Tests that a FAIL is detected by the testbot."""
 
-from __future__ import print_function
 
 import lldbsuite.test.lldbtest as lldbtest
 

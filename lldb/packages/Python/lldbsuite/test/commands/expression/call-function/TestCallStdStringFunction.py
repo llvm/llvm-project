@@ -2,7 +2,6 @@
 Test calling std::String member functions.
 """
 
-from __future__ import print_function
 
 
 import lldb

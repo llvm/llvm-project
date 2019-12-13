@@ -2,7 +2,6 @@
 Test getting return-values correctly when stepping out
 """
 
-from __future__ import print_function
 
 
 import lldb

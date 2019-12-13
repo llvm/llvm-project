@@ -2,7 +2,6 @@
 Test thread step-in, step-over and step-out work with the "Avoid no debug" option.
 """
 
-from __future__ import print_function
 
 
 

@@ -2,7 +2,6 @@
 Test some expressions involving STL data types.
 """
 
-from __future__ import print_function
 
 
 import unittest2

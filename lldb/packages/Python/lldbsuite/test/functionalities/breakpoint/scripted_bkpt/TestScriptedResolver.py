@@ -2,9 +2,6 @@
 Test setting breakpoints using a scripted resolver
 """
 
-from __future__ import print_function
-
-
 import os
 import lldb
 import lldbsuite.test.lldbutil as lldbutil

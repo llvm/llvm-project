@@ -1,6 +1,5 @@
 """Test custom import command to import files by path."""
 
-from __future__ import print_function
 
 
 import lldb

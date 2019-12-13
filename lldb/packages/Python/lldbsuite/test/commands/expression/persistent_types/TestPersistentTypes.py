@@ -2,7 +2,6 @@
 Test that lldb persistent types works correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

@@ -1,6 +1,5 @@
 """Test that a global ObjC object found before the process is started updates correctly."""
 
-from __future__ import print_function
 
 
 import lldb

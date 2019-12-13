@@ -2,7 +2,6 @@
 Make sure the getting a variable path works and doesn't crash.
 """
 
-from __future__ import print_function
 
 
 import lldb

@@ -2,7 +2,6 @@
 Read in a library with a version number of 0.0.0, make sure we produce a good version.
 """
 
-from __future__ import print_function
 
 
 import lldb

@@ -2,7 +2,6 @@
 Test lldb-vscode completions request
 """
 
-from __future__ import print_function
 
 import lldbvscode_testcase
 import unittest2
