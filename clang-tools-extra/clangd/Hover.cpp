@@ -25,9 +25,11 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -224,8 +226,8 @@ void enhanceFromIndex(HoverInfo &Hover, const NamedDecl &ND,
 
 // Populates Type, ReturnType, and Parameters for function-like decls.
 void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
-                                      const FunctionDecl *FD,
-                                      const PrintingPolicy &Policy) {
+                               const FunctionDecl *FD,
+                               const PrintingPolicy &Policy) {
   HI.Parameters.emplace();
   for (const ParmVarDecl *PVD : FD->parameters()) {
     HI.Parameters->emplace_back();
@@ -250,11 +252,11 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
     }
   }
 
-  if (const auto* CCD = llvm::dyn_cast<CXXConstructorDecl>(FD)) {
+  if (const auto *CCD = llvm::dyn_cast<CXXConstructorDecl>(FD)) {
     // Constructor's "return type" is the class type.
     HI.ReturnType = declaredType(CCD->getParent()).getAsString(Policy);
     // Don't provide any type for the constructor itself.
-  } else if (llvm::isa<CXXDestructorDecl>(FD)){
+  } else if (llvm::isa<CXXDestructorDecl>(FD)) {
     HI.ReturnType = "void";
   } else {
     HI.ReturnType = FD->getReturnType().getAsString(Policy);
@@ -309,7 +311,7 @@ llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
 }
 
 /// Generate a \p Hover object given the declaration \p D.
-HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
+HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
   HoverInfo HI;
   const ASTContext &Ctx = D->getASTContext();
 
@@ -321,12 +323,10 @@ HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
     HI.LocalScope.append("::");
 
   PrintingPolicy Policy = printingPolicyForDecls(Ctx.getPrintingPolicy());
-  if (const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(D)) {
-    HI.Name = printName(Ctx, *ND);
-    ND = getDeclForComment(ND);
-    HI.Documentation = getDeclComment(Ctx, *ND);
-    enhanceFromIndex(HI, *ND, Index);
-  }
+  HI.Name = printName(Ctx, *D);
+  const auto *CommentD = getDeclForComment(D);
+  HI.Documentation = getDeclComment(Ctx, *CommentD);
+  enhanceFromIndex(HI, *CommentD, Index);
 
   HI.Kind = index::getSymbolInfo(D).Kind;
 
@@ -460,34 +460,70 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
           tooling::applyAllReplacements(HI->Definition, Replacements))
     HI->Definition = *Formatted;
 
-  HI->SymRange = getTokenRange(AST.getSourceManager(),
-                               AST.getLangOpts(), SourceLocationBeg);
+  HI->SymRange = getTokenRange(AST.getSourceManager(), AST.getLangOpts(),
+                               SourceLocationBeg);
   return HI;
 }
 
 markup::Document HoverInfo::present() const {
   markup::Document Output;
-  if (NamespaceScope) {
-    auto &P = Output.addParagraph();
-    P.appendText("Declared in");
-    // Drop trailing "::".
-    if (!LocalScope.empty())
-      P.appendCode(llvm::StringRef(LocalScope).drop_back(2));
-    else if (NamespaceScope->empty())
-      P.appendCode("global namespace");
-    else
-      P.appendCode(llvm::StringRef(*NamespaceScope).drop_back(2));
+  // Header contains a text of the form:
+  // variable `var` : `int`
+  //
+  // class `X`
+  //
+  // function `foo` → `int`
+  markup::Paragraph &Header = Output.addParagraph();
+  Header.appendText(index::getSymbolKindString(Kind));
+  assert(!Name.empty() && "hover triggered on a nameless symbol");
+  Header.appendCode(Name);
+  if (ReturnType) {
+    Header.appendText("→");
+    Header.appendCode(*ReturnType);
+  } else if (Type) {
+    Header.appendText(":");
+    Header.appendCode(*Type);
   }
 
-  if (!Definition.empty()) {
-    Output.addCodeBlock(Definition);
-  } else {
-    // Builtin types
-    Output.addCodeBlock(Name);
+  // For functions we display signature in a list form, e.g.:
+  // - `bool param1`
+  // - `int param2 = 5`
+  if (Parameters && !Parameters->empty()) {
+    markup::BulletList &L = Output.addBulletList();
+    for (const auto &Param : *Parameters) {
+      std::string Buffer;
+      llvm::raw_string_ostream OS(Buffer);
+      OS << Param;
+      L.addItem().addParagraph().appendCode(std::move(OS.str()));
+    }
+  }
+
+  if (Value) {
+    markup::Paragraph &P = Output.addParagraph();
+    P.appendText("Value =");
+    P.appendCode(*Value);
   }
 
   if (!Documentation.empty())
     Output.addParagraph().appendText(Documentation);
+
+  if (!Definition.empty()) {
+    std::string ScopeComment;
+    // Drop trailing "::".
+    if (!LocalScope.empty()) {
+      // Container name, e.g. class, method, function.
+      // We might want to propogate some info about container type to print
+      // function foo, class X, method X::bar, etc.
+      ScopeComment =
+          "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
+    } else if (NamespaceScope && !NamespaceScope->empty()) {
+      ScopeComment = "// In namespace " +
+                     llvm::StringRef(*NamespaceScope).rtrim(':').str() + '\n';
+    }
+    // Note that we don't print anything for global namespace, to not annoy
+    // non-c++ projects or projects that are not making use of namespaces.
+    Output.addCodeBlock(ScopeComment + Definition);
+  }
   return Output;
 }
 
