@@ -11,14 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
-
 using namespace llvm;
+
+#define DEBUG_TYPE "moduleutils"
 
 static void appendToGlobalArray(const char *Array, Module &M, Function *F,
                                 int Priority, Constant *Data) {
@@ -298,8 +300,9 @@ void VFABI::setVectorVariantNames(
   Module *M = CI->getModule();
 #ifndef NDEBUG
   for (const std::string &VariantMapping : VariantMappings) {
+    LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
     Optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping);
-    assert(VI.hasValue() && "Canno add an invalid VFABI name.");
+    assert(VI.hasValue() && "Cannot add an invalid VFABI name.");
     assert(M->getNamedValue(VI.getValue().VectorName) &&
            "Cannot add variant to attribute: "
            "vector function declaration is missing.");
