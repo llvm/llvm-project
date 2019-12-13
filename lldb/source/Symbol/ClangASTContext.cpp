@@ -2398,14 +2398,31 @@ bool ClangASTContext::GetCompleteDecl(clang::ASTContext *ast,
   }
 }
 
-void ClangASTContext::SetMetadataAsUserID(const void *object,
+void ClangASTContext::SetMetadataAsUserID(const clang::Decl *decl,
                                           user_id_t user_id) {
   ClangASTMetadata meta_data;
   meta_data.SetUserID(user_id);
-  SetMetadata(object, meta_data);
+  SetMetadata(decl, meta_data);
 }
 
-void ClangASTContext::SetMetadata(const void *object,
+void ClangASTContext::SetMetadataAsUserID(const clang::Type *type,
+                                          user_id_t user_id) {
+  ClangASTMetadata meta_data;
+  meta_data.SetUserID(user_id);
+  SetMetadata(type, meta_data);
+}
+
+void ClangASTContext::SetMetadata(const clang::Decl *object,
+                                  ClangASTMetadata &metadata) {
+  ClangExternalASTSourceCommon *external_source =
+      ClangExternalASTSourceCommon::Lookup(
+          getASTContext()->getExternalSource());
+
+  if (external_source)
+    external_source->SetMetadata(object, metadata);
+}
+
+void ClangASTContext::SetMetadata(const clang::Type *object,
                                   ClangASTMetadata &metadata) {
   ClangExternalASTSourceCommon *external_source =
       ClangExternalASTSourceCommon::Lookup(
@@ -2416,14 +2433,23 @@ void ClangASTContext::SetMetadata(const void *object,
 }
 
 ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
-                                               const void *object) {
+                                               const clang::Decl *object) {
   ClangExternalASTSourceCommon *external_source =
       ClangExternalASTSourceCommon::Lookup(ast->getExternalSource());
 
   if (external_source)
     return external_source->GetMetadata(object);
-  else
-    return nullptr;
+  return nullptr;
+}
+
+ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
+                                               const clang::Type *object) {
+  ClangExternalASTSourceCommon *external_source =
+      ClangExternalASTSourceCommon::Lookup(ast->getExternalSource());
+
+  if (external_source)
+    return external_source->GetMetadata(object);
+  return nullptr;
 }
 
 bool ClangASTContext::SetTagTypeKind(clang::QualType tag_qual_type,
@@ -5096,7 +5122,7 @@ GetDynamicArrayInfo(ClangASTContext &ast, SymbolFile *sym_file,
                     clang::QualType qual_type,
                     const ExecutionContext *exe_ctx) {
   if (qual_type->isIncompleteArrayType())
-    if (auto *metadata = ast.GetMetadata(qual_type.getAsOpaquePtr()))
+    if (auto *metadata = ast.GetMetadata(qual_type.getTypePtr()))
       return sym_file->GetDynamicArrayInfoForUID(metadata->GetUserID(),
                                                  exe_ctx);
   return llvm::None;
@@ -8856,8 +8882,11 @@ void ClangASTContext::DumpSummary(lldb::opaque_compiler_type_t type,
 void ClangASTContext::DumpTypeDescription(lldb::opaque_compiler_type_t type) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, &s);
+
+  CompilerType ct(this, type);
+  const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
   ClangASTMetadata *metadata =
-      ClangASTContext::GetMetadata(getASTContext(), type);
+      ClangASTContext::GetMetadata(getASTContext(), clang_type);
   if (metadata) {
     metadata->Dump(&s);
   }
@@ -9485,7 +9514,7 @@ ClangASTContext::DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc) {
 
 ClangASTMetadata *
 ClangASTContext::DeclContextGetMetaData(const CompilerDeclContext &dc,
-                                        const void *object) {
+                                        const Decl *object) {
   clang::ASTContext *ast = DeclContextGetClangASTContext(dc);
   if (ast)
     return ClangASTContext::GetMetadata(ast, object);

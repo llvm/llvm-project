@@ -1336,7 +1336,8 @@ TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
       dwarf->GetUID(type_die), Type::eEncodingIsUID, &attrs.decl, clang_type,
       Type::ResolveState::Full);
   type_sp->SetEncodingType(element_type);
-  m_ast.SetMetadataAsUserID(clang_type.GetOpaqueQualType(), die.GetID());
+  const clang::Type *type = ClangUtil::GetQualType(clang_type).getTypePtr();
+  m_ast.SetMetadataAsUserID(type, die.GetID());
   return type_sp;
 }
 
