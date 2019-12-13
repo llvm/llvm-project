@@ -2006,80 +2006,68 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
   for (auto I = MergeList.begin(); I != MergeList.end(); ++I) {
     CombineInfo &CI = *I;
 
+    if (CI.InstClass == UNKNOWN)
+      continue;
+
+    if (!findMatchingInst(CI))
+      goto done;
+
+    Modified = true;
+    removeCombinedInst(MergeList, *CI.Paired);
+
     switch (CI.InstClass) {
     default:
+      llvm_unreachable("unknown InstClass");
       break;
-    case DS_READ:
-      if (findMatchingInst(CI)) {
-        Modified = true;
-        removeCombinedInst(MergeList, *CI.Paired);
-        MachineBasicBlock::iterator NewMI = mergeRead2Pair(CI);
-        CI.setMI(NewMI, *TII, *STM);
-      }
-      break;
-    case DS_WRITE:
-      if (findMatchingInst(CI)) {
-        Modified = true;
-        removeCombinedInst(MergeList, *CI.Paired);
-        MachineBasicBlock::iterator NewMI = mergeWrite2Pair(CI);
-        CI.setMI(NewMI, *TII, *STM);
-      }
-      break;
-    case S_BUFFER_LOAD_IMM:
-      if (findMatchingInst(CI)) {
-        Modified = true;
-        removeCombinedInst(MergeList, *CI.Paired);
-        MachineBasicBlock::iterator NewMI = mergeSBufferLoadImmPair(CI);
-        CI.setMI(NewMI, *TII, *STM);
-        OptimizeListAgain |= (CI.Width0 + CI.Width1) < 16;
-      }
-      break;
-    case BUFFER_LOAD:
-      if (findMatchingInst(CI)) {
-        Modified = true;
-        removeCombinedInst(MergeList, *CI.Paired);
-        MachineBasicBlock::iterator NewMI = mergeBufferLoadPair(CI);
-        CI.setMI(NewMI, *TII, *STM);
-        OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
-      }
-      break;
-    case BUFFER_STORE:
-      if (findMatchingInst(CI)) {
-        Modified = true;
-        removeCombinedInst(MergeList, *CI.Paired);
-        MachineBasicBlock::iterator NewMI = mergeBufferStorePair(CI);
-        CI.setMI(NewMI, *TII, *STM);
-        OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
-      }
-      break;
-    case MIMG:
-      if (findMatchingInst(CI)) {
-        Modified = true;
-        removeCombinedInst(MergeList, *CI.Paired);
-        MachineBasicBlock::iterator NewMI = mergeImagePair(CI);
-        CI.setMI(NewMI, *TII, *STM);
-        OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
-      }
-      break;
-    case TBUFFER_LOAD:
-      if (findMatchingInst(CI)) {
-        Modified = true;
-        removeCombinedInst(MergeList, *CI.Paired);
-        MachineBasicBlock::iterator NewMI = mergeTBufferLoadPair(CI);
-        CI.setMI(NewMI, *TII, *STM);
-        OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
-      }
-      break;
-    case TBUFFER_STORE:
-      if (findMatchingInst(CI)) {
-        Modified = true;
-        removeCombinedInst(MergeList, *CI.Paired);
-        MachineBasicBlock::iterator NewMI = mergeTBufferStorePair(CI);
-        CI.setMI(NewMI, *TII, *STM);
-        OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
-      }
+    case DS_READ: {
+      MachineBasicBlock::iterator NewMI = mergeRead2Pair(CI);
+      CI.setMI(NewMI, *TII, *STM);
       break;
     }
+    case DS_WRITE: {
+      MachineBasicBlock::iterator NewMI = mergeWrite2Pair(CI);
+      CI.setMI(NewMI, *TII, *STM);
+      break;
+    }
+    case S_BUFFER_LOAD_IMM: {
+      MachineBasicBlock::iterator NewMI = mergeSBufferLoadImmPair(CI);
+      CI.setMI(NewMI, *TII, *STM);
+      OptimizeListAgain |= (CI.Width0 + CI.Width1) < 16;
+      break;
+    }
+    case BUFFER_LOAD: {
+      MachineBasicBlock::iterator NewMI = mergeBufferLoadPair(CI);
+      CI.setMI(NewMI, *TII, *STM);
+      OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
+      break;
+    }
+    case BUFFER_STORE: {
+      MachineBasicBlock::iterator NewMI = mergeBufferStorePair(CI);
+      CI.setMI(NewMI, *TII, *STM);
+      OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
+      break;
+    }
+    case MIMG: {
+      MachineBasicBlock::iterator NewMI = mergeImagePair(CI);
+      CI.setMI(NewMI, *TII, *STM);
+      OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
+      break;
+    }
+    case TBUFFER_LOAD: {
+      MachineBasicBlock::iterator NewMI = mergeTBufferLoadPair(CI);
+      CI.setMI(NewMI, *TII, *STM);
+      OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
+      break;
+    }
+    case TBUFFER_STORE: {
+      MachineBasicBlock::iterator NewMI = mergeTBufferStorePair(CI);
+      CI.setMI(NewMI, *TII, *STM);
+      OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
+      break;
+    }
+    }
+
+done:
     // Clear the InstsToMove after we have finished searching so we don't have
     // stale values left over if we search for this CI again in another pass
     // over the block.

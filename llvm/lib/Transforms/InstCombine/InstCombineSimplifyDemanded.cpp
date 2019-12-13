@@ -14,6 +14,8 @@
 #include "InstCombineInternal.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
 

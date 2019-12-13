@@ -398,8 +398,12 @@ struct IRPosition {
   /// single attribute of any kind in \p AKs, there are "subsuming" positions
   /// that could have an attribute as well. This method returns all attributes
   /// found in \p Attrs.
+  /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
+  ///                                 e.g., the function position if this is an
+  ///                                 argument position, should be ignored.
   void getAttrs(ArrayRef<Attribute::AttrKind> AKs,
-                SmallVectorImpl<Attribute> &Attrs) const;
+                SmallVectorImpl<Attribute> &Attrs,
+                bool IgnoreSubsumingPositions = false) const;
 
   /// Return the attribute of kind \p AK existing in the IR at this position.
   Attribute getAttr(Attribute::AttrKind AK) const {
@@ -1840,7 +1844,9 @@ struct DerefState : AbstractState {
   /// ```
   /// In that case, AccessedBytesMap is `{0:4, 4:4, 8:4, 40:4}`.
   /// AccessedBytesMap is std::map so it is iterated in accending order on
-  /// key(Offset). So KnownBytes will be updated like this: |Access | KnownBytes
+  /// key(Offset). So KnownBytes will be updated like this:
+  ///
+  /// |Access | KnownBytes
   /// |(0, 4)| 0 -> 4
   /// |(4, 4)| 4 -> 8
   /// |(8, 4)| 8 -> 12

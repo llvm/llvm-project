@@ -229,7 +229,7 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());
-  ClangASTContext *clang_ast_context = target_sp->GetScratchClangASTContext();
+  ClangASTContext *clang_ast_context = ClangASTContext::GetScratch(*target_sp);
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
 
   GetItemInfoReturnInfo return_value;

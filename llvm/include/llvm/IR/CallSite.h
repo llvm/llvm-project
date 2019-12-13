@@ -45,7 +45,7 @@
 namespace llvm {
 
 namespace Intrinsic {
-enum ID : unsigned;
+typedef unsigned ID;
 }
 
 template <typename FunTy = const Function, typename BBTy = const BasicBlock,

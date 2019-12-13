@@ -1,6 +1,5 @@
 """Test that a forward-declared class works when its complete definition is in a library"""
 
-from __future__ import print_function
 
 
 import lldb

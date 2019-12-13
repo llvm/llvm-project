@@ -13,38 +13,48 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FORMATTEDSTRING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FORMATTEDSTRING_H
 
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace clang {
 namespace clangd {
+namespace markup {
 
-/// A structured string representation that could be converted to markdown or
-/// plaintext upon requrest.
-class FormattedString {
+/// Holds text and knows how to lay it out. Multiple blocks can be grouped to
+/// form a document. Blocks include their own trailing newlines, container
+/// should trim them if need be.
+class Block {
 public:
-  /// Append plain text to the end of the string.
-  void appendText(std::string Text);
-  /// Append a block of C++ code. This translates to a ``` block in markdown.
-  /// In a plain text representation, the code block will be surrounded by
-  /// newlines.
-  void appendCodeBlock(std::string Code, std::string Language = "cpp");
-  /// Append an inline block of C++ code. This translates to the ` block in
-  /// markdown.
-  void appendInlineCode(std::string Code);
+  virtual void renderMarkdown(llvm::raw_ostream &OS) const = 0;
+  virtual void renderPlainText(llvm::raw_ostream &OS) const = 0;
+  std::string asMarkdown() const;
+  std::string asPlainText() const;
 
-  std::string renderAsMarkdown() const;
-  std::string renderAsPlainText() const;
-  std::string renderForTests() const;
+  virtual ~Block() = default;
+};
+
+/// Represents parts of the markup that can contain strings, like inline code,
+/// code block or plain text.
+/// One must introduce different paragraphs to create separate blocks.
+class Paragraph : public Block {
+public:
+  void renderMarkdown(llvm::raw_ostream &OS) const override;
+  void renderPlainText(llvm::raw_ostream &OS) const override;
+
+  /// Append plain text to the end of the string.
+  Paragraph &appendText(std::string Text);
+
+  /// Append inline code, this translates to the ` block in markdown.
+  Paragraph &appendCode(std::string Code);
 
 private:
-  enum class ChunkKind {
-    PlainText,       /// A plain text paragraph.
-    CodeBlock,       /// A block of code.
-    InlineCodeBlock, /// An inline block of code.
-  };
   struct Chunk {
-    ChunkKind Kind = ChunkKind::PlainText;
+    enum {
+      PlainText,
+      InlineCode,
+    } Kind = PlainText;
     std::string Contents;
     /// Language for code block chunks. Ignored for other chunks.
     std::string Language;
@@ -52,6 +62,26 @@ private:
   std::vector<Chunk> Chunks;
 };
 
+/// A format-agnostic representation for structured text. Allows rendering into
+/// markdown and plaintext.
+class Document {
+public:
+  /// Adds a semantical block that will be separate from others.
+  Paragraph &addParagraph();
+  /// Inserts a vertical space into the document.
+  void addSpacer();
+  /// Adds a block of code. This translates to a ``` block in markdown. In plain
+  /// text representation, the code block will be surrounded by newlines.
+  void addCodeBlock(std::string Code, std::string Language = "cpp");
+
+  std::string asMarkdown() const;
+  std::string asPlainText() const;
+
+private:
+  std::vector<std::unique_ptr<Block>> Children;
+};
+
+} // namespace markup
 } // namespace clangd
 } // namespace clang
 

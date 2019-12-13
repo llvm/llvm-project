@@ -848,11 +848,11 @@ def int_arm_mve_qrdmulh_predicated: Intrinsic<[llvm_anyvector_ty],
    [IntrNoMem]>;
 def int_arm_mve_mull_int_predicated: Intrinsic<[llvm_anyvector_ty],
    [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty,
-    LLVMMatchType<1>],
+    LLVMMatchType<0>],
    [IntrNoMem]>;
 def int_arm_mve_mull_poly_predicated: Intrinsic<[llvm_anyvector_ty],
    [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty,
-    LLVMMatchType<1>],
+    LLVMMatchType<0>],
    [IntrNoMem]>;
 def int_arm_mve_qadd_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],

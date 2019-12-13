@@ -958,7 +958,7 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      int f()   vs.   inf f()
+      int f()   vs.   int f()
       {}              {
                       }
 

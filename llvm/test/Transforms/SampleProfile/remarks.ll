@@ -21,7 +21,7 @@
 
 ; We are expecting foo() to be inlined in main() (almost all the cycles are
 ; spent inside foo).
-; CHECK: remark: remarks.cc:13:21: inlined hot callee '_Z3foov' into 'main'
+; CHECK: remark: remarks.cc:13:21: inlined callee '_Z3foov' into 'main'
 
 ; The back edge for the loop is the hottest edge in the loop subgraph.
 ; CHECK: remark: remarks.cc:6:9: most popular destination for conditional branches at remarks.cc:5:3
@@ -31,12 +31,12 @@
 
 ; Checking to see if YAML file is generated and contains remarks
 ;YAML:       --- !Passed
-;YAML-NEXT:  Pass:            sample-profile
-;YAML-NEXT:  Name:            HotInline
+;YAML-NEXT:  Pass:            sample-profile-inline
+;YAML-NEXT:  Name:            InlineSuccess
 ;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 13, Column: 21 }
 ;YAML-NEXT:  Function:        main
 ;YAML-NEXT:  Args:
-;YAML-NEXT:    - String:          'inlined hot callee '''
+;YAML-NEXT:    - String:          'inlined callee '''
 ;YAML-NEXT:    - Callee:          _Z3foov
 ;YAML-NEXT:      DebugLoc:        { File: remarks.cc, Line: 3, Column: 0 }
 ;YAML-NEXT:    - String:          ''' into '''

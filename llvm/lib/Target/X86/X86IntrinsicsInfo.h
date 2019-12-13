@@ -15,6 +15,7 @@
 
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
+#include "llvm/IR/IntrinsicsX86.h"
 
 namespace llvm {
 

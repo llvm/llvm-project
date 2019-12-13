@@ -38,7 +38,7 @@ class GlobalObject;
 class Module;
 
 namespace Intrinsic {
-  enum ID : unsigned;
+typedef unsigned ID;
 } // end namespace Intrinsic
 
 class GlobalValue : public Constant {

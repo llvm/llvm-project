@@ -553,6 +553,8 @@ public:
   std::string getAsString() const;
   std::string getAsString(const PrintingPolicy &Policy) const;
 
+  static std::string getAddrSpaceAsString(LangAS AS);
+
   bool isEmptyWhenPrinted(const PrintingPolicy &Policy) const;
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
              bool appendSpaceIfNonEmpty = false) const;
@@ -6837,6 +6839,23 @@ inline const Type *Type::getPointeeOrArrayElementType() const {
   else if (type->isArrayType())
     return type->getBaseElementTypeUnsafe();
   return type;
+}
+/// Insertion operator for diagnostics. This allows sending address spaces into
+/// a diagnostic with <<.
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           LangAS AS) {
+  DB.AddTaggedVal(static_cast<std::underlying_type_t<LangAS>>(AS),
+                  DiagnosticsEngine::ArgumentKind::ak_addrspace);
+  return DB;
+}
+
+/// Insertion operator for partial diagnostics. This allows sending adress
+/// spaces into a diagnostic with <<.
+inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
+                                           LangAS AS) {
+  PD.AddTaggedVal(static_cast<std::underlying_type_t<LangAS>>(AS),
+                  DiagnosticsEngine::ArgumentKind::ak_addrspace);
+  return PD;
 }
 
 /// Insertion operator for diagnostics. This allows sending Qualifiers into a

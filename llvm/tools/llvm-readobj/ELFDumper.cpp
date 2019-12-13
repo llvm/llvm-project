@@ -1434,18 +1434,18 @@ static const char *getGroupType(uint32_t Flag) {
 static const EnumEntry<unsigned> ElfSectionFlags[] = {
   ENUM_ENT(SHF_WRITE,            "W"),
   ENUM_ENT(SHF_ALLOC,            "A"),
-  ENUM_ENT(SHF_EXCLUDE,          "E"),
   ENUM_ENT(SHF_EXECINSTR,        "X"),
   ENUM_ENT(SHF_MERGE,            "M"),
   ENUM_ENT(SHF_STRINGS,          "S"),
   ENUM_ENT(SHF_INFO_LINK,        "I"),
   ENUM_ENT(SHF_LINK_ORDER,       "L"),
-  ENUM_ENT(SHF_OS_NONCONFORMING, "o"),
+  ENUM_ENT(SHF_OS_NONCONFORMING, "O"),
   ENUM_ENT(SHF_GROUP,            "G"),
   ENUM_ENT(SHF_TLS,              "T"),
+  ENUM_ENT(SHF_COMPRESSED,       "C"),
+  ENUM_ENT(SHF_EXCLUDE,          "E"),
   ENUM_ENT(SHF_MASKOS,           "o"),
   ENUM_ENT(SHF_MASKPROC,         "p"),
-  ENUM_ENT_1(SHF_COMPRESSED),
 };
 
 static const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
@@ -1492,6 +1492,7 @@ static std::string getGNUFlags(uint64_t Flags) {
     case ELF::SHF_OS_NONCONFORMING:
     case ELF::SHF_GROUP:
     case ELF::SHF_TLS:
+    case ELF::SHF_COMPRESSED:
     case ELF::SHF_EXCLUDE:
       Str += Entry.AltName;
       break;

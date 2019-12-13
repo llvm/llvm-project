@@ -9,4 +9,4 @@ void test13(char *d, char *s, int c, size_t n) {
   memccpy(d, s, c, n);
 }
 
-// CHECK: attributes #2 = { nobuiltin }
+// CHECK: attributes #2 = { nobuiltin "no-builtin-memccpy" }

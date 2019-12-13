@@ -28,7 +28,7 @@ def iAny : ValueType<0, 253>;
 def llvm_anyint_ty : LLVMType<iAny>;
 
 // Make sure we can return up to 8 values
-// CHECK: returns_8_results // llvm.returns.8.results
+// CHECK: returns_8_results = {{[0-9]+}}, // llvm.returns.8.results
 def int_returns_8_results : Intrinsic<"llvm.returns.8.results",
     [llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty,
      llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty]>;

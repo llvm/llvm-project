@@ -53,9 +53,8 @@ public:
     if (!type_system)
       return false;
 
-    ClangASTContext *ast = m_backend.GetExecutionContextRef()
-                               .GetTargetSP()
-                               ->GetScratchClangASTContext();
+    ClangASTContext *ast = ClangASTContext::GetScratch(
+        *m_backend.GetExecutionContextRef().GetTargetSP());
     if (!ast)
       return false;
 

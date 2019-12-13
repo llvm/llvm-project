@@ -3717,6 +3717,11 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   // Adjust the debug info kind for the given toolchain.
   TC.adjustDebugInfoKind(DebugInfoKind, Args);
 
+  // When emitting remarks, we need at least debug lines in the output.
+  if (shouldEmitRemarks(Args) &&
+      DebugInfoKind <= codegenoptions::DebugDirectivesOnly)
+    DebugInfoKind = codegenoptions::DebugLineTablesOnly;
+
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DWARFVersion,
                           DebuggerTuning);
 
@@ -4078,7 +4083,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // Disable all llvm IR level optimizations.
     CmdArgs.push_back("-disable-llvm-passes");
 
-    // Render target options such as -fuse-init-array on modern ELF platforms.
+    // Render target options.
     TC.addClangTargetOptions(Args, CmdArgs, JA.getOffloadingDeviceKind());
 
     // reject options that shouldn't be supported in bitcode
@@ -4955,6 +4960,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-fnoopenmp-use-tls");
       Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
                       options::OPT_fno_openmp_simd);
+      Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_enable_irbuilder);
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_cuda_number_of_sm_EQ);
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_cuda_blocks_per_sm_EQ);

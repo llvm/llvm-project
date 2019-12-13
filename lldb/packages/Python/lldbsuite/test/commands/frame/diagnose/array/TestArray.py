@@ -2,7 +2,6 @@
 Test the output of `frame diagnose` for an array access
 """
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -12,9 +11,6 @@ from lldbsuite.test import lldbutil
 
 class TestArray(TestBase):
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        TestBase.setUp(self)
 
     @skipUnlessDarwin
     @skipIfDarwinEmbedded  # <rdar://problem/33842388> frame diagnose doesn't work for armv7 or arm64

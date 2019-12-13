@@ -1,4 +1,3 @@
-from __future__ import print_function
 
 import unittest2
 import os
@@ -12,9 +11,6 @@ from lldbsuite.test import lldbutil
 
 class TestClangModuleHashMismatch(TestBase):
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        TestBase.setUp(self)
 
     @skipUnlessDarwin
     @skipIf(debug_info=no_match(["gmodules"]))

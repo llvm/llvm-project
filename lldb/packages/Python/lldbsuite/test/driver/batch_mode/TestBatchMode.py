@@ -2,7 +2,6 @@
 Test that the lldb driver's batch mode works correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

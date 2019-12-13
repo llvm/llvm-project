@@ -3028,7 +3028,7 @@ int X86TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   return std::max(1, Cost);
 }
 
-int X86TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
+int X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
                               Type *Ty) {
   assert(Ty->isIntegerTy());
 
@@ -3125,8 +3125,8 @@ int X86TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
   return X86TTIImpl::getIntImmCost(Imm, Ty);
 }
 
-int X86TTIImpl::getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                              Type *Ty) {
+int X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                    const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();

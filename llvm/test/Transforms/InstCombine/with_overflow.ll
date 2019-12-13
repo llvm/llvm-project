@@ -356,8 +356,7 @@ define i1 @uadd_res_ult_x(i32 %x, i32 %y, i1* %p) nounwind {
 ; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[B:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    store i1 [[B]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C:%.*]] = extractvalue { i32, i1 } [[A]], 0
-; CHECK-NEXT:    [[D:%.*]] = icmp ult i32 [[C]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
   %a = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)
@@ -373,8 +372,7 @@ define i1 @uadd_res_ult_y(i32 %x, i32 %y, i1* %p) nounwind {
 ; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[B:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    store i1 [[B]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C:%.*]] = extractvalue { i32, i1 } [[A]], 0
-; CHECK-NEXT:    [[D:%.*]] = icmp ult i32 [[C]], [[Y]]
+; CHECK-NEXT:    [[D:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
   %a = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)
@@ -391,8 +389,7 @@ define i1 @uadd_res_ugt_x(i32 %xx, i32 %y, i1* %p) nounwind {
 ; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[B:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    store i1 [[B]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C:%.*]] = extractvalue { i32, i1 } [[A]], 0
-; CHECK-NEXT:    [[D:%.*]] = icmp ugt i32 [[X]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
   %x = urem i32 42, %xx ; Thwart complexity-based canonicalization
@@ -410,8 +407,7 @@ define i1 @uadd_res_ugt_y(i32 %x, i32 %yy, i1* %p) nounwind {
 ; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 [[Y]])
 ; CHECK-NEXT:    [[B:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    store i1 [[B]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C:%.*]] = extractvalue { i32, i1 } [[A]], 0
-; CHECK-NEXT:    [[D:%.*]] = icmp ugt i32 [[Y]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
   %y = urem i32 42, %yy ; Thwart complexity-based canonicalization
@@ -428,8 +424,7 @@ define i1 @uadd_res_ult_const(i32 %x, i1* %p) nounwind {
 ; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 42)
 ; CHECK-NEXT:    [[B:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    store i1 [[B]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C:%.*]] = extractvalue { i32, i1 } [[A]], 0
-; CHECK-NEXT:    [[D:%.*]] = icmp ult i32 [[C]], 42
+; CHECK-NEXT:    [[D:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
   %a = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 42)
@@ -445,8 +440,7 @@ define i1 @uadd_res_ult_const_one(i32 %x, i1* %p) nounwind {
 ; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 1)
 ; CHECK-NEXT:    [[B:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    store i1 [[B]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C:%.*]] = extractvalue { i32, i1 } [[A]], 0
-; CHECK-NEXT:    [[D:%.*]] = icmp eq i32 [[C]], 0
+; CHECK-NEXT:    [[D:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
   %a = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 1)
@@ -462,8 +456,7 @@ define i1 @uadd_res_ult_const_minus_one(i32 %x, i1* %p) nounwind {
 ; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 -1)
 ; CHECK-NEXT:    [[B:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    store i1 [[B]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C:%.*]] = extractvalue { i32, i1 } [[A]], 0
-; CHECK-NEXT:    [[D:%.*]] = icmp ne i32 [[C]], -1
+; CHECK-NEXT:    [[D:%.*]] = extractvalue { i32, i1 } [[A]], 1
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
   %a = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 -1)

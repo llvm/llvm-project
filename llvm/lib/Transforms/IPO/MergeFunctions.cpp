@@ -450,28 +450,10 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
     ++UI;
     CallSite CS(U->getUser());
     if (CS && CS.isCallee(U)) {
-      // Transfer the called function's attributes to the call site. Due to the
-      // bitcast we will 'lose' ABI changing attributes because the 'called
-      // function' is no longer a Function* but the bitcast. Code that looks up
-      // the attributes from the called function will fail.
-
-      // FIXME: This is not actually true, at least not anymore. The callsite
-      // will always have the same ABI affecting attributes as the callee,
-      // because otherwise the original input has UB. Note that Old and New
-      // always have matching ABI, so no attributes need to be changed.
-      // Transferring other attributes may help other optimizations, but that
-      // should be done uniformly and not in this ad-hoc way.
-      auto &Context = New->getContext();
-      auto NewPAL = New->getAttributes();
-      SmallVector<AttributeSet, 4> NewArgAttrs;
-      for (unsigned argIdx = 0; argIdx < CS.arg_size(); argIdx++)
-        NewArgAttrs.push_back(NewPAL.getParamAttributes(argIdx));
-      // Don't transfer attributes from the function to the callee. Function
-      // attributes typically aren't relevant to the calling convention or ABI.
-      CS.setAttributes(AttributeList::get(Context, /*FnAttrs=*/AttributeSet(),
-                                          NewPAL.getRetAttributes(),
-                                          NewArgAttrs));
-
+      // Do not copy attributes from the called function to the call-site.
+      // Function comparison ensures that the attributes are the same up to
+      // type congruences in byval(), in which case we need to keep the byval
+      // type of the call-site, not the callee function.
       remove(CS.getInstruction()->getFunction());
       U->set(BitcastNew);
     }

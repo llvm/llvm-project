@@ -1,8 +1,8 @@
 // Test whether or not the driver instructs the backend to use .init_array
 // sections for global constructors.
 //
-// CHECK-INIT-ARRAY: -fuse-init-array
-// CHECK-NO-INIT-ARRAY-NOT: -fuse-init-array
+// CHECK-INIT-ARRAY-NOT: -fno-use-init-array
+// CHECK-NO-INIT-ARRAY: -fno-use-init-array
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1       \
 // RUN:     -target i386-unknown-linux \

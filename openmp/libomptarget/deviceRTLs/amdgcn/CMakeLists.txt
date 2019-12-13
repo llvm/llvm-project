@@ -60,6 +60,7 @@ set(cuda_sources
 
 set(h_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_interface.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/hip_atomics.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/target_impl.h
   ${devicertl_base_directory}/common/debug.h
   ${devicertl_base_directory}/common/device_environment.h

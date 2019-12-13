@@ -4,7 +4,6 @@ the tests fail on the first run, then pass on the second.
 Do not mark them as flakey as, at this time, flakey tests will
 run twice, thus causing the second run to succeed."""
 
-from __future__ import print_function
 
 import rerun_base
 

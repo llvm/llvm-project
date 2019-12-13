@@ -27,8 +27,8 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/Loads.h"
@@ -86,6 +86,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -5551,8 +5553,14 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       for (auto RegAndSize : SplitRegs) {
         auto FragmentExpr = DIExpression::createFragmentExpression(
           Expr, Offset, RegAndSize.second);
-        if (!FragmentExpr)
+        // If a valid fragment expression cannot be created, the variable's
+        // correct value cannot be determined and so it is set as Undef.
+        if (!FragmentExpr) {
+          SDDbgValue *SDV = DAG.getConstantDbgValue(
+              Variable, Expr, UndefValue::get(V->getType()), DL, SDNodeOrder);
+          DAG.AddDbgValue(SDV, nullptr, false);
           continue;
+        }
         assert(!IsDbgDeclare && "DbgDeclare operand is not in memory?");
         FuncInfo.ArgDbgValues.push_back(
           BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), false,

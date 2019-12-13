@@ -1,6 +1,5 @@
 """Test that types defined in shared libraries work correctly."""
 
-from __future__ import print_function
 
 
 import lldb

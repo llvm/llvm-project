@@ -2,7 +2,6 @@
 Test the Intel(R) MPX registers.
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -14,9 +13,6 @@ from lldbsuite.test import lldbutil
 class RegisterCommandsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        TestBase.setUp(self)
 
     @skipIf(compiler="clang")
     @skipIf(oslist=no_match(['linux']))

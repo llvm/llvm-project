@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h" // To access function attributes.
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"

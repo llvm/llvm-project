@@ -474,13 +474,13 @@ define i32 @test_extra_uses_non_inbounds(i1 %cond, i1 %cond2) {
 ; ALL-NEXT:    [[PTR1:%.*]] = getelementptr i8, i8* [[OBJ]], i64 16
 ; ALL-NEXT:    [[PTR1_TYPED:%.*]] = bitcast i8* [[PTR1]] to i32*
 ; ALL-NEXT:    [[RES1:%.*]] = load i32, i32* [[PTR1_TYPED]], align 4
-; ALL-NEXT:    call void @foo.i32(i32* [[PTR1_TYPED]])
+; ALL-NEXT:    call void @foo.i32(i32* nonnull [[PTR1_TYPED]])
 ; ALL-NEXT:    br label [[EXIT:%.*]]
 ; ALL:       bb2:
 ; ALL-NEXT:    [[PTR2:%.*]] = getelementptr i8, i8* [[OBJ]], i64 16
 ; ALL-NEXT:    [[PTR2_TYPED:%.*]] = bitcast i8* [[PTR2]] to i32*
 ; ALL-NEXT:    [[RES2:%.*]] = load i32, i32* [[PTR2_TYPED]], align 4
-; ALL-NEXT:    call void @foo.i32(i32* [[PTR2_TYPED]])
+; ALL-NEXT:    call void @foo.i32(i32* nonnull [[PTR2_TYPED]])
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
 ; ALL-NEXT:    [[PTR_TYPED:%.*]] = phi i32* [ [[PTR1_TYPED]], [[BB1]] ], [ [[PTR2_TYPED]], [[BB2]] ]

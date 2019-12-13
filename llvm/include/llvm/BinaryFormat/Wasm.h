@@ -131,6 +131,7 @@ struct WasmFunction {
   uint32_t CodeSectionOffset;
   uint32_t Size;
   uint32_t CodeOffset;  // start of Locals and Body
+  StringRef ExportName; // from the "export" section
   StringRef SymbolName; // from the "linking" section
   StringRef DebugName;  // from the "name" section
   uint32_t Comdat;      // from the "comdat info" section
@@ -179,6 +180,7 @@ struct WasmSymbolInfo {
   uint32_t Flags;
   StringRef ImportModule; // For undefined symbols the module of the import
   StringRef ImportName;   // For undefined symbols the name of the import
+  StringRef ExportName;   // For symbols to be exported from the final module
   union {
     // For function or global symbols, the index in function or global index
     // space.

@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUBaseInfo.h"
-#include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPU.h"
-#include "SIDefines.h"
 #include "AMDGPUAsmUtils.h"
+#include "AMDGPUTargetTransformInfo.h"
+#include "SIDefines.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -20,6 +20,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"

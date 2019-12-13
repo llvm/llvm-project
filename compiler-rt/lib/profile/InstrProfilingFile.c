@@ -122,11 +122,23 @@ static uint32_t fileWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
                            uint32_t NumIOVecs) {
   uint32_t I;
   FILE *File = (FILE *)This->WriterCtx;
+  char Zeroes[sizeof(uint64_t)] = {0};
   for (I = 0; I < NumIOVecs; I++) {
     if (IOVecs[I].Data) {
       if (fwrite(IOVecs[I].Data, IOVecs[I].ElmSize, IOVecs[I].NumElm, File) !=
           IOVecs[I].NumElm)
         return 1;
+    } else if (IOVecs[I].UseZeroPadding) {
+      size_t BytesToWrite = IOVecs[I].ElmSize * IOVecs[I].NumElm;
+      while (BytesToWrite > 0) {
+        size_t PartialWriteLen =
+            (sizeof(uint64_t) > BytesToWrite) ? BytesToWrite : sizeof(uint64_t);
+        if (fwrite(Zeroes, sizeof(uint8_t), PartialWriteLen, File) !=
+            PartialWriteLen) {
+          return 1;
+        }
+        BytesToWrite -= PartialWriteLen;
+      }
     } else {
       if (fseek(File, IOVecs[I].ElmSize * IOVecs[I].NumElm, SEEK_CUR) == -1)
         return 1;

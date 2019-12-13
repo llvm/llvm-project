@@ -5,7 +5,6 @@ which chould be eStopReasonBreakpoint in general,
 and eStopReasonPlanComplete when breakpoint's condition fails.
 """
 
-from __future__ import print_function
 
 import unittest2
 import lldb

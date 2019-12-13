@@ -538,6 +538,7 @@ protected:
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__ELF__");
+    Builder.defineMacro("__SCE__");
     Builder.defineMacro("__ORBIS__");
   }
 

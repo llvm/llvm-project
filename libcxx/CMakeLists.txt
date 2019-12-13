@@ -518,19 +518,13 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
-  if(LIBCXX_HAS_MUSL_LIBC OR LIBCXX_TARGETING_CLANG_CL)
-    # musl's pthread implementations uses volatile types in their structs which
-    # is not a constexpr in C++11 but is in C++14, so we use C++14 with musl.
-    set_target_properties(${target} PROPERTIES
-      CXX_STANDARD 14
-      CXX_STANDARD_REQUIRED YES
-      CXX_EXTENSIONS NO)
-  else()
-    set_target_properties(${target} PROPERTIES
-      CXX_STANDARD 11
-      CXX_STANDARD_REQUIRED YES
-      CXX_EXTENSIONS NO)
-  endif()
+
+  # Require C++14 for all targets. C++14 is needed to ensure constant
+  # initialization for certain globals (ex global memory resources).
+  set_target_properties(${target} PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO)
 
   # On all systems the system c++ standard library headers need to be excluded.
   # MSVC only has -X, which disables all default includes; including the crt.

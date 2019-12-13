@@ -1,6 +1,5 @@
 """Test that the clang modules cache directory can be controlled."""
 
-from __future__ import print_function
 
 
 import unittest2
@@ -16,9 +15,6 @@ from lldbsuite.test import lldbutil
 class ObjCModulesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        TestBase.setUp(self)
 
     @skipUnlessDarwin
     def test_expr(self):

@@ -350,6 +350,20 @@ unsigned ELFState<ELFT>::toSymbolIndex(StringRef S, StringRef LocSec,
 }
 
 template <class ELFT>
+static void overrideFields(ELFYAML::Section *From, typename ELFT::Shdr &To) {
+  if (!From)
+    return;
+  if (From->ShFlags)
+    To.sh_flags = *From->ShFlags;
+  if (From->ShName)
+    To.sh_name = *From->ShName;
+  if (From->ShOffset)
+    To.sh_offset = *From->ShOffset;
+  if (From->ShSize)
+    To.sh_size = *From->ShSize;
+}
+
+template <class ELFT>
 bool ELFState<ELFT>::initImplicitHeader(ContiguousBlobAccumulator &CBA,
                                         Elf_Shdr &Header, StringRef SecName,
                                         ELFYAML::Section *YAMLSec) {
@@ -370,16 +384,8 @@ bool ELFState<ELFT>::initImplicitHeader(ContiguousBlobAccumulator &CBA,
   else
     return false;
 
-  // Override the fields if requested.
-  if (YAMLSec) {
-    if (YAMLSec->ShName)
-      Header.sh_name = *YAMLSec->ShName;
-    if (YAMLSec->ShOffset)
-      Header.sh_offset = *YAMLSec->ShOffset;
-    if (YAMLSec->ShSize)
-      Header.sh_size = *YAMLSec->ShSize;
-  }
-
+  // Override section fields if requested.
+  overrideFields<ELFT>(YAMLSec, Header);
   return true;
 }
 
@@ -484,15 +490,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       llvm_unreachable("Unknown section type");
     }
 
-    // Override the fields if requested.
-    if (Sec) {
-      if (Sec->ShName)
-        SHeader.sh_name = *Sec->ShName;
-      if (Sec->ShOffset)
-        SHeader.sh_offset = *Sec->ShOffset;
-      if (Sec->ShSize)
-        SHeader.sh_size = *Sec->ShSize;
-    }
+    // Override section fields if requested.
+    overrideFields<ELFT>(Sec, SHeader);
   }
 }
 

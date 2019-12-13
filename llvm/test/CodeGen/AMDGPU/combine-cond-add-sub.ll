@@ -130,14 +130,18 @@ bb:
 ; GCN-LABEL: {{^}}sub_sube_commuted:
 ; GCN-DAG: v_cmp_gt_u32_e{{32|64}} [[CC:[^,]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DAG: buffer_load_dword [[V:v[0-9]+]],
-; GCN: v_addc_u32_e32 [[ADDC:v[0-9]+]], vcc, v{{[0-9]+}}, v{{[0-9]+}}, [[CC]]
-; GCN: v_add_i32_e32 {{.*}}, 0x64, [[ADDC]]
+; GCN: v_cndmask_b32_e64 [[CCZEXT:v[0-9]+]], 0, 1, [[CC]]
+; GCN: v_sub_i32_e32 [[SUB:v[0-9]+]], vcc, [[CCZEXT]], v4
+; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, {{.*}}, [[SUB]]
+; GCN: v_add_i32_e32 {{.*}}, 0x64, [[ADD]]
 
 ; GFX9-LABEL: {{^}}sub_sube_commuted:
 ; GFX9-DAG: v_cmp_gt_u32_e{{32|64}} [[CC:[^,]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9-DAG: global_load_dword [[V:v[0-9]+]],
-; GFX9: v_addc_co_u32_e32 [[ADDC:v[0-9]+]], vcc, v{{[0-9]+}}, v{{[0-9]+}}, [[CC]]
-; GFX9: v_add_u32_e32 {{.*}}, 0x64, [[ADDC]]
+; GFX9-DAG: v_cndmask_b32_e64 [[CCZEXT:v[0-9]+]], 0, 1, [[CC]]
+; GFX9: v_sub_u32_e32 {{.*}}, [[CCZEXT]]
+; GFX9: v_add_u32_e32
+; GFX9: v_add_u32_e32 {{.*}}, 0x64,
 define amdgpu_kernel void @sub_sube_commuted(i32 addrspace(1)* nocapture %arg, i32 %a) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -312,9 +316,10 @@ bb:
 ; Check case where sub is commuted with zext
 ; GCN-LABEL: {{^}}sub_zext_setcc_commute:
 ; GCN: v_cmp_gt_u32_e32 vcc, v
-; GCN-NOT: vcc
-; GCN: v_addc_u32_e32 [[ADDC:v[0-9]+]], vcc, v{{[0-9]+}}, v{{[0-9]+}}, vcc
-; GCN: v_subrev_i32_e32 [[RESULT:v[0-9]+]], vcc, s{{[0-9]+}}, [[ADDC]]
+; GCN: v_cndmask
+; GCN: v_sub_i32_e32
+; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc,
+; GCN: v_subrev_i32_e32 [[RESULT:v[0-9]+]], vcc, s{{[0-9]+}}, [[ADD]]
 define amdgpu_kernel void @sub_zext_setcc_commute(i32 addrspace(1)* nocapture %arg, i32 %a, i32%b) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -333,9 +338,9 @@ bb:
 ; Check case where sub is commuted with sext
 ; GCN-LABEL: {{^}}sub_sext_setcc_commute:
 ; GCN: v_cmp_gt_u32_e32 vcc, v
-; GCN-NOT: vcc
-; GCN: v_subb_u32_e32 [[SUBB:v[0-9]+]], vcc, 0, v{{[0-9]+}}, vcc
-; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, s{{[0-9]+}}, [[SUBB]]
+; GCN: v_cndmask
+; GCN: v_sub_i32_e32
+; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc,
 ; GCN: v_subrev_i32_e32 [[RESULT:v[0-9]+]], vcc, s{{[0-9]+}}, [[ADD]]
 define amdgpu_kernel void @sub_sext_setcc_commute(i32 addrspace(1)* nocapture %arg, i32 %a, i32%b) {
 bb:

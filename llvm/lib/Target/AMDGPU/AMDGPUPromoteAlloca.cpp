@@ -37,6 +37,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -268,21 +270,21 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
 Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
   const AMDGPUSubtarget &ST =
       AMDGPUSubtarget::get(*TM, *Builder.GetInsertBlock()->getParent());
-  Intrinsic::ID IntrID = Intrinsic::ID::not_intrinsic;
+  Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
 
   switch (N) {
   case 0:
-    IntrID = IsAMDGCN ? Intrinsic::amdgcn_workitem_id_x
-      : Intrinsic::r600_read_tidig_x;
+    IntrID = IsAMDGCN ? (Intrinsic::ID)Intrinsic::amdgcn_workitem_id_x
+                      : (Intrinsic::ID)Intrinsic::r600_read_tidig_x;
     break;
   case 1:
-    IntrID = IsAMDGCN ? Intrinsic::amdgcn_workitem_id_y
-      : Intrinsic::r600_read_tidig_y;
+    IntrID = IsAMDGCN ? (Intrinsic::ID)Intrinsic::amdgcn_workitem_id_y
+                      : (Intrinsic::ID)Intrinsic::r600_read_tidig_y;
     break;
 
   case 2:
-    IntrID = IsAMDGCN ? Intrinsic::amdgcn_workitem_id_z
-      : Intrinsic::r600_read_tidig_z;
+    IntrID = IsAMDGCN ? (Intrinsic::ID)Intrinsic::amdgcn_workitem_id_z
+                      : (Intrinsic::ID)Intrinsic::r600_read_tidig_z;
     break;
   default:
     llvm_unreachable("invalid dimension");

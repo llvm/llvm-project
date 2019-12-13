@@ -43,7 +43,7 @@
 namespace llvm {
 
 namespace Intrinsic {
-enum ID : unsigned;
+typedef unsigned ID;
 }
 
 class AssemblyAnnotationWriter;

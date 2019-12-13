@@ -1656,6 +1656,8 @@ def fnoopenmp_relocatable_target : Flag<["-"], "fnoopenmp-relocatable-target">,
   Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fopenmp_simd : Flag<["-"], "fopenmp-simd">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
   HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
+def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
+  HelpText<"Use the experimental OpenMP-IR-Builder codegen path.">;
 def fno_openmp_simd : Flag<["-"], "fno-openmp-simd">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
 def fopenmp_cuda_mode : Flag<["-"], "fopenmp-cuda-mode">, Group<f_Group>,
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;

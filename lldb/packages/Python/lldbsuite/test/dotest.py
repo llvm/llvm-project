@@ -32,6 +32,7 @@ import re
 import signal
 import subprocess
 import sys
+import tempfile
 
 # Third-party modules
 import six
@@ -850,9 +851,15 @@ def canRunLibcxxTests():
         return True, "libc++ always present"
 
     if platform == "linux":
-        if not os.path.isdir("/usr/include/c++/v1"):
-            return False, "Unable to find libc++ installation"
-        return True, "Headers found, let's hope they work"
+        if os.path.isdir("/usr/include/c++/v1"):
+            return True, "Headers found, let's hope they work"
+        with tempfile.NamedTemporaryFile() as f:
+            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.name, "-"]
+            p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            _, stderr = p.communicate("#include <algorithm>\nint main() {}")
+            if not p.returncode:
+                return True, "Compiling with -stdlib=libc++ works"
+            return False, "Compiling with -stdlib=libc++ fails with the error: %s" % stderr
 
     return False, "Don't know how to build with libc++ on %s" % platform
 

@@ -15,6 +15,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
@@ -22,7 +23,7 @@
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
 
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
 #include "lldb/Host/Editline.h"
 #endif
 #include "lldb/Interpreter/CommandCompletions.h"
@@ -50,7 +51,6 @@ using namespace lldb_private;
 using llvm::None;
 using llvm::Optional;
 using llvm::StringRef;
-
 
 IOHandler::IOHandler(Debugger &debugger, IOHandler::Type type)
     : IOHandler(debugger, type,
@@ -234,7 +234,7 @@ IOHandlerEditline::IOHandlerEditline(
     IOHandlerDelegate &delegate, repro::DataRecorder *data_recorder)
     : IOHandler(debugger, type, input_sp, output_sp, error_sp, flags,
                 data_recorder),
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
       m_editline_up(),
 #endif
       m_delegate(delegate), m_prompt(), m_continuation_prompt(),
@@ -244,7 +244,7 @@ IOHandlerEditline::IOHandlerEditline(
       m_editing(false) {
   SetPrompt(prompt);
 
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   bool use_editline = false;
 
   use_editline = GetInputFILE() && GetOutputFILE() && GetErrorFILE() &&
@@ -272,7 +272,7 @@ IOHandlerEditline::IOHandlerEditline(
 }
 
 IOHandlerEditline::~IOHandlerEditline() {
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   m_editline_up.reset();
 #endif
 }
@@ -308,7 +308,7 @@ static Optional<std::string> SplitLineEOF(std::string &line_buffer) {
 }
 
 bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
     bool b = m_editline_up->GetLine(line, interrupted);
     if (b && m_data_recorder)
@@ -402,7 +402,7 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
   return (bool)got_line;
 }
 
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
 bool IOHandlerEditline::IsInputCompleteCallback(Editline *editline,
                                                 StringList &lines,
                                                 void *baton) {
@@ -429,14 +429,14 @@ void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request,
 #endif
 
 const char *IOHandlerEditline::GetPrompt() {
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
     return m_editline_up->GetPrompt();
   } else {
 #endif
     if (m_prompt.empty())
       return nullptr;
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   }
 #endif
   return m_prompt.c_str();
@@ -445,7 +445,7 @@ const char *IOHandlerEditline::GetPrompt() {
 bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
   m_prompt = prompt;
 
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up)
     m_editline_up->SetPrompt(m_prompt.empty() ? nullptr : m_prompt.c_str());
 #endif
@@ -460,7 +460,7 @@ const char *IOHandlerEditline::GetContinuationPrompt() {
 void IOHandlerEditline::SetContinuationPrompt(llvm::StringRef prompt) {
   m_continuation_prompt = prompt;
 
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up)
     m_editline_up->SetContinuationPrompt(m_continuation_prompt.empty()
                                              ? nullptr
@@ -473,7 +473,7 @@ void IOHandlerEditline::SetBaseLineNumber(uint32_t line) {
 }
 
 uint32_t IOHandlerEditline::GetCurrentLineIndex() const {
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up)
     return m_editline_up->GetCurrentLine();
 #endif
@@ -484,7 +484,7 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
   m_current_lines_ptr = &lines;
 
   bool success = false;
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
     return m_editline_up->GetLines(m_base_line_number, lines, interrupted);
   } else {
@@ -514,7 +514,7 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
       }
     }
     success = lines.GetSize() > 0;
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   }
 #endif
   return success;
@@ -554,7 +554,7 @@ void IOHandlerEditline::Run() {
 }
 
 void IOHandlerEditline::Cancel() {
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up)
     m_editline_up->Cancel();
 #endif
@@ -565,7 +565,7 @@ bool IOHandlerEditline::Interrupt() {
   if (m_delegate.IOHandlerInterrupt(*this))
     return true;
 
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up)
     return m_editline_up->Interrupt();
 #endif
@@ -573,14 +573,14 @@ bool IOHandlerEditline::Interrupt() {
 }
 
 void IOHandlerEditline::GotEOF() {
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up)
     m_editline_up->Interrupt();
 #endif
 }
 
 void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
-#ifndef LLDB_DISABLE_LIBEDIT
+#if LLDB_ENABLE_LIBEDIT
   if (m_editline_up)
     m_editline_up->PrintAsync(stream, s, len);
   else

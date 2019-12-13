@@ -84,8 +84,6 @@ ClangExpressionDeclMap::~ClangExpressionDeclMap() {
 
 bool ClangExpressionDeclMap::WillParse(ExecutionContext &exe_ctx,
                                        Materializer *materializer) {
-  ClangASTMetrics::ClearLocalCounters();
-
   EnableParserVars();
   m_parser_vars->m_exe_ctx = exe_ctx;
 
@@ -110,7 +108,7 @@ bool ClangExpressionDeclMap::WillParse(ExecutionContext &exe_ctx,
     m_parser_vars->m_persistent_vars = llvm::cast<ClangPersistentVariables>(
         target->GetPersistentExpressionStateForLanguage(eLanguageTypeC));
 
-    if (!target->GetScratchClangASTContext())
+    if (!ClangASTContext::GetScratch(*target))
       return false;
   }
 
@@ -127,11 +125,6 @@ void ClangExpressionDeclMap::InstallCodeGenerator(
 }
 
 void ClangExpressionDeclMap::DidParse() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
-  if (log)
-    ClangASTMetrics::DumpCounters(log);
-
   if (m_parser_vars) {
     for (size_t entity_index = 0, num_entities = m_found_entities.GetSize();
          entity_index < num_entities; ++entity_index) {
@@ -208,7 +201,7 @@ static clang::QualType ExportAllDeclaredTypes(
 TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
                                                 ClangASTContext &source,
                                                 TypeFromParser parser_type) {
-  assert(&target == m_target->GetScratchClangASTContext());
+  assert(&target == ClangASTContext::GetScratch(*m_target));
   assert((TypeSystem *)&source == parser_type.GetTypeSystem());
   assert(source.getASTContext() == m_ast_context);
 
@@ -222,7 +215,7 @@ TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
         source.getASTContext()->getSourceManager().getFileID(
             source.getASTContext()->getTranslationUnitDecl()->getLocation());
     auto scratch_ast_context = static_cast<ClangASTContextForExpressions *>(
-        m_target->GetScratchClangASTContext());
+        ClangASTContext::GetScratch(*m_target));
     clang::QualType exported_type = ExportAllDeclaredTypes(
         *m_merger_up.get(), scratch_ast_context->GetMergerUnchecked(),
         *source.getASTContext(), *source.getFileManager(),
@@ -255,8 +248,11 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
     if (target == nullptr)
       return false;
 
-    TypeFromUser user_type =
-        DeportType(*target->GetScratchClangASTContext(), *ast, parser_type);
+    auto *clang_ast_context = ClangASTContext::GetScratch(*target);
+    if (!clang_ast_context)
+      return false;
+
+    TypeFromUser user_type = DeportType(*clang_ast_context, *ast, parser_type);
 
     uint32_t offset = m_parser_vars->m_materializer->AddResultVariable(
         user_type, is_lvalue, m_keep_result_in_memory, m_result_delegate, err);
@@ -291,7 +287,9 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
   if (target == nullptr)
     return false;
 
-  ClangASTContext *context(target->GetScratchClangASTContext());
+  ClangASTContext *context = ClangASTContext::GetScratch(*target);
+  if (!context)
+    return false;
 
   TypeFromUser user_type = DeportType(*context, *ast, parser_type);
 
@@ -685,8 +683,6 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context) {
   assert(m_ast_context);
 
-  ClangASTMetrics::RegisterVisibleQuery();
-
   const ConstString name(context.m_decl_name.getAsString().c_str());
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -786,7 +782,7 @@ void ClangExpressionDeclMap::SearchPersistenDecls(NameSearchContext &context,
     return;
 
   ClangASTContext *scratch_clang_ast_context =
-      target->GetScratchClangASTContext();
+      ClangASTContext::GetScratch(*target);
 
   if (!scratch_clang_ast_context)
     return;
@@ -1723,7 +1719,9 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   if (target == nullptr)
     return;
 
-  ClangASTContext *scratch_ast_context = target->GetScratchClangASTContext();
+  ClangASTContext *scratch_ast_context = ClangASTContext::GetScratch(*target);
+  if (!scratch_ast_context)
+    return;
 
   TypeFromUser user_type(scratch_ast_context->GetBasicType(eBasicTypeVoid)
                              .GetPointerType()

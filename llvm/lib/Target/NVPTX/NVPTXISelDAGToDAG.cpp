@@ -11,11 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXISelDAGToDAG.h"
-#include "NVPTXUtilities.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
+#include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"

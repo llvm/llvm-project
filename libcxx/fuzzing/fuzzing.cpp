@@ -27,11 +27,21 @@
 #include <algorithm>
 #include <functional>
 #include <regex>
+#include <random>
 #include <cassert>
+#include <cmath>
 
 #include <iostream>
 
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+#include <cassert>
 //  If we had C++14, we could use the four iterator version of is_permutation and equal
+
+#ifndef _LIBCPP_VERSION
+#error These test should be built with libc++ only.
+#endif
 
 namespace fuzzing {
 
@@ -212,7 +222,7 @@ int partition_copy(const uint8_t *data, size_t size)
     auto iter = std::partition_copy(data, data + size,
         std::back_inserter<Vec>(v1), std::back_inserter<Vec>(v2),
         is_even<uint8_t>());
-
+  ((void)iter);
 //  The two vectors should add up to the original size
     if (v1.size() + v2.size() != size) return 1;
 
@@ -451,6 +461,7 @@ static int regex_helper(const uint8_t *data, size_t size, std::regex::flag_type 
 {
     if (size > 0)
     {
+#ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
             std::string s((const char *)data, size);
@@ -458,6 +469,11 @@ static int regex_helper(const uint8_t *data, size_t size, std::regex::flag_type 
             return std::regex_match(s, re) ? 1 : 0;
         }
         catch (std::regex_error &ex) {}
+#else
+      ((void)data);
+      ((void)size);
+      ((void)flag);
+#endif
     }
     return 0;
 }
@@ -613,5 +629,218 @@ static void set_helper (const uint8_t *data, size_t size, Vec &v1, Vec &v2)
     std::sort(v1.begin(), v1.end());
     std::sort(v2.begin(), v2.end());
 }
+
+enum class ParamKind {
+  OneValue,
+  TwoValues,
+  PointerRange
+};
+
+template <class IntT>
+std::vector<IntT> GetValues(const uint8_t *data, size_t size) {
+  std::vector<IntT> result;
+  while (size >= sizeof(IntT)) {
+    IntT tmp;
+    memcpy(&tmp, data, sizeof(IntT));
+    size -= sizeof(IntT);
+    data += sizeof(IntT);
+    result.push_back(tmp);
+  }
+  return result;
+}
+
+enum InitKind {
+  Default,
+  DoubleOnly,
+  VectorDouble,
+  VectorResultType
+};
+
+
+
+template <class Dist>
+struct ParamTypeHelper {
+  using ParamT = typename Dist::param_type;
+  using ResultT = typename Dist::result_type;
+  static_assert(std::is_same<ResultT, typename ParamT::distribution_type::result_type>::value, "");
+  static  ParamT Create(const uint8_t* data, size_t size, bool &OK) {
+
+    constexpr bool select_vector_result = std::is_constructible<ParamT, ResultT*, ResultT*, ResultT*>::value;
+    constexpr bool select_vector_double = std::is_constructible<ParamT, double*, double*>::value;
+    constexpr int selector = select_vector_result ? 0 : (select_vector_double ? 1 : 2);
+    return DispatchAndCreate(std::integral_constant<int, selector>{}, data, size, OK);
+
+  }
+
+  static ParamT DispatchAndCreate(std::integral_constant<int, 0>, const uint8_t *data, size_t size, bool &OK) {
+    return CreateVectorResult(data, size, OK);
+  }
+  static ParamT DispatchAndCreate(std::integral_constant<int, 1>, const uint8_t *data, size_t size, bool &OK) {
+    return CreateVectorDouble(data, size, OK);
+  }
+  static ParamT DispatchAndCreate(std::integral_constant<int, 2>, const uint8_t *data, size_t size, bool &OK) {
+    return CreateDefault(data, size, OK);
+  }
+
+static ParamT
+CreateVectorResult(const uint8_t *data, size_t size, bool &OK) {
+  auto Input = GetValues<ResultT>(data, size);
+  OK = false;
+  if (Input.size() < 10)
+    return ParamT{};
+  OK = true;
+  auto Beg = Input.begin();
+  auto End = Input.end();
+  auto Mid = Beg + ((End - Beg) / 2);
+
+  assert(Mid - Beg <= (End  -  Mid));
+  ParamT p(Beg, Mid, Mid);
+  return p;
+}
+
+  static ParamT
+  CreateVectorDouble(const uint8_t *data, size_t size, bool &OK) {
+    auto Input = GetValues<double>(data, size);
+
+    OK = true;
+    auto Beg = Input.begin();
+    auto End = Input.end();
+
+    ParamT p(Beg, End);
+    return p;
+  }
+
+
+  static ParamT
+  CreateDefault(const uint8_t *data, size_t size, bool &OK) {
+    OK = false;
+    if (size < sizeof(ParamT))
+      return ParamT{};
+    OK = true;
+    ParamT input;
+    memcpy(&input, data, sizeof(ParamT));
+    return input;
+  }
+
+};
+
+
+
+
+template <class IntT>
+struct ParamTypeHelper<std::poisson_distribution<IntT>> {
+    using Dist = std::poisson_distribution<IntT>;
+      using ParamT = typename Dist::param_type;
+    using ResultT = typename Dist::result_type;
+
+     static ParamT Create(const uint8_t *data, size_t size, bool& OK) {
+        OK = false;
+        auto vals = GetValues<double>(data, size);
+        if (vals.empty() || std::isnan(vals[0]) || std::isnan(std::abs(vals[0])) || vals[0] < 0 )
+          return ParamT{};
+        OK = true;
+        //std::cerr << "Value: " << vals[0] << std::endl;
+        return ParamT{vals[0]};
+     }
+};
+
+
+template <class IntT>
+struct ParamTypeHelper<std::geometric_distribution<IntT>> {
+    using Dist = std::geometric_distribution<IntT>;
+      using ParamT = typename Dist::param_type;
+    using ResultT = typename Dist::result_type;
+
+     static ParamT Create(const uint8_t *data, size_t size, bool& OK) {
+        OK = false;
+        auto vals = GetValues<double>(data, size);
+        if (vals.empty() || std::isnan(vals[0]) || vals[0] < 0 )
+          return ParamT{};
+        OK = true;
+       // std::cerr << "Value: " << vals[0] << std::endl;
+        return ParamT{vals[0]};
+     }
+};
+
+
+template <class IntT>
+struct ParamTypeHelper<std::lognormal_distribution<IntT>> {
+    using Dist = std::lognormal_distribution<IntT>;
+      using ParamT = typename Dist::param_type;
+    using ResultT = typename Dist::result_type;
+
+     static ParamT Create(const uint8_t *data, size_t size, bool& OK) {
+        OK = false;
+        auto vals = GetValues<ResultT>(data, size);
+        if (vals.size() < 2 )
+          return ParamT{};
+        OK = true;
+        return ParamT{vals[0], vals[1]};
+     }
+};
+
+
+template <>
+struct ParamTypeHelper<std::bernoulli_distribution> {
+    using Dist = std::bernoulli_distribution;
+      using ParamT = typename Dist::param_type;
+    using ResultT = typename Dist::result_type;
+
+     static ParamT Create(const uint8_t *data, size_t size, bool& OK) {
+        OK = false;
+        auto vals = GetValues<double>(data, size);
+        if (vals.empty())
+          return ParamT{};
+        OK = true;
+        return ParamT{vals[0]};
+     }
+};
+
+template <class Distribution>
+int random_distribution_helper(const uint8_t *data, size_t size) {
+
+  std::mt19937 engine;
+  using ParamT = typename Distribution::param_type;
+  bool OK;
+  ParamT p = ParamTypeHelper<Distribution>::Create(data, size, OK);
+  if (!OK)
+    return 0;
+  Distribution d(p);
+  volatile auto res = d(engine);
+  if (std::isnan(res)) {
+    // FIXME(llvm.org/PR44289):
+    // Investigate why these distributions are returning NaN and decide
+    // if that's what we want them to be doing.
+    //
+    // Make this assert false (or return non-zero).
+    return 0;
+  }
+  return 0;
+}
+
+#define DEFINE_RANDOM_TEST(name, ...) \
+int name(const uint8_t *data, size_t size) { \
+  return random_distribution_helper< std::name __VA_ARGS__ >(data, size); \
+}
+DEFINE_RANDOM_TEST(uniform_int_distribution,<std::int16_t>)
+DEFINE_RANDOM_TEST(uniform_real_distribution,<float>)
+DEFINE_RANDOM_TEST(bernoulli_distribution)
+DEFINE_RANDOM_TEST(poisson_distribution,<std::int16_t>)
+DEFINE_RANDOM_TEST(geometric_distribution,<std::int16_t>)
+DEFINE_RANDOM_TEST(binomial_distribution, <std::int16_t>)
+DEFINE_RANDOM_TEST(negative_binomial_distribution, <std::int16_t>)
+DEFINE_RANDOM_TEST(exponential_distribution, <float>)
+DEFINE_RANDOM_TEST(gamma_distribution, <float>)
+DEFINE_RANDOM_TEST(weibull_distribution, <float>)
+DEFINE_RANDOM_TEST(extreme_value_distribution, <float>)
+DEFINE_RANDOM_TEST(normal_distribution, <float>)
+DEFINE_RANDOM_TEST(lognormal_distribution, <float>)
+DEFINE_RANDOM_TEST(chi_squared_distribution, <float>)
+DEFINE_RANDOM_TEST(cauchy_distribution, <float>)
+DEFINE_RANDOM_TEST(fisher_f_distribution, <float>)
+DEFINE_RANDOM_TEST(student_t_distribution, <float>)
+DEFINE_RANDOM_TEST(discrete_distribution, <std::int16_t>)
+DEFINE_RANDOM_TEST(piecewise_constant_distribution, <float>)
+DEFINE_RANDOM_TEST(piecewise_linear_distribution, <float>)
 
 } // namespace fuzzing

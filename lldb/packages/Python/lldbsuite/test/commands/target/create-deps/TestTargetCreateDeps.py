@@ -3,7 +3,6 @@ Test that loading of dependents works correctly for all the potential
 combinations.
 """
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test.decorators import *

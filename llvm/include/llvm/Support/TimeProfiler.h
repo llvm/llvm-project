@@ -14,7 +14,8 @@
 namespace llvm {
 
 struct TimeTraceProfiler;
-extern TimeTraceProfiler *TimeTraceProfilerInstance;
+extern thread_local std::unique_ptr<TimeTraceProfiler>
+    TimeTraceProfilerInstance;
 
 /// Initialize the time trace profiler.
 /// This sets up the global \p TimeTraceProfilerInstance
@@ -24,6 +25,9 @@ void timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
 
 /// Cleanup the time trace profiler, if it was initialized.
 void timeTraceProfilerCleanup();
+
+/// Finish a time trace profiler running on a worker thread.
+void timeTraceProfilerFinishThread();
 
 /// Is the time trace profiler enabled, i.e. initialized?
 inline bool timeTraceProfilerEnabled() {

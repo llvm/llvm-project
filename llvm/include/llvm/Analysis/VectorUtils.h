@@ -252,7 +252,7 @@ class Type;
 class Value;
 
 namespace Intrinsic {
-enum ID : unsigned;
+typedef unsigned ID;
 }
 
 /// Identify if the intrinsic is trivially vectorizable.

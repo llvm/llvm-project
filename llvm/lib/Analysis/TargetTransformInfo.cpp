@@ -462,16 +462,16 @@ int TargetTransformInfo::getIntImmCost(const APInt &Imm, Type *Ty) const {
   return Cost;
 }
 
-int TargetTransformInfo::getIntImmCost(unsigned Opcode, unsigned Idx,
-                                       const APInt &Imm, Type *Ty) const {
-  int Cost = TTIImpl->getIntImmCost(Opcode, Idx, Imm, Ty);
+int TargetTransformInfo::getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                           const APInt &Imm, Type *Ty) const {
+  int Cost = TTIImpl->getIntImmCostInst(Opcode, Idx, Imm, Ty);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
-int TargetTransformInfo::getIntImmCost(Intrinsic::ID IID, unsigned Idx,
-                                       const APInt &Imm, Type *Ty) const {
-  int Cost = TTIImpl->getIntImmCost(IID, Idx, Imm, Ty);
+int TargetTransformInfo::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                             const APInt &Imm, Type *Ty) const {
+  int Cost = TTIImpl->getIntImmCostIntrin(IID, Idx, Imm, Ty);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

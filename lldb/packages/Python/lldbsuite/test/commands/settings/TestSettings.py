@@ -2,7 +2,6 @@
 Test lldb settings command.
 """
 
-from __future__ import print_function
 
 
 import os

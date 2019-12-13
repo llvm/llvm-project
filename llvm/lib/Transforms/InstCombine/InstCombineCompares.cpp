@@ -5386,6 +5386,36 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
   return nullptr;
 }
 
+// extract(uadd.with.overflow(A, B), 0) ult A
+//  -> extract(uadd.with.overflow(A, B), 1)
+static Instruction *foldICmpOfUAddOv(ICmpInst &I) {
+  CmpInst::Predicate Pred = I.getPredicate();
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+
+  Value *UAddOv;
+  Value *A, *B;
+  auto UAddOvResultPat = m_ExtractValue<0>(
+      m_Intrinsic<Intrinsic::uadd_with_overflow>(m_Value(A), m_Value(B)));
+  if (match(Op0, UAddOvResultPat) &&
+      ((Pred == ICmpInst::ICMP_ULT && (Op1 == A || Op1 == B)) ||
+       (Pred == ICmpInst::ICMP_EQ && match(Op1, m_ZeroInt()) &&
+        (match(A, m_One()) || match(B, m_One()))) ||
+       (Pred == ICmpInst::ICMP_NE && match(Op1, m_AllOnes()) &&
+        (match(A, m_AllOnes()) || match(B, m_AllOnes())))))
+    // extract(uadd.with.overflow(A, B), 0) < A
+    // extract(uadd.with.overflow(A, 1), 0) == 0
+    // extract(uadd.with.overflow(A, -1), 0) != -1
+    UAddOv = cast<ExtractValueInst>(Op0)->getAggregateOperand();
+  else if (match(Op1, UAddOvResultPat) &&
+           Pred == ICmpInst::ICMP_UGT && (Op0 == A || Op0 == B))
+    // A > extract(uadd.with.overflow(A, B), 0)
+    UAddOv = cast<ExtractValueInst>(Op1)->getAggregateOperand();
+  else
+    return nullptr;
+
+  return ExtractValueInst::Create(UAddOv, 1);
+}
+
 Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
@@ -5572,6 +5602,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   }
 
   if (Instruction *Res = foldICmpEquality(I))
+    return Res;
+
+  if (Instruction *Res = foldICmpOfUAddOv(I))
     return Res;
 
   // The 'cmpxchg' instruction returns an aggregate containing the old value and

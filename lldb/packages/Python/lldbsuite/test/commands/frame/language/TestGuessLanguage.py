@@ -2,7 +2,6 @@
 Test the SB API SBFrame::GuessLanguage.
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -26,10 +25,6 @@ class TestFrameGuessLanguage(TestBase):
         """Test GuessLanguage for C and C++."""
         self.build()
         self.do_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def check_language(self, thread, frame_no, test_lang):
         frame = thread.frames[frame_no]

@@ -29,7 +29,7 @@ main()
   outVal = takeTrivial(inVal);
 
   S_NotTrivial inNotVal, outNotVal;
-  outNotVal = takeNotTrivial(outNotVal);
+  outNotVal = takeNotTrivial(inNotVal);
 
   return 0; // Set another for return value
 }

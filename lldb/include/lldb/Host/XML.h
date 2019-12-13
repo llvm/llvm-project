@@ -9,7 +9,9 @@
 #ifndef liblldb_XML_h_
 #define liblldb_XML_h_
 
-#if defined(LIBXML2_DEFINED)
+#include "lldb/Host/Config.h"
+
+#if LLDB_ENABLE_LIBXML2
 #include <libxml/xmlreader.h>
 #endif
 
@@ -25,7 +27,7 @@
 
 namespace lldb_private {
 
-#if defined(LIBXML2_DEFINED)
+#if LLDB_ENABLE_LIBXML2
 typedef xmlNodePtr XMLNodeImpl;
 typedef xmlDocPtr XMLDocumentImpl;
 #else

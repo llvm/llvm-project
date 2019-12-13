@@ -2,7 +2,6 @@
 Test that we can have persistent pointer variables
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -13,10 +12,6 @@ from lldbsuite.test.lldbtest import *
 class PersistentPtrUpdateTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def test(self):
         """Test that we can have persistent pointer variables"""

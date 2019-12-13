@@ -94,6 +94,12 @@ void WebAssemblyTargetAsmStreamer::emitImportName(const MCSymbolWasm *Sym,
                            << ImportName << '\n';
 }
 
+void WebAssemblyTargetAsmStreamer::emitExportName(const MCSymbolWasm *Sym,
+                                                  StringRef ExportName) {
+  OS << "\t.export_name\t" << Sym->getName() << ", "
+                           << ExportName << '\n';
+}
+
 void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {
   OS << "\t.indidx  \t" << *Value << '\n';
 }

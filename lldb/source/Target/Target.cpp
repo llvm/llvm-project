@@ -2258,20 +2258,6 @@ Target::GetUtilityFunctionForLanguage(const char *text,
   return utility_fn;
 }
 
-ClangASTContext *Target::GetScratchClangASTContext(bool create_on_demand) {
-  if (!m_valid)
-    return nullptr;
-
-  auto type_system_or_err =
-          GetScratchTypeSystemForLanguage(eLanguageTypeC, create_on_demand);
-  if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
-                   std::move(err), "Couldn't get scratch ClangASTContext");
-    return nullptr;
-  }
-  return llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
-}
-
 ClangASTImporterSP Target::GetClangASTImporter() {
   if (m_valid) {
     if (!m_ast_importer_sp) {

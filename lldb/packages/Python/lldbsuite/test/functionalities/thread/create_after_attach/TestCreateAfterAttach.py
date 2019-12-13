@@ -2,7 +2,6 @@
 Test thread creation after process attach.
 """
 
-from __future__ import print_function
 
 
 import lldb

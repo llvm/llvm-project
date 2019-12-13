@@ -42,8 +42,8 @@ WebAssembly-specific options:
 .. option:: --export-dynamic
 
   When building an executable, export any non-hidden symbols.  By default only
-  the entry point and any symbols marked with --export/--export-all are
-  exported.
+  the entry point and any symbols marked as exports (either via the command line
+  or via the `export-name` source attribute) are exported.
 
 .. option:: --global-base=<value>
 
@@ -116,16 +116,18 @@ Imports and Exports
 ~~~~~~~~~~~~~~~~~~~
 
 When building a shared library any symbols marked as ``visibility=default`` will
-be exported.  When building an executable, only the entry point and symbols
-flagged as ``WASM_SYMBOL_EXPORTED`` are exported by default.  In LLVM the
-``WASM_SYMBOL_EXPORTED`` flag is applied to any symbol in the ``llvm.used`` list
-which corresponds to ``__attribute__((used))`` in C/C++ sources.
+be exported.
+
+When building an executable, only the entry point (``_start``) and symbols with
+the ``WASM_SYMBOL_EXPORTED`` flag are exported by default.  In LLVM the
+``WASM_SYMBOL_EXPORTED`` flag is set by the ``wasm-export-name`` attribute which
+in turn can be set using ``__attribute__((export_name))`` clang attribute.
 
 In addition, symbols can be exported via the linker command line using
 ``--export``.
 
 Finally, just like with native ELF linker the ``--export-dynamic`` flag can be
-used to export symbol in the executable which are marked as
+used to export symbols in the executable which are marked as
 ``visibility=default``.
 
 Garbage Collection

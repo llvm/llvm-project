@@ -2,7 +2,6 @@
 Test my first lldb watchpoint.
 """
 
-from __future__ import print_function
 
 
 import lldb

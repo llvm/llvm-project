@@ -15,13 +15,13 @@ test:
 .Ltmp1:
   jr  $t9
   nop
-# WARNING-MESSAGE: warning: found R_MIPS_JALR relocation against non-function symbol tls_obj. This is invalid and most likely a compiler bug.
+# WARNING-MESSAGE: warning: {{.+}}.tmp.o:(.text+0x0): found R_MIPS_JALR relocation against non-function symbol tls_obj. This is invalid and most likely a compiler bug.
 
   .reloc .Ltmp2, R_MIPS_JALR, reg_obj
 .Ltmp2:
   jr  $t9
   nop
-# WARNING-MESSAGE: warning: found R_MIPS_JALR relocation against non-function symbol reg_obj. This is invalid and most likely a compiler bug.
+# WARNING-MESSAGE: warning: {{.+}}.tmp.o:(.text+0x8): found R_MIPS_JALR relocation against non-function symbol reg_obj. This is invalid and most likely a compiler bug.
 
   .reloc .Ltmp3, R_MIPS_JALR, untyped
 .Ltmp3:

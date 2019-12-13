@@ -2,7 +2,6 @@
 Test that we can hit breakpoints in global constructors
 """
 
-from __future__ import print_function
 
 
 import lldb

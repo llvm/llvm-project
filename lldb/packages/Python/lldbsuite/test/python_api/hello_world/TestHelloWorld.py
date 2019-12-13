@@ -1,6 +1,5 @@
 """Test Python APIs for target (launch and attach), breakpoint, and process."""
 
-from __future__ import print_function
 
 
 import os

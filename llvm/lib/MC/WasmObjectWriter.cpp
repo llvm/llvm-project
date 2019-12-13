@@ -1324,6 +1324,14 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
           Comdats[C->getName()].emplace_back(
               WasmComdatEntry{wasm::WASM_COMDAT_FUNCTION, Index});
         }
+
+        if (WS.hasExportName()) {
+          wasm::WasmExport Export;
+          Export.Name = WS.getExportName();
+          Export.Kind = wasm::WASM_EXTERNAL_FUNCTION;
+          Export.Index = Index;
+          Exports.push_back(Export);
+        }
       } else {
         // An import; the index was assigned above.
         Index = WasmIndices.find(&WS)->second;
@@ -1454,6 +1462,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
     }
     if (WS.hasImportName())
       Flags |= wasm::WASM_SYMBOL_EXPLICIT_NAME;
+    if (WS.hasExportName())
+      Flags |= wasm::WASM_SYMBOL_EXPORTED;
 
     wasm::WasmSymbolInfo Info;
     Info.Name = WS.getName();

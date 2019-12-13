@@ -10,7 +10,6 @@ until exit or a crash takes place, and the number of events seen by LLDB is
 verified to match the expected number of events.
 """
 
-from __future__ import print_function
 
 
 import unittest2

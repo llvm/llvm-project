@@ -283,12 +283,12 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
       int MatCost = IncomingConstantAndCostsAndCount.second.MatCost;
       int &FoldedCost = IncomingConstantAndCostsAndCount.second.FoldedCost;
       if (IID)
-        FoldedCost += TTI.getIntImmCost(IID, Idx, IncomingC->getValue(),
-                                        IncomingC->getType());
+        FoldedCost += TTI.getIntImmCostIntrin(IID, Idx, IncomingC->getValue(),
+                                              IncomingC->getType());
       else
         FoldedCost +=
-            TTI.getIntImmCost(UserI->getOpcode(), Idx, IncomingC->getValue(),
-                              IncomingC->getType());
+            TTI.getIntImmCostInst(UserI->getOpcode(), Idx,
+                                  IncomingC->getValue(), IncomingC->getType());
 
       // If we accumulate more folded cost for this incoming constant than
       // materialized cost, then we'll regress any edge with this constant so

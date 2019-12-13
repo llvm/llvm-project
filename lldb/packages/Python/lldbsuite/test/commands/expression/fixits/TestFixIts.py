@@ -2,7 +2,6 @@
 Test calling an expression with errors that a FixIt can fix.
 """
 
-from __future__ import print_function
 
 
 import lldb

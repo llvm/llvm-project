@@ -648,6 +648,11 @@ namespace clang {
 
     Expected<FunctionDecl *> FindFunctionTemplateSpecialization(
         FunctionDecl *FromFD);
+
+    // Returns true if the given function has a placeholder return type and
+    // that type is declared inside the body of the function.
+    // E.g. auto f() { struct X{}; return X(); }
+    bool hasAutoReturnTypeDeclaredInside(FunctionDecl *D);
   };
 
 template <typename InContainerTy>
@@ -1547,6 +1552,10 @@ Error ASTNodeImporter::ImportDeclParts(
     DeclarationName &Name, NamedDecl *&ToD, SourceLocation &Loc) {
   // Check if RecordDecl is in FunctionDecl parameters to avoid infinite loop.
   // example: int struct_in_proto(struct data_t{int a;int b;} *d);
+  // FIXME: We could support these constructs by importing a different type of
+  // this parameter and by importing the original type of the parameter only
+  // after the FunctionDecl is created. See
+  // VisitFunctionDecl::UsedDifferentProtoType.
   DeclContext *OrigDC = D->getDeclContext();
   FunctionDecl *FunDecl;
   if (isa<RecordDecl>(D) && (FunDecl = dyn_cast<FunctionDecl>(OrigDC)) &&
@@ -3005,6 +3014,46 @@ Error ASTNodeImporter::ImportFunctionDeclBody(FunctionDecl *FromFD,
   return Error::success();
 }
 
+// Returns true if the given D has a DeclContext up to the TranslationUnitDecl
+// which is equal to the given DC.
+bool isAncestorDeclContextOf(const DeclContext *DC, const Decl *D) {
+  const DeclContext *DCi = D->getDeclContext();
+  while (DCi != D->getTranslationUnitDecl()) {
+    if (DCi == DC)
+      return true;
+    DCi = DCi->getParent();
+  }
+  return false;
+}
+
+bool ASTNodeImporter::hasAutoReturnTypeDeclaredInside(FunctionDecl *D) {
+  QualType FromTy = D->getType();
+  const FunctionProtoType *FromFPT = FromTy->getAs<FunctionProtoType>();
+  assert(FromFPT && "Must be called on FunctionProtoType");
+  if (AutoType *AutoT = FromFPT->getReturnType()->getContainedAutoType()) {
+    QualType DeducedT = AutoT->getDeducedType();
+    if (const RecordType *RecordT =
+            DeducedT.isNull() ? nullptr : dyn_cast<RecordType>(DeducedT)) {
+      RecordDecl *RD = RecordT->getDecl();
+      assert(RD);
+      if (isAncestorDeclContextOf(D, RD)) {
+        assert(RD->getLexicalDeclContext() == RD->getDeclContext());
+        return true;
+      }
+    }
+  }
+  if (const TypedefType *TypedefT =
+          dyn_cast<TypedefType>(FromFPT->getReturnType())) {
+    TypedefNameDecl *TD = TypedefT->getDecl();
+    assert(TD);
+    if (isAncestorDeclContextOf(D, TD)) {
+      assert(TD->getLexicalDeclContext() == TD->getDeclContext());
+      return true;
+    }
+  }
+  return false;
+}
+
 ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
 
   SmallVector<Decl *, 2> Redecls = getCanonicalForwardRedeclChain(D);
@@ -3128,22 +3177,37 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     return std::move(Err);
 
   QualType FromTy = D->getType();
-  bool usedDifferentExceptionSpec = false;
-
-  if (const auto *FromFPT = D->getType()->getAs<FunctionProtoType>()) {
+  // Set to true if we do not import the type of the function as is. There are
+  // cases when the original type would result in an infinite recursion during
+  // the import. To avoid an infinite recursion when importing, we create the
+  // FunctionDecl with a simplified function type and update it only after the
+  // relevant AST nodes are already imported.
+  bool UsedDifferentProtoType = false;
+  if (const auto *FromFPT = FromTy->getAs<FunctionProtoType>()) {
+    QualType FromReturnTy = FromFPT->getReturnType();
+    // Functions with auto return type may define a struct inside their body
+    // and the return type could refer to that struct.
+    // E.g.: auto foo() { struct X{}; return X(); }
+    // To avoid an infinite recursion when importing, create the FunctionDecl
+    // with a simplified return type.
+    if (hasAutoReturnTypeDeclaredInside(D)) {
+      FromReturnTy = Importer.getFromContext().VoidTy;
+      UsedDifferentProtoType = true;
+    }
     FunctionProtoType::ExtProtoInfo FromEPI = FromFPT->getExtProtoInfo();
     // FunctionProtoType::ExtProtoInfo's ExceptionSpecDecl can point to the
     // FunctionDecl that we are importing the FunctionProtoType for.
     // To avoid an infinite recursion when importing, create the FunctionDecl
-    // with a simplified function type and update it afterwards.
+    // with a simplified function type.
     if (FromEPI.ExceptionSpec.SourceDecl ||
         FromEPI.ExceptionSpec.SourceTemplate ||
         FromEPI.ExceptionSpec.NoexceptExpr) {
       FunctionProtoType::ExtProtoInfo DefaultEPI;
-      FromTy = Importer.getFromContext().getFunctionType(
-          FromFPT->getReturnType(), FromFPT->getParamTypes(), DefaultEPI);
-      usedDifferentExceptionSpec = true;
+      FromEPI = DefaultEPI;
+      UsedDifferentProtoType = true;
     }
+    FromTy = Importer.getFromContext().getFunctionType(
+        FromReturnTy, FromFPT->getParamTypes(), FromEPI);
   }
 
   QualType T;
@@ -3277,14 +3341,6 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     }
   }
 
-  if (usedDifferentExceptionSpec) {
-    // Update FunctionProtoType::ExtProtoInfo.
-    if (ExpectedType TyOrErr = import(D->getType()))
-      ToFunction->setType(*TyOrErr);
-    else
-      return TyOrErr.takeError();
-  }
-
   // Import the describing template function, if any.
   if (FromFT) {
     auto ToFTOrErr = import(FromFT);
@@ -3314,6 +3370,14 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
 
     if (Err)
       return std::move(Err);
+  }
+
+  // Import and set the original type in case we used another type.
+  if (UsedDifferentProtoType) {
+    if (ExpectedType TyOrErr = import(D->getType()))
+      ToFunction->setType(*TyOrErr);
+    else
+      return TyOrErr.takeError();
   }
 
   // FIXME: Other bits to merge?

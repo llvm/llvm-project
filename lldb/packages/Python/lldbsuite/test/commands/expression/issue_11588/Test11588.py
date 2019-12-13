@@ -4,7 +4,6 @@ valobj.AddressOf() returns None when an address is
 expected in a SyntheticChildrenProvider
 """
 
-from __future__ import print_function
 
 
 import lldb

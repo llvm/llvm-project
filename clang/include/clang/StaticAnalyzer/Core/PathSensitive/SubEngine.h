@@ -15,6 +15,7 @@
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
+#include "clang/StaticAnalyzer/Core/CheckerManager.h"
 
 namespace clang {
 
@@ -148,8 +149,10 @@ public:
     return processRegionChanges(state, nullptr, MR, MR, LCtx, nullptr);
   }
 
-  virtual ProgramStateRef
-  processPointerEscapedOnBind(ProgramStateRef State, SVal Loc, SVal Val, const LocationContext *LCtx) = 0;
+  virtual ProgramStateRef processPointerEscapedOnBind(
+      ProgramStateRef State, ArrayRef<std::pair<SVal, SVal>> LocAndVals,
+      const LocationContext *LCtx, PointerEscapeKind Kind,
+      const CallEvent *Call) = 0;
 
   virtual ProgramStateRef
   notifyCheckersOfPointerEscape(ProgramStateRef State,

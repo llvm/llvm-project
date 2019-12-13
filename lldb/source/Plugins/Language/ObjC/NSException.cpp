@@ -69,10 +69,12 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
   InferiorSizedWord userinfo_isw(userinfo, *process_sp);
   InferiorSizedWord reserved_isw(reserved, *process_sp);
 
-  CompilerType voidstar = process_sp->GetTarget()
-                              .GetScratchClangASTContext()
-                              ->GetBasicType(lldb::eBasicTypeVoid)
-                              .GetPointerType();
+  auto *clang_ast_context = ClangASTContext::GetScratch(process_sp->GetTarget());
+  if (!clang_ast_context)
+    return false;
+
+  CompilerType voidstar =
+      clang_ast_context->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
 
   if (name_sp)
     *name_sp = ValueObject::CreateValueObjectFromData(

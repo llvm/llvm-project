@@ -78,17 +78,18 @@ llvm::MDNode *CodeGenTBAA::getChar() {
 
 static bool TypeHasMayAlias(QualType QTy) {
   // Tagged types have declarations, and therefore may have attributes.
-  if (const TagType *TTy = dyn_cast<TagType>(QTy))
-    return TTy->getDecl()->hasAttr<MayAliasAttr>();
-
-  // Typedef types have declarations, and therefore may have attributes.
-  if (const TypedefType *TTy = dyn_cast<TypedefType>(QTy)) {
-    if (TTy->getDecl()->hasAttr<MayAliasAttr>())
+  if (auto *TD = QTy->getAsTagDecl())
+    if (TD->hasAttr<MayAliasAttr>())
       return true;
-    // Also, their underlying types may have relevant attributes.
-    return TypeHasMayAlias(TTy->desugar());
-  }
 
+  // Also look for may_alias as a declaration attribute on a typedef.
+  // FIXME: We should follow GCC and model may_alias as a type attribute
+  // rather than as a declaration attribute.
+  while (auto *TT = QTy->getAs<TypedefType>()) {
+    if (TT->getDecl()->hasAttr<MayAliasAttr>())
+      return true;
+    QTy = TT->desugar();
+  }
   return false;
 }
 

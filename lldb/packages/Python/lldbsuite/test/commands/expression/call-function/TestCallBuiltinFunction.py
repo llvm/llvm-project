@@ -2,7 +2,6 @@
 Tests calling builtin functions using expression evaluation.
 """
 
-from __future__ import print_function
 
 
 import lldb

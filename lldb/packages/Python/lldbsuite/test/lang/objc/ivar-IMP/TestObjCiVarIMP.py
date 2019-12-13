@@ -2,7 +2,6 @@
 Test that dynamically discovered ivars of type IMP do not crash LLDB
 """
 
-from __future__ import print_function
 
 
 

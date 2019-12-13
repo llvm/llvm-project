@@ -25,27 +25,36 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darw
 endif()
 
 set(default_disable_python OFF)
-set(default_disable_curses OFF)
-set(default_disable_libedit OFF)
+set(default_enable_libedit ON)
+set(default_enable_curses ON)
+
+# Temporary support the old LLDB_DISABLE_CURSES variable
+if (DEFINED LLDB_DISABLE_CURSES)
+  if (LLDB_DISABLE_CURSES)
+    set(default_enable_curses OFF)
+  else()
+    set(default_enable_curses ON)
+  endif()
+endif()
 
 if(DEFINED LLVM_ENABLE_LIBEDIT AND NOT LLVM_ENABLE_LIBEDIT)
   set(default_disable_libedit ON)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-  set(default_disable_curses ON)
-  set(default_disable_libedit ON)
+  set(default_enable_libedit OFF)
+  set(default_enable_curses OFF)
 elseif(CMAKE_SYSTEM_NAME MATCHES "Android")
   set(default_disable_python ON)
-  set(default_disable_curses ON)
-  set(default_disable_libedit ON)
+  set(default_enable_libedit OFF)
+  set(default_enable_curses OFF)
 elseif(IOS)
   set(default_disable_python ON)
 endif()
 
 option(LLDB_DISABLE_PYTHON "Disable Python scripting integration." ${default_disable_python})
-option(LLDB_DISABLE_CURSES "Disable Curses integration." ${default_disable_curses})
-option(LLDB_DISABLE_LIBEDIT "Disable the use of editline." ${default_disable_libedit})
+option(LLDB_ENABLE_LIBEDIT "Enable the use of editline." ${default_enable_libedit})
+option(LLDB_ENABLE_CURSES "Enable Curses integration." ${default_enable_curses})
 option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)
 option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
@@ -109,7 +118,7 @@ if ((NOT MSVC) OR MSVC12)
 endif()
 
 
-if (NOT LLDB_DISABLE_LIBEDIT)
+if (LLDB_ENABLE_LIBEDIT)
   find_package(LibEdit REQUIRED)
 
   # Check if we libedit capable of handling wide characters (built with
@@ -443,10 +452,8 @@ if (APPLE)
   find_library(FOUNDATION_LIBRARY Foundation)
   find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
   find_library(SECURITY_LIBRARY Security)
-
-  add_definitions( -DLIBXML2_DEFINED )
+  set(LLDB_ENABLE_LIBXML2 ON)
   list(APPEND system_libs xml2
-       ${CURSES_LIBRARIES}
        ${FOUNDATION_LIBRARY}
        ${CORE_FOUNDATION_LIBRARY}
        ${CORE_SERVICES_LIBRARY}
@@ -454,7 +461,7 @@ if (APPLE)
        ${DEBUG_SYMBOLS_LIBRARY})
   include_directories(${LIBXML2_INCLUDE_DIR})
 elseif(LIBXML2_FOUND AND LIBXML2_VERSION_STRING VERSION_GREATER 2.8)
-  add_definitions( -DLIBXML2_DEFINED )
+  set(LLDB_ENABLE_LIBXML2 ON)
   list(APPEND system_libs ${LIBXML2_LIBRARIES})
   include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
@@ -487,19 +494,12 @@ else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
 endif()
 
-if (NOT LLDB_DISABLE_CURSES)
+if (LLDB_ENABLE_CURSES)
     find_package(Curses REQUIRED)
-
     find_library(CURSES_PANEL_LIBRARY NAMES panel DOC "The curses panel library")
     if (NOT CURSES_PANEL_LIBRARY)
         message(FATAL_ERROR "A required curses' panel library not found.")
     endif ()
-
-    # Add panels to the library path
-    set (CURSES_LIBRARIES ${CURSES_LIBRARIES} ${CURSES_PANEL_LIBRARY})
-
-    list(APPEND system_libs ${CURSES_LIBRARIES})
-    include_directories(${CURSES_INCLUDE_DIR})
 endif ()
 
 if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND

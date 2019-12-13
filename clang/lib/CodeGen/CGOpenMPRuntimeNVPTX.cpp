@@ -19,6 +19,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Cuda.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 
 using namespace clang;
 using namespace CodeGen;

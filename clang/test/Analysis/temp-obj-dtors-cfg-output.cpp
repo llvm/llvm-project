@@ -1224,8 +1224,7 @@ const C &bar3(bool coin) {
 // CHECK:    16: a([B1.15]) (Member initializer)
 // CHECK:    17: ~B() (Temporary object destructor)
 // CHECK:    18: ~A() (Temporary object destructor)
-// CHECK:    19: /*implicit*/(int)0
-// CHECK:    20: b([B1.19]) (Member initializer)
+// CHECK:    19: b(/*implicit*/(int)0) (Member initializer)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]

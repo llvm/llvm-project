@@ -2,7 +2,6 @@
 Test stepping into std::function
 """
 
-from __future__ import print_function
 
 
 import lldb

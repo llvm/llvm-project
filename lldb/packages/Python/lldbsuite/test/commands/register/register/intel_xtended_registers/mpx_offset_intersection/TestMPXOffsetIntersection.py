@@ -2,7 +2,6 @@
 Test Intel(R) MPX registers do not get overwritten by AVX data.
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -21,9 +20,6 @@ class MPXOffsetIntersectionTestCase(TestBase):
     MPX_REGULAR_REGS = ('bnd0', 'bnd1', 'bnd2', 'bnd3')
     MPX_CONFIG_REGS = ('bndcfgu', 'bndstatus')
     BND_VALUE = '{' + ' '.join(('0xff' for _ in range(16))) + '}'
-
-    def setUp(self):
-        TestBase.setUp(self)
 
     @skipIf(oslist=no_match(['linux']))
     @skipIf(archs=no_match(['x86_64']))

@@ -196,6 +196,14 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit) {
     NumUnitErrors++;
   }
 
+  //  According to DWARF Debugging Information Format Version 5,
+  //  3.1.2 Skeleton Compilation Unit Entries:
+  //  "A skeleton compilation unit has no children."
+  if (Die.getTag() == dwarf::DW_TAG_skeleton_unit && Die.hasChildren()) {
+    error() << "Skeleton compilation unit has children.\n";
+    NumUnitErrors++;
+  }
+
   DieRangeInfo RI;
   NumUnitErrors += verifyDieRanges(Die, RI);
 

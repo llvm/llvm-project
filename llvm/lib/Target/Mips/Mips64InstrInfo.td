@@ -83,6 +83,10 @@ let usesCustomInserter = 1 in {
   def ATOMIC_LOAD_NAND_I64 : Atomic2Ops<atomic_load_nand_64, GPR64>;
   def ATOMIC_SWAP_I64      : Atomic2Ops<atomic_swap_64, GPR64>;
   def ATOMIC_CMP_SWAP_I64  : AtomicCmpSwap<atomic_cmp_swap_64, GPR64>;
+  def ATOMIC_LOAD_MIN_I64  : Atomic2Ops<atomic_load_min_64, GPR64>;
+  def ATOMIC_LOAD_MAX_I64  : Atomic2Ops<atomic_load_max_64, GPR64>;
+  def ATOMIC_LOAD_UMIN_I64 : Atomic2Ops<atomic_load_umin_64, GPR64>;
+  def ATOMIC_LOAD_UMAX_I64 : Atomic2Ops<atomic_load_umax_64, GPR64>;
 }
 
 def ATOMIC_LOAD_ADD_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
@@ -95,6 +99,11 @@ def ATOMIC_LOAD_NAND_I64_POSTRA : Atomic2OpsPostRA<GPR64>;
 def ATOMIC_SWAP_I64_POSTRA      : Atomic2OpsPostRA<GPR64>;
 
 def ATOMIC_CMP_SWAP_I64_POSTRA  : AtomicCmpSwapPostRA<GPR64>;
+
+def ATOMIC_LOAD_MIN_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
+def ATOMIC_LOAD_MAX_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
+def ATOMIC_LOAD_UMIN_I64_POSTRA : Atomic2OpsPostRA<GPR64>;
+def ATOMIC_LOAD_UMAX_I64_POSTRA : Atomic2OpsPostRA<GPR64>;
 
 /// Pseudo instructions for loading and storing accumulator registers.
 let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {

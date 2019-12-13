@@ -1,6 +1,5 @@
 """Test calling functions in static methods with a stripped binary."""
 
-from __future__ import print_function
 
 
 import lldb

@@ -42,4 +42,6 @@ DebugLocStream::ListBuilder::~ListBuilder() {
     return;
   V.initializeDbgValue(&MI);
   V.setDebugLocListIndex(ListIndex);
+  if (TagOffset)
+    V.setDebugLocListTagOffset(*TagOffset);
 }

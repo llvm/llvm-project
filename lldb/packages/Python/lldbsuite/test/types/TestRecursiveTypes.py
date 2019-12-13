@@ -2,7 +2,6 @@
 Test that recursive types are handled correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

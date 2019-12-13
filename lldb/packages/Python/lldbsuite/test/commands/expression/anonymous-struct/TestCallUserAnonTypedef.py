@@ -6,7 +6,6 @@ untagged structures.
 Ticket: https://llvm.org/bugs/show_bug.cgi?id=26790
 """
 
-from __future__ import print_function
 
 import lldb
 

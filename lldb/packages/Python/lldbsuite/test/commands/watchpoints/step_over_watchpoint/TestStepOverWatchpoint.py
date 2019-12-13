@@ -1,6 +1,5 @@
 """Test stepping over watchpoints."""
 
-from __future__ import print_function
 
 
 import lldb

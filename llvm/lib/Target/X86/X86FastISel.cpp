@@ -35,6 +35,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"

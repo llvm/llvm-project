@@ -1,0 +1,42 @@
+## This is a general test for --symbols option and its aliases.
+## There are also other symbols* tests that check specific things.
+
+# RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.elf-i386 | FileCheck %s
+
+## Check flag aliases produce identical output.
+# RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.elf-i386 > %t.symbols
+# RUN: llvm-readobj --syms %p/Inputs/trivial.obj.elf-i386 > %t.syms
+# RUN: cmp %t.symbols %t.syms
+# RUN: llvm-readobj -t %p/Inputs/trivial.obj.elf-i386 > %t.t
+# RUN: cmp %t.symbols %t.t
+# RUN: llvm-readelf -s --elf-output-style LLVM %p/Inputs/trivial.obj.elf-i386 > %t.lowers
+# RUN: cmp %t.symbols %t.lowers
+
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name:  (0)
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Local (0x0)
+# CHECK-NEXT:     Type: None (0x0)
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined (0x0)
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: trivial.ll (1)
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Local (0x0)
+# CHECK-NEXT:     Type: File (0x4)
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Absolute (0xFFF1)
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .L.str (39)
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 13
+# CHECK-NEXT:     Binding: Local (0x0)
+# CHECK-NEXT:     Type: Object (0x1)
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .rodata.str1.1 (0x5)
+# CHECK-NEXT:   }

@@ -2,7 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-from __future__ import print_function
 
 
 import lldb

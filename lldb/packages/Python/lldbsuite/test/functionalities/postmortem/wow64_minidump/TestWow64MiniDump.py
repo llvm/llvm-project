@@ -7,7 +7,6 @@ end up with a dump of the WoW64 layer.  In that case, LLDB must do extra work to
 get the 32-bit register contexts.
 """
 
-from __future__ import print_function
 from six import iteritems
 
 

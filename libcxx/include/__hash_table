@@ -825,10 +825,12 @@ private:
 
     allocator_type& __na_;
 
-    __hash_node_destructor& operator=(const __hash_node_destructor&);
-
 public:
     bool __value_constructed;
+
+    __hash_node_destructor(__hash_node_destructor const&) = default;
+    __hash_node_destructor& operator=(const __hash_node_destructor&) = delete;
+
 
     _LIBCPP_INLINE_VISIBILITY
     explicit __hash_node_destructor(allocator_type& __na,

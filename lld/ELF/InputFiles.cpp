@@ -497,6 +497,8 @@ static void addDependentLibrary(StringRef specifier, const InputFile *f) {
           specifier);
 }
 
+// Record the membership of a section group so that in the garbage collection
+// pass, section group members are kept or discarded as a unit.
 template <class ELFT>
 static void handleSectionGroup(ArrayRef<InputSectionBase *> sections,
                                ArrayRef<typename ELFT::Word> entries) {

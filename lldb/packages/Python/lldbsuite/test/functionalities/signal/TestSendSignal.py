@@ -1,6 +1,5 @@
 ﻿"""Test that lldb command 'process signal SIGUSR1' to send a signal to the inferior works."""
 
-from __future__ import print_function
 
 
 import lldb

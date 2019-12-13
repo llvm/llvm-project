@@ -262,26 +262,25 @@ static bool matchesStyle(StringRef Name,
       llvm::Regex("^[a-z]([a-z0-9]*(_[A-Z])?)*"),
   };
 
-  bool Matches = true;
   if (Name.startswith(Style.Prefix))
     Name = Name.drop_front(Style.Prefix.size());
   else
-    Matches = false;
+    return false;
 
   if (Name.endswith(Style.Suffix))
     Name = Name.drop_back(Style.Suffix.size());
   else
-    Matches = false;
+    return false;
 
   // Ensure the name doesn't have any extra underscores beyond those specified
   // in the prefix and suffix.
   if (Name.startswith("_") || Name.endswith("_"))
-    Matches = false;
+    return false;
 
   if (Style.Case && !Matchers[static_cast<size_t>(*Style.Case)].match(Name))
-    Matches = false;
+    return false;
 
-  return Matches;
+  return true;
 }
 
 static std::string fixupWithCase(StringRef Name,

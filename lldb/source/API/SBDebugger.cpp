@@ -683,12 +683,8 @@ SBStructuredData SBDebugger::GetBuildConfiguration() {
   AddBoolConfigEntry(
       *config_up, "xml", XMLDocument::XMLEnabled(),
       "A boolean value that indicates if XML support is enabled in LLDB");
-  bool have_curses = true;
-#ifdef LLDB_DISABLE_CURSES
-  have_curses = false;
-#endif
   AddBoolConfigEntry(
-      *config_up, "curses", have_curses,
+      *config_up, "curses", LLDB_ENABLE_CURSES,
       "A boolean value that indicates if curses support is enabled in LLDB");
   AddLLVMTargets(*config_up);
 

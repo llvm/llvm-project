@@ -98,7 +98,8 @@ void SetTimer(int Seconds) {
 }
 
 void SetSignalHandler(const FuzzingOptions& Options) {
-  if (Options.UnitTimeoutSec > 0)
+  // setitimer is not implemented in emscripten.
+  if (Options.UnitTimeoutSec > 0 && !LIBFUZZER_EMSCRIPTEN)
     SetTimer(Options.UnitTimeoutSec / 2 + 1);
   if (Options.HandleInt)
     SetSigaction(SIGINT, InterruptHandler);
@@ -133,7 +134,7 @@ size_t GetPeakRSSMb() {
   if (getrusage(RUSAGE_SELF, &usage))
     return 0;
   if (LIBFUZZER_LINUX || LIBFUZZER_FREEBSD || LIBFUZZER_NETBSD ||
-      LIBFUZZER_OPENBSD) {
+      LIBFUZZER_OPENBSD || LIBFUZZER_EMSCRIPTEN) {
     // ru_maxrss is in KiB
     return usage.ru_maxrss >> 10;
   } else if (LIBFUZZER_APPLE) {

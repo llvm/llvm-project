@@ -2135,6 +2135,11 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
     default:
       return VisitStmt(S, asc);
 
+    case Stmt::ImplicitValueInitExprClass:
+      if (BuildOpts.OmitImplicitValueInitializers)
+        return Block;
+      return VisitStmt(S, asc);
+
     case Stmt::AddrLabelExprClass:
       return VisitAddrLabelExpr(cast<AddrLabelExpr>(S), asc);
 

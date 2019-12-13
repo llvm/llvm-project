@@ -2,7 +2,6 @@
 Use lldb Python API to test dynamic values in ObjC
 """
 
-from __future__ import print_function
 
 
 import lldb

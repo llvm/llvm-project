@@ -1,6 +1,5 @@
 """Test calling methods on super."""
 
-from __future__ import print_function
 
 
 import lldb

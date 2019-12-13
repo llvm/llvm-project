@@ -1428,8 +1428,9 @@ bool LiveDebugValues::isEntryValueCandidate(
   if (DefinedRegs.count(MI.getOperand(0).getReg()))
     return false;
 
-  // TODO: Add support for parameters that are described as fragments.
-  if (MI.getDebugExpression()->isFragment())
+  // TODO: Add support for parameters that have a pre-existing debug expressions
+  // (e.g. fragments, or indirect parameters using DW_OP_deref).
+  if (MI.getDebugExpression()->getNumElements() > 0)
     return false;
 
   return true;

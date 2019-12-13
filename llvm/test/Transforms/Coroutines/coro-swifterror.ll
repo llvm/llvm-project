@@ -33,7 +33,7 @@ cleanup:
 ; CHECK-NEXT:    call void @print(i32 %n)
 ;   TODO: figure out a way to eliminate this
 ; CHECK-NEXT:    store i8* null, i8** %errorslot
-; CHECK-NEXT:    call void @maybeThrow(i8** swifterror %errorslot)
+; CHECK-NEXT:    call void @maybeThrow(i8** nonnull swifterror %errorslot)
 ; CHECK-NEXT:    [[T1:%.*]] = load i8*, i8** %errorslot
 ; CHECK-NEXT:    call void @logError(i8* [[T1]])
 ; CHECK-NEXT:    store i8* [[T1]], i8** %errorslot
@@ -51,7 +51,7 @@ cleanup:
 ; CHECK-NEXT:    store i32 %inc, i32* [[T0]], align 4
 ; CHECK-NEXT:    call void @print(i32 %inc)
 ; CHECK-NEXT:    store i8* [[ERROR]], i8** %2
-; CHECK-NEXT:    call void @maybeThrow(i8** swifterror %2)
+; CHECK-NEXT:    call void @maybeThrow(i8** nonnull swifterror %2)
 ; CHECK-NEXT:    [[T2:%.*]] = load i8*, i8** %2
 ; CHECK-NEXT:    call void @logError(i8* [[T2]])
 ; CHECK-NEXT:    store i8* [[T2]], i8** %2

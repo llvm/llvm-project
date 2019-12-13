@@ -706,7 +706,9 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   FunctionCaller *do_dlopen_function = nullptr;
 
   // Fetch the clang types we will need:
-  ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();
+  ClangASTContext *ast = ClangASTContext::GetScratch(process->GetTarget());
+  if (!ast)
+    return nullptr;
 
   CompilerType clang_void_pointer_type
       = ast->GetBasicType(eBasicTypeVoid).GetPointerType();
@@ -948,7 +950,11 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   Value return_value;
   // Fetch the clang types we will need:
-  ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();
+  ClangASTContext *ast = ClangASTContext::GetScratch(process->GetTarget());
+  if (!ast) {
+    error.SetErrorString("dlopen error: Unable to get ClangASTContext");
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
 
   CompilerType clang_void_pointer_type
       = ast->GetBasicType(eBasicTypeVoid).GetPointerType();

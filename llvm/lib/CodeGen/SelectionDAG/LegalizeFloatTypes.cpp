@@ -466,6 +466,14 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
 
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
 
+  if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat) {
+    Op = GetPromotedFloat(Op);
+    // If the promotion did the FP_EXTEND to the destination type for us,
+    // there's nothing left to do here.
+    if (Op.getValueType() == N->getValueType(0))
+      return BitConvertToInteger(Op);
+  }
+
   // There's only a libcall for f16 -> f32, so proceed in two stages. Also, it's
   // entirely possible for both f16 and f32 to be legal, so use the fully
   // hard-float FP_EXTEND rather than FP16_TO_FP.
@@ -476,15 +484,6 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
       Chain = Op.getValue(1);
     } else {
       Op = DAG.getNode(ISD::FP_EXTEND, SDLoc(N), MVT::f32, Op);
-    }
-  }
-
-  if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat) {
-    Op = GetPromotedFloat(Op);
-    // If the promotion did the FP_EXTEND to the destination type for us,
-    // there's nothing left to do here.
-    if (Op.getValueType() == N->getValueType(0)) {
-      return BitConvertToInteger(Op);
     }
   }
 
@@ -661,8 +660,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
                        L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
-    if (N != NewL.getValue(1).getNode())
-      ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
+    ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
     return NewL;
   }
 

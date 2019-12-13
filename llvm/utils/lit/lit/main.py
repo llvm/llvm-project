@@ -44,7 +44,7 @@ def main(builtin_params = {}):
 
     discovered_tests = lit.discovery.find_tests_for_inputs(litConfig, opts.test_paths)
     if not discovered_tests:
-        sys.stderr.write('Did not disover any tests for provided path(s).\n')
+        sys.stderr.write('error: did not disover any tests for provided path(s)\n')
         sys.exit(2)
 
     # Command line overrides configuration for maxIndividualTestTime.
@@ -66,7 +66,7 @@ def main(builtin_params = {}):
         filtered_tests = [t for t in discovered_tests if
                           opts.filter.search(t.getFullName())]
         if not filtered_tests:
-            sys.stderr.write('Filter did not match any tests '
+            sys.stderr.write('error: filter did not match any tests '
                              '(of %d discovered).  ' % len(discovered_tests))
             if opts.allow_empty_runs:
                 sys.stderr.write('Suppressing error because '
@@ -85,8 +85,8 @@ def main(builtin_params = {}):
         (run, shards) = opts.shard
         filtered_tests = filter_by_shard(filtered_tests, run, shards, litConfig)
         if not filtered_tests:
-            sys.stderr.write('Shard does not contain any tests.  Consider '
-                             'decreasing the number of shards.\n')
+            sys.stderr.write('warning: shard does not contain any tests.  '
+                             'Consider decreasing the number of shards.\n')
             sys.exit(0)
 
     if opts.max_tests:
@@ -109,11 +109,11 @@ def main(builtin_params = {}):
         write_test_results_xunit(executed_tests, opts)
 
     if litConfig.numErrors:
-        sys.stderr.write('\n%d error(s) in tests.\n' % litConfig.numErrors)
+        sys.stderr.write('\n%d error(s) in tests\n' % litConfig.numErrors)
         sys.exit(2)
 
     if litConfig.numWarnings:
-        sys.stderr.write('\n%d warning(s) in tests.\n' % litConfig.numWarnings)
+        sys.stderr.write('\n%d warning(s) in tests\n' % litConfig.numWarnings)
 
     has_failure = any(t.isFailure() for t in executed_tests)
     if has_failure:

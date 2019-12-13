@@ -2,7 +2,6 @@
 Test that backticks without a target should work (not infinite looping).
 """
 
-from __future__ import print_function
 
 
 import lldb

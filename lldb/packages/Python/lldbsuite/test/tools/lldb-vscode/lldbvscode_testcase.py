@@ -1,4 +1,3 @@
-from __future__ import print_function
 
 from lldbsuite.test.lldbtest import *
 import os

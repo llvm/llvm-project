@@ -1,6 +1,5 @@
 """Test that lldb steps correctly after the inferior has crashed."""
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test import lldbutil

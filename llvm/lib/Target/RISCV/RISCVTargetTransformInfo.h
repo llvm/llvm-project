@@ -42,9 +42,9 @@ public:
         TLI(ST->getTargetLowering()) {}
 
   int getIntImmCost(const APInt &Imm, Type *Ty);
-  int getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty);
-  int getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                    Type *Ty);
+  int getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty);
+  int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
+                          Type *Ty);
 };
 
 } // end namespace llvm

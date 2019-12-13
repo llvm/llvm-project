@@ -72,6 +72,17 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
   SmallVector<unsigned, 16> MIOperands = {MI.getOpcode(), MI.getFlags()};
   llvm::transform(MI.uses(), std::back_inserter(MIOperands), GetHashableMO);
 
+  for (const auto *Op : MI.memoperands()) {
+    MIOperands.push_back((unsigned)Op->getSize());
+    MIOperands.push_back((unsigned)Op->getFlags());
+    MIOperands.push_back((unsigned)Op->getOffset());
+    MIOperands.push_back((unsigned)Op->getOrdering());
+    MIOperands.push_back((unsigned)Op->getAddrSpace());
+    MIOperands.push_back((unsigned)Op->getSyncScopeID());
+    MIOperands.push_back((unsigned)Op->getBaseAlignment());
+    MIOperands.push_back((unsigned)Op->getFailureOrdering());
+  }
+
   auto HashMI = hash_combine_range(MIOperands.begin(), MIOperands.end());
   return std::to_string(HashMI).substr(0, 5);
 }
@@ -84,7 +95,7 @@ unsigned VRegRenamer::createVirtualRegister(unsigned VReg) {
 
 bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
   std::vector<NamedVReg> VRegs;
-  std::string Prefix = "bb" + std::to_string(getCurrentBBNumber()) + "_";
+  std::string Prefix = "bb" + std::to_string(CurrentBBNumber) + "_";
   for (MachineInstr &Candidate : *MBB) {
     // Don't rename stores/branches.
     if (Candidate.mayStore() || Candidate.isBranch())
@@ -101,11 +112,6 @@ bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
   }
 
   return VRegs.size() ? doVRegRenaming(getVRegRenameMap(VRegs)) : false;
-}
-
-bool VRegRenamer::renameVRegs(MachineBasicBlock *MBB, unsigned BBNum) {
-  CurrentBBNumber = BBNum;
-  return renameInstsInMBB(MBB);
 }
 
 unsigned VRegRenamer::createVirtualRegisterWithLowerName(unsigned VReg,

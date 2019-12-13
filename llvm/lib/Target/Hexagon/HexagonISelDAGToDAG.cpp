@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonISelDAGToDAG.h"
+#include "Hexagon.h"
 #include "HexagonISelLowering.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonTargetMachine.h"
@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 using namespace llvm;

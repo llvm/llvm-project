@@ -2,7 +2,6 @@
 Test that the user can input a format but it will not prevail over summary format's choices.
 """
 
-from __future__ import print_function
 
 
 import lldb

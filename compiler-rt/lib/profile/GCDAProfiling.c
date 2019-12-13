@@ -62,8 +62,27 @@ typedef unsigned long long uint64_t;
 #include "InstrProfiling.h"
 #include "InstrProfilingUtil.h"
 
-/* #define DEBUG_GCDAPROFILING */
+#ifndef _WIN32
+#include <pthread.h>
+static pthread_mutex_t gcov_flush_mutex = PTHREAD_MUTEX_INITIALIZER;
+static __inline void gcov_flush_lock() {
+  pthread_mutex_lock(&gcov_flush_mutex);
+}
+static __inline void gcov_flush_unlock() {
+  pthread_mutex_unlock(&gcov_flush_mutex);
+}
+#else
+#include <windows.h>
+static SRWLOCK gcov_flush_mutex = SRWLOCK_INIT;
+static __inline void gcov_flush_lock() {
+  AcquireSRWLockExclusive(&gcov_flush_mutex);
+}
+static __inline void gcov_flush_unlock() {
+  ReleaseSRWLockExclusive(&gcov_flush_mutex);
+}
+#endif
 
+/* #define DEBUG_GCDAPROFILING */
 /*
  * --- GCOV file format I/O primitives ---
  */
@@ -620,12 +639,16 @@ void llvm_register_flush_function(fn_ptr fn) {
 }
 
 void __gcov_flush() {
+  gcov_flush_lock();
+
   struct fn_node* curr = flush_fn_list.head;
 
   while (curr) {
     curr->fn();
     curr = curr->next;
   }
+
+  gcov_flush_unlock();
 }
 
 COMPILER_RT_VISIBILITY

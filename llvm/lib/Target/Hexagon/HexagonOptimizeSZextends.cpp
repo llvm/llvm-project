@@ -15,6 +15,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 

@@ -539,7 +539,7 @@ struct S1 {
     short int c[2][n];
 
 #ifdef OMP5
-    #pragma omp target parallel for simd if(target: n>60) if(simd:n)
+    #pragma omp target parallel for simd if(n>60)
 #else
     #pragma omp target parallel for simd if(target: n>60)
 #endif // OMP5
@@ -576,20 +576,22 @@ int bar(int n){
 // CHECK: define {{.*}}[[FS1]]
 //
 // CHECK:          i8* @llvm.stacksave()
+// CHECK-32:       store i32 %{{.+}}, i32* %__vla_expr
+// OMP50:        [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
 // CHECK-64:       [[B_ADDR:%.+]] = bitcast i[[SZ]]* [[B_CADDR:%.+]] to i32*
 // CHECK-64:       store i32 %{{.+}}, i32* [[B_ADDR]],
 // CHECK-64:       [[B_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[B_CADDR]],
 
-// CHECK-32:       store i32 %{{.+}}, i32* %__vla_expr
 // CHECK-32:       store i32 %{{.+}}, i32* [[B_ADDR:%.+]],
 // CHECK-32:       [[B_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[B_ADDR]],
 
+// OMP45:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
 // OMP50:          [[TOBOOL:%.+]] = trunc i8 %{{.+}} to i1
 // OMP50:          [[CONV:%.+]] = bitcast i[[SZ]]* [[CAP:%.+]] to i8*
 // OMP50:          [[FROMBOOL:%.+]] = zext i1 [[TOBOOL]] to i8
 // OMP50:          store i8 [[FROMBOOL]], i8* [[CONV]],
 // OMP50:          [[SIMD_COND:%.+]] = load i[[SZ]], i[[SZ]]* [[CAP]],
-// CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
+// OMP50:          [[IF:%.+]] = trunc i8 %{{.+}} to i1
 // CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[FAIL:[^,]+]]
 // CHECK:       [[TRY]]
 // We capture 2 VLA sizes in this target region
@@ -599,7 +601,7 @@ int bar(int n){
 // CHECK-32:    [[CSIZE:%.+]] = sext i32 [[CSZSIZE]] to i64
 
 // OMP45-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 6, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SR:%[^,]+]], i64* getelementptr inbounds ([6 x i64], [6 x i64]* [[MAPT7]], i32 0, i32 0), i32 1, i32 0)
-// OMP50-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 7, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SR:%[^,]+]], i64* getelementptr inbounds ([7 x i64], [7 x i64]* [[MAPT7]], i32 0, i32 0), i32 1, i32 0)
+// OMP50-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 7, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SR:%[^,]+]], i64* getelementptr inbounds ([7 x i64], [7 x i64]* [[MAPT7]], i32 0, i32 0), i32 1, i32 %{{.+}})
 // OMP45-DAG:   [[BPR]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BP:%.+]], i32 0, i32 0
 // OMP45-DAG:   [[PR]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[P:%.+]], i32 0, i32 0
 // OMP45-DAG:   [[SR]] = getelementptr inbounds [6 x i64], [6 x i64]* [[S:%.+]], i32 0, i32 0

@@ -32,6 +32,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Driver/Types.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
@@ -360,6 +361,25 @@ const SourceLocation getBeginLoc(const FunctionDecl *FD) {
   return FD->getBeginLoc();
 }
 
+llvm::Optional<tooling::Replacement>
+addInlineIfInHeader(const FunctionDecl *FD) {
+  // This includes inline functions and constexpr functions.
+  if (FD->isInlined() || llvm::isa<CXXMethodDecl>(FD))
+    return llvm::None;
+  // Primary template doesn't need inline.
+  if (FD->isTemplated() && !FD->isFunctionTemplateSpecialization())
+    return llvm::None;
+
+  const SourceManager &SM = FD->getASTContext().getSourceManager();
+  llvm::StringRef FileName = SM.getFilename(FD->getLocation());
+
+  // If it is not a header we don't need to mark function as "inline".
+  if (!isHeaderFile(FileName, FD->getASTContext().getLangOpts()))
+    return llvm::None;
+
+  return tooling::Replacement(SM, FD->getInnerLocStart(), 0, "inline ");
+}
+
 /// Moves definition of a function/method to its declaration location.
 /// Before:
 /// a.h:
@@ -436,6 +456,7 @@ public:
           "Couldn't find semicolon for target declaration.");
     }
 
+    auto AddInlineIfNecessary = addInlineIfInHeader(Target);
     auto ParamReplacements = renameParameters(Target, Source);
     if (!ParamReplacements)
       return ParamReplacements.takeError();
@@ -446,6 +467,13 @@ public:
 
     const tooling::Replacement SemicolonToFuncBody(SM, *Semicolon, 1,
                                                    *QualifiedBody);
+    tooling::Replacements TargetFileReplacements(SemicolonToFuncBody);
+    TargetFileReplacements = TargetFileReplacements.merge(*ParamReplacements);
+    if (AddInlineIfNecessary) {
+      if (auto Err = TargetFileReplacements.add(*AddInlineIfNecessary))
+        return std::move(Err);
+    }
+
     auto DefRange = toHalfOpenFileRange(
         SM, AST.getLangOpts(),
         SM.getExpansionRange(CharSourceRange::getCharRange(getBeginLoc(Source),
@@ -462,9 +490,8 @@ public:
 
     llvm::SmallVector<std::pair<std::string, Edit>, 2> Edits;
     // Edit for Target.
-    auto FE = Effect::fileEdit(
-        SM, SM.getFileID(*Semicolon),
-        tooling::Replacements(SemicolonToFuncBody).merge(*ParamReplacements));
+    auto FE = Effect::fileEdit(SM, SM.getFileID(*Semicolon),
+                               std::move(TargetFileReplacements));
     if (!FE)
       return FE.takeError();
     Edits.push_back(std::move(*FE));

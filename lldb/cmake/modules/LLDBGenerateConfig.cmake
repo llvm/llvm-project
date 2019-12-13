@@ -23,7 +23,7 @@ check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSIO
 # These checks exist in LLVM's configuration, so I want to match the LLVM names
 # so that the check isn't duplicated, but we translate them into the LLDB names
 # so that I don't have to change all the uses at the moment.
-set(LLDB_CONFIG_TERMIOS_SUPPORTED ${HAVE_TERMIOS_H})
+set(LLDB_ENABLE_TERMIOS ${HAVE_TERMIOS_H})
 if(NOT UNIX)
   set(LLDB_DISABLE_POSIX 1)
 endif()

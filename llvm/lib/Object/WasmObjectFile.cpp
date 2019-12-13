@@ -343,7 +343,7 @@ Error WasmObjectFile::parseDylinkSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
   llvm::DenseSet<uint64_t> Seen;
-  if (Functions.size() != FunctionTypes.size()) {
+  if (FunctionTypes.size() && !SeenCodeSection) {
     return make_error<GenericBinaryError>("Names must come after code section",
                                           object_error::parse_failed);
   }
@@ -389,7 +389,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
   HasLinkingSection = true;
-  if (Functions.size() != FunctionTypes.size()) {
+  if (FunctionTypes.size() && !SeenCodeSection) {
     return make_error<GenericBinaryError>(
         "Linking data must come after code section",
         object_error::parse_failed);
@@ -940,6 +940,7 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseFunctionSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   FunctionTypes.reserve(Count);
+  Functions.resize(Count);
   uint32_t NumTypes = Signatures.size();
   while (Count--) {
     uint32_t Type = readVaruint32(Ctx);
@@ -1029,9 +1030,11 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
     Ex.Index = readVaruint32(Ctx);
     switch (Ex.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION:
-      if (!isValidFunctionIndex(Ex.Index))
+
+      if (!isDefinedFunctionIndex(Ex.Index))
         return make_error<GenericBinaryError>("Invalid function export",
                                               object_error::parse_failed);
+      getDefinedFunction(Ex.Index).ExportName = Ex.Name;
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
       if (!isValidGlobalIndex(Ex.Index))
@@ -1132,6 +1135,7 @@ Error WasmObjectFile::parseStartSection(ReadContext &Ctx) {
 }
 
 Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
+  SeenCodeSection = true;
   CodeSection = Sections.size();
   uint32_t FunctionCount = readVaruint32(Ctx);
   if (FunctionCount != FunctionTypes.size()) {
@@ -1139,14 +1143,14 @@ Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
                                           object_error::parse_failed);
   }
 
-  while (FunctionCount--) {
-    wasm::WasmFunction Function;
+  for (uint32_t i = 0; i < FunctionCount; i++) {
+    wasm::WasmFunction& Function = Functions[i];
     const uint8_t *FunctionStart = Ctx.Ptr;
     uint32_t Size = readVaruint32(Ctx);
     const uint8_t *FunctionEnd = Ctx.Ptr + Size;
 
     Function.CodeOffset = Ctx.Ptr - FunctionStart;
-    Function.Index = NumImportedFunctions + Functions.size();
+    Function.Index = NumImportedFunctions + i;
     Function.CodeSectionOffset = FunctionStart - Ctx.Start;
     Function.Size = FunctionEnd - FunctionStart;
 
@@ -1165,7 +1169,6 @@ Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
     Function.Comdat = UINT32_MAX;
     Ctx.Ptr += BodySize;
     assert(Ctx.Ptr == FunctionEnd);
-    Functions.push_back(Function);
   }
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("Code section ended prematurely",

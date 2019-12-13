@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"

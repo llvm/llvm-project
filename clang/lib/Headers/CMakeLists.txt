@@ -3,6 +3,7 @@ set(files
   altivec.h
   ammintrin.h
   arm_acle.h
+  arm_cmse.h
   armintr.h
   arm64intr.h
   avx2intrin.h

@@ -85,6 +85,11 @@ enum PointerEscapeKind {
   /// argument to a function.
   PSK_IndirectEscapeOnCall,
 
+
+  /// Escape for a new symbol that was generated into a region
+  /// that the analyzer cannot follow during a conservative call.
+  PSK_EscapeOutParameters,
+
   /// The reason for pointer escape is unknown. For example,
   /// a region containing this pointer is invalidated.
   PSK_EscapeOther

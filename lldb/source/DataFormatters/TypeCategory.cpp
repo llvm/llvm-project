@@ -18,7 +18,7 @@ TypeCategoryImpl::TypeCategoryImpl(IFormatChangeListener *clist,
     : m_format_cont("format", "regex-format", clist),
       m_summary_cont("summary", "regex-summary", clist),
       m_filter_cont("filter", "regex-filter", clist),
-      m_synth_cont("synth", "regex-synth", clist),
+      m_synth_cont("synth", "regex-synth", clist), m_enabled(false),
       m_change_listener(clist), m_mutex(), m_name(name), m_languages() {}
 
 static bool IsApplicable(lldb::LanguageType category_lang,

@@ -50,8 +50,24 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "CompoundStatement";
   case NodeKind::UnknownDeclaration:
     return OS << "UnknownDeclaration";
+  case NodeKind::EmptyDeclaration:
+    return OS << "EmptyDeclaration";
+  case NodeKind::StaticAssertDeclaration:
+    return OS << "StaticAssertDeclaration";
+  case NodeKind::LinkageSpecificationDeclaration:
+    return OS << "LinkageSpecificationDeclaration";
   case NodeKind::SimpleDeclaration:
     return OS << "SimpleDeclaration";
+  case NodeKind::NamespaceDefinition:
+    return OS << "NamespaceDefinition";
+  case NodeKind::NamespaceAliasDefinition:
+    return OS << "NamespaceAliasDefinition";
+  case NodeKind::UsingNamespaceDirective:
+    return OS << "UsingNamespaceDirective";
+  case NodeKind::UsingDeclaration:
+    return OS << "UsingDeclaration";
+  case NodeKind::TypeAliasDeclaration:
+    return OS << "TypeAliasDeclaration";
   }
   llvm_unreachable("unknown node kind");
 }
@@ -84,6 +100,10 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "ExpressionStatement_expression";
   case syntax::NodeRole::CompoundStatement_statement:
     return OS << "CompoundStatement_statement";
+  case syntax::NodeRole::StaticAssertDeclaration_condition:
+    return OS << "StaticAssertDeclaration_condition";
+  case syntax::NodeRole::StaticAssertDeclaration_message:
+    return OS << "StaticAssertDeclaration_message";
   }
   llvm_unreachable("invalid role");
 }
@@ -215,4 +235,14 @@ std::vector<syntax::Statement *> syntax::CompoundStatement::statements() {
 syntax::Leaf *syntax::CompoundStatement::rbrace() {
   return llvm::cast_or_null<syntax::Leaf>(
       findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::Expression *syntax::StaticAssertDeclaration::condition() {
+  return llvm::cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::StaticAssertDeclaration_condition));
+}
+
+syntax::Expression *syntax::StaticAssertDeclaration::message() {
+  return llvm::cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::StaticAssertDeclaration_message));
 }

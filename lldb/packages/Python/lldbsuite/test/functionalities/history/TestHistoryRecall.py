@@ -2,7 +2,6 @@
 Make sure the !N and !-N commands work properly.
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -22,10 +21,6 @@ class TestHistoryRecall(TestBase):
     def test_history_recall(self):
         """Test the !N and !-N functionality of the command interpreter."""
         self.sample_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def sample_test(self):
         interp = self.dbg.GetCommandInterpreter()

@@ -1,6 +1,7 @@
 # RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -o - %s | FileCheck %s
 --- |
-  define void @test_dbg_value() #0 { ret void }
+  define void @test_dbg_value1() #0 { ret void }
+  define void @test_dbg_value2() #0 { ret void }
 
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "llvm", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
   !1 = !DIFile(filename: "dbg.ll", directory: "/tmp")
@@ -13,7 +14,7 @@
 ---
 # Check we do not crash when checking $noreg debug operands.
 #
-# CHECK-LABEL: name: test_dbg_value
+# CHECK-LABEL: name: test_dbg_value1
 # CHECK: bb.0:
 # CHECK-NEXT: liveins: $x0, $x1
 # CHECK:       $x10, renamable $x8 = LDPXi renamable $x0, 0 :: (load 8)
@@ -23,7 +24,7 @@
 # CHECK-NEXT:  renamable $x8 = ADDXrr $x8, $x8
 # CHECK-NEXT:  STPXi renamable $x8, killed $x10, renamable $x0, 10 :: (store 8, align 4)
 # CHECK-NEXT:  RET undef $lr
-name:           test_dbg_value
+name:           test_dbg_value1
 alignment:       4
 tracksRegLiveness: true
 liveins:
@@ -46,4 +47,39 @@ body:             |
     STRXui renamable $x8, renamable $x0, 10 :: (store 8, align 4)
     RET undef $lr
 
+...
+
+# CHECK-LABEL: name: test_dbg_value2
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $x19, $x20, $x0
+
+# CHECK:       $x8 = ORRXrs $xzr, $x0, 0
+# CHECK-NEXT:  renamable $x0 = nuw ADDXri $x0, 8, 0
+# CHECK-NEXT:  DBG_VALUE $x0, $noreg,
+# CHECK-NEXT:  STRXui killed renamable $x8, renamable $x19, 2 :: (store 8)
+# CHECK-NEXT:  $x8 = ADDXrs renamable $x0, killed renamable $x20, 0
+# CHECK-NEXT:  STPXi $xzr, renamable $x8, renamable $x19, 0 :: (store 8)
+# CHECK-NEXT:  RET undef $lr, implicit $x0
+name:            test_dbg_value2
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x19, $x20, $x0
+
+    $x8 = ORRXrs $xzr, $x0, 0
+    renamable $x0 = nuw ADDXri $x0, 8, 0
+    DBG_VALUE $x0, $noreg, !7, !DIExpression(), debug-location !9
+    STRXui killed renamable $x8, renamable $x19, 2 :: (store 8)
+    $x8 = ADDXrs renamable $x0, killed renamable $x20, 0
+    STRXui $xzr, renamable $x19, 0 :: (store 8)
+    STRXui killed renamable $x8, killed renamable $x19, 1 :: (store 8)
+    RET undef $lr, implicit $x0
 ...

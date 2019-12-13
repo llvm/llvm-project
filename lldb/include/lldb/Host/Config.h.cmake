@@ -9,8 +9,6 @@
 #ifndef LLDB_HOST_CONFIG_H
 #define LLDB_HOST_CONFIG_H
 
-#cmakedefine LLDB_CONFIG_TERMIOS_SUPPORTED
-
 #cmakedefine01 LLDB_EDITLINE_USE_WCHAR
 
 #cmakedefine01 LLDB_HAVE_EL_RFUNC_T
@@ -33,11 +31,15 @@
 #cmakedefine HAVE_LIBCOMPRESSION
 #endif
 
+#cmakedefine01 LLDB_ENABLE_TERMIOS
+
 #cmakedefine01 LLDB_ENABLE_LZMA
 
-#cmakedefine LLDB_DISABLE_CURSES
+#cmakedefine01 LLDB_ENABLE_CURSES
 
-#cmakedefine LLDB_DISABLE_LIBEDIT
+#cmakedefine01 LLDB_ENABLE_LIBEDIT
+
+#cmakedefine01 LLDB_ENABLE_LIBXML2
 
 #cmakedefine LLDB_DISABLE_PYTHON
 

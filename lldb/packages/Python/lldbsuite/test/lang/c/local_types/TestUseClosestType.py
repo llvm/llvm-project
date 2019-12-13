@@ -5,7 +5,6 @@ even if there are other definitions of the type in other
 CU's.  Assert that that is true.
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -26,10 +25,6 @@ class TestUseClosestType(TestBase):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.expr_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def run_and_check_expr(self, num_children, child_type):
         frame = self.thread.GetFrameAtIndex(0)

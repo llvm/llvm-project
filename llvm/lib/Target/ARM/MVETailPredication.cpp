@@ -21,6 +21,8 @@
 /// - A loop containing multiple VCPT instructions, predicating multiple VPT
 ///   blocks of instructions operating on different vector types.
 
+#include "ARM.h"
+#include "ARMSubtarget.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -28,13 +30,12 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "ARM.h"
-#include "ARMSubtarget.h"
 
 using namespace llvm;
 

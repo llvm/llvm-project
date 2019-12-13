@@ -28,7 +28,7 @@ def iAny : ValueType<0, 253>;
 def llvm_anyint_ty : LLVMType<iAny>;
 
 // Make sure we generate the long name without crashing
-// CHECK: this_is_a_really_long_intrinsic_name_but_we_should_still_not_crash   // llvm.this.is.a.really.long.intrinsic.name.but.we.should.still.not.crash
+// CHECK: this_is_a_really_long_intrinsic_name_but_we_should_still_not_crash,  // llvm.this.is.a.really.long.intrinsic.name.but.we.should.still.not.crash
 def int_foo : Intrinsic<"llvm.foo", [llvm_anyint_ty]>;
 def int_this_is_a_really_long_intrinsic_name_but_we_should_still_not_crash : Intrinsic<"llvm.this.is.a.really.long.intrinsic.name.but.we.should.still.not.crash", [llvm_anyint_ty]>;
 

@@ -50,5 +50,5 @@ struct S {
 
 void test_field_dumps(struct S s, struct S *p) {
   clang_analyzer_dump_pointer(&s.x); // expected-warning{{&s.x}}
-  clang_analyzer_dump_pointer(&p->x); // expected-warning{{&SymRegion{reg_$0<struct S * p>}.x}}
+  clang_analyzer_dump_pointer(&p->x); // expected-warning{{&SymRegion{reg_$1<struct S * p>}.x}}
 }

@@ -2,7 +2,6 @@
 Test display and Python APIs on file and class static variables.
 """
 
-from __future__ import print_function
 
 
 import lldb

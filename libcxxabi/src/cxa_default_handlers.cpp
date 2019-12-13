@@ -18,6 +18,8 @@
 #include "include/atomic_support.h"
 
 #if !defined(LIBCXXABI_SILENT_TERMINATE)
+
+_LIBCPP_SAFE_STATIC
 static const char* cause = "uncaught";
 
 __attribute__((noreturn))
@@ -82,21 +84,21 @@ static void demangling_unexpected_handler()
     std::terminate();
 }
 
-static std::terminate_handler default_terminate_handler = demangling_terminate_handler;
-static std::terminate_handler default_unexpected_handler = demangling_unexpected_handler;
+static constexpr std::terminate_handler default_terminate_handler = demangling_terminate_handler;
+static constexpr std::terminate_handler default_unexpected_handler = demangling_unexpected_handler;
 #else
-static std::terminate_handler default_terminate_handler = ::abort;
-static std::terminate_handler default_unexpected_handler = std::terminate;
+static constexpr std::terminate_handler default_terminate_handler = ::abort;
+static constexpr std::terminate_handler default_unexpected_handler = std::terminate;
 #endif
 
 //
 // Global variables that hold the pointers to the current handler
 //
 _LIBCXXABI_DATA_VIS
-std::terminate_handler __cxa_terminate_handler = default_terminate_handler;
+_LIBCPP_SAFE_STATIC std::terminate_handler __cxa_terminate_handler = default_terminate_handler;
 
 _LIBCXXABI_DATA_VIS
-std::unexpected_handler __cxa_unexpected_handler = default_unexpected_handler;
+_LIBCPP_SAFE_STATIC std::unexpected_handler __cxa_unexpected_handler = default_unexpected_handler;
 
 namespace std
 {
