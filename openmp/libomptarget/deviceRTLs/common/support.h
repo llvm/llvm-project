@@ -1,4 +1,4 @@
-//===--------- support.h - OpenMP GPU support functions ---------- CUDA -*-===//
+//===--------- support.h - NVPTX OpenMP support functions -------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,6 +51,10 @@ DEVICE bool checkRuntimeInitialized(kmp_Ident *loc);
 ////////////////////////////////////////////////////////////////////////////////
 
 // get low level ids of resources
+DEVICE int GetThreadIdInBlock();
+DEVICE int GetBlockIdInKernel();
+DEVICE int GetNumberOfBlocksInKernel();
+DEVICE int GetNumberOfThreadsInBlock();
 DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
 
