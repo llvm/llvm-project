@@ -32,3 +32,8 @@ func:
   nop
   nop
   .localentry func, 8
+
+## PR44284 Don't crash if err is redefined after .set
+.set err, _err
+.globl err
+err:
