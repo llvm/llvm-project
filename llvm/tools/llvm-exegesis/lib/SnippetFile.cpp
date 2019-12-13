@@ -9,6 +9,7 @@
 #include "SnippetFile.h"
 #include "Error.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -135,6 +136,21 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
   ObjectFileInfo.InitMCObjectFileInfo(TM.getTargetTriple(), /*PIC*/ false,
                                       Context);
   BenchmarkCodeStreamer Streamer(&Context, TM.getMCRegisterInfo(), &Result);
+
+  std::string Error;
+  raw_string_ostream ErrorStream(Error);
+  formatted_raw_ostream InstPrinterOStream(ErrorStream);
+  const std::unique_ptr<MCInstPrinter> InstPrinter(
+      TM.getTarget().createMCInstPrinter(
+          TM.getTargetTriple(), TM.getMCAsmInfo()->getAssemblerDialect(),
+          *TM.getMCAsmInfo(), *TM.getMCInstrInfo(), *TM.getMCRegisterInfo()));
+  // The following call will take care of calling Streamer.setTargetStreamer.
+  TM.getTarget().createAsmTargetStreamer(Streamer, InstPrinterOStream,
+                                         InstPrinter.get(),
+                                         TM.Options.MCOptions.AsmVerbose);
+  if (!Streamer.getTargetStreamer())
+    return make_error<Failure>("cannot create target asm streamer");
+
   const std::unique_ptr<MCAsmParser> AsmParser(
       createMCAsmParser(SM, Context, Streamer, *TM.getMCAsmInfo()));
   if (!AsmParser)
