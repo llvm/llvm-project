@@ -145,16 +145,24 @@ public:
 
   static bool GetCompleteDecl(clang::ASTContext *ast, clang::Decl *decl);
 
-  void SetMetadataAsUserID(const void *object, lldb::user_id_t user_id);
+  void SetMetadataAsUserID(const clang::Decl *decl, lldb::user_id_t user_id);
+  void SetMetadataAsUserID(const clang::Type *type, lldb::user_id_t user_id);
 
-  void SetMetadata(const void *object, ClangASTMetadata &meta_data);
-
-  ClangASTMetadata *GetMetadata(const void *object) {
+  void SetMetadata(const clang::Decl *object, ClangASTMetadata &meta_data);
+  void SetMetadata(const clang::Type *object, ClangASTMetadata &meta_data);
+  ClangASTMetadata *GetMetadata(const clang::Decl *object) {
     return GetMetadata(getASTContext(), object);
   }
 
   static ClangASTMetadata *GetMetadata(clang::ASTContext *ast,
-                                       const void *object);
+                                       const clang::Decl *object);
+
+  ClangASTMetadata *GetMetadata(const clang::Type *object) {
+    return GetMetadata(getASTContext(), object);
+  }
+
+  static ClangASTMetadata *GetMetadata(clang::ASTContext *ast,
+                                       const clang::Type *object);
 
   // Basic Types
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
@@ -487,7 +495,7 @@ public:
   DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc);
 
   static ClangASTMetadata *DeclContextGetMetaData(const CompilerDeclContext &dc,
-                                                  const void *object);
+                                                  const clang::Decl *object);
 
   static clang::ASTContext *
   DeclContextGetClangASTContext(const CompilerDeclContext &dc);
