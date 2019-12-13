@@ -19,6 +19,11 @@ __all__ = ['get_version', 'get_arguments', 'get_checkers', 'is_ctu_capable',
 ACTIVE_CHECKER_PATTERN = re.compile(r'^-analyzer-checker=(.*)$')
 
 
+class ClangErrorException(Exception):
+    def __init__(self, error):
+        self.error = error
+
+
 def get_version(clang):
     """ Returns the compiler version as string.
 
@@ -39,13 +44,14 @@ def get_arguments(command, cwd):
 
     cmd = command[:]
     cmd.insert(1, '-###')
+    cmd.append('-fno-color-diagnostics')
 
     output = run_command(cmd, cwd=cwd)
     # The relevant information is in the last line of the output.
     # Don't check if finding last line fails, would throw exception anyway.
     last_line = output[-1]
     if re.search(r'clang(.*): error:', last_line):
-        raise Exception(last_line)
+        raise ClangErrorException(last_line)
     return decode(last_line)
 
 

@@ -11,9 +11,17 @@ struct my_aggregate_struct {
 
 __attribute__((objc_root_class))
 @interface Root
+- (int)getInt __attribute__((objc_direct));
+@property(direct, readonly) int intProperty;
+@property(direct, readonly) int intProperty2;
 @end
 
 @implementation Root
+// CHECK-LABEL: define hidden i32 @"\01-[Root intProperty2]"
+- (int)intProperty2 {
+  return 42;
+}
+
 // CHECK-LABEL: define hidden i32 @"\01-[Root getInt]"(
 - (int)getInt __attribute__((objc_direct)) {
   // loading parameters
@@ -152,6 +160,7 @@ __attribute__((objc_root_class))
 }
 
 @end
+// CHECK-LABEL: define hidden i32 @"\01-[Root intProperty]"
 
 @interface Foo : Root {
   id __strong _cause_cxx_destruct;
@@ -173,3 +182,22 @@ __attribute__((objc_direct_members))
 // CHECK-LABEL: define hidden void @"\01-[Foo setGetDynamic_setDirect:]"(
 // CHECK-LABEL: define internal void @"\01-[Foo .cxx_destruct]"(
 @end
+
+int useRoot(Root *r) {
+  // CHECK-LABEL: define i32 @useRoot
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root getInt]"
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty]"
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty2]"
+  return [r getInt] + [r intProperty] + [r intProperty2];
+}
+
+__attribute__((objc_root_class))
+@interface RootDeclOnly
+@property(direct, readonly) int intProperty;
+@end
+
+int useRootDeclOnly(RootDeclOnly *r) {
+  // CHECK-LABEL: define i32 @useRootDeclOnly
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[RootDeclOnly intProperty]"
+  return [r intProperty];
+}

@@ -1058,11 +1058,13 @@ RedeclarePropertyAccessor(ASTContext &Context, ObjCImplementationDecl *Impl,
                           SourceLocation PropertyLoc) {
   ObjCMethodDecl *Decl = AccessorDecl;
   ObjCMethodDecl *ImplDecl = ObjCMethodDecl::Create(
-      Context, AtLoc, PropertyLoc, Decl->getSelector(), Decl->getReturnType(),
+      Context, AtLoc.isValid() ? AtLoc : Decl->getBeginLoc(),
+      PropertyLoc.isValid() ? PropertyLoc : Decl->getEndLoc(),
+      Decl->getSelector(), Decl->getReturnType(),
       Decl->getReturnTypeSourceInfo(), Impl, Decl->isInstanceMethod(),
-      Decl->isVariadic(), Decl->isPropertyAccessor(), /* isSynthesized*/ true,
-      Decl->isImplicit(), Decl->isDefined(), Decl->getImplementationControl(),
-      Decl->hasRelatedResultType());
+      Decl->isVariadic(), Decl->isPropertyAccessor(),
+      /* isSynthesized*/ true, Decl->isImplicit(), Decl->isDefined(),
+      Decl->getImplementationControl(), Decl->hasRelatedResultType());
   ImplDecl->getMethodFamily();
   if (Decl->hasAttrs())
     ImplDecl->setAttrs(Decl->getAttrs());
@@ -2500,6 +2502,9 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
     // A user declared getter will be synthesize when @synthesize of
     // the property with the same name is seen in the @implementation
     GetterMethod->setPropertyAccessor(true);
+
+  GetterMethod->createImplicitParams(Context,
+                                     GetterMethod->getClassInterface());
   property->setGetterMethodDecl(GetterMethod);
 
   // Skip setter if property is read-only.
@@ -2574,6 +2579,9 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       // A user declared setter will be synthesize when @synthesize of
       // the property with the same name is seen in the @implementation
       SetterMethod->setPropertyAccessor(true);
+
+    SetterMethod->createImplicitParams(Context,
+                                       SetterMethod->getClassInterface());
     property->setSetterMethodDecl(SetterMethod);
   }
   // Add any synthesized methods to the global pool. This allows us to

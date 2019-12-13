@@ -33,36 +33,22 @@ private:
 
   public:
     Entry();
-    Entry(lldb::TypeFormatImplSP);
-    Entry(lldb::TypeSummaryImplSP);
-    Entry(lldb::SyntheticChildrenSP);
-    Entry(lldb::TypeValidatorImplSP);
-    Entry(lldb::TypeFormatImplSP, lldb::TypeSummaryImplSP,
-          lldb::SyntheticChildrenSP, lldb::TypeValidatorImplSP);
 
+    template<typename ImplSP> bool IsCached();
     bool IsFormatCached();
-
     bool IsSummaryCached();
-
     bool IsSyntheticCached();
-
     bool IsValidatorCached();
 
-    lldb::TypeFormatImplSP GetFormat();
+    void Get(lldb::TypeFormatImplSP &);
+    void Get(lldb::TypeSummaryImplSP &);
+    void Get(lldb::SyntheticChildrenSP &);
+    void Get(lldb::TypeValidatorImplSP &);
 
-    lldb::TypeSummaryImplSP GetSummary();
-
-    lldb::SyntheticChildrenSP GetSynthetic();
-
-    lldb::TypeValidatorImplSP GetValidator();
-
-    void SetFormat(lldb::TypeFormatImplSP);
-
-    void SetSummary(lldb::TypeSummaryImplSP);
-
-    void SetSynthetic(lldb::SyntheticChildrenSP);
-
-    void SetValidator(lldb::TypeValidatorImplSP);
+    void Set(lldb::TypeFormatImplSP);
+    void Set(lldb::TypeSummaryImplSP);
+    void Set(lldb::SyntheticChildrenSP);
+    void Set(lldb::TypeValidatorImplSP);
   };
   typedef std::map<ConstString, Entry> CacheMap;
   CacheMap m_map;
@@ -76,25 +62,11 @@ private:
 public:
   FormatCache();
 
-  bool GetFormat(ConstString type, lldb::TypeFormatImplSP &format_sp);
-
-  bool GetSummary(ConstString type, lldb::TypeSummaryImplSP &summary_sp);
-
-  bool GetSynthetic(ConstString type,
-                    lldb::SyntheticChildrenSP &synthetic_sp);
-
-  bool GetValidator(ConstString type,
-                    lldb::TypeValidatorImplSP &summary_sp);
-
-  void SetFormat(ConstString type, lldb::TypeFormatImplSP &format_sp);
-
-  void SetSummary(ConstString type, lldb::TypeSummaryImplSP &summary_sp);
-
-  void SetSynthetic(ConstString type,
-                    lldb::SyntheticChildrenSP &synthetic_sp);
-
-  void SetValidator(ConstString type,
-                    lldb::TypeValidatorImplSP &synthetic_sp);
+  template <typename ImplSP> bool Get(ConstString type, ImplSP &format_impl_sp);
+  void Set(ConstString type, lldb::TypeFormatImplSP &format_sp);
+  void Set(ConstString type, lldb::TypeSummaryImplSP &summary_sp);
+  void Set(ConstString type, lldb::SyntheticChildrenSP &synthetic_sp);
+  void Set(ConstString type, lldb::TypeValidatorImplSP &synthetic_sp);
 
   void Clear();
 
@@ -102,6 +74,7 @@ public:
 
   uint64_t GetCacheMisses() { return m_cache_misses; }
 };
+
 } // namespace lldb_private
 
 #endif // lldb_FormatCache_h_

@@ -20,6 +20,7 @@ extern void clearerr(FILE *stream);
 extern int feof(FILE *stream);
 extern int ferror(FILE *stream);
 extern int fileno(FILE *stream);
+extern FILE *freopen(const char *pathname, const char *mode, FILE *stream);
 
 void check_fread() {
   FILE *fp = tmpfile();
@@ -111,6 +112,13 @@ void f_double_close(void) {
   fclose(p); // expected-warning {{Try to close a file Descriptor already closed. Cause undefined behaviour}}
 }
 
+void f_double_close_alias(void) {
+  FILE *p1 = fopen("foo", "r");
+  FILE *p2 = p1;
+  fclose(p1);
+  fclose(p2); // expected-warning {{Try to close a file Descriptor already closed. Cause undefined behaviour}}
+}
+
 void f_leak(int c) {
   FILE *p = fopen("foo.c", "r");
   if(c)
@@ -133,4 +141,38 @@ void pr7831(FILE *fp) {
 // PR 8081 - null pointer crash when 'whence' is not an integer constant
 void pr8081(FILE *stream, long offset, int whence) {
   fseek(stream, offset, whence);
+}
+
+void check_freopen_1() {
+  FILE *f1 = freopen("foo.c", "r", (FILE *)0); // expected-warning {{Stream pointer might be NULL}}
+  f1 = freopen(0, "w", (FILE *)0x123456);      // Do not report this as error.
+}
+
+void check_freopen_2() {
+  FILE *f1 = fopen("foo.c", "r");
+  if (f1) {
+    FILE *f2 = freopen(0, "w", f1);
+    if (f2) {
+      // Check if f1 and f2 point to the same stream.
+      fclose(f1);
+      fclose(f2); // expected-warning {{Try to close a file Descriptor already closed. Cause undefined behaviour}}
+    } else {
+      // Reopen failed.
+      // f1 points now to a possibly invalid stream but this condition is currently not checked.
+      // f2 is NULL.
+      rewind(f1);
+      rewind(f2); // expected-warning {{Stream pointer might be NULL}}
+    }
+  }
+}
+
+void check_freopen_3() {
+  FILE *f1 = fopen("foo.c", "r");
+  if (f1) {
+    // Unchecked result of freopen.
+    // The f1 may be invalid after this call (not checked by the checker).
+    freopen(0, "w", f1);
+    rewind(f1);
+    fclose(f1);
+  }
 }

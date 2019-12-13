@@ -64,6 +64,7 @@ private:
 
   CallDescriptionMap<FnCheck> Callbacks = {
       {{"fopen"}, &StreamChecker::evalFopen},
+      {{"freopen", 3}, &StreamChecker::evalFreopen},
       {{"tmpfile"}, &StreamChecker::evalFopen},
       {{"fclose", 1}, &StreamChecker::evalFclose},
       {{"fread", 4},
@@ -90,6 +91,7 @@ private:
   };
 
   void evalFopen(const CallEvent &Call, CheckerContext &C) const;
+  void evalFreopen(const CallEvent &Call, CheckerContext &C) const;
   void evalFclose(const CallEvent &Call, CheckerContext &C) const;
   void evalFseek(const CallEvent &Call, CheckerContext &C) const;
 
@@ -158,6 +160,49 @@ void StreamChecker::evalFopen(const CallEvent &Call, CheckerContext &C) const {
 
   C.addTransition(stateNotNull);
   C.addTransition(stateNull);
+}
+
+void StreamChecker::evalFreopen(const CallEvent &Call,
+                                CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+
+  auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  Optional<DefinedSVal> StreamVal = Call.getArgSVal(2).getAs<DefinedSVal>();
+  if (!StreamVal)
+    return;
+  // Do not allow NULL as passed stream pointer.
+  // This is not specified in the man page but may crash on some system.
+  checkNullStream(*StreamVal, C, State);
+  // Check if error was generated.
+  if (C.isDifferent())
+    return;
+
+  SymbolRef StreamSym = StreamVal->getAsSymbol();
+  // Do not care about special values for stream ("(FILE *)0x12345"?).
+  if (!StreamSym)
+    return;
+
+  // Generate state for non-failed case.
+  // Return value is the passed stream pointer.
+  // According to the documentations, the stream is closed first
+  // but any close error is ignored. The state changes to (or remains) opened.
+  ProgramStateRef StateRetNotNull =
+      State->BindExpr(CE, C.getLocationContext(), *StreamVal);
+  // Generate state for NULL return value.
+  // Stream switches to OpenFailed state.
+  ProgramStateRef StateRetNull = State->BindExpr(CE, C.getLocationContext(),
+                                                 C.getSValBuilder().makeNull());
+
+  StateRetNotNull =
+      StateRetNotNull->set<StreamMap>(StreamSym, StreamState::getOpened());
+  StateRetNull =
+      StateRetNull->set<StreamMap>(StreamSym, StreamState::getOpenFailed());
+
+  C.addTransition(StateRetNotNull);
+  C.addTransition(StateRetNull);
 }
 
 void StreamChecker::evalFclose(const CallEvent &Call, CheckerContext &C) const {

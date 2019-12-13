@@ -1049,6 +1049,8 @@ void testNoCrashWhenAccessPropertyAndThereAreNoDirectBindingsAtAll() {
 - (void)clearShadowedIvar;
 - (NSObject *)getShadowedProp;
 - (void)clearShadowedProp;
+
+@property (assign) NSObject *o2;
 @end
 
 @implementation Shadowed
@@ -1078,12 +1080,18 @@ void testNoCrashWhenAccessPropertyAndThereAreNoDirectBindingsAtAll() {
 @synthesize o;
 
 -(void)testPropertyShadowing {
-  NSObject *oo = self.o;
+  NSObject *oo = self.o; // no-crash
   clang_analyzer_eval(self.o == oo); // expected-warning{{TRUE}}
   clang_analyzer_eval([self getShadowedIvar] == oo); // expected-warning{{UNKNOWN}}
   [self clearShadowedIvar];
   clang_analyzer_eval(self.o == oo); // expected-warning{{TRUE}}
   clang_analyzer_eval([self getShadowedIvar] == oo); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval([self getShadowedIvar] == nil); // expected-warning{{TRUE}}
+}
+
+@synthesize o2 = ooo2;
+
+-(void)testPropertyShadowingWithExplicitIvar {
+  NSObject *oo2 = self.o2; // no-crash
 }
 @end

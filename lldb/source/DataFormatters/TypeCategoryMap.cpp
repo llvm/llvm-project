@@ -169,8 +169,8 @@ bool TypeCategoryMap::AnyMatches(
   return false;
 }
 
-lldb::TypeFormatImplSP
-TypeCategoryMap::GetFormat(FormattersMatchData &match_data) {
+template <typename ImplSP>
+void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
 
   uint32_t reason_why;
@@ -182,8 +182,8 @@ TypeCategoryMap::GetFormat(FormattersMatchData &match_data) {
     for (auto match : match_data.GetMatchesVector()) {
       LLDB_LOGF(
           log,
-          "[CategoryMap::GetFormat] candidate match = %s %s %s %s reason = "
-          "%" PRIu32,
+          "[%s] candidate match = %s %s %s %s reason = %" PRIu32,
+          __FUNCTION__,
           match.GetTypeName().GetCString(),
           match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
           match.DidStripReference() ? "strip-reference" : "no-strip-reference",
@@ -194,140 +194,34 @@ TypeCategoryMap::GetFormat(FormattersMatchData &match_data) {
 
   for (begin = m_active_categories.begin(); begin != end; begin++) {
     lldb::TypeCategoryImplSP category_sp = *begin;
-    lldb::TypeFormatImplSP current_format;
-    LLDB_LOGF(log, "[TypeCategoryMap::GetFormat] Trying to use category %s",
+    ImplSP current_format;
+    LLDB_LOGF(log, "[%s] Trying to use category %s", __FUNCTION__,
               category_sp->GetName());
-    if (!category_sp->Get(match_data.GetValueObject(),
-                          match_data.GetMatchesVector(), current_format,
-                          &reason_why))
+    if (!category_sp->Get(
+            match_data.GetValueObject().GetObjectRuntimeLanguage(),
+            match_data.GetMatchesVector(), current_format, &reason_why))
       continue;
-    return current_format;
+
+    retval = std::move(current_format);
+    return;
   }
-  LLDB_LOGF(log,
-            "[TypeCategoryMap::GetFormat] nothing found - returning empty SP");
-  return lldb::TypeFormatImplSP();
+  LLDB_LOGF(log, "[%s] nothing found - returning empty SP", __FUNCTION__);
 }
 
-lldb::TypeSummaryImplSP
-TypeCategoryMap::GetSummaryFormat(FormattersMatchData &match_data) {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+/// Explicit instantiations for the four types.
+/// \{
+template void TypeCategoryMap::Get<lldb::TypeValidatorImplSP>(
+    FormattersMatchData &match_data, lldb::TypeValidatorImplSP &retval);
 
-  uint32_t reason_why;
-  ActiveCategoriesIterator begin, end = m_active_categories.end();
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-
-  if (log) {
-    for (auto match : match_data.GetMatchesVector()) {
-      LLDB_LOGF(
-          log,
-          "[CategoryMap::GetSummaryFormat] candidate match = %s %s %s %s "
-          "reason = %" PRIu32,
-          match.GetTypeName().GetCString(),
-          match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
-          match.DidStripReference() ? "strip-reference" : "no-strip-reference",
-          match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef",
-          match.GetReason());
-    }
-  }
-
-  for (begin = m_active_categories.begin(); begin != end; begin++) {
-    lldb::TypeCategoryImplSP category_sp = *begin;
-    lldb::TypeSummaryImplSP current_format;
-    LLDB_LOGF(log, "[CategoryMap::GetSummaryFormat] Trying to use category %s",
-              category_sp->GetName());
-    if (!category_sp->Get(match_data.GetValueObject(),
-                          match_data.GetMatchesVector(), current_format,
-                          &reason_why))
-      continue;
-    return current_format;
-  }
-  LLDB_LOGF(
-      log,
-      "[CategoryMap::GetSummaryFormat] nothing found - returning empty SP");
-  return lldb::TypeSummaryImplSP();
-}
-
-lldb::SyntheticChildrenSP
-TypeCategoryMap::GetSyntheticChildren(FormattersMatchData &match_data) {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-
-  uint32_t reason_why;
-
-  ActiveCategoriesIterator begin, end = m_active_categories.end();
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-
-  if (log) {
-    for (auto match : match_data.GetMatchesVector()) {
-      LLDB_LOGF(
-          log,
-          "[CategoryMap::GetSyntheticChildren] candidate match = %s %s %s %s "
-          "reason = %" PRIu32,
-          match.GetTypeName().GetCString(),
-          match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
-          match.DidStripReference() ? "strip-reference" : "no-strip-reference",
-          match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef",
-          match.GetReason());
-    }
-  }
-
-  for (begin = m_active_categories.begin(); begin != end; begin++) {
-    lldb::TypeCategoryImplSP category_sp = *begin;
-    lldb::SyntheticChildrenSP current_format;
-    LLDB_LOGF(log,
-              "[CategoryMap::GetSyntheticChildren] Trying to use category %s",
-              category_sp->GetName());
-    if (!category_sp->Get(match_data.GetValueObject(),
-                          match_data.GetMatchesVector(), current_format,
-                          &reason_why))
-      continue;
-    return current_format;
-  }
-  LLDB_LOGF(log,
-            "[CategoryMap::GetSyntheticChildren] nothing found - returning "
-            "empty SP");
-  return lldb::SyntheticChildrenSP();
-}
-
-lldb::TypeValidatorImplSP
-TypeCategoryMap::GetValidator(FormattersMatchData &match_data) {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-
-  uint32_t reason_why;
-  ActiveCategoriesIterator begin, end = m_active_categories.end();
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-
-  if (log) {
-    for (auto match : match_data.GetMatchesVector()) {
-      LLDB_LOGF(
-          log,
-          "[CategoryMap::GetValidator] candidate match = %s %s %s %s reason = "
-          "%" PRIu32,
-          match.GetTypeName().GetCString(),
-          match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
-          match.DidStripReference() ? "strip-reference" : "no-strip-reference",
-          match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef",
-          match.GetReason());
-    }
-  }
-
-  for (begin = m_active_categories.begin(); begin != end; begin++) {
-    lldb::TypeCategoryImplSP category_sp = *begin;
-    lldb::TypeValidatorImplSP current_format;
-    LLDB_LOGF(log, "[CategoryMap::GetValidator] Trying to use category %s",
-              category_sp->GetName());
-    if (!category_sp->Get(match_data.GetValueObject(),
-                          match_data.GetMatchesVector(), current_format,
-                          &reason_why))
-      continue;
-    return current_format;
-  }
-  LLDB_LOGF(log,
-            "[CategoryMap::GetValidator] nothing found - returning empty SP");
-  return lldb::TypeValidatorImplSP();
-}
+template void
+TypeCategoryMap::Get<lldb::TypeFormatImplSP>(FormattersMatchData &match_data,
+                                             lldb::TypeFormatImplSP &retval);
+template void
+TypeCategoryMap::Get<lldb::TypeSummaryImplSP>(FormattersMatchData &match_data,
+                                              lldb::TypeSummaryImplSP &retval);
+template void TypeCategoryMap::Get<lldb::SyntheticChildrenSP>(
+    FormattersMatchData &match_data, lldb::SyntheticChildrenSP &retval);
+/// \}
 
 void TypeCategoryMap::ForEach(ForEachCallback callback) {
   if (callback) {

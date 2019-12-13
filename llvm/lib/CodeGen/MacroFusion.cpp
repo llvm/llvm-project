@@ -36,6 +36,21 @@ static bool isHazard(const SDep &Dep) {
   return Dep.getKind() == SDep::Anti || Dep.getKind() == SDep::Output;
 }
 
+static SUnit *getPredClusterSU(const SUnit &SU) {
+  for (const SDep &SI : SU.Preds)
+    if (SI.isCluster())
+      return SI.getSUnit();
+
+  return nullptr;
+}
+
+static bool hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit) {
+  unsigned Num = 1;
+  const SUnit *CurrentSU = &SU;
+  while ((CurrentSU = getPredClusterSU(*CurrentSU)) && Num < FuseLimit) Num ++;
+  return Num < FuseLimit;
+}
+
 static bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
                                 SUnit &SecondSU) {
   // Check that neither instr is already paired with another along the edge
@@ -161,8 +176,10 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
     if (DepSU.isBoundaryNode())
       continue;
 
+    // Only chain two instructions together at most.
     const MachineInstr *DepMI = DepSU.getInstr();
-    if (!shouldScheduleAdjacent(TII, ST, DepMI, AnchorMI))
+    if (!hasLessThanNumFused(DepSU, 2) ||
+        !shouldScheduleAdjacent(TII, ST, DepMI, AnchorMI))
       continue;
 
     if (fuseInstructionPair(DAG, DepSU, AnchorSU))

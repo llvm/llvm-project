@@ -1951,7 +1951,8 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
     if (hasSymbolicIndex)
       return UnknownVal();
 
-    if (!hasPartialLazyBinding)
+    // Additionally allow introspection of a block's internal layout.
+    if (!hasPartialLazyBinding && !isa<BlockDataRegion>(R->getBaseRegion()))
       return UndefinedVal();
   }
 

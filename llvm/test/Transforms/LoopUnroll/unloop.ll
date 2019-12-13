@@ -387,7 +387,7 @@ for.end94:
 ; Check that the loop backedge is removed from the middle loop 1699,
 ; but not the inner loop 1676.
 ; CHECK: while.body1694:
-; CHECK:   br label %while.cond1676
+; CHECK:   unreachable
 ; CHECK: while.end1699:
 ; CHECK:   br label %sw.default1711
 define void @removeSubloopBlocks() nounwind {

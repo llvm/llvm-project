@@ -43,6 +43,11 @@ config.test_exec_root = os.path.join(config.lldb_obj_root, 'lit')
 config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0'
 # End Swift mod.
 
+# Propagate LLDB_CAPTURE_REPRODUCER
+if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
+  config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
+      'LLDB_CAPTURE_REPRODUCER']
+
 llvm_config.use_default_substitutions()
 
 toolchain.use_lldb_substitutions(config)

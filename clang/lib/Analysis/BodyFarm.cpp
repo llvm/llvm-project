@@ -741,13 +741,17 @@ static Stmt *createObjCPropertyGetter(ASTContext &Ctx,
     // First, find the backing ivar.
   const ObjCIvarDecl *IVar = nullptr;
 
-  // Property accessor stubs sometimes do not correspond to any property.
+  // Property accessor stubs sometimes do not correspond to any property decl
+  // in the current interface (but in a superclass). They still have a
+  // corresponding property impl decl in this case.
   if (MD->isSynthesizedAccessorStub()) {
     const ObjCInterfaceDecl *IntD = MD->getClassInterface();
     const ObjCImplementationDecl *ImpD = IntD->getImplementation();
-    for (const auto *V: ImpD->ivars()) {
-      if (V->getName() == MD->getSelector().getNameForSlot(0))
-        IVar = V;
+    for (const auto *PI: ImpD->property_impls()) {
+      if (const ObjCPropertyDecl *P = PI->getPropertyDecl()) {
+        if (P->getGetterName() == MD->getSelector())
+          IVar = P->getPropertyIvarDecl();
+      }
     }
   }
 

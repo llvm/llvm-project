@@ -25,6 +25,16 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
   lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace();
 
+  // The environment can override the capture mode.
+  if (mode != ReproducerMode::Replay) {
+    std::string env =
+        llvm::StringRef(getenv("LLDB_CAPTURE_REPRODUCER")).lower();
+    if (env == "0" || env == "off")
+      mode = ReproducerMode::Off;
+    else if (env == "1" || env == "on")
+      mode = ReproducerMode::Capture;
+  }
+
   switch (mode) {
   case ReproducerMode::Capture: {
     if (!root) {

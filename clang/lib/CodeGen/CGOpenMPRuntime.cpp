@@ -6194,7 +6194,7 @@ static llvm::Value *emitReduceFiniFunction(CodeGenModule &CGM,
   // Emit the finalizer body:
   // <destroy>(<type>* %0)
   RCG.emitCleanups(CGF, N, PrivateAddr);
-  CGF.FinishFunction();
+  CGF.FinishFunction(Loc);
   return Fn;
 }
 

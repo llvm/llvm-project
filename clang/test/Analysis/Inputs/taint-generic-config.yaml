@@ -36,8 +36,8 @@ Propagations:
 # A list of filter functions
 Filters:
   # int x; // x is tainted
-  # myFilter(&x); // x is not tainted anymore
-  - Name: myFilter
+  # isOutOfRange(&x); // x is not tainted anymore
+  - Name: isOutOfRange
     Args: [0]
 
 # A list of sink functions

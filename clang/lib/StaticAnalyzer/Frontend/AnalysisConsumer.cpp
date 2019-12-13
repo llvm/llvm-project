@@ -722,13 +722,6 @@ std::string AnalysisConsumer::getFunctionName(const Decl *D) {
     } else if (const auto *OCD = dyn_cast<ObjCCategoryImplDecl>(DC)) {
       OS << OCD->getClassInterface()->getName() << '('
          << OCD->getName() << ')';
-    } else if (isa<ObjCProtocolDecl>(DC)) {
-      // We can extract the type of the class from the self pointer.
-      if (ImplicitParamDecl *SelfDecl = OMD->getSelfDecl()) {
-        QualType ClassTy =
-            cast<ObjCObjectPointerType>(SelfDecl->getType())->getPointeeType();
-        ClassTy.print(OS, PrintingPolicy(LangOptions()));
-      }
     }
     OS << ' ' << OMD->getSelector().getAsString() << ']';
 
