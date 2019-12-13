@@ -2331,7 +2331,7 @@ static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
   Asm->OutStreamer->EmitLabel(Holder.getRnglistsTableBaseSym());
 
   for (const RangeSpanList &List : Holder.getRangeLists())
-    Asm->EmitLabelDifference(List.getSym(), Holder.getRnglistsTableBaseSym(),
+    Asm->EmitLabelDifference(List.Label, Holder.getRnglistsTableBaseSym(),
                              4);
 
   return TableEnd;
@@ -2688,11 +2688,11 @@ void DwarfDebug::emitDebugARanges() {
 /// Emit a single range list. We handle both DWARF v5 and earlier.
 static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
                           const RangeSpanList &List) {
-  emitRangeList(DD, Asm, List.getSym(), List.getRanges(), List.getCU(),
+  emitRangeList(DD, Asm, List.Label, List.Ranges, *List.CU,
                 dwarf::DW_RLE_base_addressx, dwarf::DW_RLE_offset_pair,
                 dwarf::DW_RLE_startx_length, dwarf::DW_RLE_end_of_list,
                 llvm::dwarf::RangeListEncodingString,
-                List.getCU().getCUNode()->getRangesBaseAddress() ||
+                List.CU->getCUNode()->getRangesBaseAddress() ||
                     DD.getDwarfVersion() >= 5,
                 [](auto) {});
 }
@@ -2709,8 +2709,9 @@ void DwarfDebug::emitDebugRangesImpl(const DwarfFile &Holder, MCSection *Section
 
   Asm->OutStreamer->SwitchSection(Section);
 
-  MCSymbol *TableEnd =
-      getDwarfVersion() < 5 ? nullptr : emitRnglistsTableHeader(Asm, Holder);
+  MCSymbol *TableEnd = nullptr;
+  if (getDwarfVersion() < 5)
+    TableEnd = emitRnglistsTableHeader(Asm, Holder);
 
   for (const RangeSpanList &List : Holder.getRangeLists())
     emitRangeList(*this, Asm, List);
