@@ -18,7 +18,18 @@
 #include "quarantine.h"
 #include "report.h"
 #include "secondary.h"
+#include "string_utils.h"
 #include "tsd.h"
+
+#ifdef GWP_ASAN_HOOKS
+# include "gwp_asan/guarded_pool_allocator.h"
+// GWP-ASan is declared here in order to avoid indirect call overhead. It's also
+// instantiated outside of the Allocator class, as the allocator is only
+// zero-initialised. GWP-ASan requires constant initialisation, and the Scudo
+// allocator doesn't have a constexpr constructor (see discussion here:
+// https://reviews.llvm.org/D69265#inline-624315).
+static gwp_asan::GuardedPoolAllocator GuardedAlloc;
+#endif // GWP_ASAN_HOOKS
 
 namespace scudo {
 
@@ -133,6 +144,22 @@ public:
     Quarantine.init(
         static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
         static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
+
+#ifdef GWP_ASAN_HOOKS
+    gwp_asan::options::Options Opt;
+    Opt.Enabled = getFlags()->GWP_ASAN_Enabled;
+    // Bear in mind - Scudo has its own alignment guarantees that are strictly
+    // enforced. Scudo exposes the same allocation function for everything from
+    // malloc() to posix_memalign, so in general this flag goes unused, as Scudo
+    // will always ask GWP-ASan for an aligned amount of bytes.
+    Opt.PerfectlyRightAlign = getFlags()->GWP_ASAN_PerfectlyRightAlign;
+    Opt.MaxSimultaneousAllocations =
+        getFlags()->GWP_ASAN_MaxSimultaneousAllocations;
+    Opt.SampleRate = getFlags()->GWP_ASAN_SampleRate;
+    Opt.InstallSignalHandlers = getFlags()->GWP_ASAN_InstallSignalHandlers;
+    Opt.Printf = Printf;
+    GuardedAlloc.init(Opt);
+#endif // GWP_ASAN_HOOKS
   }
 
   void reset() { memset(this, 0, sizeof(*this)); }
@@ -164,6 +191,14 @@ public:
                           uptr Alignment = MinAlignment,
                           bool ZeroContents = false) {
     initThreadMaybe();
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.shouldSample())) {
+      if (void *Ptr = GuardedAlloc.allocate(roundUpTo(Size, Alignment)))
+        return Ptr;
+    }
+#endif // GWP_ASAN_HOOKS
+
     ZeroContents |= static_cast<bool>(Options.ZeroContents);
 
     if (UNLIKELY(Alignment > MaxAlignment)) {
@@ -261,6 +296,13 @@ public:
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
 
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
+      GuardedAlloc.deallocate(Ptr);
+      return;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (&__scudo_deallocate_hook)
       __scudo_deallocate_hook(Ptr);
 
@@ -299,6 +341,17 @@ public:
     // The following cases are handled by the C wrappers.
     DCHECK_NE(OldPtr, nullptr);
     DCHECK_NE(NewSize, 0);
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(OldPtr))) {
+      uptr OldSize = GuardedAlloc.getSize(OldPtr);
+      void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
+      if (NewPtr)
+        memcpy(NewPtr, OldPtr, (NewSize < OldSize) ? NewSize : OldSize);
+      GuardedAlloc.deallocate(OldPtr);
+      return NewPtr;
+    }
+#endif // GWP_ASAN_HOOKS
 
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(OldPtr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Reallocating, OldPtr);
@@ -446,6 +499,12 @@ public:
     initThreadMaybe();
     if (UNLIKELY(!Ptr))
       return 0;
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr)))
+      return GuardedAlloc.getSize(Ptr);
+#endif // GWP_ASAN_HOOKS
+
     Chunk::UnpackedHeader Header;
     Chunk::loadHeader(Cookie, Ptr, &Header);
     // Getting the usable size of a chunk only makes sense if it's allocated.
@@ -464,6 +523,10 @@ public:
   // A corrupted chunk will not be reported as owned, which is WAI.
   bool isOwned(const void *Ptr) {
     initThreadMaybe();
+#ifdef GWP_ASAN_HOOKS
+    if (GuardedAlloc.pointerIsMine(Ptr))
+      return true;
+#endif // GWP_ASAN_HOOKS
     if (!Ptr || !isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment))
       return false;
     Chunk::UnpackedHeader Header;

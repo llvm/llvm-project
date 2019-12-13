@@ -1,4 +1,5 @@
 add_compiler_rt_component(scudo_standalone)
+add_dependencies(scudo_standalone gwp_asan)
 
 include_directories(../..)
 
@@ -101,6 +102,13 @@ set(SCUDO_SOURCES_CXX_WRAPPERS
   wrappers_cpp.cpp
   )
 
+set(SCUDO_OBJECT_LIBS)
+
+if (COMPILER_RT_HAS_GWP_ASAN)
+  list(APPEND SCUDO_OBJECT_LIBS RTGwpAsan)
+  list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
+endif()
+
 if(COMPILER_RT_HAS_SCUDO_STANDALONE)
   add_compiler_rt_object_libraries(RTScudoStandalone
     ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
@@ -124,6 +132,7 @@ if(COMPILER_RT_HAS_SCUDO_STANDALONE)
     SOURCES ${SCUDO_SOURCES} ${SCUDO_SOURCES_C_WRAPPERS}
     ADDITIONAL_HEADERS ${SCUDO_HEADERS}
     CFLAGS ${SCUDO_CFLAGS}
+    OBJECT_LIBS ${SCUDO_OBJECT_LIBS}
     PARENT_TARGET scudo_standalone)
   add_compiler_rt_runtime(clang_rt.scudo_standalone_cxx
     STATIC
@@ -131,6 +140,7 @@ if(COMPILER_RT_HAS_SCUDO_STANDALONE)
     SOURCES ${SCUDO_SOURCES_CXX_WRAPPERS}
     ADDITIONAL_HEADERS ${SCUDO_HEADERS}
     CFLAGS ${SCUDO_CFLAGS}
+    OBJECT_LIBS ${SCUDO_OBJECT_LIBS}
     PARENT_TARGET scudo_standalone)
 
   add_subdirectory(benchmarks)
