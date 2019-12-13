@@ -1138,7 +1138,8 @@ public:
                           SDValue Offset, ISD::MemIndexedMode AM);
 
   /// Returns sum of the base pointer and offset.
-  SDValue getMemBasePlusOffset(SDValue Base, unsigned Offset, const SDLoc &DL);
+  /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap by default.
+  SDValue getMemBasePlusOffset(SDValue Base, int64_t Offset, const SDLoc &DL);
 
   SDValue getMaskedLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Base,
                         SDValue Offset, SDValue Mask, SDValue Src0, EVT MemVT,
