@@ -358,6 +358,34 @@ public:
     return isAIXABI() || (is64BitELFABI() && !isELFv2ABI());
   }
 
+  unsigned descriptorTOCAnchorOffset() const {
+    assert(usesFunctionDescriptors() &&
+           "Should only be called when the target uses descriptors.");
+    return IsPPC64 ? 8 : 4;
+  }
+
+  unsigned descriptorEnvironmentPointerOffset() const {
+    assert(usesFunctionDescriptors() &&
+           "Should only be called when the target uses descriptors.");
+    return IsPPC64 ? 16 : 8;
+  }
+
+  MCRegister getEnvironmentPointerRegister() const {
+    assert(usesFunctionDescriptors() &&
+           "Should only be called when the target uses descriptors.");
+     return IsPPC64 ? PPC::X11 : PPC::R11;
+  }
+
+  MCRegister getTOCPointerRegister() const {
+    assert((is64BitELFABI() || isAIXABI()) &&
+           "Should only be called when the target is a TOC based ABI.");
+    return IsPPC64 ? PPC::X2 : PPC::R2;
+  }
+
+  MCRegister getStackPointerRegister() const {
+    return IsPPC64 ? PPC::X1 : PPC::R1;
+  }
+
   bool isXRaySupported() const override { return IsPPC64 && IsLittleEndian; }
 };
 } // End llvm namespace

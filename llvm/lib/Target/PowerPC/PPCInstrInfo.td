@@ -1645,6 +1645,15 @@ def TCRETURNri : PPCEmitTimePseudo<(outs), (ins CTRRC:$dst, i32imm:$offset),
                  "#TC_RETURNr $dst $offset",
                  []>;
 
+let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+    Defs = [LR, R2], Uses = [CTR, RM], RST = 2 in {
+  def BCTRL_LWZinto_toc:
+    XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
+     (ins memri:$src), "bctrl\n\tlwz 2, $src", IIC_BrB,
+     [(PPCbctrl_load_toc iaddr:$src)]>, Requires<[In32BitMode]>;
+
+}
+
 
 let isCodeGenOnly = 1 in {
 
