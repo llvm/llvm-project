@@ -164,6 +164,11 @@ public:
     return SelectSVEAddSubImm(N, VT, Imm, Shift);
   }
 
+  template<MVT::SimpleValueType VT>
+  bool SelectSVELogicalImm(SDValue N, SDValue &Imm) {
+    return SelectSVELogicalImm(N, VT, Imm);
+  }
+
   /// Form sequences of consecutive 64/128-bit registers for use in NEON
   /// instructions making use of a vector-list (e.g. ldN, tbl). Vecs must have
   /// between 1 and 4 elements. If it contains a single element that is returned
@@ -241,6 +246,8 @@ private:
   bool SelectCMP_SWAP(SDNode *N);
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
+
+  bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm);
 };
 } // end anonymous namespace
 
@@ -2851,6 +2858,35 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SD
   return false;
 }
 
+bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm) {
+  if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
+    uint64_t ImmVal = CNode->getZExtValue();
+    SDLoc DL(N);
+
+    // Shift mask depending on type size.
+    switch (VT.SimpleTy) {
+      case MVT::i8:
+        ImmVal &= 0xFF;
+        ImmVal |= (ImmVal << 8);
+      case MVT::i16:
+        ImmVal &= 0xFFFF;
+        ImmVal |= (ImmVal << 16);
+      case MVT::i32:
+        ImmVal &= 0xFFFFFFFF;
+        ImmVal |= (ImmVal << 32);
+        break;
+      default:
+        break;
+    }
+
+    uint64_t encoding;
+    if (AArch64_AM::processLogicalImmediate(ImmVal, 64, encoding)) {
+      Imm = CurDAG->getTargetConstant(encoding, DL, MVT::i64);
+      return true;
+    }
+  }
+  return false;
+}
 
 bool AArch64DAGToDAGISel::trySelectStackSlotTagP(SDNode *N) {
   // tagp(FrameIndex, IRGstack, tag_offset):

@@ -207,6 +207,12 @@ def SVEAddSubImm16Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i16>", [
 def SVEAddSubImm32Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i32>", []>;
 def SVEAddSubImm64Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i64>", []>;
 
+def SVELogicalImm8Pat  : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i8>", []>;
+def SVELogicalImm16Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i16>", []>;
+def SVELogicalImm32Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i32>", []>;
+def SVELogicalImm64Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i64>", []>;
+
+
 class SVEExactFPImm<string Suffix, string ValA, string ValB> : AsmOperandClass {
   let Name = "SVEExactFPImmOperand" # Suffix;
   let DiagnosticType = "Invalid" # Name;
@@ -297,6 +303,11 @@ class SVE_1_Op_Imm_OptLsl_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty
                               ComplexPattern cpx, Instruction inst>
   : Pat<(vt (op (vt zprty:$Op1), (i32 (cpx i32:$imm, i32:$shift)))),
         (inst $Op1, i32:$imm, i32:$shift)>;
+
+class SVE_1_Op_Imm_Log_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
+                           ComplexPattern cpx, Instruction inst>
+  : Pat<(vt (op (vt zprty:$Op1), (i64 (cpx i64:$imm)))),
+        (inst $Op1, i64:$imm)>;
 
 class SVE_2_Op_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
                    ValueType vt2, Instruction inst>
@@ -1129,8 +1140,13 @@ class sve_int_log_imm<bits<2> opc, string asm>
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve_int_log_imm<bits<2> opc, string asm, string alias> {
+multiclass sve_int_log_imm<bits<2> opc, string asm, string alias, SDPatternOperator op> {
   def NAME : sve_int_log_imm<opc, asm>;
+
+  def : SVE_1_Op_Imm_Log_Pat<nxv16i8, op, ZPR8,  SVELogicalImm8Pat,  !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv8i16, op, ZPR16, SVELogicalImm16Pat, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv4i32, op, ZPR32, SVELogicalImm32Pat, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv2i64, op, ZPR64, SVELogicalImm64Pat, !cast<Instruction>(NAME)>;
 
   def : InstAlias<asm # "\t$Zdn, $Zdn, $imm",
                   (!cast<Instruction>(NAME) ZPR8:$Zdn, sve_logical_imm8:$imm), 4>;

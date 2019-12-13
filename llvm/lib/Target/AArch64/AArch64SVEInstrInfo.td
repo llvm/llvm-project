@@ -117,9 +117,9 @@ let Predicates = [HasSVE] in {
   defm EORV_VPZ  : sve_int_reduce_2<0b001, "eorv", AArch64eorv_pred>;
   defm ANDV_VPZ  : sve_int_reduce_2<0b010, "andv", AArch64andv_pred>;
 
-  defm ORR_ZI : sve_int_log_imm<0b00, "orr", "orn">;
-  defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon">;
-  defm AND_ZI : sve_int_log_imm<0b10, "and", "bic">;
+  defm ORR_ZI : sve_int_log_imm<0b00, "orr", "orn", int_aarch64_sve_orr_imm>;
+  defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon", int_aarch64_sve_eor_imm>;
+  defm AND_ZI : sve_int_log_imm<0b10, "and", "bic", int_aarch64_sve_and_imm>;
 
   defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", simm8>;
   defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", simm8>;

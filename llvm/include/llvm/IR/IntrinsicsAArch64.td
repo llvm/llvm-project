@@ -1104,6 +1104,12 @@ class AdvSIMD_ScatterStore_VectorBase_Intrinsic
                ],
                [IntrWriteMem, IntrArgMemOnly, ImmArg<3>]>;
 
+class AdvSIMD_1VectorArg_Imm64_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_i64_ty],
+                [IntrNoMem, ImmArg<1>]>;
+
 //
 // Loads
 //
@@ -1270,6 +1276,10 @@ def int_aarch64_sve_orrs        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_orns        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_nors        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_nands       : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_orr_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
+def int_aarch64_sve_eor_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
+def int_aarch64_sve_and_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
 
 //
 // Conversion
