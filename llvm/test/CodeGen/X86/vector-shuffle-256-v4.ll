@@ -2002,6 +2002,56 @@ define <8 x i32> @shuffle_v8i32_0zzzzzzz_optsize(<8 x i32> %a) optsize {
   ret <8 x i32> %b
 }
 
+define <4 x double> @shuffle_v4f64_0zzz_pgso(<4 x double> %a) !prof !14 {
+; ALL-LABEL: shuffle_v4f64_0zzz_pgso:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; ALL-NEXT:    retq
+  %b = shufflevector <4 x double> %a, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x double> %b
+}
+
+define <4 x i64> @shuffle_v4i64_0zzz_pgso(<4 x i64> %a) !prof !14 {
+; ALL-LABEL: shuffle_v4i64_0zzz_pgso:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; ALL-NEXT:    retq
+  %b = shufflevector <4 x i64> %a, <4 x i64> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x i64> %b
+}
+
+define <8 x float> @shuffle_v8f32_0zzzzzzz_pgso(<8 x float> %a) !prof !14 {
+; AVX1OR2-LABEL: shuffle_v8f32_0zzzzzzz_pgso:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v8f32_0zzzzzzz_pgso:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512VL-NEXT:    retq
+  %b = shufflevector <8 x float> %a, <8 x float> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <8 x float> %b
+}
+
+define <8 x i32> @shuffle_v8i32_0zzzzzzz_pgso(<8 x i32> %a) !prof !14 {
+; AVX1OR2-LABEL: shuffle_v8i32_0zzzzzzz_pgso:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v8i32_0zzzzzzz_pgso:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512VL-NEXT:    retq
+  %b = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <8 x i32> %b
+}
+
 define <4 x i64> @unpckh_v4i64(<4 x i64> %x, <4 x i64> %y) {
 ; ALL-LABEL: unpckh_v4i64:
 ; ALL:       # %bb.0:
@@ -2022,3 +2072,19 @@ define <4 x double> @unpckh_v4f64(<4 x double> %x, <4 x double> %y) {
   ret <4 x double> %unpckh
 }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

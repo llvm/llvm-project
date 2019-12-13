@@ -130,6 +130,24 @@ define i64 @div64_optsize(i64 %a, i64 %b) optsize {
   ret i64 %div
 }
 
+define i64 @div64_pgso(i64 %a, i64 %b) !prof !15 {
+; CHECK-LABEL: div64_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rsi
+; CHECK-NEXT:    retq
+;
+; HUGEWS-LABEL: div64_pgso:
+; HUGEWS:       # %bb.0:
+; HUGEWS-NEXT:    movq %rdi, %rax
+; HUGEWS-NEXT:    cqto
+; HUGEWS-NEXT:    idivq %rsi
+; HUGEWS-NEXT:    retq
+  %div = sdiv i64 %a, %b
+  ret i64 %div
+}
+
 define i64 @div64_hugews(i64 %a, i64 %b) {
 ; ATOM-LABEL: div64_hugews:
 ; ATOM:       # %bb.0:
@@ -137,12 +155,12 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 ; ATOM-NEXT:    movq %rdi, %rax
 ; ATOM-NEXT:    orq %rsi, %rcx
 ; ATOM-NEXT:    shrq $32, %rcx
-; ATOM-NEXT:    je .LBB3_1
+; ATOM-NEXT:    je .LBB4_1
 ; ATOM-NEXT:  # %bb.2:
 ; ATOM-NEXT:    cqto
 ; ATOM-NEXT:    idivq %rsi
 ; ATOM-NEXT:    retq
-; ATOM-NEXT:  .LBB3_1:
+; ATOM-NEXT:  .LBB4_1:
 ; ATOM-NEXT:    # kill: def $eax killed $eax killed $rax
 ; ATOM-NEXT:    xorl %edx, %edx
 ; ATOM-NEXT:    divl %esi
@@ -155,12 +173,12 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 ; SLM-NEXT:    movq %rdi, %rax
 ; SLM-NEXT:    orq %rsi, %rcx
 ; SLM-NEXT:    shrq $32, %rcx
-; SLM-NEXT:    je .LBB3_1
+; SLM-NEXT:    je .LBB4_1
 ; SLM-NEXT:  # %bb.2:
 ; SLM-NEXT:    cqto
 ; SLM-NEXT:    idivq %rsi
 ; SLM-NEXT:    retq
-; SLM-NEXT:  .LBB3_1:
+; SLM-NEXT:  .LBB4_1:
 ; SLM-NEXT:    xorl %edx, %edx
 ; SLM-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SLM-NEXT:    divl %esi
@@ -173,12 +191,12 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 ; SKL-NEXT:    movq %rdi, %rcx
 ; SKL-NEXT:    orq %rsi, %rcx
 ; SKL-NEXT:    shrq $32, %rcx
-; SKL-NEXT:    je .LBB3_1
+; SKL-NEXT:    je .LBB4_1
 ; SKL-NEXT:  # %bb.2:
 ; SKL-NEXT:    cqto
 ; SKL-NEXT:    idivq %rsi
 ; SKL-NEXT:    retq
-; SKL-NEXT:  .LBB3_1:
+; SKL-NEXT:  .LBB4_1:
 ; SKL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SKL-NEXT:    xorl %edx, %edx
 ; SKL-NEXT:    divl %esi
@@ -204,6 +222,24 @@ define i32 @div32_optsize(i32 %a, i32 %b) optsize {
 ; CHECK-NEXT:    retq
 ;
 ; HUGEWS-LABEL: div32_optsize:
+; HUGEWS:       # %bb.0:
+; HUGEWS-NEXT:    movl %edi, %eax
+; HUGEWS-NEXT:    cltd
+; HUGEWS-NEXT:    idivl %esi
+; HUGEWS-NEXT:    retq
+  %div = sdiv i32 %a, %b
+  ret i32 %div
+}
+
+define i32 @div32_pgso(i32 %a, i32 %b) !prof !15 {
+; CHECK-LABEL: div32_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    retq
+;
+; HUGEWS-LABEL: div32_pgso:
 ; HUGEWS:       # %bb.0:
 ; HUGEWS-NEXT:    movl %edi, %eax
 ; HUGEWS-NEXT:    cltd
@@ -246,3 +282,4 @@ define i32 @div32_minsize(i32 %a, i32 %b) minsize {
 !12 = !{i32 10000, i64 1000, i32 1}
 !13 = !{i32 999000, i64 1000, i32 3}
 !14 = !{i32 999999, i64 5, i32 3}
+!15 = !{!"function_entry_count", i64 0}

@@ -29,7 +29,7 @@ cl::opt<bool> PGSOColdCodeOnly(
              "to cold code."));
 
 cl::opt<bool> PGSOIRPassOrTestOnly(
-    "pgso-ir-pass-or-test-only", cl::Hidden, cl::init(true),
+    "pgso-ir-pass-or-test-only", cl::Hidden, cl::init(false),
     cl::desc("Apply the profile guided size optimizations only"
              "to the IR passes or tests."));
 

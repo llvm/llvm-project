@@ -19,6 +19,19 @@ define i1 @imm_multiple_users(i64 %a, i64* %b) optsize {
   ret i1 %cmp
 }
 
+define i1 @imm_multiple_users_pgso(i64 %a, i64* %b) !prof !14 {
+; CHECK-LABEL: imm_multiple_users_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq $-1, %rax
+; CHECK-NEXT:    movq %rax, (%rsi)
+; CHECK-NEXT:    cmpq %rax, %rdi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  store i64 -1, i64* %b, align 8
+  %cmp = icmp eq i64 %a, -1
+  ret i1 %cmp
+}
+
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 
 ; Inlined memsets requiring multiple same-sized stores should be lowered using
@@ -34,3 +47,31 @@ define void @memset_zero(i8* noalias nocapture %D) optsize {
   tail call void @llvm.memset.p0i8.i64(i8* %D, i8 0, i64 15, i1 false)
   ret void
 }
+
+define void @memset_zero_pgso(i8* noalias nocapture %D) !prof !14 {
+; CHECK-LABEL: memset_zero_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movq %rax, 7(%rdi)
+; CHECK-NEXT:    movq %rax, (%rdi)
+; CHECK-NEXT:    retq
+  tail call void @llvm.memset.p0i8.i64(i8* %D, i8 0, i64 15, i1 false)
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

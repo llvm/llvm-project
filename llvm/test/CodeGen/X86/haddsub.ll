@@ -1983,6 +1983,80 @@ define float @hadd32_16_optsize(<16 x float> %x225) optsize {
   ret float %x230
 }
 
+define float @hadd32_4_pgso(<4 x float> %x225) !prof !14 {
+; SSE3-LABEL: hadd32_4_pgso:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    movaps %xmm0, %xmm1
+; SSE3-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE3-NEXT:    addps %xmm0, %xmm1
+; SSE3-NEXT:    haddps %xmm1, %xmm1
+; SSE3-NEXT:    movaps %xmm1, %xmm0
+; SSE3-NEXT:    retq
+;
+; AVX-LABEL: hadd32_4_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x226 = shufflevector <4 x float> %x225, <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %x227 = fadd <4 x float> %x225, %x226
+  %x228 = shufflevector <4 x float> %x227, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %x229 = fadd <4 x float> %x227, %x228
+  %x230 = extractelement <4 x float> %x229, i32 0
+  ret float %x230
+}
+
+define float @hadd32_8_pgso(<8 x float> %x225) !prof !14 {
+; SSE3-LABEL: hadd32_8_pgso:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    movaps %xmm0, %xmm1
+; SSE3-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE3-NEXT:    addps %xmm0, %xmm1
+; SSE3-NEXT:    haddps %xmm1, %xmm1
+; SSE3-NEXT:    movaps %xmm1, %xmm0
+; SSE3-NEXT:    retq
+;
+; AVX-LABEL: hadd32_8_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %x226 = shufflevector <8 x float> %x225, <8 x float> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x227 = fadd <8 x float> %x225, %x226
+  %x228 = shufflevector <8 x float> %x227, <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x229 = fadd <8 x float> %x227, %x228
+  %x230 = extractelement <8 x float> %x229, i32 0
+  ret float %x230
+}
+
+define float @hadd32_16_pgso(<16 x float> %x225) !prof !14 {
+; SSE3-LABEL: hadd32_16_pgso:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    movaps %xmm0, %xmm1
+; SSE3-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE3-NEXT:    addps %xmm0, %xmm1
+; SSE3-NEXT:    haddps %xmm1, %xmm1
+; SSE3-NEXT:    movaps %xmm1, %xmm0
+; SSE3-NEXT:    retq
+;
+; AVX-LABEL: hadd32_16_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %x226 = shufflevector <16 x float> %x225, <16 x float> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x227 = fadd <16 x float> %x225, %x226
+  %x228 = shufflevector <16 x float> %x227, <16 x float> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x229 = fadd <16 x float> %x227, %x228
+  %x230 = extractelement <16 x float> %x229, i32 0
+  ret float %x230
+}
+
 define float @partial_reduction_fadd_v8f32(<8 x float> %x) {
 ; SSE3-SLOW-LABEL: partial_reduction_fadd_v8f32:
 ; SSE3-SLOW:       # %bb.0:
@@ -2115,3 +2189,20 @@ define float @partial_reduction_fadd_v16f32(<16 x float> %x) {
   %r = extractelement <16 x float> %x0123, i32 0
   ret float %r
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}
