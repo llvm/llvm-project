@@ -1564,10 +1564,10 @@ define i16 @sh_trunc_sh(i64 %x) {
 ;
 ; X64-LABEL: sh_trunc_sh:
 ; X64:       # %bb.0:
-; X64-NEXT:    shrq $24, %rdi
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    shrl $12, %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $36, %rax
+; X64-NEXT:    andl $15, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $rax
 ; X64-NEXT:    retq
   %s = lshr i64 %x, 24
   %t = trunc i64 %s to i16
