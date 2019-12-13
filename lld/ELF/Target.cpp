@@ -91,15 +91,15 @@ TargetInfo *getTarget() {
 }
 
 template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
+  if (!Out::bufferStart)
+    return {};
+
   for (InputSectionBase *d : inputSections) {
     auto *isec = cast<InputSection>(d);
     if (!isec->getParent())
       continue;
 
-    const uint8_t *isecLoc =
-        Out::bufferStart
-            ? (Out::bufferStart + isec->getParent()->offset + isec->outSecOff)
-            : isec->data().data();
+    uint8_t *isecLoc = Out::bufferStart + isec->getParent()->offset + isec->outSecOff;
     if (isecLoc <= loc && loc < isecLoc + isec->getSize())
       return {isec, isec->template getLocation<ELFT>(loc - isecLoc) + ": "};
   }
