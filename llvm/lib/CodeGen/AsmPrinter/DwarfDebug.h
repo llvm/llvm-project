@@ -503,6 +503,8 @@ class DwarfDebug : public DebugHandlerBase {
   /// Emit variable locations into a debug loc dwo section.
   void emitDebugLocDWO();
 
+  void emitDebugLocImpl(MCSection *Sec);
+
   /// Emit address ranges into a debug aranges section.
   void emitDebugARanges();
 
