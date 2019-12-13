@@ -284,6 +284,11 @@ def UVector: VecOf<UScalar>;
 // Scalar.
 def DblVector: VecOf<DoubleSize<Scalar>>;
 
+// Expands to the 32-bit integer of the same signedness as Scalar.
+def Scalar32: CopyKind<u32, Scalar>;
+// Expands to the 64-bit integer of the same signedness as Scalar.
+def Scalar64: CopyKind<u64, Scalar>;
+
 // -----------------------------------------------------------------------------
 // Internal definitions for specifying immediate arguments for an intrinsic.
 
@@ -477,4 +482,14 @@ def T {
   list<Type> All32 = Int32 # [f32];
   list<Type> All64 = Int64;
   list<Type> All = Usual # All64;
+}
+
+// -----------------------------------------------------------------------------
+// Container record for DAG constant values. These constants are used because
+// bit/int class/multiclass parameters cannot be used to produce a dag node:
+// for example (u32 x) where x is 0 is transformed into (u32 { 0 }) by the
+// Tablegen parser.
+def V {
+  dag False = (u32 0);
+  dag True  = (u32 1);
 }

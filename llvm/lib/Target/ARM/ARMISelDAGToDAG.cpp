@@ -237,6 +237,27 @@ private:
   void SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
                          uint16_t OpcodeWithNoCarry, bool Add, bool Predicated);
 
+  /// Select long MVE vector reductions with two vector operands
+  /// Stride is the number of vector element widths the instruction can operate
+  /// on:
+  /// 2 for long non-rounding variants, vml{a,s}ldav[a][x]: [i16, i32]
+  /// 1 for long rounding variants: vrml{a,s}ldavh[a][x]: [i32]
+  /// Stride is used when addressing the OpcodesS array which contains multiple
+  /// opcodes for each element width.
+  /// TySize is the index into the list of element types listed above
+  void SelectBaseMVE_VMLLDAV(SDNode *N, bool Predicated,
+                             const uint16_t *OpcodesS, const uint16_t *OpcodesU,
+                             size_t Stride, size_t TySize);
+
+  /// Select a 64-bit MVE vector reduction with two vector operands
+  /// arm_mve_vmlldava_[predicated]
+  void SelectMVE_VMLLDAV(SDNode *N, bool Predicated, const uint16_t *OpcodesS,
+                         const uint16_t *OpcodesU);
+  /// Select a 72-bit MVE vector rounding reduction with two vector operands
+  /// int_arm_mve_vrmlldavha[_predicated]
+  void SelectMVE_VRMLLDAVH(SDNode *N, bool Predicated, const uint16_t *OpcodesS,
+                           const uint16_t *OpcodesU);
+
   /// SelectMVE_VLD - Select MVE interleaving load intrinsics. NumVecs
   /// should be 2 or 4. The opcode array specifies the instructions
   /// used for 8, 16 and 32-bit lane sizes respectively, and each
@@ -2531,6 +2552,96 @@ void ARMDAGToDAGISel::SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
   CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
 }
 
+static bool SDValueToConstBool(SDValue SDVal) {
+  assert(isa<ConstantSDNode>(SDVal) && "expected a compile-time constant");
+  ConstantSDNode *SDValConstant = dyn_cast<ConstantSDNode>(SDVal);
+  uint64_t Value = SDValConstant->getZExtValue();
+  assert((Value == 0 || Value == 1) && "expected value 0 or 1");
+  return Value;
+}
+
+void ARMDAGToDAGISel::SelectBaseMVE_VMLLDAV(SDNode *N, bool Predicated,
+                                            const uint16_t *OpcodesS,
+                                            const uint16_t *OpcodesU,
+                                            size_t Stride, size_t TySize) {
+  assert(TySize < Stride && "Invalid TySize");
+  bool IsUnsigned = SDValueToConstBool(N->getOperand(1));
+  bool IsSub = SDValueToConstBool(N->getOperand(2));
+  bool IsExchange = SDValueToConstBool(N->getOperand(3));
+  if (IsUnsigned) {
+    assert(!IsSub &&
+           "Unsigned versions of vmlsldav[a]/vrmlsldavh[a] do not exist");
+    assert(!IsExchange &&
+           "Unsigned versions of vmlaldav[a]x/vrmlaldavh[a]x do not exist");
+  }
+
+  auto OpIsZero = [N](size_t OpNo) {
+    if (ConstantSDNode *OpConst = dyn_cast<ConstantSDNode>(N->getOperand(OpNo)))
+      if (OpConst->getZExtValue() == 0)
+        return true;
+    return false;
+  };
+
+  // If the input accumulator value is not zero, select an instruction with
+  // accumulator, otherwise select an instruction without accumulator
+  bool IsAccum = !(OpIsZero(4) && OpIsZero(5));
+
+  const uint16_t *Opcodes = IsUnsigned ? OpcodesU : OpcodesS;
+  if (IsSub)
+    Opcodes += 4 * Stride;
+  if (IsExchange)
+    Opcodes += 2 * Stride;
+  if (IsAccum)
+    Opcodes += Stride;
+  uint16_t Opcode = Opcodes[TySize];
+
+  SDLoc Loc(N);
+  SmallVector<SDValue, 8> Ops;
+  // Push the accumulator operands, if they are used
+  if (IsAccum) {
+    Ops.push_back(N->getOperand(4));
+    Ops.push_back(N->getOperand(5));
+  }
+  // Push the two vector operands
+  Ops.push_back(N->getOperand(6));
+  Ops.push_back(N->getOperand(7));
+
+  if (Predicated)
+    AddMVEPredicateToOps(Ops, Loc, N->getOperand(8));
+  else
+    AddEmptyMVEPredicateToOps(Ops, Loc);
+
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+}
+
+void ARMDAGToDAGISel::SelectMVE_VMLLDAV(SDNode *N, bool Predicated,
+                                        const uint16_t *OpcodesS,
+                                        const uint16_t *OpcodesU) {
+  EVT VecTy = N->getOperand(6).getValueType();
+  size_t SizeIndex;
+  switch (VecTy.getVectorElementType().getSizeInBits()) {
+  case 16:
+    SizeIndex = 0;
+    break;
+  case 32:
+    SizeIndex = 1;
+    break;
+  default:
+    llvm_unreachable("bad vector element size");
+  }
+
+  SelectBaseMVE_VMLLDAV(N, Predicated, OpcodesS, OpcodesU, 2, SizeIndex);
+}
+
+void ARMDAGToDAGISel::SelectMVE_VRMLLDAVH(SDNode *N, bool Predicated,
+                                          const uint16_t *OpcodesS,
+                                          const uint16_t *OpcodesU) {
+  EVT VecTy = N->getOperand(6).getValueType();
+  assert(VecTy.getVectorElementType().getSizeInBits() == 32 &&
+         "bad vector element size");
+  SelectBaseMVE_VMLLDAV(N, Predicated, OpcodesS, OpcodesU, 1, 0);
+}
+
 void ARMDAGToDAGISel::SelectMVE_VLD(SDNode *N, unsigned NumVecs,
                                     const uint16_t *const *Opcodes) {
   EVT VT = N->getValueType(0);
@@ -4376,6 +4487,42 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
                         IntNo == Intrinsic::arm_mve_vadc_predicated);
       return;
 
+    case Intrinsic::arm_mve_vmlldava:
+    case Intrinsic::arm_mve_vmlldava_predicated: {
+      static const uint16_t OpcodesU[] = {
+          ARM::MVE_VMLALDAVu16,   ARM::MVE_VMLALDAVu32,
+          ARM::MVE_VMLALDAVau16,  ARM::MVE_VMLALDAVau32,
+      };
+      static const uint16_t OpcodesS[] = {
+          ARM::MVE_VMLALDAVs16,   ARM::MVE_VMLALDAVs32,
+          ARM::MVE_VMLALDAVas16,  ARM::MVE_VMLALDAVas32,
+          ARM::MVE_VMLALDAVxs16,  ARM::MVE_VMLALDAVxs32,
+          ARM::MVE_VMLALDAVaxs16, ARM::MVE_VMLALDAVaxs32,
+          ARM::MVE_VMLSLDAVs16,   ARM::MVE_VMLSLDAVs32,
+          ARM::MVE_VMLSLDAVas16,  ARM::MVE_VMLSLDAVas32,
+          ARM::MVE_VMLSLDAVxs16,  ARM::MVE_VMLSLDAVxs32,
+          ARM::MVE_VMLSLDAVaxs16, ARM::MVE_VMLSLDAVaxs32,
+      };
+      SelectMVE_VMLLDAV(N, IntNo == Intrinsic::arm_mve_vmlldava_predicated,
+                        OpcodesS, OpcodesU);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vrmlldavha:
+    case Intrinsic::arm_mve_vrmlldavha_predicated: {
+      static const uint16_t OpcodesU[] = {
+          ARM::MVE_VRMLALDAVHu32,  ARM::MVE_VRMLALDAVHau32,
+      };
+      static const uint16_t OpcodesS[] = {
+          ARM::MVE_VRMLALDAVHs32,  ARM::MVE_VRMLALDAVHas32,
+          ARM::MVE_VRMLALDAVHxs32, ARM::MVE_VRMLALDAVHaxs32,
+          ARM::MVE_VRMLSLDAVHs32,  ARM::MVE_VRMLSLDAVHas32,
+          ARM::MVE_VRMLSLDAVHxs32, ARM::MVE_VRMLSLDAVHaxs32,
+      };
+      SelectMVE_VRMLLDAVH(N, IntNo == Intrinsic::arm_mve_vrmlldavha_predicated,
+                          OpcodesS, OpcodesU);
+      return;
+    }
     }
     break;
   }

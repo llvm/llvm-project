@@ -775,6 +775,118 @@ defm vcmulq : VectorComplexMulAngle;
 defm vcmlaq : VectorComplexMLAAngle;
 }
 
+multiclass MVEBinaryVectorHoriz32<dag subtract, dag exchange, string xsuffix> {
+  def xsuffix#"q"
+    : Intrinsic<Scalar32, (args Vector:$a, Vector:$b),
+                          (IRInt<"vmldava", [Vector]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           (zeroinit Scalar32), $a, $b)>;
+  def xsuffix#"q_p"
+    : Intrinsic<Scalar32, (args Vector:$a, Vector:$b, Predicate:$pred),
+                          (IRInt<"vmldava_predicated", [Vector, Predicate]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           (zeroinit Scalar32), $a, $b, $pred)>;
+
+  def "a"#xsuffix#"q"
+    : Intrinsic<Scalar32, (args Scalar32:$a, Vector:$b, Vector:$c),
+                          (IRInt<"vmldava", [Vector]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $a, $b, $c)>;
+  def "a"#xsuffix#"q_p"
+    : Intrinsic<Scalar32, (args Scalar32:$a, Vector:$b, Vector:$c,
+                                Predicate:$pred),
+                          (IRInt<"vmldava_predicated", [Vector, Predicate]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $a, $b, $c, $pred)>;
+}
+
+class IntrSplit64<Type resty, dag args, dag codegen>
+  : Intrinsic<resty, args,
+              (seq (u32 (lshr $a, (u64 32))):$hi,
+                   (u32 $a):$lo,
+                   codegen:$pair,
+                   (or (shl (u64 (xval $pair, 1)), (u64 32)),
+                            (u64 (xval $pair, 0))))>;
+
+class IntrSplit64ZeroInit<Type resty, dag args, dag codegen>
+  : Intrinsic<resty, args,
+              (seq (zeroinit u32):$hi,
+                   (zeroinit u32):$lo,
+                   codegen:$pair,
+                   (or (shl (u64 (xval $pair, 1)), (u64 32)),
+                            (u64 (xval $pair, 0))))>;
+
+multiclass MVEBinaryVectorHoriz64Base<dag subtract, dag exchange,
+                                      string xsuffix, string irname> {
+  def xsuffix#"q"
+    : IntrSplit64ZeroInit<Scalar64, (args Vector:$a, Vector:$b),
+                          (IRInt<irname, [Vector]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $lo, $hi, $a, $b)>;
+  def xsuffix#"q_p"
+    : IntrSplit64ZeroInit<Scalar64, (args Vector:$a, Vector:$b,
+                                          Predicate:$pred),
+                          (IRInt<irname#"_predicated", [Vector, Predicate]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $lo, $hi, $a, $b, $pred)>;
+
+  def "a"#xsuffix#"q"
+    : IntrSplit64<Scalar64, (args Scalar64:$a, Vector:$b, Vector:$c),
+                          (IRInt<irname, [Vector]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $lo, $hi, $b, $c)>;
+  def "a"#xsuffix#"q_p"
+    : IntrSplit64<Scalar64, (args Scalar64:$a, Vector:$b, Vector:$c,
+                                  Predicate:$pred),
+                          (IRInt<irname#"_predicated", [Vector, Predicate]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $lo, $hi, $b, $c, $pred)>;
+}
+
+multiclass MVEBinaryVectorHoriz64<dag subtract, dag exchange, string xsuffix> {
+  defm "" : MVEBinaryVectorHoriz64Base<subtract, exchange, xsuffix, "vmlldava">;
+}
+
+multiclass MVEBinaryVectorHoriz64R<dag subtract, dag exchange, string xsuffix> {
+  defm "" : MVEBinaryVectorHoriz64Base<subtract, exchange, xsuffix,
+                                       "vrmlldavha">;
+}
+
+let params = T.Int in {
+def vabavq : Intrinsic<u32, (args u32:$a, Vector:$b, Vector:$c),
+    (IRInt<"vabav", [Vector]> (unsignedflag Scalar), $a, $b, $c)>;
+def vabavq_p : Intrinsic<u32, (args u32:$a, Vector:$b, Vector:$c,
+                                    Predicate:$pred),
+    (IRInt<"vabav_predicated", [Vector, Predicate]>
+                               (unsignedflag Scalar), $a, $b, $c, $pred)>;
+
+defm vmladav  : MVEBinaryVectorHoriz32<V.False, V.False, "">;
+}
+
+let params = T.Signed in {
+defm vmladav : MVEBinaryVectorHoriz32<V.False, V.True, "x">;
+defm vmlsdav : MVEBinaryVectorHoriz32<V.True, V.False, "">;
+defm vmlsdav : MVEBinaryVectorHoriz32<V.True, V.True, "x">;
+}
+
+let params = [u16, s16, u32, s32] in
+defm vmlaldav : MVEBinaryVectorHoriz64<V.False, V.False, "">;
+
+let params = [s16, s32] in {
+defm vmlaldav : MVEBinaryVectorHoriz64<V.False, V.True, "x">;
+defm vmlsldav : MVEBinaryVectorHoriz64<V.True, V.False, "">;
+defm vmlsldav : MVEBinaryVectorHoriz64<V.True, V.True, "x">;
+}
+
+let params = T.Int32 in
+defm vrmlaldavh : MVEBinaryVectorHoriz64R<V.False, V.False, "">;
+
+let params = [s32] in {
+defm vrmlaldavh : MVEBinaryVectorHoriz64R<V.False, V.True, "x">;
+defm vrmlsldavh : MVEBinaryVectorHoriz64R<V.True, V.False, "">;
+defm vrmlsldavh : MVEBinaryVectorHoriz64R<V.True, V.True, "x">;
+}
+
 foreach desttype = T.All in {
   // We want a vreinterpretq between every pair of supported vector types
   // _except_ that there shouldn't be one from a type to itself.
