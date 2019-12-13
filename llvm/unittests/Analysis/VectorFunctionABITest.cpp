@@ -13,7 +13,7 @@
 
 using namespace llvm;
 
-// This test makes sure that the getFromVFABI method succeeds only on
+// This test makes sure that the demangling method succeeds only on
 // valid values of the string.
 TEST(VectorFunctionABITests, OnlyValidNames) {
   // Incomplete string.
@@ -91,8 +91,8 @@ protected:
   unsigned &VF = Info.Shape.VF;
   VFISAKind &ISA = Info.ISA;
   SmallVector<VFParameter, 8> &Parameters = Info.Shape.Parameters;
-  StringRef &ScalarName = Info.ScalarName;
-  StringRef &VectorName = Info.VectorName;
+  std::string &ScalarName = Info.ScalarName;
+  std::string &VectorName = Info.VectorName;
   bool &IsScalable = Info.Shape.IsScalable;
   // Invoke the parser.
   bool invokeParser(const StringRef MangledName) {
@@ -241,6 +241,12 @@ TEST_F(VFABIParserTest, ISA) {
 
   EXPECT_TRUE(invokeParser("_ZGVeN2v_sin"));
   EXPECT_EQ(ISA, VFISAKind::AVX512);
+}
+
+TEST_F(VFABIParserTest, LLVM_ISA) {
+  EXPECT_FALSE(invokeParser("_ZGV_LLVM_N2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_sin_(vector_name)"));
+  EXPECT_EQ(ISA, VFISAKind::LLVM);
 }
 
 TEST_F(VFABIParserTest, InvalidMask) {
@@ -524,4 +530,16 @@ TEST_F(VFABIParserTest, LLVM_InternalISA) {
   EXPECT_FALSE(invokeParser("_ZGV_LLVM_N2v_sin"));
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_sin_(vector_name)"));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
+}
+
+TEST_F(VFABIParserTest, IntrinsicsInLLVMIsa) {
+  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N4vv_llvm.pow.f32(__svml_powf4)"));
+  EXPECT_EQ(VF, (unsigned)4);
+  EXPECT_FALSE(IsMasked());
+  EXPECT_FALSE(IsScalable);
+  EXPECT_EQ(ISA, VFISAKind::LLVM);
+  EXPECT_EQ(Parameters.size(), (unsigned)2);
+  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::Vector}));
+  EXPECT_EQ(ScalarName, "llvm.pow.f32");
 }
