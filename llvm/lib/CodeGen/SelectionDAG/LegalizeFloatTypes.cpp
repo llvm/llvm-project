@@ -660,8 +660,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
                        L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
-    if (N != NewL.getValue(1).getNode())
-      ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
+    ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
     return NewL;
   }
 
