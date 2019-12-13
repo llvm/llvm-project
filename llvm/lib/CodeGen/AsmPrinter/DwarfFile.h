@@ -37,12 +37,21 @@ struct RangeSpan {
   const MCSymbol *End;
 };
 
-struct RangeSpanList {
+class RangeSpanList {
+private:
   // Index for locating within the debug_range section this particular span.
-  MCSymbol *Label;
+  MCSymbol *RangeSym;
   const DwarfCompileUnit *CU;
   // List of ranges.
   SmallVector<RangeSpan, 2> Ranges;
+
+public:
+  RangeSpanList(MCSymbol *Sym, const DwarfCompileUnit &CU,
+                SmallVector<RangeSpan, 2> Ranges)
+      : RangeSym(Sym), CU(&CU), Ranges(std::move(Ranges)) {}
+  MCSymbol *getSym() const { return RangeSym; }
+  const DwarfCompileUnit &getCU() const { return *CU; }
+  const SmallVectorImpl<RangeSpan> &getRanges() const { return Ranges; }
 };
 
 class DwarfFile {
