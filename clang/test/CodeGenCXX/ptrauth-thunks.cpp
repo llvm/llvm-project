@@ -24,4 +24,4 @@ namespace Test1 {
 // CHECK-LABEL: define linkonce_odr void @_ZTv0_n24_N5Test11DD0Ev(%"struct.Test1::D"* %this)
 // CHECK: %[[BitcastThis:.*]] = bitcast %"struct.Test1::D"* %this to i64*
 // CHECK: %[[SignedVTable:.*]] = load i64, i64* %[[BitcastThis]], align 8
-// CHECK: %[[VTable:.*]] = tail call i64 @llvm.ptrauth.auth.i64(i64 %[[SignedVTable]], i32 2, i64 0)
+// CHECK: %[[VTable:.*]] = call i64 @llvm.ptrauth.auth.i64(i64 %[[SignedVTable]], i32 2, i64 0)
