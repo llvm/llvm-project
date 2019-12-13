@@ -7,9 +7,6 @@ class TestObjCXXBridgedPO(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipUnlessDarwin
     def test_bridged_type_po(self):
         self.build()

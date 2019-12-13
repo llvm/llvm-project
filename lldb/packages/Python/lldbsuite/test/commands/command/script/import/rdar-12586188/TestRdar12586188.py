@@ -18,10 +18,6 @@ class Rdar12586188TestCase(TestBase):
         """Check that we handle an ImportError in a special way when command script importing files."""
         self.run_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def run_test(self):
         """Check that we handle an ImportError in a special way when command script importing files."""
 

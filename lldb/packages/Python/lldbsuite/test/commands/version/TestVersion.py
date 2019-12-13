@@ -6,9 +6,6 @@ class VersionTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @no_debug_info_test
     def test_version(self):
         # Should work even when people patch the output,

@@ -25,10 +25,6 @@ class TestWeakSymbolsInExpressions(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.do_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def run_weak_var_check (self, weak_varname, present):
         # The expression will modify present_weak_int to signify which branch
         # was taken.  Set it to so we don't get confused by a previous run.

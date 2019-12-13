@@ -12,10 +12,6 @@ class ValueVarUpdateTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     @add_test_categories(['pyapi'])
     def test_with_process_launch_api(self):
         """Test SBValue::GetValueDidChange"""

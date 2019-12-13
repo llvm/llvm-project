@@ -21,9 +21,6 @@ class MPXOffsetIntersectionTestCase(TestBase):
     MPX_CONFIG_REGS = ('bndcfgu', 'bndstatus')
     BND_VALUE = '{' + ' '.join(('0xff' for _ in range(16))) + '}'
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipIf(oslist=no_match(['linux']))
     @skipIf(archs=no_match(['x86_64']))
     def test_mpx_registers_offset_intersection(self):

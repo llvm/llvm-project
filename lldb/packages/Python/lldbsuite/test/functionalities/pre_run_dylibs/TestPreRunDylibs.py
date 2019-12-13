@@ -10,10 +10,6 @@ class TestPreRunLibraries(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     @skipIf(oslist=no_match(['darwin','macos']))
     def test(self):
         """Test that we find directly linked dylib pre-run."""

@@ -14,11 +14,6 @@ class TestBreakpointLanguage(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line number to break inside main().
-
     def check_location_file(self, bp, loc, test_name):
         bp_loc = bp.GetLocationAtIndex(loc)
         addr = bp_loc.GetAddress()

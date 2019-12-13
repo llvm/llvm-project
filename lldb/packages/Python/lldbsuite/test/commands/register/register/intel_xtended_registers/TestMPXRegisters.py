@@ -14,9 +14,6 @@ class RegisterCommandsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipIf(compiler="clang")
     @skipIf(oslist=no_match(['linux']))
     @skipIf(archs=no_match(['i386', 'x86_64']))

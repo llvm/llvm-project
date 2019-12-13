@@ -14,10 +14,6 @@ class TestCalculatorMode(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def test__calculator_mode(self):
         """Test calling expressions in the dummy target."""
         self.expect("expression 11 + 22", "11 + 22 didn't get the expected result", substrs=["33"])

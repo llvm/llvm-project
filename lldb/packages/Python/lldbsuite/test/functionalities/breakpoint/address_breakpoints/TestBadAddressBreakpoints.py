@@ -20,10 +20,6 @@ class BadAddressBreakpointTestCase(TestBase):
         self.build()
         self.address_breakpoints()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def address_breakpoints(self):
         """Test that breakpoints set on a bad address say they are bad."""
         target, process, thread, bkpt = \

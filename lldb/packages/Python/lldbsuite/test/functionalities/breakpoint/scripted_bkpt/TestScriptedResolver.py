@@ -40,10 +40,6 @@ class TestScriptedResolver(TestBase):
         self.build()
         self.do_test_bad_options()        
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def make_target_and_import(self):
         target = lldbutil.run_to_breakpoint_make_target(self)
         interp = self.dbg.GetCommandInterpreter()
