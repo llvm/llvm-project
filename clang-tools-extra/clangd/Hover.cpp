@@ -95,7 +95,7 @@ std::string printDefinition(const Decl *D) {
 }
 
 void printParams(llvm::raw_ostream &OS,
-                        const std::vector<HoverInfo::Param> &Params) {
+                 const std::vector<HoverInfo::Param> &Params) {
   for (size_t I = 0, E = Params.size(); I != E; ++I) {
     if (I)
       OS << ", ";
@@ -456,12 +456,11 @@ markup::Document HoverInfo::present() const {
       P.appendCode(llvm::StringRef(*NamespaceScope).drop_back(2));
   }
 
-  Output.addSpacer();
   if (!Definition.empty()) {
-    Output.addParagraph().appendCode(Definition);
+    Output.addCodeBlock(Definition);
   } else {
     // Builtin types
-    Output.addParagraph().appendCode(Name);
+    Output.addCodeBlock(Name);
   }
 
   if (!Documentation.empty())

@@ -54,6 +54,28 @@ TEST(Render, Escaping) {
   P = Paragraph();
   P.appendCode("`foo`");
   EXPECT_EQ(P.asMarkdown(), "` ``foo`` `");
+
+  // Code blocks might need more than 3 backticks.
+  Document D;
+  D.addCodeBlock("foobarbaz `\nqux");
+  EXPECT_EQ(D.asMarkdown(), "```cpp\n"
+                            "foobarbaz `\nqux\n"
+                            "```");
+  D = Document();
+  D.addCodeBlock("foobarbaz ``\nqux");
+  EXPECT_THAT(D.asMarkdown(), "```cpp\n"
+                              "foobarbaz ``\nqux\n"
+                              "```");
+  D = Document();
+  D.addCodeBlock("foobarbaz ```\nqux");
+  EXPECT_EQ(D.asMarkdown(), "````cpp\n"
+                            "foobarbaz ```\nqux\n"
+                            "````");
+  D = Document();
+  D.addCodeBlock("foobarbaz ` `` ``` ```` `\nqux");
+  EXPECT_EQ(D.asMarkdown(), "`````cpp\n"
+                            "foobarbaz ` `` ``` ```` `\nqux\n"
+                            "`````");
 }
 
 TEST(Paragraph, SeparationOfChunks) {
@@ -96,9 +118,18 @@ TEST(Paragraph, NewLines) {
 TEST(Document, Separators) {
   Document D;
   D.addParagraph().appendText("foo");
+  D.addCodeBlock("test");
   D.addParagraph().appendText("bar");
-  EXPECT_EQ(D.asMarkdown(), "foo\nbar");
-  EXPECT_EQ(D.asPlainText(), "foo\nbar");
+  EXPECT_EQ(D.asMarkdown(), R"md(foo
+```cpp
+test
+```
+bar)md");
+  EXPECT_EQ(D.asPlainText(), R"pt(foo
+
+test
+
+bar)pt");
 }
 
 TEST(Document, Spacer) {
@@ -108,6 +139,38 @@ TEST(Document, Spacer) {
   D.addParagraph().appendText("bar");
   EXPECT_EQ(D.asMarkdown(), "foo\n\nbar");
   EXPECT_EQ(D.asPlainText(), "foo\n\nbar");
+}
+
+TEST(CodeBlock, Render) {
+  Document D;
+  // Code blocks preserves any extra spaces.
+  D.addCodeBlock("foo\n  bar\n  baz");
+  EXPECT_EQ(D.asMarkdown(), R"md(```cpp
+foo
+  bar
+  baz
+```)md");
+  EXPECT_EQ(D.asPlainText(), R"pt(foo
+  bar
+  baz)pt");
+  D.addCodeBlock("foo");
+  EXPECT_EQ(D.asMarkdown(), R"md(```cpp
+foo
+  bar
+  baz
+```
+```cpp
+foo
+```)md");
+  // FIXME: we shouldn't have 2 empty lines in between. A solution might be
+  // having a `verticalMargin` method for blocks, and let container insert new
+  // lines according to that before/after blocks.
+  EXPECT_EQ(D.asPlainText(), R"pt(foo
+  bar
+  baz
+
+
+foo)pt");
 }
 
 } // namespace
