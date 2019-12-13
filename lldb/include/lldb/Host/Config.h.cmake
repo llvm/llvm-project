@@ -13,7 +13,6 @@
 
 #cmakedefine01 LLDB_HAVE_EL_RFUNC_T
 
-#cmakedefine LLDB_DISABLE_POSIX
 
 #cmakedefine01 HAVE_SYS_TYPES_H
 
@@ -30,6 +29,8 @@
 #ifndef HAVE_LIBCOMPRESSION
 #cmakedefine HAVE_LIBCOMPRESSION
 #endif
+
+#cmakedefine01 LLDB_ENABLE_POSIX
 
 #cmakedefine01 LLDB_ENABLE_TERMIOS
 

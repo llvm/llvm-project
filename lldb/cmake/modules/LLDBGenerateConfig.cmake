@@ -24,9 +24,7 @@ check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSIO
 # so that the check isn't duplicated, but we translate them into the LLDB names
 # so that I don't have to change all the uses at the moment.
 set(LLDB_ENABLE_TERMIOS ${HAVE_TERMIOS_H})
-if(NOT UNIX)
-  set(LLDB_DISABLE_POSIX 1)
-endif()
+set(LLDB_ENABLE_POSIX NOT UNIX)
 
 if(NOT LLDB_CONFIG_HEADER_INPUT)
  set(LLDB_CONFIG_HEADER_INPUT ${LLDB_INCLUDE_ROOT}/lldb/Host/Config.h.cmake)
