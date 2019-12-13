@@ -1585,17 +1585,29 @@ public:
   }
 
   /// Extract the alignment of the return value.
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use getRetAlign() instead.
   unsigned getRetAlignment() const {
     if (const auto MA = Attrs.getRetAlignment())
       return MA->value();
     return 0;
   }
 
+  /// Extract the alignment of the return value.
+  MaybeAlign getRetAlign() const { return Attrs.getRetAlignment(); }
+
   /// Extract the alignment for a call or parameter (0=unknown).
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use getParamAlign() instead.
   unsigned getParamAlignment(unsigned ArgNo) const {
     if (const auto MA = Attrs.getParamAlignment(ArgNo))
       return MA->value();
     return 0;
+  }
+
+  /// Extract the alignment for a call or parameter (0=unknown).
+  MaybeAlign getParamAlign(unsigned ArgNo) const {
+    return Attrs.getParamAlignment(ArgNo);
   }
 
   /// Extract the byval type for a call or parameter.

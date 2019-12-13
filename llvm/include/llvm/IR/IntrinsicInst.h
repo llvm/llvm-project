@@ -348,7 +348,10 @@ namespace llvm {
       return cast<PointerType>(getRawDest()->getType())->getAddressSpace();
     }
 
+    /// FIXME: Remove this function once transition to Align is over.
+    /// Use getDestAlign() instead.
     unsigned getDestAlignment() const { return getParamAlignment(ARG_DEST); }
+    MaybeAlign getDestAlign() const { return getParamAlign(ARG_DEST); }
 
     /// Set the specified arguments of the instruction.
     void setDest(Value *Ptr) {
@@ -406,8 +409,14 @@ namespace llvm {
       return cast<PointerType>(getRawSource()->getType())->getAddressSpace();
     }
 
+    /// FIXME: Remove this function once transition to Align is over.
+    /// Use getSourceAlign() instead.
     unsigned getSourceAlignment() const {
       return BaseCL::getParamAlignment(ARG_SOURCE);
+    }
+
+    MaybeAlign getSourceAlign() const {
+      return BaseCL::getParamAlign(ARG_SOURCE);
     }
 
     void setSource(Value *Ptr) {

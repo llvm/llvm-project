@@ -126,6 +126,11 @@ unsigned Argument::getParamAlignment() const {
   return getParent()->getParamAlignment(getArgNo());
 }
 
+MaybeAlign Argument::getParamAlign() const {
+  assert(getType()->isPointerTy() && "Only pointers have alignments");
+  return getParent()->getParamAlign(getArgNo());
+}
+
 Type *Argument::getParamByValType() const {
   assert(getType()->isPointerTy() && "Only pointers have byval types");
   return getParent()->getParamByValType(getArgNo());

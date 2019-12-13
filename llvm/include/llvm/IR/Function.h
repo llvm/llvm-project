@@ -435,10 +435,16 @@ public:
   void addDereferenceableOrNullParamAttr(unsigned ArgNo, uint64_t Bytes);
 
   /// Extract the alignment for a call or parameter (0=unknown).
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use getParamAlign() instead.
   unsigned getParamAlignment(unsigned ArgNo) const {
-    if (const auto MA = AttributeSets.getParamAlignment(ArgNo))
+    if (const auto MA = getParamAlign(ArgNo))
       return MA->value();
     return 0;
+  }
+
+  MaybeAlign getParamAlign(unsigned ArgNo) const {
+    return AttributeSets.getParamAlignment(ArgNo);
   }
 
   /// Extract the byval type for a parameter.
