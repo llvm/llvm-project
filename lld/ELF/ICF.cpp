@@ -84,6 +84,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <atomic>
@@ -452,6 +453,7 @@ static void print(const Twine &s) {
 
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
+  llvm::TimeTraceScope timeScope("ICF");
   // Compute isPreemptible early. We may add more symbols later, so this loop
   // cannot be merged with the later computeIsPreemptible() pass which is used
   // by scanRelocations().
