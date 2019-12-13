@@ -34,6 +34,10 @@ template <bool> struct InTemplate {};
 int main(int, char**)
 {
 #ifdef __cpp_lib_is_constant_evaluated
+#ifdef TEST_COMPILER_C1XX
+    #pragma warning(push)
+    #pragma warning(disable: 5063) // 'std::is_constant_evaluated' always evaluates to true in manifestly constant-evaluated expressions
+#endif // TEST_COMPILER_C1XX
   // Test the signature
   {
     ASSERT_SAME_TYPE(decltype(std::is_constant_evaluated()), bool);
@@ -51,6 +55,9 @@ int main(int, char**)
     static int local_static = std::is_constant_evaluated() ? 42 : -1;
     assert(local_static == 42);
   }
-#endif
+#ifdef TEST_COMPILER_C1XX
+    #pragma warning(pop)
+#endif // TEST_COMPILER_C1XX
+#endif // __cpp_lib_is_constant_evaluated
   return 0;
 }
