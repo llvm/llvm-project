@@ -31,7 +31,6 @@
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/TimeProfiler.h"
 #include <functional>
 #include <vector>
 
@@ -324,7 +323,6 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
 // input sections. This function make some or all of them on
 // so that they are emitted to the output file.
 template <class ELFT> void markLive() {
-  llvm::TimeTraceScope timeScope("GC");
   // If -gc-sections is not given, no sections are removed.
   if (!config->gcSections) {
     for (InputSectionBase *sec : inputSections)

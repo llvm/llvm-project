@@ -191,7 +191,6 @@ struct Configuration {
   bool trace;
   bool thinLTOEmitImportsFiles;
   bool thinLTOIndexOnly;
-  bool timeTraceEnabled;
   bool tocOptimize;
   bool undefinedVersion;
   bool useAndroidRelrTags = false;
@@ -241,7 +240,6 @@ struct Configuration {
   unsigned ltoo;
   unsigned optimize;
   unsigned thinLTOJobs;
-  unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
 
   // The following config options do not directly correspond to any
