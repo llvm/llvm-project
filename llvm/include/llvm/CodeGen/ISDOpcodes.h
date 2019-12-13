@@ -13,6 +13,8 @@
 #ifndef LLVM_CODEGEN_ISDOPCODES_H
 #define LLVM_CODEGEN_ISDOPCODES_H
 
+#include "llvm/CodeGen/ValueTypes.h"
+
 namespace llvm {
 
 /// ISD namespace - This namespace contains an enum which represents all of the
@@ -1082,7 +1084,7 @@ namespace ISD {
 
   /// Return the operation corresponding to !(X op Y), where 'op' is a valid
   /// SetCC operation.
-  CondCode getSetCCInverse(CondCode Operation, bool isInteger);
+  CondCode getSetCCInverse(CondCode Operation, EVT Type);
 
   /// Return the operation corresponding to (Y op X) when given the operation
   /// for (X op Y).
@@ -1091,12 +1093,12 @@ namespace ISD {
   /// Return the result of a logical OR between different comparisons of
   /// identical values: ((X op1 Y) | (X op2 Y)). This function returns
   /// SETCC_INVALID if it is not possible to represent the resultant comparison.
-  CondCode getSetCCOrOperation(CondCode Op1, CondCode Op2, bool isInteger);
+  CondCode getSetCCOrOperation(CondCode Op1, CondCode Op2, EVT Type);
 
   /// Return the result of a logical AND between different comparisons of
   /// identical values: ((X op1 Y) & (X op2 Y)). This function returns
   /// SETCC_INVALID if it is not possible to represent the resultant comparison.
-  CondCode getSetCCAndOperation(CondCode Op1, CondCode Op2, bool isInteger);
+  CondCode getSetCCAndOperation(CondCode Op1, CondCode Op2, EVT Type);
 
 } // end llvm::ISD namespace
 

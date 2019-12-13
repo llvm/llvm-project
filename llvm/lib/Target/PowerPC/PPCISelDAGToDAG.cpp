@@ -3597,7 +3597,7 @@ SDValue IntegerCompareEliminator::getSETCCInGPR(SDValue Compare,
 
   if (ConvOpts == SetccInGPROpts::ZExtInvert ||
       ConvOpts == SetccInGPROpts::SExtInvert)
-    CC = ISD::getSetCCInverse(CC, true);
+    CC = ISD::getSetCCInverse(CC, InputVT);
 
   bool Inputs32Bit = InputVT == MVT::i32;
 
