@@ -1,0 +1,72 @@
+# RUN: not llc -mtriple=s390x-linux-gnu -mcpu=z14 -run-pass=none -o - %s \
+# RUN:  2>&1 | FileCheck %s
+# REQUIRES: asserts
+#
+# Test that the machine verifier catches wrong operand types.
+
+--- |
+  define anyregcc i64 @fun() { ret i64 0  }
+  @gsrc = global i16 2
+...
+---
+name:            fun
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64bit }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $r2l
+    %0:gr64bit = LGHI $r2l
+    %1:addr64bit = LLILL $r2l
+    %2:addr64bit = LGFI $r2l
+    %3:addr64bit = LGFI 0
+
+    %3:addr64bit = AG %3, %1, 0, %2, implicit-def dead $cc
+    %3:addr64bit = AG %3, %1, %0, %2, implicit-def dead $cc
+    %3:addr64bit = AG %3, %1, 0, 2, implicit-def dead $cc
+
+    %4:addr64bit = LARL @gsrc
+    %4:addr64bit = LARL $r2l
+
+    MVCLoop %4, 0, %3, 0, 1680, %0, implicit-def $cc
+    MVCLoop %4, 0, %3, 0, %1, %0, implicit-def $cc
+
+    BCR 0, 0, $r2d, implicit $cc
+    BCR 0, $r2d, $r2d, implicit $cc
+    Return implicit $r2d
+
+...
+
+# CHECK: *** Bad machine code: Expected a non-register operand. ***
+# CHECK: - instruction: %0:gr64bit = LGHI $r2l
+# CHECK: - operand 1:   $r2l
+
+# CHECK: *** Bad machine code: Expected a non-register operand. ***
+# CHECK: - instruction: %1:addr64bit = LLILL $r2l
+# CHECK: - operand 1:   $r2l
+
+# CHECK: *** Bad machine code: Expected a non-register operand. ***
+# CHECK: - instruction: %2:addr64bit = LGFI $r2l
+# CHECK: - operand 1:   $r2l
+
+# CHECK: *** Bad machine code: Addressing mode operands corrupt! ***
+# CHECK: - instruction: %3:addr64bit = AG %3:addr64bit(tied-def 0), %1:addr64bit, %0:gr64bit, %2:addr64bit, implicit-def dead $cc
+
+# CHECK: *** Bad machine code: Addressing mode operands corrupt! ***
+# CHECK: - instruction: %3:addr64bit = AG %3:addr64bit(tied-def 0), %1:addr64bit, 0, 2, implicit-def dead $cc
+
+# CHECK: *** Bad machine code: Expected a non-register operand. ***
+# CHECK: - instruction: %4:addr64bit = LARL $r2l
+# CHECK: - operand 1:   $r2l
+
+# CHECK: *** Bad machine code: Expected a non-register operand. ***
+# CHECK: - instruction: MVCLoop %4:addr64bit, 0, %3:addr64bit, 0, %1:addr64bit, %0:gr64bit, implicit-def $cc
+# CHECK: - operand 4:   %1:addr64bit
+
+# CHECK: *** Bad machine code: Expected a non-register operand. ***
+# CHECK: - instruction: BCR 0, $r2d, $r2d, implicit $cc
+# CHECK: - operand 1:   $r2d

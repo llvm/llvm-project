@@ -1748,6 +1748,28 @@ void SystemZInstrInfo::loadImmediate(MachineBasicBlock &MBB,
   BuildMI(MBB, MBBI, DL, get(Opcode), Reg).addImm(Value);
 }
 
+bool SystemZInstrInfo::verifyInstruction(const MachineInstr &MI,
+                                         StringRef &ErrInfo) const {
+  const MCInstrDesc &MCID = MI.getDesc();
+  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+    if (I >= MCID.getNumOperands())
+      break;
+    const MachineOperand &Op = MI.getOperand(I);
+    const MCOperandInfo &MCOI = MCID.OpInfo[I];
+    // Addressing modes have register and immediate operands. Op should be a
+    // register (or frame index) operand if MCOI.RegClass contains a valid
+    // register class, or an immediate otherwise.
+    if (MCOI.OperandType == MCOI::OPERAND_MEMORY &&
+        ((MCOI.RegClass != -1 && !Op.isReg() && !Op.isFI()) ||
+         (MCOI.RegClass == -1 && !Op.isImm()))) {
+      ErrInfo = "Addressing mode operands corrupt!";
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool SystemZInstrInfo::
 areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                 const MachineInstr &MIb) const {
