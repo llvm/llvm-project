@@ -72,7 +72,7 @@ struct HoverInfo {
   llvm::Optional<std::string> Value;
 
   /// Produce a user-readable information.
-  FormattedString present() const;
+  markup::Document present() const;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const HoverInfo::Param &);
 inline bool operator==(const HoverInfo::Param &LHS,

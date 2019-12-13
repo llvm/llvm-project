@@ -11,6 +11,7 @@
 #include "AST.h"
 #include "CodeCompletionStrings.h"
 #include "FindTarget.h"
+#include "FormattedString.h"
 #include "Logger.h"
 #include "Selection.h"
 #include "SourceCode.h"
@@ -441,28 +442,30 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   return HI;
 }
 
-FormattedString HoverInfo::present() const {
-  FormattedString Output;
+markup::Document HoverInfo::present() const {
+  markup::Document Output;
   if (NamespaceScope) {
-    Output.appendText("Declared in");
+    auto &P = Output.addParagraph();
+    P.appendText("Declared in");
     // Drop trailing "::".
     if (!LocalScope.empty())
-      Output.appendInlineCode(llvm::StringRef(LocalScope).drop_back(2));
+      P.appendCode(llvm::StringRef(LocalScope).drop_back(2));
     else if (NamespaceScope->empty())
-      Output.appendInlineCode("global namespace");
+      P.appendCode("global namespace");
     else
-      Output.appendInlineCode(llvm::StringRef(*NamespaceScope).drop_back(2));
+      P.appendCode(llvm::StringRef(*NamespaceScope).drop_back(2));
   }
 
+  Output.addSpacer();
   if (!Definition.empty()) {
-    Output.appendCodeBlock(Definition);
+    Output.addParagraph().appendCode(Definition);
   } else {
     // Builtin types
-    Output.appendCodeBlock(Name);
+    Output.addParagraph().appendCode(Name);
   }
 
   if (!Documentation.empty())
-    Output.appendText(Documentation);
+    Output.addParagraph().appendText(Documentation);
   return Output;
 }
 
