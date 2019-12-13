@@ -39,7 +39,6 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -1134,9 +1133,6 @@ public:
                 &ResolvedODR,
             const GVSummaryMapTy &DefinedGlobals,
             MapVector<StringRef, BitcodeModule> &ModuleMap) {
-          if (Conf.TimeTraceEnabled)
-            timeTraceProfilerInitialize(Conf.TimeTraceGranularity,
-                                        "thin backend");
           Error E = runThinLTOBackendThread(
               AddStream, Cache, Task, BM, CombinedIndex, ImportList, ExportList,
               ResolvedODR, DefinedGlobals, ModuleMap);
@@ -1147,8 +1143,6 @@ public:
             else
               Err = std::move(E);
           }
-          if (timeTraceProfilerEnabled())
-            timeTraceProfilerFinishThread();
         },
         BM, std::ref(CombinedIndex), std::ref(ImportList), std::ref(ExportList),
         std::ref(ResolvedODR), std::ref(DefinedGlobals), std::ref(ModuleMap));
