@@ -1046,4 +1046,51 @@ def int_arm_mve_vst4q: Intrinsic<[], [llvm_anyptr_ty, llvm_anyvector_ty, LLVMMat
 def int_arm_cls: Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_cls64: Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
 
+// MVE vector absolute difference and accumulate across vector
+// The first operand is an 'unsigned' flag. The remaining operands are:
+// * accumulator
+// * first vector operand
+// * second vector operand
+// * mask (only in predicated versions)
+defm int_arm_mve_vabav: MVEPredicated<
+  [llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>], llvm_anyvector_ty,
+  [IntrNoMem]>;
+
+// The following 3 instrinsics are MVE vector reductions with two vector
+// operands.
+// The first 3 operands are boolean flags (must be compile-time constants):
+// * unsigned - the instruction operates on vectors of unsigned values and
+//              unsigned scalars
+// * subtract - the instruction performs subtraction after multiplication of
+//              lane pairs (e.g., vmlsdav vs vmladav)
+// * exchange - the instruction exchanges successive even and odd lanes of
+//              the first operands before multiplication of lane pairs
+//              (e.g., vmladavx vs vmladav)
+// The remaining operands are:
+// * accumulator
+// * first vector operand
+// * second vector operand
+// * mask (only in predicated versions)
+
+// Version with 32-bit result, vml{a,s}dav[a][x]
+defm int_arm_mve_vmldava: MVEPredicated<
+  [llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+   llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+  llvm_anyvector_ty, [IntrNoMem]>;
+
+// Version with 64-bit result, vml{a,s}ldav[a][x]
+defm int_arm_mve_vmlldava: MVEPredicated<
+  [llvm_i32_ty, llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+   llvm_i32_ty, llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+  llvm_anyvector_ty, [IntrNoMem]>;
+
+// Version with 72-bit rounded result, vrml{a,s}ldavh[a][x]
+defm int_arm_mve_vrmlldavha: MVEPredicated<
+  [llvm_i32_ty, llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+   llvm_i32_ty, llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+  llvm_anyvector_ty, [IntrNoMem]>;
 } // end TargetPrefix
