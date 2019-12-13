@@ -118,11 +118,8 @@ TEST(ScudoFlagsTest, AllocatorFlags) {
   EXPECT_EQ(2048, Flags.quarantine_max_chunk_size);
 }
 
+#ifdef GWP_ASAN_HOOKS
 TEST(ScudoFlagsTest, GWPASanFlags) {
-#ifndef GWP_ASAN_HOOKS
-  GTEST_SKIP() << "GWP-ASan wasn't built as part of Scudo Standalone.";
-#endif // GWP_ASAN_HOOKS
-
   scudo::FlagParser Parser;
   scudo::Flags Flags;
   scudo::registerFlags(&Parser, &Flags);
@@ -134,3 +131,4 @@ TEST(ScudoFlagsTest, GWPASanFlags) {
   EXPECT_FALSE(Flags.GWP_ASAN_InstallSignalHandlers);
   EXPECT_EQ(1, Flags.GWP_ASAN_SampleRate);
 }
+#endif // GWP_ASAN_HOOKS
