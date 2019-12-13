@@ -60,14 +60,18 @@ CreateFunctionRefExpr(Sema &S, FunctionDecl *Fn, NamedDecl *FoundDecl,
   // being used.
   if (FoundDecl != Fn && S.DiagnoseUseOfDecl(Fn, Loc))
     return ExprError();
-  if (auto *FPT = Fn->getType()->getAs<FunctionProtoType>())
-    S.ResolveExceptionSpec(Loc, FPT);
   DeclRefExpr *DRE = new (S.Context)
       DeclRefExpr(S.Context, Fn, false, Fn->getType(), VK_LValue, Loc, LocInfo);
   if (HadMultipleCandidates)
     DRE->setHadMultipleCandidates(true);
 
   S.MarkDeclRefReferenced(DRE, Base);
+  if (auto *FPT = DRE->getType()->getAs<FunctionProtoType>()) {
+    if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
+      S.ResolveExceptionSpec(Loc, FPT);
+      DRE->setType(Fn->getType());
+    }
+  }
   return S.ImpCastExprToType(DRE, S.Context.getPointerType(DRE->getType()),
                              CK_FunctionToPointerDecay);
 }
@@ -14435,13 +14439,6 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
                                        VK_RValue, OK_Ordinary,
                                        UnOp->getOperatorLoc(), false);
   }
-
-  // C++ [except.spec]p17:
-  //   An exception-specification is considered to be needed when:
-  //   - in an expression the function is the unique lookup result or the
-  //     selected member of a set of overloaded functions
-  if (auto *FPT = Fn->getType()->getAs<FunctionProtoType>())
-    ResolveExceptionSpec(E->getExprLoc(), FPT);
 
   if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {
     // FIXME: avoid copy.
