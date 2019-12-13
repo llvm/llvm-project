@@ -36,7 +36,7 @@ struct Y : Primary, X {
 };
 Y y;
 // ITANIUM: @_ZTV1Y = {{.*}}constant {{.*}} null, {{.*}} @_ZTI1Y {{.*}} @_ZN7Primary1fEv {{.*}} @_ZNK1YssERKS_ {{.*}} @_ZN1YaSERKS_ {{.*}} @_ZN1YaSEOS_ {{.*}} @_ZNK1YeqERKS_ {{.*}} -[[POINTERSIZE:4|8]]
-// ITANIUM-SAME: @_ZTI1Y {{.*}} @_ZThn[[POINTERSIZE]]_N1YaSERKS_a
+// ITANIUM-SAME: @_ZTI1Y {{.*}} @_ZThn[[POINTERSIZE]]_N1YaSERKS_
 
 struct A {
   void operator<=>(int);
