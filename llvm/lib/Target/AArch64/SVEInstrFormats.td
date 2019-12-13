@@ -419,15 +419,22 @@ class sve_int_pfirst_next<bits<2> sz8_64, bits<5> opc, string asm,
   let Defs = [NZCV];
 }
 
-multiclass sve_int_pfirst<bits<5> opc, string asm> {
-  def : sve_int_pfirst_next<0b01, opc, asm, PPR8>;
+multiclass sve_int_pfirst<bits<5> opc, string asm, SDPatternOperator op> {
+  def _B : sve_int_pfirst_next<0b01, opc, asm, PPR8>;
+
+  def : SVE_2_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, !cast<Instruction>(NAME # _B)>;
 }
 
-multiclass sve_int_pnext<bits<5> opc, string asm> {
+multiclass sve_int_pnext<bits<5> opc, string asm, SDPatternOperator op> {
   def _B : sve_int_pfirst_next<0b00, opc, asm, PPR8>;
   def _H : sve_int_pfirst_next<0b01, opc, asm, PPR16>;
   def _S : sve_int_pfirst_next<0b10, opc, asm, PPR32>;
   def _D : sve_int_pfirst_next<0b11, opc, asm, PPR64>;
+
+  def : SVE_2_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i1, op, nxv8i1, nxv8i1, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i1, op, nxv4i1, nxv4i1, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i1, op, nxv2i1, nxv2i1, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
