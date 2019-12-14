@@ -68,6 +68,8 @@ public:
 // ThunkSection.
 Thunk *addThunk(const InputSection &isec, Relocation &rel);
 
+void writePPC64LoadAndBranch(uint8_t *buf, int64_t offset);
+
 } // namespace elf
 } // namespace lld
 
