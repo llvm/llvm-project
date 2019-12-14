@@ -4,6 +4,7 @@ executable("clang-tblgen") {
     "//llvm/lib/TableGen",
   ]
   sources = [
+    "ASTTableGen.cpp",
     "ClangASTNodesEmitter.cpp",
     "ClangASTPropertiesEmitter.cpp",
     "ClangAttrEmitter.cpp",
