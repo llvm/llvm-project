@@ -821,32 +821,15 @@ TEST_FUNC(affine_if_op) {
 // clang-format on
 TEST_FUNC(linalg_matmul) {
   using namespace edsc;
-  using namespace edsc::intrinsics;
-  using namespace edsc::op;
-  using linalg_yield = OperationBuilder<linalg::YieldOp>;
 
   auto f32Type = FloatType::getF32(&globalContext());
   auto memrefType = MemRefType::get({-1, -1}, f32Type, {}, 0);
   auto f =
       makeFunction("linalg_matmul", {}, {memrefType, memrefType, memrefType});
 
-  // clang-format off
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  Value *A(f.getArgument(0)), *B(f.getArgument(1)), *C(f.getArgument(2));
-  AffineExpr m, n, k;
-  bindDims(f.getContext(), m, n, k);
-  makeLinalgGenericOp(
-    {m, n, k},
-    {{m, n}, {k, n}, {m, n}},
-    {A, B},
-    {C},
-    {"parallel", "parallel", "reduction"},
-    [](ArrayRef<BlockArgument *> args) {
-      ValueHandle a(args[0]), b(args[1]), c(args[2]);
-      linalg_yield((c + a * b).getValue());
-  });
-  // clang-format on
+  linalg_matmul(makeValueHandles(llvm::to_vector<3>(f.getArguments())));
 
   f.print(llvm::outs());
   f.erase();
