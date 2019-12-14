@@ -45,7 +45,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangASTEmitters.h"
+#include "ASTTableGen.h"
 #include "TableGenBackends.h"
 
 #include "llvm/ADT/StringRef.h"

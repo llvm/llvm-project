@@ -1,4 +1,4 @@
-//=== ClangASTEmitters.h - Definitions for AST node emitters ----*- C++ -*-===//
+//=== ASTTableGen.h - Common definitions for AST node tablegen --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_AST_EMITTERS
-#define CLANG_AST_EMITTERS
+#ifndef CLANG_AST_TABLEGEN_H
+#define CLANG_AST_TABLEGEN_H
 
 #include "llvm/TableGen/Record.h"
 #include "llvm/ADT/STLExtras.h"
