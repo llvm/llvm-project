@@ -122,11 +122,11 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:   401100:       jmpl *4202784
-// DISASM-NEXT:                 pushl $16
+// DISASM-NEXT:                 pushl $0
 // DISASM-NEXT:                 jmp -32 <_start+0xa>
 // DISASM:      bar:
 // DISASM-NEXT:   401110:       jmpl *4202788
-// DISASM-NEXT:                 pushl $24
+// DISASM-NEXT:                 pushl $8
 // DISASM-NEXT:                 jmp -48 <_start+0xa>
 
 .text

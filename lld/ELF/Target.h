@@ -42,8 +42,7 @@ public:
   virtual void writePltHeader(uint8_t *buf) const {}
 
   virtual void writePlt(uint8_t *buf, uint64_t gotEntryAddr,
-                        uint64_t pltEntryAddr, int32_t index,
-                        unsigned relOff) const {}
+                        uint64_t pltEntryAddr, int32_t index) const {}
   virtual void addPltHeaderSymbols(InputSection &isec) const {}
   virtual void addPltSymbols(InputSection &isec, uint64_t off) const {}
 

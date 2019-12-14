@@ -2471,17 +2471,11 @@ void PltSection::writeTo(uint8_t *buf) {
     target->writePltHeader(buf);
   size_t off = headerSize;
 
-  RelocationBaseSection *relSec = isIplt ? in.relaIplt : in.relaPlt;
-
-  // The IPlt is immediately after the Plt, account for this in relOff
-  size_t pltOff = isIplt ? in.plt->getSize() : 0;
-
   for (size_t i = 0, e = entries.size(); i != e; ++i) {
     const Symbol *b = entries[i];
-    unsigned relOff = relSec->entsize * i + pltOff;
     uint64_t got = b->getGotPltVA();
     uint64_t plt = this->getVA() + off;
-    target->writePlt(buf + off, got, plt, b->pltIndex, relOff);
+    target->writePlt(buf + off, got, plt, b->pltIndex);
     off += target->pltEntrySize;
   }
 }

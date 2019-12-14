@@ -28,7 +28,7 @@ public:
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -163,8 +163,7 @@ void RISCV::writePltHeader(uint8_t *buf) const {
 }
 
 void RISCV::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                     uint64_t pltEntryAddr, int32_t index,
-                     unsigned relOff) const {
+                     uint64_t pltEntryAddr, int32_t /*index*/) const {
   // 1: auipc t3, %pcrel_hi(f@.got.plt)
   // l[wd] t3, %pcrel_lo(1b)(t3)
   // jalr t1, t3
