@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import lit.main
+from lit.main import main
 
 if __name__ == '__main__':
-    lit.main()
+    main()

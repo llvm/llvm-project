@@ -17,7 +17,7 @@ def parse_args():
             help="Show version and exit",
             action="store_true")
     parser.add_argument("-j", "--threads", "--workers",
-            dest="numWorkers",
+            dest="workers",
             metavar="N",
             help="Number of workers used for testing",
             type=_positive_int,
@@ -115,7 +115,6 @@ def parse_args():
 
     selection_group = parser.add_argument_group("Test Selection")
     selection_group.add_argument("--max-tests",
-            dest="max_tests",
             metavar="N",
             help="Maximum number of tests to run",
             type=_positive_int)
