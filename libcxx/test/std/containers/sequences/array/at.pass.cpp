@@ -16,6 +16,10 @@
 #include <array>
 #include <cassert>
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
+#include <stdexcept>
+#endif
+
 #include "test_macros.h"
 
 // std::array is explicitly allowed to be initialized with A a = { init-list };.
