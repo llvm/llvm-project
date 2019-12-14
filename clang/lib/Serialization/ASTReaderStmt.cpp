@@ -11,7 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ASTRecordReader.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
@@ -66,8 +67,6 @@ using namespace serialization;
 namespace clang {
 
   class ASTStmtReader : public StmtVisitor<ASTStmtReader> {
-    friend class OMPClauseReader;
-
     ASTRecordReader &Record;
     llvm::BitstreamCursor &DeclsCursor;
 
@@ -1974,10 +1973,9 @@ void ASTStmtReader::VisitAsTypeExpr(AsTypeExpr *E) {
 void ASTStmtReader::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
   E->setLocStart(readSourceLocation());
   E->setLocEnd(readSourceLocation());
-  OMPClauseReader ClauseReader(Record);
   SmallVector<OMPClause *, 5> Clauses;
   for (unsigned i = 0; i < E->getNumClauses(); ++i)
-    Clauses.push_back(ClauseReader.readClause());
+    Clauses.push_back(Record.readOMPClause());
   E->setClauses(Clauses);
   if (E->hasAssociatedStmt())
     E->setAssociatedStmt(Record.readSubStmt());
