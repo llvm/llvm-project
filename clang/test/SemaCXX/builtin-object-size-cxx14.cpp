@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx14 -std=c++14 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
 
 typedef __SIZE_TYPE__ size_t;
@@ -112,4 +112,10 @@ namespace InvalidBase {
   T invalid_base_2();
   constexpr size_t bos_dtor = __builtin_object_size(&(T&)(T&&)invalid_base_2(), 0);
   static_assert(bos_dtor == -1, "");
+}
+
+// PR44268
+constexpr int bos_new() { // cxx14-error {{constant expression}}
+  void *p = new int; // cxx14-note {{until C++20}}
+  return __builtin_object_size(p, 0);
 }
