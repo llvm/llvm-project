@@ -2019,12 +2019,11 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_SELECT_CC(SDNode *N, unsigned OpNo) {
 // code.
 SDValue DAGTypeLegalizer::PromoteFloatOp_SETCC(SDNode *N, unsigned OpNo) {
   EVT VT = N->getValueType(0);
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue Op0 = GetPromotedFloat(N->getOperand(0));
   SDValue Op1 = GetPromotedFloat(N->getOperand(1));
   ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(2))->get();
 
-  return DAG.getSetCC(SDLoc(N), NVT, Op0, Op1, CCCode);
+  return DAG.getSetCC(SDLoc(N), VT, Op0, Op1, CCCode);
 
 }
 
