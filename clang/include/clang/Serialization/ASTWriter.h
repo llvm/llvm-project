@@ -106,8 +106,6 @@ class ASTWriter : public ASTDeserializationListener,
 public:
   friend class ASTDeclWriter;
   friend class ASTRecordWriter;
-  friend class ASTStmtWriter;
-  friend class ASTTypeWriter;
 
   using RecordData = SmallVector<uint64_t, 64>;
   using RecordDataImpl = SmallVectorImpl<uint64_t>;
