@@ -1,6 +1,10 @@
 static_library("OpenMP") {
   output_name = "LLVMFrontendOpenMP"
-
+  deps = [
+    "//llvm/lib/Transforms/Utils",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
   sources = [
     "OMPConstants.cpp",
     "OMPIRBuilder.cpp",
