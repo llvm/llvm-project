@@ -1,7 +1,8 @@
+class ASTNode;
 class AttrSubject;
 
 class DeclNode<DeclNode base, string diagSpelling = "", bit abstract = 0>
-    : AttrSubject {
+    : ASTNode, AttrSubject {
   DeclNode Base = base;
   bit Abstract = abstract;
   string DiagSpelling = diagSpelling;

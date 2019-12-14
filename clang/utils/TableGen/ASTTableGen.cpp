@@ -60,6 +60,26 @@ std::string clang::tblgen::StmtNode::getId() const {
   return (Twine(getName()) + "Class").str();
 }
 
+/// Emit a string spelling out the C++ value type.
+void PropertyType::emitCXXValueTypeName(bool forRead, raw_ostream &out) const {
+  if (!isGenericSpecialization()) {
+    if (!forRead && isConstWhenWriting())
+      out << "const ";
+    out << getCXXTypeName();
+  } else if (auto elementType = getArrayElementType()) {
+    out << "llvm::ArrayRef<";
+    elementType.emitCXXValueTypeName(forRead, out);
+    out << ">";
+  } else if (auto valueType = getOptionalElementType()) {
+    out << "llvm::Optional<";
+    valueType.emitCXXValueTypeName(forRead, out);
+    out << ">";
+  } else {
+    //PrintFatalError(getLoc(), "unexpected generic property type");
+    abort();
+  }
+}
+
 // A map from a node to each of its child nodes.
 using ChildMap = std::multimap<ASTNode, ASTNode>;
 

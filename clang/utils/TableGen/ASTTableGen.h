@@ -35,9 +35,37 @@
 #define NeverCanonicalUnlessDependentClassName "NeverCanonicalUnlessDependent"
 #define LeafTypeClassName "LeafType"
 
-// Property node hierarchy.
+// Properties of AST nodes.
 #define PropertyClassName "Property"
 #define ClassFieldName "Class"
+#define NameFieldName "Name"
+#define TypeFieldName "Type"
+#define ReadFieldName "Read"
+
+// Types of properties.
+#define PropertyTypeClassName "PropertyType"
+#define CXXTypeNameFieldName "CXXName"
+#define PassByReferenceFieldName "PassByReference"
+#define ConstWhenWritingFieldName "ConstWhenWriting"
+#define PackOptionalCodeFieldName "PackOptional"
+#define UnpackOptionalCodeFieldName "UnpackOptional"
+#define BufferElementTypesFieldName "BufferElementTypes"
+#define ArrayTypeClassName "Array"
+#define ArrayElementTypeFieldName "Element"
+#define OptionalTypeClassName "Optional"
+#define OptionalElementTypeFieldName "Element"
+#define SubclassPropertyTypeClassName "SubclassPropertyType"
+#define SubclassBaseTypeFieldName "Base"
+#define SubclassClassNameFieldName "SubclassName"
+#define EnumPropertyTypeClassName "EnumPropertyType"
+
+// Creation rules.
+#define CreationRuleClassName "Creator"
+#define CreateFieldName "Create"
+
+// Override rules.
+#define OverrideRuleClassName "Override"
+#define IgnoredPropertiesFieldName "IgnoredProperties"
 
 namespace clang {
 namespace tblgen {
@@ -166,6 +194,147 @@ public:
   }
   static llvm::StringRef getTableGenNodeClassName() {
     return StmtNodeClassName;
+  }
+};
+
+/// The type of a property.
+class PropertyType : public WrappedRecord {
+public:
+  PropertyType(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+
+  /// Is this a generic specialization (i.e. `Array<T>` or `Optional<T>`)?
+  bool isGenericSpecialization() const {
+    return get()->isAnonymous();
+  }
+
+  /// The abstract type name of the property.  Doesn't work for generic
+  /// specializations.
+  llvm::StringRef getAbstractTypeName() const {
+    return get()->getName();
+  }
+
+  /// The C++ type name of the property.  Doesn't work for generic
+  /// specializations.
+  llvm::StringRef getCXXTypeName() const {
+    return get()->getValueAsString(CXXTypeNameFieldName);
+  }
+  void emitCXXValueTypeName(bool forRead, llvm::raw_ostream &out) const;
+
+  /// Whether the C++ type should be passed around by reference.
+  bool shouldPassByReference() const {
+    return get()->getValueAsBit(PassByReferenceFieldName);
+  }
+
+  /// Whether the C++ type should have 'const' prepended when working with
+  /// a value of the type being written.
+  bool isConstWhenWriting() const {
+    return get()->getValueAsBit(ConstWhenWritingFieldName);
+  }
+
+  /// If this is `Array<T>`, return `T`; otherwise return null.
+  PropertyType getArrayElementType() const {
+    if (isSubClassOf(ArrayTypeClassName))
+      return get()->getValueAsDef(ArrayElementTypeFieldName);
+    return nullptr;
+  }
+
+  /// If this is `Optional<T>`, return `T`; otherwise return null.
+  PropertyType getOptionalElementType() const {
+    if (isSubClassOf(OptionalTypeClassName))
+      return get()->getValueAsDef(OptionalElementTypeFieldName);
+    return nullptr;
+  }
+
+  /// If this is a subclass type, return its superclass type.
+  PropertyType getSuperclassType() const {
+    if (isSubClassOf(SubclassPropertyTypeClassName))
+      return get()->getValueAsDef(SubclassBaseTypeFieldName);
+    return nullptr;
+  }
+
+  // Given that this is a subclass type, return the C++ name of its
+  // subclass type.  This is just the bare class name, suitable for
+  // use in `cast<>`.
+  llvm::StringRef getSubclassClassName() const {
+    return get()->getValueAsString(SubclassClassNameFieldName);
+  }
+
+  /// Does this represent an enum type?
+  bool isEnum() const {
+    return isSubClassOf(EnumPropertyTypeClassName);
+  }
+
+  llvm::StringRef getPackOptionalCode() const {
+    return get()->getValueAsString(PackOptionalCodeFieldName);
+  }
+
+  llvm::StringRef getUnpackOptionalCode() const {
+    return get()->getValueAsString(UnpackOptionalCodeFieldName);
+  }
+
+  std::vector<llvm::Record*> getBufferElementTypes() const {
+    return get()->getValueAsListOfDefs(BufferElementTypesFieldName);
+  }
+};
+
+/// A property of an AST node.
+class Property : public WrappedRecord {
+public:
+  Property(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+
+  /// Return the name of this property.
+  llvm::StringRef getName() const {
+    return get()->getValueAsString(NameFieldName);
+  }
+
+  /// Return the type of this property.
+  PropertyType getType() const {
+    return get()->getValueAsDef(TypeFieldName);
+  }
+
+  /// Return the class of which this is a property.
+  ASTNode getClass() const {
+    return get()->getValueAsDef(ClassFieldName);
+  }
+
+  /// Return the code for reading this property.
+  llvm::StringRef getReadCode() const {
+    return get()->getValueAsString(ReadFieldName);
+  }
+};
+
+/// A rule for how to create an AST node from its properties.
+class CreationRule : public WrappedRecord {
+public:
+  CreationRule(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+
+  /// Return the class for which this is a creation rule.
+  /// Should never be abstract.
+  ASTNode getClass() const {
+    return get()->getValueAsDef(ClassFieldName);
+  }
+
+  llvm::StringRef getCreationCode() const {
+    return get()->getValueAsString(CreateFieldName);
+  }
+};
+
+/// A rule which overrides the standard rules for serializing an AST node.
+class OverrideRule : public WrappedRecord {
+public:
+  OverrideRule(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+
+  /// Return the class for which this is an override rule.
+  /// Should never be abstract.
+  ASTNode getClass() const {
+    return get()->getValueAsDef(ClassFieldName);
+  }
+
+  /// Return a set of properties that are unnecessary when serializing
+  /// this AST node.  Generally this is used for inherited properties
+  /// that are derived for this subclass.
+  std::vector<llvm::StringRef> getIgnoredProperties() const {
+    return get()->getValueAsListOfStrings(IgnoredPropertiesFieldName);
   }
 };
 
