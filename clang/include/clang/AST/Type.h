@@ -66,6 +66,11 @@ enum {
   TypeAlignment = 1 << TypeAlignmentInBits
 };
 
+namespace serialization {
+  template <class T> class AbstractTypeReader;
+  template <class T> class AbstractTypeWriter;
+}
+
 } // namespace clang
 
 namespace llvm {
@@ -1847,6 +1852,8 @@ protected:
 public:
   friend class ASTReader;
   friend class ASTWriter;
+  template <class T> friend class serialization::AbstractTypeReader;
+  template <class T> friend class serialization::AbstractTypeWriter;
 
   Type(const Type &) = delete;
   Type(Type &&) = delete;
@@ -4448,6 +4455,7 @@ public:
 
 class TagType : public Type {
   friend class ASTReader;
+  template <class T> friend class serialization::AbstractTypeReader;
 
   /// Stores the TagDecl associated with this type. The decl may point to any
   /// TagDecl that declares the entity.
@@ -5085,6 +5093,7 @@ class InjectedClassNameType : public Type {
   friend class ASTReader; // FIXME: ASTContext::getInjectedClassNameType is not
                           // currently suitable for AST reading, too much
                           // interdependencies.
+  template <class T> friend class serialization::AbstractTypeReader;
 
   CXXRecordDecl *Decl;
 
@@ -5843,6 +5852,7 @@ class ObjCInterfaceType : public ObjCObjectType {
   friend class ASTContext; // ASTContext creates these.
   friend class ASTReader;
   friend class ObjCInterfaceDecl;
+  template <class T> friend class serialization::AbstractTypeReader;
 
   mutable ObjCInterfaceDecl *Decl;
 

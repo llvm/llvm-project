@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_ASTREADER_H
 #define LLVM_CLANG_SERIALIZATION_ASTREADER_H
 
+#include "clang/AST/AbstractBasicReader.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclarationName.h"
@@ -2281,7 +2282,8 @@ public:
 };
 
 /// An object for streaming information from a record.
-class ASTRecordReader {
+class ASTRecordReader
+    : public serialization::DataStreamBasicReader<ASTRecordReader> {
   using ModuleFile = serialization::ModuleFile;
 
   ASTReader *Reader;
@@ -2294,7 +2296,8 @@ class ASTRecordReader {
 
 public:
   /// Construct an ASTRecordReader that uses the default encoding scheme.
-  ASTRecordReader(ASTReader &Reader, ModuleFile &F) : Reader(&Reader), F(&F) {}
+  ASTRecordReader(ASTReader &Reader, ModuleFile &F)
+    : DataStreamBasicReader(Reader.getContext()), Reader(&Reader), F(&F) {}
 
   /// Reads a record with id AbbrevID from Cursor, resetting the
   /// internal state.
@@ -2367,8 +2370,9 @@ public:
                              static_cast<ExplicitSpecKind>(Kind));
   }
 
-  FunctionProtoType::ExceptionSpecInfo
-  readExceptionSpecInfo(SmallVectorImpl<QualType> &ExceptionStorage);
+  /// Read information about an exception specification (inherited).
+  //FunctionProtoType::ExceptionSpecInfo
+  //readExceptionSpecInfo(SmallVectorImpl<QualType> &ExceptionStorage);
 
   /// Get the global offset corresponding to a local offset.
   uint64_t getGlobalBitOffset(uint32_t LocalOffset) {
@@ -2377,6 +2381,7 @@ public:
 
   /// Reads a statement.
   Stmt *readStmt() { return Reader->ReadStmt(*F); }
+  Stmt *readStmtRef() { return readStmt(); /* FIXME: readSubStmt? */ }
 
   /// Reads an expression.
   Expr *readExpr() { return Reader->ReadExpr(*F); }
@@ -2426,6 +2431,9 @@ public:
   QualType readType() {
     return Reader->readType(*F, Record, Idx);
   }
+  QualType readQualType() {
+    return readType();
+  }
 
   /// Reads a declaration ID from the given position in this record.
   ///
@@ -2438,6 +2446,9 @@ public:
   /// given module, advancing Idx.
   Decl *readDecl() {
     return Reader->ReadDecl(*F, Record, Idx);
+  }
+  Decl *readDeclRef() {
+    return readDecl();
   }
 
   /// Reads a declaration from the given position in the record,
@@ -2460,21 +2471,22 @@ public:
   }
 
   /// Read a declaration name, advancing Idx.
-  DeclarationName readDeclarationName();
+  // DeclarationName readDeclarationName(); (inherited)
   DeclarationNameLoc readDeclarationNameLoc(DeclarationName Name);
   DeclarationNameInfo readDeclarationNameInfo();
 
   void readQualifierInfo(QualifierInfo &Info);
 
-  NestedNameSpecifier *readNestedNameSpecifier();
+  /// Return a nested name specifier, advancing Idx.
+  // NestedNameSpecifier *readNestedNameSpecifier(); (inherited)
 
   NestedNameSpecifierLoc readNestedNameSpecifierLoc();
 
   /// Read a template name, advancing Idx.
-  TemplateName readTemplateName();
+  // TemplateName readTemplateName(); (inherited)
 
-  /// Read a template argument, advancing Idx.
-  TemplateArgument readTemplateArgument(bool Canonicalize = false);
+  /// Read a template argument, advancing Idx. (inherited)
+  // TemplateArgument readTemplateArgument(bool Canonicalize = false);
 
   /// Read a template parameter list, advancing Idx.
   TemplateParameterList *readTemplateParameterList();
@@ -2510,16 +2522,26 @@ public:
   APValue readAPValue();
 
   /// Read an integral value, advancing Idx.
-  llvm::APInt readAPInt();
+  // llvm::APInt readAPInt(); (inherited)
 
   /// Read a signed integral value, advancing Idx.
-  llvm::APSInt readAPSInt();
+  // llvm::APSInt readAPSInt(); (inherited)
 
   /// Read a floating-point value, advancing Idx.
   llvm::APFloat readAPFloat(const llvm::fltSemantics &Sem);
 
   /// Read a boolean value, advancing Idx.
   bool readBool() { return readInt() != 0; }
+
+  /// Read a 32-bit unsigned value; required to satisfy BasicReader.
+  uint32_t readUInt32() {
+    return uint32_t(readInt());
+  }
+
+  /// Read a 64-bit unsigned value; required to satisfy BasicReader.
+  uint64_t readUInt64() {
+    return readInt();
+  }
 
   /// Read a string, advancing Idx.
   std::string readString() {

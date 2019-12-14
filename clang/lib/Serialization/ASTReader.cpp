@@ -13,6 +13,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
+#include "clang/AST/AbstractTypeReader.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
@@ -6316,16 +6317,13 @@ ASTReader::RecordLocation ASTReader::TypeCursorForIndex(unsigned Index) {
   return RecordLocation(M, M->TypeOffsets[Index - M->BaseTypeIndex]);
 }
 
-static FunctionType::ExtInfo readFunctionExtInfo(ASTRecordReader &Record) {
-  bool noreturn = Record.readBool();
-  bool hasregparm = Record.readBool();
-  unsigned regparm = Record.readInt();
-  auto cc = static_cast<CallingConv>(Record.readInt());
-  bool producesResult = Record.readBool();
-  bool nocallersavedregs = Record.readBool();
-  bool nocfcheck = Record.readBool();
-  return FunctionType::ExtInfo(noreturn, hasregparm, regparm, cc,
-                               producesResult, nocallersavedregs, nocfcheck);
+static llvm::Optional<Type::TypeClass> getTypeClassForCode(TypeCode code) {
+  switch (code) {
+#define TYPE_BIT_CODE(CLASS_ID, CODE_ID, CODE_VALUE) \
+  case TYPE_##CODE_ID: return Type::CLASS_ID;
+#include "clang/Serialization/TypeBitCodes.def"
+  default: return llvm::None;
+  }
 }
 
 /// Read and return the type with the given index..
@@ -6365,534 +6363,20 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     Error(Code.takeError());
     return QualType();
   }
-  switch ((TypeCode) Code.get()) {
-  case TYPE_EXT_QUAL: {
-    if (Record.size() != 2) {
-      Error("Incorrect encoding of extended qualifier type");
-      return QualType();
-    }
-    QualType Base = Record.readType();
-    Qualifiers Quals = Record.readQualifiers();
-    return Context.getQualifiedType(Base, Quals);
+  if (Code.get() == TYPE_EXT_QUAL) {
+    QualType baseType = Record.readQualType();
+    Qualifiers quals = Record.readQualifiers();
+    return Context.getQualifiedType(baseType, quals);
   }
 
-  case TYPE_COMPLEX: {
-    if (Record.size() != 1) {
-      Error("Incorrect encoding of complex type");
-      return QualType();
-    }
-    QualType ElemType = Record.readType();
-    return Context.getComplexType(ElemType);
+  auto maybeClass = getTypeClassForCode((TypeCode) Code.get());
+  if (!maybeClass) {
+    Error("Unexpected code for type");
+    return QualType();
   }
 
-  case TYPE_POINTER: {
-    if (Record.size() != 1) {
-      Error("Incorrect encoding of pointer type");
-      return QualType();
-    }
-    QualType PointeeType = Record.readType();
-    return Context.getPointerType(PointeeType);
-  }
-
-  case TYPE_DECAYED: {
-    if (Record.size() != 1) {
-      Error("Incorrect encoding of decayed type");
-      return QualType();
-    }
-    QualType OriginalType = Record.readType();
-    QualType DT = Context.getAdjustedParameterType(OriginalType);
-    if (!isa<DecayedType>(DT))
-      Error("Decayed type does not decay");
-    return DT;
-  }
-
-  case TYPE_ADJUSTED: {
-    if (Record.size() != 2) {
-      Error("Incorrect encoding of adjusted type");
-      return QualType();
-    }
-    QualType OriginalTy = Record.readType();
-    QualType AdjustedTy = Record.readType();
-    return Context.getAdjustedType(OriginalTy, AdjustedTy);
-  }
-
-  case TYPE_BLOCK_POINTER: {
-    if (Record.size() != 1) {
-      Error("Incorrect encoding of block pointer type");
-      return QualType();
-    }
-    QualType PointeeType = Record.readType();
-    return Context.getBlockPointerType(PointeeType);
-  }
-
-  case TYPE_LVALUE_REFERENCE: {
-    if (Record.size() != 2) {
-      Error("Incorrect encoding of lvalue reference type");
-      return QualType();
-    }
-    QualType PointeeType = Record.readType();
-    return Context.getLValueReferenceType(PointeeType, Record.readBool());
-  }
-
-  case TYPE_RVALUE_REFERENCE: {
-    if (Record.size() != 1) {
-      Error("Incorrect encoding of rvalue reference type");
-      return QualType();
-    }
-    QualType PointeeType = Record.readType();
-    return Context.getRValueReferenceType(PointeeType);
-  }
-
-  case TYPE_MEMBER_POINTER: {
-    if (Record.size() != 2) {
-      Error("Incorrect encoding of member pointer type");
-      return QualType();
-    }
-    QualType PointeeType = Record.readType();
-    QualType ClassType = Record.readType();
-    if (PointeeType.isNull() || ClassType.isNull())
-      return QualType();
-
-    return Context.getMemberPointerType(PointeeType, ClassType.getTypePtr());
-  }
-
-  case TYPE_CONSTANT_ARRAY: {
-    QualType ElementType = Record.readType();
-    ArrayType::ArraySizeModifier ASM =
-      (ArrayType::ArraySizeModifier) Record.readInt();
-    unsigned IndexTypeQuals = Record.readInt();
-    llvm::APInt Size = Record.readAPInt();
-    Expr *SizeExpr = Record.readExpr();
-    return Context.getConstantArrayType(ElementType, Size, SizeExpr,
-                                        ASM, IndexTypeQuals);
-  }
-
-  case TYPE_INCOMPLETE_ARRAY: {
-    QualType ElementType = Record.readType();
-    ArrayType::ArraySizeModifier ASM =
-      (ArrayType::ArraySizeModifier) Record.readInt();
-    unsigned IndexTypeQuals = Record.readInt();
-    return Context.getIncompleteArrayType(ElementType, ASM, IndexTypeQuals);
-  }
-
-  case TYPE_VARIABLE_ARRAY: {
-    QualType ElementType = Record.readType();
-    ArrayType::ArraySizeModifier ASM = (ArrayType::ArraySizeModifier)Record.readInt();
-    unsigned IndexTypeQuals = Record.readInt();
-    SourceLocation LBLoc = Record.readSourceLocation();
-    SourceLocation RBLoc = Record.readSourceLocation();
-    return Context.getVariableArrayType(ElementType, ReadExpr(*Loc.F),
-                                         ASM, IndexTypeQuals,
-                                         SourceRange(LBLoc, RBLoc));
-  }
-
-  case TYPE_VECTOR: {
-    if (Record.size() != 3) {
-      Error("incorrect encoding of vector type in AST file");
-      return QualType();
-    }
-
-    QualType ElementType = Record.readType();
-    unsigned NumElements = Record.readInt();
-    unsigned VecKind = Record.readInt();
-    return Context.getVectorType(ElementType, NumElements,
-                                  (VectorType::VectorKind)VecKind);
-  }
-
-  case TYPE_EXT_VECTOR: {
-    if (Record.size() != 3) {
-      Error("incorrect encoding of extended vector type in AST file");
-      return QualType();
-    }
-
-    QualType ElementType = Record.readType();
-    unsigned NumElements = Record.readInt();
-    return Context.getExtVectorType(ElementType, NumElements);
-  }
-
-  case TYPE_FUNCTION_NO_PROTO: {
-    if (Record.size() != 8) {
-      Error("incorrect encoding of no-proto function type");
-      return QualType();
-    }
-    QualType ResultType = Record.readType();
-    FunctionType::ExtInfo Info = readFunctionExtInfo(Record);
-    return Context.getFunctionNoProtoType(ResultType, Info);
-  }
-
-  case TYPE_FUNCTION_PROTO: {
-    QualType ResultType = Record.readType();
-
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.ExtInfo = readFunctionExtInfo(Record);
-    EPI.Variadic = Record.readBool();
-    EPI.HasTrailingReturn = Record.readBool();
-    EPI.TypeQuals = Record.readQualifiers();
-    EPI.RefQualifier = static_cast<RefQualifierKind>(Record.readInt());
-    SmallVector<QualType, 8> ExceptionStorage;
-    EPI.ExceptionSpec = Record.readExceptionSpecInfo(ExceptionStorage);
-
-    unsigned NumParams = Record.readInt();
-    SmallVector<QualType, 16> ParamTypes;
-    for (unsigned I = 0; I != NumParams; ++I)
-      ParamTypes.push_back(Record.readType());
-
-    SmallVector<FunctionProtoType::ExtParameterInfo, 4> ExtParameterInfos;
-    if (Record.getIdx() != Record.size()) {
-      for (unsigned I = 0; I != NumParams; ++I)
-        ExtParameterInfos.push_back(
-          FunctionProtoType::ExtParameterInfo
-                           ::getFromOpaqueValue(Record.readInt()));
-      EPI.ExtParameterInfos = ExtParameterInfos.data();
-    }
-
-    assert(Record.getIdx() == Record.size());
-
-    return Context.getFunctionType(ResultType, ParamTypes, EPI);
-  }
-
-  case TYPE_UNRESOLVED_USING: {
-    return Context.getTypeDeclType(
-                  Record.readDeclAs<UnresolvedUsingTypenameDecl>());
-  }
-
-  case TYPE_TYPEDEF: {
-    if (Record.size() != 2) {
-      Error("incorrect encoding of typedef type");
-      return QualType();
-    }
-    TypedefNameDecl *Decl = Record.readDeclAs<TypedefNameDecl>();
-    QualType Canonical = Record.readType();
-    if (!Canonical.isNull())
-      Canonical = Context.getCanonicalType(Canonical);
-    return Context.getTypedefType(Decl, Canonical);
-  }
-
-  case TYPE_TYPEOF_EXPR:
-    return Context.getTypeOfExprType(ReadExpr(*Loc.F));
-
-  case TYPE_TYPEOF: {
-    if (Record.size() != 1) {
-      Error("incorrect encoding of typeof(type) in AST file");
-      return QualType();
-    }
-    QualType UnderlyingType = Record.readType();
-    return Context.getTypeOfType(UnderlyingType);
-  }
-
-  case TYPE_DECLTYPE: {
-    QualType UnderlyingType = Record.readType();
-    return Context.getDecltypeType(Record.readExpr(), UnderlyingType);
-  }
-
-  case TYPE_UNARY_TRANSFORM: {
-    QualType BaseType = Record.readType();
-    QualType UnderlyingType = Record.readType();
-    UnaryTransformType::UTTKind UKind =
-      (UnaryTransformType::UTTKind)Record.readInt();
-    return Context.getUnaryTransformType(BaseType, UnderlyingType, UKind);
-  }
-
-  case TYPE_AUTO: {
-    QualType Deduced = Record.readType();
-    AutoTypeKeyword Keyword = (AutoTypeKeyword) Record.readInt();
-    bool IsDependent = false, IsPack = false;
-    if (Deduced.isNull()) {
-      auto Dependence = Record.readInt();
-      IsDependent = Dependence > 0;
-      IsPack = Dependence > 1;
-    }
-    return Context.getAutoType(Deduced, Keyword, IsDependent, IsPack);
-  }
-
-  case TYPE_DEDUCED_TEMPLATE_SPECIALIZATION: {
-    TemplateName Name = Record.readTemplateName();
-    QualType Deduced = Record.readType();
-    bool IsDependent = Deduced.isNull() ? Record.readBool() : false;
-    return Context.getDeducedTemplateSpecializationType(Name, Deduced,
-                                                        IsDependent);
-  }
-
-  case TYPE_RECORD: {
-    if (Record.size() != 2) {
-      Error("incorrect encoding of record type");
-      return QualType();
-    }
-    bool IsDependent = Record.readBool();
-    RecordDecl *RD = Record.readDeclAs<RecordDecl>();
-    RD = cast<RecordDecl>(RD->getCanonicalDecl());
-    QualType T = Context.getRecordType(RD);
-    const_cast<Type*>(T.getTypePtr())->setDependent(IsDependent);
-    return T;
-  }
-
-  case TYPE_ENUM: {
-    if (Record.size() != 2) {
-      Error("incorrect encoding of enum type");
-      return QualType();
-    }
-    bool IsDependent = Record.readBool();
-    QualType T = Context.getEnumType(Record.readDeclAs<EnumDecl>());
-    const_cast<Type*>(T.getTypePtr())->setDependent(IsDependent);
-    return T;
-  }
-
-  case TYPE_ATTRIBUTED: {
-    if (Record.size() != 3) {
-      Error("incorrect encoding of attributed type");
-      return QualType();
-    }
-    QualType modifiedType = Record.readType();
-    QualType equivalentType = Record.readType();
-    AttributedType::Kind kind = static_cast<AttributedType::Kind>(Record.readInt());
-    return Context.getAttributedType(kind, modifiedType, equivalentType);
-  }
-
-  case TYPE_PAREN: {
-    if (Record.size() != 1) {
-      Error("incorrect encoding of paren type");
-      return QualType();
-    }
-    QualType InnerType = Record.readType();
-    return Context.getParenType(InnerType);
-  }
-
-  case TYPE_MACRO_QUALIFIED: {
-    if (Record.size() != 2) {
-      Error("incorrect encoding of macro defined type");
-      return QualType();
-    }
-    QualType UnderlyingTy = Record.readType();
-    IdentifierInfo *MacroII = Record.readIdentifier();
-    return Context.getMacroQualifiedType(UnderlyingTy, MacroII);
-  }
-
-  case TYPE_PACK_EXPANSION: {
-    if (Record.size() != 2) {
-      Error("incorrect encoding of pack expansion type");
-      return QualType();
-    }
-    QualType Pattern = Record.readType();
-    if (Pattern.isNull())
-      return QualType();
-    Optional<unsigned> NumExpansions;
-    unsigned RawNumExpansions = Record.readInt();
-    if (RawNumExpansions)
-      NumExpansions = RawNumExpansions - 1;
-    return Context.getPackExpansionType(Pattern, NumExpansions);
-  }
-
-  case TYPE_ELABORATED: {
-    ElaboratedTypeKeyword Keyword = (ElaboratedTypeKeyword)Record.readInt();
-    NestedNameSpecifier *NNS = Record.readNestedNameSpecifier();
-    QualType NamedType = Record.readType();
-    TagDecl *OwnedTagDecl = Record.readDeclAs<TagDecl>();
-    return Context.getElaboratedType(Keyword, NNS, NamedType, OwnedTagDecl);
-  }
-
-  case TYPE_OBJC_INTERFACE: {
-    ObjCInterfaceDecl *ItfD = Record.readDeclAs<ObjCInterfaceDecl>();
-    return Context.getObjCInterfaceType(ItfD->getCanonicalDecl());
-  }
-
-  case TYPE_OBJC_TYPE_PARAM: {
-    ObjCTypeParamDecl *Decl = Record.readDeclAs<ObjCTypeParamDecl>();
-    unsigned NumProtos = Record.readInt();
-    SmallVector<ObjCProtocolDecl*, 4> Protos;
-    for (unsigned I = 0; I != NumProtos; ++I)
-      Protos.push_back(Record.readDeclAs<ObjCProtocolDecl>());
-    return Context.getObjCTypeParamType(Decl, Protos);
-  }
-
-  case TYPE_OBJC_OBJECT: {
-    QualType Base = Record.readType();
-    unsigned NumTypeArgs = Record.readInt();
-    SmallVector<QualType, 4> TypeArgs;
-    for (unsigned I = 0; I != NumTypeArgs; ++I)
-      TypeArgs.push_back(Record.readType());
-    unsigned NumProtos = Record.readInt();
-    SmallVector<ObjCProtocolDecl*, 4> Protos;
-    for (unsigned I = 0; I != NumProtos; ++I)
-      Protos.push_back(Record.readDeclAs<ObjCProtocolDecl>());
-    bool IsKindOf = Record.readBool();
-    return Context.getObjCObjectType(Base, TypeArgs, Protos, IsKindOf);
-  }
-
-  case TYPE_OBJC_OBJECT_POINTER: {
-    QualType Pointee = Record.readType();
-    return Context.getObjCObjectPointerType(Pointee);
-  }
-
-  case TYPE_SUBST_TEMPLATE_TYPE_PARM: {
-    QualType Parm = Record.readType();
-    QualType Replacement = Record.readType();
-    return Context.getSubstTemplateTypeParmType(
-        cast<TemplateTypeParmType>(Parm),
-        Context.getCanonicalType(Replacement));
-  }
-
-  case TYPE_SUBST_TEMPLATE_TYPE_PARM_PACK: {
-    QualType Parm = Record.readType();
-    TemplateArgument ArgPack = Record.readTemplateArgument();
-    return Context.getSubstTemplateTypeParmPackType(
-                                               cast<TemplateTypeParmType>(Parm),
-                                                     ArgPack);
-  }
-
-  case TYPE_INJECTED_CLASS_NAME: {
-    CXXRecordDecl *D = Record.readDeclAs<CXXRecordDecl>();
-    QualType TST = Record.readType(); // probably derivable
-    // FIXME: ASTContext::getInjectedClassNameType is not currently suitable
-    // for AST reading, too much interdependencies.
-    const Type *T = nullptr;
-    for (auto *DI = D; DI; DI = DI->getPreviousDecl()) {
-      if (const Type *Existing = DI->getTypeForDecl()) {
-        T = Existing;
-        break;
-      }
-    }
-    if (!T) {
-      T = new (Context, TypeAlignment) InjectedClassNameType(D, TST);
-      for (auto *DI = D; DI; DI = DI->getPreviousDecl())
-        DI->setTypeForDecl(T);
-    }
-    return QualType(T, 0);
-  }
-
-  case TYPE_TEMPLATE_TYPE_PARM: {
-    unsigned Depth = Record.readInt();
-    unsigned Index = Record.readInt();
-    bool Pack = Record.readBool();
-    auto D = Record.readDeclAs<TemplateTypeParmDecl>();
-    return Context.getTemplateTypeParmType(Depth, Index, Pack, D);
-  }
-
-  case TYPE_DEPENDENT_NAME: {
-    ElaboratedTypeKeyword Keyword = (ElaboratedTypeKeyword)Record.readInt();
-    NestedNameSpecifier *NNS = Record.readNestedNameSpecifier();
-    const IdentifierInfo *Name = Record.readIdentifier();
-    QualType Canon = Record.readType();
-    if (!Canon.isNull())
-      Canon = Context.getCanonicalType(Canon);
-    return Context.getDependentNameType(Keyword, NNS, Name, Canon);
-  }
-
-  case TYPE_DEPENDENT_TEMPLATE_SPECIALIZATION: {
-    ElaboratedTypeKeyword Keyword = (ElaboratedTypeKeyword)Record.readInt();
-    NestedNameSpecifier *NNS = Record.readNestedNameSpecifier();
-    const IdentifierInfo *Name = Record.readIdentifier();
-    unsigned NumArgs = Record.readInt();
-    SmallVector<TemplateArgument, 8> Args;
-    Args.reserve(NumArgs);
-    while (NumArgs--)
-      Args.push_back(Record.readTemplateArgument());
-    return Context.getDependentTemplateSpecializationType(Keyword, NNS, Name,
-                                                          Args);
-  }
-
-  case TYPE_DEPENDENT_SIZED_ARRAY: {
-    // ArrayType
-    QualType ElementType = Record.readType();
-    ArrayType::ArraySizeModifier ASM
-      = (ArrayType::ArraySizeModifier)Record.readInt();
-    unsigned IndexTypeQuals = Record.readInt();
-
-    // DependentSizedArrayType
-    Expr *NumElts = Record.readExpr();
-    SourceRange Brackets = Record.readSourceRange();
-
-    return Context.getDependentSizedArrayType(ElementType, NumElts, ASM,
-                                               IndexTypeQuals, Brackets);
-  }
-
-  case TYPE_TEMPLATE_SPECIALIZATION: {
-    bool IsDependent = Record.readBool();
-    TemplateName Name = Record.readTemplateName();
-    SmallVector<TemplateArgument, 8> Args;
-    Record.readTemplateArgumentList(Args);
-    QualType Underlying = Record.readType();
-    QualType T;
-    if (Underlying.isNull())
-      T = Context.getCanonicalTemplateSpecializationType(Name, Args);
-    else
-      T = Context.getTemplateSpecializationType(Name, Args, Underlying);
-    const_cast<Type*>(T.getTypePtr())->setDependent(IsDependent);
-    return T;
-  }
-
-  case TYPE_ATOMIC: {
-    if (Record.size() != 1) {
-      Error("Incorrect encoding of atomic type");
-      return QualType();
-    }
-    QualType ValueType = Record.readType();
-    return Context.getAtomicType(ValueType);
-  }
-
-  case TYPE_PIPE: {
-    if (Record.size() != 2) {
-      Error("Incorrect encoding of pipe type");
-      return QualType();
-    }
-
-    // Reading the pipe element type.
-    QualType ElementType = Record.readType();
-    unsigned ReadOnly = Record.readInt();
-    return Context.getPipeType(ElementType, ReadOnly);
-  }
-
-  case TYPE_DEPENDENT_SIZED_VECTOR: {
-    QualType ElementType = Record.readType();
-    Expr *SizeExpr = Record.readExpr();
-    SourceLocation AttrLoc = Record.readSourceLocation();
-    unsigned VecKind = Record.readInt();
-
-    return Context.getDependentVectorType(ElementType, SizeExpr, AttrLoc,
-                                               (VectorType::VectorKind)VecKind);
-  }
-
-  case TYPE_DEPENDENT_SIZED_EXT_VECTOR: {
-    // DependentSizedExtVectorType
-    QualType ElementType = Record.readType();
-    Expr *SizeExpr = Record.readExpr();
-    SourceLocation AttrLoc = Record.readSourceLocation();
-
-    return Context.getDependentSizedExtVectorType(ElementType, SizeExpr,
-                                                  AttrLoc);
-  }
-
-  case TYPE_DEPENDENT_ADDRESS_SPACE: {
-    // DependentAddressSpaceType
-    QualType PointeeType = Record.readType();
-    Expr *AddrSpaceExpr = Record.readExpr();
-    SourceLocation AttrLoc = Record.readSourceLocation();
-
-    return Context.getDependentAddressSpaceType(PointeeType, AddrSpaceExpr,
-                                                AttrLoc);
-  }
-  }
-  llvm_unreachable("Invalid TypeCode!");
-}
-
-FunctionProtoType::ExceptionSpecInfo
-ASTRecordReader::readExceptionSpecInfo(SmallVectorImpl<QualType> &Exceptions) {
-  FunctionProtoType::ExceptionSpecInfo ESI;
-  ExceptionSpecificationType EST =
-      static_cast<ExceptionSpecificationType>(readInt());
-  ESI.Type = EST;
-  if (EST == EST_Dynamic) {
-    for (unsigned I = 0, N = readInt(); I != N; ++I)
-      Exceptions.push_back(readType());
-    ESI.Exceptions = Exceptions;
-  } else if (isComputedNoexcept(EST)) {
-    ESI.NoexceptExpr = readExpr();
-  } else if (EST == EST_Uninstantiated) {
-    ESI.SourceDecl = readDeclAs<FunctionDecl>();
-    ESI.SourceTemplate = readDeclAs<FunctionDecl>();
-  } else if (EST == EST_Unevaluated) {
-    ESI.SourceDecl = readDeclAs<FunctionDecl>();
-  }
-  return ESI;
+  serialization::AbstractTypeReader<ASTRecordReader> TypeReader(Record);
+  return TypeReader.read(*maybeClass);
 }
 
 namespace clang {
@@ -9075,49 +8559,6 @@ ASTReader::getGlobalSelectorID(ModuleFile &M, unsigned LocalID) const {
   return LocalID + I->second;
 }
 
-DeclarationName ASTRecordReader::readDeclarationName() {
-  ASTContext &Context = getContext();
-  DeclarationName::NameKind Kind = (DeclarationName::NameKind)readInt();
-  switch (Kind) {
-  case DeclarationName::Identifier:
-    return DeclarationName(readIdentifier());
-
-  case DeclarationName::ObjCZeroArgSelector:
-  case DeclarationName::ObjCOneArgSelector:
-  case DeclarationName::ObjCMultiArgSelector:
-    return DeclarationName(readSelector());
-
-  case DeclarationName::CXXConstructorName:
-    return Context.DeclarationNames.getCXXConstructorName(
-                          Context.getCanonicalType(readType()));
-
-  case DeclarationName::CXXDestructorName:
-    return Context.DeclarationNames.getCXXDestructorName(
-                          Context.getCanonicalType(readType()));
-
-  case DeclarationName::CXXDeductionGuideName:
-    return Context.DeclarationNames.getCXXDeductionGuideName(
-                          readDeclAs<TemplateDecl>());
-
-  case DeclarationName::CXXConversionFunctionName:
-    return Context.DeclarationNames.getCXXConversionFunctionName(
-                          Context.getCanonicalType(readType()));
-
-  case DeclarationName::CXXOperatorName:
-    return Context.DeclarationNames.getCXXOperatorName(
-                                       (OverloadedOperatorKind)readInt());
-
-  case DeclarationName::CXXLiteralOperatorName:
-    return Context.DeclarationNames.getCXXLiteralOperatorName(
-                                       readIdentifier());
-
-  case DeclarationName::CXXUsingDirective:
-    return DeclarationName::getUsingDirectiveName();
-  }
-
-  llvm_unreachable("Invalid NameKind!");
-}
-
 DeclarationNameLoc
 ASTRecordReader::readDeclarationNameLoc(DeclarationName Name) {
   DeclarationNameLoc DNLoc;
@@ -9169,118 +8610,6 @@ void ASTRecordReader::readQualifierInfo(QualifierInfo &Info) {
     for (unsigned i = 0; i != NumTPLists; ++i)
       Info.TemplParamLists[i] = readTemplateParameterList();
   }
-}
-
-TemplateName
-ASTRecordReader::readTemplateName() {
-  ASTContext &Context = getContext();
-  TemplateName::NameKind Kind = (TemplateName::NameKind)readInt();
-  switch (Kind) {
-  case TemplateName::Template:
-      return TemplateName(readDeclAs<TemplateDecl>());
-
-  case TemplateName::OverloadedTemplate: {
-    unsigned size = readInt();
-    UnresolvedSet<8> Decls;
-    while (size--)
-      Decls.addDecl(readDeclAs<NamedDecl>());
-
-    return Context.getOverloadedTemplateName(Decls.begin(), Decls.end());
-  }
-
-  case TemplateName::AssumedTemplate: {
-    DeclarationName Name = readDeclarationName();
-    return Context.getAssumedTemplateName(Name);
-  }
-
-  case TemplateName::QualifiedTemplate: {
-    NestedNameSpecifier *NNS = readNestedNameSpecifier();
-    bool hasTemplKeyword = readBool();
-    TemplateDecl *Template = readDeclAs<TemplateDecl>();
-    return Context.getQualifiedTemplateName(NNS, hasTemplKeyword, Template);
-  }
-
-  case TemplateName::DependentTemplate: {
-    NestedNameSpecifier *NNS = readNestedNameSpecifier();
-    if (readBool())  // isIdentifier
-      return Context.getDependentTemplateName(NNS, readIdentifier());
-    return Context.getDependentTemplateName(NNS,
-                                         (OverloadedOperatorKind)readInt());
-  }
-
-  case TemplateName::SubstTemplateTemplateParm: {
-    auto *param = readDeclAs<TemplateTemplateParmDecl>();
-    if (!param) return TemplateName();
-    TemplateName replacement = readTemplateName();
-    return Context.getSubstTemplateTemplateParm(param, replacement);
-  }
-
-  case TemplateName::SubstTemplateTemplateParmPack: {
-    TemplateTemplateParmDecl *Param
-      = readDeclAs<TemplateTemplateParmDecl>();
-    if (!Param)
-      return TemplateName();
-
-    TemplateArgument ArgPack = readTemplateArgument();
-    if (ArgPack.getKind() != TemplateArgument::Pack)
-      return TemplateName();
-
-    return Context.getSubstTemplateTemplateParmPack(Param, ArgPack);
-  }
-  }
-
-  llvm_unreachable("Unhandled template name kind!");
-}
-
-TemplateArgument ASTRecordReader::readTemplateArgument(bool Canonicalize) {
-  ASTContext &Context = getContext();
-  if (Canonicalize) {
-    // The caller wants a canonical template argument. Sometimes the AST only
-    // wants template arguments in canonical form (particularly as the template
-    // argument lists of template specializations) so ensure we preserve that
-    // canonical form across serialization.
-    TemplateArgument Arg = readTemplateArgument(false);
-    return Context.getCanonicalTemplateArgument(Arg);
-  }
-
-  TemplateArgument::ArgKind Kind = (TemplateArgument::ArgKind) readInt();
-  switch (Kind) {
-  case TemplateArgument::Null:
-    return TemplateArgument();
-  case TemplateArgument::Type:
-    return TemplateArgument(readType());
-  case TemplateArgument::Declaration: {
-    ValueDecl *D = readDeclAs<ValueDecl>();
-    return TemplateArgument(D, readType());
-  }
-  case TemplateArgument::NullPtr:
-    return TemplateArgument(readType(), /*isNullPtr*/true);
-  case TemplateArgument::Integral: {
-    llvm::APSInt Value = readAPSInt();
-    QualType T = readType();
-    return TemplateArgument(Context, Value, T);
-  }
-  case TemplateArgument::Template:
-    return TemplateArgument(readTemplateName());
-  case TemplateArgument::TemplateExpansion: {
-    TemplateName Name = readTemplateName();
-    Optional<unsigned> NumTemplateExpansions;
-    if (unsigned NumExpansions = readInt())
-      NumTemplateExpansions = NumExpansions - 1;
-    return TemplateArgument(Name, NumTemplateExpansions);
-  }
-  case TemplateArgument::Expression:
-    return TemplateArgument(readExpr());
-  case TemplateArgument::Pack: {
-    unsigned NumArgs = readInt();
-    TemplateArgument *Args = new (Context) TemplateArgument[NumArgs];
-    for (unsigned I = 0; I != NumArgs; ++I)
-      Args[I] = readTemplateArgument();
-    return TemplateArgument(llvm::makeArrayRef(Args, NumArgs));
-  }
-  }
-
-  llvm_unreachable("Unhandled template argument kind!");
 }
 
 TemplateParameterList *
@@ -9403,67 +8732,13 @@ ASTRecordReader::readCXXCtorInitializers() {
   return CtorInitializers;
 }
 
-NestedNameSpecifier *
-ASTRecordReader::readNestedNameSpecifier() {
-  ASTContext &Context = getContext();
-  unsigned N = readInt();
-  NestedNameSpecifier *NNS = nullptr, *Prev = nullptr;
-  for (unsigned I = 0; I != N; ++I) {
-    NestedNameSpecifier::SpecifierKind Kind
-      = (NestedNameSpecifier::SpecifierKind)readInt();
-    switch (Kind) {
-    case NestedNameSpecifier::Identifier: {
-      IdentifierInfo *II = readIdentifier();
-      NNS = NestedNameSpecifier::Create(Context, Prev, II);
-      break;
-    }
-
-    case NestedNameSpecifier::Namespace: {
-      NamespaceDecl *NS = readDeclAs<NamespaceDecl>();
-      NNS = NestedNameSpecifier::Create(Context, Prev, NS);
-      break;
-    }
-
-    case NestedNameSpecifier::NamespaceAlias: {
-      NamespaceAliasDecl *Alias = readDeclAs<NamespaceAliasDecl>();
-      NNS = NestedNameSpecifier::Create(Context, Prev, Alias);
-      break;
-    }
-
-    case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate: {
-      const Type *T = readType().getTypePtrOrNull();
-      if (!T)
-        return nullptr;
-
-      bool Template = readBool();
-      NNS = NestedNameSpecifier::Create(Context, Prev, Template, T);
-      break;
-    }
-
-    case NestedNameSpecifier::Global:
-      NNS = NestedNameSpecifier::GlobalSpecifier(Context);
-      // No associated value, and there can't be a prefix.
-      break;
-
-    case NestedNameSpecifier::Super: {
-      CXXRecordDecl *RD = readDeclAs<CXXRecordDecl>();
-      NNS = NestedNameSpecifier::SuperSpecifier(Context, RD);
-      break;
-    }
-    }
-    Prev = NNS;
-  }
-  return NNS;
-}
-
 NestedNameSpecifierLoc
 ASTRecordReader::readNestedNameSpecifierLoc() {
   ASTContext &Context = getContext();
   unsigned N = readInt();
   NestedNameSpecifierLocBuilder Builder;
   for (unsigned I = 0; I != N; ++I) {
-    auto Kind = (NestedNameSpecifier::SpecifierKind) readInt();
+    auto Kind = readNestedNameSpecifierKind();
     switch (Kind) {
     case NestedNameSpecifier::Identifier: {
       IdentifierInfo *II = readIdentifier();
@@ -9548,7 +8823,7 @@ readAPFloatSemantics(ASTRecordReader &reader) {
 
 APValue ASTRecordReader::readAPValue() {
   unsigned Kind = readInt();
-  switch (Kind) {
+  switch ((APValue::ValueKind) Kind) {
   case APValue::None:
     return APValue();
   case APValue::Indeterminate:
@@ -9584,20 +8859,6 @@ APValue ASTRecordReader::readAPValue() {
     return APValue();
   }
   llvm_unreachable("Invalid APValue::ValueKind");
-}
-
-/// Read an integral value
-llvm::APInt ASTRecordReader::readAPInt() {
-  unsigned BitWidth = readInt();
-  unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
-  llvm::APInt Result(BitWidth, NumWords, readIntArray(NumWords).data());
-  return Result;
-}
-
-/// Read a signed integral value
-llvm::APSInt ASTRecordReader::readAPSInt() {
-  bool isUnsigned = readBool();
-  return llvm::APSInt(readAPInt(), isUnsigned);
 }
 
 /// Read a floating-point value
