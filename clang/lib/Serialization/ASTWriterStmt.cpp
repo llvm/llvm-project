@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/ASTRecordWriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -1926,9 +1926,8 @@ void ASTStmtWriter::VisitSEHLeaveStmt(SEHLeaveStmt *S) {
 void ASTStmtWriter::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
   Record.AddSourceLocation(E->getBeginLoc());
   Record.AddSourceLocation(E->getEndLoc());
-  OMPClauseWriter ClauseWriter(Record);
   for (unsigned i = 0; i < E->getNumClauses(); ++i) {
-    ClauseWriter.writeClause(E->getClause(i));
+    Record.writeOMPClause(E->getClause(i));
   }
   if (E->hasAssociatedStmt())
     Record.AddStmt(E->getAssociatedStmt());

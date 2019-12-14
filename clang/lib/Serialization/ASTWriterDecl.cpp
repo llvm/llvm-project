@@ -20,7 +20,7 @@
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Serialization/ASTReader.h"
-#include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace clang;
@@ -1775,18 +1775,16 @@ void ASTDeclWriter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
   VisitDecl(D);
   for (auto *I : D->varlists())
     Record.AddStmt(I);
-  OMPClauseWriter ClauseWriter(Record);
   for (OMPClause *C : D->clauselists())
-    ClauseWriter.writeClause(C);
+    Record.writeOMPClause(C);
   Code = serialization::DECL_OMP_ALLOCATE;
 }
 
 void ASTDeclWriter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
   Record.push_back(D->clauselist_size());
   VisitDecl(D);
-  OMPClauseWriter ClauseWriter(Record);
   for (OMPClause *C : D->clauselists())
-    ClauseWriter.writeClause(C);
+    Record.writeOMPClause(C);
   Code = serialization::DECL_OMP_REQUIRES;
 }
 
@@ -1811,9 +1809,8 @@ void ASTDeclWriter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   Record.AddStmt(D->getMapperVarRef());
   Record.AddDeclarationName(D->getVarName());
   Record.AddDeclRef(D->getPrevDeclInScope());
-  OMPClauseWriter ClauseWriter(Record);
   for (OMPClause *C : D->clauselists())
-    ClauseWriter.writeClause(C);
+    Record.writeOMPClause(C);
   Code = serialization::DECL_OMP_DECLARE_MAPPER;
 }
 
