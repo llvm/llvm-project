@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_ASTWRITER_H
 #define LLVM_CLANG_SERIALIZATION_ASTWRITER_H
 
+#include "clang/AST/AbstractBasicWriter.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
@@ -745,7 +746,8 @@ private:
 };
 
 /// An object for streaming information to a record.
-class ASTRecordWriter {
+class ASTRecordWriter
+    : public serialization::DataStreamBasicWriter<ASTRecordWriter> {
   ASTWriter *Writer;
   ASTWriter::RecordDataImpl *Record;
 
@@ -839,6 +841,9 @@ public:
   void AddStmt(Stmt *S) {
     StmtsToEmit.push_back(S);
   }
+  void writeStmtRef(const Stmt *S) {
+    AddStmt(const_cast<Stmt*>(S));
+  }
 
   /// Add a definition for the given function to the queue of statements
   /// to emit.
@@ -848,17 +853,36 @@ public:
   void AddSourceLocation(SourceLocation Loc) {
     return Writer->AddSourceLocation(Loc, *Record);
   }
+  void writeSourceLocation(SourceLocation Loc) {
+    AddSourceLocation(Loc);
+  }
 
   /// Emit a source range.
   void AddSourceRange(SourceRange Range) {
     return Writer->AddSourceRange(Range, *Record);
   }
 
+  void writeBool(bool Value) {
+    Record->push_back(Value);
+  }
+
+  void writeUInt32(uint32_t Value) {
+    Record->push_back(Value);
+  }
+
+  void writeUInt64(uint64_t Value) {
+    Record->push_back(Value);
+  }
+
   /// Emit an integral value.
-  void AddAPInt(const llvm::APInt &Value);
+  void AddAPInt(const llvm::APInt &Value) {
+    writeAPInt(Value);
+  }
 
   /// Emit a signed integral value.
-  void AddAPSInt(const llvm::APSInt &Value);
+  void AddAPSInt(const llvm::APSInt &Value) {
+    writeAPSInt(Value);
+  }
 
   /// Emit a floating-point value.
   void AddAPFloat(const llvm::APFloat &Value);
@@ -870,9 +894,15 @@ public:
   void AddIdentifierRef(const IdentifierInfo *II) {
     return Writer->AddIdentifierRef(II, *Record);
   }
+  void writeIdentifier(const IdentifierInfo *II) {
+    AddIdentifierRef(II);
+  }
 
   /// Emit a Selector (which is a smart pointer reference).
   void AddSelectorRef(Selector S);
+  void writeSelector(Selector sel) {
+    AddSelectorRef(sel);
+  }
 
   /// Emit a CXXTemporary.
   void AddCXXTemporary(const CXXTemporary *Temp);
@@ -886,6 +916,9 @@ public:
   /// Emit a reference to a type.
   void AddTypeRef(QualType T) {
     return Writer->AddTypeRef(T, *Record);
+  }
+  void writeQualType(QualType T) {
+    AddTypeRef(T);
   }
 
   /// Emits a reference to a declarator info.
@@ -909,9 +942,14 @@ public:
   void AddDeclRef(const Decl *D) {
     return Writer->AddDeclRef(D, *Record);
   }
+  void writeDeclRef(const Decl *D) {
+    AddDeclRef(D);
+  }
 
   /// Emit a declaration name.
-  void AddDeclarationName(DeclarationName Name);
+  void AddDeclarationName(DeclarationName Name) {
+    writeDeclarationName(Name);
+  }
 
   void AddDeclarationNameLoc(const DeclarationNameLoc &DNLoc,
                              DeclarationName Name);
@@ -920,16 +958,22 @@ public:
   void AddQualifierInfo(const QualifierInfo &Info);
 
   /// Emit a nested name specifier.
-  void AddNestedNameSpecifier(NestedNameSpecifier *NNS);
+  void AddNestedNameSpecifier(NestedNameSpecifier *NNS) {
+    writeNestedNameSpecifier(NNS);
+  }
 
   /// Emit a nested name specifier with source-location information.
   void AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS);
 
   /// Emit a template name.
-  void AddTemplateName(TemplateName Name);
+  void AddTemplateName(TemplateName Name) {
+    writeTemplateName(Name);
+  }
 
   /// Emit a template argument.
-  void AddTemplateArgument(const TemplateArgument &Arg);
+  void AddTemplateArgument(const TemplateArgument &Arg) {
+    writeTemplateArgument(Arg);
+  }
 
   /// Emit a template parameter list.
   void AddTemplateParameterList(const TemplateParameterList *TemplateParams);

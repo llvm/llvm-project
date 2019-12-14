@@ -139,6 +139,10 @@ class FullComment;
 
 } // namespace comments
 
+namespace serialization {
+template <class> class AbstractTypeReader;
+} // namespace serialization
+
 struct TypeInfo {
   uint64_t Width = 0;
   unsigned Align = 0;
@@ -428,6 +432,7 @@ private:
   friend class ASTDeclReader;
   friend class ASTReader;
   friend class ASTWriter;
+  template <class> friend class serialization::AbstractTypeReader;
   friend class CXXRecordDecl;
 
   /// A mapping to contain the template or declaration that
