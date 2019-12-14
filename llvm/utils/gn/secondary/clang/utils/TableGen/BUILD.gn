@@ -5,6 +5,7 @@ executable("clang-tblgen") {
   ]
   sources = [
     "ClangASTNodesEmitter.cpp",
+    "ClangASTPropertiesEmitter.cpp",
     "ClangAttrEmitter.cpp",
     "ClangCommentCommandInfoEmitter.cpp",
     "ClangCommentHTMLNamedCharacterReferenceEmitter.cpp",
