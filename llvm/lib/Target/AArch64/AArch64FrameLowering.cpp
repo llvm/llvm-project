@@ -832,6 +832,10 @@ static bool needsWinCFI(const MachineFunction &MF) {
          F.needsUnwindTableEntry();
 }
 
+static bool isTargetDarwin(const MachineFunction &MF) {
+  return MF.getSubtarget<AArch64Subtarget>().isTargetDarwin();
+}
+
 // Convenience function to determine whether I is an SVE callee save.
 bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
@@ -1012,7 +1016,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   if (HasFP) {
     // Only set up FP if we actually need to.
-    int64_t FPOffset = AFI->getCalleeSaveBaseToFrameRecordOffset();
+    int64_t FPOffset = isTargetDarwin(MF) ? (AFI->getCalleeSavedStackSize() - 16) : 0;
 
     if (CombineSPBump)
       FPOffset += AFI->getLocalStackSize();
@@ -1225,6 +1229,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (needsFrameMoves) {
+    const DataLayout &TD = MF.getDataLayout();
+    const int StackGrowth = isTargetDarwin(MF)
+                                ? (2 * -TD.getPointerSize(0))
+                                : -AFI->getCalleeSavedStackSize();
+    Register FramePtr = RegInfo->getFrameRegister(MF);
     // An example of the prologue:
     //
     //     .globl __foo
@@ -1292,15 +1301,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     //     .cfi_offset w28, -32
 
     if (HasFP) {
-      const int OffsetToFirstCalleeSaveFromFP =
-          AFI->getCalleeSaveBaseToFrameRecordOffset() -
-          AFI->getCalleeSavedStackSize();
-      Register FramePtr = RegInfo->getFrameRegister(MF);
-
       // Define the current CFA rule to use the provided FP.
       unsigned Reg = RegInfo->getDwarfRegNum(FramePtr, true);
       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
-          nullptr, Reg, OffsetToFirstCalleeSaveFromFP - FixedObject));
+          nullptr, Reg, StackGrowth - FixedObject));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
@@ -1607,8 +1611,10 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // non-post-indexed loads for the restores if we aren't actually going to
   // be able to save any instructions.
   if (!IsFunclet && (MFI.hasVarSizedObjects() || AFI->isStackRealigned())) {
+    int64_t OffsetToFrameRecord =
+        isTargetDarwin(MF) ? (-(int64_t)AFI->getCalleeSavedStackSize() + 16) : 0;
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::FP,
-                    {-AFI->getCalleeSaveBaseToFrameRecordOffset(), MVT::i8},
+                    {OffsetToFrameRecord, MVT::i8},
                     TII, MachineInstr::FrameDestroy, false, NeedsWinCFI);
   } else if (NumBytes)
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
@@ -1670,8 +1676,8 @@ static StackOffset getFPOffset(const MachineFunction &MF, int64_t ObjectOffset) 
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
   unsigned FixedObject = IsWin64 ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
-  unsigned FPAdjust = AFI->getCalleeSavedStackSize(MF.getFrameInfo()) -
-                      AFI->getCalleeSaveBaseToFrameRecordOffset();
+  unsigned FPAdjust = isTargetDarwin(MF)
+                        ? 16 : AFI->getCalleeSavedStackSize(MF.getFrameInfo());
   return {ObjectOffset + FixedObject + FPAdjust, MVT::i8};
 }
 
@@ -1928,9 +1934,6 @@ static void computeCalleeSaveRegisterPairs(
   if (CSI.empty())
     return;
 
-  const bool IsTargetWindows =
-      MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
-
   bool NeedsWinCFI = needsWinCFI(MF);
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -2054,14 +2057,6 @@ static void computeCalleeSaveRegisterPairs(
     assert(((!RPI.isScalable() && RPI.Offset >= -64 && RPI.Offset <= 63) ||
             (RPI.isScalable() && RPI.Offset >= -256 && RPI.Offset <= 255)) &&
            "Offset out of bounds for LDP/STP immediate");
-
-    // Save the offset to frame record so that the FP register can point to the
-    // innermost frame record (spilled FP and LR registers).
-    if (NeedsFrameRecord && ((!IsTargetWindows && RPI.Reg1 == AArch64::LR &&
-                              RPI.Reg2 == AArch64::FP) ||
-                             (IsTargetWindows && RPI.Reg1 == AArch64::FP &&
-                              RPI.Reg2 == AArch64::LR)))
-      AFI->setCalleeSaveBaseToFrameRecordOffset(Offset);
 
     RegPairs.push_back(RPI);
     if (RPI.isPaired())
