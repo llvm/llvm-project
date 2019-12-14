@@ -110,6 +110,19 @@ public:
   llvm::StringRef getId() const;
   std::string getClassName() const;
   DeclNode getBase() const { return DeclNode(ASTNode::getBase().getRecord()); }
+
+  static llvm::StringRef getASTHierarchyName() {
+    return "Decl";
+  }
+  static llvm::StringRef getASTIdTypeName() {
+    return "Decl::Kind";
+  }
+  static llvm::StringRef getASTIdAccessorName() {
+    return "getKind";
+  }
+  static llvm::StringRef getTableGenNodeClassName() {
+    return DeclNodeClassName;
+  }
 };
 
 class TypeNode : public ASTNode {
@@ -119,6 +132,19 @@ public:
   llvm::StringRef getId() const;
   llvm::StringRef getClassName() const;
   TypeNode getBase() const { return TypeNode(ASTNode::getBase().getRecord()); }
+
+  static llvm::StringRef getASTHierarchyName() {
+    return "Type";
+  }
+  static llvm::StringRef getASTIdTypeName() {
+    return "Type::TypeClass";
+  }
+  static llvm::StringRef getASTIdAccessorName() {
+    return "getTypeClass";
+  }
+  static llvm::StringRef getTableGenNodeClassName() {
+    return TypeNodeClassName;
+  }
 };
 
 class StmtNode : public ASTNode {
@@ -128,6 +154,19 @@ public:
   std::string getId() const;
   llvm::StringRef getClassName() const;
   StmtNode getBase() const { return StmtNode(ASTNode::getBase().getRecord()); }
+
+  static llvm::StringRef getASTHierarchyName() {
+    return "Stmt";
+  }
+  static llvm::StringRef getASTIdTypeName() {
+    return "Stmt::StmtClass";
+  }
+  static llvm::StringRef getASTIdAccessorName() {
+    return "getStmtClass";
+  }
+  static llvm::StringRef getTableGenNodeClassName() {
+    return StmtNodeClassName;
+  }
 };
 
 /// A visitor for an AST node hierarchy.  Note that `base` can be null for
@@ -136,18 +175,19 @@ template <class NodeClass>
 using ASTNodeHierarchyVisitor =
   llvm::function_ref<void(NodeClass node, NodeClass base)>;
 
+void visitASTNodeHierarchyImpl(llvm::RecordKeeper &records,
+                               llvm::StringRef nodeClassName,
+                               ASTNodeHierarchyVisitor<ASTNode> visit);
+
+template <class NodeClass>
 void visitASTNodeHierarchy(llvm::RecordKeeper &records,
-                           llvm::StringRef nodeClassName,
-                           ASTNodeHierarchyVisitor<ASTNode> visit);
-
-void visitDeclNodeHierarchy(llvm::RecordKeeper &records,
-                            ASTNodeHierarchyVisitor<DeclNode> visit);
-
-void visitTypeNodeHierarchy(llvm::RecordKeeper &records,
-                            ASTNodeHierarchyVisitor<TypeNode> visit);
-
-void visitStmtNodeHierarchy(llvm::RecordKeeper &records,
-                            ASTNodeHierarchyVisitor<StmtNode> visit);
+                           ASTNodeHierarchyVisitor<NodeClass> visit) {
+  visitASTNodeHierarchyImpl(records, NodeClass::getTableGenNodeClassName(),
+                            [visit](ASTNode node, ASTNode base) {
+                              visit(NodeClass(node.getRecord()),
+                                    NodeClass(base.getRecord()));
+                            });
+}
 
 } // end namespace clang::tblgen
 } // end namespace clang
