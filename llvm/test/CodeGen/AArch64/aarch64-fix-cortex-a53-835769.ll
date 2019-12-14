@@ -3,19 +3,19 @@
 ; therefore, the tests are a bit fragile/reliant on instruction scheduling. The
 ; test cases have been minimized as much as possible, but still most of the test
 ; cases could break if instruction scheduling heuristics for cortex-a53 change
-; RUN: llc < %s -mcpu=cortex-a53 -aarch64-fix-cortex-a53-835769=1 -stats 2>&1 \
+; RUN: llc < %s -mcpu=cortex-a53 -aarch64-fix-cortex-a53-835769=1 -frame-pointer=non-leaf -stats 2>&1 \
 ; RUN:  | FileCheck %s
-; RUN: llc < %s -mcpu=cortex-a53 -aarch64-fix-cortex-a53-835769=0 -stats 2>&1 \
+; RUN: llc < %s -mcpu=cortex-a53 -aarch64-fix-cortex-a53-835769=0 -frame-pointer=non-leaf -stats 2>&1 \
 ; RUN:  | FileCheck %s --check-prefix CHECK-NOWORKAROUND
 ; The following run lines are just to verify whether or not this pass runs by
 ; default for given CPUs. Given the fragility of the tests, this is only run on
 ; a test case where the scheduler has not freedom at all to reschedule the
 ; instructions, so the potentially massively different scheduling heuristics
 ; will not break the test case.
-; RUN: llc < %s -mcpu=generic    | FileCheck %s --check-prefix CHECK-BASIC-PASS-DISABLED
-; RUN: llc < %s -mcpu=cortex-a53 | FileCheck %s --check-prefix CHECK-BASIC-PASS-DISABLED
-; RUN: llc < %s -mcpu=cortex-a57 | FileCheck %s --check-prefix CHECK-BASIC-PASS-DISABLED
-; RUN: llc < %s -mcpu=cyclone    | FileCheck %s --check-prefix CHECK-BASIC-PASS-DISABLED
+; RUN: llc < %s -mcpu=generic    -frame-pointer=non-leaf | FileCheck %s --check-prefix CHECK-BASIC-PASS-DISABLED
+; RUN: llc < %s -mcpu=cortex-a53 -frame-pointer=non-leaf | FileCheck %s --check-prefix CHECK-BASIC-PASS-DISABLED
+; RUN: llc < %s -mcpu=cortex-a57 -frame-pointer=non-leaf | FileCheck %s --check-prefix CHECK-BASIC-PASS-DISABLED
+; RUN: llc < %s -mcpu=cyclone    -frame-pointer=non-leaf | FileCheck %s --check-prefix CHECK-BASIC-PASS-DISABLED
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
