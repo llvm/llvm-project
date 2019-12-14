@@ -2360,7 +2360,6 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_UNDEF(SDNode *N) {
 
 SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
   EVT VT = N->getValueType(0);
-  EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
 
   AtomicSDNode *AM = cast<AtomicSDNode>(N);
   SDLoc SL(N);
@@ -2374,13 +2373,19 @@ SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
                     { AM->getChain(), AM->getBasePtr(), CastVal },
                     AM->getMemOperand());
 
-  SDValue ResultCast = DAG.getNode(GetPromotionOpcode(VT, NFPVT), SL, NFPVT,
-                                   NewAtomic);
+  SDValue Result = NewAtomic;
+
+  if (getTypeAction(VT) == TargetLowering::TypePromoteFloat) {
+    EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+    Result = DAG.getNode(GetPromotionOpcode(VT, NFPVT), SL, NFPVT,
+                                     NewAtomic);
+  }
+
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), NewAtomic.getValue(1));
 
-  return ResultCast;
+  return Result;
 
 }
 
