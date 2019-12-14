@@ -1,5 +1,5 @@
 // REQUIRES: native-run
-// RUN: %clang_builtins %s %librt -o %t && %run %t
+// RUN: %clang_builtins %s %librt -o %t && %run_nomprotect %t
 // REQUIRES: librt_has_enable_execute_stack
 //===-- enable_execute_stack_test.c - Test __enable_execute_stack ----------===//
 //
