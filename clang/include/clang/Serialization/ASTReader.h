@@ -365,7 +365,6 @@ public:
   friend class ASTDeclReader;
   friend class ASTIdentifierIterator;
   friend class ASTRecordReader;
-  friend class ASTStmtReader;
   friend class ASTUnit; // ASTUnit needs to remap source locations.
   friend class ASTWriter;
   friend class PCHValidator;
