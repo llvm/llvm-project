@@ -3,9 +3,23 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -fsyntax-only -pedantic -verify -Wsign-compare -std=c++2a %s
 
 void compare_not_found_test() {
-  // expected-error@+1 {{cannot deduce return type of 'operator<=>' because type 'std::partial_ordering' was not found; include <compare>}}
+  // expected-error@+1 {{cannot use builtin operator '<=>' because type 'std::partial_ordering' was not found; include <compare>}}
   (void)(0.0 <=> 42.123);
 }
+
+struct deduction_compare_not_found {
+  // expected-error@+1 {{cannot default 'operator<=>' because type 'std::strong_ordering' was not found; include <compare>}}
+  friend auto operator<=>(const deduction_compare_not_found&, const deduction_compare_not_found&) = default;
+};
+
+struct comparable {
+  int operator<=>(comparable);
+};
+struct default_compare_not_found {
+  // expected-error@+1 {{cannot default 'operator<=>' because type 'std::strong_ordering' was not found; include <compare>}}
+  friend int operator<=>(const default_compare_not_found&, const default_compare_not_found&) = default;
+};
+bool b = default_compare_not_found() < default_compare_not_found(); // expected-note {{first required here}}
 
 namespace std {
 inline namespace __1 {
