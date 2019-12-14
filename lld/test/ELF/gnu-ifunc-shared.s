@@ -41,7 +41,7 @@
 // DISASM-NEXT:     134b:       jmp     -48 <.plt>
 // DISASM-NEXT:     1350:       jmpq    *8466(%rip)
 // DISASM-NEXT:     1356:       pushq   $0
-// DISASM-NEXT:     135b:       jmp     -32 <f2@plt>
+// DISASM-NEXT:     135b:       jmp     -64 <.plt>
 
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (5) .rela.dyn {

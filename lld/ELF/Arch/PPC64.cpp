@@ -296,11 +296,12 @@ PPC64::PPC64() {
   relativeRel = R_PPC64_RELATIVE;
   iRelativeRel = R_PPC64_IRELATIVE;
   symbolicRel = R_PPC64_ADDR64;
+  pltHeaderSize = 60;
   pltEntrySize = 4;
+  ipltEntrySize = 4;
   gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 1;
   gotPltHeaderEntriesNum = 2;
-  pltHeaderSize = 60;
   needsThunks = true;
 
   tlsModuleIndexRel = R_PPC64_DTPMOD64;

@@ -63,10 +63,10 @@
 // DISASM-NEXT:                  jmp     -48 <.plt>
 // DISASM-NEXT:                  jmpl    *4207276
 // DISASM-NEXT:                  pushl   $0
-// DISASM-NEXT:                  jmp     -32 <zed2@plt>
+// DISASM-NEXT:                  jmp     -64 <.plt>
 // DISASM-NEXT:                  jmpl    *4207280
 // DISASM-NEXT:                  pushl   $8
-// DISASM-NEXT:                  jmp     -48 <zed2@plt>
+// DISASM-NEXT:                  jmp     -80 <.plt>
 
 .text
 .type foo STT_GNU_IFUNC
