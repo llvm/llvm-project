@@ -101,6 +101,35 @@ STATISTIC(NumAttributesFixedDueToRequiredDependences,
   STATS_DECLTRACK(NAME, Floating,                                              \
                   ("Number of floating values known to be '" #NAME "'"))
 
+// Specialization of the operator<< for abstract attributes subclasses. This
+// disambiguates situations where multiple operators are applicable.
+namespace llvm {
+#define PIPE_OPERATOR(CLASS)                                                   \
+  raw_ostream &operator<<(raw_ostream &OS, const CLASS &AA) {                  \
+    return OS << static_cast<const AbstractAttribute &>(AA);                   \
+  }
+
+PIPE_OPERATOR(AAIsDead)
+PIPE_OPERATOR(AANoUnwind)
+PIPE_OPERATOR(AANoSync)
+PIPE_OPERATOR(AANoRecurse)
+PIPE_OPERATOR(AAWillReturn)
+PIPE_OPERATOR(AANoReturn)
+PIPE_OPERATOR(AAReturnedValues)
+PIPE_OPERATOR(AANonNull)
+PIPE_OPERATOR(AANoAlias)
+PIPE_OPERATOR(AADereferenceable)
+PIPE_OPERATOR(AAAlign)
+PIPE_OPERATOR(AANoCapture)
+PIPE_OPERATOR(AAValueSimplify)
+PIPE_OPERATOR(AANoFree)
+PIPE_OPERATOR(AAHeapToStack)
+PIPE_OPERATOR(AAReachability)
+PIPE_OPERATOR(AAMemoryBehavior)
+
+#undef PIPE_OPERATOR
+} // namespace llvm
+
 // TODO: Determine a good default value.
 //
 // In the LLVM-TS and SPEC2006, 32 seems to not induce compile time overheads
@@ -563,8 +592,7 @@ template <typename AAType, typename StateType = typename AAType::StateType>
 static void clampReturnedValueStates(Attributor &A, const AAType &QueryingAA,
                                      StateType &S) {
   LLVM_DEBUG(dbgs() << "[Attributor] Clamp return value states for "
-                    << static_cast<const AbstractAttribute &>(QueryingAA)
-                    << " into " << S << "\n");
+                    << QueryingAA << " into " << S << "\n");
 
   assert((QueryingAA.getIRPosition().getPositionKind() ==
               IRPosition::IRP_RETURNED ||
@@ -638,8 +666,7 @@ template <typename AAType, typename StateType = typename AAType::StateType>
 static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
                                         StateType &S) {
   LLVM_DEBUG(dbgs() << "[Attributor] Clamp call site argument states for "
-                    << static_cast<const AbstractAttribute &>(QueryingAA)
-                    << " into " << S << "\n");
+                    << QueryingAA << " into " << S << "\n");
 
   assert(QueryingAA.getIRPosition().getPositionKind() ==
              IRPosition::IRP_ARGUMENT &&
@@ -1175,8 +1202,7 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     const auto &RetValAA = A.getAAFor<AAReturnedValues>(
         *this, IRPosition::function(*CB->getCalledFunction()));
     LLVM_DEBUG(dbgs() << "[AAReturnedValues] Found another AAReturnedValues: "
-                      << static_cast<const AbstractAttribute &>(RetValAA)
-                      << "\n");
+                      << RetValAA << "\n");
 
     // Skip dead ends, thus if we do not know anything about the returned
     // call we mark it as unresolved and it will stay that way.
@@ -2162,6 +2188,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // (i) Check whether noalias holds in the definition.
 
     auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, IRP);
+    LLVM_DEBUG(dbgs() << "[Attributor][AANoAliasCSArg] check definition: " << V
+                      << " :: " << NoAliasAA << "\n");
 
     if (!NoAliasAA.isAssumedNoAlias())
       return indicatePessimisticFixpoint();
@@ -2193,7 +2221,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
 
       if (const Function *F = getAnchorScope()) {
         if (AAResults *AAR = A.getInfoCache().getAAResultsForFunction(*F)) {
-          bool IsAliasing = AAR->isNoAlias(&getAssociatedValue(), ArgOp);
+          bool IsAliasing = !AAR->isNoAlias(&getAssociatedValue(), ArgOp);
           LLVM_DEBUG(dbgs()
                      << "[Attributor][NoAliasCSArg] Check alias between "
                         "callsite arguments "
@@ -2201,7 +2229,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
                      << getAssociatedValue() << " " << *ArgOp << " => "
                      << (IsAliasing ? "" : "no-") << "alias \n");
 
-          if (IsAliasing)
+          if (!IsAliasing)
             continue;
         }
       }
@@ -4897,8 +4925,7 @@ bool Attributor::checkForAllUses(
     if (Instruction *UserI = dyn_cast<Instruction>(U->getUser()))
       if (LivenessAA && LivenessAA->isAssumedDead(UserI)) {
         LLVM_DEBUG(dbgs() << "[Attributor] Dead user: " << *UserI << ": "
-                          << static_cast<const AbstractAttribute &>(*LivenessAA)
-                          << "\n");
+                          << *LivenessAA << "\n");
         AnyDead = true;
         continue;
       }
