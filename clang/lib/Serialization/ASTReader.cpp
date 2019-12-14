@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ASTRecordReader.h"
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
 #include "clang/AST/AbstractTypeReader.h"
@@ -30,6 +30,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/ODRHash.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateBase.h"
@@ -11470,6 +11471,31 @@ Expected<unsigned> ASTRecordReader::readRecord(llvm::BitstreamCursor &Cursor,
 //===----------------------------------------------------------------------===//
 //// OMPClauseReader implementation
 ////===----------------------------------------------------------------------===//
+
+// This has to be in namespace clang because it's friended by all
+// of the OMP clauses.
+namespace clang {
+
+class OMPClauseReader : public OMPClauseVisitor<OMPClauseReader> {
+  ASTRecordReader &Record;
+  ASTContext &Context;
+
+public:
+  OMPClauseReader(ASTRecordReader &Record)
+      : Record(Record), Context(Record.getContext()) {}
+
+#define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *C);
+#include "clang/Basic/OpenMPKinds.def"
+  OMPClause *readClause();
+  void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
+  void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
+};
+
+} // end namespace clang
+
+OMPClause *ASTRecordReader::readOMPClause() {
+  return OMPClauseReader(*this).readClause();
+}
 
 OMPClause *OMPClauseReader::readClause() {
   OMPClause *C = nullptr;

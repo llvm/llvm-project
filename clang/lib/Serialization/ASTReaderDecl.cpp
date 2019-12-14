@@ -48,7 +48,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Serialization/ASTBitCodes.h"
-#include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ASTRecordReader.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/DenseMap.h"
@@ -2630,9 +2630,8 @@ void ASTDeclReader::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
   D->setVars(Vars);
   SmallVector<OMPClause *, 8> Clauses;
   Clauses.reserve(NumClauses);
-  OMPClauseReader ClauseReader(Record);
   for (unsigned I = 0; I != NumClauses; ++I)
-    Clauses.push_back(ClauseReader.readClause());
+    Clauses.push_back(Record.readOMPClause());
   D->setClauses(Clauses);
 }
 
@@ -2641,9 +2640,8 @@ void ASTDeclReader::VisitOMPRequiresDecl(OMPRequiresDecl * D) {
   unsigned NumClauses = D->clauselist_size();
   SmallVector<OMPClause *, 8> Clauses;
   Clauses.reserve(NumClauses);
-  OMPClauseReader ClauseReader(Record);
   for (unsigned I = 0; I != NumClauses; ++I)
-    Clauses.push_back(ClauseReader.readClause());
+    Clauses.push_back(Record.readOMPClause());
   D->setClauses(Clauses);
 }
 
@@ -2674,9 +2672,8 @@ void ASTDeclReader::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   unsigned NumClauses = D->clauselist_size();
   SmallVector<OMPClause *, 8> Clauses;
   Clauses.reserve(NumClauses);
-  OMPClauseReader ClauseReader(Record);
   for (unsigned I = 0; I != NumClauses; ++I)
-    Clauses.push_back(ClauseReader.readClause());
+    Clauses.push_back(Record.readOMPClause());
   D->setClauses(Clauses);
 }
 
