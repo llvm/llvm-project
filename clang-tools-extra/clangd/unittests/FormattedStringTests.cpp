@@ -120,16 +120,20 @@ TEST(Document, Separators) {
   D.addParagraph().appendText("foo");
   D.addCodeBlock("test");
   D.addParagraph().appendText("bar");
-  EXPECT_EQ(D.asMarkdown(), R"md(foo
+
+  const char ExpectedMarkdown[] = R"md(foo
 ```cpp
 test
 ```
-bar)md");
-  EXPECT_EQ(D.asPlainText(), R"pt(foo
+bar)md";
+  EXPECT_EQ(D.asMarkdown(), ExpectedMarkdown);
+
+  const char ExpectedText[] = R"pt(foo
 
 test
 
-bar)pt");
+bar)pt";
+  EXPECT_EQ(D.asPlainText(), ExpectedText);
 }
 
 TEST(Document, Spacer) {
