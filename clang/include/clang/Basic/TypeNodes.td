@@ -1,4 +1,6 @@
-class TypeNode<TypeNode base, bit abstract = 0> {
+class ASTNode;
+
+class TypeNode<TypeNode base, bit abstract = 0> : ASTNode {
 	TypeNode Base = base;
   bit Abstract = abstract;
 } 

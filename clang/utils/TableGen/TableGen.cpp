@@ -42,6 +42,8 @@ enum ActionType {
   GenClangAttrParsedAttrKinds,
   GenClangAttrTextNodeDump,
   GenClangAttrNodeTraverse,
+  GenClangBasicReader,
+  GenClangBasicWriter,
   GenClangDiagsDefs,
   GenClangDiagGroups,
   GenClangDiagsIndexName,
@@ -131,6 +133,10 @@ cl::opt<ActionType> Action(
                    "Generate Clang diagnostic groups"),
         clEnumValN(GenClangDiagsIndexName, "gen-clang-diags-index-name",
                    "Generate Clang diagnostic name index"),
+        clEnumValN(GenClangBasicReader, "gen-clang-basic-reader",
+                   "Generate Clang BasicReader classes"),
+        clEnumValN(GenClangBasicWriter, "gen-clang-basic-writer",
+                   "Generate Clang BasicWriter classes"),
         clEnumValN(GenClangCommentNodes, "gen-clang-comment-nodes",
                    "Generate Clang AST comment nodes"),
         clEnumValN(GenClangDeclNodes, "gen-clang-decl-nodes",
@@ -275,6 +281,12 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenClangTypeNodes:
     EmitClangTypeNodes(Records, OS);
+    break;
+  case GenClangBasicReader:
+    EmitClangBasicReader(Records, OS);
+    break;
+  case GenClangBasicWriter:
+    EmitClangBasicWriter(Records, OS);
     break;
   case GenClangOpcodes:
     EmitClangOpcodes(Records, OS);
