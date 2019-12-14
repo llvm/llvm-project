@@ -212,6 +212,11 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
         // ArtifactCombiner to combine away them.
         if (isArtifact(MI)) {
           LLVM_DEBUG(dbgs() << ".. Not legalized, moving to artifacts retry\n");
+          assert(NumArtifacts == 0 &&
+                 "Artifacts are only expected in instruction list starting the "
+                 "second iteration, but each iteration starting second must "
+                 "start with an empty artifacts list");
+          (void)NumArtifacts;
           RetryList.push_back(&MI);
           continue;
         }
@@ -224,7 +229,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
     // Try to combine the instructions in RetryList again if there
     // are new artifacts. If not, stop legalizing.
     if (!RetryList.empty()) {
-      if (ArtifactList.size() > NumArtifacts) {
+      if (!ArtifactList.empty()) {
         while (!RetryList.empty())
           ArtifactList.insert(RetryList.pop_back_val());
       } else {
