@@ -5613,7 +5613,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     if (Function *Callee = CS.getCalledFunction()) {
       // Skip declerations except if annotations on their call sites were
       // explicitly requested.
-      if (!AnnotateDeclarationCallSites && Callee->isDeclaration())
+      if (!AnnotateDeclarationCallSites && Callee->isDeclaration() &&
+          !Callee->hasMetadata(LLVMContext::MD_callback))
         return true;
 
       if (!Callee->getReturnType()->isVoidTy() && !CS->use_empty()) {
