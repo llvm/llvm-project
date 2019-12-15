@@ -84,6 +84,7 @@ class ASTPropsEmitter {
 	raw_ostream &Out;
 	RecordKeeper &Records;
 	std::map<ASTNode, NodeInfo> NodeInfos;
+  std::vector<PropertyType> AllPropertyTypes;
 
 public:
 	ASTPropsEmitter(RecordKeeper &records, raw_ostream &out)
@@ -122,6 +123,15 @@ public:
                           + "\"");
       }
       info.Override = overrideRule;
+    }
+
+    for (PropertyType type :
+           records.getAllDerivedDefinitions(PropertyTypeClassName)) {
+      // Ignore generic specializations; they're generally not useful when
+      // emitting basic emitters etc.
+      if (type.isGenericSpecialization()) continue;
+
+      AllPropertyTypes.push_back(type);
     }
 
     Validator(*this).validate();
@@ -174,6 +184,11 @@ public:
 
   void emitReadOfProperty(Property property);
   void emitWriteOfProperty(Property property);
+
+  void emitBasicReaderWriterFile(const ReaderWriterInfo &info);
+  void emitDispatcherTemplate(const ReaderWriterInfo &info);
+  void emitPackUnpackOptionalTemplate(const ReaderWriterInfo &info);
+  void emitBasicReaderWriterTemplate(const ReaderWriterInfo &info);
 
 private:
   class Validator {
@@ -477,11 +492,11 @@ void clang::EmitClangTypeWriter(RecordKeeper &records, raw_ostream &out) {
 /*************************** BASIC READER/WRITERS ***************************/
 /****************************************************************************/
 
-static void emitDispatcherTemplate(ArrayRef<Record*> types, raw_ostream &out,
-                                   const ReaderWriterInfo &info) {
+void
+ASTPropsEmitter::emitDispatcherTemplate(const ReaderWriterInfo &info) {
   // Declare the {Read,Write}Dispatcher template.
   StringRef dispatcherPrefix = (info.IsReader ? "Read" : "Write");
-  out << "template <class ValueType>\n"
+  Out << "template <class ValueType>\n"
          "struct " << dispatcherPrefix << "Dispatcher;\n";
 
   // Declare a specific specialization of the dispatcher template.
@@ -490,10 +505,10 @@ static void emitDispatcherTemplate(ArrayRef<Record*> types, raw_ostream &out,
         const Twine &cxxTypeName,
         StringRef methodSuffix) {
     StringRef var = info.HelperVariable;
-    out << "template " << specializationParameters << "\n"
+    Out << "template " << specializationParameters << "\n"
            "struct " << dispatcherPrefix << "Dispatcher<"
                      << cxxTypeName << "> {\n";
-    out << "  template <class Basic" << info.ClassSuffix << ", class... Args>\n"
+    Out << "  template <class Basic" << info.ClassSuffix << ", class... Args>\n"
            "  static " << (info.IsReader ? cxxTypeName : "void") << " "
                        << info.MethodPrefix
                        << "(Basic" << info.ClassSuffix << " &" << var
@@ -506,7 +521,7 @@ static void emitDispatcherTemplate(ArrayRef<Record*> types, raw_ostream &out,
   };
 
   // Declare explicit specializations for each of the concrete types.
-  for (PropertyType type : types) {
+  for (PropertyType type : AllPropertyTypes) {
     declareSpecialization("<>",
                           type.getCXXTypeName(),
                           type.getAbstractTypeName());
@@ -524,22 +539,21 @@ static void emitDispatcherTemplate(ArrayRef<Record*> types, raw_ostream &out,
   declareSpecialization("<class T>",
                         "llvm::Optional<T>",
                         "Optional");
-  out << "\n";
+  Out << "\n";
 }
 
-static void emitPackUnpackOptionalTemplate(ArrayRef<Record*> types,
-                                           raw_ostream &out,
-                                           const ReaderWriterInfo &info) {
+void
+ASTPropsEmitter::emitPackUnpackOptionalTemplate(const ReaderWriterInfo &info) {
   StringRef classPrefix = (info.IsReader ? "Unpack" : "Pack");
   StringRef methodName = (info.IsReader ? "unpack" : "pack");
 
   // Declare the {Pack,Unpack}OptionalValue template.
-  out << "template <class ValueType>\n"
+  Out << "template <class ValueType>\n"
          "struct " << classPrefix << "OptionalValue;\n";
 
   auto declareSpecialization = [&](const Twine &typeName,
                                    StringRef code) {
-    out << "template <>\n"
+    Out << "template <>\n"
            "struct " << classPrefix << "OptionalValue<" << typeName << "> {\n"
            "  static " << (info.IsReader ? "Optional<" : "") << typeName
                        << (info.IsReader ? "> " : " ") << methodName << "("
@@ -550,7 +564,7 @@ static void emitPackUnpackOptionalTemplate(ArrayRef<Record*> types,
            "};\n";
   };
 
-  for (PropertyType type : types) {
+  for (PropertyType type : AllPropertyTypes) {
     StringRef code = (info.IsReader ? type.getUnpackOptionalCode()
                                     : type.getPackOptionalCode());
     if (code.empty()) continue;
@@ -560,81 +574,79 @@ static void emitPackUnpackOptionalTemplate(ArrayRef<Record*> types,
     if (type.isConstWhenWriting() && !info.IsReader)
       declareSpecialization("const " + typeName, code);
   }
-  out << "\n";
+  Out << "\n";
 }
 
-static void emitBasicReaderWriterTemplate(ArrayRef<Record*> types,
-                                          raw_ostream &out,
-                                          const ReaderWriterInfo &info) {
+void
+ASTPropsEmitter::emitBasicReaderWriterTemplate(const ReaderWriterInfo &info) {
   // Emit the Basic{Reader,Writer}Base template.
-  out << "template <class Impl>\n"
+  Out << "template <class Impl>\n"
          "class Basic" << info.ClassSuffix << "Base {\n";
   if (info.IsReader)
-    out << "  ASTContext &C;\n";
-  out << "protected:\n"
+    Out << "  ASTContext &C;\n";
+  Out << "protected:\n"
          "  Basic" << info.ClassSuffix << "Base"
                    << (info.IsReader ? "(ASTContext &ctx) : C(ctx)" : "()")
                    << " {}\n"
          "public:\n";
   if (info.IsReader)
-    out << "  ASTContext &getASTContext() { return C; }\n";
-  out << "  Impl &asImpl() { return static_cast<Impl&>(*this); }\n";
+    Out << "  ASTContext &getASTContext() { return C; }\n";
+  Out << "  Impl &asImpl() { return static_cast<Impl&>(*this); }\n";
 
   auto enterReaderWriterMethod = [&](StringRef cxxTypeName,
                                      StringRef abstractTypeName,
                                      bool shouldPassByReference,
                                      bool constWhenWriting) {
-    out << "  " << (info.IsReader ? cxxTypeName : "void")
+    Out << "  " << (info.IsReader ? cxxTypeName : "void")
                 << " " << info.MethodPrefix << abstractTypeName << "(";
     if (!info.IsReader)
-      out       << (shouldPassByReference || constWhenWriting ? "const " : "")
+      Out       << (shouldPassByReference || constWhenWriting ? "const " : "")
                 << cxxTypeName
                 << (shouldPassByReference ? " &" : "") << " value";
-    out         << ") {\n";
+    Out         << ") {\n";
   };
 
   // Emit {read,write}ValueType methods for all the enum and subclass types
   // that default to using the integer/base-class implementations.
-  for (PropertyType type : types) {
+  for (PropertyType type : AllPropertyTypes) {
     if (type.isEnum()) {
       enterReaderWriterMethod(type.getCXXTypeName(),
                               type.getAbstractTypeName(),
                               /*pass by reference*/ false,
                               /*const when writing*/ false);
       if (info.IsReader)
-        out << "    return " << type.getCXXTypeName()
+        Out << "    return " << type.getCXXTypeName()
                              << "(asImpl().readUInt32());\n";
       else
-        out << "    asImpl().writeUInt32(uint32_t(value));\n";
-      out << "  }\n";
+        Out << "    asImpl().writeUInt32(uint32_t(value));\n";
+      Out << "  }\n";
     } else if (PropertyType superclass = type.getSuperclassType()) {
       enterReaderWriterMethod(type.getCXXTypeName(),
                               type.getAbstractTypeName(),
                               /*pass by reference*/ false,
                               /*const when writing*/ type.isConstWhenWriting());
       if (info.IsReader)
-        out << "    return cast_or_null<" << type.getSubclassClassName()
+        Out << "    return cast_or_null<" << type.getSubclassClassName()
                                           << ">(asImpl().read"
                                           << superclass.getAbstractTypeName()
                                           << "());\n";
       else
-        out << "    asImpl().write" << superclass.getAbstractTypeName()
+        Out << "    asImpl().write" << superclass.getAbstractTypeName()
                                     << "(value);\n";
-      out << "  }\n";
+      Out << "  }\n";
     } else {
       // The other types can't be handled as trivially.
     }
   }
-  out << "};\n\n";
+  Out << "};\n\n";
 }
 
-static void emitBasicReaderWriterFile(RecordKeeper &records, raw_ostream &out,
-                                      const ReaderWriterInfo &info) {
-  auto types = records.getAllDerivedDefinitions(PropertyTypeClassName);
+void ASTPropsEmitter::emitBasicReaderWriterFile(const ReaderWriterInfo &info) {
+  auto types = Records.getAllDerivedDefinitions(PropertyTypeClassName);
 
-  emitDispatcherTemplate(types, out, info);
-  emitPackUnpackOptionalTemplate(types, out, info);
-  emitBasicReaderWriterTemplate(types, out, info);
+  emitDispatcherTemplate(info);
+  emitPackUnpackOptionalTemplate(info);
+  emitBasicReaderWriterTemplate(info);
 }
 
 /// Emit an .inc file that defines some helper classes for reading
@@ -644,7 +656,7 @@ void clang::EmitClangBasicReader(RecordKeeper &records, raw_ostream &out) {
 
   // Use any property, we won't be using those properties.
   auto info = ReaderWriterInfo::forReader<TypeNode>();
-  emitBasicReaderWriterFile(records, out, info);
+  ASTPropsEmitter(records, out).emitBasicReaderWriterFile(info);
 }
 
 /// Emit an .inc file that defines some helper classes for writing
@@ -654,5 +666,5 @@ void clang::EmitClangBasicWriter(RecordKeeper &records, raw_ostream &out) {
 
   // Use any property, we won't be using those properties.
   auto info = ReaderWriterInfo::forWriter<TypeNode>();
-  emitBasicReaderWriterFile(records, out, info);
+  ASTPropsEmitter(records, out).emitBasicReaderWriterFile(info);
 }
