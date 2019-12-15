@@ -1,25 +1,20 @@
 clang_tablegen(Attrs.inc -gen-clang-attr-classes
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrClasses)
 
 clang_tablegen(AttrImpl.inc -gen-clang-attr-impl
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrImpl)
 
 clang_tablegen(AttrTextNodeDump.inc -gen-clang-attr-text-node-dump
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrTextDump)
 
 clang_tablegen(AttrNodeTraverse.inc -gen-clang-attr-node-traverse
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrTraverse)
 
 clang_tablegen(AttrVisitor.inc -gen-clang-attr-ast-visitor
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrVisitor)
 
