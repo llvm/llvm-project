@@ -39,8 +39,8 @@ entry:
 define i32 @test_rev_w_srl16(i16 %a) {
 ; CHECK-LABEL: test_rev_w_srl16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    rev16 w0, w8
+; CHECK-NEXT:    rev w8, w0
+; CHECK-NEXT:    lsr w0, w8, #16
 ; CHECK-NEXT:    ret
 ;
 ; FALLBACK-LABEL: test_rev_w_srl16:
@@ -60,7 +60,8 @@ define i32 @test_rev_w_srl16_load(i16 *%a) {
 ; CHECK-LABEL: test_rev_w_srl16_load:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    rev16 w0, w8
+; CHECK-NEXT:    rev w8, w8
+; CHECK-NEXT:    lsr w0, w8, #16
 ; CHECK-NEXT:    ret
 ;
 ; FALLBACK-LABEL: test_rev_w_srl16_load:
@@ -106,8 +107,9 @@ entry:
 define i64 @test_rev_x_srl32(i32 %a) {
 ; CHECK-LABEL: test_rev_x_srl32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    rev32 x0, x8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    rev x8, x0
+; CHECK-NEXT:    lsr x0, x8, #32
 ; CHECK-NEXT:    ret
 ;
 ; FALLBACK-LABEL: test_rev_x_srl32:
@@ -128,7 +130,8 @@ define i64 @test_rev_x_srl32_load(i32 *%a) {
 ; CHECK-LABEL: test_rev_x_srl32_load:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    rev32 x0, x8
+; CHECK-NEXT:    rev x8, x8
+; CHECK-NEXT:    lsr x0, x8, #32
 ; CHECK-NEXT:    ret
 ;
 ; FALLBACK-LABEL: test_rev_x_srl32_load:
