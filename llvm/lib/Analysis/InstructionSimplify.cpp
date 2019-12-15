@@ -4452,6 +4452,30 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
     ShuffleVectorInst::commuteShuffleMask(Indices, InVecNumElts);
   }
 
+  // A splat of an inserted scalar constant becomes a vector constant:
+  // shuf (inselt ?, C, IndexC), undef, <IndexC, IndexC...> --> <C, C...>
+  // NOTE: We may have commuted above, so analyze the updated Indices, not the
+  //       original mask constant.
+  Constant *C;
+  ConstantInt *IndexC;
+  if (match(Op0, m_InsertElement(m_Value(), m_Constant(C),
+                                 m_ConstantInt(IndexC)))) {
+    // Match a splat shuffle mask of the insert index allowing undef elements.
+    int InsertIndex = IndexC->getZExtValue();
+    if (all_of(Indices, [InsertIndex](int MaskElt) {
+          return MaskElt == InsertIndex || MaskElt == -1;
+        })) {
+      assert(isa<UndefValue>(Op1) && "Expected undef operand 1 for splat");
+
+      // Shuffle mask undefs become undefined constant result elements.
+      SmallVector<Constant *, 16> VecC(MaskNumElts, C);
+      for (unsigned i = 0; i != MaskNumElts; ++i)
+        if (Indices[i] == -1)
+          VecC[i] = UndefValue::get(C->getType());
+      return ConstantVector::get(VecC);
+    }
+  }
+
   // A shuffle of a splat is always the splat itself. Legal if the shuffle's
   // value type is same as the input vectors' type.
   if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op0))
