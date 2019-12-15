@@ -58,7 +58,7 @@
 // IREL1-REL3-NOT: R_X86_64_
 
 // Make sure the static relocations look right, both with and without headers.
-// DUMP: Contents of section .plt:
+// DUMP: Contents of section .iplt:
 // DUMP-NEXT: 2011f0
 // DUMP: Contents of section .got:
 // DUMP-NEXT: 202200 f0112000 00000000

@@ -2450,6 +2450,7 @@ PltSection::PltSection()
       headerSize(target->pltHeaderSize) {
   if (config->emachine == EM_PPC || config->emachine == EM_PPC64) {
     name = ".glink";
+    alignment = 4;
   }
 
   // The PLT needs to be writable on SPARC as the dynamic linker will
@@ -2505,9 +2506,10 @@ void PltSection::addSymbols() {
 }
 
 IpltSection::IpltSection()
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt") {
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".iplt") {
   if (config->emachine == EM_PPC || config->emachine == EM_PPC64) {
     name = ".glink";
+    alignment = 4;
   }
 }
 

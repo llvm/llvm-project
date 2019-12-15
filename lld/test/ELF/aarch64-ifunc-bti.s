@@ -27,8 +27,10 @@
 # CHECK-NEXT:                   add     x16, x16, #1280
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
-# CHECK-NEXT:           ...
-# CHECK: 00000000000103c0 myfunc:
+# CHECK-EMPTY:
+# CHECK: Disassembly of section .iplt:
+# CHECK-EMPTY:
+# CHECK-NEXT: 00000000000103c0 myfunc:
 # CHECK-NEXT:    103c0:         bti     c
 # CHECK-NEXT:                   adrp    x16, #131072
 # CHECK-NEXT:                   ldr     x17, [x16, #1288]

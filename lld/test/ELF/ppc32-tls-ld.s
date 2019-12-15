@@ -11,7 +11,7 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
 
 # LD-REL:      .rela.dyn {
-# LD-REL-NEXT:   0x202CC R_PPC_DTPMOD32 - 0x0
+# LD-REL-NEXT:   0x202C4 R_PPC_DTPMOD32 - 0x0
 # LD-REL-NEXT: }
 
 ## .got - _GLOBAL_OFFSET_TABLE_ = 0
