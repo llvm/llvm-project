@@ -160,6 +160,20 @@ class Property<string name, PropertyType type> {
   code Read;
 }
 
+/// A rule for declaring helper variables when read properties from a
+/// value of this type.  Note that this means that this code is actually
+/// run when *writing* values of this type; however, naming this
+/// `ReadHelper` makes the connection to the `Read` operations on the
+/// properties much clearer.
+class ReadHelper<code _code> {
+  HasProperties Class;
+
+  /// Code which will be run when writing objects of this type before
+  /// writing any of the properties, specified in terms of a variable
+  /// `node`.
+  code Code = _code;
+}
+
 /// A rule for creating objects of this type.
 class Creator<code create> {
   HasProperties Class;
@@ -211,7 +225,7 @@ class PropertyTypeCase<PropertyType type, string name> : HasProperties {
   string Name = name;
 }
 
-// DeclarationName
+// Type cases for DeclarationName.
 def : PropertyTypeKind<DeclarationName, DeclarationNameKind,
                        "node.getNameKind()">;
 let Class = PropertyTypeCase<DeclarationName, "Identifier"> in {
