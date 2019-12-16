@@ -197,54 +197,6 @@ public:
     return FunctionProtoType::ExtParameterInfo::getFromOpaqueValue(value);
   }
 
-  TemplateArgument readTemplateArgument(bool canonicalize = false) {
-    if (canonicalize) {
-      return getASTContext().getCanonicalTemplateArgument(
-               readTemplateArgument(false));
-    }
-
-    auto kind = asImpl().readTemplateArgumentKind();
-    switch (kind) {
-    case TemplateArgument::Null:
-      return TemplateArgument();
-    case TemplateArgument::Type:
-      return TemplateArgument(asImpl().readQualType());
-    case TemplateArgument::Declaration: {
-      auto decl = asImpl().readValueDeclRef();
-      auto type = asImpl().readQualType();
-      return TemplateArgument(decl, type);
-    }
-    case TemplateArgument::NullPtr:
-      return TemplateArgument(asImpl().readQualType(), /*nullptr*/ true);
-    case TemplateArgument::Integral: {
-      auto value = asImpl().readAPSInt();
-      auto type = asImpl().readQualType();
-      return TemplateArgument(getASTContext(), value, type);
-    }
-    case TemplateArgument::Template:
-      return TemplateArgument(asImpl().readTemplateName());
-    case TemplateArgument::TemplateExpansion: {
-      auto name = asImpl().readTemplateName();
-      auto numExpansions = asImpl().template readOptional<uint32_t>();
-      return TemplateArgument(name, numExpansions);
-    }
-    case TemplateArgument::Expression:
-      return TemplateArgument(asImpl().readExprRef());
-    case TemplateArgument::Pack: {
-      llvm::SmallVector<TemplateArgument, 8> packBuffer;
-      auto pack = asImpl().template readArray<TemplateArgument>(packBuffer);
-
-      // Copy the pack into the ASTContext.
-      TemplateArgument *contextPack =
-        new (getASTContext()) TemplateArgument[pack.size()];
-      for (size_t i = 0, e = pack.size(); i != e; ++i)
-        contextPack[i] = pack[i];
-      return TemplateArgument(llvm::makeArrayRef(contextPack, pack.size()));
-    }
-    }
-    llvm_unreachable("bad template argument kind");
-  }
-
   NestedNameSpecifier *readNestedNameSpecifier() {
     auto &ctx = getASTContext();
 
