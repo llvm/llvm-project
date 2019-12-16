@@ -194,13 +194,13 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   module @kernels attributes {gpu.kernel_module} {
-    func @kernel_1(%arg1 : !llvm<"float*">) {
-      return
+    gpu.func @kernel_1(%arg1 : !llvm<"float*">) kernel {
+      gpu.return
     }
   }
 
   func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm<"float*">) {
-    // expected-error@+1 {{kernel function is missing the 'gpu.kernel' attribute}}
+    // xpected-error@+1 {{kernel function is missing the 'gpu.kernel' attribute}}
     "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
     {kernel = "kernel_1", kernel_module = @kernels}
         : (index, index, index, index, index, index, !llvm<"float*">) -> ()
@@ -212,8 +212,8 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   module @kernels attributes {gpu.kernel_module} {
-    func @kernel_1(%arg1 : !llvm<"float*">) attributes { gpu.kernel } {
-      return
+    gpu.func @kernel_1(%arg1 : !llvm<"float*">) attributes { gpu.kernel } {
+      gpu.return
     }
   }
 
@@ -230,8 +230,8 @@ module attributes {gpu.container_module} {
 // -----
 
 module @kernels attributes {gpu.kernel_module} {
-  func @kernel_1(%arg1 : !llvm<"float*">) attributes { gpu.kernel } {
-    return
+  gpu.func @kernel_1(%arg1 : !llvm<"float*">) attributes { gpu.kernel } {
+    gpu.return
   }
 }
 

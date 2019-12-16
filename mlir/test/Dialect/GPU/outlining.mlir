@@ -38,9 +38,8 @@ func @launch() {
 
 
 // CHECK-LABEL: module @launch_kernel
-// CHECK-NEXT: func @launch_kernel
+// CHECK-NEXT: gpu.func @launch_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
-// CHECK:      attributes {gpu.kernel}
 // CHECK-NEXT: %[[BID:.*]] = "gpu.block_id"() {dimension = "x"} : () -> index
 // CHECK-NEXT: = "gpu.block_id"() {dimension = "y"} : () -> index
 // CHECK-NEXT: = "gpu.block_id"() {dimension = "z"} : () -> index
@@ -138,7 +137,7 @@ func @recursive_device_function() {
 }
 
 // CHECK: module @function_call_kernel attributes {gpu.kernel_module} {
-// CHECK:   func @function_call_kernel()
+// CHECK:   gpu.func @function_call_kernel()
 // CHECK:     call @device_function() : () -> ()
 // CHECK:     call @device_function() : () -> ()
 // CHECK:     llvm.mlir.addressof @global : !llvm<"i64*">

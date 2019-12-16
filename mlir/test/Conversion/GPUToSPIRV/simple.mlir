@@ -8,10 +8,9 @@ module attributes {gpu.container_module} {
     // CHECK-SAME: {{%.*}}: f32 {spirv.interface_var_abi = {binding = 0 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
     // CHECK-SAME: {{%.*}}: !spv.ptr<!spv.struct<!spv.array<12 x f32 [4]> [0]>, StorageBuffer> {spirv.interface_var_abi = {binding = 1 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
     // CHECK-SAME: spirv.entry_point_abi = {local_size = dense<[32, 4, 1]> : vector<3xi32>}
-    func @kernel_1(%arg0 : f32, %arg1 : memref<12xf32>)
-        attributes { gpu.kernel } {
+    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<12xf32>) attributes {gpu.kernel} {
       // CHECK: spv.Return
-      return
+      gpu.return
     }
     // CHECK: attributes {capabilities = ["Shader"], extensions = ["SPV_KHR_storage_buffer_storage_class"]}
   }

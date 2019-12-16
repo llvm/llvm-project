@@ -122,3 +122,4 @@ module attributes {gpu.kernel_module} {
     "test.finish" () : () -> ()
   }) : () -> ()
 }
+
