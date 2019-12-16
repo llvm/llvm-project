@@ -97,6 +97,9 @@ public:
   /// Returns true if this value is known to be non-negative.
   bool isNonNegative() const { return Zero.isSignBitSet(); }
 
+  /// Returns true if this value is known to be positive.
+  bool isStrictlyPositive() const { return Zero.isSignBitSet() && !One.isNullValue(); }
+
   /// Make this value negative.
   void makeNegative() {
     One.setSignBit();
