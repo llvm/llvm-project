@@ -178,44 +178,6 @@ public:
     asImpl().writeUInt32(epi.getOpaqueValue());
   }
 
-  void writeDeclarationName(DeclarationName name) {
-    asImpl().writeDeclarationNameKind(name.getNameKind());
-    switch (name.getNameKind()) {
-    case DeclarationName::Identifier:
-      asImpl().writeIdentifier(name.getAsIdentifierInfo());
-      return;
-
-    case DeclarationName::ObjCZeroArgSelector:
-    case DeclarationName::ObjCOneArgSelector:
-    case DeclarationName::ObjCMultiArgSelector:
-      asImpl().writeSelector(name.getObjCSelector());
-      return;
-
-    case DeclarationName::CXXConstructorName:
-    case DeclarationName::CXXDestructorName:
-    case DeclarationName::CXXConversionFunctionName:
-      asImpl().writeQualType(name.getCXXNameType());
-      return;
-
-    case DeclarationName::CXXDeductionGuideName:
-      asImpl().writeDeclRef(name.getCXXDeductionGuideTemplate());
-      return;
-
-    case DeclarationName::CXXOperatorName:
-      asImpl().writeOverloadedOperatorKind(name.getCXXOverloadedOperator());
-      return;
-
-    case DeclarationName::CXXLiteralOperatorName:
-      asImpl().writeIdentifier(name.getCXXLiteralIdentifier());
-      return;
-
-    case DeclarationName::CXXUsingDirective:
-      // No extra data to emit
-      return;
-    }
-    llvm_unreachable("bad name kind");
-  }
-
   void writeTemplateName(TemplateName name) {
     asImpl().writeTemplateNameKind(name.getKind());
     switch (name.getKind()) {
