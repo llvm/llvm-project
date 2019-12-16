@@ -257,33 +257,35 @@ bool Dpu::PrepareStepOverPrintfBkp(
         return false;
 
       size_t mram_buffer_size;
-      if (printf_buffer_current_idx <= printf_buffer_last_idx) {
-        mram_buffer_size = printf_buffer_size;
-      } else {
-        mram_buffer_size = printf_buffer_current_idx - printf_buffer_last_idx;
-      }
-      uint8_t *mram_buffer = (uint8_t *)malloc(mram_buffer_size);
+      uint8_t *mram_buffer = (uint8_t *)calloc(1, printf_buffer_size);
       if (mram_buffer == NULL)
         return false;
-      if (mram_buffer_size == printf_buffer_size) {
+      if (printf_buffer_current_idx <= printf_buffer_last_idx) {
+        mram_buffer_size = printf_buffer_size -
+                           (printf_buffer_last_idx - printf_buffer_current_idx);
         if (!ReadMRAM(printf_buffer_last_idx, mram_buffer,
-                      printf_buffer_size - printf_buffer_last_idx))
-          return false;
+                      printf_buffer_size - printf_buffer_last_idx)) {
+          goto PrepareStepOverPrintfBkp_err;
+        }
         if (!ReadMRAM(printf_buffer_address,
-                      &mram_buffer[printf_buffer_last_idx],
-                      printf_buffer_current_idx))
-          return false;
-
+                      &mram_buffer[printf_buffer_size - printf_buffer_last_idx],
+                      printf_buffer_current_idx)) {
+          goto PrepareStepOverPrintfBkp_err;
+        }
       } else {
+        mram_buffer_size = printf_buffer_current_idx - printf_buffer_last_idx;
         if (!ReadMRAM(printf_buffer_last_idx + printf_buffer_address,
-                      mram_buffer, mram_buffer_size))
-          return false;
+                      mram_buffer, mram_buffer_size)) {
+          goto PrepareStepOverPrintfBkp_err;
+        }
       }
 
       if (stdout_file != NULL) {
         if (dpulog_read_and_display_contents_of(mram_buffer, mram_buffer_size,
-                                                stdout_file) != DPU_API_SUCCESS)
-          return false;
+                                                stdout_file) !=
+            DPU_API_SUCCESS) {
+          goto PrepareStepOverPrintfBkp_err;
+        }
 
         fflush(stdout_file);
       }
@@ -292,6 +294,10 @@ bool Dpu::PrepareStepOverPrintfBkp(
     }
   }
   return true;
+
+PrepareStepOverPrintfBkp_err:
+  free(mram_buffer);
+  return false;
 }
 
 #define UNKNOWN_INSTRUCTION (0ULL)
