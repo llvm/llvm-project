@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -1030,5 +1032,89 @@ void linear_modifiers(int argc) {
 #pragma omp teams
 #pragma omp distribute simd linear(foo(k)) // expected-error {{expected 'val' modifier}}
   for (k = 0; k < argc; ++k) ++k;
+}
+
+void test_nontemporal() {
+  int i;
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
+#pragma omp distribute simd nontemporal(
+  for (i = 0; i < 16; ++i)
+    ;
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 2 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
+#pragma omp distribute simd nontemporal(,
+  for (i = 0; i < 16; ++i)
+    ;
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 2 {{expected expression}}
+#pragma omp distribute simd nontemporal(, )
+  for (i = 0; i < 16; ++i)
+    ;
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 {{expected expression}}
+#pragma omp distribute simd nontemporal()
+  for (i = 0; i < 16; ++i)
+    ;
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 {{expected expression}}
+#pragma omp distribute simd nontemporal(int)
+  for (i = 0; i < 16; ++i)
+    ;
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} omp50-error@+1 {{expected variable name}}
+#pragma omp distribute simd nontemporal(0)
+  for (i = 0; i < 16; ++i)
+    ;
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 {{use of undeclared identifier 'x'}}
+#pragma omp distribute simd nontemporal(x)
+  for (i = 0; i < 16; ++i)
+    ;
+// expected-error@+2 {{use of undeclared identifier 'x'}}
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 {{use of undeclared identifier 'y'}}
+#pragma omp distribute simd nontemporal(x, y)
+  for (i = 0; i < 16; ++i)
+    ;
+// expected-error@+3 {{use of undeclared identifier 'x'}}
+// expected-error@+2 {{use of undeclared identifier 'y'}}
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 {{use of undeclared identifier 'z'}}
+#pragma omp distribute simd nontemporal(x, y, z)
+  for (i = 0; i < 16; ++i)
+    ;
+
+  int x, y;
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 {{expected ',' or ')' in 'nontemporal' clause}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
+#pragma omp distribute simd nontemporal(x :)
+  for (i = 0; i < 16; ++i)
+    ;
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}} expected-error@+1 {{expected ',' or ')' in 'nontemporal' clause}}
+#pragma omp distribute simd nontemporal(x :, )
+  for (i = 0; i < 16; ++i)
+    ;
+
+// omp50-note@+2 {{defined as nontemporal}}
+// omp45-error@+1 2 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} omp50-error@+1 {{a variable cannot appear in more than one nontemporal clause}}
+#pragma omp distribute simd nontemporal(x) nontemporal(x)
+  for (i = 0; i < 16; ++i)
+    ;
+
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}}
+#pragma omp distribute simd private(x) nontemporal(x)
+  for (i = 0; i < 16; ++i)
+    ;
+
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}}
+#pragma omp distribute simd nontemporal(x) private(x)
+  for (i = 0; i < 16; ++i)
+    ;
+
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}} expected-note@+1 {{to match this '('}} expected-error@+1 {{expected ',' or ')' in 'nontemporal' clause}} expected-error@+1 {{expected ')'}}
+#pragma omp distribute simd nontemporal(x, y : 0)
+  for (i = 0; i < 16; ++i)
+    ;
+
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}}
+#pragma omp distribute simd nontemporal(x) lastprivate(x)
+  for (i = 0; i < 16; ++i)
+    ;
+
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp distribute simd'}}
+#pragma omp distribute simd lastprivate(x) nontemporal(x)
+  for (i = 0; i < 16; ++i)
+    ;
 }
 
