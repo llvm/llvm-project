@@ -1856,7 +1856,10 @@ bool Type::isIntegralOrUnscopedEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
            BT->getKind() <= BuiltinType::Int128;
+  return isUnscopedEnumerationType();
+}
 
+bool Type::isUnscopedEnumerationType() const {
   // Check for a complete enum type; incomplete enum types are not properly an
   // enumeration type in the sense required here.
   // C++0x: However, if the underlying type of the enum is fixed, it is
