@@ -690,24 +690,24 @@ let Class = BuiltinType in {
   }
 
 	def : Creator<[{
-		switch (kind) {
-        default: llvm_unreachable("unreachable builtin case");
+      switch (kind) {
 #define IMAGE_TYPE(IMGTYPE, ID, SINGLETON_ID, ACCESS, SUFFIX) \
-		case BuiltinType::ID: return ctx.SINGLETON_ID;
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/OpenCLImageTypes.def"
 
 #define EXT_OPAQUE_TYPE(EXTTYPE, ID, EXT) \
-		case BuiltinType::ID: return ctx.ID##Ty;
+      case BuiltinType::ID: return ctx.ID##Ty;
 #include "clang/Basic/OpenCLExtensionTypes.def"
 
 #define SVE_TYPE(NAME, ID, SINGLETON_ID) \
-		case BuiltinType::ID: return ctx.SINGLETON_ID;
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
 #define BUILTIN_TYPE(ID, SINGLETON_ID) \
-		case BuiltinType::ID: return ctx.SINGLETON_ID;
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/AST/BuiltinTypes.def"
-		}
+      }
+      llvm_unreachable("unreachable builtin case");
 	}]>;
 }
 
