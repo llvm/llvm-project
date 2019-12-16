@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
+#include <string>
 #include <vector>
 
 namespace clang {
@@ -18,7 +19,7 @@ namespace driver {
 namespace tools {
 namespace systemz {
 
-const char *getSystemZTargetCPU(const llvm::opt::ArgList &Args);
+std::string getSystemZTargetCPU(const llvm::opt::ArgList &Args);
 
 void getSystemZTargetFeatures(const llvm::opt::ArgList &Args,
                               std::vector<llvm::StringRef> &Features);
