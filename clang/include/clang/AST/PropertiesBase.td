@@ -107,7 +107,7 @@ def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
     SubclassPropertyType<"ValueDecl", DeclRef>;
 def ElaboratedTypeKeyword : EnumPropertyType;
 def ExtParameterInfo : PropertyType<"FunctionProtoType::ExtParameterInfo">;
-def Identifier : PropertyType<"IdentifierInfo*">;
+def Identifier : RefPropertyType<"IdentifierInfo"> { let ConstWhenWriting = 1; }
 def NestedNameSpecifier : PropertyType<"NestedNameSpecifier *">;
 def NestedNameSpecifierKind :
   EnumPropertyType<"NestedNameSpecifier::SpecifierKind">;
@@ -158,6 +158,16 @@ class Property<string name, PropertyType type> {
   /// A function for reading the property, expressed in terms of a variable
   /// "node".
   code Read;
+
+  /// Code specifying when this property is available.  Can be defined
+  /// in terms of other properties, in which case this property must be
+  /// read/written after those properties.  Using this will make the
+  /// value Optional when deserializing.
+  ///
+  /// FIXME: the emitter doesn't yet force dependent properties to be
+  /// read/written later; this only works if the properties used in the
+  /// condition happen to be written first.
+  code Conditional = "";
 }
 
 /// A rule for declaring helper variables when read properties from a
