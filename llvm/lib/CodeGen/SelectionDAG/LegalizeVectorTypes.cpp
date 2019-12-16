@@ -166,7 +166,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UMULFIX:
   case ISD::UMULFIXSAT:
   case ISD::SDIVFIX:
+  case ISD::SDIVFIXSAT:
   case ISD::UDIVFIX:
+  case ISD::UDIVFIXSAT:
     R = ScalarizeVecRes_FIX(N);
     break;
   }
@@ -956,7 +958,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UMULFIX:
   case ISD::UMULFIXSAT:
   case ISD::SDIVFIX:
+  case ISD::SDIVFIXSAT:
   case ISD::UDIVFIX:
+  case ISD::UDIVFIXSAT:
     SplitVecRes_FIX(N, Lo, Hi);
     break;
   }

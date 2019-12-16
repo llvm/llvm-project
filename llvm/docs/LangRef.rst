@@ -14331,6 +14331,136 @@ Examples
       %res = call i4 @llvm.udiv.fix.i4(i4 3, i4 4, i32 1)  ; %res = 2 (or 1) (1.5 / 2 = 0.75)
 
 
+'``llvm.sdiv.fix.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sdiv.fix.sat``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.sdiv.fix.sat.i16(i16 %a, i16 %b, i32 %scale)
+      declare i32 @llvm.sdiv.fix.sat.i32(i32 %a, i32 %b, i32 %scale)
+      declare i64 @llvm.sdiv.fix.sat.i64(i64 %a, i64 %b, i32 %scale)
+      declare <4 x i32> @llvm.sdiv.fix.sat.v4i32(<4 x i32> %a, <4 x i32> %b, i32 %scale)
+
+Overview
+"""""""""
+
+The '``llvm.sdiv.fix.sat``' family of intrinsic functions perform signed
+fixed point saturation division on 2 arguments of the same scale.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. ``%a`` and ``%b`` are the two
+values that will undergo signed fixed point division. The argument
+``%scale`` represents the scale of both operands, and must be a constant
+integer.
+
+Semantics:
+""""""""""
+
+This operation performs fixed point division on the 2 arguments of a
+specified scale. The result will also be returned in the same scale specified
+in the third argument.
+
+If the result value cannot be precisely represented in the given scale, the
+value is rounded up or down to the closest representable value. The rounding
+direction is unspecified.
+
+The maximum value this operation can clamp to is the largest signed value
+representable by the bit width of the first 2 arguments. The minimum value is the
+smallest signed value representable by this bit width.
+
+It is undefined behavior if the second argument is zero.
+
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.sdiv.fix.sat.i4(i4 6, i4 2, i32 0)  ; %res = 3 (6 / 2 = 3)
+      %res = call i4 @llvm.sdiv.fix.sat.i4(i4 6, i4 4, i32 1)  ; %res = 3 (3 / 2 = 1.5)
+      %res = call i4 @llvm.sdiv.fix.sat.i4(i4 3, i4 -2, i32 1) ; %res = -3 (1.5 / -1 = -1.5)
+
+      ; The result in the following could be rounded up to 1 or down to 0.5
+      %res = call i4 @llvm.sdiv.fix.sat.i4(i4 3, i4 4, i32 1)  ; %res = 2 (or 1) (1.5 / 2 = 0.75)
+
+      ; Saturation
+      %res = call i4 @llvm.sdiv.fix.sat.i4(i4 -8, i4 -1, i32 0)  ; %res = 7 (-8 / -1 = 8 => 7)
+      %res = call i4 @llvm.sdiv.fix.sat.i4(i4 4, i4 2, i32 2)  ; %res = 7 (1 / 0.5 = 2 => 1.75)
+      %res = call i4 @llvm.sdiv.fix.sat.i4(i4 -4, i4 1, i32 2)  ; %res = -8 (-1 / 0.25 = -4 => -2)
+
+
+'``llvm.udiv.fix.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.udiv.fix.sat``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.udiv.fix.sat.i16(i16 %a, i16 %b, i32 %scale)
+      declare i32 @llvm.udiv.fix.sat.i32(i32 %a, i32 %b, i32 %scale)
+      declare i64 @llvm.udiv.fix.sat.i64(i64 %a, i64 %b, i32 %scale)
+      declare <4 x i32> @llvm.udiv.fix.sat.v4i32(<4 x i32> %a, <4 x i32> %b, i32 %scale)
+
+Overview
+"""""""""
+
+The '``llvm.udiv.fix.sat``' family of intrinsic functions perform unsigned
+fixed point saturation division on 2 arguments of the same scale.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. ``%a`` and ``%b`` are the two
+values that will undergo unsigned fixed point division. The argument
+``%scale`` represents the scale of both operands, and must be a constant
+integer.
+
+Semantics:
+""""""""""
+
+This operation performs fixed point division on the 2 arguments of a
+specified scale. The result will also be returned in the same scale specified
+in the third argument.
+
+If the result value cannot be precisely represented in the given scale, the
+value is rounded up or down to the closest representable value. The rounding
+direction is unspecified.
+
+The maximum value this operation can clamp to is the largest unsigned value
+representable by the bit width of the first 2 arguments. The minimum value is the
+smallest unsigned value representable by this bit width (zero).
+
+It is undefined behavior if the second argument is zero.
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.udiv.fix.sat.i4(i4 6, i4 2, i32 0)  ; %res = 3 (6 / 2 = 3)
+      %res = call i4 @llvm.udiv.fix.sat.i4(i4 6, i4 4, i32 1)  ; %res = 3 (3 / 2 = 1.5)
+
+      ; The result in the following could be rounded down to 0.5 or up to 1
+      %res = call i4 @llvm.udiv.fix.sat.i4(i4 3, i4 4, i32 1)  ; %res = 1 (or 2) (1.5 / 2 = 0.75)
+
+      ; Saturation
+      %res = call i4 @llvm.udiv.fix.sat.i4(i4 8, i4 2, i32 2)  ; %res = 15 (2 / 0.5 = 4 => 3.75)
+
+
 Specialised Arithmetic Intrinsics
 ---------------------------------
 

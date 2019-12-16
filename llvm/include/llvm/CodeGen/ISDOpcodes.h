@@ -291,6 +291,11 @@ namespace ISD {
     /// constant integer.
     SDIVFIX, UDIVFIX,
 
+    /// Same as the corresponding unsaturated fixed point instructions, but the
+    /// result is clamped between the min and max values representable by the
+    /// bits of the first 2 operands.
+    SDIVFIXSAT, UDIVFIXSAT,
+
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,
 

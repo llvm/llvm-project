@@ -4727,7 +4727,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
   case Intrinsic::sdiv_fix:
-  case Intrinsic::udiv_fix: {
+  case Intrinsic::sdiv_fix_sat:
+  case Intrinsic::udiv_fix:
+  case Intrinsic::udiv_fix_sat: {
     Value *Op1 = Call.getArgOperand(0);
     Value *Op2 = Call.getArgOperand(1);
     Assert(Op1->getType()->isIntOrIntVectorTy(),
@@ -4742,7 +4744,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            "third argument of [us][mul|div]_fix[_sat] must fit within 32 bits");
 
     if (ID == Intrinsic::smul_fix || ID == Intrinsic::smul_fix_sat ||
-        ID == Intrinsic::sdiv_fix) {
+        ID == Intrinsic::sdiv_fix || ID == Intrinsic::sdiv_fix_sat) {
       Assert(
           Op3->getZExtValue() < Op1->getType()->getScalarSizeInBits(),
           "the scale of s[mul|div]_fix[_sat] must be less than the width of "

@@ -314,7 +314,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::UMULFIXSAT:                 return "umulfixsat";
 
   case ISD::SDIVFIX:                    return "sdivfix";
+  case ISD::SDIVFIXSAT:                 return "sdivfixsat";
   case ISD::UDIVFIX:                    return "udivfix";
+  case ISD::UDIVFIXSAT:                 return "udivfixsat";
 
   // Conversion operators.
   case ISD::SIGN_EXTEND:                return "sign_extend";
