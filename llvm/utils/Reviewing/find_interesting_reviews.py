@@ -21,7 +21,8 @@ from phabricator import Phabricator
 # $ . ./venv/bin/activate
 # $ pip install Phabricator
 
-GIT_REPO_METADATA = (("llvm", "https://llvm.org/git/llvm.git"), )
+GIT_REPO_METADATA = (("llvm-monorepo", "https://github.com/llvm/llvm-project"),
+                     )
 
 # The below PhabXXX classes represent objects as modelled by Phabricator.
 # The classes can be serialized to disk, to try and make sure that we don't
@@ -481,7 +482,8 @@ def find_reviewers_for_diff_heuristic(diff):
     reviewers2nr_files_touched = {}
     # Assume last revision before diff was modified is the revision the diff
     # applies to.
-    git_repo = "git_repos/llvm"
+    assert len(GIT_REPO_METADATA) == 1
+    git_repo = os.path.join("git_repos", GIT_REPO_METADATA[0][0])
     cmd = 'git -C {0} rev-list -n 1 --before="{1}" master'.format(
         git_repo,
         datetime.fromtimestamp(
