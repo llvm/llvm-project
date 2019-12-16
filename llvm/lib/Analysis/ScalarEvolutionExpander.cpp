@@ -414,7 +414,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
   // without the other.
   SplitAddRecs(Ops, Ty, SE);
 
-  Type *IntPtrTy = DL.getIntPtrType(PTy);
+  Type *IntIdxTy = DL.getIndexType(PTy);
 
   // Descend down the pointer's type and attempt to convert the other
   // operands into GEP indices, at each level. The first index in a GEP
@@ -426,7 +426,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     // array indexing.
     SmallVector<const SCEV *, 8> ScaledOps;
     if (ElTy->isSized()) {
-      const SCEV *ElSize = SE.getSizeOfExpr(IntPtrTy, ElTy);
+      const SCEV *ElSize = SE.getSizeOfExpr(IntIdxTy, ElTy);
       if (!ElSize->isZero()) {
         SmallVector<const SCEV *, 8> NewOps;
         for (const SCEV *Op : Ops) {

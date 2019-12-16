@@ -2414,41 +2414,31 @@ void ClangASTContext::SetMetadataAsUserID(const clang::Type *type,
 
 void ClangASTContext::SetMetadata(const clang::Decl *object,
                                   ClangASTMetadata &metadata) {
-  ClangExternalASTSourceCommon *external_source =
-      ClangExternalASTSourceCommon::Lookup(
-          getASTContext()->getExternalSource());
-
-  if (external_source)
-    external_source->SetMetadata(object, metadata);
+  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
+          getASTContext()->getExternalSource()))
+    A->SetMetadata(object, metadata);
 }
 
 void ClangASTContext::SetMetadata(const clang::Type *object,
                                   ClangASTMetadata &metadata) {
-  ClangExternalASTSourceCommon *external_source =
-      ClangExternalASTSourceCommon::Lookup(
-          getASTContext()->getExternalSource());
-
-  if (external_source)
-    external_source->SetMetadata(object, metadata);
+  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
+          getASTContext()->getExternalSource()))
+    A->SetMetadata(object, metadata);
 }
 
 ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
                                                const clang::Decl *object) {
-  ClangExternalASTSourceCommon *external_source =
-      ClangExternalASTSourceCommon::Lookup(ast->getExternalSource());
-
-  if (external_source)
-    return external_source->GetMetadata(object);
+  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
+          ast->getExternalSource()))
+    return A->GetMetadata(object);
   return nullptr;
 }
 
 ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
                                                const clang::Type *object) {
-  ClangExternalASTSourceCommon *external_source =
-      ClangExternalASTSourceCommon::Lookup(ast->getExternalSource());
-
-  if (external_source)
-    return external_source->GetMetadata(object);
+  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
+          ast->getExternalSource()))
+    return A->GetMetadata(object);
   return nullptr;
 }
 

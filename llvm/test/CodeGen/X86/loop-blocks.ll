@@ -269,6 +269,35 @@ exit:
 
 attributes #0 = { minsize norecurse nounwind optsize readnone uwtable }
 
+; CHECK-LABEL: slightly_more_involved_2_pgso:
+; CHECK-NOT:      jmp .LBB6_1
+; CHECK:          .LBB6_1:
+; CHECK-NEXT:     callq body
+
+define void @slightly_more_involved_2_pgso() norecurse nounwind readnone uwtable !prof !14 {
+entry:
+  br label %loop
+
+loop:
+  call void @body()
+  %t0 = call i32 @get()
+  %t1 = icmp slt i32 %t0, 2
+  br i1 %t1, label %block_a, label %bb
+
+bb:
+  %t2 = call i32 @get()
+  %t3 = icmp slt i32 %t2, 99
+  br i1 %t3, label %exit, label %loop
+
+block_a:
+  call void @bar99()
+  br label %loop
+
+exit:
+  call void @exit()
+  ret void
+}
+
 declare void @bar99() nounwind
 declare void @bar100() nounwind
 declare void @bar101() nounwind
@@ -281,3 +310,20 @@ declare i32 @get() nounwind
 declare void @block_a_true_func() nounwind
 declare void @block_a_false_func() nounwind
 declare void @block_a_merge_func() nounwind
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

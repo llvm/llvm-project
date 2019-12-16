@@ -108,7 +108,7 @@ void TerminalState::Clear() {
 bool TerminalState::Save(int fd, bool save_process_group) {
   m_tty.SetFileDescriptor(fd);
   if (m_tty.IsATerminal()) {
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
     m_tflags = ::fcntl(fd, F_GETFL, 0);
 #endif
 #if LLDB_ENABLE_TERMIOS
@@ -118,7 +118,7 @@ bool TerminalState::Save(int fd, bool save_process_group) {
     if (err != 0)
       m_termios_up.reset();
 #endif // #if LLDB_ENABLE_TERMIOS
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
     if (save_process_group)
       m_process_group = ::tcgetpgrp(0);
     else
@@ -138,7 +138,7 @@ bool TerminalState::Save(int fd, bool save_process_group) {
 // Restore the state of the TTY using the cached values from a previous call to
 // Save().
 bool TerminalState::Restore() const {
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
   if (IsValid()) {
     const int fd = m_tty.GetFileDescriptor();
     if (TFlagsIsValid())

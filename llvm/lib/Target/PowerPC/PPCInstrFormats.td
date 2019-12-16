@@ -1529,6 +1529,29 @@ class XLForm_2_ext_and_DSForm_1<bits<6> opcode1, bits<10> xo1,
   let BH = 0;
 }
 
+class XLForm_2_ext_and_DForm_1<bits<6> opcode1, bits<10> xo1, bits<5> bo,
+                               bits<5> bi, bit lk, bits<6> opcode2, dag OOL,
+                               dag IOL, string asmstr, InstrItinClass itin,
+                               list<dag> pattern>
+  : I2<opcode1, opcode2, OOL, IOL, asmstr, itin> {
+
+  bits<5>  RST;
+  bits<21> D_RA;
+
+  let Pattern = pattern;
+
+  let Inst{6-10} = bo;
+  let Inst{11-15} = bi;
+  let Inst{16-18} = 0;
+  let Inst{19-20} = 0;  // Unused (BH)
+  let Inst{21-30} = xo1;
+  let Inst{31} = lk;
+
+  let Inst{38-42} = RST;
+  let Inst{43-47} = D_RA{20-16};  // Base Register
+  let Inst{48-63} = D_RA{15-0};   // Displacement
+}
+
 // 1.7.8 XFX-Form
 class XFXForm_1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
                 InstrItinClass itin>

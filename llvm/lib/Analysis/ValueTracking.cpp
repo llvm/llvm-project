@@ -90,7 +90,7 @@ static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
   if (unsigned BitWidth = Ty->getScalarSizeInBits())
     return BitWidth;
 
-  return DL.getIndexTypeSizeInBits(Ty);
+  return DL.getPointerTypeSizeInBits(Ty);
 }
 
 namespace {
@@ -1137,7 +1137,7 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
     // which fall through here.
     Type *ScalarTy = SrcTy->getScalarType();
     SrcBitWidth = ScalarTy->isPointerTy() ?
-      Q.DL.getIndexTypeSizeInBits(ScalarTy) :
+      Q.DL.getPointerTypeSizeInBits(ScalarTy) :
       Q.DL.getTypeSizeInBits(ScalarTy);
 
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
@@ -1664,7 +1664,7 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
 
   Type *ScalarTy = V->getType()->getScalarType();
   unsigned ExpectedWidth = ScalarTy->isPointerTy() ?
-    Q.DL.getIndexTypeSizeInBits(ScalarTy) : Q.DL.getTypeSizeInBits(ScalarTy);
+    Q.DL.getPointerTypeSizeInBits(ScalarTy) : Q.DL.getTypeSizeInBits(ScalarTy);
   assert(ExpectedWidth == BitWidth && "V and Known should have same BitWidth");
   (void)BitWidth;
   (void)ExpectedWidth;
@@ -2409,7 +2409,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
 
   Type *ScalarTy = V->getType()->getScalarType();
   unsigned TyBits = ScalarTy->isPointerTy() ?
-    Q.DL.getIndexTypeSizeInBits(ScalarTy) :
+    Q.DL.getPointerTypeSizeInBits(ScalarTy) :
     Q.DL.getTypeSizeInBits(ScalarTy);
 
   unsigned Tmp, Tmp2;

@@ -33,10 +33,10 @@ F:              ; preds = %0
 
 define void @test1_ptr(i32* %V) {
 ; CHECK-LABEL: @test1_ptr(
-; CHECK-NEXT:    [[MAGICPTR:%.*]] = ptrtoint i32* [[V:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[MAGICPTR]], label [[F:%.*]] [
-; CHECK-NEXT:    i32 17, label [[T:%.*]]
-; CHECK-NEXT:    i32 4, label [[T]]
+; CHECK-NEXT:    [[MAGICPTR:%.*]] = ptrtoint i32* [[V:%.*]] to i40
+; CHECK-NEXT:    switch i40 [[MAGICPTR]], label [[F:%.*]] [
+; CHECK-NEXT:    i40 17, label [[T:%.*]]
+; CHECK-NEXT:    i40 4, label [[T]]
 ; CHECK-NEXT:    ]
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @foo1()
@@ -59,10 +59,10 @@ F:              ; preds = %0
 
 define void @test1_ptr_as1(i32 addrspace(1)* %V) {
 ; CHECK-LABEL: @test1_ptr_as1(
-; CHECK-NEXT:    [[MAGICPTR:%.*]] = ptrtoint i32 addrspace(1)* [[V:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[MAGICPTR]], label [[F:%.*]] [
-; CHECK-NEXT:    i32 17, label [[T:%.*]]
-; CHECK-NEXT:    i32 4, label [[T]]
+; CHECK-NEXT:    [[MAGICPTR:%.*]] = ptrtoint i32 addrspace(1)* [[V:%.*]] to i40
+; CHECK-NEXT:    switch i40 [[MAGICPTR]], label [[F:%.*]] [
+; CHECK-NEXT:    i40 17, label [[T:%.*]]
+; CHECK-NEXT:    i40 4, label [[T]]
 ; CHECK-NEXT:    ]
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @foo1()

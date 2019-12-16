@@ -101,6 +101,35 @@ STATISTIC(NumAttributesFixedDueToRequiredDependences,
   STATS_DECLTRACK(NAME, Floating,                                              \
                   ("Number of floating values known to be '" #NAME "'"))
 
+// Specialization of the operator<< for abstract attributes subclasses. This
+// disambiguates situations where multiple operators are applicable.
+namespace llvm {
+#define PIPE_OPERATOR(CLASS)                                                   \
+  raw_ostream &operator<<(raw_ostream &OS, const CLASS &AA) {                  \
+    return OS << static_cast<const AbstractAttribute &>(AA);                   \
+  }
+
+PIPE_OPERATOR(AAIsDead)
+PIPE_OPERATOR(AANoUnwind)
+PIPE_OPERATOR(AANoSync)
+PIPE_OPERATOR(AANoRecurse)
+PIPE_OPERATOR(AAWillReturn)
+PIPE_OPERATOR(AANoReturn)
+PIPE_OPERATOR(AAReturnedValues)
+PIPE_OPERATOR(AANonNull)
+PIPE_OPERATOR(AANoAlias)
+PIPE_OPERATOR(AADereferenceable)
+PIPE_OPERATOR(AAAlign)
+PIPE_OPERATOR(AANoCapture)
+PIPE_OPERATOR(AAValueSimplify)
+PIPE_OPERATOR(AANoFree)
+PIPE_OPERATOR(AAHeapToStack)
+PIPE_OPERATOR(AAReachability)
+PIPE_OPERATOR(AAMemoryBehavior)
+
+#undef PIPE_OPERATOR
+} // namespace llvm
+
 // TODO: Determine a good default value.
 //
 // In the LLVM-TS and SPEC2006, 32 seems to not induce compile time overheads
@@ -153,6 +182,20 @@ ChangeStatus llvm::operator&(ChangeStatus l, ChangeStatus r) {
   return l == ChangeStatus::UNCHANGED ? l : r;
 }
 ///}
+
+/// For calls (and invokes) we will only replace instruction uses to not disturb
+/// the old style call graph.
+/// TODO: Remove this once we get rid of the old PM.
+static void replaceAllInstructionUsesWith(Value &Old, Value &New) {
+  if (!isa<CallBase>(Old))
+    return Old.replaceAllUsesWith(&New);
+  SmallVector<Use *, 8> Uses;
+  for (Use &U : Old.uses())
+    if (isa<Instruction>(U.getUser()))
+      Uses.push_back(&U);
+  for (Use *U : Uses)
+    U->set(&New);
+}
 
 /// Recursively visit all values that might become \p IRP at some point. This
 /// will be done by looking through cast instructions, selects, phis, and calls
@@ -549,8 +592,7 @@ template <typename AAType, typename StateType = typename AAType::StateType>
 static void clampReturnedValueStates(Attributor &A, const AAType &QueryingAA,
                                      StateType &S) {
   LLVM_DEBUG(dbgs() << "[Attributor] Clamp return value states for "
-                    << static_cast<const AbstractAttribute &>(QueryingAA)
-                    << " into " << S << "\n");
+                    << QueryingAA << " into " << S << "\n");
 
   assert((QueryingAA.getIRPosition().getPositionKind() ==
               IRPosition::IRP_RETURNED ||
@@ -624,8 +666,7 @@ template <typename AAType, typename StateType = typename AAType::StateType>
 static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
                                         StateType &S) {
   LLVM_DEBUG(dbgs() << "[Attributor] Clamp call site argument states for "
-                    << static_cast<const AbstractAttribute &>(QueryingAA)
-                    << " into " << S << "\n");
+                    << QueryingAA << " into " << S << "\n");
 
   assert(QueryingAA.getIRPosition().getPositionKind() ==
              IRPosition::IRP_ARGUMENT &&
@@ -992,7 +1033,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
   auto ReplaceCallSiteUsersWith = [](CallBase &CB, Constant &C) {
     if (CB.getNumUses() == 0 || CB.isMustTailCall())
       return ChangeStatus::UNCHANGED;
-    CB.replaceAllUsesWith(&C);
+    replaceAllInstructionUsesWith(CB, C);
     return ChangeStatus::CHANGED;
   };
 
@@ -1161,8 +1202,7 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     const auto &RetValAA = A.getAAFor<AAReturnedValues>(
         *this, IRPosition::function(*CB->getCalledFunction()));
     LLVM_DEBUG(dbgs() << "[AAReturnedValues] Found another AAReturnedValues: "
-                      << static_cast<const AbstractAttribute &>(RetValAA)
-                      << "\n");
+                      << RetValAA << "\n");
 
     // Skip dead ends, thus if we do not know anything about the returned
     // call we mark it as unresolved and it will stay that way.
@@ -2148,6 +2188,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // (i) Check whether noalias holds in the definition.
 
     auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, IRP);
+    LLVM_DEBUG(dbgs() << "[Attributor][AANoAliasCSArg] check definition: " << V
+                      << " :: " << NoAliasAA << "\n");
 
     if (!NoAliasAA.isAssumedNoAlias())
       return indicatePessimisticFixpoint();
@@ -2179,7 +2221,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
 
       if (const Function *F = getAnchorScope()) {
         if (AAResults *AAR = A.getInfoCache().getAAResultsForFunction(*F)) {
-          bool IsAliasing = AAR->isNoAlias(&getAssociatedValue(), ArgOp);
+          bool IsAliasing = !AAR->isNoAlias(&getAssociatedValue(), ArgOp);
           LLVM_DEBUG(dbgs()
                      << "[Attributor][NoAliasCSArg] Check alias between "
                         "callsite arguments "
@@ -2187,7 +2229,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
                      << getAssociatedValue() << " " << *ArgOp << " => "
                      << (IsAliasing ? "" : "no-") << "alias \n");
 
-          if (IsAliasing)
+          if (!IsAliasing)
             continue;
         }
       }
@@ -2535,7 +2577,7 @@ struct AAIsDeadFunction : public AAIsDead {
               CallInst *CI = createCallMatchingInvoke(II);
               CI->insertBefore(II);
               CI->takeName(II);
-              II->replaceAllUsesWith(CI);
+              replaceAllInstructionUsesWith(*II, *CI);
 
               // If this is a nounwind + mayreturn invoke we only remove the unwind edge.
               // This is done by moving the invoke into a new and dead block and connecting
@@ -3920,7 +3962,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       if (!V.user_empty() && &V != C && V.getType() == C->getType()) {
         LLVM_DEBUG(dbgs() << "[Attributor][ValueSimplify] " << V << " -> " << *C
                           << "\n");
-        V.replaceAllUsesWith(C);
+        replaceAllInstructionUsesWith(V, *C);
         Changed = ChangeStatus::CHANGED;
       }
     }
@@ -4160,7 +4202,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
         AI = new BitCastInst(AI, MallocCall->getType(), "malloc_bc",
                              AI->getNextNode());
 
-      MallocCall->replaceAllUsesWith(AI);
+      replaceAllInstructionUsesWith(*MallocCall, *AI);
 
       if (auto *II = dyn_cast<InvokeInst>(MallocCall)) {
         auto *NBB = II->getNormalDest();
@@ -4883,8 +4925,7 @@ bool Attributor::checkForAllUses(
     if (Instruction *UserI = dyn_cast<Instruction>(U->getUser()))
       if (LivenessAA && LivenessAA->isAssumedDead(UserI)) {
         LLVM_DEBUG(dbgs() << "[Attributor] Dead user: " << *UserI << ": "
-                          << static_cast<const AbstractAttribute &>(*LivenessAA)
-                          << "\n");
+                          << *LivenessAA << "\n");
         AnyDead = true;
         continue;
       }
@@ -5572,7 +5613,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     if (Function *Callee = CS.getCalledFunction()) {
       // Skip declerations except if annotations on their call sites were
       // explicitly requested.
-      if (!AnnotateDeclarationCallSites && Callee->isDeclaration())
+      if (!AnnotateDeclarationCallSites && Callee->isDeclaration() &&
+          !Callee->hasMetadata(LLVMContext::MD_callback))
         return true;
 
       if (!Callee->getReturnType()->isVoidTy() && !CS->use_empty()) {

@@ -5732,10 +5732,19 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
   return SDValue(nullptr, 0);
 }
 
-SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, unsigned Offset,
-                                           const SDLoc &DL) {
+SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, int64_t Offset,
+                                           const SDLoc &DL,
+                                           const SDNodeFlags Flags) {
   EVT VT = Base.getValueType();
-  return getNode(ISD::ADD, DL, VT, Base, getConstant(Offset, DL, VT));
+  return getMemBasePlusOffset(Base, getConstant(Offset, DL, VT), DL, Flags);
+}
+
+SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
+                                           const SDLoc &DL,
+                                           const SDNodeFlags Flags) {
+  assert(Offset.getValueType().isInteger());
+  EVT BasePtrVT = Ptr.getValueType();
+  return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
 }
 
 /// Returns true if memcpy source is constant data.
@@ -9328,8 +9337,8 @@ unsigned SelectionDAG::InferPtrAlignment(SDValue Ptr) const {
   const GlobalValue *GV = nullptr;
   int64_t GVOffset = 0;
   if (TLI->isGAPlusOffset(Ptr.getNode(), GV, GVOffset)) {
-    unsigned IdxWidth = getDataLayout().getIndexTypeSizeInBits(GV->getType());
-    KnownBits Known(IdxWidth);
+    unsigned PtrWidth = getDataLayout().getPointerTypeSizeInBits(GV->getType());
+    KnownBits Known(PtrWidth);
     llvm::computeKnownBits(GV, Known, getDataLayout());
     unsigned AlignBits = Known.countMinTrailingZeros();
     unsigned Align = AlignBits ? 1 << std::min(31U, AlignBits) : 0;

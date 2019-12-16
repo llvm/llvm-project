@@ -651,8 +651,9 @@ void MipsRegisterBankInfo::setRegBank(MachineInstr &MI,
 static void
 combineAwayG_UNMERGE_VALUES(LegalizationArtifactCombiner &ArtCombiner,
                             MachineInstr &MI) {
+  SmallVector<Register, 4> UpdatedDefs;
   SmallVector<MachineInstr *, 2> DeadInstrs;
-  ArtCombiner.tryCombineMerges(MI, DeadInstrs);
+  ArtCombiner.tryCombineMerges(MI, DeadInstrs, UpdatedDefs);
   for (MachineInstr *DeadMI : DeadInstrs)
     DeadMI->eraseFromParent();
 }

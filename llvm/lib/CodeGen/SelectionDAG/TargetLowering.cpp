@@ -1544,6 +1544,16 @@ bool TargetLowering::SimplifyDemandedBits(
     Known.Zero = Known2.Zero.reverseBits();
     break;
   }
+  case ISD::BSWAP: {
+    SDValue Src = Op.getOperand(0);
+    APInt DemandedSrcBits = DemandedBits.byteSwap();
+    if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
+                             Depth + 1))
+      return true;
+    Known.One = Known2.One.byteSwap();
+    Known.Zero = Known2.Zero.byteSwap();
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -3282,11 +3292,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         EVT newVT = EVT::getIntegerVT(*DAG.getContext(), bestWidth);
         if (newVT.isRound() &&
             shouldReduceLoadWidth(Lod, ISD::NON_EXTLOAD, newVT)) {
-          EVT PtrType = Lod->getOperand(1).getValueType();
           SDValue Ptr = Lod->getBasePtr();
           if (bestOffset != 0)
-            Ptr = DAG.getNode(ISD::ADD, dl, PtrType, Lod->getBasePtr(),
-                              DAG.getConstant(bestOffset, dl, PtrType));
+            Ptr = DAG.getMemBasePlusOffset(Ptr, bestOffset, dl);
           unsigned NewAlign = MinAlign(Lod->getAlignment(), bestOffset);
           SDValue NewLoad = DAG.getLoad(
               newVT, dl, Lod->getChain(), Ptr,
@@ -6906,7 +6914,7 @@ SDValue TargetLowering::getVectorElementPointer(SelectionDAG &DAG,
 
   Index = DAG.getNode(ISD::MUL, dl, IdxVT, Index,
                       DAG.getConstant(EltSize, dl, IdxVT));
-  return DAG.getNode(ISD::ADD, dl, IdxVT, VecPtr, Index);
+  return DAG.getMemBasePlusOffset(VecPtr, Index, dl);
 }
 
 //===----------------------------------------------------------------------===//

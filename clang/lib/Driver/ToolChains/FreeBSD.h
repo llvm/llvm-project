@@ -76,6 +76,10 @@ public:
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,
   // FreeBSD defaults to standalone/full debug info.
   bool GetDefaultStandaloneDebug() const override { return true; }
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:
   Tool *buildAssembler() const override;

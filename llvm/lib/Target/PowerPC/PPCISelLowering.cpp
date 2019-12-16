@@ -3154,11 +3154,17 @@ SDValue PPCTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue PPCTargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
                                                   SelectionDAG &DAG) const {
+  if (Subtarget.isAIXABI())
+    report_fatal_error("ADJUST_TRAMPOLINE operation is not supported on AIX.");
+
   return Op.getOperand(0);
 }
 
 SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
                                                 SelectionDAG &DAG) const {
+  if (Subtarget.isAIXABI())
+    report_fatal_error("INIT_TRAMPOLINE operation is not supported on AIX.");
+
   SDValue Chain = Op.getOperand(0);
   SDValue Trmp = Op.getOperand(1); // trampoline
   SDValue FPtr = Op.getOperand(2); // nested function
@@ -5209,34 +5215,48 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
 
   MachinePointerInfo MPI(CS ? CS.getCalledValue() : nullptr);
 
+  // Registers used in building the DAG.
+  const MCRegister EnvPtrReg = Subtarget.getEnvironmentPointerRegister();
+  const MCRegister TOCReg = Subtarget.getTOCPointerRegister();
+
+  // Offsets of descriptor members.
+  const unsigned TOCAnchorOffset = Subtarget.descriptorTOCAnchorOffset();
+  const unsigned EnvPtrOffset = Subtarget.descriptorEnvironmentPointerOffset();
+
+  const MVT RegVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  const unsigned Alignment = Subtarget.isPPC64() ? 8 : 4;
+
   // One load for the functions entry point address.
-  SDValue LoadFuncPtr = DAG.getLoad(MVT::i64, dl, LDChain, Callee, MPI,
-                                    /* Alignment = */ 8, MMOFlags);
+  SDValue LoadFuncPtr = DAG.getLoad(RegVT, dl, LDChain, Callee, MPI,
+                                    Alignment, MMOFlags);
 
   // One for loading the TOC anchor for the module that contains the called
   // function.
-  SDValue TOCOff = DAG.getIntPtrConstant(8, dl);
-  SDValue AddTOC = DAG.getNode(ISD::ADD, dl, MVT::i64, Callee, TOCOff);
+  SDValue TOCOff = DAG.getIntPtrConstant(TOCAnchorOffset, dl);
+  SDValue AddTOC = DAG.getNode(ISD::ADD, dl, RegVT, Callee, TOCOff);
   SDValue TOCPtr =
-      DAG.getLoad(MVT::i64, dl, LDChain, AddTOC, MPI.getWithOffset(8),
-                  /* Alignment = */ 8, MMOFlags);
+      DAG.getLoad(RegVT, dl, LDChain, AddTOC,
+                  MPI.getWithOffset(TOCAnchorOffset), Alignment, MMOFlags);
 
   // One for loading the environment pointer.
-  SDValue PtrOff = DAG.getIntPtrConstant(16, dl);
-  SDValue AddPtr = DAG.getNode(ISD::ADD, dl, MVT::i64, Callee, PtrOff);
+  SDValue PtrOff = DAG.getIntPtrConstant(EnvPtrOffset, dl);
+  SDValue AddPtr = DAG.getNode(ISD::ADD, dl, RegVT, Callee, PtrOff);
   SDValue LoadEnvPtr =
-      DAG.getLoad(MVT::i64, dl, LDChain, AddPtr, MPI.getWithOffset(16),
-                  /* Alignment = */ 8, MMOFlags);
+      DAG.getLoad(RegVT, dl, LDChain, AddPtr,
+                  MPI.getWithOffset(EnvPtrOffset), Alignment, MMOFlags);
+
 
   // Then copy the newly loaded TOC anchor to the TOC pointer.
-  SDValue TOCVal = DAG.getCopyToReg(Chain, dl, PPC::X2, TOCPtr, Glue);
+  SDValue TOCVal = DAG.getCopyToReg(Chain, dl, TOCReg, TOCPtr, Glue);
   Chain = TOCVal.getValue(0);
   Glue = TOCVal.getValue(1);
 
   // If the function call has an explicit 'nest' parameter, it takes the
   // place of the environment pointer.
+  assert((!hasNest || !Subtarget.isAIXABI()) &&
+         "Nest parameter is not supported on AIX.");
   if (!hasNest) {
-    SDValue EnvVal = DAG.getCopyToReg(Chain, dl, PPC::X11, LoadEnvPtr, Glue);
+    SDValue EnvVal = DAG.getCopyToReg(Chain, dl, EnvPtrReg, LoadEnvPtr, Glue);
     Chain = EnvVal.getValue(0);
     Glue = EnvVal.getValue(1);
   }
@@ -5265,27 +5285,29 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops, CallingConv::ID CallConv,
     Ops.push_back(Callee);
   else {
     assert(!isPatchPoint && "Patch point call are not indirect.");
-    if (Subtarget.isAIXABI())
-      report_fatal_error("Indirect call on AIX is not implemented.");
 
-    // For 64-bit ELF we have saved the TOC pointer to the linkage area on the
-    // stack (this would have  been done in `LowerCall_64SVR4`). The call
-    // instruction is a pseudo instruction that represents both the indirect
-    // branch and a load that restores the TOC pointer from the linkage area.
-    // The operand for the TOC restore is an add of the TOC save offset to the
-    // stack pointer. This must be the second operand: after the chain input but
-    // before any other variadic arguments.
-    if (Subtarget.is64BitELFABI()) {
-      SDValue StackPtr = DAG.getRegister(PPC::X1, MVT::i64);
+    // For the TOC based ABIs, we have saved the TOC pointer to the linkage area
+    // on the stack (this would have been done in `LowerCall_64SVR4` or
+    // `LowerCall_AIX`). The call instruction is a pseudo instruction that
+    // represents both the indirect branch and a load that restores the TOC
+    // pointer from the linkage area. The operand for the TOC restore is an add
+    // of the TOC save offset to the stack pointer. This must be the second
+    // operand: after the chain input but before any other variadic arguments.
+    if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) {
+      const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();
+
+      SDValue StackPtr = DAG.getRegister(StackPtrReg, RegVT);
       unsigned TOCSaveOffset = Subtarget.getFrameLowering()->getTOCSaveOffset();
       SDValue TOCOff = DAG.getIntPtrConstant(TOCSaveOffset, dl);
-      SDValue AddTOC = DAG.getNode(ISD::ADD, dl, MVT::i64, StackPtr, TOCOff);
+      SDValue AddTOC = DAG.getNode(ISD::ADD, dl, RegVT, StackPtr, TOCOff);
       Ops.push_back(AddTOC);
     }
 
     // Add the register used for the environment pointer.
     if (Subtarget.usesFunctionDescriptors() && !hasNest)
-      Ops.push_back(DAG.getRegister(PPC::X11, MVT::i64));
+      Ops.push_back(DAG.getRegister(Subtarget.getEnvironmentPointerRegister(),
+                                    RegVT));
+
 
     // Add CTR register as callee so a bctr can be emitted later.
     if (isTailCall)
@@ -5306,7 +5328,7 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops, CallingConv::ID CallConv,
   // no way to mark dependencies as implicit here.
   // We will add the R2/X2 dependency in EmitInstrWithCustomInserter.
   if ((Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) && !isPatchPoint)
-    Ops.push_back(DAG.getRegister(IsPPC64 ? PPC::X2 : PPC::R2, RegVT));
+    Ops.push_back(DAG.getRegister(Subtarget.getTOCPointerRegister(), RegVT));
 
   // Add implicit use of CR bit 6 for 32-bit SVR4 vararg calls
   if (isVarArg && Subtarget.is32BitELFABI())
@@ -6962,9 +6984,6 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   if (isVarArg || isPatchPoint)
     report_fatal_error("This call type is unimplemented on AIX.");
 
-  if (!isFunctionGlobalAddress(Callee) && !isa<ExternalSymbolSDNode>(Callee))
-    report_fatal_error("Handling of indirect call is unimplemented!");
-
   const PPCSubtarget& Subtarget =
       static_cast<const PPCSubtarget&>(DAG.getSubtarget());
   if (Subtarget.hasQPX())
@@ -7021,6 +7040,26 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     if (VA.isMemLoc())
       report_fatal_error("Handling of placing parameters on the stack is "
                          "unimplemented!");
+  }
+
+  // For indirect calls, we need to save the TOC base to the stack for
+  // restoration after the call.
+  if (!isTailCall && !isPatchPoint &&
+      !isFunctionGlobalAddress(Callee) && !isa<ExternalSymbolSDNode>(Callee)) {
+    const MCRegister TOCBaseReg = Subtarget.getTOCPointerRegister();
+    const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();
+    const MVT PtrVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+    const unsigned TOCSaveOffset =
+        Subtarget.getFrameLowering()->getTOCSaveOffset();
+
+    setUsesTOCBasePtr(DAG);
+    SDValue Val = DAG.getCopyFromReg(Chain, dl, TOCBaseReg, PtrVT);
+    SDValue PtrOff = DAG.getIntPtrConstant(TOCSaveOffset, dl);
+    SDValue StackPtr = DAG.getRegister(StackPtrReg, PtrVT);
+    SDValue AddPtr = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
+    Chain = DAG.getStore(
+        Val.getValue(1), dl, Val, AddPtr,
+        MachinePointerInfo::getStack(DAG.getMachineFunction(), TOCSaveOffset));
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain

@@ -25,6 +25,7 @@
 #include "polly/Support/SCEVValidator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"

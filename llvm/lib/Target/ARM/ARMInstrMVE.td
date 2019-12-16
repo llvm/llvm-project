@@ -567,10 +567,10 @@ class MVE_rDest<dag oops, dag iops, InstrItinClass itin,
   let Inst{4} = 0b0;
 }
 
-class MVE_VABAV<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
+class MVE_VABAV<string suffix, bit U, bits<2> size>
   : MVE_rDest<(outs rGPR:$Rda), (ins rGPR:$Rda_src, MQPR:$Qn, MQPR:$Qm),
               NoItinerary, "vabav", suffix, "$Rda, $Qn, $Qm", "$Rda = $Rda_src",
-              pattern> {
+              []> {
   bits<4> Qm;
   bits<4> Qn;
   bits<4> Rda;
@@ -589,12 +589,36 @@ class MVE_VABAV<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
   let Inst{0} = 0b1;
 }
 
-def MVE_VABAVs8  : MVE_VABAV<"s8", 0b0, 0b00>;
-def MVE_VABAVs16 : MVE_VABAV<"s16", 0b0, 0b01>;
-def MVE_VABAVs32 : MVE_VABAV<"s32", 0b0, 0b10>;
-def MVE_VABAVu8  : MVE_VABAV<"u8", 0b1, 0b00>;
-def MVE_VABAVu16 : MVE_VABAV<"u16", 0b1, 0b01>;
-def MVE_VABAVu32 : MVE_VABAV<"u32", 0b1, 0b10>;
+multiclass MVE_VABAV_m<MVEVectorVTInfo VTI> {
+  def "" : MVE_VABAV<VTI.Suffix, VTI.Unsigned, VTI.Size>;
+
+  let Predicates = [HasMVEInt] in {
+    def : Pat<(i32 (int_arm_mve_vabav
+                            (i32 VTI.Unsigned),
+                            (i32 rGPR:$Rda_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (i32 (!cast<Instruction>(NAME)
+                            (i32 rGPR:$Rda_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm)))>;
+
+    def : Pat<(i32 (int_arm_mve_vabav_predicated
+                            (i32 VTI.Unsigned),
+                            (i32 rGPR:$Rda_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (i32 (!cast<Instruction>(NAME)
+                            (i32 rGPR:$Rda_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+  }
+}
+
+defm MVE_VABAVs8  : MVE_VABAV_m<MVE_v16s8>;
+defm MVE_VABAVs16 : MVE_VABAV_m<MVE_v8s16>;
+defm MVE_VABAVs32 : MVE_VABAV_m<MVE_v4s32>;
+defm MVE_VABAVu8  : MVE_VABAV_m<MVE_v16u8>;
+defm MVE_VABAVu16 : MVE_VABAV_m<MVE_v8u16>;
+defm MVE_VABAVu32 : MVE_VABAV_m<MVE_v4u32>;
 
 class MVE_VADDV<string iname, string suffix, dag iops, string cstr,
               bit A, bit U, bits<2> size, list<dag> pattern=[]>
@@ -803,10 +827,9 @@ defm MVE_VMINAV : MVE_VMINMAXAV_ty<"vminav", 0b1>;
 defm MVE_VMAXAV : MVE_VMINMAXAV_ty<"vmaxav", 0b0>;
 
 class MVE_VMLAMLSDAV<string iname, string suffix, dag iops, string cstr,
-                   bit sz, bit bit_28, bit A, bit X, bit bit_8, bit bit_0,
-                   list<dag> pattern=[]>
+                   bit sz, bit bit_28, bit A, bit X, bit bit_8, bit bit_0>
   : MVE_rDest<(outs tGPREven:$RdaDest), iops, NoItinerary, iname, suffix,
-              "$RdaDest, $Qn, $Qm", cstr, pattern> {
+              "$RdaDest, $Qn, $Qm", cstr, []> {
   bits<4> RdaDest;
   bits<3> Qm;
   bits<3> Qn;
@@ -824,47 +847,88 @@ class MVE_VMLAMLSDAV<string iname, string suffix, dag iops, string cstr,
   let Inst{0} = bit_0;
 }
 
-multiclass MVE_VMLAMLSDAV_A<string iname, string x, string suffix,
-                            bit sz, bit bit_28, bit X, bit bit_8, bit bit_0,
-                            list<dag> pattern=[]> {
-  def ""#x#suffix : MVE_VMLAMLSDAV<iname # x, suffix,
+multiclass MVE_VMLAMLSDAV_A<string iname, string x, MVEVectorVTInfo VTI,
+                            bit sz, bit bit_28, bit X, bit bit_8, bit bit_0> {
+  def ""#x#VTI.Suffix : MVE_VMLAMLSDAV<iname # x, VTI.Suffix,
                                    (ins MQPR:$Qn, MQPR:$Qm), "",
-                                   sz, bit_28, 0b0, X, bit_8, bit_0, pattern>;
-  def "a"#x#suffix : MVE_VMLAMLSDAV<iname # "a" # x, suffix,
+                                   sz, bit_28, 0b0, X, bit_8, bit_0>;
+  def "a"#x#VTI.Suffix : MVE_VMLAMLSDAV<iname # "a" # x, VTI.Suffix,
                                     (ins tGPREven:$RdaSrc, MQPR:$Qn, MQPR:$Qm),
                                     "$RdaDest = $RdaSrc",
-                                    sz, bit_28, 0b1, X, bit_8, bit_0, pattern>;
+                                    sz, bit_28, 0b1, X, bit_8, bit_0>;
+  let Predicates = [HasMVEInt] in {
+    def : Pat<(i32 (int_arm_mve_vmldava
+                            (i32 VTI.Unsigned),
+                            (i32 bit_0) /* subtract */,
+                            (i32 X) /* exchange */,
+                            (i32 0) /* accumulator */,
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (i32 (!cast<Instruction>(NAME # x # VTI.Suffix)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm)))>;
+
+    def : Pat<(i32 (int_arm_mve_vmldava_predicated
+                            (i32 VTI.Unsigned),
+                            (i32 bit_0) /* subtract */,
+                            (i32 X) /* exchange */,
+                            (i32 0) /* accumulator */,
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (i32 (!cast<Instruction>(NAME # x # VTI.Suffix)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                             ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+
+    def : Pat<(i32 (int_arm_mve_vmldava
+                            (i32 VTI.Unsigned),
+                            (i32 bit_0) /* subtract */,
+                            (i32 X) /* exchange */,
+                            (i32 tGPREven:$RdaSrc),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (i32 (!cast<Instruction>(NAME # "a" # x # VTI.Suffix)
+                            (i32 tGPREven:$RdaSrc),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm)))>;
+
+    def : Pat<(i32 (int_arm_mve_vmldava_predicated
+                            (i32 VTI.Unsigned),
+                            (i32 bit_0) /* subtract */,
+                            (i32 X) /* exchange */,
+                            (i32 tGPREven:$RdaSrc),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (i32 (!cast<Instruction>(NAME # "a" # x # VTI.Suffix)
+                            (i32 tGPREven:$RdaSrc),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                             ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+  }
 }
 
-multiclass MVE_VMLAMLSDAV_AX<string iname, string suffix, bit sz, bit bit_28,
-                             bit bit_8, bit bit_0, list<dag> pattern=[]> {
-  defm "" : MVE_VMLAMLSDAV_A<iname, "", suffix, sz, bit_28,
-                             0b0, bit_8, bit_0, pattern>;
-  defm "" : MVE_VMLAMLSDAV_A<iname, "x", suffix, sz, bit_28,
-                             0b1, bit_8, bit_0, pattern>;
+multiclass MVE_VMLAMLSDAV_AX<string iname, MVEVectorVTInfo VTI, bit sz,
+                             bit bit_28, bit bit_8, bit bit_0> {
+  defm "" : MVE_VMLAMLSDAV_A<iname, "", VTI, sz, bit_28,
+                             0b0, bit_8, bit_0>;
+  defm "" : MVE_VMLAMLSDAV_A<iname, "x", VTI, sz, bit_28,
+                             0b1, bit_8, bit_0>;
 }
 
-multiclass MVE_VMLADAV_multi<string suffix, bit sz, bit bit_8,
-                             list<dag> pattern=[]> {
-  defm "" : MVE_VMLAMLSDAV_AX<"vmladav", "s"#suffix,
-                              sz, 0b0, bit_8, 0b0, pattern>;
-  defm "" : MVE_VMLAMLSDAV_A<"vmladav", "", "u"#suffix,
-                             sz, 0b1, 0b0, bit_8, 0b0, pattern>;
+multiclass MVE_VMLADAV_multi<MVEVectorVTInfo SVTI, MVEVectorVTInfo UVTI,
+                             bit sz, bit bit_8> {
+  defm "" : MVE_VMLAMLSDAV_AX<"vmladav", SVTI,
+                              sz, 0b0, bit_8, 0b0>;
+  defm "" : MVE_VMLAMLSDAV_A<"vmladav", "", UVTI,
+                             sz, 0b1, 0b0, bit_8, 0b0>;
 }
 
-multiclass MVE_VMLSDAV_multi<string suffix, bit sz, bit bit_28,
-                             list<dag> pattern=[]> {
-  defm "" : MVE_VMLAMLSDAV_AX<"vmlsdav", "s"#suffix,
-                              sz, bit_28, 0b0, 0b1, pattern>;
+multiclass MVE_VMLSDAV_multi<MVEVectorVTInfo VTI, bit sz, bit bit_28> {
+  defm "" : MVE_VMLAMLSDAV_AX<"vmlsdav", VTI,
+                              sz, bit_28, 0b0, 0b1>;
 }
 
-defm MVE_VMLADAV : MVE_VMLADAV_multi< "8", 0b0, 0b1>;
-defm MVE_VMLADAV : MVE_VMLADAV_multi<"16", 0b0, 0b0>;
-defm MVE_VMLADAV : MVE_VMLADAV_multi<"32", 0b1, 0b0>;
+defm MVE_VMLADAV : MVE_VMLADAV_multi<MVE_v16s8, MVE_v16u8, 0b0, 0b1>;
+defm MVE_VMLADAV : MVE_VMLADAV_multi<MVE_v8s16, MVE_v8u16, 0b0, 0b0>;
+defm MVE_VMLADAV : MVE_VMLADAV_multi<MVE_v4s32, MVE_v4u32, 0b1, 0b0>;
 
-defm MVE_VMLSDAV : MVE_VMLSDAV_multi< "8", 0b0, 0b1>;
-defm MVE_VMLSDAV : MVE_VMLSDAV_multi<"16", 0b0, 0b0>;
-defm MVE_VMLSDAV : MVE_VMLSDAV_multi<"32", 0b1, 0b0>;
+defm MVE_VMLSDAV : MVE_VMLSDAV_multi<MVE_v16s8, 0b0, 0b1>;
+defm MVE_VMLSDAV : MVE_VMLSDAV_multi<MVE_v8s16, 0b0, 0b0>;
+defm MVE_VMLSDAV : MVE_VMLSDAV_multi<MVE_v4s32, 0b1, 0b0>;
 
 // vmlav aliases vmladav
 foreach acc = ["", "a"] in {
@@ -2315,8 +2379,8 @@ let Predicates = [HasMVEInt] in {
 
 
 class MVE_VSHLL_imm<string iname, string suffix, bit U, bit th,
-                    dag immops, list<dag> pattern=[]>
-  : MVE_shift_imm<(outs MQPR:$Qd), !con((ins MQPR:$Qm), immops),
+                    Operand immtype, list<dag> pattern=[]>
+  : MVE_shift_imm<(outs MQPR:$Qd), (ins MQPR:$Qm, immtype:$imm),
                   iname, suffix, "$Qd, $Qm, $imm", vpred_r, "", pattern> {
   let Inst{28} = U;
   let Inst{25-23} = 0b101;
@@ -2325,6 +2389,9 @@ class MVE_VSHLL_imm<string iname, string suffix, bit U, bit th,
   let Inst{11-6} = 0b111101;
   let Inst{4} = 0b0;
   let Inst{0} = 0b0;
+
+  // For the MVE_VSHLL_patterns multiclass to refer to
+  Operand immediateType = immtype;
 }
 
 // The immediate VSHLL instructions accept shift counts from 1 up to
@@ -2333,7 +2400,7 @@ class MVE_VSHLL_imm<string iname, string suffix, bit U, bit th,
 
 class MVE_VSHLL_imm8<string iname, string suffix,
                      bit U, bit th, list<dag> pattern=[]>
-  : MVE_VSHLL_imm<iname, suffix, U, th, (ins mve_shift_imm1_7:$imm), pattern> {
+  : MVE_VSHLL_imm<iname, suffix, U, th, mve_shift_imm1_7, pattern> {
   bits<3> imm;
   let Inst{20-19} = 0b01;
   let Inst{18-16} = imm;
@@ -2341,7 +2408,7 @@ class MVE_VSHLL_imm8<string iname, string suffix,
 
 class MVE_VSHLL_imm16<string iname, string suffix,
                       bit U, bit th, list<dag> pattern=[]>
-  : MVE_VSHLL_imm<iname, suffix, U, th, (ins mve_shift_imm1_15:$imm), pattern> {
+  : MVE_VSHLL_imm<iname, suffix, U, th, mve_shift_imm1_15, pattern> {
   bits<4> imm;
   let Inst{20} = 0b1;
   let Inst{19-16} = imm;
@@ -2384,6 +2451,45 @@ defm MVE_VSHLL_lws8  : MVE_VSHLL_lw<"vshll", "s8",  0b00, 0b0, "$Qd, $Qm, #8">;
 defm MVE_VSHLL_lws16 : MVE_VSHLL_lw<"vshll", "s16", 0b01, 0b0, "$Qd, $Qm, #16">;
 defm MVE_VSHLL_lwu8  : MVE_VSHLL_lw<"vshll", "u8",  0b00, 0b1, "$Qd, $Qm, #8">;
 defm MVE_VSHLL_lwu16 : MVE_VSHLL_lw<"vshll", "u16", 0b01, 0b1, "$Qd, $Qm, #16">;
+
+multiclass MVE_VSHLL_patterns<MVEVectorVTInfo VTI, int top> {
+  // A succession of local variable definitions, via singleton
+  // foreach, to make the actual patterns legible
+  foreach suffix = [!strconcat(VTI.Suffix, !if(top, "th", "bh"))] in
+  foreach inst_imm = [!cast<MVE_VSHLL_imm>("MVE_VSHLL_imm" # suffix)] in
+  foreach inst_lw = [!cast<MVE_VSHLL_by_lane_width>("MVE_VSHLL_lw" # suffix)] in
+  foreach unpred_int = [int_arm_mve_vshll_imm] in
+  foreach pred_int = [int_arm_mve_vshll_imm_predicated] in
+  foreach imm = [inst_imm.immediateType] in {
+
+    def : Pat<(VTI.DblVec (unpred_int (VTI.Vec MQPR:$src), imm:$imm,
+                                      (i32 VTI.Unsigned), (i32 top))),
+              (VTI.DblVec (inst_imm   (VTI.Vec MQPR:$src), imm:$imm))>;
+    def : Pat<(VTI.DblVec (unpred_int (VTI.Vec MQPR:$src), (i32 VTI.LaneBits),
+                                      (i32 VTI.Unsigned), (i32 top))),
+              (VTI.DblVec (inst_lw    (VTI.Vec MQPR:$src)))>;
+
+    def : Pat<(VTI.DblVec (pred_int   (VTI.Vec MQPR:$src), imm:$imm,
+                                      (i32 VTI.Unsigned), (i32 top),
+                                      (VTI.Pred VCCR:$mask),
+                                      (VTI.DblVec MQPR:$inactive))),
+              (VTI.DblVec (inst_imm   (VTI.Vec MQPR:$src), imm:$imm,
+                                      ARMVCCThen, (VTI.Pred VCCR:$mask),
+                                      (VTI.DblVec MQPR:$inactive)))>;
+    def : Pat<(VTI.DblVec (pred_int   (VTI.Vec MQPR:$src), (i32 VTI.LaneBits),
+                                      (i32 VTI.Unsigned), (i32 top),
+                                      (VTI.Pred VCCR:$mask),
+                                      (VTI.DblVec MQPR:$inactive))),
+              (VTI.DblVec (inst_lw    (VTI.Vec MQPR:$src), ARMVCCThen,
+                                      (VTI.Pred VCCR:$mask),
+                                      (VTI.DblVec MQPR:$inactive)))>;
+
+  }
+}
+
+foreach VTI = [MVE_v16s8, MVE_v8s16, MVE_v16u8, MVE_v8u16] in
+  foreach top = [0, 1] in
+    defm : MVE_VSHLL_patterns<VTI, top>;
 
 class MVE_VxSHRN<string iname, string suffix, bit bit_12, bit bit_28,
                dag immops, list<dag> pattern=[]>
@@ -2606,6 +2712,13 @@ class MVE_shift_with_imm<string iname, string suffix, dag oops, dag iops,
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b0;
   let validForTailPredication = 1;
+
+  // For the MVE_shift_imm_patterns multiclass to refer to
+  MVEVectorVTInfo VTI;
+  Operand immediateType;
+  Intrinsic unpred_int;
+  Intrinsic pred_int;
+  dag unsignedFlag = (?);
 }
 
 class MVE_VSxI_imm<string iname, string suffix, bit bit_8, dag imm>
@@ -2645,50 +2758,49 @@ def MVE_VSLIimm32 : MVE_VSxI_imm<"vsli", "32", 0b1,(ins imm0_31:$imm)> {
   let Inst{21} = 0b1;
 }
 
-class MVE_VQSHL_imm<string suffix, dag imm>
-  : MVE_shift_with_imm<"vqshl", suffix, (outs MQPR:$Qd),
-                       !con((ins MQPR:$Qm), imm), "$Qd, $Qm, $imm",
+class MVE_VQSHL_imm<MVEVectorVTInfo VTI_, Operand immType>
+  : MVE_shift_with_imm<"vqshl", VTI_.Suffix, (outs MQPR:$Qd),
+                       (ins MQPR:$Qm, immType:$imm), "$Qd, $Qm, $imm",
                        vpred_r, ""> {
   bits<6> imm;
 
+  let Inst{28} = VTI_.Unsigned;
   let Inst{25-24} = 0b11;
   let Inst{21-16} = imm;
   let Inst{10-8} = 0b111;
+
+  let VTI = VTI_;
+  let immediateType = immType;
+  let unsignedFlag = (? (i32 VTI.Unsigned));
 }
 
-def MVE_VQSHLimms8 : MVE_VQSHL_imm<"s8", (ins imm0_7:$imm)> {
-  let Inst{28} = 0b0;
-  let Inst{21-19} = 0b001;
+let unpred_int = int_arm_mve_vqshl_imm,
+    pred_int = int_arm_mve_vqshl_imm_predicated in {
+  def MVE_VQSHLimms8 : MVE_VQSHL_imm<MVE_v16s8, imm0_7> {
+    let Inst{21-19} = 0b001;
+  }
+  def MVE_VQSHLimmu8 : MVE_VQSHL_imm<MVE_v16u8, imm0_7> {
+    let Inst{21-19} = 0b001;
+  }
+  
+  def MVE_VQSHLimms16 : MVE_VQSHL_imm<MVE_v8s16, imm0_15> {
+    let Inst{21-20} = 0b01;
+  }
+  def MVE_VQSHLimmu16 : MVE_VQSHL_imm<MVE_v8u16, imm0_15> {
+    let Inst{21-20} = 0b01;
+  }
+  
+  def MVE_VQSHLimms32 : MVE_VQSHL_imm<MVE_v4s32, imm0_31> {
+    let Inst{21} = 0b1;
+  }
+  def MVE_VQSHLimmu32 : MVE_VQSHL_imm<MVE_v4u32, imm0_31> {
+    let Inst{21} = 0b1;
+  }
 }
 
-def MVE_VQSHLimmu8 : MVE_VQSHL_imm<"u8", (ins imm0_7:$imm)> {
-  let Inst{28} = 0b1;
-  let Inst{21-19} = 0b001;
-}
-
-def MVE_VQSHLimms16 : MVE_VQSHL_imm<"s16", (ins imm0_15:$imm)> {
-  let Inst{28} = 0b0;
-  let Inst{21-20} = 0b01;
-}
-
-def MVE_VQSHLimmu16 : MVE_VQSHL_imm<"u16", (ins imm0_15:$imm)> {
-  let Inst{28} = 0b1;
-  let Inst{21-20} = 0b01;
-}
-
-def MVE_VQSHLimms32 : MVE_VQSHL_imm<"s32", (ins imm0_31:$imm)> {
-  let Inst{28} = 0b0;
-  let Inst{21} = 0b1;
-}
-
-def MVE_VQSHLimmu32 : MVE_VQSHL_imm<"u32", (ins imm0_31:$imm)> {
-  let Inst{28} = 0b1;
-  let Inst{21} = 0b1;
-}
-
-class MVE_VQSHLU_imm<string suffix, dag imm>
-  : MVE_shift_with_imm<"vqshlu", suffix, (outs MQPR:$Qd),
-                       !con((ins MQPR:$Qm), imm), "$Qd, $Qm, $imm",
+class MVE_VQSHLU_imm<MVEVectorVTInfo VTI_, Operand immType>
+  : MVE_shift_with_imm<"vqshlu", VTI_.Suffix, (outs MQPR:$Qd),
+                       (ins MQPR:$Qm, immType:$imm), "$Qd, $Qm, $imm",
                        vpred_r, ""> {
   bits<6> imm;
 
@@ -2696,60 +2808,102 @@ class MVE_VQSHLU_imm<string suffix, dag imm>
   let Inst{25-24} = 0b11;
   let Inst{21-16} = imm;
   let Inst{10-8} = 0b110;
+
+  let VTI = VTI_;
+  let immediateType = immType;
 }
 
-def MVE_VQSHLU_imms8 : MVE_VQSHLU_imm<"s8", (ins imm0_7:$imm)> {
-  let Inst{21-19} = 0b001;
+let unpred_int = int_arm_mve_vqshlu_imm,
+    pred_int = int_arm_mve_vqshlu_imm_predicated in {
+  def MVE_VQSHLU_imms8 : MVE_VQSHLU_imm<MVE_v16s8, imm0_7> {
+    let Inst{21-19} = 0b001;
+  }
+
+  def MVE_VQSHLU_imms16 : MVE_VQSHLU_imm<MVE_v8s16, imm0_15> {
+    let Inst{21-20} = 0b01;
+  }
+
+  def MVE_VQSHLU_imms32 : MVE_VQSHLU_imm<MVE_v4s32, imm0_31> {
+    let Inst{21} = 0b1;
+  }
 }
 
-def MVE_VQSHLU_imms16 : MVE_VQSHLU_imm<"s16", (ins imm0_15:$imm)> {
-  let Inst{21-20} = 0b01;
-}
-
-def MVE_VQSHLU_imms32 : MVE_VQSHLU_imm<"s32", (ins imm0_31:$imm)> {
-  let Inst{21} = 0b1;
-}
-
-class MVE_VRSHR_imm<string suffix, dag imm>
-  : MVE_shift_with_imm<"vrshr", suffix, (outs MQPR:$Qd),
-                       !con((ins MQPR:$Qm), imm), "$Qd, $Qm, $imm",
+class MVE_VRSHR_imm<MVEVectorVTInfo VTI_, Operand immType>
+  : MVE_shift_with_imm<"vrshr", VTI_.Suffix, (outs MQPR:$Qd),
+                       (ins MQPR:$Qm, immType:$imm), "$Qd, $Qm, $imm",
                        vpred_r, ""> {
   bits<6> imm;
 
+  let Inst{28} = VTI_.Unsigned;
   let Inst{25-24} = 0b11;
   let Inst{21-16} = imm;
   let Inst{10-8} = 0b010;
+
+  let VTI = VTI_;
+  let immediateType = immType;
+  let unsignedFlag = (? (i32 VTI.Unsigned));
 }
 
-def MVE_VRSHR_imms8 : MVE_VRSHR_imm<"s8", (ins shr_imm8:$imm)> {
-  let Inst{28} = 0b0;
-  let Inst{21-19} = 0b001;
+let unpred_int = int_arm_mve_vrshr_imm,
+    pred_int = int_arm_mve_vrshr_imm_predicated in {
+  def MVE_VRSHR_imms8 : MVE_VRSHR_imm<MVE_v16s8, shr_imm8> {
+    let Inst{21-19} = 0b001;
+  }
+
+  def MVE_VRSHR_immu8 : MVE_VRSHR_imm<MVE_v16u8, shr_imm8> {
+    let Inst{21-19} = 0b001;
+  }
+
+  def MVE_VRSHR_imms16 : MVE_VRSHR_imm<MVE_v8s16, shr_imm16> {
+    let Inst{21-20} = 0b01;
+  }
+
+  def MVE_VRSHR_immu16 : MVE_VRSHR_imm<MVE_v8u16, shr_imm16> {
+    let Inst{21-20} = 0b01;
+  }
+
+  def MVE_VRSHR_imms32 : MVE_VRSHR_imm<MVE_v4s32, shr_imm32> {
+    let Inst{21} = 0b1;
+  }
+
+  def MVE_VRSHR_immu32 : MVE_VRSHR_imm<MVE_v4u32, shr_imm32> {
+    let Inst{21} = 0b1;
+  }
 }
 
-def MVE_VRSHR_immu8 : MVE_VRSHR_imm<"u8", (ins shr_imm8:$imm)> {
-  let Inst{28} = 0b1;
-  let Inst{21-19} = 0b001;
+multiclass MVE_shift_imm_patterns<MVE_shift_with_imm inst> {
+  def : Pat<(inst.VTI.Vec !con((inst.unpred_int (inst.VTI.Vec MQPR:$src),
+                                                inst.immediateType:$imm),
+                               inst.unsignedFlag)),
+            (inst.VTI.Vec (inst (inst.VTI.Vec MQPR:$src),
+                                inst.immediateType:$imm))>;
+
+  def : Pat<(inst.VTI.Vec !con((inst.pred_int (inst.VTI.Vec MQPR:$src),
+                                              inst.immediateType:$imm),
+                               inst.unsignedFlag,
+                               (? (inst.VTI.Pred VCCR:$mask),
+                                  (inst.VTI.Vec MQPR:$inactive)))),
+            (inst.VTI.Vec (inst (inst.VTI.Vec MQPR:$src),
+                                inst.immediateType:$imm,
+                                ARMVCCThen, (inst.VTI.Pred VCCR:$mask),
+                                (inst.VTI.Vec MQPR:$inactive)))>;
 }
 
-def MVE_VRSHR_imms16 : MVE_VRSHR_imm<"s16", (ins shr_imm16:$imm)> {
-  let Inst{28} = 0b0;
-  let Inst{21-20} = 0b01;
-}
-
-def MVE_VRSHR_immu16 : MVE_VRSHR_imm<"u16", (ins shr_imm16:$imm)> {
-  let Inst{28} = 0b1;
-  let Inst{21-20} = 0b01;
-}
-
-def MVE_VRSHR_imms32 : MVE_VRSHR_imm<"s32", (ins shr_imm32:$imm)> {
-  let Inst{28} = 0b0;
-  let Inst{21} = 0b1;
-}
-
-def MVE_VRSHR_immu32 : MVE_VRSHR_imm<"u32", (ins shr_imm32:$imm)> {
-  let Inst{28} = 0b1;
-  let Inst{21} = 0b1;
-}
+defm : MVE_shift_imm_patterns<MVE_VQSHLimms8>;
+defm : MVE_shift_imm_patterns<MVE_VQSHLimmu8>;
+defm : MVE_shift_imm_patterns<MVE_VQSHLimms16>;
+defm : MVE_shift_imm_patterns<MVE_VQSHLimmu16>;
+defm : MVE_shift_imm_patterns<MVE_VQSHLimms32>;
+defm : MVE_shift_imm_patterns<MVE_VQSHLimmu32>;
+defm : MVE_shift_imm_patterns<MVE_VQSHLU_imms8>;
+defm : MVE_shift_imm_patterns<MVE_VQSHLU_imms16>;
+defm : MVE_shift_imm_patterns<MVE_VQSHLU_imms32>;
+defm : MVE_shift_imm_patterns<MVE_VRSHR_imms8>;
+defm : MVE_shift_imm_patterns<MVE_VRSHR_immu8>;
+defm : MVE_shift_imm_patterns<MVE_VRSHR_imms16>;
+defm : MVE_shift_imm_patterns<MVE_VRSHR_immu16>;
+defm : MVE_shift_imm_patterns<MVE_VRSHR_imms32>;
+defm : MVE_shift_imm_patterns<MVE_VRSHR_immu32>;
 
 class MVE_VSHR_imm<string suffix, dag imm>
   : MVE_shift_with_imm<"vshr", suffix, (outs MQPR:$Qd),
@@ -5240,7 +5394,6 @@ class MVE_VPT<string suffix, bits<2> size, dag iops, string asm, list<dag> patte
   let Inst{4} = 0b0;
 
   let Defs = [VPR];
-  let validForTailPredication = 1;
 }
 
 class MVE_VPTt1<string suffix, bits<2> size, dag iops>
@@ -5252,7 +5405,6 @@ class MVE_VPTt1<string suffix, bits<2> size, dag iops>
   let Inst{5} = Qm{3};
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = fc{1};
-  let validForTailPredication = 1;
 }
 
 class MVE_VPTt1i<string suffix, bits<2> size>
@@ -5354,7 +5506,6 @@ class MVE_VPTf<string suffix, bit size, dag iops, string asm, list<dag> pattern=
 
   let Defs = [VPR];
   let Predicates = [HasMVEFloat];
-  let validForTailPredication = 1;
 }
 
 class MVE_VPTft1<string suffix, bit size>

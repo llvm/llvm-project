@@ -121,6 +121,10 @@ EXTERN int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t Var,
 
 INLINE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
 
+INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
+  // AMDGCN doesn't need to sync threads in a warp
+}
+
 INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
   // we have protected the master warp from releasing from its barrier
   // due to a full workgroup barrier in the middle of a work function.
@@ -131,14 +135,6 @@ INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
 EXTERN void __kmpc_impl_threadfence(void);
 EXTERN void __kmpc_impl_threadfence_block(void);
 EXTERN void __kmpc_impl_threadfence_system(void);
-
-// Calls to the AMDGCN layer (assuming 1D layout)
-EXTERN uint64_t __ockl_get_local_size(uint32_t);
-EXTERN uint64_t __ockl_get_num_groups(uint32_t);
-INLINE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
-INLINE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
-INLINE int GetNumberOfBlocksInKernel() { return __ockl_get_num_groups(0); }
-INLINE int GetNumberOfThreadsInBlock() { return __ockl_get_local_size(0); }
 
 // DEVICE versions of part of libc
 extern "C" {

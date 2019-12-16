@@ -617,7 +617,7 @@ def setupSysPath():
         if not lldbPythonDir:
             print(
                 "Unable to load lldb extension module.  Possible reasons for this include:")
-            print("  1) LLDB was built with LLDB_DISABLE_PYTHON=1")
+            print("  1) LLDB was built with LLDB_ENABLE_PYTHON=0")
             print(
                 "  2) PYTHONPATH and PYTHONHOME are not set correctly.  PYTHONHOME should refer to")
             print(

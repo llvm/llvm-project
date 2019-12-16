@@ -139,6 +139,36 @@ entry:
   ret void
 }
 
+define void @test3_pgso(i8* nocapture %A, i8* nocapture %B) nounwind noredzone !prof !14 {
+; LINUX-LABEL: test3_pgso:
+; LINUX:       # %bb.0: # %entry
+; LINUX-NEXT:    movl $64, %edx
+; LINUX-NEXT:    jmp memcpy # TAILCALL
+;
+; DARWIN-LABEL: test3_pgso:
+; DARWIN:       ## %bb.0: ## %entry
+; DARWIN-NEXT:    movq 56(%rsi), %rax
+; DARWIN-NEXT:    movq %rax, 56(%rdi)
+; DARWIN-NEXT:    movq 48(%rsi), %rax
+; DARWIN-NEXT:    movq %rax, 48(%rdi)
+; DARWIN-NEXT:    movq 40(%rsi), %rax
+; DARWIN-NEXT:    movq %rax, 40(%rdi)
+; DARWIN-NEXT:    movq 32(%rsi), %rax
+; DARWIN-NEXT:    movq %rax, 32(%rdi)
+; DARWIN-NEXT:    movq 24(%rsi), %rax
+; DARWIN-NEXT:    movq %rax, 24(%rdi)
+; DARWIN-NEXT:    movq 16(%rsi), %rax
+; DARWIN-NEXT:    movq %rax, 16(%rdi)
+; DARWIN-NEXT:    movq (%rsi), %rax
+; DARWIN-NEXT:    movq 8(%rsi), %rcx
+; DARWIN-NEXT:    movq %rcx, 8(%rdi)
+; DARWIN-NEXT:    movq %rax, (%rdi)
+; DARWIN-NEXT:    retq
+entry:
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 64, i1 false)
+  ret void
+}
+
 define void @test3_minsize(i8* nocapture %A, i8* nocapture %B) nounwind minsize noredzone {
 ; DARWIN-LABEL: test3_minsize:
 ; DARWIN:       ## %bb.0:
@@ -506,3 +536,20 @@ define void @addrspace256(i8 addrspace(256)* %a, i8 addrspace(256)* %b) nounwind
   tail call void @llvm.memcpy.p256i8.p256i8.i64(i8 addrspace(256)* align 8 %a, i8 addrspace(256)* align 8 %b, i64 16, i1 false)
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

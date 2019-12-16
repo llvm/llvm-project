@@ -98,21 +98,19 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
 
 bool lldb_private::formatters::NSException_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  lldb::ValueObjectSP name_sp;
   lldb::ValueObjectSP reason_sp;
-  if (!ExtractFields(valobj, &name_sp, &reason_sp, nullptr, nullptr))
+  if (!ExtractFields(valobj, nullptr, &reason_sp, nullptr, nullptr))
     return false;
 
-  if (!name_sp || !reason_sp)
+  if (!reason_sp) {
+    stream.Printf("No reason");
     return false;
+  }
 
-  StreamString name_str_summary;
   StreamString reason_str_summary;
-  if (NSStringSummaryProvider(*name_sp, name_str_summary, options) &&
-      NSStringSummaryProvider(*reason_sp, reason_str_summary, options) &&
-      !name_str_summary.Empty() && !reason_str_summary.Empty()) {
-    stream.Printf("name: %s - reason: %s", name_str_summary.GetData(),
-                  reason_str_summary.GetData());
+  if (NSStringSummaryProvider(*reason_sp, reason_str_summary, options) &&
+      !reason_str_summary.Empty()) {
+    stream.Printf("%s", reason_str_summary.GetData());
     return true;
   } else
     return false;

@@ -36,6 +36,8 @@ namespace clang {
 /// external AST sources that also provide information for semantic
 /// analysis.
 class MultiplexExternalSemaSource : public ExternalSemaSource {
+  /// LLVM-style RTTI.
+  static char ID;
 
 private:
   SmallVector<ExternalSemaSource *, 2> Sources; // doesn't own them.
@@ -352,9 +354,13 @@ public:
   bool MaybeDiagnoseMissingCompleteType(SourceLocation Loc,
                                         QualType T) override;
 
-  // isa/cast/dyn_cast support
-  static bool classof(const MultiplexExternalSemaSource*) { return true; }
-  //static bool classof(const ExternalSemaSource*) { return true; }
+  /// LLVM-style RTTI.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || ExternalSemaSource::isA(ClassID);
+  }
+  static bool classof(const ExternalASTSource *S) { return S->isA(&ID); }
+  /// \}
 };
 
 } // end namespace clang

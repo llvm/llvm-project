@@ -55,6 +55,7 @@ fixedStack:
 body:             |
   bb.0:
     liveins: $lr, $w9
+    $lr = ORRXri $xzr, 1
     $x25 = ORRXri $xzr, 1
     $w9 = ORRWri $wzr, 1
     $w9 = ORRWri $wzr, 1

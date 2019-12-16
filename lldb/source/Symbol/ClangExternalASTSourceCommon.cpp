@@ -13,43 +13,9 @@
 
 using namespace lldb_private;
 
-typedef llvm::DenseMap<clang::ExternalASTSource *,
-                       ClangExternalASTSourceCommon *>
-    ASTSourceMap;
+char ClangExternalASTSourceCommon::ID;
 
-static ASTSourceMap &GetSourceMap(std::unique_lock<std::mutex> &guard) {
-  // Intentionally leaked to avoid problems with global destructors.
-  static ASTSourceMap *s_source_map = new ASTSourceMap;
-  static std::mutex s_mutex;
-  std::unique_lock<std::mutex> locked_guard(s_mutex);
-  guard.swap(locked_guard);
-  return *s_source_map;
-}
-
-ClangExternalASTSourceCommon *
-ClangExternalASTSourceCommon::Lookup(clang::ExternalASTSource *source) {
-  std::unique_lock<std::mutex> guard;
-  ASTSourceMap &source_map = GetSourceMap(guard);
-
-  ASTSourceMap::iterator iter = source_map.find(source);
-
-  if (iter != source_map.end()) {
-    return iter->second;
-  } else {
-    return nullptr;
-  }
-}
-
-ClangExternalASTSourceCommon::ClangExternalASTSourceCommon()
-    : clang::ExternalASTSource() {
-  std::unique_lock<std::mutex> guard;
-  GetSourceMap(guard)[this] = this;
-}
-
-ClangExternalASTSourceCommon::~ClangExternalASTSourceCommon() {
-  std::unique_lock<std::mutex> guard;
-  GetSourceMap(guard).erase(this);
-}
+ClangExternalASTSourceCommon::~ClangExternalASTSourceCommon() {}
 
 ClangASTMetadata *
 ClangExternalASTSourceCommon::GetMetadata(const clang::Decl *object) {

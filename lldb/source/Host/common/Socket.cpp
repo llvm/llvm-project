@@ -22,7 +22,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/WindowsError.h"
 
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
 #include "lldb/Host/posix/DomainSocket.h"
 
 #include <arpa/inet.h>
@@ -122,7 +122,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
         std::make_unique<UDPSocket>(true, child_processes_inherit);
     break;
   case ProtocolUnixDomain:
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
     socket_up =
         std::make_unique<DomainSocket>(true, child_processes_inherit);
 #else

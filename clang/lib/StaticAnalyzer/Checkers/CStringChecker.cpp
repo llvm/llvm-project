@@ -1706,13 +1706,12 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
           } else {
             if (appendK == ConcatFnKind::none) {
               // strlcpy returns strlen(src)
-              StateZeroSize = StateZeroSize->BindExpr(CE, LCtx, *strLengthNL);
-            } else if (dstStrLengthNL) {
+              StateZeroSize = StateZeroSize->BindExpr(CE, LCtx, strLength);
+            } else {
               // strlcat returns strlen(src) + strlen(dst)
-              SVal retSize = svalBuilder.evalBinOpNN(
-                  state, BO_Add, *strLengthNL, *dstStrLengthNL, sizeTy);
-              StateZeroSize =
-                  StateZeroSize->BindExpr(CE, LCtx, *(retSize.getAs<NonLoc>()));
+              SVal retSize = svalBuilder.evalBinOp(
+                  state, BO_Add, strLength, dstStrLength, sizeTy);
+              StateZeroSize = StateZeroSize->BindExpr(CE, LCtx, retSize);
             }
           }
           C.addTransition(StateZeroSize);

@@ -49,3 +49,14 @@ void BoolConversion() {
   // CHECK: store <4 x i128> zeroinitializer
   constexpr bigint4 cBigintsF = (bigint4)false;
 }
+
+typedef __attribute__((vector_size(8))) int gcc_int_2;
+gcc_int_2 FloatToIntConversion(gcc_int_2 Int2, float f) {
+  return Int2 + f;
+  // CHECK: %[[LOAD_INT:.+]] = load <2 x i32>
+  // CHECK: %[[LOAD:.+]] = load float, float*
+  // CHECK: %[[CONV:.+]] = fptosi float %[[LOAD]] to i32
+  // CHECK: %[[INSERT:.+]] = insertelement <2 x i32> undef, i32 %[[CONV]], i32 0
+  // CHECK: %[[SPLAT:.+]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> undef, <2 x i32> zeroinitializer
+  // CHECK: add <2 x i32> %[[LOAD_INT]], %[[SPLAT]]
+}

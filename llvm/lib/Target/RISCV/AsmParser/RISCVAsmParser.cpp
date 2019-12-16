@@ -1610,7 +1610,6 @@ bool RISCVAsmParser::parseDirectiveOption() {
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = compressInst(CInst, Inst, getSTI(), S.getContext());
-  CInst.setLoc(Inst.getLoc());
   S.EmitInstruction((Res ? CInst : Inst), getSTI());
 }
 

@@ -121,7 +121,7 @@ private:
     clang::DeclContext *lexical_decl_context;
   };
 
-  std::map<clang::Decl *, Backup> m_backups;
+  llvm::DenseMap<clang::Decl *, Backup> m_backups;
 
   void OverrideOne(clang::Decl *decl) {
     if (m_backups.find(decl) != m_backups.end()) {
@@ -228,10 +228,8 @@ namespace {
 /// imported while completing the original Decls).
 class CompleteTagDeclsScope : public ClangASTImporter::NewDeclListener {
   ClangASTImporter::ImporterDelegateSP m_delegate;
-  // FIXME: Investigate how many decls we usually have in these sets and
-  // see if we can use SmallPtrSet instead here.
-  std::set<NamedDecl *> m_decls_to_complete;
-  std::set<NamedDecl *> m_decls_already_completed;
+  llvm::SmallPtrSet<NamedDecl *, 32> m_decls_to_complete;
+  llvm::SmallPtrSet<NamedDecl *, 32> m_decls_already_completed;
   clang::ASTContext *m_dst_ctx;
   clang::ASTContext *m_src_ctx;
   ClangASTImporter &importer;
@@ -387,7 +385,7 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
     const clang::CXXRecordDecl *cxx_record_decl =
         qual_type->getAsCXXRecordDecl();
     if (cxx_record_decl) {
-      if (ResolveDeclOrigin(cxx_record_decl, nullptr, nullptr))
+      if (GetDeclOrigin(cxx_record_decl).Valid())
         return true;
     }
   } break;
@@ -396,7 +394,7 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
     clang::EnumDecl *enum_decl =
         llvm::cast<clang::EnumType>(qual_type)->getDecl();
     if (enum_decl) {
-      if (ResolveDeclOrigin(enum_decl, nullptr, nullptr))
+      if (GetDeclOrigin(enum_decl).Valid())
         return true;
     }
   } break;
@@ -411,7 +409,7 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
       // We currently can't complete objective C types through the newly added
       // ASTContext because it only supports TagDecl objects right now...
       if (class_interface_decl) {
-        if (ResolveDeclOrigin(class_interface_decl, nullptr, nullptr))
+        if (GetDeclOrigin(class_interface_decl).Valid())
           return true;
       }
     }
@@ -463,7 +461,7 @@ bool ClangASTImporter::Import(const CompilerType &type) {
     const clang::CXXRecordDecl *cxx_record_decl =
         qual_type->getAsCXXRecordDecl();
     if (cxx_record_decl) {
-      if (ResolveDeclOrigin(cxx_record_decl, nullptr, nullptr))
+      if (GetDeclOrigin(cxx_record_decl).Valid())
         return CompleteAndFetchChildren(qual_type);
     }
   } break;
@@ -472,7 +470,7 @@ bool ClangASTImporter::Import(const CompilerType &type) {
     clang::EnumDecl *enum_decl =
         llvm::cast<clang::EnumType>(qual_type)->getDecl();
     if (enum_decl) {
-      if (ResolveDeclOrigin(enum_decl, nullptr, nullptr))
+      if (GetDeclOrigin(enum_decl).Valid())
         return CompleteAndFetchChildren(qual_type);
     }
   } break;
@@ -487,7 +485,7 @@ bool ClangASTImporter::Import(const CompilerType &type) {
       // We currently can't complete objective C types through the newly added
       // ASTContext because it only supports TagDecl objects right now...
       if (class_interface_decl) {
-        if (ResolveDeclOrigin(class_interface_decl, nullptr, nullptr))
+        if (GetDeclOrigin(class_interface_decl).Valid())
           return CompleteAndFetchChildren(qual_type);
       }
     }

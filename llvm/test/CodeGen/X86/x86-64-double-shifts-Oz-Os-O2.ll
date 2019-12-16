@@ -50,6 +50,19 @@ entry:
   ret i64 %or
 }
 
+define i64 @_Z8lshift11mm_pgso(i64 %a, i64 %b) !prof !14 {
+; CHECK-LABEL: _Z8lshift11mm_pgso:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shldq $11, %rsi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %shl = shl i64 %a, 11
+  %shr = lshr i64 %b, 53
+  %or = or i64 %shr, %shl
+  ret i64 %or
+}
+
 attributes #1 = { nounwind optsize readnone uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 ; clang -O2 -c test2.cpp -emit-llvm -S
@@ -78,3 +91,19 @@ entry:
 
 attributes #2= { nounwind readnone uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

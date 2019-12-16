@@ -138,18 +138,16 @@ static void collectLocStats(uint64_t BytesCovered, uint64_t BytesInScope,
                             std::vector<unsigned> &VarLocStats, bool IsParam,
                             bool IsLocalVar) {
   auto getCoverageBucket = [BytesCovered, BytesInScope]() -> unsigned {
-    unsigned LocBucket = 100 * (double)BytesCovered / BytesInScope;
-    if (LocBucket == 0) {
-      // No debug location at all for the variable.
+    // No debug location at all for the variable.
+    if (BytesCovered == 0)
       return 0;
-    } else if (LocBucket == 100 || BytesCovered > BytesInScope) {
-      // Fully covered variable within its scope.
+    // Fully covered variable within its scope.
+    if (BytesCovered >= BytesInScope)
       return NumOfCoverageCategories - 1;
-    } else {
-      // Get covered range (e.g. 20%-29%).
-      LocBucket /= 10;
-      return LocBucket + 1;
-    }
+    // Get covered range (e.g. 20%-29%).
+    unsigned LocBucket = 100 * (double)BytesCovered / BytesInScope;
+    LocBucket /= 10;
+    return LocBucket + 1;
   };
 
   unsigned CoverageBucket = getCoverageBucket();
@@ -430,16 +428,16 @@ static void printLocationStats(raw_ostream &OS,
      << LocationStats[0];
   LLVM_DEBUG(llvm::dbgs() << Key << " with 0% of its scope covered: "
                           << LocationStats[0] << '\n');
-  OS << ",\"" << Key << " with 1-9% of its scope covered\":"
+  OS << ",\"" << Key << " with (0%,10%) of its scope covered\":"
      << LocationStats[1];
-  LLVM_DEBUG(llvm::dbgs() << Key << " with 1-9% of its scope covered: "
+  LLVM_DEBUG(llvm::dbgs() << Key << " with (0%,10%) of its scope covered: "
                           << LocationStats[1] << '\n');
   for (unsigned i = 2; i < NumOfCoverageCategories - 1; ++i) {
-    OS << ",\"" << Key << " with " << (i - 1) * 10 << "-" << i * 10 - 1
-       << "% of its scope covered\":" << LocationStats[i];
+    OS << ",\"" << Key << " with [" << (i - 1) * 10 << "%," << i * 10
+       << "%) of its scope covered\":" << LocationStats[i];
     LLVM_DEBUG(llvm::dbgs()
-               << Key << " with " << (i - 1) * 10 << "-" << i * 10 - 1
-               << "% of its scope covered: " << LocationStats[i]);
+               << Key << " with [" << (i - 1) * 10 << "%," << i * 10
+               << "%) of its scope covered: " << LocationStats[i]);
   }
   OS << ",\"" << Key << " with 100% of its scope covered\":"
      << LocationStats[NumOfCoverageCategories - 1];

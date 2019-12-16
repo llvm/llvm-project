@@ -55,7 +55,7 @@ class LLDBTest(TestFormat):
         if litConfig.noExecute:
             return lit.Test.PASS, ''
 
-        if test.config.lldb_disable_python:
+        if not test.config.lldb_enable_python:
             return (lit.Test.UNSUPPORTED, 'Python module disabled')
 
         if test.config.unsupported:

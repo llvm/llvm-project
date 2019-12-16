@@ -14466,7 +14466,7 @@ vector must have <M> * <N> elements.
 
 
 '``llvm.matrix.columnwise.load.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""

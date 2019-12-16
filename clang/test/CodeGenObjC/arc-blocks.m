@@ -730,5 +730,15 @@ void test20(const id x) {
   test20_callee(^{ (void)x; });
 }
 
+// CHECK-LABEL: define void @test21(
+// CHECK: %[[V6:.*]] = call i8* @llvm.objc.retainBlock(
+// CHECK: %[[V7:.*]] = bitcast i8* %[[V6]] to void ()*
+// CHECK: call void (i32, ...) @test21_callee(i32 1, void ()* %[[V7]]),
+
+void test21_callee(int n, ...);
+void test21(id x) {
+  test21_callee(1, ^{ (void)x; });
+}
+
 // CHECK: attributes [[NUW]] = { nounwind }
 // CHECK-UNOPT: attributes [[NUW]] = { nounwind }

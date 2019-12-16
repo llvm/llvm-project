@@ -10,7 +10,6 @@
 #include "CommandObjectApropos.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Utility/Args.h"
 

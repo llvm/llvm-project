@@ -1,3 +1,3 @@
 add_subdirectory(LLJITDumpObjects)
 add_subdirectory(LLJITWithObjectCache)
-add_subdirectory(LLJITWithJITLink)
+add_subdirectory(LLJITWithCustomObjectLinkingLayer)

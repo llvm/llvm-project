@@ -670,7 +670,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       if (CI && !getVectorIntrinsicIDForCall(CI, TLI) &&
           !isa<DbgInfoIntrinsic>(CI) &&
           !(CI->getCalledFunction() && TLI &&
-            !VFDatabase::getMappings(*CI).empty())) {
+            TLI->isFunctionVectorizable(CI->getCalledFunction()->getName()))) {
         // If the call is a recognized math libary call, it is likely that
         // we can vectorize it given loosened floating-point constraints.
         LibFunc Func;
@@ -685,8 +685,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // but it's hard to provide meaningful yet generic advice.
           // Also, should this be guarded by allowExtraAnalysis() and/or be part
           // of the returned info from isFunctionVectorizable()?
-          reportVectorizationFailure(
-              "Found a non-intrinsic callsite",
+          reportVectorizationFailure("Found a non-intrinsic callsite",
               "library call cannot be vectorized. "
               "Try compiling with -fno-math-errno, -ffast-math, "
               "or similar flags",

@@ -697,16 +697,16 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
                                                 bool AllowNonInbounds = false) {
   assert(V->getType()->isPtrOrPtrVectorTy());
 
-  Type *IntPtrTy = DL.getIntPtrType(V->getType())->getScalarType();
-  APInt Offset = APInt::getNullValue(IntPtrTy->getIntegerBitWidth());
+  Type *IntIdxTy = DL.getIndexType(V->getType())->getScalarType();
+  APInt Offset = APInt::getNullValue(IntIdxTy->getIntegerBitWidth());
 
   V = V->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds);
   // As that strip may trace through `addrspacecast`, need to sext or trunc
   // the offset calculated.
-  IntPtrTy = DL.getIntPtrType(V->getType())->getScalarType();
-  Offset = Offset.sextOrTrunc(IntPtrTy->getIntegerBitWidth());
+  IntIdxTy = DL.getIndexType(V->getType())->getScalarType();
+  Offset = Offset.sextOrTrunc(IntIdxTy->getIntegerBitWidth());
 
-  Constant *OffsetIntPtr = ConstantInt::get(IntPtrTy, Offset);
+  Constant *OffsetIntPtr = ConstantInt::get(IntIdxTy, Offset);
   if (V->getType()->isVectorTy())
     return ConstantVector::getSplat(V->getType()->getVectorNumElements(),
                                     OffsetIntPtr);
@@ -4067,7 +4067,7 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
       // The following transforms are only safe if the ptrtoint cast
       // doesn't truncate the pointers.
       if (Ops[1]->getType()->getScalarSizeInBits() ==
-          Q.DL.getIndexSizeInBits(AS)) {
+          Q.DL.getPointerSizeInBits(AS)) {
         auto PtrToIntOrZero = [GEPTy](Value *P) -> Value * {
           if (match(P, m_Zero()))
             return Constant::getNullValue(GEPTy);
@@ -4450,6 +4450,30 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   if (Op0Const && !Op1Const) {
     std::swap(Op0, Op1);
     ShuffleVectorInst::commuteShuffleMask(Indices, InVecNumElts);
+  }
+
+  // A splat of an inserted scalar constant becomes a vector constant:
+  // shuf (inselt ?, C, IndexC), undef, <IndexC, IndexC...> --> <C, C...>
+  // NOTE: We may have commuted above, so analyze the updated Indices, not the
+  //       original mask constant.
+  Constant *C;
+  ConstantInt *IndexC;
+  if (match(Op0, m_InsertElement(m_Value(), m_Constant(C),
+                                 m_ConstantInt(IndexC)))) {
+    // Match a splat shuffle mask of the insert index allowing undef elements.
+    int InsertIndex = IndexC->getZExtValue();
+    if (all_of(Indices, [InsertIndex](int MaskElt) {
+          return MaskElt == InsertIndex || MaskElt == -1;
+        })) {
+      assert(isa<UndefValue>(Op1) && "Expected undef operand 1 for splat");
+
+      // Shuffle mask undefs become undefined constant result elements.
+      SmallVector<Constant *, 16> VecC(MaskNumElts, C);
+      for (unsigned i = 0; i != MaskNumElts; ++i)
+        if (Indices[i] == -1)
+          VecC[i] = UndefValue::get(C->getType());
+      return ConstantVector::get(VecC);
+    }
   }
 
   // A shuffle of a splat is always the splat itself. Legal if the shuffle's

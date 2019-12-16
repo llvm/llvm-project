@@ -22,6 +22,13 @@ void Flags::setDefaults() {
 #define SCUDO_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
 #include "flags.inc"
 #undef SCUDO_FLAG
+
+#ifdef GWP_ASAN_HOOKS
+#define GWP_ASAN_OPTION(Type, Name, DefaultValue, Description)                 \
+  GWP_ASAN_##Name = DefaultValue;
+#include "gwp_asan/options.inc"
+#undef GWP_ASAN_OPTION
+#endif // GWP_ASAN_HOOKS
 }
 
 void registerFlags(FlagParser *Parser, Flags *F) {
@@ -30,6 +37,14 @@ void registerFlags(FlagParser *Parser, Flags *F) {
                        reinterpret_cast<void *>(&F->Name));
 #include "flags.inc"
 #undef SCUDO_FLAG
+
+#ifdef GWP_ASAN_HOOKS
+#define GWP_ASAN_OPTION(Type, Name, DefaultValue, Description)                 \
+  Parser->registerFlag("GWP_ASAN_"#Name, Description, FlagType::FT_##Type,     \
+                       reinterpret_cast<void *>(&F->GWP_ASAN_##Name));
+#include "gwp_asan/options.inc"
+#undef GWP_ASAN_OPTION
+#endif // GWP_ASAN_HOOKS
 }
 
 static const char *getCompileDefinitionScudoDefaultOptions() {

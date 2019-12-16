@@ -7,15 +7,10 @@
 //===----------------------------------------------------------------------===//
 #include "CommandObjectFrame.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
-#include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -24,23 +19,16 @@
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Interpreter/OptionGroupVariable.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Function.h"
-#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/Timer.h"
 
 #include <memory>
 #include <string>
@@ -852,7 +840,7 @@ Process 1234 stopped
 
 bool CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
                                                 CommandReturnObject &result) {
-#ifndef LLDB_DISABLE_PYTHON
+#if LLDB_ENABLE_PYTHON
   if (m_options.m_class_name.empty()) {
     result.AppendErrorWithFormat(
         "%s needs a Python class name (-l argument).\n", m_cmd_name.c_str());
@@ -1106,7 +1094,7 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
                  CommandObjectSP(new CommandObjectFrameSelect(interpreter)));
   LoadSubCommand("variable",
                  CommandObjectSP(new CommandObjectFrameVariable(interpreter)));
-#ifndef LLDB_DISABLE_PYTHON
+#if LLDB_ENABLE_PYTHON
   LoadSubCommand("recognizer", CommandObjectSP(new CommandObjectFrameRecognizer(
                                    interpreter)));
 #endif

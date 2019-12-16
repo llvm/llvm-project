@@ -140,22 +140,13 @@ public:
 };
 } // namespace
 
-bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
-  // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
-    return false;
-  LLVM_DEBUG(dbgs() << "Legalize Machine IR for: " << MF.getName() << '\n');
-  init(MF);
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
-
-  const size_t NumBlocks = MF.size();
+Legalizer::MFResult
+Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
+                                   ArrayRef<GISelChangeObserver *> AuxObservers,
+                                   MachineIRBuilder &MIRBuilder) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // Populate Insts
+  // Populate worklists.
   InstListTy InstList;
   ArtifactListTy ArtifactList;
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
@@ -178,48 +169,33 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   }
   ArtifactList.finalize();
   InstList.finalize();
-  std::unique_ptr<MachineIRBuilder> MIRBuilder;
-  GISelCSEInfo *CSEInfo = nullptr;
-  bool EnableCSE = EnableCSEInLegalizer.getNumOccurrences()
-                       ? EnableCSEInLegalizer
-                       : TPC.isGISelCSEEnabled();
 
-  if (EnableCSE) {
-    MIRBuilder = std::make_unique<CSEMIRBuilder>();
-    CSEInfo = &Wrapper.get(TPC.getCSEConfig());
-    MIRBuilder->setCSEInfo(CSEInfo);
-  } else
-    MIRBuilder = std::make_unique<MachineIRBuilder>();
-  // This observer keeps the worklist updated.
+  // This observer keeps the worklists updated.
   LegalizerWorkListManager WorkListObserver(InstList, ArtifactList);
-  // We want both WorkListObserver as well as CSEInfo to observe all changes.
-  // Use the wrapper observer.
+  // We want both WorkListObserver as well as all the auxiliary observers (e.g.
+  // CSEInfo) to observe all changes. Use the wrapper observer.
   GISelObserverWrapper WrapperObserver(&WorkListObserver);
-  if (EnableCSE && CSEInfo)
-    WrapperObserver.addObserver(CSEInfo);
+  for (GISelChangeObserver *Observer : AuxObservers)
+    WrapperObserver.addObserver(Observer);
+
   // Now install the observer as the delegate to MF.
   // This will keep all the observers notified about new insertions/deletions.
   RAIIDelegateInstaller DelInstall(MF, &WrapperObserver);
-  LegalizerHelper Helper(MF, WrapperObserver, *MIRBuilder.get());
-  const LegalizerInfo &LInfo(Helper.getLegalizerInfo());
-  LegalizationArtifactCombiner ArtCombiner(*MIRBuilder.get(), MF.getRegInfo(),
-                                           LInfo);
+  LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder);
+  LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI);
   auto RemoveDeadInstFromLists = [&WrapperObserver](MachineInstr *DeadMI) {
     WrapperObserver.erasingInstr(*DeadMI);
-  };
-  auto stopLegalizing = [&](MachineInstr &MI) {
-    Helper.MIRBuilder.stopObservingChanges();
-    reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
-                       "unable to legalize instruction", MI);
   };
   bool Changed = false;
   SmallVector<MachineInstr *, 128> RetryList;
   do {
+    LLVM_DEBUG(dbgs() << "=== New Iteration ===\n");
     assert(RetryList.empty() && "Expected no instructions in RetryList");
     unsigned NumArtifacts = ArtifactList.size();
     while (!InstList.empty()) {
       MachineInstr &MI = *InstList.pop_back_val();
-      assert(isPreISelGenericOpcode(MI.getOpcode()) && "Expecting generic opcode");
+      assert(isPreISelGenericOpcode(MI.getOpcode()) &&
+             "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
         LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
         MI.eraseFromParentAndMarkDBGValuesForRemoval();
@@ -235,11 +211,17 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
         // legalizing InstList may generate artifacts that allow
         // ArtifactCombiner to combine away them.
         if (isArtifact(MI)) {
+          LLVM_DEBUG(dbgs() << ".. Not legalized, moving to artifacts retry\n");
+          assert(NumArtifacts == 0 &&
+                 "Artifacts are only expected in instruction list starting the "
+                 "second iteration, but each iteration starting second must "
+                 "start with an empty artifacts list");
+          (void)NumArtifacts;
           RetryList.push_back(&MI);
           continue;
         }
-        stopLegalizing(MI);
-        return false;
+        Helper.MIRBuilder.stopObservingChanges();
+        return {Changed, &MI};
       }
       WorkListObserver.printNewInstrs();
       Changed |= Res == LegalizerHelper::Legalized;
@@ -247,18 +229,19 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
     // Try to combine the instructions in RetryList again if there
     // are new artifacts. If not, stop legalizing.
     if (!RetryList.empty()) {
-      if (ArtifactList.size() > NumArtifacts) {
+      if (!ArtifactList.empty()) {
         while (!RetryList.empty())
           ArtifactList.insert(RetryList.pop_back_val());
       } else {
-        MachineInstr *MI = *RetryList.begin();
-        stopLegalizing(*MI);
-        return false;
+        LLVM_DEBUG(dbgs() << "No new artifacts created, not retrying!\n");
+        Helper.MIRBuilder.stopObservingChanges();
+        return {Changed, RetryList.front()};
       }
     }
     while (!ArtifactList.empty()) {
       MachineInstr &MI = *ArtifactList.pop_back_val();
-      assert(isPreISelGenericOpcode(MI.getOpcode()) && "Expecting generic opcode");
+      assert(isPreISelGenericOpcode(MI.getOpcode()) &&
+             "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
         LLVM_DEBUG(dbgs() << MI << "Is dead\n");
         RemoveDeadInstFromLists(&MI);
@@ -266,6 +249,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
       SmallVector<MachineInstr *, 4> DeadInstructions;
+      LLVM_DEBUG(dbgs() << "Trying to combine: " << MI);
       if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions,
                                             WrapperObserver)) {
         WorkListObserver.printNewInstrs();
@@ -280,13 +264,58 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       // If this was not an artifact (that could be combined away), this might
       // need special handling. Add it to InstList, so when it's processed
       // there, it has to be legal or specially handled.
-      else
+      else {
+        LLVM_DEBUG(dbgs() << ".. Not combined, moving to instructions list\n");
         InstList.insert(&MI);
+      }
     }
   } while (!InstList.empty());
 
+  return {Changed, /*FailedOn*/ nullptr};
+}
+
+bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
+  // If the ISel pipeline failed, do not bother running that pass.
+  if (MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::FailedISel))
+    return false;
+  LLVM_DEBUG(dbgs() << "Legalize Machine IR for: " << MF.getName() << '\n');
+  init(MF);
+  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
+
+  const size_t NumBlocks = MF.size();
+
+  std::unique_ptr<MachineIRBuilder> MIRBuilder;
+  GISelCSEInfo *CSEInfo = nullptr;
+  bool EnableCSE = EnableCSEInLegalizer.getNumOccurrences()
+                       ? EnableCSEInLegalizer
+                       : TPC.isGISelCSEEnabled();
+  if (EnableCSE) {
+    MIRBuilder = std::make_unique<CSEMIRBuilder>();
+    CSEInfo = &Wrapper.get(TPC.getCSEConfig());
+    MIRBuilder->setCSEInfo(CSEInfo);
+  } else
+    MIRBuilder = std::make_unique<MachineIRBuilder>();
+
+  SmallVector<GISelChangeObserver *, 1> AuxObservers;
+  if (EnableCSE && CSEInfo) {
+    // We want CSEInfo in addition to WorkListObserver to observe all changes.
+    AuxObservers.push_back(CSEInfo);
+  }
+
+  const LegalizerInfo &LI = *MF.getSubtarget().getLegalizerInfo();
+  MFResult Result = legalizeMachineFunction(MF, LI, AuxObservers, *MIRBuilder);
+
+  if (Result.FailedOn) {
+    reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
+                       "unable to legalize instruction", *Result.FailedOn);
+    return false;
+  }
   // For now don't support if new blocks are inserted - we would need to fix the
-  // outerloop for that.
+  // outer loop for that.
   if (MF.size() != NumBlocks) {
     MachineOptimizationRemarkMissed R("gisel-legalize", "GISelFailure",
                                       MF.getFunction().getSubprogram(),
@@ -295,6 +324,5 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
     reportGISelFailure(MF, TPC, MORE, R);
     return false;
   }
-
-  return Changed;
+  return Result.Changed;
 }

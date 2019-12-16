@@ -1,0 +1,72 @@
+# RUN: llc -run-pass=if-converter %s -o - | FileCheck %s
+--- |
+  target triple = "thumbv8m.main-arm-none-eabi"
+
+  define hidden void @foo(void ()* nocapture %baz) local_unnamed_addr #0 {
+  entry:
+    %call = call i32 @bar() #0
+    %tobool = icmp eq i32 %call, 0
+    br i1 %tobool, label %land.end, label %land.rhs
+
+  land.rhs:                                         ; preds = %entry
+    %call1 = call i32 @bar() #0
+    br label %land.end
+
+  land.end:                                         ; preds = %land.rhs, %entry
+    call void %baz() #0
+    ret void
+  }
+  declare dso_local i32 @bar() local_unnamed_addr #0
+
+  attributes #0 = { nounwind }
+
+...
+---
+name:            foo
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+frameInfo:
+  stackSize:       8
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '$lr',
+      callee-saved-restored: false }
+  - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '$r4' }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r4, $lr
+
+    $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r4, killed $lr
+    $r4 = tMOVr $r0, 14, $noreg
+    tBL 14, $noreg, @bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
+    t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
+    t2Bcc %bb.2, 0, killed $cpsr
+
+  bb.1.land.rhs:
+    liveins: $r4
+
+    tBL 14, $noreg, @bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $r0
+
+  bb.2.land.end:
+    liveins: $r4
+
+    $sp = t2STMDB_UPD $sp, 14, $noreg, $r4, killed $r5, killed $r6, killed $r7, killed $r8, killed $r9, killed $r10, killed $r11
+    $r4 = t2BICri $r4, 1, 14, $noreg, $noreg
+    $sp = tSUBspi $sp, 34, 14, $noreg
+    VLSTM $sp, 14, $noreg
+    tBLXNSr 14, $noreg, killed $r4, csr_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    VLLDM $sp, 14, $noreg
+    $sp = tADDspi $sp, 34, 14, $noreg
+    $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11
+    $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc
+
+...
+# Just check there is no ICE (in debug builds)
+# CHECK: name: foo
