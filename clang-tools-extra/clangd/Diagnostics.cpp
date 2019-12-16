@@ -232,7 +232,7 @@ std::string capitalize(std::string Message) {
 }
 
 /// Returns a message sent to LSP for the main diagnostic in \p D.
-/// This message may include notes, if they're not emited in some other way.
+/// This message may include notes, if they're not emitted in some other way.
 /// Example output:
 ///
 ///     no matching function for call to 'foo'
