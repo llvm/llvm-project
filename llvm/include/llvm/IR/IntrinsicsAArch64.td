@@ -998,6 +998,17 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [LLVMSubdivide2VectorType<0>,
                  llvm_anyvector_ty],
                 [IntrNoMem]>;
+  class SVE2_2VectorArg_Narrowing_Intrinsic
+      : Intrinsic<
+            [LLVMSubdivide2VectorType<0>],
+            [llvm_anyvector_ty, LLVMMatchType<0>],
+            [IntrNoMem]>;
+
+  class SVE2_Merged2VectorArg_Narrowing_Intrinsic
+      : Intrinsic<
+            [LLVMSubdivide2VectorType<0>],
+            [LLVMSubdivide2VectorType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
+            [IntrNoMem]>;
 
   // NOTE: There is no relationship between these intrinsics beyond an attempt
   // to reuse currently identical class definitions.
@@ -1504,4 +1515,19 @@ def int_aarch64_sve_sqxtunb : SVE2_1VectorArg_Narrowing_Intrinsic;
 def int_aarch64_sve_sqxtunt : SVE2_Merged1VectorArg_Narrowing_Intrinsic;
 def int_aarch64_sve_uqxtnb  : SVE2_1VectorArg_Narrowing_Intrinsic;
 def int_aarch64_sve_uqxtnt  : SVE2_Merged1VectorArg_Narrowing_Intrinsic;
+
+//
+// SVE2 - Binary narrowing DSP operations
+//
+def int_aarch64_sve_addhnb    : SVE2_2VectorArg_Narrowing_Intrinsic;
+def int_aarch64_sve_addhnt    : SVE2_Merged2VectorArg_Narrowing_Intrinsic;
+
+def int_aarch64_sve_raddhnb   : SVE2_2VectorArg_Narrowing_Intrinsic;
+def int_aarch64_sve_raddhnt   : SVE2_Merged2VectorArg_Narrowing_Intrinsic;
+
+def int_aarch64_sve_subhnb    : SVE2_2VectorArg_Narrowing_Intrinsic;
+def int_aarch64_sve_subhnt    : SVE2_Merged2VectorArg_Narrowing_Intrinsic;
+
+def int_aarch64_sve_rsubhnb   : SVE2_2VectorArg_Narrowing_Intrinsic;
+def int_aarch64_sve_rsubhnt   : SVE2_Merged2VectorArg_Narrowing_Intrinsic;
 }

@@ -1446,16 +1446,16 @@ let Predicates = [HasSVE2] in {
   defm UQRSHRNT_ZZI  : sve2_int_bin_shift_imm_right_narrow_top<0b111, "uqrshrnt">;
 
   // SVE2 integer add/subtract narrow high part (bottom)
-  defm ADDHNB_ZZZ  : sve2_int_addsub_narrow_high_bottom<0b00, "addhnb">;
-  defm RADDHNB_ZZZ : sve2_int_addsub_narrow_high_bottom<0b01, "raddhnb">;
-  defm SUBHNB_ZZZ  : sve2_int_addsub_narrow_high_bottom<0b10, "subhnb">;
-  defm RSUBHNB_ZZZ : sve2_int_addsub_narrow_high_bottom<0b11, "rsubhnb">;
+  defm ADDHNB_ZZZ  : sve2_int_addsub_narrow_high_bottom<0b00, "addhnb",  int_aarch64_sve_addhnb>;
+  defm RADDHNB_ZZZ : sve2_int_addsub_narrow_high_bottom<0b01, "raddhnb", int_aarch64_sve_raddhnb>;
+  defm SUBHNB_ZZZ  : sve2_int_addsub_narrow_high_bottom<0b10, "subhnb",  int_aarch64_sve_subhnb>;
+  defm RSUBHNB_ZZZ : sve2_int_addsub_narrow_high_bottom<0b11, "rsubhnb", int_aarch64_sve_rsubhnb>;
 
   // SVE2 integer add/subtract narrow high part (top)
-  defm ADDHNT_ZZZ  : sve2_int_addsub_narrow_high_top<0b00, "addhnt">;
-  defm RADDHNT_ZZZ : sve2_int_addsub_narrow_high_top<0b01, "raddhnt">;
-  defm SUBHNT_ZZZ  : sve2_int_addsub_narrow_high_top<0b10, "subhnt">;
-  defm RSUBHNT_ZZZ : sve2_int_addsub_narrow_high_top<0b11, "rsubhnt">;
+  defm ADDHNT_ZZZ  : sve2_int_addsub_narrow_high_top<0b00, "addhnt",  int_aarch64_sve_addhnt>;
+  defm RADDHNT_ZZZ : sve2_int_addsub_narrow_high_top<0b01, "raddhnt", int_aarch64_sve_raddhnt>;
+  defm SUBHNT_ZZZ  : sve2_int_addsub_narrow_high_top<0b10, "subhnt",  int_aarch64_sve_subhnt>;
+  defm RSUBHNT_ZZZ : sve2_int_addsub_narrow_high_top<0b11, "rsubhnt", int_aarch64_sve_rsubhnt>;
 
   // SVE2 saturating extract narrow (bottom)
   defm SQXTNB_ZZ  : sve2_int_sat_extract_narrow_bottom<0b00, "sqxtnb",  int_aarch64_sve_sqxtnb>;
