@@ -371,8 +371,7 @@ public:
   ///
   /// \return
   ///     True if lookup succeeded; false otherwise.
-  bool ResolveDeclOrigin(const clang::Decl *decl, clang::Decl **original_decl,
-                         clang::ASTContext **original_ctx);
+  ClangASTImporter::DeclOrigin GetDeclOrigin(const clang::Decl *decl);
 
   /// Returns m_merger_up.  Only call this if the target is configured to use
   /// modern lookup,

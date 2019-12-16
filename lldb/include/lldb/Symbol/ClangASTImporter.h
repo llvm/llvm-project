@@ -96,19 +96,6 @@ public:
 
   bool RequireCompleteType(clang::QualType type);
 
-  bool ResolveDeclOrigin(const clang::Decl *decl, clang::Decl **original_decl,
-                         clang::ASTContext **original_ctx) {
-    DeclOrigin origin = GetDeclOrigin(decl);
-
-    if (original_decl)
-      *original_decl = origin.decl;
-
-    if (original_ctx)
-      *original_ctx = origin.ctx;
-
-    return origin.Valid();
-  }
-
   void SetDeclOrigin(const clang::Decl *decl, clang::Decl *original_decl);
 
   ClangASTMetadata *GetDeclMetadata(const clang::Decl *decl);
