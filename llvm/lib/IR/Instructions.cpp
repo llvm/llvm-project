@@ -1342,7 +1342,11 @@ void LoadInst::setAlignment(MaybeAlign Align) {
          "Alignment is greater than MaximumAlignment!");
   setInstructionSubclassData((getSubclassDataFromInstruction() & ~(31 << 1)) |
                              (encode(Align) << 1));
-  assert(getAlign() == Align && "Alignment representation error!");
+  if (Align)
+    assert(getAlignment() == Align->value() &&
+           "Alignment representation error!");
+  else
+    assert(getAlignment() == 0 && "Alignment representation error!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1412,12 +1416,16 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, MaybeAlign Align,
   AssertOK();
 }
 
-void StoreInst::setAlignment(MaybeAlign Alignment) {
-  assert((!Alignment || *Alignment <= MaximumAlignment) &&
+void StoreInst::setAlignment(MaybeAlign Align) {
+  assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   setInstructionSubclassData((getSubclassDataFromInstruction() & ~(31 << 1)) |
-                             (encode(Alignment) << 1));
-  assert(getAlign() == Alignment && "Alignment representation error!");
+                             (encode(Align) << 1));
+  if (Align)
+    assert(getAlignment() == Align->value() &&
+           "Alignment representation error!");
+  else
+    assert(getAlignment() == 0 && "Alignment representation error!");
 }
 
 //===----------------------------------------------------------------------===//

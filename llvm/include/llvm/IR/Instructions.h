@@ -239,20 +239,14 @@ public:
   }
 
   /// Return the alignment of the access that is being performed.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getAlign() instead.
   unsigned getAlignment() const {
-    if (const auto MA = getAlign())
+    if (const auto MA =
+            decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31))
       return MA->value();
     return 0;
   }
 
-  /// Return the alignment of the access that is being performed.
-  MaybeAlign getAlign() const {
-    return decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31);
-  }
-
-  void setAlignment(MaybeAlign Alignment);
+  void setAlignment(MaybeAlign Align);
 
   /// Returns the ordering constraint of this load instruction.
   AtomicOrdering getOrdering() const {
@@ -371,19 +365,14 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   /// Return the alignment of the access that is being performed
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getAlign() instead.
   unsigned getAlignment() const {
-    if (const auto MA = getAlign())
+    if (const auto MA =
+            decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31))
       return MA->value();
     return 0;
   }
 
-  MaybeAlign getAlign() const {
-    return decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31);
-  }
-
-  void setAlignment(MaybeAlign Alignment);
+  void setAlignment(MaybeAlign Align);
 
   /// Returns the ordering constraint of this store instruction.
   AtomicOrdering getOrdering() const {
