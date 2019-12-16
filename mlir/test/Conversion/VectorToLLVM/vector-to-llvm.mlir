@@ -280,6 +280,16 @@ func @shuffle_2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf32> {
 //       CHECK:   %[[i3:.*]] = llvm.insertvalue %[[e3]], %[[i2]][2] : !llvm<"[3 x <4 x float>]">
 //       CHECK:   llvm.return %[[i3]] : !llvm<"[3 x <4 x float>]">
 
+func @extract_element(%arg0: vector<16xf32>) -> f32 {
+  %0 = constant 15 : index
+  %1 = vector.extractelement %arg0[%0 : index]: vector<16xf32>
+  return %1 : f32
+}
+// CHECK-LABEL: extract_element(%arg0: !llvm<"<16 x float>">)
+//       CHECK:   %[[c:.*]] = llvm.mlir.constant(15 : index) : !llvm.i64
+//       CHECK:   %[[x:.*]] = llvm.extractelement %arg0[%[[c]] : !llvm.i64] : !llvm<"<16 x float>">
+//       CHECK:   llvm.return %[[x]] : !llvm.float
+
 func @extract_element_from_vec_1d(%arg0: vector<16xf32>) -> f32 {
   %0 = vector.extract %arg0[15 : i32]: vector<16xf32>
   return %0 : f32
@@ -314,6 +324,16 @@ func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
 //       CHECK:   llvm.mlir.constant(0 : i32) : !llvm.i32
 //       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i32] : !llvm<"<16 x float>">
 //       CHECK:   llvm.return {{.*}} : !llvm.float
+
+func @insert_element(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
+  %0 = constant 3 : index
+  %1 = vector.insertelement %arg0, %arg1[%0 : index] : vector<4xf32>
+  return %1 : vector<4xf32>
+}
+// CHECK-LABEL: insert_element(%arg0: !llvm.float, %arg1: !llvm<"<4 x float>">)
+//       CHECK:   %[[c:.*]] = llvm.mlir.constant(3 : index) : !llvm.i64
+//       CHECK:   %[[x:.*]] = llvm.insertelement %arg0, %arg1[%[[c]] : !llvm.i64] : !llvm<"<4 x float>">
+//       CHECK:   llvm.return %[[x]] : !llvm<"<4 x float>">
 
 func @insert_element_into_vec_1d(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
   %0 = vector.insert %arg0, %arg1[3 : i32] : f32 into vector<4xf32>
