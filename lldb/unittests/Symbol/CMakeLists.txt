@@ -2,6 +2,7 @@ add_lldb_unittest(SymbolTests
   LocateSymbolFileTest.cpp
   PostfixExpressionTest.cpp
   TestClangASTContext.cpp
+  TestClangASTImporter.cpp
   TestDWARFCallFrameInfo.cpp
   TestType.cpp
   TestLineEntry.cpp
