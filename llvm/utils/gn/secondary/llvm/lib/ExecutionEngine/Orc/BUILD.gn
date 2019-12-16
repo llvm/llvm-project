@@ -6,6 +6,7 @@ static_library("Orc") {
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
     "//llvm/lib/Object",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
   ]
