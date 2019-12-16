@@ -78,6 +78,7 @@ struct NodeInfo {
   std::vector<Property> Properties;
   CreationRule Creator = nullptr;
   OverrideRule Override = nullptr;
+  ReadHelperRule ReadHelper = nullptr;
 };
 
 struct CasedTypeInfo {
@@ -99,14 +100,14 @@ public:
 		// Find all the properties.
 		for (Property property :
            records.getAllDerivedDefinitions(PropertyClassName)) {
-			ASTNode node = property.getClass();
+			HasProperties node = property.getClass();
 			NodeInfos[node].Properties.push_back(property);
 		}
 
     // Find all the creation rules.
     for (CreationRule creationRule :
            records.getAllDerivedDefinitions(CreationRuleClassName)) {
-      ASTNode node = creationRule.getClass();
+      HasProperties node = creationRule.getClass();
 
       auto &info = NodeInfos[node];
       if (info.Creator) {
@@ -120,7 +121,7 @@ public:
     // Find all the override rules.
     for (OverrideRule overrideRule :
            records.getAllDerivedDefinitions(OverrideRuleClassName)) {
-      ASTNode node = overrideRule.getClass();
+      HasProperties node = overrideRule.getClass();
 
       auto &info = NodeInfos[node];
       if (info.Override) {
@@ -129,6 +130,20 @@ public:
                           + "\"");
       }
       info.Override = overrideRule;
+    }
+
+    // Find all the write helper rules.
+    for (ReadHelperRule helperRule :
+           records.getAllDerivedDefinitions(ReadHelperRuleClassName)) {
+      HasProperties node = helperRule.getClass();
+
+      auto &info = NodeInfos[node];
+      if (info.ReadHelper) {
+        PrintFatalError(helperRule.getLoc(),
+                        "multiple write helper rules for \"" + node.getName()
+                          + "\"");
+      }
+      info.ReadHelper = helperRule;
     }
 
     // Find all the concrete property types.
@@ -425,6 +440,11 @@ void ASTPropsEmitter::emitPropertiedReaderWriterBody(HasProperties node,
                         + node.getName() + "\"");
 
     creationCode = nodeInfo.Creator.getCreationCode();
+  }
+
+  // Emit the ReadHelper code, if present.
+  if (!info.IsReader && nodeInfo.ReadHelper) {
+    Out << "    " << nodeInfo.ReadHelper.getHelperCode() << "\n";
   }
 
   // Emit code to read all the properties.

@@ -69,6 +69,10 @@
 #define SubclassClassNameFieldName "SubclassName"
 #define EnumPropertyTypeClassName "EnumPropertyType"
 
+// Write helper rules.
+#define ReadHelperRuleClassName "ReadHelper"
+#define HelperCodeFieldName "Code"
+
 // Creation rules.
 #define CreationRuleClassName "Creator"
 #define CreateFieldName "Create"
@@ -388,7 +392,7 @@ public:
   }
 
   /// Return the class of which this is a property.
-  ASTNode getClass() const {
+  HasProperties getClass() const {
     return get()->getValueAsDef(ClassFieldName);
   }
 
@@ -402,6 +406,27 @@ public:
   }
 };
 
+/// A rule for running some helper code for reading properties from
+/// a value (which is actually done when writing the value out).
+class ReadHelperRule : public WrappedRecord {
+public:
+  ReadHelperRule(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+
+  /// Return the class for which this is a creation rule.
+  /// Should never be abstract.
+  HasProperties getClass() const {
+    return get()->getValueAsDef(ClassFieldName);
+  }
+
+  llvm::StringRef getHelperCode() const {
+    return get()->getValueAsString(HelperCodeFieldName);
+  }
+
+  static llvm::StringRef getTableGenNodeClassName() {
+    return ReadHelperRuleClassName;
+  }
+};
+
 /// A rule for how to create an AST node from its properties.
 class CreationRule : public WrappedRecord {
 public:
@@ -409,7 +434,7 @@ public:
 
   /// Return the class for which this is a creation rule.
   /// Should never be abstract.
-  ASTNode getClass() const {
+  HasProperties getClass() const {
     return get()->getValueAsDef(ClassFieldName);
   }
 
@@ -429,7 +454,7 @@ public:
 
   /// Return the class for which this is an override rule.
   /// Should never be abstract.
-  ASTNode getClass() const {
+  HasProperties getClass() const {
     return get()->getValueAsDef(ClassFieldName);
   }
 
