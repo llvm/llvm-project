@@ -53,6 +53,13 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
   // Gets a hashable artifact from a given MachineOperand (ie an unsigned).
   auto GetHashableMO = [this](const MachineOperand &MO) -> unsigned {
     switch (MO.getType()) {
+    case MachineOperand::MO_CImmediate:
+      return hash_combine(MO.getType(), MO.getTargetFlags(),
+                          MO.getCImm()->getZExtValue());
+    case MachineOperand::MO_FPImmediate:
+      return hash_combine(
+          MO.getType(), MO.getTargetFlags(),
+          MO.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
     case MachineOperand::MO_Immediate:
       return MO.getImm();
     case MachineOperand::MO_TargetIndex:
@@ -70,8 +77,6 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
 
     // TODO: Handle the following Immediate/Index/ID/Predicate cases. They can
     // be hashed on in a stable manner.
-    case MachineOperand::MO_CImmediate:
-    case MachineOperand::MO_FPImmediate:
     case MachineOperand::MO_FrameIndex:
     case MachineOperand::MO_ConstantPoolIndex:
     case MachineOperand::MO_JumpTableIndex:
