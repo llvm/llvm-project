@@ -41,6 +41,13 @@ inline T *makePointerFromOptional(Optional<T *> value) {
 // In addition to the concrete type names, BasicReader is expected to
 // implement these methods:
 //
+//   template <class EnumType>
+//   void writeEnum(T value);
+//
+//     Reads an enum value from the current property.  EnumType will always
+//     be an enum type.  Only necessary if the BasicReader doesn't provide
+//     type-specific readers for all the enum types.
+//
 //   template <class ValueType>
 //   Optional<ValueType> writeOptional();
 //
@@ -125,6 +132,11 @@ public:
   /// serialized and deserialized in a reliable order instead.
   Impl &find(const char *propertyName) {
     return asImpl();
+  }
+
+  template <class T>
+  T readEnum() {
+    return T(asImpl().readUInt32());
   }
 
   // Implement object reading by forwarding to this, collapsing the

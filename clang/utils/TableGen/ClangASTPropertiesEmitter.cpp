@@ -757,10 +757,10 @@ ASTPropsEmitter::emitBasicReaderWriterTemplate(const ReaderWriterInfo &info) {
     } else if (type.isEnum()) {
       enterMethod("value");
       if (info.IsReader)
-        Out << "    return " << type.getCXXTypeName()
-                             << "(asImpl().readUInt32());\n";
+        Out << "    return asImpl().template readEnum<"
+            <<         type.getCXXTypeName() << ">();\n";
       else
-        Out << "    asImpl().writeUInt32(uint32_t(value));\n";
+        Out << "    asImpl().writeEnum(value);\n";
       exitMethod();
 
     } else if (PropertyType superclass = type.getSuperclassType()) {

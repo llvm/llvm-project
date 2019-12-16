@@ -42,6 +42,13 @@ inline llvm::Optional<T*> makeOptionalFromPointer(T *value) {
 // In addition to the concrete property types, BasicWriter is expected
 // to implement these methods:
 //
+//   template <class EnumType>
+//   void writeEnum(T value);
+//
+//     Writes an enum value as the current property.  EnumType will always
+//     be an enum type.  Only necessary if the BasicWriter doesn't provide
+//     type-specific writers for all the enum types.
+//
 //   template <class ValueType>
 //   void writeOptional(Optional<ValueType> value);
 //
@@ -125,6 +132,11 @@ public:
   // Implement object writing by forwarding to this, collapsing the
   // structure into a single data stream.
   Impl &writeObject() { return asImpl(); }
+
+  template <class T>
+  void writeEnum(T value) {
+    asImpl().writeUInt32(uint32_t(value));
+  }
 
   template <class T>
   void writeArray(llvm::ArrayRef<T> array) {
