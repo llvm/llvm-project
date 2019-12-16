@@ -14,7 +14,11 @@
 
 // These are spellings in the tblgen files.
 
-// Field names that are fortunately common across the hierarchies.
+#define HasPropertiesClassName "HasProperties"
+
+// ASTNodes and their common fields.  `Base` is actually defined
+// in subclasses, but it's still common across the hierarchies.
+#define ASTNodeClassName "ASTNode"
 #define BaseFieldName "Base"
 #define AbstractFieldName "Abstract"
 
@@ -34,6 +38,12 @@
 #define NeverCanonicalClassName "NeverCanonical"
 #define NeverCanonicalUnlessDependentClassName "NeverCanonicalUnlessDependent"
 #define LeafTypeClassName "LeafType"
+
+// Cases of various non-ASTNode structured types like DeclarationName.
+#define TypeKindClassName "PropertyTypeKind"
+#define KindTypeFieldName "KindType"
+#define KindPropertyNameFieldName "KindPropertyName"
+#define TypeCaseClassName "PropertyTypeCase"
 
 // Properties of AST nodes.
 #define PropertyClassName "Property"
@@ -94,13 +104,54 @@ public:
   bool isSubClassOf(llvm::StringRef className) const {
     return get()->isSubClassOf(className);
   }
+
+  template <class NodeClass>
+  NodeClass getAs() const {
+    return (isSubClassOf(NodeClass::getTableGenNodeClassName())
+              ? NodeClass(get()) : NodeClass());
+  }
+
+  friend bool operator<(WrappedRecord lhs, WrappedRecord rhs) {
+    assert(lhs && rhs && "sorting null nodes");
+    return lhs.get()->getName() < rhs.get()->getName();
+  }
+  friend bool operator>(WrappedRecord lhs, WrappedRecord rhs) {
+    return rhs < lhs;
+  }
+  friend bool operator<=(WrappedRecord lhs, WrappedRecord rhs) {
+    return !(rhs < lhs);
+  }
+  friend bool operator>=(WrappedRecord lhs, WrappedRecord rhs) {
+    return !(lhs < rhs);
+  }
+  friend bool operator==(WrappedRecord lhs, WrappedRecord rhs) {
+    // This should handle null nodes.
+    return lhs.getRecord() == rhs.getRecord();
+  }
+  friend bool operator!=(WrappedRecord lhs, WrappedRecord rhs) {
+    return !(lhs == rhs);
+  }
+};
+
+/// Anything in the AST that has properties.
+class HasProperties : public WrappedRecord {
+public:
+  static constexpr llvm::StringRef ClassName = HasPropertiesClassName;
+
+  HasProperties(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+
+  llvm::StringRef getName() const;
+
+  static llvm::StringRef getTableGenNodeClassName() {
+    return HasPropertiesClassName;
+  }
 };
 
 /// An (optional) reference to a TableGen node representing a class
 /// in one of Clang's AST hierarchies.
-class ASTNode : public WrappedRecord {
+class ASTNode : public HasProperties {
 public:
-  ASTNode(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+  ASTNode(llvm::Record *record = nullptr) : HasProperties(record) {}
 
   llvm::StringRef getName() const {
     return get()->getName();
@@ -116,19 +167,9 @@ public:
     return get()->getValueAsBit(AbstractFieldName);
   }
 
-  friend bool operator<(ASTNode lhs, ASTNode rhs) {
-    assert(lhs && rhs && "sorting null nodes");
-    return lhs.getName() < rhs.getName();
+  static llvm::StringRef getTableGenNodeClassName() {
+    return ASTNodeClassName;
   }
-  friend bool operator>(ASTNode lhs, ASTNode rhs) { return rhs < lhs; }
-  friend bool operator<=(ASTNode lhs, ASTNode rhs) { return !(rhs < lhs); }
-  friend bool operator>=(ASTNode lhs, ASTNode rhs) { return !(lhs < rhs); }
-
-  friend bool operator==(ASTNode lhs, ASTNode rhs) {
-    // This should handle null nodes.
-    return lhs.getRecord() == rhs.getRecord();
-  }
-  friend bool operator!=(ASTNode lhs, ASTNode rhs) { return !(lhs == rhs); }
 };
 
 class DeclNode : public ASTNode {
@@ -275,6 +316,60 @@ public:
   std::vector<llvm::Record*> getBufferElementTypes() const {
     return get()->getValueAsListOfDefs(BufferElementTypesFieldName);
   }
+
+  static llvm::StringRef getTableGenNodeClassName() {
+    return PropertyTypeClassName;
+  }
+};
+
+/// A rule for returning the kind of a type.
+class TypeKindRule : public WrappedRecord {
+public:
+  TypeKindRule(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+
+  /// Return the type to which this applies.
+  PropertyType getParentType() const {
+    return get()->getValueAsDef(TypeFieldName);
+  }
+
+  /// Return the type of the kind.
+  PropertyType getKindType() const {
+    return get()->getValueAsDef(KindTypeFieldName);
+  }
+
+  /// Return the name to use for the kind property.
+  llvm::StringRef getKindPropertyName() const {
+    return get()->getValueAsString(KindPropertyNameFieldName);
+  }
+
+  /// Return the code for reading the kind value.
+  llvm::StringRef getReadCode() const {
+    return get()->getValueAsString(ReadFieldName);
+  }
+
+  static llvm::StringRef getTableGenNodeClassName() {
+    return TypeKindClassName;
+  }
+};
+
+/// An implementation case of a property type.
+class TypeCase : public HasProperties {
+public:
+  TypeCase(llvm::Record *record = nullptr) : HasProperties(record) {}
+
+  /// Return the name of this case.
+  llvm::StringRef getCaseName() const {
+    return get()->getValueAsString(NameFieldName);
+  }
+
+  /// Return the type of which this is a case.
+  PropertyType getParentType() const {
+    return get()->getValueAsDef(TypeFieldName);
+  }
+
+  static llvm::StringRef getTableGenNodeClassName() {
+    return TypeCaseClassName;
+  }
 };
 
 /// A property of an AST node.
@@ -301,6 +396,10 @@ public:
   llvm::StringRef getReadCode() const {
     return get()->getValueAsString(ReadFieldName);
   }
+
+  static llvm::StringRef getTableGenNodeClassName() {
+    return PropertyClassName;
+  }
 };
 
 /// A rule for how to create an AST node from its properties.
@@ -316,6 +415,10 @@ public:
 
   llvm::StringRef getCreationCode() const {
     return get()->getValueAsString(CreateFieldName);
+  }
+
+  static llvm::StringRef getTableGenNodeClassName() {
+    return CreationRuleClassName;
   }
 };
 
@@ -335,6 +438,10 @@ public:
   /// that are derived for this subclass.
   std::vector<llvm::StringRef> getIgnoredProperties() const {
     return get()->getValueAsListOfStrings(IgnoredPropertiesFieldName);
+  }
+
+  static llvm::StringRef getTableGenNodeClassName() {
+    return OverrideRuleClassName;
   }
 };
 

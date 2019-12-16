@@ -37,6 +37,34 @@ inline T *makePointerFromOptional(Optional<T *> value) {
 // where TypeName is the name of a PropertyType node from PropertiesBase.td
 // and ValueType is the corresponding C++ type name.  The read method may
 // require one or more buffer arguments.
+//
+// In addition to the concrete type names, BasicReader is expected to
+// implement these methods:
+//
+//   template <class ValueType>
+//   Optional<ValueType> writeOptional();
+//
+//     Reads an optional value from the current property.
+//
+//   template <class ValueType>
+//   ArrayRef<ValueType> readArray(llvm::SmallVectorImpl<ValueType> &buffer);
+//
+//     Reads an array of values from the current property.
+//
+//   PropertyReader readObject();
+//
+//     Reads an object from the current property; the returned property
+//     reader will be subjected to a sequence of property reads and then
+//     discarded before any other properties are reader from the "outer"
+//     property reader (which need not be the same type).  The sub-reader
+//     will be used as if with the following code:
+//
+//       {
+//         auto &&widget = W.find("widget").readObject();
+//         auto kind = widget.find("kind").readWidgetKind();
+//         auto declaration = widget.find("declaration").readDeclRef();
+//         return Widget(kind, declaration);
+//       }
 
 // ReadDispatcher does type-based forwarding to one of the read methods
 // on the BasicReader passed in:
@@ -98,6 +126,10 @@ public:
   Impl &find(const char *propertyName) {
     return asImpl();
   }
+
+  // Implement object reading by forwarding to this, collapsing the
+  // structure into a single data stream.
+  Impl &readObject() { return asImpl(); }
 
   template <class T>
   llvm::ArrayRef<T> readArray(llvm::SmallVectorImpl<T> &buffer) {

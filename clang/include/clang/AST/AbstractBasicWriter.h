@@ -38,6 +38,33 @@ inline llvm::Optional<T*> makeOptionalFromPointer(T *value) {
 //   void write##TypeName(ValueType value);
 // where TypeName is the name of a PropertyType node from PropertiesBase.td
 // and ValueType is the corresponding C++ type name.
+//
+// In addition to the concrete property types, BasicWriter is expected
+// to implement these methods:
+//
+//   template <class ValueType>
+//   void writeOptional(Optional<ValueType> value);
+//
+//     Writes an optional value as the current property.
+//
+//   template <class ValueType>
+//   void writeArray(ArrayRef<ValueType> value);
+//
+//     Writes an array of values as the current property.
+//
+//   PropertyWriter writeObject();
+//
+//     Writes an object as the current property; the returned property
+//     writer will be subjected to a sequence of property writes and then
+//     discarded before any other properties are written to the "outer"
+//     property writer (which need not be the same type).  The sub-writer
+//     will be used as if with the following code:
+//
+//       {
+//         auto &&widget = W.find("widget").writeObject();
+//         widget.find("kind").writeWidgetKind(...);
+//         widget.find("declaration").writeDeclRef(...);
+//       }
 
 // WriteDispatcher is a template which does type-based forwarding to one
 // of the write methods of the BasicWriter passed in:
@@ -94,6 +121,10 @@ public:
   Impl &find(const char *propertyName) {
     return asImpl();
   }
+
+  // Implement object writing by forwarding to this, collapsing the
+  // structure into a single data stream.
+  Impl &writeObject() { return asImpl(); }
 
   template <class T>
   void writeArray(llvm::ArrayRef<T> array) {
