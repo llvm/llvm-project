@@ -691,6 +691,7 @@ let Class = BuiltinType in {
 
 	def : Creator<[{
 		switch (kind) {
+        default: llvm_unreachable("unreachable builtin case");
 #define IMAGE_TYPE(IMGTYPE, ID, SINGLETON_ID, ACCESS, SUFFIX) \
 		case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/OpenCLImageTypes.def"
