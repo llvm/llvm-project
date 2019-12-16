@@ -159,3 +159,15 @@ func @constant_vector_mask() {
   %0 = vector.constant_mask [3, 2] : vector<4x3xi1>
   return
 }
+
+// CHECK-LABEL: extract_slices
+func @extract_slices(%arg0 : vector<4x2xf32>)
+  -> (tuple<vector<2x2xf32>, vector<2x2xf32>>) {
+  // CHECK: vector.extract_slices %{{.*}}, [2, 2], [1, 1] : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
+  %0 = vector.extract_slices %arg0, [2, 2], [1, 1]
+    : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
+  %1 = vector.tuple_get %0, 0 : tuple<vector<2x2xf32>, vector<2x2xf32>>
+  %2 = vector.tuple_get %0, 1 : tuple<vector<2x2xf32>, vector<2x2xf32>>
+  %3 = vector.tuple %1, %2 : vector<2x2xf32>, vector<2x2xf32>
+  return %3 : tuple<vector<2x2xf32>, vector<2x2xf32>>
+}

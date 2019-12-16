@@ -704,3 +704,59 @@ func @constant_mask_with_zero_mask_dim_size() {
   %0 = vector.constant_mask [0, 2] : vector<4x3xi1>
   return
 }
+
+
+// -----
+
+func @extract_slices_non_unit_strides(%arg0 : vector<4x2xf32>) {
+  // expected-error@+1 {{requires unit strides}}
+  %0 = vector.extract_slices %arg0, [2, 2], [1, 3]
+    : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
+  return
+}
+
+// -----
+
+func @extract_slices_tuple_element_wrong_rank(%arg0 : vector<4x2xf32>) {
+  // expected-error@+1 {{requires vector tuple elements of rank 2}}
+  %0 = vector.extract_slices %arg0, [2, 2], [1, 1]
+    : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2x3xf32>>
+  return
+}
+
+// -----
+
+func @extract_slices_sizes_strides_wrong_rank(%arg0 : vector<4x2xf32>) {
+  // expected-error@+1 {{requires sizes and strides of rank}}
+  %0 = vector.extract_slices %arg0, [2, 2], [1, 1, 1]
+    : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
+  return
+}
+
+// -----
+
+func @extract_slices_invalid_tuple_element_type(%arg0 : vector<4x2xf32>) {
+  // expected-error@+1 {{invalid tuple element type}}
+  %0 = vector.extract_slices %arg0, [2, 2], [1, 1]
+    : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<4x2xf32>>
+  return
+}
+
+// -----
+
+func @tuple_of_non_vectors(%arg0 : vector<4x2xf32>) {
+  %c0 = constant 0 : index
+  // expected-error@+1 {{must be vector of any type values}}
+  %0 = vector.tuple %arg0, %c0 : vector<4x2xf32>, index
+  return
+}
+
+// -----
+
+func @tuple_get_of_non_vectors(%arg0 : tuple<vector<4x2xf32>, index>) {
+  // expected-error@+1 {{vector of any type values}}
+  %0 = vector.tuple_get %arg0, 0 : tuple<vector<4x2xf32>, index>
+  return
+}
+
+
