@@ -4458,9 +4458,9 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       bool RHSNonNegative = RHSKnown.isNonNegative();
       bool RHSPositive = RHSKnown.isStrictlyPositive();
 
-      if((LHSNonNegative && RHSNonNegative) || (LHSNegative && RHSNegative))
+      if ((LHSNonNegative && RHSNonNegative) || (LHSNegative && RHSNegative))
         Known.Zero.setHighBits(32 - MaxValBits);
-      else if((LHSNegative && RHSPositive) || (LHSPositive && RHSNegative))
+      else if ((LHSNegative && RHSPositive) || (LHSPositive && RHSNegative))
         Known.One.setHighBits(32 - MaxValBits);
     } else {
       unsigned LHSValBits = 24 - LHSKnown.countMinLeadingZeros();
