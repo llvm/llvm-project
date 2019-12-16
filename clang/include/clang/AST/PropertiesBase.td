@@ -362,7 +362,7 @@ let Class = PropertyTypeCase<TemplateName, "DependentTemplate"> in {
                       : nullptr) }];
   }
   def : Property<"operatorKind", OverloadedOperatorKind> {
-    let Conditional = [{ identifier }];
+    let Conditional = [{ !identifier }];
     let Read = [{ dtn->getOperator() }];
   }
   def : Creator<[{
