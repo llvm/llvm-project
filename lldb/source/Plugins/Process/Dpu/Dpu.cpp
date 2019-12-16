@@ -291,13 +291,14 @@ bool Dpu::PrepareStepOverPrintfBkp(
       }
 
       free(mram_buffer);
+      return true;
+    PrepareStepOverPrintfBkp_err:
+      free(mram_buffer);
+      return false;
     }
   }
-  return true;
 
-PrepareStepOverPrintfBkp_err:
-  free(mram_buffer);
-  return false;
+  return true;
 }
 
 #define UNKNOWN_INSTRUCTION (0ULL)
