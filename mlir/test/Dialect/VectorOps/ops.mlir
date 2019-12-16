@@ -189,3 +189,12 @@ func @extract_slices(%arg0 : vector<4x2xf32>)
   %3 = vector.tuple %1, %2 : vector<2x2xf32>, vector<2x2xf32>
   return %3 : tuple<vector<2x2xf32>, vector<2x2xf32>>
 }
+
+// CHECK-LABEL: insert_slices
+func @insert_slices(%arg0 : tuple<vector<2x2xf32>, vector<2x2xf32>>)
+  -> (vector<4x2xf32>) {
+  // CHECK: vector.insert_slices %{{.*}}, [2, 2], [1, 1] : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<4x2xf32>
+  %0 = vector.insert_slices %arg0, [2, 2], [1, 1]
+    : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<4x2xf32>
+  return %0 : vector<4x2xf32>
+}
