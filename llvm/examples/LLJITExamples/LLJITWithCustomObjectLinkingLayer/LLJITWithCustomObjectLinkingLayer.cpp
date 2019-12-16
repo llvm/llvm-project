@@ -1,4 +1,4 @@
-//===-- LLJITWithJITLink.cpp - Configure LLJIT to use ObjectLinkingLayer --===//
+//===--------------- LLJITWithCustomObjectLinkingLayer.cpp ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file shows how to switch LLJIT to use ObjectLinkingLayer (which is
-// backed by JITLink) rather than RTDyldObjectLinkingLayer (which is backed by
-// RuntimeDyld). Using JITLink as the underlying allocator enables use of
-// small code model in JIT'd code.
+// This file shows how to switch LLJIT to use a custom object linking layer (we
+// use ObjectLinkingLayer, which is backed by JITLink, as an example).
 //
 //===----------------------------------------------------------------------===//
 
