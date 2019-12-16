@@ -25,52 +25,42 @@
 using namespace lldb_private;
 using namespace clang;
 
-clang::QualType ClangASTImporter::CopyType(clang::ASTContext *dst_ast,
-                                           clang::ASTContext *src_ast,
-                                           clang::QualType type) {
-  ImporterDelegateSP delegate_sp(GetDelegate(dst_ast, src_ast));
+CompilerType ClangASTImporter::CopyType(ClangASTContext &dst_ast,
+                                        const CompilerType &src_type) {
+  clang::ASTContext *dst_clang_ast = dst_ast.getASTContext();
+  if (!dst_clang_ast)
+    return CompilerType();
 
-  ASTImporterDelegate::CxxModuleScope std_scope(*delegate_sp, dst_ast);
+  ClangASTContext *src_ast =
+      llvm::dyn_cast_or_null<ClangASTContext>(src_type.GetTypeSystem());
+  if (!src_ast)
+    return CompilerType();
 
+  clang::ASTContext *src_clang_ast = src_ast->getASTContext();
+  if (!src_clang_ast)
+    return CompilerType();
+
+  clang::QualType src_qual_type = ClangUtil::GetQualType(src_type);
+
+  ImporterDelegateSP delegate_sp(GetDelegate(dst_clang_ast, src_clang_ast));
   if (!delegate_sp)
-    return QualType();
+    return CompilerType();
 
-  llvm::Expected<QualType> ret_or_error = delegate_sp->Import(type);
+  ASTImporterDelegate::CxxModuleScope std_scope(*delegate_sp, dst_clang_ast);
+
+  llvm::Expected<QualType> ret_or_error = delegate_sp->Import(src_qual_type);
   if (!ret_or_error) {
     Log *log =
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
     LLDB_LOG_ERROR(log, ret_or_error.takeError(),
         "Couldn't import type: {0}");
-    return QualType();
+    return CompilerType();
   }
-  return *ret_or_error;
-}
 
-lldb::opaque_compiler_type_t
-ClangASTImporter::CopyType(clang::ASTContext *dst_ast,
-                           clang::ASTContext *src_ast,
-                           lldb::opaque_compiler_type_t type) {
-  return CopyType(dst_ast, src_ast, QualType::getFromOpaquePtr(type))
-      .getAsOpaquePtr();
-}
+  lldb::opaque_compiler_type_t dst_clang_type = ret_or_error->getAsOpaquePtr();
 
-CompilerType ClangASTImporter::CopyType(ClangASTContext &dst_ast,
-                                        const CompilerType &src_type) {
-  clang::ASTContext *dst_clang_ast = dst_ast.getASTContext();
-  if (dst_clang_ast) {
-    ClangASTContext *src_ast =
-        llvm::dyn_cast_or_null<ClangASTContext>(src_type.GetTypeSystem());
-    if (src_ast) {
-      clang::ASTContext *src_clang_ast = src_ast->getASTContext();
-      if (src_clang_ast) {
-        lldb::opaque_compiler_type_t dst_clang_type = CopyType(
-            dst_clang_ast, src_clang_ast, src_type.GetOpaqueQualType());
-
-        if (dst_clang_type)
-          return CompilerType(&dst_ast, dst_clang_type);
-      }
-    }
-  }
+  if (dst_clang_type)
+    return CompilerType(&dst_ast, dst_clang_type);
   return CompilerType();
 }
 
@@ -306,34 +296,27 @@ public:
 };
 } // namespace
 
-lldb::opaque_compiler_type_t
-ClangASTImporter::DeportType(clang::ASTContext *dst_ctx,
-                             clang::ASTContext *src_ctx,
-                             lldb::opaque_compiler_type_t type) {
+CompilerType ClangASTImporter::DeportType(ClangASTContext &dst,
+                                          const CompilerType &src_type) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  LLDB_LOGF(log,
-            "    [ClangASTImporter] DeportType called on (%sType*)0x%llx "
-            "from (ASTContext*)%p to (ASTContext*)%p",
-            QualType::getFromOpaquePtr(type)->getTypeClassName(),
-            (unsigned long long)type, static_cast<void *>(src_ctx),
-            static_cast<void *>(dst_ctx));
+  ClangASTContext *src_ctxt =
+      llvm::cast<ClangASTContext>(src_type.GetTypeSystem());
+
+  LLDB_LOG(log,
+           "    [ClangASTImporter] DeportType called on ({0}Type*){1:x} "
+           "from (ASTContext*){2:x} to (ASTContext*){3:x}",
+           src_type.GetTypeName(), src_type.GetOpaqueQualType(),
+           src_ctxt->getASTContext(), dst.getASTContext());
 
   DeclContextOverride decl_context_override;
 
-  if (auto *t = QualType::getFromOpaquePtr(type)->getAs<TagType>())
+  if (auto *t = ClangUtil::GetQualType(src_type)->getAs<TagType>())
     decl_context_override.OverrideAllDeclsFromContainingFunction(t->getDecl());
 
-  lldb::opaque_compiler_type_t result;
-  {
-    CompleteTagDeclsScope complete_scope(*this, dst_ctx, src_ctx);
-    result = CopyType(dst_ctx, src_ctx, type);
-  }
-
-  if (!result)
-    return nullptr;
-
-  return result;
+  CompleteTagDeclsScope complete_scope(*this, dst.getASTContext(),
+                                       src_ctxt->getASTContext());
+  return CopyType(dst, src_type);
 }
 
 clang::Decl *ClangASTImporter::DeportDecl(clang::ASTContext *dst_ctx,
