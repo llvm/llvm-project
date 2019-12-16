@@ -811,16 +811,61 @@ TEST_FUNC(affine_if_op) {
 }
 
 // clang-format off
+// CHECK-LABEL: func @linalg_pointwise
+//       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
+// CHECK-SAME: indexing_maps = [(d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1)],
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]}
+//       CHECK:       addf
+//       CHECK:     }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+//       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
+// CHECK-SAME: indexing_maps = [(d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1)],
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]}
+//       CHECK:       cmpf "ogt"
+//       CHECK:       select
+//       CHECK:   }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+//       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64,
+// CHECK-SAME:      indexing_maps = [(d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1)],
+// CHECK-SAME:      iterator_types = ["parallel", "parallel"]}
+//       CHECK:     tanh
+//       CHECK:   }: memref<?x?xf32>, memref<?x?xf32>
+// clang-format on
+TEST_FUNC(linalg_pointwise_test) {
+  using namespace edsc;
+  using namespace edsc::ops;
+
+  auto f32Type = FloatType::getF32(&globalContext());
+  auto memrefType = MemRefType::get({-1, -1}, f32Type, {}, 0);
+  auto f = makeFunction("linalg_pointwise", {},
+                        {memrefType, memrefType, memrefType});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  ValueHandle A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
+  AffineExpr i, j;
+  bindDims(&globalContext(), i, j);
+  StructuredIndexed SA(A), SB(B), SC(C);
+  linalg_pointwise_add(SA({i, j}), SB({i, j}), SC({i, j}));
+  linalg_pointwise_max(SA({i, j}), SB({i, j}), SC({i, j}));
+  linalg_pointwise_tanh(SA({i, j}), SC({i, j}));
+
+  f.print(llvm::outs());
+  f.erase();
+}
+
+// clang-format off
 // CHECK-LABEL: func @linalg_matmul
-//       CHECK:   linalg.generic
+//       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
+// CHECK-SAME: indexing_maps = [(d0, d1, d2) -> (d0, d2), (d0, d1, d2) -> (d2, d1), (d0, d1, d2) -> (d0, d1)],
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]}
 ///      CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
 //       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
 //       CHECK:     %[[a4:.*]] = addf %[[a2]], %[[a3]] : f32
 //       CHECK:     linalg.yield %[[a4]] : f32
 //       CHECK:   }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
 // clang-format on
-TEST_FUNC(linalg_matmul) {
+TEST_FUNC(linalg_matmul_test) {
   using namespace edsc;
+  using namespace edsc::ops;
 
   auto f32Type = FloatType::getF32(&globalContext());
   auto memrefType = MemRefType::get({-1, -1}, f32Type, {}, 0);
@@ -830,6 +875,70 @@ TEST_FUNC(linalg_matmul) {
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
   linalg_matmul(makeValueHandles(llvm::to_vector<3>(f.getArguments())));
+
+  f.print(llvm::outs());
+  f.erase();
+}
+
+// clang-format off
+// CHECK-LABEL: func @linalg_conv_nhwc
+//       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
+// CHECK-SAME: indexing_maps = [(d0, d1, d2, d3, d4, d5, d6) -> (d0, d2 * 3 + d4 * 5, d3 * 4 + d5 * 6, d6),
+// CHECK-SAME: (d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d1),
+// CHECK-SAME: (d0, d1, d2, d3, d4, d5, d6) -> (d0, d2, d3, d1)],
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]}
+///      CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
+//       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
+//       CHECK:     %[[a4:.*]] = addf %[[a2]], %[[a3]] : f32
+//       CHECK:     linalg.yield %[[a4]] : f32
+//       CHECK:   }: memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>
+// clang-format on
+TEST_FUNC(linalg_conv_nhwc) {
+  using namespace edsc;
+  using namespace edsc::ops;
+
+  auto f32Type = FloatType::getF32(&globalContext());
+  auto memrefType = MemRefType::get({-1, -1, -1, -1}, f32Type, {}, 0);
+  auto f = makeFunction("linalg_conv_nhwc", {},
+                        {memrefType, memrefType, memrefType});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  linalg_conv_nhwc(makeValueHandles(llvm::to_vector<3>(f.getArguments())),
+                   /*strides=*/{3, 4}, /*dilations=*/{5, 6});
+
+  f.print(llvm::outs());
+  f.erase();
+}
+
+// clang-format off
+// CHECK-LABEL: func @linalg_dilated_conv_nhwc
+//       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
+// CHECK-SAME: indexing_maps = [(d0, d1, d2, d3, d4, d5, d6) -> (d0, d3 * 3 + d5 * 5, d4 * 4 + d6 * 6, d2),
+// CHECK-SAME: (d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d2, d1),
+// CHECK-SAME: (d0, d1, d2, d3, d4, d5, d6) -> (d0, d3, d4, d1 + d2 * 7)],
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]}
+///      CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
+//       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
+//       CHECK:     %[[a4:.*]] = addf %[[a2]], %[[a3]] : f32
+//       CHECK:     linalg.yield %[[a4]] : f32
+//       CHECK:   }: memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>
+// clang-format on
+TEST_FUNC(linalg_dilated_conv_nhwc) {
+  using namespace edsc;
+  using namespace edsc::ops;
+
+  auto f32Type = FloatType::getF32(&globalContext());
+  auto memrefType = MemRefType::get({-1, -1, -1, -1}, f32Type, {}, 0);
+  auto f = makeFunction("linalg_dilated_conv_nhwc", {},
+                        {memrefType, memrefType, memrefType});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  linalg_dilated_conv_nhwc(
+      makeValueHandles(llvm::to_vector<3>(f.getArguments())),
+      /*depth_multiplier=*/7,
+      /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
   f.print(llvm::outs());
   f.erase();
