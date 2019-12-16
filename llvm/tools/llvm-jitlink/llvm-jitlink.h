@@ -26,12 +26,13 @@ namespace llvm {
 
 struct Session {
   orc::ExecutionSession ES;
-  orc::JITDylib &MainJD;
+  orc::JITDylib *MainJD;
   orc::ObjectLinkingLayer ObjLayer;
   std::vector<orc::JITDylib *> JDSearchOrder;
   Triple TT;
 
   Session(Triple TT);
+  static Expected<std::unique_ptr<Session>> Create(Triple TT);
   void dumpSessionInfo(raw_ostream &OS);
   void modifyPassConfig(const Triple &FTT,
                         jitlink::PassConfiguration &PassConfig);
@@ -63,6 +64,9 @@ struct Session {
   FileInfoMap FileInfos;
   uint64_t SizeBeforePruning = 0;
   uint64_t SizeAfterFixups = 0;
+
+private:
+  Session(Triple TT, Error &Err);
 };
 
 Error registerMachOStubsAndGOT(Session &S, jitlink::LinkGraph &G);

@@ -53,6 +53,7 @@ class SymbolStringPtr {
 
 public:
   SymbolStringPtr() = default;
+  SymbolStringPtr(nullptr_t) {}
   SymbolStringPtr(const SymbolStringPtr &Other)
     : S(Other.S) {
     if (isRealPoolEntry(S))
@@ -84,6 +85,8 @@ public:
     if (isRealPoolEntry(S))
       --S->getValue();
   }
+
+  explicit operator bool() const { return S; }
 
   StringRef operator*() const { return S->first(); }
 

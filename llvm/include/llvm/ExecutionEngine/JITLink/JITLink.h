@@ -488,6 +488,8 @@ public:
 
   /// Set the visibility for this Symbol.
   void setScope(Scope S) {
+    assert((!Name.empty() || S == Scope::Local) &&
+           "Can not set anonymous symbol to non-local scope");
     assert((S == Scope::Default || Base->isDefined() || Base->isAbsolute()) &&
            "Invalid visibility for symbol type");
     this->S = static_cast<uint8_t>(S);
