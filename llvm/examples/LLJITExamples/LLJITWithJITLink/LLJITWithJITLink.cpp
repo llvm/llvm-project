@@ -38,22 +38,20 @@ int main(int argc, char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "HowToUseLLJIT");
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
-  // Define an in-process JITLink memory manager.
-  jitlink::InProcessMemoryManager MemMgr;
-
   // Detect the host and set code model to small.
   auto JTMB = ExitOnErr(JITTargetMachineBuilder::detectHost());
   JTMB.setCodeModel(CodeModel::Small);
 
   // Create an LLJIT instance with an ObjectLinkingLayer as the base layer.
-  auto J =
-      ExitOnErr(LLJITBuilder()
-                    .setJITTargetMachineBuilder(std::move(JTMB))
-                    .setObjectLinkingLayerCreator([&](ExecutionSession &ES,
-                                                      const Triple &TT) {
-                      return std::make_unique<ObjectLinkingLayer>(ES, MemMgr);
-                    })
-                    .create());
+  auto J = ExitOnErr(
+      LLJITBuilder()
+          .setJITTargetMachineBuilder(std::move(JTMB))
+          .setObjectLinkingLayerCreator(
+              [&](ExecutionSession &ES, const Triple &TT) {
+                return std::make_unique<ObjectLinkingLayer>(
+                    ES, std::make_unique<jitlink::InProcessMemoryManager>());
+              })
+          .create());
 
   auto M = ExitOnErr(parseExampleModule(Add1Example, "add1"));
 
