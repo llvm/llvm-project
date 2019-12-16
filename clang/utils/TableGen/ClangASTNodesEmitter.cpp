@@ -142,7 +142,7 @@ std::pair<ASTNode, ASTNode> ClangASTNodesEmitter::EmitNode(raw_ostream &OS,
 }
 
 void ClangASTNodesEmitter::deriveChildTree() {
-  assert(Root == nullptr && "already computed tree");
+  assert(!Root && "already computed tree");
 
   // Emit statements
   const std::vector<Record*> Stmts

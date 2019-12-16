@@ -80,11 +80,17 @@ struct NodeInfo {
   OverrideRule Override = nullptr;
 };
 
+struct CasedTypeInfo {
+  TypeKindRule KindRule;
+  std::vector<TypeCase> Cases;
+};
+
 class ASTPropsEmitter {
 	raw_ostream &Out;
 	RecordKeeper &Records;
-	std::map<ASTNode, NodeInfo> NodeInfos;
+	std::map<HasProperties, NodeInfo> NodeInfos;
   std::vector<PropertyType> AllPropertyTypes;
+  std::map<PropertyType, CasedTypeInfo> CasedTypeInfos;
 
 public:
 	ASTPropsEmitter(RecordKeeper &records, raw_ostream &out)
@@ -125,6 +131,7 @@ public:
       info.Override = overrideRule;
     }
 
+    // Find all the concrete property types.
     for (PropertyType type :
            records.getAllDerivedDefinitions(PropertyTypeClassName)) {
       // Ignore generic specializations; they're generally not useful when
@@ -134,10 +141,29 @@ public:
       AllPropertyTypes.push_back(type);
     }
 
+    // Find all the type kind rules.
+    for (TypeKindRule kindRule :
+           records.getAllDerivedDefinitions(TypeKindClassName)) {
+      PropertyType type = kindRule.getParentType();
+      auto &info = CasedTypeInfos[type];
+      if (info.KindRule) {
+        PrintFatalError(kindRule.getLoc(),
+                        "multiple kind rules for \""
+                           + type.getCXXTypeName() + "\"");
+      }
+      info.KindRule = kindRule;
+    }
+
+    // Find all the type cases.
+    for (TypeCase typeCase :
+           records.getAllDerivedDefinitions(TypeCaseClassName)) {
+      CasedTypeInfos[typeCase.getParentType()].Cases.push_back(typeCase);
+    }
+
     Validator(*this).validate();
 	}
 
-  void visitAllProperties(ASTNode derived, const NodeInfo &derivedInfo,
+  void visitAllProperties(HasProperties derived, const NodeInfo &derivedInfo,
                           function_ref<void (Property)> visit) {
     std::set<StringRef> ignoredProperties;
 
@@ -147,60 +173,88 @@ public:
       ignoredProperties.insert(list.begin(), list.end());
     }
 
-    for (ASTNode node = derived; node; node = node.getBase()) {
-      auto it = NodeInfos.find(node);
-
-      // Ignore intermediate nodes that don't add interesting properties.
-      if (it == NodeInfos.end()) continue;
-      auto &info = it->second;
-
+    visitAllNodesWithInfo(derived, derivedInfo,
+                          [&](HasProperties node, const NodeInfo &info) {
       for (Property prop : info.Properties) {
         if (ignoredProperties.count(prop.getName()))
           continue;
 
         visit(prop);
       }
+    });
+  }
+
+  void visitAllNodesWithInfo(HasProperties derivedNode,
+                             const NodeInfo &derivedNodeInfo,
+                             llvm::function_ref<void (HasProperties node,
+                                                      const NodeInfo &info)>
+                               visit) {
+    visit(derivedNode, derivedNodeInfo);
+
+    // Also walk the bases if appropriate.
+    if (ASTNode base = derivedNode.getAs<ASTNode>()) {
+      for (base = base.getBase(); base; base = base.getBase()) {
+        auto it = NodeInfos.find(base);
+
+        // Ignore intermediate nodes that don't add interesting properties.
+        if (it == NodeInfos.end()) continue;
+        auto &baseInfo = it->second;
+
+        visit(base, baseInfo);
+      }
     }
   }
 
   template <class NodeClass>
-  void emitReaderClass() {
+  void emitNodeReaderClass() {
     auto info = ReaderWriterInfo::forReader<NodeClass>();
-    emitReaderWriterClass<NodeClass>(info);
+    emitNodeReaderWriterClass<NodeClass>(info);
   }
 
   template <class NodeClass>
-  void emitWriterClass() {
+  void emitNodeWriterClass() {
     auto info = ReaderWriterInfo::forWriter<NodeClass>();
-    emitReaderWriterClass<NodeClass>(info);
+    emitNodeReaderWriterClass<NodeClass>(info);
   }
 
   template <class NodeClass>
-  void emitReaderWriterClass(const ReaderWriterInfo &info);
+  void emitNodeReaderWriterClass(const ReaderWriterInfo &info);
 
   template <class NodeClass>
   void emitNodeReaderWriterMethod(NodeClass node,
                                   const ReaderWriterInfo &info);
 
-  void emitReadOfProperty(Property property);
-  void emitWriteOfProperty(Property property);
+  void emitPropertiedReaderWriterBody(HasProperties node,
+                                      const ReaderWriterInfo &info);
+
+  void emitReadOfProperty(StringRef readerName, Property property);
+  void emitReadOfProperty(StringRef readerName, StringRef name,
+                          PropertyType type);
+
+  void emitWriteOfProperty(StringRef writerName, Property property);
+  void emitWriteOfProperty(StringRef writerName, StringRef name,
+                           PropertyType type, StringRef readCode);
 
   void emitBasicReaderWriterFile(const ReaderWriterInfo &info);
   void emitDispatcherTemplate(const ReaderWriterInfo &info);
   void emitPackUnpackOptionalTemplate(const ReaderWriterInfo &info);
   void emitBasicReaderWriterTemplate(const ReaderWriterInfo &info);
 
+  void emitCasedReaderWriterMethodBody(PropertyType type,
+                                       const CasedTypeInfo &typeCases,
+                                       const ReaderWriterInfo &info);
+
 private:
   class Validator {
-    const ASTPropsEmitter &Emitter;
-    std::set<ASTNode> ValidatedNodes;
+    ASTPropsEmitter &Emitter;
+    std::set<HasProperties> ValidatedNodes;
 
   public:
-    Validator(const ASTPropsEmitter &emitter) : Emitter(emitter) {}
+    Validator(ASTPropsEmitter &emitter) : Emitter(emitter) {}
     void validate();
 
   private:
-    void validateNode(ASTNode node, const NodeInfo &nodeInfo);
+    void validateNode(HasProperties node, const NodeInfo &nodeInfo);
     void validateType(PropertyType type, WrappedRecord context);
   };
 };
@@ -217,21 +271,17 @@ void ASTPropsEmitter::Validator::validate() {
   }
 }
 
-void ASTPropsEmitter::Validator::validateNode(ASTNode node,
-                                              const NodeInfo &nodeInfo) {
-  if (!ValidatedNodes.insert(node).second) return;
+void ASTPropsEmitter::Validator::validateNode(HasProperties derivedNode,
+                                              const NodeInfo &derivedNodeInfo) {
+  if (!ValidatedNodes.insert(derivedNode).second) return;
 
   // A map from property name to property.
   std::map<StringRef, Property> allProperties;
 
-  // Walk the hierarchy, ignoring nodes that don't declare anything
-  // interesting.
-  for (auto base = node; base; base = base.getBase()) {
-    auto it = Emitter.NodeInfos.find(base);
-    if (it == Emitter.NodeInfos.end()) continue;
-
-    auto &baseInfo = it->second;
-    for (Property property : baseInfo.Properties) {
+  Emitter.visitAllNodesWithInfo(derivedNode, derivedNodeInfo,
+                                [&](HasProperties node,
+                                    const NodeInfo &nodeInfo) {
+    for (Property property : nodeInfo.Properties) {
       validateType(property.getType(), property);
 
       auto result = allProperties.insert(
@@ -244,11 +294,11 @@ void ASTPropsEmitter::Validator::validateNode(ASTNode node,
         Property existingProperty = result.first->second;
         PrintError(existingProperty.getLoc(),
                    "multiple properties named \"" + property.getName()
-                      + "\" in hierarchy of " + node.getName());
+                      + "\" in hierarchy of " + derivedNode.getName());
         PrintNote(property.getLoc(), "existing property");
       }
     }
-  }
+  });
 }
 
 void ASTPropsEmitter::Validator::validateType(PropertyType type,
@@ -284,7 +334,7 @@ void ASTPropsEmitter::Validator::validateType(PropertyType type,
 /****************************************************************************/
 
 template <class NodeClass>
-void ASTPropsEmitter::emitReaderWriterClass(const ReaderWriterInfo &info) {
+void ASTPropsEmitter::emitNodeReaderWriterClass(const ReaderWriterInfo &info) {
   StringRef suffix = info.ClassSuffix;
   StringRef var = info.HelperVariable;
 
@@ -350,6 +400,14 @@ void ASTPropsEmitter::emitNodeReaderWriterMethod(NodeClass node,
   if (info.IsReader)
     Out << "    auto &ctx = " << info.HelperVariable << ".getASTContext();\n";
 
+  emitPropertiedReaderWriterBody(node, info);
+
+  // Finish the method declaration.
+  Out << "  }\n\n";
+}
+
+void ASTPropsEmitter::emitPropertiedReaderWriterBody(HasProperties node,
+                                               const ReaderWriterInfo &info) {
   // Find the information for this node.
   auto it = NodeInfos.find(node);
   if (it == NodeInfos.end())
@@ -380,17 +438,14 @@ void ASTPropsEmitter::emitNodeReaderWriterMethod(NodeClass node,
 
     // Emit code to read or write this property.
     if (info.IsReader)
-      emitReadOfProperty(prop);
+      emitReadOfProperty(info.HelperVariable, prop);
     else
-      emitWriteOfProperty(prop);
+      emitWriteOfProperty(info.HelperVariable, prop);
   });
 
   // Emit the final creation code.
   if (info.IsReader)
     Out << "    " << creationCode << "\n";
-
-  // Finish the method declaration.
-  Out << "  }\n\n";
 }
 
 static void emitBasicReaderWriterMethodSuffix(raw_ostream &out,
@@ -422,10 +477,14 @@ static void emitBasicReaderWriterMethodSuffix(raw_ostream &out,
 }
 
 /// Emit code to read the given property in a node-reader method.
-void ASTPropsEmitter::emitReadOfProperty(Property property) {
-  PropertyType type = property.getType();
-  auto name = property.getName();
+void ASTPropsEmitter::emitReadOfProperty(StringRef readerName,
+                                         Property property) {
+  emitReadOfProperty(readerName, property.getName(), property.getType());
+}
 
+void ASTPropsEmitter::emitReadOfProperty(StringRef readerName,
+                                         StringRef name,
+                                         PropertyType type) {
   // Declare all the necessary buffers.
   auto bufferTypes = type.getBufferElementTypes();
   for (size_t i = 0, e = bufferTypes.size(); i != e; ++i) {
@@ -440,7 +499,7 @@ void ASTPropsEmitter::emitReadOfProperty(Property property) {
   // that in the creation rule.
   Out << "    ";
   type.emitCXXValueTypeName(true, Out);
-  Out << " " << name << " = R.find(\"" << name << "\")."
+  Out << " " << name << " = " << readerName << ".find(\"" << name << "\")."
       << (type.isGenericSpecialization() ? "template " : "") << "read";
   emitBasicReaderWriterMethodSuffix(Out, type, /*for read*/ true);
   Out << "(";
@@ -451,13 +510,21 @@ void ASTPropsEmitter::emitReadOfProperty(Property property) {
 }
 
 /// Emit code to write the given property in a node-writer method.
-void ASTPropsEmitter::emitWriteOfProperty(Property property) {
+void ASTPropsEmitter::emitWriteOfProperty(StringRef writerName,
+                                          Property property) {
+  emitWriteOfProperty(writerName, property.getName(), property.getType(),
+                      property.getReadCode());
+}
+
+void ASTPropsEmitter::emitWriteOfProperty(StringRef writerName,
+                                          StringRef name,
+                                          PropertyType type,
+                                          StringRef readCode) {
   // Focus down to the property:
   //   W.find("prop").write##ValueType(value);
-  Out << "    W.find(\"" << property.getName() << "\").write";
-  emitBasicReaderWriterMethodSuffix(Out, property.getType(),
-                                    /*for read*/ false);
-  Out << "(" << property.getReadCode() << ");\n";
+  Out << "    " << writerName << ".find(\"" << name << "\").write";
+  emitBasicReaderWriterMethodSuffix(Out, type, /*for read*/ false);
+  Out << "(" << readCode << ");\n";
 }
 
 /// Emit an .inc file that defines the AbstractFooReader class
@@ -467,7 +534,7 @@ static void emitASTReader(RecordKeeper &records, raw_ostream &out,
                           StringRef description) {
   emitSourceFileHeader(description, out);
 
-  ASTPropsEmitter(records, out).emitReaderClass<NodeClass>();
+  ASTPropsEmitter(records, out).emitNodeReaderClass<NodeClass>();
 }
 
 void clang::EmitClangTypeReader(RecordKeeper &records, raw_ostream &out) {
@@ -481,7 +548,7 @@ static void emitASTWriter(RecordKeeper &records, raw_ostream &out,
                           StringRef description) {
   emitSourceFileHeader(description, out);
 
-  ASTPropsEmitter(records, out).emitWriterClass<NodeClass>();
+  ASTPropsEmitter(records, out).emitNodeWriterClass<NodeClass>();
 }
 
 void clang::EmitClangTypeWriter(RecordKeeper &records, raw_ostream &out) {
@@ -596,35 +663,49 @@ ASTPropsEmitter::emitBasicReaderWriterTemplate(const ReaderWriterInfo &info) {
   auto enterReaderWriterMethod = [&](StringRef cxxTypeName,
                                      StringRef abstractTypeName,
                                      bool shouldPassByReference,
-                                     bool constWhenWriting) {
+                                     bool constWhenWriting,
+                                     StringRef paramName) {
     Out << "  " << (info.IsReader ? cxxTypeName : "void")
                 << " " << info.MethodPrefix << abstractTypeName << "(";
     if (!info.IsReader)
       Out       << (shouldPassByReference || constWhenWriting ? "const " : "")
                 << cxxTypeName
-                << (shouldPassByReference ? " &" : "") << " value";
+                << (shouldPassByReference ? " &" : "") << " " << paramName;
     Out         << ") {\n";
   };
 
   // Emit {read,write}ValueType methods for all the enum and subclass types
   // that default to using the integer/base-class implementations.
   for (PropertyType type : AllPropertyTypes) {
-    if (type.isEnum()) {
+    auto enterMethod = [&](StringRef paramName) {
       enterReaderWriterMethod(type.getCXXTypeName(),
                               type.getAbstractTypeName(),
-                              /*pass by reference*/ false,
-                              /*const when writing*/ false);
+                              type.shouldPassByReference(),
+                              type.isConstWhenWriting(),
+                              paramName);
+    };
+    auto exitMethod = [&] {
+      Out << "  }\n";
+    };
+
+    // Handled cased types.
+    auto casedIter = CasedTypeInfos.find(type);
+    if (casedIter != CasedTypeInfos.end()) {
+      enterMethod("node");
+      emitCasedReaderWriterMethodBody(type, casedIter->second, info);
+      exitMethod();
+
+    } else if (type.isEnum()) {
+      enterMethod("value");
       if (info.IsReader)
         Out << "    return " << type.getCXXTypeName()
                              << "(asImpl().readUInt32());\n";
       else
         Out << "    asImpl().writeUInt32(uint32_t(value));\n";
-      Out << "  }\n";
+      exitMethod();
+
     } else if (PropertyType superclass = type.getSuperclassType()) {
-      enterReaderWriterMethod(type.getCXXTypeName(),
-                              type.getAbstractTypeName(),
-                              /*pass by reference*/ false,
-                              /*const when writing*/ type.isConstWhenWriting());
+      enterMethod("value");
       if (info.IsReader)
         Out << "    return cast_or_null<" << type.getSubclassClassName()
                                           << ">(asImpl().read"
@@ -633,7 +714,8 @@ ASTPropsEmitter::emitBasicReaderWriterTemplate(const ReaderWriterInfo &info) {
       else
         Out << "    asImpl().write" << superclass.getAbstractTypeName()
                                     << "(value);\n";
-      Out << "  }\n";
+      exitMethod();
+
     } else {
       // The other types can't be handled as trivially.
     }
@@ -641,9 +723,66 @@ ASTPropsEmitter::emitBasicReaderWriterTemplate(const ReaderWriterInfo &info) {
   Out << "};\n\n";
 }
 
-void ASTPropsEmitter::emitBasicReaderWriterFile(const ReaderWriterInfo &info) {
-  auto types = Records.getAllDerivedDefinitions(PropertyTypeClassName);
+void ASTPropsEmitter::emitCasedReaderWriterMethodBody(PropertyType type,
+                                             const CasedTypeInfo &typeCases,
+                                             const ReaderWriterInfo &info) {
+  if (typeCases.Cases.empty()) {
+    assert(typeCases.KindRule);
+    PrintFatalError(typeCases.KindRule.getLoc(),
+                    "no cases found for \"" + type.getCXXTypeName() + "\"");
+  }
+  if (!typeCases.KindRule) {
+    assert(!typeCases.Cases.empty());
+    PrintFatalError(typeCases.Cases.front().getLoc(),
+                    "no kind rule for \"" + type.getCXXTypeName() + "\"");
+  }
 
+  auto var = info.HelperVariable;
+  std::string subvar = ("sub" + var).str();
+
+  // Bind `ctx` for readers.
+  if (info.IsReader)
+    Out << "    auto &ctx = asImpl().getASTContext();\n";
+
+  // Start an object.
+  Out << "    auto &&" << subvar << " = asImpl()."
+                       << info.MethodPrefix << "Object();\n";
+
+  // Read/write the kind property;
+  TypeKindRule kindRule = typeCases.KindRule;
+  StringRef kindProperty = kindRule.getKindPropertyName();
+  PropertyType kindType = kindRule.getKindType();
+  if (info.IsReader) {
+    emitReadOfProperty(subvar, kindProperty, kindType);
+  } else {
+    // Read the kind into a local variable.
+    Out << "    ";
+    kindType.emitCXXValueTypeName(/*for read*/ false, Out);
+    Out << " " << kindProperty << " = " << kindRule.getReadCode() << ";\n";
+    emitWriteOfProperty(subvar, kindProperty, kindType, kindProperty);
+  }
+
+  // Prepare a ReaderWriterInfo with a helper variable that will use
+  // the sub-reader/writer.
+  ReaderWriterInfo subInfo = info;
+  subInfo.HelperVariable = subvar;
+
+  // Switch on the kind.
+  Out << "    switch (" << kindProperty << ") {\n";
+  for (TypeCase typeCase : typeCases.Cases) {
+    Out << "    case " << type.getCXXTypeName() << "::"
+                       << typeCase.getCaseName() << ": {\n";
+    emitPropertiedReaderWriterBody(typeCase, subInfo);
+    if (!info.IsReader)
+      Out << "    return;\n";
+    Out << "    }\n\n";
+  }
+  Out << "    }\n"
+         "    llvm_unreachable(\"bad " << kindType.getCXXTypeName()
+                                       << "\");\n";
+}
+
+void ASTPropsEmitter::emitBasicReaderWriterFile(const ReaderWriterInfo &info) {
   emitDispatcherTemplate(info);
   emitPackUnpackOptionalTemplate(info);
   emitBasicReaderWriterTemplate(info);

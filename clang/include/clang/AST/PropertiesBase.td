@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class ASTNode;
+class HasProperties;
 
 /// The type of the property.
 class PropertyType<string typeName = ""> {
@@ -151,7 +151,7 @@ class Optional<PropertyType element> : PropertyType {
 
 /// A property of an AST node.
 class Property<string name, PropertyType type> {
-  ASTNode Class;
+  HasProperties Class;
   string Name = name;
   PropertyType Type = type;
 
@@ -162,7 +162,7 @@ class Property<string name, PropertyType type> {
 
 /// A rule for creating objects of this type.
 class Creator<code create> {
-  ASTNode Class;
+  HasProperties Class;
 
   /// A function for creating values of this kind, expressed in terms of a
   /// variable `ctx` of type `ASTContext &`.  Must also refer to all of the
@@ -172,8 +172,42 @@ class Creator<code create> {
 
 /// A rule which overrides some of the normal rules.
 class Override {
-  ASTNode Class;
+  HasProperties Class;
 
   /// Properties from base classes that should be ignored.
   list<string> IgnoredProperties = [];
 }
+
+/// A description of how to break a type into cases.  Providing this and
+/// an exhaustive list of the cases will cause AbstractBasic{Reader,Writer}
+/// to be generated with a default implementation of how to read the
+/// type.
+///
+/// Creator rules for the cases can additionally access a variable
+/// `kind` of the KindType.
+class PropertyTypeKind<PropertyType type,
+                       PropertyType kindType,
+                       string readCode> {
+  /// The type for which this describes cases.
+  PropertyType Type = type;
+
+  /// The type of this type's kind enum.
+  PropertyType KindType = kindType;
+
+  /// The property name to use for the kind.
+  string KindPropertyName = "kind";
+
+  /// An expression which reads the kind from a value, expressed in terms
+  /// of a variable `node`.
+  string Read = readCode;
+}
+
+/// One of the options for representing a particular type.
+class PropertyTypeCase<PropertyType type, string name> : HasProperties {
+  /// The type of which this is a case.
+  PropertyType Type = type;
+
+  /// The name of the case (a value of the type's kind enum).
+  string Name = name;
+}
+

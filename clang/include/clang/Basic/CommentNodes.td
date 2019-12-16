@@ -1,4 +1,6 @@
-class CommentNode<CommentNode base, bit abstract = 0> {
+include "clang/Basic/ASTNode.td"
+
+class CommentNode<CommentNode base, bit abstract = 0> : ASTNode {
   CommentNode Base = base;
   bit Abstract = abstract;
 }

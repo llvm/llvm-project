@@ -1,5 +1,4 @@
-class ASTNode;
-class AttrSubject;
+include "clang/Basic/ASTNode.td"
 
 class StmtNode<StmtNode base, bit abstract = 0> : ASTNode, AttrSubject {
 	StmtNode Base = base;
