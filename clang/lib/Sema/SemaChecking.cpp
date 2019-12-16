@@ -5796,34 +5796,50 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
            << SourceRange(TheCall->getArg(NumArgs)->getBeginLoc(),
                           (*(TheCall->arg_end() - 1))->getEndLoc());
 
-  // __builtin_fpclassify is the only case where NumArgs != 1, so we can count
-  // on all preceding parameters just being int.  Try all of those.
-  for (unsigned i = 0; i < NumArgs - 1; ++i) {
-    Expr *Arg = TheCall->getArg(i);
-
-    if (Arg->isTypeDependent())
-      return false;
-
-    ExprResult Res = PerformImplicitConversion(Arg, Context.IntTy, AA_Passing);
-
-    if (Res.isInvalid())
-      return true;
-    TheCall->setArg(i, Res.get());
-  }
-
   Expr *OrigArg = TheCall->getArg(NumArgs-1);
 
   if (OrigArg->isTypeDependent())
     return false;
-
-  OrigArg = DefaultFunctionArrayLvalueConversion(OrigArg).get();
-  TheCall->setArg(NumArgs - 1, OrigArg);
 
   // This operation requires a non-_Complex floating-point number.
   if (!OrigArg->getType()->isRealFloatingType())
     return Diag(OrigArg->getBeginLoc(),
                 diag::err_typecheck_call_invalid_unary_fp)
            << OrigArg->getType() << OrigArg->getSourceRange();
+
+  // If this is an implicit conversion from float -> float, double, or
+  // long double, or half -> half, float, double, or long double, remove it.
+  if (ImplicitCastExpr *Cast = dyn_cast<ImplicitCastExpr>(OrigArg)) {
+    // Only remove standard FloatCasts, leaving other casts inplace
+    if (Cast->getCastKind() == CK_FloatingCast) {
+      bool IgnoreCast = false;
+      Expr *CastArg = Cast->getSubExpr();
+      if (CastArg->getType()->isSpecificBuiltinType(BuiltinType::Float)) {
+        assert(
+            (Cast->getType()->isSpecificBuiltinType(BuiltinType::Double) ||
+             Cast->getType()->isSpecificBuiltinType(BuiltinType::Float) ||
+             Cast->getType()->isSpecificBuiltinType(BuiltinType::LongDouble)) &&
+            "promotion from float to either float, double, or long double is "
+            "the only expected cast here");
+        IgnoreCast = true;
+      } else if (CastArg->getType()->isSpecificBuiltinType(BuiltinType::Half) &&
+                 !Context.getTargetInfo().useFP16ConversionIntrinsics()) {
+        assert(
+            (Cast->getType()->isSpecificBuiltinType(BuiltinType::Double) ||
+             Cast->getType()->isSpecificBuiltinType(BuiltinType::Float) ||
+             Cast->getType()->isSpecificBuiltinType(BuiltinType::Half) ||
+             Cast->getType()->isSpecificBuiltinType(BuiltinType::LongDouble)) &&
+            "promotion from half to either half, float, double, or long double "
+            "is the only expected cast here");
+        IgnoreCast = true;
+      }
+
+      if (IgnoreCast) {
+        Cast->setSubExpr(nullptr);
+        TheCall->setArg(NumArgs-1, CastArg);
+      }
+    }
+  }
 
   return false;
 }
