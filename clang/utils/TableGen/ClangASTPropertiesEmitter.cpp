@@ -188,6 +188,10 @@ public:
       ignoredProperties.insert(list.begin(), list.end());
     }
 
+    // TODO: we should sort the properties in various ways
+    //   - put arrays at the end to enable abbreviations
+    //   - put conditional properties after properties used in the condition
+
     visitAllNodesWithInfo(derived, derivedInfo,
                           [&](HasProperties node, const NodeInfo &info) {
       for (Property prop : info.Properties) {
@@ -244,11 +248,12 @@ public:
 
   void emitReadOfProperty(StringRef readerName, Property property);
   void emitReadOfProperty(StringRef readerName, StringRef name,
-                          PropertyType type);
+                          PropertyType type, StringRef condition = "");
 
   void emitWriteOfProperty(StringRef writerName, Property property);
   void emitWriteOfProperty(StringRef writerName, StringRef name,
-                           PropertyType type, StringRef readCode);
+                           PropertyType type, StringRef readCode,
+                           StringRef condition = "");
 
   void emitBasicReaderWriterFile(const ReaderWriterInfo &info);
   void emitDispatcherTemplate(const ReaderWriterInfo &info);
@@ -499,12 +504,14 @@ static void emitBasicReaderWriterMethodSuffix(raw_ostream &out,
 /// Emit code to read the given property in a node-reader method.
 void ASTPropsEmitter::emitReadOfProperty(StringRef readerName,
                                          Property property) {
-  emitReadOfProperty(readerName, property.getName(), property.getType());
+  emitReadOfProperty(readerName, property.getName(), property.getType(),
+                     property.getCondition());
 }
 
 void ASTPropsEmitter::emitReadOfProperty(StringRef readerName,
                                          StringRef name,
-                                         PropertyType type) {
+                                         PropertyType type,
+                                         StringRef condition) {
   // Declare all the necessary buffers.
   auto bufferTypes = type.getBufferElementTypes();
   for (size_t i = 0, e = bufferTypes.size(); i != e; ++i) {
@@ -518,33 +525,65 @@ void ASTPropsEmitter::emitReadOfProperty(StringRef readerName,
   // get a pr-value back from read(), and we should be able to forward
   // that in the creation rule.
   Out << "    ";
+  if (!condition.empty()) Out << "llvm::Optional<";
   type.emitCXXValueTypeName(true, Out);
-  Out << " " << name << " = " << readerName << ".find(\"" << name << "\")."
+  if (!condition.empty()) Out << ">";
+  Out << " " << name;
+
+  if (condition.empty()) {
+    Out << " = ";
+  } else {
+    Out << ";\n"
+           "    if (" << condition << ") {\n"
+           "      " << name << ".emplace(";
+  }
+
+  Out << readerName << ".find(\"" << name << "\")."
       << (type.isGenericSpecialization() ? "template " : "") << "read";
   emitBasicReaderWriterMethodSuffix(Out, type, /*for read*/ true);
   Out << "(";
   for (size_t i = 0, e = bufferTypes.size(); i != e; ++i) {
     Out << (i > 0 ? ", " : "") << name << "_buffer_" << i;
   }
-  Out << ");\n";
+  Out << ")";
+
+  if (condition.empty()) {
+    Out << ";\n";
+  } else {
+    Out << ");\n"
+           "    }\n";
+  }
 }
 
 /// Emit code to write the given property in a node-writer method.
 void ASTPropsEmitter::emitWriteOfProperty(StringRef writerName,
                                           Property property) {
   emitWriteOfProperty(writerName, property.getName(), property.getType(),
-                      property.getReadCode());
+                      property.getReadCode(), property.getCondition());
 }
 
 void ASTPropsEmitter::emitWriteOfProperty(StringRef writerName,
                                           StringRef name,
                                           PropertyType type,
-                                          StringRef readCode) {
+                                          StringRef readCode,
+                                          StringRef condition) {
+  if (!condition.empty()) {
+    Out << "    if (" << condition << ") {\n";
+  }
+
   // Focus down to the property:
-  //   W.find("prop").write##ValueType(value);
-  Out << "    " << writerName << ".find(\"" << name << "\").write";
+  //   T prop = <READ>;
+  //   W.find("prop").write##ValueType(prop);
+  Out << "    ";
+  type.emitCXXValueTypeName(false, Out);
+  Out << " " << name << " = (" << readCode << ");\n"
+         "    " << writerName << ".find(\"" << name << "\").write";
   emitBasicReaderWriterMethodSuffix(Out, type, /*for read*/ false);
-  Out << "(" << readCode << ");\n";
+  Out << "(" << name << ");\n";
+
+  if (!condition.empty()) {
+    Out << "    }\n";
+  }
 }
 
 /// Emit an .inc file that defines the AbstractFooReader class
@@ -775,11 +814,10 @@ void ASTPropsEmitter::emitCasedReaderWriterMethodBody(PropertyType type,
   if (info.IsReader) {
     emitReadOfProperty(subvar, kindProperty, kindType);
   } else {
-    // Read the kind into a local variable.
-    Out << "    ";
-    kindType.emitCXXValueTypeName(/*for read*/ false, Out);
-    Out << " " << kindProperty << " = " << kindRule.getReadCode() << ";\n";
-    emitWriteOfProperty(subvar, kindProperty, kindType, kindProperty);
+    // Write the property.  Note that this will implicitly read the
+    // kind into a local variable with the right name.
+    emitWriteOfProperty(subvar, kindProperty, kindType,
+                        kindRule.getReadCode());
   }
 
   // Prepare a ReaderWriterInfo with a helper variable that will use

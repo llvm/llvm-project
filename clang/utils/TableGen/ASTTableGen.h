@@ -57,6 +57,7 @@
 #define CXXTypeNameFieldName "CXXName"
 #define PassByReferenceFieldName "PassByReference"
 #define ConstWhenWritingFieldName "ConstWhenWriting"
+#define ConditionalCodeFieldName "Conditional"
 #define PackOptionalCodeFieldName "PackOptional"
 #define UnpackOptionalCodeFieldName "UnpackOptional"
 #define BufferElementTypesFieldName "BufferElementTypes"
@@ -399,6 +400,11 @@ public:
   /// Return the code for reading this property.
   llvm::StringRef getReadCode() const {
     return get()->getValueAsString(ReadFieldName);
+  }
+
+  /// Return the code for determining whether to add this property.
+  llvm::StringRef getCondition() const {
+    return get()->getValueAsString(ConditionalCodeFieldName);
   }
 
   static llvm::StringRef getTableGenNodeClassName() {

@@ -466,7 +466,8 @@ let Class = ElaboratedType in {
     let Read = [{ node->getNamedType() }];
   }
   def : Property<"ownedTag", Optional<TagDeclRef>> {
-    let Read = [{ makeOptionalFromPointer(node->getOwnedTagDecl()) }];
+    let Read = [{ makeOptionalFromPointer(
+                    const_cast<const TagDecl *>(node->getOwnedTagDecl())) }];
   }
 
   def : Creator<[{
@@ -628,7 +629,8 @@ let Class = TemplateTypeParmType in {
     let Read = [{ node->isParameterPack() }];
   }
   def : Property<"declaration", Optional<TemplateTypeParmDeclRef>> {
-    let Read = [{ makeOptionalFromPointer(node->getDecl()) }];
+    let Read = [{ makeOptionalFromPointer(
+                    const_cast<const TemplateTypeParmDecl*>(node->getDecl())) }];
   }
 
   def : Creator<[{
