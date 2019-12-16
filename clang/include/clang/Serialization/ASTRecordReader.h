@@ -228,7 +228,15 @@ public:
   // TemplateName readTemplateName(); (inherited)
 
   /// Read a template argument, advancing Idx. (inherited)
-  // TemplateArgument readTemplateArgument(bool Canonicalize = false);
+  // TemplateArgument readTemplateArgument();
+  using DataStreamBasicReader::readTemplateArgument;
+  TemplateArgument readTemplateArgument(bool Canonicalize) {
+    TemplateArgument Arg = readTemplateArgument();
+    if (Canonicalize) {
+      Arg = getContext().getCanonicalTemplateArgument(Arg);
+    }
+    return Arg;
+  }
 
   /// Read a template parameter list, advancing Idx.
   TemplateParameterList *readTemplateParameterList();

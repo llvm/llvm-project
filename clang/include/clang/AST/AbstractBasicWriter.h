@@ -178,47 +178,6 @@ public:
     asImpl().writeUInt32(epi.getOpaqueValue());
   }
 
-  void writeTemplateArgument(const TemplateArgument &arg) {
-    asImpl().writeTemplateArgumentKind(arg.getKind());
-    switch (arg.getKind()) {
-    case TemplateArgument::Null:
-      return;
-    case TemplateArgument::Type:
-      asImpl().writeQualType(arg.getAsType());
-      return;
-    case TemplateArgument::Declaration:
-      asImpl().writeValueDeclRef(arg.getAsDecl());
-      asImpl().writeQualType(arg.getParamTypeForDecl());
-      return;
-    case TemplateArgument::NullPtr:
-      asImpl().writeQualType(arg.getNullPtrType());
-      return;
-    case TemplateArgument::Integral:
-      asImpl().writeAPSInt(arg.getAsIntegral());
-      asImpl().writeQualType(arg.getIntegralType());
-      return;
-    case TemplateArgument::Template:
-      asImpl().writeTemplateName(arg.getAsTemplateOrTemplatePattern());
-      return;
-    case TemplateArgument::TemplateExpansion: {
-      asImpl().writeTemplateName(arg.getAsTemplateOrTemplatePattern());
-      // Convert Optional<unsigned> to Optional<uint32>, just in case.
-      Optional<unsigned> numExpansions = arg.getNumTemplateExpansions();
-      Optional<uint32_t> numExpansions32;
-      if (numExpansions) numExpansions32 = *numExpansions;
-      asImpl().template writeOptional<uint32_t>(numExpansions32);
-      return;
-    }
-    case TemplateArgument::Expression:
-      asImpl().writeExprRef(arg.getAsExpr());
-      return;
-    case TemplateArgument::Pack:
-      asImpl().template writeArray<TemplateArgument>(arg.pack_elements());
-      return;
-    }
-    llvm_unreachable("bad template argument kind");
-  }
-
   void writeNestedNameSpecifier(NestedNameSpecifier *NNS) {
     // Nested name specifiers usually aren't too long. I think that 8 would
     // typically accommodate the vast majority.

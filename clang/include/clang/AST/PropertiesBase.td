@@ -401,3 +401,95 @@ let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
     return ctx.getSubstTemplateTemplateParmPack(parameterPack, argumentPack);
   }]>;
 }
+
+// Type cases for TemplateArgument.
+def : PropertyTypeKind<TemplateArgument, TemplateArgumentKind,
+                       "node.getKind()">;
+let Class = PropertyTypeCase<TemplateArgument, "Null"> in {
+  def : Creator<[{
+    return TemplateArgument();
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Type"> in {
+  def : Property<"type", QualType> {
+    let Read = [{ node.getAsType() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(type);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Declaration"> in {
+  def : Property<"declaration", ValueDeclRef> {
+    let Read = [{ node.getAsDecl() }];
+  }
+  def : Property<"parameterType", QualType> {
+    let Read = [{ node.getParamTypeForDecl() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(declaration, parameterType);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "NullPtr"> in {
+  def : Property<"type", QualType> {
+    let Read = [{ node.getNullPtrType() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(type, /*nullptr*/ true);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
+  def : Property<"value", APSInt> {
+    let Read = [{ node.getAsIntegral() }];
+  }
+  def : Property<"type", QualType> {
+    let Read = [{ node.getIntegralType() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(ctx, value, type);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Template"> in {
+  def : Property<"name", TemplateName> {
+    let Read = [{ node.getAsTemplateOrTemplatePattern() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(name);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
+  def : Property<"name", TemplateName> {
+    let Read = [{ node.getAsTemplateOrTemplatePattern() }];
+  }
+  def : Property<"numExpansions", Optional<UInt32>> {
+    let Read = [{
+      // Translate unsigned -> uint32_t just in case.
+      node.getNumTemplateExpansions().map(
+        [](unsigned i) { return uint32_t(i); })
+    }];
+  }
+  def : Creator<[{
+    auto numExpansionsUnsigned =
+      numExpansions.map([](uint32_t i) { return unsigned(i); });
+    return TemplateArgument(name, numExpansionsUnsigned);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Expression"> in {
+  def : Property<"expression", ExprRef> {
+    let Read = [{ node.getAsExpr() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(expression);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {
+  def : Property<"elements", Array<TemplateArgument>> {
+    let Read = [{ node.pack_elements() }];
+  }
+  def : Creator<[{
+    // Copy the pack into the ASTContext.
+    TemplateArgument *ctxElements = new (ctx) TemplateArgument[elements.size()];
+    for (size_t i = 0, e = elements.size(); i != e; ++i)
+      ctxElements[i] = elements[i];
+    return TemplateArgument(llvm::makeArrayRef(ctxElements, elements.size()));
+  }]>;
+}
