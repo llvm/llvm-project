@@ -413,25 +413,21 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
   return AMemSet;
 }
 
-static unsigned findStoreAlignment(const DataLayout &DL, const StoreInst *SI) {
-  unsigned StoreAlign = SI->getAlignment();
-  if (!StoreAlign)
-    StoreAlign = DL.getABITypeAlignment(SI->getOperand(0)->getType());
-  return StoreAlign;
+static Align findStoreAlignment(const DataLayout &DL, const StoreInst *SI) {
+  return DL.getValueOrABITypeAlignment(MaybeAlign(SI->getAlignment()),
+                                       SI->getOperand(0)->getType());
 }
 
-static unsigned findLoadAlignment(const DataLayout &DL, const LoadInst *LI) {
-  unsigned LoadAlign = LI->getAlignment();
-  if (!LoadAlign)
-    LoadAlign = DL.getABITypeAlignment(LI->getType());
-  return LoadAlign;
+static Align findLoadAlignment(const DataLayout &DL, const LoadInst *LI) {
+  return DL.getValueOrABITypeAlignment(MaybeAlign(LI->getAlignment()),
+                                       LI->getType());
 }
 
-static unsigned findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
-                                     const LoadInst *LI) {
-  unsigned StoreAlign = findStoreAlignment(DL, SI);
-  unsigned LoadAlign = findLoadAlignment(DL, LI);
-  return MinAlign(StoreAlign, LoadAlign);
+static Align findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
+                                 const LoadInst *LI) {
+  Align StoreAlign = findStoreAlignment(DL, SI);
+  Align LoadAlign = findLoadAlignment(DL, LI);
+  return commonAlignment(StoreAlign, LoadAlign);
 }
 
 // This method try to lift a store instruction before position P.
@@ -646,7 +642,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
             LI, SI->getPointerOperand()->stripPointerCasts(),
             LI->getPointerOperand()->stripPointerCasts(),
             DL.getTypeStoreSize(SI->getOperand(0)->getType()),
-            findCommonAlignment(DL, SI, LI), C);
+            findCommonAlignment(DL, SI, LI).value(), C);
         if (changed) {
           MD->removeInstruction(SI);
           SI->eraseFromParent();
@@ -978,12 +974,12 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   // example we could be moving from movaps -> movq on x86.
   IRBuilder<> Builder(M);
   if (UseMemMove)
-    Builder.CreateMemMove(M->getRawDest(), M->getDestAlignment(),
-                          MDep->getRawSource(), MDep->getSourceAlignment(),
+    Builder.CreateMemMove(M->getRawDest(), M->getDestAlign(),
+                          MDep->getRawSource(), MDep->getSourceAlign(),
                           M->getLength(), M->isVolatile());
   else
-    Builder.CreateMemCpy(M->getRawDest(), M->getDestAlignment(),
-                         MDep->getRawSource(), MDep->getSourceAlignment(),
+    Builder.CreateMemCpy(M->getRawDest(), M->getDestAlign(),
+                         MDep->getRawSource(), MDep->getSourceAlign(),
                          M->getLength(), M->isVolatile());
 
   // Remove the instruction we're replacing.
