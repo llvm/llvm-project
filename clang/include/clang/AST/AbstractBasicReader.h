@@ -197,65 +197,6 @@ public:
     return FunctionProtoType::ExtParameterInfo::getFromOpaqueValue(value);
   }
 
-  TemplateName readTemplateName() {
-    auto &ctx = getASTContext();
-    auto kind = asImpl().readTemplateNameKind();
-    switch (kind) {
-    case TemplateName::Template:
-      return TemplateName(asImpl().readTemplateDeclRef());
-
-    case TemplateName::OverloadedTemplate: {
-      SmallVector<NamedDecl *, 8> buffer;
-      auto overloadsArray = asImpl().template readArray<NamedDecl*>(buffer);
-
-      // Copy into an UnresolvedSet to satisfy the interface.
-      UnresolvedSet<8> overloads;
-      for (auto overload : overloadsArray) {
-        overloads.addDecl(overload);
-      }
-
-      return ctx.getOverloadedTemplateName(overloads.begin(), overloads.end());
-    }
-
-    case TemplateName::AssumedTemplate: {
-      auto name = asImpl().readDeclarationName();
-      return ctx.getAssumedTemplateName(name);
-    }
-
-    case TemplateName::QualifiedTemplate: {
-      auto qual = asImpl().readNestedNameSpecifier();
-      auto hasTemplateKeyword = asImpl().readBool();
-      auto templateDecl = asImpl().readTemplateDeclRef();
-      return ctx.getQualifiedTemplateName(qual, hasTemplateKeyword,
-                                          templateDecl);
-    }
-
-    case TemplateName::DependentTemplate: {
-      auto qual = asImpl().readNestedNameSpecifier();
-      auto isIdentifier = asImpl().readBool();
-      if (isIdentifier) {
-        return ctx.getDependentTemplateName(qual, asImpl().readIdentifier());
-      } else {
-        return ctx.getDependentTemplateName(qual,
-                 asImpl().readOverloadedOperatorKind());
-      }
-    }
-
-    case TemplateName::SubstTemplateTemplateParm: {
-      auto param = asImpl().readTemplateTemplateParmDeclRef();
-      auto replacement = asImpl().readTemplateName();
-      return ctx.getSubstTemplateTemplateParm(param, replacement);
-    }
-
-    case TemplateName::SubstTemplateTemplateParmPack: {
-      auto param = asImpl().readTemplateTemplateParmDeclRef();
-      auto replacement = asImpl().readTemplateName();
-      return ctx.getSubstTemplateTemplateParmPack(param, replacement);
-    }
-    }
-    llvm_unreachable("bad template name kind");
-  }
-
   TemplateArgument readTemplateArgument(bool canonicalize = false) {
     if (canonicalize) {
       return getASTContext().getCanonicalTemplateArgument(
