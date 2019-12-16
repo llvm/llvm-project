@@ -27,8 +27,11 @@ namespace clang {
 void EmitClangDeclContext(llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 void EmitClangASTNodes(llvm::RecordKeeper &RK, llvm::raw_ostream &OS,
                        const std::string &N, const std::string &S);
+void EmitClangBasicReader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangBasicWriter(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangTypeNodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-
+void EmitClangTypeReader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangTypeWriter(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangAttrParserStringSwitches(llvm::RecordKeeper &Records,
                                        llvm::raw_ostream &OS);
 void EmitClangAttrSubjectMatchRulesParserStringSwitches(
