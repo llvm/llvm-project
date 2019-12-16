@@ -211,3 +211,64 @@ class PropertyTypeCase<PropertyType type, string name> : HasProperties {
   string Name = name;
 }
 
+// DeclarationName
+def : PropertyTypeKind<DeclarationName, DeclarationNameKind,
+                       "node.getNameKind()">;
+let Class = PropertyTypeCase<DeclarationName, "Identifier"> in {
+  def : Property<"identifier", Identifier> {
+    let Read = [{ node.getAsIdentifierInfo() }];
+  }
+  def : Creator<[{
+    return DeclarationName(identifier);
+  }]>;
+}
+foreach count = ["Zero", "One", "Multi"] in {
+  let Class = PropertyTypeCase<DeclarationName, "ObjC"#count#"ArgSelector"> in {
+    def : Property<"selector", Selector> {
+      let Read = [{ node.getObjCSelector() }];
+    }
+    def : Creator<[{
+      return DeclarationName(selector);
+    }]>;
+  }
+}
+foreach kind = ["Constructor", "Destructor", "ConversionFunction"] in {
+  let Class = PropertyTypeCase<DeclarationName, "CXX"#kind#"Name"> in {
+    def : Property<"type", QualType> {
+      let Read = [{ node.getCXXNameType() }];
+    }
+    def : Creator<[{
+      return ctx.DeclarationNames.getCXX}]#kind#[{Name(
+               ctx.getCanonicalType(type));
+    }]>;
+  }
+}
+let Class = PropertyTypeCase<DeclarationName, "CXXDeductionGuideName"> in {
+  def : Property<"declaration", TemplateDeclRef> {
+    let Read = [{ node.getCXXDeductionGuideTemplate() }];
+  }
+  def : Creator<[{
+    return ctx.DeclarationNames.getCXXDeductionGuideName(declaration);
+  }]>;
+}
+let Class = PropertyTypeCase<DeclarationName, "CXXOperatorName"> in {
+  def : Property<"operatorKind", OverloadedOperatorKind> {
+    let Read = [{ node.getCXXOverloadedOperator() }];
+  }
+  def : Creator<[{
+    return ctx.DeclarationNames.getCXXOperatorName(operatorKind);
+  }]>;
+}
+let Class = PropertyTypeCase<DeclarationName, "CXXLiteralOperatorName"> in {
+  def : Property<"identifier", Identifier> {
+    let Read = [{ node.getCXXLiteralIdentifier() }];
+  }
+  def : Creator<[{
+    return ctx.DeclarationNames.getCXXLiteralOperatorName(identifier);
+  }]>;
+}
+let Class = PropertyTypeCase<DeclarationName, "CXXUsingDirective"> in {
+  def : Creator<[{
+    return DeclarationName::getUsingDirectiveName();
+  }]>;
+}

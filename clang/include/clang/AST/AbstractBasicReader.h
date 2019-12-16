@@ -197,48 +197,6 @@ public:
     return FunctionProtoType::ExtParameterInfo::getFromOpaqueValue(value);
   }
 
-  DeclarationName readDeclarationName() {
-    auto &ctx = getASTContext();
-    auto kind = asImpl().readDeclarationNameKind();
-    switch (kind) {
-    case DeclarationName::Identifier:
-      return DeclarationName(asImpl().readIdentifier());
-
-    case DeclarationName::ObjCZeroArgSelector:
-    case DeclarationName::ObjCOneArgSelector:
-    case DeclarationName::ObjCMultiArgSelector:
-      return DeclarationName(asImpl().readSelector());
-
-    case DeclarationName::CXXConstructorName:
-      return ctx.DeclarationNames.getCXXConstructorName(
-               ctx.getCanonicalType(asImpl().readQualType()));
-
-    case DeclarationName::CXXDestructorName:
-      return ctx.DeclarationNames.getCXXDestructorName(
-               ctx.getCanonicalType(asImpl().readQualType()));
-
-    case DeclarationName::CXXConversionFunctionName:
-      return ctx.DeclarationNames.getCXXConversionFunctionName(
-               ctx.getCanonicalType(asImpl().readQualType()));
-
-    case DeclarationName::CXXDeductionGuideName:
-      return ctx.DeclarationNames.getCXXDeductionGuideName(
-               asImpl().readTemplateDeclRef());
-
-    case DeclarationName::CXXOperatorName:
-      return ctx.DeclarationNames.getCXXOperatorName(
-               asImpl().readOverloadedOperatorKind());
-
-    case DeclarationName::CXXLiteralOperatorName:
-      return ctx.DeclarationNames.getCXXLiteralOperatorName(
-               asImpl().readIdentifier());
-
-    case DeclarationName::CXXUsingDirective:
-      return DeclarationName::getUsingDirectiveName();
-    }
-    llvm_unreachable("bad name kind");
-  }
-
   TemplateName readTemplateName() {
     auto &ctx = getASTContext();
     auto kind = asImpl().readTemplateNameKind();
