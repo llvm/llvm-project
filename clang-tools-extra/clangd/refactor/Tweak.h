@@ -48,7 +48,7 @@ public:
   /// Input to prepare and apply tweaks.
   struct Selection {
     Selection(const SymbolIndex *Index, ParsedAST &AST, unsigned RangeBegin,
-              unsigned RangeEnd);
+              unsigned RangeEnd, SelectionTree ASTSelection);
     /// The text of the active document.
     llvm::StringRef Code;
     /// The Index for handling codebase related queries.

@@ -46,10 +46,17 @@ void validateRegistry() {
 } // namespace
 
 Tweak::Selection::Selection(const SymbolIndex *Index, ParsedAST &AST,
+<<<<<<< HEAD
                             unsigned RangeBegin, unsigned RangeEnd)
     : Index(Index), AST(&AST), SelectionBegin(RangeBegin),
       SelectionEnd(RangeEnd),
       ASTSelection(AST.getASTContext(), AST.getTokens(), RangeBegin, RangeEnd) {
+=======
+                            unsigned RangeBegin, unsigned RangeEnd,
+                            SelectionTree ASTSelection)
+    : Index(Index), AST(&AST), SelectionBegin(RangeBegin),
+      SelectionEnd(RangeEnd), ASTSelection(std::move(ASTSelection)) {
+>>>>>>> [clangd] Make Tweak::Selection movable. NFC
   auto &SM = AST.getSourceManager();
   Code = SM.getBufferData(SM.getMainFileID());
   Cursor = SM.getComposedLoc(SM.getMainFileID(), RangeBegin);
