@@ -83,15 +83,15 @@ bool RawStringLiteral::prepare(const Selection &Inputs) {
     return false;
   Str = dyn_cast_or_null<StringLiteral>(N->ASTNode.get<Stmt>());
   return Str &&
-         isNormalString(*Str, Inputs.Cursor, Inputs.AST.getSourceManager()) &&
+         isNormalString(*Str, Inputs.Cursor, Inputs.AST->getSourceManager()) &&
          needsRaw(Str->getBytes()) && canBeRaw(Str->getBytes());
 }
 
 Expected<Tweak::Effect> RawStringLiteral::apply(const Selection &Inputs) {
-  auto &SM = Inputs.AST.getSourceManager();
+  auto &SM = Inputs.AST->getSourceManager();
   auto Reps = tooling::Replacements(
       tooling::Replacement(SM, Str, ("R\"(" + Str->getBytes() + ")\"").str(),
-                           Inputs.AST.getLangOpts()));
+                           Inputs.AST->getLangOpts()));
   return Effect::mainFileEdit(SM, std::move(Reps));
 }
 

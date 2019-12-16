@@ -44,18 +44,18 @@ Expected<Tweak::Effect> AnnotateHighlightings::apply(const Selection &Inputs) {
     // Now we hit the TUDecl case where commonAncestor() returns null
     // intendedly. We only annotate tokens in the main file, so use the default
     // traversal scope (which is the top level decls of the main file).
-    HighlightingTokens = getSemanticHighlightings(Inputs.AST);
+    HighlightingTokens = getSemanticHighlightings(*Inputs.AST);
   } else {
     // Store the existing scopes.
-    const auto &BackupScopes = Inputs.AST.getASTContext().getTraversalScope();
+    const auto &BackupScopes = Inputs.AST->getASTContext().getTraversalScope();
     // Narrow the traversal scope to the selected node.
-    Inputs.AST.getASTContext().setTraversalScope(
+    Inputs.AST->getASTContext().setTraversalScope(
         {const_cast<Decl *>(CommonDecl)});
-    HighlightingTokens = getSemanticHighlightings(Inputs.AST);
+    HighlightingTokens = getSemanticHighlightings(*Inputs.AST);
     // Restore the traversal scope.
-    Inputs.AST.getASTContext().setTraversalScope(BackupScopes);
+    Inputs.AST->getASTContext().setTraversalScope(BackupScopes);
   }
-  auto &SM = Inputs.AST.getSourceManager();
+  auto &SM = Inputs.AST->getSourceManager();
   tooling::Replacements Result;
   llvm::StringRef FilePath = SM.getFilename(Inputs.Cursor);
   for (const auto &Token : HighlightingTokens) {

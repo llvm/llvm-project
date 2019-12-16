@@ -438,15 +438,15 @@ public:
 
     // Check if the decls referenced in function body are visible in the
     // declaration location.
-    if (!checkDeclsAreVisible(getNonLocalDeclRefs(Sel.AST, Source), Target,
-                              Sel.AST.getSourceManager()))
+    if (!checkDeclsAreVisible(getNonLocalDeclRefs(*Sel.AST, Source), Target,
+                              Sel.AST->getSourceManager()))
       return false;
 
     return true;
   }
 
   Expected<Effect> apply(const Selection &Sel) override {
-    const auto &AST = Sel.AST.getASTContext();
+    const auto &AST = Sel.AST->getASTContext();
     const auto &SM = AST.getSourceManager();
 
     auto Semicolon = getSemicolonForDecl(Target);
