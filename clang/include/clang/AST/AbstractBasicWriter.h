@@ -178,62 +178,6 @@ public:
     asImpl().writeUInt32(epi.getOpaqueValue());
   }
 
-  void writeTemplateName(TemplateName name) {
-    asImpl().writeTemplateNameKind(name.getKind());
-    switch (name.getKind()) {
-    case TemplateName::Template:
-      asImpl().writeDeclRef(name.getAsTemplateDecl());
-      return;
-
-    case TemplateName::OverloadedTemplate: {
-      OverloadedTemplateStorage *overload = name.getAsOverloadedTemplate();
-      asImpl().writeArray(llvm::makeArrayRef(overload->begin(),
-                                             overload->end()));
-      return;
-    }
-
-    case TemplateName::AssumedTemplate: {
-      AssumedTemplateStorage *assumed = name.getAsAssumedTemplateName();
-      asImpl().writeDeclarationName(assumed->getDeclName());
-      return;
-    }
-
-    case TemplateName::QualifiedTemplate: {
-      QualifiedTemplateName *qual = name.getAsQualifiedTemplateName();
-      asImpl().writeNestedNameSpecifier(qual->getQualifier());
-      asImpl().writeBool(qual->hasTemplateKeyword());
-      asImpl().writeDeclRef(qual->getTemplateDecl());
-      return;
-    }
-
-    case TemplateName::DependentTemplate: {
-      DependentTemplateName *dep = name.getAsDependentTemplateName();
-      asImpl().writeNestedNameSpecifier(dep->getQualifier());
-      asImpl().writeBool(dep->isIdentifier());
-      if (dep->isIdentifier())
-        asImpl().writeIdentifier(dep->getIdentifier());
-      else
-        asImpl().writeOverloadedOperatorKind(dep->getOperator());
-      return;
-    }
-
-    case TemplateName::SubstTemplateTemplateParm: {
-      auto subst = name.getAsSubstTemplateTemplateParm();
-      asImpl().writeDeclRef(subst->getParameter());
-      asImpl().writeTemplateName(subst->getReplacement());
-      return;
-    }
-
-    case TemplateName::SubstTemplateTemplateParmPack: {
-      auto substPack = name.getAsSubstTemplateTemplateParmPack();
-      asImpl().writeDeclRef(substPack->getParameterPack());
-      asImpl().writeTemplateArgument(substPack->getArgumentPack());
-      return;
-    }
-    }
-    llvm_unreachable("bad template name kind");
-  }
-
   void writeTemplateArgument(const TemplateArgument &arg) {
     asImpl().writeTemplateArgumentKind(arg.getKind());
     switch (arg.getKind()) {

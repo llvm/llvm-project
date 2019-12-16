@@ -296,3 +296,108 @@ let Class = PropertyTypeCase<DeclarationName, "CXXUsingDirective"> in {
     return DeclarationName::getUsingDirectiveName();
   }]>;
 }
+
+// Type cases for TemplateName.
+def : PropertyTypeKind<TemplateName, TemplateNameKind, "node.getKind()">;
+let Class = PropertyTypeCase<TemplateName, "Template"> in {
+  def : Property<"declaration", TemplateDeclRef> {
+    let Read = [{ node.getAsTemplateDecl() }];
+  }
+  def : Creator<[{
+    return TemplateName(declaration);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "OverloadedTemplate"> in {
+  def : Property<"overloads", Array<NamedDeclRef>> {
+    let Read = [{ node.getAsOverloadedTemplate()->decls() }];
+  }
+  def : Creator<[{
+    // Copy into an UnresolvedSet to satisfy the interface.
+    UnresolvedSet<8> overloadSet;
+    for (auto overload : overloads) {
+      overloadSet.addDecl(overload);
+    }
+
+    return ctx.getOverloadedTemplateName(overloadSet.begin(),
+                                         overloadSet.end());
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "AssumedTemplate"> in {
+  def : Property<"name", DeclarationName> {
+    let Read = [{ node.getAsAssumedTemplateName()->getDeclName() }];
+  }
+  def : Creator<[{
+    return ctx.getAssumedTemplateName(name);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "QualifiedTemplate"> in {
+  def : ReadHelper<[{
+    auto qtn = node.getAsQualifiedTemplateName();
+  }]>;
+  def : Property<"qualifier", NestedNameSpecifier> {
+    let Read = [{ qtn->getQualifier() }];
+  }
+  def : Property<"hasTemplateKeyword", Bool> {
+    let Read = [{ qtn->hasTemplateKeyword() }];
+  }
+  def : Property<"declaration", TemplateDeclRef> {
+    let Read = [{ qtn->getTemplateDecl() }];
+  }
+  def : Creator<[{
+    return ctx.getQualifiedTemplateName(qualifier, hasTemplateKeyword,
+                                        declaration);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "DependentTemplate"> in {
+  def : ReadHelper<[{
+    auto dtn = node.getAsDependentTemplateName();
+  }]>;
+  def : Property<"qualifier", NestedNameSpecifier> {
+    let Read = [{ dtn->getQualifier() }];
+  }
+  def : Property<"identifier", Optional<Identifier>> {
+    let Read = [{ makeOptionalFromPointer(
+                    dtn->isIdentifier()
+                      ? dtn->getIdentifier()
+                      : nullptr) }];
+  }
+  def : Property<"operatorKind", OverloadedOperatorKind> {
+    let Conditional = [{ identifier }];
+    let Read = [{ dtn->getOperator() }];
+  }
+  def : Creator<[{
+    if (identifier) {
+      return ctx.getDependentTemplateName(qualifier, *identifier);
+    } else {
+      return ctx.getDependentTemplateName(qualifier, *operatorKind);
+    }
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParm"> in {
+  def : ReadHelper<[{
+    auto parm = node.getAsSubstTemplateTemplateParm();
+  }]>;
+  def : Property<"parameter", TemplateTemplateParmDeclRef> {
+    let Read = [{ parm->getParameter() }];
+  }
+  def : Property<"replacement", TemplateName> {
+    let Read = [{ parm->getReplacement() }];
+  }
+  def : Creator<[{
+    return ctx.getSubstTemplateTemplateParm(parameter, replacement);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
+  def : ReadHelper<[{
+    auto parm = node.getAsSubstTemplateTemplateParmPack();
+  }]>;
+  def : Property<"parameterPack", TemplateTemplateParmDeclRef> {
+    let Read = [{ parm->getParameterPack() }];
+  }
+  def : Property<"argumentPack", TemplateArgument> {
+    let Read = [{ parm->getArgumentPack() }];
+  }
+  def : Creator<[{
+    return ctx.getSubstTemplateTemplateParmPack(parameterPack, argumentPack);
+  }]>;
+}
