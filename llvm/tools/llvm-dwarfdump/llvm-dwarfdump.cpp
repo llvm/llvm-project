@@ -271,7 +271,7 @@ static bool filterArch(ObjectFile &Obj) {
           return true;
 
       // Match as name.
-      if (MachO->getArchTriple().getArch() == Triple(Arch).getArch())
+      if (MachO->getArchTriple().getArchName() == Triple(Arch).getArchName())
         return true;
     }
   }

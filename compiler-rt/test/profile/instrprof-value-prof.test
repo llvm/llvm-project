@@ -1,3 +1,4 @@
+// RUN: rm -f %t.profraw %t.ir.profraw %t.ir.dyn.profraw
 // RUN: %clang_profgen -O2 -mllvm -enable-value-profiling=true -mllvm -vp-static-alloc=true -mllvm -vp-counters-per-site=256 -o %t %S/Inputs/instrprof-value-prof-real.c
 // RUN: env LLVM_PROFILE_FILE=%t.profraw LLVM_VP_MAX_NUM_VALS_PER_SITE=255 %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw

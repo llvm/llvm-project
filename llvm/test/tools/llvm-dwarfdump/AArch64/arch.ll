@@ -1,6 +1,5 @@
 ; RUN: llc -O0 %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump -arch arm64   %t.o | FileCheck %s
-; RUN: llvm-dwarfdump -arch aarch64 %t.o | FileCheck %s
 ; RUN: llvm-dwarfdump -arch 0x0100000c %t.o | FileCheck %s
 ; CHECK: file format Mach-O arm64
 ;

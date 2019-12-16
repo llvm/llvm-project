@@ -52,7 +52,7 @@ join:
 ;     %c = phi i32* [ %c1, %one ], [ %c2, %two ]
 ;     %a3 = bitcast i32* %a to i8*                   <--- new
 ;     %c5 = bitcast i32* %c to i8*
-;     %0 = bitcast i32* undef to i8*                 <--- old, invalidated
+;     %0 = bitcast i32* %a to i8*                 <--- old, invalidated
 ;
 ; 3. Finally, when C is expanded again:
 ;
@@ -61,16 +61,20 @@ join:
 ;     %c = phi i32* [ %c1, %one ], [ %c2, %two ]
 ;     %c5 = bitcast i32* %c to i8*                   <--- new
 ;     %a3 = bitcast i32* %a to i8*
-;     %0 = bitcast i32* undef to i8*                 <--- old, invalidated
-;     %1 = bitcast i32* undef to i8*
+;     %0 = bitcast i32* %c to i8*                 <--- old, invalidated
+;     %1 = bitcast i32* %a to i8*
 
   %a = phi i32* [%a1, %one], [%a2, %two]
   %c = phi i32* [%c1, %one], [%c2, %two]
   br label %for.body
 
-
-; CHECK: [[VALUE:%[0-9a-z]+]] = bitcast i32* undef to i8*
-; CHECK-NOT: [[VALUE]]
+; CHECK: join
+; CHECK: {{%[0-9a-z]+}} = bitcast i32* %c to i8*
+; CHECK: {{%[0-9a-z]+}} = bitcast i32* %a to i8*
+; CHECK: [[OLD_C:%[0-9a-z]+]] = bitcast i32* %c to i8*
+; CHECK: [[OLD_A:%[0-9a-z]+]] = bitcast i32* %a to i8*
+; CHECK-NOT: [[OLD_C]]
+; CHECK-NOT: [[OLD_A]]
 
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %join ], [ %add, %for.body ]

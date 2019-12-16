@@ -33,7 +33,8 @@ from libscanbuild.intercept import capture
 from libscanbuild.report import document
 from libscanbuild.compilation import split_command, classify_source, \
     compiler_language
-from libscanbuild.clang import get_version, get_arguments, get_triple_arch
+from libscanbuild.clang import get_version, get_arguments, get_triple_arch, \
+    ClangErrorException
 from libscanbuild.shell import decode
 
 __all__ = ['scan_build', 'analyze_build', 'analyze_compiler_wrapper']
@@ -435,7 +436,7 @@ def run(opts):
     of the compilation database.
 
     This complex task is decomposed into smaller methods which are calling
-    each other in chain. If the analyzis is not possible the given method
+    each other in chain. If the analysis is not possible the given method
     just return and break the chain.
 
     The passed parameter is a python dictionary. Each method first check
@@ -451,7 +452,7 @@ def run(opts):
 
         return arch_check(opts)
     except Exception:
-        logging.error("Problem occurred during analyzis.", exc_info=1)
+        logging.error("Problem occurred during analysis.", exc_info=1)
         return None
 
 
@@ -490,10 +491,15 @@ def report_failure(opts):
     os.close(handle)
     # Execute Clang again, but run the syntax check only.
     cwd = opts['directory']
-    cmd = get_arguments(
-        [opts['clang'], '-fsyntax-only', '-E'
-         ] + opts['flags'] + [opts['file'], '-o', name], cwd)
-    run_command(cmd, cwd=cwd)
+    cmd = [opts['clang'], '-fsyntax-only', '-E'] + opts['flags'] + \
+        [opts['file'], '-o', name]
+    try:
+        cmd = get_arguments(cmd, cwd)
+        run_command(cmd, cwd=cwd)
+    except subprocess.CalledProcessError:
+        pass
+    except ClangErrorException:
+        pass
     # write general information about the crash
     with open(name + '.info.txt', 'w') as handle:
         handle.write(opts['file'] + os.linesep)
@@ -538,6 +544,12 @@ def run_analyzer(opts, continuation=report_failure):
         return {'error_output': output, 'exit_code': 0}
     except subprocess.CalledProcessError as ex:
         result = {'error_output': ex.output, 'exit_code': ex.returncode}
+        if opts.get('output_failures', False):
+            opts.update(result)
+            continuation(opts)
+        return result
+    except ClangErrorException as ex:
+        result = {'error_output': ex.error, 'exit_code': 0}
         if opts.get('output_failures', False):
             opts.update(result)
             continuation(opts)

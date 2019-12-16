@@ -290,9 +290,9 @@ ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
       SmallString<80> buf;
       llvm::raw_svector_ostream OS(buf);
       assert(CurrentFunctionDescription);
-      OS << "Null pointer argument in call to " << CurrentFunctionDescription
-         << ' ' << IdxOfArg << llvm::getOrdinalSuffix(IdxOfArg)
-         << " parameter";
+      OS << "Null pointer passed as " << IdxOfArg
+         << llvm::getOrdinalSuffix(IdxOfArg) << " argument to "
+         << CurrentFunctionDescription;
 
       emitNullArgBug(C, stateNull, S, OS.str());
     }
@@ -1313,9 +1313,9 @@ void CStringChecker::evalMemcmp(CheckerContext &C, const CallExpr *CE) const {
     ProgramStateRef StSameBuf, StNotSameBuf;
     std::tie(StSameBuf, StNotSameBuf) = state->assume(SameBuf);
 
-    // If the two arguments might be the same buffer, we know the result is 0,
+    // If the two arguments are the same buffer, we know the result is 0,
     // and we only need to check one size.
-    if (StSameBuf) {
+    if (StSameBuf && !StNotSameBuf) {
       state = StSameBuf;
       state = CheckBufferAccess(C, state, Size, Left);
       if (state) {
@@ -1323,20 +1323,19 @@ void CStringChecker::evalMemcmp(CheckerContext &C, const CallExpr *CE) const {
                                     svalBuilder.makeZeroVal(CE->getType()));
         C.addTransition(state);
       }
+      return;
     }
 
-    // If the two arguments might be different buffers, we have to check the
-    // size of both of them.
-    if (StNotSameBuf) {
-      state = StNotSameBuf;
-      state = CheckBufferAccess(C, state, Size, Left, Right);
-      if (state) {
-        // The return value is the comparison result, which we don't know.
-        SVal CmpV = svalBuilder.conjureSymbolVal(nullptr, CE, LCtx,
-                                                 C.blockCount());
-        state = state->BindExpr(CE, LCtx, CmpV);
-        C.addTransition(state);
-      }
+    // If the two arguments might be different buffers, we have to check
+    // the size of both of them.
+    assert(StNotSameBuf);
+    state = CheckBufferAccess(C, state, Size, Left, Right);
+    if (state) {
+      // The return value is the comparison result, which we don't know.
+      SVal CmpV =
+          svalBuilder.conjureSymbolVal(nullptr, CE, LCtx, C.blockCount());
+      state = state->BindExpr(CE, LCtx, CmpV);
+      C.addTransition(state);
     }
   }
 }
@@ -1536,7 +1535,10 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
                                       bool ReturnEnd, bool IsBounded,
                                       ConcatFnKind appendK,
                                       bool returnPtr) const {
-  CurrentFunctionDescription = "string copy function";
+  if (appendK == ConcatFnKind::none)
+    CurrentFunctionDescription = "string copy function";
+  else
+    CurrentFunctionDescription = "string concatenation function";
   ProgramStateRef state = C.getState();
   const LocationContext *LCtx = C.getLocationContext();
 

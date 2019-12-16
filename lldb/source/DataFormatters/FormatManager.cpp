@@ -640,9 +640,23 @@ ImplSP FormatManager::Get(ValueObject &valobj,
   FormattersMatchData match_data(valobj, use_dynamic);
   if (ImplSP retval_sp = GetCached<ImplSP>(match_data))
     return retval_sp;
-
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-  LLDB_LOGF(log, "[%s] Search failed. Giving hardcoded a chance.", __FUNCTION__);
+
+  LLDB_LOGF(log, "[%s] Search failed. Giving language a chance.", __FUNCTION__);
+  for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
+    if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
+      ImplSP retval_sp;
+      if (lang_category->Get(match_data, retval_sp))
+        if (retval_sp) {
+          LLDB_LOGF(log, "[%s] Language search success. Returning.",
+                    __FUNCTION__);
+          return retval_sp;
+        }
+    }
+  }
+
+  LLDB_LOGF(log, "[%s] Search failed. Giving hardcoded a chance.",
+            __FUNCTION__);
   return GetHardcoded<ImplSP>(match_data);
 }
 
@@ -667,21 +681,6 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
   }
 
   m_categories_map.Get(match_data, retval_sp);
-  if (!retval_sp) {
-    LLDB_LOGF(log, "[%s] Search failed. Giving language a chance.",
-              __FUNCTION__);
-    for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
-      if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
-        if (lang_category->Get(match_data, retval_sp))
-          break;
-      }
-    }
-    if (retval_sp) {
-      LLDB_LOGF(log, "[%s] Language search success. Returning.", __FUNCTION__);
-      return retval_sp;
-    }
-  }
-
   if (match_data.GetTypeForCache() && (!retval_sp || !retval_sp->NonCacheable())) {
     LLDB_LOGF(log, "[%s] Caching %p for type %s", __FUNCTION__,
               static_cast<void *>(retval_sp.get()),

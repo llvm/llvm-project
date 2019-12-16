@@ -1,3 +1,5 @@
+// RUN: rm -f %t.profraw
+//
 // 1. Test that __llvm_profile_set_filename has higher precedence than
 //    the default path.
 // RUN: %clang_profgen -o %t -O3 %s
