@@ -20,6 +20,24 @@ def SDT_AArch64_GLD1_IMM : SDTypeProfile<1, 4, [
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
 ]>;
 
+def SDT_AArch64_SST1 : SDTypeProfile<0, 5, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>, SDTCisVec<3>, SDTCisVT<4, OtherVT>,
+  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
+]>;
+
+def SDT_AArch64_SST1_IMM : SDTypeProfile<0, 5, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisInt<3>, SDTCisVT<4, OtherVT>,
+  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
+]>;
+
+def AArch64st1_scatter               : SDNode<"AArch64ISD::SST1",               SDT_AArch64_SST1,     [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
+def AArch64st1_scatter_scaled        : SDNode<"AArch64ISD::SST1_SCALED",        SDT_AArch64_SST1,     [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
+def AArch64st1_scatter_uxtw          : SDNode<"AArch64ISD::SST1_UXTW",          SDT_AArch64_SST1,     [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
+def AArch64st1_scatter_sxtw          : SDNode<"AArch64ISD::SST1_SXTW",          SDT_AArch64_SST1,     [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
+def AArch64st1_scatter_uxtw_scaled   : SDNode<"AArch64ISD::SST1_UXTW_SCALED",   SDT_AArch64_SST1,     [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
+def AArch64st1_scatter_sxtw_scaled   : SDNode<"AArch64ISD::SST1_SXTW_SCALED",   SDT_AArch64_SST1,     [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
+def AArch64st1_scatter_imm           : SDNode<"AArch64ISD::SST1_IMM",           SDT_AArch64_SST1_IMM, [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
+
 def AArch64ld1_gather                : SDNode<"AArch64ISD::GLD1",               SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1_gather_scaled         : SDNode<"AArch64ISD::GLD1_SCALED",        SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1_gather_uxtw           : SDNode<"AArch64ISD::GLD1_UXTW",          SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
@@ -584,51 +602,55 @@ let Predicates = [HasSVE] in {
   defm ST1W_D : sve_mem_cst_ss<0b1011, "st1w", Z_d, ZPR64, GPR64NoXZRshifted32>;
   defm ST1D   : sve_mem_cst_ss<0b1111, "st1d", Z_d, ZPR64, GPR64NoXZRshifted64>;
 
-  // Scatters using unscaled 32-bit offsets, e.g.
-  //    st1h z0.s, p0, [x0, z0.s, uxtw]
-  // and unpacked:
+  // Scatters using unpacked, unscaled 32-bit offsets, e.g.
   //    st1h z0.d, p0, [x0, z0.d, uxtw]
-  defm SST1B_D : sve_mem_sst_sv_32_unscaled<0b000, "st1b", Z_d, ZPR64, ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only>;
-  defm SST1B_S : sve_mem_sst_sv_32_unscaled<0b001, "st1b", Z_s, ZPR32, ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only>;
-  defm SST1H_D : sve_mem_sst_sv_32_unscaled<0b010, "st1h", Z_d, ZPR64, ZPR64ExtSXTW8, ZPR64ExtUXTW8>;
-  defm SST1H_S : sve_mem_sst_sv_32_unscaled<0b011, "st1h", Z_s, ZPR32, ZPR32ExtSXTW8, ZPR32ExtUXTW8>;
-  defm SST1W_D : sve_mem_sst_sv_32_unscaled<0b100, "st1w", Z_d, ZPR64, ZPR64ExtSXTW8, ZPR64ExtUXTW8>;
-  defm SST1W   : sve_mem_sst_sv_32_unscaled<0b101, "st1w", Z_s, ZPR32, ZPR32ExtSXTW8, ZPR32ExtUXTW8>;
-  defm SST1D   : sve_mem_sst_sv_32_unscaled<0b110, "st1d", Z_d, ZPR64, ZPR64ExtSXTW8, ZPR64ExtUXTW8>;
+  defm SST1B_D : sve_mem_64b_sst_sv_32_unscaled<0b000, "st1b", AArch64st1_scatter_sxtw, AArch64st1_scatter_uxtw, ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
+  defm SST1H_D : sve_mem_64b_sst_sv_32_unscaled<0b010, "st1h", AArch64st1_scatter_sxtw, AArch64st1_scatter_uxtw, ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
+  defm SST1W_D : sve_mem_64b_sst_sv_32_unscaled<0b100, "st1w", AArch64st1_scatter_sxtw, AArch64st1_scatter_uxtw, ZPR64ExtSXTW8, ZPR64ExtUXTW8,nxv2i32>;
+  defm SST1D   : sve_mem_64b_sst_sv_32_unscaled<0b110, "st1d", AArch64st1_scatter_sxtw, AArch64st1_scatter_uxtw, ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i64>;
 
-  // Scatters using scaled 32-bit offsets, e.g.
+  // Scatters using packed, unscaled 32-bit offsets, e.g.
+  //    st1h z0.s, p0, [x0, z0.s, uxtw]
+  defm SST1B_S : sve_mem_32b_sst_sv_32_unscaled<0b001, "st1b", AArch64st1_scatter_sxtw, AArch64st1_scatter_uxtw, ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
+  defm SST1H_S : sve_mem_32b_sst_sv_32_unscaled<0b011, "st1h", AArch64st1_scatter_sxtw, AArch64st1_scatter_uxtw, ZPR32ExtSXTW8, ZPR32ExtUXTW8, nxv4i16>;
+  defm SST1W   : sve_mem_32b_sst_sv_32_unscaled<0b101, "st1w", AArch64st1_scatter_sxtw, AArch64st1_scatter_uxtw, ZPR32ExtSXTW8, ZPR32ExtUXTW8, nxv4i32>;
+
+  // Scatters using packed, scaled 32-bit offsets, e.g.
   //    st1h z0.s, p0, [x0, z0.s, uxtw #1]
-  // and unpacked:
+  defm SST1H_S : sve_mem_32b_sst_sv_32_scaled<0b011, "st1h", AArch64st1_scatter_sxtw_scaled, AArch64st1_scatter_uxtw_scaled, ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
+  defm SST1W   : sve_mem_32b_sst_sv_32_scaled<0b101, "st1w", AArch64st1_scatter_sxtw_scaled, AArch64st1_scatter_uxtw_scaled, ZPR32ExtSXTW32, ZPR32ExtUXTW32, nxv4i32>;
+
+  // Scatters using unpacked, scaled 32-bit offsets, e.g.
   //    st1h z0.d, p0, [x0, z0.d, uxtw #1]
-  defm SST1H_D : sve_mem_sst_sv_32_scaled<0b010, "st1h", Z_d, ZPR64, ZPR64ExtSXTW16, ZPR64ExtUXTW16>;
-  defm SST1H_S : sve_mem_sst_sv_32_scaled<0b011, "st1h", Z_s, ZPR32, ZPR32ExtSXTW16, ZPR32ExtUXTW16>;
-  defm SST1W_D : sve_mem_sst_sv_32_scaled<0b100, "st1w", Z_d, ZPR64, ZPR64ExtSXTW32, ZPR64ExtUXTW32>;
-  defm SST1W   : sve_mem_sst_sv_32_scaled<0b101, "st1w", Z_s, ZPR32, ZPR32ExtSXTW32, ZPR32ExtUXTW32>;
-  defm SST1D   : sve_mem_sst_sv_32_scaled<0b110, "st1d", Z_d, ZPR64, ZPR64ExtSXTW64, ZPR64ExtUXTW64>;
+  defm SST1H_D : sve_mem_64b_sst_sv_32_scaled<0b010, "st1h", AArch64st1_scatter_sxtw_scaled, AArch64st1_scatter_uxtw_scaled, ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
+  defm SST1W_D : sve_mem_64b_sst_sv_32_scaled<0b100, "st1w", AArch64st1_scatter_sxtw_scaled, AArch64st1_scatter_uxtw_scaled, ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
+  defm SST1D   : sve_mem_64b_sst_sv_32_scaled<0b110, "st1d", AArch64st1_scatter_sxtw_scaled, AArch64st1_scatter_uxtw_scaled, ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
 
   // Scatters using 32/64-bit pointers with offset, e.g.
   //    st1h z0.s, p0, [z0.s, #16]
+  defm SST1B_S : sve_mem_32b_sst_vi_ptrs<0b001, "st1b", timm0_31, AArch64st1_scatter_imm, nxv4i8>;
+  defm SST1H_S : sve_mem_32b_sst_vi_ptrs<0b011, "st1h", tuimm5s2, AArch64st1_scatter_imm, nxv4i16>;
+  defm SST1W   : sve_mem_32b_sst_vi_ptrs<0b101, "st1w", tuimm5s4, AArch64st1_scatter_imm, nxv4i32>;
+
+  // Scatters using 32/64-bit pointers with offset, e.g.
   //    st1h z0.d, p0, [z0.d, #16]
-  defm SST1B_D : sve_mem_sst_vi_ptrs<0b000, "st1b", Z_d, ZPR64, imm0_31>;
-  defm SST1B_S : sve_mem_sst_vi_ptrs<0b001, "st1b", Z_s, ZPR32, imm0_31>;
-  defm SST1H_D : sve_mem_sst_vi_ptrs<0b010, "st1h", Z_d, ZPR64, uimm5s2>;
-  defm SST1H_S : sve_mem_sst_vi_ptrs<0b011, "st1h", Z_s, ZPR32, uimm5s2>;
-  defm SST1W_D : sve_mem_sst_vi_ptrs<0b100, "st1w", Z_d, ZPR64, uimm5s4>;
-  defm SST1W   : sve_mem_sst_vi_ptrs<0b101, "st1w", Z_s, ZPR32, uimm5s4>;
-  defm SST1D   : sve_mem_sst_vi_ptrs<0b110, "st1d", Z_d, ZPR64, uimm5s8>;
+  defm SST1B_D : sve_mem_64b_sst_vi_ptrs<0b000, "st1b", timm0_31, AArch64st1_scatter_imm, nxv2i8>;
+  defm SST1H_D : sve_mem_64b_sst_vi_ptrs<0b010, "st1h", tuimm5s2, AArch64st1_scatter_imm, nxv2i16>;
+  defm SST1W_D : sve_mem_64b_sst_vi_ptrs<0b100, "st1w", tuimm5s4, AArch64st1_scatter_imm, nxv2i32>;
+  defm SST1D   : sve_mem_64b_sst_vi_ptrs<0b110, "st1d", tuimm5s8, AArch64st1_scatter_imm, nxv2i64>;
 
   // Scatters using unscaled 64-bit offsets, e.g.
   //    st1h z0.d, p0, [x0, z0.d]
-  defm SST1B_D : sve_mem_sst_sv_64_unscaled<0b00, "st1b">;
-  defm SST1H_D : sve_mem_sst_sv_64_unscaled<0b01, "st1h">;
-  defm SST1W_D : sve_mem_sst_sv_64_unscaled<0b10, "st1w">;
-  defm SST1D   : sve_mem_sst_sv_64_unscaled<0b11, "st1d">;
+  defm SST1B_D : sve_mem_sst_sv_64_unscaled<0b00, "st1b", AArch64st1_scatter, nxv2i8>;
+  defm SST1H_D : sve_mem_sst_sv_64_unscaled<0b01, "st1h", AArch64st1_scatter, nxv2i16>;
+  defm SST1W_D : sve_mem_sst_sv_64_unscaled<0b10, "st1w", AArch64st1_scatter, nxv2i32>;
+  defm SST1D   : sve_mem_sst_sv_64_unscaled<0b11, "st1d", AArch64st1_scatter, nxv2i64>;
 
   // Scatters using scaled 64-bit offsets, e.g.
   //    st1h z0.d, p0, [x0, z0.d, lsl #1]
-  defm SST1H_D_SCALED : sve_mem_sst_sv_64_scaled<0b01, "st1h", ZPR64ExtLSL16>;
-  defm SST1W_D_SCALED : sve_mem_sst_sv_64_scaled<0b10, "st1w", ZPR64ExtLSL32>;
-  defm SST1D_SCALED   : sve_mem_sst_sv_64_scaled<0b11, "st1d", ZPR64ExtLSL64>;
+  defm SST1H_D_SCALED : sve_mem_sst_sv_64_scaled<0b01, "st1h", AArch64st1_scatter_scaled, ZPR64ExtLSL16, nxv2i16>;
+  defm SST1W_D_SCALED : sve_mem_sst_sv_64_scaled<0b10, "st1w", AArch64st1_scatter_scaled, ZPR64ExtLSL32, nxv2i32>;
+  defm SST1D_SCALED   : sve_mem_sst_sv_64_scaled<0b11, "st1d", AArch64st1_scatter_scaled, ZPR64ExtLSL64, nxv2i64>;
 
   // ST(2|3|4) structured stores (register + immediate)
   defm ST2B_IMM : sve_mem_est_si<0b00, 0b01, ZZ_b,   "st2b", simm4s2>;

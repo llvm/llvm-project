@@ -1064,6 +1064,35 @@ class AdvSIMD_1VectorArg_Imm_Intrinsic
                  llvm_i32_ty],
                 [IntrNoMem, ImmArg<1>]>;
 
+class AdvSIMD_ScatterStore_64bitOffset_Intrinsic
+    : Intrinsic<[],
+               [
+                 llvm_anyvector_ty,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMPointerToElt<0>,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
+               ],
+               [IntrWriteMem, IntrArgMemOnly]>;
+
+class AdvSIMD_ScatterStore_32bitOffset_Intrinsic
+    : Intrinsic<[],
+               [
+                 llvm_anyvector_ty,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMPointerToElt<0>,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
+               ],
+               [IntrWriteMem, IntrArgMemOnly]>;
+
+class AdvSIMD_ScatterStore_VectorBase_Intrinsic
+    : Intrinsic<[],
+               [
+                 llvm_anyvector_ty,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 llvm_anyvector_ty, llvm_i64_ty
+               ],
+               [IntrWriteMem, IntrArgMemOnly, ImmArg<3>]>;
+
 //
 // Loads
 //
@@ -1405,6 +1434,36 @@ def int_aarch64_sve_ld1_gather_uxtw_index : AdvSIMD_GatherLoad_32bitOffset_Intri
 
 // vector base + immediate index
 def int_aarch64_sve_ld1_gather_imm : AdvSIMD_GatherLoad_VecTorBase_Intrinsic;
+
+//
+// Scatter stores:
+//
+
+// scalar + vector, 64 bit unscaled offsets
+def int_aarch64_sve_st1_scatter : AdvSIMD_ScatterStore_64bitOffset_Intrinsic;
+
+// scalar + vector, 64 bit scaled offsets
+def int_aarch64_sve_st1_scatter_index
+    : AdvSIMD_ScatterStore_64bitOffset_Intrinsic;
+
+//  scalar + vector, 32 bit unscaled offsets, sign (sxtw) or zero (zxtw)
+//  extended to 64 bits
+def int_aarch64_sve_st1_scatter_sxtw
+    : AdvSIMD_ScatterStore_32bitOffset_Intrinsic;
+
+def int_aarch64_sve_st1_scatter_uxtw
+    : AdvSIMD_ScatterStore_32bitOffset_Intrinsic;
+
+//  scalar + vector, 32 bit scaled offsets, sign (sxtw) or zero (zxtw) extended
+//  to 64 bits
+def int_aarch64_sve_st1_scatter_sxtw_index
+    : AdvSIMD_ScatterStore_32bitOffset_Intrinsic;
+
+def int_aarch64_sve_st1_scatter_uxtw_index
+    : AdvSIMD_ScatterStore_32bitOffset_Intrinsic;
+
+// vector base + immediate index
+def int_aarch64_sve_st1_scatter_imm : AdvSIMD_ScatterStore_VectorBase_Intrinsic;
 
 //
 // SVE2 - Non-widening pairwise arithmetic

@@ -1357,6 +1357,13 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::GLD1S_SXTW_SCALED: return "AArch64ISD::GLD1S_SXTW_SCALED";
   case AArch64ISD::GLD1S_UXTW_SCALED: return "AArch64ISD::GLD1S_UXTW_SCALED";
   case AArch64ISD::GLD1S_IMM:         return "AArch64ISD::GLD1S_IMM";
+  case AArch64ISD::SST1:              return "AArch64ISD::SST1";
+  case AArch64ISD::SST1_SCALED:       return "AArch64ISD::SST1_SCALED";
+  case AArch64ISD::SST1_SXTW:         return "AArch64ISD::SST1_SXTW";
+  case AArch64ISD::SST1_UXTW:         return "AArch64ISD::SST1_UXTW";
+  case AArch64ISD::SST1_SXTW_SCALED:  return "AArch64ISD::SST1_SXTW_SCALED";
+  case AArch64ISD::SST1_UXTW_SCALED:  return "AArch64ISD::SST1_UXTW_SCALED";
+  case AArch64ISD::SST1_IMM:          return "AArch64ISD::SST1_IMM";
   }
   return nullptr;
 }
@@ -12080,6 +12087,75 @@ static MVT getSVEContainerType(EVT ContentTy) {
   }
 }
 
+static SDValue performST1ScatterCombine(SDNode *N, SelectionDAG &DAG,
+                                        unsigned Opcode,
+                                        bool OnlyPackedOffsets = true) {
+  const SDValue Src = N->getOperand(2);
+  const EVT SrcVT = Src->getValueType(0);
+  assert(SrcVT.isScalableVector() &&
+         "Scatter stores are only possible for SVE vectors");
+
+  SDLoc DL(N);
+  MVT SrcElVT = SrcVT.getVectorElementType().getSimpleVT();
+
+  // Make sure that source data will fit into an SVE register
+  if (SrcVT.getSizeInBits().getKnownMinSize() > AArch64::SVEBitsPerBlock)
+    return SDValue();
+
+  // For FPs, ACLE only supports _packed_ single and double precision types.
+  if (SrcElVT.isFloatingPoint())
+    if ((SrcVT != MVT::nxv4f32) && (SrcVT != MVT::nxv2f64))
+      return SDValue();
+
+  // Depending on the addressing mode, this is either a pointer or a vector of
+  // pointers (that fits into one register)
+  const SDValue Base = N->getOperand(4);
+  // Depending on the addressing mode, this is either a single offset or a
+  // vector of offsets  (that fits into one register)
+  SDValue Offset = N->getOperand(5);
+
+  auto &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isTypeLegal(Base.getValueType()))
+    return SDValue();
+
+  // Some scatter store variants allow unpacked offsets, but only as nxv2i32
+  // vectors. These are implicitly sign (sxtw) or zero (zxtw) extend to
+  // nxv2i64. Legalize accordingly.
+  if (!OnlyPackedOffsets &&
+      Offset.getValueType().getSimpleVT().SimpleTy == MVT::nxv2i32)
+    Offset = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::nxv2i64, Offset).getValue(0);
+
+  if (!TLI.isTypeLegal(Offset.getValueType()))
+    return SDValue();
+
+  // Source value type that is representable in hardware
+  EVT HwSrcVt = getSVEContainerType(SrcVT);
+
+  // Keep the original type of the input data to store - this is needed to
+  // differentiate between ST1B, ST1H, ST1W and ST1D. For FP values we want the
+  // integer equivalent, so just use HwSrcVt.
+  SDValue InputVT = DAG.getValueType(SrcVT);
+  if (SrcVT.isFloatingPoint())
+    InputVT = DAG.getValueType(HwSrcVt);
+
+  SDVTList VTs = DAG.getVTList(MVT::Other);
+  SDValue SrcNew;
+
+  if (Src.getValueType().isFloatingPoint())
+    SrcNew = DAG.getNode(ISD::BITCAST, DL, HwSrcVt, Src);
+  else
+    SrcNew = DAG.getNode(ISD::ANY_EXTEND, DL, HwSrcVt, Src);
+
+  SDValue Ops[] = {N->getOperand(0), // Chain
+                   SrcNew,
+                   N->getOperand(3), // Pg
+                   Base,
+                   Offset,
+                   InputVT};
+
+  return DAG.getNode(Opcode, DL, VTs, Ops);
+}
+
 static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
                                        unsigned Opcode) {
   EVT RetVT = N->getValueType(0);
@@ -12300,6 +12376,24 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW_SCALED);
     case Intrinsic::aarch64_sve_ld1_gather_imm:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_IMM);
+    case Intrinsic::aarch64_sve_st1_scatter:
+      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1);
+    case Intrinsic::aarch64_sve_st1_scatter_index:
+      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_SCALED);
+    case Intrinsic::aarch64_sve_st1_scatter_sxtw:
+      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_SXTW,
+                                      /*OnlyPackedOffsets=*/false);
+    case Intrinsic::aarch64_sve_st1_scatter_uxtw:
+      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_UXTW,
+                                      /*OnlyPackedOffsets=*/false);
+    case Intrinsic::aarch64_sve_st1_scatter_sxtw_index:
+      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_SXTW_SCALED,
+                                      /*OnlyPackedOffsets=*/false);
+    case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
+      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_UXTW_SCALED,
+                                      /*OnlyPackedOffsets=*/false);
+    case Intrinsic::aarch64_sve_st1_scatter_imm:
+      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_IMM);
     default:
       break;
     }
