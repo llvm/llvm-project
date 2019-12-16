@@ -39,16 +39,16 @@ public:
   virtual void setPreprocessor(std::shared_ptr<Preprocessor> PP) {}
 
   /// \returns true to continue indexing, or false to abort.
-  virtual bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
-                                   ArrayRef<SymbolRelation> Relations,
-                                   SourceLocation Loc, ASTNodeInfo ASTNode) {
+  virtual bool handleDeclOccurrence(const Decl *D, SymbolRoleSet Roles,
+                                    ArrayRef<SymbolRelation> Relations,
+                                    SourceLocation Loc, ASTNodeInfo ASTNode) {
     return true;
   }
 
   /// \returns true to continue indexing, or false to abort.
-  virtual bool handleMacroOccurence(const IdentifierInfo *Name,
-                                    const MacroInfo *MI, SymbolRoleSet Roles,
-                                    SourceLocation Loc) {
+  virtual bool handleMacroOccurrence(const IdentifierInfo *Name,
+                                     const MacroInfo *MI, SymbolRoleSet Roles,
+                                     SourceLocation Loc) {
     return true;
   }
 
@@ -57,9 +57,9 @@ public:
   /// This will be called for each module reference in an import decl.
   /// For "@import MyMod.SubMod", there will be a call for 'MyMod' with the
   /// 'reference' role, and a call for 'SubMod' with the 'declaration' role.
-  virtual bool handleModuleOccurence(const ImportDecl *ImportD,
-                                     const Module *Mod, SymbolRoleSet Roles,
-                                     SourceLocation Loc) {
+  virtual bool handleModuleOccurrence(const ImportDecl *ImportD,
+                                      const Module *Mod, SymbolRoleSet Roles,
+                                      SourceLocation Loc) {
     return true;
   }
 

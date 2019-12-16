@@ -245,14 +245,14 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
 }
 
 // Always return true to continue indexing.
-bool SymbolCollector::handleDeclOccurence(
+bool SymbolCollector::handleDeclOccurrence(
     const Decl *D, index::SymbolRoleSet Roles,
     llvm::ArrayRef<index::SymbolRelation> Relations, SourceLocation Loc,
     index::IndexDataConsumer::ASTNodeInfo ASTNode) {
   assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
   assert(CompletionAllocator && CompletionTUInfo);
   assert(ASTNode.OrigD);
-  // Indexing API puts cannonical decl into D, which might not have a valid
+  // Indexing API puts canonical decl into D, which might not have a valid
   // source location for implicit/built-in decls. Fallback to original decl in
   // such cases.
   if (D->getLocation().isInvalid())
@@ -346,10 +346,10 @@ bool SymbolCollector::handleDeclOccurence(
   return true;
 }
 
-bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
-                                           const MacroInfo *MI,
-                                           index::SymbolRoleSet Roles,
-                                           SourceLocation Loc) {
+bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
+                                            const MacroInfo *MI,
+                                            index::SymbolRoleSet Roles,
+                                            SourceLocation Loc) {
   assert(PP.get());
 
   const auto &SM = PP->getSourceManager();
@@ -524,9 +524,8 @@ void SymbolCollector::finish() {
         auto FileURI = toURI(SM, FileEntry->getName(), Opts);
         Found = URICache.insert({FID, FileURI}).first;
       } else {
-        // Ignore cases where we can not find a corresponding file entry
-        // for the loc, thoses are not interesting, e.g. symbols formed
-        // via macro concatenation.
+        // Ignore cases where we can not find a corresponding file entry for
+        // given location, e.g. symbols formed via macro concatenation.
         return None;
       }
     }

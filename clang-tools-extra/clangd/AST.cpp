@@ -377,7 +377,7 @@ public:
     // Loc of "auto" in operator auto()
     if (CurLoc.isInvalid() && dyn_cast<CXXConversionDecl>(D))
       CurLoc = D->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
-    // Loc of "auto" in function with traling return type (c++11).
+    // Loc of "auto" in function with trailing return type (c++11).
     if (CurLoc.isInvalid())
       CurLoc = D->getSourceRange().getBegin();
     if (CurLoc != SearchedLocation)

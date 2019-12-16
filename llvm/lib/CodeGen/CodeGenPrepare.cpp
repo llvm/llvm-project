@@ -7345,6 +7345,10 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, bool &ModifiedDT) {
     if (Br1->getMetadata(LLVMContext::MD_unpredictable))
       continue;
 
+    // The merging of mostly empty BB can cause a degenerate branch.
+    if (TBB == FBB)
+      continue;
+
     unsigned Opc;
     Value *Cond1, *Cond2;
     if (match(LogicOp, m_And(m_OneUse(m_Value(Cond1)),

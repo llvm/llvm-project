@@ -8,7 +8,6 @@ init:
 
 ; CHECK:  %vala = load i64, i64* %ptr
 ; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %vala, metadata [[MD:![0-9]*]]
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %vala, metadata [[MD]]
 ; CHECK-NEXT:  %valbmasked = and i64 %vala, 1
 
 a:                                              ; preds = %init

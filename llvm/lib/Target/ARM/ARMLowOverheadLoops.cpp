@@ -129,21 +129,8 @@ namespace {
       bool IsDo = Start->getOpcode() == ARM::t2DoLoopStart;
       if (!IsTailPredicationLegal())
         return IsDo ? ARM::t2DLS : ARM::t2WLS;
-      
-      switch (VCTP->getOpcode()) {
-      default:
-        llvm_unreachable("unhandled vctp opcode");
-        break;
-      case ARM::MVE_VCTP8:
-        return IsDo ? ARM::MVE_DLSTP_8 : ARM::MVE_WLSTP_8;
-      case ARM::MVE_VCTP16:
-        return IsDo ? ARM::MVE_DLSTP_16 : ARM::MVE_WLSTP_16;
-      case ARM::MVE_VCTP32:
-        return IsDo ? ARM::MVE_DLSTP_32 : ARM::MVE_WLSTP_32;
-      case ARM::MVE_VCTP64:
-        return IsDo ? ARM::MVE_DLSTP_64 : ARM::MVE_WLSTP_64;
-      }
-      return 0;
+
+      return VCTPOpcodeToLSTP(VCTP->getOpcode(), IsDo);
     }
 
     void dump() const {
@@ -217,24 +204,6 @@ char ARMLowOverheadLoops::ID = 0;
 
 INITIALIZE_PASS(ARMLowOverheadLoops, DEBUG_TYPE, ARM_LOW_OVERHEAD_LOOPS_NAME,
                 false, false)
-
-static bool IsLoopStart(MachineInstr &MI) {
-  return MI.getOpcode() == ARM::t2DoLoopStart ||
-         MI.getOpcode() == ARM::t2WhileLoopStart;
-}
-
-static bool IsVCTP(MachineInstr *MI) {
-  switch (MI->getOpcode()) {
-  default:
-    break;
-  case ARM::MVE_VCTP8:
-  case ARM::MVE_VCTP16:
-  case ARM::MVE_VCTP32:
-  case ARM::MVE_VCTP64:
-    return true;
-  }
-  return false;
-}
 
 MachineInstr *LowOverheadLoop::IsSafeToDefineLR(ReachingDefAnalysis *RDA) {
   // We can define LR because LR already contains the same value.
@@ -423,7 +392,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   std::function<MachineInstr*(MachineBasicBlock*)> SearchForStart =
     [&SearchForStart](MachineBasicBlock *MBB) -> MachineInstr* {
     for (auto &MI : *MBB) {
-      if (IsLoopStart(MI))
+      if (isLoopStart(MI))
         return &MI;
     }
     if (MBB->pred_size() == 1)
@@ -451,9 +420,9 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
         LoLoop.Dec = &MI;
       else if (MI.getOpcode() == ARM::t2LoopEnd)
         LoLoop.End = &MI;
-      else if (IsLoopStart(MI))
+      else if (isLoopStart(MI))
         LoLoop.Start = &MI;
-      else if (IsVCTP(&MI))
+      else if (isVCTP(&MI))
         LoLoop.addVCTP(&MI);
       else if (MI.getDesc().isCall()) {
         // TODO: Though the call will require LE to execute again, does this
@@ -789,7 +758,7 @@ bool ARMLowOverheadLoops::RevertNonLoops() {
     SmallVector<MachineInstr*, 4> Ends;
 
     for (auto &I : MBB) {
-      if (IsLoopStart(I))
+      if (isLoopStart(I))
         Starts.push_back(&I);
       else if (I.getOpcode() == ARM::t2LoopDec)
         Decs.push_back(&I);
