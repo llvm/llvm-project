@@ -18,6 +18,14 @@ func @fifth_order_left(%arg0: (((() -> ()) -> ()) -> ()) -> ())
 //CHECK: llvm.func @fifth_order_right(!llvm<"void ()* ()* ()* ()*">)
 func @fifth_order_right(%arg0: () -> (() -> (() -> (() -> ()))))
 
+// Check that memrefs are converted to pointers-to-struct if appear as function arguments.
+// CHECK: llvm.func @memref_call_conv(!llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">)
+func @memref_call_conv(%arg0: memref<?xf32>)
+
+// Same in nested functions.
+// CHECK: llvm.func @memref_call_conv_nested(!llvm<"void ({ float*, float*, i64, [1 x i64], [1 x i64] }*)*">)
+func @memref_call_conv_nested(%arg0: (memref<?xf32>) -> ())
+
 //CHECK-LABEL: llvm.func @pass_through(%arg0: !llvm<"void ()*">) -> !llvm<"void ()*"> {
 func @pass_through(%arg0: () -> ()) -> (() -> ()) {
 // CHECK-NEXT:  llvm.br ^bb1(%arg0 : !llvm<"void ()*">)
