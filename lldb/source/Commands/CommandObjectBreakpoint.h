@@ -9,14 +9,9 @@
 #ifndef liblldb_CommandObjectBreakpoint_h_
 #define liblldb_CommandObjectBreakpoint_h_
 
-#include <utility>
-#include <vector>
 
 #include "lldb/Breakpoint/BreakpointName.h"
-#include "lldb/Core/Address.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
-#include "lldb/Interpreter/Options.h"
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 

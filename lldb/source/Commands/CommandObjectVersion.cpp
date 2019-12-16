@@ -8,7 +8,6 @@
 
 #include "CommandObjectVersion.h"
 
-#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/lldb-private.h"
 

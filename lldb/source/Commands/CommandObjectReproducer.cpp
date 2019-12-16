@@ -15,7 +15,6 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
-#include "lldb/Interpreter/OptionGroupBoolean.h"
 
 #include <csignal>
 

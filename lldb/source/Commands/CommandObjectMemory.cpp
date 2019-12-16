@@ -7,15 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectMemory.h"
-#include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
@@ -38,7 +34,6 @@
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "lldb/lldb-private.h"
 
 #include <cinttypes>
 #include <memory>
