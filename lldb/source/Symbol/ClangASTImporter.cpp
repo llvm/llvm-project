@@ -121,7 +121,7 @@ private:
     clang::DeclContext *lexical_decl_context;
   };
 
-  std::map<clang::Decl *, Backup> m_backups;
+  llvm::DenseMap<clang::Decl *, Backup> m_backups;
 
   void OverrideOne(clang::Decl *decl) {
     if (m_backups.find(decl) != m_backups.end()) {
@@ -228,10 +228,8 @@ namespace {
 /// imported while completing the original Decls).
 class CompleteTagDeclsScope : public ClangASTImporter::NewDeclListener {
   ClangASTImporter::ImporterDelegateSP m_delegate;
-  // FIXME: Investigate how many decls we usually have in these sets and
-  // see if we can use SmallPtrSet instead here.
-  std::set<NamedDecl *> m_decls_to_complete;
-  std::set<NamedDecl *> m_decls_already_completed;
+  llvm::SmallPtrSet<NamedDecl *, 32> m_decls_to_complete;
+  llvm::SmallPtrSet<NamedDecl *, 32> m_decls_already_completed;
   clang::ASTContext *m_dst_ctx;
   clang::ASTContext *m_src_ctx;
   ClangASTImporter &importer;
