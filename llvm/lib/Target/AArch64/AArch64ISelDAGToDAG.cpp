@@ -2867,16 +2867,23 @@ bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm) {
     switch (VT.SimpleTy) {
       case MVT::i8:
         ImmVal &= 0xFF;
-        ImmVal |= (ImmVal << 8);
+        ImmVal |= ImmVal << 8;
+        ImmVal |= ImmVal << 16;
+        ImmVal |= ImmVal << 32;
+        break;
       case MVT::i16:
         ImmVal &= 0xFFFF;
-        ImmVal |= (ImmVal << 16);
+        ImmVal |= ImmVal << 16;
+        ImmVal |= ImmVal << 32;
+        break;
       case MVT::i32:
         ImmVal &= 0xFFFFFFFF;
-        ImmVal |= (ImmVal << 32);
+        ImmVal |= ImmVal << 32;
+        break;
+      case MVT::i64:
         break;
       default:
-        break;
+        llvm_unreachable("Unexpected type");
     }
 
     uint64_t encoding;
