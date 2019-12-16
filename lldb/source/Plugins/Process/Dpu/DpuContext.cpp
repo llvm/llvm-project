@@ -100,9 +100,8 @@ bool DpuContext::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list) {
     }
   } else {
     for (auto thread_id : *resume_list) {
-      if (running_threads[thread_id] != 0xff) {
-        if (!AddThreadInScheduling(thread_id))
-          return false;
+      if (!AddThreadInScheduling(thread_id)) {
+        return false;
       }
     }
   }
@@ -140,6 +139,11 @@ bool DpuContext::ContextReadyForResumeOrStep() {
 }
 
 bool DpuContext::AddThreadInScheduling(unsigned int thread) {
+  // If the thread was not running, it can't be added in the scheduling list
+  if (running_threads[thread] == 0xff) {
+    return true;
+  }
+
   if (m_context->nr_of_running_threads >= nr_threads)
     return false;
 
