@@ -778,9 +778,8 @@ clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
   metadata.SetUserID(toOpaqueUid(id));
   metadata.SetIsDynamicCXXType(false);
 
-  CompilerType ct =
-      m_clang.CreateRecordType(context, access, uname.c_str(), ttk,
-                               lldb::eLanguageTypeC_plus_plus, &metadata);
+  CompilerType ct = m_clang.CreateRecordType(
+      context, access, uname, ttk, lldb::eLanguageTypeC_plus_plus, &metadata);
 
   lldbassert(ct.IsValid());
 

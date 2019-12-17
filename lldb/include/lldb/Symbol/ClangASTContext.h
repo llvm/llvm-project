@@ -263,8 +263,9 @@ public:
                                     bool omit_empty_base_classes);
 
   CompilerType CreateRecordType(clang::DeclContext *decl_ctx,
-                                lldb::AccessType access_type, const char *name,
-                                int kind, lldb::LanguageType language,
+                                lldb::AccessType access_type,
+                                llvm::StringRef name, int kind,
+                                lldb::LanguageType language,
                                 ClangASTMetadata *metadata = nullptr,
                                 bool exports_symbols = false);
 
@@ -322,8 +323,9 @@ public:
 
   static bool RecordHasFields(const clang::RecordDecl *record_decl);
 
-  CompilerType CreateObjCClass(const char *name, clang::DeclContext *decl_ctx,
-                               bool isForwardDecl, bool isInternal,
+  CompilerType CreateObjCClass(llvm::StringRef name,
+                               clang::DeclContext *decl_ctx, bool isForwardDecl,
+                               bool isInternal,
                                ClangASTMetadata *metadata = nullptr);
 
   bool SetTagTypeKind(clang::QualType type, int kind) const;
