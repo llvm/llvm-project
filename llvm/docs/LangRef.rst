@@ -16478,7 +16478,6 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.maxnum(<type> <op1>, <type> <op2>
-                                            metadata <rounding mode>,
                                             metadata <exception behavior>)
 
 Overview:
@@ -16493,16 +16492,12 @@ Arguments:
 The first two arguments and the return value are floating-point numbers
 of the same type.
 
-The third and forth arguments specify the rounding mode and exception
-behavior as described above.
+The third argument specifies the exception behavior as described above.
 
 Semantics:
 """"""""""
 
-This function follows the IEEE-754 semantics for maxNum. The rounding mode is
-described, not determined, by the rounding mode argument. The actual rounding
-mode is determined by the runtime floating-point environment. The rounding
-mode argument is only intended as information to the compiler.
+This function follows the IEEE-754 semantics for maxNum.
 
 
 '``llvm.experimental.constrained.minnum``' Intrinsic
@@ -16515,7 +16510,6 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.minnum(<type> <op1>, <type> <op2>
-                                            metadata <rounding mode>,
                                             metadata <exception behavior>)
 
 Overview:
@@ -16530,16 +16524,12 @@ Arguments:
 The first two arguments and the return value are floating-point numbers
 of the same type.
 
-The third and forth arguments specify the rounding mode and exception
-behavior as described above.
+The third argument specifies the exception behavior as described above.
 
 Semantics:
 """"""""""
 
-This function follows the IEEE-754 semantics for minNum. The rounding mode is
-described, not determined, by the rounding mode argument. The actual rounding
-mode is determined by the runtime floating-point environment. The rounding
-mode argument is only intended as information to the compiler.
+This function follows the IEEE-754 semantics for minNum.
 
 
 '``llvm.experimental.constrained.ceil``' Intrinsic
@@ -16552,7 +16542,6 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.ceil(<type> <op1>,
-                                          metadata <rounding mode>,
                                           metadata <exception behavior>)
 
 Overview:
@@ -16567,9 +16556,7 @@ Arguments:
 The first argument and the return value are floating-point numbers of the same
 type.
 
-The second and third arguments specify the rounding mode and exception
-behavior as described above. The rounding mode is currently unused for this
-intrinsic.
+The second argument specifies the exception behavior as described above.
 
 Semantics:
 """"""""""
@@ -16588,7 +16575,6 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.floor(<type> <op1>,
-                                           metadata <rounding mode>,
                                            metadata <exception behavior>)
 
 Overview:
@@ -16603,9 +16589,7 @@ Arguments:
 The first argument and the return value are floating-point numbers of the same
 type.
 
-The second and third arguments specify the rounding mode and exception
-behavior as described above. The rounding mode is currently unused for this
-intrinsic.
+The second argument specifies the exception behavior as described above.
 
 Semantics:
 """"""""""
@@ -16624,7 +16608,6 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.round(<type> <op1>,
-                                           metadata <rounding mode>,
                                            metadata <exception behavior>)
 
 Overview:
@@ -16639,9 +16622,7 @@ Arguments:
 The first argument and the return value are floating-point numbers of the same
 type.
 
-The second and third arguments specify the rounding mode and exception
-behavior as described above. The rounding mode is currently unused for this
-intrinsic.
+The second argument specifies the exception behavior as described above.
 
 Semantics:
 """"""""""
@@ -16736,7 +16717,6 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.trunc(<type> <op1>,
-                                           metadata <truncing mode>,
                                            metadata <exception behavior>)
 
 Overview:
@@ -16752,9 +16732,7 @@ Arguments:
 The first argument and the return value are floating-point numbers of the same
 type.
 
-The second and third arguments specify the truncing mode and exception
-behavior as described above. The truncing mode is currently unused for this
-intrinsic.
+The second argument specifies the exception behavior as described above.
 
 Semantics:
 """"""""""
