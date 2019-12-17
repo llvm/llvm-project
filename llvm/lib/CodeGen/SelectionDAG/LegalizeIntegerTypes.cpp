@@ -1202,6 +1202,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::SETCC:        Res = PromoteIntOp_SETCC(N, OpNo); break;
   case ISD::SIGN_EXTEND:  Res = PromoteIntOp_SIGN_EXTEND(N); break;
   case ISD::SINT_TO_FP:   Res = PromoteIntOp_SINT_TO_FP(N); break;
+  case ISD::STRICT_SINT_TO_FP: Res = PromoteIntOp_STRICT_SINT_TO_FP(N); break;
   case ISD::STORE:        Res = PromoteIntOp_STORE(cast<StoreSDNode>(N),
                                                    OpNo); break;
   case ISD::MSTORE:       Res = PromoteIntOp_MSTORE(cast<MaskedStoreSDNode>(N),
@@ -1215,6 +1216,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
   case ISD::FP16_TO_FP:
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
+  case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
   case ISD::EXTRACT_SUBVECTOR: Res = PromoteIntOp_EXTRACT_SUBVECTOR(N); break;
 
@@ -1491,6 +1493,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SINT_TO_FP(SDNode *N) {
                                 SExtPromotedInteger(N->getOperand(0))), 0);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_STRICT_SINT_TO_FP(SDNode *N) {
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0),
+                                SExtPromotedInteger(N->getOperand(1))), 0);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntOp_STORE(StoreSDNode *N, unsigned OpNo){
   assert(ISD::isUNINDEXEDStore(N) && "Indexed store during type legalization!");
   SDValue Ch = N->getChain(), Ptr = N->getBasePtr();
@@ -1588,6 +1595,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntOp_UINT_TO_FP(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N,
                                 ZExtPromotedInteger(N->getOperand(0))), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_STRICT_UINT_TO_FP(SDNode *N) {
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0),
+                                ZExtPromotedInteger(N->getOperand(1))), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ZERO_EXTEND(SDNode *N) {
