@@ -667,7 +667,12 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOp_StrictFP(SDNode *N) {
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
   // Revectorize the result so the types line up with what the uses of this
   // expression expect.
-  return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Res);
+  Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Res);
+
+  // Do our own replacement and return SDValue() to tell the caller that we
+  // handled all replacements since caller can only handle a single result.
+  ReplaceValueWith(SDValue(N, 0), Res);
+  return SDValue();
 }
 
 /// The vectors to concatenate have length one - use a BUILD_VECTOR instead.
