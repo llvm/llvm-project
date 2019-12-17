@@ -109,6 +109,10 @@ INLINE uint64_t __kmpc_impl_ffs(uint64_t x) { return __builtin_ffsl(x); }
 
 INLINE uint64_t __kmpc_impl_popc(uint64_t x) { return __builtin_popcountl(x); }
 
+template <typename T> INLINE T __kmpc_impl_min(T x, T y) {
+  return x < y ? x : y;
+}
+
 INLINE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return __ballot64(1);
 }

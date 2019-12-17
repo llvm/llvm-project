@@ -104,6 +104,10 @@ INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
 
 INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __popc(x); }
 
+template <typename T> INLINE T __kmpc_impl_min(T x, T y) {
+  return min(x, y);
+}
+
 #ifndef CUDA_VERSION
 #error CUDA_VERSION macro is undefined, something wrong with cuda.
 #endif
