@@ -60,7 +60,7 @@ addi zero, zero, 0
 
 # CHECK-REL-NOT: R_RISCV
 
-# Testing the function call offset could resovled by assembler
+# Testing the function call offset could resolved by assembler
 # when the function and the callsite within the same compile unit
 # and the linker relaxation is disabled.
 func:

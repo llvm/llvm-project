@@ -636,9 +636,6 @@ def : InstAlias<"jr $rs, $offset",        (JALR      X0, GPR:$rs, simm12:$offset
 def : InstAlias<"jalr $rs, $offset",      (JALR      X1, GPR:$rs, simm12:$offset), 0>;
 def : InstAlias<"jalr $rd, $rs, $offset", (JALR GPR:$rd, GPR:$rs, simm12:$offset), 0>;
 
-// TODO call
-// TODO tail
-
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
 def : InstAlias<"rdinstret $rd", (CSRRS GPR:$rd, INSTRET.Encoding, X0)>;
