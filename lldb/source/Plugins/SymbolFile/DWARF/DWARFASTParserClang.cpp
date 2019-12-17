@@ -1720,7 +1720,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             ClangASTContext::GetAsRecordDecl(clang_type);
 
         if (record_decl) {
-          GetClangASTImporter().InsertRecordDecl(
+          GetClangASTImporter().SetRecordLayout(
               record_decl, ClangASTImporter::LayoutInfo());
         }
       }
@@ -2134,7 +2134,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     clang::CXXRecordDecl *record_decl =
         m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
     if (record_decl)
-      GetClangASTImporter().InsertRecordDecl(record_decl, layout_info);
+      GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
   }
 
   return (bool)clang_type;

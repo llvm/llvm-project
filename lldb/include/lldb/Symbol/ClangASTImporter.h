@@ -58,7 +58,14 @@ public:
   clang::Decl *DeportDecl(clang::ASTContext *dst_ctx,
                           clang::ASTContext *src_ctx, clang::Decl *decl);
 
-  void InsertRecordDecl(clang::RecordDecl *decl, const LayoutInfo &layout);
+  /// Sets the layout for the given RecordDecl. The layout will later be
+  /// used by Clang's during code generation. Not calling this function for
+  /// a RecordDecl will cause that Clang's codegen tries to layout the
+  /// record by itself.
+  ///
+  /// \param decl The RecordDecl to set the layout for.
+  /// \param layout The layout for the record.
+  void SetRecordLayout(clang::RecordDecl *decl, const LayoutInfo &layout);
 
   bool LayoutRecordType(
       const clang::RecordDecl *record_decl, uint64_t &bit_size,

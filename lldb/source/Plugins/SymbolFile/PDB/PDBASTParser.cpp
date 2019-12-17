@@ -1207,7 +1207,7 @@ bool PDBASTParser::CompleteTypeFromUDT(
   if (!record_decl)
     return static_cast<bool>(compiler_type);
 
-  GetClangASTImporter().InsertRecordDecl(record_decl, layout_info);
+  GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
 
   return static_cast<bool>(compiler_type);
 }
