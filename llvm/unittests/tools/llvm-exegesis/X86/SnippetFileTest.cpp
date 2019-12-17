@@ -115,6 +115,13 @@ TEST_F(X86SnippetFileTest, MissingParam) {
   consumeError(std::move(Error));
 }
 
+TEST_F(X86SnippetFileTest, NoAsmStreamer) {
+  auto Snippets = TestCommon(R"(
+    .cv_fpo_proc foo 4
+  )");
+  EXPECT_FALSE((bool)Snippets.takeError());
+}
+
 } // namespace
 } // namespace exegesis
 } // namespace llvm

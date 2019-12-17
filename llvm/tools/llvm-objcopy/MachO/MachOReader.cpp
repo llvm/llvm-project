@@ -29,13 +29,9 @@ void MachOReader::readHeader(Object &O) const {
 
 template <typename SectionType>
 Section constructSectionCommon(SectionType Sec) {
-  Section S;
-  S.Sectname =
-      StringRef(Sec.sectname, strnlen(Sec.sectname, sizeof(Sec.sectname)))
-          .str();
-  S.Segname =
-      StringRef(Sec.segname, strnlen(Sec.segname, sizeof(Sec.sectname))).str();
-  S.CanonicalName = (Twine(S.Segname) + "," + S.Sectname).str();
+  StringRef SegName(Sec.segname, strnlen(Sec.segname, sizeof(Sec.segname)));
+  StringRef SectName(Sec.sectname, strnlen(Sec.sectname, sizeof(Sec.sectname)));
+  Section S(SegName, SectName);
   S.Addr = Sec.addr;
   S.Size = Sec.size;
   S.Offset = Sec.offset;

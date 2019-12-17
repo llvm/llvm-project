@@ -34,7 +34,7 @@ public:
   void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
 
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
@@ -214,8 +214,8 @@ void X86::writePltHeader(uint8_t *buf) const {
 }
 
 void X86::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                   uint64_t pltEntryAddr, int32_t index,
-                   unsigned relOff) const {
+                   uint64_t pltEntryAddr, int32_t index) const {
+  unsigned relOff = in.relaPlt->entsize * index;
   if (config->isPic) {
     const uint8_t inst[] = {
         0xff, 0xa3, 0, 0, 0, 0, // jmp *foo@GOT(%ebx)
@@ -416,7 +416,7 @@ public:
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
 };
 
 class RetpolineNoPic : public X86 {
@@ -425,7 +425,7 @@ public:
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
 };
 } // namespace
 
@@ -460,8 +460,8 @@ void RetpolinePic::writePltHeader(uint8_t *buf) const {
 }
 
 void RetpolinePic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                            uint64_t pltEntryAddr, int32_t index,
-                            unsigned relOff) const {
+                            uint64_t pltEntryAddr, int32_t index) const {
+  unsigned relOff = in.relaPlt->entsize * index;
   const uint8_t insn[] = {
       0x50,                            // pushl %eax
       0x8b, 0x83, 0,    0,    0,    0, // mov foo@GOT(%ebx), %eax
@@ -518,8 +518,8 @@ void RetpolineNoPic::writePltHeader(uint8_t *buf) const {
 }
 
 void RetpolineNoPic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                              uint64_t pltEntryAddr, int32_t index,
-                              unsigned relOff) const {
+                              uint64_t pltEntryAddr, int32_t index) const {
+  unsigned relOff = in.relaPlt->entsize * index;
   const uint8_t insn[] = {
       0x50,                         // 0:  pushl %eax
       0xa1, 0,    0,    0,    0,    // 1:  mov foo_in_GOT, %eax

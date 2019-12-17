@@ -48,21 +48,12 @@ public:
       : m_file_manager(clang::FileSystemOptions(),
                        FileSystem::Instance().GetVirtualFileSystem()) {}
 
-  clang::QualType CopyType(clang::ASTContext *dst_ctx,
-                           clang::ASTContext *src_ctx, clang::QualType type);
-
-  lldb::opaque_compiler_type_t CopyType(clang::ASTContext *dst_ctx,
-                                        clang::ASTContext *src_ctx,
-                                        lldb::opaque_compiler_type_t type);
-
   CompilerType CopyType(ClangASTContext &dst, const CompilerType &src_type);
 
   clang::Decl *CopyDecl(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx,
                         clang::Decl *decl);
 
-  lldb::opaque_compiler_type_t DeportType(clang::ASTContext *dst_ctx,
-                                          clang::ASTContext *src_ctx,
-                                          lldb::opaque_compiler_type_t type);
+  CompilerType DeportType(ClangASTContext &dst, const CompilerType &src_type);
 
   clang::Decl *DeportDecl(clang::ASTContext *dst_ctx,
                           clang::ASTContext *src_ctx, clang::Decl *decl);
@@ -95,19 +86,6 @@ public:
   bool CompleteAndFetchChildren(clang::QualType type);
 
   bool RequireCompleteType(clang::QualType type);
-
-  bool ResolveDeclOrigin(const clang::Decl *decl, clang::Decl **original_decl,
-                         clang::ASTContext **original_ctx) {
-    DeclOrigin origin = GetDeclOrigin(decl);
-
-    if (original_decl)
-      *original_decl = origin.decl;
-
-    if (original_ctx)
-      *original_ctx = origin.ctx;
-
-    return origin.Valid();
-  }
 
   void SetDeclOrigin(const clang::Decl *decl, clang::Decl *original_decl);
 
@@ -182,7 +160,7 @@ public:
     clang::Decl *decl;
   };
 
-  typedef std::map<const clang::Decl *, DeclOrigin> OriginMap;
+  typedef llvm::DenseMap<const clang::Decl *, DeclOrigin> OriginMap;
 
   /// Listener interface used by the ASTImporterDelegate to inform other code
   /// about decls that have been imported the first time.
@@ -262,7 +240,7 @@ public:
     /// ASTContext. Used by the CxxModuleHandler to mark declarations that
     /// were created from the 'std' C++ module to prevent that the Importer
     /// tries to sync them with the broken equivalent in the debug info AST.
-    std::set<clang::Decl *> m_decls_to_ignore;
+    llvm::SmallPtrSet<clang::Decl *, 16> m_decls_to_ignore;
     ClangASTImporter &m_master;
     clang::ASTContext *m_source_ctx;
     CxxModuleHandler *m_std_handler = nullptr;
@@ -271,8 +249,8 @@ public:
   };
 
   typedef std::shared_ptr<ASTImporterDelegate> ImporterDelegateSP;
-  typedef std::map<clang::ASTContext *, ImporterDelegateSP> DelegateMap;
-  typedef std::map<const clang::NamespaceDecl *, NamespaceMapSP>
+  typedef llvm::DenseMap<clang::ASTContext *, ImporterDelegateSP> DelegateMap;
+  typedef llvm::DenseMap<const clang::NamespaceDecl *, NamespaceMapSP>
       NamespaceMetaMap;
 
   struct ASTContextMetadata {
@@ -289,7 +267,7 @@ public:
   };
 
   typedef std::shared_ptr<ASTContextMetadata> ASTContextMetadataSP;
-  typedef std::map<const clang::ASTContext *, ASTContextMetadataSP>
+  typedef llvm::DenseMap<const clang::ASTContext *, ASTContextMetadataSP>
       ContextMetadataMap;
 
   ContextMetadataMap m_metadata_map;

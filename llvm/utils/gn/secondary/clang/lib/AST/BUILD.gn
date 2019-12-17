@@ -29,6 +29,10 @@ static_library("AST") {
   # Generated files used in public headers should be in public_deps, the rest
   # in regular deps.
   public_deps = [
+    "//clang/include/clang/AST:AbstractBasicReader",
+    "//clang/include/clang/AST:AbstractBasicWriter",
+    "//clang/include/clang/AST:AbstractTypeReader",
+    "//clang/include/clang/AST:AbstractTypeWriter",
     "//clang/include/clang/AST:AttrVisitor",
     "//clang/include/clang/AST:Attrs",
     "//clang/include/clang/AST:CommentCommandList",

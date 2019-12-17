@@ -8,9 +8,7 @@
 
 #include "CommandObjectThread.h"
 
-#include "lldb/Core/SourceManager.h"
 #include "lldb/Core/ValueObject.h"
-#include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -29,11 +27,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
-#include "lldb/Target/ThreadPlanStepInstruction.h"
-#include "lldb/Target/ThreadPlanStepOut.h"
-#include "lldb/Target/ThreadPlanStepRange.h"
 #include "lldb/Utility/State.h"
-#include "lldb/lldb-private.h"
 
 using namespace lldb;
 using namespace lldb_private;

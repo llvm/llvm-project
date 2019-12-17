@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -51,11 +53,11 @@ int tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if(target: argc)
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd if(target : argc) if (distribute:argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute simd'}}
+#pragma omp target teams distribute simd if(target : argc) if (simd:argc) // omp45-error {{directive name modifier 'simd' is not allowed for '#pragma omp target teams distribute simd'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if(target: argc) if (target:argc) // expected-error {{directive '#pragma omp target teams distribute simd' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{no more 'if' clause is allowed}}
+#pragma omp target teams distribute simd if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{no more 'if' clause is allowed}} omp50-error {{expected 'simd' directive name modifier}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if(distribute : argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute simd'}}
   for (i = 0; i < argc; ++i) foo();
@@ -97,11 +99,11 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if(target: z/argc)
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd if(target : argc) if (distribute:argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute simd'}}
+#pragma omp target teams distribute simd if(target : argc) if (simd:argc) // omp45-error {{directive name modifier 'simd' is not allowed for '#pragma omp target teams distribute simd'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if(target: argc) if (target:argc) // expected-error {{directive '#pragma omp target teams distribute simd' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{no more 'if' clause is allowed}}
+#pragma omp target teams distribute simd if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{no more 'if' clause is allowed}} omp50-error {{expected 'simd' directive name modifier}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if(distribute : argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute simd'}}
   for (i = 0; i < argc; ++i) foo();

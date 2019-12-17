@@ -4445,7 +4445,6 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     LHSKnown = LHSKnown.trunc(24);
     RHSKnown = RHSKnown.trunc(24);
 
-    bool Negative = false;
     if (Opc == AMDGPUISD::MUL_I24) {
       unsigned LHSValBits = 24 - LHSKnown.countMinSignBits();
       unsigned RHSValBits = 24 - RHSKnown.countMinSignBits();
@@ -4453,16 +4452,16 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       if (MaxValBits >= 32)
         break;
       bool LHSNegative = LHSKnown.isNegative();
-      bool LHSPositive = LHSKnown.isNonNegative();
+      bool LHSNonNegative = LHSKnown.isNonNegative();
+      bool LHSPositive = LHSKnown.isStrictlyPositive();
       bool RHSNegative = RHSKnown.isNegative();
-      bool RHSPositive = RHSKnown.isNonNegative();
-      if ((!LHSNegative && !LHSPositive) || (!RHSNegative && !RHSPositive))
-        break;
-      Negative = (LHSNegative && RHSPositive) || (LHSPositive && RHSNegative);
-      if (Negative)
-        Known.One.setHighBits(32 - MaxValBits);
-      else
+      bool RHSNonNegative = RHSKnown.isNonNegative();
+      bool RHSPositive = RHSKnown.isStrictlyPositive();
+
+      if ((LHSNonNegative && RHSNonNegative) || (LHSNegative && RHSNegative))
         Known.Zero.setHighBits(32 - MaxValBits);
+      else if ((LHSNegative && RHSPositive) || (LHSPositive && RHSNegative))
+        Known.One.setHighBits(32 - MaxValBits);
     } else {
       unsigned LHSValBits = 24 - LHSKnown.countMinLeadingZeros();
       unsigned RHSValBits = 24 - RHSKnown.countMinLeadingZeros();

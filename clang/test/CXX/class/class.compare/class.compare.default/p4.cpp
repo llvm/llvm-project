@@ -21,8 +21,8 @@ namespace N {
 
   constexpr bool (*test_a_not_found)(const A&, const A&) = &operator==; // expected-error {{undeclared}}
 
-  constexpr bool operator==(const A&, const A&);
-  constexpr bool (*test_a)(const A&, const A&) = &operator==;
+  constexpr bool operator==(const A&, const A&) noexcept;
+  constexpr bool (*test_a)(const A&, const A&) noexcept = &operator==;
   static_assert((*test_a)(A(), A()));
 }
 

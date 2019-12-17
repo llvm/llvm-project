@@ -62,10 +62,10 @@
 // DISASM-NEXT:                  pushl   $8
 // DISASM-NEXT:                  jmp     -48 <.plt>
 // DISASM-NEXT:                  jmpl    *4207276
-// DISASM-NEXT:                  pushl   $48
+// DISASM-NEXT:                  pushl   $0
 // DISASM-NEXT:                  jmp     -32 <zed2@plt>
 // DISASM-NEXT:                  jmpl    *4207280
-// DISASM-NEXT:                  pushl   $56
+// DISASM-NEXT:                  pushl   $8
 // DISASM-NEXT:                  jmp     -48 <zed2@plt>
 
 .text

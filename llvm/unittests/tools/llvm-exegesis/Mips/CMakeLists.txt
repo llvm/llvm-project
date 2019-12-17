@@ -15,6 +15,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(LLVMExegesisMipsTests
   BenchmarkResultTest.cpp
+  SnippetGeneratorTest.cpp
   TargetTest.cpp
   )
 target_link_libraries(LLVMExegesisMipsTests PRIVATE

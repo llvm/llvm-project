@@ -128,9 +128,9 @@ public:
     this->PP = std::move(PP);
   }
 
-  bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
-                           ArrayRef<SymbolRelation> Relations,
-                           SourceLocation Loc, ASTNodeInfo ASTNode) override {
+  bool handleDeclOccurrence(const Decl *D, SymbolRoleSet Roles,
+                            ArrayRef<SymbolRelation> Relations,
+                            SourceLocation Loc, ASTNodeInfo ASTNode) override {
     ASTContext &Ctx = D->getASTContext();
     SourceManager &SM = Ctx.getSourceManager();
 
@@ -166,9 +166,9 @@ public:
     return true;
   }
 
-  bool handleModuleOccurence(const ImportDecl *ImportD,
-                             const clang::Module *Mod,
-                             SymbolRoleSet Roles, SourceLocation Loc) override {
+  bool handleModuleOccurrence(const ImportDecl *ImportD,
+                              const clang::Module *Mod, SymbolRoleSet Roles,
+                              SourceLocation Loc) override {
     ASTContext &Ctx = ImportD->getASTContext();
     SourceManager &SM = Ctx.getSourceManager();
 
@@ -190,8 +190,8 @@ public:
     return true;
   }
 
-  bool handleMacroOccurence(const IdentifierInfo *Name, const MacroInfo *MI,
-                            SymbolRoleSet Roles, SourceLocation Loc) override {
+  bool handleMacroOccurrence(const IdentifierInfo *Name, const MacroInfo *MI,
+                             SymbolRoleSet Roles, SourceLocation Loc) override {
     assert(PP);
     SourceManager &SM = PP->getSourceManager();
 

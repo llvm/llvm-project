@@ -732,7 +732,6 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ; VI-LABEL: missing_truncate_promote_bswap:
 ; VI:       ; %bb.0: ; %bb
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    v_alignbit_b32 v1, v0, v0, 8
 ; VI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
 ; VI-NEXT:    s_mov_b32 s4, 0xff00ff

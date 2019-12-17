@@ -6,29 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "CommandObjectExpression.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectVariable.h"
-#include "lldb/DataFormatters/ValueObjectPrinter.h"
-#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
-#include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
-#include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/Thread.h"
 
 using namespace lldb;
 using namespace lldb_private;

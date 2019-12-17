@@ -38,6 +38,55 @@ define <2 x double> @test_vcvt_high_f64_f32(<4 x float> %x) nounwind readnone ss
   ret <2 x double> %vcvt1.i
 }
 
+define <2 x double> @test_vcvt_high_f64_f32_bitcast(<4 x float> %x) nounwind readnone ssp {
+; GENERIC-LABEL: test_vcvt_high_f64_f32_bitcast:
+; GENERIC:       // %bb.0:
+; GENERIC-NEXT:    ext.16b v0, v0, v0, #8
+; GENERIC-NEXT:    fcvtl v0.2d, v0.2s
+; GENERIC-NEXT:    ret
+;
+; FAST-LABEL: test_vcvt_high_f64_f32_bitcast:
+; FAST:       // %bb.0:
+; FAST-NEXT:    fcvtl2 v0.2d, v0.4s
+; FAST-NEXT:    ret
+;
+; GISEL-LABEL: test_vcvt_high_f64_f32_bitcast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    fcvtl v0.2d, v0.2s
+; GISEL-NEXT:    ret
+  %bc1 = bitcast <4 x float> %x to <2 x double>
+  %ext = shufflevector <2 x double> %bc1, <2 x double> undef, <1 x i32> <i32 1>
+  %bc2 = bitcast <1 x double> %ext to <2 x float>
+  %r = fpext <2 x float> %bc2 to <2 x double>
+  ret <2 x double> %r
+}
+
+define <2 x double> @test_vcvt_high_i64_f32_bitcast(<2 x i64> %x) nounwind readnone ssp {
+; GENERIC-LABEL: test_vcvt_high_i64_f32_bitcast:
+; GENERIC:       // %bb.0:
+; GENERIC-NEXT:    ext.16b v0, v0, v0, #8
+; GENERIC-NEXT:    fcvtl v0.2d, v0.2s
+; GENERIC-NEXT:    ret
+;
+; FAST-LABEL: test_vcvt_high_i64_f32_bitcast:
+; FAST:       // %bb.0:
+; FAST-NEXT:    ext.16b v0, v0, v0, #8
+; FAST-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; FAST-NEXT:    fcvtl v0.2d, v0.2s
+; FAST-NEXT:    ret
+;
+; GISEL-LABEL: test_vcvt_high_i64_f32_bitcast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    fcvtl v0.2d, v0.2s
+; GISEL-NEXT:    ret
+  %ext = shufflevector <2 x i64> %x, <2 x i64> undef, <1 x i32> <i32 1>
+  %bc2 = bitcast <1 x i64> %ext to <2 x float>
+  %r = fpext <2 x float> %bc2 to <2 x double>
+  ret <2 x double> %r
+}
+
 ; FALLBACK-NOT: remark{{.*}}G_FPEXT{{.*}}(in function: test_vcvt_f32_f64)
 ; FALLBACK-NOT: remark{{.*}}fpext{{.*}}(in function: test_vcvt_f32_f64)
 define <2 x float> @test_vcvt_f32_f64(<2 x double> %v) nounwind readnone ssp {

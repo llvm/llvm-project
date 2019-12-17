@@ -1171,7 +1171,7 @@ template <class _Tp, class _Allocator>
 inline
 __deque_base<_Tp, _Allocator>::__deque_base()
     _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-    : __start_(0), __size_(0) {}
+    : __start_(0), __size_(0, __default_init_tag()) {}
 
 template <class _Tp, class _Allocator>
 inline

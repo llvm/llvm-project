@@ -91,6 +91,7 @@ STATISTIC(FusionNotBeneficial, "Fusion is not beneficial");
 STATISTIC(NonIdenticalGuards, "Candidates have different guards");
 STATISTIC(NonEmptyExitBlock, "Candidate has a non-empty exit block");
 STATISTIC(NonEmptyGuardBlock, "Candidate has a non-empty guard block");
+STATISTIC(NotRotated, "Candidate is not rotated");
 
 enum FusionDependenceAnalysisChoice {
   FUSION_DEPENDENCE_ANALYSIS_SCEV,
@@ -317,6 +318,11 @@ struct FusionCandidate {
       LLVM_DEBUG(dbgs() << "Loop " << L->getName()
                         << " is not in simplified form!\n");
       return reportInvalidCandidate(NotSimplifiedForm);
+    }
+
+    if (!isRotated()) {
+      LLVM_DEBUG(dbgs() << "Loop " << L->getName() << " is not rotated!\n");
+      return reportInvalidCandidate(NotRotated);
     }
 
     return true;

@@ -488,6 +488,27 @@ bool isUncondBranchOpcode(int Opc) {
   return Opc == ARM::B || Opc == ARM::tB || Opc == ARM::t2B;
 }
 
+// This table shows the VPT instruction variants, i.e. the different
+// mask field encodings, see also B5.6. Predication/conditional execution in
+// the ArmARM.
+enum VPTMaskValue {
+  T     =  8, // 0b1000
+  TT    =  4, // 0b0100
+  TE    = 12, // 0b1100
+  TTT   =  2, // 0b0010
+  TTE   =  6, // 0b0110
+  TEE   = 10, // 0b1010
+  TET   = 14, // 0b1110
+  TTTT  =  1, // 0b0001
+  TTTE  =  3, // 0b0011
+  TTEE  =  5, // 0b0101
+  TTET  =  7, // 0b0111
+  TEEE  =  9, // 0b1001
+  TEET  = 11, // 0b1011
+  TETT  = 13, // 0b1101
+  TETE  = 15  // 0b1111
+};
+
 static inline bool isVPTOpcode(int Opc) {
   return Opc == ARM::MVE_VPTv16i8 || Opc == ARM::MVE_VPTv16u8 ||
          Opc == ARM::MVE_VPTv16s8 || Opc == ARM::MVE_VPTv8i16 ||
@@ -501,6 +522,97 @@ static inline bool isVPTOpcode(int Opc) {
          Opc == ARM::MVE_VPTv4u32r || Opc == ARM::MVE_VPTv4s32r ||
          Opc == ARM::MVE_VPTv4f32r || Opc == ARM::MVE_VPTv8f16r ||
          Opc == ARM::MVE_VPST;
+}
+
+static inline
+unsigned VCMPOpcodeToVPT(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return 0;
+  case ARM::MVE_VCMPf32:
+    return ARM::MVE_VPTv4f32;
+  case ARM::MVE_VCMPf16:
+    return ARM::MVE_VPTv8f16;
+  case ARM::MVE_VCMPi8:
+    return ARM::MVE_VPTv16i8;
+  case ARM::MVE_VCMPi16:
+    return ARM::MVE_VPTv8i16;
+  case ARM::MVE_VCMPi32:
+    return ARM::MVE_VPTv4i32;
+  case ARM::MVE_VCMPu8:
+    return ARM::MVE_VPTv16u8;
+  case ARM::MVE_VCMPu16:
+    return ARM::MVE_VPTv8u16;
+  case ARM::MVE_VCMPu32:
+    return ARM::MVE_VPTv4u32;
+  case ARM::MVE_VCMPs8:
+    return ARM::MVE_VPTv16s8;
+  case ARM::MVE_VCMPs16:
+    return ARM::MVE_VPTv8s16;
+  case ARM::MVE_VCMPs32:
+    return ARM::MVE_VPTv4s32;
+
+  case ARM::MVE_VCMPf32r:
+    return ARM::MVE_VPTv4f32r;
+  case ARM::MVE_VCMPf16r:
+    return ARM::MVE_VPTv8f16r;
+  case ARM::MVE_VCMPi8r:
+    return ARM::MVE_VPTv16i8r;
+  case ARM::MVE_VCMPi16r:
+    return ARM::MVE_VPTv8i16r;
+  case ARM::MVE_VCMPi32r:
+    return ARM::MVE_VPTv4i32r;
+  case ARM::MVE_VCMPu8r:
+    return ARM::MVE_VPTv16u8r;
+  case ARM::MVE_VCMPu16r:
+    return ARM::MVE_VPTv8u16r;
+  case ARM::MVE_VCMPu32r:
+    return ARM::MVE_VPTv4u32r;
+  case ARM::MVE_VCMPs8r:
+    return ARM::MVE_VPTv16s8r;
+  case ARM::MVE_VCMPs16r:
+    return ARM::MVE_VPTv8s16r;
+  case ARM::MVE_VCMPs32r:
+    return ARM::MVE_VPTv4s32r;
+  }
+}
+
+static inline
+unsigned VCTPOpcodeToLSTP(unsigned Opcode, bool IsDoLoop) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("unhandled vctp opcode");
+    break;
+  case ARM::MVE_VCTP8:
+    return IsDoLoop ? ARM::MVE_DLSTP_8 : ARM::MVE_WLSTP_8;
+  case ARM::MVE_VCTP16:
+    return IsDoLoop ? ARM::MVE_DLSTP_16 : ARM::MVE_WLSTP_16;
+  case ARM::MVE_VCTP32:
+    return IsDoLoop ? ARM::MVE_DLSTP_32 : ARM::MVE_WLSTP_32;
+  case ARM::MVE_VCTP64:
+    return IsDoLoop ? ARM::MVE_DLSTP_64 : ARM::MVE_WLSTP_64;
+  }
+  return 0;
+}
+
+static inline
+bool isVCTP(MachineInstr *MI) {
+  switch (MI->getOpcode()) {
+  default:
+    break;
+  case ARM::MVE_VCTP8:
+  case ARM::MVE_VCTP16:
+  case ARM::MVE_VCTP32:
+  case ARM::MVE_VCTP64:
+    return true;
+  }
+  return false;
+}
+
+static inline
+bool isLoopStart(MachineInstr &MI) {
+  return MI.getOpcode() == ARM::t2DoLoopStart ||
+         MI.getOpcode() == ARM::t2WhileLoopStart;
 }
 
 static inline

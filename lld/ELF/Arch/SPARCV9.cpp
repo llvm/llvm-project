@@ -27,7 +27,7 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   void writePlt(uint8_t *buf, uint64_t gotEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
 };
 } // namespace
@@ -125,8 +125,7 @@ void SPARCV9::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
 }
 
 void SPARCV9::writePlt(uint8_t *buf, uint64_t gotEntryAddr,
-                       uint64_t pltEntryAddr, int32_t index,
-                       unsigned relOff) const {
+                       uint64_t pltEntryAddr, int32_t index) const {
   const uint8_t pltData[] = {
       0x03, 0x00, 0x00, 0x00, // sethi   (. - .PLT0), %g1
       0x30, 0x68, 0x00, 0x00, // ba,a    %xcc, .PLT1

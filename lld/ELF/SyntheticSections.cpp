@@ -2471,22 +2471,16 @@ void PltSection::writeTo(uint8_t *buf) {
     target->writePltHeader(buf);
   size_t off = headerSize;
 
-  RelocationBaseSection *relSec = isIplt ? in.relaIplt : in.relaPlt;
-
-  // The IPlt is immediately after the Plt, account for this in relOff
-  size_t pltOff = isIplt ? in.plt->getSize() : 0;
-
   for (size_t i = 0, e = entries.size(); i != e; ++i) {
     const Symbol *b = entries[i];
-    unsigned relOff = relSec->entsize * i + pltOff;
     uint64_t got = b->getGotPltVA();
     uint64_t plt = this->getVA() + off;
-    target->writePlt(buf + off, got, plt, b->pltIndex, relOff);
+    target->writePlt(buf + off, got, plt, b->pltIndex);
     off += target->pltEntrySize;
   }
 }
 
-template <class ELFT> void PltSection::addEntry(Symbol &sym) {
+void PltSection::addEntry(Symbol &sym) {
   sym.pltIndex = entries.size();
   entries.push_back(&sym);
 }
@@ -3620,11 +3614,6 @@ template void splitSections<ELF32LE>();
 template void splitSections<ELF32BE>();
 template void splitSections<ELF64LE>();
 template void splitSections<ELF64BE>();
-
-template void PltSection::addEntry<ELF32LE>(Symbol &Sym);
-template void PltSection::addEntry<ELF32BE>(Symbol &Sym);
-template void PltSection::addEntry<ELF64LE>(Symbol &Sym);
-template void PltSection::addEntry<ELF64BE>(Symbol &Sym);
 
 template class MipsAbiFlagsSection<ELF32LE>;
 template class MipsAbiFlagsSection<ELF32BE>;

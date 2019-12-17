@@ -40,8 +40,7 @@ define i32 @test_bswap_bswap(i32 %a0) nounwind {
 define i32 @test_demandedbits_bswap(i32 %a0) nounwind {
 ; X86-LABEL: test_demandedbits_bswap:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $-16777216, %eax # imm = 0xFF000000
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
 ; X86-NEXT:    retl
@@ -49,7 +48,6 @@ define i32 @test_demandedbits_bswap(i32 %a0) nounwind {
 ; X64-LABEL: test_demandedbits_bswap:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
 ; X64-NEXT:    bswapl %eax
 ; X64-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
 ; X64-NEXT:    retq

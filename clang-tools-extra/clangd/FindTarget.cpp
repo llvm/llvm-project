@@ -649,10 +649,10 @@ llvm::SmallVector<ReferenceLoc, 2> refInTypeLoc(TypeLoc L) {
   return {*V.Ref};
 }
 
-class ExplicitReferenceColletor
-    : public RecursiveASTVisitor<ExplicitReferenceColletor> {
+class ExplicitReferenceCollector
+    : public RecursiveASTVisitor<ExplicitReferenceCollector> {
 public:
-  ExplicitReferenceColletor(llvm::function_ref<void(ReferenceLoc)> Out)
+  ExplicitReferenceCollector(llvm::function_ref<void(ReferenceLoc)> Out)
       : Out(Out) {
     assert(Out);
   }
@@ -798,16 +798,16 @@ private:
 void findExplicitReferences(const Stmt *S,
                             llvm::function_ref<void(ReferenceLoc)> Out) {
   assert(S);
-  ExplicitReferenceColletor(Out).TraverseStmt(const_cast<Stmt *>(S));
+  ExplicitReferenceCollector(Out).TraverseStmt(const_cast<Stmt *>(S));
 }
 void findExplicitReferences(const Decl *D,
                             llvm::function_ref<void(ReferenceLoc)> Out) {
   assert(D);
-  ExplicitReferenceColletor(Out).TraverseDecl(const_cast<Decl *>(D));
+  ExplicitReferenceCollector(Out).TraverseDecl(const_cast<Decl *>(D));
 }
 void findExplicitReferences(const ASTContext &AST,
                             llvm::function_ref<void(ReferenceLoc)> Out) {
-  ExplicitReferenceColletor(Out).TraverseAST(const_cast<ASTContext &>(AST));
+  ExplicitReferenceCollector(Out).TraverseAST(const_cast<ASTContext &>(AST));
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, DeclRelation R) {

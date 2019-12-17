@@ -673,7 +673,7 @@ public:
   size_t getSize() const override;
   bool isNeeded() const override { return !entries.empty(); }
   void addSymbols();
-  template <class ELFT> void addEntry(Symbol &sym);
+  void addEntry(Symbol &sym);
 
   size_t headerSize;
 

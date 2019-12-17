@@ -126,7 +126,7 @@ bool RemoveUsingNamespace::prepare(const Selection &Inputs) {
 }
 
 Expected<Tweak::Effect> RemoveUsingNamespace::apply(const Selection &Inputs) {
-  auto &Ctx = Inputs.AST.getASTContext();
+  auto &Ctx = Inputs.AST->getASTContext();
   auto &SM = Ctx.getSourceManager();
   // First, collect *all* using namespace directives that redeclare the same
   // namespace.
@@ -143,7 +143,7 @@ Expected<Tweak::Effect> RemoveUsingNamespace::apply(const Selection &Inputs) {
   // Collect all references to symbols from the namespace for which we're
   // removing the directive.
   std::vector<SourceLocation> IdentsToQualify;
-  for (auto &D : Inputs.AST.getLocalTopLevelDecls()) {
+  for (auto &D : Inputs.AST->getLocalTopLevelDecls()) {
     findExplicitReferences(D, [&](ReferenceLoc Ref) {
       if (Ref.Qualifier)
         return; // This reference is already qualified.

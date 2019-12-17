@@ -50,10 +50,11 @@ struct ExternalVTableUse {
 /// external AST sources that also provide information for semantic
 /// analysis.
 class ExternalSemaSource : public ExternalASTSource {
+  /// LLVM-style RTTI.
+  static char ID;
+
 public:
-  ExternalSemaSource() {
-    ExternalASTSource::SemaSource = true;
-  }
+  ExternalSemaSource() = default;
 
   ~ExternalSemaSource() override;
 
@@ -222,10 +223,13 @@ public:
     return false;
   }
 
-  // isa/cast/dyn_cast support
-  static bool classof(const ExternalASTSource *Source) {
-    return Source->SemaSource;
+  /// LLVM-style RTTI.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || ExternalASTSource::isA(ClassID);
   }
+  static bool classof(const ExternalASTSource *S) { return S->isA(&ID); }
+  /// \}
 };
 
 } // end namespace clang

@@ -24,9 +24,10 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <algorithm>
 #include <limits>
+#include <unordered_map>
 #include <utility>
 
 using namespace clang;
@@ -56,10 +57,11 @@ public:
 
   /// Used to parse the configuration file.
   struct TaintConfiguration {
-    using NameArgsPair = std::pair<std::string, ArgVector>;
+    using NameScopeArgs = std::tuple<std::string, std::string, ArgVector>;
 
     struct Propagation {
       std::string Name;
+      std::string Scope;
       ArgVector SrcArgs;
       SignedArgVector DstArgs;
       VariadicType VarType;
@@ -67,8 +69,8 @@ public:
     };
 
     std::vector<Propagation> Propagations;
-    std::vector<NameArgsPair> Filters;
-    std::vector<NameArgsPair> Sinks;
+    std::vector<NameScopeArgs> Filters;
+    std::vector<NameScopeArgs> Sinks;
 
     TaintConfiguration() = default;
     TaintConfiguration(const TaintConfiguration &) = default;
@@ -97,18 +99,49 @@ private:
       BT.reset(new BugType(this, "Use of Untrusted Data", "Untrusted Data"));
   }
 
+  struct FunctionData {
+    FunctionData() = delete;
+    FunctionData(const FunctionData &) = default;
+    FunctionData(FunctionData &&) = default;
+    FunctionData &operator=(const FunctionData &) = delete;
+    FunctionData &operator=(FunctionData &&) = delete;
+
+    static Optional<FunctionData> create(const CallExpr *CE,
+                                         const CheckerContext &C) {
+      const FunctionDecl *FDecl = C.getCalleeDecl(CE);
+      if (!FDecl || (FDecl->getKind() != Decl::Function &&
+                     FDecl->getKind() != Decl::CXXMethod))
+        return None;
+
+      StringRef Name = C.getCalleeName(FDecl);
+      std::string FullName = FDecl->getQualifiedNameAsString();
+      if (Name.empty() || FullName.empty())
+        return None;
+
+      return FunctionData{FDecl, Name, FullName};
+    }
+
+    bool isInScope(StringRef Scope) const {
+      return StringRef(FullName).startswith(Scope);
+    }
+
+    const FunctionDecl *const FDecl;
+    const StringRef Name;
+    const std::string FullName;
+  };
+
   /// Catch taint related bugs. Check if tainted data is passed to a
   /// system call etc. Returns true on matching.
-  bool checkPre(const CallExpr *CE, const FunctionDecl *FDecl, StringRef Name,
+  bool checkPre(const CallExpr *CE, const FunctionData &FData,
                 CheckerContext &C) const;
 
   /// Add taint sources on a pre-visit. Returns true on matching.
-  bool addSourcesPre(const CallExpr *CE, const FunctionDecl *FDecl,
-                     StringRef Name, CheckerContext &C) const;
+  bool addSourcesPre(const CallExpr *CE, const FunctionData &FData,
+                     CheckerContext &C) const;
 
   /// Mark filter's arguments not tainted on a pre-visit. Returns true on
   /// matching.
-  bool addFiltersPre(const CallExpr *CE, StringRef Name,
+  bool addFiltersPre(const CallExpr *CE, const FunctionData &FData,
                      CheckerContext &C) const;
 
   /// Propagate taint generated at pre-visit. Returns true on matching.
@@ -149,7 +182,7 @@ private:
   /// Check if tainted data is used as a custom sink's parameter.
   static constexpr llvm::StringLiteral MsgCustomSink =
       "Untrusted data is passed to a user-defined sink";
-  bool checkCustomSinks(const CallExpr *CE, StringRef Name,
+  bool checkCustomSinks(const CallExpr *CE, const FunctionData &FData,
                         CheckerContext &C) const;
 
   /// Generate a report if the expression is tainted or points to tainted data.
@@ -157,8 +190,17 @@ private:
                                CheckerContext &C) const;
 
   struct TaintPropagationRule;
-  using NameRuleMap = llvm::StringMap<TaintPropagationRule>;
-  using NameArgMap = llvm::StringMap<ArgVector>;
+  template <typename T>
+  using ConfigDataMap =
+      std::unordered_multimap<std::string, std::pair<std::string, T>>;
+  using NameRuleMap = ConfigDataMap<TaintPropagationRule>;
+  using NameArgMap = ConfigDataMap<ArgVector>;
+
+  /// Find a function with the given name and scope. Returns the first match
+  /// or the end of the map.
+  template <typename T>
+  static auto findFunctionInConfig(const ConfigDataMap<T> &Map,
+                                   const FunctionData &FData);
 
   /// A struct used to specify taint propagation rules for a function.
   ///
@@ -200,8 +242,7 @@ private:
     /// Get the propagation rule for a given function.
     static TaintPropagationRule
     getTaintPropagationRule(const NameRuleMap &CustomPropagations,
-                            const FunctionDecl *FDecl, StringRef Name,
-                            CheckerContext &C);
+                            const FunctionData &FData, CheckerContext &C);
 
     void addSrcArg(unsigned A) { SrcArgs.push_back(A); }
     void addDstArg(unsigned A) { DstArgs.push_back(A); }
@@ -236,14 +277,15 @@ private:
                            CheckerContext &C);
   };
 
-  /// Defines a map between the propagation function's name and
-  /// TaintPropagationRule.
+  /// Defines a map between the propagation function's name, scope
+  /// and TaintPropagationRule.
   NameRuleMap CustomPropagations;
 
-  /// Defines a map between the filter function's name and filtering args.
+  /// Defines a map between the filter function's name, scope and filtering
+  /// args.
   NameArgMap CustomFilters;
 
-  /// Defines a map between the sink function's name and sinking args.
+  /// Defines a map between the sink function's name, scope and sinking args.
   NameArgMap CustomSinks;
 };
 
@@ -260,7 +302,7 @@ constexpr llvm::StringLiteral GenericTaintChecker::MsgCustomSink;
 using TaintConfig = GenericTaintChecker::TaintConfiguration;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(TaintConfig::Propagation)
-LLVM_YAML_IS_SEQUENCE_VECTOR(TaintConfig::NameArgsPair)
+LLVM_YAML_IS_SEQUENCE_VECTOR(TaintConfig::NameScopeArgs)
 
 namespace llvm {
 namespace yaml {
@@ -275,6 +317,7 @@ template <> struct MappingTraits<TaintConfig> {
 template <> struct MappingTraits<TaintConfig::Propagation> {
   static void mapping(IO &IO, TaintConfig::Propagation &Propagation) {
     IO.mapRequired("Name", Propagation.Name);
+    IO.mapOptional("Scope", Propagation.Scope);
     IO.mapOptional("SrcArgs", Propagation.SrcArgs);
     IO.mapOptional("DstArgs", Propagation.DstArgs);
     IO.mapOptional("VariadicType", Propagation.VarType,
@@ -292,10 +335,11 @@ template <> struct ScalarEnumerationTraits<GenericTaintChecker::VariadicType> {
   }
 };
 
-template <> struct MappingTraits<TaintConfig::NameArgsPair> {
-  static void mapping(IO &IO, TaintConfig::NameArgsPair &NameArg) {
-    IO.mapRequired("Name", NameArg.first);
-    IO.mapRequired("Args", NameArg.second);
+template <> struct MappingTraits<TaintConfig::NameScopeArgs> {
+  static void mapping(IO &IO, TaintConfig::NameScopeArgs &NSA) {
+    IO.mapRequired("Name", std::get<0>(NSA));
+    IO.mapOptional("Scope", std::get<1>(NSA));
+    IO.mapRequired("Args", std::get<2>(NSA));
   }
 };
 } // namespace yaml
@@ -328,31 +372,51 @@ void GenericTaintChecker::parseConfiguration(CheckerManager &Mgr,
                                              const std::string &Option,
                                              TaintConfiguration &&Config) {
   for (auto &P : Config.Propagations) {
-    GenericTaintChecker::CustomPropagations.try_emplace(
-        P.Name, std::move(P.SrcArgs),
-        convertToArgVector(Mgr, Option, P.DstArgs), P.VarType, P.VarIndex);
+    GenericTaintChecker::CustomPropagations.emplace(
+        P.Name,
+        std::make_pair(P.Scope, TaintPropagationRule{
+                                    std::move(P.SrcArgs),
+                                    convertToArgVector(Mgr, Option, P.DstArgs),
+                                    P.VarType, P.VarIndex}));
   }
 
   for (auto &F : Config.Filters) {
-    GenericTaintChecker::CustomFilters.try_emplace(F.first,
-                                                   std::move(F.second));
+    GenericTaintChecker::CustomFilters.emplace(
+        std::get<0>(F),
+        std::make_pair(std::move(std::get<1>(F)), std::move(std::get<2>(F))));
   }
 
   for (auto &S : Config.Sinks) {
-    GenericTaintChecker::CustomSinks.try_emplace(S.first, std::move(S.second));
+    GenericTaintChecker::CustomSinks.emplace(
+        std::get<0>(S),
+        std::make_pair(std::move(std::get<1>(S)), std::move(std::get<2>(S))));
   }
+}
+
+template <typename T>
+auto GenericTaintChecker::findFunctionInConfig(const ConfigDataMap<T> &Map,
+                                               const FunctionData &FData) {
+  auto Range = Map.equal_range(FData.Name);
+  auto It =
+      std::find_if(Range.first, Range.second, [&FData](const auto &Entry) {
+        const auto &Value = Entry.second;
+        StringRef Scope = Value.first;
+        return Scope.empty() || FData.isInScope(Scope);
+      });
+  return It != Range.second ? It : Map.end();
 }
 
 GenericTaintChecker::TaintPropagationRule
 GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
-    const NameRuleMap &CustomPropagations, const FunctionDecl *FDecl,
-    StringRef Name, CheckerContext &C) {
+    const NameRuleMap &CustomPropagations, const FunctionData &FData,
+    CheckerContext &C) {
   // TODO: Currently, we might lose precision here: we always mark a return
   // value as tainted even if it's just a pointer, pointing to tainted data.
 
   // Check for exact name match for functions without builtin substitutes.
+  // Use qualified name, because these are C functions without namespace.
   TaintPropagationRule Rule =
-      llvm::StringSwitch<TaintPropagationRule>(Name)
+      llvm::StringSwitch<TaintPropagationRule>(FData.FullName)
           // Source functions
           // TODO: Add support for vfscanf & family.
           .Case("fdopen", TaintPropagationRule({}, {ReturnValueIndex}))
@@ -397,6 +461,7 @@ GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
 
   // Check if it's one of the memory setting/copying functions.
   // This check is specialized but faster then calling isCLibraryFunction.
+  const FunctionDecl *FDecl = FData.FDecl;
   unsigned BId = 0;
   if ((BId = FDecl->getMemoryFunctionKind()))
     switch (BId) {
@@ -440,35 +505,32 @@ GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
   // or smart memory copy:
   // - memccpy - copying until hitting a special character.
 
-  auto It = CustomPropagations.find(Name);
-  if (It != CustomPropagations.end())
-    return It->getValue();
+  auto It = findFunctionInConfig(CustomPropagations, FData);
+  if (It != CustomPropagations.end()) {
+    const auto &Value = It->second;
+    return Value.second;
+  }
 
   return TaintPropagationRule();
 }
 
 void GenericTaintChecker::checkPreStmt(const CallExpr *CE,
                                        CheckerContext &C) const {
-  const FunctionDecl *FDecl = C.getCalleeDecl(CE);
-  // Check for non-global functions.
-  if (!FDecl || FDecl->getKind() != Decl::Function)
-    return;
-
-  StringRef Name = C.getCalleeName(FDecl);
-  if (Name.empty())
+  Optional<FunctionData> FData = FunctionData::create(CE, C);
+  if (!FData)
     return;
 
   // Check for taintedness related errors first: system call, uncontrolled
   // format string, tainted buffer size.
-  if (checkPre(CE, FDecl, Name, C))
+  if (checkPre(CE, *FData, C))
     return;
 
   // Marks the function's arguments and/or return value tainted if it present in
   // the list.
-  if (addSourcesPre(CE, FDecl, Name, C))
+  if (addSourcesPre(CE, *FData, C))
     return;
 
-  addFiltersPre(CE, Name, C);
+  addFiltersPre(CE, *FData, C);
 }
 
 void GenericTaintChecker::checkPostStmt(const CallExpr *CE,
@@ -484,12 +546,11 @@ void GenericTaintChecker::printState(raw_ostream &Out, ProgramStateRef State,
 }
 
 bool GenericTaintChecker::addSourcesPre(const CallExpr *CE,
-                                        const FunctionDecl *FDecl,
-                                        StringRef Name,
+                                        const FunctionData &FData,
                                         CheckerContext &C) const {
   // First, try generating a propagation rule for this function.
   TaintPropagationRule Rule = TaintPropagationRule::getTaintPropagationRule(
-      this->CustomPropagations, FDecl, Name, C);
+      this->CustomPropagations, FData, C);
   if (!Rule.isNull()) {
     ProgramStateRef State = Rule.process(CE, C);
     if (State) {
@@ -500,14 +561,16 @@ bool GenericTaintChecker::addSourcesPre(const CallExpr *CE,
   return false;
 }
 
-bool GenericTaintChecker::addFiltersPre(const CallExpr *CE, StringRef Name,
+bool GenericTaintChecker::addFiltersPre(const CallExpr *CE,
+                                        const FunctionData &FData,
                                         CheckerContext &C) const {
-  auto It = CustomFilters.find(Name);
+  auto It = findFunctionInConfig(CustomFilters, FData);
   if (It == CustomFilters.end())
     return false;
 
   ProgramStateRef State = C.getState();
-  const ArgVector &Args = It->getValue();
+  const auto &Value = It->second;
+  const ArgVector &Args = Value.second;
   for (unsigned ArgNum : Args) {
     if (ArgNum >= CE->getNumArgs())
       continue;
@@ -564,19 +627,19 @@ bool GenericTaintChecker::propagateFromPre(const CallExpr *CE,
 }
 
 bool GenericTaintChecker::checkPre(const CallExpr *CE,
-                                   const FunctionDecl *FDecl, StringRef Name,
+                                   const FunctionData &FData,
                                    CheckerContext &C) const {
 
   if (checkUncontrolledFormatString(CE, C))
     return true;
 
-  if (checkSystemCall(CE, Name, C))
+  if (checkSystemCall(CE, FData.Name, C))
     return true;
 
-  if (checkTaintedBufferSize(CE, FDecl, C))
+  if (checkTaintedBufferSize(CE, FData.FDecl, C))
     return true;
 
-  if (checkCustomSinks(CE, Name, C))
+  if (checkCustomSinks(CE, FData, C))
     return true;
 
   return false;
@@ -595,7 +658,7 @@ Optional<SVal> GenericTaintChecker::getPointedToSVal(CheckerContext &C,
 
   QualType ArgTy = Arg->getType().getCanonicalType();
   if (!ArgTy->isPointerType())
-    return None;
+    return State->getSVal(*AddrLoc);
 
   QualType ValTy = ArgTy->getPointeeType();
 
@@ -848,13 +911,15 @@ bool GenericTaintChecker::checkTaintedBufferSize(const CallExpr *CE,
          generateReportIfTainted(CE->getArg(ArgNum), MsgTaintedBufferSize, C);
 }
 
-bool GenericTaintChecker::checkCustomSinks(const CallExpr *CE, StringRef Name,
+bool GenericTaintChecker::checkCustomSinks(const CallExpr *CE,
+                                           const FunctionData &FData,
                                            CheckerContext &C) const {
-  auto It = CustomSinks.find(Name);
+  auto It = findFunctionInConfig(CustomSinks, FData);
   if (It == CustomSinks.end())
     return false;
 
-  const GenericTaintChecker::ArgVector &Args = It->getValue();
+  const auto &Value = It->second;
+  const GenericTaintChecker::ArgVector &Args = Value.second;
   for (unsigned ArgNum : Args) {
     if (ArgNum >= CE->getNumArgs())
       continue;

@@ -75,9 +75,14 @@ static uptr main_thread_identity = 0;
 ALIGNED(64) static char main_thread_state[sizeof(ThreadState)];
 static ThreadState *main_thread_state_loc = (ThreadState *)main_thread_state;
 
+// We cannot use pthread_self() before libpthread has been initialized.  Our
+// current heuristic for guarding this is checking `main_thread_identity` which
+// is only assigned in `__tsan::InitializePlatform`.
 static ThreadState **cur_thread_location() {
+  if (main_thread_identity == 0)
+    return &main_thread_state_loc;
   uptr thread_identity = (uptr)pthread_self();
-  if (thread_identity == main_thread_identity || main_thread_identity == 0)
+  if (thread_identity == main_thread_identity)
     return &main_thread_state_loc;
   return (ThreadState **)MemToShadow(thread_identity);
 }

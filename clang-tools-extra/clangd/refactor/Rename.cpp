@@ -80,8 +80,7 @@ llvm::DenseSet<const Decl *> locateDeclAt(ParsedAST &AST,
   unsigned Offset =
       AST.getSourceManager().getDecomposedSpellingLoc(TokenStartLoc).second;
 
-  SelectionTree Selection = SelectionTree::createRight(
-      AST.getASTContext(), AST.getTokens(), Offset, Offset);
+  SelectionTree Selection(AST.getASTContext(), AST.getTokens(), Offset);
   const SelectionTree::Node *SelectedNode = Selection.commonAncestor();
   if (!SelectedNode)
     return {};
@@ -365,7 +364,7 @@ llvm::Expected<FileEdits> renameOutsideFile(
                            std::move(FileAndOccurrences.second),
                            RenameDecl.getASTContext().getLangOpts());
     if (!RenameRanges) {
-      // Our heuristice fails to adjust rename ranges to the current state of
+      // Our heuristics fails to adjust rename ranges to the current state of
       // the file, it is most likely the index is stale, so we give up the
       // entire rename.
       return llvm::make_error<llvm::StringError>(
@@ -388,7 +387,7 @@ llvm::Expected<FileEdits> renameOutsideFile(
   return Results;
 }
 
-// A simple edit is eithor changing line or column, but not both.
+// A simple edit is either changing line or column, but not both.
 bool impliesSimpleEdit(const Position &LHS, const Position &RHS) {
   return LHS.line == RHS.line || LHS.character == RHS.character;
 }

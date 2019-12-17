@@ -24,20 +24,16 @@
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/State.h"
 #include "lldb/Utility/StringList.h"
 
 #include "llvm/ADT/STLExtras.h"
 
 #include <algorithm>
-#include <cctype>
 #include <functional>
 #include <memory>
 

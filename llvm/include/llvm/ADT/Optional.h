@@ -267,6 +267,14 @@ public:
     return hasValue() ? getValue() : std::forward<U>(value);
   }
 
+  /// Apply a function to the value if present; otherwise return None.
+  template <class Function>
+  auto map(const Function &F) const
+      -> Optional<decltype(F(getValue()))> {
+    if (*this) return F(getValue());
+    return None;
+  }
+
 #if LLVM_HAS_RVALUE_REFERENCE_THIS
   T &&getValue() && { return std::move(Storage.getValue()); }
   T &&operator*() && { return std::move(Storage.getValue()); }
@@ -274,6 +282,14 @@ public:
   template <typename U>
   T getValueOr(U &&value) && {
     return hasValue() ? std::move(getValue()) : std::forward<U>(value);
+  }
+
+  /// Apply a function to the value if present; otherwise return None.
+  template <class Function>
+  auto map(const Function &F) &&
+      -> Optional<decltype(F(std::move(*this).getValue()))> {
+    if (*this) return F(std::move(*this).getValue());
+    return None;
   }
 #endif
 };
