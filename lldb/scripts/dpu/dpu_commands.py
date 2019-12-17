@@ -107,11 +107,11 @@ def get_dpu_status(run_context, slice_id, dpu_id):
                        .GetValue())
     dpu_mask = 1 << dpu_id
     if (dpu_mask & dpu_running) != 0:
-        return "RUNNING "
+        return "RUNNING"
     elif (dpu_mask & dpu_in_fault) != 0:
-        return "ERROR   "
+        return "ERROR  "
     else:
-        return "IDLE    "
+        return "IDLE   "
 
 
 def break_to_next_boot_and_get_dpus(debugger, target):
