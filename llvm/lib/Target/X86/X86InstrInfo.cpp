@@ -3218,8 +3218,9 @@ bool X86InstrInfo::getMemOperandWithOffset(
 
   Offset = DispMO.getImm();
 
-  assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
-                            "operands of type register.");
+  if (!BaseOp->isReg())
+    return false;
+
   return true;
 }
 
