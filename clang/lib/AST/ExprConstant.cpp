@@ -11625,8 +11625,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (!HasSameBase(LHSValue, RHSValue)) {
       // Inequalities and subtractions between unrelated pointers have
       // unspecified or undefined behavior.
-      if (!IsEquality)
-        return Error(E);
+      if (!IsEquality) {
+        Info.FFDiag(E, diag::note_constexpr_pointer_comparison_unspecified);
+        return false;
+      }
       // A constant address may compare equal to the address of a symbol.
       // The one exception is that address of an object cannot compare equal
       // to a null pointer constant.

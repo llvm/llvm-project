@@ -174,7 +174,7 @@ constexpr bool test_constexpr() {
   using nullptr_t = decltype(nullptr);
   using LHSTy = decltype(LHS);
   using RHSTy = decltype(RHS);
-  // expected-note@+1 {{subexpression not valid in a constant expression}}
+  // expected-note@+1 {{unspecified}}
   auto Res = (LHS <=> RHS);
   if constexpr (__is_same(LHSTy, nullptr_t) || __is_same(RHSTy, nullptr_t)) {
     CHECK_TYPE(decltype(Res), std::strong_equality);
