@@ -1873,15 +1873,16 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   std::vector<std::string> module_names;
   swift_ast_sp->RegisterSectionModules(module, module_names);
-  swift_ast_sp->ValidateSectionModules(module, module_names);
-
-  if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES)) {
-    std::lock_guard<std::recursive_mutex> locker(g_log_mutex);
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "((Module*)%p, \"%s\") = %p",
-               static_cast<void *>(&module),
-               module.GetFileSpec().GetFilename().AsCString("<anonymous>"),
-               static_cast<void *>(swift_ast_sp.get()));
-    swift_ast_sp->LogConfiguration();
+  if (module_names.size()) {
+    swift_ast_sp->ValidateSectionModules(module, module_names);
+    if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES)) {
+      std::lock_guard<std::recursive_mutex> locker(g_log_mutex);
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "((Module*)%p, \"%s\") = %p",
+                 static_cast<void *>(&module),
+                 module.GetFileSpec().GetFilename().AsCString("<anonymous>"),
+                 static_cast<void *>(swift_ast_sp.get()));
+      swift_ast_sp->LogConfiguration();
+    }
   }
   return swift_ast_sp;
 }
@@ -4081,18 +4082,18 @@ static std::string GetBriefModuleName(Module &module) {
   return name;
 }
 
-bool SwiftASTContext::RegisterSectionModules(
+void SwiftASTContext::RegisterSectionModules(
     Module &module, std::vector<std::string> &module_names) {
-  VALID_OR_RETURN(false);
+  VALID_OR_RETURN_VOID();
 
   swift::MemoryBufferSerializedModuleLoader *loader =
       GetMemoryBufferModuleLoader();
   if (!loader)
-    return false;
+    return;
 
   SectionList *section_list = module.GetSectionList();
   if (!section_list)
-    return false;
+    return;
 
   SectionSP section_sp(
       section_list->FindSectionByType(eSectionTypeSwiftModules, true));
@@ -4107,12 +4108,12 @@ bool SwiftASTContext::RegisterSectionModules(
       if (swift::parseASTSection(*loader, section_data_ref, llvm_modules)) {
         for (auto module_name : llvm_modules)
           module_names.push_back(module_name);
-        return true;
+        return;
       }
     }
   } else {
     if (m_ast_file_data_map.find(&module) != m_ast_file_data_map.end())
-      return true;
+      return;
 
     // Grab all the AST blobs from the symbol vendor.
     auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
@@ -4155,10 +4156,10 @@ bool SwiftASTContext::RegisterSectionModules(
     }
     if (!ast_file_datas.empty() && (parse_fail_count == 0)) {
       // We found AST data entries and we successfully parsed all of them.
-      return true;
+      return;
     }
   }
-  return false;
+  return;
 }
 
 void SwiftASTContext::ValidateSectionModules(
