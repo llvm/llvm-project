@@ -342,15 +342,15 @@ HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
 }
 
 /// Generate a \p Hover object given the type \p T.
-HoverInfo getHoverContents(QualType T, const Decl *D, ASTContext &ASTCtx,
-                                  const SymbolIndex *Index) {
+HoverInfo getHoverContents(QualType T, ASTContext &ASTCtx,
+                           const SymbolIndex *Index) {
   HoverInfo HI;
   llvm::raw_string_ostream OS(HI.Name);
   PrintingPolicy Policy = printingPolicyForDecls(ASTCtx.getPrintingPolicy());
   T.print(OS, Policy);
   OS.flush();
 
-  if (D) {
+  if (const auto *D = T->getAsTagDecl()) {
     HI.Kind = index::getSymbolInfo(D).Kind;
     enhanceFromIndex(HI, D, Index);
   }
@@ -396,12 +396,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
 
   if (auto Deduced = getDeducedType(AST.getASTContext(), SourceLocationBeg)) {
-    // Find the corresponding decl to populate kind and fetch documentation.
-    DeclRelationSet Rel = DeclRelation::TemplatePattern | DeclRelation::Alias;
-    auto Decls =
-        targetDecl(ast_type_traits::DynTypedNode::create(*Deduced), Rel);
-    HI = getHoverContents(*Deduced, Decls.empty() ? nullptr : Decls.front(),
-                          AST.getASTContext(), Index);
+    HI = getHoverContents(*Deduced, AST.getASTContext(), Index);
   } else if (auto M = locateMacroAt(SourceLocationBeg, AST.getPreprocessor())) {
     HI = getHoverContents(*M, AST);
   } else {
