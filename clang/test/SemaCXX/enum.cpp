@@ -88,19 +88,13 @@ enum { }; // expected-warning{{declaration does not declare anything}}
 typedef enum { }; // expected-warning{{typedef requires a name}}
 
 // PR7921
-enum PR7921E {
-    PR7921V = (PR7921E)(123)
-#if __cplusplus < 201103L
-// expected-error@-2 {{expression is not an integral constant expression}}
-#else
-// expected-error@-4 {{must have integral or unscoped enumeration type}}
-// FIXME: The above diagnostic isn't very good; we should instead complain about the type being incomplete.
-#endif
+enum PR7921E { // expected-note {{not complete until the closing '}'}}
+    PR7921V = (PR7921E)(123) // expected-error {{'PR7921E' is an incomplete type}}
 };
 
 void PR8089() {
-  enum E; // expected-error{{ISO C++ forbids forward references to 'enum' types}}
-  int a = (E)3; // expected-error{{cannot initialize a variable of type 'int' with an rvalue of type 'E'}}
+  enum E; // expected-error{{ISO C++ forbids forward references to 'enum' types}} expected-note {{forward declaration}}
+  int a = (E)3; // expected-error {{'E' is an incomplete type}}
 }
 
 // This is accepted as a GNU extension. In C++98, there was no provision for
