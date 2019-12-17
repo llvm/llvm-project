@@ -569,8 +569,8 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
   } else if (target && target->IsValid()) {
     std::shared_ptr<ClangASTContextForExpressions> ast_sp(
         new ClangASTContextForExpressions(*target, fixed_arch));
-    ast_sp->m_scratch_ast_source_up.reset(
-        new ClangASTSource(target->shared_from_this()));
+    ast_sp->m_scratch_ast_source_up.reset(new ClangASTSource(
+        target->shared_from_this(), target->GetClangASTImporter()));
     lldbassert(ast_sp->getFileManager());
     ast_sp->m_scratch_ast_source_up->InstallASTContext(
         *ast_sp, *ast_sp->getFileManager(), true);

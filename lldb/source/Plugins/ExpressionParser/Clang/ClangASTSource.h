@@ -38,7 +38,11 @@ public:
   ///
   /// \param[in] target
   ///     A reference to the target containing debug information to use.
-  ClangASTSource(const lldb::TargetSP &target);
+  ///
+  /// \param[in] importer
+  ///     The ClangASTImporter to use.
+  ClangASTSource(const lldb::TargetSP &target,
+                 const lldb::ClangASTImporterSP &importer);
 
   /// Destructor
   ~ClangASTSource() override;
