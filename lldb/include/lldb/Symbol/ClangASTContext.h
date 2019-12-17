@@ -845,7 +845,7 @@ public:
                         // (lldb::opaque_compiler_type_t type, "-[NString
                         // stringWithCString:]")
       const CompilerType &method_compiler_type, lldb::AccessType access,
-      bool is_artificial, bool is_variadic);
+      bool is_artificial, bool is_variadic, bool is_objc_direct_call);
 
   static bool SetHasExternalStorage(lldb::opaque_compiler_type_t type,
                                     bool has_extern);

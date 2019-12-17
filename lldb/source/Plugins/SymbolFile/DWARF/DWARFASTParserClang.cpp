@@ -390,6 +390,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       is_complete_objc_class = form_value.Signed();
       break;
 
+    case DW_AT_APPLE_objc_direct:
+      is_objc_direct_call = true;
+      break;
+
     case DW_AT_APPLE_runtime_class:
       class_language = (LanguageType)form_value.Signed();
       break;
@@ -958,7 +962,8 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           clang::ObjCMethodDecl *objc_method_decl =
               m_ast.AddMethodToObjCObjectType(
                   class_opaque_type, attrs.name.GetCString(), clang_type,
-                  attrs.accessibility, attrs.is_artificial, is_variadic);
+                  attrs.accessibility, attrs.is_artificial, is_variadic,
+                  attrs.is_objc_direct_call);
           type_handled = objc_method_decl != NULL;
           if (type_handled) {
             LinkDeclContextToDIE(objc_method_decl, die);

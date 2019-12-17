@@ -7769,7 +7769,7 @@ clang::ObjCMethodDecl *ClangASTContext::AddMethodToObjCObjectType(
                       // (lldb::opaque_compiler_type_t type, "-[NString
                       // stringWithCString:]")
     const CompilerType &method_clang_type, lldb::AccessType access,
-    bool is_artificial, bool is_variadic) {
+    bool is_artificial, bool is_variadic, bool is_objc_direct_call) {
   if (!type || !method_clang_type.IsValid())
     return nullptr;
 
@@ -7873,6 +7873,18 @@ clang::ObjCMethodDecl *ClangASTContext::AddMethodToObjCObjectType(
     objc_method_decl->setMethodParams(
         *ast, llvm::ArrayRef<clang::ParmVarDecl *>(params),
         llvm::ArrayRef<clang::SourceLocation>());
+  }
+
+  if (is_objc_direct_call) {
+    // Add a the objc_direct attribute to the declaration we generate that
+    // we generate a direct method call for this ObjCMethodDecl.
+    objc_method_decl->addAttr(
+        clang::ObjCDirectAttr::CreateImplicit(*ast, SourceLocation()));
+    // Usually Sema is creating implicit parameters (e.g., self) when it
+    // parses the method. We don't have a parsing Sema when we build our own
+    // AST here so we manually need to create these implicit parameters to
+    // make the direct call code generation happy.
+    objc_method_decl->createImplicitParams(*ast, class_interface_decl);
   }
 
   class_interface_decl->addDecl(objc_method_decl);
