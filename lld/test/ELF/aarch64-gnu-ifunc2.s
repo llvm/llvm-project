@@ -16,9 +16,9 @@
 # CHECK-NEXT:   210178: ldr     x8, [x8, #0x190]
 # CHECK-NEXT:   21017c: ret
 
-# CHECK:      Disassembly of section .plt:
+# CHECK:      Disassembly of section .iplt:
 # CHECK-EMPTY:
-# CHECK-NEXT: .plt:
+# CHECK-NEXT: .iplt:
 # .got.plt - page(0x210180) = 0x220190 - 0x210000 = 0x10190
 # CHECK-NEXT:   210180: adrp    x16, #0x10000
 # CHECK-NEXT:   210184: ldr     x17, [x16, #0x190]

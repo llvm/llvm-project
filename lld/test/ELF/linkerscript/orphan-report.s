@@ -34,7 +34,7 @@
 # REPORT-NEXT: <internal>:(.rela.plt) is being placed in '.rela.plt'
 # REPORT-NEXT: <internal>:(.rela.dyn) is being placed in '.rela.dyn'
 # REPORT-NEXT: <internal>:(.plt) is being placed in '.plt'
-# REPORT-NEXT: <internal>:(.plt) is being placed in '.plt'
+# REPORT-NEXT: <internal>:(.iplt) is being placed in '.iplt'
 # REPORT-NEXT: <internal>:(.symtab) is being placed in '.symtab'
 # REPORT-NEXT: <internal>:(.symtab_shndx) is being placed in '.symtab_shndx'
 # REPORT-NEXT: <internal>:(.shstrtab) is being placed in '.shstrtab'

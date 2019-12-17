@@ -28,18 +28,18 @@
 # RELOC-NEXT:   R_PPC_JMP_SLOT h 0x0
 # RELOC-NEXT: }
 
-# SEC: .got PROGBITS 00020374
-# DYN: PPC_GOT 0x20374
+# SEC: .got PROGBITS 00020368
+# DYN: PPC_GOT 0x20368
 
 ## .got2+0x8000-0x10004 = 0x30000+0x8000-0x10004 = 65536*2+32764
 # CHECK-LABEL: _start:
 # CHECK-NEXT:         bcl 20, 31, .+4
 # PIE-NEXT:    10210: mflr 30
 # PIE-NEXT:           addis 30, 30, 3
-# PIE-NEXT:           addi 30, 30, -32400
+# PIE-NEXT:           addi 30, 30, -32412
 # SHARED-NEXT: 10230: mflr 30
 # SHARED-NEXT:        addis 30, 30, 3
-# SHARED-NEXT:        addi 30, 30, -32408
+# SHARED-NEXT:        addi 30, 30, -32420
 
 ## Two bl 00008000.got2.plt_pic32.f
 # CHECK-NEXT:    bl .+40
@@ -94,11 +94,11 @@
 # CHECK-NEXT:  00008000.got2.plt_pic32.f:
 
 ## In Secure PLT ABI, .plt stores function pointers to first instructions of .glink
-# HEX: 0x00040378 000102a0 000102a4 000102a8
+# HEX: 0x0004036c 00010294 00010298 0001029c
 
 ## These instructions are referenced by .plt entries.
-# PIE:    000102a0 .glink:
-# SHARED: 000102c0 .glink:
+# PIE:    00010294 .glink:
+# SHARED: 000102b4 .glink:
 # CHECK-NEXT: b .+12
 # CHECK-NEXT: b .+8
 # CHECK-NEXT: b .+4
@@ -108,8 +108,8 @@
 # CHECK-NEXT:         addis 11, 11, 0
 # CHECK-NEXT:         mflr 0
 # CHECK-NEXT:         bcl 20, 31, .+4
-# PIE-NEXT:    102b8: addi 11, 11, 24
-# SHARED-NEXT: 102d8: addi 11, 11, 24
+# PIE-NEXT:    102ac: addi 11, 11, 24
+# SHARED-NEXT: 102cc: addi 11, 11, 24
 
 # CHECK-NEXT: mflr 12
 # CHECK-NEXT: mtlr 0
