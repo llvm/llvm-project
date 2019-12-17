@@ -4335,7 +4335,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
     if (IsMalloc) {
       if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
-        if (Size->getValue().sle(MaxHeapToStackSize))
+        if (Size->getValue().ule(MaxHeapToStackSize))
           if (UsesCheck(I) || FreeCheck(I)) {
             MallocCalls.insert(&I);
             return true;
@@ -4345,7 +4345,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
       if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
         if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
           if ((Size->getValue().umul_ov(Num->getValue(), Overflow))
-                  .sle(MaxHeapToStackSize))
+                  .ule(MaxHeapToStackSize))
             if (!Overflow && (UsesCheck(I) || FreeCheck(I))) {
               MallocCalls.insert(&I);
               return true;
