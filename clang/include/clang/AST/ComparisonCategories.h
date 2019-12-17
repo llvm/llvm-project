@@ -41,12 +41,10 @@ class NamespaceDecl;
 /// partial_ordering, weak_ordering, and strong_ordering are collectively
 /// termed the comparison category types.
 enum class ComparisonCategoryType : unsigned char {
-  WeakEquality,
-  StrongEquality,
   PartialOrdering,
   WeakOrdering,
   StrongOrdering,
-  First = WeakEquality,
+  First = PartialOrdering,
   Last = StrongOrdering
 };
 
@@ -54,9 +52,6 @@ enum class ComparisonCategoryType : unsigned char {
 /// [class.spaceship]p4.
 inline ComparisonCategoryType commonComparisonType(ComparisonCategoryType A,
                                                    ComparisonCategoryType B) {
-  if ((A == ComparisonCategoryType::StrongEquality) ^
-      (B == ComparisonCategoryType::StrongEquality))
-    return ComparisonCategoryType::WeakEquality;
   return A < B ? A : B;
 }
 
@@ -70,8 +65,6 @@ Optional<ComparisonCategoryType> getComparisonCategoryForBuiltinCmp(QualType T);
 enum class ComparisonCategoryResult : unsigned char {
   Equal,
   Equivalent,
-  Nonequivalent,
-  Nonequal,
   Less,
   Greater,
   Unordered,
@@ -139,21 +132,11 @@ public:
     return Info;
   }
 
-  /// True iff the comparison category is an equality comparison.
-  bool isEquality() const { return !isOrdered(); }
-
-  /// True iff the comparison category is a relational comparison.
-  bool isOrdered() const {
-    using CCK = ComparisonCategoryType;
-    return Kind == CCK::PartialOrdering || Kind == CCK::WeakOrdering ||
-           Kind == CCK::StrongOrdering;
-  }
-
   /// True iff the comparison is "strong". i.e. it checks equality and
   /// not equivalence.
   bool isStrong() const {
     using CCK = ComparisonCategoryType;
-    return Kind == CCK::StrongEquality || Kind == CCK::StrongOrdering;
+    return Kind == CCK::StrongOrdering;
   }
 
   /// True iff the comparison is not totally ordered.
@@ -167,28 +150,18 @@ public:
   /// weak equivalence if needed.
   ComparisonCategoryResult makeWeakResult(ComparisonCategoryResult Res) const {
     using CCR = ComparisonCategoryResult;
-    if (!isStrong()) {
-      if (Res == CCR::Equal)
-        return CCR::Equivalent;
-      if (Res == CCR::Nonequal)
-        return CCR::Nonequivalent;
-    }
+    if (!isStrong() && Res == CCR::Equal)
+      return CCR::Equivalent;
     return Res;
   }
 
   const ValueInfo *getEqualOrEquiv() const {
     return getValueInfo(makeWeakResult(ComparisonCategoryResult::Equal));
   }
-  const ValueInfo *getNonequalOrNonequiv() const {
-    assert(isEquality());
-    return getValueInfo(makeWeakResult(ComparisonCategoryResult::Nonequal));
-  }
   const ValueInfo *getLess() const {
-    assert(isOrdered());
     return getValueInfo(ComparisonCategoryResult::Less);
   }
   const ValueInfo *getGreater() const {
-    assert(isOrdered());
     return getValueInfo(ComparisonCategoryResult::Greater);
   }
   const ValueInfo *getUnordered() const {

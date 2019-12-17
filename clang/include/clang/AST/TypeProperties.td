@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "PropertiesBase.td"
-include "../Basic/TypeNodes.td"
+include "clang/AST/PropertiesBase.td"
+include "clang/Basic/TypeNodes.td"
 
 let Class = ComplexType in {
   def : Property<"elementType", QualType> {
@@ -38,8 +38,8 @@ let Class = AdjustedType in {
 
 let Class = DecayedType in {
   def : Override {
-  	// We don't need to serialize the adjusted type because we can always
-  	// derive it by decaying the original type.
+    // We don't need to serialize the adjusted type because we can always
+    // derive it by decaying the original type.
     let IgnoredProperties = [ "adjustedType" ];
   }
 
@@ -139,7 +139,7 @@ let Class = VariableArrayType in {
     return ctx.getVariableArrayType(elementType, size, sizeModifier,
                                     indexQualifiers.getCVRQualifiers(),
                                     SourceRange(leftBracketLoc,
-                                    						rightBracketLoc));
+                                                rightBracketLoc));
   }]>;
 }
 
@@ -157,8 +157,8 @@ let Class = DependentSizedArrayType in {
   def : Creator<[{
     return ctx.getDependentSizedArrayType(elementType, size, sizeModifier,
                                           indexQualifiers.getCVRQualifiers(),
-                                    			SourceRange(leftBracketLoc,
-                                    									rightBracketLoc));
+                                          SourceRange(leftBracketLoc,
+                                                      rightBracketLoc));
   }]>;
 }
 
@@ -194,7 +194,7 @@ let Class = DependentVectorType in {
 
   def : Creator<[{
     return ctx.getDependentVectorType(elementType, size, attributeLoc,
-    																	vectorKind);
+                                      vectorKind);
   }]>;
 }
 
@@ -274,7 +274,7 @@ let Class = FunctionProtoType in {
     let Read = [{ node->getRefQualifier() }];
   }
   def : Property<"exceptionSpecifier", ExceptionSpecInfo> {
-  	let Read = [{ node->getExceptionSpecInfo() }];
+    let Read = [{ node->getExceptionSpecInfo() }];
   }
   def : Property<"parameters", Array<QualType>> {
     let Read = [{ node->getParamTypes() }];
@@ -331,9 +331,9 @@ let Class = TypedefType in {
   }
 
   def : Creator<[{
-  	QualType finalCanonicalType =
-  		canonicalType ? ctx.getCanonicalType(*canonicalType)
-  								  : QualType();
+    QualType finalCanonicalType =
+      canonicalType ? ctx.getCanonicalType(*canonicalType)
+                    : QualType();
     return ctx.getTypedefType(cast<TypedefNameDecl>(declaration),
                               finalCanonicalType);
   }]>;
@@ -425,8 +425,8 @@ let Class = DeducedTemplateSpecializationType in {
 
   def : Creator<[{
     return ctx.getDeducedTemplateSpecializationType(
-    						 										makeNullableFromOptional(templateName),
-    						 										deducedType, dependent);
+                                     makeNullableFromOptional(templateName),
+                                     deducedType, dependent);
   }]>;
 }
 
@@ -435,8 +435,8 @@ let Class = TagType in {
     let Read = [{ node->isDependentType() }];
   }
   def : Property<"declaration", DeclRef> {
-  	// Serializing a reference to the canonical declaration is apparently
-  	// necessary to make module-merging work.
+    // Serializing a reference to the canonical declaration is apparently
+    // necessary to make module-merging work.
     let Read = [{ node->getDecl()->getCanonicalDecl() }];
   }
 }
@@ -451,7 +451,7 @@ let Class = EnumType in {
 
 let Class = RecordType in {
   def : Creator<[{
-  	auto record = cast<RecordDecl>(declaration);
+    auto record = cast<RecordDecl>(declaration);
     QualType result = ctx.getRecordType(record);
     const_cast<Type*>(result.getTypePtr())->setDependent(dependent);
     return result;
@@ -469,12 +469,13 @@ let Class = ElaboratedType in {
     let Read = [{ node->getNamedType() }];
   }
   def : Property<"ownedTag", Optional<TagDeclRef>> {
-    let Read = [{ makeOptionalFromPointer(node->getOwnedTagDecl()) }];
+    let Read = [{ makeOptionalFromPointer(
+                    const_cast<const TagDecl *>(node->getOwnedTagDecl())) }];
   }
 
   def : Creator<[{
     return ctx.getElaboratedType(keyword, qualifier, namedType,
-    													   makePointerFromOptional(ownedTag));
+                                 makePointerFromOptional(ownedTag));
   }]>;
 }
 
@@ -577,11 +578,11 @@ let Class = TemplateSpecializationType in {
   }
   def : Property<"underlyingType", Optional<QualType>> {
     let Read = [{
-    	node->isTypeAlias()
-    		? llvm::Optional<QualType>(node->getAliasedType())
-    		: node->isCanonicalUnqualified()
-        		? llvm::None
-        		: llvm::Optional<QualType>(node->getCanonicalTypeInternal())
+      node->isTypeAlias()
+        ? llvm::Optional<QualType>(node->getAliasedType())
+        : node->isCanonicalUnqualified()
+            ? llvm::None
+            : llvm::Optional<QualType>(node->getCanonicalTypeInternal())
     }];
   }
 
@@ -592,8 +593,8 @@ let Class = TemplateSpecializationType in {
                                                           templateArguments);
     } else {
       result = ctx.getTemplateSpecializationType(templateName,
-      																					 templateArguments,
-      																					 *underlyingType);
+                                                 templateArguments,
+                                                 *underlyingType);
     }
     const_cast<Type*>(result.getTypePtr())->setDependent(dependent);
     return result;
@@ -615,8 +616,8 @@ let Class = DependentTemplateSpecializationType in {
   }
 
   def : Creator<[{
-  	return ctx.getDependentTemplateSpecializationType(keyword, qualifier,
-  	                                                  name, templateArguments);
+    return ctx.getDependentTemplateSpecializationType(keyword, qualifier,
+                                                      name, templateArguments);
   }]>;
 }
 
@@ -631,12 +632,13 @@ let Class = TemplateTypeParmType in {
     let Read = [{ node->isParameterPack() }];
   }
   def : Property<"declaration", Optional<TemplateTypeParmDeclRef>> {
-    let Read = [{ makeOptionalFromPointer(node->getDecl()) }];
+    let Read = [{ makeOptionalFromPointer(
+                    const_cast<const TemplateTypeParmDecl*>(node->getDecl())) }];
   }
 
   def : Creator<[{
-  	return ctx.getTemplateTypeParmType(depth, index, isParameterPack,
-  																		 makePointerFromOptional(declaration));
+    return ctx.getTemplateTypeParmType(depth, index, isParameterPack,
+                                       makePointerFromOptional(declaration));
   }]>;
 }
 
@@ -649,7 +651,7 @@ let Class = SubstTemplateTypeParmType in {
   }
 
   def : Creator<[{
-  	// The call to getCanonicalType here existed in ASTReader.cpp, too.
+    // The call to getCanonicalType here existed in ASTReader.cpp, too.
     return ctx.getSubstTemplateTypeParmType(
         cast<TemplateTypeParmType>(replacedParameter),
         ctx.getCanonicalType(replacementType));
@@ -665,7 +667,7 @@ let Class = PackExpansionType in {
   }
 
   def : Creator<[{
-  	return ctx.getPackExpansionType(pattern, numExpansions);
+    return ctx.getPackExpansionType(pattern, numExpansions);
   }]>;
 }
 
@@ -678,8 +680,8 @@ let Class = SubstTemplateTypeParmPackType in {
   }
 
   def : Creator<[{
-  	return ctx.getSubstTemplateTypeParmPackType(
-                 				cast<TemplateTypeParmType>(replacedParameter),
+    return ctx.getSubstTemplateTypeParmPackType(
+                         cast<TemplateTypeParmType>(replacedParameter),
                         replacementPack);
   }]>;
 }
@@ -689,25 +691,26 @@ let Class = BuiltinType in {
     let Read = [{ node->getKind() }];
   }
 
-	def : Creator<[{
-		switch (kind) {
+  def : Creator<[{
+      switch (kind) {
 #define IMAGE_TYPE(IMGTYPE, ID, SINGLETON_ID, ACCESS, SUFFIX) \
-		case BuiltinType::ID: return ctx.SINGLETON_ID;
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/OpenCLImageTypes.def"
 
 #define EXT_OPAQUE_TYPE(EXTTYPE, ID, EXT) \
-		case BuiltinType::ID: return ctx.ID##Ty;
+      case BuiltinType::ID: return ctx.ID##Ty;
 #include "clang/Basic/OpenCLExtensionTypes.def"
 
 #define SVE_TYPE(NAME, ID, SINGLETON_ID) \
-		case BuiltinType::ID: return ctx.SINGLETON_ID;
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
 #define BUILTIN_TYPE(ID, SINGLETON_ID) \
-		case BuiltinType::ID: return ctx.SINGLETON_ID;
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/AST/BuiltinTypes.def"
-		}
-	}]>;
+      }
+      llvm_unreachable("unreachable builtin case");
+  }]>;
 }
 
 let Class = DependentNameType in {
@@ -722,18 +725,18 @@ let Class = DependentNameType in {
   }
   def : Property<"underlyingType", Optional<QualType>> {
     let Read = [{
-    	node->isCanonicalUnqualified()
-    		? llvm::None
-    		: llvm::Optional<QualType>(node->getCanonicalTypeInternal())
+      node->isCanonicalUnqualified()
+        ? llvm::None
+        : llvm::Optional<QualType>(node->getCanonicalTypeInternal())
     }];
   }
 
-	def : Creator<[{
-		QualType canon = (underlyingType
-												? ctx.getCanonicalType(*underlyingType)
-												: QualType());
-		return ctx.getDependentNameType(keyword, qualifier, name, canon);
-	}]>;
+  def : Creator<[{
+    QualType canon = (underlyingType
+                        ? ctx.getCanonicalType(*underlyingType)
+                        : QualType());
+    return ctx.getDependentNameType(keyword, qualifier, name, canon);
+  }]>;
 }
 
 let Class = ObjCObjectType in {
@@ -751,9 +754,9 @@ let Class = ObjCObjectType in {
   }
 
   def : Creator<[{
-		return ctx.getObjCObjectType(baseType, typeArgsAsWritten, qualifiers,
-																 isKindOfTypeAsWritten);
-	}]>;
+    return ctx.getObjCObjectType(baseType, typeArgsAsWritten, qualifiers,
+                                 isKindOfTypeAsWritten);
+  }]>;
 }
 
 let Class = ObjCInterfaceType in {
@@ -770,9 +773,9 @@ let Class = ObjCInterfaceType in {
   }
 
   def : Creator<[{
-		return ctx.getObjCInterfaceType(
-						 cast<ObjCInterfaceDecl>(declaration->getCanonicalDecl()));
-	}]>;
+    return ctx.getObjCInterfaceType(
+             cast<ObjCInterfaceDecl>(declaration->getCanonicalDecl()));
+  }]>;
 }
 
 let Class = ObjCTypeParamType in {
@@ -784,8 +787,8 @@ let Class = ObjCTypeParamType in {
   }
 
   def : Creator<[{
-		return ctx.getObjCTypeParamType(declaration, qualifiers);
-	}]>;
+    return ctx.getObjCTypeParamType(declaration, qualifiers);
+  }]>;
 }
 
 let Class = ObjCObjectPointerType in {
@@ -794,8 +797,8 @@ let Class = ObjCObjectPointerType in {
   }
 
   def : Creator<[{
-		return ctx.getObjCObjectPointerType(pointeeType);
-	}]>;
+    return ctx.getObjCObjectPointerType(pointeeType);
+  }]>;
 }
 
 let Class = PipeType in {
@@ -807,6 +810,6 @@ let Class = PipeType in {
   }
 
   def : Creator<[{
-		return ctx.getPipeType(elementType, isReadOnly);
-	}]>;
+    return ctx.getPipeType(elementType, isReadOnly);
+  }]>;
 }

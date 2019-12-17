@@ -283,7 +283,7 @@ else() # if this is included from LLVM's CMake
                                         -DCMAKE_ASM_COMPILER_WORKS=ON
                                         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                         ${${target}_extra_args}
-                             TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib llvm-nm llvm-objcopy llvm-objdump llvm-strip
+                             TOOLCHAIN_TOOLS clang lld llvm-ar llvm-lipo llvm-ranlib llvm-nm llvm-objcopy llvm-objdump llvm-strip
                              USE_TOOLCHAIN
                              ${EXTRA_ARGS})
   endfunction()
@@ -487,7 +487,7 @@ else() # if this is included from LLVM's CMake
                                         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                         -DLLVM_RUNTIMES_TARGET=${name}
                                         ${${name}_extra_args}
-                             TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib llvm-nm llvm-objcopy llvm-objdump llvm-strip
+                             TOOLCHAIN_TOOLS clang lld llvm-ar llvm-lipo llvm-ranlib llvm-nm llvm-objcopy llvm-objdump llvm-strip
                              EXTRA_TARGETS ${${name}_extra_targets}
                                            ${${name}_test_targets}
                              USE_TOOLCHAIN
@@ -555,13 +555,16 @@ else() # if this is included from LLVM's CMake
       endforeach()
     endif()
 
-    # TODO: This is a hack needed because the libcxx headers are copied into the
-    # build directory during configuration. Without that step the clang in the
-    # build directory cannot find the C++ headers in certain configurations.
-    # I need to build a mechanism for runtime projects to provide CMake code
-    # that executes at LLVM configuration time to handle this case.
     if(NOT LLVM_BUILD_INSTRUMENTED AND CLANG_ENABLE_BOOTSTRAP)
+      # TODO: This is a hack needed because the libcxx headers are copied into the
+      # build directory during configuration. Without that step the clang in the
+      # build directory cannot find the C++ headers in certain configurations.
+      # I need to build a mechanism for runtime projects to provide CMake code
+      # that executes at LLVM configuration time to handle this case.
       add_dependencies(clang-bootstrap-deps runtimes-configure)
+      # We need to add the runtimes as a dependency because compiler-rt can be
+      # built as part of runtimes and we need the profile runtime for PGO
+      add_dependencies(clang-bootstrap-deps runtimes)
     endif()
 
     if(LLVM_INCLUDE_TESTS)

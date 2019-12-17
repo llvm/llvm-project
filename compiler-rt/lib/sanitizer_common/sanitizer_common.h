@@ -552,7 +552,7 @@ bool operator!=(const InternalMmapVectorNoCtor<T> &lhs,
 template<typename T>
 class InternalMmapVector : public InternalMmapVectorNoCtor<T> {
  public:
-  InternalMmapVector() { InternalMmapVectorNoCtor<T>::Initialize(1); }
+  InternalMmapVector() { InternalMmapVectorNoCtor<T>::Initialize(0); }
   explicit InternalMmapVector(uptr cnt) {
     InternalMmapVectorNoCtor<T>::Initialize(cnt);
     this->resize(cnt);

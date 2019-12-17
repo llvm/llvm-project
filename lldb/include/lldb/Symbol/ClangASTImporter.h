@@ -48,21 +48,12 @@ public:
       : m_file_manager(clang::FileSystemOptions(),
                        FileSystem::Instance().GetVirtualFileSystem()) {}
 
-  clang::QualType CopyType(clang::ASTContext *dst_ctx,
-                           clang::ASTContext *src_ctx, clang::QualType type);
-
-  lldb::opaque_compiler_type_t CopyType(clang::ASTContext *dst_ctx,
-                                        clang::ASTContext *src_ctx,
-                                        lldb::opaque_compiler_type_t type);
-
   CompilerType CopyType(ClangASTContext &dst, const CompilerType &src_type);
 
   clang::Decl *CopyDecl(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx,
                         clang::Decl *decl);
 
-  lldb::opaque_compiler_type_t DeportType(clang::ASTContext *dst_ctx,
-                                          clang::ASTContext *src_ctx,
-                                          lldb::opaque_compiler_type_t type);
+  CompilerType DeportType(ClangASTContext &dst, const CompilerType &src_type);
 
   clang::Decl *DeportDecl(clang::ASTContext *dst_ctx,
                           clang::ASTContext *src_ctx, clang::Decl *decl);

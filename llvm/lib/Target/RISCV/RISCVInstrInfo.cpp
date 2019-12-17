@@ -24,6 +24,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 
+#define GEN_CHECK_COMPRESS_INSTR
+#include "RISCVGenCompressInstEmitter.inc"
+
 #define GET_INSTRINFO_CTOR_DTOR
 #include "RISCVGenInstrInfo.inc"
 
@@ -451,7 +454,18 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
   switch (Opcode) {
-  default: { return get(Opcode).getSize(); }
+  default: {
+    if (MI.getParent() && MI.getParent()->getParent()) {
+      const auto MF = MI.getMF();
+      const auto &TM = static_cast<const RISCVTargetMachine &>(MF->getTarget());
+      const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
+      const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
+      const RISCVSubtarget &ST = MF->getSubtarget<RISCVSubtarget>();
+      if (isCompressibleInst(MI, &ST, MRI, STI))
+        return 2;
+    }
+    return get(Opcode).getSize();
+  }
   case TargetOpcode::EH_LABEL:
   case TargetOpcode::IMPLICIT_DEF:
   case TargetOpcode::KILL:

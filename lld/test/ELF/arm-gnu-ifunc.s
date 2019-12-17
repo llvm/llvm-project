@@ -37,7 +37,7 @@ _start:
 // CHECK-NEXT:     Size: 16
 // CHECK-NEXT:     Link:
 // CHECK-NEXT:     Info: 4
-// CHECK:          Name: .plt
+// CHECK:          Name: .iplt
 // CHECK-NEXT:     Type: SHT_PROGBITS
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:       SHF_ALLOC
@@ -128,7 +128,7 @@ _start:
 // DISASM-NEXT:    1111c:      movw    r0, #260
 // DISASM-NEXT:    11120:      movt    r0, #1
 // DISASM-EMPTY:
-// DISASM-NEXT: Disassembly of section .plt:
+// DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
 // DISASM-NEXT: $a:
 // DISASM-NEXT:    11130:       add     r12, pc, #0, #12

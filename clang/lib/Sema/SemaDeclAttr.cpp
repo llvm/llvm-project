@@ -5772,8 +5772,8 @@ static void handleWebAssemblyExportNameAttr(Sema &S, Decl *D, const ParsedAttr &
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
     return;
 
-  FD->addAttr(::new (S.Context)
-                  WebAssemblyExportNameAttr(S.Context, AL, Str));
+  D->addAttr(::new (S.Context) WebAssemblyExportNameAttr(S.Context, AL, Str));
+  D->addAttr(UsedAttr::CreateImplicit(S.Context));
 }
 
 static void handleWebAssemblyImportModuleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

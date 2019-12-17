@@ -74,8 +74,9 @@ static bool shouldStripUnderscore() {
   return Triple(sys::getProcessTriple()).isOSBinFormatMachO();
 }
 
-static std::string demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
+static std::string demangle(const std::string &Mangled) {
   int Status;
+  std::string Prefix;
 
   const char *DecoratedStr = Mangled.c_str();
   if (shouldStripUnderscore())
@@ -92,11 +93,11 @@ static std::string demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
 
   if (!Undecorated &&
       (DecoratedLength > 6 && strncmp(DecoratedStr, "__imp_", 6) == 0)) {
-    OS << "import thunk for ";
+    Prefix = "import thunk for ";
     Undecorated = itaniumDemangle(DecoratedStr + 6, nullptr, nullptr, &Status);
   }
 
-  std::string Result(Undecorated ? Undecorated : Mangled);
+  std::string Result(Undecorated ? Prefix + Undecorated : Mangled);
   free(Undecorated);
   return Result;
 }
@@ -144,9 +145,9 @@ static void demangleLine(llvm::raw_ostream &OS, StringRef Mangled, bool Split) {
     SmallVector<std::pair<StringRef, StringRef>, 16> Words;
     SplitStringDelims(Mangled, Words, IsLegalItaniumChar);
     for (const auto &Word : Words)
-      Result += demangle(OS, Word.first) + Word.second.str();
+      Result += ::demangle(Word.first) + Word.second.str();
   } else
-    Result = demangle(OS, Mangled);
+    Result = ::demangle(Mangled);
   OS << Result << '\n';
   OS.flush();
 }

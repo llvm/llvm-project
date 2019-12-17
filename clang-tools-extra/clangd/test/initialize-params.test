@@ -18,9 +18,6 @@
 # CHECK-NEXT:      "definitionProvider": true,
 # CHECK-NEXT:      "documentFormattingProvider": true,
 # CHECK-NEXT:      "documentHighlightProvider": true,
-# CHECK-NEXT:      "documentLinkProvider": {
-# CHECK-NEXT:        "resolveProvider": false
-# CHECK-NEXT:      }
 # CHECK-NEXT:      "documentOnTypeFormattingProvider": {
 # CHECK-NEXT:        "firstTriggerCharacter": "\n",
 # CHECK-NEXT:        "moreTriggerCharacter": []

@@ -65,9 +65,9 @@ llvm::Optional<Path> getSourceFile(llvm::StringRef FileName,
                                    const Tweak::Selection &Sel) {
   if (auto Source = getCorrespondingHeaderOrSource(
           FileName,
-          &Sel.AST.getSourceManager().getFileManager().getVirtualFileSystem()))
+          &Sel.AST->getSourceManager().getFileManager().getVirtualFileSystem()))
     return *Source;
-  return getCorrespondingHeaderOrSource(FileName, Sel.AST, Sel.Index);
+  return getCorrespondingHeaderOrSource(FileName, *Sel.AST, Sel.Index);
 }
 
 // Synthesize a DeclContext for TargetNS from CurContext. TargetNS must be empty
@@ -309,8 +309,8 @@ public:
     // Bail out if we are not in a header file.
     // FIXME: We might want to consider moving method definitions below class
     // definition even if we are inside a source file.
-    if (!isHeaderFile(Sel.AST.getSourceManager().getFilename(Sel.Cursor),
-                      Sel.AST.getLangOpts()))
+    if (!isHeaderFile(Sel.AST->getSourceManager().getFilename(Sel.Cursor),
+                      Sel.AST->getLangOpts()))
       return false;
 
     Source = getSelectedFunction(Sel.ASTSelection.commonAncestor());
@@ -333,7 +333,7 @@ public:
   }
 
   Expected<Effect> apply(const Selection &Sel) override {
-    const SourceManager &SM = Sel.AST.getSourceManager();
+    const SourceManager &SM = Sel.AST->getSourceManager();
     auto MainFileName =
         getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
     if (!MainFileName)
@@ -348,7 +348,7 @@ public:
           "Couldn't find a suitable implementation file.");
 
     auto &FS =
-        Sel.AST.getSourceManager().getFileManager().getVirtualFileSystem();
+        Sel.AST->getSourceManager().getFileManager().getVirtualFileSystem();
     auto Buffer = FS.getBufferForFile(*CCFile);
     // FIXME: Maybe we should consider creating the implementation file if it
     // doesn't exist?
@@ -363,7 +363,7 @@ public:
       return InsertionPoint.takeError();
 
     auto FuncDef = getFunctionSourceCode(
-        Source, InsertionPoint->EnclosingNamespace, Sel.AST.getTokens());
+        Source, InsertionPoint->EnclosingNamespace, Sel.AST->getTokens());
     if (!FuncDef)
       return FuncDef.takeError();
 
@@ -377,10 +377,10 @@ public:
 
     // FIXME: We should also get rid of inline qualifier.
     const tooling::Replacement DeleteFuncBody(
-        Sel.AST.getSourceManager(),
+        Sel.AST->getSourceManager(),
         CharSourceRange::getTokenRange(*toHalfOpenFileRange(
-            SM, Sel.AST.getLangOpts(),
-            getDeletionRange(Source, Sel.AST.getTokens()))),
+            SM, Sel.AST->getLangOpts(),
+            getDeletionRange(Source, Sel.AST->getTokens()))),
         ";");
     auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(),
                                      tooling::Replacements(DeleteFuncBody));

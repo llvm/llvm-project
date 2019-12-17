@@ -23,31 +23,16 @@ Optional<ComparisonCategoryType>
 clang::getComparisonCategoryForBuiltinCmp(QualType T) {
   using CCT = ComparisonCategoryType;
 
-  if (const ComplexType *CT = T->getAs<ComplexType>()) {
-    if (CT->getElementType()->hasFloatingRepresentation())
-      return CCT::WeakEquality;
-    // FIXME: Remove this, consistent with P1959R0.
-    return CCT::StrongEquality;
-  }
-
   if (T->isIntegralOrEnumerationType())
     return CCT::StrongOrdering;
 
-  if (T->hasFloatingRepresentation())
+  if (T->isRealFloatingType())
     return CCT::PartialOrdering;
-
-  // C++2a [expr.spaceship]p7: If the composite pointer type is a function
-  // pointer type, a pointer-to-member type, or std::nullptr_t, the
-  // result is of type std::strong_equality
-  if (T->isFunctionPointerType() || T->isMemberPointerType() ||
-      T->isNullPtrType())
-    // FIXME: This case was removed by P1959R0.
-    return CCT::StrongEquality;
 
   // C++2a [expr.spaceship]p8: If the composite pointer type is an object
   // pointer type, p <=> q is of type std::strong_ordering.
   // Note: this assumes neither operand is a null pointer constant.
-  if (T->isPointerType())
+  if (T->isObjectPointerType())
     return CCT::StrongOrdering;
 
   // TODO: Extend support for operator<=> to ObjC types.
@@ -185,10 +170,6 @@ QualType ComparisonCategoryInfo::getType() const {
 StringRef ComparisonCategories::getCategoryString(ComparisonCategoryType Kind) {
   using CCKT = ComparisonCategoryType;
   switch (Kind) {
-  case CCKT::WeakEquality:
-    return "weak_equality";
-  case CCKT::StrongEquality:
-    return "strong_equality";
   case CCKT::PartialOrdering:
     return "partial_ordering";
   case CCKT::WeakOrdering:
@@ -204,12 +185,8 @@ StringRef ComparisonCategories::getResultString(ComparisonCategoryResult Kind) {
   switch (Kind) {
   case CCVT::Equal:
     return "equal";
-  case CCVT::Nonequal:
-    return "nonequal";
   case CCVT::Equivalent:
     return "equivalent";
-  case CCVT::Nonequivalent:
-    return "nonequivalent";
   case CCVT::Less:
     return "less";
   case CCVT::Greater:
@@ -226,16 +203,10 @@ ComparisonCategories::getPossibleResultsForType(ComparisonCategoryType Type) {
   using CCR = ComparisonCategoryResult;
   std::vector<CCR> Values;
   Values.reserve(4);
-  bool IsStrong = (Type == CCT::StrongEquality || Type == CCT::StrongOrdering);
-  if (IsStrong)
+  bool IsStrong = Type == CCT::StrongOrdering;
   Values.push_back(IsStrong ? CCR::Equal : CCR::Equivalent);
-  if (Type == CCT::StrongOrdering || Type == CCT::WeakOrdering ||
-      Type == CCT::PartialOrdering) {
-    Values.push_back(CCR::Less);
-    Values.push_back(CCR::Greater);
-  } else {
-    Values.push_back(IsStrong ? CCR::Nonequal : CCR::Nonequivalent);
-  }
+  Values.push_back(CCR::Less);
+  Values.push_back(CCR::Greater);
   if (Type == CCT::PartialOrdering)
     Values.push_back(CCR::Unordered);
   return Values;

@@ -490,7 +490,7 @@ protected:
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_base()
         _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value)
-        : __before_begin_(__begin_node()) {}
+        : __before_begin_(__begin_node(), __default_init_tag()) {}
     _LIBCPP_INLINE_VISIBILITY
     explicit __forward_list_base(const allocator_type& __a)
         : __before_begin_(__begin_node(), __node_allocator(__a)) {}

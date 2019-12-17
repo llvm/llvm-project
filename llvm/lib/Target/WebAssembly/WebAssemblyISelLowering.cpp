@@ -181,6 +181,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, MVT::v2i64, Expand);
     }
 
+    // But we do have integer min and max operations
+    if (Subtarget->hasUnimplementedSIMD128()) {
+      for (auto Op : {ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX})
+        for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+          setOperationAction(Op, T, Legal);
+    }
+
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
                     ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,

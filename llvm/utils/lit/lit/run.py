@@ -6,25 +6,30 @@ import lit.Test
 import lit.util
 import lit.worker
 
+
 # No-operation semaphore for supporting `None` for parallelism_groups.
 #   lit_config.parallelism_groups['my_group'] = None
 class NopSemaphore(object):
     def acquire(self): pass
     def release(self): pass
 
-def create_run(tests, lit_config, workers, progress_callback, timeout=None):
+
+def create_run(tests, lit_config, workers, progress_callback, max_failures,
+               timeout):
     assert workers > 0
     if workers == 1:
-        return SerialRun(tests, lit_config, progress_callback, timeout)
-    return ParallelRun(tests, lit_config, progress_callback, timeout, workers)
+        return SerialRun(tests, lit_config, progress_callback, max_failures, timeout)
+    return ParallelRun(tests, lit_config, progress_callback, max_failures, timeout, workers)
+
 
 class Run(object):
     """A concrete, configured testing run."""
 
-    def __init__(self, tests, lit_config, progress_callback, timeout):
+    def __init__(self, tests, lit_config, progress_callback, max_failures, timeout):
         self.tests = tests
         self.lit_config = lit_config
         self.progress_callback = progress_callback
+        self.max_failures = max_failures
         self.timeout = timeout
 
     def execute(self):
@@ -69,22 +74,20 @@ class Run(object):
         if self.hit_max_failures:
             return
 
-        # Update the parent process copy of the test. This includes the result,
-        # XFAILS, REQUIRES, and UNSUPPORTED statuses.
         test.setResult(result)
+
+        # Use test.isFailure() for correct XFAIL and XPASS handling
+        if test.isFailure():
+            self.failure_count += 1
+            if self.failure_count == self.max_failures:
+                self.hit_max_failures = True
 
         self.progress_callback(test)
 
-        # If we've finished all the tests or too many tests have failed, notify
-        # the main thread that we've stopped testing.
-        self.failure_count += (result.code == lit.Test.FAIL)  # TODO(yln): this is buggy
-        if self.lit_config.maxFailures and \
-                self.failure_count == self.lit_config.maxFailures:
-            self.hit_max_failures = True
 
 class SerialRun(Run):
-    def __init__(self, tests, lit_config, progress_callback, timeout):
-        super(SerialRun, self).__init__(tests, lit_config, progress_callback, timeout)
+    def __init__(self, tests, lit_config, progress_callback, max_failures, timeout):
+        super(SerialRun, self).__init__(tests, lit_config, progress_callback, max_failures, timeout)
 
     def _execute(self, deadline):
         # TODO(yln): ignores deadline
@@ -94,9 +97,10 @@ class SerialRun(Run):
             if self.hit_max_failures:
                 break
 
+
 class ParallelRun(Run):
-    def __init__(self, tests, lit_config, progress_callback, timeout, workers):
-        super(ParallelRun, self).__init__(tests, lit_config, progress_callback, timeout)
+    def __init__(self, tests, lit_config, progress_callback, max_failures, timeout, workers):
+        super(ParallelRun, self).__init__(tests, lit_config, progress_callback, max_failures, timeout)
         self.workers = workers
 
     def _execute(self, deadline):

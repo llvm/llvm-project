@@ -35,7 +35,7 @@ public:
   void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
   void addPltSymbols(InputSection &isec, uint64_t off) const override;
   void addPltHeaderSymbols(InputSection &isd) const override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
@@ -59,8 +59,9 @@ ARM::ARM() {
   tlsModuleIndexRel = R_ARM_TLS_DTPMOD32;
   tlsOffsetRel = R_ARM_TLS_DTPOFF32;
   gotBaseSymInGotPlt = false;
-  pltEntrySize = 16;
   pltHeaderSize = 32;
+  pltEntrySize = 16;
+  ipltEntrySize = 16;
   trapInstr = {0xd4, 0xd4, 0xd4, 0xd4};
   needsThunks = true;
 }
@@ -216,8 +217,7 @@ void ARM::addPltHeaderSymbols(InputSection &isec) const {
 // Long form PLT entries that do not have any restrictions on the displacement
 // of the .plt from the .plt.got.
 static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
-                         uint64_t pltEntryAddr, int32_t index,
-                         unsigned relOff) {
+                         uint64_t pltEntryAddr) {
   const uint8_t pltData[] = {
       0x04, 0xc0, 0x9f, 0xe5, //     ldr ip, L2
       0x0f, 0xc0, 0x8c, 0xe0, // L1: add ip, ip, pc
@@ -232,8 +232,7 @@ static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
 // The default PLT entries require the .plt.got to be within 128 Mb of the
 // .plt in the positive direction.
 void ARM::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                   uint64_t pltEntryAddr, int32_t index,
-                   unsigned relOff) const {
+                   uint64_t pltEntryAddr, int32_t /*index*/) const {
   // The PLT entry is similar to the example given in Appendix A of ELF for
   // the Arm Architecture. Instead of using the Group Relocations to find the
   // optimal rotation for the 8-bit immediate used in the add instructions we
@@ -248,7 +247,7 @@ void ARM::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   uint64_t offset = gotPltEntryAddr - pltEntryAddr - 8;
   if (!llvm::isUInt<27>(offset)) {
     // We cannot encode the Offset, use the long form.
-    writePltLong(buf, gotPltEntryAddr, pltEntryAddr, index, relOff);
+    writePltLong(buf, gotPltEntryAddr, pltEntryAddr);
     return;
   }
   write32le(buf + 0, pltData[0] | ((offset >> 20) & 0xff));

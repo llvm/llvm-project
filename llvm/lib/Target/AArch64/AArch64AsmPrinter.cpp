@@ -518,8 +518,8 @@ void AArch64AsmPrinter::EmitEndOfAsmFile(Module &M) {
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
-    emitStackMaps(SM);
   }
+  emitStackMaps(SM);
 }
 
 void AArch64AsmPrinter::EmitLOHs() {

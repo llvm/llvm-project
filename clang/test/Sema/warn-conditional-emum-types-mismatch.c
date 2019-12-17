@@ -19,7 +19,7 @@ enum ExtendedStatusCodes {
 int get_flag(int cond) {
   return cond ? A : B; 
   #ifdef __cplusplus
-  // expected-warning@-2 {{enumeration type mismatch in conditional expression ('ro' and 'rw')}}
+  // expected-warning@-2 {{conditional expression between different enumeration types ('ro' and 'rw')}}
   #else 
   // expected-no-diagnostics
   #endif

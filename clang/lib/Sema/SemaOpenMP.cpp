@@ -4778,11 +4778,15 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
     AllowedNameModifiers.push_back(OMPD_target);
     AllowedNameModifiers.push_back(OMPD_parallel);
+    if (LangOpts.OpenMP >= 50)
+      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_target_teams_distribute_simd:
     Res = ActOnOpenMPTargetTeamsDistributeSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
     AllowedNameModifiers.push_back(OMPD_target);
+    if (LangOpts.OpenMP >= 50)
+      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_declare_target:
   case OMPD_end_declare_target:
@@ -10762,8 +10766,14 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
       if (NameModifier == OMPD_unknown || NameModifier == OMPD_parallel)
         CaptureRegion = OMPD_target;
       break;
-    case OMPD_target_teams_distribute_parallel_for:
     case OMPD_target_teams_distribute_parallel_for_simd:
+      if (OpenMPVersion >= 50 &&
+          (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)) {
+        CaptureRegion = OMPD_parallel;
+        break;
+      }
+      LLVM_FALLTHROUGH;
+    case OMPD_target_teams_distribute_parallel_for:
       // If this clause applies to the nested 'parallel' region, capture within
       // the 'teams' region, otherwise do not capture.
       if (NameModifier == OMPD_unknown || NameModifier == OMPD_parallel)
@@ -10824,6 +10834,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
         CaptureRegion = OMPD_target;
       break;
     case OMPD_teams_distribute_simd:
+    case OMPD_target_teams_distribute_simd:
       if (OpenMPVersion >= 50 &&
           (NameModifier == OMPD_unknown || NameModifier == OMPD_simd))
         CaptureRegion = OMPD_teams;
@@ -10836,7 +10847,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target:
     case OMPD_target_teams:
     case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
     case OMPD_distribute_parallel_for:
     case OMPD_task:
     case OMPD_taskloop:

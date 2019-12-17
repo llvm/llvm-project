@@ -391,12 +391,12 @@ BUILTIN(__builtin_ctanhf, "XfXf", "Fne")
 BUILTIN(__builtin_ctanhl, "XLdXLd", "Fne")
 
 // FP Comparisons.
-BUILTIN(__builtin_isgreater     , "i.", "Fnc")
-BUILTIN(__builtin_isgreaterequal, "i.", "Fnc")
-BUILTIN(__builtin_isless        , "i.", "Fnc")
-BUILTIN(__builtin_islessequal   , "i.", "Fnc")
-BUILTIN(__builtin_islessgreater , "i.", "Fnc")
-BUILTIN(__builtin_isunordered   , "i.", "Fnc")
+BUILTIN(__builtin_isgreater     , "i.", "Fnct")
+BUILTIN(__builtin_isgreaterequal, "i.", "Fnct")
+BUILTIN(__builtin_isless        , "i.", "Fnct")
+BUILTIN(__builtin_islessequal   , "i.", "Fnct")
+BUILTIN(__builtin_islessgreater , "i.", "Fnct")
+BUILTIN(__builtin_isunordered   , "i.", "Fnct")
 
 // Unary FP classification
 BUILTIN(__builtin_fpclassify, "iiiiii.", "Fnc")

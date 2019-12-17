@@ -201,7 +201,7 @@ public:
   RelType getDynRel(RelType type) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
   void writeGotHeader(uint8_t *buf) const override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
@@ -296,11 +296,12 @@ PPC64::PPC64() {
   relativeRel = R_PPC64_RELATIVE;
   iRelativeRel = R_PPC64_IRELATIVE;
   symbolicRel = R_PPC64_ADDR64;
+  pltHeaderSize = 60;
   pltEntrySize = 4;
+  ipltEntrySize = 4;
   gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 1;
   gotPltHeaderEntriesNum = 2;
-  pltHeaderSize = 60;
   needsThunks = true;
 
   tlsModuleIndexRel = R_PPC64_DTPMOD64;
@@ -669,8 +670,7 @@ void PPC64::writePltHeader(uint8_t *buf) const {
 }
 
 void PPC64::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                     uint64_t pltEntryAddr, int32_t index,
-                     unsigned relOff) const {
+                     uint64_t pltEntryAddr, int32_t index) const {
   int32_t offset = pltHeaderSize + index * pltEntrySize;
   // bl __glink_PLTresolve
   write32(buf, 0x48000000 | ((-offset) & 0x03FFFFFc));

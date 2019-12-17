@@ -47,7 +47,7 @@ void validateRegistry() {
 
 Tweak::Selection::Selection(const SymbolIndex *Index, ParsedAST &AST,
                             unsigned RangeBegin, unsigned RangeEnd)
-    : Index(Index), AST(AST), SelectionBegin(RangeBegin),
+    : Index(Index), AST(&AST), SelectionBegin(RangeBegin),
       SelectionEnd(RangeEnd),
       ASTSelection(AST.getASTContext(), AST.getTokens(), RangeBegin, RangeEnd) {
   auto &SM = AST.getSourceManager();

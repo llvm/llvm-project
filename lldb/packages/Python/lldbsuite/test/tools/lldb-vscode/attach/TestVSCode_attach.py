@@ -79,19 +79,22 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
         shutil.copyfile(orig_program, program)
         shutil.copymode(orig_program, program)
 
+        # Use a file as a synchronization point between test and inferior.
+        pid_file_path = lldbutil.append_to_process_working_directory(self,
+            "pid_file_%d" % (int(time.time())))
+
         def cleanup():
             if os.path.exists(program):
                 os.unlink(program)
+            self.run_platform_command("rm %s" % (pid_file_path))
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        self.process = subprocess.Popen([program],
-                                        stdin=subprocess.PIPE,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
-        # Wait for a bit to ensure the process is launched, but not for so long
-        # that the process has already finished by the time we attach.
-        time.sleep(3)
+        popen = self.spawnSubprocess(program, [pid_file_path])
+        self.addTearDownHook(self.cleanupSubprocesses)
+
+        pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
+
         self.attach(program=program)
         self.set_and_hit_breakpoint(continueToExit=True)
 
@@ -143,7 +146,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
         # and use it for debugging
         attachCommands = [
             'target create -d "%s"' % (program),
-            'process launch -- arg1'
+            'process launch'
         ]
         initCommands = ['target list', 'platform list']
         preRunCommands = ['image list a.out', 'image dump sections a.out']

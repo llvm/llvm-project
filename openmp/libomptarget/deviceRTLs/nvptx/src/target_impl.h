@@ -100,9 +100,24 @@ INLINE uint32_t __kmpc_impl_smid() {
   return id;
 }
 
+INLINE double __target_impl_get_wtick() {
+  // Timer precision is 1ns
+  return ((double)1E-9);
+}
+
+INLINE double __target_impl_get_wtime() {
+  unsigned long long nsecs;
+  asm("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
+  return (double)nsecs * __target_impl_get_wtick();
+}
+
 INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
 
 INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __popc(x); }
+
+template <typename T> INLINE T __kmpc_impl_min(T x, T y) {
+  return min(x, y);
+}
 
 #ifndef CUDA_VERSION
 #error CUDA_VERSION macro is undefined, something wrong with cuda.
@@ -166,5 +181,11 @@ INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
 INLINE void __kmpc_impl_threadfence(void) { __threadfence(); }
 INLINE void __kmpc_impl_threadfence_block(void) { __threadfence_block(); }
 INLINE void __kmpc_impl_threadfence_system(void) { __threadfence_system(); }
+
+// Calls to the NVPTX layer (assuming 1D layout)
+INLINE int GetThreadIdInBlock() { return threadIdx.x; }
+INLINE int GetBlockIdInKernel() { return blockIdx.x; }
+INLINE int GetNumberOfBlocksInKernel() { return gridDim.x; }
+INLINE int GetNumberOfThreadsInBlock() { return blockDim.x; }
 
 #endif

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -Wno-parentheses -Wdeprecated -verify -triple x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++11 %s -Wno-parentheses -Wdeprecated -verify -triple x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify -triple x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++17 %s -Wno-parentheses -Wdeprecated -verify -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++98 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++11 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++17 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
 // RUN: %clang_cc1 -std=c++2a %s -Wno-parentheses -Wdeprecated -verify=expected,cxx20 -triple x86_64-linux-gnu
 
-// RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify -triple x86_64-linux-gnu -Wno-deprecated-register -DNO_DEPRECATED_FLAGS
+// RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -Wno-deprecated-register -DNO_DEPRECATED_FLAGS
 
 #include "Inputs/register.h"
 
@@ -221,6 +221,33 @@ namespace DeprecatedVolatile {
     a = c = a;
     b += a;
   }
+}
+
+namespace ArithConv {
+  enum E { e } e2;
+  enum F { f };
+  bool b1 = e == e2;
+  bool b2 = e == f; // not-cxx20-warning-re {{different enumeration types ('ArithConv::E' and 'ArithConv::F'){{$}}}} cxx20-warning {{F') is deprecated}}
+  bool b3 = e == 0.0; // cxx20-warning {{comparison of enumeration type 'ArithConv::E' with floating-point type 'double' is deprecated}}
+  bool b4 = 0.0 == f; // cxx20-warning {{comparison of floating-point type 'double' with enumeration type 'ArithConv::F' is deprecated}}
+  int n1 = true ? e : f; // cxx20-warning {{conditional expression between different enumeration types ('ArithConv::E' and 'ArithConv::F') is deprecated}}
+  int n2 = true ? e : 0.0; // cxx20-warning {{conditional expression between enumeration type 'ArithConv::E' and floating-point type 'double' is deprecated}}
+}
+
+namespace ArrayComp {
+  int arr1[3], arr2[4];
+  bool b1 = arr1 == arr2; // expected-warning {{array comparison always evaluates to false}} cxx20-warning {{comparison between two arrays is deprecated}}
+  bool b2 = arr1 < arr2; // expected-warning {{array comparison always evaluates to a constant}} cxx20-warning {{comparison between two arrays is deprecated}}
+  __attribute__((weak)) int arr3[3];
+  bool b3 = arr1 == arr3; // cxx20-warning {{comparison between two arrays is deprecated}}
+  bool b4 = arr1 < arr3; // cxx20-warning {{comparison between two arrays is deprecated}}
+#if __cplusplus > 201703L
+  bool b5 = arr1 <=> arr2; // cxx20-error {{invalid operands}}
+#endif
+
+  int (&f())[3];
+  bool b6 = arr1 == f(); // cxx20-warning {{comparison between two arrays is deprecated}}
+  bool b7 = arr1 == +f();
 }
 
 # 1 "/usr/include/system-header.h" 1 3

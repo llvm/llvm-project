@@ -5993,7 +5993,8 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   //      the usual arithmetic conversions are performed to bring them to a
   //      common type, and the result is of that type.
   if (LTy->isArithmeticType() && RTy->isArithmeticType()) {
-    QualType ResTy = UsualArithmeticConversions(LHS, RHS);
+    QualType ResTy =
+        UsualArithmeticConversions(LHS, RHS, QuestionLoc, ACK_Conditional);
     if (LHS.isInvalid() || RHS.isInvalid())
       return QualType();
     if (ResTy.isNull()) {

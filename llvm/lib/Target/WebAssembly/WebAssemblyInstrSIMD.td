@@ -732,10 +732,10 @@ defm MUL : SIMDBinaryIntNoI64x2<mul, "mul", 93>;
 
 // Integer min_s / min_u / max_s / max_u
 let isCommutable = 1 in {
-defm MIN_S : SIMDBinaryIntNoI64x2<int_wasm_min_signed, "min_s", 94>;
-defm MIN_U : SIMDBinaryIntNoI64x2<int_wasm_min_unsigned, "min_u", 95>;
-defm MAX_S : SIMDBinaryIntNoI64x2<int_wasm_max_signed, "max_s", 96>;
-defm MAX_U : SIMDBinaryIntNoI64x2<int_wasm_max_unsigned, "max_u", 97>;
+defm MIN_S : SIMDBinaryIntNoI64x2<smin, "min_s", 94>;
+defm MIN_U : SIMDBinaryIntNoI64x2<umin, "min_u", 95>;
+defm MAX_S : SIMDBinaryIntNoI64x2<smax, "max_s", 96>;
+defm MAX_U : SIMDBinaryIntNoI64x2<umax, "max_u", 97>;
 } // isCommutable = 1
 
 // Widening dot product: i32x4.dot_i16x8_s

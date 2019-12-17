@@ -1,47 +1,27 @@
 import("//clang/utils/TableGen/clang_tablegen.gni")
 
 clang_tablegen("Attrs") {
-  args = [
-    "-gen-clang-attr-classes",
-    "-I",
-    rebase_path("../..", root_out_dir),
-  ]
+  args = [ "-gen-clang-attr-classes" ]
   td_file = "../Basic/Attr.td"
 }
 
 clang_tablegen("AttrImpl") {
-  args = [
-    "-gen-clang-attr-impl",
-    "-I",
-    rebase_path("../..", root_out_dir),
-  ]
+  args = [ "-gen-clang-attr-impl" ]
   td_file = "../Basic/Attr.td"
 }
 
 clang_tablegen("AttrTextNodeDump") {
-  args = [
-    "-gen-clang-attr-text-node-dump",
-    "-I",
-    rebase_path("../..", root_out_dir),
-  ]
+  args = [ "-gen-clang-attr-text-node-dump" ]
   td_file = "../Basic/Attr.td"
 }
 
 clang_tablegen("AttrNodeTraverse") {
-  args = [
-    "-gen-clang-attr-node-traverse",
-    "-I",
-    rebase_path("../..", root_out_dir),
-  ]
+  args = [ "-gen-clang-attr-node-traverse" ]
   td_file = "../Basic/Attr.td"
 }
 
 clang_tablegen("AttrVisitor") {
-  args = [
-    "-gen-clang-attr-ast-visitor",
-    "-I",
-    rebase_path("../..", root_out_dir),
-  ]
+  args = [ "-gen-clang-attr-ast-visitor" ]
   td_file = "../Basic/Attr.td"
 }
 

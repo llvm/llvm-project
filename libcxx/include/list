@@ -715,7 +715,7 @@ template <class _Tp, class _Alloc>
 inline
 __list_imp<_Tp, _Alloc>::__list_imp()
         _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value)
-    : __size_alloc_(0)
+    : __size_alloc_(0, __default_init_tag())
 {
 }
 

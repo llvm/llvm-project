@@ -61,7 +61,7 @@ REGISTER_TWEAK(DumpAST)
 llvm::Expected<Tweak::Effect> DumpAST::apply(const Selection &Inputs) {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
-  Node->dump(OS, Inputs.AST.getSourceManager());
+  Node->dump(OS, Inputs.AST->getSourceManager());
   return Effect::showMessage(std::move(OS.str()));
 }
 
@@ -110,8 +110,8 @@ class DumpSymbol : public Tweak {
     llvm::raw_string_ostream Out(Storage);
 
     for (auto &Sym : getSymbolInfo(
-             Inputs.AST,
-             sourceLocToPosition(Inputs.AST.getSourceManager(), Inputs.Cursor)))
+             *Inputs.AST, sourceLocToPosition(Inputs.AST->getSourceManager(),
+                                              Inputs.Cursor)))
       Out << Sym;
     return Effect::showMessage(Out.str());
   }
@@ -144,7 +144,7 @@ public:
   Expected<Effect> apply(const Selection &Inputs) override {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
-    Inputs.AST.getASTContext().DumpRecordLayout(Record, OS);
+    Inputs.AST->getASTContext().DumpRecordLayout(Record, OS);
     return Effect::showMessage(std::move(OS.str()));
   }
   std::string title() const override {

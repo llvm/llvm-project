@@ -287,9 +287,6 @@ public:
   void semanticRanges(PathRef File, Position Pos,
                       Callback<std::vector<Range>> CB);
 
-  /// Get all document links in a file.
-  void documentLinks(PathRef File, Callback<std::vector<DocumentLink>> CB);
- 
   /// Returns estimated memory usage for each of the currently open files.
   /// The order of results is unspecified.
   /// Overall memory usage of clangd may be significantly more than reported

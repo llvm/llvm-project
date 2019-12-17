@@ -20,7 +20,6 @@ using namespace dwarf;
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-  InitializeELF(TM.Options.UseInitArray);
   // AARCH64 ELF ABI does not define static relocation type for TLS offset
   // within a module.  Do not generate AT_location for TLS variables.
   SupportDebugThreadLocalLocation = false;

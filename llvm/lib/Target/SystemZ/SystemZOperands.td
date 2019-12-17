@@ -25,6 +25,7 @@ class ImmediateOp<ValueType vt, string asmop> : Operand<vt> {
   let PrintMethod = "print"##asmop##"Operand";
   let DecoderMethod = "decode"##asmop##"Operand";
   let ParserMatchClass = !cast<AsmOperandClass>(asmop);
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class ImmOpWithPattern<ValueType vt, string asmop, code pred, SDNodeXForm xform,
@@ -63,13 +64,15 @@ class PCRelTLSAsmOperand<string size>
 
 // Constructs an operand for a PC-relative address with address type VT.
 // ASMOP is the associated asm operand.
-class PCRelOperand<ValueType vt, AsmOperandClass asmop> : Operand<vt> {
-  let PrintMethod = "printPCRelOperand";
-  let ParserMatchClass = asmop;
-}
-class PCRelTLSOperand<ValueType vt, AsmOperandClass asmop> : Operand<vt> {
-  let PrintMethod = "printPCRelTLSOperand";
-  let ParserMatchClass = asmop;
+let OperandType = "OPERAND_PCREL" in {
+  class PCRelOperand<ValueType vt, AsmOperandClass asmop> : Operand<vt> {
+    let PrintMethod = "printPCRelOperand";
+    let ParserMatchClass = asmop;
+  }
+  class PCRelTLSOperand<ValueType vt, AsmOperandClass asmop> : Operand<vt> {
+    let PrintMethod = "printPCRelTLSOperand";
+    let ParserMatchClass = asmop;
+  }
 }
 
 // Constructs both a DAG pattern and instruction operand for a PC-relative
@@ -105,6 +108,7 @@ class AddressOperand<string bitsize, string dispsize, string length,
   let EncoderMethod = "get"##format##dispsize##length##"Encoding";
   let DecoderMethod =
     "decode"##format##bitsize##"Disp"##dispsize##length##"Operand";
+  let OperandType = "OPERAND_MEMORY";
   let MIOperandInfo = operands;
   let ParserMatchClass =
     !cast<AddressAsmOperand>(format##bitsize##"Disp"##dispsize##length);
@@ -508,7 +512,8 @@ defm imm64zx48 : Immediate<i64, [{
   return isUInt<64>(N->getZExtValue());
 }], UIMM48, "U48Imm">;
 
-def imm64 : ImmLeaf<i64, [{}]>, Operand<i64>;
+let OperandType = "OPERAND_IMMEDIATE" in
+  def imm64 : ImmLeaf<i64, [{}]>, Operand<i64>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point immediates
@@ -657,4 +662,5 @@ def bdvaddr12only     : BDVMode<            "64", "12">;
 def cond4 : PatLeaf<(i32 timm), [{ return (N->getZExtValue() < 16); }]>,
             Operand<i32> {
   let PrintMethod = "printCond4Operand";
+  let OperandType = "OPERAND_IMMEDIATE";
 }

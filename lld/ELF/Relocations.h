@@ -115,8 +115,6 @@ template <class ELFT> void scanRelocations(InputSectionBase &);
 
 template <class ELFT> void reportUndefinedSymbols();
 
-void addIRelativeRelocs();
-
 class ThunkSection;
 class Thunk;
 struct InputSectionDescription;

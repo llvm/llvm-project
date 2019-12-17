@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -60,15 +62,15 @@ int tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for simd if(target: argc)
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for simd if(parallel : argc) if (for:argc) // expected-error {{directive name modifier 'for' is not allowed for '#pragma omp target teams distribute parallel for simd'}}
+#pragma omp target teams distribute parallel for simd if(parallel : argc) if (simd:argc) // omp45-error {{directive name modifier 'simd' is not allowed for '#pragma omp target teams distribute parallel for simd'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for simd if(parallel : argc) if (parallel:argc) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'if' clause with 'parallel' name modifier}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for simd if(target: argc) if (target:argc) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for simd if(parallel : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{expected 'target' directive name modifier}}
+#pragma omp target teams distribute parallel for simd if(parallel : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{expected 'target' directive name modifier}} omp50-error {{expected one of 'target' or 'simd' directive name modifiers}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for simd if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{expected 'parallel' directive name modifier}}
+#pragma omp target teams distribute parallel for simd if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{expected 'parallel' directive name modifier}} omp50-error {{expected one of 'parallel' or 'simd' directive name modifiers}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for simd if(distribute : argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute parallel for simd'}}
   for (i = 0; i < argc; ++i) foo();
@@ -122,15 +124,15 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for simd if(target: argc)
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for simd if(parallel : argc) if (for:argc) // expected-error {{directive name modifier 'for' is not allowed for '#pragma omp target teams distribute parallel for simd'}}
+#pragma omp target teams distribute parallel for simd if(parallel : argc) if (simd:argc) // omp45-error {{directive name modifier 'simd' is not allowed for '#pragma omp target teams distribute parallel for simd'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for simd if(parallel : argc) if (parallel:argc) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'if' clause with 'parallel' name modifier}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for simd if(target: argc) if (target:argc) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for simd if(parallel : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{expected 'target' directive name modifier}}
+#pragma omp target teams distribute parallel for simd if(parallel : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{expected 'target' directive name modifier}} omp50-error {{expected one of 'target' or 'simd' directive name modifiers}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for simd if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} expected-error {{expected 'parallel' directive name modifier}}
+#pragma omp target teams distribute parallel for simd if(target: argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{expected 'parallel' directive name modifier}} omp50-error {{expected one of 'parallel' or 'simd' directive name modifiers}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for simd if(distribute : argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute parallel for simd'}}
   for (i = 0; i < argc; ++i) foo();

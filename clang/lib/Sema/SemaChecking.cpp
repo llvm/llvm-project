@@ -5756,7 +5756,8 @@ bool Sema::SemaBuiltinUnorderedCompare(CallExpr *TheCall) {
 
   // Do standard promotions between the two arguments, returning their common
   // type.
-  QualType Res = UsualArithmeticConversions(OrigArg0, OrigArg1, false);
+  QualType Res = UsualArithmeticConversions(
+      OrigArg0, OrigArg1, TheCall->getExprLoc(), ACK_Comparison);
   if (OrigArg0.isInvalid() || OrigArg1.isInvalid())
     return true;
 
@@ -11514,32 +11515,6 @@ static const IntegerLiteral *getIntegerLiteral(Expr *E) {
   return IL;
 }
 
-static void CheckConditionalWithEnumTypes(Sema &S, SourceLocation Loc,
-                                          Expr *LHS, Expr *RHS) {
-  QualType LHSStrippedType = LHS->IgnoreParenImpCasts()->getType();
-  QualType RHSStrippedType = RHS->IgnoreParenImpCasts()->getType();
-
-  const auto *LHSEnumType = LHSStrippedType->getAs<EnumType>();
-  if (!LHSEnumType)
-    return;
-  const auto *RHSEnumType = RHSStrippedType->getAs<EnumType>();
-  if (!RHSEnumType)
-    return;
-
-  // Ignore anonymous enums.
-  if (!LHSEnumType->getDecl()->hasNameForLinkage())
-    return;
-  if (!RHSEnumType->getDecl()->hasNameForLinkage())
-    return;
-
-  if (S.Context.hasSameUnqualifiedType(LHSStrippedType, RHSStrippedType))
-    return;
-
-  S.Diag(Loc, diag::warn_conditional_mixed_enum_types)
-      << LHSStrippedType << RHSStrippedType << LHS->getSourceRange()
-      << RHS->getSourceRange();
-}
-
 static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
   E = E->IgnoreParenImpCasts();
   SourceLocation ExprLoc = E->getExprLoc();
@@ -12031,8 +12006,6 @@ static void CheckConditionalOperator(Sema &S, ConditionalOperator *E,
   bool Suspicious = false;
   CheckConditionalOperand(S, E->getTrueExpr(), T, CC, Suspicious);
   CheckConditionalOperand(S, E->getFalseExpr(), T, CC, Suspicious);
-  CheckConditionalWithEnumTypes(S, E->getBeginLoc(), E->getTrueExpr(),
-                                E->getFalseExpr());
 
   if (T->isBooleanType())
     DiagnoseIntInBoolContext(S, E);

@@ -1,0 +1,15 @@
+# REQUIRES: x86-registered-target
+## Basic test checking that update_llc_test_checks.py can update a file with multiple check prefixes
+
+# RUN: cp -f %S/Inputs/basic.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/basic.ll.expected %t.ll
+## The flags --x86_scrub_rip and --extra_scrub should have any effect for this
+## test. Check the output is identical.
+# RUN: cp -f %S/Inputs/basic.ll %t.ll &&  %update_llc_test_checks --extra_scrub %t.ll
+# RUN: diff -u %S/Inputs/basic.ll.expected %t.ll
+# RUN: cp -f %S/Inputs/basic.ll %t.ll &&  %update_llc_test_checks --x86_scrub_rip %t.ll
+# RUN: diff -u %S/Inputs/basic.ll.expected %t.ll
+## Finally, run the script on an already updated file and verify that all previous
+## CHECK lines are removed.
+# RUN: %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/basic.ll.expected %t.ll

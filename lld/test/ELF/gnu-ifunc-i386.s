@@ -75,7 +75,7 @@
 // CHECK-NEXT:   Binding: Global
 // CHECK-NEXT:   Type: Function
 // CHECK-NEXT:   Other: 0
-// CHECK-NEXT:   Section: .plt
+// CHECK-NEXT:   Section: .iplt
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: bar_resolver
@@ -93,7 +93,7 @@
 // CHECK-NEXT:   Binding: Global
 // CHECK-NEXT:   Type: Function
 // CHECK-NEXT:   Other: 0
-// CHECK-NEXT:   Section: .plt
+// CHECK-NEXT:   Section: .iplt
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: foo_resolver
@@ -118,16 +118,16 @@
 // DISASM-NEXT:                 movl $4194516, %edx
 // DISASM-NEXT:                 movl $4194532, %edx
 // DISASM-EMPTY:
-// DISASM-NEXT: Disassembly of section .plt:
+// DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:   401100:       jmpl *4202784
-// DISASM-NEXT:                 pushl $16
-// DISASM-NEXT:                 jmp -32 <_start+0xa>
+// DISASM-NEXT:                 pushl $0
+// DISASM-NEXT:                 jmp -4198672
 // DISASM:      bar:
 // DISASM-NEXT:   401110:       jmpl *4202788
-// DISASM-NEXT:                 pushl $24
-// DISASM-NEXT:                 jmp -48 <_start+0xa>
+// DISASM-NEXT:                 pushl $8
+// DISASM-NEXT:                 jmp -4198688
 
 .text
 .type foo STT_GNU_IFUNC

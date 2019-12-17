@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 -mattr=+mmx,+fma,+f16c,+avx512f -stop-after finalize-isel -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+mmx,+fma,+f16c,+avx512f -stop-after finalize-isel -o - %s | FileCheck %s
 ; This test ensures that the MXCSR is implicitly used by MMX FP instructions.
 
 define x86_mmx @mxcsr_mmx(<4 x float> %a0) {

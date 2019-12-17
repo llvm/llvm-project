@@ -134,6 +134,8 @@ namespace {
 
 class MipsAsmParser : public MCTargetAsmParser {
   MipsTargetStreamer &getTargetStreamer() {
+    assert(getParser().getStreamer().getTargetStreamer() &&
+           "do not have a target streamer");
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<MipsTargetStreamer &>(TS);
   }
