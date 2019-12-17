@@ -3373,7 +3373,6 @@ define <1 x float> @constrained_vector_maxnum_v1f32() #0 {
 entry:
   %max = call <1 x float> @llvm.experimental.constrained.maxnum.v1f32(
                                <1 x float> <float 42.0>, <1 x float> <float 41.0>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %max
 }
@@ -3416,7 +3415,6 @@ entry:
   %max = call <2 x double> @llvm.experimental.constrained.maxnum.v2f64(
                                 <2 x double> <double 43.0, double 42.0>,
                                 <2 x double> <double 41.0, double 40.0>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %max
 }
@@ -3472,7 +3470,6 @@ entry:
   %max = call <3 x float> @llvm.experimental.constrained.maxnum.v3f32(
                               <3 x float> <float 43.0, float 44.0, float 45.0>,
                               <3 x float> <float 41.0, float 42.0, float 43.0>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %max
 }
@@ -3530,7 +3527,6 @@ entry:
   %max = call <3 x double> @llvm.experimental.constrained.maxnum.v3f64(
                           <3 x double> <double 43.0, double 44.0, double 45.0>,
                           <3 x double> <double 40.0, double 41.0, double 42.0>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %max
 }
@@ -3598,7 +3594,6 @@ entry:
                                               double 46.0, double 47.0>,
                                 <4 x double> <double 40.0, double 41.0,
                                               double 42.0, double 43.0>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <4 x double> %max
 }
@@ -3628,7 +3623,6 @@ define <1 x float> @constrained_vector_minnum_v1f32() #0 {
  entry:
   %min = call <1 x float> @llvm.experimental.constrained.minnum.v1f32(
                                <1 x float> <float 42.0>, <1 x float> <float 41.0>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %min
 }
@@ -3671,7 +3665,6 @@ entry:
   %min = call <2 x double> @llvm.experimental.constrained.minnum.v2f64(
                                 <2 x double> <double 43.0, double 42.0>,
                                 <2 x double> <double 41.0, double 40.0>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %min
 }
@@ -3727,7 +3720,6 @@ entry:
   %min = call <3 x float> @llvm.experimental.constrained.minnum.v3f32(
                               <3 x float> <float 43.0, float 44.0, float 45.0>,
                               <3 x float> <float 41.0, float 42.0, float 43.0>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %min
 }
@@ -3785,7 +3777,6 @@ entry:
  %min = call <3 x double> @llvm.experimental.constrained.minnum.v3f64(
                           <3 x double> <double 43.0, double 44.0, double 45.0>,
                           <3 x double> <double 40.0, double 41.0, double 42.0>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %min
 }
@@ -3853,7 +3844,6 @@ entry:
                                               double 46.0, double 47.0>,
                                 <4 x double> <double 40.0, double 41.0,
                                               double 42.0, double 43.0>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <4 x double> %min
 }
@@ -5244,7 +5234,6 @@ define <1 x float> @constrained_vector_ceil_v1f32() #0 {
 entry:
   %ceil = call <1 x float> @llvm.experimental.constrained.ceil.v1f32(
                                <1 x float> <float 1.5>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %ceil
 }
@@ -5272,7 +5261,6 @@ define <2 x double> @constrained_vector_ceil_v2f64() #0 {
 entry:
   %ceil = call <2 x double> @llvm.experimental.constrained.ceil.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %ceil
 }
@@ -5313,7 +5301,6 @@ define <3 x float> @constrained_vector_ceil_v3f32() #0 {
 entry:
   %ceil = call <3 x float> @llvm.experimental.constrained.ceil.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %ceil
 }
@@ -5351,7 +5338,6 @@ define <3 x double> @constrained_vector_ceil_v3f64() #0 {
 entry:
   %ceil = call <3 x double> @llvm.experimental.constrained.ceil.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %ceil
 }
@@ -5375,7 +5361,6 @@ define <1 x float> @constrained_vector_floor_v1f32() #0 {
 entry:
   %floor = call <1 x float> @llvm.experimental.constrained.floor.v1f32(
                                <1 x float> <float 1.5>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %floor
 }
@@ -5404,7 +5389,6 @@ define <2 x double> @constrained_vector_floor_v2f64() #0 {
 entry:
   %floor = call <2 x double> @llvm.experimental.constrained.floor.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %floor
 }
@@ -5445,7 +5429,6 @@ define <3 x float> @constrained_vector_floor_v3f32() #0 {
 entry:
   %floor = call <3 x float> @llvm.experimental.constrained.floor.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %floor
 }
@@ -5483,7 +5466,6 @@ define <3 x double> @constrained_vector_floor_v3f64() #0 {
 entry:
   %floor = call <3 x double> @llvm.experimental.constrained.floor.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %floor
 }
@@ -5511,7 +5493,6 @@ define <1 x float> @constrained_vector_round_v1f32() #0 {
 entry:
   %round = call <1 x float> @llvm.experimental.constrained.round.v1f32(
                                <1 x float> <float 1.5>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %round
 }
@@ -5549,7 +5530,6 @@ define <2 x double> @constrained_vector_round_v2f64() #0 {
 entry:
   %round = call <2 x double> @llvm.experimental.constrained.round.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %round
 }
@@ -5598,7 +5578,6 @@ define <3 x float> @constrained_vector_round_v3f32() #0 {
 entry:
   %round = call <3 x float> @llvm.experimental.constrained.round.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %round
 }
@@ -5650,7 +5629,6 @@ define <3 x double> @constrained_vector_round_v3f64() #0 {
 entry:
   %round = call <3 x double> @llvm.experimental.constrained.round.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %round
 }
@@ -5674,7 +5652,6 @@ define <1 x float> @constrained_vector_trunc_v1f32() #0 {
 entry:
   %trunc = call <1 x float> @llvm.experimental.constrained.trunc.v1f32(
                                <1 x float> <float 1.5>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %trunc
 }
@@ -5702,7 +5679,6 @@ define <2 x double> @constrained_vector_trunc_v2f64() #0 {
 entry:
   %trunc = call <2 x double> @llvm.experimental.constrained.trunc.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %trunc
 }
@@ -5743,7 +5719,6 @@ define <3 x float> @constrained_vector_trunc_v3f32() #0 {
 entry:
   %trunc = call <3 x float> @llvm.experimental.constrained.trunc.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %trunc
 }
@@ -5781,7 +5756,6 @@ define <3 x double> @constrained_vector_trunc_v3f64() #0 {
 entry:
   %trunc = call <3 x double> @llvm.experimental.constrained.trunc.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %trunc
 }
@@ -7313,8 +7287,8 @@ declare <2 x double> @llvm.experimental.constrained.log10.v2f64(<2 x double>, me
 declare <2 x double> @llvm.experimental.constrained.log2.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.maxnum.v2f64(<2 x double>, <2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.minnum.v2f64(<2 x double>, <2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.maxnum.v2f64(<2 x double>, <2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.minnum.v2f64(<2 x double>, <2 x double>, metadata)
 declare <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f32(<2 x float>, metadata)
 declare <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f32(<2 x float>, metadata)
 declare <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f64(<2 x double>, metadata)
@@ -7325,10 +7299,10 @@ declare <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f64(<2 x double>
 declare <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double>, metadata)
 declare <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float>, metadata)
-declare <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.round.v2f64(<2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.round.v2f64(<2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata)
 declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i32(<2 x i32>, metadata, metadata)
 declare <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i32(<2 x i32>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64>, metadata, metadata)
@@ -7356,8 +7330,8 @@ declare <1 x float> @llvm.experimental.constrained.log10.v1f32(<1 x float>, meta
 declare <1 x float> @llvm.experimental.constrained.log2.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.rint.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.nearbyint.v1f32(<1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.maxnum.v1f32(<1 x float>, <1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.minnum.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.maxnum.v1f32(<1 x float>, <1 x float>, metadata)
+declare <1 x float> @llvm.experimental.constrained.minnum.v1f32(<1 x float>, <1 x float>, metadata)
 declare <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f32(<1 x float>, metadata)
 declare <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f32(<1 x float>, metadata)
 declare <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f64(<1 x double>, metadata)
@@ -7368,10 +7342,10 @@ declare <1 x i32> @llvm.experimental.constrained.fptoui.v1i32.v1f64(<1 x double>
 declare <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f64(<1 x double>, metadata)
 declare <1 x float> @llvm.experimental.constrained.fptrunc.v1f32.v1f64(<1 x double>, metadata, metadata)
 declare <1 x double> @llvm.experimental.constrained.fpext.v1f64.v1f32(<1 x float>, metadata)
-declare <1 x float> @llvm.experimental.constrained.ceil.v1f32(<1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.floor.v1f32(<1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.round.v1f32(<1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.trunc.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.ceil.v1f32(<1 x float>, metadata)
+declare <1 x float> @llvm.experimental.constrained.floor.v1f32(<1 x float>, metadata)
+declare <1 x float> @llvm.experimental.constrained.round.v1f32(<1 x float>, metadata)
+declare <1 x float> @llvm.experimental.constrained.trunc.v1f32(<1 x float>, metadata)
 declare <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i32(<1 x i32>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.sitofp.v1f32.v1i32(<1 x i32>, metadata, metadata)
 declare <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i64(<1 x i64>, metadata, metadata)
@@ -7416,10 +7390,10 @@ declare <3 x float> @llvm.experimental.constrained.rint.v3f32(<3 x float>, metad
 declare <3 x double> @llvm.experimental.constrained.rint.v3f64(<3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.nearbyint.v3f32(<3 x float>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.nearbyint.v3f64(<3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.maxnum.v3f32(<3 x float>, <3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.maxnum.v3f64(<3 x double>, <3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.minnum.v3f32(<3 x float>, <3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.minnum.v3f64(<3 x double>, <3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.maxnum.v3f32(<3 x float>, <3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.maxnum.v3f64(<3 x double>, <3 x double>, metadata)
+declare <3 x float> @llvm.experimental.constrained.minnum.v3f32(<3 x float>, <3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.minnum.v3f64(<3 x double>, <3 x double>, metadata)
 declare <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f32(<3 x float>, metadata)
 declare <3 x i64> @llvm.experimental.constrained.fptosi.v3i64.v3f32(<3 x float>, metadata)
 declare <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f64(<3 x double>, metadata)
@@ -7430,14 +7404,14 @@ declare <3 x i32> @llvm.experimental.constrained.fptoui.v3i32.v3f64(<3 x double>
 declare <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f64(<3 x double>, metadata)
 declare <3 x float> @llvm.experimental.constrained.fptrunc.v3f32.v3f64(<3 x double>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(<3 x float>, metadata)
-declare <3 x float> @llvm.experimental.constrained.ceil.v3f32(<3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.ceil.v3f64(<3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.floor.v3f32(<3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.floor.v3f64(<3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.round.v3f32(<3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.round.v3f64(<3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.trunc.v3f32(<3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.trunc.v3f64(<3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.ceil.v3f32(<3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.ceil.v3f64(<3 x double>, metadata)
+declare <3 x float> @llvm.experimental.constrained.floor.v3f32(<3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.floor.v3f64(<3 x double>, metadata)
+declare <3 x float> @llvm.experimental.constrained.round.v3f32(<3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.round.v3f64(<3 x double>, metadata)
+declare <3 x float> @llvm.experimental.constrained.trunc.v3f32(<3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.trunc.v3f64(<3 x double>, metadata)
 declare <3 x double> @llvm.experimental.constrained.sitofp.v3f64.v3i32(<3 x i32>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.sitofp.v3f32.v3i32(<3 x i32>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.sitofp.v3f64.v3i64(<3 x i64>, metadata, metadata)
@@ -7465,8 +7439,8 @@ declare <4 x double> @llvm.experimental.constrained.log10.v4f64(<4 x double>, me
 declare <4 x double> @llvm.experimental.constrained.log2.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.rint.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(<4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.maxnum.v4f64(<4 x double>, <4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.minnum.v4f64(<4 x double>, <4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.maxnum.v4f64(<4 x double>, <4 x double>, metadata)
+declare <4 x double> @llvm.experimental.constrained.minnum.v4f64(<4 x double>, <4 x double>, metadata)
 declare <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(<4 x float>, metadata)
 declare <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f32(<4 x float>, metadata)
 declare <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f64(<4 x double>, metadata)
@@ -7477,10 +7451,10 @@ declare <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f64(<4 x double>
 declare <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f64(<4 x double>, metadata)
 declare <4 x float> @llvm.experimental.constrained.fptrunc.v4f32.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
-declare <4 x double> @llvm.experimental.constrained.ceil.v4f64(<4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.round.v4f64(<4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.ceil.v4f64(<4 x double>, metadata)
+declare <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double>, metadata)
+declare <4 x double> @llvm.experimental.constrained.round.v4f64(<4 x double>, metadata)
+declare <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double>, metadata)
 declare <4 x double> @llvm.experimental.constrained.sitofp.v4f64.v4i32(<4 x i32>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.sitofp.v4f64.v4i64(<4 x i64>, metadata, metadata)

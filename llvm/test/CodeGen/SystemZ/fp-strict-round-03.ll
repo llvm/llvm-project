@@ -89,33 +89,31 @@ define void @f6(fp128 *%ptr) #0 {
 }
 
 ; Test floor for f32.
-declare float @llvm.experimental.constrained.floor.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.floor.f32(float, metadata)
 define float @f7(float %f) #0 {
 ; CHECK-LABEL: f7:
 ; CHECK: fiebra %f0, 7, %f0, 4
 ; CHECK: br %r14
   %res = call float @llvm.experimental.constrained.floor.f32(
                         float %f,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Test floor for f64.
-declare double @llvm.experimental.constrained.floor.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.floor.f64(double, metadata)
 define double @f8(double %f) #0 {
 ; CHECK-LABEL: f8:
 ; CHECK: fidbra %f0, 7, %f0, 4
 ; CHECK: br %r14
   %res = call double @llvm.experimental.constrained.floor.f64(
                         double %f,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Test floor for f128.
-declare fp128 @llvm.experimental.constrained.floor.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.floor.f128(fp128, metadata)
 define void @f9(fp128 *%ptr) #0 {
 ; CHECK-LABEL: f9:
 ; CHECK: vl [[REG:%v[0-9]+]], 0(%r2)
@@ -125,40 +123,37 @@ define void @f9(fp128 *%ptr) #0 {
   %src = load fp128, fp128 *%ptr
   %res = call fp128 @llvm.experimental.constrained.floor.f128(
                         fp128 %src,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   store fp128 %res, fp128 *%ptr
   ret void
 }
 
 ; Test ceil for f32.
-declare float @llvm.experimental.constrained.ceil.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.ceil.f32(float, metadata)
 define float @f10(float %f) #0 {
 ; CHECK-LABEL: f10:
 ; CHECK: fiebra %f0, 6, %f0, 4
 ; CHECK: br %r14
   %res = call float @llvm.experimental.constrained.ceil.f32(
                         float %f,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Test ceil for f64.
-declare double @llvm.experimental.constrained.ceil.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.ceil.f64(double, metadata)
 define double @f11(double %f) #0 {
 ; CHECK-LABEL: f11:
 ; CHECK: fidbra %f0, 6, %f0, 4
 ; CHECK: br %r14
   %res = call double @llvm.experimental.constrained.ceil.f64(
                         double %f,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Test ceil for f128.
-declare fp128 @llvm.experimental.constrained.ceil.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.ceil.f128(fp128, metadata)
 define void @f12(fp128 *%ptr) #0 {
 ; CHECK-LABEL: f12:
 ; CHECK: vl [[REG:%v[0-9]+]], 0(%r2)
@@ -168,40 +163,37 @@ define void @f12(fp128 *%ptr) #0 {
   %src = load fp128, fp128 *%ptr
   %res = call fp128 @llvm.experimental.constrained.ceil.f128(
                         fp128 %src,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   store fp128 %res, fp128 *%ptr
   ret void
 }
 
 ; Test trunc for f32.
-declare float @llvm.experimental.constrained.trunc.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
 define float @f13(float %f) #0 {
 ; CHECK-LABEL: f13:
 ; CHECK: fiebra %f0, 5, %f0, 4
 ; CHECK: br %r14
   %res = call float @llvm.experimental.constrained.trunc.f32(
                         float %f,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Test trunc for f64.
-declare double @llvm.experimental.constrained.trunc.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 define double @f14(double %f) #0 {
 ; CHECK-LABEL: f14:
 ; CHECK: fidbra %f0, 5, %f0, 4
 ; CHECK: br %r14
   %res = call double @llvm.experimental.constrained.trunc.f64(
                         double %f,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Test trunc for f128.
-declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata)
 define void @f15(fp128 *%ptr) #0 {
 ; CHECK-LABEL: f15:
 ; CHECK: vl [[REG:%v[0-9]+]], 0(%r2)
@@ -211,40 +203,37 @@ define void @f15(fp128 *%ptr) #0 {
   %src = load fp128, fp128 *%ptr
   %res = call fp128 @llvm.experimental.constrained.trunc.f128(
                         fp128 %src,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   store fp128 %res, fp128 *%ptr
   ret void
 }
 
 ; Test round for f32.
-declare float @llvm.experimental.constrained.round.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.round.f32(float, metadata)
 define float @f16(float %f) #0 {
 ; CHECK-LABEL: f16:
 ; CHECK: fiebra %f0, 1, %f0, 4
 ; CHECK: br %r14
   %res = call float @llvm.experimental.constrained.round.f32(
                         float %f,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Test round for f64.
-declare double @llvm.experimental.constrained.round.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.round.f64(double, metadata)
 define double @f17(double %f) #0 {
 ; CHECK-LABEL: f17:
 ; CHECK: fidbra %f0, 1, %f0, 4
 ; CHECK: br %r14
   %res = call double @llvm.experimental.constrained.round.f64(
                         double %f,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Test round for f128.
-declare fp128 @llvm.experimental.constrained.round.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.round.f128(fp128, metadata)
 define void @f18(fp128 *%ptr) #0 {
 ; CHECK-LABEL: f18:
 ; CHECK: vl [[REG:%v[0-9]+]], 0(%r2)
@@ -254,7 +243,6 @@ define void @f18(fp128 *%ptr) #0 {
   %src = load fp128, fp128 *%ptr
   %res = call fp128 @llvm.experimental.constrained.round.f128(
                         fp128 %src,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   store fp128 %res, fp128 *%ptr
   ret void

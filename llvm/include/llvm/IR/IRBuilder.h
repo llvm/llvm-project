@@ -2171,21 +2171,24 @@ public:
       UseFMF = FMFSource->getFastMathFlags();
 
     CallInst *C;
+    bool HasRoundingMD = false;
     switch (ID) {
-    default: {
+    default:
+      break;
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)  \
+    case Intrinsic::INTRINSIC:                                \
+      HasRoundingMD = ROUND_MODE;                             \
+      break;
+#include "llvm/IR/ConstrainedOps.def"
+    }
+    if (HasRoundingMD) {
       Value *RoundingV = getConstrainedFPRounding(Rounding);
       C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, RoundingV, ExceptV},
                           nullptr, Name);
-    } break;
-    case Intrinsic::experimental_constrained_fpext:
-    case Intrinsic::experimental_constrained_fptoui:
-    case Intrinsic::experimental_constrained_fptosi:
-    case Intrinsic::experimental_constrained_lround:
-    case Intrinsic::experimental_constrained_llround:
+    } else
       C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, ExceptV}, nullptr,
                           Name);
-      break;
-    }
+
     setConstrainedFPCallAttr(C);
 
     if (isa<FPMathOperator>(C))
@@ -2402,18 +2405,18 @@ public:
     for (auto *OneArg : Args)
       UseArgs.push_back(OneArg);
     Function *F = cast<Function>(Callee);
+    bool HasRoundingMD = false;
     switch (F->getIntrinsicID()) {
     default:
-      UseArgs.push_back(getConstrainedFPRounding(Rounding));
       break;
-    case Intrinsic::experimental_constrained_fpext:
-    case Intrinsic::experimental_constrained_fptoui:
-    case Intrinsic::experimental_constrained_fptosi:
-    case Intrinsic::experimental_constrained_lround:
-    case Intrinsic::experimental_constrained_llround:
-      // No rounding metadata for these intrinsics.
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)  \
+    case Intrinsic::INTRINSIC:                                \
+      HasRoundingMD = ROUND_MODE;                             \
       break;
+#include "llvm/IR/ConstrainedOps.def"
     }
+    if (HasRoundingMD)
+      UseArgs.push_back(getConstrainedFPRounding(Rounding));
     UseArgs.push_back(getConstrainedFPExcept(Except));
 
     CallInst *C = CreateCall(
