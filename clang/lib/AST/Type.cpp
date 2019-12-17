@@ -1860,12 +1860,8 @@ bool Type::isIntegralOrUnscopedEnumerationType() const {
 }
 
 bool Type::isUnscopedEnumerationType() const {
-  // Check for a complete enum type; incomplete enum types are not properly an
-  // enumeration type in the sense required here.
-  // C++0x: However, if the underlying type of the enum is fixed, it is
-  // considered complete.
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
-    return ET->getDecl()->isComplete() && !ET->getDecl()->isScoped();
+    return !ET->getDecl()->isScoped();
 
   return false;
 }

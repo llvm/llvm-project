@@ -740,7 +740,7 @@ void CastOperation::CheckDynamicCast() {
     assert(DestPointer && "Reference to void is not possible");
   } else if (DestRecord) {
     if (Self.RequireCompleteType(OpRange.getBegin(), DestPointee,
-                                 diag::err_bad_dynamic_cast_incomplete,
+                                 diag::err_bad_cast_incomplete,
                                  DestRange)) {
       SrcExpr = ExprError();
       return;
@@ -785,7 +785,7 @@ void CastOperation::CheckDynamicCast() {
   const RecordType *SrcRecord = SrcPointee->getAs<RecordType>();
   if (SrcRecord) {
     if (Self.RequireCompleteType(OpRange.getBegin(), SrcPointee,
-                                 diag::err_bad_dynamic_cast_incomplete,
+                                 diag::err_bad_cast_incomplete,
                                  SrcExpr.get())) {
       SrcExpr = ExprError();
       return;
@@ -1182,6 +1182,11 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // The same goes for reverse floating point promotion/conversion and
   // floating-integral conversions. Again, only floating->enum is relevant.
   if (DestType->isEnumeralType()) {
+    if (Self.RequireCompleteType(OpRange.getBegin(), DestType,
+                                 diag::err_bad_cast_incomplete)) {
+      SrcExpr = ExprError();
+      return TC_Failed;
+    }
     if (SrcType->isIntegralOrEnumerationType()) {
       Kind = CK_IntegralCast;
       return TC_Success;
@@ -1651,7 +1656,7 @@ TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
                       CastKind &Kind, bool ListInitialization) {
   if (DestType->isRecordType()) {
     if (Self.RequireCompleteType(OpRange.getBegin(), DestType,
-                                 diag::err_bad_dynamic_cast_incomplete) ||
+                                 diag::err_bad_cast_incomplete) ||
         Self.RequireNonAbstractType(OpRange.getBegin(), DestType,
                                     diag::err_allocation_of_abstract_type)) {
       msg = 0;
