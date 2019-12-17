@@ -2731,7 +2731,7 @@ public:
 
   Expr *readExpr() { return Reader.readExpr(); }
 
-  Attr *readAttr() { return Reader->ReadAttr(*F, Record, Idx); }
+  Attr *readAttr() { return Reader.readAttr(); }
 
   std::string readString() {
     return Reader.readString();

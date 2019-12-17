@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Serialization/ASTRecordReader.h"
-#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
@@ -1860,7 +1859,7 @@ void ASTStmtReader::VisitFunctionParmPackExpr(FunctionParmPackExpr *E) {
 void ASTStmtReader::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
   VisitExpr(E);
   E->State = Record.readSubExpr();
-  auto *VD = ReadDeclAs<ValueDecl>();
+  auto *VD = readDeclAs<ValueDecl>();
   unsigned ManglingNumber = Record.readInt();
   E->setExtendingDecl(VD, ManglingNumber);
 }
