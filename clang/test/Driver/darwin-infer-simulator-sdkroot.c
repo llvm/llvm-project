@@ -4,9 +4,9 @@
 //
 // RUN: rm -rf %t/SDKs/iPhoneOS8.0.0.sdk
 // RUN: mkdir -p %t/SDKs/iPhoneOS8.0.0.sdk
-// RUN: env SDKROOT=%t/SDKs/iPhoneOS8.0.0.sdk %clang %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/iPhoneOS8.0.0.sdk %clang %s -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-IPHONE %s
-// RUN: env SDKROOT=%t/SDKs/iPhoneOS8.0.0.sdk IPHONEOS_DEPLOYMENT_TARGET=8.0 %clang %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/iPhoneOS8.0.0.sdk IPHONEOS_DEPLOYMENT_TARGET=8.0 %clang %s -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-IPHONE %s
 // CHECK-IPHONE: clang
 // CHECK-IPHONE: "-cc1"
@@ -17,7 +17,7 @@
 //
 // RUN: rm -rf %t/SDKs/iPhoneSimulator8.0.sdk
 // RUN: mkdir -p %t/SDKs/iPhoneSimulator8.0.sdk
-// RUN: env SDKROOT=%t/SDKs/iPhoneSimulator8.0.sdk %clang %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/iPhoneSimulator8.0.sdk %clang %s -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SIMULATOR %s
 //
 // CHECK-SIMULATOR: clang
@@ -29,9 +29,9 @@
 //
 // RUN: rm -rf %t/SDKs/WatchOS3.0.sdk
 // RUN: mkdir -p %t/SDKs/WatchOS3.0.sdk
-// RUN: env SDKROOT=%t/SDKs/WatchOS3.0.sdk %clang %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/WatchOS3.0.sdk %clang %s -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-WATCH %s
-// RUN: env WATCHOS_DEPLOYMENT_TARGET=3.0 %clang %s -isysroot %t/SDKs/WatchOS3.0.sdk -### 2>&1 \
+// RUN: env WATCHOS_DEPLOYMENT_TARGET=3.0 %clang %s -isysroot %t/SDKs/WatchOS3.0.sdk -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-WATCH %s
 //
 // CHECK-WATCH: clang
@@ -43,7 +43,7 @@
 //
 // RUN: rm -rf %t/SDKs/WatchSimulator3.0.sdk
 // RUN: mkdir -p %t/SDKs/WatchSimulator3.0.sdk
-// RUN: env SDKROOT=%t/SDKs/WatchSimulator3.0.sdk %clang %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/WatchSimulator3.0.sdk %clang %s -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-WATCH-SIMULATOR %s
 //
 // CHECK-WATCH-SIMULATOR: clang
@@ -55,7 +55,7 @@
 //
 // RUN: rm -rf %t/SDKs/AppleTVOS10.0.sdk
 // RUN: mkdir -p %t/SDKs/AppleTVOS10.0.sdk
-// RUN: env SDKROOT=%t/SDKs/AppleTVOS10.0.sdk %clang %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/AppleTVOS10.0.sdk %clang %s -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-TV %s
 //
 // CHECK-TV: clang
@@ -67,7 +67,7 @@
 //
 // RUN: rm -rf %t/SDKs/AppleTVSimulator10.0.sdk
 // RUN: mkdir -p %t/SDKs/AppleTVSimulator10.0.sdk
-// RUN: env SDKROOT=%t/SDKs/AppleTVSimulator10.0.sdk %clang %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/AppleTVSimulator10.0.sdk %clang %s -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-TV-SIMULATOR %s
 //
 // CHECK-TV-SIMULATOR: clang
