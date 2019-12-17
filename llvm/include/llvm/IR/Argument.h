@@ -76,7 +76,12 @@ public:
   bool hasByValOrInAllocaAttr() const;
 
   /// If this is a byval or inalloca argument, return its alignment.
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use getParamAlign() instead.
   unsigned getParamAlignment() const;
+
+  /// If this is a byval or inalloca argument, return its alignment.
+  MaybeAlign getParamAlign() const;
 
   /// If this is a byval argument, return its type.
   Type *getParamByValType() const;
