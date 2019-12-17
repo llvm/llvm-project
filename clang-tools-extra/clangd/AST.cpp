@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -222,8 +223,11 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
     // Come up with a presentation for an anonymous entity.
     if (isa<NamespaceDecl>(ND))
       return "(anonymous namespace)";
-    if (auto *Cls = llvm::dyn_cast<RecordDecl>(&ND))
+    if (auto *Cls = llvm::dyn_cast<RecordDecl>(&ND)) {
+      if (Cls->isLambda())
+        return "(lambda)";
       return ("(anonymous " + Cls->getKindName() + ")").str();
+    }
     if (isa<EnumDecl>(ND))
       return "(anonymous enum)";
     return "(anonymous)";
