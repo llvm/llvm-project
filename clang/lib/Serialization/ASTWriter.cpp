@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/ASTRecordWriter.h"
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
 #include "MultiOnDiskHashTable.h"
+#include "clang/AST/AbstractTypeWriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/Attr.h"
@@ -132,456 +133,43 @@ static StringRef bytes(const SmallVectorImpl<T> &v) {
 // Type serialization
 //===----------------------------------------------------------------------===//
 
-namespace clang {
-
-  class ASTTypeWriter {
-    ASTWriter &Writer;
-    ASTRecordWriter Record;
-
-    /// Type code that corresponds to the record generated.
-    TypeCode Code = static_cast<TypeCode>(0);
-
-    /// Abbreviation to use for the record, if any.
-    unsigned AbbrevToUse = 0;
-
-  public:
-    ASTTypeWriter(ASTWriter &Writer, ASTWriter::RecordDataImpl &Record)
-      : Writer(Writer), Record(Writer, Record) {}
-
-    uint64_t Emit() {
-      return Record.Emit(Code, AbbrevToUse);
-    }
-
-    void Visit(QualType T) {
-      if (T.hasLocalNonFastQualifiers()) {
-        Qualifiers Qs = T.getLocalQualifiers();
-        Record.AddTypeRef(T.getLocalUnqualifiedType());
-        Record.push_back(Qs.getAsOpaqueValue());
-        Code = TYPE_EXT_QUAL;
-        AbbrevToUse = Writer.TypeExtQualAbbrev;
-      } else {
-        switch (T->getTypeClass()) {
-          // For all of the concrete, non-dependent types, call the
-          // appropriate visitor function.
-#define TYPE(Class, Base) \
-        case Type::Class: Visit##Class##Type(cast<Class##Type>(T)); break;
-#define ABSTRACT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
-        }
-      }
-    }
-
-    void VisitArrayType(const ArrayType *T);
-    void VisitFunctionType(const FunctionType *T);
-    void VisitTagType(const TagType *T);
-
-#define TYPE(Class, Base) void Visit##Class##Type(const Class##Type *T);
-#define ABSTRACT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
-  };
-
-} // namespace clang
-
-void ASTTypeWriter::VisitBuiltinType(const BuiltinType *T) {
-  llvm_unreachable("Built-in types are never serialized");
-}
-
-void ASTTypeWriter::VisitComplexType(const ComplexType *T) {
-  Record.AddTypeRef(T->getElementType());
-  Code = TYPE_COMPLEX;
-}
-
-void ASTTypeWriter::VisitPointerType(const PointerType *T) {
-  Record.AddTypeRef(T->getPointeeType());
-  Code = TYPE_POINTER;
-}
-
-void ASTTypeWriter::VisitDecayedType(const DecayedType *T) {
-  Record.AddTypeRef(T->getOriginalType());
-  Code = TYPE_DECAYED;
-}
-
-void ASTTypeWriter::VisitAdjustedType(const AdjustedType *T) {
-  Record.AddTypeRef(T->getOriginalType());
-  Record.AddTypeRef(T->getAdjustedType());
-  Code = TYPE_ADJUSTED;
-}
-
-void ASTTypeWriter::VisitBlockPointerType(const BlockPointerType *T) {
-  Record.AddTypeRef(T->getPointeeType());
-  Code = TYPE_BLOCK_POINTER;
-}
-
-void ASTTypeWriter::VisitLValueReferenceType(const LValueReferenceType *T) {
-  Record.AddTypeRef(T->getPointeeTypeAsWritten());
-  Record.push_back(T->isSpelledAsLValue());
-  Code = TYPE_LVALUE_REFERENCE;
-}
-
-void ASTTypeWriter::VisitRValueReferenceType(const RValueReferenceType *T) {
-  Record.AddTypeRef(T->getPointeeTypeAsWritten());
-  Code = TYPE_RVALUE_REFERENCE;
-}
-
-void ASTTypeWriter::VisitMemberPointerType(const MemberPointerType *T) {
-  Record.AddTypeRef(T->getPointeeType());
-  Record.AddTypeRef(QualType(T->getClass(), 0));
-  Code = TYPE_MEMBER_POINTER;
-}
-
-void ASTTypeWriter::VisitArrayType(const ArrayType *T) {
-  Record.AddTypeRef(T->getElementType());
-  Record.push_back(T->getSizeModifier()); // FIXME: stable values
-  Record.push_back(T->getIndexTypeCVRQualifiers()); // FIXME: stable values
-}
-
-void ASTTypeWriter::VisitConstantArrayType(const ConstantArrayType *T) {
-  VisitArrayType(T);
-  Record.AddAPInt(T->getSize());
-  Code = TYPE_CONSTANT_ARRAY;
-}
-
-void ASTTypeWriter::VisitIncompleteArrayType(const IncompleteArrayType *T) {
-  VisitArrayType(T);
-  Code = TYPE_INCOMPLETE_ARRAY;
-}
-
-void ASTTypeWriter::VisitVariableArrayType(const VariableArrayType *T) {
-  VisitArrayType(T);
-  Record.AddSourceLocation(T->getLBracketLoc());
-  Record.AddSourceLocation(T->getRBracketLoc());
-  Record.AddStmt(T->getSizeExpr());
-  Code = TYPE_VARIABLE_ARRAY;
-}
-
-void ASTTypeWriter::VisitVectorType(const VectorType *T) {
-  Record.AddTypeRef(T->getElementType());
-  Record.push_back(T->getNumElements());
-  Record.push_back(T->getVectorKind());
-  Code = TYPE_VECTOR;
-}
-
-void ASTTypeWriter::VisitExtVectorType(const ExtVectorType *T) {
-  VisitVectorType(T);
-  Code = TYPE_EXT_VECTOR;
-}
-
-void ASTTypeWriter::VisitFunctionType(const FunctionType *T) {
-  Record.AddTypeRef(T->getReturnType());
-  FunctionType::ExtInfo C = T->getExtInfo();
-  Record.push_back(C.getNoReturn());
-  Record.push_back(C.getHasRegParm());
-  Record.push_back(C.getRegParm());
-  // FIXME: need to stabilize encoding of calling convention...
-  Record.push_back(C.getCC());
-  Record.push_back(C.getProducesResult());
-  Record.push_back(C.getNoCallerSavedRegs());
-  Record.push_back(C.getNoCfCheck());
-
-  if (C.getHasRegParm() || C.getRegParm() || C.getProducesResult())
-    AbbrevToUse = 0;
-}
-
-void ASTTypeWriter::VisitFunctionNoProtoType(const FunctionNoProtoType *T) {
-  VisitFunctionType(T);
-  Code = TYPE_FUNCTION_NO_PROTO;
-}
-
-static void addExceptionSpec(const FunctionProtoType *T,
-                             ASTRecordWriter &Record) {
-  Record.push_back(T->getExceptionSpecType());
-  if (T->getExceptionSpecType() == EST_Dynamic) {
-    Record.push_back(T->getNumExceptions());
-    for (unsigned I = 0, N = T->getNumExceptions(); I != N; ++I)
-      Record.AddTypeRef(T->getExceptionType(I));
-  } else if (isComputedNoexcept(T->getExceptionSpecType())) {
-    Record.AddStmt(T->getNoexceptExpr());
-  } else if (T->getExceptionSpecType() == EST_Uninstantiated) {
-    Record.AddDeclRef(T->getExceptionSpecDecl());
-    Record.AddDeclRef(T->getExceptionSpecTemplate());
-  } else if (T->getExceptionSpecType() == EST_Unevaluated) {
-    Record.AddDeclRef(T->getExceptionSpecDecl());
+static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
+  switch (id) {
+#define TYPE_BIT_CODE(CLASS_ID, CODE_ID, CODE_VALUE) \
+  case Type::CLASS_ID: return TYPE_##CODE_ID;
+#include "clang/Serialization/TypeBitCodes.def"
+  case Type::Builtin:
+    llvm_unreachable("shouldn't be serializing a builtin type this way");
   }
-}
-
-void ASTTypeWriter::VisitFunctionProtoType(const FunctionProtoType *T) {
-  VisitFunctionType(T);
-
-  Record.push_back(T->isVariadic());
-  Record.push_back(T->hasTrailingReturn());
-  Record.push_back(T->getMethodQuals().getAsOpaqueValue());
-  Record.push_back(static_cast<unsigned>(T->getRefQualifier()));
-  addExceptionSpec(T, Record);
-
-  Record.push_back(T->getNumParams());
-  for (unsigned I = 0, N = T->getNumParams(); I != N; ++I)
-    Record.AddTypeRef(T->getParamType(I));
-
-  if (T->hasExtParameterInfos()) {
-    for (unsigned I = 0, N = T->getNumParams(); I != N; ++I)
-      Record.push_back(T->getExtParameterInfo(I).getOpaqueValue());
-  }
-
-  if (T->isVariadic() || T->hasTrailingReturn() || T->getMethodQuals() ||
-      T->getRefQualifier() || T->getExceptionSpecType() != EST_None ||
-      T->hasExtParameterInfos())
-    AbbrevToUse = 0;
-
-  Code = TYPE_FUNCTION_PROTO;
-}
-
-void ASTTypeWriter::VisitUnresolvedUsingType(const UnresolvedUsingType *T) {
-  Record.AddDeclRef(T->getDecl());
-  Code = TYPE_UNRESOLVED_USING;
-}
-
-void ASTTypeWriter::VisitTypedefType(const TypedefType *T) {
-  Record.AddDeclRef(T->getDecl());
-  assert(!T->isCanonicalUnqualified() && "Invalid typedef ?");
-  Record.AddTypeRef(T->getCanonicalTypeInternal());
-  Code = TYPE_TYPEDEF;
-}
-
-void ASTTypeWriter::VisitTypeOfExprType(const TypeOfExprType *T) {
-  Record.AddStmt(T->getUnderlyingExpr());
-  Code = TYPE_TYPEOF_EXPR;
-}
-
-void ASTTypeWriter::VisitTypeOfType(const TypeOfType *T) {
-  Record.AddTypeRef(T->getUnderlyingType());
-  Code = TYPE_TYPEOF;
-}
-
-void ASTTypeWriter::VisitDecltypeType(const DecltypeType *T) {
-  Record.AddTypeRef(T->getUnderlyingType());
-  Record.AddStmt(T->getUnderlyingExpr());
-  Code = TYPE_DECLTYPE;
-}
-
-void ASTTypeWriter::VisitUnaryTransformType(const UnaryTransformType *T) {
-  Record.AddTypeRef(T->getBaseType());
-  Record.AddTypeRef(T->getUnderlyingType());
-  Record.push_back(T->getUTTKind());
-  Code = TYPE_UNARY_TRANSFORM;
-}
-
-void ASTTypeWriter::VisitAutoType(const AutoType *T) {
-  Record.AddTypeRef(T->getDeducedType());
-  Record.push_back((unsigned)T->getKeyword());
-  if (T->getDeducedType().isNull())
-    Record.push_back(T->containsUnexpandedParameterPack() ? 2 :
-                     T->isDependentType() ? 1 : 0);
-  Code = TYPE_AUTO;
-}
-
-void ASTTypeWriter::VisitDeducedTemplateSpecializationType(
-    const DeducedTemplateSpecializationType *T) {
-  Record.AddTemplateName(T->getTemplateName());
-  Record.AddTypeRef(T->getDeducedType());
-  if (T->getDeducedType().isNull())
-    Record.push_back(T->isDependentType());
-  Code = TYPE_DEDUCED_TEMPLATE_SPECIALIZATION;
-}
-
-void ASTTypeWriter::VisitTagType(const TagType *T) {
-  Record.push_back(T->isDependentType());
-  Record.AddDeclRef(T->getDecl()->getCanonicalDecl());
-  assert(!T->isBeingDefined() &&
-         "Cannot serialize in the middle of a type definition");
-}
-
-void ASTTypeWriter::VisitRecordType(const RecordType *T) {
-  VisitTagType(T);
-  Code = TYPE_RECORD;
-}
-
-void ASTTypeWriter::VisitEnumType(const EnumType *T) {
-  VisitTagType(T);
-  Code = TYPE_ENUM;
-}
-
-void ASTTypeWriter::VisitAttributedType(const AttributedType *T) {
-  Record.AddTypeRef(T->getModifiedType());
-  Record.AddTypeRef(T->getEquivalentType());
-  Record.push_back(T->getAttrKind());
-  Code = TYPE_ATTRIBUTED;
-}
-
-void
-ASTTypeWriter::VisitSubstTemplateTypeParmType(
-                                        const SubstTemplateTypeParmType *T) {
-  Record.AddTypeRef(QualType(T->getReplacedParameter(), 0));
-  Record.AddTypeRef(T->getReplacementType());
-  Code = TYPE_SUBST_TEMPLATE_TYPE_PARM;
-}
-
-void
-ASTTypeWriter::VisitSubstTemplateTypeParmPackType(
-                                      const SubstTemplateTypeParmPackType *T) {
-  Record.AddTypeRef(QualType(T->getReplacedParameter(), 0));
-  Record.AddTemplateArgument(T->getArgumentPack());
-  Code = TYPE_SUBST_TEMPLATE_TYPE_PARM_PACK;
-}
-
-void
-ASTTypeWriter::VisitTemplateSpecializationType(
-                                       const TemplateSpecializationType *T) {
-  Record.push_back(T->isDependentType());
-  Record.AddTemplateName(T->getTemplateName());
-  Record.push_back(T->getNumArgs());
-  for (const auto &ArgI : *T)
-    Record.AddTemplateArgument(ArgI);
-  Record.AddTypeRef(T->isTypeAlias() ? T->getAliasedType()
-                                     : T->isCanonicalUnqualified()
-                                           ? QualType()
-                                           : T->getCanonicalTypeInternal());
-  Code = TYPE_TEMPLATE_SPECIALIZATION;
-}
-
-void
-ASTTypeWriter::VisitDependentSizedArrayType(const DependentSizedArrayType *T) {
-  VisitArrayType(T);
-  Record.AddStmt(T->getSizeExpr());
-  Record.AddSourceRange(T->getBracketsRange());
-  Code = TYPE_DEPENDENT_SIZED_ARRAY;
-}
-
-void
-ASTTypeWriter::VisitDependentSizedExtVectorType(
-                                        const DependentSizedExtVectorType *T) {
-  Record.AddTypeRef(T->getElementType());
-  Record.AddStmt(T->getSizeExpr());
-  Record.AddSourceLocation(T->getAttributeLoc());
-  Code = TYPE_DEPENDENT_SIZED_EXT_VECTOR;
-}
-
-void ASTTypeWriter::VisitDependentVectorType(const DependentVectorType *T) {
-  Record.AddTypeRef(T->getElementType());
-  Record.AddStmt(const_cast<Expr*>(T->getSizeExpr()));
-  Record.AddSourceLocation(T->getAttributeLoc());
-  Record.push_back(T->getVectorKind());
-  Code = TYPE_DEPENDENT_SIZED_VECTOR;
-}
-
-void
-ASTTypeWriter::VisitDependentAddressSpaceType(
-    const DependentAddressSpaceType *T) {
-  Record.AddTypeRef(T->getPointeeType());
-  Record.AddStmt(T->getAddrSpaceExpr());
-  Record.AddSourceLocation(T->getAttributeLoc());
-  Code = TYPE_DEPENDENT_ADDRESS_SPACE;
-}
-
-void
-ASTTypeWriter::VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
-  Record.push_back(T->getDepth());
-  Record.push_back(T->getIndex());
-  Record.push_back(T->isParameterPack());
-  Record.AddDeclRef(T->getDecl());
-  Code = TYPE_TEMPLATE_TYPE_PARM;
-}
-
-void
-ASTTypeWriter::VisitDependentNameType(const DependentNameType *T) {
-  Record.push_back(T->getKeyword());
-  Record.AddNestedNameSpecifier(T->getQualifier());
-  Record.AddIdentifierRef(T->getIdentifier());
-  Record.AddTypeRef(
-      T->isCanonicalUnqualified() ? QualType() : T->getCanonicalTypeInternal());
-  Code = TYPE_DEPENDENT_NAME;
-}
-
-void
-ASTTypeWriter::VisitDependentTemplateSpecializationType(
-                                const DependentTemplateSpecializationType *T) {
-  Record.push_back(T->getKeyword());
-  Record.AddNestedNameSpecifier(T->getQualifier());
-  Record.AddIdentifierRef(T->getIdentifier());
-  Record.push_back(T->getNumArgs());
-  for (const auto &I : *T)
-    Record.AddTemplateArgument(I);
-  Code = TYPE_DEPENDENT_TEMPLATE_SPECIALIZATION;
-}
-
-void ASTTypeWriter::VisitPackExpansionType(const PackExpansionType *T) {
-  Record.AddTypeRef(T->getPattern());
-  if (Optional<unsigned> NumExpansions = T->getNumExpansions())
-    Record.push_back(*NumExpansions + 1);
-  else
-    Record.push_back(0);
-  Code = TYPE_PACK_EXPANSION;
-}
-
-void ASTTypeWriter::VisitParenType(const ParenType *T) {
-  Record.AddTypeRef(T->getInnerType());
-  Code = TYPE_PAREN;
-}
-
-void ASTTypeWriter::VisitMacroQualifiedType(const MacroQualifiedType *T) {
-  Record.AddTypeRef(T->getUnderlyingType());
-  Record.AddIdentifierRef(T->getMacroIdentifier());
-  Code = TYPE_MACRO_QUALIFIED;
-}
-
-void ASTTypeWriter::VisitElaboratedType(const ElaboratedType *T) {
-  Record.push_back(T->getKeyword());
-  Record.AddNestedNameSpecifier(T->getQualifier());
-  Record.AddTypeRef(T->getNamedType());
-  Record.AddDeclRef(T->getOwnedTagDecl());
-  Code = TYPE_ELABORATED;
-}
-
-void ASTTypeWriter::VisitInjectedClassNameType(const InjectedClassNameType *T) {
-  Record.AddDeclRef(T->getDecl()->getCanonicalDecl());
-  Record.AddTypeRef(T->getInjectedSpecializationType());
-  Code = TYPE_INJECTED_CLASS_NAME;
-}
-
-void ASTTypeWriter::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
-  Record.AddDeclRef(T->getDecl()->getCanonicalDecl());
-  Code = TYPE_OBJC_INTERFACE;
-}
-
-void ASTTypeWriter::VisitObjCTypeParamType(const ObjCTypeParamType *T) {
-  Record.AddDeclRef(T->getDecl());
-  Record.push_back(T->getNumProtocols());
-  for (const auto *I : T->quals())
-    Record.AddDeclRef(I);
-  Code = TYPE_OBJC_TYPE_PARAM;
-}
-
-void ASTTypeWriter::VisitObjCObjectType(const ObjCObjectType *T) {
-  Record.AddTypeRef(T->getBaseType());
-  Record.push_back(T->getTypeArgsAsWritten().size());
-  for (auto TypeArg : T->getTypeArgsAsWritten())
-    Record.AddTypeRef(TypeArg);
-  Record.push_back(T->getNumProtocols());
-  for (const auto *I : T->quals())
-    Record.AddDeclRef(I);
-  Record.push_back(T->isKindOfTypeAsWritten());
-  Code = TYPE_OBJC_OBJECT;
-}
-
-void
-ASTTypeWriter::VisitObjCObjectPointerType(const ObjCObjectPointerType *T) {
-  Record.AddTypeRef(T->getPointeeType());
-  Code = TYPE_OBJC_OBJECT_POINTER;
-}
-
-void
-ASTTypeWriter::VisitAtomicType(const AtomicType *T) {
-  Record.AddTypeRef(T->getValueType());
-  Code = TYPE_ATOMIC;
-}
-
-void
-ASTTypeWriter::VisitPipeType(const PipeType *T) {
-  Record.AddTypeRef(T->getElementType());
-  Record.push_back(T->isReadOnly());
-  Code = TYPE_PIPE;
+  llvm_unreachable("bad type kind");
 }
 
 namespace {
+
+class ASTTypeWriter {
+  ASTWriter &Writer;
+  ASTWriter::RecordData Record;
+  ASTRecordWriter BasicWriter;
+
+public:
+  ASTTypeWriter(ASTWriter &Writer)
+    : Writer(Writer), BasicWriter(Writer, Record) {}
+
+  uint64_t write(QualType T) {
+    if (T.hasLocalNonFastQualifiers()) {
+      Qualifiers Qs = T.getLocalQualifiers();
+      BasicWriter.writeQualType(T.getLocalUnqualifiedType());
+      BasicWriter.writeQualifiers(Qs);
+      return BasicWriter.Emit(TYPE_EXT_QUAL, Writer.getTypeExtQualAbbrev());
+    }
+
+    const Type *typePtr = T.getTypePtr();
+    serialization::AbstractTypeWriter<ASTRecordWriter> atw(BasicWriter);
+    atw.write(typePtr);
+    return BasicWriter.Emit(getTypeCodeForTypeClass(typePtr->getTypeClass()),
+                            /*abbrev*/ 0);
+  }
+};
 
 class TypeLocWriter : public TypeLocVisitor<TypeLocWriter> {
   ASTRecordWriter &Record;
@@ -3192,12 +2780,8 @@ void ASTWriter::WriteType(QualType T) {
 
   assert(Idx.getIndex() >= FirstTypeID && "Re-writing a type from a prior AST");
 
-  RecordData Record;
-
   // Emit the type's representation.
-  ASTTypeWriter W(*this, Record);
-  W.Visit(T);
-  uint64_t Offset = W.Emit();
+  uint64_t Offset = ASTTypeWriter(*this).write(T);
 
   // Record the offset for this type.
   unsigned Index = Idx.getIndex() - FirstTypeID;
@@ -5345,11 +4929,12 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         Record.AddStmt(cast<CXXDestructorDecl>(D)->getOperatorDeleteThisArg());
         break;
 
-      case UPD_CXX_RESOLVED_EXCEPTION_SPEC:
-        addExceptionSpec(
-            cast<FunctionDecl>(D)->getType()->castAs<FunctionProtoType>(),
-            Record);
+      case UPD_CXX_RESOLVED_EXCEPTION_SPEC: {
+        auto prototype =
+          cast<FunctionDecl>(D)->getType()->castAs<FunctionProtoType>();
+        Record.writeExceptionSpecInfo(prototype->getExceptionSpecInfo());
         break;
+      }
 
       case UPD_CXX_DEDUCED_RETURN_TYPE:
         Record.push_back(GetOrCreateTypeID(Update.getType()));
@@ -5413,17 +4998,6 @@ void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
 void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record) {
   AddSourceLocation(Range.getBegin(), Record);
   AddSourceLocation(Range.getEnd(), Record);
-}
-
-void ASTRecordWriter::AddAPInt(const llvm::APInt &Value) {
-  Record->push_back(Value.getBitWidth());
-  const uint64_t *Words = Value.getRawData();
-  Record->append(Words, Words + Value.getNumWords());
-}
-
-void ASTRecordWriter::AddAPSInt(const llvm::APSInt &Value) {
-  Record->push_back(Value.isUnsigned());
-  AddAPInt(Value);
 }
 
 void ASTRecordWriter::AddAPFloat(const llvm::APFloat &Value) {
@@ -5743,44 +5317,6 @@ void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
   Decls.insert(I, LocDecl);
 }
 
-void ASTRecordWriter::AddDeclarationName(DeclarationName Name) {
-  // FIXME: Emit a stable enum for NameKind.  0 = Identifier etc.
-  Record->push_back(Name.getNameKind());
-  switch (Name.getNameKind()) {
-  case DeclarationName::Identifier:
-    AddIdentifierRef(Name.getAsIdentifierInfo());
-    break;
-
-  case DeclarationName::ObjCZeroArgSelector:
-  case DeclarationName::ObjCOneArgSelector:
-  case DeclarationName::ObjCMultiArgSelector:
-    AddSelectorRef(Name.getObjCSelector());
-    break;
-
-  case DeclarationName::CXXConstructorName:
-  case DeclarationName::CXXDestructorName:
-  case DeclarationName::CXXConversionFunctionName:
-    AddTypeRef(Name.getCXXNameType());
-    break;
-
-  case DeclarationName::CXXDeductionGuideName:
-    AddDeclRef(Name.getCXXDeductionGuideTemplate());
-    break;
-
-  case DeclarationName::CXXOperatorName:
-    Record->push_back(Name.getCXXOverloadedOperator());
-    break;
-
-  case DeclarationName::CXXLiteralOperatorName:
-    AddIdentifierRef(Name.getCXXLiteralIdentifier());
-    break;
-
-  case DeclarationName::CXXUsingDirective:
-    // No extra data to emit
-    break;
-  }
-}
-
 unsigned ASTWriter::getAnonymousDeclarationNumber(const NamedDecl *D) {
   assert(needsAnonymousDeclarationNumber(D) &&
          "expected an anonymous declaration");
@@ -5847,52 +5383,6 @@ void ASTRecordWriter::AddQualifierInfo(const QualifierInfo &Info) {
     AddTemplateParameterList(Info.TemplParamLists[i]);
 }
 
-void ASTRecordWriter::AddNestedNameSpecifier(NestedNameSpecifier *NNS) {
-  // Nested name specifiers usually aren't too long. I think that 8 would
-  // typically accommodate the vast majority.
-  SmallVector<NestedNameSpecifier *, 8> NestedNames;
-
-  // Push each of the NNS's onto a stack for serialization in reverse order.
-  while (NNS) {
-    NestedNames.push_back(NNS);
-    NNS = NNS->getPrefix();
-  }
-
-  Record->push_back(NestedNames.size());
-  while(!NestedNames.empty()) {
-    NNS = NestedNames.pop_back_val();
-    NestedNameSpecifier::SpecifierKind Kind = NNS->getKind();
-    Record->push_back(Kind);
-    switch (Kind) {
-    case NestedNameSpecifier::Identifier:
-      AddIdentifierRef(NNS->getAsIdentifier());
-      break;
-
-    case NestedNameSpecifier::Namespace:
-      AddDeclRef(NNS->getAsNamespace());
-      break;
-
-    case NestedNameSpecifier::NamespaceAlias:
-      AddDeclRef(NNS->getAsNamespaceAlias());
-      break;
-
-    case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      AddTypeRef(QualType(NNS->getAsType(), 0));
-      Record->push_back(Kind == NestedNameSpecifier::TypeSpecWithTemplate);
-      break;
-
-    case NestedNameSpecifier::Global:
-      // Don't need to write an associated value.
-      break;
-
-    case NestedNameSpecifier::Super:
-      AddDeclRef(NNS->getAsRecordDecl());
-      break;
-    }
-  }
-}
-
 void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
   // Nested name specifiers usually aren't too long. I think that 8 would
   // typically accommodate the vast majority.
@@ -5944,105 +5434,6 @@ void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
       AddSourceRange(NNS.getLocalSourceRange());
       break;
     }
-  }
-}
-
-void ASTRecordWriter::AddTemplateName(TemplateName Name) {
-  TemplateName::NameKind Kind = Name.getKind();
-  Record->push_back(Kind);
-  switch (Kind) {
-  case TemplateName::Template:
-    AddDeclRef(Name.getAsTemplateDecl());
-    break;
-
-  case TemplateName::OverloadedTemplate: {
-    OverloadedTemplateStorage *OvT = Name.getAsOverloadedTemplate();
-    Record->push_back(OvT->size());
-    for (const auto &I : *OvT)
-      AddDeclRef(I);
-    break;
-  }
-
-  case TemplateName::AssumedTemplate: {
-    AssumedTemplateStorage *ADLT = Name.getAsAssumedTemplateName();
-    AddDeclarationName(ADLT->getDeclName());
-    break;
-  }
-
-  case TemplateName::QualifiedTemplate: {
-    QualifiedTemplateName *QualT = Name.getAsQualifiedTemplateName();
-    AddNestedNameSpecifier(QualT->getQualifier());
-    Record->push_back(QualT->hasTemplateKeyword());
-    AddDeclRef(QualT->getTemplateDecl());
-    break;
-  }
-
-  case TemplateName::DependentTemplate: {
-    DependentTemplateName *DepT = Name.getAsDependentTemplateName();
-    AddNestedNameSpecifier(DepT->getQualifier());
-    Record->push_back(DepT->isIdentifier());
-    if (DepT->isIdentifier())
-      AddIdentifierRef(DepT->getIdentifier());
-    else
-      Record->push_back(DepT->getOperator());
-    break;
-  }
-
-  case TemplateName::SubstTemplateTemplateParm: {
-    SubstTemplateTemplateParmStorage *subst
-      = Name.getAsSubstTemplateTemplateParm();
-    AddDeclRef(subst->getParameter());
-    AddTemplateName(subst->getReplacement());
-    break;
-  }
-
-  case TemplateName::SubstTemplateTemplateParmPack: {
-    SubstTemplateTemplateParmPackStorage *SubstPack
-      = Name.getAsSubstTemplateTemplateParmPack();
-    AddDeclRef(SubstPack->getParameterPack());
-    AddTemplateArgument(SubstPack->getArgumentPack());
-    break;
-  }
-  }
-}
-
-void ASTRecordWriter::AddTemplateArgument(const TemplateArgument &Arg) {
-  Record->push_back(Arg.getKind());
-  switch (Arg.getKind()) {
-  case TemplateArgument::Null:
-    break;
-  case TemplateArgument::Type:
-    AddTypeRef(Arg.getAsType());
-    break;
-  case TemplateArgument::Declaration:
-    AddDeclRef(Arg.getAsDecl());
-    AddTypeRef(Arg.getParamTypeForDecl());
-    break;
-  case TemplateArgument::NullPtr:
-    AddTypeRef(Arg.getNullPtrType());
-    break;
-  case TemplateArgument::Integral:
-    AddAPSInt(Arg.getAsIntegral());
-    AddTypeRef(Arg.getIntegralType());
-    break;
-  case TemplateArgument::Template:
-    AddTemplateName(Arg.getAsTemplateOrTemplatePattern());
-    break;
-  case TemplateArgument::TemplateExpansion:
-    AddTemplateName(Arg.getAsTemplateOrTemplatePattern());
-    if (Optional<unsigned> NumExpansions = Arg.getNumTemplateExpansions())
-      Record->push_back(*NumExpansions + 1);
-    else
-      Record->push_back(0);
-    break;
-  case TemplateArgument::Expression:
-    AddStmt(Arg.getAsExpr());
-    break;
-  case TemplateArgument::Pack:
-    Record->push_back(Arg.pack_size());
-    for (const auto &P : Arg.pack_elements())
-      AddTemplateArgument(P);
-    break;
   }
 }
 
@@ -6629,6 +6020,26 @@ void ASTWriter::AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
 //===----------------------------------------------------------------------===//
 //// OMPClause Serialization
 ////===----------------------------------------------------------------------===//
+
+namespace {
+
+class OMPClauseWriter : public OMPClauseVisitor<OMPClauseWriter> {
+  ASTRecordWriter &Record;
+
+public:
+  OMPClauseWriter(ASTRecordWriter &Record) : Record(Record) {}
+#define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *S);
+#include "clang/Basic/OpenMPKinds.def"
+  void writeClause(OMPClause *C);
+  void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
+  void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
+};
+
+}
+
+void ASTRecordWriter::writeOMPClause(OMPClause *C) {
+  OMPClauseWriter(*this).writeClause(C);
+}
 
 void OMPClauseWriter::writeClause(OMPClause *C) {
   Record.push_back(C->getClauseKind());

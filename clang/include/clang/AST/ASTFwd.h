@@ -24,7 +24,7 @@ class Stmt;
 #include "clang/AST/StmtNodes.inc"
 class Type;
 #define TYPE(DERIVED, BASE) class DERIVED##Type;
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 class CXXCtorInitializer;
 
 } // end namespace clang

@@ -148,7 +148,7 @@ private:
 #include "clang/AST/StmtNodes.inc"
     NKI_Type,
 #define TYPE(DERIVED, BASE) NKI_##DERIVED##Type,
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     NKI_OMPClause,
 #define OPENMP_CLAUSE(TextualSpelling, Class) NKI_##Class,
 #include "clang/Basic/OpenMPKinds.def"
@@ -205,7 +205,7 @@ KIND_TO_KIND_ID(OMPClause)
 #define STMT(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED)
 #include "clang/AST/StmtNodes.inc"
 #define TYPE(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Type)
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 #define OPENMP_CLAUSE(TextualSpelling, Class) KIND_TO_KIND_ID(Class)
 #include "clang/Basic/OpenMPKinds.def"
 #undef KIND_TO_KIND_ID
