@@ -201,7 +201,7 @@ TEST_F(TestClangASTImporter, RecordLayout) {
   layout_info.bit_size = 15;
   layout_info.alignment = 2;
   layout_info.field_offsets[field] = 1;
-  importer.InsertRecordDecl(source_record, layout_info);
+  importer.SetRecordLayout(source_record, layout_info);
 
   uint64_t bit_size;
   uint64_t alignment;

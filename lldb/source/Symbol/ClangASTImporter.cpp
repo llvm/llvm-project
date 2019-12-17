@@ -547,7 +547,7 @@ bool ClangASTImporter::LayoutRecordType(
   return success;
 }
 
-void ClangASTImporter::InsertRecordDecl(clang::RecordDecl *decl,
+void ClangASTImporter::SetRecordLayout(clang::RecordDecl *decl,
                                         const LayoutInfo &layout) {
   m_record_decl_to_layout_map.insert(std::make_pair(decl, layout));
 }
