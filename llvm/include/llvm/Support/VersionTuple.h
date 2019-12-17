@@ -87,6 +87,13 @@ public:
     return Build;
   }
 
+  /// Return a version tuple that contains only the first 3 version components.
+  VersionTuple withoutBuild() const {
+    if (HasBuild)
+      return VersionTuple(Major, Minor, Subminor);
+    return *this;
+  }
+
   /// Determine if two version numbers are equivalent. If not
   /// provided, minor and subminor version numbers are considered to be zero.
   friend bool operator==(const VersionTuple &X, const VersionTuple &Y) {

@@ -1,14 +1,14 @@
 // RUN: touch %t.o
-// RUN: %clang -target x86_64-apple-macosx10.4 -### %t.o 2> %t.log
-// RUN: %clang -target x86_64-apple-darwin9 -### %t.o 2>> %t.log
-// RUN: %clang -target x86_64-apple-macosx10.7 -### %t.o 2>> %t.log
+// RUN: %clang -target x86_64-apple-macosx10.4 -mlinker-version=400 -### %t.o 2> %t.log
+// RUN: %clang -target x86_64-apple-darwin9 -mlinker-version=400 -### %t.o 2>> %t.log
+// RUN: %clang -target x86_64-apple-macosx10.7 -mlinker-version=400 -### %t.o 2>> %t.log
 //
-// RUN: %clang -target armv7-apple-ios -### %t.o 2>> %t.log
-// RUN: %clang -target armv7-apple-ios0.0 -### %t.o 2>> %t.log
-// RUN: %clang -target armv7-apple-ios1.2.3 -### %t.o 2>> %t.log
-// RUN: %clang -target armv7-apple-ios5.0 -### %t.o 2>> %t.log
-// RUN: %clang -target armv7-apple-ios7.0 -### %t.o 2>> %t.log
-// RUN: %clang -target arm64-apple-ios -### %t.o 2>> %t.log
+// RUN: %clang -target armv7-apple-ios -mlinker-version=400 -### %t.o 2>> %t.log
+// RUN: %clang -target armv7-apple-ios0.0 -mlinker-version=400 -### %t.o 2>> %t.log
+// RUN: %clang -target armv7-apple-ios1.2.3 -mlinker-version=400 -### %t.o 2>> %t.log
+// RUN: %clang -target armv7-apple-ios5.0 -mlinker-version=400 -### %t.o 2>> %t.log
+// RUN: %clang -target armv7-apple-ios7.0 -mlinker-version=400 -### %t.o 2>> %t.log
+// RUN: %clang -target arm64-apple-ios -mlinker-version=400 -### %t.o 2>> %t.log
 //
 // RUN: FileCheck %s < %t.log
 
