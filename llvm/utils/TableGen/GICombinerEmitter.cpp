@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringMatcher.h"
@@ -20,6 +22,7 @@
 #include "CodeGenTarget.h"
 #include "GlobalISel/CodeExpander.h"
 #include "GlobalISel/CodeExpansions.h"
+#include "GlobalISel/GIMatchDag.h"
 
 using namespace llvm;
 
@@ -38,9 +41,24 @@ static cl::opt<bool> ShowExpansions(
     "gicombiner-show-expansions",
     cl::desc("Use C++ comments to indicate occurence of code expansion"),
     cl::cat(GICombinerEmitterCat));
+static cl::opt<bool> StopAfterParse(
+    "gicombiner-stop-after-parse",
+    cl::desc("Stop processing after parsing rules and dump state"),
+    cl::cat(GICombinerEmitterCat));
 
 namespace {
 typedef uint64_t RuleID;
+
+// We're going to be referencing the same small strings quite a lot for operand
+// names and the like. Make their lifetime management simple with a global
+// string table.
+StringSet<> StrTab;
+
+StringRef insertStrTab(StringRef S) {
+  if (S.empty())
+    return S;
+  return StrTab.insert(S).first->first();
+}
 
 class RootInfo {
   StringRef PatternSymbol;
@@ -52,11 +70,27 @@ public:
 };
 
 class CombineRule {
+  struct VarInfo {
+    const GIMatchDagInstr *N;
+    const GIMatchDagOperand *Op;
+    const DagInit *Matcher;
+
+  public:
+    VarInfo(const GIMatchDagInstr *N, const GIMatchDagOperand *Op,
+            const DagInit *Matcher)
+        : N(N), Op(Op), Matcher(Matcher) {}
+  };
+
 protected:
   /// A unique ID for this rule
   /// ID's are used for debugging and run-time disabling of rules among other
   /// things.
   RuleID ID;
+
+  /// A unique ID that can be used for anonymous objects belonging to this rule.
+  /// Used to create unique names in makeNameForAnon*() without making tests
+  /// overly fragile.
+  unsigned UID = 0;
 
   /// The record defining this rule.
   const Record &TheDef;
@@ -67,20 +101,35 @@ protected:
   /// from the bottom of the function to the top.
   std::vector<RootInfo> Roots;
 
+  GIMatchDag MatchDag;
+
   /// A block of arbitrary C++ to finish testing the match.
   /// FIXME: This is a temporary measure until we have actual pattern matching
   const CodeInit *MatchingFixupCode = nullptr;
+
+  bool parseInstructionMatcher(const CodeGenTarget &Target, StringInit *ArgName,
+                               const Init &Arg,
+                               StringMap<std::vector<VarInfo>> &NamedEdgeDefs,
+                               StringMap<std::vector<VarInfo>> &NamedEdgeUses);
+
 public:
-  CombineRule(const CodeGenTarget &Target, RuleID ID, const Record &R)
-      : ID(ID), TheDef(R) {}
+  CombineRule(const CodeGenTarget &Target, GIMatchDagContext &Ctx, RuleID ID,
+              const Record &R)
+      : ID(ID), TheDef(R), MatchDag(Ctx) {}
+  CombineRule(const CombineRule &) = delete;
+
   bool parseDefs();
   bool parseMatcher(const CodeGenTarget &Target);
 
   RuleID getID() const { return ID; }
+  unsigned allocUID() { return UID++; }
   StringRef getName() const { return TheDef.getName(); }
   const Record &getDef() const { return TheDef; }
   const CodeInit *getMatchingFixupCode() const { return MatchingFixupCode; }
   size_t getNumRoots() const { return Roots.size(); }
+
+  GIMatchDag &getMatchDag() { return MatchDag; }
+  const GIMatchDag &getMatchDag() const { return MatchDag; }
 
   using const_root_iterator = std::vector<RootInfo>::const_iterator;
   const_root_iterator roots_begin() const { return Roots.begin(); }
@@ -109,6 +158,34 @@ static Record *getDefOfSubClass(const Init &N, StringRef Cls) {
     if (OpI->getDef()->isSubClassOf(Cls))
       return OpI->getDef();
   return nullptr;
+}
+
+/// A convenience function to check that an Init refers to a dag whose operator
+/// is a def that is a subclass of the given class and coerce it to a dag if it
+/// is. This is primarily useful for testing for subclasses of GIMatchKind and
+/// similar in DagInit's since DagInit's support any type inside them.
+static const DagInit *getDagWithOperatorOfSubClass(const Init &N,
+                                                   StringRef Cls) {
+  if (const DagInit *I = dyn_cast<DagInit>(&N))
+    if (I->getNumArgs() > 0)
+      if (const DefInit *OpI = dyn_cast<DefInit>(I->getOperator()))
+        if (OpI->getDef()->isSubClassOf(Cls))
+          return I;
+  return nullptr;
+}
+
+StringRef makeNameForAnonInstr(CombineRule &Rule) {
+  return insertStrTab(
+      to_string(format("__anon%d_%d", Rule.getID(), Rule.allocUID())));
+}
+
+StringRef makeDebugName(CombineRule &Rule, StringRef Name) {
+  return insertStrTab(Name.empty() ? makeNameForAnonInstr(Rule) : StringRef(Name));
+}
+
+StringRef makeNameForAnonPredicate(CombineRule &Rule) {
+  return insertStrTab(
+      to_string(format("__anonpred%d_%d", Rule.getID(), Rule.allocUID())));
 }
 
 bool CombineRule::parseDefs() {
@@ -149,9 +226,66 @@ bool CombineRule::parseDefs() {
   return true;
 }
 
+// Parse an (Instruction $a:Arg1, $b:Arg2, ...) matcher. Edges are formed
+// between matching operand names between different matchers.
+bool CombineRule::parseInstructionMatcher(
+    const CodeGenTarget &Target, StringInit *ArgName, const Init &Arg,
+    StringMap<std::vector<VarInfo>> &NamedEdgeDefs,
+    StringMap<std::vector<VarInfo>> &NamedEdgeUses) {
+  if (const DagInit *Matcher =
+          getDagWithOperatorOfSubClass(Arg, "Instruction")) {
+    auto &Instr =
+        Target.getInstruction(Matcher->getOperatorAsDef(TheDef.getLoc()));
+
+    StringRef Name = ArgName ? ArgName->getValue() : "";
+
+    GIMatchDagInstr *N =
+        MatchDag.addInstrNode(makeDebugName(*this, Name), insertStrTab(Name),
+                              MatchDag.getContext().makeOperandList(Instr));
+
+    N->setOpcodeAnnotation(&Instr);
+    const auto &P = MatchDag.addPredicateNode<GIMatchDagOpcodePredicate>(
+        makeNameForAnonPredicate(*this), Instr);
+    MatchDag.addPredicateDependency(N, nullptr, P, &P->getOperandInfo()["mi"]);
+    unsigned OpIdx = 0;
+    for (const auto &NameInit : Matcher->getArgNames()) {
+      StringRef Name = insertStrTab(NameInit->getAsUnquotedString());
+      if (Name.empty())
+        continue;
+      N->assignNameToOperand(OpIdx, Name);
+
+      // Record the endpoints of any named edges. We'll add the cartesian
+      // product of edges later.
+      const auto &InstrOperand = N->getOperandInfo()[OpIdx];
+      if (InstrOperand.isDef()) {
+        NamedEdgeDefs.try_emplace(Name);
+        NamedEdgeDefs[Name].emplace_back(N, &InstrOperand, Matcher);
+      } else {
+        NamedEdgeUses.try_emplace(Name);
+        NamedEdgeUses[Name].emplace_back(N, &InstrOperand, Matcher);
+      }
+
+      if (InstrOperand.isDef()) {
+        if (find_if(Roots, [&](const RootInfo &X) {
+              return X.getPatternSymbol() == Name;
+            }) != Roots.end()) {
+          N->setMatchRoot();
+        }
+      }
+
+      OpIdx++;
+    }
+
+    return true;
+  }
+  return false;
+}
+
 bool CombineRule::parseMatcher(const CodeGenTarget &Target) {
   NamedRegionTimer T("parseMatcher", "Time spent parsing the matcher",
                      "Rule Parsing", "Time spent on rule parsing", TimeRegions);
+  StringMap<std::vector<VarInfo>> NamedEdgeDefs;
+  StringMap<std::vector<VarInfo>> NamedEdgeUses;
   DagInit *Matchers = TheDef.getValueAsDag("Match");
 
   if (Matchers->getOperatorAsDef(TheDef.getLoc())->getName() != "match") {
@@ -167,6 +301,11 @@ bool CombineRule::parseMatcher(const CodeGenTarget &Target) {
   // The match section consists of a list of matchers and predicates. Parse each
   // one and add the equivalent GIMatchDag nodes, predicates, and edges.
   for (unsigned I = 0; I < Matchers->getNumArgs(); ++I) {
+    if (parseInstructionMatcher(Target, Matchers->getArgName(I),
+                                *Matchers->getArg(I), NamedEdgeDefs,
+                                NamedEdgeUses))
+      continue;
+
 
     // Parse arbitrary C++ code we have in lieu of supporting MIR matching
     if (const CodeInit *CodeI = dyn_cast<CodeInit>(Matchers->getArg(I))) {
@@ -182,6 +321,63 @@ bool CombineRule::parseMatcher(const CodeGenTarget &Target) {
     PrintNote("Pattern was `" + Matchers->getArg(I)->getAsString() + "'");
     return false;
   }
+
+  // Add the cartesian product of use -> def edges.
+  bool FailedToAddEdges = false;
+  for (const auto &NameAndDefs : NamedEdgeDefs) {
+    if (NameAndDefs.getValue().size() > 1) {
+      PrintError(TheDef.getLoc(),
+                 "Two different MachineInstrs cannot def the same vreg");
+      for (const auto &NameAndDefOp : NameAndDefs.getValue())
+        PrintNote("in " + to_string(*NameAndDefOp.N) + " created from " +
+                  to_string(*NameAndDefOp.Matcher) + "");
+      FailedToAddEdges = true;
+    }
+    const auto &Uses = NamedEdgeUses[NameAndDefs.getKey()];
+    for (const VarInfo &DefVar : NameAndDefs.getValue()) {
+      for (const VarInfo &UseVar : Uses) {
+        MatchDag.addEdge(insertStrTab(NameAndDefs.getKey()), UseVar.N, UseVar.Op,
+                         DefVar.N, DefVar.Op);
+      }
+    }
+  }
+  if (FailedToAddEdges)
+    return false;
+
+  // If a variable is referenced in multiple use contexts then we need a
+  // predicate to confirm they are the same operand. We can elide this if it's
+  // also referenced in a def context and we're traversing the def-use chain
+  // from the def to the uses but we can't know which direction we're going
+  // until after reorientToRoots().
+  for (const auto &NameAndUses : NamedEdgeUses) {
+    const auto &Uses = NameAndUses.getValue();
+    if (Uses.size() > 1) {
+      const auto &LeadingVar = Uses.front();
+      for (const auto &Var : ArrayRef<VarInfo>(Uses).drop_front()) {
+        // Add a predicate for each pair until we've covered the whole
+        // equivalence set. We could test the whole set in a single predicate
+        // but that means we can't test any equivalence until all the MO's are
+        // available which can lead to wasted work matching the DAG when this
+        // predicate can already be seen to have failed.
+        //
+        // We have a similar problem due to the need to wait for a particular MO
+        // before being able to test any of them. However, that is mitigated by
+        // the order in which we build the DAG. We build from the roots outwards
+        // so by using the first recorded use in all the predicates, we are
+        // making the dependency on one of the earliest visited references in
+        // the DAG. It's not guaranteed once the generated matcher is optimized
+        // (because the factoring the common portions of rules might change the
+        // visit order) but this should mean that these predicates depend on the
+        // first MO to become available.
+        const auto &P = MatchDag.addPredicateNode<GIMatchDagSameMOPredicate>(
+            makeNameForAnonPredicate(*this));
+        MatchDag.addPredicateDependency(LeadingVar.N, LeadingVar.Op, P,
+                                        &P->getOperandInfo()["mi0"]);
+        MatchDag.addPredicateDependency(Var.N, Var.Op, P,
+                                        &P->getOperandInfo()["mi1"]);
+      }
+    }
+  }
   return true;
 }
 
@@ -190,6 +386,8 @@ class GICombinerEmitter {
   const CodeGenTarget &Target;
   Record *Combiner;
   std::vector<std::unique_ptr<CombineRule>> Rules;
+  GIMatchDagContext MatchDagCtx;
+
   std::unique_ptr<CombineRule> makeCombineRule(const Record &R);
 
   void gatherRules(std::vector<std::unique_ptr<CombineRule>> &ActiveRules,
@@ -246,12 +444,20 @@ void GICombinerEmitter::emitNameMatcher(raw_ostream &OS) const {
 std::unique_ptr<CombineRule>
 GICombinerEmitter::makeCombineRule(const Record &TheDef) {
   std::unique_ptr<CombineRule> Rule =
-      std::make_unique<CombineRule>(Target, NumPatternTotal, TheDef);
+      std::make_unique<CombineRule>(Target, MatchDagCtx, NumPatternTotal, TheDef);
 
   if (!Rule->parseDefs())
     return nullptr;
   if (!Rule->parseMatcher(Target))
     return nullptr;
+  LLVM_DEBUG({
+    dbgs() << "Parsed rule defs/match for '" << Rule->getName() << "'\n";
+    Rule->getMatchDag().dump();
+    Rule->getMatchDag().writeDOTGraph(dbgs(), Rule->getName());
+  });
+  if (StopAfterParse)
+    return Rule;
+
   // For now, don't support multi-root rules. We'll come back to this later
   // once we have the algorithm changes to support it.
   if (Rule->getNumRoots() > 1) {
@@ -337,6 +543,12 @@ void GICombinerEmitter::generateCodeForRule(raw_ostream &OS,
 
 void GICombinerEmitter::run(raw_ostream &OS) {
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
+  if (StopAfterParse) {
+    MatchDagCtx.print(errs());
+    PrintNote(Combiner->getLoc(),
+              "Terminating due to -gicombiner-stop-after-parse");
+    return;
+  }
   if (ErrorsPrinted)
     PrintFatalError(Combiner->getLoc(), "Failed to parse one or more rules");
 
