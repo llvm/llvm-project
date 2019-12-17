@@ -6190,6 +6190,8 @@ def ext_typecheck_ordered_comparison_of_pointer_and_zero : Extension<
   "ordered comparison between pointer and zero (%0 and %1) is an extension">;
 def err_typecheck_ordered_comparison_of_pointer_and_zero : Error<
   "ordered comparison between pointer and zero (%0 and %1)">;
+def err_typecheck_three_way_comparison_of_pointer_and_zero : Error<
+  "three-way comparison between pointer and zero">;
 def ext_typecheck_ordered_comparison_of_function_pointers : ExtWarn<
   "ordered comparison of function pointers (%0 and %1)">,
   InGroup<DiagGroup<"ordered-compare-function-pointers">>;
@@ -10197,6 +10199,8 @@ def err_std_compare_type_not_supported : Error<
    "the type does not have the expected form}1">;
 def note_rewriting_operator_as_spaceship : Note<
   "while rewriting comparison as call to 'operator<=>' declared here">;
+def err_three_way_vector_comparison : Error<
+  "three-way comparison between vectors is not supported">;
 
 // Memory Tagging Extensions (MTE) diagnostics
 def err_memtag_arg_null_or_pointer : Error<
