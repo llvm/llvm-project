@@ -555,13 +555,16 @@ else() # if this is included from LLVM's CMake
       endforeach()
     endif()
 
-    # TODO: This is a hack needed because the libcxx headers are copied into the
-    # build directory during configuration. Without that step the clang in the
-    # build directory cannot find the C++ headers in certain configurations.
-    # I need to build a mechanism for runtime projects to provide CMake code
-    # that executes at LLVM configuration time to handle this case.
     if(NOT LLVM_BUILD_INSTRUMENTED AND CLANG_ENABLE_BOOTSTRAP)
+      # TODO: This is a hack needed because the libcxx headers are copied into the
+      # build directory during configuration. Without that step the clang in the
+      # build directory cannot find the C++ headers in certain configurations.
+      # I need to build a mechanism for runtime projects to provide CMake code
+      # that executes at LLVM configuration time to handle this case.
       add_dependencies(clang-bootstrap-deps runtimes-configure)
+      # We need to add the runtimes as a dependency because compiler-rt can be
+      # built as part of runtimes and we need the profile runtime for PGO
+      add_dependencies(clang-bootstrap-deps runtimes)
     endif()
 
     if(LLVM_INCLUDE_TESTS)
