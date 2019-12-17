@@ -117,9 +117,9 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
   if (MoveForward) {
     // When I is being moved forward, we need to make sure the InsertPoint
     // dominates every users. Or else, a user may be using an undefined I.
-    for (const Value *User : I.users())
-      if (auto *UserInst = dyn_cast<Instruction>(User))
-        if (!DT.dominates(&InsertPoint, UserInst))
+    for (const Use &U : I.uses())
+      if (auto *UserInst = dyn_cast<Instruction>(U.getUser()))
+        if (UserInst != &InsertPoint && !DT.dominates(&InsertPoint, U))
           return false;
   } else {
     // When I is being moved backward, we need to make sure all its opernads
@@ -172,4 +172,18 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
     return reportInvalidCandidate(I, HasDependences);
 
   return true;
+}
+
+void llvm::moveInstsBottomUp(BasicBlock &FromBB, BasicBlock &ToBB,
+                             const DominatorTree &DT,
+                             const PostDominatorTree &PDT, DependenceInfo &DI) {
+  for (auto It = ++FromBB.rbegin(); It != FromBB.rend();) {
+    Instruction *MovePos = ToBB.getFirstNonPHIOrDbg();
+    Instruction &I = *It;
+    // Increment the iterator before modifying FromBB.
+    ++It;
+
+    if (isSafeToMoveBefore(I, *MovePos, DT, PDT, DI))
+      I.moveBefore(MovePos);
+  }
 }

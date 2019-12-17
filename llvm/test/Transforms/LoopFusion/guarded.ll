@@ -8,8 +8,6 @@
 ; CHECK: [[LOOP1PREHEADER]]
 ; CHECK-NEXT: br label %[[LOOP1BODY:bb[0-9]*]]
 ; CHECK: [[LOOP1BODY]]
-; CHECK: br i1 %{{.*}}, label %[[LOOP2BODY:bb[0-9]*]], label %[[LOOP2BODY]]
-; CHECK: [[LOOP2BODY]]
 ; CHECK: br i1 %{{.*}}, label %[[LOOP1BODY]], label %[[LOOP2EXIT:bb[0-9]+]]
 ; CHECK: [[LOOP2EXIT]]
 ; CHECK: br label %[[LOOP1SUCC]]

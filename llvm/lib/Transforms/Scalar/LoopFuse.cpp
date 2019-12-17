@@ -1114,6 +1114,29 @@ private:
     return FC.ExitBlock->size() == 1;
   }
 
+  /// Simplify the condition of the latch branch of \p FC to true, when both of
+  /// its successors are the same.
+  void simplifyLatchBranch(const FusionCandidate &FC) const {
+    BranchInst *FCLatchBranch = dyn_cast<BranchInst>(FC.Latch->getTerminator());
+    if (FCLatchBranch) {
+      assert(FCLatchBranch->isConditional() &&
+             FCLatchBranch->getSuccessor(0) == FCLatchBranch->getSuccessor(1) &&
+             "Expecting the two successors of FCLatchBranch to be the same");
+      FCLatchBranch->setCondition(
+          llvm::ConstantInt::getTrue(FCLatchBranch->getCondition()->getType()));
+    }
+  }
+
+  /// Move instructions from FC0.Latch to FC1.Latch. If FC0.Latch has an unique
+  /// successor, then merge FC0.Latch with its unique successor.
+  void mergeLatch(const FusionCandidate &FC0, const FusionCandidate &FC1) {
+    moveInstsBottomUp(*FC0.Latch, *FC1.Latch, DT, PDT, DI);
+    if (BasicBlock *Succ = FC0.Latch->getUniqueSuccessor()) {
+      MergeBlockIntoPredecessor(Succ, &DTU, &LI);
+      DTU.flush();
+    }
+  }
+
   /// Fuse two fusion candidates, creating a new fused loop.
   ///
   /// This method contains the mechanics of fusing two loops, represented by \p
@@ -1247,6 +1270,10 @@ private:
     FC0.Latch->getTerminator()->replaceUsesOfWith(FC0.Header, FC1.Header);
     FC1.Latch->getTerminator()->replaceUsesOfWith(FC1.Header, FC0.Header);
 
+    // Change the condition of FC0 latch branch to true, as both successors of
+    // the branch are the same.
+    simplifyLatchBranch(FC0);
+
     // If FC0.Latch and FC0.ExitingBlock are the same then we have already
     // performed the updates above.
     if (FC0.Latch != FC0.ExitingBlock)
@@ -1269,8 +1296,14 @@ private:
 
     // Is there a way to keep SE up-to-date so we don't need to forget the loops
     // and rebuild the information in subsequent passes of fusion?
+    // Note: Need to forget the loops before merging the loop latches, as
+    // mergeLatch may remove the only block in FC1.
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
+
+    // Move instructions from FC0.Latch to FC1.Latch.
+    // Note: mergeLatch requires an updated DT.
+    mergeLatch(FC0, FC1);
 
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->block_begin(),
@@ -1491,6 +1524,10 @@ private:
     FC0.Latch->getTerminator()->replaceUsesOfWith(FC0.Header, FC1.Header);
     FC1.Latch->getTerminator()->replaceUsesOfWith(FC1.Header, FC0.Header);
 
+    // Change the condition of FC0 latch branch to true, as both successors of
+    // the branch are the same.
+    simplifyLatchBranch(FC0);
+
     // If FC0.Latch and FC0.ExitingBlock are the same then we have already
     // performed the updates above.
     if (FC0.Latch != FC0.ExitingBlock)
@@ -1522,8 +1559,14 @@ private:
 
     // Is there a way to keep SE up-to-date so we don't need to forget the loops
     // and rebuild the information in subsequent passes of fusion?
+    // Note: Need to forget the loops before merging the loop latches, as
+    // mergeLatch may remove the only block in FC1.
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
+
+    // Move instructions from FC0.Latch to FC1.Latch.
+    // Note: mergeLatch requires an updated DT.
+    mergeLatch(FC0, FC1);
 
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->block_begin(),
