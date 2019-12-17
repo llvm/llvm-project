@@ -331,7 +331,6 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
   else {
     Target &target = GetThread().GetProcess()->GetTarget();
     const bool ignore_calls = GetKind() == eKindStepOverRange;
-    bool found_calls;
     uint32_t branch_index =
         instructions->GetIndexOfNextBranchInstruction(pc_index, target,
                                                       ignore_calls, 
