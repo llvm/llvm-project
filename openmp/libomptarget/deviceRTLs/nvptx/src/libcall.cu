@@ -336,54 +336,30 @@ EXTERN int omp_get_max_task_priority(void) {
 // locks
 ////////////////////////////////////////////////////////////////////////////////
 
-#define __OMP_SPIN 1000
-#define UNSET 0
-#define SET 1
-
 EXTERN void omp_init_lock(omp_lock_t *lock) {
-  omp_unset_lock(lock);
+  __kmpc_impl_init_lock(lock);
   PRINT0(LD_IO, "call omp_init_lock()\n");
 }
 
 EXTERN void omp_destroy_lock(omp_lock_t *lock) {
-  omp_unset_lock(lock);
+  __kmpc_impl_destroy_lock(lock);
   PRINT0(LD_IO, "call omp_destroy_lock()\n");
 }
 
 EXTERN void omp_set_lock(omp_lock_t *lock) {
-  // int atomicCAS(int* address, int compare, int val);
-  // (old == compare ? val : old)
-
-  // TODO: not sure spinning is a good idea here..
-  while (atomicCAS(lock, UNSET, SET) != UNSET) {
-    clock_t start = clock();
-    clock_t now;
-    for (;;) {
-      now = clock();
-      clock_t cycles = now > start ? now - start : now + (0xffffffff - start);
-      if (cycles >= __OMP_SPIN * GetBlockIdInKernel()) {
-        break;
-      }
-    }
-  } // wait for 0 to be the read value
-
+  __kmpc_impl_set_lock(lock);
   PRINT0(LD_IO, "call omp_set_lock()\n");
 }
 
 EXTERN void omp_unset_lock(omp_lock_t *lock) {
-  (void)atomicExch(lock, UNSET);
-
+  __kmpc_impl_unset_lock(lock);
   PRINT0(LD_IO, "call omp_unset_lock()\n");
 }
 
 EXTERN int omp_test_lock(omp_lock_t *lock) {
-  // int atomicCAS(int* address, int compare, int val);
-  // (old == compare ? val : old)
-  int ret = atomicAdd(lock, 0);
-
+  int rc = __kmpc_impl_test_lock(lock);
   PRINT(LD_IO, "call omp_test_lock() return %d\n", ret);
-
-  return ret;
+  return rc;
 }
 
 // for xlf Fotran
