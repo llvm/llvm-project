@@ -298,45 +298,6 @@ namespace clang {
       return nullptr;
     }
 
-    void addDeclToContexts(Decl *FromD, Decl *ToD) {
-      if (Importer.isMinimalImport()) {
-        // In minimal import case the decl must be added even if it is not
-        // contained in original context, for LLDB compatibility.
-        // FIXME: Check if a better solution is possible.
-        if (!FromD->getDescribedTemplate() &&
-            FromD->getFriendObjectKind() == Decl::FOK_None)
-          ToD->getLexicalDeclContext()->addDeclInternal(ToD);
-        return;
-      }
-
-      DeclContext *FromDC = FromD->getDeclContext();
-      DeclContext *FromLexicalDC = FromD->getLexicalDeclContext();
-      DeclContext *ToDC = ToD->getDeclContext();
-      DeclContext *ToLexicalDC = ToD->getLexicalDeclContext();
-
-      bool Visible = false;
-      if (FromDC->containsDeclAndLoad(FromD)) {
-        ToDC->addDeclInternal(ToD);
-        Visible = true;
-      }
-      if (ToDC != ToLexicalDC && FromLexicalDC->containsDeclAndLoad(FromD)) {
-        ToLexicalDC->addDeclInternal(ToD);
-        Visible = true;
-      }
-
-      // If the Decl was added to any context, it was made already visible.
-      // Otherwise it is still possible that it should be visible.
-      if (!Visible) {
-        if (auto *FromNamed = dyn_cast<NamedDecl>(FromD)) {
-          auto *ToNamed = cast<NamedDecl>(ToD);
-          DeclContextLookupResult FromLookup =
-              FromDC->lookup(FromNamed->getDeclName());
-          if (llvm::is_contained(FromLookup, FromNamed))
-            ToDC->makeDeclVisibleInContext(ToNamed);
-        }
-      }
-    }
-
   public:
     explicit ASTNodeImporter(ASTImporter &Importer) : Importer(Importer) {}
 
@@ -2776,7 +2737,11 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
     D2 = D2CXX;
     D2->setAccess(D->getAccess());
     D2->setLexicalDeclContext(LexicalDC);
-    addDeclToContexts(D, D2);
+    if (!DCXX->getDescribedClassTemplate() || DCXX->isImplicit())
+      LexicalDC->addDeclInternal(D2);
+
+    if (LexicalDC != DC && D->isInIdentifierNamespace(Decl::IDNS_TagFriend))
+      DC->makeDeclVisibleInContext(D2);
 
     if (ClassTemplateDecl *FromDescribed =
         DCXX->getDescribedClassTemplate()) {
@@ -2842,7 +2807,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
                                 Name.getAsIdentifierInfo(), PrevDecl))
       return D2;
     D2->setLexicalDeclContext(LexicalDC);
-    addDeclToContexts(D, D2);
+    LexicalDC->addDeclInternal(D2);
   }
 
   if (auto BraceRangeOrErr = import(D->getBraceRange()))
@@ -3421,7 +3386,23 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   if (Error Err = ImportTemplateInformation(D, ToFunction))
     return std::move(Err);
 
-  addDeclToContexts(D, ToFunction);
+  bool IsFriend = D->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend);
+
+  // TODO Can we generalize this approach to other AST nodes as well?
+  if (D->getDeclContext()->containsDeclAndLoad(D))
+    DC->addDeclInternal(ToFunction);
+  if (DC != LexicalDC && D->getLexicalDeclContext()->containsDeclAndLoad(D))
+    LexicalDC->addDeclInternal(ToFunction);
+
+  // Friend declaration's lexical context is the befriending class, but the
+  // semantic context is the enclosing scope of the befriending class.
+  // We want the friend functions to be found in the semantic context by lookup.
+  // FIXME should we handle this generically in VisitFriendDecl?
+  // In Other cases when LexicalDC != DC we don't want it to be added,
+  // e.g out-of-class definitions like void B::f() {} .
+  if (LexicalDC != DC && IsFriend) {
+    DC->makeDeclVisibleInContext(ToFunction);
+  }
 
   if (auto *FromCXXMethod = dyn_cast<CXXMethodDecl>(D))
     if (Error Err = ImportOverriddenMethods(cast<CXXMethodDecl>(ToFunction),
@@ -3869,7 +3850,10 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
   if (D->isConstexpr())
     ToVar->setConstexpr(true);
 
-  addDeclToContexts(D, ToVar);
+  if (D->getDeclContext()->containsDeclAndLoad(D))
+    DC->addDeclInternal(ToVar);
+  if (DC != LexicalDC && D->getLexicalDeclContext()->containsDeclAndLoad(D))
+    LexicalDC->addDeclInternal(ToVar);
 
   // Import the rest of the chain. I.e. import all subsequent declarations.
   for (++RedeclIt; RedeclIt != Redecls.end(); ++RedeclIt) {
@@ -5149,6 +5133,7 @@ template <typename T> static auto getTemplateDefinition(T *D) -> T * {
 }
 
 ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
+  bool IsFriend = D->getFriendObjectKind() != Decl::FOK_None;
 
   // Import the major distinguishing characteristics of this class template.
   DeclContext *DC, *LexicalDC;
@@ -5225,7 +5210,10 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   D2->setAccess(D->getAccess());
   D2->setLexicalDeclContext(LexicalDC);
 
-  addDeclToContexts(D, D2);
+  if (D->getDeclContext()->containsDeclAndLoad(D))
+    DC->addDeclInternal(D2);
+  if (DC != LexicalDC && D->getLexicalDeclContext()->containsDeclAndLoad(D))
+    LexicalDC->addDeclInternal(D2);
 
   if (FoundByLookup) {
     auto *Recent =
@@ -5250,6 +5238,9 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     D2->setPreviousDecl(Recent);
   }
+
+  if (LexicalDC != DC && IsFriend)
+    DC->makeDeclVisibleInContext(D2);
 
   if (FromTemplated->isCompleteDefinition() &&
       !ToTemplated->isCompleteDefinition()) {
