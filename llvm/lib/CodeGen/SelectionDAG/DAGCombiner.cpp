@@ -1035,8 +1035,7 @@ CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
   DAG.ReplaceAllUsesOfValueWith(TLO.Old, TLO.New);
 
   // Push the new node and any (possibly new) users onto the worklist.
-  AddToWorklist(TLO.New.getNode());
-  AddUsersToWorklist(TLO.New.getNode());
+  AddToWorklistWithUsers(TLO.New.getNode());
 
   // Finally, if the node is now dead, remove it from the graph.  The node
   // may not be dead if the replacement process recursively simplified to
