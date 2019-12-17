@@ -2,7 +2,7 @@
 # RUN:   | FileCheck %s
 #
 # Test that regalloc manages (via regalloc hints) to avoid a LOCRMux jump
-# sequence expansion, and a SELR instuction is emitted.
+# sequence expansion, and a SELR/LOCR instuction is emitted.
 
 --- |
   ; ModuleID = 'tc.ll'
@@ -78,7 +78,7 @@
 
 ...
 
-# CHECK: selr
+# CHECK: locr
 # CHECK-NOT: risblg
 
 ---
