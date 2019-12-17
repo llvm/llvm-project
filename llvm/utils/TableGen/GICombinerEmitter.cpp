@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -136,6 +137,60 @@ public:
   const_root_iterator roots_end() const { return Roots.end(); }
   iterator_range<const_root_iterator> roots() const {
     return llvm::make_range(Roots.begin(), Roots.end());
+  }
+
+  /// The matcher will begin from the roots and will perform the match by
+  /// traversing the edges to cover the whole DAG. This function reverses DAG
+  /// edges such that everything is reachable from a root. This is part of the
+  /// preparation work for flattening the DAG into a tree.
+  void reorientToRoots() {
+    SmallSet<const GIMatchDagInstr *, 5> Roots;
+    SmallSet<const GIMatchDagInstr *, 5> Visited;
+    SmallSet<GIMatchDagEdge *, 20> EdgesRemaining;
+
+    for (auto &I : MatchDag.roots()) {
+      Roots.insert(I);
+      Visited.insert(I);
+    }
+    for (auto &I : MatchDag.edges())
+      EdgesRemaining.insert(I);
+
+    bool Progressed = false;
+    SmallSet<GIMatchDagEdge *, 20> EdgesToRemove;
+    while (!EdgesRemaining.empty()) {
+      for (auto EI = EdgesRemaining.begin(), EE = EdgesRemaining.end();
+           EI != EE; ++EI) {
+        if (Visited.count((*EI)->getFromMI())) {
+          if (Roots.count((*EI)->getToMI()))
+            PrintError(TheDef.getLoc(), "One or more roots are unnecessary");
+          Visited.insert((*EI)->getToMI());
+          EdgesToRemove.insert(*EI);
+          Progressed = true;
+        }
+      }
+      for (GIMatchDagEdge *ToRemove : EdgesToRemove)
+        EdgesRemaining.erase(ToRemove);
+      EdgesToRemove.clear();
+
+      for (auto EI = EdgesRemaining.begin(), EE = EdgesRemaining.end();
+           EI != EE; ++EI) {
+        if (Visited.count((*EI)->getToMI())) {
+          (*EI)->reverse();
+          Visited.insert((*EI)->getToMI());
+          EdgesToRemove.insert(*EI);
+          Progressed = true;
+        }
+        for (GIMatchDagEdge *ToRemove : EdgesToRemove)
+          EdgesRemaining.erase(ToRemove);
+        EdgesToRemove.clear();
+      }
+
+      if (!Progressed) {
+        LLVM_DEBUG(dbgs() << "No progress\n");
+        return;
+      }
+      Progressed = false;
+    }
   }
 };
 
@@ -450,6 +505,9 @@ GICombinerEmitter::makeCombineRule(const Record &TheDef) {
     return nullptr;
   if (!Rule->parseMatcher(Target))
     return nullptr;
+
+  Rule->reorientToRoots();
+
   LLVM_DEBUG({
     dbgs() << "Parsed rule defs/match for '" << Rule->getName() << "'\n";
     Rule->getMatchDag().dump();

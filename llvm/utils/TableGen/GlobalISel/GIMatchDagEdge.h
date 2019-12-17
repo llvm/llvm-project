@@ -51,6 +51,9 @@ public:
   const GIMatchDagInstr *getToMI() const { return ToMI; }
   const GIMatchDagOperand *getToMO() const { return ToMO; }
 
+  /// Flip the direction of the edge.
+  void reverse();
+
   LLVM_DUMP_METHOD void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

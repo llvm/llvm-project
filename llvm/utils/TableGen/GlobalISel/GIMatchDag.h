@@ -53,6 +53,9 @@ class GIMatchDag {
 public:
   using InstrNodesVec = std::vector<std::unique_ptr<GIMatchDagInstr>>;
   using EdgesVec = std::vector<std::unique_ptr<GIMatchDagEdge>>;
+  using edge_iterator = raw_pointer_iterator<EdgesVec::iterator>;
+  using const_edge_iterator = raw_pointer_iterator<EdgesVec::const_iterator>;
+
   using PredicateNodesVec = std::vector<std::unique_ptr<GIMatchDagPredicate>>;
 
   using PredicateDependencyEdgesVec =
@@ -73,6 +76,30 @@ public:
   GIMatchDag(const GIMatchDag &) = delete;
 
   GIMatchDagContext &getContext() const { return Ctx; }
+  edge_iterator edges_begin() {
+    return raw_pointer_iterator<EdgesVec::iterator>(Edges.begin());
+  }
+  edge_iterator edges_end() {
+    return raw_pointer_iterator<EdgesVec::iterator>(Edges.end());
+  }
+  const_edge_iterator edges_begin() const {
+    return raw_pointer_iterator<EdgesVec::const_iterator>(Edges.begin());
+  }
+  const_edge_iterator edges_end() const {
+    return raw_pointer_iterator<EdgesVec::const_iterator>(Edges.end());
+  }
+  iterator_range<edge_iterator> edges() {
+    return make_range(edges_begin(), edges_end());
+  }
+  iterator_range<const_edge_iterator> edges() const {
+    return make_range(edges_begin(), edges_end());
+  }
+  iterator_range<std::vector<GIMatchDagInstr *>::iterator> roots() {
+    return make_range(MatchRoots.begin(), MatchRoots.end());
+  }
+  iterator_range<std::vector<GIMatchDagInstr *>::const_iterator> roots() const {
+    return make_range(MatchRoots.begin(), MatchRoots.end());
+  }
 
   template <class... Args> GIMatchDagInstr *addInstrNode(Args &&... args) {
     auto Obj =
