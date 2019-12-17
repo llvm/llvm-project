@@ -8,7 +8,6 @@
 ; RUN: llc -mtriple i586-intel-elfiamcu -use-ctors < %s | FileCheck %s --check-prefix=MCU-CTORS
 ; RUN: llc -mtriple i586-intel-elfiamcu < %s | FileCheck %s --check-prefix=MCU-INIT-ARRAY
 ; RUN: llc -mtriple x86_64-win32-gnu < %s | FileCheck --check-prefix=COFF-CTOR %s
-; RUN: llc -mtriple x86_64 -use-ctors=false < %s | FileCheck %s
 @llvm.global_ctors = appending global [3 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @f, i8* null}, { i32, void ()*, i8* } { i32 15, void ()* @g, i8* @v }, { i32, void ()*, i8* } { i32 55555, void ()* @h, i8* @v }]
 
 @v = weak_odr global i8 0
@@ -70,5 +69,3 @@ entry:
 ; COFF-CTOR-NEXT:	.section	.ctors,"dw"
 ; COFF-CTOR-NEXT:	.p2align	3
 ; COFF-CTOR-NEXT:	.quad	f
-
-; CHECK: .init_array
