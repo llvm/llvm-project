@@ -44,9 +44,31 @@ namespace llvm {
     X86ELFTargetObjectFile() {
       PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
     }
-    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+
     /// Describe a TLS variable address within debug info.
     const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
+  };
+
+  /// X86FreeBSDTargetObjectFile - This implementation is used for FreeBSD
+  /// on x86 and x86-64.
+  class X86FreeBSDTargetObjectFile : public X86ELFTargetObjectFile {
+    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  };
+
+  /// This implementation is used for Fuchsia on x86-64.
+  class X86FuchsiaTargetObjectFile : public X86ELFTargetObjectFile {
+    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  };
+
+  /// X86LinuxNaClTargetObjectFile - This implementation is used for linux and
+  /// Native Client on x86 and x86-64.
+  class X86LinuxNaClTargetObjectFile : public X86ELFTargetObjectFile {
+    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  };
+
+  /// This implementation is used for Solaris on x86/x86-64.
+  class X86SolarisTargetObjectFile : public X86ELFTargetObjectFile {
+    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
   };
 
 } // end namespace llvm

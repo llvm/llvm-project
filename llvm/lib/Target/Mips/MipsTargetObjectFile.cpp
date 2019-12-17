@@ -44,6 +44,7 @@ EmbeddedData("membedded-data", cl::Hidden,
 
 void MipsTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  InitializeELF(TM.Options.UseInitArray);
 
   SmallDataSection = getContext().getELFSection(
       ".sdata", ELF::SHT_PROGBITS,
