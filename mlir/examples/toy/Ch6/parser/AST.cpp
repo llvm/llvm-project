@@ -21,6 +21,7 @@
 
 #include "toy/AST.h"
 
+#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -84,20 +85,15 @@ template <typename T> static std::string loc(T *node) {
 
 /// Dispatch to a generic expressions to the appropriate subclass using RTTI
 void ASTDumper::dump(ExprAST *expr) {
-#define dispatch(CLASS)                                                        \
-  if (CLASS *node = llvm::dyn_cast<CLASS>(expr))                               \
-    return dump(node);
-  dispatch(VarDeclExprAST);
-  dispatch(LiteralExprAST);
-  dispatch(NumberExprAST);
-  dispatch(VariableExprAST);
-  dispatch(ReturnExprAST);
-  dispatch(BinaryExprAST);
-  dispatch(CallExprAST);
-  dispatch(PrintExprAST);
-  // No match, fallback to a generic message
-  INDENT();
-  llvm::errs() << "<unknown Expr, kind " << expr->getKind() << ">\n";
+  mlir::TypeSwitch<ExprAST *>(expr)
+      .Case<BinaryExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
+            PrintExprAST, ReturnExprAST, VarDeclExprAST, VariableExprAST>(
+          [&](auto *node) { dump(node); })
+      .Default([&](ExprAST *) {
+        // No match, fallback to a generic message
+        INDENT();
+        llvm::errs() << "<unknown Expr, kind " << expr->getKind() << ">\n";
+      });
 }
 
 /// A variable declaration is printing the variable name, the type, and then
