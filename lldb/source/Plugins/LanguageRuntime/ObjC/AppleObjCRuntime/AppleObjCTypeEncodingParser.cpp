@@ -128,7 +128,7 @@ clang::QualType AppleObjCTypeEncodingParser::BuildAggregate(
   if (!lldb_ctx)
     return clang::QualType();
   CompilerType union_type(lldb_ctx->CreateRecordType(
-      nullptr, lldb::eAccessPublic, name.c_str(), kind, lldb::eLanguageTypeC));
+      nullptr, lldb::eAccessPublic, name, kind, lldb::eLanguageTypeC));
   if (union_type) {
     ClangASTContext::StartTagDeclarationDefinition(union_type);
 
