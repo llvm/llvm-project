@@ -18,3 +18,8 @@ LLVM_DUMP_METHOD void GIMatchDagEdge::print(raw_ostream &OS) const {
      << "]";
 }
 
+void GIMatchDagEdge::reverse() {
+  std::swap(FromMI, ToMI);
+  std::swap(FromMO, ToMO);
+}
+
