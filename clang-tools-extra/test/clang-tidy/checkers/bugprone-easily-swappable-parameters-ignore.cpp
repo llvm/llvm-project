@@ -3,7 +3,8 @@
 // RUN:     {key: bugprone-easily-swappable-parameters.MinimumLength, value: 2}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterNames, value: "\"\";Foo;Bar"}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: "T"}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0} \
+// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0}, \
+// RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 0} \
 // RUN:  ]}' --
 
 void ignoredUnnamed(int I, int, int) {} // NO-WARN: No >= 2 length of non-unnamed.

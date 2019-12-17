@@ -39,8 +39,14 @@ public:
   /// ignored.
   const std::vector<std::string> IgnoredParameterTypeSuffixes;
 
-  /// Whether to consider an unqualified and a qualified type mixable.
+  /// Whether to consider differently qualified versions of the same type
+  /// mixable.
   const bool QualifiersMix;
+
+  /// Whether to model implicit conversions "in full" (conditions apply)
+  /// during analysis and consider types that are implicitly convertible to
+  /// one another mixable.
+  const bool ModelImplicitConversions;
 };
 
 } // namespace bugprone

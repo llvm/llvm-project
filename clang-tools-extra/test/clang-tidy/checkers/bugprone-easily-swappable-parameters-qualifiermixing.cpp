@@ -3,7 +3,8 @@
 // RUN:     {key: bugprone-easily-swappable-parameters.MinimumLength, value: 2}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterNames, value: ""}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 1} \
+// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 1}, \
+// RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 0} \
 // RUN:  ]}' --
 
 typedef int MyInt1;

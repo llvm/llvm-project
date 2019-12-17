@@ -3,7 +3,8 @@
 // RUN:     {key: bugprone-easily-swappable-parameters.MinimumLength, value: 3}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterNames, value: ""}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0} \
+// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0}, \
+// RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 0} \
 // RUN:  ]}' --
 
 int add(int Left, int Right) { return Left + Right; } // NO-WARN: Only 2 parameters.
