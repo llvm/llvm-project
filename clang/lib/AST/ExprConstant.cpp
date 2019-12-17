@@ -7080,6 +7080,31 @@ public:
            DerivedSuccess(Result, E);
   }
 
+  bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E) {
+    APValue Val;
+    if (!Evaluate(Val, Info, E->getBase()))
+      return false;
+
+    if (Val.isVector()) {
+      SmallVector<uint32_t, 4> Indices;
+      E->getEncodedElementAccess(Indices);
+      if (Indices.size() == 1) {
+        // Return scalar.
+        return DerivedSuccess(Val.getVectorElt(Indices[0]), E);
+      } else {
+        // Construct new APValue vector.
+        SmallVector<APValue, 4> Elts;
+        for (unsigned I = 0; I < Indices.size(); ++I) {
+          Elts.push_back(Val.getVectorElt(Indices[I]));
+        }
+        APValue VecResult(Elts.data(), Indices.size());
+        return DerivedSuccess(VecResult, E);
+      }
+    }
+
+    return false;
+  }
+
   bool VisitCastExpr(const CastExpr *E) {
     switch (E->getCastKind()) {
     default:

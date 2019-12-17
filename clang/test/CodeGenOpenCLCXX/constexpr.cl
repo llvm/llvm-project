@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -O0 -emit-llvm -o - | FileCheck %s
 
+typedef int int2 __attribute__((ext_vector_type(2)));
+typedef int int4 __attribute__((ext_vector_type(4)));
+
 struct Storage final {
   constexpr const float& operator[](const int index) const noexcept {
     return InternalStorage[index];
@@ -23,4 +26,29 @@ constexpr float FloatConstant = compute();
 // CHECK: store float 2.000000e+00
 kernel void foo(global float *x) {
   *x = FloatConstant;
+}
+
+// Test evaluation of constant vectors.
+// CHECK-LABEL: define spir_kernel void @vecEval
+// CHECK: store i32 3
+// CHECK: store <2 x i32> <i32 22, i32 33>, <2 x i32>
+
+const int oneElt = int4(3).x;
+const int2 twoElts = (int4)(11, 22, 33, 44).yz;
+
+kernel void vecEval(global int *x, global int2 *y) {
+  *x = oneElt;
+  *y = twoElts;
+}
+
+// Test evaluation of vectors initialized through a constexpr function.
+// CHECK-LABEL: define spir_kernel void @vecEval2
+// CHECK: store <2 x i32>
+constexpr int2 addOne(int2 x) {
+  return (int2)(x.x + 1, x.y + 1);
+}
+const int2 fromConstexprFunc = addOne(int2(2));
+
+kernel void vecEval2(global int2 *x) {
+  *x = fromConstexprFunc;
 }
