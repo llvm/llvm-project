@@ -47,12 +47,6 @@ public:
   DWARFDIE
   GetDIE(const DIERef &die_ref) override;
 
-  std::unique_ptr<SymbolFileDWARFDwo>
-  GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
-                                 const DWARFDebugInfoEntry &cu_die) override {
-    return nullptr;
-  }
-
   DWARFCompileUnit *GetBaseCompileUnit() override { return &m_base_dwarf_cu; }
 
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
