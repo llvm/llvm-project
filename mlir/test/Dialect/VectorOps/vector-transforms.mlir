@@ -40,27 +40,19 @@ func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
 // CHECK-NEXT: %[[TG8:.*]] = vector.tuple_get %[[ES2]], 3 : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
 // CHECK-NEXT: %[[A4:.*]] = addf %[[TG7]], %[[TG8]] : vector<2x2xf32>
 
-// CHECK-NEXT: %[[R1:.*]] = vector.tuple %[[A1]], %[[A2]], %[[A3]], %[[A4]] : vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>
-// CHECK-NEXT: %[[R2:.*]] = vector.insert_slices %[[R1]], [2, 2], [1, 1] : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>> into vector<4x4xf32>
-
 // CHECK-NEXT: %[[ES3:.*]] = vector.extract_slices %{{.*}}, [2, 2], [1, 1] : vector<4x4xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
-// CHECK-NEXT: %[[ES4:.*]] = vector.extract_slices %[[R2]], [2, 2], [1, 1] : vector<4x4xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
 
 // CHECK-NEXT: %[[TG9:.*]] = vector.tuple_get %[[ES3]], 0 : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
-// CHECK-NEXT: %[[TG10:.*]] = vector.tuple_get %[[ES4]], 0 : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
-// CHECK-NEXT: %[[A5:.*]] = addf %[[TG9]], %[[TG10]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A5:.*]] = addf %[[TG9]], %[[A1]] : vector<2x2xf32>
 
 // CHECK-NEXT: %[[TG11:.*]] = vector.tuple_get %[[ES3]], 1 : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
-// CHECK-NEXT: %[[TG12:.*]] = vector.tuple_get %[[ES4]], 1 : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
-// CHECK-NEXT: %[[A6:.*]] = addf %[[TG11]], %[[TG12]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A6:.*]] = addf %[[TG11]], %[[A2]] : vector<2x2xf32>
 
 // CHECK-NEXT: %[[TG13:.*]] = vector.tuple_get %[[ES3]], 2 : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
-// CHECK-NEXT: %[[TG14:.*]] = vector.tuple_get %[[ES4]], 2 : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
-// CHECK-NEXT: %[[A7:.*]] = addf %[[TG13]], %[[TG14]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A7:.*]] = addf %[[TG13]], %[[A3]] : vector<2x2xf32>
 
 // CHECK-NEXT: %[[TG15:.*]] = vector.tuple_get %[[ES3]], 3 : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
-// CHECK-NEXT: %[[TG16:.*]] = vector.tuple_get %[[ES4]], 3 : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>>
-// CHECK-NEXT: %[[A8:.*]] = addf %[[TG15]], %[[TG16]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A8:.*]] = addf %[[TG15]], %[[A4]] : vector<2x2xf32>
 
 // CHECK-NEXT: %[[R3:.*]] = vector.tuple %[[A5]], %[[A6]], %[[A7]], %[[A8]] : vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>
 // CHECK-NEXT: %[[R4:.*]] = vector.insert_slices %[[R3]], [2, 2], [1, 1] : tuple<vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>, vector<2x2xf32>> into vector<4x4xf32>
@@ -278,7 +270,6 @@ func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
 // TODO(andydavis) Update test with VTR split transform.
 // CHECK-LABEL: func @vector_transfers
 // CHECK-COUNT-8: vector.transfer_read
-// CHECK-COUNT-2: vector.extract_slices
 // CHECK-COUNT-4: addf
 // CHECK-COUNT-1: vector.insert_slices
 //         CHECK: vector.transfer_write
