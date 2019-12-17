@@ -131,7 +131,7 @@ TEST(SanitizerCommon, InternalMmapVector) {
     EXPECT_EQ((uptr)i, vector.size());
   }
   InternalMmapVector<uptr> empty_vector;
-  CHECK_GT(empty_vector.capacity(), 0U);
+  CHECK_EQ(empty_vector.capacity(), 0U);
   CHECK_EQ(0U, empty_vector.size());
 }
 
