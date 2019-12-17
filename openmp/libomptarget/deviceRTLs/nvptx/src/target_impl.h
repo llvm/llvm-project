@@ -188,4 +188,11 @@ INLINE int GetBlockIdInKernel() { return blockIdx.x; }
 INLINE int GetNumberOfBlocksInKernel() { return gridDim.x; }
 INLINE int GetNumberOfThreadsInBlock() { return blockDim.x; }
 
+// Locks
+EXTERN void __kmpc_impl_init_lock(omp_lock_t *lock);
+EXTERN void __kmpc_impl_destroy_lock(omp_lock_t *lock);
+EXTERN void __kmpc_impl_set_lock(omp_lock_t *lock);
+EXTERN void __kmpc_impl_unset_lock(omp_lock_t *lock);
+EXTERN int __kmpc_impl_test_lock(omp_lock_t *lock);
+
 #endif

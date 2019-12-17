@@ -55,6 +55,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       ${devicertl_common_directory}/src/critical.cu
       src/data_sharing.cu
       src/libcall.cu
+      src/target_impl.cu
       ${devicertl_common_directory}/src/loop.cu
       ${devicertl_common_directory}/src/omptarget.cu
       ${devicertl_common_directory}/src/parallel.cu
