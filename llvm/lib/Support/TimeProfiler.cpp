@@ -33,8 +33,7 @@ std::vector<std::unique_ptr<llvm::TimeTraceProfiler>>
 
 namespace llvm {
 
-thread_local std::unique_ptr<TimeTraceProfiler> TimeTraceProfilerInstance =
-    nullptr;
+LLVM_THREAD_LOCAL std::unique_ptr<TimeTraceProfiler> TimeTraceProfilerInstance;
 
 typedef duration<steady_clock::rep, steady_clock::period> DurationType;
 typedef time_point<steady_clock> TimePointType;
