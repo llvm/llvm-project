@@ -744,7 +744,7 @@ static bool searchForFile(SmallVectorImpl<char> &FilePath,
                           ArrayRef<std::string> Dirs,
                           StringRef FileName) {
   SmallString<128> WPath;
-  for (const StringRef &Dir : Dirs) {
+  for (const std::string &Dir : Dirs) {
     if (Dir.empty())
       continue;
     WPath.clear();
