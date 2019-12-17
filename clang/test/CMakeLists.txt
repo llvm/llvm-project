@@ -138,7 +138,8 @@ endif()
 
 # Copy gen_ast_dump_json_test.py to the clang build dir. This allows invoking
 # it without having to pass the --clang= argument
-configure_file(AST/gen_ast_dump_json_test.py ${LLVM_TOOLS_BINARY_DIR}/gen_ast_dump_json_test.py COPYONLY)
+configure_file(AST/gen_ast_dump_json_test.py
+  ${CLANG_BINARY_DIR}/bin/gen_ast_dump_json_test.py COPYONLY)
 
 add_custom_target(clang-test-depends DEPENDS ${CLANG_TEST_DEPS})
 set_target_properties(clang-test-depends PROPERTIES FOLDER "Clang tests")
