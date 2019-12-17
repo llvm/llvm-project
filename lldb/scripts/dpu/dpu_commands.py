@@ -94,11 +94,7 @@ def get_dpu_program_path(dpu):
     return re.search('"(.+)"', str(program_path)).group(1)
 
 
-def get_dpu_status(rank, slice_id, dpu_id):
-    run_context = rank.GetChildMemberWithName("runtime") \
-                      .GetChildMemberWithName("run_context")
-    if not(run_context.IsValid()):
-        return "UNKNOWN"
+def get_dpu_status(run_context, slice_id, dpu_id):
     dpus_running = run_context.GetChildMemberWithName("dpu_running")
     if not(dpus_running.IsValid()):
         return "UNKNOWN"
@@ -111,11 +107,11 @@ def get_dpu_status(rank, slice_id, dpu_id):
                        .GetValue())
     dpu_mask = 1 << dpu_id
     if (dpu_mask & dpu_running) != 0:
-        return "RUNNING"
+        return "RUNNING "
     elif (dpu_mask & dpu_in_fault) != 0:
-        return "ERROR  "
+        return "ERROR   "
     else:
-        return "IDLE   "
+        return "IDLE    "
 
 
 def break_to_next_boot_and_get_dpus(debugger, target):
@@ -333,15 +329,6 @@ def dpu_attach(debugger, command, result, internal_dict):
     return target_dpu
 
 
-def dpu_get(rank_addr, slice_id, dpu_id, debugger, target):
-    return get_dpu_from_command("dpu_get((struct dpu_rank_t *)"
-                                + str(rank_addr)
-                                + ", " + str(slice_id)
-                                + ", " + str(dpu_id) + ")",
-                                debugger,
-                                target)
-
-
 def print_list(list, result):
     if result is None:
         return
@@ -367,7 +354,7 @@ def dpu_list(debugger, command, result, internal_dict):
         get_value_from_command(
             debugger, "dpu_rank_handler_dpu_rank_list_size", 10)
     if not(success):
-        print("dpu_list: internal error 1")
+        print("dpu_list: internal error 1 (can't get number of ranks)")
         return None
 
     result_list = []
@@ -378,45 +365,47 @@ def dpu_list(debugger, command, result, internal_dict):
             debugger,
             target)
         if rank is None or not(rank.IsValid()):
-            print("dpu_list: internal error 2")
+            print("dpu_list: internal error 2 (can't get rank)")
             return None
-        rank_addr = rank.GetValue()
-        if int(rank_addr, 16) == 0:
+        if int(rank.GetValue(), 16) == 0:
             continue
 
         region_id, rank_id = get_region_id_and_rank_id(rank, target)
 
-        slice_id = 0
-        dpu_id = 0
-        dpu = dpu_get(rank_addr, slice_id, dpu_id, debugger, target)
-        if dpu is None:
-            return None
-        if not(dpu.IsValid):
-            print("dpu_list: internal error 3")
-            return None
+        uint32_type = target.FindFirstType("uint32_t")
+        nb_dpus_per_slice = int(rank.GetChildMemberWithName("description")
+                                .GetChildMemberWithName("topology")
+                                .GetChildMemberWithName(
+                                    "nr_of_dpus_per_control_interface")
+                                .Cast(uint32_type).GetValue()) & 0xff
+        nb_slices = int(rank.GetChildMemberWithName("description")
+                        .GetChildMemberWithName("topology")
+                        .GetChildMemberWithName("nr_of_control_interfaces")
+                        .Cast(uint32_type).GetValue()) & 0xff
 
-        while int(dpu.GetValue(), 16) != 0:
-            while int(dpu.GetValue(), 16) != 0:
+        run_context = rank.GetChildMemberWithName("runtime") \
+                          .GetChildMemberWithName("run_context")
+        dpus = rank.GetChildMemberWithName("dpus")
+
+        for slice_id in range(0, nb_slices):
+            for dpu_id in range(0, nb_dpus_per_slice):
+                dpu = rank.GetValueForExpressionPath(
+                    "->dpus["
+                    + str(slice_id * nb_dpus_per_slice + dpu_id)
+                    + "]")
+
+                if dpu.GetChildMemberWithName("enabled").GetValue() != 'true':
+                    continue
+
                 program_path = get_dpu_program_path(dpu)
                 if program_path is None:
                     program_path = ""
 
-                dpu_status = get_dpu_status(rank, slice_id, dpu_id)
+                dpu_status = get_dpu_status(run_context, slice_id, dpu_id)
 
-                result_list.append((dpu.GetValue(),
+                result_list.append((dpu.GetAddress(),
                                     region_id, rank_id, slice_id, dpu_id,
                                     dpu_status, program_path))
-
-                dpu_id = dpu_id + 1
-                dpu = dpu_get(rank_addr, slice_id, dpu_id, debugger, target)
-                if dpu is None:
-                    return None
-
-            dpu_id = 0
-            slice_id = slice_id + 1
-            dpu = dpu_get(rank_addr, slice_id, dpu_id, debugger, target)
-            if dpu is None:
-                return None
 
     print_list(result_list, result)
     return result_list
