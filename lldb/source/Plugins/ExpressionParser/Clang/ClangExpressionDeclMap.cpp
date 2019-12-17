@@ -173,31 +173,6 @@ ClangExpressionDeclMap::TargetInfo ClangExpressionDeclMap::GetTargetInfo() {
   return ret;
 }
 
-static clang::QualType ExportAllDeclaredTypes(
-    clang::ExternalASTMerger &parent_merger, clang::ExternalASTMerger &merger,
-    clang::ASTContext &source, clang::FileManager &source_file_manager,
-    const clang::ExternalASTMerger::OriginMap &source_origin_map,
-    clang::FileID file, clang::QualType root) {
-  // Mark the source as temporary to make sure all declarations from the
-  // AST are exported. Also add the parent_merger as the merger into the
-  // source AST so that the merger can track back any declarations from
-  // the persistent ASTs we used as sources.
-  clang::ExternalASTMerger::ImporterSource importer_source(
-      source, source_file_manager, source_origin_map, /*Temporary*/ true,
-      &parent_merger);
-  merger.AddSources(importer_source);
-  clang::ASTImporter &exporter = merger.ImporterForOrigin(source);
-  llvm::Expected<clang::QualType> ret_or_error = exporter.Import(root);
-  merger.RemoveSources(importer_source);
-  if (ret_or_error) {
-    return *ret_or_error;
-  } else {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-    LLDB_LOG_ERROR(log, ret_or_error.takeError(), "Couldn't import type: {0}");
-    return clang::QualType();
-  }
-}
-
 TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
                                                 ClangASTContext &source,
                                                 TypeFromParser parser_type) {
@@ -207,18 +182,6 @@ TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
 
   if (m_ast_importer_sp) {
     return TypeFromUser(m_ast_importer_sp->DeportType(target, parser_type));
-  } else if (m_merger_up) {
-    clang::FileID source_file =
-        source.getASTContext()->getSourceManager().getFileID(
-            source.getASTContext()->getTranslationUnitDecl()->getLocation());
-    auto scratch_ast_context = static_cast<ClangASTContextForExpressions *>(
-        ClangASTContext::GetScratch(*m_target));
-    clang::QualType exported_type = ExportAllDeclaredTypes(
-        *m_merger_up.get(), scratch_ast_context->GetMergerUnchecked(),
-        *source.getASTContext(), *source.getFileManager(),
-        m_merger_up->GetOrigins(), source_file,
-        clang::QualType::getFromOpaquePtr(parser_type.GetOpaqueQualType()));
-    return TypeFromUser(exported_type.getAsOpaquePtr(), &target);
   } else {
     lldbassert(0 && "No mechanism for deporting a type!");
     return TypeFromUser();
