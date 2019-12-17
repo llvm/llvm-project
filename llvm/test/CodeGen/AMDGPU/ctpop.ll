@@ -284,7 +284,7 @@ define amdgpu_kernel void @v_ctpop_i32_add_var_inv(i32 addrspace(1)* noalias %ou
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAR]], [[VAL]]
 ; VI: flat_load_dword [[VAR:v[0-9]+]], v[{{[0-9]+:[0-9]+}}]
 ; VI: flat_load_dword [[VAL:v[0-9]+]], v[{{[0-9]+:[0-9]+}}]
-; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
+; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAR]], [[VAL]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 

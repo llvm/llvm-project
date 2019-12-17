@@ -78,7 +78,7 @@ define amdgpu_kernel void @load_shl_base_lds_max_offset(i8 addrspace(1)* %out, i
 ; GCN: v_lshlrev_b32_e32 [[OFS:v[0-9]+]], 2, {{v[0-9]+}}
 ; GCN-DAG: v_add_{{[iu]}}32_e32 [[PTR0:v[0-9]+]], vcc, lds0@abs32@lo, [[OFS]]
 ; GCN-DAG: v_add_{{[iu]}}32_e32 [[PTR1:v[0-9]+]], vcc, lds1@abs32@lo, [[OFS]]
-; GCN: s_mov_b32 m0, -1
+; GCN-DAG: s_mov_b32 m0, -1
 
 ; GCN-DAG: ds_read_b32 {{v[0-9]+}}, [[PTR0]] offset:256
 ; GCN-DAG: ds_read_b32 {{v[0-9]+}}, [[PTR1]] offset:256
