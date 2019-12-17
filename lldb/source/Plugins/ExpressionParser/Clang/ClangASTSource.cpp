@@ -49,10 +49,11 @@ private:
 };
 }
 
-ClangASTSource::ClangASTSource(const lldb::TargetSP &target)
+ClangASTSource::ClangASTSource(const lldb::TargetSP &target,
+                               const lldb::ClangASTImporterSP &importer)
     : m_import_in_progress(false), m_lookups_enabled(false), m_target(target),
       m_ast_context(nullptr), m_active_lexical_decls(), m_active_lookups() {
-  m_ast_importer_sp = m_target->GetClangASTImporter();
+  m_ast_importer_sp = importer;
 }
 
 void ClangASTSource::InstallASTContext(ClangASTContext &clang_ast_context,
@@ -65,9 +66,13 @@ void ClangASTSource::InstallASTContext(ClangASTContext &clang_ast_context,
 }
 
 ClangASTSource::~ClangASTSource() {
-  if (m_ast_importer_sp)
-    m_ast_importer_sp->ForgetDestination(m_ast_context);
+  if (!m_ast_importer_sp)
+    return;
 
+  m_ast_importer_sp->ForgetDestination(m_ast_context);
+
+  if (!m_target)
+    return;
   // We are in the process of destruction, don't create clang ast context on
   // demand by passing false to
   // Target::GetScratchClangASTContext(create_on_demand).
@@ -681,6 +686,9 @@ void ClangASTSource::FindExternalVisibleDecls(
 
   const ConstString name(context.m_decl_name.getAsString().c_str());
   if (IgnoreName(name, true))
+    return;
+
+  if (!m_target)
     return;
 
   if (module_sp && namespace_decl) {

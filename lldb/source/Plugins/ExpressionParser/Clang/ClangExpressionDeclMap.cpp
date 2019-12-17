@@ -65,9 +65,10 @@ const char *g_lldb_local_vars_namespace_cstr = "$__lldb_local_vars";
 ClangExpressionDeclMap::ClangExpressionDeclMap(
     bool keep_result_in_memory,
     Materializer::PersistentVariableDelegate *result_delegate,
-    ExecutionContext &exe_ctx, ValueObject *ctx_obj)
-    : ClangASTSource(exe_ctx.GetTargetSP()), m_found_entities(),
-      m_struct_members(), m_keep_result_in_memory(keep_result_in_memory),
+    const lldb::TargetSP &target, const lldb::ClangASTImporterSP &importer,
+    ValueObject *ctx_obj)
+    : ClangASTSource(target, importer), m_found_entities(), m_struct_members(),
+      m_keep_result_in_memory(keep_result_in_memory),
       m_result_delegate(result_delegate), m_ctx_obj(ctx_obj), m_parser_vars(),
       m_struct_vars() {
   EnableStructVars();
@@ -737,6 +738,8 @@ void ClangExpressionDeclMap::SearchPersistenDecls(NameSearchContext &context,
                                                   const ConstString name,
                                                   unsigned int current_id) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  if (!m_parser_vars)
+    return;
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
   if (!target)
     return;
@@ -1048,6 +1051,9 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
     NameSearchContext &context, ConstString name, unsigned current_id) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
+  if (!m_target)
+    return;
+
   auto *modules_decl_vendor = m_target->GetClangModulesDeclVendor();
   if (!modules_decl_vendor)
     return;
@@ -1236,6 +1242,8 @@ void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
                                             ConstString name,
                                             CompilerDeclContext &namespace_decl,
                                             unsigned current_id) {
+  if (!m_parser_vars)
+    return;
 
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
 
@@ -1366,9 +1374,14 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
   // Only look for functions by name out in our symbols if the function doesn't
   // start with our phony prefix of '$'
-  Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
-  StackFrame *frame = m_parser_vars->m_exe_ctx.GetFramePtr();
+
+  Target *target = nullptr;
+  StackFrame *frame = nullptr;
   SymbolContext sym_ctx;
+  if (m_parser_vars) {
+    target = m_parser_vars->m_exe_ctx.GetTargetPtr();
+    frame = m_parser_vars->m_exe_ctx.GetFramePtr();
+  }
   if (frame != nullptr)
     sym_ctx = frame->GetSymbolContext(lldb::eSymbolContextFunction |
                                       lldb::eSymbolContextBlock);

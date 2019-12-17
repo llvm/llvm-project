@@ -892,9 +892,9 @@ void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     Materializer::PersistentVariableDelegate &delegate,
     bool keep_result_in_memory,
     ValueObject *ctx_obj) {
-  m_expr_decl_map_up.reset(
-      new ClangExpressionDeclMap(keep_result_in_memory, &delegate, exe_ctx,
-                                 ctx_obj));
+  m_expr_decl_map_up.reset(new ClangExpressionDeclMap(
+      keep_result_in_memory, &delegate, exe_ctx.GetTargetSP(),
+      exe_ctx.GetTargetRef().GetClangASTImporter(), ctx_obj));
 }
 
 clang::ASTConsumer *
