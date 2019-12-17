@@ -229,23 +229,32 @@ func @contraction4x4_ikj(%arg0 : vector<4x2xf32>, %arg1 : vector<2x4xf32>,
 // CHECK:      %[[C2:.*]] = constant 2 : index
 
 // Check LHS vector.transfer read is split for each user.
-// TODO(andydavis) Connect VTR results with users in subsequent CL.
 
 //      CHECK: %[[VTR0:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<4x2xf32>, vector<2x2xf32>
 // CHECK-NEXT: %[[VTR1:.*]] = vector.transfer_read %{{.*}}[%[[C2]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<4x2xf32>, vector<2x2xf32>
 
-//      CHECK: %[[VTR2:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<2x4xf32>, vector<2x2xf32>
+// CHECK-NEXT: %[[VTR2:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<2x4xf32>, vector<2x2xf32>
 // CHECK-NEXT: %[[VTR3:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C2]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<2x4xf32>, vector<2x2xf32>
 
-//      CHECK: %[[VTR4:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<4x4xf32>, vector<2x2xf32>
+// CHECK-NEXT: %[[VTR4:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<4x4xf32>, vector<2x2xf32>
 // CHECK-NEXT: %[[VTR5:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C2]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<4x4xf32>, vector<2x2xf32>
-// CHECK-NEXT: %[[VTR5:.*]] = vector.transfer_read %{{.*}}[%[[C2]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<4x4xf32>, vector<2x2xf32>
-// CHECK-NEXT: %[[VTR5:.*]] = vector.transfer_read %{{.*}}[%[[C2]], %[[C2]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<4x4xf32>, vector<2x2xf32>
+// CHECK-NEXT: %[[VTR6:.*]] = vector.transfer_read %{{.*}}[%[[C2]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<4x4xf32>, vector<2x2xf32>
+// CHECK-NEXT: %[[VTR7:.*]] = vector.transfer_read %{{.*}}[%[[C2]], %[[C2]]], %{{.*}} {permutation_map = #[[MAP0]]} : memref<4x4xf32>, vector<2x2xf32>
+
+// CHECK-NEXT: %[[R0:.*]] = vector.contract {indexing_maps = [#map2, #map3, #map0], iterator_types = ["parallel", "reduction", "parallel"]} %[[VTR0]], %[[VTR2]], %[[VTR4]] : vector<2x2xf32>, vector<2x2xf32> into vector<2x2xf32>
+// CHECK-NEXT: %[[R1:.*]] = vector.contract {indexing_maps = [#map2, #map3, #map0], iterator_types = ["parallel", "reduction", "parallel"]} %[[VTR0]], %[[VTR3]], %[[VTR5]] : vector<2x2xf32>, vector<2x2xf32> into vector<2x2xf32>
+// CHECK-NEXT: %[[R2:.*]] = vector.contract {indexing_maps = [#map2, #map3, #map0], iterator_types = ["parallel", "reduction", "parallel"]} %[[VTR1]], %[[VTR2]], %[[VTR6]] : vector<2x2xf32>, vector<2x2xf32> into vector<2x2xf32>
+// CHECK-NEXT: %[[R3:.*]] = vector.contract {indexing_maps = [#map2, #map3, #map0], iterator_types = ["parallel", "reduction", "parallel"]} %[[VTR1]], %[[VTR3]], %[[VTR7]] : vector<2x2xf32>, vector<2x2xf32> into vector<2x2xf32>
+
+// CHECK-NEXT: vector.transfer_write %[[R0]], %{{.*}}[%[[C0]], %[[C0]]] {permutation_map = #[[MAP0]]} : vector<2x2xf32>, memref<4x4xf32>
+// CHECK-NEXT: vector.transfer_write %[[R1]], %{{.*}}[%[[C0]], %[[C2]]] {permutation_map = #[[MAP0]]} : vector<2x2xf32>, memref<4x4xf32>
+// CHECK-NEXT: vector.transfer_write %[[R2]], %{{.*}}[%[[C2]], %[[C0]]] {permutation_map = #[[MAP0]]} : vector<2x2xf32>, memref<4x4xf32>
+// CHECK-NEXT: vector.transfer_write %[[R3]], %{{.*}}[%[[C2]], %[[C2]]] {permutation_map = #[[MAP0]]} : vector<2x2xf32>, memref<4x4xf32>
+// CHECK-NEXT: return
 
 func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
                                    %arg1 : memref<2x4xf32>,
-                                   %arg2 : memref<4x4xf32>)
-                                   -> (vector<4x4xf32>) {
+                                   %arg2 : memref<4x4xf32>) {
   %c0 = constant 0 : index
   %cf0 = constant 0.0 : f32
 
@@ -264,15 +273,17 @@ func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
   %3 = vector.contract #contraction_trait1 %0, %1, %2
       : vector<4x2xf32>, vector<2x4xf32> into vector<4x4xf32>
 
-  return %3 : vector<4x4xf32>
+  vector.transfer_write %3, %arg2[%c0, %c0]
+    {permutation_map = (d0, d1) -> (d0, d1)}
+      : vector<4x4xf32>, memref<4x4xf32>
+  return
 }
 
 // TODO(andydavis) Update test with VTR split transform.
 // CHECK-LABEL: func @vector_transfers
 // CHECK-COUNT-8: vector.transfer_read
 // CHECK-COUNT-4: addf
-// CHECK-COUNT-1: vector.insert_slices
-//         CHECK: vector.transfer_write
+// CHECK-COUNT-4: vector.transfer_write
 
 func @vector_transfers(%arg0: index, %arg1: index) {
   %cst = constant 0.000000e+00 : f32
