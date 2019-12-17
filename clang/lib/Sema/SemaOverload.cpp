@@ -13259,16 +13259,13 @@ ExprResult Sema::BuildSynthesizedThreeWayComparison(
   if (Eq.isInvalid())
     return ExprError();
 
-  ExprResult Less;
-  if (Info->isOrdered()) {
-    Less = CreateOverloadedBinOp(OpLoc, BO_LT, Fns, LHS, RHS, true, true,
-                                 DefaultedFn);
-    if (Less.isInvalid())
-      return ExprError();
-  }
+  ExprResult Less = CreateOverloadedBinOp(OpLoc, BO_LT, Fns, LHS, RHS, true,
+                                          true, DefaultedFn);
+  if (Less.isInvalid())
+    return ExprError();
 
   ExprResult Greater;
-  if (Info->isOrdered()) {
+  if (Info->isPartial()) {
     Greater = CreateOverloadedBinOp(OpLoc, BO_LT, Fns, RHS, LHS, true, true,
                                     DefaultedFn);
     if (Greater.isInvalid())
@@ -13287,17 +13284,7 @@ ExprResult Sema::BuildSynthesizedThreeWayComparison(
     {ExprResult(), ComparisonCategoryResult::Unordered},
   };
 
-  int I;
-  if (Info->isEquality()) {
-    Comparisons[1].Result = Info->isStrong()
-                                ? ComparisonCategoryResult::Nonequal
-                                : ComparisonCategoryResult::Nonequivalent;
-    I = 1;
-  } else if (!Info->isPartial()) {
-    I = 2;
-  } else {
-    I = 3;
-  }
+  int I = Info->isPartial() ? 3 : 2;
 
   // Combine the comparisons with suitable conditional expressions.
   ExprResult Result;

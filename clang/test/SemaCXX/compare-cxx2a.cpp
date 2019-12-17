@@ -213,45 +213,28 @@ struct ClassB : Class {};
 struct Class2 {};
 using FnTy = void(int);
 using FnTy2 = long(int);
+using FnTy3 = void(int) noexcept;
 using MemFnTy = void (Class::*)() const;
-using MemFnTyB = void (ClassB::*)() const;
-using MemFnTy2 = void (Class::*)();
-using MemFnTy3 = void (Class2::*)() const;
 using MemDataTy = long(Class::*);
 
 void test_nullptr(int *x, FnTy *fp, MemFnTy memp, MemDataTy memdp) {
-  auto r1 = (nullptr <=> nullptr);
-  ASSERT_EXPR_TYPE(r1, std::strong_equality);
-
-  auto r2 = (nullptr <=> x);
-  ASSERT_EXPR_TYPE(r2, std::strong_equality);
-
-  auto r3 = (fp <=> nullptr);
-  ASSERT_EXPR_TYPE(r3, std::strong_equality);
-
-  auto r4 = (0 <=> fp);
-  ASSERT_EXPR_TYPE(r4, std::strong_equality);
-
-  auto r5 = (nullptr <=> memp);
-  ASSERT_EXPR_TYPE(r5, std::strong_equality);
-
-  auto r6 = (0 <=> memdp);
-  ASSERT_EXPR_TYPE(r6, std::strong_equality);
-
-  auto r7 = (0 <=> nullptr);
-  ASSERT_EXPR_TYPE(r7, std::strong_equality);
+  auto r1 = (nullptr <=> nullptr); // expected-error {{invalid operands}}
+  auto r2 = (nullptr <=> x); // expected-error {{invalid operands}}
+  auto r3 = (fp <=> nullptr); // expected-error {{invalid operands}}
+  auto r4 = (0 <=> fp); // expected-error {{ordered comparison between pointer and zero}}
+  auto r5 = (nullptr <=> memp); // expected-error {{invalid operands}}
+  auto r6 = (0 <=> memdp); // expected-error {{invalid operands}}
+  auto r7 = (0 <=> nullptr); // expected-error {{invalid operands}}
 }
 
-void test_compatible_pointer(FnTy *f1, FnTy2 *f2, MemFnTy mf1, MemFnTyB mfb,
-                             MemFnTy2 mf2, MemFnTy3 mf3) {
+void test_memptr(MemFnTy mf, MemDataTy md) {
+  (void)(mf <=> mf); // expected-error {{invalid operands}} expected-warning {{self-comparison}}
+  (void)(md <=> md); // expected-error {{invalid operands}} expected-warning {{self-comparison}}
+}
+
+void test_compatible_pointer(FnTy *f1, FnTy2 *f2, FnTy3 *f3) {
   (void)(f1 <=> f2); // expected-error {{distinct pointer types}}
-
-  auto r1 = (mf1 <=> mfb); // OK
-  ASSERT_EXPR_TYPE(r1, std::strong_equality);
-  ASSERT_EXPR_TYPE((mf1 <=> mfb), std::strong_equality);
-
-  (void)(mf1 <=> mf2); // expected-error {{distinct pointer types}}
-  (void)(mf3 <=> mf1); // expected-error {{distinct pointer types}}
+  (void)(f1 <=> f3); // expected-error {{invalid operands}}
 }
 
 // Test that variable narrowing is deferred for value dependent expressions
@@ -401,8 +384,7 @@ void test_mixed_float_int(float f, double d, long double ld) {
 namespace NullptrTest {
 using nullptr_t = decltype(nullptr);
 void foo(nullptr_t x, nullptr_t y) {
-  auto r = x <=> y;
-  ASSERT_EXPR_TYPE(r, std::strong_equality);
+  auto r = x <=> y; // expected-error {{invalid operands}}
 }
 } // namespace NullptrTest
 
@@ -413,25 +395,34 @@ enum WeakE { E_One,
              E_Two };
 
 void test_diag(_Complex int ci, _Complex float cf, _Complex double cd, int i, float f, StrongE E1, WeakE E2, int *p) {  // expected-warning 3 {{'_Complex' is a C99 extension}}
-  (void)(ci <=> (_Complex int &)ci); // expected-warning {{'_Complex' is a C99 extension}}
-  (void)(ci <=> cf);
-  (void)(ci <=> i);
-  (void)(ci <=> f);
-  (void)(cf <=> i);
-  (void)(cf <=> f);
+  (void)(ci <=> (_Complex int &)ci); // expected-warning {{'_Complex' is a C99 extension}} expected-error {{invalid operands}}
+  (void)(ci <=> cf); // expected-error {{invalid operands}}
+  (void)(ci <=> i); // expected-error {{invalid operands}}
+  (void)(ci <=> f); // expected-error {{invalid operands}}
+  (void)(cf <=> i); // expected-error {{invalid operands}}
+  (void)(cf <=> f); // expected-error {{invalid operands}}
   (void)(ci <=> p); // expected-error {{invalid operands}}
   (void)(ci <=> E1); // expected-error {{invalid operands}}
   (void)(E2 <=> cf); // expected-error {{invalid operands}}
 }
 
 void test_int(_Complex int x, _Complex int y) { // expected-warning 2 {{'_Complex' is a C99 extension}}
-  auto r = x <=> y;
-  ASSERT_EXPR_TYPE(r, std::strong_equality);
+  auto r = x <=> y; // expected-error {{invalid operands}}
 }
 
 void test_double(_Complex double x, _Complex double y) { // expected-warning 2 {{'_Complex' is a C99 extension}}
-  auto r = x <=> y;
-  ASSERT_EXPR_TYPE(r, std::weak_equality);
+  auto r = x <=> y; // expected-error {{invalid operands}}
 }
 
 } // namespace ComplexTest
+
+namespace Vector {
+  typedef __attribute__((ext_vector_type(4))) int V;
+  void f(V v1, V v2) {
+    // This would logically result in a vector of std::strong_ordering, but we
+    // don't support vectors of class type. We could model this as a vector of
+    // int (-1 / 0 / 1), but that doesn't extend to floating-point types (how
+    // to represent 'unordered')? For now, just reject.
+    (void)(v1 <=> v2); // expected-error {{three-way comparison between vectors is not supported}}
+  }
+}

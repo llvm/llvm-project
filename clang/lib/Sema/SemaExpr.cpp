@@ -10685,9 +10685,11 @@ static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
     return QualType();
   if (Type.isNull())
     return S.InvalidOperands(Loc, LHS, RHS);
-  assert(Type->isArithmeticType() || Type->isEnumeralType());
 
-  // FIXME: Reject complex types, consistent with P1959R0.
+  Optional<ComparisonCategoryType> CCT =
+      getComparisonCategoryForBuiltinCmp(Type);
+  if (!CCT)
+    return S.InvalidOperands(Loc, LHS, RHS);
 
   bool HasNarrowing = checkThreeWayNarrowingConversion(
       S, Type, LHS.get(), LHSType, LHS.get()->getBeginLoc());
@@ -10699,8 +10701,7 @@ static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
   assert(!Type.isNull() && "composite type for <=> has not been set");
 
   return S.CheckComparisonCategoryType(
-      *getComparisonCategoryForBuiltinCmp(Type), Loc,
-      Sema::ComparisonCategoryUsage::OperatorInExpression);
+      *CCT, Loc, Sema::ComparisonCategoryUsage::OperatorInExpression);
 }
 
 static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
@@ -10762,6 +10763,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
                                     BinaryOperatorKind Opc) {
   bool IsRelational = BinaryOperator::isRelationalOp(Opc);
   bool IsThreeWay = Opc == BO_Cmp;
+  bool IsOrdered = IsRelational || IsThreeWay;
   auto IsAnyPointerType = [](ExprResult E) {
     QualType Ty = E.get()->getType();
     return Ty->isPointerType() || Ty->isMemberPointerType();
@@ -10831,16 +10833,19 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
 
     if (CompositeTy->isPointerType() && LHSIsNull != RHSIsNull) {
       // P0946R0: Comparisons between a null pointer constant and an object
-      // pointer result in std::strong_equality
-      // FIXME: Reject this, consistent with P1959R0 + P0946R0.
-      CCT = ComparisonCategoryType::StrongEquality;
+      // pointer result in std::strong_equality, which is ill-formed under
+      // P1959R0.
+      Diag(Loc, diag::err_typecheck_three_way_comparison_of_pointer_and_zero)
+          << (LHSIsNull ? LHS.get()->getSourceRange()
+                        : RHS.get()->getSourceRange());
+      return QualType();
     }
 
     return CheckComparisonCategoryType(
         *CCT, Loc, ComparisonCategoryUsage::OperatorInExpression);
   };
 
-  if (!IsRelational && LHSIsNull != RHSIsNull) {
+  if (!IsOrdered && LHSIsNull != RHSIsNull) {
     bool IsEquality = Opc == BO_EQ;
     if (RHSIsNull)
       DiagnoseAlwaysNonNullPointer(LHS.get(), RHSNullKind, IsEquality,
@@ -10859,7 +10864,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     // but we allow it as an extension.
     // FIXME: If we really want to allow this, should it be part of composite
     // pointer type computation so it works in conditionals too?
-    if (!IsRelational &&
+    if (!IsOrdered &&
         ((LHSType->isFunctionPointerType() && RHSType->isVoidPointerType()) ||
          (RHSType->isFunctionPointerType() && LHSType->isVoidPointerType()))) {
       // This is a gcc extension compatibility comparison.
@@ -10884,8 +10889,11 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     // C++ [expr.rel]p2:
     //   If both operands are pointers, [...] bring them to their composite
     //   pointer type.
+    // For <=>, the only valid non-pointer types are arrays and functions, and
+    // we already decayed those, so this is really the same as the relational
+    // comparison rule.
     if ((int)LHSType->isPointerType() + (int)RHSType->isPointerType() >=
-            (IsRelational ? 2 : 1) &&
+            (IsOrdered ? 2 : 1) &&
         (!LangOpts.ObjCAutoRefCount || !(LHSType->isObjCObjectPointerType() ||
                                          RHSType->isObjCObjectPointerType()))) {
       if (convertPointersToCompositeType(*this, Loc, LHS, RHS))
@@ -10948,7 +10956,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     // C++ [expr.eq]p4:
     //   Two operands of type std::nullptr_t or one operand of type
     //   std::nullptr_t and the other a null pointer constant compare equal.
-    if (!IsRelational && LHSIsNull && RHSIsNull) {
+    if (!IsOrdered && LHSIsNull && RHSIsNull) {
       if (LHSType->isNullPtrType()) {
         RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
         return computeResultTy();
@@ -10961,12 +10969,12 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
 
     // Comparison of Objective-C pointers and block pointers against nullptr_t.
     // These aren't covered by the composite pointer type rules.
-    if (!IsRelational && RHSType->isNullPtrType() &&
+    if (!IsOrdered && RHSType->isNullPtrType() &&
         (LHSType->isObjCObjectPointerType() || LHSType->isBlockPointerType())) {
       RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
       return computeResultTy();
     }
-    if (!IsRelational && LHSType->isNullPtrType() &&
+    if (!IsOrdered && LHSType->isNullPtrType() &&
         (RHSType->isObjCObjectPointerType() || RHSType->isBlockPointerType())) {
       LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
       return computeResultTy();
@@ -11000,7 +11008,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     // C++ [expr.eq]p2:
     //   If at least one operand is a pointer to member, [...] bring them to
     //   their composite pointer type.
-    if (!IsRelational &&
+    if (!IsOrdered &&
         (LHSType->isMemberPointerType() || RHSType->isMemberPointerType())) {
       if (convertPointersToCompositeType(*this, Loc, LHS, RHS))
         return QualType();
@@ -11010,7 +11018,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   }
 
   // Handle block pointer types.
-  if (!IsRelational && LHSType->isBlockPointerType() &&
+  if (!IsOrdered && LHSType->isBlockPointerType() &&
       RHSType->isBlockPointerType()) {
     QualType lpointee = LHSType->castAs<BlockPointerType>()->getPointeeType();
     QualType rpointee = RHSType->castAs<BlockPointerType>()->getPointeeType();
@@ -11026,7 +11034,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   }
 
   // Allow block pointers to be compared with null pointer constants.
-  if (!IsRelational
+  if (!IsOrdered
       && ((LHSType->isBlockPointerType() && RHSType->isPointerType())
           || (LHSType->isPointerType() && RHSType->isBlockPointerType()))) {
     if (!LHSIsNull && !RHSIsNull) {
@@ -11096,12 +11104,12 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       return computeResultTy();
     }
 
-    if (!IsRelational && LHSType->isBlockPointerType() &&
+    if (!IsOrdered && LHSType->isBlockPointerType() &&
         RHSType->isBlockCompatibleObjCPointerType(Context)) {
       LHS = ImpCastExprToType(LHS.get(), RHSType,
                               CK_BlockPointerToObjCPointerCast);
       return computeResultTy();
-    } else if (!IsRelational &&
+    } else if (!IsOrdered &&
                LHSType->isBlockCompatibleObjCPointerType(Context) &&
                RHSType->isBlockPointerType()) {
       RHS = ImpCastExprToType(RHS.get(), LHSType,
@@ -11118,7 +11126,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       // since users tend to want to compare addresses.
     } else if ((LHSIsNull && LHSType->isIntegerType()) ||
                (RHSIsNull && RHSType->isIntegerType())) {
-      if (IsRelational) {
+      if (IsOrdered) {
         isError = getLangOpts().CPlusPlus;
         DiagID =
           isError ? diag::err_typecheck_ordered_comparison_of_pointer_and_zero
@@ -11127,7 +11135,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     } else if (getLangOpts().CPlusPlus) {
       DiagID = diag::err_typecheck_comparison_of_pointer_integer;
       isError = true;
-    } else if (IsRelational)
+    } else if (IsOrdered)
       DiagID = diag::ext_typecheck_ordered_comparison_of_pointer_integer;
     else
       DiagID = diag::ext_typecheck_comparison_of_pointer_integer;
@@ -11150,12 +11158,12 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   }
 
   // Handle block pointers.
-  if (!IsRelational && RHSIsNull
+  if (!IsOrdered && RHSIsNull
       && LHSType->isBlockPointerType() && RHSType->isIntegerType()) {
     RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
     return computeResultTy();
   }
-  if (!IsRelational && LHSIsNull
+  if (!IsOrdered && LHSIsNull
       && LHSType->isIntegerType() && RHSType->isBlockPointerType()) {
     LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
     return computeResultTy();
@@ -11232,6 +11240,11 @@ QualType Sema::GetSignedVectorType(QualType V) {
 QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
                                           SourceLocation Loc,
                                           BinaryOperatorKind Opc) {
+  if (Opc == BO_Cmp) {
+    Diag(Loc, diag::err_three_way_vector_comparison);
+    return QualType();
+  }
+
   // Check to make sure we're operating on vectors of the same type and width,
   // Allowing one side to be a scalar of element type.
   QualType vType = CheckVectorOperands(LHS, RHS, Loc, /*isCompAssign*/false,

@@ -2149,6 +2149,7 @@ public:
   bool isReferenceType() const;
   bool isLValueReferenceType() const;
   bool isRValueReferenceType() const;
+  bool isObjectPointerType() const;
   bool isFunctionPointerType() const;
   bool isFunctionReferenceType() const;
   bool isMemberPointerType() const;
@@ -6603,6 +6604,16 @@ inline bool Type::isLValueReferenceType() const {
 
 inline bool Type::isRValueReferenceType() const {
   return isa<RValueReferenceType>(CanonicalType);
+}
+
+inline bool Type::isObjectPointerType() const {
+  // Note: an "object pointer type" is not the same thing as a pointer to an
+  // object type; rather, it is a pointer to an object type or a pointer to cv
+  // void.
+  if (const auto *T = getAs<PointerType>())
+    return !T->getPointeeType()->isFunctionType();
+  else
+    return false;
 }
 
 inline bool Type::isFunctionPointerType() const {
