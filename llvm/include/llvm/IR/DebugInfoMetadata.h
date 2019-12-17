@@ -2552,6 +2552,11 @@ public:
       return 0;
   }
 
+  using ExtOps = std::array<uint64_t, 6>;
+
+  /// Returns the ops for a zero- or sign-extension in a DIExpression.
+  static ExtOps getExtOps(unsigned FromSize, unsigned ToSize, bool Signed);
+
   /// Append a zero- or sign-extension to \p Expr. Converts the expression to a
   /// stack value if it isn't one already.
   static DIExpression *appendExt(const DIExpression *Expr, unsigned FromSize,
