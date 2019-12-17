@@ -1396,6 +1396,32 @@ TEST(Hover, All) {
             HI.Definition = "struct Test &&test = {}";
             HI.Value = "{}";
           }},
+      {
+          R"cpp(// auto on alias
+          typedef int int_type;
+          ^[[auto]] x = int_type();
+          )cpp",
+          [](HoverInfo &HI) { HI.Name = "int"; }},
+      {
+          R"cpp(// auto on alias
+          struct cls {};
+          typedef cls cls_type;
+          ^[[auto]] y = cls_type();
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "struct cls";
+            HI.Kind = index::SymbolKind::Struct;
+          }},
+      {
+          R"cpp(// auto on alias
+          template <class>
+          struct templ {};
+          ^[[auto]] z = templ<int>();
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "struct templ<int>";
+            HI.Kind = index::SymbolKind::Struct;
+          }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
