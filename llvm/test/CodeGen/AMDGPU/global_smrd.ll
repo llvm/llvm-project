@@ -83,8 +83,8 @@ define amdgpu_kernel void @memdep(i32 addrspace(1)* %in, [8 x i32], i32 addrspac
 ; CHECK: s_getpc_b64 [[GET_PC:s\[[0-9]+:[0-9]+\]]]
 ; CHECK: s_load_dwordx2 [[A_ADDR:s\[[0-9]+:[0-9]+\]]], [[GET_PC]], 0x0
 ; CHECK: s_load_dwordx2 [[A_ADDR1:s\[[0-9]+:[0-9]+\]]], [[A_ADDR]], 0x0
-; CHECK: s_load_dword [[SVAL:s[0-9]+]], [[A_ADDR1]], 0x0
 ; CHECK: s_load_dwordx2 [[OUT:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0
+; CHECK: s_load_dword [[SVAL:s[0-9]+]], [[A_ADDR1]], 0x0
 ; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
 ; CHECK: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[VVAL]]
 @A = common local_unnamed_addr addrspace(1) global i32 addrspace(1)* null, align 4
