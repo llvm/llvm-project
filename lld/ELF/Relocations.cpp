@@ -1011,7 +1011,7 @@ static void addRelativeReloc(InputSectionBase *isec, uint64_t offsetInSec,
                          expr, type);
 }
 
-template <class GotPltSection>
+template <class PltSection, class GotPltSection>
 static void addPltEntry(PltSection *plt, GotPltSection *gotPlt,
                         RelocationBaseSection *rel, RelType type, Symbol &sym) {
   plt->addEntry(sym);
@@ -1415,13 +1415,9 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     } else if (!needsPlt(expr)) {
       // Make the ifunc's PLT entry canonical by changing the value of its
       // symbol to redirect all references to point to it.
-      unsigned entryOffset = sym.pltIndex * target->pltEntrySize;
-      if (config->zRetpolineplt)
-        entryOffset += target->pltHeaderSize;
-
       auto &d = cast<Defined>(sym);
       d.section = in.iplt;
-      d.value = entryOffset;
+      d.value = sym.pltIndex * target->ipltEntrySize;
       d.size = 0;
       // It's important to set the symbol type here so that dynamic loaders
       // don't try to call the PLT as if it were an ifunc resolver.

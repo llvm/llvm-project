@@ -64,8 +64,9 @@ AArch64::AArch64() {
   symbolicRel = R_AARCH64_ABS64;
   tlsDescRel = R_AARCH64_TLSDESC;
   tlsGotRel = R_AARCH64_TLS_TPREL64;
-  pltEntrySize = 16;
   pltHeaderSize = 32;
+  pltEntrySize = 16;
+  ipltEntrySize = 16;
   defaultMaxPageSize = 65536;
 
   // Align to the 2 MiB page size (known as a superpage or huge page).
@@ -590,8 +591,10 @@ AArch64BtiPac::AArch64BtiPac() {
   btiEntry = btiHeader && !config->shared;
   pacEntry = (config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_PAC);
 
-  if (btiEntry || pacEntry)
+  if (btiEntry || pacEntry) {
     pltEntrySize = 24;
+    ipltEntrySize = 24;
+  }
 }
 
 void AArch64BtiPac::writePltHeader(uint8_t *buf) const {

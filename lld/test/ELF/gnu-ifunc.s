@@ -107,10 +107,10 @@
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:  2011b0: {{.*}} jmpq *4122(%rip)
 // DISASM-NEXT:  2011b6: {{.*}} pushq $0
-// DISASM-NEXT:  2011bb: {{.*}} jmp -32 <_start+0x16>
+// DISASM-NEXT:  2011bb: {{.*}} jmp -16 <.plt>
 // DISASM-NEXT:  2011c0: {{.*}} jmpq *4114(%rip)
 // DISASM-NEXT:  2011c6: {{.*}} pushq $1
-// DISASM-NEXT:  2011cb: {{.*}} jmp -48 <_start+0x16>
+// DISASM-NEXT:  2011cb: {{.*}} jmp -32 <.plt>
 
 .text
 .type foo STT_GNU_IFUNC

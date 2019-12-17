@@ -61,8 +61,9 @@ X86_64::X86_64() {
   tlsGotRel = R_X86_64_TPOFF64;
   tlsModuleIndexRel = R_X86_64_DTPMOD64;
   tlsOffsetRel = R_X86_64_DTPOFF64;
-  pltEntrySize = 16;
   pltHeaderSize = 16;
+  pltEntrySize = 16;
+  ipltEntrySize = 16;
   trapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
 
   // Align to the large page size (known as a superpage or huge page).
@@ -166,7 +167,7 @@ void X86_64::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
 
   write32le(buf + 2, gotPltEntryAddr - pltEntryAddr - 6);
   write32le(buf + 7, index);
-  write32le(buf + 12, -pltHeaderSize - pltEntrySize * index - 16);
+  write32le(buf + 12, in.plt->getVA() - pltEntryAddr - 16);
 }
 
 RelType X86_64::getDynRel(RelType type) const {
@@ -599,6 +600,7 @@ public:
 Retpoline::Retpoline() {
   pltHeaderSize = 48;
   pltEntrySize = 32;
+  ipltEntrySize = 32;
 }
 
 void Retpoline::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -639,7 +641,7 @@ void Retpoline::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   };
   memcpy(buf, insn, sizeof(insn));
 
-  uint64_t off = pltHeaderSize + pltEntrySize * index;
+  uint64_t off = pltEntryAddr - in.plt->getVA();
 
   write32le(buf + 3, gotPltEntryAddr - pltEntryAddr - 7);
   write32le(buf + 8, -off - 12 + 32);
@@ -651,6 +653,7 @@ void Retpoline::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
 RetpolineZNow::RetpolineZNow() {
   pltHeaderSize = 32;
   pltEntrySize = 16;
+  ipltEntrySize = 16;
 }
 
 void RetpolineZNow::writePltHeader(uint8_t *buf) const {
@@ -679,7 +682,7 @@ void RetpolineZNow::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   memcpy(buf, insn, sizeof(insn));
 
   write32le(buf + 3, gotPltEntryAddr - pltEntryAddr - 7);
-  write32le(buf + 8, -pltHeaderSize - pltEntrySize * index - 12);
+  write32le(buf + 8, in.plt->getVA() - pltEntryAddr - 12);
 }
 
 static TargetInfo *getTargetInfo() {

@@ -515,9 +515,9 @@ template <class ELFT> void createSyntheticSections() {
       /*sort=*/false);
   add(in.relaIplt);
 
-  in.plt = make<PltSection>(false);
+  in.plt = make<PltSection>();
   add(in.plt);
-  in.iplt = make<PltSection>(true);
+  in.iplt = make<IpltSection>();
   add(in.iplt);
 
   if (config->andFeatures)
