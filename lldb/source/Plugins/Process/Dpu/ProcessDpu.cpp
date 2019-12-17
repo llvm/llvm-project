@@ -312,17 +312,18 @@ Status ProcessDpu::Halt() {
 Status ProcessDpu::Detach() {
   Status error;
   bool success;
-  Dpu *dpu_neighbor = m_rank->GetDpuFromSliceIdAndDpuId(
-      m_dpu->GetSliceID(), m_dpu->GetDpuID() ^ 0x1);
-  if (dpu_neighbor == nullptr)
-    return Status("Cannot find the DPU neighbor in the rank");
 
   success = m_dpu->ResumeThreads(NULL, false);
   if (!success)
     return Status("Cannot resume the DPU");
-  success = dpu_neighbor->ResumeThreads(NULL, false);
-  if (!success)
-    return Status("Cannot resume the DPU neighbor");
+
+  Dpu *dpu_neighbor = m_rank->GetDpuFromSliceIdAndDpuId(
+      m_dpu->GetSliceID(), m_dpu->GetDpuID() ^ 0x1);
+  if (dpu_neighbor != nullptr) {
+    success = dpu_neighbor->ResumeThreads(NULL, false);
+    if (!success)
+      return Status("Cannot resume the DPU neighbor");
+  }
 
   success = m_dpu->RestoreSliceContext();
   if (!success)
