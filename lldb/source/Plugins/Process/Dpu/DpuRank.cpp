@@ -79,9 +79,10 @@ Dpu *DpuRank::GetDpu(size_t index) {
 }
 
 void DpuRank::SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
-                           uint64_t slice_target) {
-  dpu_set_structure_value_and_slice_target(m_rank, slice_id, structure_value,
-                                           slice_target);
+                           uint64_t slice_target,
+                           dpu_bitfield_t host_mux_mram_state) {
+  dpu_set_debug_slice_info(m_rank, slice_id, structure_value, slice_target,
+                           host_mux_mram_state);
 }
 
 struct _dpu_context_t *DpuRank::AllocContext() {

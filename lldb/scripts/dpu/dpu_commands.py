@@ -281,6 +281,8 @@ def dpu_attach(debugger, command, result, internal_dict):
 
     structure_value = slice_info.GetChildMemberWithName("structure_value") \
         .GetValueAsUnsigned()
+    host_mux_mram_state = \
+        slice_info.GetChildMemberWithName("host_mux_mram_state")
     slice_target_type = slice_target.GetChildMemberWithName("type") \
         .GetValueAsUnsigned()
     slice_target_dpu_group_id = slice_target.GetChildMemberWithName("dpu_id") \
@@ -296,6 +298,8 @@ def dpu_attach(debugger, command, result, internal_dict):
     lldb_server_dpu_env = os.environ.copy()
     lldb_server_dpu_env["UPMEM_LLDB_STRUCTURE_VALUE"] = str(structure_value)
     lldb_server_dpu_env["UPMEM_LLDB_SLICE_TARGET"] = str(slice_target)
+    lldb_server_dpu_env["UPMEM_LLDB_HOST_MUX_MRAM_STATE"] = \
+        str(host_mux_mram_state)
     subprocess.Popen(['lldb-server-dpu',
                       'gdbserver',
                       '--attach',

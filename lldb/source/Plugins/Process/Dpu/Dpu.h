@@ -88,7 +88,8 @@ public:
   unsigned int GetSliceID();
   unsigned int GetDpuID();
 
-  bool SaveSliceContext(uint64_t structure_value, uint64_t slice_target);
+  bool SaveSliceContext(uint64_t structure_value, uint64_t slice_target,
+                        dpu_bitfield_t host_mux_mram_state);
   bool RestoreSliceContext();
 
   void SetAttachSession();

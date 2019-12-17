@@ -49,7 +49,7 @@ public:
   Dpu *GetDpuFromSliceIdAndDpuId(unsigned int slice_id, unsigned int dpu_id);
 
   void SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
-                    uint64_t slice_target);
+                    uint64_t slice_target, dpu_bitfield_t host_mux_mram_state);
 
   struct _dpu_context_t *AllocContext();
 
