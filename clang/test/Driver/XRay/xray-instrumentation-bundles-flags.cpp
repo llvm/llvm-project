@@ -7,5 +7,5 @@
 // RUN:     | FileCheck %s
 // CHECK:  -fxray-instrumentation-bundle=function
 //
-// REQUIRES-ANY: linux, freebsd
-// REQUIRES-ANY: amd64, x86_64, x86_64h, arm, aarch64, arm64
+// REQUIRES: linux || freebsd
+// REQUIRES: amd64 || x86_64 || x86_64h || arm || aarch64 || arm64

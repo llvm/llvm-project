@@ -45,5 +45,5 @@
 // FDR: libclang_rt.xray-fdr
 // NONE-NOT: libclang_rt.xray-basic
 // NONE-NOT: libclang_rt.xray-fdr
-// REQUIRES-ANY: linux, freebsd
-// REQUIRES-ANY: amd64, x86_64, x86_64h, arm, aarch64, arm64
+// REQUIRES: linux || freebsd
+// REQUIRES: amd64 || x86_64 || x86_64h || arm || aarch64 || arm64
