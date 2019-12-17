@@ -1899,25 +1899,26 @@ PPCAIXAsmPrinter::getMCSymbolForTOCPseudoMO(const MachineOperand &MO) {
     return XSym->getContainingCsect()->getQualNameSymbol();
   }
 
-  // Handle initialized global variables.
-  if (GV) {
-    SectionKind GVKind = getObjFileLowering().getKindForGlobal(GV, TM);
+  // Handle initialized global variables and defined functions.
+  SectionKind GOKind = getObjFileLowering().getKindForGlobal(GO, TM);
 
+  if (GOKind.isText()) {
+    // If the MO is a function, we want to make sure to refer to the function
+    // descriptor csect.
+    return OutStreamer->getContext()
+        .getXCOFFSection(XSym->getName(), XCOFF::XMC_DS, XCOFF::XTY_SD,
+                         XCOFF::C_HIDEXT, SectionKind::getData())
+        ->getQualNameSymbol();
+  } else if (GOKind.isCommon() || GOKind.isBSSLocal()) {
     // If the operand is a common then we should refer to the csect symbol.
-    if (GVKind.isCommon() || GVKind.isBSSLocal()) {
-      MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
-          getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
-      return Csect->getQualNameSymbol();
-    }
-
-    // Other global variables are refered to by labels inside of a single csect,
-    // so refer to the label directly.
-    return getSymbol(GV);
+    return cast<MCSectionXCOFF>(
+               getObjFileLowering().SectionForGlobal(GO, GOKind, TM))
+        ->getQualNameSymbol();
   }
 
-  // If the MO is a function, we want to make sure to refer to the function
-  // descriptor csect.
-  return XSym->getContainingCsect()->getQualNameSymbol();
+  // Other global variables are refered to by labels inside of a single csect,
+  // so refer to the label directly.
+  return getSymbol(GV);
 }
 
 /// createPPCAsmPrinterPass - Returns a pass that prints the PPC assembly code
