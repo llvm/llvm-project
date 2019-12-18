@@ -44,6 +44,8 @@ AnalysisManager::AnalysisManager(ASTContext &ASTCtx,
       options(Options) {
   AnaCtxMgr.getCFGBuildOptions().setAllAlwaysAdd();
   AnaCtxMgr.getCFGBuildOptions().OmitImplicitValueInitializers = true;
+  AnaCtxMgr.getCFGBuildOptions().AddCXXDefaultInitExprInAggregates =
+      Options.ShouldIncludeDefaultInitForAggregates;
 }
 
 AnalysisManager::~AnalysisManager() {

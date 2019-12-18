@@ -19,6 +19,7 @@
 // CHECK-NEXT: c++-temp-dtor-inlining = true
 // CHECK-NEXT: c++-template-inlining = true
 // CHECK-NEXT: cfg-conditional-static-initializers = true
+// CHECK-NEXT: cfg-expand-default-aggr-inits = false
 // CHECK-NEXT: cfg-implicit-dtors = true
 // CHECK-NEXT: cfg-lifetime = false
 // CHECK-NEXT: cfg-loopexit = false
@@ -98,4 +99,4 @@
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 95
+// CHECK-NEXT: num-entries = 96

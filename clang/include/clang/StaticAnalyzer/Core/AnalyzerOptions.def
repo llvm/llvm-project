@@ -112,6 +112,12 @@ ANALYZER_OPTION(
     bool, ShouldIncludeScopesInCFG, "cfg-scopes",
     "Whether or not scope information should be included in the CFG.", false)
 
+ANALYZER_OPTION(bool, ShouldIncludeDefaultInitForAggregates,
+                "cfg-expand-default-aggr-inits",
+                "Whether or not inline CXXDefaultInitializers for aggregate "
+                "initialization in the CFG.",
+                false)
+
 ANALYZER_OPTION(
     bool, MayInlineTemplateFunctions, "c++-template-inlining",
     "Whether or not templated functions may be considered for inlining.", true)
