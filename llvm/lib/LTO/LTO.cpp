@@ -1264,7 +1264,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   if (ThinLTO.ModuleMap.empty())
     return Error::success();
 
-  if (Conf.CombinedIndexHook && !Conf.CombinedIndexHook(ThinLTO.CombinedIndex))
+  if (Conf.CombinedIndexHook &&
+      !Conf.CombinedIndexHook(ThinLTO.CombinedIndex, GUIDPreservedSymbols))
     return Error::success();
 
   // Collect for each module the list of function it defines (GUID ->

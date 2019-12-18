@@ -183,8 +183,9 @@ struct Config {
   ///
   /// It is called regardless of whether the backend is in-process, although it
   /// is not called from individual backend processes.
-  using CombinedIndexHookFn =
-      std::function<bool(const ModuleSummaryIndex &Index)>;
+  using CombinedIndexHookFn = std::function<bool(
+      const ModuleSummaryIndex &Index,
+      const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols)>;
   CombinedIndexHookFn CombinedIndexHook;
 
   /// This is a convenience function that configures this Config object to write

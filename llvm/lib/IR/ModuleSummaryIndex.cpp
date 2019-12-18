@@ -405,7 +405,9 @@ static bool hasWriteOnlyFlag(const GlobalValueSummary *S) {
   return false;
 }
 
-void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
+void ModuleSummaryIndex::exportToDot(
+    raw_ostream &OS,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) const {
   std::vector<Edge> CrossModuleEdges;
   DenseMap<GlobalValue::GUID, std::vector<uint64_t>> NodeMap;
   using GVSOrderedMapTy = std::map<GlobalValue::GUID, GlobalValueSummary *>;
@@ -485,6 +487,8 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
         A.addComment("dsoLocal");
       if (Flags.CanAutoHide)
         A.addComment("canAutoHide");
+      if (GUIDPreservedSymbols.count(SummaryIt.first))
+        A.addComment("preserved");
 
       auto VI = getValueInfo(SummaryIt.first);
       A.add("label", getNodeLabel(VI, SummaryIt.second));
