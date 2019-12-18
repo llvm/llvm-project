@@ -8319,8 +8319,6 @@ SDValue PPCTargetLowering::LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const {
 /// SplatSize.  Cast the result to VT.
 static SDValue BuildSplatI(int Val, unsigned SplatSize, EVT VT,
                            SelectionDAG &DAG, const SDLoc &dl) {
-  assert(Val >= -16 && Val <= 15 && "vsplti is out of range!");
-
   static const MVT VTys[] = { // canonical VT to use for each size.
     MVT::v16i8, MVT::v8i16, MVT::Other, MVT::v4i32
   };
@@ -8640,29 +8638,10 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
 
   // We have XXSPLTIB for constant splats one byte wide
-  if (Subtarget.hasP9Vector() && SplatSize == 1) {
-    // This is a splat of 1-byte elements with some elements potentially undef.
-    // Rather than trying to match undef in the SDAG patterns, ensure that all
-    // elements are the same constant.
-    if (HasAnyUndefs || ISD::isBuildVectorAllOnes(BVN)) {
-      SmallVector<SDValue, 16> Ops(16, DAG.getConstant(SplatBits,
-                                                       dl, MVT::i32));
-      SDValue NewBV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
-      if (Op.getValueType() != MVT::v16i8)
-        return DAG.getBitcast(Op.getValueType(), NewBV);
-      return NewBV;
-    }
-
-    // BuildVectorSDNode::isConstantSplat() is actually pretty smart. It'll
-    // detect that constant splats like v8i16: 0xABAB are really just splats
-    // of a 1-byte constant. In this case, we need to convert the node to a
-    // splat of v16i8 and a bitcast.
-    if (Op.getValueType() != MVT::v16i8)
-      return DAG.getBitcast(Op.getValueType(),
-                            DAG.getConstant(SplatBits, dl, MVT::v16i8));
-
-    return Op;
-  }
+  // FIXME: SplatBits is an unsigned int being cast to an int while passing it
+  // as an argument to BuildSplatiI. Given SplatSize == 1 it is okay here.
+  if (Subtarget.hasP9Vector() && SplatSize == 1)
+    return BuildSplatI(SplatBits, SplatSize, Op.getValueType(), DAG, dl);
 
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
   int32_t SextVal= (int32_t(SplatBits << (32-SplatBitSize)) >>
