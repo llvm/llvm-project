@@ -114,7 +114,7 @@ def sync_source_lists(write):
                     print('   remove:\n    ' + '\n    '.join(remove))
                 print()
         if write:
-            git(['commit', '-m', 'gn build: Merge %s' % rev])
+            git(['commit', '-m', '[gn build] Port %s' % rev])
         else:
             print()
 
