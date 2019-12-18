@@ -1196,13 +1196,18 @@ bool DIExpression::isConstant() const {
   return true;
 }
 
+DIExpression::ExtOps DIExpression::getExtOps(unsigned FromSize, unsigned ToSize,
+                                             bool Signed) {
+  dwarf::TypeKind TK = Signed ? dwarf::DW_ATE_signed : dwarf::DW_ATE_unsigned;
+  DIExpression::ExtOps Ops{{dwarf::DW_OP_LLVM_convert, FromSize, TK,
+                            dwarf::DW_OP_LLVM_convert, ToSize, TK}};
+  return Ops;
+}
+
 DIExpression *DIExpression::appendExt(const DIExpression *Expr,
                                       unsigned FromSize, unsigned ToSize,
                                       bool Signed) {
-  dwarf::TypeKind TK = Signed ? dwarf::DW_ATE_signed : dwarf::DW_ATE_unsigned;
-  uint64_t Ops[] = {dwarf::DW_OP_LLVM_convert, FromSize, TK,
-                    dwarf::DW_OP_LLVM_convert, ToSize,   TK};
-  return appendToStack(Expr, Ops);
+  return appendToStack(Expr, getExtOps(FromSize, ToSize, Signed));
 }
 
 DIGlobalVariableExpression *
