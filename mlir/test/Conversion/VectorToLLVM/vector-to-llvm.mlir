@@ -385,3 +385,41 @@ func @vector_type_cast(%arg0: memref<8x8x8xf32>) -> memref<vector<8x8x8xf32>> {
 //       CHECK:   llvm.insertvalue %[[alignedBit]], {{.*}}[1] : !llvm<"{ [8 x [8 x <8 x float>]]*, [8 x [8 x <8 x float>]]*, i64 }">
 //       CHECK:   llvm.mlir.constant(0 : index
 //       CHECK:   llvm.insertvalue {{.*}}[2] : !llvm<"{ [8 x [8 x <8 x float>]]*, [8 x [8 x <8 x float>]]*, i64 }">
+
+func @vector_print_scalar(%arg0: f32) {
+  vector.print %arg0 : f32
+  return
+}
+// CHECK-LABEL: vector_print_scalar(%arg0: !llvm.float)
+//       CHECK:    llvm.call @print_f32(%arg0) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @print_newline() : () -> ()
+
+func @vector_print_vector(%arg0: vector<2x2xf32>) {
+  vector.print %arg0 : vector<2x2xf32>
+  return
+}
+// CHECK-LABEL: vector_print_vector(%arg0: !llvm<"[2 x <2 x float>]">)
+//       CHECK:    llvm.call @print_open() : () -> ()
+//       CHECK:    %[[x0:.*]] = llvm.extractvalue %arg0[0] : !llvm<"[2 x <2 x float>]">
+//       CHECK:    llvm.call @print_open() : () -> ()
+//       CHECK:    %[[x1:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+//       CHECK:    %[[x2:.*]] = llvm.extractelement %[[x0]][%[[x1]] : !llvm.i64] : !llvm<"<2 x float>">
+//       CHECK:    llvm.call @print_f32(%[[x2]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @print_comma() : () -> ()
+//       CHECK:    %[[x3:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+//       CHECK:    %[[x4:.*]] = llvm.extractelement %[[x0]][%[[x3]] : !llvm.i64] : !llvm<"<2 x float>">
+//       CHECK:    llvm.call @print_f32(%[[x4]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @print_close() : () -> ()
+//       CHECK:    llvm.call @print_comma() : () -> ()
+//       CHECK:    %[[x5:.*]] = llvm.extractvalue %arg0[1] : !llvm<"[2 x <2 x float>]">
+//       CHECK:    llvm.call @print_open() : () -> ()
+//       CHECK:    %[[x6:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+//       CHECK:    %[[x7:.*]] = llvm.extractelement %[[x5]][%[[x6]] : !llvm.i64] : !llvm<"<2 x float>">
+//       CHECK:    llvm.call @print_f32(%[[x7]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @print_comma() : () -> ()
+//       CHECK:    %[[x8:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+//       CHECK:    %[[x9:.*]] = llvm.extractelement %[[x5]][%[[x8]] : !llvm.i64] : !llvm<"<2 x float>">
+//       CHECK:    llvm.call @print_f32(%[[x9]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @print_close() : () -> ()
+//       CHECK:    llvm.call @print_close() : () -> ()
+//       CHECK:    llvm.call @print_newline() : () -> ()

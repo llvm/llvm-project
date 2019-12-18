@@ -63,3 +63,14 @@ extern "C" void print_memref_3d_f32(StridedMemRefType<float, 3> *M) {
 extern "C" void print_memref_4d_f32(StridedMemRefType<float, 4> *M) {
   impl::printMemRef(*M);
 }
+
+// Small runtime support "lib" for vector.print lowering.
+// By providing elementary printing methods only, this
+// library can remain fully unaware of low-level implementation
+// details of our vectors.
+extern "C" void print_f32(float f) { std::cout << f; }
+extern "C" void print_f64(double d) { std::cout << d; }
+extern "C" void print_open() { std::cout << "( "; }
+extern "C" void print_close() { std::cout << " )"; }
+extern "C" void print_comma() { std::cout << ", "; }
+extern "C" void print_newline() { std::cout << "\n"; }

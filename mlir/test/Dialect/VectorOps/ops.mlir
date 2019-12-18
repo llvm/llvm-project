@@ -198,3 +198,10 @@ func @insert_slices(%arg0 : tuple<vector<2x2xf32>, vector<2x2xf32>>)
     : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<4x2xf32>
   return %0 : vector<4x2xf32>
 }
+
+// CHECK-LABEL: @vector_print
+func @vector_print(%arg0: vector<8x4xf32>) {
+  // CHECK: vector.print %{{.*}} : vector<8x4xf32>
+  vector.print %arg0 : vector<8x4xf32>
+  return
+}

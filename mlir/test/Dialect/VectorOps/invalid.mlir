@@ -818,3 +818,11 @@ func @insert_slices_invalid_tuple_element_type(%arg0 : tuple<vector<2x2xf32>, ve
     : tuple<vector<2x2xf32>, vector<4x2xf32>> into vector<4x2xf32>
   return
 }
+
+// -----
+
+func @print_no_result(%arg0 : f32) -> i32 {
+  // expected-error@+1 {{cannot name an operation with no results}}
+  %0 = vector.print %arg0 : f32
+  return %0
+}

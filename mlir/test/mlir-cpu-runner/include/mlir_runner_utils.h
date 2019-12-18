@@ -285,4 +285,12 @@ print_memref_4d_f32(StridedMemRefType<float, 4> *M);
 extern "C" MLIR_RUNNER_UTILS_EXPORT void
 print_memref_vector_4x4xf32(StridedMemRefType<Vector2D<4, 4, float>, 2> *M);
 
+// Small runtime support "lib" for vector.print lowering.
+extern "C" MLIR_RUNNER_UTILS_EXPORT void print_f32(float f);
+extern "C" MLIR_RUNNER_UTILS_EXPORT void print_f64(double d);
+extern "C" MLIR_RUNNER_UTILS_EXPORT void print_open();
+extern "C" MLIR_RUNNER_UTILS_EXPORT void print_close();
+extern "C" MLIR_RUNNER_UTILS_EXPORT void print_comma();
+extern "C" MLIR_RUNNER_UTILS_EXPORT void print_newline();
+
 #endif // MLIR_CPU_RUNNER_MLIRUTILS_H_
