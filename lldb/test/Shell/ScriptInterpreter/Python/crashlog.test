@@ -1,7 +1,7 @@
 #                                                                 -*- python -*-
 # REQUIRES: system-darwin
-# DEBUG: cd %S/../../../examples/python && cat %s | %lldb && false
-# RUN: cd %S/../../../examples/python && cat %s | %lldb | FileCheck %s
+# DEBUG: cd %S/../../../../examples/python && cat %s | %lldb && false
+# RUN: cd %S/../../../../examples/python && cat %s | %lldb | FileCheck %s
 # CHECK-LABEL: {{S}}KIP BEYOND CHECKS
 script
 import crashlog
