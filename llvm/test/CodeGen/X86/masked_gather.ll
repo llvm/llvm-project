@@ -1725,13 +1725,14 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX512-LABEL: gather_v8i32_v8i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    kshiftlw $8, %k1, %k0
-; AVX512-NEXT:    kshiftrw $8, %k0, %k2
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kshiftlw $8, %k0, %k0
+; AVX512-NEXT:    kshiftrw $8, %k0, %k1
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+; AVX512-NEXT:    kmovw %k1, %k2
 ; AVX512-NEXT:    vpgatherdd c(,%zmm0,4), %zmm1 {%k2}
-; AVX512-NEXT:    vpbroadcastq $28, %zmm0
-; AVX512-NEXT:    vpgatherqd c(,%zmm0), %ymm2 {%k1}
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28]
+; AVX512-NEXT:    vpgatherdd c(,%zmm0), %zmm2 {%k1}
 ; AVX512-NEXT:    vpaddd %ymm2, %ymm2, %ymm0
 ; AVX512-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
