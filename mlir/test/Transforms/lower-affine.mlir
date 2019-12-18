@@ -545,6 +545,19 @@ func @affine_load_store_zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
   return
 }
 
+// CHECK-LABEL: func @affine_prefetch
+func @affine_prefetch(%arg0 : index) {
+  %0 = alloc() : memref<10xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.prefetch %0[%i0 + symbol(%arg0) + 7], read, locality<3>, data : memref<10xf32>
+  }
+// CHECK:       %[[a:.*]] = addi %{{.*}}, %{{.*}} : index
+// CHECK-NEXT:  %[[c7:.*]] = constant 7 : index
+// CHECK-NEXT:  %[[b:.*]] = addi %[[a]], %[[c7]] : index
+// CHECK-NEXT:  prefetch %[[v0:.*]][%[[b]]], read, locality<3>, data : memref<10xf32>
+  return
+}
+
 // CHECK-LABEL: func @affine_dma_start
 func @affine_dma_start(%arg0 : index) {
   %0 = alloc() : memref<100xf32>

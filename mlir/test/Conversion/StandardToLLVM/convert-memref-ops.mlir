@@ -253,6 +253,36 @@ func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
   return
 }
 
+// CHECK-LABEL: func @prefetch
+func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
+// CHECK-NEXT:  %[[ld:.*]] = llvm.load %{{.*}} : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">
+// CHECK-NEXT:  %[[ptr:.*]] = llvm.extractvalue %[[ld]][1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+// CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+// CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+// CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
+// CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
+// CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
+// CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+// CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm<"float*">, !llvm.i64) -> !llvm<"float*">
+// CHECK-NEXT:  [[C1:%.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+// CHECK-NEXT:  [[C3:%.*]] = llvm.mlir.constant(3 : i32) : !llvm.i32
+// CHECK-NEXT:  [[C1_1:%.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+// CHECK-NEXT:  "llvm.intr.prefetch"(%[[addr]], [[C1]], [[C3]], [[C1_1]]) : (!llvm<"float*">, !llvm.i32, !llvm.i32, !llvm.i32) -> ()
+  prefetch %A[%i, %j], write, locality<3>, data : memref<?x?xf32>
+// CHECK:  [[C0:%.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:  [[C0_1:%.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:  [[C1_2:%.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+// CHECK:  "llvm.intr.prefetch"(%{{.*}}, [[C0]], [[C0_1]], [[C1_2]]) : (!llvm<"float*">, !llvm.i32, !llvm.i32, !llvm.i32) -> ()
+  prefetch %A[%i, %j], read, locality<0>, data : memref<?x?xf32>
+// CHECK:  [[C0_2:%.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:  [[C2:%.*]] = llvm.mlir.constant(2 : i32) : !llvm.i32
+// CHECK:  [[C0_3:%.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:  "llvm.intr.prefetch"(%{{.*}}, [[C0_2]], [[C2]], [[C0_3]]) : (!llvm<"float*">, !llvm.i32, !llvm.i32, !llvm.i32) -> ()
+  prefetch %A[%i, %j], read, locality<2>, instr : memref<?x?xf32>
+  return
+}
+
 // CHECK-LABEL: func @zero_d_store(%arg0: !llvm<"{ float*, float*, i64 }*">, %arg1: !llvm.float) {
 func @zero_d_store(%arg0: memref<f32>, %arg1: f32) {
 // CHECK-NEXT:  %[[ld:.*]] = llvm.load %{{.*}} : !llvm<"{ float*, float*, i64 }*">

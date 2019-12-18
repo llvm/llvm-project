@@ -466,14 +466,20 @@ func @affine_apply() {
   return
 }
 
-// CHECK-LABEL: func @load_store
-func @load_store(memref<4x4xi32>, index) {
+// CHECK-LABEL: func @load_store_prefetch
+func @load_store_prefetch(memref<4x4xi32>, index) {
 ^bb0(%0: memref<4x4xi32>, %1: index):
   // CHECK: %0 = load %arg0[%arg1, %arg1] : memref<4x4xi32>
   %2 = "std.load"(%0, %1, %1) : (memref<4x4xi32>, index, index)->i32
 
-  // CHECK: %1 = load %arg0[%arg1, %arg1] : memref<4x4xi32>
+  // CHECK: %{{.*}} = load %arg0[%arg1, %arg1] : memref<4x4xi32>
   %3 = load %0[%1, %1] : memref<4x4xi32>
+
+  // CHECK: prefetch %arg0[%arg1, %arg1], write, locality<1>, data : memref<4x4xi32>
+  prefetch %0[%1, %1], write, locality<1>, data : memref<4x4xi32>
+
+  // CHECK: prefetch %arg0[%arg1, %arg1], read, locality<3>, instr : memref<4x4xi32>
+  prefetch %0[%1, %1], read, locality<3>, instr : memref<4x4xi32>
 
   return
 }
@@ -625,7 +631,7 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: std.subview %4[%c0, %c1][%arg0, %arg1][%c1, %c0] : memref<64x22xf32, #[[BASE_MAP2]]> to memref<?x?xf32, #[[SUBVIEW_MAP2]]>
   %5 = subview %4[%c0, %c1][%arg0, %arg1][%c1, %c0]
     : memref<64x22xf32, (d0, d1) -> (d0 * 22 + d1)> to
-      memref<?x?xf32, (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)> 
+      memref<?x?xf32, (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>
 
   // CHECK: std.subview %0[][][] : memref<8x16x4xf32, #[[BASE_MAP0]]> to memref<4x4x4xf32, #[[SUBVIEW_MAP3]]>
   %6 = subview %0[][][]

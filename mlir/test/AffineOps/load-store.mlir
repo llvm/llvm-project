@@ -194,3 +194,23 @@ func @zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
   // CHECK: affine.store %{{.*}}, %{{.*}}[] : memref<i32>
   return
 }
+
+// -----
+
+// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1) -> (d0 + 3, d1 + 7)
+// CHECK: [[MAP1:#map[0-9]+]] = (d0, d1) -> (d0 + 3, d1 + 11)
+
+// Test with loop IVs and constants.
+func @test_prefetch(%arg0 : index, %arg1 : index) {
+  %0 = alloc() : memref<100x100xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.for %i1 = 0 to 10 {
+      %1 = affine.load %0[%i0 + 3, %i1 + 7] : memref<100x100xf32>
+      affine.prefetch %0[%i0 + 3, %i1 + 11], write, locality<0>, data : memref<100x100xf32>
+      // CHECK: affine.prefetch %{{.*}}[%{{.*}} + 3, %{{.*}} + 11], write, locality<0>, data : memref<100x100xf32>
+      affine.prefetch %0[%i0, %i1 + 1], read, locality<3>, instr : memref<100x100xf32>
+      // CHECK: affine.prefetch %{{.*}}[%{{.*}}, %{{.*}} + 1], read, locality<3>, instr : memref<100x100xf32>
+    }
+  }
+  return
+}

@@ -87,6 +87,24 @@ func @store_non_affine_index(%arg0 : index) {
 
 // -----
 
+func @invalid_prefetch_rw(%i : index) {
+  %0 = alloc() : memref<10xf32>
+  // expected-error@+1 {{rw specifier has to be 'read' or 'write'}}
+  affine.prefetch %0[%i], rw, locality<0>, data  : memref<10xf32>
+  return
+}
+
+// -----
+
+func @invalid_prefetch_cache_type(%i : index) {
+  %0 = alloc() : memref<10xf32>
+  // expected-error@+1 {{cache type has to be 'data' or 'instr'}}
+  affine.prefetch %0[%i], read, locality<0>, false  : memref<10xf32>
+  return
+}
+
+// -----
+
 func @dma_start_non_affine_src_index(%arg0 : index) {
   %0 = alloc() : memref<100xf32>
   %1 = alloc() : memref<100xf32, 2>

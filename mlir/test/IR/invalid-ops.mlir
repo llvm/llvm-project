@@ -985,7 +985,34 @@ func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16,
 func @invalid_memref_cast() {
   %0 = alloc() : memref<2x5xf32, 0>
   // expected-error@+1 {{operand type 'memref<2x5xf32>' and result type 'memref<*xi32>' are cast incompatible}}
-  %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xi32> 
+  %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xi32>
+  return
+}
+
+// -----
+
+func @invalid_prefetch_rw(%i : index) {
+  %0 = alloc() : memref<10xf32>
+  // expected-error@+1 {{rw specifier has to be 'read' or 'write'}}
+  prefetch %0[%i], rw, locality<0>, data  : memref<10xf32>
+  return
+}
+
+// -----
+
+func @invalid_prefetch_cache_type(%i : index) {
+  %0 = alloc() : memref<10xf32>
+  // expected-error@+1 {{cache type has to be 'data' or 'instr'}}
+  prefetch %0[%i], read, locality<0>, false  : memref<10xf32>
+  return
+}
+
+// -----
+
+func @invalid_prefetch_locality_hint(%i : index) {
+  %0 = alloc() : memref<10xf32>
+  // expected-error@+1 {{32-bit integer attribute whose minimum value is 0 whose maximum value is 3}}
+  prefetch %0[%i], read, locality<5>, data  : memref<10xf32>
   return
 }
 
@@ -995,7 +1022,7 @@ func @invalid_memref_cast() {
 func @invalid_memref_cast() {
   %0 = alloc() : memref<2x5xf32, 0>
   // expected-error@+1 {{operand type 'memref<2x5xf32>' and result type 'memref<*xf32>' are cast incompatible}}
-  %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xf32, 1> 
+  %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xf32, 1>
   return
 }
 
@@ -1004,8 +1031,8 @@ func @invalid_memref_cast() {
 // unranked to unranked
 func @invalid_memref_cast() {
   %0 = alloc() : memref<2x5xf32, 0>
-  %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xf32, 0> 
+  %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xf32, 0>
   // expected-error@+1 {{operand type 'memref<*xf32>' and result type 'memref<*xf32>' are cast incompatible}}
-  %2 = memref_cast %1 : memref<*xf32, 0> to memref<*xf32, 0> 
+  %2 = memref_cast %1 : memref<*xf32, 0> to memref<*xf32, 0>
   return
 }
