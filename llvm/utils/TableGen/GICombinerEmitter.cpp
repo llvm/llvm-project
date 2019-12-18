@@ -24,6 +24,7 @@
 #include "GlobalISel/CodeExpander.h"
 #include "GlobalISel/CodeExpansions.h"
 #include "GlobalISel/GIMatchDag.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -289,8 +290,8 @@ static const DagInit *getDagWithOperatorOfSubClass(const Init &N,
 }
 
 StringRef makeNameForAnonInstr(CombineRule &Rule) {
-  return insertStrTab(
-      to_string(format("__anon%d_%d", Rule.getID(), Rule.allocUID())));
+  return insertStrTab(to_string(
+      format("__anon%" PRIu64 "_%" PRIu64, Rule.getID(), Rule.allocUID())));
 }
 
 StringRef makeDebugName(CombineRule &Rule, StringRef Name) {
@@ -298,8 +299,8 @@ StringRef makeDebugName(CombineRule &Rule, StringRef Name) {
 }
 
 StringRef makeNameForAnonPredicate(CombineRule &Rule) {
-  return insertStrTab(
-      to_string(format("__anonpred%d_%d", Rule.getID(), Rule.allocUID())));
+  return insertStrTab(to_string(
+      format("__anonpred%" PRIu64 "_%" PRIu64, Rule.getID(), Rule.allocUID())));
 }
 
 void CombineRule::declareMatchData(StringRef PatternSymbol, StringRef Type,
