@@ -22,6 +22,8 @@
 
 #include "include/mlir_runner_utils.h"
 
+#include <cstdio>
+
 extern "C" void
 print_memref_vector_4x4xf32(StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
   impl::printMemRef(*M);
@@ -68,9 +70,9 @@ extern "C" void print_memref_4d_f32(StridedMemRefType<float, 4> *M) {
 // By providing elementary printing methods only, this
 // library can remain fully unaware of low-level implementation
 // details of our vectors.
-extern "C" void print_f32(float f) { std::cout << f; }
-extern "C" void print_f64(double d) { std::cout << d; }
-extern "C" void print_open() { std::cout << "( "; }
-extern "C" void print_close() { std::cout << " )"; }
-extern "C" void print_comma() { std::cout << ", "; }
-extern "C" void print_newline() { std::cout << "\n"; }
+extern "C" void print_f32(float f) { fprintf(stdout, "%g", f); }
+extern "C" void print_f64(double d) { fprintf(stdout, "%lg", d); }
+extern "C" void print_open() { fputs("( ", stdout); }
+extern "C" void print_close() { fputs(" )", stdout); }
+extern "C" void print_comma() { fputs(", ", stdout); }
+extern "C" void print_newline() { fputc('\n', stdout); }
