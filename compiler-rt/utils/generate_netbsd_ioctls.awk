@@ -13,6 +13,12 @@
 #
 # This script reads public headers from a NetBSD host.
 #
+# This script shall be executed only on the newest NetBSD version.
+# This script will emit compat code for the older releases.
+#
+# NetBSD minimal version supported 9.0.
+# NetBSD current version supported 9.99.26.
+#
 #===------------------------------------------------------------------------===#
 
 BEGIN {
@@ -247,6 +253,10 @@ END {
     exit(abnormal_exit)
   }
 
+  # Add compat entries
+  add_compat("dev/filemon/filemon.h (compat <= 9.99.26)", "FILEMON_SET_FD", "READWRITE", "sizeof(int)")
+  add_compat("", "FILEMON_SET_PID", "READWRITE", "sizeof(int)")
+
   # Generate sanitizer_interceptors_ioctl_netbsd.inc
 
   # open pipe
@@ -304,6 +314,9 @@ END {
   pcmd("")
 
   for (i = 0; i < ioctl_table_max; i++) {
+    if (i in fname && fname[i] == "dev/nvmm/nvmm_ioctl.h") {
+      pcmd("#if defined(__x86_64__)")
+    }
     if (i in fname) {
       pcmd("  /* Entries from file: " fname[i] " */")
     }
@@ -315,10 +328,14 @@ END {
     }
 
     pcmd("  _(" ioctl_name[i] ", " ioctl_mode[i] "," type ");")
+
+    if (ioctl_name[i] == "NVMM_IOC_CTL") {
+      pcmd("#endif")
+    }
   }
 
   pcmd("#undef _")
-  pcmd("}")
+  pcmd("}   // NOLINT")
   pcmd("")
   pcmd("static bool ioctl_initialized = false;")
   pcmd("")
@@ -637,4 +654,15 @@ function get_type(string)
   }
 
   return string
+}
+
+function add_compat(path, name, mode, type)
+{
+  if (path != "") {
+    fname[ioctl_table_max] = path
+  }
+  ioctl_name[ioctl_table_max] = name
+  ioctl_mode[ioctl_table_max] = mode
+  ioctl_type[ioctl_table_max] = type
+  ioctl_table_max++
 }
