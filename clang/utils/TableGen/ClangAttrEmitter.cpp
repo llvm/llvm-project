@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
+#include "ASTTableGen.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -99,9 +102,9 @@ static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
     .EndsWith("Decl *", "Record.GetLocalDeclAs<" 
               + std::string(type, 0, type.size()-1) + ">(Record.readInt())")
-    .Case("TypeSourceInfo *", "Record.getTypeSourceInfo()")
+    .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
     .Case("Expr *", "Record.readExpr()")
-    .Case("IdentifierInfo *", "Record.getIdentifierInfo()")
+    .Case("IdentifierInfo *", "Record.readIdentifier()")
     .Case("StringRef", "Record.readString()")
     .Case("ParamIdx", "ParamIdx::deserialize(Record.readInt())")
     .Default("Record.readInt()");
@@ -578,7 +581,7 @@ namespace {
       OS << "      " << getLowerName() << "Ptr = Record.readExpr();\n";
       OS << "    else\n";
       OS << "      " << getLowerName()
-         << "Ptr = Record.getTypeSourceInfo();\n";
+         << "Ptr = Record.readTypeSourceInfo();\n";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
@@ -1819,7 +1822,7 @@ struct PragmaClangAttributeSupport {
 } // end anonymous namespace
 
 static bool doesDeclDeriveFrom(const Record *D, const Record *Base) {
-  const Record *CurrentBase = D->getValueAsDef("Base");
+  const Record *CurrentBase = D->getValueAsOptionalDef(BaseFieldName);
   if (!CurrentBase)
     return false;
   if (CurrentBase == Base)
@@ -1860,7 +1863,8 @@ PragmaClangAttributeSupport::PragmaClangAttributeSupport(
 
   std::vector<Record *> Aggregates =
       Records.getAllDerivedDefinitions("AttrSubjectMatcherAggregateRule");
-  std::vector<Record *> DeclNodes = Records.getAllDerivedDefinitions("DDecl");
+  std::vector<Record *> DeclNodes =
+    Records.getAllDerivedDefinitions(DeclNodeClassName);
   for (const auto *Aggregate : Aggregates) {
     Record *SubjectDecl = Aggregate->getValueAsDef("Subject");
 
@@ -2232,10 +2236,8 @@ static void emitClangAttrThisIsaIdentifierArgList(RecordKeeper &Records,
   OS << "#endif // CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST\n\n";
 }
 
-namespace clang {
-
 // Emits the class definitions for attributes.
-void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' definitions", OS);
 
   OS << "#ifndef LLVM_CLANG_ATTR_CLASSES_INC\n";
@@ -2447,7 +2449,7 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Emits the class method definitions for attributes.
-void EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' member function definitions", OS);
 
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
@@ -2511,8 +2513,6 @@ void EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
         "const PrintingPolicy &Policy) const {\n";
   EmitFunc("printPretty(OS, Policy)");
 }
-
-} // end namespace clang
 
 static void emitAttrList(raw_ostream &OS, StringRef Class,
                          const std::vector<Record*> &AttrList) {
@@ -3255,9 +3255,8 @@ static std::string GetDiagnosticSpelling(const Record &R) {
   // If we couldn't find the DiagSpelling in this object, we can check to see
   // if the object is one that has a base, and if it is, loop up to the Base
   // member recursively.
-  std::string Super = R.getSuperClasses().back().first->getName();
-  if (Super == "DDecl" || Super == "DStmt")
-    return GetDiagnosticSpelling(*R.getValueAsDef("Base"));
+  if (auto Base = R.getValueAsOptionalDef(BaseFieldName))
+    return GetDiagnosticSpelling(*Base);
 
   return "";
 }
@@ -3337,7 +3336,8 @@ static std::string GenerateCustomAppertainsTo(const Record &Subject,
   if (I != CustomSubjectSet.end())
     return *I;
 
-  Record *Base = Subject.getValueAsDef("Base");
+  // This only works with non-root Decls.
+  Record *Base = Subject.getValueAsDef(BaseFieldName);
 
   // Not currently support custom subjects within custom subjects.
   if (Base->isSubClassOf("SubsetSubject")) {

@@ -129,7 +129,7 @@ public:
   bool TokError(const Twine &Msg) const {
     return Error(Lex.getLoc(), Msg);
   }
-  const TGLexer::DependenciesMapTy &getDependencies() const {
+  const TGLexer::DependenciesSetTy &getDependencies() const {
     return Lex.getDependencies();
   }
 

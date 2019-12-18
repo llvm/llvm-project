@@ -1,258 +1,256 @@
-class AttrSubject;
+include "clang/Basic/ASTNode.td"
 
-class Stmt<bit abstract = 0> : AttrSubject {
+class StmtNode<StmtNode base, bit abstract = 0> : ASTNode, AttrSubject {
+	StmtNode Base = base;
   bit Abstract = abstract;
 }
 
-class DStmt<Stmt base, bit abstract = 0> : Stmt<abstract> {
-  Stmt Base = base;
-}
-
 // Statements
-def NullStmt : Stmt;
-def CompoundStmt : Stmt;
-def IfStmt : Stmt;
-def SwitchStmt : Stmt;
-def WhileStmt : Stmt;
-def DoStmt : Stmt;
-def ForStmt : Stmt;
-def GotoStmt : Stmt;
-def IndirectGotoStmt : Stmt;
-def ContinueStmt : Stmt;
-def BreakStmt : Stmt;
-def ReturnStmt : Stmt;
-def DeclStmt  : Stmt;
-def SwitchCase : Stmt<1>;
-def CaseStmt : DStmt<SwitchCase>;
-def DefaultStmt : DStmt<SwitchCase>;
-def CapturedStmt : Stmt;
+def Stmt : StmtNode<?, 1>;
+def NullStmt : StmtNode<Stmt>;
+def CompoundStmt : StmtNode<Stmt>;
+def IfStmt : StmtNode<Stmt>;
+def SwitchStmt : StmtNode<Stmt>;
+def WhileStmt : StmtNode<Stmt>;
+def DoStmt : StmtNode<Stmt>;
+def ForStmt : StmtNode<Stmt>;
+def GotoStmt : StmtNode<Stmt>;
+def IndirectGotoStmt : StmtNode<Stmt>;
+def ContinueStmt : StmtNode<Stmt>;
+def BreakStmt : StmtNode<Stmt>;
+def ReturnStmt : StmtNode<Stmt>;
+def DeclStmt  : StmtNode<Stmt>;
+def SwitchCase : StmtNode<Stmt, 1>;
+def CaseStmt : StmtNode<SwitchCase>;
+def DefaultStmt : StmtNode<SwitchCase>;
+def CapturedStmt : StmtNode<Stmt>;
 
 // Statements that might produce a value (for example, as the last non-null
 // statement in a GNU statement-expression).
-def ValueStmt : Stmt<1>;
-def LabelStmt : DStmt<ValueStmt>;
-def AttributedStmt : DStmt<ValueStmt>;
+def ValueStmt : StmtNode<Stmt, 1>;
+def LabelStmt : StmtNode<ValueStmt>;
+def AttributedStmt : StmtNode<ValueStmt>;
 
 // Asm statements
-def AsmStmt : Stmt<1>;
-def GCCAsmStmt : DStmt<AsmStmt>;
-def MSAsmStmt : DStmt<AsmStmt>;
+def AsmStmt : StmtNode<Stmt, 1>;
+def GCCAsmStmt : StmtNode<AsmStmt>;
+def MSAsmStmt : StmtNode<AsmStmt>;
 
 // Obj-C statements
-def ObjCAtTryStmt : Stmt;
-def ObjCAtCatchStmt : Stmt;
-def ObjCAtFinallyStmt : Stmt;
-def ObjCAtThrowStmt : Stmt;
-def ObjCAtSynchronizedStmt : Stmt;
-def ObjCForCollectionStmt : Stmt;
-def ObjCAutoreleasePoolStmt : Stmt;
+def ObjCAtTryStmt : StmtNode<Stmt>;
+def ObjCAtCatchStmt : StmtNode<Stmt>;
+def ObjCAtFinallyStmt : StmtNode<Stmt>;
+def ObjCAtThrowStmt : StmtNode<Stmt>;
+def ObjCAtSynchronizedStmt : StmtNode<Stmt>;
+def ObjCForCollectionStmt : StmtNode<Stmt>;
+def ObjCAutoreleasePoolStmt : StmtNode<Stmt>;
 
 // C++ statements
-def CXXCatchStmt : Stmt;
-def CXXTryStmt : Stmt;
-def CXXForRangeStmt : Stmt;
+def CXXCatchStmt : StmtNode<Stmt>;
+def CXXTryStmt : StmtNode<Stmt>;
+def CXXForRangeStmt : StmtNode<Stmt>;
 
 // C++ Coroutines TS statements
-def CoroutineBodyStmt : Stmt;
-def CoreturnStmt : Stmt;
+def CoroutineBodyStmt : StmtNode<Stmt>;
+def CoreturnStmt : StmtNode<Stmt>;
 
 // Expressions
-def Expr : DStmt<ValueStmt, 1>;
-def PredefinedExpr : DStmt<Expr>;
-def DeclRefExpr : DStmt<Expr>;
-def IntegerLiteral : DStmt<Expr>;
-def FixedPointLiteral : DStmt<Expr>;
-def FloatingLiteral : DStmt<Expr>;
-def ImaginaryLiteral : DStmt<Expr>;
-def StringLiteral : DStmt<Expr>;
-def CharacterLiteral : DStmt<Expr>;
-def ParenExpr : DStmt<Expr>;
-def UnaryOperator : DStmt<Expr>;
-def OffsetOfExpr : DStmt<Expr>;
-def UnaryExprOrTypeTraitExpr : DStmt<Expr>;
-def ArraySubscriptExpr : DStmt<Expr>;
-def OMPArraySectionExpr : DStmt<Expr>;
-def CallExpr : DStmt<Expr>;
-def MemberExpr : DStmt<Expr>;
-def CastExpr : DStmt<Expr, 1>;
-def BinaryOperator : DStmt<Expr>;
-def CompoundAssignOperator : DStmt<BinaryOperator>;
-def AbstractConditionalOperator : DStmt<Expr, 1>;
-def ConditionalOperator : DStmt<AbstractConditionalOperator>;
-def BinaryConditionalOperator : DStmt<AbstractConditionalOperator>;
-def ImplicitCastExpr : DStmt<CastExpr>;
-def ExplicitCastExpr : DStmt<CastExpr, 1>;
-def CStyleCastExpr : DStmt<ExplicitCastExpr>;
-def CompoundLiteralExpr : DStmt<Expr>;
-def ExtVectorElementExpr : DStmt<Expr>;
-def InitListExpr : DStmt<Expr>;
-def DesignatedInitExpr : DStmt<Expr>;
-def DesignatedInitUpdateExpr : DStmt<Expr>;
-def ImplicitValueInitExpr : DStmt<Expr>;
-def NoInitExpr : DStmt<Expr>;
-def ArrayInitLoopExpr : DStmt<Expr>;
-def ArrayInitIndexExpr : DStmt<Expr>;
-def ParenListExpr : DStmt<Expr>;
-def VAArgExpr : DStmt<Expr>;
-def GenericSelectionExpr : DStmt<Expr>;
-def PseudoObjectExpr : DStmt<Expr>;
-def SourceLocExpr : DStmt<Expr>;
+def Expr : StmtNode<ValueStmt, 1>;
+def PredefinedExpr : StmtNode<Expr>;
+def DeclRefExpr : StmtNode<Expr>;
+def IntegerLiteral : StmtNode<Expr>;
+def FixedPointLiteral : StmtNode<Expr>;
+def FloatingLiteral : StmtNode<Expr>;
+def ImaginaryLiteral : StmtNode<Expr>;
+def StringLiteral : StmtNode<Expr>;
+def CharacterLiteral : StmtNode<Expr>;
+def ParenExpr : StmtNode<Expr>;
+def UnaryOperator : StmtNode<Expr>;
+def OffsetOfExpr : StmtNode<Expr>;
+def UnaryExprOrTypeTraitExpr : StmtNode<Expr>;
+def ArraySubscriptExpr : StmtNode<Expr>;
+def OMPArraySectionExpr : StmtNode<Expr>;
+def CallExpr : StmtNode<Expr>;
+def MemberExpr : StmtNode<Expr>;
+def CastExpr : StmtNode<Expr, 1>;
+def BinaryOperator : StmtNode<Expr>;
+def CompoundAssignOperator : StmtNode<BinaryOperator>;
+def AbstractConditionalOperator : StmtNode<Expr, 1>;
+def ConditionalOperator : StmtNode<AbstractConditionalOperator>;
+def BinaryConditionalOperator : StmtNode<AbstractConditionalOperator>;
+def ImplicitCastExpr : StmtNode<CastExpr>;
+def ExplicitCastExpr : StmtNode<CastExpr, 1>;
+def CStyleCastExpr : StmtNode<ExplicitCastExpr>;
+def CompoundLiteralExpr : StmtNode<Expr>;
+def ExtVectorElementExpr : StmtNode<Expr>;
+def InitListExpr : StmtNode<Expr>;
+def DesignatedInitExpr : StmtNode<Expr>;
+def DesignatedInitUpdateExpr : StmtNode<Expr>;
+def ImplicitValueInitExpr : StmtNode<Expr>;
+def NoInitExpr : StmtNode<Expr>;
+def ArrayInitLoopExpr : StmtNode<Expr>;
+def ArrayInitIndexExpr : StmtNode<Expr>;
+def ParenListExpr : StmtNode<Expr>;
+def VAArgExpr : StmtNode<Expr>;
+def GenericSelectionExpr : StmtNode<Expr>;
+def PseudoObjectExpr : StmtNode<Expr>;
+def SourceLocExpr : StmtNode<Expr>;
 
 // Wrapper expressions
-def FullExpr : DStmt<Expr, 1>;
-def ConstantExpr : DStmt<FullExpr>;
+def FullExpr : StmtNode<Expr, 1>;
+def ConstantExpr : StmtNode<FullExpr>;
 
 // Atomic expressions
-def AtomicExpr : DStmt<Expr>;
+def AtomicExpr : StmtNode<Expr>;
 
 // GNU Extensions.
-def AddrLabelExpr : DStmt<Expr>;
-def StmtExpr : DStmt<Expr>;
-def ChooseExpr : DStmt<Expr>;
-def GNUNullExpr : DStmt<Expr>;
+def AddrLabelExpr : StmtNode<Expr>;
+def StmtExpr : StmtNode<Expr>;
+def ChooseExpr : StmtNode<Expr>;
+def GNUNullExpr : StmtNode<Expr>;
 
 // C++ Expressions.
-def CXXOperatorCallExpr : DStmt<CallExpr>;
-def CXXMemberCallExpr : DStmt<CallExpr>;
-def CXXNamedCastExpr : DStmt<ExplicitCastExpr, 1>;
-def CXXStaticCastExpr : DStmt<CXXNamedCastExpr>;
-def CXXDynamicCastExpr : DStmt<CXXNamedCastExpr>;
-def CXXReinterpretCastExpr : DStmt<CXXNamedCastExpr>;
-def CXXConstCastExpr : DStmt<CXXNamedCastExpr>;
-def CXXFunctionalCastExpr : DStmt<ExplicitCastExpr>;
-def CXXTypeidExpr : DStmt<Expr>;
-def UserDefinedLiteral : DStmt<CallExpr>;
-def CXXBoolLiteralExpr : DStmt<Expr>;
-def CXXNullPtrLiteralExpr : DStmt<Expr>;
-def CXXThisExpr : DStmt<Expr>;
-def CXXThrowExpr : DStmt<Expr>;
-def CXXDefaultArgExpr : DStmt<Expr>;
-def CXXDefaultInitExpr : DStmt<Expr>;
-def CXXScalarValueInitExpr : DStmt<Expr>;
-def CXXStdInitializerListExpr : DStmt<Expr>;
-def CXXNewExpr : DStmt<Expr>;
-def CXXDeleteExpr : DStmt<Expr>;
-def CXXPseudoDestructorExpr : DStmt<Expr>;
-def TypeTraitExpr : DStmt<Expr>;
-def ArrayTypeTraitExpr : DStmt<Expr>;
-def ExpressionTraitExpr : DStmt<Expr>;
-def DependentScopeDeclRefExpr : DStmt<Expr>;
-def CXXConstructExpr : DStmt<Expr>;
-def CXXInheritedCtorInitExpr : DStmt<Expr>;
-def CXXBindTemporaryExpr : DStmt<Expr>;
-def ExprWithCleanups : DStmt<FullExpr>;
-def CXXTemporaryObjectExpr : DStmt<CXXConstructExpr>;
-def CXXUnresolvedConstructExpr : DStmt<Expr>;
-def CXXDependentScopeMemberExpr : DStmt<Expr>;
-def OverloadExpr : DStmt<Expr, 1>;
-def UnresolvedLookupExpr : DStmt<OverloadExpr>;
-def UnresolvedMemberExpr : DStmt<OverloadExpr>;
-def CXXNoexceptExpr : DStmt<Expr>;
-def PackExpansionExpr : DStmt<Expr>;
-def SizeOfPackExpr : DStmt<Expr>;
-def SubstNonTypeTemplateParmExpr : DStmt<Expr>;
-def SubstNonTypeTemplateParmPackExpr : DStmt<Expr>;
-def FunctionParmPackExpr : DStmt<Expr>;
-def MaterializeTemporaryExpr : DStmt<Expr>;
-def LambdaExpr : DStmt<Expr>;
-def CXXFoldExpr : DStmt<Expr>;
+def CXXOperatorCallExpr : StmtNode<CallExpr>;
+def CXXMemberCallExpr : StmtNode<CallExpr>;
+def CXXNamedCastExpr : StmtNode<ExplicitCastExpr, 1>;
+def CXXStaticCastExpr : StmtNode<CXXNamedCastExpr>;
+def CXXDynamicCastExpr : StmtNode<CXXNamedCastExpr>;
+def CXXReinterpretCastExpr : StmtNode<CXXNamedCastExpr>;
+def CXXConstCastExpr : StmtNode<CXXNamedCastExpr>;
+def CXXFunctionalCastExpr : StmtNode<ExplicitCastExpr>;
+def CXXTypeidExpr : StmtNode<Expr>;
+def UserDefinedLiteral : StmtNode<CallExpr>;
+def CXXBoolLiteralExpr : StmtNode<Expr>;
+def CXXNullPtrLiteralExpr : StmtNode<Expr>;
+def CXXThisExpr : StmtNode<Expr>;
+def CXXThrowExpr : StmtNode<Expr>;
+def CXXDefaultArgExpr : StmtNode<Expr>;
+def CXXDefaultInitExpr : StmtNode<Expr>;
+def CXXScalarValueInitExpr : StmtNode<Expr>;
+def CXXStdInitializerListExpr : StmtNode<Expr>;
+def CXXNewExpr : StmtNode<Expr>;
+def CXXDeleteExpr : StmtNode<Expr>;
+def CXXPseudoDestructorExpr : StmtNode<Expr>;
+def TypeTraitExpr : StmtNode<Expr>;
+def ArrayTypeTraitExpr : StmtNode<Expr>;
+def ExpressionTraitExpr : StmtNode<Expr>;
+def DependentScopeDeclRefExpr : StmtNode<Expr>;
+def CXXConstructExpr : StmtNode<Expr>;
+def CXXInheritedCtorInitExpr : StmtNode<Expr>;
+def CXXBindTemporaryExpr : StmtNode<Expr>;
+def ExprWithCleanups : StmtNode<FullExpr>;
+def CXXTemporaryObjectExpr : StmtNode<CXXConstructExpr>;
+def CXXUnresolvedConstructExpr : StmtNode<Expr>;
+def CXXDependentScopeMemberExpr : StmtNode<Expr>;
+def OverloadExpr : StmtNode<Expr, 1>;
+def UnresolvedLookupExpr : StmtNode<OverloadExpr>;
+def UnresolvedMemberExpr : StmtNode<OverloadExpr>;
+def CXXNoexceptExpr : StmtNode<Expr>;
+def PackExpansionExpr : StmtNode<Expr>;
+def SizeOfPackExpr : StmtNode<Expr>;
+def SubstNonTypeTemplateParmExpr : StmtNode<Expr>;
+def SubstNonTypeTemplateParmPackExpr : StmtNode<Expr>;
+def FunctionParmPackExpr : StmtNode<Expr>;
+def MaterializeTemporaryExpr : StmtNode<Expr>;
+def LambdaExpr : StmtNode<Expr>;
+def CXXFoldExpr : StmtNode<Expr>;
 
 // C++ Coroutines TS expressions
-def CoroutineSuspendExpr : DStmt<Expr, 1>;
-def CoawaitExpr : DStmt<CoroutineSuspendExpr>;
-def DependentCoawaitExpr : DStmt<Expr>;
-def CoyieldExpr : DStmt<CoroutineSuspendExpr>;
+def CoroutineSuspendExpr : StmtNode<Expr, 1>;
+def CoawaitExpr : StmtNode<CoroutineSuspendExpr>;
+def DependentCoawaitExpr : StmtNode<Expr>;
+def CoyieldExpr : StmtNode<CoroutineSuspendExpr>;
 
 // Obj-C Expressions.
-def ObjCStringLiteral : DStmt<Expr>;
-def ObjCBoxedExpr : DStmt<Expr>;
-def ObjCArrayLiteral : DStmt<Expr>;
-def ObjCDictionaryLiteral : DStmt<Expr>;
-def ObjCEncodeExpr : DStmt<Expr>;
-def ObjCMessageExpr : DStmt<Expr>;
-def ObjCSelectorExpr : DStmt<Expr>;
-def ObjCProtocolExpr : DStmt<Expr>;
-def ObjCIvarRefExpr : DStmt<Expr>;
-def ObjCPropertyRefExpr : DStmt<Expr>;
-def ObjCIsaExpr : DStmt<Expr>;
-def ObjCIndirectCopyRestoreExpr : DStmt<Expr>;
-def ObjCBoolLiteralExpr : DStmt<Expr>;
-def ObjCSubscriptRefExpr : DStmt<Expr>;
-def ObjCAvailabilityCheckExpr : DStmt<Expr>;
+def ObjCStringLiteral : StmtNode<Expr>;
+def ObjCBoxedExpr : StmtNode<Expr>;
+def ObjCArrayLiteral : StmtNode<Expr>;
+def ObjCDictionaryLiteral : StmtNode<Expr>;
+def ObjCEncodeExpr : StmtNode<Expr>;
+def ObjCMessageExpr : StmtNode<Expr>;
+def ObjCSelectorExpr : StmtNode<Expr>;
+def ObjCProtocolExpr : StmtNode<Expr>;
+def ObjCIvarRefExpr : StmtNode<Expr>;
+def ObjCPropertyRefExpr : StmtNode<Expr>;
+def ObjCIsaExpr : StmtNode<Expr>;
+def ObjCIndirectCopyRestoreExpr : StmtNode<Expr>;
+def ObjCBoolLiteralExpr : StmtNode<Expr>;
+def ObjCSubscriptRefExpr : StmtNode<Expr>;
+def ObjCAvailabilityCheckExpr : StmtNode<Expr>;
 
 // Obj-C ARC Expressions.
-def ObjCBridgedCastExpr : DStmt<ExplicitCastExpr>;
+def ObjCBridgedCastExpr : StmtNode<ExplicitCastExpr>;
 
 // CUDA Expressions.
-def CUDAKernelCallExpr : DStmt<CallExpr>;
+def CUDAKernelCallExpr : StmtNode<CallExpr>;
 
 // Clang Extensions.
-def ShuffleVectorExpr : DStmt<Expr>;
-def ConvertVectorExpr : DStmt<Expr>;
-def BlockExpr : DStmt<Expr>;
-def OpaqueValueExpr : DStmt<Expr>;
-def TypoExpr : DStmt<Expr>;
+def ShuffleVectorExpr : StmtNode<Expr>;
+def ConvertVectorExpr : StmtNode<Expr>;
+def BlockExpr : StmtNode<Expr>;
+def OpaqueValueExpr : StmtNode<Expr>;
+def TypoExpr : StmtNode<Expr>;
 
 // Microsoft Extensions.
-def MSPropertyRefExpr : DStmt<Expr>;
-def MSPropertySubscriptExpr : DStmt<Expr>;
-def CXXUuidofExpr : DStmt<Expr>;
-def SEHTryStmt : Stmt;
-def SEHExceptStmt : Stmt;
-def SEHFinallyStmt : Stmt;
-def SEHLeaveStmt : Stmt;
-def MSDependentExistsStmt : Stmt;
+def MSPropertyRefExpr : StmtNode<Expr>;
+def MSPropertySubscriptExpr : StmtNode<Expr>;
+def CXXUuidofExpr : StmtNode<Expr>;
+def SEHTryStmt : StmtNode<Stmt>;
+def SEHExceptStmt : StmtNode<Stmt>;
+def SEHFinallyStmt : StmtNode<Stmt>;
+def SEHLeaveStmt : StmtNode<Stmt>;
+def MSDependentExistsStmt : StmtNode<Stmt>;
 
 // OpenCL Extensions.
-def AsTypeExpr : DStmt<Expr>;
+def AsTypeExpr : StmtNode<Expr>;
 
 // OpenMP Directives.
-def OMPExecutableDirective : Stmt<1>;
-def OMPLoopDirective : DStmt<OMPExecutableDirective, 1>;
-def OMPParallelDirective : DStmt<OMPExecutableDirective>;
-def OMPSimdDirective : DStmt<OMPLoopDirective>;
-def OMPForDirective : DStmt<OMPLoopDirective>;
-def OMPForSimdDirective : DStmt<OMPLoopDirective>;
-def OMPSectionsDirective : DStmt<OMPExecutableDirective>;
-def OMPSectionDirective : DStmt<OMPExecutableDirective>;
-def OMPSingleDirective : DStmt<OMPExecutableDirective>;
-def OMPMasterDirective : DStmt<OMPExecutableDirective>;
-def OMPCriticalDirective : DStmt<OMPExecutableDirective>;
-def OMPParallelForDirective : DStmt<OMPLoopDirective>;
-def OMPParallelForSimdDirective : DStmt<OMPLoopDirective>;
-def OMPParallelSectionsDirective : DStmt<OMPExecutableDirective>;
-def OMPTaskDirective : DStmt<OMPExecutableDirective>;
-def OMPTaskyieldDirective : DStmt<OMPExecutableDirective>;
-def OMPBarrierDirective : DStmt<OMPExecutableDirective>;
-def OMPTaskwaitDirective : DStmt<OMPExecutableDirective>;
-def OMPTaskgroupDirective : DStmt<OMPExecutableDirective>;
-def OMPFlushDirective : DStmt<OMPExecutableDirective>;
-def OMPOrderedDirective : DStmt<OMPExecutableDirective>;
-def OMPAtomicDirective : DStmt<OMPExecutableDirective>;
-def OMPTargetDirective : DStmt<OMPExecutableDirective>;
-def OMPTargetDataDirective : DStmt<OMPExecutableDirective>;
-def OMPTargetEnterDataDirective : DStmt<OMPExecutableDirective>;
-def OMPTargetExitDataDirective : DStmt<OMPExecutableDirective>;
-def OMPTargetParallelDirective : DStmt<OMPExecutableDirective>;
-def OMPTargetParallelForDirective : DStmt<OMPExecutableDirective>;
-def OMPTargetUpdateDirective : DStmt<OMPExecutableDirective>;
-def OMPTeamsDirective : DStmt<OMPExecutableDirective>;
-def OMPCancellationPointDirective : DStmt<OMPExecutableDirective>;
-def OMPCancelDirective : DStmt<OMPExecutableDirective>;
-def OMPTaskLoopDirective : DStmt<OMPLoopDirective>;
-def OMPTaskLoopSimdDirective : DStmt<OMPLoopDirective>;
-def OMPDistributeDirective : DStmt<OMPLoopDirective>;
-def OMPDistributeParallelForDirective : DStmt<OMPLoopDirective>;
-def OMPDistributeParallelForSimdDirective : DStmt<OMPLoopDirective>;
-def OMPDistributeSimdDirective : DStmt<OMPLoopDirective>;
-def OMPTargetParallelForSimdDirective : DStmt<OMPLoopDirective>;
-def OMPTargetSimdDirective : DStmt<OMPLoopDirective>;
-def OMPTeamsDistributeDirective : DStmt<OMPLoopDirective>;
-def OMPTeamsDistributeSimdDirective : DStmt<OMPLoopDirective>;
-def OMPTeamsDistributeParallelForSimdDirective : DStmt<OMPLoopDirective>;
-def OMPTeamsDistributeParallelForDirective : DStmt<OMPLoopDirective>;
-def OMPTargetTeamsDirective : DStmt<OMPExecutableDirective>;
-def OMPTargetTeamsDistributeDirective : DStmt<OMPLoopDirective>;
-def OMPTargetTeamsDistributeParallelForDirective : DStmt<OMPLoopDirective>;
-def OMPTargetTeamsDistributeParallelForSimdDirective : DStmt<OMPLoopDirective>;
-def OMPTargetTeamsDistributeSimdDirective : DStmt<OMPLoopDirective>;
+def OMPExecutableDirective : StmtNode<Stmt, 1>;
+def OMPLoopDirective : StmtNode<OMPExecutableDirective, 1>;
+def OMPParallelDirective : StmtNode<OMPExecutableDirective>;
+def OMPSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPForDirective : StmtNode<OMPLoopDirective>;
+def OMPForSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPSectionsDirective : StmtNode<OMPExecutableDirective>;
+def OMPSectionDirective : StmtNode<OMPExecutableDirective>;
+def OMPSingleDirective : StmtNode<OMPExecutableDirective>;
+def OMPMasterDirective : StmtNode<OMPExecutableDirective>;
+def OMPCriticalDirective : StmtNode<OMPExecutableDirective>;
+def OMPParallelForDirective : StmtNode<OMPLoopDirective>;
+def OMPParallelForSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPParallelSectionsDirective : StmtNode<OMPExecutableDirective>;
+def OMPTaskDirective : StmtNode<OMPExecutableDirective>;
+def OMPTaskyieldDirective : StmtNode<OMPExecutableDirective>;
+def OMPBarrierDirective : StmtNode<OMPExecutableDirective>;
+def OMPTaskwaitDirective : StmtNode<OMPExecutableDirective>;
+def OMPTaskgroupDirective : StmtNode<OMPExecutableDirective>;
+def OMPFlushDirective : StmtNode<OMPExecutableDirective>;
+def OMPOrderedDirective : StmtNode<OMPExecutableDirective>;
+def OMPAtomicDirective : StmtNode<OMPExecutableDirective>;
+def OMPTargetDirective : StmtNode<OMPExecutableDirective>;
+def OMPTargetDataDirective : StmtNode<OMPExecutableDirective>;
+def OMPTargetEnterDataDirective : StmtNode<OMPExecutableDirective>;
+def OMPTargetExitDataDirective : StmtNode<OMPExecutableDirective>;
+def OMPTargetParallelDirective : StmtNode<OMPExecutableDirective>;
+def OMPTargetParallelForDirective : StmtNode<OMPExecutableDirective>;
+def OMPTargetUpdateDirective : StmtNode<OMPExecutableDirective>;
+def OMPTeamsDirective : StmtNode<OMPExecutableDirective>;
+def OMPCancellationPointDirective : StmtNode<OMPExecutableDirective>;
+def OMPCancelDirective : StmtNode<OMPExecutableDirective>;
+def OMPTaskLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPTaskLoopSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPDistributeDirective : StmtNode<OMPLoopDirective>;
+def OMPDistributeParallelForDirective : StmtNode<OMPLoopDirective>;
+def OMPDistributeParallelForSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPDistributeSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPTargetParallelForSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPTargetSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPTeamsDistributeDirective : StmtNode<OMPLoopDirective>;
+def OMPTeamsDistributeSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPTeamsDistributeParallelForSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPTeamsDistributeParallelForDirective : StmtNode<OMPLoopDirective>;
+def OMPTargetTeamsDirective : StmtNode<OMPExecutableDirective>;
+def OMPTargetTeamsDistributeDirective : StmtNode<OMPLoopDirective>;
+def OMPTargetTeamsDistributeParallelForDirective : StmtNode<OMPLoopDirective>;
+def OMPTargetTeamsDistributeParallelForSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPTargetTeamsDistributeSimdDirective : StmtNode<OMPLoopDirective>;

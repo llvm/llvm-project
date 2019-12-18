@@ -1,0 +1,495 @@
+//==--- PropertiesBase.td - Baseline definitions for AST properties -------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+class HasProperties;
+
+/// The type of the property.
+class PropertyType<string typeName = ""> {
+  /// The C++ type name for the type.
+  string CXXName = !if(!ne(typeName, ""), typeName, NAME);
+
+  /// Whether the C++ type should generally be passed around by reference.
+  bit PassByReference = 0;
+
+  /// Whether `const` should be prepended to the type when writing.
+  bit ConstWhenWriting = 0;
+
+  /// Given a value of type Optional<CXXName> bound as 'value', yield a
+  /// CXXName that can be serialized into a DataStreamTypeWriter.
+  string PackOptional = "";
+
+  /// Given a value of type CXXName bound as 'value' that was deserialized
+  /// by a DataStreamTypeReader, yield an Optional<CXXName>.
+  string UnpackOptional = "";
+
+  /// A list of types for which buffeers must be passed to the read
+  /// operations.
+  list<PropertyType> BufferElementTypes = [];
+}
+
+/// Property types that correspond to specific C++ enums.
+class EnumPropertyType<string typeName = ""> : PropertyType<typeName> {}
+
+/// Property types that correspond to a specific C++ class.
+/// Supports optional values by using the null representation.
+class RefPropertyType<string className> : PropertyType<className # "*"> {
+  let PackOptional =
+    "value ? *value : nullptr";
+  let UnpackOptional =
+    "value ? llvm::Optional<" # CXXName # ">(value) : llvm::None";
+}
+
+/// Property types that correspond to a specific subclass of another type.
+class SubclassPropertyType<string className, PropertyType base>
+    : RefPropertyType<className> {
+  PropertyType Base = base;
+  string SubclassName = className;
+  let ConstWhenWriting = base.ConstWhenWriting;
+}
+
+/// Property types that support optional values by using their
+/// default value.
+class DefaultValuePropertyType<string typeName = ""> : PropertyType<typeName> {
+  let PackOptional =
+    "value ? *value : " # CXXName # "()";
+  let UnpackOptional =
+    "value.isNull() ? llvm::None : llvm::Optional<" # CXXName # ">(value)";
+}
+
+/// Property types that correspond to integer types and support optional
+/// values by shifting the value over by 1.
+class CountPropertyType<string typeName = ""> : PropertyType<typeName> {
+  let PackOptional =
+    "value ? *value + 1 : 0";
+  let UnpackOptional =
+    "value ? llvm::Optional<" # CXXName # ">(value - 1) : llvm::None";
+}
+
+def APInt : PropertyType<"llvm::APInt"> { let PassByReference = 1; }
+def APSInt : PropertyType<"llvm::APSInt"> { let PassByReference = 1; }
+def ArraySizeModifier : EnumPropertyType<"ArrayType::ArraySizeModifier">;
+def AttrKind : EnumPropertyType<"attr::Kind">;
+def AutoTypeKeyword : EnumPropertyType;
+def Bool : PropertyType<"bool">;
+def BuiltinTypeKind : EnumPropertyType<"BuiltinType::Kind">;
+def CallingConv : EnumPropertyType;
+def DeclarationName : PropertyType;
+def DeclarationNameKind : EnumPropertyType<"DeclarationName::NameKind">;
+def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
+  def CXXRecordDeclRef :
+    SubclassPropertyType<"CXXRecordDecl", DeclRef>;
+  def FunctionDeclRef :
+    SubclassPropertyType<"FunctionDecl", DeclRef>;
+  def NamedDeclRef :
+    SubclassPropertyType<"NamedDecl", DeclRef>;
+  def NamespaceDeclRef :
+    SubclassPropertyType<"NamespaceDecl", DeclRef>;
+  def NamespaceAliasDeclRef :
+    SubclassPropertyType<"NamespaceAliasDecl", DeclRef>;
+  def ObjCProtocolDeclRef :
+    SubclassPropertyType<"ObjCProtocolDecl", DeclRef>;
+  def ObjCTypeParamDeclRef :
+    SubclassPropertyType<"ObjCTypeParamDecl", DeclRef>;
+  def TagDeclRef :
+    SubclassPropertyType<"TagDecl", DeclRef>;
+  def TemplateDeclRef :
+    SubclassPropertyType<"TemplateDecl", DeclRef>;
+  def TemplateTypeParmDeclRef :
+    SubclassPropertyType<"TemplateTypeParmDecl", DeclRef>;
+  def TemplateTemplateParmDeclRef :
+    SubclassPropertyType<"TemplateTemplateParmDecl", DeclRef>;
+  def ValueDeclRef :
+    SubclassPropertyType<"ValueDecl", DeclRef>;
+def ElaboratedTypeKeyword : EnumPropertyType;
+def ExtParameterInfo : PropertyType<"FunctionProtoType::ExtParameterInfo">;
+def Identifier : RefPropertyType<"IdentifierInfo"> { let ConstWhenWriting = 1; }
+def NestedNameSpecifier : PropertyType<"NestedNameSpecifier *">;
+def NestedNameSpecifierKind :
+  EnumPropertyType<"NestedNameSpecifier::SpecifierKind">;
+def OverloadedOperatorKind : EnumPropertyType;
+def Qualifiers : PropertyType;
+def QualType : DefaultValuePropertyType;
+def RefQualifierKind : EnumPropertyType;
+def Selector : PropertyType;
+def SourceLocation : PropertyType;
+def StmtRef : RefPropertyType<"Stmt"> { let ConstWhenWriting = 1; }
+  def ExprRef : SubclassPropertyType<"Expr", StmtRef>;
+def TemplateArgument : PropertyType;
+def TemplateArgumentKind : EnumPropertyType<"TemplateArgument::ArgKind">;
+def TemplateName : DefaultValuePropertyType;
+def TemplateNameKind : EnumPropertyType<"TemplateName::NameKind">;
+def UInt32 : CountPropertyType<"uint32_t">;
+def UInt64 : CountPropertyType<"uint64_t">;
+def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
+def VectorKind : EnumPropertyType<"VectorType::VectorKind">;
+
+def ExceptionSpecInfo : PropertyType<"FunctionProtoType::ExceptionSpecInfo"> {
+  let BufferElementTypes = [ QualType ];
+}
+
+/// Arrays.  The corresponding C++ type is ArrayRef of the corresponding
+/// C++ type of the element.
+class Array<PropertyType element> : PropertyType {
+  PropertyType Element = element;
+  let BufferElementTypes = [ element ];
+}
+
+/// llvm::Optional<T>.  The corresponding C++ type is generally just the
+/// corresponding C++ type of the element.
+///
+/// Optional<Unsigned> may restrict the range of the operand for some
+/// serialization clients.
+class Optional<PropertyType element> : PropertyType {
+  PropertyType Element = element;
+  let PassByReference = element.PassByReference;
+}
+
+/// A property of an AST node.
+class Property<string name, PropertyType type> {
+  HasProperties Class;
+  string Name = name;
+  PropertyType Type = type;
+
+  /// A function for reading the property, expressed in terms of a variable
+  /// "node".
+  code Read;
+
+  /// Code specifying when this property is available.  Can be defined
+  /// in terms of other properties, in which case this property must be
+  /// read/written after those properties.  Using this will make the
+  /// value Optional when deserializing.
+  ///
+  /// FIXME: the emitter doesn't yet force dependent properties to be
+  /// read/written later; this only works if the properties used in the
+  /// condition happen to be written first.
+  code Conditional = "";
+}
+
+/// A rule for declaring helper variables when read properties from a
+/// value of this type.  Note that this means that this code is actually
+/// run when *writing* values of this type; however, naming this
+/// `ReadHelper` makes the connection to the `Read` operations on the
+/// properties much clearer.
+class ReadHelper<code _code> {
+  HasProperties Class;
+
+  /// Code which will be run when writing objects of this type before
+  /// writing any of the properties, specified in terms of a variable
+  /// `node`.
+  code Code = _code;
+}
+
+/// A rule for creating objects of this type.
+class Creator<code create> {
+  HasProperties Class;
+
+  /// A function for creating values of this kind, expressed in terms of a
+  /// variable `ctx` of type `ASTContext &`.  Must also refer to all of the
+  /// properties by name.
+  code Create = create;
+}
+
+/// A rule which overrides some of the normal rules.
+class Override {
+  HasProperties Class;
+
+  /// Properties from base classes that should be ignored.
+  list<string> IgnoredProperties = [];
+}
+
+/// A description of how to break a type into cases.  Providing this and
+/// an exhaustive list of the cases will cause AbstractBasic{Reader,Writer}
+/// to be generated with a default implementation of how to read the
+/// type.
+///
+/// Creator rules for the cases can additionally access a variable
+/// `kind` of the KindType.
+class PropertyTypeKind<PropertyType type,
+                       PropertyType kindType,
+                       string readCode> {
+  /// The type for which this describes cases.
+  PropertyType Type = type;
+
+  /// The type of this type's kind enum.
+  PropertyType KindType = kindType;
+
+  /// The property name to use for the kind.
+  string KindPropertyName = "kind";
+
+  /// An expression which reads the kind from a value, expressed in terms
+  /// of a variable `node`.
+  string Read = readCode;
+}
+
+/// One of the options for representing a particular type.
+class PropertyTypeCase<PropertyType type, string name> : HasProperties {
+  /// The type of which this is a case.
+  PropertyType Type = type;
+
+  /// The name of the case (a value of the type's kind enum).
+  string Name = name;
+}
+
+// Type cases for DeclarationName.
+def : PropertyTypeKind<DeclarationName, DeclarationNameKind,
+                       "node.getNameKind()">;
+let Class = PropertyTypeCase<DeclarationName, "Identifier"> in {
+  def : Property<"identifier", Identifier> {
+    let Read = [{ node.getAsIdentifierInfo() }];
+  }
+  def : Creator<[{
+    return DeclarationName(identifier);
+  }]>;
+}
+foreach count = ["Zero", "One", "Multi"] in {
+  let Class = PropertyTypeCase<DeclarationName, "ObjC"#count#"ArgSelector"> in {
+    def : Property<"selector", Selector> {
+      let Read = [{ node.getObjCSelector() }];
+    }
+    def : Creator<[{
+      return DeclarationName(selector);
+    }]>;
+  }
+}
+foreach kind = ["Constructor", "Destructor", "ConversionFunction"] in {
+  let Class = PropertyTypeCase<DeclarationName, "CXX"#kind#"Name"> in {
+    def : Property<"type", QualType> {
+      let Read = [{ node.getCXXNameType() }];
+    }
+    def : Creator<[{
+      return ctx.DeclarationNames.getCXX}]#kind#[{Name(
+               ctx.getCanonicalType(type));
+    }]>;
+  }
+}
+let Class = PropertyTypeCase<DeclarationName, "CXXDeductionGuideName"> in {
+  def : Property<"declaration", TemplateDeclRef> {
+    let Read = [{ node.getCXXDeductionGuideTemplate() }];
+  }
+  def : Creator<[{
+    return ctx.DeclarationNames.getCXXDeductionGuideName(declaration);
+  }]>;
+}
+let Class = PropertyTypeCase<DeclarationName, "CXXOperatorName"> in {
+  def : Property<"operatorKind", OverloadedOperatorKind> {
+    let Read = [{ node.getCXXOverloadedOperator() }];
+  }
+  def : Creator<[{
+    return ctx.DeclarationNames.getCXXOperatorName(operatorKind);
+  }]>;
+}
+let Class = PropertyTypeCase<DeclarationName, "CXXLiteralOperatorName"> in {
+  def : Property<"identifier", Identifier> {
+    let Read = [{ node.getCXXLiteralIdentifier() }];
+  }
+  def : Creator<[{
+    return ctx.DeclarationNames.getCXXLiteralOperatorName(identifier);
+  }]>;
+}
+let Class = PropertyTypeCase<DeclarationName, "CXXUsingDirective"> in {
+  def : Creator<[{
+    return DeclarationName::getUsingDirectiveName();
+  }]>;
+}
+
+// Type cases for TemplateName.
+def : PropertyTypeKind<TemplateName, TemplateNameKind, "node.getKind()">;
+let Class = PropertyTypeCase<TemplateName, "Template"> in {
+  def : Property<"declaration", TemplateDeclRef> {
+    let Read = [{ node.getAsTemplateDecl() }];
+  }
+  def : Creator<[{
+    return TemplateName(declaration);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "OverloadedTemplate"> in {
+  def : Property<"overloads", Array<NamedDeclRef>> {
+    let Read = [{ node.getAsOverloadedTemplate()->decls() }];
+  }
+  def : Creator<[{
+    // Copy into an UnresolvedSet to satisfy the interface.
+    UnresolvedSet<8> overloadSet;
+    for (auto overload : overloads) {
+      overloadSet.addDecl(overload);
+    }
+
+    return ctx.getOverloadedTemplateName(overloadSet.begin(),
+                                         overloadSet.end());
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "AssumedTemplate"> in {
+  def : Property<"name", DeclarationName> {
+    let Read = [{ node.getAsAssumedTemplateName()->getDeclName() }];
+  }
+  def : Creator<[{
+    return ctx.getAssumedTemplateName(name);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "QualifiedTemplate"> in {
+  def : ReadHelper<[{
+    auto qtn = node.getAsQualifiedTemplateName();
+  }]>;
+  def : Property<"qualifier", NestedNameSpecifier> {
+    let Read = [{ qtn->getQualifier() }];
+  }
+  def : Property<"hasTemplateKeyword", Bool> {
+    let Read = [{ qtn->hasTemplateKeyword() }];
+  }
+  def : Property<"declaration", TemplateDeclRef> {
+    let Read = [{ qtn->getTemplateDecl() }];
+  }
+  def : Creator<[{
+    return ctx.getQualifiedTemplateName(qualifier, hasTemplateKeyword,
+                                        declaration);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "DependentTemplate"> in {
+  def : ReadHelper<[{
+    auto dtn = node.getAsDependentTemplateName();
+  }]>;
+  def : Property<"qualifier", NestedNameSpecifier> {
+    let Read = [{ dtn->getQualifier() }];
+  }
+  def : Property<"identifier", Optional<Identifier>> {
+    let Read = [{ makeOptionalFromPointer(
+                    dtn->isIdentifier()
+                      ? dtn->getIdentifier()
+                      : nullptr) }];
+  }
+  def : Property<"operatorKind", OverloadedOperatorKind> {
+    let Conditional = [{ !identifier }];
+    let Read = [{ dtn->getOperator() }];
+  }
+  def : Creator<[{
+    if (identifier) {
+      return ctx.getDependentTemplateName(qualifier, *identifier);
+    } else {
+      return ctx.getDependentTemplateName(qualifier, *operatorKind);
+    }
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParm"> in {
+  def : ReadHelper<[{
+    auto parm = node.getAsSubstTemplateTemplateParm();
+  }]>;
+  def : Property<"parameter", TemplateTemplateParmDeclRef> {
+    let Read = [{ parm->getParameter() }];
+  }
+  def : Property<"replacement", TemplateName> {
+    let Read = [{ parm->getReplacement() }];
+  }
+  def : Creator<[{
+    return ctx.getSubstTemplateTemplateParm(parameter, replacement);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
+  def : ReadHelper<[{
+    auto parm = node.getAsSubstTemplateTemplateParmPack();
+  }]>;
+  def : Property<"parameterPack", TemplateTemplateParmDeclRef> {
+    let Read = [{ parm->getParameterPack() }];
+  }
+  def : Property<"argumentPack", TemplateArgument> {
+    let Read = [{ parm->getArgumentPack() }];
+  }
+  def : Creator<[{
+    return ctx.getSubstTemplateTemplateParmPack(parameterPack, argumentPack);
+  }]>;
+}
+
+// Type cases for TemplateArgument.
+def : PropertyTypeKind<TemplateArgument, TemplateArgumentKind,
+                       "node.getKind()">;
+let Class = PropertyTypeCase<TemplateArgument, "Null"> in {
+  def : Creator<[{
+    return TemplateArgument();
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Type"> in {
+  def : Property<"type", QualType> {
+    let Read = [{ node.getAsType() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(type);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Declaration"> in {
+  def : Property<"declaration", ValueDeclRef> {
+    let Read = [{ node.getAsDecl() }];
+  }
+  def : Property<"parameterType", QualType> {
+    let Read = [{ node.getParamTypeForDecl() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(declaration, parameterType);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "NullPtr"> in {
+  def : Property<"type", QualType> {
+    let Read = [{ node.getNullPtrType() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(type, /*nullptr*/ true);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
+  def : Property<"value", APSInt> {
+    let Read = [{ node.getAsIntegral() }];
+  }
+  def : Property<"type", QualType> {
+    let Read = [{ node.getIntegralType() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(ctx, value, type);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Template"> in {
+  def : Property<"name", TemplateName> {
+    let Read = [{ node.getAsTemplateOrTemplatePattern() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(name);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
+  def : Property<"name", TemplateName> {
+    let Read = [{ node.getAsTemplateOrTemplatePattern() }];
+  }
+  def : Property<"numExpansions", Optional<UInt32>> {
+    let Read = [{
+      // Translate unsigned -> uint32_t just in case.
+      node.getNumTemplateExpansions().map(
+        [](unsigned i) { return uint32_t(i); })
+    }];
+  }
+  def : Creator<[{
+    auto numExpansionsUnsigned =
+      numExpansions.map([](uint32_t i) { return unsigned(i); });
+    return TemplateArgument(name, numExpansionsUnsigned);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Expression"> in {
+  def : Property<"expression", ExprRef> {
+    let Read = [{ node.getAsExpr() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(expression);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {
+  def : Property<"elements", Array<TemplateArgument>> {
+    let Read = [{ node.pack_elements() }];
+  }
+  def : Creator<[{
+    // Copy the pack into the ASTContext.
+    TemplateArgument *ctxElements = new (ctx) TemplateArgument[elements.size()];
+    for (size_t i = 0, e = elements.size(); i != e; ++i)
+      ctxElements[i] = elements[i];
+    return TemplateArgument(llvm::makeArrayRef(ctxElements, elements.size()));
+  }]>;
+}

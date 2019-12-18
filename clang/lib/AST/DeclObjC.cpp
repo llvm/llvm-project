@@ -958,10 +958,18 @@ ObjCMethodDecl *ObjCMethodDecl::getCanonicalDecl() {
   auto *CtxD = cast<Decl>(getDeclContext());
 
   if (auto *ImplD = dyn_cast<ObjCImplementationDecl>(CtxD)) {
-    if (ObjCInterfaceDecl *IFD = ImplD->getClassInterface())
+    if (ObjCInterfaceDecl *IFD = ImplD->getClassInterface()) {
       if (ObjCMethodDecl *MD = IFD->getMethod(getSelector(),
                                               isInstanceMethod()))
         return MD;
+      // readwrite properties may have been re-declared in an extension.
+      // look harder.
+      if (isPropertyAccessor())
+        for (auto *Ext : IFD->known_extensions())
+          if (ObjCMethodDecl *MD =
+                  Ext->getMethod(getSelector(), isInstanceMethod()))
+            return MD;
+    }
   } else if (auto *CImplD = dyn_cast<ObjCCategoryImplDecl>(CtxD)) {
     if (ObjCCategoryDecl *CatD = CImplD->getCategoryDecl())
       if (ObjCMethodDecl *MD = CatD->getMethod(getSelector(),

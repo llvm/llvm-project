@@ -191,6 +191,14 @@ int useRoot(Root *r) {
   return [r getInt] + [r intProperty] + [r intProperty2];
 }
 
+int useFoo(Foo *f) {
+  // CHECK-LABEL: define i32 @useFoo
+  // CHECK: call void bitcast {{.*}} @"\01-[Foo setGetDynamic_setDirect:]"
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo getDirect_setDynamic]"
+  [f setGetDynamic_setDirect:1];
+  return [f getDirect_setDynamic];
+}
+
 __attribute__((objc_root_class))
 @interface RootDeclOnly
 @property(direct, readonly) int intProperty;

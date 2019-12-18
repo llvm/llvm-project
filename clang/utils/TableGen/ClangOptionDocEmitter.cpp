@@ -8,6 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -21,8 +22,6 @@
 
 using namespace llvm;
 
-namespace clang {
-namespace docs {
 namespace {
 struct DocumentedOption {
   Record *Option;
@@ -380,11 +379,8 @@ void emitDocumentation(int Depth, const Documentation &Doc,
 }
 
 }  // namespace
-}  // namespace docs
 
-void EmitClangOptDocs(RecordKeeper &Records, raw_ostream &OS) {
-  using namespace docs;
-
+void clang::EmitClangOptDocs(RecordKeeper &Records, raw_ostream &OS) {
   const Record *DocInfo = Records.getDef("GlobalDocumentation");
   if (!DocInfo) {
     PrintFatalError("The GlobalDocumentation top-level definition is missing, "
@@ -396,4 +392,3 @@ void EmitClangOptDocs(RecordKeeper &Records, raw_ostream &OS) {
 
   emitDocumentation(0, extractDocumentation(Records), DocInfo, OS);
 }
-} // end namespace clang
