@@ -479,4 +479,123 @@ FunctionDecl 'func12'
 )cpp");
 }
 
+TEST(Traverse, LambdaUnlessSpelledInSource) {
+
+  auto AST =
+      buildASTFromCodeWithArgs(R"cpp(
+
+void captures() {
+  int a = 0;
+  int b = 0;
+  int d = 0;
+  int f = 0;
+
+  [a, &b, c = d, &e = f](int g, int h = 42) {};
+}
+
+void templated() {
+  int a = 0;
+  [a]<typename T>(T t) {};
+}
+
+struct SomeStruct {
+    int a = 0;
+    void capture_this() {
+        [this]() {};
+    }
+    void capture_this_copy() {
+        [self = *this]() {};
+    }
+};
+)cpp",
+                               {"-Wno-unused-value", "-Wno-c++2a-extensions"});
+
+  auto getLambdaNode = [&AST](const std::string &name) {
+    auto BN = ast_matchers::match(
+        lambdaExpr(hasAncestor(functionDecl(hasName(name)))).bind("lambda"),
+        AST->getASTContext());
+    EXPECT_EQ(BN.size(), 1u);
+    return BN[0].getNodeAs<LambdaExpr>("lambda");
+  };
+
+  {
+    auto L = getLambdaNode("captures");
+
+    EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource, L),
+              R"cpp(
+LambdaExpr
+|-DeclRefExpr 'a'
+|-DeclRefExpr 'b'
+|-VarDecl 'c'
+| `-DeclRefExpr 'd'
+|-VarDecl 'e'
+| `-DeclRefExpr 'f'
+|-ParmVarDecl 'g'
+|-ParmVarDecl 'h'
+| `-IntegerLiteral
+`-CompoundStmt
+)cpp");
+
+    EXPECT_EQ(dumpASTString(ast_type_traits::TK_AsIs, L),
+              R"cpp(
+LambdaExpr
+|-CXXRecordDecl ''
+| |-CXXMethodDecl 'operator()'
+| | |-ParmVarDecl 'g'
+| | |-ParmVarDecl 'h'
+| | | `-IntegerLiteral
+| | `-CompoundStmt
+| |-FieldDecl ''
+| |-FieldDecl ''
+| |-FieldDecl ''
+| |-FieldDecl ''
+| `-CXXDestructorDecl '~'
+|-ImplicitCastExpr
+| `-DeclRefExpr 'a'
+|-DeclRefExpr 'b'
+|-ImplicitCastExpr
+| `-DeclRefExpr 'd'
+|-DeclRefExpr 'f'
+`-CompoundStmt
+)cpp");
+  }
+
+  {
+    auto L = getLambdaNode("templated");
+
+    EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource, L),
+              R"cpp(
+LambdaExpr
+|-DeclRefExpr 'a'
+|-TemplateTypeParmDecl 'T'
+|-ParmVarDecl 't'
+`-CompoundStmt
+)cpp");
+  }
+
+  {
+    auto L = getLambdaNode("capture_this");
+
+    EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource, L),
+              R"cpp(
+LambdaExpr
+|-CXXThisExpr
+`-CompoundStmt
+)cpp");
+  }
+
+  {
+    auto L = getLambdaNode("capture_this_copy");
+
+    EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource, L),
+              R"cpp(
+LambdaExpr
+|-VarDecl 'self'
+| `-UnaryOperator
+|   `-CXXThisExpr
+`-CompoundStmt
+)cpp");
+  }
+}
+
 } // namespace clang

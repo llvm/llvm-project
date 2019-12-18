@@ -145,7 +145,9 @@ public:
 
     ScopedIncrement ScopedDepth(&CurrentDepth);
     Stmt *StmtToTraverse = StmtNode;
-    if (auto *ExprNode = dyn_cast_or_null<Expr>(StmtNode))
+    if (auto *ExprNode = dyn_cast_or_null<LambdaExpr>(StmtNode))
+      StmtToTraverse = ExprNode;
+    else if (auto *ExprNode = dyn_cast_or_null<Expr>(StmtNode))
       StmtToTraverse = Finder->getASTContext().traverseIgnored(ExprNode);
     if (Traversal ==
         ast_type_traits::TraversalKind::TK_IgnoreImplicitCastsAndParentheses) {
@@ -202,6 +204,38 @@ public:
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return traverse(*CtorInit);
+  }
+  bool TraverseLambdaExpr(LambdaExpr *Node) {
+    if (!Node)
+      return true;
+    ScopedIncrement ScopedDepth(&CurrentDepth);
+
+    for (unsigned I = 0, N = Node->capture_size(); I != N; ++I) {
+      const auto *C = Node->capture_begin() + I;
+      if (!C->isExplicit())
+        continue;
+      if (Node->isInitCapture(C) && !match(*C->getCapturedVar()))
+        return false;
+      if (!match(*Node->capture_init_begin()[I]))
+        return false;
+    }
+
+    if (const auto *TPL = Node->getTemplateParameterList()) {
+      for (const auto *TP : *TPL) {
+        if (!match(*TP))
+          return false;
+      }
+    }
+
+    for (const auto *P : Node->getCallOperator()->parameters()) {
+      if (!match(*P))
+        return false;
+    }
+
+    if (!match(*Node->getBody()))
+      return false;
+
+    return false;
   }
 
   bool shouldVisitTemplateInstantiations() const { return true; }
