@@ -336,7 +336,7 @@ def print_list(list, result):
     for (dpu_addr, region_id, rank_id, slice_id, dpu_id,
          status, program) in list:
         result.PutCString(
-            "'" + str(dpu_addr) + "' \t"
+            "'" + str(hex(dpu_addr)) + "' \t"
             + str(region_id) + "." + str(rank_id) + "."
             + str(slice_id) + "." + str(dpu_id)
             + " \t" + status + " \t'" + program + "'")
@@ -403,7 +403,7 @@ def dpu_list(debugger, command, result, internal_dict):
 
                 dpu_status = get_dpu_status(run_context, slice_id, dpu_id)
 
-                result_list.append((dpu.GetAddress(),
+                result_list.append((int(str(dpu.GetAddress())),
                                     region_id, rank_id, slice_id, dpu_id,
                                     dpu_status, program_path))
 
