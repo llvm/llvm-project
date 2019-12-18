@@ -1,7 +1,7 @@
-; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FASTF64 -check-prefix=ALL %s
-; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefix=SLOWF64 -check-prefix=ALL %s
-; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=amdgcn-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FASTF64 -check-prefix=ALL %s
-; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefix=SLOWF64 -check-prefix=ALL %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=FASTF64,FASTF16,ALL %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=SLOWF64,SLOWF16,ALL %s
+; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=FASTF64,FASTF16,ALL %s
+; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=SLOWF64,SLOWF16,ALL %s
 
 ; ALL: 'fsub_f32'
 ; ALL: estimated cost of 1 for {{.*}} fsub float
@@ -83,7 +83,8 @@ define amdgpu_kernel void @fsub_f16(half addrspace(1)* %out, half addrspace(1)* 
 }
 
 ; ALL: 'fsub_v2f16'
-; ALL: estimated cost of 2 for {{.*}} fsub <2 x half>
+; SLOWF16: estimated cost of 2 for {{.*}} fsub <2 x half>
+; FASTF16: estimated cost of 1 for {{.*}} fsub <2 x half>
 define amdgpu_kernel void @fsub_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %vaddr, <2 x half> %b) #0 {
   %vec = load <2 x half>, <2 x half> addrspace(1)* %vaddr
   %add = fsub <2 x half> %vec, %b
@@ -91,8 +92,19 @@ define amdgpu_kernel void @fsub_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
   ret void
 }
 
+; ALL: 'fsub_v3f16'
+; SLOWF16: estimated cost of 4 for {{.*}} fsub <3 x half>
+; FASTF16: estimated cost of 2 for {{.*}} fsub <3 x half>
+define amdgpu_kernel void @fsub_v3f16(<3 x half> addrspace(1)* %out, <3 x half> addrspace(1)* %vaddr, <3 x half> %b) #0 {
+  %vec = load <3 x half>, <3 x half> addrspace(1)* %vaddr
+  %add = fsub <3 x half> %vec, %b
+  store <3 x half> %add, <3 x half> addrspace(1)* %out
+  ret void
+}
+
 ; ALL: 'fsub_v4f16'
-; ALL: estimated cost of 4 for {{.*}} fsub <4 x half>
+; SLOWF16: estimated cost of 4 for {{.*}} fsub <4 x half>
+; FASTF16: estimated cost of 2 for {{.*}} fsub <4 x half>
 define amdgpu_kernel void @fsub_v4f16(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %vaddr, <4 x half> %b) #0 {
   %vec = load <4 x half>, <4 x half> addrspace(1)* %vaddr
   %add = fsub <4 x half> %vec, %b
