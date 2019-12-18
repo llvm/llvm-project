@@ -11,7 +11,7 @@
 // RUN: not ld.lld %t.o %t2.so -o %t 2>&1 | FileCheck %s
 
 # Calling external function bar needs a nop
-// CHECK: call lacks nop, can't restore toc
+// CHECK: call to foo lacks nop, can't restore toc
     .text
     .abiversion 2
 
