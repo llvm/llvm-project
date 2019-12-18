@@ -382,3 +382,36 @@ module {
     }) {sym_name="kernel_1", type=f32} : () -> ()
   }
 }
+
+// -----
+
+module {
+  module @gpu_funcs attributes {gpu.kernel_module} {
+    // expected-error @+1 {{expected memref type in attribution}}
+    gpu.func @kernel() workgroup(%0: i32) {
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module {
+  module @gpu_funcs attributes {gpu.kernel_module} {
+    // expected-error @+1 {{expected memory space 3 in attribution}}
+    gpu.func @kernel() workgroup(%0: memref<4xf32>) {
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module {
+  module @gpu_funcs attributes {gpu.kernel_module} {
+    // expected-error @+1 {{expected memory space 5 in attribution}}
+    gpu.func @kernel() private(%0: memref<4xf32>) {
+      gpu.return
+    }
+  }
+}

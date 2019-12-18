@@ -2,7 +2,7 @@
 
 module attributes {gpu.kernel_module} {
   // CHECK-LABEL:  llvm.func @private
-  gpu.func @private(%arg0: f32) private(%arg1: memref<4xf32>) {
+  gpu.func @private(%arg0: f32) private(%arg1: memref<4xf32, 5>) {
     // Allocate private memory inside the function.
     // CHECK: %[[size:.*]] = llvm.mlir.constant(4 : i64) : !llvm.i64
     // CHECK: %[[raw:.*]] = llvm.alloca %[[size]] x !llvm.float : (!llvm.i64) -> !llvm<"float*">
@@ -24,7 +24,7 @@ module attributes {gpu.kernel_module} {
     // CHECK: llvm.getelementptr
     // CHECK: llvm.store
     %c0 = constant 0 : index
-    store %arg0, %arg1[%c0] : memref<4xf32>
+    store %arg0, %arg1[%c0] : memref<4xf32, 5>
 
     "terminator"() : () -> ()
   }
@@ -123,7 +123,7 @@ module attributes {gpu.kernel_module} {
   // CHECK-LABEL: llvm.func @multiple
   gpu.func @multiple(%arg0: f32)
       workgroup(%arg1: memref<1xf32, 3>, %arg2: memref<2xf32, 3>)
-      private(%arg3: memref<3xf32>, %arg4: memref<4xf32>) {
+      private(%arg3: memref<3xf32, 5>, %arg4: memref<4xf32, 5>) {
 
     // Workgroup buffers.
     // CHECK: llvm.mlir.addressof @[[buffer1]]
@@ -138,8 +138,8 @@ module attributes {gpu.kernel_module} {
     %c0 = constant 0 : index
     store %arg0, %arg1[%c0] : memref<1xf32, 3>
     store %arg0, %arg2[%c0] : memref<2xf32, 3>
-    store %arg0, %arg3[%c0] : memref<3xf32>
-    store %arg0, %arg4[%c0] : memref<4xf32>
+    store %arg0, %arg3[%c0] : memref<3xf32, 5>
+    store %arg0, %arg4[%c0] : memref<4xf32, 5>
     "terminator"() : () -> ()
   }
 }
