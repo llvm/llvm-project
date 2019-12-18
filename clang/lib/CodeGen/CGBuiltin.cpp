@@ -368,10 +368,10 @@ static Value *emitUnaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
 
   if (CGF.Builder.getIsFPConstrained()) {
-    Value *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
+    Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
     return CGF.Builder.CreateConstrainedFPCall(F, { Src0 });
   } else {
-    Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+    Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
     return CGF.Builder.CreateCall(F, Src0);
   }
 }
@@ -385,10 +385,10 @@ static Value *emitBinaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
 
   if (CGF.Builder.getIsFPConstrained()) {
-    Value *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
+    Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
     return CGF.Builder.CreateConstrainedFPCall(F, { Src0, Src1 });
   } else {
-    Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+    Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
     return CGF.Builder.CreateCall(F, { Src0, Src1 });
   }
 }
@@ -403,10 +403,10 @@ static Value *emitTernaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
   llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
 
   if (CGF.Builder.getIsFPConstrained()) {
-    Value *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
+    Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
     return CGF.Builder.CreateConstrainedFPCall(F, { Src0, Src1, Src2 });
   } else {
-    Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+    Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
     return CGF.Builder.CreateCall(F, { Src0, Src1, Src2 });
   }
 }
