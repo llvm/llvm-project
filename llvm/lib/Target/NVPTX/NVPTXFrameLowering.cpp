@@ -83,3 +83,8 @@ MachineBasicBlock::iterator NVPTXFrameLowering::eliminateCallFramePseudoInstr(
   // ADJCALLSTACKUP instructions.
   return MBB.erase(I);
 }
+
+TargetFrameLowering::DwarfFrameBase
+NVPTXFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
+  return {DwarfFrameBase::CFA, {0}};
+}
