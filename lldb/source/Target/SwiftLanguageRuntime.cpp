@@ -135,83 +135,58 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
   return hasReflectionSection;
 }
 
+SwiftLanguageRuntime::NativeReflectionContext *
+SwiftLanguageRuntime::GetReflectionContext() {
+  if (!m_initialized_reflection_ctx)
+    SetupReflection();
+  return m_reflection_ctx.get();
+}
+
 void SwiftLanguageRuntime::SetupReflection() {
-  reflection_ctx.reset(new NativeReflectionContext(this->GetMemoryReader()));
+  std::lock_guard<std::recursive_mutex> lock(m_add_module_mutex);
+  if (m_initialized_reflection_ctx)
+    return;
+
+  m_reflection_ctx.reset(new NativeReflectionContext(this->GetMemoryReader()));
+  m_initialized_reflection_ctx = true;
 
   auto &target = m_process->GetTarget();
   auto exe_module = target.GetExecutableModule();
-  if (!exe_module)
+  if (!AddModuleToReflectionContext(exe_module)) {
+    m_reflection_ctx.reset();
     return;
-  auto *obj_file = exe_module->GetObjectFile();
-  if (!obj_file)
-      return;
-  if (obj_file->GetPluginName().GetStringRef().equals("elf"))
-    return;
-  Address start_address = obj_file->GetBaseAddress();
-  auto load_ptr = static_cast<uintptr_t>(start_address.GetLoadAddress(&target));
+  }
 
-  // Bail out if we can't read the executable instead of crashing.
-  if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
-    return;
+  m_modules_to_add.AppendIfNeeded(GetTargetRef().GetImages());
 
-  reflection_ctx.reset(new NativeReflectionContext(this->GetMemoryReader()));
-  reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
-
-  auto module_list = GetTargetRef().GetImages();
-  module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
-    auto *obj_file = module_sp->GetObjectFile();
-    if (!obj_file)
-        return false;
-    if (obj_file->GetPluginName().GetStringRef().equals("elf"))
-      return true;
-    Address start_address = obj_file->GetBaseAddress();
-    auto load_ptr = static_cast<uintptr_t>(
-        start_address.GetLoadAddress(&(m_process->GetTarget())));
-    if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
-      return false;
-    if (HasReflectionInfo(obj_file))
-      reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+  // Add all defered modules to reflection context that were added to
+  // the target since this SwiftLanguageRuntime was created.
+  m_modules_to_add.ForEach([&](const ModuleSP &module_sp) -> bool {
+    AddModuleToReflectionContext(module_sp);
     return true;
   });
+  m_modules_to_add.Clear();
+
+  // The global ABI bit is read by the Swift runtime library.
+  SetupABIBit();
 }
 
 SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
     : LanguageRuntime(process) {
-  SetupSwiftError();
-  SetupExclusivity();
-  SetupReflection();
-  SetupABIBit();
 }
 
 bool SwiftLanguageRuntime::IsABIStable() {
+  SetupABIBit();
   return _swift_classIsSwiftMask == 2;
 }
 
-static llvm::Optional<lldb::addr_t>
-FindSymbolForSwiftObject(Target &target, ConstString object,
-                         const SymbolType sym_type) {
-  llvm::Optional<lldb::addr_t> retval;
-
-  SymbolContextList sc_list;
-  if (target.GetImages().FindSymbolsWithNameAndType(object, sym_type,
-                                                    sc_list)) {
-    SymbolContext SwiftObject_Class;
-    if (sc_list.GetSize() == 1 &&
-        sc_list.GetContextAtIndex(0, SwiftObject_Class)) {
-      if (SwiftObject_Class.symbol) {
-        lldb::addr_t SwiftObject_class_addr =
-            SwiftObject_Class.symbol->GetAddress().GetLoadAddress(&target);
-        if (SwiftObject_class_addr &&
-            SwiftObject_class_addr != LLDB_INVALID_ADDRESS)
-          retval = SwiftObject_class_addr;
-      }
-    }
-  }
-  return retval;
+static bool IsModuleSwiftRuntime(lldb_private::Module &module) {
+  return module.GetFileSpec().GetFilename().GetStringRef().startswith(
+      "libswiftCore");
 }
 
-AppleObjCRuntimeV2 *SwiftLanguageRuntime::GetObjCRuntime() {
-  if (auto objc_runtime = ObjCLanguageRuntime::Get(*GetProcess())) {
+static AppleObjCRuntimeV2 *GetObjCRuntime(lldb_private::Process &process) {
+  if (auto objc_runtime = ObjCLanguageRuntime::Get(process)) {
     if (objc_runtime->GetPluginName() ==
         AppleObjCRuntimeV2::GetPluginNameStatic())
       return (AppleObjCRuntimeV2 *)objc_runtime;
@@ -219,60 +194,156 @@ AppleObjCRuntimeV2 *SwiftLanguageRuntime::GetObjCRuntime() {
   return nullptr;
 }
 
+AppleObjCRuntimeV2 *SwiftLanguageRuntime::GetObjCRuntime() {
+  return ::GetObjCRuntime(*GetProcess());
+}
+
+enum class RuntimeKind { Swift, ObjC };
+static llvm::Optional<lldb::addr_t>
+FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
+                         StringRef object, const SymbolType sym_type) {
+  AppleObjCRuntimeV2 *objc_runtime =
+      (runtime_kind == RuntimeKind::ObjC) ? GetObjCRuntime(process) : nullptr;
+
+  bool found_module = false;
+  Target &target = process.GetTarget();
+  ModuleList images = target.GetImages();
+  for (unsigned i = 0, e = images.GetSize(); i < e; ++i) {
+    ModuleSP image = images.GetModuleAtIndex(i);
+    if (!image)
+      continue;
+    if (runtime_kind == RuntimeKind::Swift && !IsModuleSwiftRuntime(*image))
+      continue;
+    if (runtime_kind == RuntimeKind::ObjC &&
+        (!objc_runtime || !objc_runtime->IsModuleObjCLibrary(image)))
+      continue;
+
+    found_module = true;
+    SymbolContextList sc_list;
+    if (!image->FindSymbolsWithNameAndType(ConstString(object), sym_type,
+                                          sc_list))
+      continue;
+    if (sc_list.GetSize() != 1)
+      continue;
+
+    SymbolContext SwiftObject_Class;
+    if (!sc_list.GetContextAtIndex(0, SwiftObject_Class))
+      continue;
+    if (!SwiftObject_Class.symbol)
+      continue;
+    lldb::addr_t addr =
+        SwiftObject_Class.symbol->GetAddress().GetLoadAddress(&target);
+    if (addr && addr != LLDB_INVALID_ADDRESS)
+      return addr;
+  }
+
+  if (!found_module) {
+    // Don't diagnose a missing Objective-C runtime on platforms that
+    // don't have one.
+    if (runtime_kind == RuntimeKind::ObjC) {
+      auto *obj_file = target.GetExecutableModule()->GetObjectFile();
+      bool have_objc_interop =
+          obj_file && obj_file->GetPluginName().GetStringRef().equals("mach-o");
+      if (!have_objc_interop)
+        return {};
+    }
+    target.GetDebugger().GetAsyncErrorStream()->Printf(
+        "Couldn't find the %s runtime library in loaded images.\n",
+        (runtime_kind == RuntimeKind::Swift) ? "Swift" : "Objective-C");
+  }
+  lldbassert(found_module && "couldn't find runtime library in loaded images");
+  return {};
+}
+
 void SwiftLanguageRuntime::SetupSwiftError() {
-  Target &target(m_process->GetTarget());
+  m_SwiftNativeNSErrorISA =
+      FindSymbolForSwiftObject(*m_process, RuntimeKind::Swift,
+                               "__SwiftNativeNSError", eSymbolTypeObjCClass);
+  m_initialized_swift_native_error_isa = true;
+}
 
-  if (m_SwiftNativeNSErrorISA.hasValue())
-    return;
-
-  ConstString g_SwiftNativeNSError("__SwiftNativeNSError");
-
-  m_SwiftNativeNSErrorISA = FindSymbolForSwiftObject(
-      target, g_SwiftNativeNSError, eSymbolTypeObjCClass);
+llvm::Optional<lldb::addr_t> SwiftLanguageRuntime::GetSwiftNativeNSErrorISA() {
+  if (!m_initialized_swift_native_error_isa)
+    SetupSwiftError();
+  assert(m_initialized_swift_native_error_isa);
+  return m_SwiftNativeNSErrorISA;
 }
 
 void SwiftLanguageRuntime::SetupExclusivity() {
-  Target &target(m_process->GetTarget());
-
-  ConstString g_disableExclusivityChecking("_swift_disableExclusivityChecking");
-
   m_dynamic_exclusivity_flag_addr = FindSymbolForSwiftObject(
-      target, g_disableExclusivityChecking, eSymbolTypeData);
+      *m_process, RuntimeKind::Swift, "_swift_disableExclusivityChecking",
+      eSymbolTypeData);
+  m_initialized_dynamic_exclusivity_flag_addr = true;
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
   if (log)
     log->Printf("SwiftLanguageRuntime: _swift_disableExclusivityChecking = %lu",
                 m_dynamic_exclusivity_flag_addr ?
                 *m_dynamic_exclusivity_flag_addr : 0);
 }
 
-void SwiftLanguageRuntime::SetupABIBit() {
-  Target &target(m_process->GetTarget());
-  ConstString g_objc_debug_swift_stable_abi_bit("objc_debug_swift_stable_abi_bit");
+llvm::Optional<lldb::addr_t>
+SwiftLanguageRuntime::GetDynamicExclusivityFlagAddr() {
+  if (!m_initialized_dynamic_exclusivity_flag_addr)
+    SetupExclusivity();
+  assert(m_initialized_dynamic_exclusivity_flag_addr);
+  return m_dynamic_exclusivity_flag_addr;
+}
 
-  if (FindSymbolForSwiftObject(target, g_objc_debug_swift_stable_abi_bit, eSymbolTypeAny))
+void SwiftLanguageRuntime::SetupABIBit() {
+  if (m_initialized_swift_classIsSwiftMask)
+    return;
+  if (FindSymbolForSwiftObject(*m_process, RuntimeKind::ObjC,
+                               "objc_debug_swift_stable_abi_bit",
+                               eSymbolTypeAny))
     _swift_classIsSwiftMask = 2;
   else
     _swift_classIsSwiftMask = 1;
+
+  m_initialized_swift_classIsSwiftMask = true;
+}
+
+bool SwiftLanguageRuntime::AddModuleToReflectionContext(
+    const lldb::ModuleSP &module_sp) {
+  // This function is called from within SetupReflection so it cannot
+  // call GetReflectionContext().
+  assert(m_initialized_reflection_ctx);
+  if (!m_reflection_ctx)
+    return false;
+  if (!module_sp)
+    return false;
+  auto *obj_file = module_sp->GetObjectFile();
+  if (!obj_file)
+    return false;
+  if (obj_file->GetPluginName().GetStringRef().equals("elf"))
+    return false;
+  Address start_address = obj_file->GetBaseAddress();
+  auto load_ptr = static_cast<uintptr_t>(
+      start_address.GetLoadAddress(&(m_process->GetTarget())));
+  if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS) {
+    if (obj_file->GetType() != ObjectFile::eTypeJIT)
+      if (Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES))
+        log->Printf("%s: failed to get start address for %s.", __FUNCTION__,
+                    obj_file->GetFileSpec().GetFilename().GetCString());
+    return false;
+  }
+  if (HasReflectionInfo(obj_file))
+    m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+  return true;
 }
 
 void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
-  module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
-  auto *obj_file = module_sp->GetObjectFile();
-    if (!obj_file)
-        return true;
-    Address start_address = obj_file->GetBaseAddress();
-    auto load_ptr = static_cast<uintptr_t>(
-        start_address.GetLoadAddress(&(m_process->GetTarget())));
-    if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
-      return false;
-    if (!reflection_ctx)
-      return false;
-    if (HasReflectionInfo(obj_file))
-      reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
-    return true;
-  });
+  // If the reflection context hasn't been initialized, add them to
+  // the list of defered modules so they are added in
+  // SetupReflection(), otherwise add them directly.
+  std::lock_guard<std::recursive_mutex> lock(m_add_module_mutex);
+  if (!m_initialized_reflection_ctx)
+    m_modules_to_add.AppendIfNeeded(module_list);
+  else
+    module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
+      AddModuleToReflectionContext(module_sp);
+      return true;
+    });
 }
 
 static bool GetObjectDescription_ResultVariable(Process *process, Stream &str,
@@ -1486,6 +1557,7 @@ SwiftLanguageRuntime::GetRemoteASTContext(SwiftASTContext &swift_ast_ctx) {
     return *known->second;
 
   // Initialize a new remote AST context.
+  (void)GetReflectionContext();
   auto remote_ast_up = std::make_unique<swift::remoteAST::RemoteASTContext>(
       *swift_ast_ctx.GetASTContext(), GetMemoryReader());
   auto &remote_ast = *remote_ast_up;
@@ -1675,6 +1747,10 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
   }
 
   lldb::addr_t pointer = instance->GetPointerValue();
+  auto *reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return llvm::None;
+
   auto class_instance_type_info = reflection_ctx->getInstanceTypeInfo(pointer);
   if (class_instance_type_info) {
     auto class_type_info = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(
@@ -1796,11 +1872,11 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
     return false;
 
   SetupSwiftError();
-  if (m_SwiftNativeNSErrorISA.hasValue()) {
+  if (GetSwiftNativeNSErrorISA()) {
     if (auto objc_runtime = GetObjCRuntime()) {
       if (auto descriptor =
               objc_runtime->GetClassDescriptor(*instance_type_sp)) {
-        if (descriptor->GetISA() != m_SwiftNativeNSErrorISA.getValue()) {
+        if (descriptor->GetISA() != *GetSwiftNativeNSErrorISA()) {
           // not a __SwiftNativeNSError - but statically typed as ErrorType
           // return true here
           return true;
@@ -2577,6 +2653,10 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
 
 const swift::reflection::TypeInfo *
 SwiftLanguageRuntime::GetTypeInfo(CompilerType type) {
+  auto *reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return nullptr;
+
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   CompilerType can_type = ToCompilerType(swift_can_type);
   ConstString mangled_name(can_type.GetMangledTypeName());
@@ -3807,11 +3887,12 @@ void SwiftLanguageRuntime::WillStartExecutingUserExpression(
   std::lock_guard<std::mutex> lock(m_active_user_expr_mutex);
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  if (m_active_user_expr_count == 0 && m_dynamic_exclusivity_flag_addr &&
-      !runs_in_playground_or_repl) {
+  if (!runs_in_playground_or_repl && m_active_user_expr_count == 0 &&
+      GetDynamicExclusivityFlagAddr()) {
     // We're executing the first user expression. Toggle the flag.
-
-    auto type_system_or_err = m_process->GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+    auto type_system_or_err =
+        m_process->GetTarget().GetScratchTypeSystemForLanguage(
+            eLanguageTypeC_plus_plus);
     if (!type_system_or_err) {
       LLDB_LOG_ERROR(log, type_system_or_err.takeError(),
                      "SwiftLanguageRuntime: Unable to get pointer to type system");
@@ -3826,7 +3907,7 @@ void SwiftLanguageRuntime::WillStartExecutingUserExpression(
 
     Status error;
     Scalar original_value;
-    m_process->ReadScalarIntegerFromMemory(*m_dynamic_exclusivity_flag_addr,
+    m_process->ReadScalarIntegerFromMemory(*GetDynamicExclusivityFlagAddr(),
                                            *bool_size, false, original_value,
                                            error);
 
@@ -3871,9 +3952,11 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression(
     log->Printf("SwiftLanguageRuntime: finished user expression. "
                 "Number active: %u", m_active_user_expr_count);
 
-  if (m_active_user_expr_count == 0 && m_dynamic_exclusivity_flag_addr &&
-      !runs_in_playground_or_repl) {
-    auto type_system_or_err = m_process->GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+  if (!runs_in_playground_or_repl && m_active_user_expr_count == 0 &&
+      GetDynamicExclusivityFlagAddr()) {
+    auto type_system_or_err =
+        m_process->GetTarget().GetScratchTypeSystemForLanguage(
+            eLanguageTypeC_plus_plus);
     if (!type_system_or_err) {
       LLDB_LOG_ERROR(log, type_system_or_err.takeError(),
                      "SwiftLanguageRuntime: Unable to get pointer to type system");
@@ -3888,7 +3971,7 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression(
 
     Status error;
     Scalar original_value(m_original_dynamic_exclusivity_flag_state ? 1U : 0U);
-    m_process->WriteScalarToMemory(*m_dynamic_exclusivity_flag_addr,
+    m_process->WriteScalarToMemory(*GetDynamicExclusivityFlagAddr(),
                                    original_value, *bool_size, error);
     if (error.Fail()) {
       if (log)
