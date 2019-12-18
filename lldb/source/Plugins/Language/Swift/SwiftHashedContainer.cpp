@@ -324,9 +324,11 @@ HashedCollectionConfig::CocoaObjectAtAddress(
   ProcessSP process_sp = exe_ctx.GetProcessSP();
   if (!process_sp)
     return nullptr;
-  CompilerType id = exe_ctx.GetTargetSP()
-    ->GetScratchClangASTContext()
-    ->GetBasicType(lldb::eBasicTypeObjCID);
+  ClangASTContext *clang_ast_context =
+        ClangASTContext::GetScratch(process_sp->GetTarget());
+  if (!clang_ast_context)
+    return nullptr;
+  CompilerType id = clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID);
   InferiorSizedWord isw(address, *process_sp);
   return ValueObject::CreateValueObjectFromData(
     "cocoa", isw.GetAsData(process_sp->GetByteOrder()), exe_ctx, id);

@@ -316,8 +316,12 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     "native/shared strings already handled");
 
   if ((discriminator & 0xE0) == 0x40) { // 010xxxxx: Bridged
-    CompilerType id_type =
-        process->GetTarget().GetScratchClangASTContext()->GetBasicType(
+    ClangASTContext *clang_ast_context =
+        ClangASTContext::GetScratch(process->GetTarget());
+    if (!clang_ast_context)
+      return false;
+
+    CompilerType id_type = clang_ast_context->GetBasicType(
             lldb::eBasicTypeObjCID);
 
     // We may have an NSString pointer inline, so try formatting it directly.
