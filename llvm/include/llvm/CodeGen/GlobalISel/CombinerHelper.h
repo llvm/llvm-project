@@ -36,6 +36,13 @@ struct PreferredTuple {
   MachineInstr *MI;
 };
 
+struct IndexedLoadStoreMatchInfo {
+  Register Addr;
+  Register Base;
+  Register Offset;
+  bool IsPre;
+};
+
 class CombinerHelper {
 protected:
   MachineIRBuilder &Builder;
@@ -84,6 +91,8 @@ public:
   /// Combine \p MI into a pre-indexed or post-indexed load/store operation if
   /// legal and the surrounding code makes it useful.
   bool tryCombineIndexedLoadStore(MachineInstr &MI);
+  bool matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
+  void applyCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
 
   bool matchElideBrByInvertingCond(MachineInstr &MI);
   void applyElideBrByInvertingCond(MachineInstr &MI);
