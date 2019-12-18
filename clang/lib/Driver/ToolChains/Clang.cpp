@@ -1415,29 +1415,6 @@ static bool isNoCommonDefault(const llvm::Triple &Triple) {
   }
 }
 
-static bool shouldEmitRemarks(const ArgList &Args) {
-  // -fsave-optimization-record enables it.
-  if (Args.hasFlag(options::OPT_fsave_optimization_record,
-                   options::OPT_fno_save_optimization_record, false))
-    return true;
-
-  // -fsave-optimization-record=<format> enables it as well.
-  if (Args.hasFlag(options::OPT_fsave_optimization_record_EQ,
-                   options::OPT_fno_save_optimization_record, false))
-    return true;
-
-  // -foptimization-record-file alone enables it too.
-  if (Args.hasFlag(options::OPT_foptimization_record_file_EQ,
-                   options::OPT_fno_save_optimization_record, false))
-    return true;
-
-  // -foptimization-record-passes alone enables it too.
-  if (Args.hasFlag(options::OPT_foptimization_record_passes_EQ,
-                   options::OPT_fno_save_optimization_record, false))
-    return true;
-  return false;
-}
-
 static bool hasMultipleInvocations(const llvm::Triple &Triple,
                                    const ArgList &Args) {
   // Supported only on Darwin where we invoke the compiler multiple times
@@ -3718,7 +3695,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   TC.adjustDebugInfoKind(DebugInfoKind, Args);
 
   // When emitting remarks, we need at least debug lines in the output.
-  if (shouldEmitRemarks(Args) &&
+  if (willEmitRemarks(Args) &&
       DebugInfoKind <= codegenoptions::DebugDirectivesOnly)
     DebugInfoKind = codegenoptions::DebugLineTablesOnly;
 
@@ -5546,7 +5523,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fapple-pragma-pack");
 
   // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
-  if (shouldEmitRemarks(Args) && checkRemarksOptions(D, Args, Triple))
+  if (willEmitRemarks(Args) && checkRemarksOptions(D, Args, Triple))
     renderRemarksOptions(Args, CmdArgs, Triple, Input, JA);
 
   bool RewriteImports = Args.hasFlag(options::OPT_frewrite_imports,
