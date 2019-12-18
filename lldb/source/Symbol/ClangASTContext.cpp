@@ -569,8 +569,8 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
   } else if (target && target->IsValid()) {
     std::shared_ptr<ClangASTContextForExpressions> ast_sp(
         new ClangASTContextForExpressions(*target, fixed_arch));
-    ast_sp->m_scratch_ast_source_up.reset(
-        new ClangASTSource(target->shared_from_this()));
+    ast_sp->m_scratch_ast_source_up.reset(new ClangASTSource(
+        target->shared_from_this(), target->GetClangASTImporter()));
     lldbassert(ast_sp->getFileManager());
     ast_sp->m_scratch_ast_source_up->InstallASTContext(
         *ast_sp, *ast_sp->getFileManager(), true);
@@ -1285,9 +1285,12 @@ CompilerType ClangASTContext::GetTypeForDecl(ObjCInterfaceDecl *decl) {
 
 #pragma mark Structure, Unions, Classes
 
-CompilerType ClangASTContext::CreateRecordType(
-    DeclContext *decl_ctx, AccessType access_type, const char *name, int kind,
-    LanguageType language, ClangASTMetadata *metadata, bool exports_symbols) {
+CompilerType ClangASTContext::CreateRecordType(DeclContext *decl_ctx,
+                                               AccessType access_type,
+                                               llvm::StringRef name, int kind,
+                                               LanguageType language,
+                                               ClangASTMetadata *metadata,
+                                               bool exports_symbols) {
   ASTContext *ast = getASTContext();
   assert(ast != nullptr);
 
@@ -1307,7 +1310,7 @@ CompilerType ClangASTContext::CreateRecordType(
   // something is struct or a class, so we default to always use the more
   // complete definition just in case.
 
-  bool has_name = name && name[0];
+  bool has_name = !name.empty();
 
   CXXRecordDecl *decl = CXXRecordDecl::Create(
       *ast, (TagDecl::TagKind)kind, decl_ctx, SourceLocation(),
@@ -1683,14 +1686,14 @@ bool ClangASTContext::RecordHasFields(const RecordDecl *record_decl) {
 
 #pragma mark Objective-C Classes
 
-CompilerType ClangASTContext::CreateObjCClass(const char *name,
+CompilerType ClangASTContext::CreateObjCClass(llvm::StringRef name,
                                               DeclContext *decl_ctx,
                                               bool isForwardDecl,
                                               bool isInternal,
                                               ClangASTMetadata *metadata) {
   ASTContext *ast = getASTContext();
   assert(ast != nullptr);
-  assert(name && name[0]);
+  assert(!name.empty());
   if (decl_ctx == nullptr)
     decl_ctx = ast->getTranslationUnitDecl();
 
@@ -7769,7 +7772,7 @@ clang::ObjCMethodDecl *ClangASTContext::AddMethodToObjCObjectType(
                       // (lldb::opaque_compiler_type_t type, "-[NString
                       // stringWithCString:]")
     const CompilerType &method_clang_type, lldb::AccessType access,
-    bool is_artificial, bool is_variadic) {
+    bool is_artificial, bool is_variadic, bool is_objc_direct_call) {
   if (!type || !method_clang_type.IsValid())
     return nullptr;
 
@@ -7873,6 +7876,18 @@ clang::ObjCMethodDecl *ClangASTContext::AddMethodToObjCObjectType(
     objc_method_decl->setMethodParams(
         *ast, llvm::ArrayRef<clang::ParmVarDecl *>(params),
         llvm::ArrayRef<clang::SourceLocation>());
+  }
+
+  if (is_objc_direct_call) {
+    // Add a the objc_direct attribute to the declaration we generate that
+    // we generate a direct method call for this ObjCMethodDecl.
+    objc_method_decl->addAttr(
+        clang::ObjCDirectAttr::CreateImplicit(*ast, SourceLocation()));
+    // Usually Sema is creating implicit parameters (e.g., self) when it
+    // parses the method. We don't have a parsing Sema when we build our own
+    // AST here so we manually need to create these implicit parameters to
+    // make the direct call code generation happy.
+    objc_method_decl->createImplicitParams(*ast, class_interface_decl);
   }
 
   class_interface_decl->addDecl(objc_method_decl);
@@ -9504,10 +9519,4 @@ ClangASTContextForExpressions::GetUtilityFunction(const char *text,
 PersistentExpressionState *
 ClangASTContextForExpressions::GetPersistentExpressionState() {
   return m_persistent_variables.get();
-}
-
-clang::ExternalASTMerger &
-ClangASTContextForExpressions::GetMergerUnchecked() {
-  lldbassert(m_scratch_ast_source_up != nullptr);
-  return m_scratch_ast_source_up->GetMergerUnchecked();
 }

@@ -732,5 +732,14 @@ void DifferenceEngine::diff(Module *L, Module *R) {
 
 bool DifferenceEngine::equivalentAsOperands(GlobalValue *L, GlobalValue *R) {
   if (globalValueOracle) return (*globalValueOracle)(L, R);
+
+  if (isa<GlobalVariable>(L) && isa<GlobalVariable>(R)) {
+    GlobalVariable *GVL = cast<GlobalVariable>(L);
+    GlobalVariable *GVR = cast<GlobalVariable>(R);
+    if (GVL->hasLocalLinkage() && GVL->hasUniqueInitializer() &&
+        GVR->hasLocalLinkage() && GVR->hasUniqueInitializer())
+      return GVL->getInitializer() == GVR->getInitializer();
+  }
+
   return L->getName() == R->getName();
 }

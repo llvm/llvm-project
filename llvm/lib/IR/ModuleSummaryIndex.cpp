@@ -244,7 +244,7 @@ void ModuleSummaryIndex::dumpSCCs(raw_ostream &O) {
        !I.isAtEnd(); ++I) {
     O << "SCC (" << utostr(I->size()) << " node" << (I->size() == 1 ? "" : "s")
       << ") {\n";
-    for (const ValueInfo V : *I) {
+    for (const ValueInfo &V : *I) {
       FunctionSummary *F = nullptr;
       if (V.getSummaryList().size())
         F = cast<FunctionSummary>(V.getSummaryList().front().get());

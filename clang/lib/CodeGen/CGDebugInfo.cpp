@@ -3495,6 +3495,9 @@ llvm::DISubprogram *CGDebugInfo::getObjCMethodDeclaration(
   if (CGM.getCodeGenOpts().DwarfVersion < 5 && !OMD->isDirectMethod())
     return nullptr;
 
+  if (OMD->isDirectMethod())
+    SPFlags |= llvm::DISubprogram::SPFlagObjCDirect;
+
   // Starting with DWARF V5 method declarations are emitted as children of
   // the interface type.
   auto *ID = dyn_cast_or_null<ObjCInterfaceDecl>(D->getDeclContext());

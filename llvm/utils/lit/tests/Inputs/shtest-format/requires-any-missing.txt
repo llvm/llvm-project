@@ -1,2 +1,0 @@
-RUN: true
-REQUIRES-ANY: a-missing-feature, a-missing-feature-2

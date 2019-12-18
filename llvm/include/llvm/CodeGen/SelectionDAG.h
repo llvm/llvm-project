@@ -811,6 +811,11 @@ public:
   /// float type VT, by either extending or rounding (by truncation).
   SDValue getFPExtendOrRound(SDValue Op, const SDLoc &DL, EVT VT);
 
+  /// Convert Op, which must be a STRICT operation of float type, to the
+  /// float type VT, by either extending or rounding (by truncation).
+  std::pair<SDValue, SDValue>
+  getStrictFPExtendOrRound(SDValue Op, SDValue Chain, const SDLoc &DL, EVT VT);
+
   /// Convert Op, which must be of integer type, to the
   /// integer type VT, by either any-extending or truncating it.
   SDValue getAnyExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);

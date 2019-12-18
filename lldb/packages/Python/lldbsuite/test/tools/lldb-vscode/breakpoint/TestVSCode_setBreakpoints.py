@@ -17,7 +17,6 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
-    @no_debug_info_test
     def test_set_and_clear(self):
         '''Tests setting and clearing source file and line breakpoints.
            This packet is a bit tricky on the debug adaptor side since there
@@ -149,7 +148,6 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                                 "expect breakpoint still verified")
 
     @skipIfWindows
-    @no_debug_info_test
     def test_functionality(self):
         '''Tests hitting breakpoints and the functionality of a single
            breakpoint, like 'conditions' and 'hitCondition' settings.'''

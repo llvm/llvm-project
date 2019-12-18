@@ -1498,7 +1498,7 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
                                 : BaseOp->getIndex() < RHS.BaseOp->getIndex();
 
         if (Offset != RHS.Offset)
-          return StackGrowsDown ? Offset > RHS.Offset : Offset < RHS.Offset;
+          return Offset < RHS.Offset;
 
         return SU->NodeNum < RHS.SU->NodeNum;
       }

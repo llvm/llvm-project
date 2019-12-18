@@ -4,16 +4,16 @@
 
 declare float @llvm.experimental.constrained.rint.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.nearbyint.f32(float, metadata, metadata)
-declare float @llvm.experimental.constrained.floor.f32(float, metadata, metadata)
-declare float @llvm.experimental.constrained.ceil.f32(float, metadata, metadata)
-declare float @llvm.experimental.constrained.trunc.f32(float, metadata, metadata)
-declare float @llvm.experimental.constrained.round.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.floor.f32(float, metadata)
+declare float @llvm.experimental.constrained.ceil.f32(float, metadata)
+declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
+declare float @llvm.experimental.constrained.round.f32(float, metadata)
 declare <4 x float> @llvm.experimental.constrained.rint.v4f32(<4 x float>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float>, metadata, metadata)
-declare <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float>, metadata, metadata)
-declare <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float>, metadata, metadata)
-declare <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float>, metadata, metadata)
-declare <4 x float> @llvm.experimental.constrained.round.v4f32(<4 x float>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float>, metadata)
+declare <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float>, metadata)
+declare <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float>, metadata)
+declare <4 x float> @llvm.experimental.constrained.round.v4f32(<4 x float>, metadata)
 
 define <4 x float> @f1(<4 x float> %val) #0 {
 ; CHECK-LABEL: f1:
@@ -43,7 +43,6 @@ define <4 x float> @f3(<4 x float> %val) #0 {
 ; CHECK: br %r14
   %res = call <4 x float> @llvm.experimental.constrained.floor.v4f32(
                         <4 x float> %val,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
@@ -54,7 +53,6 @@ define <4 x float> @f4(<4 x float> %val) #0 {
 ; CHECK: br %r14
   %res = call <4 x float> @llvm.experimental.constrained.ceil.v4f32(
                         <4 x float> %val,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
@@ -65,7 +63,6 @@ define <4 x float> @f5(<4 x float> %val) #0 {
 ; CHECK: br %r14
   %res = call <4 x float> @llvm.experimental.constrained.trunc.v4f32(
                         <4 x float> %val,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
@@ -76,7 +73,6 @@ define <4 x float> @f6(<4 x float> %val) #0 {
 ; CHECK: br %r14
   %res = call <4 x float> @llvm.experimental.constrained.round.v4f32(
                         <4 x float> %val,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
@@ -112,7 +108,6 @@ define float @f9(<4 x float> %val) #0 {
   %scalar = extractelement <4 x float> %val, i32 0
   %res = call float @llvm.experimental.constrained.floor.f32(
                         float %scalar,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret float %res
 }
@@ -124,7 +119,6 @@ define float @f10(<4 x float> %val) #0 {
   %scalar = extractelement <4 x float> %val, i32 0
   %res = call float @llvm.experimental.constrained.ceil.f32(
                         float %scalar,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret float %res
 }
@@ -136,7 +130,6 @@ define float @f11(<4 x float> %val) #0 {
   %scalar = extractelement <4 x float> %val, i32 0
   %res = call float @llvm.experimental.constrained.trunc.f32(
                         float %scalar,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret float %res
 }
@@ -148,7 +141,6 @@ define float @f12(<4 x float> %val) #0 {
   %scalar = extractelement <4 x float> %val, i32 0
   %res = call float @llvm.experimental.constrained.round.f32(
                         float %scalar,
-                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   ret float %res
 }

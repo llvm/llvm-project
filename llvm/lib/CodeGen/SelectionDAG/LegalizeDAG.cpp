@@ -173,10 +173,9 @@ private:
                           SDValue NewIntValue) const;
   SDValue ExpandFCOPYSIGN(SDNode *Node) const;
   SDValue ExpandFABS(SDNode *Node) const;
-  SDValue ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0, EVT DestVT,
-                               const SDLoc &dl);
-  SDValue PromoteLegalINT_TO_FP(SDValue LegalOp, EVT DestVT, bool isSigned,
-                                const SDLoc &dl);
+  SDValue ExpandLegalINT_TO_FP(SDNode *Node, SDValue &Chain);
+  void PromoteLegalINT_TO_FP(SDNode *N, const SDLoc &dl,
+                             SmallVectorImpl<SDValue> &Results);
   void PromoteLegalFP_TO_INT(SDNode *N, const SDLoc &dl,
                              SmallVectorImpl<SDValue> &Results);
 
@@ -1010,6 +1009,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
   case ISD::STRICT_LRINT:
   case ISD::STRICT_LLRINT:
   case ISD::STRICT_LROUND:
@@ -2338,9 +2339,14 @@ SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
 /// INT_TO_FP operation of the specified operand when the target requests that
 /// we expand it.  At this point, we know that the result and operand types are
 /// legal for the target.
-SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
-                                                   EVT DestVT,
-                                                   const SDLoc &dl) {
+SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
+                                                   SDValue &Chain) {
+  bool isSigned = (Node->getOpcode() == ISD::STRICT_SINT_TO_FP ||
+                   Node->getOpcode() == ISD::SINT_TO_FP);
+  EVT DestVT = Node->getValueType(0);
+  SDLoc dl(Node);
+  unsigned OpNo = Node->isStrictFPOpcode() ? 1 : 0;
+  SDValue Op0 = Node->getOperand(OpNo);
   EVT SrcVT = Op0.getValueType();
 
   // TODO: Should any fast-math-flags be set for the created nodes?
@@ -2387,16 +2393,39 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
                                      BitsToDouble(0x4330000080000000ULL) :
                                      BitsToDouble(0x4330000000000000ULL),
                                      dl, MVT::f64);
-    // subtract the bias
-    SDValue Sub = DAG.getNode(ISD::FSUB, dl, MVT::f64, Load, Bias);
-    // final result
-    SDValue Result = DAG.getFPExtendOrRound(Sub, dl, DestVT);
+    // Subtract the bias and get the final result.
+    SDValue Sub;
+    SDValue Result;
+    if (Node->isStrictFPOpcode()) {
+      Sub = DAG.getNode(ISD::STRICT_FSUB, dl, {MVT::f64, MVT::Other},
+                        {Node->getOperand(0), Load, Bias});
+      Chain = Sub.getValue(1);
+      if (DestVT != Sub.getValueType()) {
+        std::pair<SDValue, SDValue> ResultPair;
+        ResultPair =
+            DAG.getStrictFPExtendOrRound(Sub, Chain, dl, DestVT);
+        Result = ResultPair.first;
+        Chain = ResultPair.second;
+      }
+      else
+        Result = Sub;
+    } else {
+      Sub = DAG.getNode(ISD::FSUB, dl, MVT::f64, Load, Bias);
+      Result = DAG.getFPExtendOrRound(Sub, dl, DestVT);
+    }
     return Result;
   }
   assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
   // Code below here assumes !isSigned without checking again.
+  // FIXME: This can produce slightly incorrect results. See details in
+  // FIXME: https://reviews.llvm.org/D69275
 
-  SDValue Tmp1 = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
+  SDValue Tmp1;
+  if (Node->isStrictFPOpcode()) {
+    Tmp1 = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, { DestVT, MVT::Other },
+                       { Node->getOperand(0), Op0 });
+  } else
+    Tmp1 = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
 
   SDValue SignSet = DAG.getSetCC(dl, getSetCCResultType(SrcVT), Op0,
                                  DAG.getConstant(0, dl, SrcVT), ISD::SETLT);
@@ -2442,6 +2471,13 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
     FudgeInReg = Handle.getValue();
   }
 
+  if (Node->isStrictFPOpcode()) {
+    SDValue Result = DAG.getNode(ISD::STRICT_FADD, dl, { DestVT, MVT::Other },
+                                 { Tmp1.getValue(1), Tmp1, FudgeInReg });
+    Chain = Result.getValue(1);
+    return Result;
+  }
+
   return DAG.getNode(ISD::FADD, dl, DestVT, Tmp1, FudgeInReg);
 }
 
@@ -2450,9 +2486,16 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
 /// we promote it.  At this point, we know that the result and operand types are
 /// legal for the target, and that there is a legal UINT_TO_FP or SINT_TO_FP
 /// operation that takes a larger input.
-SDValue SelectionDAGLegalize::PromoteLegalINT_TO_FP(SDValue LegalOp, EVT DestVT,
-                                                    bool isSigned,
-                                                    const SDLoc &dl) {
+void SelectionDAGLegalize::PromoteLegalINT_TO_FP(
+    SDNode *N, const SDLoc &dl, SmallVectorImpl<SDValue> &Results) {
+  bool IsStrict = N->isStrictFPOpcode();
+  bool IsSigned = N->getOpcode() == ISD::SINT_TO_FP ||
+                  N->getOpcode() == ISD::STRICT_SINT_TO_FP;
+  EVT DestVT = N->getValueType(0);
+  SDValue LegalOp = N->getOperand(IsStrict ? 1 : 0);
+  unsigned UIntOp = IsStrict ? ISD::STRICT_UINT_TO_FP : ISD::UINT_TO_FP;
+  unsigned SIntOp = IsStrict ? ISD::STRICT_SINT_TO_FP : ISD::SINT_TO_FP;
+
   // First step, figure out the appropriate *INT_TO_FP operation to use.
   EVT NewInTy = LegalOp.getValueType();
 
@@ -2464,15 +2507,16 @@ SDValue SelectionDAGLegalize::PromoteLegalINT_TO_FP(SDValue LegalOp, EVT DestVT,
     assert(NewInTy.isInteger() && "Ran out of possibilities!");
 
     // If the target supports SINT_TO_FP of this type, use it.
-    if (TLI.isOperationLegalOrCustom(ISD::SINT_TO_FP, NewInTy)) {
-      OpToUse = ISD::SINT_TO_FP;
+    if (TLI.isOperationLegalOrCustom(SIntOp, NewInTy)) {
+      OpToUse = SIntOp;
       break;
     }
-    if (isSigned) continue;
+    if (IsSigned)
+      continue;
 
     // If the target supports UINT_TO_FP of this type, use it.
-    if (TLI.isOperationLegalOrCustom(ISD::UINT_TO_FP, NewInTy)) {
-      OpToUse = ISD::UINT_TO_FP;
+    if (TLI.isOperationLegalOrCustom(UIntOp, NewInTy)) {
+      OpToUse = UIntOp;
       break;
     }
 
@@ -2481,9 +2525,20 @@ SDValue SelectionDAGLegalize::PromoteLegalINT_TO_FP(SDValue LegalOp, EVT DestVT,
 
   // Okay, we found the operation and type to use.  Zero extend our input to the
   // desired type then run the operation on it.
-  return DAG.getNode(OpToUse, dl, DestVT,
-                     DAG.getNode(isSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND,
-                                 dl, NewInTy, LegalOp));
+  if (IsStrict) {
+    SDValue Res =
+        DAG.getNode(OpToUse, dl, {DestVT, MVT::Other},
+                    {N->getOperand(0),
+                     DAG.getNode(IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND,
+                                 dl, NewInTy, LegalOp)});
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+  }
+
+  Results.push_back(
+      DAG.getNode(OpToUse, dl, DestVT,
+                  DAG.getNode(IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND,
+                              dl, NewInTy, LegalOp)));
 }
 
 /// This function is responsible for legalizing a
@@ -2899,15 +2954,20 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   }
   case ISD::UINT_TO_FP:
-    if (TLI.expandUINT_TO_FP(Node, Tmp1, DAG)) {
+  case ISD::STRICT_UINT_TO_FP:
+    if (TLI.expandUINT_TO_FP(Node, Tmp1, Tmp2, DAG)) {
       Results.push_back(Tmp1);
+      if (Node->isStrictFPOpcode())
+        Results.push_back(Tmp2);
       break;
     }
     LLVM_FALLTHROUGH;
   case ISD::SINT_TO_FP:
-    Tmp1 = ExpandLegalINT_TO_FP(Node->getOpcode() == ISD::SINT_TO_FP,
-                                Node->getOperand(0), Node->getValueType(0), dl);
+  case ISD::STRICT_SINT_TO_FP:
+    Tmp1 = ExpandLegalINT_TO_FP(Node, Tmp2);
     Results.push_back(Tmp1);
+    if (Node->isStrictFPOpcode())
+      Results.push_back(Tmp2);
     break;
   case ISD::FP_TO_SINT:
     if (TLI.expandFP_TO_SINT(Node, Tmp1, DAG))
@@ -4194,6 +4254,9 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::INSERT_VECTOR_ELT) {
     OVT = Node->getOperand(0).getSimpleValueType();
   }
+  if (Node->getOpcode() == ISD::STRICT_UINT_TO_FP ||
+      Node->getOpcode() == ISD::STRICT_SINT_TO_FP)
+    OVT = Node->getOperand(1).getSimpleValueType();
   if (Node->getOpcode() == ISD::BR_CC)
     OVT = Node->getOperand(2).getSimpleValueType();
   MVT NVT = TLI.getTypeToPromoteTo(Node->getOpcode(), OVT);
@@ -4248,10 +4311,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     PromoteLegalFP_TO_INT(Node, dl, Results);
     break;
   case ISD::UINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
-    Tmp1 = PromoteLegalINT_TO_FP(Node->getOperand(0), Node->getValueType(0),
-                                 Node->getOpcode() == ISD::SINT_TO_FP, dl);
-    Results.push_back(Tmp1);
+  case ISD::STRICT_SINT_TO_FP:
+    PromoteLegalINT_TO_FP(Node, dl, Results);
     break;
   case ISD::VAARG: {
     SDValue Chain = Node->getOperand(0); // Get the chain.

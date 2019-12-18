@@ -538,6 +538,10 @@ def strict_fp_to_sint : SDNode<"ISD::STRICT_FP_TO_SINT",
                                SDTFPToIntOp, [SDNPHasChain]>;
 def strict_fp_to_uint : SDNode<"ISD::STRICT_FP_TO_UINT",
                                SDTFPToIntOp, [SDNPHasChain]>;
+def strict_sint_to_fp : SDNode<"ISD::STRICT_SINT_TO_FP",
+                               SDTIntToFPOp, [SDNPHasChain]>;
+def strict_uint_to_fp : SDNode<"ISD::STRICT_UINT_TO_FP",
+                               SDTIntToFPOp, [SDNPHasChain]>;
 
 def setcc      : SDNode<"ISD::SETCC"      , SDTSetCC>;
 def select     : SDNode<"ISD::SELECT"     , SDTSelect>;
@@ -1398,6 +1402,12 @@ def any_fp_to_sint : PatFrags<(ops node:$src),
 def any_fp_to_uint : PatFrags<(ops node:$src),
                               [(strict_fp_to_uint node:$src),
                                (fp_to_uint node:$src)]>;
+def any_sint_to_fp : PatFrags<(ops node:$src),
+                              [(strict_sint_to_fp node:$src),
+                               (sint_to_fp node:$src)]>;
+def any_uint_to_fp : PatFrags<(ops node:$src),
+                              [(strict_uint_to_fp node:$src),
+                               (uint_to_fp node:$src)]>;
 
 multiclass binary_atomic_op_ord<SDNode atomic_op> {
   def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),

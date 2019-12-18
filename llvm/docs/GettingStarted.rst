@@ -490,55 +490,27 @@ in order to update the last commit with all pending changes.
 For developers to commit changes from Git
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A helper script is provided in ``llvm/utils/git-svn/git-llvm``. After you add it
-to your path, you can push committed changes upstream with ``git llvm
-push``. While this creates a Subversion checkout and patches it under the hood,
-it does not require you to have interaction with it.
+Once a patch is reviewed, you should rebase it, re-test locally, and commit the
+changes to LLVM's master branch. This is done using `git push`.
 
-.. code-block:: console
+LLVM currently has a linear-history policy, which means that merge commits are
+not allowed. The `llvm-project` repo on github is configured to reject pushes
+that include merges, so the `git rebase` step above is required.
 
-  % export PATH=$PATH:$TOP_LEVEL_DIR/llvm-project/llvm/utils/git-svn/
-  % git llvm push
+Reverting a change
+^^^^^^^^^^^^^^^^^^
 
-Within a couple minutes after pushing to subversion, the svn commit will have
-been converted back to a Git commit, and made its way into the official Git
-repository. At that point, ``git pull`` should get back the changes as they were
-committed.
-
-You'll likely want to ``git pull --rebase`` to get the official git commit
-downloaded back to your repository. The SVN revision numbers of each commit can
-be found at the end of the commit message, e.g. ``llvm-svn: 350914``.
-
-You may also find the ``-n`` flag useful, like ``git llvm push -n``. This runs
-through all the steps of committing _without_ actually doing the commit, and
-tell you what it would have done. That can be useful if you're unsure whether
-the right thing will happen.
-
-Reverting a change when using Git
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you're using Git and need to revert a patch, Git needs to be supplied a
-commit hash, not an svn revision. To make things easier, you can use
-``git llvm revert`` to revert with either an SVN revision or a Git hash instead.
-
-Additionally, you can first run with ``git llvm revert -n`` to print which Git
-commands will run, without doing anything.
-
-Running ``git llvm revert`` will only revert things in your local repository. To
-push the revert upstream, you still need to run ``git llvm push`` as described
-earlier.
-
-.. code-block:: console
-
-  % git llvm revert rNNNNNN       # Revert by SVN id
-  % git llvm revert abcdef123456  # Revert by Git commit hash
-  % git llvm revert -n rNNNNNN    # Print the commands without doing anything
+When reverting changes using git, the default message will say "This reverts
+commit XYZ". Leave this at the end of the commit message, but add some details
+before it as to why the commit is being reverted. A brief explanation and/or
+links to bots that demonstrate the problem are sufficient.
 
 Checkout via SVN (deprecated)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Until we have fully migrated to Git, you may also get a fresh copy of
-the code from the official Subversion repository.
+The SVN repository is no longer updated, but it is still available for now. If
+you need to check the code out of SVN rather than git for some reason, you can
+do it like so:
 
 * ``cd where-you-want-llvm-to-live``
 * Read-Only: ``svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm``

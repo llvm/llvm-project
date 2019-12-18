@@ -326,7 +326,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FP_EXTEND:           return "strict_fp_extend";
 
   case ISD::SINT_TO_FP:                 return "sint_to_fp";
+  case ISD::STRICT_SINT_TO_FP:          return "strict_sint_to_fp";
   case ISD::UINT_TO_FP:                 return "uint_to_fp";
+  case ISD::STRICT_UINT_TO_FP:          return "strict_uint_to_fp";
   case ISD::FP_TO_SINT:                 return "fp_to_sint";
   case ISD::STRICT_FP_TO_SINT:          return "strict_fp_to_sint";
   case ISD::FP_TO_UINT:                 return "fp_to_uint";

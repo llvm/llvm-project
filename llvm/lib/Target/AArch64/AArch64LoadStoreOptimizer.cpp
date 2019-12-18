@@ -230,69 +230,6 @@ static bool isTagStore(const MachineInstr &MI) {
   }
 }
 
-// Scaling factor for unscaled load or store.
-static int getMemScale(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Opcode has unknown scale!");
-  case AArch64::LDRBBui:
-  case AArch64::LDURBBi:
-  case AArch64::LDRSBWui:
-  case AArch64::LDURSBWi:
-  case AArch64::STRBBui:
-  case AArch64::STURBBi:
-    return 1;
-  case AArch64::LDRHHui:
-  case AArch64::LDURHHi:
-  case AArch64::LDRSHWui:
-  case AArch64::LDURSHWi:
-  case AArch64::STRHHui:
-  case AArch64::STURHHi:
-    return 2;
-  case AArch64::LDRSui:
-  case AArch64::LDURSi:
-  case AArch64::LDRSWui:
-  case AArch64::LDURSWi:
-  case AArch64::LDRWui:
-  case AArch64::LDURWi:
-  case AArch64::STRSui:
-  case AArch64::STURSi:
-  case AArch64::STRWui:
-  case AArch64::STURWi:
-  case AArch64::LDPSi:
-  case AArch64::LDPSWi:
-  case AArch64::LDPWi:
-  case AArch64::STPSi:
-  case AArch64::STPWi:
-    return 4;
-  case AArch64::LDRDui:
-  case AArch64::LDURDi:
-  case AArch64::LDRXui:
-  case AArch64::LDURXi:
-  case AArch64::STRDui:
-  case AArch64::STURDi:
-  case AArch64::STRXui:
-  case AArch64::STURXi:
-  case AArch64::LDPDi:
-  case AArch64::LDPXi:
-  case AArch64::STPDi:
-  case AArch64::STPXi:
-    return 8;
-  case AArch64::LDRQui:
-  case AArch64::LDURQi:
-  case AArch64::STRQui:
-  case AArch64::STURQi:
-  case AArch64::LDPQi:
-  case AArch64::STPQi:
-  case AArch64::STGOffset:
-  case AArch64::STZGOffset:
-  case AArch64::ST2GOffset:
-  case AArch64::STZ2GOffset:
-  case AArch64::STGPi:
-    return 16;
-  }
-}
-
 static unsigned getMatchingNonSExtOpcode(unsigned Opc,
                                          bool *IsValidLdStrOpc = nullptr) {
   if (IsValidLdStrOpc)
@@ -603,7 +540,7 @@ static void getPrePostIndexedMemOpInfo(const MachineInstr &MI, int &Scale,
   // ST*G and all paired ldst have the same scale in pre/post-indexed variants
   // as in the "unsigned offset" variant.
   // All other pre/post indexed ldst instructions are unscaled.
-  Scale = (IsTagStore || IsPaired) ? getMemScale(MI) : 1;
+  Scale = (IsTagStore || IsPaired) ? AArch64InstrInfo::getMemScale(MI) : 1;
 
   if (IsPaired) {
     MinOffset = -64;
@@ -635,8 +572,8 @@ static bool isLdOffsetInRangeOfSt(MachineInstr &LoadInst,
                                   MachineInstr &StoreInst,
                                   const AArch64InstrInfo *TII) {
   assert(isMatchingStore(LoadInst, StoreInst) && "Expect only matched ld/st.");
-  int LoadSize = getMemScale(LoadInst);
-  int StoreSize = getMemScale(StoreInst);
+  int LoadSize = TII->getMemScale(LoadInst);
+  int StoreSize = TII->getMemScale(StoreInst);
   int UnscaledStOffset = TII->isUnscaledLdSt(StoreInst)
                              ? getLdStOffsetOp(StoreInst).getImm()
                              : getLdStOffsetOp(StoreInst).getImm() * StoreSize;
@@ -746,7 +683,7 @@ AArch64LoadStoreOpt::mergeNarrowZeroStores(MachineBasicBlock::iterator I,
 
   unsigned Opc = I->getOpcode();
   bool IsScaled = !TII->isUnscaledLdSt(Opc);
-  int OffsetStride = IsScaled ? 1 : getMemScale(*I);
+  int OffsetStride = IsScaled ? 1 : TII->getMemScale(*I);
 
   bool MergeForward = Flags.getMergeForward();
   // Insert our new paired instruction after whichever of the paired
@@ -853,7 +790,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   unsigned Opc =
       SExtIdx == -1 ? I->getOpcode() : getMatchingNonSExtOpcode(I->getOpcode());
   bool IsUnscaled = TII->isUnscaledLdSt(Opc);
-  int OffsetStride = IsUnscaled ? getMemScale(*I) : 1;
+  int OffsetStride = IsUnscaled ? TII->getMemScale(*I) : 1;
 
   bool MergeForward = Flags.getMergeForward();
 
@@ -938,11 +875,11 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     // We're trying to pair instructions that differ in how they are scaled.  If
     // I is scaled then scale the offset of Paired accordingly.  Otherwise, do
     // the opposite (i.e., make Paired's offset unscaled).
-    int MemSize = getMemScale(*Paired);
+    int MemSize = TII->getMemScale(*Paired);
     if (PairedIsUnscaled) {
       // If the unscaled offset isn't a multiple of the MemSize, we can't
       // pair the operations together.
-      assert(!(PairedOffset % getMemScale(*Paired)) &&
+      assert(!(PairedOffset % TII->getMemScale(*Paired)) &&
              "Offset should be a multiple of the stride!");
       PairedOffset /= MemSize;
     } else {
@@ -967,9 +904,9 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   int OffsetImm = getLdStOffsetOp(*RtMI).getImm();
   // Scale the immediate offset, if necessary.
   if (TII->isUnscaledLdSt(RtMI->getOpcode())) {
-    assert(!(OffsetImm % getMemScale(*RtMI)) &&
+    assert(!(OffsetImm % TII->getMemScale(*RtMI)) &&
            "Unscaled offset cannot be scaled.");
-    OffsetImm /= getMemScale(*RtMI);
+    OffsetImm /= TII->getMemScale(*RtMI);
   }
 
   // Construct the new instruction.
@@ -1069,8 +1006,8 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
   MachineBasicBlock::iterator NextI = LoadI;
   ++NextI;
 
-  int LoadSize = getMemScale(*LoadI);
-  int StoreSize = getMemScale(*StoreI);
+  int LoadSize = TII->getMemScale(*LoadI);
+  int StoreSize = TII->getMemScale(*StoreI);
   Register LdRt = getLdStRegOp(*LoadI).getReg();
   const MachineOperand &StMO = getLdStRegOp(*StoreI);
   Register StRt = getLdStRegOp(*StoreI).getReg();
@@ -1489,7 +1426,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   Register Reg = getLdStRegOp(FirstMI).getReg();
   Register BaseReg = getLdStBaseOp(FirstMI).getReg();
   int Offset = getLdStOffsetOp(FirstMI).getImm();
-  int OffsetStride = IsUnscaled ? getMemScale(FirstMI) : 1;
+  int OffsetStride = IsUnscaled ? TII->getMemScale(FirstMI) : 1;
   bool IsPromotableZeroStore = isPromotableZeroStoreInst(FirstMI);
 
   Optional<bool> MaybeCanRename = None;
@@ -1534,7 +1471,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // We're trying to pair instructions that differ in how they are scaled.
         // If FirstMI is scaled then scale the offset of MI accordingly.
         // Otherwise, do the opposite (i.e., make MI's offset unscaled).
-        int MemSize = getMemScale(MI);
+        int MemSize = TII->getMemScale(MI);
         if (MIIsUnscaled) {
           // If the unscaled offset isn't a multiple of the MemSize, we can't
           // pair the operations together: bail and keep looking.
@@ -1792,7 +1729,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
   MachineBasicBlock::iterator MBBI = I;
 
   Register BaseReg = getLdStBaseOp(MemMI).getReg();
-  int MIUnscaledOffset = getLdStOffsetOp(MemMI).getImm() * getMemScale(MemMI);
+  int MIUnscaledOffset = getLdStOffsetOp(MemMI).getImm() * TII->getMemScale(MemMI);
 
   // Scan forward looking for post-index opportunities.  Updating instructions
   // can't be formed if the memory instruction doesn't have the offset we're
@@ -1963,7 +1900,7 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   // with Offset-1)
   bool IsUnscaled = TII->isUnscaledLdSt(MI);
   int Offset = getLdStOffsetOp(MI).getImm();
-  int OffsetStride = IsUnscaled ? getMemScale(MI) : 1;
+  int OffsetStride = IsUnscaled ? TII->getMemScale(MI) : 1;
   // Allow one more for offset.
   if (Offset > 0)
     Offset -= OffsetStride;
@@ -2029,7 +1966,7 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   // The immediate in the load/store is scaled by the size of the memory
   // operation. The immediate in the add we're looking for,
   // however, is not, so adjust here.
-  int UnscaledOffset = getLdStOffsetOp(MI).getImm() * getMemScale(MI);
+  int UnscaledOffset = getLdStOffsetOp(MI).getImm() * TII->getMemScale(MI);
 
   // Look forward to try to find a pre-index instruction. For example,
   // ldr x1, [x0, #64]

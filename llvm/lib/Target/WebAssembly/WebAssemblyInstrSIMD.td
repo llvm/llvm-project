@@ -738,12 +738,31 @@ defm MAX_S : SIMDBinaryIntNoI64x2<smax, "max_s", 96>;
 defm MAX_U : SIMDBinaryIntNoI64x2<umax, "max_u", 97>;
 } // isCommutable = 1
 
+// Integer unsigned rounding average: avgr_u
+def avgr_u_v16i8 :
+  PatFrag<(ops node:$lhs, node:$rhs),
+          (srl
+            (add (add node:$lhs, node:$rhs), (splat16 (i32 1))),
+            (v16i8 (splat16 (i32 1)))
+          )>;
+def avgr_u_v8i16 :
+  PatFrag<(ops node:$lhs, node:$rhs),
+          (srl
+            (add (add node:$lhs, node:$rhs), (splat8 (i32 1))),
+            (v8i16 (splat8 (i32 1)))
+          )>;
+
+let isCommutable = 1, Predicates = [HasUnimplementedSIMD128] in {
+defm AVGR_U : SIMDBinary<v16i8, "i8x16", avgr_u_v16i8, "avgr_u", 217>;
+defm AVGR_U : SIMDBinary<v8i16, "i16x8", avgr_u_v8i16, "avgr_u", 218>;
+}
+
 // Widening dot product: i32x4.dot_i16x8_s
 let isCommutable = 1 in
 defm DOT : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
                   [(set V128:$dst, (int_wasm_dot V128:$lhs, V128:$rhs))],
                   "i32x4.dot_i16x8_s\t$dst, $lhs, $rhs", "i32x4.dot_i16x8_s",
-                  217>;
+                  219>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point unary arithmetic

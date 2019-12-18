@@ -18,7 +18,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Flaky
-    @no_debug_info_test
     def test_default(self):
         '''
             Tests the default launch of a simple program. No arguments,
@@ -36,7 +35,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                         "make sure program path is in first argument")
 
     @skipIfWindows
-    @no_debug_info_test
     def test_stopOnEntry(self):
         '''
             Tests the default launch of a simple program that stops at the
@@ -56,7 +54,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                         'verify stop isn\'t "main" breakpoint')
 
     @skipIfWindows
-    @no_debug_info_test
     def test_cwd(self):
         '''
             Tests the default launch of a simple program with a current working
@@ -84,7 +81,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(found, "verified program working directory")
 
     @skipIfWindows
-    @no_debug_info_test
     def test_debuggerRoot(self):
         '''
             Tests the "debuggerRoot" will change the working directory of
@@ -113,7 +109,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
-    @no_debug_info_test
     def test_sourcePath(self):
         '''
             Tests the "sourcePath" will set the target.source-map.
@@ -139,7 +134,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
-    @no_debug_info_test
     def test_disableSTDIO(self):
         '''
             Tests the default launch of a simple program with STDIO disabled.
@@ -156,7 +150,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
     @skipIfLinux # shell argument expansion doesn't seem to work on Linux
     @expectedFailureNetBSD
-    @no_debug_info_test
     def test_shellExpandArguments_enabled(self):
         '''
             Tests the default launch of a simple program with shell expansion
@@ -180,7 +173,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                                     glob, program))
 
     @skipIfWindows
-    @no_debug_info_test
     def test_shellExpandArguments_disabled(self):
         '''
             Tests the default launch of a simple program with shell expansion
@@ -206,7 +198,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                                     glob, glob))
 
     @skipIfWindows
-    @no_debug_info_test
     def test_args(self):
         '''
             Tests launch of a simple program with arguments
@@ -232,7 +223,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                             'arg[%i] "%s" not in "%s"' % (i+1, quoted_arg, lines[i]))
 
     @skipIfWindows
-    @no_debug_info_test
     def test_environment(self):
         '''
             Tests launch of a simple program with environment variables
@@ -265,7 +255,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                                 var, lines))
 
     @skipIfWindows
-    @no_debug_info_test
     def test_commands(self):
         '''
             Tests the "initCommands", "preRunCommands", "stopCommands" and
@@ -332,7 +321,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.verify_commands('exitCommands', output, exitCommands)
 
     @skipIfWindows
-    @no_debug_info_test
     def test_extra_launch_commands(self):
         '''
             Tests the "luanchCommands" with extra launching settings

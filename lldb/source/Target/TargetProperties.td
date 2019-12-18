@@ -4,9 +4,6 @@ let Definition = "experimental" in {
   def InjectLocalVars : Property<"inject-local-vars", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, inject local variables explicitly into the expression text. This will fix symbol resolution when there are name collisions between ivars and local variables. But it can make expressions run much more slowly.">;
-  def UseModernTypeLookup : Property<"use-modern-type-lookup", "Boolean">,
-    Global, DefaultFalse,
-    Desc<"If true, use Clang's modern type lookup infrastructure.">;
 }
 
 let Definition = "target" in {

@@ -922,7 +922,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setOperationAction(ISD::FREM, MVT::f128, Expand);
       }
       setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Custom);
-
+      setOperationAction(ISD::BSWAP, MVT::v8i16, Legal);
+      setOperationAction(ISD::BSWAP, MVT::v4i32, Legal);
+      setOperationAction(ISD::BSWAP, MVT::v2i64, Legal);
+      setOperationAction(ISD::BSWAP, MVT::v1i128, Legal);
     }
 
     if (Subtarget.hasP9Altivec()) {

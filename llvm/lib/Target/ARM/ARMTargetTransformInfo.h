@@ -159,6 +159,10 @@ public:
     return isLegalMaskedLoad(DataTy, Alignment);
   }
 
+  bool isLegalMaskedGather(Type *Ty, MaybeAlign Alignment) { return false; }
+
+  bool isLegalMaskedScatter(Type *Ty, MaybeAlign Alignment) { return false; }
+
   int getMemcpyCost(const Instruction *I);
 
   int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);

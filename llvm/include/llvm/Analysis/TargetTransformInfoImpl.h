@@ -272,9 +272,13 @@ public:
     return Alignment >= DataSize && isPowerOf2_32(DataSize);
   }
 
-  bool isLegalMaskedScatter(Type *DataType) { return false; }
+  bool isLegalMaskedScatter(Type *DataType, MaybeAlign Alignment) {
+    return false;
+  }
 
-  bool isLegalMaskedGather(Type *DataType) { return false; }
+  bool isLegalMaskedGather(Type *DataType, MaybeAlign Alignment) {
+    return false;
+  }
 
   bool isLegalMaskedCompressStore(Type *DataType) { return false; }
 

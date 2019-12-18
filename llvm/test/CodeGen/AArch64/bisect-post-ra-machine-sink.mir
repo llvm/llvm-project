@@ -9,7 +9,7 @@
 # RUN-POSTRA: bb.0:
 # RUN-POSTRA-NOT: $w19 = COPY killed $w0
 # RUN-POSTRA: bb.1:
-# RUN-POSTRA: liveins: $w1, $w0
+# RUN-POSTRA: liveins: $w0, $w1
 # RUN-POSTRA: renamable $w19 = COPY killed $w0
 
 # Make sure the pass it not run.

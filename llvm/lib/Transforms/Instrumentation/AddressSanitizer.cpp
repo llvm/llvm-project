@@ -2901,15 +2901,14 @@ void FunctionStackPoisoner::copyArgsPassedByValToAllocas() {
   for (Argument &Arg : F.args()) {
     if (Arg.hasByValAttr()) {
       Type *Ty = Arg.getType()->getPointerElementType();
-      unsigned Alignment = Arg.getParamAlignment();
-      if (Alignment == 0)
-        Alignment = DL.getABITypeAlignment(Ty);
+      const Align Alignment =
+          DL.getValueOrABITypeAlignment(Arg.getParamAlign(), Ty);
 
       AllocaInst *AI = IRB.CreateAlloca(
           Ty, nullptr,
           (Arg.hasName() ? Arg.getName() : "Arg" + Twine(Arg.getArgNo())) +
               ".byval");
-      AI->setAlignment(Align(Alignment));
+      AI->setAlignment(Alignment);
       Arg.replaceAllUsesWith(AI);
 
       uint64_t AllocSize = DL.getTypeAllocSize(Ty);

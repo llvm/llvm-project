@@ -221,13 +221,13 @@ let Predicates = [FeatureNoVectorEnhancements1] in {
 
 // Convert a signed integer register value to a floating-point one.
 let Uses = [FPC], mayRaiseFPException = 1 in {
-  def CEFBR : UnaryRRE<"cefbr", 0xB394, sint_to_fp, FP32,  GR32>;
-  def CDFBR : UnaryRRE<"cdfbr", 0xB395, sint_to_fp, FP64,  GR32>;
-  def CXFBR : UnaryRRE<"cxfbr", 0xB396, sint_to_fp, FP128, GR32>;
+  def CEFBR : UnaryRRE<"cefbr", 0xB394, any_sint_to_fp, FP32,  GR32>;
+  def CDFBR : UnaryRRE<"cdfbr", 0xB395, any_sint_to_fp, FP64,  GR32>;
+  def CXFBR : UnaryRRE<"cxfbr", 0xB396, any_sint_to_fp, FP128, GR32>;
 
-  def CEGBR : UnaryRRE<"cegbr", 0xB3A4, sint_to_fp, FP32,  GR64>;
-  def CDGBR : UnaryRRE<"cdgbr", 0xB3A5, sint_to_fp, FP64,  GR64>;
-  def CXGBR : UnaryRRE<"cxgbr", 0xB3A6, sint_to_fp, FP128, GR64>;
+  def CEGBR : UnaryRRE<"cegbr", 0xB3A4, any_sint_to_fp, FP32,  GR64>;
+  def CDGBR : UnaryRRE<"cdgbr", 0xB3A5, any_sint_to_fp, FP64,  GR64>;
+  def CXGBR : UnaryRRE<"cxgbr", 0xB3A6, any_sint_to_fp, FP128, GR64>;
 }
 
 // The FP extension feature provides versions of the above that allow
@@ -254,13 +254,13 @@ let Predicates = [FeatureFPExtension] in {
     def CXLGBR : TernaryRRFe<"cxlgbr", 0xB3A2, FP128, GR64>;
   }
 
-  def : Pat<(f32  (uint_to_fp GR32:$src)), (CELFBR 0, GR32:$src, 0)>;
-  def : Pat<(f64  (uint_to_fp GR32:$src)), (CDLFBR 0, GR32:$src, 0)>;
-  def : Pat<(f128 (uint_to_fp GR32:$src)), (CXLFBR 0, GR32:$src, 0)>;
+  def : Pat<(f32  (any_uint_to_fp GR32:$src)), (CELFBR 0, GR32:$src, 0)>;
+  def : Pat<(f64  (any_uint_to_fp GR32:$src)), (CDLFBR 0, GR32:$src, 0)>;
+  def : Pat<(f128 (any_uint_to_fp GR32:$src)), (CXLFBR 0, GR32:$src, 0)>;
 
-  def : Pat<(f32  (uint_to_fp GR64:$src)), (CELGBR 0, GR64:$src, 0)>;
-  def : Pat<(f64  (uint_to_fp GR64:$src)), (CDLGBR 0, GR64:$src, 0)>;
-  def : Pat<(f128 (uint_to_fp GR64:$src)), (CXLGBR 0, GR64:$src, 0)>;
+  def : Pat<(f32  (any_uint_to_fp GR64:$src)), (CELGBR 0, GR64:$src, 0)>;
+  def : Pat<(f64  (any_uint_to_fp GR64:$src)), (CDLGBR 0, GR64:$src, 0)>;
+  def : Pat<(f128 (any_uint_to_fp GR64:$src)), (CXLGBR 0, GR64:$src, 0)>;
 }
 
 // Convert a floating-point register value to a signed integer value,

@@ -884,16 +884,16 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       continue;
     case Intrinsic::memcpy: {
       MemCpyInst *MemCpy = cast<MemCpyInst>(Intr);
-      Builder.CreateMemCpy(MemCpy->getRawDest(), MemCpy->getDestAlignment(),
-                           MemCpy->getRawSource(), MemCpy->getSourceAlignment(),
+      Builder.CreateMemCpy(MemCpy->getRawDest(), MemCpy->getDestAlign(),
+                           MemCpy->getRawSource(), MemCpy->getSourceAlign(),
                            MemCpy->getLength(), MemCpy->isVolatile());
       Intr->eraseFromParent();
       continue;
     }
     case Intrinsic::memmove: {
       MemMoveInst *MemMove = cast<MemMoveInst>(Intr);
-      Builder.CreateMemMove(MemMove->getRawDest(), MemMove->getDestAlignment(),
-                            MemMove->getRawSource(), MemMove->getSourceAlignment(),
+      Builder.CreateMemMove(MemMove->getRawDest(), MemMove->getDestAlign(),
+                            MemMove->getRawSource(), MemMove->getSourceAlign(),
                             MemMove->getLength(), MemMove->isVolatile());
       Intr->eraseFromParent();
       continue;

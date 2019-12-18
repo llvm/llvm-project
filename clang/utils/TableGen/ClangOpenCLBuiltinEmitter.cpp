@@ -26,6 +26,11 @@
 //
 //  * Structs and enums to represent types and function signatures.
 //
+//  * const char *FunctionExtensionTable[]
+//    List of space-separated OpenCL extensions.  A builtin references an
+//    entry in this table when the builtin requires a particular (set of)
+//    extension(s) to be enabled.
+//
 //  * OpenCLTypeStruct TypeTable[]
 //    Type information for return types and arguments.
 //
@@ -133,6 +138,9 @@ private:
   // function names.
   void GroupBySignature();
 
+  // Emit the FunctionExtensionTable that lists all function extensions.
+  void EmitExtensionTable();
+
   // Emit the TypeTable containing all types used by OpenCL builtins.
   void EmitTypeTable();
 
@@ -150,12 +158,13 @@ private:
   // each function, and is a struct OpenCLBuiltinDecl.
   // E.g.:
   // // 891 convert_float2_rtn
-  //   { 58, 2, 100, 0 },
+  //   { 58, 2, 3, 100, 0 },
   // This means that the signature of this convert_float2_rtn overload has
   // 1 argument (+1 for the return type), stored at index 58 in
-  // the SignatureTable.  The last two values represent the minimum (1.0) and
-  // maximum (0, meaning no max version) OpenCL version in which this overload
-  // is supported.
+  // the SignatureTable.  This prototype requires extension "3" in the
+  // FunctionExtensionTable.  The last two values represent the minimum (1.0)
+  // and maximum (0, meaning no max version) OpenCL version in which this
+  // overload is supported.
   void EmitBuiltinTable();
 
   // Emit a StringMatcher function to check whether a function name is an
@@ -190,6 +199,10 @@ private:
 
   // Contains the map of OpenCL types to their index in the TypeTable.
   MapVector<const Record *, unsigned> TypeMap;
+
+  // List of OpenCL function extensions mapping extension strings to
+  // an index into the FunctionExtensionTable.
+  StringMap<unsigned> FunctionExtensionIndex;
 
   // List of OpenCL type names in the same order as in enum OpenCLTypeID.
   // This list does not contain generic types.
@@ -227,16 +240,18 @@ void BuiltinNameEmitter::Emit() {
   // Emit enums and structs.
   EmitDeclarations();
 
+  // Parse the Records to populate the internal lists.
   GetOverloads();
   GroupBySignature();
 
   // Emit tables.
+  EmitExtensionTable();
   EmitTypeTable();
   EmitSignatureTable();
   EmitBuiltinTable();
 
+  // Emit functions.
   EmitStringMatcher();
-
   EmitQualTypeFinder();
 }
 
@@ -323,6 +338,8 @@ struct OpenCLBuiltinStruct {
   const bool IsConst;
   // Function attribute __attribute__((convergent))
   const bool IsConv;
+  // OpenCL extension(s) required for this overload.
+  const unsigned short Extension;
   // First OpenCL version in which this overload was introduced (e.g. CL20).
   const unsigned short MinVersion;
   // First OpenCL version in which this overload was removed (e.g. CL20).
@@ -413,6 +430,23 @@ void BuiltinNameEmitter::GetOverloads() {
   }
 }
 
+void BuiltinNameEmitter::EmitExtensionTable() {
+  OS << "static const char *FunctionExtensionTable[] = {\n";
+  unsigned Index = 0;
+  std::vector<Record *> FuncExtensions =
+      Records.getAllDerivedDefinitions("FunctionExtension");
+
+  for (const auto &FE : FuncExtensions) {
+    // Emit OpenCL extension table entry.
+    OS << "  // " << Index << ": " << FE->getName() << "\n"
+       << "  \"" << FE->getValueAsString("ExtName") << "\",\n";
+
+    // Record index of this extension.
+    FunctionExtensionIndex[FE->getName()] = Index++;
+  }
+  OS << "};\n\n";
+}
+
 void BuiltinNameEmitter::EmitTypeTable() {
   OS << "static const OpenCLTypeStruct TypeTable[] = {\n";
   for (const auto &T : TypeMap) {
@@ -463,11 +497,13 @@ void BuiltinNameEmitter::EmitBuiltinTable() {
     OS << "\n";
 
     for (const auto &Overload : SLM.second.Signatures) {
+      StringRef ExtName = Overload.first->getValueAsDef("Extension")->getName();
       OS << "  { " << Overload.second << ", "
          << Overload.first->getValueAsListOfDefs("Signature").size() << ", "
          << (Overload.first->getValueAsBit("IsPure")) << ", "
          << (Overload.first->getValueAsBit("IsConst")) << ", "
          << (Overload.first->getValueAsBit("IsConv")) << ", "
+         << FunctionExtensionIndex[ExtName] << ", "
          << Overload.first->getValueAsDef("MinVersion")->getValueAsInt("ID")
          << ", "
          << Overload.first->getValueAsDef("MaxVersion")->getValueAsInt("ID")
@@ -496,8 +532,8 @@ bool BuiltinNameEmitter::CanReuseSignature(
             Rec2->getValueAsDef("MinVersion")->getValueAsInt("ID") &&
         Rec->getValueAsDef("MaxVersion")->getValueAsInt("ID") ==
             Rec2->getValueAsDef("MaxVersion")->getValueAsInt("ID") &&
-        Rec->getValueAsString("Extension") ==
-            Rec2->getValueAsString("Extension")) {
+        Rec->getValueAsDef("Extension")->getName() ==
+            Rec2->getValueAsDef("Extension")->getName()) {
       return true;
     }
   }

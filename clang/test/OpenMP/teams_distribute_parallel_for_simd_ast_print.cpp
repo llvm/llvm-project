@@ -157,7 +157,7 @@ T tmain(T argc) {
 // CHECK-NEXT: foo();
 #pragma omp target
 #ifdef OMP5
-#pragma omp teams distribute parallel for simd if(simd:argc)
+#pragma omp teams distribute parallel for simd if(simd:argc) nontemporal(argc, c, d)
 #else
 #pragma omp teams distribute parallel for simd
 #endif // OMP5
@@ -165,7 +165,7 @@ T tmain(T argc) {
     foo();
 // CHECK: #pragma omp target
 // OMP45-NEXT: #pragma omp teams distribute parallel for simd
-// OMP50-NEXT: #pragma omp teams distribute parallel for simd if(simd: argc)
+// OMP50-NEXT: #pragma omp teams distribute parallel for simd if(simd: argc) nontemporal(argc,c,d)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: foo();
 #pragma omp target

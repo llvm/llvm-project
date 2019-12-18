@@ -2,13 +2,73 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
-; FIXME: llvm.experimental.constrained.[su]itofp does not yet exist
+declare fp128 @llvm.experimental.constrained.sitofp.f128.i32(i32, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.sitofp.f128.i64(i64, metadata, metadata)
+
+declare fp128 @llvm.experimental.constrained.uitofp.f128.i32(i32, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.uitofp.f128.i64(i64, metadata, metadata)
 
 declare i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128, metadata)
 declare i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128, metadata)
 
 declare i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128, metadata)
 declare i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128, metadata)
+
+; Test signed i32->f128.
+define void @f1(i32 %i, fp128 *%dst) #0 {
+; CHECK-LABEL: f1:
+; CHECK: cxfbr %f0, %r2
+; CHECK: vmrhg %v0, %v0, %v2
+; CHECK: vst %v0, 0(%r3)
+; CHECK: br %r14
+  %conv = call fp128 @llvm.experimental.constrained.sitofp.f128.i32(i32 %i,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  store fp128 %conv, fp128 *%dst
+  ret void
+}
+
+; Test signed i64->f128.
+define void @f2(i64 %i, fp128 *%dst) #0 {
+; CHECK-LABEL: f2:
+; CHECK: cxgbr %f0, %r2
+; CHECK: vmrhg %v0, %v0, %v2
+; CHECK: vst %v0, 0(%r3)
+; CHECK: br %r14
+  %conv = call fp128 @llvm.experimental.constrained.sitofp.f128.i64(i64 %i,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  store fp128 %conv, fp128 *%dst
+  ret void
+}
+
+; Test unsigned i32->f128.
+define void @f3(i32 %i, fp128 *%dst) #0 {
+; CHECK-LABEL: f3:
+; CHECK: cxlfbr %f0, 0, %r2, 0
+; CHECK: vmrhg %v0, %v0, %v2
+; CHECK: vst %v0, 0(%r3)
+; CHECK: br %r14
+  %conv = call fp128 @llvm.experimental.constrained.uitofp.f128.i32(i32 %i,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  store fp128 %conv, fp128 *%dst
+  ret void
+}
+
+; Test unsigned i64->f128.
+define void @f4(i64 %i, fp128 *%dst) #0 {
+; CHECK-LABEL: f4:
+; CHECK: cxlgbr %f0, 0, %r2, 0
+; CHECK: vmrhg %v0, %v0, %v2
+; CHECK: vst %v0, 0(%r3)
+; CHECK: br %r14
+  %conv = call fp128 @llvm.experimental.constrained.uitofp.f128.i64(i64 %i,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  store fp128 %conv, fp128 *%dst
+  ret void
+}
 
 ; Test signed f128->i32.
 define i32 @f5(fp128 *%src) #0 {

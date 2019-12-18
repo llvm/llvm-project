@@ -6,7 +6,7 @@
 # CHECK-LABEL: bb.0:
 # CHECK-NOT: $w19 = COPY killed $w0
 # CHECK-LABEL: bb.1:
-# CHECK: liveins: $w1, $w0
+# CHECK: liveins: $w0, $w1
 # CHECK: renamable $w19 = COPY killed $w0
 
 name: sinkcopy1
@@ -35,7 +35,7 @@ body: |
 # CHECK-LABEL: bb.0:
 # CHECK-NOT: renamable $w19 = COPY killed $w0
 # CHECK-LABEL: bb.2:
-# CHECK: liveins: $w1, $w0
+# CHECK: liveins: $w0, $w1
 # CHECK: renamable $w19 = COPY killed $w0
 name: sinkcopy2
 tracksRegLiveness: true
@@ -63,7 +63,7 @@ body: |
 # CHECK-LABEL: bb.0:
 # CHECK-NOT: renamable $w19 = COPY killed $w0
 # CHECK-LABEL: bb.1:
-# CHECK: liveins: $w1, $w0
+# CHECK: liveins: $w0, $w1
 # CHECK: renamable $w19 = COPY killed $w0
 # CHECK: renamable $w20 = COPY killed $w1
 name: sinkcopy3
@@ -89,7 +89,7 @@ body: |
 # CHECK-NOT: renamable $w19 = COPY killed $w0
 # CHECK-NOT: renamable $w20 = COPY killed $w1
 # CHECK-LABEL: bb.1:
-# CHECK: liveins: $w1, $w0
+# CHECK: liveins: $w0, $w1
 # CHECK: renamable $w19 = COPY killed $w0
 # CHECK-LABEL: bb.2:
 # CHECK: liveins: $w0, $w1
@@ -123,7 +123,7 @@ body: |
 # CHECK-LABEL: bb.2:
 # CHECK: $w1 = ADDWrr $w1, $w0
 # CHECK-LABEL: bb.3:
-# CHECK: liveins: $w1, $w0
+# CHECK: liveins: $w0, $w1
 # CHECK: renamable $w19 = COPY killed $w0
 name: sinkcopy5
 tracksRegLiveness: true
@@ -155,7 +155,7 @@ body: |
 # CHECK-NOT: renamable $w19 = COPY $w0
 # CHECK-NOT: renamable $w20 = COPY $w0
 # CHECK-LABEL: bb.2:
-# CHECK: liveins: $w1, $w0
+# CHECK: liveins: $w0, $w1
 # CHECK: renamable $w19 = COPY $w0
 # CHECK: renamable $w20 = COPY $w19
 name: sinkcopy6
@@ -213,7 +213,7 @@ body: |
 # CHECK-LABEL: bb.2:
 # CHECK: $w1 = ADDWrr $w1, $w0, implicit $x0
 # CHECK-LABEL: bb.3:
-# CHECK: liveins: $x1, $w0
+# CHECK: liveins: $w0, $x1
 # CHECK: renamable $w19 = COPY killed $w0, implicit-def $x19
 name: sinkcopy8
 tracksRegLiveness: true

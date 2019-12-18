@@ -200,8 +200,8 @@ public:
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
   void writeGotHeader(uint8_t *buf) const override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
@@ -669,9 +669,9 @@ void PPC64::writePltHeader(uint8_t *buf) const {
   write64(buf + 52, gotPltOffset);
 }
 
-void PPC64::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                     uint64_t pltEntryAddr, int32_t index) const {
-  int32_t offset = pltHeaderSize + index * pltEntrySize;
+void PPC64::writePlt(uint8_t *buf, const Symbol &sym,
+                     uint64_t /*pltEntryAddr*/) const {
+  int32_t offset = pltHeaderSize + sym.pltIndex * pltEntrySize;
   // bl __glink_PLTresolve
   write32(buf, 0x48000000 | ((-offset) & 0x03FFFFFc));
 }

@@ -2769,8 +2769,7 @@ void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
   Asm->EmitULEB128(dwarf::DW_MACINFO_end_file);
 }
 
-/// Emit macros into a debug macinfo section.
-void DwarfDebug::emitDebugMacinfo() {
+void DwarfDebug::emitDebugMacinfoImpl(MCSection *Section) {
   for (const auto &P : CUMap) {
     auto &TheCU = *P.second;
     auto *SkCU = TheCU.getSkeleton();
@@ -2779,8 +2778,7 @@ void DwarfDebug::emitDebugMacinfo() {
     DIMacroNodeArray Macros = CUNode->getMacros();
     if (Macros.empty())
       continue;
-    Asm->OutStreamer->SwitchSection(
-        Asm->getObjFileLowering().getDwarfMacinfoSection());
+    Asm->OutStreamer->SwitchSection(Section);
     Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
     handleMacroNodes(Macros, U);
     Asm->OutStreamer->AddComment("End Of Macro List Mark");
@@ -2788,22 +2786,13 @@ void DwarfDebug::emitDebugMacinfo() {
   }
 }
 
+/// Emit macros into a debug macinfo section.
+void DwarfDebug::emitDebugMacinfo() {
+  emitDebugMacinfoImpl(Asm->getObjFileLowering().getDwarfMacinfoSection());
+}
+
 void DwarfDebug::emitDebugMacinfoDWO() {
-  for (const auto &P : CUMap) {
-    auto &TheCU = *P.second;
-    auto *SkCU = TheCU.getSkeleton();
-    DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
-    auto *CUNode = cast<DICompileUnit>(P.first);
-    DIMacroNodeArray Macros = CUNode->getMacros();
-    if (Macros.empty())
-      continue;
-    Asm->OutStreamer->SwitchSection(
-        Asm->getObjFileLowering().getDwarfMacinfoDWOSection());
-    Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
-    handleMacroNodes(Macros, U);
-    Asm->OutStreamer->AddComment("End Of Macro List Mark");
-    Asm->emitInt8(0);
-  }
+  emitDebugMacinfoImpl(Asm->getObjFileLowering().getDwarfMacinfoDWOSection());
 }
 
 // DWARF5 Experimental Separate Dwarf emitters.

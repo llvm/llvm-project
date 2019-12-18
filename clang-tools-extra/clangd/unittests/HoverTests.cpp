@@ -104,7 +104,7 @@ TEST(Hover, Structured) {
           }}
           )cpp",
        [](HoverInfo &HI) {
-         HI.NamespaceScope = "ns1::(anonymous)::";
+         HI.NamespaceScope = "ns1::";
          HI.LocalScope = "(anonymous struct)::";
          HI.Name = "bar";
          HI.Kind = index::SymbolKind::Field;
@@ -362,7 +362,7 @@ void foo())cpp";
         }
         )cpp",
        [](HoverInfo &HI) {
-         HI.Name = "class (lambda)";
+         HI.Name = "(lambda)";
          HI.Kind = index::SymbolKind::Class;
        }},
       // auto on template instantiation
@@ -373,7 +373,7 @@ void foo())cpp";
         }
         )cpp",
        [](HoverInfo &HI) {
-         HI.Name = "class Foo<int>";
+         HI.Name = "Foo<int>";
          HI.Kind = index::SymbolKind::Class;
        }},
       // auto on specialized template
@@ -385,7 +385,7 @@ void foo())cpp";
         }
         )cpp",
        [](HoverInfo &HI) {
-         HI.Name = "class Foo<int>";
+         HI.Name = "Foo<int>";
          HI.Kind = index::SymbolKind::Class;
        }},
 
@@ -524,6 +524,44 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.LocalScope = "boom::";
        }},
+      {
+          R"cpp(// Should not print inline or anon namespaces.
+          namespace ns {
+            inline namespace in_ns {
+              namespace a {
+                namespace {
+                  namespace b {
+                    inline namespace in_ns2 {
+                      class Foo {};
+                    } // in_ns2
+                  } // b
+                } // anon
+              } // a
+            } // in_ns
+          } // ns
+          void foo() {
+            ns::a::b::[[F^oo]] x;
+            (void)x;
+          }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "Foo";
+            HI.Kind = index::SymbolKind::Class;
+            HI.NamespaceScope = "ns::a::b::";
+            HI.Definition = "class Foo {}";
+          }},
+      {
+          R"cpp(
+          template <typename T> class Foo {};
+          class X;
+          void foo() {
+            [[^auto]] x = Foo<X>();
+          }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "Foo<X>";
+            HI.Kind = index::SymbolKind::Class;
+          }},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
@@ -895,7 +933,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "foo";
             HI.Kind = index::SymbolKind::Variable;
-            HI.NamespaceScope = "ns::(anonymous)::";
+            HI.NamespaceScope = "ns::";
             HI.Type = "int";
             HI.Definition = "int foo";
           }},
@@ -1173,7 +1211,7 @@ TEST(Hover, All) {
             }
           )cpp",
           [](HoverInfo &HI) {
-            HI.Name = "class std::initializer_list<int>";
+            HI.Name = "initializer_list<int>";
             HI.Kind = index::SymbolKind::Class;
           }},
       {
@@ -1231,7 +1269,7 @@ TEST(Hover, All) {
             }
           )cpp",
           [](HoverInfo &HI) {
-            HI.Name = "struct Bar";
+            HI.Name = "Bar";
             HI.Kind = index::SymbolKind::Struct;
           }},
       {
@@ -1242,7 +1280,7 @@ TEST(Hover, All) {
             }
           )cpp",
           [](HoverInfo &HI) {
-            HI.Name = "struct Bar";
+            HI.Name = "Bar";
             HI.Kind = index::SymbolKind::Struct;
           }},
       {
@@ -1253,7 +1291,7 @@ TEST(Hover, All) {
             }
           )cpp",
           [](HoverInfo &HI) {
-            HI.Name = "struct Bar";
+            HI.Name = "Bar";
             HI.Kind = index::SymbolKind::Struct;
           }},
       {
@@ -1265,7 +1303,7 @@ TEST(Hover, All) {
             }
           )cpp",
           [](HoverInfo &HI) {
-            HI.Name = "struct Bar";
+            HI.Name = "Bar";
             HI.Kind = index::SymbolKind::Struct;
           }},
       {
@@ -1277,7 +1315,7 @@ TEST(Hover, All) {
             }
           )cpp",
           [](HoverInfo &HI) {
-            HI.Name = "struct Bar";
+            HI.Name = "Bar";
             HI.Kind = index::SymbolKind::Struct;
           }},
       {
@@ -1289,7 +1327,7 @@ TEST(Hover, All) {
             }
           )cpp",
           [](HoverInfo &HI) {
-            HI.Name = "struct Bar";
+            HI.Name = "Bar";
             HI.Kind = index::SymbolKind::Struct;
           }},
       {
@@ -1300,7 +1338,7 @@ TEST(Hover, All) {
             }
           )cpp",
           [](HoverInfo &HI) {
-            HI.Name = "struct Bar";
+            HI.Name = "Bar";
             HI.Kind = index::SymbolKind::Struct;
           }},
       {
@@ -1364,7 +1402,7 @@ TEST(Hover, All) {
             }
           )cpp",
           [](HoverInfo &HI) {
-            HI.Name = "struct Bar";
+            HI.Name = "Bar";
             HI.Kind = index::SymbolKind::Struct;
           }},
       {
@@ -1395,6 +1433,32 @@ TEST(Hover, All) {
             HI.Type = "struct Test &&";
             HI.Definition = "struct Test &&test = {}";
             HI.Value = "{}";
+          }},
+      {
+          R"cpp(// auto on alias
+          typedef int int_type;
+          ^[[auto]] x = int_type();
+          )cpp",
+          [](HoverInfo &HI) { HI.Name = "int"; }},
+      {
+          R"cpp(// auto on alias
+          struct cls {};
+          typedef cls cls_type;
+          ^[[auto]] y = cls_type();
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "cls";
+            HI.Kind = index::SymbolKind::Struct;
+          }},
+      {
+          R"cpp(// auto on alias
+          template <class>
+          struct templ {};
+          ^[[auto]] z = templ<int>();
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "templ<int>";
+            HI.Kind = index::SymbolKind::Struct;
           }},
   };
 

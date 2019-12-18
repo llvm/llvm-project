@@ -3373,7 +3373,6 @@ define <1 x float> @constrained_vector_maxnum_v1f32() #0 {
 entry:
   %max = call <1 x float> @llvm.experimental.constrained.maxnum.v1f32(
                                <1 x float> <float 42.0>, <1 x float> <float 41.0>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %max
 }
@@ -3416,7 +3415,6 @@ entry:
   %max = call <2 x double> @llvm.experimental.constrained.maxnum.v2f64(
                                 <2 x double> <double 43.0, double 42.0>,
                                 <2 x double> <double 41.0, double 40.0>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %max
 }
@@ -3472,7 +3470,6 @@ entry:
   %max = call <3 x float> @llvm.experimental.constrained.maxnum.v3f32(
                               <3 x float> <float 43.0, float 44.0, float 45.0>,
                               <3 x float> <float 41.0, float 42.0, float 43.0>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %max
 }
@@ -3530,7 +3527,6 @@ entry:
   %max = call <3 x double> @llvm.experimental.constrained.maxnum.v3f64(
                           <3 x double> <double 43.0, double 44.0, double 45.0>,
                           <3 x double> <double 40.0, double 41.0, double 42.0>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %max
 }
@@ -3598,7 +3594,6 @@ entry:
                                               double 46.0, double 47.0>,
                                 <4 x double> <double 40.0, double 41.0,
                                               double 42.0, double 43.0>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <4 x double> %max
 }
@@ -3628,7 +3623,6 @@ define <1 x float> @constrained_vector_minnum_v1f32() #0 {
  entry:
   %min = call <1 x float> @llvm.experimental.constrained.minnum.v1f32(
                                <1 x float> <float 42.0>, <1 x float> <float 41.0>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %min
 }
@@ -3671,7 +3665,6 @@ entry:
   %min = call <2 x double> @llvm.experimental.constrained.minnum.v2f64(
                                 <2 x double> <double 43.0, double 42.0>,
                                 <2 x double> <double 41.0, double 40.0>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %min
 }
@@ -3727,7 +3720,6 @@ entry:
   %min = call <3 x float> @llvm.experimental.constrained.minnum.v3f32(
                               <3 x float> <float 43.0, float 44.0, float 45.0>,
                               <3 x float> <float 41.0, float 42.0, float 43.0>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %min
 }
@@ -3785,7 +3777,6 @@ entry:
  %min = call <3 x double> @llvm.experimental.constrained.minnum.v3f64(
                           <3 x double> <double 43.0, double 44.0, double 45.0>,
                           <3 x double> <double 40.0, double 41.0, double 42.0>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %min
 }
@@ -3853,7 +3844,6 @@ entry:
                                               double 46.0, double 47.0>,
                                 <4 x double> <double 40.0, double 41.0,
                                               double 42.0, double 43.0>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <4 x double> %min
 }
@@ -5244,7 +5234,6 @@ define <1 x float> @constrained_vector_ceil_v1f32() #0 {
 entry:
   %ceil = call <1 x float> @llvm.experimental.constrained.ceil.v1f32(
                                <1 x float> <float 1.5>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %ceil
 }
@@ -5272,7 +5261,6 @@ define <2 x double> @constrained_vector_ceil_v2f64() #0 {
 entry:
   %ceil = call <2 x double> @llvm.experimental.constrained.ceil.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %ceil
 }
@@ -5313,7 +5301,6 @@ define <3 x float> @constrained_vector_ceil_v3f32() #0 {
 entry:
   %ceil = call <3 x float> @llvm.experimental.constrained.ceil.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %ceil
 }
@@ -5351,7 +5338,6 @@ define <3 x double> @constrained_vector_ceil_v3f64() #0 {
 entry:
   %ceil = call <3 x double> @llvm.experimental.constrained.ceil.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %ceil
 }
@@ -5375,7 +5361,6 @@ define <1 x float> @constrained_vector_floor_v1f32() #0 {
 entry:
   %floor = call <1 x float> @llvm.experimental.constrained.floor.v1f32(
                                <1 x float> <float 1.5>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %floor
 }
@@ -5404,7 +5389,6 @@ define <2 x double> @constrained_vector_floor_v2f64() #0 {
 entry:
   %floor = call <2 x double> @llvm.experimental.constrained.floor.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %floor
 }
@@ -5445,7 +5429,6 @@ define <3 x float> @constrained_vector_floor_v3f32() #0 {
 entry:
   %floor = call <3 x float> @llvm.experimental.constrained.floor.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %floor
 }
@@ -5483,7 +5466,6 @@ define <3 x double> @constrained_vector_floor_v3f64() #0 {
 entry:
   %floor = call <3 x double> @llvm.experimental.constrained.floor.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %floor
 }
@@ -5511,7 +5493,6 @@ define <1 x float> @constrained_vector_round_v1f32() #0 {
 entry:
   %round = call <1 x float> @llvm.experimental.constrained.round.v1f32(
                                <1 x float> <float 1.5>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %round
 }
@@ -5549,7 +5530,6 @@ define <2 x double> @constrained_vector_round_v2f64() #0 {
 entry:
   %round = call <2 x double> @llvm.experimental.constrained.round.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %round
 }
@@ -5598,7 +5578,6 @@ define <3 x float> @constrained_vector_round_v3f32() #0 {
 entry:
   %round = call <3 x float> @llvm.experimental.constrained.round.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %round
 }
@@ -5650,7 +5629,6 @@ define <3 x double> @constrained_vector_round_v3f64() #0 {
 entry:
   %round = call <3 x double> @llvm.experimental.constrained.round.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %round
 }
@@ -5674,7 +5652,6 @@ define <1 x float> @constrained_vector_trunc_v1f32() #0 {
 entry:
   %trunc = call <1 x float> @llvm.experimental.constrained.trunc.v1f32(
                                <1 x float> <float 1.5>,
-                               metadata !"round.dynamic",
                                metadata !"fpexcept.strict") #0
   ret <1 x float> %trunc
 }
@@ -5702,7 +5679,6 @@ define <2 x double> @constrained_vector_trunc_v2f64() #0 {
 entry:
   %trunc = call <2 x double> @llvm.experimental.constrained.trunc.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
-                                metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <2 x double> %trunc
 }
@@ -5743,7 +5719,6 @@ define <3 x float> @constrained_vector_trunc_v3f32() #0 {
 entry:
   %trunc = call <3 x float> @llvm.experimental.constrained.trunc.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
-                              metadata !"round.dynamic",
                               metadata !"fpexcept.strict") #0
   ret <3 x float> %trunc
 }
@@ -5781,9 +5756,1515 @@ define <3 x double> @constrained_vector_trunc_v3f64() #0 {
 entry:
   %trunc = call <3 x double> @llvm.experimental.constrained.trunc.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
-                          metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
   ret <3 x double> %trunc
+}
+
+define <1 x double> @constrained_vector_sitofp_v1f64_v1i32(<1 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v1f64_v1i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvtsi2sd %edi, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v1f64_v1i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call <1 x double>
+           @llvm.experimental.constrained.sitofp.v1f64.v1i32(<1 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x double> %result
+}
+
+define <1 x float> @constrained_vector_sitofp_v1f32_v1i32(<1 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v1f32_v1i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvtsi2ss %edi, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v1f32_v1i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call <1 x float>
+           @llvm.experimental.constrained.sitofp.v1f32.v1i32(<1 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x float> %result
+}
+
+define <1 x double> @constrained_vector_sitofp_v1f64_v1i64(<1 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v1f64_v1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvtsi2sd %rdi, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v1f64_v1i64:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call <1 x double>
+           @llvm.experimental.constrained.sitofp.v1f64.v1i64(<1 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x double> %result
+}
+
+define <1 x float> @constrained_vector_sitofp_v1f32_v1i64(<1 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v1f32_v1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvtsi2ss %rdi, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v1f32_v1i64:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call <1 x float>
+           @llvm.experimental.constrained.sitofp.v1f32.v1i64(<1 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x float> %result
+}
+
+define <2 x double> @constrained_vector_sitofp_v2f64_v2i32(<2 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v2f64_v2i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm0
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v2f64_v2i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vextractps $1, %xmm0, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm2, %xmm0
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    retq
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.sitofp.v2f64.v2i32(<2 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x float> @constrained_vector_sitofp_v2f32_v2i32(<2 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v2f32_v2i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2ss %eax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %eax, %xmm0
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v2f32_v2i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vextractps $1, %xmm0, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm2, %xmm0
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    retq
+entry:
+  %result = call <2 x float>
+           @llvm.experimental.constrained.sitofp.v2f32.v2i32(<2 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
+
+define <2 x double> @constrained_vector_sitofp_v2f64_v2i64(<2 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v2f64_v2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm0
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v2f64_v2i64:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm1
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm0
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    retq
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x float> @constrained_vector_sitofp_v2f32_v2i64(<2 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v2f32_v2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v2f32_v2i64:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    retq
+entry:
+  %result = call <2 x float>
+           @llvm.experimental.constrained.sitofp.v2f32.v2i64(<2 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
+
+define <3 x double> @constrained_vector_sitofp_v3f64_v3i32(<3 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v3f64_v3i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm0
+; CHECK-NEXT:    movsd %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fldl -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movapd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v3f64_v3i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vextractps $1, %xmm0, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm2, %xmm2
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm3, %xmm0
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX-NEXT:    retq
+entry:
+  %result = call <3 x double>
+           @llvm.experimental.constrained.sitofp.v3f64.v3i32(<3 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x double> %result
+}
+
+define <3 x float> @constrained_vector_sitofp_v3f32_v3i32(<3 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v3f32_v3i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2ss %eax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    cvtsi2ss %eax, %xmm2
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %eax, %xmm0
+; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v3f32_v3i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vextractps $1, %xmm0, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm2, %xmm2
+; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm3, %xmm0
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX-NEXT:    retq
+entry:
+  %result = call <3 x float>
+           @llvm.experimental.constrained.sitofp.v3f32.v3i32(<3 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x float> %result
+}
+
+define <3 x double> @constrained_vector_sitofp_v3f64_v3i64(<3 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v3f64_v3i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvtsi2sd %rdi, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rsi, %xmm1
+; CHECK-NEXT:    cvtsi2sd %rdx, %xmm2
+; CHECK-NEXT:    movsd %xmm2, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fldl -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_sitofp_v3f64_v3i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_sitofp_v3f64_v3i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm2
+; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm0
+; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <3 x double>
+           @llvm.experimental.constrained.sitofp.v3f64.v3i64(<3 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x double> %result
+}
+
+define <3 x float> @constrained_vector_sitofp_v3f32_v3i64(<3 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v3f32_v3i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvtsi2ss %rsi, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rdi, %xmm0
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rdx, %xmm1
+; CHECK-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_sitofp_v3f32_v3i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_sitofp_v3f32_v3i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+entry:
+  %result = call <3 x float>
+           @llvm.experimental.constrained.sitofp.v3f32.v3i64(<3 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x float> %result
+}
+
+define <4 x double> @constrained_vector_sitofp_v4f64_v4i32(<4 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v4f64_v4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; CHECK-NEXT:    movapd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v4f64_v4i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX-NEXT:    retq
+entry:
+  %result = call <4 x double>
+           @llvm.experimental.constrained.sitofp.v4f64.v4i32(<4 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x double> %result
+}
+
+define <4 x float> @constrained_vector_sitofp_v4f32_v4i32(<4 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v4f32_v4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_sitofp_v4f32_v4i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call <4 x float>
+           @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
+}
+
+define <4 x double> @constrained_vector_sitofp_v4f64_v4i64(<4 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v4f64_v4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm0
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm0
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; CHECK-NEXT:    movapd %xmm2, %xmm0
+; CHECK-NEXT:    movapd %xmm3, %xmm1
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_sitofp_v4f64_v4i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vmovq %xmm1, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm1
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm2
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_sitofp_v4f64_v4i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX512-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm2
+; AVX512-NEXT:    vmovq %xmm1, %rax
+; AVX512-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm1
+; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm2
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm0
+; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <4 x double>
+           @llvm.experimental.constrained.sitofp.v4f64.v4i64(<4 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x double> %result
+}
+
+define <4 x float> @constrained_vector_sitofp_v4f32_v4i64(<4 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_sitofp_v4f32_v4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_sitofp_v4f32_v4i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm2
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_sitofp_v4f32_v4i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm2
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+entry:
+  %result = call <4 x float>
+           @llvm.experimental.constrained.sitofp.v4f32.v4i64(<4 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
+}
+
+define <1 x double> @constrained_vector_uitofp_v1f64_v1i32(<1 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v1f64_v1i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v1f64_v1i32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v1f64_v1i32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <1 x double>
+           @llvm.experimental.constrained.uitofp.v1f64.v1i32(<1 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x double> %result
+}
+
+define <1 x float> @constrained_vector_uitofp_v1f32_v1i32(<1 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v1f32_v1i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v1f32_v1i32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v1f32_v1i32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <1 x float>
+           @llvm.experimental.constrained.uitofp.v1f32.v1i32(<1 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x float> %result
+}
+
+define <1 x double> @constrained_vector_uitofp_v1f64_v1i64(<1 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v1f64_v1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %xmm1
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; CHECK-NEXT:    subpd {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; CHECK-NEXT:    addpd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v1f64_v1i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX1-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v1f64_v1i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <1 x double>
+           @llvm.experimental.constrained.uitofp.v1f64.v1i64(<1 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x double> %result
+}
+
+define <1 x float> @constrained_vector_uitofp_v1f32_v1i64(<1 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v1f32_v1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    js .LBB170_1
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    cvtsi2ss %rdi, %xmm0
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB170_1:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shrq %rax
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    orq %rax, %rdi
+; CHECK-NEXT:    cvtsi2ss %rdi, %xmm0
+; CHECK-NEXT:    addss %xmm0, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v1f32_v1i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    testq %rdi, %rdi
+; AVX1-NEXT:    js .LBB170_1
+; AVX1-NEXT:  # %bb.2: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+; AVX1-NEXT:  .LBB170_1:
+; AVX1-NEXT:    movq %rdi, %rax
+; AVX1-NEXT:    shrq %rax
+; AVX1-NEXT:    andl $1, %edi
+; AVX1-NEXT:    orq %rax, %rdi
+; AVX1-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v1f32_v1i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <1 x float>
+           @llvm.experimental.constrained.uitofp.v1f32.v1i64(<1 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x float> %result
+}
+
+define <2 x double> @constrained_vector_uitofp_v2f64_v2i32(<2 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v2f64_v2i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm0
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v2f64_v2i32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vextractps $1, %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm0
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v2f64_v2i32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vextractps $1, %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2sd %eax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2sd %eax, %xmm2, %xmm0
+; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512-NEXT:    retq
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.uitofp.v2f64.v2i32(<2 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x float> @constrained_vector_uitofp_v2f32_v2i32(<2 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v2f32_v2i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v2f32_v2i32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vextractps $1, %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v2f32_v2i32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vextractps $1, %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2ss %eax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2ss %eax, %xmm2, %xmm0
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX512-NEXT:    retq
+entry:
+  %result = call <2 x float>
+           @llvm.experimental.constrained.uitofp.v2f32.v2i32(<2 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
+
+define <2 x double> @constrained_vector_uitofp_v2f64_v2i64(<2 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v2f64_v2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [4294967295,4294967295]
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    por {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    psrlq $32, %xmm0
+; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    subpd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    addpd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v2f64_v2i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; AVX1-NEXT:    vpor {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX1-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v2f64_v2i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX512-NEXT:    vpor {{.*}}(%rip), %xmm1, %xmm1
+; AVX512-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX512-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x float> @constrained_vector_uitofp_v2f32_v2i64(<2 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v2f32_v2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    js .LBB174_1
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    jns .LBB174_5
+; CHECK-NEXT:  .LBB174_4:
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm1
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB174_1:
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    addss %xmm0, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    js .LBB174_4
+; CHECK-NEXT:  .LBB174_5: # %entry
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v2f32_v2i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB174_1
+; AVX1-NEXT:  # %bb.2: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    jns .LBB174_5
+; AVX1-NEXT:  .LBB174_4:
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
+; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX1-NEXT:    retq
+; AVX1-NEXT:  .LBB174_1:
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vaddss %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB174_4
+; AVX1-NEXT:  .LBB174_5: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v2f32_v2i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vcvtusi2ss %rax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtusi2ss %rax, %xmm2, %xmm0
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX512-NEXT:    retq
+entry:
+  %result = call <2 x float>
+           @llvm.experimental.constrained.uitofp.v2f32.v2i64(<2 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
+
+define <3 x double> @constrained_vector_uitofp_v3f64_v3i32(<3 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v3f64_v3i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm0
+; CHECK-NEXT:    movsd %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fldl -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movapd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v3f64_v3i32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vextractps $1, %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX1-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v3f64_v3i32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vextractps $1, %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2sd %eax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2sd %eax, %xmm2, %xmm2
+; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2sd %eax, %xmm3, %xmm0
+; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <3 x double>
+           @llvm.experimental.constrained.uitofp.v3f64.v3i32(<3 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x double> %result
+}
+
+define <3 x float> @constrained_vector_uitofp_v3f32_v3i32(<3 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v3f32_v3i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm2
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v3f32_v3i32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vextractps $1, %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX1-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v3f32_v3i32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vextractps $1, %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2ss %eax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2ss %eax, %xmm2, %xmm2
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX512-NEXT:    vcvtusi2ss %eax, %xmm3, %xmm0
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX512-NEXT:    retq
+entry:
+  %result = call <3 x float>
+           @llvm.experimental.constrained.uitofp.v3f32.v3i32(<3 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x float> %result
+}
+
+define <3 x double> @constrained_vector_uitofp_v3f64_v3i64(<3 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v3f64_v3i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %xmm1
+; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-NEXT:    movapd {{.*#+}} xmm3 = [4.503599627370496E+15,1.9342813113834067E+25]
+; CHECK-NEXT:    subpd %xmm3, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; CHECK-NEXT:    addpd %xmm1, %xmm0
+; CHECK-NEXT:    movq %rsi, %xmm4
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
+; CHECK-NEXT:    subpd %xmm3, %xmm4
+; CHECK-NEXT:    movapd %xmm4, %xmm1
+; CHECK-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm4[1]
+; CHECK-NEXT:    addpd %xmm4, %xmm1
+; CHECK-NEXT:    movq %rdx, %xmm4
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
+; CHECK-NEXT:    subpd %xmm3, %xmm4
+; CHECK-NEXT:    movapd %xmm4, %xmm2
+; CHECK-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm4[1]
+; CHECK-NEXT:    addpd %xmm4, %xmm2
+; CHECK-NEXT:    movlpd %xmm2, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fldl -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v3f64_v3i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vmovapd {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
+; AVX1-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX1-NEXT:    vmovapd {{.*#+}} xmm3 = [4.503599627370496E+15,1.9342813113834067E+25]
+; AVX1-NEXT:    vsubpd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm2[1,0]
+; AVX1-NEXT:    vaddpd %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm4 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
+; AVX1-NEXT:    vsubpd %xmm3, %xmm4, %xmm4
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm4[1,0]
+; AVX1-NEXT:    vaddpd %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX1-NEXT:    vsubpd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v3f64_v3i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vcvtusi2sd %rax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtusi2sd %rax, %xmm2, %xmm2
+; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtusi2sd %rax, %xmm3, %xmm0
+; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <3 x double>
+           @llvm.experimental.constrained.uitofp.v3f64.v3i64(<3 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x double> %result
+}
+
+define <3 x float> @constrained_vector_uitofp_v3f32_v3i64(<3 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v3f32_v3i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    js .LBB178_1
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    cvtsi2ss %rsi, %xmm1
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    jns .LBB178_5
+; CHECK-NEXT:  .LBB178_4:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shrq %rax
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    orq %rax, %rdi
+; CHECK-NEXT:    cvtsi2ss %rdi, %xmm0
+; CHECK-NEXT:    addss %xmm0, %xmm0
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    jns .LBB178_8
+; CHECK-NEXT:  .LBB178_7:
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    shrq %rax
+; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    orq %rax, %rdx
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rdx, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm1
+; CHECK-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB178_1:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shrq %rax
+; CHECK-NEXT:    andl $1, %esi
+; CHECK-NEXT:    orq %rax, %rsi
+; CHECK-NEXT:    cvtsi2ss %rsi, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm1
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    js .LBB178_4
+; CHECK-NEXT:  .LBB178_5: # %entry
+; CHECK-NEXT:    cvtsi2ss %rdi, %xmm0
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    js .LBB178_7
+; CHECK-NEXT:  .LBB178_8: # %entry
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rdx, %xmm1
+; CHECK-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v3f32_v3i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB178_1
+; AVX1-NEXT:  # %bb.2: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    jns .LBB178_5
+; AVX1-NEXT:  .LBB178_4:
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vaddss %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    jmp .LBB178_6
+; AVX1-NEXT:  .LBB178_1:
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vaddss %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB178_4
+; AVX1-NEXT:  .LBB178_5: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX1-NEXT:  .LBB178_6: # %entry
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB178_7
+; AVX1-NEXT:  # %bb.8: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+; AVX1-NEXT:  .LBB178_7:
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v3f32_v3i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vcvtusi2ss %rax, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtusi2ss %rax, %xmm2, %xmm2
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vcvtusi2ss %rax, %xmm3, %xmm0
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+entry:
+  %result = call <3 x float>
+           @llvm.experimental.constrained.uitofp.v3f32.v3i64(<3 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x float> %result
+}
+
+define <4 x double> @constrained_vector_uitofp_v4f64_v4i32(<4 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v4f64_v4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm1
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm1
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; CHECK-NEXT:    movapd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v4f64_v4i32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; AVX1-NEXT:    vcvtdq2pd %xmm1, %ymm1
+; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX1-NEXT:    vmulpd {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v4f64_v4i32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512-NEXT:    vcvtdq2pd %xmm1, %ymm1
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
+; AVX512-NEXT:    vmulpd %ymm2, %ymm1, %ymm1
+; AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
+; AVX512-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX512-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <4 x double>
+           @llvm.experimental.constrained.uitofp.v4f64.v4i32(<4 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x double> %result
+}
+
+define <4 x float> @constrained_vector_uitofp_v4f32_v4i32(<4 x i32> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v4f32_v4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [65535,65535,65535,65535]
+; CHECK-NEXT:    andps %xmm0, %xmm1
+; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    psrld $16, %xmm0
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    mulps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    addps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v4f32_v4i32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; AVX1-NEXT:    vcvtdq2ps %xmm1, %xmm1
+; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX1-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v4f32_v4i32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512-NEXT:    vcvtdq2ps %xmm1, %xmm1
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
+; AVX512-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
+; AVX512-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX512-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <4 x float>
+           @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
+}
+
+define <4 x double> @constrained_vector_uitofp_v4f64_v4i64(<4 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v4f64_v4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,4294967295]
+; CHECK-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-NEXT:    pand %xmm2, %xmm3
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [4841369599423283200,4841369599423283200]
+; CHECK-NEXT:    por %xmm4, %xmm3
+; CHECK-NEXT:    psrlq $32, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [4985484787499139072,4985484787499139072]
+; CHECK-NEXT:    por %xmm5, %xmm0
+; CHECK-NEXT:    movapd {{.*#+}} xmm6 = [1.9342813118337666E+25,1.9342813118337666E+25]
+; CHECK-NEXT:    subpd %xmm6, %xmm0
+; CHECK-NEXT:    addpd %xmm3, %xmm0
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    por %xmm4, %xmm2
+; CHECK-NEXT:    psrlq $32, %xmm1
+; CHECK-NEXT:    por %xmm5, %xmm1
+; CHECK-NEXT:    subpd %xmm6, %xmm1
+; CHECK-NEXT:    addpd %xmm2, %xmm1
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v4f64_v4i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX1-NEXT:    vorps {{.*}}(%rip), %ymm1, %ymm1
+; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    vorpd {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vsubpd {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v4f64_v4i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; AVX512-NEXT:    vpor %ymm2, %ymm1, %ymm1
+; AVX512-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072]
+; AVX512-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25]
+; AVX512-NEXT:    vsubpd %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call <4 x double>
+           @llvm.experimental.constrained.uitofp.v4f64.v4i64(<4 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x double> %result
+}
+
+define <4 x float> @constrained_vector_uitofp_v4f32_v4i64(<4 x i64> %x) #0 {
+; CHECK-LABEL: constrained_vector_uitofp_v4f32_v4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    js .LBB182_1
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    jns .LBB182_5
+; CHECK-NEXT:  .LBB182_4:
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm3
+; CHECK-NEXT:    addss %xmm3, %xmm3
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    jns .LBB182_8
+; CHECK-NEXT:  .LBB182_7:
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm1
+; CHECK-NEXT:    jmp .LBB182_9
+; CHECK-NEXT:  .LBB182_1:
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm2
+; CHECK-NEXT:    addss %xmm2, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    js .LBB182_4
+; CHECK-NEXT:  .LBB182_5: # %entry
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm3
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    js .LBB182_7
+; CHECK-NEXT:  .LBB182_8: # %entry
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
+; CHECK-NEXT:  .LBB182_9: # %entry
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    js .LBB182_10
+; CHECK-NEXT:  # %bb.11: # %entry
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB182_10:
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    addss %xmm0, %xmm0
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: constrained_vector_uitofp_v4f32_v4i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB182_1
+; AVX1-NEXT:  # %bb.2: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    jns .LBB182_5
+; AVX1-NEXT:  .LBB182_4:
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vaddss %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    jmp .LBB182_6
+; AVX1-NEXT:  .LBB182_1:
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vaddss %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB182_4
+; AVX1-NEXT:  .LBB182_5: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX1-NEXT:  .LBB182_6: # %entry
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB182_7
+; AVX1-NEXT:  # %bb.8: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm2
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    jns .LBB182_11
+; AVX1-NEXT:  .LBB182_10:
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+; AVX1-NEXT:  .LBB182_7:
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm2
+; AVX1-NEXT:    vaddss %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB182_10
+; AVX1-NEXT:  .LBB182_11: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: constrained_vector_uitofp_v4f32_v4i64:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2ss %rax, %xmm1, %xmm1
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2ss %rax, %xmm2, %xmm2
+; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2ss %rax, %xmm3, %xmm2
+; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2ss %rax, %xmm3, %xmm0
+; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512DQ-LABEL: constrained_vector_uitofp_v4f32_v4i64:
+; AVX512DQ:       # %bb.0: # %entry
+; AVX512DQ-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512DQ-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; AVX512DQ-NEXT:    vmovq %xmm0, %rax
+; AVX512DQ-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512DQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512DQ-NEXT:    vmovq %xmm2, %rax
+; AVX512DQ-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm3
+; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
+; AVX512DQ-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX512DQ-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm2
+; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
+; AVX512DQ-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512DQ-NEXT:    vpand %ymm2, %ymm0, %ymm2
+; AVX512DQ-NEXT:    vpsrlq $1, %ymm0, %ymm3
+; AVX512DQ-NEXT:    vpor %ymm3, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX512DQ-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm3
+; AVX512DQ-NEXT:    vmovq %xmm2, %rax
+; AVX512DQ-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm4
+; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[2,3]
+; AVX512DQ-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512DQ-NEXT:    vmovq %xmm2, %rax
+; AVX512DQ-NEXT:    vcvtsi2ss %rax, %xmm5, %xmm4
+; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],xmm4[0],xmm3[3]
+; AVX512DQ-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX512DQ-NEXT:    vcvtsi2ss %rax, %xmm5, %xmm2
+; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1,2],xmm2[0]
+; AVX512DQ-NEXT:    vaddps %xmm2, %xmm2, %xmm2
+; AVX512DQ-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX512DQ-NEXT:    vpcmpgtq %ymm0, %ymm3, %ymm0
+; AVX512DQ-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512DQ-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+entry:
+  %result = call <4 x float>
+           @llvm.experimental.constrained.uitofp.v4f32.v4i64(<4 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
 }
 
 attributes #0 = { strictfp }
@@ -5806,8 +7287,8 @@ declare <2 x double> @llvm.experimental.constrained.log10.v2f64(<2 x double>, me
 declare <2 x double> @llvm.experimental.constrained.log2.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.maxnum.v2f64(<2 x double>, <2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.minnum.v2f64(<2 x double>, <2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.maxnum.v2f64(<2 x double>, <2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.minnum.v2f64(<2 x double>, <2 x double>, metadata)
 declare <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f32(<2 x float>, metadata)
 declare <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f32(<2 x float>, metadata)
 declare <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f64(<2 x double>, metadata)
@@ -5818,10 +7299,18 @@ declare <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f64(<2 x double>
 declare <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double>, metadata)
 declare <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float>, metadata)
-declare <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.round.v2f64(<2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.round.v2f64(<2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i32(<2 x i32>, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i32(<2 x i32>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64>, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i64(<2 x i64>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i32(<2 x i32>, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.uitofp.v2f32.v2i32(<2 x i32>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64>, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.uitofp.v2f32.v2i64(<2 x i64>, metadata, metadata)
 
 ; Scalar width declarations
 declare <1 x float> @llvm.experimental.constrained.fadd.v1f32(<1 x float>, <1 x float>, metadata, metadata)
@@ -5841,8 +7330,8 @@ declare <1 x float> @llvm.experimental.constrained.log10.v1f32(<1 x float>, meta
 declare <1 x float> @llvm.experimental.constrained.log2.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.rint.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.nearbyint.v1f32(<1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.maxnum.v1f32(<1 x float>, <1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.minnum.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.maxnum.v1f32(<1 x float>, <1 x float>, metadata)
+declare <1 x float> @llvm.experimental.constrained.minnum.v1f32(<1 x float>, <1 x float>, metadata)
 declare <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f32(<1 x float>, metadata)
 declare <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f32(<1 x float>, metadata)
 declare <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f64(<1 x double>, metadata)
@@ -5853,10 +7342,18 @@ declare <1 x i32> @llvm.experimental.constrained.fptoui.v1i32.v1f64(<1 x double>
 declare <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f64(<1 x double>, metadata)
 declare <1 x float> @llvm.experimental.constrained.fptrunc.v1f32.v1f64(<1 x double>, metadata, metadata)
 declare <1 x double> @llvm.experimental.constrained.fpext.v1f64.v1f32(<1 x float>, metadata)
-declare <1 x float> @llvm.experimental.constrained.ceil.v1f32(<1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.floor.v1f32(<1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.round.v1f32(<1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.trunc.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.ceil.v1f32(<1 x float>, metadata)
+declare <1 x float> @llvm.experimental.constrained.floor.v1f32(<1 x float>, metadata)
+declare <1 x float> @llvm.experimental.constrained.round.v1f32(<1 x float>, metadata)
+declare <1 x float> @llvm.experimental.constrained.trunc.v1f32(<1 x float>, metadata)
+declare <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i32(<1 x i32>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.sitofp.v1f32.v1i32(<1 x i32>, metadata, metadata)
+declare <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i64(<1 x i64>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.sitofp.v1f32.v1i64(<1 x i64>, metadata, metadata)
+declare <1 x double> @llvm.experimental.constrained.uitofp.v1f64.v1i32(<1 x i32>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.uitofp.v1f32.v1i32(<1 x i32>, metadata, metadata)
+declare <1 x double> @llvm.experimental.constrained.uitofp.v1f64.v1i64(<1 x i64>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.uitofp.v1f32.v1i64(<1 x i64>, metadata, metadata)
 
 ; Illegal width declarations
 declare <3 x float> @llvm.experimental.constrained.fadd.v3f32(<3 x float>, <3 x float>, metadata, metadata)
@@ -5893,10 +7390,10 @@ declare <3 x float> @llvm.experimental.constrained.rint.v3f32(<3 x float>, metad
 declare <3 x double> @llvm.experimental.constrained.rint.v3f64(<3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.nearbyint.v3f32(<3 x float>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.nearbyint.v3f64(<3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.maxnum.v3f32(<3 x float>, <3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.maxnum.v3f64(<3 x double>, <3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.minnum.v3f32(<3 x float>, <3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.minnum.v3f64(<3 x double>, <3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.maxnum.v3f32(<3 x float>, <3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.maxnum.v3f64(<3 x double>, <3 x double>, metadata)
+declare <3 x float> @llvm.experimental.constrained.minnum.v3f32(<3 x float>, <3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.minnum.v3f64(<3 x double>, <3 x double>, metadata)
 declare <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f32(<3 x float>, metadata)
 declare <3 x i64> @llvm.experimental.constrained.fptosi.v3i64.v3f32(<3 x float>, metadata)
 declare <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f64(<3 x double>, metadata)
@@ -5907,14 +7404,22 @@ declare <3 x i32> @llvm.experimental.constrained.fptoui.v3i32.v3f64(<3 x double>
 declare <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f64(<3 x double>, metadata)
 declare <3 x float> @llvm.experimental.constrained.fptrunc.v3f32.v3f64(<3 x double>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(<3 x float>, metadata)
-declare <3 x float> @llvm.experimental.constrained.ceil.v3f32(<3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.ceil.v3f64(<3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.floor.v3f32(<3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.floor.v3f64(<3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.round.v3f32(<3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.round.v3f64(<3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.trunc.v3f32(<3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.trunc.v3f64(<3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.ceil.v3f32(<3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.ceil.v3f64(<3 x double>, metadata)
+declare <3 x float> @llvm.experimental.constrained.floor.v3f32(<3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.floor.v3f64(<3 x double>, metadata)
+declare <3 x float> @llvm.experimental.constrained.round.v3f32(<3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.round.v3f64(<3 x double>, metadata)
+declare <3 x float> @llvm.experimental.constrained.trunc.v3f32(<3 x float>, metadata)
+declare <3 x double> @llvm.experimental.constrained.trunc.v3f64(<3 x double>, metadata)
+declare <3 x double> @llvm.experimental.constrained.sitofp.v3f64.v3i32(<3 x i32>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.sitofp.v3f32.v3i32(<3 x i32>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.sitofp.v3f64.v3i64(<3 x i64>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.sitofp.v3f32.v3i64(<3 x i64>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.uitofp.v3f64.v3i32(<3 x i32>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.uitofp.v3f32.v3i32(<3 x i32>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.uitofp.v3f64.v3i64(<3 x i64>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.uitofp.v3f32.v3i64(<3 x i64>, metadata, metadata)
 
 ; Double width declarations
 declare <4 x double> @llvm.experimental.constrained.fadd.v4f64(<4 x double>, <4 x double>, metadata, metadata)
@@ -5934,8 +7439,8 @@ declare <4 x double> @llvm.experimental.constrained.log10.v4f64(<4 x double>, me
 declare <4 x double> @llvm.experimental.constrained.log2.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.rint.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(<4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.maxnum.v4f64(<4 x double>, <4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.minnum.v4f64(<4 x double>, <4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.maxnum.v4f64(<4 x double>, <4 x double>, metadata)
+declare <4 x double> @llvm.experimental.constrained.minnum.v4f64(<4 x double>, <4 x double>, metadata)
 declare <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(<4 x float>, metadata)
 declare <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f32(<4 x float>, metadata)
 declare <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f64(<4 x double>, metadata)
@@ -5946,7 +7451,16 @@ declare <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f64(<4 x double>
 declare <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f64(<4 x double>, metadata)
 declare <4 x float> @llvm.experimental.constrained.fptrunc.v4f32.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
-declare <4 x double> @llvm.experimental.constrained.ceil.v4f64(<4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.round.v4f64(<4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.ceil.v4f64(<4 x double>, metadata)
+declare <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double>, metadata)
+declare <4 x double> @llvm.experimental.constrained.round.v4f64(<4 x double>, metadata)
+declare <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double>, metadata)
+declare <4 x double> @llvm.experimental.constrained.sitofp.v4f64.v4i32(<4 x i32>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.sitofp.v4f64.v4i64(<4 x i64>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i64(<4 x i64>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.uitofp.v4f64.v4i32(<4 x i32>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.uitofp.v4f64.v4i64(<4 x i64>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i64(<4 x i64>, metadata, metadata)
+

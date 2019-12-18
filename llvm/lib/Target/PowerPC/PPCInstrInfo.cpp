@@ -4263,12 +4263,10 @@ MachineInstr *PPCInstrInfo::findLoopInstr(
 // Return true if get the base operand, byte offset of an instruction and the
 // memory width. Width is the size of memory that is being loaded/stored.
 bool PPCInstrInfo::getMemOperandWithOffsetWidth(
-  const MachineInstr &LdSt,
-  const MachineOperand *&BaseReg,
-  int64_t &Offset,
-  unsigned &Width,
-  const TargetRegisterInfo *TRI) const {
-  assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
+    const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
+    unsigned &Width, const TargetRegisterInfo *TRI) const {
+  if (!LdSt.mayLoadOrStore())
+    return false;
 
   // Handle only loads/stores with base register followed by immediate offset.
   if (LdSt.getNumExplicitOperands() != 3)

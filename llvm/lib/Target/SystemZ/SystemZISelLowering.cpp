@@ -219,6 +219,11 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Legal);
       if (Subtarget.hasFPExtension())
         setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Legal);
+
+      // And similarly for STRICT_[SU]INT_TO_FP.
+      setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Legal);
+      if (Subtarget.hasFPExtension())
+        setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Legal);
     }
   }
 
@@ -258,6 +263,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   if (!Subtarget.hasFPExtension()) {
     setOperationAction(ISD::UINT_TO_FP, MVT::i32, Promote);
     setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Promote);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i64, Expand);
   }
 
   // We have native support for a 64-bit CTLZ, via FLOGR.
@@ -402,6 +409,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v2i64, Legal);
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v2i64, Legal);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v2i64, Legal);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v2f64, Legal);
   }
 
   if (Subtarget.hasVectorEnhancements2()) {
@@ -418,6 +429,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v4i32, Legal);
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4f32, Legal);
   }
 
   // Handle floating-point types.

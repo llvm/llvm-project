@@ -1309,7 +1309,7 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
         /// Motivating case is const_iterator begin() const vs iterator begin().
         auto &OverloadSet = OverloadMap[std::make_pair(
             CurContext, Method->getDeclName().getAsOpaqueInteger())];
-        for (const DeclIndexPair& Entry : OverloadSet) {
+        for (const DeclIndexPair Entry : OverloadSet) {
           Result &Incumbent = Results[Entry.second];
           switch (compareOverloads(*Method,
                                    *cast<CXXMethodDecl>(Incumbent.Declaration),

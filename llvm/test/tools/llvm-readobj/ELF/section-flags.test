@@ -98,6 +98,11 @@
 # LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
 # LLVM-NEXT: ]
 
+# LLVM:      Name: unknown
+# LLVM-NEXT: Type: SHT_PROGBITS
+# LLVM-NEXT: Flags [ (0xF0000)
+# LLVM-NEXT: ]
+
 # GNU: [Nr] Name          Type     Address          Off    Size   ES Flg          Lk Inf Al
 # GNU: [ 1] allflags      PROGBITS 0000000000000000 000040 000000 00 WAXMSILOGTCE 0   0  0
 # GNU: [ 2] noflags       PROGBITS 0000000000000000 000040 000000 00              0   0  0
@@ -113,6 +118,7 @@
 # GNU: [12] tls           PROGBITS 0000000000000000 000040 000000 00 T            0   0  0
 # GNU: [13] compressed    PROGBITS 0000000000000000 000040 000000 00 C            0   0  0
 # GNU: [14] exclude       PROGBITS 0000000000000000 000040 000000 00 E            0   0  0
+# GNU: [15] unknown       PROGBITS 0000000000000000 000040 000000 00 x            0   0  0
 
 --- !ELF
 FileHeader:
@@ -166,3 +172,6 @@ Sections:
   - Name:  exclude
     Type:  SHT_PROGBITS
     Flags: [ SHF_EXCLUDE ]
+  - Name:  unknown
+    Type:  SHT_PROGBITS
+    ShFlags: 0x000f0000
