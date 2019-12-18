@@ -57,8 +57,15 @@ __asm__(".pushsection .init,\"ax\",@progbits\n\t"
 __asm__(".pushsection .init,\"ax\",%progbits\n\t"
     "bl " __USER_LABEL_PREFIX__ "__do_init\n\t"
     ".popsection");
-#endif  // CRT_HAS_INITFINI_ARRAY
-#endif
+#elif defined(__powerpc__) || defined(__powerpc64__)
+__asm__(".pushsection .init,\"ax\",@progbits\n\t"
+    "bl " __USER_LABEL_PREFIX__ "__do_init\n\t"
+    "nop\n\t"
+    ".popsection");
+#else
+#error "crtbegin without .init_fini array unimplemented for this architecture"
+#endif // defined(various architectures)
+#endif // CRT_HAS_INITFINI_ARRAY
 
 #ifndef CRT_HAS_INITFINI_ARRAY
 static fp __DTOR_LIST__[]
@@ -97,5 +104,12 @@ __asm__(".pushsection .fini,\"ax\",@progbits\n\t"
 __asm__(".pushsection .fini,\"ax\",%progbits\n\t"
     "bl " __USER_LABEL_PREFIX__ "__do_fini\n\t"
     ".popsection");
-#endif
+#elif defined(__powerpc__) || defined(__powerpc64__)
+__asm__(".pushsection .fini,\"ax\",@progbits\n\t"
+    "bl " __USER_LABEL_PREFIX__ "__do_fini\n\t"
+    "nop\n\t"
+    ".popsection");
+#else
+#error "crtbegin without .init_fini array unimplemented for this architecture"
+#endif  // defined(various architectures)
 #endif  // CRT_HAS_INIT_FINI_ARRAY
