@@ -4,5 +4,11 @@ static_library("GlobalISel") {
   ]
   sources = [
     "CodeExpander.cpp",
+    "GIMatchDag.cpp",
+    "GIMatchDagEdge.cpp",
+    "GIMatchDagInstr.cpp",
+    "GIMatchDagOperands.cpp",
+    "GIMatchDagPredicate.cpp",
+    "GIMatchDagPredicateDependencyEdge.cpp",
   ]
 }
