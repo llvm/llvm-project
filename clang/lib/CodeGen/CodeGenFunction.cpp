@@ -966,7 +966,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         if (!CGM.getCodeGenOpts().CallFEntry)
           CGM.getDiags().Report(diag::err_opt_not_valid_without_opt)
             << "-mnop-mcount" << "-mfentry";
-        Fn->addFnAttr("mnop-mcount", "true");
+        Fn->addFnAttr("mnop-mcount");
       }
     }
   }

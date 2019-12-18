@@ -7,5 +7,4 @@ entry:
   ret void
 }
 
-attributes #0 = { "instrument-function-entry-inlined"="mcount" "mnop-mcount"="true" }
-
+attributes #0 = { "instrument-function-entry-inlined"="mcount" "mnop-mcount" }

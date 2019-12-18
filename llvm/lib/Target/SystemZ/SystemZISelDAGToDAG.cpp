@@ -347,7 +347,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const Function &F = MF.getFunction();
-    if (F.getFnAttribute("mnop-mcount").getValueAsString() == "true" &&
+    if (F.hasFnAttribute("mnop-mcount") &&
         F.getFnAttribute("fentry-call").getValueAsString() != "true")
       report_fatal_error("mnop-mcount only supported with fentry-call");
 
