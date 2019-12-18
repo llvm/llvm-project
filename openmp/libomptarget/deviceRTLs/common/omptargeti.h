@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "common/target_atomic.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 // Task Descriptor
 ////////////////////////////////////////////////////////////////////////////////
@@ -207,7 +209,7 @@ INLINE void omptarget_nvptx_SimpleMemoryManager::Release() {
   ASSERT0(LT_FUSSY, usedMemIdx < OMP_STATE_COUNT,
           "MemIdx is too big or uninitialized.");
   MemDataTy &MD = MemData[usedSlotIdx];
-  atomicExch((unsigned *)&MD.keys[usedMemIdx], 0);
+  __kmpc_atomic_exchange((unsigned *)&MD.keys[usedMemIdx], 0u);
 }
 
 INLINE const void *omptarget_nvptx_SimpleMemoryManager::Acquire(const void *buf,
@@ -217,7 +219,7 @@ INLINE const void *omptarget_nvptx_SimpleMemoryManager::Acquire(const void *buf,
   const unsigned sm = usedSlotIdx;
   MemDataTy &MD = MemData[sm];
   unsigned i = hash(GetBlockIdInKernel());
-  while (atomicCAS((unsigned *)&MD.keys[i], 0, 1) != 0) {
+  while (__kmpc_atomic_cas((unsigned *)&MD.keys[i], 0u, 1u) != 0) {
     i = hash(i + 1);
   }
   usedSlotIdx = sm;
