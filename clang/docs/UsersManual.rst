@@ -346,36 +346,36 @@ output format of the diagnostics that it generates.
       ``-fsave-optimization-record=bitstream``: A binary format based on LLVM
       Bitstream.
 
-    The output file is controlled by :ref:`-foptimization-record-file <opt_foptimization-record-file>`.
+   The output file is controlled by :ref:`-foptimization-record-file <opt_foptimization-record-file>`.
 
-    In the absence of an explicit output file, the file is chosen using the
-    following scheme:
+   In the absence of an explicit output file, the file is chosen using the
+   following scheme:
 
-    ``<base>.opt.<format>``
+   ``<base>.opt.<format>``
 
-    where ``<base>`` is based on the output file of the compilation (whether
-    it's explicitly specified through `-o` or not) when used with `-c` or `-S`.
-    In other cases, it's based on the input file's stem. For example:
+   where ``<base>`` is based on the output file of the compilation (whether
+   it's explicitly specified through `-o` or not) when used with `-c` or `-S`.
+   In other cases, it's based on the input file's stem. For example:
 
-    * ``clang -fsave-optimization-record -c in.c -o out.o`` will generate
-      ``out.opt.yaml``
+   * ``clang -fsave-optimization-record -c in.c -o out.o`` will generate
+     ``out.opt.yaml``
 
-    * ``clang -fsave-optimization-record in.c -o out`` will generate
-      ``in.opt.yaml``
+   * ``clang -fsave-optimization-record in.c -o out`` will generate
+     ``in.opt.yaml``
 
-    Compiling for multiple architectures will use the following scheme:
+   Compiling for multiple architectures will use the following scheme:
 
-    ``<base>-<arch>.opt.<format>``
+   ``<base>-<arch>.opt.<format>``
 
-    Note that this is only allowed on Darwin platforms and is incompatible with
-    passing multiple ``-arch <arch>`` options.
+   Note that this is only allowed on Darwin platforms and is incompatible with
+   passing multiple ``-arch <arch>`` options.
 
-    When targeting (Thin)LTO, the base is derived from the output filename, and
-    the extension is not dropped.
+   When targeting (Thin)LTO, the base is derived from the output filename, and
+   the extension is not dropped.
 
-    When targeting ThinLTO, the following scheme is used:
+   When targeting ThinLTO, the following scheme is used:
 
-    ``<base>.opt.<format>.thin.<num>.<format>``
+   ``<base>.opt.<format>.thin.<num>.<format>``
 
 .. _opt_foptimization-record-file:
 
