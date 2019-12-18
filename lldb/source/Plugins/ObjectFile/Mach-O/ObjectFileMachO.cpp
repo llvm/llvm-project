@@ -479,12 +479,13 @@ public:
       switch (flavor) {
       case GPRAltRegSet:
       case GPRRegSet:
-        for (uint32_t i = 0; i < count; ++i) {
+        // On ARM, the CPSR register is also included in the count but it is
+        // not included in gpr.r so loop until (count-1).
+        for (uint32_t i = 0; i < (count - 1); ++i) {
           gpr.r[i] = data.GetU32(&offset);
         }
-
-        // Note that gpr.cpsr is also copied by the above loop; this loop
-        // technically extends one element past the end of the gpr.r[] array.
+        // Save cpsr explicitly.
+        gpr.cpsr = data.GetU32(&offset);
 
         SetError(GPRRegSet, Read, 0);
         offset = next_thread_state;
