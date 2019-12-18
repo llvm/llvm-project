@@ -10,7 +10,7 @@
 # CHECK:   Section header string table index
 # CHECK: There are 5 section headers, starting at offset
 # CHECK: Section Headers:
-# CHECK:   O (extra OS processing required) o (OS specific), p (processor specific)
+# CHECK: Key to Flags:
 # CHECK: There are no relocations in this file.
 # CHECK: Symbol table '.symtab' contains 1 entries
 # CHECK:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
