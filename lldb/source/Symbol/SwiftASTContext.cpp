@@ -6649,6 +6649,16 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   case swift::TypeKind::BoundGenericClass:
   case swift::TypeKind::BoundGenericStruct: {
     auto nominal = swift_can_type->getAnyNominal();
+    // Imported unions don't have stored properties.
+    if (auto *ntd =
+            llvm::dyn_cast_or_null<swift::NominalTypeDecl>(nominal->getDecl()))
+      if (auto *rd = llvm::dyn_cast_or_null<clang::RecordDecl>(ntd->getClangDecl()))
+        if (rd->isUnion()) {
+          swift::DeclRange ms = ntd->getMembers();
+          return std::count_if(ms.begin(), ms.end(), [](swift::Decl *D) {
+            return llvm::isa<swift::VarDecl>(D);
+          });
+        }
     return GetStoredProperties(nominal).size();
   }
 
@@ -7296,6 +7306,38 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Struct:
   case swift::TypeKind::BoundGenericStruct: {
     auto nominal = swift_can_type->getAnyNominal();
+
+    // Imported unions don't have stored properties, iterate over the
+    // VarDecls instead.
+    if (auto *ntd =
+            llvm::dyn_cast_or_null<swift::NominalTypeDecl>(nominal->getDecl()))
+      if (auto *rd = llvm::dyn_cast_or_null<clang::RecordDecl>(ntd->getClangDecl()))
+        if (rd->isUnion()) {
+          unsigned count = 0;
+          for (swift::Decl *D : ntd->getMembers()) {
+            auto *VD = llvm::dyn_cast_or_null<swift::VarDecl>(D);
+            if (!VD)
+              continue;
+            if (count++ < idx)
+              continue;
+
+            swift::Type child_swift_type = VD->getType();
+
+            CompilerType child_type =
+                ToCompilerType(VD->getType().getPointer());
+            child_name = VD->getNameStr();
+            if (!get_type_size(child_byte_size, child_type))
+              return {};
+            child_is_base_class = false;
+            child_is_deref_of_parent = false;
+            child_byte_offset = 0;
+            child_bitfield_bit_size = 0;
+            child_bitfield_bit_offset = 0;
+            return child_type;
+          }
+          return {};
+        }
+
     auto stored_properties = GetStoredProperties(nominal);
     if (idx >= stored_properties.size())
       break;
