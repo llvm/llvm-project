@@ -2933,8 +2933,12 @@ bool Sema::FunctionParamTypesAreEqual(const FunctionProtoType *OldType,
                                               N = NewType->param_type_begin(),
                                               E = OldType->param_type_end();
        O && (O != E); ++O, ++N) {
-    if (!Context.hasSameType(O->getUnqualifiedType(),
-                             N->getUnqualifiedType())) {
+    // Ignore address spaces in pointee type. This is to disallow overloading
+    // on __ptr32/__ptr64 address spaces.
+    QualType Old = Context.removePtrSizeAddrSpace(O->getUnqualifiedType());
+    QualType New = Context.removePtrSizeAddrSpace(N->getUnqualifiedType());
+
+    if (!Context.hasSameType(Old, New)) {
       if (ArgPos)
         *ArgPos = O - OldType->param_type_begin();
       return false;

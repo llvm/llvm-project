@@ -39,7 +39,10 @@ static const unsigned TCEOpenCLAddrSpaceMap[] = {
     0, // opencl_generic
     0, // cuda_device
     0, // cuda_constant
-    0  // cuda_shared
+    0, // cuda_shared
+    0, // ptr32_sptr
+    0, // ptr32_uptr
+    0, // ptr64
 };
 
 class LLVM_LIBRARY_VISIBILITY TCETargetInfo : public TargetInfo {
