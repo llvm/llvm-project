@@ -119,6 +119,10 @@ protected:
                                               Value);
   }
 
+  const Instruction &getInstr(unsigned OpCode) {
+    return State.getIC().getInstr(OpCode);
+  }
+
   LLVMState State;
 };
 
@@ -355,8 +359,8 @@ TEST_F(Core2TargetTest, SetRegToFP1_4Bits) {
 }
 
 TEST_F(Core2Avx512TargetTest, FillMemoryOperands_ADD64rm) {
-  Instruction I(State.getInstrInfo(), State.getRATC(), X86::ADD64rm);
-  InstructionTemplate IT(I);
+  const Instruction &I = getInstr(X86::ADD64rm);
+  InstructionTemplate IT(&I);
   constexpr const int kOffset = 42;
   State.getExegesisTarget().fillMemoryOperands(IT, X86::RDI, kOffset);
   // Memory is operands 2-6.
@@ -368,8 +372,8 @@ TEST_F(Core2Avx512TargetTest, FillMemoryOperands_ADD64rm) {
 }
 
 TEST_F(Core2Avx512TargetTest, FillMemoryOperands_VGATHERDPSZ128rm) {
-  Instruction I(State.getInstrInfo(), State.getRATC(), X86::VGATHERDPSZ128rm);
-  InstructionTemplate IT(I);
+  const Instruction &I = getInstr(X86::VGATHERDPSZ128rm);
+  InstructionTemplate IT(&I);
   constexpr const int kOffset = 42;
   State.getExegesisTarget().fillMemoryOperands(IT, X86::RDI, kOffset);
   // Memory is operands 4-8.

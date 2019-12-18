@@ -23,7 +23,7 @@ namespace exegesis {
 
 // A template for an Instruction holding values for each of its Variables.
 struct InstructionTemplate {
-  InstructionTemplate(const Instruction &Instr);
+  InstructionTemplate(const Instruction *Instr);
 
   InstructionTemplate(const InstructionTemplate &);            // default
   InstructionTemplate &operator=(const InstructionTemplate &); // default
@@ -36,13 +36,16 @@ struct InstructionTemplate {
   MCOperand &getValueFor(const Operand &Op);
   const MCOperand &getValueFor(const Operand &Op) const;
   bool hasImmediateVariables() const;
+  const Instruction &getInstr() const { return *Instr; }
+  ArrayRef<MCOperand> getVariableValues() const { return VariableValues; }
 
   // Builds an MCInst from this InstructionTemplate setting its operands
   // to the corresponding variable values. Precondition: All VariableValues must
   // be set.
   MCInst build() const;
 
-  Instruction Instr;
+private:
+  const Instruction *Instr;
   SmallVector<MCOperand, 4> VariableValues;
 };
 
