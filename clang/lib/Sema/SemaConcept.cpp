@@ -653,7 +653,7 @@ static NormalForm makeCNF(const NormalizedConstraint &Normalized) {
   if (Normalized.getCompoundKind() == NormalizedConstraint::CCK_Conjunction) {
     LCNF.reserve(LCNF.size() + RCNF.size());
     while (!RCNF.empty())
-      LCNF.push_back(std::move(RCNF.pop_back_val()));
+      LCNF.push_back(RCNF.pop_back_val());
     return LCNF;
   }
 
@@ -682,7 +682,7 @@ static NormalForm makeDNF(const NormalizedConstraint &Normalized) {
   if (Normalized.getCompoundKind() == NormalizedConstraint::CCK_Disjunction) {
     LDNF.reserve(LDNF.size() + RDNF.size());
     while (!RDNF.empty())
-      LDNF.push_back(std::move(RDNF.pop_back_val()));
+      LDNF.push_back(RDNF.pop_back_val());
     return LDNF;
   }
 
