@@ -1,8 +1,8 @@
+## Here we test how OS and processor specific flags are dumped.
+
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj -S %t.o | FileCheck --check-prefix=OS-PROC-LLVM %s
 # RUN: llvm-readelf -S %t.o | FileCheck --check-prefix=OS-PROC-GNU %s
-
-## Here we test how OS and processor specific flags are dumped.
 
 # OS-PROC-LLVM:      Name: .os.flags.low
 # OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
