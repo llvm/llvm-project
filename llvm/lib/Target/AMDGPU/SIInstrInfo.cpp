@@ -404,11 +404,22 @@ bool SIInstrInfo::getMemOperandsWithOffset(
   return false;
 }
 
+static bool
+memOpsHaveSameBaseOperands(ArrayRef<const MachineOperand *> BaseOps1,
+                           ArrayRef<const MachineOperand *> BaseOps2) {
+  if (BaseOps1.size() != BaseOps2.size())
+    return false;
+  for (size_t I = 0, E = BaseOps1.size(); I < E; ++I)
+    if (!BaseOps1[I]->isIdenticalTo(*BaseOps2[I]))
+      return false;
+  return true;
+}
+
 static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
-                                  const MachineOperand &BaseOp1,
+                                  ArrayRef<const MachineOperand *> BaseOps1,
                                   const MachineInstr &MI2,
-                                  const MachineOperand &BaseOp2) {
-  if (BaseOp1.isIdenticalTo(BaseOp2))
+                                  ArrayRef<const MachineOperand *> BaseOps2) {
+  if (memOpsHaveSameBaseOperands(BaseOps1, BaseOps2))
     return true;
 
   if (!MI1.hasOneMemOperand() || !MI2.hasOneMemOperand())
@@ -437,13 +448,11 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
 bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       ArrayRef<const MachineOperand *> BaseOps2,
                                       unsigned NumLoads) const {
-  assert(BaseOps1.size() == 1 && BaseOps2.size() == 1);
-  const MachineOperand &BaseOp1 = *BaseOps1.front();
-  const MachineOperand &BaseOp2 = *BaseOps2.front();
-  const MachineInstr &FirstLdSt = *BaseOp1.getParent();
-  const MachineInstr &SecondLdSt = *BaseOp2.getParent();
+  assert(!BaseOps1.empty() && !BaseOps2.empty());
+  const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
+  const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
 
-  if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOp1, SecondLdSt, BaseOp2))
+  if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
     return false;
 
   const MachineOperand *FirstDst = nullptr;
