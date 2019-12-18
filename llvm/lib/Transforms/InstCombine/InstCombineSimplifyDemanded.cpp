@@ -984,65 +984,13 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
   if (VWidth == 1)
     return nullptr;
 
-  IRBuilderBase::InsertPointGuard Guard(Builder);
-  Builder.SetInsertPoint(II);
-
-  // Assume the arguments are unchanged and later override them, if needed.
-  SmallVector<Value *, 16> Args(II->arg_begin(), II->arg_end());
+  ConstantInt *NewDMask = nullptr;
 
   if (DMaskIdx < 0) {
-    // Buffer case.
-
-    const unsigned ActiveBits = DemandedElts.getActiveBits();
-    const unsigned UnusedComponentsAtFront = DemandedElts.countTrailingZeros();
-
-    // Start assuming the prefix of elements is demanded, but possibly clear some other bits if
-    // there are trailing zeros (unused components at front) and update offset.
-    DemandedElts = (1 << ActiveBits) - 1;
-
-    if (UnusedComponentsAtFront > 0) {
-      static const unsigned InvalidOffsetIdx = 0xf;
-
-      unsigned OffsetIdx;
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::amdgcn_raw_buffer_load:
-      case Intrinsic::amdgcn_raw_buffer_load_format:
-        OffsetIdx = 1;
-        break;
-      case Intrinsic::amdgcn_s_buffer_load:
-        // If resulting type is vec3, there is no point in trimming the
-        // load with updated offset, as the vec3 would most likely be widened to
-        // vec4 anyway during lowering.
-        if (ActiveBits == 4 && UnusedComponentsAtFront == 1)
-          OffsetIdx = InvalidOffsetIdx;
-        else
-          OffsetIdx = 1;
-        break;
-      case Intrinsic::amdgcn_buffer_load:
-      case Intrinsic::amdgcn_buffer_load_format:
-      case Intrinsic::amdgcn_struct_buffer_load:
-      case Intrinsic::amdgcn_struct_buffer_load_format:
-        OffsetIdx = 2;
-        break;
-      default:
-        // TODO: handle *tbuffer* intrinsics.
-        OffsetIdx = InvalidOffsetIdx;
-        break;
-      }
-
-      if (OffsetIdx != InvalidOffsetIdx) {
-        // Clear demanded bits and update the offset.
-        DemandedElts &= ~((1 << UnusedComponentsAtFront) - 1);
-        auto Offset = II->getArgOperand(OffsetIdx);
-        unsigned SingleComponentSizeInBits = getDataLayout().getTypeSizeInBits(II->getType()->getScalarType());
-        unsigned OffsetAdd = UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
-        auto OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
-        Args[OffsetIdx] = Builder.CreateAdd(Offset, OffsetAddVal);
-      }
-    }
+    // Pretend that a prefix of elements is demanded to simplify the code
+    // below.
+    DemandedElts = (1 << DemandedElts.getActiveBits()) - 1;
   } else {
-    // Image case.
-
     ConstantInt *DMask = cast<ConstantInt>(II->getArgOperand(DMaskIdx));
     unsigned DMaskVal = DMask->getZExtValue() & 0xf;
 
@@ -1061,7 +1009,7 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
     }
 
     if (DMaskVal != NewDMaskVal)
-      Args[DMaskIdx] = ConstantInt::get(DMask->getType(), NewDMaskVal);
+      NewDMask = ConstantInt::get(DMask->getType(), NewDMaskVal);
   }
 
   unsigned NewNumElts = DemandedElts.countPopulation();
@@ -1069,8 +1017,8 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
     return UndefValue::get(II->getType());
 
   if (NewNumElts >= VWidth && DemandedElts.isMask()) {
-    if (DMaskIdx >= 0)
-      II->setArgOperand(DMaskIdx, Args[DMaskIdx]);
+    if (NewDMask)
+      II->setArgOperand(DMaskIdx, NewDMask);
     return nullptr;
   }
 
@@ -1092,6 +1040,16 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
 
   OverloadTys[0] = NewTy;
   Function *NewIntrin = Intrinsic::getDeclaration(M, IID, OverloadTys);
+
+  SmallVector<Value *, 16> Args;
+  for (unsigned I = 0, E = II->getNumArgOperands(); I != E; ++I)
+    Args.push_back(II->getArgOperand(I));
+
+  if (NewDMask)
+    Args[DMaskIdx] = NewDMask;
+
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(II);
 
   CallInst *NewCall = Builder.CreateCall(NewIntrin, Args);
   NewCall->takeName(II);
@@ -1761,7 +1719,6 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     case Intrinsic::amdgcn_raw_buffer_load:
     case Intrinsic::amdgcn_raw_buffer_load_format:
     case Intrinsic::amdgcn_raw_tbuffer_load:
-    case Intrinsic::amdgcn_s_buffer_load:
     case Intrinsic::amdgcn_struct_buffer_load:
     case Intrinsic::amdgcn_struct_buffer_load_format:
     case Intrinsic::amdgcn_struct_tbuffer_load:
