@@ -78,6 +78,10 @@ struct FileRange {
   /// Gets the substring that this FileRange refers to.
   llvm::StringRef text(const SourceManager &SM) const;
 
+  /// Convert to the clang range. The returned range is always a char range,
+  /// never a token range.
+  CharSourceRange toCharRange(const SourceManager &SM) const;
+
   friend bool operator==(const FileRange &L, const FileRange &R) {
     return std::tie(L.File, L.Begin, L.End) == std::tie(R.File, R.Begin, R.End);
   }
