@@ -403,7 +403,7 @@ def dpu_list(debugger, command, result, internal_dict):
 
                 dpu_status = get_dpu_status(run_context, slice_id, dpu_id)
 
-                result_list.append((int(str(dpu.GetAddress())),
+                result_list.append((int(str(dpu.GetAddress()), 16),
                                     region_id, rank_id, slice_id, dpu_id,
                                     dpu_status, program_path))
 
