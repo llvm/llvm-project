@@ -217,7 +217,7 @@ SwiftRuntimeReporting::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
     return StructuredData::ObjectSP();
 
   // Prepare the argument types: treat all of them as pointers
-  ClangASTContext *clang_ast_context = target.GetScratchClangASTContext();
+  ClangASTContext *clang_ast_context = ClangASTContext::GetScratch(target);
   ValueList args;
   Value input_value;
   input_value.SetCompilerType(

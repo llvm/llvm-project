@@ -140,8 +140,11 @@ SwiftArrayBridgedBufferHandler::SwiftArrayBridgedBufferHandler(
     ProcessSP process_sp, lldb::addr_t native_ptr)
     : SwiftArrayBufferHandler(), m_elem_type(), m_synth_array_sp(),
       m_frontend(nullptr) {
-  m_elem_type =
-      process_sp->GetTarget().GetScratchClangASTContext()->GetBasicType(
+  ClangASTContext *clang_ast_context =
+        ClangASTContext::GetScratch(process_sp->GetTarget());
+  if (!clang_ast_context)
+    return;
+  m_elem_type = clang_ast_context->GetBasicType(
           lldb::eBasicTypeObjCID);
   InferiorSizedWord isw(native_ptr, *process_sp);
   m_synth_array_sp = ValueObjectConstResult::CreateValueObjectFromData(
@@ -285,9 +288,15 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
   llvm::StringRef valobj_typename(
       valobj.GetCompilerType().GetTypeName().AsCString(""));
 
+  if (!valobj.GetTargetSP())
+    return nullptr;
+  ClangASTContext *clang_ast_context =
+      ClangASTContext::GetScratch(*valobj.GetTargetSP());
+  if (!clang_ast_context)
+    return nullptr;
+
   if (valobj_typename.startswith("Swift._NSSwiftArray")) {
-    CompilerType anyobject_type =
-        valobj.GetTargetSP()->GetScratchClangASTContext()->GetBasicType(
+    CompilerType anyobject_type = clang_ast_context->GetBasicType(
             lldb::eBasicTypeObjCID);
     auto handler = std::unique_ptr<SwiftArrayBufferHandler>(
         new SwiftArrayNativeBufferHandler(valobj, valobj.GetPointerValue(),
@@ -301,8 +310,7 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
   // that are in Foundation don't get the new mangling.
   if (valobj_typename.startswith("_TtCs23_ContiguousArrayStorage") ||
       valobj_typename.startswith("Swift._ContiguousArrayStorage")) {
-    CompilerType anyobject_type =
-        valobj.GetTargetSP()->GetScratchClangASTContext()->GetBasicType(
+    CompilerType anyobject_type = clang_ast_context->GetBasicType(
             lldb::eBasicTypeObjCID);
     auto handler = std::unique_ptr<SwiftArrayBufferHandler>(
         new SwiftArrayNativeBufferHandler(

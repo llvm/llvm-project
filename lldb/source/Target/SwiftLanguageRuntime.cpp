@@ -1173,7 +1173,7 @@ const CompilerType &SwiftLanguageRuntime::GetBoxMetadataType() {
   static ConstString g_type_name("__lldb_autogen_boxmetadata");
   const bool is_packed = false;
   if (ClangASTContext *ast_ctx =
-          GetProcess()->GetTarget().GetScratchClangASTContext()) {
+          ClangASTContext::GetScratch(GetProcess()->GetTarget())) {
     CompilerType voidstar =
         ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
     CompilerType uint32 = ClangASTContext::GetIntTypeFromBitSize(
@@ -3067,9 +3067,11 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
                 ABISP abi_sp(frame.GetThread()->GetProcess()->GetABI());
                 ValueList argument_values;
                 Value input_value;
+                auto clang_ctx = ClangASTContext::GetScratch(target);
+                if (!clang_ctx)
+                  continue;
                 CompilerType clang_void_ptr_type =
-                    target.GetScratchClangASTContext()
-                        ->GetBasicType(eBasicTypeVoid)
+                        clang_ctx->GetBasicType(eBasicTypeVoid)
                         .GetPointerType();
 
                 input_value.SetValueType(Value::eValueTypeScalar);

@@ -132,6 +132,8 @@ public:
 
   ~SwiftASTContext();
 
+  const std::string &GetDescription() const;
+
   // PluginInterface functions
   ConstString GetPluginName() override;
 
@@ -322,6 +324,7 @@ public:
   CompilerType ImportType(CompilerType &type, Status &error);
 
   swift::ClangImporter *GetClangImporter();
+  swift::DWARFImporterDelegate *GetDWARFImporterDelegate();
 
   struct TupleElement {
     ConstString element_name;

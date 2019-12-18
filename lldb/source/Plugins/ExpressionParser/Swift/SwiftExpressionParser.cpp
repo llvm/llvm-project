@@ -1667,6 +1667,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   }
 
   runSILDiagnosticPasses(*sil_module);
+  runSILOwnershipEliminatorPass(*sil_module);
 
   if (log) {
     std::string s;
