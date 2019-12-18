@@ -315,12 +315,14 @@ bool TargetTransformInfo::isLegalNTLoad(Type *DataType, Align Alignment) const {
   return TTIImpl->isLegalNTLoad(DataType, Alignment);
 }
 
-bool TargetTransformInfo::isLegalMaskedGather(Type *DataType) const {
-  return TTIImpl->isLegalMaskedGather(DataType);
+bool TargetTransformInfo::isLegalMaskedGather(Type *DataType,
+                                              MaybeAlign Alignment) const {
+  return TTIImpl->isLegalMaskedGather(DataType, Alignment);
 }
 
-bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType) const {
-  return TTIImpl->isLegalMaskedScatter(DataType);
+bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType,
+                                               MaybeAlign Alignment) const {
+  return TTIImpl->isLegalMaskedScatter(DataType, Alignment);
 }
 
 bool TargetTransformInfo::isLegalMaskedCompressStore(Type *DataType) const {
