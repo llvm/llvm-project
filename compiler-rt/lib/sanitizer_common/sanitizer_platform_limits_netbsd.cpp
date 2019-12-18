@@ -109,7 +109,12 @@
 #include <dev/dmover/dmover_io.h>
 #include <dev/dtv/dtvio_demux.h>
 #include <dev/dtv/dtvio_frontend.h>
+#if !__NetBSD_Prereq__(9,9,26)
 #include <dev/filemon/filemon.h>
+#else
+#define FILEMON_SET_FD          _IOWR('S', 1, int)
+#define FILEMON_SET_PID         _IOWR('S', 2, pid_t)
+#endif
 #include <dev/hdaudio/hdaudioio.h>
 #include <dev/hdmicec/hdmicecio.h>
 #include <dev/hpc/hpcfbio.h>
@@ -698,6 +703,7 @@ unsigned struct_nvmm_ioc_machine_configure_sz =
     sizeof(nvmm_ioc_machine_configure);
 unsigned struct_nvmm_ioc_vcpu_create_sz = sizeof(nvmm_ioc_vcpu_create);
 unsigned struct_nvmm_ioc_vcpu_destroy_sz = sizeof(nvmm_ioc_vcpu_destroy);
+unsigned struct_nvmm_ioc_vcpu_configure_sz = sizeof(nvmm_ioc_vcpu_configure);
 unsigned struct_nvmm_ioc_vcpu_setstate_sz = sizeof(nvmm_ioc_vcpu_destroy);
 unsigned struct_nvmm_ioc_vcpu_getstate_sz = sizeof(nvmm_ioc_vcpu_getstate);
 unsigned struct_nvmm_ioc_vcpu_inject_sz = sizeof(nvmm_ioc_vcpu_inject);
@@ -1458,6 +1464,7 @@ unsigned IOCTL_NVMM_IOC_MACHINE_DESTROY = NVMM_IOC_MACHINE_DESTROY;
 unsigned IOCTL_NVMM_IOC_MACHINE_CONFIGURE = NVMM_IOC_MACHINE_CONFIGURE;
 unsigned IOCTL_NVMM_IOC_VCPU_CREATE = NVMM_IOC_VCPU_CREATE;
 unsigned IOCTL_NVMM_IOC_VCPU_DESTROY = NVMM_IOC_VCPU_DESTROY;
+unsigned IOCTL_NVMM_IOC_VCPU_CONFIGURE = NVMM_IOC_VCPU_CONFIGURE;
 unsigned IOCTL_NVMM_IOC_VCPU_SETSTATE = NVMM_IOC_VCPU_SETSTATE;
 unsigned IOCTL_NVMM_IOC_VCPU_GETSTATE = NVMM_IOC_VCPU_GETSTATE;
 unsigned IOCTL_NVMM_IOC_VCPU_INJECT = NVMM_IOC_VCPU_INJECT;
@@ -1534,6 +1541,7 @@ unsigned IOCTL_IOC_NPF_STATS = IOC_NPF_STATS;
 unsigned IOCTL_IOC_NPF_SAVE = IOC_NPF_SAVE;
 unsigned IOCTL_IOC_NPF_RULE = IOC_NPF_RULE;
 unsigned IOCTL_IOC_NPF_CONN_LOOKUP = IOC_NPF_CONN_LOOKUP;
+unsigned IOCTL_IOC_NPF_TABLE_REPLACE = IOC_NPF_TABLE_REPLACE;
 unsigned IOCTL_PPPOESETPARMS = PPPOESETPARMS;
 unsigned IOCTL_PPPOEGETPARMS = PPPOEGETPARMS;
 unsigned IOCTL_PPPOEGETSESSION = PPPOEGETSESSION;
