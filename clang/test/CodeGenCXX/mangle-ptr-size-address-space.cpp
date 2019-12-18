@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-extensions -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -fms-extensions -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK
 // RUN: %clang_cc1 -fms-extensions -emit-llvm -triple x86_64-windows-msvc -o - %s | FileCheck %s --check-prefixes=WIN
 
 // CHECK-LABEL: define {{.*}}void @_Z2f0PU10ptr32_sptri
@@ -13,6 +13,6 @@ void * __ptr32 __uptr f1(int * __ptr32 p) { return 0; }
 // WIN-LABEL: define {{.*}}void @"?f2@@YAXPEAH@Z"
 void f2(int * __ptr64 p) {}
 
-  // CHECK-LABEL: define {{.*}}i8* @_Z2f3Pi
+// CHECK-LABEL: define {{.*}}i8* @_Z2f3Pi
 // WIN-LABEL: define {{.*}}i8* @"?f3@@YAPEAXPEAH@Z"
 void * __ptr64 f3(int * __ptr64 p) { return 0; }
