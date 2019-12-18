@@ -101,6 +101,8 @@ INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
   return __lanemask_gt();
 }
 
+EXTERN bool __kmpc_impl_is_first_active_thread();
+
 INLINE uint32_t __kmpc_impl_smid() {
   return __smid();
 }

@@ -57,12 +57,13 @@ get_filename_component(devicertl_base_directory
 set(cuda_sources
   ${devicertl_base_directory}/common/src/cancel.cu
   ${devicertl_base_directory}/common/src/critical.cu
-  ${devicertl_base_directory}/common/src/loop.cu
+  ${devicertl_base_directory}/common/src/data_sharing.cu
   ${devicertl_base_directory}/common/src/libcall.cu
-  ${devicertl_base_directory}/common/src/reduction.cu
+  ${devicertl_base_directory}/common/src/loop.cu
   ${devicertl_base_directory}/common/src/omp_data.cu
   ${devicertl_base_directory}/common/src/omptarget.cu
   ${devicertl_base_directory}/common/src/parallel.cu
+  ${devicertl_base_directory}/common/src/reduction.cu
   ${devicertl_base_directory}/common/src/sync.cu
   ${devicertl_base_directory}/common/src/task.cu)
 
