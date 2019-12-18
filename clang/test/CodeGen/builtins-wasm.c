@@ -352,6 +352,20 @@ i16x8 sub_saturate_u_i16x8(i16x8 x, i16x8 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+i8x16 avgr_u_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_avgr_u_i8x16(x, y);
+  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.avgr.unsigned.v16i8(
+  // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i16x8 avgr_u_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_avgr_u_i16x8(x, y);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.avgr.unsigned.v8i16(
+  // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 i32x4 dot_i16x8_s(i16x8 x, i16x8 y) {
   return __builtin_wasm_dot_s_i32x4_i16x8(x, y);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.dot(<8 x i16> %x, <8 x i16> %y)
