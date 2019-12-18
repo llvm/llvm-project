@@ -729,6 +729,14 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
                                                       [ LLVMMatchType<0>,
                                                         LLVMMatchType<0>,
                                                         llvm_metadata_ty ]>;
+  def int_experimental_constrained_maximum : Intrinsic<[ llvm_anyfloat_ty ],
+                                                       [ LLVMMatchType<0>,
+                                                         LLVMMatchType<0>,
+                                                         llvm_metadata_ty ]>;
+  def int_experimental_constrained_minimum : Intrinsic<[ llvm_anyfloat_ty ],
+                                                       [ LLVMMatchType<0>,
+                                                         LLVMMatchType<0>,
+                                                         llvm_metadata_ty ]>;
   def int_experimental_constrained_ceil : Intrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty ]>;

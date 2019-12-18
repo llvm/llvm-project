@@ -1175,7 +1175,7 @@ let Predicates = [FeatureVector] in {
   // Maximum.
   multiclass VectorMax<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, any_fmaxnum, tr, 4>;
-    def : FPMinMax<insn, fmaximum, tr, 1>;
+    def : FPMinMax<insn, any_fmaximum, tr, 1>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     let Uses = [FPC], mayRaiseFPException = 1 in {
@@ -1201,7 +1201,7 @@ let Predicates = [FeatureVector] in {
   // Minimum.
   multiclass VectorMin<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, any_fminnum, tr, 4>;
-    def : FPMinMax<insn, fminimum, tr, 1>;
+    def : FPMinMax<insn, any_fminimum, tr, 1>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     let Uses = [FPC], mayRaiseFPException = 1 in {
