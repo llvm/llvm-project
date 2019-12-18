@@ -291,7 +291,7 @@ static const DagInit *getDagWithOperatorOfSubClass(const Init &N,
 
 StringRef makeNameForAnonInstr(CombineRule &Rule) {
   return insertStrTab(to_string(
-      format("__anon%" PRIu64 "_%" PRIu64, Rule.getID(), Rule.allocUID())));
+      format("__anon%" PRIu64 "_%u", Rule.getID(), Rule.allocUID())));
 }
 
 StringRef makeDebugName(CombineRule &Rule, StringRef Name) {
@@ -300,7 +300,7 @@ StringRef makeDebugName(CombineRule &Rule, StringRef Name) {
 
 StringRef makeNameForAnonPredicate(CombineRule &Rule) {
   return insertStrTab(to_string(
-      format("__anonpred%" PRIu64 "_%" PRIu64, Rule.getID(), Rule.allocUID())));
+      format("__anonpred%" PRIu64 "_%u", Rule.getID(), Rule.allocUID())));
 }
 
 void CombineRule::declareMatchData(StringRef PatternSymbol, StringRef Type,
