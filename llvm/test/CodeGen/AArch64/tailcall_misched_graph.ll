@@ -39,8 +39,8 @@ declare void @callee2(i8*, i8*, i8*, i8*, i8*,
 ; Make sure that there is an dependence edge between fi#-2 and fi#-4.
 ; Without this edge the scheduler would be free to move the store accross the load.
 
-; COMMON: SU({{.*}}):   [[VRB]]:gpr64 = LDRXui %fixed-stack.2
-; COMMON-NOT: SU
+; COMMON: {{^SU(.*)}}:   [[VRB]]:gpr64 = LDRXui %fixed-stack.2
+; COMMON-NOT: {{^SU(.*)}}:
 ; COMMON:  Successors:
 ; COMMON:   SU([[DEPSTOREB:.*]]): Ord  Latency=0
 ; COMMON:   SU([[DEPSTOREA:.*]]): Ord  Latency=0

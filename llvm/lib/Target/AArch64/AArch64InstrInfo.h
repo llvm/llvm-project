@@ -89,6 +89,12 @@ public:
   /// if there is a corresponding unscaled variant available.
   static Optional<unsigned> getUnscaledLdSt(unsigned Opc);
 
+  /// Scaling factor for (scaled or unscaled) load or store.
+  static int getMemScale(unsigned Opc);
+  static int getMemScale(const MachineInstr &MI) {
+    return getMemScale(MI.getOpcode());
+  }
+
 
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);

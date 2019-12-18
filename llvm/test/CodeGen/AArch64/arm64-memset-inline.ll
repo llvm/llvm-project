@@ -113,9 +113,9 @@ define void @bzero_20_stack() {
 
 define void @bzero_26_stack() {
 ; CHECK-LABEL: bzero_26_stack:
-; CHECK:       stp xzr, xzr, [sp, #8]
-; CHECK-NEXT:  str xzr, [sp]
+; CHECK:       stp xzr, xzr, [sp]
 ; CHECK-NEXT:  strh wzr, [sp, #24]
+; CHECK-NEXT:  str xzr, [sp, #16]
 ; CHECK-NEXT:  bl something
   %buf = alloca [26 x i8], align 1
   %cast = bitcast [26 x i8]* %buf to i8*
@@ -259,9 +259,9 @@ define void @memset_12_stack() {
 define void @memset_16_stack() {
 ; CHECK-LABEL: memset_16_stack:
 ; CHECK:       mov x8, #-6148914691236517206
+; CHECK-NEXT:  str x8, [sp, #-32]!
 ; CHECK-NEXT:  mov x0, sp
 ; CHECK-NEXT:  stp x8, x30, [sp, #8]
-; CHECK-NEXT:  str x8, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [16 x i8], align 1
   %cast = bitcast [16 x i8]* %buf to i8*
