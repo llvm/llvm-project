@@ -710,7 +710,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "  bool tryCombineAll(\n"
      << "    GISelChangeObserver &Observer,\n"
      << "    MachineInstr &MI,\n"
-     << "    MachineIRBuilder &B) const;\n"
+     << "    MachineIRBuilder &B,\n"
+     << "    CombinerHelper &Helper) const;\n"
      << "};\n\n";
 
   emitNameMatcher(OS);
@@ -766,8 +767,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   OS << "bool " << getClassName() << "::tryCombineAll(\n"
      << "    GISelChangeObserver &Observer,\n"
      << "    MachineInstr &MI,\n"
-     << "    MachineIRBuilder &B) const {\n"
-     << "  CombinerHelper Helper(Observer, B);\n"
+     << "    MachineIRBuilder &B,\n"
+     << "    CombinerHelper &Helper) const {\n"
      << "  MachineBasicBlock *MBB = MI.getParent();\n"
      << "  MachineFunction *MF = MBB->getParent();\n"
      << "  MachineRegisterInfo &MRI = MF->getRegInfo();\n"

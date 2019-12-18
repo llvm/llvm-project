@@ -73,6 +73,7 @@ class GIDefMatchData<string type> : GIDefKind {
 }
 
 def extending_load_matchdata : GIDefMatchData<"PreferredTuple">;
+def indexed_load_store_matchdata : GIDefMatchData<"IndexedLoadStoreMatchInfo">;
 
 /// The operator at the root of a GICombineRule.Match dag.
 def match;
@@ -106,6 +107,12 @@ def extending_loads : GICombineRule<
   (defs root:$root, extending_load_matchdata:$matchinfo),
   (match [{ return Helper.matchCombineExtendingLoads(${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineExtendingLoads(${root}, ${matchinfo}); }])>;
+def combines_for_extload: GICombineGroup<[extending_loads]>;
+
+def combine_indexed_load_store : GICombineRule<
+  (defs root:$root, indexed_load_store_matchdata:$matchinfo),
+  (match [{ return Helper.matchCombineIndexedLoadStore(${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineIndexedLoadStore(${root}, ${matchinfo}); }])>;
 
 // FIXME: Is there a reason this wasn't in tryCombine? I've left it out of
 //        all_combines because it wasn't there.
@@ -114,6 +121,4 @@ def elide_br_by_inverting_cond : GICombineRule<
   (match [{ return Helper.matchElideBrByInvertingCond(${d}); }]),
   (apply [{ Helper.applyElideBrByInvertingCond(${d}); }])>;
 
-def combines_for_extload: GICombineGroup<[extending_loads]>;
-
-def all_combines : GICombineGroup<[trivial_combines, combines_for_extload]>;
+def all_combines : GICombineGroup<[trivial_combines, combines_for_extload, combine_indexed_load_store]>;
