@@ -96,7 +96,7 @@ define dso_local i32 @bpf_prog(%union.sk_buff*) local_unnamed_addr #0 !dbg !15 {
 ; CHECK-NEXT:        .long   41
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   45                      # BTF_KIND_FUNC(id = 7)
-; CHECK-NEXT:        .long   201326592               # 0xc000000
+; CHECK-NEXT:        .long   201326593               # 0xc000001
 ; CHECK-NEXT:        .long   6
 ; CHECK-NEXT:        .byte   0                       # string offset=0
 ; CHECK-NEXT:        .ascii  "sk_buff"               # string offset=1
