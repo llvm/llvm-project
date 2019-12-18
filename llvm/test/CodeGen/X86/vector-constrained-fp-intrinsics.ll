@@ -7267,6 +7267,65 @@ entry:
   ret <4 x float> %result
 }
 
+; Simple test to make sure we don't fuse vselect+strict_fadd into a masked operation.
+define <16 x float> @vpaddd_mask_test(<16 x float> %i, <16 x float> %j, <16 x i32> %mask1) nounwind readnone strictfp {
+; CHECK-LABEL: vpaddd_mask_test:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm10, %xmm10
+; CHECK-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
+; CHECK-NEXT:    pcmpeqd %xmm10, %xmm8
+; CHECK-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
+; CHECK-NEXT:    pcmpeqd %xmm10, %xmm9
+; CHECK-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
+; CHECK-NEXT:    pcmpeqd %xmm10, %xmm11
+; CHECK-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm10
+; CHECK-NEXT:    addps %xmm3, %xmm7
+; CHECK-NEXT:    addps %xmm2, %xmm6
+; CHECK-NEXT:    addps %xmm1, %xmm5
+; CHECK-NEXT:    addps %xmm0, %xmm4
+; CHECK-NEXT:    andps %xmm10, %xmm0
+; CHECK-NEXT:    andnps %xmm4, %xmm10
+; CHECK-NEXT:    orps %xmm10, %xmm0
+; CHECK-NEXT:    andps %xmm11, %xmm1
+; CHECK-NEXT:    andnps %xmm5, %xmm11
+; CHECK-NEXT:    orps %xmm11, %xmm1
+; CHECK-NEXT:    andps %xmm9, %xmm2
+; CHECK-NEXT:    andnps %xmm6, %xmm9
+; CHECK-NEXT:    orps %xmm9, %xmm2
+; CHECK-NEXT:    andps %xmm8, %xmm3
+; CHECK-NEXT:    andnps %xmm7, %xmm8
+; CHECK-NEXT:    orps %xmm8, %xmm3
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: vpaddd_mask_test:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm6
+; AVX1-NEXT:    vpxor %xmm7, %xmm7, %xmm7
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm6, %xmm6
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm5, %xmm5
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm6
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm6, %xmm6
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm4, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
+; AVX1-NEXT:    vaddps %ymm3, %ymm1, %ymm3
+; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm2
+; AVX1-NEXT:    vblendvps %ymm4, %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vblendvps %ymm5, %ymm1, %ymm3, %ymm1
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: vpaddd_mask_test:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vptestmd %zmm2, %zmm2, %k1
+; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0 {%k1}
+; AVX512-NEXT:    retq
+  %mask = icmp ne <16 x i32> %mask1, zeroinitializer
+  %x = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %i, <16 x float> %j, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %r = select <16 x i1> %mask, <16 x float> %x, <16 x float> %i
+  ret <16 x float> %r
+}
+declare  <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float>, <16 x float>, metadata, metadata)
+
 attributes #0 = { strictfp }
 
 ; Single width declarations
