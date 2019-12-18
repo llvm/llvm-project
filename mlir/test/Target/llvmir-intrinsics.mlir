@@ -50,6 +50,42 @@ llvm.func @log2_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
   llvm.return
 }
 
+// CHECK-LABEL: @fabs_test
+llvm.func @fabs_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.fabs.f32
+  "llvm.intr.fabs"(%arg0) : (!llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.fabs.v8f32
+  "llvm.intr.fabs"(%arg1) : (!llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
+// CHECK-LABEL: @ceil_test
+llvm.func @ceil_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.ceil.f32
+  "llvm.intr.ceil"(%arg0) : (!llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.ceil.v8f32
+  "llvm.intr.ceil"(%arg1) : (!llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
+// CHECK-LABEL: @cos_test
+llvm.func @cos_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.cos.f32
+  "llvm.intr.cos"(%arg0) : (!llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.cos.v8f32
+  "llvm.intr.cos"(%arg1) : (!llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
+// CHECK-LABEL: @copysign_test
+llvm.func @copysign_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<8 x float>">, %arg3: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.copysign.f32
+  "llvm.intr.copysign"(%arg0, %arg1) : (!llvm.float, !llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.copysign.v8f32
+  "llvm.intr.copysign"(%arg2, %arg3) : (!llvm<"<8 x float>">, !llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK: declare float @llvm.fmuladd.f32.f32.f32(float, float, float)
 // CHECK: declare <8 x float> @llvm.fmuladd.v8f32.v8f32.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
@@ -62,3 +98,9 @@ llvm.func @log2_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
 // CHECK: declare <8 x float> @llvm.log10.v8f32(<8 x float>) #0
 // CHECK: declare float @llvm.log2.f32(float)
 // CHECK: declare <8 x float> @llvm.log2.v8f32(<8 x float>) #0
+// CHECK: declare float @llvm.fabs.f32(float)
+// CHECK: declare <8 x float> @llvm.fabs.v8f32(<8 x float>) #0
+// CHECK: declare float @llvm.ceil.f32(float)
+// CHECK: declare <8 x float> @llvm.ceil.v8f32(<8 x float>) #0
+// CHECK: declare float @llvm.cos.f32(float)
+// CHECK: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
