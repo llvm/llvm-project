@@ -62,20 +62,6 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   CombinerHelper Helper(Observer, B, KB, MDT);
 
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_CONCAT_VECTORS:
-    return Helper.tryCombineConcatVectors(MI);
-  case TargetOpcode::G_SHUFFLE_VECTOR:
-    return Helper.tryCombineShuffleVector(MI);
-  case TargetOpcode::G_LOAD:
-  case TargetOpcode::G_SEXTLOAD:
-  case TargetOpcode::G_ZEXTLOAD: {
-    bool Changed = false;
-    Changed |= Helper.tryCombineExtendingLoads(MI);
-    Changed |= Helper.tryCombineIndexedLoadStore(MI);
-    return Changed;
-  }
-  case TargetOpcode::G_STORE:
-    return Helper.tryCombineIndexedLoadStore(MI);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     switch (MI.getIntrinsicID()) {
     case Intrinsic::memcpy:
@@ -95,6 +81,18 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
 
   if (Generated.tryCombineAll(Observer, MI, B))
     return true;
+
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_CONCAT_VECTORS:
+    return Helper.tryCombineConcatVectors(MI);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return Helper.tryCombineShuffleVector(MI);
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_STORE:
+    return Helper.tryCombineIndexedLoadStore(MI);
+  }
 
   return false;
 }
