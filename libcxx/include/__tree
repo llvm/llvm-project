@@ -775,10 +775,13 @@ private:
     typedef __tree_node_types<pointer> _NodeTypes;
     allocator_type& __na_;
 
-    __tree_node_destructor& operator=(const __tree_node_destructor&);
 
 public:
     bool __value_constructed;
+
+
+    __tree_node_destructor(const __tree_node_destructor &) = default;
+    __tree_node_destructor& operator=(const __tree_node_destructor&) = delete;
 
     _LIBCPP_INLINE_VISIBILITY
     explicit __tree_node_destructor(allocator_type& __na, bool __val = false) _NOEXCEPT

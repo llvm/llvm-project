@@ -2,7 +2,6 @@
 Test address breakpoints set with shared library of SBAddress work correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -20,10 +19,6 @@ class AddressBreakpointTestCase(TestBase):
         """Test address breakpoints set with shared library of SBAddress work correctly."""
         self.build()
         self.address_breakpoints()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def address_breakpoints(self):
         """Test address breakpoints set with shared library of SBAddress work correctly."""

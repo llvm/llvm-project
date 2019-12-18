@@ -1,6 +1,5 @@
 """Test custom import command to import files by path."""
 
-from __future__ import print_function
 
 
 import lldb
@@ -18,10 +17,6 @@ class ImportTestCase(TestBase):
     def test_import_command(self):
         """Import some Python scripts by path and test them"""
         self.run_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def run_test(self):
         """Import some Python scripts by path and test them."""

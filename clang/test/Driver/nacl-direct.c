@@ -5,7 +5,7 @@
 // RUN:     -target i686-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-I686 %s
 // CHECK-I686: {{.*}}clang{{.*}}" "-cc1"
-// CHECK-I686: "-fuse-init-array"
+// CHECK-I686-NOT: "-fno-use-init-array"
 // CHECK-I686: "-target-cpu" "pentium4"
 // CHECK-I686: "-resource-dir" "foo"
 // CHECK-I686: "-internal-isystem" "foo{{/|\\\\}}include"
@@ -25,7 +25,7 @@
 // RUN:     -target x86_64-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-x86_64 %s
 // CHECK-x86_64: {{.*}}clang{{.*}}" "-cc1"
-// CHECK-x86_64: "-fuse-init-array"
+// CHECK-x86_64-NOT: "-fno-use-init-array"
 // CHECK-x86_64: "-target-cpu" "x86-64"
 // CHECK-x86_64: "-resource-dir" "foo"
 // CHECK-x86_64: "-internal-isystem" "foo{{/|\\\\}}include"
@@ -45,7 +45,7 @@
 // RUN:     -target armv7a-unknown-nacl-gnueabihf -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM %s
 // CHECK-ARM: {{.*}}clang{{.*}}" "-cc1"
-// CHECK-ARM: "-fuse-init-array"
+// CHECK-ARM-NOT: "-fno-use-init-array"
 // CHECK-ARM: "-target-cpu" "generic"
 // CHECK-ARM: "-target-abi" "aapcs-linux"
 // CHECK-ARM: "-mfloat-abi" "hard"
@@ -68,7 +68,7 @@
 // RUN:     -target mipsel-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS %s
 // CHECK-MIPS: {{.*}}clang{{.*}}" "-cc1"
-// CHECK-MIPS: "-fuse-init-array"
+// CHECK-MIPS-NOT: "-fno-use-init-array"
 // CHECK-MIPS: "-target-cpu" "mips32r2"
 // CHECK-MIPS: "-target-abi" "o32"
 // CHECK-MIPS: "-mfloat-abi" "hard"

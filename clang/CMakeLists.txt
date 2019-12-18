@@ -801,8 +801,8 @@ if (CLANG_ENABLE_BOOTSTRAP)
                 # We shouldn't need to set this here, but INSTALL_DIR doesn't
                 # seem to work, so instead I'm passing this through
                 -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-                ${CLANG_BOOTSTRAP_CMAKE_ARGS}
                 ${PASSTHROUGH_VARIABLES}
+                ${CLANG_BOOTSTRAP_CMAKE_ARGS}
                  -DCLANG_STAGE=${NEXT_CLANG_STAGE}
                 ${COMPILER_OPTIONS}
                 ${${CLANG_STAGE}_CONFIG}

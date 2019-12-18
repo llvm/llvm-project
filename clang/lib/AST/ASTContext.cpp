@@ -2462,7 +2462,7 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
       return llvm::None;
 
     SmallVector<std::pair<QualType, int64_t>, 4> Bases;
-    for (const auto Base : ClassDecl->bases()) {
+    for (const auto &Base : ClassDecl->bases()) {
       // Empty types can be inherited from, and non-empty types can potentially
       // have tail padding, so just make sure there isn't an error.
       if (!isStructEmpty(Base.getType())) {
@@ -2480,7 +2480,7 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
              Layout.getBaseClassOffset(R.first->getAsCXXRecordDecl());
     });
 
-    for (const auto Base : Bases) {
+    for (const auto &Base : Bases) {
       int64_t BaseOffset = Context.toBits(
           Layout.getBaseClassOffset(Base.first->getAsCXXRecordDecl()));
       int64_t BaseSize = Base.second;

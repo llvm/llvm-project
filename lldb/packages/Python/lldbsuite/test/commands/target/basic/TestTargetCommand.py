@@ -2,7 +2,6 @@
 Test some target commands: create, list, select, variable.
 """
 
-from __future__ import print_function
 import os
 import stat
 import tempfile

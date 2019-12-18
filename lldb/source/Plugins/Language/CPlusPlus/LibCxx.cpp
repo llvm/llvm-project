@@ -572,10 +572,13 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
   location_sp->GetPointeeData(extractor, 0, size);
 
   // std::wstring::size() is measured in 'characters', not bytes
-  auto wchar_t_size = valobj.GetTargetSP()
-                          ->GetScratchClangASTContext()
-                          ->GetBasicType(lldb::eBasicTypeWChar)
-                          .GetByteSize(nullptr);
+  ClangASTContext *ast_context =
+      ClangASTContext::GetScratch(*valobj.GetTargetSP());
+  if (!ast_context)
+    return false;
+
+  auto wchar_t_size =
+      ast_context->GetBasicType(lldb::eBasicTypeWChar).GetByteSize(nullptr);
   if (!wchar_t_size)
     return false;
 

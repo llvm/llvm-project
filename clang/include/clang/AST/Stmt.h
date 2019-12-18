@@ -1995,6 +1995,10 @@ public:
   bool isConstexpr() const { return IfStmtBits.IsConstexpr; }
   void setConstexpr(bool C) { IfStmtBits.IsConstexpr = C; }
 
+  /// If this is an 'if constexpr', determine which substatement will be taken.
+  /// Otherwise, or if the condition is value-dependent, returns None.
+  Optional<const Stmt*> getNondiscardedCase(const ASTContext &Ctx) const;
+
   bool isObjCAvailabilityCheck() const;
 
   SourceLocation getBeginLoc() const { return getIfLoc(); }

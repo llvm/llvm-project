@@ -177,6 +177,9 @@ public:
     /// IdentifierInfo
     ak_identifierinfo,
 
+    /// address space
+    ak_addrspace,
+
     /// Qualifiers
     ak_qual,
 

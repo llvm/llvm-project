@@ -90,6 +90,3 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         self.assertEqual(frame4.GetDisplayFunctionName(), "main")
         self.assertFalse(frame2.IsArtificial())
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)

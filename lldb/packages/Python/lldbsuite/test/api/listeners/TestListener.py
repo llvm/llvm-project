@@ -2,7 +2,6 @@
 Test that we can listen to modules loaded events.
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -16,10 +15,6 @@ import six
 class ListenToModuleLoadedEvents (TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def test_receiving_breakpoint_added(self):
         """Test that we get breakpoint added events, waiting on event classes on the debugger"""

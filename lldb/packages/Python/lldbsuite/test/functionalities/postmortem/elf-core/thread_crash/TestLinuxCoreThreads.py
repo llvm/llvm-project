@@ -2,7 +2,6 @@
 Test signal reporting when debugging with linux core files.
 """
 
-from __future__ import print_function
 
 
 import lldb

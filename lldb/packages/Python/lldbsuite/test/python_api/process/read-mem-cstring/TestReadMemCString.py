@@ -1,6 +1,5 @@
 """Test reading c-strings from memory via SB API."""
 
-from __future__ import print_function
 
 import os
 import lldb

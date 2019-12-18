@@ -2275,6 +2275,8 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
     DwarfDebug::emitDebugLocValue(AP, BT, Value, DwarfExpr);
   }
   DwarfExpr.finalize();
+  if (DwarfExpr.TagOffset)
+    List.setTagOffset(*DwarfExpr.TagOffset);
 }
 
 void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
@@ -2464,22 +2466,15 @@ static void emitLocList(DwarfDebug &DD, AsmPrinter *Asm, const DebugLocStream::L
                 });
 }
 
-// Emit locations into the .debug_loc/.debug_loclists section.
-void DwarfDebug::emitDebugLoc() {
+void DwarfDebug::emitDebugLocImpl(MCSection *Sec) {
   if (DebugLocs.getLists().empty())
     return;
 
+  Asm->OutStreamer->SwitchSection(Sec);
+
   MCSymbol *TableEnd = nullptr;
-  if (getDwarfVersion() >= 5) {
-
-    Asm->OutStreamer->SwitchSection(
-        Asm->getObjFileLowering().getDwarfLoclistsSection());
-
+  if (getDwarfVersion() >= 5)
     TableEnd = emitLoclistsTableHeader(Asm, *this);
-  } else {
-    Asm->OutStreamer->SwitchSection(
-        Asm->getObjFileLowering().getDwarfLocSection());
-  }
 
   for (const auto &List : DebugLocs.getLists())
     emitLocList(*this, Asm, List);
@@ -2488,21 +2483,20 @@ void DwarfDebug::emitDebugLoc() {
     Asm->OutStreamer->EmitLabel(TableEnd);
 }
 
+// Emit locations into the .debug_loc/.debug_loclists section.
+void DwarfDebug::emitDebugLoc() {
+  emitDebugLocImpl(
+      getDwarfVersion() >= 5
+          ? Asm->getObjFileLowering().getDwarfLoclistsSection()
+          : Asm->getObjFileLowering().getDwarfLocSection());
+}
+
 // Emit locations into the .debug_loc.dwo/.debug_loclists.dwo section.
 void DwarfDebug::emitDebugLocDWO() {
-  if (DebugLocs.getLists().empty())
-    return;
-
   if (getDwarfVersion() >= 5) {
-    MCSymbol *TableEnd = nullptr;
-    Asm->OutStreamer->SwitchSection(
+    emitDebugLocImpl(
         Asm->getObjFileLowering().getDwarfLoclistsDWOSection());
-    TableEnd = emitLoclistsTableHeader(Asm, *this);
-    for (const auto &List : DebugLocs.getLists())
-      emitLocList(*this, Asm, List);
 
-    if (TableEnd)
-      Asm->OutStreamer->EmitLabel(TableEnd);
     return;
   }
 

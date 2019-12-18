@@ -8,7 +8,7 @@
 
 #include "lldb/Host/Config.h"
 
-#ifndef LLDB_DISABLE_PYTHON
+#if LLDB_ENABLE_PYTHON
 
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"

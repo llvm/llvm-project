@@ -174,7 +174,8 @@ namespace llvm {
       BCTRL,
 
       /// CHAIN,FLAG = BCTRL(CHAIN, ADDR, INFLAG) - The combination of a bctrl
-      /// instruction and the TOC reload required on SVR4 PPC64.
+      /// instruction and the TOC reload required on 64-bit ELF, 32-bit AIX
+      /// and 64-bit AIX.
       BCTRL_LOAD_TOC,
 
       /// Return with a flag operand, matched by 'blr'

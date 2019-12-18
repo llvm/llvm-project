@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangASTEmitters.h"
+#include "ASTTableGen.h"
 #include "TableGenBackends.h"
 
 #include "llvm/TableGen/Error.h"
@@ -21,6 +21,8 @@
 #include <set>
 #include <string>
 using namespace llvm;
+using namespace clang;
+using namespace clang::tblgen;
 
 /// ClangASTNodesEmitter - The top-level class emits .inc files containing
 ///  declarations of Clang statements.
@@ -28,11 +30,11 @@ using namespace llvm;
 namespace {
 class ClangASTNodesEmitter {
   // A map from a node to each of its derived nodes.
-  typedef std::multimap<Record*, Record*> ChildMap;
+  typedef std::multimap<ASTNode, ASTNode> ChildMap;
   typedef ChildMap::const_iterator ChildIterator;
 
   RecordKeeper &Records;
-  Record *Root = nullptr;
+  ASTNode Root;
   const std::string &NodeClassName;
   const std::string &BaseSuffix;
   std::string MacroHierarchyName;
@@ -49,23 +51,23 @@ class ClangASTNodesEmitter {
   const std::string &macroHierarchyName() {
     assert(Root && "root node not yet derived!");
     if (MacroHierarchyName.empty())
-      MacroHierarchyName = macroName(Root->getName());
+      MacroHierarchyName = macroName(Root.getName());
     return MacroHierarchyName;
   }
 
   // Return the name to be printed in the base field. Normally this is
   // the record's name plus the base suffix, but if it is the root node and
   // the suffix is non-empty, it's just the suffix.
-  std::string baseName(Record &R) {
-    if (&R == Root && !BaseSuffix.empty())
+  std::string baseName(ASTNode node) {
+    if (node == Root && !BaseSuffix.empty())
       return BaseSuffix;
 
-    return R.getName().str() + BaseSuffix;
+    return node.getName().str() + BaseSuffix;
   }
 
   void deriveChildTree();
 
-  std::pair<Record *, Record *> EmitNode(raw_ostream& OS, Record *Base);
+  std::pair<ASTNode, ASTNode> EmitNode(raw_ostream& OS, ASTNode Base);
 public:
   explicit ClangASTNodesEmitter(RecordKeeper &R, const std::string &N,
                                 const std::string &S)
@@ -82,60 +84,58 @@ public:
 
 // Returns the first and last non-abstract subrecords
 // Called recursively to ensure that nodes remain contiguous
-std::pair<Record *, Record *> ClangASTNodesEmitter::EmitNode(raw_ostream &OS,
-                                                             Record *Base) {
-  std::string BaseName = macroName(Base->getName());
+std::pair<ASTNode, ASTNode> ClangASTNodesEmitter::EmitNode(raw_ostream &OS,
+                                                           ASTNode Base) {
+  std::string BaseName = macroName(Base.getName());
 
   ChildIterator i = Tree.lower_bound(Base), e = Tree.upper_bound(Base);
+  bool HasChildren = (i != e);
 
-  Record *First = nullptr, *Last = nullptr;
-  if (!Base->getValueAsBit(AbstractFieldName))
+  ASTNode First, Last;
+  if (!Base.isAbstract())
     First = Last = Base;
 
   for (; i != e; ++i) {
-    Record *R = i->second;
-    bool Abstract = R->getValueAsBit(AbstractFieldName);
-    std::string NodeName = macroName(R->getName());
+    ASTNode Child = i->second;
+    bool Abstract = Child.isAbstract();
+    std::string NodeName = macroName(Child.getName());
 
     OS << "#ifndef " << NodeName << "\n";
     OS << "#  define " << NodeName << "(Type, Base) "
         << BaseName << "(Type, Base)\n";
     OS << "#endif\n";
 
-    if (Abstract)
-      OS << "ABSTRACT_" << macroHierarchyName() << "(" << NodeName << "("
-          << R->getName() << ", " << baseName(*Base) << "))\n";
-    else
-      OS << NodeName << "(" << R->getName() << ", "
-          << baseName(*Base) << ")\n";
+    if (Abstract) OS << "ABSTRACT_" << macroHierarchyName() << "(";
+    OS << NodeName << "(" << Child.getName() << ", " << baseName(Base) << ")";
+    if (Abstract) OS << ")";
+    OS << "\n";
 
-    if (Tree.find(R) != Tree.end()) {
-      const std::pair<Record *, Record *> &Result
-        = EmitNode(OS, R);
-      if (!First && Result.first)
-        First = Result.first;
-      if (Result.second)
-        Last = Result.second;
-    } else {
-      if (!Abstract) {
-        Last = R;
+    auto Result = EmitNode(OS, Child);
+    assert(Result.first && Result.second && "node didn't have children?");
 
-        if (!First)
-          First = R;
-      }
-    }
+    // Update the range of Base.
+    if (!First) First = Result.first;
+    Last = Result.second;
 
     OS << "#undef " << NodeName << "\n\n";
   }
 
-  if (First) {
-    assert (Last && "Got a first node but not a last node for a range!");
+  // If there aren't first/last nodes, it must be because there were no
+  // children and this node was abstract, which is not a sensible combination.
+  if (!First) {
+    PrintFatalError(Base.getLoc(), "abstract node has no children");
+  }
+  assert(Last && "set First without Last");
+
+  if (HasChildren) {
+    // Use FOO_RANGE unless this is the last of the ranges, in which case
+    // use LAST_FOO_RANGE.
     if (Base == Root)
       OS << "LAST_" << macroHierarchyName() << "_RANGE(";
     else
       OS << macroHierarchyName() << "_RANGE(";
-    OS << Base->getName() << ", " << First->getName() << ", "
-       << Last->getName() << ")\n\n";
+    OS << Base.getName() << ", " << First.getName() << ", "
+       << Last.getName() << ")\n\n";
   }
 
   return std::make_pair(First, Last);

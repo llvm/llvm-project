@@ -3,7 +3,6 @@
 Test lldb data formatter subsystem.
 """
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -25,11 +24,11 @@ class ObjCDataFormatterNSException(ObjCDataFormatterTestCase):
             'frame variable except0 except1 except2 except3',
             substrs=[
                 '(NSException *) except0 = ',
-                'name: @"TheGuyWhoHasNoName" - reason: @"cuz it\'s funny"',
+                '@"First"',
                 '(NSException *) except1 = ',
-                'name: @"TheGuyWhoHasNoName~1" - reason: @"cuz it\'s funny"',
+                '@"Second"',
                 '(NSException *) except2 = ',
-                'name: @"TheGuyWhoHasNoName`2" - reason: @"cuz it\'s funny"',
+                ' @"Third"',
                 '(NSException *) except3 = ',
-                'name: @"TheGuyWhoHasNoName/3" - reason: @"cuz it\'s funny"'
+                ' @"Fourth"'
             ])

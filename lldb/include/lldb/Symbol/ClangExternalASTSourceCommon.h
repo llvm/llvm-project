@@ -122,19 +122,38 @@ private:
 };
 
 class ClangExternalASTSourceCommon : public clang::ExternalASTSource {
+
+  /// LLVM-style RTTI.
+  static char ID;
+
 public:
-  ClangExternalASTSourceCommon();
   ~ClangExternalASTSourceCommon() override;
 
-  ClangASTMetadata *GetMetadata(const void *object);
-  void SetMetadata(const void *object, ClangASTMetadata &metadata);
+  ClangASTMetadata *GetMetadata(const clang::Decl *object);
+  void SetMetadata(const clang::Decl *object,
+                   const ClangASTMetadata &metadata) {
+    m_decl_metadata[object] = metadata;
+  }
 
-  static ClangExternalASTSourceCommon *Lookup(clang::ExternalASTSource *source);
+  ClangASTMetadata *GetMetadata(const clang::Type *object);
+  void SetMetadata(const clang::Type *object,
+                   const ClangASTMetadata &metadata) {
+    m_type_metadata[object] = metadata;
+  }
 
+  /// LLVM-style RTTI.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || ExternalASTSource::isA(ClassID);
+  }
+  static bool classof(const ExternalASTSource *S) { return S->isA(&ID); }
+  /// \}
 private:
-  typedef llvm::DenseMap<const void *, ClangASTMetadata> MetadataMap;
+  typedef llvm::DenseMap<const clang::Decl *, ClangASTMetadata> DeclMetadataMap;
+  typedef llvm::DenseMap<const clang::Type *, ClangASTMetadata> TypeMetadataMap;
 
-  MetadataMap m_metadata;
+  DeclMetadataMap m_decl_metadata;
+  TypeMetadataMap m_type_metadata;
 };
 
 } // namespace lldb_private

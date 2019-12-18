@@ -2,7 +2,6 @@
 Test the Intel(R) MPX bound violation signal.
 """
 
-from __future__ import print_function
 
 
 import lldb

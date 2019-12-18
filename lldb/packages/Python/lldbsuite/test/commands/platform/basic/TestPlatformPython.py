@@ -2,7 +2,6 @@
 Test the lldb platform Python API.
 """
 
-from __future__ import print_function
 
 
 import lldb

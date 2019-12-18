@@ -2,7 +2,6 @@
 Test that breakpoints in an IT instruction don't fire if their condition is
 false.
 """
-from __future__ import print_function
 
 
 import lldb

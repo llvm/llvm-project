@@ -89,6 +89,10 @@ Non-comprehensive list of changes in this release
   to run at a lower frequency which can impact performance. This behavior can be
   changed by passing -mprefer-vector-width=512 on the command line.
 
+* clang now defaults to ``.init_array`` on Linux. It used to use ``.ctors`` if
+  the found gcc installation is older than 4.7.0. Add ``-fno-use-init-array`` to
+  get the old behavior (``.ctors``).
+
 New Compiler Flags
 ------------------
 

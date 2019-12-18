@@ -1,6 +1,5 @@
 """Test that we handle inferiors that send signals to themselves"""
 
-from __future__ import print_function
 
 
 import lldb

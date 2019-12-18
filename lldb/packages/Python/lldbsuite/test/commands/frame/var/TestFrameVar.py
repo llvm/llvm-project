@@ -2,7 +2,6 @@
 Make sure the frame variable -g, -a, and -l flags work.
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -22,10 +21,6 @@ class TestFrameVar(TestBase):
     def test_frame_var(self):
         self.build()
         self.do_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def do_test(self):
         exe = self.getBuildArtifact("a.out")

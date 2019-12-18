@@ -79,16 +79,18 @@ def vmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                               (IRInt<"vmulh", [Vector]> $a, $b)>;
 def vrmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                                (IRInt<"vrmulh", [Vector]> $a, $b)>;
-def vqdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                (IRInt<"vqdmulh", [Vector]> $a, $b)>;
-def vqrdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                 (IRInt<"vqrdmulh", [Vector]> $a, $b)>;
 def vmullbq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
                                       (IRInt<"vmull", [DblVector, Vector]>
                                        $a, $b, 0)>;
 def vmulltq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
                                       (IRInt<"vmull", [DblVector, Vector]>
                                        $a, $b, 1)>;
+}
+let params = T.Signed in {
+def vqdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                (IRInt<"vqdmulh", [Vector]> $a, $b)>;
+def vqrdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                                 (IRInt<"vqrdmulh", [Vector]> $a, $b)>;
 }
 
 let params = T.Poly, overrideKindLetter = "p" in {
@@ -135,91 +137,73 @@ def vabdq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                              (IRInt<"vabd", [Vector]> $a, $b)>;
 }
 
+multiclass VectorVectorArithmetic<string operation, int wantXVariant = 1> {
+  defm "" : IntrinsicMX<Vector, (args Vector:$a, Vector:$b,
+                                 Predicate:$pred),
+                                (IRInt<operation, [Vector, Predicate]> $a, $b,
+                                 $pred, $inactive),
+                                wantXVariant>;
+}
+
+multiclass VectorVectorArithmeticBitcast<string operation> {
+  defm "" : IntrinsicMX<Vector, (args Vector:$a, Vector:$b,
+                                 Predicate:$pred),
+                                (bitcast (IRInt<operation, [UVector, Predicate]>
+                                          (bitcast $a, UVector),
+                                          (bitcast $b, UVector),
+                                          $pred,
+                                          (bitcast $inactive, UVector)), Vector)>;
+}
+
 // Predicated intrinsics
 let params = T.Usual in {
-def vabdq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"abd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vaddq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"add_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vsubq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"sub_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmulq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mul_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-defm vandq_m: predicated_bit_op_fp<"and_predicated">;
-defm vbicq_m: predicated_bit_op_fp<"bic_predicated">;
-defm veorq_m: predicated_bit_op_fp<"eor_predicated">;
-defm vornq_m: predicated_bit_op_fp<"orn_predicated">;
-defm vorrq_m: predicated_bit_op_fp<"orr_predicated">;
+  defm vabdq : VectorVectorArithmetic<"abd_predicated">;
+  defm vaddq : VectorVectorArithmetic<"add_predicated">;
+  defm vsubq : VectorVectorArithmetic<"sub_predicated">;
+  defm vmulq : VectorVectorArithmetic<"mul_predicated">;
+  defm vandq : VectorVectorArithmeticBitcast<"and_predicated">;
+  defm vbicq : VectorVectorArithmeticBitcast<"bic_predicated">;
+  defm veorq : VectorVectorArithmeticBitcast<"eor_predicated">;
+  defm vornq : VectorVectorArithmeticBitcast<"orn_predicated">;
+  defm vorrq : VectorVectorArithmeticBitcast<"orr_predicated">;
+}
+
+multiclass DblVectorVectorArithmetic<string operation, dag top> {
+  defm "" : IntrinsicMX<DblVector, (args Vector:$a, Vector:$b,
+                                    Predicate:$pred),
+                                   (IRInt<operation,
+                                          [DblVector, Vector, Predicate]>
+                                    $a, $b, top, $pred, $inactive)>;
 }
 
 // Predicated intrinsics - Int types only
 let params = T.Int in {
-def vminq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"min_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmaxq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"max_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmulhq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vrmulhq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"rmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vqdmulhq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"qdmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vqrdmulhq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"qrdmulh_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmullbq_int_m: Intrinsic<
-    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mull_int_predicated", [DblVector, Vector, Predicate]> $a, $b, 0,
-     $pred, $inactive)>;
-def vmulltq_int_m: Intrinsic<
-    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mull_int_predicated", [DblVector, Vector, Predicate]> $a, $b, 1,
-     $pred, $inactive)>;
-def vqaddq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"qadd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vhaddq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"hadd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vrhaddq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"rhadd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vqsubq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"qsub_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vhsubq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"hsub_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+  defm vminq : VectorVectorArithmetic<"min_predicated">;
+  defm vmaxq : VectorVectorArithmetic<"max_predicated">;
+  defm vmulhq : VectorVectorArithmetic<"mulh_predicated">;
+  defm vrmulhq : VectorVectorArithmetic<"rmulh_predicated">;
+  defm vqaddq : VectorVectorArithmetic<"qadd_predicated", 0>;
+  defm vhaddq : VectorVectorArithmetic<"hadd_predicated">;
+  defm vrhaddq : VectorVectorArithmetic<"rhadd_predicated">;
+  defm vqsubq : VectorVectorArithmetic<"qsub_predicated", 0>;
+  defm vhsubq : VectorVectorArithmetic<"hsub_predicated">;
+  defm vmullbq_int : DblVectorVectorArithmetic<"mull_int_predicated", (u32 0)>;
+  defm vmulltq_int : DblVectorVectorArithmetic<"mull_int_predicated", (u32 1)>;
+}
+let params = T.Signed in {
+  defm vqdmulhq : VectorVectorArithmetic<"qdmulh_predicated", 0>;
+  defm vqrdmulhq : VectorVectorArithmetic<"qrdmulh_predicated", 0>;
 }
 
 let params = T.Poly, overrideKindLetter = "p" in {
-def vmullbq_poly_m: Intrinsic<
-    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mull_poly_predicated", [DblVector, Vector, Predicate]> $a, $b, 0,
-     $pred, $inactive)>;
-def vmulltq_poly_m: Intrinsic<
-    DblVector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"mull_poly_predicated", [DblVector, Vector, Predicate]> $a, $b, 1,
-     $pred, $inactive)>;
+  defm vmullbq_poly : DblVectorVectorArithmetic<"mull_poly_predicated", (u32 0)>;
+  defm vmulltq_poly : DblVectorVectorArithmetic<"mull_poly_predicated", (u32 1)>;
 }
 
 // Predicated intrinsics - Float types only
 let params = T.Float in {
-def vminnmq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"min_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
-def vmaxnmq_m: Intrinsic<
-    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
-    (IRInt<"max_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
+  defm vminnmq : VectorVectorArithmetic<"min_predicated">;
+  defm vmaxnmq : VectorVectorArithmetic<"max_predicated">;
 }
 
 let params = T.Int in {
@@ -615,7 +599,7 @@ let params = T.Int in {
   defm vshlq: IntrinsicMX<Vector, (args Vector:$v, imm_0toNm1:$sh,
                                         Predicate:$pred),
       (IRInt<"shl_imm_predicated", [Vector, Predicate]>
-           $v, $sh, $pred, $inactive), "_n">;
+           $v, $sh, $pred, $inactive), 1, "_n">;
 
   let pnt = PNT_NType in {
     def vshrq_n: Intrinsic<Vector, (args Vector:$v, imm_1toN:$sh),
@@ -623,9 +607,50 @@ let params = T.Int in {
     defm vshrq: IntrinsicMX<Vector, (args Vector:$v, imm_1toN:$sh,
                                           Predicate:$pred),
         (IRInt<"shr_imm_predicated", [Vector, Predicate]>
-             $v, $sh, (unsignedflag Scalar), $pred, $inactive), "_n">;
+             $v, $sh, (unsignedflag Scalar), $pred, $inactive), 1, "_n">;
   }
 }
+
+let params = T.Int in {
+  def vqshlq_n: Intrinsic<Vector, (args Vector:$v, imm_0toNm1:$sh),
+       (IRInt<"vqshl_imm", [Vector]> $v, $sh, (unsignedflag Scalar))>;
+  def vqshlq_m_n: Intrinsic<Vector, (args Vector:$inactive, Vector:$v,
+                                          imm_0toNm1:$sh, Predicate:$pred),
+       (IRInt<"vqshl_imm_predicated", [Vector, Predicate]>
+            $v, $sh, (unsignedflag Scalar), $pred, $inactive)>;
+
+  let pnt = PNT_NType in {
+    def vrshrq_n: Intrinsic<Vector, (args Vector:$v, imm_1toN:$sh),
+         (IRInt<"vrshr_imm", [Vector]> $v, $sh, (unsignedflag Scalar))>;
+    defm vrshrq: IntrinsicMX<Vector, (args Vector:$v, imm_1toN:$sh,
+                                           Predicate:$pred),
+         (IRInt<"vrshr_imm_predicated", [Vector, Predicate]>
+              $v, $sh, (unsignedflag Scalar), $pred, $inactive), 1, "_n">;
+  }
+}
+
+let params = T.Signed, pnt = PNT_NType in {
+  def vqshluq_n: Intrinsic<UVector, (args Vector:$v, imm_0toNm1:$sh),
+       (IRInt<"vqshlu_imm", [Vector]> $v, $sh)>;
+  def vqshluq_m_n: Intrinsic<UVector, (args UVector:$inactive, Vector:$v,
+                                            imm_0toNm1:$sh, Predicate:$pred),
+       (IRInt<"vqshlu_imm_predicated", [Vector, Predicate]>
+            $v, $sh, $pred, $inactive)>;
+}
+
+multiclass vshll_imm<int top> {
+  let params = !listconcat(T.Int8, T.Int16), pnt = PNT_NType in {
+    def _n: Intrinsic<DblVector, (args Vector:$v, imm_1toN:$sh),
+        (IRInt<"vshll_imm", [DblVector, Vector]>
+            $v, $sh, (unsignedflag Scalar), top)>;
+    defm "": IntrinsicMX<DblVector, (args Vector:$v, imm_1toN:$sh,
+                                          Predicate:$pred),
+        (IRInt<"vshll_imm_predicated", [DblVector, Vector, Predicate]>
+            $v, $sh, (unsignedflag Scalar), top, $pred, $inactive), 1, "_n">;
+  }
+}
+defm vshllbq : vshll_imm<0>;
+defm vshlltq : vshll_imm<1>;
 
 // Base class for the scalar shift intrinsics.
 class ScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
@@ -753,6 +778,118 @@ defm vhcaddq : VectorComplexAddAngle<(u32 0)>;
 let params = T.Float in {
 defm vcmulq : VectorComplexMulAngle;
 defm vcmlaq : VectorComplexMLAAngle;
+}
+
+multiclass MVEBinaryVectorHoriz32<dag subtract, dag exchange, string xsuffix> {
+  def xsuffix#"q"
+    : Intrinsic<Scalar32, (args Vector:$a, Vector:$b),
+                          (IRInt<"vmldava", [Vector]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           (zeroinit Scalar32), $a, $b)>;
+  def xsuffix#"q_p"
+    : Intrinsic<Scalar32, (args Vector:$a, Vector:$b, Predicate:$pred),
+                          (IRInt<"vmldava_predicated", [Vector, Predicate]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           (zeroinit Scalar32), $a, $b, $pred)>;
+
+  def "a"#xsuffix#"q"
+    : Intrinsic<Scalar32, (args Scalar32:$a, Vector:$b, Vector:$c),
+                          (IRInt<"vmldava", [Vector]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $a, $b, $c)>;
+  def "a"#xsuffix#"q_p"
+    : Intrinsic<Scalar32, (args Scalar32:$a, Vector:$b, Vector:$c,
+                                Predicate:$pred),
+                          (IRInt<"vmldava_predicated", [Vector, Predicate]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $a, $b, $c, $pred)>;
+}
+
+class IntrSplit64<Type resty, dag args, dag codegen>
+  : Intrinsic<resty, args,
+              (seq (u32 (lshr $a, (u64 32))):$hi,
+                   (u32 $a):$lo,
+                   codegen:$pair,
+                   (or (shl (u64 (xval $pair, 1)), (u64 32)),
+                            (u64 (xval $pair, 0))))>;
+
+class IntrSplit64ZeroInit<Type resty, dag args, dag codegen>
+  : Intrinsic<resty, args,
+              (seq (zeroinit u32):$hi,
+                   (zeroinit u32):$lo,
+                   codegen:$pair,
+                   (or (shl (u64 (xval $pair, 1)), (u64 32)),
+                            (u64 (xval $pair, 0))))>;
+
+multiclass MVEBinaryVectorHoriz64Base<dag subtract, dag exchange,
+                                      string xsuffix, string irname> {
+  def xsuffix#"q"
+    : IntrSplit64ZeroInit<Scalar64, (args Vector:$a, Vector:$b),
+                          (IRInt<irname, [Vector]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $lo, $hi, $a, $b)>;
+  def xsuffix#"q_p"
+    : IntrSplit64ZeroInit<Scalar64, (args Vector:$a, Vector:$b,
+                                          Predicate:$pred),
+                          (IRInt<irname#"_predicated", [Vector, Predicate]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $lo, $hi, $a, $b, $pred)>;
+
+  def "a"#xsuffix#"q"
+    : IntrSplit64<Scalar64, (args Scalar64:$a, Vector:$b, Vector:$c),
+                          (IRInt<irname, [Vector]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $lo, $hi, $b, $c)>;
+  def "a"#xsuffix#"q_p"
+    : IntrSplit64<Scalar64, (args Scalar64:$a, Vector:$b, Vector:$c,
+                                  Predicate:$pred),
+                          (IRInt<irname#"_predicated", [Vector, Predicate]>
+                           (unsignedflag Scalar), subtract, exchange,
+                           $lo, $hi, $b, $c, $pred)>;
+}
+
+multiclass MVEBinaryVectorHoriz64<dag subtract, dag exchange, string xsuffix> {
+  defm "" : MVEBinaryVectorHoriz64Base<subtract, exchange, xsuffix, "vmlldava">;
+}
+
+multiclass MVEBinaryVectorHoriz64R<dag subtract, dag exchange, string xsuffix> {
+  defm "" : MVEBinaryVectorHoriz64Base<subtract, exchange, xsuffix,
+                                       "vrmlldavha">;
+}
+
+let params = T.Int in {
+def vabavq : Intrinsic<u32, (args u32:$a, Vector:$b, Vector:$c),
+    (IRInt<"vabav", [Vector]> (unsignedflag Scalar), $a, $b, $c)>;
+def vabavq_p : Intrinsic<u32, (args u32:$a, Vector:$b, Vector:$c,
+                                    Predicate:$pred),
+    (IRInt<"vabav_predicated", [Vector, Predicate]>
+                               (unsignedflag Scalar), $a, $b, $c, $pred)>;
+
+defm vmladav  : MVEBinaryVectorHoriz32<V.False, V.False, "">;
+}
+
+let params = T.Signed in {
+defm vmladav : MVEBinaryVectorHoriz32<V.False, V.True, "x">;
+defm vmlsdav : MVEBinaryVectorHoriz32<V.True, V.False, "">;
+defm vmlsdav : MVEBinaryVectorHoriz32<V.True, V.True, "x">;
+}
+
+let params = [u16, s16, u32, s32] in
+defm vmlaldav : MVEBinaryVectorHoriz64<V.False, V.False, "">;
+
+let params = [s16, s32] in {
+defm vmlaldav : MVEBinaryVectorHoriz64<V.False, V.True, "x">;
+defm vmlsldav : MVEBinaryVectorHoriz64<V.True, V.False, "">;
+defm vmlsldav : MVEBinaryVectorHoriz64<V.True, V.True, "x">;
+}
+
+let params = T.Int32 in
+defm vrmlaldavh : MVEBinaryVectorHoriz64R<V.False, V.False, "">;
+
+let params = [s32] in {
+defm vrmlaldavh : MVEBinaryVectorHoriz64R<V.False, V.True, "x">;
+defm vrmlsldavh : MVEBinaryVectorHoriz64R<V.True, V.False, "">;
+defm vrmlsldavh : MVEBinaryVectorHoriz64R<V.True, V.True, "x">;
 }
 
 foreach desttype = T.All in {

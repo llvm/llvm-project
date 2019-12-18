@@ -1552,3 +1552,25 @@ define i64 @reg64_lshr_by_masked_negated_unfolded_add_b(i64 %val, i64 %a, i64 %b
   %shifted = lshr i64 %val, %negaaddbitwidthaddb
   ret i64 %shifted
 }
+
+define i16 @sh_trunc_sh(i64 %x) {
+; X32-LABEL: sh_trunc_sh:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    shrl $4, %eax
+; X32-NEXT:    andl $15, %eax
+; X32-NEXT:    # kill: def $ax killed $ax killed $eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: sh_trunc_sh:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $36, %rax
+; X64-NEXT:    andl $15, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $rax
+; X64-NEXT:    retq
+  %s = lshr i64 %x, 24
+  %t = trunc i64 %s to i16
+  %r = lshr i16 %t, 12
+  ret i16 %r
+}

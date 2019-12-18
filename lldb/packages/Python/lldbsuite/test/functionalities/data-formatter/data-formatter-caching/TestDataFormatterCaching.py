@@ -8,9 +8,6 @@ class TestDataFormatterCaching(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def test_with_run_command(self):
         """
         Test that hardcoded summary formatter matches aren't improperly cached.

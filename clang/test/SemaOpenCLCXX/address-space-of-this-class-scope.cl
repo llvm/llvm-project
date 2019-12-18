@@ -7,8 +7,8 @@ struct C {
 };
 
 void bar(__local C*);
-// expected-note@-1{{candidate function not viable: address space mismatch in 1st argument ('decltype(this)' (aka '__global C *')), parameter type must be '__local C *'}}
-// expected-note@-2{{candidate function not viable: address space mismatch in 1st argument ('decltype(this)' (aka 'C *')), parameter type must be '__local C *'}}
+// expected-note@-1{{candidate function not viable: cannot pass pointer to address space '__global' as a pointer to address space '__local' in 1st argument}}
+// expected-note@-2{{candidate function not viable: cannot pass pointer to default address space as a pointer to address space '__local' in 1st argument}}
 
 __global C Glob;
 void foo(){

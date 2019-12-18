@@ -2,7 +2,6 @@
 Test that we obey thread conditioned breakpoints.
 """
 
-from __future__ import print_function
 
 
 import lldb

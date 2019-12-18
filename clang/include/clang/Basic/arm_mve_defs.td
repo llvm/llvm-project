@@ -284,6 +284,11 @@ def UVector: VecOf<UScalar>;
 // Scalar.
 def DblVector: VecOf<DoubleSize<Scalar>>;
 
+// Expands to the 32-bit integer of the same signedness as Scalar.
+def Scalar32: CopyKind<u32, Scalar>;
+// Expands to the 64-bit integer of the same signedness as Scalar.
+def Scalar64: CopyKind<u64, Scalar>;
+
 // -----------------------------------------------------------------------------
 // Internal definitions for specifying immediate arguments for an intrinsic.
 
@@ -435,6 +440,7 @@ class NameOverride<string basename_> {
 // A wrapper to define both _m and _x versions of a predicated
 // intrinsic.
 multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
+                       int wantXVariant = 1,
                        string nameSuffix = "",
                        PolymorphicNameType pnt_x = PNT_Type> {
   // The _m variant takes an initial parameter called $inactive, which
@@ -444,15 +450,17 @@ multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
   def "_m" # nameSuffix:
      Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg>;
 
-  // The _x variant leaves off that parameter, and simply uses an
-  // undef value of the same type.
-  def "_x" # nameSuffix:
-     Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)> {
-    // Allow overriding of the polymorphic name type, because
-    // sometimes the _m and _x variants polymorph differently
-    // (typically because the type of the inactive parameter can be
-    // used as a disambiguator if it's present).
-    let pnt = pnt_x;
+  foreach unusedVar = !if(!eq(wantXVariant, 1), [1], []<int>) in {
+    // The _x variant leaves off that parameter, and simply uses an
+    // undef value of the same type.
+    def "_x" # nameSuffix:
+       Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)> {
+      // Allow overriding of the polymorphic name type, because
+      // sometimes the _m and _x variants polymorph differently
+      // (typically because the type of the inactive parameter can be
+      // used as a disambiguator if it's present).
+      let pnt = pnt_x;
+    }
   }
 }
 
@@ -477,4 +485,14 @@ def T {
   list<Type> All32 = Int32 # [f32];
   list<Type> All64 = Int64;
   list<Type> All = Usual # All64;
+}
+
+// -----------------------------------------------------------------------------
+// Container record for DAG constant values. These constants are used because
+// bit/int class/multiclass parameters cannot be used to produce a dag node:
+// for example (u32 x) where x is 0 is transformed into (u32 { 0 }) by the
+// Tablegen parser.
+def V {
+  dag False = (u32 0);
+  dag True  = (u32 1);
 }

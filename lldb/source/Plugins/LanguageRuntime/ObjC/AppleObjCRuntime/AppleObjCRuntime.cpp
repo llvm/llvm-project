@@ -111,7 +111,10 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
     }
   } else {
     // If it is not a pointer, see if we can make it into a pointer.
-    ClangASTContext *ast_context = target->GetScratchClangASTContext();
+    ClangASTContext *ast_context = ClangASTContext::GetScratch(*target);
+    if (!ast_context)
+      return false;
+
     CompilerType opaque_type = ast_context->GetBasicType(eBasicTypeObjCID);
     if (!opaque_type)
       opaque_type = ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
@@ -123,7 +126,9 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   arg_value_list.PushValue(value);
 
   // This is the return value:
-  ClangASTContext *ast_context = target->GetScratchClangASTContext();
+  ClangASTContext *ast_context = ClangASTContext::GetScratch(*target);
+  if (!ast_context)
+    return false;
 
   CompilerType return_compiler_type = ast_context->GetCStringType(true);
   Value ret;
@@ -494,9 +499,12 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
   reserved_dict = reserved_dict->GetSyntheticValue();
   if (!reserved_dict) return ThreadSP();
 
+  ClangASTContext *clang_ast_context =
+      ClangASTContext::GetScratch(*exception_sp->GetTargetSP());
+  if (!clang_ast_context)
+    return ThreadSP();
   CompilerType objc_id =
-      exception_sp->GetTargetSP()->GetScratchClangASTContext()->GetBasicType(
-          lldb::eBasicTypeObjCID);
+      clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID);
   ValueObjectSP return_addresses;
 
   auto objc_object_from_address = [&exception_sp, &objc_id](uint64_t addr,

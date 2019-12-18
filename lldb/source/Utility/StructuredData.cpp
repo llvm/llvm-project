@@ -7,16 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/StructuredData.h"
-#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cerrno>
 #include <cstdlib>
 #include <inttypes.h>
-#include <limits>
 
 using namespace lldb_private;
 using namespace llvm;

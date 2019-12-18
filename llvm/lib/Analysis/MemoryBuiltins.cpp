@@ -544,6 +544,7 @@ Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
           Builder.CreateSub(SizeOffsetPair.first, SizeOffsetPair.second);
       Value *UseZero =
           Builder.CreateICmpULT(SizeOffsetPair.first, SizeOffsetPair.second);
+      ResultSize = Builder.CreateZExtOrTrunc(ResultSize, ResultType);
       return Builder.CreateSelect(UseZero, ConstantInt::get(ResultType, 0),
                                   ResultSize);
     }
@@ -576,7 +577,7 @@ ObjectSizeOffsetVisitor::ObjectSizeOffsetVisitor(const DataLayout &DL,
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
-  IntTyBits = DL.getPointerTypeSizeInBits(V->getType());
+  IntTyBits = DL.getIndexTypeSizeInBits(V->getType());
   Zero = APInt::getNullValue(IntTyBits);
 
   V = V->stripPointerCasts();
@@ -746,7 +747,7 @@ ObjectSizeOffsetVisitor::visitExtractValueInst(ExtractValueInst&) {
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitGEPOperator(GEPOperator &GEP) {
   SizeOffsetType PtrData = compute(GEP.getPointerOperand());
-  APInt Offset(IntTyBits, 0);
+  APInt Offset(DL.getIndexTypeSizeInBits(GEP.getPointerOperand()->getType()), 0);
   if (!bothKnown(PtrData) || !GEP.accumulateConstantOffset(DL, Offset))
     return unknown();
 
@@ -834,7 +835,7 @@ ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
 
 SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute(Value *V) {
   // XXX - Are vectors of pointers possible here?
-  IntTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
+  IntTy = cast<IntegerType>(DL.getIndexType(V->getType()));
   Zero = ConstantInt::get(IntTy, 0);
 
   SizeOffsetEvalType Result = compute_(V);
@@ -938,12 +939,12 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallSite(CallSite CS) {
   }
 
   Value *FirstArg = CS.getArgument(FnData->FstParam);
-  FirstArg = Builder.CreateZExt(FirstArg, IntTy);
+  FirstArg = Builder.CreateZExtOrTrunc(FirstArg, IntTy);
   if (FnData->SndParam < 0)
     return std::make_pair(FirstArg, Zero);
 
   Value *SecondArg = CS.getArgument(FnData->SndParam);
-  SecondArg = Builder.CreateZExt(SecondArg, IntTy);
+  SecondArg = Builder.CreateZExtOrTrunc(SecondArg, IntTy);
   Value *Size = Builder.CreateMul(FirstArg, SecondArg);
   return std::make_pair(Size, Zero);
 

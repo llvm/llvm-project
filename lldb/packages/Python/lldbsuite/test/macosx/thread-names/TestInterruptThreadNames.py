@@ -1,5 +1,4 @@
 """Test that we get thread names when interrupting a process."""
-from __future__ import print_function
 
 
 import time
@@ -12,10 +11,6 @@ from lldbsuite.test import lldbutil
 class TestInterruptThreadNames(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])

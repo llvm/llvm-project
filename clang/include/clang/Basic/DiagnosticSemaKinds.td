@@ -3987,8 +3987,12 @@ def note_ovl_candidate_bad_lvalue : Note<
     "%select{%ordinal4 argument|object argument}3">;
 def note_ovl_candidate_bad_addrspace : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
-    "address space mismatch in %select{%ordinal6|'this'}5 argument (%3), "
-    "parameter type must be %4">;
+    "cannot %select{pass pointer to|bind reference in}5 %3 "
+    "%select{as a pointer to|to object in}5 %4 in %ordinal6 "
+    "argument">;
+def note_ovl_candidate_bad_addrspace_this : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "'this' object is in %3, but method expects object in %4">;
 def note_ovl_candidate_bad_gc : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "%select{%ordinal7|'this'}6 argument (%3) has %select{no|__weak|__strong}4 "
@@ -9696,10 +9700,6 @@ def warn_omp_declare_variant_after_used : Warning<
 def warn_omp_declare_variant_after_emitted : Warning<
   "'#pragma omp declare variant' cannot be applied to the function that was defined already;"
   " the original function might be used">, InGroup<SourceUsesOpenMP>;
-def err_omp_declare_variant_noproto : Error<
-  "function with '#pragma omp declare variant' must have a prototype">;
-def note_omp_declare_variant_specified_here : Note<
-  "'#pragma omp declare variant' for function specified here">;
 def err_omp_declare_variant_doesnt_support : Error<
   "'#pragma omp declare variant' does not "
   "support %select{function templates|virtual functions|"
@@ -10145,8 +10145,8 @@ def warn_dispatch_body_ignored : Warning<
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<
-  "cannot deduce return type of 'operator<=>' because type '%0' was not found; "
-  "include <compare>">;
+  "cannot %select{use builtin operator '<=>'|default 'operator<=>'}1 "
+  "because type '%0' was not found; include <compare>">;
 def err_spaceship_argument_narrowing : Error<
   "argument to 'operator<=>' "
   "%select{cannot be narrowed from type %1 to %2|"

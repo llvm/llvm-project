@@ -152,6 +152,30 @@ rare.1:
   br label %fallthrough
 }
 
+; Negative test - opt for size
+define void @test6_pgso(i1 %cond, i64* %base) !prof !14 {
+; CHECK-LABEL: @test6
+entry:
+; CHECK: %addr = getelementptr
+  %addr = getelementptr inbounds i64, i64* %base, i64 5
+  %casted = bitcast i64* %addr to i32*
+  br i1 %cond, label %if.then, label %fallthrough
+
+if.then:
+; CHECK-LABEL: if.then:
+; CHECK-NOT: getelementptr inbounds i8, {{.+}} 40
+  %v1 = load i32, i32* %casted, align 4
+  call void @foo(i32 %v1)
+  %cmp = icmp eq i32 %v1, 0
+  br i1 %cmp, label %rare.1, label %fallthrough
+
+fallthrough:
+  ret void
+
+rare.1:
+  call void @slowpath(i32 %v1, i32* %casted) cold
+  br label %fallthrough
+}
 
 ; Make sure sinking two copies of addressing mode into different blocks works
 ; when there are cold paths for each.
@@ -278,3 +302,20 @@ BB:
   store i1 false, i1* %G23
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

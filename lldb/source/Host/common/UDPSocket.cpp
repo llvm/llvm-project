@@ -11,7 +11,7 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"
 
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #endif

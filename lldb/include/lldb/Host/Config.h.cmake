@@ -13,7 +13,6 @@
 
 #cmakedefine01 LLDB_HAVE_EL_RFUNC_T
 
-#cmakedefine LLDB_DISABLE_POSIX
 
 #cmakedefine01 HAVE_SYS_TYPES_H
 
@@ -31,6 +30,8 @@
 #cmakedefine HAVE_LIBCOMPRESSION
 #endif
 
+#cmakedefine01 LLDB_ENABLE_POSIX
+
 #cmakedefine01 LLDB_ENABLE_TERMIOS
 
 #cmakedefine01 LLDB_ENABLE_LZMA
@@ -41,7 +42,7 @@
 
 #cmakedefine01 LLDB_ENABLE_LIBXML2
 
-#cmakedefine LLDB_DISABLE_PYTHON
+#cmakedefine01 LLDB_ENABLE_PYTHON
 
 #cmakedefine LLDB_PYTHON_HOME "${LLDB_PYTHON_HOME}"
 

@@ -244,7 +244,7 @@ bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
   if (MF.hasEHFunclets())
     return true;
   // Retain behavior of always omitting the FP for leaf functions when possible.
-  if (MFI.hasCalls() && MF.getTarget().Options.DisableFramePointerElim(MF))
+  if (MF.getTarget().Options.DisableFramePointerElim(MF))
     return true;
   if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
       MFI.hasStackMap() || MFI.hasPatchPoint() ||

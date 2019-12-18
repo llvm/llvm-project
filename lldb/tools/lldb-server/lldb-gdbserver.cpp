@@ -22,6 +22,7 @@
 #include "LLDBServerUtilities.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostGetOpt.h"
@@ -237,7 +238,7 @@ void ConnectToRemote(MainLoop &mainloop,
     snprintf(connection_url, sizeof(connection_url), "fd://%d", connection_fd);
 
     // Create the connection.
-#if !defined LLDB_DISABLE_POSIX && !defined _WIN32
+#if LLDB_ENABLE_POSIX && !defined _WIN32
     ::fcntl(connection_fd, F_SETFD, FD_CLOEXEC);
 #endif
     connection_up.reset(new ConnectionFileDescriptor);
@@ -521,7 +522,7 @@ int main_gdbserver(int argc, char *argv[]) {
   printf("%s-%s\n", LLGS_PROGRAM_NAME, LLGS_VERSION_STR);
 
   ConnectToRemote(mainloop, gdb_server, reverse_connect, host_and_port,
-                  progname, subcommand, named_pipe_path.c_str(), 
+                  progname, subcommand, named_pipe_path.c_str(),
                   unnamed_pipe, connection_fd);
 
   if (!gdb_server.IsConnected()) {

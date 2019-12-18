@@ -492,10 +492,10 @@ int main (int argc, const char * argv[])
 	        nsurl0 = [bundle bundleURL];
 	    }
 
-	    NSException* except0 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName" reason:@"cuz it's funny" userInfo:nil];
-	    NSException* except1 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName~1" reason:@"cuz it's funny" userInfo:nil];
-	    NSException* except2 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName`2" reason:@"cuz it's funny" userInfo:nil];
-	    NSException* except3 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName/3" reason:@"cuz it's funny" userInfo:nil];
+	    NSException* except0 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName" reason:@"First" userInfo:nil];
+	    NSException* except1 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName~1" reason:@"Second" userInfo:nil];
+	    NSException* except2 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName`2" reason:@"Third" userInfo:nil];
+	    NSException* except3 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName/3" reason:@"Fourth" userInfo:nil];
 
 	    NSURL *nsurl = [[NSURL alloc] initWithString:@"http://www.foo.bar"];
 	    NSURL *nsurl2 = [NSURL URLWithString:@"page.html" relativeToURL:nsurl];

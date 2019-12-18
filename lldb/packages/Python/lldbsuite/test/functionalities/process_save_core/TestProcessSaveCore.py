@@ -2,7 +2,6 @@
 Test saving a core file (or mini dump).
 """
 
-from __future__ import print_function
 
 import os
 import lldb

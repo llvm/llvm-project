@@ -5,7 +5,6 @@ when they are packed in a 8-byte region.
 
 """
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test.decorators import *

@@ -790,6 +790,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     BuildMI(loopMBB, DL, TII->get(NOR), Scratch).addReg(ZERO).addReg(Scratch);
   } else {
     assert(IsOr && OR && "Unknown instruction for atomic pseudo expansion!");
+    (void)IsOr;
     BuildMI(loopMBB, DL, TII->get(OR), Scratch).addReg(Incr).addReg(ZERO);
   }
 

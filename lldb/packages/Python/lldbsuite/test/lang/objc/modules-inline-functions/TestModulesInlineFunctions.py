@@ -1,6 +1,5 @@
 """Test that inline functions from modules are imported correctly"""
 
-from __future__ import print_function
 
 
 
@@ -15,10 +14,6 @@ from lldbsuite.test import lldbutil
 class ModulesInlineFunctionsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))

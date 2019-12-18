@@ -470,8 +470,7 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
 
         Lo = DAG.getStore(Chain, dl, Lo, Ptr, ST->getPointerInfo(), Alignment,
                           MMOFlags, AAInfo);
-        Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                          DAG.getConstant(4, dl, Ptr.getValueType()));
+        Ptr = DAG.getMemBasePlusOffset(Ptr, 4, dl);
         Hi = DAG.getStore(Chain, dl, Hi, Ptr,
                           ST->getPointerInfo().getWithOffset(4),
                           MinAlign(Alignment, 4U), MMOFlags, AAInfo);
@@ -581,9 +580,7 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
 
       // Store the remaining ExtraWidth bits.
       IncrementSize = RoundWidth / 8;
-      Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                        DAG.getConstant(IncrementSize, dl,
-                                        Ptr.getValueType()));
+      Ptr = DAG.getMemBasePlusOffset(Ptr, IncrementSize, dl);
       Hi = DAG.getNode(
           ISD::SRL, dl, Value.getValueType(), Value,
           DAG.getConstant(RoundWidth, dl,
@@ -797,9 +794,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
       // Load the remaining ExtraWidth bits.
       IncrementSize = RoundWidth / 8;
-      Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                         DAG.getConstant(IncrementSize, dl,
-                                         Ptr.getValueType()));
+      Ptr = DAG.getMemBasePlusOffset(Ptr, IncrementSize, dl);
       Hi = DAG.getExtLoad(ExtType, dl, Node->getValueType(0), Chain, Ptr,
                           LD->getPointerInfo().getWithOffset(IncrementSize),
                           ExtraVT, MinAlign(Alignment, IncrementSize), MMOFlags,
@@ -828,9 +823,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
       // Load the remaining ExtraWidth bits.
       IncrementSize = RoundWidth / 8;
-      Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                         DAG.getConstant(IncrementSize, dl,
-                                         Ptr.getValueType()));
+      Ptr = DAG.getMemBasePlusOffset(Ptr, IncrementSize, dl);
       Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, Node->getValueType(0), Chain, Ptr,
                           LD->getPointerInfo().getWithOffset(IncrementSize),
                           ExtraVT, MinAlign(Alignment, IncrementSize), MMOFlags,
@@ -1418,7 +1411,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
     unsigned Offset = TypeByteSize*i;
 
     SDValue Idx = DAG.getConstant(Offset, dl, FIPtr.getValueType());
-    Idx = DAG.getNode(ISD::ADD, dl, FIPtr.getValueType(), FIPtr, Idx);
+    Idx = DAG.getMemBasePlusOffset(FIPtr, Idx, dl);
 
     // If the destination vector element type is narrower than the source
     // element type, only store the bits necessary.
@@ -1481,8 +1474,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
   } else {
     // Advance the pointer so that the loaded byte will contain the sign bit.
     unsigned ByteOffset = (FloatVT.getSizeInBits() / 8) - 1;
-    IntPtr = DAG.getNode(ISD::ADD, DL, StackPtr.getValueType(), StackPtr,
-                      DAG.getConstant(ByteOffset, DL, StackPtr.getValueType()));
+    IntPtr = DAG.getMemBasePlusOffset(StackPtr, ByteOffset, DL);
     State.IntPointerInfo = MachinePointerInfo::getFixedStack(MF, FI,
                                                              ByteOffset);
   }
@@ -1659,7 +1651,7 @@ bool SelectionDAGLegalize::LegalizeSetCCCondCode(
     }
     // Swapping operands didn't work. Try inverting the condition.
     bool NeedSwap = false;
-    InvCC = getSetCCInverse(CCCode, OpVT.isInteger());
+    InvCC = getSetCCInverse(CCCode, OpVT);
     if (!TLI.isCondCodeLegalOrCustom(InvCC, OpVT)) {
       // If inverting the condition is not enough, try swapping operands
       // on top of it.
@@ -3614,8 +3606,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Try to legalize by inverting the condition.  This is for targets that
     // might support an ordered version of a condition, but not the unordered
     // version (or vice versa).
-    ISD::CondCode InvCC = ISD::getSetCCInverse(CCOp,
-                                               Tmp1.getValueType().isInteger());
+    ISD::CondCode InvCC = ISD::getSetCCInverse(CCOp, Tmp1.getValueType());
     if (TLI.isCondCodeLegalOrCustom(InvCC, Tmp1.getSimpleValueType())) {
       // Use the new condition code and swap true and false
       Legalized = true;

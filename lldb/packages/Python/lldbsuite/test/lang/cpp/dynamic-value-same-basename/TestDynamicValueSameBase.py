@@ -3,7 +3,6 @@ Make sure if we have two classes with the same base name the
 dynamic value calculator doesn't confuse them
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -25,10 +24,6 @@ class DynamicValueSameBaseTestCase(TestBase):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.cpp")
         self.sample_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def sample_test(self):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,

@@ -2,7 +2,6 @@
 Test that we handle breakpoints on consecutive instructions correctly.
 """
 
-from __future__ import print_function
 
 
 import unittest2

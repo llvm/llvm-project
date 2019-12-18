@@ -1067,8 +1067,6 @@ public:
                                                  const char *name,
                                                  Status &error);
 
-  ClangASTContext *GetScratchClangASTContext(bool create_on_demand = true);
-
   lldb::ClangASTImporterSP GetClangASTImporter();
 
   // Install any files through the platform that need be to installed prior to

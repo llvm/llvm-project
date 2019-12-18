@@ -2,7 +2,6 @@
 Test that apropos env doesn't crash trying to touch the process plugin command
 """
 
-from __future__ import print_function
 
 
 import lldb

@@ -3,7 +3,6 @@ Test that we can compile expressions referring to
 absent weak symbols from a dylib.
 """
 
-from __future__ import print_function
 
 
 import os
@@ -25,10 +24,6 @@ class TestWeakSymbolsInExpressions(TestBase):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.do_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def run_weak_var_check (self, weak_varname, present):
         # The expression will modify present_weak_int to signify which branch

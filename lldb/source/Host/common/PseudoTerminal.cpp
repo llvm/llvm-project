@@ -79,7 +79,7 @@ bool PseudoTerminal::OpenFirstAvailableMaster(int oflag, char *error_str,
   if (error_str)
     error_str[0] = '\0';
 
-#if !defined(LLDB_DISABLE_POSIX)
+#if LLDB_ENABLE_POSIX
   // Open the master side of a pseudo terminal
   m_master_fd = ::posix_openpt(oflag);
   if (m_master_fd < 0) {
@@ -193,7 +193,7 @@ lldb::pid_t PseudoTerminal::Fork(char *error_str, size_t error_len) {
   if (error_str)
     error_str[0] = '\0';
   pid_t pid = LLDB_INVALID_PROCESS_ID;
-#if !defined(LLDB_DISABLE_POSIX)
+#if LLDB_ENABLE_POSIX
   int flags = O_RDWR;
   flags |= O_CLOEXEC;
   if (OpenFirstAvailableMaster(flags, error_str, error_len)) {

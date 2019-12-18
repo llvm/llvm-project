@@ -954,8 +954,6 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     if (isEmpty && isDiscardable(*sec)) {
       sec->markDead();
       cmd = nullptr;
-    } else if (!sec->isLive()) {
-      sec->markLive();
     }
   }
 

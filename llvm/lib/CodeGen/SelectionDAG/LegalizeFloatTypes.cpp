@@ -660,8 +660,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
                        L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
-    if (N != NewL.getValue(1).getNode())
-      ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
+    ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
     return NewL;
   }
 
@@ -2020,12 +2019,11 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_SELECT_CC(SDNode *N, unsigned OpNo) {
 // code.
 SDValue DAGTypeLegalizer::PromoteFloatOp_SETCC(SDNode *N, unsigned OpNo) {
   EVT VT = N->getValueType(0);
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue Op0 = GetPromotedFloat(N->getOperand(0));
   SDValue Op1 = GetPromotedFloat(N->getOperand(1));
   ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(2))->get();
 
-  return DAG.getSetCC(SDLoc(N), NVT, Op0, Op1, CCCode);
+  return DAG.getSetCC(SDLoc(N), VT, Op0, Op1, CCCode);
 
 }
 
@@ -2362,7 +2360,6 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_UNDEF(SDNode *N) {
 
 SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
   EVT VT = N->getValueType(0);
-  EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
 
   AtomicSDNode *AM = cast<AtomicSDNode>(N);
   SDLoc SL(N);
@@ -2376,13 +2373,19 @@ SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
                     { AM->getChain(), AM->getBasePtr(), CastVal },
                     AM->getMemOperand());
 
-  SDValue ResultCast = DAG.getNode(GetPromotionOpcode(VT, NFPVT), SL, NFPVT,
-                                   NewAtomic);
+  SDValue Result = NewAtomic;
+
+  if (getTypeAction(VT) == TargetLowering::TypePromoteFloat) {
+    EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+    Result = DAG.getNode(GetPromotionOpcode(VT, NFPVT), SL, NFPVT,
+                                     NewAtomic);
+  }
+
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), NewAtomic.getValue(1));
 
-  return ResultCast;
+  return Result;
 
 }
 

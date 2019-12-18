@@ -36887,9 +36887,8 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
 
     if (TValIsAllZeros || FValIsAllOnes) {
       SDValue CC = Cond.getOperand(2);
-      ISD::CondCode NewCC =
-          ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
-                               Cond.getOperand(0).getValueType().isInteger());
+      ISD::CondCode NewCC = ISD::getSetCCInverse(
+          cast<CondCodeSDNode>(CC)->get(), Cond.getOperand(0).getValueType());
       Cond = DAG.getSetCC(DL, CondVT, Cond.getOperand(0), Cond.getOperand(1),
                           NewCC);
       std::swap(LHS, RHS);
@@ -37411,7 +37410,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     SDValue Other;
     if (ISD::isBuildVectorAllZeros(LHS.getNode())) {
       Other = RHS;
-      CC = ISD::getSetCCInverse(CC, true);
+      CC = ISD::getSetCCInverse(CC, VT.getVectorElementType());
     } else if (ISD::isBuildVectorAllZeros(RHS.getNode())) {
       Other = LHS;
     }
@@ -37483,7 +37482,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     SDValue Other;
     if (ISD::isBuildVectorAllOnes(LHS.getNode())) {
       Other = RHS;
-      CC = ISD::getSetCCInverse(CC, true);
+      CC = ISD::getSetCCInverse(CC, VT.getVectorElementType());
     } else if (ISD::isBuildVectorAllOnes(RHS.getNode())) {
       Other = LHS;
     }

@@ -1,6 +1,5 @@
 """Check that we handle an ImportError in a special way when command script importing files."""
 
-from __future__ import print_function
 
 
 import lldb
@@ -18,10 +17,6 @@ class Rdar12586188TestCase(TestBase):
     def test_rdar12586188_command(self):
         """Check that we handle an ImportError in a special way when command script importing files."""
         self.run_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def run_test(self):
         """Check that we handle an ImportError in a special way when command script importing files."""

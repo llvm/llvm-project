@@ -397,8 +397,8 @@ static std::unique_ptr<jitlink::JITLinkMemoryManager> createMemoryManager() {
 }
 
 Session::Session(Triple TT)
-    : MainJD(ES.createJITDylib("<main>")), MemMgr(createMemoryManager()),
-      ObjLayer(ES, *MemMgr), TT(std::move(TT)) {
+    : MainJD(ES.createJITDylib("<main>")), ObjLayer(ES, createMemoryManager()),
+      TT(std::move(TT)) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.

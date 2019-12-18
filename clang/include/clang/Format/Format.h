@@ -981,7 +981,7 @@ struct FormatStyle {
     /// set, and the function could/should not be put on a single line (as per
     /// `AllowShortFunctionsOnASingleLine` and constructor formatting options).
     /// \code
-    ///   int f()   vs.   inf f()
+    ///   int f()   vs.   int f()
     ///   {}              {
     ///                   }
     /// \endcode

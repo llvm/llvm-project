@@ -108,11 +108,11 @@ for.end:
   ret void
 }
 
-define void @foo_nosize(i32 inreg %dns) {
-; SLOW-LABEL: foo_nosize:
+define void @foo_pgso(i32 inreg %dns) !prof !14 {
+; SLOW-LABEL: foo_pgso:
 ; SLOW:       # %bb.0: # %entry
-; SLOW-NEXT:    movw $-1, %cx
-; SLOW-NEXT:    .p2align 4, 0x90
+; SLOW-NEXT:    xorl %ecx, %ecx
+; SLOW-NEXT:    decl %ecx
 ; SLOW-NEXT:  .LBB4_1: # %for.body
 ; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SLOW-NEXT:    movzwl %cx, %edx
@@ -122,10 +122,10 @@ define void @foo_nosize(i32 inreg %dns) {
 ; SLOW-NEXT:  # %bb.2: # %for.end
 ; SLOW-NEXT:    retl
 ;
-; FAST-LABEL: foo_nosize:
+; FAST-LABEL: foo_pgso:
 ; FAST:       # %bb.0: # %entry
-; FAST-NEXT:    movw $-1, %cx
-; FAST-NEXT:    .p2align 4, 0x90
+; FAST-NEXT:    xorl %ecx, %ecx
+; FAST-NEXT:    decl %ecx
 ; FAST-NEXT:  .LBB4_1: # %for.body
 ; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; FAST-NEXT:    movzwl %cx, %edx
@@ -148,11 +148,11 @@ for.end:
   ret void
 }
 
-define void @bar_nosize(i32 inreg %dns) {
-; SLOW-LABEL: bar_nosize:
+define void @bar_pgso(i32 inreg %dns) !prof !14 {
+; SLOW-LABEL: bar_pgso:
 ; SLOW:       # %bb.0: # %entry
-; SLOW-NEXT:    movw $1, %cx
-; SLOW-NEXT:    .p2align 4, 0x90
+; SLOW-NEXT:    xorl %ecx, %ecx
+; SLOW-NEXT:    incl %ecx
 ; SLOW-NEXT:  .LBB5_1: # %for.body
 ; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SLOW-NEXT:    movzwl %cx, %edx
@@ -162,10 +162,10 @@ define void @bar_nosize(i32 inreg %dns) {
 ; SLOW-NEXT:  # %bb.2: # %for.end
 ; SLOW-NEXT:    retl
 ;
-; FAST-LABEL: bar_nosize:
+; FAST-LABEL: bar_pgso:
 ; FAST:       # %bb.0: # %entry
-; FAST-NEXT:    movw $1, %cx
-; FAST-NEXT:    .p2align 4, 0x90
+; FAST-NEXT:    xorl %ecx, %ecx
+; FAST-NEXT:    incl %ecx
 ; FAST-NEXT:  .LBB5_1: # %for.body
 ; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; FAST-NEXT:    movzwl %cx, %edx
@@ -186,3 +186,99 @@ for.body:
 for.end:
   ret void
 }
+
+define void @foo_nosize(i32 inreg %dns) {
+; SLOW-LABEL: foo_nosize:
+; SLOW:       # %bb.0: # %entry
+; SLOW-NEXT:    movw $-1, %cx
+; SLOW-NEXT:    .p2align 4, 0x90
+; SLOW-NEXT:  .LBB6_1: # %for.body
+; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
+; SLOW-NEXT:    movzwl %cx, %edx
+; SLOW-NEXT:    decl %ecx
+; SLOW-NEXT:    cmpl %eax, %edx
+; SLOW-NEXT:    jl .LBB6_1
+; SLOW-NEXT:  # %bb.2: # %for.end
+; SLOW-NEXT:    retl
+;
+; FAST-LABEL: foo_nosize:
+; FAST:       # %bb.0: # %entry
+; FAST-NEXT:    movw $-1, %cx
+; FAST-NEXT:    .p2align 4, 0x90
+; FAST-NEXT:  .LBB6_1: # %for.body
+; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
+; FAST-NEXT:    movzwl %cx, %edx
+; FAST-NEXT:    addl $-1, %ecx
+; FAST-NEXT:    cmpl %eax, %edx
+; FAST-NEXT:    jl .LBB6_1
+; FAST-NEXT:  # %bb.2: # %for.end
+; FAST-NEXT:    retl
+entry:
+  br label %for.body
+
+for.body:
+  %i.05 = phi i16 [ %dec, %for.body ], [ 0, %entry ]
+  %dec = add i16 %i.05, -1
+  %conv = zext i16 %dec to i32
+  %cmp = icmp slt i32 %conv, %dns
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+define void @bar_nosize(i32 inreg %dns) {
+; SLOW-LABEL: bar_nosize:
+; SLOW:       # %bb.0: # %entry
+; SLOW-NEXT:    movw $1, %cx
+; SLOW-NEXT:    .p2align 4, 0x90
+; SLOW-NEXT:  .LBB7_1: # %for.body
+; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
+; SLOW-NEXT:    movzwl %cx, %edx
+; SLOW-NEXT:    incl %ecx
+; SLOW-NEXT:    cmpl %eax, %edx
+; SLOW-NEXT:    jl .LBB7_1
+; SLOW-NEXT:  # %bb.2: # %for.end
+; SLOW-NEXT:    retl
+;
+; FAST-LABEL: bar_nosize:
+; FAST:       # %bb.0: # %entry
+; FAST-NEXT:    movw $1, %cx
+; FAST-NEXT:    .p2align 4, 0x90
+; FAST-NEXT:  .LBB7_1: # %for.body
+; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
+; FAST-NEXT:    movzwl %cx, %edx
+; FAST-NEXT:    addl $1, %ecx
+; FAST-NEXT:    cmpl %eax, %edx
+; FAST-NEXT:    jl .LBB7_1
+; FAST-NEXT:  # %bb.2: # %for.end
+; FAST-NEXT:    retl
+entry:
+  br label %for.body
+
+for.body:
+  %i.05 = phi i16 [ %inc, %for.body ], [ 0, %entry ]
+  %inc = add i16 %i.05, 1
+  %conv = zext i16 %inc to i32
+  %cmp = icmp slt i32 %conv, %dns
+  br i1 %cmp, label %for.body, label %for.end
+for.end:
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

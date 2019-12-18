@@ -287,6 +287,25 @@ namespace clang {
     }
   };
 
+  /// Activates OpenMP parsing mode to preseve OpenMP specific annotation
+  /// tokens.
+  class ParsingOpenMPDirectiveRAII {
+    Parser &P;
+    bool OldVal;
+
+  public:
+    ParsingOpenMPDirectiveRAII(Parser &P)
+        : P(P), OldVal(P.OpenMPDirectiveParsing) {
+      P.OpenMPDirectiveParsing = true;
+    }
+
+    /// This can be used to restore the state early, before the dtor
+    /// is run.
+    void restore() { P.OpenMPDirectiveParsing = OldVal; }
+
+    ~ParsingOpenMPDirectiveRAII() { restore(); }
+  };
+
   /// RAII object that makes '>' behave either as an operator
   /// or as the closing angle bracket for a template argument list.
   class GreaterThanIsOperatorScope {

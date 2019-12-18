@@ -8,192 +8,176 @@
 #include "FormattedString.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-
+#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace clangd {
+namespace markup {
 namespace {
 
-TEST(FormattedString, Basic) {
-  FormattedString S;
-  EXPECT_EQ(S.renderAsPlainText(), "");
-  EXPECT_EQ(S.renderAsMarkdown(), "");
-
-  S.appendText("foobar  ");
-  S.appendText("baz");
-  EXPECT_EQ(S.renderAsPlainText(), "foobar baz");
-  EXPECT_EQ(S.renderAsMarkdown(), "foobar  baz");
-
-  S = FormattedString();
-  S.appendInlineCode("foobar");
-  EXPECT_EQ(S.renderAsPlainText(), "foobar");
-  EXPECT_EQ(S.renderAsMarkdown(), "`foobar`");
-
-  S = FormattedString();
-  S.appendCodeBlock("foobar");
-  EXPECT_EQ(S.renderAsPlainText(), "foobar");
-  EXPECT_EQ(S.renderAsMarkdown(), "```cpp\n"
-                                  "foobar\n"
-                                  "```\n");
-}
-
-TEST(FormattedString, CodeBlocks) {
-  FormattedString S;
-  S.appendCodeBlock("foobar");
-  S.appendCodeBlock("bazqux", "javascript");
-  S.appendText("after");
-
-  std::string ExpectedText = R"(foobar
-
-bazqux
-
-after)";
-  EXPECT_EQ(S.renderAsPlainText(), ExpectedText);
-  std::string ExpectedMarkdown = R"md(```cpp
-foobar
-```
-```javascript
-bazqux
-```
-after)md";
-  EXPECT_EQ(S.renderAsMarkdown(), ExpectedMarkdown);
-
-  S = FormattedString();
-  S.appendInlineCode("foobar");
-  S.appendInlineCode("bazqux");
-  EXPECT_EQ(S.renderAsPlainText(), "foobar bazqux");
-  EXPECT_EQ(S.renderAsMarkdown(), "`foobar` `bazqux`");
-
-  S = FormattedString();
-  S.appendText("foo");
-  S.appendInlineCode("bar");
-  S.appendText("baz");
-
-  EXPECT_EQ(S.renderAsPlainText(), "foo bar baz");
-  EXPECT_EQ(S.renderAsMarkdown(), "foo `bar` baz");
-}
-
-TEST(FormattedString, Escaping) {
+TEST(Render, Escaping) {
   // Check some ASCII punctuation
-  FormattedString S;
-  S.appendText("*!`");
-  EXPECT_EQ(S.renderAsMarkdown(), "\\*\\!\\`");
+  Paragraph P;
+  P.appendText("*!`");
+  EXPECT_EQ(P.asMarkdown(), "\\*\\!\\`");
 
   // Check all ASCII punctuation.
-  S = FormattedString();
+  P = Paragraph();
   std::string Punctuation = R"txt(!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~)txt";
   // Same text, with each character escaped.
   std::string EscapedPunctuation;
   EscapedPunctuation.reserve(2 * Punctuation.size());
   for (char C : Punctuation)
     EscapedPunctuation += std::string("\\") + C;
-  S.appendText(Punctuation);
-  EXPECT_EQ(S.renderAsMarkdown(), EscapedPunctuation);
+  P.appendText(Punctuation);
+  EXPECT_EQ(P.asMarkdown(), EscapedPunctuation);
 
   // In code blocks we don't need to escape ASCII punctuation.
-  S = FormattedString();
-  S.appendInlineCode("* foo !+ bar * baz");
-  EXPECT_EQ(S.renderAsMarkdown(), "`* foo !+ bar * baz`");
-  S = FormattedString();
-  S.appendCodeBlock("#define FOO\n* foo !+ bar * baz");
-  EXPECT_EQ(S.renderAsMarkdown(), "```cpp\n"
-                                  "#define FOO\n* foo !+ bar * baz\n"
-                                  "```\n");
+  P = Paragraph();
+  P.appendCode("* foo !+ bar * baz");
+  EXPECT_EQ(P.asMarkdown(), "`* foo !+ bar * baz`");
 
   // But we have to escape the backticks.
-  S = FormattedString();
-  S.appendInlineCode("foo`bar`baz");
-  EXPECT_EQ(S.renderAsMarkdown(), "`foo``bar``baz`");
-
-  S = FormattedString();
-  S.appendCodeBlock("foo`bar`baz");
-  EXPECT_EQ(S.renderAsMarkdown(), "```cpp\n"
-                                  "foo`bar`baz\n"
-                                  "```\n");
+  P = Paragraph();
+  P.appendCode("foo`bar`baz");
+  EXPECT_EQ(P.asMarkdown(), "`foo``bar``baz`");
 
   // Inline code blocks starting or ending with backticks should add spaces.
-  S = FormattedString();
-  S.appendInlineCode("`foo");
-  EXPECT_EQ(S.renderAsMarkdown(), "` ``foo `");
-  S = FormattedString();
-  S.appendInlineCode("foo`");
-  EXPECT_EQ(S.renderAsMarkdown(), "` foo`` `");
-  S = FormattedString();
-  S.appendInlineCode("`foo`");
-  EXPECT_EQ(S.renderAsMarkdown(), "` ``foo`` `");
-
-  // Should also add extra spaces if the block stars and ends with spaces.
-  S = FormattedString();
-  S.appendInlineCode(" foo ");
-  EXPECT_EQ(S.renderAsMarkdown(), "`  foo  `");
-  S = FormattedString();
-  S.appendInlineCode("foo ");
-  EXPECT_EQ(S.renderAsMarkdown(), "`foo `");
-  S = FormattedString();
-  S.appendInlineCode(" foo");
-  EXPECT_EQ(S.renderAsMarkdown(), "` foo`");
+  P = Paragraph();
+  P.appendCode("`foo");
+  EXPECT_EQ(P.asMarkdown(), "` ``foo `");
+  P = Paragraph();
+  P.appendCode("foo`");
+  EXPECT_EQ(P.asMarkdown(), "` foo`` `");
+  P = Paragraph();
+  P.appendCode("`foo`");
+  EXPECT_EQ(P.asMarkdown(), "` ``foo`` `");
 
   // Code blocks might need more than 3 backticks.
-  S = FormattedString();
-  S.appendCodeBlock("foobarbaz `\nqux");
-  EXPECT_EQ(S.renderAsMarkdown(), "```cpp\n"
-                                  "foobarbaz `\nqux\n"
-                                  "```\n");
-  S = FormattedString();
-  S.appendCodeBlock("foobarbaz ``\nqux");
-  EXPECT_EQ(S.renderAsMarkdown(), "```cpp\n"
-                                  "foobarbaz ``\nqux\n"
-                                  "```\n");
-  S = FormattedString();
-  S.appendCodeBlock("foobarbaz ```\nqux");
-  EXPECT_EQ(S.renderAsMarkdown(), "````cpp\n"
-                                  "foobarbaz ```\nqux\n"
-                                  "````\n");
-  S = FormattedString();
-  S.appendCodeBlock("foobarbaz ` `` ``` ```` `\nqux");
-  EXPECT_EQ(S.renderAsMarkdown(), "`````cpp\n"
-                                  "foobarbaz ` `` ``` ```` `\nqux\n"
-                                  "`````\n");
+  Document D;
+  D.addCodeBlock("foobarbaz `\nqux");
+  EXPECT_EQ(D.asMarkdown(), "```cpp\n"
+                            "foobarbaz `\nqux\n"
+                            "```");
+  D = Document();
+  D.addCodeBlock("foobarbaz ``\nqux");
+  EXPECT_THAT(D.asMarkdown(), "```cpp\n"
+                              "foobarbaz ``\nqux\n"
+                              "```");
+  D = Document();
+  D.addCodeBlock("foobarbaz ```\nqux");
+  EXPECT_EQ(D.asMarkdown(), "````cpp\n"
+                            "foobarbaz ```\nqux\n"
+                            "````");
+  D = Document();
+  D.addCodeBlock("foobarbaz ` `` ``` ```` `\nqux");
+  EXPECT_EQ(D.asMarkdown(), "`````cpp\n"
+                            "foobarbaz ` `` ``` ```` `\nqux\n"
+                            "`````");
 }
 
-TEST(FormattedString, MarkdownWhitespace) {
-  // Whitespace should be added as separators between blocks.
-  FormattedString S;
-  S.appendText("foo");
-  S.appendText("bar");
-  EXPECT_EQ(S.renderAsMarkdown(), "foo bar");
+TEST(Paragraph, SeparationOfChunks) {
+  // This test keeps appending contents to a single Paragraph and checks
+  // expected accumulated contents after each one.
+  // Purpose is to check for separation between different chunks.
+  Paragraph P;
 
-  S = FormattedString();
-  S.appendInlineCode("foo");
-  S.appendInlineCode("bar");
-  EXPECT_EQ(S.renderAsMarkdown(), "`foo` `bar`");
+  P.appendText("after");
+  EXPECT_EQ(P.asMarkdown(), "after");
+  EXPECT_EQ(P.asPlainText(), "after");
 
-  // However, we don't want to add any extra whitespace.
-  S = FormattedString();
-  S.appendText("foo ");
-  S.appendInlineCode("bar");
-  EXPECT_EQ(S.renderAsMarkdown(), "foo `bar`");
+  P.appendCode("foobar");
+  EXPECT_EQ(P.asMarkdown(), "after `foobar`");
+  EXPECT_EQ(P.asPlainText(), "after foobar");
 
-  S = FormattedString();
-  S.appendText("foo\n");
-  S.appendInlineCode("bar");
-  EXPECT_EQ(S.renderAsMarkdown(), "foo\n`bar`");
-
-  S = FormattedString();
-  S.appendInlineCode("foo");
-  S.appendText(" bar");
-  EXPECT_EQ(S.renderAsMarkdown(), "`foo` bar");
-
-  S = FormattedString();
-  S.appendText("foo");
-  S.appendCodeBlock("bar");
-  S.appendText("baz");
-  EXPECT_EQ(S.renderAsMarkdown(), "foo\n```cpp\nbar\n```\nbaz");
+  P.appendText("bat");
+  EXPECT_EQ(P.asMarkdown(), "after `foobar` bat");
+  EXPECT_EQ(P.asPlainText(), "after foobar bat");
 }
 
+TEST(Paragraph, ExtraSpaces) {
+  // Make sure spaces inside chunks are dropped.
+  Paragraph P;
+  P.appendText("foo\n   \t   baz");
+  P.appendCode(" bar\n");
+  EXPECT_EQ(P.asMarkdown(), R"md(foo baz `bar`)md");
+  EXPECT_EQ(P.asPlainText(), R"pt(foo baz bar)pt");
+}
+
+TEST(Paragraph, NewLines) {
+  // New lines before and after chunks are dropped.
+  Paragraph P;
+  P.appendText(" \n foo\nbar\n ");
+  P.appendCode(" \n foo\nbar \n ");
+  EXPECT_EQ(P.asMarkdown(), R"md(foo bar `foo bar`)md");
+  EXPECT_EQ(P.asPlainText(), R"pt(foo bar foo bar)pt");
+}
+
+TEST(Document, Separators) {
+  Document D;
+  D.addParagraph().appendText("foo");
+  D.addCodeBlock("test");
+  D.addParagraph().appendText("bar");
+
+  const char ExpectedMarkdown[] = R"md(foo
+```cpp
+test
+```
+bar)md";
+  EXPECT_EQ(D.asMarkdown(), ExpectedMarkdown);
+
+  const char ExpectedText[] = R"pt(foo
+
+test
+
+bar)pt";
+  EXPECT_EQ(D.asPlainText(), ExpectedText);
+}
+
+TEST(Document, Spacer) {
+  Document D;
+  D.addParagraph().appendText("foo");
+  D.addSpacer();
+  D.addParagraph().appendText("bar");
+  EXPECT_EQ(D.asMarkdown(), "foo\n\nbar");
+  EXPECT_EQ(D.asPlainText(), "foo\n\nbar");
+}
+
+TEST(CodeBlock, Render) {
+  Document D;
+  // Code blocks preserves any extra spaces.
+  D.addCodeBlock("foo\n  bar\n  baz");
+  EXPECT_EQ(D.asMarkdown(), R"md(```cpp
+foo
+  bar
+  baz
+```)md");
+  EXPECT_EQ(D.asPlainText(), R"pt(foo
+  bar
+  baz)pt");
+  D.addCodeBlock("foo");
+  EXPECT_EQ(D.asMarkdown(), R"md(```cpp
+foo
+  bar
+  baz
+```
+```cpp
+foo
+```)md");
+  // FIXME: we shouldn't have 2 empty lines in between. A solution might be
+  // having a `verticalMargin` method for blocks, and let container insert new
+  // lines according to that before/after blocks.
+  EXPECT_EQ(D.asPlainText(), R"pt(foo
+  bar
+  baz
+
+
+foo)pt");
+}
 
 } // namespace
+} // namespace markup
 } // namespace clangd
 } // namespace clang

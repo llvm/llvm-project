@@ -2,7 +2,6 @@
 Test setting a breakpoint by line and column.
 """
 
-from __future__ import print_function
 
 
 import lldb

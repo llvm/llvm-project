@@ -537,7 +537,10 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
     return {};
 
   ClangASTContext *clang_ast_context =
-      m_process->GetTarget().GetScratchClangASTContext();
+      ClangASTContext::GetScratch(m_process->GetTarget());
+  if (!clang_ast_context)
+    return {};
+
   CompilerType voidstar =
       clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
 

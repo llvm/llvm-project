@@ -277,7 +277,7 @@ def : MnemonicAlias<"vstm", "vstmia">;
 //
 let mayLoad = 1 in
 def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
-                  IIC_fpLoad_m, "vlldm${p}\t$Rn", "", []>,
+                  NoItinerary, "vlldm${p}\t$Rn", "", []>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
     let Inst{24-23} = 0b00;
     let Inst{22}    = 0;
@@ -290,7 +290,7 @@ def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
 
 let mayStore = 1 in
 def VLSTM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
-                  IIC_fpStore_m, "vlstm${p}\t$Rn", "", []>,
+                  NoItinerary, "vlstm${p}\t$Rn", "", []>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
     let Inst{24-23} = 0b00;
     let Inst{22}    = 0;

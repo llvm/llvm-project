@@ -5,7 +5,6 @@ DW_OP_constu(X < 32) to DW_OP_litX which broke the debugger because
 it didn't read the value as an unsigned.
 """
 
-from __future__ import print_function
 
 
 from lldbsuite.test.decorators import *

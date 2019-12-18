@@ -848,11 +848,11 @@ def int_arm_mve_qrdmulh_predicated: Intrinsic<[llvm_anyvector_ty],
    [IntrNoMem]>;
 def int_arm_mve_mull_int_predicated: Intrinsic<[llvm_anyvector_ty],
    [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty,
-    LLVMMatchType<1>],
+    LLVMMatchType<0>],
    [IntrNoMem]>;
 def int_arm_mve_mull_poly_predicated: Intrinsic<[llvm_anyvector_ty],
    [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty,
-    LLVMMatchType<1>],
+    LLVMMatchType<0>],
    [IntrNoMem]>;
 def int_arm_mve_qadd_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
@@ -876,9 +876,18 @@ defm int_arm_mve_maxv: IntrinsicSignSuffix<[llvm_i32_ty],
    [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
 
 multiclass MVEPredicated<list<LLVMType> rets, list<LLVMType> params,
-                         LLVMType pred, list<IntrinsicProperty> props = []> {
+                         LLVMType pred = llvm_anyvector_ty,
+                         list<IntrinsicProperty> props = []> {
   def "": Intrinsic<rets, params, props>;
   def _predicated: Intrinsic<rets, params # [pred], props>;
+}
+multiclass MVEPredicatedM<list<LLVMType> rets, list<LLVMType> params,
+                          LLVMType pred = llvm_anyvector_ty,
+                          list<IntrinsicProperty> props = [IntrNoMem]> {
+  def "": Intrinsic<rets, params, props>;
+  def _predicated: Intrinsic<rets, params # [pred,
+      !if(!eq(!cast<string>(rets[0]), "llvm_anyvector_ty"),
+          LLVMMatchType<0>, rets[0])], props>;
 }
 
 defm int_arm_mve_vcvt_narrow: MVEPredicated<[llvm_v8f16_ty],
@@ -920,6 +929,16 @@ def int_arm_mve_shr_imm_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, // extra i32 is unsigned flag
     llvm_anyvector_ty, LLVMMatchType<0>],
    [IntrNoMem]>;
+
+defm int_arm_mve_vqshl_imm: MVEPredicatedM<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty /*shiftcount*/, llvm_i32_ty /*unsigned*/]>;
+defm int_arm_mve_vrshr_imm: MVEPredicatedM<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty /*shiftcount*/, llvm_i32_ty /*unsigned*/]>;
+defm int_arm_mve_vqshlu_imm: MVEPredicatedM<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty /*shiftcount*/]>;
+defm int_arm_mve_vshll_imm: MVEPredicatedM<[llvm_anyvector_ty],
+   [llvm_anyvector_ty, llvm_i32_ty /*shiftcount*/, llvm_i32_ty /*unsigned*/,
+                       llvm_i32_ty /*top-half*/]>;
 
 // MVE scalar shifts.
 class ARM_MVE_qrshift_single<list<LLVMType> value,
@@ -1027,4 +1046,51 @@ def int_arm_mve_vst4q: Intrinsic<[], [llvm_anyptr_ty, llvm_anyvector_ty, LLVMMat
 def int_arm_cls: Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_cls64: Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
 
+// MVE vector absolute difference and accumulate across vector
+// The first operand is an 'unsigned' flag. The remaining operands are:
+// * accumulator
+// * first vector operand
+// * second vector operand
+// * mask (only in predicated versions)
+defm int_arm_mve_vabav: MVEPredicated<
+  [llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>], llvm_anyvector_ty,
+  [IntrNoMem]>;
+
+// The following 3 instrinsics are MVE vector reductions with two vector
+// operands.
+// The first 3 operands are boolean flags (must be compile-time constants):
+// * unsigned - the instruction operates on vectors of unsigned values and
+//              unsigned scalars
+// * subtract - the instruction performs subtraction after multiplication of
+//              lane pairs (e.g., vmlsdav vs vmladav)
+// * exchange - the instruction exchanges successive even and odd lanes of
+//              the first operands before multiplication of lane pairs
+//              (e.g., vmladavx vs vmladav)
+// The remaining operands are:
+// * accumulator
+// * first vector operand
+// * second vector operand
+// * mask (only in predicated versions)
+
+// Version with 32-bit result, vml{a,s}dav[a][x]
+defm int_arm_mve_vmldava: MVEPredicated<
+  [llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+   llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+  llvm_anyvector_ty, [IntrNoMem]>;
+
+// Version with 64-bit result, vml{a,s}ldav[a][x]
+defm int_arm_mve_vmlldava: MVEPredicated<
+  [llvm_i32_ty, llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+   llvm_i32_ty, llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+  llvm_anyvector_ty, [IntrNoMem]>;
+
+// Version with 72-bit rounded result, vrml{a,s}ldavh[a][x]
+defm int_arm_mve_vrmlldavha: MVEPredicated<
+  [llvm_i32_ty, llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+   llvm_i32_ty, llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+  llvm_anyvector_ty, [IntrNoMem]>;
 } // end TargetPrefix

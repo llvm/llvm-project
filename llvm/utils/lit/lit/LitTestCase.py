@@ -1,7 +1,8 @@
 import unittest
 
-import lit.worker
+import lit.discovery
 import lit.LitConfig
+import lit.worker
 
 """
 TestCase adaptor for providing a Python 'unittest' compatible interface to 'lit'

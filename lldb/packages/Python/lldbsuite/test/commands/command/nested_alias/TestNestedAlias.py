@@ -2,7 +2,6 @@
 Test that an alias can reference other aliases without crashing.
 """
 
-from __future__ import print_function
 
 
 import lldb

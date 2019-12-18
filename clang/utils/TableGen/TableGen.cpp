@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h" // Declares all backends.
-#include "ClangASTEmitters.h"
+#include "ASTTableGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
@@ -42,6 +42,8 @@ enum ActionType {
   GenClangAttrParsedAttrKinds,
   GenClangAttrTextNodeDump,
   GenClangAttrNodeTraverse,
+  GenClangBasicReader,
+  GenClangBasicWriter,
   GenClangDiagsDefs,
   GenClangDiagGroups,
   GenClangDiagsIndexName,
@@ -49,6 +51,8 @@ enum ActionType {
   GenClangDeclNodes,
   GenClangStmtNodes,
   GenClangTypeNodes,
+  GenClangTypeReader,
+  GenClangTypeWriter,
   GenClangOpcodes,
   GenClangSACheckers,
   GenClangCommentHTMLTags,
@@ -131,6 +135,10 @@ cl::opt<ActionType> Action(
                    "Generate Clang diagnostic groups"),
         clEnumValN(GenClangDiagsIndexName, "gen-clang-diags-index-name",
                    "Generate Clang diagnostic name index"),
+        clEnumValN(GenClangBasicReader, "gen-clang-basic-reader",
+                   "Generate Clang BasicReader classes"),
+        clEnumValN(GenClangBasicWriter, "gen-clang-basic-writer",
+                   "Generate Clang BasicWriter classes"),
         clEnumValN(GenClangCommentNodes, "gen-clang-comment-nodes",
                    "Generate Clang AST comment nodes"),
         clEnumValN(GenClangDeclNodes, "gen-clang-decl-nodes",
@@ -139,6 +147,10 @@ cl::opt<ActionType> Action(
                    "Generate Clang AST statement nodes"),
         clEnumValN(GenClangTypeNodes, "gen-clang-type-nodes",
                    "Generate Clang AST type nodes"),
+        clEnumValN(GenClangTypeReader, "gen-clang-type-reader",
+                   "Generate Clang AbstractTypeReader class"),
+        clEnumValN(GenClangTypeWriter, "gen-clang-type-writer",
+                   "Generate Clang AbstractTypeWriter class"),
         clEnumValN(GenClangOpcodes, "gen-clang-opcodes",
                    "Generate Clang constexpr interpreter opcodes"),
         clEnumValN(GenClangSACheckers, "gen-clang-sa-checkers",
@@ -275,6 +287,18 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenClangTypeNodes:
     EmitClangTypeNodes(Records, OS);
+    break;
+  case GenClangTypeReader:
+    EmitClangTypeReader(Records, OS);
+    break;
+  case GenClangTypeWriter:
+    EmitClangTypeWriter(Records, OS);
+    break;
+  case GenClangBasicReader:
+    EmitClangBasicReader(Records, OS);
+    break;
+  case GenClangBasicWriter:
+    EmitClangBasicWriter(Records, OS);
     break;
   case GenClangOpcodes:
     EmitClangOpcodes(Records, OS);

@@ -848,22 +848,28 @@ public:
   /// Create a logical NOT operation as (XOR Val, BooleanOne).
   SDValue getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT);
 
+  /// Returns sum of the base pointer and offset.
+  /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap by default.
+  SDValue getMemBasePlusOffset(SDValue Base, int64_t Offset, const SDLoc &DL,
+                               const SDNodeFlags Flags = SDNodeFlags());
+  SDValue getMemBasePlusOffset(SDValue Base, SDValue Offset, const SDLoc &DL,
+                               const SDNodeFlags Flags = SDNodeFlags());
+
   /// Create an add instruction with appropriate flags when used for
   /// addressing some offset of an object. i.e. if a load is split into multiple
   /// components, create an add nuw from the base pointer to the offset.
-  SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Op, int64_t Offset) {
-    EVT VT = Op.getValueType();
-    return getObjectPtrOffset(SL, Op, getConstant(Offset, SL, VT));
+  SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, int64_t Offset) {
+    SDNodeFlags Flags;
+    Flags.setNoUnsignedWrap(true);
+    return getMemBasePlusOffset(Ptr, Offset, SL, Flags);
   }
 
-  SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Op, SDValue Offset) {
-    EVT VT = Op.getValueType();
-
+  SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, SDValue Offset) {
     // The object itself can't wrap around the address space, so it shouldn't be
     // possible for the adds of the offsets to the split parts to overflow.
     SDNodeFlags Flags;
     Flags.setNoUnsignedWrap(true);
-    return getNode(ISD::ADD, SL, VT, Op, Offset, Flags);
+    return getMemBasePlusOffset(Ptr, Offset, SL, Flags);
   }
 
   /// Return a new CALLSEQ_START node, that starts new call frame, in which
@@ -1136,9 +1142,6 @@ public:
                         SDValue Ptr, EVT SVT, MachineMemOperand *MMO);
   SDValue getIndexedStore(SDValue OrigStore, const SDLoc &dl, SDValue Base,
                           SDValue Offset, ISD::MemIndexedMode AM);
-
-  /// Returns sum of the base pointer and offset.
-  SDValue getMemBasePlusOffset(SDValue Base, unsigned Offset, const SDLoc &DL);
 
   SDValue getMaskedLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Base,
                         SDValue Offset, SDValue Mask, SDValue Src0, EVT MemVT,

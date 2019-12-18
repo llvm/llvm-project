@@ -8,7 +8,7 @@
 
 #include "lldb/Host/Config.h"
 
-#ifndef LLDB_DISABLE_PYTHON
+#if LLDB_ENABLE_PYTHON
 
 #include "OperatingSystemPython.h"
 
@@ -418,4 +418,4 @@ lldb::ThreadSP OperatingSystemPython::CreateThread(lldb::tid_t tid,
   return ThreadSP();
 }
 
-#endif // #ifndef LLDB_DISABLE_PYTHON
+#endif // #if LLDB_ENABLE_PYTHON

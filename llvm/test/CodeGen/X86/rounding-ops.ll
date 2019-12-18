@@ -252,3 +252,60 @@ define double @test12(double* %xptr) nounwind optsize {
   %call = tail call double @trunc(double %x) nounwind readnone
   ret double %call
 }
+
+define float @test11_pgso(float* %xptr) nounwind !prof !14 {
+; CHECK-SSE-LABEL: test11_pgso:
+; CHECK-SSE:       ## %bb.0:
+; CHECK-SSE-NEXT:    roundss $11, (%rdi), %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: test11_pgso:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: test11_pgso:
+; CHECK-AVX512:       ## %bb.0:
+; CHECK-AVX512-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    retq
+  %x = load float, float* %xptr
+  %call = tail call float @truncf(float %x) nounwind readnone
+  ret float %call
+}
+
+define double @test12_pgso(double* %xptr) nounwind !prof !14 {
+; CHECK-SSE-LABEL: test12_pgso:
+; CHECK-SSE:       ## %bb.0:
+; CHECK-SSE-NEXT:    roundsd $11, (%rdi), %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: test12_pgso:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    vroundsd $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: test12_pgso:
+; CHECK-AVX512:       ## %bb.0:
+; CHECK-AVX512-NEXT:    vroundsd $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    retq
+  %x = load double, double* %xptr
+  %call = tail call double @trunc(double %x) nounwind readnone
+  ret double %call
+}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

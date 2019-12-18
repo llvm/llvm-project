@@ -1,6 +1,5 @@
 """Test for the JITLoaderGDB interface"""
 
-from __future__ import print_function
 
 import unittest2
 import os

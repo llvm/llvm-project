@@ -15,7 +15,7 @@ if(DOXYGEN_FOUND)
   )
 endif()
 
-if (NOT LLDB_DISABLE_PYTHON)
+if (LLDB_ENABLE_PYTHON)
   find_program(EPYDOC_EXECUTABLE NAMES epydoc epydoc.py)
   if(EPYDOC_EXECUTABLE)
     message(STATUS "Found epydoc - ${EPYDOC_EXECUTABLE}")

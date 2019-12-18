@@ -15,9 +15,9 @@ from subprocess import Popen, PIPE
 
 def coverage_buckets():
   yield '0%'
-  yield '1-9%'
+  yield '(0%,10%)'
   for start in range(10, 91, 10):
-    yield '{0}-{1}%'.format(start, start + 9)
+    yield '[{0}%,{1}%)'.format(start, start + 10)
   yield '100%'
 
 def locstats_output(
@@ -28,6 +28,10 @@ def locstats_output(
   scope_bytes,
   variables_coverage_map
   ):
+
+  if scope_bytes == 0:
+    print ('No scope bytes found.')
+    sys.exit(0)
 
   pc_ranges_covered = int(ceil(scope_bytes_covered * 100.0)
               / scope_bytes)
@@ -40,10 +44,10 @@ def locstats_output(
   print (' =================================================')
   print ('            Debug Location Statistics       ')
   print (' =================================================')
-  print ('     cov%          samples          percentage(~)  ')
+  print ('     cov%           samples         percentage(~)  ')
   print (' -------------------------------------------------')
   for cov_bucket in coverage_buckets():
-    print ('   {0:6}        {1:8d}             {2:3d}%'. \
+    print ('   {0:10}     {1:8d}              {2:3d}%'. \
       format(cov_bucket, variables_coverage_map[cov_bucket], \
              variables_coverage_per_map[cov_bucket]))
   print (' =================================================')

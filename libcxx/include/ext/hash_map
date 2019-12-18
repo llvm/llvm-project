@@ -318,11 +318,12 @@ private:
 
     allocator_type& __na_;
 
-    __hash_map_node_destructor& operator=(const __hash_map_node_destructor&);
-
 public:
     bool __first_constructed;
     bool __second_constructed;
+
+    __hash_map_node_destructor(__hash_map_node_destructor const&) = default;
+    __hash_map_node_destructor& operator=(const __hash_map_node_destructor&) = delete;
 
     _LIBCPP_INLINE_VISIBILITY
     explicit __hash_map_node_destructor(allocator_type& __na)

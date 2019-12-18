@@ -18,7 +18,6 @@
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 
-#include <algorithm>
 #include <array>
 #include <utility>
 

@@ -24,6 +24,8 @@
 
 using namespace clang;
 
+char ExternalASTSource::ID;
+
 ExternalASTSource::~ExternalASTSource() = default;
 
 llvm::Optional<ExternalASTSource::ASTSourceDescriptor>

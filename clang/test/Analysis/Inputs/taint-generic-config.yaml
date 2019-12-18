@@ -9,9 +9,26 @@ Propagations:
   - Name:     mySource2
     DstArgs:  [0]
 
+  # int x = myNamespace::mySource3(); // x is tainted
+  - Name:     mySource3
+    Scope:    "myNamespace::"
+    DstArgs:  [-1]
+
+  # int x = myAnotherNamespace::mySource3(); // x is tainted
+  - Name:     mySource3
+    Scope:    "myAnotherNamespace::"
+    DstArgs:  [-1]
+
   # int x, y;
   # myScanf("%d %d", &x, &y); // x and y are tainted
   - Name:          myScanf
+    VariadicType:  Dst
+    VariadicIndex: 1
+
+  # int x, y;
+  # Foo::myScanf("%d %d", &x, &y); // x and y are tainted
+  - Name:          myMemberScanf
+    Scope:         "Foo::"
     VariadicType:  Dst
     VariadicIndex: 1
 
@@ -40,6 +57,18 @@ Filters:
   - Name: isOutOfRange
     Args: [0]
 
+  # int x; // x is tainted
+  # myNamespace::isOutOfRange(&x); // x is not tainted anymore
+  - Name:  isOutOfRange2
+    Scope: "myNamespace::"
+    Args:  [0]
+
+  # int x; // x is tainted
+  # myAnotherNamespace::isOutOfRange(&x); // x is not tainted anymore
+  - Name:  isOutOfRange2
+    Scope: "myAnotherNamespace::"
+    Args:  [0]
+
 # A list of sink functions
 Sinks:
   # int x, y; // x and y are tainted
@@ -48,3 +77,15 @@ Sinks:
   # mySink(0, x, 1); // It won't warn
   - Name: mySink
     Args: [0, 2]
+
+  # int x; // x is tainted
+  # myNamespace::mySink(x); // It will warn
+  - Name:  mySink2
+    Scope: "myNamespace::"
+    Args:  [0]
+
+  # int x; // x is tainted
+  # myAnotherNamespace::mySink(x); // It will warn
+  - Name:  mySink2
+    Scope: "myAnotherNamespace::"
+    Args:  [0]

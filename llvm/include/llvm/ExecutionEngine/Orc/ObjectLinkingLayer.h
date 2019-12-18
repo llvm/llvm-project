@@ -79,7 +79,7 @@ public:
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   /// and NotifyEmitted functors.
   ObjectLinkingLayer(ExecutionSession &ES,
-                     jitlink::JITLinkMemoryManager &MemMgr);
+                     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
   /// Destruct an ObjectLinkingLayer.
   ~ObjectLinkingLayer();
@@ -145,7 +145,7 @@ private:
   Error removeAllModules();
 
   mutable std::mutex LayerMutex;
-  jitlink::JITLinkMemoryManager &MemMgr;
+  std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr;
   bool OverrideObjectFlags = false;
   bool AutoClaimObjectSymbols = false;
   ReturnObjectBufferFunction ReturnObjectBuffer;

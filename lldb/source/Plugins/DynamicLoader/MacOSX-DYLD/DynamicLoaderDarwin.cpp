@@ -1073,7 +1073,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
         StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
         if (frame_sp) {
           ClangASTContext *clang_ast_context =
-              target.GetScratchClangASTContext();
+              ClangASTContext::GetScratch(target);
 
           if (!clang_ast_context)
             return LLDB_INVALID_ADDRESS;

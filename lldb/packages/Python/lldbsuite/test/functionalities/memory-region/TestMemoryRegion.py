@@ -2,7 +2,6 @@
 Test the 'memory region' command.
 """
 
-from __future__ import print_function
 
 
 import lldb

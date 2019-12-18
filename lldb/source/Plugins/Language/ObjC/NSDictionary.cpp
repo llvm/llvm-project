@@ -65,7 +65,7 @@ NSDictionary_Additionals::GetAdditionalSynthetics() {
 static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
   CompilerType compiler_type;
 
-  ClangASTContext *target_ast_context = target_sp->GetScratchClangASTContext();
+  ClangASTContext *target_ast_context = ClangASTContext::GetScratch(*target_sp);
 
   if (target_ast_context) {
     ConstString g___lldb_autogen_nspair("__lldb_autogen_nspair");

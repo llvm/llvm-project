@@ -4930,7 +4930,7 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
   // Get scalar or pointer size.
   unsigned BitWidth = Ty->isIntOrIntVectorTy()
                           ? Ty->getScalarSizeInBits()
-                          : DL.getIndexTypeSizeInBits(Ty->getScalarType());
+                          : DL.getPointerTypeSizeInBits(Ty->getScalarType());
 
   if (!BitWidth)
     return nullptr;

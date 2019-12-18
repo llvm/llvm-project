@@ -27,6 +27,8 @@
 #define SHARED __attribute__((shared))
 #define ALIGN(N) __attribute__((aligned(N)))
 
+#include "hip_atomics.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options
 ////////////////////////////////////////////////////////////////////////////////
@@ -118,6 +120,10 @@ EXTERN int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t Var,
                                           uint32_t Delta, int32_t Width);
 
 INLINE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
+
+INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
+  // AMDGCN doesn't need to sync threads in a warp
+}
 
 INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
   // we have protected the master warp from releasing from its barrier

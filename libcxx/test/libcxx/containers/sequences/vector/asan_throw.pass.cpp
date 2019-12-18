@@ -50,6 +50,7 @@ public:
             throw 0;
         }
     }
+    ThrowOnCopy& operator=(ThrowOnCopy const&) = default;
 
     bool should_throw;
 };

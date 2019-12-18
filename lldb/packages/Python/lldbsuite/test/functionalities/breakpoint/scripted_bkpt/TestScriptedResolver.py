@@ -2,9 +2,6 @@
 Test setting breakpoints using a scripted resolver
 """
 
-from __future__ import print_function
-
-
 import os
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
@@ -42,10 +39,6 @@ class TestScriptedResolver(TestBase):
            options"""
         self.build()
         self.do_test_bad_options()        
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def make_target_and_import(self):
         target = lldbutil.run_to_breakpoint_make_target(self)

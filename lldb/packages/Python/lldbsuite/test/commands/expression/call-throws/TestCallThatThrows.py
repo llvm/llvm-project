@@ -2,7 +2,6 @@
 Test calling a function that throws an ObjC exception, make sure that it doesn't propagate the exception.
 """
 
-from __future__ import print_function
 
 
 import lldb

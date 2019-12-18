@@ -5,20 +5,20 @@
 
 ; This function should require all FPRs, but no other spill slots.
 ; We need to save and restore 8 of the 16 FPRs, so the frame size
-; should be exactly 160 + 8 * 8 = 224.  The CFA offset is 160
-; (the caller-allocated part of the frame) + 224.
+; should be exactly 8 * 8 = 64.  The CFA offset is 160
+; (the caller-allocated part of the frame) + 64.
 define void @f1(fp128 *%ptr) {
 ; CHECK-LABEL: f1:
-; CHECK: aghi %r15, -224
-; CHECK: .cfi_def_cfa_offset 384
-; CHECK: std %f8, 216(%r15)
-; CHECK: std %f9, 208(%r15)
-; CHECK: std %f10, 200(%r15)
-; CHECK: std %f11, 192(%r15)
-; CHECK: std %f12, 184(%r15)
-; CHECK: std %f13, 176(%r15)
-; CHECK: std %f14, 168(%r15)
-; CHECK: std %f15, 160(%r15)
+; CHECK: aghi %r15, -64
+; CHECK: .cfi_def_cfa_offset 224
+; CHECK: std %f8, 56(%r15)
+; CHECK: std %f9, 48(%r15)
+; CHECK: std %f10, 40(%r15)
+; CHECK: std %f11, 32(%r15)
+; CHECK: std %f12, 24(%r15)
+; CHECK: std %f13, 16(%r15)
+; CHECK: std %f14, 8(%r15)
+; CHECK: std %f15, 0(%r15)
 ; CHECK: .cfi_offset %f8, -168
 ; CHECK: .cfi_offset %f9, -176
 ; CHECK: .cfi_offset %f10, -184
@@ -28,15 +28,15 @@ define void @f1(fp128 *%ptr) {
 ; CHECK: .cfi_offset %f14, -216
 ; CHECK: .cfi_offset %f15, -224
 ; ...main function body...
-; CHECK: ld %f8, 216(%r15)
-; CHECK: ld %f9, 208(%r15)
-; CHECK: ld %f10, 200(%r15)
-; CHECK: ld %f11, 192(%r15)
-; CHECK: ld %f12, 184(%r15)
-; CHECK: ld %f13, 176(%r15)
-; CHECK: ld %f14, 168(%r15)
-; CHECK: ld %f15, 160(%r15)
-; CHECK: aghi %r15, 224
+; CHECK: ld %f8, 56(%r15)
+; CHECK: ld %f9, 48(%r15)
+; CHECK: ld %f10, 40(%r15)
+; CHECK: ld %f11, 32(%r15)
+; CHECK: ld %f12, 24(%r15)
+; CHECK: ld %f13, 16(%r15)
+; CHECK: ld %f14, 8(%r15)
+; CHECK: ld %f15, 0(%r15)
+; CHECK: aghi %r15, 64
 ; CHECK: br %r14
   %l0 = load volatile fp128, fp128 *%ptr
   %l1 = load volatile fp128, fp128 *%ptr
@@ -69,14 +69,14 @@ define void @f1(fp128 *%ptr) {
 ; so %f13+%f15 is the pair that gets dropped.
 define void @f2(fp128 *%ptr) {
 ; CHECK-LABEL: f2:
-; CHECK: aghi %r15, -208
-; CHECK: .cfi_def_cfa_offset 368
-; CHECK: std %f8, 200(%r15)
-; CHECK: std %f9, 192(%r15)
-; CHECK: std %f10, 184(%r15)
-; CHECK: std %f11, 176(%r15)
-; CHECK: std %f12, 168(%r15)
-; CHECK: std %f14, 160(%r15)
+; CHECK: aghi %r15, -48
+; CHECK: .cfi_def_cfa_offset 208
+; CHECK: std %f8, 40(%r15)
+; CHECK: std %f9, 32(%r15)
+; CHECK: std %f10, 24(%r15)
+; CHECK: std %f11, 16(%r15)
+; CHECK: std %f12, 8(%r15)
+; CHECK: std %f14, 0(%r15)
 ; CHECK: .cfi_offset %f8, -168
 ; CHECK: .cfi_offset %f9, -176
 ; CHECK: .cfi_offset %f10, -184
@@ -86,13 +86,13 @@ define void @f2(fp128 *%ptr) {
 ; CHECK-NOT: %f13
 ; CHECK-NOT: %f15
 ; ...main function body...
-; CHECK: ld %f8, 200(%r15)
-; CHECK: ld %f9, 192(%r15)
-; CHECK: ld %f10, 184(%r15)
-; CHECK: ld %f11, 176(%r15)
-; CHECK: ld %f12, 168(%r15)
-; CHECK: ld %f14, 160(%r15)
-; CHECK: aghi %r15, 208
+; CHECK: ld %f8, 40(%r15)
+; CHECK: ld %f9, 32(%r15)
+; CHECK: ld %f10, 24(%r15)
+; CHECK: ld %f11, 16(%r15)
+; CHECK: ld %f12, 8(%r15)
+; CHECK: ld %f14, 0(%r15)
+; CHECK: aghi %r15, 48
 ; CHECK: br %r14
   %l0 = load volatile fp128, fp128 *%ptr
   %l1 = load volatile fp128, fp128 *%ptr
@@ -122,10 +122,10 @@ define void @f2(fp128 *%ptr) {
 ; numerical order so the pair should be %f8+%f10.
 define void @f3(fp128 *%ptr) {
 ; CHECK-LABEL: f3:
-; CHECK: aghi %r15, -176
-; CHECK: .cfi_def_cfa_offset 336
-; CHECK: std %f8, 168(%r15)
-; CHECK: std %f10, 160(%r15)
+; CHECK: aghi %r15, -16
+; CHECK: .cfi_def_cfa_offset 176
+; CHECK: std %f8, 8(%r15)
+; CHECK: std %f10, 0(%r15)
 ; CHECK: .cfi_offset %f8, -168
 ; CHECK: .cfi_offset %f10, -176
 ; CHECK-NOT: %f9
@@ -135,9 +135,9 @@ define void @f3(fp128 *%ptr) {
 ; CHECK-NOT: %f14
 ; CHECK-NOT: %f15
 ; ...main function body...
-; CHECK: ld %f8, 168(%r15)
-; CHECK: ld %f10, 160(%r15)
-; CHECK: aghi %r15, 176
+; CHECK: ld %f8, 8(%r15)
+; CHECK: ld %f10, 0(%r15)
+; CHECK: aghi %r15, 16
 ; CHECK: br %r14
   %l0 = load volatile fp128, fp128 *%ptr
   %l1 = load volatile fp128, fp128 *%ptr

@@ -2,7 +2,6 @@
 Test that lldb persistent variables works correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

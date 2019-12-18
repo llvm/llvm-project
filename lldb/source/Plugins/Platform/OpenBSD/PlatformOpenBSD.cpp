@@ -10,7 +10,7 @@
 #include "lldb/Host/Config.h"
 
 #include <stdio.h>
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
 #include <sys/utsname.h>
 #endif
 
@@ -173,7 +173,7 @@ bool PlatformOpenBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
 void PlatformOpenBSD::GetStatus(Stream &strm) {
   Platform::GetStatus(strm);
 
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
   // Display local kernel information only when we are running in host mode.
   // Otherwise, we would end up printing non-OpenBSD information (when running
   // on Mac OS for example).

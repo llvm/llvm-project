@@ -14,6 +14,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
 #include <string>
@@ -36,23 +37,31 @@ struct MachHeader {
 
 struct RelocationInfo;
 struct Section {
-  std::string Sectname;
   std::string Segname;
+  std::string Sectname;
   // CanonicalName is a string formatted as “<Segname>,<Sectname>".
   std::string CanonicalName;
-  uint64_t Addr;
-  uint64_t Size;
-  uint32_t Offset;
-  uint32_t Align;
-  uint32_t RelOff;
-  uint32_t NReloc;
-  uint32_t Flags;
-  uint32_t Reserved1;
-  uint32_t Reserved2;
-  uint32_t Reserved3;
-
+  uint64_t Addr = 0;
+  uint64_t Size = 0;
+  uint32_t Offset = 0;
+  uint32_t Align = 0;
+  uint32_t RelOff = 0;
+  uint32_t NReloc = 0;
+  uint32_t Flags = 0;
+  uint32_t Reserved1 = 0;
+  uint32_t Reserved2 = 0;
+  uint32_t Reserved3 = 0;
   StringRef Content;
   std::vector<RelocationInfo> Relocations;
+
+  Section(StringRef SegName, StringRef SectName)
+      : Segname(SegName), Sectname(SectName),
+        CanonicalName((Twine(SegName) + Twine(',') + SectName).str()) {}
+
+  Section(StringRef SegName, StringRef SectName, StringRef Content)
+      : Segname(SegName), Sectname(SectName),
+        CanonicalName((Twine(SegName) + Twine(',') + SectName).str()),
+        Content(Content) {}
 
   MachO::SectionType getType() const {
     return static_cast<MachO::SectionType>(Flags & MachO::SECTION_TYPE);
@@ -81,6 +90,9 @@ struct LoadCommand {
   // Section describes only sections' metadata and where to find the
   // corresponding content inside the binary.
   std::vector<Section> Sections;
+
+  // Returns the segment name if the load command is a segment command.
+  Optional<StringRef> getSegmentName() const;
 };
 
 // A symbol information. Fields which starts with "n_" are same as them in the
@@ -275,8 +287,23 @@ struct Object {
   /// The index LC_FUNCTION_STARTS load comamnd if present.
   Optional<size_t> FunctionStartsCommandIndex;
 
+  BumpPtrAllocator Alloc;
+  StringSaver NewSectionsContents;
+
+  Object() : NewSectionsContents(Alloc) {}
+
   void removeSections(function_ref<bool(const Section &)> ToRemove);
   void addLoadCommand(LoadCommand LC);
+
+  /// Creates a new segment load command in the object and returns a reference
+  /// to the newly created load command. The caller should verify that SegName
+  /// is not too long (SegName.size() should be less than or equal to 16).
+  LoadCommand &addSegment(StringRef SegName);
+
+  bool is64Bit() const {
+    return Header.Magic == MachO::MH_MAGIC_64 ||
+           Header.Magic == MachO::MH_CIGAM_64;
+  }
 };
 
 } // end namespace macho

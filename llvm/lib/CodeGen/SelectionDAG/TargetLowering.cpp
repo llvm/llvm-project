@@ -390,8 +390,10 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   NewRHS = DAG.getConstant(0, dl, RetVT);
 
   CCCode = getCmpLibcallCC(LC1);
-  if (ShouldInvertCC)
-    CCCode = getSetCCInverse(CCCode, /*isInteger=*/true);
+  if (ShouldInvertCC) {
+    assert(RetVT.isInteger());
+    CCCode = getSetCCInverse(CCCode, RetVT);
+  }
 
   if (LC2 != RTLIB::UNKNOWN_LIBCALL) {
     SDValue Tmp = DAG.getNode(
@@ -1540,6 +1542,16 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
     Known.One = Known2.One.reverseBits();
     Known.Zero = Known2.Zero.reverseBits();
+    break;
+  }
+  case ISD::BSWAP: {
+    SDValue Src = Op.getOperand(0);
+    APInt DemandedSrcBits = DemandedBits.byteSwap();
+    if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
+                             Depth + 1))
+      return true;
+    Known.One = Known2.One.byteSwap();
+    Known.Zero = Known2.Zero.byteSwap();
     break;
   }
   case ISD::SIGN_EXTEND_INREG: {
@@ -2812,7 +2824,8 @@ SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
     // Note that where Y is variable and is known to have at most one bit set
     // (for example, if it is Z & 1) we cannot do this; the expressions are not
     // equivalent when Y == 0.
-    Cond = ISD::getSetCCInverse(Cond, /*isInteger=*/true);
+    assert(OpVT.isInteger());
+    Cond = ISD::getSetCCInverse(Cond, OpVT);
     if (DCI.isBeforeLegalizeOps() ||
         isCondCodeLegal(Cond, N0.getSimpleValueType()))
       return DAG.getSetCC(DL, VT, N0, Zero, Cond);
@@ -2901,7 +2914,8 @@ SDValue TargetLowering::optimizeSetCCOfSignedTruncationCheck(
     // What if we invert constants? (and the target predicate)
     I1.negate();
     I01.negate();
-    NewCond = getSetCCInverse(NewCond, /*isInteger=*/true);
+    assert(XVT.isInteger());
+    NewCond = getSetCCInverse(NewCond, XVT);
     if (!checkConstants())
       return SDValue();
     // Great, e.g. got  icmp uge i16 (add i16 %x, -128), -256
@@ -3137,7 +3151,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         // (ctpop x) != 1 --> (x == 0) || ((x & x-1) != 0)
         SDValue Zero = DAG.getConstant(0, dl, CTVT);
         SDValue NegOne = DAG.getAllOnesConstant(dl, CTVT);
-        ISD::CondCode InvCond = ISD::getSetCCInverse(Cond, true);
+        assert(CTVT.isInteger());
+        ISD::CondCode InvCond = ISD::getSetCCInverse(Cond, CTVT);
         SDValue Add = DAG.getNode(ISD::ADD, dl, CTVT, CTOp, NegOne);
         SDValue And = DAG.getNode(ISD::AND, dl, CTVT, CTOp, Add);
         SDValue LHS = DAG.getSetCC(dl, VT, CTOp, Zero, InvCond);
@@ -3228,7 +3243,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 
           ISD::CondCode InvCond = ISD::getSetCCInverse(
               cast<CondCodeSDNode>(TopSetCC.getOperand(2))->get(),
-              TopSetCC.getOperand(0).getValueType().isInteger());
+              TopSetCC.getOperand(0).getValueType());
           return DAG.getSetCC(dl, VT, TopSetCC.getOperand(0),
                                       TopSetCC.getOperand(1),
                                       InvCond);
@@ -3277,11 +3292,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         EVT newVT = EVT::getIntegerVT(*DAG.getContext(), bestWidth);
         if (newVT.isRound() &&
             shouldReduceLoadWidth(Lod, ISD::NON_EXTLOAD, newVT)) {
-          EVT PtrType = Lod->getOperand(1).getValueType();
           SDValue Ptr = Lod->getBasePtr();
           if (bestOffset != 0)
-            Ptr = DAG.getNode(ISD::ADD, dl, PtrType, Lod->getBasePtr(),
-                              DAG.getConstant(bestOffset, dl, PtrType));
+            Ptr = DAG.getMemBasePlusOffset(Ptr, bestOffset, dl);
           unsigned NewAlign = MinAlign(Lod->getAlignment(), bestOffset);
           SDValue NewLoad = DAG.getLoad(
               newVT, dl, Lod->getChain(), Ptr,
@@ -3392,8 +3405,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           return DAG.getNode(ISD::TRUNCATE, dl, VT, N0);
         // Invert the condition.
         ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-        CC = ISD::getSetCCInverse(CC,
-                                  N0.getOperand(0).getValueType().isInteger());
+        CC = ISD::getSetCCInverse(CC, N0.getOperand(0).getValueType());
         if (DCI.isBeforeLegalizeOps() ||
             isCondCodeLegal(CC, N0.getOperand(0).getSimpleValueType()))
           return DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), CC);
@@ -6902,7 +6914,7 @@ SDValue TargetLowering::getVectorElementPointer(SelectionDAG &DAG,
 
   Index = DAG.getNode(ISD::MUL, dl, IdxVT, Index,
                       DAG.getConstant(EltSize, dl, IdxVT));
-  return DAG.getNode(ISD::ADD, dl, IdxVT, VecPtr, Index);
+  return DAG.getMemBasePlusOffset(VecPtr, Index, dl);
 }
 
 //===----------------------------------------------------------------------===//

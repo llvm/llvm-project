@@ -222,7 +222,7 @@ public:
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
   bool instrumentStack(
       SmallVectorImpl<AllocaInst *> &Allocas,
-      DenseMap<AllocaInst *, std::vector<DbgDeclareInst *>> &AllocaDeclareMap,
+      DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> &AllocaDbgMap,
       SmallVectorImpl<Instruction *> &RetVec, Value *StackTag);
   Value *readRegister(IRBuilder<> &IRB, StringRef Name);
   bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
@@ -1016,7 +1016,7 @@ bool HWAddressSanitizer::instrumentLandingPads(
 
 bool HWAddressSanitizer::instrumentStack(
     SmallVectorImpl<AllocaInst *> &Allocas,
-    DenseMap<AllocaInst *, std::vector<DbgDeclareInst *>> &AllocaDeclareMap,
+    DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> &AllocaDbgMap,
     SmallVectorImpl<Instruction *> &RetVec, Value *StackTag) {
   // Ideally, we want to calculate tagged stack base pointer, and rewrite all
   // alloca addresses using that. Unfortunately, offsets are not known yet
@@ -1038,11 +1038,15 @@ bool HWAddressSanitizer::instrumentStack(
     AI->replaceUsesWithIf(Replacement,
                           [AILong](Use &U) { return U.getUser() != AILong; });
 
-    for (auto *DDI : AllocaDeclareMap.lookup(AI)) {
-      DIExpression *OldExpr = DDI->getExpression();
-      DIExpression *NewExpr = DIExpression::append(
-          OldExpr, {dwarf::DW_OP_LLVM_tag_offset, RetagMask(N)});
-      DDI->setArgOperand(2, MetadataAsValue::get(*C, NewExpr));
+    for (auto *DDI : AllocaDbgMap.lookup(AI)) {
+      // Prepend "tag_offset, N" to the dwarf expression.
+      // Tag offset logically applies to the alloca pointer, and it makes sense
+      // to put it at the beginning of the expression.
+      SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
+                                         RetagMask(N)};
+      DDI->setArgOperand(
+          2, MetadataAsValue::get(*C, DIExpression::prependOpcodes(
+                                          DDI->getExpression(), NewOps)));
     }
 
     size_t Size = getAllocaSizeInBytes(*AI);
@@ -1089,7 +1093,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   SmallVector<AllocaInst*, 8> AllocasToInstrument;
   SmallVector<Instruction*, 8> RetVec;
   SmallVector<Instruction*, 8> LandingPadVec;
-  DenseMap<AllocaInst *, std::vector<DbgDeclareInst *>> AllocaDeclareMap;
+  DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
   for (auto &BB : F) {
     for (auto &Inst : BB) {
       if (ClInstrumentStack)
@@ -1103,9 +1107,10 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
           isa<CleanupReturnInst>(Inst))
         RetVec.push_back(&Inst);
 
-      if (auto *DDI = dyn_cast<DbgDeclareInst>(&Inst))
-        if (auto *Alloca = dyn_cast_or_null<AllocaInst>(DDI->getAddress()))
-          AllocaDeclareMap[Alloca].push_back(DDI);
+      if (auto *DDI = dyn_cast<DbgVariableIntrinsic>(&Inst))
+        if (auto *Alloca =
+                dyn_cast_or_null<AllocaInst>(DDI->getVariableLocation()))
+          AllocaDbgMap[Alloca].push_back(DDI);
 
       if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
         LandingPadVec.push_back(&Inst);
@@ -1148,7 +1153,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   if (!AllocasToInstrument.empty()) {
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    Changed |= instrumentStack(AllocasToInstrument, AllocaDeclareMap, RetVec,
+    Changed |= instrumentStack(AllocasToInstrument, AllocaDbgMap, RetVec,
                                StackTag);
   }
 

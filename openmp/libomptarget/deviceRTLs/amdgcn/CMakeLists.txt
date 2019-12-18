@@ -56,13 +56,20 @@ get_filename_component(devicertl_base_directory
 
 set(cuda_sources
   ${devicertl_base_directory}/common/src/cancel.cu
-  ${devicertl_base_directory}/common/src/critical.cu)
+  ${devicertl_base_directory}/common/src/critical.cu
+  ${devicertl_base_directory}/common/src/loop.cu
+  ${devicertl_base_directory}/common/src/omptarget.cu
+  ${devicertl_base_directory}/common/src/sync.cu
+  ${devicertl_base_directory}/common/src/task.cu)
 
 set(h_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_interface.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/hip_atomics.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/target_impl.h
   ${devicertl_base_directory}/common/debug.h
   ${devicertl_base_directory}/common/device_environment.h
+  ${devicertl_base_directory}/common/omptarget.h
+  ${devicertl_base_directory}/common/omptargeti.h
   ${devicertl_base_directory}/common/state-queue.h
   ${devicertl_base_directory}/common/state-queuei.h
   ${devicertl_base_directory}/common/support.h)

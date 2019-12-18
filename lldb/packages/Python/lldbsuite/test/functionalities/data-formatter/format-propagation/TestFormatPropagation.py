@@ -2,7 +2,6 @@
 Check if changing Format on an SBValue correctly propagates that new format to children as it should
 """
 
-from __future__ import print_function
 
 
 import lldb

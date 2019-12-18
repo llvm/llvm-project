@@ -2,7 +2,6 @@
 Test that we work properly with classes with the trivial_abi attribute
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -37,10 +36,6 @@ class TestTrivialABI(TestBase):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.cpp")
         self.expr_test(False)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def check_value(self, test_var, ivar_value):
         self.assertTrue(test_var.GetError().Success(), "Invalid valobj: %s"%(test_var.GetError().GetCString()))

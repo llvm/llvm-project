@@ -23,7 +23,7 @@ if (LLDB_BUILD_INTEL_PT)
 endif()
 
 # Add python wrapper if python not disabled
-if (NOT LLDB_DISABLE_PYTHON AND LLDB_BUILD_INTEL_PT)
+if (LLDB_ENABLE_PYTHON AND LLDB_BUILD_INTEL_PT)
   set(LLDB_INTEL_FEATURES_PYTHON_WRAP
      ${LLDB_BINARY_DIR}/tools/intel-features/scripts/IntelFeaturesPythonWrap.cpp)
   set_source_files_properties(${LLDB_INTEL_FEATURES_PYTHON_WRAP}
@@ -59,7 +59,7 @@ add_lldb_library(lldbIntelFeatures SHARED
   )
 
 # Add link dependencies for python wrapper
-if (NOT LLDB_DISABLE_PYTHON AND LLDB_BUILD_INTEL_PT)
+if (LLDB_ENABLE_PYTHON AND LLDB_BUILD_INTEL_PT)
   add_dependencies(lldbIntelFeatures intel-features-swig_wrapper)
 endif()
 

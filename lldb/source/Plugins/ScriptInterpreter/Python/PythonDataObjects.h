@@ -50,7 +50,7 @@
 
 #include "lldb/Host/Config.h"
 
-#ifndef LLDB_DISABLE_PYTHON
+#if LLDB_ENABLE_PYTHON
 
 // LLDB Python header must be included first
 #include "lldb-python.h"

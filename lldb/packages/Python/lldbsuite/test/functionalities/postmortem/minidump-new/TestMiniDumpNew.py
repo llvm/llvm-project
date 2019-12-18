@@ -2,7 +2,6 @@
 Test basics of Minidump debugging.
 """
 
-from __future__ import print_function
 from six import iteritems
 
 import shutil

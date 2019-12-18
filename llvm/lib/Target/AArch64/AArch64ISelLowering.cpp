@@ -1614,7 +1614,8 @@ static void changeVectorFPCCToAArch64CC(ISD::CondCode CC,
     // All of the compare-mask comparisons are ordered, but we can switch
     // between the two by a double inversion. E.g. ULE == !OGT.
     Invert = true;
-    changeFPCCToAArch64CC(getSetCCInverse(CC, false), CondCode, CondCode2);
+    changeFPCCToAArch64CC(getSetCCInverse(CC, /* FP inverse */ MVT::f32),
+                          CondCode, CondCode2);
     break;
   }
 }
@@ -1861,7 +1862,7 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
     ISD::CondCode CC = cast<CondCodeSDNode>(Val->getOperand(2))->get();
     bool isInteger = LHS.getValueType().isInteger();
     if (Negate)
-      CC = getSetCCInverse(CC, isInteger);
+      CC = getSetCCInverse(CC, LHS.getValueType());
     SDLoc DL(Val);
     // Determine OutCC and handle FP special case.
     if (isInteger) {
@@ -2333,7 +2334,7 @@ static SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) {
   if (CTVal->isAllOnesValue() && CFVal->isNullValue()) {
     std::swap(TVal, FVal);
     std::swap(CTVal, CFVal);
-    CC = ISD::getSetCCInverse(CC, true);
+    CC = ISD::getSetCCInverse(CC, LHS.getValueType());
   }
 
   // If the constants line up, perform the transform!
@@ -5026,8 +5027,8 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   if (LHS.getValueType().isInteger()) {
     SDValue CCVal;
-    SDValue Cmp =
-        getAArch64Cmp(LHS, RHS, ISD::getSetCCInverse(CC, true), CCVal, DAG, dl);
+    SDValue Cmp = getAArch64Cmp(
+        LHS, RHS, ISD::getSetCCInverse(CC, LHS.getValueType()), CCVal, DAG, dl);
 
     // Note that we inverted the condition above, so we reverse the order of
     // the true and false operands here.  This will allow the setcc to be
@@ -5046,7 +5047,8 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   AArch64CC::CondCode CC1, CC2;
   changeFPCCToAArch64CC(CC, CC1, CC2);
   if (CC2 == AArch64CC::AL) {
-    changeFPCCToAArch64CC(ISD::getSetCCInverse(CC, false), CC1, CC2);
+    changeFPCCToAArch64CC(ISD::getSetCCInverse(CC, LHS.getValueType()), CC1,
+                          CC2);
     SDValue CC1Val = DAG.getConstant(CC1, dl, MVT::i32);
 
     // Note that we inverted the condition above, so we reverse the order of
@@ -5107,18 +5109,18 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
     if (CTVal && CFVal && CTVal->isAllOnesValue() && CFVal->isNullValue()) {
       std::swap(TVal, FVal);
       std::swap(CTVal, CFVal);
-      CC = ISD::getSetCCInverse(CC, true);
+      CC = ISD::getSetCCInverse(CC, LHS.getValueType());
     } else if (CTVal && CFVal && CTVal->isOne() && CFVal->isNullValue()) {
       std::swap(TVal, FVal);
       std::swap(CTVal, CFVal);
-      CC = ISD::getSetCCInverse(CC, true);
+      CC = ISD::getSetCCInverse(CC, LHS.getValueType());
     } else if (TVal.getOpcode() == ISD::XOR) {
       // If TVal is a NOT we want to swap TVal and FVal so that we can match
       // with a CSINV rather than a CSEL.
       if (isAllOnesConstant(TVal.getOperand(1))) {
         std::swap(TVal, FVal);
         std::swap(CTVal, CFVal);
-        CC = ISD::getSetCCInverse(CC, true);
+        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
       }
     } else if (TVal.getOpcode() == ISD::SUB) {
       // If TVal is a negation (SUB from 0) we want to swap TVal and FVal so
@@ -5126,7 +5128,7 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
       if (isNullConstant(TVal.getOperand(0))) {
         std::swap(TVal, FVal);
         std::swap(CTVal, CFVal);
-        CC = ISD::getSetCCInverse(CC, true);
+        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
       }
     } else if (CTVal && CFVal) {
       const int64_t TrueVal = CTVal->getSExtValue();
@@ -5169,7 +5171,7 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
       if (Swap) {
         std::swap(TVal, FVal);
         std::swap(CTVal, CFVal);
-        CC = ISD::getSetCCInverse(CC, true);
+        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
       }
 
       if (Opcode != AArch64ISD::CSEL) {
@@ -8513,6 +8515,26 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(16);
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
     return true;
+  case Intrinsic::aarch64_sve_ldnt1: {
+    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(1)->getType());
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(PtrTy->getElementType());
+    Info.ptrVal = I.getArgOperand(1);
+    Info.offset = 0;
+    Info.align = MaybeAlign(DL.getABITypeAlignment(PtrTy->getElementType()));
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MONonTemporal;
+    return true;
+  }
+  case Intrinsic::aarch64_sve_stnt1: {
+    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(2)->getType());
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(PtrTy->getElementType());
+    Info.ptrVal = I.getArgOperand(2);
+    Info.offset = 0;
+    Info.align = MaybeAlign(DL.getABITypeAlignment(PtrTy->getElementType()));
+    Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MONonTemporal;
+    return true;
+  }
   default:
     break;
   }
@@ -10410,10 +10432,10 @@ static SDValue performSetccAddFolding(SDNode *Op, SelectionDAG &DAG) {
         MVT::i32);
     Cmp = *InfoAndKind.Info.AArch64.Cmp;
   } else
-    Cmp = getAArch64Cmp(*InfoAndKind.Info.Generic.Opnd0,
-                      *InfoAndKind.Info.Generic.Opnd1,
-                      ISD::getSetCCInverse(InfoAndKind.Info.Generic.CC, true),
-                      CCVal, DAG, dl);
+    Cmp = getAArch64Cmp(
+        *InfoAndKind.Info.Generic.Opnd0, *InfoAndKind.Info.Generic.Opnd1,
+        ISD::getSetCCInverse(InfoAndKind.Info.Generic.CC, CmpVT), CCVal, DAG,
+        dl);
 
   EVT VT = Op->getValueType(0);
   LHS = DAG.getNode(ISD::ADD, dl, VT, RHS, DAG.getConstant(1, dl, VT));
@@ -10940,6 +10962,48 @@ static SDValue splitStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
     Offset += EltOffset;
   }
   return NewST1;
+}
+
+static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT PtrTy = N->getOperand(3).getValueType();
+
+  EVT LoadVT = VT;
+  if (VT.isFloatingPoint())
+    LoadVT = VT.changeTypeToInteger();
+
+  auto *MINode = cast<MemIntrinsicSDNode>(N);
+  SDValue PassThru = DAG.getConstant(0, DL, LoadVT);
+  SDValue L = DAG.getMaskedLoad(LoadVT, DL, MINode->getChain(),
+                                MINode->getOperand(3), DAG.getUNDEF(PtrTy),
+                                MINode->getOperand(2), PassThru,
+                                MINode->getMemoryVT(), MINode->getMemOperand(),
+                                ISD::UNINDEXED, ISD::NON_EXTLOAD, false);
+
+   if (VT.isFloatingPoint()) {
+     SDValue Ops[] = { DAG.getNode(ISD::BITCAST, DL, VT, L), L.getValue(1) };
+     return DAG.getMergeValues(Ops, DL);
+   }
+
+  return L;
+}
+
+static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  SDValue Data = N->getOperand(2);
+  EVT DataVT = Data.getValueType();
+  EVT PtrTy = N->getOperand(4).getValueType();
+
+  if (DataVT.isFloatingPoint())
+    Data = DAG.getNode(ISD::BITCAST, DL, DataVT.changeTypeToInteger(), Data);
+
+  auto *MINode = cast<MemIntrinsicSDNode>(N);
+  return DAG.getMaskedStore(MINode->getChain(), DL, Data, MINode->getOperand(4),
+                            DAG.getUNDEF(PtrTy), MINode->getOperand(3),
+                            MINode->getMemoryVT(), MINode->getMemOperand(),
+                            ISD::UNINDEXED, false, false);
 }
 
 /// Replace a splat of zeros to a vector store by scalar stores of WZR/XZR.  The
@@ -12218,6 +12282,10 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_neon_st3lane:
     case Intrinsic::aarch64_neon_st4lane:
       return performNEONPostLDSTCombine(N, DCI, DAG);
+    case Intrinsic::aarch64_sve_ldnt1:
+      return performLDNT1Combine(N, DAG);
+    case Intrinsic::aarch64_sve_stnt1:
+      return performSTNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_ld1_gather:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1);
     case Intrinsic::aarch64_sve_ld1_gather_index:

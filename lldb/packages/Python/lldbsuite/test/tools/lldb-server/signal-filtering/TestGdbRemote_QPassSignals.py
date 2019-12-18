@@ -1,6 +1,5 @@
 # This test makes sure that lldb-server supports and properly handles
 # QPassSignals GDB protocol package.
-from __future__ import print_function
 
 import gdbremote_testcase
 from lldbsuite.test.decorators import *

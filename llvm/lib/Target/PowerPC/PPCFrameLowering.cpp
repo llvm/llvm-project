@@ -2441,10 +2441,6 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 }
 
 unsigned PPCFrameLowering::getTOCSaveOffset() const {
-  if (Subtarget.isAIXABI())
-    // TOC save/restore is normally handled by the linker.
-    // Indirect calls should hit this limitation.
-    report_fatal_error("TOC save is not implemented on AIX yet.");
   return TOCSaveOffset;
 }
 

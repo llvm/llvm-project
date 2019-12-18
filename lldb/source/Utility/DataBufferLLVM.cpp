@@ -8,12 +8,9 @@
 
 #include "lldb/Utility/DataBufferLLVM.h"
 
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #include <assert.h>
-#include <type_traits>
 
 using namespace lldb_private;
 

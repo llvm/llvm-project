@@ -267,3 +267,12 @@ Tool *OpenBSD::buildAssembler() const {
 }
 
 Tool *OpenBSD::buildLinker() const { return new tools::openbsd::Linker(*this); }
+
+void OpenBSD::addClangTargetOptions(const ArgList &DriverArgs,
+                                    ArgStringList &CC1Args,
+                                    Action::OffloadKind) const {
+  // Support for .init_array is still new (Aug 2016).
+  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                          options::OPT_fno_use_init_array, false))
+    CC1Args.push_back("-fno-use-init-array");
+}

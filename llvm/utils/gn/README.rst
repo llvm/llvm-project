@@ -34,10 +34,8 @@ This is a `good overview of GN <https://docs.google.com/presentation/d/15Zwb53Jc
 Quick start
 ===========
 
-GN only works in the monorepo layout.
-
 #. ``git clone https://github.com/llvm/llvm-project.git; cd llvm-project`` if
-   you don't have a monorepo checkout yet.
+   you don't have a checkout yet.
 
 #. ``llvm/utils/gn/get.py`` to download a prebuilt gn binary if you're on a
    64-bit X86 system running Linux, macOS, or Windows. `Build gn yourself

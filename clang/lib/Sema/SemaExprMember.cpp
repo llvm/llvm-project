@@ -919,6 +919,18 @@ MemberExpr *Sema::BuildMemberExpr(
                          VK, OK, getNonOdrUseReasonInCurrentContext(Member));
   E->setHadMultipleCandidates(HadMultipleCandidates);
   MarkMemberReferenced(E);
+
+  // C++ [except.spec]p17:
+  //   An exception-specification is considered to be needed when:
+  //   - in an expression the function is the unique lookup result or the
+  //     selected member of a set of overloaded functions
+  if (auto *FPT = Ty->getAs<FunctionProtoType>()) {
+    if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
+      if (auto *NewFPT = ResolveExceptionSpec(MemberNameInfo.getLoc(), FPT))
+        E->setType(Context.getQualifiedType(NewFPT, Ty.getQualifiers()));
+    }
+  }
+
   return E;
 }
 

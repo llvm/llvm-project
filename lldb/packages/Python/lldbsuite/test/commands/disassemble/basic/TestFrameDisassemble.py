@@ -2,7 +2,6 @@
 Test to ensure SBFrame::Disassemble produces SOME output
 """
 
-from __future__ import print_function
 
 
 import lldb
@@ -20,10 +19,6 @@ class FrameDisassembleTestCase(TestBase):
         """Sample test to ensure SBFrame::Disassemble produces SOME output."""
         self.build()
         self.frame_disassemble_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def frame_disassemble_test(self):
         """Sample test to ensure SBFrame::Disassemble produces SOME output"""
