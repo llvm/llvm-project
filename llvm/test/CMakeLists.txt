@@ -75,6 +75,7 @@ set(LLVM_TEST_DEPENDS
           llvm-lib
           llvm-link
           llvm-lipo
+          llvm-locstats
           llvm-lto2
           llvm-mc
           llvm-mca
