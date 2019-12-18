@@ -15,6 +15,7 @@ clang_target_link_libraries(SyntaxTests
   clangLex
   clangSerialization
   clangTooling
+  clangToolingCore
   clangToolingSyntax
   )
 

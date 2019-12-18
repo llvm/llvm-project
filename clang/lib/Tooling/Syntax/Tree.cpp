@@ -40,7 +40,10 @@ bool syntax::Leaf::classof(const Node *N) {
 
 syntax::Node::Node(NodeKind Kind)
     : Parent(nullptr), NextSibling(nullptr), Kind(static_cast<unsigned>(Kind)),
-      Role(static_cast<unsigned>(NodeRole::Detached)) {}
+      Role(static_cast<unsigned>(NodeRole::Detached)), Original(false),
+      CanModify(false) {}
+
+bool syntax::Node::isDetached() const { return role() == NodeRole::Detached; }
 
 bool syntax::Tree::classof(const Node *N) { return N->kind() > NodeKind::Leaf; }
 
@@ -54,6 +57,48 @@ void syntax::Tree::prependChildLowLevel(Node *Child, NodeRole Role) {
   Child->NextSibling = this->FirstChild;
   Child->Role = static_cast<unsigned>(Role);
   this->FirstChild = Child;
+}
+
+void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
+                                             Node *New) {
+  assert(!BeforeBegin || BeforeBegin->Parent == this);
+
+#ifndef NDEBUG
+  for (auto *N = New; N; N = N->nextSibling()) {
+    assert(N->Parent == nullptr);
+    assert(N->role() != NodeRole::Detached && "Roles must be set");
+    // FIXME: sanity-check the role.
+  }
+#endif
+
+  // Detach old nodes.
+  for (auto *N = !BeforeBegin ? FirstChild : BeforeBegin->nextSibling();
+       N != End;) {
+    auto *Next = N->NextSibling;
+
+    N->Role = static_cast<unsigned>(NodeRole::Detached);
+    N->Parent = nullptr;
+    N->NextSibling = nullptr;
+
+    N = Next;
+  }
+
+  // Attach new nodes.
+  if (BeforeBegin)
+    BeforeBegin->NextSibling = New ? New : End;
+  else
+    FirstChild = New ? New : End;
+
+  if (New) {
+    auto *Last = New;
+    while (auto *Next = Last->nextSibling())
+      Last = Next;
+    Last->NextSibling = End;
+  }
+
+  // Mark the node as modified.
+  for (auto *T = this; T && T->Original; T = T->Parent)
+    T->Original = false;
 }
 
 namespace {
@@ -85,9 +130,15 @@ static void dumpTokens(llvm::raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
 
 static void dumpTree(llvm::raw_ostream &OS, const syntax::Node *N,
                      const syntax::Arena &A, std::vector<bool> IndentMask) {
+  std::string Marks;
+  if (!N->isOriginal())
+    Marks += "M";
   if (N->role() == syntax::NodeRole::Detached)
-    OS << "*: ";
-  // FIXME: find a nice way to print other roles.
+    Marks += "*"; // FIXME: find a nice way to print other roles.
+  if (!N->canModify())
+    Marks += "I";
+  if (!Marks.empty())
+    OS << Marks << ": ";
 
   if (auto *L = llvm::dyn_cast<syntax::Leaf>(N)) {
     dumpTokens(OS, *L->token(), A.sourceManager());
@@ -133,8 +184,33 @@ std::string syntax::Node::dumpTokens(const Arena &A) const {
     if (!L)
       return;
     ::dumpTokens(OS, *L->token(), A.sourceManager());
+    OS << " ";
   });
   return OS.str();
+}
+
+syntax::Leaf *syntax::Tree::firstLeaf() {
+  auto *T = this;
+  while (auto *C = T->firstChild()) {
+    if (auto *L = dyn_cast<syntax::Leaf>(C))
+      return L;
+    T = cast<syntax::Tree>(C);
+  }
+  return nullptr;
+}
+
+syntax::Leaf *syntax::Tree::lastLeaf() {
+  auto *T = this;
+  while (auto *C = T->firstChild()) {
+    // Find the last child.
+    while (auto *Next = C->nextSibling())
+      C = Next;
+
+    if (auto *L = dyn_cast<syntax::Leaf>(C))
+      return L;
+    T = cast<syntax::Tree>(C);
+  }
+  return nullptr;
 }
 
 syntax::Node *syntax::Tree::findChild(NodeRole R) {
