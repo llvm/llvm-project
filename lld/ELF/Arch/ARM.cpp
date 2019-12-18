@@ -34,8 +34,8 @@ public:
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
   void addPltSymbols(InputSection &isec, uint64_t off) const override;
   void addPltHeaderSymbols(InputSection &isd) const override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
@@ -231,8 +231,8 @@ static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
 
 // The default PLT entries require the .plt.got to be within 128 Mb of the
 // .plt in the positive direction.
-void ARM::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                   uint64_t pltEntryAddr, int32_t /*index*/) const {
+void ARM::writePlt(uint8_t *buf, const Symbol &sym,
+                   uint64_t pltEntryAddr) const {
   // The PLT entry is similar to the example given in Appendix A of ELF for
   // the Arm Architecture. Instead of using the Group Relocations to find the
   // optimal rotation for the 8-bit immediate used in the add instructions we
@@ -244,10 +244,10 @@ void ARM::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
       0xe5bcf000, //     ldr pc, [ip, #0x00000NNN] Offset(&(.plt.got) - L1 - 8
   };
 
-  uint64_t offset = gotPltEntryAddr - pltEntryAddr - 8;
+  uint64_t offset = sym.getGotPltVA() - pltEntryAddr - 8;
   if (!llvm::isUInt<27>(offset)) {
     // We cannot encode the Offset, use the long form.
-    writePltLong(buf, gotPltEntryAddr, pltEntryAddr);
+    writePltLong(buf, sym.getGotPltVA(), pltEntryAddr);
     return;
   }
   write32le(buf + 0, pltData[0] | ((offset >> 20) & 0xff));
