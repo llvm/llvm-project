@@ -1240,8 +1240,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (Subtarget.hasAnyFMA()) {
       for (auto VT : { MVT::f32, MVT::f64, MVT::v4f32, MVT::v8f32,
-                       MVT::v2f64, MVT::v4f64 })
+                       MVT::v2f64, MVT::v4f64 }) {
         setOperationAction(ISD::FMA, VT, Legal);
+        setOperationAction(ISD::STRICT_FMA, VT, Legal);
+      }
     }
 
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
@@ -1434,6 +1436,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FNEG,  VT, Custom);
       setOperationAction(ISD::FABS,  VT, Custom);
       setOperationAction(ISD::FMA,   VT, Legal);
+      setOperationAction(ISD::STRICT_FMA, VT, Legal);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
     }
 

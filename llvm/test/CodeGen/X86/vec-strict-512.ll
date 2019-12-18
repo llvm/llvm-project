@@ -14,6 +14,8 @@ declare <8 x double> @llvm.experimental.constrained.sqrt.v8f64(<8 x double>, met
 declare <16 x float> @llvm.experimental.constrained.sqrt.v16f32(<16 x float>, metadata, metadata)
 declare <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f32(<8 x float>, metadata)
 declare <8 x float> @llvm.experimental.constrained.fptrunc.v8f32.v8f64(<8 x double>, metadata, metadata)
+declare <8 x double> @llvm.experimental.constrained.fma.v8f64(<8 x double>, <8 x double>, <8 x double>, metadata, metadata)
+declare <16 x float> @llvm.experimental.constrained.fma.v16f32(<16 x float>, <16 x float>, <16 x float>, metadata, metadata)
 
 define <8 x double> @f1(<8 x double> %a, <8 x double> %b) #0 {
 ; CHECK-LABEL: f1:
@@ -149,6 +151,28 @@ define <8 x float> @f12(<8 x double> %a) #0 {
                                 metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <8 x float> %ret
+}
+
+define <16 x float> @f13(<16 x float> %a, <16 x float> %b, <16 x float> %c) #0 {
+; CHECK-LABEL: f13:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x float> @llvm.experimental.constrained.fma.v16f32(<16 x float> %a, <16 x float> %b, <16 x float> %c,
+                                                                     metadata !"round.dynamic",
+                                                                     metadata !"fpexcept.strict") #0
+  ret <16 x float> %res
+}
+
+define <8 x double> @f14(<8 x double> %a, <8 x double> %b, <8 x double> %c) #0 {
+; CHECK-LABEL: f14:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x double> @llvm.experimental.constrained.fma.v8f64(<8 x double> %a, <8 x double> %b, <8 x double> %c,
+                                                                    metadata !"round.dynamic",
+                                                                    metadata !"fpexcept.strict") #0
+  ret <8 x double> %res
 }
 
 attributes #0 = { strictfp }
