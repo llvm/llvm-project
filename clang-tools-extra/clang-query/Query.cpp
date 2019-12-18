@@ -101,9 +101,24 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     Finder.matchAST(AST->getASTContext());
 
     if (QS.PrintMatcher) {
-      std::string prefixText = "Matcher: ";
-      OS << "\n  " << prefixText << Source << "\n";
-      OS << "  " << std::string(prefixText.size() + Source.size(), '=') << '\n';
+      SmallVector<StringRef, 4> Lines;
+      Source.split(Lines, "\n");
+      auto FirstLine = Lines[0];
+      Lines.erase(Lines.begin(), Lines.begin() + 1);
+      while (!Lines.empty() && Lines.back().empty()) {
+        Lines.resize(Lines.size() - 1);
+      }
+      unsigned MaxLength = FirstLine.size();
+      std::string PrefixText = "Matcher: ";
+      OS << "\n  " << PrefixText << FirstLine;
+
+      for (auto Line : Lines) {
+        OS << "\n" << std::string(PrefixText.size() + 2, ' ') << Line;
+        MaxLength = std::max<int>(MaxLength, Line.rtrim().size());
+      }
+
+      OS << "\n"
+         << "  " << std::string(PrefixText.size() + MaxLength, '=') << "\n\n";
     }
 
     for (auto MI = Matches.begin(), ME = Matches.end(); MI != ME; ++MI) {
