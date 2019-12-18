@@ -558,7 +558,7 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
     Atomic.ParameterMapping.emplace();
     Atomic.ParameterMapping->reserve(OccurringIndices.size());
     for (unsigned I = 0, C = TemplateParams->size(); I != C; ++I)
-      if (OccurringIndices[I])
+      if (I < OccurringIndices.size() && OccurringIndices[I])
         Atomic.ParameterMapping->push_back(
             S.getIdentityTemplateArgumentLoc(TemplateParams->begin()[I],
                 // Here we assume we do not support things like
