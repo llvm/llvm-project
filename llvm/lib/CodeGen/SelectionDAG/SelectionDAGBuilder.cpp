@@ -5571,26 +5571,8 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       = [&](ArrayRef<std::pair<unsigned, unsigned>> SplitRegs) {
       unsigned Offset = 0;
       for (auto RegAndSize : SplitRegs) {
-        // If the expression is already a fragment, the current register
-        // offset+size might extend beyond the fragment. In this case, only
-        // the register bits that are inside the fragment are relevant.
-        int RegFragmentSizeInBits = RegAndSize.second;
-        if (auto ExprFragmentInfo = Expr->getFragmentInfo()) {
-          uint64_t ExprFragmentSizeInBits = ExprFragmentInfo->SizeInBits;
-          // The register is entirely outside the expression fragment,
-          // so is irrelevant for debug info.
-          if (Offset >= ExprFragmentSizeInBits)
-            break;
-          // The register is partially outside the expression fragment, only
-          // the low bits within the fragment are relevant for debug info.
-          if (Offset + RegFragmentSizeInBits > ExprFragmentSizeInBits) {
-            RegFragmentSizeInBits = ExprFragmentSizeInBits - Offset;
-          }
-        }
-
         auto FragmentExpr = DIExpression::createFragmentExpression(
-            Expr, Offset, RegFragmentSizeInBits);
-        Offset += RegAndSize.second;
+          Expr, Offset, RegAndSize.second);
         // If a valid fragment expression cannot be created, the variable's
         // correct value cannot be determined and so it is set as Undef.
         if (!FragmentExpr) {
@@ -5603,6 +5585,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
         FuncInfo.ArgDbgValues.push_back(
           BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), false,
                   RegAndSize.first, Variable, *FragmentExpr));
+        Offset += RegAndSize.second;
       }
     };
 
