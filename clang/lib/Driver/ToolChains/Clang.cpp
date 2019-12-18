@@ -1444,7 +1444,12 @@ static bool checkRemarksOptions(const Driver &D, const ArgList &Args,
 
 static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
                                  const llvm::Triple &Triple,
-                                 const InputInfo &Input, const JobAction &JA) {
+                                 const InputInfo &Input,
+                                 const InputInfo &Output, const JobAction &JA) {
+  StringRef Format = "yaml";
+  if (const Arg *A = Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+    Format = A->getValue();
+
   CmdArgs.push_back("-opt-record-file");
 
   const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
@@ -1454,11 +1459,17 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
     bool hasMultipleArchs =
         Triple.isOSDarwin() && // Only supported on Darwin platforms.
         Args.getAllArgValues(options::OPT_arch).size() > 1;
+
     SmallString<128> F;
 
     if (Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S)) {
       if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
         F = FinalOutput->getValue();
+    } else {
+      if (Format != "yaml" && // For YAML, keep the original behavior.
+          Triple.isOSDarwin() && // Enable this only on darwin, since it's the only platform supporting .dSYM bundles.
+          Output.isFilename())
+        F = Output.getFilename();
     }
 
     if (F.empty()) {
@@ -1494,12 +1505,9 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
       llvm::sys::path::replace_extension(F, OldExtension);
     }
 
-    std::string Extension = "opt.";
-    if (const Arg *A =
-            Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
-      Extension += A->getValue();
-    else
-      Extension += "yaml";
+    SmallString<32> Extension;
+    Extension += "opt.";
+    Extension += Format;
 
     llvm::sys::path::replace_extension(F, Extension);
     CmdArgs.push_back(Args.MakeArgString(F));
@@ -1511,10 +1519,9 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
     CmdArgs.push_back(A->getValue());
   }
 
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_fsave_optimization_record_EQ)) {
+  if (!Format.empty()) {
     CmdArgs.push_back("-opt-record-format");
-    CmdArgs.push_back(A->getValue());
+    CmdArgs.push_back(Format.data());
   }
 }
 
@@ -5524,7 +5531,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
   if (willEmitRemarks(Args) && checkRemarksOptions(D, Args, Triple))
-    renderRemarksOptions(Args, CmdArgs, Triple, Input, JA);
+    renderRemarksOptions(Args, CmdArgs, Triple, Input, Output, JA);
 
   bool RewriteImports = Args.hasFlag(options::OPT_frewrite_imports,
                                      options::OPT_fno_rewrite_imports, false);
