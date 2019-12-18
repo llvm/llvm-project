@@ -1069,6 +1069,12 @@ class AdvSIMD_GatherLoad_VecTorBase_Intrinsic
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
 
+class AdvSIMD_1VectorArg_Imm_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_i32_ty],
+                [IntrNoMem, ImmArg<1>]>;
+
 class AdvSIMD_ScatterStore_64bitOffset_Intrinsic
     : Intrinsic<[],
                [
@@ -1098,6 +1104,12 @@ class AdvSIMD_ScatterStore_VectorBase_Intrinsic
                ],
                [IntrWriteMem, IntrArgMemOnly, ImmArg<3>]>;
 
+class AdvSIMD_1VectorArg_Imm64_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_i64_ty],
+                [IntrNoMem, ImmArg<1>]>;
+
 //
 // Loads
 //
@@ -1117,6 +1129,14 @@ def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 def int_aarch64_sve_add   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_sub   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_subr  : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_add_imm    : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_sub_imm    : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_subr_imm   : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_sqadd_imm  : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_uqadd_imm  : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_sqsub_imm  : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_uqsub_imm  : AdvSIMD_1VectorArg_Imm_Intrinsic;
 
 def int_aarch64_sve_mul        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_smulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
@@ -1256,6 +1276,10 @@ def int_aarch64_sve_orrs        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_orns        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_nors        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_nands       : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_orr_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
+def int_aarch64_sve_eor_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
+def int_aarch64_sve_and_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
 
 //
 // Conversion
