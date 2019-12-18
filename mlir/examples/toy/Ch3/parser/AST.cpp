@@ -88,7 +88,7 @@ void ASTDumper::dump(ExprAST *expr) {
   mlir::TypeSwitch<ExprAST *>(expr)
       .Case<BinaryExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
             PrintExprAST, ReturnExprAST, VarDeclExprAST, VariableExprAST>(
-          [&](auto *node) { dump(node); })
+          [&](auto *node) { this->dump(node); })
       .Default([&](ExprAST *) {
         // No match, fallback to a generic message
         INDENT();
