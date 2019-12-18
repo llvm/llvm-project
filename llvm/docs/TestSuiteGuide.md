@@ -163,7 +163,7 @@ benchmarks. CMake can print a list of them:
   Select a build type like `OPTIMIZE` or `DEBUG` selecting a set of predefined
   compiler flags. These flags are applied regardless of the `CMAKE_C_FLAGS`
   option and may be changed by modifying `CMAKE_C_FLAGS_OPTIMIZE` etc.  See
-  [https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html]](https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html)
+  [https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html](https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html)
 
 - `TEST_SUITE_RUN_UNDER`
 
