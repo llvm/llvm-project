@@ -24,7 +24,7 @@ struct ioctl_desc {
   const char *name;
 };
 
-const unsigned ioctl_table_max = 1236;
+const unsigned ioctl_table_max = 1238;
 static ioctl_desc ioctl_table[ioctl_table_max];
 static unsigned ioctl_table_size = 0;
 
@@ -166,9 +166,6 @@ static void ioctl_table_fill() {
   _(FE_ENABLE_HIGH_LNB_VOLTAGE, READ, sizeof(int));
   _(FE_SET_FRONTEND_TUNE_MODE, READ, sizeof(unsigned int));
   _(FE_DISHNETWORK_SEND_LEGACY_CMD, READ, sizeof(unsigned long));
-  /* Entries from file: dev/filemon/filemon.h */
-  _(FILEMON_SET_FD, READWRITE, sizeof(int));
-  _(FILEMON_SET_PID, READWRITE, sizeof(int));
   /* Entries from file: dev/hdaudio/hdaudioio.h */
   _(HDAUDIO_FGRP_INFO, READWRITE, struct_plistref_sz);
   _(HDAUDIO_FGRP_GETCONFIG, READWRITE, struct_plistref_sz);
@@ -653,6 +650,7 @@ static void ioctl_table_fill() {
   _(NVMM_IOC_MACHINE_CONFIGURE, READ, struct_nvmm_ioc_machine_configure_sz);
   _(NVMM_IOC_VCPU_CREATE, READ, struct_nvmm_ioc_vcpu_create_sz);
   _(NVMM_IOC_VCPU_DESTROY, READ, struct_nvmm_ioc_vcpu_destroy_sz);
+  _(NVMM_IOC_VCPU_CONFIGURE, READ, struct_nvmm_ioc_vcpu_configure_sz);
   _(NVMM_IOC_VCPU_SETSTATE, READ, struct_nvmm_ioc_vcpu_setstate_sz);
   _(NVMM_IOC_VCPU_GETSTATE, READ, struct_nvmm_ioc_vcpu_getstate_sz);
   _(NVMM_IOC_VCPU_INJECT, READ, struct_nvmm_ioc_vcpu_inject_sz);
@@ -735,6 +733,7 @@ static void ioctl_table_fill() {
   _(IOC_NPF_SAVE, WRITE, struct_nvlist_ref_sz);
   _(IOC_NPF_RULE, READWRITE, struct_nvlist_ref_sz);
   _(IOC_NPF_CONN_LOOKUP, READWRITE, struct_nvlist_ref_sz);
+  _(IOC_NPF_TABLE_REPLACE, READWRITE, struct_nvlist_ref_sz);
   /* Entries from file: net/if_pppoe.h */
   _(PPPOESETPARMS, READ, struct_pppoediscparms_sz);
   _(PPPOEGETPARMS, READWRITE, struct_pppoediscparms_sz);
@@ -1403,8 +1402,11 @@ static void ioctl_table_fill() {
   _(SNDCTL_DSP_SETRECVOL, READ, sizeof(unsigned int));
   _(SNDCTL_DSP_SKIP, NONE, 0);
   _(SNDCTL_DSP_SILENCE, NONE, 0);
+  /* Entries from file: dev/filemon/filemon.h (compat <= 9.99.26) */
+  _(FILEMON_SET_FD, READWRITE, sizeof(int));
+  _(FILEMON_SET_PID, READWRITE, sizeof(int));
 #undef _
-}  // NOLINT
+} // NOLINT
 
 static bool ioctl_initialized = false;
 

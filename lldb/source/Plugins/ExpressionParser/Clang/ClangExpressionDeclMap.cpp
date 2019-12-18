@@ -734,29 +734,33 @@ void ClangExpressionDeclMap::MaybeRegisterFunctionBody(
   }
 }
 
-void ClangExpressionDeclMap::SearchPersistenDecls(NameSearchContext &context,
-                                                  const ConstString name,
-                                                  unsigned int current_id) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+clang::NamedDecl *ClangExpressionDeclMap::GetPersistentDecl(ConstString name) {
   if (!m_parser_vars)
-    return;
+    return nullptr;
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
   if (!target)
-    return;
+    return nullptr;
 
   ClangASTContext *scratch_clang_ast_context =
       ClangASTContext::GetScratch(*target);
 
   if (!scratch_clang_ast_context)
-    return;
+    return nullptr;
 
   ASTContext *scratch_ast_context = scratch_clang_ast_context->getASTContext();
 
   if (!scratch_ast_context)
-    return;
+    return nullptr;
 
-  NamedDecl *persistent_decl =
-      m_parser_vars->m_persistent_vars->GetPersistentDecl(name);
+  return m_parser_vars->m_persistent_vars->GetPersistentDecl(name);
+}
+
+void ClangExpressionDeclMap::SearchPersistenDecls(NameSearchContext &context,
+                                                  const ConstString name,
+                                                  unsigned int current_id) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  NamedDecl *persistent_decl = GetPersistentDecl(name);
 
   if (!persistent_decl)
     return;
@@ -1407,6 +1411,10 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
     // any other $__lldb names should be weeded out now
     if (name.GetStringRef().startswith("$__lldb"))
+      return;
+
+    // No ParserVars means we can't do register or variable lookup.
+    if (!m_parser_vars)
       return;
 
     ExpressionVariableSP pvar_sp(

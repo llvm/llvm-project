@@ -25,6 +25,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 
@@ -50,7 +51,10 @@ static bool isImplicitExpr(clang::Expr *E) { return E->IgnoreImplicit() != E; }
 /// Call finalize() to finish building the tree and consume the root node.
 class syntax::TreeBuilder {
 public:
-  TreeBuilder(syntax::Arena &Arena) : Arena(Arena), Pending(Arena) {}
+  TreeBuilder(syntax::Arena &Arena) : Arena(Arena), Pending(Arena) {
+    for (const auto &T : Arena.tokenBuffer().expandedTokens())
+      LocationToToken.insert({T.location().getRawEncoding(), &T});
+  }
 
   llvm::BumpPtrAllocator &allocator() { return Arena.allocator(); }
 
@@ -85,7 +89,7 @@ public:
     assert(Tokens.back().kind() == tok::eof);
 
     // Build the root of the tree, consuming all the children.
-    Pending.foldChildren(Tokens.drop_back(),
+    Pending.foldChildren(Arena, Tokens.drop_back(),
                          new (Arena.allocator()) syntax::TranslationUnit);
 
     return cast<syntax::TranslationUnit>(std::move(Pending).finalize());
@@ -156,9 +160,12 @@ private:
       assert(A.tokenBuffer().expandedTokens().back().kind() == tok::eof);
       // Create all leaf nodes.
       // Note that we do not have 'eof' in the tree.
-      for (auto &T : A.tokenBuffer().expandedTokens().drop_back())
-        Trees.insert(Trees.end(),
-                     {&T, NodeAndRole{new (A.allocator()) syntax::Leaf(&T)}});
+      for (auto &T : A.tokenBuffer().expandedTokens().drop_back()) {
+        auto *L = new (A.allocator()) syntax::Leaf(&T);
+        L->Original = true;
+        L->CanModify = A.tokenBuffer().spelledForExpanded(T).hasValue();
+        Trees.insert(Trees.end(), {&T, NodeAndRole{L}});
+      }
     }
 
     ~Forest() { assert(DelayedFolds.empty()); }
@@ -176,18 +183,19 @@ private:
     }
 
     /// Add \p Node to the forest and attach child nodes based on \p Tokens.
-    void foldChildren(llvm::ArrayRef<syntax::Token> Tokens,
+    void foldChildren(const syntax::Arena &A,
+                      llvm::ArrayRef<syntax::Token> Tokens,
                       syntax::Tree *Node) {
       // Execute delayed folds inside `Tokens`.
       auto BeginExecuted = DelayedFolds.lower_bound(Tokens.begin());
       auto It = BeginExecuted;
       for (; It != DelayedFolds.end() && It->second.End <= Tokens.end(); ++It)
-        foldChildrenEager(llvm::makeArrayRef(It->first, It->second.End),
+        foldChildrenEager(A, llvm::makeArrayRef(It->first, It->second.End),
                           It->second.Node);
       DelayedFolds.erase(BeginExecuted, It);
 
       // Attach children to `Node`.
-      foldChildrenEager(Tokens, Node);
+      foldChildrenEager(A, Tokens, Node);
     }
 
     /// Schedule a call to `foldChildren` that will only be executed when
@@ -244,7 +252,8 @@ private:
   private:
     /// Implementation detail of `foldChildren`, does acutal folding ignoring
     /// delayed folds.
-    void foldChildrenEager(llvm::ArrayRef<syntax::Token> Tokens,
+    void foldChildrenEager(const syntax::Arena &A,
+                           llvm::ArrayRef<syntax::Token> Tokens,
                            syntax::Tree *Node) {
       assert(Node->firstChild() == nullptr && "node already has children");
 
@@ -262,6 +271,10 @@ private:
       for (auto It = EndChildren; It != BeginChildren; --It)
         Node->prependChildLowLevel(std::prev(It)->second.Node,
                                    std::prev(It)->second.Role);
+
+      // Mark that this node came from the AST and is backed by the source code.
+      Node->Original = true;
+      Node->CanModify = A.tokenBuffer().spelledForExpanded(Tokens).hasValue();
 
       Trees.erase(BeginChildren, EndChildren);
       Trees.insert({FirstToken, NodeAndRole(Node)});
@@ -294,6 +307,9 @@ private:
   std::string str() { return Pending.str(Arena); }
 
   syntax::Arena &Arena;
+  /// To quickly find tokens by their start location.
+  llvm::DenseMap</*SourceLocation*/ unsigned, const syntax::Token *>
+      LocationToToken;
   Forest Pending;
   llvm::DenseSet<Decl *> DeclsWithoutSemicolons;
 };
@@ -585,7 +601,7 @@ private:
 
 void syntax::TreeBuilder::foldNode(llvm::ArrayRef<syntax::Token> Range,
                                    syntax::Tree *New) {
-  Pending.foldChildren(Range, New);
+  Pending.foldChildren(Arena, Range, New);
 }
 
 void syntax::TreeBuilder::noticeDeclaratorRange(
@@ -617,7 +633,8 @@ void syntax::TreeBuilder::markStmtChild(Stmt *Child, NodeRole Role) {
     Pending.assignRole(getExprRange(E),
                        NodeRole::ExpressionStatement_expression);
     // (!) 'getRange(Stmt)' ensures this already covers a trailing semicolon.
-    Pending.foldChildren(Range, new (allocator()) syntax::ExpressionStatement);
+    Pending.foldChildren(Arena, Range,
+                         new (allocator()) syntax::ExpressionStatement);
   }
   Pending.assignRole(Range, Role);
 }
@@ -630,14 +647,9 @@ void syntax::TreeBuilder::markExprChild(Expr *Child, NodeRole Role) {
 }
 
 const syntax::Token *syntax::TreeBuilder::findToken(SourceLocation L) const {
-  auto Tokens = Arena.tokenBuffer().expandedTokens();
-  auto &SM = Arena.sourceManager();
-  auto It = llvm::partition_point(Tokens, [&](const syntax::Token &T) {
-    return SM.isBeforeInTranslationUnit(T.location(), L);
-  });
-  assert(It != Tokens.end());
-  assert(It->location() == L);
-  return &*It;
+  auto It = LocationToToken.find(L.getRawEncoding());
+  assert(It != LocationToToken.end());
+  return It->second;
 }
 
 syntax::TranslationUnit *

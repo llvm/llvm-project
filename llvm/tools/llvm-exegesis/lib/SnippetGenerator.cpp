@@ -112,7 +112,7 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
       return 0;
     };
     // Collect used registers that have never been def'ed.
-    for (const Operand &Op : IT.Instr.Operands) {
+    for (const Operand &Op : IT.getInstr().Operands) {
       if (Op.isUse()) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0 && !DefinedRegs.test(Reg)) {
@@ -122,7 +122,7 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
       }
     }
     // Mark defs as having been def'ed.
-    for (const Operand &Op : IT.Instr.Operands) {
+    for (const Operand &Op : IT.getInstr().Operands) {
       if (Op.isDef()) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0)
@@ -141,7 +141,7 @@ generateSelfAliasingCodeTemplates(const Instruction &Instr) {
   std::vector<CodeTemplate> Result;
   Result.emplace_back();
   CodeTemplate &CT = Result.back();
-  InstructionTemplate IT(Instr);
+  InstructionTemplate IT(&Instr);
   if (SelfAliasing.hasImplicitAliasing()) {
     CT.Info = "implicit Self cycles, picking random values.";
   } else {
@@ -160,7 +160,7 @@ generateUnconstrainedCodeTemplates(const Instruction &Instr, StringRef Msg) {
   Result.emplace_back();
   CodeTemplate &CT = Result.back();
   CT.Info = formatv("{0}, repeating an unconstrained assignment", Msg);
-  CT.Instructions.emplace_back(Instr);
+  CT.Instructions.emplace_back(&Instr);
   return std::move(Result);
 }
 
@@ -218,10 +218,11 @@ void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
 void randomizeUnsetVariables(const ExegesisTarget &Target,
                              const BitVector &ForbiddenRegs,
                              InstructionTemplate &IT) {
-  for (const Variable &Var : IT.Instr.Variables) {
+  for (const Variable &Var : IT.getInstr().Variables) {
     MCOperand &AssignedValue = IT.getValueFor(Var);
     if (!AssignedValue.isValid())
-      Target.randomizeMCOperand(IT.Instr, Var, AssignedValue, ForbiddenRegs);
+      Target.randomizeMCOperand(IT.getInstr(), Var, AssignedValue,
+                                ForbiddenRegs);
   }
 }
 

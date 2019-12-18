@@ -81,8 +81,8 @@ TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
   ASSERT_THAT(CT.Instructions, SizeIs(1));
   const InstructionTemplate &IT = CT.Instructions[0];
   EXPECT_THAT(IT.getOpcode(), Opcode);
-  ASSERT_THAT(IT.VariableValues, SizeIs(3));
-  EXPECT_THAT(IT.VariableValues,
+  ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
+  EXPECT_THAT(IT.getVariableValues(),
               AnyOf(ElementsAre(IsReg(), IsInvalid(), IsReg()),
                     ElementsAre(IsReg(), IsReg(), IsInvalid())))
       << "Op0 is either set to Op1 or to Op2";

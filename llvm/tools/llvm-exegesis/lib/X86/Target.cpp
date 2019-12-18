@@ -25,7 +25,7 @@ namespace exegesis {
 // Returns an error if we cannot handle the memory references in this
 // instruction.
 static Error isInvalidMemoryInstr(const Instruction &Instr) {
-  switch (Instr.Description->TSFlags & X86II::FormMask) {
+  switch (Instr.Description.TSFlags & X86II::FormMask) {
   default:
     llvm_unreachable("Unknown FormMask value");
   // These have no memory access.
@@ -114,10 +114,10 @@ static Error isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::RawFrmImm8:
     return Error::success();
   case X86II::AddRegFrm:
-    return (Instr.Description->Opcode == X86::POP16r ||
-            Instr.Description->Opcode == X86::POP32r ||
-            Instr.Description->Opcode == X86::PUSH16r ||
-            Instr.Description->Opcode == X86::PUSH32r)
+    return (Instr.Description.Opcode == X86::POP16r ||
+            Instr.Description.Opcode == X86::POP32r ||
+            Instr.Description.Opcode == X86::PUSH16r ||
+            Instr.Description.Opcode == X86::PUSH32r)
                ? make_error<Failure>(
                      "unsupported opcode: unsupported memory access")
                : Error::success();
@@ -150,7 +150,7 @@ static Error isInvalidMemoryInstr(const Instruction &Instr) {
 
 static Error IsInvalidOpcode(const Instruction &Instr) {
   const auto OpcodeName = Instr.Name;
-  if ((Instr.Description->TSFlags & X86II::FormMask) == X86II::Pseudo)
+  if ((Instr.Description.TSFlags & X86II::FormMask) == X86II::Pseudo)
     return make_error<Failure>("unsupported opcode: pseudo instruction");
   if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
       OpcodeName.startswith("ADJCALLSTACK"))
@@ -172,13 +172,13 @@ static Error IsInvalidOpcode(const Instruction &Instr) {
 }
 
 static unsigned getX86FPFlags(const Instruction &Instr) {
-  return Instr.Description->TSFlags & X86II::FPTypeMask;
+  return Instr.Description.TSFlags & X86II::FPTypeMask;
 }
 
 // Helper to fill a memory operand with a value.
 static void setMemOp(InstructionTemplate &IT, int OpIdx,
                      const MCOperand &OpVal) {
-  const auto Op = IT.Instr.Operands[OpIdx];
+  const auto Op = IT.getInstr().Operands[OpIdx];
   assert(Op.isExplicit() && "invalid memory pattern");
   IT.getValueFor(Op) = OpVal;
 }
@@ -190,7 +190,7 @@ static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
     const LLVMState &State, const SnippetGenerator::Options &Opts,
     std::function<unsigned(unsigned, unsigned)> GetDestReg) {
   assert(Instr.Operands.size() == 6 && "invalid LEA");
-  assert(X86II::getMemoryOperandNo(Instr.Description->TSFlags) == 1 &&
+  assert(X86II::getMemoryOperandNo(Instr.Description.TSFlags) == 1 &&
          "invalid LEA");
 
   constexpr const int kDestOp = 0;
@@ -213,7 +213,7 @@ static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
       for (int LogScale = 0; LogScale <= 3; ++LogScale) {
         // FIXME: Add an option for controlling how we explore immediates.
         for (const int Disp : {0, 42}) {
-          InstructionTemplate IT(Instr);
+          InstructionTemplate IT(&Instr);
           const int64_t Scale = 1ull << LogScale;
           setMemOp(IT, 1, MCOperand::createReg(BaseReg));
           setMemOp(IT, 2, MCOperand::createImm(Scale));
@@ -259,7 +259,7 @@ X86LatencySnippetGenerator::generateCodeTemplates(
     return std::move(E);
 
   // LEA gets special attention.
-  const auto Opcode = Instr.Description->getOpcode();
+  const auto Opcode = Instr.Description.getOpcode();
   if (Opcode == X86::LEA64r || Opcode == X86::LEA64_32r) {
     return generateLEATemplatesCommon(Instr, ForbiddenRegisters, State, Opts,
                                       [](unsigned BaseReg, unsigned IndexReg) {
@@ -310,7 +310,7 @@ X86UopsSnippetGenerator::generateCodeTemplates(
     return std::move(E);
 
   // LEA gets special attention.
-  const auto Opcode = Instr.Description->getOpcode();
+  const auto Opcode = Instr.Description.getOpcode();
   if (Opcode == X86::LEA64r || Opcode == X86::LEA64_32r) {
     // Any destination register that is not used for adddressing is fine.
     auto PossibleDestRegs =
@@ -648,13 +648,13 @@ void ExegesisX86Target::randomizeMCOperand(
 void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
                                            unsigned Reg,
                                            unsigned Offset) const {
-  assert(!isInvalidMemoryInstr(IT.Instr) &&
+  assert(!isInvalidMemoryInstr(IT.getInstr()) &&
          "fillMemoryOperands requires a valid memory instruction");
-  int MemOpIdx = X86II::getMemoryOperandNo(IT.Instr.Description->TSFlags);
+  int MemOpIdx = X86II::getMemoryOperandNo(IT.getInstr().Description.TSFlags);
   assert(MemOpIdx >= 0 && "invalid memory operand index");
   // getMemoryOperandNo() ignores tied operands, so we have to add them back.
   for (unsigned I = 0; I <= static_cast<unsigned>(MemOpIdx); ++I) {
-    const auto &Op = IT.Instr.Operands[I];
+    const auto &Op = IT.getInstr().Operands[I];
     if (Op.isTied() && Op.getTiedToIndex() < I) {
       ++MemOpIdx;
     }

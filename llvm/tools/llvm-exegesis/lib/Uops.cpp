@@ -127,7 +127,7 @@ static std::vector<InstructionTemplate> generateSnippetUsingStaticRenaming(
   std::vector<BitVector> PossibleRegsForVar;
   for (const Variable *Var : TiedVariables) {
     assert(Var);
-    const Operand &Op = IT.Instr.getPrimaryOperand(*Var);
+    const Operand &Op = IT.getInstr().getPrimaryOperand(*Var);
     assert(Op.isReg());
     BitVector PossibleRegs = Op.getRegisterAliasing().sourceBits();
     remove(PossibleRegs, ForbiddenRegisters);
@@ -166,7 +166,7 @@ Expected<std::vector<CodeTemplate>> UopsSnippetGenerator::generateCodeTemplates(
                 State.getTargetMachine().getTargetTriple())
           : 0;
   const AliasingConfigurations SelfAliasing(Instr, Instr);
-  InstructionTemplate IT(Instr);
+  InstructionTemplate IT(&Instr);
   if (SelfAliasing.empty()) {
     CT.Info = "instruction is parallel, repeating a random one.";
     CT.Instructions.push_back(std::move(IT));

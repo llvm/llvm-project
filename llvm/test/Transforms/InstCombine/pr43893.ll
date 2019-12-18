@@ -13,9 +13,10 @@ entry:
 ;CHECK: call void @llvm.dbg.value(metadata i32 -8
 ;CHECK: call void @llvm.dbg.value(metadata i32 undef
   %conv = sext i8 %dec to i32, !dbg !17
-  call void @llvm.dbg.value(metadata i32 %conv, metadata !18, metadata !DIExpression()), !dbg !19
+  %udiv = udiv i32 %conv, 4, !dbg !17
+  call void @llvm.dbg.value(metadata i32 %udiv, metadata !18, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 -8, metadata !20, metadata !DIExpression()), !dbg !19
-  call void @llvm.dbg.value(metadata i32 %conv, metadata !20, metadata !DIExpression()), !dbg !19
+  call void @llvm.dbg.value(metadata i32 %udiv, metadata !20, metadata !DIExpression()), !dbg !19
   store i8 0, i8* @b, align 1, !dbg !21
   %cmp = icmp sgt i32 %conv, 0, !dbg !22
   %conv1 = zext i1 %cmp to i32, !dbg !22
