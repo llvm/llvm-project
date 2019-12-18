@@ -294,9 +294,6 @@ public:
   /// Whether timestamps should be written to the produced PCH file.
   unsigned IncludeTimestamps : 1;
 
-  /// Should a temporary file be used during compilation.
-  unsigned UseTemporary : 1;
-
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.

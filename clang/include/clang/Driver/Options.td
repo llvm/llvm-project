@@ -1563,9 +1563,6 @@ def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
 def fno_strict_vtable_pointers: Flag<["-"], "fno-strict-vtable-pointers">,
   Group<f_Group>;
 def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>;
-def fno_temp_file : Flag<["-"], "fno-temp-file">, Group<f_Group>,
-  Flags<[CC1Option, CoreOption]>, HelpText<
-  "Directly create compilation output files. This may lead to incorrect incremental builds if the compiler crashes">;
 def fno_threadsafe_statics : Flag<["-"], "fno-threadsafe-statics">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Do not emit code to make initialization of local statics thread safe">;
 def fno_use_cxa_atexit : Flag<["-"], "fno-use-cxa-atexit">, Group<f_Group>, Flags<[CC1Option]>,

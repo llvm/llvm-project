@@ -672,7 +672,7 @@ CompilerInstance::createDefaultOutputFile(bool Binary, StringRef InFile,
                                           StringRef Extension) {
   return createOutputFile(getFrontendOpts().OutputFile, Binary,
                           /*RemoveFileOnSignal=*/true, InFile, Extension,
-                          getFrontendOpts().UseTemporary);
+                          /*UseTemporary=*/true);
 }
 
 std::unique_ptr<raw_pwrite_stream> CompilerInstance::createNullOutputFile() {
