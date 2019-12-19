@@ -1446,6 +1446,22 @@ void test() {
 }
 </pre></div></div></td></tr>
 
+
+<tr><td><a id="security.insecureAPI.decodeValueOfObjCType"><div class="namedescr expandable"><span class="name">
+security.insecureAPI.decodeValueOfObjCType</span><span class="lang">
+(ObjC)</span><div class="descr">
+Warn on uses of the <code>-[NSCoder decodeValueOfObjCType:at:]</code> method.
+The safe alternative is <code>-[NSCoder decodeValueOfObjCType:at:size:]</code>.</div></div></a></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void test(NSCoder *decoder) {
+  // This would be a vulnerability on 64-bit platforms
+  // but not on 32-bit platforms.
+  NSUInteger x;
+  [decoder decodeValueOfObjCType:"I" at:&x]; // warn
+}
+</pre></div></div></td></tr>
+
 </tbody></table>
 
 <!-- =========================== unix =========================== -->
