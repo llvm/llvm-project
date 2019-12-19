@@ -567,10 +567,10 @@ class MVE_rDest<dag oops, dag iops, InstrItinClass itin,
   let Inst{4} = 0b0;
 }
 
-class MVE_VABAV<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
+class MVE_VABAV<string suffix, bit U, bits<2> size>
   : MVE_rDest<(outs rGPR:$Rda), (ins rGPR:$Rda_src, MQPR:$Qn, MQPR:$Qm),
               NoItinerary, "vabav", suffix, "$Rda, $Qn, $Qm", "$Rda = $Rda_src",
-              pattern> {
+              []> {
   bits<4> Qm;
   bits<4> Qn;
   bits<4> Rda;
@@ -589,12 +589,36 @@ class MVE_VABAV<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
   let Inst{0} = 0b1;
 }
 
-def MVE_VABAVs8  : MVE_VABAV<"s8", 0b0, 0b00>;
-def MVE_VABAVs16 : MVE_VABAV<"s16", 0b0, 0b01>;
-def MVE_VABAVs32 : MVE_VABAV<"s32", 0b0, 0b10>;
-def MVE_VABAVu8  : MVE_VABAV<"u8", 0b1, 0b00>;
-def MVE_VABAVu16 : MVE_VABAV<"u16", 0b1, 0b01>;
-def MVE_VABAVu32 : MVE_VABAV<"u32", 0b1, 0b10>;
+multiclass MVE_VABAV_m<MVEVectorVTInfo VTI> {
+  def "" : MVE_VABAV<VTI.Suffix, VTI.Unsigned, VTI.Size>;
+
+  let Predicates = [HasMVEInt] in {
+    def : Pat<(i32 (int_arm_mve_vabav
+                            (i32 VTI.Unsigned),
+                            (i32 rGPR:$Rda_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (i32 (!cast<Instruction>(NAME)
+                            (i32 rGPR:$Rda_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm)))>;
+
+    def : Pat<(i32 (int_arm_mve_vabav_predicated
+                            (i32 VTI.Unsigned),
+                            (i32 rGPR:$Rda_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (i32 (!cast<Instruction>(NAME)
+                            (i32 rGPR:$Rda_src),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+  }
+}
+
+defm MVE_VABAVs8  : MVE_VABAV_m<MVE_v16s8>;
+defm MVE_VABAVs16 : MVE_VABAV_m<MVE_v8s16>;
+defm MVE_VABAVs32 : MVE_VABAV_m<MVE_v4s32>;
+defm MVE_VABAVu8  : MVE_VABAV_m<MVE_v16u8>;
+defm MVE_VABAVu16 : MVE_VABAV_m<MVE_v8u16>;
+defm MVE_VABAVu32 : MVE_VABAV_m<MVE_v4u32>;
 
 class MVE_VADDV<string iname, string suffix, dag iops, string cstr,
               bit A, bit U, bits<2> size, list<dag> pattern=[]>
@@ -803,10 +827,9 @@ defm MVE_VMINAV : MVE_VMINMAXAV_ty<"vminav", 0b1>;
 defm MVE_VMAXAV : MVE_VMINMAXAV_ty<"vmaxav", 0b0>;
 
 class MVE_VMLAMLSDAV<string iname, string suffix, dag iops, string cstr,
-                   bit sz, bit bit_28, bit A, bit X, bit bit_8, bit bit_0,
-                   list<dag> pattern=[]>
+                   bit sz, bit bit_28, bit A, bit X, bit bit_8, bit bit_0>
   : MVE_rDest<(outs tGPREven:$RdaDest), iops, NoItinerary, iname, suffix,
-              "$RdaDest, $Qn, $Qm", cstr, pattern> {
+              "$RdaDest, $Qn, $Qm", cstr, []> {
   bits<4> RdaDest;
   bits<3> Qm;
   bits<3> Qn;
@@ -824,47 +847,88 @@ class MVE_VMLAMLSDAV<string iname, string suffix, dag iops, string cstr,
   let Inst{0} = bit_0;
 }
 
-multiclass MVE_VMLAMLSDAV_A<string iname, string x, string suffix,
-                            bit sz, bit bit_28, bit X, bit bit_8, bit bit_0,
-                            list<dag> pattern=[]> {
-  def ""#x#suffix : MVE_VMLAMLSDAV<iname # x, suffix,
+multiclass MVE_VMLAMLSDAV_A<string iname, string x, MVEVectorVTInfo VTI,
+                            bit sz, bit bit_28, bit X, bit bit_8, bit bit_0> {
+  def ""#x#VTI.Suffix : MVE_VMLAMLSDAV<iname # x, VTI.Suffix,
                                    (ins MQPR:$Qn, MQPR:$Qm), "",
-                                   sz, bit_28, 0b0, X, bit_8, bit_0, pattern>;
-  def "a"#x#suffix : MVE_VMLAMLSDAV<iname # "a" # x, suffix,
+                                   sz, bit_28, 0b0, X, bit_8, bit_0>;
+  def "a"#x#VTI.Suffix : MVE_VMLAMLSDAV<iname # "a" # x, VTI.Suffix,
                                     (ins tGPREven:$RdaSrc, MQPR:$Qn, MQPR:$Qm),
                                     "$RdaDest = $RdaSrc",
-                                    sz, bit_28, 0b1, X, bit_8, bit_0, pattern>;
+                                    sz, bit_28, 0b1, X, bit_8, bit_0>;
+  let Predicates = [HasMVEInt] in {
+    def : Pat<(i32 (int_arm_mve_vmldava
+                            (i32 VTI.Unsigned),
+                            (i32 bit_0) /* subtract */,
+                            (i32 X) /* exchange */,
+                            (i32 0) /* accumulator */,
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (i32 (!cast<Instruction>(NAME # x # VTI.Suffix)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm)))>;
+
+    def : Pat<(i32 (int_arm_mve_vmldava_predicated
+                            (i32 VTI.Unsigned),
+                            (i32 bit_0) /* subtract */,
+                            (i32 X) /* exchange */,
+                            (i32 0) /* accumulator */,
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (i32 (!cast<Instruction>(NAME # x # VTI.Suffix)
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                             ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+
+    def : Pat<(i32 (int_arm_mve_vmldava
+                            (i32 VTI.Unsigned),
+                            (i32 bit_0) /* subtract */,
+                            (i32 X) /* exchange */,
+                            (i32 tGPREven:$RdaSrc),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm))),
+              (i32 (!cast<Instruction>(NAME # "a" # x # VTI.Suffix)
+                            (i32 tGPREven:$RdaSrc),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm)))>;
+
+    def : Pat<(i32 (int_arm_mve_vmldava_predicated
+                            (i32 VTI.Unsigned),
+                            (i32 bit_0) /* subtract */,
+                            (i32 X) /* exchange */,
+                            (i32 tGPREven:$RdaSrc),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (i32 (!cast<Instruction>(NAME # "a" # x # VTI.Suffix)
+                            (i32 tGPREven:$RdaSrc),
+                            (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                             ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+  }
 }
 
-multiclass MVE_VMLAMLSDAV_AX<string iname, string suffix, bit sz, bit bit_28,
-                             bit bit_8, bit bit_0, list<dag> pattern=[]> {
-  defm "" : MVE_VMLAMLSDAV_A<iname, "", suffix, sz, bit_28,
-                             0b0, bit_8, bit_0, pattern>;
-  defm "" : MVE_VMLAMLSDAV_A<iname, "x", suffix, sz, bit_28,
-                             0b1, bit_8, bit_0, pattern>;
+multiclass MVE_VMLAMLSDAV_AX<string iname, MVEVectorVTInfo VTI, bit sz,
+                             bit bit_28, bit bit_8, bit bit_0> {
+  defm "" : MVE_VMLAMLSDAV_A<iname, "", VTI, sz, bit_28,
+                             0b0, bit_8, bit_0>;
+  defm "" : MVE_VMLAMLSDAV_A<iname, "x", VTI, sz, bit_28,
+                             0b1, bit_8, bit_0>;
 }
 
-multiclass MVE_VMLADAV_multi<string suffix, bit sz, bit bit_8,
-                             list<dag> pattern=[]> {
-  defm "" : MVE_VMLAMLSDAV_AX<"vmladav", "s"#suffix,
-                              sz, 0b0, bit_8, 0b0, pattern>;
-  defm "" : MVE_VMLAMLSDAV_A<"vmladav", "", "u"#suffix,
-                             sz, 0b1, 0b0, bit_8, 0b0, pattern>;
+multiclass MVE_VMLADAV_multi<MVEVectorVTInfo SVTI, MVEVectorVTInfo UVTI,
+                             bit sz, bit bit_8> {
+  defm "" : MVE_VMLAMLSDAV_AX<"vmladav", SVTI,
+                              sz, 0b0, bit_8, 0b0>;
+  defm "" : MVE_VMLAMLSDAV_A<"vmladav", "", UVTI,
+                             sz, 0b1, 0b0, bit_8, 0b0>;
 }
 
-multiclass MVE_VMLSDAV_multi<string suffix, bit sz, bit bit_28,
-                             list<dag> pattern=[]> {
-  defm "" : MVE_VMLAMLSDAV_AX<"vmlsdav", "s"#suffix,
-                              sz, bit_28, 0b0, 0b1, pattern>;
+multiclass MVE_VMLSDAV_multi<MVEVectorVTInfo VTI, bit sz, bit bit_28> {
+  defm "" : MVE_VMLAMLSDAV_AX<"vmlsdav", VTI,
+                              sz, bit_28, 0b0, 0b1>;
 }
 
-defm MVE_VMLADAV : MVE_VMLADAV_multi< "8", 0b0, 0b1>;
-defm MVE_VMLADAV : MVE_VMLADAV_multi<"16", 0b0, 0b0>;
-defm MVE_VMLADAV : MVE_VMLADAV_multi<"32", 0b1, 0b0>;
+defm MVE_VMLADAV : MVE_VMLADAV_multi<MVE_v16s8, MVE_v16u8, 0b0, 0b1>;
+defm MVE_VMLADAV : MVE_VMLADAV_multi<MVE_v8s16, MVE_v8u16, 0b0, 0b0>;
+defm MVE_VMLADAV : MVE_VMLADAV_multi<MVE_v4s32, MVE_v4u32, 0b1, 0b0>;
 
-defm MVE_VMLSDAV : MVE_VMLSDAV_multi< "8", 0b0, 0b1>;
-defm MVE_VMLSDAV : MVE_VMLSDAV_multi<"16", 0b0, 0b0>;
-defm MVE_VMLSDAV : MVE_VMLSDAV_multi<"32", 0b1, 0b0>;
+defm MVE_VMLSDAV : MVE_VMLSDAV_multi<MVE_v16s8, 0b0, 0b1>;
+defm MVE_VMLSDAV : MVE_VMLSDAV_multi<MVE_v8s16, 0b0, 0b0>;
+defm MVE_VMLSDAV : MVE_VMLSDAV_multi<MVE_v4s32, 0b1, 0b0>;
 
 // vmlav aliases vmladav
 foreach acc = ["", "a"] in {
