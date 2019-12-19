@@ -55,10 +55,10 @@ func @shuffle2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf32> {
 
 // CHECK-LABEL: @extract_element
 func @extract_element(%a: vector<16xf32>) -> f32 {
-  // CHECK:      %[[C15:.*]] = constant 15 : index
-  %c = constant 15 : index
-  // CHECK-NEXT: vector.extractelement %{{.*}}[%[[C15]] : index] : vector<16xf32>
-  %1 = vector.extractelement %a[%c : index] : vector<16xf32>
+  // CHECK:      %[[C15:.*]] = constant 15 : i32
+  %c = constant 15 : i32
+  // CHECK-NEXT: vector.extractelement %{{.*}}[%[[C15]] : i32] : vector<16xf32>
+  %1 = vector.extractelement %a[%c : i32] : vector<16xf32>
   return %1 : f32
 }
 
@@ -75,10 +75,10 @@ func @extract(%arg0: vector<4x8x16xf32>) -> (vector<8x16xf32>, vector<16xf32>, f
 
 // CHECK-LABEL: @insert_element
 func @insert_element(%a: f32, %b: vector<16xf32>) -> vector<16xf32> {
-  // CHECK:      %[[C15:.*]] = constant 15 : index
-  %c = constant 15 : index
-  // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[%[[C15]] : index] : vector<16xf32>
-  %1 = vector.insertelement %a, %b[%c : index] : vector<16xf32>
+  // CHECK:      %[[C15:.*]] = constant 15 : i32
+  %c = constant 15 : i32
+  // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[%[[C15]] : i32] : vector<16xf32>
+  %1 = vector.insertelement %a, %b[%c : i32] : vector<16xf32>
   return %1 : vector<16xf32>
 }
 
