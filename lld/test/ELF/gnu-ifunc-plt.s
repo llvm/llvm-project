@@ -64,10 +64,10 @@
 // DISASM-NEXT:   20131b:       jmp     -48 <.plt>
 // DISASM-NEXT:   201320:       jmpq    *8498(%rip)
 // DISASM-NEXT:   201326:       pushq   $0
-// DISASM-NEXT:   20132b:       jmp     -32 <zed2@plt>
+// DISASM-NEXT:   20132b:       jmp     -64 <.plt>
 // DISASM-NEXT:   201330:       jmpq    *8490(%rip)
 // DISASM-NEXT:   201336:       pushq   $1
-// DISASM-NEXT:   20133b:       jmp     -48 <zed2@plt>
+// DISASM-NEXT:   20133b:       jmp     -80 <.plt>
 
 .text
 .type foo STT_GNU_IFUNC

@@ -144,6 +144,7 @@ PPC::PPC() {
   gotPltHeaderEntriesNum = 0;
   pltHeaderSize = 64; // size of PLTresolve in .glink
   pltEntrySize = 4;
+  ipltEntrySize = 4;
 
   needsThunks = true;
 

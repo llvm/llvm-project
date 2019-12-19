@@ -95,8 +95,9 @@ RISCV::RISCV() {
   // .got.plt[0] = _dl_runtime_resolve, .got.plt[1] = link_map
   gotPltHeaderEntriesNum = 2;
 
-  pltEntrySize = 16;
   pltHeaderSize = 32;
+  pltEntrySize = 16;
+  ipltEntrySize = 16;
 }
 
 static uint32_t getEFlags(InputFile *f) {

@@ -57,8 +57,9 @@ X86::X86() {
   tlsGotRel = R_386_TLS_TPOFF;
   tlsModuleIndexRel = R_386_TLS_DTPMOD32;
   tlsOffsetRel = R_386_TLS_DTPOFF32;
-  pltEntrySize = 16;
   pltHeaderSize = 16;
+  pltEntrySize = 16;
+  ipltEntrySize = 16;
   trapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
 
   // Align to the non-PAE large page size (known as a superpage or huge page).
@@ -235,7 +236,7 @@ void X86::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   }
 
   write32le(buf + 7, relOff);
-  write32le(buf + 12, -pltHeaderSize - pltEntrySize * index - 16);
+  write32le(buf + 12, in.plt->getVA() - pltEntryAddr - 16);
 }
 
 int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
@@ -432,6 +433,7 @@ public:
 RetpolinePic::RetpolinePic() {
   pltHeaderSize = 48;
   pltEntrySize = 32;
+  ipltEntrySize = 32;
 }
 
 void RetpolinePic::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -474,7 +476,7 @@ void RetpolinePic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   memcpy(buf, insn, sizeof(insn));
 
   uint32_t ebx = in.gotPlt->getVA();
-  unsigned off = pltHeaderSize + pltEntrySize * index;
+  unsigned off = pltEntryAddr - in.plt->getVA();
   write32le(buf + 3, gotPltEntryAddr - ebx);
   write32le(buf + 8, -off - 12 + 32);
   write32le(buf + 13, -off - 17 + 18);
@@ -485,6 +487,7 @@ void RetpolinePic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
 RetpolineNoPic::RetpolineNoPic() {
   pltHeaderSize = 48;
   pltEntrySize = 32;
+  ipltEntrySize = 32;
 }
 
 void RetpolineNoPic::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -532,7 +535,7 @@ void RetpolineNoPic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   };
   memcpy(buf, insn, sizeof(insn));
 
-  unsigned off = pltHeaderSize + pltEntrySize * index;
+  unsigned off = pltEntryAddr - in.plt->getVA();
   write32le(buf + 2, gotPltEntryAddr);
   write32le(buf + 7, -off - 11 + 32);
   write32le(buf + 12, -off - 16 + 17);

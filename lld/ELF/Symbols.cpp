@@ -163,9 +163,11 @@ uint64_t Symbol::getGotPltOffset() const {
 }
 
 uint64_t Symbol::getPltVA() const {
-  PltSection *plt = isInIplt ? in.iplt : in.plt;
-  uint64_t outVA =
-      plt->getVA() + plt->headerSize + pltIndex * target->pltEntrySize;
+  uint64_t outVA = isInIplt
+                       ? in.iplt->getVA() + pltIndex * target->ipltEntrySize
+                       : in.plt->getVA() + in.plt->headerSize +
+                             pltIndex * target->pltEntrySize;
+
   // While linking microMIPS code PLT code are always microMIPS
   // code. Set the less-significant bit to track that fact.
   // See detailed comment in the `getSymVA` function.
