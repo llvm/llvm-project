@@ -4,8 +4,8 @@
 define i8 @single(i32 %A) {
 ; CHECK-LABEL: @single(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L1:%.*]] = icmp slt i32 [[A:%.*]], -128
-; CHECK-NEXT:    [[L2:%.*]] = select i1 [[L1]], i32 128, i32 [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[A:%.*]], -128
+; CHECK-NEXT:    [[L2:%.*]] = select i1 [[TMP0]], i32 [[A]], i32 -128
 ; CHECK-NEXT:    [[CONV7:%.*]] = trunc i32 [[L2]] to i8
 ; CHECK-NEXT:    ret i8 [[CONV7]]
 ;
@@ -19,10 +19,10 @@ entry:
 define i8 @double(i32 %A) {
 ; CHECK-LABEL: @double(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L1:%.*]] = icmp slt i32 [[A:%.*]], -128
-; CHECK-NEXT:    [[L2:%.*]] = select i1 [[L1]], i32 128, i32 [[A]]
-; CHECK-NEXT:    [[DOTINV:%.*]] = icmp sgt i32 [[A]], 127
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[DOTINV]], i32 127, i32 [[L2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[A:%.*]], -128
+; CHECK-NEXT:    [[L2:%.*]] = select i1 [[TMP0]], i32 [[A]], i32 -128
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[L2]], 127
+; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[TMP1]], i32 [[L2]], i32 127
 ; CHECK-NEXT:    [[CONV7:%.*]] = trunc i32 [[SPEC_SELECT_I]] to i8
 ; CHECK-NEXT:    ret i8 [[CONV7]]
 ;
@@ -39,7 +39,7 @@ define i8 @thisdoesnotloop(i32 %A, i32 %B) {
 ; CHECK-LABEL: @thisdoesnotloop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L1:%.*]] = icmp slt i32 [[A:%.*]], -128
-; CHECK-NEXT:    [[L2:%.*]] = select i1 [[L1]], i32 128, i32 [[B:%.*]]
+; CHECK-NEXT:    [[L2:%.*]] = select i1 [[L1]], i32 -128, i32 [[B:%.*]]
 ; CHECK-NEXT:    [[CONV7:%.*]] = trunc i32 [[L2]] to i8
 ; CHECK-NEXT:    ret i8 [[CONV7]]
 ;
@@ -52,10 +52,10 @@ entry:
 
 define i8 @original(i32 %A, i32 %B) {
 ; CHECK-LABEL: @original(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[A:%.*]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 128, i32 [[A]]
-; CHECK-NEXT:    [[DOTINV:%.*]] = icmp sgt i32 [[A]], 127
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[DOTINV]], i32 127, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[A:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 -128
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 127
+; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 127
 ; CHECK-NEXT:    [[CONV7:%.*]] = trunc i32 [[SPEC_SELECT_I]] to i8
 ; CHECK-NEXT:    ret i8 [[CONV7]]
 ;
