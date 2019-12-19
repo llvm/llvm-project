@@ -201,7 +201,8 @@ public:
 
   void finish() override {
     for (auto *Sym : UpdateOther)
-      copyLocalEntry(Sym, Sym->getVariableValue());
+      if (Sym->isVariable())
+        copyLocalEntry(Sym, Sym->getVariableValue());
   }
 
 private:
