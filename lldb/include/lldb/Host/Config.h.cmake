@@ -42,6 +42,8 @@
 
 #cmakedefine01 LLDB_ENABLE_LIBXML2
 
+#cmakedefine01 LLDB_ENABLE_LUA
+
 #cmakedefine01 LLDB_ENABLE_PYTHON
 
 #cmakedefine LLDB_PYTHON_HOME "${LLDB_PYTHON_HOME}"
