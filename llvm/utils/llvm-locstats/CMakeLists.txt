@@ -1,4 +1,4 @@
-if (LLVM_BUILD_UTILS AND LLVM_BUILD_TOOLS)
+if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_custom_command(
     OUTPUT ${LLVM_TOOLS_BINARY_DIR}/llvm-locstats
     DEPENDS ${LLVM_MAIN_SRC_DIR}/utils/llvm-locstats/llvm-locstats.py
