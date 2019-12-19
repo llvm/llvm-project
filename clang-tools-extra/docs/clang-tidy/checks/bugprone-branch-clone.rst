@@ -4,7 +4,7 @@ bugprone-branch-clone
 =====================
 
 Checks for repeated branches in ``if/else if/else`` chains, consecutive
-repeated branches in ``switch`` statements and indentical true and false
+repeated branches in ``switch`` statements and identical true and false
 branches in conditional operators.
 
 .. code-block:: c++
@@ -28,7 +28,7 @@ following shorter and cleaner code:
     do_something(x, y);
 
 
-If this is the inteded behavior, then there is no reason to use a conditional
+If this is the intended behavior, then there is no reason to use a conditional
 statement; otherwise the issue can be solved by fixing the branch that is
 handled incorrectly.
 

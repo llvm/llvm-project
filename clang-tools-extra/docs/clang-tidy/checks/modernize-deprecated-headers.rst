@@ -10,7 +10,7 @@ Standard [depr.c.headers] section.
 This check replaces C standard library headers with their C++ alternatives and
 removes redundant ones.
 
-Improtant note: the Standard doesn't guarantee that the C++ headers declare all
+Important note: the Standard doesn't guarantee that the C++ headers declare all
 the same functions in the global namespace. The check in its current form can
 break the code that uses library symbols from the global namespace.
 

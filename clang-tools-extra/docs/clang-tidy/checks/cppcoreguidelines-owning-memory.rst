@@ -171,6 +171,6 @@ Suppose you have code like the following:
 The semantic of a ``gsl::owner<T*>`` is mostly like a ``std::unique_ptr<T>``, therefore
 assignment of two ``gsl::owner<T*>`` is considered a move, which requires that the 
 resource ``Owner2`` must have been released before the assignment.
-This kind of condition could be catched in later improvements of this check with 
+This kind of condition could be caught in later improvements of this check with 
 flowsensitive analysis. Currently, the `Clang Static Analyzer` catches this bug
 for dynamic memory, but not for general types of resources.
