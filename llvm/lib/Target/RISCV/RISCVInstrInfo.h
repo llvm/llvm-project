@@ -101,6 +101,35 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
+  // Return true if the function can safely be outlined from.
+  virtual bool
+  isFunctionSafeToOutlineFrom(MachineFunction &MF,
+                              bool OutlineFromLinkOnceODRs) const override;
+
+  // Return true if MBB is safe to outline from, and return any target-specific
+  // information in Flags.
+  virtual bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
+                                      unsigned &Flags) const override;
+
+  // Calculate target-specific information for a set of outlining candidates.
+  outliner::OutlinedFunction getOutliningCandidateInfo(
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+
+  // Return if/how a given MachineInstr should be outlined.
+  virtual outliner::InstrType
+  getOutliningType(MachineBasicBlock::iterator &MBBI,
+                   unsigned Flags) const override;
+
+  // Insert a custom frame for outlined functions.
+  virtual void
+  buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
+                     const outliner::OutlinedFunction &OF) const override;
+
+  // Insert a call to an outlined function into a given basic block.
+  virtual MachineBasicBlock::iterator
+  insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
+                     MachineBasicBlock::iterator &It, MachineFunction &MF,
+                     const outliner::Candidate &C) const override;
 protected:
   const RISCVSubtarget &STI;
 };
