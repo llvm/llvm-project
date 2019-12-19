@@ -12231,18 +12231,14 @@ static SDValue performST1ScatterCombine(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
-                                       unsigned Opcode) {
+                                       unsigned Opcode,
+                                       bool OnlyPackedOffsets = true) {
   EVT RetVT = N->getValueType(0);
   assert(RetVT.isScalableVector() &&
          "Gather loads are only possible for SVE vectors");
-
   SDLoc DL(N);
-  MVT RetElVT = RetVT.getVectorElementType().getSimpleVT();
-  unsigned NumElements = AArch64::SVEBitsPerBlock / RetElVT.getSizeInBits();
 
-  EVT MaxVT = llvm::MVT::getScalableVectorVT(RetElVT, NumElements);
-  if (RetVT.getSizeInBits().getKnownMinSize() >
-      MaxVT.getSizeInBits().getKnownMinSize())
+  if (RetVT.getSizeInBits().getKnownMinSize() > AArch64::SVEBitsPerBlock)
     return SDValue();
 
   // Depending on the addressing mode, this is either a pointer or a vector of
@@ -12250,11 +12246,18 @@ static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
   const SDValue Base = N->getOperand(3);
   // Depending on the addressing mode, this is either a single offset or a
   // vector of offsets  (that fits into one register)
-  const SDValue Offset = N->getOperand(4);
+  SDValue Offset = N->getOperand(4);
 
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(Base.getValueType()) ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(Offset.getValueType()))
+  auto &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isTypeLegal(Base.getValueType()))
     return SDValue();
+
+  // Some gather load variants allow unpacked offsets, but only as nxv2i32
+  // vectors. These are implicitly sign (sxtw) or zero (zxtw) extend to
+  // nxv2i64. Legalize accordingly.
+  if (!OnlyPackedOffsets &&
+      Offset.getValueType().getSimpleVT().SimpleTy == MVT::nxv2i32)
+    Offset = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::nxv2i64, Offset).getValue(0);
 
   // Return value type that is representable in hardware
   EVT HwRetVt = getSVEContainerType(RetVT);
@@ -12439,13 +12442,17 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_ld1_gather_index:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SCALED);
     case Intrinsic::aarch64_sve_ld1_gather_sxtw:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SXTW);
+      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SXTW,
+                                      /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_uxtw:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW);
+      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW,
+                                      /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_sxtw_index:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SXTW_SCALED);
+      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SXTW_SCALED,
+                                      /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW_SCALED);
+      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW_SCALED,
+                                      /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_imm:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_IMM);
     case Intrinsic::aarch64_sve_st1_scatter:
