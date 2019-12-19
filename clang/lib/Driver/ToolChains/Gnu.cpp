@@ -2782,23 +2782,7 @@ void Generic_ELF::anchor() {}
 void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args,
                                         Action::OffloadKind) const {
-  const Generic_GCC::GCCVersion &V = GCCInstallation.getVersion();
-  bool UseInitArrayDefault =
-      getTriple().getArch() == llvm::Triple::aarch64 ||
-      getTriple().getArch() == llvm::Triple::aarch64_be ||
-      (getTriple().isOSFreeBSD() &&
-       getTriple().getOSMajorVersion() >= 12) ||
-      (getTriple().getOS() == llvm::Triple::Linux &&
-       ((!GCCInstallation.isValid() || !V.isOlderThan(4, 7, 0)) ||
-        getTriple().isAndroid())) ||
-      getTriple().getOS() == llvm::Triple::NaCl ||
-      (getTriple().getVendor() == llvm::Triple::MipsTechnologies &&
-       !getTriple().hasEnvironment()) ||
-      getTriple().getOS() == llvm::Triple::Solaris ||
-      getTriple().getArch() == llvm::Triple::riscv32 ||
-      getTriple().getArch() == llvm::Triple::riscv64;
-
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                          options::OPT_fno_use_init_array, UseInitArrayDefault))
+                          options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 }
