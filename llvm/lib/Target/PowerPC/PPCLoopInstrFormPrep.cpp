@@ -846,11 +846,15 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   // Check if a load/store has DS form.
   auto isDSFormCandidate = [] (const Instruction *I, const Value *PtrValue) {
     assert((PtrValue && I) && "Invalid parameter!");
-    // FIXME: 32 bit instruction lwa is also DS form.
-    return !isa<IntrinsicInst>(I) &&
-           ((PtrValue->getType()->getPointerElementType()->isIntegerTy(64)) ||
-            (PtrValue->getType()->getPointerElementType()->isFloatTy()) ||
-            (PtrValue->getType()->getPointerElementType()->isDoubleTy()));
+    if (isa<IntrinsicInst>(I))
+      return false;
+    Type *PointerElementType = PtrValue->getType()->getPointerElementType();
+    return (PointerElementType->isIntegerTy(64)) ||
+           (PointerElementType->isFloatTy()) ||
+           (PointerElementType->isDoubleTy()) ||
+           (PointerElementType->isIntegerTy(32) &&
+            llvm::any_of(I->users(),
+                         [](const User *U) { return isa<SExtInst>(U); }));
   };
 
   // Check if a load/store has DQ form.
