@@ -394,8 +394,8 @@ SVal StoreManager::attemptDownCast(SVal Base, QualType TargetType,
 }
 
 static bool hasSameUnqualifiedPointeeType(QualType ty1, QualType ty2) {
-  return ty1->getPointeeType().getTypePtr() == 
-    ty2->getPointeeType().getTypePtr();
+  return ty1->getPointeeType().getCanonicalType().getTypePtr() ==
+         ty2->getPointeeType().getCanonicalType().getTypePtr();
 }
 
 /// CastRetrievedVal - Used by subclasses of StoreManager to implement
@@ -427,7 +427,7 @@ SVal StoreManager::CastRetrievedVal(SVal V, const TypedValueRegion *R,
   // correctly every time we need it.
   if (castTy->isPointerType() && !castTy->isVoidPointerType())
     if (const auto *SR = dyn_cast_or_null<SymbolicRegion>(V.getAsRegion())) {
-      QualType sr = SR->getSymbol()->getType(); 
+      QualType sr = SR->getSymbol()->getType();
       if (!hasSameUnqualifiedPointeeType(sr, castTy))
           return loc::MemRegionVal(castRegion(SR, castTy));
     }
