@@ -7350,29 +7350,29 @@ let Predicates = [HasAVX512], ExeDomain = _SrcRC.ExeDomain in {
 }
 
 defm VCVTTSS2SIZ: avx512_cvt_s_all<0x2C, "vcvttss2si", f32x_info, i32x_info,
-                        fp_to_sint, X86cvtts2Int, X86cvtts2IntSAE, WriteCvtSS2I,
+                        any_fp_to_sint, X86cvtts2Int, X86cvtts2IntSAE, WriteCvtSS2I,
                         "{l}">, XS, EVEX_CD8<32, CD8VT1>;
 defm VCVTTSS2SI64Z: avx512_cvt_s_all<0x2C, "vcvttss2si", f32x_info, i64x_info,
-                        fp_to_sint, X86cvtts2Int, X86cvtts2IntSAE, WriteCvtSS2I,
+                        any_fp_to_sint, X86cvtts2Int, X86cvtts2IntSAE, WriteCvtSS2I,
                         "{q}">, VEX_W, XS, EVEX_CD8<32, CD8VT1>;
 defm VCVTTSD2SIZ: avx512_cvt_s_all<0x2C, "vcvttsd2si", f64x_info, i32x_info,
-                        fp_to_sint, X86cvtts2Int, X86cvtts2IntSAE, WriteCvtSD2I,
+                        any_fp_to_sint, X86cvtts2Int, X86cvtts2IntSAE, WriteCvtSD2I,
                         "{l}">, XD, EVEX_CD8<64, CD8VT1>;
 defm VCVTTSD2SI64Z: avx512_cvt_s_all<0x2C, "vcvttsd2si", f64x_info, i64x_info,
-                        fp_to_sint, X86cvtts2Int, X86cvtts2IntSAE, WriteCvtSD2I,
+                        any_fp_to_sint, X86cvtts2Int, X86cvtts2IntSAE, WriteCvtSD2I,
                         "{q}">, VEX_W, XD, EVEX_CD8<64, CD8VT1>;
 
 defm VCVTTSS2USIZ: avx512_cvt_s_all<0x78, "vcvttss2usi", f32x_info, i32x_info,
-                        fp_to_uint, X86cvtts2UInt, X86cvtts2UIntSAE, WriteCvtSS2I,
+                        any_fp_to_uint, X86cvtts2UInt, X86cvtts2UIntSAE, WriteCvtSS2I,
                         "{l}">, XS, EVEX_CD8<32, CD8VT1>;
 defm VCVTTSS2USI64Z: avx512_cvt_s_all<0x78, "vcvttss2usi", f32x_info, i64x_info,
-                        fp_to_uint, X86cvtts2UInt, X86cvtts2UIntSAE, WriteCvtSS2I,
+                        any_fp_to_uint, X86cvtts2UInt, X86cvtts2UIntSAE, WriteCvtSS2I,
                         "{q}">, XS,VEX_W, EVEX_CD8<32, CD8VT1>;
 defm VCVTTSD2USIZ: avx512_cvt_s_all<0x78, "vcvttsd2usi", f64x_info, i32x_info,
-                        fp_to_uint, X86cvtts2UInt, X86cvtts2UIntSAE, WriteCvtSD2I,
+                        any_fp_to_uint, X86cvtts2UInt, X86cvtts2UIntSAE, WriteCvtSD2I,
                         "{l}">, XD, EVEX_CD8<64, CD8VT1>;
 defm VCVTTSD2USI64Z: avx512_cvt_s_all<0x78, "vcvttsd2usi", f64x_info, i64x_info,
-                        fp_to_uint, X86cvtts2UInt, X86cvtts2UIntSAE, WriteCvtSD2I,
+                        any_fp_to_uint, X86cvtts2UInt, X86cvtts2UIntSAE, WriteCvtSD2I,
                         "{q}">, XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
 //===----------------------------------------------------------------------===//

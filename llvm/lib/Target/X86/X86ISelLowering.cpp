@@ -979,18 +979,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::FP_TO_SINT,         MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_SINT,         MVT::v2i32, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v2i32, Custom);
 
     // Custom legalize these to avoid over promotion or custom promotion.
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v2i8,  Custom);
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v4i8,  Custom);
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v8i8,  Custom);
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v2i16, Custom);
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v4i16, Custom);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v2i8,  Custom);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v4i8,  Custom);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v8i8,  Custom);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v2i16, Custom);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v4i16, Custom);
+    for (auto VT : {MVT::v2i8, MVT::v4i8, MVT::v8i8, MVT::v2i16, MVT::v4i16}) {
+      setOperationAction(ISD::FP_TO_SINT,        VT, Custom);
+      setOperationAction(ISD::FP_TO_UINT,        VT, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
+    }
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v4i32, Legal);
     setOperationAction(ISD::STRICT_SINT_TO_FP,  MVT::v4i32, Legal);
@@ -1164,9 +1162,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
-    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v8i16, MVT::v8i32);
-    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v8i16, MVT::v8i32);
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v8i32, Legal);
+    setOperationPromotedToType(ISD::FP_TO_SINT,        MVT::v8i16, MVT::v8i32);
+    setOperationPromotedToType(ISD::FP_TO_UINT,        MVT::v8i16, MVT::v8i32);
+    setOperationPromotedToType(ISD::STRICT_FP_TO_SINT, MVT::v8i16, MVT::v8i32);
+    setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::v8i16, MVT::v8i32);
+    setOperationAction(ISD::FP_TO_SINT,                MVT::v8i32, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v8i32, Legal);
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
 
@@ -1361,12 +1362,18 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v1i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR,       MVT::v1i1, Custom);
 
-    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v8i1,  MVT::v8i32);
-    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v8i1,  MVT::v8i32);
-    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v4i1,  MVT::v4i32);
-    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v4i1,  MVT::v4i32);
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v2i1,  Custom);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v2i1,  Custom);
+    setOperationPromotedToType(ISD::FP_TO_SINT,        MVT::v8i1,  MVT::v8i32);
+    setOperationPromotedToType(ISD::FP_TO_UINT,        MVT::v8i1,  MVT::v8i32);
+    setOperationPromotedToType(ISD::FP_TO_SINT,        MVT::v4i1,  MVT::v4i32);
+    setOperationPromotedToType(ISD::FP_TO_UINT,        MVT::v4i1,  MVT::v4i32);
+    setOperationPromotedToType(ISD::STRICT_FP_TO_SINT, MVT::v8i1,  MVT::v8i32);
+    setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::v8i1,  MVT::v8i32);
+    setOperationPromotedToType(ISD::STRICT_FP_TO_SINT, MVT::v4i1,  MVT::v4i32);
+    setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::v4i1,  MVT::v4i32);
+    setOperationAction(ISD::FP_TO_SINT,                MVT::v2i1,  Custom);
+    setOperationAction(ISD::FP_TO_UINT,                MVT::v2i1,  Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v2i1,  Custom);
+    setOperationAction(ISD::STRICT_FP_TO_UINT,         MVT::v2i1,  Custom);
 
     // There is no byte sized k-register load or store without AVX512DQ.
     if (!Subtarget.hasDQI()) {
@@ -1440,16 +1447,18 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
     }
 
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v16i32, Legal);
-    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i16, MVT::v16i32);
-    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i8, MVT::v16i32);
-    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i1, MVT::v16i32);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i32, Legal);
-    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i1, MVT::v16i32);
-    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i8, MVT::v16i32);
-    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i16, MVT::v16i32);
-    setOperationAction(ISD::SINT_TO_FP,         MVT::v16i32, Legal);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v16i32, Legal);
+    for (MVT VT : { MVT::v16i1, MVT::v16i8, MVT::v16i16 }) {
+      setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
+      setOperationPromotedToType(ISD::FP_TO_UINT       , VT, MVT::v16i32);
+      setOperationPromotedToType(ISD::STRICT_FP_TO_SINT, VT, MVT::v16i32);
+      setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, VT, MVT::v16i32);
+    }
+    setOperationAction(ISD::FP_TO_SINT,        MVT::v16i32, Legal);
+    setOperationAction(ISD::FP_TO_UINT,        MVT::v16i32, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v16i32, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v16i32, Legal);
+    setOperationAction(ISD::SINT_TO_FP,        MVT::v16i32, Legal);
+    setOperationAction(ISD::UINT_TO_FP,        MVT::v16i32, Legal);
 
     setOperationAction(ISD::STRICT_FADD,      MVT::v16f32, Legal);
     setOperationAction(ISD::STRICT_FADD,      MVT::v8f64,  Legal);
@@ -1551,6 +1560,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_SINT, MVT::v8i64, Legal);
       setOperationAction(ISD::FP_TO_UINT, MVT::v8i64, Legal);
 
+      setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v8i64, Legal);
+      setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v8i64, Legal);
+
       setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
     }
 
@@ -1641,12 +1653,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (Subtarget.hasDQI()) {
       for (auto VT : { MVT::v2i64, MVT::v4i64 }) {
-        setOperationAction(ISD::SINT_TO_FP,     VT, Legal);
-        setOperationAction(ISD::UINT_TO_FP,     VT, Legal);
-        setOperationAction(ISD::FP_TO_SINT,     VT, Legal);
-        setOperationAction(ISD::FP_TO_UINT,     VT, Legal);
-
-        setOperationAction(ISD::MUL,            VT, Legal);
+        setOperationAction(ISD::SINT_TO_FP,        VT, Legal);
+        setOperationAction(ISD::UINT_TO_FP,        VT, Legal);
+        setOperationAction(ISD::FP_TO_SINT,        VT, Legal);
+        setOperationAction(ISD::FP_TO_UINT,        VT, Legal);
+        setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Legal);
+        setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Legal);
+        setOperationAction(ISD::MUL,               VT, Legal);
       }
     }
 
@@ -1821,8 +1834,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       assert(isOperationCustom(ISD::UINT_TO_FP, MVT::v2f32) &&
              "Unexpected operation action!");
       // v2i64 FP_TO_S/UINT(v2f32) custom conversion.
-      setOperationAction(ISD::FP_TO_SINT,    MVT::v2f32, Custom);
-      setOperationAction(ISD::FP_TO_UINT,    MVT::v2f32, Custom);
+      setOperationAction(ISD::FP_TO_SINT,        MVT::v2f32, Custom);
+      setOperationAction(ISD::FP_TO_UINT,        MVT::v2f32, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v2f32, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v2f32, Custom);
     }
 
     if (Subtarget.hasBWI()) {
@@ -19739,31 +19754,57 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     if (VT == MVT::v2i1 && SrcVT == MVT::v2f64) {
       MVT ResVT = MVT::v4i32;
       MVT TruncVT = MVT::v4i1;
-      unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
       if (!IsSigned && !Subtarget.hasVLX()) {
         // Widen to 512-bits.
         ResVT = MVT::v8i32;
         TruncVT = MVT::v8i1;
-        Opc = ISD::FP_TO_UINT;
+        unsigned Opc = IsStrict ? ISD::STRICT_FP_TO_UINT : ISD::FP_TO_UINT;
         Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8f64,
                           DAG.getUNDEF(MVT::v8f64),
                           Src, DAG.getIntPtrConstant(0, dl));
+        SDValue Res, Chain;
+        if (IsStrict) {
+          Res = DAG.getNode(Opc, dl, {ResVT, MVT::Other},
+                            {Op.getOperand(0), Src});
+          Chain = Res.getValue(1);
+        } else
+          Res = DAG.getNode(Opc, dl, ResVT, Src);
+        Res = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Res);
+        Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i1, Res,
+                          DAG.getIntPtrConstant(0, dl));
+        if (IsStrict)
+          return DAG.getMergeValues({Res, Chain}, dl);
+        return Res;
       }
-      // FIXME: Strict fp!
-      assert(!IsStrict && "Unhandled strict operation!");
-      SDValue Res = DAG.getNode(Opc, dl, ResVT, Src);
+      SDValue Res, Chain;
+      unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+      if (IsStrict) {
+        Res =
+            DAG.getNode(Opc, dl, {ResVT, MVT::Other}, {Op->getOperand(0), Src});
+        Chain = Res.getValue(1);
+      } else
+        Res = DAG.getNode(Opc, dl, {ResVT, MVT::Other},
+                          {DAG.getEntryNode(), Src});
       Res = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Res);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i1, Res,
-                         DAG.getIntPtrConstant(0, dl));
+      Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i1, Res,
+                        DAG.getIntPtrConstant(0, dl));
+      if (IsStrict)
+        return DAG.getMergeValues({Res, Chain}, dl);
+      return Res;
     }
 
     assert(Subtarget.hasDQI() && Subtarget.hasVLX() && "Requires AVX512DQVL!");
     if (VT == MVT::v2i64 && SrcVT  == MVT::v2f32) {
-      // FIXME: Strict fp!
-      assert(!IsStrict && "Unhandled strict operation!");
-      return DAG.getNode(IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI, dl, VT,
-                         DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
-                                     DAG.getUNDEF(MVT::v2f32)));
+      SDValue Tmp = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
+                                DAG.getUNDEF(MVT::v2f32));
+      unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+      SDValue Res, Chain;
+      if (IsStrict) {
+        Res = DAG.getNode(Opc, dl, {VT, MVT::Other}, {Op->getOperand(0), Tmp});
+        Chain = Res.getValue(1);
+        return DAG.getMergeValues({Res, Chain}, dl);
+      }
+      return DAG.getNode(Opc, dl, {VT, MVT::Other}, {DAG.getEntryNode(), Tmp});
     }
 
     return SDValue();
@@ -23100,6 +23141,26 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   return DAG.getNode(ISD::SUB, dl, PtrVT, RegNodeBase, ParentFrameOffset);
 }
 
+// We share some nodes between STRICT and non STRICT FP intrinsics.
+// For these nodes, we need chain them to entry token if they are not called
+// by STRICT FP intrinsics.
+static SDValue getProperNode(unsigned Opcode, const SDLoc &dl, EVT VT,
+                             ArrayRef<SDValue> Ops, SelectionDAG &DAG) {
+  switch (Opcode) {
+  default:
+    return DAG.getNode(Opcode, dl, VT, Ops);
+  case X86ISD::CVTTP2SI:
+  case X86ISD::CVTTP2UI:
+  case X86ISD::CMPP:
+  case X86ISD::CMPM:
+    break;
+  }
+
+  SmallVector<SDValue, 6> NewOps = {DAG.getEntryNode()};
+  NewOps.append(Ops.begin(), Ops.end());
+  return DAG.getNode(Opcode, dl, {VT, MVT::Other}, NewOps);
+}
+
 SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                    SelectionDAG &DAG) const {
   // Helper to detect if the operand is CUR_DIRECTION rounding mode.
@@ -23144,23 +23205,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   const IntrinsicData* IntrData = getIntrinsicWithoutChain(IntNo);
 
-  // We share some nodes between STRICT and non STRICT FP intrinsics.
-  // For these nodes, we need chain them to entry token if they are not called
-  // by STRICT FP intrinsics.
-  auto getProperNode = [&](unsigned Opcode, EVT VT, ArrayRef<SDValue> Ops) {
-    switch (Opcode) {
-    default:
-      return DAG.getNode(Opcode, dl, VT, Ops);
-    case X86ISD::CMPP:
-    case X86ISD::CMPM:
-      break;
-    }
-
-    SmallVector<SDValue, 6> NewOps = {DAG.getEntryNode()};
-    NewOps.append(Ops.begin(), Ops.end());
-    return DAG.getNode(Opcode, dl, {VT, MVT::Other}, NewOps);
-  };
-
   if (IntrData) {
     switch(IntrData->Type) {
     case INTR_TYPE_1OP: {
@@ -23178,7 +23222,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         if (!isRoundModeCurDirection(Rnd))
           return SDValue();
       }
-      return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1));
+      return getProperNode(IntrData->Opc0, dl, Op.getValueType(),
+                           Op.getOperand(1), DAG);
     }
     case INTR_TYPE_1OP_SAE: {
       SDValue Sae = Op.getOperand(2);
@@ -23249,8 +23294,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           return SDValue();
       }
 
-      return getProperNode(IntrData->Opc0, Op.getValueType(),
-                           {Src1, Src2, Src3});
+      return getProperNode(IntrData->Opc0, dl, Op.getValueType(),
+                           {Src1, Src2, Src3}, DAG);
     }
     case INTR_TYPE_4OP:
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1),
@@ -23274,8 +23319,9 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         if (!isRoundModeCurDirection(Rnd))
           return SDValue();
       }
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src),
-                                  Mask, PassThru, Subtarget, DAG);
+      return getVectorMaskingNode(
+          getProperNode(IntrData->Opc0, dl, VT, Src, DAG), Mask, PassThru,
+          Subtarget, DAG);
     }
     case INTR_TYPE_1OP_MASK_SAE: {
       SDValue Src = Op.getOperand(1);
@@ -23291,8 +23337,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       else
         return SDValue();
 
-      return getVectorMaskingNode(DAG.getNode(Opc, dl, VT, Src),
-                                  Mask, PassThru, Subtarget, DAG);
+      return getVectorMaskingNode(getProperNode(Opc, dl, VT, Src, DAG), Mask,
+                                  PassThru, Subtarget, DAG);
     }
     case INTR_TYPE_SCALAR_MASK: {
       SDValue Src1 = Op.getOperand(1);
@@ -23498,8 +23544,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           return SDValue();
       }
       //default rounding mode
-      return getProperNode(IntrData->Opc0, MaskVT,
-                           {Op.getOperand(1), Op.getOperand(2), CC});
+      return getProperNode(IntrData->Opc0, dl, MaskVT,
+                           {Op.getOperand(1), Op.getOperand(2), CC}, DAG);
     }
     case CMP_MASK_SCALAR_CC: {
       SDValue Src1 = Op.getOperand(1);
@@ -23694,13 +23740,13 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Mask = Op.getOperand(3);
 
       if (isAllOnesConstant(Mask))
-        return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Src);
+        return getProperNode(IntrData->Opc0, dl, Op.getValueType(), Src, DAG);
 
       MVT SrcVT = Src.getSimpleValueType();
       MVT MaskVT = MVT::getVectorVT(MVT::i1, SrcVT.getVectorNumElements());
       Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
-      return DAG.getNode(IntrData->Opc1, dl, Op.getValueType(), Src, PassThru,
-                         Mask);
+      return getProperNode(IntrData->Opc1, dl, Op.getValueType(),
+                           {Src, PassThru, Mask}, DAG);
     }
     case CVTPS2PH_MASK: {
       SDValue Src = Op.getOperand(1);
@@ -28566,8 +28612,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Res;
       SDValue Chain;
       if (IsStrict) {
-        Res = DAG.getNode(ISD::FP_TO_SINT, dl, { PromoteVT, MVT::Other },
-                          { N->getOperand(0), Src });
+        Res = DAG.getNode(ISD::STRICT_FP_TO_SINT, dl, {PromoteVT, MVT::Other},
+                          {N->getOperand(0), Src});
         Chain = Res.getValue(1);
       } else
         Res = DAG.getNode(ISD::FP_TO_SINT, dl, PromoteVT, Src);
@@ -28610,11 +28656,19 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
           // legalization to v8i32<-v8f64.
           return;
         }
-        // FIXME: Strict fp.
-        assert(!IsStrict && "Missing STRICT_FP_TO_SINT support!");
         unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
-        SDValue Res = DAG.getNode(Opc, dl, MVT::v4i32, Src);
+        SDValue Res;
+        SDValue Chain;
+        if (IsStrict) {
+          Res = DAG.getNode(Opc, dl, {MVT::v4i32, MVT::Other},
+                            {N->getOperand(0), Src});
+          Chain = Res.getValue(1);
+        } else
+          Res = DAG.getNode(Opc, dl, {MVT::v4i32, MVT::Other},
+                            {DAG.getEntryNode(), Src});
         Results.push_back(Res);
+        if (IsStrict)
+          Results.push_back(Chain);
         return;
       }
 
@@ -34719,7 +34773,6 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       break;
     case X86ISD::CVTP2SI:   case X86ISD::CVTP2UI:
     case X86ISD::MCVTP2SI:  case X86ISD::MCVTP2UI:
-    case X86ISD::CVTTP2SI:  case X86ISD::CVTTP2UI:
     case X86ISD::MCVTTP2SI: case X86ISD::MCVTTP2UI:
     case X86ISD::CVTSI2P:   case X86ISD::CVTUI2P:
     case X86ISD::MCVTSI2P:  case X86ISD::MCVTUI2P:
@@ -34727,6 +34780,12 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       if (In.getOperand(0).getValueType() == MVT::v2f64 ||
           In.getOperand(0).getValueType() == MVT::v2i64)
         return N->getOperand(0); // return the bitcast
+      break;
+    case X86ISD::CVTTP2SI:
+    case X86ISD::CVTTP2UI:
+      if (In.getOperand(1).getValueType() == MVT::v2f64 ||
+          In.getOperand(1).getValueType() == MVT::v2i64)
+        return N->getOperand(0);
       break;
     }
   }
@@ -42431,12 +42490,16 @@ static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   // Convert a full vector load into vzload when not all bits are needed.
-  SDValue In = N->getOperand(0);
+  SDValue In;
+  if (N->getOpcode() == X86ISD::CVTTP2SI || N->getOpcode() == X86ISD::CVTTP2UI)
+    In = N->getOperand(1);
+  else
+    In = N->getOperand(0);
   MVT InVT = In.getSimpleValueType();
   if (VT.getVectorNumElements() < InVT.getVectorNumElements() &&
       ISD::isNormalLoad(In.getNode()) && In.hasOneUse()) {
     assert(InVT.is128BitVector() && "Expected 128-bit input vector");
-    LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
+    LoadSDNode *LN = cast<LoadSDNode>(In);
     // Unless the load is volatile or atomic.
     if (LN->isSimple()) {
       SDLoc dl(N);
@@ -42450,9 +42513,13 @@ static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
                                   LN->getPointerInfo(),
                                   LN->getAlignment(),
                                   LN->getMemOperand()->getFlags());
-      SDValue Convert = DAG.getNode(N->getOpcode(), dl, VT,
-                                    DAG.getBitcast(InVT, VZLoad));
-      DCI.CombineTo(N, Convert);
+      SDValue Convert = getProperNode(N->getOpcode(), dl, VT,
+                                      DAG.getBitcast(InVT, VZLoad), DAG);
+      if (Convert->getOpcode() == X86ISD::CVTTP2SI ||
+          Convert->getOpcode() == X86ISD::CVTTP2UI)
+        DCI.CombineTo(N, Convert.getValue(0), Convert.getValue(1));
+      else
+        DCI.CombineTo(N, Convert);
       DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
       return SDValue(N, 0);
     }

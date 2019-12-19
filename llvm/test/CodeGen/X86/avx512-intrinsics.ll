@@ -4322,17 +4322,21 @@ declare <8 x i32> @llvm.x86.avx512.mask.cvttpd2dq.512(<8 x double>, <8 x i32>, i
 define <8 x i32>@test_int_x86_avx512_mask_cvtt_pd2dq_512(<8 x double> %x0, <8 x i32> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_cvtt_pd2dq_512:
 ; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttpd2dq %zmm0, %ymm1 {%k1}
+; X64-NEXT:    vcvttpd2dq %zmm0, %ymm2
+; X64-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
 ; X64-NEXT:    vcvttpd2dq {sae}, %zmm0, %ymm0
 ; X64-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_pd2dq_512:
 ; X86:       # %bb.0:
+; X86-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vcvttpd2dq %zmm0, %ymm1 {%k1}
+; X86-NEXT:    vcvttpd2dq %zmm0, %ymm2
+; X86-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
 ; X86-NEXT:    vcvttpd2dq {sae}, %zmm0, %ymm0
 ; X86-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
@@ -4373,17 +4377,21 @@ declare <8 x i32> @llvm.x86.avx512.mask.cvttpd2udq.512(<8 x double>, <8 x i32>, 
 define <8 x i32>@test_int_x86_avx512_mask_cvtt_pd2udq_512(<8 x double> %x0, <8 x i32> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_cvtt_pd2udq_512:
 ; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttpd2udq %zmm0, %ymm1 {%k1}
+; X64-NEXT:    vcvttpd2udq %zmm0, %ymm2
+; X64-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
 ; X64-NEXT:    vcvttpd2udq {sae}, %zmm0, %ymm0
 ; X64-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_pd2udq_512:
 ; X86:       # %bb.0:
+; X86-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vcvttpd2udq %zmm0, %ymm1 {%k1}
+; X86-NEXT:    vcvttpd2udq %zmm0, %ymm2
+; X86-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
 ; X86-NEXT:    vcvttpd2udq {sae}, %zmm0, %ymm0
 ; X86-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
@@ -4399,7 +4407,8 @@ define <16 x i32>@test_int_x86_avx512_mask_cvtt_ps2dq_512(<16 x float> %x0, <16 
 ; X64-LABEL: test_int_x86_avx512_mask_cvtt_ps2dq_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttps2dq %zmm0, %zmm1 {%k1}
+; X64-NEXT:    vcvttps2dq %zmm0, %zmm2
+; X64-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
 ; X64-NEXT:    vcvttps2dq {sae}, %zmm0, %zmm0
 ; X64-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; X64-NEXT:    retq
@@ -4407,7 +4416,8 @@ define <16 x i32>@test_int_x86_avx512_mask_cvtt_ps2dq_512(<16 x float> %x0, <16 
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2dq_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vcvttps2dq %zmm0, %zmm1 {%k1}
+; X86-NEXT:    vcvttps2dq %zmm0, %zmm2
+; X86-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
 ; X86-NEXT:    vcvttps2dq {sae}, %zmm0, %zmm0
 ; X86-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; X86-NEXT:    retl
@@ -4423,7 +4433,8 @@ define <16 x i32>@test_int_x86_avx512_mask_cvtt_ps2udq_512(<16 x float> %x0, <16
 ; X64-LABEL: test_int_x86_avx512_mask_cvtt_ps2udq_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttps2udq %zmm0, %zmm1 {%k1}
+; X64-NEXT:    vcvttps2udq %zmm0, %zmm2
+; X64-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
 ; X64-NEXT:    vcvttps2udq {sae}, %zmm0, %zmm0
 ; X64-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; X64-NEXT:    retq
@@ -4431,7 +4442,8 @@ define <16 x i32>@test_int_x86_avx512_mask_cvtt_ps2udq_512(<16 x float> %x0, <16
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2udq_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vcvttps2udq %zmm0, %zmm1 {%k1}
+; X86-NEXT:    vcvttps2udq %zmm0, %zmm2
+; X86-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
 ; X86-NEXT:    vcvttps2udq {sae}, %zmm0, %zmm0
 ; X86-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; X86-NEXT:    retl
