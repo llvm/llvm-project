@@ -501,9 +501,13 @@ void ConstantHoistingPass::collectConstantCandidates(
 /// into an instruction itself.
 void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
   ConstCandMapType ConstCandMap;
-  for (BasicBlock &BB : Fn)
+  for (BasicBlock &BB : Fn) {
+    // Ignore unreachable basic blocks.
+    if (!DT->isReachableFromEntry(&BB))
+      continue;
     for (Instruction &Inst : BB)
       collectConstantCandidates(ConstCandMap, &Inst);
+  }
 }
 
 // This helper function is necessary to deal with values that have different
