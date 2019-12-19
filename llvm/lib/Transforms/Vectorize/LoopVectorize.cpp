@@ -531,6 +531,9 @@ protected:
   /// vectorizing this phi node.
   void fixReduction(PHINode *Phi);
 
+  /// Clear NSW/NUW flags from reduction instructions if necessary.
+  void clearReductionWrapFlags(RecurrenceDescriptor &RdxDesc);
+
   /// The Loop exit block may have single value PHI nodes with some
   /// incoming value. While vectorizing we only handled real values
   /// that were defined inside the loop and we should have one value for
@@ -3711,16 +3714,20 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
     }
   }
 
+  // Wrap flags are in general invalid after vectorization, clear them.
+  clearReductionWrapFlags(RdxDesc);
+
   // Fix the vector-loop phi.
 
   // Reductions do not have to start at zero. They can start with
   // any loop invariant values.
   BasicBlock *Latch = OrigLoop->getLoopLatch();
   Value *LoopVal = Phi->getIncomingValueForBlock(Latch);
+
   for (unsigned Part = 0; Part < UF; ++Part) {
     Value *VecRdxPhi = getOrCreateVectorValue(Phi, Part);
     Value *Val = getOrCreateVectorValue(LoopVal, Part);
-    // Make sure to add the reduction stat value only to the
+    // Make sure to add the reduction start value only to the
     // first unroll part.
     Value *StartVal = (Part == 0) ? VectorStart : Identity;
     cast<PHINode>(VecRdxPhi)->addIncoming(StartVal, LoopVectorPreHeader);
@@ -3855,6 +3862,37 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   int SelfEdgeBlockIdx = (IncomingEdgeBlockIdx ? 0 : 1);
   Phi->setIncomingValue(SelfEdgeBlockIdx, BCBlockPhi);
   Phi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
+}
+
+void InnerLoopVectorizer::clearReductionWrapFlags(
+    RecurrenceDescriptor &RdxDesc) {
+  RecurrenceDescriptor::RecurrenceKind RK = RdxDesc.getRecurrenceKind();
+  if (RK != RecurrenceDescriptor::RK_IntegerAdd &&
+      RK != RecurrenceDescriptor::RK_IntegerMult)
+    return;
+
+  Instruction *LoopExitInstr = RdxDesc.getLoopExitInstr();
+  assert(LoopExitInstr && "null loop exit instruction");
+  SmallVector<Instruction *, 8> Worklist;
+  SmallPtrSet<Instruction *, 8> Visited;
+  Worklist.push_back(LoopExitInstr);
+  Visited.insert(LoopExitInstr);
+
+  while (!Worklist.empty()) {
+    Instruction *Cur = Worklist.pop_back_val();
+    if (isa<OverflowingBinaryOperator>(Cur))
+      for (unsigned Part = 0; Part < UF; ++Part) {
+        Value *V = getOrCreateVectorValue(Cur, Part);
+        cast<Instruction>(V)->dropPoisonGeneratingFlags();
+      }
+
+    for (User *U : Cur->users()) {
+      Instruction *UI = cast<Instruction>(U);
+      if ((Cur != LoopExitInstr || OrigLoop->contains(UI->getParent())) &&
+          Visited.insert(UI).second)
+        Worklist.push_back(UI);
+    }
+  }
 }
 
 void InnerLoopVectorizer::fixLCSSAPHIs() {
