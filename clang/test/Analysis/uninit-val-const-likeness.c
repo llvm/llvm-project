@@ -54,3 +54,21 @@ int work3(const Params * const params) {
     sum += fooList[i]; // no-warning
   return sum;
 }
+
+typedef Params ParamsTypedef;
+typedef const ParamsTypedef *ConstParamsTypedef;
+
+static void create4(ConstParamsTypedef const params, int fooList[]) {
+  int tmpList[SIZE] = {0};
+  for (int i = 0; i < params->noOfSymbols; i++)
+    fooList[i] = tmpList[i];
+}
+
+int work4(Params * const params) {
+  int fooList[SIZE];
+  create4(params, fooList);
+  int sum = 0;
+  for (int i = 0; i < params->noOfSymbols; i++)
+    sum += fooList[i]; // no-warning
+  return sum;
+}
