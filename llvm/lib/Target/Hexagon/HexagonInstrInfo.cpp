@@ -2147,7 +2147,7 @@ bool HexagonInstrInfo::isDuplexPair(const MachineInstr &MIa,
 }
 
 bool HexagonInstrInfo::isEarlySourceInstr(const MachineInstr &MI) const {
-  if (MI.mayLoad() || MI.mayStore() || MI.isCompare())
+  if (MI.mayLoadOrStore() || MI.isCompare())
     return true;
 
   // Multiply

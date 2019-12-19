@@ -186,7 +186,7 @@ bool ARCOptAddrMode::noUseOfAddBeforeLoadOrStore(const MachineInstr *Add,
 }
 
 MachineInstr *ARCOptAddrMode::tryToCombine(MachineInstr &Ldst) {
-  assert((Ldst.mayLoad() || Ldst.mayStore()) && "LD/ST instruction expected");
+  assert(Ldst.mayLoadOrStore() && "LD/ST instruction expected");
 
   unsigned BasePos, OffsetPos;
 

@@ -185,7 +185,7 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (SIInstrInfo::isMAI(*MI) && checkMAIHazards(MI) > 0)
     return NoopHazard;
 
-  if ((MI->mayLoad() || MI->mayStore()) && checkMAILdStHazards(MI) > 0)
+  if (MI->mayLoadOrStore() && checkMAILdStHazards(MI) > 0)
     return NoopHazard;
 
   if (MI->isInlineAsm() && checkInlineAsmHazards(MI) > 0)
@@ -296,7 +296,7 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
   if (SIInstrInfo::isMAI(*MI))
     return std::max(WaitStates, checkMAIHazards(MI));
 
-  if (MI->mayLoad() || MI->mayStore())
+  if (MI->mayLoadOrStore())
     return std::max(WaitStates, checkMAILdStHazards(MI));
 
   return WaitStates;
