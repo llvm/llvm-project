@@ -101,8 +101,6 @@ INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
   return __lanemask_gt();
 }
 
-EXTERN bool __kmpc_impl_is_first_active_thread();
-
 INLINE uint32_t __kmpc_impl_smid() {
   return __smid();
 }
@@ -125,6 +123,8 @@ template <typename T> INLINE T __kmpc_impl_min(T x, T y) {
 INLINE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return __ballot64(1);
 }
+
+EXTERN bool __kmpc_impl_is_first_active_thread();
 
 EXTERN int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t Var,
                                      int32_t SrcLane);
