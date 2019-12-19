@@ -3831,11 +3831,11 @@ multiclass MVE_VMULL_m<MVEVectorVTInfo VTI,
     // Predicated multiply
     def : Pat<(VTI.DblVec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             (i32 Top),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+                            (VTI.Pred VCCR:$mask), (VTI.DblVec MQPR:$inactive))),
               (VTI.DblVec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
-                            (VTI.Vec MQPR:$inactive)))>;
+                            (VTI.DblVec MQPR:$inactive)))>;
   }
 }
 
