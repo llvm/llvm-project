@@ -198,9 +198,6 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MULFIX(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_StrictFPOp(SDNode *N) {
-  if (N->getOpcode() == ISD::STRICT_FP_ROUND)
-    return ScalarizeVecRes_STRICT_FP_ROUND(N);
-
   EVT VT = N->getValueType(0).getVectorElementType();
   unsigned NumOpers = N->getNumOperands();
   SDValue Chain = N->getOperand(0);
@@ -305,18 +302,6 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_FP_ROUND(SDNode *N) {
   SDValue Op = GetScalarizedVector(N->getOperand(0));
   return DAG.getNode(ISD::FP_ROUND, SDLoc(N),
                      NewVT, Op, N->getOperand(1));
-}
-
-SDValue DAGTypeLegalizer::ScalarizeVecRes_STRICT_FP_ROUND(SDNode *N) {
-  EVT NewVT = N->getValueType(0).getVectorElementType();
-  SDValue Op = GetScalarizedVector(N->getOperand(1));
-  SDValue Res = DAG.getNode(ISD::STRICT_FP_ROUND, SDLoc(N),
-                            { NewVT, MVT::Other }, 
-                            { N->getOperand(0), Op, N->getOperand(2) });
-  // Legalize the chain result - switch anything that used the old chain to
-  // use the new one.
-  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
-  return Res;
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_FPOWI(SDNode *N) {
