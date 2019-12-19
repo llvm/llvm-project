@@ -1863,6 +1863,12 @@ call for retaining a value of block-pointer type, it has the effect of a
 ``Block_copy``.  The optimizer may remove such copies when it sees that the
 result is used only as an argument to a call.
 
+When a block pointer type is converted to a non-block pointer type (such as
+``id``), ``Block_copy`` is called. This is necessary because a block allocated
+on the stack won't get copied to the heap when the non-block pointer escapes.
+A block pointer is implicitly converted to ``id`` when it is passed to a
+function as a variadic argument.
+
 .. _arc.misc.exceptions:
 
 Exceptions
