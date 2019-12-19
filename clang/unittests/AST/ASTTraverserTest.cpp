@@ -141,12 +141,12 @@ struct A {
 
 template<typename T>
 struct templ
-{ 
+{
 };
 
 template<>
 struct templ<int>
-{ 
+{
 };
 
 void parmvardecl_attr(struct A __attribute__((address_space(19)))*);
