@@ -317,20 +317,20 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     // Nothing to do for temporary symbols.
     if (S.isTemporary())
       continue;
-    const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
 
-    // Map the symbol into its containing csect.
+    const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
     const MCSectionXCOFF *ContainingCsect = XSym->getContainingCsect();
+
+    // Handle undefined symbol.
+    if (ContainingCsect->getCSectType() == XCOFF::XTY_ER) {
+      UndefinedCsects.emplace_back(ContainingCsect);
+      continue;
+    }
 
     // If the symbol is the csect itself, we don't need to put the symbol
     // into csect's Syms.
     if (XSym == ContainingCsect->getQualNameSymbol())
       continue;
-
-    if (XSym->isUndefined(false)) {
-      UndefinedCsects.emplace_back(ContainingCsect);
-      continue;
-    }
 
     assert(WrapperMap.find(ContainingCsect) != WrapperMap.end() &&
            "Expected containing csect to exist in map");
