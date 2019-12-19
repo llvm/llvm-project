@@ -5107,7 +5107,13 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
                                                 G ? G->getGlobal() : nullptr);
   };
 
-  bool UsePlt = Subtarget.is32BitELFABI() && !isLocalCallee();
+  // The PLT is only used in 32-bit ELF PIC mode.  Attempting to use the PLT in
+  // a static relocation model causes some versions of GNU LD (2.17.50, at
+  // least) to force BSS-PLT, instead of secure-PLT, even if all objects are
+  // built with secure-PLT.
+  bool UsePlt =
+      Subtarget.is32BitELFABI() && !isLocalCallee() &&
+      Subtarget.getTargetMachine().getRelocationModel() == Reloc::PIC_;
 
   if (isFunctionGlobalAddress(Callee)) {
     const GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Callee);

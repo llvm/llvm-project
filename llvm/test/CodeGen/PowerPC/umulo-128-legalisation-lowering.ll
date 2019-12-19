@@ -63,7 +63,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; PPC32-NEXT:    mr 28, 9
 ; PPC32-NEXT:    mr 23, 6
 ; PPC32-NEXT:    mr 24, 5
-; PPC32-NEXT:    bl __multi3@PLT
+; PPC32-NEXT:    bl __multi3
 ; PPC32-NEXT:    mr 7, 4
 ; PPC32-NEXT:    mullw 4, 24, 30
 ; PPC32-NEXT:    mullw 8, 29, 23
