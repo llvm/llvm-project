@@ -5840,9 +5840,30 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
     SDValue MC = DAG.getMemcpy(Root, sdl, Op1, Op2, Op3, Align, isVol,
-                               false, isTC,
+                               /* AlwaysInline */ false, isTC,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)));
+    updateDAGForMaybeTailCall(MC);
+    return;
+  }
+  case Intrinsic::memcpy_inline: {
+    const auto &MCI = cast<MemCpyInlineInst>(I);
+    SDValue Dst = getValue(I.getArgOperand(0));
+    SDValue Src = getValue(I.getArgOperand(1));
+    SDValue Size = getValue(I.getArgOperand(2));
+    assert(isa<ConstantSDNode>(Size) && "memcpy_inline needs constant size");
+    // @llvm.memcpy.inline defines 0 and 1 to both mean no alignment.
+    Align DstAlign = MCI.getDestAlign().valueOrOne();
+    Align SrcAlign = MCI.getSourceAlign().valueOrOne();
+    Align Alignment = commonAlignment(DstAlign, SrcAlign);
+    bool isVol = MCI.isVolatile();
+    bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
+    // FIXME: Support passing different dest/src alignments to the memcpy DAG
+    // node.
+    SDValue MC = DAG.getMemcpy(
+        getRoot(), sdl, Dst, Src, Size, Alignment.value(), isVol,
+        /* AlwaysInline */ true, isTC, MachinePointerInfo(I.getArgOperand(0)),
+        MachinePointerInfo(I.getArgOperand(1)));
     updateDAGForMaybeTailCall(MC);
     return;
   }
