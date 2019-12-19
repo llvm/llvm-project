@@ -77,7 +77,7 @@ class Run(object):
 
         # If we've finished all the tests or too many tests have failed, notify
         # the main thread that we've stopped testing.
-        self.failure_count += (result.code == lit.Test.FAIL)
+        self.failure_count += (result.code == lit.Test.FAIL)  # TODO(yln): this is buggy
         if self.lit_config.maxFailures and \
                 self.failure_count == self.lit_config.maxFailures:
             self.hit_max_failures = True
