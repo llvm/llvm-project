@@ -1,6 +1,5 @@
 """Test breaking inside functions defined within a BSD archive file libfoo.a."""
 
-from __future__ import print_function
 
 
 import lldb

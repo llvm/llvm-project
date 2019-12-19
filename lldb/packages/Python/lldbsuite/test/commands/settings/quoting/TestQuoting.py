@@ -2,7 +2,6 @@
 Test quoting of arguments to lldb commands
 """
 
-from __future__ import print_function
 
 
 

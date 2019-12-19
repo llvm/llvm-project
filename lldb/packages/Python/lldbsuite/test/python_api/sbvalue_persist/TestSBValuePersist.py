@@ -1,6 +1,5 @@
 """Test SBValue::Persist"""
 
-from __future__ import print_function
 
 
 import lldb

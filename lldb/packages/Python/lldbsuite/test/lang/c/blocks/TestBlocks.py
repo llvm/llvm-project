@@ -1,6 +1,5 @@
 """Test that lldb can invoke blocks and access variables inside them"""
 
-from __future__ import print_function
 
 
 import unittest2

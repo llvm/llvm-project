@@ -1,6 +1,5 @@
 """Test that we handle inferiors which change their process group"""
 
-from __future__ import print_function
 
 
 import os

@@ -2,7 +2,6 @@
 Make sure FindTypes finds struct types with the struct prefix.
 """
 
-from __future__ import print_function
 
 
 import lldb

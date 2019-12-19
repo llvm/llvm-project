@@ -1,6 +1,5 @@
 """Test that the 'add-dsym', aka 'target symbols add', succeeds in the middle of debug session."""
 
-from __future__ import print_function
 
 
 import lldb

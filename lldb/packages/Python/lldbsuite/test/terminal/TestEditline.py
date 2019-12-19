@@ -2,7 +2,6 @@
 Test that the lldb editline handling is configured correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

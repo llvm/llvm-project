@@ -1,7 +1,6 @@
 """
 Test that argdumper is a viable launching strategy.
 """
-from __future__ import print_function
 
 
 import lldb

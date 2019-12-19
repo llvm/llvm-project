@@ -3,7 +3,6 @@ Test lldb breakpoint setting by source regular expression.
 This test just tests the source file & function restrictions.
 """
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test.decorators import *

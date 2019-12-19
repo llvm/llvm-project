@@ -1,6 +1,5 @@
 """Test function call thread safety."""
 
-from __future__ import print_function
 
 
 import lldb

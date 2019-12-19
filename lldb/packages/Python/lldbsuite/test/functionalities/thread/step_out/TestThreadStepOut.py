@@ -2,7 +2,6 @@
 Test stepping out from a function in a multi-threaded program.
 """
 
-from __future__ import print_function
 
 
 import lldb

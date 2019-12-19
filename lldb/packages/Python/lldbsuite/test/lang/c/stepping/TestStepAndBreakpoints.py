@@ -1,6 +1,5 @@
 """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
 
-from __future__ import print_function
 
 
 import lldb

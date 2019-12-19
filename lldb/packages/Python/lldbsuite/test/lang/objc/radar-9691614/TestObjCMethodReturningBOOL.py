@@ -2,7 +2,6 @@
 Test that objective-c method returning BOOL works correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

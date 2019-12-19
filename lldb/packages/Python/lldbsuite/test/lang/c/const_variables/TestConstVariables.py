@@ -1,6 +1,5 @@
 """Check that compiler-generated constant values work correctly"""
 
-from __future__ import print_function
 
 
 import lldb

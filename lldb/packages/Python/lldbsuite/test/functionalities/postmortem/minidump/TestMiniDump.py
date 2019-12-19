@@ -2,7 +2,6 @@
 Test basics of mini dump debugging.
 """
 
-from __future__ import print_function
 from six import iteritems
 
 

@@ -2,7 +2,6 @@
 Test that we can listen to modules loaded events.
 """
 
-from __future__ import print_function
 
 
 import lldb

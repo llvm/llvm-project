@@ -3,7 +3,6 @@
 Test that the expression parser returns proper Unicode strings.
 """
 
-from __future__ import print_function
 
 
 import lldb

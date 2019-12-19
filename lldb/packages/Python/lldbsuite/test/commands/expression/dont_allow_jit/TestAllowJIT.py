@@ -2,7 +2,6 @@
 Test that --allow-jit=false does disallow JITting:
 """
 
-from __future__ import print_function
 
 
 import lldb

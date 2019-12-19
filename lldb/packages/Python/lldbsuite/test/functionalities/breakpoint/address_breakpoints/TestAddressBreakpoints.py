@@ -2,7 +2,6 @@
 Test address breakpoints set with shared library of SBAddress work correctly.
 """
 
-from __future__ import print_function
 
 
 import lldb

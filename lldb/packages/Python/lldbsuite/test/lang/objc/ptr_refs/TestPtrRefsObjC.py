@@ -2,7 +2,6 @@
 Test the ptr_refs tool on Darwin with Objective-C
 """
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test.decorators import *

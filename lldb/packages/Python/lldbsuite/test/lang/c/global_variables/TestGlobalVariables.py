@@ -1,6 +1,5 @@
 """Show global variables and check that they do indeed have global scopes."""
 
-from __future__ import print_function
 
 
 from lldbsuite.test.decorators import *

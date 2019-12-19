@@ -2,7 +2,6 @@
 Test some SBStructuredData API.
 """
 
-from __future__ import print_function
 
 
 import lldb

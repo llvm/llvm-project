@@ -1,6 +1,5 @@
 """Test that lldb steps correctly after the inferior has crashed while in a recursive routine."""
 
-from __future__ import print_function
 
 import lldb
 from lldbsuite.test.decorators import *

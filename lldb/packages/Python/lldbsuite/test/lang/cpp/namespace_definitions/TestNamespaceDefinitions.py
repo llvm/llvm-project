@@ -1,6 +1,5 @@
 """Test that forward declarations don't cause bogus conflicts in namespaced types"""
 
-from __future__ import print_function
 
 
 import unittest2

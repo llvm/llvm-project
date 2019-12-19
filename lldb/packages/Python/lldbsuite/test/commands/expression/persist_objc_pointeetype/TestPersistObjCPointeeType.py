@@ -2,7 +2,6 @@
 Test that we can p *objcObject
 """
 
-from __future__ import print_function
 
 
 import lldb

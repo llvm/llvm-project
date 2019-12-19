@@ -1,6 +1,5 @@
 """Test that importing modules in Objective-C works as expected."""
 
-from __future__ import print_function
 
 
 import unittest2

@@ -4,7 +4,6 @@ This exercises classes like ObjectFileELF and their support for opening
 foreign-architecture object files.
 """
 
-from __future__ import print_function
 
 
 import os.path

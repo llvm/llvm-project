@@ -2,7 +2,6 @@
 Make sure we can find the binary inside an app bundle.
 """
 
-from __future__ import print_function
 
 
 import lldb

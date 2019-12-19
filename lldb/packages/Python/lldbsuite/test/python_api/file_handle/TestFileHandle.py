@@ -2,7 +2,6 @@
 Test lldb Python API for file handles.
 """
 
-from __future__ import print_function
 
 import os
 import io

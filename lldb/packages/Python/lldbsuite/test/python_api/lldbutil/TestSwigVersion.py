@@ -2,7 +2,6 @@
 Test that we embed the swig version into the lldb module
 """
 
-from __future__ import print_function
 
 """
 import os

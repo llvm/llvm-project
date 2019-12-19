@@ -1,6 +1,5 @@
 """Test stepping over and into inlined functions."""
 
-from __future__ import print_function
 
 
 import lldb

@@ -2,7 +2,6 @@
 Test SBTarget APIs.
 """
 
-from __future__ import print_function
 
 
 import unittest2

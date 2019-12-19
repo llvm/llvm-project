@@ -5,7 +5,6 @@ even if there are other definitions of the type in other
 CU's.  Assert that that is true.
 """
 
-from __future__ import print_function
 
 
 import lldb

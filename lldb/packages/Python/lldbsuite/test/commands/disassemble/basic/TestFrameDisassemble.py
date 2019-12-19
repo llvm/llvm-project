@@ -2,7 +2,6 @@
 Test to ensure SBFrame::Disassemble produces SOME output
 """
 
-from __future__ import print_function
 
 
 import lldb

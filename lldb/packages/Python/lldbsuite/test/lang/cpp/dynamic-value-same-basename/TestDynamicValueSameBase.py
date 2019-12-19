@@ -3,7 +3,6 @@ Make sure if we have two classes with the same base name the
 dynamic value calculator doesn't confuse them
 """
 
-from __future__ import print_function
 
 
 import lldb

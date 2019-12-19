@@ -1,6 +1,5 @@
 """Test that the clang modules cache directory can be controlled."""
 
-from __future__ import print_function
 
 
 import unittest2

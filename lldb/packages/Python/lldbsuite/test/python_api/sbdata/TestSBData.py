@@ -1,6 +1,5 @@
 """Test the SBData APIs."""
 
-from __future__ import print_function
 
 
 from math import fabs

@@ -2,7 +2,6 @@
 Test basics of mach core file debugging.
 """
 
-from __future__ import print_function
 
 
 import lldb

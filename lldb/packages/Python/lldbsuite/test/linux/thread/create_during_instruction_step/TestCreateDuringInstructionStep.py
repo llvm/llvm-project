@@ -3,7 +3,6 @@ This tests that we do not lose control of the inferior, while doing an instructi
 over a thread creation instruction.
 """
 
-from __future__ import print_function
 
 
 import lldb

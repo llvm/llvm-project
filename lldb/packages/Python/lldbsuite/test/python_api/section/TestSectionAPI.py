@@ -2,7 +2,6 @@
 Test SBSection APIs.
 """
 
-from __future__ import print_function
 
 
 from lldbsuite.test.decorators import *

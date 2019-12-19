@@ -11,7 +11,6 @@ within the LLDB test suite.
 Tests the process_control module.
 """
 
-from __future__ import print_function
 
 # System imports.
 import os

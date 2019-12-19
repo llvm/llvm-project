@@ -2,7 +2,6 @@
 Test that template instaniations of std::vector<long> and <short> in the same module have the correct types.
 """
 
-from __future__ import print_function
 
 
 import lldb

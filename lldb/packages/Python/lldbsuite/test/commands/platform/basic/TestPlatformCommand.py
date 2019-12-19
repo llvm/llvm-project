@@ -2,7 +2,6 @@
 Test some lldb platform commands.
 """
 
-from __future__ import print_function
 
 
 import lldb

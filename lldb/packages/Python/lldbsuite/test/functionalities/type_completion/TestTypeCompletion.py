@@ -2,7 +2,6 @@
 Check that types only get completed when necessary.
 """
 
-from __future__ import print_function
 
 
 import lldb
