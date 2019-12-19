@@ -16,11 +16,13 @@
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMCInstLower.h"
 #include "TargetInfo/SystemZTargetInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/TargetRegistry.h"
 
@@ -553,6 +555,16 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
 void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
                                          SystemZMCInstLower &Lower) {
   MCContext &Ctx = MF->getContext();
+  if (MF->getFunction().hasFnAttribute("mrecord-mcount")) {
+    MCSymbol *DotSym = OutContext.createTempSymbol();
+    OutStreamer->PushSection();
+    OutStreamer->SwitchSection(
+        Ctx.getELFSection("__mcount_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
+    OutStreamer->EmitSymbolValue(DotSym, 8);
+    OutStreamer->PopSection();
+    OutStreamer->EmitLabel(DotSym);
+  }
+
   if (MF->getFunction().hasFnAttribute("mnop-mcount")) {
     EmitNop(Ctx, *OutStreamer, 6, getSubtargetInfo());
     return;
