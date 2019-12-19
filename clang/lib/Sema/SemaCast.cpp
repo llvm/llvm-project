@@ -1316,10 +1316,6 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
   // Because we try the reference downcast before this function, from now on
   // this is the only cast possibility, so we issue an error if we fail now.
   // FIXME: Should allow casting away constness if CStyle.
-  bool DerivedToBase;
-  bool ObjCConversion;
-  bool ObjCLifetimeConversion;
-  bool FunctionConversion;
   QualType FromType = SrcExpr->getType();
   QualType ToType = R->getPointeeType();
   if (CStyle) {
@@ -1327,9 +1323,9 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
     ToType = ToType.getUnqualifiedType();
   }
 
+  Sema::ReferenceConversions RefConv;
   Sema::ReferenceCompareResult RefResult = Self.CompareReferenceRelationship(
-      SrcExpr->getBeginLoc(), ToType, FromType, DerivedToBase, ObjCConversion,
-      ObjCLifetimeConversion, FunctionConversion);
+      SrcExpr->getBeginLoc(), ToType, FromType, &RefConv);
   if (RefResult != Sema::Ref_Compatible) {
     if (CStyle || RefResult == Sema::Ref_Incompatible)
       return TC_NotApplicable;
@@ -1341,7 +1337,7 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
     return TC_Failed;
   }
 
-  if (DerivedToBase) {
+  if (RefConv & Sema::ReferenceConversions::DerivedToBase) {
     Kind = CK_DerivedToBase;
     CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                        /*DetectVirtual=*/true);
