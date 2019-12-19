@@ -22,7 +22,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ClangASTImporter.h"
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
+#include "lldb/Symbol/ClangASTMetadata.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
