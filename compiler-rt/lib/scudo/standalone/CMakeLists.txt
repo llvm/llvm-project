@@ -1,5 +1,7 @@
 add_compiler_rt_component(scudo_standalone)
-add_dependencies(scudo_standalone gwp_asan)
+if (COMPILER_RT_HAS_GWP_ASAN)
+  add_dependencies(scudo_standalone gwp_asan)
+endif()
 
 include_directories(../..)
 
