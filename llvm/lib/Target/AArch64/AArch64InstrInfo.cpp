@@ -1998,6 +1998,9 @@ bool AArch64InstrInfo::getMemOperandWithOffset(const MachineInstr &LdSt,
                                           const MachineOperand *&BaseOp,
                                           int64_t &Offset,
                                           const TargetRegisterInfo *TRI) const {
+  if (!LdSt.mayLoadOrStore())
+    return false;
+
   unsigned Width;
   return getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI);
 }
@@ -2042,9 +2045,8 @@ bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
     Offset = LdSt.getOperand(3).getImm() * Scale;
   }
 
-  assert((BaseOp->isReg() || BaseOp->isFI()) &&
-         "getMemOperandWithOffset only supports base "
-         "operands of type register or frame index.");
+  if (!BaseOp->isReg() && !BaseOp->isFI())
+    return false;
 
   return true;
 }
