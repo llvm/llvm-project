@@ -46,7 +46,6 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD # Hangs on NetBSD as well
-    @no_debug_info_test
     def test_by_pid(self):
         '''
             Tests attaching to a process by process ID.
@@ -62,7 +61,6 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD # Hangs on NetBSD as well
-    @no_debug_info_test
     def test_by_name(self):
         '''
             Tests attaching to a process by process name.
@@ -101,7 +99,6 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipUnlessDarwin
     @skipIfDarwin
     @skipIfNetBSD # Hangs on NetBSD as well
-    @no_debug_info_test
     def test_by_name_waitFor(self):
         '''
             Tests attaching to a process by process name and waiting for the
@@ -119,7 +116,6 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
     @skipIfDarwin
     @skipIfNetBSD # Hangs on NetBSD as well
-    @no_debug_info_test
     def test_commands(self):
         '''
             Tests the "initCommands", "preRunCommands", "stopCommands",

@@ -6,6 +6,8 @@ import vscode
 
 class VSCodeTestCaseBase(TestBase):
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     def create_debug_adaptor(self):
         '''Create the Visual Studio Code debug adaptor'''
         self.assertTrue(os.path.exists(self.lldbVSCodeExec),
