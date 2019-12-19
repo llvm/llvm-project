@@ -981,10 +981,6 @@ void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
 
   QualType ArgTy = E->getLHS()->getType();
 
-  // TODO: Handle comparing these types.
-  if (ArgTy->isVectorType())
-    return CGF.ErrorUnsupported(
-        E, "aggregate three-way comparison with vector arguments");
   if (!ArgTy->isIntegralOrEnumerationType() && !ArgTy->isRealFloatingType() &&
       !ArgTy->isNullPtrType() && !ArgTy->isPointerType() &&
       !ArgTy->isMemberPointerType() && !ArgTy->isAnyComplexType()) {
@@ -1022,10 +1018,6 @@ void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
   Value *Select;
   if (ArgTy->isNullPtrType()) {
     Select = EmitCmpRes(CmpInfo.getEqualOrEquiv());
-  } else if (CmpInfo.isEquality()) {
-    Select = Builder.CreateSelect(
-        EmitCmp(CK_Equal), EmitCmpRes(CmpInfo.getEqualOrEquiv()),
-        EmitCmpRes(CmpInfo.getNonequalOrNonequiv()), "sel.eq");
   } else if (!CmpInfo.isPartial()) {
     Value *SelectOne =
         Builder.CreateSelect(EmitCmp(CK_Less), EmitCmpRes(CmpInfo.getLess()),
