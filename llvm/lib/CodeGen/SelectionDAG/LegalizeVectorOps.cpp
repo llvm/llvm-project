@@ -506,6 +506,8 @@ SDValue VectorLegalizer::Promote(SDValue Op) {
     return PromoteINT_TO_FP(Op);
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+  case ISD::STRICT_FP_TO_SINT:
     // Promote the operation by extending the operand.
     return PromoteFP_TO_INT(Op);
   }
@@ -575,6 +577,7 @@ SDValue VectorLegalizer::PromoteINT_TO_FP(SDValue Op) {
 SDValue VectorLegalizer::PromoteFP_TO_INT(SDValue Op) {
   MVT VT = Op.getSimpleValueType();
   MVT NVT = TLI.getTypeToPromoteTo(Op.getOpcode(), VT);
+  bool IsStrict = Op->isStrictFPOpcode();
   assert(NVT.getVectorNumElements() == VT.getVectorNumElements() &&
          "Vectors have different number of elements!");
 
@@ -585,17 +588,35 @@ SDValue VectorLegalizer::PromoteFP_TO_INT(SDValue Op) {
       TLI.isOperationLegalOrCustom(ISD::FP_TO_SINT, NVT))
     NewOpc = ISD::FP_TO_SINT;
 
+  if (NewOpc == ISD::STRICT_FP_TO_UINT &&
+      TLI.isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, NVT))
+    NewOpc = ISD::STRICT_FP_TO_SINT;
+
   SDLoc dl(Op);
-  SDValue Promoted  = DAG.getNode(NewOpc, dl, NVT, Op.getOperand(0));
+  SDValue Promoted, Chain;
+  if (IsStrict) {
+    Promoted = DAG.getNode(NewOpc, dl, {NVT, MVT::Other},
+                           {Op.getOperand(0), Op.getOperand(1)});
+    Chain = Promoted.getValue(1);
+  } else
+    Promoted = DAG.getNode(NewOpc, dl, NVT, Op.getOperand(0));
 
   // Assert that the converted value fits in the original type.  If it doesn't
   // (eg: because the value being converted is too big), then the result of the
   // original operation was undefined anyway, so the assert is still correct.
-  Promoted = DAG.getNode(Op->getOpcode() == ISD::FP_TO_UINT ? ISD::AssertZext
-                                                            : ISD::AssertSext,
-                         dl, NVT, Promoted,
+  if (Op->getOpcode() == ISD::FP_TO_UINT ||
+      Op->getOpcode() == ISD::STRICT_FP_TO_UINT)
+    NewOpc = ISD::AssertZext;
+  else
+    NewOpc = ISD::AssertSext;
+
+  Promoted = DAG.getNode(NewOpc, dl, NVT, Promoted,
                          DAG.getValueType(VT.getScalarType()));
-  return DAG.getNode(ISD::TRUNCATE, dl, VT, Promoted);
+  Promoted = DAG.getNode(ISD::TRUNCATE, dl, VT, Promoted);
+  if (IsStrict)
+    return DAG.getMergeValues({Promoted, Chain}, dl);
+
+  return Promoted;
 }
 
 SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
