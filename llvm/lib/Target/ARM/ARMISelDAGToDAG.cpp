@@ -2636,9 +2636,10 @@ void ARMDAGToDAGISel::SelectMVE_VMLLDAV(SDNode *N, bool Predicated,
 void ARMDAGToDAGISel::SelectMVE_VRMLLDAVH(SDNode *N, bool Predicated,
                                           const uint16_t *OpcodesS,
                                           const uint16_t *OpcodesU) {
-  EVT VecTy = N->getOperand(6).getValueType();
-  assert(VecTy.getVectorElementType().getSizeInBits() == 32 &&
-         "bad vector element size");
+  assert(
+      N->getOperand(6).getValueType().getVectorElementType().getSizeInBits() ==
+          32 &&
+      "bad vector element size");
   SelectBaseMVE_VMLLDAV(N, Predicated, OpcodesS, OpcodesU, 1, 0);
 }
 
