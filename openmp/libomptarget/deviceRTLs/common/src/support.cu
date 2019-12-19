@@ -98,6 +98,14 @@ DEVICE bool checkRuntimeInitialized(kmp_Ident *loc) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+DEVICE int GetThreadIdInBlock() { return threadIdx.x; }
+
+DEVICE int GetBlockIdInKernel() { return blockIdx.x; }
+
+DEVICE int GetNumberOfBlocksInKernel() { return gridDim.x; }
+
+DEVICE int GetNumberOfThreadsInBlock() { return blockDim.x; }
+
 DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 
 DEVICE unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
