@@ -5,7 +5,7 @@
 ;
 ; Test the llvm-locstats output.
 ; LOCSTATS: 0% 0 0%
-; LOCSTATS: [1%,10%) 0 0%
+; LOCSTATS: (0%,10%) 0 0%
 ; LOCSTATS: [10%,20%) 0 0%
 ; LOCSTATS: [20%,30%) 1 11%
 ; LOCSTATS: [30%,40%) 0 0%
