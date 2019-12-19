@@ -1,4 +1,4 @@
-//===- llvm/DebugInfo/DWARF/DWARFOptDeclContext.cpp -----------------------===//
+//===- tools/dsymutil/DeclContext.cpp - Declaration context ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/DWARF/DWARFOptDeclContext.h"
+#include "DeclContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 
 namespace llvm {
+namespace dsymutil {
 
 /// Set the last DIE/CU a context was seen in and, possibly invalidate the
 /// context if it is ambiguous.
@@ -205,5 +206,5 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
 
   return PointerIntPair<DeclContext *, 1>(*ContextIter);
 }
-
+} // namespace dsymutil
 } // namespace llvm
