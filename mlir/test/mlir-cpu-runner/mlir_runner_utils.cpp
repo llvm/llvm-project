@@ -29,22 +29,38 @@ print_memref_vector_4x4xf32(StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
   impl::printMemRef(*M);
 }
 
+#define MEMREF_CASE(TYPE, RANK)                                                \
+  case RANK:                                                                   \
+    impl::printMemRef(*(static_cast<StridedMemRefType<TYPE, RANK> *>(ptr)));   \
+    break
+
+extern "C" void print_memref_i8(UnrankedMemRefType<int8_t> *M) {
+  printUnrankedMemRefMetaData(std::cout, *M);
+  int rank = M->rank;
+  void *ptr = M->descriptor;
+
+  switch (rank) {
+    MEMREF_CASE(int8_t, 0);
+    MEMREF_CASE(int8_t, 1);
+    MEMREF_CASE(int8_t, 2);
+    MEMREF_CASE(int8_t, 3);
+    MEMREF_CASE(int8_t, 4);
+  default:
+    assert(0 && "Unsupported rank to print");
+  }
+}
+
 extern "C" void print_memref_f32(UnrankedMemRefType<float> *M) {
   printUnrankedMemRefMetaData(std::cout, *M);
   int rank = M->rank;
   void *ptr = M->descriptor;
 
-#define MEMREF_CASE(RANK)                                                      \
-  case RANK:                                                                   \
-    impl::printMemRef(*(static_cast<StridedMemRefType<float, RANK> *>(ptr)));  \
-    break
-
   switch (rank) {
-    MEMREF_CASE(0);
-    MEMREF_CASE(1);
-    MEMREF_CASE(2);
-    MEMREF_CASE(3);
-    MEMREF_CASE(4);
+    MEMREF_CASE(float, 0);
+    MEMREF_CASE(float, 1);
+    MEMREF_CASE(float, 2);
+    MEMREF_CASE(float, 3);
+    MEMREF_CASE(float, 4);
   default:
     assert(0 && "Unsupported rank to print");
   }
