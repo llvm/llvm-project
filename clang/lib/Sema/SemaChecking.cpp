@@ -4642,8 +4642,6 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
-  case AtomicExpr::AO__opencl_atomic_fetch_min:
-  case AtomicExpr::AO__opencl_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__atomic_add_fetch:
@@ -4666,6 +4664,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__atomic_nand_fetch:
   case AtomicExpr::AO__c11_atomic_fetch_min:
   case AtomicExpr::AO__c11_atomic_fetch_max:
+  case AtomicExpr::AO__opencl_atomic_fetch_min:
+  case AtomicExpr::AO__opencl_atomic_fetch_max:
   case AtomicExpr::AO__atomic_min_fetch:
   case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__atomic_fetch_min:
