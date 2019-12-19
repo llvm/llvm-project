@@ -248,19 +248,19 @@ define <2 x float> @PR32872(<2 x float> %x) {
   ret <2 x float> %tmp4
 }
 
-define <4 x float> @splat_constant(<4 x float> %x) {
-; CHECK-LABEL: @splat_constant(
-; CHECK-NEXT:    [[INS3:%.*]] = insertelement <4 x float> [[X:%.*]], float 4.200000e+01, i32 3
-; CHECK-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x float> [[INS3]], <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    ret <4 x float> [[SPLAT3]]
+define <5 x i8> @splat_inserted_constant(<4 x i8> %x) {
+; CHECK-LABEL: @splat_inserted_constant(
+; CHECK-NEXT:    [[INS3:%.*]] = insertelement <4 x i8> [[X:%.*]], i8 42, i64 3
+; CHECK-NEXT:    [[SPLAT5:%.*]] = shufflevector <4 x i8> [[INS3]], <4 x i8> undef, <5 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    ret <5 x i8> [[SPLAT5]]
 ;
-  %ins3 = insertelement <4 x float> %x, float 42.0, i32 3
-  %splat3 = shufflevector <4 x float> %ins3, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-  ret <4 x float> %splat3
+  %ins3 = insertelement <4 x i8> %x, i8 42, i64 3
+  %splat5 = shufflevector <4 x i8> %ins3, <4 x i8> undef, <5 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <5 x i8> %splat5
 }
 
-define <4 x float> @splat_constant_undef_elt(<4 x float> %x) {
-; CHECK-LABEL: @splat_constant_undef_elt(
+define <4 x float> @splat_inserted_constant_undef_elt(<4 x float> %x) {
+; CHECK-LABEL: @splat_inserted_constant_undef_elt(
 ; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> [[X:%.*]], float 1.200000e+01, i32 1
 ; CHECK-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x float> [[INS1]], <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 undef, i32 1>
 ; CHECK-NEXT:    ret <4 x float> [[SPLAT1]]
@@ -268,4 +268,15 @@ define <4 x float> @splat_constant_undef_elt(<4 x float> %x) {
   %ins1 = insertelement <4 x float> %x, float 12.0, i32 1
   %splat1 = shufflevector <4 x float> %ins1, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 undef, i32 1>
   ret <4 x float> %splat1
+}
+
+define <2 x i8> @splat_inserted_constant_not_canonical(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @splat_inserted_constant_not_canonical(
+; CHECK-NEXT:    [[INS2:%.*]] = insertelement <3 x i8> [[X:%.*]], i8 23, i7 2
+; CHECK-NEXT:    [[SPLAT2:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> [[INS2]], <2 x i32> <i32 undef, i32 5>
+; CHECK-NEXT:    ret <2 x i8> [[SPLAT2]]
+;
+  %ins2 = insertelement <3 x i8> %x, i8 23, i7 2
+  %splat2 = shufflevector <3 x i8> %y, <3 x i8> %ins2, <2 x i32> <i32 undef, i32 5>
+  ret <2 x i8> %splat2
 }
