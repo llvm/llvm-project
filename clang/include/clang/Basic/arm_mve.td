@@ -606,6 +606,47 @@ let params = T.Int in {
   }
 }
 
+let params = T.Int in {
+  def vqshlq_n: Intrinsic<Vector, (args Vector:$v, imm_0toNm1:$sh),
+       (IRInt<"vqshl_imm", [Vector]> $v, $sh, (unsignedflag Scalar))>;
+  def vqshlq_m_n: Intrinsic<Vector, (args Vector:$inactive, Vector:$v,
+                                          imm_0toNm1:$sh, Predicate:$pred),
+       (IRInt<"vqshl_imm_predicated", [Vector, Predicate]>
+            $v, $sh, (unsignedflag Scalar), $pred, $inactive)>;
+
+  let pnt = PNT_NType in {
+    def vrshrq_n: Intrinsic<Vector, (args Vector:$v, imm_1toN:$sh),
+         (IRInt<"vrshr_imm", [Vector]> $v, $sh, (unsignedflag Scalar))>;
+    defm vrshrq: IntrinsicMX<Vector, (args Vector:$v, imm_1toN:$sh,
+                                           Predicate:$pred),
+         (IRInt<"vrshr_imm_predicated", [Vector, Predicate]>
+              $v, $sh, (unsignedflag Scalar), $pred, $inactive), "_n">;
+  }
+}
+
+let params = T.Signed, pnt = PNT_NType in {
+  def vqshluq_n: Intrinsic<UVector, (args Vector:$v, imm_0toNm1:$sh),
+       (IRInt<"vqshlu_imm", [Vector]> $v, $sh)>;
+  def vqshluq_m_n: Intrinsic<UVector, (args UVector:$inactive, Vector:$v,
+                                            imm_0toNm1:$sh, Predicate:$pred),
+       (IRInt<"vqshlu_imm_predicated", [Vector, Predicate]>
+            $v, $sh, $pred, $inactive)>;
+}
+
+multiclass vshll_imm<int top> {
+  let params = !listconcat(T.Int8, T.Int16), pnt = PNT_NType in {
+    def _n: Intrinsic<DblVector, (args Vector:$v, imm_1toN:$sh),
+        (IRInt<"vshll_imm", [DblVector, Vector]>
+            $v, $sh, (unsignedflag Scalar), top)>;
+    defm "": IntrinsicMX<DblVector, (args Vector:$v, imm_1toN:$sh,
+                                          Predicate:$pred),
+        (IRInt<"vshll_imm_predicated", [DblVector, Vector, Predicate]>
+            $v, $sh, (unsignedflag Scalar), top, $pred, $inactive), "_n">;
+  }
+}
+defm vshllbq : vshll_imm<0>;
+defm vshlltq : vshll_imm<1>;
+
 // Base class for the scalar shift intrinsics.
 class ScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
   Intrinsic<argtype, !con((args argtype:$value), shiftCountArg), shiftCodeGen> {
