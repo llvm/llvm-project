@@ -20,7 +20,7 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/raw_ostream.h"
 
-#ifndef LLDB_DISABLE_POSIX
+#if LLDB_ENABLE_POSIX
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
@@ -273,7 +273,7 @@ Status TCPSocket::Accept(Socket *&conn_socket) {
   // Loop until we are happy with our connection
   while (!accept_connection) {
     accept_loop.Run();
-    
+
     if (error.Fail())
         return error;
 
