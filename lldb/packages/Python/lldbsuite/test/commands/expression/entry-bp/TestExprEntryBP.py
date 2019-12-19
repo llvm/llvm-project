@@ -30,5 +30,3 @@ class ExprEntryBPTestCase(TestBase):
         self.assertTrue(result.IsValid(), "Can't evaluate expression")
         self.assertEqual(8, result.GetValueAsSigned())
 
-    def setUp(self):
-        TestBase.setUp(self)

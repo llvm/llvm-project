@@ -22,10 +22,6 @@ class TestHistoryRecall(TestBase):
         """Test the !N and !-N functionality of the command interpreter."""
         self.sample_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def sample_test(self):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()

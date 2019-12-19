@@ -14,10 +14,6 @@ class ProcessIOTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def setup_test(self):
         # Get the full path to our executable to be debugged.
         self.exe = self.getBuildArtifact("process_io")

@@ -23,10 +23,6 @@ class TestFindTypesOnStructType(TestBase):
         self.build()
         self.do_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def do_test(self):
         """Make sure FindTypes actually finds 'struct typename' not just 'typename'."""
         exe = self.getBuildArtifact("a.out")

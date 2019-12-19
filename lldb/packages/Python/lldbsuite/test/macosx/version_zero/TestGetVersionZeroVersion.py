@@ -24,10 +24,6 @@ class TestGetVersionForZero(TestBase):
         self.yaml2obj("libDylib.dylib.yaml", self.getBuildArtifact("libDylib.dylib"))
         self.do_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def do_test(self):
         lib_name = "libDylib.dylib"
         target = lldbutil.run_to_breakpoint_make_target(self, exe_name=lib_name)

@@ -20,10 +20,6 @@ class FrameDisassembleTestCase(TestBase):
         self.build()
         self.frame_disassemble_test()
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     def frame_disassemble_test(self):
         """Sample test to ensure SBFrame::Disassemble produces SOME output"""
         exe = self.getBuildArtifact("a.out")

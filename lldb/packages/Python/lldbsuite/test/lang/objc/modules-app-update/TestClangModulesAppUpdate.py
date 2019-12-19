@@ -12,9 +12,6 @@ from lldbsuite.test import lldbutil
 class TestClangModuleAppUpdate(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipUnlessDarwin
     @skipIf(debug_info=no_match(["gmodules"]))
     def test_rebuild_app_modules_untouched(self):
