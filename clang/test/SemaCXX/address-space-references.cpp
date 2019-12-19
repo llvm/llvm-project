@@ -3,10 +3,10 @@
 typedef int __attribute__((address_space(1))) int_1;
 typedef int __attribute__((address_space(2))) int_2;
 
-void f0(int_1 &); // expected-note{{candidate function not viable: address space mismatch in 1st argument ('int'), parameter type must be 'int_1 &' (aka '__attribute__((address_space(1))) int &')}} \
-// expected-note{{candidate function not viable: address space mismatch in 1st argument ('int_2' (aka '__attribute__((address_space(2))) int')), parameter type must be 'int_1 &' (aka '__attribute__((address_space(1))) int &')}}
-void f0(const int_1 &); // expected-note{{candidate function not viable: address space mismatch in 1st argument ('int'), parameter type must be 'const int_1 &' (aka 'const __attribute__((address_space(1))) int &')}} \
-// expected-note{{candidate function not viable: address space mismatch in 1st argument ('int_2' (aka '__attribute__((address_space(2))) int')), parameter type must be 'const int_1 &' (aka 'const __attribute__((address_space(1))) int &')}}
+void f0(int_1 &);       // expected-note{{candidate function not viable: cannot bind reference in generic address space to object in address space '1' in 1st argument}} \
+// expected-note{{candidate function not viable: cannot bind reference in address space '2' to object in address space '1' in 1st argument}}
+void f0(const int_1 &); // expected-note{{candidate function not viable: cannot bind reference in generic address space to object in address space '1' in 1st argument}} \
+// expected-note{{candidate function not viable: cannot bind reference in address space '2' to object in address space '1' in 1st argument}}
 
 void test_f0() {
   int i;
