@@ -35,6 +35,14 @@ clang_tablegen(TypeNodes.inc -gen-clang-type-nodes
   SOURCE ../Basic/TypeNodes.td
   TARGET ClangTypeNodes)
 
+clang_tablegen(AbstractBasicReader.inc -gen-clang-basic-reader
+  SOURCE PropertiesBase.td
+  TARGET ClangAbstractBasicReader)
+
+clang_tablegen(AbstractBasicWriter.inc -gen-clang-basic-writer
+  SOURCE PropertiesBase.td
+  TARGET ClangAbstractBasicWriter)
+
 clang_tablegen(CommentNodes.inc -gen-clang-comment-nodes
   SOURCE ../Basic/CommentNodes.td
   TARGET ClangCommentNodes)
