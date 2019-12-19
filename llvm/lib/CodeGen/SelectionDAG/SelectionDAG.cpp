@@ -5735,7 +5735,14 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
 SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, int64_t Offset,
                                            const SDLoc &DL) {
   EVT VT = Base.getValueType();
-  return getNode(ISD::ADD, DL, VT, Base, getConstant(Offset, DL, VT));
+  return getMemBasePlusOffset(Base, getConstant(Offset, DL, VT), DL);
+}
+
+SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
+                                           const SDLoc &DL) {
+  assert(Offset.getValueType().isInteger());
+  EVT BasePtrVT = Ptr.getValueType();
+  return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset);
 }
 
 /// Returns true if memcpy source is constant data.
