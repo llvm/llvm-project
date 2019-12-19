@@ -12,19 +12,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "common/omptarget.h"
-
-// Timer precision is 1ns
-#define TIMER_PRECISION ((double)1E-9)
+#include "target_impl.h"
 
 EXTERN double omp_get_wtick(void) {
-  PRINT(LD_IO, "omp_get_wtick() returns %g\n", TIMER_PRECISION);
-  return TIMER_PRECISION;
+  double rc = __target_impl_get_wtick();
+  PRINT(LD_IO, "omp_get_wtick() returns %g\n", rc);
+  return rc;
 }
 
 EXTERN double omp_get_wtime(void) {
-  unsigned long long nsecs;
-  asm("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
-  double rc = (double)nsecs * TIMER_PRECISION;
+  double rc = __target_impl_get_wtime();
   PRINT(LD_IO, "call omp_get_wtime() returns %g\n", rc);
   return rc;
 }
