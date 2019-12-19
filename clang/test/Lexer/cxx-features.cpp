@@ -66,6 +66,8 @@
 #error "wrong value for __cpp_impl_three_way_comparison"
 #endif
 
+// init_captures checked below
+
 // --- C++17 features ---
 
 #if check(hex_float, 0, 0, 0, 201603, 201603)
@@ -170,7 +172,7 @@
 #error "wrong value for __cpp_digit_separators"
 #endif
 
-#if check(init_captures, 0, 0, 201304, 201304, 201304)
+#if check(init_captures, 0, 0, 201304, 201304, 201803)
 #error "wrong value for __cpp_init_captures"
 #endif
 
