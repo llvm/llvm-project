@@ -1,25 +1,20 @@
 clang_tablegen(Attrs.inc -gen-clang-attr-classes
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrClasses)
 
 clang_tablegen(AttrImpl.inc -gen-clang-attr-impl
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrImpl)
 
 clang_tablegen(AttrTextNodeDump.inc -gen-clang-attr-text-node-dump
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrTextDump)
 
 clang_tablegen(AttrNodeTraverse.inc -gen-clang-attr-node-traverse
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrTraverse)
 
 clang_tablegen(AttrVisitor.inc -gen-clang-attr-ast-visitor
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrVisitor)
 
@@ -30,6 +25,26 @@ clang_tablegen(StmtNodes.inc -gen-clang-stmt-nodes
 clang_tablegen(DeclNodes.inc -gen-clang-decl-nodes
   SOURCE ../Basic/DeclNodes.td
   TARGET ClangDeclNodes)
+
+clang_tablegen(TypeNodes.inc -gen-clang-type-nodes
+  SOURCE ../Basic/TypeNodes.td
+  TARGET ClangTypeNodes)
+
+clang_tablegen(AbstractBasicReader.inc -gen-clang-basic-reader
+  SOURCE PropertiesBase.td
+  TARGET ClangAbstractBasicReader)
+
+clang_tablegen(AbstractBasicWriter.inc -gen-clang-basic-writer
+  SOURCE PropertiesBase.td
+  TARGET ClangAbstractBasicWriter)
+
+clang_tablegen(AbstractTypeReader.inc -gen-clang-type-reader
+  SOURCE TypeProperties.td
+  TARGET ClangAbstractTypeReader)
+
+clang_tablegen(AbstractTypeWriter.inc -gen-clang-type-writer
+  SOURCE TypeProperties.td
+  TARGET ClangAbstractTypeWriter)
 
 clang_tablegen(CommentNodes.inc -gen-clang-comment-nodes
   SOURCE ../Basic/CommentNodes.td

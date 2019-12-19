@@ -165,3 +165,13 @@ namespace DependentMemberExpr {
   static_assert(A<int>().f() == 1); // expected-error {{static_assert failed}}
 #endif
 }
+
+namespace DependentTemplateName {
+  struct HasMember {
+    template <class T> struct Member;
+  };
+
+  void test() {
+    getWithIdentifier<HasMember>();
+  }
+}

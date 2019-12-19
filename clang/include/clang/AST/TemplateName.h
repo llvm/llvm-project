@@ -119,6 +119,10 @@ public:
 
   iterator begin() const { return getStorage(); }
   iterator end() const { return getStorage() + size(); }
+
+  llvm::ArrayRef<NamedDecl*> decls() const {
+    return llvm::makeArrayRef(begin(), end());
+  }
 };
 
 /// A structure for storing an already-substituted template template

@@ -297,7 +297,7 @@ QualType QualType::getSingleStepDesugaredTypeImpl(QualType type,
 #define TYPE(CLASS, BASE) \
   static_assert(!std::is_polymorphic<CLASS##Type>::value, \
                 #CLASS "Type should not be polymorphic!");
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
 QualType Type::getLocallyUnqualifiedSingleStepDesugaredType() const {
   switch (getTypeClass()) {
@@ -308,7 +308,7 @@ QualType Type::getLocallyUnqualifiedSingleStepDesugaredType() const {
     if (!ty->isSugared()) return QualType(ty, 0); \
     return ty->desugar(); \
   }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
   }
   llvm_unreachable("bad type kind!");
 }
@@ -329,7 +329,7 @@ SplitQualType QualType::getSplitDesugaredType(QualType T) {
       Cur = Ty->desugar(); \
       break; \
     }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     }
   }
 }
@@ -357,7 +357,7 @@ SplitQualType QualType::getSplitUnqualifiedTypeImpl(QualType type) {
       next = ty->desugar(); \
       break; \
     }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     }
 
     // Otherwise, split the underlying type.  If that yields qualifiers,
@@ -396,7 +396,7 @@ template<typename T> static const T *getAsSugar(const Type *Cur) {
       Cur = Ty->desugar().getTypePtr(); \
       break; \
     }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     }
   }
 }
@@ -429,7 +429,7 @@ const Type *Type::getUnqualifiedDesugaredType() const {
       Cur = Ty->desugar().getTypePtr(); \
       break; \
     }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     }
   }
 }
@@ -753,7 +753,7 @@ public:
 #define TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base) \
   QualType Visit##Class##Type(const Class##Type *T) { return QualType(T, 0); }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
 #define TRIVIAL_TYPE_CLASS(Class) \
   QualType Visit##Class##Type(const Class##Type *T) { return QualType(T, 0); }
@@ -2729,7 +2729,7 @@ const char *Type::getTypeClassName() const {
   switch (TypeBits.TC) {
 #define ABSTRACT_TYPE(Derived, Base)
 #define TYPE(Derived, Base) case Derived: return #Derived;
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
   }
 
   llvm_unreachable("Invalid type class.");
@@ -3599,13 +3599,13 @@ static CachedProperties computeCachedProperties(const Type *T) {
   switch (T->getTypeClass()) {
 #define TYPE(Class,Base)
 #define NON_CANONICAL_TYPE(Class,Base) case Type::Class:
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     llvm_unreachable("didn't expect a non-canonical type here");
 
 #define TYPE(Class,Base)
 #define DEPENDENT_TYPE(Class,Base) case Type::Class:
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class,Base) case Type::Class:
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     // Treat instantiation-dependent types as external.
     assert(T->isInstantiationDependentType());
     return CachedProperties(ExternalLinkage, false);
@@ -3702,13 +3702,13 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
   switch (T->getTypeClass()) {
 #define TYPE(Class,Base)
 #define NON_CANONICAL_TYPE(Class,Base) case Type::Class:
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     llvm_unreachable("didn't expect a non-canonical type here");
 
 #define TYPE(Class,Base)
 #define DEPENDENT_TYPE(Class,Base) case Type::Class:
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class,Base) case Type::Class:
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     // Treat instantiation-dependent types as external.
     assert(T->isInstantiationDependentType());
     return LinkageInfo::external();
@@ -3817,7 +3817,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Class:                             \
     llvm_unreachable("non-canonical type");
 #define TYPE(Class, Parent)
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
   // Pointer types.
   case Type::Pointer:

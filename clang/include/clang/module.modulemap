@@ -20,7 +20,6 @@ module Clang_AST {
   textual header "AST/BuiltinTypes.def"
   textual header "AST/OperationKinds.def"
   textual header "AST/TypeLocNodes.def"
-  textual header "AST/TypeNodes.def"
 
   module * { export * }
 }
@@ -113,7 +112,15 @@ module Clang_Parse { requires cplusplus umbrella "Parse" module * { export * } }
 module Clang_Rewrite { requires cplusplus umbrella "Rewrite/Core" module * { export * } }
 module Clang_RewriteFrontend { requires cplusplus umbrella "Rewrite/Frontend" module * { export * } }
 module Clang_Sema { requires cplusplus umbrella "Sema" module * { export * } }
-module Clang_Serialization { requires cplusplus umbrella "Serialization" module * { export * } }
+
+module Clang_Serialization {
+  requires cplusplus
+  umbrella "Serialization"
+
+  textual header "Serialization/TypeBitCodes.def"
+
+  module * { export * }
+}
 
 module Clang_StaticAnalyzer_Core {
   requires cplusplus

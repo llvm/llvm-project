@@ -66,6 +66,11 @@ enum {
   TypeAlignment = 1 << TypeAlignmentInBits
 };
 
+namespace serialization {
+  template <class T> class AbstractTypeReader;
+  template <class T> class AbstractTypeWriter;
+}
+
 } // namespace clang
 
 namespace llvm {
@@ -126,7 +131,7 @@ using CanQualType = CanQual<Type>;
 
 // Provide forward declarations for all of the *Type classes.
 #define TYPE(Class, Base) class Class##Type;
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
 /// The collection of all-type qualifiers we support.
 /// Clang supports five independent qualifiers:
@@ -1422,10 +1427,9 @@ class alignas(8) Type : public ExtQualsTypeCommonBase {
 public:
   enum TypeClass {
 #define TYPE(Class, Base) Class,
-#define LAST_TYPE(Class) TypeLast = Class,
+#define LAST_TYPE(Class) TypeLast = Class
 #define ABSTRACT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
-    TagFirst = Record, TagLast = Enum
+#include "clang/AST/TypeNodes.inc"
   };
 
 private:
@@ -1818,6 +1822,8 @@ protected:
 public:
   friend class ASTReader;
   friend class ASTWriter;
+  template <class T> friend class serialization::AbstractTypeReader;
+  template <class T> friend class serialization::AbstractTypeWriter;
 
   Type(const Type &) = delete;
   Type(Type &&) = delete;
@@ -2404,7 +2410,7 @@ template <> inline const Class##Type *Type::getAs() const { \
 template <> inline const Class##Type *Type::castAs() const { \
   return cast<Class##Type>(CanonicalType); \
 }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
 /// This class is used for builtin types like 'int'.  Builtin
 /// types are always canonical and have a literal name field.
@@ -3925,19 +3931,9 @@ public:
     EPI.ExtInfo = getExtInfo();
     EPI.Variadic = isVariadic();
     EPI.HasTrailingReturn = hasTrailingReturn();
-    EPI.ExceptionSpec.Type = getExceptionSpecType();
+    EPI.ExceptionSpec = getExceptionSpecInfo();
     EPI.TypeQuals = getMethodQuals();
     EPI.RefQualifier = getRefQualifier();
-    if (EPI.ExceptionSpec.Type == EST_Dynamic) {
-      EPI.ExceptionSpec.Exceptions = exceptions();
-    } else if (isComputedNoexcept(EPI.ExceptionSpec.Type)) {
-      EPI.ExceptionSpec.NoexceptExpr = getNoexceptExpr();
-    } else if (EPI.ExceptionSpec.Type == EST_Uninstantiated) {
-      EPI.ExceptionSpec.SourceDecl = getExceptionSpecDecl();
-      EPI.ExceptionSpec.SourceTemplate = getExceptionSpecTemplate();
-    } else if (EPI.ExceptionSpec.Type == EST_Unevaluated) {
-      EPI.ExceptionSpec.SourceDecl = getExceptionSpecDecl();
-    }
     EPI.ExtParameterInfos = getExtParameterInfosOrNull();
     return EPI;
   }
@@ -3967,6 +3963,23 @@ public:
   /// Return whether this function has an instantiation-dependent exception
   /// spec.
   bool hasInstantiationDependentExceptionSpec() const;
+
+  /// Return all the available information about this type's exception spec.
+  ExceptionSpecInfo getExceptionSpecInfo() const {
+    ExceptionSpecInfo Result;
+    Result.Type = getExceptionSpecType();
+    if (Result.Type == EST_Dynamic) {
+      Result.Exceptions = exceptions();
+    } else if (isComputedNoexcept(Result.Type)) {
+      Result.NoexceptExpr = getNoexceptExpr();
+    } else if (Result.Type == EST_Uninstantiated) {
+      Result.SourceDecl = getExceptionSpecDecl();
+      Result.SourceTemplate = getExceptionSpecTemplate();
+    } else if (Result.Type == EST_Unevaluated) {
+      Result.SourceDecl = getExceptionSpecDecl();
+    }
+    return Result;
+  }
 
   /// Return the number of types in the exception specification.
   unsigned getNumExceptions() const {
@@ -4405,6 +4418,7 @@ public:
 
 class TagType : public Type {
   friend class ASTReader;
+  template <class T> friend class serialization::AbstractTypeReader;
 
   /// Stores the TagDecl associated with this type. The decl may point to any
   /// TagDecl that declares the entity.
@@ -4420,7 +4434,7 @@ public:
   bool isBeingDefined() const;
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() >= TagFirst && T->getTypeClass() <= TagLast;
+    return T->getTypeClass() == Enum || T->getTypeClass() == Record;
   }
 };
 
@@ -5042,6 +5056,7 @@ class InjectedClassNameType : public Type {
   friend class ASTReader; // FIXME: ASTContext::getInjectedClassNameType is not
                           // currently suitable for AST reading, too much
                           // interdependencies.
+  template <class T> friend class serialization::AbstractTypeReader;
 
   CXXRecordDecl *Decl;
 
@@ -5800,6 +5815,7 @@ class ObjCInterfaceType : public ObjCObjectType {
   friend class ASTContext; // ASTContext creates these.
   friend class ASTReader;
   friend class ObjCInterfaceDecl;
+  template <class T> friend class serialization::AbstractTypeReader;
 
   mutable ObjCInterfaceDecl *Decl;
 
