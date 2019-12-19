@@ -193,23 +193,6 @@ define void @test_inreg(i8* inreg %ptr) {
   ret void
 }
 
-; Shouldn't tail call when the OS doesn't support it. Windows supports this,
-; so we should be able to tail call there.
-declare extern_weak void @extern_weak_fn()
-define void @test_extern_weak() {
-  ; DARWIN-LABEL: name: test_extern_weak
-  ; DARWIN: bb.1 (%ir-block.0):
-  ; DARWIN:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN:   BL @extern_weak_fn, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
-  ; DARWIN:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN:   RET_ReallyLR
-  ; WINDOWS-LABEL: name: test_extern_weak
-  ; WINDOWS: bb.1 (%ir-block.0):
-  ; WINDOWS:   TCRETURNdi @extern_weak_fn, 0, csr_aarch64_aapcs, implicit $sp
-  tail call void @extern_weak_fn()
-  ret void
-}
-
 declare fastcc void @fast_fn()
 define void @test_mismatched_caller() {
   ; COMMON-LABEL: name: test_mismatched_caller
