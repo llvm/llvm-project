@@ -207,8 +207,6 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case DefiningSynthesizedFunction:
   case ExceptionSpecEvaluation:
   case ConstraintSubstitution:
-  case ParameterMappingSubstitution:
-  case ConstraintNormalization:
   case RewritingOperatorAsSpaceship:
     return false;
 
@@ -381,22 +379,6 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::ConstraintSubstitution,
           PointOfInstantiation, InstantiationRange, Template, nullptr,
           {}, &DeductionInfo) {}
-
-Sema::InstantiatingTemplate::InstantiatingTemplate(
-    Sema &SemaRef, SourceLocation PointOfInstantiation,
-    ConstraintNormalization, NamedDecl *Template,
-    SourceRange InstantiationRange)
-    : InstantiatingTemplate(
-          SemaRef, CodeSynthesisContext::ConstraintNormalization,
-          PointOfInstantiation, InstantiationRange, Template) {}
-
-Sema::InstantiatingTemplate::InstantiatingTemplate(
-    Sema &SemaRef, SourceLocation PointOfInstantiation,
-    ParameterMappingSubstitution, NamedDecl *Template,
-    SourceRange InstantiationRange)
-    : InstantiatingTemplate(
-          SemaRef, CodeSynthesisContext::ParameterMappingSubstitution,
-          PointOfInstantiation, InstantiationRange, Template) {}
 
 void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
   Ctx.SavedInNonInstantiationSFINAEContext = InNonInstantiationSFINAEContext;
@@ -751,17 +733,6 @@ void Sema::PrintInstantiationStack() {
                    diag::note_constraint_substitution_here)
           << Active->InstantiationRange;
       break;
-    case CodeSynthesisContext::ConstraintNormalization:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_constraint_normalization_here)
-          << cast<NamedDecl>(Active->Entity)->getName()
-          << Active->InstantiationRange;
-      break;
-    case CodeSynthesisContext::ParameterMappingSubstitution:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_parameter_mapping_substitution_here)
-          << Active->InstantiationRange;
-      break;
     }
   }
 }
@@ -786,8 +757,6 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::DefaultFunctionArgumentInstantiation:
     case CodeSynthesisContext::ExceptionSpecInstantiation:
     case CodeSynthesisContext::ConstraintsCheck:
-    case CodeSynthesisContext::ParameterMappingSubstitution:
-    case CodeSynthesisContext::ConstraintNormalization:
       // This is a template instantiation, so there is no SFINAE.
       return None;
 
@@ -2955,17 +2924,6 @@ Sema::SubstStmt(Stmt *S, const MultiLevelTemplateArgumentList &TemplateArgs) {
                                     SourceLocation(),
                                     DeclarationName());
   return Instantiator.TransformStmt(S);
-}
-
-bool Sema::SubstTemplateArguments(
-    ArrayRef<TemplateArgumentLoc> Args,
-    const MultiLevelTemplateArgumentList &TemplateArgs,
-    TemplateArgumentListInfo &Out) {
-  TemplateInstantiator Instantiator(*this, TemplateArgs,
-                                    SourceLocation(),
-                                    DeclarationName());
-  return Instantiator.TransformTemplateArguments(Args.begin(), Args.end(),
-                                                 Out);
 }
 
 ExprResult
