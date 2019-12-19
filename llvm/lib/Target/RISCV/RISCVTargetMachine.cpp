@@ -66,6 +66,9 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
   initAsmInfo();
+
+  // RISC-V supports the MachineOutliner.
+  setMachineOutliner(true);
 }
 
 const RISCVSubtarget *
