@@ -9,17 +9,13 @@
 #include "lldb/Utility/ArchSpec.h"
 
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/NameMatches.h"
-#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Host.h"
 
 using namespace lldb;
 using namespace lldb_private;
