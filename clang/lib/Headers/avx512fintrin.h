@@ -4305,7 +4305,7 @@ _mm512_loadu_si512 (void const *__P)
   struct __loadu_si512 {
     __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
-  return ((struct __loadu_si512*)__P)->__v;
+  return ((const struct __loadu_si512*)__P)->__v;
 }
 
 static __inline __m512i __DEFAULT_FN_ATTRS512
@@ -4314,7 +4314,7 @@ _mm512_loadu_epi32 (void const *__P)
   struct __loadu_epi32 {
     __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
-  return ((struct __loadu_epi32*)__P)->__v;
+  return ((const struct __loadu_epi32*)__P)->__v;
 }
 
 static __inline __m512i __DEFAULT_FN_ATTRS512
@@ -4341,7 +4341,7 @@ _mm512_loadu_epi64 (void const *__P)
   struct __loadu_epi64 {
     __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
-  return ((struct __loadu_epi64*)__P)->__v;
+  return ((const struct __loadu_epi64*)__P)->__v;
 }
 
 static __inline __m512i __DEFAULT_FN_ATTRS512
@@ -4401,7 +4401,7 @@ _mm512_loadu_pd(void const *__p)
   struct __loadu_pd {
     __m512d_u __v;
   } __attribute__((__packed__, __may_alias__));
-  return ((struct __loadu_pd*)__p)->__v;
+  return ((const struct __loadu_pd*)__p)->__v;
 }
 
 static __inline __m512 __DEFAULT_FN_ATTRS512
@@ -4410,13 +4410,13 @@ _mm512_loadu_ps(void const *__p)
   struct __loadu_ps {
     __m512_u __v;
   } __attribute__((__packed__, __may_alias__));
-  return ((struct __loadu_ps*)__p)->__v;
+  return ((const struct __loadu_ps*)__p)->__v;
 }
 
 static __inline __m512 __DEFAULT_FN_ATTRS512
 _mm512_load_ps(void const *__p)
 {
-  return *(__m512*)__p;
+  return *(const __m512*)__p;
 }
 
 static __inline __m512 __DEFAULT_FN_ATTRS512
@@ -4439,7 +4439,7 @@ _mm512_maskz_load_ps(__mmask16 __U, void const *__P)
 static __inline __m512d __DEFAULT_FN_ATTRS512
 _mm512_load_pd(void const *__p)
 {
-  return *(__m512d*)__p;
+  return *(const __m512d*)__p;
 }
 
 static __inline __m512d __DEFAULT_FN_ATTRS512
@@ -4462,19 +4462,19 @@ _mm512_maskz_load_pd(__mmask8 __U, void const *__P)
 static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_load_si512 (void const *__P)
 {
-  return *(__m512i *) __P;
+  return *(const __m512i *) __P;
 }
 
 static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_load_epi32 (void const *__P)
 {
-  return *(__m512i *) __P;
+  return *(const __m512i *) __P;
 }
 
 static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_load_epi64 (void const *__P)
 {
-  return *(__m512i *) __P;
+  return *(const __m512i *) __P;
 }
 
 /* SIMD store ops */
@@ -8724,13 +8724,13 @@ _mm_mask_load_ss (__m128 __W, __mmask8 __U, const float* __A)
                                                 (__v4sf)_mm_setzero_ps(),
                                                 0, 4, 4, 4);
 
-  return (__m128) __builtin_ia32_loadss128_mask ((__v4sf *) __A, src, __U & 1);
+  return (__m128) __builtin_ia32_loadss128_mask ((const __v4sf *) __A, src, __U & 1);
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
 _mm_maskz_load_ss (__mmask8 __U, const float* __A)
 {
-  return (__m128)__builtin_ia32_loadss128_mask ((__v4sf *) __A,
+  return (__m128)__builtin_ia32_loadss128_mask ((const __v4sf *) __A,
                                                 (__v4sf) _mm_setzero_ps(),
                                                 __U & 1);
 }
@@ -8742,13 +8742,13 @@ _mm_mask_load_sd (__m128d __W, __mmask8 __U, const double* __A)
                                                  (__v2df)_mm_setzero_pd(),
                                                  0, 2);
 
-  return (__m128d) __builtin_ia32_loadsd128_mask ((__v2df *) __A, src, __U & 1);
+  return (__m128d) __builtin_ia32_loadsd128_mask ((const __v2df *) __A, src, __U & 1);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS128
 _mm_maskz_load_sd (__mmask8 __U, const double* __A)
 {
-  return (__m128d) __builtin_ia32_loadsd128_mask ((__v2df *) __A,
+  return (__m128d) __builtin_ia32_loadsd128_mask ((const __v2df *) __A,
                                                   (__v2df) _mm_setzero_pd(),
                                                   __U & 1);
 }
