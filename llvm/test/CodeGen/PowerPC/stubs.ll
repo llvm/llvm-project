@@ -6,4 +6,4 @@ entry:
 }
 
 ; CHECK: test1:
-; CHECK: bl __floatditf@PLT
+; CHECK: bl __floatditf

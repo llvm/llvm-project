@@ -9,7 +9,6 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
 #define LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
 
-#include "CompileUnit.h"
 #include "DebugMap.h"
 #include "LinkUtils.h"
 #include "llvm/CodeGen/AccelTable.h"
@@ -17,6 +16,7 @@
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFOptCompileUnit.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"

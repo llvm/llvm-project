@@ -1639,7 +1639,7 @@ bool HCE::replaceInstrExact(const ExtDesc &ED, Register ExtR) {
     return true;
   }
 
-  if ((MI.mayLoad() || MI.mayStore()) && !isStoreImmediate(ExtOpc)) {
+  if (MI.mayLoadOrStore() && !isStoreImmediate(ExtOpc)) {
     // For memory instructions, there is an asymmetry in the addressing
     // modes. Addressing modes allowing extenders can be replaced with
     // addressing modes that use registers, but the order of operands
@@ -1794,7 +1794,7 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
     return true;
   }
 
-  if (MI.mayLoad() || MI.mayStore()) {
+  if (MI.mayLoadOrStore()) {
     unsigned IdxOpc = getRegOffOpcode(ExtOpc);
     assert(IdxOpc && "Expecting indexed opcode");
     MachineInstrBuilder MIB = BuildMI(MBB, At, dl, HII->get(IdxOpc));
@@ -1844,7 +1844,7 @@ bool HCE::replaceInstr(unsigned Idx, Register ExtR, const ExtenderInit &ExtI) {
   // These two addressing modes must be converted into indexed forms
   // regardless of what the initializer looks like.
   bool IsAbs = false, IsAbsSet = false;
-  if (MI.mayLoad() || MI.mayStore()) {
+  if (MI.mayLoadOrStore()) {
     unsigned AM = HII->getAddrMode(MI);
     IsAbs = AM == HexagonII::Absolute;
     IsAbsSet = AM == HexagonII::AbsoluteSet;

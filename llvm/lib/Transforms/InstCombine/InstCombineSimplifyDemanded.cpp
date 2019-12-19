@@ -350,8 +350,36 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     // If the operands are constants, see if we can simplify them.
-    if (ShrinkDemandedConstant(I, 1, DemandedMask) ||
-        ShrinkDemandedConstant(I, 2, DemandedMask))
+    // This is similar to ShrinkDemandedConstant, but for a select we want to
+    // try to keep the selected constants the same as icmp value constants, if
+    // we can. This helps not break apart (or helps put back together)
+    // canonical patterns like min and max.
+    auto CanonicalizeSelectConstant = [](Instruction *I, unsigned OpNo,
+                                         APInt DemandedMask) {
+      const APInt *SelC;
+      if (!match(I->getOperand(OpNo), m_APInt(SelC)))
+        return false;
+
+      // Get the constant out of the ICmp, if there is one.
+      const APInt *CmpC;
+      ICmpInst::Predicate Pred;
+      if (!match(I->getOperand(0), m_c_ICmp(Pred, m_APInt(CmpC), m_Value())) ||
+          CmpC->getBitWidth() != SelC->getBitWidth())
+        return ShrinkDemandedConstant(I, OpNo, DemandedMask);
+
+      // If the constant is already the same as the ICmp, leave it as-is.
+      if (*CmpC == *SelC)
+        return false;
+      // If the constants are not already the same, but can be with the demand
+      // mask, use the constant value from the ICmp.
+      if ((*CmpC & DemandedMask) == (*SelC & DemandedMask)) {
+        I->setOperand(OpNo, ConstantInt::get(I->getType(), *CmpC));
+        return true;
+      }
+      return ShrinkDemandedConstant(I, OpNo, DemandedMask);
+    };
+    if (CanonicalizeSelectConstant(I, 1, DemandedMask) ||
+        CanonicalizeSelectConstant(I, 2, DemandedMask))
       return I;
 
     // Only known if known in both the LHS and RHS.

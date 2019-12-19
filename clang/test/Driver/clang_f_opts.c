@@ -588,3 +588,6 @@
 // CHECK-TRIVIAL-PATTERN-NOT: hasn't been enabled
 // CHECK-TRIVIAL-ZERO-GOOD-NOT: hasn't been enabled
 // CHECK-TRIVIAL-ZERO-BAD: hasn't been enabled
+
+// RUN: %clang -### -S -fno-temp-file %s 2>&1 | FileCheck -check-prefix=CHECK-NO-TEMP-FILE %s
+// CHECK-NO-TEMP-FILE: "-fno-temp-file"

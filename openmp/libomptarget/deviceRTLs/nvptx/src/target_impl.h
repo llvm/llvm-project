@@ -13,6 +13,8 @@
 #define _TARGET_IMPL_H_
 
 #include <cuda.h>
+#include <stdlib.h>
+
 #include "nvptx_interface.h"
 
 #define DEVICE __device__
@@ -203,5 +205,9 @@ EXTERN void __kmpc_impl_destroy_lock(omp_lock_t *lock);
 EXTERN void __kmpc_impl_set_lock(omp_lock_t *lock);
 EXTERN void __kmpc_impl_unset_lock(omp_lock_t *lock);
 EXTERN int __kmpc_impl_test_lock(omp_lock_t *lock);
+
+// Memory
+INLINE void *__kmpc_impl_malloc(size_t x) { return malloc(x); }
+INLINE void __kmpc_impl_free(void *x) { free(x); }
 
 #endif

@@ -1,4 +1,4 @@
-//===- tools/dsymutil/DeclContext.h - Dwarf debug info linker ---*- C++ -*-===//
+//===- llvm/DebugInfo/DWARF/DWARFOptDeclContext.h ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_DSYMUTIL_DECLCONTEXT_H
-#define LLVM_TOOLS_DSYMUTIL_DECLCONTEXT_H
+#ifndef LLVM_DEBUGINFO_DWARF_OPT_DECLCONTEXT_H
+#define LLVM_DEBUGINFO_DWARF_OPT_DECLCONTEXT_H
 
-#include "CompileUnit.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFOptCompileUnit.h"
 #include "llvm/Support/Path.h"
 
 namespace llvm {
-namespace dsymutil {
 
 struct DeclMapInfo;
 
@@ -165,7 +164,6 @@ struct DeclMapInfo : private DenseMapInfo<DeclContext *> {
   }
 };
 
-} // end namespace dsymutil
 } // end namespace llvm
 
-#endif // LLVM_TOOLS_DSYMUTIL_DECLCONTEXT_H
+#endif // LLVM_DEBUGINFO_DWARF_OPT_DECLCONTEXT_H

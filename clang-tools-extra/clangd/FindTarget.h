@@ -182,6 +182,18 @@ inline DeclRelationSet operator&(DeclRelation L, DeclRelation R) {
 inline DeclRelationSet operator~(DeclRelation R) { return ~DeclRelationSet(R); }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, DeclRelationSet);
 
+/// Find declarations explicitly referenced in the source code defined by \p N.
+/// For templates, will prefer to return a template instantiation whenever
+/// possible. However, can also return a template pattern if the specialization
+/// cannot be picked, e.g. in dependent code or when there is no corresponding
+/// Decl for a template instantitation, e.g. for templated using decls:
+///    template <class T> using Ptr = T*;
+///    Ptr<int> x;
+///    ^~~ there is no Decl for 'Ptr<int>', so we return the template pattern.
+/// \p Mask should not contain TemplatePattern or TemplateInstantiation.
+llvm::SmallVector<const NamedDecl *, 1>
+explicitReferenceTargets(ast_type_traits::DynTypedNode N,
+                         DeclRelationSet Mask = {});
 } // namespace clangd
 } // namespace clang
 

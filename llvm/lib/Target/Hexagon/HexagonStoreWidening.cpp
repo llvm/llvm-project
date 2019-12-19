@@ -271,7 +271,7 @@ void HexagonStoreWidening::createStoreGroup(MachineInstr *BaseStore,
     if (MI->isCall() || MI->hasUnmodeledSideEffects())
       return;
 
-    if (MI->mayLoad() || MI->mayStore()) {
+    if (MI->mayLoadOrStore()) {
       if (MI->hasOrderedMemoryRef() || instrAliased(Group, MI))
         return;
       Other.push_back(MI);

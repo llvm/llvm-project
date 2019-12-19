@@ -295,8 +295,8 @@ let Predicates = [HasSVE] in {
 
   def PTEST_PP : sve_int_ptest<0b010000, "ptest">;
   def PFALSE   : sve_int_pfalse<0b000000, "pfalse">;
-  defm PFIRST  : sve_int_pfirst<0b00000, "pfirst">;
-  defm PNEXT   : sve_int_pnext<0b00110, "pnext">;
+  defm PFIRST  : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
+  defm PNEXT   : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
 
   defm AND_PPzPP   : sve_int_pred_log<0b0000, "and", int_aarch64_sve_and>;
   defm BIC_PPzPP   : sve_int_pred_log<0b0001, "bic", int_aarch64_sve_bic>;

@@ -1004,7 +1004,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         // zone are okay, despite the fact that we don't have a good way
         // for validating all of the usages of the calculation.
 #ifndef NDEBUG
-        bool TouchesMemory = I.mayLoad() || I.mayStore();
+        bool TouchesMemory = I.mayLoadOrStore();
         // If we *don't* protect the user from escaped allocas, don't bother
         // validating the instructions.
         if (!I.isDebugInstr() && TouchesMemory && ProtectFromEscapedAllocas) {

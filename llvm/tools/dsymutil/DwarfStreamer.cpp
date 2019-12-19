@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfStreamer.h"
-#include "CompileUnit.h"
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFOptCompileUnit.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.inc"
 #include "llvm/Support/LEB128.h"

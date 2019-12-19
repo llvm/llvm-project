@@ -9,6 +9,7 @@
 #include "MCTargetDesc/RISCVFixupKinds.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -54,7 +55,8 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   if (IsPCRel) {
     switch (Kind) {
     default:
-      llvm_unreachable("invalid fixup kind!");
+      Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+      return ELF::R_RISCV_NONE;
     case FK_Data_4:
     case FK_PCRel_4:
       return ELF::R_RISCV_32_PCREL;
@@ -87,7 +89,14 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
 
   switch (Kind) {
   default:
-    llvm_unreachable("invalid fixup kind!");
+    Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+    return ELF::R_RISCV_NONE;
+  case FK_Data_1:
+    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    return ELF::R_RISCV_NONE;
+  case FK_Data_2:
+    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    return ELF::R_RISCV_NONE;
   case FK_Data_4:
     if (Expr->getKind() == MCExpr::Target &&
         cast<RISCVMCExpr>(Expr)->getKind() == RISCVMCExpr::VK_RISCV_32_PCREL)

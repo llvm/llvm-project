@@ -287,9 +287,8 @@ public:
           ASTContextMetadataSP(new ASTContextMetadata(dst_ctx));
       m_metadata_map[dst_ctx] = context_md;
       return context_md;
-    } else {
-      return context_md_iter->second;
     }
+    return context_md_iter->second;
   }
 
   ASTContextMetadataSP MaybeGetContextMetadata(clang::ASTContext *dst_ctx) {
@@ -297,8 +296,7 @@ public:
 
     if (context_md_iter != m_metadata_map.end())
       return context_md_iter->second;
-    else
-      return ASTContextMetadataSP();
+    return ASTContextMetadataSP();
   }
 
   ImporterDelegateSP GetDelegate(clang::ASTContext *dst_ctx,
@@ -313,9 +311,8 @@ public:
           ImporterDelegateSP(new ASTImporterDelegate(*this, dst_ctx, src_ctx));
       delegates[src_ctx] = delegate;
       return delegate;
-    } else {
-      return delegate_iter->second;
     }
+    return delegate_iter->second;
   }
 
 public:
