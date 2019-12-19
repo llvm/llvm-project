@@ -88,7 +88,7 @@ define i32 @weighted_select1(i32 %a, i32 %b) {
 ; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
-  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !0
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !15
   ret i32 %sel
 }
 
@@ -104,7 +104,7 @@ define i32 @weighted_select2(i32 %a, i32 %b) {
 ; CHECK-NEXT:  .LBB6_2: # %select.end
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
-  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !1
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !16
   ret i32 %sel
 }
 
@@ -124,7 +124,7 @@ define i32 @weighted_select3(i32 %a, i32 %b) {
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
-  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !2
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !17
   ret i32 %sel
 }
 
@@ -137,12 +137,51 @@ define i32 @unweighted_select(i32 %a, i32 %b) {
 ; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
-  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !3
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !18
   ret i32 %sel
 }
 
-!0 = !{!"branch_weights", i32 1, i32 99}
-!1 = !{!"branch_weights", i32 1, i32 100}
-!2 = !{!"branch_weights", i32 100, i32 1}
-!3 = !{!"branch_weights", i32 0, i32 0}
+define i32 @weighted_select_optsize(i32 %a, i32 %b) optsize {
+; CHECK-LABEL: weighted_select_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnel %edi, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ne i32 %a, 0
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !16
+  ret i32 %sel
+}
 
+define i32 @weighted_select_pgso(i32 %a, i32 %b) !prof !14 {
+; CHECK-LABEL: weighted_select_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnel %edi, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ne i32 %a, 0
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !16
+  ret i32 %sel
+}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}
+!15 = !{!"branch_weights", i32 1, i32 99}
+!16 = !{!"branch_weights", i32 1, i32 100}
+!17 = !{!"branch_weights", i32 100, i32 1}
+!18 = !{!"branch_weights", i32 0, i32 0}

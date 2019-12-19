@@ -240,3 +240,140 @@ define i64 @xor4_optsize(i64 %x) optsize {
   %a = xor i64 %x, 9223372036854775808 ; toggle bit 63
   ret i64 %a
 }
+
+define i64 @and1_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: and1_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btrq $31, %rax
+; CHECK-NEXT:    retq
+  %a = and i64 %x, 18446744071562067967 ; clear bit 31
+  ret i64 %a
+}
+
+define i64 @and2_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: and2_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btrq $32, %rax
+; CHECK-NEXT:    retq
+  %a = and i64 %x, 18446744069414584319 ; clear bit 32
+  ret i64 %a
+}
+
+define i64 @and3_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: and3_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btrq $62, %rax
+; CHECK-NEXT:    retq
+  %a = and i64 %x, 13835058055282163711 ; clear bit 62
+  ret i64 %a
+}
+
+define i64 @and4_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: and4_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btrq $63, %rax
+; CHECK-NEXT:    retq
+  %a = and i64 %x, 9223372036854775807 ; clear bit 63
+  ret i64 %a
+}
+
+define i64 @or1_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: or1_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btsq $31, %rax
+; CHECK-NEXT:    retq
+  %a = or i64 %x, 2147483648 ; set bit 31
+  ret i64 %a
+}
+
+define i64 @or2_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: or2_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btsq $32, %rax
+; CHECK-NEXT:    retq
+  %a = or i64 %x, 4294967296 ; set bit 32
+  ret i64 %a
+}
+
+define i64 @or3_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: or3_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btsq $62, %rax
+; CHECK-NEXT:    retq
+  %a = or i64 %x, 4611686018427387904 ; set bit 62
+  ret i64 %a
+}
+
+define i64 @or4_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: or4_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btsq $63, %rax
+; CHECK-NEXT:    retq
+  %a = or i64 %x, 9223372036854775808 ; set bit 63
+  ret i64 %a
+}
+
+define i64 @xor1_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: xor1_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btcq $31, %rax
+; CHECK-NEXT:    retq
+  %a = xor i64 %x, 2147483648 ; toggle bit 31
+  ret i64 %a
+}
+
+define i64 @xor2_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: xor2_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btcq $32, %rax
+; CHECK-NEXT:    retq
+  %a = xor i64 %x, 4294967296 ; toggle bit 32
+  ret i64 %a
+}
+
+define i64 @xor3_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: xor3_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btcq $62, %rax
+; CHECK-NEXT:    retq
+  %a = xor i64 %x, 4611686018427387904 ; toggle bit 62
+  ret i64 %a
+}
+
+define i64 @xor4_pgso(i64 %x) !prof !14 {
+; CHECK-LABEL: xor4_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btcq $63, %rax
+; CHECK-NEXT:    retq
+  %a = xor i64 %x, 9223372036854775808 ; toggle bit 63
+  ret i64 %a
+}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}
