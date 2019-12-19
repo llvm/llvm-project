@@ -2084,34 +2084,34 @@ class DIModule : public DIScope {
 
   static DIModule *getImpl(LLVMContext &Context, DIScope *Scope,
                            StringRef Name, StringRef ConfigurationMacros,
-                           StringRef IncludePath, StringRef ISysRoot,
+                           StringRef IncludePath, StringRef SysRoot,
                            StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, ConfigurationMacros),
                    getCanonicalMDString(Context, IncludePath),
-                   getCanonicalMDString(Context, ISysRoot),
+                   getCanonicalMDString(Context, SysRoot),
                    Storage, ShouldCreate);
   }
   static DIModule *getImpl(LLVMContext &Context, Metadata *Scope,
                            MDString *Name, MDString *ConfigurationMacros,
-                           MDString *IncludePath, MDString *ISysRoot,
+                           MDString *IncludePath, MDString *SysRoot,
                            StorageType Storage, bool ShouldCreate = true);
 
   TempDIModule cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(),
                         getConfigurationMacros(), getIncludePath(),
-                        getISysRoot());
+                        getSysRoot());
   }
 
 public:
   DEFINE_MDNODE_GET(DIModule, (DIScope *Scope, StringRef Name,
                                StringRef ConfigurationMacros, StringRef IncludePath,
-                               StringRef ISysRoot),
-                    (Scope, Name, ConfigurationMacros, IncludePath, ISysRoot))
+                               StringRef SysRoot),
+                    (Scope, Name, ConfigurationMacros, IncludePath, SysRoot))
   DEFINE_MDNODE_GET(DIModule,
                     (Metadata *Scope, MDString *Name, MDString *ConfigurationMacros,
-                     MDString *IncludePath, MDString *ISysRoot),
-                    (Scope, Name, ConfigurationMacros, IncludePath, ISysRoot))
+                     MDString *IncludePath, MDString *SysRoot),
+                    (Scope, Name, ConfigurationMacros, IncludePath, SysRoot))
 
   TempDIModule clone() const { return cloneImpl(); }
 
@@ -2119,13 +2119,13 @@ public:
   StringRef getName() const { return getStringOperand(1); }
   StringRef getConfigurationMacros() const { return getStringOperand(2); }
   StringRef getIncludePath() const { return getStringOperand(3); }
-  StringRef getISysRoot() const { return getStringOperand(4); }
+  StringRef getSysRoot() const { return getStringOperand(4); }
 
   Metadata *getRawScope() const { return getOperand(0); }
   MDString *getRawName() const { return getOperandAs<MDString>(1); }
   MDString *getRawConfigurationMacros() const { return getOperandAs<MDString>(2); }
   MDString *getRawIncludePath() const { return getOperandAs<MDString>(3); }
-  MDString *getRawISysRoot() const { return getOperandAs<MDString>(4); }
+  MDString *getRawSysRoot() const { return getOperandAs<MDString>(4); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIModuleKind;
