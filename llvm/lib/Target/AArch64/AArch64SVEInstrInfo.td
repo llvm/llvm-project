@@ -63,15 +63,6 @@ def AArch64uminv_pred      :  SDNode<"AArch64ISD::UMINV_PRED", SDT_AArch64Reduce
 def AArch64orv_pred        :  SDNode<"AArch64ISD::ORV_PRED", SDT_AArch64Reduce>;
 def AArch64eorv_pred       :  SDNode<"AArch64ISD::EORV_PRED", SDT_AArch64Reduce>;
 def AArch64andv_pred       :  SDNode<"AArch64ISD::ANDV_PRED", SDT_AArch64Reduce>;
-def AArch64lasta           :  SDNode<"AArch64ISD::LASTA",     SDT_AArch64Reduce>;
-def AArch64lastb           :  SDNode<"AArch64ISD::LASTB",     SDT_AArch64Reduce>;
-
-def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3, [SDTCisVec<1>, SDTCisVec<3>]>;
-def AArch64clasta_n   : SDNode<"AArch64ISD::CLASTA_N",   SDT_AArch64ReduceWithInit>;
-def AArch64clastb_n   : SDNode<"AArch64ISD::CLASTB_N",   SDT_AArch64ReduceWithInit>;
-
-def SDT_AArch64Rev   : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
-def AArch64rev       : SDNode<"AArch64ISD::REV", SDT_AArch64Rev>;
 
 let Predicates = [HasSVE] in {
 
@@ -260,19 +251,19 @@ let Predicates = [HasSVE] in {
   // Select elements from either vector (predicated)
   defm SEL_ZPZZ    : sve_int_sel_vvv<"sel", vselect>;
 
-  defm SPLICE_ZPZ : sve_int_perm_splice<"splice", int_aarch64_sve_splice>;
-  defm COMPACT_ZPZ : sve_int_perm_compact<"compact", int_aarch64_sve_compact>;
+  defm SPLICE_ZPZ : sve_int_perm_splice<"splice">;
+  defm COMPACT_ZPZ : sve_int_perm_compact<"compact">;
   defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
   defm INSR_ZV : sve_int_perm_insrv<"insr", AArch64insr>;
-  defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext>;
+  def  EXT_ZZI : sve_int_perm_extract_i<"ext">;
 
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", int_aarch64_sve_rbit>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", int_aarch64_sve_revb, bswap>;
   defm REVH_ZPmZ : sve_int_perm_rev_revh<"revh", int_aarch64_sve_revh>;
   defm REVW_ZPmZ : sve_int_perm_rev_revw<"revw", int_aarch64_sve_revw>;
 
-  defm REV_PP : sve_int_perm_reverse_p<"rev", AArch64rev>;
-  defm REV_ZZ : sve_int_perm_reverse_z<"rev", AArch64rev>;
+  defm REV_PP : sve_int_perm_reverse_p<"rev">;
+  defm REV_ZZ : sve_int_perm_reverse_z<"rev">;
 
   defm SUNPKLO_ZZ : sve_int_perm_unpk<0b00, "sunpklo", AArch64sunpklo>;
   defm SUNPKHI_ZZ : sve_int_perm_unpk<0b01, "sunpkhi", AArch64sunpkhi>;
@@ -323,17 +314,17 @@ let Predicates = [HasSVE] in {
   defm NORS_PPzPP  : sve_int_pred_log<0b1110, "nors", int_aarch64_sve_nors>;
   defm NANDS_PPzPP : sve_int_pred_log<0b1111, "nands", int_aarch64_sve_nands>;
 
-  defm CLASTA_RPZ : sve_int_perm_clast_rz<0, "clasta", AArch64clasta_n>;
-  defm CLASTB_RPZ : sve_int_perm_clast_rz<1, "clastb", AArch64clastb_n>;
-  defm CLASTA_VPZ : sve_int_perm_clast_vz<0, "clasta", AArch64clasta_n>;
-  defm CLASTB_VPZ : sve_int_perm_clast_vz<1, "clastb", AArch64clastb_n>;
-  defm CLASTA_ZPZ : sve_int_perm_clast_zz<0, "clasta", int_aarch64_sve_clasta>;
-  defm CLASTB_ZPZ : sve_int_perm_clast_zz<1, "clastb", int_aarch64_sve_clastb>;
+  defm CLASTA_RPZ : sve_int_perm_clast_rz<0, "clasta">;
+  defm CLASTB_RPZ : sve_int_perm_clast_rz<1, "clastb">;
+  defm CLASTA_VPZ : sve_int_perm_clast_vz<0, "clasta">;
+  defm CLASTB_VPZ : sve_int_perm_clast_vz<1, "clastb">;
+  defm CLASTA_ZPZ : sve_int_perm_clast_zz<0, "clasta">;
+  defm CLASTB_ZPZ : sve_int_perm_clast_zz<1, "clastb">;
 
-  defm LASTA_RPZ : sve_int_perm_last_r<0, "lasta", AArch64lasta>;
-  defm LASTB_RPZ : sve_int_perm_last_r<1, "lastb", AArch64lastb>;
-  defm LASTA_VPZ : sve_int_perm_last_v<0, "lasta", AArch64lasta>;
-  defm LASTB_VPZ : sve_int_perm_last_v<1, "lastb", AArch64lastb>;
+  defm LASTA_RPZ : sve_int_perm_last_r<0, "lasta">;
+  defm LASTB_RPZ : sve_int_perm_last_r<1, "lastb">;
+  defm LASTA_VPZ : sve_int_perm_last_v<0, "lasta">;
+  defm LASTB_VPZ : sve_int_perm_last_v<1, "lastb">;
 
   // continuous load with reg+immediate
   defm LD1B_IMM    : sve_mem_cld_si<0b0000, "ld1b",  Z_b, ZPR8>;
@@ -758,21 +749,21 @@ let Predicates = [HasSVE] in {
   defm ADR_LSL_ZZZ_S  : sve_int_bin_cons_misc_0_a_32_lsl<0b10, "adr">;
   defm ADR_LSL_ZZZ_D  : sve_int_bin_cons_misc_0_a_64_lsl<0b11, "adr">;
 
-  defm TBL_ZZZ  : sve_int_perm_tbl<"tbl", AArch64tbl>;
+  defm TBL_ZZZ  : sve_int_perm_tbl<"tbl">;
 
-  defm ZIP1_ZZZ : sve_int_perm_bin_perm_zz<0b000, "zip1", AArch64zip1>;
-  defm ZIP2_ZZZ : sve_int_perm_bin_perm_zz<0b001, "zip2", AArch64zip2>;
-  defm UZP1_ZZZ : sve_int_perm_bin_perm_zz<0b010, "uzp1", AArch64uzp1>;
-  defm UZP2_ZZZ : sve_int_perm_bin_perm_zz<0b011, "uzp2", AArch64uzp2>;
-  defm TRN1_ZZZ : sve_int_perm_bin_perm_zz<0b100, "trn1", AArch64trn1>;
-  defm TRN2_ZZZ : sve_int_perm_bin_perm_zz<0b101, "trn2", AArch64trn2>;
+  defm ZIP1_ZZZ : sve_int_perm_bin_perm_zz<0b000, "zip1">;
+  defm ZIP2_ZZZ : sve_int_perm_bin_perm_zz<0b001, "zip2">;
+  defm UZP1_ZZZ : sve_int_perm_bin_perm_zz<0b010, "uzp1">;
+  defm UZP2_ZZZ : sve_int_perm_bin_perm_zz<0b011, "uzp2">;
+  defm TRN1_ZZZ : sve_int_perm_bin_perm_zz<0b100, "trn1">;
+  defm TRN2_ZZZ : sve_int_perm_bin_perm_zz<0b101, "trn2">;
 
-  defm ZIP1_PPP : sve_int_perm_bin_perm_pp<0b000, "zip1", AArch64zip1>;
-  defm ZIP2_PPP : sve_int_perm_bin_perm_pp<0b001, "zip2", AArch64zip2>;
-  defm UZP1_PPP : sve_int_perm_bin_perm_pp<0b010, "uzp1", AArch64uzp1>;
-  defm UZP2_PPP : sve_int_perm_bin_perm_pp<0b011, "uzp2", AArch64uzp2>;
-  defm TRN1_PPP : sve_int_perm_bin_perm_pp<0b100, "trn1", AArch64trn1>;
-  defm TRN2_PPP : sve_int_perm_bin_perm_pp<0b101, "trn2", AArch64trn2>;
+  defm ZIP1_PPP : sve_int_perm_bin_perm_pp<0b000, "zip1">;
+  defm ZIP2_PPP : sve_int_perm_bin_perm_pp<0b001, "zip2">;
+  defm UZP1_PPP : sve_int_perm_bin_perm_pp<0b010, "uzp1">;
+  defm UZP2_PPP : sve_int_perm_bin_perm_pp<0b011, "uzp2">;
+  defm TRN1_PPP : sve_int_perm_bin_perm_pp<0b100, "trn1">;
+  defm TRN2_PPP : sve_int_perm_bin_perm_pp<0b101, "trn2">;
 
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", int_aarch64_sve_cmphs, SETUGE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", int_aarch64_sve_cmphi, SETUGT>;
