@@ -154,6 +154,20 @@ ChangeStatus llvm::operator&(ChangeStatus l, ChangeStatus r) {
 }
 ///}
 
+/// For calls (and invokes) we will only replace instruction uses to not disturb
+/// the old style call graph.
+/// TODO: Remove this once we get rid of the old PM.
+static void replaceAllInstructionUsesWith(Value &Old, Value &New) {
+  if (!isa<CallBase>(Old))
+    return Old.replaceAllUsesWith(&New);
+  SmallVector<Use *, 8> Uses;
+  for (Use &U : Old.uses())
+    if (isa<Instruction>(U.getUser()))
+      Uses.push_back(&U);
+  for (Use *U : Uses)
+    U->set(&New);
+}
+
 /// Recursively visit all values that might become \p IRP at some point. This
 /// will be done by looking through cast instructions, selects, phis, and calls
 /// with the "returned" attribute. Once we cannot look through the value any
@@ -992,7 +1006,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
   auto ReplaceCallSiteUsersWith = [](CallBase &CB, Constant &C) {
     if (CB.getNumUses() == 0 || CB.isMustTailCall())
       return ChangeStatus::UNCHANGED;
-    CB.replaceAllUsesWith(&C);
+    replaceAllInstructionUsesWith(CB, C);
     return ChangeStatus::CHANGED;
   };
 
@@ -2535,7 +2549,7 @@ struct AAIsDeadFunction : public AAIsDead {
               CallInst *CI = createCallMatchingInvoke(II);
               CI->insertBefore(II);
               CI->takeName(II);
-              II->replaceAllUsesWith(CI);
+              replaceAllInstructionUsesWith(*II, *CI);
 
               // If this is a nounwind + mayreturn invoke we only remove the unwind edge.
               // This is done by moving the invoke into a new and dead block and connecting
@@ -3920,7 +3934,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       if (!V.user_empty() && &V != C && V.getType() == C->getType()) {
         LLVM_DEBUG(dbgs() << "[Attributor][ValueSimplify] " << V << " -> " << *C
                           << "\n");
-        V.replaceAllUsesWith(C);
+        replaceAllInstructionUsesWith(V, *C);
         Changed = ChangeStatus::CHANGED;
       }
     }
@@ -4160,7 +4174,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
         AI = new BitCastInst(AI, MallocCall->getType(), "malloc_bc",
                              AI->getNextNode());
 
-      MallocCall->replaceAllUsesWith(AI);
+      replaceAllInstructionUsesWith(*MallocCall, *AI);
 
       if (auto *II = dyn_cast<InvokeInst>(MallocCall)) {
         auto *NBB = II->getNormalDest();
