@@ -2440,15 +2440,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     switch (optID) {
     default:
       break;
-    case options::OPT_frounding_math:
-    case options::OPT_ftrapping_math:
-    case options::OPT_ffp_exception_behavior_EQ:
-      D.Diag(clang::diag::warn_drv_experimental_fp_control_incomplete_opt)
-          << A->getOption().getName();
-      break;
     case options::OPT_ffp_model_EQ: {
-      D.Diag(clang::diag::warn_drv_experimental_fp_control_incomplete_opt)
-          << A->getOption().getName();
       // If -ffp-model= is seen, reset to fno-fast-math
       HonorINFs = true;
       HonorNaNs = true;
