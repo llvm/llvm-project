@@ -105,6 +105,12 @@ Improvements to clang-tidy
   :doc:`bugprone-bad-signal-to-kill-thread
   <clang-tidy/checks/bugprone-bad-signal-to-kill-thread>` was added.
 
+- New :doc:`cert-oop58-cpp
+  <clang-tidy/checks/cert-oop58-cpp>` check.
+
+  Finds assignments to the copied object and its direct or indirect members
+  in copy constructors and copy assignment operators.
+
 - New :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines-init-variables>` check.
 

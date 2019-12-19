@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -22,6 +24,22 @@ Error LLJITBuilderState::prepareForConstruction() {
       JTMB = std::move(*JTMBOrErr);
     else
       return JTMBOrErr.takeError();
+
+    // If no ObjectLinkingLayer creator was set and the target supports JITLink
+    // then configure for JITLink.
+    auto &TT = JTMB->getTargetTriple();
+    if (!CreateObjectLinkingLayer && TT.isOSBinFormatMachO() &&
+        (TT.getArch() == Triple::aarch64 || TT.getArch() == Triple::x86_64)) {
+
+      JTMB->setRelocationModel(Reloc::PIC_);
+      JTMB->setCodeModel(CodeModel::Small);
+      CreateObjectLinkingLayer =
+          [](ExecutionSession &ES,
+             const Triple &) -> std::unique_ptr<ObjectLayer> {
+        return std::make_unique<ObjectLinkingLayer>(
+            ES, std::make_unique<jitlink::InProcessMemoryManager>());
+      };
+    }
   }
 
   return Error::success();

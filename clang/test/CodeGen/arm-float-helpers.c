@@ -79,7 +79,7 @@ int fcmpgt(float a, float b) { return a > b; }
 int fcmpun(float a, float b) { return __builtin_isunordered(a, b); }
 // CHECK-LABEL: define i32 @fcmpun(float %a, float %b)
 // CHECK-NOT: __aeabi_fcmpun
-// CHECK: %cmp = fcmp uno double %conv, %conv1
+// CHECK: %cmp = fcmp uno float {{.*}}, {{.*}}
 
 double dadd(double a, double b) { return a + b; }
 // CHECK-LABEL: define double @dadd(double %a, double %b)

@@ -11,6 +11,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Stack.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"

@@ -23,6 +23,7 @@
 #include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
 #include "LimitedRandomnessCheck.h"
+#include "MutatingCopyCheck.h"
 #include "PostfixOperatorCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
 #include "SetLongJmpCheck.h"
@@ -69,6 +70,8 @@ public:
         "cert-oop11-cpp");
     CheckFactories.registerCheck<bugprone::UnhandledSelfAssignmentCheck>(
         "cert-oop54-cpp");
+    CheckFactories.registerCheck<MutatingCopyCheck>(
+        "cert-oop58-cpp");
 
     // C checkers
     // DCL

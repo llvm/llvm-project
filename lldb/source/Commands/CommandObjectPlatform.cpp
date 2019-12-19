@@ -21,11 +21,8 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/DataExtractor.h"
-#include <mutex>
 
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Threading.h"
 
 using namespace lldb;
 using namespace lldb_private;

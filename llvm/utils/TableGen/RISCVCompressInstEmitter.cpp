@@ -45,6 +45,14 @@
 //                     const MCRegisterInfo &MRI,
 //                     const MCSubtargetInfo &STI);
 //
+// In addition, it exports a function for checking whether
+// an instruction is compressable:
+//
+// bool isCompressibleInst(const MachineInstr& MI,
+//                           const RISCVSubtarget *Subtarget,
+//                           const MCRegisterInfo &MRI,
+//                           const MCSubtargetInfo &STI);
+//
 // The clients that include this auto-generated header file and
 // invoke these functions can compress an instruction before emitting
 // it in the target-specific ASM or ELF streamer or can uncompress
@@ -99,7 +107,7 @@ class RISCVCompressInstEmitter {
         : Source(S), Dest(D), PatReqFeatures(RF), SourceOperandMap(SourceMap),
           DestOperandMap(DestMap) {}
   };
-
+  enum EmitterType { Compress, Uncompress, CheckCompress };
   RecordKeeper &Records;
   CodeGenTarget Target;
   SmallVector<CompressPat, 4> CompressPatterns;
@@ -107,7 +115,7 @@ class RISCVCompressInstEmitter {
   void addDagOperandMapping(Record *Rec, DagInit *Dag, CodeGenInstruction &Inst,
                             IndexedMap<OpData> &OperandMap, bool IsSourceInst);
   void evaluateCompressPat(Record *Compress);
-  void emitCompressInstEmitter(raw_ostream &o, bool Compress);
+  void emitCompressInstEmitter(raw_ostream &o, EmitterType EType);
   bool validateTypes(Record *SubType, Record *Type, bool IsSourceInst);
   bool validateRegister(Record *Reg, Record *RegClass);
   void createDagOperandMapping(Record *Rec, StringMap<unsigned> &SourceOperands,
@@ -482,24 +490,37 @@ static void getReqFeatures(std::set<StringRef> &FeaturesSet,
   }
 }
 
-unsigned getMCOpPredicate(DenseMap<const Record *, unsigned> &MCOpPredicateMap,
-                          std::vector<const Record *> &MCOpPredicates,
-                          Record *Rec) {
-  unsigned Entry = MCOpPredicateMap[Rec];
+static unsigned getPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
+                              std::vector<const Record *> &Predicates,
+                              Record *Rec, StringRef Name) {
+  unsigned Entry = PredicateMap[Rec];
   if (Entry)
     return Entry;
 
-  if (!Rec->isValueUnset("MCOperandPredicate")) {
-    MCOpPredicates.push_back(Rec);
-    Entry = MCOpPredicates.size();
-    MCOpPredicateMap[Rec] = Entry;
+  if (!Rec->isValueUnset(Name)) {
+    Predicates.push_back(Rec);
+    Entry = Predicates.size();
+    PredicateMap[Rec] = Entry;
     return Entry;
   }
 
-  PrintFatalError(Rec->getLoc(),
-                  "No MCOperandPredicate on this operand at all: " +
-                      Rec->getName().str() + "'");
+  PrintFatalError(Rec->getLoc(), "No " + Name +
+    " predicate on this operand at all: '" + Rec->getName().str() + "'");
   return 0;
+}
+
+static void printPredicates(std::vector<const Record *> &Predicates,
+                            StringRef Name, raw_ostream &o) {
+  for (unsigned i = 0; i < Predicates.size(); ++i) {
+    Init *Pred = Predicates[i]->getValueInit(Name);
+    if (CodeInit *SI = dyn_cast<CodeInit>(Pred))
+      o << "  case " << i + 1 << ": {\n"
+        << "  // " << Predicates[i]->getName().str() << "\n"
+        << "  " << SI->getValue() << "\n"
+        << "  }\n";
+    else
+      llvm_unreachable("Unexpected predicate field!");
+  }
 }
 
 static std::string mergeCondAndCode(raw_string_ostream &CondStream,
@@ -519,7 +540,7 @@ static std::string mergeCondAndCode(raw_string_ostream &CondStream,
 }
 
 void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
-                                                       bool Compress) {
+                                                       EmitterType EType) {
   Record *AsmWriter = Target.getAsmWriter();
   if (!AsmWriter->getValueAsInt("PassSubtarget"))
     PrintFatalError(AsmWriter->getLoc(),
@@ -534,8 +555,9 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   // source and destination are flipped and the sort key needs to change
   // accordingly.
   llvm::stable_sort(CompressPatterns,
-                    [Compress](const CompressPat &LHS, const CompressPat &RHS) {
-                      if (Compress)
+                    [EType](const CompressPat &LHS, const CompressPat &RHS) {
+                      if (EType == EmitterType::Compress ||
+                        EType == EmitterType::CheckCompress)
                         return (LHS.Source.TheDef->getName().str() <
                                 RHS.Source.TheDef->getName().str());
                       else
@@ -546,6 +568,9 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   // A list of MCOperandPredicates for all operands in use, and the reverse map.
   std::vector<const Record *> MCOpPredicates;
   DenseMap<const Record *, unsigned> MCOpPredicateMap;
+  // A list of ImmLeaf Predicates for all operands in use, and the reverse map.
+  std::vector<const Record *> ImmLeafPredicates;
+  DenseMap<const Record *, unsigned> ImmLeafPredicateMap;
 
   std::string F;
   std::string FH;
@@ -553,21 +578,29 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   raw_string_ostream FuncH(FH);
   bool NeedMRI = false;
 
-  if (Compress)
+  if (EType == EmitterType::Compress)
     o << "\n#ifdef GEN_COMPRESS_INSTR\n"
       << "#undef GEN_COMPRESS_INSTR\n\n";
-  else
+  else if (EType == EmitterType::Uncompress)
     o << "\n#ifdef GEN_UNCOMPRESS_INSTR\n"
       << "#undef GEN_UNCOMPRESS_INSTR\n\n";
+  else if (EType == EmitterType::CheckCompress)
+    o << "\n#ifdef GEN_CHECK_COMPRESS_INSTR\n"
+      << "#undef GEN_CHECK_COMPRESS_INSTR\n\n";
 
-  if (Compress) {
+  if (EType == EmitterType::Compress) {
     FuncH << "static bool compressInst(MCInst& OutInst,\n";
     FuncH.indent(25) << "const MCInst &MI,\n";
     FuncH.indent(25) << "const MCSubtargetInfo &STI,\n";
     FuncH.indent(25) << "MCContext &Context) {\n";
-  } else {
+  } else if (EType == EmitterType::Uncompress){
     FuncH << "static bool uncompressInst(MCInst& OutInst,\n";
     FuncH.indent(27) << "const MCInst &MI,\n";
+    FuncH.indent(27) << "const MCRegisterInfo &MRI,\n";
+    FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
+  } else if (EType == EmitterType::CheckCompress) {
+    FuncH << "static bool isCompressibleInst(const MachineInstr& MI,\n";
+    FuncH.indent(27) << "const RISCVSubtarget *Subtarget,\n";
     FuncH.indent(27) << "const MCRegisterInfo &MRI,\n";
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
   }
@@ -575,10 +608,12 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   if (CompressPatterns.empty()) {
     o << FuncH.str();
     o.indent(2) << "return false;\n}\n";
-    if (Compress)
+    if (EType == EmitterType::Compress)
       o << "\n#endif //GEN_COMPRESS_INSTR\n";
-    else
+    else if (EType == EmitterType::Uncompress)
       o << "\n#endif //GEN_UNCOMPRESS_INSTR\n\n";
+    else if (EType == EmitterType::CheckCompress)
+      o << "\n#endif //GEN_CHECK_COMPRESS_INSTR\n\n";
     return;
   }
 
@@ -589,18 +624,24 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   CaseStream << "  switch (MI.getOpcode()) {\n";
   CaseStream << "    default: return false;\n";
 
+  bool CompressOrCheck =
+    EType == EmitterType::Compress || EType == EmitterType::CheckCompress;
+  bool CompressOrUncompress =
+    EType == EmitterType::Compress || EType == EmitterType::Uncompress;
+
   for (auto &CompressPat : CompressPatterns) {
     std::string CondString;
     std::string CodeString;
     raw_string_ostream CondStream(CondString);
     raw_string_ostream CodeStream(CodeString);
     CodeGenInstruction &Source =
-        Compress ? CompressPat.Source : CompressPat.Dest;
-    CodeGenInstruction &Dest = Compress ? CompressPat.Dest : CompressPat.Source;
-    IndexedMap<OpData> SourceOperandMap =
-        Compress ? CompressPat.SourceOperandMap : CompressPat.DestOperandMap;
-    IndexedMap<OpData> &DestOperandMap =
-        Compress ? CompressPat.DestOperandMap : CompressPat.SourceOperandMap;
+        CompressOrCheck ?  CompressPat.Source : CompressPat.Dest;
+    CodeGenInstruction &Dest =
+        CompressOrCheck ? CompressPat.Dest : CompressPat.Source;
+    IndexedMap<OpData> SourceOperandMap = CompressOrCheck ?
+      CompressPat.SourceOperandMap : CompressPat.DestOperandMap;
+    IndexedMap<OpData> &DestOperandMap = CompressOrCheck ?
+      CompressPat.DestOperandMap : CompressPat.SourceOperandMap;
 
     CurOp = Source.TheDef->getName().str();
     // Check current and previous opcode to decide to continue or end a case.
@@ -670,7 +711,8 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       }
     }
     CodeStream.indent(6) << "// " + Dest.AsmString + "\n";
-    CodeStream.indent(6) << "OutInst.setOpcode(" + Namespace +
+    if (CompressOrUncompress)
+      CodeStream.indent(6) << "OutInst.setOpcode(" + Namespace +
                                 "::" + Dest.TheDef->getName().str() + ");\n";
     OpNo = 0;
     for (const auto &DestOperand : Dest.Operands) {
@@ -692,43 +734,69 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                        "RegClassID).contains(" + "MI.getOperand(" +
                        std::to_string(OpIdx) + ").getReg())) &&\n";
 
-          CodeStream.indent(6) << "OutInst.addOperand(MI.getOperand(" +
-                                      std::to_string(OpIdx) + "));\n";
+          if (CompressOrUncompress)
+            CodeStream.indent(6) << "OutInst.addOperand(MI.getOperand(" +
+                                        std::to_string(OpIdx) + "));\n";
         } else {
           // Handling immediate operands.
-          unsigned Entry = getMCOpPredicate(MCOpPredicateMap, MCOpPredicates,
-                                            DestOperand.Rec);
-          CondStream.indent(6) << Namespace + "ValidateMCOperand(" +
-                                      "MI.getOperand(" + std::to_string(OpIdx) +
-                                      "), STI, " + std::to_string(Entry) +
-                                      ") &&\n";
-          CodeStream.indent(6) << "OutInst.addOperand(MI.getOperand(" +
-                                      std::to_string(OpIdx) + "));\n";
+          if (CompressOrUncompress) {
+            unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
+              DestOperand.Rec, StringRef("MCOperandPredicate"));
+            CondStream.indent(6) << Namespace + "ValidateMCOperand(" +
+                                        "MI.getOperand(" + std::to_string(OpIdx) +
+                                        "), STI, " + std::to_string(Entry) +
+                                        ") &&\n";
+          } else {
+            unsigned Entry = getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
+              DestOperand.Rec, StringRef("ImmediateCode"));
+            CondStream.indent(6) << "MI.getOperand(" + std::to_string(OpIdx) +
+                                    ").isImm() && \n";
+            CondStream.indent(6) << Namespace + "ValidateMachineOperand(" +
+                                        "MI.getOperand(" + std::to_string(OpIdx) +
+                                        "), Subtarget, " + std::to_string(Entry) +
+                                        ") &&\n";
+          }
+          if (CompressOrUncompress)
+            CodeStream.indent(6) << "OutInst.addOperand(MI.getOperand(" +
+                                        std::to_string(OpIdx) + "));\n";
         }
         break;
       }
       case OpData::Imm: {
-        unsigned Entry =
-            getMCOpPredicate(MCOpPredicateMap, MCOpPredicates, DestOperand.Rec);
-        CondStream.indent(6)
-            << Namespace + "ValidateMCOperand(" + "MCOperand::createImm(" +
-                   std::to_string(DestOperandMap[OpNo].Data.Imm) + "), STI, " +
-                   std::to_string(Entry) + ") &&\n";
-        CodeStream.indent(6)
-            << "OutInst.addOperand(MCOperand::createImm(" +
-                   std::to_string(DestOperandMap[OpNo].Data.Imm) + "));\n";
+        if (CompressOrUncompress) {
+          unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
+            DestOperand.Rec, StringRef("MCOperandPredicate"));
+          CondStream.indent(6)
+              << Namespace + "ValidateMCOperand(" + "MCOperand::createImm(" +
+                     std::to_string(DestOperandMap[OpNo].Data.Imm) + "), STI, " +
+                     std::to_string(Entry) + ") &&\n";
+        } else {
+          unsigned Entry = getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
+            DestOperand.Rec, StringRef("ImmediateCode"));
+          CondStream.indent(6)
+              << Namespace + "ValidateMachineOperand(" + "MachineOperand::CreateImm(" +
+                     std::to_string(DestOperandMap[OpNo].Data.Imm) + "), SubTarget, " +
+                     std::to_string(Entry) + ") &&\n";
+        }
+        if (CompressOrUncompress)
+          CodeStream.indent(6)
+              << "OutInst.addOperand(MCOperand::createImm(" +
+                     std::to_string(DestOperandMap[OpNo].Data.Imm) + "));\n";
       } break;
       case OpData::Reg: {
-        // Fixed register has been validated at pattern validation time.
-        Record *Reg = DestOperandMap[OpNo].Data.Reg;
-        CodeStream.indent(6) << "OutInst.addOperand(MCOperand::createReg(" +
-                                    Namespace + "::" + Reg->getName().str() +
-                                    "));\n";
+        if (CompressOrUncompress) {
+          // Fixed register has been validated at pattern validation time.
+          Record *Reg = DestOperandMap[OpNo].Data.Reg;
+          CodeStream.indent(6) << "OutInst.addOperand(MCOperand::createReg(" +
+                                      Namespace + "::" + Reg->getName().str() +
+                                      "));\n";
+        }
       } break;
       }
       ++OpNo;
     }
-    CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
+    if (CompressOrUncompress)
+      CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
     CaseStream << mergeCondAndCode(CondStream, CodeStream);
     PrevOp = CurOp;
   }
@@ -748,29 +816,40 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       << "    llvm_unreachable(\"Unknown MCOperandPredicate kind\");\n"
       << "    break;\n";
 
-    for (unsigned i = 0; i < MCOpPredicates.size(); ++i) {
-      Init *MCOpPred = MCOpPredicates[i]->getValueInit("MCOperandPredicate");
-      if (CodeInit *SI = dyn_cast<CodeInit>(MCOpPred))
-        o << "  case " << i + 1 << ": {\n"
-          << "   // " << MCOpPredicates[i]->getName().str() << SI->getValue()
-          << "\n"
-          << "    }\n";
-      else
-        llvm_unreachable("Unexpected MCOperandPredicate field!");
-    }
+    printPredicates(MCOpPredicates, "MCOperandPredicate", o);
+
+    o << "  }\n"
+      << "}\n\n";
+  }
+
+  if (!ImmLeafPredicates.empty()) {
+    o << "static bool " << Namespace
+      << "ValidateMachineOperand(const MachineOperand &MO,\n"
+      << "                  const RISCVSubtarget *Subtarget,\n"
+      << "                  unsigned PredicateIndex) {\n"
+      << "  int64_t Imm = MO.getImm(); \n"
+      << "  switch (PredicateIndex) {\n"
+      << "  default:\n"
+      << "    llvm_unreachable(\"Unknown ImmLeaf Predicate kind\");\n"
+      << "    break;\n";
+
+    printPredicates(ImmLeafPredicates, "ImmediateCode", o);
+
     o << "  }\n"
       << "}\n\n";
   }
 
   o << FuncH.str();
-  if (NeedMRI && Compress)
+  if (NeedMRI && EType == EmitterType::Compress)
     o.indent(2) << "const MCRegisterInfo &MRI = *Context.getRegisterInfo();\n";
   o << Func.str();
 
-  if (Compress)
+  if (EType == EmitterType::Compress)
     o << "\n#endif //GEN_COMPRESS_INSTR\n";
-  else
+  else if (EType == EmitterType::Uncompress)
     o << "\n#endif //GEN_UNCOMPRESS_INSTR\n\n";
+  else if (EType == EmitterType::CheckCompress)
+    o << "\n#endif //GEN_CHECK_COMPRESS_INSTR\n\n";
 }
 
 void RISCVCompressInstEmitter::run(raw_ostream &o) {
@@ -789,9 +868,11 @@ void RISCVCompressInstEmitter::run(raw_ostream &o) {
   // Emit file header.
   emitSourceFileHeader("Compress instruction Source Fragment", o);
   // Generate compressInst() function.
-  emitCompressInstEmitter(o, true);
+  emitCompressInstEmitter(o, EmitterType::Compress);
   // Generate uncompressInst() function.
-  emitCompressInstEmitter(o, false);
+  emitCompressInstEmitter(o, EmitterType::Uncompress);
+  // Generate isCompressibleInst() function.
+  emitCompressInstEmitter(o, EmitterType::CheckCompress);
 }
 
 namespace llvm {

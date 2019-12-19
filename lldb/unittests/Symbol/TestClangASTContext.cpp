@@ -1,6 +1,4 @@
-//===-- TestClangASTContext.cpp ---------------------------------------*- C++
-//-*-===//
-
+//===-- TestClangASTContext.cpp ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
-
-#include "clang/AST/DeclCXX.h"
-
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/Declaration.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "gtest/gtest.h"
 
 using namespace clang;
 using namespace lldb;
@@ -448,4 +445,37 @@ TEST_F(TestClangASTContext, TemplateArguments) {
     EXPECT_EQ(arg, result->value);
     EXPECT_EQ(int_type, result->type);
   }
+}
+
+static QualType makeConstInt(clang::ASTContext &ctxt) {
+  QualType result(ctxt.IntTy);
+  result.addConst();
+  return result;
+}
+
+TEST_F(TestClangASTContext, TestGetTypeClassDeclType) {
+  clang::ASTContext &ctxt = *m_ast->getASTContext();
+  auto *nullptr_expr = new (ctxt) CXXNullPtrLiteralExpr(ctxt.NullPtrTy, SourceLocation());
+  QualType t = ctxt.getDecltypeType(nullptr_expr, makeConstInt(ctxt));
+  EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
+}
+
+TEST_F(TestClangASTContext, TestGetTypeClassTypeOf) {
+  clang::ASTContext &ctxt = *m_ast->getASTContext();
+  QualType t = ctxt.getTypeOfType(makeConstInt(ctxt));
+  EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
+}
+
+TEST_F(TestClangASTContext, TestGetTypeClassTypeOfExpr) {
+  clang::ASTContext &ctxt = *m_ast->getASTContext();
+  auto *nullptr_expr = new (ctxt) CXXNullPtrLiteralExpr(ctxt.NullPtrTy, SourceLocation());
+  QualType t = ctxt.getTypeOfExprType(nullptr_expr);
+  EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
+}
+
+TEST_F(TestClangASTContext, TestGetTypeClassNested) {
+  clang::ASTContext &ctxt = *m_ast->getASTContext();
+  QualType t_base = ctxt.getTypeOfType(makeConstInt(ctxt));
+  QualType t = ctxt.getTypeOfType(t_base);
+  EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }

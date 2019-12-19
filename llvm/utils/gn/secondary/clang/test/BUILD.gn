@@ -150,6 +150,7 @@ group("test") {
     "//llvm/tools/llvm-lto2",
     "//llvm/tools/llvm-modextract",
     "//llvm/tools/llvm-nm:symlinks",
+    "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
     "//llvm/tools/llvm-profdata",
     "//llvm/tools/llvm-readobj:symlinks",

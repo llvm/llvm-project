@@ -106,7 +106,6 @@ def parse_args():
                  "0 means no time limit. [Default: 0]",
             type=_non_negative_int) # TODO(yln): --[no-]test-timeout, instead of 0 allowed
     execution_group.add_argument("--max-failures",
-            dest="maxFailures",
             help="Stop execution after the given number of failures.",
             type=_positive_int)
     execution_group.add_argument("--allow-empty-runs",

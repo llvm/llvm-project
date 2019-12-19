@@ -46,6 +46,10 @@
 #error "wrong value for __cpp_impl_destroying_delete"
 #endif
 
+#if check(impl_three_way_comparison, 0, 0, 0, 0, 201907)
+#error "wrong value for __cpp_impl_three_way_comparison"
+#endif
+
 // --- C++17 features ---
 
 #if check(hex_float, 0, 0, 0, 201603, 201603)

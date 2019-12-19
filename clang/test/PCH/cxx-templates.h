@@ -448,3 +448,11 @@ namespace DependentMemberExpr {
     constexpr int f() { return Base::setstate(); }
   };
 }
+
+namespace DependentTemplateName {
+  template <template <class> class Template>
+  struct TakesClassTemplate {};
+
+  template <class T>
+  TakesClassTemplate<T::template Member> getWithIdentifier();
+}

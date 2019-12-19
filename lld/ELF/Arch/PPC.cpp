@@ -32,7 +32,7 @@ public:
     llvm_unreachable("should call writePPC32GlinkSection() instead");
   }
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-    int32_t index, unsigned relOff) const override {
+                int32_t index) const override {
     llvm_unreachable("should call writePPC32GlinkSection() instead");
   }
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;

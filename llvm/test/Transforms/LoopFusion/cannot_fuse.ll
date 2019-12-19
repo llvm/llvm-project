@@ -15,60 +15,64 @@
 ; CHECK: bb20.preheader
 ; CHECK: ****************************
 ; CHECK: Loop Fusion complete
-define void @non_cfe(i32* noalias %arg) {
+define void @non_cfe(i32* noalias %arg, i32 %N) {
 bb:
-  br label %bb5
+  br label %bb7
 
-bb5:                                              ; preds = %bb14, %bb
-  %indvars.iv2 = phi i64 [ %indvars.iv.next3, %bb14 ], [ 0, %bb ]
-  %.01 = phi i32 [ 0, %bb ], [ %tmp15, %bb14 ]
-  %exitcond4 = icmp ne i64 %indvars.iv2, 100
-  br i1 %exitcond4, label %bb7, label %bb16
-
-bb7:                                              ; preds = %bb5
-  %tmp = add nsw i32 %.01, -3
-  %tmp8 = add nuw nsw i64 %indvars.iv2, 3
+bb7:                                              ; preds = %bb, %bb14
+  %.014 = phi i32 [ 0, %bb ], [ %tmp15, %bb14 ]
+  %indvars.iv23 = phi i64 [ 0, %bb ], [ %indvars.iv.next3, %bb14 ]
+  %tmp = add nsw i32 %.014, -3
+  %tmp8 = add nuw nsw i64 %indvars.iv23, 3
   %tmp9 = trunc i64 %tmp8 to i32
   %tmp10 = mul nsw i32 %tmp, %tmp9
-  %tmp11 = trunc i64 %indvars.iv2 to i32
+  %tmp11 = trunc i64 %indvars.iv23 to i32
   %tmp12 = srem i32 %tmp10, %tmp11
-  %tmp13 = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv2
+  %tmp13 = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv23
   store i32 %tmp12, i32* %tmp13, align 4
   br label %bb14
 
 bb14:                                             ; preds = %bb7
-  %indvars.iv.next3 = add nuw nsw i64 %indvars.iv2, 1
-  %tmp15 = add nuw nsw i32 %.01, 1
-  br label %bb5
+  %indvars.iv.next3 = add nuw nsw i64 %indvars.iv23, 1
+  %tmp15 = add nuw nsw i32 %.014, 1
+  %exitcond4 = icmp ne i64 %indvars.iv.next3, 100
+  br i1 %exitcond4, label %bb7, label %bb34
 
-bb16:                                             ; preds = %bb5
+bb34:
+  %cmp = icmp slt i32 %N, 50
+  br i1 %cmp, label %bb16, label %bb33
+
+bb16:                                             ; preds = %bb34
   %tmp17 = load i32, i32* %arg, align 4
   %tmp18 = icmp slt i32 %tmp17, 0
-  br i1 %tmp18, label %bb20, label %bb33
+  br i1 %tmp18, label %bb20.preheader, label %bb33
 
-bb20:                                             ; preds = %bb30, %bb16
-  %indvars.iv = phi i64 [ %indvars.iv.next, %bb30 ], [ 0, %bb16 ]
-  %.0 = phi i32 [ 0, %bb16 ], [ %tmp31, %bb30 ]
-  %exitcond = icmp ne i64 %indvars.iv, 100
-  br i1 %exitcond, label %bb22, label %bb33
+bb20.preheader:                                   ; preds = %bb16
+  br label %bb22
 
-bb22:                                             ; preds = %bb20
-  %tmp23 = add nsw i32 %.0, -3
-  %tmp24 = add nuw nsw i64 %indvars.iv, 3
+bb22:                                             ; preds = %bb20.preheader, %bb30
+  %.02 = phi i32 [ 0, %bb20.preheader ], [ %tmp31, %bb30 ]
+  %indvars.iv1 = phi i64 [ 0, %bb20.preheader ], [ %indvars.iv.next, %bb30 ]
+  %tmp23 = add nsw i32 %.02, -3
+  %tmp24 = add nuw nsw i64 %indvars.iv1, 3
   %tmp25 = trunc i64 %tmp24 to i32
   %tmp26 = mul nsw i32 %tmp23, %tmp25
-  %tmp27 = trunc i64 %indvars.iv to i32
+  %tmp27 = trunc i64 %indvars.iv1 to i32
   %tmp28 = srem i32 %tmp26, %tmp27
-  %tmp29 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv
+  %tmp29 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv1
   store i32 %tmp28, i32* %tmp29, align 4
   br label %bb30
 
 bb30:                                             ; preds = %bb22
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %tmp31 = add nuw nsw i32 %.0, 1
-  br label %bb20
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv1, 1
+  %tmp31 = add nuw nsw i32 %.02, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, 100
+  br i1 %exitcond, label %bb22, label %bb33.loopexit
 
-bb33:                                             ; preds = %bb20, %bb16
+bb33.loopexit:                                    ; preds = %bb30
+  br label %bb33
+
+bb33:                                             ; preds = %bb33.loopexit, %bb16, %bb34
   ret void
 }
 
@@ -88,54 +92,48 @@ bb33:                                             ; preds = %bb20, %bb16
 ; CHECK: Loop Fusion complete
 define void @non_adjacent(i32* noalias %arg) {
 bb:
-  br label %bb3
+  br label %bb5
 
-bb3:                                              ; preds = %bb11, %bb
-  %.01 = phi i64 [ 0, %bb ], [ %tmp12, %bb11 ]
-  %exitcond2 = icmp ne i64 %.01, 100
-  br i1 %exitcond2, label %bb5, label %bb4
-
-bb4:                                              ; preds = %bb3
+bb4:                                              ; preds = %bb11
   br label %bb13
 
-bb5:                                              ; preds = %bb3
-  %tmp = add nsw i64 %.01, -3
-  %tmp6 = add nuw nsw i64 %.01, 3
+bb5:                                              ; preds = %bb, %bb11
+  %.013 = phi i64 [ 0, %bb ], [ %tmp12, %bb11 ]
+  %tmp = add nsw i64 %.013, -3
+  %tmp6 = add nuw nsw i64 %.013, 3
   %tmp7 = mul nsw i64 %tmp, %tmp6
-  %tmp8 = srem i64 %tmp7, %.01
+  %tmp8 = srem i64 %tmp7, %.013
   %tmp9 = trunc i64 %tmp8 to i32
-  %tmp10 = getelementptr inbounds i32, i32* %arg, i64 %.01
+  %tmp10 = getelementptr inbounds i32, i32* %arg, i64 %.013
   store i32 %tmp9, i32* %tmp10, align 4
   br label %bb11
 
 bb11:                                             ; preds = %bb5
-  %tmp12 = add nuw nsw i64 %.01, 1
-  br label %bb3
+  %tmp12 = add nuw nsw i64 %.013, 1
+  %exitcond2 = icmp ne i64 %tmp12, 100
+  br i1 %exitcond2, label %bb5, label %bb4
 
 bb13:                                             ; preds = %bb4
-  br label %bb14
+  br label %bb16
 
-bb14:                                             ; preds = %bb23, %bb13
-  %.0 = phi i64 [ 0, %bb13 ], [ %tmp24, %bb23 ]
-  %exitcond = icmp ne i64 %.0, 100
-  br i1 %exitcond, label %bb16, label %bb15
-
-bb15:                                             ; preds = %bb14
+bb15:                                             ; preds = %bb23
   br label %bb25
 
-bb16:                                             ; preds = %bb14
-  %tmp17 = add nsw i64 %.0, -3
-  %tmp18 = add nuw nsw i64 %.0, 3
+bb16:                                             ; preds = %bb13, %bb23
+  %.02 = phi i64 [ 0, %bb13 ], [ %tmp24, %bb23 ]
+  %tmp17 = add nsw i64 %.02, -3
+  %tmp18 = add nuw nsw i64 %.02, 3
   %tmp19 = mul nsw i64 %tmp17, %tmp18
-  %tmp20 = srem i64 %tmp19, %.0
+  %tmp20 = srem i64 %tmp19, %.02
   %tmp21 = trunc i64 %tmp20 to i32
-  %tmp22 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %.0
+  %tmp22 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %.02
   store i32 %tmp21, i32* %tmp22, align 4
   br label %bb23
 
 bb23:                                             ; preds = %bb16
-  %tmp24 = add nuw nsw i64 %.0, 1
-  br label %bb14
+  %tmp24 = add nuw nsw i64 %.02, 1
+  %exitcond = icmp ne i64 %tmp24, 100
+  br i1 %exitcond, label %bb16, label %bb15
 
 bb25:                                             ; preds = %bb15
   ret void
@@ -156,54 +154,48 @@ bb25:                                             ; preds = %bb15
 ; CHECK: Loop Fusion complete
 define void @different_bounds(i32* noalias %arg) {
 bb:
-  br label %bb3
+  br label %bb5
 
-bb3:                                              ; preds = %bb11, %bb
-  %.01 = phi i64 [ 0, %bb ], [ %tmp12, %bb11 ]
-  %exitcond2 = icmp ne i64 %.01, 100
-  br i1 %exitcond2, label %bb5, label %bb4
-
-bb4:                                              ; preds = %bb3
+bb4:                                              ; preds = %bb11
   br label %bb13
 
-bb5:                                              ; preds = %bb3
-  %tmp = add nsw i64 %.01, -3
-  %tmp6 = add nuw nsw i64 %.01, 3
+bb5:                                              ; preds = %bb, %bb11
+  %.013 = phi i64 [ 0, %bb ], [ %tmp12, %bb11 ]
+  %tmp = add nsw i64 %.013, -3
+  %tmp6 = add nuw nsw i64 %.013, 3
   %tmp7 = mul nsw i64 %tmp, %tmp6
-  %tmp8 = srem i64 %tmp7, %.01
+  %tmp8 = srem i64 %tmp7, %.013
   %tmp9 = trunc i64 %tmp8 to i32
-  %tmp10 = getelementptr inbounds i32, i32* %arg, i64 %.01
+  %tmp10 = getelementptr inbounds i32, i32* %arg, i64 %.013
   store i32 %tmp9, i32* %tmp10, align 4
   br label %bb11
 
 bb11:                                             ; preds = %bb5
-  %tmp12 = add nuw nsw i64 %.01, 1
-  br label %bb3
+  %tmp12 = add nuw nsw i64 %.013, 1
+  %exitcond2 = icmp ne i64 %tmp12, 100
+  br i1 %exitcond2, label %bb5, label %bb4
 
 bb13:                                             ; preds = %bb4
-  br label %bb14
+  br label %bb16
 
-bb14:                                             ; preds = %bb23, %bb13
-  %.0 = phi i64 [ 0, %bb13 ], [ %tmp24, %bb23 ]
-  %exitcond = icmp ne i64 %.0, 200
-  br i1 %exitcond, label %bb16, label %bb15
-
-bb15:                                             ; preds = %bb14
+bb15:                                             ; preds = %bb23
   br label %bb25
 
-bb16:                                             ; preds = %bb14
-  %tmp17 = add nsw i64 %.0, -3
-  %tmp18 = add nuw nsw i64 %.0, 3
+bb16:                                             ; preds = %bb13, %bb23
+  %.02 = phi i64 [ 0, %bb13 ], [ %tmp24, %bb23 ]
+  %tmp17 = add nsw i64 %.02, -3
+  %tmp18 = add nuw nsw i64 %.02, 3
   %tmp19 = mul nsw i64 %tmp17, %tmp18
-  %tmp20 = srem i64 %tmp19, %.0
+  %tmp20 = srem i64 %tmp19, %.02
   %tmp21 = trunc i64 %tmp20 to i32
-  %tmp22 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %.0
+  %tmp22 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %.02
   store i32 %tmp21, i32* %tmp22, align 4
   br label %bb23
 
 bb23:                                             ; preds = %bb16
-  %tmp24 = add nuw nsw i64 %.0, 1
-  br label %bb14
+  %tmp24 = add nuw nsw i64 %.02, 1
+  %exitcond = icmp ne i64 %tmp24, 200
+  br i1 %exitcond, label %bb16, label %bb15
 
 bb25:                                             ; preds = %bb15
   ret void
@@ -225,41 +217,38 @@ bb25:                                             ; preds = %bb15
 ; CHECK: Loop Fusion complete
 define void @negative_dependence(i32* noalias %arg) {
 bb:
-  br label %bb5
+  br label %bb7
 
-bb5:                                              ; preds = %bb9, %bb
-  %indvars.iv2 = phi i64 [ %indvars.iv.next3, %bb9 ], [ 0, %bb ]
-  %exitcond4 = icmp ne i64 %indvars.iv2, 100
-  br i1 %exitcond4, label %bb7, label %bb11
+bb11.preheader:                                   ; preds = %bb9
+  br label %bb13
 
-bb7:                                              ; preds = %bb5
-  %tmp = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv2
-  %tmp8 = trunc i64 %indvars.iv2 to i32
+bb7:                                              ; preds = %bb, %bb9
+  %indvars.iv22 = phi i64 [ 0, %bb ], [ %indvars.iv.next3, %bb9 ]
+  %tmp = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv22
+  %tmp8 = trunc i64 %indvars.iv22 to i32
   store i32 %tmp8, i32* %tmp, align 4
   br label %bb9
 
 bb9:                                              ; preds = %bb7
-  %indvars.iv.next3 = add nuw nsw i64 %indvars.iv2, 1
-  br label %bb5
+  %indvars.iv.next3 = add nuw nsw i64 %indvars.iv22, 1
+  %exitcond4 = icmp ne i64 %indvars.iv.next3, 100
+  br i1 %exitcond4, label %bb7, label %bb11.preheader
 
-bb11:                                             ; preds = %bb18, %bb5
-  %indvars.iv = phi i64 [ %indvars.iv.next, %bb18 ], [ 0, %bb5 ]
-  %exitcond = icmp ne i64 %indvars.iv, 100
-  br i1 %exitcond, label %bb13, label %bb19
-
-bb13:                                             ; preds = %bb11
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+bb13:                                             ; preds = %bb11.preheader, %bb18
+  %indvars.iv1 = phi i64 [ 0, %bb11.preheader ], [ %indvars.iv.next, %bb18 ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv1, 1
   %tmp14 = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv.next
   %tmp15 = load i32, i32* %tmp14, align 4
   %tmp16 = shl nsw i32 %tmp15, 1
-  %tmp17 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv
+  %tmp17 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv1
   store i32 %tmp16, i32* %tmp17, align 4
   br label %bb18
 
 bb18:                                             ; preds = %bb13
-  br label %bb11
+  %exitcond = icmp ne i64 %indvars.iv.next, 100
+  br i1 %exitcond, label %bb13, label %bb19
 
-bb19:                                             ; preds = %bb11
+bb19:                                             ; preds = %bb18
   ret void
 }
 
@@ -282,41 +271,38 @@ bb19:                                             ; preds = %bb11
 ; CHECK: Loop Fusion complete
 define i32 @sumTest(i32* noalias %arg) {
 bb:
-  br label %bb6
+  br label %bb9
 
-bb6:                                              ; preds = %bb9, %bb
-  %indvars.iv3 = phi i64 [ %indvars.iv.next4, %bb9 ], [ 0, %bb ]
-  %.01 = phi i32 [ 0, %bb ], [ %tmp11, %bb9 ]
-  %exitcond5 = icmp ne i64 %indvars.iv3, 100
-  br i1 %exitcond5, label %bb9, label %bb13
+bb13.preheader:                                   ; preds = %bb9
+  br label %bb15
 
-bb9:                                              ; preds = %bb6
-  %tmp = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv3
+bb9:                                              ; preds = %bb, %bb9
+  %.01.lcssa = phi i32 [ 0, %bb ], [ %tmp11, %bb9 ]
+  %.013 = phi i32 [ 0, %bb ], [ %tmp11, %bb9 ]
+  %indvars.iv32 = phi i64 [ 0, %bb ], [ %indvars.iv.next4, %bb9 ]
+  %tmp = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv32
   %tmp10 = load i32, i32* %tmp, align 4
-  %tmp11 = add nsw i32 %.01, %tmp10
-  %indvars.iv.next4 = add nuw nsw i64 %indvars.iv3, 1
-  br label %bb6
+  %tmp11 = add nsw i32 %.013, %tmp10
+  %indvars.iv.next4 = add nuw nsw i64 %indvars.iv32, 1
+  %exitcond5 = icmp ne i64 %indvars.iv.next4, 100
+  br i1 %exitcond5, label %bb9, label %bb13.preheader
 
-bb13:                                             ; preds = %bb20, %bb6
-  %.01.lcssa = phi i32 [ %.01, %bb6 ], [ %.01.lcssa, %bb20 ]
-  %indvars.iv = phi i64 [ %indvars.iv.next, %bb20 ], [ 0, %bb6 ]
-  %exitcond = icmp ne i64 %indvars.iv, 100
-  br i1 %exitcond, label %bb15, label %bb14
-
-bb14:                                             ; preds = %bb13
+bb14:                                             ; preds = %bb20
   br label %bb21
 
-bb15:                                             ; preds = %bb13
-  %tmp16 = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv
+bb15:                                             ; preds = %bb13.preheader, %bb20
+  %indvars.iv1 = phi i64 [ 0, %bb13.preheader ], [ %indvars.iv.next, %bb20 ]
+  %tmp16 = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv1
   %tmp17 = load i32, i32* %tmp16, align 4
   %tmp18 = sdiv i32 %tmp17, %.01.lcssa
-  %tmp19 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv
+  %tmp19 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv1
   store i32 %tmp18, i32* %tmp19, align 4
   br label %bb20
 
 bb20:                                             ; preds = %bb15
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  br label %bb13
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv1, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, 100
+  br i1 %exitcond, label %bb15, label %bb14
 
 bb21:                                             ; preds = %bb14
   ret i32 %.01.lcssa
@@ -368,4 +354,63 @@ for.body8:                                        ; preds = %for.body, %for.body
 for.cond.cleanup7:                                ; preds = %for.body8, %entry
   %sum1.0.lcssa36 = phi float [ 0.000000e+00, %entry ], [ %add, %for.body8 ]
   ret float %sum1.0.lcssa36
+}
+
+; Check that non-rotated loops are not considered for fusion.
+; CHECK: Performing Loop Fusion on function notRotated
+; CHECK: Loop bb{{.*}} is not rotated!
+; CHECK: Loop bb{{.*}} is not rotated!
+define void @notRotated(i32* noalias %arg) {
+bb:
+  br label %bb5
+
+bb5:                                              ; preds = %bb14, %bb
+  %indvars.iv2 = phi i64 [ %indvars.iv.next3, %bb14 ], [ 0, %bb ]
+  %.01 = phi i32 [ 0, %bb ], [ %tmp15, %bb14 ]
+  %exitcond4 = icmp ne i64 %indvars.iv2, 100
+  br i1 %exitcond4, label %bb7, label %bb17
+
+bb7:                                              ; preds = %bb5
+  %tmp = add nsw i32 %.01, -3
+  %tmp8 = add nuw nsw i64 %indvars.iv2, 3
+  %tmp9 = trunc i64 %tmp8 to i32
+  %tmp10 = mul nsw i32 %tmp, %tmp9
+  %tmp11 = trunc i64 %indvars.iv2 to i32
+  %tmp12 = srem i32 %tmp10, %tmp11
+  %tmp13 = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv2
+  store i32 %tmp12, i32* %tmp13, align 4
+  br label %bb14
+
+bb14:                                             ; preds = %bb7
+  %indvars.iv.next3 = add nuw nsw i64 %indvars.iv2, 1
+  %tmp15 = add nuw nsw i32 %.01, 1
+  br label %bb5
+
+bb17:                                             ; preds = %bb27, %bb5
+  %indvars.iv = phi i64 [ %indvars.iv.next, %bb27 ], [ 0, %bb5 ]
+  %.0 = phi i32 [ 0, %bb5 ], [ %tmp28, %bb27 ]
+  %exitcond = icmp ne i64 %indvars.iv, 100
+  br i1 %exitcond, label %bb19, label %bb18
+
+bb18:                                             ; preds = %bb17
+  br label %bb29
+
+bb19:                                             ; preds = %bb17
+  %tmp20 = add nsw i32 %.0, -3
+  %tmp21 = add nuw nsw i64 %indvars.iv, 3
+  %tmp22 = trunc i64 %tmp21 to i32
+  %tmp23 = mul nsw i32 %tmp20, %tmp22
+  %tmp24 = trunc i64 %indvars.iv to i32
+  %tmp25 = srem i32 %tmp23, %tmp24
+  %tmp26 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv
+  store i32 %tmp25, i32* %tmp26, align 4
+  br label %bb27
+
+bb27:                                             ; preds = %bb19
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %tmp28 = add nuw nsw i32 %.0, 1
+  br label %bb17
+
+bb29:                                             ; preds = %bb18
+  ret void
 }

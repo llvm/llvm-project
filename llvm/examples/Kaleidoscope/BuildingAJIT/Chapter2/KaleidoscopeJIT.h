@@ -105,7 +105,7 @@ private:
         FPM->run(F);
     });
 
-    return TSM;
+    return std::move(TSM);
   }
 };
 

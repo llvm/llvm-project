@@ -77,8 +77,8 @@ protected:
     auto AST = TU.build();
     EXPECT_THAT(AST.getDiagnostics(), ::testing::IsEmpty()) << Code;
     llvm::Annotations::Range R = A.range();
-    auto Selection = SelectionTree::createRight(
-        AST.getASTContext(), AST.getTokens(), R.Begin, R.End);
+    SelectionTree Selection(AST.getASTContext(), AST.getTokens(), R.Begin,
+                            R.End);
     const SelectionTree::Node *N = Selection.commonAncestor();
     if (!N) {
       ADD_FAILURE() << "No node selected!\n" << Code;

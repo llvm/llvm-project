@@ -94,6 +94,10 @@ bool MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
                                MemoryDependenceResults *MemDep = nullptr,
                                bool PredecessorWithTwoSuccessors = false);
 
+/// Try to remove redundant dbg.value instructions from given basic block.
+/// Returns true if at least one instruction was removed.
+bool RemoveRedundantDbgInstrs(BasicBlock *BB);
+
 /// Replace all uses of an instruction (specified by BI) with a value, then
 /// remove and delete the original instruction.
 void ReplaceInstWithValue(BasicBlock::InstListType &BIL,

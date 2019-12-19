@@ -28,7 +28,7 @@ namespace {
 /// Escape a markdown text block. Ensures the punctuation will not introduce
 /// any of the markdown constructs.
 std::string renderText(llvm::StringRef Input) {
-  // Escaping ASCII punctiation ensures we can't start a markdown construct.
+  // Escaping ASCII punctuation ensures we can't start a markdown construct.
   constexpr llvm::StringLiteral Punctuation =
       R"txt(!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~)txt";
 
@@ -93,7 +93,7 @@ std::string getMarkerForCodeBlock(llvm::StringRef Input) {
   return std::string(/*Repeat=*/std::max(3u, MaxBackticks + 1), '`');
 }
 
-// Trims the input and concatanates whitespace blocks into a single ` `.
+// Trims the input and concatenates whitespace blocks into a single ` `.
 std::string canonicalizeSpaces(std::string Input) {
   // Goes over the string and preserves only a single ` ` for any whitespace
   // chunks, the rest is moved to the end of the string and dropped in the end.
@@ -102,7 +102,7 @@ std::string canonicalizeSpaces(std::string Input) {
   llvm::SplitString(Input, Words);
   if (Words.empty())
     return "";
-  // Go over each word and and add it to the string.
+  // Go over each word and add it to the string.
   for (llvm::StringRef Word : Words) {
     llvm::for_each(Word, [&WritePtr](const char C) { *WritePtr++ = C; });
     // Separate from next block.

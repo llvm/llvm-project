@@ -34,7 +34,7 @@ public:
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
 
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
@@ -156,8 +156,7 @@ void X86_64::writePltHeader(uint8_t *buf) const {
 }
 
 void X86_64::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                      uint64_t pltEntryAddr, int32_t index,
-                      unsigned relOff) const {
+                      uint64_t pltEntryAddr, int32_t index) const {
   const uint8_t inst[] = {
       0xff, 0x25, 0, 0, 0, 0, // jmpq *got(%rip)
       0x68, 0, 0, 0, 0,       // pushq <relocation index>
@@ -584,7 +583,7 @@ public:
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
 };
 
 class RetpolineZNow : public X86_64 {
@@ -593,7 +592,7 @@ public:
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override {}
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
 };
 } // namespace
 
@@ -629,8 +628,7 @@ void Retpoline::writePltHeader(uint8_t *buf) const {
 }
 
 void Retpoline::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                         uint64_t pltEntryAddr, int32_t index,
-                         unsigned relOff) const {
+                         uint64_t pltEntryAddr, int32_t index) const {
   const uint8_t insn[] = {
       0x4c, 0x8b, 0x1d, 0, 0, 0, 0, // 0:  mov foo@GOTPLT(%rip), %r11
       0xe8, 0,    0,    0,    0,    // 7:  callq plt+0x20
@@ -672,8 +670,7 @@ void RetpolineZNow::writePltHeader(uint8_t *buf) const {
 }
 
 void RetpolineZNow::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                             uint64_t pltEntryAddr, int32_t index,
-                             unsigned relOff) const {
+                             uint64_t pltEntryAddr, int32_t index) const {
   const uint8_t insn[] = {
       0x4c, 0x8b, 0x1d, 0,    0, 0, 0, // mov foo@GOTPLT(%rip), %r11
       0xe9, 0,    0,    0,    0,       // jmp plt+0

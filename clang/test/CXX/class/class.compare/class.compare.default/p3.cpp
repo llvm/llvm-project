@@ -24,10 +24,10 @@ struct A {
   friend bool operator>=(const A&, const A&) = default;
 };
 struct TestA {
-  friend constexpr bool operator==(const A&, const A&);
-  friend constexpr bool operator!=(const A&, const A&);
+  friend constexpr bool operator==(const A&, const A&) noexcept;
+  friend constexpr bool operator!=(const A&, const A&) noexcept;
 
-  friend constexpr std::strong_ordering operator<=>(const A&, const A&);
+  friend constexpr std::strong_ordering operator<=>(const A&, const A&) noexcept;
   friend constexpr bool operator<(const A&, const A&);
   friend constexpr bool operator<=(const A&, const A&);
   friend constexpr bool operator>(const A&, const A&);
@@ -51,10 +51,10 @@ struct TestReversedA {
   friend constexpr bool operator>(const ReversedA&, const ReversedA&);
   friend constexpr bool operator<=(const ReversedA&, const ReversedA&);
   friend constexpr bool operator<(const ReversedA&, const ReversedA&);
-  friend constexpr std::strong_ordering operator<=>(const ReversedA&, const ReversedA&);
+  friend constexpr std::strong_ordering operator<=>(const ReversedA&, const ReversedA&) noexcept;
 
-  friend constexpr bool operator!=(const ReversedA&, const ReversedA&);
-  friend constexpr bool operator==(const ReversedA&, const ReversedA&);
+  friend constexpr bool operator!=(const ReversedA&, const ReversedA&) noexcept;
+  friend constexpr bool operator==(const ReversedA&, const ReversedA&) noexcept;
 };
 
 struct B {
@@ -69,8 +69,8 @@ struct B {
   friend bool operator>=(const B&, const B&) = default;
 };
 struct TestB {
-  friend constexpr bool operator==(const B&, const B&);
-  friend constexpr bool operator!=(const B&, const B&);
+  friend constexpr bool operator==(const B&, const B&) noexcept;
+  friend constexpr bool operator!=(const B&, const B&) noexcept;
 
   friend constexpr std::strong_ordering operator<=>(const B&, const B&);
   friend constexpr bool operator<(const B&, const B&);

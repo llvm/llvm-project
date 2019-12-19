@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // FileIndex implements SymbolIndex for symbols from a set of files. Symbols are
-// maintained at source-file granuality (e.g. with ASTs), and files can be
+// maintained at source-file granularity (e.g. with ASTs), and files can be
 // updated dynamically.
 //
 //===----------------------------------------------------------------------===//

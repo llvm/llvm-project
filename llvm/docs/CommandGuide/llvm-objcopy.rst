@@ -43,6 +43,9 @@ multiple file formats.
  starts with ".note". Otherwise, it will have type `SHT_PROGBITS`. Can be
  specified multiple times to add multiple sections.
 
+ For MachO objects, ``<section>`` must be formatted as
+ ``<segment name>,<section name>``.
+
 .. option:: --binary-architecture <arch>, -B
 
  Ignored for compatibility.

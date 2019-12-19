@@ -20,6 +20,16 @@ using namespace llvm;
 using namespace clang;
 using namespace clang::tblgen;
 
+llvm::StringRef clang::tblgen::HasProperties::getName() const {
+  if (auto node = getAs<ASTNode>()) {
+    return node.getName();
+  } else if (auto typeCase = getAs<TypeCase>()) {
+    return typeCase.getCaseName();
+  } else {
+    PrintFatalError(getLoc(), "unexpected node declaring properties");
+  }
+}
+
 static StringRef removeExpectedNodeNameSuffix(Record *node, StringRef suffix) {
   StringRef nodeName = node->getName();
   if (!nodeName.endswith(suffix)) {

@@ -102,8 +102,8 @@ TEST(Paragraph, ExtraSpaces) {
   Paragraph P;
   P.appendText("foo\n   \t   baz");
   P.appendCode(" bar\n");
-  EXPECT_EQ(P.asMarkdown(), R"md(foo baz `bar`)md");
-  EXPECT_EQ(P.asPlainText(), R"pt(foo baz bar)pt");
+  EXPECT_EQ(P.asMarkdown(), "foo baz `bar`");
+  EXPECT_EQ(P.asPlainText(), "foo baz bar");
 }
 
 TEST(Paragraph, NewLines) {
@@ -111,8 +111,8 @@ TEST(Paragraph, NewLines) {
   Paragraph P;
   P.appendText(" \n foo\nbar\n ");
   P.appendCode(" \n foo\nbar \n ");
-  EXPECT_EQ(P.asMarkdown(), R"md(foo bar `foo bar`)md");
-  EXPECT_EQ(P.asPlainText(), R"pt(foo bar foo bar)pt");
+  EXPECT_EQ(P.asMarkdown(), "foo bar `foo bar`");
+  EXPECT_EQ(P.asPlainText(), "foo bar foo bar");
 }
 
 TEST(Document, Separators) {
@@ -120,16 +120,20 @@ TEST(Document, Separators) {
   D.addParagraph().appendText("foo");
   D.addCodeBlock("test");
   D.addParagraph().appendText("bar");
-  EXPECT_EQ(D.asMarkdown(), R"md(foo
+
+  const char ExpectedMarkdown[] = R"md(foo
 ```cpp
 test
 ```
-bar)md");
-  EXPECT_EQ(D.asPlainText(), R"pt(foo
+bar)md";
+  EXPECT_EQ(D.asMarkdown(), ExpectedMarkdown);
+
+  const char ExpectedText[] = R"pt(foo
 
 test
 
-bar)pt");
+bar)pt";
+  EXPECT_EQ(D.asPlainText(), ExpectedText);
 }
 
 TEST(Document, Spacer) {
@@ -145,32 +149,41 @@ TEST(CodeBlock, Render) {
   Document D;
   // Code blocks preserves any extra spaces.
   D.addCodeBlock("foo\n  bar\n  baz");
-  EXPECT_EQ(D.asMarkdown(), R"md(```cpp
+
+  llvm::StringRef ExpectedMarkdown =
+      R"md(```cpp
 foo
   bar
   baz
-```)md");
-  EXPECT_EQ(D.asPlainText(), R"pt(foo
+```)md";
+  llvm::StringRef ExpectedPlainText =
+      R"pt(foo
   bar
-  baz)pt");
+  baz)pt";
+  EXPECT_EQ(D.asMarkdown(), ExpectedMarkdown);
+  EXPECT_EQ(D.asPlainText(), ExpectedPlainText);
   D.addCodeBlock("foo");
-  EXPECT_EQ(D.asMarkdown(), R"md(```cpp
+  ExpectedMarkdown =
+      R"md(```cpp
 foo
   bar
   baz
 ```
 ```cpp
 foo
-```)md");
+```)md";
+  EXPECT_EQ(D.asMarkdown(), ExpectedMarkdown);
   // FIXME: we shouldn't have 2 empty lines in between. A solution might be
   // having a `verticalMargin` method for blocks, and let container insert new
   // lines according to that before/after blocks.
-  EXPECT_EQ(D.asPlainText(), R"pt(foo
+  ExpectedPlainText =
+      R"pt(foo
   bar
   baz
 
 
-foo)pt");
+foo)pt";
+  EXPECT_EQ(D.asPlainText(), ExpectedPlainText);
 }
 
 } // namespace

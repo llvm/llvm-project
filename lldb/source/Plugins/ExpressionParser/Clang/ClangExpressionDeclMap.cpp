@@ -206,10 +206,7 @@ TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
   assert(source.getASTContext() == m_ast_context);
 
   if (m_ast_importer_sp) {
-    return TypeFromUser(m_ast_importer_sp->DeportType(
-                            target.getASTContext(), source.getASTContext(),
-                            parser_type.GetOpaqueQualType()),
-                        &target);
+    return TypeFromUser(m_ast_importer_sp->DeportType(target, parser_type));
   } else if (m_merger_up) {
     clang::FileID source_file =
         source.getASTContext()->getSourceManager().getFileID(

@@ -1767,9 +1767,9 @@ class _LIBCPP_AVAILABILITY_FUTURE __packaged_task_func<_Fp, _Alloc, _Rp(_ArgType
     __compressed_pair<_Fp, _Alloc> __f_;
 public:
     _LIBCPP_INLINE_VISIBILITY
-    explicit __packaged_task_func(const _Fp& __f) : __f_(__f) {}
+    explicit __packaged_task_func(const _Fp& __f) : __f_(__f, __default_init_tag()) {}
     _LIBCPP_INLINE_VISIBILITY
-    explicit __packaged_task_func(_Fp&& __f) : __f_(_VSTD::move(__f)) {}
+    explicit __packaged_task_func(_Fp&& __f) : __f_(_VSTD::move(__f), __default_init_tag()) {}
     _LIBCPP_INLINE_VISIBILITY
     __packaged_task_func(const _Fp& __f, const _Alloc& __a)
         : __f_(__f, __a) {}

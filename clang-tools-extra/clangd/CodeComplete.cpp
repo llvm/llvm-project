@@ -395,7 +395,7 @@ private:
     std::string ReturnType;
   };
 
-  // If all BundledEntrys have the same value for a property, return it.
+  // If all BundledEntries have the same value for a property, return it.
   template <std::string BundledEntry::*Member>
   const std::string *onlyValue() const {
     auto B = Bundled.begin(), E = Bundled.end();
@@ -499,7 +499,7 @@ llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R,
   llvm_unreachable("unknown CodeCompletionResult kind");
 }
 
-// Scopes of the paritial identifier we're trying to complete.
+// Scopes of the partial identifier we're trying to complete.
 // It is used when we query the index for more completion results.
 struct SpecifiedScope {
   // The scopes we should look in, determined by Sema.
@@ -874,7 +874,7 @@ public:
       // Function Template.
       // - High score is better.
       // - Shorter signature is better.
-      // - Alphebatically smaller is better.
+      // - Alphabetically smaller is better.
       if (L.Quality.NumberOfParameters != R.Quality.NumberOfParameters)
         return L.Quality.NumberOfParameters < R.Quality.NumberOfParameters;
       if (L.Quality.NumberOfOptionalParameters !=
@@ -1510,7 +1510,7 @@ private:
   }
 
   // Merges Sema and Index results where possible, to form CompletionCandidates.
-  // \p Identifiers is raw idenfiers that can also be completion condidates.
+  // \p Identifiers is raw idenfiers that can also be completion candidates.
   // Identifiers are not merged with results from index or sema.
   // Groups overloads if desired, to form CompletionCandidate::Bundles. The
   // bundles are scored and top results are returned, best to worst.

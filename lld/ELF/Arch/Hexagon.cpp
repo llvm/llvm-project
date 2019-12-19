@@ -34,7 +34,7 @@ public:
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+                int32_t index) const override;
 };
 } // namespace
 
@@ -303,8 +303,7 @@ void Hexagon::writePltHeader(uint8_t *buf) const {
 }
 
 void Hexagon::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                       uint64_t pltEntryAddr, int32_t index,
-                       unsigned relOff) const {
+                       uint64_t pltEntryAddr, int32_t index) const {
   const uint8_t inst[] = {
       0x00, 0x40, 0x00, 0x00, // { immext (#0)
       0x0e, 0xc0, 0x49, 0x6a, //   r14 = add (pc, ##GOTn@PCREL) }

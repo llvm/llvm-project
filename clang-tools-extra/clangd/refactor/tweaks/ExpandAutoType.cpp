@@ -71,10 +71,10 @@ bool ExpandAutoType::prepare(const Selection& Inputs) {
 }
 
 Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
-  auto& SrcMgr = Inputs.AST.getSourceManager();
+  auto &SrcMgr = Inputs.AST->getSourceManager();
 
-  llvm::Optional<clang::QualType> DeducedType =
-      getDeducedType(Inputs.AST.getASTContext(), CachedLocation->getBeginLoc());
+  llvm::Optional<clang::QualType> DeducedType = getDeducedType(
+      Inputs.AST->getASTContext(), CachedLocation->getBeginLoc());
 
   // if we can't resolve the type, return an error message
   if (DeducedType == llvm::None)
@@ -107,7 +107,7 @@ Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
 
 llvm::Error ExpandAutoType::createErrorMessage(const std::string& Message,
                                                const Selection& Inputs) {
-  auto& SrcMgr = Inputs.AST.getSourceManager();
+  auto &SrcMgr = Inputs.AST->getSourceManager();
   std::string ErrorMessage =
       Message + ": " +
           SrcMgr.getFilename(Inputs.Cursor).str() + " Line " +

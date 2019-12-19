@@ -2253,38 +2253,28 @@ Error BinaryWriter::finalize() {
       std::unique(std::begin(OrderedSegments), std::end(OrderedSegments));
   OrderedSegments.erase(End, std::end(OrderedSegments));
 
-  uint64_t Offset = 0;
-
-  // Modify the first segment so that there is no gap at the start. This allows
-  // our layout algorithm to proceed as expected while not writing out the gap
-  // at the start.
-  if (!OrderedSegments.empty()) {
-    Segment *Seg = OrderedSegments[0];
-    const SectionBase *Sec = Seg->firstSection();
-    auto Diff = Sec->OriginalOffset - Seg->OriginalOffset;
-    Seg->OriginalOffset += Diff;
-    // The size needs to be shrunk as well.
-    Seg->FileSize -= Diff;
-    // The PAddr needs to be increased to remove the gap before the first
-    // section.
-    Seg->PAddr += Diff;
-    uint64_t LowestPAddr = Seg->PAddr;
-    for (Segment *Segment : OrderedSegments) {
-      Segment->Offset = Segment->PAddr - LowestPAddr;
-      Offset = std::max(Offset, Segment->Offset + Segment->FileSize);
-    }
+  // Compute the section LMA based on its sh_offset and the containing segment's
+  // p_offset and p_paddr. Also compute the minimum LMA of all sections as
+  // MinAddr. In the output, the contents between address 0 and MinAddr will be
+  // skipped.
+  uint64_t MinAddr = UINT64_MAX;
+  for (SectionBase &Sec : Obj.allocSections()) {
+    if (Sec.ParentSegment != nullptr)
+      Sec.Addr =
+          Sec.Offset - Sec.ParentSegment->Offset + Sec.ParentSegment->PAddr;
+    MinAddr = std::min(MinAddr, Sec.Addr);
   }
-
-  layoutSections(Obj.allocSections(), Offset);
 
   // Now that every section has been laid out we just need to compute the total
   // file size. This might not be the same as the offset returned by
   // layoutSections, because we want to truncate the last segment to the end of
   // its last section, to match GNU objcopy's behaviour.
   TotalSize = 0;
-  for (const SectionBase &Sec : Obj.allocSections())
+  for (SectionBase &Sec : Obj.allocSections()) {
+    Sec.Offset = Sec.Addr - MinAddr;
     if (Sec.Type != SHT_NOBITS)
       TotalSize = std::max(TotalSize, Sec.Offset + Sec.Size);
+  }
 
   if (Error E = Buf.allocate(TotalSize))
     return E;

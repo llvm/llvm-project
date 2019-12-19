@@ -36,94 +36,18 @@
 #include "clang/AST/ExternalASTSource.h"
 
 #include "lldb/Core/dwarf.h"
+#include "lldb/Symbol/ClangASTMetadata.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {
 
-class ClangASTMetadata {
-public:
-  ClangASTMetadata()
-      : m_user_id(0), m_union_is_user_id(false), m_union_is_isa_ptr(false),
-        m_has_object_ptr(false), m_is_self(false), m_is_dynamic_cxx(true) {}
-
-  bool GetIsDynamicCXXType() const { return m_is_dynamic_cxx; }
-
-  void SetIsDynamicCXXType(bool b) { m_is_dynamic_cxx = b; }
-
-  void SetUserID(lldb::user_id_t user_id) {
-    m_user_id = user_id;
-    m_union_is_user_id = true;
-    m_union_is_isa_ptr = false;
-  }
-
-  lldb::user_id_t GetUserID() const {
-    if (m_union_is_user_id)
-      return m_user_id;
-    else
-      return LLDB_INVALID_UID;
-  }
-
-  void SetISAPtr(uint64_t isa_ptr) {
-    m_isa_ptr = isa_ptr;
-    m_union_is_user_id = false;
-    m_union_is_isa_ptr = true;
-  }
-
-  uint64_t GetISAPtr() const {
-    if (m_union_is_isa_ptr)
-      return m_isa_ptr;
-    else
-      return 0;
-  }
-
-  void SetObjectPtrName(const char *name) {
-    m_has_object_ptr = true;
-    if (strcmp(name, "self") == 0)
-      m_is_self = true;
-    else if (strcmp(name, "this") == 0)
-      m_is_self = false;
-    else
-      m_has_object_ptr = false;
-  }
-
-  lldb::LanguageType GetObjectPtrLanguage() const {
-    if (m_has_object_ptr) {
-      if (m_is_self)
-        return lldb::eLanguageTypeObjC;
-      else
-        return lldb::eLanguageTypeC_plus_plus;
-    }
-    return lldb::eLanguageTypeUnknown;
-  }
-
-  const char *GetObjectPtrName() const {
-    if (m_has_object_ptr) {
-      if (m_is_self)
-        return "self";
-      else
-        return "this";
-    } else
-      return nullptr;
-  }
-
-  bool HasObjectPtr() const { return m_has_object_ptr; }
-
-  void Dump(Stream *s);
-
-private:
-  union {
-    lldb::user_id_t m_user_id;
-    uint64_t m_isa_ptr;
-  };
-
-  bool m_union_is_user_id : 1, m_union_is_isa_ptr : 1, m_has_object_ptr : 1,
-      m_is_self : 1, m_is_dynamic_cxx : 1;
-};
-
 class ClangExternalASTSourceCommon : public clang::ExternalASTSource {
+
+  /// LLVM-style RTTI.
+  static char ID;
+
 public:
-  ClangExternalASTSourceCommon();
   ~ClangExternalASTSourceCommon() override;
 
   ClangASTMetadata *GetMetadata(const clang::Decl *object);
@@ -138,8 +62,13 @@ public:
     m_type_metadata[object] = metadata;
   }
 
-  static ClangExternalASTSourceCommon *Lookup(clang::ExternalASTSource *source);
-
+  /// LLVM-style RTTI.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || ExternalASTSource::isA(ClassID);
+  }
+  static bool classof(const ExternalASTSource *S) { return S->isA(&ID); }
+  /// \}
 private:
   typedef llvm::DenseMap<const clang::Decl *, ClangASTMetadata> DeclMetadataMap;
   typedef llvm::DenseMap<const clang::Type *, ClangASTMetadata> TypeMetadataMap;

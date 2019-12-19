@@ -1,4 +1,4 @@
-//===-- LLJITWithJITLink.cpp - Configure LLJIT to use ObjectLinkingLayer --===//
+//===--------------- LLJITWithCustomObjectLinkingLayer.cpp ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file shows how to switch LLJIT to use ObjectLinkingLayer (which is
-// backed by JITLink) rather than RTDyldObjectLinkingLayer (which is backed by
-// RuntimeDyld). Using JITLink as the underlying allocator enables use of
-// small code model in JIT'd code.
+// This file shows how to switch LLJIT to use a custom object linking layer (we
+// use ObjectLinkingLayer, which is backed by JITLink, as an example).
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,22 +36,20 @@ int main(int argc, char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "HowToUseLLJIT");
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
-  // Define an in-process JITLink memory manager.
-  jitlink::InProcessMemoryManager MemMgr;
-
   // Detect the host and set code model to small.
   auto JTMB = ExitOnErr(JITTargetMachineBuilder::detectHost());
   JTMB.setCodeModel(CodeModel::Small);
 
   // Create an LLJIT instance with an ObjectLinkingLayer as the base layer.
-  auto J =
-      ExitOnErr(LLJITBuilder()
-                    .setJITTargetMachineBuilder(std::move(JTMB))
-                    .setObjectLinkingLayerCreator([&](ExecutionSession &ES,
-                                                      const Triple &TT) {
-                      return std::make_unique<ObjectLinkingLayer>(ES, MemMgr);
-                    })
-                    .create());
+  auto J = ExitOnErr(
+      LLJITBuilder()
+          .setJITTargetMachineBuilder(std::move(JTMB))
+          .setObjectLinkingLayerCreator(
+              [&](ExecutionSession &ES, const Triple &TT) {
+                return std::make_unique<ObjectLinkingLayer>(
+                    ES, std::make_unique<jitlink::InProcessMemoryManager>());
+              })
+          .create());
 
   auto M = ExitOnErr(parseExampleModule(Add1Example, "add1"));
 

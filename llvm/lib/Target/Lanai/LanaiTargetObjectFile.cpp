@@ -28,7 +28,6 @@ static cl::opt<unsigned> SSThreshold(
 void LanaiTargetObjectFile::Initialize(MCContext &Ctx,
                                        const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-  InitializeELF(TM.Options.UseInitArray);
 
   SmallDataSection = getContext().getELFSection(
       ".sdata", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);

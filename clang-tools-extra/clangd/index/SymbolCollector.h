@@ -99,14 +99,14 @@ public:
   }
 
   bool
-  handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
-                      ArrayRef<index::SymbolRelation> Relations,
-                      SourceLocation Loc,
-                      index::IndexDataConsumer::ASTNodeInfo ASTNode) override;
+  handleDeclOccurrence(const Decl *D, index::SymbolRoleSet Roles,
+                       ArrayRef<index::SymbolRelation> Relations,
+                       SourceLocation Loc,
+                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override;
 
-  bool handleMacroOccurence(const IdentifierInfo *Name, const MacroInfo *MI,
-                            index::SymbolRoleSet Roles,
-                            SourceLocation Loc) override;
+  bool handleMacroOccurrence(const IdentifierInfo *Name, const MacroInfo *MI,
+                             index::SymbolRoleSet Roles,
+                             SourceLocation Loc) override;
 
   SymbolSlab takeSymbols() { return std::move(Symbols).build(); }
   RefSlab takeRefs() { return std::move(Refs).build(); }

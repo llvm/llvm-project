@@ -1,4 +1,4 @@
-class ASTNode;
+include "clang/Basic/ASTNode.td"
 
 class TypeNode<TypeNode base, bit abstract = 0> : ASTNode {
 	TypeNode Base = base;

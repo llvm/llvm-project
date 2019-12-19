@@ -51,6 +51,8 @@ enum ActionType {
   GenClangDeclNodes,
   GenClangStmtNodes,
   GenClangTypeNodes,
+  GenClangTypeReader,
+  GenClangTypeWriter,
   GenClangOpcodes,
   GenClangSACheckers,
   GenClangCommentHTMLTags,
@@ -145,6 +147,10 @@ cl::opt<ActionType> Action(
                    "Generate Clang AST statement nodes"),
         clEnumValN(GenClangTypeNodes, "gen-clang-type-nodes",
                    "Generate Clang AST type nodes"),
+        clEnumValN(GenClangTypeReader, "gen-clang-type-reader",
+                   "Generate Clang AbstractTypeReader class"),
+        clEnumValN(GenClangTypeWriter, "gen-clang-type-writer",
+                   "Generate Clang AbstractTypeWriter class"),
         clEnumValN(GenClangOpcodes, "gen-clang-opcodes",
                    "Generate Clang constexpr interpreter opcodes"),
         clEnumValN(GenClangSACheckers, "gen-clang-sa-checkers",
@@ -281,6 +287,12 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenClangTypeNodes:
     EmitClangTypeNodes(Records, OS);
+    break;
+  case GenClangTypeReader:
+    EmitClangTypeReader(Records, OS);
+    break;
+  case GenClangTypeWriter:
+    EmitClangTypeWriter(Records, OS);
     break;
   case GenClangBasicReader:
     EmitClangBasicReader(Records, OS);

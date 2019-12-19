@@ -63,13 +63,13 @@ bool ObjCLocalizeStringLiteral::prepare(const Selection &Inputs) {
 
 Expected<Tweak::Effect>
 ObjCLocalizeStringLiteral::apply(const Selection &Inputs) {
-  auto &SM = Inputs.AST.getSourceManager();
-  auto &LangOpts = Inputs.AST.getASTContext().getLangOpts();
+  auto &SM = Inputs.AST->getSourceManager();
+  auto &LangOpts = Inputs.AST->getASTContext().getLangOpts();
   auto Reps = tooling::Replacements(tooling::Replacement(
       SM, CharSourceRange::getCharRange(Str->getBeginLoc()),
       "NSLocalizedString(", LangOpts));
   SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-      Str->getEndLoc(), 0, Inputs.AST.getSourceManager(), LangOpts);
+      Str->getEndLoc(), 0, Inputs.AST->getSourceManager(), LangOpts);
   if (auto Err = Reps.add(tooling::Replacement(
           SM, CharSourceRange::getCharRange(EndLoc), ", @\"\")", LangOpts)))
     return std::move(Err);
