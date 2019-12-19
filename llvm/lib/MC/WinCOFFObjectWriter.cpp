@@ -352,9 +352,10 @@ COFFSymbol *WinCOFFObjectWriter::getLinkedSymbol(const MCSymbol &Symbol) {
 
 /// This function takes a symbol data object from the assembler
 /// and creates the associated COFF symbol staging object.
-void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
+void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSymGeneric,
                                        MCAssembler &Assembler,
                                        const MCAsmLayout &Layout) {
+  const auto &MCSym = cast<MCSymbolCOFF>(MCSymGeneric);
   COFFSymbol *Sym = GetOrCreateCOFFSymbol(&MCSym);
   const MCSymbol *Base = Layout.getBaseSymbol(MCSym);
   COFFSection *Sec = nullptr;
@@ -365,7 +366,7 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
   }
 
   COFFSymbol *Local = nullptr;
-  if (cast<MCSymbolCOFF>(MCSym).isWeakExternal()) {
+  if (MCSym.isWeakExternal()) {
     Sym->Data.StorageClass = COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
 
     COFFSymbol *WeakDefault = getLinkedSymbol(MCSym);
@@ -376,6 +377,9 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
         WeakDefault->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;
       else
         WeakDefault->Section = Sec;
+      // Make the default symbol static, in order to not conflict with
+      // similar default symbols for the same weak in other objects.
+      WeakDefault->Data.StorageClass = COFF::IMAGE_SYM_CLASS_STATIC;
       Local = WeakDefault;
     }
 
@@ -394,14 +398,8 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
     else
       Sym->Section = Sec;
     Local = Sym;
-  }
 
-  if (Local) {
-    Local->Data.Value = getSymbolValue(MCSym, Layout);
-
-    const MCSymbolCOFF &SymbolCOFF = cast<MCSymbolCOFF>(MCSym);
-    Local->Data.Type = SymbolCOFF.getType();
-    Local->Data.StorageClass = SymbolCOFF.getClass();
+    Local->Data.StorageClass = MCSym.getClass();
 
     // If no storage class was specified in the streamer, define it here.
     if (Local->Data.StorageClass == COFF::IMAGE_SYM_CLASS_NULL) {
@@ -411,6 +409,12 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
       Local->Data.StorageClass = IsExternal ? COFF::IMAGE_SYM_CLASS_EXTERNAL
                                             : COFF::IMAGE_SYM_CLASS_STATIC;
     }
+  }
+
+  if (Local) {
+    Local->Data.Value = getSymbolValue(MCSym, Layout);
+
+    Local->Data.Type = MCSym.getType();
   }
 
   Sym->MC = &MCSym;
