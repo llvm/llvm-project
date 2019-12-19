@@ -1211,7 +1211,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
-    assert(Inst.mayLoad() || Inst.mayStore());
+    assert(Inst.mayLoadOrStore());
 
     if (TII->usesVM_CNT(Inst)) {
       if (!ST->hasVscnt())
