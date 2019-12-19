@@ -283,10 +283,10 @@ static_assert(&x == &y, "false"); // expected-error {{false}}
 static_assert(&x != &y, "");
 constexpr bool g1 = &x == &y;
 constexpr bool g2 = &x != &y;
-constexpr bool g3 = &x <= &y; // expected-error {{must be initialized by a constant expression}}
-constexpr bool g4 = &x >= &y; // expected-error {{must be initialized by a constant expression}}
-constexpr bool g5 = &x < &y; // expected-error {{must be initialized by a constant expression}}
-constexpr bool g6 = &x > &y; // expected-error {{must be initialized by a constant expression}}
+constexpr bool g3 = &x <= &y; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
+constexpr bool g4 = &x >= &y; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
+constexpr bool g5 = &x < &y; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
+constexpr bool g6 = &x > &y; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
 
 struct S { int x, y; } s;
 static_assert(&s.x == &s.y, "false"); // expected-error {{false}}
@@ -298,17 +298,17 @@ static_assert(&s.x > &s.y, "false"); // expected-error {{false}}
 
 static_assert(0 == &y, "false"); // expected-error {{false}}
 static_assert(0 != &y, "");
-constexpr bool n3 = (int*)0 <= &y; // expected-error {{must be initialized by a constant expression}}
-constexpr bool n4 = (int*)0 >= &y; // expected-error {{must be initialized by a constant expression}}
-constexpr bool n5 = (int*)0 < &y; // expected-error {{must be initialized by a constant expression}}
-constexpr bool n6 = (int*)0 > &y; // expected-error {{must be initialized by a constant expression}}
+constexpr bool n3 = (int*)0 <= &y; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
+constexpr bool n4 = (int*)0 >= &y; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
+constexpr bool n5 = (int*)0 < &y; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
+constexpr bool n6 = (int*)0 > &y; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
 
 static_assert(&x == 0, "false"); // expected-error {{false}}
 static_assert(&x != 0, "");
-constexpr bool n9 = &x <= (int*)0; // expected-error {{must be initialized by a constant expression}}
-constexpr bool n10 = &x >= (int*)0; // expected-error {{must be initialized by a constant expression}}
-constexpr bool n11 = &x < (int*)0; // expected-error {{must be initialized by a constant expression}}
-constexpr bool n12 = &x > (int*)0; // expected-error {{must be initialized by a constant expression}}
+constexpr bool n9 = &x <= (int*)0; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
+constexpr bool n10 = &x >= (int*)0; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
+constexpr bool n11 = &x < (int*)0; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
+constexpr bool n12 = &x > (int*)0; // expected-error {{must be initialized by a constant expression}} expected-note {{unspecified}}
 
 static_assert(&x == &x, "");
 static_assert(&x != &x, "false"); // expected-error {{false}}
