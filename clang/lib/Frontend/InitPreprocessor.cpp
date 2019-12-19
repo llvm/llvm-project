@@ -507,7 +507,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   if (LangOpts.CPlusPlus14) {
     Builder.defineMacro("__cpp_binary_literals", "201304L");
     Builder.defineMacro("__cpp_digit_separators", "201309L");
-    Builder.defineMacro("__cpp_init_captures", "201304L"); // (not latest)
+    Builder.defineMacro("__cpp_init_captures",
+                        LangOpts.CPlusPlus2a ? "201803L" : "201304L");
     Builder.defineMacro("__cpp_generic_lambdas",
                         LangOpts.CPlusPlus2a ? "201707L" : "201304L");
     Builder.defineMacro("__cpp_decltype_auto", "201304L");

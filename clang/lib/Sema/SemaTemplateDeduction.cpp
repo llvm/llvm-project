@@ -4453,7 +4453,8 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
       /*.IsPack = */ (bool)Type.getAs<PackExpansionTypeLoc>()};
 
   if (!DependentDeductionDepth &&
-      (Type.getType()->isDependentType() || Init->isTypeDependent())) {
+      (Type.getType()->isDependentType() || Init->isTypeDependent() ||
+       Init->containsUnexpandedParameterPack())) {
     Result = SubstituteDeducedTypeTransform(*this, DependentResult).Apply(Type);
     assert(!Result.isNull() && "substituting DependentTy can't fail");
     return DAR_Succeeded;
