@@ -266,13 +266,16 @@ public:
   /// Generate a stackmap record for a stackmap instruction.
   ///
   /// MI must be a raw STACKMAP, not a PATCHPOINT.
-  void recordStackMap(const MachineInstr &MI);
+  void recordStackMap(const MCSymbol &L,
+                      const MachineInstr &MI);
 
   /// Generate a stackmap record for a patchpoint instruction.
-  void recordPatchPoint(const MachineInstr &MI);
+  void recordPatchPoint(const MCSymbol &L,
+                        const MachineInstr &MI);
 
   /// Generate a stackmap record for a statepoint instruction.
-  void recordStatepoint(const MachineInstr &MI);
+  void recordStatepoint(const MCSymbol &L,
+                        const MachineInstr &MI);
 
   /// If there is any stack map data, create a stack map section and serialize
   /// the map info into it. This clears the stack map data structures
@@ -306,12 +309,15 @@ private:
   /// registers that need to be recorded in the stackmap.
   LiveOutVec parseRegisterLiveOutMask(const uint32_t *Mask) const;
 
-  /// This should be called by the MC lowering code _immediately_ before
-  /// lowering the MI to an MCInst. It records where the operands for the
-  /// instruction are stored, and outputs a label to record the offset of
-  /// the call from the start of the text section. In special cases (e.g. AnyReg
-  /// calling convention) the return register is also recorded if requested.
-  void recordStackMapOpers(const MachineInstr &MI, uint64_t ID,
+  /// Record the locations of the operands of the provided instruction in a
+  /// record keyed by the provided label.  For instructions w/AnyReg calling
+  /// convention the return register is also recorded if requested.  For
+  /// STACKMAP, and PATCHPOINT the label is expected to immediately *preceed*
+  /// lowering of the MI to MCInsts.  For STATEPOINT, it expected to
+  /// immediately *follow*.  It's not clear this difference was intentional,
+  /// but it exists today.  
+  void recordStackMapOpers(const MCSymbol &L,
+                           const MachineInstr &MI, uint64_t ID,
                            MachineInstr::const_mop_iterator MOI,
                            MachineInstr::const_mop_iterator MOE,
                            bool recordResult = false);
