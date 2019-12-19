@@ -1,8 +1,8 @@
-; RUN: %llc_dwarf --function-sections < %s -filetype=obj | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -function-sections -mtriple=x86_64-unknown-linux-gnu < %s -filetype=obj | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; CHECK: DW_AT_ranges [DW_FORM_rnglistx]   (indexed (0x0) rangelist = 0x00000010
-; CHECK:                    [0x0000000000000000, 0x0000000000000006) ".text._Z2f1v"
-; CHECK:                    [0x0000000000000000, 0x0000000000000006) ".text._Z2f2v")
+; CHECK:                    [0x0000000000000000, 0x{{[0-9a-z]*}}) ".text._Z2f1v"
+; CHECK:                    [0x0000000000000000, 0x{{[0-9a-z]*}}) ".text._Z2f2v")
 ; CHECK: DW_AT_addr_base [DW_FORM_sec_offset] (0x00000008)
 
 
