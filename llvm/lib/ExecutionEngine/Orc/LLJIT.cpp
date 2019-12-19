@@ -24,15 +24,11 @@ Error LLJITBuilderState::prepareForConstruction() {
       JTMB = std::move(*JTMBOrErr);
     else
       return JTMBOrErr.takeError();
-  }
 
-  // If the client didn't configure any linker options then auto-configure the
-  // JIT linker.
-  if (!CreateObjectLinkingLayer && JTMB->getCodeModel() == None &&
-      JTMB->getRelocationModel() == None) {
-
+    // If no ObjectLinkingLayer creator was set and the target supports JITLink
+    // then configure for JITLink.
     auto &TT = JTMB->getTargetTriple();
-    if (TT.isOSBinFormatMachO() &&
+    if (!CreateObjectLinkingLayer && TT.isOSBinFormatMachO() &&
         (TT.getArch() == Triple::aarch64 || TT.getArch() == Triple::x86_64)) {
 
       JTMB->setRelocationModel(Reloc::PIC_);
