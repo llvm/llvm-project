@@ -121,6 +121,10 @@ EXTERN int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t Var,
 
 INLINE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
 
+INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
+  // AMDGCN doesn't need to sync threads in a warp
+}
+
 INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
   // we have protected the master warp from releasing from its barrier
   // due to a full workgroup barrier in the middle of a work function.
