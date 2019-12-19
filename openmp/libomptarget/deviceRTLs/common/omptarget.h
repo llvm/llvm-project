@@ -17,7 +17,6 @@
 // std includes
 #include <inttypes.h>
 #include <math.h>
-#include <stdlib.h>
 
 // local includes
 #include "target_impl.h"
