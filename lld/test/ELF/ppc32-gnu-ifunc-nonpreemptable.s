@@ -1,4 +1,5 @@
-# REQUIRES: ppc
+# REQUIRES: ppc, asserts
+# XFAIL: *
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s

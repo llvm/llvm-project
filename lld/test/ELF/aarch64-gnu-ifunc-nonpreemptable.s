@@ -37,7 +37,7 @@ main:
 # PDE-NEXT:   210178:   add     x8, x8, #384
 # PDE-NEXT:   21017c:   ret
 # PDE-EMPTY:
-# PDE-NEXT: Disassembly of section .plt:
+# PDE-NEXT: Disassembly of section .iplt:
 # PDE-EMPTY:
 # PDE-NEXT: myfunc:
 ## page(.got.plt) - page(0x210010) = 65536
@@ -59,7 +59,7 @@ main:
 # PIE-NEXT:    10268: add     x8, x8, #624
 # PIE-NEXT:    1026c: ret
 # PIE-EMPTY:
-# PIE-NEXT: Disassembly of section .plt:
+# PIE-NEXT: Disassembly of section .iplt:
 # PIE-EMPTY:
 # PIE-NEXT: myfunc:
 # PIE-NEXT:    10270: adrp    x16, #131072

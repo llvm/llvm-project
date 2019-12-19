@@ -39,6 +39,9 @@
 // DISASM-NEXT:     1340:       jmpq    *8474(%rip)
 // DISASM-NEXT:     1346:       pushq   $1
 // DISASM-NEXT:     134b:       jmp     -48 <.plt>
+// DISASM:      Disassembly of section .iplt:
+// DISASM-EMPTY:
+// DISASM:      .iplt:
 // DISASM-NEXT:     1350:       jmpq    *8466(%rip)
 // DISASM-NEXT:     1356:       pushq   $0
 // DISASM-NEXT:     135b:       jmp     -64 <.plt>

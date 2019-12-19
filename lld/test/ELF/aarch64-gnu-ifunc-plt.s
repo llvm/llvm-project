@@ -39,8 +39,8 @@
 // DISASM:      bar:
 // DISASM-NEXT:    2102dc: ret
 // DISASM:      _start:
-// DISASM-NEXT:    2102e0: bl      #80 <zed2@plt+0x10>
-// DISASM-NEXT:    2102e4: bl      #92 <zed2@plt+0x20>
+// DISASM-NEXT:    2102e0: bl      #80 <zed2+0x210330>
+// DISASM-NEXT:    2102e4: bl      #92 <zed2+0x210340>
 // DISASM-NEXT:    2102e8: bl      #40 <bar2@plt>
 // DISASM-NEXT:    2102ec: bl      #52 <zed2@plt>
 // DISASM-EMPTY:
@@ -67,6 +67,10 @@
 // DISASM-NEXT:    210324: ldr     x17, [x16, #1120]
 // DISASM-NEXT:    210328: add     x16, x16, #1120
 // DISASM-NEXT:    21032c: br      x17
+// DISASM-EMPTY:
+// DISASM-NEXT: Disassembly of section .iplt:
+// DISASM-EMPTY:
+// DISASM-NEXT: .iplt:
 // DISASM-NEXT:    210330: adrp    x16, #131072
 // DISASM-NEXT:    210334: ldr     x17, [x16, #1128]
 // DISASM-NEXT:    210338: add     x16, x16, #1128
