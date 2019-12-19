@@ -205,3 +205,20 @@ func @vector_print(%arg0: vector<8x4xf32>) {
   vector.print %arg0 : vector<8x4xf32>
   return
 }
+
+// CHECK-LABEL: reshape
+func @reshape(%arg0 : vector<3x2x4xf32>) -> (vector<2x3x4xf32>) {
+  // CHECK:      %[[C2:.*]] = constant 2 : index
+  %c2 = constant 2 : index
+  // CHECK:      %[[C3:.*]] = constant 3 : index
+  %c3 = constant 3 : index
+  // CHECK:      %[[C6:.*]] = constant 6 : index
+  %c6 = constant 6 : index
+  // CHECK:      %[[C9:.*]] = constant 9 : index
+  %c9 = constant 9 : index
+  // CHECK: vector.reshape %{{.*}}, [%[[C3]], %[[C6]]], [%[[C2]], %[[C9]]], [4] : vector<3x2x4xf32> to vector<2x3x4xf32>
+  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
+    : vector<3x2x4xf32> to vector<2x3x4xf32>
+
+  return %1 : vector<2x3x4xf32>
+}

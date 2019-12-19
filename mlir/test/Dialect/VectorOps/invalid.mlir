@@ -826,3 +826,63 @@ func @print_no_result(%arg0 : f32) -> i32 {
   %0 = vector.print %arg0 : f32
   return %0
 }
+
+// -----
+
+func @reshape_bad_input_shape(%arg0 : vector<3x2x4xf32>) {
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %c6 = constant 6 : index
+  %c9 = constant 9 : index
+  // expected-error@+1 {{invalid input shape for vector type}}
+  %1 = vector.reshape %arg0, [%c3, %c6, %c3], [%c2, %c9], [4]
+    : vector<3x2x4xf32> to vector<2x3x4xf32>
+}
+
+// -----
+
+func @reshape_bad_output_shape(%arg0 : vector<3x2x4xf32>) {
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %c6 = constant 6 : index
+  %c9 = constant 9 : index
+  // expected-error@+1 {{invalid output shape for vector type}}
+  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9, %c3], [4]
+    : vector<3x2x4xf32> to vector<2x3x4xf32>
+}
+
+// -----
+
+func @reshape_bad_input_output_shape_product(%arg0 : vector<3x2x4xf32>) {
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %c6 = constant 6 : index
+  %c9 = constant 9 : index
+  // expected-error@+1 {{product of input and output shape sizes must match}}
+  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c6], [4]
+    : vector<3x2x4xf32> to vector<2x3x4xf32>
+}
+
+// -----
+
+func @reshape_bad_input_fixed_size(%arg0 : vector<3x2x5xf32>) {
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %c6 = constant 6 : index
+  %c9 = constant 9 : index
+  // expected-error@+1 {{fixed vector size must match input vector for dim 0}}
+  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
+    : vector<3x2x5xf32> to vector<2x3x4xf32>
+}
+
+// -----
+
+func @reshape_bad_output_fixed_size(%arg0 : vector<3x2x4xf32>) {
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %c6 = constant 6 : index
+  %c9 = constant 9 : index
+  // expected-error@+1 {{fixed vector size must match output vector for dim 0}}
+  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
+    : vector<3x2x4xf32> to vector<2x3x5xf32>
+}
