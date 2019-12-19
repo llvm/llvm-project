@@ -431,13 +431,13 @@ public:
   static bool isTemplateImplicitInstantiation(const Decl *D);
 
 private:
-  bool handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
-                           ArrayRef<index::SymbolRelation> Relations,
-                           SourceLocation Loc, ASTNodeInfo ASTNode) override;
+  bool handleDeclOccurrence(const Decl *D, index::SymbolRoleSet Roles,
+                            ArrayRef<index::SymbolRelation> Relations,
+                            SourceLocation Loc, ASTNodeInfo ASTNode) override;
 
-  bool handleModuleOccurence(const ImportDecl *ImportD, const Module *Mod,
-                             index::SymbolRoleSet Roles,
-                             SourceLocation Loc) override;
+  bool handleModuleOccurrence(const ImportDecl *ImportD, const Module *Mod,
+                              index::SymbolRoleSet Roles,
+                              SourceLocation Loc) override;
 
   void finish() override;
 

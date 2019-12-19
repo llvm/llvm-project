@@ -364,6 +364,11 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
   // Set this new list of attributes on the function.
   F->setAttributes(NewAttrs);
 
+  // If the attribute list includes "optnone" we need to make sure it also
+  // includes "noinline" otherwise we will get a verifier failure.
+  if (F->hasFnAttribute(Attribute::OptimizeNone))
+    F->addFnAttr(Attribute::NoInline);
+
   // Try running on the hacked up program...
   if (TestFn(BD, M.get())) {
     BD.setNewProgram(std::move(M)); // It crashed, keep the trimmed version...

@@ -449,8 +449,8 @@ bool ExtractVariable::prepare(const Selection &Inputs) {
   // we don't trigger on empty selections for now
   if (Inputs.SelectionBegin == Inputs.SelectionEnd)
     return false;
-  const ASTContext &Ctx = Inputs.AST.getASTContext();
-  const SourceManager &SM = Inputs.AST.getSourceManager();
+  const ASTContext &Ctx = Inputs.AST->getASTContext();
+  const SourceManager &SM = Inputs.AST->getSourceManager();
   if (const SelectionTree::Node *N =
           computeExtractedExpr(Inputs.ASTSelection.commonAncestor()))
     Target = std::make_unique<ExtractionContext>(N, SM, Ctx);
@@ -468,7 +468,8 @@ Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
   // replace expression with variable name
   if (auto Err = Result.add(Target->replaceWithVar(Range, VarName)))
     return std::move(Err);
-  return Effect::mainFileEdit(Inputs.AST.getSourceManager(), std::move(Result));
+  return Effect::mainFileEdit(Inputs.AST->getSourceManager(),
+                              std::move(Result));
 }
 
 } // namespace

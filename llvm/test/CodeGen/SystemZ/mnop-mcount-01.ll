@@ -22,5 +22,5 @@ entry:
 }
 
 attributes #0 = { "fentry-call"="true" }
-attributes #1 = { "fentry-call"="true" "mnop-mcount"="true" }
+attributes #1 = { "fentry-call"="true" "mnop-mcount" }
 

@@ -2098,9 +2098,7 @@ struct AAReachabilityImpl : AAReachability {
   }
 
   /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    indicatePessimisticFixpoint();
-  }
+  void initialize(Attributor &A) override { indicatePessimisticFixpoint(); }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -2579,12 +2577,14 @@ struct AAIsDeadFunction : public AAIsDead {
               CI->takeName(II);
               replaceAllInstructionUsesWith(*II, *CI);
 
-              // If this is a nounwind + mayreturn invoke we only remove the unwind edge.
-              // This is done by moving the invoke into a new and dead block and connecting
-              // the normal destination of the invoke with a branch that follows the call
-              // replacement we created above.
+              // If this is a nounwind + mayreturn invoke we only remove the
+              // unwind edge. This is done by moving the invoke into a new and
+              // dead block and connecting the normal destination of the invoke
+              // with a branch that follows the call replacement we created
+              // above.
               if (MayReturn) {
-                BasicBlock *NewDeadBB = SplitBlock(BB, II, nullptr, nullptr, nullptr, ".i2c");
+                BasicBlock *NewDeadBB =
+                    SplitBlock(BB, II, nullptr, nullptr, nullptr, ".i2c");
                 assert(isa<BranchInst>(BB->getTerminator()) &&
                        BB->getTerminator()->getNumSuccessors() == 1 &&
                        BB->getTerminator()->getSuccessor(0) == NewDeadBB);
@@ -4335,7 +4335,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
     if (IsMalloc) {
       if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
-        if (Size->getValue().sle(MaxHeapToStackSize))
+        if (Size->getValue().ule(MaxHeapToStackSize))
           if (UsesCheck(I) || FreeCheck(I)) {
             MallocCalls.insert(&I);
             return true;
@@ -4345,7 +4345,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
       if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
         if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
           if ((Size->getValue().umul_ov(Num->getValue(), Overflow))
-                  .sle(MaxHeapToStackSize))
+                  .ule(MaxHeapToStackSize))
             if (!Overflow && (UsesCheck(I) || FreeCheck(I))) {
               MallocCalls.insert(&I);
               return true;
@@ -5717,9 +5717,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const IRPosition &Pos) {
 }
 
 template <typename base_ty, base_ty BestState, base_ty WorstState>
-raw_ostream &llvm::
-operator<<(raw_ostream &OS,
-           const IntegerStateBase<base_ty, BestState, WorstState> &S) {
+raw_ostream &
+llvm::operator<<(raw_ostream &OS,
+                 const IntegerStateBase<base_ty, BestState, WorstState> &S) {
   return OS << "(" << S.getKnown() << "-" << S.getAssumed() << ")"
             << static_cast<const AbstractState &>(S);
 }

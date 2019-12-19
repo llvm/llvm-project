@@ -3296,8 +3296,10 @@ int X86TTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *SrcVTy,
   unsigned AddressSpace = PtrTy->getAddressSpace();
 
   bool Scalarize = false;
-  if ((Opcode == Instruction::Load && !isLegalMaskedGather(SrcVTy)) ||
-      (Opcode == Instruction::Store && !isLegalMaskedScatter(SrcVTy)))
+  if ((Opcode == Instruction::Load &&
+       !isLegalMaskedGather(SrcVTy, MaybeAlign(Alignment))) ||
+      (Opcode == Instruction::Store &&
+       !isLegalMaskedScatter(SrcVTy, MaybeAlign(Alignment))))
     Scalarize = true;
   // Gather / Scatter for vector 2 is not profitable on KNL / SKX
   // Vector-4 of gather/scatter instruction does not exist on KNL.
@@ -3420,7 +3422,7 @@ bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
   return isLegalMaskedExpandLoad(DataTy);
 }
 
-bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
+bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, MaybeAlign Alignment) {
   // Some CPUs have better gather performance than others.
   // TODO: Remove the explicit ST->hasAVX512()?, That would mean we would only
   // enable gather with a -march.
@@ -3458,11 +3460,11 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
   return IntWidth == 32 || IntWidth == 64;
 }
 
-bool X86TTIImpl::isLegalMaskedScatter(Type *DataType) {
+bool X86TTIImpl::isLegalMaskedScatter(Type *DataType, MaybeAlign Alignment) {
   // AVX2 doesn't support scatter
   if (!ST->hasAVX512())
     return false;
-  return isLegalMaskedGather(DataType);
+  return isLegalMaskedGather(DataType, Alignment);
 }
 
 bool X86TTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {

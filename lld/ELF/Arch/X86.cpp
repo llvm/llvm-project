@@ -33,8 +33,8 @@ public:
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
 
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
@@ -57,8 +57,9 @@ X86::X86() {
   tlsGotRel = R_386_TLS_TPOFF;
   tlsModuleIndexRel = R_386_TLS_DTPMOD32;
   tlsOffsetRel = R_386_TLS_DTPOFF32;
-  pltEntrySize = 16;
   pltHeaderSize = 16;
+  pltEntrySize = 16;
+  ipltEntrySize = 16;
   trapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
 
   // Align to the non-PAE large page size (known as a superpage or huge page).
@@ -213,9 +214,9 @@ void X86::writePltHeader(uint8_t *buf) const {
   write32le(buf + 8, gotPlt + 8);
 }
 
-void X86::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                   uint64_t pltEntryAddr, int32_t index,
-                   unsigned relOff) const {
+void X86::writePlt(uint8_t *buf, const Symbol &sym,
+                   uint64_t pltEntryAddr) const {
+  unsigned relOff = in.relaPlt->entsize * sym.pltIndex;
   if (config->isPic) {
     const uint8_t inst[] = {
         0xff, 0xa3, 0, 0, 0, 0, // jmp *foo@GOT(%ebx)
@@ -223,7 +224,7 @@ void X86::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
         0xe9, 0,    0, 0, 0,    // jmp .PLT0@PC
     };
     memcpy(buf, inst, sizeof(inst));
-    write32le(buf + 2, gotPltEntryAddr - in.gotPlt->getVA());
+    write32le(buf + 2, sym.getGotPltVA() - in.gotPlt->getVA());
   } else {
     const uint8_t inst[] = {
         0xff, 0x25, 0, 0, 0, 0, // jmp *foo@GOT
@@ -231,11 +232,11 @@ void X86::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
         0xe9, 0,    0, 0, 0,    // jmp .PLT0@PC
     };
     memcpy(buf, inst, sizeof(inst));
-    write32le(buf + 2, gotPltEntryAddr);
+    write32le(buf + 2, sym.getGotPltVA());
   }
 
   write32le(buf + 7, relOff);
-  write32le(buf + 12, -pltHeaderSize - pltEntrySize * index - 16);
+  write32le(buf + 12, in.plt->getVA() - pltEntryAddr - 16);
 }
 
 int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
@@ -415,8 +416,8 @@ public:
   RetpolinePic();
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
 };
 
 class RetpolineNoPic : public X86 {
@@ -424,14 +425,15 @@ public:
   RetpolineNoPic();
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
 };
 } // namespace
 
 RetpolinePic::RetpolinePic() {
   pltHeaderSize = 48;
   pltEntrySize = 32;
+  ipltEntrySize = 32;
 }
 
 void RetpolinePic::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -459,9 +461,9 @@ void RetpolinePic::writePltHeader(uint8_t *buf) const {
   memcpy(buf, insn, sizeof(insn));
 }
 
-void RetpolinePic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                            uint64_t pltEntryAddr, int32_t index,
-                            unsigned relOff) const {
+void RetpolinePic::writePlt(uint8_t *buf, const Symbol &sym,
+                            uint64_t pltEntryAddr) const {
+  unsigned relOff = in.relaPlt->entsize * sym.pltIndex;
   const uint8_t insn[] = {
       0x50,                            // pushl %eax
       0x8b, 0x83, 0,    0,    0,    0, // mov foo@GOT(%ebx), %eax
@@ -474,8 +476,8 @@ void RetpolinePic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   memcpy(buf, insn, sizeof(insn));
 
   uint32_t ebx = in.gotPlt->getVA();
-  unsigned off = pltHeaderSize + pltEntrySize * index;
-  write32le(buf + 3, gotPltEntryAddr - ebx);
+  unsigned off = pltEntryAddr - in.plt->getVA();
+  write32le(buf + 3, sym.getGotPltVA() - ebx);
   write32le(buf + 8, -off - 12 + 32);
   write32le(buf + 13, -off - 17 + 18);
   write32le(buf + 18, relOff);
@@ -485,6 +487,7 @@ void RetpolinePic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
 RetpolineNoPic::RetpolineNoPic() {
   pltHeaderSize = 48;
   pltEntrySize = 32;
+  ipltEntrySize = 32;
 }
 
 void RetpolineNoPic::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -517,9 +520,9 @@ void RetpolineNoPic::writePltHeader(uint8_t *buf) const {
   write32le(buf + 8, gotPlt + 8);
 }
 
-void RetpolineNoPic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                              uint64_t pltEntryAddr, int32_t index,
-                              unsigned relOff) const {
+void RetpolineNoPic::writePlt(uint8_t *buf, const Symbol &sym,
+                              uint64_t pltEntryAddr) const {
+  unsigned relOff = in.relaPlt->entsize * sym.pltIndex;
   const uint8_t insn[] = {
       0x50,                         // 0:  pushl %eax
       0xa1, 0,    0,    0,    0,    // 1:  mov foo_in_GOT, %eax
@@ -532,8 +535,8 @@ void RetpolineNoPic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   };
   memcpy(buf, insn, sizeof(insn));
 
-  unsigned off = pltHeaderSize + pltEntrySize * index;
-  write32le(buf + 2, gotPltEntryAddr);
+  unsigned off = pltEntryAddr - in.plt->getVA();
+  write32le(buf + 2, sym.getGotPltVA());
   write32le(buf + 7, -off - 11 + 32);
   write32le(buf + 12, -off - 16 + 17);
   write32le(buf + 17, relOff);

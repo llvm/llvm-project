@@ -14,6 +14,7 @@
 
 #include "common/omptarget.h"
 #include "target_impl.h"
+#include "common/target_atomic.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -397,9 +398,9 @@ public:
     unsigned int rank = __kmpc_impl_popc(active & lane_mask_lt);
     uint64_t warp_res;
     if (rank == 0) {
-      warp_res = atomicAdd(
+      warp_res = __kmpc_atomic_add(
           (unsigned long long *)&omptarget_nvptx_threadPrivateContext->Cnt(),
-          change);
+          (unsigned long long)change);
     }
     warp_res = Shuffle(active, warp_res, leader);
     return warp_res + rank;
@@ -792,8 +793,8 @@ EXTERN void __kmpc_reduce_conditional_lastprivate(kmp_Ident *loc, int32_t gtid,
     // Atomic max of iterations.
     uint64_t *varArray = (uint64_t *)array;
     uint64_t elem = varArray[i];
-    (void)atomicMax((unsigned long long int *)Buffer,
-                    (unsigned long long int)elem);
+    (void)__kmpc_atomic_max((unsigned long long int *)Buffer,
+                            (unsigned long long int)elem);
 
     // Barrier.
     syncWorkersInGenericMode(NumThreads);

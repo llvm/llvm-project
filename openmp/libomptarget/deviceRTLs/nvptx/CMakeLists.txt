@@ -53,18 +53,19 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
   set(cuda_src_files
       ${devicertl_common_directory}/src/cancel.cu
       ${devicertl_common_directory}/src/critical.cu
-      src/data_sharing.cu
-      src/libcall.cu
+      ${devicertl_common_directory}/src/data_sharing.cu
+      ${devicertl_common_directory}/src/libcall.cu
       ${devicertl_common_directory}/src/loop.cu
       ${devicertl_common_directory}/src/omptarget.cu
       ${devicertl_common_directory}/src/parallel.cu
-      src/reduction.cu
+      ${devicertl_common_directory}/src/reduction.cu
       ${devicertl_common_directory}/src/support.cu
       ${devicertl_common_directory}/src/sync.cu
       ${devicertl_common_directory}/src/task.cu
+      src/target_impl.cu
   )
 
-  set(omp_data_objects src/omp_data.cu)
+  set(omp_data_objects ${devicertl_common_directory}/src/omp_data.cu)
 
   # Get the compute capability the user requested or use SM_35 by default.
   # SM_35 is what clang uses by default.

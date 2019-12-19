@@ -1469,6 +1469,9 @@ void MallocChecker::checkPostObjCMessage(const ObjCMethodCall &Call,
     if (!*FreeWhenDone)
       return;
 
+  if (Call.hasNonZeroCallbackArg())
+    return;
+
   bool IsKnownToBeAllocatedMemory;
   ProgramStateRef State =
       FreeMemAux(C, Call.getArgExpr(0), Call.getOriginExpr(), C.getState(),

@@ -943,6 +943,20 @@ int PPCTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   return Cost;
 }
 
+unsigned PPCTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+      ArrayRef<Value*> Args, FastMathFlags FMF, unsigned VF) {
+  return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF);
+}
+
+unsigned PPCTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+      ArrayRef<Type*> Tys, FastMathFlags FMF,
+      unsigned ScalarizationCostPassed) {
+  if (ID == Intrinsic::bswap && ST->hasP9Vector())
+    return TLI->getTypeLegalizationCost(DL, RetTy).first;
+  return BaseT::getIntrinsicInstrCost(ID, RetTy, Tys, FMF,
+                                      ScalarizationCostPassed);
+}
+
 bool PPCTTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
                             LoopInfo *LI, DominatorTree *DT,
                             AssumptionCache *AC, TargetLibraryInfo *LibInfo) {

@@ -108,6 +108,11 @@ public:
                                  unsigned AddressSpace,
                                  bool UseMaskForCond = false,
                                  bool UseMaskForGaps = false);
+  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+            ArrayRef<Value*> Args, FastMathFlags FMF, unsigned VF);
+  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+            ArrayRef<Type*> Tys, FastMathFlags FMF,
+            unsigned ScalarizationCostPassed = UINT_MAX);
 
   /// @}
 };

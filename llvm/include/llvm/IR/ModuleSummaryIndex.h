@@ -1376,7 +1376,9 @@ public:
   void dump() const;
 
   /// Export summary to dot file for GraphViz.
-  void exportToDot(raw_ostream& OS) const;
+  void
+  exportToDot(raw_ostream &OS,
+              const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) const;
 
   /// Print out strongly connected components for debugging.
   void dumpSCCs(raw_ostream &OS);

@@ -14,15 +14,15 @@
 ## to the address of the canonical PLT is fixed.
 
 # SEC: .text PROGBITS 00000000100101e0
-# SEC: .plt  NOBITS   0000000010030200
-# SEC: 00000000100101f0 0 FUNC GLOBAL DEFAULT 3 ifunc
+# SEC: .plt  NOBITS   00000000100301f8
+# SEC: 00000000100101e8 0 FUNC GLOBAL DEFAULT 3 ifunc
 
 ## .toc[0] stores the address of the canonical PLT.
 # HEX:      section '.toc':
-# HEX-NEXT: 0x100201f8 f0010110 00000000
+# HEX-NEXT: 0x100201f0 e8010110 00000000
 
 # REL:      .rela.dyn {
-# REL-NEXT:   0x10030200 R_PPC64_IRELATIVE - 0x100101e8
+# REL-NEXT:   0x100301f8 R_PPC64_IRELATIVE - 0x100101e8
 # REL-NEXT: }
 
 # DIS: addi 3, 3,

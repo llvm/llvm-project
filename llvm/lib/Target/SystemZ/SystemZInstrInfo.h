@@ -322,6 +322,10 @@ public:
                      MachineBasicBlock::iterator MBBI,
                      unsigned Reg, uint64_t Value) const;
 
+  // Perform target specific instruction verification.
+  bool verifyInstruction(const MachineInstr &MI,
+                         StringRef &ErrInfo) const override;
+
   // Sometimes, it is possible for the target to tell, even without
   // aliasing information, that two MIs access different memory
   // addresses. This function returns true if two MIs access different

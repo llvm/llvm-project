@@ -102,23 +102,25 @@ Error Config::addSaveTemps(std::string OutputFileName,
   setHook("4.opt", PostOptModuleHook);
   setHook("5.precodegen", PreCodeGenModuleHook);
 
-  CombinedIndexHook = [=](const ModuleSummaryIndex &Index) {
-    std::string Path = OutputFileName + "index.bc";
-    std::error_code EC;
-    raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
-    // Because -save-temps is a debugging feature, we report the error
-    // directly and exit.
-    if (EC)
-      reportOpenError(Path, EC.message());
-    WriteIndexToFile(Index, OS);
+  CombinedIndexHook =
+      [=](const ModuleSummaryIndex &Index,
+          const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+        std::string Path = OutputFileName + "index.bc";
+        std::error_code EC;
+        raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
+        // Because -save-temps is a debugging feature, we report the error
+        // directly and exit.
+        if (EC)
+          reportOpenError(Path, EC.message());
+        WriteIndexToFile(Index, OS);
 
-    Path = OutputFileName + "index.dot";
-    raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_None);
-    if (EC)
-      reportOpenError(Path, EC.message());
-    Index.exportToDot(OSDot);
-    return true;
-  };
+        Path = OutputFileName + "index.dot";
+        raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_None);
+        if (EC)
+          reportOpenError(Path, EC.message());
+        Index.exportToDot(OSDot, GUIDPreservedSymbols);
+        return true;
+      };
 
   return Error::success();
 }

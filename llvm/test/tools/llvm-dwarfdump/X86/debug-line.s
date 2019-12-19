@@ -62,7 +62,8 @@
 # CHECK-NEXT:       dir_index: 1
 # CHECK-NEXT:        mod_time: 0x00000011
 # CHECK-NEXT:          length: 0x00000022
-# CHECK-NOT:  {{.}}
+# CHECK-EMPTY:
+# CHECK-NEXT: debug_line[0x0000008c]
 
 .section .debug_line,"",@progbits
     .long .Lunit0_end - .Lunit0_begin ## unit_length
@@ -120,7 +121,7 @@
     .byte 0, 0x1, 0x1 ## DW_LNE_end_sequence
 .Lunit0_end:
 
-## Second line table program with version 4.
+## Second line table program with version 4 and no sequences.
     .long .Lunit1_end - .Lunit1_begin ## unit_length
 .Lunit1_begin:
     .short 4 ## version
@@ -143,3 +144,29 @@
     .byte 0x22 ## Length
 .Lheader1_end:
 .Lunit1_end:
+
+## Third line table program needed to show that only a single blank line is
+## printed after a program with no sequences. The values in this table are
+## arbitrary.
+    .long .Lunit2_end - .Lunit2_begin ## unit_length
+.Lunit2_begin:
+    .short 4 ## version
+    .long .Lheader2_end - .Lheader2_begin ## header_length
+.Lheader2_begin:
+    .byte 1 ## minimum_instruction_length
+    .byte 2 ## maximum_operations_per_instruction
+    .byte 1 ## default_is_stmt
+    .byte 1 ## line_base
+    .byte 1 ## line_range
+    .byte 2 ## opcode_base
+    .byte 1 ## standard_opcode_lengths
+    ## include_directories
+    .byte 0
+    ## file_names
+    .asciz "bar.c"
+    .byte 0 ## Directory index
+    .byte 0 ## Timestamp
+    .byte 0 ## Length
+.Lheader2_end:
+    .byte 0, 0x1, 0x1 ## DW_LNE_end_sequence
+.Lunit2_end:

@@ -8,9 +8,7 @@
 
 #include "CommandObjectHelp.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Interpreter/Options.h"
 
 using namespace lldb;
 using namespace lldb_private;

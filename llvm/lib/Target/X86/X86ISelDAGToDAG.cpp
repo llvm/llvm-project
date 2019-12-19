@@ -580,6 +580,12 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
   if (!N.hasOneUse())
     return false;
 
+  // FIXME: Temporary hack to prevent strict floating point nodes from
+  // folding into masked operations illegally.
+  if (U == Root && Root->getOpcode() == ISD::VSELECT &&
+      N.getOpcode() != ISD::LOAD && N.getOpcode() != X86ISD::VBROADCAST_LOAD)
+    return false;
+
   if (N.getOpcode() != ISD::LOAD)
     return true;
 
@@ -810,7 +816,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
 
     switch (N->getOpcode()) {
     case ISD::FP_TO_SINT:
-    case ISD::FP_TO_UINT: {
+    case ISD::FP_TO_UINT:
+    case ISD::STRICT_FP_TO_SINT:
+    case ISD::STRICT_FP_TO_UINT: {
       // Replace vector fp_to_s/uint with their X86 specific equivalent so we
       // don't need 2 sets of patterns.
       if (!N->getSimpleValueType(0).isVector())
@@ -819,13 +827,27 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       unsigned NewOpc;
       switch (N->getOpcode()) {
       default: llvm_unreachable("Unexpected opcode!");
+      case ISD::STRICT_FP_TO_SINT:
       case ISD::FP_TO_SINT: NewOpc = X86ISD::CVTTP2SI; break;
+      case ISD::STRICT_FP_TO_UINT:
       case ISD::FP_TO_UINT: NewOpc = X86ISD::CVTTP2UI; break;
       }
-      SDValue Res = CurDAG->getNode(NewOpc, SDLoc(N), N->getValueType(0),
-                                    N->getOperand(0));
+      SDValue Res;
+      if (N->isStrictFPOpcode())
+        Res =
+            CurDAG->getNode(NewOpc, SDLoc(N), {N->getValueType(0), MVT::Other},
+                            {N->getOperand(0), N->getOperand(1)});
+      else
+        Res =
+            CurDAG->getNode(NewOpc, SDLoc(N), {N->getValueType(0), MVT::Other},
+                            {CurDAG->getEntryNode(), N->getOperand(0)});
       --I;
-      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      if (N->isStrictFPOpcode()) {
+        SDValue From[] = {SDValue(N, 0), SDValue(N, 1)};
+        SDValue To[] = {Res.getValue(0), Res.getValue(1)};
+        CurDAG->ReplaceAllUsesOfValuesWith(From, To, 2);
+      } else
+        CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
       CurDAG->DeleteNode(N);
       continue;

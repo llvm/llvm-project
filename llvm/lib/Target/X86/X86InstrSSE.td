@@ -868,19 +868,19 @@ let hasSideEffects = 0, Predicates = [UseAVX], ExeDomain = d in {
 }
 
 let isCodeGenOnly = 1, Predicates = [UseAVX], Uses = [MXCSR], mayRaiseFPException = 1 in {
-defm VCVTTSS2SI   : sse12_cvt_s<0x2C, FR32, GR32, fp_to_sint, f32mem, loadf32,
+defm VCVTTSS2SI   : sse12_cvt_s<0x2C, FR32, GR32, any_fp_to_sint, f32mem, loadf32,
                                 "cvttss2si", "cvttss2si",
                                 WriteCvtSS2I, SSEPackedSingle>,
                                 XS, VEX, VEX_LIG;
-defm VCVTTSS2SI64 : sse12_cvt_s<0x2C, FR32, GR64, fp_to_sint, f32mem, loadf32,
+defm VCVTTSS2SI64 : sse12_cvt_s<0x2C, FR32, GR64, any_fp_to_sint, f32mem, loadf32,
                                 "cvttss2si", "cvttss2si",
                                 WriteCvtSS2I, SSEPackedSingle>,
                                 XS, VEX, VEX_W, VEX_LIG;
-defm VCVTTSD2SI   : sse12_cvt_s<0x2C, FR64, GR32, fp_to_sint, f64mem, loadf64,
+defm VCVTTSD2SI   : sse12_cvt_s<0x2C, FR64, GR32, any_fp_to_sint, f64mem, loadf64,
                                 "cvttsd2si", "cvttsd2si",
                                 WriteCvtSD2I, SSEPackedDouble>,
                                 XD, VEX, VEX_LIG;
-defm VCVTTSD2SI64 : sse12_cvt_s<0x2C, FR64, GR64, fp_to_sint, f64mem, loadf64,
+defm VCVTTSD2SI64 : sse12_cvt_s<0x2C, FR64, GR64, any_fp_to_sint, f64mem, loadf64,
                                 "cvttsd2si", "cvttsd2si",
                                 WriteCvtSD2I, SSEPackedDouble>,
                                 XD, VEX, VEX_W, VEX_LIG;
@@ -926,16 +926,16 @@ let Predicates = [UseAVX] in {
 }
 
 let isCodeGenOnly = 1 in {
-defm CVTTSS2SI : sse12_cvt_s<0x2C, FR32, GR32, fp_to_sint, f32mem, loadf32,
+defm CVTTSS2SI : sse12_cvt_s<0x2C, FR32, GR32, any_fp_to_sint, f32mem, loadf32,
                       "cvttss2si", "cvttss2si",
                       WriteCvtSS2I, SSEPackedSingle>, XS, SIMD_EXC;
-defm CVTTSS2SI64 : sse12_cvt_s<0x2C, FR32, GR64, fp_to_sint, f32mem, loadf32,
+defm CVTTSS2SI64 : sse12_cvt_s<0x2C, FR32, GR64, any_fp_to_sint, f32mem, loadf32,
                       "cvttss2si", "cvttss2si",
                       WriteCvtSS2I, SSEPackedSingle>, XS, REX_W, SIMD_EXC;
-defm CVTTSD2SI : sse12_cvt_s<0x2C, FR64, GR32, fp_to_sint, f64mem, loadf64,
+defm CVTTSD2SI : sse12_cvt_s<0x2C, FR64, GR32, any_fp_to_sint, f64mem, loadf64,
                       "cvttsd2si", "cvttsd2si",
                       WriteCvtSD2I, SSEPackedDouble>, XD, SIMD_EXC;
-defm CVTTSD2SI64 : sse12_cvt_s<0x2C, FR64, GR64, fp_to_sint, f64mem, loadf64,
+defm CVTTSD2SI64 : sse12_cvt_s<0x2C, FR64, GR64, any_fp_to_sint, f64mem, loadf64,
                       "cvttsd2si", "cvttsd2si",
                       WriteCvtSD2I, SSEPackedDouble>, XD, REX_W, SIMD_EXC;
 defm CVTSI2SS  : sse12_cvt_s<0x2A, GR32, FR32, sint_to_fp, i32mem, loadi32,
@@ -1595,9 +1595,9 @@ def : InstAlias<"vcvttpd2dqy\t{$src, $dst|$dst, $src}",
                 (VCVTTPD2DQYrr VR128:$dst, VR256:$src), 0, "att">;
 
 let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(v4i32 (fp_to_sint (v4f64 VR256:$src))),
+  def : Pat<(v4i32 (any_fp_to_sint (v4f64 VR256:$src))),
             (VCVTTPD2DQYrr VR256:$src)>;
-  def : Pat<(v4i32 (fp_to_sint (loadv4f64 addr:$src))),
+  def : Pat<(v4i32 (any_fp_to_sint (loadv4f64 addr:$src))),
             (VCVTTPD2DQYrm addr:$src)>;
 }
 

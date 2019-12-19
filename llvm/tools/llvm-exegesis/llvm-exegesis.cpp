@@ -208,7 +208,7 @@ static Expected<std::vector<BenchmarkCode>>
 generateSnippets(const LLVMState &State, unsigned Opcode,
                  const BitVector &ForbiddenRegs) {
   const Instruction &Instr = State.getIC().getInstr(Opcode);
-  const MCInstrDesc &InstrDesc = *Instr.Description;
+  const MCInstrDesc &InstrDesc = Instr.Description;
   // Ignore instructions that we cannot run.
   if (InstrDesc.isPseudo())
     return make_error<Failure>("Unsupported opcode: isPseudo");

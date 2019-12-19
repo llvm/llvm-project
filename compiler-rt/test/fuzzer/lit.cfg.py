@@ -28,7 +28,6 @@ config.test_format = lit.formats.ShTest(execute_external)
 # LeakSanitizer is not supported on OSX or Windows right now.
 if (sys.platform.startswith('darwin') or
     sys.platform.startswith('freebsd') or
-    sys.platform.startswith('netbsd') or
     sys.platform.startswith('win')):
   lit_config.note('lsan feature unavailable')
 else:
@@ -116,3 +115,6 @@ config.substitutions.append(('%env_asan_opts=',
 
 if not config.parallelism_group:
   config.parallelism_group = 'shadow-memory'
+
+if config.host_os == 'NetBSD':
+  config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))

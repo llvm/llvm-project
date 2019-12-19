@@ -88,5 +88,23 @@ entry:
   ret double %0
 }
 
+; This would crash while trying getNegatedExpression().
+
+define float @negated_constant(float %x) {
+; CHECK-LABEL: negated_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1037565952
+; CHECK-NEXT:    mov w9, #1109917696
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    fmul s1, s0, s1
+; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmadd s0, s0, s2, s1
+; CHECK-NEXT:    ret
+  %m = fmul float %x, 42.0
+  %fma = call nsz float @llvm.fma.f32(float %x, float -42.0, float %m)
+  %nfma = fneg float %fma
+  ret float %nfma
+}
+
 declare float @llvm.fma.f32(float, float, float) nounwind readnone
 declare double @llvm.fma.f64(double, double, double) nounwind readnone

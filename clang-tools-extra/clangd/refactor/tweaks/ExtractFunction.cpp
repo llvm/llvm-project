@@ -681,8 +681,8 @@ tooling::Replacement createFunctionDefinition(const NewFunction &ExtractedFunc,
 
 bool ExtractFunction::prepare(const Selection &Inputs) {
   const Node *CommonAnc = Inputs.ASTSelection.commonAncestor();
-  const SourceManager &SM = Inputs.AST.getSourceManager();
-  const LangOptions &LangOpts = Inputs.AST.getLangOpts();
+  const SourceManager &SM = Inputs.AST->getSourceManager();
+  const LangOptions &LangOpts = Inputs.AST->getLangOpts();
   if (auto MaybeExtZone = findExtractionZone(CommonAnc, SM, LangOpts)) {
     ExtZone = std::move(*MaybeExtZone);
     return true;
@@ -691,8 +691,8 @@ bool ExtractFunction::prepare(const Selection &Inputs) {
 }
 
 Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
-  const SourceManager &SM = Inputs.AST.getSourceManager();
-  const LangOptions &LangOpts = Inputs.AST.getLangOpts();
+  const SourceManager &SM = Inputs.AST->getSourceManager();
+  const LangOptions &LangOpts = Inputs.AST->getLangOpts();
   auto ExtractedFunc = getExtractedFunction(ExtZone, SM, LangOpts);
   // FIXME: Add more types of errors.
   if (!ExtractedFunc)

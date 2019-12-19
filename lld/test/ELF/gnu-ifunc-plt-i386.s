@@ -37,8 +37,8 @@
 // DISASM:      bar:
 // DISASM-NEXT:    4011b5:       retl
 // DISASM:      _start:
-// DISASM-NEXT:    4011b6:       calll   69 <zed2@plt+0x10>
-// DISASM-NEXT:                  calll   80 <zed2@plt+0x20>
+// DISASM-NEXT:    4011b6:       calll   69 <zed2+0x401200>
+// DISASM-NEXT:                  calll   80 <zed2+0x401210>
 // DISASM-NEXT:                  calll   27 <bar2@plt>
 // DISASM-NEXT:                  calll   38 <zed2@plt>
 // DISASM-EMPTY:
@@ -61,12 +61,16 @@
 // DISASM-NEXT:    4011f0:       jmpl    *4207272
 // DISASM-NEXT:                  pushl   $8
 // DISASM-NEXT:                  jmp     -48 <.plt>
+// DISASM-EMPTY:
+// DISASM-NEXT: Disassembly of section .iplt:
+// DISASM-EMPTY:
+// DISASM-NEXT: .iplt:
 // DISASM-NEXT:                  jmpl    *4207276
-// DISASM-NEXT:                  pushl   $48
-// DISASM-NEXT:                  jmp     -32 <zed2@plt>
+// DISASM-NEXT:                  pushl   $0
+// DISASM-NEXT:                  jmp     -64 <.plt>
 // DISASM-NEXT:                  jmpl    *4207280
-// DISASM-NEXT:                  pushl   $56
-// DISASM-NEXT:                  jmp     -48 <zed2@plt>
+// DISASM-NEXT:                  pushl   $8
+// DISASM-NEXT:                  jmp     -80 <.plt>
 
 .text
 .type foo STT_GNU_IFUNC

@@ -16,7 +16,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
+#include "lldb/Symbol/ClangASTMetadata.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -417,9 +417,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       metadata.SetUserID(type.getSymIndexId());
       metadata.SetIsDynamicCXXType(false);
 
-      clang_type = m_ast.CreateRecordType(
-          decl_context, access, name.c_str(), tag_type_kind,
-          lldb::eLanguageTypeC_plus_plus, &metadata);
+      clang_type =
+          m_ast.CreateRecordType(decl_context, access, name, tag_type_kind,
+                                 lldb::eLanguageTypeC_plus_plus, &metadata);
       assert(clang_type.IsValid());
 
       auto record_decl =
@@ -1207,7 +1207,7 @@ bool PDBASTParser::CompleteTypeFromUDT(
   if (!record_decl)
     return static_cast<bool>(compiler_type);
 
-  GetClangASTImporter().InsertRecordDecl(record_decl, layout_info);
+  GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
 
   return static_cast<bool>(compiler_type);
 }

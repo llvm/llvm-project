@@ -1073,6 +1073,19 @@ std::error_code RedirectingFileSystem::isLocal(const Twine &Path,
   return ExternalFS->isLocal(Path, Result);
 }
 
+std::error_code RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
+  if (llvm::sys::path::is_absolute(Path, llvm::sys::path::Style::posix) ||
+      llvm::sys::path::is_absolute(Path, llvm::sys::path::Style::windows))
+    return {};
+
+  auto WorkingDir = getCurrentWorkingDirectory();
+  if (!WorkingDir)
+    return WorkingDir.getError();
+
+  llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  return {};
+}
+
 directory_iterator RedirectingFileSystem::dir_begin(const Twine &Dir,
                                                     std::error_code &EC) {
   ErrorOr<RedirectingFileSystem::Entry *> E = lookupPath(Dir);
@@ -1428,21 +1441,31 @@ class llvm::vfs::RedirectingFileSystemParser {
       return nullptr;
     }
 
-    if (IsRootEntry && !sys::path::is_absolute(Name)) {
-      assert(NameValueNode && "Name presence should be checked earlier");
-      error(NameValueNode,
-            "entry with relative path at the root level is not discoverable");
-      return nullptr;
+    sys::path::Style path_style = sys::path::Style::native;
+    if (IsRootEntry) {
+      // VFS root entries may be in either Posix or Windows style.  Figure out
+      // which style we have, and use it consistently.
+      if (sys::path::is_absolute(Name, sys::path::Style::posix)) {
+        path_style = sys::path::Style::posix;
+      } else if (sys::path::is_absolute(Name, sys::path::Style::windows)) {
+        path_style = sys::path::Style::windows;
+      } else {
+        assert(NameValueNode && "Name presence should be checked earlier");
+        error(NameValueNode,
+              "entry with relative path at the root level is not discoverable");
+        return nullptr;
+      }
     }
 
     // Remove trailing slash(es), being careful not to remove the root path
     StringRef Trimmed(Name);
-    size_t RootPathLen = sys::path::root_path(Trimmed).size();
+    size_t RootPathLen = sys::path::root_path(Trimmed, path_style).size();
     while (Trimmed.size() > RootPathLen &&
-           sys::path::is_separator(Trimmed.back()))
+           sys::path::is_separator(Trimmed.back(), path_style))
       Trimmed = Trimmed.slice(0, Trimmed.size() - 1);
+
     // Get the last component
-    StringRef LastComponent = sys::path::filename(Trimmed);
+    StringRef LastComponent = sys::path::filename(Trimmed, path_style);
 
     std::unique_ptr<RedirectingFileSystem::Entry> Result;
     switch (Kind) {
@@ -1460,12 +1483,12 @@ class llvm::vfs::RedirectingFileSystemParser {
       break;
     }
 
-    StringRef Parent = sys::path::parent_path(Trimmed);
+    StringRef Parent = sys::path::parent_path(Trimmed, path_style);
     if (Parent.empty())
       return Result;
 
     // if 'name' contains multiple components, create implicit directory entries
-    for (sys::path::reverse_iterator I = sys::path::rbegin(Parent),
+    for (sys::path::reverse_iterator I = sys::path::rbegin(Parent, path_style),
                                      E = sys::path::rend(Parent);
          I != E; ++I) {
       std::vector<std::unique_ptr<RedirectingFileSystem::Entry>> Entries;

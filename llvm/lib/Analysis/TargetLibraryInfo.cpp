@@ -1588,22 +1588,12 @@ StringRef TargetLibraryInfoImpl::getScalarizedFunction(StringRef F,
   return I->ScalarFnName;
 }
 
-TargetLibraryInfo TargetLibraryAnalysis::run(Function &F,
+TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
                                              FunctionAnalysisManager &) {
-  if (PresetInfoImpl)
-    return TargetLibraryInfo(*PresetInfoImpl);
-
-  return TargetLibraryInfo(
-      lookupInfoImpl(Triple(F.getParent()->getTargetTriple())));
-}
-
-TargetLibraryInfoImpl &TargetLibraryAnalysis::lookupInfoImpl(const Triple &T) {
-  std::unique_ptr<TargetLibraryInfoImpl> &Impl =
-      Impls[T.normalize()];
-  if (!Impl)
-    Impl.reset(new TargetLibraryInfoImpl(T));
-
-  return *Impl;
+  if (!BaselineInfoImpl)
+    BaselineInfoImpl =
+        TargetLibraryInfoImpl(Triple(F.getParent()->getTargetTriple()));
+  return TargetLibraryInfo(*BaselineInfoImpl, &F);
 }
 
 unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
@@ -1614,18 +1604,18 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
-    : ImmutablePass(ID), TLIImpl(), TLI(TLIImpl) {
+    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl()) {
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(const Triple &T)
-    : ImmutablePass(ID), TLIImpl(T), TLI(TLIImpl) {
+    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(T)) {
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
     const TargetLibraryInfoImpl &TLIImpl)
-    : ImmutablePass(ID), TLIImpl(TLIImpl), TLI(this->TLIImpl) {
+    : ImmutablePass(ID), TLA(TLIImpl) {
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 

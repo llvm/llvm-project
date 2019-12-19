@@ -1233,6 +1233,9 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
        Language == dwarf::DW_LANG_ObjC))
     addFlag(SPDie, dwarf::DW_AT_prototyped);
 
+  if (SP->isObjCDirect())
+    addFlag(SPDie, dwarf::DW_AT_APPLE_objc_direct);
+
   unsigned CC = 0;
   DITypeRefArray Args;
   if (const DISubroutineType *SPTy = SP->getType()) {

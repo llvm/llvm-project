@@ -24,7 +24,6 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @no_debug_info_test
     def test_completions(self):
         """
             Tests the completion request at different breakpoints

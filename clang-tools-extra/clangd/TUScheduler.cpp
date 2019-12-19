@@ -480,7 +480,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
 
     {
       std::lock_guard<std::mutex> Lock(PublishMu);
-      // No need to rebuild the AST if we won't send the diagnotics. However,
+      // No need to rebuild the AST if we won't send the diagnostics. However,
       // note that we don't prevent preamble rebuilds.
       if (!CanPublishResults)
         return;

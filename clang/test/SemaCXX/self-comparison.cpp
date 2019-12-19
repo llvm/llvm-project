@@ -15,16 +15,16 @@ struct A {
   int b[3];
   bool f() { return x == x; } // expected-warning {{self-comparison always evaluates to true}}
   bool g() { return x2 == x2; } // no-warning
-  bool h() { return a == b; } // expected-warning {{array comparison always evaluates to false}}
+  bool h() { return a == b; } // expected-warning {{array comparison always evaluates to false}} expected-warning {{deprecated}}
   bool i() {
     int c[3];
-    return a == c; // expected-warning {{array comparison always evaluates to false}}
+    return a == c; // expected-warning {{array comparison always evaluates to false}} expected-warning {{deprecated}}
   }
 };
 
 namespace NA { extern "C" int x[3]; }
 namespace NB { extern "C" int x[3]; }
-bool k = NA::x == NB::x; // expected-warning {{self-comparison always evaluates to true}}
+bool k = NA::x == NB::x; // expected-warning {{self-comparison always evaluates to true}} expected-warning {{deprecated}}
 
 template<typename T> struct Y { static inline int n; };
 bool f() {
@@ -81,7 +81,7 @@ int struct_test(S s1, S s2, S *s3, T t) {
   return s2.field == s2.field;  // expected-warning {{self-comparison always evaluates to true}}
   return s1.static_field == s2.static_field;  // expected-warning {{self-comparison always evaluates to true}}
   return S::static_field == s1.static_field;  // expected-warning {{self-comparison always evaluates to true}}
-  return s1.array == s1.array;  // expected-warning {{self-comparison always evaluates to true}}
+  return s1.array == s1.array;  // expected-warning {{self-comparison always evaluates to true}} expected-warning {{deprecated}}
   return t.s.static_field == S::static_field;  // expected-warning {{self-comparison always evaluates to true}}
   return s3->field == s3->field;  // expected-warning {{self-comparison always evaluates to true}}
   return s3->static_field == S::static_field;  // expected-warning {{self-comparison always evaluates to true}}
@@ -102,7 +102,7 @@ int struct_test(S s1, S s2, S *s3, T t) {
 
   // no warning
   return s1.field == s2.field;
-  return s2.array == s1.array;
+  return s2.array == s1.array; // FIXME: This always evaluates to false. expected-warning {{deprecated}}
   return s2.array[0] == s1.array[0];
   return s1.array[I1] == s1.array[I2];
 

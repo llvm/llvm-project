@@ -393,6 +393,27 @@ def uimm5s8 : Operand<i64>, ImmLeaf<i64,
   let PrintMethod = "printImmScale<8>";
 }
 
+// tuimm5sN predicate - similiar to uimm5sN, but use TImmLeaf (TargetConstant)
+// instead of ImmLeaf (Constant)
+def tuimm5s2 : Operand<i64>, TImmLeaf<i64,
+                [{ return Imm >= 0 && Imm < (32*2) && ((Imm % 2) == 0); }],
+                UImmS2XForm> {
+  let ParserMatchClass = UImm5s2Operand;
+  let PrintMethod = "printImmScale<2>";
+}
+def tuimm5s4 : Operand<i64>, TImmLeaf<i64,
+                [{ return Imm >= 0 && Imm < (32*4) && ((Imm % 4) == 0); }],
+                UImmS4XForm> {
+  let ParserMatchClass = UImm5s4Operand;
+  let PrintMethod = "printImmScale<4>";
+}
+def tuimm5s8 : Operand<i64>, TImmLeaf<i64,
+                [{ return Imm >= 0 && Imm < (32*8) && ((Imm % 8) == 0); }],
+                UImmS8XForm> {
+  let ParserMatchClass = UImm5s8Operand;
+  let PrintMethod = "printImmScale<8>";
+}
+
 // uimm6sN predicate - True if the immediate is a multiple of N in the range
 // [0 * N, 64 * N].
 def UImm6s1Operand : UImmScaledMemoryIndexed<6, 1>;
@@ -745,6 +766,14 @@ def imm0_63 : Operand<i64>, ImmLeaf<i64, [{
 
 // imm0_31 predicate - True if the immediate is in the range [0,31]
 def imm0_31 : Operand<i64>, ImmLeaf<i64, [{
+  return ((uint64_t)Imm) < 32;
+}]> {
+  let ParserMatchClass = Imm0_31Operand;
+}
+
+// timm0_31 predicate - same ass imm0_31, but use TargetConstant (TimmLeaf)
+// instead of Contant (ImmLeaf)
+def timm0_31 : Operand<i64>, TImmLeaf<i64, [{
   return ((uint64_t)Imm) < 32;
 }]> {
   let ParserMatchClass = Imm0_31Operand;

@@ -1235,6 +1235,10 @@ public:
 
   /// Get the base operand and byte offset of an instruction that reads/writes
   /// memory.
+  /// It returns false if MI does not read/write memory.
+  /// It returns false if no base operand and offset was found.
+  /// It is not guaranteed to always recognize base operand and offsets in all
+  /// cases.
   virtual bool getMemOperandWithOffset(const MachineInstr &MI,
                                        const MachineOperand *&BaseOp,
                                        int64_t &Offset,

@@ -43,7 +43,10 @@ enum TraversalKind {
 
   /// Will not traverse implicit casts and parentheses.
   /// Corresponds to Expr::IgnoreParenImpCasts()
-  TK_IgnoreImplicitCastsAndParentheses
+  TK_IgnoreImplicitCastsAndParentheses,
+
+  /// Ignore AST nodes not written in the source
+  TK_IgnoreUnlessSpelledInSource
 };
 
 /// Kind identifier.

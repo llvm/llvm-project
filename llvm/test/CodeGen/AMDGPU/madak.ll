@@ -10,8 +10,8 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; GCN-LABEL: {{^}}madak_f32:
 ; GFX6:   buffer_load_dword [[VA:v[0-9]+]]
 ; GFX6:   buffer_load_dword [[VB:v[0-9]+]]
-; GFX8: {{flat|global}}_load_dword [[VB:v[0-9]+]]
 ; GFX8: {{flat|global}}_load_dword [[VA:v[0-9]+]]
+; GFX8: {{flat|global}}_load_dword [[VB:v[0-9]+]]
 ; GFX9: {{flat|global}}_load_dword [[VA:v[0-9]+]]
 ; GFX9: {{flat|global}}_load_dword [[VB:v[0-9]+]]
 ; GFX10: {{flat|global}}_load_dword [[VA:v[0-9]+]]
@@ -101,8 +101,8 @@ define amdgpu_kernel void @madak_m_inline_imm_f32(float addrspace(1)* noalias %o
 ; GCN-LABEL: {{^}}madak_inline_imm_f32:
 ; GFX6:   buffer_load_dword [[VA:v[0-9]+]]
 ; GFX6:   buffer_load_dword [[VB:v[0-9]+]]
-; GFX8: {{flat|global}}_load_dword [[VB:v[0-9]+]]
 ; GFX8: {{flat|global}}_load_dword [[VA:v[0-9]+]]
+; GFX8: {{flat|global}}_load_dword [[VB:v[0-9]+]]
 ; GFX9: {{flat|global}}_load_dword [[VA:v[0-9]+]]
 ; GFX9: {{flat|global}}_load_dword [[VB:v[0-9]+]]
 ; GFX10: {{flat|global}}_load_dword [[VA:v[0-9]+]]

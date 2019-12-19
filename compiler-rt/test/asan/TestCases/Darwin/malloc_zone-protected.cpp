@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 // RUN: %clangxx_asan %s -o %t
-// RUN: not %run %t 2>&1 | FileCheck %s
+// RUN: ASAN_OPTIONS="abort_on_error=1" not --crash %run %t 2>&1 | FileCheck %s
 
 
 void *pwn(malloc_zone_t *unused_zone, size_t unused_size) {

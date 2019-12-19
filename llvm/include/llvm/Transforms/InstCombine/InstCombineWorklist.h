@@ -24,8 +24,8 @@ namespace llvm {
 /// InstCombineWorklist - This is the worklist management logic for
 /// InstCombine.
 class InstCombineWorklist {
-  SmallVector<Instruction*, 256> Worklist;
-  DenseMap<Instruction*, unsigned> WorklistMap;
+  SmallVector<Instruction *, 256> Worklist;
+  DenseMap<Instruction *, unsigned> WorklistMap;
 
 public:
   InstCombineWorklist() = default;
@@ -38,6 +38,9 @@ public:
   /// Add - Add the specified instruction to the worklist if it isn't already
   /// in it.
   void Add(Instruction *I) {
+    assert(I);
+    assert(I->getParent() && "Instruction not inserted yet?");
+
     if (WorklistMap.insert(std::make_pair(I, Worklist.size())).second) {
       LLVM_DEBUG(dbgs() << "IC: ADD: " << *I << '\n');
       Worklist.push_back(I);

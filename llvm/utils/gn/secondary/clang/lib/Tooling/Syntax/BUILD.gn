@@ -9,7 +9,10 @@ static_library("Syntax") {
   ]
   sources = [
     "BuildTree.cpp",
+    "ComputeReplacements.cpp",
+    "Mutations.cpp",
     "Nodes.cpp",
+    "Synthesis.cpp",
     "Tokens.cpp",
     "Tree.cpp",
   ]

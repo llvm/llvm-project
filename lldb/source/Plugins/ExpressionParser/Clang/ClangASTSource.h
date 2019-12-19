@@ -15,7 +15,6 @@
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
-#include "clang/AST/ExternalASTMerger.h"
 #include "clang/Basic/IdentifierTable.h"
 
 #include "llvm/ADT/SmallSet.h"
@@ -39,7 +38,11 @@ public:
   ///
   /// \param[in] target
   ///     A reference to the target containing debug information to use.
-  ClangASTSource(const lldb::TargetSP &target);
+  ///
+  /// \param[in] importer
+  ///     The ClangASTImporter to use.
+  ClangASTSource(const lldb::TargetSP &target,
+                 const lldb::ClangASTImporterSP &importer);
 
   /// Destructor
   ~ClangASTSource() override;
@@ -340,24 +343,6 @@ public:
   ///     A copy of the Decl in m_ast_context, or NULL if the copy failed.
   clang::Decl *CopyDecl(clang::Decl *src_decl);
 
-  /// Copies a single Type to the target of the given ExternalASTMerger.
-  ///
-  /// \param[in] src_context
-  ///     The ASTContext containing the type.
-  ///
-  /// \param[in] merger
-  ///     The merger to use.  This isn't just *m_merger_up because it might be
-  ///     the persistent AST context's merger.
-  ///
-  /// \param[in] type
-  ///     The type to copy.
-  ///
-  /// \return
-  ///     A copy of the Type in the merger's target context.
-	clang::QualType CopyTypeWithMerger(clang::ASTContext &src_context,
-                                     clang::ExternalASTMerger &merger,
-                                     clang::QualType type);
-
   /// Determined the origin of a single Decl, if it can be found.
   ///
   /// \param[in] decl
@@ -371,16 +356,7 @@ public:
   ///
   /// \return
   ///     True if lookup succeeded; false otherwise.
-  bool ResolveDeclOrigin(const clang::Decl *decl, clang::Decl **original_decl,
-                         clang::ASTContext **original_ctx);
-
-  /// Returns m_merger_up.  Only call this if the target is configured to use
-  /// modern lookup,
-	clang::ExternalASTMerger &GetMergerUnchecked();
-
-  /// Returns true if there is a merger.  This only occurs if the target is
-  /// using modern lookup.
-  bool HasMerger() { return (bool)m_merger_up; }
+  ClangASTImporter::DeclOrigin GetDeclOrigin(const clang::Decl *decl);
 
 protected:
   bool FindObjCMethodDeclsWithOrigin(
@@ -402,8 +378,6 @@ protected:
   clang::FileManager *m_file_manager;
   /// The target's AST importer.
   lldb::ClangASTImporterSP m_ast_importer_sp;
-  /// The ExternalASTMerger for this parse.
-  std::unique_ptr<clang::ExternalASTMerger> m_merger_up;
   std::set<const clang::Decl *> m_active_lexical_decls;
   std::set<const char *> m_active_lookups;
 };

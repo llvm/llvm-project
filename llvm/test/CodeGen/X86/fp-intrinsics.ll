@@ -1941,6 +1941,762 @@ entry:
   ret i64 %result
 }
 
+; Verify that sitofp(%x) isn't simplified when the rounding mode is
+; unknown.
+; Verify that no gross errors happen.
+define double @sifdb(i8 %x) #0 {
+; X87-LABEL: sifdb:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: sifdb:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: sifdb:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movsbl %dil, %eax
+; SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sifdb:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movsbl %dil, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.sitofp.f64.i8(i8 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+define double @sifdw(i16 %x) #0 {
+; X87-LABEL: sifdw:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: sifdw:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: sifdw:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movswl %di, %eax
+; SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sifdw:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movswl %di, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.sitofp.f64.i16(i16 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+define double @sifdi(i32 %x) #0 {
+; X87-LABEL: sifdi:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: sifdi:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    cvtsi2sdl {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: sifdi:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtsi2sd %edi, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sifdi:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+define float @siffb(i8 %x) #0 {
+; X87-LABEL: siffb:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: siffb:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    popl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: siffb:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movsbl %dil, %eax
+; SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: siffb:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movsbl %dil, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call float @llvm.experimental.constrained.sitofp.f32.i8(i8 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define float @siffw(i16 %x) #0 {
+; X87-LABEL: siffw:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: siffw:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    popl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: siffw:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movswl %di, %eax
+; SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: siffw:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movswl %di, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call float @llvm.experimental.constrained.sitofp.f32.i16(i16 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define float @siffi(i32 %x) #0 {
+; X87-LABEL: siffi:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: siffi:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    cvtsi2ssl {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    popl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: siffi:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtsi2ss %edi, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: siffi:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define double @sifdl(i64 %x) #0 {
+; X87-LABEL: sifdl:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: sifdl:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $20, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fstpl (%esp)
+; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    addl $20, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: sifdl:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtsi2sd %rdi, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sifdl:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+define float @siffl(i64 %x) #0 {
+; X87-LABEL: siffl:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: siffl:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $20, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    addl $20, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: siffl:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: siffl:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+; Verify that uitofp(%x) isn't simplified when the rounding mode is
+; unknown.
+; Verify that no gross errors happen.
+define double @uifdb(i8 %x) #0 {
+; X87-LABEL: uifdb:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: uifdb:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: uifdb:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movzbl %dil, %eax
+; SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: uifdb:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movzbl %dil, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.uitofp.f64.i8(i8 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+define double @uifdw(i16 %x) #0 {
+; X87-LABEL: uifdw:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: uifdw:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: uifdw:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movzwl %di, %eax
+; SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: uifdw:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movzwl %di, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.uitofp.f64.i16(i16 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+define double @uifdi(i32 %x) #0 {
+; X87-LABEL: uifdi:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: uifdi:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    orpd %xmm0, %xmm1
+; X86-SSE-NEXT:    subsd %xmm0, %xmm1
+; X86-SSE-NEXT:    movsd %xmm1, (%esp)
+; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: uifdi:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    cvtsi2sd %rax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: uifdi:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: uifdi:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+define double @uifdl(i64 %x) #0 {
+; X87-LABEL: uifdl:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $20, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 24
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    xorl %eax, %eax
+; X87-NEXT:    testl %ecx, %ecx
+; X87-NEXT:    setns %al
+; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    addl $20, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: uifdl:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; X86-SSE-NEXT:    subpd {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    movapd %xmm0, %xmm1
+; X86-SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; X86-SSE-NEXT:    addpd %xmm0, %xmm1
+; X86-SSE-NEXT:    movlpd %xmm1, (%esp)
+; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: uifdl:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movq %rdi, %xmm1
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; SSE-NEXT:    subpd {{.*}}(%rip), %xmm1
+; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE-NEXT:    addpd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: uifdl:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX1-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: uifdl:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+define float @uiffb(i8 %x) #0 {
+; X87-LABEL: uiffb:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: uiffb:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    popl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: uiffb:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movzbl %dil, %eax
+; SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: uiffb:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movzbl %dil, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call float @llvm.experimental.constrained.uitofp.f32.i8(i8 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define float @uiffw(i16 %x) #0 {
+; X87-LABEL: uiffw:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: uiffw:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    popl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: uiffw:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movzwl %di, %eax
+; SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: uiffw:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movzwl %di, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+entry:
+  %result = call float @llvm.experimental.constrained.uitofp.f32.i16(i16 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define float @uiffi(i32 %x) #0 {
+; X87-LABEL: uiffi:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: uiffi:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    orpd %xmm0, %xmm1
+; X86-SSE-NEXT:    subsd %xmm0, %xmm1
+; X86-SSE-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE-NEXT:    cvtsd2ss %xmm1, %xmm0
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    popl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: uiffi:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    cvtsi2ss %rax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: uiffi:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: uiffi:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define float @uiffl(i64 %x) #0 {
+; X87-LABEL: uiffl:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $20, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 24
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X87-NEXT:    xorl %eax, %eax
+; X87-NEXT:    testl %ecx, %ecx
+; X87-NEXT:    setns %al
+; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    addl $20, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: uiffl:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $20, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    xorl %eax, %eax
+; X86-SSE-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    setns %al
+; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    addl $20, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: uiffl:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    testq %rdi, %rdi
+; SSE-NEXT:    js .LBB52_1
+; SSE-NEXT:  # %bb.2: # %entry
+; SSE-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE-NEXT:    retq
+; SSE-NEXT:  .LBB52_1:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    shrq %rax
+; SSE-NEXT:    andl $1, %edi
+; SSE-NEXT:    orq %rax, %rdi
+; SSE-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE-NEXT:    addss %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: uiffl:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    testq %rdi, %rdi
+; AVX1-NEXT:    js .LBB52_1
+; AVX1-NEXT:  # %bb.2: # %entry
+; AVX1-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+; AVX1-NEXT:  .LBB52_1:
+; AVX1-NEXT:    movq %rdi, %rax
+; AVX1-NEXT:    shrq %rax
+; AVX1-NEXT:    andl $1, %edi
+; AVX1-NEXT:    orq %rax, %rdi
+; AVX1-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: uiffl:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %result = call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
 attributes #0 = { strictfp }
 
 @llvm.fp.env = thread_local global i8 zeroinitializer, section "llvm.metadata"
@@ -1981,3 +2737,19 @@ declare i32 @llvm.experimental.constrained.lround.i32.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.lround.i32.f32(float, metadata)
 declare i64 @llvm.experimental.constrained.llround.i64.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.llround.i64.f32(float, metadata)
+declare double @llvm.experimental.constrained.sitofp.f64.i8(i8, metadata, metadata)
+declare double @llvm.experimental.constrained.sitofp.f64.i16(i16, metadata, metadata)
+declare double @llvm.experimental.constrained.sitofp.f64.i32(i32, metadata, metadata)
+declare double @llvm.experimental.constrained.sitofp.f64.i64(i64, metadata, metadata)
+declare float @llvm.experimental.constrained.sitofp.f32.i8(i8, metadata, metadata)
+declare float @llvm.experimental.constrained.sitofp.f32.i16(i16, metadata, metadata)
+declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
+declare float @llvm.experimental.constrained.sitofp.f32.i64(i64, metadata, metadata)
+declare double @llvm.experimental.constrained.uitofp.f64.i8(i8, metadata, metadata)
+declare double @llvm.experimental.constrained.uitofp.f64.i16(i16, metadata, metadata)
+declare double @llvm.experimental.constrained.uitofp.f64.i32(i32, metadata, metadata)
+declare double @llvm.experimental.constrained.uitofp.f64.i64(i64, metadata, metadata)
+declare float @llvm.experimental.constrained.uitofp.f32.i8(i8, metadata, metadata)
+declare float @llvm.experimental.constrained.uitofp.f32.i16(i16, metadata, metadata)
+declare float @llvm.experimental.constrained.uitofp.f32.i32(i32, metadata, metadata)
+declare float @llvm.experimental.constrained.uitofp.f32.i64(i64, metadata, metadata)

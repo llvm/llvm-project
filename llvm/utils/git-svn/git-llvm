@@ -206,7 +206,7 @@ def get_fetch_url():
 def get_push_url(user='', ssh=False):
 
     if ssh:
-        return 'ssh://{}'.format(GIT_URL)
+        return 'ssh://git@{}'.format(GIT_URL)
 
     return 'https://{}'.format(GIT_URL)
 
@@ -221,7 +221,7 @@ def get_revs_to_push(branch):
     return commits
 
 
-def git_push_one_rev(rev, dry_run, branch):
+def git_push_one_rev(rev, dry_run, branch, ssh):
     # Check if this a merge commit by counting the number of parent commits.
     # More than 1 parent commmit means this is a merge.
     num_parents = len(git('show', '--no-patch', '--format="%P"', rev).split())
@@ -237,7 +237,7 @@ def git_push_one_rev(rev, dry_run, branch):
         return
 
     # Second push to actually push the commit
-    git('push', get_push_url(), '{}:{}'.format(rev, branch), print_raw_stderr=True)
+    git('push', get_push_url(ssh=ssh), '{}:{}'.format(rev, branch), print_raw_stderr=True)
 
 
 def cmd_push(args):
@@ -261,7 +261,7 @@ def cmd_push(args):
             die("Aborting")
 
     for r in revs:
-        git_push_one_rev(r, dry_run, args.branch)
+        git_push_one_rev(r, dry_run, args.branch, args.ssh)
 
 
 if __name__ == '__main__':
@@ -292,6 +292,13 @@ if __name__ == '__main__':
         help='Do everything other than commit to svn.  Leaves junk in the svn '
         'repo, so probably will not work well if you try to commit more '
         'than one rev.')
+    parser_push.add_argument(
+        '-s',
+        '--ssh',
+        dest='ssh',
+        action='store_true',
+        help='Use the SSH protocol for authentication, '
+        'instead of HTTPS with username and password.')
     parser_push.add_argument(
         '-f',
         '--force',

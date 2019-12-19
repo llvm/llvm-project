@@ -31,8 +31,8 @@ public:
   void writePltHeader(uint8_t *buf) const override {
     llvm_unreachable("should call writePPC32GlinkSection() instead");
   }
-  void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-    int32_t index, unsigned relOff) const override {
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override {
     llvm_unreachable("should call writePPC32GlinkSection() instead");
   }
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -144,6 +144,7 @@ PPC::PPC() {
   gotPltHeaderEntriesNum = 0;
   pltHeaderSize = 64; // size of PLTresolve in .glink
   pltEntrySize = 4;
+  ipltEntrySize = 4;
 
   needsThunks = true;
 

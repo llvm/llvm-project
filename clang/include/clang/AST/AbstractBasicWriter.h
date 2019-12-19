@@ -38,6 +38,40 @@ inline llvm::Optional<T*> makeOptionalFromPointer(T *value) {
 //   void write##TypeName(ValueType value);
 // where TypeName is the name of a PropertyType node from PropertiesBase.td
 // and ValueType is the corresponding C++ type name.
+//
+// In addition to the concrete property types, BasicWriter is expected
+// to implement these methods:
+//
+//   template <class EnumType>
+//   void writeEnum(T value);
+//
+//     Writes an enum value as the current property.  EnumType will always
+//     be an enum type.  Only necessary if the BasicWriter doesn't provide
+//     type-specific writers for all the enum types.
+//
+//   template <class ValueType>
+//   void writeOptional(Optional<ValueType> value);
+//
+//     Writes an optional value as the current property.
+//
+//   template <class ValueType>
+//   void writeArray(ArrayRef<ValueType> value);
+//
+//     Writes an array of values as the current property.
+//
+//   PropertyWriter writeObject();
+//
+//     Writes an object as the current property; the returned property
+//     writer will be subjected to a sequence of property writes and then
+//     discarded before any other properties are written to the "outer"
+//     property writer (which need not be the same type).  The sub-writer
+//     will be used as if with the following code:
+//
+//       {
+//         auto &&widget = W.find("widget").writeObject();
+//         widget.find("kind").writeWidgetKind(...);
+//         widget.find("declaration").writeDeclRef(...);
+//       }
 
 // WriteDispatcher is a template which does type-based forwarding to one
 // of the write methods of the BasicWriter passed in:
@@ -95,6 +129,15 @@ public:
     return asImpl();
   }
 
+  // Implement object writing by forwarding to this, collapsing the
+  // structure into a single data stream.
+  Impl &writeObject() { return asImpl(); }
+
+  template <class T>
+  void writeEnum(T value) {
+    asImpl().writeUInt32(uint32_t(value));
+  }
+
   template <class T>
   void writeArray(llvm::ArrayRef<T> array) {
     asImpl().writeUInt32(array.size());
@@ -145,141 +188,6 @@ public:
     static_assert(sizeof(epi.getOpaqueValue()) <= sizeof(uint32_t),
                   "opaque value doesn't fit into uint32_t");
     asImpl().writeUInt32(epi.getOpaqueValue());
-  }
-
-  void writeDeclarationName(DeclarationName name) {
-    asImpl().writeDeclarationNameKind(name.getNameKind());
-    switch (name.getNameKind()) {
-    case DeclarationName::Identifier:
-      asImpl().writeIdentifier(name.getAsIdentifierInfo());
-      return;
-
-    case DeclarationName::ObjCZeroArgSelector:
-    case DeclarationName::ObjCOneArgSelector:
-    case DeclarationName::ObjCMultiArgSelector:
-      asImpl().writeSelector(name.getObjCSelector());
-      return;
-
-    case DeclarationName::CXXConstructorName:
-    case DeclarationName::CXXDestructorName:
-    case DeclarationName::CXXConversionFunctionName:
-      asImpl().writeQualType(name.getCXXNameType());
-      return;
-
-    case DeclarationName::CXXDeductionGuideName:
-      asImpl().writeDeclRef(name.getCXXDeductionGuideTemplate());
-      return;
-
-    case DeclarationName::CXXOperatorName:
-      asImpl().writeOverloadedOperatorKind(name.getCXXOverloadedOperator());
-      return;
-
-    case DeclarationName::CXXLiteralOperatorName:
-      asImpl().writeIdentifier(name.getCXXLiteralIdentifier());
-      return;
-
-    case DeclarationName::CXXUsingDirective:
-      // No extra data to emit
-      return;
-    }
-    llvm_unreachable("bad name kind");
-  }
-
-  void writeTemplateName(TemplateName name) {
-    asImpl().writeTemplateNameKind(name.getKind());
-    switch (name.getKind()) {
-    case TemplateName::Template:
-      asImpl().writeDeclRef(name.getAsTemplateDecl());
-      return;
-
-    case TemplateName::OverloadedTemplate: {
-      OverloadedTemplateStorage *overload = name.getAsOverloadedTemplate();
-      asImpl().writeArray(llvm::makeArrayRef(overload->begin(),
-                                             overload->end()));
-      return;
-    }
-
-    case TemplateName::AssumedTemplate: {
-      AssumedTemplateStorage *assumed = name.getAsAssumedTemplateName();
-      asImpl().writeDeclarationName(assumed->getDeclName());
-      return;
-    }
-
-    case TemplateName::QualifiedTemplate: {
-      QualifiedTemplateName *qual = name.getAsQualifiedTemplateName();
-      asImpl().writeNestedNameSpecifier(qual->getQualifier());
-      asImpl().writeBool(qual->hasTemplateKeyword());
-      asImpl().writeDeclRef(qual->getTemplateDecl());
-      return;
-    }
-
-    case TemplateName::DependentTemplate: {
-      DependentTemplateName *dep = name.getAsDependentTemplateName();
-      asImpl().writeNestedNameSpecifier(dep->getQualifier());
-      asImpl().writeBool(dep->isIdentifier());
-      if (dep->isIdentifier())
-        asImpl().writeIdentifier(dep->getIdentifier());
-      else
-        asImpl().writeOverloadedOperatorKind(dep->getOperator());
-      return;
-    }
-
-    case TemplateName::SubstTemplateTemplateParm: {
-      auto subst = name.getAsSubstTemplateTemplateParm();
-      asImpl().writeDeclRef(subst->getParameter());
-      asImpl().writeTemplateName(subst->getReplacement());
-      return;
-    }
-
-    case TemplateName::SubstTemplateTemplateParmPack: {
-      auto substPack = name.getAsSubstTemplateTemplateParmPack();
-      asImpl().writeDeclRef(substPack->getParameterPack());
-      asImpl().writeTemplateArgument(substPack->getArgumentPack());
-      return;
-    }
-    }
-    llvm_unreachable("bad template name kind");
-  }
-
-  void writeTemplateArgument(const TemplateArgument &arg) {
-    asImpl().writeTemplateArgumentKind(arg.getKind());
-    switch (arg.getKind()) {
-    case TemplateArgument::Null:
-      return;
-    case TemplateArgument::Type:
-      asImpl().writeQualType(arg.getAsType());
-      return;
-    case TemplateArgument::Declaration:
-      asImpl().writeValueDeclRef(arg.getAsDecl());
-      asImpl().writeQualType(arg.getParamTypeForDecl());
-      return;
-    case TemplateArgument::NullPtr:
-      asImpl().writeQualType(arg.getNullPtrType());
-      return;
-    case TemplateArgument::Integral:
-      asImpl().writeAPSInt(arg.getAsIntegral());
-      asImpl().writeQualType(arg.getIntegralType());
-      return;
-    case TemplateArgument::Template:
-      asImpl().writeTemplateName(arg.getAsTemplateOrTemplatePattern());
-      return;
-    case TemplateArgument::TemplateExpansion: {
-      asImpl().writeTemplateName(arg.getAsTemplateOrTemplatePattern());
-      // Convert Optional<unsigned> to Optional<uint32>, just in case.
-      Optional<unsigned> numExpansions = arg.getNumTemplateExpansions();
-      Optional<uint32_t> numExpansions32;
-      if (numExpansions) numExpansions32 = *numExpansions;
-      asImpl().template writeOptional<uint32_t>(numExpansions32);
-      return;
-    }
-    case TemplateArgument::Expression:
-      asImpl().writeExprRef(arg.getAsExpr());
-      return;
-    case TemplateArgument::Pack:
-      asImpl().template writeArray<TemplateArgument>(arg.pack_elements());
-      return;
-    }
-    llvm_unreachable("bad template argument kind");
   }
 
   void writeNestedNameSpecifier(NestedNameSpecifier *NNS) {

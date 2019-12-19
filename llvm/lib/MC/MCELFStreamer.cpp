@@ -308,10 +308,6 @@ void MCELFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
     EmitLabel(Symbol);
     EmitZeros(Size);
 
-    // Update the maximum alignment of the section if necessary.
-    if (ByteAlignment > Section.getAlignment())
-      Section.setAlignment(Align(ByteAlignment));
-
     SwitchSection(P.first, P.second);
   } else {
     if(Symbol->declareCommon(Size, ByteAlignment))

@@ -47,6 +47,77 @@ define <16 x i8> @mul_v16i8(<16 x i8> %x, <16 x i8> %y) {
   ret <16 x i8> %a
 }
 
+; CHECK-LABEL: min_s_v16i8:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .functype min_s_v16i8 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i8x16.min_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <16 x i8> @min_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %c = icmp slt <16 x i8> %x, %y
+  %a = select <16 x i1> %c, <16 x i8> %x, <16 x i8> %y
+  ret <16 x i8> %a
+}
+
+; CHECK-LABEL: min_u_v16i8:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .functype min_u_v16i8 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i8x16.min_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <16 x i8> @min_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %c = icmp ult <16 x i8> %x, %y
+  %a = select <16 x i1> %c, <16 x i8> %x, <16 x i8> %y
+  ret <16 x i8> %a
+}
+
+; CHECK-LABEL: max_s_v16i8:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .functype max_s_v16i8 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i8x16.max_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <16 x i8> @max_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %c = icmp sgt <16 x i8> %x, %y
+  %a = select <16 x i1> %c, <16 x i8> %x, <16 x i8> %y
+  ret <16 x i8> %a
+}
+
+; CHECK-LABEL: max_u_v16i8:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .functype max_u_v16i8 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i8x16.max_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <16 x i8> @max_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %c = icmp ugt <16 x i8> %x, %y
+  %a = select <16 x i1> %c, <16 x i8> %x, <16 x i8> %y
+  ret <16 x i8> %a
+}
+
+; CHECK-LABEL: avgr_u_v16i8:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .functype avgr_u_v16i8 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i8x16.avgr_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <16 x i8> @avgr_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %a = add nuw <16 x i8> %x, %y
+  %b = add nuw <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1,
+                              i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %c = udiv <16 x i8> %b, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2,
+                           i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  ret <16 x i8> %c
+}
+
+; CHECK-LABEL: avgr_u_v16i8_wrap:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .functype avgr_u_v16i8_wrap (v128, v128) -> (v128){{$}}
+; SIMD128-NOT: i8x16.avgr_u
+define <16 x i8> @avgr_u_v16i8_wrap(<16 x i8> %x, <16 x i8> %y) {
+  %a = add <16 x i8> %x, %y
+  %b = add <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1,
+                          i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %c = udiv <16 x i8> %b, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2,
+                           i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  ret <16 x i8> %c
+}
+
 ; CHECK-LABEL: neg_v16i8:
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype neg_v16i8 (v128) -> (v128){{$}}
@@ -293,6 +364,73 @@ define <8 x i16> @mul_v8i16(<8 x i16> %x, <8 x i16> %y) {
   ret <8 x i16> %a
 }
 
+; CHECK-LABEL: min_s_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype min_s_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.min_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @min_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %c = icmp slt <8 x i16> %x, %y
+  %a = select <8 x i1> %c, <8 x i16> %x, <8 x i16> %y
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: min_u_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype min_u_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.min_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @min_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %c = icmp ult <8 x i16> %x, %y
+  %a = select <8 x i1> %c, <8 x i16> %x, <8 x i16> %y
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: max_s_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype max_s_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.max_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @max_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %c = icmp sgt <8 x i16> %x, %y
+  %a = select <8 x i1> %c, <8 x i16> %x, <8 x i16> %y
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: max_u_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype max_u_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.max_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @max_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %c = icmp ugt <8 x i16> %x, %y
+  %a = select <8 x i1> %c, <8 x i16> %x, <8 x i16> %y
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: avgr_u_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype avgr_u_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.avgr_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @avgr_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %a = add nuw <8 x i16> %x, %y
+  %b = add nuw <8 x i16> %a, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %c = udiv <8 x i16> %b, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  ret <8 x i16> %c
+}
+
+; CHECK-LABEL: avgr_u_v8i16_wrap:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype avgr_u_v8i16_wrap (v128, v128) -> (v128){{$}}
+; SIMD128-NOT: i16x8.avgr_u
+define <8 x i16> @avgr_u_v8i16_wrap(<8 x i16> %x, <8 x i16> %y) {
+  %a = add <8 x i16> %x, %y
+  %b = add <8 x i16> %a, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %c = udiv <8 x i16> %b, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  ret <8 x i16> %c
+}
+
 ; CHECK-LABEL: neg_v8i16:
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128-NEXT: .functype neg_v8i16 (v128) -> (v128){{$}}
@@ -528,6 +666,50 @@ define <4 x i32> @sub_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @mul_v4i32(<4 x i32> %x, <4 x i32> %y) {
   %a = mul <4 x i32> %x, %y
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: min_s_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .functype min_s_v4i32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.min_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @min_s_v4i32(<4 x i32> %x, <4 x i32> %y) {
+  %c = icmp slt <4 x i32> %x, %y
+  %a = select <4 x i1> %c, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: min_u_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .functype min_u_v4i32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.min_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @min_u_v4i32(<4 x i32> %x, <4 x i32> %y) {
+  %c = icmp ult <4 x i32> %x, %y
+  %a = select <4 x i1> %c, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: max_s_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .functype max_s_v4i32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.max_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @max_s_v4i32(<4 x i32> %x, <4 x i32> %y) {
+  %c = icmp sgt <4 x i32> %x, %y
+  %a = select <4 x i1> %c, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: max_u_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .functype max_u_v4i32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.max_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @max_u_v4i32(<4 x i32> %x, <4 x i32> %y) {
+  %c = icmp ugt <4 x i32> %x, %y
+  %a = select <4 x i1> %c, <4 x i32> %x, <4 x i32> %y
   ret <4 x i32> %a
 }
 

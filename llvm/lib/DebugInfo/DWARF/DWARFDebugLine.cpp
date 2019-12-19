@@ -453,9 +453,9 @@ DWARFDebugLine::LineTable::LineTable() { clear(); }
 void DWARFDebugLine::LineTable::dump(raw_ostream &OS,
                                      DIDumpOptions DumpOptions) const {
   Prologue.dump(OS, DumpOptions);
-  OS << '\n';
 
   if (!Rows.empty()) {
+    OS << '\n';
     Row::dumpTableHeader(OS);
     for (const Row &R : Rows) {
       R.dump(OS);

@@ -26,8 +26,8 @@ public:
   SPARCV9();
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
-  void writePlt(uint8_t *buf, uint64_t gotEntryAddr, uint64_t pltEntryAddr,
-                int32_t index, unsigned relOff) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
 };
 } // namespace
@@ -124,9 +124,8 @@ void SPARCV9::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void SPARCV9::writePlt(uint8_t *buf, uint64_t gotEntryAddr,
-                       uint64_t pltEntryAddr, int32_t index,
-                       unsigned relOff) const {
+void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
+                       uint64_t pltEntryAddr) const {
   const uint8_t pltData[] = {
       0x03, 0x00, 0x00, 0x00, // sethi   (. - .PLT0), %g1
       0x30, 0x68, 0x00, 0x00, // ba,a    %xcc, .PLT1
@@ -139,7 +138,7 @@ void SPARCV9::writePlt(uint8_t *buf, uint64_t gotEntryAddr,
   };
   memcpy(buf, pltData, sizeof(pltData));
 
-  uint64_t off = pltHeaderSize + pltEntrySize * index;
+  uint64_t off = pltEntryAddr - in.plt->getVA();
   relocateOne(buf, R_SPARC_22, off);
   relocateOne(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
 }

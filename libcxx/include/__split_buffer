@@ -324,7 +324,7 @@ template <class _Tp, class _Allocator>
 inline
 __split_buffer<_Tp, _Allocator>::__split_buffer()
     _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-    : __first_(nullptr), __begin_(nullptr), __end_(nullptr), __end_cap_(nullptr)
+    : __first_(nullptr), __begin_(nullptr), __end_(nullptr), __end_cap_(nullptr, __default_init_tag())
 {
 }
 
@@ -368,7 +368,7 @@ __split_buffer<_Tp, _Allocator>::__split_buffer(__split_buffer&& __c)
 
 template <class _Tp, class _Allocator>
 __split_buffer<_Tp, _Allocator>::__split_buffer(__split_buffer&& __c, const __alloc_rr& __a)
-    : __end_cap_(__second_tag(), __a)
+    : __end_cap_(nullptr, __a)
 {
     if (__a == __c.__alloc())
     {

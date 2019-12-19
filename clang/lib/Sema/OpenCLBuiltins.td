@@ -40,6 +40,21 @@ def ConstantAS   : AddressSpace<"clang::LangAS::opencl_constant">;
 def LocalAS      : AddressSpace<"clang::LangAS::opencl_local">;
 def GenericAS    : AddressSpace<"clang::LangAS::opencl_generic">;
 
+// OpenCL language extension.
+class AbstractExtension<string _Ext> {
+  // One or more OpenCL extensions, space separated.  Each extension must be
+  // a valid extension name for the opencl extension pragma.
+  string ExtName = _Ext;
+}
+
+// Extension associated to a builtin function.
+class FunctionExtension<string _Ext> : AbstractExtension<_Ext>;
+
+// FunctionExtension definitions.
+def FuncExtNone                          : FunctionExtension<"">;
+def FuncExtKhrSubgroups                  : FunctionExtension<"cl_khr_subgroups">;
+def FuncExtKhrGlobalInt32BaseAtomics     : FunctionExtension<"cl_khr_global_int32_base_atomics">;
+def FuncExtKhrGlobalInt32ExtendedAtomics : FunctionExtension<"cl_khr_global_int32_extended_atomics">;
 
 // Qualified Type.  These map to ASTContext::QualType.
 class QualType<string _Name, bit _IsAbstract=0> {
@@ -198,14 +213,14 @@ class Builtin<string _Name, list<Type> _Signature, list<bit> _Attributes = Attr.
   // the following are the arguments. The list must have at least one element
   // (the return type).
   list<Type> Signature = _Signature;
-  // OpenCL Extension to which the function belongs (cl_khr_subgroups, ...)
-  string Extension = "";
   // Function attribute __attribute__((pure))
   bit IsPure = _Attributes[0];
   // Function attribute __attribute__((const))
   bit IsConst = _Attributes[1];
   // Function attribute __attribute__((convergent))
   bit IsConv = _Attributes[2];
+  // OpenCL extensions to which the function belongs.
+  FunctionExtension Extension = FuncExtNone;
   // Version of OpenCL from which the function is available (e.g.: CL10).
   // MinVersion is inclusive.
   Version MinVersion = CL10;
@@ -862,17 +877,19 @@ foreach name = ["prefetch"] in {
 // Functions that use memory_order and cl_mem_fence_flags enums are not
 // declared here as the TableGen backend does not handle enums.
 
-// OpenCL v1.0 s9.5, s9.6, s9.7 - Atomic Functions for 32-bit integers.
+// OpenCL v1.0 s9.5, s9.6, s9.7 - Atomic Functions for 32-bit integers
 // --- Table 9.1 ---
-foreach Type = [Int, UInt] in {
-  foreach name = ["atom_add", "atom_sub", "atom_xchg"] in {
-    def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type]>;
-  }
-  foreach name = ["atom_inc", "atom_dec"] in {
-    def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>]>;
-  }
-  foreach name = ["atom_cmpxchg"] in {
-    def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type, Type]>;
+let Extension = FuncExtKhrGlobalInt32BaseAtomics in {
+  foreach Type = [Int, UInt] in {
+    foreach name = ["atom_add", "atom_sub", "atom_xchg"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type]>;
+    }
+    foreach name = ["atom_inc", "atom_dec"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>]>;
+    }
+    foreach name = ["atom_cmpxchg"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type, Type]>;
+    }
   }
 }
 
@@ -1077,7 +1094,7 @@ let MinVersion = CL20 in {
 
 // OpenCL v2.0 s9.17.3: Additions to section 6.13.1: Work-Item Functions
 let MinVersion = CL20 in {
-  let Extension = "cl_khr_subgroups" in {
+  let Extension = FuncExtKhrSubgroups in {
     def get_sub_group_size : Builtin<"get_sub_group_size", [UInt]>;
     def get_max_sub_group_size : Builtin<"get_max_sub_group_size", [UInt]>;
     def get_num_sub_groups : Builtin<"get_num_sub_groups", [UInt]>;

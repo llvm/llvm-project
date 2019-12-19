@@ -115,13 +115,13 @@ T tmain(T argc, T *argv) {
   // CHECK-NEXT: }
 
 #ifdef OMP5
-#pragma omp target parallel for simd if(target:argc > 0) if (simd: argc)
+#pragma omp target parallel for simd if(target:argc > 0) if (simd: argc) nontemporal(argc, c, d)
 #else
 #pragma omp target parallel for simd if(target:argc > 0)
 #endif // OMP5
   for (T i = 0; i < 2; ++i) {}
   // OMP45: #pragma omp target parallel for simd if(target: argc > 0)
-  // OMP50: #pragma omp target parallel for simd if(target: argc > 0) if(simd: argc)
+  // OMP50: #pragma omp target parallel for simd if(target: argc > 0) if(simd: argc) nontemporal(argc,c,d)
   // CHECK-NEXT: for (T i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 

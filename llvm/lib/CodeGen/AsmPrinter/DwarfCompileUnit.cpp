@@ -514,10 +514,10 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
     const MCSymbol *RangeSectionSym =
         TLOF.getDwarfRangesSection()->getBeginSymbol();
     if (isDwoUnit())
-      addSectionDelta(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
+      addSectionDelta(ScopeDIE, dwarf::DW_AT_ranges, List.Label,
                       RangeSectionSym);
     else
-      addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
+      addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.Label,
                       RangeSectionSym);
   }
 }

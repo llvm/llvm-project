@@ -18,6 +18,7 @@
 #ifndef LLVM_TOOLS_LLVM_EXEGESIS_MCINSTRDESCVIEW_H
 #define LLVM_TOOLS_LLVM_EXEGESIS_MCINSTRDESCVIEW_H
 
+#include <memory>
 #include <random>
 #include <unordered_map>
 
@@ -48,7 +49,7 @@ struct Variable {
 
   // The index of this Variable in Instruction.Variables and its associated
   // Value in InstructionBuilder.VariableValues.
-  int Index = -1;
+  Optional<uint8_t> Index;
 };
 
 // MCOperandInfo can only represents Explicit operands. This object gives a
@@ -81,20 +82,40 @@ struct Operand {
   const MCOperandInfo &getExplicitOperandInfo() const;
 
   // Please use the accessors above and not the following fields.
-  int Index = -1;
+  Optional<uint8_t> Index;
   bool IsDef = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const MCOperandInfo *Info = nullptr;              // Set for Explicit Op.
-  int TiedToIndex = -1;                             // Set for Reg&Explicit Op.
+  Optional<uint8_t> TiedToIndex;                    // Set for Reg&Explicit Op.
   const MCPhysReg *ImplicitReg = nullptr;           // Set for Implicit Op.
-  int VariableIndex = -1;                           // Set for Explicit Op.
+  Optional<uint8_t> VariableIndex;                  // Set for Explicit Op.
+};
+
+/// A cache of BitVector to reuse between Instructions.
+/// The cache will only be exercised during Instruction initialization.
+/// For X86, this is ~160 unique vectors for all of the ~15K Instructions.
+struct BitVectorCache {
+  // Finds or allocates the provided BitVector in the cache and retrieves it's
+  // unique instance.
+  const BitVector *getUnique(BitVector &&BV) const;
+
+private:
+  mutable std::vector<std::unique_ptr<BitVector>> Cache;
 };
 
 // A view over an MCInstrDesc offering a convenient interface to compute
 // Register aliasing.
 struct Instruction {
-  Instruction(const MCInstrInfo &InstrInfo,
-              const RegisterAliasingTrackerCache &RATC, unsigned Opcode);
+  // Create an instruction for a particular Opcode.
+  static std::unique_ptr<Instruction>
+  create(const MCInstrInfo &InstrInfo, const RegisterAliasingTrackerCache &RATC,
+         const BitVectorCache &BVC, unsigned Opcode);
+
+  // Prevent copy or move, instructions are allocated once and cached.
+  Instruction(const Instruction &) = delete;
+  Instruction(Instruction &&) = delete;
+  Instruction &operator=(const Instruction &) = delete;
+  Instruction &operator=(Instruction &&) = delete;
 
   // Returns the Operand linked to this Variable.
   // In case the Variable is tied, the primary (i.e. Def) Operand is returned.
@@ -133,14 +154,20 @@ struct Instruction {
             const RegisterAliasingTrackerCache &RATC,
             raw_ostream &Stream) const;
 
-  const MCInstrDesc *Description; // Never nullptr.
-  StringRef Name;                 // The name of this instruction.
-  SmallVector<Operand, 8> Operands;
-  SmallVector<Variable, 4> Variables;
-  BitVector ImplDefRegs; // The set of aliased implicit def registers.
-  BitVector ImplUseRegs; // The set of aliased implicit use registers.
-  BitVector AllDefRegs;  // The set of all aliased def registers.
-  BitVector AllUseRegs;  // The set of all aliased use registers.
+  const MCInstrDesc &Description;
+  const StringRef Name; // The name of this instruction.
+  const SmallVector<Operand, 8> Operands;
+  const SmallVector<Variable, 4> Variables;
+  const BitVector &ImplDefRegs; // The set of aliased implicit def registers.
+  const BitVector &ImplUseRegs; // The set of aliased implicit use registers.
+  const BitVector &AllDefRegs;  // The set of all aliased def registers.
+  const BitVector &AllUseRegs;  // The set of all aliased use registers.
+private:
+  Instruction(const MCInstrDesc *Description, StringRef Name,
+              SmallVector<Operand, 8> Operands,
+              SmallVector<Variable, 4> Variables, const BitVector *ImplDefRegs,
+              const BitVector *ImplUseRegs, const BitVector *AllDefRegs,
+              const BitVector *AllUseRegs);
 };
 
 // Instructions are expensive to instantiate. This class provides a cache of
@@ -157,6 +184,7 @@ private:
   const RegisterAliasingTrackerCache &RATC;
   mutable std::unordered_map<unsigned, std::unique_ptr<Instruction>>
       Instructions;
+  const BitVectorCache BVC;
 };
 
 // Represents the assignment of a Register to an Operand.

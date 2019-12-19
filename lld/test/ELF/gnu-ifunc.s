@@ -102,15 +102,15 @@
 // DISASM-NEXT:  201199: {{.*}} movl $2097544, %edx
 // DISASM-NEXT:  20119e: {{.*}} movl $2097545, %edx
 // DISASM-EMPTY:
-// DISASM-NEXT: Disassembly of section .plt:
+// DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .plt:
+// DISASM-NEXT: .iplt:
 // DISASM-NEXT:  2011b0: {{.*}} jmpq *4122(%rip)
 // DISASM-NEXT:  2011b6: {{.*}} pushq $0
-// DISASM-NEXT:  2011bb: {{.*}} jmp -32 <_start+0x16>
+// DISASM-NEXT:  2011bb: {{.*}} jmp -2101696
 // DISASM-NEXT:  2011c0: {{.*}} jmpq *4114(%rip)
 // DISASM-NEXT:  2011c6: {{.*}} pushq $1
-// DISASM-NEXT:  2011cb: {{.*}} jmp -48 <_start+0x16>
+// DISASM-NEXT:  2011cb: {{.*}} jmp -2101712
 
 .text
 .type foo STT_GNU_IFUNC

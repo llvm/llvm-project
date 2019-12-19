@@ -530,6 +530,12 @@ def strict_fminnum    : SDNode<"ISD::STRICT_FMINNUM",
 def strict_fmaxnum    : SDNode<"ISD::STRICT_FMAXNUM",
                                SDTFPBinOp, [SDNPHasChain,
                                             SDNPCommutative, SDNPAssociative]>;
+def strict_fminimum   : SDNode<"ISD::STRICT_FMINIMUM",
+                               SDTFPBinOp, [SDNPHasChain,
+                                            SDNPCommutative, SDNPAssociative]>;
+def strict_fmaximum   : SDNode<"ISD::STRICT_FMAXIMUM",
+                               SDTFPBinOp, [SDNPHasChain,
+                                            SDNPCommutative, SDNPAssociative]>;
 def strict_fpround    : SDNode<"ISD::STRICT_FP_ROUND",
                                SDTFPRoundOp, [SDNPHasChain]>;
 def strict_fpextend   : SDNode<"ISD::STRICT_FP_EXTEND",
@@ -538,6 +544,10 @@ def strict_fp_to_sint : SDNode<"ISD::STRICT_FP_TO_SINT",
                                SDTFPToIntOp, [SDNPHasChain]>;
 def strict_fp_to_uint : SDNode<"ISD::STRICT_FP_TO_UINT",
                                SDTFPToIntOp, [SDNPHasChain]>;
+def strict_sint_to_fp : SDNode<"ISD::STRICT_SINT_TO_FP",
+                               SDTIntToFPOp, [SDNPHasChain]>;
+def strict_uint_to_fp : SDNode<"ISD::STRICT_UINT_TO_FP",
+                               SDTIntToFPOp, [SDNPHasChain]>;
 
 def setcc      : SDNode<"ISD::SETCC"      , SDTSetCC>;
 def select     : SDNode<"ISD::SELECT"     , SDTSelect>;
@@ -1380,6 +1390,12 @@ def any_fmaxnum    : PatFrags<(ops node:$lhs, node:$rhs),
 def any_fminnum    : PatFrags<(ops node:$lhs, node:$rhs),
                               [(strict_fminnum node:$lhs, node:$rhs),
                                (fminnum node:$lhs, node:$rhs)]>;
+def any_fmaximum   : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_fmaximum node:$lhs, node:$rhs),
+                               (fmaximum node:$lhs, node:$rhs)]>;
+def any_fminimum   : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_fminimum node:$lhs, node:$rhs),
+                               (fminimum node:$lhs, node:$rhs)]>;
 def any_fpround    : PatFrags<(ops node:$src),
                               [(strict_fpround node:$src),
                                (fpround node:$src)]>;
@@ -1398,6 +1414,12 @@ def any_fp_to_sint : PatFrags<(ops node:$src),
 def any_fp_to_uint : PatFrags<(ops node:$src),
                               [(strict_fp_to_uint node:$src),
                                (fp_to_uint node:$src)]>;
+def any_sint_to_fp : PatFrags<(ops node:$src),
+                              [(strict_sint_to_fp node:$src),
+                               (sint_to_fp node:$src)]>;
+def any_uint_to_fp : PatFrags<(ops node:$src),
+                              [(strict_uint_to_fp node:$src),
+                               (uint_to_fp node:$src)]>;
 
 multiclass binary_atomic_op_ord<SDNode atomic_op> {
   def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),

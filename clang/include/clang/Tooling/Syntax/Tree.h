@@ -65,6 +65,9 @@ private:
 
 class Tree;
 class TreeBuilder;
+class FactoryImpl;
+class MutationsImpl;
+
 enum class NodeKind : uint16_t;
 enum class NodeRole : uint8_t;
 
@@ -78,6 +81,23 @@ public:
 
   NodeKind kind() const { return static_cast<NodeKind>(Kind); }
   NodeRole role() const { return static_cast<NodeRole>(Role); }
+
+  /// Whether the node is detached from a tree, i.e. does not have a parent.
+  bool isDetached() const;
+  /// Whether the node was created from the AST backed by the source code
+  /// rather than added later through mutation APIs or created with factory
+  /// functions.
+  /// When this flag is true, all subtrees are also original.
+  /// This flag is set to false on any modifications to the node or any of its
+  /// subtrees, even if this simply involves swapping existing subtrees.
+  bool isOriginal() const { return Original; }
+  /// If this function return false, the tree cannot be modified because there
+  /// is no reasonable way to produce the corresponding textual replacements.
+  /// This can happen when the node crosses macro expansion boundaries.
+  ///
+  /// Note that even if the node is not modifiable, its child nodes can be
+  /// modifiable.
+  bool canModify() const { return CanModify; }
 
   const Tree *parent() const { return Parent; }
   Tree *parent() { return Parent; }
@@ -93,11 +113,17 @@ public:
 private:
   // Tree is allowed to change the Parent link and Role.
   friend class Tree;
+  // TreeBuilder is allowed to set the Original and CanModify flags.
+  friend class TreeBuilder;
+  // MutationsImpl sets roles and CanModify flag.
+  friend class MutationsImpl;
 
   Tree *Parent;
   Node *NextSibling;
   unsigned Kind : 16;
   unsigned Role : 8;
+  unsigned Original : 1;
+  unsigned CanModify : 1;
 };
 
 /// A leaf node points to a single token inside the expanded token stream.
@@ -121,6 +147,14 @@ public:
   Node *firstChild() { return FirstChild; }
   const Node *firstChild() const { return FirstChild; }
 
+  Leaf *firstLeaf();
+  const Leaf *firstLeaf() const {
+    return const_cast<Tree *>(this)->firstLeaf();
+  }
+
+  Leaf *lastLeaf();
+  const Leaf *lastLeaf() const { return const_cast<Tree *>(this)->lastLeaf(); }
+
 protected:
   /// Find the first node with a corresponding role.
   syntax::Node *findChild(NodeRole R);
@@ -128,10 +162,18 @@ protected:
 private:
   /// Prepend \p Child to the list of children and and sets the parent pointer.
   /// A very low-level operation that does not check any invariants, only used
-  /// by TreeBuilder.
+  /// by TreeBuilder and FactoryImpl.
   /// EXPECTS: Role != NodeRoleDetached.
   void prependChildLowLevel(Node *Child, NodeRole Role);
   friend class TreeBuilder;
+  friend class FactoryImpl;
+
+  /// Replace a range of children [BeforeBegin->NextSibling, End) with a list of
+  /// new nodes starting at \p New.
+  /// Only used by MutationsImpl to implement higher-level mutation operations.
+  /// (!) \p New can be null to model removal of the child range.
+  void replaceChildRangeLowLevel(Node *BeforeBegin, Node *End, Node *New);
+  friend class MutationsImpl;
 
   Node *FirstChild = nullptr;
 };

@@ -223,6 +223,14 @@ enum NodeType : unsigned {
   GLD1S_UXTW_SCALED,
   GLD1S_SXTW_SCALED,
   GLD1S_IMM,
+  // Scatter store
+  SST1,
+  SST1_SCALED,
+  SST1_UXTW,
+  SST1_SXTW,
+  SST1_UXTW_SCALED,
+  SST1_SXTW_SCALED,
+  SST1_IMM,
 
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -252,8 +260,10 @@ enum NodeType : unsigned {
   STG,
   STZG,
   ST2G,
-  STZ2G
+  STZ2G,
 
+  LDP,
+  STP
 };
 
 } // end namespace AArch64ISD

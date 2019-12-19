@@ -553,8 +553,7 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
 void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
                                          SystemZMCInstLower &Lower) {
   MCContext &Ctx = MF->getContext();
-  if (MF->getFunction().getFnAttribute("mnop-mcount")
-                       .getValueAsString() == "true") {
+  if (MF->getFunction().hasFnAttribute("mnop-mcount")) {
     EmitNop(Ctx, *OutStreamer, 6, getSubtargetInfo());
     return;
   }

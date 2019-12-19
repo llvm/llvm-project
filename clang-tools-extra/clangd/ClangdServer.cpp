@@ -466,7 +466,7 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
 
 void ClangdServer::switchSourceHeader(
     PathRef Path, Callback<llvm::Optional<clangd::Path>> CB) {
-  // We want to return the result as fast as possible, stragety is:
+  // We want to return the result as fast as possible, strategy is:
   //  1) use the file-only heuristic, it requires some IO but it is much
   //     faster than building AST, but it only works when .h/.cc files are in
   //     the same directory.
@@ -609,17 +609,6 @@ void ClangdServer::semanticRanges(PathRef File, Position Pos,
         CB(clangd::getSemanticRanges(InpAST->AST, Pos));
       };
   WorkScheduler.runWithAST("SemanticRanges", File, std::move(Action));
-}
-
-void ClangdServer::documentLinks(PathRef File,
-                                 Callback<std::vector<DocumentLink>> CB) {
-  auto Action =
-      [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
-        if (!InpAST)
-          return CB(InpAST.takeError());
-        CB(clangd::getDocumentLinks(InpAST->AST));
-      };
-  WorkScheduler.runWithAST("DocumentLinks", File, std::move(Action));
 }
 
 std::vector<std::pair<Path, std::size_t>>

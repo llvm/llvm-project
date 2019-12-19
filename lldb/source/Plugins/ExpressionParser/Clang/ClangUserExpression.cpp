@@ -38,7 +38,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -893,9 +892,9 @@ void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     Materializer::PersistentVariableDelegate &delegate,
     bool keep_result_in_memory,
     ValueObject *ctx_obj) {
-  m_expr_decl_map_up.reset(
-      new ClangExpressionDeclMap(keep_result_in_memory, &delegate, exe_ctx,
-                                 ctx_obj));
+  m_expr_decl_map_up.reset(new ClangExpressionDeclMap(
+      keep_result_in_memory, &delegate, exe_ctx.GetTargetSP(),
+      exe_ctx.GetTargetRef().GetClangASTImporter(), ctx_obj));
 }
 
 clang::ASTConsumer *

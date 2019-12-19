@@ -711,18 +711,36 @@ bool CombinerHelper::findPreIndexCandidate(MachineInstr &MI, Register &Addr,
 }
 
 bool CombinerHelper::tryCombineIndexedLoadStore(MachineInstr &MI) {
+  IndexedLoadStoreMatchInfo MatchInfo;
+  if (matchCombineIndexedLoadStore(MI, MatchInfo)) {
+    applyCombineIndexedLoadStore(MI, MatchInfo);
+    return true;
+  }
+  return false;
+}
+
+bool CombinerHelper::matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo) {
   unsigned Opcode = MI.getOpcode();
   if (Opcode != TargetOpcode::G_LOAD && Opcode != TargetOpcode::G_SEXTLOAD &&
       Opcode != TargetOpcode::G_ZEXTLOAD && Opcode != TargetOpcode::G_STORE)
     return false;
 
-  bool IsStore = Opcode == TargetOpcode::G_STORE;
-  Register Addr, Base, Offset;
-  bool IsPre = findPreIndexCandidate(MI, Addr, Base, Offset);
-  if (!IsPre && !findPostIndexCandidate(MI, Addr, Base, Offset))
+  MatchInfo.IsPre = findPreIndexCandidate(MI, MatchInfo.Addr, MatchInfo.Base,
+                                          MatchInfo.Offset);
+  if (!MatchInfo.IsPre &&
+      !findPostIndexCandidate(MI, MatchInfo.Addr, MatchInfo.Base,
+                              MatchInfo.Offset))
     return false;
 
+  return true;
+}
 
+void CombinerHelper::applyCombineIndexedLoadStore(
+    MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo) {
+  MachineInstr &AddrDef = *MRI.getUniqueVRegDef(MatchInfo.Addr);
+  MachineIRBuilder MIRBuilder(MI);
+  unsigned Opcode = MI.getOpcode();
+  bool IsStore = Opcode == TargetOpcode::G_STORE;
   unsigned NewOpcode;
   switch (Opcode) {
   case TargetOpcode::G_LOAD:
@@ -741,25 +759,22 @@ bool CombinerHelper::tryCombineIndexedLoadStore(MachineInstr &MI) {
     llvm_unreachable("Unknown load/store opcode");
   }
 
-  MachineInstr &AddrDef = *MRI.getUniqueVRegDef(Addr);
-  MachineIRBuilder MIRBuilder(MI);
   auto MIB = MIRBuilder.buildInstr(NewOpcode);
   if (IsStore) {
-    MIB.addDef(Addr);
+    MIB.addDef(MatchInfo.Addr);
     MIB.addUse(MI.getOperand(0).getReg());
   } else {
     MIB.addDef(MI.getOperand(0).getReg());
-    MIB.addDef(Addr);
+    MIB.addDef(MatchInfo.Addr);
   }
 
-  MIB.addUse(Base);
-  MIB.addUse(Offset);
-  MIB.addImm(IsPre);
+  MIB.addUse(MatchInfo.Base);
+  MIB.addUse(MatchInfo.Offset);
+  MIB.addImm(MatchInfo.IsPre);
   MI.eraseFromParent();
   AddrDef.eraseFromParent();
 
   LLVM_DEBUG(dbgs() << "    Combinined to indexed operation");
-  return true;
 }
 
 bool CombinerHelper::matchElideBrByInvertingCond(MachineInstr &MI) {

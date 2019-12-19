@@ -196,11 +196,8 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
 
-  if (LHS.isZero() || RHS.isZero()) {
-    if (LHS.isZero() && RHS.isZero())
-      S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Equal)));
-    else
-      S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Nonequal)));
+  if (LHS.isZero() && RHS.isZero()) {
+    S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Equal)));
     return true;
   }
 

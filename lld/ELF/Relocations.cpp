@@ -1011,10 +1011,10 @@ static void addRelativeReloc(InputSectionBase *isec, uint64_t offsetInSec,
                          expr, type);
 }
 
-template <class ELFT, class GotPltSection>
+template <class PltSection, class GotPltSection>
 static void addPltEntry(PltSection *plt, GotPltSection *gotPlt,
                         RelocationBaseSection *rel, RelType type, Symbol &sym) {
-  plt->addEntry<ELFT>(sym);
+  plt->addEntry(sym);
   gotPlt->addEntry(sym);
   rel->addReloc(
       {type, gotPlt, sym.getGotPltOffset(), !sym.isPreemptible, &sym, 0});
@@ -1190,7 +1190,7 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
                     "' cannot be preempted; recompile with -fPIE" +
                     getLocation(sec, sym, offset));
       if (!sym.isInPlt())
-        addPltEntry<ELFT>(in.plt, in.gotPlt, in.relaPlt, target->pltRel, sym);
+        addPltEntry(in.plt, in.gotPlt, in.relaPlt, target->pltRel, sym);
       if (!sym.isDefined())
         replaceWithDefined(
             sym, in.plt,
@@ -1331,7 +1331,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   if (!sym.isGnuIFunc() || sym.isPreemptible) {
     // If a relocation needs PLT, we create PLT and GOTPLT slots for the symbol.
     if (needsPlt(expr) && !sym.isInPlt())
-      addPltEntry<ELFT>(in.plt, in.gotPlt, in.relaPlt, target->pltRel, sym);
+      addPltEntry(in.plt, in.gotPlt, in.relaPlt, target->pltRel, sym);
 
     // Create a GOT slot if a relocation needs GOT.
     if (needsGot(expr)) {
@@ -1401,8 +1401,8 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
       // that's really needed to create the IRELATIVE is the section and value,
       // so ideally we should just need to copy those.
       auto *directSym = make<Defined>(cast<Defined>(sym));
-      addPltEntry<ELFT>(in.iplt, in.igotPlt, in.relaIplt, target->iRelativeRel,
-                        *directSym);
+      addPltEntry(in.iplt, in.igotPlt, in.relaIplt, target->iRelativeRel,
+                  *directSym);
       sym.pltIndex = directSym->pltIndex;
     }
     if (needsGot(expr)) {
@@ -1415,13 +1415,9 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     } else if (!needsPlt(expr)) {
       // Make the ifunc's PLT entry canonical by changing the value of its
       // symbol to redirect all references to point to it.
-      unsigned entryOffset = sym.pltIndex * target->pltEntrySize;
-      if (config->zRetpolineplt)
-        entryOffset += target->pltHeaderSize;
-
       auto &d = cast<Defined>(sym);
       d.section = in.iplt;
-      d.value = entryOffset;
+      d.value = sym.pltIndex * target->ipltEntrySize;
       d.size = 0;
       // It's important to set the symbol type here so that dynamic loaders
       // don't try to call the PLT as if it were an ifunc resolver.

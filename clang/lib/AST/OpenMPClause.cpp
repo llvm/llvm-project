@@ -135,6 +135,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_atomic_default_mem_order:
   case OMPC_device_type:
   case OMPC_match:
+  case OMPC_nontemporal:
     break;
   }
 
@@ -213,6 +214,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_atomic_default_mem_order:
   case OMPC_device_type:
   case OMPC_match:
+  case OMPC_nontemporal:
     break;
   }
 
@@ -1155,6 +1157,25 @@ OMPIsDevicePtrClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPIsDevicePtrClause(Sizes);
 }
 
+OMPNontemporalClause *OMPNontemporalClause::Create(const ASTContext &C,
+                                                   SourceLocation StartLoc,
+                                                   SourceLocation LParenLoc,
+                                                   SourceLocation EndLoc,
+                                                   ArrayRef<Expr *> VL) {
+  // Allocate space for nontemporal variables.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+  auto *Clause =
+      new (Mem) OMPNontemporalClause(StartLoc, LParenLoc, EndLoc, VL.size());
+  Clause->setVarRefs(VL);
+  return Clause;
+}
+
+OMPNontemporalClause *OMPNontemporalClause::CreateEmpty(const ASTContext &C,
+                                                        unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  return new (Mem) OMPNontemporalClause(N);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -1648,3 +1669,10 @@ void OMPClausePrinter::VisitOMPIsDevicePtrClause(OMPIsDevicePtrClause *Node) {
   }
 }
 
+void OMPClausePrinter::VisitOMPNontemporalClause(OMPNontemporalClause *Node) {
+  if (!Node->varlist_empty()) {
+    OS << "nontemporal";
+    VisitOMPClauseList(Node, '(');
+    OS << ")";
+  }
+}

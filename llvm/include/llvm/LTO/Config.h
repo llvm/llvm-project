@@ -14,7 +14,9 @@
 #ifndef LLVM_LTO_CONFIG_H
 #define LLVM_LTO_CONFIG_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetOptions.h"
@@ -183,8 +185,9 @@ struct Config {
   ///
   /// It is called regardless of whether the backend is in-process, although it
   /// is not called from individual backend processes.
-  using CombinedIndexHookFn =
-      std::function<bool(const ModuleSummaryIndex &Index)>;
+  using CombinedIndexHookFn = std::function<bool(
+      const ModuleSummaryIndex &Index,
+      const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols)>;
   CombinedIndexHookFn CombinedIndexHook;
 
   /// This is a convenience function that configures this Config object to write

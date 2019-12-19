@@ -1,7 +1,9 @@
 // Test diagnostics for ill-formed STL <compare> headers.
 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -fsyntax-only -pedantic -verify -Wsign-compare -std=c++2a %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -fsyntax-only -pedantic -verify -Wsign-compare -std=c++2a -DTEST_TRIVIAL=1 %s
 
+#ifndef TEST_TRIVIAL
 void compare_not_found_test() {
   // expected-error@+1 {{cannot use builtin operator '<=>' because type 'std::partial_ordering' was not found; include <compare>}}
   (void)(0.0 <=> 42.123);
@@ -41,7 +43,7 @@ struct partial_ordering {
 } // namespace std
 
 auto missing_member_test() {
-  // expected-error@+1 {{standard library implementation of 'std::partial_ordering' is not supported; member 'less' is missing}}
+  // expected-error@+1 {{standard library implementation of 'std::partial_ordering' is not supported; member 'equivalent' is missing}}
   return (1.0 <=> 1.0);
 }
 
@@ -59,21 +61,22 @@ auto test_non_constexpr_var() {
   return (1 <=> 0);
 }
 
+#else
+
 namespace std {
 inline namespace __1 {
-struct strong_equality {
+struct strong_ordering {
   char value = 0;
-  constexpr strong_equality() = default;
+  constexpr strong_ordering() = default;
   // non-trivial
-  constexpr strong_equality(strong_equality const &other) : value(other.value) {}
+  constexpr strong_ordering(strong_ordering const &other) : value(other.value) {}
 };
 } // namespace __1
 } // namespace std
 
-struct Class {};
-using MemPtr = void (Class::*)(int);
-
-auto test_non_trivial(MemPtr LHS, MemPtr RHS) {
-  // expected-error@+1 {{standard library implementation of 'std::strong_equality' is not supported; the type is not trivially copyable}}
+auto test_non_trivial(int LHS, int RHS) {
+  // expected-error@+1 {{standard library implementation of 'std::strong_ordering' is not supported; the type is not trivially copyable}}
   return LHS <=> RHS;
 }
+
+#endif

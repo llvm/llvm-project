@@ -160,7 +160,19 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   CmdArgs.push_back("-o");
-  CmdArgs.push_back(Output.getFilename());
+  const char *OutputFile = Output.getFilename();
+  // GCC implicitly adds an .exe extension if it is given an output file name
+  // that lacks an extension. However, GCC only does this when actually
+  // running on windows, not when operating as a cross compiler. As some users
+  // have come to rely on this behaviour, try to replicate it.
+#ifdef _WIN32
+  if (!llvm::sys::path::has_extension(OutputFile))
+    CmdArgs.push_back(Args.MakeArgString(Twine(OutputFile) + ".exe"));
+  else
+    CmdArgs.push_back(OutputFile);
+#else
+  CmdArgs.push_back(OutputFile);
+#endif
 
   Args.AddAllArgs(CmdArgs, options::OPT_e);
   // FIXME: add -N, -n flags

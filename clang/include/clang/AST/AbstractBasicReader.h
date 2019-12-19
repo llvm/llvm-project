@@ -37,6 +37,41 @@ inline T *makePointerFromOptional(Optional<T *> value) {
 // where TypeName is the name of a PropertyType node from PropertiesBase.td
 // and ValueType is the corresponding C++ type name.  The read method may
 // require one or more buffer arguments.
+//
+// In addition to the concrete type names, BasicReader is expected to
+// implement these methods:
+//
+//   template <class EnumType>
+//   void writeEnum(T value);
+//
+//     Reads an enum value from the current property.  EnumType will always
+//     be an enum type.  Only necessary if the BasicReader doesn't provide
+//     type-specific readers for all the enum types.
+//
+//   template <class ValueType>
+//   Optional<ValueType> writeOptional();
+//
+//     Reads an optional value from the current property.
+//
+//   template <class ValueType>
+//   ArrayRef<ValueType> readArray(llvm::SmallVectorImpl<ValueType> &buffer);
+//
+//     Reads an array of values from the current property.
+//
+//   PropertyReader readObject();
+//
+//     Reads an object from the current property; the returned property
+//     reader will be subjected to a sequence of property reads and then
+//     discarded before any other properties are reader from the "outer"
+//     property reader (which need not be the same type).  The sub-reader
+//     will be used as if with the following code:
+//
+//       {
+//         auto &&widget = W.find("widget").readObject();
+//         auto kind = widget.find("kind").readWidgetKind();
+//         auto declaration = widget.find("declaration").readDeclRef();
+//         return Widget(kind, declaration);
+//       }
 
 // ReadDispatcher does type-based forwarding to one of the read methods
 // on the BasicReader passed in:
@@ -98,6 +133,15 @@ public:
   Impl &find(const char *propertyName) {
     return asImpl();
   }
+
+  template <class T>
+  T readEnum() {
+    return T(asImpl().readUInt32());
+  }
+
+  // Implement object reading by forwarding to this, collapsing the
+  // structure into a single data stream.
+  Impl &readObject() { return asImpl(); }
 
   template <class T>
   llvm::ArrayRef<T> readArray(llvm::SmallVectorImpl<T> &buffer) {
@@ -163,155 +207,6 @@ public:
                   "opaque value doesn't fit into uint32_t");
     uint32_t value = asImpl().readUInt32();
     return FunctionProtoType::ExtParameterInfo::getFromOpaqueValue(value);
-  }
-
-  DeclarationName readDeclarationName() {
-    auto &ctx = getASTContext();
-    auto kind = asImpl().readDeclarationNameKind();
-    switch (kind) {
-    case DeclarationName::Identifier:
-      return DeclarationName(asImpl().readIdentifier());
-
-    case DeclarationName::ObjCZeroArgSelector:
-    case DeclarationName::ObjCOneArgSelector:
-    case DeclarationName::ObjCMultiArgSelector:
-      return DeclarationName(asImpl().readSelector());
-
-    case DeclarationName::CXXConstructorName:
-      return ctx.DeclarationNames.getCXXConstructorName(
-               ctx.getCanonicalType(asImpl().readQualType()));
-
-    case DeclarationName::CXXDestructorName:
-      return ctx.DeclarationNames.getCXXDestructorName(
-               ctx.getCanonicalType(asImpl().readQualType()));
-
-    case DeclarationName::CXXConversionFunctionName:
-      return ctx.DeclarationNames.getCXXConversionFunctionName(
-               ctx.getCanonicalType(asImpl().readQualType()));
-
-    case DeclarationName::CXXDeductionGuideName:
-      return ctx.DeclarationNames.getCXXDeductionGuideName(
-               asImpl().readTemplateDeclRef());
-
-    case DeclarationName::CXXOperatorName:
-      return ctx.DeclarationNames.getCXXOperatorName(
-               asImpl().readOverloadedOperatorKind());
-
-    case DeclarationName::CXXLiteralOperatorName:
-      return ctx.DeclarationNames.getCXXLiteralOperatorName(
-               asImpl().readIdentifier());
-
-    case DeclarationName::CXXUsingDirective:
-      return DeclarationName::getUsingDirectiveName();
-    }
-    llvm_unreachable("bad name kind");
-  }
-
-  TemplateName readTemplateName() {
-    auto &ctx = getASTContext();
-    auto kind = asImpl().readTemplateNameKind();
-    switch (kind) {
-    case TemplateName::Template:
-      return TemplateName(asImpl().readTemplateDeclRef());
-
-    case TemplateName::OverloadedTemplate: {
-      SmallVector<NamedDecl *, 8> buffer;
-      auto overloadsArray = asImpl().template readArray<NamedDecl*>(buffer);
-
-      // Copy into an UnresolvedSet to satisfy the interface.
-      UnresolvedSet<8> overloads;
-      for (auto overload : overloadsArray) {
-        overloads.addDecl(overload);
-      }
-
-      return ctx.getOverloadedTemplateName(overloads.begin(), overloads.end());
-    }
-
-    case TemplateName::AssumedTemplate: {
-      auto name = asImpl().readDeclarationName();
-      return ctx.getAssumedTemplateName(name);
-    }
-
-    case TemplateName::QualifiedTemplate: {
-      auto qual = asImpl().readNestedNameSpecifier();
-      auto hasTemplateKeyword = asImpl().readBool();
-      auto templateDecl = asImpl().readTemplateDeclRef();
-      return ctx.getQualifiedTemplateName(qual, hasTemplateKeyword,
-                                          templateDecl);
-    }
-
-    case TemplateName::DependentTemplate: {
-      auto qual = asImpl().readNestedNameSpecifier();
-      auto isIdentifier = asImpl().readBool();
-      if (isIdentifier) {
-        return ctx.getDependentTemplateName(qual, asImpl().readIdentifier());
-      } else {
-        return ctx.getDependentTemplateName(qual,
-                 asImpl().readOverloadedOperatorKind());
-      }
-    }
-
-    case TemplateName::SubstTemplateTemplateParm: {
-      auto param = asImpl().readTemplateTemplateParmDeclRef();
-      auto replacement = asImpl().readTemplateName();
-      return ctx.getSubstTemplateTemplateParm(param, replacement);
-    }
-
-    case TemplateName::SubstTemplateTemplateParmPack: {
-      auto param = asImpl().readTemplateTemplateParmDeclRef();
-      auto replacement = asImpl().readTemplateName();
-      return ctx.getSubstTemplateTemplateParmPack(param, replacement);
-    }
-    }
-    llvm_unreachable("bad template name kind");
-  }
-
-  TemplateArgument readTemplateArgument(bool canonicalize = false) {
-    if (canonicalize) {
-      return getASTContext().getCanonicalTemplateArgument(
-               readTemplateArgument(false));
-    }
-
-    auto kind = asImpl().readTemplateArgumentKind();
-    switch (kind) {
-    case TemplateArgument::Null:
-      return TemplateArgument();
-    case TemplateArgument::Type:
-      return TemplateArgument(asImpl().readQualType());
-    case TemplateArgument::Declaration: {
-      auto decl = asImpl().readValueDeclRef();
-      auto type = asImpl().readQualType();
-      return TemplateArgument(decl, type);
-    }
-    case TemplateArgument::NullPtr:
-      return TemplateArgument(asImpl().readQualType(), /*nullptr*/ true);
-    case TemplateArgument::Integral: {
-      auto value = asImpl().readAPSInt();
-      auto type = asImpl().readQualType();
-      return TemplateArgument(getASTContext(), value, type);
-    }
-    case TemplateArgument::Template:
-      return TemplateArgument(asImpl().readTemplateName());
-    case TemplateArgument::TemplateExpansion: {
-      auto name = asImpl().readTemplateName();
-      auto numExpansions = asImpl().template readOptional<uint32_t>();
-      return TemplateArgument(name, numExpansions);
-    }
-    case TemplateArgument::Expression:
-      return TemplateArgument(asImpl().readExprRef());
-    case TemplateArgument::Pack: {
-      llvm::SmallVector<TemplateArgument, 8> packBuffer;
-      auto pack = asImpl().template readArray<TemplateArgument>(packBuffer);
-
-      // Copy the pack into the ASTContext.
-      TemplateArgument *contextPack =
-        new (getASTContext()) TemplateArgument[pack.size()];
-      for (size_t i = 0, e = pack.size(); i != e; ++i)
-        contextPack[i] = pack[i];
-      return TemplateArgument(llvm::makeArrayRef(contextPack, pack.size()));
-    }
-    }
-    llvm_unreachable("bad template argument kind");
   }
 
   NestedNameSpecifier *readNestedNameSpecifier() {

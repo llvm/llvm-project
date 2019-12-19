@@ -1,0 +1,132 @@
+## Here we test how OS and processor specific flags are dumped.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj -S %t.o | FileCheck --check-prefix=OS-PROC-LLVM %s
+# RUN: llvm-readelf -S %t.o | FileCheck --check-prefix=OS-PROC-GNU %s
+
+# OS-PROC-LLVM:      Name: .os.flags.low
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0x100000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .os.flags.high
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0xFE00000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .os.flags.mask
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0xFF00000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .proc.flags.low
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0x10000000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .proc.flags.high
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0xE0000000)
+# OS-PROC-LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .proc.flags.mask
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0xF0000000)
+# OS-PROC-LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .both.flags.low
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0x10100000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .both.flags.high
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0xEFE00000)
+# OS-PROC-LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .both.flags.mask
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0xFFF00000)
+# OS-PROC-LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .exclude
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0x80000000)
+# OS-PROC-LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
+# OS-PROC-LLVM-NEXT: ]
+# OS-PROC-LLVM:      Name: .all.possible
+# OS-PROC-LLVM-NEXT: Type: SHT_PROGBITS
+# OS-PROC-LLVM-NEXT: Flags [ (0xFFFFFFFF)
+# OS-PROC-LLVM-NEXT:   SHF_ALLOC (0x2)
+# OS-PROC-LLVM-NEXT:   SHF_COMPRESSED (0x800)
+# OS-PROC-LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
+# OS-PROC-LLVM-NEXT:   SHF_EXECINSTR (0x4)
+# OS-PROC-LLVM-NEXT:   SHF_GROUP (0x200)
+# OS-PROC-LLVM-NEXT:   SHF_INFO_LINK (0x40)
+# OS-PROC-LLVM-NEXT:   SHF_LINK_ORDER (0x80)
+# OS-PROC-LLVM-NEXT:   SHF_MERGE (0x10)
+# OS-PROC-LLVM-NEXT:   SHF_OS_NONCONFORMING (0x100)
+# OS-PROC-LLVM-NEXT:   SHF_STRINGS (0x20)
+# OS-PROC-LLVM-NEXT:   SHF_TLS (0x400)
+# OS-PROC-LLVM-NEXT:   SHF_WRITE (0x1)
+# OS-PROC-LLVM-NEXT: ]
+
+# OS-PROC-GNU:      Section Headers:
+# OS-PROC-GNU-NEXT:  [Nr] Name                   Type     Address          Off    Size   ES Flg            Lk Inf Al
+# OS-PROC-GNU-NEXT:  [ 0]                        NULL     0000000000000000 000000 000000 00                0   0  0
+# OS-PROC-GNU-NEXT:  [ 1] .os.flags.low          PROGBITS 0000000000000000 000040 000000 00   o            0   0  0
+# OS-PROC-GNU-NEXT:  [ 2] .os.flags.high         PROGBITS 0000000000000000 000040 000000 00   o            0   0  0
+# OS-PROC-GNU-NEXT:  [ 3] .os.flags.mask         PROGBITS 0000000000000000 000040 000000 00   o            0   0  0
+# OS-PROC-GNU-NEXT:  [ 4] .proc.flags.low        PROGBITS 0000000000000000 000040 000000 00   p            0   0  0
+# OS-PROC-GNU-NEXT:  [ 5] .proc.flags.high       PROGBITS 0000000000000000 000040 000000 00   p            0   0  0
+# OS-PROC-GNU-NEXT:  [ 6] .proc.flags.mask       PROGBITS 0000000000000000 000040 000000 00   p            0   0  0
+# OS-PROC-GNU-NEXT:  [ 7] .both.flags.low        PROGBITS 0000000000000000 000040 000000 00  op            0   0  0
+# OS-PROC-GNU-NEXT:  [ 8] .both.flags.high       PROGBITS 0000000000000000 000040 000000 00  op            0   0  0
+# OS-PROC-GNU-NEXT:  [ 9] .both.flags.mask       PROGBITS 0000000000000000 000040 000000 00  op            0   0  0
+# OS-PROC-GNU-NEXT:  [10] .exclude               PROGBITS 0000000000000000 000040 000000 00   E            0   0  0
+# OS-PROC-GNU-NEXT:  [11] .all.possible          PROGBITS 0000000000000000 000040 000000 00 WAXMSILOGTCopx 0   0  0
+
+## Use an arbitrary EM_* machine type that does not have specific SHF_* OS/Processor
+## flags to test what we dump when bits in the OS and processor specific ranges are set.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_NONE
+Sections:
+  - Name:  .os.flags.low
+    Type:  SHT_PROGBITS
+    ShFlags: 0x00100000
+  - Name:  .os.flags.high
+    Type:  SHT_PROGBITS
+    ShFlags: 0x0FE00000
+  - Name:  .os.flags.mask
+    Type:  SHT_PROGBITS
+    ShFlags: 0x0FF00000
+  - Name:  .proc.flags.low
+    Type:  SHT_PROGBITS
+    ShFlags: 0x10000000
+  - Name:  .proc.flags.high
+    Type:  SHT_PROGBITS
+    ShFlags: 0xE0000000
+  - Name:  .proc.flags.mask
+    Type:  SHT_PROGBITS
+    ShFlags: 0xF0000000
+  - Name:  .both.flags.low
+    Type:  SHT_PROGBITS
+    ShFlags: 0x10100000
+  - Name:  .both.flags.high
+    Type:  SHT_PROGBITS
+    ShFlags: 0xEFE00000
+  - Name:  .both.flags.mask
+    Type:  SHT_PROGBITS
+    ShFlags: 0xFFF00000
+## SHF_MASKPROC has a value of 0xf0000000, SHF_EXCLUDE has a value of
+## 0x80000000. When SHF_EXCLUDE is mixed with other processor specific
+## flags, GNU readelf does not necessarily print "E", because it handles
+## the SHF_MASKPROC mask first. It only prints "E" when there are no other
+## processor flags set. Check llvm-readelf output matches GNU.
+  - Name:  .exclude
+    Type:  SHT_PROGBITS
+    ShFlags: 0x80000000
+## Set all possible flags to test where we print 'o' and 'p' letters.
+  - Name:  .all.possible
+    Type:  SHT_PROGBITS
+    ShFlags: 0xFFFFFFFF

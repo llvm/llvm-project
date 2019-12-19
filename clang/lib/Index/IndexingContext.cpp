@@ -99,9 +99,8 @@ static void reportModuleReferences(const Module *Mod,
     return;
   reportModuleReferences(Mod->Parent, IdLocs.drop_back(), ImportD,
                          DataConsumer);
-  DataConsumer.handleModuleOccurence(ImportD, Mod,
-                                     (SymbolRoleSet)SymbolRole::Reference,
-                                     IdLocs.back());
+  DataConsumer.handleModuleOccurrence(
+      ImportD, Mod, (SymbolRoleSet)SymbolRole::Reference, IdLocs.back());
 }
 
 bool IndexingContext::importedModule(const ImportDecl *ImportD) {
@@ -145,7 +144,7 @@ bool IndexingContext::importedModule(const ImportDecl *ImportD) {
   if (ImportD->isImplicit())
     Roles |= (unsigned)SymbolRole::Implicit;
 
-  return DataConsumer.handleModuleOccurence(ImportD, Mod, Roles, Loc);
+  return DataConsumer.handleModuleOccurrence(ImportD, Mod, Roles, Loc);
 }
 
 bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {
@@ -443,26 +442,26 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
   }
 
   IndexDataConsumer::ASTNodeInfo Node{OrigE, OrigD, Parent, ContainerDC};
-  return DataConsumer.handleDeclOccurence(D, Roles, FinalRelations, Loc, Node);
+  return DataConsumer.handleDeclOccurrence(D, Roles, FinalRelations, Loc, Node);
 }
 
 void IndexingContext::handleMacroDefined(const IdentifierInfo &Name,
                                          SourceLocation Loc,
                                          const MacroInfo &MI) {
   SymbolRoleSet Roles = (unsigned)SymbolRole::Definition;
-  DataConsumer.handleMacroOccurence(&Name, &MI, Roles, Loc);
+  DataConsumer.handleMacroOccurrence(&Name, &MI, Roles, Loc);
 }
 
 void IndexingContext::handleMacroUndefined(const IdentifierInfo &Name,
                                            SourceLocation Loc,
                                            const MacroInfo &MI) {
   SymbolRoleSet Roles = (unsigned)SymbolRole::Undefinition;
-  DataConsumer.handleMacroOccurence(&Name, &MI, Roles, Loc);
+  DataConsumer.handleMacroOccurrence(&Name, &MI, Roles, Loc);
 }
 
 void IndexingContext::handleMacroReference(const IdentifierInfo &Name,
                                            SourceLocation Loc,
                                            const MacroInfo &MI) {
   SymbolRoleSet Roles = (unsigned)SymbolRole::Reference;
-  DataConsumer.handleMacroOccurence(&Name, &MI, Roles, Loc);
+  DataConsumer.handleMacroOccurrence(&Name, &MI, Roles, Loc);
 }

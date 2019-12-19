@@ -5756,7 +5756,8 @@ bool Sema::SemaBuiltinUnorderedCompare(CallExpr *TheCall) {
 
   // Do standard promotions between the two arguments, returning their common
   // type.
-  QualType Res = UsualArithmeticConversions(OrigArg0, OrigArg1, false);
+  QualType Res = UsualArithmeticConversions(
+      OrigArg0, OrigArg1, TheCall->getExprLoc(), ACK_Comparison);
   if (OrigArg0.isInvalid() || OrigArg1.isInvalid())
     return true;
 
@@ -5796,50 +5797,40 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
            << SourceRange(TheCall->getArg(NumArgs)->getBeginLoc(),
                           (*(TheCall->arg_end() - 1))->getEndLoc());
 
+  // __builtin_fpclassify is the only case where NumArgs != 1, so we can count
+  // on all preceding parameters just being int.  Try all of those.
+  for (unsigned i = 0; i < NumArgs - 1; ++i) {
+    Expr *Arg = TheCall->getArg(i);
+
+    if (Arg->isTypeDependent())
+      return false;
+
+    ExprResult Res = PerformImplicitConversion(Arg, Context.IntTy, AA_Passing);
+
+    if (Res.isInvalid())
+      return true;
+    TheCall->setArg(i, Res.get());
+  }
+
   Expr *OrigArg = TheCall->getArg(NumArgs-1);
 
   if (OrigArg->isTypeDependent())
     return false;
+
+  // Usual Unary Conversions will convert half to float, which we want for
+  // machines that use fp16 conversion intrinsics. Else, we wnat to leave the
+  // type how it is, but do normal L->Rvalue conversions.
+  if (Context.getTargetInfo().useFP16ConversionIntrinsics())
+    OrigArg = UsualUnaryConversions(OrigArg).get();
+  else
+    OrigArg = DefaultFunctionArrayLvalueConversion(OrigArg).get();
+  TheCall->setArg(NumArgs - 1, OrigArg);
 
   // This operation requires a non-_Complex floating-point number.
   if (!OrigArg->getType()->isRealFloatingType())
     return Diag(OrigArg->getBeginLoc(),
                 diag::err_typecheck_call_invalid_unary_fp)
            << OrigArg->getType() << OrigArg->getSourceRange();
-
-  // If this is an implicit conversion from float -> float, double, or
-  // long double, or half -> half, float, double, or long double, remove it.
-  if (ImplicitCastExpr *Cast = dyn_cast<ImplicitCastExpr>(OrigArg)) {
-    // Only remove standard FloatCasts, leaving other casts inplace
-    if (Cast->getCastKind() == CK_FloatingCast) {
-      bool IgnoreCast = false;
-      Expr *CastArg = Cast->getSubExpr();
-      if (CastArg->getType()->isSpecificBuiltinType(BuiltinType::Float)) {
-        assert(
-            (Cast->getType()->isSpecificBuiltinType(BuiltinType::Double) ||
-             Cast->getType()->isSpecificBuiltinType(BuiltinType::Float) ||
-             Cast->getType()->isSpecificBuiltinType(BuiltinType::LongDouble)) &&
-            "promotion from float to either float, double, or long double is "
-            "the only expected cast here");
-        IgnoreCast = true;
-      } else if (CastArg->getType()->isSpecificBuiltinType(BuiltinType::Half) &&
-                 !Context.getTargetInfo().useFP16ConversionIntrinsics()) {
-        assert(
-            (Cast->getType()->isSpecificBuiltinType(BuiltinType::Double) ||
-             Cast->getType()->isSpecificBuiltinType(BuiltinType::Float) ||
-             Cast->getType()->isSpecificBuiltinType(BuiltinType::Half) ||
-             Cast->getType()->isSpecificBuiltinType(BuiltinType::LongDouble)) &&
-            "promotion from half to either half, float, double, or long double "
-            "is the only expected cast here");
-        IgnoreCast = true;
-      }
-
-      if (IgnoreCast) {
-        Cast->setSubExpr(nullptr);
-        TheCall->setArg(NumArgs-1, CastArg);
-      }
-    }
-  }
 
   return false;
 }
@@ -11514,32 +11505,6 @@ static const IntegerLiteral *getIntegerLiteral(Expr *E) {
   return IL;
 }
 
-static void CheckConditionalWithEnumTypes(Sema &S, SourceLocation Loc,
-                                          Expr *LHS, Expr *RHS) {
-  QualType LHSStrippedType = LHS->IgnoreParenImpCasts()->getType();
-  QualType RHSStrippedType = RHS->IgnoreParenImpCasts()->getType();
-
-  const auto *LHSEnumType = LHSStrippedType->getAs<EnumType>();
-  if (!LHSEnumType)
-    return;
-  const auto *RHSEnumType = RHSStrippedType->getAs<EnumType>();
-  if (!RHSEnumType)
-    return;
-
-  // Ignore anonymous enums.
-  if (!LHSEnumType->getDecl()->hasNameForLinkage())
-    return;
-  if (!RHSEnumType->getDecl()->hasNameForLinkage())
-    return;
-
-  if (S.Context.hasSameUnqualifiedType(LHSStrippedType, RHSStrippedType))
-    return;
-
-  S.Diag(Loc, diag::warn_conditional_mixed_enum_types)
-      << LHSStrippedType << RHSStrippedType << LHS->getSourceRange()
-      << RHS->getSourceRange();
-}
-
 static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
   E = E->IgnoreParenImpCasts();
   SourceLocation ExprLoc = E->getExprLoc();
@@ -12031,8 +11996,6 @@ static void CheckConditionalOperator(Sema &S, ConditionalOperator *E,
   bool Suspicious = false;
   CheckConditionalOperand(S, E->getTrueExpr(), T, CC, Suspicious);
   CheckConditionalOperand(S, E->getFalseExpr(), T, CC, Suspicious);
-  CheckConditionalWithEnumTypes(S, E->getBeginLoc(), E->getTrueExpr(),
-                                E->getFalseExpr());
 
   if (T->isBooleanType())
     DiagnoseIntInBoolContext(S, E);

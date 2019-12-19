@@ -90,21 +90,21 @@ bool ExpandMacro::prepare(const Selection &Inputs) {
   //        'FOO[[ ]]BAR'. We should not trigger in that case.
 
   // Find a token under the cursor.
-  auto *T = findIdentifierUnderCursor(Inputs.AST.getTokens(), Inputs.Cursor);
+  auto *T = findIdentifierUnderCursor(Inputs.AST->getTokens(), Inputs.Cursor);
   // We are interested only in identifiers, other tokens can't be macro names.
   if (!T)
     return false;
   // If the identifier is a macro we will find the corresponding expansion.
-  auto Expansion = Inputs.AST.getTokens().expansionStartingAt(T);
+  auto Expansion = Inputs.AST->getTokens().expansionStartingAt(T);
   if (!Expansion)
     return false;
-  this->MacroName = T->text(Inputs.AST.getSourceManager());
+  this->MacroName = T->text(Inputs.AST->getSourceManager());
   this->Expansion = *Expansion;
   return true;
 }
 
 Expected<Tweak::Effect> ExpandMacro::apply(const Selection &Inputs) {
-  auto &SM = Inputs.AST.getSourceManager();
+  auto &SM = Inputs.AST->getSourceManager();
 
   std::string Replacement;
   for (const syntax::Token &T : Expansion.Expanded) {

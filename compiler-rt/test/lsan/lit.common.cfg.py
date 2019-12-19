@@ -28,6 +28,8 @@ elif lsan_lit_test_mode == "AddressSanitizer":
   config.name = "LeakSanitizer-AddressSanitizer"
   lsan_cflags = ["-fsanitize=address"]
   config.available_features.add('asan')
+  if config.host_os == 'NetBSD':
+    config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))
 else:
   lit_config.fatal("Unknown LSan test mode: %r" % lsan_lit_test_mode)
 config.name += config.name_suffix

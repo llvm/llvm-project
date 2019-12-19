@@ -151,7 +151,7 @@ static void indexPreprocessorMacros(const Preprocessor &PP,
                                     IndexDataConsumer &DataConsumer) {
   for (const auto &M : PP.macros())
     if (MacroDirective *MD = M.second.getLatest())
-      DataConsumer.handleMacroOccurence(
+      DataConsumer.handleMacroOccurrence(
           M.first, MD->getMacroInfo(),
           static_cast<unsigned>(index::SymbolRole::Definition),
           MD->getLocation());

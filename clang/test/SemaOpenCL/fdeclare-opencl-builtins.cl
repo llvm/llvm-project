@@ -1,24 +1,58 @@
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins
-// expected-no-diagnostics
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -DNO_HEADER
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -DNO_HEADER
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -DNO_HEADER
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -DNO_HEADER
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
+
+// XFAIL: *
 
 // Test the -fdeclare-opencl-builtins option.
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#if __OPENCL_C_VERSION__ < CL_VERSION_1_2
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif
+
+// Provide typedefs when invoking clang without -finclude-default-header.
+#ifdef NO_HEADER
+typedef unsigned char uchar;
+typedef unsigned int uint;
+typedef unsigned long ulong;
+typedef unsigned short ushort;
+typedef __SIZE_TYPE__ size_t;
 typedef char char2 __attribute__((ext_vector_type(2)));
 typedef char char4 __attribute__((ext_vector_type(4)));
+typedef uchar uchar4 __attribute__((ext_vector_type(4)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef half half4 __attribute__((ext_vector_type(4)));
 typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef uint uint4 __attribute__((ext_vector_type(4)));
 typedef long long2 __attribute__((ext_vector_type(2)));
-typedef unsigned int uint;
-typedef __SIZE_TYPE__ size_t;
+#endif
 
 kernel void test_pointers(volatile global void *global_p, global const int4 *a) {
   int i;
   unsigned int ui;
 
   prefetch(a, 2);
+
+  atom_add((volatile __global int *)global_p, i);
+#if !defined(__OPENCL_CPP_VERSION__) && __OPENCL_C_VERSION__ < CL_VERSION_1_1
+// expected-error@-2{{no matching function for call to 'atom_add'}}
+
+// There are two potential definitions of the function "atom_add", both are
+// currently disabled because the associated extension is disabled.
+// expected-note@-6{{candidate unavailable as it requires OpenCL extension 'cl_khr_global_int32_base_atomics' to be enabled}}
+// expected-note@-7{{candidate unavailable as it requires OpenCL extension 'cl_khr_global_int32_base_atomics' to be enabled}}
+#endif
+
+#if __OPENCL_C_VERSION__ < CL_VERSION_1_1
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#endif
 
   atom_add((volatile __global int *)global_p, i);
   atom_cmpxchg((volatile __global unsigned int *)global_p, ui, ui);
@@ -41,6 +75,8 @@ kernel void basic_conversion() {
 char4 test_int(char c, char4 c4) {
   char m = max(c, c);
   char4 m4 = max(c4, c4);
+  uchar4 abs1 = abs(c4);
+  uchar4 abs2 = abs(abs1);
   return max(c4, c);
 }
 
@@ -64,6 +100,7 @@ kernel void basic_image_readonly(read_only image2d_t image_read_only_image2d) {
   int imgWidth = get_image_width(image_read_only_image2d);
 }
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 kernel void basic_image_readwrite(read_write image3d_t image_read_write_image3d) {
   half4 h4;
   int4 i4;
@@ -72,6 +109,7 @@ kernel void basic_image_readwrite(read_write image3d_t image_read_write_image3d)
 
   int imgDepth = get_image_depth(image_read_write_image3d);
 }
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_image1d_buffer) {
   half4 h4;
@@ -84,4 +122,45 @@ kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_i
 
 kernel void basic_subgroup(global uint *out) {
   out[0] = get_sub_group_size();
+#if !defined(__OPENCL_CPP_VERSION__) && __OPENCL_C_VERSION__ < CL_VERSION_2_0
+// expected-error@-2{{implicit declaration of function 'get_sub_group_size' is invalid in OpenCL}}
+// expected-error@-3{{implicit conversion changes signedness: 'int' to 'uint' (aka 'unsigned int')}}
+#elif defined(__OPENCL_CPP_VERSION__)
+// expected-error@-5{{no matching function for call to 'get_sub_group_size'}}
+// expected-note@-6{{candidate unavailable as it requires OpenCL extension 'cl_khr_subgroups' to be enabled}}
+#else
+// expected-error@-8{{use of declaration 'get_sub_group_size' requires cl_khr_subgroups extension to be enabled}}
+#endif
+}
+
+kernel void basic_vector_data() {
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+  generic void *generic_p;
+#endif
+  constant void *constant_p;
+  local void *local_p;
+  global void *global_p;
+  private void *private_p;
+  size_t s;
+
+  vload4(s, (const __constant ulong *) constant_p);
+  vload16(s, (const __constant short *) constant_p);
+
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+  vload3(s, (const __generic ushort *) generic_p);
+  vload16(s, (const __generic uchar *) generic_p);
+#endif
+
+  vload8(s, (const __global long *) global_p);
+  vload2(s, (const __local uint *) local_p);
+  vload16(s, (const __private float *) private_p);
+}
+
+kernel void basic_work_item() {
+  uint ui;
+
+  get_enqueued_local_size(ui);
+#if !defined(__OPENCL_CPP_VERSION__) && __OPENCL_C_VERSION__ < CL_VERSION_2_0
+// expected-error@-2{{implicit declaration of function 'get_enqueued_local_size' is invalid in OpenCL}}
+#endif
 }

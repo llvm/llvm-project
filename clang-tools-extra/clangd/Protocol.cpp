@@ -1087,18 +1087,5 @@ llvm::json::Value toJSON(const SelectionRange &Out) {
   }
   return llvm::json::Object{{"range", Out.range}};
 }
-
-bool fromJSON(const llvm::json::Value &Params, DocumentLinkParams &R) {
-  llvm::json::ObjectMapper O(Params);
-  return O && O.map("textDocument", R.textDocument);
-}
-
-llvm::json::Value toJSON(const DocumentLink &DocumentLink) {
-  return llvm::json::Object{
-      {"range", DocumentLink.range},
-      {"target", DocumentLink.target},
-  };
-}
-
 } // namespace clangd
 } // namespace clang

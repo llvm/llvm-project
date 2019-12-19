@@ -72,7 +72,7 @@ EXTERN bool __kmpc_kernel_convergent_simd(void *buffer,
 
   // We cannot have more than the # of convergent threads.
   if (SimdLimitSource > 0)
-    *NumLanes = min(ConvergentSize, SimdLimitSource);
+    *NumLanes = __kmpc_impl_min(ConvergentSize, SimdLimitSource);
   else
     *NumLanes = ConvergentSize;
   ASSERT(LT_FUSSY, *NumLanes > 0, "bad thread request of %d threads",
@@ -149,7 +149,7 @@ EXTERN bool __kmpc_kernel_convergent_parallel(void *buffer,
   // We cannot have more than the # of convergent threads.
   uint16_t NumThreads;
   if (NumThreadsSource > 0)
-    NumThreads = min(ConvergentSize, NumThreadsSource);
+    NumThreads = __kmpc_impl_min(ConvergentSize, NumThreadsSource);
   else
     NumThreads = ConvergentSize;
   ASSERT(LT_FUSSY, NumThreads > 0, "bad thread request of %d threads",

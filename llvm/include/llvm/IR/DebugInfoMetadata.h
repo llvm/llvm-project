@@ -1758,6 +1758,7 @@ public:
   bool isPure() const { return getSPFlags() & SPFlagPure; }
   bool isElemental() const { return getSPFlags() & SPFlagElemental; }
   bool isRecursive() const { return getSPFlags() & SPFlagRecursive; }
+  bool isObjCDirect() const { return getSPFlags() & SPFlagObjCDirect; }
 
   /// Check if this is deleted member function.
   ///
@@ -2550,6 +2551,11 @@ public:
     else
       return 0;
   }
+
+  using ExtOps = std::array<uint64_t, 6>;
+
+  /// Returns the ops for a zero- or sign-extension in a DIExpression.
+  static ExtOps getExtOps(unsigned FromSize, unsigned ToSize, bool Signed);
 
   /// Append a zero- or sign-extension to \p Expr. Converts the expression to a
   /// stack value if it isn't one already.

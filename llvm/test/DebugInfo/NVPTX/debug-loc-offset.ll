@@ -43,8 +43,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 ; CHECK: .loc [[CU2:[0-9]+]] 6 0
 ; CHECK: Lfunc_begin1:
 ; CHECK: .loc [[CU2]] 6 0
-; CHECK: //DEBUG_VALUE: baz:z <- {{[0-9]+}}
-; CHECK: //DEBUG_VALUE: baz:z <- {{[0-9]+}}
+; CHECK-NOT: //DEBUG_VALUE: baz:z
+; CHECK: //DEBUG_VALUE: baz:z <- undef
 ; CHECK: .loc [[CU2]] 10 0
 ; CHECK: ret;
 ; CHECK: }

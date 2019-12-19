@@ -296,16 +296,32 @@ ItaniumManglingCanonicalizer::addEquivalence(FragmentKind Kind, StringRef First,
   return EquivalenceError::Success;
 }
 
+static ItaniumManglingCanonicalizer::Key
+parseMaybeMangledName(CanonicalizingDemangler &Demangler, StringRef Mangling,
+                      bool CreateNewNodes) {
+  Demangler.ASTAllocator.setCreateNewNodes(CreateNewNodes);
+  Demangler.reset(Mangling.begin(), Mangling.end());
+  // Attempt demangling only for names that look like C++ mangled names.
+  // Otherwise, treat them as extern "C" names. We permit the latter to
+  // be remapped by (eg)
+  //   encoding 6memcpy 7memmove
+  // consistent with how they are encoded as local-names inside a C++ mangling.
+  Node *N;
+  if (Mangling.startswith("_Z") || Mangling.startswith("__Z") ||
+      Mangling.startswith("___Z") || Mangling.startswith("____Z"))
+    N = Demangler.parse();
+  else
+    N = Demangler.make<itanium_demangle::NameType>(
+        StringView(Mangling.data(), Mangling.size()));
+  return reinterpret_cast<ItaniumManglingCanonicalizer::Key>(N);
+}
+
 ItaniumManglingCanonicalizer::Key
 ItaniumManglingCanonicalizer::canonicalize(StringRef Mangling) {
-  P->Demangler.ASTAllocator.setCreateNewNodes(true);
-  P->Demangler.reset(Mangling.begin(), Mangling.end());
-  return reinterpret_cast<Key>(P->Demangler.parse());
+  return parseMaybeMangledName(P->Demangler, Mangling, true);
 }
 
 ItaniumManglingCanonicalizer::Key
 ItaniumManglingCanonicalizer::lookup(StringRef Mangling) {
-  P->Demangler.ASTAllocator.setCreateNewNodes(false);
-  P->Demangler.reset(Mangling.begin(), Mangling.end());
-  return reinterpret_cast<Key>(P->Demangler.parse());
+  return parseMaybeMangledName(P->Demangler, Mangling, false);
 }

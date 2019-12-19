@@ -238,8 +238,18 @@ lldb::FrameComparison ThreadPlanStepRange::CompareCurrentFrameToStartFrame() {
 }
 
 bool ThreadPlanStepRange::StopOthers() {
-  return (m_stop_others == lldb::eOnlyThisThread ||
-          m_stop_others == lldb::eOnlyDuringStepping);
+  switch (m_stop_others) {
+  case lldb::eOnlyThisThread:
+    return true;
+  case lldb::eOnlyDuringStepping:
+    // If there is a call in the range of the next branch breakpoint,
+    // then we should always run all threads, since a call can execute
+    // arbitrary code which might for instance take a lock that's held
+    // by another thread.
+    return !m_found_calls;
+  case lldb::eAllThreads:
+    return false;
+  }
 }
 
 InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
@@ -292,6 +302,7 @@ void ThreadPlanStepRange::ClearNextBranchBreakpoint() {
     GetTarget().RemoveBreakpointByID(m_next_branch_bp_sp->GetID());
     m_next_branch_bp_sp.reset();
     m_could_not_resolve_hw_bp = false;
+    m_found_calls = false;
   }
 }
 
@@ -305,6 +316,9 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
   if (!m_use_fast_step)
     return false;
 
+  // clear the m_found_calls, we'll rediscover it for this range.
+  m_found_calls = false;
+  
   lldb::addr_t cur_addr = GetThread().GetRegisterContext()->GetPC();
   // Find the current address in our address ranges, and fetch the disassembly
   // if we haven't already:
@@ -319,7 +333,8 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
     const bool ignore_calls = GetKind() == eKindStepOverRange;
     uint32_t branch_index =
         instructions->GetIndexOfNextBranchInstruction(pc_index, target,
-                                                      ignore_calls);
+                                                      ignore_calls, 
+                                                      &m_found_calls);
 
     Address run_to_address;
 

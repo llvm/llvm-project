@@ -7080,6 +7080,31 @@ public:
            DerivedSuccess(Result, E);
   }
 
+  bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E) {
+    APValue Val;
+    if (!Evaluate(Val, Info, E->getBase()))
+      return false;
+
+    if (Val.isVector()) {
+      SmallVector<uint32_t, 4> Indices;
+      E->getEncodedElementAccess(Indices);
+      if (Indices.size() == 1) {
+        // Return scalar.
+        return DerivedSuccess(Val.getVectorElt(Indices[0]), E);
+      } else {
+        // Construct new APValue vector.
+        SmallVector<APValue, 4> Elts;
+        for (unsigned I = 0; I < Indices.size(); ++I) {
+          Elts.push_back(Val.getVectorElt(Indices[I]));
+        }
+        APValue VecResult(Elts.data(), Indices.size());
+        return DerivedSuccess(VecResult, E);
+      }
+    }
+
+    return false;
+  }
+
   bool VisitCastExpr(const CastExpr *E) {
     switch (E->getCastKind()) {
     default:
@@ -11481,6 +11506,14 @@ public:
     }
   }
 };
+
+enum class CmpResult {
+  Unequal,
+  Less,
+  Equal,
+  Greater,
+  Unordered,
+};
 }
 
 template <class SuccessCB, class AfterCB>
@@ -11496,15 +11529,8 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     return false;
   };
 
-  using CCR = ComparisonCategoryResult;
-  bool IsRelational = E->isRelationalOp();
+  bool IsRelational = E->isRelationalOp() || E->getOpcode() == BO_Cmp;
   bool IsEquality = E->isEqualityOp();
-  if (E->getOpcode() == BO_Cmp) {
-    const ComparisonCategoryInfo &CmpInfo =
-        Info.Ctx.CompCategories.getInfoForType(E->getType());
-    IsRelational = CmpInfo.isOrdered();
-    IsEquality = CmpInfo.isEquality();
-  }
 
   QualType LHSTy = E->getLHS()->getType();
   QualType RHSTy = E->getRHS()->getType();
@@ -11518,10 +11544,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (!EvaluateInteger(E->getRHS(), RHS, Info) || !LHSOK)
       return false;
     if (LHS < RHS)
-      return Success(CCR::Less, E);
+      return Success(CmpResult::Less, E);
     if (LHS > RHS)
-      return Success(CCR::Greater, E);
-    return Success(CCR::Equal, E);
+      return Success(CmpResult::Greater, E);
+    return Success(CmpResult::Equal, E);
   }
 
   if (LHSTy->isFixedPointType() || RHSTy->isFixedPointType()) {
@@ -11534,10 +11560,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (!EvaluateFixedPointOrInteger(E->getRHS(), RHSFX, Info) || !LHSOK)
       return false;
     if (LHSFX < RHSFX)
-      return Success(CCR::Less, E);
+      return Success(CmpResult::Less, E);
     if (LHSFX > RHSFX)
-      return Success(CCR::Greater, E);
-    return Success(CCR::Equal, E);
+      return Success(CmpResult::Greater, E);
+    return Success(CmpResult::Equal, E);
   }
 
   if (LHSTy->isAnyComplexType() || RHSTy->isAnyComplexType()) {
@@ -11573,12 +11599,12 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       APFloat::cmpResult CR_i =
         LHS.getComplexFloatImag().compare(RHS.getComplexFloatImag());
       bool IsEqual = CR_r == APFloat::cmpEqual && CR_i == APFloat::cmpEqual;
-      return Success(IsEqual ? CCR::Equal : CCR::Nonequal, E);
+      return Success(IsEqual ? CmpResult::Equal : CmpResult::Unequal, E);
     } else {
       assert(IsEquality && "invalid complex comparison");
       bool IsEqual = LHS.getComplexIntReal() == RHS.getComplexIntReal() &&
                      LHS.getComplexIntImag() == RHS.getComplexIntImag();
-      return Success(IsEqual ? CCR::Equal : CCR::Nonequal, E);
+      return Success(IsEqual ? CmpResult::Equal : CmpResult::Unequal, E);
     }
   }
 
@@ -11597,13 +11623,13 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     auto GetCmpRes = [&]() {
       switch (LHS.compare(RHS)) {
       case APFloat::cmpEqual:
-        return CCR::Equal;
+        return CmpResult::Equal;
       case APFloat::cmpLessThan:
-        return CCR::Less;
+        return CmpResult::Less;
       case APFloat::cmpGreaterThan:
-        return CCR::Greater;
+        return CmpResult::Greater;
       case APFloat::cmpUnordered:
-        return CCR::Unordered;
+        return CmpResult::Unordered;
       }
       llvm_unreachable("Unrecognised APFloat::cmpResult enum");
     };
@@ -11625,8 +11651,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (!HasSameBase(LHSValue, RHSValue)) {
       // Inequalities and subtractions between unrelated pointers have
       // unspecified or undefined behavior.
-      if (!IsEquality)
-        return Error(E);
+      if (!IsEquality) {
+        Info.FFDiag(E, diag::note_constexpr_pointer_comparison_unspecified);
+        return false;
+      }
       // A constant address may compare equal to the address of a symbol.
       // The one exception is that address of an object cannot compare equal
       // to a null pointer constant.
@@ -11656,7 +11684,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       if ((RHSValue.Base && isZeroSized(LHSValue)) ||
           (LHSValue.Base && isZeroSized(RHSValue)))
         return Error(E);
-      return Success(CCR::Nonequal, E);
+      return Success(CmpResult::Unequal, E);
     }
 
     const CharUnits &LHSOffset = LHSValue.getLValueOffset();
@@ -11740,10 +11768,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     }
 
     if (CompareLHS < CompareRHS)
-      return Success(CCR::Less, E);
+      return Success(CmpResult::Less, E);
     if (CompareLHS > CompareRHS)
-      return Success(CCR::Greater, E);
-    return Success(CCR::Equal, E);
+      return Success(CmpResult::Greater, E);
+    return Success(CmpResult::Equal, E);
   }
 
   if (LHSTy->isMemberPointerType()) {
@@ -11764,7 +11792,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     //   null, they compare unequal.
     if (!LHSValue.getDecl() || !RHSValue.getDecl()) {
       bool Equal = !LHSValue.getDecl() && !RHSValue.getDecl();
-      return Success(Equal ? CCR::Equal : CCR::Nonequal, E);
+      return Success(Equal ? CmpResult::Equal : CmpResult::Unequal, E);
     }
 
     //   Otherwise if either is a pointer to a virtual member function, the
@@ -11781,7 +11809,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     //   they were dereferenced with a hypothetical object of the associated
     //   class type.
     bool Equal = LHSValue == RHSValue;
-    return Success(Equal ? CCR::Equal : CCR::Nonequal, E);
+    return Success(Equal ? CmpResult::Equal : CmpResult::Unequal, E);
   }
 
   if (LHSTy->isNullPtrType()) {
@@ -11790,7 +11818,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     // C++11 [expr.rel]p4, [expr.eq]p3: If two operands of type std::nullptr_t
     // are compared, the result is true of the operator is <=, >= or ==, and
     // false otherwise.
-    return Success(CCR::Equal, E);
+    return Success(CmpResult::Equal, E);
   }
 
   return DoAfter();
@@ -11800,14 +11828,29 @@ bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
   if (!CheckLiteralType(Info, E))
     return false;
 
-  auto OnSuccess = [&](ComparisonCategoryResult ResKind,
-                       const BinaryOperator *E) {
+  auto OnSuccess = [&](CmpResult CR, const BinaryOperator *E) {
+    ComparisonCategoryResult CCR;
+    switch (CR) {
+    case CmpResult::Unequal:
+      llvm_unreachable("should never produce Unequal for three-way comparison");
+    case CmpResult::Less:
+      CCR = ComparisonCategoryResult::Less;
+      break;
+    case CmpResult::Equal:
+      CCR = ComparisonCategoryResult::Equal;
+      break;
+    case CmpResult::Greater:
+      CCR = ComparisonCategoryResult::Greater;
+      break;
+    case CmpResult::Unordered:
+      CCR = ComparisonCategoryResult::Unordered;
+      break;
+    }
     // Evaluation succeeded. Lookup the information for the comparison category
     // type and fetch the VarDecl for the result.
     const ComparisonCategoryInfo &CmpInfo =
         Info.Ctx.CompCategories.getInfoForType(E->getType());
-    const VarDecl *VD =
-        CmpInfo.getValueInfo(CmpInfo.makeWeakResult(ResKind))->VD;
+    const VarDecl *VD = CmpInfo.getValueInfo(CmpInfo.makeWeakResult(CCR))->VD;
     // Check and evaluate the result as a constant expression.
     LValue LV;
     LV.set(VD);
@@ -11835,14 +11878,14 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
          "DataRecursiveIntBinOpEvaluator should have handled integral types");
 
   if (E->isComparisonOp()) {
-    // Evaluate builtin binary comparisons by evaluating them as C++2a three-way
+    // Evaluate builtin binary comparisons by evaluating them as three-way
     // comparisons and then translating the result.
-    auto OnSuccess = [&](ComparisonCategoryResult ResKind,
-                         const BinaryOperator *E) {
-      using CCR = ComparisonCategoryResult;
-      bool IsEqual   = ResKind == CCR::Equal,
-           IsLess    = ResKind == CCR::Less,
-           IsGreater = ResKind == CCR::Greater;
+    auto OnSuccess = [&](CmpResult CR, const BinaryOperator *E) {
+      assert((CR != CmpResult::Unequal || E->isEqualityOp()) &&
+             "should only produce Unequal for equality comparisons");
+      bool IsEqual   = CR == CmpResult::Equal,
+           IsLess    = CR == CmpResult::Less,
+           IsGreater = CR == CmpResult::Greater;
       auto Op = E->getOpcode();
       switch (Op) {
       default:
@@ -11850,10 +11893,14 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
       case BO_EQ:
       case BO_NE:
         return Success(IsEqual == (Op == BO_EQ), E);
-      case BO_LT: return Success(IsLess, E);
-      case BO_GT: return Success(IsGreater, E);
-      case BO_LE: return Success(IsEqual || IsLess, E);
-      case BO_GE: return Success(IsEqual || IsGreater, E);
+      case BO_LT:
+        return Success(IsLess, E);
+      case BO_GT:
+        return Success(IsGreater, E);
+      case BO_LE:
+        return Success(IsEqual || IsLess, E);
+      case BO_GE:
+        return Success(IsEqual || IsGreater, E);
       }
     };
     return EvaluateComparisonBinaryOperator(Info, E, OnSuccess, [&]() {

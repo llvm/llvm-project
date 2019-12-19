@@ -1156,7 +1156,7 @@ void DwarfDebug::finalizeModuleInfo() {
 
     // We don't keep track of which addresses are used in which CU so this
     // is a bit pessimistic under LTO.
-    if (!AddrPool.isEmpty() &&
+    if ((!AddrPool.isEmpty() || TheCU.hasRangeLists()) &&
         (getDwarfVersion() >= 5 || HasSplitUnit))
       U.addAddrTableBase();
 
@@ -2331,7 +2331,7 @@ static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
   Asm->OutStreamer->EmitLabel(Holder.getRnglistsTableBaseSym());
 
   for (const RangeSpanList &List : Holder.getRangeLists())
-    Asm->EmitLabelDifference(List.getSym(), Holder.getRnglistsTableBaseSym(),
+    Asm->EmitLabelDifference(List.Label, Holder.getRnglistsTableBaseSym(),
                              4);
 
   return TableEnd;
@@ -2688,11 +2688,11 @@ void DwarfDebug::emitDebugARanges() {
 /// Emit a single range list. We handle both DWARF v5 and earlier.
 static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
                           const RangeSpanList &List) {
-  emitRangeList(DD, Asm, List.getSym(), List.getRanges(), List.getCU(),
+  emitRangeList(DD, Asm, List.Label, List.Ranges, *List.CU,
                 dwarf::DW_RLE_base_addressx, dwarf::DW_RLE_offset_pair,
                 dwarf::DW_RLE_startx_length, dwarf::DW_RLE_end_of_list,
                 llvm::dwarf::RangeListEncodingString,
-                List.getCU().getCUNode()->getRangesBaseAddress() ||
+                List.CU->getCUNode()->getRangesBaseAddress() ||
                     DD.getDwarfVersion() >= 5,
                 [](auto) {});
 }
@@ -2709,8 +2709,9 @@ void DwarfDebug::emitDebugRangesImpl(const DwarfFile &Holder, MCSection *Section
 
   Asm->OutStreamer->SwitchSection(Section);
 
-  MCSymbol *TableEnd =
-      getDwarfVersion() < 5 ? nullptr : emitRnglistsTableHeader(Asm, Holder);
+  MCSymbol *TableEnd = nullptr;
+  if (getDwarfVersion() >= 5)
+    TableEnd = emitRnglistsTableHeader(Asm, Holder);
 
   for (const RangeSpanList &List : Holder.getRangeLists())
     emitRangeList(*this, Asm, List);
@@ -2769,8 +2770,7 @@ void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
   Asm->EmitULEB128(dwarf::DW_MACINFO_end_file);
 }
 
-/// Emit macros into a debug macinfo section.
-void DwarfDebug::emitDebugMacinfo() {
+void DwarfDebug::emitDebugMacinfoImpl(MCSection *Section) {
   for (const auto &P : CUMap) {
     auto &TheCU = *P.second;
     auto *SkCU = TheCU.getSkeleton();
@@ -2779,8 +2779,7 @@ void DwarfDebug::emitDebugMacinfo() {
     DIMacroNodeArray Macros = CUNode->getMacros();
     if (Macros.empty())
       continue;
-    Asm->OutStreamer->SwitchSection(
-        Asm->getObjFileLowering().getDwarfMacinfoSection());
+    Asm->OutStreamer->SwitchSection(Section);
     Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
     handleMacroNodes(Macros, U);
     Asm->OutStreamer->AddComment("End Of Macro List Mark");
@@ -2788,22 +2787,13 @@ void DwarfDebug::emitDebugMacinfo() {
   }
 }
 
+/// Emit macros into a debug macinfo section.
+void DwarfDebug::emitDebugMacinfo() {
+  emitDebugMacinfoImpl(Asm->getObjFileLowering().getDwarfMacinfoSection());
+}
+
 void DwarfDebug::emitDebugMacinfoDWO() {
-  for (const auto &P : CUMap) {
-    auto &TheCU = *P.second;
-    auto *SkCU = TheCU.getSkeleton();
-    DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
-    auto *CUNode = cast<DICompileUnit>(P.first);
-    DIMacroNodeArray Macros = CUNode->getMacros();
-    if (Macros.empty())
-      continue;
-    Asm->OutStreamer->SwitchSection(
-        Asm->getObjFileLowering().getDwarfMacinfoDWOSection());
-    Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
-    handleMacroNodes(Macros, U);
-    Asm->OutStreamer->AddComment("End Of Macro List Mark");
-    Asm->emitInt8(0);
-  }
+  emitDebugMacinfoImpl(Asm->getObjFileLowering().getDwarfMacinfoDWOSection());
 }
 
 // DWARF5 Experimental Separate Dwarf emitters.

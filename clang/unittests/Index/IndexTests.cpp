@@ -74,9 +74,9 @@ public:
     IndexDataConsumer::initialize(Ctx);
   }
 
-  bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
-                           ArrayRef<SymbolRelation>, SourceLocation Loc,
-                           ASTNodeInfo) override {
+  bool handleDeclOccurrence(const Decl *D, SymbolRoleSet Roles,
+                            ArrayRef<SymbolRelation>, SourceLocation Loc,
+                            ASTNodeInfo) override {
     const auto *ND = llvm::dyn_cast<NamedDecl>(D);
     if (!ND)
       return true;
@@ -91,8 +91,8 @@ public:
     return true;
   }
 
-  bool handleMacroOccurence(const IdentifierInfo *Name, const MacroInfo *MI,
-                            SymbolRoleSet Roles, SourceLocation Loc) override {
+  bool handleMacroOccurrence(const IdentifierInfo *Name, const MacroInfo *MI,
+                             SymbolRoleSet Roles, SourceLocation Loc) override {
     TestSymbol S;
     S.SymInfo = getSymbolInfoForMacro(*MI);
     S.QName = Name->getName();

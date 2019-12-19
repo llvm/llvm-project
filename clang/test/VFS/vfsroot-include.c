@@ -1,6 +1,3 @@
-// FIXME: PR43272
-// XFAIL: system-windows
-
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: sed -e "s@TEST_DIR@%{/S:regex_replacement}@g" -e "s@OUT_DIR@%{/t:regex_replacement}@g" %S/Inputs/vfsroot.yaml > %t.yaml
