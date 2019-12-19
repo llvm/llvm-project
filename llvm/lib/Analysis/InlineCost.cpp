@@ -307,7 +307,7 @@ public:
                               Params.ComputeFullInlineCost || ORE),
         BoostIndirectCalls(BoostIndirect), EnableLoadElimination(true) {}
 
-  InlineResult analyzeCall(CallBase &Call);
+  InlineResult analyze();
 
   int getThreshold() { return Threshold; }
   int getCost() { return Cost; }
@@ -1318,7 +1318,7 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
           InlineConstants::IndirectCallThreshold;
       CallAnalyzer CA(TTI, GetAssumptionCache, GetBFI, PSI, ORE, *F, Call,
                       IndirectCallParams, false);
-      if (CA.analyzeCall(Call)) {
+      if (CA.analyze()) {
         // We were able to inline the indirect call! Subtract the cost from the
         // threshold to get the bonus we want to apply, but don't go below zero.
         Cost -= std::max(0, CA.getThreshold() - CA.getCost());
@@ -1725,7 +1725,7 @@ void CallAnalyzer::findDeadBlocks(BasicBlock *CurrBB, BasicBlock *NextBB) {
 /// factors and heuristics. If this method returns false but the computed cost
 /// is below the computed threshold, then inlining was forcibly disabled by
 /// some artifact of the routine.
-InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
+InlineResult CallAnalyzer::analyze() {
   ++NumCallsAnalyzed;
 
   // Perform some tweaks to the cost and threshold based on the direct
@@ -1742,7 +1742,7 @@ InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
   assert(NumVectorInstructions == 0);
 
   // Update the threshold based on callsite properties
-  updateThreshold(Call, F);
+  updateThreshold(CandidateCall, F);
 
   // While Threshold depends on commandline options that can take negative
   // values, we want to enforce the invariant that the computed threshold and
@@ -1758,7 +1758,7 @@ InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
 
   // Give out bonuses for the callsite, as the instructions setting them up
   // will be gone after inlining.
-  addCost(-getCallsiteCost(Call, DL));
+  addCost(-getCallsiteCost(CandidateCall, DL));
 
   // If this function uses the coldcc calling convention, prefer not to inline
   // it.
@@ -1772,7 +1772,7 @@ InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
   if (F.empty())
     return true;
 
-  Function *Caller = Call.getFunction();
+  Function *Caller = CandidateCall.getFunction();
   // Check if the caller function is recursive itself.
   for (User *U : Caller->users()) {
     CallBase *Call = dyn_cast<CallBase>(U);
@@ -1784,10 +1784,10 @@ InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
 
   // Populate our simplified values by mapping from function arguments to call
   // arguments with known important simplifications.
-  auto CAI = Call.arg_begin();
+  auto CAI = CandidateCall.arg_begin();
   for (Function::arg_iterator FAI = F.arg_begin(), FAE = F.arg_end();
        FAI != FAE; ++FAI, ++CAI) {
-    assert(CAI != Call.arg_end());
+    assert(CAI != CandidateCall.arg_end());
     if (Constant *C = dyn_cast<Constant>(CAI))
       SimplifiedValues[&*FAI] = C;
 
@@ -1900,8 +1900,8 @@ InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
     }
   }
 
-  bool OnlyOneCallAndLocalLinkage =
-      F.hasLocalLinkage() && F.hasOneUse() && &F == Call.getCalledFunction();
+  bool OnlyOneCallAndLocalLinkage = F.hasLocalLinkage() && F.hasOneUse() &&
+                                    &F == CandidateCall.getCalledFunction();
   // If this is a noduplicate call, we can still inline as long as
   // inlining this would cause the removal of the caller (so the instruction
   // is not actually duplicated, just moved).
@@ -2075,7 +2075,7 @@ InlineCost llvm::getInlineCost(
 
   CallAnalyzer CA(CalleeTTI, GetAssumptionCache, GetBFI, PSI, ORE, *Callee,
                   Call, Params);
-  InlineResult ShouldInline = CA.analyzeCall(Call);
+  InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());
 
