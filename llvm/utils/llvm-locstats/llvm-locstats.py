@@ -29,6 +29,10 @@ def locstats_output(
   variables_coverage_map
   ):
 
+  if scope_bytes == 0:
+    print ('No scope bytes found.')
+    sys.exit(0)
+
   pc_ranges_covered = int(ceil(scope_bytes_covered * 100.0)
               / scope_bytes)
   variables_coverage_per_map = {}
