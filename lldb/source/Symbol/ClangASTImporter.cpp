@@ -1139,16 +1139,5 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
 
 clang::Decl *
 ClangASTImporter::ASTImporterDelegate::GetOriginalDecl(clang::Decl *To) {
-  ASTContextMetadataSP to_context_md =
-      m_master.GetContextMetadata(&To->getASTContext());
-
-  if (!to_context_md)
-    return nullptr;
-
-  OriginMap::iterator iter = to_context_md->m_origins.find(To);
-
-  if (iter == to_context_md->m_origins.end())
-    return nullptr;
-
-  return const_cast<clang::Decl *>(iter->second.decl);
+  return m_master.GetDeclOrigin(To).decl;
 }
