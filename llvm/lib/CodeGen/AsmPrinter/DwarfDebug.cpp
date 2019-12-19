@@ -1156,7 +1156,7 @@ void DwarfDebug::finalizeModuleInfo() {
 
     // We don't keep track of which addresses are used in which CU so this
     // is a bit pessimistic under LTO.
-    if (!AddrPool.isEmpty() &&
+    if ((!AddrPool.isEmpty() || TheCU.hasRangeLists()) &&
         (getDwarfVersion() >= 5 || HasSplitUnit))
       U.addAddrTableBase();
 
