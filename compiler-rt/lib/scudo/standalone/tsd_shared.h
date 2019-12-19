@@ -72,6 +72,16 @@ template <class Allocator, u32 MaxTSDCount> struct TSDRegistrySharedT {
     return getTSDAndLockSlow(TSD);
   }
 
+  void disable() {
+    for (u32 I = 0; I < NumberOfTSDs; I++)
+      TSDs[I].lock();
+  }
+
+  void enable() {
+    for (u32 I = 0; I < NumberOfTSDs; I++)
+      TSDs[I].unlock();
+  }
+
 private:
   ALWAYS_INLINE void setCurrentTSD(TSD<Allocator> *CurrentTSD) {
 #if _BIONIC
