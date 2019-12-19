@@ -2684,7 +2684,9 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
 
     if (Init) {
       Init->setVisibility(Var->getVisibility());
-      Init->setDSOLocal(Var->isDSOLocal());
+      // Don't mark an extern_weak function DSO local on windows.
+      if (!CGM.getTriple().isOSWindows() || !Init->hasExternalWeakLinkage())
+        Init->setDSOLocal(Var->isDSOLocal());
     }
 
     llvm::LLVMContext &Context = CGM.getModule().getContext();
