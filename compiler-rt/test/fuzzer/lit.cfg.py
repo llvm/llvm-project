@@ -28,7 +28,6 @@ config.test_format = lit.formats.ShTest(execute_external)
 # LeakSanitizer is not supported on OSX or Windows right now.
 if (sys.platform.startswith('darwin') or
     sys.platform.startswith('freebsd') or
-    sys.platform.startswith('netbsd') or
     sys.platform.startswith('win')):
   lit_config.note('lsan feature unavailable')
 else:
