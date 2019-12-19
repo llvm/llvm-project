@@ -2693,7 +2693,7 @@ static unsigned getVectorComparisonOrInvert(ISD::CondCode CC, CmpMode Mode,
     return Opcode;
   }
 
-  CC = ISD::getSetCCInverse(CC, Mode == CmpMode::Int);
+  CC = ISD::getSetCCInverse(CC, Mode == CmpMode::Int ? MVT::i32 : MVT::f32);
   if (unsigned Opcode = getVectorComparison(CC, Mode)) {
     Invert = true;
     return Opcode;

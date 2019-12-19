@@ -4641,8 +4641,8 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   // (and (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
   // (or  (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
   if (LL == RL && LR == RR) {
-    ISD::CondCode NewCC = IsAnd ? ISD::getSetCCAndOperation(CC0, CC1, IsInteger)
-                                : ISD::getSetCCOrOperation(CC0, CC1, IsInteger);
+    ISD::CondCode NewCC = IsAnd ? ISD::getSetCCAndOperation(CC0, CC1, OpVT)
+                                : ISD::getSetCCOrOperation(CC0, CC1, OpVT);
     if (NewCC != ISD::SETCC_INVALID &&
         (!LegalOperations ||
          (TLI.isCondCodeLegal(NewCC, LL.getSimpleValueType()) &&
@@ -7047,7 +7047,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   SDValue LHS, RHS, CC;
   if (TLI.isConstTrueVal(N1.getNode()) && isSetCCEquivalent(N0, LHS, RHS, CC)) {
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
-                                               LHS.getValueType().isInteger());
+                                               LHS.getValueType());
     if (!LegalOperations ||
         TLI.isCondCodeLegal(NotCC, LHS.getSimpleValueType())) {
       switch (N0Opcode) {
@@ -20348,7 +20348,7 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
       (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, CmpOpVT))) {
 
     if (Swap) {
-      CC = ISD::getSetCCInverse(CC, CmpOpVT.isInteger());
+      CC = ISD::getSetCCInverse(CC, CmpOpVT);
       std::swap(N2C, N3C);
     }
 

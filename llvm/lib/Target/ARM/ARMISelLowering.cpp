@@ -4952,7 +4952,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       Opcode = ARMISD::CSINC;
       std::swap(TrueVal, FalseVal);
       std::swap(TVal, FVal);
-      CC = ISD::getSetCCInverse(CC, true);
+      CC = ISD::getSetCCInverse(CC, LHS.getValueType());
     }
 
     if (Opcode) {
@@ -4962,7 +4962,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
           HasLowerConstantMaterializationCost(FVal, TVal, Subtarget)) {
         std::swap(TrueVal, FalseVal);
         std::swap(TVal, FVal);
-        CC = ISD::getSetCCInverse(CC, true);
+        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
       }
 
       // Attempt to use ZR checking TVal is 0, possibly inverting the condition
@@ -4971,7 +4971,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       if (FVal == 0 && Opcode != ARMISD::CSINC) {
         std::swap(TrueVal, FalseVal);
         std::swap(TVal, FVal);
-        CC = ISD::getSetCCInverse(CC, true);
+        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
       }
       if (TVal == 0)
         TrueVal = DAG.getRegister(ARM::ZR, MVT::i32);
@@ -5015,7 +5015,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
       if (CondCode == ARMCC::LT || CondCode == ARMCC::LE ||
           CondCode == ARMCC::VC || CondCode == ARMCC::NE) {
-        CC = ISD::getSetCCInverse(CC, true);
+        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
         std::swap(TrueVal, FalseVal);
       }
     }
@@ -14226,7 +14226,7 @@ static SDValue PerformHWLoopCombine(SDNode *N,
     return SDValue();
 
   if (Negate)
-    CC = ISD::getSetCCInverse(CC, true);
+    CC = ISD::getSetCCInverse(CC, /* Integer inverse */ MVT::i32);
 
   auto IsTrueIfZero = [](ISD::CondCode CC, int Imm) {
     return (CC == ISD::SETEQ && Imm == 0) ||
