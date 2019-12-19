@@ -768,13 +768,13 @@ unsigned DataLayout::getPrefTypeAlignment(Type *Ty) const {
 
 IntegerType *DataLayout::getIntPtrType(LLVMContext &C,
                                        unsigned AddressSpace) const {
-  return IntegerType::get(C, getIndexSizeInBits(AddressSpace));
+  return IntegerType::get(C, getPointerSizeInBits(AddressSpace));
 }
 
 Type *DataLayout::getIntPtrType(Type *Ty) const {
   assert(Ty->isPtrOrPtrVectorTy() &&
          "Expected a pointer or pointer vector type.");
-  unsigned NumBits = getIndexTypeSizeInBits(Ty);
+  unsigned NumBits = getPointerTypeSizeInBits(Ty);
   IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
     return VectorType::get(IntTy, VecTy->getNumElements());
