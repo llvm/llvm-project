@@ -43,6 +43,7 @@ If 1, close stdout at startup. If 2 close stderr; if 3 close both.
 */
 #include <assert.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
