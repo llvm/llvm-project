@@ -4241,7 +4241,6 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SDValue Root = getRoot();
   SmallVector<SDValue, 4> Chains(std::min(MaxParallelChains, NumValues));
   SDLoc dl = getCurSDLoc();
-  EVT PtrVT = Ptr.getValueType();
   unsigned Alignment = I.getAlignment();
   AAMDNodes AAInfo;
   I.getAAMetadata(AAInfo);
@@ -4267,8 +4266,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
       Root = Chain;
       ChainI = 0;
     }
-    SDValue Add = DAG.getNode(ISD::ADD, dl, PtrVT, Ptr,
-                              DAG.getConstant(Offsets[i], dl, PtrVT), Flags);
+    SDValue Add = DAG.getMemBasePlusOffset(Ptr, Offsets[i], dl, Flags);
     SDValue Val = SDValue(Src.getNode(), Src.getResNo() + i);
     if (MemVTs[i] != ValueVTs[i])
       Val = DAG.getPtrExtOrTrunc(Val, dl, MemVTs[i]);
@@ -6712,7 +6710,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Add the offset to the FP.
     Value *FP = I.getArgOperand(1);
     SDValue FPVal = getValue(FP);
-    SDValue Add = DAG.getNode(ISD::ADD, sdl, PtrVT, FPVal, OffsetVal);
+    SDValue Add = DAG.getMemBasePlusOffset(FPVal, OffsetVal, sdl);
     setValue(&I, Add);
 
     return;

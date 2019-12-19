@@ -2757,8 +2757,7 @@ void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
 
     // Increment the pointer to the other half.
     unsigned IncrementSize = NVT.getSizeInBits()/8;
-    Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                      DAG.getConstant(IncrementSize, dl, Ptr.getValueType()));
+    Ptr = DAG.getMemBasePlusOffset(Ptr, IncrementSize, dl);
     Hi = DAG.getExtLoad(ExtType, dl, NVT, Ch, Ptr,
                         N->getPointerInfo().getWithOffset(IncrementSize), NEVT,
                         MinAlign(Alignment, IncrementSize), MMOFlags, AAInfo);
@@ -2782,8 +2781,7 @@ void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
                         Alignment, MMOFlags, AAInfo);
 
     // Increment the pointer to the other half.
-    Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                      DAG.getConstant(IncrementSize, dl, Ptr.getValueType()));
+    Ptr = DAG.getMemBasePlusOffset(Ptr, IncrementSize, dl);
     // Load the rest of the low bits.
     Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, NVT, Ch, Ptr,
                         N->getPointerInfo().getWithOffset(IncrementSize),
@@ -4103,8 +4101,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_UINT_TO_FP(SDNode *N) {
     SDValue Offset = DAG.getSelect(dl, Zero.getValueType(), SignSet,
                                    Zero, Four);
     unsigned Alignment = cast<ConstantPoolSDNode>(FudgePtr)->getAlignment();
-    FudgePtr = DAG.getNode(ISD::ADD, dl, FudgePtr.getValueType(),
-                           FudgePtr, Offset);
+    FudgePtr = DAG.getMemBasePlusOffset(FudgePtr, Offset, dl);
     Alignment = std::min(Alignment, 4u);
 
     // Load the value out, extending it from f32 to the destination float type.
