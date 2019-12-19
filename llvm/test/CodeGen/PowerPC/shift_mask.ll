@@ -257,3 +257,25 @@ define <2 x i64> @test213(<2 x i64> %a, <2 x i64> %b) {
   %ashr = ashr <2 x i64> %a, %rem
   ret <2 x i64> %ashr
 }
+
+define i32 @test214(i32 %a) {
+; CHECK-LABEL: test214:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lis 4, 32767
+; CHECK-NEXT:    ori 4, 4, 65535
+; CHECK-NEXT:    sldi 4, 4, 1
+; CHECK-NEXT:    and 3, 3, 4
+; CHECK-NEXT:    blr
+  %and = and i32 %a, -2
+  ret i32 %and
+}
+
+define i64 @test215(i64 %a) {
+; CHECK-LABEL: test215:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li 4, -7
+; CHECK-NEXT:    and 3, 3, 4
+; CHECK-NEXT:    blr
+  %and = and i64 %a, -7
+  ret i64 %and
+}
