@@ -2533,6 +2533,7 @@ void SelectionDAGLegalize::PromoteLegalINT_TO_FP(
                                  dl, NewInTy, LegalOp)});
     Results.push_back(Res);
     Results.push_back(Res.getValue(1));
+    return;
   }
 
   Results.push_back(
