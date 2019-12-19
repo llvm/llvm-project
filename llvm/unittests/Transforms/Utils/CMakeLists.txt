@@ -15,7 +15,6 @@ add_llvm_unittest(UtilsTests
   FunctionComparatorTest.cpp
   IntegerDivisionTest.cpp
   LocalTest.cpp
-  LoopUtilsTest.cpp
   SizeOptsTest.cpp
   SSAUpdaterBulkTest.cpp
   UnrollLoopTest.cpp
