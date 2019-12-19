@@ -254,7 +254,6 @@ syntax::spelledTokensTouching(SourceLocation Loc,
   assert(Loc.isFileID());
   llvm::ArrayRef<syntax::Token> All =
       Tokens.spelledTokens(Tokens.sourceManager().getFileID(Loc));
-  // Comparing SourceLocations is well-defined within a FileID.
   auto *Right = llvm::partition_point(
       All, [&](const syntax::Token &Tok) { return Tok.location() < Loc; });
   bool AcceptRight = Right != All.end() && Right->location() <= Loc;
