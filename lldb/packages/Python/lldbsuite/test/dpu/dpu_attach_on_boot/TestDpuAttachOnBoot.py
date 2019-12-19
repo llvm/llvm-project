@@ -58,13 +58,13 @@ class DpuAttachOnBootTestCase(TestBase):
 
         print(dpu_list[0][0])
         target_dpu = dpu_commands.dpu_attach_on_boot(self.dbg,
-                                                     str(dpu_list[0][0]),
+                                                     str(hex(dpu_list[0][0])),
                                                      None, None)
         self.assertTrue(target_dpu.IsValid())
         dpu_commands.dpu_detach(self.dbg, None, None, None)
 
         target_dpu = dpu_commands.dpu_attach_on_boot(self.dbg,
-                                                     str(dpu_list[0][0]),
+                                                     str(hex(dpu_list[0][0])),
                                                      None, None)
         self.assertTrue(target_dpu.IsValid())
         dpu_commands.dpu_detach(self.dbg, None, None, None)
