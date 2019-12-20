@@ -1174,7 +1174,7 @@ namespace {
     // We analyze lambda bodies separately. Skip them here.
     bool TraverseLambdaExpr(LambdaExpr *LE) {
       // Traverse the captures, but not the body.
-      for (const auto &C : zip(LE->captures(), LE->capture_inits()))
+      for (const auto C : zip(LE->captures(), LE->capture_inits()))
         TraverseLambdaCapture(LE, &std::get<0>(C), std::get<1>(C));
       return true;
     }
