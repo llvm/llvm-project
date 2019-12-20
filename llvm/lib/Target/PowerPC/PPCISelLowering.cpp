@@ -5102,9 +5102,10 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
   auto isLocalCallee = [&]() {
     const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
     const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
+    const GlobalValue *GV = G ? G->getGlobal() : nullptr;
 
-    return DAG.getTarget().shouldAssumeDSOLocal(*Mod,
-                                                G ? G->getGlobal() : nullptr);
+    return DAG.getTarget().shouldAssumeDSOLocal(*Mod, GV) &&
+           !dyn_cast_or_null<GlobalIFunc>(GV);
   };
 
   // The PLT is only used in 32-bit ELF PIC mode.  Attempting to use the PLT in
