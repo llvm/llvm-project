@@ -1397,28 +1397,14 @@ def int_aarch64_sve_zip2      : AdvSIMD_2VectorArg_Intrinsic;
 // Logical operations
 //
 
+def int_aarch64_sve_and  : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_bic  : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_cnot : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_eor  : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_not  : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_orr  : AdvSIMD_Pred2VectorArg_Intrinsic;
 
-def int_aarch64_sve_and         : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_or          : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_xor         : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_bic_base    : AdvSIMD_2VectorArg_Intrinsic;
-def int_aarch64_sve_bic         : AdvSIMD_Pred2VectorArg_Intrinsic;
-
-def int_aarch64_sve_eor         : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_ands        : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_bics        : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_eors        : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_orr         : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_orn         : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_nor         : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_nand        : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_orrs        : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_orns        : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_nors        : AdvSIMD_Pred2VectorArg_Intrinsic;
-def int_aarch64_sve_nands       : AdvSIMD_Pred2VectorArg_Intrinsic;
-
+// TODO: Deprecated and will be replaced by isel patterns.
 def int_aarch64_sve_orr_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
 def int_aarch64_sve_eor_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
 def int_aarch64_sve_and_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
@@ -1578,6 +1564,13 @@ def int_aarch64_sve_ptrue : AdvSIMD_SVE_PTRUE_Intrinsic;
 // Predicate operations
 //
 
+def int_aarch64_sve_and_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_bic_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_eor_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_nand_z  : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_nor_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_orn_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_orr_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_pfirst  : AdvSIMD_Pred1VectorArg_Intrinsic;
 def int_aarch64_sve_pnext   : AdvSIMD_Pred1VectorArg_Intrinsic;
 def int_aarch64_sve_punpkhi : AdvSIMD_SVE_PUNPKHI_Intrinsic;
