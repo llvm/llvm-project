@@ -68,6 +68,9 @@ void DPURTE::addClangTargetOptions(
     // view) that will be used for debug purpose
     CC1Args.push_back("-ffunction-sections");
   }
+  // add stack-size-section by default to always be able to use
+  // dpu_stack_analyzer
+  CC1Args.push_back("-fstack-size-section");
   CC1Args.push_back("-fdata-sections");
   if (DriverArgs.hasArg(options::OPT_pg)) {
     CC1Args.push_back("-DDPU_PROFILING");
