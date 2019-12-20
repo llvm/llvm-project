@@ -47,6 +47,7 @@ static_library("Checkers") {
     "EnumCastOutOfRangeChecker.cpp",
     "ExprInspectionChecker.cpp",
     "FixedAddressChecker.cpp",
+    "FuchsiaHandleChecker.cpp",
     "GCDAntipatternChecker.cpp",
     "GTestChecker.cpp",
     "GenericTaintChecker.cpp",
