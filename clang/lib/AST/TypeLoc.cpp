@@ -294,6 +294,12 @@ bool TypeSpecTypeLoc::isKind(const TypeLoc &TL) {
   return TSTChecker().Visit(TL);
 }
 
+bool TagTypeLoc::isDefinition() const {
+  TagDecl *D = getDecl();
+  return D->isCompleteDefinition() &&
+         (D->getIdentifier() == nullptr || D->getLocation() == getNameLoc());
+}
+
 // Reimplemented to account for GNU/C++ extension
 //     typeof unary-expression
 // where there are no parentheses.

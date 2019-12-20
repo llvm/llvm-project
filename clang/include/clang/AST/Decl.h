@@ -78,33 +78,6 @@ class TypeLoc;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
 
-/// A container of type source information.
-///
-/// A client can read the relevant info using TypeLoc wrappers, e.g:
-/// @code
-/// TypeLoc TL = TypeSourceInfo->getTypeLoc();
-/// TL.getBeginLoc().print(OS, SrcMgr);
-/// @endcode
-class alignas(8) TypeSourceInfo {
-  // Contains a memory block after the class, used for type source information,
-  // allocated by ASTContext.
-  friend class ASTContext;
-
-  QualType Ty;
-
-  TypeSourceInfo(QualType ty) : Ty(ty) {}
-
-public:
-  /// Return the type wrapped by this type source info.
-  QualType getType() const { return Ty; }
-
-  /// Return the TypeLoc wrapper for the type source info.
-  TypeLoc getTypeLoc() const; // implemented in TypeLoc.h
-
-  /// Override the type stored in this TypeSourceInfo. Use with caution!
-  void overrideType(QualType T) { Ty = T; }
-};
-
 /// The top declaration context.
 class TranslationUnitDecl : public Decl, public DeclContext {
   ASTContext &Ctx;

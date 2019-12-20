@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_AST_TYPELOC_H
 #define LLVM_CLANG_AST_TYPELOC_H
 
-#include "clang/AST/Decl.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -39,6 +38,7 @@ class Expr;
 class ObjCInterfaceDecl;
 class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
+class ParmVarDecl;
 class TemplateTypeParmDecl;
 class UnqualTypeLoc;
 class UnresolvedUsingTypenameDecl;
@@ -704,11 +704,7 @@ public:
   TagDecl *getDecl() const { return getTypePtr()->getDecl(); }
 
   /// True if the tag was defined in this type specifier.
-  bool isDefinition() const {
-    TagDecl *D = getDecl();
-    return D->isCompleteDefinition() &&
-           (D->getIdentifier() == nullptr || D->getLocation() == getNameLoc());
-  }
+  bool isDefinition() const;
 };
 
 /// Wrapper for source info for record types.
