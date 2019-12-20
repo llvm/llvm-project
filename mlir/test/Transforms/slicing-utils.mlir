@@ -222,13 +222,12 @@ func @slicing_test() {
 // FWDBWD-LABEL: slicing_test_2
 func @slicing_test_2() {
   %c0 = constant 0 : index
-  %c1 = constant 1 : index
   %c2 = constant 2 : index
   %c16 = constant 16 : index
-  loop.for %i0 = %c0 to %c16 step %c1 {
+  affine.for %i0 = %c0 to %c16 {
     affine.for %i1 = (i)[] -> (i)(%i0) to 10 {
       // BWD: matched: %[[b:.*]] {{.*}} backward static slice:
-      // BWD: loop.for {{.*}}
+      // BWD: affine.for {{.*}}
 
       // affine.for appears in the body of loop.for
       // BWD: affine.for {{.*}}
@@ -238,7 +237,7 @@ func @slicing_test_2() {
       %b = "slicing-test-op"(%i1): (index) -> index
 
       // BWD: matched: %[[c:.*]] {{.*}} backward static slice:
-      // BWD: loop.for {{.*}}
+      // BWD: affine.for {{.*}}
 
       // affine.for appears in the body of loop.for
       // BWD-NEXT: affine.for {{.*}}

@@ -51,6 +51,19 @@ func @affine_for_upper_bound_invalid_dim(%arg : index) {
 }
 
 // -----
+func @affine_load_invalid_dim(%M : memref<10xi32>) {
+  "unknown"() ({
+  ^bb0(%arg: index):
+    affine.load %M[%arg] : memref<10xi32>
+    // expected-error@-1 {{index must be a dimension or symbol identifier}}
+    br ^bb1
+  ^bb1:
+    br ^bb1
+  }) : () -> ()
+  return
+}
+
+// -----
 
 #map0 = (d0)[s0] -> (d0 + s0)
 
