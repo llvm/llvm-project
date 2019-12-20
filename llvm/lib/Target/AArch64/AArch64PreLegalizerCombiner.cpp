@@ -79,7 +79,7 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     }
   }
 
-  if (Generated.tryCombineAll(Observer, MI, B))
+  if (Generated.tryCombineAll(Observer, MI, B, Helper))
     return true;
 
   switch (MI.getOpcode()) {
@@ -87,11 +87,6 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return Helper.tryCombineShuffleVector(MI);
-  case TargetOpcode::G_LOAD:
-  case TargetOpcode::G_SEXTLOAD:
-  case TargetOpcode::G_ZEXTLOAD:
-  case TargetOpcode::G_STORE:
-    return Helper.tryCombineIndexedLoadStore(MI);
   }
 
   return false;
