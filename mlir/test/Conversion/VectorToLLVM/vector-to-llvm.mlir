@@ -231,15 +231,15 @@ func @outerproduct_add(%arg0: vector<2xf32>, %arg1: vector<3xf32>, %arg2: vector
 //       CHECK:   llvm.return {{.*}} : !llvm<"[2 x <3 x float>]">
 
 func @shuffle_1D_direct(%arg0: vector<2xf32>, %arg1: vector<2xf32>) -> vector<2xf32> {
-  %1 = vector.shuffle %arg0, %arg1 [0 : i32, 1 : i32] : vector<2xf32>, vector<2xf32>
+  %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<2xf32>, vector<2xf32>
   return %1 : vector<2xf32>
 }
 // CHECK-LABEL: shuffle_1D_direct(%arg0: !llvm<"<2 x float>">, %arg1: !llvm<"<2 x float>">)
-//       CHECK:   %[[s:.*]] = llvm.shufflevector %arg0, %arg1 [0 : i32, 1 : i32] : !llvm<"<2 x float>">, !llvm<"<2 x float>">
+//       CHECK:   %[[s:.*]] = llvm.shufflevector %arg0, %arg1 [0, 1] : !llvm<"<2 x float>">, !llvm<"<2 x float>">
 //       CHECK:   llvm.return %[[s]] : !llvm<"<2 x float>">
 
 func @shuffle_1D(%arg0: vector<2xf32>, %arg1: vector<3xf32>) -> vector<5xf32> {
-  %1 = vector.shuffle %arg0, %arg1 [4 : i32, 3 : i32, 2 : i32, 1 : i32, 0 : i32] : vector<2xf32>, vector<3xf32>
+  %1 = vector.shuffle %arg0, %arg1 [4, 3, 2, 1, 0] : vector<2xf32>, vector<3xf32>
   return %1 : vector<5xf32>
 }
 // CHECK-LABEL: shuffle_1D(%arg0: !llvm<"<2 x float>">, %arg1: !llvm<"<3 x float>">)
@@ -267,7 +267,7 @@ func @shuffle_1D(%arg0: vector<2xf32>, %arg1: vector<3xf32>) -> vector<5xf32> {
 //       CHECK:   llvm.return %[[i5]] : !llvm<"<5 x float>">
 
 func @shuffle_2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf32> {
-  %1 = vector.shuffle %a, %b[1 : i32, 0 : i32, 2: i32] : vector<1x4xf32>, vector<2x4xf32>
+  %1 = vector.shuffle %a, %b[1, 0, 2] : vector<1x4xf32>, vector<2x4xf32>
   return %1 : vector<3x4xf32>
 }
 // CHECK-LABEL: shuffle_2D(%arg0: !llvm<"[1 x <4 x float>]">, %arg1: !llvm<"[2 x <4 x float>]">)
@@ -291,38 +291,38 @@ func @extract_element(%arg0: vector<16xf32>) -> f32 {
 //       CHECK:   llvm.return %[[x]] : !llvm.float
 
 func @extract_element_from_vec_1d(%arg0: vector<16xf32>) -> f32 {
-  %0 = vector.extract %arg0[15 : i32]: vector<16xf32>
+  %0 = vector.extract %arg0[15]: vector<16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: extract_element_from_vec_1d
-//       CHECK:   llvm.mlir.constant(15 : i32) : !llvm.i32
-//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i32] : !llvm<"<16 x float>">
+//       CHECK:   llvm.mlir.constant(15 : i64) : !llvm.i64
+//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<16 x float>">
 //       CHECK:   llvm.return {{.*}} : !llvm.float
 
 func @extract_vec_2d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<3x16xf32> {
-  %0 = vector.extract %arg0[0 : i32]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0]: vector<4x3x16xf32>
   return %0 : vector<3x16xf32>
 }
 // CHECK-LABEL: extract_vec_2d_from_vec_3d
-//       CHECK:   llvm.extractvalue {{.*}}[0 : i32] : !llvm<"[4 x [3 x <16 x float>]]">
+//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[4 x [3 x <16 x float>]]">
 //       CHECK:   llvm.return {{.*}} : !llvm<"[3 x <16 x float>]">
 
 func @extract_vec_1d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<16xf32> {
-  %0 = vector.extract %arg0[0 : i32, 0 : i32]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0, 0]: vector<4x3x16xf32>
   return %0 : vector<16xf32>
 }
 // CHECK-LABEL: extract_vec_1d_from_vec_3d
-//       CHECK:   llvm.extractvalue {{.*}}[0 : i32, 0 : i32] : !llvm<"[4 x [3 x <16 x float>]]">
+//       CHECK:   llvm.extractvalue {{.*}}[0, 0] : !llvm<"[4 x [3 x <16 x float>]]">
 //       CHECK:   llvm.return {{.*}} : !llvm<"<16 x float>">
 
 func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
-  %0 = vector.extract %arg0[0 : i32, 0 : i32, 0 : i32]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0, 0, 0]: vector<4x3x16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: extract_element_from_vec_3d
-//       CHECK:   llvm.extractvalue {{.*}}[0 : i32, 0 : i32] : !llvm<"[4 x [3 x <16 x float>]]">
-//       CHECK:   llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i32] : !llvm<"<16 x float>">
+//       CHECK:   llvm.extractvalue {{.*}}[0, 0] : !llvm<"[4 x [3 x <16 x float>]]">
+//       CHECK:   llvm.mlir.constant(0 : i64) : !llvm.i64
+//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<16 x float>">
 //       CHECK:   llvm.return {{.*}} : !llvm.float
 
 func @insert_element(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
@@ -336,39 +336,39 @@ func @insert_element(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
 //       CHECK:   llvm.return %[[x]] : !llvm<"<4 x float>">
 
 func @insert_element_into_vec_1d(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
-  %0 = vector.insert %arg0, %arg1[3 : i32] : f32 into vector<4xf32>
+  %0 = vector.insert %arg0, %arg1[3] : f32 into vector<4xf32>
   return %0 : vector<4xf32>
 }
 // CHECK-LABEL: insert_element_into_vec_1d
-//       CHECK:   llvm.mlir.constant(3 : i32) : !llvm.i32
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i32] : !llvm<"<4 x float>">
+//       CHECK:   llvm.mlir.constant(3 : i64) : !llvm.i64
+//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<4 x float>">
 //       CHECK:   llvm.return {{.*}} : !llvm<"<4 x float>">
 
 func @insert_vec_2d_into_vec_3d(%arg0: vector<8x16xf32>, %arg1: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
-  %0 = vector.insert %arg0, %arg1[3 : i32] : vector<8x16xf32> into vector<4x8x16xf32>
+  %0 = vector.insert %arg0, %arg1[3] : vector<8x16xf32> into vector<4x8x16xf32>
   return %0 : vector<4x8x16xf32>
 }
 // CHECK-LABEL: insert_vec_2d_into_vec_3d
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3 : i32] : !llvm<"[4 x [8 x <16 x float>]]">
+//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3] : !llvm<"[4 x [8 x <16 x float>]]">
 //       CHECK:   llvm.return {{.*}} : !llvm<"[4 x [8 x <16 x float>]]">
 
 func @insert_vec_1d_into_vec_3d(%arg0: vector<16xf32>, %arg1: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
-  %0 = vector.insert %arg0, %arg1[3 : i32, 7 : i32] : vector<16xf32> into vector<4x8x16xf32>
+  %0 = vector.insert %arg0, %arg1[3, 7] : vector<16xf32> into vector<4x8x16xf32>
   return %0 : vector<4x8x16xf32>
 }
 // CHECK-LABEL: insert_vec_1d_into_vec_3d
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3 : i32, 7 : i32] : !llvm<"[4 x [8 x <16 x float>]]">
+//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3, 7] : !llvm<"[4 x [8 x <16 x float>]]">
 //       CHECK:   llvm.return {{.*}} : !llvm<"[4 x [8 x <16 x float>]]">
 
 func @insert_element_into_vec_3d(%arg0: f32, %arg1: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
-  %0 = vector.insert %arg0, %arg1[3 : i32, 7 : i32, 15 : i32] : f32 into vector<4x8x16xf32>
+  %0 = vector.insert %arg0, %arg1[3, 7, 15] : f32 into vector<4x8x16xf32>
   return %0 : vector<4x8x16xf32>
 }
 // CHECK-LABEL: insert_element_into_vec_3d
-//       CHECK:   llvm.extractvalue {{.*}}[3 : i32, 7 : i32] : !llvm<"[4 x [8 x <16 x float>]]">
-//       CHECK:   llvm.mlir.constant(15 : i32) : !llvm.i32
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i32] : !llvm<"<16 x float>">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3 : i32, 7 : i32] : !llvm<"[4 x [8 x <16 x float>]]">
+//       CHECK:   llvm.extractvalue {{.*}}[3, 7] : !llvm<"[4 x [8 x <16 x float>]]">
+//       CHECK:   llvm.mlir.constant(15 : i64) : !llvm.i64
+//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<16 x float>">
+//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3, 7] : !llvm<"[4 x [8 x <16 x float>]]">
 //       CHECK:   llvm.return {{.*}} : !llvm<"[4 x [8 x <16 x float>]]">
 
 func @vector_type_cast(%arg0: memref<8x8x8xf32>) -> memref<vector<8x8x8xf32>> {

@@ -48,19 +48,19 @@ func @vector_broadcast(%a: f32, %b: vector<16xf32>, %c: vector<1x16xf32>, %d: ve
 
 // CHECK-LABEL: @shuffle1D
 func @shuffle1D(%a: vector<2xf32>, %b: vector<4xf32>) -> vector<2xf32> {
-  // CHECK: vector.shuffle %{{.*}}, %{{.*}}[0 : i32, 1 : i32, 2 : i32, 3 : i32] : vector<2xf32>, vector<2xf32>
-  %1 = vector.shuffle %a, %a[0 : i32, 1 : i32, 2: i32, 3 : i32] : vector<2xf32>, vector<2xf32>
-  // CHECK-NEXT: vector.shuffle %{{.*}}, %{{.*}}[0 : i32, 1 : i32, 2 : i32] : vector<4xf32>, vector<4xf32>
-  %2 = vector.shuffle %1, %b[0 : i32, 1 : i32, 2 : i32] : vector<4xf32>, vector<4xf32>
-  // CHECK-NEXT: vector.shuffle %{{.*}}, %{{.*}}[0 : i32, 6 : i32] : vector<3xf32>, vector<4xf32>
-  %3 = vector.shuffle %2, %b[0 : i32, 6 : i32] : vector<3xf32>, vector<4xf32>
+  // CHECK: vector.shuffle %{{.*}}, %{{.*}}[0, 1, 2, 3] : vector<2xf32>, vector<2xf32>
+  %1 = vector.shuffle %a, %a[0, 1, 2, 3] : vector<2xf32>, vector<2xf32>
+  // CHECK-NEXT: vector.shuffle %{{.*}}, %{{.*}}[0, 1, 2] : vector<4xf32>, vector<4xf32>
+  %2 = vector.shuffle %1, %b[0, 1, 2] : vector<4xf32>, vector<4xf32>
+  // CHECK-NEXT: vector.shuffle %{{.*}}, %{{.*}}[0, 6] : vector<3xf32>, vector<4xf32>
+  %3 = vector.shuffle %2, %b[0, 6] : vector<3xf32>, vector<4xf32>
   return %3 : vector<2xf32>
 }
 
 // CHECK-LABEL: @shuffle2D
 func @shuffle2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf32> {
-  // CHECK: vector.shuffle %{{.*}}, %{{.*}}[0 : i32, 1 : i32, 2 : i32] : vector<1x4xf32>, vector<2x4xf32>
-  %1 = vector.shuffle %a, %b[0 : i32, 1 : i32, 2: i32] : vector<1x4xf32>, vector<2x4xf32>
+  // CHECK: vector.shuffle %{{.*}}, %{{.*}}[0, 1, 2] : vector<1x4xf32>, vector<2x4xf32>
+  %1 = vector.shuffle %a, %b[0, 1, 2] : vector<1x4xf32>, vector<2x4xf32>
   return %1 : vector<3x4xf32>
 }
 
@@ -75,12 +75,12 @@ func @extract_element(%a: vector<16xf32>) -> f32 {
 
 // CHECK-LABEL: @extract
 func @extract(%arg0: vector<4x8x16xf32>) -> (vector<8x16xf32>, vector<16xf32>, f32) {
-  // CHECK: vector.extract {{.*}}[3 : i32] : vector<4x8x16xf32>
-  %1 = vector.extract %arg0[3 : i32] : vector<4x8x16xf32>
-  // CHECK-NEXT: vector.extract {{.*}}[3 : i32, 3 : i32] : vector<4x8x16xf32>
-  %2 = vector.extract %arg0[3 : i32, 3 : i32] : vector<4x8x16xf32>
-  // CHECK-NEXT: vector.extract {{.*}}[3 : i32, 3 : i32, 3 : i32] : vector<4x8x16xf32>
-  %3 = vector.extract %arg0[3 : i32, 3 : i32, 3 : i32] : vector<4x8x16xf32>
+  // CHECK: vector.extract {{.*}}[3] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[3] : vector<4x8x16xf32>
+  // CHECK-NEXT: vector.extract {{.*}}[3, 3] : vector<4x8x16xf32>
+  %2 = vector.extract %arg0[3, 3] : vector<4x8x16xf32>
+  // CHECK-NEXT: vector.extract {{.*}}[3, 3, 3] : vector<4x8x16xf32>
+  %3 = vector.extract %arg0[3, 3, 3] : vector<4x8x16xf32>
   return %1, %2, %3 : vector<8x16xf32>, vector<16xf32>, f32
 }
 
@@ -95,12 +95,12 @@ func @insert_element(%a: f32, %b: vector<16xf32>) -> vector<16xf32> {
 
 // CHECK-LABEL: @insert
 func @insert(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>, %res: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
-  // CHECK: vector.insert %{{.*}}, %{{.*}}[3 : i32] : vector<8x16xf32> into vector<4x8x16xf32>
-  %1 = vector.insert %c, %res[3 : i32] : vector<8x16xf32> into vector<4x8x16xf32>
-  // CHECK: vector.insert %{{.*}}, %{{.*}}[3 : i32, 3 : i32] : vector<16xf32> into vector<4x8x16xf32>
-  %2 = vector.insert %b, %res[3 : i32, 3 : i32] : vector<16xf32> into vector<4x8x16xf32>
-  // CHECK: vector.insert %{{.*}}, %{{.*}}[3 : i32, 3 : i32, 3 : i32] : f32 into vector<4x8x16xf32>
-  %3 = vector.insert %a, %res[3 : i32, 3 : i32, 3 : i32] : f32 into vector<4x8x16xf32>
+  // CHECK: vector.insert %{{.*}}, %{{.*}}[3] : vector<8x16xf32> into vector<4x8x16xf32>
+  %1 = vector.insert %c, %res[3] : vector<8x16xf32> into vector<4x8x16xf32>
+  // CHECK: vector.insert %{{.*}}, %{{.*}}[3, 3] : vector<16xf32> into vector<4x8x16xf32>
+  %2 = vector.insert %b, %res[3, 3] : vector<16xf32> into vector<4x8x16xf32>
+  // CHECK: vector.insert %{{.*}}, %{{.*}}[3, 3, 3] : f32 into vector<4x8x16xf32>
+  %3 = vector.insert %a, %res[3, 3, 3] : f32 into vector<4x8x16xf32>
   return %3 : vector<4x8x16xf32>
 }
 

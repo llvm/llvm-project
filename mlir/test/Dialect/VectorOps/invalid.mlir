@@ -32,28 +32,28 @@ func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
 
 func @shuffle_elt_type_mismatch(%arg0: vector<2xf32>, %arg1: vector<2xi32>) {
   // expected-error@+1 {{'vector.shuffle' op failed to verify that second operand v2 and result have same element type}}
-  %1 = vector.shuffle %arg0, %arg1 [0 : i32, 1 : i32] : vector<2xf32>, vector<2xi32>
+  %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<2xf32>, vector<2xi32>
 }
 
 // -----
 
 func @shuffle_rank_mismatch(%arg0: vector<2xf32>, %arg1: vector<4x2xf32>) {
   // expected-error@+1 {{'vector.shuffle' op rank mismatch}}
-  %1 = vector.shuffle %arg0, %arg1 [0 : i32, 1 : i32] : vector<2xf32>, vector<4x2xf32>
+  %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<2xf32>, vector<4x2xf32>
 }
 
 // -----
 
 func @shuffle_trailing_dim_size_mismatch(%arg0: vector<2x2xf32>, %arg1: vector<2x4xf32>) {
   // expected-error@+1 {{'vector.shuffle' op dimension mismatch}}
-  %1 = vector.shuffle %arg0, %arg1 [0 : i32, 1 : i32] : vector<2x2xf32>, vector<2x4xf32>
+  %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<2x2xf32>, vector<2x4xf32>
 }
 
 // -----
 
 func @shuffle_index_out_of_range(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
   // expected-error@+1 {{'vector.shuffle' op mask index #2 out of range}}
-  %1 = vector.shuffle %arg0, %arg1 [0 : i32, 4 : i32] : vector<2xf32>, vector<2xf32>
+  %1 = vector.shuffle %arg0, %arg1 [0, 4] : vector<2xf32>, vector<2xf32>
 }
 
 // -----
@@ -89,35 +89,35 @@ func @extract_position_empty(%arg0: vector<4x8x16xf32>) {
 
 func @extract_position_rank_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute of rank smaller than vector}}
-  %1 = vector.extract %arg0[0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[0, 0, 0, 0] : vector<4x8x16xf32>
 }
 
 // -----
 
 func @extract_position_rank_overflow_generic(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute of rank smaller than vector}}
-  %1 = "vector.extract" (%arg0) { position = [0 : i32, 0 : i32, 0 : i32, 0 : i32] } : (vector<4x8x16xf32>) -> (vector<16xf32>)
+  %1 = "vector.extract" (%arg0) { position = [0, 0, 0, 0] } : (vector<4x8x16xf32>) -> (vector<16xf32>)
 }
 
 // -----
 
 func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #2 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[0 : i32, 43 : i32, 0 : i32] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[0, 43, 0] : vector<4x8x16xf32>
 }
 
 // -----
 
 func @extract_precise_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[3 : i32, 7 : i32, 16 : i32] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[3, 7, 16] : vector<4x8x16xf32>
 }
 
 // -----
 
 func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[0 : i32, 0 : i32, -1 : i32] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[0, 0, -1] : vector<4x8x16xf32>
 }
 
 // -----
@@ -147,35 +147,35 @@ func @insert_vector_type(%a: f32, %b: vector<4x8x16xf32>) {
 
 func @insert_vector_type(%a: f32, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute of rank smaller than dest vector rank}}
-  %1 = vector.insert %a, %b[3 : i32,3 : i32,3 : i32,3 : i32,3 : i32,3 : i32] : f32 into vector<4x8x16xf32>
+  %1 = vector.insert %a, %b[3, 3, 3, 3, 3, 3] : f32 into vector<4x8x16xf32>
 }
 
 // -----
 
 func @insert_vector_type(%a: vector<4xf32>, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute rank + source rank to match dest vector rank}}
-  %1 = vector.insert %a, %b[3 : i32] : vector<4xf32> into vector<4x8x16xf32>
+  %1 = vector.insert %a, %b[3] : vector<4xf32> into vector<4x8x16xf32>
 }
 
 // -----
 
 func @insert_vector_type(%a: f32, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute rank to match the dest vector rank}}
-  %1 = vector.insert %a, %b[3 : i32,3 : i32] : f32 into vector<4x8x16xf32>
+  %1 = vector.insert %a, %b[3, 3] : f32 into vector<4x8x16xf32>
 }
 
 // -----
 
 func @insert_position_overflow(%a: f32, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding dest vector dimension}}
-  %1 = vector.insert %a, %b[0 : i32, 0 : i32, -1 : i32] : f32 into vector<4x8x16xf32>
+  %1 = vector.insert %a, %b[0, 0, -1] : f32 into vector<4x8x16xf32>
 }
 
 // -----
 
 func @insert_precise_position_overflow(%a: f32, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #1 to be a non-negative integer smaller than the corresponding dest vector dimension}}
-  %1 = vector.insert %a, %b[4 : i32, 7 : i32, 15 : i32] : f32 into vector<4x8x16xf32>
+  %1 = vector.insert %a, %b[4, 7, 15] : f32 into vector<4x8x16xf32>
 }
 
 // -----
