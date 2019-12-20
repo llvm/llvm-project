@@ -362,6 +362,20 @@ func @reduce_incorrect_yield(%arg0 : f32) {
 
 // -----
 
+func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
+  // expected-error@+1 {{'gpu.shuffle' op requires the same type for value operand and result}}
+  %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "xor" } : (f32, i32, i32) -> (i32, i1)
+}
+
+// -----
+
+func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
+  // expected-error@+1 {{'gpu.shuffle' op requires value operand type to be f32 or i32}}
+  %shfl, %pred = gpu.shuffle %arg0, %arg1, %arg2 xor : index
+}
+
+// -----
+
 module {
   module @gpu_funcs attributes {gpu.kernel_module} {
     // expected-error @+1 {{custom op 'gpu.func' gpu.func requires named arguments}}

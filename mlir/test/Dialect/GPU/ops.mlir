@@ -81,6 +81,11 @@ module attributes {gpu.container_module} {
       %one = constant 1.0 : f32
       %sum = "gpu.all_reduce"(%one) ({}) {op = "add"} : (f32) -> (f32)
 
+      %width = constant 7 : i32
+      %offset = constant 3 : i32
+      // CHECK: gpu.shuffle %{{.*}}, %{{.*}}, %{{.*}} xor : f32
+      %shfl, %pred = gpu.shuffle %arg0, %offset, %width xor : f32
+
       "gpu.barrier"() : () -> ()
 
       "some_op"(%bIdX, %tIdX) : (index, index) -> ()

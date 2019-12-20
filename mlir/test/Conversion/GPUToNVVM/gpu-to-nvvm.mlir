@@ -75,6 +75,31 @@ module attributes {gpu.kernel_module} {
 // -----
 
 module attributes {gpu.kernel_module} {
+  // CHECK-LABEL: func @gpu_shuffle()
+  func @gpu_shuffle()
+      attributes { gpu.kernel } {
+    // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : !llvm.float
+    %arg0 = constant 1.0 : f32
+    // CHECK: %[[#OFFSET:]] = llvm.mlir.constant(4 : i32) : !llvm.i32
+    %arg1 = constant 4 : i32
+    // CHECK: %[[#WIDTH:]] = llvm.mlir.constant(23 : i32) : !llvm.i32
+    %arg2 = constant 23 : i32
+    // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+    // CHECK: %[[#SHL:]] = llvm.shl %[[#ONE]], %[[#WIDTH]] : !llvm.i32
+    // CHECK: %[[#MASK:]] = llvm.sub %[[#SHL]], %[[#ONE]] : !llvm.i32
+    // CHECK: %[[#CLAMP:]] = llvm.sub %[[#WIDTH]], %[[#ONE]] : !llvm.i32
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync.bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] : !llvm<"{ float, i1 }">
+    // CHECK: llvm.extractvalue %[[#SHFL]][0 : index] : !llvm<"{ float, i1 }">
+    // CHECK: llvm.extractvalue %[[#SHFL]][1 : index] : !llvm<"{ float, i1 }">
+    %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "xor" } : (f32, i32, i32) -> (f32, i1)
+
+    std.return
+  }
+}
+
+// -----
+
+module attributes {gpu.kernel_module} {
   // CHECK-LABEL: func @gpu_sync()
   func @gpu_sync()
       attributes { gpu.kernel } {
