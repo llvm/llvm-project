@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding %s -verify
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -flax-vector-conversions=none %s -verify
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -x c++ %s -verify
+// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wcast-qual %s -verify
+// RUN: %clang_cc1 -fsyntax-only -ffreestanding -flax-vector-conversions=none -Wcast-qual %s -verify
+// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wcast-qual -x c++ %s -verify
 // expected-no-diagnostics
 
 #if defined(i386) || defined(__x86_64__)
@@ -14,6 +14,10 @@ void __attribute__((__target__("mmx"))) mm_empty_wrap(void) {
 
 __m128 __attribute__((__target__("sse"))) mm_add_ss_wrap(__m128 a, __m128 b) {
   return _mm_add_ss(a, b);
+}
+
+void __attribute__((__target__("sse"))) mm_prefetch_wrap(const void *p) {
+  _mm_prefetch(p, 0x3);
 }
 
 __m128d __attribute__((__target__("sse2"))) mm_sqrt_sd_wrap(__m128d a, __m128d b) {
