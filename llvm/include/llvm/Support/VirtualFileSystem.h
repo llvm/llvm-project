@@ -293,7 +293,7 @@ public:
   /// \param Path A path that is modified to be an absolute path.
   /// \returns success if \a path has been made absolute, otherwise a
   ///          platform-specific error_code.
-  std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
+  virtual std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
 };
 
 /// Gets an \p vfs::FileSystem for the 'real' file system, as seen by
@@ -748,6 +748,8 @@ public:
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
 
   std::error_code isLocal(const Twine &Path, bool &Result) override;
+
+  std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const override;
 
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
