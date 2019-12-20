@@ -9537,9 +9537,3 @@ PersistentExpressionState *
 ClangASTContextForExpressions::GetPersistentExpressionState() {
   return m_persistent_variables.get();
 }
-
-clang::ExternalASTMerger &
-ClangASTContextForExpressions::GetMergerUnchecked() {
-  lldbassert(m_scratch_ast_source_up != nullptr);
-  return m_scratch_ast_source_up->GetMergerUnchecked();
-}

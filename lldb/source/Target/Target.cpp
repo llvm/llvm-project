@@ -3850,18 +3850,6 @@ void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
                                             true);
 }
 
-bool TargetProperties::GetUseModernTypeLookup() const {
-  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
-      nullptr, false, ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
-    return exp_values->GetPropertyAtIndexAsBoolean(
-        nullptr, ePropertyUseModernTypeLookup, true);
-  else
-    return true;
-}
-
 bool TargetProperties::GetSwiftCreateModuleContextsInParallel() const {
   const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
       nullptr, false, ePropertyExperimental);
@@ -4482,7 +4470,7 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
   return module_list;
 }
 
-std::recursive_mutex &Target::GetAPIMutex() { 
+std::recursive_mutex &Target::GetAPIMutex() {
   if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
     return m_private_mutex;
   else
