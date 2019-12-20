@@ -21858,8 +21858,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   if (AddTest) {
     CC = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
-    Cond = EmitCmp(Cond, DAG.getConstant(0, DL, Cond.getValueType()),
-                   X86::COND_NE, DL, DAG);
+    Cond = EmitTest(Cond, X86::COND_NE, DL, DAG, Subtarget);
   }
 
   // a <  b ? -1 :  0 -> RES = ~setcc_carry
@@ -22580,8 +22579,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   if (addTest) {
     X86::CondCode X86Cond = Inverted ? X86::COND_E : X86::COND_NE;
     CC = DAG.getTargetConstant(X86Cond, dl, MVT::i8);
-    Cond = EmitCmp(Cond, DAG.getConstant(0, dl, Cond.getValueType()),
-                   X86Cond, dl, DAG);
+    Cond = EmitTest(Cond, X86Cond, dl, DAG, Subtarget);
   }
   Cond = ConvertCmpIfNecessary(Cond, DAG);
   return DAG.getNode(X86ISD::BRCOND, dl, Op.getValueType(),
