@@ -1,5 +1,4 @@
-//===---- reduction.cu - NVPTX OpenMP reduction implementation ---- CUDA
-//-*-===//
+//===---- reduction.cu - GPU OpenMP reduction implementation ----- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,9 +9,6 @@
 // This file contains the implementation of reduction with KMPC interface.
 //
 //===----------------------------------------------------------------------===//
-
-#include <complex.h>
-#include <stdio.h>
 
 #include "common/omptarget.h"
 #include "target_impl.h"
