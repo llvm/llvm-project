@@ -624,6 +624,30 @@ def vecshiftR64Narrow : Operand<i32>, ImmLeaf<i32, [{
   let ParserMatchClass = Imm1_32Operand;
 }
 
+// Same as vecshiftR#N, but use TargetConstant (TimmLeaf) instead of Constant
+// (ImmLeaf)
+def tvecshiftR8 : Operand<i32>, TImmLeaf<i32, [{
+  return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 9);
+}]> {
+  let EncoderMethod = "getVecShiftR8OpValue";
+  let DecoderMethod = "DecodeVecShiftR8Imm";
+  let ParserMatchClass = Imm1_8Operand;
+}
+def tvecshiftR16 : Operand<i32>, TImmLeaf<i32, [{
+  return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 17);
+}]> {
+  let EncoderMethod = "getVecShiftR16OpValue";
+  let DecoderMethod = "DecodeVecShiftR16Imm";
+  let ParserMatchClass = Imm1_16Operand;
+}
+def tvecshiftR32 : Operand<i32>, TImmLeaf<i32, [{
+  return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 33);
+}]> {
+  let EncoderMethod = "getVecShiftR32OpValue";
+  let DecoderMethod = "DecodeVecShiftR32Imm";
+  let ParserMatchClass = Imm1_32Operand;
+}
+
 def Imm0_1Operand : AsmImmRange<0, 1>;
 def Imm0_7Operand : AsmImmRange<0, 7>;
 def Imm0_15Operand : AsmImmRange<0, 15>;
