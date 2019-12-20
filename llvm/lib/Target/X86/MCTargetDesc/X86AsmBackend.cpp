@@ -148,10 +148,7 @@ class X86AsmBackend : public MCAsmBackend {
   X86AlignBranchKind AlignBranchType;
   Align AlignBoundary;
 
-  bool isFirstMacroFusibleInst(const MCInst &Inst) const;
   bool isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const;
-  bool isRIPRelative(const MCInst &MI) const;
-  bool hasVariantSymbol(const MCInst &MI) const;
 
   bool needAlign(MCObjectStreamer &OS) const;
   bool needAlignInst(const MCInst &Inst) const;
@@ -370,22 +367,37 @@ classifySecondInstInMacroFusion(const MCInst &MI, const MCInstrInfo &MCII) {
   return classifySecondCondCodeInMacroFusion(CC);
 }
 
+/// Check if the instruction uses RIP relative addressing.
+static bool isRIPRelative(const MCInst &MI, const MCInstrInfo &MCII) {
+  unsigned Opcode = MI.getOpcode();
+  const MCInstrDesc &Desc = MCII.get(Opcode);
+  uint64_t TSFlags = Desc.TSFlags;
+  unsigned CurOp = X86II::getOperandBias(Desc);
+  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  if (MemoryOperand < 0)
+    return false;
+  unsigned BaseRegNum = MemoryOperand + CurOp + X86::AddrBaseReg;
+  unsigned BaseReg = MI.getOperand(BaseRegNum).getReg();
+  return (BaseReg == X86::RIP);
+}
+
 /// Check if the instruction is valid as the first instruction in macro fusion.
-bool X86AsmBackend::isFirstMacroFusibleInst(const MCInst &Inst) const {
+static bool isFirstMacroFusibleInst(const MCInst &Inst,
+                                    const MCInstrInfo &MCII) {
   // An Intel instruction with RIP relative addressing is not macro fusible.
-  if (isRIPRelative(Inst))
+  if (isRIPRelative(Inst, MCII))
     return false;
   X86::FirstMacroFusionInstKind FIK =
       X86::classifyFirstOpcodeInMacroFusion(Inst.getOpcode());
   return FIK != X86::FirstMacroFusionInstKind::Invalid;
 }
 
-/// Check if the two instructions are macro-fused.
+/// Check if the two instructions will be macro-fused on the target cpu.
 bool X86AsmBackend::isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const {
   const MCInstrDesc &InstDesc = MCII->get(Jcc.getOpcode());
   if (!InstDesc.isConditionalBranch())
     return false;
-  if (!isFirstMacroFusibleInst(Cmp))
+  if (!isFirstMacroFusibleInst(Cmp, *MCII))
     return false;
   const X86::FirstMacroFusionInstKind CmpKind =
       X86::classifyFirstOpcodeInMacroFusion(Cmp.getOpcode());
@@ -394,33 +406,15 @@ bool X86AsmBackend::isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const {
   return X86::isMacroFused(CmpKind, BranchKind);
 }
 
-/// Check if the instruction is RIP relative addressing.
-bool X86AsmBackend::isRIPRelative(const MCInst &MI) const {
-  unsigned Opcode = MI.getOpcode();
-  const MCInstrDesc &Desc = MCII->get(Opcode);
-  uint64_t TSFlags = Desc.TSFlags;
-  unsigned CurOp = X86II::getOperandBias(Desc);
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
-  if (MemoryOperand >= 0) {
-    unsigned BaseRegNum = MemoryOperand + CurOp + X86::AddrBaseReg;
-    unsigned BaseReg = MI.getOperand(BaseRegNum).getReg();
-    if (BaseReg == X86::RIP)
-      return true;
-  }
-  return false;
-}
-
-/// Check if the instruction has variant symbol operand.
-bool X86AsmBackend::hasVariantSymbol(const MCInst &MI) const {
-
+/// Check if the instruction has a variant symbol operand.
+static bool hasVariantSymbol(const MCInst &MI) {
   for (auto &Operand : MI) {
-    if (Operand.isExpr()) {
-      const MCExpr &Expr = *Operand.getExpr();
-      if (Expr.getKind() == MCExpr::SymbolRef &&
-          cast<MCSymbolRefExpr>(*Operand.getExpr()).getKind() !=
-              MCSymbolRefExpr::VK_None)
-        return true;
-    }
+    if (!Operand.isExpr())
+      continue;
+    const MCExpr &Expr = *Operand.getExpr();
+    if (Expr.getKind() == MCExpr::SymbolRef &&
+        cast<MCSymbolRefExpr>(Expr).getKind() != MCSymbolRefExpr::VK_None)
+      return true;
   }
   return false;
 }
@@ -511,7 +505,7 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
     auto *F = getOrCreateBoundaryAlignFragment(OS);
     F->setEmitNops(true);
     F->setFused(false);
-  } else if (NeedAlignFused && isFirstMacroFusibleInst(Inst)) {
+  } else if (NeedAlignFused && isFirstMacroFusibleInst(Inst, *MCII)) {
     // We don't know if macro fusion happens until the reaching the next
     // instruction, so a place holder is put here if necessary.
     getOrCreateBoundaryAlignFragment(OS);
