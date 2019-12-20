@@ -27,9 +27,19 @@ public:
   NodeTreePrinter(llvm::raw_ostream &OS)
       : TextTreeStructure(OS, /* showColors */ false), OS(OS) {}
 
-  void Visit(const Decl *D) { OS << D->getDeclKindName() << "Decl"; }
+  void Visit(const Decl *D) {
+    OS << D->getDeclKindName() << "Decl";
+    if (auto *ND = dyn_cast<NamedDecl>(D)) {
+      OS << " '" << ND->getDeclName() << "'";
+    }
+  }
 
-  void Visit(const Stmt *S) { OS << S->getStmtClassName(); }
+  void Visit(const Stmt *S) {
+    OS << S->getStmtClassName();
+    if (auto *E = dyn_cast<DeclRefExpr>(S)) {
+      OS << " '" << E->getDecl()->getDeclName() << "'";
+    }
+  }
 
   void Visit(QualType QT) {
     OS << "QualType " << QT.split().Quals.getAsString();
@@ -147,7 +157,7 @@ void parmvardecl_attr(struct A __attribute__((address_space(19)))*);
 
   verifyWithDynNode(Func,
                     R"cpp(
-CXXMethodDecl
+CXXMethodDecl 'func'
 |-CompoundStmt
 | `-ReturnStmt
 |   `-IntegerLiteral
