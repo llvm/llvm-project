@@ -1823,9 +1823,8 @@ NamespaceDecl *ClangASTSource::AddNamespace(
 }
 
 clang::Decl *ClangASTSource::CopyDecl(Decl *src_decl) {
-  clang::ASTContext &from_context = src_decl->getASTContext();
   if (m_ast_importer_sp) {
-    return m_ast_importer_sp->CopyDecl(m_ast_context, &from_context, src_decl);
+    return m_ast_importer_sp->CopyDecl(m_ast_context, src_decl);
   } else {
     lldbassert(0 && "No mechanism for copying a decl!");
     return nullptr;

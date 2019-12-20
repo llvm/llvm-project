@@ -18,16 +18,12 @@
 using namespace lldb_private;
 using namespace lldb;
 
-static std::unique_ptr<ClangASTContext> createAST() {
-  return std::make_unique<ClangASTContext>(HostInfo::GetTargetTriple());
-}
-
 namespace {
 struct FakeClangExpressionDeclMap : public ClangExpressionDeclMap {
   FakeClangExpressionDeclMap(const ClangASTImporterSP &importer)
       : ClangExpressionDeclMap(false, nullptr, lldb::TargetSP(), importer,
                                nullptr) {
-    m_scratch_context = createAST();
+    m_scratch_context = clang_utils::createAST();
   }
   std::unique_ptr<ClangASTContext> m_scratch_context;
   /// Adds a persistent decl that can be found by the ClangExpressionDeclMap
