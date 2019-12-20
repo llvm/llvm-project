@@ -267,8 +267,8 @@ enum NodeType : unsigned {
   VEXTEND, STRICT_VEXTEND,
 
   // Round the f64 elements of vector operand 0 to f32s and store them in the
-  // even elements of the result.
-  VROUND,
+  // even elements of the result.  Regular and strict versions.
+  VROUND, STRICT_VROUND,
 
   // AND the two vector operands together and set CC based on the result.
   VTM,
