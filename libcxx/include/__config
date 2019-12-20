@@ -260,7 +260,6 @@
 #  else  // _BYTE_ORDER == _LITTLE_ENDIAN
 #    define _LIBCPP_BIG_ENDIAN
 #  endif  // _BYTE_ORDER == _LITTLE_ENDIAN
-#  define _LIBCPP_HAS_QUICK_EXIT
 #endif  // __NetBSD__
 
 #if defined(_WIN32)
@@ -354,7 +353,7 @@
 #    if __ANDROID_API__ >= 29
 #      define _LIBCPP_HAS_TIMESPEC_GET
 #    endif
-#  elif defined(__Fuchsia__) || defined(__wasi__)
+#  elif defined(__Fuchsia__) || defined(__wasi__) || defined(__NetBSD__)
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
 #    define _LIBCPP_HAS_QUICK_EXIT
 #    define _LIBCPP_HAS_TIMESPEC_GET
