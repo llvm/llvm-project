@@ -162,6 +162,10 @@ public:
   std::unique_ptr<llvm::lto::InputFile> obj;
 };
 
+inline bool isBitcode(MemoryBufferRef mb) {
+  return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
+}
+
 // Will report a fatal() error if the input buffer is not a valid bitcode
 // or wasm object file.
 InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName = "");
