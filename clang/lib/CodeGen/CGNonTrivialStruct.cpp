@@ -265,6 +265,9 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
   void visitPtrAuth(QualType FT, const FieldDecl *FD,
                     CharUnits CurStructOffset) {
     this->appendStr("_pa");
+    PointerAuthQualifier PtrAuth = FT.getPointerAuth();
+    this->appendStr(llvm::to_string(PtrAuth.getKey()) + "_");
+    this->appendStr(llvm::to_string(PtrAuth.getExtraDiscriminator()) + "_");
     CharUnits FieldOffset = CurStructOffset + this->getFieldOffset(FD);
     this->appendStr(llvm::to_string(FieldOffset.getQuantity()));
   }
