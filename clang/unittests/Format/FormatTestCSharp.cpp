@@ -316,6 +316,27 @@ TEST_F(FormatTestCSharp, AttributesIndentation) {
                "    }\n"
                "}\n",
                Style);
+
+  verifyFormat("public A : Base\n"
+               "{\n"
+               "}\n"
+               "[Test]\n"
+               "public Foo()\n"
+               "{\n"
+               "}\n",
+               Style);
+
+  verifyFormat("namespace\n"
+               "{\n"
+               "public A : Base\n"
+               "{\n"
+               "}\n"
+               "[Test]\n"
+               "public Foo()\n"
+               "{\n"
+               "}\n"
+               "}\n",
+               Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpSpaceBefore) {

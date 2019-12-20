@@ -466,7 +466,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
               (NextTok->is(tok::semi) &&
                (!ExpectClassBody || LBraceStack.size() != 1)) ||
               (NextTok->isBinaryOperator() && !NextIsObjCMethod);
-          if (NextTok->is(tok::l_square)) {
+          if (!Style.isCSharp() && NextTok->is(tok::l_square)) {
             // We can have an array subscript after a braced init
             // list, but C++11 attributes are expected after blocks.
             NextTok = Tokens->getNextToken();
