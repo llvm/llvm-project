@@ -337,6 +337,10 @@ public:
 
   void emitLegacySExt(unsigned FromBits);
   void emitLegacyZExt(unsigned FromBits);
+
+  /// Emit location information expressed via WebAssembly location + offset
+  /// The Index is an identifier for locals, globals or operand stack.
+  void addWasmLocation(unsigned Index, int64_t Offset);
 };
 
 /// DwarfExpression implementation for .debug_loc entries.
