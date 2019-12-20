@@ -325,3 +325,16 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
   OSABI:   ELFOSABI_STANDALONE
+
+## Test we can use an arbitrary number for OSABI.
+# RUN: yaml2obj %s --docnum=27 -o %t.number
+# RUN: llvm-readobj --file-headers %t.number | FileCheck %s --check-prefix=OSABI-NUMBER
+# OSABI-NUMBER: OS/ABI: 0xFE
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+  OSABI:   0xFE
