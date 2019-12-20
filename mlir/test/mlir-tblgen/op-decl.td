@@ -9,7 +9,9 @@ def Test_Dialect : Dialect {
 class NS_Op<string mnemonic, list<OpTrait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
 
-def NS_AOp : NS_Op<"a_op", [NoSideEffect]> {
+// NoSideEffect trait is included twice to ensure it gets uniqued during
+// emission.
+def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
   let arguments = (ins
     I32:$a,
     Variadic<F32>:$b,
