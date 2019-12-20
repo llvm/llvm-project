@@ -423,7 +423,7 @@ Example:::
 `PragmaDiagnosticPush <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a0f3ff19762baa38fe6c5c58022d32979>`_ Callback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PragmaDiagnosticPush is called when a #pragma gcc dianostic push directive is read.
+PragmaDiagnosticPush is called when a #pragma gcc diagnostic push directive is read.
 
 Argument descriptions:
 
@@ -443,7 +443,7 @@ Example:::
 `PragmaDiagnosticPop <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ac94d789873122221fba8d76f6c5ea45e>`_ Callback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PragmaDiagnosticPop is called when a #pragma gcc dianostic pop directive is read.
+PragmaDiagnosticPop is called when a #pragma gcc diagnostic pop directive is read.
 
 Argument descriptions:
 
@@ -463,7 +463,7 @@ Example:::
 `PragmaDiagnostic <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#afe7938f38a83cb7b4b25a13edfdd7bdd>`_ Callback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PragmaDiagnostic is called when a #pragma gcc dianostic directive is read.
+PragmaDiagnostic is called when a #pragma gcc diagnostic directive is read.
 
 Argument descriptions:
 

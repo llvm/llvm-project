@@ -74,7 +74,7 @@ the default ``clangd``:
 Most distributions include clangd in a ``clang-tools`` package, or in the full
 ``llvm`` distribution.
 
-For some platforms, binaries are also avaliable at `releases.llvm.org
+For some platforms, binaries are also available at `releases.llvm.org
 <http://releases.llvm.org/download.html>`__.
 
 :raw-html:`</details>`
