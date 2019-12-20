@@ -992,6 +992,50 @@ public:
 extern template class basic_parser<int>;
 
 //--------------------------------------------------
+// parser<long>
+//
+template <> class parser<long> final : public basic_parser<long> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // parse - Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, long &Val);
+
+  // getValueName - Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "long"; }
+
+  void printOptionDiff(const Option &O, long V, OptVal Default,
+                       size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+extern template class basic_parser<long>;
+
+//--------------------------------------------------
+// parser<long long>
+//
+template <> class parser<long long> : public basic_parser<long long> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // parse - Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, long long &Val);
+
+  // getValueName - Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "long"; }
+
+  void printOptionDiff(const Option &O, long long V, OptVal Default,
+                       size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+extern template class basic_parser<long long>;
+
+//--------------------------------------------------
 // parser<unsigned>
 //
 template <> class parser<unsigned> : public basic_parser<unsigned> {
