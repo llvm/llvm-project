@@ -49,9 +49,11 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_NETBSD
 
+## Test ELFOSABI_GNU and ELFOSABI_LINUX (historical alias for ELFOSABI_GNU).
 # RUN: yaml2obj %s --docnum=5 -o %t.gnu
 # RUN: llvm-readobj --file-headers %t.gnu | FileCheck %s --check-prefix=OSABI-GNU
-
+# RUN: yaml2obj %s --docnum=6 -o %t.gnu.alias
+# RUN: llvm-readobj --file-headers %t.gnu.alias | FileCheck %s --check-prefix=OSABI-GNU
 # OSABI-GNU: OS/ABI: GNU/Linux (0x3)
 
 --- !ELF
@@ -62,7 +64,15 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_GNU
 
-# RUN: yaml2obj %s --docnum=6 -o %t.hurd
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+  OSABI:   ELFOSABI_LINUX
+
+# RUN: yaml2obj %s --docnum=7 -o %t.hurd
 # RUN: llvm-readobj --file-headers %t.hurd | FileCheck %s --check-prefix=OSABI-HURD
 
 # OSABI-HURD: OS/ABI: GNU/Hurd (0x4)
@@ -75,7 +85,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_HURD
 
-# RUN: yaml2obj %s --docnum=7 -o %t.solaris
+# RUN: yaml2obj %s --docnum=8 -o %t.solaris
 # RUN: llvm-readobj --file-headers %t.solaris | FileCheck %s --check-prefix=OSABI-SOLARIS
 
 # OSABI-SOLARIS: OS/ABI: Solaris (0x6)
@@ -88,7 +98,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_SOLARIS
 
-# RUN: yaml2obj %s --docnum=8 -o %t.aix
+# RUN: yaml2obj %s --docnum=9 -o %t.aix
 # RUN: llvm-readobj --file-headers %t.aix | FileCheck %s --check-prefix=OSABI-AIX
 
 # OSABI-AIX: OS/ABI: AIX (0x7)
@@ -101,7 +111,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_AIX
 
-# RUN: yaml2obj %s --docnum=9 -o %t.irix
+# RUN: yaml2obj %s --docnum=10 -o %t.irix
 # RUN: llvm-readobj --file-headers %t.irix | FileCheck %s --check-prefix=OSABI-IRIX
 
 # OSABI-IRIX: OS/ABI: IRIX (0x8)
@@ -114,7 +124,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_IRIX
 
-# RUN: yaml2obj %s --docnum=10 -o %t.freebsd
+# RUN: yaml2obj %s --docnum=11 -o %t.freebsd
 # RUN: llvm-readobj --file-headers %t.freebsd | FileCheck %s --check-prefix=OSABI-FREEBSD
 
 # OSABI-FREEBSD: OS/ABI: FreeBSD (0x9)
@@ -127,7 +137,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_FREEBSD
 
-# RUN: yaml2obj %s --docnum=11 -o %t.tru64
+# RUN: yaml2obj %s --docnum=12 -o %t.tru64
 # RUN: llvm-readobj --file-headers %t.tru64 | FileCheck %s --check-prefix=OSABI-TRU64
 
 # OSABI-TRU64: OS/ABI: TRU64 (0xA)
@@ -140,7 +150,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_TRU64
 
-# RUN: yaml2obj %s --docnum=12 -o %t.modesto
+# RUN: yaml2obj %s --docnum=13 -o %t.modesto
 # RUN: llvm-readobj --file-headers %t.modesto | FileCheck %s --check-prefix=OSABI-MODESTO
 
 # OSABI-MODESTO: OS/ABI: Modesto (0xB)
@@ -153,7 +163,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_MODESTO
 
-# RUN: yaml2obj %s --docnum=13 -o %t.openbsd
+# RUN: yaml2obj %s --docnum=14 -o %t.openbsd
 # RUN: llvm-readobj --file-headers %t.openbsd | FileCheck %s --check-prefix=OSABI-OPENBSD
 
 # OSABI-OPENBSD: OS/ABI: OpenBSD (0xC)
@@ -166,7 +176,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_OPENBSD
 
-# RUN: yaml2obj %s --docnum=14 -o %t.openvms
+# RUN: yaml2obj %s --docnum=15 -o %t.openvms
 # RUN: llvm-readobj --file-headers %t.openvms | FileCheck %s --check-prefix=OSABI-OPENVMS
 
 # OSABI-OPENVMS: OS/ABI: OpenVMS (0xD)
@@ -179,7 +189,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_OPENVMS
 
-# RUN: yaml2obj %s --docnum=15 -o %t.nsk
+# RUN: yaml2obj %s --docnum=16 -o %t.nsk
 # RUN: llvm-readobj --file-headers %t.nsk | FileCheck %s --check-prefix=OSABI-NSK
 
 # OSABI-NSK: OS/ABI: NSK (0xE)
@@ -192,7 +202,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_NSK
 
-# RUN: yaml2obj %s --docnum=16 -o %t.aros
+# RUN: yaml2obj %s --docnum=17 -o %t.aros
 # RUN: llvm-readobj --file-headers %t.aros | FileCheck %s --check-prefix=OSABI-AROS
 
 # OSABI-AROS: OS/ABI: AROS (0xF)
@@ -205,7 +215,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_AROS
 
-# RUN: yaml2obj %s --docnum=17 -o %t.fenixos
+# RUN: yaml2obj %s --docnum=18 -o %t.fenixos
 # RUN: llvm-readobj --file-headers %t.fenixos | FileCheck %s --check-prefix=OSABI-FENIXOS
 
 # OSABI-FENIXOS: OS/ABI: FenixOS (0x10)
@@ -218,7 +228,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_FENIXOS
 
-# RUN: yaml2obj %s --docnum=18 -o %t.cloudabi
+# RUN: yaml2obj %s --docnum=19 -o %t.cloudabi
 # RUN: llvm-readobj --file-headers %t.cloudabi | FileCheck %s --check-prefix=OSABI-CLOUDABI
 
 # OSABI-CLOUDABI: OS/ABI: CloudABI (0x11)
@@ -231,9 +241,9 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_CLOUDABI
 
-# RUN: yaml2obj %s --docnum=19 -o %t.amdhsa
+# RUN: yaml2obj %s --docnum=20 -o %t.amdhsa
 # RUN: llvm-readobj --file-headers %t.amdhsa | FileCheck %s --check-prefix=OSABI-ARCHSPEC40
-# RUN: yaml2obj %s --docnum=20 -o %t.c6000
+# RUN: yaml2obj %s --docnum=21 -o %t.c6000
 # RUN: llvm-readobj --file-headers %t.c6000 | FileCheck %s --check-prefix=OSABI-ARCHSPEC40
 
 # OSABI-ARCHSPEC40: OS/ABI: 0x40
@@ -254,9 +264,9 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_C6000_ELFABI
 
-# RUN: yaml2obj %s --docnum=21 -o %t.amdpal
+# RUN: yaml2obj %s --docnum=22 -o %t.amdpal
 # RUN: llvm-readobj --file-headers %t.amdpal | FileCheck %s --check-prefix=OSABI-ARCHSPEC41
-# RUN: yaml2obj %s --docnum=22 -o %t.c6000linux
+# RUN: yaml2obj %s --docnum=23 -o %t.c6000linux
 # RUN: llvm-readobj --file-headers %t.c6000linux | FileCheck %s --check-prefix=OSABI-ARCHSPEC41
 
 # OSABI-ARCHSPEC41: OS/ABI: 0x41
@@ -277,7 +287,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_C6000_LINUX
 
-# RUN: yaml2obj %s --docnum=23 -o %t.amdmesa
+# RUN: yaml2obj %s --docnum=24 -o %t.amdmesa
 # RUN: llvm-readobj --file-headers %t.amdmesa | FileCheck %s --check-prefix=OSABI-AMD-MESA3D
 
 # OSABI-AMD-MESA3D: OS/ABI: 0x42
@@ -290,7 +300,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_AMDGPU_MESA3D
 
-# RUN: yaml2obj %s --docnum=24 -o %t.arm
+# RUN: yaml2obj %s --docnum=25 -o %t.arm
 # RUN: llvm-readobj --file-headers %t.arm | FileCheck %s --check-prefix=OSABI-ARM
 
 # OSABI-ARM: OS/ABI: 0x61
@@ -303,7 +313,7 @@ FileHeader:
   Machine: EM_X86_64
   OSABI:   ELFOSABI_ARM
 
-# RUN: yaml2obj %s --docnum=25 -o %t.standalone
+# RUN: yaml2obj %s --docnum=26 -o %t.standalone
 # RUN: llvm-readobj --file-headers %t.standalone | FileCheck %s --check-prefix=OSABI-STANDALONE
 
 # OSABI-STANDALONE: OS/ABI: Standalone (0xFF)
