@@ -78,6 +78,25 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
                                 num_children=0)
         self.expect("expr obj", substrs=["ObjCClass",
                                          "private_ivar", "42"])
-        # FIXME: Removing this makes the expression below fail!
-        self.expect("target var swiftChild")
+        self.expect("expr swiftChild", substrs=["ObjCClass",
+                                                "private_ivar", "42"])
+
+
+    @skipUnlessDarwin
+    @swiftTest
+    def test_eager_member_completion(self):
+        """
+        ClangImporter deserializes members lazily. However, for
+        DWARFImporter there is no API to lookup a member by name, so
+        it relies on eagerly importing all members when their
+        containing is realized.
+
+        This end-to-end-test tests that this works.
+        Don't add anything else to it!
+        """
+        self.runCmd("settings set symbols.use-swift-dwarfimporter true")
+
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('main.swift'))
         self.expect("expr swiftChild!.number", substrs=["42"])
