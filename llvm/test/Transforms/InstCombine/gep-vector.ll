@@ -47,6 +47,26 @@ define i32* @bitcast_array_to_vec_gep([3 x i32]* %x, i64 %y, i64 %z) {
   ret i32* %gep
 }
 
+define i32* @bitcast_vec_to_array_gep_matching_alloc_size(<4 x i32>* %x, i64 %y, i64 %z) {
+; CHECK-LABEL: @bitcast_vec_to_array_gep_matching_alloc_size(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i32>, <4 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret i32* [[GEP]]
+;
+  %arr_ptr = bitcast <4 x i32>* %x to [4 x i32]*
+  %gep = getelementptr [4 x i32], [4 x i32]* %arr_ptr, i64 %y, i64 %z
+  ret i32* %gep
+}
+
+define i32* @bitcast_array_to_vec_gep_matching_alloc_size([4 x i32]* %x, i64 %y, i64 %z) {
+; CHECK-LABEL: @bitcast_array_to_vec_gep_matching_alloc_size(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret i32* [[GEP]]
+;
+  %vec_ptr = bitcast [4 x i32]* %x to <4 x i32>*
+  %gep = getelementptr inbounds <4 x i32>, <4 x i32>* %vec_ptr, i64 %y, i64 %z
+  ret i32* %gep
+}
+
 define i32 addrspace(3)* @bitcast_vec_to_array_addrspace(<7 x i32>* %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_addrspace(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <7 x i32>, <7 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
@@ -68,5 +88,29 @@ define i32 addrspace(3)* @inbounds_bitcast_vec_to_array_addrspace(<7 x i32>* %x,
   %arr_ptr = bitcast <7 x i32>* %x to [7 x i32]*
   %asc = addrspacecast [7 x i32]* %arr_ptr to [7 x i32] addrspace(3)*
   %gep = getelementptr inbounds [7 x i32], [7 x i32] addrspace(3)* %asc, i64 %y, i64 %z
+  ret i32 addrspace(3)* %gep
+}
+
+define i32 addrspace(3)* @bitcast_vec_to_array_addrspace_matching_alloc_size(<4 x i32>* %x, i64 %y, i64 %z) {
+; CHECK-LABEL: @bitcast_vec_to_array_addrspace_matching_alloc_size(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i32>, <4 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast i32* [[GEP]] to i32 addrspace(3)*
+; CHECK-NEXT:    ret i32 addrspace(3)* [[TMP1]]
+;
+  %arr_ptr = bitcast <4 x i32>* %x to [4 x i32]*
+  %asc = addrspacecast [4 x i32]* %arr_ptr to [4 x i32] addrspace(3)*
+  %gep = getelementptr [4 x i32], [4 x i32] addrspace(3)* %asc, i64 %y, i64 %z
+  ret i32 addrspace(3)* %gep
+}
+
+define i32 addrspace(3)* @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_size(<4 x i32>* %x, i64 %y, i64 %z) {
+; CHECK-LABEL: @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_size(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast i32* [[GEP]] to i32 addrspace(3)*
+; CHECK-NEXT:    ret i32 addrspace(3)* [[TMP1]]
+;
+  %arr_ptr = bitcast <4 x i32>* %x to [4 x i32]*
+  %asc = addrspacecast [4 x i32]* %arr_ptr to [4 x i32] addrspace(3)*
+  %gep = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* %asc, i64 %y, i64 %z
   ret i32 addrspace(3)* %gep
 }
