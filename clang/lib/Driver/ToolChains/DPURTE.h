@@ -40,6 +40,7 @@ public:
         Args.hasArg(options::OPT_pg)
             ? GetUpmemSdkPath("/share/upmem/include/built-in/librtlto_p.a")
             : GetUpmemSdkPath("/share/upmem/include/built-in/librtlto.a");
+    PathToBootstrap = GetUpmemSdkPath("/share/upmem/include/misc/crt0.o");
   }
 
   ~DPURTE() override {
@@ -82,6 +83,7 @@ private:
   char *PathToRtLibDirectory;
   const char *RtLibName;
   char *PathToRtLibBc;
+  char *PathToBootstrap;
 };
 } // end namespace toolchains
 namespace tools {
@@ -89,12 +91,14 @@ namespace dpu {
 class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
 public:
   Linker(const ToolChain &TC, const char *Script, const char *RtLibDir,
-         const char *RtLibName, const char *PathToRtLibBc)
+         const char *RtLibName, const char *PathToRtLibBc,
+         const char *PathToBootstrap)
       : GnuTool("dpu::Linker", "ld.lld", TC) {
     LinkScript = Script;
     RtLibraryPath = RtLibDir;
     RtLibraryName = RtLibName;
     RtBcLibrary = PathToRtLibBc;
+    Bootstrap = PathToBootstrap;
   }
 
   bool isLinkJob() const override { return true; }
@@ -111,6 +115,7 @@ private:
   const char *RtLibraryPath;
   const char *RtLibraryName;
   const char *RtBcLibrary;
+  const char *Bootstrap;
 };
 } // end namespace dpu
 } // end namespace tools
