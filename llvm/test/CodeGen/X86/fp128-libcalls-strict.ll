@@ -322,7 +322,7 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
 entry:
-  %ceil = call fp128 @llvm.experimental.constrained.ceil.f128(fp128 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %ceil = call fp128 @llvm.experimental.constrained.ceil.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret fp128 %ceil
 }
 
@@ -486,7 +486,7 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
 entry:
-  %floor = call fp128 @llvm.experimental.constrained.floor.f128(fp128 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %floor = call fp128 @llvm.experimental.constrained.floor.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret fp128 %floor
 }
 
@@ -654,7 +654,7 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
 entry:
-  %maxnum = call fp128 @llvm.experimental.constrained.maxnum.f128(fp128 %x, fp128 %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %maxnum = call fp128 @llvm.experimental.constrained.maxnum.f128(fp128 %x, fp128 %y, metadata !"fpexcept.strict") #0
   ret fp128 %maxnum
 }
 
@@ -699,7 +699,7 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
 entry:
-  %minnum = call fp128 @llvm.experimental.constrained.minnum.f128(fp128 %x, fp128 %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %minnum = call fp128 @llvm.experimental.constrained.minnum.f128(fp128 %x, fp128 %y, metadata !"fpexcept.strict") #0
   ret fp128 %minnum
 }
 
@@ -909,7 +909,7 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
 entry:
-  %round = call fp128 @llvm.experimental.constrained.round.f128(fp128 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %round = call fp128 @llvm.experimental.constrained.round.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret fp128 %round
 }
 
@@ -1032,7 +1032,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
 entry:
-  %trunc = call fp128 @llvm.experimental.constrained.trunc.f128(fp128 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %trunc = call fp128 @llvm.experimental.constrained.trunc.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret fp128 %trunc
 }
 
@@ -1136,24 +1136,24 @@ declare fp128 @llvm.experimental.constrained.fmul.f128(fp128, fp128, metadata, m
 declare fp128 @llvm.experimental.constrained.fdiv.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.fma.f128(fp128, fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.frem.f128(fp128, fp128, metadata, metadata)
-declare fp128 @llvm.experimental.constrained.ceil.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.ceil.f128(fp128, metadata)
 declare fp128 @llvm.experimental.constrained.cos.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.exp.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.exp2.f128(fp128, metadata, metadata)
-declare fp128 @llvm.experimental.constrained.floor.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.floor.f128(fp128, metadata)
 declare fp128 @llvm.experimental.constrained.log.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.log10.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.log2.f128(fp128, metadata, metadata)
-declare fp128 @llvm.experimental.constrained.maxnum.f128(fp128, fp128, metadata, metadata)
-declare fp128 @llvm.experimental.constrained.minnum.f128(fp128, fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.maxnum.f128(fp128, fp128, metadata)
+declare fp128 @llvm.experimental.constrained.minnum.f128(fp128, fp128, metadata)
 declare fp128 @llvm.experimental.constrained.nearbyint.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.pow.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.powi.f128(fp128, i32, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.rint.f128(fp128, metadata, metadata)
-declare fp128 @llvm.experimental.constrained.round.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.round.f128(fp128, metadata)
 declare fp128 @llvm.experimental.constrained.sin.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.sqrt.f128(fp128, metadata, metadata)
-declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata)
 declare i32 @llvm.experimental.constrained.lrint.i32.f128(fp128, metadata, metadata)
 declare i64 @llvm.experimental.constrained.llrint.i64.f128(fp128, metadata, metadata)
 declare i32 @llvm.experimental.constrained.lround.i32.f128(fp128, metadata)
