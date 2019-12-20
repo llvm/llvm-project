@@ -565,15 +565,18 @@ public:
   }
 };
 
+/// Represents required padding such that a particular other set of fragments
+/// does not cross a particular power-of-two boundary. The other fragments must
+/// follow this one within the same section.
 class MCBoundaryAlignFragment : public MCFragment {
 private:
-  /// The size of the MCBoundaryAlignFragment.
-  /// Note: The size is lazily set during relaxation, and is not meaningful
-  /// before that.
+  /// The size of the fragment.  The size is lazily set during relaxation, and
+  /// is not meaningful before that.
   uint64_t Size = 0;
   /// The alignment requirement of the branch to be aligned.
   Align AlignBoundary;
-  /// Flag to indicate whether the branch is fused.
+  /// Flag to indicate whether the branch is fused.  Use in determining the
+  /// region of fragments being aligned.
   bool Fused : 1;
   /// Flag to indicate whether NOPs should be emitted.
   bool EmitNops : 1;
@@ -586,21 +589,16 @@ public:
 
   /// \name Accessors
   /// @{
-
-  Align getAlignment() const { return AlignBoundary; }
-
   uint64_t getSize() const { return Size; }
-
-  bool canEmitNops() const { return EmitNops; }
-
-  bool isFused() const { return Fused; }
-
-  void setFused(bool Value) { Fused = Value; }
-
-  void setEmitNops(bool Value) { EmitNops = Value; }
-
   void setSize(uint64_t Value) { Size = Value; }
 
+  Align getAlignment() const { return AlignBoundary; }  
+  
+  bool isFused() const { return Fused; }
+  void setFused(bool Value) { Fused = Value; }
+
+  bool canEmitNops() const { return EmitNops; }
+  void setEmitNops(bool Value) { EmitNops = Value; }
   /// @}
   //
 
