@@ -668,7 +668,7 @@ define amdgpu_kernel void @test_bswap_v4i64(<4 x i64> addrspace(1)* %out, <4 x i
 ; VI-NEXT:    s_lshl_b32 s6, s6, 8
 ; VI-NEXT:    s_or_b32 s4, s6, s4
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v3
-; VI-NEXT:    v_or_b32_e32 v5, s4, v1
+; VI-NEXT:    v_or_b32_e32 v6, s4, v1
 ; VI-NEXT:    v_mov_b32_e32 v1, s8
 ; VI-NEXT:    v_alignbit_b32 v3, s9, v1, 24
 ; VI-NEXT:    v_alignbit_b32 v1, s9, v1, 8
@@ -678,11 +678,11 @@ define amdgpu_kernel void @test_bswap_v4i64(<4 x i64> addrspace(1)* %out, <4 x i
 ; VI-NEXT:    v_and_b32_e32 v1, s17, v1
 ; VI-NEXT:    s_lshr_b32 s4, s9, 24
 ; VI-NEXT:    s_lshl_b32 s6, s6, 8
-; VI-NEXT:    s_and_b32 s13, s15, s18
-; VI-NEXT:    s_lshl_b64 s[14:15], s[10:11], 24
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    s_or_b32 s4, s6, s4
-; VI-NEXT:    v_or_b32_e32 v3, s4, v1
+; VI-NEXT:    s_and_b32 s13, s15, s18
+; VI-NEXT:    s_lshl_b64 s[14:15], s[10:11], 24
+; VI-NEXT:    v_or_b32_e32 v4, s4, v1
 ; VI-NEXT:    s_lshl_b32 s4, s10, 8
 ; VI-NEXT:    s_and_b32 s15, s15, s19
 ; VI-NEXT:    s_mov_b32 s14, s12
@@ -704,11 +704,11 @@ define amdgpu_kernel void @test_bswap_v4i64(<4 x i64> addrspace(1)* %out, <4 x i
 ; VI-NEXT:    s_mov_b32 s8, s12
 ; VI-NEXT:    s_or_b64 s[8:9], s[12:13], s[8:9]
 ; VI-NEXT:    s_or_b64 s[8:9], s[8:9], s[14:15]
-; VI-NEXT:    v_mov_b32_e32 v4, s9
-; VI-NEXT:    v_mov_b32_e32 v6, s11
-; VI-NEXT:    buffer_store_dwordx4 v[3:6], off, s[0:3], 0 offset:16
+; VI-NEXT:    v_mov_b32_e32 v5, s9
+; VI-NEXT:    v_mov_b32_e32 v7, s11
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %val = load <4 x i64>, <4 x i64> addrspace(1)* %in, align 32
