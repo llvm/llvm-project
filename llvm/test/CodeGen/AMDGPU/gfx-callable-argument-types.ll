@@ -3294,14 +3294,15 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-LABEL: tail_call_byval_align16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:8
-; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:12
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:12
+; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, byval_align16_f64_arg@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s5, s5, byval_align16_f64_arg@rel32@hi+12
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32
 ; GFX9-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; GFX10-LABEL: tail_call_byval_align16:
