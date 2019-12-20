@@ -106,6 +106,15 @@ public:
   /// Return whether A and B use the same def of PhysReg.
   bool hasSameReachingDef(MachineInstr *A, MachineInstr *B, int PhysReg);
 
+  /// Return whether the reaching def for MI also is live out of its parent
+  /// block.
+  bool isReachingDefLiveOut(MachineInstr *MI, int PhysReg);
+
+  /// Return the local MI that produces the live out value for PhysReg, or
+  /// nullptr for a non-live out or non-local def.
+  MachineInstr *getLocalLiveOutMIDef(MachineBasicBlock *MBB,
+                                     int PhysReg);
+
   /// Return whether the given register is used after MI, whether it's a local
   /// use or a live out.
   bool isRegUsedAfter(MachineInstr *MI, int PhysReg);
