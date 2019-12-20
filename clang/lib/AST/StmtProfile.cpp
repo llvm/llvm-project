@@ -769,6 +769,9 @@ void OMPClauseProfiler::VisitOMPIsDevicePtrClause(
     const OMPIsDevicePtrClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPNontemporalClause(const OMPNontemporalClause *C) {
+  VisitOMPClauseList(C);
+}
 }
 
 void
