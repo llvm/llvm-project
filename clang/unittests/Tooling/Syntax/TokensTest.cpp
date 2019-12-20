@@ -770,7 +770,7 @@ TEST_F(TokenBufferTest, TokensToFileRange) {
   // We don't test assertion failures because death tests are slow.
 }
 
-TEST_F(TokenBufferTest, macroExpansions) {
+TEST_F(TokenBufferTest, MacroExpansions) {
   llvm::Annotations Code(R"cpp(
     #define FOO B
     #define FOO2 BA
