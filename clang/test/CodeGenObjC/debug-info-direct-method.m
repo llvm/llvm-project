@@ -1,12 +1,17 @@
 // RUN: %clang_cc1 -dwarf-version=5 -emit-llvm -debug-info-kind=limited -w -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -dwarf-version=4 -emit-llvm -debug-info-kind=limited -w -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -dwarf-version=5 -emit-llvm -debug-info-kind=limited -w -triple x86_64-apple-darwin10 %s -o - -DDISABLE_DIRECT | FileCheck --check-prefix=CHECK-DISABLED %s
 
 __attribute__((objc_root_class))
 @interface Root
 @end
 
 @implementation Root
-- (int)getInt __attribute__((objc_direct)) {
+- (int)getInt
+#ifndef DISABLE_DIRECT
+ __attribute__((objc_direct))
+#endif
+{
   return 42;
 }
 @end
@@ -19,3 +24,6 @@ __attribute__((objc_root_class))
 // CHECK-SAME:             runtimeLang: DW_LANG_ObjC)
 // CHECK: ![[MEMBERS]] = !{![[GETTER:[0-9]+]]}
 // CHECK: ![[GETTER]] = !DISubprogram(name: "-[Root getInt]",
+// CHECK-SAME: spFlags: DISPFlagObjCDirect
+
+// CHECK-DISABLED-NOT: DISPFlagObjCDirect
