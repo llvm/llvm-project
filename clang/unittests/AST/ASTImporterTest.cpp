@@ -247,6 +247,11 @@ template <typename T> RecordDecl *getRecordDecl(T *D) {
   return cast<RecordType>(ET->getNamedType().getTypePtr())->getDecl();
 }
 
+static const RecordDecl *getRecordDeclOfFriend(FriendDecl *FD) {
+  QualType Ty = FD->getFriendType()->getType().getCanonicalType();
+  return cast<RecordType>(Ty)->getDecl();
+}
+
 struct ImportExpr : TestImportBase {};
 struct ImportType : TestImportBase {};
 struct ImportDecl : TestImportBase {};
@@ -2707,7 +2712,7 @@ TEST_P(ImportFriendFunctions, Lookup) {
   EXPECT_FALSE(To0->isInIdentifierNamespace(Decl::IDNS_Ordinary));
 }
 
-TEST_P(ImportFriendFunctions, DISABLED_LookupWithProtoAfter) {
+TEST_P(ImportFriendFunctions, LookupWithProtoAfter) {
   auto FunctionPattern = functionDecl(hasName("f"));
   auto ClassPattern = cxxRecordDecl(hasName("X"));
 
@@ -3778,6 +3783,44 @@ TEST_P(ImportFriendClasses, ImportOfRecursiveFriendClass) {
   EXPECT_TRUE(MatchVerifier<Decl>{}.match(ToD, Pattern));
 }
 
+TEST_P(ImportFriendClasses, UndeclaredFriendClassShouldNotBeVisible) {
+  Decl *FromTu = getTuDecl("class X { friend class Y; };", Lang_CXX, "from.cc");
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTu, cxxRecordDecl(hasName("X")));
+  auto *FromFriend = FirstDeclMatcher<FriendDecl>().match(FromTu, friendDecl());
+  RecordDecl *FromRecordOfFriend =
+      const_cast<RecordDecl *>(getRecordDeclOfFriend(FromFriend));
+
+  ASSERT_EQ(FromRecordOfFriend->getDeclContext(), cast<DeclContext>(FromTu));
+  ASSERT_EQ(FromRecordOfFriend->getLexicalDeclContext(),
+            cast<DeclContext>(FromX));
+  ASSERT_FALSE(
+      FromRecordOfFriend->getDeclContext()->containsDecl(FromRecordOfFriend));
+  ASSERT_FALSE(FromRecordOfFriend->getLexicalDeclContext()->containsDecl(
+      FromRecordOfFriend));
+  ASSERT_FALSE(FromRecordOfFriend->getLookupParent()
+                   ->lookup(FromRecordOfFriend->getDeclName())
+                   .empty());
+
+  auto *ToX = Import(FromX, Lang_CXX);
+  ASSERT_TRUE(ToX);
+
+  Decl *ToTu = ToX->getTranslationUnitDecl();
+  auto *ToFriend = FirstDeclMatcher<FriendDecl>().match(ToTu, friendDecl());
+  RecordDecl *ToRecordOfFriend =
+      const_cast<RecordDecl *>(getRecordDeclOfFriend(ToFriend));
+
+  ASSERT_EQ(ToRecordOfFriend->getDeclContext(), cast<DeclContext>(ToTu));
+  ASSERT_EQ(ToRecordOfFriend->getLexicalDeclContext(), cast<DeclContext>(ToX));
+  EXPECT_FALSE(
+      ToRecordOfFriend->getDeclContext()->containsDecl(ToRecordOfFriend));
+  EXPECT_FALSE(ToRecordOfFriend->getLexicalDeclContext()->containsDecl(
+      ToRecordOfFriend));
+  EXPECT_FALSE(ToRecordOfFriend->getLookupParent()
+                   ->lookup(ToRecordOfFriend->getDeclName())
+                   .empty());
+}
+
 TEST_P(ImportFriendClasses, ImportOfRecursiveFriendClassTemplate) {
   Decl *FromTu = getTuDecl(
       R"(
@@ -4475,11 +4518,6 @@ TEST_P(ASTImporterLookupTableTest, LookupDeclNamesFromDifferentTUs) {
   // FromPlus have a different TU, thus its DeclarationName is different too.
   Res = LT.lookup(ToTU, FromPlus->getDeclName());
   ASSERT_EQ(Res.size(), 0u);
-}
-
-static const RecordDecl *getRecordDeclOfFriend(FriendDecl *FD) {
-  QualType Ty = FD->getFriendType()->getType().getCanonicalType();
-  return cast<RecordType>(Ty)->getDecl();
 }
 
 TEST_P(ASTImporterLookupTableTest,
