@@ -1298,9 +1298,12 @@ CompilerType ClangASTContext::GetTypeForDecl(ObjCInterfaceDecl *decl) {
 
 #pragma mark Structure, Unions, Classes
 
-CompilerType ClangASTContext::CreateRecordType(
-    DeclContext *decl_ctx, AccessType access_type, const char *name, int kind,
-    LanguageType language, ClangASTMetadata *metadata, bool exports_symbols) {
+CompilerType ClangASTContext::CreateRecordType(DeclContext *decl_ctx,
+                                               AccessType access_type,
+                                               llvm::StringRef name, int kind,
+                                               LanguageType language,
+                                               ClangASTMetadata *metadata,
+                                               bool exports_symbols) {
   ASTContext *ast = getASTContext();
   assert(ast != nullptr);
 
@@ -1320,7 +1323,7 @@ CompilerType ClangASTContext::CreateRecordType(
   // something is struct or a class, so we default to always use the more
   // complete definition just in case.
 
-  bool has_name = name && name[0];
+  bool has_name = !name.empty();
 
   CXXRecordDecl *decl = CXXRecordDecl::Create(
       *ast, (TagDecl::TagKind)kind, decl_ctx, SourceLocation(),
@@ -1696,14 +1699,14 @@ bool ClangASTContext::RecordHasFields(const RecordDecl *record_decl) {
 
 #pragma mark Objective-C Classes
 
-CompilerType ClangASTContext::CreateObjCClass(const char *name,
+CompilerType ClangASTContext::CreateObjCClass(llvm::StringRef name,
                                               DeclContext *decl_ctx,
                                               bool isForwardDecl,
                                               bool isInternal,
                                               ClangASTMetadata *metadata) {
   ASTContext *ast = getASTContext();
   assert(ast != nullptr);
-  assert(name && name[0]);
+  assert(!name.empty());
   if (decl_ctx == nullptr)
     decl_ctx = ast->getTranslationUnitDecl();
 

@@ -38,7 +38,7 @@ protected:
     return std::make_unique<ClangASTContext>(HostInfo::GetTargetTriple());
   }
 
-  CompilerType createRecord(ClangASTContext &ast, const char *name) {
+  CompilerType createRecord(ClangASTContext &ast, llvm::StringRef name) {
     return ast.CreateRecordType(ast.getASTContext()->getTranslationUnitDecl(),
                                 lldb::AccessType::eAccessPublic, name, 0,
                                 lldb::LanguageType::eLanguageTypeC);
