@@ -284,6 +284,21 @@ TEST(ScudoWrappersCTest, MallocIterateBoundary) {
   free(P);
 }
 
+// We expect heap operations within a disable/enable scope to deadlock.
+TEST(ScudoWrappersCTest, MallocDisableDeadlock) {
+  EXPECT_DEATH(
+      {
+        void *P = malloc(Size);
+        EXPECT_NE(P, nullptr);
+        free(P);
+        malloc_disable();
+        alarm(1);
+        P = malloc(Size);
+        malloc_enable();
+      },
+      "");
+}
+
 #if !SCUDO_FUCHSIA
 TEST(ScudoWrappersCTest, MallocInfo) {
   char Buffer[64];

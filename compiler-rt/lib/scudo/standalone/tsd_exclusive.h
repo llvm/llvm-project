@@ -48,7 +48,8 @@ template <class Allocator> struct TSDRegistryExT {
   }
 
   ALWAYS_INLINE TSD<Allocator> *getTSDAndLock(bool *UnlockRequired) {
-    if (LIKELY(State == ThreadState::Initialized)) {
+    if (LIKELY(State == ThreadState::Initialized &&
+               !atomic_load(&Disabled, memory_order_acquire))) {
       *UnlockRequired = false;
       return &ThreadTSD;
     }
@@ -56,6 +57,18 @@ template <class Allocator> struct TSDRegistryExT {
     FallbackTSD->lock();
     *UnlockRequired = true;
     return FallbackTSD;
+  }
+
+  // To disable the exclusive TSD registry, we effectively lock the fallback TSD
+  // and force all threads to attempt to use it instead of their local one.
+  void disable() {
+    FallbackTSD->lock();
+    atomic_store(&Disabled, 1U, memory_order_release);
+  }
+
+  void enable() {
+    atomic_store(&Disabled, 0U, memory_order_release);
+    FallbackTSD->unlock();
   }
 
 private:
@@ -81,6 +94,7 @@ private:
 
   pthread_key_t PThreadKey;
   bool Initialized;
+  atomic_u8 Disabled;
   TSD<Allocator> *FallbackTSD;
   HybridMutex Mutex;
   static THREADLOCAL ThreadState State;

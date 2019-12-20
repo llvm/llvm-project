@@ -18,23 +18,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     "`CMakeFiles'. Please delete them.")
 endif()
 
-set(LLDB_LINKER_SUPPORTS_GROUPS OFF)
-if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-  # The Darwin linker doesn't understand --start-group/--end-group.
-  set(LLDB_LINKER_SUPPORTS_GROUPS ON)
-endif()
-
 set(default_enable_python ON)
 set(default_enable_lua OFF) # Experimental
 set(default_enable_libedit ON)
 set(default_enable_curses ON)
 
-# Temporary support the old LLDB_DISABLE_* variables
-if (DEFINED LLDB_DISABLE_CURSES)
-  if (LLDB_DISABLE_CURSES)
-    set(default_enable_curses OFF)
-  endif()
-endif()
+# Temporarily support the old LLDB_DISABLE_* variables
 if (DEFINED LLDB_DISABLE_PYTHON)
   if (LLDB_DISABLE_PYTHON)
     set(default_enable_python OFF)
