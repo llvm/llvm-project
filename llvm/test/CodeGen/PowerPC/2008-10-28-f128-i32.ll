@@ -62,7 +62,7 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    stw 3, 312(1)
 ; CHECK-NEXT:    lfd 30, 312(1)
 ; CHECK-NEXT:    fmr 2, 30
-; CHECK-NEXT:    bl __gcc_qmul@PLT
+; CHECK-NEXT:    bl __gcc_qmul
 ; CHECK-NEXT:    lis 3, 16864
 ; CHECK-NEXT:    stfd 1, 280(1)
 ; CHECK-NEXT:    stw 3, 368(1)
@@ -84,7 +84,7 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    lwz 3, 288(1)
 ; CHECK-NEXT:    stw 3, 344(1)
 ; CHECK-NEXT:    lfd 2, 344(1)
-; CHECK-NEXT:    bl __gcc_qsub@PLT
+; CHECK-NEXT:    bl __gcc_qsub
 ; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
 ; CHECK-NEXT:    lis 3, .LCPI0_1@ha
@@ -117,7 +117,7 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:  .LBB0_5: # %bb1
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    mr 3, 30
-; CHECK-NEXT:    bl __floatditf@PLT
+; CHECK-NEXT:    bl __floatditf
 ; CHECK-NEXT:    lis 3, 17392
 ; CHECK-NEXT:    stfd 1, 208(1)
 ; CHECK-NEXT:    stw 3, 240(1)
@@ -140,7 +140,7 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    lwz 3, 200(1)
 ; CHECK-NEXT:    stw 3, 216(1)
 ; CHECK-NEXT:    lfd 2, 216(1)
-; CHECK-NEXT:    bl __gcc_qadd@PLT
+; CHECK-NEXT:    bl __gcc_qadd
 ; CHECK-NEXT:    blt 2, .LBB0_7
 ; CHECK-NEXT:  # %bb.6: # %bb1
 ; CHECK-NEXT:    fmr 2, 28
@@ -163,7 +163,7 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    lwz 3, 192(1)
 ; CHECK-NEXT:    stw 3, 248(1)
 ; CHECK-NEXT:    lfd 4, 248(1)
-; CHECK-NEXT:    bl __gcc_qsub@PLT
+; CHECK-NEXT:    bl __gcc_qsub
 ; CHECK-NEXT:    stfd 2, 176(1)
 ; CHECK-NEXT:    stfd 1, 168(1)
 ; CHECK-NEXT:    fcmpu 1, 2, 27
@@ -206,7 +206,7 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    lwz 3, 40(1)
 ; CHECK-NEXT:    stw 3, 56(1)
 ; CHECK-NEXT:    lfd 2, 56(1)
-; CHECK-NEXT:    bl __gcc_qsub@PLT
+; CHECK-NEXT:    bl __gcc_qsub
 ; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
 ; CHECK-NEXT:    lis 3, .LCPI0_2@ha
@@ -261,7 +261,7 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    lwz 3, 104(1)
 ; CHECK-NEXT:    stw 3, 120(1)
 ; CHECK-NEXT:    lfd 2, 120(1)
-; CHECK-NEXT:    bl __gcc_qsub@PLT
+; CHECK-NEXT:    bl __gcc_qsub
 ; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
 ; CHECK-NEXT:    lis 3, .LCPI0_0@ha

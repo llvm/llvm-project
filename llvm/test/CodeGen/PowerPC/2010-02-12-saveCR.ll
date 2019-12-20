@@ -11,7 +11,7 @@ entry:
 ; CHECK-DAG: ori [[T2:[0-9]+]], [[T2]], 34492
 ; CHECK-DAG: stwx [[T1]], 1, [[T2]]
 ; CHECK-DAG: addi 3, 1, 28
-; CHECK: bl bar@PLT
+; CHECK: bl bar
   %x = alloca [100000 x i8]                       ; <[100000 x i8]*> [#uses=1]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
   %x1 = bitcast [100000 x i8]* %x to i8*          ; <i8*> [#uses=1]

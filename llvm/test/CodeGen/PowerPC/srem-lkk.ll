@@ -139,7 +139,7 @@ define i64 @dont_fold_srem_i64(i64 %x) {
 ; CHECK-NEXT:    .cfi_offset lr, 4
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    li 6, 98
-; CHECK-NEXT:    bl __moddi3@PLT
+; CHECK-NEXT:    bl __moddi3
 ; CHECK-NEXT:    lwz 0, 20(1)
 ; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    mtlr 0
