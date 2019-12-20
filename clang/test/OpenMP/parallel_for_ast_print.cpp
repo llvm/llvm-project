@@ -70,8 +70,8 @@ T tmain(T argc) {
 // CHECK: static T a;
   static T g;
 #pragma omp threadprivate(g)
-#pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a)
-  // CHECK: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a)
+#pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d, e,f)
+  // CHECK: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d,e,f)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
