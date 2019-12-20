@@ -88,6 +88,8 @@ private:
                             SmallVectorImpl<MachineInstr *> &CCUsers);
   bool convertToLoadAndTest(MachineInstr &MI, MachineInstr &Compare,
                             SmallVectorImpl<MachineInstr *> &CCUsers);
+  bool convertToLogical(MachineInstr &MI, MachineInstr &Compare,
+                        SmallVectorImpl<MachineInstr *> &CCUsers);
   bool adjustCCMasksForInstr(MachineInstr &MI, MachineInstr &Compare,
                              SmallVectorImpl<MachineInstr *> &CCUsers,
                              unsigned ConvOpc = 0);
@@ -303,6 +305,52 @@ bool SystemZElimCompare::convertToLoadAndTest(
   return true;
 }
 
+// See if MI is an instruction with an equivalent "logical" opcode that can
+// be used and replace MI. This is useful for EQ/NE comparisons where the
+// "nsw" flag is missing since the "logical" opcode always sets CC to reflect
+// the result being zero or non-zero.
+bool SystemZElimCompare::convertToLogical(
+    MachineInstr &MI, MachineInstr &Compare,
+    SmallVectorImpl<MachineInstr *> &CCUsers) {
+
+  unsigned ConvOpc = 0;
+  switch (MI.getOpcode()) {
+  case SystemZ::AR:   ConvOpc = SystemZ::ALR;   break;
+  case SystemZ::ARK:  ConvOpc = SystemZ::ALRK;  break;
+  case SystemZ::AGR:  ConvOpc = SystemZ::ALGR;  break;
+  case SystemZ::AGRK: ConvOpc = SystemZ::ALGRK; break;
+  case SystemZ::A:    ConvOpc = SystemZ::AL;    break;
+  case SystemZ::AY:   ConvOpc = SystemZ::ALY;   break;
+  case SystemZ::AG:   ConvOpc = SystemZ::ALG;   break;
+  default: break;
+  }
+  if (!ConvOpc || !adjustCCMasksForInstr(MI, Compare, CCUsers, ConvOpc))
+    return false;
+
+  // Operands should be identical, so just change the opcode and remove the
+  // dead flag on CC.
+  MI.setDesc(TII->get(ConvOpc));
+  MI.clearRegisterDeads(SystemZ::CC);
+  return true;
+}
+
+#ifndef NDEBUG
+static bool isAddWithImmediate(unsigned Opcode) {
+  switch(Opcode) {
+  case SystemZ::AHI:
+  case SystemZ::AHIK:
+  case SystemZ::AGHI:
+  case SystemZ::AGHIK:
+  case SystemZ::AFI:
+  case SystemZ::AIH:
+  case SystemZ::AGFI:
+    return true;
+  default: break;
+  }
+  return false;
+}
+#endif
+
 // The CC users in CCUsers are testing the result of a comparison of some
 // value X against zero and we know that any CC value produced by MI would
 // also reflect the value of X.  ConvOpc may be used to pass the transfomed
@@ -313,6 +361,8 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
     MachineInstr &MI, MachineInstr &Compare,
     SmallVectorImpl<MachineInstr *> &CCUsers,
     unsigned ConvOpc) {
+  unsigned CompareFlags = Compare.getDesc().TSFlags;
+  unsigned CompareCCValues = SystemZII::getCCValues(CompareFlags);
   int Opcode = (ConvOpc ? ConvOpc : MI.getOpcode());
   const MCInstrDesc &Desc = TII->get(Opcode);
   unsigned MIFlags = Desc.TSFlags;
@@ -330,60 +380,97 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
   }
 
   // See which compare-style condition codes are available.
-  unsigned ReusableCCMask = SystemZII::getCompareZeroCCMask(MIFlags);
-
+  unsigned CCValues = SystemZII::getCCValues(MIFlags);
+  unsigned ReusableCCMask = CCValues;
   // For unsigned comparisons with zero, only equality makes sense.
-  unsigned CompareFlags = Compare.getDesc().TSFlags;
   if (CompareFlags & SystemZII::IsLogical)
     ReusableCCMask &= SystemZ::CCMASK_CMP_EQ;
-
+  unsigned OFImplies = 0;
+  bool LogicalMI = false;
+  bool MIEquivalentToCmp = false;
+  if (MI.getFlag(MachineInstr::NoSWrap) &&
+      (MIFlags & SystemZII::CCIfNoSignedWrap)) {
+    // If MI has the NSW flag set in combination with the
+    // SystemZII::CCIfNoSignedWrap flag, all CCValues are valid.
+  }
+  else if ((MIFlags & SystemZII::CCIfNoSignedWrap) &&
+           MI.getOperand(2).isImm()) {
+    // Signed addition of immediate. If adding a positive immediate
+    // overflows, the result must be less than zero. If adding a negative
+    // immediate overflows, the result must be larger than zero (except in
+    // the special case of adding the minimum value of the result range, in
+    // which case we cannot predict whether the result is larger than or
+    // equal to zero).
+    assert(isAddWithImmediate(Opcode) && "Expected an add with immediate.");
+    assert(!MI.mayLoadOrStore() && "Expected an immediate term.");
+    int64_t RHS = MI.getOperand(2).getImm();
+    if (SystemZ::GRX32BitRegClass.contains(MI.getOperand(0).getReg()) &&
+        RHS == INT32_MIN)
+      return false;
+    OFImplies = (RHS > 0 ? SystemZ::CCMASK_CMP_LT : SystemZ::CCMASK_CMP_GT);
+  }
+  else if ((MIFlags & SystemZII::IsLogical) && CCValues) {
+    // Use CCMASK_CMP_EQ to match with CCUsers. On success CCMask:s will be
+    // converted to CCMASK_LOGICAL_ZERO or CCMASK_LOGICAL_NONZERO.
+    LogicalMI = true;
+    ReusableCCMask = SystemZ::CCMASK_CMP_EQ;
+  }
+  else {
+    ReusableCCMask &= SystemZII::getCompareZeroCCMask(MIFlags);
+    assert((ReusableCCMask & ~CCValues) == 0 && "Invalid CCValues");
+    MIEquivalentToCmp =
+      ReusableCCMask == CCValues && CCValues == CompareCCValues;
+  }
   if (ReusableCCMask == 0)
     return false;
-
-  unsigned CCValues = SystemZII::getCCValues(MIFlags);
-  assert((ReusableCCMask & ~CCValues) == 0 && "Invalid CCValues");
-
-  bool MIEquivalentToCmp =
-    (ReusableCCMask == CCValues &&
-     CCValues == SystemZII::getCCValues(CompareFlags));
 
   if (!MIEquivalentToCmp) {
     // Now check whether these flags are enough for all users.
     SmallVector<MachineOperand *, 4> AlterMasks;
     for (unsigned int I = 0, E = CCUsers.size(); I != E; ++I) {
-      MachineInstr *MI = CCUsers[I];
+      MachineInstr *CCUserMI = CCUsers[I];
 
       // Fail if this isn't a use of CC that we understand.
-      unsigned Flags = MI->getDesc().TSFlags;
+      unsigned Flags = CCUserMI->getDesc().TSFlags;
       unsigned FirstOpNum;
       if (Flags & SystemZII::CCMaskFirst)
         FirstOpNum = 0;
       else if (Flags & SystemZII::CCMaskLast)
-        FirstOpNum = MI->getNumExplicitOperands() - 2;
+        FirstOpNum = CCUserMI->getNumExplicitOperands() - 2;
       else
         return false;
 
       // Check whether the instruction predicate treats all CC values
       // outside of ReusableCCMask in the same way.  In that case it
       // doesn't matter what those CC values mean.
-      unsigned CCValid = MI->getOperand(FirstOpNum).getImm();
-      unsigned CCMask = MI->getOperand(FirstOpNum + 1).getImm();
+      unsigned CCValid = CCUserMI->getOperand(FirstOpNum).getImm();
+      unsigned CCMask = CCUserMI->getOperand(FirstOpNum + 1).getImm();
+      assert(CCValid == CompareCCValues && (CCMask & ~CCValid) == 0 &&
+             "Corrupt CC operands of CCUser.");
       unsigned OutValid = ~ReusableCCMask & CCValid;
       unsigned OutMask = ~ReusableCCMask & CCMask;
       if (OutMask != 0 && OutMask != OutValid)
         return false;
 
-      AlterMasks.push_back(&MI->getOperand(FirstOpNum));
-      AlterMasks.push_back(&MI->getOperand(FirstOpNum + 1));
+      AlterMasks.push_back(&CCUserMI->getOperand(FirstOpNum));
+      AlterMasks.push_back(&CCUserMI->getOperand(FirstOpNum + 1));
     }
 
     // All users are OK.  Adjust the masks for MI.
     for (unsigned I = 0, E = AlterMasks.size(); I != E; I += 2) {
       AlterMasks[I]->setImm(CCValues);
       unsigned CCMask = AlterMasks[I + 1]->getImm();
-      if (CCMask & ~ReusableCCMask)
-        AlterMasks[I + 1]->setImm((CCMask & ReusableCCMask) |
-                                  (CCValues & ~ReusableCCMask));
+      if (LogicalMI) {
+        // Translate the CCMask into its "logical" value.
+        CCMask = (CCMask == SystemZ::CCMASK_CMP_EQ ?
+                  SystemZ::CCMASK_LOGICAL_ZERO : SystemZ::CCMASK_LOGICAL_NONZERO);
+        CCMask &= CCValues; // Logical subtracts never set CC=0.
+      } else {
+        if (CCMask & ~ReusableCCMask)
+          CCMask = (CCMask & ReusableCCMask) | (CCValues & ~ReusableCCMask);
+        CCMask |= (CCMask & OFImplies) ? SystemZ::CCMASK_ARITH_OVERFLOW : 0;
+      }
+      AlterMasks[I + 1]->setImm(CCMask);
     }
   }
 
@@ -460,7 +547,9 @@ bool SystemZElimCompare::optimizeCompareZero(
       }
       // Try to eliminate Compare by reusing a CC result from MI.
       if ((!CCRefs && convertToLoadAndTest(MI, Compare, CCUsers)) ||
-          (!CCRefs.Def && adjustCCMasksForInstr(MI, Compare, CCUsers))) {
+          (!CCRefs.Def &&
+           (adjustCCMasksForInstr(MI, Compare, CCUsers) ||
+            convertToLogical(MI, Compare, CCUsers)))) {
         EliminatedComparisons += 1;
         return true;
       }

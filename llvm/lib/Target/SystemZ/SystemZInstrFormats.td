@@ -75,8 +75,9 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   // SystemZ::CCMASK_*.
   bits<4> CCValues = 0;
 
-  // The subset of CCValues that have the same meaning as they would after
-  // a comparison of the first operand against zero.
+  // The subset of CCValues that have the same meaning as they would after a
+  // comparison of the first operand against zero. "Logical" instructions
+  // leave this blank as they set CC in a different way.
   bits<4> CompareZeroCCMask = 0;
 
   // True if the instruction is conditional and if the CC mask operand
@@ -87,8 +88,15 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   bit CCMaskLast = 0;
 
   // True if the instruction is the "logical" rather than "arithmetic" form,
-  // in cases where a distinction exists.
+  // in cases where a distinction exists. Except for logical compares, if the
+  // instruction sets this flag along with a non-zero CCValues field, it is
+  // assumed to set CC to either CCMASK_LOGICAL_ZERO or
+  // CCMASK_LOGICAL_NONZERO.
   bit IsLogical = 0;
+
+  // True if the (add or sub) instruction sets CC like a compare of the
+  // result against zero, but only if the 'nsw' flag is set.
+  bit CCIfNoSignedWrap = 0;
 
   let TSFlags{0}     = SimpleBDXLoad;
   let TSFlags{1}     = SimpleBDXStore;
@@ -101,6 +109,7 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   let TSFlags{18}    = CCMaskFirst;
   let TSFlags{19}    = CCMaskLast;
   let TSFlags{20}    = IsLogical;
+  let TSFlags{21}    = CCIfNoSignedWrap;
 }
 
 //===----------------------------------------------------------------------===//
