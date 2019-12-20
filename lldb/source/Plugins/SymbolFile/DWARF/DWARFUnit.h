@@ -243,6 +243,13 @@ public:
     return *Offset + m_loclists_base;
   }
 
+  /// Return the location table for parsing the given location list data. The
+  /// format is chosen according to the unit type. Never returns null.
+  std::unique_ptr<llvm::DWARFLocationTable>
+  GetLocationTable(const lldb_private::DataExtractor &data) const;
+
+  const lldb_private::DWARFDataExtractor &GetLocationData() const;
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,

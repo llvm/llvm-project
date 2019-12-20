@@ -597,13 +597,6 @@ void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
   m_objfile_sp->ReadSectionData(section_sp.get(), data);
 }
 
-const DWARFDataExtractor &SymbolFileDWARF::DebugLocData() {
-  const DWARFDataExtractor &debugLocData = get_debug_loc_data();
-  if (debugLocData.GetByteSize() > 0)
-    return debugLocData;
-  return get_debug_loclists_data();
-}
-
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_loc_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugLoc, m_data_debug_loc);
 }
@@ -3361,7 +3354,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                   module, DataExtractor(data, block_offset, block_length),
                   die.GetCU());
             } else {
-              DataExtractor data = DebugLocData();
+              DataExtractor data = die.GetCU()->GetLocationData();
               dw_offset_t offset = form_value.Unsigned();
               if (form_value.Form() == DW_FORM_loclistx)
                 offset = die.GetCU()->GetLoclistOffset(offset).getValueOr(-1);
@@ -3976,13 +3969,6 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
     }
   }
   return m_debug_map_symfile;
-}
-
-DWARFExpression::LocationListFormat
-SymbolFileDWARF::GetLocationListFormat() const {
-  if (m_data_debug_loclists.m_data.GetByteSize() > 0)
-    return DWARFExpression::LocLists;
-  return DWARFExpression::RegularLocationList;
 }
 
 SymbolFileDWARFDwp *SymbolFileDWARF::GetDwpSymbolFile() {
