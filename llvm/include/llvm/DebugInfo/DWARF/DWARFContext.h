@@ -298,7 +298,7 @@ public:
   /// Report any recoverable parsing problems using the callback.
   Expected<const DWARFDebugLine::LineTable *>
   getLineTableForUnit(DWARFUnit *U,
-                      std::function<void(Error)> RecoverableErrorCallback);
+                      function_ref<void(Error)> RecoverableErrorCallback);
 
   DataExtractor getStringExtractor() const {
     return DataExtractor(DObj->getStrSection(), false, 0);

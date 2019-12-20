@@ -514,7 +514,7 @@ DWARFDebugLine::getLineTable(uint64_t Offset) const {
 
 Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
     DWARFDataExtractor &DebugLineData, uint64_t Offset, const DWARFContext &Ctx,
-    const DWARFUnit *U, std::function<void(Error)> RecoverableErrorCallback) {
+    const DWARFUnit *U, function_ref<void(Error)> RecoverableErrorCallback) {
   if (!DebugLineData.isValidOffset(Offset))
     return createStringError(errc::invalid_argument, "offset 0x%8.8" PRIx64
                        " is not a valid debug line section offset",
@@ -535,7 +535,7 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
 Error DWARFDebugLine::LineTable::parse(
     DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
     const DWARFContext &Ctx, const DWARFUnit *U,
-    std::function<void(Error)> RecoverableErrorCallback, raw_ostream *OS) {
+    function_ref<void(Error)> RecoverableErrorCallback, raw_ostream *OS) {
   const uint64_t DebugLineOffset = *OffsetPtr;
 
   clear();
