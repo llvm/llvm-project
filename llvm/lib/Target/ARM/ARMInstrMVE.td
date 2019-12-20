@@ -5717,6 +5717,8 @@ class MVE_WLSTP<string asm, bits<2> size>
   let Inst{13} = 0b0;
   let Inst{11} = label{0};
   let Inst{10-1} = label{10-1};
+  let isBranch = 1;
+  let isTerminator = 1;
 }
 
 def MVE_DLSTP_8  : MVE_DLSTP<"dlstp.8",  0b00>;
@@ -5745,6 +5747,8 @@ def MVE_LETP : MVE_loltp_end<(outs GPRlr:$LRout),
   let Inst{13} = 0b0;
   let Inst{11} = label{0};
   let Inst{10-1} = label{10-1};
+  let isBranch = 1;
+  let isTerminator = 1;
 }
 
 def MVE_LCTP : MVE_loltp_end<(outs), (ins pred:$p), "lctp${p}", ""> {
