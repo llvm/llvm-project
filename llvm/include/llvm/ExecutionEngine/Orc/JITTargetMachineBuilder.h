@@ -79,11 +79,17 @@ public:
     return *this;
   }
 
+  /// Get the relocation model.
+  const Optional<Reloc::Model> &getRelocationModel() const { return RM; }
+
   /// Set the code model.
   JITTargetMachineBuilder &setCodeModel(Optional<CodeModel::Model> CM) {
     this->CM = std::move(CM);
     return *this;
   }
+
+  /// Get the code model.
+  const Optional<CodeModel::Model> &getCodeModel() const { return CM; }
 
   /// Set the LLVM CodeGen optimization level.
   JITTargetMachineBuilder &setCodeGenOptLevel(CodeGenOpt::Level OptLevel) {
