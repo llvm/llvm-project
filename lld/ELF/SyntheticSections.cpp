@@ -2470,11 +2470,8 @@ void PltSection::writeTo(uint8_t *buf) {
   target->writePltHeader(buf);
   size_t off = headerSize;
 
-  for (size_t i = 0, e = entries.size(); i != e; ++i) {
-    const Symbol *b = entries[i];
-    uint64_t got = b->getGotPltVA();
-    uint64_t plt = this->getVA() + off;
-    target->writePlt(buf + off, got, plt, b->pltIndex);
+  for (const Symbol *sym : entries) {
+    target->writePlt(buf + off, *sym, getVA() + off);
     off += target->pltEntrySize;
   }
 }
@@ -2516,8 +2513,7 @@ IpltSection::IpltSection()
 void IpltSection::writeTo(uint8_t *buf) {
   uint32_t off = 0;
   for (const Symbol *sym : entries) {
-    target->writeIplt(buf + off, sym->getGotPltVA(), getVA() + off,
-                      sym->pltIndex);
+    target->writeIplt(buf + off, *sym, getVA() + off);
     off += target->ipltEntrySize;
   }
 }

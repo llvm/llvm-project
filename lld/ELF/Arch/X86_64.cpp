@@ -33,8 +33,8 @@ public:
   void writeGotPltHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
 
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
@@ -156,8 +156,8 @@ void X86_64::writePltHeader(uint8_t *buf) const {
   write32le(buf + 8, gotPlt - plt + 4); // GOTPLT+16
 }
 
-void X86_64::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                      uint64_t pltEntryAddr, int32_t index) const {
+void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
+                      uint64_t pltEntryAddr) const {
   const uint8_t inst[] = {
       0xff, 0x25, 0, 0, 0, 0, // jmpq *got(%rip)
       0x68, 0, 0, 0, 0,       // pushq <relocation index>
@@ -165,8 +165,8 @@ void X86_64::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  write32le(buf + 2, gotPltEntryAddr - pltEntryAddr - 6);
-  write32le(buf + 7, index);
+  write32le(buf + 2, sym.getGotPltVA() - pltEntryAddr - 6);
+  write32le(buf + 7, sym.pltIndex);
   write32le(buf + 12, in.plt->getVA() - pltEntryAddr - 16);
 }
 
@@ -583,8 +583,8 @@ public:
   Retpoline();
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
 };
 
 class RetpolineZNow : public X86_64 {
@@ -592,8 +592,8 @@ public:
   RetpolineZNow();
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override {}
   void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
-                int32_t index) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
 };
 } // namespace
 
@@ -629,8 +629,8 @@ void Retpoline::writePltHeader(uint8_t *buf) const {
   write32le(buf + 9, gotPlt - plt - 13 + 16);
 }
 
-void Retpoline::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                         uint64_t pltEntryAddr, int32_t index) const {
+void Retpoline::writePlt(uint8_t *buf, const Symbol &sym,
+                         uint64_t pltEntryAddr) const {
   const uint8_t insn[] = {
       0x4c, 0x8b, 0x1d, 0, 0, 0, 0, // 0:  mov foo@GOTPLT(%rip), %r11
       0xe8, 0,    0,    0,    0,    // 7:  callq plt+0x20
@@ -643,10 +643,10 @@ void Retpoline::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
 
   uint64_t off = pltEntryAddr - in.plt->getVA();
 
-  write32le(buf + 3, gotPltEntryAddr - pltEntryAddr - 7);
+  write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
   write32le(buf + 8, -off - 12 + 32);
   write32le(buf + 13, -off - 17 + 18);
-  write32le(buf + 18, index);
+  write32le(buf + 18, sym.pltIndex);
   write32le(buf + 23, -off - 27);
 }
 
@@ -672,8 +672,8 @@ void RetpolineZNow::writePltHeader(uint8_t *buf) const {
   memcpy(buf, insn, sizeof(insn));
 }
 
-void RetpolineZNow::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
-                             uint64_t pltEntryAddr, int32_t index) const {
+void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
+                             uint64_t pltEntryAddr) const {
   const uint8_t insn[] = {
       0x4c, 0x8b, 0x1d, 0,    0, 0, 0, // mov foo@GOTPLT(%rip), %r11
       0xe9, 0,    0,    0,    0,       // jmp plt+0
@@ -681,7 +681,7 @@ void RetpolineZNow::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   };
   memcpy(buf, insn, sizeof(insn));
 
-  write32le(buf + 3, gotPltEntryAddr - pltEntryAddr - 7);
+  write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
   write32le(buf + 8, in.plt->getVA() - pltEntryAddr - 12);
 }
 
