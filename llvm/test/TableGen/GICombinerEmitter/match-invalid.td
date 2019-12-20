@@ -53,6 +53,15 @@ def unknown_kind2 : GICombineRule<
 // CHECK-NEXT: def unknown_kind2 : GICombineRule<
 // CHECK: :[[@LINE-6]]:{{[0-9]+}}: error: Failed to parse rule
 
+def multidef : GICombineRule<
+  (defs root:$a),
+  (match (MOV $a, $b),
+         (MOV $a, $b)),
+  (dummy)>;
+// CHECK: :[[@LINE-5]]:{{[0-9]+}}: error: Two different MachineInstrs cannot def the same vreg
+// CHECK-NEXT: def multidef : GICombineRule<
+// CHECK: :[[@LINE-7]]:{{[0-9]+}}: error: Failed to parse rule
+
 def multidef_but_not_an_error: GICombineRule<
   (defs root:$a),
   (match (MOV $a, $b),
@@ -66,6 +75,7 @@ def MyCombiner: GICombinerHelper<"GenMyCombiner", [
   null_matcher,
   unknown_kind1,
   unknown_kind2,
+  multidef
   // Rules omitted from a matcher can be as broken as you like. They will not be read.
   // multidef_but_not_an_error
 ]>;
