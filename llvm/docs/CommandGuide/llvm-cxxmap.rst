@@ -71,6 +71,14 @@ indicating whether the following mangled name fragments are
 respectively.
 Blank lines and lines starting with ``#`` are ignored.
 
+Unmangled C names can be expressed as an ``encoding`` that is a (length-prefixed)
+<`source-name <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.source-name>`_>:
+
+.. code-block:: none
+
+  # C function "void foo_bar()" is remapped to C++ function "void foo::bar()".
+  encoding 7foo_bar _Z3foo3barv
+
 For convenience, built-in <substitution>s such as ``St`` and ``Ss``
 are accepted as <name>s (even though they technically are not <name>s).
 
