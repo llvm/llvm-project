@@ -228,7 +228,9 @@ DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
     if (I != R.end() && std::next(I) == R.end())
       return (*I)->getAddrOffsetSectionItem(Index);
   }
-  uint64_t Offset = AddrOffsetSectionBase + Index * getAddressByteSize();
+  if (!AddrOffsetSectionBase)
+    return None;
+  uint64_t Offset = *AddrOffsetSectionBase + Index * getAddressByteSize();
   if (AddrOffsetSection->Data.size() < Offset + getAddressByteSize())
     return None;
   DWARFDataExtractor DA(Context.getDWARFObj(), *AddrOffsetSection,
@@ -360,7 +362,7 @@ void DWARFUnit::clear() {
   BaseAddr.reset();
   RangeSectionBase = 0;
   LocSectionBase = 0;
-  AddrOffsetSectionBase = 0;
+  AddrOffsetSectionBase = None;
   clearDIEs(false);
   DWO.reset();
 }
@@ -448,13 +450,13 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   if (Optional<uint64_t> DWOId = toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
     Header.setDWOId(*DWOId);
   if (!IsDWO) {
-    assert(AddrOffsetSectionBase == 0);
+    assert(AddrOffsetSectionBase == None);
     assert(RangeSectionBase == 0);
     assert(LocSectionBase == 0);
-    AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_addr_base), 0);
+    AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_addr_base));
     if (!AddrOffsetSectionBase)
       AddrOffsetSectionBase =
-          toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
+          toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base));
     RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
     LocSectionBase = toSectionOffset(UnitDie.find(DW_AT_loclists_base), 0);
   }
@@ -578,7 +580,8 @@ bool DWARFUnit::parseDWO() {
     return false;
   DWO = std::shared_ptr<DWARFCompileUnit>(std::move(DWOContext), DWOCU);
   // Share .debug_addr and .debug_ranges section with compile unit in .dwo
-  DWO->setAddrOffsetSection(AddrOffsetSection, AddrOffsetSectionBase);
+  if (AddrOffsetSectionBase)
+    DWO->setAddrOffsetSection(AddrOffsetSection, *AddrOffsetSectionBase);
   if (getVersion() >= 5) {
     DWO->setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
     DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
