@@ -5,7 +5,6 @@
 func @broadcast_to_scalar(%arg0: f32) -> f32 {
   // expected-error@+1 {{'vector.broadcast' op result #0 must be vector of any type values, but got 'f32'}}
   %0 = vector.broadcast %arg0 : f32 to f32
-  return %0 : f32
 }
 
 // -----
@@ -531,7 +530,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{expected an indexing map for each vector operand}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
-  return
 }
 
 // -----
@@ -551,7 +549,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{expected indexing map 0 to be a projected permutation of its inputs}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
-  return
 }
 
 // -----
@@ -571,7 +568,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{op expected indexing map 1 to have no symbols}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
-  return
 }
 
 // -----
@@ -591,7 +587,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{expected indexing map 2 to have 5 number of inputs}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
-  return
 }
 
 // -----
@@ -611,7 +606,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{expected indexing map 1 to have 4 number of outputs}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
-  return
 }
 
 // -----
@@ -631,7 +625,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{op expected at least one contracting dimension pair}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
-  return
 }
 
 // -----
@@ -651,7 +644,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{invalid contracting dimension map}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
-  return
 }
 
 // -----
@@ -671,7 +663,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{invalid batch dimension map}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
-  return
 }
 
 // -----
@@ -691,7 +682,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{invalid accumulator/result vector shape}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<88x15x5xf32>
-  return
 }
 
 // -----
@@ -713,7 +703,6 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
   // expected-error@+1 {{expected zero or exactly 2 vector mask operands}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2, %lhs_mask
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
-  return
 }
 
 // -----
@@ -723,7 +712,6 @@ func @create_mask() {
   %c3 = constant 3 : index
   // expected-error@+1 {{must specify an operand for each result vector dimension}}
   %0 = vector.create_mask %c3, %c2 : vector<4x3x7xi1>
-  return
 }
 
 
@@ -732,7 +720,6 @@ func @create_mask() {
 func @constant_mask() {
   // expected-error@+1 {{must specify array attr of size equal vector result rank}}
   %0 = vector.constant_mask [3, 2, 7] : vector<4x3xi1>
-  return
 }
 
 // -----
@@ -740,7 +727,6 @@ func @constant_mask() {
 func @constant_mask_out_of_bounds() {
   // expected-error@+1 {{array attr of size out of bounds of vector result dimension size}}
   %0 = vector.constant_mask [-1, 2] : vector<4x3xi1>
-  return
 }
 
 // -----
@@ -748,7 +734,6 @@ func @constant_mask_out_of_bounds() {
 func @constant_mask_out_of_bounds() {
   // expected-error@+1 {{array attr of size out of bounds of vector result dimension size}}
   %0 = vector.constant_mask [3, 4] : vector<4x3xi1>
-  return
 }
 
 // -----
@@ -756,7 +741,6 @@ func @constant_mask_out_of_bounds() {
 func @constant_mask_with_zero_mask_dim_size() {
   // expected-error@+1 {{expected all mask dim sizes to be zeros, as a result of conjunction with zero mask dim}}
   %0 = vector.constant_mask [0, 2] : vector<4x3xi1>
-  return
 }
 
 
@@ -766,7 +750,6 @@ func @extract_slices_non_unit_strides(%arg0 : vector<4x2xf32>) {
   // expected-error@+1 {{requires unit strides}}
   %0 = vector.extract_slices %arg0, [2, 2], [1, 3]
     : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
-  return
 }
 
 // -----
@@ -775,7 +758,6 @@ func @extract_slices_tuple_element_wrong_rank(%arg0 : vector<4x2xf32>) {
   // expected-error@+1 {{requires vector tuple elements of rank 2}}
   %0 = vector.extract_slices %arg0, [2, 2], [1, 1]
     : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2x3xf32>>
-  return
 }
 
 // -----
@@ -784,7 +766,6 @@ func @extract_slices_sizes_strides_wrong_rank(%arg0 : vector<4x2xf32>) {
   // expected-error@+1 {{requires sizes and strides of rank}}
   %0 = vector.extract_slices %arg0, [2, 2], [1, 1, 1]
     : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
-  return
 }
 
 // -----
@@ -793,7 +774,6 @@ func @extract_slices_invalid_tuple_element_type(%arg0 : vector<4x2xf32>) {
   // expected-error@+1 {{invalid tuple element type}}
   %0 = vector.extract_slices %arg0, [2, 2], [1, 1]
     : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<4x2xf32>>
-  return
 }
 
 // -----
@@ -802,7 +782,6 @@ func @tuple_of_non_vectors(%arg0 : vector<4x2xf32>) {
   %c0 = constant 0 : index
   // expected-error@+1 {{must be vector of any type values}}
   %0 = vector.tuple %arg0, %c0 : vector<4x2xf32>, index
-  return
 }
 
 // -----
@@ -810,7 +789,6 @@ func @tuple_of_non_vectors(%arg0 : vector<4x2xf32>) {
 func @tuple_get_of_non_vectors(%arg0 : tuple<vector<4x2xf32>, index>) {
   // expected-error@+1 {{vector of any type values}}
   %0 = vector.tuple_get %arg0, 0 : tuple<vector<4x2xf32>, index>
-  return
 }
 
 // -----
@@ -819,7 +797,6 @@ func @insert_slices_non_unit_strides(%arg0 : tuple<vector<2x2xf32>, vector<2x2xf
   // expected-error@+1 {{requires unit strides}}
   %0 = vector.insert_slices %arg0, [2, 2], [1, 3]
     : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<4x2xf32>
-  return
 }
 
 // -----
@@ -828,7 +805,6 @@ func @insert_slices_tuple_element_wrong_rank(%arg0 : tuple<vector<2x2xf32>, vect
   // expected-error@+1 {{requires vector tuple elements of rank 2}}
   %0 = vector.insert_slices %arg0, [2, 2], [1, 1]
     : tuple<vector<2x2xf32>, vector<2x2x3xf32>> into vector<4x2xf32>
-  return
 }
 
 // -----
@@ -837,7 +813,6 @@ func @insert_slices_sizes_strides_wrong_rank(%arg0 : tuple<vector<2x2xf32>, vect
   // expected-error@+1 {{requires sizes and strides of rank}}
   %0 = vector.insert_slices %arg0, [2, 2], [1, 1, 1]
     : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<4x2xf32>
-  return
 }
 
 // -----
@@ -846,7 +821,6 @@ func @insert_slices_invalid_tuple_element_type(%arg0 : tuple<vector<2x2xf32>, ve
   // expected-error@+1 {{invalid tuple element type}}
   %0 = vector.insert_slices %arg0, [2, 2], [1, 1]
     : tuple<vector<2x2xf32>, vector<4x2xf32>> into vector<4x2xf32>
-  return
 }
 
 // -----
@@ -854,7 +828,6 @@ func @insert_slices_invalid_tuple_element_type(%arg0 : tuple<vector<2x2xf32>, ve
 func @print_no_result(%arg0 : f32) -> i32 {
   // expected-error@+1 {{cannot name an operation with no results}}
   %0 = vector.print %arg0 : f32
-  return %0
 }
 
 // -----
