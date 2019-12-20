@@ -144,7 +144,7 @@ public:
 
 class X86AsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
-  const MCInstrInfo &MCII;
+  std::unique_ptr<const MCInstrInfo> MCII;
   X86AlignBranchKind AlignBranchType;
   Align AlignBoundary;
 
@@ -162,7 +162,7 @@ class X86AsmBackend : public MCAsmBackend {
 public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
       : MCAsmBackend(support::little), STI(STI),
-        MCII(*(T.createMCInstrInfo())) {
+        MCII(T.createMCInstrInfo()) {
     AlignBoundary = assumeAligned(X86AlignBranchBoundary);
     AlignBranchType = X86AlignBranchKindLoc;
   }
@@ -382,7 +382,7 @@ bool X86AsmBackend::isFirstMacroFusibleInst(const MCInst &Inst) const {
 
 /// Check if the two instructions are macro-fused.
 bool X86AsmBackend::isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const {
-  const MCInstrDesc &InstDesc = MCII.get(Jcc.getOpcode());
+  const MCInstrDesc &InstDesc = MCII->get(Jcc.getOpcode());
   if (!InstDesc.isConditionalBranch())
     return false;
   if (!isFirstMacroFusibleInst(Cmp))
@@ -390,14 +390,14 @@ bool X86AsmBackend::isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const {
   const X86::FirstMacroFusionInstKind CmpKind =
       X86::classifyFirstOpcodeInMacroFusion(Cmp.getOpcode());
   const X86::SecondMacroFusionInstKind BranchKind =
-      classifySecondInstInMacroFusion(Jcc, MCII);
+      classifySecondInstInMacroFusion(Jcc, *MCII);
   return X86::isMacroFused(CmpKind, BranchKind);
 }
 
 /// Check if the instruction is RIP relative addressing.
 bool X86AsmBackend::isRIPRelative(const MCInst &MI) const {
   unsigned Opcode = MI.getOpcode();
-  const MCInstrDesc &Desc = MCII.get(Opcode);
+  const MCInstrDesc &Desc = MCII->get(Opcode);
   uint64_t TSFlags = Desc.TSFlags;
   unsigned CurOp = X86II::getOperandBias(Desc);
   int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
@@ -451,7 +451,7 @@ bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
   if (hasVariantSymbol(Inst))
     return false;
 
-  const MCInstrDesc &InstDesc = MCII.get(Inst.getOpcode());
+  const MCInstrDesc &InstDesc = MCII->get(Inst.getOpcode());
   return (InstDesc.isConditionalBranch() &&
           (AlignBranchType & X86AlignBranchKind::AlignBranchJcc)) ||
          (InstDesc.isUnconditionalBranch() &&
