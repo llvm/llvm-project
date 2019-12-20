@@ -45,7 +45,8 @@ STATISTIC(NumTasks, "Number of tasks found.");
 STATISTIC(NumSpindles, "Number of spindles found.");
 STATISTIC(NumSharedEHSpindles, "Number of shared exception-handling spindles "
           "found in this function.");
-STATISTIC(NumBasicBlocksInPF, "Number of basic blocks analyzed in parallel functions.");
+STATISTIC(NumBasicBlocksInPF,
+          "Number of basic blocks analyzed in parallel functions.");
 STATISTIC(NumTasksInPF, "Number of tasks found in parallel functions.");
 STATISTIC(NumSpindlesInPF, "Number of spindles found in parallel functions.");
 

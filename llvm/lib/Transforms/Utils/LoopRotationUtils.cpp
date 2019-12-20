@@ -211,7 +211,6 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
   BasicBlock *OrigHeader = L->getHeader();
   BasicBlock *OrigLatch = L->getLoopLatch();
-  Function *ParentF = OrigHeader->getParent();
 
   BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
   if (!BI || BI->isUnconditional())
@@ -517,7 +516,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // Recompute task info.
     // FIXME: Figure out a way to update task info that is less computationally
     // wasteful.
-    TaskI->recalculate(*ParentF, *DT);
+    TaskI->recalculate(*DT->getRoot()->getParent(), *DT);
 
   LLVM_DEBUG(dbgs() << "LoopRotation: into "; L->dump());
 

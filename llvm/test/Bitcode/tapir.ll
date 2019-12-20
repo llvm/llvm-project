@@ -2,7 +2,7 @@
 ;
 ; Thanks to @joshbohde for the code for this test case.
 ;;
-; RUN: llvm-as %s -o=- | llvm-dis 
+; RUN: llvm-as %s -o=- | llvm-dis
 
 declare token @llvm.syncregion.start() #3
 

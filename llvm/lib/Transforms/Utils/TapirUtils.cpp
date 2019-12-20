@@ -112,8 +112,8 @@ static bool hasLifetimeMarkers(AllocaInst *AI) {
   return false;
 }
 
-// Move static allocas in Block into Entry, which is assumed to do dominate
-// Block.  Leave lifetime markers behind in Block and before each instruction in
+// Move static allocas in Block into Entry, which is assumed to dominate Block.
+// Leave lifetime markers behind in Block and before each instruction in
 // ExitPoints for those static allocas.  Returns true if Block still contains
 // dynamic allocas, which cannot be moved.
 bool llvm::MoveStaticAllocasInBlock(
@@ -216,7 +216,6 @@ bool llvm::MoveStaticAllocasInBlock(
 
   return ContainsDynamicAllocas;
 }
-
 
 namespace {
 /// A class for recording information about inlining a landing pad.

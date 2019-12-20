@@ -21,9 +21,9 @@ class Loop;
 class LoopInfo;
 class MemorySSAUpdater;
 class ScalarEvolution;
-class TaskInfo;
 struct SimplifyQuery;
 class TargetTransformInfo;
+class TaskInfo;
 
 /// Convert a loop into a loop with bottom test. It may
 /// perform loop latch simplication as well if the flag RotationOnly

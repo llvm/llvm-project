@@ -274,7 +274,7 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
 
   // FIXME: Recalculating TaskInfo for the whole function is wasteful.
   // Optimize this routine in the future.
-  AR.TI.recalculate(*F, AR.DT);
+  AR.TI.recalculate(*AR.DT.getRoot()->getParent(), AR.DT);
 
   return getLoopPassPreservedAnalyses();
 }

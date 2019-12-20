@@ -1,4 +1,4 @@
-//===---- LoopSpawning.h - Spawn loop iterations efficiently ----*- C++ -*-===//
+//===---- LoopSpawningTI.h - Spawn loop iterations efficiently --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,10 +17,12 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
 /// The LoopSpawning Pass.
 struct LoopSpawningPass : public PassInfoMixin<LoopSpawningPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
-}
+
+} // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_TAPIR_LOOPSPAWNING_H

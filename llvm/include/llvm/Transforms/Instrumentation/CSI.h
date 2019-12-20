@@ -29,6 +29,7 @@
 
 namespace llvm {
 
+class Loop;
 class LoopInfo;
 class Spindle;
 class Task;
