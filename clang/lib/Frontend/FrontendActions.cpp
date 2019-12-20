@@ -140,7 +140,7 @@ GeneratePCHAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile,
   std::unique_ptr<raw_pwrite_stream> OS =
       CI.createOutputFile(CI.getFrontendOpts().OutputFile, /*Binary=*/true,
                           /*RemoveFileOnSignal=*/false, InFile,
-                          /*Extension=*/"", CI.getFrontendOpts().UseTemporary);
+                          /*Extension=*/"", /*UseTemporary=*/true);
   if (!OS)
     return nullptr;
 
