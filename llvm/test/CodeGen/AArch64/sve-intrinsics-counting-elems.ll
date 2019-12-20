@@ -12,6 +12,24 @@ define i64 @cntb() {
   ret i64 %out
 }
 
+define i64 @cntb_mul3() {
+; CHECK-LABEL: cntb_mul3:
+; CHECK: cntb x0, vl6, mul #3
+; CHECK-NEXT: ret
+  %cnt = call i64 @llvm.aarch64.sve.cntb(i32 6)
+  %out = mul i64 %cnt, 3
+  ret i64 %out
+}
+
+define i64 @cntb_mul4() {
+; CHECK-LABEL: cntb_mul4:
+; CHECK: cntb x0, vl8, mul #4
+; CHECK-NEXT: ret
+  %cnt = call i64 @llvm.aarch64.sve.cntb(i32 8)
+  %out = mul i64 %cnt, 4
+  ret i64 %out
+}
+
 ;
 ; CNTH
 ;
@@ -21,6 +39,24 @@ define i64 @cnth() {
 ; CHECK: cnth x0, vl3
 ; CHECK-NEXT: ret
   %out = call i64 @llvm.aarch64.sve.cnth(i32 3)
+  ret i64 %out
+}
+
+define i64 @cnth_mul5() {
+; CHECK-LABEL: cnth_mul5:
+; CHECK: cnth x0, vl7, mul #5
+; CHECK-NEXT: ret
+  %cnt = call i64 @llvm.aarch64.sve.cnth(i32 7)
+  %out = mul i64 %cnt, 5
+  ret i64 %out
+}
+
+define i64 @cnth_mul8() {
+; CHECK-LABEL: cnth_mul8:
+; CHECK: cnth x0, vl5, mul #8
+; CHECK-NEXT: ret
+  %cnt = call i64 @llvm.aarch64.sve.cnth(i32 5)
+  %out = mul i64 %cnt, 8
   ret i64 %out
 }
 
@@ -36,6 +72,24 @@ define i64 @cntw() {
   ret i64 %out
 }
 
+define i64 @cntw_mul11() {
+; CHECK-LABEL: cntw_mul11:
+; CHECK: cntw x0, vl8, mul #11
+; CHECK-NEXT: ret
+  %cnt = call i64 @llvm.aarch64.sve.cntw(i32 8)
+  %out = mul i64 %cnt, 11
+  ret i64 %out
+}
+
+define i64 @cntw_mul2() {
+; CHECK-LABEL: cntw_mul2:
+; CHECK: cntw x0, vl6, mul #2
+; CHECK-NEXT: ret
+  %cnt = call i64 @llvm.aarch64.sve.cntw(i32 6)
+  %out = mul i64 %cnt, 2
+  ret i64 %out
+}
+
 ;
 ; CNTD
 ;
@@ -45,6 +99,24 @@ define i64 @cntd() {
 ; CHECK: cntd x0, vl5
 ; CHECK-NEXT: ret
   %out = call i64 @llvm.aarch64.sve.cntd(i32 5)
+  ret i64 %out
+}
+
+define i64 @cntd_mul15() {
+; CHECK-LABEL: cntd_mul15:
+; CHECK: cntd x0, vl16, mul #15
+; CHECK-NEXT: ret
+  %cnt = call i64 @llvm.aarch64.sve.cntd(i32 9)
+  %out = mul i64 %cnt, 15
+  ret i64 %out
+}
+
+define i64 @cntd_mul16() {
+; CHECK-LABEL: cntd_mul16:
+; CHECK: cntd x0, vl32, mul #16
+; CHECK-NEXT: ret
+  %cnt = call i64 @llvm.aarch64.sve.cntd(i32 10)
+  %out = mul i64 %cnt, 16
   ret i64 %out
 }
 
