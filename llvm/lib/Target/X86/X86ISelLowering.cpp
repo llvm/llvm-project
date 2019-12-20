@@ -20429,20 +20429,25 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
 
 /// Emit nodes that will be selected as "cmp Op0,Op1", or something
 /// equivalent.
-SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
-                                   const SDLoc &dl, SelectionDAG &DAG,
-                                   SDValue Chain, bool IsSignaling) const {
+static std::pair<SDValue, SDValue> EmitCmp(SDValue Op0, SDValue Op1,
+                                           unsigned X86CC, const SDLoc &dl,
+                                           SelectionDAG &DAG,
+                                           const X86Subtarget &Subtarget,
+                                           SDValue Chain, bool IsSignaling) {
   if (isNullConstant(Op1))
-    return EmitTest(Op0, X86CC, dl, DAG, Subtarget);
+    return std::make_pair(EmitTest(Op0, X86CC, dl, DAG, Subtarget), SDValue());
 
   EVT CmpVT = Op0.getValueType();
 
   if (CmpVT.isFloatingPoint()) {
-    if (Chain)
-      return DAG.getNode(IsSignaling ? X86ISD::STRICT_FCMPS
-                                     : X86ISD::STRICT_FCMP,
-                         dl, {MVT::i32, MVT::Other}, {Chain, Op0, Op1});
-    return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op0, Op1);
+    if (Chain) {
+      SDValue Res =
+          DAG.getNode(IsSignaling ? X86ISD::STRICT_FCMPS : X86ISD::STRICT_FCMP,
+                      dl, {MVT::i32, MVT::Other}, {Chain, Op0, Op1});
+      return std::make_pair(Res, Res.getValue(1));
+    }
+    return std::make_pair(DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op0, Op1),
+                          SDValue());
   }
 
   assert((CmpVT == MVT::i8 || CmpVT == MVT::i16 ||
@@ -20497,7 +20502,7 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
   // Use SUB instead of CMP to enable CSE between SUB and CMP.
   SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
   SDValue Sub = DAG.getNode(X86ISD::SUB, dl, VTs, Op0, Op1);
-  return Sub.getValue(1);
+  return std::make_pair(Sub.getValue(1), SDValue());
 }
 
 /// Convert a comparison if required by the subtarget.
@@ -21433,9 +21438,11 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
   if (CondCode == X86::COND_INVALID)
     return SDValue();
 
-  SDValue EFLAGS = EmitCmp(Op0, Op1, CondCode, dl, DAG, Chain, IsSignaling);
+  std::pair<SDValue, SDValue> Tmp =
+      EmitCmp(Op0, Op1, CondCode, dl, DAG, Subtarget, Chain, IsSignaling);
+  SDValue EFLAGS = Tmp.first;
   if (Chain)
-    Chain = EFLAGS.getValue(1);
+    Chain = Tmp.second;
   EFLAGS = ConvertCmpIfNecessary(EFLAGS, DAG);
   X86CC = DAG.getTargetConstant(CondCode, dl, MVT::i8);
   return EFLAGS;
