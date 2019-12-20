@@ -9,6 +9,7 @@
 #include "DwarfLinker.h"
 #include "BinaryHolder.h"
 #include "DebugMap.h"
+#include "DeclContext.h"
 #include "DwarfStreamer.h"
 #include "MachOUtils.h"
 #include "dsymutil.h"
@@ -44,7 +45,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/DebugInfo/DWARF/DWARFOptDeclContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -374,6 +374,30 @@ static bool dieNeedsChildrenToBeMeaningful(uint32_t Tag) {
 }
 
 void DwarfLinker::startDebugObject(LinkContext &Context) {
+  // Iterate over the debug map entries and put all the ones that are
+  // functions (because they have a size) into the Ranges map. This map is
+  // very similar to the FunctionRanges that are stored in each unit, with 2
+  // notable differences:
+  //
+  //  1. Obviously this one is global, while the other ones are per-unit.
+  //
+  //  2. This one contains not only the functions described in the DIE
+  //     tree, but also the ones that are only in the debug map.
+  //
+  // The latter information is required to reproduce dsymutil's logic while
+  // linking line tables. The cases where this information matters look like
+  // bugs that need to be investigated, but for now we need to reproduce
+  // dsymutil's behavior.
+  // FIXME: Once we understood exactly if that information is needed,
+  // maybe totally remove this (or try to use it to do a real
+  // -gline-tables-only on Darwin.
+  for (const auto &Entry : Context.DMO.symbols()) {
+    const auto &Mapping = Entry.getValue();
+    if (Mapping.Size && Mapping.ObjectAddress)
+      Context.Ranges[*Mapping.ObjectAddress] = DebugMapObjectRange(
+          *Mapping.ObjectAddress + Mapping.Size,
+          int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
+  }
 }
 
 void DwarfLinker::endDebugObject(LinkContext &Context) {
@@ -536,7 +560,7 @@ bool DwarfLinker::RelocationManager::findValidRelocsInDebugInfo(
 /// This function must be called with offsets in strictly ascending
 /// order because it never looks back at relocations it already 'went past'.
 /// \returns true and sets Info.InDebugMap if it is the case.
-bool DwarfLinker::RelocationManager::hasValidRelocationAt(
+bool DwarfLinker::RelocationManager::hasValidRelocation(
     uint64_t StartOffset, uint64_t EndOffset, CompileUnit::DIEInfo &Info) {
   assert(NextValidReloc == 0 ||
          StartOffset > ValidRelocs[NextValidReloc - 1].Offset);
@@ -627,8 +651,7 @@ unsigned DwarfLinker::shouldKeepVariableDIE(RelocationManager &RelocMgr,
   // always check if the variable has a valid relocation, so that the
   // DIEInfo is filled. However, we don't want a static variable in a
   // function to force us to keep the enclosing function.
-  if (!RelocMgr.hasValidRelocationAt(LocationOffset, LocationEndOffset,
-                                     MyInfo) ||
+  if (!RelocMgr.hasValidRelocation(LocationOffset, LocationEndOffset, MyInfo) ||
       (Flags & TF_InFunctionScope))
     return Flags;
 
@@ -666,7 +689,7 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
   auto LowPc = dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc));
   assert(LowPc.hasValue() && "low_pc attribute is not an address.");
   if (!LowPc ||
-      !RelocMgr.hasValidRelocationAt(LowPcOffset, LowPcEndOffset, MyInfo))
+      !RelocMgr.hasValidRelocation(LowPcOffset, LowPcEndOffset, MyInfo))
     return Flags;
 
   if (Options.Verbose) {
@@ -701,7 +724,7 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
   }
 
   // Replace the debug map range with a more accurate one.
-  Ranges[*LowPc] = ObjFileAddressRange(*HighPc, MyInfo.AddrAdjust);
+  Ranges[*LowPc] = DebugMapObjectRange(*HighPc, MyInfo.AddrAdjust);
   Unit.addFunctionRange(*LowPc, *HighPc, MyInfo.AddrAdjust);
   return Flags;
 }
@@ -1628,8 +1651,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
   Data =
       DWARFDataExtractor(DIECopy, Data.isLittleEndian(), Data.getAddressSize());
   // Modify the copy with relocated addresses.
-  if (RelocMgr.areRelocationsResolved() &&
-      RelocMgr.applyValidRelocs(DIECopy, Offset, Data.isLittleEndian())) {
+  if (RelocMgr.applyValidRelocs(DIECopy, Offset, Data.isLittleEndian())) {
     // If we applied relocations, we store the value of high_pc that was
     // potentially stored in the input DIE. If high_pc is an address
     // (Dwarf version == 2), then it might have been relocated to a
@@ -2371,7 +2393,7 @@ Error DwarfLinker::loadClangModule(
 
   // Setup access to the debug info.
   auto DwarfContext = DWARFContext::create(*ErrOrObj);
-  RelocationManager RelocMgr(*this, *ErrOrObj, DMO);
+  RelocationManager RelocMgr(*this);
 
   for (const auto &CU : DwarfContext->compile_units()) {
     updateDwarfVersion(CU->getVersion());
@@ -2752,7 +2774,8 @@ bool DwarfLinker::link(const DebugMap &Map) {
     // Look for relocations that correspond to debug map entries.
 
     if (LLVM_LIKELY(!Options.Update) &&
-        !LinkContext.RelocMgr->hasValidRelocs()) {
+        !LinkContext.RelocMgr.findValidRelocsInDebugInfo(
+            *LinkContext.ObjectFile, LinkContext.DMO)) {
       if (Options.Verbose)
         outs() << "No valid relocations found. Skipping.\n";
 
@@ -2869,7 +2892,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
       Streamer->copyInvariantDebugSection(*LinkContext.ObjectFile);
     } else {
       for (auto &CurrentUnit : LinkContext.CompileUnits)
-        lookForDIEsToKeep(*LinkContext.RelocMgr, LinkContext.Ranges,
+        lookForDIEsToKeep(LinkContext.RelocMgr, LinkContext.Ranges,
                           LinkContext.CompileUnits,
                           CurrentUnit->getOrigUnit().getUnitDIE(),
                           LinkContext.DMO, *CurrentUnit, 0);
@@ -2878,9 +2901,10 @@ bool DwarfLinker::link(const DebugMap &Map) {
     // The calls to applyValidRelocs inside cloneDIE will walk the reloc
     // array again (in the same way findValidRelocsInDebugInfo() did). We
     // need to reset the NextValidReloc index to the beginning.
-    if (LinkContext.RelocMgr->hasValidRelocs() || LLVM_UNLIKELY(Options.Update))
-      DIECloner(*this, *LinkContext.RelocMgr, DIEAlloc,
-                LinkContext.CompileUnits, Options)
+    LinkContext.RelocMgr.resetValidRelocs();
+    if (LinkContext.RelocMgr.hasValidRelocs() || LLVM_UNLIKELY(Options.Update))
+      DIECloner(*this, LinkContext.RelocMgr, DIEAlloc, LinkContext.CompileUnits,
+                Options)
           .cloneAllCompileUnits(*LinkContext.DwarfContext, LinkContext.DMO,
                                 LinkContext.Ranges, OffsetsStringPool,
                                 LinkContext.DwarfContext->isLittleEndian());

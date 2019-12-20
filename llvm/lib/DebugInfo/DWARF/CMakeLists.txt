@@ -27,9 +27,6 @@ add_llvm_component_library(LLVMDebugInfoDWARF
   DWARFUnitIndex.cpp
   DWARFUnit.cpp
   DWARFVerifier.cpp
-  DWARFOptCompileUnit.cpp
-  DWARFOptDeclContext.cpp
-  DWARFOptimizer.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/DWARF
