@@ -97,6 +97,19 @@ define <16 x i8> @max_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SIMD128-NEXT: i8x16.avgr_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @avgr_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %a = add nuw <16 x i8> %x, %y
+  %b = add nuw <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1,
+                              i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %c = udiv <16 x i8> %b, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2,
+                           i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  ret <16 x i8> %c
+}
+
+; CHECK-LABEL: avgr_u_v16i8_wrap:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .functype avgr_u_v16i8_wrap (v128, v128) -> (v128){{$}}
+; SIMD128-NOT: i8x16.avgr_u
+define <16 x i8> @avgr_u_v16i8_wrap(<16 x i8> %x, <16 x i8> %y) {
   %a = add <16 x i8> %x, %y
   %b = add <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1,
                           i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -401,6 +414,17 @@ define <8 x i16> @max_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; SIMD128-NEXT: i16x8.avgr_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @avgr_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %a = add nuw <8 x i16> %x, %y
+  %b = add nuw <8 x i16> %a, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %c = udiv <8 x i16> %b, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  ret <8 x i16> %c
+}
+
+; CHECK-LABEL: avgr_u_v8i16_wrap:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype avgr_u_v8i16_wrap (v128, v128) -> (v128){{$}}
+; SIMD128-NOT: i16x8.avgr_u
+define <8 x i16> @avgr_u_v8i16_wrap(<8 x i16> %x, <8 x i16> %y) {
   %a = add <8 x i16> %x, %y
   %b = add <8 x i16> %a, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %c = udiv <8 x i16> %b, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
