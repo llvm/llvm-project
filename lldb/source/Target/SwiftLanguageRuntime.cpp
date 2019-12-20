@@ -1869,11 +1869,11 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
     return false;
 
   SetupSwiftError();
-  if (GetSwiftNativeNSErrorISA()) {
+  if (auto swift_native_nserror_isa = GetSwiftNativeNSErrorISA()) {
     if (auto objc_runtime = GetObjCRuntime()) {
       if (auto descriptor =
               objc_runtime->GetClassDescriptor(*instance_type_sp)) {
-        if (descriptor->GetISA() != *GetSwiftNativeNSErrorISA()) {
+        if (descriptor->GetISA() != *swift_native_nserror_isa) {
           // not a __SwiftNativeNSError - but statically typed as ErrorType
           // return true here
           return true;
