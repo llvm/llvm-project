@@ -8,9 +8,11 @@ define <vscale x 2 x i64> @no_dag_combine_zext_sext(<vscale x 2 x i1> %pg,
                                                     <vscale x 2 x i8>* %res_out,
                                                     <vscale x 2 x i1> %pred) {
 ; CHECK-LABEL: no_dag_combine_zext_sext
-; CHECK:  	ld1b	{ z0.d }, p0/z, [z0.d, #16]
-; CHECK-NEXT:	st1b	{ z0.d }, p1, [x0]
-; CHECK-NEXT:	and	z0.d, z0.d, #0xff
+; CHECK:  	ld1b	{ z1.d }, p0/z, [z0.d, #16]
+; CHECK-NEXT:	mov	w8, #255
+; CHECK-NEXT:	mov	z0.d, x8
+; CHECK-NEXT:	and	z0.d, z1.d, z0.d
+; CHECK-NEXT:	st1b	{ z1.d }, p1, [x0]
 ; CHECK-NEXT: ret
   %load = call <vscale x 2 x i8> @llvm.aarch64.sve.ld1.gather.imm.nxv2i8.nxv2i64(<vscale x 2 x i1> %pg,
                                                                                  <vscale x 2 x i64> %base,
@@ -52,9 +54,11 @@ define <vscale x 2 x i64> @no_dag_combine_zext(<vscale x 2 x i1> %pg,
                                                <vscale x 2 x i8>* %res_out,
                                                <vscale x 2 x i1> %pred) {
 ; CHECK-LABEL: no_dag_combine_zext
-; CHECK:  	ld1b	{ z0.d }, p0/z, [z0.d, #16]
-; CHECK-NEXT:	st1b	{ z0.d }, p1, [x0]
-; CHECK-NEXT:	and	z0.d, z0.d, #0xff
+; CHECK:  	ld1b	{ z1.d }, p0/z, [z0.d, #16]
+; CHECK-NEXT:	mov	w8, #255
+; CHECK-NEXT:	mov	z0.d, x8
+; CHECK-NEXT:	and	z0.d, z1.d, z0.d
+; CHECK-NEXT:	st1b	{ z1.d }, p1, [x0]
 ; CHECK-NEXT:	ret
   %load = call <vscale x 2 x i8> @llvm.aarch64.sve.ld1.gather.imm.nxv2i8.nxv2i64(<vscale x 2 x i1> %pg,
                                                                                  <vscale x 2 x i64> %base,
