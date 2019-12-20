@@ -311,6 +311,20 @@ define i32 @test13() {
   ret i32 %3
 }
 
+define i32 @test_sle() {
+  %1 = tail call noalias i8* @malloc(i64 -1)
+  ; FIXME: This should not be transformed
+  ; CHECK: %1 = alloca i8, i64 -1
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
+  tail call void @no_sync_func(i8* %1)
+  %2 = bitcast i8* %1 to i32*
+  store i32 10, i32* %2
+  %3 = load i32, i32* %2
+  tail call void @free(i8* %1)
+  ; CHECK-NOT: tail call void @free(i8* noalias %1)
+  ret i32 %3
+}
+
 define void @test14() {
   %1 = tail call noalias i8* @calloc(i64 64, i64 4)
   ; CHECK: %1 = tail call noalias i8* @calloc(i64 64, i64 4)
