@@ -167,14 +167,8 @@ struct FusionCandidate {
                   const PostDominatorTree *PDT, OptimizationRemarkEmitter &ORE)
       : Preheader(L->getLoopPreheader()), Header(L->getHeader()),
         ExitingBlock(L->getExitingBlock()), ExitBlock(L->getExitBlock()),
-        Latch(L->getLoopLatch()), L(L), Valid(true), GuardBranch(nullptr),
-        DT(DT), PDT(PDT), ORE(ORE) {
-
-    // TODO: This is temporary while we fuse both rotated and non-rotated
-    // loops. Once we switch to only fusing rotated loops, the initialization of
-    // GuardBranch can be moved into the initialization list above.
-    if (isRotated())
-      GuardBranch = L->getLoopGuardBranch();
+        Latch(L->getLoopLatch()), L(L), Valid(true),
+        GuardBranch(L->getLoopGuardBranch()), DT(DT), PDT(PDT), ORE(ORE) {
 
     // Walk over all blocks in the loop and check for conditions that may
     // prevent fusion. For each block, walk over all instructions and collect
@@ -261,12 +255,6 @@ struct FusionCandidate {
                : GuardBranch->getSuccessor(0);
   }
 
-  bool isRotated() const {
-    assert(L && "Expecting loop to be valid.");
-    assert(Latch && "Expecting latch to be valid.");
-    return L->isLoopExiting(Latch);
-  }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     dbgs() << "\tGuardBranch: "
@@ -320,7 +308,7 @@ struct FusionCandidate {
       return reportInvalidCandidate(NotSimplifiedForm);
     }
 
-    if (!isRotated()) {
+    if (!L->isRotatedForm()) {
       LLVM_DEBUG(dbgs() << "Loop " << L->getName() << " is not rotated!\n");
       return reportInvalidCandidate(NotRotated);
     }
