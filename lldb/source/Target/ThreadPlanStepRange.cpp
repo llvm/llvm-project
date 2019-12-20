@@ -250,6 +250,7 @@ bool ThreadPlanStepRange::StopOthers() {
   case lldb::eAllThreads:
     return false;
   }
+  llvm_unreachable("Unhandled run mode!");
 }
 
 InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
