@@ -94,6 +94,15 @@ INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
   return res;
 }
 
+// Return true if this is the first active thread in the warp.
+INLINE bool __kmpc_impl_is_first_active_thread() {
+  unsigned long long Mask = __kmpc_impl_activemask();
+  unsigned long long ShNum = WARPSIZE - (GetThreadIdInBlock() % WARPSIZE);
+  unsigned long long Sh = Mask << ShNum;
+  // Truncate Sh to the 32 lower bits
+  return (unsigned)Sh == 0;
+}
+
 INLINE uint32_t __kmpc_impl_smid() {
   uint32_t id;
   asm("mov.u32 %0, %%smid;" : "=r"(id));
