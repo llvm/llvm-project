@@ -67,7 +67,7 @@ FileRange syntax::Token::range(const SourceManager &SM,
   auto F = First.range(SM);
   auto L = Last.range(SM);
   assert(F.file() == L.file() && "tokens from different files");
-  assert(F == L || F.endOffset() <= L.beginOffset() && "wrong order of tokens");
+  assert((F == L || F.endOffset() <= L.beginOffset()) && "wrong order of tokens");
   return FileRange(F.file(), F.beginOffset(), L.endOffset());
 }
 
