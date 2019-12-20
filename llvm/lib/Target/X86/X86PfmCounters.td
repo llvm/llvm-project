@@ -81,14 +81,14 @@ def HaswellPfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
   let UopsCounter = UopsIssuedPfmCounter;
   let IssueCounters = [
-    PfmIssueCounter<"HWPort0", "uops_dispatched_port:port_0">,
-    PfmIssueCounter<"HWPort1", "uops_dispatched_port:port_1">,
-    PfmIssueCounter<"HWPort2", "uops_dispatched_port:port_2">,
-    PfmIssueCounter<"HWPort3", "uops_dispatched_port:port_3">,
-    PfmIssueCounter<"HWPort4", "uops_dispatched_port:port_4">,
-    PfmIssueCounter<"HWPort5", "uops_dispatched_port:port_5">,
-    PfmIssueCounter<"HWPort6", "uops_dispatched_port:port_6">,
-    PfmIssueCounter<"HWPort7", "uops_dispatched_port:port_7">
+    PfmIssueCounter<"HWPort0", "uops_executed_port:port_0">,
+    PfmIssueCounter<"HWPort1", "uops_executed_port:port_1">,
+    PfmIssueCounter<"HWPort2", "uops_executed_port:port_2">,
+    PfmIssueCounter<"HWPort3", "uops_executed_port:port_3">,
+    PfmIssueCounter<"HWPort4", "uops_executed_port:port_4">,
+    PfmIssueCounter<"HWPort5", "uops_executed_port:port_5">,
+    PfmIssueCounter<"HWPort6", "uops_executed_port:port_6">,
+    PfmIssueCounter<"HWPort7", "uops_executed_port:port_7">
   ];
 }
 def : PfmCountersBinding<"haswell", HaswellPfmCounters>;
