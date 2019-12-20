@@ -1209,8 +1209,12 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
   unsigned Opcode = FaultingMI.getOperand(3).getImm();
   unsigned OperandsBeginIdx = 4;
 
+  auto &Ctx = OutStreamer->getContext();
+  MCSymbol *FaultingLabel = Ctx.createTempSymbol();
+  OutStreamer->EmitLabel(FaultingLabel);
+
   assert(FK < FaultMaps::FaultKindMax && "Invalid Faulting Kind!");
-  FM.recordFaultingOp(FK, HandlerLabel);
+  FM.recordFaultingOp(FK, FaultingLabel, HandlerLabel);
 
   MCInst MI;
   MI.setOpcode(Opcode);
