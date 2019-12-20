@@ -14,7 +14,9 @@
 #ifndef LLVM_LTO_CONFIG_H
 #define LLVM_LTO_CONFIG_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetOptions.h"
