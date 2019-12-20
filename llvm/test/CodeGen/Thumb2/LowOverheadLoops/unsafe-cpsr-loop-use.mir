@@ -142,6 +142,7 @@ body:             |
     t2IT 2, 8, implicit-def $itstate
     renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2, killed $cpsr, implicit renamable $r3, implicit killed $itstate
     early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep4)
+    renamable $lr = tMOVr $lr, 14, $noreg
     t2LoopEnd killed renamable $lr, %bb.1, implicit-def dead $cpsr
     tB %bb.2, 14, $noreg
 

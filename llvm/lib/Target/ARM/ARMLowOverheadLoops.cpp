@@ -23,6 +23,7 @@
 #include "ARMBasicBlockInfo.h"
 #include "ARMSubtarget.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineLoopUtils.h"
@@ -268,12 +269,15 @@ MachineInstr *LowOverheadLoop::IsSafeToDefineLR(ReachingDefAnalysis *RDA) {
   // Find an insertion point:
   // - Is there a (mov lr, Count) before Start? If so, and nothing else writes
   //   to Count before Start, we can insert at that mov.
-  // - Is there a (mov lr, Count) after Start? If so, and nothing else writes
-  //   to Count after Start, we can insert at that mov.
-  if (auto *LRDef = RDA->getReachingMIDef(&MBB->back(), ARM::LR)) {
+  if (auto *LRDef = RDA->getReachingMIDef(Start, ARM::LR))
     if (IsMoveLR(LRDef) && RDA->hasSameReachingDef(Start, LRDef, CountReg))
       return LRDef;
-  }
+
+  // - Is there a (mov lr, Count) after Start? If so, and nothing else writes
+  //   to Count after Start, we can insert at that mov.
+  if (auto *LRDef = RDA->getLocalLiveOutMIDef(MBB, ARM::LR))
+    if (IsMoveLR(LRDef) && RDA->hasSameReachingDef(Start, LRDef, CountReg))
+      return LRDef;
 
   // We've found no suitable LR def and Start doesn't use LR directly. Can we
   // just define LR anyway?
@@ -281,6 +285,32 @@ MachineInstr *LowOverheadLoop::IsSafeToDefineLR(ReachingDefAnalysis *RDA) {
     return Start;
 
   return nullptr;
+}
+
+// Can we safely move 'From' to just before 'To'? To satisfy this, 'From' must
+// not define a register that is used by any instructions, after and including,
+// 'To'. These instructions also must not redefine any of Froms operands.
+template<typename Iterator>
+static bool IsSafeToMove(MachineInstr *From, MachineInstr *To, ReachingDefAnalysis *RDA) {
+  SmallSet<int, 2> Defs;
+  // First check that From would compute the same value if moved.
+  for (auto &MO : From->operands()) {
+    if (!MO.isReg() || MO.isUndef() || !MO.getReg())
+      continue;
+    if (MO.isDef())
+      Defs.insert(MO.getReg());
+    else if (!RDA->hasSameReachingDef(From, To, MO.getReg()))
+      return false;
+  }
+
+  // Now walk checking that the rest of the instructions will compute the same
+  // value.
+  for (auto I = ++Iterator(From), E = Iterator(To); I != E; ++I) {
+    for (auto &MO : I->operands())
+      if (MO.isReg() && MO.getReg() && MO.isUse() && Defs.count(MO.getReg()))
+        return false;
+  }
+  return true;
 }
 
 void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils,
@@ -369,13 +399,26 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils,
     return;
   }
 
-  // We can't perform TP if the register does not hold the same value at
-  // InsertPt as the liveout value.
+  // The element count register maybe defined after InsertPt, in which case we
+  // need to try to move either InsertPt or the def so that the [w|d]lstp can
+  // use the value.
   MachineBasicBlock *InsertBB = InsertPt->getParent();
-  if  (!RDA->hasSameReachingDef(InsertPt, &InsertBB->back(),
-                                NumElements)) {
-    CannotTailPredicate = true;
-    return;
+  if (!RDA->isReachingDefLiveOut(InsertPt, NumElements)) {
+    if (auto *ElemDef = RDA->getLocalLiveOutMIDef(InsertBB, NumElements)) {
+      if (IsSafeToMove<MachineBasicBlock::reverse_iterator>(ElemDef, InsertPt, RDA)) {
+        ElemDef->removeFromParent();
+        InsertBB->insert(MachineBasicBlock::iterator(InsertPt), ElemDef);
+        LLVM_DEBUG(dbgs() << "ARM Loops: Moved element count def: "
+                   << *ElemDef);
+      } else if (IsSafeToMove<MachineBasicBlock::iterator>(InsertPt, ElemDef, RDA)) {
+        InsertPt->removeFromParent();
+        InsertBB->insertAfter(MachineBasicBlock::iterator(ElemDef), InsertPt);
+        LLVM_DEBUG(dbgs() << "ARM Loops: Moved start past: " << *ElemDef);
+      } else {
+        CannotTailPredicate = true;
+        return;
+      }
+    }
   }
 
   // Especially in the case of while loops, InsertBB may not be the
