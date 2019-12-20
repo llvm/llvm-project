@@ -7317,7 +7317,8 @@ define <16 x float> @vpaddd_mask_test(<16 x float> %i, <16 x float> %j, <16 x i3
 ; AVX512-LABEL: vpaddd_mask_test:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0 {%k1}
+; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm1
+; AVX512-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
   %x = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %i, <16 x float> %j, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
