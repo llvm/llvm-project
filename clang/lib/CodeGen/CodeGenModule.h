@@ -855,6 +855,13 @@ public:
   /// space, target-specific global or constant address space may be returned.
   LangAS GetGlobalVarAddressSpace(const VarDecl *D);
 
+  /// Return the AST address space of constant literal, which is used to emit
+  /// the constant literal as global variable in LLVM IR.
+  /// Note: This is not necessarily the address space of the constant literal
+  /// in AST. For address space agnostic language, e.g. C++, constant literal
+  /// in AST is always in default address space.
+  LangAS GetGlobalConstantAddressSpace() const;
+
   /// Return the llvm::Constant for the address of the given global variable.
   /// If Ty is non-null and if the global doesn't exist, then it will be created
   /// with the specified type instead of whatever the normal requested type
@@ -865,13 +872,6 @@ public:
                                      llvm::Type *Ty = nullptr,
                                      ForDefinition_t IsForDefinition
                                        = NotForDefinition);
-
-  /// Return the AST address space of string literal, which is used to emit
-  /// the string literal as global variable in LLVM IR.
-  /// Note: This is not necessarily the address space of the string literal
-  /// in AST. For address space agnostic language, e.g. C++, string literal
-  /// in AST is always in default address space.
-  LangAS getStringLiteralAddressSpace() const;
 
   /// Return the address of the given function. If Ty is non-null, then this
   /// function will use the specified type if it has to create it.

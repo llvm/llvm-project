@@ -404,24 +404,22 @@ static Address createReferenceTemporary(CodeGenFunction &CGF,
         (Ty->isArrayType() || Ty->isRecordType()) &&
         CGF.CGM.isTypeConstant(Ty, true))
       if (auto Init = ConstantEmitter(CGF).tryEmitAbstract(Inner, Ty)) {
-        if (auto AddrSpace = CGF.getTarget().getConstantAddressSpace()) {
-          auto AS = AddrSpace.getValue();
-          auto *GV = new llvm::GlobalVariable(
-              CGF.CGM.getModule(), Init->getType(), /*isConstant=*/true,
-              llvm::GlobalValue::PrivateLinkage, Init, ".ref.tmp", nullptr,
-              llvm::GlobalValue::NotThreadLocal,
-              CGF.getContext().getTargetAddressSpace(AS));
-          CharUnits alignment = CGF.getContext().getTypeAlignInChars(Ty);
-          GV->setAlignment(alignment.getAsAlign());
-          llvm::Constant *C = GV;
-          if (AS != LangAS::Default)
-            C = TCG.performAddrSpaceCast(
-                CGF.CGM, GV, AS, LangAS::Default,
-                GV->getValueType()->getPointerTo(
-                    CGF.getContext().getTargetAddressSpace(LangAS::Default)));
-          // FIXME: Should we put the new global into a COMDAT?
-          return Address(C, alignment);
-        }
+        auto AS = CGF.CGM.GetGlobalConstantAddressSpace();
+        auto *GV = new llvm::GlobalVariable(
+            CGF.CGM.getModule(), Init->getType(), /*isConstant=*/true,
+            llvm::GlobalValue::PrivateLinkage, Init, ".ref.tmp", nullptr,
+            llvm::GlobalValue::NotThreadLocal,
+            CGF.getContext().getTargetAddressSpace(AS));
+        CharUnits alignment = CGF.getContext().getTypeAlignInChars(Ty);
+        GV->setAlignment(alignment.getAsAlign());
+        llvm::Constant *C = GV;
+        if (AS != LangAS::Default)
+          C = TCG.performAddrSpaceCast(
+              CGF.CGM, GV, AS, LangAS::Default,
+              GV->getValueType()->getPointerTo(
+                  CGF.getContext().getTargetAddressSpace(LangAS::Default)));
+        // FIXME: Should we put the new global into a COMDAT?
+        return Address(C, alignment);
       }
     return CGF.CreateMemTemp(Ty, "ref.tmp", Alloca);
   }
