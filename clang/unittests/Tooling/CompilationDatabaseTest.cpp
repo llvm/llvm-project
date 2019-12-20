@@ -749,6 +749,7 @@ TEST_F(InterpolateTest, Language) {
   add("dir/foo.cpp", "-std=c++17");
   add("dir/bar.c", "");
   add("dir/baz.cee", "-x c");
+  add("dir/aux.cpp", "-std=c++17 -x objective-c++");
 
   // .h is ambiguous, so we add explicit language flags
   EXPECT_EQ(getCommand("foo.h"),
@@ -767,6 +768,9 @@ TEST_F(InterpolateTest, Language) {
   Entries.erase(path(StringRef("dir/bar.c")));
   // Now we transfer across languages, so drop -std too.
   EXPECT_EQ(getCommand("foo.c"), "clang -D dir/foo.cpp");
+  // Prefer -x over -std when overriding language.
+  EXPECT_EQ(getCommand("aux.h"),
+            "clang -D dir/aux.cpp -x objective-c++-header -std=c++17");
 }
 
 TEST_F(InterpolateTest, Strip) {
