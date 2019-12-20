@@ -1021,6 +1021,17 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
             [LLVMSubdivide2VectorType<0>, llvm_anyvector_ty, LLVMMatchType<0>],
             [IntrNoMem]>;
 
+  class SVE2_1VectorArg_Imm_Narrowing_Intrinsic
+      : Intrinsic<[LLVMSubdivide2VectorType<0>],
+                  [llvm_anyvector_ty, llvm_i32_ty],
+                  [IntrNoMem, ImmArg<1>]>;
+
+  class SVE2_2VectorArg_Imm_Narrowing_Intrinsic
+      : Intrinsic<[LLVMSubdivide2VectorType<0>],
+                  [LLVMSubdivide2VectorType<0>, llvm_anyvector_ty,
+                   llvm_i32_ty],
+                  [IntrNoMem, ImmArg<2>]>;
+
   // NOTE: There is no relationship between these intrinsics beyond an attempt
   // to reuse currently identical class definitions.
   class AdvSIMD_SVE_LOGB_Intrinsic  : AdvSIMD_SVE_CNT_Intrinsic;
@@ -1559,4 +1570,32 @@ def int_aarch64_sve_subhnt    : SVE2_Merged2VectorArg_Narrowing_Intrinsic;
 
 def int_aarch64_sve_rsubhnb   : SVE2_2VectorArg_Narrowing_Intrinsic;
 def int_aarch64_sve_rsubhnt   : SVE2_Merged2VectorArg_Narrowing_Intrinsic;
+
+// Narrowing shift right
+def int_aarch64_sve_shrnb     : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
+def int_aarch64_sve_shrnt     : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
+
+def int_aarch64_sve_rshrnb    : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
+def int_aarch64_sve_rshrnt    : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
+
+// Saturating shift right - signed input/output
+def int_aarch64_sve_sqshrnb   : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
+def int_aarch64_sve_sqshrnt   : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
+
+def int_aarch64_sve_sqrshrnb  : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
+def int_aarch64_sve_sqrshrnt  : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
+
+// Saturating shift right - unsigned input/output
+def int_aarch64_sve_uqshrnb   : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
+def int_aarch64_sve_uqshrnt   : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
+
+def int_aarch64_sve_uqrshrnb  : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
+def int_aarch64_sve_uqrshrnt  : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
+
+// Saturating shift right - signed input, unsigned output
+def int_aarch64_sve_sqshrunb  : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
+def int_aarch64_sve_sqshrunt  : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
+
+def int_aarch64_sve_sqrshrunb : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
+def int_aarch64_sve_sqrshrunt : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
 }
