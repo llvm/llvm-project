@@ -599,12 +599,12 @@ Error DWARFDebugLine::LineTable::parse(
         // address is that of the byte after the last target machine instruction
         // of the sequence.
         State.Row.EndSequence = true;
-        State.appendRowToMatrix();
         if (OS) {
           *OS << "\n";
           OS->indent(12);
           State.Row.dump(*OS);
         }
+        State.appendRowToMatrix();
         State.resetRowAndSequence();
         break;
 
