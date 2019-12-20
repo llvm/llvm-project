@@ -80,8 +80,7 @@ TEST_F(TestClangASTImporter, CopyDeclTagDecl) {
 
   ClangASTImporter importer;
   clang::Decl *imported =
-      importer.CopyDecl(target_ast->getASTContext(),
-                        source.ast->getASTContext(), source.record_decl);
+      importer.CopyDecl(target_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the correct decl by just comparing their qualified name.
@@ -131,8 +130,7 @@ TEST_F(TestClangASTImporter, DeportDeclTagDecl) {
 
   ClangASTImporter importer;
   clang::Decl *imported =
-      importer.DeportDecl(target_ast->getASTContext(),
-                          source.ast->getASTContext(), source.record_decl);
+      importer.DeportDecl(target_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the correct decl by just comparing their qualified name.
@@ -179,8 +177,7 @@ TEST_F(TestClangASTImporter, MetadataPropagation) {
 
   ClangASTImporter importer;
   clang::Decl *imported =
-      importer.CopyDecl(target_ast->getASTContext(),
-                        source.ast->getASTContext(), source.record_decl);
+      importer.CopyDecl(target_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the same Metadata.
@@ -202,14 +199,12 @@ TEST_F(TestClangASTImporter, MetadataPropagationIndirectImport) {
 
   ClangASTImporter importer;
   clang::Decl *temporary_imported =
-      importer.CopyDecl(temporary_ast->getASTContext(),
-                        source.ast->getASTContext(), source.record_decl);
+      importer.CopyDecl(temporary_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, temporary_imported);
 
   std::unique_ptr<ClangASTContext> target_ast = createAST();
   clang::Decl *imported =
-      importer.CopyDecl(target_ast->getASTContext(),
-                        temporary_ast->getASTContext(), temporary_imported);
+      importer.CopyDecl(target_ast->getASTContext(), temporary_imported);
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the same Metadata.
@@ -228,8 +223,7 @@ TEST_F(TestClangASTImporter, MetadataPropagationAfterCopying) {
 
   ClangASTImporter importer;
   clang::Decl *imported =
-      importer.CopyDecl(target_ast->getASTContext(),
-                        source.ast->getASTContext(), source.record_decl);
+      importer.CopyDecl(target_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, imported);
 
   // The TagDecl has been imported. Now set the metadata of the source and
