@@ -333,6 +333,11 @@ make_pointer_range(RangeT &&Range) {
                     PointerIteratorT(std::end(std::forward<RangeT>(Range))));
 }
 
+template <typename WrappedIteratorT,
+          typename T1 = typename std::remove_reference<decltype(**std::declval<WrappedIteratorT>())>::type,
+          typename T2 = typename std::add_pointer<T1>::type>
+using raw_pointer_iterator = pointer_iterator<pointee_iterator<WrappedIteratorT, T1>, T2>;
+
 // Wrapper iterator over iterator ItType, adding DataRef to the type of ItType,
 // to create NodeRef = std::pair<InnerTypeOfItType, DataRef>.
 template <typename ItType, typename NodeRef, typename DataRef>

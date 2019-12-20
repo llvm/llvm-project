@@ -132,8 +132,8 @@ def nonstandardroot : GICombineRule<
 // CHECK-NEXT:     (MOV 0:dst<def>, 1:src1):$__anon3_0 // $s=getOperand(0), $s2=getOperand(1)
 // CHECK-NEXT:     (MOV 0:dst<def>, 1:src1):$__anon3_2 // $d1=getOperand(0), $s=getOperand(1)
 // CHECK-NEXT:     (MOV 0:dst<def>, 1:src1):$__anon3_4 // $d2=getOperand(0), $s=getOperand(1)
-// CHECK-NEXT:     __anon3_2[src1] --[s]--> __anon3_0[dst]
-// CHECK-NEXT:     __anon3_4[src1] --[s]--> __anon3_0[dst]
+// CHECK-NEXT:     __anon3_0[dst] --[s]--> __anon3_2[src1]
+// CHECK-NEXT:     __anon3_0[dst] --[s]--> __anon3_4[src1]
 // CHECK-NEXT:     <<$mi.getOpcode() == MOV>>:$__anonpred3_1
 // CHECK-NEXT:     <<$mi.getOpcode() == MOV>>:$__anonpred3_3
 // CHECK-NEXT:     <<$mi.getOpcode() == MOV>>:$__anonpred3_5
@@ -150,8 +150,8 @@ def nonstandardroot : GICombineRule<
 // CHECK-NEXT:   Node[[N1:0x[0-9a-f]+]] [shape=record,label="{{[{]{}}<s0>#0 $dst|<s1>#1 $src1}|__anon3_0|MOV|Match starts here|$s=getOperand(0), $s2=getOperand(1)|{{0x[0-9a-f]+}}|{<d0>#0 $dst|<d1>#1 $src1}}",color=red]
 // CHECK-NEXT:   Node[[N2:0x[0-9a-f]+]] [shape=record,label="{{[{]{}}<s0>#0 $dst|<s1>#1 $src1}|__anon3_2|MOV|$d1=getOperand(0), $s=getOperand(1)|{{0x[0-9a-f]+}}|{<d0>#0 $dst|<d1>#1 $src1}}"]
 // CHECK-NEXT:   Node[[N3:0x[0-9a-f]+]] [shape=record,label="{{[{]{}}<s0>#0 $dst|<s1>#1 $src1}|__anon3_4|MOV|$d2=getOperand(0), $s=getOperand(1)|{{0x[0-9a-f]+}}|{<d0>#0 $dst|<d1>#1 $src1}}"]
-// CHECK-NEXT:   Node[[N2]]:s1:n -> Node[[N1]]:d0:s [label="$s"]
-// CHECK-NEXT:   Node[[N3]]:s1:n -> Node[[N1]]:d0:s [label="$s"]
+// CHECK-NEXT:   Node[[N2]]:s1:n -> Node[[N1]]:d0:s [label="$s",dir=back,arrowtail=crow]
+// CHECK-NEXT:   Node[[N3]]:s1:n -> Node[[N1]]:d0:s [label="$s",dir=back,arrowtail=crow]
 // CHECK-NEXT:   Pred[[P1:0x[0-9a-f]+]] [shape=record,label="{{[{]{}}<s0>#0 $$|<s1>#1 $mi}|__anonpred3_1|$mi.getOpcode() == MOV|{{0x[0-9a-f]+}}|{<d0>#0 $$|<d1>#1 $mi}}",style=dotted]
 // CHECK-NEXT:   Pred[[P2:0x[0-9a-f]+]] [shape=record,label="{{[{]{}}<s0>#0 $$|<s1>#1 $mi}|__anonpred3_3|$mi.getOpcode() == MOV|{{0x[0-9a-f]+}}|{<d0>#0 $$|<d1>#1 $mi}}",style=dotted]
 // CHECK-NEXT:   Pred[[P3:0x[0-9a-f]+]] [shape=record,label="{{[{]{}}<s0>#0 $$|<s1>#1 $mi}|__anonpred3_5|$mi.getOpcode() == MOV|{{0x[0-9a-f]+}}|{<d0>#0 $$|<d1>#1 $mi}}",style=dotted]
