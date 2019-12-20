@@ -51,7 +51,10 @@ static bool isImplicitExpr(clang::Expr *E) { return E->IgnoreImplicit() != E; }
 /// Call finalize() to finish building the tree and consume the root node.
 class syntax::TreeBuilder {
 public:
-  TreeBuilder(syntax::Arena &Arena) : Arena(Arena), Pending(Arena) {}
+  TreeBuilder(syntax::Arena &Arena) : Arena(Arena), Pending(Arena) {
+    for (const auto &T : Arena.tokenBuffer().expandedTokens())
+      LocationToToken.insert({T.location().getRawEncoding(), &T});
+  }
 
   llvm::BumpPtrAllocator &allocator() { return Arena.allocator(); }
 
@@ -304,6 +307,9 @@ private:
   std::string str() { return Pending.str(Arena); }
 
   syntax::Arena &Arena;
+  /// To quickly find tokens by their start location.
+  llvm::DenseMap</*SourceLocation*/ unsigned, const syntax::Token *>
+      LocationToToken;
   Forest Pending;
   llvm::DenseSet<Decl *> DeclsWithoutSemicolons;
 };
@@ -641,14 +647,9 @@ void syntax::TreeBuilder::markExprChild(Expr *Child, NodeRole Role) {
 }
 
 const syntax::Token *syntax::TreeBuilder::findToken(SourceLocation L) const {
-  auto Tokens = Arena.tokenBuffer().expandedTokens();
-  auto &SM = Arena.sourceManager();
-  auto It = llvm::partition_point(Tokens, [&](const syntax::Token &T) {
-    return SM.isBeforeInTranslationUnit(T.location(), L);
-  });
-  assert(It != Tokens.end());
-  assert(It->location() == L);
-  return &*It;
+  auto It = LocationToToken.find(L.getRawEncoding());
+  assert(It != LocationToToken.end());
+  return It->second;
 }
 
 syntax::TranslationUnit *

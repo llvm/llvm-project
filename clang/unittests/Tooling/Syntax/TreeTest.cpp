@@ -769,6 +769,46 @@ void test() {
     |   `-}
     `-}
        )txt"},
+      // All nodes can be mutated.
+      {R"cpp(
+#define OPEN {
+#define CLOSE }
+
+void test() {
+  OPEN
+    1;
+  CLOSE
+
+  OPEN
+    2;
+  }
+}
+)cpp",
+       R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-test
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-CompoundStatement
+    | |-{
+    | |-ExpressionStatement
+    | | |-UnknownExpression
+    | | | `-1
+    | | `-;
+    | `-}
+    |-CompoundStatement
+    | |-{
+    | |-ExpressionStatement
+    | | |-UnknownExpression
+    | | | `-2
+    | | `-;
+    | `-}
+    `-}
+       )txt"},
   };
 
   for (const auto &T : Cases) {
