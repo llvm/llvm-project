@@ -1444,8 +1444,6 @@ static const EnumEntry<unsigned> ElfSectionFlags[] = {
   ENUM_ENT(SHF_TLS,              "T"),
   ENUM_ENT(SHF_COMPRESSED,       "C"),
   ENUM_ENT(SHF_EXCLUDE,          "E"),
-  ENUM_ENT(SHF_MASKOS,           "o"),
-  ENUM_ENT(SHF_MASKPROC,         "p"),
 };
 
 static const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
@@ -1477,34 +1475,51 @@ static const EnumEntry<unsigned> ElfX86_64SectionFlags[] = {
 };
 
 static std::string getGNUFlags(uint64_t Flags) {
+  // Here we are trying to build the flags string in the same way as GNU does.
+  // It is not that straightforward. Imagine we have sh_flags == 0x90000000.
+  // SHF_EXCLUDE ("E") has a value of 0x80000000 and SHF_MASKPROC is 0xf0000000.
+  // GNU readelf will not print "E" or "Ep" in this case, but will print just
+  // "p". It only will print "E" when no other processor flag is set.
   std::string Str;
-  for (auto Entry : ElfSectionFlags) {
-    uint64_t Flag = Entry.Value & Flags;
-    Flags &= ~Entry.Value;
-    switch (Flag) {
-    case ELF::SHF_WRITE:
-    case ELF::SHF_ALLOC:
-    case ELF::SHF_EXECINSTR:
-    case ELF::SHF_MERGE:
-    case ELF::SHF_STRINGS:
-    case ELF::SHF_INFO_LINK:
-    case ELF::SHF_LINK_ORDER:
-    case ELF::SHF_OS_NONCONFORMING:
-    case ELF::SHF_GROUP:
-    case ELF::SHF_TLS:
-    case ELF::SHF_COMPRESSED:
-    case ELF::SHF_EXCLUDE:
-      Str += Entry.AltName;
-      break;
-    default:
-      if (Flag & ELF::SHF_MASKOS)
-        Str += "o";
-      else if (Flag & ELF::SHF_MASKPROC)
-        Str += "p";
-      else if (Flag)
-        Str += "x";
+  bool HasUnknownFlag = false;
+  bool HasOSFlag = false;
+  bool HasProcFlag = false;
+  while (Flags) {
+    // Take the least significant bit as a flag.
+    uint64_t Flag = Flags & -Flags;
+    Flags -= Flag;
+
+    // Find the flag in the known flags list.
+    auto I = llvm::find_if(ElfSectionFlags, [=](const EnumEntry<unsigned> &E) {
+      return E.Value == Flag;
+    });
+    if (I != std::end(ElfSectionFlags)) {
+      Str += I->AltName;
+      continue;
+    }
+
+    // If we did not find a matching regular flag, then we deal with an OS
+    // specific flag, processor specific flag or an unknown flag.
+    if (Flag & ELF::SHF_MASKOS) {
+      HasOSFlag = true;
+      Flags &= ~ELF::SHF_MASKOS;
+    } else if (Flag & ELF::SHF_MASKPROC) {
+      HasProcFlag = true;
+      // Mask off all the processor-specific bits. This removes the SHF_EXCLUDE
+      // bit if set so that it doesn't also get printed.
+      Flags &= ~ELF::SHF_MASKPROC;
+    } else {
+      HasUnknownFlag = true;
     }
   }
+
+  // "o", "p" and "x" are printed last.
+  if (HasOSFlag)
+    Str += "o";
+  if (HasProcFlag)
+    Str += "p";
+  if (HasUnknownFlag)
+    Str += "x";
   return Str;
 }
 
