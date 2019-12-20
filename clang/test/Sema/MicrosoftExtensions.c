@@ -150,6 +150,20 @@ void ptr_func(int * __ptr64 i) {} // expected-error {{redefinition of 'ptr_func'
 void ptr_func2(int * __sptr __ptr32 i) {}  // expected-note {{previous definition is here}}
 void ptr_func2(int * __uptr __ptr32 i) {} // expected-error {{redefinition of 'ptr_func2'}}
 
+// Check for warning when return types have the type attribute.
+void *__ptr32 ptr_func3() { return 0; } // expected-note {{previous definition is here}}
+void *__ptr64 ptr_func3() { return 0; } // expected-error {{redefinition of 'ptr_func3'}}
+
+// Test that __ptr32/__ptr64 can be passed as arguments with other address
+// spaces.
+void ptr_func4(int *i);
+void ptr_func5(int *__ptr32 i);
+void test_ptr_arguments() {
+  int *__ptr64 i64;
+  ptr_func4(i64);
+  ptr_func5(i64);
+}
+
 int * __sptr __ptr32 __sptr wrong4; // expected-warning {{attribute '__sptr' is already applied}}
 
 __ptr32 int *wrong5; // expected-error {{'__ptr32' attribute only applies to pointer arguments}}
