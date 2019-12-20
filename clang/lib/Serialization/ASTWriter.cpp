@@ -6578,3 +6578,19 @@ void OMPClauseWriter::VisitOMPOrderClause(OMPOrderClause *C) {
   Record.AddSourceLocation(C->getKindKwLoc());
 }
 
+void ASTRecordWriter::writeOMPTraitInfo(OMPTraitInfo *TI) {
+  writeUInt32(TI->Sets.size());
+  for (const auto &Set : TI->Sets) {
+    writeEnum(Set.Kind);
+    writeUInt32(Set.Selectors.size());
+    for (const auto &Selector : Set.Selectors) {
+      writeEnum(Selector.Kind);
+      writeBool(Selector.ScoreOrCondition);
+      if (Selector.ScoreOrCondition)
+        writeExprRef(Selector.ScoreOrCondition);
+      writeUInt32(Selector.Properties.size());
+      for (const auto &Property : Selector.Properties)
+        writeEnum(Property.Kind);
+    }
+  }
+}

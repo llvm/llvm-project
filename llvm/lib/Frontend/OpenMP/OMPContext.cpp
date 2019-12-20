@@ -286,6 +286,16 @@ TraitSet llvm::omp::getOpenMPContextTraitSetKind(StringRef S) {
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
       .Default(TraitSet::invalid);
 }
+
+TraitSet
+llvm::omp::getOpenMPContextTraitSetForSelector(TraitSelector Selector) {
+  switch (Selector) {
+#define OMP_TRAIT_SELECTOR(Enum, TraitSetEnum, Str, ReqProp)                   \
+  case TraitSelector::Enum:                                                    \
+    return TraitSet::TraitSetEnum;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  }
+}
 TraitSet
 llvm::omp::getOpenMPContextTraitSetForProperty(TraitProperty Property) {
   switch (Property) {
@@ -333,11 +343,10 @@ StringRef llvm::omp::getOpenMPContextTraitSelectorName(TraitSelector Kind) {
   llvm_unreachable("Unknown trait selector!");
 }
 
-TraitProperty llvm::omp::getOpenMPContextTraitPropertyKind(
-    TraitSet Set, TraitSelector Selector, StringRef S) {
+TraitProperty llvm::omp::getOpenMPContextTraitPropertyKind(TraitSet Set,
+                                                           StringRef S) {
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
-  if (Set == TraitSet::TraitSetEnum &&                                         \
-      Selector == TraitSelector::TraitSelectorEnum && Str == S)                \
+  if (Set == TraitSet::TraitSetEnum && Str == S)                               \
     return TraitProperty::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   return TraitProperty::invalid;
@@ -397,4 +406,37 @@ bool llvm::omp::isValidTraitPropertyForTraitSetAndSelector(
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
   llvm_unreachable("Unknown trait property!");
+}
+
+std::string llvm::omp::listOpenMPContextTraitSets() {
+  std::string S;
+#define OMP_TRAIT_SET(Enum, Str)                                               \
+  if (Str != "invalid")                                                        \
+    S.append("'").append(Str).append("'").append(" ");
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  S.pop_back();
+  return S;
+}
+
+std::string llvm::omp::listOpenMPContextTraitSelectors(TraitSet Set) {
+  std::string S;
+#define OMP_TRAIT_SELECTOR(Enum, TraitSetEnum, Str, ReqProp)                   \
+  if (TraitSet::TraitSetEnum == Set && Str != "Invalid")                       \
+    S.append("'").append(Str).append("'").append(" ");
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  S.pop_back();
+  return S;
+}
+
+std::string
+llvm::omp::listOpenMPContextTraitProperties(TraitSet Set,
+                                            TraitSelector Selector) {
+  std::string S;
+#define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
+  if (TraitSet::TraitSetEnum == Set &&                                         \
+      TraitSelector::TraitSelectorEnum == Selector && Str != "invalid")        \
+    S.append("'").append(Str).append("'").append(" ");
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  S.pop_back();
+  return S;
 }

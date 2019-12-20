@@ -2756,6 +2756,8 @@ public:
     return Reader.readVersionTuple();
   }
 
+  OMPTraitInfo *readOMPTraitInfo() { return Reader.readOMPTraitInfo(); }
+
   template <typename T> T *GetLocalDeclAs(uint32_t LocalID) {
     return Reader.GetLocalDeclAs<T>(LocalID);
   }

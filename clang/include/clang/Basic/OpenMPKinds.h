@@ -19,45 +19,6 @@
 
 namespace clang {
 
-/// OpenMP context selector sets.
-enum OpenMPContextSelectorSetKind {
-#define OPENMP_CONTEXT_SELECTOR_SET(Name) OMP_CTX_SET_##Name,
-#include "clang/Basic/OpenMPKinds.def"
-  OMP_CTX_SET_unknown,
-};
-
-/// OpenMP context selectors.
-enum OpenMPContextSelectorKind {
-#define OPENMP_CONTEXT_SELECTOR(Name) OMP_CTX_##Name,
-#include "clang/Basic/OpenMPKinds.def"
-  OMP_CTX_unknown,
-};
-
-OpenMPContextSelectorSetKind getOpenMPContextSelectorSet(llvm::StringRef Str);
-llvm::StringRef
-getOpenMPContextSelectorSetName(OpenMPContextSelectorSetKind Kind);
-OpenMPContextSelectorKind getOpenMPContextSelector(llvm::StringRef Str);
-llvm::StringRef getOpenMPContextSelectorName(OpenMPContextSelectorKind Kind);
-
-/// Struct to store the context selectors info.
-template <typename VectorType, typename ScoreT> struct OpenMPCtxSelectorData {
-  OpenMPContextSelectorSetKind CtxSet = OMP_CTX_SET_unknown;
-  OpenMPContextSelectorKind Ctx = OMP_CTX_unknown;
-  ScoreT Score;
-  VectorType Names;
-  explicit OpenMPCtxSelectorData() = default;
-  explicit OpenMPCtxSelectorData(OpenMPContextSelectorSetKind CtxSet,
-                                 OpenMPContextSelectorKind Ctx,
-                                 const ScoreT &Score, VectorType &&Names)
-      : CtxSet(CtxSet), Ctx(Ctx), Score(Score), Names(Names) {}
-  template <typename U>
-  explicit OpenMPCtxSelectorData(OpenMPContextSelectorSetKind CtxSet,
-                                 OpenMPContextSelectorKind Ctx,
-                                 const ScoreT &Score, const U &Names)
-      : CtxSet(CtxSet), Ctx(Ctx), Score(Score),
-        Names(Names.begin(), Names.end()) {}
-};
-
 /// OpenMP directives.
 using OpenMPDirectiveKind = llvm::omp::Directive;
 

@@ -1258,30 +1258,68 @@ def err_omp_mapper_expected_declarator : Error<
   "expected declarator on 'omp declare mapper' directive">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected '%0' clause on 'omp declare variant' directive">;
-def err_omp_declare_variant_no_ctx_selector : Error<
-  "expected context selector in '%0' clause on 'omp declare variant' directive">;
-def err_omp_declare_variant_equal_expected : Error<
-  "expected '=' after '%0' context selector set name on 'omp declare variant' directive">;
-def warn_omp_declare_variant_cs_name_expected : Warning<
-  "unknown context selector in '%0' context selector set of 'omp declare variant' directive, ignored">,
-  InGroup<OpenMPClauses>;
-def err_omp_declare_variant_item_expected : Error<
-  "expected %0 in '%1' context selector of '%2' selector set of 'omp declare variant' directive">;
-def err_omp_declare_variant_ctx_set_mutiple_use : Error<
-  "context selector set '%0' is used already in the same 'omp declare variant' directive">;
-def note_omp_declare_variant_ctx_set_used_here : Note<
-  "previously context selector set '%0' used here">;
-def err_omp_expected_comma_brace : Error<"expected '}' or ',' after '%0'">;
-def err_omp_declare_variant_ctx_mutiple_use : Error<
-  "context trait selector '%0' is used already in the same '%1' context selector set of 'omp declare variant' directive">;
-def note_omp_declare_variant_ctx_used_here : Note<
-  "previously context trait selector '%0' used here">;
-def warn_omp_more_one_device_type_clause : Warning<
-  "more than one 'device_type' clause is specified">,
-  InGroup<OpenMPClauses>;
-def err_omp_wrong_device_kind_trait : Error<
-  "unknown '%0' device kind trait in the 'device' context selector set, expected"
-  " one of 'host', 'nohost', 'cpu', 'gpu' or 'fpga'">;
+def warn_omp_declare_variant_string_literal_or_identifier
+    : Warning<"expected identifier or string literal describing a context "
+              "%select{set|selector|property}0; "
+              "%select{set|selector|property}0 skipped">,
+      InGroup<OpenMPClauses>;
+def note_omp_declare_variant_ctx_options
+    : Note<"context %select{set|selector|property}0 options are: %1">;
+def warn_omp_declare_variant_expected
+    : Warning<"expected '%0' after the %1; '%0' assumed">,
+      InGroup<OpenMPClauses>;
+def warn_omp_declare_variant_ctx_not_a_property
+    : Warning<"'%0' is not a valid context property for the context selector "
+              "'%1' and the context set '%2'; property ignored">,
+      InGroup<OpenMPClauses>;
+def note_omp_declare_variant_ctx_is_a
+    : Note<"'%0' is a context %select{set|selector|property}1 not a context "
+           "%select{set|selector|property}2">;
+def note_omp_declare_variant_ctx_try : Note<"try 'match(%0={%1%2})'">;
+def warn_omp_declare_variant_ctx_not_a_selector
+    : Warning<"'%0' is not a valid context selector for the context set '%1'; "
+              "selector ignored">,
+      InGroup<OpenMPClauses>;
+def warn_omp_declare_variant_ctx_not_a_set
+    : Warning<"'%0' is not a valid context set in a `declare variant`; set "
+              "ignored">,
+      InGroup<OpenMPClauses>;
+def warn_omp_declare_variant_ctx_mutiple_use
+    : Warning<"the context %select{set|selector|property}0 '%1' was used "
+              "already in the same 'omp declare variant' directive; "
+              "%select{set|selector|property}0 ignored">,
+      InGroup<OpenMPClauses>;
+def note_omp_declare_variant_ctx_used_here
+    : Note<"the previous context %select{set|selector|property}0 '%1' used "
+           "here">;
+def note_omp_declare_variant_ctx_continue_here
+    : Note<"the ignored %select{set|selector|property}0 spans until here">;
+def warn_omp_ctx_incompatible_selector_for_set
+    : Warning<"the context selector '%0' is not valid for the context set "
+              "'%1'; selector ignored">,
+      InGroup<OpenMPClauses>;
+def note_omp_ctx_compatible_set_for_selector
+    : Note<"the context selector '%0' can be nested in the context set '%1'; "
+           "try 'match(%1={%0%select{|(property)}2})'">;
+def warn_omp_ctx_selector_without_properties
+    : Warning<"the context selector '%0' in context set '%1' requires a "
+              "context property defined in parentheses; selector ignored">,
+      InGroup<OpenMPClauses>;
+def warn_omp_ctx_incompatible_property_for_selector
+    : Warning<"the context property '%0' is not valid for the context selector "
+              "'%1' and the context set '%2'; property ignored">,
+      InGroup<OpenMPClauses>;
+def note_omp_ctx_compatible_set_and_selector_for_property
+    : Note<"the context property '%0' can be nested in the context selector "
+           "'%1' which is nested in the context set '%2'; try "
+           "'match(%2={%1(%0)})'">;
+def warn_omp_ctx_incompatible_score_for_property
+    : Warning<"the context selector '%0' in the context set '%1' cannot have a "
+              "score ('%2'); score ignored">,
+      InGroup<OpenMPClauses>;
+def warn_omp_more_one_device_type_clause
+    : Warning<"more than one 'device_type' clause is specified">,
+      InGroup<OpenMPClauses>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
