@@ -9,13 +9,17 @@
 #ifndef SCUDO_PLATFORM_H_
 #define SCUDO_PLATFORM_H_
 
+// Transitive includes of stdint.h specify some of the defines checked below.
+#include <stdint.h>
+
 #if defined(__linux__)
 #define SCUDO_LINUX 1
 #else
 #define SCUDO_LINUX 0
 #endif
 
-#if defined(__ANDROID__)
+// See https://android.googlesource.com/platform/bionic/+/master/docs/defines.md
+#if defined(__BIONIC__)
 #define SCUDO_ANDROID 1
 #else
 #define SCUDO_ANDROID 0
