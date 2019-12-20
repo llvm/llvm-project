@@ -1773,7 +1773,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return false;
     s.PutCString(name);
 
-    if (Block *inline_block = sc->block->GetContainingInlinedBlock()) {
+    if (sc->block->GetContainingInlinedBlock()) {
       if (const InlineFunctionInfo *inline_info =
               sc->block->GetInlinedFunctionInfo()) {
         s.PutCString(" [inlined] ");
