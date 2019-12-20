@@ -3967,6 +3967,7 @@ class MVE_VMULL<string iname, string suffix, bit bit_28, bits<2> bits_21_20,
   let Inst{8} = 0b0;
   let Inst{7} = Qn{3};
   let Inst{0} = 0b0;
+  let validForTailPredication = 1;
 }
 
 multiclass MVE_VMULL_m<MVEVectorVTInfo VTI,
@@ -4267,6 +4268,7 @@ class MVE_VQDMULL<string iname, string suffix, bit size, bit T,
   let Inst{8} = 0b1;
   let Inst{7} = Qn{3};
   let Inst{0} = 0b1;
+  let validForTailPredication = 1;
 }
 
 multiclass MVE_VQDMULL_halves<string suffix, bit size, string cstr=""> {
@@ -4382,6 +4384,7 @@ class MVE_VQDMULL_qr<string iname, string suffix, bit size,
   let Inst{12} = T;
   let Inst{8} = 0b1;
   let Inst{5} = 0b1;
+  let validForTailPredication = 1;
 }
 
 multiclass MVE_VQDMULL_qr_halves<string suffix, bit size, string cstr=""> {
