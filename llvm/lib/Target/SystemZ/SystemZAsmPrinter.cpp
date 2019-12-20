@@ -583,7 +583,11 @@ void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
 
   unsigned NumNOPBytes = MI.getOperand(1).getImm();
 
-  SM.recordStackMap(MI);
+  auto &Ctx = OutStreamer->getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer->EmitLabel(MILabel);
+  
+  SM.recordStackMap(*MILabel, MI);
   assert(NumNOPBytes % 2 == 0 && "Invalid number of NOP bytes requested!");
 
   // Scan ahead to trim the shadow.
@@ -612,7 +616,11 @@ void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
 // [<def>], <id>, <numBytes>, <target>, <numArgs>
 void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
                                         SystemZMCInstLower &Lower) {
-  SM.recordPatchPoint(MI);
+  auto &Ctx = OutStreamer->getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer->EmitLabel(MILabel);
+
+  SM.recordPatchPoint(*MILabel, MI);
   PatchPointOpers Opers(&MI);
 
   unsigned EncodedBytes = 0;
