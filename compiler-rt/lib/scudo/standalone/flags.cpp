@@ -40,7 +40,7 @@ void registerFlags(FlagParser *Parser, Flags *F) {
 
 #ifdef GWP_ASAN_HOOKS
 #define GWP_ASAN_OPTION(Type, Name, DefaultValue, Description)                 \
-  Parser->registerFlag("GWP_ASAN_"#Name, Description, FlagType::FT_##Type,     \
+  Parser->registerFlag("GWP_ASAN_" #Name, Description, FlagType::FT_##Type,    \
                        reinterpret_cast<void *>(&F->GWP_ASAN_##Name));
 #include "gwp_asan/options.inc"
 #undef GWP_ASAN_OPTION
