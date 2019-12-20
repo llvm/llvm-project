@@ -137,23 +137,7 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
       ++MBIter;
     };
 
-    unsigned BlockMask = 0;
-    switch (VPTInstCnt) {
-    case 1:
-      BlockMask = VPTMaskValue::T;
-      break;
-    case 2:
-      BlockMask = VPTMaskValue::TT;
-      break;
-    case 3:
-      BlockMask = VPTMaskValue::TTT;
-      break;
-    case 4:
-      BlockMask = VPTMaskValue::TTTT;
-      break;
-    default:
-      llvm_unreachable("Unexpected number of instruction in a VPT block");
-    };
+    unsigned BlockMask = getARMVPTBlockMask(VPTInstCnt);
 
     // Search back for a VCMP that can be folded to create a VPT, or else create
     // a VPST directly
