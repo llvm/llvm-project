@@ -1,5 +1,5 @@
-; REQUIRES: lld
-; RUN: llc %s -filetype=obj -o %t.o
+; REQUIRES: lld, x86
+; RUN: llc -mtriple x86_64-pc-linux %s -filetype=obj -o %t.o
 ; RUN: ld.lld %t.o %t.o -o %t
 ; "foo" is defined in both compilation units, but there should be only one meaningful debuginfo entry
 ; RUN: lldb-test symbols --find=function --name=foo --function-flags=full %t | FileCheck %s
