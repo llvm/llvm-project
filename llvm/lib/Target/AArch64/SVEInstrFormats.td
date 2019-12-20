@@ -18,7 +18,7 @@ def SVEPatternOperand : AsmOperandClass {
   let DiagnosticType = "InvalidSVEPattern";
 }
 
-def sve_pred_enum : Operand<i32>, ImmLeaf<i32, [{
+def sve_pred_enum : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 32);
   }]> {
 
@@ -249,11 +249,12 @@ def sve_incdec_imm : Operand<i32>, ImmLeaf<i32, [{
 //             it's important we define them first.
 //===----------------------------------------------------------------------===//
 
-class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty>
+class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty,
+                    ValueType vt, SDPatternOperator op>
 : I<(outs pprty:$Pd), (ins sve_pred_enum:$pattern),
   asm, "\t$Pd, $pattern",
   "",
-  []>, Sched<[]> {
+  [(set (vt pprty:$Pd), (op sve_pred_enum:$pattern))]>, Sched<[]> {
   bits<4> Pd;
   bits<5> pattern;
   let Inst{31-24} = 0b00100101;
@@ -269,11 +270,11 @@ class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty>
   let Defs = !if(!eq (opc{0}, 1), [NZCV], []);
 }
 
-multiclass sve_int_ptrue<bits<3> opc, string asm> {
-  def _B : sve_int_ptrue<0b00, opc, asm, PPR8>;
-  def _H : sve_int_ptrue<0b01, opc, asm, PPR16>;
-  def _S : sve_int_ptrue<0b10, opc, asm, PPR32>;
-  def _D : sve_int_ptrue<0b11, opc, asm, PPR64>;
+multiclass sve_int_ptrue<bits<3> opc, string asm, SDPatternOperator op> {
+  def _B : sve_int_ptrue<0b00, opc, asm, PPR8, nxv16i1, op>;
+  def _H : sve_int_ptrue<0b01, opc, asm, PPR16, nxv8i1, op>;
+  def _S : sve_int_ptrue<0b10, opc, asm, PPR32, nxv4i1, op>;
+  def _D : sve_int_ptrue<0b11, opc, asm, PPR64, nxv2i1, op>;
 
   def : InstAlias<asm # "\t$Pd",
                   (!cast<Instruction>(NAME # _B) PPR8:$Pd, 0b11111), 1>;
@@ -285,9 +286,12 @@ multiclass sve_int_ptrue<bits<3> opc, string asm> {
                   (!cast<Instruction>(NAME # _D) PPR64:$Pd, 0b11111), 1>;
 }
 
+def SDT_AArch64PTrue : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVT<1, i32>]>;
+def AArch64ptrue : SDNode<"AArch64ISD::PTRUE", SDT_AArch64PTrue>;
+
 let Predicates = [HasSVE] in {
-  defm PTRUE  : sve_int_ptrue<0b000, "ptrue">;
-  defm PTRUES : sve_int_ptrue<0b001, "ptrues">;
+  defm PTRUE  : sve_int_ptrue<0b000, "ptrue", AArch64ptrue>;
+  defm PTRUES : sve_int_ptrue<0b001, "ptrues", null_frag>;
 }
 
 //===----------------------------------------------------------------------===//
