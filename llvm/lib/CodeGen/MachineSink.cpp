@@ -1215,10 +1215,14 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
     for (MCSubRegIterator S(DefReg, TRI, true); S.isValid(); ++S)
       SuccBB->removeLiveIn(*S);
   for (auto U : UsedOpsInCopy) {
-    Register Reg = MI->getOperand(U).getReg();
-    if (!SuccBB->isLiveIn(Reg))
-      SuccBB->addLiveIn(Reg);
+    Register SrcReg = MI->getOperand(U).getReg();
+    LaneBitmask Mask;
+    for (MCRegUnitMaskIterator S(SrcReg, TRI); S.isValid(); ++S) {
+      Mask |= (*S).second;
+    }
+    SuccBB->addLiveIn(SrcReg, Mask.any() ? Mask : LaneBitmask::getAll());
   }
+  SuccBB->sortUniqueLiveIns();
 }
 
 static bool hasRegisterDependency(MachineInstr *MI,
