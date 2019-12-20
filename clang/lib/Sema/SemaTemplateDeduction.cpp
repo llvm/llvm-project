@@ -24,6 +24,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -2501,6 +2502,30 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
+TemplateArgumentLoc
+Sema::getIdentityTemplateArgumentLoc(Decl *TemplateParm,
+                                     SourceLocation Location) {
+  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParm))
+    return getTrivialTemplateArgumentLoc(
+        TemplateArgument(
+            Context.getTemplateTypeParmType(TTP->getDepth(), TTP->getIndex(),
+                                            TTP->isParameterPack(), TTP)),
+        QualType(), Location.isValid() ? Location : TTP->getLocation());
+  else if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParm))
+    return getTrivialTemplateArgumentLoc(TemplateArgument(TemplateName(TTP)),
+                                         QualType(),
+                                         Location.isValid() ? Location :
+                                         TTP->getLocation());
+  auto *NTTP = cast<NonTypeTemplateParmDecl>(TemplateParm);
+  CXXScopeSpec SS;
+  DeclarationNameInfo Info(NTTP->getDeclName(),
+                           Location.isValid() ? Location : NTTP->getLocation());
+  Expr *E = BuildDeclarationNameExpr(SS, Info, NTTP).get();
+  return getTrivialTemplateArgumentLoc(TemplateArgument(E), NTTP->getType(),
+                                       Location.isValid() ? Location :
+                                       NTTP->getLocation());
+}
+
 /// Convert the given deduced template argument and add it to the set of
 /// fully-converted template arguments.
 static bool
@@ -2589,23 +2614,6 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
   }
 
   return ConvertArg(Arg, 0);
-}
-
-template<typename TemplateDeclT>
-static Sema::TemplateDeductionResult
-CheckDeducedArgumentConstraints(Sema& S, TemplateDeclT *Template,
-                                ArrayRef<TemplateArgument> DeducedArgs,
-                                TemplateDeductionInfo &Info) {
-  llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
-  Template->getAssociatedConstraints(AssociatedConstraints);
-  if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints,
-                                    DeducedArgs, Info.getLocation(),
-                                    Info.AssociatedConstraintsSatisfaction) ||
-      !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-    Info.reset(TemplateArgumentList::CreateCopy(S.Context, DeducedArgs));
-    return Sema::TDK_ConstraintsNotSatisfied;
-  }
-  return Sema::TDK_Success;
 }
 
 // FIXME: This should not be a template, but
@@ -2705,10 +2713,6 @@ static Sema::TemplateDeductionResult ConvertDeducedTemplateArguments(
     // If we get here, we successfully used the default template argument.
   }
 
-  if (Sema::TemplateDeductionResult Result
-        = CheckDeducedArgumentConstraints(S, Template, Builder, Info))
-    return Result;
-
   return Sema::TDK_Success;
 }
 
@@ -2729,6 +2733,23 @@ template<>
 struct IsPartialSpecialization<VarTemplatePartialSpecializationDecl> {
   static constexpr bool value = true;
 };
+
+template<typename TemplateDeclT>
+static Sema::TemplateDeductionResult
+CheckDeducedArgumentConstraints(Sema& S, TemplateDeclT *Template,
+                                ArrayRef<TemplateArgument> DeducedArgs,
+                                TemplateDeductionInfo& Info) {
+  llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
+  Template->getAssociatedConstraints(AssociatedConstraints);
+  if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints,
+                                    DeducedArgs, Info.getLocation(),
+                                    Info.AssociatedConstraintsSatisfaction) ||
+      !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+    Info.reset(TemplateArgumentList::CreateCopy(S.Context, DeducedArgs));
+    return Sema::TDK_ConstraintsNotSatisfied;
+  }
+  return Sema::TDK_Success;
+}
 
 /// Complete template argument deduction for a partial specialization.
 template <typename T>
@@ -2811,6 +2832,9 @@ FinishTemplateArgumentDeduction(
   if (Trap.hasErrorOccurred())
     return Sema::TDK_SubstitutionFailure;
 
+  if (auto Result = CheckDeducedArgumentConstraints(S, Partial, Builder, Info))
+    return Result;
+
   return Sema::TDK_Success;
 }
 
@@ -2852,6 +2876,10 @@ static Sema::TemplateDeductionResult FinishTemplateArgumentDeduction(
 
   if (Trap.hasErrorOccurred())
     return Sema::TDK_SubstitutionFailure;
+
+  if (auto Result = CheckDeducedArgumentConstraints(S, Template, Builder,
+                                                    Info))
+    return Result;
 
   return Sema::TDK_Success;
 }
@@ -3362,6 +3390,11 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
           *this, FunctionTemplate, /*IsDeduced*/true, Deduced, Info, Builder,
           CurrentInstantiationScope, NumExplicitlySpecified,
           PartialOverloading))
+    return Result;
+
+  if (TemplateDeductionResult Result
+        = CheckDeducedArgumentConstraints(*this, FunctionTemplate, Builder,
+                                          Info))
     return Result;
 
   // C++ [temp.deduct.call]p10: [DR1391]
@@ -4929,6 +4962,21 @@ Sema::getMoreSpecializedTemplate(FunctionTemplateDecl *FT1,
                                  TemplatePartialOrderingContext TPOC,
                                  unsigned NumCallArguments1,
                                  unsigned NumCallArguments2) {
+
+  auto JudgeByConstraints = [&] () -> FunctionTemplateDecl * {
+    llvm::SmallVector<const Expr *, 3> AC1, AC2;
+    FT1->getAssociatedConstraints(AC1);
+    FT2->getAssociatedConstraints(AC2);
+    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+    if (IsAtLeastAsConstrained(FT1, AC1, FT2, AC2, AtLeastAsConstrained1))
+      return nullptr;
+    if (IsAtLeastAsConstrained(FT2, AC2, FT1, AC1, AtLeastAsConstrained2))
+      return nullptr;
+    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
+      return nullptr;
+    return AtLeastAsConstrained1 ? FT1 : FT2;
+  };
+
   bool Better1 = isAtLeastAsSpecializedAs(*this, Loc, FT1, FT2, TPOC,
                                           NumCallArguments1);
   bool Better2 = isAtLeastAsSpecializedAs(*this, Loc, FT2, FT1, TPOC,
@@ -4938,7 +4986,7 @@ Sema::getMoreSpecializedTemplate(FunctionTemplateDecl *FT1,
     return Better1 ? FT1 : FT2;
 
   if (!Better1 && !Better2) // Neither is better than the other
-    return nullptr;
+    return JudgeByConstraints();
 
   // FIXME: This mimics what GCC implements, but doesn't match up with the
   // proposed resolution for core issue 692. This area needs to be sorted out,
@@ -4948,7 +4996,7 @@ Sema::getMoreSpecializedTemplate(FunctionTemplateDecl *FT1,
   if (Variadic1 != Variadic2)
     return Variadic1? FT2 : FT1;
 
-  return nullptr;
+  return JudgeByConstraints();
 }
 
 /// Determine if the two templates are equivalent.
@@ -5073,7 +5121,6 @@ template<typename TemplateLikeDecl>
 static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
                                      TemplateLikeDecl *P2,
                                      TemplateDeductionInfo &Info) {
-  // TODO: Concepts: Regard constraints
   // C++ [temp.class.order]p1:
   //   For two class template partial specializations, the first is at least as
   //   specialized as the second if, given the following rewrite to two
@@ -5144,8 +5191,21 @@ Sema::getMoreSpecializedPartialSpecialization(
   bool Better1 = isAtLeastAsSpecializedAs(*this, PT1, PT2, PS2, Info);
   bool Better2 = isAtLeastAsSpecializedAs(*this, PT2, PT1, PS1, Info);
 
-  if (Better1 == Better2)
-    return nullptr;
+  if (!Better1 && !Better2)
+      return nullptr;
+  if (Better1 && Better2) {
+    llvm::SmallVector<const Expr *, 3> AC1, AC2;
+    PS1->getAssociatedConstraints(AC1);
+    PS2->getAssociatedConstraints(AC2);
+    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+    if (IsAtLeastAsConstrained(PS1, AC1, PS2, AC2, AtLeastAsConstrained1))
+      return nullptr;
+    if (IsAtLeastAsConstrained(PS2, AC2, PS1, AC1, AtLeastAsConstrained2))
+      return nullptr;
+    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
+      return nullptr;
+    return AtLeastAsConstrained1 ? PS1 : PS2;
+  }
 
   return Better1 ? PS1 : PS2;
 }
@@ -5157,11 +5217,22 @@ bool Sema::isMoreSpecializedThanPrimary(
   QualType PartialT = Spec->getInjectedSpecializationType();
   if (!isAtLeastAsSpecializedAs(*this, PartialT, PrimaryT, Primary, Info))
     return false;
-  if (isAtLeastAsSpecializedAs(*this, PrimaryT, PartialT, Spec, Info)) {
-    Info.clearSFINAEDiagnostic();
+  if (!isAtLeastAsSpecializedAs(*this, PrimaryT, PartialT, Spec, Info))
+    return true;
+  Info.clearSFINAEDiagnostic();
+  llvm::SmallVector<const Expr *, 3> PrimaryAC, SpecAC;
+  Primary->getAssociatedConstraints(PrimaryAC);
+  Spec->getAssociatedConstraints(SpecAC);
+  bool AtLeastAsConstrainedPrimary, AtLeastAsConstrainedSpec;
+  if (IsAtLeastAsConstrained(Spec, SpecAC, Primary, PrimaryAC,
+                             AtLeastAsConstrainedSpec))
     return false;
-  }
-  return true;
+  if (!AtLeastAsConstrainedSpec)
+    return false;
+  if (IsAtLeastAsConstrained(Primary, PrimaryAC, Spec, SpecAC,
+                             AtLeastAsConstrainedPrimary))
+    return false;
+  return !AtLeastAsConstrainedPrimary;
 }
 
 VarTemplatePartialSpecializationDecl *
@@ -5184,8 +5255,22 @@ Sema::getMoreSpecializedPartialSpecialization(
   bool Better1 = isAtLeastAsSpecializedAs(*this, PT1, PT2, PS2, Info);
   bool Better2 = isAtLeastAsSpecializedAs(*this, PT2, PT1, PS1, Info);
 
-  if (Better1 == Better2)
+  if (!Better1 && !Better2)
     return nullptr;
+  if (Better1 && Better2) {
+    llvm::SmallVector<const Expr *, 3> AC1, AC2;
+    PS1->getAssociatedConstraints(AC1);
+    PS2->getAssociatedConstraints(AC2);
+    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+    if (IsAtLeastAsConstrained(PS1, AC1, PS2, AC2, AtLeastAsConstrained1))
+      return nullptr;
+    if (IsAtLeastAsConstrained(PS2, AC2, PS1, AC1, AtLeastAsConstrained2))
+      return nullptr;
+    if (AtLeastAsConstrained1 == AtLeastAsConstrained2) {
+      return nullptr;
+    }
+    return AtLeastAsConstrained1 ? PS1 : PS2;
+  }
 
   return Better1 ? PS1 : PS2;
 }
@@ -5205,13 +5290,25 @@ bool Sema::isMoreSpecializedThanPrimary(
       CanonTemplate, PrimaryArgs);
   QualType PartialT = Context.getTemplateSpecializationType(
       CanonTemplate, Spec->getTemplateArgs().asArray());
+
   if (!isAtLeastAsSpecializedAs(*this, PartialT, PrimaryT, Primary, Info))
     return false;
-  if (isAtLeastAsSpecializedAs(*this, PrimaryT, PartialT, Spec, Info)) {
-    Info.clearSFINAEDiagnostic();
+  if (!isAtLeastAsSpecializedAs(*this, PrimaryT, PartialT, Spec, Info))
+    return true;
+  Info.clearSFINAEDiagnostic();
+  llvm::SmallVector<const Expr *, 3> PrimaryAC, SpecAC;
+  Primary->getAssociatedConstraints(PrimaryAC);
+  Spec->getAssociatedConstraints(SpecAC);
+  bool AtLeastAsConstrainedPrimary, AtLeastAsConstrainedSpec;
+  if (IsAtLeastAsConstrained(Spec, SpecAC, Primary, PrimaryAC,
+                             AtLeastAsConstrainedSpec))
     return false;
-  }
-  return true;
+  if (!AtLeastAsConstrainedSpec)
+    return false;
+  if (IsAtLeastAsConstrained(Primary, PrimaryAC, Spec, SpecAC,
+                             AtLeastAsConstrainedPrimary))
+    return false;
+  return !AtLeastAsConstrainedPrimary;
 }
 
 bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
@@ -5277,6 +5374,49 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   return isAtLeastAsSpecializedAs(*this, PType, AType, AArg, Info);
 }
 
+struct OccurringTemplateParameterFinder :
+    RecursiveASTVisitor<OccurringTemplateParameterFinder> {
+  llvm::SmallBitVector &OccurringIndices;
+
+  OccurringTemplateParameterFinder(llvm::SmallBitVector &OccurringIndices)
+      : OccurringIndices(OccurringIndices) { }
+
+  bool VisitTemplateTypeParmType(TemplateTypeParmType *T) {
+    assert(T->getDepth() == 0 && "This assumes that we allow concepts at "
+                                 "namespace scope only");
+    noteParameter(T->getIndex());
+    return true;
+  }
+
+  bool TraverseTemplateName(TemplateName Template) {
+    if (auto *TTP =
+            dyn_cast<TemplateTemplateParmDecl>(Template.getAsTemplateDecl())) {
+      assert(TTP->getDepth() == 0 && "This assumes that we allow concepts at "
+                                     "namespace scope only");
+      noteParameter(TTP->getIndex());
+    }
+    RecursiveASTVisitor<OccurringTemplateParameterFinder>::
+        TraverseTemplateName(Template);
+    return true;
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *E) {
+    if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(E->getDecl())) {
+      assert(NTTP->getDepth() == 0 && "This assumes that we allow concepts at "
+                                      "namespace scope only");
+      noteParameter(NTTP->getIndex());
+    }
+    return true;
+  }
+
+protected:
+  void noteParameter(unsigned Index) {
+    if (OccurringIndices.size() >= Index)
+      OccurringIndices.resize(Index + 1, false);
+    OccurringIndices.set(Index);
+  }
+};
+
 /// Mark the template parameters that are used by the given
 /// expression.
 static void
@@ -5285,6 +5425,11 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
                            bool OnlyDeduced,
                            unsigned Depth,
                            llvm::SmallBitVector &Used) {
+  if (!OnlyDeduced) {
+    OccurringTemplateParameterFinder(Used).TraverseStmt(const_cast<Expr *>(E));
+    return;
+  }
+
   // We can deduce from a pack expansion.
   if (const PackExpansionExpr *Expansion = dyn_cast<PackExpansionExpr>(E))
     E = Expansion->getPattern();
@@ -5303,8 +5448,6 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
       break;
   }
 
-  // FIXME: if !OnlyDeduced, we have to walk the whole subexpression to
-  // find other occurrences of template parameters.
   const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
   if (!DRE)
     return;
@@ -5682,6 +5825,20 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
       MarkUsedTemplateParameters(Ctx, P, OnlyDeduced, Depth, Used);
     break;
   }
+}
+
+/// Mark which template parameters are used in a given expression.
+///
+/// \param E the expression from which template parameters will be deduced.
+///
+/// \param Used a bit vector whose elements will be set to \c true
+/// to indicate when the corresponding template parameter will be
+/// deduced.
+void
+Sema::MarkUsedTemplateParameters(const Expr *E, bool OnlyDeduced,
+                                 unsigned Depth,
+                                 llvm::SmallBitVector &Used) {
+  ::MarkUsedTemplateParameters(Context, E, OnlyDeduced, Depth, Used);
 }
 
 /// Mark which template parameters can be deduced from a given

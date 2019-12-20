@@ -5278,16 +5278,25 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
   if (Error Err = ImportTemplateArguments(
       D->getTemplateArgs().data(), D->getTemplateArgs().size(), TemplateArgs))
     return std::move(Err);
-
-  // Try to find an existing specialization with these template arguments.
+  // Try to find an existing specialization with these template arguments and
+  // template parameter list.
   void *InsertPos = nullptr;
   ClassTemplateSpecializationDecl *PrevDecl = nullptr;
   ClassTemplatePartialSpecializationDecl *PartialSpec =
             dyn_cast<ClassTemplatePartialSpecializationDecl>(D);
-  if (PartialSpec)
-    PrevDecl =
-        ClassTemplate->findPartialSpecialization(TemplateArgs, InsertPos);
-  else
+
+  // Import template parameters.
+  TemplateParameterList *ToTPList = nullptr;
+
+  if (PartialSpec) {
+    auto ToTPListOrErr = import(PartialSpec->getTemplateParameters());
+    if (!ToTPListOrErr)
+      return ToTPListOrErr.takeError();
+    ToTPList = *ToTPListOrErr;
+    PrevDecl = ClassTemplate->findPartialSpecialization(TemplateArgs,
+                                                        *ToTPListOrErr,
+                                                        InsertPos);
+  } else
     PrevDecl = ClassTemplate->findSpecialization(TemplateArgs, InsertPos);
 
   if (PrevDecl) {
@@ -5346,13 +5355,9 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
       return std::move(Err);
     CanonInjType = CanonInjType.getCanonicalType();
 
-    auto ToTPListOrErr = import(PartialSpec->getTemplateParameters());
-    if (!ToTPListOrErr)
-      return ToTPListOrErr.takeError();
-
     if (GetImportedOrCreateDecl<ClassTemplatePartialSpecializationDecl>(
             D2, D, Importer.getToContext(), D->getTagKind(), DC,
-            *BeginLocOrErr, *IdLocOrErr, *ToTPListOrErr, ClassTemplate,
+            *BeginLocOrErr, *IdLocOrErr, ToTPList, ClassTemplate,
             llvm::makeArrayRef(TemplateArgs.data(), TemplateArgs.size()),
             ToTAInfo, CanonInjType,
             cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
@@ -5360,10 +5365,11 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
 
     // Update InsertPos, because preceding import calls may have invalidated
     // it by adding new specializations.
-    if (!ClassTemplate->findPartialSpecialization(TemplateArgs, InsertPos))
+    auto *PartSpec2 = cast<ClassTemplatePartialSpecializationDecl>(D2);
+    if (!ClassTemplate->findPartialSpecialization(TemplateArgs, ToTPList,
+                                                  InsertPos))
       // Add this partial specialization to the class template.
-      ClassTemplate->AddPartialSpecialization(
-          cast<ClassTemplatePartialSpecializationDecl>(D2), InsertPos);
+      ClassTemplate->AddPartialSpecialization(PartSpec2, InsertPos);
 
   } else { // Not a partial specialization.
     if (GetImportedOrCreateDecl(
