@@ -7,10 +7,6 @@
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
 
-#if defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= CL_VERSION_2_0
-// expected-no-diagnostics
-#endif
-
 // Test the -fdeclare-opencl-builtins option.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
@@ -41,6 +37,20 @@ kernel void test_pointers(volatile global void *global_p, global const int4 *a) 
   unsigned int ui;
 
   prefetch(a, 2);
+
+  atom_add((volatile __global int *)global_p, i);
+#if !defined(__OPENCL_CPP_VERSION__) && __OPENCL_C_VERSION__ < CL_VERSION_1_1
+// expected-error@-2{{no matching function for call to 'atom_add'}}
+
+// There are two potential definitions of the function "atom_add", both are
+// currently disabled because the associated extension is disabled.
+// expected-note@-6{{candidate unavailable as it requires OpenCL extension 'cl_khr_global_int32_base_atomics' to be enabled}}
+// expected-note@-7{{candidate unavailable as it requires OpenCL extension 'cl_khr_global_int32_base_atomics' to be enabled}}
+#endif
+
+#if __OPENCL_C_VERSION__ < CL_VERSION_1_1
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#endif
 
   atom_add((volatile __global int *)global_p, i);
   atom_cmpxchg((volatile __global unsigned int *)global_p, ui, ui);
@@ -113,6 +123,11 @@ kernel void basic_subgroup(global uint *out) {
 #if !defined(__OPENCL_CPP_VERSION__) && __OPENCL_C_VERSION__ < CL_VERSION_2_0
 // expected-error@-2{{implicit declaration of function 'get_sub_group_size' is invalid in OpenCL}}
 // expected-error@-3{{implicit conversion changes signedness: 'int' to 'uint' (aka 'unsigned int')}}
+#elif defined(__OPENCL_CPP_VERSION__)
+// expected-error@-5{{no matching function for call to 'get_sub_group_size'}}
+// expected-note@-6{{candidate unavailable as it requires OpenCL extension 'cl_khr_subgroups' to be enabled}}
+#else
+// expected-error@-8{{use of declaration 'get_sub_group_size' requires cl_khr_subgroups extension to be enabled}}
 #endif
 }
 
