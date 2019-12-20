@@ -1,4 +1,5 @@
 // RUN: %clangxx_msan -O0 -g %s -o %t && %run %t
+// RUN: %clangxx_msan -DPOISON -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <errno.h>
@@ -65,6 +66,10 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < kSize1; ++i)
     p[i] = i * 2 + (i % 3 - 1) * 3;
   poison_stack_and_param();
+#ifdef POISON
+  __msan_poison(p + 1, sizeof(long));
+  // CHECK: Uninitialized bytes in __msan_check_mem_is_initialized at offset 0 inside [{{.*}}, 8)
+#endif
   qsort(p, kSize1, sizeof(long), compar1);
   __msan_check_mem_is_initialized(p, sizeof(long) * kSize1);
   assert(seen2);

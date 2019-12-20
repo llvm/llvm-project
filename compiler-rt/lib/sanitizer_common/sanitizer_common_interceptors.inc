@@ -9670,6 +9670,13 @@ INTERCEPTOR(void, qsort, void *base, SIZE_T nmemb, SIZE_T size,
             qsort_compar_f compar) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, qsort, base, nmemb, size, compar);
+  // Run the comparator over all array elements to detect any memory issues.
+  for (SIZE_T i = 0; i < nmemb - 1; ++i) {
+    void *p = (void *)((char *)base + i * size);
+    void *q = (void *)((char *)base + (i + 1) * size);
+    COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
+    compar(p, q);
+  }
   qsort_compar_f old_compar = qsort_compar;
   qsort_compar = compar;
   SIZE_T old_size = qsort_size;
@@ -9699,6 +9706,13 @@ INTERCEPTOR(void, qsort_r, void *base, SIZE_T nmemb, SIZE_T size,
             qsort_r_compar_f compar, void *arg) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, qsort_r, base, nmemb, size, compar, arg);
+  // Run the comparator over all array elements to detect any memory issues.
+  for (SIZE_T i = 0; i < nmemb - 1; ++i) {
+    void *p = (void *)((char *)base + i * size);
+    void *q = (void *)((char *)base + (i + 1) * size);
+    COMMON_INTERCEPTOR_UNPOISON_PARAM(3);
+    compar(p, q, arg);
+  }
   qsort_r_compar_f old_compar = qsort_r_compar;
   qsort_r_compar = compar;
   SIZE_T old_size = qsort_r_size;
