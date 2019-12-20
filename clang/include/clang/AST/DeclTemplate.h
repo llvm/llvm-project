@@ -793,10 +793,9 @@ protected:
 
   void loadLazySpecializationsImpl() const;
 
-  template <class EntryType, typename ...ProfileArguments>
-  typename SpecEntryTraits<EntryType>::DeclType*
+  template <class EntryType> typename SpecEntryTraits<EntryType>::DeclType*
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
-                         void *&InsertPos, ProfileArguments &&...ProfileArgs);
+                         ArrayRef<TemplateArgument> Args, void *&InsertPos);
 
   template <class Derived, class EntryType>
   void addSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
@@ -2057,14 +2056,7 @@ public:
              ->getInjectedSpecializationType();
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    Profile(ID, getTemplateArgs().asArray(), getTemplateParameters(),
-            getASTContext());
-  }
-
-  static void
-  Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          TemplateParameterList *TPL, ASTContext &Context);
+  // FIXME: Add Profile support!
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 
@@ -2188,8 +2180,7 @@ public:
   /// Return the partial specialization with the provided arguments if it
   /// exists, otherwise return the insertion point.
   ClassTemplatePartialSpecializationDecl *
-  findPartialSpecialization(ArrayRef<TemplateArgument> Args,
-                            TemplateParameterList *TPL, void *&InsertPos);
+  findPartialSpecialization(ArrayRef<TemplateArgument> Args, void *&InsertPos);
 
   /// Insert the specified partial specialization knowing that it is not
   /// already in. InsertPos must be obtained from findPartialSpecialization.
@@ -2889,15 +2880,6 @@ public:
     return First->InstantiatedFromMember.setInt(true);
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    Profile(ID, getTemplateArgs().asArray(), getTemplateParameters(),
-            getASTContext());
-  }
-
-  static void
-  Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          TemplateParameterList *TPL, ASTContext &Context);
-
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 
   static bool classofKind(Kind K) {
@@ -3016,8 +2998,7 @@ public:
   /// Return the partial specialization with the provided arguments if it
   /// exists, otherwise return the insertion point.
   VarTemplatePartialSpecializationDecl *
-  findPartialSpecialization(ArrayRef<TemplateArgument> Args,
-                            TemplateParameterList *TPL, void *&InsertPos);
+  findPartialSpecialization(ArrayRef<TemplateArgument> Args, void *&InsertPos);
 
   /// Insert the specified partial specialization knowing that it is not
   /// already in. InsertPos must be obtained from findPartialSpecialization.
