@@ -493,7 +493,11 @@ def X86fgetexpSAE   : SDNode<"X86ISD::FGETEXP_SAE", SDTFPUnaryOp>;
 def X86fgetexps     : SDNode<"X86ISD::FGETEXPS", SDTFPBinOp>;
 def X86fgetexpSAEs  : SDNode<"X86ISD::FGETEXPS_SAE", SDTFPBinOp>;
 
-def X86Fmadd     : SDNode<"ISD::FMA",          SDTFPTernaryOp, [SDNPCommutative]>;
+def X86Fmadd        : SDNode<"ISD::FMA",          SDTFPTernaryOp, [SDNPCommutative]>;
+def X86strict_Fmadd : SDNode<"ISD::STRICT_FMA",   SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
+def X86any_Fmadd    : PatFrags<(ops node:$src1, node:$src2, node:$src3),
+                               [(X86strict_Fmadd node:$src1, node:$src2, node:$src3),
+                                (X86Fmadd node:$src1, node:$src2, node:$src3)]>;
 def X86Fnmadd    : SDNode<"X86ISD::FNMADD",    SDTFPTernaryOp, [SDNPCommutative]>;
 def X86Fmsub     : SDNode<"X86ISD::FMSUB",     SDTFPTernaryOp, [SDNPCommutative]>;
 def X86Fnmsub    : SDNode<"X86ISD::FNMSUB",    SDTFPTernaryOp, [SDNPCommutative]>;
