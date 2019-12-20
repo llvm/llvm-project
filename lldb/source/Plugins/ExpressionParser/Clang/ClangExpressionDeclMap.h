@@ -283,6 +283,14 @@ public:
                                 CompilerDeclContext &namespace_decl,
                                 unsigned int current_id);
 
+protected:
+  /// Retrieves the declaration with the given name from the storage of
+  /// persistent declarations.
+  ///
+  /// \return
+  ///     A persistent decl with the given name or a nullptr.
+  virtual clang::NamedDecl *GetPersistentDecl(ConstString name);
+
 private:
   ExpressionVariableList
       m_found_entities; ///< All entities that were looked up for the parser.
