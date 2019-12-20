@@ -3361,10 +3361,6 @@ bool InstCombiner::run() {
         // Move the name to the new instruction first.
         Result->takeName(I);
 
-        // Push the new instruction and any users onto the worklist.
-        Worklist.AddUsersToWorkList(*Result);
-        Worklist.Add(Result);
-
         // Insert the new instruction into the basic block...
         BasicBlock *InstParent = I->getParent();
         BasicBlock::iterator InsertPos = I->getIterator();
@@ -3375,6 +3371,10 @@ bool InstCombiner::run() {
           InsertPos = InstParent->getFirstInsertionPt();
 
         InstParent->getInstList().insert(InsertPos, Result);
+
+        // Push the new instruction and any users onto the worklist.
+        Worklist.AddUsersToWorkList(*Result);
+        Worklist.Add(Result);
 
         eraseInstFromFunction(*I);
       } else {
