@@ -85,12 +85,23 @@ Sections:
 # RUN: llvm-readobj -S %t-x86_64.o | FileCheck --check-prefix=X86_64-LLVM %s
 # RUN: llvm-readelf -S %t-x86_64.o | FileCheck --check-prefix=X86_64-GNU %s
 
-# X86_64-LLVM:      Flags [ (0x10000000)
+# X86_64-LLVM:      Name: .x86_64
+# X86_64-LLVM-NEXT: Type: SHT_PROGBITS
+# X86_64-LLVM-NEXT: Flags [ (0x10000000)
 # X86_64-LLVM-NEXT:   SHF_X86_64_LARGE (0x10000000)
 # X86_64-LLVM-NEXT: ]
 
-# X86_64-GNU: [Nr] Name    Type     Address          Off    Size   ES Flg Lk Inf Al
-# X86_64-GNU: [ 1] .x86_64 PROGBITS 0000000000000000 000040 000000 00   p 0   0  0
+# X86_64-LLVM:      Name: .with.exclude
+# X86_64-LLVM-NEXT: Type: SHT_PROGBITS
+# X86_64-LLVM-NEXT: Flags [ (0x90000000)
+# X86_64-LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
+# X86_64-LLVM-NEXT:   SHF_X86_64_LARGE (0x10000000)
+# X86_64-LLVM-NEXT: ]
+
+## GNU prints 'l' before 'E', despite otherwise printing upper-case letters first.
+# X86_64-GNU: [Nr] Name          Type     Address          Off    Size   ES Flg Lk Inf Al
+# X86_64-GNU: [ 1] .x86_64       PROGBITS 0000000000000000 000040 000000 00   l 0   0  0
+# X86_64-GNU: [ 2] .with.exclude PROGBITS 0000000000000000 000040 000000 00  lE 0   0  0
 
 --- !ELF
 FileHeader:
@@ -102,6 +113,9 @@ Sections:
   - Name:  .x86_64
     Type:  SHT_PROGBITS
     Flags: [ SHF_X86_64_LARGE ]
+  - Name:  .with.exclude
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_X86_64_LARGE, SHF_EXCLUDE ]
 
 # RUN: yaml2obj --docnum 5 %s -o %t-arm.o
 # RUN: llvm-readobj -S %t-arm.o | FileCheck --check-prefix=ARM-LLVM %s
@@ -112,7 +126,7 @@ Sections:
 # ARM-LLVM-NEXT: ]
 
 # ARM-GNU: [Nr] Name Type     Address          Off    Size   ES Flg Lk Inf Al
-# ARM-GNU: [ 1] foo  PROGBITS 0000000000000000 000040 000000 00   p 0   0  0
+# ARM-GNU: [ 1] foo  PROGBITS 0000000000000000 000040 000000 00   y 0   0  0
 
 --- !ELF
 FileHeader:
