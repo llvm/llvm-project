@@ -314,7 +314,7 @@ define i1 @nonnull4(i32** %a) {
 define i1 @nonnull5(i32** %a) {
 ; CHECK-LABEL: @nonnull5(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; CHECK-NEXT:    tail call void @escape(i32* nonnull [[LOAD]])
+; CHECK-NEXT:    tail call void @escape(i32* [[LOAD]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32* [[LOAD]], null
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i1 false

@@ -566,11 +566,10 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   if (Inv == CxtI)
     return false;
 
-  // The context comes first, but they're both in the same block. Make sure
-  // there is nothing in between that might interrupt the control flow.
-  for (BasicBlock::const_iterator I =
-         std::next(BasicBlock::const_iterator(CxtI)), IE(Inv);
-       I != IE; ++I)
+  // The context comes first, but they're both in the same block.
+  // Make sure there is nothing in between that might interrupt
+  // the control flow, not even CxtI itself.
+  for (BasicBlock::const_iterator I(CxtI), IE(Inv); I != IE; ++I)
     if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
       return false;
 
