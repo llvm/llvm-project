@@ -34,13 +34,29 @@
 #error "wrong value for __cpp_char8_t"
 #endif
 
+#if check(conditional_explicit, 0, 0, 0, 0, 201806)
+#error "wrong value for __cpp_conditional_explicit"
+#endif
+
+// constexpr checked below
+
 #if check(constexpr_dynamic_alloc, 0, 0, 0, 0, 201907)
 #error "wrong value for __cpp_constexpr_dynamic_alloc"
+#endif
+
+#if check(constexpr_in_decltype, 0, 201711, 201711, 201711, 201711)
+#error "wrong value for __cpp_constexpr_in_decltype"
 #endif
 
 #if check(constinit, 0, 0, 0, 0, 201907)
 #error "wrong value for __cpp_constinit"
 #endif
+
+#if check(designated_initializers, 0, 0, 0, 0, 201707)
+#error "wrong value for __cpp_designated_initializers"
+#endif
+
+// generic_lambdas checked below
 
 #if check(impl_destroying_delete, 201806, 201806, 201806, 201806, 201806)
 #error "wrong value for __cpp_impl_destroying_delete"
@@ -158,7 +174,7 @@
 #error "wrong value for __cpp_init_captures"
 #endif
 
-#if check(generic_lambdas, 0, 0, 201304, 201304, 201304)
+#if check(generic_lambdas, 0, 0, 201304, 201304, 201707)
 #error "wrong value for __cpp_generic_lambdas"
 #endif
 
