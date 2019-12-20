@@ -139,9 +139,9 @@ for.end:                                          ; preds = %for.body
 ; CHECK: shufflevector <16 x i32> %wide.vec, <16 x i32> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK: shufflevector <16 x i32> %wide.vec, <16 x i32> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
 ; CHECK: shufflevector <16 x i32> %wide.vec, <16 x i32> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK: add nsw <4 x i32>
+; CHECK: add <4 x i32>
 ; CHECK: sub <4 x i32>
-; CHECK: add nsw <4 x i32>
+; CHECK: add <4 x i32>
 ; CHECK: sub <4 x i32>
 
 %struct.ST4 = type { i32, i32, i32, i32 }
@@ -529,7 +529,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: %[[V0:.*]] = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK: %[[V1:.*]] = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK: bitcast <4 x i32> %[[V1]] to <4 x float>
-; CHECK: add nsw <4 x i32>
+; CHECK: add <4 x i32>
 ; CHECK: fadd fast <4 x float>
 
 %struct.IntFloat = type { i32, float }
@@ -645,7 +645,7 @@ for.end:
 ; CHECK:   store i32 %[[X4:.+]], {{.*}}
 ; CHECK:   %[[L2:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
 ; CHECK:   %[[S1:.+]] = shufflevector <8 x i32> %[[L2]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK:   add nsw <4 x i32> %[[S1]], %[[Phi]]
+; CHECK:   add <4 x i32> %[[S1]], %[[Phi]]
 
 define i32 @PR27626_1(%pair.i32 *%p, i64 %n) {
 entry:
@@ -746,7 +746,7 @@ for.end:
 ; CHECK:   store i32 %[[X4:.+]], {{.*}}
 ; CHECK:   %[[L2:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
 ; CHECK:   %[[S1:.+]] = shufflevector <8 x i32> %[[L2]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK:   add nsw <4 x i32> %[[S1]], %[[Phi]]
+; CHECK:   add <4 x i32> %[[S1]], %[[Phi]]
 
 define i32 @PR27626_3(%pair.i32 *%p, i64 %n, i32 %z) {
 entry:

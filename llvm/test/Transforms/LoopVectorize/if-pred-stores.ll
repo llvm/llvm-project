@@ -248,8 +248,8 @@ define void @bug18724(i1 %cond) {
 ; UNROLL-NOSIMPLIFY-NEXT:    store i32 2, i32* [[TMP1]], align 4
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; UNROLL-NOSIMPLIFY:       pred.store.continue4:
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = add nsw i32 [[VEC_PHI]], 1
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = add nsw i32 [[VEC_PHI2]], 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = add i32 [[VEC_PHI]], 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = add i32 [[VEC_PHI2]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI]] = select i1 undef, i32 [[VEC_PHI]], i32 [[TMP4]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI5]] = select i1 undef, i32 [[VEC_PHI2]], i32 [[TMP5]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[OFFSET_IDX6:%.*]] = add i64 undef, [[INDEX]]

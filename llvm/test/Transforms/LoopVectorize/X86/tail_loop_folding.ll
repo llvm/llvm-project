@@ -96,7 +96,7 @@ define i32 @reduction_i32(i32* nocapture readonly %A, i32* nocapture readonly %B
 ; CHECK:         [[LOAD1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* {{.*}}, i32 4, <8 x i1> [[ICMPULE]], <8 x i32> undef)
 ; CHECK:         [[LOAD2:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* {{.*}}, i32 4, <8 x i1> [[ICMPULE]], <8 x i32> undef)
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw <8 x i32> [[LOAD2]], [[LOAD1]]
-; CHECK-NEXT:    [[ACCUM]] = add nuw nsw <8 x i32> [[ADD]], [[ACCUM_PHI]]
+; CHECK-NEXT:    [[ACCUM]] = add <8 x i32> [[ADD]], [[ACCUM_PHI]]
 ; CHECK:         [[LIVEOUT:%.*]] = select <8 x i1> [[ICMPULE]], <8 x i32> [[ACCUM]], <8 x i32> [[ACCUM_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; CHECK:       middle.block:

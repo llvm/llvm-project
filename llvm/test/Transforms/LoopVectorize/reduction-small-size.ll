@@ -8,7 +8,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP17:%.*]], %[[LATCH]] ]
 ; CHECK:       [[LATCH]]:
 ; CHECK:         [[TMP13:%.*]] = and <4 x i32> [[VEC_PHI]], <i32 255, i32 255, i32 255, i32 255>
-; CHECK-NEXT:    [[TMP14:%.*]] = add nuw nsw <4 x i32> [[TMP13]], {{.*}}
+; CHECK-NEXT:    [[TMP14:%.*]] = add <4 x i32> [[TMP13]], {{.*}}
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK:         [[TMP16:%.*]] = trunc <4 x i32> [[TMP14]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP17]] = zext <4 x i8> [[TMP16]] to <4 x i32>
