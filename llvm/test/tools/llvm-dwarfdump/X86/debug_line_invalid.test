@@ -113,27 +113,35 @@
 # NONFATAL:      debug_line[0x000001ad]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      standard_opcode_lengths[DW_LNS_set_isa] = 1
-# NONFATAL-NOT:  include_directories
-# NONFATAL-NOT:  file_names
+# NONFATAL-NEXT: include_directories[  0] = "/tmp"
+# NONFATAL-NEXT: file_names[  0]:
+# NONFATAL-NEXT:            name: "a.c"
+# NONFATAL-NEXT:       dir_index: 1
 # NONFATAL-NOT:  Address
 
 ## Case 9: V5 prologue ends during file table.
 # NONFATAL:      debug_line[0x000001ed]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
-# NONFATAL-NOT:  file_names
+# NONFATAL-NEXT: file_names[  0]:
+# NONFATAL-NEXT:            name: "a.c"
+# NONFATAL-NEXT:       dir_index: 1
 # NONFATAL-NOT:  Address
 
 ## Case 10: V5 prologue ends during directory table.
 # NONFATAL:      debug_line[0x0000022d]
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL-NOT:  include_directories
-# NONFATAL-NOT:  file_names
+# NONFATAL:      include_directories[  0] = "/tmp"
+# NONFATAL-NEXT: file_names[  0]:
+# NONFATAL-NEXT:            name: "a.c"
+# NONFATAL-NEXT:       dir_index: 1
 # NONFATAL-NOT:  Address
 
 ## Case 11: V5 invalid MD5 hash form.
 # NONFATAL:      debug_line[0x0000026d]
 # NONFATAL-NEXT: Line table prologue
+# NONFATAL:      include_directories[  0] = "/tmp"
+# NONFATAL-NOT:  file_names
 # NONFATAL-NOT:  Address
 
 # LAST:          debug_line[0x000002af]
@@ -151,12 +159,9 @@
 # ALL-NEXT: warning: parsing line table prologue at 0x000000c9 should have ended at 0x00000104 but it ended at 0x00000103
 # OTHER-NEXT: warning: unexpected line op length at offset 0x00000158 expected 0x02 found 0x01
 # OTHER-NEXT: warning: last sequence in debug line table is not terminated!
-# ALL-NEXT: warning: parsing line table prologue at 0x000001ad found an invalid directory or file table description at 0x000001cc
-# ALL-NEXT: warning: failed to parse entry content descriptions at offset 0x000001cc because offset extends beyond the prologue end at offset 0x000001c8
-# ALL-NEXT: warning: parsing line table prologue at 0x000001ed found an invalid directory or file table description at 0x0000021a
-# ALL-NEXT: warning: failed to parse file entry at offset 0x0000021a because offset extends beyond the prologue end at offset 0x00000218
-# ALL-NEXT: warning: parsing line table prologue at 0x0000022d found an invalid directory or file table description at 0x0000024f
-# ALL-NEXT: warning: failed to parse directory entry at offset 0x0000024f because offset extends beyond the prologue end at offset 0x0000024f
+# ALL-NEXT: warning: parsing line table prologue at 0x000001ad should have ended at 0x000001c8 but it ended at 0x000001df
+# ALL-NEXT: warning: parsing line table prologue at 0x000001ed should have ended at 0x00000218 but it ended at 0x0000021f
+# ALL-NEXT: warning: parsing line table prologue at 0x0000022d should have ended at 0x0000024f but it ended at 0x0000025f
 # ALL-NEXT: warning: parsing line table prologue at 0x0000026d found an invalid directory or file table description at 0x000002a2
 # ALL-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
 # ALL-NOT:  warning:
