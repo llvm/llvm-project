@@ -125,10 +125,8 @@ CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
-    Value *Ptr, Value *Val, Value *Size, unsigned Align, uint32_t ElementSize,
+    Value *Ptr, Value *Val, Value *Size, Align Alignment, uint32_t ElementSize,
     MDNode *TBAATag, MDNode *ScopeTag, MDNode *NoAliasTag) {
-  assert(Align >= ElementSize &&
-         "Pointer alignment must be at least element size.");
 
   Ptr = getCastedInt8PtrValue(Ptr);
   Value *Ops[] = {Ptr, Val, Size, getInt32(ElementSize)};
@@ -139,7 +137,7 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
 
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
-  cast<AtomicMemSetInst>(CI)->setDestAlignment(Align);
+  cast<AtomicMemSetInst>(CI)->setDestAlignment(Alignment);
 
   // Set the TBAA info if present.
   if (TBAATag)
