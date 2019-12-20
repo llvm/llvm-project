@@ -90,8 +90,6 @@ public:
   static lldb_private::SymbolFile *
   CreateInstance(lldb::ObjectFileSP objfile_sp);
 
-  static lldb_private::FileSpecList GetSymlinkPaths();
-
   // Constructors and Destructors
 
   SymbolFileDWARF(lldb::ObjectFileSP objfile_sp,

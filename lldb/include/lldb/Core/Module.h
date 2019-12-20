@@ -10,6 +10,7 @@
 #define liblldb_Module_h_
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContextScope.h"
@@ -966,10 +967,10 @@ protected:
   ///references to them
   TypeSystemMap m_type_system_map;   ///< A map of any type systems associated
                                      ///with this module
-  PathMappingList m_source_mappings; ///< Module specific source remappings for
-                                     ///when you have debug info for a module
-                                     ///that doesn't match where the sources
-                                     ///currently are
+  /// Module specific source remappings for when you have debug info for a
+  /// module that doesn't match where the sources currently are.
+  PathMappingList m_source_mappings =
+      ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
                                      /// is used by the ObjectFile and and
                                      /// ObjectFile instances for the debug info

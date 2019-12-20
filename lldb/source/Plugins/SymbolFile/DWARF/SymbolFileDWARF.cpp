@@ -135,14 +135,6 @@ public:
     m_collection_sp->Initialize(g_symbolfiledwarf_properties);
   }
 
-  FileSpecList GetSymLinkPaths() {
-    const OptionValueFileSpecList *option_value =
-        m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(
-            nullptr, true, ePropertySymLinkPaths);
-    assert(option_value);
-    return option_value->GetCurrentValue();
-  }
-
   bool IgnoreFileIndexes() const {
     return m_collection_sp->GetPropertyAtIndexAsBoolean(
         nullptr, ePropertyIgnoreIndexes, false);
@@ -225,10 +217,6 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
   }
 
   return support_files;
-}
-
-FileSpecList SymbolFileDWARF::GetSymlinkPaths() {
-  return GetGlobalPluginProperties()->GetSymLinkPaths();
 }
 
 void SymbolFileDWARF::Initialize() {
