@@ -220,9 +220,7 @@ FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
 
     found_module = true;
     SymbolContextList sc_list;
-    if (!image->FindSymbolsWithNameAndType(ConstString(object), sym_type,
-                                          sc_list))
-      continue;
+    image->FindSymbolsWithNameAndType(ConstString(object), sym_type, sc_list);
     if (sc_list.GetSize() != 1)
       continue;
 
