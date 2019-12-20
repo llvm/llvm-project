@@ -33,9 +33,9 @@ syn match mlirType /x\s*\zsvector/
 " TODO: the list is not exhaustive.
 syn keyword mlirOps alloc alloca addf addi call call_indirect cmpi constant
 syn keyword mlirOps dealloc divf dma_start dma_wait dim extract_element
-syn keyword getTensor index_cast load memref_cast memref_shape_cast mulf muli
-syn keyword prefetch sitofp splat store select subf subi subview tensor_cast
-syn keyword view
+syn keyword mlirOps getTensor index_cast load memref_cast memref_shape_cast
+syn keyword mlirOps mulf muli prefetch sitofp splat store select subf subi
+syn keyword mlirOps subview tensor_cast view
 
 " Affine ops.
 syn match mlirOps /\<affine\.apply\>/
