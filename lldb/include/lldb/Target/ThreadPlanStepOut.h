@@ -79,6 +79,7 @@ private:
   lldb::ValueObjectSP m_return_valobj_sp;
   bool m_is_swift_error_value;
   bool m_calculate_return_value;
+  StreamString m_constructor_errors;
 
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOut(
       bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
