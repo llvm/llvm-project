@@ -37,6 +37,15 @@ using InstructionListType = SmallVector<Instruction *, 2>;
 //===--------------------------------------------------------------------===//
 
 template <class G>
+void AbstractDependenceGraphBuilder<G>::computeInstructionOrdinals() {
+  // The BBList is expected to be in program order.
+  size_t NextOrdinal = 1;
+  for (auto *BB : BBList)
+    for (auto &I : *BB)
+      InstOrdinalMap.insert(std::make_pair(&I, NextOrdinal++));
+}
+
+template <class G>
 void AbstractDependenceGraphBuilder<G>::createFineGrainedNodes() {
   ++TotalGraphs;
   assert(IMap.empty() && "Expected empty instruction map at start");
@@ -44,6 +53,7 @@ void AbstractDependenceGraphBuilder<G>::createFineGrainedNodes() {
     for (Instruction &I : *BB) {
       auto &NewNode = createFineGrainedNode(I);
       IMap.insert(std::make_pair(&I, &NewNode));
+      NodeOrdinalMap.insert(std::make_pair(&NewNode, getOrdinal(I)));
       ++TotalFineGrainedNodes;
     }
 }
@@ -106,6 +116,13 @@ template <class G> void AbstractDependenceGraphBuilder<G>::createPiBlocks() {
   for (NodeListType &NL : ListOfSCCs) {
     LLVM_DEBUG(dbgs() << "Creating pi-block node with " << NL.size()
                       << " nodes in it.\n");
+
+    // SCC iterator may put the nodes in an order that's different from the
+    // program order. To preserve original program order, we sort the list of
+    // nodes based on ordinal numbers computed earlier.
+    llvm::sort(NL, [&](NodeType *LHS, NodeType *RHS) {
+      return getOrdinal(*LHS) < getOrdinal(*RHS);
+    });
 
     NodeType &PiNode = createPiBlock(NL);
     ++TotalPiBlockNodes;
@@ -199,6 +216,10 @@ template <class G> void AbstractDependenceGraphBuilder<G>::createPiBlocks() {
       }
     }
   }
+
+  // Ordinal maps are no longer needed.
+  InstOrdinalMap.clear();
+  NodeOrdinalMap.clear();
 
   LLVM_DEBUG(dbgs() << "==== End of Creation of Pi-Blocks ===\n");
 }
