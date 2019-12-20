@@ -1532,8 +1532,7 @@ entry:
   ret void
 }
 
-; FIXME: This test is currently miscompiled for KNL with the operands of the
-; vcmpgtb swapped.
+; This test used to end up with the vpcmpgtb on KNL having its operands in the wrong order.
 define <8 x i64> @cmp_swap_bug(<16 x i8>* %x, <8 x i64> %y, <8 x i64> %z) {
 ; KNL-LABEL: cmp_swap_bug:
 ; KNL:       ## %bb.0: ## %entry
@@ -1542,7 +1541,7 @@ define <8 x i64> @cmp_swap_bug(<16 x i8>* %x, <8 x i64> %y, <8 x i64> %z) {
 ; KNL-NEXT:    ## encoding: [0xc4,0xe2,0x69,0x00,0x15,A,A,A,A]
 ; KNL-NEXT:    ## fixup A - offset: 5, value: LCPI69_0-4, kind: reloc_riprel_4byte
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3 ## encoding: [0xc5,0xe1,0xef,0xdb]
-; KNL-NEXT:    vpcmpgtb %xmm3, %xmm2, %xmm2 ## encoding: [0xc5,0xe9,0x64,0xd3]
+; KNL-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2 ## encoding: [0xc5,0xe1,0x64,0xd2]
 ; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2 ## encoding: [0x62,0xf2,0x7d,0x48,0x21,0xd2]
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1 ## encoding: [0x62,0xf2,0x6d,0x48,0x27,0xca]
 ; KNL-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x64,0xc0]
