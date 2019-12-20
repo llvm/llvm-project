@@ -4412,10 +4412,7 @@ static bool isTypeValid(QualType T) {
 Sema::ReferenceCompareResult
 Sema::CompareReferenceRelationship(SourceLocation Loc,
                                    QualType OrigT1, QualType OrigT2,
-                                   bool &DerivedToBase,
-                                   bool &ObjCConversion,
-                                   bool &ObjCLifetimeConversion,
-                                   bool &FunctionConversion) {
+                                   ReferenceConversions *ConvOut) {
   assert(!OrigT1->isReferenceType() &&
     "T1 must be the pointee type of the reference type");
   assert(!OrigT2->isReferenceType() && "T2 cannot be a reference type");
@@ -4426,24 +4423,25 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   QualType UnqualT1 = Context.getUnqualifiedArrayType(T1, T1Quals);
   QualType UnqualT2 = Context.getUnqualifiedArrayType(T2, T2Quals);
 
+  ReferenceConversions ConvTmp;
+  ReferenceConversions &Conv = ConvOut ? *ConvOut : ConvTmp;
+  Conv = ReferenceConversions();
+
   // C++ [dcl.init.ref]p4:
   //   Given types "cv1 T1" and "cv2 T2," "cv1 T1" is
   //   reference-related to "cv2 T2" if T1 is the same type as T2, or
   //   T1 is a base class of T2.
-  DerivedToBase = false;
-  ObjCConversion = false;
-  ObjCLifetimeConversion = false;
   QualType ConvertedT2;
   if (UnqualT1 == UnqualT2) {
     // Nothing to do.
   } else if (isCompleteType(Loc, OrigT2) &&
              isTypeValid(UnqualT1) && isTypeValid(UnqualT2) &&
              IsDerivedFrom(Loc, UnqualT2, UnqualT1))
-    DerivedToBase = true;
+    Conv |= ReferenceConversions::DerivedToBase;
   else if (UnqualT1->isObjCObjectOrInterfaceType() &&
            UnqualT2->isObjCObjectOrInterfaceType() &&
            Context.canBindObjCObjectType(UnqualT1, UnqualT2))
-    ObjCConversion = true;
+    Conv |= ReferenceConversions::ObjC;
   else if (UnqualT2->isFunctionType() &&
            IsFunctionConversion(UnqualT2, UnqualT1, ConvertedT2)) {
     // C++1z [dcl.init.ref]p4:
@@ -4452,7 +4450,7 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
     //
     // We extend this to also apply to 'noreturn', so allow any function
     // conversion between function types.
-    FunctionConversion = true;
+    Conv |= ReferenceConversions::Function;
     return Ref_Compatible;
   } else
     return Ref_Incompatible;
@@ -4482,7 +4480,7 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime() &&
       T1Quals.compatiblyIncludesObjCLifetime(T2Quals)) {
     if (isNonTrivialObjCLifetimeConversion(T2Quals, T1Quals))
-      ObjCLifetimeConversion = true;
+      Conv |= ReferenceConversions::ObjCLifetime;
 
     T1Quals.removeObjCLifetime();
     T2Quals.removeObjCLifetime();
@@ -4491,6 +4489,9 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   // MS compiler ignores __unaligned qualifier for references; do the same.
   T1Quals.removeUnaligned();
   T2Quals.removeUnaligned();
+
+  if (T1Quals != T2Quals)
+    Conv |= ReferenceConversions::Qualification;
 
   if (T1Quals.compatiblyIncludes(T2Quals))
     return Ref_Compatible;
@@ -4532,11 +4533,6 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
       continue;
 
     if (AllowRvalues) {
-      bool DerivedToBase = false;
-      bool ObjCConversion = false;
-      bool ObjCLifetimeConversion = false;
-      bool FunctionConversion = false;
-
       // If we are initializing an rvalue reference, don't permit conversion
       // functions that return lvalues.
       if (!ConvTemplate && DeclType->isRValueReferenceType()) {
@@ -4552,9 +4548,8 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
               Conv->getConversionType()
                   .getNonReferenceType()
                   .getUnqualifiedType(),
-              DeclType.getNonReferenceType().getUnqualifiedType(),
-              DerivedToBase, ObjCConversion, ObjCLifetimeConversion,
-              FunctionConversion) == Sema::Ref_Incompatible)
+              DeclType.getNonReferenceType().getUnqualifiedType()) ==
+              Sema::Ref_Incompatible)
         continue;
     } else {
       // If the conversion function doesn't return a reference type,
@@ -4655,14 +4650,36 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
 
   // Compute some basic properties of the types and the initializer.
   bool isRValRef = DeclType->isRValueReferenceType();
-  bool DerivedToBase = false;
-  bool ObjCConversion = false;
-  bool ObjCLifetimeConversion = false;
-  bool FunctionConversion = false;
   Expr::Classification InitCategory = Init->Classify(S.Context);
-  Sema::ReferenceCompareResult RefRelationship = S.CompareReferenceRelationship(
-      DeclLoc, T1, T2, DerivedToBase, ObjCConversion, ObjCLifetimeConversion,
-      FunctionConversion);
+
+  Sema::ReferenceConversions RefConv;
+  Sema::ReferenceCompareResult RefRelationship =
+      S.CompareReferenceRelationship(DeclLoc, T1, T2, &RefConv);
+
+  auto SetAsReferenceBinding = [&](bool BindsDirectly) {
+    ICS.setStandard();
+    ICS.Standard.First = ICK_Identity;
+    ICS.Standard.Second = (RefConv & Sema::ReferenceConversions::DerivedToBase)
+                              ? ICK_Derived_To_Base
+                              : (RefConv & Sema::ReferenceConversions::ObjC)
+                                    ? ICK_Compatible_Conversion
+                                    : ICK_Identity;
+    ICS.Standard.Third = ICK_Identity;
+    ICS.Standard.FromTypePtr = T2.getAsOpaquePtr();
+    ICS.Standard.setToType(0, T2);
+    ICS.Standard.setToType(1, T1);
+    ICS.Standard.setToType(2, T1);
+    ICS.Standard.ReferenceBinding = true;
+    ICS.Standard.DirectBinding = BindsDirectly;
+    ICS.Standard.IsLvalueReference = !isRValRef;
+    ICS.Standard.BindsToFunctionLvalue = T2->isFunctionType();
+    ICS.Standard.BindsToRvalue = InitCategory.isRValue();
+    ICS.Standard.BindsImplicitObjectArgumentWithoutRefQualifier = false;
+    ICS.Standard.ObjCLifetimeConversionBinding =
+        (RefConv & Sema::ReferenceConversions::ObjCLifetime) != 0;
+    ICS.Standard.CopyConstructor = nullptr;
+    ICS.Standard.DeprecatedStringLiteralToCharPtr = false;
+  };
 
   // C++0x [dcl.init.ref]p5:
   //   A reference to type "cv1 T1" is initialized by an expression
@@ -4682,25 +4699,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
       //   has a type that is a derived class of the parameter type,
       //   in which case the implicit conversion sequence is a
       //   derived-to-base Conversion (13.3.3.1).
-      ICS.setStandard();
-      ICS.Standard.First = ICK_Identity;
-      ICS.Standard.Second = DerivedToBase? ICK_Derived_To_Base
-                         : ObjCConversion? ICK_Compatible_Conversion
-                         : ICK_Identity;
-      ICS.Standard.Third = ICK_Identity;
-      ICS.Standard.FromTypePtr = T2.getAsOpaquePtr();
-      ICS.Standard.setToType(0, T2);
-      ICS.Standard.setToType(1, T1);
-      ICS.Standard.setToType(2, T1);
-      ICS.Standard.ReferenceBinding = true;
-      ICS.Standard.DirectBinding = true;
-      ICS.Standard.IsLvalueReference = !isRValRef;
-      ICS.Standard.BindsToFunctionLvalue = T2->isFunctionType();
-      ICS.Standard.BindsToRvalue = false;
-      ICS.Standard.BindsImplicitObjectArgumentWithoutRefQualifier = false;
-      ICS.Standard.ObjCLifetimeConversionBinding = ObjCLifetimeConversion;
-      ICS.Standard.CopyConstructor = nullptr;
-      ICS.Standard.DeprecatedStringLiteralToCharPtr = false;
+      SetAsReferenceBinding(/*BindsDirectly=*/true);
 
       // Nothing more to do: the inaccessibility/ambiguity check for
       // derived-to-base conversions is suppressed when we're
@@ -4738,34 +4737,16 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   //               lvalue and "cv1 T1" is reference-compatible with "cv2 T2", or
   if (RefRelationship == Sema::Ref_Compatible &&
       (InitCategory.isXValue() ||
-       (InitCategory.isPRValue() && (T2->isRecordType() || T2->isArrayType())) ||
+       (InitCategory.isPRValue() &&
+          (T2->isRecordType() || T2->isArrayType())) ||
        (InitCategory.isLValue() && T2->isFunctionType()))) {
-    ICS.setStandard();
-    ICS.Standard.First = ICK_Identity;
-    ICS.Standard.Second = DerivedToBase? ICK_Derived_To_Base
-                      : ObjCConversion? ICK_Compatible_Conversion
-                      : ICK_Identity;
-    ICS.Standard.Third = ICK_Identity;
-    ICS.Standard.FromTypePtr = T2.getAsOpaquePtr();
-    ICS.Standard.setToType(0, T2);
-    ICS.Standard.setToType(1, T1);
-    ICS.Standard.setToType(2, T1);
-    ICS.Standard.ReferenceBinding = true;
-    // In C++0x, this is always a direct binding. In C++98/03, it's a direct
+    // In C++11, this is always a direct binding. In C++98/03, it's a direct
     // binding unless we're binding to a class prvalue.
     // Note: Although xvalues wouldn't normally show up in C++98/03 code, we
     // allow the use of rvalue references in C++98/03 for the benefit of
     // standard library implementors; therefore, we need the xvalue check here.
-    ICS.Standard.DirectBinding =
-      S.getLangOpts().CPlusPlus11 ||
-      !(InitCategory.isPRValue() || T2->isRecordType());
-    ICS.Standard.IsLvalueReference = !isRValRef;
-    ICS.Standard.BindsToFunctionLvalue = T2->isFunctionType();
-    ICS.Standard.BindsToRvalue = InitCategory.isRValue();
-    ICS.Standard.BindsImplicitObjectArgumentWithoutRefQualifier = false;
-    ICS.Standard.ObjCLifetimeConversionBinding = ObjCLifetimeConversion;
-    ICS.Standard.CopyConstructor = nullptr;
-    ICS.Standard.DeprecatedStringLiteralToCharPtr = false;
+    SetAsReferenceBinding(/*BindsDirectly=*/S.getLangOpts().CPlusPlus11 ||
+                          !(InitCategory.isPRValue() || T2->isRecordType()));
     return ICS;
   }
 
@@ -5084,13 +5065,8 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       }
 
       // Compute some basic properties of the types and the initializer.
-      bool dummy1 = false;
-      bool dummy2 = false;
-      bool dummy3 = false;
-      bool dummy4 = false;
       Sema::ReferenceCompareResult RefRelationship =
-          S.CompareReferenceRelationship(From->getBeginLoc(), T1, T2, dummy1,
-                                         dummy2, dummy3, dummy4);
+          S.CompareReferenceRelationship(From->getBeginLoc(), T1, T2);
 
       if (RefRelationship >= Sema::Ref_Related) {
         return TryReferenceInit(S, Init, ToType, /*FIXME*/ From->getBeginLoc(),

@@ -5862,29 +5862,29 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   // FIXME:
   //   Resolving a defect in P0012R1: we extend this to cover all cases where
   //   one of the operands is reference-compatible with the other, in order
-  //   to support conditionals between functions differing in noexcept.
+  //   to support conditionals between functions differing in noexcept. This
+  //   will similarly cover difference in array bounds after P0388R4.
   ExprValueKind LVK = LHS.get()->getValueKind();
   ExprValueKind RVK = RHS.get()->getValueKind();
   if (!Context.hasSameType(LTy, RTy) &&
       LVK == RVK && LVK != VK_RValue) {
     // DerivedToBase was already handled by the class-specific case above.
     // FIXME: Should we allow ObjC conversions here?
-    bool DerivedToBase, ObjCConversion, ObjCLifetimeConversion,
-        FunctionConversion;
-    if (CompareReferenceRelationship(QuestionLoc, LTy, RTy, DerivedToBase,
-                                     ObjCConversion, ObjCLifetimeConversion,
-                                     FunctionConversion) == Ref_Compatible &&
-        !DerivedToBase && !ObjCConversion && !ObjCLifetimeConversion &&
+    const ReferenceConversions AllowedConversions =
+        ReferenceConversions::Qualification | ReferenceConversions::Function;
+
+    ReferenceConversions RefConv;
+    if (CompareReferenceRelationship(QuestionLoc, LTy, RTy, &RefConv) ==
+            Ref_Compatible &&
+        !(RefConv & ~AllowedConversions) &&
         // [...] subject to the constraint that the reference must bind
         // directly [...]
         !RHS.get()->refersToBitField() && !RHS.get()->refersToVectorElement()) {
       RHS = ImpCastExprToType(RHS.get(), LTy, CK_NoOp, RVK);
       RTy = RHS.get()->getType();
-    } else if (CompareReferenceRelationship(
-                   QuestionLoc, RTy, LTy, DerivedToBase, ObjCConversion,
-                   ObjCLifetimeConversion,
-                   FunctionConversion) == Ref_Compatible &&
-               !DerivedToBase && !ObjCConversion && !ObjCLifetimeConversion &&
+    } else if (CompareReferenceRelationship(QuestionLoc, RTy, LTy, &RefConv) ==
+                   Ref_Compatible &&
+               !(RefConv & ~AllowedConversions) &&
                !LHS.get()->refersToBitField() &&
                !LHS.get()->refersToVectorElement()) {
       LHS = ImpCastExprToType(LHS.get(), RTy, CK_NoOp, LVK);
