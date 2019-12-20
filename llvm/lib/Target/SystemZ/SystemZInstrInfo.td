@@ -492,7 +492,7 @@ let Predicates = [FeatureMiscellaneousExtensions3], Uses = [CC] in {
   let isCommutable = 1 in {
     // Expands to SELR or SELFHR or a branch-and-move sequence,
     // depending on the choice of registers.
-    def  SELRMux : CondBinaryRRFaPseudo<GRX32, GRX32, GRX32>;
+    def  SELRMux : CondBinaryRRFaPseudo<"selrmux", GRX32, GRX32, GRX32>;
     defm SELFHR  : CondBinaryRRFaPair<"selfhr", 0xB9C0, GRH32, GRH32, GRH32>;
     defm SELR    : CondBinaryRRFaPair<"selr",   0xB9F0, GR32, GR32, GR32>;
     defm SELGR   : CondBinaryRRFaPair<"selgr",  0xB9E3, GR64, GR64, GR64>;
@@ -525,7 +525,7 @@ let Predicates = [FeatureLoadStoreOnCond2], Uses = [CC] in {
   let isCommutable = 1 in {
     // Expands to LOCR or LOCFHR or a branch-and-move sequence,
     // depending on the choice of registers.
-    def LOCRMux : CondBinaryRRFPseudo<GRX32, GRX32>;
+    def LOCRMux : CondBinaryRRFPseudo<"locrmux", GRX32, GRX32>;
     defm LOCFHR : CondBinaryRRFPair<"locfhr", 0xB9E0, GRH32, GRH32>;
   }
 
