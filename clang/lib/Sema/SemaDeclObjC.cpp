@@ -4555,12 +4555,6 @@ static void mergeInterfaceMethodToImpl(Sema &S,
                                             method->getLocation()));
   }
 
-  if (!method->isDirectMethod())
-    if (const auto *attr = prevMethod->getAttr<ObjCDirectAttr>()) {
-      method->addAttr(
-          ObjCDirectAttr::CreateImplicit(S.Context, attr->getLocation()));
-    }
-
   // Merge nullability of the result type.
   QualType newReturnType
     = mergeTypeNullabilityForRedecl(
@@ -4787,16 +4781,73 @@ Decl *Sema::ActOnMethodDeclaration(
         }
     }
 
+    // A method is either tagged direct explicitly, or inherits it from its
+    // canonical declaration.
+    //
+    // We have to do the merge upfront and not in mergeInterfaceMethodToImpl()
+    // because IDecl->lookupMethod() returns more possible matches than just
+    // the canonical declaration.
+    if (!ObjCMethod->isDirectMethod()) {
+      const ObjCMethodDecl *CanonicalMD = ObjCMethod->getCanonicalDecl();
+      if (const auto *attr = CanonicalMD->getAttr<ObjCDirectAttr>()) {
+        ObjCMethod->addAttr(
+            ObjCDirectAttr::CreateImplicit(Context, attr->getLocation()));
+      }
+    }
+
     // Merge information from the @interface declaration into the
     // @implementation.
     if (ObjCInterfaceDecl *IDecl = ImpDecl->getClassInterface()) {
       if (auto *IMD = IDecl->lookupMethod(ObjCMethod->getSelector(),
                                           ObjCMethod->isInstanceMethod())) {
         mergeInterfaceMethodToImpl(*this, ObjCMethod, IMD);
-        if (const auto *attr = ObjCMethod->getAttr<ObjCDirectAttr>()) {
-          if (!IMD->isDirectMethod()) {
-            Diag(attr->getLocation(), diag::err_objc_direct_missing_on_decl);
+
+        // The Idecl->lookupMethod() above will find declarations for ObjCMethod
+        // in one of these places:
+        //
+        // (1) the canonical declaration in an @interface container paired
+        //     with the ImplDecl,
+        // (2) non canonical declarations in @interface not paired with the
+        //     ImplDecl for the same Class,
+        // (3) any superclass container.
+        //
+        // Direct methods only allow for canonical declarations in the matching
+        // container (case 1).
+        //
+        // Direct methods overriding a superclass declaration (case 3) is
+        // handled during overrides checks in CheckObjCMethodOverrides().
+        //
+        // We deal with same-class container mismatches (Case 2) here.
+        if (IDecl == IMD->getClassInterface()) {
+          auto diagContainerMismatch = [&] {
+            int decl = 0, impl = 0;
+
+            if (auto *Cat = dyn_cast<ObjCCategoryDecl>(IMD->getDeclContext()))
+              decl = Cat->IsClassExtension() ? 1 : 2;
+
+            if (auto *Cat = dyn_cast<ObjCCategoryImplDecl>(ImpDecl))
+              impl = 1 + (decl != 0);
+
+            Diag(ObjCMethod->getLocation(),
+                 diag::err_objc_direct_impl_decl_mismatch)
+                << decl << impl;
             Diag(IMD->getLocation(), diag::note_previous_declaration);
+          };
+
+          if (const auto *attr = ObjCMethod->getAttr<ObjCDirectAttr>()) {
+            if (ObjCMethod->getCanonicalDecl() != IMD) {
+              diagContainerMismatch();
+            } else if (!IMD->isDirectMethod()) {
+              Diag(attr->getLocation(), diag::err_objc_direct_missing_on_decl);
+              Diag(IMD->getLocation(), diag::note_previous_declaration);
+            }
+          } else if (const auto *attr = IMD->getAttr<ObjCDirectAttr>()) {
+            if (ObjCMethod->getCanonicalDecl() != IMD) {
+              diagContainerMismatch();
+            } else {
+              ObjCMethod->addAttr(
+                  ObjCDirectAttr::CreateImplicit(Context, attr->getLocation()));
+            }
           }
         }
 
@@ -4828,11 +4879,42 @@ Decl *Sema::ActOnMethodDeclaration(
           }
     }
   } else {
-    if (!ObjCMethod->isDirectMethod() &&
-        ClassDecl->hasAttr<ObjCDirectMembersAttr>()) {
-      ObjCMethod->addAttr(
-          ObjCDirectAttr::CreateImplicit(Context, ObjCMethod->getLocation()));
+    if (!isa<ObjCProtocolDecl>(ClassDecl)) {
+      if (!ObjCMethod->isDirectMethod() &&
+          ClassDecl->hasAttr<ObjCDirectMembersAttr>()) {
+        ObjCMethod->addAttr(
+            ObjCDirectAttr::CreateImplicit(Context, ObjCMethod->getLocation()));
+      }
+
+      // There can be a single declaration in any @interface container
+      // for a given direct method, look for clashes as we add them.
+      //
+      // For valid code, we should always know the primary interface
+      // declaration by now, however for invalid code we'll keep parsing
+      // but we won't find the primary interface and IDecl will be nil.
+      ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(ClassDecl);
+      if (!IDecl)
+        IDecl = cast<ObjCCategoryDecl>(ClassDecl)->getClassInterface();
+
+      if (IDecl)
+        if (auto *IMD = IDecl->lookupMethod(ObjCMethod->getSelector(),
+                                            ObjCMethod->isInstanceMethod(),
+                                            /*shallowCategoryLookup=*/false,
+                                            /*followSuper=*/false)) {
+          if (isa<ObjCProtocolDecl>(IMD->getDeclContext())) {
+            // Do not emit a diagnostic for the Protocol case:
+            // diag::err_objc_direct_on_protocol has already been emitted
+            // during parsing for these with a nicer diagnostic.
+          } else if (ObjCMethod->isDirectMethod() || IMD->isDirectMethod()) {
+            Diag(ObjCMethod->getLocation(),
+                 diag::err_objc_direct_duplicate_decl)
+                << ObjCMethod->isDirectMethod() << IMD->isDirectMethod()
+                << ObjCMethod->getDeclName();
+            Diag(IMD->getLocation(), diag::note_previous_declaration);
+          }
+        }
     }
+
     cast<DeclContext>(ClassDecl)->addDecl(ObjCMethod);
   }
 
