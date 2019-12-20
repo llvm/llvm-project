@@ -450,8 +450,8 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   // Accumulate the allocated size.
   if (I.isStaticAlloca()) {
     Type *Ty = I.getAllocatedType();
-    AllocatedSize = SaturatingAdd(DL.getTypeAllocSize(Ty).getFixedSize(),
-                                  AllocatedSize);
+    AllocatedSize =
+        SaturatingAdd(DL.getTypeAllocSize(Ty).getFixedSize(), AllocatedSize);
   }
 
   // We will happily inline static alloca instructions.
@@ -1077,8 +1077,8 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
 
   Value *SimpleV = nullptr;
   if (auto FI = dyn_cast<FPMathOperator>(&I))
-    SimpleV = SimplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS,
-                            CRHS ? CRHS : RHS, FI->getFastMathFlags(), DL);
+    SimpleV = SimplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS, CRHS ? CRHS : RHS,
+                            FI->getFastMathFlags(), DL);
   else
     SimpleV =
         SimplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS, CRHS ? CRHS : RHS, DL);
@@ -1111,9 +1111,8 @@ bool CallAnalyzer::visitFNeg(UnaryOperator &I) {
   if (!COp)
     COp = SimplifiedValues.lookup(Op);
 
-  Value *SimpleV = SimplifyFNegInst(COp ? COp : Op,
-                                    cast<FPMathOperator>(I).getFastMathFlags(),
-                                    DL);
+  Value *SimpleV = SimplifyFNegInst(
+      COp ? COp : Op, cast<FPMathOperator>(I).getFastMathFlags(), DL);
 
   if (Constant *C = dyn_cast_or_null<Constant>(SimpleV))
     SimplifiedValues[&I] = C;
@@ -1493,8 +1492,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   }
 
   int64_t ExpectedNumberOfCompare = 3 * (int64_t)NumCaseCluster / 2 - 1;
-  int64_t SwitchCost =
-    ExpectedNumberOfCompare * 2 * InlineConstants::InstrCost;
+  int64_t SwitchCost = ExpectedNumberOfCompare * 2 * InlineConstants::InstrCost;
 
   addCost(SwitchCost, (int64_t)CostUpperBound);
   return false;
@@ -1934,7 +1932,7 @@ InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
   if (NumVectorInstructions <= NumInstructions / 10)
     Threshold -= VectorBonus;
   else if (NumVectorInstructions <= NumInstructions / 2)
-    Threshold -= VectorBonus/2;
+    Threshold -= VectorBonus / 2;
 
   return Cost < std::max(1, Threshold);
 }
@@ -2175,7 +2173,8 @@ InlineParams llvm::getInlineParams(int Threshold) {
   if (LocallyHotCallSiteThreshold.getNumOccurrences() > 0)
     Params.LocallyHotCallSiteThreshold = LocallyHotCallSiteThreshold;
 
-  // Set the ColdCallSiteThreshold knob from the -inline-cold-callsite-threshold.
+  // Set the ColdCallSiteThreshold knob from the
+  // -inline-cold-callsite-threshold.
   Params.ColdCallSiteThreshold = ColdCallSiteThreshold;
 
   // Set the OptMinSizeThreshold and OptSizeThreshold params only if the
