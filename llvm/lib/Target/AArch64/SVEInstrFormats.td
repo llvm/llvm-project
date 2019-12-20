@@ -244,6 +244,10 @@ def sve_incdec_imm : Operand<i32>, TImmLeaf<i32, [{
   let DecoderMethod = "DecodeSVEIncDecImm";
 }
 
+// This allows i32 immediate extraction from i64 based arithmetic.
+def sve_cnt_mul_imm : ComplexPattern<i32, 1, "SelectCntImm<1, 16, 1, false>">;
+def sve_cnt_shl_imm : ComplexPattern<i32, 1, "SelectCntImm<1, 16, 1, true>">;
+
 //===----------------------------------------------------------------------===//
 // SVE PTrue - These are used extensively throughout the pattern matching so
 //             it's important we define them first.
@@ -634,6 +638,12 @@ multiclass sve_int_count<bits<3> opc, string asm, SDPatternOperator op> {
                   (!cast<Instruction>(NAME) GPR64:$Rd, sve_pred_enum:$pattern, 1), 1>;
   def : InstAlias<asm # "\t$Rd",
                   (!cast<Instruction>(NAME) GPR64:$Rd, 0b11111, 1), 2>;
+
+  def : Pat<(i64 (mul (op sve_pred_enum:$pattern), (sve_cnt_mul_imm i32:$imm))),
+            (!cast<Instruction>(NAME) sve_pred_enum:$pattern, sve_incdec_imm:$imm)>;
+
+  def : Pat<(i64 (shl (op sve_pred_enum:$pattern), (i64 (sve_cnt_shl_imm i32:$imm)))),
+            (!cast<Instruction>(NAME) sve_pred_enum:$pattern, sve_incdec_imm:$imm)>;
 
   def : Pat<(i64 (op sve_pred_enum:$pattern)),
             (!cast<Instruction>(NAME) sve_pred_enum:$pattern, 1)>;
