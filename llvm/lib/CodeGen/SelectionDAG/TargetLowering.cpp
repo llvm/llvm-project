@@ -6116,8 +6116,10 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
 }
 
 bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
+                                      SDValue &Chain,
                                       SelectionDAG &DAG) const {
-  SDValue Src = Node->getOperand(0);
+  unsigned OpNo = Node->isStrictFPOpcode() ? 1 : 0;
+  SDValue Src = Node->getOperand(OpNo);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
 
@@ -6140,7 +6142,13 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
 
     // For unsigned conversions, convert them to signed conversions using the
     // algorithm from the x86_64 __floatundidf in compiler_rt.
-    SDValue Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Src);
+    SDValue Fast;
+    if (Node->isStrictFPOpcode()) {
+      Fast = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {DstVT, MVT::Other},
+                         {Node->getOperand(0), Src});
+      Chain = SDValue(Fast.getNode(), 1);
+    } else
+      Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Src);
 
     SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
     SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Src, ShiftConst);
@@ -6148,8 +6156,17 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
     SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Src, AndConst);
     SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
 
-    SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Or);
-    SDValue Slow = DAG.getNode(ISD::FADD, dl, DstVT, SignCvt, SignCvt);
+    SDValue Slow;
+    if (Node->isStrictFPOpcode()) {
+      SDValue SignCvt = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl,
+                                    {DstVT, MVT::Other}, {Chain, Or});
+      Slow = DAG.getNode(ISD::STRICT_FADD, dl, { DstVT, MVT::Other },
+                         { SignCvt.getValue(1), SignCvt, SignCvt });
+      Chain = Slow.getValue(1);
+    } else {
+      SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Or);
+      Slow = DAG.getNode(ISD::FADD, dl, DstVT, SignCvt, SignCvt);
+    }
 
     // TODO: This really should be implemented using a branch rather than a
     // select.  We happen to get lucky and machinesink does the right
@@ -6192,8 +6209,18 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
     SDValue HiOr = DAG.getNode(ISD::OR, dl, SrcVT, Hi, TwoP84);
     SDValue LoFlt = DAG.getBitcast(DstVT, LoOr);
     SDValue HiFlt = DAG.getBitcast(DstVT, HiOr);
-    SDValue HiSub = DAG.getNode(ISD::FSUB, dl, DstVT, HiFlt, TwoP84PlusTwoP52);
-    Result = DAG.getNode(ISD::FADD, dl, DstVT, LoFlt, HiSub);
+    if (Node->isStrictFPOpcode()) {
+      SDValue HiSub =
+          DAG.getNode(ISD::STRICT_FSUB, dl, {DstVT, MVT::Other},
+                      {Node->getOperand(0), HiFlt, TwoP84PlusTwoP52});
+      Result = DAG.getNode(ISD::STRICT_FADD, dl, {DstVT, MVT::Other},
+                           {HiSub.getValue(1), LoFlt, HiSub});
+      Chain = Result.getValue(1);
+    } else {
+      SDValue HiSub =
+          DAG.getNode(ISD::FSUB, dl, DstVT, HiFlt, TwoP84PlusTwoP52);
+      Result = DAG.getNode(ISD::FADD, dl, DstVT, LoFlt, HiSub);
+    }
     return true;
   }
 

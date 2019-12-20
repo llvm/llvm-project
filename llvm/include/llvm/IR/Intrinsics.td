@@ -640,6 +640,16 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
                                                     [ llvm_anyfloat_ty,
                                                       llvm_metadata_ty ]>;
 
+  def int_experimental_constrained_sitofp : Intrinsic<[ llvm_anyfloat_ty ],
+                                                       [ llvm_anyint_ty,
+                                                         llvm_metadata_ty,
+                                                         llvm_metadata_ty ]>;
+
+  def int_experimental_constrained_uitofp : Intrinsic<[ llvm_anyfloat_ty ],
+                                                       [ llvm_anyint_ty,
+                                                         llvm_metadata_ty,
+                                                         llvm_metadata_ty ]>;
+
   def int_experimental_constrained_fptrunc : Intrinsic<[ llvm_anyfloat_ty ],
                                                        [ llvm_anyfloat_ty,
                                                          llvm_metadata_ty,
