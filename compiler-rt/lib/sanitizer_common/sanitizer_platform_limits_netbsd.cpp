@@ -109,7 +109,7 @@
 #include <dev/dmover/dmover_io.h>
 #include <dev/dtv/dtvio_demux.h>
 #include <dev/dtv/dtvio_frontend.h>
-#if !__NetBSD_Prereq__(9, 9, 26)
+#if !__NetBSD_Prereq__(9, 99, 26)
 #include <dev/filemon/filemon.h>
 #else
 #define FILEMON_SET_FD          _IOWR('S', 1, int)
