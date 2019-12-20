@@ -1,3 +1,4 @@
+import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/unittest/unittest.gni")
 
 unittest("ScudoUnitTest") {
@@ -54,5 +55,8 @@ unittest("ScudoCxxUnitTest") {
     "scudo_unit_test_main.cpp",
     "wrappers_cpp_test.cpp",
   ]
+  if (is_clang) {
+    cflags = [ "-Wno-mismatched-new-delete" ]
+  }
   has_custom_main = true
 }
