@@ -78,3 +78,5 @@ config.excludes = ['Inputs']
 if ubsan_lit_test_mode in ['AddressSanitizer', 'MemorySanitizer', 'ThreadSanitizer']:
   if not config.parallelism_group:
     config.parallelism_group = 'shadow-memory'
+  if config.host_os == 'NetBSD':
+    config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))
