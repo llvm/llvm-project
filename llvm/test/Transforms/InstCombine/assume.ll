@@ -311,6 +311,23 @@ define i1 @nonnull4(i32** %a) {
   %rval = icmp eq i32* %load, null
   ret i1 %rval
 }
+define i1 @nonnull5(i32** %a) {
+; CHECK-LABEL: @nonnull5(
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    tail call void @escape(i32* nonnull [[LOAD]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32* [[LOAD]], null
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i1 false
+;
+  %load = load i32*, i32** %a
+  ;; This call may throw!
+  tail call void @escape(i32* %load)
+  %integral = ptrtoint i32* %load to i64
+  %cmp = icmp slt i64 %integral, 0
+  tail call void @llvm.assume(i1 %cmp) ; %load has at least highest bit set
+  %rval = icmp eq i32* %load, null
+  ret i1 %rval
+}
 
 ; PR35846 - https://bugs.llvm.org/show_bug.cgi?id=35846
 
