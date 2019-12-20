@@ -91,14 +91,14 @@ let Predicates = [HasSVE] in {
   defm AND_ZZZ : sve_int_bin_cons_log<0b00, "and", and>;
   defm ORR_ZZZ : sve_int_bin_cons_log<0b01, "orr", or>;
   defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor", xor>;
-  defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", int_aarch64_sve_bic_base>;
+  defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", null_frag>;
 
   defm ADD_ZPmZ   : sve_int_bin_pred_arit_0<0b000, "add", int_aarch64_sve_add>;
   defm SUB_ZPmZ   : sve_int_bin_pred_arit_0<0b001, "sub", int_aarch64_sve_sub>;
   defm SUBR_ZPmZ  : sve_int_bin_pred_arit_0<0b011, "subr", int_aarch64_sve_subr>;
 
-  defm ORR_ZPmZ : sve_int_bin_pred_log<0b000, "orr", int_aarch64_sve_or>;
-  defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor", int_aarch64_sve_xor>;
+  defm ORR_ZPmZ : sve_int_bin_pred_log<0b000, "orr", int_aarch64_sve_orr>;
+  defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor", int_aarch64_sve_eor>;
   defm AND_ZPmZ : sve_int_bin_pred_log<0b010, "and", int_aarch64_sve_and>;
   defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic", int_aarch64_sve_bic>;
 
@@ -307,21 +307,21 @@ let Predicates = [HasSVE] in {
   defm PFIRST  : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
   defm PNEXT   : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
 
-  defm AND_PPzPP   : sve_int_pred_log<0b0000, "and", int_aarch64_sve_and>;
-  defm BIC_PPzPP   : sve_int_pred_log<0b0001, "bic", int_aarch64_sve_bic>;
-  defm EOR_PPzPP   : sve_int_pred_log<0b0010, "eor", int_aarch64_sve_eor>;
+  defm AND_PPzPP   : sve_int_pred_log<0b0000, "and", int_aarch64_sve_and_z>;
+  defm BIC_PPzPP   : sve_int_pred_log<0b0001, "bic", int_aarch64_sve_bic_z>;
+  defm EOR_PPzPP   : sve_int_pred_log<0b0010, "eor", int_aarch64_sve_eor_z>;
   defm SEL_PPPP    : sve_int_pred_log<0b0011, "sel", vselect>;
-  defm ANDS_PPzPP  : sve_int_pred_log<0b0100, "ands", int_aarch64_sve_ands>;
-  defm BICS_PPzPP  : sve_int_pred_log<0b0101, "bics", int_aarch64_sve_bics>;
-  defm EORS_PPzPP  : sve_int_pred_log<0b0110, "eors", int_aarch64_sve_eors>;
-  defm ORR_PPzPP   : sve_int_pred_log<0b1000, "orr", int_aarch64_sve_orr>;
-  defm ORN_PPzPP   : sve_int_pred_log<0b1001, "orn", int_aarch64_sve_orn>;
-  defm NOR_PPzPP   : sve_int_pred_log<0b1010, "nor", int_aarch64_sve_nor>;
-  defm NAND_PPzPP  : sve_int_pred_log<0b1011, "nand", int_aarch64_sve_nand>;
-  defm ORRS_PPzPP  : sve_int_pred_log<0b1100, "orrs", int_aarch64_sve_orrs>;
-  defm ORNS_PPzPP  : sve_int_pred_log<0b1101, "orns", int_aarch64_sve_orns>;
-  defm NORS_PPzPP  : sve_int_pred_log<0b1110, "nors", int_aarch64_sve_nors>;
-  defm NANDS_PPzPP : sve_int_pred_log<0b1111, "nands", int_aarch64_sve_nands>;
+  defm ANDS_PPzPP  : sve_int_pred_log<0b0100, "ands", null_frag>;
+  defm BICS_PPzPP  : sve_int_pred_log<0b0101, "bics", null_frag>;
+  defm EORS_PPzPP  : sve_int_pred_log<0b0110, "eors", null_frag>;
+  defm ORR_PPzPP   : sve_int_pred_log<0b1000, "orr", int_aarch64_sve_orr_z>;
+  defm ORN_PPzPP   : sve_int_pred_log<0b1001, "orn", int_aarch64_sve_orn_z>;
+  defm NOR_PPzPP   : sve_int_pred_log<0b1010, "nor", int_aarch64_sve_nor_z>;
+  defm NAND_PPzPP  : sve_int_pred_log<0b1011, "nand", int_aarch64_sve_nand_z>;
+  defm ORRS_PPzPP  : sve_int_pred_log<0b1100, "orrs", null_frag>;
+  defm ORNS_PPzPP  : sve_int_pred_log<0b1101, "orns", null_frag>;
+  defm NORS_PPzPP  : sve_int_pred_log<0b1110, "nors", null_frag>;
+  defm NANDS_PPzPP : sve_int_pred_log<0b1111, "nands", null_frag>;
 
   defm CLASTA_RPZ : sve_int_perm_clast_rz<0, "clasta", AArch64clasta_n>;
   defm CLASTB_RPZ : sve_int_perm_clast_rz<1, "clastb", AArch64clastb_n>;
