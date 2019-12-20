@@ -43,6 +43,22 @@ protected:
                                 lldb::AccessType::eAccessPublic, name, 0,
                                 lldb::LanguageType::eLanguageTypeC);
   }
+
+  /// Create a record with the given name and a field with the given type
+  /// and name.
+  CompilerType createRecordWithField(ClangASTContext &ast,
+                                     llvm::StringRef record_name,
+                                     CompilerType field_type,
+                                     llvm::StringRef field_name) {
+    CompilerType t = createRecord(ast, record_name);
+
+    ClangASTContext::StartTagDeclarationDefinition(t);
+    ast.AddFieldToRecordType(t, field_name, field_type,
+                             lldb::AccessType::eAccessPublic, 7);
+    ClangASTContext::CompleteTagDeclarationDefinition(t);
+
+    return t;
+  }
 };
 
 TEST_F(TestClangASTImporter, CanImportInvalidType) {
@@ -58,7 +74,9 @@ TEST_F(TestClangASTImporter, ImportInvalidType) {
 TEST_F(TestClangASTImporter, CopyDeclTagDecl) {
   // Tests that the ClangASTImporter::CopyDecl can copy TagDecls.
   std::unique_ptr<ClangASTContext> source_ast = createAST();
-  CompilerType source_type = createRecord(*source_ast, "Source");
+  CompilerType source_type = createRecordWithField(
+      *source_ast, "Source",
+      source_ast->GetBasicType(lldb::BasicType::eBasicTypeChar), "a_field");
   clang::TagDecl *source = ClangUtil::GetAsTagDecl(source_type);
 
   std::unique_ptr<ClangASTContext> target_ast = createAST();
@@ -72,6 +90,8 @@ TEST_F(TestClangASTImporter, CopyDeclTagDecl) {
   clang::TagDecl *imported_tag_decl = llvm::cast<clang::TagDecl>(imported);
   EXPECT_EQ(source->getQualifiedNameAsString(),
             imported_tag_decl->getQualifiedNameAsString());
+  // We did a minimal import of the tag decl.
+  EXPECT_TRUE(imported_tag_decl->hasExternalLexicalStorage());
 
   // Check that origin was set for the imported declaration.
   ClangASTImporter::DeclOrigin origin = importer.GetDeclOrigin(imported);
@@ -83,7 +103,9 @@ TEST_F(TestClangASTImporter, CopyDeclTagDecl) {
 TEST_F(TestClangASTImporter, CopyTypeTagDecl) {
   // Tests that the ClangASTImporter::CopyType can copy TagDecls types.
   std::unique_ptr<ClangASTContext> source_ast = createAST();
-  CompilerType source_type = createRecord(*source_ast, "Source");
+  CompilerType source_type = createRecordWithField(
+      *source_ast, "Source",
+      source_ast->GetBasicType(lldb::BasicType::eBasicTypeChar), "a_field");
   clang::TagDecl *source = ClangUtil::GetAsTagDecl(source_type);
 
   std::unique_ptr<ClangASTContext> target_ast = createAST();
@@ -96,6 +118,8 @@ TEST_F(TestClangASTImporter, CopyTypeTagDecl) {
   clang::TagDecl *imported_tag_decl = ClangUtil::GetAsTagDecl(imported);
   EXPECT_EQ(source->getQualifiedNameAsString(),
             imported_tag_decl->getQualifiedNameAsString());
+  // We did a minimal import of the tag decl.
+  EXPECT_TRUE(imported_tag_decl->hasExternalLexicalStorage());
 
   // Check that origin was set for the imported declaration.
   ClangASTImporter::DeclOrigin origin =
@@ -103,6 +127,57 @@ TEST_F(TestClangASTImporter, CopyTypeTagDecl) {
   EXPECT_TRUE(origin.Valid());
   EXPECT_EQ(origin.ctx, source_ast->getASTContext());
   EXPECT_EQ(origin.decl, source);
+}
+
+TEST_F(TestClangASTImporter, DeportDeclTagDecl) {
+  // Tests that the ClangASTImporter::DeportDecl completely copies TagDecls.
+  std::unique_ptr<ClangASTContext> source_ast = createAST();
+  CompilerType source_type = createRecordWithField(
+      *source_ast, "Source",
+      source_ast->GetBasicType(lldb::BasicType::eBasicTypeChar), "a_field");
+  clang::TagDecl *source = ClangUtil::GetAsTagDecl(source_type);
+
+  std::unique_ptr<ClangASTContext> target_ast = createAST();
+
+  ClangASTImporter importer;
+  clang::Decl *imported = importer.DeportDecl(
+      target_ast->getASTContext(), source_ast->getASTContext(), source);
+  ASSERT_NE(nullptr, imported);
+
+  // Check that we got the correct decl by just comparing their qualified name.
+  clang::TagDecl *imported_tag_decl = llvm::cast<clang::TagDecl>(imported);
+  EXPECT_EQ(source->getQualifiedNameAsString(),
+            imported_tag_decl->getQualifiedNameAsString());
+  // The record should be completed as we deported it.
+  EXPECT_FALSE(imported_tag_decl->hasExternalLexicalStorage());
+
+  // Deporting doesn't update the origin map.
+  EXPECT_FALSE(importer.GetDeclOrigin(imported_tag_decl).Valid());
+}
+
+TEST_F(TestClangASTImporter, DeportTypeTagDecl) {
+  // Tests that the ClangASTImporter::CopyType can deport TagDecl types.
+  std::unique_ptr<ClangASTContext> source_ast = createAST();
+  CompilerType source_type = createRecordWithField(
+      *source_ast, "Source",
+      source_ast->GetBasicType(lldb::BasicType::eBasicTypeChar), "a_field");
+  clang::TagDecl *source = ClangUtil::GetAsTagDecl(source_type);
+
+  std::unique_ptr<ClangASTContext> target_ast = createAST();
+
+  ClangASTImporter importer;
+  CompilerType imported = importer.DeportType(*target_ast, source_type);
+  ASSERT_TRUE(imported.IsValid());
+
+  // Check that we got the correct decl by just comparing their qualified name.
+  clang::TagDecl *imported_tag_decl = ClangUtil::GetAsTagDecl(imported);
+  EXPECT_EQ(source->getQualifiedNameAsString(),
+            imported_tag_decl->getQualifiedNameAsString());
+  // The record should be completed as we deported it.
+  EXPECT_FALSE(imported_tag_decl->hasExternalLexicalStorage());
+
+  // Deporting doesn't update the origin map.
+  EXPECT_FALSE(importer.GetDeclOrigin(imported_tag_decl).Valid());
 }
 
 TEST_F(TestClangASTImporter, MetadataPropagation) {
@@ -185,13 +260,9 @@ TEST_F(TestClangASTImporter, RecordLayout) {
   // correctly retrieve them.
 
   std::unique_ptr<ClangASTContext> source_ast = createAST();
-  CompilerType source_type = createRecord(*source_ast, "Source");
-  ClangASTContext::StartTagDeclarationDefinition(source_type);
-  clang::FieldDecl *field = source_ast->AddFieldToRecordType(
-      source_type, "a_field",
-      source_ast->GetBasicType(lldb::BasicType::eBasicTypeChar),
-      lldb::AccessType::eAccessPublic, 7);
-  ClangASTContext::CompleteTagDeclarationDefinition(source_type);
+  CompilerType source_type = createRecordWithField(
+      *source_ast, "Source",
+      source_ast->GetBasicType(lldb::BasicType::eBasicTypeChar), "a_field");
 
   clang::TagDecl *source_tag = ClangUtil::GetAsTagDecl(source_type);
   clang::RecordDecl *source_record = llvm::cast<clang::RecordDecl>(source_tag);
@@ -200,7 +271,7 @@ TEST_F(TestClangASTImporter, RecordLayout) {
   ClangASTImporter::LayoutInfo layout_info;
   layout_info.bit_size = 15;
   layout_info.alignment = 2;
-  layout_info.field_offsets[field] = 1;
+  layout_info.field_offsets[*source_record->fields().begin()] = 1;
   importer.SetRecordLayout(source_record, layout_info);
 
   uint64_t bit_size;
@@ -214,7 +285,7 @@ TEST_F(TestClangASTImporter, RecordLayout) {
   EXPECT_EQ(15U, bit_size);
   EXPECT_EQ(2U, alignment);
   EXPECT_EQ(1U, field_offsets.size());
-  EXPECT_EQ(1U, field_offsets[field]);
+  EXPECT_EQ(1U, field_offsets[*source_record->fields().begin()]);
   EXPECT_EQ(0U, base_offsets.size());
   EXPECT_EQ(0U, vbase_offsets.size());
 }

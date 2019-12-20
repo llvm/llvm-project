@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 # System modules
+import os
 import sys
 
 # Third-party modules
@@ -29,6 +30,7 @@ else:
         def launch(self, executable=None, extra_args=None, timeout=30, dimensions=None):
             logfile = getattr(sys.stdout, 'buffer',
                               sys.stdout) if self.TraceOn() else None
+
             args = ['--no-lldbinit', '--no-use-colors']
             for cmd in self.setUpCommands():
                 args += ['-O', cmd]
@@ -36,9 +38,13 @@ else:
                 args += ['--file', executable]
             if extra_args is not None:
                 args.extend(extra_args)
+
+            env = dict(os.environ)
+            env["TERM"]="vt100"
+
             self.child = pexpect.spawn(
                     lldbtest_config.lldbExec, args=args, logfile=logfile,
-                    timeout=timeout, dimensions=dimensions)
+                    timeout=timeout, dimensions=dimensions, env=env)
             self.expect_prompt()
             for cmd in self.setUpCommands():
                 self.child.expect_exact(cmd)

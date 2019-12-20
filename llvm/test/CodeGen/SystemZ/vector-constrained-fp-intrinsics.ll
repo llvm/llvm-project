@@ -5417,13 +5417,12 @@ define void @constrained_vector_fptrunc_v3f64(<3 x double>* %src, <3 x float>* %
 ; SZ13-LABEL: constrained_vector_fptrunc_v3f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    vl %v1, 0(%r2), 4
-; SZ13-NEXT:    ledbra %f2, 0, %f1, 0
-; SZ13-NEXT:    vrepg %v1, %v1, 1
+; SZ13-NEXT:    vledb %v1, %v1, 0, 0
+; SZ13-NEXT:    larl %r1, .LCPI97_0
 ; SZ13-NEXT:    ld %f0, 16(%r2)
-; SZ13-NEXT:    ledbra %f1, 0, %f1, 0
+; SZ13-NEXT:    vl %v2, 0(%r1), 3
+; SZ13-NEXT:    vperm %v1, %v1, %v0, %v2
 ; SZ13-NEXT:    ledbra %f0, 0, %f0, 0
-; SZ13-NEXT:    vmrhf %v1, %v2, %v1
-; SZ13-NEXT:    vmrhg %v1, %v1, %v1
 ; SZ13-NEXT:    ste %f0, 8(%r3)
 ; SZ13-NEXT:    vsteg %v1, 0(%r3), 0
 ; SZ13-NEXT:    br %r14
@@ -5544,13 +5543,11 @@ define void @constrained_vector_fpext_v3f64(<3 x float>* %src, <3 x double>* %de
 ; SZ13-LABEL: constrained_vector_fpext_v3f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    vl %v0, 0(%r2), 4
-; SZ13-NEXT:    vrepf %v2, %v0, 1
-; SZ13-NEXT:    ldebr %f1, %f0
-; SZ13-NEXT:    ldebr %f2, %f2
-; SZ13-NEXT:    vrepf %v0, %v0, 2
-; SZ13-NEXT:    ldebr %f0, %f0
-; SZ13-NEXT:    vmrhg %v1, %v1, %v2
-; SZ13-NEXT:    std %f0, 16(%r3)
+; SZ13-NEXT:    vrepf %v1, %v0, 1
+; SZ13-NEXT:    vldeb %v0, %v0
+; SZ13-NEXT:    ldebr %f1, %f1
+; SZ13-NEXT:    vmrhg %v1, %v0, %v1
+; SZ13-NEXT:    vsteg %v0, 16(%r3), 1
 ; SZ13-NEXT:    vst %v1, 0(%r3), 4
 ; SZ13-NEXT:    br %r14
 entry:
