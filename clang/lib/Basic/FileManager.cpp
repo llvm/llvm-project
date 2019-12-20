@@ -548,10 +548,9 @@ void FileManager::GetUniqueIDMapping(
 }
 
 StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {
-  // FIXME: use llvm::sys::fs::canonical() when it gets implemented
-  llvm::DenseMap<const DirectoryEntry *, llvm::StringRef>::iterator Known
-    = CanonicalDirNames.find(Dir);
-  if (Known != CanonicalDirNames.end())
+  llvm::DenseMap<const void *, llvm::StringRef>::iterator Known
+    = CanonicalNames.find(Dir);
+  if (Known != CanonicalNames.end())
     return Known->second;
 
   StringRef CanonicalName(Dir->getName());
@@ -560,7 +559,23 @@ StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {
   if (!FS->getRealPath(Dir->getName(), CanonicalNameBuf))
     CanonicalName = StringRef(CanonicalNameBuf).copy(CanonicalNameStorage);
 
-  CanonicalDirNames.insert({Dir, CanonicalName});
+  CanonicalNames.insert({Dir, CanonicalName});
+  return CanonicalName;
+}
+
+StringRef FileManager::getCanonicalName(const FileEntry *File) {
+  llvm::DenseMap<const void *, llvm::StringRef>::iterator Known
+    = CanonicalNames.find(File);
+  if (Known != CanonicalNames.end())
+    return Known->second;
+
+  StringRef CanonicalName(File->getName());
+
+  SmallString<4096> CanonicalNameBuf;
+  if (!FS->getRealPath(File->getName(), CanonicalNameBuf))
+    CanonicalName = StringRef(CanonicalNameBuf).copy(CanonicalNameStorage);
+
+  CanonicalNames.insert({File, CanonicalName});
   return CanonicalName;
 }
 
