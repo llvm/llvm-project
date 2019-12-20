@@ -252,8 +252,7 @@ define i1 @nonnull2(i32* %a) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LOAD]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp eq i32 [[LOAD]], 0
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %load = load i32, i32* %a
   %cmp = icmp ne i32 %load, 0
@@ -273,10 +272,10 @@ define i1 @nonnull3(i32** %a, i1 %control) {
 ; CHECK:       taken:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp eq i32* [[LOAD]], null
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[RVAL_2:%.*]] = icmp sgt i32* [[LOAD]], null
+; CHECK-NEXT:    ret i1 [[RVAL_2]]
 ;
 entry:
   %load = load i32*, i32** %a
@@ -287,7 +286,8 @@ taken:
   %rval = icmp eq i32* %load, null
   ret i1 %rval
 not_taken:
-  ret i1 true
+  %rval.2 = icmp sgt i32* %load, null
+  ret i1 %rval.2
 }
 
 ; Make sure the above canonicalization does not trigger
@@ -300,8 +300,7 @@ define i1 @nonnull4(i32** %a) {
 ; CHECK-NEXT:    tail call void @escape(i32* [[LOAD]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp eq i32* [[LOAD]], null
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %load = load i32*, i32** %a
   ;; This call may throw!
@@ -353,12 +352,12 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP1]])
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
+; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
+; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP2]])
 ; CHECK-NEXT:    ret void
 ;
   %cmp1 = icmp eq i8 %x, 0

@@ -10,8 +10,7 @@ define i1 @nonnull0_true(i8* %x) {
 ; CHECK-LABEL: @nonnull0_true(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i8* [[X:%.*]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp ne i8* [[X]], null
-; CHECK-NEXT:    ret i1 [[Q]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp ne i8* %x, null
   call void @llvm.assume(i1 %a)
@@ -24,8 +23,7 @@ define i1 @nonnull1_true(i8* %x) {
 ; CHECK-NEXT:    [[INTPTR:%.*]] = ptrtoint i8* [[X:%.*]] to i64
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i64 [[INTPTR]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp ne i8* [[X]], null
-; CHECK-NEXT:    ret i1 [[Q]]
+; CHECK-NEXT:    ret i1 true
 ;
   %intptr = ptrtoint i8* %x to i64
   %a = icmp ne i64 %intptr, 0
@@ -38,10 +36,20 @@ define i1 @nonnull2_true(i8 %x, i8 %y) {
 ; CHECK-LABEL: @nonnull2_true(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    ret i1 [[Q]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp ugt i8 %x, %y
+  call void @llvm.assume(i1 %a)
+  %q = icmp ne i8 %x, 0
+  ret i1 %q
+}
+define i1 @nonnull2_true_swapped(i8 %x, i8 %y) {
+; CHECK-LABEL: @nonnull2_true_swapped(
+; CHECK-NEXT:    [[A:%.*]] = icmp ult i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
+; CHECK-NEXT:    ret i1 true
+;
+  %a = icmp ult i8 %y, %x
   call void @llvm.assume(i1 %a)
   %q = icmp ne i8 %x, 0
   ret i1 %q
@@ -61,8 +69,7 @@ define i1 @nonnull4_true(i8 %x) {
 ; CHECK-LABEL: @nonnull4_true(
 ; CHECK-NEXT:    [[A:%.*]] = icmp uge i8 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    ret i1 [[Q]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp uge i8 %x, 1
   call void @llvm.assume(i1 %a)
@@ -86,8 +93,7 @@ define i1 @nonnull6_true(i8 %x) {
 ; CHECK-LABEL: @nonnull6_true(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    ret i1 [[Q]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp sgt i8 %x, 0
   call void @llvm.assume(i1 %a)
@@ -98,8 +104,7 @@ define i1 @nonnull7_true(i8 %x) {
 ; CHECK-LABEL: @nonnull7_true(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    ret i1 [[Q]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp sgt i8 %x, 1
   call void @llvm.assume(i1 %a)
@@ -135,8 +140,7 @@ define i1 @nonnull10_true(i8 %x) {
 ; CHECK-LABEL: @nonnull10_true(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sge i8 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    ret i1 [[Q]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp sge i8 %x, 1
   call void @llvm.assume(i1 %a)
