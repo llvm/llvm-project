@@ -29,12 +29,7 @@ set(default_enable_lua OFF) # Experimental
 set(default_enable_libedit ON)
 set(default_enable_curses ON)
 
-# Temporary support the old LLDB_DISABLE_* variables
-if (DEFINED LLDB_DISABLE_CURSES)
-  if (LLDB_DISABLE_CURSES)
-    set(default_enable_curses OFF)
-  endif()
-endif()
+# Temporarily support the old LLDB_DISABLE_* variables
 if (DEFINED LLDB_DISABLE_PYTHON)
   if (LLDB_DISABLE_PYTHON)
     set(default_enable_python OFF)
