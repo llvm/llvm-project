@@ -924,13 +924,6 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
     NewCU.setSection(Asm->getObjFileLowering().getDwarfInfoSection());
   }
 
-  // Create DIEs for function declarations used for call site debug info.
-  // Note: Declaration subprograms imported by LTO are not added to the unit's
-  // list of retained types, so their DIEs are not constructed here.
-  for (auto Scope : DIUnit->getRetainedTypes())
-    if (auto *SP = dyn_cast_or_null<DISubprogram>(Scope))
-      NewCU.getOrCreateSubprogramDIE(SP);
-
   CUMap.insert({DIUnit, &NewCU});
   CUDieMap.insert({&NewCU.getUnitDie(), &NewCU});
   return NewCU;
