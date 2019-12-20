@@ -113,6 +113,9 @@ if ((NOT MSVC) OR MSVC12)
   add_definitions( -DHAVE_ROUND )
 endif()
 
+if (LLDB_ENABLE_LUA)
+  find_package(Lua REQUIRED)
+endif()
 
 if (LLDB_ENABLE_LIBEDIT)
   find_package(LibEdit REQUIRED)
