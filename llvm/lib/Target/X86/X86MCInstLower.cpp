@@ -1194,10 +1194,7 @@ void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
 
   // Record our statepoint node in the same section used by STACKMAP
   // and PATCHPOINT
-  auto &Ctx = OutStreamer->getContext();
-  MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
-  SM.recordStatepoint(*MILabel, MI);
+  SM.recordStatepoint(MI);
 }
 
 void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
@@ -1289,12 +1286,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
 // <id>, <shadowBytes>, ...
 void X86AsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
-
-  auto &Ctx = OutStreamer->getContext();
-  MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
-
-  SM.recordStackMap(*MILabel, MI);
+  SM.recordStackMap(MI);
   unsigned NumShadowBytes = MI.getOperand(1).getImm();
   SMShadowTracker.reset(NumShadowBytes);
 }
@@ -1307,10 +1299,7 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
 
-  auto &Ctx = OutStreamer->getContext();
-  MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
-  SM.recordPatchPoint(*MILabel, MI);
+  SM.recordPatchPoint(MI);
 
   PatchPointOpers opers(&MI);
   unsigned ScratchIdx = opers.getNextScratchIdx();

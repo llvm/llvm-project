@@ -294,13 +294,14 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   return LiveOuts;
 }
 
-void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
-                                    const MachineInstr &MI, uint64_t ID,
+void StackMaps::recordStackMapOpers(const MachineInstr &MI, uint64_t ID,
                                     MachineInstr::const_mop_iterator MOI,
                                     MachineInstr::const_mop_iterator MOE,
                                     bool recordResult) {
   MCContext &OutContext = AP.OutStreamer->getContext();
-  
+  MCSymbol *MILabel = OutContext.createTempSymbol();
+  AP.OutStreamer->EmitLabel(MILabel);
+
   LocationVec Locations;
   LiveOutVec LiveOuts;
 
@@ -339,7 +340,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   // Create an expression to calculate the offset of the callsite from function
   // entry.
   const MCExpr *CSOffsetExpr = MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(&MILabel, OutContext),
+      MCSymbolRefExpr::create(MILabel, OutContext),
       MCSymbolRefExpr::create(AP.CurrentFnSymForSize, OutContext), OutContext);
 
   CSInfos.emplace_back(CSOffsetExpr, ID, std::move(Locations),
@@ -359,23 +360,22 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
     FnInfos.insert(std::make_pair(AP.CurrentFnSym, FunctionInfo(FrameSize)));
 }
 
-void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI) {
+void StackMaps::recordStackMap(const MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::STACKMAP && "expected stackmap");
 
   StackMapOpers opers(&MI);
   const int64_t ID = MI.getOperand(PatchPointOpers::IDPos).getImm();
-  recordStackMapOpers(L, MI, ID, std::next(MI.operands_begin(),
-                                           opers.getVarIdx()),
+  recordStackMapOpers(MI, ID, std::next(MI.operands_begin(), opers.getVarIdx()),
                       MI.operands_end());
 }
 
-void StackMaps::recordPatchPoint(const MCSymbol &L, const MachineInstr &MI) {
+void StackMaps::recordPatchPoint(const MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::PATCHPOINT && "expected patchpoint");
 
   PatchPointOpers opers(&MI);
   const int64_t ID = opers.getID();
   auto MOI = std::next(MI.operands_begin(), opers.getStackMapStartIdx());
-  recordStackMapOpers(L, MI, ID, MOI, MI.operands_end(),
+  recordStackMapOpers(MI, ID, MOI, MI.operands_end(),
                       opers.isAnyReg() && opers.hasDef());
 
 #ifndef NDEBUG
@@ -390,14 +390,14 @@ void StackMaps::recordPatchPoint(const MCSymbol &L, const MachineInstr &MI) {
 #endif
 }
 
-void StackMaps::recordStatepoint(const MCSymbol &L, const MachineInstr &MI) {
+void StackMaps::recordStatepoint(const MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::STATEPOINT && "expected statepoint");
 
   StatepointOpers opers(&MI);
   // Record all the deopt and gc operands (they're contiguous and run from the
   // initial index to the end of the operand list)
   const unsigned StartIdx = opers.getVarIdx();
-  recordStackMapOpers(L, MI, opers.getID(), MI.operands_begin() + StartIdx,
+  recordStackMapOpers(MI, opers.getID(), MI.operands_begin() + StartIdx,
                       MI.operands_end(), false);
 }
 
