@@ -1647,9 +1647,9 @@ public:
   virtual bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const {
-    assert((MIa.mayLoad() || MIa.mayStore()) &&
+    assert(MIa.mayLoadOrStore() &&
            "MIa must load from or modify a memory location");
-    assert((MIb.mayLoad() || MIb.mayStore()) &&
+    assert(MIb.mayLoadOrStore() &&
            "MIb must load from or modify a memory location");
     return false;
   }

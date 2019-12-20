@@ -159,7 +159,7 @@ bool HexagonSplitDoubleRegs::isVolatileInstr(const MachineInstr *MI) const {
 }
 
 bool HexagonSplitDoubleRegs::isFixedInstr(const MachineInstr *MI) const {
-  if (MI->mayLoad() || MI->mayStore())
+  if (MI->mayLoadOrStore())
     if (MemRefsFixed || isVolatileInstr(MI))
       return true;
   if (MI->isDebugInstr())

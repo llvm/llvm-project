@@ -449,7 +449,7 @@ static unsigned EstimateRuntime(MachineBasicBlock::iterator I,
       continue;
     if (I->isCall())
       Time += 10;
-    else if (I->mayLoad() || I->mayStore())
+    else if (I->mayLoadOrStore())
       Time += 2;
     else
       ++Time;
@@ -835,7 +835,7 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
     assert(MBBICommon->isIdenticalTo(*MBBI) && "Expected matching MIIs!");
 
     // Merge MMOs from memory operations in the common block.
-    if (MBBICommon->mayLoad() || MBBICommon->mayStore())
+    if (MBBICommon->mayLoadOrStore())
       MBBICommon->cloneMergedMemRefs(*MBB->getParent(), {&*MBBICommon, &*MBBI});
     // Drop undef flags if they aren't present in all merged instructions.
     for (unsigned I = 0, E = MBBICommon->getNumOperands(); I != E; ++I) {

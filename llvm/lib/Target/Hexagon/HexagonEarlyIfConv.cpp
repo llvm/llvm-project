@@ -682,7 +682,7 @@ bool HexagonEarlyIfConversion::isPredicableStore(const MachineInstr *MI)
 
 bool HexagonEarlyIfConversion::isSafeToSpeculate(const MachineInstr *MI)
       const {
-  if (MI->mayLoad() || MI->mayStore())
+  if (MI->mayLoadOrStore())
     return false;
   if (MI->isCall() || MI->isBarrier() || MI->isBranch())
     return false;
