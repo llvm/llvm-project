@@ -1,0 +1,76 @@
+--- |
+  ; RUN: llc %s -start-before=cfi-instr-inserter -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+
+  ; Test that KILL instructions no longer terminate the instruction range of a
+  ; Debug Intrinsic calculated by DbgEntityHistoryCalculator.
+
+  source_filename = ".\\test.cpp"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-scei-ps4"
+  
+  define hidden i32 @main(i32 %arg, i8** nocapture readnone %argv) local_unnamed_addr !dbg !8 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %arg, metadata !19, metadata !DIExpression()), !dbg !22
+    call void @llvm.dbg.value(metadata i8** %argv, metadata !20, metadata !DIExpression()), !dbg !22
+    %add = shl nsw i32 %arg, 1, !dbg !23
+    call void @llvm.dbg.value(metadata i32 %add, metadata !21, metadata !DIExpression()), !dbg !22
+    ret i32 %add, !dbg !24
+  }
+
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !llvm.ident = !{!7}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, debugInfoForProfiling: true, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "F:\\test")
+  !2 = !{}
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 2}
+  !6 = !{i32 7, !"PIC Level", i32 2}
+  !7 = !{!"clang version 10.0.0"}
+  !8 = distinct !DISubprogram(name: "main", scope: !9, file: !9, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !18)
+  !9 = !DIFile(filename: ".\\test.cpp", directory: "F:\\test")
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{!12, !13, !14}
+  !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !13 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !12)
+  !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !15, size: 64)
+  !15 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !16, size: 64)
+  !16 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !17)
+  !17 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+  !18 = !{!19, !20, !21}
+  !19 = !DILocalVariable(name: "arg", arg: 1, scope: !8, file: !9, line: 1, type: !13)
+  !20 = !DILocalVariable(name: "argv", arg: 2, scope: !8, file: !9, line: 1, type: !14)
+  !21 = !DILocalVariable(name: "result", scope: !8, file: !9, line: 2, type: !12)
+  !22 = !DILocation(line: 0, scope: !8)
+  !23 = !DILocation(line: 2, scope: !8)
+  !24 = !DILocation(line: 3, scope: !8)
+
+...
+---
+name:            main
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.0.entry:
+    liveins: $edi
+
+    renamable $edi = KILL killed $edi, implicit-def $rdi
+    renamable $eax = LEA64_32r killed renamable $rdi, 1, renamable $rdi, 0, $noreg, debug-location !23
+    DBG_VALUE $eax, $noreg, !21, !DIExpression(), debug-location !22
+    ; CHECK-LABEL: DW_TAG_variable
+    ; CHECK: DW_AT_location        (0x00000000:
+    ; CHECK:  [0x0000000000000003,  0x0000000000000004): DW_OP_reg0 RAX)
+    ; CHECK-NEXT: DW_AT_name    ("result")
+    renamable $eax = KILL killed $eax, implicit-def $rax
+    RETQ killed $eax, debug-location !24
+
+...

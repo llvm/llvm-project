@@ -76,6 +76,7 @@
 ; ASM: [[pad_right_tmp:\.Ltmp[0-9]+]]:
 ; ASM:         #DEBUG_VALUE: pad_right:o <- [DW_OP_LLVM_fragment 32 32] $eax
 ; ASM:         retq
+; ASM: [[pad_right_end:\.Lfunc_end1]]:
 
 
 ; ASM-LABEL: pad_left: # @pad_left
@@ -84,6 +85,7 @@
 ; ASM: [[pad_left_tmp:\.Ltmp[0-9]+]]:
 ; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] $eax
 ; ASM:         retq
+; ASM: [[pad_left_end:\.Lfunc_end2]]:
 
 
 ; ASM-LABEL: nested: # @nested
@@ -146,7 +148,7 @@
 ; ASM:        .asciz  "pad_right"             # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    [[pad_right_tmp]] [[pad_right_tmp]], subfield_reg, 17, 4
+; ASM:        .cv_def_range    [[pad_right_tmp]] [[pad_right_end]], subfield_reg, 17, 4
 
 ; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
@@ -169,7 +171,7 @@
 ; ASM:        .asciz  "pad_left"              # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    [[pad_left_tmp]] [[pad_left_tmp]], subfield_reg, 17, 0
+; ASM:        .cv_def_range    [[pad_left_tmp]] [[pad_left_end]], subfield_reg, 17, 0
 
 ; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
