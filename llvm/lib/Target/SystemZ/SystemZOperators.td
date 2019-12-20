@@ -353,6 +353,8 @@ def z_vextend           : SDNode<"SystemZISD::VEXTEND", SDT_ZVecUnaryConv>;
 def z_strict_vextend    : SDNode<"SystemZISD::STRICT_VEXTEND",
                                  SDT_ZVecUnaryConv, [SDNPHasChain]>;
 def z_vround            : SDNode<"SystemZISD::VROUND", SDT_ZVecUnaryConv>;
+def z_strict_vround     : SDNode<"SystemZISD::STRICT_VROUND",
+                                 SDT_ZVecUnaryConv, [SDNPHasChain]>;
 def z_vtm               : SDNode<"SystemZISD::VTM", SDT_ZCmp>;
 def z_vfae_cc           : SDNode<"SystemZISD::VFAE_CC", SDT_ZVecTernaryIntCC>;
 def z_vfaez_cc          : SDNode<"SystemZISD::VFAEZ_CC", SDT_ZVecTernaryIntCC>;
@@ -741,6 +743,9 @@ def z_any_vfcmphe : PatFrags<(ops node:$lhs, node:$rhs),
 def z_any_vextend : PatFrags<(ops node:$src),
                              [(z_strict_vextend node:$src),
                               (z_vextend node:$src)]>;
+def z_any_vround  : PatFrags<(ops node:$src),
+                             [(z_strict_vround node:$src),
+                              (z_vround node:$src)]>;
 
 // Create a unary operator that loads from memory and then performs
 // the given operation on it.
