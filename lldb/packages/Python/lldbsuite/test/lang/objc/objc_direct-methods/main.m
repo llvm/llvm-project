@@ -24,6 +24,7 @@ const char *directCallConflictingName() {
             //%self.expect("expr [self directCallNSStringArg: str]", substrs=['@"some string"'])
             //%self.expect("expr [self directCallIdArg: (id)str]", substrs=['@"some string appendix"'])
             //%self.expect("expr [self directCallConflictingName]", substrs=["correct function"])
+            //%self.expect("expr [self directCallWithCategory]", substrs=["called function with category"])
 }
 
 // Declare several objc_direct functions we can test.
@@ -61,6 +62,17 @@ const char *directCallConflictingName() {
 }
 @end
 
+
+@interface Foo (Cat)
+@end
+
+@implementation Foo (Cat)
+-(const char *) directCallWithCategory  __attribute__((objc_direct))
+{
+  return "called function with category";
+}
+@end
+
 int main()
 {
   Foo *foo = [[Foo alloc] init];
@@ -75,5 +87,6 @@ int main()
                      //%self.expect("expr [foo directCallNSStringArg: str]", substrs=['@"some string"'])
                      //%self.expect("expr [foo directCallIdArg: (id)str]", substrs=['@"some string appendix"'])
                      //%self.expect("expr [foo directCallConflictingName]", substrs=["correct function"])
+                     //%self.expect("expr [foo directCallWithCategory]", substrs=["called function with category"])
   return 0;
 }
