@@ -682,7 +682,7 @@ private:
 
 // Used for non-preemptible ifuncs. It does not have a header. Each entry is
 // associated with an IRELATIVE relocation, which will be resolved eagerly at
-// runtime. PltSection cannot can only contain entries associated with JUMP_SLOT
+// runtime. PltSection can only contain entries associated with JUMP_SLOT
 // relocations, so IPLT entries are in a separate section.
 class IpltSection final : public SyntheticSection {
   std::vector<const Symbol *> entries;
