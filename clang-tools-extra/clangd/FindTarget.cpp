@@ -438,17 +438,8 @@ targetDecl(const ast_type_traits::DynTypedNode &N, DeclRelationSet Mask) {
   return Result;
 }
 
-namespace {
-/// Find declarations explicitly referenced in the source code defined by \p N.
-/// For templates, will prefer to return a template instantiation whenever
-/// possible. However, can also return a template pattern if the specialization
-/// cannot be picked, e.g. in dependent code or when there is no corresponding
-/// Decl for a template instantitation, e.g. for templated using decls:
-///    template <class T> using Ptr = T*;
-///    Ptr<int> x;
-///    ^~~ there is no Decl for 'Ptr<int>', so we return the template pattern.
 llvm::SmallVector<const NamedDecl *, 1>
-explicitReferenceTargets(DynTypedNode N, DeclRelationSet Mask = {}) {
+explicitReferenceTargets(DynTypedNode N, DeclRelationSet Mask) {
   assert(!(Mask & (DeclRelation::TemplatePattern |
                    DeclRelation::TemplateInstantiation)) &&
          "explicitRefenceTargets handles templates on its own");
@@ -478,6 +469,7 @@ explicitReferenceTargets(DynTypedNode N, DeclRelationSet Mask = {}) {
   return Targets;
 }
 
+namespace {
 llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
   struct Visitor : ConstDeclVisitor<Visitor> {
     llvm::SmallVector<ReferenceLoc, 2> Refs;
