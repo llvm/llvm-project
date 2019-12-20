@@ -1680,6 +1680,149 @@ void foo()
                          functionDecl(hasDescendant(Matcher)))))));
 }
 
+TEST(Traversal, traverseUnlessSpelledInSource) {
+
+  StringRef Code = R"cpp(
+
+struct A
+{
+};
+
+struct B
+{
+  B(int);
+  B(A const& a);
+  B();
+};
+
+struct C
+{
+  operator B();
+};
+
+B func1() {
+  return 42;
+}
+
+B func2() {
+  return B{42};
+}
+
+B func3() {
+  return B(42);
+}
+
+B func4() {
+  return B();
+}
+
+B func5() {
+  return B{};
+}
+
+B func6() {
+  return C();
+}
+
+B func7() {
+  return A();
+}
+
+B func8() {
+  return C{};
+}
+
+B func9() {
+  return A{};
+}
+
+B func10() {
+  A a;
+  return a;
+}
+
+B func11() {
+  B b;
+  return b;
+}
+
+B func12() {
+  C c;
+  return c;
+}
+
+)cpp";
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func1"))),
+                                hasReturnValue(integerLiteral(equals(42)))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+               returnStmt(forFunction(functionDecl(hasName("func2"))),
+                          hasReturnValue(cxxTemporaryObjectExpr(
+                              hasArgument(0, integerLiteral(equals(42)))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func3"))),
+                                hasReturnValue(
+                                    cxxFunctionalCastExpr(hasSourceExpression(
+                                        integerLiteral(equals(42)))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func4"))),
+                                hasReturnValue(cxxTemporaryObjectExpr())))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func5"))),
+                                hasReturnValue(cxxTemporaryObjectExpr())))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func6"))),
+                                hasReturnValue(cxxTemporaryObjectExpr())))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func7"))),
+                                hasReturnValue(cxxTemporaryObjectExpr())))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func8"))),
+                                hasReturnValue(cxxFunctionalCastExpr(
+                                    hasSourceExpression(initListExpr())))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func9"))),
+                                hasReturnValue(cxxFunctionalCastExpr(
+                                    hasSourceExpression(initListExpr())))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func10"))),
+                                hasReturnValue(
+                                    declRefExpr(to(varDecl(hasName("a")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func11"))),
+                                hasReturnValue(
+                                    declRefExpr(to(varDecl(hasName("b")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                     returnStmt(forFunction(functionDecl(hasName("func12"))),
+                                hasReturnValue(
+                                    declRefExpr(to(varDecl(hasName("c")))))))));
+}
+
 TEST(IgnoringImpCasts, MatchesImpCasts) {
   // This test checks that ignoringImpCasts matches when implicit casts are
   // present and its inner matcher alone does not match.
