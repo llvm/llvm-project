@@ -1426,24 +1426,24 @@ let Predicates = [HasSVE2] in {
   defm SBCLT_ZZZ : sve2_int_addsub_long_carry<0b11, "sbclt">;
 
   // SVE2 bitwise shift right narrow (bottom)
-  defm SQSHRUNB_ZZI  : sve2_int_bin_shift_imm_right_narrow_bottom<0b000, "sqshrunb">;
-  defm SQRSHRUNB_ZZI : sve2_int_bin_shift_imm_right_narrow_bottom<0b001, "sqrshrunb">;
-  defm SHRNB_ZZI     : sve2_int_bin_shift_imm_right_narrow_bottom<0b010, "shrnb">;
-  defm RSHRNB_ZZI    : sve2_int_bin_shift_imm_right_narrow_bottom<0b011, "rshrnb">;
-  defm SQSHRNB_ZZI   : sve2_int_bin_shift_imm_right_narrow_bottom<0b100, "sqshrnb">;
-  defm SQRSHRNB_ZZI  : sve2_int_bin_shift_imm_right_narrow_bottom<0b101, "sqrshrnb">;
-  defm UQSHRNB_ZZI   : sve2_int_bin_shift_imm_right_narrow_bottom<0b110, "uqshrnb">;
-  defm UQRSHRNB_ZZI  : sve2_int_bin_shift_imm_right_narrow_bottom<0b111, "uqrshrnb">;
+  defm SQSHRUNB_ZZI  : sve2_int_bin_shift_imm_right_narrow_bottom<0b000, "sqshrunb",  int_aarch64_sve_sqshrunb>;
+  defm SQRSHRUNB_ZZI : sve2_int_bin_shift_imm_right_narrow_bottom<0b001, "sqrshrunb", int_aarch64_sve_sqrshrunb>;
+  defm SHRNB_ZZI     : sve2_int_bin_shift_imm_right_narrow_bottom<0b010, "shrnb",     int_aarch64_sve_shrnb>;
+  defm RSHRNB_ZZI    : sve2_int_bin_shift_imm_right_narrow_bottom<0b011, "rshrnb",    int_aarch64_sve_rshrnb>;
+  defm SQSHRNB_ZZI   : sve2_int_bin_shift_imm_right_narrow_bottom<0b100, "sqshrnb",   int_aarch64_sve_sqshrnb>;
+  defm SQRSHRNB_ZZI  : sve2_int_bin_shift_imm_right_narrow_bottom<0b101, "sqrshrnb",  int_aarch64_sve_sqrshrnb>;
+  defm UQSHRNB_ZZI   : sve2_int_bin_shift_imm_right_narrow_bottom<0b110, "uqshrnb",   int_aarch64_sve_uqshrnb>;
+  defm UQRSHRNB_ZZI  : sve2_int_bin_shift_imm_right_narrow_bottom<0b111, "uqrshrnb",  int_aarch64_sve_uqrshrnb>;
 
   // SVE2 bitwise shift right narrow (top)
-  defm SQSHRUNT_ZZI  : sve2_int_bin_shift_imm_right_narrow_top<0b000, "sqshrunt">;
-  defm SQRSHRUNT_ZZI : sve2_int_bin_shift_imm_right_narrow_top<0b001, "sqrshrunt">;
-  defm SHRNT_ZZI     : sve2_int_bin_shift_imm_right_narrow_top<0b010, "shrnt">;
-  defm RSHRNT_ZZI    : sve2_int_bin_shift_imm_right_narrow_top<0b011, "rshrnt">;
-  defm SQSHRNT_ZZI   : sve2_int_bin_shift_imm_right_narrow_top<0b100, "sqshrnt">;
-  defm SQRSHRNT_ZZI  : sve2_int_bin_shift_imm_right_narrow_top<0b101, "sqrshrnt">;
-  defm UQSHRNT_ZZI   : sve2_int_bin_shift_imm_right_narrow_top<0b110, "uqshrnt">;
-  defm UQRSHRNT_ZZI  : sve2_int_bin_shift_imm_right_narrow_top<0b111, "uqrshrnt">;
+  defm SQSHRUNT_ZZI  : sve2_int_bin_shift_imm_right_narrow_top<0b000, "sqshrunt",  int_aarch64_sve_sqshrunt>;
+  defm SQRSHRUNT_ZZI : sve2_int_bin_shift_imm_right_narrow_top<0b001, "sqrshrunt", int_aarch64_sve_sqrshrunt>;
+  defm SHRNT_ZZI     : sve2_int_bin_shift_imm_right_narrow_top<0b010, "shrnt",     int_aarch64_sve_shrnt>;
+  defm RSHRNT_ZZI    : sve2_int_bin_shift_imm_right_narrow_top<0b011, "rshrnt",    int_aarch64_sve_rshrnt>;
+  defm SQSHRNT_ZZI   : sve2_int_bin_shift_imm_right_narrow_top<0b100, "sqshrnt",   int_aarch64_sve_sqshrnt>;
+  defm SQRSHRNT_ZZI  : sve2_int_bin_shift_imm_right_narrow_top<0b101, "sqrshrnt",  int_aarch64_sve_sqrshrnt>;
+  defm UQSHRNT_ZZI   : sve2_int_bin_shift_imm_right_narrow_top<0b110, "uqshrnt",   int_aarch64_sve_uqshrnt>;
+  defm UQRSHRNT_ZZI  : sve2_int_bin_shift_imm_right_narrow_top<0b111, "uqrshrnt",  int_aarch64_sve_uqrshrnt>;
 
   // SVE2 integer add/subtract narrow high part (bottom)
   defm ADDHNB_ZZZ  : sve2_int_addsub_narrow_high_bottom<0b00, "addhnb",  int_aarch64_sve_addhnb>;
