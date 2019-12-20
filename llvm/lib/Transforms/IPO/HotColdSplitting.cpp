@@ -207,6 +207,11 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
   if (F.hasFnAttribute(Attribute::NoInline))
     return false;
 
+  // A function marked `noreturn` may contain unreachable terminators: these
+  // should not be considered cold, as the function may be a trampoline.
+  if (F.hasFnAttribute(Attribute::NoReturn))
+    return false;
+
   if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
       F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
       F.hasFnAttribute(Attribute::SanitizeThread) ||

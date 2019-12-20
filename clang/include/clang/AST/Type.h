@@ -477,7 +477,10 @@ public:
     return A == B ||
            // Otherwise in OpenCLC v2.0 s6.5.5: every address space except
            // for __constant can be used as __generic.
-           (A == LangAS::opencl_generic && B != LangAS::opencl_constant);
+           (A == LangAS::opencl_generic && B != LangAS::opencl_constant) ||
+           // Consider pointer size address spaces to be equivalent to default.
+           ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
+            (isPtrSizeAddressSpace(B) || B == LangAS::Default));
   }
 
   /// Returns true if the address space in these qualifiers is equal to or
@@ -6174,6 +6177,33 @@ public:
 
   /// Apply the collected qualifiers to the given type.
   QualType apply(const ASTContext &Context, const Type* T) const;
+};
+
+/// A container of type source information.
+///
+/// A client can read the relevant info using TypeLoc wrappers, e.g:
+/// @code
+/// TypeLoc TL = TypeSourceInfo->getTypeLoc();
+/// TL.getBeginLoc().print(OS, SrcMgr);
+/// @endcode
+class alignas(8) TypeSourceInfo {
+  // Contains a memory block after the class, used for type source information,
+  // allocated by ASTContext.
+  friend class ASTContext;
+
+  QualType Ty;
+
+  TypeSourceInfo(QualType ty) : Ty(ty) {}
+
+public:
+  /// Return the type wrapped by this type source info.
+  QualType getType() const { return Ty; }
+
+  /// Return the TypeLoc wrapper for the type source info.
+  TypeLoc getTypeLoc() const; // implemented in TypeLoc.h
+
+  /// Override the type stored in this TypeSourceInfo. Use with caution!
+  void overrideType(QualType T) { Ty = T; }
 };
 
 // Inline function definitions.

@@ -479,12 +479,13 @@ public:
       switch (flavor) {
       case GPRAltRegSet:
       case GPRRegSet:
-        for (uint32_t i = 0; i < count; ++i) {
+        // On ARM, the CPSR register is also included in the count but it is
+        // not included in gpr.r so loop until (count-1).
+        for (uint32_t i = 0; i < (count - 1); ++i) {
           gpr.r[i] = data.GetU32(&offset);
         }
-
-        // Note that gpr.cpsr is also copied by the above loop; this loop
-        // technically extends one element past the end of the gpr.r[] array.
+        // Save cpsr explicitly.
+        gpr.cpsr = data.GetU32(&offset);
 
         SetError(GPRRegSet, Read, 0);
         offset = next_thread_state;
@@ -1864,9 +1865,15 @@ public:
           m_section_infos[n_sect].vm_range.SetByteSize(
               section_sp->GetByteSize());
         } else {
+          const char *filename = "<unknown>";
+          SectionSP first_section_sp(m_section_list->GetSectionAtIndex(0));
+          if (first_section_sp)
+            filename = first_section_sp->GetObjectFile()->GetFileSpec().GetPath().c_str();
+
           Host::SystemLog(Host::eSystemLogError,
-                          "error: unable to find section for section %u\n",
-                          n_sect);
+                          "error: unable to find section %d for a symbol in %s, corrupt file?\n",
+                          n_sect, 
+                          filename);
         }
       }
       if (m_section_infos[n_sect].vm_range.Contains(file_addr)) {

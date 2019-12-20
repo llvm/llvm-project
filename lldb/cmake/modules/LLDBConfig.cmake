@@ -25,6 +25,7 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darw
 endif()
 
 set(default_enable_python ON)
+set(default_enable_lua OFF) # Experimental
 set(default_enable_libedit ON)
 set(default_enable_curses ON)
 
@@ -49,13 +50,16 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   set(default_enable_curses OFF)
 elseif(CMAKE_SYSTEM_NAME MATCHES "Android")
   set(default_enable_python OFF)
+  set(default_enable_lua OFF)
   set(default_enable_libedit OFF)
   set(default_enable_curses OFF)
 elseif(IOS)
   set(default_enable_python OFF)
+  set(default_enable_lua OFF)
 endif()
 
 option(LLDB_ENABLE_PYTHON "Enable Python scripting integration." ${default_enable_python})
+option(LLDB_ENABLE_PYTHON "Enable Lua scripting integration." ${default_enable_lua})
 option(LLDB_ENABLE_LIBEDIT "Enable the use of editline." ${default_enable_libedit})
 option(LLDB_ENABLE_CURSES "Enable Curses integration." ${default_enable_curses})
 option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)

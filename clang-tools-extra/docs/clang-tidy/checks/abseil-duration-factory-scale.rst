@@ -5,7 +5,7 @@ abseil-duration-factory-scale
 
 Checks for cases where arguments to ``absl::Duration`` factory functions are
 scaled internally and could be changed to a different factory function. This
-check also looks for arguements with a zero value and suggests using
+check also looks for arguments with a zero value and suggests using
 ``absl::ZeroDuration()`` instead.
 
 Examples:

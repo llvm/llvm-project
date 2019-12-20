@@ -18,7 +18,7 @@ def SVEPatternOperand : AsmOperandClass {
   let DiagnosticType = "InvalidSVEPattern";
 }
 
-def sve_pred_enum : Operand<i32>, ImmLeaf<i32, [{
+def sve_pred_enum : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 32);
   }]> {
 
@@ -249,11 +249,12 @@ def sve_incdec_imm : Operand<i32>, ImmLeaf<i32, [{
 //             it's important we define them first.
 //===----------------------------------------------------------------------===//
 
-class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty>
+class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty,
+                    ValueType vt, SDPatternOperator op>
 : I<(outs pprty:$Pd), (ins sve_pred_enum:$pattern),
   asm, "\t$Pd, $pattern",
   "",
-  []>, Sched<[]> {
+  [(set (vt pprty:$Pd), (op sve_pred_enum:$pattern))]>, Sched<[]> {
   bits<4> Pd;
   bits<5> pattern;
   let Inst{31-24} = 0b00100101;
@@ -269,11 +270,11 @@ class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty>
   let Defs = !if(!eq (opc{0}, 1), [NZCV], []);
 }
 
-multiclass sve_int_ptrue<bits<3> opc, string asm> {
-  def _B : sve_int_ptrue<0b00, opc, asm, PPR8>;
-  def _H : sve_int_ptrue<0b01, opc, asm, PPR16>;
-  def _S : sve_int_ptrue<0b10, opc, asm, PPR32>;
-  def _D : sve_int_ptrue<0b11, opc, asm, PPR64>;
+multiclass sve_int_ptrue<bits<3> opc, string asm, SDPatternOperator op> {
+  def _B : sve_int_ptrue<0b00, opc, asm, PPR8, nxv16i1, op>;
+  def _H : sve_int_ptrue<0b01, opc, asm, PPR16, nxv8i1, op>;
+  def _S : sve_int_ptrue<0b10, opc, asm, PPR32, nxv4i1, op>;
+  def _D : sve_int_ptrue<0b11, opc, asm, PPR64, nxv2i1, op>;
 
   def : InstAlias<asm # "\t$Pd",
                   (!cast<Instruction>(NAME # _B) PPR8:$Pd, 0b11111), 1>;
@@ -285,9 +286,12 @@ multiclass sve_int_ptrue<bits<3> opc, string asm> {
                   (!cast<Instruction>(NAME # _D) PPR64:$Pd, 0b11111), 1>;
 }
 
+def SDT_AArch64PTrue : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVT<1, i32>]>;
+def AArch64ptrue : SDNode<"AArch64ISD::PTRUE", SDT_AArch64PTrue>;
+
 let Predicates = [HasSVE] in {
-  defm PTRUE  : sve_int_ptrue<0b000, "ptrue">;
-  defm PTRUES : sve_int_ptrue<0b001, "ptrues">;
+  defm PTRUE  : sve_int_ptrue<0b000, "ptrue", AArch64ptrue>;
+  defm PTRUES : sve_int_ptrue<0b001, "ptrues", null_frag>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -299,19 +303,14 @@ class SVE_1_Op_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
 : Pat<(vtd (op vt1:$Op1)),
       (inst $Op1)>;
 
-class SVE_1_Op_Imm_OptLsl_Reverse_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
-                                      ValueType it, ComplexPattern cpx, Instruction inst>
-  : Pat<(vt (op (vt (AArch64dup (it (cpx i32:$imm, i32:$shift)))), (vt zprty:$Op1))),
-        (inst $Op1, i32:$imm, i32:$shift)>;
-
 class SVE_1_Op_Imm_OptLsl_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
-                              ValueType it, ComplexPattern cpx, Instruction inst>
-  : Pat<(vt (op (vt zprty:$Op1), (vt (AArch64dup (it (cpx i32:$imm, i32:$shift)))))),
+                              ComplexPattern cpx, Instruction inst>
+  : Pat<(vt (op (vt zprty:$Op1), (i32 (cpx i32:$imm, i32:$shift)))),
         (inst $Op1, i32:$imm, i32:$shift)>;
 
 class SVE_1_Op_Imm_Log_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
-                           ValueType it, ComplexPattern cpx, Instruction inst>
-  : Pat<(vt (op (vt zprty:$Op1), (vt (AArch64dup (it (cpx i64:$imm)))))),
+                           ComplexPattern cpx, Instruction inst>
+  : Pat<(vt (op (vt zprty:$Op1), (i64 (cpx i64:$imm)))),
         (inst $Op1, i64:$imm)>;
 
 class SVE_2_Op_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
@@ -420,15 +419,22 @@ class sve_int_pfirst_next<bits<2> sz8_64, bits<5> opc, string asm,
   let Defs = [NZCV];
 }
 
-multiclass sve_int_pfirst<bits<5> opc, string asm> {
-  def : sve_int_pfirst_next<0b01, opc, asm, PPR8>;
+multiclass sve_int_pfirst<bits<5> opc, string asm, SDPatternOperator op> {
+  def _B : sve_int_pfirst_next<0b01, opc, asm, PPR8>;
+
+  def : SVE_2_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, !cast<Instruction>(NAME # _B)>;
 }
 
-multiclass sve_int_pnext<bits<5> opc, string asm> {
+multiclass sve_int_pnext<bits<5> opc, string asm, SDPatternOperator op> {
   def _B : sve_int_pfirst_next<0b00, opc, asm, PPR8>;
   def _H : sve_int_pfirst_next<0b01, opc, asm, PPR16>;
   def _S : sve_int_pfirst_next<0b10, opc, asm, PPR32>;
   def _D : sve_int_pfirst_next<0b11, opc, asm, PPR64>;
+
+  def : SVE_2_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i1, op, nxv8i1, nxv8i1, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i1, op, nxv4i1, nxv4i1, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i1, op, nxv2i1, nxv2i1, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1148,10 +1154,10 @@ class sve_int_log_imm<bits<2> opc, string asm>
 multiclass sve_int_log_imm<bits<2> opc, string asm, string alias, SDPatternOperator op> {
   def NAME : sve_int_log_imm<opc, asm>;
 
-  def : SVE_1_Op_Imm_Log_Pat<nxv16i8, op, ZPR8,  i32, SVELogicalImm8Pat,  !cast<Instruction>(NAME)>;
-  def : SVE_1_Op_Imm_Log_Pat<nxv8i16, op, ZPR16, i32, SVELogicalImm16Pat, !cast<Instruction>(NAME)>;
-  def : SVE_1_Op_Imm_Log_Pat<nxv4i32, op, ZPR32, i32, SVELogicalImm32Pat, !cast<Instruction>(NAME)>;
-  def : SVE_1_Op_Imm_Log_Pat<nxv2i64, op, ZPR64, i64, SVELogicalImm64Pat, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv16i8, op, ZPR8,  SVELogicalImm8Pat,  !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv8i16, op, ZPR16, SVELogicalImm16Pat, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv4i32, op, ZPR32, SVELogicalImm32Pat, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv2i64, op, ZPR64, SVELogicalImm64Pat, !cast<Instruction>(NAME)>;
 
   def : InstAlias<asm # "\t$Zdn, $Zdn, $imm",
                   (!cast<Instruction>(NAME) ZPR8:$Zdn, sve_logical_imm8:$imm), 4>;
@@ -3325,22 +3331,10 @@ multiclass sve_int_arith_imm0<bits<3> opc, string asm, SDPatternOperator op> {
   def _S : sve_int_arith_imm0<0b10, opc, asm, ZPR32, addsub_imm8_opt_lsl_i32>;
   def _D : sve_int_arith_imm0<0b11, opc, asm, ZPR64, addsub_imm8_opt_lsl_i64>;
 
-  def : SVE_1_Op_Imm_OptLsl_Pat<nxv16i8, op, ZPR8,  i32, SVEAddSubImm8Pat,  !cast<Instruction>(NAME # _B)>;
-  def : SVE_1_Op_Imm_OptLsl_Pat<nxv8i16, op, ZPR16, i32, SVEAddSubImm16Pat, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Imm_OptLsl_Pat<nxv4i32, op, ZPR32, i32, SVEAddSubImm32Pat, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Imm_OptLsl_Pat<nxv2i64, op, ZPR64, i64, SVEAddSubImm64Pat, !cast<Instruction>(NAME # _D)>;
-}
-
-multiclass sve_int_arith_imm0_subr<bits<3> opc, string asm, SDPatternOperator op> {
-  def _B : sve_int_arith_imm0<0b00, opc, asm, ZPR8,  addsub_imm8_opt_lsl_i8>;
-  def _H : sve_int_arith_imm0<0b01, opc, asm, ZPR16, addsub_imm8_opt_lsl_i16>;
-  def _S : sve_int_arith_imm0<0b10, opc, asm, ZPR32, addsub_imm8_opt_lsl_i32>;
-  def _D : sve_int_arith_imm0<0b11, opc, asm, ZPR64, addsub_imm8_opt_lsl_i64>;
-
-  def : SVE_1_Op_Imm_OptLsl_Reverse_Pat<nxv16i8, op, ZPR8,  i32, SVEAddSubImm8Pat,  !cast<Instruction>(NAME # _B)>;
-  def : SVE_1_Op_Imm_OptLsl_Reverse_Pat<nxv8i16, op, ZPR16, i32, SVEAddSubImm16Pat, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Imm_OptLsl_Reverse_Pat<nxv4i32, op, ZPR32, i32, SVEAddSubImm32Pat, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Imm_OptLsl_Reverse_Pat<nxv2i64, op, ZPR64, i64, SVEAddSubImm64Pat, !cast<Instruction>(NAME # _D)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv16i8, op, ZPR8,  SVEAddSubImm8Pat,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv8i16, op, ZPR16, SVEAddSubImm16Pat, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv4i32, op, ZPR32, SVEAddSubImm32Pat, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv2i64, op, ZPR64, SVEAddSubImm64Pat, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve_int_arith_imm<bits<2> sz8_64, bits<6> opc, string asm,

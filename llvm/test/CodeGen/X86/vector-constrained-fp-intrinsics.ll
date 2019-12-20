@@ -3922,29 +3922,12 @@ entry:
 define <4 x i32> @constrained_vector_fptosi_v4i32_v4f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v4i32_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm2
-; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    cvttps2dq {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_fptosi_v4i32_v4f32:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvttss2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vcvttss2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vcvttss2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vcvttss2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvttps2dq {{.*}}(%rip), %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(
@@ -4065,20 +4048,27 @@ define <4 x i64> @constrained_vector_fptosi_v4i64_v4f32() #0 {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: constrained_vector_fptosi_v4i64_v4f32:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttss2si {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vcvttss2si {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vcvttss2si {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vcvttss2si {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: constrained_vector_fptosi_v4i64_v4f32:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vcvttss2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vcvttss2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    vcvttss2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vcvttss2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm2
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512DQ-LABEL: constrained_vector_fptosi_v4i64_v4f32:
+; AVX512DQ:       # %bb.0: # %entry
+; AVX512DQ-NEXT:    vmovaps {{.*#+}} xmm0 = [4.2E+1,4.3E+1,4.4E+1,4.5E+1]
+; AVX512DQ-NEXT:    vcvttps2qq %ymm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512DQ-NEXT:    retq
 entry:
   %result = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f32(
                                 <4 x float><float 42.0, float 43.0,
@@ -4108,19 +4098,12 @@ entry:
 define <2 x i32> @constrained_vector_fptosi_v2i32_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v2i32_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    cvttpd2dq {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_fptosi_v2i32_v2f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvttsd2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vcvttsd2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvttpd2dqx {{.*}}(%rip), %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f64(
@@ -4162,29 +4145,14 @@ entry:
 define <4 x i32> @constrained_vector_fptosi_v4i32_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v4i32_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm2
-; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    cvttpd2dq {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    cvttpd2dq {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_fptosi_v4i32_v4f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvttsd2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vcvttsd2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vcvttsd2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vcvttsd2si {{.*}}(%rip), %eax
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvttpd2dqy {{.*}}(%rip), %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f64(
@@ -4221,14 +4189,31 @@ define <2 x i64> @constrained_vector_fptosi_v2i64_v2f64() #0 {
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_fptosi_v2i64_v2f64:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
-; AVX-NEXT:    vmovq %rax, %xmm1
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX-NEXT:    retq
+; AVX1-LABEL: constrained_vector_fptosi_v2i64_v2f64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
+; AVX1-NEXT:    vmovq %rax, %xmm0
+; AVX1-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
+; AVX1-NEXT:    vmovq %rax, %xmm1
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: constrained_vector_fptosi_v2i64_v2f64:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    retq
+;
+; AVX512DQ-LABEL: constrained_vector_fptosi_v2i64_v2f64:
+; AVX512DQ:       # %bb.0: # %entry
+; AVX512DQ-NEXT:    vmovaps {{.*#+}} xmm0 = [4.2100000000000001E+1,4.2200000000000003E+1]
+; AVX512DQ-NEXT:    vcvttpd2qq %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
 entry:
   %result = call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(
                                 <2 x double><double 42.1, double 42.2>,
@@ -4305,20 +4290,27 @@ define <4 x i64> @constrained_vector_fptosi_v4i64_v4f64() #0 {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: constrained_vector_fptosi_v4i64_v4f64:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: constrained_vector_fptosi_v4i64_v4f64:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vcvttsd2si {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm2
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512DQ-LABEL: constrained_vector_fptosi_v4i64_v4f64:
+; AVX512DQ:       # %bb.0: # %entry
+; AVX512DQ-NEXT:    vmovaps {{.*#+}} ymm0 = [4.2100000000000001E+1,4.2200000000000003E+1,4.2299999999999997E+1,4.2399999999999999E+1]
+; AVX512DQ-NEXT:    vcvttpd2qq %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512DQ-NEXT:    retq
 entry:
   %result = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f64(
                                 <4 x double><double 42.1, double 42.2,
@@ -4643,20 +4635,27 @@ define <4 x i64> @constrained_vector_fptoui_v4i64_v4f32() #0 {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: constrained_vector_fptoui_v4i64_v4f32:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttss2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vcvttss2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vcvttss2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vcvttss2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: constrained_vector_fptoui_v4i64_v4f32:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vcvttss2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vcvttss2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    vcvttss2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vcvttss2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm2
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512DQ-LABEL: constrained_vector_fptoui_v4i64_v4f32:
+; AVX512DQ:       # %bb.0: # %entry
+; AVX512DQ-NEXT:    vmovaps {{.*#+}} xmm0 = [4.2E+1,4.3E+1,4.4E+1,4.5E+1]
+; AVX512DQ-NEXT:    vcvttps2uqq %ymm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512DQ-NEXT:    retq
 entry:
   %result = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f32(
                                 <4 x float><float 42.0, float 43.0,
@@ -4865,14 +4864,22 @@ define <2 x i64> @constrained_vector_fptoui_v2i64_v2f64() #0 {
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: constrained_vector_fptoui_v2i64_v2f64:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: constrained_vector_fptoui_v2i64_v2f64:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    retq
+;
+; AVX512DQ-LABEL: constrained_vector_fptoui_v2i64_v2f64:
+; AVX512DQ:       # %bb.0: # %entry
+; AVX512DQ-NEXT:    vmovaps {{.*#+}} xmm0 = [4.2100000000000001E+1,4.2200000000000003E+1]
+; AVX512DQ-NEXT:    vcvttpd2uqq %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
 entry:
   %result = call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(
                                 <2 x double><double 42.1, double 42.2>,
@@ -4981,20 +4988,27 @@ define <4 x i64> @constrained_vector_fptoui_v4i64_v4f64() #0 {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: constrained_vector_fptoui_v4i64_v4f64:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
-; AVX512-NEXT:    vmovq %rax, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: constrained_vector_fptoui_v4i64_v4f64:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vcvttsd2usi {{.*}}(%rip), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm2
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512DQ-LABEL: constrained_vector_fptoui_v4i64_v4f64:
+; AVX512DQ:       # %bb.0: # %entry
+; AVX512DQ-NEXT:    vmovaps {{.*#+}} ymm0 = [4.2100000000000001E+1,4.2200000000000003E+1,4.2299999999999997E+1,4.2399999999999999E+1]
+; AVX512DQ-NEXT:    vcvttpd2uqq %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512DQ-NEXT:    retq
 entry:
   %result = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f64(
                                 <4 x double><double 42.1, double 42.2,
@@ -7266,6 +7280,66 @@ entry:
                                                metadata !"fpexcept.strict") #0
   ret <4 x float> %result
 }
+
+; Simple test to make sure we don't fuse vselect+strict_fadd into a masked operation.
+define <16 x float> @vpaddd_mask_test(<16 x float> %i, <16 x float> %j, <16 x i32> %mask1) nounwind readnone strictfp {
+; CHECK-LABEL: vpaddd_mask_test:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm10, %xmm10
+; CHECK-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
+; CHECK-NEXT:    pcmpeqd %xmm10, %xmm8
+; CHECK-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
+; CHECK-NEXT:    pcmpeqd %xmm10, %xmm9
+; CHECK-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
+; CHECK-NEXT:    pcmpeqd %xmm10, %xmm11
+; CHECK-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm10
+; CHECK-NEXT:    addps %xmm3, %xmm7
+; CHECK-NEXT:    addps %xmm2, %xmm6
+; CHECK-NEXT:    addps %xmm1, %xmm5
+; CHECK-NEXT:    addps %xmm0, %xmm4
+; CHECK-NEXT:    andps %xmm10, %xmm0
+; CHECK-NEXT:    andnps %xmm4, %xmm10
+; CHECK-NEXT:    orps %xmm10, %xmm0
+; CHECK-NEXT:    andps %xmm11, %xmm1
+; CHECK-NEXT:    andnps %xmm5, %xmm11
+; CHECK-NEXT:    orps %xmm11, %xmm1
+; CHECK-NEXT:    andps %xmm9, %xmm2
+; CHECK-NEXT:    andnps %xmm6, %xmm9
+; CHECK-NEXT:    orps %xmm9, %xmm2
+; CHECK-NEXT:    andps %xmm8, %xmm3
+; CHECK-NEXT:    andnps %xmm7, %xmm8
+; CHECK-NEXT:    orps %xmm8, %xmm3
+; CHECK-NEXT:    retq
+;
+; AVX1-LABEL: vpaddd_mask_test:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm6
+; AVX1-NEXT:    vpxor %xmm7, %xmm7, %xmm7
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm6, %xmm6
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm5, %xmm5
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm6
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm6, %xmm6
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm4, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
+; AVX1-NEXT:    vaddps %ymm3, %ymm1, %ymm3
+; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm2
+; AVX1-NEXT:    vblendvps %ymm4, %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vblendvps %ymm5, %ymm1, %ymm3, %ymm1
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: vpaddd_mask_test:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vptestmd %zmm2, %zmm2, %k1
+; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm1
+; AVX512-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    retq
+  %mask = icmp ne <16 x i32> %mask1, zeroinitializer
+  %x = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %i, <16 x float> %j, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %r = select <16 x i1> %mask, <16 x float> %x, <16 x float> %i
+  ret <16 x float> %r
+}
+declare  <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float>, <16 x float>, metadata, metadata)
 
 attributes #0 = { strictfp }
 

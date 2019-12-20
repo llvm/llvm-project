@@ -213,6 +213,7 @@ enum DescriptionLevel {
 enum ScriptLanguage {
   eScriptLanguageNone,
   eScriptLanguagePython,
+  eScriptLanguageLua,
   eScriptLanguageDefault = eScriptLanguagePython,
   eScriptLanguageUnknown
 };

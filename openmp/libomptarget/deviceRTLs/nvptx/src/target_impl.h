@@ -13,6 +13,8 @@
 #define _TARGET_IMPL_H_
 
 #include <cuda.h>
+#include <stdlib.h>
+
 #include "nvptx_interface.h"
 
 #define DEVICE __device__
@@ -188,11 +190,24 @@ INLINE int GetBlockIdInKernel() { return blockIdx.x; }
 INLINE int GetNumberOfBlocksInKernel() { return gridDim.x; }
 INLINE int GetNumberOfThreadsInBlock() { return blockDim.x; }
 
+// Return true if this is the first active thread in the warp.
+INLINE bool __kmpc_impl_is_first_active_thread() {
+  unsigned long long Mask = __kmpc_impl_activemask();
+  unsigned long long ShNum = WARPSIZE - (GetThreadIdInBlock() % WARPSIZE);
+  unsigned long long Sh = Mask << ShNum;
+  // Truncate Sh to the 32 lower bits
+  return (unsigned)Sh == 0;
+}
+
 // Locks
 EXTERN void __kmpc_impl_init_lock(omp_lock_t *lock);
 EXTERN void __kmpc_impl_destroy_lock(omp_lock_t *lock);
 EXTERN void __kmpc_impl_set_lock(omp_lock_t *lock);
 EXTERN void __kmpc_impl_unset_lock(omp_lock_t *lock);
 EXTERN int __kmpc_impl_test_lock(omp_lock_t *lock);
+
+// Memory
+INLINE void *__kmpc_impl_malloc(size_t x) { return malloc(x); }
+INLINE void __kmpc_impl_free(void *x) { free(x); }
 
 #endif

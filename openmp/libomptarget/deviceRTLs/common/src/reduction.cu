@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "common/omptarget.h"
+#include "common/target_atomic.h"
 #include "target_impl.h"
 
 EXTERN
@@ -242,7 +243,7 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
     // atomicInc increments 'timestamp' and has a range [0, NumTeams-1].
     // It resets 'timestamp' back to 0 once the last team increments
     // this counter.
-    unsigned val = atomicInc(timestamp, NumTeams - 1);
+    unsigned val = __kmpc_atomic_inc(timestamp, NumTeams - 1);
     IsLastTeam = val == NumTeams - 1;
   }
 
@@ -377,7 +378,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_simple(kmp_Ident *loc,
   if (checkSPMDMode(loc) && GetThreadIdInBlock() != 0)
     return 0;
   // The master thread of the team actually does the reduction.
-  while (atomicCAS((uint32_t *)crit, 0, 1))
+  while (__kmpc_atomic_cas((uint32_t *)crit, 0u, 1u))
     ;
   return 1;
 }
@@ -386,7 +387,7 @@ EXTERN void
 __kmpc_nvptx_teams_end_reduce_nowait_simple(kmp_Ident *loc, int32_t global_tid,
                                             kmp_CriticalName *crit) {
   __kmpc_impl_threadfence_system();
-  (void)atomicExch((uint32_t *)crit, 0);
+  (void)__kmpc_atomic_exchange((uint32_t *)crit, 0u);
 }
 
 INLINE static bool isMaster(kmp_Ident *loc, uint32_t ThreadId) {
@@ -431,7 +432,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   bool IsMaster = isMaster(loc, ThreadId);
   while (IsMaster) {
     // Atomic read
-    Bound = atomicAdd((uint32_t *)&IterCnt, 0);
+    Bound = __kmpc_atomic_add((uint32_t *)&IterCnt, 0u);
     if (TeamId < Bound + num_of_records)
       break;
   }
@@ -447,7 +448,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     // Increment team counter.
     // This counter is incremented by all teams in the current
     // BUFFER_SIZE chunk.
-    ChunkTeamCount = atomicInc((uint32_t *)&Cnt, num_of_records - 1);
+    ChunkTeamCount = __kmpc_atomic_inc((uint32_t *)&Cnt, num_of_records - 1u);
   }
   // Synchronize
   if (checkSPMDMode(loc))
@@ -522,7 +523,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   if (IsMaster && ChunkTeamCount == num_of_records - 1) {
     // Allow SIZE number of teams to proceed writing their
     // intermediate results to the global buffer.
-    atomicAdd((uint32_t *)&IterCnt, num_of_records);
+    __kmpc_atomic_add((uint32_t *)&IterCnt, uint32_t(num_of_records));
   }
 
   return 0;

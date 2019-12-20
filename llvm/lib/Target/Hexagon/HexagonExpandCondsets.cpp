@@ -1041,7 +1041,7 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
   bool CanDown = canMoveOver(*DefI, Defs, Uses);
   // The TfrI does not access memory, but DefI could. Check if it's safe
   // to move DefI down to TfrI.
-  if (DefI->mayLoad() || DefI->mayStore())
+  if (DefI->mayLoadOrStore())
     if (!canMoveMemTo(*DefI, TfrI, true))
       CanDown = false;
 

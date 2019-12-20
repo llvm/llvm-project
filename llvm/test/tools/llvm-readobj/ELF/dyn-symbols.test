@@ -1,175 +1,88 @@
-# RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 | FileCheck %s
+## In this test we test that dynamic symbols are dumped as expected.
 
-## Check the two-letter alias --dt is equivalent to the --dyn-symbols full flag
-## name.
-
-# RUN: llvm-readobj --dt %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-alias
-# RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-no-alias
-# RUN: diff %t.readobj-dt-alias %t.readobj-dt-no-alias
-
-# CHECK:      DynamicSymbols [
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name:
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Local
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name:
-# CHECK-NEXT:     Value: 0x618
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Local
-# CHECK-NEXT:     Type: Section
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: .init
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name:
-# CHECK-NEXT:     Value: 0x200DC0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Local
-# CHECK-NEXT:     Type: Section
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: .tbss
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _ITM_deregisterTMCloneTable{{ }}
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Weak
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: puts@GLIBC_2.2.5{{ }}
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: Function
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __tls_get_addr@GLIBC_2.3{{ }}
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: Function
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __gmon_start__{{ }}
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Weak
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _Jv_RegisterClasses{{ }}
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Weak
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _ITM_registerTMCloneTable{{ }}
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Weak
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __cxa_finalize@GLIBC_2.2.5{{ }}
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Weak
-# CHECK-NEXT:     Type: Function
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _edata{{ }}
-# CHECK-NEXT:     Value: 0x201030
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: .data
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: foo{{ }}
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 4
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: TLS
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: .tbss
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _end{{ }}
-# CHECK-NEXT:     Value: 0x201038
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: .bss
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __bss_start{{ }}
-# CHECK-NEXT:     Value: 0x201030
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: .bss
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: main{{ }}
-# CHECK-NEXT:     Value: 0x780
-# CHECK-NEXT:     Size: 59
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: Function
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: .text
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _init{{ }}
-# CHECK-NEXT:     Value: 0x618
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: Function
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: .init
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _fini{{ }}
-# CHECK-NEXT:     Value: 0x7BC
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: Function
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: .fini
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
-
-## Check that we are able to dump the dynamic symbol table even when we have no program headers.
-## In this case we find the table by it's type (SHT_DYNSYM) and ignore the DT_SYMTAB value.
-
+## Case 1: Dynamic symbol table found via the DT_SYMTAB dynamic tag.
 # RUN: yaml2obj --docnum=1 %s -o %t1.so
-# RUN: llvm-readobj %t1.so --dyn-symbols | FileCheck %s --check-prefix=NOPHDRS
+# RUN: llvm-readobj --dyn-symbols %t1.so 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not="warning:" --check-prefix=DYNSYMS-LLVM
+# RUN: llvm-readelf --dyn-symbols %t1.so 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not="warning:" --check-prefix=DYNSYMS-GNU
 
-# NOPHDRS: Name: foo
+# DYNSYMS-LLVM:      DynamicSymbols [
+# DYNSYMS-LLVM-NEXT:   Symbol {
+# DYNSYMS-LLVM-NEXT:     Name:  (0)
+# DYNSYMS-LLVM-NEXT:     Value: 0x0
+# DYNSYMS-LLVM-NEXT:     Size: 0
+# DYNSYMS-LLVM-NEXT:     Binding: Local (0x0)
+# DYNSYMS-LLVM-NEXT:     Type: None (0x0)
+# DYNSYMS-LLVM-NEXT:     Other: 0
+# DYNSYMS-LLVM-NEXT:     Section: Undefined (0x0)
+# DYNSYMS-LLVM-NEXT:   }
+# DYNSYMS-LLVM-NEXT:   Symbol {
+# DYNSYMS-LLVM-NEXT:     Name: foo (5)
+# DYNSYMS-LLVM-NEXT:     Value: 0x0
+# DYNSYMS-LLVM-NEXT:     Size: 0
+# DYNSYMS-LLVM-NEXT:     Binding: Local (0x0)
+# DYNSYMS-LLVM-NEXT:     Type: None (0x0)
+# DYNSYMS-LLVM-NEXT:     Other: 0
+# DYNSYMS-LLVM-NEXT:     Section: Undefined (0x0)
+# DYNSYMS-LLVM-NEXT:   }
+# DYNSYMS-LLVM-NEXT:   Symbol {
+# DYNSYMS-LLVM-NEXT:     Name: bar (1)
+# DYNSYMS-LLVM-NEXT:     Value: 0x0
+# DYNSYMS-LLVM-NEXT:     Size: 0
+# DYNSYMS-LLVM-NEXT:     Binding: Local (0x0)
+# DYNSYMS-LLVM-NEXT:     Type: None (0x0)
+# DYNSYMS-LLVM-NEXT:     Other: 0
+# DYNSYMS-LLVM-NEXT:     Section: Undefined (0x0)
+# DYNSYMS-LLVM-NEXT:   }
+# DYNSYMS-LLVM-NEXT: ]
+
+# DYNSYMS-GNU:      Symbol table '.dynsym' contains 3 entries:
+# DYNSYMS-GNU-NEXT:  Num:    Value          Size Type    Bind   Vis       Ndx Name
+# DYNSYMS-GNU-NEXT:    0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# DYNSYMS-GNU-NEXT:    1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo
+# DYNSYMS-GNU-NEXT:    2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND bar
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0x100
+      - Tag:   DT_NULL
+        Value: 0
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Address: 0x100
+DynamicSymbols:
+  - Name: foo
+  - Name: bar
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x100
+    Sections:
+      - Section: .dynsym
+
+## Case 2: Check the two-letter alias --dt is equivalent to the --dyn-symbols
+## full flag name.
+# RUN: llvm-readobj --dt %t1.so > %t.readobj-dt-alias
+# RUN: llvm-readobj --dyn-symbols %t1.so > %t.readobj-dt-no-alias
+# RUN: cmp %t.readobj-dt-alias %t.readobj-dt-no-alias
+
+## Case 3: Check that we are able to dump the dynamic symbol table even when we have no program headers.
+## In this case we find the table by it's type (SHT_DYNSYM) and ignore the DT_SYMTAB value.
+# RUN: yaml2obj --docnum=2 %s -o %t2.so
+# RUN: llvm-readobj %t2.so --dyn-symbols | FileCheck %s --check-prefix=NOPHDRS-LLVM
+# RUN: llvm-readelf %t2.so --dyn-symbols | FileCheck %s --check-prefix=NOPHDRS-GNU
+
+# NOPHDRS-LLVM: Name: foo
+# NOPHDRS-GNU:  1: 0000000000000000 0 NOTYPE LOCAL DEFAULT UND foo
 
 --- !ELF
 FileHeader:
@@ -188,15 +101,15 @@ Sections:
 DynamicSymbols:
   - Name: foo
 
-## Check we report a warning when there is no SHT_DYNSYM section and we can't map the DT_SYMTAB value
+## Case 4: Check we report a warning when there is no SHT_DYNSYM section and we can't map the DT_SYMTAB value
 ## to an address because of the absence of a corresponding PT_LOAD program header.
+# RUN: yaml2obj --docnum=3 %s -o %t3.so
+# RUN: llvm-readobj %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefixes=NOSHT-DYNSYM,NOSHT-DYNSYM-LLVM
+# RUN: llvm-readelf %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefix=NOSHT-DYNSYM
 
-# RUN: yaml2obj --docnum=2 %s -o %t2.so
-# RUN: llvm-readobj %t2.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t2.so --check-prefix=NOSHT-DYNSYM
-
-# NOSHT-DYNSYM: warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0x0
-# NOSHT-DYNSYM:      DynamicSymbols [
-# NOSHT-DYNSYM-NEXT: ]
+# NOSHT-DYNSYM:           warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0x0
+# NOSHT-DYNSYM-LLVM:      DynamicSymbols [
+# NOSHT-DYNSYM-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -217,14 +130,15 @@ Sections:
 DynamicSymbols:
   - Name: foo
 
-## Check that when we can't map the value of the DT_SYMTAB tag to an address, we report a warning and
+## Case 5: Check that when we can't map the value of the DT_SYMTAB tag to an address, we report a warning and
 ## use the information in the section header table to locate the dynamic symbol table.
+# RUN: yaml2obj --docnum=4 %s -o %t4.so
+# RUN: llvm-readobj %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-LLVM
+# RUN: llvm-readelf %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-GNU
 
-# RUN: yaml2obj --docnum=3 %s -o %t3.so
-# RUN: llvm-readobj %t3.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=BROKEN-DTSYMTAB
-
-# BROKEN-DTSYMTAB: warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
-# BROKEN-DTSYMTAB: Name: foo
+# BROKEN-DTSYMTAB:      warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# BROKEN-DTSYMTAB-LLVM: Name: foo
+# BROKEN-DTSYMTAB-GNU:  1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo
 
 --- !ELF
 FileHeader:
@@ -248,14 +162,15 @@ ProgramHeaders:
     Sections:
       - Section: .dynsym
 
-## Check that if we can get the location of the dynamic symbol table using both the DT_SYMTAB value
+## Case 6: Check that if we can get the location of the dynamic symbol table using both the DT_SYMTAB value
 ## and the section headers table then we prefer the former and report a warning.
+# RUN: yaml2obj --docnum=5 %s -o %t5.so
+# RUN: llvm-readobj %t5.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefixes=PREFER-DTSYMTAB,PREFER-DTSYMTAB-LLVM
+# RUN: llvm-readelf %t5.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefixes=PREFER-DTSYMTAB,PREFER-DTSYMTAB-GNU
 
-# RUN: yaml2obj --docnum=4 %s -o %t4.so
-# RUN: llvm-readobj %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=PREFER-DTSYMTAB
-
-# PREFER-DTSYMTAB: warning: '[[FILE]]': SHT_DYNSYM section header and DT_SYMTAB disagree about the location of the dynamic symbol table
-# PREFER-DTSYMTAB: Name: o
+# PREFER-DTSYMTAB:      warning: '[[FILE]]': SHT_DYNSYM section header and DT_SYMTAB disagree about the location of the dynamic symbol table
+# PREFER-DTSYMTAB-LLVM: Name: o
+# PREFER-DTSYMTAB-GNU:  1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND o
 
 --- !ELF
 FileHeader:
@@ -284,3 +199,86 @@ ProgramHeaders:
     VAddr: 0x0000
     Sections:
       - Section: .mydynsym
+
+## Case 7: Check how we dump versioned symbols. Use both -V and --dyn-symbols
+## to check that printed version is consistent.
+# RUN: yaml2obj %s --docnum=6 -o %t6
+# RUN: llvm-readobj -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-LLVM
+# RUN: llvm-readelf -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-GNU
+
+# VERSIONED-LLVM:      Symbol {
+# VERSIONED-LLVM:        Name: foo (16)
+# VERSIONED-LLVM-NEXT:   Value: 0x0
+# VERSIONED-LLVM-NEXT:   Size: 0
+# VERSIONED-LLVM-NEXT:   Binding: Local (0x0)
+# VERSIONED-LLVM-NEXT:   Type: None (0x0)
+# VERSIONED-LLVM-NEXT:   Other: 0
+# VERSIONED-LLVM-NEXT:   Section: Undefined (0x0)
+# VERSIONED-LLVM-NEXT: }
+# VERSIONED-LLVM-NEXT: Symbol {
+# VERSIONED-LLVM-NEXT:   Name: bar@@Default (12)
+# VERSIONED-LLVM-NEXT:   Value: 0x0
+# VERSIONED-LLVM-NEXT:   Size: 0
+# VERSIONED-LLVM-NEXT:   Binding: Local (0x0)
+# VERSIONED-LLVM-NEXT:   Type: None (0x0)
+# VERSIONED-LLVM-NEXT:   Other: 0
+# VERSIONED-LLVM-NEXT:   Section: Undefined (0x0)
+# VERSIONED-LLVM-NEXT: }
+# VERSIONED-LLVM-NEXT: Symbol {
+# VERSIONED-LLVM-NEXT:   Name: zed@NonDefault (20)
+# VERSIONED-LLVM-NEXT:   Value: 0x0
+# VERSIONED-LLVM-NEXT:   Size: 0
+# VERSIONED-LLVM-NEXT:   Binding: Local (0x0)
+# VERSIONED-LLVM-NEXT:   Type: None (0x0)
+# VERSIONED-LLVM-NEXT:   Other: 0
+# VERSIONED-LLVM-NEXT:   Section: Undefined (0x0)
+# VERSIONED-LLVM-NEXT: }
+# VERSIONED-LLVM: VersionSymbols [
+# VERSIONED-LLVM:  Name: foo
+# VERSIONED-LLVM:  Name: bar@@Default
+# VERSIONED-LLVM:  Name: zed@NonDefault
+
+# VERSIONED-GNU:      Num:    Value          Size Type    Bind   Vis       Ndx Name
+# VERSIONED-GNU:        1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo
+# VERSIONED-GNU-NEXT:   2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND bar@@Default
+# VERSIONED-GNU-NEXT:   3: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND zed@NonDefault
+# VERSIONED-GNU:      000:   0 (*local*) 1 (*global*) 2 (Default) 3h(NonDefault)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .gnu.version
+    Type:         SHT_GNU_versym
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynsym
+    AddressAlign: 0x2
+    EntSize:      0x2
+## 0x8000 is a special VERSYM_HIDDEN bit.
+    Entries:      [ 0, 1, 2, 0x8003 ]
+  - Name:         .gnu.version_d
+    Type:         SHT_GNU_verdef
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynstr
+    AddressAlign: 0x4
+    Info:         0x2
+    Entries:
+      - Version:    1
+        Flags:      0
+        VersionNdx: 2
+        Hash:       0
+        Names:
+          - Default
+      - Version:    1
+        Flags:      0
+        VersionNdx: 3
+        Hash:       0
+        Names:
+          - NonDefault
+DynamicSymbols:
+  - Name: foo
+  - Name: bar
+  - Name: zed

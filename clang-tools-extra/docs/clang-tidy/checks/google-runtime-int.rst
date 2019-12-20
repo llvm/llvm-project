@@ -9,7 +9,7 @@ with ``u?intXX(_t)?``.
 The corresponding style guide rule:
 https://google.github.io/styleguide/cppguide.html#Integer_Types.
 
-Correspondig cpplint.py check: `runtime/int`.
+Corresponding cpplint.py check: `runtime/int`.
 
 Options
 -------

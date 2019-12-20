@@ -7,7 +7,7 @@ Clang-Doc
 .. toctree::
    :maxdepth: 1
 
-:program:`clang-doc` is a tool for generating C and C++ documenation from 
+:program:`clang-doc` is a tool for generating C and C++ documentation from 
 source code and comments. 
 
 The tool is in a very early development stage, so you might encounter bugs and
@@ -100,7 +100,7 @@ Options
                                   generated if the file is in this dir.
     --stylesheets=<string>      - CSS stylesheets to extend the default styles.
 
-The following flags shoud only be used if ``format`` is set to ``html``:
+The following flags should only be used if ``format`` is set to ``html``:
 - ``repository``
 - ``source-root``
 - ``stylesheets``

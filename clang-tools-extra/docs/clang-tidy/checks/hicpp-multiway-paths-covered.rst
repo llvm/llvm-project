@@ -82,7 +82,7 @@ Degenerated ``switch`` statements without any labels are caught as well.
 
 .. code-block:: c++
   
-  // A completly degenerated switch will be diagnosed.
+  // A completely degenerated switch will be diagnosed.
   int i = 42;
   switch(i) {}
 

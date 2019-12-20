@@ -107,7 +107,7 @@ INLINE uint32_t __kmpc_impl_smid() {
 
 INLINE double __target_impl_get_wtick() { return ((double)1E-9); }
 
-EXTERN int64_t __clock64();
+EXTERN uint64_t __clock64();
 INLINE double __target_impl_get_wtime() {
   return ((double)1.0 / 745000000.0) * __clock64();
 }
@@ -155,12 +155,18 @@ INLINE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
 INLINE int GetNumberOfBlocksInKernel() { return __ockl_get_num_groups(0); }
 INLINE int GetNumberOfThreadsInBlock() { return __ockl_get_local_size(0); }
 
+EXTERN bool __kmpc_impl_is_first_active_thread();
+
 // Locks
 EXTERN void __kmpc_impl_init_lock(omp_lock_t *lock);
 EXTERN void __kmpc_impl_destroy_lock(omp_lock_t *lock);
 EXTERN void __kmpc_impl_set_lock(omp_lock_t *lock);
 EXTERN void __kmpc_impl_unset_lock(omp_lock_t *lock);
 EXTERN int __kmpc_impl_test_lock(omp_lock_t *lock);
+
+// Memory
+EXTERN void *__kmpc_impl_malloc(size_t x);
+EXTERN void __kmpc_impl_free(void *x);
 
 // DEVICE versions of part of libc
 extern "C" {

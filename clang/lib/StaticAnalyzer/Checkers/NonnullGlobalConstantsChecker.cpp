@@ -36,6 +36,7 @@ class NonnullGlobalConstantsChecker : public Checker<check::Location> {
   mutable IdentifierInfo *NSStringII = nullptr;
   mutable IdentifierInfo *CFStringRefII = nullptr;
   mutable IdentifierInfo *CFBooleanRefII = nullptr;
+  mutable IdentifierInfo *CFNullRefII = nullptr;
 
 public:
   NonnullGlobalConstantsChecker() {}
@@ -61,6 +62,7 @@ void NonnullGlobalConstantsChecker::initIdentifierInfo(ASTContext &Ctx) const {
   NSStringII = &Ctx.Idents.get("NSString");
   CFStringRefII = &Ctx.Idents.get("CFStringRef");
   CFBooleanRefII = &Ctx.Idents.get("CFBooleanRef");
+  CFNullRefII = &Ctx.Idents.get("CFNullRef");
 }
 
 /// Add an assumption that const string-like globals are non-null.
@@ -136,7 +138,7 @@ bool NonnullGlobalConstantsChecker::isNonnullType(QualType Ty) const {
       T->getInterfaceDecl()->getIdentifier() == NSStringII;
   } else if (auto *T = dyn_cast<TypedefType>(Ty)) {
     IdentifierInfo* II = T->getDecl()->getIdentifier();
-    return II == CFStringRefII || II == CFBooleanRefII;
+    return II == CFStringRefII || II == CFBooleanRefII || II == CFNullRefII;
   }
   return false;
 }

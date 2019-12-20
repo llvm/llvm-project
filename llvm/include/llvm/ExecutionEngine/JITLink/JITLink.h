@@ -873,7 +873,7 @@ public:
                           uint64_t Alignment, bool IsLive) {
     auto &Sym = Symbol::constructCommon(
         Allocator.Allocate<Symbol>(),
-        createBlock(Section, Address, Size, Alignment, 0), Name, Size, S,
+        createBlock(Section, Size, Address, Alignment, 0), Name, Size, S,
         IsLive);
     Section.addSymbol(Sym);
     return Sym;

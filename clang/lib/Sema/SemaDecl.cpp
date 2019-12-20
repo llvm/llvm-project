@@ -3656,6 +3656,11 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
   }
 
+  // Check if the function types are compatible when pointer size address
+  // spaces are ignored.
+  if (Context.hasSameFunctionTypeIgnoringPtrSizes(OldQType, NewQType))
+    return false;
+
   // GNU C permits a K&R definition to follow a prototype declaration
   // if the declared types of the parameters in the K&R definition
   // match the types in the prototype declaration, even when the

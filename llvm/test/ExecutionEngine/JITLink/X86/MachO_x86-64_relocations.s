@@ -4,6 +4,11 @@
 
         .section        __TEXT,__text,regular,pure_instructions
 
+# Check that common symbols work.
+# jitlink-check: *{4}common_symbol = 0
+# jitlink-check: common_symbol[1:0] = 0
+.comm   common_symbol,4,2
+
         .align  4, 0x90
 Lanon_func:
         retq

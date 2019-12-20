@@ -5,17 +5,17 @@
 # CHECK: DW_TAG_compile_unit
 # CHECK:   DW_AT_low_pc                                              (0x0000000000000000)
 # VERBOSE: DW_AT_low_pc [DW_FORM_addrx] (indexed (00000000) address = 0x0000000000000000 ".text")
-# FIXME: There is a debug_addr section, it's just that the index is outside its 
-#        bounds (both of the section, and the range defined by the header for the
-#        debug_addr contribution for this CU)
-# CHECK:   DW_AT_low_pc                 (indexed (00000001) address = <no .debug_addr section>)
-# VERBOSE: DW_AT_low_pc [DW_FORM_addrx] (indexed (00000001) address = <no .debug_addr section>)
+# FIXME: Improve the error message from "unresolved" to describe the specific
+#        issue (in this case, the index is outside the bounds of the debug_addr
+#        contribution/debug_addr section)
+# CHECK:   DW_AT_low_pc                 (indexed (00000001) address = <unresolved>)
+# VERBOSE: DW_AT_low_pc [DW_FORM_addrx] (indexed (00000001) address = <unresolved>)
 
 # CHECK: DW_TAG_compile_unit
 # FIXME: Should error "no debug_addr contribution" - rather than parsing debug_addr
 #        from the start, incorrectly interpreting the header bytes as an address.
-# CHECK:   DW_AT_low_pc                                              (0x000800050000000c)
-# VERBOSE: DW_AT_low_pc [DW_FORM_addrx] (indexed (00000000) address = 0x000800050000000c)
+# CHECK:   DW_AT_low_pc                 (indexed (00000000) address = <unresolved>)
+# VERBOSE: DW_AT_low_pc [DW_FORM_addrx] (indexed (00000000) address = <unresolved>)
 
 	.globl	foo                     # -- Begin function foo
 foo:                                    # @foo

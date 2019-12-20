@@ -412,7 +412,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     if (A)
       dumpSectionedAddress(AddrOS, DumpOpts, *A);
     else
-      OS << "<no .debug_addr section>";
+      OS << "<unresolved>";
     break;
   }
   case DW_FORM_flag_present:

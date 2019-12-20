@@ -14,6 +14,10 @@
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
 #endif
 
+#if LLDB_ENABLE_LUA
+#include "Plugins/ScriptInterpreter/Lua/ScriptInterpreterLua.h"
+#endif
+
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
@@ -185,6 +189,10 @@ llvm::Error SystemInitializerFull::Initialize() {
 
 #if LLDB_ENABLE_PYTHON
   ScriptInterpreterPython::Initialize();
+#endif
+
+#if LLDB_ENABLE_LUA
+  ScriptInterpreterLua::Initialize();
 #endif
 
   platform_freebsd::PlatformFreeBSD::Initialize();

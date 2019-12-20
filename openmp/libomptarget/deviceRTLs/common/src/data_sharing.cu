@@ -1,4 +1,4 @@
-//===----- data_sharing.cu - NVPTX OpenMP debug utilities -------- CUDA -*-===//
+//===----- data_sharing.cu - OpenMP GPU data sharing ------------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the implementation of data sharing environments/
+// This file contains the implementation of data sharing environments
 //
 //===----------------------------------------------------------------------===//
 #include "common/omptarget.h"
 #include "target_impl.h"
 #include <stdio.h>
 
-// Return true if this is the first active thread in the warp.
-INLINE static bool IsWarpMasterActiveThread() {
-  unsigned long long Mask = __kmpc_impl_activemask();
-  unsigned long long ShNum = WARPSIZE - (GetThreadIdInBlock() % WARPSIZE);
-  unsigned long long Sh = Mask << ShNum;
-  // Truncate Sh to the 32 lower bits
-  return (unsigned)Sh == 0;
-}
 // Return true if this is the master thread.
 INLINE static bool IsMasterThread(bool isSPMDExecutionMode) {
   return !isSPMDExecutionMode && GetMasterThreadID() == GetThreadIdInBlock();
@@ -128,7 +120,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
   DSPRINT(DSFLAG, "Active threads: %08x \n", (unsigned)ActiveT);
 
   // Only the warp active master needs to grow the stack.
-  if (IsWarpMasterActiveThread()) {
+  if (__kmpc_impl_is_first_active_thread()) {
     // Save the current active threads.
     ActiveT = CurActiveThreads;
 
@@ -229,7 +221,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
   unsigned WID = GetWarpId();
 
   if (IsEntryPoint) {
-    if (IsWarpMasterActiveThread()) {
+    if (__kmpc_impl_is_first_active_thread()) {
       DSPRINT0(DSFLAG, "Doing clean up\n");
 
       // The master thread cleans the saved slot, because this is an environment
@@ -255,7 +247,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
   // warp diverged and returns in different places). This only works if we
   // assume that threads will converge right after the call site that started
   // the environment.
-  if (IsWarpMasterActiveThread()) {
+  if (__kmpc_impl_is_first_active_thread()) {
     __kmpc_impl_lanemask_t &ActiveT = DataSharingState.ActiveThreads[WID];
 
     DSPRINT0(DSFLAG, "Before restoring the stack\n");

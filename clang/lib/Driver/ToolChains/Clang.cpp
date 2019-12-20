@@ -1415,29 +1415,6 @@ static bool isNoCommonDefault(const llvm::Triple &Triple) {
   }
 }
 
-static bool shouldEmitRemarks(const ArgList &Args) {
-  // -fsave-optimization-record enables it.
-  if (Args.hasFlag(options::OPT_fsave_optimization_record,
-                   options::OPT_fno_save_optimization_record, false))
-    return true;
-
-  // -fsave-optimization-record=<format> enables it as well.
-  if (Args.hasFlag(options::OPT_fsave_optimization_record_EQ,
-                   options::OPT_fno_save_optimization_record, false))
-    return true;
-
-  // -foptimization-record-file alone enables it too.
-  if (Args.hasFlag(options::OPT_foptimization_record_file_EQ,
-                   options::OPT_fno_save_optimization_record, false))
-    return true;
-
-  // -foptimization-record-passes alone enables it too.
-  if (Args.hasFlag(options::OPT_foptimization_record_passes_EQ,
-                   options::OPT_fno_save_optimization_record, false))
-    return true;
-  return false;
-}
-
 static bool hasMultipleInvocations(const llvm::Triple &Triple,
                                    const ArgList &Args) {
   // Supported only on Darwin where we invoke the compiler multiple times
@@ -1467,7 +1444,12 @@ static bool checkRemarksOptions(const Driver &D, const ArgList &Args,
 
 static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
                                  const llvm::Triple &Triple,
-                                 const InputInfo &Input, const JobAction &JA) {
+                                 const InputInfo &Input,
+                                 const InputInfo &Output, const JobAction &JA) {
+  StringRef Format = "yaml";
+  if (const Arg *A = Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+    Format = A->getValue();
+
   CmdArgs.push_back("-opt-record-file");
 
   const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
@@ -1477,11 +1459,17 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
     bool hasMultipleArchs =
         Triple.isOSDarwin() && // Only supported on Darwin platforms.
         Args.getAllArgValues(options::OPT_arch).size() > 1;
+
     SmallString<128> F;
 
     if (Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S)) {
       if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
         F = FinalOutput->getValue();
+    } else {
+      if (Format != "yaml" && // For YAML, keep the original behavior.
+          Triple.isOSDarwin() && // Enable this only on darwin, since it's the only platform supporting .dSYM bundles.
+          Output.isFilename())
+        F = Output.getFilename();
     }
 
     if (F.empty()) {
@@ -1517,12 +1505,9 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
       llvm::sys::path::replace_extension(F, OldExtension);
     }
 
-    std::string Extension = "opt.";
-    if (const Arg *A =
-            Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
-      Extension += A->getValue();
-    else
-      Extension += "yaml";
+    SmallString<32> Extension;
+    Extension += "opt.";
+    Extension += Format;
 
     llvm::sys::path::replace_extension(F, Extension);
     CmdArgs.push_back(Args.MakeArgString(F));
@@ -1534,10 +1519,9 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
     CmdArgs.push_back(A->getValue());
   }
 
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_fsave_optimization_record_EQ)) {
+  if (!Format.empty()) {
     CmdArgs.push_back("-opt-record-format");
-    CmdArgs.push_back(A->getValue());
+    CmdArgs.push_back(Format.data());
   }
 }
 
@@ -2456,15 +2440,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     switch (optID) {
     default:
       break;
-    case options::OPT_frounding_math:
-    case options::OPT_ftrapping_math:
-    case options::OPT_ffp_exception_behavior_EQ:
-      D.Diag(clang::diag::warn_drv_experimental_fp_control_incomplete_opt)
-          << A->getOption().getName();
-      break;
     case options::OPT_ffp_model_EQ: {
-      D.Diag(clang::diag::warn_drv_experimental_fp_control_incomplete_opt)
-          << A->getOption().getName();
       // If -ffp-model= is seen, reset to fno-fast-math
       HonorINFs = true;
       HonorNaNs = true;
@@ -2813,8 +2789,11 @@ static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
       CmdArgs.push_back("-analyzer-disable-checker=unix.Vfork");
     }
 
-    if (Triple.isOSDarwin())
+    if (Triple.isOSDarwin()) {
       CmdArgs.push_back("-analyzer-checker=osx");
+      CmdArgs.push_back(
+          "-analyzer-checker=security.insecureAPI.decodeValueOfObjCType");
+    }
 
     CmdArgs.push_back("-analyzer-checker=deadcode");
 
@@ -3718,7 +3697,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   TC.adjustDebugInfoKind(DebugInfoKind, Args);
 
   // When emitting remarks, we need at least debug lines in the output.
-  if (shouldEmitRemarks(Args) &&
+  if (willEmitRemarks(Args) &&
       DebugInfoKind <= codegenoptions::DebugDirectivesOnly)
     DebugInfoKind = codegenoptions::DebugLineTablesOnly;
 
@@ -5014,6 +4993,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (TC.SupportsProfiling())
     Args.AddLastArg(CmdArgs, options::OPT_mnop_mcount);
 
+  if (TC.SupportsProfiling())
+    Args.AddLastArg(CmdArgs, options::OPT_mrecord_mcount);
+
   Args.AddLastArg(CmdArgs, options::OPT_mpacked_stack);
 
   if (Args.getLastArg(options::OPT_fapple_kext) ||
@@ -5029,6 +5011,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_granularity_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_ftrapv);
   Args.AddLastArg(CmdArgs, options::OPT_malign_double);
+  Args.AddLastArg(CmdArgs, options::OPT_fno_temp_file);
 
   if (Arg *A = Args.getLastArg(options::OPT_ftrapv_handler_EQ)) {
     CmdArgs.push_back("-ftrapv-handler");
@@ -5546,8 +5529,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fapple-pragma-pack");
 
   // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
-  if (shouldEmitRemarks(Args) && checkRemarksOptions(D, Args, Triple))
-    renderRemarksOptions(Args, CmdArgs, Triple, Input, JA);
+  if (willEmitRemarks(Args) && checkRemarksOptions(D, Args, Triple))
+    renderRemarksOptions(Args, CmdArgs, Triple, Input, Output, JA);
 
   bool RewriteImports = Args.hasFlag(options::OPT_frewrite_imports,
                                      options::OPT_fno_rewrite_imports, false);

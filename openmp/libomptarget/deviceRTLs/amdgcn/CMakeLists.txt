@@ -57,12 +57,14 @@ get_filename_component(devicertl_base_directory
 set(cuda_sources
   ${devicertl_base_directory}/common/src/cancel.cu
   ${devicertl_base_directory}/common/src/critical.cu
-  ${devicertl_base_directory}/common/src/loop.cu
+  ${devicertl_base_directory}/common/src/data_sharing.cu
   ${devicertl_base_directory}/common/src/libcall.cu
-  ${devicertl_base_directory}/common/src/reduction.cu
+  ${devicertl_base_directory}/common/src/loop.cu
   ${devicertl_base_directory}/common/src/omp_data.cu
   ${devicertl_base_directory}/common/src/omptarget.cu
   ${devicertl_base_directory}/common/src/parallel.cu
+  ${devicertl_base_directory}/common/src/reduction.cu
+  ${devicertl_base_directory}/common/src/support.cu
   ${devicertl_base_directory}/common/src/sync.cu
   ${devicertl_base_directory}/common/src/task.cu)
 
@@ -75,6 +77,7 @@ set(h_files
   ${devicertl_base_directory}/common/omptarget.h
   ${devicertl_base_directory}/common/omptargeti.h
   ${devicertl_base_directory}/common/state-queue.h
+  ${devicertl_base_directory}/common/target_atomic.h
   ${devicertl_base_directory}/common/state-queuei.h
   ${devicertl_base_directory}/common/support.h)
 

@@ -205,6 +205,7 @@ enum NodeType : unsigned {
   UUNPKLO,
 
   INSR,
+  PTRUE,
 
   // Unsigned gather loads.
   GLD1,

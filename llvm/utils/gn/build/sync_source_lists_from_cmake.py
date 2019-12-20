@@ -98,7 +98,7 @@ def sync_source_lists(write):
 
     # Output necessary changes grouped by revision.
     for rev in sorted(changes_by_rev):
-        print('gn build: Merge {0} -- https://reviews.llvm.org/rG{0}'
+        print('[gn build] Port {0} -- https://reviews.llvm.org/rG{0}'
             .format(rev))
         for gn_file, data in sorted(changes_by_rev[rev].items()):
             add = data.get('add', [])
@@ -114,7 +114,7 @@ def sync_source_lists(write):
                     print('   remove:\n    ' + '\n    '.join(remove))
                 print()
         if write:
-            git(['commit', '-m', 'gn build: Merge %s' % rev])
+            git(['commit', '-m', '[gn build] Port %s' % rev])
         else:
             print()
 

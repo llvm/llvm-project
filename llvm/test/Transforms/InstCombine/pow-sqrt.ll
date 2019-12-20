@@ -150,6 +150,7 @@ define double @pow_intrinsic_half_fast(double %x) {
   ret double %pow
 }
 
+; FIXME: This should not be transformed without some kind of FMF.
 ; -0.5 means take the reciprocal.
 
 define float @pow_libcall_neghalf_no_FMF(float %x) {
@@ -165,6 +166,34 @@ define float @pow_libcall_neghalf_no_FMF(float %x) {
   ret float %pow
 }
 
+define float @pow_libcall_neghalf_reassoc(float %x) {
+; CHECK-LABEL: @pow_libcall_neghalf_reassoc(
+; CHECK-NEXT:    [[SQRTF:%.*]] = call reassoc float @sqrtf(float [[X:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = call reassoc float @llvm.fabs.f32(float [[SQRTF]])
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp reassoc oeq float [[X]], 0xFFF0000000000000
+; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv reassoc float 1.000000e+00, [[ABS]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], float 0.000000e+00, float [[ABS_OP]]
+; CHECK-NEXT:    ret float [[RECIPROCAL]]
+;
+  %pow = call reassoc float @powf(float %x, float -5.0e-01)
+  ret float %pow
+}
+
+define float @pow_libcall_neghalf_afn(float %x) {
+; CHECK-LABEL: @pow_libcall_neghalf_afn(
+; CHECK-NEXT:    [[SQRTF:%.*]] = call afn float @sqrtf(float [[X:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = call afn float @llvm.fabs.f32(float [[SQRTF]])
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq float [[X]], 0xFFF0000000000000
+; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv afn float 1.000000e+00, [[ABS]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], float 0.000000e+00, float [[ABS_OP]]
+; CHECK-NEXT:    ret float [[RECIPROCAL]]
+;
+  %pow = call afn float @powf(float %x, float -5.0e-01)
+  ret float %pow
+}
+
+; FIXME: This should not be transformed without some kind of FMF.
+
 define <2 x double> @pow_intrinsic_neghalf_no_FMF(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_no_FMF(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
@@ -178,27 +207,53 @@ define <2 x double> @pow_intrinsic_neghalf_no_FMF(<2 x double> %x) {
   ret <2 x double> %pow
 }
 
+define <2 x double> @pow_intrinsic_neghalf_reassoc(<2 x double> %x) {
+; CHECK-LABEL: @pow_intrinsic_neghalf_reassoc(
+; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = call reassoc <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp reassoc oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
+; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv reassoc <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select <2 x i1> [[ISINF]], <2 x double> zeroinitializer, <2 x double> [[ABS_OP]]
+; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
+;
+  %pow = call reassoc <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
+  ret <2 x double> %pow
+}
+
+define <2 x double> @pow_intrinsic_neghalf_afn(<2 x double> %x) {
+; CHECK-LABEL: @pow_intrinsic_neghalf_afn(
+; CHECK-NEXT:    [[SQRT:%.*]] = call afn <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = call afn <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
+; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv afn <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select <2 x i1> [[ISINF]], <2 x double> zeroinitializer, <2 x double> [[ABS_OP]]
+; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
+;
+  %pow = call afn <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
+  ret <2 x double> %pow
+}
+
 ; If we can disregard INFs, no need for a select.
 
 define double @pow_libcall_neghalf_ninf(double %x) {
 ; CHECK-LABEL: @pow_libcall_neghalf_ninf(
-; CHECK-NEXT:    [[SQRT:%.*]] = call ninf double @sqrt(double [[X:%.*]])
-; CHECK-NEXT:    [[ABS:%.*]] = call ninf double @llvm.fabs.f64(double [[SQRT]])
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf double 1.000000e+00, [[ABS]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call ninf afn double @sqrt(double [[X:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = call ninf afn double @llvm.fabs.f64(double [[SQRT]])
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf afn double 1.000000e+00, [[ABS]]
 ; CHECK-NEXT:    ret double [[RECIPROCAL]]
 ;
-  %pow = call ninf double @pow(double %x, double -5.0e-01)
+  %pow = call afn ninf double @pow(double %x, double -5.0e-01)
   ret double %pow
 }
 
 define <2 x double> @pow_intrinsic_neghalf_ninf(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_ninf(
-; CHECK-NEXT:    [[SQRT:%.*]] = call ninf <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
-; CHECK-NEXT:    [[ABS:%.*]] = call ninf <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call ninf afn <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = call ninf afn <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf afn <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
 ; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
 ;
-  %pow = call ninf <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
+  %pow = call afn ninf <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
   ret <2 x double> %pow
 }
 
@@ -206,25 +261,25 @@ define <2 x double> @pow_intrinsic_neghalf_ninf(<2 x double> %x) {
 
 define double @pow_libcall_neghalf_nsz(double %x) {
 ; CHECK-LABEL: @pow_libcall_neghalf_nsz(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @sqrt(double [[X:%.*]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[SQRT_OP:%.*]] = fdiv nsz double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz afn double @sqrt(double [[X:%.*]])
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz afn oeq double [[X]], 0xFFF0000000000000
+; CHECK-NEXT:    [[SQRT_OP:%.*]] = fdiv nsz afn double 1.000000e+00, [[SQRT]]
 ; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], double 0.000000e+00, double [[SQRT_OP]]
 ; CHECK-NEXT:    ret double [[RECIPROCAL]]
 ;
-  %pow = call nsz double @pow(double %x, double -5.0e-01)
+  %pow = call afn nsz double @pow(double %x, double -5.0e-01)
   ret double %pow
 }
 
 define double @pow_intrinsic_neghalf_nsz(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_nsz(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[SQRT_OP:%.*]] = fdiv nsz double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz afn double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz afn oeq double [[X]], 0xFFF0000000000000
+; CHECK-NEXT:    [[SQRT_OP:%.*]] = fdiv nsz afn double 1.000000e+00, [[SQRT]]
 ; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], double 0.000000e+00, double [[SQRT_OP]]
 ; CHECK-NEXT:    ret double [[RECIPROCAL]]
 ;
-  %pow = call nsz double @llvm.pow.f64(double %x, double -5.0e-01)
+  %pow = call afn nsz double @llvm.pow.f64(double %x, double -5.0e-01)
   ret double %pow
 }
 
@@ -232,21 +287,21 @@ define double @pow_intrinsic_neghalf_nsz(double %x) {
 
 define double @pow_intrinsic_neghalf_ninf_nsz(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_ninf_nsz(
-; CHECK-NEXT:    [[SQRT:%.*]] = call ninf nsz double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf nsz double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call ninf nsz afn double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf nsz afn double 1.000000e+00, [[SQRT]]
 ; CHECK-NEXT:    ret double [[RECIPROCAL]]
 ;
-  %pow = call ninf nsz double @llvm.pow.f64(double %x, double -5.0e-01)
+  %pow = call afn ninf nsz double @llvm.pow.f64(double %x, double -5.0e-01)
   ret double %pow
 }
 
 define float @pow_libcall_neghalf_ninf_nsz(float %x) {
 ; CHECK-LABEL: @pow_libcall_neghalf_ninf_nsz(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call ninf nsz float @sqrtf(float [[X:%.*]])
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf nsz float 1.000000e+00, [[SQRTF]]
+; CHECK-NEXT:    [[SQRTF:%.*]] = call ninf nsz afn float @sqrtf(float [[X:%.*]])
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf nsz afn float 1.000000e+00, [[SQRTF]]
 ; CHECK-NEXT:    ret float [[RECIPROCAL]]
 ;
-  %pow = call ninf nsz float @powf(float %x, float -5.0e-01)
+  %pow = call afn ninf nsz float @powf(float %x, float -5.0e-01)
   ret float %pow
 }
 
@@ -259,19 +314,6 @@ define float @pow_libcall_neghalf_fast(float %x) {
 ; CHECK-NEXT:    ret float [[RECIPROCAL]]
 ;
   %pow = call fast float @powf(float %x, float -5.0e-01)
-  ret float %pow
-}
-
-define float @powf_libcall_neghalf_approx(float %x) {
-; CHECK-LABEL: @powf_libcall_neghalf_approx(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call afn float @sqrtf(float [[X:%.*]])
-; CHECK-NEXT:    [[ABS:%.*]] = call afn float @llvm.fabs.f32(float [[SQRTF]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq float [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv afn float 1.000000e+00, [[ABS]]
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], float 0.000000e+00, float [[ABS_OP]]
-; CHECK-NEXT:    ret float [[RECIPROCAL]]
-;
-  %pow = call afn float @powf(float %x, float -5.0e-01)
   ret float %pow
 }
 

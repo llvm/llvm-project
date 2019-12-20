@@ -804,6 +804,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_i32_ty],
                 [IntrNoMem]>;
 
+  class AdvSIMD_Pred1VectorArg_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMMatchType<0>],
+                [IntrNoMem]>;
+
   class AdvSIMD_Pred2VectorArg_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -923,6 +929,11 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorElementType<0>],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_PTRUE_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [llvm_i32_ty],
+                [IntrNoMem, ImmArg<0>]>;
+
   class AdvSIMD_SVE_PUNPKHI_Intrinsic
     : Intrinsic<[LLVMHalfElementsVectorType<0>],
                 [llvm_anyvector_ty],
@@ -951,7 +962,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_SVE_CNTB_Intrinsic
     : Intrinsic<[llvm_i64_ty],
                 [llvm_i32_ty],
-                [IntrNoMem]>;
+                [IntrNoMem, ImmArg<0>]>;
 
   class AdvSIMD_SVE_CNTP_Intrinsic
     : Intrinsic<[llvm_i64_ty],
@@ -1069,6 +1080,12 @@ class AdvSIMD_GatherLoad_VecTorBase_Intrinsic
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
 
+class AdvSIMD_1VectorArg_Imm_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_i32_ty],
+                [IntrNoMem, ImmArg<1>]>;
+
 class AdvSIMD_ScatterStore_64bitOffset_Intrinsic
     : Intrinsic<[],
                [
@@ -1098,6 +1115,12 @@ class AdvSIMD_ScatterStore_VectorBase_Intrinsic
                ],
                [IntrWriteMem, IntrArgMemOnly, ImmArg<3>]>;
 
+class AdvSIMD_1VectorArg_Imm64_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_i64_ty],
+                [IntrNoMem, ImmArg<1>]>;
+
 //
 // Loads
 //
@@ -1117,6 +1140,14 @@ def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 def int_aarch64_sve_add   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_sub   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_subr  : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_add_imm    : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_sub_imm    : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_subr_imm   : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_sqadd_imm  : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_uqadd_imm  : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_sqsub_imm  : AdvSIMD_1VectorArg_Imm_Intrinsic;
+def int_aarch64_sve_uqsub_imm  : AdvSIMD_1VectorArg_Imm_Intrinsic;
 
 def int_aarch64_sve_mul        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_smulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
@@ -1256,6 +1287,10 @@ def int_aarch64_sve_orrs        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_orns        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_nors        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_nands       : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_orr_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
+def int_aarch64_sve_eor_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
+def int_aarch64_sve_and_imm  : AdvSIMD_1VectorArg_Imm64_Intrinsic;
 
 //
 // Conversion
@@ -1403,9 +1438,17 @@ def int_aarch64_sve_ucvtf_f32i64    : Builtin_SVCVT<"svcvt_f32_u64_m", llvm_nxv4
 def int_aarch64_sve_ucvtf_f64i32    : Builtin_SVCVT<"svcvt_f64_u32_m", llvm_nxv2f64_ty, llvm_nxv4i32_ty>;
 
 //
+// Predicate creation
+//
+
+def int_aarch64_sve_ptrue : AdvSIMD_SVE_PTRUE_Intrinsic;
+
+//
 // Predicate operations
 //
 
+def int_aarch64_sve_pfirst  : AdvSIMD_Pred1VectorArg_Intrinsic;
+def int_aarch64_sve_pnext   : AdvSIMD_Pred1VectorArg_Intrinsic;
 def int_aarch64_sve_punpkhi : AdvSIMD_SVE_PUNPKHI_Intrinsic;
 def int_aarch64_sve_punpklo : AdvSIMD_SVE_PUNPKHI_Intrinsic;
 

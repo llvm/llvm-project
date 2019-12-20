@@ -347,9 +347,12 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const Function &F = MF.getFunction();
-    if (F.getFnAttribute("mnop-mcount").getValueAsString() == "true" &&
-        F.getFnAttribute("fentry-call").getValueAsString() != "true")
-      report_fatal_error("mnop-mcount only supported with fentry-call");
+    if (F.getFnAttribute("fentry-call").getValueAsString() != "true") {
+      if (F.hasFnAttribute("mnop-mcount"))
+        report_fatal_error("mnop-mcount only supported with fentry-call");
+      if (F.hasFnAttribute("mrecord-mcount"))
+        report_fatal_error("mrecord-mcount only supported with fentry-call");
+    }
 
     Subtarget = &MF.getSubtarget<SystemZSubtarget>();
     return SelectionDAGISel::runOnMachineFunction(MF);

@@ -93,13 +93,13 @@ let Predicates = [HasSVE] in {
   defm AND_ZPmZ : sve_int_bin_pred_log<0b010, "and", int_aarch64_sve_and>;
   defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic", int_aarch64_sve_bic>;
 
-  defm ADD_ZI   : sve_int_arith_imm0<0b000, "add", add>;
-  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub>;
-  defm SUBR_ZI  : sve_int_arith_imm0_subr<0b011, "subr", sub>;
-  defm SQADD_ZI : sve_int_arith_imm0<0b100, "sqadd", saddsat>;
-  defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd", uaddsat>;
-  defm SQSUB_ZI : sve_int_arith_imm0<0b110, "sqsub", ssubsat>;
-  defm UQSUB_ZI : sve_int_arith_imm0<0b111, "uqsub", usubsat>;
+  defm ADD_ZI   : sve_int_arith_imm0<0b000, "add", int_aarch64_sve_add_imm>;
+  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", int_aarch64_sve_sub_imm>;
+  defm SUBR_ZI  : sve_int_arith_imm0<0b011, "subr", int_aarch64_sve_subr_imm>;
+  defm SQADD_ZI : sve_int_arith_imm0<0b100, "sqadd", int_aarch64_sve_sqadd_imm>;
+  defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd", int_aarch64_sve_uqadd_imm>;
+  defm SQSUB_ZI : sve_int_arith_imm0<0b110, "sqsub", int_aarch64_sve_sqsub_imm>;
+  defm UQSUB_ZI : sve_int_arith_imm0<0b111, "uqsub", int_aarch64_sve_uqsub_imm>;
 
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", int_aarch64_sve_mad>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", int_aarch64_sve_msb>;
@@ -117,9 +117,9 @@ let Predicates = [HasSVE] in {
   defm EORV_VPZ  : sve_int_reduce_2<0b001, "eorv", AArch64eorv_pred>;
   defm ANDV_VPZ  : sve_int_reduce_2<0b010, "andv", AArch64andv_pred>;
 
-  defm ORR_ZI : sve_int_log_imm<0b00, "orr", "orn", or>;
-  defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon", xor>;
-  defm AND_ZI : sve_int_log_imm<0b10, "and", "bic", and>;
+  defm ORR_ZI : sve_int_log_imm<0b00, "orr", "orn", int_aarch64_sve_orr_imm>;
+  defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon", int_aarch64_sve_eor_imm>;
+  defm AND_ZI : sve_int_log_imm<0b10, "and", "bic", int_aarch64_sve_and_imm>;
 
   defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", simm8>;
   defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", simm8>;
@@ -295,8 +295,8 @@ let Predicates = [HasSVE] in {
 
   def PTEST_PP : sve_int_ptest<0b010000, "ptest">;
   def PFALSE   : sve_int_pfalse<0b000000, "pfalse">;
-  defm PFIRST  : sve_int_pfirst<0b00000, "pfirst">;
-  defm PNEXT   : sve_int_pnext<0b00110, "pnext">;
+  defm PFIRST  : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
+  defm PNEXT   : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
 
   defm AND_PPzPP   : sve_int_pred_log<0b0000, "and", int_aarch64_sve_and>;
   defm BIC_PPzPP   : sve_int_pred_log<0b0001, "bic", int_aarch64_sve_bic>;

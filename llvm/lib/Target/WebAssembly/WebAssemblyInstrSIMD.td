@@ -739,23 +739,24 @@ defm MAX_U : SIMDBinaryIntNoI64x2<umax, "max_u", 97>;
 } // isCommutable = 1
 
 // Integer unsigned rounding average: avgr_u
-def avgr_u_v16i8 :
-  PatFrag<(ops node:$lhs, node:$rhs),
-          (srl
-            (add (add node:$lhs, node:$rhs), (splat16 (i32 1))),
-            (v16i8 (splat16 (i32 1)))
-          )>;
-def avgr_u_v8i16 :
-  PatFrag<(ops node:$lhs, node:$rhs),
-          (srl
-            (add (add node:$lhs, node:$rhs), (splat8 (i32 1))),
-            (v8i16 (splat8 (i32 1)))
-          )>;
-
 let isCommutable = 1, Predicates = [HasUnimplementedSIMD128] in {
-defm AVGR_U : SIMDBinary<v16i8, "i8x16", avgr_u_v16i8, "avgr_u", 217>;
-defm AVGR_U : SIMDBinary<v8i16, "i16x8", avgr_u_v8i16, "avgr_u", 218>;
+defm AVGR_U : SIMDBinary<v16i8, "i8x16", int_wasm_avgr_unsigned, "avgr_u", 217>;
+defm AVGR_U : SIMDBinary<v8i16, "i16x8", int_wasm_avgr_unsigned, "avgr_u", 218>;
 }
+
+def add_nuw : PatFrag<(ops node:$lhs, node:$rhs),
+                      (add node:$lhs, node:$rhs),
+                      "return N->getFlags().hasNoUnsignedWrap();">;
+
+foreach nodes = [[v16i8, splat16], [v8i16, splat8]] in
+def : Pat<(srl
+            (add_nuw
+              (add_nuw (nodes[0] V128:$lhs), (nodes[0] V128:$rhs)),
+              (nodes[1] (i32 1))
+            ),
+            (nodes[0] (nodes[1] (i32 1)))
+          ),
+          (!cast<NI>("AVGR_U_"#nodes[0]) V128:$lhs, V128:$rhs)>;
 
 // Widening dot product: i32x4.dot_i16x8_s
 let isCommutable = 1 in

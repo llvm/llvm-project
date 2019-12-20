@@ -346,36 +346,55 @@ output format of the diagnostics that it generates.
       ``-fsave-optimization-record=bitstream``: A binary format based on LLVM
       Bitstream.
 
-    The output file is controlled by :ref:`-foptimization-record-file <opt_foptimization-record-file>`.
+   The output file is controlled by :ref:`-foptimization-record-file <opt_foptimization-record-file>`.
 
-    In the absence of an explicit output file, the file is chosen using the
-    following scheme:
+   In the absence of an explicit output file, the file is chosen using the
+   following scheme:
 
-    ``<base>.opt.<format>``
+   ``<base>.opt.<format>``
 
-    where ``<base>`` is based on the output file of the compilation (whether
-    it's explicitly specified through `-o` or not) when used with `-c` or `-S`.
-    In other cases, it's based on the input file's stem. For example:
+   where ``<base>`` is based on the output file of the compilation (whether
+   it's explicitly specified through `-o` or not) when used with `-c` or `-S`.
+   For example:
 
-    * ``clang -fsave-optimization-record -c in.c -o out.o`` will generate
-      ``out.opt.yaml``
+   * ``clang -fsave-optimization-record -c in.c -o out.o`` will generate
+     ``out.opt.yaml``
 
-    * ``clang -fsave-optimization-record in.c -o out`` will generate
-      ``in.opt.yaml``
+   * ``clang -fsave-optimization-record -c in.c `` will generate
+     ``in.opt.yaml``
 
-    Compiling for multiple architectures will use the following scheme:
+   When targeting (Thin)LTO, the base is derived from the output filename, and
+   the extension is not dropped.
 
-    ``<base>-<arch>.opt.<format>``
+   When targeting ThinLTO, the following scheme is used:
 
-    Note that this is only allowed on Darwin platforms and is incompatible with
-    passing multiple ``-arch <arch>`` options.
+   ``<base>.opt.<format>.thin.<num>.<format>``
 
-    When targeting (Thin)LTO, the base is derived from the output filename, and
-    the extension is not dropped.
+   Darwin-only: when used for generating a linked binary from a source file
+   (through an intermediate object file), the driver will invoke `cc1` to
+   generate a temporary object file. The temporary remark file will be emitted
+   next to the object file, which will then be picked up by `dsymutil` and
+   emitted in the .dSYM bundle. This is available for all formats except YAML.
 
-    When targeting ThinLTO, the following scheme is used:
+   For example:
 
-    ``<base>.opt.<format>.thin.<num>.<format>``
+   ``clang -fsave-optimization-record=bitstream in.c -o out`` will generate
+
+   * ``/var/folders/43/9y164hh52tv_2nrdxrj31nyw0000gn/T/a-9be59b.o``
+
+   * ``/var/folders/43/9y164hh52tv_2nrdxrj31nyw0000gn/T/a-9be59b.opt.bitstream``
+
+   * ``out``
+
+   * ``out.dSYM/Contents/Resources/Remarks/out``
+
+   Darwin-only: compiling for multiple architectures will use the following
+   scheme:
+
+   ``<base>-<arch>.opt.<format>``
+
+   Note that this is incompatible with passing the
+   :ref:`-foptimization-record-file <opt_foptimization-record-file>` option.
 
 .. _opt_foptimization-record-file:
 

@@ -583,6 +583,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                      MVT::v4f32, MVT::v2f64 }) {
       setOperationAction(ISD::STRICT_FMAXNUM, VT, Legal);
       setOperationAction(ISD::STRICT_FMINNUM, VT, Legal);
+      setOperationAction(ISD::STRICT_FMAXIMUM, VT, Legal);
+      setOperationAction(ISD::STRICT_FMINIMUM, VT, Legal);
     }
   }
 

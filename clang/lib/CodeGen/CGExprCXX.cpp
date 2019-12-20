@@ -241,16 +241,28 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
+  bool TrivialForCodegen =
+      MD->isTrivial() || (MD->isDefaulted() && MD->getParent()->isUnion());
+  bool TrivialAssignment =
+      TrivialForCodegen &&
+      (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()) &&
+      !MD->getParent()->mayInsertExtraPadding();
+
   // C++17 demands that we evaluate the RHS of a (possibly-compound) assignment
   // operator before the LHS.
   CallArgList RtlArgStorage;
   CallArgList *RtlArgs = nullptr;
+  LValue TrivialAssignmentRHS;
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     if (OCE->isAssignmentOp()) {
-      RtlArgs = &RtlArgStorage;
-      EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
-                   drop_begin(CE->arguments(), 1), CE->getDirectCallee(),
-                   /*ParamsToSkip*/0, EvaluationOrder::ForceRightToLeft);
+      if (TrivialAssignment) {
+        TrivialAssignmentRHS = EmitLValue(CE->getArg(1));
+      } else {
+        RtlArgs = &RtlArgStorage;
+        EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
+                     drop_begin(CE->arguments(), 1), CE->getDirectCallee(),
+                     /*ParamsToSkip*/0, EvaluationOrder::ForceRightToLeft);
+      }
     }
   }
 
@@ -281,22 +293,25 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     return RValue::get(nullptr);
   }
 
-  if (MD->isTrivial() || (MD->isDefaulted() && MD->getParent()->isUnion())) {
-    if (isa<CXXDestructorDecl>(MD)) return RValue::get(nullptr);
-    if (!MD->getParent()->mayInsertExtraPadding()) {
-      if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()) {
-        // We don't like to generate the trivial copy/move assignment operator
-        // when it isn't necessary; just produce the proper effect here.
-        LValue RHS = isa<CXXOperatorCallExpr>(CE)
-                         ? MakeNaturalAlignAddrLValue(
-                               (*RtlArgs)[0].getRValue(*this).getScalarVal(),
-                               (*(CE->arg_begin() + 1))->getType())
-                         : EmitLValue(*CE->arg_begin());
-        EmitAggregateAssign(This, RHS, CE->getType());
-        return RValue::get(This.getPointer(*this));
-      }
-      llvm_unreachable("unknown trivial member function");
+  if (TrivialForCodegen) {
+    if (isa<CXXDestructorDecl>(MD))
+      return RValue::get(nullptr);
+
+    if (TrivialAssignment) {
+      // We don't like to generate the trivial copy/move assignment operator
+      // when it isn't necessary; just produce the proper effect here.
+      // It's important that we use the result of EmitLValue here rather than
+      // emitting call arguments, in order to preserve TBAA information from
+      // the RHS.
+      LValue RHS = isa<CXXOperatorCallExpr>(CE)
+                       ? TrivialAssignmentRHS
+                       : EmitLValue(*CE->arg_begin());
+      EmitAggregateAssign(This, RHS, CE->getType());
+      return RValue::get(This.getPointer(*this));
     }
+
+    assert(MD->getParent()->mayInsertExtraPadding() &&
+           "unknown trivial member function");
   }
 
   // Compute the function type we're calling.
