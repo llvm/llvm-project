@@ -45,6 +45,12 @@ bool isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
                         const DominatorTree &DT, const PostDominatorTree &PDT,
                         DependenceInfo &DI);
 
+/// Move instructions from \p FromBB bottom up to the beginning of \p ToBB
+/// when proven safe.
+void moveInstsBottomUp(BasicBlock &FromBB, BasicBlock &ToBB,
+                       const DominatorTree &DT, const PostDominatorTree &PDT,
+                       DependenceInfo &DI);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CODEMOVERUTILS_H

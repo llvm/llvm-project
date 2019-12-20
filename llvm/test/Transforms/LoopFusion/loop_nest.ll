@@ -25,19 +25,16 @@
 ; CHECK: [[LOOP1HEADER]]
 ; CHECK: br label %[[LOOP3HEADER:bb[0-9]+]]
 ; CHECK: [[LOOP3HEADER]]
-; CHECK: br label %[[LOOP3LATCH:bb[0-9]+]]
-; CHECK: [[LOOP3LATCH]]
-; CHECK: br i1 %{{.*}}, label %[[LOOP3HEADER]], label %[[LOOP1LATCH:bb[0-9]+]]
-; CHECK: [[LOOP1LATCH]]
-; CHECK: br i1 %{{.*}}, label %[[LOOP2PREHEADER:bb[0-9]+]], label %[[LOOP2PREHEADER]]
-; CHECK: [[LOOP2PREHEADER]]
+; CHECK: br label %[[LOOP2HEADER:bb[0-9]+]]
+; CHECK: [[LOOP2HEADER]]
 ; CHECK: br label %[[LOOP4HEADER:bb[0-9]+]]
 ; CHECK: [[LOOP4HEADER]]
-; CHECK: br label %[[LOOP4LATCH:bb[0-9]+]] 
-; CHECK: [[LOOP4LATCH]]
-; CHECK: br i1 %{{.*}}, label %[[LOOP4HEADER]], label %[[LOOP2LATCH:bb[0-9]+]]
-; CHECK: [[LOOP2LATCH]]
-; CHECK:  br i1 %{{.*}}, label %[[LOOP1HEADER]], label %[[LOOP1EXIT:bb[0-9]*]]
+; CHECK: br i1 %{{.*}}, label %[[LOOP3HEADER]], label %[[LOOP1LATCH:bb[0-9]+]]
+; CHECK: [[LOOP1LATCH]]
+; CHECK-NEXT: %inc.outer.fc0 = add nuw nsw i64 %indvars.iv105, 1
+; CHECK-NEXT: %add.outer.fc0 = add nuw nsw i32 %.06, 1
+; CHECK-NEXT: %cmp.outer.fc0 = icmp ne i64 %inc.outer.fc0, 100
+; CHECK: br i1 %{{.*}}, label %[[LOOP1HEADER]], label %[[LOOP1EXIT:bb[0-9]*]]
 ; CHECK: ret void
 
 ; TODO: The current version of loop fusion does not allow the inner loops to be
@@ -48,8 +45,8 @@ bb:
   br label %bb16
 
 bb16:                                   ; preds = %bb, %bb27
-  %.06 = phi i32 [ 0, %bb ], [ %tmp28, %bb27 ]
-  %indvars.iv105 = phi i64 [ 0, %bb ], [ %indvars.iv.next11, %bb27 ]
+  %.06 = phi i32 [ 0, %bb ], [ %add.outer.fc0, %bb27 ]
+  %indvars.iv105 = phi i64 [ 0, %bb ], [ %inc.outer.fc0, %bb27 ]
   br label %bb18
 
 bb30:                                   ; preds = %bb27
@@ -73,10 +70,10 @@ bb25:                                             ; preds = %bb18
   br i1 %exitcond9, label %bb18, label %bb27
 
 bb27:                                             ; preds = %bb25
-  %indvars.iv.next11 = add nuw nsw i64 %indvars.iv105, 1
-  %tmp28 = add nuw nsw i32 %.06, 1
-  %exitcond12 = icmp ne i64 %indvars.iv.next11, 100
-  br i1 %exitcond12, label %bb16, label %bb30
+  %inc.outer.fc0 = add nuw nsw i64 %indvars.iv105, 1
+  %add.outer.fc0 = add nuw nsw i32 %.06, 1
+  %cmp.outer.fc0 = icmp ne i64 %inc.outer.fc0, 100
+  br i1 %cmp.outer.fc0, label %bb16, label %bb30
 
 bb33:                                   ; preds = %bb30, %bb45
   %.023 = phi i32 [ 0, %bb30 ], [ %tmp46, %bb45 ]

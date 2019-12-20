@@ -6,9 +6,7 @@
 ; CHECK-NEXT: bb:
 ; CHECK-NEXT: br label %[[LOOP1HEADER:bb[0-9]*]]
 ; CHECK: [[LOOP1HEADER]]
-; CHECK: br label %[[LOOP1LATCH:bb[0-9]*]]
-; CHECK: [[LOOP1LATCH]]
-; CHECK: br i1 %{{.*}}, label %[[LOOP2HEADER:bb[0-9]+]], label %[[LOOP2HEADER]]
+; CHECK: br label %[[LOOP2HEADER:bb[0-9]*]]
 ; CHECK: [[LOOP2HEADER]]
 ; CHECK: br label %[[LOOP2LATCH:bb[0-9]+]]
 ; CHECK: [[LOOP2LATCH]]
@@ -72,9 +70,7 @@ bb29:                                             ; preds = %bb18
 ; CHECK: [[LOOP1PREHEADER]]
 ; CHECK: br label %[[LOOP1HEADER:bb[0-9]*]]
 ; CHECK: [[LOOP1HEADER]]
-; CHECK: br label %[[LOOP1LATCH:bb[0-9]*]]
-; CHECK: [[LOOP1LATCH]]
-; CHECK: br i1 %{{.*}}, label %[[LOOP2HEADER:bb[0-9]*]], label %[[LOOP2HEADER]]
+; CHECK: br label %[[LOOP2HEADER:bb[0-9]*]]
 ; CHECK: [[LOOP2HEADER]]
 ; CHECK: br label %[[LOOP2LATCH:bb[0-9]+]]
 ; CHECK: [[LOOP2LATCH]]
@@ -129,9 +125,7 @@ bb27:                                             ; preds = %bb17
 ; CHECK-NEXT: bb:
 ; CHECK-NEXT: br label %[[LOOP1HEADER:bb[0-9]*]]
 ; CHECK: [[LOOP1HEADER]]
-; CHECK: br label %[[LOOP1LATCH:bb[0-9]*]]
-; CHECK: [[LOOP1LATCH]]
-; CHECK: br i1 %{{.*}}, label %[[LOOP2HEADER:bb[0-9]+]], label %[[LOOP2HEADER]]
+; CHECK: br label %[[LOOP2HEADER:bb[0-9]*]]
 ; CHECK: [[LOOP2HEADER]]
 ; CHECK: br label %[[LOOP2LATCH:bb[0-9]+]]
 ; CHECK: [[LOOP2LATCH]]
@@ -179,8 +173,6 @@ bb19:                                             ; preds = %bb18
 ; CHECK: [[LOOP1PREHEADER]]
 ; CHECK: br label %[[LOOP1HEADER:bb[0-9]*]]
 ; CHECK: [[LOOP1HEADER]]
-; CHECK: br i1 %{{.*}}, label %[[LOOP2HEADER:bb[0-9]*]], label %[[LOOP2HEADER]]
-; CHECK: [[LOOP2HEADER]]
 ; CHECK: br i1 %{{.*}}, label %[[LOOP1HEADER]], label %[[EXITBLOCK]]
 ; CHECK: ret void
 define void @raw_only_parametric(i32* noalias %arg, i32 %arg4) {
@@ -217,9 +209,7 @@ bb23:                                             ; preds = %bb17, %bb
 ; CHECK-NEXT: bb:
 ; CHECK: br label %[[LOOP1HEADER:bb[0-9]*]]
 ; CHECK: [[LOOP1HEADER]]
-; CHECK: br label %[[LOOP1LATCH:bb[0-9]*]]
-; CHECK: [[LOOP1LATCH]]
-; CHECK: br i1 %{{.*}}, label %[[LOOP2HEADER:bb[0-9]+]], label %[[LOOP2HEADER]]
+; CHECK: br label %[[LOOP2HEADER:bb[0-9]*]]
 ; CHECK: [[LOOP2HEADER]]
 ; CHECK: br label %[[LOOP2LATCH:bb[0-9]+]]
 ; CHECK: [[LOOP2LATCH]]
@@ -264,5 +254,55 @@ bb25:                                             ; preds = %bb19
   br i1 %exitcond, label %bb19, label %bb26
 
 bb26:                                             ; preds = %bb25
+  ret void
+}
+
+; Test that instructions in loop 1 latch are moved to the beginning of loop 2
+; latch iff it is proven safe. %inc.first and %cmp.first are moved, but
+; `store i32 0, i32* %Ai.first` is not.
+
+; CHECK: void @flow_dep
+; CHECK-LABEL: entry:
+; CHECK-NEXT: br label %for.first
+; CHECK-LABEL: for.first:
+; CHECK: store i32 0, i32* %Ai.first
+; CHECK: %Ai.second =
+; CHECK: br label %for.second.latch
+; CHECK-LABEL: for.second.latch:
+; CHECK-NEXT: %inc.first = add nsw i64 %i.first, 1
+; CHECK-NEXT: %cmp.first = icmp slt i64 %inc.first, 100
+; CHECK: br i1 %cmp.second, label %for.first, label %for.end
+; CHECK-LABEL: for.end:
+; CHECK-NEXT: ret void
+
+define void @flow_dep(i32* noalias %A, i32* noalias %B) {
+entry:
+  br label %for.first
+
+for.first:
+  %i.first = phi i64 [ 0, %entry ], [ %inc.first, %for.first ]
+  %Ai.first = getelementptr inbounds i32, i32* %A, i64 %i.first
+  store i32 0, i32* %Ai.first, align 4
+  %inc.first = add nsw i64 %i.first, 1
+  %cmp.first = icmp slt i64 %inc.first, 100
+  br i1 %cmp.first, label %for.first, label %for.second.preheader
+
+for.second.preheader:
+  br label %for.second
+
+for.second:
+  %i.second = phi i64 [ %inc.second, %for.second.latch ], [ 0, %for.second.preheader ]
+  %Ai.second = getelementptr inbounds i32, i32* %A, i64 %i.second
+  %0 = load i32, i32* %Ai.second, align 4
+  %Bi = getelementptr inbounds i32, i32* %B, i64 %i.second
+  store i32 %0, i32* %Bi, align 4
+  br label %for.second.latch
+
+for.second.latch:
+  %inc.second = add nsw i64 %i.second, 1
+  %cmp.second = icmp slt i64 %inc.second, 100
+  br i1 %cmp.second, label %for.second, label %for.end
+
+for.end:
   ret void
 }
