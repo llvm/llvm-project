@@ -262,7 +262,9 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
         DbgLabels.addInstr(L, MI);
       }
 
-      if (MI.isDebugInstr())
+      // Meta Instructions have no output and do not change any values and so
+      // can be safely ignored.
+      if (MI.isMetaInstruction())
         continue;
 
       // Not a DBG_VALUE instruction. It may clobber registers which describe
