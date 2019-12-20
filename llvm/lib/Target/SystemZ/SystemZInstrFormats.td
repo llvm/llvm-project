@@ -3209,6 +3209,8 @@ class CondBinaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
   let CCMaskLast = 1;
+  let NumOpsKey = !subst("loc", "sel", mnemonic);
+  let NumOpsValue = "2";
 }
 
 // Like CondBinaryRRF, but used for the raw assembly form.  The condition-code
@@ -3248,6 +3250,8 @@ class CondBinaryRRFa<string mnemonic, bits<16> opcode, RegisterOperand cls1,
              [(set cls1:$R1, (z_select_ccmask cls2:$R2, cls3:$R3,
                                               cond4:$valid, cond4:$M4))]> {
   let CCMaskLast = 1;
+  let NumOpsKey = mnemonic;
+  let NumOpsValue = "3";
 }
 
 // Like CondBinaryRRFa, but used for the raw assembly form.  The condition-code
@@ -4798,7 +4802,8 @@ class TestBinarySILPseudo<SDPatternOperator operator, ImmOpWithPattern imm>
 
 // Like CondBinaryRRF, but expanded after RA depending on the choice of
 // register.
-class CondBinaryRRFPseudo<RegisterOperand cls1, RegisterOperand cls2>
+class CondBinaryRRFPseudo<string mnemonic, RegisterOperand cls1,
+                          RegisterOperand cls2>
   : Pseudo<(outs cls1:$R1),
            (ins cls1:$R1src, cls2:$R2, cond4:$valid, cond4:$M3),
            [(set cls1:$R1, (z_select_ccmask cls2:$R2, cls1:$R1src,
@@ -4806,17 +4811,21 @@ class CondBinaryRRFPseudo<RegisterOperand cls1, RegisterOperand cls2>
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
   let CCMaskLast = 1;
+  let NumOpsKey = !subst("loc", "sel", mnemonic);
+  let NumOpsValue = "2";
 }
 
 // Like CondBinaryRRFa, but expanded after RA depending on the choice of
 // register.
-class CondBinaryRRFaPseudo<RegisterOperand cls1, RegisterOperand cls2,
-                           RegisterOperand cls3>
+class CondBinaryRRFaPseudo<string mnemonic, RegisterOperand cls1,
+                           RegisterOperand cls2, RegisterOperand cls3>
   : Pseudo<(outs cls1:$R1),
            (ins cls3:$R3, cls2:$R2, cond4:$valid, cond4:$M4),
            [(set cls1:$R1, (z_select_ccmask cls2:$R2, cls3:$R3,
                                             cond4:$valid, cond4:$M4))]> {
   let CCMaskLast = 1;
+  let NumOpsKey = mnemonic;
+  let NumOpsValue = "3";
 }
 
 // Like CondBinaryRIE, but expanded after RA depending on the choice of
