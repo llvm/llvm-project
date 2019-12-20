@@ -112,9 +112,6 @@
 
 # RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
 
-# MD5: warning: parsing line table prologue at 0x00000000 found an invalid directory or file table description at 0x0000003b
-# MD5-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
-
 # ALL-NOT:  warning:
 # ALL:      warning: parsing line table prologue at offset 0x00000048 found unsupported version 0x00
 # ALL-NEXT: warning: parsing line table prologue at offset 0x0000004e found unsupported version 0x01
