@@ -1531,3 +1531,46 @@ entry:
   store <2 x i8> %2, <2 x i8>* %y
   ret void
 }
+
+; FIXME: This test is currently miscompiled for KNL with the operands of the
+; vcmpgtb swapped.
+define <8 x i64> @cmp_swap_bug(<16 x i8>* %x, <8 x i64> %y, <8 x i64> %z) {
+; KNL-LABEL: cmp_swap_bug:
+; KNL:       ## %bb.0: ## %entry
+; KNL-NEXT:    vmovdqa (%rdi), %xmm2 ## encoding: [0xc5,0xf9,0x6f,0x17]
+; KNL-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    ## encoding: [0xc4,0xe2,0x69,0x00,0x15,A,A,A,A]
+; KNL-NEXT:    ## fixup A - offset: 5, value: LCPI69_0-4, kind: reloc_riprel_4byte
+; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3 ## encoding: [0xc5,0xe1,0xef,0xdb]
+; KNL-NEXT:    vpcmpgtb %xmm3, %xmm2, %xmm2 ## encoding: [0xc5,0xe9,0x64,0xd3]
+; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2 ## encoding: [0x62,0xf2,0x7d,0x48,0x21,0xd2]
+; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1 ## encoding: [0x62,0xf2,0x6d,0x48,0x27,0xca]
+; KNL-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x64,0xc0]
+; KNL-NEXT:    retq ## encoding: [0xc3]
+;
+; AVX512BW-LABEL: cmp_swap_bug:
+; AVX512BW:       ## %bb.0: ## %entry
+; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm2 ## encoding: [0xc5,0xf9,0x6f,0x17]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    ## encoding: [0xc4,0xe2,0x69,0x00,0x15,A,A,A,A]
+; AVX512BW-NEXT:    ## fixup A - offset: 5, value: LCPI69_0-4, kind: reloc_riprel_4byte
+; AVX512BW-NEXT:    vpmovb2m %zmm2, %k1 ## encoding: [0x62,0xf2,0x7e,0x48,0x29,0xca]
+; AVX512BW-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x64,0xc0]
+; AVX512BW-NEXT:    retq ## encoding: [0xc3]
+;
+; SKX-LABEL: cmp_swap_bug:
+; SKX:       ## %bb.0: ## %entry
+; SKX-NEXT:    vmovdqa (%rdi), %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x17]
+; SKX-NEXT:    vpshufb {{.*}}(%rip), %xmm2, %xmm2 ## EVEX TO VEX Compression xmm2 = xmm2[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SKX-NEXT:    ## encoding: [0xc4,0xe2,0x69,0x00,0x15,A,A,A,A]
+; SKX-NEXT:    ## fixup A - offset: 5, value: LCPI69_0-4, kind: reloc_riprel_4byte
+; SKX-NEXT:    vpmovb2m %xmm2, %k1 ## encoding: [0x62,0xf2,0x7e,0x08,0x29,0xca]
+; SKX-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x64,0xc0]
+; SKX-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %0 = load <16 x i8>, <16 x i8>* %x
+  %1 = shufflevector <16 x i8> %0, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %2 = icmp slt <8 x i8> %1, zeroinitializer
+  %3 = select <8 x i1> %2, <8 x i64> %y, <8 x i64> %z
+  ret <8 x i64> %3
+}
