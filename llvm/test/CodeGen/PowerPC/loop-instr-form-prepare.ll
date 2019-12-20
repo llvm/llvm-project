@@ -774,20 +774,17 @@ define float @test_ds_combine_float_int(i8* %0, i32 signext %1) {
 
 define i64 @test_ds_lwa_prep(i8* %0, i32 signext %1) {
 ; CHECK-LABEL: test_ds_lwa_prep:
-; CHECK:         li r6, 1
-; CHECK-NEXT:    li r7, 2
-; CHECK-NEXT:    li r8, 6
-; CHECK-NEXT:    li r9, 10
+; CHECK:         addi r5, r3, 2
+; CHECK:         li r6, -1
 ; CHECK:       .LBB9_2: #
-; CHECK-NEXT:    lwax r11, r3, r6
-; CHECK-NEXT:    lwax r12, r3, r7
-; CHECK-NEXT:    lwax r0, r3, r8
-; CHECK-NEXT:    addi r10, r3, 1
-; CHECK-NEXT:    mulld r11, r12, r11
-; CHECK-NEXT:    lwax r3, r3, r9
-; CHECK-NEXT:    mulld r11, r11, r0
-; CHECK-NEXT:    maddld r5, r11, r3, r5
-; CHECK-NEXT:    mr r3, r10
+; CHECK-NEXT:    lwax r7, r5, r6
+; CHECK-NEXT:    lwa r8, 0(r5)
+; CHECK-NEXT:    lwa r9, 4(r5)
+; CHECK-NEXT:    lwa r10, 8(r5)
+; CHECK-NEXT:    addi r5, r5, 1
+; CHECK-NEXT:    mulld r7, r8, r7
+; CHECK-NEXT:    mulld r7, r7, r9
+; CHECK-NEXT:    maddld r3, r7, r10, r3
 ; CHECK-NEXT:    bdnz .LBB9_2
 
   %3 = sext i32 %1 to i64
@@ -827,3 +824,4 @@ define i64 @test_ds_lwa_prep(i8* %0, i32 signext %1) {
   %33 = add nsw i64 %32, %3
   ret i64 %33
 }
+
