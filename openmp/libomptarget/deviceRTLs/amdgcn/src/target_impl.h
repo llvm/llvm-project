@@ -124,8 +124,6 @@ INLINE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return __ballot64(1);
 }
 
-EXTERN bool __kmpc_impl_is_first_active_thread();
-
 EXTERN int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t Var,
                                      int32_t SrcLane);
 
@@ -156,6 +154,8 @@ INLINE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
 INLINE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
 INLINE int GetNumberOfBlocksInKernel() { return __ockl_get_num_groups(0); }
 INLINE int GetNumberOfThreadsInBlock() { return __ockl_get_local_size(0); }
+
+EXTERN bool __kmpc_impl_is_first_active_thread();
 
 // Locks
 EXTERN void __kmpc_impl_init_lock(omp_lock_t *lock);
