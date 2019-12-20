@@ -43316,9 +43316,9 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
 
 static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
                             const X86Subtarget &Subtarget) {
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
+  const ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  const SDValue LHS = N->getOperand(0);
+  const SDValue RHS = N->getOperand(1);
   EVT VT = N->getValueType(0);
   EVT OpVT = LHS.getValueType();
   SDLoc DL(N);
@@ -43345,30 +43345,35 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
       (CC == ISD::SETNE || CC == ISD::SETEQ || ISD::isSignedIntSetCC(CC))) {
-    // Put build_vectors on the right.
-    if (LHS.getOpcode() == ISD::BUILD_VECTOR) {
-      std::swap(LHS, RHS);
-      CC = ISD::getSetCCSwappedOperands(CC);
+    // Using temporaries to avoid messing up operand ordering for later
+    // transformations if this doesn't work.
+    SDValue Op0 = LHS;
+    SDValue Op1 = RHS;
+    ISD::CondCode TmpCC = CC;
+    // Put build_vector on the right.
+    if (Op0.getOpcode() == ISD::BUILD_VECTOR) {
+      std::swap(Op0, Op1);
+      TmpCC = ISD::getSetCCSwappedOperands(TmpCC);
     }
 
     bool IsSEXT0 =
-        (LHS.getOpcode() == ISD::SIGN_EXTEND) &&
-        (LHS.getOperand(0).getValueType().getVectorElementType() == MVT::i1);
-    bool IsVZero1 = ISD::isBuildVectorAllZeros(RHS.getNode());
+        (Op0.getOpcode() == ISD::SIGN_EXTEND) &&
+        (Op0.getOperand(0).getValueType().getVectorElementType() == MVT::i1);
+    bool IsVZero1 = ISD::isBuildVectorAllZeros(Op1.getNode());
 
     if (IsSEXT0 && IsVZero1) {
-      assert(VT == LHS.getOperand(0).getValueType() &&
+      assert(VT == Op0.getOperand(0).getValueType() &&
              "Uexpected operand type");
-      if (CC == ISD::SETGT)
+      if (TmpCC == ISD::SETGT)
         return DAG.getConstant(0, DL, VT);
-      if (CC == ISD::SETLE)
+      if (TmpCC == ISD::SETLE)
         return DAG.getConstant(1, DL, VT);
-      if (CC == ISD::SETEQ || CC == ISD::SETGE)
-        return DAG.getNOT(DL, LHS.getOperand(0), VT);
+      if (TmpCC == ISD::SETEQ || TmpCC == ISD::SETGE)
+        return DAG.getNOT(DL, Op0.getOperand(0), VT);
 
-      assert((CC == ISD::SETNE || CC == ISD::SETLT) &&
+      assert((TmpCC == ISD::SETNE || TmpCC == ISD::SETLT) &&
              "Unexpected condition code!");
-      return LHS.getOperand(0);
+      return Op0.getOperand(0);
     }
   }
 
@@ -43381,8 +43386,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       VT.getVectorElementType() == MVT::i1 &&
       (OpVT.getVectorElementType() == MVT::i8 ||
        OpVT.getVectorElementType() == MVT::i16)) {
-    SDValue Setcc = DAG.getNode(ISD::SETCC, DL, OpVT, LHS, RHS,
-                                N->getOperand(2));
+    SDValue Setcc = DAG.getSetCC(DL, OpVT, LHS, RHS, CC);
     return DAG.getNode(ISD::TRUNCATE, DL, VT, Setcc);
   }
 
