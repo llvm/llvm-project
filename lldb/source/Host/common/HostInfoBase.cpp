@@ -47,18 +47,28 @@ struct HostInfoBaseFields {
     }
   }
 
+  llvm::once_flag m_host_triple_once;
   std::string m_host_triple;
 
+  llvm::once_flag m_host_arch_once;
   ArchSpec m_host_arch_32;
   ArchSpec m_host_arch_64;
 
+  llvm::once_flag m_lldb_so_dir_once;
   FileSpec m_lldb_so_dir;
+  llvm::once_flag m_lldb_support_exe_dir_once;
   FileSpec m_lldb_support_exe_dir;
+  llvm::once_flag m_lldb_headers_dir_once;
   FileSpec m_lldb_headers_dir;
+  llvm::once_flag m_lldb_clang_resource_dir_once;
   FileSpec m_lldb_clang_resource_dir;
+  llvm::once_flag m_lldb_system_plugin_dir_once;
   FileSpec m_lldb_system_plugin_dir;
+  llvm::once_flag m_lldb_user_plugin_dir_once;
   FileSpec m_lldb_user_plugin_dir;
+  llvm::once_flag m_lldb_process_tmp_dir_once;
   FileSpec m_lldb_process_tmp_dir;
+  llvm::once_flag m_lldb_global_tmp_dir_once;
   FileSpec m_lldb_global_tmp_dir;
 };
 
@@ -73,8 +83,7 @@ void HostInfoBase::Terminate() {
 }
 
 llvm::StringRef HostInfoBase::GetTargetTriple() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
+  llvm::call_once(g_fields->m_host_triple_once, []() {
     g_fields->m_host_triple =
         HostInfo::GetArchitecture().GetTriple().getTriple();
   });
@@ -82,8 +91,7 @@ llvm::StringRef HostInfoBase::GetTargetTriple() {
 }
 
 const ArchSpec &HostInfoBase::GetArchitecture(ArchitectureKind arch_kind) {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
+  llvm::call_once(g_fields->m_host_arch_once, []() {
     HostInfo::ComputeHostArchitectureSupport(g_fields->m_host_arch_32,
                                              g_fields->m_host_arch_64);
   });
@@ -108,87 +116,76 @@ llvm::Optional<HostInfoBase::ArchitectureKind> HostInfoBase::ParseArchitectureKi
 }
 
 FileSpec HostInfoBase::GetShlibDir() {
-  static llvm::once_flag g_once_flag;
-  static bool success = false;
-  llvm::call_once(g_once_flag, []() {
-    success = HostInfo::ComputeSharedLibraryDirectory(g_fields->m_lldb_so_dir);
+  llvm::call_once(g_fields->m_lldb_so_dir_once, []() {
+    if (!HostInfo::ComputeSharedLibraryDirectory(g_fields->m_lldb_so_dir))
+      g_fields->m_lldb_so_dir = FileSpec();
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     LLDB_LOG(log, "shlib dir -> `{0}`", g_fields->m_lldb_so_dir);
   });
-  return success ? g_fields->m_lldb_so_dir : FileSpec();
+  return g_fields->m_lldb_so_dir;
 }
 
 FileSpec HostInfoBase::GetSupportExeDir() {
-  static llvm::once_flag g_once_flag;
-  static bool success = false;
-  llvm::call_once(g_once_flag, []() {
-    success =
-        HostInfo::ComputeSupportExeDirectory(g_fields->m_lldb_support_exe_dir);
+  llvm::call_once(g_fields->m_lldb_support_exe_dir_once, []() {
+    if (!HostInfo::ComputeSupportExeDirectory(g_fields->m_lldb_support_exe_dir))
+      g_fields->m_lldb_support_exe_dir = FileSpec();
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     LLDB_LOG(log, "support exe dir -> `{0}`", g_fields->m_lldb_support_exe_dir);
   });
-  return success ? g_fields->m_lldb_support_exe_dir : FileSpec();
+  return g_fields->m_lldb_support_exe_dir;
 }
 
 FileSpec HostInfoBase::GetHeaderDir() {
-  static llvm::once_flag g_once_flag;
-  static bool success = false;
-  llvm::call_once(g_once_flag, []() {
-    success = HostInfo::ComputeHeaderDirectory(g_fields->m_lldb_headers_dir);
+  llvm::call_once(g_fields->m_lldb_headers_dir_once, []() {
+    if (!HostInfo::ComputeHeaderDirectory(g_fields->m_lldb_headers_dir))
+      g_fields->m_lldb_headers_dir = FileSpec();
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     LLDB_LOG(log, "header dir -> `{0}`", g_fields->m_lldb_headers_dir);
   });
-  return success ? g_fields->m_lldb_headers_dir : FileSpec();
+  return g_fields->m_lldb_headers_dir;
 }
 
 FileSpec HostInfoBase::GetSystemPluginDir() {
-  static llvm::once_flag g_once_flag;
-  static bool success = false;
-  llvm::call_once(g_once_flag, []() {
-    success = HostInfo::ComputeSystemPluginsDirectory(
-        g_fields->m_lldb_system_plugin_dir);
+  llvm::call_once(g_fields->m_lldb_system_plugin_dir_once, []() {
+    if (!HostInfo::ComputeSystemPluginsDirectory(g_fields->m_lldb_system_plugin_dir))
+      g_fields->m_lldb_system_plugin_dir = FileSpec();
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     LLDB_LOG(log, "system plugin dir -> `{0}`",
              g_fields->m_lldb_system_plugin_dir);
   });
-  return success ? g_fields->m_lldb_system_plugin_dir : FileSpec();
+  return g_fields->m_lldb_system_plugin_dir;
 }
 
 FileSpec HostInfoBase::GetUserPluginDir() {
-  static llvm::once_flag g_once_flag;
-  static bool success = false;
-  llvm::call_once(g_once_flag, []() {
-    success =
-        HostInfo::ComputeUserPluginsDirectory(g_fields->m_lldb_user_plugin_dir);
+  llvm::call_once(g_fields->m_lldb_user_plugin_dir_once, []() {
+    if (!HostInfo::ComputeUserPluginsDirectory(g_fields->m_lldb_user_plugin_dir))
+      g_fields->m_lldb_user_plugin_dir = FileSpec();
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     LLDB_LOG(log, "user plugin dir -> `{0}`", g_fields->m_lldb_user_plugin_dir);
   });
-  return success ? g_fields->m_lldb_user_plugin_dir : FileSpec();
+  return g_fields->m_lldb_user_plugin_dir;
 }
 
 FileSpec HostInfoBase::GetProcessTempDir() {
-  static llvm::once_flag g_once_flag;
-  static bool success = false;
-  llvm::call_once(g_once_flag, []() {
-    success = HostInfo::ComputeProcessTempFileDirectory(
-        g_fields->m_lldb_process_tmp_dir);
+  llvm::call_once(g_fields->m_lldb_process_tmp_dir_once, []() {
+    if (!HostInfo::ComputeProcessTempFileDirectory( g_fields->m_lldb_process_tmp_dir))
+      g_fields->m_lldb_process_tmp_dir = FileSpec();
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     LLDB_LOG(log, "process temp dir -> `{0}`",
              g_fields->m_lldb_process_tmp_dir);
   });
-  return success ? g_fields->m_lldb_process_tmp_dir : FileSpec();
+  return g_fields->m_lldb_process_tmp_dir;
 }
 
 FileSpec HostInfoBase::GetGlobalTempDir() {
-  static llvm::once_flag g_once_flag;
-  static bool success = false;
-  llvm::call_once(g_once_flag, []() {
-    success = HostInfo::ComputeGlobalTempFileDirectory(
-        g_fields->m_lldb_global_tmp_dir);
+  llvm::call_once(g_fields->m_lldb_global_tmp_dir_once, []() {
+    if (!HostInfo::ComputeGlobalTempFileDirectory( g_fields->m_lldb_global_tmp_dir))
+      g_fields->m_lldb_global_tmp_dir = FileSpec();
+
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     LLDB_LOG(log, "global temp dir -> `{0}`", g_fields->m_lldb_global_tmp_dir);
   });
-  return success ? g_fields->m_lldb_global_tmp_dir : FileSpec();
+  return g_fields->m_lldb_global_tmp_dir;
 }
 
 ArchSpec HostInfoBase::GetAugmentedArchSpec(llvm::StringRef triple) {
