@@ -104,13 +104,12 @@ std::string canonicalizeSpaces(std::string Input) {
     return "";
   // Go over each word and add it to the string.
   for (llvm::StringRef Word : Words) {
+    if (WritePtr > Input.begin())
+      *WritePtr++ = ' '; // Separate from previous block.
     llvm::for_each(Word, [&WritePtr](const char C) { *WritePtr++ = C; });
-    // Separate from next block.
-    *WritePtr++ = ' ';
   }
-  // Get rid of extra spaces, -1 is for the trailing space introduced with last
-  // word.
-  Input.resize(WritePtr - Input.begin() - 1);
+  // Get rid of extra spaces.
+  Input.resize(WritePtr - Input.begin());
   return Input;
 }
 

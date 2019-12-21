@@ -761,11 +761,12 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
 }
 
 void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
-  SmallVector<char, 128> AbsoluteFilename;
+#ifdef _WIN32
+  SmallString<4096> TmpFilename;
+#endif
   if (DiagOpts->AbsolutePath) {
-    auto Dir = SM.getFileManager().getDirectory(
-        llvm::sys::path::parent_path(Filename));
-    if (Dir) {
+    auto File = SM.getFileManager().getFile(Filename);
+    if (File) {
       // We want to print a simplified absolute path, i. e. without "dots".
       //
       // The hardest part here are the paths like "<part1>/<link>/../<part2>".
@@ -781,16 +782,14 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
       // on Windows we can just use llvm::sys::path::remove_dots(), because,
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
-      SmallString<4096> DirName = (*Dir)->getName();
-      llvm::sys::fs::make_absolute(DirName);
-      llvm::sys::path::native(DirName);
-      llvm::sys::path::remove_dots(DirName, /* remove_dot_dot */ true);
+      TmpFilename = (*File)->getName();
+      llvm::sys::fs::make_absolute(TmpFilename);
+      llvm::sys::path::native(TmpFilename);
+      llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);
+      Filename = StringRef(TmpFilename.data(), TmpFilename.size());
 #else
-      StringRef DirName = SM.getFileManager().getCanonicalName(*Dir);
+      Filename = SM.getFileManager().getCanonicalName(*File);
 #endif
-      llvm::sys::path::append(AbsoluteFilename, DirName,
-                              llvm::sys::path::filename(Filename));
-      Filename = StringRef(AbsoluteFilename.data(), AbsoluteFilename.size());
     }
   }
 

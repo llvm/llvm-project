@@ -28,11 +28,9 @@ const char *FaultMaps::WFMP = "Fault Maps: ";
 FaultMaps::FaultMaps(AsmPrinter &AP) : AP(AP) {}
 
 void FaultMaps::recordFaultingOp(FaultKind FaultTy,
+                                 const MCSymbol *FaultingLabel,
                                  const MCSymbol *HandlerLabel) {
   MCContext &OutContext = AP.OutStreamer->getContext();
-  MCSymbol *FaultingLabel = OutContext.createTempSymbol();
-
-  AP.OutStreamer->EmitLabel(FaultingLabel);
 
   const MCExpr *FaultingOffset = MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(FaultingLabel, OutContext),

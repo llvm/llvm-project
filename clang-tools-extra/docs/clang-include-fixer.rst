@@ -105,7 +105,7 @@ Customized settings in `.vimrc`:
 
   Set to 1 if you want to insert ``#include`` for the symbol under the cursor.
   Default is 0. Compared to normal mode, this mode won't parse the source file
-  and only search the sysmbol from database, which is faster than normal mode.
+  and only search the symbol from database, which is faster than normal mode.
 
 See ``clang-include-fixer.py`` for more details.
 

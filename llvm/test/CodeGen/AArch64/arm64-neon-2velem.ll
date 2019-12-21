@@ -1686,8 +1686,8 @@ define <2 x float> @test_vmul_laneq2_f32_bitcast(<2 x float> %a, <2 x double> %v
   ret <2 x float> %mul
 }
 
-define <4 x i16> @test_vmul_laneq5_i16_bitcast(<4 x i16> %a, <2 x double> %v) {
-; CHECK-LABEL: test_vmul_laneq5_i16_bitcast:
+define <4 x i16> @test_vadd_laneq5_i16_bitcast(<4 x i16> %a, <2 x double> %v) {
+; CHECK-LABEL: test_vadd_laneq5_i16_bitcast:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-NEXT:    dup v1.4h, v1.h[1]
@@ -1695,6 +1695,48 @@ define <4 x i16> @test_vmul_laneq5_i16_bitcast(<4 x i16> %a, <2 x double> %v) {
 ; CHECK-NEXT:    ret
   %extract = shufflevector <2 x double> %v, <2 x double> undef, <1 x i32> <i32 1>
   %bc = bitcast <1 x double> %extract to <4 x i16>
+  %splat = shufflevector <4 x i16> %bc, <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %r = add <4 x i16> %splat, %a
+  ret <4 x i16> %r
+}
+
+define <4 x i16> @test_vadd_lane2_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x i8> %v) {
+; CHECK-LABEL: test_vadd_lane2_i16_bitcast_bigger_aligned:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v1.8b, v1.8b, v0.8b, #2
+; CHECK-NEXT:    dup v1.4h, v1.h[1]
+; CHECK-NEXT:    add v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    ret
+  %extract = shufflevector <16 x i8> %v, <16 x i8> undef, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9>
+  %bc = bitcast <8 x i8> %extract to <4 x i16>
+  %splat = shufflevector <4 x i16> %bc, <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %r = add <4 x i16> %splat, %a
+  ret <4 x i16> %r
+}
+
+define <4 x i16> @test_vadd_lane5_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x i8> %v) {
+; CHECK-LABEL: test_vadd_lane5_i16_bitcast_bigger_aligned:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    dup v1.4h, v1.h[1]
+; CHECK-NEXT:    add v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    ret
+  %extract = shufflevector <16 x i8> %v, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %bc = bitcast <8 x i8> %extract to <4 x i16>
+  %splat = shufflevector <4 x i16> %bc, <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %r = add <4 x i16> %splat, %a
+  ret <4 x i16> %r
+}
+
+define <4 x i16> @test_vadd_lane_i16_bitcast_bigger_unaligned(<4 x i16> %a, <16 x i8> %v) {
+; CHECK-LABEL: test_vadd_lane_i16_bitcast_bigger_unaligned:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v1.8b, v1.8b, v0.8b, #1
+; CHECK-NEXT:    dup v1.4h, v1.h[1]
+; CHECK-NEXT:    add v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    ret
+  %extract = shufflevector <16 x i8> %v, <16 x i8> undef, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+  %bc = bitcast <8 x i8> %extract to <4 x i16>
   %splat = shufflevector <4 x i16> %bc, <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %r = add <4 x i16> %splat, %a
   ret <4 x i16> %r

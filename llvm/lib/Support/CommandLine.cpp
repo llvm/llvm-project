@@ -57,6 +57,8 @@ namespace cl {
 template class basic_parser<bool>;
 template class basic_parser<boolOrDefault>;
 template class basic_parser<int>;
+template class basic_parser<long>;
+template class basic_parser<long long>;
 template class basic_parser<unsigned>;
 template class basic_parser<unsigned long>;
 template class basic_parser<unsigned long long>;
@@ -82,6 +84,8 @@ void basic_parser_impl::anchor() {}
 void parser<bool>::anchor() {}
 void parser<boolOrDefault>::anchor() {}
 void parser<int>::anchor() {}
+void parser<long>::anchor() {}
+void parser<long long>::anchor() {}
 void parser<unsigned>::anchor() {}
 void parser<unsigned long>::anchor() {}
 void parser<unsigned long long>::anchor() {}
@@ -1806,6 +1810,24 @@ bool parser<int>::parse(Option &O, StringRef ArgName, StringRef Arg,
   return false;
 }
 
+// parser<long> implementation
+//
+bool parser<long>::parse(Option &O, StringRef ArgName, StringRef Arg,
+                         long &Value) {
+  if (Arg.getAsInteger(0, Value))
+    return O.error("'" + Arg + "' value invalid for long argument!");
+  return false;
+}
+
+// parser<long long> implementation
+//
+bool parser<long long>::parse(Option &O, StringRef ArgName, StringRef Arg,
+                              long long &Value) {
+  if (Arg.getAsInteger(0, Value))
+    return O.error("'" + Arg + "' value invalid for llong argument!");
+  return false;
+}
+
 // parser<unsigned> implementation
 //
 bool parser<unsigned>::parse(Option &O, StringRef ArgName, StringRef Arg,
@@ -2015,6 +2037,8 @@ void generic_parser_base::printGenericOptionDiff(
 PRINT_OPT_DIFF(bool)
 PRINT_OPT_DIFF(boolOrDefault)
 PRINT_OPT_DIFF(int)
+PRINT_OPT_DIFF(long)
+PRINT_OPT_DIFF(long long)
 PRINT_OPT_DIFF(unsigned)
 PRINT_OPT_DIFF(unsigned long)
 PRINT_OPT_DIFF(unsigned long long)

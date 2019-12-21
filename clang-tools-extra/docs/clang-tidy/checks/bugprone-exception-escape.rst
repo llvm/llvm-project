@@ -30,7 +30,7 @@ Options
 
    Comma separated list containing function names which should not throw. An
    example value for this parameter can be ``WinMain`` which adds function
-   ``WinMain()`` in the Windows API to the list of the funcions which should
+   ``WinMain()`` in the Windows API to the list of the functions which should
    not throw. Default value is an empty string.
 
 .. option:: IgnoredExceptions

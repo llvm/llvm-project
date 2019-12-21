@@ -71,7 +71,7 @@ private:
 void syntax::removeStatement(syntax::Arena &A, syntax::Statement *S) {
   assert(S->canModify());
 
-  if (auto *Parent = llvm::dyn_cast<CompoundStatement>(S->parent())) {
+  if (isa<CompoundStatement>(S->parent())) {
     // A child of CompoundStatement can just be safely removed.
     MutationsImpl::remove(S);
     return;

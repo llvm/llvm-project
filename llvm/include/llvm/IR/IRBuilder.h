@@ -468,19 +468,45 @@ public:
   /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use the version that takes Align instead of this one.
+  LLVM_ATTRIBUTE_DEPRECATED(
+      CallInst *CreateElementUnorderedAtomicMemSet(
+          Value *Ptr, Value *Val, uint64_t Size, unsigned Alignment,
+          uint32_t ElementSize, MDNode *TBAATag = nullptr,
+          MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr),
+      "Use the version that takes Align instead of this one") {
+    return CreateElementUnorderedAtomicMemSet(Ptr, Val, getInt64(Size),
+                                              Align(Alignment), ElementSize,
+                                              TBAATag, ScopeTag, NoAliasTag);
+  }
+
   CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
-                                               uint64_t Size, unsigned Align,
+                                               uint64_t Size, Align Alignment,
                                                uint32_t ElementSize,
                                                MDNode *TBAATag = nullptr,
                                                MDNode *ScopeTag = nullptr,
                                                MDNode *NoAliasTag = nullptr) {
-    return CreateElementUnorderedAtomicMemSet(Ptr, Val, getInt64(Size), Align,
+    return CreateElementUnorderedAtomicMemSet(Ptr, Val, getInt64(Size),
+                                              Align(Alignment), ElementSize,
+                                              TBAATag, ScopeTag, NoAliasTag);
+  }
+
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use the version that takes Align instead of this one.
+  LLVM_ATTRIBUTE_DEPRECATED(
+      CallInst *CreateElementUnorderedAtomicMemSet(
+          Value *Ptr, Value *Val, Value *Size, unsigned Alignment,
+          uint32_t ElementSize, MDNode *TBAATag = nullptr,
+          MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr),
+      "Use the version that takes Align instead of this one") {
+    return CreateElementUnorderedAtomicMemSet(Ptr, Val, Size, Align(Alignment),
                                               ElementSize, TBAATag, ScopeTag,
                                               NoAliasTag);
   }
 
   CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
-                                               Value *Size, unsigned Align,
+                                               Value *Size, Align Alignment,
                                                uint32_t ElementSize,
                                                MDNode *TBAATag = nullptr,
                                                MDNode *ScopeTag = nullptr,
@@ -2395,18 +2421,16 @@ public:
         Args, OpBundles, Name, FPMathTag);
   }
 
-  // Deprecated [opaque pointer types]
   CallInst *CreateConstrainedFPCall(
-      Value *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
+      Function *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
       Optional<fp::RoundingMode> Rounding = None,
       Optional<fp::ExceptionBehavior> Except = None) {
     llvm::SmallVector<Value *, 6> UseArgs;
 
     for (auto *OneArg : Args)
       UseArgs.push_back(OneArg);
-    Function *F = cast<Function>(Callee);
     bool HasRoundingMD = false;
-    switch (F->getIntrinsicID()) {
+    switch (Callee->getIntrinsicID()) {
     default:
       break;
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)  \
@@ -2419,9 +2443,7 @@ public:
       UseArgs.push_back(getConstrainedFPRounding(Rounding));
     UseArgs.push_back(getConstrainedFPExcept(Except));
 
-    CallInst *C = CreateCall(
-        cast<FunctionType>(Callee->getType()->getPointerElementType()), Callee,
-        UseArgs, Name);
+    CallInst *C = CreateCall(Callee, UseArgs, Name);
     setConstrainedFPCallAttr(C);
     return C;
   }

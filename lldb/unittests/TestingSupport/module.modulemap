@@ -1,0 +1,16 @@
+
+module lldb_TestingSupport {
+  requires cplusplus
+  module TestUtilities { header "TestUtilities.h" export * }
+  module MockTildeExpressionResolver { header "MockTildeExpressionResolver.h" export * }
+}
+
+module lldb_TestingSupport_Host {
+  requires cplusplus
+  module NativeProcessTestUtils { header "Host/NativeProcessTestUtils.h" export * }
+}
+
+module lldb_TestingSupport_Symbol {
+  requires cplusplus
+  module ClangTestUtils { header "Symbol/ClangTestUtils.h" export * }
+}

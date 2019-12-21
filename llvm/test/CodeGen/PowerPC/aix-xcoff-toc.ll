@@ -1,10 +1,10 @@
-; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefixes CHECK,CHECK32 %s
-; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff < %s 2>&1 | FileCheck --check-prefixes CHECK,CHECK64  %s
+; RUN: llc  -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefixes CHECK,CHECK32 %s
+; RUN: llc  -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff < %s 2>&1 | FileCheck --check-prefixes CHECK,CHECK64  %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYM %s
 
-; RUN: not llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t.o 2>&1 \
+; RUN: not llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t.o 2>&1 \
 ; RUN: < %s | FileCheck --check-prefix=XCOFF64 %s
 ; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
 
@@ -70,14 +70,92 @@ define void @foobar() {
 ; CHECK-NEXT: .tc   foobar[TC],foobar[DS]
 
 ; SYM:       File: {{.*}}aix-xcoff-toc.ll.tmp.o
-; SYM:       Symbol {{[{][[:space:]] *}}Index: [[#INDX:]]{{[[:space:]] *}}Name: TOC
+; SYM:       Symbol {{[{][[:space:]] *}}Index: [[#UNDEF_INDX:]]{{[[:space:]] *}}Name: a
+; SYM-NEXT:   Value (RelocatableAddress): 0x0
+; SYM-NEXT:   Section: N_UNDEF
+; SYM-NEXT:   Type: 0x0
+; SYM-NEXT:   StorageClass: C_EXT (0x2)
+; SYM-NEXT:   NumberOfAuxEntries: 1
+; SYM-NEXT:   CSECT Auxiliary Entry {
+; SYM-NEXT:     Index: [[#UNDEF_INDX+1]]
+; SYM-NEXT:     SectionLen: 0
+; SYM-NEXT:     ParameterHashIndex: 0x0
+; SYM-NEXT:     TypeChkSectNum: 0x0
+; SYM-NEXT:     SymbolAlignmentLog2: 0
+; SYM-NEXT:     SymbolType: XTY_ER (0x0)
+; SYM-NEXT:     StorageMappingClass: XMC_UA (0x4)
+; SYM-NEXT:     StabInfoIndex: 0x0
+; SYM-NEXT:     StabSectNum: 0x0
+; SYM-NEXT:   }
+; SYM-NEXT: }
+; SYM-NEXT: Symbol {
+; SYM-NEXT:   Index: [[#UNDEF_INDX+2]]
+; SYM-NEXT:   Name: b
+; SYM-NEXT:   Value (RelocatableAddress): 0x0
+; SYM-NEXT:   Section: N_UNDEF
+; SYM-NEXT:   Type: 0x0
+; SYM-NEXT:   StorageClass: C_EXT (0x2)
+; SYM-NEXT:   NumberOfAuxEntries: 1
+; SYM-NEXT:   CSECT Auxiliary Entry {
+; SYM-NEXT:     Index: [[#UNDEF_INDX+3]]
+; SYM-NEXT:     SectionLen: 0
+; SYM-NEXT:     ParameterHashIndex: 0x0
+; SYM-NEXT:     TypeChkSectNum: 0x0
+; SYM-NEXT:     SymbolAlignmentLog2: 0
+; SYM-NEXT:     SymbolType: XTY_ER (0x0)
+; SYM-NEXT:     StorageMappingClass: XMC_UA (0x4)
+; SYM-NEXT:     StabInfoIndex: 0x0
+; SYM-NEXT:     StabSectNum: 0x0
+; SYM-NEXT:   }
+; SYM-NEXT: }
+; SYM-NEXT: Symbol {
+; SYM-NEXT:   Index: [[#UNDEF_INDX+4]]
+; SYM-NEXT:   Name: c
+; SYM-NEXT:   Value (RelocatableAddress): 0x0
+; SYM-NEXT:   Section: N_UNDEF
+; SYM-NEXT:   Type: 0x0
+; SYM-NEXT:   StorageClass: C_EXT (0x2)
+; SYM-NEXT:   NumberOfAuxEntries: 1
+; SYM-NEXT:   CSECT Auxiliary Entry {
+; SYM-NEXT:     Index: [[#UNDEF_INDX+5]]
+; SYM-NEXT:     SectionLen: 0
+; SYM-NEXT:     ParameterHashIndex: 0x0
+; SYM-NEXT:     TypeChkSectNum: 0x0
+; SYM-NEXT:     SymbolAlignmentLog2: 0
+; SYM-NEXT:     SymbolType: XTY_ER (0x0)
+; SYM-NEXT:     StorageMappingClass: XMC_UA (0x4)
+; SYM-NEXT:     StabInfoIndex: 0x0
+; SYM-NEXT:     StabSectNum: 0x0
+; SYM-NEXT:   }
+; SYM-NEXT: }
+; SYM-NEXT: Symbol {
+; SYM-NEXT:   Index: [[#UNDEF_INDX+6]]
+; SYM-NEXT:   Name: foo
+; SYM-NEXT:   Value (RelocatableAddress): 0x0
+; SYM-NEXT:   Section: N_UNDEF
+; SYM-NEXT:   Type: 0x0
+; SYM-NEXT:   StorageClass: C_EXT (0x2)
+; SYM-NEXT:   NumberOfAuxEntries: 1
+; SYM-NEXT:   CSECT Auxiliary Entry {
+; SYM-NEXT:     Index: [[#UNDEF_INDX+7]]
+; SYM-NEXT:     SectionLen: 0
+; SYM-NEXT:     ParameterHashIndex: 0x0
+; SYM-NEXT:     TypeChkSectNum: 0x0
+; SYM-NEXT:     SymbolAlignmentLog2: 0
+; SYM-NEXT:     SymbolType: XTY_ER (0x0)
+; SYM-NEXT:     StorageMappingClass: XMC_DS (0xA)
+; SYM-NEXT:     StabInfoIndex: 0x0
+; SYM-NEXT:     StabSectNum: 0x0
+; SYM-NEXT:   }
+; SYM-NEXT: }
+; SYM:       Symbol {{[{][[:space:]] *}}Index: [[#TOC_INDX:]]{{[[:space:]] *}}Name: TOC
 ; SYM-NEXT:    Value (RelocatableAddress): 0xA8
 ; SYM-NEXT:    Section: .data
 ; SYM-NEXT:    Type: 0x0
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:    NumberOfAuxEntries: 1
 ; SYM-NEXT:    CSECT Auxiliary Entry {
-; SYM-NEXT:      Index: [[#INDX+1]]
+; SYM-NEXT:      Index: [[#TOC_INDX+1]]
 ; SYM-NEXT:      SectionLen: 0
 ; SYM-NEXT:      ParameterHashIndex: 0x0
 ; SYM-NEXT:      TypeChkSectNum: 0x0
@@ -89,7 +167,7 @@ define void @foobar() {
 ; SYM-NEXT:    }
 ; SYM-NEXT:  }
 ; SYM-NEXT:  Symbol {
-; SYM-NEXT:    Index: [[#INDX+2]]
+; SYM-NEXT:    Index: [[#TOC_INDX+2]]
 ; SYM-NEXT:    Name: a
 ; SYM-NEXT:    Value (RelocatableAddress): 0xA8
 ; SYM-NEXT:    Section: .data
@@ -97,7 +175,7 @@ define void @foobar() {
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:    NumberOfAuxEntries: 1
 ; SYM-NEXT:    CSECT Auxiliary Entry {
-; SYM-NEXT:      Index: [[#INDX+3]]
+; SYM-NEXT:      Index: [[#TOC_INDX+3]]
 ; SYM-NEXT:      SectionLen: 4
 ; SYM-NEXT:      ParameterHashIndex: 0x0
 ; SYM-NEXT:      TypeChkSectNum: 0x0
@@ -109,7 +187,7 @@ define void @foobar() {
 ; SYM-NEXT:    }
 ; SYM-NEXT:  }
 ; SYM-NEXT:  Symbol {
-; SYM-NEXT:    Index: [[#INDX+4]]
+; SYM-NEXT:    Index: [[#TOC_INDX+4]]
 ; SYM-NEXT:    Name: b
 ; SYM-NEXT:    Value (RelocatableAddress): 0xAC
 ; SYM-NEXT:    Section: .data
@@ -117,7 +195,7 @@ define void @foobar() {
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:    NumberOfAuxEntries: 1
 ; SYM-NEXT:    CSECT Auxiliary Entry {
-; SYM-NEXT:      Index: [[#INDX+5]]
+; SYM-NEXT:      Index: [[#TOC_INDX+5]]
 ; SYM-NEXT:      SectionLen: 4
 ; SYM-NEXT:      ParameterHashIndex: 0x0
 ; SYM-NEXT:      TypeChkSectNum: 0x0
@@ -129,7 +207,7 @@ define void @foobar() {
 ; SYM-NEXT:    }
 ; SYM-NEXT:  }
 ; SYM-NEXT:  Symbol {
-; SYM-NEXT:    Index: [[#INDX+6]]
+; SYM-NEXT:    Index: [[#TOC_INDX+6]]
 ; SYM-NEXT:    Name: c
 ; SYM-NEXT:    Value (RelocatableAddress): 0xB0
 ; SYM-NEXT:    Section: .data
@@ -137,7 +215,7 @@ define void @foobar() {
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:    NumberOfAuxEntries: 1
 ; SYM-NEXT:    CSECT Auxiliary Entry {
-; SYM-NEXT:      Index: [[#INDX+7]]
+; SYM-NEXT:      Index: [[#TOC_INDX+7]]
 ; SYM-NEXT:      SectionLen: 4
 ; SYM-NEXT:      ParameterHashIndex: 0x0
 ; SYM-NEXT:      TypeChkSectNum: 0x0
@@ -149,7 +227,7 @@ define void @foobar() {
 ; SYM-NEXT:    }
 ; SYM-NEXT:  }
 ; SYM-NEXT:  Symbol {
-; SYM-NEXT:    Index: [[#INDX+8]]
+; SYM-NEXT:    Index: [[#TOC_INDX+8]]
 ; SYM-NEXT:    Name: globa
 ; SYM-NEXT:    Value (RelocatableAddress): 0xB4
 ; SYM-NEXT:    Section: .data
@@ -157,7 +235,7 @@ define void @foobar() {
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:    NumberOfAuxEntries: 1
 ; SYM-NEXT:    CSECT Auxiliary Entry {
-; SYM-NEXT:      Index: [[#INDX+9]]
+; SYM-NEXT:      Index: [[#TOC_INDX+9]]
 ; SYM-NEXT:      SectionLen: 4
 ; SYM-NEXT:      ParameterHashIndex: 0x0
 ; SYM-NEXT:      TypeChkSectNum: 0x0
@@ -169,7 +247,7 @@ define void @foobar() {
 ; SYM-NEXT:    }
 ; SYM-NEXT:  }
 ; SYM-NEXT:  Symbol {
-; SYM-NEXT:    Index: [[#INDX+10]]
+; SYM-NEXT:    Index: [[#TOC_INDX+10]]
 ; SYM-NEXT:    Name: ptr
 ; SYM-NEXT:    Value (RelocatableAddress): 0xB8
 ; SYM-NEXT:    Section: .data
@@ -177,7 +255,7 @@ define void @foobar() {
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:    NumberOfAuxEntries: 1
 ; SYM-NEXT:    CSECT Auxiliary Entry {
-; SYM-NEXT:      Index: [[#INDX+11]]
+; SYM-NEXT:      Index: [[#TOC_INDX+11]]
 ; SYM-NEXT:      SectionLen: 4
 ; SYM-NEXT:      ParameterHashIndex: 0x0
 ; SYM-NEXT:      TypeChkSectNum: 0x0
@@ -189,7 +267,7 @@ define void @foobar() {
 ; SYM-NEXT:    }
 ; SYM-NEXT:  }
 ; SYM-NEXT:  Symbol {
-; SYM-NEXT:    Index: [[#INDX+12]]
+; SYM-NEXT:    Index: [[#TOC_INDX+12]]
 ; SYM-NEXT:    Name: bar
 ; SYM-NEXT:    Value (RelocatableAddress): 0xBC
 ; SYM-NEXT:    Section: .data
@@ -197,7 +275,7 @@ define void @foobar() {
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:    NumberOfAuxEntries: 1
 ; SYM-NEXT:    CSECT Auxiliary Entry {
-; SYM-NEXT:      Index: [[#INDX+13]]
+; SYM-NEXT:      Index: [[#TOC_INDX+13]]
 ; SYM-NEXT:      SectionLen: 4
 ; SYM-NEXT:      ParameterHashIndex: 0x0
 ; SYM-NEXT:      TypeChkSectNum: 0x0
@@ -209,7 +287,7 @@ define void @foobar() {
 ; SYM-NEXT:    }
 ; SYM-NEXT:  }
 ; SYM-NEXT:  Symbol {
-; SYM-NEXT:    Index: [[#INDX+14]]
+; SYM-NEXT:    Index: [[#TOC_INDX+14]]
 ; SYM-NEXT:    Name: foo
 ; SYM-NEXT:    Value (RelocatableAddress): 0xC0
 ; SYM-NEXT:    Section: .data
@@ -217,7 +295,7 @@ define void @foobar() {
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:    NumberOfAuxEntries: 1
 ; SYM-NEXT:    CSECT Auxiliary Entry {
-; SYM-NEXT:      Index: [[#INDX+15]]
+; SYM-NEXT:      Index: [[#TOC_INDX+15]]
 ; SYM-NEXT:      SectionLen: 4
 ; SYM-NEXT:      ParameterHashIndex: 0x0
 ; SYM-NEXT:      TypeChkSectNum: 0x0
@@ -229,7 +307,7 @@ define void @foobar() {
 ; SYM-NEXT:    }
 ; SYM-NEXT:  }
 ; SYM-NEXT:  Symbol {
-; SYM-NEXT:    Index: [[#INDX+16]]
+; SYM-NEXT:    Index: [[#TOC_INDX+16]]
 ; SYM-NEXT:    Name: foobar
 ; SYM-NEXT:    Value (RelocatableAddress): 0xC4
 ; SYM-NEXT:    Section: .data
@@ -237,7 +315,7 @@ define void @foobar() {
 ; SYM-NEXT:    StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:    NumberOfAuxEntries: 1
 ; SYM-NEXT:    CSECT Auxiliary Entry {
-; SYM-NEXT:      Index: [[#INDX+17]]
+; SYM-NEXT:      Index: [[#TOC_INDX+17]]
 ; SYM-NEXT:      SectionLen: 4
 ; SYM-NEXT:      ParameterHashIndex: 0x0
 ; SYM-NEXT:      TypeChkSectNum: 0x0

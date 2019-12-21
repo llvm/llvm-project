@@ -1,4 +1,4 @@
-//===- llvm/DebugInfo/DWARF/DWARFOptCompileUnit.cpp -----------------------===//
+//===- tools/dsymutil/CompileUnit.h - Dwarf compile unit ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/DWARF/DWARFOptCompileUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFOptDeclContext.h"
+#include "CompileUnit.h"
+#include "DeclContext.h"
 
 namespace llvm {
+namespace dsymutil {
 
 /// Check if the DIE at \p Idx is in the scope of a function.
 static bool inFunctionScope(CompileUnit &U, unsigned Idx) {
@@ -141,4 +142,5 @@ void CompileUnit::addTypeAccelerator(const DIE *Die,
   Pubtypes.emplace_back(Name, Die, QualifiedNameHash, ObjcClassImplementation);
 }
 
+} // namespace dsymutil
 } // namespace llvm

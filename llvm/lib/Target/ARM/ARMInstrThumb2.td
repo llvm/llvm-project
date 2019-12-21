@@ -270,8 +270,7 @@ def t2am_imm8_offset : MemOperand,
 
 // t2addrmode_imm8s4  := reg +/- (imm8 << 2)
 def MemImm8s4OffsetAsmOperand : AsmOperandClass {let Name = "MemImm8s4Offset";}
-class T2AddrMode_Imm8s4 : MemOperand,
-                          ComplexPattern<i32, 2, "SelectT2AddrModeImm8<2>", []> {
+class T2AddrMode_Imm8s4 : MemOperand {
   let EncoderMethod = "getT2AddrModeImm8s4OpValue";
   let DecoderMethod = "DecodeT2AddrModeImm8s4";
   let ParserMatchClass = MemImm8s4OffsetAsmOperand;
@@ -1413,8 +1412,7 @@ let mayLoad = 1, hasSideEffects = 0, hasExtraDefRegAllocReq = 1 in {
 // Load doubleword
 def t2LDRDi8  : T2Ii8s4<1, 0, 1, (outs rGPR:$Rt, rGPR:$Rt2),
                         (ins t2addrmode_imm8s4:$addr),
-                        IIC_iLoad_d_i, "ldrd", "\t$Rt, $Rt2, $addr", "",
-                        [(set rGPR:$Rt, rGPR:$Rt2, (ARMldrd t2addrmode_imm8s4:$addr))]>,
+                        IIC_iLoad_d_i, "ldrd", "\t$Rt, $Rt2, $addr", "", []>,
                  Sched<[WriteLd]>;
 } // mayLoad = 1, hasSideEffects = 0, hasExtraDefRegAllocReq = 1
 
@@ -1595,8 +1593,7 @@ defm t2STRH:T2I_st<0b01,"strh", IIC_iStore_bh_i, IIC_iStore_bh_si,
 let mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1 in
 def t2STRDi8 : T2Ii8s4<1, 0, 0, (outs),
                        (ins rGPR:$Rt, rGPR:$Rt2, t2addrmode_imm8s4:$addr),
-               IIC_iStore_d_r, "strd", "\t$Rt, $Rt2, $addr", "",
-               [(ARMstrd rGPR:$Rt, rGPR:$Rt2, t2addrmode_imm8s4:$addr)]>,
+               IIC_iStore_d_r, "strd", "\t$Rt, $Rt2, $addr", "", []>,
                Sched<[WriteST]>;
 
 // Indexed stores
@@ -5189,8 +5186,6 @@ class t2LOL<dag oops, dag iops, string asm, string ops>
   let Inst{31-23} = 0b111100000;
   let Inst{15-14} = 0b11;
   let Inst{0} = 0b1;
-  let isBranch = 1;
-  let isTerminator = 1;
   let DecoderMethod = "DecodeLOLoop";
   let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB];
 }
@@ -5207,13 +5202,13 @@ def t2WLS : t2LOL<(outs GPRlr:$LR),
   let Inst{11} = label{0};
   let Inst{10-1} = label{10-1};
   let usesCustomInserter = 1;
+  let isBranch = 1;
+  let isTerminator = 1;
 }
 
 def t2DLS : t2LOL<(outs GPRlr:$LR), (ins rGPR:$Rn),
                   "dls", "$LR, $Rn"> {
   bits<4> Rn;
-  let isBranch = 0;
-  let isTerminator = 0;
   let Inst{22-20} = 0b100;
   let Inst{19-16} = Rn{3-0};
   let Inst{13-1} = 0b1000000000000;
@@ -5229,6 +5224,8 @@ def t2LEUpdate : t2LOL<(outs GPRlr:$LRout),
   let Inst{11} = label{0};
   let Inst{10-1} = label{10-1};
   let usesCustomInserter = 1;
+  let isBranch = 1;
+  let isTerminator = 1;
 }
 
 def t2LE : t2LOL<(outs ), (ins lelabel_u11:$label), "le", "$label"> {
@@ -5237,6 +5234,8 @@ def t2LE : t2LOL<(outs ), (ins lelabel_u11:$label), "le", "$label"> {
   let Inst{13-12} = 0b00;
   let Inst{11} = label{0};
   let Inst{10-1} = label{10-1};
+  let isBranch = 1;
+  let isTerminator = 1;
 }
 
 def t2DoLoopStart :

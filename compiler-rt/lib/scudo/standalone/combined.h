@@ -22,7 +22,7 @@
 #include "tsd.h"
 
 #ifdef GWP_ASAN_HOOKS
-# include "gwp_asan/guarded_pool_allocator.h"
+#include "gwp_asan/guarded_pool_allocator.h"
 // GWP-ASan is declared here in order to avoid indirect call overhead. It's also
 // instantiated outside of the Allocator class, as the allocator is only
 // zero-initialised. GWP-ASan requires constant initialisation, and the Scudo
@@ -414,19 +414,19 @@ public:
     return NewPtr;
   }
 
-  // TODO(kostyak): while this locks the Primary & Secondary, it still allows
-  //                pointers to be fetched from the TSD. We ultimately want to
-  //                lock the registry as well. For now, it's good enough.
+  // TODO(kostyak): disable() is currently best-effort. There are some small
+  //                windows of time when an allocation could still succeed after
+  //                this function finishes. We will revisit that later.
   void disable() {
     initThreadMaybe();
-    Primary.disable();
+    TSDRegistry.disable();
     Secondary.disable();
   }
 
   void enable() {
     initThreadMaybe();
     Secondary.enable();
-    Primary.enable();
+    TSDRegistry.enable();
   }
 
   // The function returns the amount of bytes required to store the statistics,

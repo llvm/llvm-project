@@ -18,22 +18,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     "`CMakeFiles'. Please delete them.")
 endif()
 
-set(LLDB_LINKER_SUPPORTS_GROUPS OFF)
-if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-  # The Darwin linker doesn't understand --start-group/--end-group.
-  set(LLDB_LINKER_SUPPORTS_GROUPS ON)
-endif()
-
 set(default_enable_python ON)
+set(default_enable_lua OFF) # Experimental
 set(default_enable_libedit ON)
 set(default_enable_curses ON)
 
-# Temporary support the old LLDB_DISABLE_* variables
-if (DEFINED LLDB_DISABLE_CURSES)
-  if (LLDB_DISABLE_CURSES)
-    set(default_enable_curses OFF)
-  endif()
-endif()
+# Temporarily support the old LLDB_DISABLE_* variables
 if (DEFINED LLDB_DISABLE_PYTHON)
   if (LLDB_DISABLE_PYTHON)
     set(default_enable_python OFF)
@@ -49,13 +39,16 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   set(default_enable_curses OFF)
 elseif(CMAKE_SYSTEM_NAME MATCHES "Android")
   set(default_enable_python OFF)
+  set(default_enable_lua OFF)
   set(default_enable_libedit OFF)
   set(default_enable_curses OFF)
 elseif(IOS)
   set(default_enable_python OFF)
+  set(default_enable_lua OFF)
 endif()
 
 option(LLDB_ENABLE_PYTHON "Enable Python scripting integration." ${default_enable_python})
+option(LLDB_ENABLE_PYTHON "Enable Lua scripting integration." ${default_enable_lua})
 option(LLDB_ENABLE_LIBEDIT "Enable the use of editline." ${default_enable_libedit})
 option(LLDB_ENABLE_CURSES "Enable Curses integration." ${default_enable_curses})
 option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)

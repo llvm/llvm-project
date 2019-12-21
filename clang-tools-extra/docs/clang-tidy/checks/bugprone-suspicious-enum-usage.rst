@@ -40,7 +40,7 @@ Examples:
   unsigned flag;
   flag =
       A |
-      H; // OK, disjoint value intervalls in the enum types ->probably good use.
+      H; // OK, disjoint value intervals in the enum types ->probably good use.
   flag = B | F; // Warning, have common values so they are probably misused.
   
   // Case 2:

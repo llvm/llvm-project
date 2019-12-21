@@ -1,0 +1,6 @@
+# REQUIRES: lld, x86
+; RUN: llc -mtriple x86_64-pc-linux %S/inline-function-address.ll -filetype=obj -o %t.o
+; RUN: ld.lld %t.o %t.o -o %t -shared
+; RUN: lldb-test symbols --find=function --name=foo --function-flags=full %t | FileCheck %s
+; CHECK: Function: {{.*}} "foo"
+; CHECK-NOT: Function: {{.*}} "foo"

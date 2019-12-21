@@ -37,3 +37,11 @@ template<typename ...T> void f(T ...t) {
   }...               // expected-error {{does not contain any unexpanded}}
   );
 }
+
+template<int ...a> constexpr auto x = [...z = a] (auto F) { return F(z...); };
+static_assert(x<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 123);
+static_assert(x<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 124); // expected-error {{failed}}
+
+template<int ...a> constexpr auto y = [z = a...] (auto F) { return F(z...); }; // expected-error {{must appear before the name of the capture}}
+static_assert(y<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 123);
+static_assert(y<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 124); // expected-error {{failed}}

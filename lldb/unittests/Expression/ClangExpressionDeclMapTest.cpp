@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ExpressionParser/Clang/ClangExpressionDeclMap.h"
-#include "TestingSupport/TestUtilities.h"
+#include "TestingSupport/Symbol/ClangTestUtils.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -18,16 +18,12 @@
 using namespace lldb_private;
 using namespace lldb;
 
-static std::unique_ptr<ClangASTContext> createAST() {
-  return std::make_unique<ClangASTContext>(HostInfo::GetTargetTriple());
-}
-
 namespace {
 struct FakeClangExpressionDeclMap : public ClangExpressionDeclMap {
   FakeClangExpressionDeclMap(const ClangASTImporterSP &importer)
       : ClangExpressionDeclMap(false, nullptr, lldb::TargetSP(), importer,
                                nullptr) {
-    m_scratch_context = createAST();
+    m_scratch_context = clang_utils::createAST();
   }
   std::unique_ptr<ClangASTContext> m_scratch_context;
   /// Adds a persistent decl that can be found by the ClangExpressionDeclMap
@@ -78,7 +74,7 @@ struct ClangExpressionDeclMapTest : public testing::Test {
   void SetUp() override {
     importer = std::make_shared<ClangASTImporter>();
     decl_map = std::make_unique<FakeClangExpressionDeclMap>(importer);
-    target_ast = createAST();
+    target_ast = clang_utils::createAST();
     decl_map->InstallASTContext(*target_ast, *target_ast->getFileManager());
   }
 
@@ -86,21 +82,6 @@ struct ClangExpressionDeclMapTest : public testing::Test {
     importer.reset();
     decl_map.reset();
     target_ast.reset();
-  }
-
-  clang::DeclarationName getDeclarationName(ClangASTContext &ast,
-                                            llvm::StringRef name) {
-    clang::IdentifierInfo &II = ast.getIdentifierTable()->get(name);
-    return ast.getASTContext()->DeclarationNames.getIdentifier(&II);
-  }
-
-  CompilerType createRecord(ClangASTContext &ast, llvm::StringRef name) {
-    CompilerType t = ast.CreateRecordType(ast.getASTContext()->getTranslationUnitDecl(),
-                                lldb::AccessType::eAccessPublic, name, 0,
-                                lldb::LanguageType::eLanguageTypeC);
-    ClangASTContext::StartTagDeclarationDefinition(t);
-    ClangASTContext::CompleteTagDeclarationDefinition(t);
-    return t;
   }
 };
 } // namespace
@@ -110,7 +91,8 @@ TEST_F(ClangExpressionDeclMapTest, TestUnknownIdentifierLookup) {
 
   // Setup a NameSearchContext for 'foo'.
   llvm::SmallVector<clang::NamedDecl *, 16> decls;
-  clang::DeclarationName name = getDeclarationName(*target_ast, "foo");
+  clang::DeclarationName name =
+      clang_utils::getDeclarationName(*target_ast, "foo");
   const clang::DeclContext *dc = target_ast->GetTranslationUnitDecl();
   NameSearchContext search(*decl_map, decls, name, dc);
 
@@ -127,12 +109,13 @@ TEST_F(ClangExpressionDeclMapTest, TestPersistentDeclLookup) {
   // to the scratch AST context.
   llvm::StringRef decl_name = "$persistent_class";
   CompilerType persistent_type =
-      createRecord(*decl_map->m_scratch_context, decl_name);
+      clang_utils::createRecord(*decl_map->m_scratch_context, decl_name);
   decl_map->AddPersistentDeclForTest(ClangUtil::GetAsTagDecl(persistent_type));
 
   // Setup a NameSearchContext for $persistent_class;
   llvm::SmallVector<clang::NamedDecl *, 16> decls;
-  clang::DeclarationName name = getDeclarationName(*target_ast, decl_name);
+  clang::DeclarationName name =
+      clang_utils::getDeclarationName(*target_ast, decl_name);
   const clang::DeclContext *dc = target_ast->GetTranslationUnitDecl();
   NameSearchContext search(*decl_map, decls, name, dc);
 

@@ -5864,6 +5864,8 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   //   one of the operands is reference-compatible with the other, in order
   //   to support conditionals between functions differing in noexcept. This
   //   will similarly cover difference in array bounds after P0388R4.
+  // FIXME: If LTy and RTy have a composite pointer type, should we convert to
+  //   that instead?
   ExprValueKind LVK = LHS.get()->getValueKind();
   ExprValueKind RVK = RHS.get()->getValueKind();
   if (!Context.hasSameType(LTy, RTy) &&

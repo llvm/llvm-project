@@ -36,7 +36,8 @@ public:
 
   static const char *faultTypeToString(FaultKind);
 
-  void recordFaultingOp(FaultKind FaultTy, const MCSymbol *HandlerLabel);
+  void recordFaultingOp(FaultKind FaultTy, const MCSymbol *FaultingLabel,
+                        const MCSymbol *HandlerLabel);
   void serializeToFaultMapSection();
   void reset() {
     FunctionInfos.clear();

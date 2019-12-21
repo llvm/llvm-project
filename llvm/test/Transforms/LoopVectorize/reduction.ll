@@ -300,7 +300,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; In this test the reduction variable is on the LHS and we can vectorize it.
 ;CHECK-LABEL: @reduction_sub_lhs(
 ;CHECK: phi <4 x i32>
-;CHECK: sub nsw <4 x i32>
+;CHECK: sub <4 x i32>
 ;CHECK: ret i32
 define i32 @reduction_sub_lhs(i32 %n, i32* noalias nocapture %A) nounwind uwtable readonly {
 entry:
