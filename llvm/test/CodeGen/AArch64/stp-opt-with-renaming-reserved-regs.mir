@@ -1,0 +1,89 @@
+# RUN: llc -run-pass=aarch64-ldst-opt -mattr=+reserve-x10 -mattr=+reserve-x11 \
+# RUN:     -mattr=+reserve-x15 -mtriple=arm64-apple-iphoneos -verify-machineinstrs \
+# RUN:     -o - %s | FileCheck --check-prefix=CHECK --check-prefix=PRESERVED %s
+
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs \
+# RUN:     -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOPRES %s
+
+
+# Make sure we do not pick reserved registers. For test1, we would pick x10,
+# and for test2 we would pick x15, both of which are reserved.
+#
+---
+# CHECK-LABEL: name: test1
+# CHECK:       bb.0:
+# CHECK-NEXT:     liveins: $x0, $x1
+# PRESERVED:      $x12, renamable $x8 = LDPXi renamable $x0, 0 :: (load 8)
+# NOPRES:         $x10, renamable $x8 = LDPXi renamable $x0, 0 :: (load 8)
+# CHECK-NEXT:     renamable $x9 = LDRXui renamable $x0, 1 :: (load 8)
+# CHECK-NEXT:     STRXui renamable $x9, renamable $x0, 100 :: (store 8, align 4)
+# CHECK-NEXT:     renamable $x8 = ADDXrr $x8, $x8
+# PRESERVED-NEXT: STPXi renamable $x8, killed $x12, renamable $x0, 10 :: (store 8, align 4)
+# NOPRES-NEXT:    STPXi renamable $x8, killed $x10, renamable $x0, 10 :: (store 8, align 4)
+# CHECK-NEXT:     RET undef $lr
+
+name:            test1
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load 8)
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store 8, align 4)
+    renamable $x9 = LDRXui renamable $x0, 1 :: (load 8)
+    STRXui renamable $x9, renamable $x0, 100 :: (store 8, align 4)
+    renamable $x8 = ADDXrr $x8, $x8
+    STRXui renamable $x8, renamable $x0, 10 :: (store 8, align 4)
+    RET undef $lr
+
+...
+# CHECK-LABEL: name: test2
+# CHECK:       bb.0:
+# CHECK-NEXT:     liveins: $x0, $x1, $x10, $x11, $x12, $x13
+# CHECK:          renamable $w19 = LDRWui renamable $x0, 0 :: (load 8)
+# PRESERVED-NEXT: $x18, renamable $x8 = LDPXi renamable $x0, 1 :: (load 8)
+# NOPRES-NEXT:    $x15, renamable $x8 = LDPXi renamable $x0, 1 :: (load 8)
+# CHECK-NEXT:     renamable $x9 = LDRXui renamable $x0, 3 :: (load 8)
+# CHECK-NEXT:     renamable $x14 = LDRXui renamable $x0, 5 :: (load 8)
+# PRESERVED-NEXT: STPXi renamable $x9, killed $x18, renamable $x0, 10 :: (store 8, align 4)
+# NOPRES-NEXT:    STPXi renamable $x9, killed $x15, renamable $x0, 10 :: (store 8, align 4)
+# CHECK-NEXT:     STRXui killed renamable $x14, renamable $x0, 200 :: (store 8, align 4)
+# CHECK-NEXT:     renamable $w8 = ADDWrr $w19, $w19
+# CHECK-NEXT:     STRWui renamable $w8, renamable $x0, 100 :: (store 8, align 4)
+# CHECK-NEXT:     RET undef $lr
+#
+name:            test2
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x10, $x11, $x12, $x13
+    renamable $w19 = LDRWui renamable $x0, 0 :: (load 8)
+    renamable $x9, renamable $x8 = LDPXi renamable $x0, 1 :: (load 8)
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store 8, align 4)
+    renamable $x9 = LDRXui renamable $x0, 3 :: (load 8)
+    renamable $x14 = LDRXui renamable $x0, 5 :: (load 8)
+    STRXui renamable $x9, renamable $x0, 10 :: (store 8, align 4)
+    STRXui renamable killed $x14, renamable $x0, 200 :: (store 8, align 4)
+    renamable $w8 = ADDWrr $w19, $w19
+    STRWui renamable $w8, renamable $x0, 100 :: (store 8, align 4)
+    RET undef $lr
+
+...
+---
