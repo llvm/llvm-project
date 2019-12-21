@@ -39,8 +39,8 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; This simulates the debug info for a Clang module.
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, nameTableKind: GNU, retainedTypes: !{!11})
 !3 = !DIFile(filename: "t.c", directory: "/")
-!8 = !DIModule(scope: !9, name: "SubModule", includePath: "", isysroot: "/")
-!9 = !DIModule(scope: null, name: "CModule", includePath: "", isysroot: "/")
+!8 = !DIModule(scope: !9, name: "SubModule", includePath: "", sysroot: "/")
+!9 = !DIModule(scope: null, name: "CModule", includePath: "", sysroot: "/")
 !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "FromSubmodule", scope: !8, file: !3, line: 1, size: 96, elements: !13)
 !13 = !{!14, !16, !17}
 !14 = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: !11, file: !3, line: 2, baseType: !15, size: 32)
