@@ -78,6 +78,12 @@ RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
     ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager)
     : ObjectLayer(ES), GetMemoryManager(GetMemoryManager) {}
 
+RTDyldObjectLinkingLayer::~RTDyldObjectLinkingLayer() {
+  std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
+  for (auto &MemMgr : MemMgrs)
+    MemMgr->deregisterEHFrames();
+}
+
 void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
                                     std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");

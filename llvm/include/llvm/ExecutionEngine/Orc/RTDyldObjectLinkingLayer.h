@@ -54,6 +54,8 @@ public:
   RTDyldObjectLinkingLayer(ExecutionSession &ES,
                            GetMemoryManagerFunction GetMemoryManager);
 
+  ~RTDyldObjectLinkingLayer();
+
   /// Emit the object.
   void emit(MaterializationResponsibility R,
             std::unique_ptr<MemoryBuffer> O) override;
