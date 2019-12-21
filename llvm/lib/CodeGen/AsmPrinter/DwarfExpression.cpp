@@ -572,3 +572,11 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
   emitUnsigned((1ULL << FromBits) - 1);
   emitOp(dwarf::DW_OP_and);
 }
+
+void DwarfExpression::addWasmLocation(unsigned Index, int64_t Offset) {
+  assert(LocationKind == Implicit || LocationKind == Unknown);
+  LocationKind = Implicit;
+  emitOp(dwarf::DW_OP_WASM_location);
+  emitUnsigned(Index);
+  emitSigned(Offset);
+}
