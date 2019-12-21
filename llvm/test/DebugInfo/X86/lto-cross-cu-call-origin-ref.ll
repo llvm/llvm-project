@@ -49,10 +49,6 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_AT_name ("a.c")
 
-; CHECK: DW_TAG_subprogram
-; CHECK:   DW_AT_name ("func_from_b")
-; CHECK:   DW_AT_declaration (true)
-
 ; CHECK: 0x{{0+}}[[NOINLINE_FUNC_IN_A:.*]]: DW_TAG_subprogram
 ; CHECK:   DW_AT_name ("noinline_func_in_a")
 
@@ -80,14 +76,6 @@
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_AT_name ("b.c")
-
-; CHECK: DW_TAG_subprogram
-; CHECK:   DW_AT_name ("noinline_func_in_a")
-; CHECK:   DW_AT_declaration (true)
-
-; CHECK: DW_TAG_subprogram
-; CHECK:   DW_AT_name ("always_inline_helper_in_a_that_calls_foo")
-; CHECK:   DW_AT_declaration (true)
 
 ; 3) Validate the cross-CU ref from "call_func_in_b_from_a" in a.c.
 ; CHECK: 0x{{0+}}[[FUNC_FROM_B]]: DW_TAG_subprogram
