@@ -289,8 +289,10 @@ int main(int argc, char **argv) {
   }
 
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
-  cl::ParseCommandLineOptions(argc, argv, IsAddr2Line ? "llvm-addr2line\n"
-                                                      : "llvm-symbolizer\n");
+  cl::ParseCommandLineOptions(
+      argc, argv, IsAddr2Line ? "llvm-addr2line\n" : "llvm-symbolizer\n",
+      /*Errs=*/nullptr,
+      IsAddr2Line ? "LLVM_ADDR2LINE_OPTS" : "LLVM_SYMBOLIZER_OPTS");
 
   // If both --demangle and --no-demangle are specified then pick the last one.
   if (ClNoDemangle.getPosition() > ClDemangle.getPosition())

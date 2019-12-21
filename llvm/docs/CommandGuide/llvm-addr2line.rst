@@ -27,6 +27,8 @@ Here are some of those differences:
 
 -  Uses `--output-style=GNU`_ by default.
 
+-  Parses options from the environment variable ``LLVM_ADDR2LINE_OPTS``.
+
 SEE ALSO
 --------
 
