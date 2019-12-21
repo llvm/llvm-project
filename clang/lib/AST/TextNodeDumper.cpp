@@ -489,6 +489,9 @@ void TextNodeDumper::visitInlineCommandComment(
   case comments::InlineCommandComment::RenderEmphasized:
     OS << " RenderEmphasized";
     break;
+  case comments::InlineCommandComment::RenderAnchor:
+    OS << " RenderAnchor";
+    break;
   }
 
   for (unsigned i = 0, e = C->getNumArgs(); i != e; ++i)
