@@ -571,9 +571,7 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
         new ClangASTContextForExpressions(*target, fixed_arch));
     ast_sp->m_scratch_ast_source_up.reset(new ClangASTSource(
         target->shared_from_this(), target->GetClangASTImporter()));
-    lldbassert(ast_sp->getFileManager());
-    ast_sp->m_scratch_ast_source_up->InstallASTContext(
-        *ast_sp, *ast_sp->getFileManager(), true);
+    ast_sp->m_scratch_ast_source_up->InstallASTContext(*ast_sp);
     llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
         ast_sp->m_scratch_ast_source_up->CreateProxy());
     ast_sp->SetExternalSource(proxy_ast_source);
@@ -663,14 +661,60 @@ ASTContext *ClangASTContext::getASTContext() {
   return m_ast_up.get();
 }
 
+class NullDiagnosticConsumer : public DiagnosticConsumer {
+public:
+  NullDiagnosticConsumer() {
+    m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  }
+
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const clang::Diagnostic &info) override {
+    if (m_log) {
+      llvm::SmallVector<char, 32> diag_str(10);
+      info.FormatDiagnostic(diag_str);
+      diag_str.push_back('\0');
+      LLDB_LOGF(m_log, "Compiler diagnostic: %s\n", diag_str.data());
+    }
+  }
+
+  DiagnosticConsumer *clone(DiagnosticsEngine &Diags) const {
+    return new NullDiagnosticConsumer();
+  }
+
+private:
+  Log *m_log;
+};
+
 void ClangASTContext::CreateASTContext() {
   assert(!m_ast_up);
   m_ast_owned = true;
-  m_ast_up.reset(new ASTContext(*getLanguageOptions(), *getSourceManager(),
-                                *getIdentifierTable(), *getSelectorTable(),
-                                *getBuiltinContext()));
 
-  m_ast_up->getDiagnostics().setClient(getDiagnosticConsumer(), false);
+  m_language_options_up.reset(new LangOptions());
+  ParseLangArgs(*m_language_options_up, clang::Language::ObjCXX,
+                GetTargetTriple());
+
+  m_identifier_table_up.reset(
+      new IdentifierTable(*m_language_options_up, nullptr));
+  m_builtins_up.reset(new Builtin::Context());
+
+  m_selector_table_up.reset(new SelectorTable());
+
+  clang::FileSystemOptions file_system_options;
+  m_file_manager_up.reset(new clang::FileManager(
+      file_system_options, FileSystem::Instance().GetVirtualFileSystem()));
+
+  llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_id_sp(new DiagnosticIDs());
+  m_diagnostics_engine_up.reset(
+      new DiagnosticsEngine(diag_id_sp, new DiagnosticOptions()));
+
+  m_source_manager_up.reset(
+      new clang::SourceManager(*m_diagnostics_engine_up, *m_file_manager_up));
+  m_ast_up.reset(new ASTContext(*m_language_options_up, *m_source_manager_up,
+                                *m_identifier_table_up, *m_selector_table_up,
+                                *m_builtins_up));
+
+  m_diagnostic_consumer_up.reset(new NullDiagnosticConsumer);
+  m_ast_up->getDiagnostics().setClient(m_diagnostic_consumer_up.get(), false);
 
   // This can be NULL if we don't know anything about the architecture or if
   // the target for an architecture isn't enabled in the llvm/clang that we
@@ -699,95 +743,10 @@ ClangASTContext *ClangASTContext::GetASTContext(clang::ASTContext *ast) {
   return clang_ast;
 }
 
-Builtin::Context *ClangASTContext::getBuiltinContext() {
-  if (m_builtins_up == nullptr)
-    m_builtins_up.reset(new Builtin::Context());
-  return m_builtins_up.get();
-}
-
-IdentifierTable *ClangASTContext::getIdentifierTable() {
-  if (m_identifier_table_up == nullptr)
-    m_identifier_table_up.reset(
-        new IdentifierTable(*ClangASTContext::getLanguageOptions(), nullptr));
-  return m_identifier_table_up.get();
-}
-
-LangOptions *ClangASTContext::getLanguageOptions() {
-  if (m_language_options_up == nullptr) {
-    m_language_options_up.reset(new LangOptions());
-    ParseLangArgs(*m_language_options_up, clang::Language::ObjCXX,
-                  GetTargetTriple());
-    //        InitializeLangOptions(*m_language_options_up, Language::ObjCXX);
-  }
-  return m_language_options_up.get();
-}
-
-SelectorTable *ClangASTContext::getSelectorTable() {
-  if (m_selector_table_up == nullptr)
-    m_selector_table_up.reset(new SelectorTable());
-  return m_selector_table_up.get();
-}
-
-clang::FileManager *ClangASTContext::getFileManager() {
-  if (m_file_manager_up == nullptr) {
-    clang::FileSystemOptions file_system_options;
-    m_file_manager_up.reset(new clang::FileManager(
-        file_system_options, FileSystem::Instance().GetVirtualFileSystem()));
-  }
-  return m_file_manager_up.get();
-}
-
-clang::SourceManager *ClangASTContext::getSourceManager() {
-  if (m_source_manager_up == nullptr)
-    m_source_manager_up.reset(
-        new clang::SourceManager(*getDiagnosticsEngine(), *getFileManager()));
-  return m_source_manager_up.get();
-}
-
-clang::DiagnosticsEngine *ClangASTContext::getDiagnosticsEngine() {
-  if (m_diagnostics_engine_up == nullptr) {
-    llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_id_sp(new DiagnosticIDs());
-    m_diagnostics_engine_up.reset(
-        new DiagnosticsEngine(diag_id_sp, new DiagnosticOptions()));
-  }
-  return m_diagnostics_engine_up.get();
-}
-
 clang::MangleContext *ClangASTContext::getMangleContext() {
   if (m_mangle_ctx_up == nullptr)
     m_mangle_ctx_up.reset(getASTContext()->createMangleContext());
   return m_mangle_ctx_up.get();
-}
-
-class NullDiagnosticConsumer : public DiagnosticConsumer {
-public:
-  NullDiagnosticConsumer() {
-    m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-  }
-
-  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const clang::Diagnostic &info) override {
-    if (m_log) {
-      llvm::SmallVector<char, 32> diag_str(10);
-      info.FormatDiagnostic(diag_str);
-      diag_str.push_back('\0');
-      LLDB_LOGF(m_log, "Compiler diagnostic: %s\n", diag_str.data());
-    }
-  }
-
-  DiagnosticConsumer *clone(DiagnosticsEngine &Diags) const {
-    return new NullDiagnosticConsumer();
-  }
-
-private:
-  Log *m_log;
-};
-
-DiagnosticConsumer *ClangASTContext::getDiagnosticConsumer() {
-  if (m_diagnostic_consumer_up == nullptr)
-    m_diagnostic_consumer_up.reset(new NullDiagnosticConsumer);
-
-  return m_diagnostic_consumer_up.get();
 }
 
 std::shared_ptr<clang::TargetOptions> &ClangASTContext::getTargetOptions() {
@@ -802,8 +761,8 @@ std::shared_ptr<clang::TargetOptions> &ClangASTContext::getTargetOptions() {
 TargetInfo *ClangASTContext::getTargetInfo() {
   // target_triple should be something like "x86_64-apple-macosx"
   if (m_target_info_up == nullptr && !m_target_triple.empty())
-    m_target_info_up.reset(TargetInfo::CreateTargetInfo(*getDiagnosticsEngine(),
-                                                        getTargetOptions()));
+    m_target_info_up.reset(TargetInfo::CreateTargetInfo(
+        getASTContext()->getDiagnostics(), getTargetOptions()));
   return m_target_info_up.get();
 }
 

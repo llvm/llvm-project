@@ -246,8 +246,8 @@ bool HostInfoBase::ComputeSharedLibraryDirectory(FileSpec &file_spec) {
   // On other posix systems, we will get .../lib(64|32)?/liblldb.so.
 
   FileSpec lldb_file_spec(Host::GetModuleFileSpecForHostAddress(
-      reinterpret_cast<void *>(reinterpret_cast<intptr_t>(
-          HostInfoBase::ComputeSharedLibraryDirectory))));
+      reinterpret_cast<void *>(
+          HostInfoBase::ComputeSharedLibraryDirectory)));
 
   // This is necessary because when running the testsuite the shlib might be a
   // symbolic link inside the Python resource dir.

@@ -60,9 +60,7 @@ public:
   }
   void MaterializeVisibleDecls(const clang::DeclContext *DC) { return; }
 
-  void InstallASTContext(ClangASTContext &ast_context,
-                         clang::FileManager &file_manager,
-                         bool is_shared_context = false);
+  void InstallASTContext(ClangASTContext &ast_context);
 
   //
   // APIs for ExternalASTSource

@@ -38,11 +38,13 @@ entry:
   br i1 %cmp, label %if.then, label %if.end4
 
 if.then:
+  call void asm sideeffect ".space 10", "~{$1}"()
   %1 = load i32, i32* %argc.addr, align 4
   %cmp1 = icmp sgt i32 %1, 3
   br i1 %cmp1, label %if.then2, label %if.end
 
 if.then2:
+  call void asm sideeffect ".space 10", "~{$1}"()
   %call = call i32 bitcast (i32 (...)* @boo to i32 ()*)()
   store i32 %call, i32* %retval, align 4
   br label %return

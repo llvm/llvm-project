@@ -75,7 +75,7 @@ struct ClangExpressionDeclMapTest : public testing::Test {
     importer = std::make_shared<ClangASTImporter>();
     decl_map = std::make_unique<FakeClangExpressionDeclMap>(importer);
     target_ast = clang_utils::createAST();
-    decl_map->InstallASTContext(*target_ast, *target_ast->getFileManager());
+    decl_map->InstallASTContext(*target_ast);
   }
 
   void TearDown() override {

@@ -4776,7 +4776,7 @@ Decl *Sema::ActOnMethodDeclaration(
             if (auto *Cat = dyn_cast<ObjCCategoryDecl>(IMD->getDeclContext()))
               decl = Cat->IsClassExtension() ? 1 : 2;
 
-            if (auto *Cat = dyn_cast<ObjCCategoryImplDecl>(ImpDecl))
+            if (isa<ObjCCategoryImplDecl>(ImpDecl))
               impl = 1 + (decl != 0);
 
             Diag(ObjCMethod->getLocation(),

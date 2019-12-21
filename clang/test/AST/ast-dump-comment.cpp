@@ -47,6 +47,11 @@ int Test_InlineCommandComment;
 // CHECK:      VarDecl{{.*}}Test_InlineCommandComment
 // CHECK:        InlineCommandComment{{.*}} Name="c" RenderMonospaced Arg[0]="Aaa"
 
+/// \anchor Aaa
+int Test_InlineCommandCommentAnchor;
+// CHECK:      VarDecl{{.*}}Test_InlineCommandComment
+// CHECK:        InlineCommandComment{{.*}} Name="anchor" RenderAnchor Arg[0]="Aaa"
+
 /// <a>Aaa</a>
 /// <br/>
 int Test_HTMLTagComment;

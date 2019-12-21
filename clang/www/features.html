@@ -91,15 +91,9 @@ most important are pinpointing exactly what is wrong in the program,
 highlighting related information so that it is easy to understand at a glance,
 and making the wording as clear as possible.</p>
 
-<p>Here is one simple example that illustrates the difference between a typical
-GCC and Clang diagnostic:</p>
+<p>Here is one simple example that illustrates the quality of Clang diagnostic:</p>
 
 <pre>
-  $ <b>gcc-4.9 -fsyntax-only t.c</b>
-  t.c: In function 'int f(int, int)':
-  t.c:7:39: error: invalid operands to binary + (have 'int' and 'struct A')
-     return y + func(y ? ((SomeA.X + 40) + SomeA) / 42 + SomeA.X : SomeA.X);
-                                         ^
   $ <b>clang -fsyntax-only t.c</b>
   t.c:7:39: error: invalid operands to binary expression ('int' and 'struct A')
   <span style="color:darkgreen">  return y + func(y ? ((SomeA.X + 40) + SomeA) / 42 + SomeA.X : SomeA.X);</span>
@@ -122,7 +116,7 @@ Diagnostics</a> page.</p>
 <!--=======================================================================-->
 
 <p>GCC is currently the defacto-standard open source compiler today, and it
-routinely compiles a huge volume of code.  GCC supports a huge number of
+routinely compiles a huge volume of code. GCC supports a huge number of
 extensions and features (many of which are undocumented) and a lot of
 code and header files depend on these features in order to build.</p>
 
@@ -275,19 +269,18 @@ specifically designed and built to capture this information.
 
 
 <!--=======================================================================-->
-<h3><a name="license">Use the LLVM 'BSD' License</a></h3>
+<h3><a name="license">Use the LLVM 'Apache 2' License</a></h3>
 <!--=======================================================================-->
 
 <p>We actively intend for clang (and LLVM as a whole) to be used for
 commercial projects, not only as a stand-alone compiler but also as a library
-embedded inside a proprietary application.  The BSD license is the simplest way
-to allow this.  We feel that the license encourages contributors to pick up the
-source and work with it, and believe that those individuals and organizations
-will contribute back their work if they do not want to have to maintain a fork
-forever (which is time consuming and expensive when merges are involved).
-Further, nobody makes money on compilers these days, but many people need them
-to get bigger goals accomplished: it makes sense for everyone to work
-together.</p>
+embedded inside a proprietary application. We feel that the license encourages
+contributors to pick up the source and work with it, and believe that those
+individuals and organizations will contribute back their work if they do not
+want to have to maintain a fork forever (which is time consuming and expensive
+when merges are involved). Further, nobody makes money on compilers these days,
+but many people need them to get bigger goals accomplished: it makes sense for
+everyone to work together.</p>
 
 <p>For more information about the LLVM/clang license, please see the <a
 href="https://llvm.org/docs/DeveloperPolicy.html#copyright-license-and-patents">LLVM License
@@ -369,9 +362,6 @@ beyond what the standard officially allows, we make an effort to explicitly call
 this out in the code and emit warnings about it (which are disabled by default,
 but can optionally be mapped to either warnings or errors), allowing you to use
 clang in "strict" mode if you desire.</p>
-
-<p>We also intend to support "dialects" of these languages, such as C89, K&amp;R
-C, C++'03, Objective-C 2, etc.</p>
 
 </div>
 </body>

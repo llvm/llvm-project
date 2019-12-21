@@ -67,7 +67,7 @@ simple_readline(FILE *stdin, FILE *stdout, char *prompt)
   char *ret = (char *)PyMem_Malloc(n + 2);
 #endif
   if (ret) {
-    strncpy(ret, line, n);
+    memcpy(ret, line, n);
     free(line);
     ret[n] = '\n';
     ret[n + 1] = '\0';

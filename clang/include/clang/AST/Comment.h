@@ -94,10 +94,11 @@ protected:
 
     unsigned : NumInlineContentCommentBits;
 
-    unsigned RenderKind : 2;
+    unsigned RenderKind : 3;
+
     unsigned CommandID : CommandInfo::NumCommandIDBits;
   };
-  enum { NumInlineCommandCommentBits = NumInlineContentCommentBits + 2 +
+  enum { NumInlineCommandCommentBits = NumInlineContentCommentBits + 3 +
                                        CommandInfo::NumCommandIDBits };
 
   class HTMLTagCommentBitfields {
@@ -310,7 +311,8 @@ public:
     RenderNormal,
     RenderBold,
     RenderMonospaced,
-    RenderEmphasized
+    RenderEmphasized,
+    RenderAnchor
   };
 
 protected:
