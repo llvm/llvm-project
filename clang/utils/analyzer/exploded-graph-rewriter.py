@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import re
+import sys
 
 
 #===-----------------------------------------------------------------------===#
@@ -425,7 +426,10 @@ class DotDumpVisitor(object):
 
     def output(self):
         assert not self._dump_dot_only
-        return ''.join(self._output)
+        if sys.version_info[0] > 2 and sys.version_info[1] >= 5:
+            return ''.join(self._output).encode()
+        else:
+            return ''.join(self._output)
 
     def _dump(self, s):
         s = s.replace('&', '&amp;') \
