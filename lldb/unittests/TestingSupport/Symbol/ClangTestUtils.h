@@ -17,7 +17,7 @@ namespace lldb_private {
 namespace clang_utils {
 inline clang::DeclarationName getDeclarationName(ClangASTContext &ast,
                                                  llvm::StringRef name) {
-  clang::IdentifierInfo &II = ast.getIdentifierTable()->get(name);
+  clang::IdentifierInfo &II = ast.getASTContext()->Idents.get(name);
   return ast.getASTContext()->DeclarationNames.getIdentifier(&II);
 }
 
