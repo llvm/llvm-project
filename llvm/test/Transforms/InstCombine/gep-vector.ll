@@ -27,9 +27,12 @@ define <2 x i8*> @vectorindex3() {
   ret <2 x i8*> %1
 }
 
+; Negative test - datalayout's alloc size for the 2 types must match.
+
 define i32* @bitcast_vec_to_array_gep(<7 x i32>* %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_gep(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <7 x i32>, <7 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    [[ARR_PTR:%.*]] = bitcast <7 x i32>* [[X:%.*]] to [7 x i32]*
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [7 x i32], [7 x i32]* [[ARR_PTR]], i64 [[Y:%.*]], i64 [[Z:%.*]]
 ; CHECK-NEXT:    ret i32* [[GEP]]
 ;
   %arr_ptr = bitcast <7 x i32>* %x to [7 x i32]*
@@ -37,15 +40,20 @@ define i32* @bitcast_vec_to_array_gep(<7 x i32>* %x, i64 %y, i64 %z) {
   ret i32* %gep
 }
 
+; Negative test - datalayout's alloc size for the 2 types must match.
+
 define i32* @bitcast_array_to_vec_gep([3 x i32]* %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_array_to_vec_gep(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    [[VEC_PTR:%.*]] = bitcast [3 x i32]* [[X:%.*]] to <3 x i32>*
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <3 x i32>, <3 x i32>* [[VEC_PTR]], i64 [[Y:%.*]], i64 [[Z:%.*]]
 ; CHECK-NEXT:    ret i32* [[GEP]]
 ;
   %vec_ptr = bitcast [3 x i32]* %x to <3 x i32>*
   %gep = getelementptr inbounds <3 x i32>, <3 x i32>* %vec_ptr, i64 %y, i64 %z
   ret i32* %gep
 }
+
+; Sizes and types match - safe to remove bitcast.
 
 define i32* @bitcast_vec_to_array_gep_matching_alloc_size(<4 x i32>* %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_gep_matching_alloc_size(
@@ -57,6 +65,8 @@ define i32* @bitcast_vec_to_array_gep_matching_alloc_size(<4 x i32>* %x, i64 %y,
   ret i32* %gep
 }
 
+; Sizes and types match - safe to remove bitcast.
+
 define i32* @bitcast_array_to_vec_gep_matching_alloc_size([4 x i32]* %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_array_to_vec_gep_matching_alloc_size(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
@@ -67,11 +77,14 @@ define i32* @bitcast_array_to_vec_gep_matching_alloc_size([4 x i32]* %x, i64 %y,
   ret i32* %gep
 }
 
+; Negative test - datalayout's alloc size for the 2 types must match.
+
 define i32 addrspace(3)* @bitcast_vec_to_array_addrspace(<7 x i32>* %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_addrspace(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <7 x i32>, <7 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast i32* [[GEP]] to i32 addrspace(3)*
-; CHECK-NEXT:    ret i32 addrspace(3)* [[TMP1]]
+; CHECK-NEXT:    [[ARR_PTR:%.*]] = bitcast <7 x i32>* [[X:%.*]] to [7 x i32]*
+; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast [7 x i32]* [[ARR_PTR]] to [7 x i32] addrspace(3)*
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [7 x i32], [7 x i32] addrspace(3)* [[ASC]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret i32 addrspace(3)* [[GEP]]
 ;
   %arr_ptr = bitcast <7 x i32>* %x to [7 x i32]*
   %asc = addrspacecast [7 x i32]* %arr_ptr to [7 x i32] addrspace(3)*
@@ -79,17 +92,22 @@ define i32 addrspace(3)* @bitcast_vec_to_array_addrspace(<7 x i32>* %x, i64 %y, 
   ret i32 addrspace(3)* %gep
 }
 
+; Negative test - datalayout's alloc size for the 2 types must match.
+
 define i32 addrspace(3)* @inbounds_bitcast_vec_to_array_addrspace(<7 x i32>* %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @inbounds_bitcast_vec_to_array_addrspace(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <7 x i32>, <7 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast i32* [[GEP]] to i32 addrspace(3)*
-; CHECK-NEXT:    ret i32 addrspace(3)* [[TMP1]]
+; CHECK-NEXT:    [[ARR_PTR:%.*]] = bitcast <7 x i32>* [[X:%.*]] to [7 x i32]*
+; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast [7 x i32]* [[ARR_PTR]] to [7 x i32] addrspace(3)*
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [7 x i32], [7 x i32] addrspace(3)* [[ASC]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret i32 addrspace(3)* [[GEP]]
 ;
   %arr_ptr = bitcast <7 x i32>* %x to [7 x i32]*
   %asc = addrspacecast [7 x i32]* %arr_ptr to [7 x i32] addrspace(3)*
   %gep = getelementptr inbounds [7 x i32], [7 x i32] addrspace(3)* %asc, i64 %y, i64 %z
   ret i32 addrspace(3)* %gep
 }
+
+; Sizes and types match - safe to remove bitcast.
 
 define i32 addrspace(3)* @bitcast_vec_to_array_addrspace_matching_alloc_size(<4 x i32>* %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_addrspace_matching_alloc_size(
@@ -102,6 +120,8 @@ define i32 addrspace(3)* @bitcast_vec_to_array_addrspace_matching_alloc_size(<4 
   %gep = getelementptr [4 x i32], [4 x i32] addrspace(3)* %asc, i64 %y, i64 %z
   ret i32 addrspace(3)* %gep
 }
+
+; Sizes and types match - safe to remove bitcast.
 
 define i32 addrspace(3)* @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_size(<4 x i32>* %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_size(
