@@ -213,6 +213,22 @@ public:
     return addTransition(State, (Tag ? Tag : Location.getTag()));
   }
 
+  /// Generate a transition to a node that will be used to report
+  /// an error. This node will not be a sink. That is, exploration will
+  /// continue along this path.
+  ///
+  /// @param State The state of the generated node.
+  /// @param Pred The transition will be generated from the specified Pred node
+  ///             to the newly generated node.
+  /// @param Tag The tag to uniquely identify the creation site. If null,
+  ///        the default tag for the checker will be used.
+  ExplodedNode *
+  generateNonFatalErrorNode(ProgramStateRef State,
+                            ExplodedNode *Pred,
+                            const ProgramPointTag *Tag = nullptr) {
+    return addTransition(State, Pred, (Tag ? Tag : Location.getTag()));
+  }
+
   /// Emit the diagnostics report.
   void emitReport(std::unique_ptr<BugReport> R) {
     Changed = true;

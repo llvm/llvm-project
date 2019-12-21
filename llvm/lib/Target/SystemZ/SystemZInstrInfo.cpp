@@ -945,6 +945,12 @@ static void transferDeadCC(MachineInstr *OldMI, MachineInstr *NewMI) {
   }
 }
 
+static void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
+                           MachineInstr::MIFlag Flag) {
+  if (OldMI->getFlag(Flag))
+    NewMI->setFlag(Flag);
+}
+
 MachineInstr *SystemZInstrInfo::convertToThreeAddress(
     MachineFunction::iterator &MFI, MachineInstr &MI, LiveVariables *LV) const {
   MachineBasicBlock *MBB = MI.getParent();
@@ -1050,6 +1056,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
             .addImm(0)
             .addImm(MI.getOperand(2).getImm());
     transferDeadCC(&MI, BuiltMI);
+    transferMIFlag(&MI, BuiltMI, MachineInstr::NoSWrap);
     return BuiltMI;
   }
 
@@ -1200,6 +1207,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       if (MemDesc.TSFlags & SystemZII::HasIndex)
         MIB.addReg(0);
       transferDeadCC(&MI, MIB);
+      transferMIFlag(&MI, MIB, MachineInstr::NoSWrap);
       return MIB;
     }
   }

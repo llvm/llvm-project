@@ -283,15 +283,15 @@ LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
  * \param ConfigMacrosLen The length of the C string passed to \c ConfigMacros.
  * \param IncludePath     The path to the module map file.
  * \param IncludePathLen  The length of the C string passed to \c IncludePath.
- * \param ISysRoot        The Clang system root (value of -isysroot).
- * \param ISysRootLen     The length of the C string passed to \c ISysRoot.
+ * \param SysRoot         The Clang system root (value of -isysroot).
+ * \param SysRootLen      The length of the C string passed to \c SysRoot.
  */
 LLVMMetadataRef
 LLVMDIBuilderCreateModule(LLVMDIBuilderRef Builder, LLVMMetadataRef ParentScope,
                           const char *Name, size_t NameLen,
                           const char *ConfigMacros, size_t ConfigMacrosLen,
                           const char *IncludePath, size_t IncludePathLen,
-                          const char *ISysRoot, size_t ISysRootLen);
+                          const char *SysRoot, size_t SysRootLen);
 
 /**
  * Creates a new descriptor for a namespace with the specified parent scope.

@@ -75,8 +75,9 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   // SystemZ::CCMASK_*.
   bits<4> CCValues = 0;
 
-  // The subset of CCValues that have the same meaning as they would after
-  // a comparison of the first operand against zero.
+  // The subset of CCValues that have the same meaning as they would after a
+  // comparison of the first operand against zero. "Logical" instructions
+  // leave this blank as they set CC in a different way.
   bits<4> CompareZeroCCMask = 0;
 
   // True if the instruction is conditional and if the CC mask operand
@@ -87,8 +88,15 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   bit CCMaskLast = 0;
 
   // True if the instruction is the "logical" rather than "arithmetic" form,
-  // in cases where a distinction exists.
+  // in cases where a distinction exists. Except for logical compares, if the
+  // instruction sets this flag along with a non-zero CCValues field, it is
+  // assumed to set CC to either CCMASK_LOGICAL_ZERO or
+  // CCMASK_LOGICAL_NONZERO.
   bit IsLogical = 0;
+
+  // True if the (add or sub) instruction sets CC like a compare of the
+  // result against zero, but only if the 'nsw' flag is set.
+  bit CCIfNoSignedWrap = 0;
 
   let TSFlags{0}     = SimpleBDXLoad;
   let TSFlags{1}     = SimpleBDXStore;
@@ -101,6 +109,7 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   let TSFlags{18}    = CCMaskFirst;
   let TSFlags{19}    = CCMaskLast;
   let TSFlags{20}    = IsLogical;
+  let TSFlags{21}    = CCIfNoSignedWrap;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3200,6 +3209,8 @@ class CondBinaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
   let CCMaskLast = 1;
+  let NumOpsKey = !subst("loc", "sel", mnemonic);
+  let NumOpsValue = "2";
 }
 
 // Like CondBinaryRRF, but used for the raw assembly form.  The condition-code
@@ -3239,6 +3250,8 @@ class CondBinaryRRFa<string mnemonic, bits<16> opcode, RegisterOperand cls1,
              [(set cls1:$R1, (z_select_ccmask cls2:$R2, cls3:$R3,
                                               cond4:$valid, cond4:$M4))]> {
   let CCMaskLast = 1;
+  let NumOpsKey = mnemonic;
+  let NumOpsValue = "3";
 }
 
 // Like CondBinaryRRFa, but used for the raw assembly form.  The condition-code
@@ -4789,7 +4802,8 @@ class TestBinarySILPseudo<SDPatternOperator operator, ImmOpWithPattern imm>
 
 // Like CondBinaryRRF, but expanded after RA depending on the choice of
 // register.
-class CondBinaryRRFPseudo<RegisterOperand cls1, RegisterOperand cls2>
+class CondBinaryRRFPseudo<string mnemonic, RegisterOperand cls1,
+                          RegisterOperand cls2>
   : Pseudo<(outs cls1:$R1),
            (ins cls1:$R1src, cls2:$R2, cond4:$valid, cond4:$M3),
            [(set cls1:$R1, (z_select_ccmask cls2:$R2, cls1:$R1src,
@@ -4797,17 +4811,21 @@ class CondBinaryRRFPseudo<RegisterOperand cls1, RegisterOperand cls2>
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
   let CCMaskLast = 1;
+  let NumOpsKey = !subst("loc", "sel", mnemonic);
+  let NumOpsValue = "2";
 }
 
 // Like CondBinaryRRFa, but expanded after RA depending on the choice of
 // register.
-class CondBinaryRRFaPseudo<RegisterOperand cls1, RegisterOperand cls2,
-                           RegisterOperand cls3>
+class CondBinaryRRFaPseudo<string mnemonic, RegisterOperand cls1,
+                           RegisterOperand cls2, RegisterOperand cls3>
   : Pseudo<(outs cls1:$R1),
            (ins cls3:$R3, cls2:$R2, cond4:$valid, cond4:$M4),
            [(set cls1:$R1, (z_select_ccmask cls2:$R2, cls3:$R3,
                                             cond4:$valid, cond4:$M4))]> {
   let CCMaskLast = 1;
+  let NumOpsKey = mnemonic;
+  let NumOpsValue = "3";
 }
 
 // Like CondBinaryRIE, but expanded after RA depending on the choice of

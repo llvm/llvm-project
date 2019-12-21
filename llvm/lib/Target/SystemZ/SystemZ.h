@@ -55,7 +55,7 @@ const unsigned CCMASK_ARITH          = CCMASK_ANY;
 
 // Condition-code mask assignments for logical operations.
 const unsigned CCMASK_LOGICAL_ZERO     = CCMASK_0 | CCMASK_2;
-const unsigned CCMASK_LOGICAL_NONZERO  = CCMASK_1 | CCMASK_2;
+const unsigned CCMASK_LOGICAL_NONZERO  = CCMASK_1 | CCMASK_3;
 const unsigned CCMASK_LOGICAL_CARRY    = CCMASK_2 | CCMASK_3;
 const unsigned CCMASK_LOGICAL_NOCARRY  = CCMASK_0 | CCMASK_1;
 const unsigned CCMASK_LOGICAL_BORROW   = CCMASK_LOGICAL_NOCARRY;

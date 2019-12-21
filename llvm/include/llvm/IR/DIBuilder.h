@@ -734,11 +734,11 @@ namespace llvm {
     ///                    A space-separated shell-quoted list of -D macro
     ///                    definitions as they would appear on a command line.
     /// \param IncludePath The path to the module map file.
-    /// \param ISysRoot    The clang system root (value of -isysroot).
+    /// \param SysRoot     The clang system root (value of -isysroot).
     DIModule *createModule(DIScope *Scope, StringRef Name,
                            StringRef ConfigurationMacros,
                            StringRef IncludePath,
-                           StringRef ISysRoot);
+                           StringRef SysRoot);
 
     /// This creates a descriptor for a lexical block with a new file
     /// attached. This merely extends the existing

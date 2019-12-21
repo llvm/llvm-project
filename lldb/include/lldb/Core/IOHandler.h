@@ -52,6 +52,7 @@ public:
     REPL,
     ProcessIO,
     PythonInterpreter,
+    LuaInterpreter,
     PythonCode,
     Other
   };

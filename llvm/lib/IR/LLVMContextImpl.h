@@ -819,27 +819,27 @@ template <> struct MDNodeKeyImpl<DIModule> {
   MDString *Name;
   MDString *ConfigurationMacros;
   MDString *IncludePath;
-  MDString *ISysRoot;
+  MDString *SysRoot;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *ConfigurationMacros,
-                MDString *IncludePath, MDString *ISysRoot)
+                MDString *IncludePath, MDString *SysRoot)
       : Scope(Scope), Name(Name), ConfigurationMacros(ConfigurationMacros),
-        IncludePath(IncludePath), ISysRoot(ISysRoot) {}
+        IncludePath(IncludePath), SysRoot(SysRoot) {}
   MDNodeKeyImpl(const DIModule *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         ConfigurationMacros(N->getRawConfigurationMacros()),
-        IncludePath(N->getRawIncludePath()), ISysRoot(N->getRawISysRoot()) {}
+        IncludePath(N->getRawIncludePath()), SysRoot(N->getRawSysRoot()) {}
 
   bool isKeyOf(const DIModule *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
            ConfigurationMacros == RHS->getRawConfigurationMacros() &&
            IncludePath == RHS->getRawIncludePath() &&
-           ISysRoot == RHS->getRawISysRoot();
+           SysRoot == RHS->getRawSysRoot();
   }
 
   unsigned getHashValue() const {
     return hash_combine(Scope, Name,
-                        ConfigurationMacros, IncludePath, ISysRoot);
+                        ConfigurationMacros, IncludePath, SysRoot);
   }
 };
 

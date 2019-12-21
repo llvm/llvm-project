@@ -14,6 +14,7 @@
 
 #include "WebAssemblyInstrInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -229,4 +230,13 @@ bool WebAssemblyInstrInfo::reverseBranchCondition(
 
   Cond.front() = MachineOperand::CreateImm(!Cond.front().getImm());
   return false;
+}
+
+ArrayRef<std::pair<int, const char *>>
+WebAssemblyInstrInfo::getSerializableTargetIndices() const {
+  static const std::pair<int, const char *> TargetIndices[] = {
+      {WebAssembly::TI_LOCAL_START, "wasm-local-start"},
+      {WebAssembly::TI_GLOBAL_START, "wasm-global-start"},
+      {WebAssembly::TI_OPERAND_STACK_START, "wasm-operator-stack-start"}};
+  return makeArrayRef(TargetIndices);
 }

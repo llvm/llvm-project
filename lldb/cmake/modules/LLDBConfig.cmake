@@ -18,39 +18,46 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     "`CMakeFiles'. Please delete them.")
 endif()
 
-set(default_enable_python ON)
-set(default_enable_lua OFF) # Experimental
-set(default_enable_libedit ON)
-set(default_enable_curses ON)
+set(LLDB_LINKER_SUPPORTS_GROUPS OFF)
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+  # The Darwin linker doesn't understand --start-group/--end-group.
+  set(LLDB_LINKER_SUPPORTS_GROUPS ON)
+endif()
 
-# Temporarily support the old LLDB_DISABLE_* variables
-if (DEFINED LLDB_DISABLE_PYTHON)
-  if (LLDB_DISABLE_PYTHON)
-    set(default_enable_python OFF)
+macro(add_optional_dependency variable description package found)
+  set(${variable} "Auto" CACHE STRING "${description} On, Off or Auto (default)")
+  string(TOUPPER "${${variable}}" ${variable})
+
+  if("${${variable}}" STREQUAL "AUTO")
+    set(find_package TRUE)
+    set(maybe_required)
+  elseif(${${variable}})
+    set(find_package TRUE)
+    set(maybe_required REQUIRED)
+  else()
+    set(${variable} FALSE PARENT_SCOPE)
   endif()
-endif()
 
-if(DEFINED LLVM_ENABLE_LIBEDIT AND NOT LLVM_ENABLE_LIBEDIT)
-  set(default_disable_libedit ON)
-endif()
+  if(${find_package})
+    find_package(${package} ${maybe_required})
+    set(${variable} "${${found}}")
+  endif()
+endmacro()
 
-if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-  set(default_enable_libedit OFF)
-  set(default_enable_curses OFF)
-elseif(CMAKE_SYSTEM_NAME MATCHES "Android")
+add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support." LibEdit libedit_FOUND)
+add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support." CursesAndPanel CURSESANDPANEL_FOUND)
+add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support." LibLZMA LIBLZMA_FOUND)
+add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support." Lua LUA_FOUND)
+
+set(default_enable_python ON)
+
+if(CMAKE_SYSTEM_NAME MATCHES "Android")
   set(default_enable_python OFF)
-  set(default_enable_lua OFF)
-  set(default_enable_libedit OFF)
-  set(default_enable_curses OFF)
 elseif(IOS)
   set(default_enable_python OFF)
-  set(default_enable_lua OFF)
 endif()
 
 option(LLDB_ENABLE_PYTHON "Enable Python scripting integration." ${default_enable_python})
-option(LLDB_ENABLE_PYTHON "Enable Lua scripting integration." ${default_enable_lua})
-option(LLDB_ENABLE_LIBEDIT "Enable the use of editline." ${default_enable_libedit})
-option(LLDB_ENABLE_CURSES "Enable Curses integration." ${default_enable_curses})
 option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)
 option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
@@ -113,12 +120,9 @@ if ((NOT MSVC) OR MSVC12)
   add_definitions( -DHAVE_ROUND )
 endif()
 
-
+# Check if we libedit capable of handling wide characters (built with
+# '--enable-widec').
 if (LLDB_ENABLE_LIBEDIT)
-  find_package(LibEdit REQUIRED)
-
-  # Check if we libedit capable of handling wide characters (built with
-  # '--enable-widec').
   set(CMAKE_REQUIRED_LIBRARIES ${libedit_LIBRARIES})
   set(CMAKE_REQUIRED_INCLUDES ${libedit_INCLUDE_DIRS})
   check_symbol_exists(el_winsertstr histedit.h LLDB_EDITLINE_USE_WCHAR)
@@ -133,7 +137,6 @@ if (LLDB_ENABLE_LIBEDIT)
   set(CMAKE_REQUIRED_INCLUDES)
   set(CMAKE_EXTRA_INCLUDE_FILES)
 endif()
-
 
 # On Windows, we can't use the normal FindPythonLibs module that comes with CMake,
 # for a number of reasons.
@@ -395,12 +398,9 @@ endif()
 set(LLDB_VERSION "${LLDB_VERSION_MAJOR}.${LLDB_VERSION_MINOR}.${LLDB_VERSION_PATCH}${LLDB_VERSION_SUFFIX}")
 message(STATUS "LLDB version: ${LLDB_VERSION}")
 
-find_package(LibLZMA)
-cmake_dependent_option(LLDB_ENABLE_LZMA "Support LZMA compression" ON "LIBLZMA_FOUND" OFF)
 if (LLDB_ENABLE_LZMA)
   include_directories(${LIBLZMA_INCLUDE_DIRS})
 endif()
-llvm_canonicalize_cmake_booleans(LLDB_ENABLE_LZMA)
 
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
@@ -489,14 +489,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
 else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
 endif()
-
-if (LLDB_ENABLE_CURSES)
-    find_package(Curses REQUIRED)
-    find_library(CURSES_PANEL_LIBRARY NAMES panel DOC "The curses panel library")
-    if (NOT CURSES_PANEL_LIBRARY)
-        message(FATAL_ERROR "A required curses' panel library not found.")
-    endif ()
-endif ()
 
 if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
     ((ANDROID_ABI MATCHES "armeabi") OR (ANDROID_ABI MATCHES "mips")))

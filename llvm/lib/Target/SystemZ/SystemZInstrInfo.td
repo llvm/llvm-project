@@ -492,7 +492,7 @@ let Predicates = [FeatureMiscellaneousExtensions3], Uses = [CC] in {
   let isCommutable = 1 in {
     // Expands to SELR or SELFHR or a branch-and-move sequence,
     // depending on the choice of registers.
-    def  SELRMux : CondBinaryRRFaPseudo<GRX32, GRX32, GRX32>;
+    def  SELRMux : CondBinaryRRFaPseudo<"selrmux", GRX32, GRX32, GRX32>;
     defm SELFHR  : CondBinaryRRFaPair<"selfhr", 0xB9C0, GRH32, GRH32, GRH32>;
     defm SELR    : CondBinaryRRFaPair<"selr",   0xB9F0, GR32, GR32, GR32>;
     defm SELGR   : CondBinaryRRFaPair<"selgr",  0xB9E3, GR64, GR64, GR64>;
@@ -525,7 +525,7 @@ let Predicates = [FeatureLoadStoreOnCond2], Uses = [CC] in {
   let isCommutable = 1 in {
     // Expands to LOCR or LOCFHR or a branch-and-move sequence,
     // depending on the choice of registers.
-    def LOCRMux : CondBinaryRRFPseudo<GRX32, GRX32>;
+    def LOCRMux : CondBinaryRRFPseudo<"locrmux", GRX32, GRX32>;
     defm LOCFHR : CondBinaryRRFPair<"locfhr", 0xB9E0, GRH32, GRH32>;
   }
 
@@ -915,7 +915,7 @@ def : Pat<(or (zext32 GR32:$src), imm64hf32:$imm),
 //===----------------------------------------------------------------------===//
 
 // Addition producing a signed overflow flag.
-let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
+let Defs = [CC], CCValues = 0xF, CCIfNoSignedWrap = 1 in {
   // Addition of a register.
   let isCommutable = 1 in {
     defm AR : BinaryRRAndK<"ar", 0x1A, 0xB9F8, z_sadd, GR32, GR32>;
@@ -957,7 +957,7 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
 defm : SXB<z_sadd, GR64, AGFR>;
 
 // Addition producing a carry.
-let Defs = [CC] in {
+let Defs = [CC], CCValues = 0xF, IsLogical = 1 in {
   // Addition of a register.
   let isCommutable = 1 in {
     defm ALR : BinaryRRAndK<"alr", 0x1E, 0xB9FA, z_uadd, GR32, GR32>;
@@ -997,7 +997,7 @@ let Defs = [CC] in {
 defm : ZXB<z_uadd, GR64, ALGFR>;
 
 // Addition producing and using a carry.
-let Defs = [CC], Uses = [CC] in {
+let Defs = [CC], Uses = [CC], CCValues = 0xF, IsLogical = 1 in {
   // Addition of a register.
   def ALCR  : BinaryRRE<"alcr",  0xB998, z_addcarry, GR32, GR32>;
   def ALCGR : BinaryRRE<"alcgr", 0xB988, z_addcarry, GR64, GR64>;
@@ -1017,7 +1017,8 @@ def ALSIHN : BinaryRIL<"alsihn", 0xCCB, null_frag, GRH32, simm32>,
 //===----------------------------------------------------------------------===//
 
 // Subtraction producing a signed overflow flag.
-let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
+let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8,
+    CCIfNoSignedWrap = 1 in {
   // Subtraction of a register.
   defm SR : BinaryRRAndK<"sr", 0x1B, 0xB9F9, z_ssub, GR32, GR32>;
   def SGFR : BinaryRRE<"sgfr", 0xB919, null_frag, GR64, GR32>;
@@ -1066,7 +1067,7 @@ def : Pat<(z_saddo GR64:$src1, imm64lf32n:$src2),
           (SGR GR64:$src1, (LLILF imm64lf32n:$src2))>;
 
 // Subtraction producing a carry.
-let Defs = [CC] in {
+let Defs = [CC], CCValues = 0x7, IsLogical = 1 in {
   // Subtraction of a register.
   defm SLR : BinaryRRAndK<"slr", 0x1F, 0xB9FB, z_usub, GR32, GR32>;
   def SLGFR : BinaryRRE<"slgfr", 0xB91B, null_frag, GR64, GR32>;
@@ -1104,7 +1105,7 @@ def : Pat<(add GR64:$src1, imm64zx32n:$src2),
           (SLGFI GR64:$src1, imm64zx32n:$src2)>;
 
 // Subtraction producing and using a carry.
-let Defs = [CC], Uses = [CC] in {
+let Defs = [CC], Uses = [CC], CCValues = 0xF, IsLogical = 1 in {
   // Subtraction of a register.
   def SLBR  : BinaryRRE<"slbr",  0xB999, z_subcarry, GR32, GR32>;
   def SLBGR : BinaryRRE<"slbgr", 0xB989, z_subcarry, GR64, GR64>;

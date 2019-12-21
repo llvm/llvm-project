@@ -405,7 +405,7 @@ HANDLE_DW_AT(0x3b31, BORLAND_closure, 0, BORLAND)
 // LLVM project extensions.
 HANDLE_DW_AT(0x3e00, LLVM_include_path, 0, LLVM)
 HANDLE_DW_AT(0x3e01, LLVM_config_macros, 0, LLVM)
-HANDLE_DW_AT(0x3e02, LLVM_isysroot, 0, LLVM)
+HANDLE_DW_AT(0x3e02, LLVM_sysroot, 0, LLVM)
 HANDLE_DW_AT(0x3e03, LLVM_tag_offset, 0, LLVM)
 // Apple extensions.
 HANDLE_DW_AT(0x3fe1, APPLE_optimized, 0, APPLE)
@@ -648,6 +648,8 @@ HANDLE_DW_OP(0xa9, reinterpret, 5, DWARF)
 // Vendor extensions:
 // Extensions for GNU-style thread-local storage.
 HANDLE_DW_OP(0xe0, GNU_push_tls_address, 0, GNU)
+// Extensions for WebAssembly.
+HANDLE_DW_OP(0xed, WASM_location, 0, WASM)
 // The GNU entry value extension.
 HANDLE_DW_OP(0xf3, GNU_entry_value, 0, GNU)
 // Extensions for Fission proposal.

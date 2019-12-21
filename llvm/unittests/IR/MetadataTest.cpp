@@ -2059,7 +2059,7 @@ TEST_F(DIModuleTest, get) {
   EXPECT_EQ(Name, N->getName());
   EXPECT_EQ(ConfigMacro, N->getConfigurationMacros());
   EXPECT_EQ(Includes, N->getIncludePath());
-  EXPECT_EQ(Sysroot, N->getISysRoot());
+  EXPECT_EQ(Sysroot, N->getSysRoot());
   EXPECT_EQ(N, DIModule::get(Context, Scope, Name,
                              ConfigMacro, Includes, Sysroot));
   EXPECT_NE(N, DIModule::get(Context, getFile(), Name,

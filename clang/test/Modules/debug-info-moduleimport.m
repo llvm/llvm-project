@@ -15,7 +15,7 @@
 // CHECK: ![[MODULE]] = !DIModule(scope: null, name: "DebugObjC",
 // CHECK-SAME:  configMacros: "\22-DGREETING=Hello World\22 \22-UNDEBUG\22",
 // CHECK-SAME:  includePath: "{{.*}}test{{.*}}Modules{{.*}}Inputs",
-// CHECK-SAME:  isysroot: "/tmp/..")
+// CHECK-SAME:  sysroot: "/tmp/..")
 // CHECK: ![[F]] = !DIFile(filename: {{.*}}debug-info-moduleimport.m
 
 // RUN: %clang_cc1 -debug-info-kind=limited -fmodules -fimplicit-module-maps -fmodules-cache-path=%t \

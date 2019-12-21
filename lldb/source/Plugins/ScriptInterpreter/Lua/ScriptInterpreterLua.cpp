@@ -7,18 +7,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScriptInterpreterLua.h"
+#include "Lua.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
-
-#include "llvm/Support/Threading.h"
-
-#include <mutex>
+#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+class IOHandlerLuaInterpreter : public IOHandlerDelegate,
+                                public IOHandlerEditline {
+public:
+  IOHandlerLuaInterpreter(Debugger &debugger)
+      : IOHandlerEditline(debugger, IOHandler::Type::LuaInterpreter, "lua",
+                          ">>> ", "..> ", true, debugger.GetUseColor(), 0,
+                          *this, nullptr),
+        m_lua() {}
+
+  void IOHandlerInputComplete(IOHandler &io_handler,
+                              std::string &data) override {
+    if (llvm::Error error = m_lua.Run(data)) {
+      *GetOutputStreamFileSP() << llvm::toString(std::move(error));
+    }
+  }
+
+private:
+  Lua m_lua;
+};
 
 ScriptInterpreterLua::ScriptInterpreterLua(Debugger &debugger)
     : ScriptInterpreter(debugger, eScriptLanguageLua) {}
@@ -26,16 +45,35 @@ ScriptInterpreterLua::ScriptInterpreterLua(Debugger &debugger)
 ScriptInterpreterLua::~ScriptInterpreterLua() {}
 
 bool ScriptInterpreterLua::ExecuteOneLine(llvm::StringRef command,
-                                          CommandReturnObject *,
-                                          const ExecuteScriptOptions &) {
-  m_debugger.GetErrorStream().PutCString(
-      "error: the lua script interpreter is not yet implemented.\n");
-  return false;
+                                          CommandReturnObject *result,
+                                          const ExecuteScriptOptions &options) {
+  Lua l;
+  if (llvm::Error e = l.Run(command)) {
+    result->AppendErrorWithFormatv(
+        "lua failed attempting to evaluate '{0}': {1}\n", command,
+        llvm::toString(std::move(e)));
+    return false;
+  }
+  return true;
 }
 
 void ScriptInterpreterLua::ExecuteInterpreterLoop() {
-  m_debugger.GetErrorStream().PutCString(
-      "error: the lua script interpreter is not yet implemented.\n");
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+
+  Debugger &debugger = m_debugger;
+
+  // At the moment, the only time the debugger does not have an input file
+  // handle is when this is called directly from lua, in which case it is
+  // both dangerous and unnecessary (not to mention confusing) to try to embed
+  // a running interpreter loop inside the already running lua interpreter
+  // loop, so we won't do it.
+
+  if (!debugger.GetInputFile().IsValid())
+    return;
+
+  IOHandlerSP io_handler_sp(new IOHandlerLuaInterpreter(debugger));
+  debugger.PushIOHandler(io_handler_sp);
 }
 
 void ScriptInterpreterLua::Initialize() {

@@ -72,6 +72,7 @@ private:
   std::vector<lldb::StackFrameSP> m_stepped_past_frames;
   lldb::ValueObjectSP m_return_valobj_sp;
   bool m_calculate_return_value;
+  StreamString m_constructor_errors;
 
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOut(
       bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
