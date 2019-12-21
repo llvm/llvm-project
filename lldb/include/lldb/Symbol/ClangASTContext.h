@@ -102,22 +102,6 @@ public:
 
   clang::ASTContext *getASTContext();
 
-  clang::Builtin::Context *getBuiltinContext();
-
-  clang::IdentifierTable *getIdentifierTable();
-
-  clang::LangOptions *getLanguageOptions();
-
-  clang::SelectorTable *getSelectorTable();
-
-  clang::FileManager *getFileManager();
-
-  clang::SourceManager *getSourceManager();
-
-  clang::DiagnosticsEngine *getDiagnosticsEngine();
-
-  clang::DiagnosticConsumer *getDiagnosticConsumer();
-
   clang::MangleContext *getMangleContext();
 
   std::shared_ptr<clang::TargetOptions> &getTargetOptions();
