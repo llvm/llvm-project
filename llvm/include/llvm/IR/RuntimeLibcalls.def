@@ -23,7 +23,7 @@
 
 // Declare the enumerator for each libcall, along with its default name. Some
 // libcalls have different names on particular OSes or architectures. These
-// are set in InitLibcallNames() in TargetLoweringBase.cpp and/or by targets
+// are set in InitLibcalls() in TargetLoweringBase.cpp and/or by targets
 // using TargetLoweringBase::setLibcallName()
 #ifndef HANDLE_LIBCALL
 #error "HANDLE_LIBCALL must be defined"
