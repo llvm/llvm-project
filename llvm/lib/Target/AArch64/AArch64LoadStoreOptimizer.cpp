@@ -831,8 +831,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
             for (auto &MOP : MI.operands()) {
               if (MOP.isReg() && !MOP.isDebug() && MOP.getReg() &&
                   TRI->regsOverlap(MOP.getReg(), RegToRename)) {
-                assert(MOP.isImplicit() ||
-                       (MOP.isRenamable() && !MOP.isEarlyClobber()) &&
+                assert((MOP.isImplicit() ||
+                        (MOP.isRenamable() && !MOP.isEarlyClobber())) &&
                            "Need renamable operands");
                 MOP.setReg(GetMatchingSubReg(MOP.getReg()));
               }
