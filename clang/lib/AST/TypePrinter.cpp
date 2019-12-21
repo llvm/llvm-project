@@ -1567,6 +1567,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::NoDeref:
     OS << "noderef";
     break;
+  case attr::AcquireHandle:
+    OS << "acquire_handle";
+    break;
   }
   OS << "))";
 }
