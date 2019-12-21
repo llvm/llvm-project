@@ -209,7 +209,11 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseG0 = false;
+  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
+  bool UseLLD = (llvm::sys::path::filename(Exec).equals_lower("ld.lld") ||
+                 llvm::sys::path::stem(Exec).equals_lower("ld.lld"));
   bool UseShared = IsShared && !IsStatic;
+  StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
   //----------------------------------------------------------------------------
   // Silence warnings for various options
@@ -232,9 +236,10 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   for (const auto &Opt : HTC.ExtraOpts)
     CmdArgs.push_back(Opt.c_str());
 
-  CmdArgs.push_back("-march=hexagon");
-  StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
-  CmdArgs.push_back(Args.MakeArgString("-mcpu=hexagon" + CpuVer));
+  if (!UseLLD) {
+    CmdArgs.push_back("-march=hexagon");
+    CmdArgs.push_back(Args.MakeArgString("-mcpu=hexagon" + CpuVer));
+  }
 
   if (IsShared) {
     CmdArgs.push_back("-shared");
