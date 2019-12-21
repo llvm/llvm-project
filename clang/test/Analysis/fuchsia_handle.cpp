@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,fuchsia.HandleChecker -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,fuchsia.HandleChecker -analyzer-output=text \
+// RUN:     -verify %s
 
 typedef __typeof__(sizeof(int)) size_t;
 typedef int zx_status_t;
@@ -116,33 +117,76 @@ void checkNoLeak06() {
 
 void checkLeak01(int tag) {
   zx_handle_t sa, sb;
-  if (zx_channel_create(0, &sa, &sb))
-    return;
+  if (zx_channel_create(0, &sa, &sb)) // expected-note    {{Handle allocated here}}
+    return;                           // expected-note@-1 {{Assuming the condition is false}}
+                                      // expected-note@-2 {{Taking false branch}}
   use1(&sa);
-  if (tag)
+  if (tag) // expected-note {{Assuming 'tag' is 0}}
     zx_handle_close(sa);
+  // expected-note@-2 {{Taking false branch}}
   use2(sb); // expected-warning {{Potential leak of handle}}
+  // expected-note@-1 {{Potential leak of handle}}
   zx_handle_close(sb);
+}
+
+void checkReportLeakOnOnePath(int tag) {
+  zx_handle_t sa, sb;
+  if (zx_channel_create(0, &sa, &sb)) // expected-note {{Handle allocated here}}
+    return;                           // expected-note@-1 {{Assuming the condition is false}}
+                                      // expected-note@-2 {{Taking false branch}}
+  zx_handle_close(sb);
+  switch(tag) { // expected-note {{Control jumps to the 'default' case at line}} 
+    case 0:
+      use2(sa);
+      return;
+    case 1:
+      use2(sa);
+      return;
+    case 2:
+      use2(sa);
+      return;
+    case 3:
+      use2(sa);
+      return;
+    case 4:
+      use2(sa);
+      return;
+    default:
+      use2(sa);
+      return; // expected-warning {{Potential leak of handle}}
+              // expected-note@-1 {{Potential leak of handle}}
+  }
 }
 
 void checkDoubleRelease01(int tag) {
   zx_handle_t sa, sb;
   zx_channel_create(0, &sa, &sb);
-  if (tag)
-    zx_handle_close(sa);
+  // expected-note@-1 {{Handle allocated here}}
+  if (tag) // expected-note {{Assuming 'tag' is not equal to 0}}
+    zx_handle_close(sa); // expected-note {{Handle released here}}
+  // expected-note@-2 {{Taking true branch}}
   zx_handle_close(sa); // expected-warning {{Releasing a previously released handle}}
+  // expected-note@-1 {{Releasing a previously released handle}}
   zx_handle_close(sb);
 }
 
 void checkUseAfterFree01(int tag) {
   zx_handle_t sa, sb;
   zx_channel_create(0, &sa, &sb);
+  // expected-note@-1 {{Handle allocated here}}
+  // expected-note@-2 {{Handle allocated here}}
+  // expected-note@+2 {{Taking true branch}}
+  // expected-note@+1 {{Taking false branch}}
   if (tag) {
-    zx_handle_close(sa);
+    // expected-note@-1 {{Assuming 'tag' is not equal to 0}}
+    zx_handle_close(sa); // expected-note {{Handle released here}}
     use1(&sa); // expected-warning {{Using a previously released handle}}
+    // expected-note@-1 {{Using a previously released handle}}
   }
-  zx_handle_close(sb);
+  // expected-note@-6 {{Assuming 'tag' is 0}}
+  zx_handle_close(sb); // expected-note {{Handle released here}}
   use2(sb); // expected-warning {{Using a previously released handle}}
+  // expected-note@-1 {{Using a previously released handle}}
 }
 
 void checkMemberOperatorIndices() {

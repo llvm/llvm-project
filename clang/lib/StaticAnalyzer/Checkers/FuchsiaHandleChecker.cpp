@@ -199,6 +199,28 @@ public:
 
 REGISTER_MAP_WITH_PROGRAMSTATE(HStateMap, SymbolRef, HandleState)
 
+static const ExplodedNode *getAcquireSite(const ExplodedNode *N, SymbolRef Sym,
+                                          CheckerContext &Ctx) {
+  ProgramStateRef State = N->getState();
+  // When bug type is handle leak, exploded node N does not have state info for
+  // leaking handle. Get the predecessor of N instead.
+  if (!State->get<HStateMap>(Sym))
+    N = N->getFirstPred();
+
+  const ExplodedNode *Pred = N;
+  while (N) {
+    State = N->getState();
+    if (!State->get<HStateMap>(Sym)) {
+      const HandleState *HState = Pred->getState()->get<HStateMap>(Sym);
+      if (HState && (HState->isAllocated() || HState->maybeAllocated()))
+        return N;
+    }
+    Pred = N;
+    N = N->getFirstPred();
+  }
+  return nullptr;
+}
+
 /// Returns the symbols extracted from the argument or null if it cannot be
 /// found.
 SymbolRef getFuchsiaHandleSymbol(QualType QT, SVal Arg, ProgramStateRef State) {
@@ -282,6 +304,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
 
   ProgramStateRef State = C.getState();
 
+  std::vector<std::function<std::string(BugReport & BR)>> Notes;
   SymbolRef ResultSymbol = nullptr;
   if (const auto *TypeDefTy = FuncDecl->getReturnType()->getAs<TypedefType>())
     if (TypeDefTy->getDecl()->getName() == ErrorTypeName)
@@ -310,14 +333,45 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
       if (HState && HState->isReleased()) {
         reportDoubleRelease(Handle, Call.getArgSourceRange(Arg), C);
         return;
-      } else
+      } else {
+        Notes.push_back([Handle](BugReport &BR) {
+          auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
+          if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
+            return "Handle released here.";
+          } else
+            return "";
+        });
         State = State->set<HStateMap>(Handle, HandleState::getReleased());
+      }
     } else if (hasFuchsiaAttr<AcquireHandleAttr>(PVD)) {
+      Notes.push_back([Handle](BugReport &BR) {
+        auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
+        if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
+          return "Handle allocated here.";
+        } else
+          return "";
+      });
       State = State->set<HStateMap>(
           Handle, HandleState::getMaybeAllocated(ResultSymbol));
     }
   }
-  C.addTransition(State);
+  const NoteTag *T = nullptr;
+  if (!Notes.empty()) {
+    T = C.getNoteTag(
+        [this, Notes{std::move(Notes)}](BugReport &BR) -> std::string {
+          if (&BR.getBugType() != &UseAfterReleaseBugType &&
+              &BR.getBugType() != &LeakBugType &&
+              &BR.getBugType() != &DoubleReleaseBugType)
+            return "";
+          for (auto &Note : Notes) {
+            std::string Text = Note(BR);
+            if (!Text.empty())
+              return Text;
+          }
+          return "";
+        });
+  }
+  C.addTransition(State, T);
 }
 
 void FuchsiaHandleChecker::checkDeadSymbols(SymbolReaper &SymReaper,
@@ -353,6 +407,7 @@ void FuchsiaHandleChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 ProgramStateRef FuchsiaHandleChecker::evalAssume(ProgramStateRef State,
                                                  SVal Cond,
                                                  bool Assumption) const {
+  // TODO: add notes about successes/fails for APIs.
   ConstraintManager &Cmr = State->getConstraintManager();
   HStateMapTy TrackedHandles = State->get<HStateMap>();
   for (auto &CurItem : TrackedHandles) {
@@ -453,7 +508,22 @@ void FuchsiaHandleChecker::reportBug(SymbolRef Sym, ExplodedNode *ErrorNode,
   if (!ErrorNode)
     return;
 
-  auto R = std::make_unique<PathSensitiveBugReport>(Type, Msg, ErrorNode);
+  std::unique_ptr<PathSensitiveBugReport> R;
+  if (Type.isSuppressOnSink()) {
+    const ExplodedNode *AcquireNode = getAcquireSite(ErrorNode, Sym, C);
+    if (AcquireNode) {
+      PathDiagnosticLocation LocUsedForUniqueing =
+          PathDiagnosticLocation::createBegin(
+              AcquireNode->getStmtForDiagnostics(), C.getSourceManager(),
+              AcquireNode->getLocationContext());
+
+      R = std::make_unique<PathSensitiveBugReport>(
+          Type, Msg, ErrorNode, LocUsedForUniqueing,
+          AcquireNode->getLocationContext()->getDecl());
+    }
+  }
+  if (!R)
+    R = std::make_unique<PathSensitiveBugReport>(Type, Msg, ErrorNode);
   if (Range)
     R->addRange(*Range);
   R->markInteresting(Sym);
