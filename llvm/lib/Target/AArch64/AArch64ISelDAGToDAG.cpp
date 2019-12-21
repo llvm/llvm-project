@@ -177,7 +177,7 @@ public:
 
     int64_t MulImm = cast<ConstantSDNode>(N)->getSExtValue();
     if (Shift)
-      MulImm = 1 << MulImm;
+      MulImm = 1LL << MulImm;
 
     if ((MulImm % std::abs(Scale)) != 0)
       return false;
