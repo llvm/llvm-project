@@ -150,21 +150,21 @@ define double @pow_intrinsic_half_fast(double %x) {
   ret double %pow
 }
 
-; FIXME: This should not be transformed without some kind of FMF.
+; This should not be transformed without some kind of FMF.
 ; -0.5 means take the reciprocal.
 
 define float @pow_libcall_neghalf_no_FMF(float %x) {
 ; CHECK-LABEL: @pow_libcall_neghalf_no_FMF(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]])
-; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv float 1.000000e+00, [[ABS]]
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], float 0.000000e+00, float [[ABS_OP]]
-; CHECK-NEXT:    ret float [[RECIPROCAL]]
+; CHECK-NEXT:    [[POW:%.*]] = call float @powf(float [[X:%.*]], float -5.000000e-01)
+; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @powf(float %x, float -5.0e-01)
   ret float %pow
 }
+
+; Transform to sqrt+fdiv because 'reassoc' allows an extra rounding step.
+; Use 'fabs' to handle -0.0 correctly.
+; Use 'select' to handle -INF correctly.
 
 define float @pow_libcall_neghalf_reassoc(float %x) {
 ; CHECK-LABEL: @pow_libcall_neghalf_reassoc(
@@ -179,6 +179,10 @@ define float @pow_libcall_neghalf_reassoc(float %x) {
   ret float %pow
 }
 
+; Transform to sqrt+fdiv because 'afn' allows an extra rounding step.
+; Use 'fabs' to handle -0.0 correctly.
+; Use 'select' to handle -INF correctly.
+
 define float @pow_libcall_neghalf_afn(float %x) {
 ; CHECK-LABEL: @pow_libcall_neghalf_afn(
 ; CHECK-NEXT:    [[SQRTF:%.*]] = call afn float @sqrtf(float [[X:%.*]])
@@ -192,20 +196,20 @@ define float @pow_libcall_neghalf_afn(float %x) {
   ret float %pow
 }
 
-; FIXME: This should not be transformed without some kind of FMF.
+; This should not be transformed without some kind of FMF.
 
 define <2 x double> @pow_intrinsic_neghalf_no_FMF(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_no_FMF(
-; CHECK-NEXT:    [[SQRT:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
-; CHECK-NEXT:    [[ABS:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
-; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select <2 x i1> [[ISINF]], <2 x double> zeroinitializer, <2 x double> [[ABS_OP]]
-; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
+; CHECK-NEXT:    [[POW:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> [[X:%.*]], <2 x double> <double -5.000000e-01, double -5.000000e-01>)
+; CHECK-NEXT:    ret <2 x double> [[POW]]
 ;
   %pow = call <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
   ret <2 x double> %pow
 }
+
+; Transform to sqrt+fdiv because 'reassoc' allows an extra rounding step.
+; Use 'fabs' to handle -0.0 correctly.
+; Use 'select' to handle -INF correctly.
 
 define <2 x double> @pow_intrinsic_neghalf_reassoc(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_reassoc(
@@ -219,6 +223,10 @@ define <2 x double> @pow_intrinsic_neghalf_reassoc(<2 x double> %x) {
   %pow = call reassoc <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
   ret <2 x double> %pow
 }
+
+; Transform to sqrt+fdiv because 'afn' allows an extra rounding step.
+; Use 'fabs' to handle -0.0 correctly.
+; Use 'select' to handle -INF correctly.
 
 define <2 x double> @pow_intrinsic_neghalf_afn(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_afn(
