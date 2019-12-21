@@ -91,15 +91,9 @@ most important are pinpointing exactly what is wrong in the program,
 highlighting related information so that it is easy to understand at a glance,
 and making the wording as clear as possible.</p>
 
-<p>Here is one simple example that illustrates the difference between a typical
-GCC and Clang diagnostic:</p>
+<p>Here is one simple example that illustrates the quality of Clang diagnostic:</p>
 
 <pre>
-  $ <b>gcc-4.9 -fsyntax-only t.c</b>
-  t.c: In function 'int f(int, int)':
-  t.c:7:39: error: invalid operands to binary + (have 'int' and 'struct A')
-     return y + func(y ? ((SomeA.X + 40) + SomeA) / 42 + SomeA.X : SomeA.X);
-                                         ^
   $ <b>clang -fsyntax-only t.c</b>
   t.c:7:39: error: invalid operands to binary expression ('int' and 'struct A')
   <span style="color:darkgreen">  return y + func(y ? ((SomeA.X + 40) + SomeA) / 42 + SomeA.X : SomeA.X);</span>
@@ -122,7 +116,7 @@ Diagnostics</a> page.</p>
 <!--=======================================================================-->
 
 <p>GCC is currently the defacto-standard open source compiler today, and it
-routinely compiles a huge volume of code.  GCC supports a huge number of
+routinely compiles a huge volume of code. GCC supports a huge number of
 extensions and features (many of which are undocumented) and a lot of
 code and header files depend on these features in order to build.</p>
 
