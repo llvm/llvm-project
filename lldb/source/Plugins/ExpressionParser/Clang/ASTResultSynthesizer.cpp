@@ -453,7 +453,7 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
     ConstString name_cs(name.str().c_str());
 
     Decl *D_scratch = m_target.GetClangASTImporter()->DeportDecl(
-        ClangASTContext::GetScratch(m_target)->getASTContext(), decl);
+        &ClangASTContext::GetScratch(m_target)->getASTContext(), decl);
 
     if (!D_scratch) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
