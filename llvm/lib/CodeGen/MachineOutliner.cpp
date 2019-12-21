@@ -313,24 +313,31 @@ private:
   /// respective suffixes.
   ///
   /// \param[in] CurrNode The node currently being visited.
-  /// \param CurrNodeLen The concatenation of all node sizes from the root to
-  /// this node. Used to produce suffix indices.
-  void setSuffixIndices(SuffixTreeNode &CurrNode, unsigned CurrNodeLen) {
+  void setSuffixIndices() {
+    // List of nodes we need to visit along with the current length of the
+    // string.
+    std::vector<std::pair<SuffixTreeNode *, unsigned>> ToVisit;
 
-    bool IsLeaf = CurrNode.Children.size() == 0 && !CurrNode.isRoot();
+    // Current node being visited.
+    SuffixTreeNode *CurrNode = Root;
 
-    // Store the concatenation of lengths down from the root.
-    CurrNode.ConcatLen = CurrNodeLen;
-    // Traverse the tree depth-first.
-    for (auto &ChildPair : CurrNode.Children) {
-      assert(ChildPair.second && "Node had a null child!");
-      setSuffixIndices(*ChildPair.second,
-                       CurrNodeLen + ChildPair.second->size());
+    // Sum of the lengths of the nodes down the path to the current one.
+    unsigned CurrNodeLen = 0;
+    ToVisit.push_back({CurrNode, CurrNodeLen});
+    while (!ToVisit.empty()) {
+      std::tie(CurrNode, CurrNodeLen) = ToVisit.back();
+      ToVisit.pop_back();
+      CurrNode->ConcatLen = CurrNodeLen;
+      for (auto &ChildPair : CurrNode->Children) {
+        assert(ChildPair.second && "Node had a null child!");
+        ToVisit.push_back(
+            {ChildPair.second, CurrNodeLen + ChildPair.second->size()});
+      }
+
+      // No children, so we are at the end of the string.
+      if (CurrNode->Children.size() == 0 && !CurrNode->isRoot())
+        CurrNode->SuffixIdx = Str.size() - CurrNodeLen;
     }
-
-    // Is this node a leaf? If it is, give it a suffix index.
-    if (IsLeaf)
-      CurrNode.SuffixIdx = Str.size() - CurrNodeLen;
   }
 
   /// Construct the suffix tree for the prefix of the input ending at
@@ -486,7 +493,7 @@ public:
 
     // Set the suffix indices of each leaf.
     assert(Root && "Root node can't be nullptr!");
-    setSuffixIndices(*Root, 0);
+    setSuffixIndices();
   }
 
   /// Iterator for finding all repeated substrings in the suffix tree.
