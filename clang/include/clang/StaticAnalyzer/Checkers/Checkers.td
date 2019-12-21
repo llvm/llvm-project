@@ -108,6 +108,8 @@ def CloneDetectionAlpha : Package<"clone">, ParentPackage<Alpha>;
 
 def NonDeterminismAlpha : Package<"nondeterminism">, ParentPackage<Alpha>;
 
+def Fuchsia : Package<"fuchsia">;
+
 //===----------------------------------------------------------------------===//
 // Core Checkers.
 //===----------------------------------------------------------------------===//
@@ -1423,3 +1425,16 @@ def PointerSortingChecker : Checker<"PointerSorting">,
   Documentation<HasDocumentation>;
 
 } // end alpha.nondeterminism
+
+//===----------------------------------------------------------------------===//
+// Fuchsia checkers.
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = Fuchsia in {
+
+def FuchsiaHandleChecker : Checker<"HandleChecker">,
+  HelpText<"A Checker that detect leaks related to Fuchsia handles">,
+  Documentation<HasDocumentation>;
+
+} // end fuchsia
+
