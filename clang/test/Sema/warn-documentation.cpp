@@ -1102,6 +1102,13 @@ int test_inline_no_argument_a_bad(int);
 /// \a A
 int test_inline_no_argument_a_good(int);
 
+// expected-warning@+1 {{'\anchor' command does not have a valid word argument}}
+/// \anchor
+int test_inline_no_argument_anchor_bad(int);
+
+/// \anchor A
+int test_inline_no_argument_anchor_good(int);
+
 // expected-warning@+1 {{'@b' command does not have a valid word argument}}
 /// @b
 int test_inline_no_argument_b_bad(int);

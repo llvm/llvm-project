@@ -1518,6 +1518,9 @@ void JSONNodeDumper::visitInlineCommandComment(
   case comments::InlineCommandComment::RenderMonospaced:
     JOS.attribute("renderKind", "monospaced");
     break;
+  case comments::InlineCommandComment::RenderAnchor:
+    JOS.attribute("renderKind", "anchor");
+    break;
   }
 
   llvm::json::Array Args;
