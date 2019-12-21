@@ -6,7 +6,7 @@
 ; CHECK-NEXT: DW_AT_name {{.*}}"DebugModule"
 ; CHECK-NEXT: DW_AT_LLVM_config_macros {{.*}}"-DMODULES=0"
 ; CHECK-NEXT: DW_AT_LLVM_include_path {{.*}}"/llvm/tools/clang/test/Modules/Inputs"
-; CHECK-NEXT: DW_AT_LLVM_isysroot {{.*}}"/"
+; CHECK-NEXT: DW_AT_LLVM_sysroot {{.*}}"/"
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx"
@@ -20,7 +20,7 @@ target triple = "x86_64-apple-macosx"
 !2 = !{}
 !3 = !{!4}
 !4 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: !5, file: !1, line: 5)
-!5 = !DIModule(scope: null, name: "DebugModule", configMacros: "-DMODULES=0", includePath: "/llvm/tools/clang/test/Modules/Inputs", isysroot: "/")
+!5 = !DIModule(scope: null, name: "DebugModule", configMacros: "-DMODULES=0", includePath: "/llvm/tools/clang/test/Modules/Inputs", sysroot: "/")
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = !{!"LLVM version 3.7.0"}
