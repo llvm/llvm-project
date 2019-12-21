@@ -86,7 +86,7 @@ static void SetPluginInfo(const FileSpec &plugin_file_spec,
 }
 
 template <typename FPtrTy> static FPtrTy CastToFPtr(void *VPtr) {
-  return reinterpret_cast<FPtrTy>(reinterpret_cast<intptr_t>(VPtr));
+  return reinterpret_cast<FPtrTy>(VPtr);
 }
 
 static FileSystem::EnumerateDirectoryResult

@@ -328,9 +328,9 @@ lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
   case eAllocationPolicyMirror:
     process_sp = m_process_wp.lock();
     LLDB_LOGF(log,
-              "IRMemoryMap::%s process_sp=0x%" PRIx64
+              "IRMemoryMap::%s process_sp=0x%" PRIxPTR
               ", process_sp->CanJIT()=%s, process_sp->IsAlive()=%s",
-              __FUNCTION__, (lldb::addr_t)process_sp.get(),
+              __FUNCTION__, reinterpret_cast<uintptr_t>(process_sp.get()),
               process_sp && process_sp->CanJIT() ? "true" : "false",
               process_sp && process_sp->IsAlive() ? "true" : "false");
     if (process_sp && process_sp->CanJIT() && process_sp->IsAlive()) {
@@ -577,9 +577,9 @@ void IRMemoryMap::WriteMemory(lldb::addr_t process_address,
   if (lldb_private::Log *log =
           lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
     LLDB_LOGF(log,
-              "IRMemoryMap::WriteMemory (0x%" PRIx64 ", 0x%" PRIx64
+              "IRMemoryMap::WriteMemory (0x%" PRIx64 ", 0x%" PRIxPTR
               ", 0x%" PRId64 ") went to [0x%" PRIx64 "..0x%" PRIx64 ")",
-              (uint64_t)process_address, (uint64_t)bytes, (uint64_t)size,
+              (uint64_t)process_address, reinterpret_cast<uintptr_t>(bytes), (uint64_t)size,
               (uint64_t)allocation.m_process_start,
               (uint64_t)allocation.m_process_start +
                   (uint64_t)allocation.m_size);
@@ -708,9 +708,9 @@ void IRMemoryMap::ReadMemory(uint8_t *bytes, lldb::addr_t process_address,
   if (lldb_private::Log *log =
           lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
     LLDB_LOGF(log,
-              "IRMemoryMap::ReadMemory (0x%" PRIx64 ", 0x%" PRIx64
+              "IRMemoryMap::ReadMemory (0x%" PRIx64 ", 0x%" PRIxPTR
               ", 0x%" PRId64 ") came from [0x%" PRIx64 "..0x%" PRIx64 ")",
-              (uint64_t)process_address, (uint64_t)bytes, (uint64_t)size,
+              (uint64_t)process_address, reinterpret_cast<uintptr_t>(bytes), (uint64_t)size,
               (uint64_t)allocation.m_process_start,
               (uint64_t)allocation.m_process_start +
                   (uint64_t)allocation.m_size);
