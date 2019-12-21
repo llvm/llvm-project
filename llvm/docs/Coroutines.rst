@@ -121,7 +121,7 @@ in further detail below.
 The frontend may generate code to call the coroutine function directly;
 this will become a call to the ramp function and will return a pointer
 to the coroutine object.  The frontend should always resume or destroy
-the coroutine using the corresping intrinsics.
+the coroutine using the corresponding intrinsics.
 
 Returned-Continuation Lowering
 ------------------------------
