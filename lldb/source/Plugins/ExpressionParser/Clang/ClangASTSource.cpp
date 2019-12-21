@@ -56,12 +56,10 @@ ClangASTSource::ClangASTSource(const lldb::TargetSP &target,
   m_ast_importer_sp = importer;
 }
 
-void ClangASTSource::InstallASTContext(ClangASTContext &clang_ast_context,
-                                       clang::FileManager &file_manager,
-                                       bool is_shared_context) {
+void ClangASTSource::InstallASTContext(ClangASTContext &clang_ast_context) {
   m_ast_context = clang_ast_context.getASTContext();
   m_clang_ast_context = &clang_ast_context;
-  m_file_manager = &file_manager;
+  m_file_manager = &m_ast_context->getSourceManager().getFileManager();
   m_ast_importer_sp->InstallMapCompleter(m_ast_context, *this);
 }
 
