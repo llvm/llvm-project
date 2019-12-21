@@ -9,7 +9,7 @@
 ; CHECK: !1 = !DIModule(scope: !0, name: "Module")
 !1 = !DIModule(scope: !0, name: "Module")
 
-; CHECK: !2 = !DIModule(scope: !0, name: "Module", configMacros: "-DNDEBUG", includePath: "/usr/include", isysroot: "/")
-!2 = !DIModule(scope: !0, name: "Module", configMacros: "-DNDEBUG", includePath: "/usr/include", isysroot: "/")
+; CHECK: !2 = !DIModule(scope: !0, name: "Module", configMacros: "-DNDEBUG", includePath: "/usr/include", sysroot: "/")
+!2 = !DIModule(scope: !0, name: "Module", configMacros: "-DNDEBUG", includePath: "/usr/include", sysroot: "/")
 
 !3 = !DIModule(scope: !0, name: "Module", configMacros: "")

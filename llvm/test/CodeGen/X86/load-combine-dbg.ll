@@ -25,7 +25,7 @@ define i32 @zext_load(i32* %arg) !dbg !30 {
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !3, isOptimized: false, emissionKind: FullDebug)
-!2 = !DIModule(scope: null, name: "test", includePath: "", isysroot: "/")
+!2 = !DIModule(scope: null, name: "test", includePath: "", sysroot: "/")
 !3 = !DIFile(filename: "main.swift", directory: "/")
 
 !30 = distinct !DISubprogram(name: "main", scope: !2, file: !3, line: 1, type: !31, isLocal: false, isDefinition: true, isOptimized: false, unit: !1)
