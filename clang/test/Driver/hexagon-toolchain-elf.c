@@ -545,6 +545,7 @@
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK081 %s
+// REQUIRES: hexagon-registered-target
 // CHECK081:      "-march=hexagon"
 // CHECK081:      "-mcpu=hexagonv60"
 // -----------------------------------------------------------------------------
