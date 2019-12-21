@@ -17,8 +17,8 @@ namespace lldb_private {
 namespace clang_utils {
 inline clang::DeclarationName getDeclarationName(ClangASTContext &ast,
                                                  llvm::StringRef name) {
-  clang::IdentifierInfo &II = ast.getASTContext()->Idents.get(name);
-  return ast.getASTContext()->DeclarationNames.getIdentifier(&II);
+  clang::IdentifierInfo &II = ast.getASTContext().Idents.get(name);
+  return ast.getASTContext().DeclarationNames.getIdentifier(&II);
 }
 
 inline std::unique_ptr<ClangASTContext> createAST() {
@@ -26,7 +26,7 @@ inline std::unique_ptr<ClangASTContext> createAST() {
 }
 
 inline CompilerType createRecord(ClangASTContext &ast, llvm::StringRef name) {
-  return ast.CreateRecordType(ast.getASTContext()->getTranslationUnitDecl(),
+  return ast.CreateRecordType(ast.getASTContext().getTranslationUnitDecl(),
                               lldb::AccessType::eAccessPublic, name, 0,
                               lldb::LanguageType::eLanguageTypeC);
 }
