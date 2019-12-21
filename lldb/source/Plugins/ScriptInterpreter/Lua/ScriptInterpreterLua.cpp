@@ -22,33 +22,34 @@ using namespace lldb_private;
 class IOHandlerLuaInterpreter : public IOHandlerDelegate,
                                 public IOHandlerEditline {
 public:
-  IOHandlerLuaInterpreter(Debugger &debugger)
+  IOHandlerLuaInterpreter(Debugger &debugger,
+                          ScriptInterpreterLua &script_interpreter)
       : IOHandlerEditline(debugger, IOHandler::Type::LuaInterpreter, "lua",
                           ">>> ", "..> ", true, debugger.GetUseColor(), 0,
                           *this, nullptr),
-        m_lua() {}
+        m_script_interpreter(script_interpreter) {}
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
-    if (llvm::Error error = m_lua.Run(data)) {
+    if (llvm::Error error = m_script_interpreter.GetLua().Run(data)) {
       *GetOutputStreamFileSP() << llvm::toString(std::move(error));
     }
   }
 
 private:
-  Lua m_lua;
+  ScriptInterpreterLua &m_script_interpreter;
 };
 
 ScriptInterpreterLua::ScriptInterpreterLua(Debugger &debugger)
-    : ScriptInterpreter(debugger, eScriptLanguageLua) {}
+    : ScriptInterpreter(debugger, eScriptLanguageLua),
+      m_lua(std::make_unique<Lua>()) {}
 
 ScriptInterpreterLua::~ScriptInterpreterLua() {}
 
 bool ScriptInterpreterLua::ExecuteOneLine(llvm::StringRef command,
                                           CommandReturnObject *result,
                                           const ExecuteScriptOptions &options) {
-  Lua l;
-  if (llvm::Error e = l.Run(command)) {
+  if (llvm::Error e = m_lua->Run(command)) {
     result->AppendErrorWithFormatv(
         "lua failed attempting to evaluate '{0}': {1}\n", command,
         llvm::toString(std::move(e)));
@@ -72,7 +73,7 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
   if (!debugger.GetInputFile().IsValid())
     return;
 
-  IOHandlerSP io_handler_sp(new IOHandlerLuaInterpreter(debugger));
+  IOHandlerSP io_handler_sp(new IOHandlerLuaInterpreter(debugger, *this));
   debugger.PushIOHandler(io_handler_sp);
 }
 
@@ -107,3 +108,5 @@ lldb_private::ConstString ScriptInterpreterLua::GetPluginName() {
 }
 
 uint32_t ScriptInterpreterLua::GetPluginVersion() { return 1; }
+
+Lua &ScriptInterpreterLua::GetLua() { return *m_lua; }
