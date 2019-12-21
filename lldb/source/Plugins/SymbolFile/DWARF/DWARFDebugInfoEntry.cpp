@@ -645,25 +645,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
       }
     }
   }
-
-  // If we're a unit DIE, also check the attributes of the dwo unit (if any).
-  if (GetParent())
-    return 0;
-  SymbolFileDWARFDwo *dwo_symbol_file = cu->GetDwoSymbolFile();
-  if (!dwo_symbol_file)
-    return 0;
-
-  DWARFCompileUnit *dwo_cu = dwo_symbol_file->GetCompileUnit();
-  if (!dwo_cu)
-    return 0;
-
-  DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
-  if (!dwo_cu_die.IsValid())
-    return 0;
-
-  return dwo_cu_die.GetDIE()->GetAttributeValue(
-      dwo_cu, attr, form_value, end_attr_offset_ptr,
-      check_specification_or_abstract_origin);
+  return 0;
 }
 
 // GetAttributeValueAsString

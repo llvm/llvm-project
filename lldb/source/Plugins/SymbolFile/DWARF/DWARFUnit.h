@@ -201,7 +201,7 @@ public:
   lldb_private::FileSpec GetFile(size_t file_idx);
   lldb_private::FileSpec::Style GetPathStyle();
 
-  SymbolFileDWARFDwo *GetDwoSymbolFile() const;
+  SymbolFileDWARFDwo *GetDwoSymbolFile();
 
   die_iterator_range dies() {
     ExtractDIEsIfNeeded();
