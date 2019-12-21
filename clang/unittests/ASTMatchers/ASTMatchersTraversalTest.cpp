@@ -1751,17 +1751,6 @@ B func12() {
   return c;
 }
 
-void func13() {
-  int a = 0;
-  int c = 0;
-
-  [a, b = c](int d) { int e = d; };
-}
-
-void func14() {
-  [] <typename TemplateType> (TemplateType t, TemplateType u) { int e = t + u; };
-}
-
 )cpp";
 
   EXPECT_TRUE(matches(
@@ -1832,23 +1821,6 @@ void func14() {
                      returnStmt(forFunction(functionDecl(hasName("func12"))),
                                 hasReturnValue(
                                     declRefExpr(to(varDecl(hasName("c")))))))));
-
-  EXPECT_TRUE(matches(
-      Code,
-      traverse(
-          ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-          lambdaExpr(forFunction(functionDecl(hasName("func13"))),
-                     has(compoundStmt(hasDescendant(varDecl(hasName("e"))))),
-                     has(declRefExpr(to(varDecl(hasName("a"))))),
-                     has(varDecl(hasName("b"), hasInitializer(declRefExpr(to(
-                                                   varDecl(hasName("c"))))))),
-                     has(parmVarDecl(hasName("d")))))));
-
-  EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                     lambdaExpr(
-                         forFunction(functionDecl(hasName("func14"))),
-                         has(templateTypeParmDecl(hasName("TemplateType")))))));
 }
 
 TEST(IgnoringImpCasts, MatchesImpCasts) {
