@@ -47,7 +47,7 @@ DefineLegalizerInfo(ALegalizer, {
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
   getActionDefinitionsBuilder(G_ASHR).legalFor({{s32, s32}});
   getActionDefinitionsBuilder(G_SHL).legalFor({{s32, s32}});
-});
+})
 
 TEST_F(GISelMITest, BasicLegalizerTest) {
   StringRef MIRString = R"(
