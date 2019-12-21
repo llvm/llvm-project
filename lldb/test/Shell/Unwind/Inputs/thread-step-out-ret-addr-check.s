@@ -10,6 +10,7 @@ asm_main:
 # Executing 'thread step-out' here will initially attempt to write a
 # breakpoint to that stack address, but should fail because of the executable
 # memory check.
+        .globl nonstandard_stub
 nonstandard_stub:
         mov (%rsp), %rdi
         mov (%rdi), %rsi
