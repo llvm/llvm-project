@@ -2191,15 +2191,17 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // of a bitcasted pointer to vector or array of the same dimensions:
     // gep (bitcast <c x ty>* X to [c x ty]*), Y, Z --> gep X, Y, Z
     // gep (bitcast [c x ty]* X to <c x ty>*), Y, Z --> gep X, Y, Z
-    auto areMatchingArrayAndVecTypes = [](Type *ArrTy, Type *VecTy) {
+    auto areMatchingArrayAndVecTypes = [](Type *ArrTy, Type *VecTy,
+                                          const DataLayout &DL) {
       return ArrTy->getArrayElementType() == VecTy->getVectorElementType() &&
-             ArrTy->getArrayNumElements() == VecTy->getVectorNumElements();
+             ArrTy->getArrayNumElements() == VecTy->getVectorNumElements() &&
+             DL.getTypeAllocSize(ArrTy) == DL.getTypeAllocSize(VecTy);
     };
     if (GEP.getNumOperands() == 3 &&
         ((GEPEltType->isArrayTy() && SrcEltType->isVectorTy() &&
-          areMatchingArrayAndVecTypes(GEPEltType, SrcEltType)) ||
+          areMatchingArrayAndVecTypes(GEPEltType, SrcEltType, DL)) ||
          (GEPEltType->isVectorTy() && SrcEltType->isArrayTy() &&
-          areMatchingArrayAndVecTypes(SrcEltType, GEPEltType)))) {
+          areMatchingArrayAndVecTypes(SrcEltType, GEPEltType, DL)))) {
 
       // Create a new GEP here, as using `setOperand()` followed by
       // `setSourceElementType()` won't actually update the type of the
