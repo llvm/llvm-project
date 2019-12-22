@@ -12832,8 +12832,37 @@ public:
     //   expression E1 is sequenced before the expression E2.
     if (SemaRef.getLangOpts().CPlusPlus17)
       VisitSequencedExpressions(ASE->getLHS(), ASE->getRHS());
-    else
-      Base::VisitStmt(ASE);
+    else {
+      Visit(ASE->getLHS());
+      Visit(ASE->getRHS());
+    }
+  }
+
+  void VisitBinPtrMemD(const BinaryOperator *BO) { VisitBinPtrMem(BO); }
+  void VisitBinPtrMemI(const BinaryOperator *BO) { VisitBinPtrMem(BO); }
+  void VisitBinPtrMem(const BinaryOperator *BO) {
+    // C++17 [expr.mptr.oper]p4:
+    //  Abbreviating pm-expression.*cast-expression as E1.*E2, [...]
+    //  the expression E1 is sequenced before the expression E2.
+    if (SemaRef.getLangOpts().CPlusPlus17)
+      VisitSequencedExpressions(BO->getLHS(), BO->getRHS());
+    else {
+      Visit(BO->getLHS());
+      Visit(BO->getRHS());
+    }
+  }
+
+  void VisitBinShl(const BinaryOperator *BO) { VisitBinShlShr(BO); }
+  void VisitBinShr(const BinaryOperator *BO) { VisitBinShlShr(BO); }
+  void VisitBinShlShr(const BinaryOperator *BO) {
+    // C++17 [expr.shift]p4:
+    //  The expression E1 is sequenced before the expression E2.
+    if (SemaRef.getLangOpts().CPlusPlus17)
+      VisitSequencedExpressions(BO->getLHS(), BO->getRHS());
+    else {
+      Visit(BO->getLHS());
+      Visit(BO->getRHS());
+    }
   }
 
   void VisitBinComma(const BinaryOperator *BO) {
@@ -12845,38 +12874,67 @@ public:
   }
 
   void VisitBinAssign(const BinaryOperator *BO) {
-    // The modification is sequenced after the value computation of the LHS
-    // and RHS, so check it before inspecting the operands and update the
-    // map afterwards.
-    Object O = getObject(BO->getLHS(), true);
-    if (!O)
-      return VisitExpr(BO);
-
-    notePreMod(O, BO);
-
-    // C++11 [expr.ass]p7:
-    //   E1 op= E2 is equivalent to E1 = E1 op E2, except that E1 is evaluated
-    //   only once.
-    //
-    // Therefore, for a compound assignment operator, O is considered used
-    // everywhere except within the evaluation of E1 itself.
-    if (isa<CompoundAssignOperator>(BO))
-      notePreUse(O, BO);
-
-    Visit(BO->getLHS());
-
-    if (isa<CompoundAssignOperator>(BO))
-      notePostUse(O, BO);
-
-    Visit(BO->getRHS());
+    SequenceTree::Seq RHSRegion;
+    SequenceTree::Seq LHSRegion;
+    if (SemaRef.getLangOpts().CPlusPlus17) {
+      RHSRegion = Tree.allocate(Region);
+      LHSRegion = Tree.allocate(Region);
+    } else {
+      RHSRegion = Region;
+      LHSRegion = Region;
+    }
+    SequenceTree::Seq OldRegion = Region;
 
     // C++11 [expr.ass]p1:
-    //   the assignment is sequenced [...] before the value computation of the
-    //   assignment expression.
+    //  [...] the assignment is sequenced after the value computation
+    //  of the right and left operands, [...]
+    //
+    // so check it before inspecting the operands and update the
+    // map afterwards.
+    Object O = getObject(BO->getLHS(), /*Mod=*/true);
+    if (O)
+      notePreMod(O, BO);
+
+    if (SemaRef.getLangOpts().CPlusPlus17) {
+      // C++17 [expr.ass]p1:
+      //  [...] The right operand is sequenced before the left operand. [...]
+      {
+        SequencedSubexpression SeqBefore(*this);
+        Region = RHSRegion;
+        Visit(BO->getRHS());
+      }
+
+      Region = LHSRegion;
+      Visit(BO->getLHS());
+
+      if (O && isa<CompoundAssignOperator>(BO))
+        notePostUse(O, BO);
+
+    } else {
+      // C++11 does not specify any sequencing between the LHS and RHS.
+      Region = LHSRegion;
+      Visit(BO->getLHS());
+
+      if (O && isa<CompoundAssignOperator>(BO))
+        notePostUse(O, BO);
+
+      Region = RHSRegion;
+      Visit(BO->getRHS());
+    }
+
+    // C++11 [expr.ass]p1:
+    //  the assignment is sequenced [...] before the value computation of the
+    //  assignment expression.
     // C11 6.5.16/3 has no such rule.
-    notePostMod(O, BO,
-                SemaRef.getLangOpts().CPlusPlus ? UK_ModAsValue
-                                                : UK_ModAsSideEffect);
+    Region = OldRegion;
+    if (O)
+      notePostMod(O, BO,
+                  SemaRef.getLangOpts().CPlusPlus ? UK_ModAsValue
+                                                  : UK_ModAsSideEffect);
+    if (SemaRef.getLangOpts().CPlusPlus17) {
+      Tree.merge(RHSRegion);
+      Tree.merge(LHSRegion);
+    }
   }
 
   void VisitCompoundAssignOperator(const CompoundAssignOperator *CAO) {
