@@ -49,11 +49,11 @@ module {
                 %8 = load %arg1[%iv4, %iv6, %iv5] : memref<?x?x?xf32>
                 %9 = addf %7, %8 : f32
                 %10 = subi %iv4, %iv1 : index
-                %11 = divis %10, %step1 : index
+                %11 = divi_signed %10, %step1 : index
                 %12 = subi %iv5, %iv2 : index
-                %13 = divis %12, %step2 : index
+                %13 = divi_signed %12, %step2 : index
                 %14 = subi %iv6, %iv3 : index
-                %15 = divis %14, %step3 : index
+                %15 = divi_signed %14, %step3 : index
                 store %9, %6[%11, %13, %15] : memref<?x?x?xf32>
               }
             }
@@ -62,11 +62,11 @@ module {
             loop.for %iv8 = %iv2 to %ub2 step %step2 {
               loop.for %iv9 = %iv3 to %ub3 step %step3 {
                 %16 = subi %iv7, %iv1 : index
-                %17 = divis %16, %step1 : index
+                %17 = divi_signed %16, %step1 : index
                 %18 = subi %iv8, %iv2 : index
-                %19 = divis %18, %step2 : index
+                %19 = divi_signed %18, %step2 : index
                 %20 = subi %iv9, %iv3 : index
-                %21 = divis %20, %step3 : index
+                %21 = divi_signed %20, %step3 : index
                 %22 = load %6[%17, %19, %21] : memref<?x?x?xf32>
                 %23 = load %arg2[%iv9, %iv8, %iv7] : memref<?x?x?xf32>
                 %24 = mulf %22, %23 : f32

@@ -88,9 +88,9 @@ func @fsub_scalar(%arg: f32) -> f32 {
 // CHECK-LABEL: @div_rem
 func @div_rem(%arg0 : i32, %arg1 : i32) {
   // CHECK: spv.SDiv
-  %0 = divis %arg0, %arg1 : i32
+  %0 = divi_signed %arg0, %arg1 : i32
   // CHECK: spv.SMod
-  %1 = remis %arg0, %arg1 : i32
+  %1 = remi_signed %arg0, %arg1 : i32
   return
 }
 

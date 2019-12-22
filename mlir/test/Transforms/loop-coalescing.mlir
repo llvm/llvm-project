@@ -26,10 +26,10 @@ func @one_3d_nest() {
     // CHECK-NOT: loop.for
 
     // Reconstruct original IVs from the linearized one.
-    // CHECK: %[[orig_k:.*]] = remis %[[i]], %[[orig_ub_k]]
-    // CHECK: %[[div:.*]] = divis %[[i]], %[[orig_ub_k]]
-    // CHECK: %[[orig_j:.*]] = remis %[[div]], %[[orig_ub_j]]
-    // CHECK: %[[orig_i:.*]] = divis %[[div]], %[[orig_ub_j]]
+    // CHECK: %[[orig_k:.*]] = remi_signed %[[i]], %[[orig_ub_k]]
+    // CHECK: %[[div:.*]] = divi_signed %[[i]], %[[orig_ub_k]]
+    // CHECK: %[[orig_j:.*]] = remi_signed %[[div]], %[[orig_ub_j]]
+    // CHECK: %[[orig_i:.*]] = divi_signed %[[div]], %[[orig_ub_j]]
     loop.for %j = %c0 to %c56 step %c1 {
       loop.for %k = %c0 to %c3 step %c1 {
         // CHECK: "use"(%[[orig_i]], %[[orig_j]], %[[orig_k]])
@@ -52,10 +52,10 @@ func @multi_use() {
   loop.for %i = %c1 to %c10 step %c1 {
     loop.for %j = %c1 to %c10 step %c1 {
       loop.for %k = %c1 to %c10 step %c1 {
-        // CHECK: %[[k_unshifted:.*]] = remis %[[iv]], %[[k_extent:.*]]
-        // CHECK: %[[ij:.*]] = divis %[[iv]], %[[k_extent]]
-        // CHECK: %[[j_unshifted:.*]] = remis %[[ij]], %[[j_extent:.*]]
-        // CHECK: %[[i_unshifted:.*]] = divis %[[ij]], %[[j_extent]]
+        // CHECK: %[[k_unshifted:.*]] = remi_signed %[[iv]], %[[k_extent:.*]]
+        // CHECK: %[[ij:.*]] = divi_signed %[[iv]], %[[k_extent]]
+        // CHECK: %[[j_unshifted:.*]] = remi_signed %[[ij]], %[[j_extent:.*]]
+        // CHECK: %[[i_unshifted:.*]] = divi_signed %[[ij]], %[[j_extent]]
         // CHECK: %[[k:.*]] = addi %[[k_unshifted]]
         // CHECK: %[[j:.*]] = addi %[[j_unshifted]]
         // CHECK: %[[i:.*]] = addi %[[i_unshifted]]
@@ -91,7 +91,7 @@ func @unnormalized_loops() {
   // CHECK: %[[c1:.*]] = constant 1
   // CHECK: %[[step_minus_c1:.*]] = subi %[[orig_step_i]], %[[c1]]
   // CHECK: %[[dividend:.*]] = addi %[[diff_i]], %[[step_minus_c1]]
-  // CHECK: %[[numiter_i:.*]] = divis %[[dividend]], %[[orig_step_i]]
+  // CHECK: %[[numiter_i:.*]] = divi_signed %[[dividend]], %[[orig_step_i]]
 
   // Normalized lower bound and step for the outer loop.
   // CHECK: %[[lb_i:.*]] = constant 0
@@ -99,7 +99,7 @@ func @unnormalized_loops() {
 
   // Number of iterations in the inner loop, the pattern is the same as above,
   // only capture the final result.
-  // CHECK: %[[numiter_j:.*]] = divis {{.*}}, %[[orig_step_j]]
+  // CHECK: %[[numiter_j:.*]] = divi_signed {{.*}}, %[[orig_step_j]]
 
   // New bounds of the outer loop.
   // CHECK: %[[range:.*]] = muli %[[numiter_i]], %[[numiter_j]]
@@ -109,8 +109,8 @@ func @unnormalized_loops() {
     // CHECK-NOT: loop.for
     loop.for %j = %c7 to %c17 step %c3 {
       // The IVs are rewritten.
-      // CHECK: %[[normalized_j:.*]] = remis %[[i]], %[[numiter_j]]
-      // CHECK: %[[normalized_i:.*]] = divis %[[i]], %[[numiter_j]]
+      // CHECK: %[[normalized_j:.*]] = remi_signed %[[i]], %[[numiter_j]]
+      // CHECK: %[[normalized_i:.*]] = divi_signed %[[i]], %[[numiter_j]]
       // CHECK: %[[scaled_j:.*]] = muli %[[normalized_j]], %[[orig_step_j]]
       // CHECK: %[[orig_j:.*]] = addi %[[scaled_j]], %[[orig_lb_j]]
       // CHECK: %[[scaled_i:.*]] = muli %[[normalized_i]], %[[orig_step_i]]
@@ -137,11 +137,11 @@ func @parametric(%lb1 : index, %ub1 : index, %step1 : index,
   // CHECK: %[[range1:.*]] = subi %[[orig_ub1]], %[[orig_lb1]]
   // CHECK: %[[orig_step1_minus_1:.*]] = subi %[[orig_step1]], %c1
   // CHECK: %[[dividend1:.*]] = addi %[[range1]], %[[orig_step1_minus_1]]
-  // CHECK: %[[numiter1:.*]] = divis %[[dividend1]], %[[orig_step1]]
+  // CHECK: %[[numiter1:.*]] = divi_signed %[[dividend1]], %[[orig_step1]]
   // CHECK: %[[range2:.*]] = subi %[[orig_ub2]], %[[orig_lb2]]
   // CHECK: %[[orig_step2_minus_1:.*]] = subi %arg5, %c1
   // CHECK: %[[dividend2:.*]] = addi %[[range2]], %[[orig_step2_minus_1]]
-  // CHECK: %[[numiter2:.*]] = divis %[[dividend2]], %[[orig_step2]]
+  // CHECK: %[[numiter2:.*]] = divi_signed %[[dividend2]], %[[orig_step2]]
   // CHECK: %[[range:.*]] = muli %[[numiter1]], %[[numiter2]] : index
 
   // Check that the outer loop is updated.
@@ -151,8 +151,8 @@ func @parametric(%lb1 : index, %ub1 : index, %step1 : index,
     // CHECK-NOT: loop.for
     loop.for %j = %lb2 to %ub2 step %step2 {
       // Remapping of the induction variables.
-      // CHECK: %[[normalized_j:.*]] = remis %[[i]], %[[numiter2]] : index
-      // CHECK: %[[normalized_i:.*]] = divis %[[i]], %[[numiter2]] : index
+      // CHECK: %[[normalized_j:.*]] = remi_signed %[[i]], %[[numiter2]] : index
+      // CHECK: %[[normalized_i:.*]] = divi_signed %[[i]], %[[numiter2]] : index
       // CHECK: %[[scaled_j:.*]] = muli %[[normalized_j]], %[[orig_step2]]
       // CHECK: %[[orig_j:.*]] = addi %[[scaled_j]], %[[orig_lb2]]
       // CHECK: %[[scaled_i:.*]] = muli %[[normalized_i]], %[[orig_step1]]

@@ -794,6 +794,12 @@ llvm.func @vector_ops(%arg0: !llvm<"<4 x float>">, %arg1: !llvm<"<4 x i1>">, %ar
   %10 = llvm.or %arg2, %arg2 : !llvm<"<4 x i64>">
 // CHECK-NEXT: %14 = xor <4 x i64> %2, %2
   %11 = llvm.xor %arg2, %arg2 : !llvm<"<4 x i64>">
+// CHECK-NEXT: %15 = shl <4 x i64> %2, %2
+  %12 = llvm.shl %arg2, %arg2 : !llvm<"<4 x i64>">
+// CHECK-NEXT: %16 = lshr <4 x i64> %2, %2
+  %13 = llvm.lshr %arg2, %arg2 : !llvm<"<4 x i64>">
+// CHECK-NEXT: %17 = ashr <4 x i64> %2, %2
+  %14 = llvm.ashr %arg2, %arg2 : !llvm<"<4 x i64>">
 // CHECK-NEXT:    ret <4 x float> %4
   llvm.return %1 : !llvm<"<4 x float>">
 }

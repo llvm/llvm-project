@@ -212,8 +212,8 @@ func @mulf_splat_tensor() -> tensor<4xf32> {
 
 // -----
 
-// CHECK-LABEL: func @simple_divis
-func @simple_divis() -> (i32, i32, i32) {
+// CHECK-LABEL: func @simple_divi_signed
+func @simple_divi_signed() -> (i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = constant 0
   %z = constant 0 : i32
   // CHECK-DAG: [[C6:%.+]] = constant 6
@@ -221,15 +221,15 @@ func @simple_divis() -> (i32, i32, i32) {
   %1 = constant 2 : i32
 
   // CHECK-NEXT: [[C3:%.+]] = constant 3 : i32
-  %2 = divis %0, %1 : i32
+  %2 = divi_signed %0, %1 : i32
 
   %3 = constant -2 : i32
 
   // CHECK-NEXT: [[CM3:%.+]] = constant -3 : i32
-  %4 = divis %0, %3 : i32
+  %4 = divi_signed %0, %3 : i32
 
-  // CHECK-NEXT: [[XZ:%.+]] = divis [[C6]], [[C0]]
-  %5 = divis %0, %z : i32
+  // CHECK-NEXT: [[XZ:%.+]] = divi_signed [[C6]], [[C0]]
+  %5 = divi_signed %0, %z : i32
 
   // CHECK-NEXT: return [[C3]], [[CM3]], [[XZ]]
   return %2, %4, %5 : i32, i32, i32
@@ -237,8 +237,8 @@ func @simple_divis() -> (i32, i32, i32) {
 
 // -----
 
-// CHECK-LABEL: func @divis_splat_tensor
-func @divis_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
+// CHECK-LABEL: func @divi_signed_splat_tensor
+func @divi_signed_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
   // CHECK-DAG: [[C0:%.+]] = constant dense<0>
   %z = constant dense<0> : tensor<4xi32>
   // CHECK-DAG: [[C6:%.+]] = constant dense<6>
@@ -246,15 +246,15 @@ func @divis_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
   %1 = constant dense<2> : tensor<4xi32>
 
   // CHECK-NEXT: [[C3:%.+]] = constant dense<3> : tensor<4xi32>
-  %2 = divis %0, %1 : tensor<4xi32>
+  %2 = divi_signed %0, %1 : tensor<4xi32>
 
   %3 = constant dense<-2> : tensor<4xi32>
 
   // CHECK-NEXT: [[CM3:%.+]] = constant dense<-3> : tensor<4xi32>
-  %4 = divis %0, %3 : tensor<4xi32>
+  %4 = divi_signed %0, %3 : tensor<4xi32>
 
-  // CHECK-NEXT: [[XZ:%.+]] = divis [[C6]], [[C0]]
-  %5 = divis %0, %z : tensor<4xi32>
+  // CHECK-NEXT: [[XZ:%.+]] = divi_signed [[C6]], [[C0]]
+  %5 = divi_signed %0, %z : tensor<4xi32>
 
   // CHECK-NEXT: return [[C3]], [[CM3]], [[XZ]]
   return %2, %4, %5 : tensor<4xi32>, tensor<4xi32>, tensor<4xi32>
@@ -262,24 +262,24 @@ func @divis_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
 
 // -----
 
-// CHECK-LABEL: func @simple_diviu
-func @simple_diviu() -> (i32, i32, i32) {
+// CHECK-LABEL: func @simple_divi_unsigned
+func @simple_divi_unsigned() -> (i32, i32, i32) {
   %z = constant 0 : i32
   // CHECK-DAG: [[C6:%.+]] = constant 6
   %0 = constant 6 : i32
   %1 = constant 2 : i32
 
   // CHECK-DAG: [[C3:%.+]] = constant 3 : i32
-  %2 = diviu %0, %1 : i32
+  %2 = divi_unsigned %0, %1 : i32
 
   %3 = constant -2 : i32
 
   // Unsigned division interprets -2 as 2^32-2, so the result is 0.
   // CHECK-DAG: [[C0:%.+]] = constant 0 : i32
-  %4 = diviu %0, %3 : i32
+  %4 = divi_unsigned %0, %3 : i32
 
-  // CHECK-NEXT: [[XZ:%.+]] = diviu [[C6]], [[C0]]
-  %5 = diviu %0, %z : i32
+  // CHECK-NEXT: [[XZ:%.+]] = divi_unsigned [[C6]], [[C0]]
+  %5 = divi_unsigned %0, %z : i32
 
   // CHECK-NEXT: return [[C3]], [[C0]], [[XZ]]
   return %2, %4, %5 : i32, i32, i32
@@ -288,24 +288,24 @@ func @simple_diviu() -> (i32, i32, i32) {
 
 // -----
 
-// CHECK-LABEL: func @diviu_splat_tensor
-func @diviu_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
+// CHECK-LABEL: func @divi_unsigned_splat_tensor
+func @divi_unsigned_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
   %z = constant dense<0> : tensor<4xi32>
   // CHECK-DAG: [[C6:%.+]] = constant dense<6>
   %0 = constant dense<6> : tensor<4xi32>
   %1 = constant dense<2> : tensor<4xi32>
 
   // CHECK-DAG: [[C3:%.+]] = constant dense<3> : tensor<4xi32>
-  %2 = diviu %0, %1 : tensor<4xi32>
+  %2 = divi_unsigned %0, %1 : tensor<4xi32>
 
   %3 = constant dense<-2> : tensor<4xi32>
 
   // Unsigned division interprets -2 as 2^32-2, so the result is 0.
   // CHECK-DAG: [[C0:%.+]] = constant dense<0> : tensor<4xi32>
-  %4 = diviu %0, %3 : tensor<4xi32>
+  %4 = divi_unsigned %0, %3 : tensor<4xi32>
 
-  // CHECK-NEXT: [[XZ:%.+]] = diviu [[C6]], [[C0]]
-  %5 = diviu %0, %z : tensor<4xi32>
+  // CHECK-NEXT: [[XZ:%.+]] = divi_unsigned [[C6]], [[C0]]
+  %5 = divi_unsigned %0, %z : tensor<4xi32>
 
   // CHECK-NEXT: return [[C3]], [[C0]], [[XZ]]
   return %2, %4, %5 : tensor<4xi32>, tensor<4xi32>, tensor<4xi32>
@@ -313,18 +313,18 @@ func @diviu_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
 
 // -----
 
-// CHECK-LABEL: func @simple_remis
-func @simple_remis(%a : i32) -> (i32, i32, i32) {
+// CHECK-LABEL: func @simple_remi_signed
+func @simple_remi_signed(%a : i32) -> (i32, i32, i32) {
   %0 = constant 5 : i32
   %1 = constant 2 : i32
   %2 = constant 1 : i32
   %3 = constant -2 : i32
 
   // CHECK-NEXT:[[C1:%.+]] = constant 1 : i32
-  %4 = remis %0, %1 : i32
-  %5 = remis %0, %3 : i32
+  %4 = remi_signed %0, %1 : i32
+  %5 = remi_signed %0, %3 : i32
   // CHECK-NEXT:[[C0:%.+]] = constant 0 : i32
-  %6 = remis %a, %2 : i32
+  %6 = remi_signed %a, %2 : i32
 
   // CHECK-NEXT: return [[C1]], [[C1]], [[C0]] : i32, i32, i32
   return %4, %5, %6 : i32, i32, i32
@@ -332,19 +332,19 @@ func @simple_remis(%a : i32) -> (i32, i32, i32) {
 
 // -----
 
-// CHECK-LABEL: func @simple_remiu
-func @simple_remiu(%a : i32) -> (i32, i32, i32) {
+// CHECK-LABEL: func @simple_remi_unsigned
+func @simple_remi_unsigned(%a : i32) -> (i32, i32, i32) {
   %0 = constant 5 : i32
   %1 = constant 2 : i32
   %2 = constant 1 : i32
   %3 = constant -2 : i32
 
   // CHECK-DAG:[[C1:%.+]] = constant 1 : i32
-  %4 = remiu %0, %1 : i32
+  %4 = remi_unsigned %0, %1 : i32
   // CHECK-DAG:[[C5:%.+]] = constant 5 : i32
-  %5 = remiu %0, %3 : i32
+  %5 = remi_unsigned %0, %3 : i32
   // CHECK-DAG:[[C0:%.+]] = constant 0 : i32
-  %6 = remiu %a, %2 : i32
+  %6 = remi_unsigned %a, %2 : i32
 
   // CHECK-NEXT: return [[C1]], [[C5]], [[C0]] : i32, i32, i32
   return %4, %5, %6 : i32, i32, i32

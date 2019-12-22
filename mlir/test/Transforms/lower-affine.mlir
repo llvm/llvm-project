@@ -452,7 +452,7 @@ func @args_ret_affine_apply(index, index) -> (index, index) {
 // CHECK-LABEL: func @affine_apply_mod
 func @affine_apply_mod(%arg0 : index) -> (index) {
 // CHECK-NEXT: %[[c42:.*]] = constant 42 : index
-// CHECK-NEXT: %[[v0:.*]] = remis %{{.*}}, %[[c42]] : index
+// CHECK-NEXT: %[[v0:.*]] = remi_signed %{{.*}}, %[[c42]] : index
 // CHECK-NEXT: %[[c0:.*]] = constant 0 : index
 // CHECK-NEXT: %[[v1:.*]] = cmpi "slt", %[[v0]], %[[c0]] : index
 // CHECK-NEXT: %[[v2:.*]] = addi %[[v0]], %[[c42]] : index
@@ -476,7 +476,7 @@ func @affine_apply_floordiv(%arg0 : index) -> (index) {
 // CHECK-NEXT: %[[v0:.*]] = cmpi "slt", %{{.*}}, %[[c0]] : index
 // CHECK-NEXT: %[[v1:.*]] = subi %[[cm1]], %{{.*}} : index
 // CHECK-NEXT: %[[v2:.*]] = select %[[v0]], %[[v1]], %{{.*}} : index
-// CHECK-NEXT: %[[v3:.*]] = divis %[[v2]], %[[c42]] : index
+// CHECK-NEXT: %[[v3:.*]] = divi_signed %[[v2]], %[[c42]] : index
 // CHECK-NEXT: %[[v4:.*]] = subi %[[cm1]], %[[v3]] : index
 // CHECK-NEXT: %[[v5:.*]] = select %[[v0]], %[[v4]], %[[v3]] : index
   %0 = affine.apply #mapfloordiv (%arg0)
@@ -499,7 +499,7 @@ func @affine_apply_ceildiv(%arg0 : index) -> (index) {
 // CHECK-NEXT:  %[[v1:.*]] = subi %[[c0]], %{{.*}} : index
 // CHECK-NEXT:  %[[v2:.*]] = subi %{{.*}}, %[[c1]] : index
 // CHECK-NEXT:  %[[v3:.*]] = select %[[v0]], %[[v1]], %[[v2]] : index
-// CHECK-NEXT:  %[[v4:.*]] = divis %[[v3]], %[[c42]] : index
+// CHECK-NEXT:  %[[v4:.*]] = divi_signed %[[v3]], %[[c42]] : index
 // CHECK-NEXT:  %[[v5:.*]] = subi %[[c0]], %[[v4]] : index
 // CHECK-NEXT:  %[[v6:.*]] = addi %[[v4]], %[[c1]] : index
 // CHECK-NEXT:  %[[v7:.*]] = select %[[v0]], %[[v5]], %[[v6]] : index

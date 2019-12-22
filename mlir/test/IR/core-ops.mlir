@@ -153,65 +153,65 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = select %{{[0-9]+}}, %cst_4, %cst_4 : tensor<42xi32>
   %25 = "std.select"(%19, %tci32, %tci32) : (tensor<42 x i1>, tensor<42 x i32>, tensor<42 x i32>) -> tensor<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = divis %arg2, %arg2 : i32
-  %26 = divis %i, %i : i32
+  // CHECK: %{{[0-9]+}} = divi_signed %arg2, %arg2 : i32
+  %26 = divi_signed %i, %i : i32
 
-  // CHECK: %{{[0-9]+}} = divis %arg3, %arg3 : index
-  %27 = divis %idx, %idx : index
+  // CHECK: %{{[0-9]+}} = divi_signed %arg3, %arg3 : index
+  %27 = divi_signed %idx, %idx : index
 
-  // CHECK: %{{[0-9]+}} = divis %cst_5, %cst_5 : vector<42xi32>
-  %28 = divis %vci32, %vci32 : vector<42 x i32>
+  // CHECK: %{{[0-9]+}} = divi_signed %cst_5, %cst_5 : vector<42xi32>
+  %28 = divi_signed %vci32, %vci32 : vector<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = divis %cst_4, %cst_4 : tensor<42xi32>
-  %29 = divis %tci32, %tci32 : tensor<42 x i32>
+  // CHECK: %{{[0-9]+}} = divi_signed %cst_4, %cst_4 : tensor<42xi32>
+  %29 = divi_signed %tci32, %tci32 : tensor<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = divis %arg2, %arg2 : i32
-  %30 = "std.divis"(%i, %i) : (i32, i32) -> i32
+  // CHECK: %{{[0-9]+}} = divi_signed %arg2, %arg2 : i32
+  %30 = "std.divi_signed"(%i, %i) : (i32, i32) -> i32
 
-  // CHECK: %{{[0-9]+}} = diviu %arg2, %arg2 : i32
-  %31 = diviu %i, %i : i32
+  // CHECK: %{{[0-9]+}} = divi_unsigned %arg2, %arg2 : i32
+  %31 = divi_unsigned %i, %i : i32
 
-  // CHECK: %{{[0-9]+}} = diviu %arg3, %arg3 : index
-  %32 = diviu %idx, %idx : index
+  // CHECK: %{{[0-9]+}} = divi_unsigned %arg3, %arg3 : index
+  %32 = divi_unsigned %idx, %idx : index
 
-  // CHECK: %{{[0-9]+}} = diviu %cst_5, %cst_5 : vector<42xi32>
-  %33 = diviu %vci32, %vci32 : vector<42 x i32>
+  // CHECK: %{{[0-9]+}} = divi_unsigned %cst_5, %cst_5 : vector<42xi32>
+  %33 = divi_unsigned %vci32, %vci32 : vector<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = diviu %cst_4, %cst_4 : tensor<42xi32>
-  %34 = diviu %tci32, %tci32 : tensor<42 x i32>
+  // CHECK: %{{[0-9]+}} = divi_unsigned %cst_4, %cst_4 : tensor<42xi32>
+  %34 = divi_unsigned %tci32, %tci32 : tensor<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = diviu %arg2, %arg2 : i32
-  %35 = "std.diviu"(%i, %i) : (i32, i32) -> i32
+  // CHECK: %{{[0-9]+}} = divi_unsigned %arg2, %arg2 : i32
+  %35 = "std.divi_unsigned"(%i, %i) : (i32, i32) -> i32
 
-  // CHECK: %{{[0-9]+}} = remis %arg2, %arg2 : i32
-  %36 = remis %i, %i : i32
+  // CHECK: %{{[0-9]+}} = remi_signed %arg2, %arg2 : i32
+  %36 = remi_signed %i, %i : i32
 
-  // CHECK: %{{[0-9]+}} = remis %arg3, %arg3 : index
-  %37 = remis %idx, %idx : index
+  // CHECK: %{{[0-9]+}} = remi_signed %arg3, %arg3 : index
+  %37 = remi_signed %idx, %idx : index
 
-  // CHECK: %{{[0-9]+}} = remis %cst_5, %cst_5 : vector<42xi32>
-  %38 = remis %vci32, %vci32 : vector<42 x i32>
+  // CHECK: %{{[0-9]+}} = remi_signed %cst_5, %cst_5 : vector<42xi32>
+  %38 = remi_signed %vci32, %vci32 : vector<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = remis %cst_4, %cst_4 : tensor<42xi32>
-  %39 = remis %tci32, %tci32 : tensor<42 x i32>
+  // CHECK: %{{[0-9]+}} = remi_signed %cst_4, %cst_4 : tensor<42xi32>
+  %39 = remi_signed %tci32, %tci32 : tensor<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = remis %arg2, %arg2 : i32
-  %40 = "std.remis"(%i, %i) : (i32, i32) -> i32
+  // CHECK: %{{[0-9]+}} = remi_signed %arg2, %arg2 : i32
+  %40 = "std.remi_signed"(%i, %i) : (i32, i32) -> i32
 
-  // CHECK: %{{[0-9]+}} = remiu %arg2, %arg2 : i32
-  %41 = remiu %i, %i : i32
+  // CHECK: %{{[0-9]+}} = remi_unsigned %arg2, %arg2 : i32
+  %41 = remi_unsigned %i, %i : i32
 
-  // CHECK: %{{[0-9]+}} = remiu %arg3, %arg3 : index
-  %42 = remiu %idx, %idx : index
+  // CHECK: %{{[0-9]+}} = remi_unsigned %arg3, %arg3 : index
+  %42 = remi_unsigned %idx, %idx : index
 
-  // CHECK: %{{[0-9]+}} = remiu %cst_5, %cst_5 : vector<42xi32>
-  %43 = remiu %vci32, %vci32 : vector<42 x i32>
+  // CHECK: %{{[0-9]+}} = remi_unsigned %cst_5, %cst_5 : vector<42xi32>
+  %43 = remi_unsigned %vci32, %vci32 : vector<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = remiu %cst_4, %cst_4 : tensor<42xi32>
-  %44 = remiu %tci32, %tci32 : tensor<42 x i32>
+  // CHECK: %{{[0-9]+}} = remi_unsigned %cst_4, %cst_4 : tensor<42xi32>
+  %44 = remi_unsigned %tci32, %tci32 : tensor<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = remiu %arg2, %arg2 : i32
-  %45 = "std.remiu"(%i, %i) : (i32, i32) -> i32
+  // CHECK: %{{[0-9]+}} = remi_unsigned %arg2, %arg2 : i32
+  %45 = "std.remi_unsigned"(%i, %i) : (i32, i32) -> i32
 
   // CHECK: %{{[0-9]+}} = divf %arg1, %arg1 : f32
   %46 = "std.divf"(%f, %f) : (f32,f32) -> f32
@@ -448,6 +448,52 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
 
   // CHECK: %{{[0-9]+}} = tanh %arg0 : tensor<4x4x?xf32>
   %123 = tanh %t : tensor<4x4x?xf32>
+
+  // CHECK: %{{[0-9]+}} = shift_left %arg2, %arg2 : i32
+  %124 = "std.shift_left"(%i, %i) : (i32, i32) -> i32
+
+  // CHECK:%{{[0-9]+}} = shift_left %4, %4 : i32
+  %125 = shift_left %i2, %i2 : i32
+
+  // CHECK: %{{[0-9]+}} = shift_left %arg3, %arg3 : index
+  %126 = shift_left %idx, %idx : index
+
+  // CHECK: %{{[0-9]+}} = shift_left %cst_5, %cst_5 : vector<42xi32>
+  %127 = shift_left %vci32, %vci32 : vector<42 x i32>
+
+  // CHECK: %{{[0-9]+}} = shift_left %cst_4, %cst_4 : tensor<42xi32>
+  %128 = shift_left %tci32, %tci32 : tensor<42 x i32>
+
+  // CHECK: %{{[0-9]+}} = shift_right_signed %arg2, %arg2 : i32
+  %129 = "std.shift_right_signed"(%i, %i) : (i32, i32) -> i32
+
+  // CHECK:%{{[0-9]+}} = shift_right_signed %4, %4 : i32
+  %130 = shift_right_signed %i2, %i2 : i32
+
+  // CHECK: %{{[0-9]+}} = shift_right_signed %arg3, %arg3 : index
+  %131 = shift_right_signed %idx, %idx : index
+
+  // CHECK: %{{[0-9]+}} = shift_right_signed %cst_5, %cst_5 : vector<42xi32>
+  %132 = shift_right_signed %vci32, %vci32 : vector<42 x i32>
+
+  // CHECK: %{{[0-9]+}} = shift_right_signed %cst_4, %cst_4 : tensor<42xi32>
+  %133 = shift_right_signed %tci32, %tci32 : tensor<42 x i32>
+
+  // CHECK: %{{[0-9]+}} = shift_right_unsigned %arg2, %arg2 : i32
+  %134 = "std.shift_right_unsigned"(%i, %i) : (i32, i32) -> i32
+
+  // CHECK:%{{[0-9]+}} = shift_right_unsigned %4, %4 : i32
+  %135 = shift_right_unsigned %i2, %i2 : i32
+
+  // CHECK: %{{[0-9]+}} = shift_right_unsigned %arg3, %arg3 : index
+  %136 = shift_right_unsigned %idx, %idx : index
+
+  // CHECK: %{{[0-9]+}} = shift_right_unsigned %cst_5, %cst_5 : vector<42xi32>
+  %137 = shift_right_unsigned %vci32, %vci32 : vector<42 x i32>
+
+  // CHECK: %{{[0-9]+}} = shift_right_unsigned %cst_4, %cst_4 : tensor<42xi32>
+  %138 = shift_right_unsigned %tci32, %tci32 : tensor<42 x i32>
+
   return
 }
 

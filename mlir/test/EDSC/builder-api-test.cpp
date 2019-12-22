@@ -101,8 +101,8 @@ TEST_FUNC(builder_dynamic_for_func_args) {
   // CHECK-DAG:    [[rf4:%[0-9]+]] = mulf {{.*}}, {{.*}} : f32
   //     CHECK:    {{.*}} = subf [[rf3]], [[rf4]] : f32
   // CHECK-DAG:    [[ri1:%[0-9]+]] = addi {{.*}}, {{.*}} : i32
-  // CHECK-DAG:    [[ri2:%[0-9]+]] = divis [[ri1]], {{.*}} : i32
-  // CHECK-DAG:    [[ri3:%[0-9]+]] = remis [[ri2]], {{.*}} : i32
+  // CHECK-DAG:    [[ri2:%[0-9]+]] = divi_signed [[ri1]], {{.*}} : i32
+  // CHECK-DAG:    [[ri3:%[0-9]+]] = remi_signed [[ri2]], {{.*}} : i32
   // CHECK-DAG:    [[ri4:%[0-9]+]] = muli {{.*}}, {{.*}} : i32
   //     CHECK:    {{.*}} = subi [[ri3]], [[ri4]] : i32
   // clang-format on

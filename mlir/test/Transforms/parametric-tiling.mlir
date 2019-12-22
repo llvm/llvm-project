@@ -12,11 +12,11 @@ func @rectangular(%arg0: memref<?x?xf32>) {
   // COMMON:      %[[diff:.*]] = subi %c44, %c2
   // COMMON:      %[[adjustment:.*]] = subi %c1, %c1_{{.*}}
   // COMMON-NEXT: %[[diff_adj:.*]] = addi %[[diff]], %[[adjustment]]
-  // COMMON-NEXT: %[[range:.*]] = divis %[[diff_adj]], %c1
+  // COMMON-NEXT: %[[range:.*]] = divi_signed %[[diff_adj]], %c1
 
   // Ceildiv to get the parametric tile size.
   // COMMON:       %[[sum:.*]] = addi %[[range]], %c6
-  // COMMON-NEXT:  %[[size:.*]] = divis %[[sum]], %c7
+  // COMMON-NEXT:  %[[size:.*]] = divi_signed %[[sum]], %c7
   // New outer step (original is %c1).
   // COMMON-NEXT:      %[[step:.*]] = muli %c1, %[[size]]
 
@@ -26,11 +26,11 @@ func @rectangular(%arg0: memref<?x?xf32>) {
   // TILE_74:      %[[diff2:.*]] = subi %c44, %c1
   // TILE_74:      %[[adjustment2:.*]] = subi %c2, %c1_{{.*}}
   // TILE_74-NEXT: %[[diff2_adj:.*]] = addi %[[diff2]], %[[adjustment2]]
-  // TILE_74-NEXT: %[[range2:.*]] = divis %[[diff2_adj]], %c2
+  // TILE_74-NEXT: %[[range2:.*]] = divi_signed %[[diff2_adj]], %c2
 
   // Ceildiv to get the parametric tile size for the second original loop.
   // TILE_74:      %[[sum2:.*]] = addi %[[range2]], %c3
-  // TILE_74-NEXT: %[[size2:.*]] = divis %[[sum2]], %c4
+  // TILE_74-NEXT: %[[size2:.*]] = divi_signed %[[sum2]], %c4
   // New inner step (original is %c2).
   // TILE_74-NEXT:     %[[step2:.*]] = muli %c2, %[[size2]]
 
@@ -76,11 +76,11 @@ func @triangular(%arg0: memref<?x?xf32>) {
   // COMMON:      %[[diff:.*]] = subi %c44, %c2
   // COMMON:      %[[adjustment:.*]] = subi %c1, %c1_{{.*}}
   // COMMON-NEXT: %[[diff_adj:.*]] = addi %[[diff]], %[[adjustment]]
-  // COMMON-NEXT: %[[range:.*]] = divis %[[diff_adj]], %c1
+  // COMMON-NEXT: %[[range:.*]] = divi_signed %[[diff_adj]], %c1
 
   // Ceildiv to get the parametric tile size.
   // COMMON:       %[[sum:.*]] = addi %[[range]], %c6
-  // COMMON-NEXT:  %[[size:.*]] = divis %[[sum]], %c7
+  // COMMON-NEXT:  %[[size:.*]] = divi_signed %[[sum]], %c7
   // New outer step (original is %c1).
   // COMMON-NEXT:  %[[step:.*]] = muli %c1, %[[size]]
 
@@ -95,11 +95,11 @@ func @triangular(%arg0: memref<?x?xf32>) {
   // where step is known to be %c2.
   // TILE_74:      %[[diff2:.*]] = subi %[[i]], %c1
   // TILE_74-NEXT: %[[diff2_adj:.*]] = addi %[[diff2]], %[[adjustment2]]
-  // TILE_74-NEXT: %[[range2:.*]] = divis %[[diff2_adj]], %c2
+  // TILE_74-NEXT: %[[range2:.*]] = divi_signed %[[diff2_adj]], %c2
 
   // Ceildiv to get the parametric tile size for the second original loop.
   // TILE_74:      %[[sum2:.*]] = addi %[[range2]], %c3
-  // TILE_74-NEXT: %[[size2:.*]] = divis %[[sum2]], %c4
+  // TILE_74-NEXT: %[[size2:.*]] = divi_signed %[[sum2]], %c4
   // New inner step (original is %c2).
   // TILE_74-NEXT:     %[[step2:.*]] = muli %c2, %[[size2]]
 

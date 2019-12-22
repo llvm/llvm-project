@@ -6,10 +6,10 @@ func @foo(%arg0: memref<?xf32>, %arg1 : index) {
   %c42 = constant 42 : index
   %c3 = constant 3 : index
   // CHECK:      subi %{{.*}}, %{{.*}} : index
-  // CHECK-NEXT: %[[range_i:.*]] = divis {{.*}}, %{{.*}} : index
+  // CHECK-NEXT: %[[range_i:.*]] = divi_signed {{.*}}, %{{.*}} : index
   loop.for %i0 = %c0 to %c42 step %c3 {
     // CHECK:      subi %{{.*}}, %{{.*}} : index
-    // CHECK-NEXT: %[[range_j:.*]] = divis {{.*}}, %{{.*}} : index
+    // CHECK-NEXT: %[[range_j:.*]] = divi_signed {{.*}}, %{{.*}} : index
     loop.for %i1 = %c3 to %c42 step %arg1 {
       // CHECK:      gpu.launch
       // CHECK-SAME: blocks

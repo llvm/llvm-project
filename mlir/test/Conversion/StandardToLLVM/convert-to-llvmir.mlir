@@ -371,13 +371,13 @@ func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>
 // CHECK-NEXT:  %1 = llvm.fadd %arg0, %0 : !llvm<"<4 x float>">
   %1 = addf %arg0, %0 : vector<4xf32>
 // CHECK-NEXT:  %2 = llvm.sdiv %arg2, %arg2 : !llvm<"<4 x i64>">
-  %3 = divis %arg2, %arg2 : vector<4xi64>
+  %3 = divi_signed %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg2 : !llvm<"<4 x i64>">
-  %4 = diviu %arg2, %arg2 : vector<4xi64>
+  %4 = divi_unsigned %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT:  %4 = llvm.srem %arg2, %arg2 : !llvm<"<4 x i64>">
-  %5 = remis %arg2, %arg2 : vector<4xi64>
+  %5 = remi_signed %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT:  %5 = llvm.urem %arg2, %arg2 : !llvm<"<4 x i64>">
-  %6 = remiu %arg2, %arg2 : vector<4xi64>
+  %6 = remi_unsigned %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT:  %6 = llvm.fdiv %arg0, %0 : !llvm<"<4 x float>">
   %7 = divf %arg0, %0 : vector<4xf32>
 // CHECK-NEXT:  %7 = llvm.frem %arg0, %0 : !llvm<"<4 x float>">
@@ -388,6 +388,12 @@ func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>
   %10 = or %arg2, %arg3 : vector<4xi64>
 // CHECK-NEXT:  %10 = llvm.xor %arg2, %arg3 : !llvm<"<4 x i64>">
   %11 = xor %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %11 = llvm.shl %arg2, %arg2 : !llvm<"<4 x i64>">
+  %12 = shift_left %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg2 : !llvm<"<4 x i64>">
+  %13 = shift_right_signed %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg2 : !llvm<"<4 x i64>">
+  %14 = shift_right_unsigned %arg2, %arg2 : vector<4xi64>
   return %1 : vector<4xf32>
 }
 
@@ -401,13 +407,13 @@ func @ops(f32, f32, i32, i32) -> (f32, i32) {
 // CHECK-NEXT:  %2 = llvm.icmp "slt" %arg2, %1 : !llvm.i32
   %2 = cmpi "slt", %arg2, %1 : i32
 // CHECK-NEXT:  %3 = llvm.sdiv %arg2, %arg3 : !llvm.i32
-  %4 = divis %arg2, %arg3 : i32
+  %4 = divi_signed %arg2, %arg3 : i32
 // CHECK-NEXT:  %4 = llvm.udiv %arg2, %arg3 : !llvm.i32
-  %5 = diviu %arg2, %arg3 : i32
+  %5 = divi_unsigned %arg2, %arg3 : i32
 // CHECK-NEXT:  %5 = llvm.srem %arg2, %arg3 : !llvm.i32
-  %6 = remis %arg2, %arg3 : i32
+  %6 = remi_signed %arg2, %arg3 : i32
 // CHECK-NEXT:  %6 = llvm.urem %arg2, %arg3 : !llvm.i32
-  %7 = remiu %arg2, %arg3 : i32
+  %7 = remi_unsigned %arg2, %arg3 : i32
 // CHECK-NEXT:  %7 = llvm.select %2, %arg2, %arg3 : !llvm.i1, !llvm.i32
   %8 = select %2, %arg2, %arg3 : i32
 // CHECK-NEXT:  %8 = llvm.fdiv %arg0, %arg1 : !llvm.float
@@ -428,6 +434,12 @@ func @ops(f32, f32, i32, i32) -> (f32, i32) {
   %16 = constant 7.9e-01 : f64
 // CHECK-NEXT: %16 = llvm.call @tanh(%15) : (!llvm.double) -> !llvm.double
   %17 = std.tanh %16 : f64
+// CHECK-NEXT: %17 = llvm.shl %arg2, %arg3 : !llvm.i32
+  %18 = shift_left %arg2, %arg3 : i32
+// CHECK-NEXT: %18 = llvm.ashr %arg2, %arg3 : !llvm.i32
+  %19 = shift_right_signed %arg2, %arg3 : i32
+// CHECK-NEXT: %19 = llvm.lshr %arg2, %arg3 : !llvm.i32
+  %20 = shift_right_unsigned %arg2, %arg3 : i32
 
   return %0, %4 : f32, i32
 }

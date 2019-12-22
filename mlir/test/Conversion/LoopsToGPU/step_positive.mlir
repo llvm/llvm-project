@@ -3,8 +3,8 @@
 // CHECK-LABEL: @step_var
 func @step_var(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
   // Check that we divide by step.
-  // CHECK:  %[[range_i:.*]] = divis {{.*}}, %{{.*}}
-  // CHECK:  %[[range_j:.*]] = divis {{.*}}, %{{.*}}
+  // CHECK:  %[[range_i:.*]] = divi_signed {{.*}}, %{{.*}}
+  // CHECK:  %[[range_j:.*]] = divi_signed {{.*}}, %{{.*}}
 
   // CHECK: gpu.launch
   // CHECK-SAME: blocks(%{{[^)]*}}, %{{[^)]*}}, %{{[^)]*}}) in (%{{[^)]*}} = %[[range_i]], %{{[^)]*}} = %{{[^)]*}}, %{{[^)]*}} = %{{[^)]*}})
