@@ -959,10 +959,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
                       getTarget().getMCountName());
       }
       if (CGM.getCodeGenOpts().MNopMCount) {
-        if (getContext().getTargetInfo().getTriple().getArch() !=
-            llvm::Triple::systemz)
-          CGM.getDiags().Report(diag::err_opt_not_valid_on_target)
-            << "-mnop-mcount";
         if (!CGM.getCodeGenOpts().CallFEntry)
           CGM.getDiags().Report(diag::err_opt_not_valid_without_opt)
             << "-mnop-mcount" << "-mfentry";
@@ -970,10 +966,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       }
 
       if (CGM.getCodeGenOpts().RecordMCount) {
-        if (getContext().getTargetInfo().getTriple().getArch() !=
-            llvm::Triple::systemz)
-          CGM.getDiags().Report(diag::err_opt_not_valid_on_target)
-            << "-mrecord-mcount";
         if (!CGM.getCodeGenOpts().CallFEntry)
           CGM.getDiags().Report(diag::err_opt_not_valid_without_opt)
             << "-mrecord-mcount" << "-mfentry";
