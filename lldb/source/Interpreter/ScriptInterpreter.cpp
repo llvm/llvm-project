@@ -32,14 +32,14 @@ void ScriptInterpreter::CollectDataForBreakpointCommandCallback(
     CommandReturnObject &result) {
   result.SetStatus(eReturnStatusFailed);
   result.AppendError(
-      "ScriptInterpreter::GetScriptCommands(StringList &) is not implemented.");
+      "This script interpreter does not support breakpoint callbacks.");
 }
 
 void ScriptInterpreter::CollectDataForWatchpointCommandCallback(
     WatchpointOptions *bp_options, CommandReturnObject &result) {
   result.SetStatus(eReturnStatusFailed);
   result.AppendError(
-      "ScriptInterpreter::GetScriptCommands(StringList &) is not implemented.");
+      "This script interpreter does not support watchpoint callbacks.");
 }
 
 std::string ScriptInterpreter::LanguageToString(lldb::ScriptLanguage language) {
