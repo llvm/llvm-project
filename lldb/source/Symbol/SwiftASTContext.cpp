@@ -5143,10 +5143,6 @@ void SwiftASTContext::AddDebuggerClient(
       std::unique_ptr<swift::DebuggerClient>(debugger_client));
 }
 
-bool SwiftASTContext::DeclContextIsStructUnionOrClass(void *opaque_decl_ctx) {
-  return false;
-}
-
 ConstString SwiftASTContext::DeclContextGetName(void *opaque_decl_ctx) {
   return ConstString();
 }

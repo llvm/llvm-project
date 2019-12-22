@@ -400,8 +400,6 @@ public:
     return {};
   }
 
-  bool DeclContextIsStructUnionOrClass(void *opaque_decl_ctx) override;
-
   ConstString DeclContextGetName(void *opaque_decl_ctx) override;
 
   ConstString DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) override;
