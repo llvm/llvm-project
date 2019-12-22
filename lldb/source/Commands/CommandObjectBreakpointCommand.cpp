@@ -38,7 +38,12 @@ static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
         "Commands are in the Python language.",
     },
     {
-        eSortOrderByName,
+        eScriptLanguageLua,
+        "lua",
+        "Commands are in the Lua language.",
+    },
+    {
+        eScriptLanguageDefault,
         "default-script",
         "Commands are in the default scripting language.",
     },
@@ -297,12 +302,14 @@ are no syntax errors may indicate that a function was declared but never called.
             option_arg,
             g_breakpoint_command_add_options[option_idx].enum_values,
             eScriptLanguageNone, error);
-
-        if (m_script_language == eScriptLanguagePython ||
-            m_script_language == eScriptLanguageDefault) {
+        switch (m_script_language) {
+        case eScriptLanguagePython:
+        case eScriptLanguageLua:
           m_use_script_language = true;
-        } else {
+          break;
+        case eScriptLanguageNone:
           m_use_script_language = false;
+          break;
         }
         break;
 
