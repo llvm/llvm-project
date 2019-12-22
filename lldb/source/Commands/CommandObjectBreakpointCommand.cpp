@@ -307,6 +307,7 @@ are no syntax errors may indicate that a function was declared but never called.
           m_use_script_language = true;
           break;
         case eScriptLanguageNone:
+        case eScriptLanguageUnknown:
           m_use_script_language = false;
           break;
         }
