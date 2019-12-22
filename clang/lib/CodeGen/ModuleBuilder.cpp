@@ -290,10 +290,6 @@ namespace {
       Builder->EmitTentativeDefinition(D);
     }
 
-    void CompleteExternalDeclaration(VarDecl *D) override {
-      Builder->EmitExternalDeclaration(D);
-    }
-
     void HandleVTable(CXXRecordDecl *RD) override {
       if (Diags.hasErrorOccurred())
         return;

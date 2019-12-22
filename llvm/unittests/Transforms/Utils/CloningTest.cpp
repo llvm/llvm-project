@@ -764,7 +764,7 @@ protected:
 
     DBuilder.createGlobalVariableExpression(
         Subprogram, "unattached", "unattached", File, 1,
-        DBuilder.createNullPtrType(), false, true, Expr);
+        DBuilder.createNullPtrType(), false, Expr);
 
     auto *Entry = BasicBlock::Create(C, "", F);
     IBuilder.SetInsertPoint(Entry);
