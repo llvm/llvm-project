@@ -2335,7 +2335,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;
-      for (const auto &K : In.users()) {
+      for (auto K : In.users()) {
         Instruction *UseI = dyn_cast<Instruction>(K);
         if (!UseI)
           continue;
