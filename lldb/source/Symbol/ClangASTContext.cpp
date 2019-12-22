@@ -9268,13 +9268,6 @@ uint32_t ClangASTContext::CountDeclLevels(clang::DeclContext *frame_decl_ctx,
   return LLDB_INVALID_DECL_LEVEL;
 }
 
-bool ClangASTContext::DeclContextIsStructUnionOrClass(void *opaque_decl_ctx) {
-  if (opaque_decl_ctx)
-    return ((clang::DeclContext *)opaque_decl_ctx)->isRecord();
-  else
-    return false;
-}
-
 ConstString ClangASTContext::DeclContextGetName(void *opaque_decl_ctx) {
   if (opaque_decl_ctx) {
     clang::NamedDecl *named_decl =

@@ -37,13 +37,6 @@ ConstString CompilerDeclContext::GetScopeQualifiedName() const {
     return ConstString();
 }
 
-bool CompilerDeclContext::IsStructUnionOrClass() const {
-  if (IsValid())
-    return m_type_system->DeclContextIsStructUnionOrClass(m_opaque_decl_ctx);
-  else
-    return false;
-}
-
 bool CompilerDeclContext::IsClassMethod(lldb::LanguageType *language_ptr,
                                         bool *is_instance_method_ptr,
                                         ConstString *language_object_name_ptr) {
