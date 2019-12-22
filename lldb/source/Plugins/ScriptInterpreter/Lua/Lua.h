@@ -16,11 +16,16 @@
 
 namespace lldb_private {
 
+extern "C" {
+int luaopen_lldb(lua_State *L);
+}
+
 class Lua {
 public:
   Lua() : m_lua_state(luaL_newstate()) {
     assert(m_lua_state);
     luaL_openlibs(m_lua_state);
+    luaopen_lldb(m_lua_state);
   }
 
   ~Lua() {
