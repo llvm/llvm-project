@@ -78,10 +78,6 @@ DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
 void DwarfCompileUnit::addLabelAddress(DIE &Die, dwarf::Attribute Attribute,
                                        const MCSymbol *Label) {
   // Don't use the address pool in non-fission or in the skeleton unit itself.
-  // FIXME: Once GDB supports this, it's probably worthwhile using the address
-  // pool from the skeleton - maybe even in non-fission (possibly fewer
-  // relocations by sharing them in the pool, but we have other ideas about how
-  // to reduce the number of relocations as well/instead).
   if ((!DD->useSplitDwarf() || !Skeleton) && DD->getDwarfVersion() < 5)
     return addLocalLabelAddress(Die, Attribute, Label);
 

@@ -444,8 +444,6 @@ public:
   DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
                             const bool ignore_using_decls) override;
 
-  bool DeclContextIsStructUnionOrClass(void *opaque_decl_ctx) override;
-
   ConstString DeclContextGetName(void *opaque_decl_ctx) override;
 
   ConstString DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) override;

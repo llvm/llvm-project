@@ -35,6 +35,7 @@ enum AsmRewriteKind {
   AOK_Align,          // Rewrite align as .align.
   AOK_EVEN,           // Rewrite even as .even.
   AOK_Emit,           // Rewrite _emit as .byte.
+  AOK_CallInput,      // Rewrite in terms of ${N:P}.
   AOK_Input,          // Rewrite in terms of $N.
   AOK_Output,         // Rewrite in terms of $N.
   AOK_SizeDirective,  // Add a sizing directive (e.g., dword ptr).
@@ -49,6 +50,7 @@ const char AsmRewritePrecedence [] = {
   2, // AOK_EVEN
   2, // AOK_Emit
   3, // AOK_Input
+  3, // AOK_CallInput
   3, // AOK_Output
   5, // AOK_SizeDirective
   1, // AOK_Label

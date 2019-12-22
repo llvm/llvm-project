@@ -7086,19 +7086,55 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     // Otherwise, duplicate from the lane of the input vector.
     unsigned Opcode = getDUPLANEOp(V1.getValueType().getVectorElementType());
 
-    // SelectionDAGBuilder may have "helpfully" already extracted or conatenated
-    // to make a vector of the same size as this SHUFFLE. We can ignore the
-    // extract entirely, and canonicalise the concat using WidenVector.
-    if (V1.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
-      Lane += cast<ConstantSDNode>(V1.getOperand(1))->getZExtValue();
+    // Try to eliminate a bitcasted extract subvector before a DUPLANE.
+    auto getScaledOffsetDup = [](SDValue BitCast, int &LaneC, MVT &CastVT) {
+      // Match: dup (bitcast (extract_subv X, C)), LaneC
+      if (BitCast.getOpcode() != ISD::BITCAST ||
+          BitCast.getOperand(0).getOpcode() != ISD::EXTRACT_SUBVECTOR)
+        return false;
+
+      // The extract index must align in the destination type. That may not
+      // happen if the bitcast is from narrow to wide type.
+      SDValue Extract = BitCast.getOperand(0);
+      unsigned ExtIdx = Extract.getConstantOperandVal(1);
+      unsigned SrcEltBitWidth = Extract.getScalarValueSizeInBits();
+      unsigned ExtIdxInBits = ExtIdx * SrcEltBitWidth;
+      unsigned CastedEltBitWidth = BitCast.getScalarValueSizeInBits();
+      if (ExtIdxInBits % CastedEltBitWidth != 0)
+        return false;
+
+      // Update the lane value by offsetting with the scaled extract index.
+      LaneC += ExtIdxInBits / CastedEltBitWidth;
+
+      // Determine the casted vector type of the wide vector input.
+      // dup (bitcast (extract_subv X, C)), LaneC --> dup (bitcast X), LaneC'
+      // Examples:
+      // dup (bitcast (extract_subv v2f64 X, 1) to v2f32), 1 --> dup v4f32 X, 3
+      // dup (bitcast (extract_subv v16i8 X, 8) to v4i16), 1 --> dup v8i16 X, 5
+      unsigned SrcVecNumElts =
+          Extract.getOperand(0).getValueSizeInBits() / CastedEltBitWidth;
+      CastVT = MVT::getVectorVT(BitCast.getSimpleValueType().getScalarType(),
+                                SrcVecNumElts);
+      return true;
+    };
+    MVT CastVT;
+    if (getScaledOffsetDup(V1, Lane, CastVT)) {
+      V1 = DAG.getBitcast(CastVT, V1.getOperand(0).getOperand(0));
+    } else if (V1.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+      // The lane is incremented by the index of the extract.
+      // Example: dup v2f32 (extract v4f32 X, 2), 1 --> dup v4f32 X, 3
+      Lane += V1.getConstantOperandVal(1);
       V1 = V1.getOperand(0);
     } else if (V1.getOpcode() == ISD::CONCAT_VECTORS) {
+      // The lane is decremented if we are splatting from the 2nd operand.
+      // Example: dup v4i32 (concat v2i32 X, v2i32 Y), 3 --> dup v4i32 Y, 1
       unsigned Idx = Lane >= (int)VT.getVectorNumElements() / 2;
       Lane -= Idx * VT.getVectorNumElements() / 2;
       V1 = WidenVector(V1.getOperand(Idx), DAG);
-    } else if (VT.getSizeInBits() == 64)
+    } else if (VT.getSizeInBits() == 64) {
+      // Widen the operand to 128-bit register with undef.
       V1 = WidenVector(V1, DAG);
-
+    }
     return DAG.getNode(Opcode, dl, VT, V1, DAG.getConstant(Lane, dl, MVT::i64));
   }
 

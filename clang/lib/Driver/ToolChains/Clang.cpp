@@ -4997,17 +4997,33 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   const XRayArgs &XRay = TC.getXRayArgs();
   XRay.addArgs(TC, Args, CmdArgs, InputType);
 
-  if (TC.SupportsProfiling())
+  if (TC.SupportsProfiling()) {
     Args.AddLastArg(CmdArgs, options::OPT_pg);
 
-  if (TC.SupportsProfiling())
-    Args.AddLastArg(CmdArgs, options::OPT_mfentry);
-
-  if (TC.SupportsProfiling())
-    Args.AddLastArg(CmdArgs, options::OPT_mnop_mcount);
-
-  if (TC.SupportsProfiling())
-    Args.AddLastArg(CmdArgs, options::OPT_mrecord_mcount);
+    llvm::Triple::ArchType Arch = TC.getArch();
+    if (Arg *A = Args.getLastArg(options::OPT_mfentry)) {
+      if (Arch == llvm::Triple::systemz || Arch == llvm::Triple::x86 ||
+          Arch == llvm::Triple::x86_64)
+        A->render(Args, CmdArgs);
+      else
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << TripleStr;
+    }
+    if (Arg *A = Args.getLastArg(options::OPT_mnop_mcount)) {
+      if (Arch == llvm::Triple::systemz)
+        A->render(Args, CmdArgs);
+      else
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << TripleStr;
+    }
+    if (Arg *A = Args.getLastArg(options::OPT_mrecord_mcount)) {
+      if (Arch == llvm::Triple::systemz)
+        A->render(Args, CmdArgs);
+      else
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << TripleStr;
+    }
+  }
 
   Args.AddLastArg(CmdArgs, options::OPT_mpacked_stack);
 

@@ -1181,7 +1181,7 @@ public:
     TypeIDValues.clear();
 
     unsigned ID = 0;
-    for (const LLTCodeGen LLTy : KnownTypes)
+    for (const LLTCodeGen &LLTy : KnownTypes)
       TypeIDValues[LLTy] = ID++;
   }
 
@@ -2153,7 +2153,7 @@ public:
         return false;
     }
 
-    for (const auto &Operand : zip(Operands, B.Operands)) {
+    for (auto Operand : zip(Operands, B.Operands)) {
       if (std::get<0>(Operand)->isHigherPriorityThan(*std::get<1>(Operand)))
         return true;
       if (std::get<1>(Operand)->isHigherPriorityThan(*std::get<0>(Operand)))
@@ -3159,7 +3159,7 @@ bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
   if (Matchers.size() < B.Matchers.size())
     return false;
 
-  for (const auto &Matcher : zip(Matchers, B.Matchers)) {
+  for (auto Matcher : zip(Matchers, B.Matchers)) {
     if (std::get<0>(Matcher)->isHigherPriorityThan(*std::get<1>(Matcher)))
       return true;
     if (std::get<1>(Matcher)->isHigherPriorityThan(*std::get<0>(Matcher)))
@@ -5176,7 +5176,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
       return true;
     if (A.size() > B.size())
       return false;
-    for (const auto &Pair : zip(A, B)) {
+    for (auto Pair : zip(A, B)) {
       if (std::get<0>(Pair)->getName() < std::get<1>(Pair)->getName())
         return true;
       if (std::get<0>(Pair)->getName() > std::get<1>(Pair)->getName())

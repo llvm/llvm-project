@@ -37,7 +37,8 @@ void DispatchStatistics::printDispatchHistogram(raw_ostream &OS) const {
   TempStream << "\n\nDispatch Logic - "
              << "number of cycles where we saw N micro opcodes dispatched:\n";
   TempStream << "[# dispatched], [# cycles]\n";
-  for (const std::pair<unsigned, unsigned> &Entry : DispatchGroupSizePerCycle) {
+  for (const std::pair<const unsigned, unsigned> &Entry :
+       DispatchGroupSizePerCycle) {
     double Percentage = ((double)Entry.second / NumCycles) * 100.0;
     TempStream << " " << Entry.first << ",              " << Entry.second
                << "  (" << format("%.1f", floor((Percentage * 10) + 0.5) / 10)
