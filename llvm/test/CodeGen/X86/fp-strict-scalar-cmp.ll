@@ -57,7 +57,7 @@ define i32 @test_f32_oeq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"oeq",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -111,7 +111,7 @@ define i32 @test_f32_ogt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"ogt",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -165,7 +165,7 @@ define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"oge",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -219,7 +219,7 @@ define i32 @test_f32_olt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"olt",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -273,7 +273,7 @@ define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"ole",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -327,7 +327,7 @@ define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"one",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -381,7 +381,7 @@ define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"ord",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -435,7 +435,7 @@ define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"ueq",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -489,7 +489,7 @@ define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"ugt",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -543,7 +543,7 @@ define i32 @test_f32_uge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"uge",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -597,7 +597,7 @@ define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"ult",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -651,7 +651,7 @@ define i32 @test_f32_ule_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"ule",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -708,7 +708,7 @@ define i32 @test_f32_une_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"une",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -762,7 +762,7 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %f1, float %f2, metadata !"uno",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -1581,7 +1581,7 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"oeq",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -1635,7 +1635,7 @@ define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"ogt",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -1689,7 +1689,7 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"oge",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -1743,7 +1743,7 @@ define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"olt",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -1797,7 +1797,7 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"ole",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -1851,7 +1851,7 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"one",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -1905,7 +1905,7 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"ord",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -1959,7 +1959,7 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"ueq",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -2013,7 +2013,7 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"ugt",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -2067,7 +2067,7 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"uge",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -2121,7 +2121,7 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"ult",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -2175,7 +2175,7 @@ define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"ule",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -2232,7 +2232,7 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"une",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -2286,7 +2286,7 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"uno",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -3057,7 +3057,7 @@ define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 
 attributes #0 = { strictfp }
 
-declare i1 @llvm.experimental.constrained.fcmp.test_f32_olt_s(float, float, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
-declare i1 @llvm.experimental.constrained.fcmps.test_f32_olt_s(float, float, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
