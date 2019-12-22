@@ -225,11 +225,17 @@ namespace dr222 { // dr222: dup 637
     void((a += b) += c);
     void((a += b) + (a += c)); // expected-warning {{multiple unsequenced modifications to 'a'}}
 
-    x[a++] = a; // expected-warning {{unsequenced modification and access to 'a'}}
+    x[a++] = a;
+#if __cplusplus < 201703L
+    // expected-warning@-2 {{unsequenced modification and access to 'a'}}
+#endif
 
     a = b = 0; // ok, read and write of 'b' are sequenced
 
-    a = (b = a++); // expected-warning {{multiple unsequenced modifications to 'a'}}
+    a = (b = a++);
+#if __cplusplus < 201703L
+    // expected-warning@-2 {{multiple unsequenced modifications to 'a'}}
+#endif
     a = (b = ++a);
 #pragma clang diagnostic pop
   }
