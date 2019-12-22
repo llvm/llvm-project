@@ -151,7 +151,9 @@ public:
     return *m_command_interpreter_up;
   }
 
-  ScriptInterpreter *GetScriptInterpreter(bool can_create = true);
+  ScriptInterpreter *
+  GetScriptInterpreter(bool can_create = true,
+                       llvm::Optional<lldb::ScriptLanguage> language = {});
 
   lldb::ListenerSP GetListener() { return m_listener_sp; }
 
@@ -396,8 +398,9 @@ protected:
                                                       // source file cache.
   std::unique_ptr<CommandInterpreter> m_command_interpreter_up;
 
-  lldb::ScriptInterpreterSP m_script_interpreter_sp;
   std::recursive_mutex m_script_interpreter_mutex;
+  std::array<lldb::ScriptInterpreterSP, lldb::eScriptLanguageUnknown>
+      m_script_interpreters;
 
   IOHandlerStack m_input_reader_stack;
   llvm::StringMap<std::weak_ptr<llvm::raw_ostream>> m_log_streams;

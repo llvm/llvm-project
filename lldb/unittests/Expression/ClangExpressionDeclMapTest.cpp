@@ -33,7 +33,7 @@ struct FakeClangExpressionDeclMap : public ClangExpressionDeclMap {
     // persistent declaration and must be inside the scratch AST context.
     assert(d);
     assert(d->getName().startswith("$"));
-    assert(&d->getASTContext() == m_scratch_context->getASTContext());
+    assert(&d->getASTContext() == &m_scratch_context->getASTContext());
     m_persistent_decls[d->getName()] = d;
   }
 

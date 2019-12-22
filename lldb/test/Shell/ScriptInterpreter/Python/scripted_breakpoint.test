@@ -1,0 +1,11 @@
+# REQUIRES: python
+#
+# Test that the scripting language argument to "breakpoint command" is honored
+# even if the global scripting language is different.
+#
+# RUN: cat %s | %lldb --script-language none 2>&1 | FileCheck %s
+b main
+breakpoint command add -s python
+print("foo")
+DONE
+# CHECK: Enter your Python command(s). Type 'DONE' to end.

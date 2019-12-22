@@ -11,6 +11,8 @@
 
 using namespace lldb_private;
 
+extern "C" int luaopen_lldb(lua_State *L) { return 0; }
+
 TEST(LuaTest, RunValid) {
   Lua lua;
   llvm::Error error = lua.Run("foo = 1");
