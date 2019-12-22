@@ -466,7 +466,7 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::NSArrayMSyntheticFrontE
     if (clang_ast_context)
       m_id_type = CompilerType(
           clang_ast_context,
-          clang_ast_context->getASTContext()->ObjCBuiltinIdTy.getAsOpaquePtr());
+          clang_ast_context->getASTContext().ObjCBuiltinIdTy.getAsOpaquePtr());
     if (valobj_sp->GetProcessSP())
       m_ptr_size = valobj_sp->GetProcessSP()->GetAddressByteSize();
   }
@@ -614,7 +614,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
       if (clang_ast_context)
         m_id_type = CompilerType(clang_ast_context,
                                  clang_ast_context->getASTContext()
-                                     ->ObjCBuiltinIdTy.getAsOpaquePtr());
+                                     .ObjCBuiltinIdTy.getAsOpaquePtr());
     }
   }
 }

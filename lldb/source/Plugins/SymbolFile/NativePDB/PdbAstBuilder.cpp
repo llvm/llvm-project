@@ -655,7 +655,7 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
 
   lldbassert(IsTagRecord(type_id, m_index.tpi()));
 
-  clang::QualType tag_qt = m_clang.getASTContext()->getTypeDeclType(&tag);
+  clang::QualType tag_qt = m_clang.getASTContext().getTypeDeclType(&tag);
   ClangASTContext::SetHasExternalStorage(tag_qt.getAsOpaquePtr(), false);
 
   TypeIndex tag_ti = type_id.index;
@@ -700,7 +700,7 @@ clang::QualType PdbAstBuilder::CreateSimpleType(TypeIndex ti) {
 
   if (ti.getSimpleMode() != SimpleTypeMode::Direct) {
     clang::QualType direct_type = GetOrCreateType(ti.makeDirect());
-    return m_clang.getASTContext()->getPointerType(direct_type);
+    return m_clang.getASTContext().getPointerType(direct_type);
   }
 
   if (ti.getSimpleKind() == SimpleTypeKind::NotTranslated)
@@ -725,19 +725,17 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
     MemberPointerInfo mpi = pointer.getMemberInfo();
     clang::QualType class_type = GetOrCreateType(mpi.ContainingType);
 
-    return m_clang.getASTContext()->getMemberPointerType(
+    return m_clang.getASTContext().getMemberPointerType(
         pointee_type, class_type.getTypePtr());
   }
 
   clang::QualType pointer_type;
   if (pointer.getMode() == PointerMode::LValueReference)
-    pointer_type =
-        m_clang.getASTContext()->getLValueReferenceType(pointee_type);
+    pointer_type = m_clang.getASTContext().getLValueReferenceType(pointee_type);
   else if (pointer.getMode() == PointerMode::RValueReference)
-    pointer_type =
-        m_clang.getASTContext()->getRValueReferenceType(pointee_type);
+    pointer_type = m_clang.getASTContext().getRValueReferenceType(pointee_type);
   else
-    pointer_type = m_clang.getASTContext()->getPointerType(pointee_type);
+    pointer_type = m_clang.getASTContext().getPointerType(pointee_type);
 
   if ((pointer.getOptions() & PointerOptions::Const) != PointerOptions::None)
     pointer_type.addConst();

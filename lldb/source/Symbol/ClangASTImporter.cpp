@@ -27,26 +27,22 @@ using namespace clang;
 
 CompilerType ClangASTImporter::CopyType(ClangASTContext &dst_ast,
                                         const CompilerType &src_type) {
-  clang::ASTContext *dst_clang_ast = dst_ast.getASTContext();
-  if (!dst_clang_ast)
-    return CompilerType();
+  clang::ASTContext &dst_clang_ast = dst_ast.getASTContext();
 
   ClangASTContext *src_ast =
       llvm::dyn_cast_or_null<ClangASTContext>(src_type.GetTypeSystem());
   if (!src_ast)
     return CompilerType();
 
-  clang::ASTContext *src_clang_ast = src_ast->getASTContext();
-  if (!src_clang_ast)
-    return CompilerType();
+  clang::ASTContext &src_clang_ast = src_ast->getASTContext();
 
   clang::QualType src_qual_type = ClangUtil::GetQualType(src_type);
 
-  ImporterDelegateSP delegate_sp(GetDelegate(dst_clang_ast, src_clang_ast));
+  ImporterDelegateSP delegate_sp(GetDelegate(&dst_clang_ast, &src_clang_ast));
   if (!delegate_sp)
     return CompilerType();
 
-  ASTImporterDelegate::CxxModuleScope std_scope(*delegate_sp, dst_clang_ast);
+  ASTImporterDelegate::CxxModuleScope std_scope(*delegate_sp, &dst_clang_ast);
 
   llvm::Expected<QualType> ret_or_error = delegate_sp->Import(src_qual_type);
   if (!ret_or_error) {
@@ -307,15 +303,15 @@ CompilerType ClangASTImporter::DeportType(ClangASTContext &dst,
            "    [ClangASTImporter] DeportType called on ({0}Type*){1:x} "
            "from (ASTContext*){2:x} to (ASTContext*){3:x}",
            src_type.GetTypeName(), src_type.GetOpaqueQualType(),
-           src_ctxt->getASTContext(), dst.getASTContext());
+           &src_ctxt->getASTContext(), &dst.getASTContext());
 
   DeclContextOverride decl_context_override;
 
   if (auto *t = ClangUtil::GetQualType(src_type)->getAs<TagType>())
     decl_context_override.OverrideAllDeclsFromContainingFunction(t->getDecl());
 
-  CompleteTagDeclsScope complete_scope(*this, dst.getASTContext(),
-                                       src_ctxt->getASTContext());
+  CompleteTagDeclsScope complete_scope(*this, &dst.getASTContext(),
+                                       &src_ctxt->getASTContext());
   return CopyType(dst, src_type);
 }
 

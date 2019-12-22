@@ -132,7 +132,7 @@ public:
 
   void StartTranslationUnit(clang::ASTConsumer *Consumer) override {
     clang::TranslationUnitDecl *translation_unit_decl =
-        m_decl_vendor.m_ast_ctx.getASTContext()->getTranslationUnitDecl();
+        m_decl_vendor.m_ast_ctx.getASTContext().getTranslationUnitDecl();
     translation_unit_decl->setHasExternalVisibleStorage();
     translation_unit_decl->setHasExternalLexicalStorage();
   }
@@ -153,7 +153,7 @@ AppleObjCDeclVendor::AppleObjCDeclVendor(ObjCLanguageRuntime &runtime)
   m_external_source = new AppleObjCExternalASTSource(*this);
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> external_source_owning_ptr(
       m_external_source);
-  m_ast_ctx.getASTContext()->setExternalSource(external_source_owning_ptr);
+  m_ast_ctx.getASTContext().setExternalSource(external_source_owning_ptr);
 }
 
 clang::ObjCInterfaceDecl *
@@ -163,7 +163,7 @@ AppleObjCDeclVendor::GetDeclForISA(ObjCLanguageRuntime::ObjCISA isa) {
   if (iter != m_isa_to_interface.end())
     return iter->second;
 
-  clang::ASTContext *ast_ctx = m_ast_ctx.getASTContext();
+  clang::ASTContext &ast_ctx = m_ast_ctx.getASTContext();
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor =
       m_runtime.GetClassDescriptorFromISA(isa);
@@ -174,10 +174,10 @@ AppleObjCDeclVendor::GetDeclForISA(ObjCLanguageRuntime::ObjCISA isa) {
   ConstString name(descriptor->GetClassName());
 
   clang::IdentifierInfo &identifier_info =
-      ast_ctx->Idents.get(name.GetStringRef());
+      ast_ctx.Idents.get(name.GetStringRef());
 
   clang::ObjCInterfaceDecl *new_iface_decl = clang::ObjCInterfaceDecl::Create(
-      *ast_ctx, ast_ctx->getTranslationUnitDecl(), clang::SourceLocation(),
+      ast_ctx, ast_ctx.getTranslationUnitDecl(), clang::SourceLocation(),
       &identifier_info, nullptr, nullptr);
 
   ClangASTMetadata meta_data;
@@ -187,7 +187,7 @@ AppleObjCDeclVendor::GetDeclForISA(ObjCLanguageRuntime::ObjCISA isa) {
   new_iface_decl->setHasExternalVisibleStorage();
   new_iface_decl->setHasExternalLexicalStorage();
 
-  ast_ctx->getTranslationUnitDecl()->addDecl(new_iface_decl);
+  ast_ctx.getTranslationUnitDecl()->addDecl(new_iface_decl);
 
   m_isa_to_interface[isa] = new_iface_decl;
 
@@ -443,9 +443,9 @@ bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {
       return;
 
     FinishDecl(superclass_decl);
-    clang::ASTContext *context = m_ast_ctx.getASTContext();
-    interface_decl->setSuperClass(context->getTrivialTypeSourceInfo(
-        context->getObjCInterfaceType(superclass_decl)));
+    clang::ASTContext &context = m_ast_ctx.getASTContext();
+    interface_decl->setSuperClass(context.getTrivialTypeSourceInfo(
+        context.getObjCInterfaceType(superclass_decl)));
   };
 
   auto instance_method_func =
@@ -503,8 +503,8 @@ bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {
       clang::TypeSourceInfo *const type_source_info = nullptr;
       const bool is_synthesized = false;
       clang::ObjCIvarDecl *ivar_decl = clang::ObjCIvarDecl::Create(
-          *m_ast_ctx.getASTContext(), interface_decl, clang::SourceLocation(),
-          clang::SourceLocation(), &m_ast_ctx.getASTContext()->Idents.get(name),
+          m_ast_ctx.getASTContext(), interface_decl, clang::SourceLocation(),
+          clang::SourceLocation(), &m_ast_ctx.getASTContext().Idents.get(name),
           ClangUtil::GetQualType(ivar_type),
           type_source_info, // TypeSourceInfo *
           clang::ObjCIvarDecl::Public, nullptr, is_synthesized);
@@ -559,22 +559,22 @@ AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
   do {
     // See if the type is already in our ASTContext.
 
-    clang::ASTContext *ast_ctx = m_ast_ctx.getASTContext();
+    clang::ASTContext &ast_ctx = m_ast_ctx.getASTContext();
 
     clang::IdentifierInfo &identifier_info =
-        ast_ctx->Idents.get(name.GetStringRef());
+        ast_ctx.Idents.get(name.GetStringRef());
     clang::DeclarationName decl_name =
-        ast_ctx->DeclarationNames.getIdentifier(&identifier_info);
+        ast_ctx.DeclarationNames.getIdentifier(&identifier_info);
 
     clang::DeclContext::lookup_result lookup_result =
-        ast_ctx->getTranslationUnitDecl()->lookup(decl_name);
+        ast_ctx.getTranslationUnitDecl()->lookup(decl_name);
 
     if (!lookup_result.empty()) {
       if (clang::ObjCInterfaceDecl *result_iface_decl =
               llvm::dyn_cast<clang::ObjCInterfaceDecl>(lookup_result[0])) {
         if (log) {
           clang::QualType result_iface_type =
-              ast_ctx->getObjCInterfaceType(result_iface_decl);
+              ast_ctx.getObjCInterfaceType(result_iface_decl);
 
           uint64_t isa_value = LLDB_INVALID_ADDRESS;
           ClangASTMetadata *metadata =
@@ -625,8 +625,7 @@ AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
     }
 
     if (log) {
-      clang::QualType new_iface_type =
-          ast_ctx->getObjCInterfaceType(iface_decl);
+      clang::QualType new_iface_type = ast_ctx.getObjCInterfaceType(iface_decl);
 
       LLDB_LOG(log, "AOCTV::FT [{0}] Created {1} (isa 0x{2:x})", current_id,
                new_iface_type.getAsString(), (uint64_t)isa);
