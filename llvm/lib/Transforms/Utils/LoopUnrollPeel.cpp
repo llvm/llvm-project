@@ -584,7 +584,7 @@ static void cloneLoopBlocks(
 
   // LastValueMap is updated with the values for the current loop
   // which are used the next time this function is called.
-  for (const auto &KV : VMap)
+  for (auto KV : VMap)
     LVMap[KV.first] = KV.second;
 }
 

@@ -489,7 +489,7 @@ public:
     // Filter the candidates further.
     SmallVector<StoreToLoadForwardingCandidate, 4> Candidates;
     unsigned NumForwarding = 0;
-    for (const StoreToLoadForwardingCandidate Cand : StoreToLoadDependences) {
+    for (const StoreToLoadForwardingCandidate &Cand : StoreToLoadDependences) {
       LLVM_DEBUG(dbgs() << "Candidate " << Cand);
 
       // Make sure that the stored values is available everywhere in the loop in
