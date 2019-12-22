@@ -7,7 +7,7 @@ config("write_vcsrevision_config") {
 }
 
 write_vcsrevision("write_vcsrevision") {
-  visibility = [ ":Version" ]
+  visibility = [ ":Basic" ]
   header = "$target_gen_dir/VCSVersion.inc"
   names = [ "LLVM", "CLANG" ]
   public_configs = [ ":write_vcsrevision_config" ]
