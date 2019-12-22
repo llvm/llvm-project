@@ -550,7 +550,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
 
   // Note that LoopPredecessor might occur in the predecessor list multiple
   // times, and we need to add it the right number of times.
-  for (const auto &PI : predecessors(Header)) {
+  for (auto PI : predecessors(Header)) {
     if (PI != LoopPredecessor)
       continue;
 
@@ -565,7 +565,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
         I8Ty, NewPHI, BasePtrIncSCEV->getValue(),
         getInstrName(MemI, GEPNodeIncNameSuffix), InsPoint);
     cast<GetElementPtrInst>(PtrInc)->setIsInBounds(IsPtrInBounds(BasePtr));
-    for (const auto &PI : predecessors(Header)) {
+    for (auto PI : predecessors(Header)) {
       if (PI == LoopPredecessor)
         continue;
 
@@ -580,7 +580,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
   } else {
     // Note that LoopPredecessor might occur in the predecessor list multiple
     // times, and we need to make sure no more incoming value for them in PHI.
-    for (const auto &PI : predecessors(Header)) {
+    for (auto PI : predecessors(Header)) {
       if (PI == LoopPredecessor)
         continue;
 
