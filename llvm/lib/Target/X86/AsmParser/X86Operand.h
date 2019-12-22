@@ -36,6 +36,7 @@ struct X86Operand final : public MCParsedAsmOperand {
   StringRef SymName;
   void *OpDecl;
   bool AddressOf;
+  bool CallOperand;
 
   struct TokOp {
     const char *Data;
@@ -77,7 +78,7 @@ struct X86Operand final : public MCParsedAsmOperand {
   };
 
   X86Operand(KindTy K, SMLoc Start, SMLoc End)
-      : Kind(K), StartLoc(Start), EndLoc(End) {}
+      : Kind(K), StartLoc(Start), EndLoc(End), CallOperand(false) {}
 
   StringRef getSymName() override { return SymName; }
   void *getOpDecl() override { return OpDecl; }
@@ -285,6 +286,9 @@ struct X86Operand final : public MCParsedAsmOperand {
   bool needAddressOf() const override {
     return AddressOf;
   }
+
+  bool isCallOperand() const override { return CallOperand; }
+  void setCallOperand(bool IsCallOperand) { CallOperand = IsCallOperand; }
 
   bool isMem() const override { return Kind == Memory; }
   bool isMemUnsized() const {
