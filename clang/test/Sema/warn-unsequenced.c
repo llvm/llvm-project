@@ -40,18 +40,18 @@ void test() {
   A agg1 = { a++, a++ }; // expected-warning {{multiple unsequenced modifications}}
   A agg2 = { a++ + a, a++ }; // expected-warning {{unsequenced modification and access}}
 
-  (xs[2] && (a = 0)) + a; // ok
+  (xs[2] && (a = 0)) + a; // expected-warning {{unsequenced modification and access to 'a'}}
   (0 && (a = 0)) + a; // ok
   (1 && (a = 0)) + a; // expected-warning {{unsequenced modification and access}}
 
-  (xs[3] || (a = 0)) + a; // ok
+  (xs[3] || (a = 0)) + a; // expected-warning {{unsequenced modification and access to 'a'}}
   (0 || (a = 0)) + a; // expected-warning {{unsequenced modification and access}}
   (1 || (a = 0)) + a; // ok
 
-  (xs[4] ? a : ++a) + a; // ok
+  (xs[4] ? a : ++a) + a; // expected-warning {{unsequenced modification and access to 'a'}}
   (0 ? a : ++a) + a; // expected-warning {{unsequenced modification and access}}
   (1 ? a : ++a) + a; // ok
-  (xs[5] ? ++a : ++a) + a; // FIXME: warn here
+  (xs[5] ? ++a : ++a) + a; // expected-warning {{unsequenced modification and access to 'a'}}
 
   (++a, xs[6] ? ++a : 0) + a; // expected-warning {{unsequenced modification and access}}
 
@@ -73,10 +73,11 @@ void test() {
   // unconditional.
   a = a++ && f(a, a);
 
-  // This has undefined behavior if a != 0. FIXME: We should diagnose this.
-  (a && a++) + a;
+  // This has undefined behavior if a != 0.
+  (a && a++) + a; // expected-warning {{unsequenced modification and access to 'a'}}
 
-  (xs[7] && ++a) * (!xs[7] && ++a); // ok
+  // FIXME: Find a way to avoid warning here.
+  (xs[7] && ++a) * (!xs[7] && ++a); // expected-warning {{multiple unsequenced modifications to 'a'}}
 
   xs[0] = (a = 1, a); // ok
 
