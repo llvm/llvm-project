@@ -107,7 +107,7 @@ void SchedulerStatistics::printSchedulerStats(raw_ostream &OS) const {
   bool HasColors = OS.has_colors();
   const auto It =
       std::max_element(IssueWidthPerCycle.begin(), IssueWidthPerCycle.end());
-  for (const std::pair<unsigned, unsigned> &Entry : IssueWidthPerCycle) {
+  for (const std::pair<const unsigned, unsigned> &Entry : IssueWidthPerCycle) {
     unsigned NumIssued = Entry.first;
     if (NumIssued == It->first && HasColors)
       OS.changeColor(raw_ostream::SAVEDCOLOR, true, false);

@@ -252,7 +252,7 @@ void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
   std::map<OpcodeAndConfig, SmallSet<ClusterId, 1>> OpcodeConfigToClusterIDs;
   // Populate OpcodeConfigToClusterIDs and UnstableOpcodes data structures.
   assert(ClusterIdForPoint_.size() == Points_.size() && "size mismatch");
-  for (const auto &Point : zip(Points_, ClusterIdForPoint_)) {
+  for (auto Point : zip(Points_, ClusterIdForPoint_)) {
     const ClusterId &ClusterIdOfPoint = std::get<1>(Point);
     if (!ClusterIdOfPoint.isValid())
       continue; // Only process fully valid clusters.
@@ -347,13 +347,13 @@ void SchedClassClusterCentroid::addPoint(ArrayRef<BenchmarkMeasure> Point) {
   assert(Representative.size() == Point.size() &&
          "All points should have identical dimensions.");
 
-  for (const auto &I : zip(Representative, Point))
+  for (auto I : zip(Representative, Point))
     std::get<0>(I).push(std::get<1>(I));
 }
 
 std::vector<BenchmarkMeasure> SchedClassClusterCentroid::getAsPoint() const {
   std::vector<BenchmarkMeasure> ClusterCenterPoint(Representative.size());
-  for (const auto &I : zip(ClusterCenterPoint, Representative))
+  for (auto I : zip(ClusterCenterPoint, Representative))
     std::get<0>(I).PerInstructionValue = std::get<1>(I).avg();
   return ClusterCenterPoint;
 }
