@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.4.3)
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  cmake_minimum_required(VERSION 3.13)
+endif()
 
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
