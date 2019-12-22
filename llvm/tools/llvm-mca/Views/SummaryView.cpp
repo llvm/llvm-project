@@ -54,7 +54,7 @@ void SummaryView::onEvent(const HWInstructionEvent &Event) {
   const Instruction &Inst = *Event.IR.getInstruction();
   const InstrDesc &Desc = Inst.getDesc();
   NumMicroOps += Desc.NumMicroOps;
-  for (const std::pair<uint64_t, const ResourceUsage> &RU : Desc.Resources) {
+  for (const std::pair<uint64_t, ResourceUsage> &RU : Desc.Resources) {
     if (RU.second.size()) {
       unsigned ProcResID = ResIdx2ProcResID[getResourceStateIndex(RU.first)];
       ProcResourceUsage[ProcResID] += RU.second.size();

@@ -59,7 +59,7 @@ void RetireControlUnitStatistics::printView(raw_ostream &OS) const {
              << "number of cycles where we saw N instructions retired:\n";
   TempStream << "[# retired], [# cycles]\n";
 
-  for (const std::pair<unsigned, unsigned> &Entry : RetiredPerCycle) {
+  for (const std::pair<const unsigned, unsigned> &Entry : RetiredPerCycle) {
     TempStream << " " << Entry.first;
     if (Entry.first < 10)
       TempStream << ",           ";

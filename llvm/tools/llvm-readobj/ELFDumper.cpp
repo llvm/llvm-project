@@ -5024,7 +5024,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
         continue;
       PrintHeader(S.sh_offset, S.sh_size);
       Error Err = Error::success();
-      for (const auto &Note : Obj->notes(S, Err))
+      for (auto Note : Obj->notes(S, Err))
         ProcessNote(Note);
       if (Err)
         reportError(std::move(Err), this->FileName);
@@ -5036,7 +5036,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
         continue;
       PrintHeader(P.p_offset, P.p_filesz);
       Error Err = Error::success();
-      for (const auto &Note : Obj->notes(P, Err))
+      for (auto Note : Obj->notes(P, Err))
         ProcessNote(Note);
       if (Err)
         reportError(std::move(Err), this->FileName);
@@ -6238,7 +6238,7 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       DictScope D(W, "NoteSection");
       PrintHeader(S.sh_offset, S.sh_size);
       Error Err = Error::success();
-      for (const auto &Note : Obj->notes(S, Err))
+      for (auto Note : Obj->notes(S, Err))
         ProcessNote(Note);
       if (Err)
         reportError(std::move(Err), this->FileName);
@@ -6251,7 +6251,7 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       DictScope D(W, "NoteSection");
       PrintHeader(P.p_offset, P.p_filesz);
       Error Err = Error::success();
-      for (const auto &Note : Obj->notes(P, Err))
+      for (auto Note : Obj->notes(P, Err))
         ProcessNote(Note);
       if (Err)
         reportError(std::move(Err), this->FileName);
