@@ -555,7 +555,7 @@ namespace {
   LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const PrintIMap &P) {
     OS << "{\n";
-    for (const std::pair<HCE::ExtenderInit,HCE::IndexList> &Q : P.IMap) {
+    for (const std::pair<const HCE::ExtenderInit, HCE::IndexList> &Q : P.IMap) {
       OS << "  " << PrintInit(Q.first, P.HRI) << " -> {";
       for (unsigned I : Q.second)
         OS << ' ' << I;
@@ -1895,7 +1895,7 @@ bool HCE::replaceExtenders(const AssignmentMap &IMap) {
   LocDefList Defs;
   bool Changed = false;
 
-  for (const std::pair<ExtenderInit,IndexList> &P : IMap) {
+  for (const std::pair<const ExtenderInit, IndexList> &P : IMap) {
     const IndexList &Idxs = P.second;
     if (Idxs.size() < CountThreshold)
       continue;
