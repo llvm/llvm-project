@@ -317,7 +317,10 @@ namespace dr635 { // dr635: yes
 namespace dr637 { // dr637: yes
   void f(int i) {
     i = ++i + 1;
-    i = i++ + 1; // expected-warning {{unsequenced}}
+    i = i++ + 1;
+#if __cplusplus < 201703L
+    // expected-warning@-2 {{unsequenced}}
+#endif
   }
 }
 
