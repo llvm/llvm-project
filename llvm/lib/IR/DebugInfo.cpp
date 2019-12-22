@@ -1289,7 +1289,7 @@ LLVMMetadataRef LLVMDIBuilderCreateGlobalVariableExpression(
   return wrap(unwrap(Builder)->createGlobalVariableExpression(
       unwrapDI<DIScope>(Scope), {Name, NameLen}, {Linkage, LinkLen},
       unwrapDI<DIFile>(File), LineNo, unwrapDI<DIType>(Ty), LocalToUnit,
-      true, unwrap<DIExpression>(Expr), unwrapDI<MDNode>(Decl),
+      unwrap<DIExpression>(Expr), unwrapDI<MDNode>(Decl),
       nullptr, AlignInBits));
 }
 

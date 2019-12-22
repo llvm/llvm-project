@@ -668,9 +668,6 @@ public:
   /// All the tentative definitions encountered in the TU.
   TentativeDefinitionsType TentativeDefinitions;
 
-  /// All the external declarations encoutered and used in the TU.
-  SmallVector<VarDecl *, 4> ExternalDeclarations;
-
   typedef LazyVector<const DeclaratorDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadUnusedFileScopedDecls, 2, 2>
     UnusedFileScopedDeclsType;

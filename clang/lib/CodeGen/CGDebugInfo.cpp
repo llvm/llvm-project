@@ -4485,7 +4485,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
 
     GVE = DBuilder.createGlobalVariableExpression(
         DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
-        Var->hasLocalLinkage(), true,
+        Var->hasLocalLinkage(),
         Expr.empty() ? nullptr : DBuilder.createExpression(Expr),
         getOrCreateStaticDataMemberDeclarationOrNull(D), TemplateParameters,
         Align);
@@ -4588,27 +4588,8 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
 
   GV.reset(DBuilder.createGlobalVariableExpression(
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
-      true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
+      true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
       TemplateParameters, Align));
-}
-
-void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
-                                       const VarDecl *D) {
-  assert(DebugKind >= codegenoptions::LimitedDebugInfo);
-  if (D->hasAttr<NoDebugAttr>())
-    return;
-
-  auto Align = getDeclAlignIfRequired(D, CGM.getContext());
-  llvm::DIFile *Unit = getOrCreateFile(D->getLocation());
-  StringRef Name = D->getName();
-  llvm::DIType *Ty = getOrCreateType(D->getType(), Unit);
-
-  llvm::DIScope *DContext = getDeclContextDescriptor(D);
-  llvm::DIGlobalVariableExpression *GVE =
-      DBuilder.createGlobalVariableExpression(
-          DContext, Name, StringRef(), Unit, getLineNumber(D->getLocation()),
-          Ty, false, false, nullptr, nullptr, nullptr, Align);
-  Var->addDebugInfo(GVE);
 }
 
 llvm::DIScope *CGDebugInfo::getCurrentContextDescriptor(const Decl *D) {

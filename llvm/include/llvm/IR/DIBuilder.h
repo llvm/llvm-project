@@ -583,7 +583,7 @@ namespace llvm {
     ///                    specified)
     DIGlobalVariableExpression *createGlobalVariableExpression(
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
-        unsigned LineNo, DIType *Ty, bool isLocalToUnit, bool isDefined = true,
+        unsigned LineNo, DIType *Ty, bool isLocalToUnit,
         DIExpression *Expr = nullptr, MDNode *Decl = nullptr,
         MDTuple *templateParams = nullptr, uint32_t AlignInBits = 0);
 
