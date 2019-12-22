@@ -375,7 +375,10 @@ protected:
 
     if (!m_func_options.GetName().empty()) {
       m_options.m_use_one_liner = false;
-      m_options.m_use_script_language = true;
+      if (!m_options.m_use_script_language) {
+        m_options.m_script_language = GetDebugger().GetScriptLanguage();
+        m_options.m_use_script_language = true;
+      }
     }
 
     BreakpointIDList valid_bp_ids;
