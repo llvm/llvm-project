@@ -337,13 +337,21 @@ void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
   PrintLeaMemReference(MI, OpNo, O, Modifier);
 }
 
+
 void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
-                                           unsigned OpNo, raw_ostream &O) {
+                                           unsigned OpNo, raw_ostream &O,
+                                           const char *Modifier) {
   const MachineOperand &BaseReg = MI->getOperand(OpNo + X86::AddrBaseReg);
   unsigned ScaleVal = MI->getOperand(OpNo + X86::AddrScaleAmt).getImm();
   const MachineOperand &IndexReg = MI->getOperand(OpNo + X86::AddrIndexReg);
   const MachineOperand &DispSpec = MI->getOperand(OpNo + X86::AddrDisp);
   const MachineOperand &SegReg = MI->getOperand(OpNo + X86::AddrSegmentReg);
+
+  // If we really don't want to print out (rip), don't.
+  bool HasBaseReg = BaseReg.getReg() != 0;
+  if (HasBaseReg && Modifier && !strcmp(Modifier, "no-rip") &&
+      BaseReg.getReg() == X86::RIP)
+    HasBaseReg = false;
 
   // If this has a segment register, print it.
   if (SegReg.getReg()) {
@@ -354,7 +362,7 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
   O << '[';
 
   bool NeedPlus = false;
-  if (BaseReg.getReg()) {
+  if (HasBaseReg) {
     PrintOperand(MI, OpNo + X86::AddrBaseReg, O);
     NeedPlus = true;
   }
@@ -372,7 +380,7 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
     PrintOperand(MI, OpNo + X86::AddrDisp, O);
   } else {
     int64_t DispVal = DispSpec.getImm();
-    if (DispVal || (!IndexReg.getReg() && !BaseReg.getReg())) {
+    if (DispVal || (!IndexReg.getReg() && !HasBaseReg)) {
       if (NeedPlus) {
         if (DispVal > 0)
           O << " + ";
@@ -525,11 +533,6 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                           const char *ExtraCode,
                                           raw_ostream &O) {
-  if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
-    PrintIntelMemReference(MI, OpNo, O);
-    return false;
-  }
-
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
 
@@ -543,14 +546,26 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       // These only apply to registers, ignore on mem.
       break;
     case 'H':
-      PrintMemReference(MI, OpNo, O, "H");
+      if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
+        return true;  // Unsupported modifier in Intel inline assembly.
+      } else {
+        PrintMemReference(MI, OpNo, O, "H");
+      }
       return false;
     case 'P': // Don't print @PLT, but do print as memory.
-      PrintMemReference(MI, OpNo, O, "no-rip");
+      if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
+        PrintIntelMemReference(MI, OpNo, O, "no-rip");
+      } else {
+        PrintMemReference(MI, OpNo, O, "no-rip");
+      }
       return false;
     }
   }
-  PrintMemReference(MI, OpNo, O, nullptr);
+  if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
+    PrintIntelMemReference(MI, OpNo, O, nullptr);
+  } else {
+    PrintMemReference(MI, OpNo, O, nullptr);
+  }
   return false;
 }
 

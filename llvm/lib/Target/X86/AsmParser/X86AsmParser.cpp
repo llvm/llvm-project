@@ -2866,6 +2866,15 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     }
   }
 
+  // Mark the operands of a call instruction.  These need to be handled
+  // differently when referenced in MS-style inline assembly.
+  if (Name.startswith("call") || Name.startswith("lcall")) {
+    for (size_t i = 1; i < Operands.size(); ++i) {
+      X86Operand &Op = static_cast<X86Operand &>(*Operands[i]);
+      Op.setCallOperand(true);
+    }
+  }
+
   if (Flags)
     Operands.push_back(X86Operand::CreatePrefix(Flags, NameLoc, NameLoc));
   return false;
