@@ -1100,7 +1100,7 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
 
   if (!ContMap.isEmpty()) {
     Out << Sep << "Container Data :" << NL;
-    for (const auto Cont : ContMap) {
+    for (const auto &Cont : ContMap) {
       Cont.first->dumpToStream(Out);
       Out << " : [ ";
       const auto CData = Cont.second;
@@ -1122,7 +1122,7 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
 
   if (!SymbolMap.isEmpty() || !RegionMap.isEmpty()) {
     Out << Sep << "Iterator Positions :" << NL;
-    for (const auto Sym : SymbolMap) {
+    for (const auto &Sym : SymbolMap) {
       Sym.first->dumpToStream(Out);
       Out << " : ";
       const auto Pos = Sym.second;
@@ -1132,7 +1132,7 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
       Pos.getOffset()->dumpToStream(Out);
     }
 
-    for (const auto Reg : RegionMap) {
+    for (const auto &Reg : RegionMap) {
       Reg.first->dumpToStream(Out);
       Out << " : ";
       const auto Pos = Reg.second;
