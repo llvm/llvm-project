@@ -45,9 +45,8 @@ define <3 x double> @negative_sign_arg_vec_splat(<3 x double> %x) {
 
 define float @known_positive_sign_arg(float %x, float %y) {
 ; CHECK-LABEL: @known_positive_sign_arg(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call ninf float @llvm.copysign.f32(float [[X:%.*]], float [[FABS]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %fabs = call float @llvm.fabs.f32(float %y)
   %r = call ninf float @llvm.copysign.f32(float %x, float %fabs)
@@ -56,9 +55,8 @@ define float @known_positive_sign_arg(float %x, float %y) {
 
 define <3 x double> @known_positive_sign_arg_vec(<3 x double> %x, <3 x i32> %y) {
 ; CHECK-LABEL: @known_positive_sign_arg_vec(
-; CHECK-NEXT:    [[YF:%.*]] = uitofp <3 x i32> [[Y:%.*]] to <3 x double>
-; CHECK-NEXT:    [[R:%.*]] = call arcp <3 x double> @llvm.copysign.v3f64(<3 x double> [[X:%.*]], <3 x double> [[YF]])
-; CHECK-NEXT:    ret <3 x double> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call arcp <3 x double> @llvm.fabs.v3f64(<3 x double> [[X:%.*]])
+; CHECK-NEXT:    ret <3 x double> [[TMP1]]
 ;
   %yf = uitofp <3 x i32> %y to <3 x double>
   %r = call arcp <3 x double> @llvm.copysign.v3f64(<3 x double> %x, <3 x double> %yf)
