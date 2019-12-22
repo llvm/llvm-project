@@ -14,6 +14,8 @@
 
 #include "lua.hpp"
 
+#include <mutex>
+
 namespace lldb_private {
 
 extern "C" {
@@ -36,6 +38,7 @@ public:
   llvm::Error Run(llvm::StringRef buffer);
 
 private:
+  std::mutex m_mutex;
   lua_State *m_lua_state;
 };
 
