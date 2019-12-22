@@ -65,7 +65,7 @@ getSectionRefsByNameOrIndex(const object::ObjectFile *Obj,
     SecIndex++;
   }
 
-  for (const std::pair<std::string, bool> &S : SecNames)
+  for (const std::pair<const std::string, bool> &S : SecNames)
     if (!S.second)
       reportWarning(
           createError(formatv("could not find section '{0}'", S.first).str()),

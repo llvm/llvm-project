@@ -194,7 +194,7 @@ static std::vector<unsigned> getOpcodesOrDie(const MCInstrInfo &MCInstrInfo) {
   StringRef(OpcodeNames.getValue())
       .split(Pieces, ",", /* MaxSplit */ -1, /* KeepEmpty */ false);
   std::vector<unsigned> Result;
-  for (const StringRef OpcodeName : Pieces) {
+  for (const StringRef &OpcodeName : Pieces) {
     if (unsigned Opcode = ResolveName(OpcodeName))
       Result.push_back(Opcode);
     else

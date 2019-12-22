@@ -275,7 +275,7 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
           std::max<double>(LatencyMeasure.PerInstructionValue, WLE->Cycles);
     }
   } else if (Mode == InstructionBenchmark::Uops) {
-    for (const auto &I : zip(SchedClassPoint, Representative)) {
+    for (auto I : zip(SchedClassPoint, Representative)) {
       BenchmarkMeasure &Measure = std::get<0>(I);
       const PerInstructionStats &Stats = std::get<1>(I);
 
