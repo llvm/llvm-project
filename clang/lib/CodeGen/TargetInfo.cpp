@@ -1187,6 +1187,10 @@ static void rewriteInputConstraintReferences(unsigned FirstIn,
     if (NumDollars % 2 != 0 && Pos < AsmString.size()) {
       // We have an operand reference.
       size_t DigitStart = Pos;
+      if (AsmString[DigitStart] == '{') {
+        OS << '{';
+        ++DigitStart;
+      }
       size_t DigitEnd = AsmString.find_first_not_of("0123456789", DigitStart);
       if (DigitEnd == std::string::npos)
         DigitEnd = AsmString.size();
