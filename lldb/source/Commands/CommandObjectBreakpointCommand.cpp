@@ -19,7 +19,6 @@
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Target/Target.h"
 
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -415,7 +414,8 @@ protected:
       // to set or collect command callback.  Otherwise, call the methods
       // associated with this object.
       if (m_options.m_use_script_language) {
-        ScriptInterpreter *script_interp = GetDebugger().GetScriptInterpreter();
+        ScriptInterpreter *script_interp = GetDebugger().GetScriptInterpreter(
+            /*can_create=*/true, m_options.m_script_language);
         // Special handling for one-liner specified inline.
         if (m_options.m_use_one_liner) {
           script_interp->SetBreakpointCommandCallback(
