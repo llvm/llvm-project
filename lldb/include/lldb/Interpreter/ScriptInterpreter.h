@@ -459,10 +459,7 @@ public:
   virtual bool
   LoadScriptingModule(const char *filename, bool can_reload, bool init_session,
                       lldb_private::Status &error,
-                      StructuredData::ObjectSP *module_sp = nullptr) {
-    error.SetErrorString("loading unimplemented");
-    return false;
-  }
+                      StructuredData::ObjectSP *module_sp = nullptr);
 
   virtual bool IsReservedWord(const char *word) { return false; }
 
