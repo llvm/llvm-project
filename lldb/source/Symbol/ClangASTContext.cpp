@@ -729,10 +729,7 @@ void ClangASTContext::CreateASTContext() {
   GetASTMap().Insert(m_ast_up.get(), this);
 
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_up(
-      new ClangExternalASTSourceCallbacks(
-          ClangASTContext::CompleteTagDecl,
-          ClangASTContext::CompleteObjCInterfaceDecl, nullptr,
-          ClangASTContext::LayoutRecordType, this));
+      new ClangExternalASTSourceCallbacks(*this));
   SetExternalSource(ast_source_up);
 }
 
@@ -8929,9 +8926,8 @@ clang::ClassTemplateDecl *ClangASTContext::ParseClassTemplateDecl(
   return nullptr;
 }
 
-void ClangASTContext::CompleteTagDecl(void *baton, clang::TagDecl *decl) {
-  ClangASTContext *ast = (ClangASTContext *)baton;
-  SymbolFile *sym_file = ast->GetSymbolFile();
+void ClangASTContext::CompleteTagDecl(clang::TagDecl *decl) {
+  SymbolFile *sym_file = GetSymbolFile();
   if (sym_file) {
     CompilerType clang_type = GetTypeForDecl(decl);
     if (clang_type)
@@ -8940,9 +8936,8 @@ void ClangASTContext::CompleteTagDecl(void *baton, clang::TagDecl *decl) {
 }
 
 void ClangASTContext::CompleteObjCInterfaceDecl(
-    void *baton, clang::ObjCInterfaceDecl *decl) {
-  ClangASTContext *ast = (ClangASTContext *)baton;
-  SymbolFile *sym_file = ast->GetSymbolFile();
+    clang::ObjCInterfaceDecl *decl) {
+  SymbolFile *sym_file = GetSymbolFile();
   if (sym_file) {
     CompilerType clang_type = GetTypeForDecl(decl);
     if (clang_type)
@@ -8963,19 +8958,18 @@ PDBASTParser *ClangASTContext::GetPDBParser() {
 }
 
 bool ClangASTContext::LayoutRecordType(
-    void *baton, const clang::RecordDecl *record_decl, uint64_t &bit_size,
+    const clang::RecordDecl *record_decl, uint64_t &bit_size,
     uint64_t &alignment,
     llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
         &base_offsets,
     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
         &vbase_offsets) {
-  ClangASTContext *ast = (ClangASTContext *)baton;
   lldb_private::ClangASTImporter *importer = nullptr;
-  if (ast->m_dwarf_ast_parser_up)
-    importer = &ast->m_dwarf_ast_parser_up->GetClangASTImporter();
-  if (!importer && ast->m_pdb_ast_parser_up)
-    importer = &ast->m_pdb_ast_parser_up->GetClangASTImporter();
+  if (m_dwarf_ast_parser_up)
+    importer = &m_dwarf_ast_parser_up->GetClangASTImporter();
+  if (!importer && m_pdb_ast_parser_up)
+    importer = &m_pdb_ast_parser_up->GetClangASTImporter();
   if (!importer)
     return false;
 
