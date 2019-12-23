@@ -714,6 +714,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (!Subtarget.hasP8Altivec())
       setOperationAction(ISD::ABS, MVT::v2i64, Expand);
 
+    // With hasAltivec set, we can lower ISD::ROTL to vrl(b|h|w).
+    if (Subtarget.hasAltivec())
+      for (auto VT : {MVT::v4i32, MVT::v8i16, MVT::v16i8})
+        setOperationAction(ISD::ROTL, VT, Legal);
+    // With hasP8Altivec set, we can lower ISD::ROTL to vrld.
+    if (Subtarget.hasP8Altivec())
+      setOperationAction(ISD::ROTL, MVT::v2i64, Legal);
+
     addRegisterClass(MVT::v4f32, &PPC::VRRCRegClass);
     addRegisterClass(MVT::v4i32, &PPC::VRRCRegClass);
     addRegisterClass(MVT::v8i16, &PPC::VRRCRegClass);
