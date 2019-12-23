@@ -2118,10 +2118,11 @@ static int regBankBoolUnion(int RB0, int RB1) {
     return RB0;
 
   // vcc, vcc -> vcc
-  if (RB0 == AMDGPU::VCCRegBankID && RB1 == AMDGPU::VCCRegBankID)
+  // vcc, sgpr -> vcc
+  // vcc, vgpr -> vcc
+  if (RB0 == AMDGPU::VCCRegBankID || RB1 == AMDGPU::VCCRegBankID)
     return AMDGPU::VCCRegBankID;
 
-  // vcc, sgpr -> vgpr
   // vcc, vgpr -> vgpr
   return regBankUnion(RB0, RB1);
 }
