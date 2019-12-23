@@ -144,7 +144,7 @@ if.then:                                          ; preds = %for.body
   %3 = load i32, i32* @c, align 4
   %4 = load i32, i32* @d, align 4
   %5 = load i32, i32* @e, align 4
-  %call = tail call i32 @foo(i32 %0, i32 %2, i32 %3, i32 %4, i32 %5, i32 32) #3
+  %call = tail call i32 @foo(i32 %0, i32 %2, i32 %3, i32 %4, i32 %5, i32 32)
   br label %if.end
 
 if.end:                                           ; preds = %for.body, %if.then
@@ -158,7 +158,7 @@ if.then3:                                         ; preds = %if.end
   %9 = load i32, i32* @d, align 4
   %10 = load i32, i32* @e, align 4
   %11 = load i32, i32* @f, align 4
-  %call4 = tail call i32 @foo(i32 %7, i32 %8, i32 %9, i32 %10, i32 %11, i32 64) #3
+  %call4 = tail call i32 @foo(i32 %7, i32 %8, i32 %9, i32 %10, i32 %11, i32 64)
   br label %if.end5
 
 if.end5:                                          ; preds = %if.end, %if.then3
@@ -172,7 +172,7 @@ if.then7:                                         ; preds = %if.end5
   %15 = load i32, i32* @e, align 4
   %16 = load i32, i32* @f, align 4
   %17 = load i32, i32* @g, align 4
-  %call8 = tail call i32 @foo(i32 %13, i32 %14, i32 %15, i32 %16, i32 %17, i32 32) #3
+  %call8 = tail call i32 @foo(i32 %13, i32 %14, i32 %15, i32 %16, i32 %17, i32 32)
   br label %if.end9
 
 if.end9:                                          ; preds = %if.end5, %if.then7
@@ -186,7 +186,7 @@ if.then11:                                        ; preds = %if.end9
   %21 = load i32, i32* @f, align 4
   %22 = load i32, i32* @g, align 4
   %23 = load i32, i32* @h, align 4
-  %call12 = tail call i32 @foo(i32 %19, i32 %20, i32 %21, i32 %22, i32 %23, i32 32) #3
+  %call12 = tail call i32 @foo(i32 %19, i32 %20, i32 %21, i32 %22, i32 %23, i32 32)
   br label %for.inc
 
 for.inc:                                          ; preds = %if.end9, %if.then11
