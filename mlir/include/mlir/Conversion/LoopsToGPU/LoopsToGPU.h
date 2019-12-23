@@ -16,7 +16,7 @@ struct LogicalResult;
 class Value;
 
 // TODO(riverriddle) Remove this after Value is value-typed.
-using ValuePtr = Value *;
+using ValuePtr = Value;
 
 namespace loop {
 class ForOp;
