@@ -1205,9 +1205,13 @@ CompilerType ClangASTContext::GetTypeForDecl(void *opaque_decl) {
   return CompilerType();
 }
 
+CompilerDeclContext ClangASTContext::CreateDeclContext(DeclContext *ctx) {
+  return CompilerDeclContext(this, ctx);
+}
+
 CompilerType ClangASTContext::GetTypeForDecl(clang::NamedDecl *decl) {
   if (clang::ObjCInterfaceDecl *interface_decl =
-          llvm::dyn_cast<clang::ObjCInterfaceDecl>(decl))
+      llvm::dyn_cast<clang::ObjCInterfaceDecl>(decl))
     return GetTypeForDecl(interface_decl);
   if (clang::TagDecl *tag_decl = llvm::dyn_cast<clang::TagDecl>(decl))
     return GetTypeForDecl(tag_decl);
@@ -9039,10 +9043,8 @@ ConstString ClangASTContext::DeclGetMangledName(void *opaque_decl) {
 
 CompilerDeclContext ClangASTContext::DeclGetDeclContext(void *opaque_decl) {
   if (opaque_decl)
-    return CompilerDeclContext(this,
-                               ((clang::Decl *)opaque_decl)->getDeclContext());
-  else
-    return CompilerDeclContext();
+    return CreateDeclContext(((clang::Decl *)opaque_decl)->getDeclContext());
+  return CompilerDeclContext();
 }
 
 CompilerType ClangASTContext::DeclGetFunctionReturnType(void *opaque_decl) {
@@ -9108,7 +9110,7 @@ std::vector<CompilerDecl> ClangASTContext::DeclContextFindDeclByName(
         if (!searched.insert(it->second).second)
           continue;
         symbol_file->ParseDeclsForContext(
-            CompilerDeclContext(this, it->second));
+            CreateDeclContext(it->second));
 
         for (clang::Decl *child : it->second->decls()) {
           if (clang::UsingDirectiveDecl *ud =
@@ -9223,7 +9225,7 @@ uint32_t ClangASTContext::CountDeclLevels(clang::DeclContext *frame_decl_ctx,
 
         searched.insert(it->second);
         symbol_file->ParseDeclsForContext(
-            CompilerDeclContext(this, it->second));
+            CreateDeclContext(it->second));
 
         for (clang::Decl *child : it->second->decls()) {
           if (clang::UsingDirectiveDecl *ud =

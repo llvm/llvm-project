@@ -440,6 +440,12 @@ public:
 
   // CompilerDeclContext override functions
 
+  /// Creates a CompilerDeclContext from the given DeclContext
+  /// with the current ClangASTContext instance as its typesystem.
+  /// The DeclContext has to come from the ASTContext of this
+  /// ClangASTContext.
+  CompilerDeclContext CreateDeclContext(clang::DeclContext *ctx);
+
   std::vector<CompilerDecl>
   DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
                             const bool ignore_using_decls) override;
