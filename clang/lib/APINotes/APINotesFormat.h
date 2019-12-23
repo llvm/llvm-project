@@ -237,7 +237,7 @@ namespace tag_block {
     BCVBR<16>,  // table offset within the blob (see below)
     BCBlob      // map from name to tag information
   >;
-};
+}
 
 namespace typedef_block {
   enum {
@@ -249,7 +249,7 @@ namespace typedef_block {
     BCVBR<16>,  // table offset within the blob (see below)
     BCBlob      // map from name to typedef information
   >;
-};
+}
 
 namespace enum_constant_block {
   enum {
