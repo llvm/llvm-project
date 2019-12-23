@@ -1965,7 +1965,7 @@ void FlatAffineConstraints::addLocalFloorDiv(ArrayRef<int64_t> dividend,
 bool FlatAffineConstraints::findId(ValueRef id, unsigned *pos) const {
   unsigned i = 0;
   for (const auto &mayBeId : ids) {
-    if (mayBeId.hasValue() && mayBeId.getValue() == id) {
+    if (mayBeId.hasValue() && mayBeId.getValue() == &id) {
       *pos = i;
       return true;
     }
@@ -1976,7 +1976,7 @@ bool FlatAffineConstraints::findId(ValueRef id, unsigned *pos) const {
 
 bool FlatAffineConstraints::containsId(ValueRef id) const {
   return llvm::any_of(ids, [&](const Optional<ValuePtr> &mayBeId) {
-    return mayBeId.hasValue() && mayBeId.getValue() == id;
+    return mayBeId.hasValue() && mayBeId.getValue() == &id;
   });
 }
 

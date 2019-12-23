@@ -21,7 +21,6 @@ namespace mlir {
 
 class IROperand;
 class Operation;
-class Value;
 template <typename OperandType> class ValueUseIterator;
 template <typename OperandType> class ValueUserIterator;
 
@@ -166,22 +165,6 @@ private:
       nextUse->back = &nextUse;
     value->firstUse = this;
   }
-};
-
-/// A reference to a value, suitable for use as an operand of an operation.
-class OpOperand : public IROperand {
-public:
-  OpOperand(Operation *owner) : IROperand(owner) {}
-  OpOperand(Operation *owner, Value value);
-
-  /// Return the current value being used by this operand.
-  Value get();
-
-  /// Set the current value being used by this operand.
-  void set(Value newValue);
-
-  /// Return which operand this is in the operand list of the User.
-  unsigned getOperandNumber();
 };
 
 /// A reference to a value, suitable for use as an operand of an operation,
