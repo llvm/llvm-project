@@ -539,7 +539,7 @@ struct S1 {
     short int c[2][n];
 
 #ifdef OMP5
-    #pragma omp target parallel for simd if(n>60)
+    #pragma omp target parallel for simd if(n>60) nontemporal(a)
 #else
     #pragma omp target parallel for simd if(target: n>60)
 #endif // OMP5
@@ -837,6 +837,9 @@ int bar(int n){
 // OMP45:       define internal {{.*}}void [[OMP_OUTLINED5]](i32* noalias %.global_tid., i32* noalias %.bound_tid., [[S1]]* %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i16* {{.+}})
 // OMP50:       define internal {{.*}}void [[OMP_OUTLINED5]](i32* noalias %.global_tid., i32* noalias %.bound_tid., [[S1]]* %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i16* {{.+}}, i[[SZ]] %{{.+}})
 // To reduce complexity, we're only going as far as validating the signature of the outlined parallel function.
+// OMP45-NOT:   !nontemporal
+// OMP50:       store double{{.*}}!nontemporal
+// OMP50:       load double{{.*}}!nontemporal
 
 
 // CHECK:       define internal void [[HVT6]]

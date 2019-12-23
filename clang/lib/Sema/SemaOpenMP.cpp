@@ -2230,6 +2230,11 @@ void Sema::EndOpenMPClause() {
 
 static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
                                  ArrayRef<OMPClause *> Clauses);
+static std::pair<ValueDecl *, bool>
+getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
+               SourceRange &ERange, bool AllowArraySection = false);
+static DeclRefExpr *buildCapture(Sema &S, ValueDecl *D, Expr *CaptureExpr,
+                                 bool WithInit);
 
 void Sema::EndOpenMPDSABlock(Stmt *CurDirective) {
   // OpenMP [2.14.3.5, Restrictions, C/C++, p.1]
@@ -2274,6 +2279,31 @@ void Sema::EndOpenMPDSABlock(Stmt *CurDirective) {
           }
         }
         Clause->setPrivateCopies(PrivateCopies);
+        continue;
+      }
+      // Finalize nontemporal clause by handling private copies, if any.
+      if (auto *Clause = dyn_cast<OMPNontemporalClause>(C)) {
+        SmallVector<Expr *, 8> PrivateRefs;
+        for (Expr *RefExpr : Clause->varlists()) {
+          assert(RefExpr && "NULL expr in OpenMP nontemporal clause.");
+          SourceLocation ELoc;
+          SourceRange ERange;
+          Expr *SimpleRefExpr = RefExpr;
+          auto Res = getPrivateItem(*this, SimpleRefExpr, ELoc, ERange);
+          if (Res.second)
+            // It will be analyzed later.
+            PrivateRefs.push_back(RefExpr);
+          ValueDecl *D = Res.first;
+          if (!D)
+            continue;
+
+          const DSAStackTy::DSAVarData DVar =
+              DSAStack->getTopDSA(D, /*FromParent=*/false);
+          PrivateRefs.push_back(DVar.PrivateCopy ? DVar.PrivateCopy
+                                                 : SimpleRefExpr);
+        }
+        Clause->setPrivateRefs(PrivateRefs);
+        continue;
       }
     }
     // Check allocate clauses.
@@ -4262,9 +4292,10 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
   return ErrorFound;
 }
 
-static std::pair<ValueDecl *, bool>
-getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
-               SourceRange &ERange, bool AllowArraySection = false) {
+static std::pair<ValueDecl *, bool> getPrivateItem(Sema &S, Expr *&RefExpr,
+                                                   SourceLocation &ELoc,
+                                                   SourceRange &ERange,
+                                                   bool AllowArraySection) {
   if (RefExpr->isTypeDependent() || RefExpr->isValueDependent() ||
       RefExpr->containsUnexpandedParameterPack())
     return std::make_pair(nullptr, true);
@@ -17172,8 +17203,6 @@ OMPClause *Sema::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,
     if (!D)
       continue;
 
-    auto *VD = dyn_cast<VarDecl>(D);
-
     // OpenMP 5.0, 2.9.3.1 simd Construct, Restrictions.
     // A list-item cannot appear in more than one nontemporal clause.
     if (const Expr *PrevRef =
@@ -17185,12 +17214,7 @@ OMPClause *Sema::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,
       continue;
     }
 
-    DeclRefExpr *Ref = nullptr;
-    if (!VD && isOpenMPCapturedDecl(D) && !CurContext->isDependentContext())
-      Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
-    Vars.push_back((VD || !Ref || CurContext->isDependentContext())
-                       ? RefExpr->IgnoreParens()
-                       : Ref);
+    Vars.push_back(RefExpr);
   }
 
   if (Vars.empty())

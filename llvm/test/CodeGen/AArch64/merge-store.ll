@@ -42,17 +42,10 @@ define void @blam() {
 ; the fastness of unaligned accesses was not specified correctly.
 
 define void @merge_vec_extract_stores(<4 x float> %v1, <2 x float>* %ptr) {
-; SPLITTING-LABEL: merge_vec_extract_stores:
-; SPLITTING:       // %bb.0:
-; SPLITTING-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; SPLITTING-NEXT:    str d0, [x0, #24]
-; SPLITTING-NEXT:    str d1, [x0, #32]
-; SPLITTING-NEXT:    ret
-;
-; MISALIGNED-LABEL: merge_vec_extract_stores:
-; MISALIGNED:       // %bb.0:
-; MISALIGNED-NEXT:    stur q0, [x0, #24]
-; MISALIGNED-NEXT:    ret
+; CHECK-LABEL: merge_vec_extract_stores:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stur q0, [x0, #24]
+; CHECK-NEXT:    ret
   %idx0 = getelementptr inbounds <2 x float>, <2 x float>* %ptr, i64 3
   %idx1 = getelementptr inbounds <2 x float>, <2 x float>* %ptr, i64 4
 
@@ -62,9 +55,4 @@ define void @merge_vec_extract_stores(<4 x float> %v1, <2 x float>* %ptr) {
   store <2 x float> %shuffle0, <2 x float>* %idx0, align 8
   store <2 x float> %shuffle1, <2 x float>* %idx1, align 8
   ret void
-
-
-; FIXME: Ideally we would like to use a generic target for this test, but this relies
-; on suppressing store pairs.
-
 }

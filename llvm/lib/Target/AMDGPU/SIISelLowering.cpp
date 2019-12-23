@@ -1473,9 +1473,7 @@ SDValue SITargetLowering::lowerKernargMemParameter(
   const SDLoc &SL, SDValue Chain,
   uint64_t Offset, unsigned Align, bool Signed,
   const ISD::InputArg *Arg) const {
-  Type *Ty = MemVT.getTypeForEVT(*DAG.getContext());
-  PointerType *PtrTy = PointerType::get(Ty, AMDGPUAS::CONSTANT_ADDRESS);
-  MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
+  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
 
   // Try to avoid using an extload by loading earlier than the argument address,
   // and extracting the relevant bits. The load should hopefully be merged with
@@ -2875,8 +2873,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
             Chain, DL, DstAddr, Arg, SizeNode, Outs[i].Flags.getByValAlign(),
             /*isVol = */ false, /*AlwaysInline = */ true,
             /*isTailCall = */ false, DstInfo,
-            MachinePointerInfo(UndefValue::get(Type::getInt8PtrTy(
-                *DAG.getContext(), AMDGPUAS::PRIVATE_ADDRESS))));
+            MachinePointerInfo(AMDGPUAS::PRIVATE_ADDRESS));
 
         MemOpChains.push_back(Cpy);
       } else {
@@ -4717,10 +4714,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
   // TODO: Use custom target PseudoSourceValue.
   // TODO: We should use the value from the IR intrinsic call, but it might not
   // be available and how do we get it?
-  Value *V = UndefValue::get(PointerType::get(Type::getInt8Ty(*DAG.getContext()),
-                                              AMDGPUAS::CONSTANT_ADDRESS));
-
-  MachinePointerInfo PtrInfo(V, StructOffset);
+  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
   return DAG.getLoad(MVT::i32, DL, QueuePtr.getValue(1), Ptr, PtrInfo,
                      MinAlign(64, StructOffset),
                      MachineMemOperand::MODereferenceable |
