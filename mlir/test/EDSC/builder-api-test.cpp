@@ -484,7 +484,7 @@ TEST_FUNC(select_op_i32) {
   IndexedValue A(f.getArgument(0));
   IndexHandle i, j;
   AffineLoopNestBuilder({&i, &j}, {zero, zero}, {one, one}, {1, 1})([&]{
-    // This test exercises IndexedValue::operator Value*.
+    // This test exercises IndexedValue::operator Value.
     // Without it, one must force conversion to ValueHandle as such:
     //   edsc::intrinsics::select(
     //      i == zero, ValueHandle(A(zero, zero)), ValueHandle(ValueA(i, j)))
@@ -802,7 +802,7 @@ TEST_FUNC(affine_if_op) {
   };
   auto intSet = IntegerSet::get(2, 2, affineExprs, isEq);
 
-  SmallVector<Value *, 4> affineIfArgs = {zero, zero, ten, ten};
+  SmallVector<ValuePtr, 4> affineIfArgs = {zero, zero, ten, ten};
   intrinsics::affine_if(intSet, affineIfArgs, /*withElseRegion=*/false);
   intrinsics::affine_if(intSet, affineIfArgs, /*withElseRegion=*/true);
 

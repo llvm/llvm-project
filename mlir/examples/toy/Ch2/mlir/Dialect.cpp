@@ -94,7 +94,7 @@ static mlir::LogicalResult verify(ConstantOp op) {
 // AddOp
 
 void AddOp::build(mlir::Builder *builder, mlir::OperationState &state,
-                  mlir::Value *lhs, mlir::Value *rhs) {
+                  mlir::ValuePtr lhs, mlir::ValuePtr rhs) {
   state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
   state.addOperands({lhs, rhs});
 }
@@ -103,7 +103,8 @@ void AddOp::build(mlir::Builder *builder, mlir::OperationState &state,
 // GenericCallOp
 
 void GenericCallOp::build(mlir::Builder *builder, mlir::OperationState &state,
-                          StringRef callee, ArrayRef<mlir::Value *> arguments) {
+                          StringRef callee,
+                          ArrayRef<mlir::ValuePtr> arguments) {
   // Generic call always returns an unranked Tensor initially.
   state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
   state.addOperands(arguments);
@@ -114,7 +115,7 @@ void GenericCallOp::build(mlir::Builder *builder, mlir::OperationState &state,
 // MulOp
 
 void MulOp::build(mlir::Builder *builder, mlir::OperationState &state,
-                  mlir::Value *lhs, mlir::Value *rhs) {
+                  mlir::ValuePtr lhs, mlir::ValuePtr rhs) {
   state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
   state.addOperands({lhs, rhs});
 }
@@ -161,7 +162,7 @@ static mlir::LogicalResult verify(ReturnOp op) {
 // TransposeOp
 
 void TransposeOp::build(mlir::Builder *builder, mlir::OperationState &state,
-                        mlir::Value *value) {
+                        mlir::ValuePtr value) {
   state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
   state.addOperands(value);
 }

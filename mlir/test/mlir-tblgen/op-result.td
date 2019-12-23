@@ -23,9 +23,9 @@ def OpB : NS_Op<"same_input_output_type_op", [SameOperandsAndResultType]> {
 }
 
 // CHECK-LABEL: OpB definitions
-// CHECK: void OpB::build(Builder *tblgen_builder, OperationState &tblgen_state, Type y, Value *x)
+// CHECK: void OpB::build(Builder *tblgen_builder, OperationState &tblgen_state, Type y, ValuePtr x)
 // CHECK:   tblgen_state.addTypes(y);
-// CHECK: void OpB::build(Builder *tblgen_builder, OperationState &tblgen_state, Value *x)
+// CHECK: void OpB::build(Builder *tblgen_builder, OperationState &tblgen_state, ValuePtr x)
 // CHECK:   tblgen_state.addTypes({x->getType()});
 
 def OpC : NS_Op<"three_normal_result_op", []> {
@@ -89,7 +89,7 @@ def OpI : NS_Op<"mix_variadic_and_normal_results_op", [SameVariadicResultSize]> 
 // CHECK-LABEL: Operation::result_range OpI::output1
 // CHECK-NEXT:    return getODSResults(0);
 
-// CHECK-LABEL: Value *OpI::output2
+// CHECK-LABEL: ValuePtr OpI::output2
 // CHECK-NEXT:    return *getODSResults(1).begin();
 
 // CHECK-LABEL: OpI::build
