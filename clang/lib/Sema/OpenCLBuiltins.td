@@ -55,6 +55,10 @@ def FuncExtNone                          : FunctionExtension<"">;
 def FuncExtKhrSubgroups                  : FunctionExtension<"cl_khr_subgroups">;
 def FuncExtKhrGlobalInt32BaseAtomics     : FunctionExtension<"cl_khr_global_int32_base_atomics">;
 def FuncExtKhrGlobalInt32ExtendedAtomics : FunctionExtension<"cl_khr_global_int32_extended_atomics">;
+def FuncExtKhrLocalInt32BaseAtomics      : FunctionExtension<"cl_khr_local_int32_base_atomics">;
+def FuncExtKhrLocalInt32ExtendedAtomics  : FunctionExtension<"cl_khr_local_int32_extended_atomics">;
+def FuncExtKhrInt64BaseAtomics           : FunctionExtension<"cl_khr_int64_base_atomics">;
+def FuncExtKhrInt64ExtendedAtomics       : FunctionExtension<"cl_khr_int64_extended_atomics">;
 
 // Qualified Type.  These map to ASTContext::QualType.
 class QualType<string _Name, bit _IsAbstract=0> {
@@ -889,6 +893,81 @@ let Extension = FuncExtKhrGlobalInt32BaseAtomics in {
     }
     foreach name = ["atom_cmpxchg"] in {
       def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type, Type]>;
+    }
+  }
+}
+// --- Table 9.3 ---
+let Extension = FuncExtKhrLocalInt32BaseAtomics in {
+  foreach Type = [Int, UInt] in {
+    foreach name = ["atom_add", "atom_sub", "atom_xchg"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, LocalAS>, Type]>;
+    }
+    foreach name = ["atom_inc", "atom_dec"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, LocalAS>]>;
+    }
+    foreach name = ["atom_cmpxchg"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, LocalAS>, Type, Type]>;
+    }
+  }
+}
+// --- Table 9.5 ---
+let Extension = FuncExtKhrInt64BaseAtomics in {
+  foreach AS = [GlobalAS, LocalAS] in {
+    foreach Type = [Long, ULong] in {
+      foreach name = ["atom_add", "atom_sub", "atom_xchg"] in {
+        def : Builtin<name, [Type, PointerType<VolatileType<Type>, AS>, Type]>;
+      }
+      foreach name = ["atom_inc", "atom_dec"] in {
+        def : Builtin<name, [Type, PointerType<VolatileType<Type>, AS>]>;
+      }
+      foreach name = ["atom_cmpxchg"] in {
+        def : Builtin<name, [Type, PointerType<VolatileType<Type>, AS>, Type, Type]>;
+      }
+    }
+  }
+}
+// --- Table 9.2 ---
+let Extension = FuncExtKhrGlobalInt32ExtendedAtomics in {
+  foreach Type = [Int, UInt] in {
+    foreach name = ["atom_min", "atom_max", "atom_and",
+                    "atom_or", "atom_xor"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type]>;
+    }
+  }
+}
+// --- Table 9.4 ---
+let Extension = FuncExtKhrLocalInt32ExtendedAtomics in {
+  foreach Type = [Int, UInt] in {
+    foreach name = ["atom_min", "atom_max", "atom_and",
+                    "atom_or", "atom_xor"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, LocalAS>, Type]>;
+    }
+  }
+}
+// --- Table 9.6 ---
+let Extension = FuncExtKhrInt64ExtendedAtomics in {
+  foreach AS = [GlobalAS, LocalAS] in {
+    foreach Type = [Long, ULong] in {
+      foreach name = ["atom_min", "atom_max", "atom_and",
+                      "atom_or", "atom_xor"] in {
+        def : Builtin<name, [Type, PointerType<VolatileType<Type>, AS>, Type]>;
+      }
+    }
+  }
+}
+// OpenCL v1.1 s6.11.1, v1.2 s6.12.11 - Atomic Functions
+foreach AS = [GlobalAS, LocalAS] in {
+  foreach Type = [Int, UInt] in {
+    foreach name = ["atomic_add", "atomic_sub", "atomic_xchg",
+                    "atomic_min", "atomic_max", "atomic_and",
+                    "atomic_or", "atomic_xor"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, AS>, Type]>;
+    }
+    foreach name = ["atomic_inc", "atomic_dec"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, AS>]>;
+    }
+    foreach name = ["atomic_cmpxchg"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, AS>, Type, Type]>;
     }
   }
 }
