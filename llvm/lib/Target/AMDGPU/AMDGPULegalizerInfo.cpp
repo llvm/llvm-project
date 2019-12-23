@@ -1186,12 +1186,8 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   // private_segment_aperture_base_hi.
   uint32_t StructOffset = (AS == AMDGPUAS::LOCAL_ADDRESS) ? 0x40 : 0x44;
 
-  // FIXME: Don't use undef
-  Value *V = UndefValue::get(PointerType::get(
-                               Type::getInt8Ty(MF.getFunction().getContext()),
-                               AMDGPUAS::CONSTANT_ADDRESS));
-
-  MachinePointerInfo PtrInfo(V, StructOffset);
+  // TODO: can we be smarter about machine pointer info?
+  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
     PtrInfo,
     MachineMemOperand::MOLoad |
