@@ -251,3 +251,145 @@ define <2 x i32> @not_add_vec(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
+define i1 @not_select_cmp_cmp(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
+; CHECK-LABEL: @not_select_cmp_cmp(
+; CHECK-NEXT:    [[CMPT:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPF:%.*]] = fcmp ugt float [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMPT]], i1 [[CMPF]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmpt = icmp sle i32 %x, %y
+  %cmpf = fcmp ugt float %z, %w
+  %sel = select i1 %cond, i1 %cmpt, i1 %cmpf
+  %not = xor i1 %sel, true
+  ret i1 %not
+}
+
+declare void @use1(i1)
+
+define i1 @not_select_cmp_cmp_extra_use1(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
+; CHECK-LABEL: @not_select_cmp_cmp_extra_use1(
+; CHECK-NEXT:    [[CMPT:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMPT]])
+; CHECK-NEXT:    [[CMPF:%.*]] = fcmp ugt float [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMPT]], i1 [[CMPF]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmpt = icmp sle i32 %x, %y
+  call void @use1(i1 %cmpt)
+  %cmpf = fcmp ugt float %z, %w
+  %sel = select i1 %cond, i1 %cmpt, i1 %cmpf
+  %not = xor i1 %sel, true
+  ret i1 %not
+}
+
+define i1 @not_select_cmp_cmp_extra_use2(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
+; CHECK-LABEL: @not_select_cmp_cmp_extra_use2(
+; CHECK-NEXT:    [[CMPT:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPF:%.*]] = fcmp ugt float [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMPF]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMPT]], i1 [[CMPF]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmpt = icmp sle i32 %x, %y
+  %cmpf = fcmp ugt float %z, %w
+  call void @use1(i1 %cmpf)
+  %sel = select i1 %cond, i1 %cmpt, i1 %cmpf
+  %not = xor i1 %sel, true
+  ret i1 %not
+}
+
+define i1 @not_select_cmp_cmp_extra_use3(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
+; CHECK-LABEL: @not_select_cmp_cmp_extra_use3(
+; CHECK-NEXT:    [[CMPT:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMPT]])
+; CHECK-NEXT:    [[CMPF:%.*]] = fcmp ugt float [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMPF]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMPT]], i1 [[CMPF]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmpt = icmp sle i32 %x, %y
+  call void @use1(i1 %cmpt)
+  %cmpf = fcmp ugt float %z, %w
+  call void @use1(i1 %cmpf)
+  %sel = select i1 %cond, i1 %cmpt, i1 %cmpf
+  %not = xor i1 %sel, true
+  ret i1 %not
+}
+
+define i1 @not_select_cmp_cmp_extra_use4(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
+; CHECK-LABEL: @not_select_cmp_cmp_extra_use4(
+; CHECK-NEXT:    [[CMPT:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPF:%.*]] = fcmp ugt float [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMPT]], i1 [[CMPF]]
+; CHECK-NEXT:    call void @use1(i1 [[SEL]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmpt = icmp sle i32 %x, %y
+  %cmpf = fcmp ugt float %z, %w
+  %sel = select i1 %cond, i1 %cmpt, i1 %cmpf
+  call void @use1(i1 %sel)
+  %not = xor i1 %sel, true
+  ret i1 %not
+}
+
+define i1 @not_select_cmpt(double %x, double %y, i1 %z, i1 %cond) {
+; CHECK-LABEL: @not_select_cmpt(
+; CHECK-NEXT:    [[CMPT:%.*]] = fcmp oeq double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMPT]], i1 [[Z:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmpt = fcmp oeq double %x, %y
+  %sel = select i1 %cond, i1 %cmpt, i1 %z
+  %not = xor i1 %sel, true
+  ret i1 %not
+}
+
+define i1 @not_select_cmpf(i1 %x, i32 %z, i32 %w, i1 %cond) {
+; CHECK-LABEL: @not_select_cmpf(
+; CHECK-NEXT:    [[CMPF:%.*]] = icmp ugt i32 [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[X:%.*]], i1 [[CMPF]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmpf = icmp ugt i32 %z, %w
+  %sel = select i1 %cond, i1 %x, i1 %cmpf
+  %not = xor i1 %sel, true
+  ret i1 %not
+}
+
+define i1 @not_select_cmpt_extra_use(double %x, double %y, i1 %z, i1 %cond) {
+; CHECK-LABEL: @not_select_cmpt_extra_use(
+; CHECK-NEXT:    [[CMPT:%.*]] = fcmp oeq double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMPT]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMPT]], i1 [[Z:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmpt = fcmp oeq double %x, %y
+  call void @use1(i1 %cmpt)
+  %sel = select i1 %cond, i1 %cmpt, i1 %z
+  %not = xor i1 %sel, true
+  ret i1 %not
+}
+
+define i1 @not_select_cmpf_extra_use(i1 %x, i32 %z, i32 %w, i1 %cond) {
+; CHECK-LABEL: @not_select_cmpf_extra_use(
+; CHECK-NEXT:    [[CMPF:%.*]] = icmp ugt i32 [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMPF]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[X:%.*]], i1 [[CMPF]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmpf = icmp ugt i32 %z, %w
+  call void @use1(i1 %cmpf)
+  %sel = select i1 %cond, i1 %x, i1 %cmpf
+  %not = xor i1 %sel, true
+  ret i1 %not
+}
