@@ -966,6 +966,15 @@ protected:
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
+
+  typedef llvm::DenseMap<const clang::Decl *, ClangASTMetadata> DeclMetadataMap;
+  /// Maps Decls to their associated ClangASTMetadata.
+  DeclMetadataMap m_decl_metadata;
+
+  typedef llvm::DenseMap<const clang::Type *, ClangASTMetadata> TypeMetadataMap;
+  /// Maps Types to their associated ClangASTMetadata.
+  TypeMetadataMap m_type_metadata;
+
   /// The sema associated that is currently used to build this ASTContext.
   /// May be null if we are already done parsing this ASTContext or the
   /// ASTContext wasn't created by parsing source code.

@@ -53,8 +53,8 @@
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/ClangASTImporter.h"
+#include "lldb/Symbol/ClangASTMetadata.h"
 #include "lldb/Symbol/ClangExternalASTSourceCallbacks.h"
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -2340,31 +2340,29 @@ void ClangASTContext::SetMetadataAsUserID(const clang::Type *type,
 
 void ClangASTContext::SetMetadata(const clang::Decl *object,
                                   ClangASTMetadata &metadata) {
-  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
-          getASTContext().getExternalSource()))
-    A->SetMetadata(object, metadata);
+  m_decl_metadata[object] = metadata;
 }
 
 void ClangASTContext::SetMetadata(const clang::Type *object,
                                   ClangASTMetadata &metadata) {
-  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
-          getASTContext().getExternalSource()))
-    A->SetMetadata(object, metadata);
+  m_type_metadata[object] = metadata;
 }
 
 ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
                                                const clang::Decl *object) {
-  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
-          ast->getExternalSource()))
-    return A->GetMetadata(object);
+  ClangASTContext *self = GetASTContext(ast);
+  auto It = self->m_decl_metadata.find(object);
+  if (It != self->m_decl_metadata.end())
+    return &It->second;
   return nullptr;
 }
 
 ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
                                                const clang::Type *object) {
-  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
-          ast->getExternalSource()))
-    return A->GetMetadata(object);
+  ClangASTContext *self = GetASTContext(ast);
+  auto It = self->m_type_metadata.find(object);
+  if (It != self->m_type_metadata.end())
+    return &It->second;
   return nullptr;
 }
 
