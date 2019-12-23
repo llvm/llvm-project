@@ -275,6 +275,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_ELFOSABI>::enumeration(
   ECase(ELFOSABI_C6000_LINUX);
   ECase(ELFOSABI_STANDALONE);
 #undef ECase
+  IO.enumFallback<Hex8>(Value);
 }
 
 void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
