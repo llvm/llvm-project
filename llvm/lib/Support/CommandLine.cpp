@@ -2436,6 +2436,28 @@ static VersionPrinterTy OverrideVersionPrinter = nullptr;
 
 static std::vector<VersionPrinterTy> *ExtraVersionPrinters = nullptr;
 
+#if defined(__GNUC__)
+// GCC and GCC-compatible compilers define __OPTIMIZE__ when optimizations are
+// enabled.
+# if defined(__OPTIMIZE__)
+#  define LLVM_IS_DEBUG_BUILD 0
+# else
+#  define LLVM_IS_DEBUG_BUILD 1
+# endif
+#elif defined(_MSC_VER)
+// MSVC doesn't have a predefined macro indicating if optimizations are enabled.
+// Use _DEBUG instead. This macro actually corresponds to the choice between
+// debug and release CRTs, but it is a reasonable proxy.
+# if defined(_DEBUG)
+#  define LLVM_IS_DEBUG_BUILD 1
+# else
+#  define LLVM_IS_DEBUG_BUILD 0
+# endif
+#else
+// Otherwise, for an unknown compiler, assume this is an optimized build.
+# define LLVM_IS_DEBUG_BUILD 0
+#endif
+
 namespace {
 class VersionPrinter {
 public:
@@ -2451,7 +2473,7 @@ public:
     OS << " " << LLVM_VERSION_INFO;
 #endif
     OS << "\n  ";
-#ifndef __OPTIMIZE__
+#if LLVM_IS_DEBUG_BUILD
     OS << "DEBUG build";
 #else
     OS << "Optimized build";
