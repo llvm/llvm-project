@@ -224,7 +224,7 @@ public:
                               std::string &output, Status &error) override;
 
   bool
-  LoadScriptingModule(const char *filename, bool can_reload, bool init_session,
+  LoadScriptingModule(const char *filename, bool init_session,
                       lldb_private::Status &error,
                       StructuredData::ObjectSP *module_sp = nullptr) override;
 

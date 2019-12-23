@@ -1403,7 +1403,7 @@ protected:
 
       switch (short_option) {
       case 'r':
-        m_allow_reload = true;
+        // NO-OP
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1413,16 +1413,11 @@ protected:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
-      m_allow_reload = true;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::makeArrayRef(g_script_import_options);
     }
-
-    // Instance variables to hold the values for command options.
-
-    bool m_allow_reload;
   };
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -1446,7 +1441,7 @@ protected:
       // more)
       m_exe_ctx.Clear();
       if (GetDebugger().GetScriptInterpreter()->LoadScriptingModule(
-              entry.c_str(), m_options.m_allow_reload, init_session, error)) {
+              entry.c_str(), init_session, error)) {
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         result.AppendErrorWithFormat("module importing failed: %s",
