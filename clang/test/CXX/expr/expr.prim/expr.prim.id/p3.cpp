@@ -75,11 +75,8 @@ static_assert(!IsTypePredicate<T1>);
 template<typename T, typename U, typename... Ts>
 concept OneOf = (Same<T, Ts> || ...);
 
-template<typename... X>
-constexpr bool S = OneOf<X..., int, int>;
-
-static_assert(S<int, long, int>);
-static_assert(!S<long, int, char, char>);
+static_assert(OneOf<int, long, int>);
+static_assert(!OneOf<long, int, char, char>);
 
 namespace piecewise_substitution {
   template <typename T>
@@ -178,3 +175,11 @@ template<typename T> concept AccessPrivate = T{}.f;
 static_assert(AccessPrivate<T4>);
 // expected-error@-1{{static_assert failed}}
 // expected-note@-2{{because 'T4' does not satisfy 'AccessPrivate'}}
+
+template<typename T, typename U>
+// expected-note@-1{{template parameter is declared here}}
+concept C8 = sizeof(T) > sizeof(U);
+
+template<typename... T>
+constexpr bool B8 = C8<T...>;
+// expected-error@-1{{pack expansion used as argument for non-pack parameter of concept}}
