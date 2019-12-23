@@ -113,7 +113,7 @@ class ObjCPropertyDecl;
 class ObjCPropertyImplDecl;
 class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
-class ParsedTargetAttr;
+struct ParsedTargetAttr;
 class Preprocessor;
 class Stmt;
 class StoredDeclsMap;
