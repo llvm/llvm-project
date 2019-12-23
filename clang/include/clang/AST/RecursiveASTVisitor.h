@@ -3378,6 +3378,9 @@ template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPNontemporalClause(
     OMPNontemporalClause *C) {
   TRY_TO(VisitOMPClauseList(C));
+  for (auto *E : C->private_refs()) {
+    TRY_TO(TraverseStmt(E));
+  }
   return true;
 }
 

@@ -1,5 +1,18 @@
-RUN: llvm-readelf --section-mapping %p/Inputs/trivial.obj.elf-x86-64 | FileCheck %s
-CHECK:      Section to Segment mapping:
-CHECK-NEXT:   Segment Sections...
-CHECK-NEXT:    None   .text .rela.text .data .bss .rodata.str1.1 .note.GNU-stack .shstrtab .symtab .strtab {{$}}
-CHECK-NOT: {{.}}
+## Test the behaviour of --section-mapping when there are no section headers in an object.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf --section-mapping %t | FileCheck %s --strict-whitespace --match-full-lines
+
+#      CHECK: Section to Segment mapping:
+# CHECK-NEXT:  Segment Sections...
+# CHECK-NEXT:   None   .foo .strtab .shstrtab 
+#  CHECK-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS

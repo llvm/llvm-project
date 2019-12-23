@@ -19,22 +19,19 @@ CompilerDeclContext::FindDeclByName(ConstString name,
   if (IsValid())
     return m_type_system->DeclContextFindDeclByName(m_opaque_decl_ctx, name,
                                                     ignore_using_decls);
-  else
-    return std::vector<CompilerDecl>();
+  return std::vector<CompilerDecl>();
 }
 
 ConstString CompilerDeclContext::GetName() const {
   if (IsValid())
     return m_type_system->DeclContextGetName(m_opaque_decl_ctx);
-  else
-    return ConstString();
+  return ConstString();
 }
 
 ConstString CompilerDeclContext::GetScopeQualifiedName() const {
   if (IsValid())
     return m_type_system->DeclContextGetScopeQualifiedName(m_opaque_decl_ctx);
-  else
-    return ConstString();
+  return ConstString();
 }
 
 bool CompilerDeclContext::IsClassMethod(lldb::LanguageType *language_ptr,
@@ -44,8 +41,7 @@ bool CompilerDeclContext::IsClassMethod(lldb::LanguageType *language_ptr,
     return m_type_system->DeclContextIsClassMethod(
         m_opaque_decl_ctx, language_ptr, is_instance_method_ptr,
         language_object_name_ptr);
-  else
-    return false;
+  return false;
 }
 
 bool CompilerDeclContext::IsContainedInLookup(CompilerDeclContext other) const {

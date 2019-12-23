@@ -6,6 +6,7 @@
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -20,22 +21,20 @@ using namespace lldb;
 namespace {
 
 class ModuleCacheTest : public testing::Test {
-public:
-  static void SetUpTestCase();
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+      subsystems;
 
-  static void TearDownTestCase();
+public:
+  void SetUp() override;
 
 protected:
-  static FileSpec s_cache_dir;
-  static std::string s_test_executable;
+  FileSpec s_cache_dir;
+  std::string s_test_executable;
 
   void TryGetAndPut(const FileSpec &cache_dir, const char *hostname,
                     bool expect_download);
 };
 }
-
-FileSpec ModuleCacheTest::s_cache_dir;
-std::string ModuleCacheTest::s_test_executable;
 
 static const char dummy_hostname[] = "dummy_hostname";
 static const char dummy_remote_dir[] = "bin";
@@ -66,21 +65,9 @@ static FileSpec GetSysrootView(FileSpec spec, const char *hostname) {
   return spec;
 }
 
-void ModuleCacheTest::SetUpTestCase() {
-  FileSystem::Initialize();
-  HostInfo::Initialize();
-  ObjectFileELF::Initialize();
-  SymbolFileSymtab::Initialize();
-
+void ModuleCacheTest::SetUp() {
   s_cache_dir = HostInfo::GetProcessTempDir();
   s_test_executable = GetInputFilePath(module_name);
-}
-
-void ModuleCacheTest::TearDownTestCase() {
-  SymbolFileSymtab::Terminate();
-  ObjectFileELF::Terminate();
-  HostInfo::Terminate();
-  FileSystem::Terminate();
 }
 
 static void VerifyDiskState(const FileSpec &cache_dir, const char *hostname) {
@@ -108,8 +95,8 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
 
   Status error = mc.GetAndPut(
       cache_dir, hostname, module_spec,
-      [&download_called](const ModuleSpec &module_spec,
-                         const FileSpec &tmp_download_file_spec) {
+      [&download_called, this](const ModuleSpec &module_spec,
+                               const FileSpec &tmp_download_file_spec) {
         download_called = true;
         EXPECT_STREQ(GetDummyRemotePath().GetCString(),
                      module_spec.GetFileSpec().GetCString());

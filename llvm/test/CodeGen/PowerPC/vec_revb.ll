@@ -57,9 +57,8 @@ entry:
 define <4 x i32> @testXXBRD_With_LogicalOp(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: testXXBRD_With_LogicalOp:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxbrw 0, 34
-; CHECK-NEXT:    xxbrw 1, 35
-; CHECK-NEXT:    xxland 34, 0, 1
+; CHECK-NEXT:    xxland 0, 34, 35
+; CHECK-NEXT:    xxbrw 34, 0
 ; CHECK-NEXT:    blr
 entry:
   %0 = bitcast <4 x i32> %a to <16 x i8>

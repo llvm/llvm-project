@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/SocketAddress.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/Socket.h"
 #include "llvm/Testing/Support/Error.h"
 
@@ -17,10 +18,7 @@ using namespace lldb_private;
 namespace {
 class SocketAddressTest : public testing::Test {
 public:
-  static void SetUpTestCase() {
-    ASSERT_THAT_ERROR(Socket::Initialize(), llvm::Succeeded());
-  }
-  static void TearDownTestCase() { Socket::Terminate(); }
+  SubsystemRAII<Socket> subsystems;
 };
 } // namespace
 

@@ -18,9 +18,15 @@ namespace lldb_private {
 
 class CompilerDeclContext {
 public:
-  // Constructors and Destructors
+  /// Constructs an invalid CompilerDeclContext.
   CompilerDeclContext() = default;
 
+  /// Constructs a CompilerDeclContext with the given opaque decl context
+  /// and its respective TypeSystem instance.
+  ///
+  /// Do not use this constructor directly but instead call the respective
+  /// wrapper from the TypeSystem subclass.
+  /// @see lldb_private::ClangASTContext::CreateDeclContext(clang::DeclContext*)
   CompilerDeclContext(TypeSystem *type_system, void *decl_ctx)
       : m_type_system(type_system), m_opaque_decl_ctx(decl_ctx) {}
 

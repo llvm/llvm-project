@@ -1593,7 +1593,9 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   const Function *F = CI.getCalledFunction();
 
   // FIXME: support Windows dllimport function calls.
-  if (F && F->hasDLLImportStorageClass())
+  if (F && (F->hasDLLImportStorageClass() ||
+            (MF->getTarget().getTargetTriple().isOSWindows() &&
+             F->hasExternalWeakLinkage())))
     return false;
 
   // FIXME: support control flow guard targets.

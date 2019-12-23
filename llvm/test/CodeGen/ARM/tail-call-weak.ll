@@ -5,14 +5,17 @@
 declare i8* @f()
 declare extern_weak i8* @g(i8*)
 
-; weak symbol resolution occurs statically in PE/COFF, ensure that we permit
-; tail calls on weak externals when targeting a COFF environment.
 define void @test() {
   %call = tail call i8* @f()
   %call1 = tail call i8* @g(i8* %call)
   ret void
 }
 
-; CHECK-COFF: b g
+; CHECK-COFF: movw r0, :lower16:.refptr.g
+; CHECK-COFF: movt r0, :upper16:.refptr.g
+; CHECK-COFF: ldr r4, [r0]
+; CHECK-COFF: mov r1, r4
+; CHECK-COFF: bx r1
+
 ; CHECK-OTHER: bl {{_?}}g
 

@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -19,14 +20,7 @@ using namespace lldb_private;
 namespace {
 class SymbolsTest : public ::testing::Test {
 public:
-  void SetUp() override {
-    FileSystem::Initialize();
-    HostInfo::Initialize();
-  }
-  void TearDown() override {
-    HostInfo::Terminate();
-    FileSystem::Terminate();
-  }
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
 };
 } // namespace
 

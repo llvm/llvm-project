@@ -9,6 +9,7 @@
 #include "lldb/Expression/DWARFExpression.h"
 #include "../../source/Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "../../source/Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/Value.h"
@@ -119,6 +120,7 @@ public:
 /// Helper class that can construct a module from YAML and evaluate
 /// DWARF expressions on it.
 class YAMLModuleTester {
+  SubsystemRAII<FileSystem> subsystems;
   llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> m_sections_map;
   lldb::ModuleSP m_module_sp;
   lldb::ObjectFileSP m_objfile_sp;
@@ -128,8 +130,6 @@ class YAMLModuleTester {
 public:
   /// Parse the debug info sections from the YAML description.
   YAMLModuleTester(llvm::StringRef yaml_data, llvm::StringRef triple) {
-    FileSystem::Initialize();
-
     auto sections_map = llvm::DWARFYAML::EmitDebugSections(yaml_data, true);
     if (!sections_map)
       return;
@@ -153,7 +153,6 @@ public:
     if (dwarf_unit)
       m_dwarf_unit = dwarf_unit.get();
   }
-  ~YAMLModuleTester() { FileSystem::Terminate(); }
   DWARFUnitSP GetDwarfUnit() { return m_dwarf_unit; }
 
   // Evaluate a raw DWARF expression.

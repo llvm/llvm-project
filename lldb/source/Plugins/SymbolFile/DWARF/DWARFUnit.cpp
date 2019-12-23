@@ -399,24 +399,6 @@ DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {
   return DWARFDIE();
 }
 
-size_t DWARFUnit::AppendDIEsWithTag(const dw_tag_t tag,
-                                    std::vector<DWARFDIE> &dies,
-                                    uint32_t depth) const {
-  size_t old_size = dies.size();
-  {
-    llvm::sys::ScopedReader lock(m_die_array_mutex);
-    DWARFDebugInfoEntry::const_iterator pos;
-    DWARFDebugInfoEntry::const_iterator end = m_die_array.end();
-    for (pos = m_die_array.begin(); pos != end; ++pos) {
-      if (pos->Tag() == tag)
-        dies.emplace_back(this, &(*pos));
-    }
-  }
-
-  // Return the number of DIEs added to the collection
-  return dies.size() - old_size;
-}
-
 size_t DWARFUnit::GetDebugInfoSize() const {
   return GetLengthByteSize() + GetLength() - GetHeaderByteSize();
 }
@@ -718,6 +700,8 @@ FileSpec DWARFUnit::GetFile(size_t file_idx) {
 // Remove the host part if present.
 static llvm::StringRef
 removeHostnameFromPathname(llvm::StringRef path_from_dwarf) {
+  if (!path_from_dwarf.contains(':'))
+    return path_from_dwarf;
   llvm::StringRef host, path;
   std::tie(host, path) = path_from_dwarf.split(':');
 
@@ -728,25 +712,6 @@ removeHostnameFromPathname(llvm::StringRef path_from_dwarf) {
   // drive-letter not a hostname.
   if (host.size() == 1 && llvm::isAlpha(host[0]) && path.startswith("\\"))
     return path_from_dwarf;
-
-  return path;
-}
-
-static FileSpec resolveCompDir(const FileSpec &path) {
-  bool is_symlink = SymbolFileDWARF::GetSymlinkPaths().FindFileIndex(
-                        0, path, /*full*/ true) != UINT32_MAX;
-
-  if (!is_symlink)
-    return path;
-
-  namespace fs = llvm::sys::fs;
-  if (fs::get_file_type(path.GetPath(), false) != fs::file_type::symlink_file)
-    return path;
-
-  FileSpec resolved_symlink;
-  const auto error = FileSystem::Instance().Readlink(path, resolved_symlink);
-  if (error.Success())
-    return resolved_symlink;
 
   return path;
 }
@@ -762,7 +727,7 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
   if (!comp_dir.empty()) {
     FileSpec::Style comp_dir_style =
         FileSpec::GuessPathStyle(comp_dir).getValueOr(FileSpec::Style::native);
-    m_comp_dir = resolveCompDir(FileSpec(comp_dir, comp_dir_style));
+    m_comp_dir = FileSpec(comp_dir, comp_dir_style);
   } else {
     // Try to detect the style based on the DW_AT_name attribute, but just store
     // the detected style in the m_comp_dir field.

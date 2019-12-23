@@ -597,7 +597,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(ConstString name,
 
 lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
     Target &target, ModuleSP &module, ConstString name,
-    CompilerDeclContext *namespace_decl, TypeFromUser *type) {
+    CompilerDeclContext *namespace_decl) {
   VariableList vars;
 
   if (module && namespace_decl)
@@ -605,19 +605,9 @@ lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
   else
     target.GetImages().FindGlobalVariables(name, -1, vars);
 
-  if (vars.GetSize()) {
-    if (type) {
-      for (VariableSP var_sp : vars) {
-        if (ClangASTContext::AreTypesSame(
-                *type, var_sp->GetType()->GetFullCompilerType()))
-          return var_sp;
-      }
-    } else {
-      return vars.GetVariableAtIndex(0);
-    }
-  }
-
-  return VariableSP();
+  if (vars.GetSize() == 0)
+    return VariableSP();
+  return vars.GetVariableAtIndex(0);
 }
 
 ClangASTContext *ClangExpressionDeclMap::GetClangASTContext() {
@@ -682,9 +672,9 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
           dyn_cast<NamespaceDecl>(context.m_decl_context)) {
     if (namespace_context->getName().str() ==
         std::string(g_lldb_local_vars_namespace_cstr)) {
-      CompilerDeclContext compiler_decl_ctx(
-          GetClangASTContext(), const_cast<void *>(static_cast<const void *>(
-                                    context.m_decl_context)));
+      CompilerDeclContext compiler_decl_ctx =
+          m_clang_ast_context->CreateDeclContext(
+              const_cast<clang::DeclContext *>(context.m_decl_context));
       FindExternalVisibleDecls(context, lldb::ModuleSP(), compiler_decl_ctx,
                                current_id);
       return;
@@ -1443,8 +1433,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   if (target) {
     ValueObjectSP valobj;
     VariableSP var;
-    var =
-        FindGlobalVariable(*target, module_sp, name, &namespace_decl, nullptr);
+    var = FindGlobalVariable(*target, module_sp, name, &namespace_decl);
 
     if (var) {
       valobj = ValueObjectVariable::Create(target, var);

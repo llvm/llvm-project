@@ -1343,7 +1343,7 @@ CompilerType PdbAstBuilder::ToCompilerType(clang::QualType qt) {
 
 CompilerDeclContext
 PdbAstBuilder::ToCompilerDeclContext(clang::DeclContext &context) {
-  return {&m_clang, &context};
+  return m_clang.CreateDeclContext(&context);
 }
 
 clang::Decl * PdbAstBuilder::FromCompilerDecl(CompilerDecl decl) {

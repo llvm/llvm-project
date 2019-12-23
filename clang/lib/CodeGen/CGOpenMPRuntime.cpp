@@ -17,6 +17,7 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/BitmaskEnum.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
@@ -11339,6 +11340,46 @@ bool CGOpenMPRuntime::emitDeclareVariant(GlobalDecl GD, bool IsForDefinition) {
   }
   DeferredVariantFunction.insert(std::make_pair(D, std::make_pair(NewGD, GD)));
   return true;
+}
+
+CGOpenMPRuntime::NontemporalDeclsRAII::NontemporalDeclsRAII(
+    CodeGenModule &CGM, const OMPLoopDirective &S)
+    : CGM(CGM), NeedToPush(S.hasClausesOfKind<OMPNontemporalClause>()) {
+  assert(CGM.getLangOpts().OpenMP && "Not in OpenMP mode.");
+  if (!NeedToPush)
+    return;
+  NontemporalDeclsSet &DS =
+      CGM.getOpenMPRuntime().NontemporalDeclsStack.emplace_back();
+  for (const auto *C : S.getClausesOfKind<OMPNontemporalClause>()) {
+    for (const Stmt *Ref : C->private_refs()) {
+      const auto *SimpleRefExpr = cast<Expr>(Ref)->IgnoreParenImpCasts();
+      const ValueDecl *VD;
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(SimpleRefExpr)) {
+        VD = DRE->getDecl();
+      } else {
+        const auto *ME = cast<MemberExpr>(SimpleRefExpr);
+        assert((ME->isImplicitCXXThis() ||
+                isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts())) &&
+               "Expected member of current class.");
+        VD = ME->getMemberDecl();
+      }
+      DS.insert(VD);
+    }
+  }
+}
+
+CGOpenMPRuntime::NontemporalDeclsRAII::~NontemporalDeclsRAII() {
+  if (!NeedToPush)
+    return;
+  CGM.getOpenMPRuntime().NontemporalDeclsStack.pop_back();
+}
+
+bool CGOpenMPRuntime::isNontemporalDecl(const ValueDecl *VD) const {
+  assert(CGM.getLangOpts().OpenMP && "Not in OpenMP mode.");
+
+  return llvm::any_of(
+      CGM.getOpenMPRuntime().NontemporalDeclsStack,
+      [VD](const NontemporalDeclsSet &Set) { return Set.count(VD) > 0; });
 }
 
 llvm::Function *CGOpenMPSIMDRuntime::emitParallelOutlinedFunction(

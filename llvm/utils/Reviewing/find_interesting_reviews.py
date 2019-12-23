@@ -458,11 +458,11 @@ def get_git_cmd_output(cmd):
 reAuthorMail = re.compile("^author-mail <([^>]*)>.*$")
 
 
-def parse_blame_output_line_porcelain(blame_output):
+def parse_blame_output_line_porcelain(blame_output_lines):
     email2nr_occurences = {}
-    if blame_output is None:
+    if blame_output_lines is None:
         return email2nr_occurences
-    for line in blame_output.split('\n'):
+    for line in blame_output_lines:
         m = reAuthorMail.match(line)
         if m:
             author_email_address = m.group(1)
@@ -471,6 +471,54 @@ def parse_blame_output_line_porcelain(blame_output):
             else:
                 email2nr_occurences[author_email_address] += 1
     return email2nr_occurences
+
+
+class BlameOutputCache:
+    def __init__(self):
+        self.cache = {}
+
+    def _populate_cache_for(self, cache_key):
+        assert cache_key not in self.cache
+        git_repo, base_revision, path = cache_key
+        cmd = ("git -C {0} blame --encoding=utf-8 --date iso -f -e -w " +
+               "--line-porcelain {1} -- {2}").format(git_repo, base_revision,
+                                                     path)
+        blame_output = get_git_cmd_output(cmd)
+        self.cache[cache_key] = \
+            blame_output.split('\n') if blame_output is not None else None
+        # FIXME: the blame cache could probably be made more effective still if
+        # instead of storing the requested base_revision in the cache, the last
+        # revision before the base revision this file/path got changed in gets
+        # stored. That way multiple project revisions for which this specific
+        # file/patch hasn't changed would get cache hits (instead of misses in
+        # the current implementation).
+
+    def get_blame_output_for(self, git_repo, base_revision, path, start_line=-1,
+                             end_line=-1):
+        cache_key = (git_repo, base_revision, path)
+        if cache_key not in self.cache:
+            self._populate_cache_for(cache_key)
+        assert cache_key in self.cache
+        all_blame_lines = self.cache[cache_key]
+        if all_blame_lines is None:
+            return None
+        if start_line == -1 and end_line == -1:
+            return all_blame_lines
+        assert start_line >= 0
+        assert end_line >= 0
+        assert end_line <= len(all_blame_lines)
+        assert start_line <= len(all_blame_lines)
+        assert start_line <= end_line
+        return all_blame_lines[start_line:end_line]
+
+    def get_parsed_git_blame_for(self, git_repo, base_revision, path,
+                                 start_line=-1, end_line=-1):
+        return parse_blame_output_line_porcelain(
+            self.get_blame_output_for(git_repo, base_revision, path, start_line,
+                                      end_line))
+
+
+blameOutputCache = BlameOutputCache()
 
 
 def find_reviewers_for_diff_heuristic(diff):
@@ -496,23 +544,18 @@ def find_reviewers_for_diff_heuristic(diff):
         for hunk in change.hunks:
             for start_line, end_line in hunk.actual_lines_changed_offset:
                 # Collect git blame results for authors in those ranges.
-                cmd = ("git -C {0} blame --encoding=utf-8 --date iso -f -e " +
-                       "-w --line-porcelain -L {1},{2} {3} -- {4}").format(
-                           git_repo, start_line, end_line, base_revision, path)
-                blame_output = get_git_cmd_output(cmd)
                 for reviewer, nr_occurences in \
-                        parse_blame_output_line_porcelain(blame_output).items():
+                        blameOutputCache.get_parsed_git_blame_for(
+                            git_repo, base_revision, path, start_line, end_line
+                        ).items():
                     if reviewer not in reviewers2nr_lines_touched:
                         reviewers2nr_lines_touched[reviewer] = 0
                     reviewers2nr_lines_touched[reviewer] += nr_occurences
         # Compute heuristic 2: don't look at context, just at files touched.
         # Collect git blame results for authors in those ranges.
-        cmd = ("git -C {0} blame --encoding=utf-8 --date iso -f -e -w " +
-               "--line-porcelain {1} -- {2}").format(git_repo, base_revision,
-                                                     path)
-        blame_output = get_git_cmd_output(cmd)
-        for reviewer, nr_occurences in parse_blame_output_line_porcelain(
-                blame_output).items():
+        for reviewer, nr_occurences in \
+                blameOutputCache.get_parsed_git_blame_for(
+                    git_repo, base_revision, path).items():
             if reviewer not in reviewers2nr_files_touched:
                 reviewers2nr_files_touched[reviewer] = 0
             reviewers2nr_files_touched[reviewer] += 1

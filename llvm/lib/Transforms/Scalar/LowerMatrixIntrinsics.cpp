@@ -29,14 +29,24 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "lower-matrix-intrinsics"
+
+static cl::opt<bool> EnableShapePropagation("matrix-propagate-shape",
+                                            cl::init(true));
+
+static cl::opt<bool> AllowContractEnabled(
+    "matrix-allow-contract", cl::init(false), cl::Hidden,
+    cl::desc("Allow the use of FMAs if available and profitable. This may "
+             "result in different results, due to less rounding error."));
 
 namespace {
 
@@ -104,12 +114,25 @@ Value *computeColumnAddr(Value *BasePtr, Value *Col, Value *Stride,
 /// LowerMatrixIntrinsics contains the methods used to lower matrix intrinsics.
 ///
 /// Currently, the lowering for each matrix intrinsic is done as follows:
-/// 1. Split the operand vectors containing an embedded matrix into a set of
-///    column vectors, based on the shape information from the intrinsic.
-/// 2. Apply the transformation described by the intrinsic on the column
-///    vectors, which yields a set of column vectors containing result matrix.
-/// 3. Embed the columns of the result matrix in a flat vector and replace all
-///    uses of the intrinsic result with it.
+/// 1. Propagate the shape information from intrinsics to connected
+/// instructions.
+/// 2. Lower instructions with shape information.
+///  2.1. Get column vectors for each argument. If we already lowered the
+///       definition of an argument, use the produced column vectors directly.
+///       If not, split the operand vector containing an embedded matrix into
+///       a set of column vectors,
+///  2.2. Lower the instruction in terms of columnwise operations, which yields
+///       a set of column vectors containing result matrix. Note that we lower
+///       all instructions that have shape information. Besides the intrinsics,
+///       this includes stores for example.
+///  2.3. Update uses of the lowered instruction. If we have shape information
+///       for a user, there is nothing to do, as we will look up the result
+///       column matrix when lowering the user. For other uses, we embed the
+///       result matrix in a flat vector and update the use.
+///  2.4. Cache the result column matrix for the instruction we lowered
+/// 3. After we lowered all instructions in a function, remove the now
+///    obsolete instructions.
+///
 class LowerMatrixIntrinsics {
   Function &Func;
   const DataLayout &DL;
@@ -130,6 +153,10 @@ class LowerMatrixIntrinsics {
     void setColumn(unsigned i, Value *V) { Columns[i] = V; }
 
     size_t getNumColumns() const { return Columns.size(); }
+    size_t getNumRows() const {
+      assert(Columns.size() > 0 && "Cannot call getNumRows without columns");
+      return cast<VectorType>(Columns[0]->getType())->getNumElements();
+    }
 
     const SmallVectorImpl<Value *> &getColumnVectors() const { return Columns; }
 
@@ -156,10 +183,38 @@ class LowerMatrixIntrinsics {
     ShapeInfo(unsigned NumRows = 0, unsigned NumColumns = 0)
         : NumRows(NumRows), NumColumns(NumColumns) {}
 
-    ShapeInfo(ConstantInt *NumRows, ConstantInt *NumColumns)
-        : NumRows(NumRows->getZExtValue()),
-          NumColumns(NumColumns->getZExtValue()) {}
+    ShapeInfo(Value *NumRows, Value *NumColumns)
+        : NumRows(cast<ConstantInt>(NumRows)->getZExtValue()),
+          NumColumns(cast<ConstantInt>(NumColumns)->getZExtValue()) {}
+
+    bool operator==(const ShapeInfo &other) {
+      return NumRows == other.NumRows && NumColumns == other.NumColumns;
+    }
+    bool operator!=(const ShapeInfo &other) { return !(*this == other); }
+
+    /// Returns true if shape-information is defined, meaning both dimensions
+    /// are != 0.
+    operator bool() const {
+      assert(NumRows == 0 || NumColumns != 0);
+      return NumRows != 0;
+    }
   };
+
+  /// Maps instructions to their shape information. The shape information
+  /// describes the shape to be used while lowering. This matches the shape of
+  /// the result value of the instruction, with the only exceptions being store
+  /// instructions and the matrix_columnwise_store intrinsics. For those, the
+  /// shape information indicates that those instructions should be lowered
+  /// using shape information as well.
+  DenseMap<Value *, ShapeInfo> ShapeMap;
+
+  /// List of instructions to remove. While lowering, we are not replacing all
+  /// users of a lowered instruction, if shape information is available and
+  /// those need to be removed after we finished lowering.
+  SmallVector<Instruction *, 16> ToRemove;
+
+  /// Map from instructions to their produced column matrix.
+  DenseMap<Value *, ColumnMatrixTy> Inst2ColumnMatrix;
 
 public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI)
@@ -167,17 +222,34 @@ public:
 
   /// Return the set of column vectors that a matrix value is lowered to.
   ///
-  /// We split the flat vector \p MatrixVal containing a matrix with shape \p SI
-  /// into column vectors.
+  /// If we lowered \p MatrixVal, just return the cache result column matrix.
+  /// Otherwie split the flat vector \p MatrixVal containing a matrix with
+  /// shape \p SI into column vectors.
   ColumnMatrixTy getMatrix(Value *MatrixVal, const ShapeInfo &SI,
                            IRBuilder<> Builder) {
     VectorType *VType = dyn_cast<VectorType>(MatrixVal->getType());
     assert(VType && "MatrixVal must be a vector type");
     assert(VType->getNumElements() == SI.NumRows * SI.NumColumns &&
            "The vector size must match the number of matrix elements");
+
+    // Check if we lowered MatrixVal using shape information. In that case,
+    // return the existing column matrix, if it matches the requested shape
+    // information. If there is a mis-match, embed the result in a flat
+    // vector and split it later.
+    auto Found = Inst2ColumnMatrix.find(MatrixVal);
+    if (Found != Inst2ColumnMatrix.end()) {
+      ColumnMatrixTy &M = Found->second;
+      // Return the found matrix, if its shape matches the requested shape
+      // information
+      if (SI.NumRows == M.getNumRows() && SI.NumColumns == M.getNumColumns())
+        return M;
+
+      MatrixVal = M.embedInVector(Builder);
+    }
+
+    // Otherwise split MatrixVal.
     SmallVector<Value *, 16> SplitVecs;
     Value *Undef = UndefValue::get(VType);
-
     for (unsigned MaskStart = 0; MaskStart < VType->getNumElements();
          MaskStart += SI.NumRows) {
       Constant *Mask = createSequentialMask(Builder, MaskStart, SI.NumRows, 0);
@@ -188,7 +260,168 @@ public:
     return {SplitVecs};
   }
 
-  // Replace intrinsic calls
+  /// If \p V already has a known shape return false.  Otherwise set the shape
+  /// for instructions that support it.
+  bool setShapeInfo(Value *V, ShapeInfo Shape) {
+    assert(Shape && "Shape not set");
+    if (isa<UndefValue>(V) || !supportsShapeInfo(V))
+      return false;
+
+    auto SIter = ShapeMap.find(V);
+    if (SIter != ShapeMap.end()) {
+      LLVM_DEBUG(dbgs() << "  not overriding existing shape: "
+                        << SIter->second.NumRows << " "
+                        << SIter->second.NumColumns << " for " << *V << "\n");
+      return false;
+    }
+
+    ShapeMap.insert({V, Shape});
+    LLVM_DEBUG(dbgs() << "  " << Shape.NumRows << " x " << Shape.NumColumns
+                      << " for " << *V << "\n");
+    return true;
+  }
+
+  /// Returns true if shape information can be used for \p V. The supported
+  /// instructions must match the instructions that can be lowered by this pass.
+  bool supportsShapeInfo(Value *V) {
+    Instruction *Inst = dyn_cast<Instruction>(V);
+    if (!Inst)
+      return false;
+
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst);
+    if (II)
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::matrix_multiply:
+      case Intrinsic::matrix_transpose:
+      case Intrinsic::matrix_columnwise_load:
+      case Intrinsic::matrix_columnwise_store:
+        return true;
+      default:
+        return false;
+      }
+    return isa<StoreInst>(Inst);
+  }
+
+  /// Propagate the shape information of instructions to their users.
+  void propagateShapeForward() {
+    // The work list contains instructions for which we can compute the shape,
+    // either based on the information provided by matrix intrinsics or known
+    // shapes of operands.
+    SmallVector<Instruction *, 8> WorkList;
+
+    // Initialize the work list with ops carrying shape information. Initially
+    // only the shape of matrix intrinsics is known.
+    for (BasicBlock &BB : Func)
+      for (Instruction &Inst : BB) {
+        IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst);
+        if (!II)
+          continue;
+
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::matrix_multiply:
+        case Intrinsic::matrix_transpose:
+        case Intrinsic::matrix_columnwise_load:
+        case Intrinsic::matrix_columnwise_store:
+          WorkList.push_back(&Inst);
+          break;
+        default:
+          break;
+        }
+      }
+
+    // Pop an element for which we guaranteed to have at least one of the
+    // operand shapes.  Add the shape for this and then add users to the work
+    // list.
+    LLVM_DEBUG(dbgs() << "Forward-propagate shapes:\n");
+    while (!WorkList.empty()) {
+      Instruction *Inst = WorkList.back();
+      WorkList.pop_back();
+
+      // New entry, set the value and insert operands
+      bool Propagate = false;
+
+      Value *MatrixA;
+      Value *MatrixB;
+      Value *M;
+      Value *N;
+      Value *K;
+      if (match(Inst, m_Intrinsic<Intrinsic::matrix_multiply>(
+                          m_Value(MatrixA), m_Value(MatrixB), m_Value(M),
+                          m_Value(N), m_Value(K)))) {
+        Propagate = setShapeInfo(Inst, {M, K});
+      } else if (match(Inst, m_Intrinsic<Intrinsic::matrix_transpose>(
+                                 m_Value(MatrixA), m_Value(M), m_Value(N)))) {
+        // Flip dimensions.
+        Propagate = setShapeInfo(Inst, {N, M});
+      } else if (match(Inst, m_Intrinsic<Intrinsic::matrix_columnwise_store>(
+                                 m_Value(MatrixA), m_Value(), m_Value(),
+                                 m_Value(M), m_Value(N)))) {
+        Propagate = setShapeInfo(Inst, {N, M});
+      } else if (match(Inst,
+                       m_Intrinsic<Intrinsic::matrix_columnwise_load>(
+                           m_Value(), m_Value(), m_Value(M), m_Value(N)))) {
+        Propagate = setShapeInfo(Inst, {M, N});
+      } else if (match(Inst, m_Store(m_Value(MatrixA), m_Value()))) {
+        auto OpShape = ShapeMap.find(MatrixA);
+        if (OpShape != ShapeMap.end())
+          setShapeInfo(Inst, OpShape->second);
+        continue;
+      }
+
+      if (Propagate)
+        for (auto *User : Inst->users())
+          if (ShapeMap.count(User) == 0)
+            WorkList.push_back(cast<Instruction>(User));
+    }
+  }
+
+  bool Visit() {
+    if (EnableShapePropagation)
+      propagateShapeForward();
+
+    ReversePostOrderTraversal<Function *> RPOT(&Func);
+    bool Changed = false;
+    for (auto *BB : RPOT) {
+      for (Instruction &Inst : make_early_inc_range(*BB)) {
+        IRBuilder<> Builder(&Inst);
+
+        if (CallInst *CInst = dyn_cast<CallInst>(&Inst))
+          Changed |= VisitCallInst(CInst);
+
+        Value *Op1;
+        Value *Op2;
+        if (match(&Inst, m_Store(m_Value(Op1), m_Value(Op2))))
+          Changed |= VisitStore(&Inst, Op1, Op2, Builder);
+      }
+    }
+
+    for (Instruction *Inst : reverse(ToRemove))
+      Inst->eraseFromParent();
+
+    return Changed;
+  }
+
+  LoadInst *createColumnLoad(Value *ColumnPtr, Type *EltType,
+                             IRBuilder<> Builder) {
+    unsigned Align = DL.getABITypeAlignment(EltType);
+    return Builder.CreateAlignedLoad(ColumnPtr, Align);
+  }
+
+  StoreInst *createColumnStore(Value *ColumnValue, Value *ColumnPtr,
+                               Type *EltType, IRBuilder<> Builder) {
+    unsigned Align = DL.getABITypeAlignment(EltType);
+    return Builder.CreateAlignedStore(ColumnValue, ColumnPtr, Align);
+  }
+
+
+  /// Turns \p BasePtr into an elementwise pointer to \p EltType.
+  Value *createElementPtr(Value *BasePtr, Type *EltType, IRBuilder<> &Builder) {
+    unsigned AS = cast<PointerType>(BasePtr->getType())->getAddressSpace();
+    Type *EltPtrType = PointerType::get(EltType, AS);
+    return Builder.CreatePointerCast(BasePtr, EltPtrType);
+  }
+
+  /// Replace intrinsic calls
   bool VisitCallInst(CallInst *Inst) {
     if (!Inst->getCalledFunction() || !Inst->getCalledFunction()->isIntrinsic())
       return false;
@@ -209,40 +442,7 @@ public:
     default:
       return false;
     }
-    Inst->eraseFromParent();
     return true;
-  }
-
-  bool Visit() {
-    ReversePostOrderTraversal<Function *> RPOT(&Func);
-    bool Changed = false;
-    for (auto *BB : RPOT) {
-      for (Instruction &Inst : make_early_inc_range(*BB)) {
-        if (CallInst *CInst = dyn_cast<CallInst>(&Inst))
-          Changed |= VisitCallInst(CInst);
-      }
-    }
-
-    return Changed;
-  }
-
-  LoadInst *createColumnLoad(Value *ColumnPtr, Type *EltType,
-                             IRBuilder<> Builder) {
-    unsigned Align = DL.getABITypeAlignment(EltType);
-    return Builder.CreateAlignedLoad(ColumnPtr, Align);
-  }
-
-  StoreInst *createColumnStore(Value *ColumnValue, Value *ColumnPtr,
-                               Type *EltType, IRBuilder<> Builder) {
-    unsigned Align = DL.getABITypeAlignment(EltType);
-    return Builder.CreateAlignedStore(ColumnValue, ColumnPtr, Align);
-  }
-
-  /// Turns \p BasePtr into an elementwise pointer to \p EltType.
-  Value *createElementPtr(Value *BasePtr, Type *EltType, IRBuilder<> &Builder) {
-    unsigned AS = cast<PointerType>(BasePtr->getType())->getAddressSpace();
-    Type *EltPtrType = PointerType::get(EltType, AS);
-    return Builder.CreatePointerCast(BasePtr, EltPtrType);
   }
 
   /// Lowers llvm.matrix.columnwise.load.
@@ -253,9 +453,8 @@ public:
     Value *Ptr = Inst->getArgOperand(0);
     Value *Stride = Inst->getArgOperand(1);
     auto VType = cast<VectorType>(Inst->getType());
-    ShapeInfo Shape(cast<ConstantInt>(Inst->getArgOperand(2)),
-                    cast<ConstantInt>(Inst->getArgOperand(3)));
     Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
+    ShapeInfo Shape(Inst->getArgOperand(2), Inst->getArgOperand(3));
 
     ColumnMatrixTy Result;
     // Distance between start of one column and the start of the next
@@ -267,22 +466,14 @@ public:
       Result.addColumn(Column);
     }
 
-    Inst->replaceAllUsesWith(Result.embedInVector(Builder));
+    finalizeLowering(Inst, Result, Builder);
   }
 
-  /// Lowers llvm.matrix.columnwise.store.
-  ///
-  /// The intrinsic store a matrix back memory using a stride between columns.
-  void LowerColumnwiseStore(CallInst *Inst) {
+  void LowerStore(Instruction *Inst, Value *Matrix, Value *Ptr, Value *Stride,
+                  ShapeInfo Shape) {
     IRBuilder<> Builder(Inst);
-    Value *Matrix = Inst->getArgOperand(0);
-    Value *Ptr = Inst->getArgOperand(1);
-    Value *Stride = Inst->getArgOperand(2);
-    ShapeInfo Shape(cast<ConstantInt>(Inst->getArgOperand(3)),
-                    cast<ConstantInt>(Inst->getArgOperand(4)));
     auto VType = cast<VectorType>(Matrix->getType());
     Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
-
     auto LM = getMatrix(Matrix, Shape, Builder);
     for (auto C : enumerate(LM.columns())) {
       Value *GEP =
@@ -290,6 +481,19 @@ public:
                             Shape.NumRows, VType->getElementType(), Builder);
       createColumnStore(C.value(), GEP, VType->getElementType(), Builder);
     }
+
+    ToRemove.push_back(Inst);
+  }
+
+  /// Lowers llvm.matrix.columnwise.store.
+  ///
+  /// The intrinsic store a matrix back memory using a stride between columns.
+  void LowerColumnwiseStore(CallInst *Inst) {
+    Value *Matrix = Inst->getArgOperand(0);
+    Value *Ptr = Inst->getArgOperand(1);
+    Value *Stride = Inst->getArgOperand(2);
+    LowerStore(Inst, Matrix, Ptr, Stride,
+               {Inst->getArgOperand(3), Inst->getArgOperand(4)});
   }
 
   /// Extract a column vector of \p NumElts starting at index (\p I, \p J) from
@@ -337,22 +541,54 @@ public:
   }
 
   Value *createMulAdd(Value *Sum, Value *A, Value *B, bool UseFPOp,
-                      IRBuilder<> &Builder) {
-    Value *Mul = UseFPOp ? Builder.CreateFMul(A, B) : Builder.CreateMul(A, B);
-    if (!Sum)
-      return Mul;
+                      IRBuilder<> &Builder, bool AllowContraction) {
 
-    return UseFPOp ? Builder.CreateFAdd(Sum, Mul) : Builder.CreateAdd(Sum, Mul);
+    if (!Sum)
+      return UseFPOp ? Builder.CreateFMul(A, B) : Builder.CreateMul(A, B);
+
+    if (UseFPOp) {
+      if (AllowContraction) {
+        // Use fmuladd for floating point operations and let the backend decide
+        // if that's profitable.
+        Value *FMulAdd = Intrinsic::getDeclaration(
+            Func.getParent(), Intrinsic::fmuladd, A->getType());
+        return Builder.CreateCall(FMulAdd, {A, B, Sum});
+      }
+      Value *Mul = Builder.CreateFMul(A, B);
+      return Builder.CreateFAdd(Sum, Mul);
+    }
+
+    Value *Mul = Builder.CreateMul(A, B);
+    return Builder.CreateAdd(Sum, Mul);
+  }
+
+  /// Cache \p Matrix as result of \p Inst and update the uses of \p Inst. For
+  /// users with shape information, there's nothing to do: the will use the
+  /// cached value when they are lowered. For other users, \p Matrix is
+  /// flattened and the uses are updated to use it. Also marks \p Inst for
+  /// deletion.
+  void finalizeLowering(Instruction *Inst, ColumnMatrixTy Matrix,
+                        IRBuilder<> &Builder) {
+    Inst2ColumnMatrix.insert(std::make_pair(Inst, Matrix));
+
+    ToRemove.push_back(Inst);
+    Value *Flattened = nullptr;
+    for (auto I = Inst->use_begin(), E = Inst->use_end(); I != E;) {
+      Use &U = *I++;
+      if (ShapeMap.find(U.getUser()) == ShapeMap.end()) {
+        if (!Flattened)
+          Flattened = Matrix.embedInVector(Builder);
+        U.set(Flattened);
+      }
+    }
   }
 
   /// Lowers llvm.matrix.multiply.
   void LowerMultiply(CallInst *MatMul) {
     IRBuilder<> Builder(MatMul);
     auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
-    ShapeInfo LShape(cast<ConstantInt>(MatMul->getArgOperand(2)),
-                     cast<ConstantInt>(MatMul->getArgOperand(3)));
-    ShapeInfo RShape(cast<ConstantInt>(MatMul->getArgOperand(3)),
-                     cast<ConstantInt>(MatMul->getArgOperand(4)));
+    ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
+    ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
 
     const ColumnMatrixTy &Lhs =
         getMatrix(MatMul->getArgOperand(0), LShape, Builder);
@@ -373,6 +609,8 @@ public:
                                      EltType->getPrimitiveSizeInBits(),
                                  uint64_t(1));
 
+    bool AllowContract = AllowContractEnabled || (isa<FPMathOperator>(MatMul) &&
+                                                  MatMul->hasAllowContract());
     // Multiply columns from the first operand with scalars from the second
     // operand.  Then move along the K axes and accumulate the columns.  With
     // this the adds can be vectorized without reassociation.
@@ -389,13 +627,12 @@ public:
           Value *RH = Builder.CreateExtractElement(Rhs.getColumn(J), K);
           Value *Splat = Builder.CreateVectorSplat(BlockSize, RH, "splat");
           Sum = createMulAdd(Sum, L, Splat, EltType->isFloatingPointTy(),
-                             Builder);
+                             Builder, AllowContract);
         }
         Result.setColumn(J, insertVector(Result.getColumn(J), I, Sum, Builder));
       }
     }
-
-    MatMul->replaceAllUsesWith(Result.embedInVector(Builder));
+    finalizeLowering(MatMul, Result, Builder);
   }
 
   /// Lowers llvm.matrix.transpose.
@@ -404,8 +641,7 @@ public:
     IRBuilder<> Builder(Inst);
     Value *InputVal = Inst->getArgOperand(0);
     VectorType *VectorTy = cast<VectorType>(InputVal->getType());
-    ShapeInfo ArgShape(cast<ConstantInt>(Inst->getArgOperand(1)),
-                       cast<ConstantInt>(Inst->getArgOperand(2)));
+    ShapeInfo ArgShape(Inst->getArgOperand(1), Inst->getArgOperand(2));
     ColumnMatrixTy InputMatrix = getMatrix(InputVal, ArgShape, Builder);
 
     for (unsigned Row = 0; Row < ArgShape.NumRows; ++Row) {
@@ -425,7 +661,17 @@ public:
       Result.addColumn(ResultColumn);
     }
 
-    Inst->replaceAllUsesWith(Result.embedInVector(Builder));
+    finalizeLowering(Inst, Result, Builder);
+  }
+
+  bool VisitStore(Instruction *Inst, Value *StoredVal, Value *Ptr,
+                  IRBuilder<> &Builder) {
+    auto I = ShapeMap.find(StoredVal);
+    if (I == ShapeMap.end())
+      return false;
+
+    LowerStore(Inst, StoredVal, Ptr, Builder.getInt32(I->second.NumRows), I->second);
+    return true;
   }
 };
 } // namespace

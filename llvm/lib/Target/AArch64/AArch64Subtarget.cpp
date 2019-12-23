@@ -251,6 +251,10 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
       !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return AArch64II::MO_GOT;
 
+  // Use ClassifyGlobalReference for setting MO_DLLIMPORT/MO_COFFSTUB.
+  if (getTargetTriple().isOSWindows())
+    return ClassifyGlobalReference(GV, TM);
+
   return AArch64II::MO_NO_FLAG;
 }
 

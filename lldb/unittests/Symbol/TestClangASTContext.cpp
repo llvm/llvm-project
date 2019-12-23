@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -21,15 +22,7 @@ using namespace lldb_private;
 
 class TestClangASTContext : public testing::Test {
 public:
-  static void SetUpTestCase() {
-    FileSystem::Initialize();
-    HostInfo::Initialize();
-  }
-
-  static void TearDownTestCase() {
-    HostInfo::Terminate();
-    FileSystem::Terminate();
-  }
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
 
   void SetUp() override {
     std::string triple = HostInfo::GetTargetTriple();
@@ -414,8 +407,7 @@ TEST_F(TestClangASTContext, TemplateArguments) {
 
   // typedef foo<int, 47> foo_def;
   CompilerType typedef_type = m_ast->CreateTypedefType(
-      type, "foo_def",
-      CompilerDeclContext(m_ast.get(), m_ast->GetTranslationUnitDecl()));
+      type, "foo_def", m_ast->CreateDeclContext(m_ast->GetTranslationUnitDecl()));
 
   CompilerType auto_type(
       m_ast.get(),
