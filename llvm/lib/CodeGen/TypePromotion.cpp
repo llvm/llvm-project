@@ -47,7 +47,7 @@
 using namespace llvm;
 
 static cl::opt<bool>
-DisablePromotion("disable-type-promotion", cl::Hidden, cl::init(false),
+DisablePromotion("disable-type-promotion", cl::Hidden, cl::init(true),
                  cl::desc("Disable type promotion pass"));
 
 // The goal of this pass is to enable more efficient code generation for
@@ -903,34 +903,16 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
              for (auto *I : CurrentVisited)
                I->dump();
              );
-
-  // Check that promoting this at the IR level is most likely beneficial. It's
-  // more likely if we're operating over multiple blocks and handling wrapping
-  // instructions.
   unsigned ToPromote = 0;
-  unsigned NonFreeArgs = 0;
-  SmallPtrSet<BasicBlock*, 4> Blocks;
   for (auto *V : CurrentVisited) {
-    if (auto *I = dyn_cast<Instruction>(V))
-      Blocks.insert(I->getParent());
-
-    if (Sources.count(V)) {
-      if (auto *Arg = dyn_cast<Argument>(V)) {
-        if (!Arg->hasZExtAttr() && !Arg->hasSExtAttr())
-          ++NonFreeArgs;
-      }
+    if (Sources.count(V))
       continue;
-    }
-
     if (Sinks.count(cast<Instruction>(V)))
       continue;
-
     ++ToPromote;
   }
 
-  // DAG optimisations should be able to handle these cases better, especially
-  // for function arguments.
-  if (ToPromote < 2 || (Blocks.size() == 1 && (NonFreeArgs > SafeWrap.size())))
+  if (ToPromote < 2)
     return false;
 
   Promoter->Mutate(OrigTy, PromotedWidth, CurrentVisited, Sources, Sinks,

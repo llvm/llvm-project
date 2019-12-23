@@ -309,7 +309,7 @@ bool HexagonPacketizerList::isCallDependent(const MachineInstr &MI,
   //   r0 = ...
   //   J2_jumpr r0
   if (DepType == SDep::Data) {
-    for (const MachineOperand MO : MI.operands())
+    for (const MachineOperand &MO : MI.operands())
       if (MO.isReg() && MO.getReg() == DepReg && !MO.isImplicit())
         return true;
   }

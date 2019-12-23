@@ -592,8 +592,8 @@ public:
   uint64_t getSize() const { return Size; }
   void setSize(uint64_t Value) { Size = Value; }
 
-  Align getAlignment() const { return AlignBoundary; }  
-  
+  Align getAlignment() const { return AlignBoundary; }
+
   bool isFused() const { return Fused; }
   void setFused(bool Value) { Fused = Value; }
 
