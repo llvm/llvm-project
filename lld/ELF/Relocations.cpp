@@ -1250,8 +1250,8 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   const uint8_t *relocatedAddr = sec.data().begin() + rel.r_offset;
   RelExpr expr = target->getRelExpr(type, sym, relocatedAddr);
 
-  // Ignore "hint" relocations because they are only markers for relaxation.
-  if (oneof<R_HINT, R_NONE>(expr))
+  // Ignore R_*_NONE and other marker relocations.
+  if (expr == R_NONE)
     return;
 
   // We can separate the small code model relocations into 2 categories:
