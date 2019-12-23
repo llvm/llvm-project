@@ -718,6 +718,8 @@ FileSpec DWARFUnit::GetFile(size_t file_idx) {
 // Remove the host part if present.
 static llvm::StringRef
 removeHostnameFromPathname(llvm::StringRef path_from_dwarf) {
+  if (!path_from_dwarf.contains(':'))
+    return path_from_dwarf;
   llvm::StringRef host, path;
   std::tie(host, path) = path_from_dwarf.split(':');
 
