@@ -64,10 +64,10 @@ C
 
 **CSE**
     Common Subexpression Elimination. An optimization that removes common
-    subexpression compuation. For example ``(a+b)*(a+b)`` has two subexpressions
-    that are the same: ``(a+b)``. This optimization would perform the addition
-    only once and then perform the multiply (but only if it's computationally
-    correct/safe).
+    subexpression computation. For example ``(a+b)*(a+b)`` has two
+    subexpressions that are the same: ``(a+b)``. This optimization would
+    perform the addition only once and then perform the multiply (but only if
+    it's computationally correct/safe).
 
 D
 -
