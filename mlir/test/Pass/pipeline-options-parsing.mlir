@@ -13,6 +13,6 @@
 // CHECK_ERROR_4: 'notaninteger' value invalid for integer argument
 // CHECK_ERROR_5: string option: may only occur zero or one times
 
-// CHECK_1: test-options-pass{list=1,2,3,4,5 string-list=a,b,c,d string=some_value}
-// CHECK_2: test-options-pass{list=1 string-list=a,b}
-// CHECK_3: module(func(test-options-pass{list=3}), func(test-options-pass{list=1,2,3,4}))
+// CHECK_1: test-options-pass{list=1,2,3,4,5 string=some_value string-list=a,b,c,d}
+// CHECK_2: test-options-pass{list=1 string= string-list=a,b}
+// CHECK_3: module(func(test-options-pass{list=3 string= string-list=}), func(test-options-pass{list=1,2,3,4 string= string-list=}))
