@@ -1,5 +1,5 @@
 # Check only conditional jumps are aligned with option --x86-align-branch-boundary=32 --x86-align-branch=jcc
-# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=32 --x86-align-branch=jcc %S/align-branch-64-1a.s | llvm-objdump -d  - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=32 --x86-align-branch=jcc %p/Inputs/align-branch-64-1.s | llvm-objdump -d  - | FileCheck %s
 
 # CHECK: 0000000000000000 foo:
 # CHECK-COUNT-3:      : 64 89 04 25 01 00 00 00          movl    %eax, %fs:1
