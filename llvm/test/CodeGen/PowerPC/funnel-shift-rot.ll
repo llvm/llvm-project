@@ -75,11 +75,7 @@ define i64 @rotl_i64(i64 %x, i64 %z) {
 define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) {
 ; CHECK-LABEL: rotl_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xxlxor 36, 36, 36
-; CHECK-NEXT:    vslw 5, 2, 3
-; CHECK-NEXT:    vsubuwm 3, 4, 3
-; CHECK-NEXT:    vsrw 2, 2, 3
-; CHECK-NEXT:    xxlor 34, 37, 34
+; CHECK-NEXT:    vrlw 2, 2, 3
 ; CHECK-NEXT:    blr
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %z)
   ret <4 x i32> %f
@@ -90,13 +86,8 @@ define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) {
 define <4 x i32> @rotl_v4i32_const_shift(<4 x i32> %x) {
 ; CHECK-LABEL: rotl_v4i32_const_shift:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vspltisw 3, -16
-; CHECK-NEXT:    vspltisw 4, 13
-; CHECK-NEXT:    vspltisw 5, 3
-; CHECK-NEXT:    vsubuwm 3, 4, 3
-; CHECK-NEXT:    vslw 4, 2, 5
-; CHECK-NEXT:    vsrw 2, 2, 3
-; CHECK-NEXT:    xxlor 34, 36, 34
+; CHECK-NEXT:    vspltisw 3, 3
+; CHECK-NEXT:    vrlw 2, 2, 3
 ; CHECK-NEXT:    blr
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
   ret <4 x i32> %f
@@ -167,10 +158,8 @@ define <4 x i32> @rotr_v4i32(<4 x i32> %x, <4 x i32> %z) {
 ; CHECK-LABEL: rotr_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlxor 36, 36, 36
-; CHECK-NEXT:    vsrw 5, 2, 3
 ; CHECK-NEXT:    vsubuwm 3, 4, 3
-; CHECK-NEXT:    vslw 2, 2, 3
-; CHECK-NEXT:    xxlor 34, 34, 37
+; CHECK-NEXT:    vrlw 2, 2, 3
 ; CHECK-NEXT:    blr
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %z)
   ret <4 x i32> %f
@@ -183,11 +172,8 @@ define <4 x i32> @rotr_v4i32_const_shift(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisw 3, -16
 ; CHECK-NEXT:    vspltisw 4, 13
-; CHECK-NEXT:    vspltisw 5, 3
 ; CHECK-NEXT:    vsubuwm 3, 4, 3
-; CHECK-NEXT:    vsrw 4, 2, 5
-; CHECK-NEXT:    vslw 2, 2, 3
-; CHECK-NEXT:    xxlor 34, 34, 36
+; CHECK-NEXT:    vrlw 2, 2, 3
 ; CHECK-NEXT:    blr
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
   ret <4 x i32> %f
