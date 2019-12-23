@@ -16,7 +16,7 @@ using namespace mlir::detail;
 
 namespace {
 Operation *createOp(MLIRContext *context, bool resizableOperands,
-                    ArrayRef<ValuePtr> operands = llvm::None,
+                    ArrayRef<Value> operands = llvm::None,
                     ArrayRef<Type> resultTypes = llvm::None) {
   return Operation::create(
       UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
@@ -30,7 +30,7 @@ TEST(OperandStorageTest, NonResizable) {
   Operation *useOp =
       createOp(&context, /*resizableOperands=*/false, /*operands=*/llvm::None,
                builder.getIntegerType(16));
-  ValuePtr operand = useOp->getResult(0);
+  Value operand = useOp->getResult(0);
 
   // Create a non-resizable operation with one operand.
   Operation *user = createOp(&context, /*resizableOperands=*/false, operand,
@@ -59,7 +59,7 @@ TEST(OperandStorageDeathTest, AddToNonResizable) {
   Operation *useOp =
       createOp(&context, /*resizableOperands=*/false, /*operands=*/llvm::None,
                builder.getIntegerType(16));
-  ValuePtr operand = useOp->getResult(0);
+  Value operand = useOp->getResult(0);
 
   // Create a non-resizable operation with one operand.
   Operation *user = createOp(&context, /*resizableOperands=*/false, operand,
@@ -79,7 +79,7 @@ TEST(OperandStorageTest, Resizable) {
   Operation *useOp =
       createOp(&context, /*resizableOperands=*/false, /*operands=*/llvm::None,
                builder.getIntegerType(16));
-  ValuePtr operand = useOp->getResult(0);
+  Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
   Operation *user = createOp(&context, /*resizableOperands=*/true, operand,

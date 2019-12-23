@@ -36,7 +36,7 @@ public:
   virtual raw_ostream &getStream() const = 0;
 
   /// Print implementations for various things an operation contains.
-  virtual void printOperand(ValuePtr value) = 0;
+  virtual void printOperand(Value value) = 0;
 
   /// Print a comma separated list of operands.
   template <typename ContainerType>
@@ -112,7 +112,7 @@ public:
   void printFunctionalType(Operation *op) {
     auto &os = getStream();
     os << "(";
-    interleaveComma(op->getNonSuccessorOperands(), os, [&](ValuePtr operand) {
+    interleaveComma(op->getNonSuccessorOperands(), os, [&](Value operand) {
       if (operand)
         printType(operand->getType());
       else
@@ -141,7 +141,7 @@ private:
 };
 
 // Make the implementations convenient to use.
-inline OpAsmPrinter &operator<<(OpAsmPrinter &p, ValueRef value) {
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p, Value value) {
   p.printOperand(value);
   return p;
 }
@@ -454,13 +454,13 @@ public:
 
   /// Resolve an operand to an SSA value, emitting an error on failure.
   virtual ParseResult resolveOperand(const OperandType &operand, Type type,
-                                     SmallVectorImpl<ValuePtr> &result) = 0;
+                                     SmallVectorImpl<Value> &result) = 0;
 
   /// Resolve a list of operands to SSA values, emitting an error on failure, or
   /// appending the results to the list on success. This method should be used
   /// when all operands have the same type.
   ParseResult resolveOperands(ArrayRef<OperandType> operands, Type type,
-                              SmallVectorImpl<ValuePtr> &result) {
+                              SmallVectorImpl<Value> &result) {
     for (auto elt : operands)
       if (resolveOperand(elt, type, result))
         return failure();
@@ -472,7 +472,7 @@ public:
   /// to the list on success.
   ParseResult resolveOperands(ArrayRef<OperandType> operands,
                               ArrayRef<Type> types, llvm::SMLoc loc,
-                              SmallVectorImpl<ValuePtr> &result) {
+                              SmallVectorImpl<Value> &result) {
     if (operands.size() != types.size())
       return emitError(loc)
              << operands.size() << " operands present, but expected "
@@ -542,8 +542,7 @@ public:
 
   /// Parse a single operation successor and its operand list.
   virtual ParseResult
-  parseSuccessorAndUseList(Block *&dest,
-                           SmallVectorImpl<ValuePtr> &operands) = 0;
+  parseSuccessorAndUseList(Block *&dest, SmallVectorImpl<Value> &operands) = 0;
 
   //===--------------------------------------------------------------------===//
   // Type Parsing
@@ -621,7 +620,7 @@ private:
 
 /// A functor used to set the name of the start of a result group of an
 /// operation. See 'getAsmResultNames' below for more details.
-using OpAsmSetValueNameFn = function_ref<void(ValuePtr, StringRef)>;
+using OpAsmSetValueNameFn = function_ref<void(Value, StringRef)>;
 
 class OpAsmDialectInterface
     : public DialectInterface::Base<OpAsmDialectInterface> {

@@ -77,13 +77,13 @@ namespace {
 struct ConversionValueMapping {
   /// Lookup a mapped value within the map. If a mapping for the provided value
   /// does not exist then return the provided value.
-  ValuePtr lookupOrDefault(ValuePtr from) const;
+  Value lookupOrDefault(Value from) const;
 
   /// Map a value to the one provided.
-  void map(ValuePtr oldVal, ValuePtr newVal) { mapping.map(oldVal, newVal); }
+  void map(Value oldVal, Value newVal) { mapping.map(oldVal, newVal); }
 
   /// Drop the last mapping for the given value.
-  void erase(ValuePtr value) { mapping.erase(value); }
+  void erase(Value value) { mapping.erase(value); }
 
 private:
   /// Current value mappings.
@@ -93,7 +93,7 @@ private:
 
 /// Lookup a mapped value within the map. If a mapping for the provided value
 /// does not exist then return the provided value.
-ValuePtr ConversionValueMapping::lookupOrDefault(ValuePtr from) const {
+Value ConversionValueMapping::lookupOrDefault(Value from) const {
   // If this value had a valid mapping, unmap that value as well in the case
   // that it was also replaced.
   while (auto mappedValue = mapping.lookupOrNull(from))
@@ -118,7 +118,7 @@ struct ArgConverter {
   /// been converted.
   struct ConvertedArgInfo {
     ConvertedArgInfo(unsigned newArgIdx, unsigned newArgSize,
-                     ValuePtr castValue = nullptr)
+                     Value castValue = nullptr)
         : newArgIdx(newArgIdx), newArgSize(newArgSize), castValue(castValue) {}
 
     /// The start index of in the new argument list that contains arguments that
@@ -130,7 +130,7 @@ struct ArgConverter {
 
     /// The cast value that was created to cast from the new arguments to the
     /// old. This only used if 'newArgSize' > 1.
-    ValuePtr castValue;
+    Value castValue;
   };
 
   /// This structure contains information pertaining to a block that has had its
@@ -226,7 +226,7 @@ void ArgConverter::notifyOpRemoved(Operation *op) {
 
       // Drop all uses of the original arguments and delete the original block.
       Block *origBlock = it->second.origBlock;
-      for (BlockArgumentPtr arg : origBlock->getArguments())
+      for (BlockArgument arg : origBlock->getArguments())
         arg->dropAllUses();
       conversionInfo.erase(it);
     }
@@ -261,7 +261,7 @@ void ArgConverter::applyRewrites(ConversionValueMapping &mapping) {
     // Process the remapping for each of the original arguments.
     for (unsigned i = 0, e = origBlock->getNumArguments(); i != e; ++i) {
       Optional<ConvertedArgInfo> &argInfo = blockInfo.argInfo[i];
-      BlockArgumentPtr origArg = origBlock->getArgument(i);
+      BlockArgument origArg = origBlock->getArgument(i);
 
       // Handle the case of a 1->0 value mapping.
       if (!argInfo) {
@@ -296,7 +296,7 @@ void ArgConverter::applyRewrites(ConversionValueMapping &mapping) {
       }
 
       // Otherwise this is a 1->N value mapping.
-      ValuePtr castValue = argInfo->castValue;
+      Value castValue = argInfo->castValue;
       assert(argInfo->newArgSize > 1 && castValue && "expected 1->N mapping");
 
       // If the argument is still used, replace it with the generated cast.
@@ -335,8 +335,8 @@ Block *ArgConverter::applySignatureConversion(
   Block *newBlock = block->splitBlock(block->begin());
   block->replaceAllUsesWith(newBlock);
 
-  SmallVector<ValuePtr, 4> newArgRange(newBlock->addArguments(convertedTypes));
-  ArrayRef<ValuePtr> newArgs(newArgRange);
+  SmallVector<Value, 4> newArgRange(newBlock->addArguments(convertedTypes));
+  ArrayRef<Value> newArgs(newArgRange);
 
   // Remap each of the original arguments as determined by the signature
   // conversion.
@@ -349,7 +349,7 @@ Block *ArgConverter::applySignatureConversion(
     auto inputMap = signatureConversion.getInputMapping(i);
     if (!inputMap)
       continue;
-    BlockArgumentPtr origArg = block->getArgument(i);
+    BlockArgument origArg = block->getArgument(i);
 
     // If inputMap->replacementValue is not nullptr, then the argument is
     // dropped and a replacement value is provided to be the remappedValue.
@@ -473,7 +473,7 @@ struct ConversionPatternRewriterImpl {
         : op(op), newValues(newValues.begin(), newValues.end()) {}
 
     Operation *op;
-    SmallVector<ValuePtr, 2> newValues;
+    SmallVector<Value, 2> newValues;
   };
 
   /// The kind of the block action performed during the rewrite.  Actions can be
@@ -570,7 +570,7 @@ struct ConversionPatternRewriterImpl {
 
   /// Remap the given operands to those with potentially different types.
   void remapValues(Operation::operand_range operands,
-                   SmallVectorImpl<ValuePtr> &remapped);
+                   SmallVectorImpl<Value> &remapped);
 
   /// Returns true if the given operation is ignored, and does not need to be
   /// converted.
@@ -803,9 +803,9 @@ void ConversionPatternRewriterImpl::notifyRegionWasClonedBefore(
 }
 
 void ConversionPatternRewriterImpl::remapValues(
-    Operation::operand_range operands, SmallVectorImpl<ValuePtr> &remapped) {
+    Operation::operand_range operands, SmallVectorImpl<Value> &remapped) {
   remapped.reserve(llvm::size(operands));
-  for (ValuePtr operand : operands)
+  for (Value operand : operands)
     remapped.push_back(mapping.lookupOrDefault(operand));
 }
 
@@ -851,7 +851,7 @@ void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues,
 void ConversionPatternRewriter::eraseOp(Operation *op) {
   LLVM_DEBUG(llvm::dbgs() << "** Erasing operation : " << op->getName()
                           << "\n");
-  SmallVector<ValuePtr, 1> nullRepls(op->getNumResults(), nullptr);
+  SmallVector<Value, 1> nullRepls(op->getNumResults(), nullptr);
   impl->replaceOp(op, nullRepls, /*valuesToRemoveIfDead=*/llvm::None);
 }
 
@@ -861,8 +861,8 @@ Block *ConversionPatternRewriter::applySignatureConversion(
   return impl->applySignatureConversion(region, conversion);
 }
 
-void ConversionPatternRewriter::replaceUsesOfBlockArgument(
-    BlockArgumentPtr from, ValuePtr to) {
+void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
+                                                           Value to) {
   for (auto &u : from->getUses()) {
     if (u.getOwner() == to->getDefiningOp())
       continue;
@@ -873,7 +873,7 @@ void ConversionPatternRewriter::replaceUsesOfBlockArgument(
 
 /// Return the converted value that replaces 'key'. Return 'key' if there is
 /// no such a converted value.
-ValuePtr ConversionPatternRewriter::getRemappedValue(ValuePtr key) {
+Value ConversionPatternRewriter::getRemappedValue(Value key) {
   return impl->mapping.lookupOrDefault(key);
 }
 
@@ -967,7 +967,7 @@ detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {
 PatternMatchResult
 ConversionPattern::matchAndRewrite(Operation *op,
                                    PatternRewriter &rewriter) const {
-  SmallVector<ValuePtr, 4> operands;
+  SmallVector<Value, 4> operands;
   auto &dialectRewriter = static_cast<ConversionPatternRewriter &>(rewriter);
   dialectRewriter.getImpl().remapValues(op->getOperands(), operands);
 
@@ -979,7 +979,7 @@ ConversionPattern::matchAndRewrite(Operation *op,
   SmallVector<Block *, 2> destinations;
   destinations.reserve(op->getNumSuccessors());
 
-  SmallVector<ArrayRef<ValuePtr>, 2> operandsPerDestination;
+  SmallVector<ArrayRef<Value>, 2> operandsPerDestination;
   unsigned firstSuccessorOperand = op->getSuccessorOperandIndex(0);
   for (unsigned i = 0, seen = 0, e = op->getNumSuccessors(); i < e; ++i) {
     destinations.push_back(op->getSuccessor(i));
@@ -1130,7 +1130,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
   RewriterState curState = rewriterImpl.getCurrentState();
 
   // Try to fold the operation.
-  SmallVector<ValuePtr, 2> replacementValues;
+  SmallVector<Value, 2> replacementValues;
   rewriter.setInsertionPoint(op);
   if (failed(rewriter.tryFold(op, replacementValues)))
     return failure();
@@ -1554,7 +1554,7 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
 /// Remap an input of the original signature to another `replacementValue`
 /// value. This would make the signature converter drop this argument.
 void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
-                                                    ValuePtr replacementValue) {
+                                                    Value replacementValue) {
   assert(!remappedInputs[origInputNo] && "input has already been remapped");
   remappedInputs[origInputNo] =
       InputMapping{origInputNo, /*size=*/0, replacementValue};
@@ -1623,7 +1623,7 @@ struct FuncOpSignatureConversion : public OpConversionPattern<FuncOp> {
 
   /// Hook for derived classes to implement combined matching and rewriting.
   PatternMatchResult
-  matchAndRewrite(FuncOp funcOp, ArrayRef<ValuePtr> operands,
+  matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     FunctionType type = funcOp.getType();
 

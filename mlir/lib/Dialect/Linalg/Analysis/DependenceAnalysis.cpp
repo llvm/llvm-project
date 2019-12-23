@@ -40,7 +40,7 @@ static StringRef toStringRef(LinalgDependenceGraph::DependenceType dt) {
   llvm_unreachable("Unexpected DependenceType");
 }
 
-ValuePtr Aliases::find(ValuePtr v) {
+Value Aliases::find(Value v) {
   if (v.isa<BlockArgument>())
     return v;
 
@@ -185,14 +185,14 @@ LinalgDependenceGraph::findCoveringDependences(LinalgOp srcLinalgOp,
 }
 
 SmallVector<Operation *, 8> LinalgDependenceGraph::findCoveringWrites(
-    LinalgOp srcLinalgOp, LinalgOp dstLinalgOp, ValuePtr view) const {
+    LinalgOp srcLinalgOp, LinalgOp dstLinalgOp, Value view) const {
   return findOperationsWithCoveringDependences(
       srcLinalgOp, dstLinalgOp, view,
       {DependenceType::WAW, DependenceType::WAR});
 }
 
 SmallVector<Operation *, 8> LinalgDependenceGraph::findCoveringReads(
-    LinalgOp srcLinalgOp, LinalgOp dstLinalgOp, ValuePtr view) const {
+    LinalgOp srcLinalgOp, LinalgOp dstLinalgOp, Value view) const {
   return findOperationsWithCoveringDependences(
       srcLinalgOp, dstLinalgOp, view,
       {DependenceType::RAR, DependenceType::RAW});
@@ -200,7 +200,7 @@ SmallVector<Operation *, 8> LinalgDependenceGraph::findCoveringReads(
 
 SmallVector<Operation *, 8>
 LinalgDependenceGraph::findOperationsWithCoveringDependences(
-    LinalgOp srcLinalgOp, LinalgOp dstLinalgOp, ValuePtr view,
+    LinalgOp srcLinalgOp, LinalgOp dstLinalgOp, Value view,
     ArrayRef<DependenceType> types) const {
   auto *src = srcLinalgOp.getOperation();
   auto *dst = dstLinalgOp.getOperation();

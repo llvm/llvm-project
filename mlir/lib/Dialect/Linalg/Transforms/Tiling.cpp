@@ -44,7 +44,7 @@ static llvm::cl::list<unsigned>
                 llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated,
                 llvm::cl::cat(clOptionsCategory));
 
-static bool isZero(ValuePtr v) {
+static bool isZero(Value v) {
   return isa_and_nonnull<ConstantIndexOp>(v->getDefiningOp()) &&
          cast<ConstantIndexOp>(v->getDefiningOp()).getValue() == 0;
 }
@@ -62,12 +62,12 @@ using LoopIndexToRangeIndexMap = DenseMap<int, int>;
 // indices of newly created loops.
 static std::tuple<SmallVector<SubViewOp::Range, 4>, LoopIndexToRangeIndexMap>
 makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
-                    ArrayRef<ValuePtr> allViewSizes,
-                    ArrayRef<ValuePtr> allTileSizes, OperationFolder *folder) {
+                    ArrayRef<Value> allViewSizes, ArrayRef<Value> allTileSizes,
+                    OperationFolder *folder) {
   assert(allTileSizes.size() == map.getNumResults());
   // Apply `map` to get view sizes in loop order.
   auto viewSizes = applyMapToValues(b, loc, map, allViewSizes, folder);
-  SmallVector<ValuePtr, 4> tileSizes(allTileSizes.begin(), allTileSizes.end());
+  SmallVector<Value, 4> tileSizes(allTileSizes.begin(), allTileSizes.end());
 
   // Traverse the tile sizes, which are in loop order, erase zeros everywhere.
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
@@ -101,8 +101,7 @@ namespace {
 //   `d0 + 2 * d1 + d3` is tiled by [0, 0, 0, 2] but not by [0, 0, 2, 0]
 //
 struct TileCheck : public AffineExprVisitor<TileCheck> {
-  TileCheck(ArrayRef<ValuePtr> tileSizes)
-      : isTiled(false), tileSizes(tileSizes) {}
+  TileCheck(ArrayRef<Value> tileSizes) : isTiled(false), tileSizes(tileSizes) {}
 
   void visitDimExpr(AffineDimExpr expr) {
     isTiled |= !isZero(tileSizes[expr.getPosition()]);
@@ -115,7 +114,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
              "nonpositive multiplying coefficient");
   }
   bool isTiled;
-  ArrayRef<ValuePtr> tileSizes;
+  ArrayRef<Value> tileSizes;
 };
 
 } // namespace
@@ -197,11 +196,11 @@ void transformIndexedGenericOpIndices(
     auto rangeIndex = loopIndexToRangeIndex.find(i);
     if (rangeIndex == loopIndexToRangeIndex.end())
       continue;
-    ValuePtr oldIndex = block.getArgument(i);
+    Value oldIndex = block.getArgument(i);
     // Offset the index argument `i` by the value of the corresponding induction
     // variable and replace all uses of the previous value.
-    ValuePtr newIndex = b.create<AddIOp>(indexedGenericOp.getLoc(), oldIndex,
-                                         pivs[rangeIndex->second]->getValue());
+    Value newIndex = b.create<AddIOp>(indexedGenericOp.getLoc(), oldIndex,
+                                      pivs[rangeIndex->second]->getValue());
     for (auto &use : oldIndex->getUses()) {
       if (use.getOwner() == newIndex->getDefiningOp())
         continue;
@@ -210,7 +209,7 @@ void transformIndexedGenericOpIndices(
   }
 }
 
-static bool isTiled(AffineExpr expr, ArrayRef<ValuePtr> tileSizes) {
+static bool isTiled(AffineExpr expr, ArrayRef<Value> tileSizes) {
   if (!expr)
     return false;
   TileCheck t(tileSizes);
@@ -220,7 +219,7 @@ static bool isTiled(AffineExpr expr, ArrayRef<ValuePtr> tileSizes) {
 
 // Checks whether the view with index `viewIndex` within `linalgOp` varies with
 // respect to a non-zero `tileSize`.
-static bool isTiled(AffineMap map, ArrayRef<ValuePtr> tileSizes) {
+static bool isTiled(AffineMap map, ArrayRef<Value> tileSizes) {
   if (!map)
     return false;
   for (unsigned r = 0; r < map.getNumResults(); ++r)
@@ -229,13 +228,13 @@ static bool isTiled(AffineMap map, ArrayRef<ValuePtr> tileSizes) {
   return false;
 }
 
-static SmallVector<ValuePtr, 4>
+static SmallVector<Value, 4>
 makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
-               ArrayRef<ValuePtr> ivs, ArrayRef<ValuePtr> tileSizes,
-               ArrayRef<ValuePtr> viewSizes, OperationFolder *folder) {
+               ArrayRef<Value> ivs, ArrayRef<Value> tileSizes,
+               ArrayRef<Value> viewSizes, OperationFolder *folder) {
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
                            llvm::make_range(tileSizes.begin(), tileSizes.end()),
-                           [](ValuePtr v) { return !isZero(v); })) &&
+                           [](Value v) { return !isZero(v); })) &&
          "expected as many ivs as non-zero sizes");
 
   using edsc::intrinsics::select;
@@ -244,22 +243,21 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
 
   // Construct (potentially temporary) mins and maxes on which to apply maps
   // that define tile subviews.
-  SmallVector<ValuePtr, 8> lbs, subViewSizes;
+  SmallVector<Value, 8> lbs, subViewSizes;
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     bool isTiled = !isZero(tileSizes[idx]);
-    lbs.push_back(isTiled ? ivs[idxIvs++]
-                          : (ValuePtr)constant_index(folder, 0));
+    lbs.push_back(isTiled ? ivs[idxIvs++] : (Value)constant_index(folder, 0));
     subViewSizes.push_back(isTiled ? tileSizes[idx] : viewSizes[idx]);
   }
 
   auto *op = linalgOp.getOperation();
 
-  SmallVector<ValuePtr, 4> res;
+  SmallVector<Value, 4> res;
   res.reserve(op->getNumOperands());
   auto viewIteratorBegin = linalgOp.getInputsAndOutputs().begin();
   for (unsigned viewIndex = 0; viewIndex < linalgOp.getNumInputsAndOutputs();
        ++viewIndex) {
-    ValuePtr view = *(viewIteratorBegin + viewIndex);
+    Value view = *(viewIteratorBegin + viewIndex);
     unsigned rank = view->getType().cast<MemRefType>().getRank();
     auto map = loopToOperandRangesMaps(linalgOp)[viewIndex];
     // If the view is not tiled, we can use it as is.
@@ -269,7 +267,7 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
     }
 
     // Construct a new subview for the tile.
-    SmallVector<ValuePtr, 4> offsets, sizes, strides;
+    SmallVector<Value, 4> offsets, sizes, strides;
     offsets.reserve(rank);
     sizes.reserve(rank);
     strides.reserve(rank);
@@ -300,16 +298,17 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
   // This is a special type of folding that we only apply when `folder` is
   // defined.
   if (folder)
-    for (auto v : llvm::concat<ValuePtr>(lbs, subViewSizes))
+    for (auto v : llvm::concat<Value>(lbs, subViewSizes))
       if (v->use_empty())
         v->getDefiningOp()->erase();
 
   return res;
 }
 
-Optional<TiledLinalgOp> mlir::linalg::tileLinalgOp(
-    OpBuilder &b, LinalgOp op, ArrayRef<ValuePtr> tileSizes,
-    ArrayRef<unsigned> permutation, OperationFolder *folder) {
+Optional<TiledLinalgOp>
+mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
+                           ArrayRef<unsigned> permutation,
+                           OperationFolder *folder) {
   // 1. Enforce the convention that "tiling by zero" skips tiling a particular
   // dimension. This convention is significantly simpler to handle instead of
   // adjusting affine maps to account for missing dimensions.
@@ -352,7 +351,7 @@ Optional<TiledLinalgOp> mlir::linalg::tileLinalgOp(
   LoopNestRangeBuilder(pivs, loopRanges)([&] {
     auto b = ScopedContext::getBuilder();
     auto loc = ScopedContext::getLocation();
-    SmallVector<ValuePtr, 4> ivValues(ivs.begin(), ivs.end());
+    SmallVector<Value, 4> ivValues(ivs.begin(), ivs.end());
 
     // If we have to apply a permutation to the tiled loop nest, we have to
     // reorder the induction variables This permutation is the right one
@@ -403,7 +402,7 @@ Optional<TiledLinalgOp> mlir::linalg::tileLinalgOp(
   ScopedContext scope(b, op.getLoc());
 
   // Materialize concrete tile size values to pass the generic tiling function.
-  SmallVector<ValuePtr, 8> tileSizeValues;
+  SmallVector<Value, 8> tileSizeValues;
   tileSizeValues.reserve(tileSizes.size());
   for (auto ts : tileSizes)
     tileSizeValues.push_back(constant_index(folder, ts));

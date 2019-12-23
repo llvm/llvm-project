@@ -18,7 +18,7 @@ def OpA : NS_Op<"one_normal_operand_op", []> {
 // CHECK-NEXT: tblgen_operands = values
 
 // CHECK:      void OpA::build
-// CHECK:        ValuePtr input
+// CHECK:        Value input
 // CHECK:        tblgen_state.addOperands(input);
 
 // CHECK:      void OpA::build
@@ -39,19 +39,19 @@ def OpD : NS_Op<"mix_variadic_and_normal_inputs_op", [SameVariadicOperandSize]> 
   let arguments = (ins Variadic<AnyTensor>:$input1, AnyTensor:$input2, Variadic<AnyTensor>:$input3);
 }
 
-// CHECK-LABEL: ArrayRef<ValuePtr> OpDOperandAdaptor::input1
+// CHECK-LABEL: ArrayRef<Value> OpDOperandAdaptor::input1
 // CHECK-NEXT:    return getODSOperands(0);
 
-// CHECK-LABEL: ValuePtr OpDOperandAdaptor::input2
+// CHECK-LABEL: Value OpDOperandAdaptor::input2
 // CHECK-NEXT:    return *getODSOperands(1).begin();
 
-// CHECK-LABEL: ArrayRef<ValuePtr> OpDOperandAdaptor::input3
+// CHECK-LABEL: ArrayRef<Value> OpDOperandAdaptor::input3
 // CHECK-NEXT:    return getODSOperands(2);
 
 // CHECK-LABEL: Operation::operand_range OpD::input1
 // CHECK-NEXT: return getODSOperands(0);
 
-// CHECK-LABEL: ValuePtr OpD::input2
+// CHECK-LABEL: Value OpD::input2
 // CHECK-NEXT: return *getODSOperands(1).begin();
 
 // CHECK-LABEL: OpD::build

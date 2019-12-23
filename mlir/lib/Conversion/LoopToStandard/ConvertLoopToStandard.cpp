@@ -187,8 +187,8 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
 
   // Compute loop bounds before branching to the condition.
   rewriter.setInsertionPointToEnd(initBlock);
-  ValuePtr lowerBound = forOp.lowerBound();
-  ValuePtr upperBound = forOp.upperBound();
+  Value lowerBound = forOp.lowerBound();
+  Value upperBound = forOp.upperBound();
   if (!lowerBound || !upperBound)
     return matchFailure();
   rewriter.create<BranchOp>(loc, conditionBlock, lowerBound);
@@ -199,8 +199,7 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
       rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, iv, upperBound);
 
   rewriter.create<CondBranchOp>(loc, comparison, firstBodyBlock,
-                                ArrayRef<ValuePtr>(), endBlock,
-                                ArrayRef<ValuePtr>());
+                                ArrayRef<Value>(), endBlock, ArrayRef<Value>());
   // Ok, we're done!
   rewriter.eraseOp(forOp);
   return matchSuccess();
@@ -239,8 +238,8 @@ IfLowering::matchAndRewrite(IfOp ifOp, PatternRewriter &rewriter) const {
 
   rewriter.setInsertionPointToEnd(condBlock);
   rewriter.create<CondBranchOp>(loc, ifOp.condition(), thenBlock,
-                                /*trueArgs=*/ArrayRef<ValuePtr>(), elseBlock,
-                                /*falseArgs=*/ArrayRef<ValuePtr>());
+                                /*trueArgs=*/ArrayRef<Value>(), elseBlock,
+                                /*falseArgs=*/ArrayRef<Value>());
 
   // Ok, we're done!
   rewriter.eraseOp(ifOp);

@@ -34,8 +34,7 @@ class Operation final
 public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
-                           ArrayRef<Type> resultTypes,
-                           ArrayRef<ValuePtr> operands,
+                           ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
                            ArrayRef<NamedAttribute> attributes,
                            ArrayRef<Block *> successors, unsigned numRegions,
                            bool resizableOperandList);
@@ -43,8 +42,7 @@ public:
   /// Overload of create that takes an existing NamedAttributeList to avoid
   /// unnecessarily uniquing a list of attributes.
   static Operation *create(Location location, OperationName name,
-                           ArrayRef<Type> resultTypes,
-                           ArrayRef<ValuePtr> operands,
+                           ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
                            NamedAttributeList attributes,
                            ArrayRef<Block *> successors, unsigned numRegions,
                            bool resizableOperandList);
@@ -53,11 +51,12 @@ public:
   static Operation *create(const OperationState &state);
 
   /// Create a new Operation with the specific fields.
-  static Operation *
-  create(Location location, OperationName name, ArrayRef<Type> resultTypes,
-         ArrayRef<ValuePtr> operands, NamedAttributeList attributes,
-         ArrayRef<Block *> successors = {}, RegionRange regions = {},
-         bool resizableOperandList = false);
+  static Operation *create(Location location, OperationName name,
+                           ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
+                           NamedAttributeList attributes,
+                           ArrayRef<Block *> successors = {},
+                           RegionRange regions = {},
+                           bool resizableOperandList = false);
 
   /// The name of an operation is the key identifier for it.
   OperationName getName() { return name; }
@@ -140,7 +139,7 @@ public:
   }
 
   /// Replace any uses of 'from' with 'to' within this operation.
-  void replaceUsesOfWith(ValuePtr from, ValuePtr to);
+  void replaceUsesOfWith(Value from, Value to);
 
   /// Replace all uses of results of this operation with the provided 'values'.
   template <typename ValuesT,
@@ -206,8 +205,8 @@ public:
 
   unsigned getNumOperands() { return getOperandStorage().size(); }
 
-  ValuePtr getOperand(unsigned idx) { return getOpOperand(idx).get(); }
-  void setOperand(unsigned idx, ValuePtr value) {
+  Value getOperand(unsigned idx) { return getOpOperand(idx).get(); }
+  void setOperand(unsigned idx, Value value) {
     return getOpOperand(idx).set(value);
   }
 
@@ -218,7 +217,7 @@ public:
   operand_iterator operand_begin() { return getOperands().begin(); }
   operand_iterator operand_end() { return getOperands().end(); }
 
-  /// Returns an iterator on the underlying Value's (ValuePtr ).
+  /// Returns an iterator on the underlying Value's (Value ).
   operand_range getOperands() { return operand_range(this); }
 
   /// Erase the operand at position `idx`.
@@ -246,7 +245,7 @@ public:
 
   unsigned getNumResults() { return numResults; }
 
-  ValuePtr getResult(unsigned idx) { return getOpResult(idx); }
+  Value getResult(unsigned idx) { return getOpResult(idx); }
 
   /// Support result iteration.
   using result_range = ResultRange;
@@ -396,7 +395,7 @@ public:
 
   operand_range getSuccessorOperands(unsigned index);
 
-  ValuePtr getSuccessorOperand(unsigned succIndex, unsigned opIndex) {
+  Value getSuccessorOperand(unsigned succIndex, unsigned opIndex) {
     assert(!isKnownNonTerminator() && "only terminators may have successors");
     assert(opIndex < getNumSuccessorOperands(succIndex));
     return getOperand(getSuccessorOperandIndex(succIndex) + opIndex);
@@ -440,7 +439,7 @@ public:
 
   /// Returns the `BlockArgument` corresponding to operand `operandIndex` in
   /// some successor, or None if `operandIndex` isn't a successor operand index.
-  Optional<BlockArgumentPtr> getSuccessorBlockArgument(unsigned operandIndex) {
+  Optional<BlockArgument> getSuccessorBlockArgument(unsigned operandIndex) {
     auto decomposed = decomposeSuccessorOperandIndex(operandIndex);
     if (!decomposed.hasValue())
       return None;

@@ -93,7 +93,7 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
   );
 
   let builders = [OpBuilder<[{Builder *builder, OperationState &state,
-                              ValuePtr basePtr, ValueRange indices}]>];
+                              Value basePtr, ValueRange indices}]>];
 
   let hasCanonicalizer = 1;
 }
@@ -263,7 +263,7 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
   );
 
   let builders = [OpBuilder<[{Builder *builder, OperationState &state,
-                  ValuePtr basePtr, /*optional*/IntegerAttr memory_access,
+                  Value basePtr, /*optional*/IntegerAttr memory_access,
                   /*optional*/IntegerAttr alignment}]>];
 }
 
@@ -358,7 +358,7 @@ def SPV_StoreOp : SPV_Op<"Store", []> {
 
   let builders = [
     OpBuilder<"Builder *builder, OperationState &state, "
-      "ValuePtr ptr, ValuePtr value, ArrayRef<NamedAttribute> namedAttrs", [{
+      "Value ptr, Value value, ArrayRef<NamedAttribute> namedAttrs", [{
       state.addOperands(ptr);
       state.addOperands(value);
       state.addAttributes(namedAttrs);

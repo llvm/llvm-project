@@ -90,7 +90,7 @@ private:
   /// Entering a function creates a new scope, and the function arguments are
   /// added to the mapping. When the processing of a function is terminated, the
   /// scope is destroyed and the mappings created in this scope are dropped.
-  llvm::ScopedHashTable<StringRef, mlir::ValuePtr> symbolTable;
+  llvm::ScopedHashTable<StringRef, mlir::Value> symbolTable;
 
   /// Helper conversion for a Toy AST location to an MLIR location.
   mlir::Location loc(Location loc) {
@@ -100,7 +100,7 @@ private:
 
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(llvm::StringRef var, mlir::ValuePtr value) {
+  mlir::LogicalResult declare(llvm::StringRef var, mlir::Value value) {
     if (symbolTable.count(var))
       return mlir::failure();
     symbolTable.insert(var, value);
@@ -123,8 +123,7 @@ private:
   /// Emit a new function and add it to the MLIR module.
   mlir::FuncOp mlirGen(FunctionAST &funcAST) {
     // Create a scope in the symbol table to hold variable declarations.
-    ScopedHashTableScope<llvm::StringRef, mlir::ValuePtr> var_scope(
-        symbolTable);
+    ScopedHashTableScope<llvm::StringRef, mlir::Value> var_scope(symbolTable);
 
     // Create an MLIR function for the given prototype.
     mlir::FuncOp function(mlirGen(*funcAST.getProto()));
@@ -175,7 +174,7 @@ private:
   }
 
   /// Emit a binary operation
-  mlir::ValuePtr mlirGen(BinaryExprAST &binop) {
+  mlir::Value mlirGen(BinaryExprAST &binop) {
     // First emit the operations for each side of the operation before emitting
     // the operation itself. For example if the expression is `a + foo(a)`
     // 1) First it will visiting the LHS, which will return a reference to the
@@ -187,10 +186,10 @@ private:
     //    and the result value is returned. If an error occurs we get a nullptr
     //    and propagate.
     //
-    mlir::ValuePtr lhs = mlirGen(*binop.getLHS());
+    mlir::Value lhs = mlirGen(*binop.getLHS());
     if (!lhs)
       return nullptr;
-    mlir::ValuePtr rhs = mlirGen(*binop.getRHS());
+    mlir::Value rhs = mlirGen(*binop.getRHS());
     if (!rhs)
       return nullptr;
     auto location = loc(binop.loc());
@@ -211,7 +210,7 @@ private:
   /// This is a reference to a variable in an expression. The variable is
   /// expected to have been declared and so should have a value in the symbol
   /// table, otherwise emit an error and return nullptr.
-  mlir::ValuePtr mlirGen(VariableExprAST &expr) {
+  mlir::Value mlirGen(VariableExprAST &expr) {
     if (auto variable = symbolTable.lookup(expr.getName()))
       return variable;
 
@@ -225,7 +224,7 @@ private:
     auto location = loc(ret.loc());
 
     // 'return' takes an optional expression, handle that case here.
-    mlir::ValuePtr expr = nullptr;
+    mlir::Value expr = nullptr;
     if (ret.getExpr().hasValue()) {
       if (!(expr = mlirGen(*ret.getExpr().getValue())))
         return mlir::failure();
@@ -233,7 +232,7 @@ private:
 
     // Otherwise, this return operation has zero operands.
     builder.create<ReturnOp>(location, expr ? makeArrayRef(expr)
-                                            : ArrayRef<mlir::ValuePtr>());
+                                            : ArrayRef<mlir::Value>());
     return mlir::success();
   }
 
@@ -255,7 +254,7 @@ private:
   ///     [[1.000000e+00, 2.000000e+00, 3.000000e+00],
   ///      [4.000000e+00, 5.000000e+00, 6.000000e+00]]>} : () -> tensor<2x3xf64>
   ///
-  mlir::ValuePtr mlirGen(LiteralExprAST &lit) {
+  mlir::Value mlirGen(LiteralExprAST &lit) {
     auto type = getType(lit.getDims());
 
     // The attribute is a vector with a floating point value per element
@@ -301,12 +300,12 @@ private:
 
   /// Emit a call expression. It emits specific operations for the `transpose`
   /// builtin. Other identifiers are assumed to be user-defined functions.
-  mlir::ValuePtr mlirGen(CallExprAST &call) {
+  mlir::Value mlirGen(CallExprAST &call) {
     llvm::StringRef callee = call.getCallee();
     auto location = loc(call.loc());
 
     // Codegen the operands first.
-    SmallVector<mlir::ValuePtr, 4> operands;
+    SmallVector<mlir::Value, 4> operands;
     for (auto &expr : call.getArgs()) {
       auto arg = mlirGen(*expr);
       if (!arg)
@@ -343,12 +342,12 @@ private:
   }
 
   /// Emit a constant for a single number (FIXME: semantic? broadcast?)
-  mlir::ValuePtr mlirGen(NumberExprAST &num) {
+  mlir::Value mlirGen(NumberExprAST &num) {
     return builder.create<ConstantOp>(loc(num.loc()), num.getValue());
   }
 
   /// Dispatch codegen for the right expression subclass using RTTI.
-  mlir::ValuePtr mlirGen(ExprAST &expr) {
+  mlir::Value mlirGen(ExprAST &expr) {
     switch (expr.getKind()) {
     case toy::ExprAST::Expr_BinOp:
       return mlirGen(cast<BinaryExprAST>(expr));
@@ -372,7 +371,7 @@ private:
   /// initializer and record the value in the symbol table before returning it.
   /// Future expressions will be able to reference this variable through symbol
   /// table lookup.
-  mlir::ValuePtr mlirGen(VarDeclExprAST &vardecl) {
+  mlir::Value mlirGen(VarDeclExprAST &vardecl) {
     auto init = vardecl.getInitVal();
     if (!init) {
       emitError(loc(vardecl.loc()),
@@ -380,7 +379,7 @@ private:
       return nullptr;
     }
 
-    mlir::ValuePtr value = mlirGen(*init);
+    mlir::Value value = mlirGen(*init);
     if (!value)
       return nullptr;
 
@@ -400,7 +399,7 @@ private:
 
   /// Codegen a list of expression, return failure if one of them hit an error.
   mlir::LogicalResult mlirGen(ExprASTList &blockAST) {
-    ScopedHashTableScope<StringRef, mlir::ValuePtr> var_scope(symbolTable);
+    ScopedHashTableScope<StringRef, mlir::Value> var_scope(symbolTable);
     for (auto &expr : blockAST) {
       // Specific handling for variable declarations, return statement, and
       // print. These can only appear in block list and not in nested

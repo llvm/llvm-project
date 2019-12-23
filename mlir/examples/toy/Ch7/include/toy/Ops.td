@@ -103,7 +103,7 @@ def AddOp : Toy_Op<"add",
 
   // Allow building an AddOp with from the two input operands.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, ValuePtr lhs, ValuePtr rhs">
+    OpBuilder<"Builder *b, OperationState &state, Value lhs, Value rhs">
   ];
 }
 
@@ -155,7 +155,7 @@ def GenericCallOp : Toy_Op<"generic_call",
   // Add custom build methods for the generic call operation.
   let builders = [
     OpBuilder<"Builder *builder, OperationState &state, "
-              "StringRef callee, ArrayRef<ValuePtr> arguments">
+              "StringRef callee, ArrayRef<Value> arguments">
   ];
 }
 
@@ -172,7 +172,7 @@ def MulOp : Toy_Op<"mul",
 
   // Allow building a MulOp with from the two input operands.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, ValuePtr lhs, ValuePtr rhs">
+    OpBuilder<"Builder *b, OperationState &state, Value lhs, Value rhs">
   ];
 }
 
@@ -251,7 +251,7 @@ def StructAccessOp : Toy_Op<"struct_access", [NoSideEffect]> {
 
   // Allow building a StructAccessOp with just a struct value and an index.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, ValuePtr input, size_t index">
+    OpBuilder<"Builder *b, OperationState &state, Value input, size_t index">
   ];
 
   let verifier = [{ return ::verify(*this); }];
@@ -290,7 +290,7 @@ def TransposeOp : Toy_Op<"transpose",
 
   // Allow building a TransposeOp with from the input operand.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, ValuePtr input">
+    OpBuilder<"Builder *b, OperationState &state, Value input">
   ];
 
   // Invoke a static verify method to verify this transpose operation.

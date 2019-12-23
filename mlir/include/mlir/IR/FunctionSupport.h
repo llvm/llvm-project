@@ -174,7 +174,7 @@ public:
   }
 
   /// Gets argument.
-  BlockArgumentPtr getArgument(unsigned idx) {
+  BlockArgument getArgument(unsigned idx) {
     return getBlocks().front().getArgument(idx);
   }
 

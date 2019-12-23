@@ -18,7 +18,7 @@
 
 using namespace mlir;
 
-void mlir::replaceAllUsesInRegionWith(ValuePtr orig, ValuePtr replacement,
+void mlir::replaceAllUsesInRegionWith(Value orig, Value replacement,
                                       Region &region) {
   for (auto &use : llvm::make_early_inc_range(orig->getUses())) {
     if (region.isAncestor(use.getOwner()->getParentRegion()))
@@ -54,14 +54,14 @@ void mlir::visitUsedValuesDefinedAbove(
 }
 
 void mlir::getUsedValuesDefinedAbove(Region &region, Region &limit,
-                                     llvm::SetVector<ValuePtr> &values) {
+                                     llvm::SetVector<Value> &values) {
   visitUsedValuesDefinedAbove(region, limit, [&](OpOperand *operand) {
     values.insert(operand->get());
   });
 }
 
 void mlir::getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
-                                     llvm::SetVector<ValuePtr> &values) {
+                                     llvm::SetVector<Value> &values) {
   for (Region &region : regions)
     getUsedValuesDefinedAbove(region, region, values);
 }
@@ -137,8 +137,8 @@ namespace {
 class LiveMap {
 public:
   /// Value methods.
-  bool wasProvenLive(ValuePtr value) { return liveValues.count(value); }
-  void setProvedLive(ValuePtr value) {
+  bool wasProvenLive(Value value) { return liveValues.count(value); }
+  void setProvedLive(Value value) {
     changed |= liveValues.insert(value).second;
   }
 
@@ -152,7 +152,7 @@ public:
 
 private:
   bool changed = false;
-  DenseSet<ValuePtr> liveValues;
+  DenseSet<Value> liveValues;
   DenseSet<Operation *> liveOps;
 };
 } // namespace
@@ -179,7 +179,7 @@ static bool isUseSpeciallyKnownDead(OpOperand &use, LiveMap &liveMap) {
   return false;
 }
 
-static void processValue(ValuePtr value, LiveMap &liveMap) {
+static void processValue(Value value, LiveMap &liveMap) {
   bool provedLive = llvm::any_of(value->getUses(), [&](OpOperand &use) {
     if (isUseSpeciallyKnownDead(use, liveMap))
       return false;
@@ -213,9 +213,9 @@ static void propagateLiveness(Operation *op, LiveMap &liveMap) {
     liveMap.setProvedLive(op);
     return;
   }
-  for (ValuePtr value : op->getResults())
+  for (Value value : op->getResults())
     processValue(value, liveMap);
-  bool provedLive = llvm::any_of(op->getResults(), [&](ValuePtr value) {
+  bool provedLive = llvm::any_of(op->getResults(), [&](Value value) {
     return liveMap.wasProvenLive(value);
   });
   if (provedLive)
@@ -231,7 +231,7 @@ static void propagateLiveness(Region &region, LiveMap &liveMap) {
     // faster convergence to a fixed point (we try to visit uses before defs).
     for (Operation &op : llvm::reverse(block->getOperations()))
       propagateLiveness(&op, liveMap);
-    for (ValuePtr value : block->getArguments())
+    for (Value value : block->getArguments())
       processValue(value, liveMap);
   }
 }
@@ -250,7 +250,7 @@ static void eraseTerminatorSuccessorOperands(Operation *terminator,
       // Iterating args in reverse is needed for correctness, to avoid
       // shifting later args when earlier args are erased.
       unsigned arg = argE - argI - 1;
-      ValuePtr value = terminator->getSuccessor(succ)->getArgument(arg);
+      Value value = terminator->getSuccessor(succ)->getArgument(arg);
       if (!liveMap.wasProvenLive(value)) {
         terminator->eraseSuccessorOperand(succ, arg);
       }

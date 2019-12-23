@@ -96,7 +96,7 @@ public:
   /// operation). The given 'op' will be removed by the caller, after this
   /// function has been called.
   virtual void handleTerminator(Operation *op,
-                                ArrayRef<ValuePtr> valuesToReplace) const {
+                                ArrayRef<Value> valuesToReplace) const {
     llvm_unreachable(
         "must implement handleTerminator in the case of one inlined block");
   }
@@ -116,8 +116,8 @@ public:
   ///   ... = foo.call @foo(%input : i32) -> i16
   ///
   /// NOTE: This hook may be invoked before the 'isLegal' checks above.
-  virtual Operation *materializeCallConversion(OpBuilder &builder,
-                                               ValuePtr input, Type resultType,
+  virtual Operation *materializeCallConversion(OpBuilder &builder, Value input,
+                                               Type resultType,
                                                Location conversionLoc) const {
     return nullptr;
   }
@@ -156,7 +156,7 @@ public:
 
   virtual void handleTerminator(Operation *op, Block *newDest) const;
   virtual void handleTerminator(Operation *op,
-                                ArrayRef<ValuePtr> valuesToRepl) const;
+                                ArrayRef<Value> valuesToRepl) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -178,7 +178,7 @@ public:
 /// be cloned into the 'inlinePoint' or spliced directly.
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Operation *inlinePoint, BlockAndValueMapping &mapper,
-                           ArrayRef<ValuePtr> resultsToReplace,
+                           ArrayRef<Value> resultsToReplace,
                            Optional<Location> inlineLoc = llvm::None,
                            bool shouldCloneInlinedRegion = true);
 
@@ -187,8 +187,8 @@ LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
 /// in-favor of the region arguments when inlining.
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Operation *inlinePoint,
-                           ArrayRef<ValuePtr> inlinedOperands,
-                           ArrayRef<ValuePtr> resultsToReplace,
+                           ArrayRef<Value> inlinedOperands,
+                           ArrayRef<Value> resultsToReplace,
                            Optional<Location> inlineLoc = llvm::None,
                            bool shouldCloneInlinedRegion = true);
 

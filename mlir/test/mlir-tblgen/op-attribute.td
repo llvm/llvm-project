@@ -216,9 +216,9 @@ def MixOperandsAndAttrs : NS_Op<"mix_operands_and_attrs", []> {
 }
 
 // DEF-LABEL: MixOperandsAndAttrs definitions
-// DEF-DAG: ValuePtr MixOperandsAndAttrs::operand()
-// DEF-DAG: ValuePtr MixOperandsAndAttrs::otherArg()
-// DEF-DAG: void MixOperandsAndAttrs::build(Builder *tblgen_builder, OperationState &tblgen_state, FloatAttr attr, ValuePtr operand, FloatAttr otherAttr, ValuePtr otherArg)
+// DEF-DAG: Value MixOperandsAndAttrs::operand()
+// DEF-DAG: Value MixOperandsAndAttrs::otherArg()
+// DEF-DAG: void MixOperandsAndAttrs::build(Builder *tblgen_builder, OperationState &tblgen_state, FloatAttr attr, Value operand, FloatAttr otherAttr, Value otherArg)
 // DEF-DAG: APFloat MixOperandsAndAttrs::attr()
 // DEF-DAG: APFloat MixOperandsAndAttrs::otherAttr()
 

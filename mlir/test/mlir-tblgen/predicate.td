@@ -16,7 +16,7 @@ def OpA : NS_Op<"op_for_CPred_containing_multiple_same_placeholder", []> {
 }
 
 // CHECK-LABEL: OpA::verify
-// CHECK: for (ValuePtr v : getODSOperands(0)) {
+// CHECK: for (Value v : getODSOperands(0)) {
 // CHECK:   if (!((v->getType().isInteger(32) || v->getType().isF32())))
 
 def OpB : NS_Op<"op_for_And_PredOpTrait", [
@@ -90,5 +90,5 @@ def OpK : NS_Op<"op_for_AnyTensorOf", []> {
 }
 
 // CHECK-LABEL: OpK::verify
-// CHECK: for (ValuePtr v : getODSOperands(0)) {
+// CHECK: for (Value v : getODSOperands(0)) {
 // CHECK: if (!(((v->getType().isa<TensorType>())) && (((v->getType().cast<ShapedType>().getElementType().isF32())) || ((v->getType().cast<ShapedType>().getElementType().isInteger(32))))))

@@ -26,7 +26,7 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
   );
 
   let regions = (region AnyRegion:$someRegion);
-  let builders = [OpBuilder<"ValuePtr val">];
+  let builders = [OpBuilder<"Value val">];
   let parser = [{ foo }];
   let printer = [{ bar }];
   let verifier = [{ baz }];
@@ -46,12 +46,12 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
 
 // CHECK: class AOpOperandAdaptor {
 // CHECK: public:
-// CHECK:   AOpOperandAdaptor(ArrayRef<ValuePtr> values);
-// CHECK:   ArrayRef<ValuePtr> getODSOperands(unsigned index);
-// CHECK:   ValuePtr a();
-// CHECK:   ArrayRef<ValuePtr> b();
+// CHECK:   AOpOperandAdaptor(ArrayRef<Value> values);
+// CHECK:   ArrayRef<Value> getODSOperands(unsigned index);
+// CHECK:   Value a();
+// CHECK:   ArrayRef<Value> b();
 // CHECK: private:
-// CHECK:   ArrayRef<ValuePtr> tblgen_operands;
+// CHECK:   ArrayRef<Value> tblgen_operands;
 // CHECK: };
 
 // CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNResults<1>::Impl, OpTrait::HasNoSideEffect, OpTrait::AtLeastNOperands<1>::Impl
@@ -60,18 +60,18 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
 // CHECK:   using OperandAdaptor = AOpOperandAdaptor;
 // CHECK:   static StringRef getOperationName();
 // CHECK:   Operation::operand_range getODSOperands(unsigned index);
-// CHECK:   ValuePtr a();
+// CHECK:   Value a();
 // CHECK:   Operation::operand_range b();
 // CHECK:   Operation::result_range getODSResults(unsigned index);
-// CHECK:   ValuePtr r();
+// CHECK:   Value r();
 // CHECK:   Region &someRegion();
 // CHECK:   IntegerAttr attr1Attr()
 // CHECK:   APInt attr1();
 // CHECK:   FloatAttr attr2Attr()
 // CHECK:   Optional< APFloat > attr2();
-// CHECK:   static void build(ValuePtr val);
-// CHECK:   static void build(Builder *tblgen_builder, OperationState &tblgen_state, Type r, ArrayRef<Type> s, ValuePtr a, ValueRange b, IntegerAttr attr1, /*optional*/FloatAttr attr2)
-// CHECK:   static void build(Builder *tblgen_builder, OperationState &tblgen_state, Type r, ArrayRef<Type> s, ValuePtr a, ValueRange b, APInt attr1, /*optional*/FloatAttr attr2)
+// CHECK:   static void build(Value val);
+// CHECK:   static void build(Builder *tblgen_builder, OperationState &tblgen_state, Type r, ArrayRef<Type> s, Value a, ValueRange b, IntegerAttr attr1, /*optional*/FloatAttr attr2)
+// CHECK:   static void build(Builder *tblgen_builder, OperationState &tblgen_state, Type r, ArrayRef<Type> s, Value a, ValueRange b, APInt attr1, /*optional*/FloatAttr attr2)
 // CHECK:   static void build(Builder *, OperationState &tblgen_state, ArrayRef<Type> resultTypes, ValueRange operands, ArrayRef<NamedAttribute> attributes)
 // CHECK:   static ParseResult parse(OpAsmParser &parser, OperationState &result);
 // CHECK:   void print(OpAsmPrinter &p);
@@ -111,7 +111,7 @@ def NS_DOp : NS_Op<"op_with_two_operands", []> {
 
 def NS_SkipDefaultBuildersOp : NS_Op<"skip_default_builders", []> {
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<"ValuePtr val">];
+  let builders = [OpBuilder<"Value val">];
 }
 
 // CHECK-LABEL: NS::SkipDefaultBuildersOp declarations

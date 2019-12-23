@@ -793,7 +793,7 @@ TEST_FUNC(affine_if_op) {
   };
   auto intSet = IntegerSet::get(2, 2, affineExprs, isEq);
 
-  SmallVector<ValuePtr, 4> affineIfArgs = {zero, zero, ten, ten};
+  SmallVector<Value, 4> affineIfArgs = {zero, zero, ten, ten};
   intrinsics::affine_if(intSet, affineIfArgs, /*withElseRegion=*/false);
   intrinsics::affine_if(intSet, affineIfArgs, /*withElseRegion=*/true);
 

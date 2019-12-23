@@ -93,7 +93,7 @@ void CAGSlice::enumerateImpliedConnections(
   std::vector<std::pair<CAGAnchorNode *, CAGAnchorNode *>> impliedPairs;
   for (auto &resultAnchorPair : resultAnchors) {
     CAGResultAnchor *resultAnchor = resultAnchorPair.second;
-    ValuePtr resultValue = resultAnchor->getValue();
+    Value resultValue = resultAnchor->getValue();
     for (auto &use : resultValue->getUses()) {
       Operation *operandOp = use.getOwner();
       unsigned operandIdx = use.getOperandNumber();

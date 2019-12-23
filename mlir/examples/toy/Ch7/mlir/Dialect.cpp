@@ -47,7 +47,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   /// Handle the given inlined terminator(toy.return) by replacing it with a new
   /// operation as necessary.
   void handleTerminator(Operation *op,
-                        ArrayRef<ValuePtr> valuesToRepl) const final {
+                        ArrayRef<Value> valuesToRepl) const final {
     // Only "toy.return" needs to be handled here.
     auto returnOp = cast<ReturnOp>(op);
 
@@ -62,7 +62,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   /// operation that takes 'input' as the only operand, and produces a single
   /// result of 'resultType'. If a conversion can not be generated, nullptr
   /// should be returned.
-  Operation *materializeCallConversion(OpBuilder &builder, ValuePtr input,
+  Operation *materializeCallConversion(OpBuilder &builder, Value input,
                                        Type resultType,
                                        Location conversionLoc) const final {
     return builder.create<CastOp>(conversionLoc, resultType, input);
@@ -186,7 +186,7 @@ void ConstantOp::inferShapes() { getResult()->setType(value().getType()); }
 // AddOp
 
 void AddOp::build(mlir::Builder *builder, mlir::OperationState &state,
-                  mlir::ValuePtr lhs, mlir::ValuePtr rhs) {
+                  mlir::Value lhs, mlir::Value rhs) {
   state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
   state.addOperands({lhs, rhs});
 }
@@ -206,8 +206,7 @@ void CastOp::inferShapes() { getResult()->setType(getOperand()->getType()); }
 // GenericCallOp
 
 void GenericCallOp::build(mlir::Builder *builder, mlir::OperationState &state,
-                          StringRef callee,
-                          ArrayRef<mlir::ValuePtr> arguments) {
+                          StringRef callee, ArrayRef<mlir::Value> arguments) {
   // Generic call always returns an unranked Tensor initially.
   state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
   state.addOperands(arguments);
@@ -228,7 +227,7 @@ Operation::operand_range GenericCallOp::getArgOperands() { return inputs(); }
 // MulOp
 
 void MulOp::build(mlir::Builder *builder, mlir::OperationState &state,
-                  mlir::ValuePtr lhs, mlir::ValuePtr rhs) {
+                  mlir::Value lhs, mlir::Value rhs) {
   state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
   state.addOperands({lhs, rhs});
 }
@@ -279,7 +278,7 @@ static mlir::LogicalResult verify(ReturnOp op) {
 // StructAccessOp
 
 void StructAccessOp::build(mlir::Builder *b, mlir::OperationState &state,
-                           mlir::ValuePtr input, size_t index) {
+                           mlir::Value input, size_t index) {
   // Extract the result type from the input type.
   StructType structTy = input->getType().cast<StructType>();
   assert(index < structTy.getNumElementTypes());
@@ -306,7 +305,7 @@ static mlir::LogicalResult verify(StructAccessOp op) {
 // TransposeOp
 
 void TransposeOp::build(mlir::Builder *builder, mlir::OperationState &state,
-                        mlir::ValuePtr value) {
+                        mlir::Value value) {
   state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
   state.addOperands(value);
 }

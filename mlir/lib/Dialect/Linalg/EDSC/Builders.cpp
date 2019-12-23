@@ -35,8 +35,8 @@ static void getMaxDimIndex(ArrayRef<StructuredIndexed> structuredIndices,
 Operation *mlir::edsc::makeLinalgGenericOp(
     ArrayRef<IterType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
     ArrayRef<StructuredIndexed> outputs,
-    function_ref<void(ArrayRef<BlockArgumentPtr>)> regionBuilder,
-    ArrayRef<ValuePtr> otherValues, ArrayRef<Attribute> otherAttributes) {
+    function_ref<void(ArrayRef<BlockArgument>)> regionBuilder,
+    ArrayRef<Value> otherValues, ArrayRef<Attribute> otherAttributes) {
   auto &builder = edsc::ScopedContext::getBuilder();
   auto *ctx = builder.getContext();
   unsigned nInputs = inputs.size();
@@ -57,7 +57,7 @@ Operation *mlir::edsc::makeLinalgGenericOp(
         AffineMap::get(/*dimCount=*/nDims, /*symbolCount=*/0, out.getExprs()));
 
   unsigned nViews = nInputs + nOutputs;
-  SmallVector<ValuePtr, 4> values;
+  SmallVector<Value, 4> values;
   values.reserve(nViews);
   values.append(inputs.begin(), inputs.end());
   values.append(outputs.begin(), outputs.end());
@@ -100,7 +100,7 @@ Operation *mlir::edsc::makeLinalgGenericOp(
   return op;
 }
 
-void mlir::edsc::ops::macRegionBuilder(ArrayRef<BlockArgumentPtr> args) {
+void mlir::edsc::ops::macRegionBuilder(ArrayRef<BlockArgument> args) {
   using edsc::op::operator+;
   using edsc::op::operator*;
   assert(args.size() == 3 && "expected 3 block arguments");
@@ -113,7 +113,7 @@ Operation *mlir::edsc::ops::linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
                                              StructuredIndexed O) {
   SmallVector<edsc::IterType, 4> iterTypes(O.getExprs().size(),
                                            edsc::IterType::Parallel);
-  auto fun = [&unaryOp](ArrayRef<BlockArgumentPtr> args) {
+  auto fun = [&unaryOp](ArrayRef<BlockArgument> args) {
     assert(args.size() == 2 && "expected 2 block arguments");
     ValueHandle a(args[0]);
     linalg_yield(unaryOp(a));
@@ -125,8 +125,7 @@ Operation *mlir::edsc::ops::linalg_pointwise_tanh(StructuredIndexed I,
                                                   StructuredIndexed O) {
   ;
   using edsc::intrinsics::tanh;
-  UnaryPointwiseOpBuilder unOp(
-      [](ValueHandle a) -> ValuePtr { return tanh(a); });
+  UnaryPointwiseOpBuilder unOp([](ValueHandle a) -> Value { return tanh(a); });
   return linalg_pointwise(unOp, I, O);
 }
 
@@ -137,7 +136,7 @@ Operation *mlir::edsc::ops::linalg_pointwise(BinaryPointwiseOpBuilder binaryOp,
                                              StructuredIndexed O) {
   SmallVector<edsc::IterType, 4> iterTypes(O.getExprs().size(),
                                            edsc::IterType::Parallel);
-  auto fun = [&binaryOp](ArrayRef<BlockArgumentPtr> args) {
+  auto fun = [&binaryOp](ArrayRef<BlockArgument> args) {
     assert(args.size() == 3 && "expected 3 block arguments");
     ValueHandle a(args[0]), b(args[1]);
     linalg_yield(binaryOp(a, b));
@@ -150,14 +149,14 @@ Operation *mlir::edsc::ops::linalg_pointwise_add(StructuredIndexed I1,
                                                  StructuredIndexed O) {
   using edsc::op::operator+;
   BinaryPointwiseOpBuilder binOp(
-      [](ValueHandle a, ValueHandle b) -> ValuePtr { return a + b; });
+      [](ValueHandle a, ValueHandle b) -> Value { return a + b; });
   return linalg_pointwise(binOp, I1, I2, O);
 }
 
 Operation *mlir::edsc::ops::linalg_pointwise_max(StructuredIndexed I1,
                                                  StructuredIndexed I2,
                                                  StructuredIndexed O) {
-  BinaryPointwiseOpBuilder binOp([](ValueHandle a, ValueHandle b) -> ValuePtr {
+  BinaryPointwiseOpBuilder binOp([](ValueHandle a, ValueHandle b) -> Value {
     using edsc::intrinsics::select;
     using edsc::op::operator>;
     return select(a > b, a, b).getValue();
