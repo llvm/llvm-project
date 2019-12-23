@@ -22,10 +22,15 @@
 long long get_val() { return 0; }
 double *g_ptr;
 
+struct S {
+  int a, b;
+};
+
 // CHECK-LABEL: define {{.*void}} @{{.*}}simple{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
 void simple(float *a, float *b, float *c, float *d) {
+  S s, *p;
 #ifdef OMP5
-  #pragma omp simd if (simd: true)
+  #pragma omp simd if (simd: true) nontemporal(a, b, c, d, s)
 #else
   #pragma omp simd
 #endif
@@ -43,8 +48,17 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: store i32 [[CALC_I_2]], i32* [[LC_I:.+]]{{.*}}!llvm.access.group
 // ... loop body ...
 // End of body: store into a[i]:
+// OMP45-NOT: load float*,{{.*}}!nontemporal
+// CHECK-NOT: load float,{{.*}}!nontemporal
+// OMP50: load float*,{{.*}}!nontemporal
+// OMP50: load float*,{{.*}}!nontemporal
+// OMP50: load float*,{{.*}}!nontemporal
+// OMP50: load i32,{{.*}}!nontemporal
+// OMP50-NOT: load i32,{{.*}}!nontemporal
+// OMP50: load float*,{{.*}}!nontemporal
+// CHECK-NOT: load float,{{.*}}!nontemporal
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}{{.*}}!llvm.access.group
-    a[i] = b[i] * c[i] * d[i];
+    a[i] = b[i] * c[i] * d[i] + s.a + p->a;
 // CHECK: [[IV1_2:%.+]] = load i32, i32* [[OMP_IV]]{{.*}}!llvm.access.group
 // CHECK-NEXT: [[ADD1_2:%.+]] = add nsw i32 [[IV1_2]], 1
 // CHECK-NEXT: store i32 [[ADD1_2]], i32* [[OMP_IV]]{{.*}}!llvm.access.group
@@ -718,6 +732,47 @@ void linear(float *a) {
 //
 }
 
+#ifdef OMP5
+// OMP50-LABEL: inner_simd
+void inner_simd() {
+  double a, b;
+#pragma omp simd nontemporal(a)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp simd nontemporal(b)
+    for (int k = 0; k < 10; ++k) {
+      // OMP50: load double,{{.*}}!nontemporal
+      // OMP50: store double{{.*}}!nontemporal
+      a = b;
+    }
+    // OMP50-NOT: load double,{{.*}}!nontemporal
+    // OMP50: load double,
+    // OMP50: store double{{.*}}!nontemporal
+    a = b;
+  }
+}
+
+extern struct T t;
+struct Base {
+  float a;
+};
+struct T : public Base {
+  void foo() {
+#pragma omp simd nontemporal(Base::a)
+    for (int i = 0; i < 10; ++i) {
+    // OMP50: store float{{.*}}!nontemporal
+    // OMP50-NOT: nontemporal
+    // OMP50-NEXT: store float
+      Base::a = 0;
+      t.a = 0;
+    }
+  }
+} t;
+
+void bartfoo() {
+  t.foo();
+}
+
+#endif // OMP5
 // TERM_DEBUG-LABEL: bar
 int bar() {return 0;};
 

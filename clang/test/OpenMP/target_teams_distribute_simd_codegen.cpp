@@ -165,7 +165,7 @@ int foo(int n) {
 
   // CHECK:       call void [[HVT1:@.+]](i[[SZ]] {{[^,]+}})
 #ifdef OMP5
-  #pragma omp target teams distribute simd if(target: 0) safelen(32) linear(a) if(simd: 1)
+  #pragma omp target teams distribute simd if(target: 0) safelen(32) linear(a) if(simd: 1) nontemporal(a)
 #else
   #pragma omp target teams distribute simd if(target: 0) safelen(32) linear(a)
 #endif // OMP5
@@ -395,6 +395,8 @@ int foo(int n) {
 // CHECK:       [[AA_ADDR:%.+]] = alloca i[[SZ]], align
 // CHECK:       store i[[SZ]] %{{.+}}, i[[SZ]]* [[AA_ADDR]], align
 // CHECK-64:    [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i32*
+// OMP45-NOT:   !nontemporal
+// OMP50:       load i32,{{.*}}!nontemporal
 // CHECK-64:    store i32 10, i32* [[AA_CADDR]], align
 // CHECK-32:    store i32 10, i32* [[AA_ADDR]], align
 // CHECK:       ret void

@@ -333,7 +333,7 @@ void simple(float *a, float *b, float *c, float *d) {
 // OMP50: br i1 [[COND]], label {{%?}}[[THEN:[^,]+]], label {{%?}}[[ELSE:[^,]+]]
 // OMP50: [[THEN]]:
 #ifdef OMP5
-  #pragma omp for simd reduction(*:R) if (simd:A)
+  #pragma omp for simd reduction(*:R) if (simd:A) nontemporal(R)
 #else
   #pragma omp for simd reduction(*:R)
 #endif
@@ -366,7 +366,8 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: [[LC_IT_2:%.+]] = add nsw i64 -10, [[LC_IT_1]]
 // CHECK-NEXT: store i64 [[LC_IT_2]], i64* [[LC:%[^,]+]],
 // CHECK-NEXT: [[LC_VAL:%.+]] = load i64, i64* [[LC]]
-// CHECK: store i32 %{{.+}}, i32* [[R_PRIV]],
+// OMP45: store i32 %{{.+}}, i32* [[R_PRIV]],
+// OMP50: store i32 %{{.+}}, i32* [[R_PRIV]],{{.*}}!nontemporal
     R *= i;
 // CHECK: [[IV8_2:%.+]] = load i64, i64* [[OMP_IV8]]
 // CHECK-NEXT: [[ADD8_2:%.+]] = add nsw i64 [[IV8_2]], 1

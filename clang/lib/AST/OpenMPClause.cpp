@@ -1162,8 +1162,8 @@ OMPNontemporalClause *OMPNontemporalClause::Create(const ASTContext &C,
                                                    SourceLocation LParenLoc,
                                                    SourceLocation EndLoc,
                                                    ArrayRef<Expr *> VL) {
-  // Allocate space for nontemporal variables.
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+  // Allocate space for nontemporal variables + private references.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(2 * VL.size()));
   auto *Clause =
       new (Mem) OMPNontemporalClause(StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
@@ -1172,8 +1172,14 @@ OMPNontemporalClause *OMPNontemporalClause::Create(const ASTContext &C,
 
 OMPNontemporalClause *OMPNontemporalClause::CreateEmpty(const ASTContext &C,
                                                         unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(2 * N));
   return new (Mem) OMPNontemporalClause(N);
+}
+
+void OMPNontemporalClause::setPrivateRefs(ArrayRef<Expr *> VL) {
+  assert(VL.size() == varlist_size() && "Number of private references is not "
+                                        "the same as the preallocated buffer");
+  std::copy(VL.begin(), VL.end(), varlist_end());
 }
 
 //===----------------------------------------------------------------------===//
