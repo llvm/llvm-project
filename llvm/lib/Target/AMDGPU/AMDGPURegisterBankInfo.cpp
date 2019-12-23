@@ -1069,11 +1069,11 @@ bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
 
   // If the pointer is an SGPR, we have nothing to do.
   if (SrcRegs.empty()) {
-    Register PtrReg = MI.getOperand(1).getReg();
-    const RegisterBank *PtrBank = getRegBank(PtrReg, MRI, *TRI);
+    const RegisterBank *PtrBank =
+      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
     if (PtrBank == &AMDGPU::SGPRRegBank)
       return false;
-    SrcRegs.push_back(PtrReg);
+    SrcRegs.push_back(MI.getOperand(1).getReg());
   }
 
   assert(LoadSize % MaxNonSmrdLoadSize == 0);
@@ -1458,7 +1458,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     if (DstTy != LLT::scalar(16))
       break;
 
-    const RegisterBank *DstBank = getRegBank(DstReg, MRI, *TRI);
+    const RegisterBank *DstBank =
+      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
     if (DstBank == &AMDGPU::VGPRRegBank)
       break;
 
@@ -1479,7 +1480,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_UMIN:
   case AMDGPU::G_UMAX: {
     Register DstReg = MI.getOperand(0).getReg();
-    const RegisterBank *DstBank = getRegBank(DstReg, MRI, *TRI);
+    const RegisterBank *DstBank =
+      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
     if (DstBank == &AMDGPU::VGPRRegBank)
       break;
 
@@ -1516,7 +1518,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     bool Signed = Opc == AMDGPU::G_SEXT;
 
     MachineIRBuilder B(MI);
-    const RegisterBank *SrcBank = getRegBank(SrcReg, MRI, *TRI);
+    const RegisterBank *SrcBank =
+      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
 
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
@@ -1618,7 +1621,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     substituteSimpleCopyRegs(OpdMapper, 1);
     substituteSimpleCopyRegs(OpdMapper, 2);
 
-    const RegisterBank *DstBank = getRegBank(DstReg, MRI, *TRI);
+    const RegisterBank *DstBank =
+      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
     if (DstBank == &AMDGPU::SGPRRegBank)
       break; // Can use S_PACK_* instructions.
 
@@ -1628,8 +1632,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register Hi = MI.getOperand(2).getReg();
     const LLT S32 = LLT::scalar(32);
 
-    const RegisterBank *BankLo = getRegBank(Lo, MRI, *TRI);
-    const RegisterBank *BankHi = getRegBank(Hi, MRI, *TRI);
+    const RegisterBank *BankLo =
+      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
+    const RegisterBank *BankHi =
+      OpdMapper.getInstrMapping().getOperandMapping(2).BreakDown[0].RegBank;
 
     Register ZextLo;
     Register ShiftHi;
@@ -1710,7 +1716,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       = OpdMapper.getInstrMapping().getOperandMapping(0);
 
     // FIXME: Should be getting from mapping or not?
-    const RegisterBank *SrcBank = getRegBank(SrcReg, MRI, *TRI);
+    const RegisterBank *SrcBank =
+      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
     MRI.setRegBank(DstReg, *DstMapping.BreakDown[0].RegBank);
     MRI.setRegBank(CastSrc.getReg(0), *SrcBank);
     MRI.setRegBank(One.getReg(0), AMDGPU::SGPRRegBank);
@@ -1775,9 +1782,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     auto InsHi = B.buildInsertVectorElement(Vec32, InsLo, InsRegs[1], IdxHi);
     B.buildBitcast(DstReg, InsHi);
 
-    const RegisterBank *DstBank = getRegBank(DstReg, MRI, *TRI);
-    const RegisterBank *SrcBank = getRegBank(SrcReg, MRI, *TRI);
-    const RegisterBank *InsSrcBank = getRegBank(InsReg, MRI, *TRI);
+    const RegisterBank *DstBank =
+      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+    const RegisterBank *SrcBank =
+      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
+    const RegisterBank *InsSrcBank =
+      OpdMapper.getInstrMapping().getOperandMapping(2).BreakDown[0].RegBank;
 
     MRI.setRegBank(InsReg, *InsSrcBank);
     MRI.setRegBank(CastSrc.getReg(0), *SrcBank);
