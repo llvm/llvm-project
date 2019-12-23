@@ -52,7 +52,7 @@ TEST_F(DWARFASTParserClangTests,
   for (int i = 0; i < 4; ++i)
     ast_parser.LinkDeclContextToDIE(decl_ctxs[i], dies[i]);
   ast_parser.EnsureAllDIEsInDeclContextHaveBeenParsed(
-      ast_ctx.CreateDeclContext(decl_ctxs[1]));
+      CompilerDeclContext(nullptr, decl_ctxs[1]));
 
   EXPECT_THAT(ast_parser.GetDeclContextToDIEMapKeys(),
               testing::UnorderedElementsAre(decl_ctxs[0], decl_ctxs[3]));
