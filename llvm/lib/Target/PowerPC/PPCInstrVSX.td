@@ -2955,16 +2955,8 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def XXBRQ : XX2_XT6_XO5_XB6<60, 31, 475, "xxbrq", vsrc, []>;
 
   // Vector Reverse
-  def : Pat<(v8i16 (PPCxxreverse v8i16 :$A)),
-            (v8i16 (COPY_TO_REGCLASS (XXBRH (COPY_TO_REGCLASS $A, VSRC)), VRRC))>;
   def : Pat<(v8i16 (bswap v8i16 :$A)),
             (v8i16 (COPY_TO_REGCLASS (XXBRH (COPY_TO_REGCLASS $A, VSRC)), VRRC))>;
-  def : Pat<(v4i32 (PPCxxreverse v4i32 :$A)),
-            (v4i32 (XXBRW $A))>;
-  def : Pat<(v2i64 (PPCxxreverse v2i64 :$A)),
-            (v2i64 (XXBRD $A))>;
-  def : Pat<(v1i128 (PPCxxreverse v1i128 :$A)),
-            (v1i128 (COPY_TO_REGCLASS (XXBRQ (COPY_TO_REGCLASS $A, VSRC)), VRRC))>;
   def : Pat<(v1i128 (bswap v1i128 :$A)),
             (v1i128 (COPY_TO_REGCLASS (XXBRQ (COPY_TO_REGCLASS $A, VSRC)), VRRC))>;
 
