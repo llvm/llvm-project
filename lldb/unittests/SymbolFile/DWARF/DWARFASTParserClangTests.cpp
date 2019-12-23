@@ -6,26 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
+#include "TestingSupport/SubsystemRAII.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 class DWARFASTParserClangTests : public testing::Test {
-public:
-  void SetUp() override {
-    FileSystem::Initialize();
-    ClangASTContext::Initialize();
-  }
-
-  void TearDown() override {
-    ClangASTContext::Terminate();
-    FileSystem::Terminate();
-  }
+  SubsystemRAII<FileSystem, ClangASTContext> subsystems;
 };
 
 namespace {

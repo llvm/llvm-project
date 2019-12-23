@@ -10,6 +10,7 @@
 #include "Plugins/Process/minidump/MinidumpTypes.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_32.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -37,9 +38,7 @@ using namespace minidump;
 
 class MinidumpParserTest : public testing::Test {
 public:
-  void SetUp() override { FileSystem::Initialize(); }
-
-  void TearDown() override { FileSystem::Terminate(); }
+  SubsystemRAII<FileSystem> subsystems;
 
   void SetUpData(const char *minidump_filename) {
     std::string filename = GetInputFilePath(minidump_filename);
