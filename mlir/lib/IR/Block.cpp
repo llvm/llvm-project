@@ -267,3 +267,8 @@ SuccessorRange::SuccessorRange(Block *block) : SuccessorRange(nullptr, 0) {
     if ((count = term->getNumSuccessors()))
       base = term->getBlockOperands().data();
 }
+
+SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange(nullptr, 0) {
+  if ((count = term->getNumSuccessors()))
+    base = term->getBlockOperands().data();
+}
