@@ -18515,7 +18515,23 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         return DAG.getBitcast(NVT, NewExtract);
       }
     }
-    // TODO - handle (DestNumElts % SrcNumElts) == 0
+    if ((DestNumElts % SrcNumElts) == 0) {
+      unsigned DestSrcRatio = DestNumElts / SrcNumElts;
+      if ((NVT.getVectorNumElements() % DestSrcRatio) == 0) {
+        unsigned NewExtNumElts = NVT.getVectorNumElements() / DestSrcRatio;
+        EVT NewExtVT = EVT::getVectorVT(*DAG.getContext(),
+                                        SrcVT.getScalarType(), NewExtNumElts);
+        if ((N->getConstantOperandVal(1) % DestSrcRatio) == 0 &&
+            TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NewExtVT)) {
+          unsigned IndexValScaled = N->getConstantOperandVal(1) / DestSrcRatio;
+          SDLoc DL(N);
+          SDValue NewIndex = DAG.getIntPtrConstant(IndexValScaled, DL);
+          SDValue NewExtract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewExtVT,
+                                           V.getOperand(0), NewIndex);
+          return DAG.getBitcast(NVT, NewExtract);
+        }
+      }
+    }
   }
 
   // Combine:
