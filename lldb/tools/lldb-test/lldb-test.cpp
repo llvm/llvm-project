@@ -603,11 +603,9 @@ Error opts::symbols::dumpAST(lldb_private::Module &Module) {
   if (!clang_ast_ctx)
     return make_string_error("Retrieved TypeSystem was not a ClangASTContext");
 
-  auto ast_ctx = clang_ast_ctx->getASTContext();
-  if (!ast_ctx)
-    return make_string_error("Can't retrieve AST context.");
+  clang::ASTContext &ast_ctx = clang_ast_ctx->getASTContext();
 
-  clang::TranslationUnitDecl *tu = ast_ctx->getTranslationUnitDecl();
+  clang::TranslationUnitDecl *tu = ast_ctx.getTranslationUnitDecl();
   if (!tu)
     return make_string_error("Can't retrieve translation unit declaration.");
 

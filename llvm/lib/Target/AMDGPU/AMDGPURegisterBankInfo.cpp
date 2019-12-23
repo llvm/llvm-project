@@ -928,7 +928,7 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
             Op.setReg(Merge.getReg(0));
           }
 
-          MRI.setRegBank(Op.getReg(), getRegBank(AMDGPU::SGPRRegBankID));
+          MRI.setRegBank(Op.getReg(), AMDGPU::SGPRRegBank);
         }
       }
     }
@@ -1117,11 +1117,11 @@ bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
   for (unsigned DefIdx = 0, e = DefRegs.size(); DefIdx != e; ++DefIdx) {
     Register IdxReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
     B.buildConstant(IdxReg, DefIdx);
-    MRI.setRegBank(IdxReg, getRegBank(AMDGPU::VGPRRegBankID));
+    MRI.setRegBank(IdxReg, AMDGPU::VGPRRegBank);
     B.buildExtractVectorElement(DefRegs[DefIdx], TmpReg, IdxReg);
   }
 
-  MRI.setRegBank(DstReg, getRegBank(AMDGPU::VGPRRegBankID));
+  MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
   return true;
 }
 
@@ -1389,7 +1389,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     B.buildSelect(DefRegs[0], Src0Regs[0], Src1Regs[0], Src2Regs[0]);
     B.buildSelect(DefRegs[1], Src0Regs[0], Src1Regs[1], Src2Regs[1]);
 
-    MRI.setRegBank(DstReg, getRegBank(AMDGPU::VGPRRegBankID));
+    MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
     MI.eraseFromParent();
     return;
   }
@@ -1445,7 +1445,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       .addUse(Src0Regs[1])
       .addUse(Src1Regs[1]);
 
-    MRI.setRegBank(DstReg, getRegBank(AMDGPU::VGPRRegBankID));
+    MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
     MI.eraseFromParent();
     return;
   }

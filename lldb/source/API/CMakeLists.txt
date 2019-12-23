@@ -9,6 +9,11 @@ if(LLDB_ENABLE_PYTHON)
   set(lldb_python_wrapper ${lldb_scripts_dir}/LLDBWrapPython.cpp)
 endif()
 
+if(LLDB_ENABLE_LUA)
+  get_target_property(lldb_scripts_dir swig_wrapper_lua BINARY_DIR)
+  set(lldb_lua_wrapper ${lldb_scripts_dir}/LLDBWrapLua.cpp)
+endif()
+
 if(LLDB_BUILD_FRAMEWORK)
   set(option_install_prefix INSTALL_PREFIX ${LLDB_FRAMEWORK_INSTALL_DIR})
   set(option_framework FRAMEWORK)
@@ -85,6 +90,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBUnixSignals.cpp
   SystemInitializerFull.cpp
   ${lldb_python_wrapper}
+  ${lldb_lua_wrapper}
 
   LINK_LIBS
     lldbBase
@@ -128,6 +134,19 @@ if(lldb_python_wrapper)
     set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
       PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
   endif ()
+endif()
+
+if(lldb_lua_wrapper)
+  add_dependencies(liblldb swig_wrapper_lua)
+  target_include_directories(liblldb PRIVATE ${LUA_INCLUDE_DIR})
+
+  if (MSVC)
+    set_property(SOURCE ${lldb_lua_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
+  else()
+    set_property(SOURCE ${lldb_lua_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
+  endif()
+
+  set_source_files_properties(${lldb_lua_wrapper} PROPERTIES GENERATED ON)
 endif()
 
 set_target_properties(liblldb

@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -831,8 +832,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
             for (auto &MOP : MI.operands()) {
               if (MOP.isReg() && !MOP.isDebug() && MOP.getReg() &&
                   TRI->regsOverlap(MOP.getReg(), RegToRename)) {
-                assert(MOP.isImplicit() ||
-                       (MOP.isRenamable() && !MOP.isEarlyClobber()) &&
+                assert((MOP.isImplicit() ||
+                        (MOP.isRenamable() && !MOP.isEarlyClobber())) &&
                            "Need renamable operands");
                 MOP.setReg(GetMatchingSubReg(MOP.getReg()));
               }
@@ -1374,6 +1375,7 @@ static Optional<MCPhysReg> tryToFindRegisterToRename(
     SmallPtrSetImpl<const TargetRegisterClass *> &RequiredClasses,
     const TargetRegisterInfo *TRI) {
   auto &MF = *FirstMI.getParent()->getParent();
+  MachineRegisterInfo &RegInfo = MF.getRegInfo();
 
   // Checks if any sub- or super-register of PR is callee saved.
   auto AnySubOrSuperRegCalleePreserved = [&MF, TRI](MCPhysReg PR) {
@@ -1397,7 +1399,8 @@ static Optional<MCPhysReg> tryToFindRegisterToRename(
   auto *RegClass = TRI->getMinimalPhysRegClass(getLdStRegOp(FirstMI).getReg());
   for (const MCPhysReg &PR : *RegClass) {
     if (DefinedInBB.available(PR) && UsedInBetween.available(PR) &&
-        !AnySubOrSuperRegCalleePreserved(PR) && CanBeUsedForAllClasses(PR)) {
+        !RegInfo.isReserved(PR) && !AnySubOrSuperRegCalleePreserved(PR) &&
+        CanBeUsedForAllClasses(PR)) {
       DefinedInBB.addReg(PR);
       LLVM_DEBUG(dbgs() << "Found rename register " << printReg(PR, TRI)
                         << "\n");

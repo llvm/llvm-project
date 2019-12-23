@@ -708,8 +708,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_source_manager_up(), m_source_file_cache(),
       m_command_interpreter_up(
           std::make_unique<CommandInterpreter>(*this, false)),
-      m_script_interpreter_sp(), m_input_reader_stack(), m_instance_name(),
-      m_loaded_plugins(), m_event_handler_thread(), m_io_handler_thread(),
+      m_input_reader_stack(), m_instance_name(), m_loaded_plugins(),
+      m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_forward_listener_sp(), m_clear_once() {
   char instance_cstr[256];
@@ -1198,17 +1198,21 @@ bool Debugger::EnableLog(llvm::StringRef channel,
                                error_stream);
 }
 
-ScriptInterpreter *Debugger::GetScriptInterpreter(bool can_create) {
+ScriptInterpreter *
+Debugger::GetScriptInterpreter(bool can_create,
+                               llvm::Optional<lldb::ScriptLanguage> language) {
   std::lock_guard<std::recursive_mutex> locker(m_script_interpreter_mutex);
+  lldb::ScriptLanguage script_language =
+      language ? *language : GetScriptLanguage();
 
-  if (!m_script_interpreter_sp) {
+  if (!m_script_interpreters[script_language]) {
     if (!can_create)
       return nullptr;
-    m_script_interpreter_sp = PluginManager::GetScriptInterpreterForLanguage(
-        GetScriptLanguage(), *this);
+    m_script_interpreters[script_language] =
+        PluginManager::GetScriptInterpreterForLanguage(script_language, *this);
   }
 
-  return m_script_interpreter_sp.get();
+  return m_script_interpreters[script_language].get();
 }
 
 SourceManager &Debugger::GetSourceManager() {

@@ -977,7 +977,7 @@ bool SymbolFileDWARF::ParseImportedModules(
               DW_AT_LLVM_include_path, nullptr))
         module.search_path = ConstString(include_path);
       if (const char *sysroot = module_die.GetAttributeValueAsString(
-              DW_AT_LLVM_isysroot, nullptr))
+              DW_AT_LLVM_sysroot, nullptr))
         module.sysroot = ConstString(sysroot);
       imported_modules.push_back(module);
     }

@@ -31,7 +31,7 @@ Features
 
 - LLD is very fast. When you link a large program on a multicore
   machine, you can expect that LLD runs more than twice as fast as the GNU
-  gold linker. Your milage may vary, though.
+  gold linker. Your mileage may vary, though.
 
 - It supports various CPUs/ABIs including x86-64, x86, x32, AArch64,
   ARM, MIPS 32/64 big/little-endian, PowerPC, PowerPC 64 and AMDGPU.

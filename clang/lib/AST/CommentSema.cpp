@@ -1143,6 +1143,7 @@ Sema::getInlineCommandRenderKind(StringRef Name) const {
       .Case("b", InlineCommandComment::RenderBold)
       .Cases("c", "p", InlineCommandComment::RenderMonospaced)
       .Cases("a", "e", "em", InlineCommandComment::RenderEmphasized)
+      .Case("anchor", InlineCommandComment::RenderAnchor)
       .Default(InlineCommandComment::RenderNormal);
 }
 

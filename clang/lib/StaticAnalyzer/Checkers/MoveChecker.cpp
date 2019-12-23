@@ -686,7 +686,7 @@ void MoveChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                    CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   TrackedRegionMapTy TrackedRegions = State->get<TrackedRegionMap>();
-  for (TrackedRegionMapTy::value_type E : TrackedRegions) {
+  for (const auto &E : TrackedRegions) {
     const MemRegion *Region = E.first;
     bool IsRegDead = !SymReaper.isLiveRegion(Region);
 

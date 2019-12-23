@@ -218,7 +218,7 @@ def int_amdgcn_s_waitcnt : GCCBuiltin<"__builtin_amdgcn_s_waitcnt">,
 def int_amdgcn_div_scale : Intrinsic<
   // 1st parameter: Numerator
   // 2nd parameter: Denominator
-  // 3rd parameter: Constant to select select between first and
+  // 3rd parameter: Constant to select between first and
   //                second. (0 = first, 1 = second).
   [llvm_anyfloat_ty, llvm_i1_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i1_ty],

@@ -12,7 +12,7 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 
 namespace lldb_private {
-
+class Lua;
 class ScriptInterpreterLua : public ScriptInterpreter {
 public:
   ScriptInterpreterLua(Debugger &debugger);
@@ -40,6 +40,11 @@ public:
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
+
+  Lua &GetLua();
+
+private:
+  std::unique_ptr<Lua> m_lua;
 };
 
 } // namespace lldb_private

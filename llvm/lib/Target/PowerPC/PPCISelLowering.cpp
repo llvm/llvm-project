@@ -714,6 +714,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (!Subtarget.hasP8Altivec())
       setOperationAction(ISD::ABS, MVT::v2i64, Expand);
 
+    // With hasAltivec set, we can lower ISD::ROTL to vrl(b|h|w).
+    if (Subtarget.hasAltivec())
+      for (auto VT : {MVT::v4i32, MVT::v8i16, MVT::v16i8})
+        setOperationAction(ISD::ROTL, VT, Legal);
+    // With hasP8Altivec set, we can lower ISD::ROTL to vrld.
+    if (Subtarget.hasP8Altivec())
+      setOperationAction(ISD::ROTL, MVT::v2i64, Legal);
+
     addRegisterClass(MVT::v4f32, &PPC::VRRCRegClass);
     addRegisterClass(MVT::v4i32, &PPC::VRRCRegClass);
     addRegisterClass(MVT::v8i16, &PPC::VRRCRegClass);
@@ -1340,7 +1348,6 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::VPERM:           return "PPCISD::VPERM";
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
   case PPCISD::VECINSERT:       return "PPCISD::VECINSERT";
-  case PPCISD::XXREVERSE:       return "PPCISD::XXREVERSE";
   case PPCISD::XXPERMDI:        return "PPCISD::XXPERMDI";
   case PPCISD::VECSHL:          return "PPCISD::VECSHL";
   case PPCISD::CMPB:            return "PPCISD::CMPB";
@@ -5102,9 +5109,10 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
   auto isLocalCallee = [&]() {
     const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
     const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
+    const GlobalValue *GV = G ? G->getGlobal() : nullptr;
 
-    return DAG.getTarget().shouldAssumeDSOLocal(*Mod,
-                                                G ? G->getGlobal() : nullptr);
+    return DAG.getTarget().shouldAssumeDSOLocal(*Mod, GV) &&
+           !dyn_cast_or_null<GlobalIFunc>(GV);
   };
 
   // The PLT is only used in 32-bit ELF PIC mode.  Attempting to use the PLT in
@@ -9179,19 +9187,19 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   if (Subtarget.hasP9Vector()) {
      if (PPC::isXXBRHShuffleMask(SVOp)) {
       SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v8i16, V1);
-      SDValue ReveHWord = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v8i16, Conv);
+      SDValue ReveHWord = DAG.getNode(ISD::BSWAP, dl, MVT::v8i16, Conv);
       return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, ReveHWord);
     } else if (PPC::isXXBRWShuffleMask(SVOp)) {
       SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V1);
-      SDValue ReveWord = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v4i32, Conv);
+      SDValue ReveWord = DAG.getNode(ISD::BSWAP, dl, MVT::v4i32, Conv);
       return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, ReveWord);
     } else if (PPC::isXXBRDShuffleMask(SVOp)) {
       SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v2i64, V1);
-      SDValue ReveDWord = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v2i64, Conv);
+      SDValue ReveDWord = DAG.getNode(ISD::BSWAP, dl, MVT::v2i64, Conv);
       return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, ReveDWord);
     } else if (PPC::isXXBRQShuffleMask(SVOp)) {
       SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v1i128, V1);
-      SDValue ReveQWord = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v1i128, Conv);
+      SDValue ReveQWord = DAG.getNode(ISD::BSWAP, dl, MVT::v1i128, Conv);
       return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, ReveQWord);
     }
   }
@@ -9752,7 +9760,7 @@ SDValue PPCTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   Op = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i64, Op.getOperand(0),
                    Op.getOperand(0));
   // XXBRD
-  Op = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v2i64, Op);
+  Op = DAG.getNode(ISD::BSWAP, dl, MVT::v2i64, Op);
   // MFVSRD
   int VectorIndex = 0;
   if (Subtarget.isLittleEndian())

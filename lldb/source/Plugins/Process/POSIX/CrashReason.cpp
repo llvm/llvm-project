@@ -136,15 +136,15 @@ std::string GetCrashReasonString(CrashReason reason, const siginfo_t &info) {
 #if defined(si_lower) && defined(si_upper)
   if (reason == CrashReason::eBoundViolation) {
     str = "signal SIGSEGV";
-    AppendBounds(str, reinterpret_cast<lldb::addr_t>(info.si_lower),
-                 reinterpret_cast<lldb::addr_t>(info.si_upper),
-                 reinterpret_cast<lldb::addr_t>(info.si_addr));
+    AppendBounds(str, reinterpret_cast<uintptr_t>(info.si_lower),
+                 reinterpret_cast<uintptr_t>(info.si_upper),
+                 reinterpret_cast<uintptr_t>(info.si_addr));
     return str;
   }
 #endif
 
   return GetCrashReasonString(reason,
-                              reinterpret_cast<lldb::addr_t>(info.si_addr));
+                              reinterpret_cast<uintptr_t>(info.si_addr));
 }
 
 std::string GetCrashReasonString(CrashReason reason, lldb::addr_t fault_addr) {

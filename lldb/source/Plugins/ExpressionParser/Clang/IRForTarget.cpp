@@ -355,7 +355,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   ConstantInt *new_constant_int =
       ConstantInt::get(llvm::Type::getInt64Ty(m_module->getContext()),
-                       reinterpret_cast<uint64_t>(result_decl), false);
+                       reinterpret_cast<uintptr_t>(result_decl), false);
 
   llvm::Metadata *values[2];
   values[0] = ConstantAsMetadata::get(new_result_global);

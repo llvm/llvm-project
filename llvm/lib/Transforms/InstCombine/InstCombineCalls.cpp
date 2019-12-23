@@ -2286,17 +2286,21 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::copysign: {
-    const APFloat *C;
-    if (match(II->getArgOperand(1), m_APFloat(C))) {
-      // If we know the sign bit of the sign argument, reduce to FABS/FNABS:
-      // copysign X, PosC --> fabs X
-      // copysign X, NegC --> fneg (fabs X)
+    if (SignBitMustBeZero(II->getArgOperand(1), &TLI)) {
+      // If we know that the sign argument is positive, reduce to FABS:
+      // copysign X, Pos --> fabs X
       Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
                                                  II->getArgOperand(0), II);
-      if (C->isNegative())
-        Fabs = Builder.CreateFNegFMF(Fabs, II);
-
       return replaceInstUsesWith(*II, Fabs);
+    }
+    // TODO: There should be a ValueTracking sibling like SignBitMustBeOne.
+    const APFloat *C;
+    if (match(II->getArgOperand(1), m_APFloat(C)) && C->isNegative()) {
+      // If we know that the sign argument is negative, reduce to FNABS:
+      // copysign X, Neg --> fneg (fabs X)
+      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
+                                                 II->getArgOperand(0), II);
+      return replaceInstUsesWith(*II, Builder.CreateFNegFMF(Fabs, II));
     }
     break;
   }

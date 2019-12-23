@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.4.3)
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  cmake_minimum_required(VERSION 3.13)
+endif()
 
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
@@ -50,7 +53,9 @@ if (LLDB_ENABLE_PYTHON)
   file(TO_CMAKE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH} LLDB_PYTHON_DEFAULT_RELATIVE_PATH)
   set(LLDB_PYTHON_RELATIVE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH}
     CACHE STRING "Path where Python modules are installed, relative to install prefix")
+endif ()
 
+if (LLDB_ENABLE_PYTHON OR LLDB_ENABLE_LUA)
   add_subdirectory(scripts)
 endif ()
 

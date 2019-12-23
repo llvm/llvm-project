@@ -315,10 +315,8 @@ ObjCLanguageRuntime::EncodingToType::RealizeType(const char *name,
 
 CompilerType ObjCLanguageRuntime::EncodingToType::RealizeType(
     ClangASTContext &ast_ctx, const char *name, bool for_expression) {
-  clang::ASTContext *clang_ast = ast_ctx.getASTContext();
-  if (!clang_ast)
-    return CompilerType();
-  return RealizeType(*clang_ast, name, for_expression);
+  clang::ASTContext &clang_ast = ast_ctx.getASTContext();
+  return RealizeType(clang_ast, name, for_expression);
 }
 
 ObjCLanguageRuntime::EncodingToType::~EncodingToType() {}

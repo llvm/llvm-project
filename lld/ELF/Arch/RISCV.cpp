@@ -108,7 +108,10 @@ static uint32_t getEFlags(InputFile *f) {
 }
 
 uint32_t RISCV::calcEFlags() const {
-  assert(!objectFiles.empty());
+  // If there are only binary input files (from -b binary), use a
+  // value of 0 for the ELF header flags.
+  if (objectFiles.empty())
+    return 0;
 
   uint32_t target = getEFlags(objectFiles.front());
 

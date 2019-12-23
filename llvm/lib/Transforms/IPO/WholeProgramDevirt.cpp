@@ -842,7 +842,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
 bool DevirtIndex::tryFindVirtualCallTargets(
     std::vector<ValueInfo> &TargetsForSlot, const TypeIdCompatibleVtableInfo TIdInfo,
     uint64_t ByteOffset) {
-  for (const TypeIdOffsetVtableInfo P : TIdInfo) {
+  for (const TypeIdOffsetVtableInfo &P : TIdInfo) {
     // Ensure that we have at most one external linkage vtable initializer.
     assert(P.VTableVI.getSummaryList().size() == 1 ||
            llvm::count_if(

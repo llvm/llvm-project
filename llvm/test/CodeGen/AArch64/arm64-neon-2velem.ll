@@ -1663,8 +1663,7 @@ entry:
 define <2 x float> @test_vmul_laneq3_f32_bitcast(<2 x float> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vmul_laneq3_f32_bitcast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.s[1]
+; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.s[3]
 ; CHECK-NEXT:    ret
   %extract = shufflevector <2 x double> %v, <2 x double> undef, <1 x i32> <i32 1>
   %bc = bitcast <1 x double> %extract to <2 x float>
@@ -1676,8 +1675,7 @@ define <2 x float> @test_vmul_laneq3_f32_bitcast(<2 x float> %a, <2 x double> %v
 define <2 x float> @test_vmul_laneq2_f32_bitcast(<2 x float> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vmul_laneq2_f32_bitcast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
+; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.s[2]
 ; CHECK-NEXT:    ret
   %extract = shufflevector <2 x double> %v, <2 x double> undef, <1 x i32> <i32 1>
   %bc = bitcast <1 x double> %extract to <2 x float>
@@ -1689,8 +1687,7 @@ define <2 x float> @test_vmul_laneq2_f32_bitcast(<2 x float> %a, <2 x double> %v
 define <4 x i16> @test_vadd_laneq5_i16_bitcast(<4 x i16> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vadd_laneq5_i16_bitcast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    dup v1.4h, v1.h[1]
+; CHECK-NEXT:    dup v1.4h, v1.h[5]
 ; CHECK-NEXT:    add v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    ret
   %extract = shufflevector <2 x double> %v, <2 x double> undef, <1 x i32> <i32 1>
@@ -1699,6 +1696,8 @@ define <4 x i16> @test_vadd_laneq5_i16_bitcast(<4 x i16> %a, <2 x double> %v) {
   %r = add <4 x i16> %splat, %a
   ret <4 x i16> %r
 }
+
+; TODO: The pattern in LowerVECTOR_SHUFFLE does not match what we are looking for.
 
 define <4 x i16> @test_vadd_lane2_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x i8> %v) {
 ; CHECK-LABEL: test_vadd_lane2_i16_bitcast_bigger_aligned:
@@ -1717,8 +1716,7 @@ define <4 x i16> @test_vadd_lane2_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x
 define <4 x i16> @test_vadd_lane5_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x i8> %v) {
 ; CHECK-LABEL: test_vadd_lane5_i16_bitcast_bigger_aligned:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    dup v1.4h, v1.h[1]
+; CHECK-NEXT:    dup v1.4h, v1.h[5]
 ; CHECK-NEXT:    add v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    ret
   %extract = shufflevector <16 x i8> %v, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -1727,6 +1725,8 @@ define <4 x i16> @test_vadd_lane5_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x
   %r = add <4 x i16> %splat, %a
   ret <4 x i16> %r
 }
+
+; Negative test - can't dup bytes {3,4} of v8i16.
 
 define <4 x i16> @test_vadd_lane_i16_bitcast_bigger_unaligned(<4 x i16> %a, <16 x i8> %v) {
 ; CHECK-LABEL: test_vadd_lane_i16_bitcast_bigger_unaligned:

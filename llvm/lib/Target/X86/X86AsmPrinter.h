@@ -112,7 +112,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   void PrintMemReference(const MachineInstr *MI, unsigned OpNo, raw_ostream &O,
                          const char *Modifier);
   void PrintIntelMemReference(const MachineInstr *MI, unsigned OpNo,
-                              raw_ostream &O);
+                              raw_ostream &O, const char *Modifier);
 
 public:
   X86AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);

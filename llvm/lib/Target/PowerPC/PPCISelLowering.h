@@ -102,10 +102,6 @@ namespace llvm {
       ///
       VECINSERT,
 
-      /// XXREVERSE - The PPC VSX reverse instruction
-      ///
-      XXREVERSE,
-
       /// VECSHL - The PPC vector shift left instruction
       ///
       VECSHL,

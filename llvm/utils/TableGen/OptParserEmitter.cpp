@@ -241,9 +241,9 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << "bool ValuesWereAdded;\n";
     OS << R.getValueAsString("ValuesCode");
     OS << "\n";
-    for (const std::string &Pref : R.getValueAsListOfStrings("Prefixes")) {
+    for (std::string S : R.getValueAsListOfStrings("Prefixes")) {
       OS << "ValuesWereAdded = Opt.addValues(";
-      std::string S = (Pref + R.getValueAsString("Name")).str();
+      S += R.getValueAsString("Name");
       write_cstring(OS, S);
       OS << ", Values);\n";
       OS << "(void)ValuesWereAdded;\n";

@@ -429,7 +429,7 @@ void IteratorModeling::checkLiveSymbols(ProgramStateRef State,
   // Keep symbolic expressions of iterator positions, container begins and ends
   // alive
   auto RegionMap = State->get<IteratorRegionMap>();
-  for (const auto Reg : RegionMap) {
+  for (const auto &Reg : RegionMap) {
     const auto Offset = Reg.second.getOffset();
     for (auto i = Offset->symbol_begin(); i != Offset->symbol_end(); ++i)
       if (isa<SymbolData>(*i))
@@ -437,7 +437,7 @@ void IteratorModeling::checkLiveSymbols(ProgramStateRef State,
   }
 
   auto SymbolMap = State->get<IteratorSymbolMap>();
-  for (const auto Sym : SymbolMap) {
+  for (const auto &Sym : SymbolMap) {
     const auto Offset = Sym.second.getOffset();
     for (auto i = Offset->symbol_begin(); i != Offset->symbol_end(); ++i)
       if (isa<SymbolData>(*i))
@@ -445,7 +445,7 @@ void IteratorModeling::checkLiveSymbols(ProgramStateRef State,
   }
 
   auto ContMap = State->get<ContainerMap>();
-  for (const auto Cont : ContMap) {
+  for (const auto &Cont : ContMap) {
     const auto CData = Cont.second;
     if (CData.getBegin()) {
       SR.markLive(CData.getBegin());
@@ -466,7 +466,7 @@ void IteratorModeling::checkDeadSymbols(SymbolReaper &SR,
   auto State = C.getState();
 
   auto RegionMap = State->get<IteratorRegionMap>();
-  for (const auto Reg : RegionMap) {
+  for (const auto &Reg : RegionMap) {
     if (!SR.isLiveRegion(Reg.first)) {
       // The region behind the `LazyCompoundVal` is often cleaned up before
       // the `LazyCompoundVal` itself. If there are iterator positions keyed
@@ -478,14 +478,14 @@ void IteratorModeling::checkDeadSymbols(SymbolReaper &SR,
   }
 
   auto SymbolMap = State->get<IteratorSymbolMap>();
-  for (const auto Sym : SymbolMap) {
+  for (const auto &Sym : SymbolMap) {
     if (!SR.isLive(Sym.first)) {
       State = State->remove<IteratorSymbolMap>(Sym.first);
     }
   }
 
   auto ContMap = State->get<ContainerMap>();
-  for (const auto Cont : ContMap) {
+  for (const auto &Cont : ContMap) {
     if (!SR.isLiveRegion(Cont.first)) {
       // We must keep the container data while it has live iterators to be able
       // to compare them to the begin and the end of the container.
@@ -1100,7 +1100,7 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
 
   if (!ContMap.isEmpty()) {
     Out << Sep << "Container Data :" << NL;
-    for (const auto Cont : ContMap) {
+    for (const auto &Cont : ContMap) {
       Cont.first->dumpToStream(Out);
       Out << " : [ ";
       const auto CData = Cont.second;
@@ -1122,7 +1122,7 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
 
   if (!SymbolMap.isEmpty() || !RegionMap.isEmpty()) {
     Out << Sep << "Iterator Positions :" << NL;
-    for (const auto Sym : SymbolMap) {
+    for (const auto &Sym : SymbolMap) {
       Sym.first->dumpToStream(Out);
       Out << " : ";
       const auto Pos = Sym.second;
@@ -1132,7 +1132,7 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
       Pos.getOffset()->dumpToStream(Out);
     }
 
-    for (const auto Reg : RegionMap) {
+    for (const auto &Reg : RegionMap) {
       Reg.first->dumpToStream(Out);
       Out << " : ";
       const auto Pos = Reg.second;
@@ -1456,13 +1456,13 @@ ProgramStateRef relateSymbols(ProgramStateRef State, SymbolRef Sym1,
 
 bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont) {
   auto RegionMap = State->get<IteratorRegionMap>();
-  for (const auto Reg : RegionMap) {
+  for (const auto &Reg : RegionMap) {
     if (Reg.second.getContainer() == Cont)
       return true;
   }
 
   auto SymbolMap = State->get<IteratorSymbolMap>();
-  for (const auto Sym : SymbolMap) {
+  for (const auto &Sym : SymbolMap) {
     if (Sym.second.getContainer() == Cont)
       return true;
   }
@@ -1472,7 +1472,7 @@ bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont) {
 
 bool isBoundThroughLazyCompoundVal(const Environment &Env,
                                    const MemRegion *Reg) {
-  for (const auto Binding: Env) {
+  for (const auto &Binding : Env) {
     if (const auto LCVal = Binding.second.getAs<nonloc::LazyCompoundVal>()) {
       if (LCVal->getRegion() == Reg)
         return true;
@@ -1488,7 +1488,7 @@ ProgramStateRef processIteratorPositions(ProgramStateRef State, Condition Cond,
   auto &RegionMapFactory = State->get_context<IteratorRegionMap>();
   auto RegionMap = State->get<IteratorRegionMap>();
   bool Changed = false;
-  for (const auto Reg : RegionMap) {
+  for (const auto &Reg : RegionMap) {
     if (Cond(Reg.second)) {
       RegionMap = RegionMapFactory.add(RegionMap, Reg.first, Proc(Reg.second));
       Changed = true;
@@ -1501,7 +1501,7 @@ ProgramStateRef processIteratorPositions(ProgramStateRef State, Condition Cond,
   auto &SymbolMapFactory = State->get_context<IteratorSymbolMap>();
   auto SymbolMap = State->get<IteratorSymbolMap>();
   Changed = false;
-  for (const auto Sym : SymbolMap) {
+  for (const auto &Sym : SymbolMap) {
     if (Cond(Sym.second)) {
       SymbolMap = SymbolMapFactory.add(SymbolMap, Sym.first, Proc(Sym.second));
       Changed = true;

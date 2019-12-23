@@ -879,6 +879,10 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     OS << MI->getOperand(0).getImm();
   } else if (MI->getOperand(0).isCImm()) {
     MI->getOperand(0).getCImm()->getValue().print(OS, false /*isSigned*/);
+  } else if (MI->getOperand(0).isTargetIndex()) {
+    auto Op = MI->getOperand(0);
+    OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
+    return true;
   } else {
     unsigned Reg;
     if (MI->getOperand(0).isReg()) {

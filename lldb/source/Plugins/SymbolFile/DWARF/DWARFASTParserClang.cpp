@@ -1909,7 +1909,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         }
       }
 
-      clang::ASTContext *ast = m_ast.getASTContext();
+      clang::ASTContext &ast = m_ast.getASTContext();
       if (!clang_type)
         clang_type = m_ast.GetBasicType(eBasicTypeVoid);
 
@@ -1929,7 +1929,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
             return false;
           llvm::APInt apint(*size, uval64, is_signed);
           template_param_infos.args.push_back(
-              clang::TemplateArgument(*ast, llvm::APSInt(apint, !is_signed),
+              clang::TemplateArgument(ast, llvm::APSInt(apint, !is_signed),
                                       ClangUtil::GetQualType(clang_type)));
         } else {
           template_param_infos.args.push_back(
@@ -3570,18 +3570,20 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
         SymbolFileDWARF *dwarf = die.GetDWARF();
         if (namespace_name) {
           dwarf->GetObjectFile()->GetModule()->LogMessage(
-              log, "ASTContext => %p: 0x%8.8" PRIx64
-                   ": DW_TAG_namespace with DW_AT_name(\"%s\") => "
-                   "clang::NamespaceDecl *%p (original = %p)",
-              static_cast<void *>(m_ast.getASTContext()), die.GetID(),
+              log,
+              "ASTContext => %p: 0x%8.8" PRIx64
+              ": DW_TAG_namespace with DW_AT_name(\"%s\") => "
+              "clang::NamespaceDecl *%p (original = %p)",
+              static_cast<void *>(&m_ast.getASTContext()), die.GetID(),
               namespace_name, static_cast<void *>(namespace_decl),
               static_cast<void *>(namespace_decl->getOriginalNamespace()));
         } else {
           dwarf->GetObjectFile()->GetModule()->LogMessage(
-              log, "ASTContext => %p: 0x%8.8" PRIx64
-                   ": DW_TAG_namespace (anonymous) => clang::NamespaceDecl *%p "
-                   "(original = %p)",
-              static_cast<void *>(m_ast.getASTContext()), die.GetID(),
+              log,
+              "ASTContext => %p: 0x%8.8" PRIx64
+              ": DW_TAG_namespace (anonymous) => clang::NamespaceDecl *%p "
+              "(original = %p)",
+              static_cast<void *>(&m_ast.getASTContext()), die.GetID(),
               static_cast<void *>(namespace_decl),
               static_cast<void *>(namespace_decl->getOriginalNamespace()));
         }

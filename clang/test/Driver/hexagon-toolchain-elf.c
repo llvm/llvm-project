@@ -536,3 +536,26 @@
 // RUN:   | FileCheck -check-prefix=CHECK080 %s
 // CHECK080:      "-cc1"
 // CHECK080:      "-Wreturn-type"
+
+// -----------------------------------------------------------------------------
+// Default, not passing -fuse-ld
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK081 %s
+// REQUIRES: hexagon-registered-target
+// CHECK081:      "-march=hexagon"
+// CHECK081:      "-mcpu=hexagonv60"
+// -----------------------------------------------------------------------------
+// Passing -fuse-ld=lld
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK082 %s
+// CHECK082-NOT:      -march=
+// CHECK082-NOT:      -mcpu=

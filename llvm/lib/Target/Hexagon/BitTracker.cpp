@@ -860,7 +860,7 @@ void BT::visitNonBranch(const MachineInstr &MI) {
              << " cell: " << ME.getCell(RU, Map) << "\n";
     }
     dbgs() << "Outputs:\n";
-    for (const std::pair<unsigned, RegisterCell> &P : ResMap) {
+    for (const std::pair<const unsigned, RegisterCell> &P : ResMap) {
       RegisterRef RD(P.first);
       dbgs() << "  " << printReg(P.first, &ME.TRI) << " cell: "
              << ME.getCell(RD, ResMap) << "\n";

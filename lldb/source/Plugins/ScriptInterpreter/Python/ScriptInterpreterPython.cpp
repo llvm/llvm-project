@@ -2057,8 +2057,7 @@ ScriptInterpreterPythonImpl::LoadPluginModule(const FileSpec &file_spec,
 
   StructuredData::ObjectSP module_sp;
 
-  if (LoadScriptingModule(file_spec.GetPath().c_str(), true, true, error,
-                          &module_sp))
+  if (LoadScriptingModule(file_spec.GetPath().c_str(), true, error, &module_sp))
     return module_sp;
 
   return StructuredData::ObjectSP();
@@ -2737,8 +2736,8 @@ uint64_t replace_all(std::string &str, const std::string &oldStr,
 }
 
 bool ScriptInterpreterPythonImpl::LoadScriptingModule(
-    const char *pathname, bool can_reload, bool init_session,
-    lldb_private::Status &error, StructuredData::ObjectSP *module_sp) {
+    const char *pathname, bool init_session, lldb_private::Status &error,
+    StructuredData::ObjectSP *module_sp) {
   if (!pathname || !pathname[0]) {
     error.SetErrorString("invalid pathname");
     return false;
@@ -2837,11 +2836,6 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
                                     .IsAllocated();
 
     bool was_imported = (was_imported_globally || was_imported_locally);
-
-    if (was_imported && !can_reload) {
-      error.SetErrorString("module already imported");
-      return false;
-    }
 
     // now actually do the import
     command_stream.Clear();

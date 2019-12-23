@@ -497,6 +497,9 @@ static void DumpCXCommentInternal(struct CommentASTDumpingContext *Ctx,
     case CXCommentInlineCommandRenderKind_Emphasized:
       printf(" RenderEmphasized");
       break;
+    case CXCommentInlineCommandRenderKind_Anchor:
+      printf(" RenderAnchor");
+      break;
     }
     for (i = 0, e = clang_InlineCommandComment_getNumArgs(Comment);
          i != e; ++i) {

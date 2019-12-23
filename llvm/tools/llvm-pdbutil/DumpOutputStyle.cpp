@@ -1407,7 +1407,7 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
 
       P.formatLine("Local / Global hashes:");
       TypeIndex TI(TypeIndex::FirstNonSimpleIndex);
-      for (const auto &H : zip(LocalHashes, GlobalHashes)) {
+      for (auto H : zip(LocalHashes, GlobalHashes)) {
         AutoIndent Indent2(P);
         LocallyHashedType &L = std::get<0>(H);
         GloballyHashedType &G = std::get<1>(H);

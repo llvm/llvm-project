@@ -6601,6 +6601,31 @@ static void handleMSAllocatorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<MSAllocatorAttr>(S, D, AL);
 }
 
+static void handeAcquireHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (AL.isUsedAsTypeAttr())
+    return;
+  // Warn if the parameter is definitely not an output parameter.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    if (PVD->getType()->isIntegerType()) {
+      S.Diag(AL.getLoc(), diag::err_attribute_output_parameter)
+          << AL.getRange();
+      return;
+    }
+  }
+  StringRef Argument;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Argument))
+    return;
+  D->addAttr(AcquireHandleAttr::Create(S.Context, Argument, AL));
+}
+
+template<typename Attr>
+static void handleHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Argument;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Argument))
+    return;
+  D->addAttr(Attr::Create(S.Context, Argument, AL));
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -7377,6 +7402,18 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
   case ParsedAttr::AT_ArmMveAlias:
     handleArmMveAliasAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_AcquireHandle:
+    handeAcquireHandleAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_ReleaseHandle:
+    handleHandleAttr<ReleaseHandleAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_UseHandle:
+    handleHandleAttr<UseHandleAttr>(S, D, AL);
     break;
   }
 }

@@ -928,7 +928,8 @@ protected:
   /// \param[out] NameOut - The return value.
   void GetNameForMethod(const ObjCMethodDecl *OMD,
                         const ObjCContainerDecl *CD,
-                        SmallVectorImpl<char> &NameOut);
+                        SmallVectorImpl<char> &NameOut,
+                        bool ignoreCategoryNamespace = false);
 
   /// GetMethodVarName - Return a unique constant for the given
   /// selector's name. The return value has type char *.
@@ -4033,7 +4034,7 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
     return I->second;
 
   SmallString<256> Name;
-  GetNameForMethod(OMD, CD, Name);
+  GetNameForMethod(OMD, CD, Name, /*ignoreCategoryNamespace*/true);
 
   CodeGenTypes &Types = CGM.getTypes();
   llvm::FunctionType *MethodTy =
@@ -4088,9 +4089,9 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
         nullptr, true);
     Builder.CreateStore(result.getScalarVal(), selfAddr);
 
-	// Nullable `Class` expressions cannot be messaged with a direct method
-	// so the only reason why the receive can be null would be because
-	// of weak linking.
+    // Nullable `Class` expressions cannot be messaged with a direct method
+    // so the only reason why the receive can be null would be because
+    // of weak linking.
     ReceiverCanBeNull = isWeakLinkedClass(OID);
   }
 
@@ -5687,14 +5688,16 @@ CGObjCCommonMac::GetPropertyTypeString(const ObjCPropertyDecl *PD,
 
 void CGObjCCommonMac::GetNameForMethod(const ObjCMethodDecl *D,
                                        const ObjCContainerDecl *CD,
-                                       SmallVectorImpl<char> &Name) {
+                                       SmallVectorImpl<char> &Name,
+                                       bool ignoreCategoryNamespace) {
   llvm::raw_svector_ostream OS(Name);
   assert (CD && "Missing container decl in GetNameForMethod");
   OS << '\01' << (D->isInstanceMethod() ? '-' : '+')
      << '[' << CD->getName();
-  if (const ObjCCategoryImplDecl *CID =
-      dyn_cast<ObjCCategoryImplDecl>(D->getDeclContext()))
-    OS << '(' << *CID << ')';
+  if (!ignoreCategoryNamespace)
+    if (const ObjCCategoryImplDecl *CID =
+        dyn_cast<ObjCCategoryImplDecl>(D->getDeclContext()))
+      OS << '(' << *CID << ')';
   OS << ' ' << D->getSelector().getAsString() << ']';
 }
 

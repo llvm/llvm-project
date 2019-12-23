@@ -2,6 +2,7 @@
 ; RUN: opt < %s -instcombine --instcombine-max-iterations=0 -S | FileCheck %s --check-prefix=ZERO
 ; RUN: opt < %s -instcombine --instcombine-max-iterations=1 -S | FileCheck %s --check-prefix=ONE
 ; RUN: opt < %s -instcombine -S | FileCheck %s --check-prefix=FIXPOINT
+; RUN: not opt < %s -instcombine -S --instcombine-infinite-loop-threshold=3 2>&1 | FileCheck %s --check-prefix=LOOP
 
 ; Based on xor-of-icmps-with-extra-uses.ll. This requires multiple iterations of
 ; InstCombine to reach a fixpoint.
@@ -31,6 +32,8 @@ define i1 @v0_select_of_consts(i32 %X, i32* %selected) {
 ; FIXPOINT-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
 ; FIXPOINT-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
 ; FIXPOINT-NEXT:    ret i1 [[TMP1]]
+
+; LOOP: LLVM ERROR: Instruction Combining seems stuck in an infinite loop after 3 iterations.
 
   %cond0 = icmp sgt i32 %X, 32767
   %cond1 = icmp sgt i32 %X, -32768

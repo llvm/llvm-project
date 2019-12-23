@@ -175,7 +175,7 @@ findBuildID(const CopyConfig &Config, const object::ELFFile<ELFT> &In) {
     if (Phdr.p_type != PT_NOTE)
       continue;
     Error Err = Error::success();
-    for (const auto &Note : In.notes(Phdr, Err))
+    for (auto Note : In.notes(Phdr, Err))
       if (Note.getType() == NT_GNU_BUILD_ID && Note.getName() == ELF_NOTE_GNU)
         return Note.getDesc();
     if (Err)

@@ -1,5 +1,4 @@
-// REQUIRES: bpf-registered-target
-// RUN: %clang -target bpf -emit-llvm -S -g %s -o - | FileCheck %s
+// RUN: %clang_cc1 -x c -debug-info-kind=limited -triple bpf-linux-gnu -emit-llvm %s -o - | FileCheck %s
 
 extern char ch;
 extern char ch;

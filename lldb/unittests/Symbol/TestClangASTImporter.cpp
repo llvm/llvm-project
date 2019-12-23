@@ -33,33 +33,6 @@ public:
     HostInfo::Terminate();
     FileSystem::Terminate();
   }
-
-protected:
-  std::unique_ptr<ClangASTContext> createAST() {
-    return std::make_unique<ClangASTContext>(HostInfo::GetTargetTriple());
-  }
-
-  CompilerType createRecord(ClangASTContext &ast, llvm::StringRef name) {
-    return ast.CreateRecordType(ast.getASTContext()->getTranslationUnitDecl(),
-                                lldb::AccessType::eAccessPublic, name, 0,
-                                lldb::LanguageType::eLanguageTypeC);
-  }
-
-  /// Create a record with the given name and a field with the given type
-  /// and name.
-  CompilerType createRecordWithField(ClangASTContext &ast,
-                                     llvm::StringRef record_name,
-                                     CompilerType field_type,
-                                     llvm::StringRef field_name) {
-    CompilerType t = createRecord(ast, record_name);
-
-    ClangASTContext::StartTagDeclarationDefinition(t);
-    ast.AddFieldToRecordType(t, field_name, field_type,
-                             lldb::AccessType::eAccessPublic, 7);
-    ClangASTContext::CompleteTagDeclarationDefinition(t);
-
-    return t;
-  }
 };
 
 TEST_F(TestClangASTImporter, CanImportInvalidType) {
@@ -76,12 +49,11 @@ TEST_F(TestClangASTImporter, CopyDeclTagDecl) {
   // Tests that the ClangASTImporter::CopyDecl can copy TagDecls.
   clang_utils::SourceASTWithRecord source;
 
-  std::unique_ptr<ClangASTContext> target_ast = createAST();
+  std::unique_ptr<ClangASTContext> target_ast = clang_utils::createAST();
 
   ClangASTImporter importer;
   clang::Decl *imported =
-      importer.CopyDecl(target_ast->getASTContext(),
-                        source.ast->getASTContext(), source.record_decl);
+      importer.CopyDecl(&target_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the correct decl by just comparing their qualified name.
@@ -94,7 +66,7 @@ TEST_F(TestClangASTImporter, CopyDeclTagDecl) {
   // Check that origin was set for the imported declaration.
   ClangASTImporter::DeclOrigin origin = importer.GetDeclOrigin(imported);
   EXPECT_TRUE(origin.Valid());
-  EXPECT_EQ(origin.ctx, source.ast->getASTContext());
+  EXPECT_EQ(origin.ctx, &source.ast->getASTContext());
   EXPECT_EQ(origin.decl, source.record_decl);
 }
 
@@ -102,7 +74,7 @@ TEST_F(TestClangASTImporter, CopyTypeTagDecl) {
   // Tests that the ClangASTImporter::CopyType can copy TagDecls types.
   clang_utils::SourceASTWithRecord source;
 
-  std::unique_ptr<ClangASTContext> target_ast = createAST();
+  std::unique_ptr<ClangASTContext> target_ast = clang_utils::createAST();
 
   ClangASTImporter importer;
   CompilerType imported = importer.CopyType(*target_ast, source.record_type);
@@ -119,7 +91,7 @@ TEST_F(TestClangASTImporter, CopyTypeTagDecl) {
   ClangASTImporter::DeclOrigin origin =
       importer.GetDeclOrigin(imported_tag_decl);
   EXPECT_TRUE(origin.Valid());
-  EXPECT_EQ(origin.ctx, source.ast->getASTContext());
+  EXPECT_EQ(origin.ctx, &source.ast->getASTContext());
   EXPECT_EQ(origin.decl, source.record_decl);
 }
 
@@ -127,12 +99,11 @@ TEST_F(TestClangASTImporter, DeportDeclTagDecl) {
   // Tests that the ClangASTImporter::DeportDecl completely copies TagDecls.
   clang_utils::SourceASTWithRecord source;
 
-  std::unique_ptr<ClangASTContext> target_ast = createAST();
+  std::unique_ptr<ClangASTContext> target_ast = clang_utils::createAST();
 
   ClangASTImporter importer;
   clang::Decl *imported =
-      importer.DeportDecl(target_ast->getASTContext(),
-                          source.ast->getASTContext(), source.record_decl);
+      importer.DeportDecl(&target_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the correct decl by just comparing their qualified name.
@@ -150,7 +121,7 @@ TEST_F(TestClangASTImporter, DeportTypeTagDecl) {
   // Tests that the ClangASTImporter::CopyType can deport TagDecl types.
   clang_utils::SourceASTWithRecord source;
 
-  std::unique_ptr<ClangASTContext> target_ast = createAST();
+  std::unique_ptr<ClangASTContext> target_ast = clang_utils::createAST();
 
   ClangASTImporter importer;
   CompilerType imported = importer.DeportType(*target_ast, source.record_type);
@@ -175,12 +146,11 @@ TEST_F(TestClangASTImporter, MetadataPropagation) {
   const lldb::user_id_t metadata = 123456;
   source.ast->SetMetadataAsUserID(source.record_decl, metadata);
 
-  std::unique_ptr<ClangASTContext> target_ast = createAST();
+  std::unique_ptr<ClangASTContext> target_ast = clang_utils::createAST();
 
   ClangASTImporter importer;
   clang::Decl *imported =
-      importer.CopyDecl(target_ast->getASTContext(),
-                        source.ast->getASTContext(), source.record_decl);
+      importer.CopyDecl(&target_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the same Metadata.
@@ -198,18 +168,16 @@ TEST_F(TestClangASTImporter, MetadataPropagationIndirectImport) {
   const lldb::user_id_t metadata = 123456;
   source.ast->SetMetadataAsUserID(source.record_decl, metadata);
 
-  std::unique_ptr<ClangASTContext> temporary_ast = createAST();
+  std::unique_ptr<ClangASTContext> temporary_ast = clang_utils::createAST();
 
   ClangASTImporter importer;
   clang::Decl *temporary_imported =
-      importer.CopyDecl(temporary_ast->getASTContext(),
-                        source.ast->getASTContext(), source.record_decl);
+      importer.CopyDecl(&temporary_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, temporary_imported);
 
-  std::unique_ptr<ClangASTContext> target_ast = createAST();
+  std::unique_ptr<ClangASTContext> target_ast = clang_utils::createAST();
   clang::Decl *imported =
-      importer.CopyDecl(target_ast->getASTContext(),
-                        temporary_ast->getASTContext(), temporary_imported);
+      importer.CopyDecl(&target_ast->getASTContext(), temporary_imported);
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the same Metadata.
@@ -224,12 +192,11 @@ TEST_F(TestClangASTImporter, MetadataPropagationAfterCopying) {
   clang_utils::SourceASTWithRecord source;
   const lldb::user_id_t metadata = 123456;
 
-  std::unique_ptr<ClangASTContext> target_ast = createAST();
+  std::unique_ptr<ClangASTContext> target_ast = clang_utils::createAST();
 
   ClangASTImporter importer;
   clang::Decl *imported =
-      importer.CopyDecl(target_ast->getASTContext(),
-                        source.ast->getASTContext(), source.record_decl);
+      importer.CopyDecl(&target_ast->getASTContext(), source.record_decl);
   ASSERT_NE(nullptr, imported);
 
   // The TagDecl has been imported. Now set the metadata of the source and

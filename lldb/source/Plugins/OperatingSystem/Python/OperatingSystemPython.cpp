@@ -90,13 +90,12 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
         python_module_path.GetFilename().AsCString(""));
     if (!os_plugin_class_name.empty()) {
       const bool init_session = false;
-      const bool allow_reload = true;
       char python_module_path_cstr[PATH_MAX];
       python_module_path.GetPath(python_module_path_cstr,
                                  sizeof(python_module_path_cstr));
       Status error;
-      if (m_interpreter->LoadScriptingModule(
-              python_module_path_cstr, allow_reload, init_session, error)) {
+      if (m_interpreter->LoadScriptingModule(python_module_path_cstr,
+                                             init_session, error)) {
         // Strip the ".py" extension if there is one
         size_t py_extension_pos = os_plugin_class_name.rfind(".py");
         if (py_extension_pos != std::string::npos)

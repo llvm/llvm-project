@@ -1644,6 +1644,11 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilder<> &B) {
       (!ExpoF->isExactlyValue(0.5) && !ExpoF->isExactlyValue(-0.5)))
     return nullptr;
 
+  // Converting pow(X, -0.5) to 1/sqrt(X) may introduce an extra rounding step,
+  // so that requires fast-math-flags (afn or reassoc).
+  if (ExpoF->isNegative() && (!Pow->hasApproxFunc() && !Pow->hasAllowReassoc()))
+    return nullptr;
+
   Sqrt = getSqrtCall(Base, Attrs, Pow->doesNotAccessMemory(), Mod, B, TLI);
   if (!Sqrt)
     return nullptr;

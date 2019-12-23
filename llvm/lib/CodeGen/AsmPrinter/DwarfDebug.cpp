@@ -241,6 +241,11 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
     MachineLocation MLoc(RegOp.getReg(), Op1.isImm());
     return DbgValueLoc(Expr, MLoc);
   }
+  if (MI->getOperand(0).isTargetIndex()) {
+    auto Op = MI->getOperand(0);
+    return DbgValueLoc(Expr,
+                       TargetIndexLocation(Op.getIndex(), Op.getOffset()));
+  }
   if (MI->getOperand(0).isImm())
     return DbgValueLoc(Expr, MI->getOperand(0).getImm());
   if (MI->getOperand(0).isFPImm())
@@ -535,6 +540,14 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
   }
 }
 
+DIE &DwarfDebug::constructSubprogramDefinitionDIE(const DISubprogram *SP) {
+  DICompileUnit *Unit = SP->getUnit();
+  assert(SP->isDefinition() && "Subprogram not a definition");
+  assert(Unit && "Subprogram definition without parent unit");
+  auto &CU = getOrCreateDwarfCompileUnit(Unit);
+  return *CU.getOrCreateSubprogramDIE(SP);
+}
+
 /// Try to interpret values loaded into registers that forward parameters
 /// for \p CallMI. Store parameters with interpreted value into \p Params.
 static void collectCallSiteParameters(const MachineInstr *CallMI,
@@ -745,6 +758,17 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
         if (!CalleeDecl || !CalleeDecl->getSubprogram())
           continue;
         CalleeSP = CalleeDecl->getSubprogram();
+
+        if (CalleeSP->isDefinition()) {
+          // Ensure that a subprogram DIE for the callee is available in the
+          // appropriate CU.
+          constructSubprogramDefinitionDIE(CalleeSP);
+        } else {
+          // Create the declaration DIE if it is missing. This is required to
+          // support compilation of old bitcode with an incomplete list of
+          // retained metadata.
+          CU.getOrCreateSubprogramDIE(CalleeSP);
+        }
       }
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
@@ -899,11 +923,6 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
     finishUnitAttributes(DIUnit, NewCU);
     NewCU.setSection(Asm->getObjFileLowering().getDwarfInfoSection());
   }
-
-  // Create DIEs for function declarations used for call site debug info.
-  for (auto Scope : DIUnit->getRetainedTypes())
-    if (auto *SP = dyn_cast_or_null<DISubprogram>(Scope))
-      NewCU.getOrCreateSubprogramDIE(SP);
 
   CUMap.insert({DIUnit, &NewCU});
   CUDieMap.insert({&NewCU.getUnitDie(), &NewCU});
@@ -2241,6 +2260,11 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
       return;
     return DwarfExpr.addExpression(std::move(Cursor));
+  } else if (Value.isTargetIndexLocation()) {
+    TargetIndexLocation Loc = Value.getTargetIndexLocation();
+    // TODO TargetIndexLocation is a target-independent. Currently only the WebAssembly-specific
+    // encoding is supported.
+    DwarfExpr.addWasmLocation(Loc.Index, Loc.Offset);
   } else if (Value.isConstantFP()) {
     APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
     DwarfExpr.addUnsignedConstant(RawBytes);

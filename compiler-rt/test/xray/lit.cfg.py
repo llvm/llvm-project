@@ -61,3 +61,6 @@ elif '64' not in config.host_arch:
       config.unsupported = True
   else:
     config.unsupported = True
+
+if config.host_os == 'NetBSD':
+  config.substitutions.insert(0, ('%run', config.netbsd_nomprotect_prefix))

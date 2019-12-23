@@ -734,6 +734,16 @@ void comment_to_html_conversion_36();
 // CHECK-NEXT:         (CXComment_Text Text=[Aaa])
 // CHECK-NEXT:         (CXComment_HTMLEndTag Name=[h1])))]
 
+/// \anchor A
+void comment_to_html_conversion_37();
+
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-2]]:6: FunctionDecl=comment_to_html_conversion_37:{{.*}} FullCommentAsHTML=[<p class="para-brief"> <span id="A"></span></p>] FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-2]]" column="6"><Name>comment_to_html_conversion_37</Name><USR>c:@F@comment_to_html_conversion_37#</USR><Declaration>void comment_to_html_conversion_37()</Declaration><Abstract><Para> <anchor id="A"></anchor></Para></Abstract></Function>]
+// CHECK-NEXT:  CommentAST=[
+// CHECK-NEXT:    (CXComment_FullComment
+// CHECK-NEXT:       (CXComment_Paragraph
+// CHECK-NEXT:         (CXComment_Text Text=[ ] IsWhitespace)
+// CHECK-NEXT:         (CXComment_InlineCommand CommandName=[anchor] RenderAnchor Arg[0]=A)))]
+
 
 /// Aaa.
 class comment_to_xml_conversion_01 {

@@ -100,23 +100,7 @@ public:
     return llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
   }
 
-  clang::ASTContext *getASTContext();
-
-  clang::Builtin::Context *getBuiltinContext();
-
-  clang::IdentifierTable *getIdentifierTable();
-
-  clang::LangOptions *getLanguageOptions();
-
-  clang::SelectorTable *getSelectorTable();
-
-  clang::FileManager *getFileManager();
-
-  clang::SourceManager *getSourceManager();
-
-  clang::DiagnosticsEngine *getDiagnosticsEngine();
-
-  clang::DiagnosticConsumer *getDiagnosticConsumer();
+  clang::ASTContext &getASTContext();
 
   clang::MangleContext *getMangleContext();
 
@@ -133,7 +117,7 @@ public:
       llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> &ast_source_up);
 
   bool GetCompleteDecl(clang::Decl *decl) {
-    return ClangASTContext::GetCompleteDecl(getASTContext(), decl);
+    return ClangASTContext::GetCompleteDecl(&getASTContext(), decl);
   }
 
   static void DumpDeclHiearchy(clang::Decl *decl);
@@ -150,14 +134,14 @@ public:
   void SetMetadata(const clang::Decl *object, ClangASTMetadata &meta_data);
   void SetMetadata(const clang::Type *object, ClangASTMetadata &meta_data);
   ClangASTMetadata *GetMetadata(const clang::Decl *object) {
-    return GetMetadata(getASTContext(), object);
+    return GetMetadata(&getASTContext(), object);
   }
 
   static ClangASTMetadata *GetMetadata(clang::ASTContext *ast,
                                        const clang::Decl *object);
 
   ClangASTMetadata *GetMetadata(const clang::Type *object) {
-    return GetMetadata(getASTContext(), object);
+    return GetMetadata(&getASTContext(), object);
   }
 
   static ClangASTMetadata *GetMetadata(clang::ASTContext *ast,
@@ -186,7 +170,7 @@ public:
   static clang::DeclContext *GetTranslationUnitDecl(clang::ASTContext *ast);
 
   clang::DeclContext *GetTranslationUnitDecl() {
-    return GetTranslationUnitDecl(getASTContext());
+    return GetTranslationUnitDecl(&getASTContext());
   }
 
   static clang::Decl *CopyDecl(clang::ASTContext *dest_context,
@@ -209,27 +193,23 @@ public:
     CompilerType compiler_type;
 
     if (type_name.GetLength()) {
-      clang::ASTContext *ast = getASTContext();
-      if (ast) {
-        if (!decl_context)
-          decl_context = ast->getTranslationUnitDecl();
+      clang::ASTContext &ast = getASTContext();
+      if (!decl_context)
+        decl_context = ast.getTranslationUnitDecl();
 
-        clang::IdentifierInfo &myIdent =
-            ast->Idents.get(type_name.GetCString());
-        clang::DeclarationName myName =
-            ast->DeclarationNames.getIdentifier(&myIdent);
+      clang::IdentifierInfo &myIdent = ast.Idents.get(type_name.GetCString());
+      clang::DeclarationName myName =
+          ast.DeclarationNames.getIdentifier(&myIdent);
 
-        clang::DeclContext::lookup_result result =
-            decl_context->lookup(myName);
+      clang::DeclContext::lookup_result result = decl_context->lookup(myName);
 
-        if (!result.empty()) {
-          clang::NamedDecl *named_decl = result[0];
-          if (const RecordDeclType *record_decl =
-                  llvm::dyn_cast<RecordDeclType>(named_decl))
-            compiler_type.SetCompilerType(
-                this, clang::QualType(record_decl->getTypeForDecl(), 0)
-                          .getAsOpaquePtr());
-        }
+      if (!result.empty()) {
+        clang::NamedDecl *named_decl = result[0];
+        if (const RecordDeclType *record_decl =
+                llvm::dyn_cast<RecordDeclType>(named_decl))
+          compiler_type.SetCompilerType(
+              this, clang::QualType(record_decl->getTypeForDecl(), 0)
+                        .getAsOpaquePtr());
       }
     }
 
@@ -371,14 +351,14 @@ public:
                                   const CompilerType *args, unsigned num_args,
                                   bool is_variadic, unsigned type_quals) {
     return ClangASTContext::CreateFunctionType(
-        getASTContext(), result_type, args, num_args, is_variadic, type_quals);
+        &getASTContext(), result_type, args, num_args, is_variadic, type_quals);
   }
 
   CompilerType CreateFunctionType(const CompilerType &result_type,
                                   const CompilerType *args, unsigned num_args,
                                   bool is_variadic, unsigned type_quals,
                                   clang::CallingConv cc) {
-    return ClangASTContext::CreateFunctionType(getASTContext(), result_type,
+    return ClangASTContext::CreateFunctionType(&getASTContext(), result_type,
                                                args, num_args, is_variadic,
                                                type_quals, cc);
   }
@@ -412,7 +392,7 @@ public:
                                             size_t bit_size, bool is_signed);
 
   CompilerType GetPointerSizedIntType(bool is_signed) {
-    return GetPointerSizedIntType(getASTContext(), is_signed);
+    return GetPointerSizedIntType(&getASTContext(), is_signed);
   }
 
   static CompilerType GetPointerSizedIntType(clang::ASTContext *ast,
@@ -463,8 +443,6 @@ public:
   std::vector<CompilerDecl>
   DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
                             const bool ignore_using_decls) override;
-
-  bool DeclContextIsStructUnionOrClass(void *opaque_decl_ctx) override;
 
   ConstString DeclContextGetName(void *opaque_decl_ctx) override;
 

@@ -56,12 +56,10 @@ ClangASTSource::ClangASTSource(const lldb::TargetSP &target,
   m_ast_importer_sp = importer;
 }
 
-void ClangASTSource::InstallASTContext(ClangASTContext &clang_ast_context,
-                                       clang::FileManager &file_manager,
-                                       bool is_shared_context) {
-  m_ast_context = clang_ast_context.getASTContext();
+void ClangASTSource::InstallASTContext(ClangASTContext &clang_ast_context) {
+  m_ast_context = &clang_ast_context.getASTContext();
   m_clang_ast_context = &clang_ast_context;
-  m_file_manager = &file_manager;
+  m_file_manager = &m_ast_context->getSourceManager().getFileManager();
   m_ast_importer_sp->InstallMapCompleter(m_ast_context, *this);
 }
 
@@ -82,14 +80,11 @@ ClangASTSource::~ClangASTSource() {
   if (!scratch_clang_ast_context)
     return;
 
-  clang::ASTContext *scratch_ast_context =
+  clang::ASTContext &scratch_ast_context =
       scratch_clang_ast_context->getASTContext();
 
-  if (!scratch_ast_context)
-    return;
-
-  if (m_ast_context != scratch_ast_context && m_ast_importer_sp)
-    m_ast_importer_sp->ForgetSource(scratch_ast_context, m_ast_context);
+  if (m_ast_context != &scratch_ast_context && m_ast_importer_sp)
+    m_ast_importer_sp->ForgetSource(&scratch_ast_context, m_ast_context);
 }
 
 void ClangASTSource::StartTranslationUnit(ASTConsumer *Consumer) {
@@ -1823,9 +1818,8 @@ NamespaceDecl *ClangASTSource::AddNamespace(
 }
 
 clang::Decl *ClangASTSource::CopyDecl(Decl *src_decl) {
-  clang::ASTContext &from_context = src_decl->getASTContext();
   if (m_ast_importer_sp) {
-    return m_ast_importer_sp->CopyDecl(m_ast_context, &from_context, src_decl);
+    return m_ast_importer_sp->CopyDecl(m_ast_context, src_decl);
   } else {
     lldbassert(0 && "No mechanism for copying a decl!");
     return nullptr;
@@ -1883,10 +1877,10 @@ clang::NamedDecl *NameSearchContext::AddVarDecl(const CompilerType &type) {
 
   IdentifierInfo *ii = m_decl_name.getAsIdentifierInfo();
 
-  clang::ASTContext *ast = lldb_ast->getASTContext();
+  clang::ASTContext &ast = lldb_ast->getASTContext();
 
   clang::NamedDecl *Decl = VarDecl::Create(
-      *ast, const_cast<DeclContext *>(m_decl_context), SourceLocation(),
+      ast, const_cast<DeclContext *>(m_decl_context), SourceLocation(),
       SourceLocation(), ii, ClangUtil::GetQualType(type), nullptr, SC_Static);
   m_decls.push_back(Decl);
 
@@ -1912,7 +1906,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
 
   QualType qual_type(ClangUtil::GetQualType(type));
 
-  clang::ASTContext *ast = lldb_ast->getASTContext();
+  clang::ASTContext &ast = lldb_ast->getASTContext();
 
   const bool isInlineSpecified = false;
   const bool hasWrittenPrototype = true;
@@ -1922,7 +1916,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
 
   if (extern_c) {
     context = LinkageSpecDecl::Create(
-        *ast, context, SourceLocation(), SourceLocation(),
+        ast, context, SourceLocation(), SourceLocation(),
         clang::LinkageSpecDecl::LanguageIDs::lang_c, false);
   }
 
@@ -1934,7 +1928,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
           : m_decl_name;
 
   clang::FunctionDecl *func_decl = FunctionDecl::Create(
-      *ast, context, SourceLocation(), SourceLocation(), decl_name, qual_type,
+      ast, context, SourceLocation(), SourceLocation(), decl_name, qual_type,
       nullptr, SC_Extern, isInlineSpecified, hasWrittenPrototype,
       isConstexprSpecified ? CSK_constexpr : CSK_unspecified);
 
@@ -1955,7 +1949,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
       QualType arg_qual_type(func_proto_type->getParamType(ArgIndex));
 
       parm_var_decls.push_back(
-          ParmVarDecl::Create(*ast, const_cast<DeclContext *>(context),
+          ParmVarDecl::Create(ast, const_cast<DeclContext *>(context),
                               SourceLocation(), SourceLocation(), nullptr,
                               arg_qual_type, nullptr, SC_Static, nullptr));
     }

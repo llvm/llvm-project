@@ -50,13 +50,11 @@ public:
 
   CompilerType CopyType(ClangASTContext &dst, const CompilerType &src_type);
 
-  clang::Decl *CopyDecl(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx,
-                        clang::Decl *decl);
+  clang::Decl *CopyDecl(clang::ASTContext *dst_ctx, clang::Decl *decl);
 
   CompilerType DeportType(ClangASTContext &dst, const CompilerType &src_type);
 
-  clang::Decl *DeportDecl(clang::ASTContext *dst_ctx,
-                          clang::ASTContext *src_ctx, clang::Decl *decl);
+  clang::Decl *DeportDecl(clang::ASTContext *dst_ctx, clang::Decl *decl);
 
   /// Sets the layout for the given RecordDecl. The layout will later be
   /// used by Clang's during code generation. Not calling this function for

@@ -275,6 +275,9 @@ void MCFragment::destroy() {
     case FT_LEB:
       delete cast<MCLEBFragment>(this);
       return;
+    case FT_BoundaryAlign:
+      delete cast<MCBoundaryAlignFragment>(this);
+      return;
     case FT_SymbolId:
       delete cast<MCSymbolIdFragment>(this);
       return;
@@ -319,6 +322,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Dwarf: OS << "MCDwarfFragment"; break;
   case MCFragment::FT_DwarfFrame: OS << "MCDwarfCallFrameFragment"; break;
   case MCFragment::FT_LEB:   OS << "MCLEBFragment"; break;
+  case MCFragment::FT_BoundaryAlign: OS<<"MCBoundaryAlignFragment"; break;
   case MCFragment::FT_SymbolId:    OS << "MCSymbolIdFragment"; break;
   case MCFragment::FT_CVInlineLines: OS << "MCCVInlineLineTableFragment"; break;
   case MCFragment::FT_CVDefRange: OS << "MCCVDefRangeTableFragment"; break;
@@ -416,6 +420,19 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     const MCLEBFragment *LF = cast<MCLEBFragment>(this);
     OS << "\n       ";
     OS << " Value:" << LF->getValue() << " Signed:" << LF->isSigned();
+    break;
+  }
+  case MCFragment::FT_BoundaryAlign: {
+    const auto *BF = cast<MCBoundaryAlignFragment>(this);
+    if (BF->canEmitNops())
+      OS << " (can emit nops to align";
+    if (BF->isFused())
+      OS << " fused branch)";
+    else
+      OS << " unfused branch)";
+    OS << "\n       ";
+    OS << " BoundarySize:" << BF->getAlignment().value()
+       << " Size:" << BF->getSize();
     break;
   }
   case MCFragment::FT_SymbolId: {

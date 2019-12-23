@@ -38,6 +38,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   EnumCastOutOfRangeChecker.cpp
   ExprInspectionChecker.cpp
   FixedAddressChecker.cpp
+  FuchsiaHandleChecker.cpp
   GCDAntipatternChecker.cpp
   GenericTaintChecker.cpp
   GTestChecker.cpp

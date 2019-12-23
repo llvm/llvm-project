@@ -53,6 +53,7 @@ class MCObjectStreamer : public MCStreamer {
   void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
   MCSymbol *EmitCFILabel() override;
+  void EmitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
   void resolvePendingFixups();
 
 protected:

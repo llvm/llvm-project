@@ -109,7 +109,7 @@ void test5() {
   __asm mov x, eax
   // CHECK: call void asm sideeffect inteldialect
   // CHECK-SAME: push $0
-  // CHECK-SAME: call dword ptr $2
+  // CHECK-SAME: call dword ptr ${2:P}
   // CHECK-SAME: mov $1, eax
   // CHECK-SAME: "=*m,=*m,*m,~{esp},~{dirflag},~{fpsr},~{flags}"(i32* %y, i32* %x, i32 (float)* @_ZN2T5IiE6createIfEEiT_)
 }

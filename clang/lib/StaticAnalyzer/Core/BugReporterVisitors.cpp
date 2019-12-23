@@ -505,7 +505,7 @@ NoStoreFuncVisitor::findRegionOfInterestInRecord(
   // Recursively examine the base classes.
   // Note that following base classes does not increase the recursion depth.
   if (const auto *RDX = dyn_cast<CXXRecordDecl>(RD))
-    for (const auto II : RDX->bases())
+    for (const auto &II : RDX->bases())
       if (const RecordDecl *RRD = II.getType()->getAsRecordDecl())
         if (Optional<RegionVector> Out =
                 findRegionOfInterestInRecord(RRD, State, R, Vec, depth))

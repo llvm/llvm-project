@@ -19,14 +19,19 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
+#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/TargetRegistry.h"
+
 using namespace llvm;
 
 static unsigned getFixupKindSize(unsigned Kind) {
@@ -64,6 +69,71 @@ static unsigned getFixupKindSize(unsigned Kind) {
 }
 
 namespace {
+class X86AlignBranchKind {
+private:
+  uint8_t AlignBranchKind = 0;
+
+public:
+  enum Flag : uint8_t {
+    AlignBranchNone = 0,
+    AlignBranchFused = 1U << 0,
+    AlignBranchJcc = 1U << 1,
+    AlignBranchJmp = 1U << 2,
+    AlignBranchCall = 1U << 3,
+    AlignBranchRet = 1U << 4,
+    AlignBranchIndirect = 1U << 5
+  };
+
+  void operator=(const std::string &Val) {
+    if (Val.empty())
+      return;
+    SmallVector<StringRef, 6> BranchTypes;
+    StringRef(Val).split(BranchTypes, '+', -1, false);
+    for (auto BranchType : BranchTypes) {
+      if (BranchType == "fused")
+        addKind(AlignBranchFused);
+      else if (BranchType == "jcc")
+        addKind(AlignBranchJcc);
+      else if (BranchType == "jmp")
+        addKind(AlignBranchJmp);
+      else if (BranchType == "call")
+        addKind(AlignBranchCall);
+      else if (BranchType == "ret")
+        addKind(AlignBranchRet);
+      else if (BranchType == "indirect")
+        addKind(AlignBranchIndirect);
+      else {
+        report_fatal_error(
+            "'-x86-align-branch 'The branches's type is combination of jcc, "
+            "fused, jmp, call, ret, indirect.(plus separated)",
+            false);
+      }
+    }
+  }
+
+  operator uint8_t() const { return AlignBranchKind; }
+  void addKind(Flag Value) { AlignBranchKind |= Value; }
+};
+
+X86AlignBranchKind X86AlignBranchKindLoc;
+
+cl::opt<uint64_t> X86AlignBranchBoundary(
+    "x86-align-branch-boundary", cl::init(0),
+    cl::desc(
+        "Control how the assembler should align branches with NOP. If the "
+        "boundary's size is not 0, it should be a power of 2 and no less "
+        "than 32. Branches will be aligned within the boundary of specified "
+        "size. -x86-align-branch-boundary=0 doesn't align branches."));
+
+cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
+    "x86-align-branch",
+    cl::desc("Specify types of branches to align (plus separated list of "
+             "types). The branches's type is combination of jcc, fused, "
+             "jmp, call, ret, indirect."),
+    cl::value_desc("jcc(conditional jump), fused(fused conditional jump), "
+                   "jmp(unconditional jump); call(call); ret(ret), "
+                   "indirect(indirect jump)."),
+    cl::location(X86AlignBranchKindLoc));
 
 class X86ELFObjectWriter : public MCELFObjectTargetWriter {
 public:
@@ -74,9 +144,28 @@ public:
 
 class X86AsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
+  std::unique_ptr<const MCInstrInfo> MCII;
+  X86AlignBranchKind AlignBranchType;
+  Align AlignBoundary;
+
+  bool isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const;
+
+  bool needAlign(MCObjectStreamer &OS) const;
+  bool needAlignInst(const MCInst &Inst) const;
+  MCBoundaryAlignFragment *
+  getOrCreateBoundaryAlignFragment(MCObjectStreamer &OS) const;
+  MCInst PrevInst;
+
 public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
-      : MCAsmBackend(support::little), STI(STI) {}
+      : MCAsmBackend(support::little), STI(STI),
+        MCII(T.createMCInstrInfo()) {
+    AlignBoundary = assumeAligned(X86AlignBranchBoundary);
+    AlignBranchType = X86AlignBranchKindLoc;
+  }
+
+  void alignBranchesBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
+  void alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
 
   unsigned getNumFixupKinds() const override {
     return X86::NumTargetFixupKinds;
@@ -256,6 +345,196 @@ static unsigned getRelaxedOpcode(const MCInst &Inst, bool is16BitMode) {
   if (R != Inst.getOpcode())
     return R;
   return getRelaxedOpcodeBranch(Inst, is16BitMode);
+}
+
+static X86::CondCode getCondFromBranch(const MCInst &MI,
+                                       const MCInstrInfo &MCII) {
+  unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  default:
+    return X86::COND_INVALID;
+  case X86::JCC_1: {
+    const MCInstrDesc &Desc = MCII.get(Opcode);
+    return static_cast<X86::CondCode>(
+        MI.getOperand(Desc.getNumOperands() - 1).getImm());
+  }
+  }
+}
+
+static X86::SecondMacroFusionInstKind
+classifySecondInstInMacroFusion(const MCInst &MI, const MCInstrInfo &MCII) {
+  X86::CondCode CC = getCondFromBranch(MI, MCII);
+  return classifySecondCondCodeInMacroFusion(CC);
+}
+
+/// Check if the instruction uses RIP relative addressing.
+static bool isRIPRelative(const MCInst &MI, const MCInstrInfo &MCII) {
+  unsigned Opcode = MI.getOpcode();
+  const MCInstrDesc &Desc = MCII.get(Opcode);
+  uint64_t TSFlags = Desc.TSFlags;
+  unsigned CurOp = X86II::getOperandBias(Desc);
+  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  if (MemoryOperand < 0)
+    return false;
+  unsigned BaseRegNum = MemoryOperand + CurOp + X86::AddrBaseReg;
+  unsigned BaseReg = MI.getOperand(BaseRegNum).getReg();
+  return (BaseReg == X86::RIP);
+}
+
+/// Check if the instruction is valid as the first instruction in macro fusion.
+static bool isFirstMacroFusibleInst(const MCInst &Inst,
+                                    const MCInstrInfo &MCII) {
+  // An Intel instruction with RIP relative addressing is not macro fusible.
+  if (isRIPRelative(Inst, MCII))
+    return false;
+  X86::FirstMacroFusionInstKind FIK =
+      X86::classifyFirstOpcodeInMacroFusion(Inst.getOpcode());
+  return FIK != X86::FirstMacroFusionInstKind::Invalid;
+}
+
+/// Check if the two instructions will be macro-fused on the target cpu.
+bool X86AsmBackend::isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const {
+  const MCInstrDesc &InstDesc = MCII->get(Jcc.getOpcode());
+  if (!InstDesc.isConditionalBranch())
+    return false;
+  if (!isFirstMacroFusibleInst(Cmp, *MCII))
+    return false;
+  const X86::FirstMacroFusionInstKind CmpKind =
+      X86::classifyFirstOpcodeInMacroFusion(Cmp.getOpcode());
+  const X86::SecondMacroFusionInstKind BranchKind =
+      classifySecondInstInMacroFusion(Jcc, *MCII);
+  return X86::isMacroFused(CmpKind, BranchKind);
+}
+
+/// Check if the instruction has a variant symbol operand.
+static bool hasVariantSymbol(const MCInst &MI) {
+  for (auto &Operand : MI) {
+    if (!Operand.isExpr())
+      continue;
+    const MCExpr &Expr = *Operand.getExpr();
+    if (Expr.getKind() == MCExpr::SymbolRef &&
+        cast<MCSymbolRefExpr>(Expr).getKind() != MCSymbolRefExpr::VK_None)
+      return true;
+  }
+  return false;
+}
+
+bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
+  if (AlignBoundary == Align::None() ||
+      AlignBranchType == X86AlignBranchKind::AlignBranchNone)
+    return false;
+
+  MCAssembler &Assembler = OS.getAssembler();
+  MCSection *Sec = OS.getCurrentSectionOnly();
+  // To be Done: Currently don't deal with Bundle cases.
+  if (Assembler.isBundlingEnabled() && Sec->isBundleLocked())
+    return false;
+
+  // Branches only need to be aligned in 32-bit or 64-bit mode.
+  if (!(STI.getFeatureBits()[X86::Mode64Bit] ||
+        STI.getFeatureBits()[X86::Mode32Bit]))
+    return false;
+
+  return true;
+}
+
+/// Check if the instruction operand needs to be aligned. Padding is disabled
+/// before intruction which may be rewritten by linker(e.g. TLSCALL).
+bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
+  // Linker may rewrite the instruction with variant symbol operand.
+  if (hasVariantSymbol(Inst))
+    return false;
+
+  const MCInstrDesc &InstDesc = MCII->get(Inst.getOpcode());
+  return (InstDesc.isConditionalBranch() &&
+          (AlignBranchType & X86AlignBranchKind::AlignBranchJcc)) ||
+         (InstDesc.isUnconditionalBranch() &&
+          (AlignBranchType & X86AlignBranchKind::AlignBranchJmp)) ||
+         (InstDesc.isCall() &&
+          (AlignBranchType & X86AlignBranchKind::AlignBranchCall)) ||
+         (InstDesc.isReturn() &&
+          (AlignBranchType & X86AlignBranchKind::AlignBranchRet)) ||
+         (InstDesc.isIndirectBranch() &&
+          (AlignBranchType & X86AlignBranchKind::AlignBranchIndirect));
+}
+
+static bool canReuseBoundaryAlignFragment(const MCBoundaryAlignFragment &F) {
+  // If a MCBoundaryAlignFragment has not been used to emit NOP,we can reuse it.
+  return !F.canEmitNops();
+}
+
+MCBoundaryAlignFragment *
+X86AsmBackend::getOrCreateBoundaryAlignFragment(MCObjectStreamer &OS) const {
+  auto *F = dyn_cast_or_null<MCBoundaryAlignFragment>(OS.getCurrentFragment());
+  if (!F || !canReuseBoundaryAlignFragment(*F)) {
+    F = new MCBoundaryAlignFragment(AlignBoundary);
+    OS.insert(F);
+  }
+  return F;
+}
+
+/// Insert MCBoundaryAlignFragment before instructions to align branches.
+void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
+                                       const MCInst &Inst) {
+  if (!needAlign(OS))
+    return;
+
+  MCFragment *CF = OS.getCurrentFragment();
+  bool NeedAlignFused = AlignBranchType & X86AlignBranchKind::AlignBranchFused;
+  if (NeedAlignFused && isMacroFused(PrevInst, Inst) && CF) {
+    // Macro fusion actually happens and there is no other fragment inserted
+    // after the previous instruction. NOP can be emitted in PF to align fused
+    // jcc.
+    if (auto *PF =
+            dyn_cast_or_null<MCBoundaryAlignFragment>(CF->getPrevNode())) {
+      const_cast<MCBoundaryAlignFragment *>(PF)->setEmitNops(true);
+      const_cast<MCBoundaryAlignFragment *>(PF)->setFused(true);
+    }
+  } else if (needAlignInst(Inst)) {
+    // Note: When there is at least one fragment, such as MCAlignFragment,
+    // inserted after the previous instruction, e.g.
+    //
+    // \code
+    //   cmp %rax %rcx
+    //   .align 16
+    //   je .Label0
+    // \ endcode
+    //
+    // We will treat the JCC as a unfused branch although it may be fused
+    // with the CMP.
+    auto *F = getOrCreateBoundaryAlignFragment(OS);
+    F->setEmitNops(true);
+    F->setFused(false);
+  } else if (NeedAlignFused && isFirstMacroFusibleInst(Inst, *MCII)) {
+    // We don't know if macro fusion happens until the reaching the next
+    // instruction, so a place holder is put here if necessary.
+    getOrCreateBoundaryAlignFragment(OS);
+  }
+
+  PrevInst = Inst;
+}
+
+/// Insert a MCBoundaryAlignFragment to mark the end of the branch to be aligned
+/// if necessary.
+void X86AsmBackend::alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) {
+  if (!needAlign(OS))
+    return;
+  // If the branch is emitted into a MCRelaxableFragment, we can determine the
+  // size of the branch easily in MCAssembler::relaxBoundaryAlign. When the
+  // branch is fused, the fused branch(macro fusion pair) must be emitted into
+  // two fragments. Or when the branch is unfused, the branch must be emitted
+  // into one fragment. The MCRelaxableFragment naturally marks the end of the
+  // fused or unfused branch.
+  // Otherwise, we need to insert a MCBoundaryAlignFragment to mark the end of
+  // the branch. This MCBoundaryAlignFragment may be reused to emit NOP to align
+  // other branch.
+  if (needAlignInst(Inst) && !isa<MCRelaxableFragment>(OS.getCurrentFragment()))
+    OS.insert(new MCBoundaryAlignFragment(AlignBoundary));
+
+  // Update the maximum alignment on the current section if necessary.
+  MCSection *Sec = OS.getCurrentSectionOnly();
+  if (AlignBoundary.value() > Sec->getAlignment())
+    Sec->setAlignment(AlignBoundary);
 }
 
 Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {

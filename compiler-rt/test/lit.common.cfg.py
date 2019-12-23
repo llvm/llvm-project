@@ -112,6 +112,19 @@ config.substitutions.append(
     (' clang', """\n\n*** Do not use 'clangXXX' in tests,
      instead define '%clangXXX' substitution in lit config. ***\n\n""") )
 
+if config.host_os == 'NetBSD':
+  nb_commands_dir = os.path.join(config.compiler_rt_src_root,
+                                 "test", "sanitizer_common", "netbsd_commands")
+  config.netbsd_noaslr_prefix = ('sh ' +
+                                 os.path.join(nb_commands_dir, 'run_noaslr.sh'))
+  config.netbsd_nomprotect_prefix = ('sh ' +
+                                     os.path.join(nb_commands_dir,
+                                                  'run_nomprotect.sh'))
+  config.substitutions.append( ('%run_nomprotect',
+                                config.netbsd_nomprotect_prefix) )
+else:
+  config.substitutions.append( ('%run_nomprotect', '%run') )
+
 # Allow tests to be executed on a simulator or remotely.
 if config.emulator:
   config.substitutions.append( ('%run', config.emulator) )
@@ -498,9 +511,3 @@ elif config.use_lld and (not config.has_lld):
 
 config.clang = " " + " ".join(run_wrapper + [config.compile_wrapper, config.clang]) + " "
 config.target_cflags = " " + " ".join(target_cflags + extra_cflags) + " "
-
-if config.host_os == 'NetBSD':
-  nb_commands_dir = os.path.join(config.compiler_rt_src_root,
-                                 "test", "sanitizer_common", "netbsd_commands")
-  config.netbsd_noaslr_prefix = ('sh ' +
-                                 os.path.join(nb_commands_dir, 'run_noaslr.sh'))
