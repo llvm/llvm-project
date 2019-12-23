@@ -721,11 +721,6 @@ void ClangASTContext::CreateASTContext() {
   if (target_info)
     m_ast_up->InitBuiltinTypes(*target_info);
 
-  if ((m_callback_tag_decl || m_callback_objc_decl) && m_callback_baton) {
-    m_ast_up->getTranslationUnitDecl()->setHasExternalLexicalStorage();
-    // m_ast_up->getTranslationUnitDecl()->setHasExternalVisibleStorage();
-  }
-
   GetASTMap().Insert(m_ast_up.get(), this);
 
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_up(

@@ -964,9 +964,6 @@ protected:
   std::unique_ptr<PDBASTParser> m_pdb_ast_parser_up;
   std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
-  CompleteTagDeclCallback m_callback_tag_decl = nullptr;
-  CompleteObjCInterfaceDeclCallback m_callback_objc_decl = nullptr;
-  void *m_callback_baton = nullptr;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
   /// The sema associated that is currently used to build this ASTContext.
