@@ -171,10 +171,6 @@ public:
     return getASTContext().getTranslationUnitDecl();
   }
 
-  static clang::Decl *CopyDecl(clang::ASTContext *dest_context,
-                               clang::ASTContext *source_context,
-                               clang::Decl *source_decl);
-
   static bool AreTypesSame(CompilerType type1, CompilerType type2,
                            bool ignore_qualifiers = false);
 
