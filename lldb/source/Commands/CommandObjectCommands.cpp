@@ -1426,13 +1426,6 @@ protected:
   };
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (GetDebugger().GetScriptLanguage() != lldb::eScriptLanguagePython) {
-      result.AppendError("only scripting language supported for module "
-                         "importing is currently Python");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
-
     if (command.empty()) {
       result.AppendError("command script import needs one or more arguments");
       result.SetStatus(eReturnStatusFailed);
