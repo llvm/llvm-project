@@ -171,10 +171,6 @@ public:
     return getASTContext().getTranslationUnitDecl();
   }
 
-  static clang::Decl *CopyDecl(clang::ASTContext *dest_context,
-                               clang::ASTContext *source_context,
-                               clang::Decl *source_decl);
-
   static bool AreTypesSame(CompilerType type1, CompilerType type2,
                            bool ignore_qualifiers = false);
 
@@ -406,14 +402,12 @@ public:
   PDBASTParser *GetPDBParser() override;
 
   // ClangASTContext callbacks for external source lookups.
-  static void CompleteTagDecl(void *baton, clang::TagDecl *);
+  void CompleteTagDecl(clang::TagDecl *);
 
-  static void CompleteObjCInterfaceDecl(void *baton,
-                                        clang::ObjCInterfaceDecl *);
+  void CompleteObjCInterfaceDecl(clang::ObjCInterfaceDecl *);
 
-  static bool LayoutRecordType(
-      void *baton, const clang::RecordDecl *record_decl, uint64_t &size,
-      uint64_t &alignment,
+  bool LayoutRecordType(
+      const clang::RecordDecl *record_decl, uint64_t &size, uint64_t &alignment,
       llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
       llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
           &base_offsets,
@@ -970,9 +964,6 @@ protected:
   std::unique_ptr<PDBASTParser> m_pdb_ast_parser_up;
   std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
-  CompleteTagDeclCallback m_callback_tag_decl = nullptr;
-  CompleteObjCInterfaceDeclCallback m_callback_objc_decl = nullptr;
-  void *m_callback_baton = nullptr;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
   /// The sema associated that is currently used to build this ASTContext.

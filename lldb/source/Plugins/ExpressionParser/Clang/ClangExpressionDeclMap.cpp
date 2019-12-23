@@ -597,7 +597,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(ConstString name,
 
 lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
     Target &target, ModuleSP &module, ConstString name,
-    CompilerDeclContext *namespace_decl, TypeFromUser *type) {
+    CompilerDeclContext *namespace_decl) {
   VariableList vars;
 
   if (module && namespace_decl)
@@ -605,19 +605,9 @@ lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
   else
     target.GetImages().FindGlobalVariables(name, -1, vars);
 
-  if (vars.GetSize()) {
-    if (type) {
-      for (VariableSP var_sp : vars) {
-        if (ClangASTContext::AreTypesSame(
-                *type, var_sp->GetType()->GetFullCompilerType()))
-          return var_sp;
-      }
-    } else {
-      return vars.GetVariableAtIndex(0);
-    }
-  }
-
-  return VariableSP();
+  if (vars.GetSize() == 0)
+    return VariableSP();
+  return vars.GetVariableAtIndex(0);
 }
 
 ClangASTContext *ClangExpressionDeclMap::GetClangASTContext() {
@@ -1443,8 +1433,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   if (target) {
     ValueObjectSP valobj;
     VariableSP var;
-    var =
-        FindGlobalVariable(*target, module_sp, name, &namespace_decl, nullptr);
+    var = FindGlobalVariable(*target, module_sp, name, &namespace_decl);
 
     if (var) {
       valobj = ValueObjectVariable::Create(target, var);

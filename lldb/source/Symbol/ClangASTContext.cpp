@@ -721,18 +721,10 @@ void ClangASTContext::CreateASTContext() {
   if (target_info)
     m_ast_up->InitBuiltinTypes(*target_info);
 
-  if ((m_callback_tag_decl || m_callback_objc_decl) && m_callback_baton) {
-    m_ast_up->getTranslationUnitDecl()->setHasExternalLexicalStorage();
-    // m_ast_up->getTranslationUnitDecl()->setHasExternalVisibleStorage();
-  }
-
   GetASTMap().Insert(m_ast_up.get(), this);
 
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_up(
-      new ClangExternalASTSourceCallbacks(
-          ClangASTContext::CompleteTagDecl,
-          ClangASTContext::CompleteObjCInterfaceDecl, nullptr,
-          ClangASTContext::LayoutRecordType, this));
+      new ClangExternalASTSourceCallbacks(*this));
   SetExternalSource(ast_source_up);
 }
 
@@ -1151,22 +1143,6 @@ CompilerType ClangASTContext::GetCStringType(bool is_const) {
     char_type.addConst();
 
   return CompilerType(this, ast.getPointerType(char_type).getAsOpaquePtr());
-}
-
-clang::Decl *ClangASTContext::CopyDecl(ASTContext *dst_ast, ASTContext *src_ast,
-                                       clang::Decl *source_decl) {
-  FileSystemOptions file_system_options;
-  FileManager file_manager(file_system_options);
-  ASTImporter importer(*dst_ast, file_manager, *src_ast, file_manager, false);
-
-  if (llvm::Expected<clang::Decl *> ret_or_error =
-          importer.Import(source_decl)) {
-    return *ret_or_error;
-  } else {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-    LLDB_LOG_ERROR(log, ret_or_error.takeError(), "Couldn't import decl: {0}");
-    return nullptr;
-  }
 }
 
 bool ClangASTContext::AreTypesSame(CompilerType type1, CompilerType type2,
@@ -8945,9 +8921,8 @@ clang::ClassTemplateDecl *ClangASTContext::ParseClassTemplateDecl(
   return nullptr;
 }
 
-void ClangASTContext::CompleteTagDecl(void *baton, clang::TagDecl *decl) {
-  ClangASTContext *ast = (ClangASTContext *)baton;
-  SymbolFile *sym_file = ast->GetSymbolFile();
+void ClangASTContext::CompleteTagDecl(clang::TagDecl *decl) {
+  SymbolFile *sym_file = GetSymbolFile();
   if (sym_file) {
     CompilerType clang_type = GetTypeForDecl(decl);
     if (clang_type)
@@ -8956,9 +8931,8 @@ void ClangASTContext::CompleteTagDecl(void *baton, clang::TagDecl *decl) {
 }
 
 void ClangASTContext::CompleteObjCInterfaceDecl(
-    void *baton, clang::ObjCInterfaceDecl *decl) {
-  ClangASTContext *ast = (ClangASTContext *)baton;
-  SymbolFile *sym_file = ast->GetSymbolFile();
+    clang::ObjCInterfaceDecl *decl) {
+  SymbolFile *sym_file = GetSymbolFile();
   if (sym_file) {
     CompilerType clang_type = GetTypeForDecl(decl);
     if (clang_type)
@@ -8979,19 +8953,18 @@ PDBASTParser *ClangASTContext::GetPDBParser() {
 }
 
 bool ClangASTContext::LayoutRecordType(
-    void *baton, const clang::RecordDecl *record_decl, uint64_t &bit_size,
+    const clang::RecordDecl *record_decl, uint64_t &bit_size,
     uint64_t &alignment,
     llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
         &base_offsets,
     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
         &vbase_offsets) {
-  ClangASTContext *ast = (ClangASTContext *)baton;
   lldb_private::ClangASTImporter *importer = nullptr;
-  if (ast->m_dwarf_ast_parser_up)
-    importer = &ast->m_dwarf_ast_parser_up->GetClangASTImporter();
-  if (!importer && ast->m_pdb_ast_parser_up)
-    importer = &ast->m_pdb_ast_parser_up->GetClangASTImporter();
+  if (m_dwarf_ast_parser_up)
+    importer = &m_dwarf_ast_parser_up->GetClangASTImporter();
+  if (!importer && m_pdb_ast_parser_up)
+    importer = &m_pdb_ast_parser_up->GetClangASTImporter();
   if (!importer)
     return false;
 
