@@ -2,7 +2,6 @@
 ; llc -mtriple=i386-pc-win32 trivial.ll -filetype=obj -o trivial.obj.coff-i386
 ; llc -mtriple=x86_64-pc-win32 trivial.ll -filetype=obj -o trivial.obj.coff-x86-64
 ; llc -mtriple=i386-linux-gnu trivial.ll -filetype=obj -o trivial.obj.elf-i386 -relocation-model=pic
-; llc -mtriple=x86_64-linux-gnu trivial.ll -filetype=obj -o trivial.obj.elf-x86-64 -relocation-model=pic
 ; llc -mtriple=i386-apple-darwin10 trivial.ll -filetype=obj -o trivial.obj.macho-i386 -relocation-model=pic
 ; llc -mtriple=x86_64-apple-darwin10 trivial.ll -filetype=obj -o trivial.obj.macho-x86-64 -relocation-model=pic
 ; llc -mtriple=wasm32-unknown-unknown trivial.ll -filetype=obj -o trivial.obj.wasm
