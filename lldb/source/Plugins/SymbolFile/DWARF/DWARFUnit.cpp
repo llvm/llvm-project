@@ -399,24 +399,6 @@ DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {
   return DWARFDIE();
 }
 
-size_t DWARFUnit::AppendDIEsWithTag(const dw_tag_t tag,
-                                    std::vector<DWARFDIE> &dies,
-                                    uint32_t depth) const {
-  size_t old_size = dies.size();
-  {
-    llvm::sys::ScopedReader lock(m_die_array_mutex);
-    DWARFDebugInfoEntry::const_iterator pos;
-    DWARFDebugInfoEntry::const_iterator end = m_die_array.end();
-    for (pos = m_die_array.begin(); pos != end; ++pos) {
-      if (pos->Tag() == tag)
-        dies.emplace_back(this, &(*pos));
-    }
-  }
-
-  // Return the number of DIEs added to the collection
-  return dies.size() - old_size;
-}
-
 size_t DWARFUnit::GetDebugInfoSize() const {
   return GetLengthByteSize() + GetLength() - GetHeaderByteSize();
 }
