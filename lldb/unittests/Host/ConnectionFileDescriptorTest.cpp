@@ -9,6 +9,7 @@
 #include "SocketTestUtilities.h"
 #include "gtest/gtest.h"
 
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Utility/UriParser.h"
 
@@ -16,11 +17,7 @@ using namespace lldb_private;
 
 class ConnectionFileDescriptorTest : public testing::Test {
 public:
-  void SetUp() override {
-    ASSERT_THAT_ERROR(Socket::Initialize(), llvm::Succeeded());
-  }
-
-  void TearDown() override { Socket::Terminate(); }
+  SubsystemRAII<Socket> subsystems;
 
   void TestGetURI(std::string ip) {
     std::unique_ptr<TCPSocket> socket_a_up;

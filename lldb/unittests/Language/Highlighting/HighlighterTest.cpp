@@ -14,32 +14,17 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
+#include "TestingSupport/SubsystemRAII.h"
 
 using namespace lldb_private;
 
 namespace {
 class HighlighterTest : public testing::Test {
-public:
-  static void SetUpTestCase();
-  static void TearDownTestCase();
+  SubsystemRAII<FileSystem, CPlusPlusLanguage, ObjCLanguage,
+                ObjCPlusPlusLanguage>
+      subsystems;
 };
 } // namespace
-
-void HighlighterTest::SetUpTestCase() {
-  // The HighlighterManager uses the language plugins under the hood, so we
-  // have to initialize them here for our test process.
-  FileSystem::Initialize();
-  CPlusPlusLanguage::Initialize();
-  ObjCLanguage::Initialize();
-  ObjCPlusPlusLanguage::Initialize();
-}
-
-void HighlighterTest::TearDownTestCase() {
-  CPlusPlusLanguage::Terminate();
-  ObjCLanguage::Terminate();
-  ObjCPlusPlusLanguage::Terminate();
-  FileSystem::Terminate();
-}
 
 static std::string getName(lldb::LanguageType type) {
   HighlighterManager m;

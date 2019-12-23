@@ -15,6 +15,7 @@
 #include "gtest/gtest.h"
 
 #include "TestingSupport/MockTildeExpressionResolver.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
@@ -29,6 +30,8 @@ using namespace lldb_private;
 namespace {
 
 class CompletionTest : public testing::Test {
+  SubsystemRAII<FileSystem> subsystems;
+
 protected:
   /// Unique temporary directory in which all created filesystem entities must
   /// be placed. It is removed at the end of the test suite.
@@ -56,8 +59,6 @@ protected:
   SmallString<128> FileBaz;
 
   void SetUp() override {
-    FileSystem::Initialize();
-
     // chdir back into the original working dir this test binary started with.
     // A previous test may have have changed the working dir.
     ASSERT_NO_ERROR(fs::set_current_path(OriginalWorkingDir));
@@ -100,7 +101,6 @@ protected:
 
   void TearDown() override {
     ASSERT_NO_ERROR(fs::remove_directories(BaseDir));
-    FileSystem::Terminate();
   }
 
   static bool HasEquivalentFile(const Twine &Path, const StringList &Paths) {
