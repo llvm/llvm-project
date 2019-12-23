@@ -1676,6 +1676,16 @@ Defs = [SREG] in
   {
     // 8-bit ROL is an alias of ADC Rd, Rd
 
+    def ROLBRd : Pseudo<(outs GPR8:$rd),
+                        (ins GPR8:$src),
+                        "rolb\t$rd",
+                        [(set i8:$rd, (AVRrol i8:$src)), (implicit SREG)]>;
+
+    def RORBRd : Pseudo<(outs GPR8:$rd),
+                        (ins GPR8:$src),
+                        "rorb\t$rd",
+                        [(set i8:$rd, (AVRror i8:$src)), (implicit SREG)]>;
+
     def ROLWRd : Pseudo<(outs DREGS:$rd),
                         (ins DREGS:$src),
                         "rolw\t$rd",
@@ -1686,7 +1696,7 @@ Defs = [SREG] in
                     (outs GPR8:$rd),
                     (ins GPR8:$src),
                     "ror\t$rd",
-                    [(set i8:$rd, (AVRror i8:$src)), (implicit SREG)]>;
+                    []>;
 
     def RORWRd : Pseudo<(outs DREGS:$rd),
                         (ins DREGS:$src),
