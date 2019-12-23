@@ -148,6 +148,7 @@ if (LLDB_ENABLE_PYTHON)
     include_directories(${Python3_INCLUDE_DIRS})
 
     if (NOT LLDB_RELOCATABLE_PYTHON)
+      get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
       file(TO_CMAKE_PATH "${PYTHON_HOME}" LLDB_PYTHON_HOME)
     endif()
   else()
