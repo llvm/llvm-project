@@ -414,8 +414,7 @@ TEST_F(TestClangASTContext, TemplateArguments) {
 
   // typedef foo<int, 47> foo_def;
   CompilerType typedef_type = m_ast->CreateTypedefType(
-      type, "foo_def",
-      CompilerDeclContext(m_ast.get(), m_ast->GetTranslationUnitDecl()));
+      type, "foo_def", m_ast->CreateDeclContext(m_ast->GetTranslationUnitDecl()));
 
   CompilerType auto_type(
       m_ast.get(),
