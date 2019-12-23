@@ -45,7 +45,7 @@ define i32 @test() nounwind {
   %1 = bitcast %struct.key_t* %key to i8*
   call void @llvm.memset.p0i8.i64(i8* align 4 %1, i8 0, i64 20, i1 false)
   %2 = getelementptr inbounds %struct.key_t, %struct.key_t* %key, i64 0, i32 1, i64 0
-  call void @test1(i8* %2) #3
+  call void @test1(i8* %2)
   ret i32 0
 }
 
