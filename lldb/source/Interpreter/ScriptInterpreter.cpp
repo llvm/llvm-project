@@ -42,6 +42,14 @@ void ScriptInterpreter::CollectDataForWatchpointCommandCallback(
       "This script interpreter does not support watchpoint callbacks.");
 }
 
+bool ScriptInterpreter::LoadScriptingModule(
+    const char *filename, bool can_reload, bool init_session,
+    lldb_private::Status &error, StructuredData::ObjectSP *module_sp) {
+  error.SetErrorString(
+      "This script interpreter does not support importing modules.");
+  return false;
+}
+
 std::string ScriptInterpreter::LanguageToString(lldb::ScriptLanguage language) {
   switch (language) {
   case eScriptLanguageNone:
