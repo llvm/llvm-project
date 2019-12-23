@@ -167,10 +167,8 @@ public:
 
   uint32_t GetPointerByteSize() override;
 
-  static clang::DeclContext *GetTranslationUnitDecl(clang::ASTContext *ast);
-
-  clang::DeclContext *GetTranslationUnitDecl() {
-    return GetTranslationUnitDecl(&getASTContext());
+  clang::TranslationUnitDecl *GetTranslationUnitDecl() {
+    return getASTContext().getTranslationUnitDecl();
   }
 
   static clang::Decl *CopyDecl(clang::ASTContext *dest_context,
