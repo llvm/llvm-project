@@ -861,6 +861,14 @@ def V_SETALLONES  : VXForm_3<908, (outs vrrc:$vD), (ins),
 def : InstAlias<"vmr $vD, $vA", (VOR vrrc:$vD, vrrc:$vA, vrrc:$vA)>;
 def : InstAlias<"vnot $vD, $vA", (VNOR vrrc:$vD, vrrc:$vA, vrrc:$vA)>;
 
+// Rotates.
+def : Pat<(v16i8 (rotl v16i8:$vA, v16i8:$vB)),
+          (v16i8 (VRLB v16i8:$vA, v16i8:$vB))>;
+def : Pat<(v8i16 (rotl v8i16:$vA, v8i16:$vB)),
+          (v8i16 (VRLH v8i16:$vA, v8i16:$vB))>;
+def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)),
+          (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
+
 // Loads.
 def : Pat<(v4i32 (load xoaddr:$src)), (LVX xoaddr:$src)>;
 
@@ -1159,9 +1167,13 @@ def:Pat<(vmrgew_swapped_shuffle v16i8:$vA, v16i8:$vB),
 def:Pat<(vmrgow_swapped_shuffle v16i8:$vA, v16i8:$vB),
         (VMRGOW $vB, $vA)>;
 
+// Vector rotates.
+def VRLD : VX1_Int_Ty<196, "vrld", int_ppc_altivec_vrld, v2i64>;
+
+def : Pat<(v2i64 (rotl v2i64:$vA, v2i64:$vB)),
+          (v2i64 (VRLD v2i64:$vA, v2i64:$vB))>;
 
 // Vector shifts
-def VRLD : VX1_Int_Ty<196, "vrld", int_ppc_altivec_vrld, v2i64>;
 def VSLD : VXForm_1<1476, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                     "vsld $vD, $vA, $vB", IIC_VecGeneral, []>;
 def VSRD : VXForm_1<1732, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
