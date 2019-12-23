@@ -6537,4 +6537,6 @@ void OMPClauseWriter::VisitOMPNontemporalClause(OMPNontemporalClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   for (auto *VE : C->varlists())
     Record.AddStmt(VE);
+  for (auto *E : C->private_refs())
+    Record.AddStmt(E);
 }

@@ -12468,4 +12468,9 @@ void OMPClauseReader::VisitOMPNontemporalClause(OMPNontemporalClause *C) {
   for (unsigned i = 0; i != NumVars; ++i)
     Vars.push_back(Record.readSubExpr());
   C->setVarRefs(Vars);
+  Vars.clear();
+  Vars.reserve(NumVars);
+  for (unsigned i = 0; i != NumVars; ++i)
+    Vars.push_back(Record.readSubExpr());
+  C->setPrivateRefs(Vars);
 }

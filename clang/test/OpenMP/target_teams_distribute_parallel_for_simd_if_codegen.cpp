@@ -35,20 +35,25 @@ void gtid_test() {
 // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
 // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
 #ifdef OMP5
-#pragma omp target teams distribute parallel for simd if(simd: true)
+#pragma omp target teams distribute parallel for simd if(simd: true) nontemporal(Arg)
 #else
 #pragma omp target teams distribute parallel for simd
 #endif // OMP5
-  for(int i = 0 ; i < 100; i++) {}
+  for (int i = 0; i < 100; i++) {
+    Arg = 0;
+  }
   // CHECK: define internal void [[OFFLOADING_FUN_0]](
-  // CHECK: call {{.*}}void {{.+}} @__kmpc_fork_teams({{.+}}, i32 0, {{.+}}* [[OMP_TEAMS_OUTLINED_0:@.+]] to {{.+}})
+  // CHECK: call {{.*}}void {{.+}} @__kmpc_fork_teams({{.+}}, i32 1, {{.+}}* [[OMP_TEAMS_OUTLINED_0:@.+]] to {{.+}})
   // CHECK: define{{.+}} void [[OMP_TEAMS_OUTLINED_0]](
   // CHECK: call void @__kmpc_for_static_init_4(
-  // CHECK:  call void {{.+}} @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{.+}} 2, {{.+}}* [[OMP_OUTLINED_0:@.+]] to void
+  // OMP50: load i32,{{.*}}!nontemporal
+  // CHECK: call void {{.+}} @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{.+}} 3, {{.+}}* [[OMP_OUTLINED_0:@.+]] to void
   // CHECK: call void @__kmpc_for_static_fini(
 
   // CHECK: define{{.+}} void [[OMP_OUTLINED_0]](
   // CHECK: call void @__kmpc_for_static_init_4(
+  // OMP45-NOT: !nontemporal
+  // OMP50: store i32 0,{{.*}}!nontemporal
   // CHECK: call void @__kmpc_for_static_fini(
   // CHECK: ret
 #pragma omp target teams distribute parallel for simd if (parallel: false)

@@ -143,7 +143,7 @@ void static_not_chunked(float *a, float *b, float *c, float *d) {
   #pragma omp target
   #pragma omp teams
 #ifdef OMP5
-  #pragma omp distribute simd dist_schedule(static) safelen(32) if(simd: true)
+  #pragma omp distribute simd dist_schedule(static) safelen(32) if(simd: true) nontemporal(a, b)
 #else
   #pragma omp distribute simd dist_schedule(static) safelen(32)
 #endif // OMP5
@@ -189,6 +189,11 @@ void static_not_chunked(float *a, float *b, float *c, float *d) {
 // CHECK:  [[BBINNBODY]]:
 // CHECK:  {{.+}} = load i32, i32* [[IV]]
 // ... loop body ...
+// OMP45-NOT: !nontemporal
+// OMP50:  load float*,{{.*}}!nontemporal
+// OMP50:  load float*,{{.*}}!nontemporal
+// OMP50-NOT: !nontemporal
+
 // CHECK:  br label %[[BBBODYCONT:.+]]
 // CHECK:  [[BBBODYCONT]]:
 // CHECK:  br label %[[BBINNINC:.+]]
@@ -271,7 +276,7 @@ void test_precond() {
   #pragma omp target
   #pragma omp teams
 #ifdef OMP5
-  #pragma omp distribute simd linear(i) if(a)
+  #pragma omp distribute simd linear(i) if(a) nontemporal(i)
 #else
   #pragma omp distribute simd linear(i)
 #endif // OMP5
@@ -293,6 +298,9 @@ void test_precond() {
 // CHECK:  br i1 [[ACMP]], label %[[PRECOND_THEN:.+]], label %[[PRECOND_END:.+]]
 // CHECK:  [[PRECOND_THEN]]
 // CHECK:  call void @__kmpc_for_static_init_4
+// OMP45-NOT: !nontemporal
+// OMP50:  store i8 {{.*}}!nontemporal
+// OMP50-NOT: !nontemporal
 // CHECK:  call void @__kmpc_for_static_fini
 // CHECK:  [[PRECOND_END]]
 

@@ -177,16 +177,16 @@ struct SS{
   // CK3: define {{.*}}i32 @{{.+}}foo{{.+}}(
   int foo(void) {
 
-  // CK3: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* %{{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
+  // CK3: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* %{{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
   // CK3: call void @[[OFFL1:.+]]([[SSI]]* %{{.+}})
     #pragma omp target
 #ifdef OMP5
-    #pragma omp teams distribute simd if(b)
+    #pragma omp teams distribute simd if(b) nontemporal(a, b)
 #else
     #pragma omp teams distribute simd
 #endif // OMP5
     for(int i = 0; i < X; i++) {
-      a[i] = (T)0;
+      a[i] = (T)b;
     }
 
       // outlined target region
@@ -197,6 +197,8 @@ struct SS{
 
   // CK3: define internal void @[[OUTL1]]({{.+}})
   // CK3: call void @__kmpc_for_static_init_4(
+  // OMP3_45-NOT: !nontemporal
+  // OMP3_50: load float,{{.*}}!nontemporal
   // CK3: call void @__kmpc_for_static_fini(
   // CK3: ret void
 
