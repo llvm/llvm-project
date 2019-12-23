@@ -5246,13 +5246,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SelectCode(Res.getNode());
     return;
   }
-  case ISD::STRICT_FP_TO_SINT:
-  case ISD::STRICT_FP_TO_UINT:
-    // FIXME: Remove when we have isel patterns for strict versions of these
-    // nodes.
-    if (!TLI->isStrictFPEnabled())
-      CurDAG->mutateStrictFPToFP(Node);
-    break;
   }
 
   SelectCode(Node);

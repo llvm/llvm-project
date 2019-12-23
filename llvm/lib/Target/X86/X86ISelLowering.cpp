@@ -19199,10 +19199,15 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
 
     SDValue ThreshVal = DAG.getConstantFP(Thresh, DL, TheVT);
 
-    SDValue Cmp = DAG.getSetCC(DL,
-                               getSetCCResultType(DAG.getDataLayout(),
-                                                  *DAG.getContext(), TheVT),
-                               Value, ThreshVal, ISD::SETLT);
+    EVT ResVT = getSetCCResultType(DAG.getDataLayout(),
+                                   *DAG.getContext(), TheVT);
+    SDValue Cmp;
+    if (IsStrict)
+      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETLT,
+                         Chain, /*IsSignaling*/ true);
+    else
+      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETLT);
+
     Adjust = DAG.getSelect(DL, MVT::i64, Cmp,
                            DAG.getConstant(0, DL, MVT::i64),
                            DAG.getConstant(APInt::getSignMask(64),

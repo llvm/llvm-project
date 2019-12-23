@@ -1162,10 +1162,30 @@ void SelectionDAGISel::DoInstructionSelection() {
       // we convert them to normal FP opcodes instead at this point.  This
       // will allow them to be handled by existing target-specific instruction
       // selectors.
-      if (!TLI->isStrictFPEnabled() && Node->isStrictFPOpcode() &&
-          (TLI->getOperationAction(Node->getOpcode(), Node->getValueType(0))
-           == TargetLowering::Expand))
-        Node = CurDAG->mutateStrictFPToFP(Node);
+      if (!TLI->isStrictFPEnabled() && Node->isStrictFPOpcode()) {
+        // For some opcodes, we need to call TLI->getOperationAction using
+        // the first operand type instead of the result type.  Note that this
+        // must match what SelectionDAGLegalize::LegalizeOp is doing.
+        EVT ActionVT;
+        switch (Node->getOpcode()) {
+        case ISD::STRICT_SINT_TO_FP:
+        case ISD::STRICT_UINT_TO_FP:
+        case ISD::STRICT_LRINT:
+        case ISD::STRICT_LLRINT:
+        case ISD::STRICT_LROUND:
+        case ISD::STRICT_LLROUND:
+        case ISD::STRICT_FSETCC:
+        case ISD::STRICT_FSETCCS:
+          ActionVT = Node->getOperand(1).getValueType();
+          break;
+        default:
+          ActionVT = Node->getValueType(0);
+          break;
+        }
+        if (TLI->getOperationAction(Node->getOpcode(), ActionVT)
+            == TargetLowering::Expand)
+          Node = CurDAG->mutateStrictFPToFP(Node);
+      }
 
       LLVM_DEBUG(dbgs() << "\nISEL: Starting selection on root node: ";
                  Node->dump(CurDAG));

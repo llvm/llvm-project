@@ -7102,22 +7102,22 @@ def : InstAlias<"vcvtsi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
 def : InstAlias<"vcvtsi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
               (VCVTSI2SDZrm_Int VR128X:$dst, VR128X:$src1, i32mem:$src), 0, "att">;
 
-def : Pat<(f32 (sint_to_fp (loadi32 addr:$src))),
+def : Pat<(f32 (any_sint_to_fp (loadi32 addr:$src))),
           (VCVTSI2SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(f32 (sint_to_fp (loadi64 addr:$src))),
+def : Pat<(f32 (any_sint_to_fp (loadi64 addr:$src))),
           (VCVTSI642SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(f64 (sint_to_fp (loadi32 addr:$src))),
+def : Pat<(f64 (any_sint_to_fp (loadi32 addr:$src))),
           (VCVTSI2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(f64 (sint_to_fp (loadi64 addr:$src))),
+def : Pat<(f64 (any_sint_to_fp (loadi64 addr:$src))),
           (VCVTSI642SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>;
 
-def : Pat<(f32 (sint_to_fp GR32:$src)),
+def : Pat<(f32 (any_sint_to_fp GR32:$src)),
           (VCVTSI2SSZrr (f32 (IMPLICIT_DEF)), GR32:$src)>;
-def : Pat<(f32 (sint_to_fp GR64:$src)),
+def : Pat<(f32 (any_sint_to_fp GR64:$src)),
           (VCVTSI642SSZrr (f32 (IMPLICIT_DEF)), GR64:$src)>;
-def : Pat<(f64 (sint_to_fp GR32:$src)),
+def : Pat<(f64 (any_sint_to_fp GR32:$src)),
           (VCVTSI2SDZrr (f64 (IMPLICIT_DEF)), GR32:$src)>;
-def : Pat<(f64 (sint_to_fp GR64:$src)),
+def : Pat<(f64 (any_sint_to_fp GR64:$src)),
           (VCVTSI642SDZrr (f64 (IMPLICIT_DEF)), GR64:$src)>;
 
 defm VCVTUSI2SSZ   : avx512_vcvtsi_common<0x7B, X86UintToFp, X86UintToFpRnd,
@@ -7141,22 +7141,22 @@ def : InstAlias<"vcvtusi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
 def : InstAlias<"vcvtusi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
               (VCVTUSI2SDZrm_Int VR128X:$dst, VR128X:$src1, i32mem:$src), 0, "att">;
 
-def : Pat<(f32 (uint_to_fp (loadi32 addr:$src))),
+def : Pat<(f32 (any_uint_to_fp (loadi32 addr:$src))),
           (VCVTUSI2SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(f32 (uint_to_fp (loadi64 addr:$src))),
+def : Pat<(f32 (any_uint_to_fp (loadi64 addr:$src))),
           (VCVTUSI642SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(f64 (uint_to_fp (loadi32 addr:$src))),
+def : Pat<(f64 (any_uint_to_fp (loadi32 addr:$src))),
           (VCVTUSI2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(f64 (uint_to_fp (loadi64 addr:$src))),
+def : Pat<(f64 (any_uint_to_fp (loadi64 addr:$src))),
           (VCVTUSI642SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>;
 
-def : Pat<(f32 (uint_to_fp GR32:$src)),
+def : Pat<(f32 (any_uint_to_fp GR32:$src)),
           (VCVTUSI2SSZrr (f32 (IMPLICIT_DEF)), GR32:$src)>;
-def : Pat<(f32 (uint_to_fp GR64:$src)),
+def : Pat<(f32 (any_uint_to_fp GR64:$src)),
           (VCVTUSI642SSZrr (f32 (IMPLICIT_DEF)), GR64:$src)>;
-def : Pat<(f64 (uint_to_fp GR32:$src)),
+def : Pat<(f64 (any_uint_to_fp GR32:$src)),
           (VCVTUSI2SDZrr (f64 (IMPLICIT_DEF)), GR32:$src)>;
-def : Pat<(f64 (uint_to_fp GR64:$src)),
+def : Pat<(f64 (any_uint_to_fp GR64:$src)),
           (VCVTUSI642SDZrr (f64 (IMPLICIT_DEF)), GR64:$src)>;
 }
 
@@ -7227,82 +7227,82 @@ defm VCVTSD2USI64Z: avx512_cvt_s_int_round<0x79, f64x_info, i64x_info, X86cvts2u
 let Predicates = [HasAVX512] in {
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128X:$dst),
-                   (v4f32 (scalar_to_vector (f32 (sint_to_fp GR64:$src)))))),
+                   (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))))),
           (VCVTSI642SSZrr_Int VR128X:$dst, GR64:$src)>;
 
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128X:$dst),
-                   (v4f32 (scalar_to_vector (f32 (sint_to_fp (loadi64 addr:$src))))))),
+                   (v4f32 (scalar_to_vector (f32 (any_sint_to_fp (loadi64 addr:$src))))))),
           (VCVTSI642SSZrm_Int VR128X:$dst, addr:$src)>;
 
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128X:$dst),
-                   (v4f32 (scalar_to_vector (f32 (sint_to_fp GR32:$src)))))),
+                   (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))))),
           (VCVTSI2SSZrr_Int VR128X:$dst, GR32:$src)>;
 
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128X:$dst),
-                   (v4f32 (scalar_to_vector (f32 (sint_to_fp (loadi32 addr:$src))))))),
+                   (v4f32 (scalar_to_vector (f32 (any_sint_to_fp (loadi32 addr:$src))))))),
           (VCVTSI2SSZrm_Int VR128X:$dst, addr:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
-                   (v2f64 (scalar_to_vector (f64 (sint_to_fp GR64:$src)))))),
+                   (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR64:$src)))))),
           (VCVTSI642SDZrr_Int VR128X:$dst, GR64:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
-                   (v2f64 (scalar_to_vector (f64 (sint_to_fp (loadi64 addr:$src))))))),
+                   (v2f64 (scalar_to_vector (f64 (any_sint_to_fp (loadi64 addr:$src))))))),
           (VCVTSI642SDZrm_Int VR128X:$dst, addr:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
-                   (v2f64 (scalar_to_vector (f64 (sint_to_fp GR32:$src)))))),
+                   (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR32:$src)))))),
           (VCVTSI2SDZrr_Int VR128X:$dst, GR32:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
-                   (v2f64 (scalar_to_vector (f64 (sint_to_fp (loadi32 addr:$src))))))),
+                   (v2f64 (scalar_to_vector (f64 (any_sint_to_fp (loadi32 addr:$src))))))),
           (VCVTSI2SDZrm_Int VR128X:$dst, addr:$src)>;
 
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128X:$dst),
-                   (v4f32 (scalar_to_vector (f32 (uint_to_fp GR64:$src)))))),
+                   (v4f32 (scalar_to_vector (f32 (any_uint_to_fp GR64:$src)))))),
           (VCVTUSI642SSZrr_Int VR128X:$dst, GR64:$src)>;
 
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128X:$dst),
-                   (v4f32 (scalar_to_vector (f32 (uint_to_fp (loadi64 addr:$src))))))),
+                   (v4f32 (scalar_to_vector (f32 (any_uint_to_fp (loadi64 addr:$src))))))),
           (VCVTUSI642SSZrm_Int VR128X:$dst, addr:$src)>;
 
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128X:$dst),
-                   (v4f32 (scalar_to_vector (f32 (uint_to_fp GR32:$src)))))),
+                   (v4f32 (scalar_to_vector (f32 (any_uint_to_fp GR32:$src)))))),
           (VCVTUSI2SSZrr_Int VR128X:$dst, GR32:$src)>;
 
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128X:$dst),
-                   (v4f32 (scalar_to_vector (f32 (uint_to_fp (loadi32 addr:$src))))))),
+                   (v4f32 (scalar_to_vector (f32 (any_uint_to_fp (loadi32 addr:$src))))))),
           (VCVTUSI2SSZrm_Int VR128X:$dst, addr:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
-                   (v2f64 (scalar_to_vector (f64 (uint_to_fp GR64:$src)))))),
+                   (v2f64 (scalar_to_vector (f64 (any_uint_to_fp GR64:$src)))))),
           (VCVTUSI642SDZrr_Int VR128X:$dst, GR64:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
-                   (v2f64 (scalar_to_vector (f64 (uint_to_fp (loadi64 addr:$src))))))),
+                   (v2f64 (scalar_to_vector (f64 (any_uint_to_fp (loadi64 addr:$src))))))),
           (VCVTUSI642SDZrm_Int VR128X:$dst, addr:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
-                   (v2f64 (scalar_to_vector (f64 (uint_to_fp GR32:$src)))))),
+                   (v2f64 (scalar_to_vector (f64 (any_uint_to_fp GR32:$src)))))),
           (VCVTUSI2SDZrr_Int VR128X:$dst, GR32:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
-                   (v2f64 (scalar_to_vector (f64 (uint_to_fp (loadi32 addr:$src))))))),
+                   (v2f64 (scalar_to_vector (f64 (any_uint_to_fp (loadi32 addr:$src))))))),
           (VCVTUSI2SDZrm_Int VR128X:$dst, addr:$src)>;
 } // Predicates = [HasAVX512]
 
@@ -8108,10 +8108,10 @@ multiclass avx512_cvtqq2ps<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   VK4WM:$mask, i64mem:$src), 0, "att">;
 }
 
-defm VCVTDQ2PD : avx512_cvtdq2pd<0xE6, "vcvtdq2pd", sint_to_fp, X86VSintToFP,
+defm VCVTDQ2PD : avx512_cvtdq2pd<0xE6, "vcvtdq2pd", any_sint_to_fp, X86VSintToFP,
                                  SchedWriteCvtDQ2PD>, XS, EVEX_CD8<32, CD8VH>;
 
-defm VCVTDQ2PS : avx512_cvtdq2ps<0x5B, "vcvtdq2ps", sint_to_fp,
+defm VCVTDQ2PS : avx512_cvtdq2ps<0x5B, "vcvtdq2ps", any_sint_to_fp,
                                 X86VSintToFpRnd, SchedWriteCvtDQ2PS>,
                                 PS, EVEX_CD8<32, CD8VF>;
 
@@ -8131,11 +8131,11 @@ defm VCVTTPD2UDQ : avx512_cvttpd2dq<0x78, "vcvttpd2udq", X86cvttp2ui,
                                  X86cvttp2uiSAE, SchedWriteCvtPD2DQ>,
                                  PS, VEX_W, EVEX_CD8<64, CD8VF>;
 
-defm VCVTUDQ2PD : avx512_cvtdq2pd<0x7A, "vcvtudq2pd", uint_to_fp,
+defm VCVTUDQ2PD : avx512_cvtdq2pd<0x7A, "vcvtudq2pd", any_uint_to_fp,
                                   X86VUintToFP, SchedWriteCvtDQ2PD>, XS,
                                   EVEX_CD8<32, CD8VH>;
 
-defm VCVTUDQ2PS : avx512_cvtdq2ps<0x7A, "vcvtudq2ps", uint_to_fp,
+defm VCVTUDQ2PS : avx512_cvtdq2ps<0x7A, "vcvtudq2ps", any_uint_to_fp,
                                  X86VUintToFpRnd, SchedWriteCvtDQ2PS>, XD,
                                  EVEX_CD8<32, CD8VF>;
 
@@ -8187,19 +8187,19 @@ defm VCVTTPS2UQQ : avx512_cvttps2qq<0x78, "vcvttps2uqq", X86cvttp2ui,
                                  X86cvttp2uiSAE, SchedWriteCvtPS2DQ>, PD,
                                  EVEX_CD8<32, CD8VH>;
 
-defm VCVTQQ2PD : avx512_cvtqq2pd<0xE6, "vcvtqq2pd", sint_to_fp,
+defm VCVTQQ2PD : avx512_cvtqq2pd<0xE6, "vcvtqq2pd", any_sint_to_fp,
                             X86VSintToFpRnd, SchedWriteCvtDQ2PD>, VEX_W, XS,
                             EVEX_CD8<64, CD8VF>;
 
-defm VCVTUQQ2PD : avx512_cvtqq2pd<0x7A, "vcvtuqq2pd", uint_to_fp,
+defm VCVTUQQ2PD : avx512_cvtqq2pd<0x7A, "vcvtuqq2pd", any_uint_to_fp,
                             X86VUintToFpRnd, SchedWriteCvtDQ2PD>, VEX_W, XS,
                             EVEX_CD8<64, CD8VF>;
 
-defm VCVTQQ2PS : avx512_cvtqq2ps<0x5B, "vcvtqq2ps", sint_to_fp,
+defm VCVTQQ2PS : avx512_cvtqq2ps<0x5B, "vcvtqq2ps", any_sint_to_fp,
                             X86VSintToFpRnd, SchedWriteCvtDQ2PS>, VEX_W, PS,
                             EVEX_CD8<64, CD8VF>;
 
-defm VCVTUQQ2PS : avx512_cvtqq2ps<0x7A, "vcvtuqq2ps", uint_to_fp,
+defm VCVTUQQ2PS : avx512_cvtqq2ps<0x7A, "vcvtuqq2ps", any_uint_to_fp,
                             X86VUintToFpRnd, SchedWriteCvtDQ2PS>, VEX_W, XD,
                             EVEX_CD8<64, CD8VF>;
 
@@ -8383,17 +8383,17 @@ def : Pat<(v4i32 (X86cvttp2ui (v4f64 VR256X:$src1))),
            (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
                                  VR256X:$src1, sub_ymm)))), sub_xmm)>;
 
-def : Pat<(v8f32 (uint_to_fp (v8i32 VR256X:$src1))),
+def : Pat<(v8f32 (any_uint_to_fp (v8i32 VR256X:$src1))),
           (EXTRACT_SUBREG (v16f32 (VCVTUDQ2PSZrr
            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF),
                                   VR256X:$src1, sub_ymm)))), sub_ymm)>;
 
-def : Pat<(v4f32 (uint_to_fp (v4i32 VR128X:$src1))),
+def : Pat<(v4f32 (any_uint_to_fp (v4i32 VR128X:$src1))),
           (EXTRACT_SUBREG (v16f32 (VCVTUDQ2PSZrr
            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF),
                                   VR128X:$src1, sub_xmm)))), sub_xmm)>;
 
-def : Pat<(v4f64 (uint_to_fp (v4i32 VR128X:$src1))),
+def : Pat<(v4f64 (any_uint_to_fp (v4i32 VR128X:$src1))),
           (EXTRACT_SUBREG (v8f64 (VCVTUDQ2PDZrr
            (v8i32 (INSERT_SUBREG (IMPLICIT_DEF),
                                  VR128X:$src1, sub_xmm)))), sub_ymm)>;
@@ -8519,32 +8519,32 @@ def : Pat<(v4i64 (X86cvttp2ui (v4f64 VR256X:$src1))),
            (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
                                   VR256X:$src1, sub_ymm)))), sub_ymm)>;
 
-def : Pat<(v4f32 (sint_to_fp (v4i64 VR256X:$src1))),
+def : Pat<(v4f32 (any_sint_to_fp (v4i64 VR256X:$src1))),
           (EXTRACT_SUBREG (v8f32 (VCVTQQ2PSZrr
            (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
                                   VR256X:$src1, sub_ymm)))), sub_xmm)>;
 
-def : Pat<(v2f64 (sint_to_fp (v2i64 VR128X:$src1))),
+def : Pat<(v2f64 (any_sint_to_fp (v2i64 VR128X:$src1))),
           (EXTRACT_SUBREG (v8f64 (VCVTQQ2PDZrr
            (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
                                   VR128X:$src1, sub_xmm)))), sub_xmm)>;
 
-def : Pat<(v4f64 (sint_to_fp (v4i64 VR256X:$src1))),
+def : Pat<(v4f64 (any_sint_to_fp (v4i64 VR256X:$src1))),
           (EXTRACT_SUBREG (v8f64 (VCVTQQ2PDZrr
            (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
                                   VR256X:$src1, sub_ymm)))), sub_ymm)>;
 
-def : Pat<(v4f32 (uint_to_fp (v4i64 VR256X:$src1))),
+def : Pat<(v4f32 (any_uint_to_fp (v4i64 VR256X:$src1))),
           (EXTRACT_SUBREG (v8f32 (VCVTUQQ2PSZrr
            (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
                                   VR256X:$src1, sub_ymm)))), sub_xmm)>;
 
-def : Pat<(v2f64 (uint_to_fp (v2i64 VR128X:$src1))),
+def : Pat<(v2f64 (any_uint_to_fp (v2i64 VR128X:$src1))),
           (EXTRACT_SUBREG (v8f64 (VCVTUQQ2PDZrr
            (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
                                   VR128X:$src1, sub_xmm)))), sub_xmm)>;
 
-def : Pat<(v4f64 (uint_to_fp (v4i64 VR256X:$src1))),
+def : Pat<(v4f64 (any_uint_to_fp (v4i64 VR256X:$src1))),
           (EXTRACT_SUBREG (v8f64 (VCVTUQQ2PDZrr
            (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
                                   VR256X:$src1, sub_ymm)))), sub_ymm)>;
