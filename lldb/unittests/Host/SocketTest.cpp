@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SocketTestUtilities.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/UriParser.h"
 #include "gtest/gtest.h"
@@ -15,11 +16,7 @@ using namespace lldb_private;
 
 class SocketTest : public testing::Test {
 public:
-  void SetUp() override {
-    ASSERT_THAT_ERROR(Socket::Initialize(), llvm::Succeeded());
-  }
-
-  void TearDown() override { Socket::Terminate(); }
+  SubsystemRAII<Socket> subsystems;
 };
 
 TEST_F(SocketTest, DecodeHostAndPort) {

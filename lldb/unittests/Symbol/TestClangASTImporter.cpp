@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -24,15 +25,7 @@ using namespace lldb_private;
 
 class TestClangASTImporter : public testing::Test {
 public:
-  static void SetUpTestCase() {
-    FileSystem::Initialize();
-    HostInfo::Initialize();
-  }
-
-  static void TearDownTestCase() {
-    HostInfo::Terminate();
-    FileSystem::Terminate();
-  }
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
 };
 
 TEST_F(TestClangASTImporter, CanImportInvalidType) {
