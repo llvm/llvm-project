@@ -9665,6 +9665,15 @@ INTERCEPTOR(void, qsort, void *base, SIZE_T nmemb, SIZE_T size,
             qsort_compar_f compar) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, qsort, base, nmemb, size, compar);
+  // Run the comparator over all array elements to detect any memory issues.
+  for (SIZE_T i = 0; i < nmemb; ++i) {
+    void *p = (void *)((char *)base + i * size);
+    COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
+    // Compare each element with itself to trigger an equality check, which
+    // typically requires the comparator to look as many of the object fields as
+    // possible.
+    compar(p, p);
+  }
   qsort_compar_f old_compar = qsort_compar;
   qsort_compar = compar;
   SIZE_T old_size = qsort_size;
@@ -9694,6 +9703,15 @@ INTERCEPTOR(void, qsort_r, void *base, SIZE_T nmemb, SIZE_T size,
             qsort_r_compar_f compar, void *arg) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, qsort_r, base, nmemb, size, compar, arg);
+  // Run the comparator over all array elements to detect any memory issues.
+  for (SIZE_T i = 0; i < nmemb; ++i) {
+    void *p = (void *)((char *)base + i * size);
+    COMMON_INTERCEPTOR_UNPOISON_PARAM(3);
+    // Compare each element with itself to trigger an equality check, which
+    // typically requires the comparator to look as many of the object fields as
+    // possible.
+    compar(p, p, arg);
+  }
   qsort_r_compar_f old_compar = qsort_r_compar;
   qsort_r_compar = compar;
   SIZE_T old_size = qsort_r_size;
