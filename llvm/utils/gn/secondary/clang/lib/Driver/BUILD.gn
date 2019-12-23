@@ -36,6 +36,7 @@ static_library("Driver") {
     "DriverOptions.cpp",
     "Job.cpp",
     "Multilib.cpp",
+    "OptionUtils.cpp",
     "Phases.cpp",
     "SanitizerArgs.cpp",
     "Tool.cpp",

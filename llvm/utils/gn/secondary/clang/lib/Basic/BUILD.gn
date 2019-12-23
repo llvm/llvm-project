@@ -59,7 +59,6 @@ static_library("Basic") {
     "ObjCRuntime.cpp",
     "OpenMPKinds.cpp",
     "OperatorPrecedence.cpp",
-    "OptionUtils.cpp",
     "SanitizerBlacklist.cpp",
     "SanitizerSpecialCaseList.cpp",
     "Sanitizers.cpp",
