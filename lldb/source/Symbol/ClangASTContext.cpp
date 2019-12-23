@@ -1153,11 +1153,6 @@ CompilerType ClangASTContext::GetCStringType(bool is_const) {
   return CompilerType(this, ast.getPointerType(char_type).getAsOpaquePtr());
 }
 
-clang::DeclContext *
-ClangASTContext::GetTranslationUnitDecl(clang::ASTContext *ast) {
-  return ast->getTranslationUnitDecl();
-}
-
 clang::Decl *ClangASTContext::CopyDecl(ASTContext *dst_ast, ASTContext *src_ast,
                                        clang::Decl *source_decl) {
   FileSystemOptions file_system_options;
@@ -1782,8 +1777,7 @@ clang::DeclContext *FindLCABetweenDecls(clang::DeclContext *left,
 clang::UsingDirectiveDecl *ClangASTContext::CreateUsingDirectiveDeclaration(
     clang::DeclContext *decl_ctx, clang::NamespaceDecl *ns_decl) {
   if (decl_ctx != nullptr && ns_decl != nullptr) {
-    clang::TranslationUnitDecl *translation_unit =
-        (clang::TranslationUnitDecl *)GetTranslationUnitDecl(&getASTContext());
+    auto *translation_unit = getASTContext().getTranslationUnitDecl();
     clang::UsingDirectiveDecl *using_decl = clang::UsingDirectiveDecl::Create(
         getASTContext(), decl_ctx, clang::SourceLocation(),
         clang::SourceLocation(), clang::NestedNameSpecifierLoc(),
