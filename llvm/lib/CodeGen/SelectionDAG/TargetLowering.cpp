@@ -6074,7 +6074,13 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
   }
 
   SDValue Cst = DAG.getConstantFP(APF, dl, SrcVT);
-  SDValue Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT);
+  SDValue Sel;
+
+  if (Node->isStrictFPOpcode())
+    Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT,
+                       Node->getOperand(0), /*IsSignaling*/ true);
+  else
+    Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT);
 
   bool Strict = Node->isStrictFPOpcode() ||
                 shouldUseStrictFP_TO_INT(SrcVT, DstVT, /*IsSigned*/ false);
@@ -6149,31 +6155,6 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
 
     // For unsigned conversions, convert them to signed conversions using the
     // algorithm from the x86_64 __floatundidf in compiler_rt.
-    SDValue Fast;
-    if (Node->isStrictFPOpcode()) {
-      Fast = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {DstVT, MVT::Other},
-                         {Node->getOperand(0), Src});
-      Chain = SDValue(Fast.getNode(), 1);
-    } else
-      Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Src);
-
-    SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
-    SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Src, ShiftConst);
-    SDValue AndConst = DAG.getConstant(1, dl, SrcVT);
-    SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Src, AndConst);
-    SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
-
-    SDValue Slow;
-    if (Node->isStrictFPOpcode()) {
-      SDValue SignCvt = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl,
-                                    {DstVT, MVT::Other}, {Chain, Or});
-      Slow = DAG.getNode(ISD::STRICT_FADD, dl, { DstVT, MVT::Other },
-                         { SignCvt.getValue(1), SignCvt, SignCvt });
-      Chain = Slow.getValue(1);
-    } else {
-      SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Or);
-      Slow = DAG.getNode(ISD::FADD, dl, DstVT, SignCvt, SignCvt);
-    }
 
     // TODO: This really should be implemented using a branch rather than a
     // select.  We happen to get lucky and machinesink does the right
@@ -6184,6 +6165,35 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
 
     SDValue SignBitTest = DAG.getSetCC(
         dl, SetCCVT, Src, DAG.getConstant(0, dl, SrcVT), ISD::SETLT);
+
+    SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
+    SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Src, ShiftConst);
+    SDValue AndConst = DAG.getConstant(1, dl, SrcVT);
+    SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Src, AndConst);
+    SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
+
+    SDValue Slow, Fast;
+    if (Node->isStrictFPOpcode()) {
+      // In strict mode, we must avoid spurious exceptions, and therefore
+      // must make sure to only emit a single STRICT_SINT_TO_FP.
+      SDValue InCvt = DAG.getSelect(dl, SrcVT, SignBitTest, Or, Src);
+      Fast = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, { DstVT, MVT::Other },
+                         { Node->getOperand(0), InCvt });
+      Slow = DAG.getNode(ISD::STRICT_FADD, dl, { DstVT, MVT::Other },
+                         { Fast.getValue(1), Fast, Fast });
+      Chain = Slow.getValue(1);
+      // The STRICT_SINT_TO_FP inherits the exception mode from the
+      // incoming STRICT_UINT_TO_FP node; the STRICT_FADD node can
+      // never raise any exception.
+      SDNodeFlags Flags;
+      Flags.setFPExcept(Node->getFlags().hasFPExcept());
+      Fast->setFlags(Flags);
+    } else {
+      SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Or);
+      Slow = DAG.getNode(ISD::FADD, dl, DstVT, SignCvt, SignCvt);
+      Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Src);
+    }
+
     Result = DAG.getSelect(dl, DstVT, SignBitTest, Slow, Fast);
     return true;
   }
