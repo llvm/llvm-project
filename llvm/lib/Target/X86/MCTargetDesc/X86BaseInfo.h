@@ -129,8 +129,7 @@ namespace X86 {
     Invalid,
   };
 
-  /// classifyFirstOpcodeInMacroFusion - return the type of the first
-  /// instruction in macro-fusion.
+  /// \returns the type of the first instruction in macro-fusion.
   inline FirstMacroFusionInstKind
   classifyFirstOpcodeInMacroFusion(unsigned Opcode) {
     switch (Opcode) {
@@ -278,8 +277,7 @@ namespace X86 {
     }
   }
 
-  /// classifySecondCondCodeInMacroFusion - return the type of the second
-  /// instruction in macro-fusion.
+  /// \returns the type of the second instruction in macro-fusion.
   inline SecondMacroFusionInstKind
   classifySecondCondCodeInMacroFusion(X86::CondCode CC) {
     if (CC == X86::COND_INVALID)
@@ -326,6 +324,10 @@ namespace X86 {
     }
   }
 
+  /// \param FirstKind kind of the first instruction in macro fusion.
+  /// \param SecondKind kind of the second instruction in macro fusion.
+  ///
+  /// \returns true if the two instruction can be macro fused.
   inline bool isMacroFused(FirstMacroFusionInstKind FirstKind,
                            SecondMacroFusionInstKind SecondKind) {
     switch (FirstKind) {
@@ -887,9 +889,8 @@ namespace X86II {
     NOTRACK = 1ULL << NoTrackShift
   };
 
-  // getBaseOpcodeFor - This function returns the "base" X86 opcode for the
-  // specified machine instruction.
-  //
+  /// \returns the "base" X86 opcode for the specified machine
+  /// instruction.
   inline uint8_t getBaseOpcodeFor(uint64_t TSFlags) {
     return TSFlags >> X86II::OpcodeShift;
   }
@@ -898,8 +899,8 @@ namespace X86II {
     return (TSFlags & X86II::ImmMask) != 0;
   }
 
-  /// getSizeOfImm - Decode the "size of immediate" field from the TSFlags field
-  /// of the specified instruction.
+  /// Decode the "size of immediate" field from the TSFlags field of the 
+  /// specified instruction.
   inline unsigned getSizeOfImm(uint64_t TSFlags) {
     switch (TSFlags & X86II::ImmMask) {
     default: llvm_unreachable("Unknown immediate size");
@@ -915,8 +916,8 @@ namespace X86II {
     }
   }
 
-  /// isImmPCRel - Return true if the immediate of the specified instruction's
-  /// TSFlags indicates that it is pc relative.
+  /// \returns true if the immediate of the specified instruction's TSFlags
+  /// indicates that it is pc relative.
   inline bool isImmPCRel(uint64_t TSFlags) {
     switch (TSFlags & X86II::ImmMask) {
     default: llvm_unreachable("Unknown immediate size");
@@ -934,7 +935,7 @@ namespace X86II {
     }
   }
 
-  /// isImmSigned - Return true if the immediate of the specified instruction's
+  /// \returns true if the immediate of the specified instruction's
   /// TSFlags indicates that it is signed.
   inline bool isImmSigned(uint64_t TSFlags) {
     switch (TSFlags & X86II::ImmMask) {
@@ -953,8 +954,8 @@ namespace X86II {
     }
   }
 
-  /// getOperandBias - compute whether all of the def operands are repeated
-  ///                  in the uses and therefore should be skipped.
+  /// Compute whether all of the def operands are repeated in the uses and
+  /// therefore should be skipped.
   /// This determines the start of the unique operand list. We need to determine
   /// if all of the defs have a corresponding tied operand in the uses.
   /// Unfortunately, the tied operand information is encoded in the uses not
@@ -992,8 +993,8 @@ namespace X86II {
     }
   }
 
-  /// getMemoryOperandNo - The function returns the MCInst operand # for the
-  /// first field of the memory operand.  If the instruction doesn't have a
+  /// The function returns the MCInst operand # for the first field of the
+  /// memory operand.  If the instruction doesn't have a
   /// memory operand, this returns -1.
   ///
   /// Note that this ignores tied operands.  If there is a tied register which
@@ -1079,8 +1080,8 @@ namespace X86II {
     }
   }
 
-  /// isX86_64ExtendedReg - Is the MachineOperand a x86-64 extended (r8 or
-  /// higher) register?  e.g. r8, xmm8, xmm13, etc.
+  /// \returns true if the MachineOperand is a x86-64 extended (r8 or
+  /// higher) register,  e.g. r8, xmm8, xmm13, etc.
   inline bool isX86_64ExtendedReg(unsigned RegNo) {
     if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM31) ||
         (RegNo >= X86::YMM8 && RegNo <= X86::YMM31) ||
@@ -1106,8 +1107,8 @@ namespace X86II {
     return false;
   }
 
-  /// is32ExtendedReg - Is the MemoryOperand a 32 extended (zmm16 or higher)
-  /// registers? e.g. zmm21, etc.
+  /// \returns true if the MemoryOperand is a 32 extended (zmm16 or higher)
+  /// registers, e.g. zmm21, etc.
   static inline bool is32ExtendedReg(unsigned RegNo) {
     return ((RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
             (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
@@ -1120,12 +1121,12 @@ namespace X86II {
             reg == X86::SIL || reg == X86::DIL);
   }
 
-  /// isKMasked - Is this a masked instruction.
+  /// \returns true if this is a masked instruction.
   inline bool isKMasked(uint64_t TSFlags) {
     return (TSFlags & X86II::EVEX_K) != 0;
   }
 
-  /// isKMergedMasked - Is this a merge masked instruction.
+  /// \returns true if this is a merge masked instruction.
   inline bool isKMergeMasked(uint64_t TSFlags) {
     return isKMasked(TSFlags) && (TSFlags & X86II::EVEX_Z) == 0;
   }
