@@ -61,6 +61,7 @@ std::string ScriptInterpreter::LanguageToString(lldb::ScriptLanguage language) {
   case eScriptLanguageUnknown:
     return "Unknown";
   }
+  llvm_unreachable("Unhandled ScriptInterpreter!");
 }
 
 lldb::ScriptLanguage
