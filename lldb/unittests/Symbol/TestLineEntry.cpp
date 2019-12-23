@@ -14,6 +14,7 @@
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Symbol/ClangASTContext.h"
 
@@ -31,16 +32,12 @@ using namespace lldb_private;
 using namespace lldb;
 
 class LineEntryTest : public testing::Test {
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileMachO, SymbolFileDWARF,
+                ClangASTContext>
+      subsystem;
+
 public:
   void SetUp() override;
-
-  void TearDown() override {
-    ClangASTContext::Terminate();
-    SymbolFileDWARF::Terminate();
-    ObjectFileMachO::Terminate();
-    HostInfo::Terminate();
-    FileSystem::Terminate();
-  }
 
 protected:
   llvm::Expected<LineEntry> GetLineEntryForLine(uint32_t line);
@@ -49,11 +46,6 @@ protected:
 };
 
 void LineEntryTest::SetUp() {
-  FileSystem::Initialize();
-  HostInfo::Initialize();
-  ObjectFileMachO::Initialize();
-  SymbolFileDWARF::Initialize();
-  ClangASTContext::Initialize();
   auto ExpectedFile = TestFile::fromYamlFile("inlined-functions.yaml");
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   m_file.emplace(std::move(*ExpectedFile));

@@ -2218,7 +2218,7 @@ CompilerDeclContext
 DWARFASTParserClang::GetDeclContextForUIDFromDWARF(const DWARFDIE &die) {
   clang::DeclContext *clang_decl_ctx = GetClangDeclContextForDIE(die);
   if (clang_decl_ctx)
-    return CompilerDeclContext(&m_ast, clang_decl_ctx);
+    return m_ast.CreateDeclContext(clang_decl_ctx);
   return CompilerDeclContext();
 }
 
@@ -2227,7 +2227,7 @@ DWARFASTParserClang::GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) {
   clang::DeclContext *clang_decl_ctx =
       GetClangDeclContextContainingDIE(die, nullptr);
   if (clang_decl_ctx)
-    return CompilerDeclContext(&m_ast, clang_decl_ctx);
+    return m_ast.CreateDeclContext(clang_decl_ctx);
   return CompilerDeclContext();
 }
 

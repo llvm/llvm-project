@@ -11,6 +11,7 @@
 
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 
 #include "lldb/Core/Module.h"
@@ -22,16 +23,7 @@ using namespace lldb_private;
 using namespace lldb;
 
 class PECallFrameInfoTest : public testing::Test {
-public:
-  void SetUp() override {
-    FileSystem::Initialize();
-    ObjectFilePECOFF::Initialize();
-  }
-
-  void TearDown() override {
-    ObjectFilePECOFF::Terminate();
-    FileSystem::Terminate();
-  }
+  SubsystemRAII<FileSystem, ObjectFilePECOFF> subsystems;
 
 protected:
   void GetUnwindPlan(addr_t file_addr, UnwindPlan &plan) const;

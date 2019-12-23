@@ -1,14 +1,14 @@
 ## Test that the -x alias can be used flexibly. Create a baseline and ensure
 ## all other combinations are identical.
-# RUN: llvm-readelf --file-header --hex-dump=.text \
-# RUN:   %p/Inputs/trivial.obj.elf-x86-64 > %t.hexdump.out
-# RUN: llvm-readelf -h --hex-dump .text %p/Inputs/trivial.obj.elf-x86-64 > %t.hexdump.1
-# RUN: llvm-readelf -h -x .text %p/Inputs/trivial.obj.elf-x86-64 > %t.hexdump.2
-# RUN: llvm-readelf -h -x=.text %p/Inputs/trivial.obj.elf-x86-64 > %t.hexdump.3
-# RUN: llvm-readelf -h -x.text %p/Inputs/trivial.obj.elf-x86-64 > %t.hexdump.4
-# RUN: llvm-readelf -hx .text %p/Inputs/trivial.obj.elf-x86-64 > %t.hexdump.5
-# RUN: llvm-readelf -hx=.text %p/Inputs/trivial.obj.elf-x86-64 > %t.hexdump.6
-# RUN: llvm-readelf -hx.text %p/Inputs/trivial.obj.elf-x86-64 > %t.hexdump.7
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf --file-header --hex-dump=.shstrtab %t > %t.hexdump.out
+# RUN: llvm-readelf -h --hex-dump .shstrtab %t > %t.hexdump.1
+# RUN: llvm-readelf -h -x .shstrtab %t > %t.hexdump.2
+# RUN: llvm-readelf -h -x=.shstrtab %t > %t.hexdump.3
+# RUN: llvm-readelf -h -x.shstrtab %t > %t.hexdump.4
+# RUN: llvm-readelf -hx .shstrtab %t > %t.hexdump.5
+# RUN: llvm-readelf -hx=.shstrtab %t > %t.hexdump.6
+# RUN: llvm-readelf -hx.shstrtab %t > %t.hexdump.7
 
 # RUN: cmp %t.hexdump.out %t.hexdump.1
 # RUN: cmp %t.hexdump.out %t.hexdump.2
@@ -18,29 +18,25 @@
 # RUN: cmp %t.hexdump.out %t.hexdump.6
 # RUN: cmp %t.hexdump.out %t.hexdump.7
 
-# RUN: llvm-readelf -S %p/Inputs/trivial.obj.elf-x86-64 | FileCheck %s --check-prefix=ELF-SEC
+## A sanity check to verify that the .shstrtab section has index 2.
+# RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=ELF-SEC
+# ELF-SEC: [ 2] .shstrtab
 
-## Both 9 and .strtab refer to .strtab. Test we dump the section only once.
-# RUN: llvm-readobj -x 9 -x 9 -x .strtab -x .strtab %p/Inputs/trivial.obj.elf-x86-64 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=ELF
-# RUN: llvm-readobj -x 9 -x .strtab -x 10 -x not_exist \
-# RUN:   %p/Inputs/trivial.obj.elf-x86-64 2>&1 | FileCheck %s -DFILE=%p/Inputs/trivial.obj.elf-x86-64 --check-prefixes=ELF-WARN,ELF
-
-# ELF-SEC: [ 9] .strtab
+## Test we dump the section only once when the option is specified multiple times for the same section.
+# RUN: llvm-readobj -x 2 -x 2 -x .shstrtab -x .shstrtab %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=ELF
+## Test warnings reported when an unknown section name and index are specified.
+# RUN: llvm-readobj -x 2 -x .shstrtab -x 3 -x not_exist %t 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t --check-prefixes=ELF-WARN,ELF
 
 # ELF-WARN: warning: '[[FILE]]': could not find section 'not_exist'
-# ELF-WARN: warning: '[[FILE]]': could not find section 10
-# ELF:      Hex dump of section '.strtab':
-# ELF-NEXT: 0x00000000 00747269 7669616c 2e6c6c00 6d61696e .trivial.ll.main
-# ELF-NEXT: 0x00000010 002e4c2e 73747200 70757473 00536f6d ..L.str.puts.Som
-# ELF-NEXT: 0x00000020 654f7468 65724675 6e637469 6f6e005f eOtherFunction._
-# ELF-NEXT: 0x00000030 474c4f42 414c5f4f 46465345 545f5441 GLOBAL_OFFSET_TA
-# ELF-NEXT: 0x00000040 424c455f 00                         BLE_.
+# ELF-WARN: warning: '[[FILE]]': could not find section 3
+# ELF:      Hex dump of section '.shstrtab':
+# ELF-NEXT: 0x00000000 002e7368 73747274 6162002e 73747274 ..shstrtab..strt
+# ELF-NEXT: 0x00000010 616200                              ab.
 # ELF-NOT:  {{.}}
 
 ## This test shows that we include the tool name in an error/warning message.
-
-# RUN: yaml2obj %s -o %t
 # RUN: llvm-readelf -x 10 %t 2>&1 | FileCheck --check-prefix=WARN %s -DTOOL=readelf
 # RUN: llvm-readobj -x 10 %t 2>&1 | FileCheck --check-prefix=WARN %s -DTOOL=readobj
 
@@ -48,7 +44,7 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS32
   Data:    ELFDATA2LSB
   Type:    ET_DYN
-  Machine: EM_RISCV
+  Machine: EM_386

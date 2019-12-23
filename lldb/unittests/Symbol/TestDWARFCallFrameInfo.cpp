@@ -12,6 +12,7 @@
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 
 #include "lldb/Core/Module.h"
@@ -32,20 +33,8 @@ using namespace lldb_private;
 using namespace lldb;
 
 class DWARFCallFrameInfoTest : public testing::Test {
-public:
-  void SetUp() override {
-    FileSystem::Initialize();
-    HostInfo::Initialize();
-    ObjectFileELF::Initialize();
-    SymbolFileSymtab::Initialize();
-  }
-
-  void TearDown() override {
-    SymbolFileSymtab::Terminate();
-    ObjectFileELF::Terminate();
-    HostInfo::Terminate();
-    FileSystem::Terminate();
-  }
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+      subsystems;
 
 protected:
   void TestBasic(DWARFCallFrameInfo::Type type, llvm::StringRef symbol);

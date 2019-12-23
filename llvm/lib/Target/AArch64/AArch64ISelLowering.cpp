@@ -4153,14 +4153,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // node so that legalize doesn't hack it.
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     auto GV = G->getGlobal();
-    if (Subtarget->classifyGlobalFunctionReference(GV, getTargetMachine()) ==
-        AArch64II::MO_GOT) {
-      Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, AArch64II::MO_GOT);
+    unsigned OpFlags =
+        Subtarget->classifyGlobalFunctionReference(GV, getTargetMachine());
+    if (OpFlags & AArch64II::MO_GOT) {
+      Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
       Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
-    } else if (Subtarget->isTargetCOFF() && GV->hasDLLImportStorageClass()) {
-      assert(Subtarget->isTargetWindows() &&
-             "Windows is the only supported COFF target");
-      Callee = getGOT(G, DAG, AArch64II::MO_DLLIMPORT);
     } else {
       const GlobalValue *GV = G->getGlobal();
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, 0);

@@ -167,10 +167,8 @@ public:
 
   uint32_t GetPointerByteSize() override;
 
-  static clang::DeclContext *GetTranslationUnitDecl(clang::ASTContext *ast);
-
-  clang::DeclContext *GetTranslationUnitDecl() {
-    return GetTranslationUnitDecl(&getASTContext());
+  clang::TranslationUnitDecl *GetTranslationUnitDecl() {
+    return getASTContext().getTranslationUnitDecl();
   }
 
   static clang::Decl *CopyDecl(clang::ASTContext *dest_context,
@@ -439,6 +437,12 @@ public:
   CompilerType GetTypeForDecl(void *opaque_decl) override;
 
   // CompilerDeclContext override functions
+
+  /// Creates a CompilerDeclContext from the given DeclContext
+  /// with the current ClangASTContext instance as its typesystem.
+  /// The DeclContext has to come from the ASTContext of this
+  /// ClangASTContext.
+  CompilerDeclContext CreateDeclContext(clang::DeclContext *ctx);
 
   std::vector<CompilerDecl>
   DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,

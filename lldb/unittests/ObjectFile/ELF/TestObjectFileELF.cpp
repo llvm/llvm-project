@@ -9,6 +9,7 @@
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -29,22 +30,8 @@ using namespace lldb_private;
 using namespace lldb;
 
 class ObjectFileELFTest : public testing::Test {
-public:
-  void SetUp() override {
-    FileSystem::Initialize();
-    HostInfo::Initialize();
-    ObjectFileELF::Initialize();
-    SymbolFileSymtab::Initialize();
-  }
-
-  void TearDown() override {
-    SymbolFileSymtab::Terminate();
-    ObjectFileELF::Terminate();
-    HostInfo::Terminate();
-    FileSystem::Terminate();
-  }
-
-protected:
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+      subsystems;
 };
 
 TEST_F(ObjectFileELFTest, SectionsResolveConsistently) {

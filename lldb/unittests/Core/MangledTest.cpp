@@ -8,6 +8,7 @@
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 
 #include "lldb/Core/Mangled.h"
@@ -58,10 +59,8 @@ TEST(MangledTest, EmptyForInvalidName) {
 }
 
 TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
-  FileSystem::Initialize();
-  HostInfo::Initialize();
-  ObjectFileELF::Initialize();
-  SymbolFileSymtab::Initialize();
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+      subsystems;
 
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !ELF
@@ -251,9 +250,4 @@ Symbols:
   EXPECT_EQ(0, Count("_Z12undemangableEvx42", eFunctionNameTypeMethod));
   EXPECT_EQ(0, Count("undemangable", eFunctionNameTypeBase));
   EXPECT_EQ(0, Count("undemangable", eFunctionNameTypeMethod));
-
-  SymbolFileSymtab::Terminate();
-  ObjectFileELF::Terminate();
-  HostInfo::Terminate();
-  FileSystem::Terminate();
 }

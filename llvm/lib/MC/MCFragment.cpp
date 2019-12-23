@@ -331,13 +331,13 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
 
   OS << "<MCFragment " << (const void *)this << " LayoutOrder:" << LayoutOrder
      << " Offset:" << Offset << " HasInstructions:" << hasInstructions();
-  if (const MCEncodedFragment *EF = dyn_cast<MCEncodedFragment>(this))
+  if (const auto *EF = dyn_cast<MCEncodedFragment>(this))
     OS << " BundlePadding:" << static_cast<unsigned>(EF->getBundlePadding());
   OS << ">";
 
   switch (getKind()) {
   case MCFragment::FT_Align: {
-    const MCAlignFragment *AF = cast<MCAlignFragment>(this);
+    const auto *AF = cast<MCAlignFragment>(this);
     if (AF->hasEmitNops())
       OS << " (emit nops)";
     OS << "\n       ";
@@ -347,7 +347,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     break;
   }
   case MCFragment::FT_Data:  {
-    const MCDataFragment *DF = cast<MCDataFragment>(this);
+    const auto *DF = cast<MCDataFragment>(this);
     OS << "\n       ";
     OS << " Contents:[";
     const SmallVectorImpl<char> &Contents = DF->getContents();
@@ -370,7 +370,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     break;
   }
   case MCFragment::FT_CompactEncodedInst: {
-    const MCCompactEncodedInstFragment *CEIF =
+    const auto *CEIF =
       cast<MCCompactEncodedInstFragment>(this);
     OS << "\n       ";
     OS << " Contents:[";
@@ -383,41 +383,41 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     break;
   }
   case MCFragment::FT_Fill:  {
-    const MCFillFragment *FF = cast<MCFillFragment>(this);
+    const auto *FF = cast<MCFillFragment>(this);
     OS << " Value:" << static_cast<unsigned>(FF->getValue())
        << " ValueSize:" << static_cast<unsigned>(FF->getValueSize())
        << " NumValues:" << FF->getNumValues();
     break;
   }
   case MCFragment::FT_Relaxable:  {
-    const MCRelaxableFragment *F = cast<MCRelaxableFragment>(this);
+    const auto *F = cast<MCRelaxableFragment>(this);
     OS << "\n       ";
     OS << " Inst:";
     F->getInst().dump_pretty(OS);
     break;
   }
   case MCFragment::FT_Org:  {
-    const MCOrgFragment *OF = cast<MCOrgFragment>(this);
+    const auto *OF = cast<MCOrgFragment>(this);
     OS << "\n       ";
     OS << " Offset:" << OF->getOffset()
        << " Value:" << static_cast<unsigned>(OF->getValue());
     break;
   }
   case MCFragment::FT_Dwarf:  {
-    const MCDwarfLineAddrFragment *OF = cast<MCDwarfLineAddrFragment>(this);
+    const auto *OF = cast<MCDwarfLineAddrFragment>(this);
     OS << "\n       ";
     OS << " AddrDelta:" << OF->getAddrDelta()
        << " LineDelta:" << OF->getLineDelta();
     break;
   }
   case MCFragment::FT_DwarfFrame:  {
-    const MCDwarfCallFrameFragment *CF = cast<MCDwarfCallFrameFragment>(this);
+    const auto *CF = cast<MCDwarfCallFrameFragment>(this);
     OS << "\n       ";
     OS << " AddrDelta:" << CF->getAddrDelta();
     break;
   }
   case MCFragment::FT_LEB: {
-    const MCLEBFragment *LF = cast<MCLEBFragment>(this);
+    const auto *LF = cast<MCLEBFragment>(this);
     OS << "\n       ";
     OS << " Value:" << LF->getValue() << " Signed:" << LF->isSigned();
     break;
@@ -436,7 +436,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     break;
   }
   case MCFragment::FT_SymbolId: {
-    const MCSymbolIdFragment *F = cast<MCSymbolIdFragment>(this);
+    const auto *F = cast<MCSymbolIdFragment>(this);
     OS << "\n       ";
     OS << " Sym:" << F->getSymbol();
     break;
