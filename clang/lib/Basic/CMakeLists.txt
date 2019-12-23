@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Core
   MC
-  Option
   Support
   )
 
@@ -56,7 +55,6 @@ add_clang_library(clangBasic
   ObjCRuntime.cpp
   OpenMPKinds.cpp
   OperatorPrecedence.cpp
-  OptionUtils.cpp
   SanitizerBlacklist.cpp
   SanitizerSpecialCaseList.cpp
   Sanitizers.cpp
