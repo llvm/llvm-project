@@ -53,7 +53,6 @@ fail:
   ret i32 1
 }
 
-
 ; Test 3 - asm-goto implements a loop. The loop gets recognized, but many loop
 ; transforms fail due to canonicalization having callbr exceptions. Trivial
 ; blocks at labels 1 and 3 also don't get simplified due to callbr.
@@ -130,4 +129,33 @@ normal0:                                          ; preds = %label04
 normal1:                                          ; preds = %normal0
   %1 = load i32, i32* %a.addr, align 4
   ret i32 %1
+}
+
+; Test 4 - asm-goto referenced with the 'l' (ell) modifier and not.
+define void @test4() {
+; CHECK-LABEL: test4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #APP
+; CHECK-NOT:     ja .Ltmp50
+; CHECK-NEXT:    ja .Ltmp5
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:  .LBB3_1:
+; CHECK-NEXT:    #APP
+; CHECK-NOT:     ja .Ltmp50
+; CHECK-NEXT:    ja .Ltmp5
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    jmp .LBB3_3
+entry:
+  callbr void asm sideeffect "ja $0", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))
+          to label %asm.fallthrough [label %quux]
+
+asm.fallthrough:                                  ; preds = %entry
+  callbr void asm sideeffect "ja ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))
+          to label %cleanup [label %quux]
+
+quux:                                             ; preds = %asm.fallthrough, %entry
+  br label %cleanup
+
+cleanup:                                          ; preds = %asm.fallthrough, %quux
+  ret void
 }
