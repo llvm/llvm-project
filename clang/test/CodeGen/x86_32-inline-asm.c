@@ -70,3 +70,35 @@ int func1() {
   __asm__ volatile("foo1 %0" : "=x" (val256)); // expected-error {{invalid output size for constraint '=x'}}
 #endif
 }
+
+int __attribute__((__target__("sse"))) _func2() {
+  __asm__ volatile("foo1 %0" : : "x" (val128)); // No error.
+  __asm__ volatile("foo1 %0" : "=x" (val128));  // No error.
+#ifdef __AVX__
+  __asm__ volatile("foo1 %0" : : "x" (val256)); // No error.
+  __asm__ volatile("foo1 %0" : "=x" (val256));  // No error.
+#else
+  __asm__ volatile("foo1 %0" : : "x" (val256)); // expected-error {{invalid input size for constraint 'x'}}
+  __asm__ volatile("foo1 %0" : "=x" (val256)); // expected-error {{invalid output size for constraint '=x'}}
+#endif
+  __asm__ volatile("foo1 %0" : : "x" (val512)); // expected-error {{invalid input size for constraint 'x'}}
+  __asm__ volatile("foo1 %0" : "=x" (val512)); // expected-error {{invalid output size for constraint '=x'}}
+}
+
+int __attribute__((__target__("avx"))) _func3() {
+  __asm__ volatile("foo1 %0" : : "x" (val128)); // No error.
+  __asm__ volatile("foo1 %0" : "=x" (val128));  // No error.
+  __asm__ volatile("foo1 %0" : : "x" (val256)); // No error.
+  __asm__ volatile("foo1 %0" : "=x" (val256));  // No error.
+  __asm__ volatile("foo1 %0" : : "x" (val512)); // expected-error {{invalid input size for constraint 'x'}}
+  __asm__ volatile("foo1 %0" : "=x" (val512)); // expected-error {{invalid output size for constraint '=x'}}
+}
+
+int __attribute__((__target__("avx512f"))) _func4() {
+  __asm__ volatile("foo1 %0" : : "x" (val128)); // No error.
+  __asm__ volatile("foo1 %0" : "=x" (val128));  // No error.
+  __asm__ volatile("foo1 %0" : : "x" (val256)); // No error.
+  __asm__ volatile("foo1 %0" : "=x" (val256));  // No error.
+  __asm__ volatile("foo1 %0" : : "x" (val512)); // No error.
+  __asm__ volatile("foo1 %0" : "=x" (val512)); // No error.
+}
