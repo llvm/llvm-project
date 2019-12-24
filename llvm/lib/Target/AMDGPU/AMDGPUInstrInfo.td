@@ -244,7 +244,7 @@ def AMDGPUdiv_fmas : SDNode<"AMDGPUISD::DIV_FMAS", AMDGPUFmasOp,
 // Single or double precision division fixup.
 // Special case divide fixup and flags(src0 = Quotient, src1 =
 // Denominator, src2 = Numerator).
-def AMDGPUdiv_fixup : SDNode<"AMDGPUISD::DIV_FIXUP", SDTFPTernaryOp>;
+def AMDGPUdiv_fixup_impl : SDNode<"AMDGPUISD::DIV_FIXUP", SDTFPTernaryOp>;
 
 def AMDGPUfmad_ftz : SDNode<"AMDGPUISD::FMAD_FTZ", SDTFPTernaryOp>;
 
@@ -433,6 +433,10 @@ def AMDGPUfp_class : PatFrags<(ops node:$src0, node:$src1),
 def AMDGPUfmed3 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_fmed3 node:$src0, node:$src1, node:$src2),
    (AMDGPUfmed3_impl node:$src0, node:$src1, node:$src2)]>;
+
+def AMDGPUdiv_fixup : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_div_fixup node:$src0, node:$src1, node:$src2),
+   (AMDGPUdiv_fixup_impl node:$src0, node:$src1, node:$src2)]>;
 
 def AMDGPUffbh_i32 : PatFrags<(ops node:$src),
   [(int_amdgcn_sffbh node:$src),
