@@ -28690,12 +28690,19 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     if (Subtarget.hasDQI() && VT == MVT::i64 &&
         (SrcVT == MVT::f32 || SrcVT == MVT::f64)) {
       assert(!Subtarget.is64Bit() && "i64 should be legal");
-      unsigned NumElts = Subtarget.hasVLX() ? 4 : 8;
-      // Using a 256-bit input here to guarantee 128-bit input for f32 case.
-      // TODO: Use 128-bit vectors for f64 case?
-      // TODO: Use 128-bit vectors for f32 by using CVTTP2SI/CVTTP2UI.
+      unsigned NumElts = Subtarget.hasVLX() ? 2 : 8;
+      // If we use a 128-bit result we might need to use a target specific node.
+      unsigned SrcElts =
+          std::max(NumElts, 128U / (unsigned)SrcVT.getSizeInBits());
       MVT VecVT = MVT::getVectorVT(MVT::i64, NumElts);
-      MVT VecInVT = MVT::getVectorVT(SrcVT.getSimpleVT(), NumElts);
+      MVT VecInVT = MVT::getVectorVT(SrcVT.getSimpleVT(), SrcElts);
+      unsigned Opc = N->getOpcode();
+      if (NumElts != SrcElts) {
+        if (IsStrict)
+          Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
+        else
+          Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+      }
 
       SDValue ZeroIdx = DAG.getIntPtrConstant(0, dl);
       SDValue Res = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VecInVT,
@@ -28704,10 +28711,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Chain;
       if (IsStrict) {
         SDVTList Tys = DAG.getVTList(VecVT, MVT::Other);
-        Res = DAG.getNode(N->getOpcode(), SDLoc(N), Tys, N->getOperand(0), Res);
+        Res = DAG.getNode(Opc, SDLoc(N), Tys, N->getOperand(0), Res);
         Chain = Res.getValue(1);
       } else
-        Res = DAG.getNode(N->getOpcode(), SDLoc(N), VecVT, Res);
+        Res = DAG.getNode(Opc, SDLoc(N), VecVT, Res);
       Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Res, ZeroIdx);
       Results.push_back(Res);
       if (IsStrict)
