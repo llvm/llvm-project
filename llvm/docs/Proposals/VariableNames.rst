@@ -356,7 +356,7 @@ References
 .. [Rust] Rust naming conventions https://doc.rust-lang.org/1.0.0/style/style/naming/README.html
 .. [Swift] Swift API Design Guidelines https://swift.org/documentation/api-design-guidelines/#general-conventions
 .. [Python] Style Guide for Python Code https://www.python.org/dev/peps/pep-0008/#function-and-variable-names
-.. [Mozilla] Mozilla Coding style: Prefixes https://developer.mozilla.org/en-US/docs/Mozilla/Developer_guide/Coding_Style#Prefixes
+.. [Mozilla] Mozilla Coding style: Prefixes https://firefox-source-docs.mozilla.org/tools/lint/coding-style/coding_style_cpp.html#prefixes
 .. [SVE] LLVM with support for SVE https://github.com/ARM-software/LLVM-SVE
 .. [AminiInconsistent] Mehdi Amini, http://lists.llvm.org/pipermail/llvm-dev/2019-February/130329.html
 .. [ArsenaultAgree] Matt Arsenault, http://lists.llvm.org/pipermail/llvm-dev/2019-February/129934.html
