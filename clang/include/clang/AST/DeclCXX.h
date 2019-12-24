@@ -1046,7 +1046,8 @@ public:
 
   /// Get all conversion functions visible in current class,
   /// including conversion function templates.
-  llvm::iterator_range<conversion_iterator> getVisibleConversionFunctions();
+  llvm::iterator_range<conversion_iterator>
+  getVisibleConversionFunctions() const;
 
   /// Determine whether this class is an aggregate (C++ [dcl.init.aggr]),
   /// which is a class with no user-declared constructors, no private
