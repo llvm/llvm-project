@@ -81,7 +81,9 @@ Options
 
     --doxygen                   - Use only doxygen-style comments to generate docs.
     --extra-arg=<string>        - Additional argument to append to the compiler command line
+                                  Can be used several times.
     --extra-arg-before=<string> - Additional argument to prepend to the compiler command line
+                                  Can be used several times.
     --format=<value>            - Format for outputted docs.
       =yaml                     -   Documentation in YAML format.
       =md                       -   Documentation in MD format.

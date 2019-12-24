@@ -123,7 +123,9 @@ That way you can avoid spelling out all the names as command line arguments:
 
     -export-fixes=<filename>   - YAML file to store suggested fixes in.
     -extra-arg=<string>        - Additional argument to append to the compiler command line
+                                 Can be used several times.
     -extra-arg-before=<string> - Additional argument to prepend to the compiler command line
+                                 Can be used several times.
     -force                     - Ignore nonexistent qualified names.
     -i                         - Overwrite edited <file>s.
     -input=<string>            - YAML file to load oldname-newname pairs from.
