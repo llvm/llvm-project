@@ -1277,15 +1277,17 @@ define i32 @f20u(double %x) #0 {
 ; X86-SSE-LABEL: f20u:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X86-SSE-NEXT:    xorl %ecx, %ecx
-; X86-SSE-NEXT:    ucomisd %xmm0, %xmm1
-; X86-SSE-NEXT:    setbe %cl
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE-NEXT:    comisd %xmm0, %xmm2
+; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
+; X86-SSE-NEXT:    ja .LBB24_2
+; X86-SSE-NEXT:  # %bb.1: # %entry
+; X86-SSE-NEXT:    movapd %xmm2, %xmm1
+; X86-SSE-NEXT:  .LBB24_2: # %entry
+; X86-SSE-NEXT:    setbe %al
+; X86-SSE-NEXT:    movzbl %al, %ecx
 ; X86-SSE-NEXT:    shll $31, %ecx
-; X86-SSE-NEXT:    movapd %xmm0, %xmm2
-; X86-SSE-NEXT:    cmpltsd %xmm1, %xmm2
-; X86-SSE-NEXT:    andnpd %xmm1, %xmm2
-; X86-SSE-NEXT:    subsd %xmm2, %xmm0
+; X86-SSE-NEXT:    subsd %xmm1, %xmm0
 ; X86-SSE-NEXT:    cvttsd2si %xmm0, %eax
 ; X86-SSE-NEXT:    xorl %ecx, %eax
 ; X86-SSE-NEXT:    retl
@@ -1324,7 +1326,7 @@ define i64 @f20u64(double %x) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{\.LCPI.*}}
 ; X87-NEXT:    xorl %edx, %edx
-; X87-NEXT:    fucomi %st(1), %st
+; X87-NEXT:    fcomi %st(1), %st
 ; X87-NEXT:    setbe %dl
 ; X87-NEXT:    fldz
 ; X87-NEXT:    fxch %st(1)
@@ -1350,24 +1352,25 @@ define i64 @f20u64(double %x) #0 {
 ; X86-SSE-NEXT:    subl $20, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X86-SSE-NEXT:    movapd %xmm0, %xmm2
-; X86-SSE-NEXT:    cmpltsd %xmm1, %xmm2
-; X86-SSE-NEXT:    andnpd %xmm1, %xmm2
-; X86-SSE-NEXT:    movapd %xmm0, %xmm3
-; X86-SSE-NEXT:    subsd %xmm2, %xmm3
-; X86-SSE-NEXT:    movsd %xmm3, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE-NEXT:    comisd %xmm0, %xmm2
+; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
+; X86-SSE-NEXT:    ja .LBB25_2
+; X86-SSE-NEXT:  # %bb.1: # %entry
+; X86-SSE-NEXT:    movapd %xmm2, %xmm1
+; X86-SSE-NEXT:  .LBB25_2: # %entry
+; X86-SSE-NEXT:    subsd %xmm1, %xmm0
+; X86-SSE-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    setbe %al
 ; X86-SSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    orl $3072, %eax # imm = 0xC00
-; X86-SSE-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X86-SSE-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    xorl %edx, %edx
-; X86-SSE-NEXT:    ucomisd %xmm0, %xmm1
-; X86-SSE-NEXT:    setbe %dl
+; X86-SSE-NEXT:    movzbl %al, %edx
 ; X86-SSE-NEXT:    shll $31, %edx
 ; X86-SSE-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1377,30 +1380,35 @@ define i64 @f20u64(double %x) #0 {
 ;
 ; SSE-LABEL: f20u64:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    xorl %ecx, %ecx
-; SSE-NEXT:    ucomisd %xmm1, %xmm0
-; SSE-NEXT:    setae %cl
-; SSE-NEXT:    shlq $63, %rcx
-; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpltsd %xmm1, %xmm2
-; SSE-NEXT:    andnpd %xmm1, %xmm2
-; SSE-NEXT:    subsd %xmm2, %xmm0
-; SSE-NEXT:    cvttsd2si %xmm0, %rax
+; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    comisd %xmm2, %xmm0
+; SSE-NEXT:    xorpd %xmm1, %xmm1
+; SSE-NEXT:    jb .LBB25_2
+; SSE-NEXT:  # %bb.1: # %entry
+; SSE-NEXT:    movapd %xmm2, %xmm1
+; SSE-NEXT:  .LBB25_2: # %entry
+; SSE-NEXT:    subsd %xmm1, %xmm0
+; SSE-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE-NEXT:    setae %al
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    shlq $63, %rax
 ; SSE-NEXT:    xorq %rcx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: f20u64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    xorl %ecx, %ecx
-; AVX1-NEXT:    vucomisd %xmm1, %xmm0
-; AVX1-NEXT:    setae %cl
-; AVX1-NEXT:    shlq $63, %rcx
-; AVX1-NEXT:    vcmpltsd %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vandnpd %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX1-NEXT:    vcomisd %xmm1, %xmm0
+; AVX1-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    jb .LBB25_2
+; AVX1-NEXT:  # %bb.1: # %entry
+; AVX1-NEXT:    vmovapd %xmm1, %xmm2
+; AVX1-NEXT:  .LBB25_2: # %entry
+; AVX1-NEXT:    vsubsd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rcx
+; AVX1-NEXT:    setae %al
+; AVX1-NEXT:    movzbl %al, %eax
+; AVX1-NEXT:    shlq $63, %rax
 ; AVX1-NEXT:    xorq %rcx, %rax
 ; AVX1-NEXT:    retq
 ;
@@ -2656,34 +2664,34 @@ define float @uiffl(i64 %x) #0 {
 ;
 ; SSE-LABEL: uiffl:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    testq %rdi, %rdi
-; SSE-NEXT:    js .LBB52_1
-; SSE-NEXT:  # %bb.2: # %entry
-; SSE-NEXT:    cvtsi2ss %rdi, %xmm0
-; SSE-NEXT:    retq
-; SSE-NEXT:  .LBB52_1:
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    shrq %rax
-; SSE-NEXT:    andl $1, %edi
-; SSE-NEXT:    orq %rax, %rdi
-; SSE-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE-NEXT:    movl %edi, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    orq %rax, %rcx
+; SSE-NEXT:    testq %rdi, %rdi
+; SSE-NEXT:    cmovnsq %rdi, %rcx
+; SSE-NEXT:    cvtsi2ss %rcx, %xmm0
+; SSE-NEXT:    jns .LBB52_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    addss %xmm0, %xmm0
+; SSE-NEXT:  .LBB52_2: # %entry
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: uiffl:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    testq %rdi, %rdi
-; AVX1-NEXT:    js .LBB52_1
-; AVX1-NEXT:  # %bb.2: # %entry
-; AVX1-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB52_1:
 ; AVX1-NEXT:    movq %rdi, %rax
 ; AVX1-NEXT:    shrq %rax
-; AVX1-NEXT:    andl $1, %edi
-; AVX1-NEXT:    orq %rax, %rdi
-; AVX1-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edi, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    orq %rax, %rcx
+; AVX1-NEXT:    testq %rdi, %rdi
+; AVX1-NEXT:    cmovnsq %rdi, %rcx
+; AVX1-NEXT:    vcvtsi2ss %rcx, %xmm0, %xmm0
+; AVX1-NEXT:    jns .LBB52_2
+; AVX1-NEXT:  # %bb.1:
 ; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:  .LBB52_2: # %entry
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: uiffl:
