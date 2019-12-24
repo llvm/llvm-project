@@ -47,8 +47,8 @@ findConstToRemove(const FunctionDecl *Def,
   if (FileRange.isInvalid())
     return None;
 
-  return utils::lexer::getConstQualifyingToken(FileRange, *Result.Context,
-                                               *Result.SourceManager);
+  return utils::lexer::getQualifyingToken(
+      tok::kw_const, FileRange, *Result.Context, *Result.SourceManager);
 }
 
 namespace {

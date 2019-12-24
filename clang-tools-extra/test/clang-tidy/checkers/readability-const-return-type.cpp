@@ -37,6 +37,9 @@ const T p32(T t) { return t; }
 template <typename T>
 typename std::add_const<T>::type n15(T v) { return v; }
 
+template <bool B>
+struct MyStruct {};
+
 template <typename A>
 class Klazz {
 public:
@@ -128,9 +131,45 @@ const Klazz<const int> p12() {}
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const Klazz<const int>'
 // CHECK-FIXES: Klazz<const int> p12() {}
 
+const Klazz<const Klazz<const int>> p33() {}
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const Klazz<
+// CHECK-FIXES: Klazz<const Klazz<const int>> p33() {}
+
 const Klazz<const int>* const p13() {}
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const Klazz<const int> *
 // CHECK-FIXES: const Klazz<const int>* p13() {}
+
+const Klazz<const int>* const volatile p14() {}
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const Klazz<const int> *
+// CHECK-FIXES: const Klazz<const int>* volatile p14() {}
+
+const MyStruct<0 < 1> p34() {}
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const MyStruct<0 < 1>'
+// CHECK-FIXES: MyStruct<0 < 1> p34() {}
+
+MyStruct<0 < 1> const p35() {}
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const MyStruct<0 < 1>'
+// CHECK-FIXES: MyStruct<0 < 1> p35() {}
+
+Klazz<MyStruct<0 < 1> const> const p36() {}
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const Klazz<const MyStru
+// CHECK-FIXES: Klazz<MyStruct<0 < 1> const> p36() {}
+
+const Klazz<MyStruct<0 < 1> const> *const p37() {}
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const Klazz<const MyStru
+// CHECK-FIXES: const Klazz<MyStruct<0 < 1> const> *p37() {}
+
+Klazz<const MyStruct<0 < 1>> const p38() {}
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const Klazz<const MyStru
+// CHECK-FIXES: Klazz<const MyStruct<0 < 1>> p38() {}
+
+const Klazz<const MyStruct<0 < 1>> p39() {}
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const Klazz<
+// CHECK-FIXES: Klazz<const MyStruct<0 < 1>> p39() {}
+
+const Klazz<const MyStruct<(0 > 1)>> p40() {}
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const Klazz<const MyStru
+// CHECK-FIXES: Klazz<const MyStruct<(0 > 1)>> p40() {}
 
 // re-declaration of p15.
 const int p15();
