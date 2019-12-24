@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -64,7 +66,7 @@ public:
 };
 class S6 {
   int a;
-  S6() : a(0) {}
+  S6() : a(0) {} // omp45-note 2 {{implicitly declared private here}}
 
 public:
   S6(const S6 &s6) : a(s6.a) {}
@@ -80,6 +82,7 @@ int foomain(int argc, char **argv) {
   I g(5);
   int i, z;
   int &j = i;
+  S6 s(0); // omp50-note {{'s' defined here}}
 #pragma omp target parallel for simd lastprivate // expected-error {{expected '(' after 'lastprivate'}}
   for (int k = 0; k < argc; ++k)
     ++k;
@@ -99,6 +102,9 @@ int foomain(int argc, char **argv) {
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target parallel for simd allocate(omp_thread_mem_alloc: argc) lastprivate(argc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for simd' directive}}
+  for (int k = 0; k < argc; ++k)
+    ++k;
+#pragma omp target parallel for simd lastprivate(conditional: argc,s) lastprivate(conditional: // omp50-error {{expected expression}} omp45-error 2 {{use of undeclared identifier 'conditional'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp45-error 2 {{calling a private constructor of class 'S6'}} omp50-error {{expected list item of scalar type in 'lastprivate' clause with 'conditional' modifier}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target parallel for simd lastprivate(S1) // expected-error {{'S1' does not refer to a value}}
@@ -221,8 +227,8 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for simd private(xa), lastprivate(xa) // expected-error {{private variable cannot be lastprivate}} expected-note {{defined as private}}
   for (i = 0; i < argc; ++i)
     foo();
-// expected-note@+2 {{defined as lastprivate}}
-// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be lastprivate, predetermined as linear}}
+// omp45-note@+2 {{defined as lastprivate}}
+// omp45-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be lastprivate, predetermined as linear}}
 #pragma omp target parallel for simd lastprivate(i)
   for (i = 0; i < argc; ++i)
     foo();
