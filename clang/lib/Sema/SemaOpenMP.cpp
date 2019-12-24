@@ -12418,6 +12418,8 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     Res = ActOnOpenMPFirstprivateClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_lastprivate:
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_LASTPRIVATE_unknown &&
+           "Unexpected lastprivate modifier.");
     Res = ActOnOpenMPLastprivateClause(
         VarList, static_cast<OpenMPLastprivateModifier>(ExtraModifier),
         DepLinMapLastLoc, ColonLoc, StartLoc, LParenLoc, EndLoc);
@@ -12441,6 +12443,8 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
                                        ReductionOrMapperId);
     break;
   case OMPC_linear:
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_LINEAR_unknown &&
+           "Unexpected linear modifier.");
     Res = ActOnOpenMPLinearClause(
         VarList, TailExpr, StartLoc, LParenLoc,
         static_cast<OpenMPLinearClauseKind>(ExtraModifier), DepLinMapLastLoc,
@@ -12460,11 +12464,15 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     Res = ActOnOpenMPFlushClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_depend:
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_DEPEND_unknown &&
+           "Unexpected depend modifier.");
     Res = ActOnOpenMPDependClause(
         static_cast<OpenMPDependClauseKind>(ExtraModifier), DepLinMapLastLoc,
         ColonLoc, VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_map:
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_MAP_unknown &&
+           "Unexpected map modifier.");
     Res = ActOnOpenMPMapClause(
         MapTypeModifiers, MapTypeModifiersLoc, ReductionOrMapperIdScopeSpec,
         ReductionOrMapperId, static_cast<OpenMPMapClauseKind>(ExtraModifier),
