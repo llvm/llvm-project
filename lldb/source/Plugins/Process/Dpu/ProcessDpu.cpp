@@ -432,6 +432,7 @@ Status ProcessDpu::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_MEMORY));
   LLDB_LOG(log, "addr = {0:X}, buf = {1}, size = {2}", addr, buf, size);
 
+  bytes_read = 0;
   if (addr >= k_dpu_iram_base) {
     if (!m_dpu->ReadIRAM(addr - k_dpu_iram_base, buf, size))
       return Status("Cannot copy from IRAM");
@@ -452,6 +453,7 @@ Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_MEMORY));
   LLDB_LOG(log, "addr = {0:X}, buf = {1}, size = {2}", addr, buf, size);
 
+  bytes_written = 0;
   if (addr >= k_dpu_iram_base) {
     if (!m_dpu->WriteIRAM(addr - k_dpu_iram_base, buf, size))
       return Status("Cannot copy to IRAM");

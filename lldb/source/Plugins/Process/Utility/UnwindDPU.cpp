@@ -30,13 +30,11 @@ UnwindDPU::UnwindDPU(Thread &thread) : Unwind(thread), m_frames() {}
 void UnwindDPU::DoClear() { m_frames.clear(); }
 
 #define FORMAT_PC(pc) (0x80000000 | ((pc)*8))
-static bool PCIsValid(lldb::addr_t pc) {
-  return pc >= FORMAT_PC(0) && pc < FORMAT_PC(4 * 1024);
-}
 
+#define NB_FRAME_MAX (256)
 bool UnwindDPU::SetFrame(CursorSP *prev_frame, lldb::addr_t cfa,
-                         lldb::addr_t pc) {
-  if (!PCIsValid(pc))
+                         lldb::addr_t pc, Function **fct) {
+  if (m_frames.size() > NB_FRAME_MAX)
     return false;
 
   CursorSP new_frame(new Cursor());
@@ -50,13 +48,16 @@ bool UnwindDPU::SetFrame(CursorSP *prev_frame, lldb::addr_t cfa,
   m_frames.push_back(new_frame);
   *prev_frame = new_frame;
 
+  // If the current function is __bootstrap, we can stop the unwinding
+  (*prev_frame)->reg_ctx_sp->GetFunction(fct, pc);
+  if (*fct != NULL &&
+      (*fct)->GetAddressRange().GetBaseAddress().GetFileAddress() ==
+          FORMAT_PC(0)) {
+    return false;
+  }
+
   return true;
 }
-
-#define NB_FRAME_MAX (8 * 1024)
-#define WRAM_SIZE (64 * 1024)
-#define NB_INSTRUCTION_MAX (4 * 1024)
-#define STACK_BACKTRACE_STOP_VALUE (0xdb9)
 
 uint32_t UnwindDPU::DoGetFrameCount() {
   if (!m_frames.empty())
@@ -72,19 +73,14 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   lldb::addr_t first_pc_addr = reg_pc.GetAsUInt32();
   lldb::addr_t first_r22_value = reg_r22.GetAsUInt32();
 
-  if (!SetFrame(&prev_frame, first_r22_value, first_pc_addr))
+  Function *fct = NULL;
+  if (!SetFrame(&prev_frame, first_r22_value, first_pc_addr, &fct))
     return m_frames.size();
 
-  Function *fct = NULL;
   lldb::addr_t start_addr = 0;
   int32_t cfa_offset = 1;
-  prev_frame->reg_ctx_sp->GetFunction(&fct, first_pc_addr);
   if (fct != NULL) {
     start_addr = fct->GetAddressRange().GetBaseAddress().GetFileAddress();
-
-    // If the current function is __bootstrap, we can stop the unwinding
-    if (start_addr == FORMAT_PC(0))
-      return m_frames.size();
 
     // Check if we have the stack size save in the cfi information.
     // If we have it, use it to set the cfa in order to have it set to the right
@@ -113,7 +109,7 @@ uint32_t UnwindDPU::DoGetFrameCount() {
     reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r23"), reg_r23);
     prev_frame->cfa += (cfa_offset == 0 ? 1 : cfa_offset);
     if (!SetFrame(&prev_frame, first_r22_value,
-                  FORMAT_PC(reg_r23.GetAsUInt32())))
+                  FORMAT_PC(reg_r23.GetAsUInt32()), &fct))
       return m_frames.size();
   }
 
@@ -121,15 +117,14 @@ uint32_t UnwindDPU::DoGetFrameCount() {
     Status error;
     lldb::addr_t cfa_addr = 0;
     lldb::addr_t pc_addr = 0;
-    m_thread.GetProcess()->ReadMemory(prev_frame->cfa - 4, &cfa_addr, 4, error);
-    m_thread.GetProcess()->ReadMemory(prev_frame->cfa - 8, &pc_addr, 4, error);
-
-    if (cfa_addr == STACK_BACKTRACE_STOP_VALUE || cfa_addr == 0 ||
-        cfa_addr > WRAM_SIZE || pc_addr > NB_INSTRUCTION_MAX ||
-        m_frames.size() > NB_FRAME_MAX)
-      break;
-
-    if (!SetFrame(&prev_frame, cfa_addr, FORMAT_PC(pc_addr)))
+    const uint32_t reg_size_in_bytes = 4;
+    if ((m_thread.GetProcess()->ReadMemory(prev_frame->cfa - 4, &cfa_addr,
+                                           reg_size_in_bytes,
+                                           error) != reg_size_in_bytes) ||
+        (m_thread.GetProcess()->ReadMemory(prev_frame->cfa - 8, &pc_addr,
+                                           reg_size_in_bytes,
+                                           error) != reg_size_in_bytes) ||
+        (!SetFrame(&prev_frame, cfa_addr, FORMAT_PC(pc_addr), &fct)))
       return m_frames.size();
   }
 
