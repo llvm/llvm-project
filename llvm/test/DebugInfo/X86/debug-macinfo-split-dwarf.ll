@@ -3,7 +3,7 @@
 ; CHECK-LABEL:.debug_info.dwo contents:
 ; CHECK:     DW_AT_GNU_dwo_name  [DW_FORM_GNU_str_index]        (indexed (00000006) string = "foo.dwo")
 ; CHECK-NEXT:     DW_AT_GNU_dwo_id [DW_FORM_data8] (0xe0f109905cbe1fe4)
-; CHECK-NEXT:     DW_AT_macro_info  [DW_FORM_data4] (0x00000000)
+; CHECK-NEXT:     DW_AT_macro_info  [DW_FORM_sec_offset] (0x00000000)
 
 ;CHECK-LABEL:.debug_macinfo.dwo contents:
 ;CHECK-NEXT:  DW_MACINFO_start_file - lineno: 0 filenum: 1

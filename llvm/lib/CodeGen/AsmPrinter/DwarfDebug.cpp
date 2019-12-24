@@ -1195,7 +1195,7 @@ void DwarfDebug::finalizeModuleInfo() {
     // If compile Unit has macros, emit "DW_AT_macro_info" attribute.
     if (CUNode->getMacros()) {
       if (useSplitDwarf())
-        TheCU.addLabelDelta(TheCU.getUnitDie(), dwarf::DW_AT_macro_info,
+        TheCU.addSectionDelta(TheCU.getUnitDie(), dwarf::DW_AT_macro_info,
                             U.getMacroLabelBegin(),
                             TLOF.getDwarfMacinfoDWOSection()->getBeginSymbol());
       else
