@@ -2297,20 +2297,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_powil:
     return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
         *this, E, Intrinsic::powi, Intrinsic::experimental_constrained_powi));
-#if 0
-    Value *Base = EmitScalarExpr(E->getArg(0));
-    Value *Exponent = EmitScalarExpr(E->getArg(1));
-    llvm::Type *ArgType = Base->getType();
-    // XXX Maybe
-    if (Builder.getIsFPConstrained()) {
-      Function *F = CGM.getIntrinsic(Intrinsic::experimental_constrained_powi, ArgType);
-      return RValue::get(Builder.CreateConstrainedFPCall(F, {Base, Exponent}));
-    }
-    else {
-      Function *F = CGM.getIntrinsic(Intrinsic::powi, ArgType);
-      return RValue::get(Builder.CreateCall(F, {Base, Exponent}));
-    }
-#endif
 
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
