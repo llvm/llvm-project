@@ -466,7 +466,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({S32, S64})
     .scalarize(0);
 
-  if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
+  if (ST.has16BitInsts()) {
+    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
+      .legalFor({S16, S32, S64})
+      .clampScalar(0, S16, S64)
+      .scalarize(0);
+  } else if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
     getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
       .legalFor({S32, S64})
       .clampScalar(0, S32, S64)
