@@ -44,7 +44,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
-attributes #0 = { noredzone nounwind ssp uwtable "no-frame-pointer-elim"="true" }
+attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7, !8, !9}

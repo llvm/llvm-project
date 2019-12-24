@@ -13,7 +13,7 @@
     ret void
   }
 
-  attributes #0 = { nounwind "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" minsize noinline noredzone "no-frame-pointer-elim"="true" }
+  attributes #0 = { nounwind "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" minsize noinline noredzone "frame-pointer"="all" }
 ...
 ---
 # CHECK-LABEL:   name:            foo

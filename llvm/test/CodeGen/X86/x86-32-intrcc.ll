@@ -158,4 +158,4 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" }
+attributes #0 = { nounwind "frame-pointer"="all" }

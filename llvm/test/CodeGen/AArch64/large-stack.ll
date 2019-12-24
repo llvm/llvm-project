@@ -21,7 +21,7 @@ entry:
 
 declare dso_local i32 @printf(i8*, ...)
 
-attributes #0 = { noinline optnone "no-frame-pointer-elim"="true" }
+attributes #0 = { noinline optnone "frame-pointer"="all" }
 
 ; CHECK:                  stp	x[[SPILL_REG1:[0-9]+]], x[[SPILL_REG2:[0-9]+]], [sp, #-[[SPILL_OFFSET1:[0-9]+]]]
 ; CHECK-NEXT:             str	x[[SPILL_REG3:[0-9]+]], [sp, #[[SPILL_OFFSET2:[0-9]+]]]

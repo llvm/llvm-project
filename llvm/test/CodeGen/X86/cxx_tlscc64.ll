@@ -166,6 +166,6 @@ entry:
 define cxx_fast_tlscc nonnull i8* @test_ssp() #2 {
   ret i8* @ssp_var
 }
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind "frame-pointer"="all" }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind sspreq }

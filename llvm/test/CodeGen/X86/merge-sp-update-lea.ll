@@ -29,4 +29,4 @@ cond.end.3:                                       ; preds = %entry, %cond.false
 ; Function Attrs: nounwind optsize
 declare noalias i8* @realloc(i8* nocapture, i32)
 
-attributes #0 = { nounwind optsize ssp "disable-tail-calls"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "target-features"="+lea-sp" }
+attributes #0 = { nounwind optsize ssp "disable-tail-calls"="false" "frame-pointer"="all" "target-features"="+lea-sp" }

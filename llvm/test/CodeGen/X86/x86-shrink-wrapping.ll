@@ -1489,7 +1489,7 @@ for.inc:
   br i1 %cmp, label %for.cond8, label %fn1.exit
 }
 
-attributes #4 = { "no-frame-pointer-elim"="true" }
+attributes #4 = { "frame-pointer"="all" }
 
 @x = external global i32, align 4
 @y = external global i32, align 4

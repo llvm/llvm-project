@@ -4,14 +4,14 @@
 
 @x = external global i32*		; <i32**> [#uses=1]
 
-define void @foo(i32 %a) "no-frame-pointer-elim"="true" {
+define void @foo(i32 %a) "frame-pointer"="all" {
 entry:
 	%tmp = load i32*, i32** @x		; <i32*> [#uses=1]
 	store i32 %a, i32* %tmp
 	ret void
 }
 
-define i32 @t1(i32 %a, i32 %b) "no-frame-pointer-elim"="true" {
+define i32 @t1(i32 %a, i32 %b) "frame-pointer"="all" {
 ; A8-LABEL: t1:
 ; A8: bxlt lr
 

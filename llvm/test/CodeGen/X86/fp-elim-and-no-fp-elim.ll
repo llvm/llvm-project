@@ -28,5 +28,5 @@ entry:
 
 declare void @foo(float, float)
 
-attributes #0 = { "no-frame-pointer-elim"="true" }
+attributes #0 = { "frame-pointer"="all" }
 attributes #1 = { "no-frame-pointer-elim"="false" }

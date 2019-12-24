@@ -51,4 +51,4 @@ entry:
   ret i64 0
 }
 
-attributes #0 = { norecurse readnone nounwind sspstrong "no-frame-pointer-elim"="true" "target-cpu"="ppc" }
+attributes #0 = { norecurse readnone nounwind sspstrong "frame-pointer"="all" "target-cpu"="ppc" }

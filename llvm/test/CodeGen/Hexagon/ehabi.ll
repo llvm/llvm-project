@@ -75,7 +75,7 @@ declare i8* @f4(i8*)
 
 declare void @f5()
 
-attributes #0 = { "no-frame-pointer-elim"="true" }
+attributes #0 = { "frame-pointer"="all" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 attributes #3 = { noreturn }

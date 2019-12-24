@@ -66,5 +66,5 @@ define void @shibe(i32) #0 {
   ret void
 }
 
-attributes #0 = { noinline nounwind optnone ssp uwtable "no-frame-pointer-elim"="true" }
+attributes #0 = { noinline nounwind optnone ssp uwtable "frame-pointer"="all" }
 attributes #1 = { nounwind }

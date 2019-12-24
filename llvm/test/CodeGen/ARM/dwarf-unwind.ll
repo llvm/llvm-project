@@ -69,7 +69,7 @@ define void @test_nodpr_noalign(i8 %l, i8 %r) {
   ret void
 }
 
-define void @test_frame_pointer_offset() minsize "no-frame-pointer-elim"="true" {
+define void @test_frame_pointer_offset() minsize "frame-pointer"="all" {
 ; CHECK-LABEL: test_frame_pointer_offset:
 ; CHECK: push {r4, r5, r6, r7, lr}
 ; CHECK: .cfi_def_cfa_offset 20
