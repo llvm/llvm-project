@@ -185,6 +185,10 @@ Improvements to clang-tidy
   The check now supports the ``IgnoreBitFieldsWidths`` option to suppress
   the warning for numbers used to specify bit field widths.
 
+  The check was updated to eliminate some false positives (such as using
+  class enumeration as non-type template parameters, or the synthetically
+  computed lengh of a static user string literal.)
+
 - New :doc:`readability-make-member-function-const
   <clang-tidy/checks/readability-make-member-function-const>` check.
 
