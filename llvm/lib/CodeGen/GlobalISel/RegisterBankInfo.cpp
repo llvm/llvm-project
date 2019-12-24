@@ -444,7 +444,7 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
       continue;
     }
     if (!MO.getReg()) {
-      LLVM_DEBUG(dbgs() << " is %%noreg, nothing to be done\n");
+      LLVM_DEBUG(dbgs() << " is $noreg, nothing to be done\n");
       continue;
     }
     assert(OpdMapper.getInstrMapping().getOperandMapping(OpIdx).NumBreakDowns !=
