@@ -129,7 +129,7 @@ template <int N, int... Dims> struct StaticSizeMult<N, Dims...> {
   static constexpr int value = N * StaticSizeMult<Dims...>::value;
 };
 
-static void printSpace(std::ostream &os, int count) {
+static inline void printSpace(std::ostream &os, int count) {
   for (int i = 0; i < count; ++i) {
     os << ' ';
   }
