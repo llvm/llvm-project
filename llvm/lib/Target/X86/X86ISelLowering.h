@@ -512,6 +512,7 @@ namespace llvm {
 
       // Vector signed/unsigned integer to float/double.
       CVTSI2P, CVTUI2P,
+      STRICT_CVTSI2P, STRICT_CVTUI2P,
 
       // Masked versions of above. Used for v2f64->v4f32.
       // SRC, PASSTHRU, MASK

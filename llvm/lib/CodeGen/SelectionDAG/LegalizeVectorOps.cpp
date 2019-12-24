@@ -502,6 +502,8 @@ SDValue VectorLegalizer::Promote(SDValue Op) {
   switch (Op.getOpcode()) {
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
     // "Promote" the operation by extending the operand.
     return PromoteINT_TO_FP(Op);
   case ISD::FP_TO_UINT:
@@ -550,7 +552,8 @@ SDValue VectorLegalizer::Promote(SDValue Op) {
 SDValue VectorLegalizer::PromoteINT_TO_FP(SDValue Op) {
   // INT_TO_FP operations may require the input operand be promoted even
   // when the type is otherwise legal.
-  MVT VT = Op.getOperand(0).getSimpleValueType();
+  bool IsStrict = Op->isStrictFPOpcode();
+  MVT VT = Op.getOperand(IsStrict ? 1 : 0).getSimpleValueType();
   MVT NVT = TLI.getTypeToPromoteTo(Op.getOpcode(), VT);
   assert(NVT.getVectorNumElements() == VT.getVectorNumElements() &&
          "Vectors have different number of elements!");
@@ -558,14 +561,20 @@ SDValue VectorLegalizer::PromoteINT_TO_FP(SDValue Op) {
   SDLoc dl(Op);
   SmallVector<SDValue, 4> Operands(Op.getNumOperands());
 
-  unsigned Opc = Op.getOpcode() == ISD::UINT_TO_FP ? ISD::ZERO_EXTEND :
-    ISD::SIGN_EXTEND;
+  unsigned Opc = (Op.getOpcode() == ISD::UINT_TO_FP ||
+                  Op.getOpcode() == ISD::STRICT_UINT_TO_FP)
+                     ? ISD::ZERO_EXTEND
+                     : ISD::SIGN_EXTEND;
   for (unsigned j = 0; j != Op.getNumOperands(); ++j) {
     if (Op.getOperand(j).getValueType().isVector())
       Operands[j] = DAG.getNode(Opc, dl, NVT, Op.getOperand(j));
     else
       Operands[j] = Op.getOperand(j);
   }
+
+  if (IsStrict)
+    return DAG.getNode(Op.getOpcode(), dl, {Op.getValueType(), MVT::Other},
+                       Operands);
 
   return DAG.getNode(Op.getOpcode(), dl, Op.getValueType(), Operands);
 }
