@@ -123,7 +123,7 @@ static bool tryToStripMineLoop(
     const TargetTransformInfo &TTI, AssumptionCache &AC, TaskInfo *TI,
     OptimizationRemarkEmitter &ORE, TargetLibraryInfo *TLI, bool PreserveLCSSA,
     Optional<unsigned> ProvidedCount) {
-  Task *T = getTaskIfTapirLoop(L, TI);
+  Task *T = getTaskIfTapirLoopStructure(L, TI);
   if (!T)
     return false;
   TapirLoopHints Hints(L);
@@ -262,7 +262,7 @@ static bool tryToStripMineLoop(
     ORE.emit(DiagnosticInfoOptimizationFailure(
                  DEBUG_TYPE, "UnprofitableParallelLoop",
                  L->getStartLoc(), L->getHeader())
-             << "Parallel loop appears to be unprofitable to parallelize.");
+             << "Parallel loop does not appear profitable to parallelize.");
     return false;
   }
 
