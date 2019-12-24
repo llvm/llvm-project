@@ -35,6 +35,7 @@ macro(add_optional_dependency variable description package found)
     set(find_package TRUE)
     set(maybe_required REQUIRED)
   else()
+    set(find_package FALSE)
     set(${variable} FALSE PARENT_SCOPE)
   endif()
 
