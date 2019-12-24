@@ -72,6 +72,9 @@ void DPURTE::addClangTargetOptions(
   // dpu_stack_analyzer
   CC1Args.push_back("-fstack-size-section");
   CC1Args.push_back("-fdata-sections");
+
+  CC1Args.push_back("-debug-info-kind=limited");
+  CC1Args.push_back("-dwarf-version=4");
   if (DriverArgs.hasArg(options::OPT_pg)) {
     CC1Args.push_back("-DDPU_PROFILING");
   }
