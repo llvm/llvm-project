@@ -471,6 +471,12 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
         if (isa<Argument>(Obj))
           AccessKind = FunctionAccessKind(AccessKind | FAK_ArgMem);
 
+        // If the underlying object is an arbitrary instruction, then
+        // conservatively deduce that this function might access memory other
+        // than its arguments.
+        if (isa<Instruction>(Obj))
+          AccessKind = FunctionAccessKind(AccessKind | FAK_NonArgMem);
+
         // Early exit the function once we discover this function can access
         // non-argument memory and inaccessible memory.
         if (FAK_AnyMem == (FAK_AnyMem & AccessKind))
