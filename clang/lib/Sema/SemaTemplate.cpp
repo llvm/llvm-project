@@ -5998,6 +5998,15 @@ bool UnnamedLocalNoLinkageFinder::VisitPipeType(const PipeType* T) {
   return false;
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitExtIntType(const ExtIntType *T) {
+  return false;
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitDependentExtIntType(
+    const DependentExtIntType *T) {
+  return false;
+}
+
 bool UnnamedLocalNoLinkageFinder::VisitTagDecl(const TagDecl *Tag) {
   if (Tag->getDeclContext()->isFunctionOrMethod()) {
     S.Diag(SR.getBegin(),
@@ -6891,7 +6900,9 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       QualType IntegerType = ParamType;
       if (const EnumType *Enum = IntegerType->getAs<EnumType>())
         IntegerType = Enum->getDecl()->getIntegerType();
-      Value = Value.extOrTrunc(Context.getTypeSize(IntegerType));
+      Value = Value.extOrTrunc(IntegerType->isExtIntType()
+                                   ? Context.getIntWidth(IntegerType)
+                                   : Context.getTypeSize(IntegerType));
 
       Converted = TemplateArgument(Context, Value,
                                    Context.getCanonicalType(ParamType));
@@ -6985,7 +6996,9 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
 
       // Coerce the template argument's value to the value it will have
       // based on the template parameter's type.
-      unsigned AllowedBits = Context.getTypeSize(IntegerType);
+      unsigned AllowedBits = IntegerType->isExtIntType()
+                                 ? Context.getIntWidth(IntegerType)
+                                 : Context.getTypeSize(IntegerType);
       if (Value.getBitWidth() != AllowedBits)
         Value = Value.extOrTrunc(AllowedBits);
       Value.setIsSigned(IntegerType->isSignedIntegerOrEnumerationType());

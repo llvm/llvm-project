@@ -134,7 +134,7 @@ public:
   /// ConvertType in that it is used to convert to the memory representation for
   /// a type.  For example, the scalar representation for _Bool is i1, but the
   /// memory representation is usually i8 or i32, depending on the target.
-  llvm::Type *ConvertTypeForMem(QualType T);
+  llvm::Type *ConvertTypeForMem(QualType T, bool ForBitField = false);
 
   /// GetFunctionType - Get the LLVM function type for \arg Info.
   llvm::FunctionType *GetFunctionType(const CGFunctionInfo &Info);

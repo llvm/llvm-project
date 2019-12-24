@@ -6719,6 +6719,15 @@ void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
   TL.setKWLoc(readSourceLocation());
 }
 
+void TypeLocReader::VisitExtIntTypeLoc(clang::ExtIntTypeLoc TL) {
+  TL.setNameLoc(readSourceLocation());
+}
+void TypeLocReader::VisitDependentExtIntTypeLoc(
+    clang::DependentExtIntTypeLoc TL) {
+  TL.setNameLoc(readSourceLocation());
+}
+
+
 void ASTRecordReader::readTypeLoc(TypeLoc TL) {
   TypeLocReader TLR(*this);
   for (; !TL.isNull(); TL = TL.getNextTypeLoc())
