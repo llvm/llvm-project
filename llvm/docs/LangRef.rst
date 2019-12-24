@@ -14473,7 +14473,7 @@ vector must have <M> * <N> elements.
 
 
 '``llvm.matrix.columnwise.load.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -14499,7 +14499,7 @@ The <Rows> and <Cols> arguments must be constant integers. The returned vector
 must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
 
 '``llvm.matrix.columnwise.store.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
