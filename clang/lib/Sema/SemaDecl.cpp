@@ -11104,6 +11104,13 @@ void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
   // getting shifty.
   if (nparams == 4 && Context.getTargetInfo().getTriple().isOSDarwin())
     HasExtraParameters = false;
+  else if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::dpu &&
+           nparams != 0) {
+    HasExtraParameters = false;
+    Diag(FD->getLocation(), diag::err_dpu_main_surplus_args) << nparams;
+    FD->setInvalidDecl(true);
+    nparams = 0;
+  }
 
   if (HasExtraParameters) {
     Diag(FD->getLocation(), diag::err_main_surplus_args) << nparams;

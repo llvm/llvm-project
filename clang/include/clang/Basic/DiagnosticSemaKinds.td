@@ -787,6 +787,8 @@ def ext_main_returns_nonint : ExtWarn<"return type of 'main' is not 'int'">,
 def note_main_change_return_type : Note<"change return type to 'int'">;
 def err_main_surplus_args : Error<"too many parameters (%0) for 'main': "
     "must be 0, 2, or 3">;
+def err_dpu_main_surplus_args : Error<"too many parameters (%0) for 'main': "
+    "must be 0">;
 def warn_main_one_arg : Warning<"only one parameter on 'main' declaration">,
     InGroup<Main>;
 def err_main_arg_wrong : Error<"%select{first|second|third|fourth}0 "
