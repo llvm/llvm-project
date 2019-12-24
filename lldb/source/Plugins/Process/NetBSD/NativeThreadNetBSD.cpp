@@ -158,6 +158,16 @@ void NativeThreadNetBSD::SetStepping() {
 std::string NativeThreadNetBSD::GetName() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
 
+#ifdef PT_LWPSTATUS
+  struct ptrace_lwpstatus info = {};
+  info.pl_lwpid = m_tid;
+  Status error = NativeProcessNetBSD::PtraceWrapper(
+      PT_LWPSTATUS, static_cast<int>(m_process.GetID()), &info, sizeof(info));
+  if (error.Fail()) {
+    return "";
+  }
+  return info.pl_name;
+#else
   std::vector<struct kinfo_lwp> infos;
   int mib[5] = {CTL_KERN, KERN_LWP, static_cast<int>(m_process.GetID()),
                 sizeof(struct kinfo_lwp), 0};
@@ -186,6 +196,7 @@ std::string NativeThreadNetBSD::GetName() {
 
   LLDB_LOG(log, "unable to find lwp {0} in LWP infos", m_tid);
   return "";
+#endif
 }
 
 lldb::StateType NativeThreadNetBSD::GetState() { return m_state; }
