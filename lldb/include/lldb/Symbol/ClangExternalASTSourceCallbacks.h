@@ -9,13 +9,14 @@
 #ifndef liblldb_ClangExternalASTSourceCallbacks_h_
 #define liblldb_ClangExternalASTSourceCallbacks_h_
 
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "clang/AST/ExternalASTSource.h"
 
 namespace lldb_private {
 
 class ClangASTContext;
 
-class ClangExternalASTSourceCallbacks : public ClangExternalASTSourceCommon {
+class ClangExternalASTSourceCallbacks : public clang::ExternalASTSource {
 public:
   ClangExternalASTSourceCallbacks(ClangASTContext &ast) : m_ast(ast) {}
 
