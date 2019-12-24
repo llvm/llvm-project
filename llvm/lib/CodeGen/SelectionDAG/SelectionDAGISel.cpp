@@ -738,23 +738,20 @@ void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
 }
 
 void SelectionDAGISel::ComputeLiveOutVRegInfo() {
-  SmallPtrSet<SDNode*, 16> VisitedNodes;
+  SmallPtrSet<SDNode *, 16> Added;
   SmallVector<SDNode*, 128> Worklist;
 
   Worklist.push_back(CurDAG->getRoot().getNode());
+  Added.insert(CurDAG->getRoot().getNode());
 
   KnownBits Known;
 
   do {
     SDNode *N = Worklist.pop_back_val();
 
-    // If we've already seen this node, ignore it.
-    if (!VisitedNodes.insert(N).second)
-      continue;
-
     // Otherwise, add all chain operands to the worklist.
     for (const SDValue &Op : N->op_values())
-      if (Op.getValueType() == MVT::Other)
+      if (Op.getValueType() == MVT::Other && Added.insert(Op.getNode()).second)
         Worklist.push_back(Op.getNode());
 
     // If this is a CopyToReg with a vreg dest, process it.
