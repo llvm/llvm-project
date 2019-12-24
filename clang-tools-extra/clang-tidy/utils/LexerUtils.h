@@ -92,13 +92,15 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts);
 
-/// Assuming that ``Range`` spans a const-qualified type, returns the ``const``
-/// token in ``Range`` that is responsible for const qualification. ``Range``
-/// must be valid with respect to ``SM``.  Returns ``None`` if no ``const``
+/// Assuming that ``Range`` spans a CVR-qualified type, returns the
+/// token in ``Range`` that is responsible for the qualification. ``Range``
+/// must be valid with respect to ``SM``.  Returns ``None`` if no qualifying
 /// tokens are found.
-llvm::Optional<Token> getConstQualifyingToken(CharSourceRange Range,
-                                              const ASTContext &Context,
-                                              const SourceManager &SM);
+/// \note: doesn't support member function qualifiers.
+llvm::Optional<Token> getQualifyingToken(tok::TokenKind TK,
+                                         CharSourceRange Range,
+                                         const ASTContext &Context,
+                                         const SourceManager &SM);
 
 } // namespace lexer
 } // namespace utils
