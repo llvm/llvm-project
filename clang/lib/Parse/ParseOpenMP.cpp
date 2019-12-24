@@ -735,10 +735,12 @@ static bool parseDeclareSimdClauses(
           CKind == OMPC_linear) {
         Parser::OpenMPVarListDataTy Data;
         SmallVectorImpl<Expr *> *Vars = &Uniforms;
-        if (CKind == OMPC_aligned)
+        if (CKind == OMPC_aligned) {
           Vars = &Aligneds;
-        else if (CKind == OMPC_linear)
+        } else if (CKind == OMPC_linear) {
+          Data.ExtraModifier = OMPC_LINEAR_val;
           Vars = &Linears;
+        }
 
         P.ConsumeToken();
         if (P.ParseOpenMPVarList(OMPD_declare_simd,
@@ -747,6 +749,9 @@ static bool parseDeclareSimdClauses(
         if (CKind == OMPC_aligned) {
           Alignments.append(Aligneds.size() - Alignments.size(), Data.TailExpr);
         } else if (CKind == OMPC_linear) {
+          assert(0 <= Data.ExtraModifier &&
+                 Data.ExtraModifier <= OMPC_LINEAR_unknown &&
+                 "Unexpected linear modifier.");
           if (P.getActions().CheckOpenMPLinearModifier(
                   static_cast<OpenMPLinearClauseKind>(Data.ExtraModifier),
                   Data.DepLinMapLastLoc))
