@@ -471,8 +471,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0);
 
   getActionDefinitionsBuilder(G_INTRINSIC_ROUND)
-    .legalFor({S32, S64})
-    .scalarize(0);
+    .scalarize(0)
+    .lower();
 
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})

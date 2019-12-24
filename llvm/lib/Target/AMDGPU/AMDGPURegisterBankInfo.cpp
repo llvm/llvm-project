@@ -2377,7 +2377,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FCANONICALIZE:
   case AMDGPU::G_INTRINSIC_TRUNC:
-  case AMDGPU::G_INTRINSIC_ROUND:
   case AMDGPU::G_AMDGPU_FFBH_U32:
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_UMULH:

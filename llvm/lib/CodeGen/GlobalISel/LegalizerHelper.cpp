@@ -2053,6 +2053,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   }
   case TargetOpcode::G_FMAD:
     return lowerFMad(MI);
+  case TargetOpcode::G_INTRINSIC_ROUND:
+    return lowerIntrinsicRound(MI);
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
     Register OldValRes = MI.getOperand(0).getReg();
     Register SuccessRes = MI.getOperand(1).getReg();
@@ -4125,6 +4127,33 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMad(MachineInstr &MI) {
   auto Mul = MIRBuilder.buildFMul(Ty, MI.getOperand(1), MI.getOperand(2),
                                   Flags);
   MIRBuilder.buildFAdd(DstReg, Mul, MI.getOperand(3), Flags);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerIntrinsicRound(MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  unsigned Flags = MI.getFlags();
+  LLT Ty = MRI.getType(DstReg);
+  const LLT CondTy = Ty.changeElementSize(1);
+
+  // result = trunc(src);
+  // if (src < 0.0 && src != result)
+  //   result += -1.0.
+
+  auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
+  auto Trunc = MIRBuilder.buildIntrinsicTrunc(Ty, SrcReg, Flags);
+
+  auto Lt0 = MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, CondTy,
+                                  SrcReg, Zero, Flags);
+  auto NeTrunc = MIRBuilder.buildFCmp(CmpInst::FCMP_ONE, CondTy,
+                                      SrcReg, Trunc, Flags);
+  auto And = MIRBuilder.buildAnd(CondTy, Lt0, NeTrunc);
+  auto AddVal = MIRBuilder.buildSITOFP(Ty, And);
+
+  MIRBuilder.buildFAdd(DstReg, Trunc, AddVal);
   MI.eraseFromParent();
   return Legalized;
 }
