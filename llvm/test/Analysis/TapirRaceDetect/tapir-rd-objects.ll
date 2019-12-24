@@ -784,7 +784,8 @@ if.else.i179:                                     ; preds = %if.then11.i, %do.bo
 
 ; CHECK: store %class.Pennant* %c.0.i.lcssa, %class.Pennant** %arrayidx21.i, align 8
 ; CHECK-NEXT: %arrayidx21.i = getelementptr inbounds %class.Pennant*, %class.Pennant** %.lcssa, i64 %idxprom20.pre-phi.i
-; CHECK-NEXT: Local, Via Ancestor Mod Ref, Opaque
+; CHECK-DAG: Via Ancestor Mod Ref, Opaque
+; CHECK-DAG: Local
 
 ; CHECK: Underlying objects of races:
 ; CHECK: %{{83|78}} = load %class.Pennant**, %class.Pennant*** %65, align 8
