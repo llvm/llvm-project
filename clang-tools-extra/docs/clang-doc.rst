@@ -7,8 +7,8 @@ Clang-Doc
 .. toctree::
    :maxdepth: 1
 
-:program:`clang-doc` is a tool for generating C and C++ documentation from 
-source code and comments. 
+:program:`clang-doc` is a tool for generating C and C++ documentation from
+source code and comments.
 
 The tool is in a very early development stage, so you might encounter bugs and
 crashes. Submitting reports with information about how to reproduce the issue
@@ -21,7 +21,7 @@ Use
 
 :program:`clang-doc` is a `LibTooling
 <https://clang.llvm.org/docs/LibTooling.html>`_-based tool, and so requires a
-compile command database for your project (for an example of how to do this 
+compile command database for your project (for an example of how to do this
 see `How To Setup Tooling For LLVM
 <https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html>`_).
 
