@@ -1193,7 +1193,7 @@ void DwarfDebug::finalizeModuleInfo() {
 
     auto *CUNode = cast<DICompileUnit>(P.first);
     // If compile Unit has macros, emit "DW_AT_macro_info" attribute.
-    if (CUNode->getMacros())
+    if (CUNode->getMacros()) {
       if (useSplitDwarf())
         TheCU.addLabelDelta(TheCU.getUnitDie(), dwarf::DW_AT_macro_info,
                             U.getMacroLabelBegin(),
@@ -1202,6 +1202,7 @@ void DwarfDebug::finalizeModuleInfo() {
         U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_macro_info,
                           U.getMacroLabelBegin(),
                           TLOF.getDwarfMacinfoSection()->getBeginSymbol());
+    }
   }
 
   // Emit all frontend-produced Skeleton CUs, i.e., Clang modules.
