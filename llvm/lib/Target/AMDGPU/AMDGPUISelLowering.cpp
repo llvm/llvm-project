@@ -2161,7 +2161,8 @@ SDValue AMDGPUTargetLowering::LowerFNEARBYINT(SDValue Op, SelectionDAG &DAG) con
 // Don't handle v2f16. The extra instructions to scalarize and repack around the
 // compare and vselect end up producing worse code than scalarizing the whole
 // operation.
-SDValue AMDGPUTargetLowering::LowerFROUND32_16(SDValue Op, SelectionDAG &DAG) const {
+SDValue AMDGPUTargetLowering::LowerFROUND_LegalFTRUNC(SDValue Op,
+                                                      SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue X = Op.getOperand(0);
   EVT VT = Op.getValueType();
@@ -2250,8 +2251,8 @@ SDValue AMDGPUTargetLowering::LowerFROUND64(SDValue Op, SelectionDAG &DAG) const
 SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (VT == MVT::f32 || VT == MVT::f16)
-    return LowerFROUND32_16(Op, DAG);
+  if (isOperationLegal(ISD::FTRUNC, VT))
+    return LowerFROUND_LegalFTRUNC(Op, DAG);
 
   if (VT == MVT::f64)
     return LowerFROUND64(Op, DAG);
