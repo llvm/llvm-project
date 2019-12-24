@@ -30,6 +30,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ompabi"
 
+cl::opt<bool> fastOpenMP(
+    "fast-openmp", cl::init(false), cl::Hidden,
+    cl::desc("Attempt faster OpenMP implementation, "
+             "assuming parallel outside set"));
+
 StructType *IdentTy = nullptr;
 FunctionType *Kmpc_MicroTy = nullptr;
 Constant *DefaultOpenMPPSource = nullptr;
@@ -263,17 +268,17 @@ StructType *createSharedsTy(Function *F) {
   return StructType::create(FnParams, "anon");
 }
 
-Type *getOrCreateIdentTy(Module *M) {
-  if (M->getTypeByName("ident_t") == nullptr) {
-    auto *Int32Ty = Type::getInt32Ty(M->getContext());
-    auto *Int8PtrTy = Type::getInt8PtrTy(M->getContext());
+Type *getOrCreateIdentTy(Module &M) {
+  if (M.getTypeByName("ident_t") == nullptr) {
+    auto *Int32Ty = Type::getInt32Ty(M.getContext());
+    auto *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
     IdentTy = StructType::create(ArrayRef<llvm::Type*>({Int32Ty /* reserved_1 */,
                                  Int32Ty /* flags */, Int32Ty /* reserved_2 */,
                                  Int32Ty /* reserved_3 */,
                                  Int8PtrTy /* psource */}), "ident_t");
-  } else if ((IdentTy = dyn_cast<StructType>(M->getTypeByName("ident_t")))->isOpaque()) {
-      auto *Int32Ty = Type::getInt32Ty(M->getContext());
-      auto *Int8PtrTy = Type::getInt8PtrTy(M->getContext());
+  } else if ((IdentTy = dyn_cast<StructType>(M.getTypeByName("ident_t")))->isOpaque()) {
+      auto *Int32Ty = Type::getInt32Ty(M.getContext());
+      auto *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
       IdentTy->setBody(ArrayRef<llvm::Type*>({Int32Ty /* reserved_1 */,
                                    Int32Ty /* flags */, Int32Ty /* reserved_2 */,
                                    Int32Ty /* reserved_3 */,
@@ -310,38 +315,38 @@ Type *createKmpTaskTWithPrivatesTy(Type *data) {
   return KmpTaskTWithPrivatesTy;
 }
 
-Value *getOrCreateDefaultLocation(Module *M) {
+Value *getOrCreateDefaultLocation(Module &M) {
   if (DefaultOpenMPPSource == nullptr) {
     const std::string DefaultLocStr = ";unknown;unknown;0;0;;";
     StringRef DefaultLocStrWithNull(DefaultLocStr.c_str(),
                                     DefaultLocStr.size() + 1);
-    DataLayout DL(M);
-    uint64_t Alignment = DL.getTypeAllocSize(Type::getInt8Ty(M->getContext()));
-    Constant *C = ConstantDataArray::getString(M->getContext(),
+    const DataLayout DL = M.getDataLayout();
+    uint64_t Alignment = DL.getTypeAllocSize(Type::getInt8Ty(M.getContext()));
+    Constant *C = ConstantDataArray::getString(M.getContext(),
                                                DefaultLocStrWithNull, false);
     // NOTE Are heap allocations not recommended in general or is it OK here?
     // I couldn't find a way to statically allocate an IRBuilder for a Module!
     auto *GV =
-        new GlobalVariable(*M, C->getType(), true, GlobalValue::PrivateLinkage,
+        new GlobalVariable(M, C->getType(), true, GlobalValue::PrivateLinkage,
                            C, ".str", nullptr, GlobalValue::NotThreadLocal);
     GV->setAlignment(Alignment);
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
     DefaultOpenMPPSource = cast<Constant>(GV);
     DefaultOpenMPPSource = ConstantExpr::getBitCast(
-        DefaultOpenMPPSource, Type::getInt8PtrTy(M->getContext()));
+        DefaultOpenMPPSource, Type::getInt8PtrTy(M.getContext()));
   }
 
   if (DefaultOpenMPLocation == nullptr) {
-    // Constant *C = ConstantInt::get(Type::getInt32Ty(M->getContext()), 0,
+    // Constant *C = ConstantInt::get(Type::getInt32Ty(M.getContext()), 0,
     // true);
-    auto *Int32Ty = Type::getInt32Ty(M->getContext());
+    auto *Int32Ty = Type::getInt32Ty(M.getContext());
     std::vector<Constant *> Members = {
         ConstantInt::get(Int32Ty, 0, true), ConstantInt::get(Int32Ty, 2, true),
         ConstantInt::get(Int32Ty, 0, true), ConstantInt::get(Int32Ty, 0, true),
         DefaultOpenMPPSource};
     Constant *C = ConstantStruct::get(IdentTy, Members);
     auto *GV =
-        new GlobalVariable(*M, C->getType(), true, GlobalValue::PrivateLinkage,
+        new GlobalVariable(M, C->getType(), true, GlobalValue::PrivateLinkage,
                            C, "", nullptr, GlobalValue::NotThreadLocal);
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
     GV->setAlignment(8);
@@ -357,8 +362,8 @@ Value *getOrCreateDefaultLocation(Module *M) {
 static Value *GetOrCreateWorkerCount(Function &F) {
   // TODO?: Figure out better place for these calls, but needed here due to
   // this function being called before other initialization points
-  getOrCreateIdentTy(F.getParent());
-  getOrCreateDefaultLocation(F.getParent());
+  getOrCreateIdentTy(*F.getParent());
+  getOrCreateDefaultLocation(*F.getParent());
 
   IRBuilder<> B(F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime());
   auto NTFn = createRuntimeFunction(
@@ -546,16 +551,10 @@ void OpenMPABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
   TOI.Outline = formatFunctionToTask(Outline, ReplCall);
 }
 
-void llvm::OpenMPABI::preProcessFunction(Function &F) {
-  auto M = (Module *)F.getParent();
+void llvm::OpenMPABI::preProcessFunction(Function &F, TaskInfo &TI) {
   getOrCreateIdentTy(M);
   getOrCreateDefaultLocation(M);
 }
-
-cl::opt<bool> fastOpenMP(
-    "fast-openmp", cl::init(false), cl::Hidden,
-    cl::desc("Attempt faster OpenMP implementation, "
-             "assuming parallel outside set"));
 
 void llvm::OpenMPABI::postProcessFunction(Function &F) {
   if (fastOpenMP) return;

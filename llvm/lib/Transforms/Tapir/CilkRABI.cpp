@@ -1018,7 +1018,7 @@ static inline void inlineCilkFunctions(Function &F) {
     llvm_unreachable("Tapir->CilkABI lowering produced bad IR!");
 }
 
-void CilkRABI::preProcessFunction(Function &F) {
+void CilkRABI::preProcessFunction(Function &F, TaskInfo &TI) {
   if (F.getName() == "main")
     F.setName("cilk_main");
 }

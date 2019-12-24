@@ -68,6 +68,7 @@ Function *CreateHelper(
     SmallPtrSetImpl<BasicBlock *> *SharedEHEntries = nullptr,
     const BasicBlock *OldUnwind = nullptr,
     const Instruction *InputSyncRegion = nullptr,
+    Type *ReturnType = nullptr,
     ClonedCodeInfo *CodeInfo = nullptr,
     ValueMapTypeRemapper *TypeMapper = nullptr,
     ValueMaterializer *Materializer = nullptr);

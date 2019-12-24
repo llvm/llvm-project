@@ -115,16 +115,20 @@ TapirToTargetImpl::outlineAllTasks(Function &F, DominatorTree &DT,
 
   // Determine the inputs for all tasks.
   DenseMap<Task *, ValueSet> TaskInputs = findAllTaskInputs(F, DT, TI);
+  DenseMap<Task *, SmallVector<Value *, 8>> HelperInputs;
   // Traverse the tasks in this function in post order.
   for (Task *T : post_order(TI.getRootTask())) {
     // At this point, all subtasks of T must have been processed.  Replace their
     // detaches with calls.
     for (Task *SubT : T->subtasks())
       TaskToOutline[SubT].replaceReplCall(
-          replaceDetachWithCallToOutline(SubT, TaskToOutline[SubT]));
+          replaceDetachWithCallToOutline(SubT, TaskToOutline[SubT],
+                                         HelperInputs[SubT]));
 
     // Outline the task, if necessary, and add the outlined function to the
     // mapping.
+
+    // If this is the root task, then no outlining is necessary.
     if (T->isRootTask())
       break;
 
@@ -142,15 +146,20 @@ TapirToTargetImpl::outlineAllTasks(Function &F, DominatorTree &DT,
     }
 
     ValueToValueMapTy VMap;
-    TaskToOutline[T] = outlineTask(T, TaskInputs[T], VMap, &AC, &DT);
+    ValueToValueMapTy InputMap;
+    TaskToOutline[T] = outlineTask(T, TaskInputs[T], HelperInputs[T], VMap,
+                                   Target->getArgStructMode(),
+                                   Target->getReturnType(), InputMap, &AC, &DT);
     // If the detach for task T does not catch an exception from the task, then
     // the outlined function cannot throw.
     if (!T->getDetach()->hasUnwindDest())
       TaskToOutline[T].Outline->setDoesNotThrow();
+    Target->addHelperAttributes(*TaskToOutline[T].Outline);
+
     // Update subtask outline info to reflect the fact that their spawner was
     // outlined.
     for (Task *SubT : T->subtasks())
-      TaskToOutline[SubT].remapOutlineInfo(VMap);
+      TaskToOutline[SubT].remapOutlineInfo(VMap, InputMap);
   }
 
   return TaskToOutline;
@@ -254,12 +263,19 @@ void TapirToTargetImpl::processFunction(
 
   LLVM_DEBUG(dbgs() << "Tapir: Processing function " << F.getName() << "\n");
 
-  Target->preProcessFunction(F);
-
   // Get the necessary analysis results.
   DominatorTree &DT = GetDT(F);
   TaskInfo &TI = GetTI(F);
   AssumptionCache &AC = GetAC(F);
+
+  Target->preProcessFunction(F, TI);
+
+  // If we don't need to do outlining, then just handle the simple ABI.
+  if (!Target->shouldDoOutlining(F)) {
+    // Process the Tapir instructions in F directly.
+    processSimpleABI(F);
+    return;
+  }
 
   // Outline all tasks in a target-oblivious manner.
   TaskOutlineMapTy TaskToOutline = outlineAllTasks(F, DT, AC, TI);

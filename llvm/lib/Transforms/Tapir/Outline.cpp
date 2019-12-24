@@ -210,10 +210,12 @@ void llvm::CloneIntoFunction(
   for (const BasicBlock *BB : Blocks) {
     BasicBlock *CBB = cast<BasicBlock>(VMap[BB]);
     // Loop over all instructions, fixing each one as we find it...
-    for (Instruction &II : *CBB)
+    for (Instruction &II : *CBB) {
+      LLVM_DEBUG(dbgs() << "Remapping " << II << "\n");
       RemapInstruction(&II, VMap,
                        ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
                        TypeMapper, Materializer);
+    }
   }
 }
 
@@ -230,14 +232,19 @@ Function *llvm::CreateHelper(
     SmallPtrSetImpl<BasicBlock *> *ReattachBlocks,
     SmallPtrSetImpl<BasicBlock *> *DetachRethrowBlocks,
     SmallPtrSetImpl<BasicBlock *> *SharedEHEntries,
-    const BasicBlock *OldUnwind,
-    const Instruction *InputSyncRegion, ClonedCodeInfo *CodeInfo,
+    const BasicBlock *OldUnwind, const Instruction *InputSyncRegion,
+    Type *ReturnType, ClonedCodeInfo *CodeInfo,
     ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer) {
   LLVM_DEBUG(dbgs() << "inputs: " << Inputs.size() << "\n");
   LLVM_DEBUG(dbgs() << "outputs: " << Outputs.size() << "\n");
 
   Function *OldFunc = Header->getParent();
-  Type *RetTy = Type::getVoidTy(Header->getContext());
+  Type *RetTy = ReturnType;
+  bool VoidRet = false;
+  if (!RetTy)
+    RetTy = Type::getVoidTy(Header->getContext());
+  if (Type::getVoidTy(Header->getContext()) == RetTy)
+    VoidRet = true;
 
   std::vector<Type *> paramTy;
 
@@ -396,8 +403,12 @@ Function *llvm::CreateHelper(
 
   // Add a branch in the new function to the cloned Header.
   BranchInst::Create(cast<BasicBlock>(VMap[Header]), NewEntry);
-  // Add a return in the new function.
-  ReturnInst::Create(Header->getContext(), NewExit);
+  // Add a return in the new function, with a default null value if necessary.
+  if (VoidRet)
+    ReturnInst::Create(Header->getContext(), NewExit);
+  else
+    ReturnInst::Create(Header->getContext(), Constant::getNullValue(RetTy),
+                       NewExit);
 
   // If needed, create a landing pad and resume for the unwind destination in
   // the new function.

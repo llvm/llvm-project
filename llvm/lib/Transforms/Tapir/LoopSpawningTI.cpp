@@ -66,6 +66,97 @@ STATISTIC(TapirLoopsFound,
 STATISTIC(LoopsConvertedToDAC,
           "Number of Tapir loops converted to divide-and-conquer iteration spawning");
 
+/// The default loop-outline processor leaves the outlined Tapir loop as is.
+class DefaultLoopOutlineProcessor : public LoopOutlineProcessor {
+public:
+  DefaultLoopOutlineProcessor(Module &M) : LoopOutlineProcessor(M) {}
+};
+
+/// The DACSpawning loop-outline processor transforms an outlined Tapir loop to
+/// evaluate the iterations using parallel recursive divide-and-conquer.
+class DACSpawning : public LoopOutlineProcessor {
+public:
+  DACSpawning(Module &M) : LoopOutlineProcessor(M) {}
+  void postProcessOutline(TapirLoopInfo &TL, TaskOutlineInfo &Out,
+                          ValueToValueMapTy &VMap) override final {
+    LoopOutlineProcessor::postProcessOutline(TL, Out, VMap);
+    implementDACIterSpawnOnHelper(TL, Out, VMap);
+    ++LoopsConvertedToDAC;
+  }
+
+private:
+  void implementDACIterSpawnOnHelper(
+      TapirLoopInfo &TL, TaskOutlineInfo &Out, ValueToValueMapTy &VMap);
+};
+
+static bool isSRetInput(const Value *V, const Function &F) {
+  if (!isa<Argument>(V))
+    return false;
+
+  auto ArgIter = F.arg_begin();
+  if (F.hasParamAttribute(0, Attribute::StructRet) && V == &*ArgIter)
+    return true;
+  ++ArgIter;
+  if (F.hasParamAttribute(1, Attribute::StructRet) && V == &*ArgIter)
+    return true;
+
+  return false;
+}
+
+void LoopOutlineProcessor::setupLoopOutlineArgs(
+    Function &F, ValueSet &HelperArgs, SmallVectorImpl<Value *> &HelperInputs,
+    ValueSet &InputSet, const SmallVectorImpl<Value *> &LCArgs,
+    const SmallVectorImpl<Value *> &LCInputs, const ValueSet &TLInputsFixed) {
+  // Add Tapir-loop inputs to vectors for args and helpers.
+  //
+  // First add the sret task input, if it exists.
+  ValueSet::iterator TLInputIter = TLInputsFixed.begin();
+  if ((TLInputIter != TLInputsFixed.end()) && isSRetInput(*TLInputIter, F)) {
+    HelperArgs.insert(*TLInputIter);
+    HelperInputs.push_back(*TLInputIter);
+    ++TLInputIter;
+  }
+
+  // Then add the loop control inputs.
+  for (Value *V : LCArgs)
+    HelperArgs.insert(V);
+  for (Value *V : LCInputs) {
+    HelperInputs.push_back(V);
+    // Add all loop-control inputs to the input set.
+    InputSet.insert(V);
+  }
+
+  // Finally add the remaining inputs
+  while (TLInputIter != TLInputsFixed.end()) {
+    Value *V = *TLInputIter++;
+    assert(!HelperArgs.count(V));
+    HelperArgs.insert(V);
+    HelperInputs.push_back(V);
+  }
+}
+
+unsigned LoopOutlineProcessor::getIVArgIndex(const Function &F,
+                                             const ValueSet &Args) const {
+  // The argument for the primary induction variable is either the first or
+  // second input, depending on whether there is an sret input.
+  unsigned IVArgOffset = 0;
+  if (isSRetInput(Args[IVArgOffset], F))
+    ++IVArgOffset;
+  return IVArgOffset;
+}
+
+void LoopOutlineProcessor::postProcessOutline(TapirLoopInfo &TL,
+                                              TaskOutlineInfo &Out,
+                                              ValueToValueMapTy &VMap) {
+  Function *Helper = Out.Outline;
+  // Use a fast calling convention for the helper.
+  Helper->setCallingConv(CallingConv::Fast);
+  // Note that the address of the helper is unimportant.
+  Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  // The helper is private to this module.
+  Helper->setLinkage(GlobalValue::PrivateLinkage);
+}
+
 /// Create an analysis remark that explains why vectorization failed
 ///
 /// \p RemarkName is the identifier for the remark.  If \p I is passed it is an
@@ -92,7 +183,6 @@ createMissedAnalysis(StringRef RemarkName, const Loop *TheLoop,
 }
 
 namespace {
-
 static void emitMissedWarning(const Loop *L, const TapirLoopHints &LH,
                               OptimizationRemarkEmitter *ORE) {
   switch (LH.getStrategy()) {
@@ -120,46 +210,15 @@ static void emitMissedWarning(const Loop *L, const TapirLoopHints &LH,
   }
 }
 
-/// A loop-outline processor transforms a newly-outlined Tapir loop for some
-/// ABI.  For example, the DACSpawning loop-outline processor transforms an
-/// outlined Tapir loop to evaluate the iterations using parallel recursive
-/// divide-and-conquer.
-class LoopOutlineProcessor {
-public:
-  virtual ~LoopOutlineProcessor() = default;
-  virtual void postProcessOutline(TapirLoopInfo &TL, TaskOutlineInfo &Out,
-                                  ValueToValueMapTy &VMap) = 0;
-};
-
-/// The default loop-outline processor leaves the outlined Tapir loop as is.
-class DefaultLoopOutlineProcessor : public LoopOutlineProcessor {
-public:
-  void postProcessOutline(TapirLoopInfo &TL, TaskOutlineInfo &Out,
-                          ValueToValueMapTy &VMap) override final {}
-};
-
-/// The DACSpawning loop-outline processor transforms an outlined Tapir loop to
-/// evaluate the iterations using parallel recursive divide-and-conquer.
-class DACSpawning : public LoopOutlineProcessor {
-public:
-  void postProcessOutline(TapirLoopInfo &TL, TaskOutlineInfo &Out,
-                          ValueToValueMapTy &VMap) override final {
-    implementDACIterSpawnOnHelper(TL, Out, VMap);
-    ++LoopsConvertedToDAC;
-  }
-
-private:
-  void implementDACIterSpawnOnHelper(
-      TapirLoopInfo &TL, TaskOutlineInfo &Out, ValueToValueMapTy &VMap);
-};
-
 /// Process Tapir loops within the given function for loop spawning.
 class LoopSpawningImpl {
 public:
   LoopSpawningImpl(Function &F, DominatorTree &DT, LoopInfo &LI, TaskInfo &TI,
                    ScalarEvolution &SE, AssumptionCache &AC,
-                   TargetTransformInfo &TTI, OptimizationRemarkEmitter &ORE)
-      : F(F), DT(DT), LI(LI), TI(TI), SE(SE), AC(AC), TTI(TTI), ORE(ORE) {}
+                   TargetTransformInfo &TTI, TapirTarget *Target,
+                   OptimizationRemarkEmitter &ORE)
+      : F(F), DT(DT), LI(LI), TI(TI), SE(SE), AC(AC), TTI(TTI), Target(Target),
+        ORE(ORE) {}
 
   ~LoopSpawningImpl() {
     for (TapirLoopInfo *TL : TapirLoops)
@@ -215,6 +274,9 @@ private:
   // Get the LoopOutlineProcessor for handling Tapir loop \p TL.
   LoopOutlineProcessor *getOutlineProcessor(TapirLoopInfo *TL);
 
+  using LOPMapTy = DenseMap<TapirLoopInfo *,
+                            std::unique_ptr<LoopOutlineProcessor>>;
+
   // For all recorded Tapir loops, determine the function arguments and inputs
   // for the outlined helper functions for those loops.
   //
@@ -224,9 +286,9 @@ private:
   // LoopArgStarts map will store the instruction in the parent where new code
   // for computing these outlined-helper-call arguments is first inserted.
   void getAllTapirLoopInputs(
-      DenseMap<Loop *, ValueSet> &LoopArgs,
-      DenseMap<Loop *, SmallVector<Value *, 1>> &LoopInputs,
-      DenseMap<Loop *, Instruction *> &LoopArgStarts);
+      DenseMap<Loop *, ValueSet> &LoopInputSets,
+      DenseMap<Loop *, SmallVector<Value *, 3>> &LoopCtlArgs,
+      DenseMap<Loop *, SmallVector<Value *, 3>> &LoopCtlInputs);
 
   // Associate tasks with Tapir loops that enclose them.
   void associateTasksToTapirLoops();
@@ -251,8 +313,10 @@ private:
   // the arguments to that helper function.  The map \p VMap will store the
   // mapping of values in the original function to values in the outlined
   // helper.
-  Function *createHelperForTapirLoop(
-      TapirLoopInfo *TL, ValueSet &Args, ValueToValueMapTy &VMap);
+  Function *createHelperForTapirLoop(TapirLoopInfo *TL, ValueSet &Args,
+                                     unsigned IVArgOffset,
+                                     ValueToValueMapTy &VMap,
+                                     ValueToValueMapTy &InputMap);
 
   // Outline all recorded Tapir loops in the function.
   TaskOutlineMapTy outlineAllTapirLoops();
@@ -266,11 +330,13 @@ private:
   ScalarEvolution &SE;
   AssumptionCache &AC;
   TargetTransformInfo &TTI;
+  TapirTarget *Target;
   OptimizationRemarkEmitter &ORE;
 
   std::vector<TapirLoopInfo *> TapirLoops;
   DenseMap<Task *, TapirLoopInfo *> TaskToTapirLoop;
   DenseMap<Loop *, TapirLoopInfo *> LoopToTapirLoop;
+  LOPMapTy OutlineProcessors;
 };
 } // end anonymous namespace
 
@@ -584,12 +650,17 @@ Task *LoopSpawningImpl::getTaskIfTapirLoop(const Loop *L) {
 
 /// Get the LoopOutlineProcessor for handling Tapir loop \p TL.
 LoopOutlineProcessor *LoopSpawningImpl::getOutlineProcessor(TapirLoopInfo *TL) {
+  // Allow the Tapir target to define a custom loop-outline processor.
+  if (LoopOutlineProcessor *TargetLOP = Target->getLoopOutlineProcessor(TL))
+    return TargetLOP;
+
+  Module &M = *F.getParent();
   Loop *L = TL->getLoop();
   TapirLoopHints Hints(L);
 
   switch (Hints.getStrategy()) {
-  case TapirLoopHints::ST_DAC: return new DACSpawning();
-  default: return new DefaultLoopOutlineProcessor();
+  case TapirLoopHints::ST_DAC: return new DACSpawning(M);
+  default: return new DefaultLoopOutlineProcessor(M);
   }
 }
 
@@ -757,20 +828,6 @@ static void getLoopControlInputs(TapirLoopInfo *TL,
   // }
 }
 
-static bool isSRetInput(const Value *V, Function &F) {
-  if (!isa<Argument>(V))
-    return false;
-
-  Function::arg_iterator ArgIter = F.arg_begin();
-  if (F.hasParamAttribute(0, Attribute::StructRet) && V == &*ArgIter)
-    return true;
-  ++ArgIter;
-  if (F.hasParamAttribute(1, Attribute::StructRet) && V == &*ArgIter)
-    return true;
-
-  return false;
-}
-
 /// For all recorded Tapir loops, determine the function arguments and inputs
 /// for the outlined helper functions for those loops.
 ///
@@ -780,10 +837,9 @@ static bool isSRetInput(const Value *V, Function &F) {
 /// LoopArgStarts map will store the instruction in the parent where new code
 /// for computing these outlined-helper-call arguments is first inserted.
 void LoopSpawningImpl::getAllTapirLoopInputs(
-    DenseMap<Loop *, ValueSet> &LoopArgs,
-    DenseMap<Loop *, SmallVector<Value *, 1>> &LoopInputs,
-    DenseMap<Loop *, Instruction *> &LoopArgStarts) {
-
+    DenseMap<Loop *, ValueSet> &LoopInputSets,
+    DenseMap<Loop *, SmallVector<Value *, 3>> &LoopCtlArgs,
+    DenseMap<Loop *, SmallVector<Value *, 3>> &LoopCtlInputs) {
   // Determine the inputs for all tasks.
   DenseMap<Task *, ValueSet> TaskInputs = findAllTaskInputs(F, DT, TI);
 
@@ -792,89 +848,49 @@ void LoopSpawningImpl::getAllTapirLoopInputs(
   for (Task *T : post_order(TI.getRootTask())) {
     if (TapirLoopInfo *TL = getTapirLoop(T)) {
       Loop *L = TL->getLoop();
-      ValueSet HelperArgs;
-      SmallVector<Value *, 8> HelperInputs;
 
       // Convert inputs for task T to Tapir-loop inputs.
       ValueSet TLInputs = getTapirLoopInputs(TL, TaskInputs[T]);
+      LoopInputSets[L] = TLInputs;
       LLVM_DEBUG({
           dbgs() << "TLInputs\n";
           for (Value *V : TLInputs)
             dbgs() << "\t" << *V << "\n";
         });
-      // Convert the inputs of the Tapir loop to inputs to the helper.
-      ValueSet TLInputsFixed;
-      Instruction *ArgStart =
-        fixupHelperInputs(F, T, TLInputs, TLInputsFixed,
-                          L->getLoopPreheader()->getTerminator(),
-                          T->getEntry()->getFirstNonPHIOrDbgOrLifetime());
 
       // Determine loop-control inputs.
-      SmallVector<Value *, 4> LCArgs;
-      SmallVector<Value *, 4> LCInputs;
-      getLoopControlInputs(TL, LCArgs, LCInputs);
-
-      // Add Tapir-loop inputs to vectors for args and helpers.
-      //
-      // First add the sret task input, if it exists.
-      ValueSet::iterator TLInputIter = TLInputsFixed.begin();
-      if ((TLInputIter != TLInputsFixed.end()) &&
-          isSRetInput(*TLInputIter, F)) {
-        HelperArgs.insert(*TLInputIter);
-        HelperInputs.push_back(*TLInputIter);
-        ++TLInputIter;
-      }
-
-      // Then add the loop control inputs.
-      for (Value *V : LCArgs)
-        HelperArgs.insert(V);
-      for (Value *V : LCInputs)
-        HelperInputs.push_back(V);
-
-      // Finally add the remaining inputs
-      while (TLInputIter != TLInputsFixed.end()) {
-        Value *V = *TLInputIter++;
-        assert(!HelperArgs.count(V));
-        HelperArgs.insert(V);
-        HelperInputs.push_back(V);
-      }
+      getLoopControlInputs(TL, LoopCtlArgs[L], LoopCtlInputs[L]);
 
       LLVM_DEBUG({
-          dbgs() << "HelperArgs:\n";
-          for (Value *V : HelperArgs)
+          dbgs() << "LoopCtlArgs:\n";
+          for (Value *V : LoopCtlArgs[L])
             dbgs() << "\t" << *V << "\n";
-          dbgs() << "HelperInputs:\n";
-          for (Value *V : HelperInputs)
+          dbgs() << "LoopCtlInputs:\n";
+          for (Value *V : LoopCtlInputs[L])
             dbgs() << "\t" << *V << "\n";
         });
-
-      LoopArgs[L] = HelperArgs;
-      for (Value *V : HelperInputs)
-        LoopInputs[L].push_back(V);
-      LoopArgStarts[L] = ArgStart;
     }
   }
 }
 
 static void updateClonedIVs(
     TapirLoopInfo *TL, BasicBlock *OrigPreheader,
-    ValueSet &Args, ValueToValueMapTy &VMap) {
+    ValueSet &Args, ValueToValueMapTy &VMap, unsigned IVArgIndex) {
   auto &PrimaryInduction = TL->getPrimaryInduction();
   PHINode *PrimaryPhi = PrimaryInduction.first;
 
-  // The argument for the primary induction variable is either the first or
-  // second input, depending on whether there is an sret input.
-  unsigned IVArgOffset = 0;
-  if (isSRetInput(Args[IVArgOffset], *OrigPreheader->getParent()))
-    ++IVArgOffset;
-  Value *PrimaryArg = Args[IVArgOffset];
+  Value *PrimaryArg = Args[IVArgIndex];
 
+  // TODO: This assertion implies that the following loop should only run once,
+  // for the primary induction variable.  However, the loop is provided in case
+  // we decide to handle more complicated sets of induction variables in the
+  // future.
   assert(TL->getInductionVars()->size() == 1 &&
          "updateClonedIVs to process multiple inductions.");
 
   // The next argument that provides an input to an IV is 3 after the input for
   // the primary induction variable.
-  unsigned ArgIdx = IVArgOffset + 3;
+  unsigned ArgIdx = IVArgIndex + 3;
   for (auto &InductionEntry : *TL->getInductionVars()) {
     PHINode *OrigPhi = InductionEntry.first;
     InductionDescriptor II = InductionEntry.second;
@@ -898,6 +914,7 @@ static void updateClonedIVs(
     if (OrigPhi == PrimaryPhi)
       NewPhi->setIncomingValue(BBIdx, VMap[PrimaryArg]);
     else
+      // TODO: Because of the assertion above, this line should never run.,
       NewPhi->setIncomingValue(BBIdx, VMap[Args[ArgIdx++]]);
   }
 }
@@ -906,7 +923,8 @@ static void updateClonedIVs(
 /// the arguments to that helper function.  The map \p VMap will store the
 /// mapping of values in the original function to values in the outlined helper.
 Function *LoopSpawningImpl::createHelperForTapirLoop(
-    TapirLoopInfo *TL, ValueSet &Args, ValueToValueMapTy &VMap) {
+    TapirLoopInfo *TL, ValueSet &Args, unsigned IVArgIndex,
+    ValueToValueMapTy &VMap, ValueToValueMapTy &InputMap) {
   Task *T = TL->getTask();
   Loop *L = TL->getLoop();
   BasicBlock *Header = L->getHeader();
@@ -933,7 +951,7 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
   // If the trip count is variable and we're not otherwise passing the trip
   // count as an argument, temporarily map the trip count to the end argument.
   if (!isa<Constant>(TL->getTripCount()) && !Args.count(TL->getTripCount()))
-    VMap[TL->getTripCount()] = Args[1];
+    VMap[TL->getTripCount()] = Args[IVArgIndex + 1];
 
   Twine NameSuffix = ".ls" + Twine(TL->getLoop()->getLoopDepth());
   SmallVector<ReturnInst *, 4> Returns;  // Ignore returns cloned.
@@ -944,7 +962,7 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
                  F.getSubprogram() != nullptr, Returns,
                  NameSuffix.str(), nullptr, &DetachedRethrowBlocks,
                  &SharedEHEntries, TL->getUnwindDest(), InputSyncRegion,
-                 nullptr, nullptr, nullptr);
+                 nullptr, nullptr, nullptr, nullptr);
 
   assert(Returns.empty() && "Returns cloned when cloning detached CFG.");
   // If the Tapir loop has no unwind destination, then the outlined function
@@ -954,12 +972,15 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
 
   // Update cloned loop condition to use the end-iteration argument.
   unsigned TripCountIdx = 0;
-  if (TL->getCondition()->getOperand(0) != TL->getTripCount())
+  Value *TripCount = TL->getTripCount();
+  if (InputMap[TripCount])
+    TripCount = InputMap[TripCount];
+  if (TL->getCondition()->getOperand(0) != TripCount)
     ++TripCountIdx;
-  assert(TL->getCondition()->getOperand(TripCountIdx) == TL->getTripCount() &&
+  assert(TL->getCondition()->getOperand(TripCountIdx) == TripCount &&
          "Trip count not used in condition");
   ICmpInst *ClonedCond = cast<ICmpInst>(VMap[TL->getCondition()]);
-  ClonedCond->setOperand(TripCountIdx, VMap[Args[1]]);
+  ClonedCond->setOperand(TripCountIdx, VMap[Args[IVArgIndex + 1]]);
 
   // If the trip count is variable and we're not passing the trip count as an
   // argument, undo the eariler temporarily mapping.
@@ -968,14 +989,7 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
     VMap.erase(TL->getTripCount());
 
   // Rewrite cloned IV's to start at their start-iteration arguments.
-  updateClonedIVs(TL, Preheader, Args, VMap);
-
-  // Use a fast calling convention for the helper.
-  Helper->setCallingConv(CallingConv::Fast);
-  // Note that the address of the helper is unimportant.
-  Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  // The helper is private to this module.
-  Helper->setLinkage(GlobalValue::PrivateLinkage);
+  updateClonedIVs(TL, Preheader, Args, VMap, IVArgIndex);
 
   // Add alignment assumptions to arguments of helper, based on alignment of
   // values in old function.
@@ -1054,15 +1068,10 @@ static void addSyncToOutlineReturns(TapirLoopInfo &TL, TaskOutlineInfo &Out,
 
 /// Outline all recorded Tapir loops in the function.
 TaskOutlineMapTy LoopSpawningImpl::outlineAllTapirLoops() {
-  DenseMap<TapirLoopInfo *, std::unique_ptr<LoopOutlineProcessor>>
-    OutlineProcessors;
-
   // Prepare Tapir loops for outlining.
-  // for (TapirLoopInfo *TL : TapirLoops) {
   for (Task *T : post_order(TI.getRootTask())) {
     if (TapirLoopInfo *TL = getTapirLoop(T)) {
       PredicatedScalarEvolution PSE(SE, *TL->getLoop());
-      // TODO: Use the boolean return value of prepareForOutlining.
       bool canOutline = TL->prepareForOutlining(DT, LI, TI, PSE, AC, ORE, TTI);
       if (!canOutline) {
         const Loop *L = TL->getLoop();
@@ -1073,30 +1082,37 @@ TaskOutlineMapTy LoopSpawningImpl::outlineAllTapirLoops() {
         forgetTapirLoop(TL);
         continue;
       }
+
+      // Get an outline processor for each Tapir loop.
       OutlineProcessors[TL] =
         std::unique_ptr<LoopOutlineProcessor>(getOutlineProcessor(TL));
     }
   }
 
   TaskOutlineMapTy TaskToOutline;
+  DenseMap<Loop *, ValueSet> LoopInputSets;
+  DenseMap<Loop *, SmallVector<Value *, 3>> LoopCtlArgs;
+  DenseMap<Loop *, SmallVector<Value *, 3>> LoopCtlInputs;
+
   DenseMap<Loop *, ValueSet> LoopArgs;
   DenseMap<Loop *, SmallVector<Value *, 1>> LoopInputs;
   DenseMap<Loop *, Instruction *> LoopArgStarts;
-  getAllTapirLoopInputs(LoopArgs, LoopInputs, LoopArgStarts);
+
+  getAllTapirLoopInputs(LoopInputSets, LoopCtlArgs, LoopCtlInputs);
 
   associateTasksToTapirLoops();
 
   for (Task *T : post_order(TI.getRootTask())) {
-    LLVM_DEBUG(dbgs() <<
-               "Examining task @ " << T->getEntry()->getName() <<
+    LLVM_DEBUG(dbgs() << "Examining task@" << T->getEntry()->getName() <<
                " for outlining\n");
     // If any subtasks were outlined as Tapir loops, replace these loops with
     // calls to the outlined functions.
     for (Task *SubT : T->subtasks()) {
       if (TapirLoopInfo *TL = getTapirLoop(SubT)) {
         // emitSCEVChecks(TL->getLoop(), TL->getBypass());
+        Loop *L = TL->getLoop();
         TaskToOutline[SubT].replaceReplCall(
-            replaceLoopWithCallToOutline(TL, TaskToOutline[SubT]));
+            replaceLoopWithCallToOutline(TL, TaskToOutline[SubT], LoopInputs[L]));
       }
     }
 
@@ -1107,15 +1123,54 @@ TaskOutlineMapTy LoopSpawningImpl::outlineAllTapirLoops() {
     Loop *L = TL->getLoop();
     LLVM_DEBUG(dbgs() << "Outlining Tapir " << *L << "\n");
 
+    // Convert the inputs of the Tapir loop to inputs to the helper.
+    ValueSet TLInputsFixed;
+    ValueToValueMapTy InputMap;
+    Instruction *ArgStart =
+        fixupHelperInputs(F, T, LoopInputSets[L], TLInputsFixed,
+                          L->getLoopPreheader()->getTerminator(),
+                          &*L->getHeader()->getFirstInsertionPt(),
+                          OutlineProcessors[TL]->getArgStructMode(), InputMap,
+                          L);
+
+    ValueSet HelperArgs;
+    SmallVector<Value *, 8> HelperInputs;
+    OutlineProcessors[TL]->setupLoopOutlineArgs(
+        F, HelperArgs, HelperInputs, LoopInputSets[L], LoopCtlArgs[L],
+        LoopCtlInputs[L], TLInputsFixed);
+
+    LLVM_DEBUG({
+        dbgs() << "HelperArgs:\n";
+        for (Value *V : HelperArgs)
+          dbgs() << "\t" << *V << "\n";
+        dbgs() << "HelperInputs:\n";
+        for (Value *V : HelperInputs)
+          dbgs() << "\t" << *V << "\n";
+      });
+
+    LoopArgs[L] = HelperArgs;
+    for (Value *V : HelperInputs)
+      LoopInputs[L].push_back(V);
+    LoopArgStarts[L] = ArgStart;
+
     ValueToValueMapTy VMap;
     // Create the helper function.
-    Function *Outline = createHelperForTapirLoop(TL, LoopArgs[L], VMap);
-    TaskToOutline[T] = TaskOutlineInfo(Outline, LoopInputs[L], LoopArgStarts[L],
+    Function *Outline = createHelperForTapirLoop(
+        TL, LoopArgs[L], OutlineProcessors[TL]->getIVArgIndex(F, LoopArgs[L]),
+        VMap, InputMap);
+    TaskToOutline[T] = TaskOutlineInfo(Outline, LoopInputSets[L],
+                                       LoopArgStarts[L],
                                        L->getLoopPreheader()->getTerminator(),
                                        TL->getExitBlock(), TL->getUnwindDest());
 
     // Do ABI-dependent processing of each outlined Tapir loop.
     OutlineProcessors[TL]->postProcessOutline(*TL, TaskToOutline[T], VMap);
+
+    LLVM_DEBUG({
+        dbgs() << "LoopInputs[L]:\n";
+        for (Value *V : LoopInputs[L])
+          dbgs() << "\t" << *V << "\n";
+      });
 
     // Add syncs to all exits of the outline.
     //
@@ -1131,9 +1186,16 @@ TaskOutlineMapTy LoopSpawningImpl::outlineAllTapirLoops() {
 
     // Update subtask outline info to reflect the fact that their spawner was
     // outlined.
-    for (Task *SubT : T->subtasks())
-      if (TaskToOutline.count(SubT))
-        TaskToOutline[SubT].remapOutlineInfo(VMap);
+    {
+      LLVM_DEBUG(dbgs() << "Remapping subloop outline info.\n");
+      for (Loop *SubL : *L) {
+        if (TapirLoopInfo *SubTL = getTapirLoop(SubL)) {
+          Task *SubT = SubTL->getTask();
+          if (TaskToOutline.count(SubT))
+            TaskToOutline[SubT].remapOutlineInfo(VMap, InputMap);
+        }
+      }
+    }
   }
 
   return TaskToOutline;
@@ -1154,6 +1216,12 @@ bool LoopSpawningImpl::run() {
 
   // Outline all Tapir loops.
   TaskOutlineMapTy TapirLoopOutlines = outlineAllTapirLoops();
+
+  // Perform target-specific processing of the outlined-loop calls.
+  for (Task *T : post_order(TI.getRootTask()))
+    if (TapirLoopInfo *TL = getTapirLoop(T))
+      OutlineProcessors[TL]->processOutlinedLoopCall(*TL, TapirLoopOutlines[T],
+                                                     DT);
 
   return true;
 }
@@ -1185,6 +1253,8 @@ PreservedAnalyses LoopSpawningPass::run(Module &M, ModuleAnalysisManager &AM) {
     [&FAM](Function &F) -> TargetTransformInfo & {
       return FAM.getResult<TargetIRAnalysis>(F);
     };
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(M);
+  TapirTargetID TargetID = TLI.getTapirTarget();
   auto GetORE =
     [&FAM](Function &F) -> OptimizationRemarkEmitter & {
       return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
@@ -1211,10 +1281,13 @@ PreservedAnalyses LoopSpawningPass::run(Module &M, ModuleAnalysisManager &AM) {
       Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 
+  TapirTarget *Target = getTapirTargetFromID(M, TargetID);
   // Now process each loop.
   for (Function *F : WorkList)
     Changed |= LoopSpawningImpl(*F, GetDT(*F), GetLI(*F), GetTI(*F), GetSE(*F),
-                                GetAC(*F), GetTTI(*F), GetORE(*F)).run();
+                                GetAC(*F), GetTTI(*F), Target,
+                                GetORE(*F)).run();
+  delete Target;
   if (Changed)
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -1236,17 +1309,24 @@ struct LoopSpawningTI : public FunctionPass {
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
+    Module &M = *F.getParent();
 
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto &TI = getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
     auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    TapirTargetID TargetID = TLI.getTapirTarget();
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
     LLVM_DEBUG(dbgs() << "LoopSpawningTI on function " << F.getName() << "\n");
-    return LoopSpawningImpl(F, DT, LI, TI, SE, AC, TTI, ORE).run();
+    TapirTarget *Target = getTapirTargetFromID(M, TargetID);
+    bool Changed = LoopSpawningImpl(F, DT, LI, TI, SE, AC, TTI, Target,
+                                    ORE).run();
+    delete Target;
+    return Changed;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1257,7 +1337,7 @@ struct LoopSpawningTI : public FunctionPass {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    // AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TaskInfoWrapperPass>();
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
@@ -1273,7 +1353,7 @@ INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-// INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)

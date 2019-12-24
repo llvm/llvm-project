@@ -30,10 +30,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "tapirlowering"
 
-static cl::opt<bool> StructTaskArgs(
-    "use-struct-for-task-args", cl::init(false), cl::Hidden,
-    cl::desc("Use a struct to store arguments for detached tasks"));
-
 TapirTarget *llvm::getTapirTargetFromID(Module &M, TapirTargetID ID) {
   switch (ID) {
   case TapirTargetID::Cilk:
@@ -185,10 +181,13 @@ llvm::findAllTaskInputs(Function &F, DominatorTree &DT, TaskInfo &TI) {
 /// constructs in the front end.  This location is NOT the correct place,
 /// however, for handling tasks that are spawned inside of a serial loop.
 std::pair<AllocaInst *, Instruction *>
-llvm::createTaskArgsStruct(ValueSet &Inputs, Task *T,
-                           Instruction *StorePt, Instruction *LoadPt) {
+llvm::createTaskArgsStruct(const ValueSet &Inputs, Task *T,
+                           Instruction *StorePt, Instruction *LoadPt,
+                           bool staticStruct, ValueToValueMapTy &InputsMap,
+                           Loop *TapirL) {
   assert(T && T->getParentTask() && "Expected spawned task.");
-  assert(T->encloses(LoadPt->getParent()) &&
+  assert((T->encloses(LoadPt->getParent()) ||
+          (TapirL && LoadPt->getParent() == TapirL->getHeader())) &&
          "Loads of struct arguments must be inside task.");
   assert(!T->encloses(StorePt->getParent()) &&
          "Store of struct arguments must be outside task.");
@@ -216,23 +215,30 @@ llvm::createTaskArgsStruct(ValueSet &Inputs, Task *T,
   }
 
   // Create an alloca for this struct in the parent task's entry block.
+  Instruction *ArgsStart = StorePt;
+  IRBuilder<> B(StorePt);
+  // TODO: Add lifetime intrinsics for this allocation.
   AllocaInst *Closure;
   StructType *ST = StructType::get(T->getEntry()->getContext(), StructIT);
   LLVM_DEBUG(dbgs() << "Closure struct type " << *ST << "\n");
-  {
+  if (staticStruct) {
     BasicBlock *AllocaInsertBlk = T->getParentTask()->getEntry();
     IRBuilder<> Builder(&*AllocaInsertBlk->getFirstInsertionPt());
     Closure = Builder.CreateAlloca(ST);
+    // Store arguments into the structure
+    if (!StructInputs.empty())
+      ArgsStart = B.CreateStore(StructInputs[0],
+                                B.CreateConstGEP2_32(ST, Closure, 0, 0));
+    for (unsigned i = 1; i < StructInputs.size(); ++i)
+      B.CreateStore(StructInputs[i], B.CreateConstGEP2_32(ST, Closure, 0, i));
+  } else {
+    // Add code to store values into struct immediately before detach.
+    Closure = B.CreateAlloca(ST);
+    ArgsStart = Closure;
+    // Store arguments into the structure
+    for (unsigned i = 0; i < StructInputs.size(); ++i)
+      B.CreateStore(StructInputs[i], B.CreateConstGEP2_32(ST, Closure, 0, i));
   }
-
-  // Add code to store values into struct immediately before detach.
-  Instruction *ArgsStart = StorePt;
-  IRBuilder<> B(StorePt);
-  if (!StructInputs.empty())
-    ArgsStart =
-      B.CreateStore(StructInputs[0], B.CreateConstGEP2_32(ST, Closure, 0, 0));
-  for (unsigned i = 1; i < StructInputs.size(); ++i)
-    B.CreateStore(StructInputs[i], B.CreateConstGEP2_32(ST, Closure, 0, i));
 
   // Add code to load values from struct in task entry and use those loaded
   // values.
@@ -240,6 +246,7 @@ llvm::createTaskArgsStruct(ValueSet &Inputs, Task *T,
   for (unsigned i = 0; i < StructInputs.size(); ++i) {
     auto STGEP = cast<Instruction>(B2.CreateConstGEP2_32(ST, Closure, 0, i));
     auto STLoad = B2.CreateLoad(STGEP);
+    InputsMap[StructInputs[i]] = STLoad;
 
     // Update all uses of the struct inputs in the loop body.
     auto UI = StructInputs[i]->use_begin(), E = StructInputs[i]->use_end();
@@ -247,7 +254,11 @@ llvm::createTaskArgsStruct(ValueSet &Inputs, Task *T,
       Use &U = *UI;
       ++UI;
       auto *Usr = dyn_cast<Instruction>(U.getUser());
-      if (!Usr || !T->encloses(Usr->getParent()))
+      if (!Usr)
+        continue;
+      if ((!T->encloses(Usr->getParent()) &&
+           (!TapirL || (Usr->getParent() != TapirL->getHeader() &&
+                        Usr->getParent() != TapirL->getLoopLatch()))))
         continue;
       U.set(STLoad);
     }
@@ -256,19 +267,9 @@ llvm::createTaskArgsStruct(ValueSet &Inputs, Task *T,
   return std::make_pair(Closure, ArgsStart);
 }
 
-/// Organize the inputs to task \p T, given in \p TaskInputs, to create an
-/// appropriate set of inputs, \p HelperInputs, to pass to the outlined
-/// function for \p T.
-Instruction *llvm::fixupHelperInputs(
-    Function &F, Task *T, ValueSet &TaskInputs, ValueSet &HelperArgs,
-    Instruction *StorePt, Instruction *LoadPt) {
-  if (StructTaskArgs) {
-    std::pair<AllocaInst *, Instruction *> ArgsStructInfo =
-      createTaskArgsStruct(TaskInputs, T, StorePt, LoadPt);
-    HelperArgs.insert(ArgsStructInfo.first);
-    return ArgsStructInfo.second;
-  }
-
+/// Organize the set \p Inputs of values in \p F into a set \p Fixed of values
+/// that can be used as inputs to a helper function.
+void llvm::fixupInputSet(Function &F, const ValueSet &Inputs, ValueSet &Fixed) {
   // Scan for any sret parameters in TaskInputs and add them first.  These
   // parameters must appear first or second in the prototype of the Helper
   // function.
@@ -276,23 +277,23 @@ Instruction *llvm::fixupHelperInputs(
   if (F.hasStructRetAttr()) {
     Function::arg_iterator ArgIter = F.arg_begin();
     if (F.hasParamAttribute(0, Attribute::StructRet))
-      if (TaskInputs.count(&*ArgIter))
+      if (Inputs.count(&*ArgIter))
         SRetInput = &*ArgIter;
     if (F.hasParamAttribute(1, Attribute::StructRet)) {
       ++ArgIter;
-      if (TaskInputs.count(&*ArgIter))
+      if (Inputs.count(&*ArgIter))
         SRetInput = &*ArgIter;
     }
   }
   if (SRetInput) {
     LLVM_DEBUG(dbgs() << "sret input " << *SRetInput << "\n");
-    HelperArgs.insert(SRetInput);
+    Fixed.insert(SRetInput);
   }
 
   // Sort the inputs to the task with largest arguments first, in order to
   // improve packing or arguments in memory.
   SmallVector<Value *, 8> InputsToSort;
-  for (Value *V : TaskInputs)
+  for (Value *V : Inputs)
     if (V != SRetInput)
       InputsToSort.push_back(V);
   LLVM_DEBUG({
@@ -309,9 +310,28 @@ Instruction *llvm::fixupHelperInputs(
 
   // Add the remaining inputs.
   for (Value *V : InputsToSort)
-    if (!HelperArgs.count(V))
-      HelperArgs.insert(V);
+    if (!Fixed.count(V))
+      Fixed.insert(V);
+}
 
+/// Organize the inputs to task \p T, given in \p TaskInputs, to create an
+/// appropriate set of inputs, \p HelperInputs, to pass to the outlined
+/// function for \p T.
+Instruction *llvm::fixupHelperInputs(
+    Function &F, Task *T, ValueSet &TaskInputs, ValueSet &HelperArgs,
+    Instruction *StorePt, Instruction *LoadPt,
+    TapirTarget::ArgStructMode useArgStruct,
+    ValueToValueMapTy &InputsMap, Loop *TapirL) {
+  if (TapirTarget::ArgStructMode::None != useArgStruct) {
+    std::pair<AllocaInst *, Instruction *> ArgsStructInfo =
+      createTaskArgsStruct(TaskInputs, T, StorePt, LoadPt,
+                           TapirTarget::ArgStructMode::Static == useArgStruct,
+                           InputsMap, TapirL);
+    HelperArgs.insert(ArgsStructInfo.first);
+    return ArgsStructInfo.second;
+  }
+
+  fixupInputSet(F, TaskInputs, HelperArgs);
   return StorePt;
 }
 
@@ -363,7 +383,7 @@ void llvm::getTaskBlocks(Task *T, std::vector<BasicBlock *> &TaskBlocks,
 /// \p T to instructions in the new helper function.
 Function *llvm::createHelperForTask(
     Function &F, Task *T, ValueSet &Args, ValueToValueMapTy &VMap,
-    AssumptionCache *AC, DominatorTree *DT) {
+    Type *ReturnType, AssumptionCache *AC, DominatorTree *DT) {
   // Collect all basic blocks in this task.
   std::vector<BasicBlock *> TaskBlocks;
   // Reattach instructions and detached rethrows in this task might need special
@@ -387,19 +407,9 @@ Function *llvm::createHelperForTask(
                  F.getSubprogram() != nullptr, Returns,
                  NameSuffix.str(), &ReattachBlocks,
                  &DetachedRethrowBlocks, &SharedEHEntries, nullptr, nullptr,
-                 nullptr, nullptr, nullptr);
+                 ReturnType, nullptr, nullptr, nullptr);
 
   assert(Returns.empty() && "Returns cloned when cloning detached CFG.");
-
-  // Use a fast calling convention for the helper.
-  Helper->setCallingConv(CallingConv::Fast);
-  // Inlining the helper function is not legal.
-  Helper->removeFnAttr(Attribute::AlwaysInline);
-  Helper->addFnAttr(Attribute::NoInline);
-  // Note that the address of the helper is unimportant.
-  Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  // The helper is private to this module.
-  Helper->setLinkage(GlobalValue::PrivateLinkage);
 
   // Add alignment assumptions to arguments of helper, based on alignment of
   // values in old function.
@@ -467,8 +477,8 @@ static void unlinkTaskEHFromParent(Task *T) {
 /// Replaces the detach instruction that spawns task \p T, with associated
 /// TaskOutlineInfo \p Out, with a call or invoke to the outlined helper function
 /// created for \p T.
-Instruction *llvm::replaceDetachWithCallToOutline(Task *T,
-                                                  TaskOutlineInfo &Out) {
+Instruction *llvm::replaceDetachWithCallToOutline(
+    Task *T, TaskOutlineInfo &Out, SmallVectorImpl<Value *> &OutlineInputs) {
   // Remove any dependencies from T's exception-handling code to T's parent.
   unlinkTaskEHFromParent(T);
 
@@ -480,9 +490,9 @@ Instruction *llvm::replaceDetachWithCallToOutline(Task *T,
     CallInst *TopCall;
     // Create call instruction.
     IRBuilder<> Builder(Out.ReplCall);
-    TopCall = Builder.CreateCall(Out.Outline, Out.OutlineInputs);
+    TopCall = Builder.CreateCall(Out.Outline, OutlineInputs);
     // Use a fast calling convention for the outline.
-    TopCall->setCallingConv(CallingConv::Fast);
+    TopCall->setCallingConv(Out.Outline->getCallingConv());
     TopCall->setDebugLoc(DI->getDebugLoc());
     TopCall->setDoesNotThrow();
     // Replace the detach with an unconditional branch to its continuation.
@@ -495,9 +505,9 @@ Instruction *llvm::replaceDetachWithCallToOutline(Task *T,
     // Create invoke instruction.  The ordinary return of the invoke is the
     // detach's continuation, and the unwind return is the detach's unwind.
     TopCall = InvokeInst::Create(Out.Outline, Out.ReplRet, Out.ReplUnwind,
-                                 Out.OutlineInputs);
+                                 OutlineInputs);
     // Use a fast calling convention for the outline.
-    TopCall->setCallingConv(CallingConv::Fast);
+    TopCall->setCallingConv(Out.Outline->getCallingConv());
     TopCall->setDebugLoc(DI->getDebugLoc());
     // Replace the detach with the invoke.
     ReplaceInstWithInst(Out.ReplCall, TopCall);
@@ -510,7 +520,9 @@ Instruction *llvm::replaceDetachWithCallToOutline(Task *T,
 /// to instructions in the new helper function.  Information about the helper
 /// function is returned as a TaskOutlineInfo structure.
 TaskOutlineInfo llvm::outlineTask(
-    Task *T, ValueSet &Inputs, ValueToValueMapTy &VMap, AssumptionCache *AC,
+    Task *T, ValueSet &Inputs, SmallVectorImpl<Value *> &HelperInputs,
+    ValueToValueMapTy &VMap, TapirTarget::ArgStructMode useArgStruct,
+    Type *ReturnType, ValueToValueMapTy &InputMap, AssumptionCache *AC,
     DominatorTree *DT) {
   assert(!T->isRootTask() && "Cannot outline the root task.");
   Function &F = *T->getEntry()->getParent();
@@ -520,15 +532,17 @@ TaskOutlineInfo llvm::outlineTask(
   ValueSet HelperArgs;
   Instruction *ArgsStart =
     fixupHelperInputs(F, T, Inputs, HelperArgs, DI,
-                      T->getEntry()->getFirstNonPHIOrDbgOrLifetime());
-  SmallVector<Value *, 8> HelperInputs;
+                      T->getEntry()->getFirstNonPHIOrDbgOrLifetime(),
+                      useArgStruct, InputMap);
+  // SmallVector<Value *, 8> HelperInputs;
   for (Value *V : HelperArgs)
     HelperInputs.push_back(V);
 
   // Clone the blocks into a helper function.
-  Function *Helper = createHelperForTask(F, T, HelperArgs, VMap, AC, DT);
-  return TaskOutlineInfo(Helper, HelperInputs, ArgsStart, DI, DI->getContinue(),
-                         DI->getUnwindDest());
+  Function *Helper = createHelperForTask(F, T, HelperArgs, VMap, ReturnType, AC,
+                                         DT);
+  return TaskOutlineInfo(Helper, Inputs, /*HelperInputs,*/ ArgsStart, DI,
+                         DI->getContinue(), DI->getUnwindDest());
 }
 
 //----------------------------------------------------------------------------//
@@ -601,14 +615,15 @@ ValueSet llvm::getTapirLoopInputs(TapirLoopInfo *TL, ValueSet &TaskInputs) {
 
 /// Replaces the Tapir loop \p TL, with associated TaskOutlineInfo \p Out, with
 /// a call or invoke to the outlined helper function created for \p TL.
-Instruction *llvm::replaceLoopWithCallToOutline(TapirLoopInfo *TL,
-                                                TaskOutlineInfo &Out) {
+Instruction *llvm::replaceLoopWithCallToOutline(
+    TapirLoopInfo *TL, TaskOutlineInfo &Out,
+    SmallVectorImpl<Value *> &OutlineInputs) {
   // Remove any dependencies from the detach unwind of T code to T's parent.
   unlinkTaskEHFromParent(TL->getTask());
 
   LLVM_DEBUG({
       dbgs() << "Creating call with arguments:\n";
-      for (Value *V : Out.OutlineInputs)
+      for (Value *V : OutlineInputs)
         dbgs() << "\t" << *V << "\n";
     });
 
@@ -619,9 +634,9 @@ Instruction *llvm::replaceLoopWithCallToOutline(TapirLoopInfo *TL,
     CallInst *TopCall;
     // Create call instruction.
     IRBuilder<> Builder(Out.ReplCall);
-    TopCall = Builder.CreateCall(Out.Outline, Out.OutlineInputs);
+    TopCall = Builder.CreateCall(Out.Outline, OutlineInputs);
     // Use a fast calling convention for the outline.
-    TopCall->setCallingConv(CallingConv::Fast);
+    TopCall->setCallingConv(Out.Outline->getCallingConv());
     TopCall->setDebugLoc(TL->getDebugLoc());
     TopCall->setDoesNotThrow();
     // Replace the loop with an unconditional branch to its exit.
@@ -636,9 +651,9 @@ Instruction *llvm::replaceLoopWithCallToOutline(TapirLoopInfo *TL,
     // Create invoke instruction.  The ordinary return of the invoke is the
     // detach's continuation, and the unwind return is the detach's unwind.
     TopCall = InvokeInst::Create(Out.Outline, Out.ReplRet, Out.ReplUnwind,
-                                 Out.OutlineInputs);
+                                 OutlineInputs);
     // Use a fast calling convention for the outline.
-    TopCall->setCallingConv(CallingConv::Fast);
+    TopCall->setCallingConv(Out.Outline->getCallingConv());
     TopCall->setDebugLoc(TL->getDebugLoc());
     // Replace the loop with the invoke.
     L->getHeader()->removePredecessor(Out.ReplCall->getParent());
@@ -651,8 +666,35 @@ Instruction *llvm::replaceLoopWithCallToOutline(TapirLoopInfo *TL,
   }
 }
 
+bool TapirTarget::shouldProcessFunction(const Function &F) const {
+  if (F.getName() == "main")
+    return true;
+
+  if (canDetach(&F))
+    return true;
+
+  for (const Instruction &I : instructions(&F))
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+      if (Intrinsic::tapir_loop_grainsize == II->getIntrinsicID())
+        return true;
+
+  return false;
+}
+
+void TapirTarget::lowerTaskFrameAddrCall(CallInst *TaskFrameAddrCall) {
+  // By default, replace calls to task_frameaddress with ordinary calls to the
+  // frameaddress intrinsic.
+  TaskFrameAddrCall->setCalledFunction(
+      Intrinsic::getDeclaration(&M, Intrinsic::frameaddress));
+}
+
+
 //----------------------------------------------------------------------------//
 // Old lowering utils
+
+static cl::opt<bool> StructTaskArgs(
+    "use-struct-for-task-args", cl::init(false), cl::Hidden,
+    cl::desc("Use a struct to store arguments for detached tasks"));
 
 /// Extracts a detached task into a separate function.  Inserts a call or invoke
 /// in place of the original detach instruction.  Returns a pointer to the
@@ -816,7 +858,7 @@ Function *llvm::extractDetachBodyToFunction(
                              VMap, F.getParent(),
                              F.getSubprogram() != nullptr, Returns, ".cilk",
                              &ExitBlocks, nullptr,
-                             nullptr, nullptr, nullptr, nullptr);
+                             nullptr, nullptr, nullptr, nullptr, nullptr);
 
     assert(Returns.empty() && "Returns cloned when cloning detached CFG.");
 
@@ -879,26 +921,4 @@ Function *llvm::extractDetachBodyToFunction(
     // the stack appropriately.
   }
   return Extracted;
-}
-
-bool TapirTarget::shouldProcessFunction(const Function &F) {
-  if (F.getName() == "main")
-    return true;
-
-  if (canDetach(&F))
-    return true;
-
-  for (const Instruction &I : instructions(&F))
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
-      if (Intrinsic::tapir_loop_grainsize == II->getIntrinsicID())
-        return true;
-
-  return false;
-}
-
-void TapirTarget::lowerTaskFrameAddrCall(CallInst *TaskFrameAddrCall) {
-  // By default, replace calls to task_frameaddress with ordinary calls to the
-  // frameaddress intrinsic.
-  TaskFrameAddrCall->setCalledFunction(
-      Intrinsic::getDeclaration(&M, Intrinsic::frameaddress));
 }
