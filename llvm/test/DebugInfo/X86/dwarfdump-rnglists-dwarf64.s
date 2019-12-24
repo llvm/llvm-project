@@ -109,6 +109,7 @@ CU_split_5_64_version:
         .byte 5                # DWARF Unit Type
         .byte 4                # Address Size (in bytes)
         .quad 0                # Offset Into Abbrev Section
+        .quad 0xdeadbeefbaadf00d  # DWO id
 # The compile-unit DIE, which has DW_AT_rnglists_base and DW_AT_ranges.
         .byte 1                # Abbreviation code
         .uleb128 1             # DW_AT_ranges
