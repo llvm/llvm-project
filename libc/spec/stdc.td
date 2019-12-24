@@ -1,5 +1,4 @@
 def StdC : StandardSpec<"stdc"> {
-  PtrType VoidPtr = PtrType<VoidType>;
   ConstType ConstVoidPtr = ConstType<VoidPtr>;
   RestrictedPtrType VoidRestrictedPtr = RestrictedPtrType<VoidType>;
   ConstType ConstVoidRestrictedPtr = ConstType<VoidRestrictedPtr>;
@@ -8,8 +7,6 @@ def StdC : StandardSpec<"stdc"> {
   ConstType ConstCharPtr = ConstType<CharPtr>;
   RestrictedPtrType CharRestrictedPtr = RestrictedPtrType<CharType>;
   ConstType ConstCharRestrictedPtr = ConstType<CharRestrictedPtr>;
-
-  NamedType SizeTType = NamedType<"size_t">;
 
   HeaderSpec String = HeaderSpec<
       "string.h",

@@ -8,6 +8,10 @@ add_entrypoint_library(
     # string.h entrypoints
     strcpy
     strcat
+
+    # sys/mman.h entrypoints
+    mmap
+    munmap
 )
 
 add_entrypoint_library(
