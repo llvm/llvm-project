@@ -20,7 +20,7 @@
 // DO NOT EDIT! THIS FILE HAS BEEN GENERATED!
 //
 // Generated with: generate_netbsd_syscalls.awk
-// Generated date: 2019-11-01
+// Generated date: 2019-12-24
 // Generated from: syscalls.master,v 1.296 2019/09/22 22:59:39 christos Exp
 //
 //===----------------------------------------------------------------------===//

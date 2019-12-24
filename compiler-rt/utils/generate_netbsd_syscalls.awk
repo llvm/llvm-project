@@ -19,7 +19,7 @@
 # This script will emit compat code for the older releases.
 #
 # NetBSD minimal version supported 9.0.
-# NetBSD current version supported 9.99.17.
+# NetBSD current version supported 9.99.30.
 #
 #===------------------------------------------------------------------------===#
 
@@ -733,6 +733,14 @@ function syscall_body(syscall, mode)
       pcmd("  PRE_READ(addr_, struct_ptrace_ptrace_siginfo_struct_sz);")
       pcmd("} else if (req_ == ptrace_pt_get_siginfo) {")
       pcmd("  PRE_WRITE(addr_, struct_ptrace_ptrace_siginfo_struct_sz);")
+      pcmd("} else if (req_ == ptrace_pt_lwpstatus) {")
+      pcmd("  struct __sanitizer_ptrace_lwpstatus *addr = (struct __sanitizer_ptrace_lwpstatus *)addr_;")
+      pcmd("  PRE_READ(&addr->pl_lwpid, sizeof(__sanitizer_lwpid_t));")
+      pcmd("  PRE_WRITE(addr, struct_ptrace_ptrace_lwpstatus_struct_sz);")
+      pcmd("} else if (req_ == ptrace_pt_lwpnext) {")
+      pcmd("  struct __sanitizer_ptrace_lwpstatus *addr = (struct __sanitizer_ptrace_lwpstatus *)addr_;")
+      pcmd("  PRE_READ(&addr->pl_lwpid, sizeof(__sanitizer_lwpid_t));")
+      pcmd("  PRE_WRITE(addr, struct_ptrace_ptrace_lwpstatus_struct_sz);")
       pcmd("} else if (req_ == ptrace_pt_setregs) {")
       pcmd("  PRE_READ(addr_, struct_ptrace_reg_struct_sz);")
       pcmd("} else if (req_ == ptrace_pt_getregs) {")
@@ -769,6 +777,14 @@ function syscall_body(syscall, mode)
       pcmd("    POST_READ(addr_, struct_ptrace_ptrace_siginfo_struct_sz);")
       pcmd("  } else if (req_ == ptrace_pt_get_siginfo) {")
       pcmd("    POST_WRITE(addr_, struct_ptrace_ptrace_siginfo_struct_sz);")
+      pcmd("  } else if (req_ == ptrace_pt_lwpstatus) {")
+      pcmd("    struct __sanitizer_ptrace_lwpstatus *addr = (struct __sanitizer_ptrace_lwpstatus *)addr_;")
+      pcmd("    POST_READ(&addr->pl_lwpid, sizeof(__sanitizer_lwpid_t));")
+      pcmd("    POST_WRITE(addr, struct_ptrace_ptrace_lwpstatus_struct_sz);")
+      pcmd("  } else if (req_ == ptrace_pt_lwpnext) {")
+      pcmd("    struct __sanitizer_ptrace_lwpstatus *addr = (struct __sanitizer_ptrace_lwpstatus *)addr_;")
+      pcmd("    POST_READ(&addr->pl_lwpid, sizeof(__sanitizer_lwpid_t));")
+      pcmd("    POST_WRITE(addr, struct_ptrace_ptrace_lwpstatus_struct_sz);")
       pcmd("  } else if (req_ == ptrace_pt_setregs) {")
       pcmd("    POST_READ(addr_, struct_ptrace_reg_struct_sz);")
       pcmd("  } else if (req_ == ptrace_pt_getregs) {")
