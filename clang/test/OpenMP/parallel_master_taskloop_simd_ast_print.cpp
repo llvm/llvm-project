@@ -62,7 +62,7 @@ T tmain(T argc) {
 
 // CHECK-LABEL: int main(int argc, char **argv) {
 int main(int argc, char **argv) {
-  int b = argc, c, d, e, f, g;
+  int b = argc, c, d, e, f, g, h;
   static int a;
 // CHECK: static int a;
 #pragma omp taskgroup task_reduction(+: d)

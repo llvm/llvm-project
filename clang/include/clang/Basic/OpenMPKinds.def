@@ -212,6 +212,9 @@
 #ifndef OPENMP_CONTEXT_SELECTOR
 #define OPENMP_CONTEXT_SELECTOR(Name)
 #endif
+#ifndef OPENMP_LASTPRIVATE_KIND
+#define OPENMP_LASTPRIVATE_KIND(Name)
+#endif
 
 // OpenMP context selector sets.
 OPENMP_CONTEXT_SELECTOR_SET(implementation)
@@ -1057,6 +1060,10 @@ OPENMP_DEVICE_TYPE_KIND(any)
 // Clauses allowed for OpenMP directive 'declare variant'.
 OPENMP_DECLARE_VARIANT_CLAUSE(match)
 
+// Type of the 'lastprivate' clause.
+OPENMP_LASTPRIVATE_KIND(conditional)
+
+#undef OPENMP_LASTPRIVATE_KIND
 #undef OPENMP_CONTEXT_SELECTOR
 #undef OPENMP_CONTEXT_SELECTOR_SET
 #undef OPENMP_DECLARE_VARIANT_CLAUSE

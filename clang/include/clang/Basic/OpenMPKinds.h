@@ -195,6 +195,13 @@ enum OpenMPDeviceType {
   OMPC_DEVICE_TYPE_unknown
 };
 
+/// OpenMP 'lastprivate' clause modifier.
+enum OpenMPLastprivateModifier {
+#define OPENMP_LASTPRIVATE_KIND(Name) OMPC_LASTPRIVATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_LASTPRIVATE_unknown,
+};
+
 /// Scheduling data for loop-based OpenMP directives.
 struct OpenMPScheduleTy final {
   OpenMPScheduleClauseKind Schedule = OMPC_SCHEDULE_unknown;

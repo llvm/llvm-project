@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp-simd %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -66,7 +68,7 @@ S3 h;
 
 template <class I, class C>
 int foomain(int argc, char **argv) {
-  I e(4);
+  I e(4); // omp50-note {{'e' defined here}}
   I g(5);
   int i;
   int &j = i;
@@ -95,6 +97,10 @@ int foomain(int argc, char **argv) {
     foo();
   }
 #pragma omp parallel sections lastprivate(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
+  {
+    foo();
+  }
+#pragma omp parallel sections lastprivate(conditional: e,argc) lastprivate(conditional: // omp50-error {{expected expression}} omp45-error 2 {{use of undeclared identifier 'conditional'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected list item of scalar type in 'lastprivate' clause with 'conditional' modifier}}
   {
     foo();
   }
