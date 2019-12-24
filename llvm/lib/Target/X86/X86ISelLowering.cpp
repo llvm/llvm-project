@@ -19782,14 +19782,16 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
         return Res;
       }
       SDValue Res, Chain;
-      unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
       if (IsStrict) {
+        unsigned Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI
+                                : X86ISD::STRICT_CVTTP2UI;
         Res =
             DAG.getNode(Opc, dl, {ResVT, MVT::Other}, {Op->getOperand(0), Src});
         Chain = Res.getValue(1);
-      } else
-        Res = DAG.getNode(Opc, dl, {ResVT, MVT::Other},
-                          {DAG.getEntryNode(), Src});
+      } else {
+        unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+        Res = DAG.getNode(Opc, dl, ResVT, Src);
+      }
       Res = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Res);
       Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i1, Res,
                         DAG.getIntPtrConstant(0, dl));
@@ -19802,14 +19804,13 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     if (VT == MVT::v2i64 && SrcVT  == MVT::v2f32) {
       SDValue Tmp = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
                                 DAG.getUNDEF(MVT::v2f32));
-      unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
-      SDValue Res, Chain;
       if (IsStrict) {
-        Res = DAG.getNode(Opc, dl, {VT, MVT::Other}, {Op->getOperand(0), Tmp});
-        Chain = Res.getValue(1);
-        return DAG.getMergeValues({Res, Chain}, dl);
+        unsigned Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI
+                                : X86ISD::STRICT_CVTTP2UI;
+        return DAG.getNode(Opc, dl, {VT, MVT::Other}, {Op->getOperand(0), Tmp});
       }
-      return DAG.getNode(Opc, dl, {VT, MVT::Other}, {DAG.getEntryNode(), Tmp});
+      unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+      return DAG.getNode(Opc, dl, VT, Tmp);
     }
 
     return SDValue();
@@ -20972,8 +20973,6 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   bool IsStrict = Op.getOpcode() == ISD::STRICT_FSETCC ||
                   Op.getOpcode() == ISD::STRICT_FSETCCS;
-  bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
-  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
   SDValue Op0 = Op.getOperand(IsStrict ? 1 : 0);
   SDValue Op1 = Op.getOperand(IsStrict ? 2 : 1);
   SDValue CC = Op.getOperand(IsStrict ? 3 : 2);
@@ -20988,12 +20987,15 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     assert(EltVT == MVT::f32 || EltVT == MVT::f64);
 #endif
 
+    bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
+    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+
     unsigned Opc;
     if (Subtarget.hasAVX512() && VT.getVectorElementType() == MVT::i1) {
       assert(VT.getVectorNumElements() <= 16);
-      Opc = X86ISD::CMPM;
+      Opc = IsStrict ? X86ISD::STRICT_CMPM : X86ISD::CMPM;
     } else {
-      Opc = X86ISD::CMPP;
+      Opc = IsStrict ? X86ISD::STRICT_CMPP : X86ISD::CMPP;
       // The SSE/AVX packed FP comparison nodes are defined with a
       // floating-point vector result that matches the operand type. This allows
       // them to work with an SSE1 target (integer vector types are not legal).
@@ -21044,37 +21046,51 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
           CombineOpc = X86ISD::FAND;
         }
 
-        SDValue Cmp0 = DAG.getNode(
-            Opc, dl, {VT, MVT::Other},
-            {Chain, Op0, Op1, DAG.getTargetConstant(CC0, dl, MVT::i8)});
-        SDValue Cmp1 = DAG.getNode(
-            Opc, dl, {VT, MVT::Other},
-            {Chain, Op0, Op1, DAG.getTargetConstant(CC1, dl, MVT::i8)});
-        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Cmp0.getValue(1),
-                            Cmp1.getValue(1));
+        SDValue Cmp0, Cmp1;
+        if (IsStrict) {
+          Cmp0 = DAG.getNode(
+              Opc, dl, {VT, MVT::Other},
+              {Chain, Op0, Op1, DAG.getTargetConstant(CC0, dl, MVT::i8)});
+          Cmp1 = DAG.getNode(
+              Opc, dl, {VT, MVT::Other},
+              {Chain, Op0, Op1, DAG.getTargetConstant(CC1, dl, MVT::i8)});
+          Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Cmp0.getValue(1),
+                              Cmp1.getValue(1));
+        } else {
+          Cmp0 = DAG.getNode(
+              Opc, dl, VT, Op0, Op1, DAG.getTargetConstant(CC0, dl, MVT::i8));
+          Cmp1 = DAG.getNode(
+              Opc, dl, VT, Op0, Op1, DAG.getTargetConstant(CC1, dl, MVT::i8));
+        }
         Cmp = DAG.getNode(CombineOpc, dl, VT, Cmp0, Cmp1);
       } else {
+        if (IsStrict) {
+          Cmp = DAG.getNode(
+              Opc, dl, {VT, MVT::Other},
+              {Chain, Op0, Op1, DAG.getTargetConstant(SSECC, dl, MVT::i8)});
+          Chain = Cmp.getValue(1);
+        } else
+          Cmp = DAG.getNode(
+              Opc, dl, VT, Op0, Op1, DAG.getTargetConstant(SSECC, dl, MVT::i8));
+      }
+    } else {
+      // Handle all other FP comparisons here.
+      if (IsStrict) {
+        // Make a flip on already signaling CCs before setting bit 4 of AVX CC.
+        SSECC |= (IsAlwaysSignaling ^ IsSignaling) << 4;
         Cmp = DAG.getNode(
             Opc, dl, {VT, MVT::Other},
             {Chain, Op0, Op1, DAG.getTargetConstant(SSECC, dl, MVT::i8)});
         Chain = Cmp.getValue(1);
-      }
-    } else {
-      // Handle all other FP comparisons here.
-      if (IsStrict)
-        // Make a flip on already signaling CCs before setting bit 4 of AVX CC.
-        SSECC |= (IsAlwaysSignaling ^ IsSignaling) << 4;
-      Cmp = DAG.getNode(
-          Opc, dl, {VT, MVT::Other},
-          {Chain, Op0, Op1, DAG.getTargetConstant(SSECC, dl, MVT::i8)});
-      Chain = Cmp.getValue(1);
+      } else
+        Cmp = DAG.getNode(
+            Opc, dl, VT, Op0, Op1, DAG.getTargetConstant(SSECC, dl, MVT::i8));
     }
 
     // If this is SSE/AVX CMPP, bitcast the result back to integer to match the
     // result type of SETCC. The bitcast is expected to be optimized away
     // during combining/isel.
-    if (Opc == X86ISD::CMPP)
-      Cmp = DAG.getBitcast(Op.getSimpleValueType(), Cmp);
+    Cmp = DAG.getBitcast(Op.getSimpleValueType(), Cmp);
 
     if (IsStrict)
       return DAG.getMergeValues({Cmp, Chain}, dl);
@@ -23151,26 +23167,6 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   return DAG.getNode(ISD::SUB, dl, PtrVT, RegNodeBase, ParentFrameOffset);
 }
 
-// We share some nodes between STRICT and non STRICT FP intrinsics.
-// For these nodes, we need chain them to entry token if they are not called
-// by STRICT FP intrinsics.
-static SDValue getProperNode(unsigned Opcode, const SDLoc &dl, EVT VT,
-                             ArrayRef<SDValue> Ops, SelectionDAG &DAG) {
-  switch (Opcode) {
-  default:
-    return DAG.getNode(Opcode, dl, VT, Ops);
-  case X86ISD::CVTTP2SI:
-  case X86ISD::CVTTP2UI:
-  case X86ISD::CMPP:
-  case X86ISD::CMPM:
-    break;
-  }
-
-  SmallVector<SDValue, 6> NewOps = {DAG.getEntryNode()};
-  NewOps.append(Ops.begin(), Ops.end());
-  return DAG.getNode(Opcode, dl, {VT, MVT::Other}, NewOps);
-}
-
 SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                    SelectionDAG &DAG) const {
   // Helper to detect if the operand is CUR_DIRECTION rounding mode.
@@ -23232,8 +23228,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         if (!isRoundModeCurDirection(Rnd))
           return SDValue();
       }
-      return getProperNode(IntrData->Opc0, dl, Op.getValueType(),
-                           Op.getOperand(1), DAG);
+      return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
+                         Op.getOperand(1));
     }
     case INTR_TYPE_1OP_SAE: {
       SDValue Sae = Op.getOperand(2);
@@ -23304,8 +23300,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           return SDValue();
       }
 
-      return getProperNode(IntrData->Opc0, dl, Op.getValueType(),
-                           {Src1, Src2, Src3}, DAG);
+      return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
+                         {Src1, Src2, Src3});
     }
     case INTR_TYPE_4OP:
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1),
@@ -23330,7 +23326,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           return SDValue();
       }
       return getVectorMaskingNode(
-          getProperNode(IntrData->Opc0, dl, VT, Src, DAG), Mask, PassThru,
+          DAG.getNode(IntrData->Opc0, dl, VT, Src), Mask, PassThru,
           Subtarget, DAG);
     }
     case INTR_TYPE_1OP_MASK_SAE: {
@@ -23347,8 +23343,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       else
         return SDValue();
 
-      return getVectorMaskingNode(getProperNode(Opc, dl, VT, Src, DAG), Mask,
-                                  PassThru, Subtarget, DAG);
+      return getVectorMaskingNode(DAG.getNode(Opc, dl, VT, Src), Mask, PassThru,
+                                  Subtarget, DAG);
     }
     case INTR_TYPE_SCALAR_MASK: {
       SDValue Src1 = Op.getOperand(1);
@@ -23554,8 +23550,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           return SDValue();
       }
       //default rounding mode
-      return getProperNode(IntrData->Opc0, dl, MaskVT,
-                           {Op.getOperand(1), Op.getOperand(2), CC}, DAG);
+      return DAG.getNode(IntrData->Opc0, dl, MaskVT,
+                         {Op.getOperand(1), Op.getOperand(2), CC});
     }
     case CMP_MASK_SCALAR_CC: {
       SDValue Src1 = Op.getOperand(1);
@@ -23750,13 +23746,13 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Mask = Op.getOperand(3);
 
       if (isAllOnesConstant(Mask))
-        return getProperNode(IntrData->Opc0, dl, Op.getValueType(), Src, DAG);
+        return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Src);
 
       MVT SrcVT = Src.getSimpleValueType();
       MVT MaskVT = MVT::getVectorVT(MVT::i1, SrcVT.getVectorNumElements());
       Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
-      return getProperNode(IntrData->Opc1, dl, Op.getValueType(),
-                           {Src, PassThru, Mask}, DAG);
+      return DAG.getNode(IntrData->Opc1, dl, Op.getValueType(),
+                         {Src, PassThru, Mask});
     }
     case CVTPS2PH_MASK: {
       SDValue Src = Op.getOperand(1);
@@ -28666,16 +28662,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
           // legalization to v8i32<-v8f64.
           return;
         }
-        unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
         SDValue Res;
         SDValue Chain;
         if (IsStrict) {
+          unsigned Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI
+                                  : X86ISD::STRICT_CVTTP2UI;
           Res = DAG.getNode(Opc, dl, {MVT::v4i32, MVT::Other},
                             {N->getOperand(0), Src});
           Chain = Res.getValue(1);
-        } else
-          Res = DAG.getNode(Opc, dl, {MVT::v4i32, MVT::Other},
-                            {DAG.getEntryNode(), Src});
+        } else {
+          unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+          Res = DAG.getNode(Opc, dl, MVT::v4i32, Src);
+        }
         Results.push_back(Res);
         if (IsStrict)
           Results.push_back(Chain);
@@ -29114,6 +29112,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::COMI:               return "X86ISD::COMI";
   case X86ISD::UCOMI:              return "X86ISD::UCOMI";
   case X86ISD::CMPM:               return "X86ISD::CMPM";
+  case X86ISD::STRICT_CMPM:        return "X86ISD::STRICT_CMPM";
   case X86ISD::CMPM_SAE:           return "X86ISD::CMPM_SAE";
   case X86ISD::SETCC:              return "X86ISD::SETCC";
   case X86ISD::SETCC_CARRY:        return "X86ISD::SETCC_CARRY";
@@ -29221,6 +29220,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VROTRI:             return "X86ISD::VROTRI";
   case X86ISD::VPPERM:             return "X86ISD::VPPERM";
   case X86ISD::CMPP:               return "X86ISD::CMPP";
+  case X86ISD::STRICT_CMPP:        return "X86ISD::STRICT_CMPP";
   case X86ISD::PCMPEQ:             return "X86ISD::PCMPEQ";
   case X86ISD::PCMPGT:             return "X86ISD::PCMPGT";
   case X86ISD::PHMINPOS:           return "X86ISD::PHMINPOS";
@@ -29382,6 +29382,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::UINT_TO_FP_RND:     return "X86ISD::UINT_TO_FP_RND";
   case X86ISD::CVTTP2SI:           return "X86ISD::CVTTP2SI";
   case X86ISD::CVTTP2UI:           return "X86ISD::CVTTP2UI";
+  case X86ISD::STRICT_CVTTP2SI:    return "X86ISD::STRICT_CVTTP2SI";
+  case X86ISD::STRICT_CVTTP2UI:    return "X86ISD::STRICT_CVTTP2UI";
   case X86ISD::MCVTTP2SI:          return "X86ISD::MCVTTP2SI";
   case X86ISD::MCVTTP2UI:          return "X86ISD::MCVTTP2UI";
   case X86ISD::CVTTP2SI_SAE:       return "X86ISD::CVTTP2SI_SAE";
@@ -34783,6 +34785,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       break;
     case X86ISD::CVTP2SI:   case X86ISD::CVTP2UI:
     case X86ISD::MCVTP2SI:  case X86ISD::MCVTP2UI:
+    case X86ISD::CVTTP2SI:  case X86ISD::CVTTP2UI:
     case X86ISD::MCVTTP2SI: case X86ISD::MCVTTP2UI:
     case X86ISD::CVTSI2P:   case X86ISD::CVTUI2P:
     case X86ISD::MCVTSI2P:  case X86ISD::MCVTUI2P:
@@ -34791,8 +34794,8 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
           In.getOperand(0).getValueType() == MVT::v2i64)
         return N->getOperand(0); // return the bitcast
       break;
-    case X86ISD::CVTTP2SI:
-    case X86ISD::CVTTP2UI:
+    case X86ISD::STRICT_CVTTP2SI:
+    case X86ISD::STRICT_CVTTP2UI:
       if (In.getOperand(1).getValueType() == MVT::v2f64 ||
           In.getOperand(1).getValueType() == MVT::v2i64)
         return N->getOperand(0);
@@ -42497,14 +42500,11 @@ static SDValue combineX86INT_TO_FP(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI) {
+  // FIXME: Handle strict fp nodes.
   EVT VT = N->getValueType(0);
 
   // Convert a full vector load into vzload when not all bits are needed.
-  SDValue In;
-  if (N->getOpcode() == X86ISD::CVTTP2SI || N->getOpcode() == X86ISD::CVTTP2UI)
-    In = N->getOperand(1);
-  else
-    In = N->getOperand(0);
+  SDValue In = N->getOperand(0);
   MVT InVT = In.getSimpleValueType();
   if (VT.getVectorNumElements() < InVT.getVectorNumElements() &&
       ISD::isNormalLoad(In.getNode()) && In.hasOneUse()) {
@@ -42523,13 +42523,9 @@ static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
                                   LN->getPointerInfo(),
                                   LN->getAlignment(),
                                   LN->getMemOperand()->getFlags());
-      SDValue Convert = getProperNode(N->getOpcode(), dl, VT,
-                                      DAG.getBitcast(InVT, VZLoad), DAG);
-      if (Convert->getOpcode() == X86ISD::CVTTP2SI ||
-          Convert->getOpcode() == X86ISD::CVTTP2UI)
-        DCI.CombineTo(N, Convert.getValue(0), Convert.getValue(1));
-      else
-        DCI.CombineTo(N, Convert);
+      SDValue Convert = DAG.getNode(N->getOpcode(), dl, VT,
+                                    DAG.getBitcast(InVT, VZLoad));
+      DCI.CombineTo(N, Convert);
       DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
       return SDValue(N, 0);
     }
