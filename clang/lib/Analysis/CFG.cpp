@@ -5919,7 +5919,7 @@ const Expr *CFGBlock::getLastCondition() const {
     return nullptr;
 
   const Stmt *Cond = StmtElem->getStmt();
-  if (isa<ObjCForCollectionStmt>(Cond))
+  if (isa<ObjCForCollectionStmt>(Cond) || isa<DeclStmt>(Cond))
     return nullptr;
 
   // Only ObjCForCollectionStmt is known not to be a non-Expr terminator, hence
