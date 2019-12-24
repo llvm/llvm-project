@@ -48,12 +48,12 @@ class SelectionDAGISel : public MachineFunctionPass {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
-  FunctionLoweringInfo *FuncInfo;
+  std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   SwiftErrorValueTracking *SwiftError;
   MachineFunction *MF;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
-  SelectionDAGBuilder *SDB;
+  std::unique_ptr<SelectionDAGBuilder> SDB;
   AAResults *AA;
   GCFunctionInfo *GFI;
   CodeGenOpt::Level OptLevel;
