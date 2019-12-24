@@ -25,6 +25,8 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 
+#include "ProcessDpu.h"
+
 extern "C" {
 #include <dpu.h>
 }
@@ -33,7 +35,7 @@ namespace lldb_private {
 namespace dpu {
 
 static inline lldb::addr_t InstIdx2InstAddr(lldb::addr_t nb_of_inst) {
-  return nb_of_inst * sizeof(dpuinstruction_t);
+  return (nb_of_inst * sizeof(dpuinstruction_t)) | k_dpu_iram_base;
 }
 
 class DpuContext {

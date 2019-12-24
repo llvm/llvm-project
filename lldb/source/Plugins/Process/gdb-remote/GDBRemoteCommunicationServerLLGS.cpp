@@ -186,6 +186,10 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       &GDBRemoteCommunicationServerLLGS::Handle_QPassSignals);
 
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDpuPrintInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDpuPrintInfo);
+
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jSaveCore,
       &GDBRemoteCommunicationServerLLGS::Handle_jSaveCore);
   RegisterMemberFunctionHandler(
@@ -1170,6 +1174,46 @@ void GDBRemoteCommunicationServerLLGS::SendProcessOutput() {
       return;
     }
   }
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qDpuPrintInfo(
+    StringExtractorGDBRemote &packet) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
+  // Fail if we don't have a current process.
+  if (!m_debugged_process_up ||
+      (m_debugged_process_up->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  if (!packet.ConsumeFront("qDpuPrintInfo:"))
+    return SendIllFormedResponse(packet, "qDpuPrintInfo: Ill formed packet ");
+
+  auto json_object = StructuredData::ParseJSON(packet.Peek());
+
+  if (!json_object ||
+      json_object->GetType() != lldb::eStructuredDataTypeDictionary)
+    return SendIllFormedResponse(packet, "qDpuPrintInfo: Ill formed packet ");
+
+  auto json_dict = json_object->GetAsDictionary();
+
+  uint32_t open_print_sequence_addr, close_print_sequence_addr,
+      print_buffer_addr, print_buffer_size, print_buffer_var_addr;
+  Status error;
+
+  json_dict->GetValueForKeyAsInteger("open_print_sequence_addr",
+                                     open_print_sequence_addr);
+  json_dict->GetValueForKeyAsInteger("close_print_sequence_addr",
+                                     close_print_sequence_addr);
+  json_dict->GetValueForKeyAsInteger("print_buffer_addr", print_buffer_addr);
+  json_dict->GetValueForKeyAsInteger("print_buffer_size", print_buffer_size);
+  json_dict->GetValueForKeyAsInteger("print_buffer_var_addr",
+                                     print_buffer_var_addr);
+
+  m_debugged_process_up->SetDpuPrintInfo(
+      open_print_sequence_addr, close_print_sequence_addr, print_buffer_addr,
+      print_buffer_size, print_buffer_var_addr, error);
+
+  return SendPacketNoLock("");
 }
 
 GDBRemoteCommunication::PacketResult

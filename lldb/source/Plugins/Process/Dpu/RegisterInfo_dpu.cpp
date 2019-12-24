@@ -14,9 +14,7 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 
-//#include "lldb/lldb-enumerations.h"
-//#include "lldb/lldb-private.h"
-
+#include "ProcessDpu.h"
 #include "RegisterInfo_dpu.h"
 
 using namespace lldb;
@@ -191,10 +189,8 @@ static RegisterInfo g_register_infos_dpu[] = {
 const uint32_t k_register_infos_count =
     sizeof(g_register_infos_dpu) / sizeof(g_register_infos_dpu[0]);
 
-const ArchSpec k_dpu_arch("dpu-upmem-dpurte");
-
 RegisterInfo_dpu::RegisterInfo_dpu()
-    : lldb_private::RegisterInfoInterface(k_dpu_arch) {}
+    : lldb_private::RegisterInfoInterface(dpu::k_dpu_arch) {}
 
 size_t RegisterInfo_dpu::GetGPRSize() const {
   return sizeof(struct RegisterInfo_dpu::GPR);

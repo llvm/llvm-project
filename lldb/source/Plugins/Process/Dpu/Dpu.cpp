@@ -10,6 +10,8 @@
 #include "Dpu.h"
 #include "DpuRank.h"
 
+#include "ProcessDpu.h"
+
 // C Includes
 #include <errno.h>
 #include <stdint.h>
@@ -34,9 +36,6 @@ using namespace lldb_private;
 using namespace lldb_private::dpu;
 
 namespace {
-
-const ArchSpec k_dpu_arch("dpu-upmem-dpurte");
-
 const uint32_t instruction_size_mod = sizeof(dpuinstruction_t) - 1;
 const uint32_t instruction_size_mask = ~instruction_size_mod;
 const uint32_t dpuword_size_mod = sizeof(dpuword_t) - 1;
@@ -64,19 +63,22 @@ Dpu::~Dpu() {
   delete m_context;
 }
 
-bool Dpu::GetPrintfSequenceAddrs() {
-  dpu_runtime_context_t *runtime = dpu_get_runtime_context(m_dpu);
-  open_print_sequence_addr = runtime->open_print_sequence_addr;
-  close_print_sequence_addr = runtime->close_print_sequence_addr;
-  printf_buffer_address = runtime->printf_buffer_address;
-  printf_buffer_size = runtime->printf_buffer_size;
-  printf_buffer_var_addr = runtime->printf_write_pointer_address;
+bool Dpu::SetPrintfSequenceAddrs(const uint32_t _open_print_sequence_addr,
+                                 const uint32_t _close_print_sequence_addr,
+                                 const uint32_t _printf_buffer_address,
+                                 const uint32_t _printf_buffer_size,
+                                 const uint32_t _printf_buffer_var_addr) {
+  open_print_sequence_addr =
+      _open_print_sequence_addr +
+      sizeof(dpuinstruction_t); // we add sizeof(dpuinstruction_t) to avoid to
+                                // be on the 'acquire' which could makes us loop
+                                // forever
+  close_print_sequence_addr = _close_print_sequence_addr;
+  printf_buffer_address = _printf_buffer_address;
+  printf_buffer_size = _printf_buffer_size;
+  printf_buffer_var_addr = _printf_buffer_var_addr;
   if (open_print_sequence_addr != (lldb::addr_t)LLDB_INVALID_ADDRESS &&
       close_print_sequence_addr != (lldb::addr_t)LLDB_INVALID_ADDRESS) {
-    open_print_sequence_addr++; // we add 1 to avoid to be on the 'acquire'
-                                // which could makes us loop forever
-    open_print_sequence_addr = InstIdx2InstAddr(open_print_sequence_addr);
-    close_print_sequence_addr = InstIdx2InstAddr(close_print_sequence_addr);
     printf_enable = true;
     if (!ReadIRAM(open_print_sequence_addr, &open_print_sequence_inst,
                   sizeof(open_print_sequence_inst)))
@@ -84,6 +86,22 @@ bool Dpu::GetPrintfSequenceAddrs() {
     if (!ReadIRAM(close_print_sequence_addr, &close_print_sequence_inst,
                   sizeof(close_print_sequence_inst)))
       return false;
+  }
+  return true;
+}
+
+bool Dpu::SetPrintfSequenceAddrsFromRuntimeInfo() {
+  dpu_runtime_context_t *runtime = dpu_get_runtime_context(m_dpu);
+  lldb::addr_t _open_print_sequence_addr = runtime->open_print_sequence_addr;
+  lldb::addr_t _close_print_sequence_addr = runtime->close_print_sequence_addr;
+  if (_open_print_sequence_addr != (lldb::addr_t)LLDB_INVALID_ADDRESS &&
+      _close_print_sequence_addr != (lldb::addr_t)LLDB_INVALID_ADDRESS) {
+    _open_print_sequence_addr = InstIdx2InstAddr(_open_print_sequence_addr);
+    _close_print_sequence_addr = InstIdx2InstAddr(_close_print_sequence_addr);
+    return SetPrintfSequenceAddrs(
+        _open_print_sequence_addr, _close_print_sequence_addr,
+        runtime->printf_buffer_address, runtime->printf_buffer_size,
+        runtime->printf_write_pointer_address);
   }
   return true;
 }
@@ -96,7 +114,7 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   if (status != DPU_API_SUCCESS)
     return false;
 
-  if (!GetPrintfSequenceAddrs())
+  if (!SetPrintfSequenceAddrsFromRuntimeInfo())
     return false;
 
   return true;
@@ -267,14 +285,15 @@ bool Dpu::PrepareStepOverPrintfBkp(
                       printf_buffer_size - printf_buffer_last_idx)) {
           goto PrepareStepOverPrintfBkp_err;
         }
-        if (!ReadMRAM(printf_buffer_address,
+        if (!ReadMRAM(printf_buffer_address & (k_dpu_mram_base - 1),
                       &mram_buffer[printf_buffer_size - printf_buffer_last_idx],
                       printf_buffer_current_idx)) {
           goto PrepareStepOverPrintfBkp_err;
         }
       } else {
         mram_buffer_size = printf_buffer_current_idx - printf_buffer_last_idx;
-        if (!ReadMRAM(printf_buffer_last_idx + printf_buffer_address,
+        if (!ReadMRAM((printf_buffer_last_idx + printf_buffer_address) &
+                          (k_dpu_mram_base - 1),
                       mram_buffer, mram_buffer_size)) {
           goto PrepareStepOverPrintfBkp_err;
         }

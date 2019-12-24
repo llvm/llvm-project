@@ -1250,6 +1250,17 @@ Status ProcessGDBRemote::DoAttachToProcessWithName(
   return error;
 }
 
+void ProcessGDBRemote::SetDpuPrintInfo(const uint32_t open_print_sequence_addr,
+                                       const uint32_t close_print_sequence_addr,
+                                       const uint32_t print_buffer_addr,
+                                       const uint32_t print_buffer_size,
+                                       const uint32_t print_buffer_var_addr,
+                                       Status &error) {
+  m_gdb_comm.SendDpuPrintInfoPacket(
+      open_print_sequence_addr, close_print_sequence_addr, print_buffer_addr,
+      print_buffer_size, print_buffer_var_addr, error);
+}
+
 void ProcessGDBRemote::SaveCore(const char *save_core_filename,
                                 const char *executable_path, Status &error) {
   m_gdb_comm.SendSaveCorePacket(save_core_filename, executable_path, error);

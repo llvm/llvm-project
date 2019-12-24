@@ -33,6 +33,11 @@ namespace dpu {
 class Dpu;
 class DpuRank;
 class DpuContext;
+
+const ArchSpec k_dpu_arch("dpu-upmem-dpurte");
+
+constexpr lldb::addr_t k_dpu_mram_base = 0x08000000;
+constexpr lldb::addr_t k_dpu_iram_base = 0x80000000;
 } // namespace dpu
 
 namespace process_dpu {
@@ -122,6 +127,13 @@ public:
 
   void SaveCore(const char *save_core_filename, const char *executable_path,
                 Status &error) override;
+
+  void SetDpuPrintInfo(const uint32_t open_print_sequence_addr,
+                       const uint32_t close_print_sequence_addr,
+                       const uint32_t print_buffer_addr,
+                       const uint32_t print_buffer_size,
+                       const uint32_t print_buffer_var_addr,
+                       Status &error) override;
 
 private:
   ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,

@@ -166,6 +166,13 @@ public:
 
   Status GetWatchpointSupportInfo(uint32_t &num) override;
 
+  void SetDpuPrintInfo(const uint32_t open_print_sequence_addr,
+                       const uint32_t close_print_sequence_addr,
+                       const uint32_t print_buffer_addr,
+                       const uint32_t print_buffer_size,
+                       const uint32_t print_buffer_var_addr,
+                       Status &error) override;
+
   void SaveCore(const char *save_core_filename, const char *executable_path,
                 Status &error) override;
 

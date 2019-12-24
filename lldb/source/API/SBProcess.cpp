@@ -1228,6 +1228,39 @@ bool SBProcess::IsInstrumentationRuntimePresent(
   return runtime_sp->IsActive();
 }
 
+lldb::SBError SBProcess::SetDpuPrintInfo(
+    const uint32_t open_print_sequence_addr,
+    const uint32_t close_print_sequence_addr, const uint32_t print_buffer_addr,
+    const uint32_t print_buffer_size, const uint32_t print_buffer_var_addr) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBProcess, SetDpuPrintInfo,
+                     (const uint32_t, const uint32_t, const uint32_t,
+                      const uint32_t, const uint32_t),
+                     open_print_sequence_addr, close_print_sequence_addr,
+                     print_buffer_addr, print_buffer_size,
+                     print_buffer_var_addr);
+
+  lldb::SBError error;
+  ProcessSP process_sp(GetSP());
+  if (!process_sp) {
+    error.SetErrorString("SBProcess is invalid");
+    return LLDB_RECORD_RESULT(error);
+  }
+
+  std::lock_guard<std::recursive_mutex> guard(
+      process_sp->GetTarget().GetAPIMutex());
+
+  if (process_sp->GetState() != eStateStopped) {
+    error.SetErrorString("the process is not stopped");
+    return LLDB_RECORD_RESULT(error);
+  }
+
+  Status status_error;
+  process_sp->SetDpuPrintInfo(
+      open_print_sequence_addr, close_print_sequence_addr, print_buffer_addr,
+      print_buffer_size, print_buffer_var_addr, status_error);
+  return LLDB_RECORD_RESULT(error);
+}
+
 lldb::SBError SBProcess::SaveCore(const char *file_name) {
   LLDB_RECORD_METHOD(lldb::SBError, SBProcess, SaveCore, (const char *),
                      file_name);

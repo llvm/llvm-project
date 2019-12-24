@@ -41,7 +41,12 @@ public:
   Dpu(DpuRank *rank, dpu_t *dpu, FILE *stdout_fd);
   ~Dpu();
 
-  bool GetPrintfSequenceAddrs();
+  bool SetPrintfSequenceAddrs(const uint32_t open_print_sequence_addr,
+                              const uint32_t close_print_sequence_addr,
+                              const uint32_t print_buffer_addr,
+                              const uint32_t print_buffer_size,
+                              const uint32_t print_var_addr);
+  bool SetPrintfSequenceAddrsFromRuntimeInfo();
 
   bool LoadElf(const FileSpec &elf_file_path);
   bool Boot();

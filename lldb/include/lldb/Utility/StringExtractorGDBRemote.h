@@ -167,7 +167,9 @@ public:
     eServerPacketType_jTraceMetaRead,   // deprecated
     eServerPacketType_jTraceStop,       // deprecated
     eServerPacketType_jTraceConfigRead, // deprecated
-    eServerPacketType_jSaveCore, // DPU
+    eServerPacketType_jSaveCore,        // DPU
+
+    eServerPacketType_qDpuPrintInfo, // dpu specific packet
 
     eServerPacketType_jLLDBTraceSupportedType,
   };

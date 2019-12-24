@@ -311,6 +311,15 @@ public:
     error.SetErrorString("Not Implemented");
   }
 
+  virtual void SetDpuPrintInfo(const uint32_t open_print_sequence_addr,
+                               const uint32_t close_print_sequence_addr,
+                               const uint32_t print_buffer_addr,
+                               const uint32_t print_buffer_size,
+                               const uint32_t print_buffer_var_addr,
+                               Status &error) {
+    error.SetErrorString("Not Implemented");
+  }
+
   /// StartTracing API for starting a tracing instance with the
   /// TraceOptions on a specific thread or process.
   ///

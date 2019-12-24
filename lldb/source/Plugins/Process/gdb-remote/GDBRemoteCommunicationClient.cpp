@@ -3372,6 +3372,43 @@ bool GDBRemoteCommunicationClient::SyncThreadState(lldb::tid_t tid) {
          response.IsOKResponse();
 }
 
+void GDBRemoteCommunicationClient::SendDpuPrintInfoPacket(
+    const uint32_t open_print_sequence_addr,
+    const uint32_t close_print_sequence_addr, const uint32_t print_buffer_addr,
+    const uint32_t print_buffer_size, const uint32_t print_buffer_var_addr,
+    Status &error) {
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+  StreamGDBRemote escaped_packet;
+  escaped_packet.PutCString("qDpuPrintInfo:");
+
+  StructuredData::Dictionary json_packet;
+  json_packet.AddIntegerItem("open_print_sequence_addr",
+                             open_print_sequence_addr);
+  json_packet.AddIntegerItem("close_print_sequence_addr",
+                             close_print_sequence_addr);
+  json_packet.AddIntegerItem("print_buffer_addr", print_buffer_addr);
+  json_packet.AddIntegerItem("print_buffer_size", print_buffer_size);
+  json_packet.AddIntegerItem("print_buffer_var_addr", print_buffer_var_addr);
+
+  StreamString json_string;
+  json_packet.Dump(json_string, false);
+  escaped_packet.PutEscapedBytes(json_string.GetData(), json_string.GetSize());
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
+                                   true) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    if (!response.IsNormalResponse()) {
+      error = response.GetStatus();
+      LLDB_LOG(log, "Target does not support SaveCore, error {0}}", error);
+    }
+  } else {
+    LLDB_LOG(log, "failed to send packet");
+    error.SetErrorStringWithFormat("failed to send packet: '%s'",
+                                   escaped_packet.GetData());
+  }
+}
+
 void GDBRemoteCommunicationClient::SendSaveCorePacket(
     const char *save_core_filename, const char *executable_path,
     Status &error) {

@@ -398,6 +398,13 @@ public:
     IsInstrumentationRuntimePresent(lldb::InstrumentationRuntimeType type);
 
     lldb::SBError
+    SetDpuPrintInfo(const uint32_t open_print_sequence_addr,
+                    const uint32_t close_print_sequence_addr,
+                    const uint32_t print_buffer_addr,
+                    const uint32_t print_buffer_size,
+                    const uint32_t print_buffer_var_addr);
+
+    lldb::SBError
     SaveCore(const char *file_name);
 
     lldb::SBTrace

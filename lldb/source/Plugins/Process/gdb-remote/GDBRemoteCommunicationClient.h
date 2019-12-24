@@ -505,6 +505,13 @@ public:
   ConfigureRemoteStructuredData(ConstString type_name,
                                 const StructuredData::ObjectSP &config_sp);
 
+  void SendDpuPrintInfoPacket(const uint32_t open_print_sequence_addr,
+                              const uint32_t close_print_sequence_addr,
+                              const uint32_t print_buffer_addr,
+                              const uint32_t print_buffer_size,
+                              const uint32_t print_buffer_var_addr,
+                              Status &error);
+
   void SendSaveCorePacket(const char *save_core_filename,
                           const char *executable_path, Status &error);
 

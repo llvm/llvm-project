@@ -37,13 +37,12 @@ def set_debug_mode(debugger, rank, debug_mode):
     return success
 
 
-def get_object_from_command(command, debugger, target, name, object_type,
-                            base):
+def get_dpu_from_command(command, debugger, target):
     addr = 0
     try:
-        addr = int(command, base)
+        addr = int(command, 16)
     except ValueError:
-        success, addr = get_value_from_command(debugger, command, base)
+        success, addr = get_value_from_command(debugger, command, 16)
         if not(success) and not(re.match(r'.*\..*\..*\..*', command) is None):
             dpus = dpu_list(debugger, None, None, None)
             addr = next((dpu[0] for dpu in dpus
@@ -55,17 +54,7 @@ def get_object_from_command(command, debugger, target, name, object_type,
                 print("Could not interpret command '" + command + "'")
                 return None
     return target.CreateValueFromExpression(
-        name, "(" + object_type + ")" + str(addr))
-
-
-def get_dpu_from_command(command, debugger, target):
-    return get_object_from_command(
-        command, debugger, target, "dpu", "struct dpu_t *", 16)
-
-
-def get_rank_from_command(command, debugger, target):
-    return get_object_from_command(
-        command, debugger, target, "rank", "struct dpu_rank_t *", 16)
+        "dpu", "(struct dpu_t *)" + str(addr))
 
 
 def get_region_id_and_rank_id(rank, target):
@@ -86,6 +75,19 @@ def get_region_id_and_rank_id(rank, target):
     return region_id, rank_id
 
 
+def get_nb_slices_and_nb_dpus_per_slice(rank, target):
+    uint32_type = target.FindFirstType("uint32_t")
+    topology = rank.GetChildMemberWithName("description") \
+                   .GetChildMemberWithName("topology")
+    nb_dpus_per_slice = topology \
+        .GetChildMemberWithName("nr_of_dpus_per_control_interface") \
+        .Cast(uint32_type).GetValueAsUnsigned() & 0xff
+    nb_slices = topology \
+        .GetChildMemberWithName("nr_of_control_interfaces") \
+        .Cast(uint32_type).GetValueAsUnsigned() & 0xff
+    return nb_slices, nb_dpus_per_slice
+
+
 def get_dpu_program_path(dpu):
     program_path = dpu.GetChildMemberWithName("runtime_context") \
                       .GetChildMemberWithName("program_path")
@@ -94,21 +96,11 @@ def get_dpu_program_path(dpu):
     return re.search('"(.+)"', str(program_path)).group(1)
 
 
-def get_dpu_status(run_context, slice_id, dpu_id):
-    dpus_running = run_context.GetChildMemberWithName("dpu_running")
-    if not(dpus_running.IsValid()):
-        return "UNKNOWN"
-    dpus_in_fault = run_context.GetChildMemberWithName("dpu_in_fault")
-    if not(dpus_in_fault.IsValid()):
-        return "UNKNOWN"
-    dpu_running = int(dpus_running.GetChildAtIndex(slice_id)
-                      .GetValue())
-    dpu_in_fault = int(dpus_in_fault.GetChildAtIndex(slice_id)
-                       .GetValue())
+def get_dpu_status(dpus_running, dpus_in_fault, slice_id, dpu_id):
     dpu_mask = 1 << dpu_id
-    if (dpu_mask & dpu_running) != 0:
+    if (dpu_mask & dpus_running) != 0:
         return "RUNNING"
-    elif (dpu_mask & dpu_in_fault) != 0:
+    elif (dpu_mask & dpus_in_fault) != 0:
         return "ERROR  "
     else:
         return "IDLE   "
@@ -148,24 +140,15 @@ def break_to_next_boot_and_get_dpus(debugger, target):
 
     thread.SetSelectedFrame(current_frame)
     if function_name == launch_rank_function:
-        nb_ci = get_dpu_from_command(
-            "(int)(rank->description->topology.nr_of_control_interfaces)",
-            debugger, target)
-        if nb_ci is None:
-            return None, frame
-        nb_dpu_per_ci = get_dpu_from_command(
-            "(int)(rank->description->topology."
-            "nr_of_dpus_per_control_interface)",
-            debugger, target)
-        if nb_dpu_per_ci is None:
-            return None, frame
-        nb_dpu = int(nb_ci.GetValue(), 16) * int(nb_dpu_per_ci.GetValue(), 16)
+        rank = frame.FindVariable("rank")
+        nb_ci, nb_dpu_per_ci = \
+            get_nb_slices_and_nb_dpus_per_slices(rank, target)
+        nb_dpu = nb_ci * nb_dpu_per_ci
         for each_dpu in range(0, nb_dpu):
-            dpu_list.append(get_dpu_from_command("&rank->dpus["
-                                                 + str(each_dpu) + "]",
-                                                 debugger, target))
+            dpu_list.append(rank.GetValueForExpressionPath(
+                "->dpus[" + str(each_dpu) + "]"))
     elif function_name == launch_dpu_function:
-        dpu_list.append(get_dpu_from_command("dpu", debugger, target))
+        dpu_list.append(frame.FindVariable("dpu"))
 
     return dpu_list, frame
 
@@ -204,7 +187,7 @@ def dpu_attach_on_boot(debugger, command, result, internal_dict):
                 dpus_booting)
 
     dpu_addr = dpus_booting[0].GetValue()
-    print("Setting up dpu '" + str(dpu_addr) + "' for attach on boot...")
+    print("Setting up dpu '" + dpu_addr + "' for attach on boot...")
     target_dpu = dpu_attach(debugger, dpu_addr, None, None)
     if target_dpu is None:
         print("Could not attach to dpu")
@@ -320,6 +303,28 @@ def dpu_attach(debugger, command, result, internal_dict):
         print("Could not connect to dpu")
         return None
 
+    open_print_sequence_addr = target_dpu \
+        .FindFunctions("__open_print_sequence") \
+        .GetContextAtIndex(0).GetFunction().GetStartAddress() \
+                                           .GetFileAddress()
+    close_print_sequence_addr = target_dpu \
+        .FindFunctions("__close_print_sequence") \
+        .GetContextAtIndex(0).GetFunction().GetStartAddress() \
+                                           .GetFileAddress()
+    print_buffer_addr = target_dpu \
+        .FindFirstGlobalVariable("__stdout_buffer").GetAddress() \
+                                                   .GetFileAddress()
+    print_buffer_size = target_dpu \
+        .FindFirstGlobalVariable("__stdout_buffer_size").GetValueAsUnsigned()
+    print_buffer_var_addr = target_dpu \
+        .FindFirstGlobalVariable("__stdout_buffer_state").GetAddress() \
+                                                         .GetFileAddress()
+    process_dpu.SetDpuPrintInfo(open_print_sequence_addr,
+                                close_print_sequence_addr,
+                                print_buffer_addr,
+                                print_buffer_size,
+                                print_buffer_var_addr)
+
     debugger.SetSelectedTarget(target)
     if not(set_debug_mode(debugger, rank, 0)):
         print("Could not unset dpu from debug mode")
@@ -350,44 +355,40 @@ def dpu_list(debugger, command, result, internal_dict):
     if not(check_target(target)):
         return None
 
-    success, nb_allocated_rank = \
-        get_value_from_command(
-            debugger, "dpu_rank_handler_dpu_rank_list_size", 10)
-    if not(success):
+    nb_allocated_rank = \
+        target.FindFirstGlobalVariable("dpu_rank_handler_dpu_rank_list_size")
+    if nb_allocated_rank is None:
         print("dpu_list: internal error 1 (can't get number of ranks)")
         return None
 
-    result_list = []
+    rank_list = target.FindFirstGlobalVariable(
+        "dpu_rank_handler_dpu_rank_list")
+    if rank_list is None:
+        print("dpu_list: internal error 2 (can't get rank list)")
+        return None
 
-    for each_rank in range(0, nb_allocated_rank):
-        rank = get_rank_from_command(
-            "dpu_rank_handler_dpu_rank_list[" + str(each_rank) + "]",
-            debugger,
-            target)
-        if rank is None or not(rank.IsValid()):
-            print("dpu_list: internal error 2 (can't get rank)")
-            return None
-        if int(rank.GetValue(), 16) == 0:
+    result_list = []
+    for each_rank in range(0, nb_allocated_rank.GetValueAsUnsigned()):
+        rank = rank_list.GetChildAtIndex(each_rank)
+        if rank.GetValue() is None:
             continue
 
         region_id, rank_id = get_region_id_and_rank_id(rank, target)
 
-        uint32_type = target.FindFirstType("uint32_t")
-        nb_dpus_per_slice = int(rank.GetChildMemberWithName("description")
-                                .GetChildMemberWithName("topology")
-                                .GetChildMemberWithName(
-                                    "nr_of_dpus_per_control_interface")
-                                .Cast(uint32_type).GetValue()) & 0xff
-        nb_slices = int(rank.GetChildMemberWithName("description")
-                        .GetChildMemberWithName("topology")
-                        .GetChildMemberWithName("nr_of_control_interfaces")
-                        .Cast(uint32_type).GetValue()) & 0xff
+        nb_slices, nb_dpus_per_slice = \
+            get_nb_slices_and_nb_dpus_per_slice(rank, target)
 
         run_context = rank.GetChildMemberWithName("runtime") \
                           .GetChildMemberWithName("run_context")
+        dpus_running = run_context.GetChildMemberWithName("dpu_running")
+        dpus_in_fault = run_context.GetChildMemberWithName("dpu_in_fault")
         dpus = rank.GetChildMemberWithName("dpus")
 
         for slice_id in range(0, nb_slices):
+            dpus_running_in_slice = dpus_running.GetChildAtIndex(slice_id) \
+                                                .GetValueAsUnsigned()
+            dpus_in_fault_in_slice = dpus_in_fault.GetChildAtIndex(slice_id) \
+                                                  .GetValueAsUnsigned()
             for dpu_id in range(0, nb_dpus_per_slice):
                 dpu = rank.GetValueForExpressionPath(
                     "->dpus["
@@ -401,7 +402,10 @@ def dpu_list(debugger, command, result, internal_dict):
                 if program_path is None:
                     program_path = ""
 
-                dpu_status = get_dpu_status(run_context, slice_id, dpu_id)
+                dpu_status = get_dpu_status(dpus_running_in_slice,
+                                            dpus_in_fault_in_slice,
+                                            slice_id,
+                                            dpu_id)
 
                 result_list.append((int(str(dpu.GetAddress()), 16),
                                     region_id, rank_id, slice_id, dpu_id,

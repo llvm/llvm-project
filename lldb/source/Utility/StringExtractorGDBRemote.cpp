@@ -173,6 +173,11 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qC;
       break;
 
+    case 'D':
+      if (PACKET_STARTS_WITH("qDpuPrintInfo:"))
+        return eServerPacketType_qDpuPrintInfo;
+      break;
+
     case 'E':
       if (PACKET_STARTS_WITH("qEcho:"))
         return eServerPacketType_qEcho;

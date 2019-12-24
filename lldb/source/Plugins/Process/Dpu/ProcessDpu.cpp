@@ -59,14 +59,8 @@ using namespace lldb_private::process_dpu;
 using namespace llvm;
 
 namespace {
-
-const ArchSpec k_dpu_arch("dpu-upmem-dpurte");
-
 // Control interface polling period
 const long k_ci_polling_interval_ns = 10000; /* ns */
-
-constexpr lldb::addr_t k_dpu_iram_base = 0x80000000;
-constexpr lldb::addr_t k_dpu_mram_base = 0x08000000;
 } // end of anonymous namespace
 
 // -----------------------------------------------------------------------------
@@ -125,19 +119,33 @@ ProcessDpu::Factory::Attach(
 
   unsigned int region_id, rank_id, slice_id, dpu_id;
   dpu_id = pid % 100;
-  pid /= 100;
-  slice_id = pid % 100;
-  pid /= 100;
-  rank_id = pid % 100;
-  pid /= 100;
-  region_id = pid % 100;
+  slice_id = (pid / 100) % 100;
+  rank_id = (pid / (100 * 100)) % 100;
+  region_id = (pid / (100 * 100 * 100)) % 100;
 
   char profile[256];
   sprintf(profile, "backend=hw,rankPath=/dev/dpu_region%u/dpu_rank%u",
           region_id, rank_id);
 
+  PseudoTerminal pseudo_terminal;
+  if (!pseudo_terminal.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY, nullptr,
+                                                0)) {
+    return Status("Cannot open first available master on pseudo terminal ")
+        .ToError();
+  }
+
+  int terminal_fd = pseudo_terminal.ReleaseMasterFileDescriptor();
+  if (terminal_fd == -1) {
+    return Status("Cannot release master file descriptor ").ToError();
+  }
+
+  FILE *stdout_fd = fdopen(terminal_fd, "w");
+  if (stdout_fd == NULL) {
+    return Status("Cannot open terminal_fd ").ToError();
+  }
+
   DpuRank *rank = new DpuRank();
-  bool success = rank->Open(profile, NULL);
+  bool success = rank->Open(profile, stdout_fd);
   if (!success)
     return Status("Cannot get a DPU rank ").ToError();
 
@@ -179,7 +187,7 @@ ProcessDpu::Factory::Attach(
   dpu->SetAttachSession();
 
   return std::unique_ptr<ProcessDpu>(new ProcessDpu(
-      666 << 5, -1, native_delegate, k_dpu_arch, mainloop, rank, dpu));
+      pid, terminal_fd, native_delegate, k_dpu_arch, mainloop, rank, dpu));
 }
 
 // -----------------------------------------------------------------------------
@@ -515,4 +523,22 @@ void ProcessDpu::SaveCore(const char *save_core_filename,
   }
 
   m_dpu->FreeIRAMBuffer(iram);
+}
+
+void ProcessDpu::SetDpuPrintInfo(const uint32_t open_print_sequence_addr,
+                                 const uint32_t close_print_sequence_addr,
+                                 const uint32_t print_buffer_addr,
+                                 const uint32_t print_buffer_size,
+                                 const uint32_t print_var_addr, Status &error) {
+  if (!m_dpu->SetPrintfSequenceAddrs(
+          open_print_sequence_addr, close_print_sequence_addr,
+          print_buffer_addr, print_buffer_size, print_var_addr))
+    error.SetErrorString("Cannot set Dpu print info");
+
+  if (m_dpu->PrintfEnable()) {
+    SetSoftwareBreakpoint(m_dpu->GetOpenPrintfSequenceAddr() | k_dpu_iram_base,
+                          8);
+    SetSoftwareBreakpoint(m_dpu->GetClosePrintfSequenceAddr() | k_dpu_iram_base,
+                          8);
+  }
 }
