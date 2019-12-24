@@ -35,6 +35,10 @@ def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
 def CharType : NamedType<"char">;
 
+// Common types
+def VoidPtr : PtrType<VoidType>;
+def SizeTType : NamedType<"size_t">;
+
 class Macro<string name> {
   string Name = name;
 }
