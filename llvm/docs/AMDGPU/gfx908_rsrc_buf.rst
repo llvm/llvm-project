@@ -1,0 +1,17 @@
+..
+    **************************************************
+    *                                                *
+    *   Automatically generated file, do not edit!   *
+    *                                                *
+    **************************************************
+
+.. _amdgpu_synid908_rsrc_buf:
+
+srsrc
+===========================
+
+Buffer resource constant which defines the address and characteristics of the buffer in memory.
+
+*Size:* 4 dwords.
+
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`

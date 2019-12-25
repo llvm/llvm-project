@@ -598,7 +598,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   case DW_TAG_base_type:
     resolve_state = Type::ResolveState::Full;
     clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-        attrs.name.GetCString(), attrs.encoding,
+        attrs.name.GetStringRef(), attrs.encoding,
         attrs.byte_size.getValueOr(0) * 8);
     break;
 
@@ -809,7 +809,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     if (!enumerator_clang_type) {
       if (attrs.byte_size) {
         enumerator_clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-            NULL, DW_ATE_signed, *attrs.byte_size * 8);
+            "", DW_ATE_signed, *attrs.byte_size * 8);
       } else {
         enumerator_clang_type = m_ast.GetBasicType(eBasicTypeInt);
       }

@@ -109,7 +109,7 @@ public:
   /// value-type.
   /// TODO(riverriddle) Remove these when all usages have been removed.
   Value operator*() const { return *this; }
-  Value *operator->() const { return (Value *)this; }
+  Value *operator->() const { return const_cast<Value *>(this); }
 
   operator bool() const { return impl; }
   bool operator==(const Value &other) const { return impl == other.impl; }
