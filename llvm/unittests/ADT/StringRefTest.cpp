@@ -509,6 +509,13 @@ TEST(StringRefTest, Count) {
   EXPECT_EQ(1U, Str.count("hello"));
   EXPECT_EQ(1U, Str.count("ello"));
   EXPECT_EQ(0U, Str.count("zz"));
+
+  StringRef OverlappingAbba("abbabba");
+  EXPECT_EQ(1U, OverlappingAbba.count("abba"));
+  StringRef NonOverlappingAbba("abbaabba");
+  EXPECT_EQ(2U, NonOverlappingAbba.count("abba"));
+  StringRef ComplexAbba("abbabbaxyzabbaxyz");
+  EXPECT_EQ(2U, ComplexAbba.count("abba"));
 }
 
 TEST(StringRefTest, EditDistance) {
