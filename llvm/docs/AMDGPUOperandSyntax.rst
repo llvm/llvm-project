@@ -102,6 +102,66 @@ Examples:
   [v[32],v[1:1],[v2]]
   [v4,v4,v4,v4]
 
+.. _amdgpu_synid_a:
+
+a
+-
+
+Accumulator registers. There are 256 32-bit accumulator registers.
+
+A sequence of *accumulator* registers may be used to operate with more than 32 bits of data.
+
+Assembler currently supports sequences of 1, 2, 4 and 16 *accumulator* registers.
+
+    =================================================== ========================================================= ====================================================================
+    Syntax                                              An Alternative Syntax (SP3)                               Description
+    =================================================== ========================================================= ====================================================================
+    **a**\<N>                                           **acc**\<N>                                               A single 32-bit *accumulator* register.
+
+                                                                                                                  *N* must be a decimal
+                                                                                                                  :ref:`integer number<amdgpu_synid_integer_number>`.
+    **a[**\ <N>\ **]**                                  **acc[**\ <N>\ **]**                                      A single 32-bit *accumulator* register.
+
+                                                                                                                  *N* may be specified as an
+                                                                                                                  :ref:`integer number<amdgpu_synid_integer_number>`
+                                                                                                                  or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+    **a[**\ <N>:<K>\ **]**                              **acc[**\ <N>:<K>\ **]**                                  A sequence of (\ *K-N+1*\ ) *accumulator* registers.
+
+                                                                                                                  *N* and *K* may be specified as
+                                                                                                                  :ref:`integer numbers<amdgpu_synid_integer_number>`
+                                                                                                                  or :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+    **[a**\ <N>, \ **a**\ <N+1>, ... **a**\ <K>\ **]**  **[acc**\ <N>, \ **acc**\ <N+1>, ... **acc**\ <K>\ **]**  A sequence of (\ *K-N+1*\ ) *accumulator* registers.
+
+                                                                                                                  Register indices must be specified as decimal
+                                                                                                                  :ref:`integer numbers<amdgpu_synid_integer_number>`.
+    =================================================== ========================================================= ====================================================================
+
+Note: *N* and *K* must satisfy the following conditions:
+
+* *N* <= *K*.
+* 0 <= *N* <= 255.
+* 0 <= *K* <= 255.
+* *K-N+1* must be equal to 1, 2, 4 or 16.
+
+Examples:
+
+.. parsed-literal::
+
+  a255
+  a[0]
+  a[0:1]
+  a[1:1]
+  a[0:3]
+  a[2*2]
+  a[1-1:2-1]
+  [a252]
+  [a252,a253,a254,a255]
+
+  acc0
+  acc[1]
+  [acc250]
+  [acc2,acc3]
+
 .. _amdgpu_synid_s:
 
 s

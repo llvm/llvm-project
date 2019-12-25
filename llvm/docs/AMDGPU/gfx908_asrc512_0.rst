@@ -1,0 +1,17 @@
+..
+    **************************************************
+    *                                                *
+    *   Automatically generated file, do not edit!   *
+    *                                                *
+    **************************************************
+
+.. _amdgpu_synid908_asrc512_0:
+
+asrc
+===========================
+
+Instruction input.
+
+*Size:* 16 dwords.
+
+*Operands:* :ref:`a<amdgpu_synid_a>`
