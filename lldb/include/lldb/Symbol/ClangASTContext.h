@@ -155,9 +155,9 @@ public:
 
   static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
 
-  CompilerType GetBuiltinTypeForDWARFEncodingAndBitSize(const char *type_name,
-                                                        uint32_t dw_ate,
-                                                        uint32_t bit_size);
+  CompilerType
+  GetBuiltinTypeForDWARFEncodingAndBitSize(llvm::StringRef type_name,
+                                           uint32_t dw_ate, uint32_t bit_size);
 
   CompilerType GetCStringType(bool is_const);
 
