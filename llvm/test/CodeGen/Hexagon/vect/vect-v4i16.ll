@@ -68,4 +68,4 @@ polly.stmt.for.body29:                            ; preds = %polly.stmt.for.body
   br i1 %exitcond, label %for.end.loopexit, label %polly.stmt.for.body29
 }
 
-attributes #0 = { nounwind "fp-contract-model"="standard" "no-frame-pointer-elim-non-leaf" "realign-stack" "relocation-model"="static" "ssp-buffers-size"="8" }
+attributes #0 = { nounwind "fp-contract-model"="standard" "frame-pointer"="non-leaf" "realign-stack" "relocation-model"="static" "ssp-buffers-size"="8" }

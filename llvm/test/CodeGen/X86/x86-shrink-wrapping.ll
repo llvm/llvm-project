@@ -1580,4 +1580,4 @@ define void @infiniteLoopNoSuccessor() #5 {
 
 declare void @somethingElse(...)
 
-attributes #5 = { nounwind  "no-frame-pointer-elim-non-leaf" }
+attributes #5 = { nounwind "frame-pointer"="non-leaf" }
