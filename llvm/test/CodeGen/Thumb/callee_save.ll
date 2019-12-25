@@ -110,7 +110,7 @@ entry:
 
 ; All callee-saved registers clobbered, and frame pointer is requested. r7 now
 ; cannot be used while saving/restoring the high regs.
-define void @four_high_four_low_frame_ptr() "no-frame-pointer-elim"="true" {
+define void @four_high_four_low_frame_ptr() "frame-pointer"="all" {
 ; CHECK-LABEL: four_high_four_low_frame_ptr:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -139,7 +139,7 @@ entry:
 ; All callee-saved registers clobbered, frame pointer is requested and
 ; llvm.returnaddress used. r7 and lr now cannot be used while saving/restoring
 ; the high regs.
-define void @four_high_four_low_frame_ptr_ret_addr() "no-frame-pointer-elim"="true" {
+define void @four_high_four_low_frame_ptr_ret_addr() "frame-pointer"="all" {
 ; CHECK-LABEL: four_high_four_low_frame_ptr_ret_addr:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -231,7 +231,7 @@ entry:
 ; llvm.returnaddress called. This leaves us with 3 low registers available (r4,
 ; r5, r6), with which to save 4 high registers, so we have to use two pushes
 ; and pops.
-define <4 x i32> @all_of_the_above(i32 %a, i32 %b, i32 %c, i32 %d) "no-frame-pointer-elim"="true" {
+define <4 x i32> @all_of_the_above(i32 %a, i32 %b, i32 %c, i32 %d) "frame-pointer"="all" {
 ; CHECK-LABEL: all_of_the_above:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}

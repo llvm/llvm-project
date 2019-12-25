@@ -104,7 +104,7 @@ false:
   ret i32 %tmp.0
 }
 
-attributes #1 = { "no-frame-pointer-elim"="true" }
+attributes #1 = { "frame-pointer"="all" }
 
 ; Shrink-wrapping should occur here. We do not have to unwind.
 ; CHECK-LABEL: framelessnoUnwind:

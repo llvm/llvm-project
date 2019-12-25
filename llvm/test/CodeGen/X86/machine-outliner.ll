@@ -98,7 +98,7 @@ define i32 @main() #0 {
   ret i32 0
 }
 
-attributes #0 = { noredzone nounwind ssp uwtable "no-frame-pointer-elim"="true" }
+attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 
 ; CHECK: OUTLINED_FUNCTION_{{[0-9]+}}:
 ; CHECK-DAG:      movl  $1, -{{[0-9]+}}(%rbp)

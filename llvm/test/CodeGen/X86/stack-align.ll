@@ -88,4 +88,4 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i
 
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) argmemonly nounwind
 
-attributes #0 = { nounwind alignstack=16 "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" }
+attributes #0 = { nounwind alignstack=16 "frame-pointer"="all" }

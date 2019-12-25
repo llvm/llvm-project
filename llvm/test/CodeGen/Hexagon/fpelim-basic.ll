@@ -86,6 +86,6 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
 
 attributes #0 = { nounwind readnone "no-frame-pointer-elim"="false" "target-cpu"="hexagonv60" }
-attributes #1 = { nounwind readnone "no-frame-pointer-elim"="true" "target-cpu"="hexagonv60" }
+attributes #1 = { nounwind readnone "frame-pointer"="all" "target-cpu"="hexagonv60" }
 attributes #2 = { argmemonly nounwind }
 attributes #3 = { nounwind }

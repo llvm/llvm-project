@@ -33,5 +33,5 @@ entry:
 ; CHECK: blr
 }
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "target-cpu"="ppc64le" }
+attributes #0 = { nounwind "frame-pointer"="all" "target-cpu"="ppc64le" }
 

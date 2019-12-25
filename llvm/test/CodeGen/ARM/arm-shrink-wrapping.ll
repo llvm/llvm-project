@@ -60,7 +60,7 @@
 ; pop {r7, pc}
 ;
 ; bx lr
-define i32 @foo(i32 %a, i32 %b) "no-frame-pointer-elim"="true" {
+define i32 @foo(i32 %a, i32 %b) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: foo:
 ; ARM-ENABLE:       @ %bb.0:
 ; ARM-ENABLE-NEXT:    cmp r0, r1
@@ -188,7 +188,7 @@ declare i32 @doSomething(i32, i32*)
 ; pop {r4, r7, pc}
 ;
 ; bx lr
-define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" {
+define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: freqSaveAndRestoreOutsideLoop:
 ; ARM-ENABLE:       @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
@@ -347,7 +347,7 @@ declare i32 @something(...)
 ; @ %for.exit
 ; nop
 ; pop {r4
-define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "no-frame-pointer-elim"="true" {
+define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; ARM-LABEL: freqSaveAndRestoreOutsideLoop2:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    push {r4, r7, lr}
@@ -553,7 +553,7 @@ for.end:                                          ; preds = %for.body
 ; pop {r4, r7, pc}
 ;
 ; bx lr
-define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" {
+define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: loopInfoSaveOutsideLoop:
 ; ARM-ENABLE:       @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
@@ -749,7 +749,7 @@ declare void @somethingElse(...)
 ; pop {r4, r7, pc}
 ;
 ; bx lr
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" nounwind {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" nounwind {
 ; ARM-ENABLE-LABEL: loopInfoRestoreOutsideLoop:
 ; ARM-ENABLE:       @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
@@ -960,7 +960,7 @@ entry:
 ; pop {r4, r7, pc}
 ;
 ; bx lr
-define i32 @inlineAsm(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" {
+define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: inlineAsm:
 ; ARM-ENABLE:       @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
@@ -1138,7 +1138,7 @@ if.end:                                           ; preds = %for.body, %if.else
 ; mov sp, r7
 ; add sp, #12
 ; pop {r7, pc}
-define i32 @callVariadicFunc(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" {
+define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: callVariadicFunc:
 ; ARM-ENABLE:       @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
@@ -1270,7 +1270,7 @@ declare i32 @someVariadicFunc(i32, ...)
 ;
 ; bl{{x?}} _abort
 ; pop
-define i32 @noreturn(i8 signext %bad_thing) "no-frame-pointer-elim"="true" {
+define i32 @noreturn(i8 signext %bad_thing) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: noreturn:
 ; ARM-ENABLE:       @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
@@ -1354,7 +1354,7 @@ attributes #0 = { noreturn nounwind }
 ; The only condition for this test is the compilation finishes correctly.
 ; infiniteloop
 ; pop
-define void @infiniteloop() "no-frame-pointer-elim"="true" {
+define void @infiniteloop() "frame-pointer"="all" {
 ; ARM-LABEL: infiniteloop:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    push {r4, r5, r7, lr}
@@ -1509,7 +1509,7 @@ if.end:
 ; Another infinite loop test this time with a body bigger than just one block.
 ; infiniteloop2
 ; pop
-define void @infiniteloop2() "no-frame-pointer-elim"="true" {
+define void @infiniteloop2() "frame-pointer"="all" {
 entry:
   br i1 undef, label %if.then, label %if.end
 
@@ -1539,7 +1539,7 @@ if.end:
 ; Another infinite loop test this time with two nested infinite loop.
 ; infiniteloop3
 ; bx lr
-define void @infiniteloop3() "no-frame-pointer-elim"="true" {
+define void @infiniteloop3() "frame-pointer"="all" {
 ; ARM-LABEL: infiniteloop3:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    mov r0, #0
@@ -1759,7 +1759,7 @@ declare double @llvm.pow.f64(double, double)
 ; info (like labels named 'line_table) not because it's found a bl instruction.
 ;
 ; bl
-define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %tmp) "no-frame-pointer-elim"="true" {
+define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %tmp) "frame-pointer"="all" {
 ; ARM-LABEL: debug_info:
 ; ARM:       @ %bb.0: @ %bb
 ; ARM-NEXT:    push {r4, r7, lr}

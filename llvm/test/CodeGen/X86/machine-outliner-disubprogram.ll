@@ -130,7 +130,7 @@ entry:
 ; CHECK-SAME: unit: !0,
 ; CHECK-SAME: retainedNodes: [[VARS]]
 
-attributes #0 = { noinline noredzone nounwind optnone ssp uwtable "no-frame-pointer-elim"="true"  }
+attributes #0 = { noinline noredzone nounwind optnone ssp uwtable "frame-pointer"="all"  }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { noredzone }
 

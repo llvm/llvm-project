@@ -6,7 +6,7 @@
   define void @no-save2() #0 { ret void }
   define void @reg-save() #0 { ret void }
   define void @stack-save() #0 { ret void }
-  attributes #0 = { minsize noinline noredzone "no-frame-pointer-elim"="true" }
+  attributes #0 = { minsize noinline noredzone "frame-pointer"="all" }
 ...
 ---
 

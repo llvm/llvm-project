@@ -19,7 +19,7 @@ entry:
   ret i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 1), !dbg !16
 }
 
-attributes #0 = { minsize norecurse nounwind optsize readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m3" "target-features"="+hwdiv,+soft-float,-crypto,-neon" "unsafe-fp-math"="false" "use-soft-float"="true" }
+attributes #0 = { minsize norecurse nounwind optsize readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m3" "target-features"="+hwdiv,+soft-float,-crypto,-neon" "unsafe-fp-math"="false" "use-soft-float"="true" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

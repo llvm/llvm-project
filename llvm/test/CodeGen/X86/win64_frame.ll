@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-win32              | FileCheck %s --check-prefix=ALL --check-prefix=PUSHF
 ; RUN: llc < %s -mtriple=x86_64-pc-win32 -mattr=+sahf | FileCheck %s --check-prefix=ALL --check-prefix=SAHF
 
-define i32 @f1(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5) "no-frame-pointer-elim"="true" {
+define i32 @f1(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5) "frame-pointer"="all" {
 ; ALL-LABEL: f1:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
@@ -19,7 +19,7 @@ define i32 @f1(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5) "no-frame-pointer-el
   ret i32 %p5
 }
 
-define void @f2(i32 %p, ...) "no-frame-pointer-elim"="true" {
+define void @f2(i32 %p, ...) "frame-pointer"="all" {
 ; ALL-LABEL: f2:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
@@ -45,7 +45,7 @@ define void @f2(i32 %p, ...) "no-frame-pointer-elim"="true" {
   ret void
 }
 
-define i8* @f3() "no-frame-pointer-elim"="true" {
+define i8* @f3() "frame-pointer"="all" {
 ; ALL-LABEL: f3:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
@@ -63,7 +63,7 @@ define i8* @f3() "no-frame-pointer-elim"="true" {
   ret i8* %ra
 }
 
-define i8* @f4() "no-frame-pointer-elim"="true" {
+define i8* @f4() "frame-pointer"="all" {
 ; ALL-LABEL: f4:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
@@ -87,7 +87,7 @@ define i8* @f4() "no-frame-pointer-elim"="true" {
 
 declare void @external(i8*)
 
-define void @f5() "no-frame-pointer-elim"="true" {
+define void @f5() "frame-pointer"="all" {
 ; ALL-LABEL: f5:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
@@ -112,7 +112,7 @@ define void @f5() "no-frame-pointer-elim"="true" {
   ret void
 }
 
-define void @f6(i32 %p, ...) "no-frame-pointer-elim"="true" {
+define void @f6(i32 %p, ...) "frame-pointer"="all" {
 ; ALL-LABEL: f6:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
@@ -137,7 +137,7 @@ define void @f6(i32 %p, ...) "no-frame-pointer-elim"="true" {
   ret void
 }
 
-define i32 @f7(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "no-frame-pointer-elim"="true" {
+define i32 @f7(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "frame-pointer"="all" {
 ; ALL-LABEL: f7:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
@@ -159,7 +159,7 @@ define i32 @f7(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "no-frame-pointer-elim"="
   ret i32 %e
 }
 
-define i32 @f8(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "no-frame-pointer-elim"="true" {
+define i32 @f8(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "frame-pointer"="all" {
 ; ALL-LABEL: f8:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
@@ -255,7 +255,7 @@ define i64 @f10(i64* %foo, i64 %bar, i64 %baz) {
   ret i64 %sel
 }
 
-define i8* @f11() "no-frame-pointer-elim"="true" {
+define i8* @f11() "frame-pointer"="all" {
 ; ALL-LABEL: f11:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp

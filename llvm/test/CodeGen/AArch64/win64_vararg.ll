@@ -147,7 +147,7 @@ define i32 @fp(i8*, i64, i8*, ...) local_unnamed_addr #6 {
   ret i32 %12
 }
 
-attributes #6 = { "no-frame-pointer-elim"="true" }
+attributes #6 = { "frame-pointer"="all" }
 
 ; CHECK-LABEL: vla
 ; CHECK: stp     x29, x30, [sp, #-112]!

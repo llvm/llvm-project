@@ -22,4 +22,4 @@ entry:
 
 declare i32 @foo2(i32)
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind "frame-pointer"="all" }

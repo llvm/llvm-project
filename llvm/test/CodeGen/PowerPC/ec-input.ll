@@ -148,8 +148,8 @@ if.end23.3:                                       ; preds = %if.end14.3
   br i1 %cmp, label %for.cond2.preheader, label %for.end38
 }
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "target-cpu"="a2q" }
-attributes #1 = { inlinehint nounwind "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "target-cpu"="a2q" }
+attributes #0 = { nounwind "frame-pointer"="all" "target-cpu"="a2q" }
+attributes #1 = { inlinehint nounwind "frame-pointer"="all" "target-cpu"="a2q" }
 attributes #2 = { nounwind }
 attributes #3 = { cold nounwind }
 

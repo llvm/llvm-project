@@ -51,10 +51,10 @@ define void @bar() #0 {
 
 declare void @baz() #1
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind "frame-pointer"="all" }
 
 attributes #1 = { nounwind readnone ssp "use-soft-float"="false" }
-; FOO: attributes #{{[0-9]}} = { nounwind "no-frame-pointer-elim"="true" }
+; FOO: attributes #{{[0-9]}} = { nounwind "frame-pointer"="all" }
 
 ; FOO: attributes #{{[0-9]}} = { nounwind readnone ssp "use-soft-float"="false" }
 

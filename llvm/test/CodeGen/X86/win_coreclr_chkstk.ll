@@ -39,7 +39,7 @@ entry:
 
 ; Prolog stack allocation >= 4096 bytes will require the probe sequence
 ; Case with frame pointer
-define i32 @main4k_frame() nounwind "no-frame-pointer-elim"="true" {
+define i32 @main4k_frame() nounwind "frame-pointer"="all" {
 entry:
 ; WIN_X64-LABEL:main4k_frame:
 ; WIN_X64:      movq    %gs:16, %rcx

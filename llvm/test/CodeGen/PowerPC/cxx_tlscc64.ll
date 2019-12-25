@@ -40,4 +40,4 @@ define cxx_fast_tlscc i32* @_ZTW4sum2() #0 {
   ret i32* @sum1
 }
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind "frame-pointer"="all" }

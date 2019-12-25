@@ -82,5 +82,5 @@ declare void @_ZSt9terminatev()
 ; Function Attrs: nounwind
 declare i32 @puts(i8* nocapture readonly)
 
-attributes #0 = { "no-frame-pointer-elim"="true" }
+attributes #0 = { "frame-pointer"="all" }
 
