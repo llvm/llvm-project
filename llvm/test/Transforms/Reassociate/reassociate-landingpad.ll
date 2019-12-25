@@ -47,7 +47,7 @@ invoke.cont25:                                    ; preds = %", bb8"
 
 declare void @c() #0
 
-attributes #0 = { "no-frame-pointer-elim-non-leaf" }
+attributes #0 = { "frame-pointer"="non-leaf" }
 
 !llvm.module.flags = !{!0}
 

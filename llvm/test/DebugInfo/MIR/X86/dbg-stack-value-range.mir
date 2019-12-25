@@ -96,7 +96,7 @@
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**)
 
-  attributes #0 = { nounwind uwtable "no-frame-pointer-elim"="false" "no-frame-pointer-elim-non-leaf" }
+  attributes #0 = { nounwind uwtable "frame-pointer"="non-leaf" }
   
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}

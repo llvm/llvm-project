@@ -51,7 +51,7 @@ define void @leaf_highreg_nofpelim() "frame-pointer"="all" {
 
 ; Leaf function, frame pointer requested for non-leaf functions only, so no
 ; need for a stack frame.
-define void @leaf_nononleaffpelim() "no-frame-pointer-elim-non-leaf" {
+define void @leaf_nononleaffpelim() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: leaf_nononleaffpelim:
 ; CHECK-NOT: push
 ; CHECK-NOT: sp
@@ -83,7 +83,7 @@ define void @call_nofpelim() "frame-pointer"="all" {
 }
 
 ; Has a call, and frame pointer requested for non-leaf function.
-define void @call_nononleaffpelim() "no-frame-pointer-elim-non-leaf" {
+define void @call_nononleaffpelim() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: call_nononleaffpelim:
 ; CHECK: push {r7, lr}
 ; CHECK: mov r7, sp

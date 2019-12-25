@@ -14,7 +14,7 @@ L.entry:
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-attributes #0 = { "no-frame-pointer-elim-non-leaf" }
+attributes #0 = { "frame-pointer"="non-leaf" }
 attributes #1 = { nounwind readnone speculatable }
 
 !llvm.module.flags = !{!0}

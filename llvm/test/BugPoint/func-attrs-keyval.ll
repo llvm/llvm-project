@@ -8,4 +8,4 @@ define void @f() #0 {
 }
 
 ; CHECK: attributes #[[ATTRS]] = { "bugpoint-crash"="sure" }
-attributes #0 = { "bugpoint-crash"="sure" noreturn "no-frame-pointer-elim-non-leaf" }
+attributes #0 = { "bugpoint-crash"="sure" noreturn "frame-pointer"="non-leaf" }

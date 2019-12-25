@@ -6,7 +6,7 @@
 
 declare dso_local void @callee() noreturn nounwind
 
-define dso_local void @caller() nounwind "no-frame-pointer-elim-non-leaf" {
+define dso_local void @caller() nounwind "frame-pointer"="non-leaf" {
 ; STATIC-LABEL: caller:
 ; STATIC:       # %bb.0: # %entry
 ; STATIC-NEXT:    daddiu $sp, $sp, -16
