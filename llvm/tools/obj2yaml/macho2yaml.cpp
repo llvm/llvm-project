@@ -198,7 +198,7 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
 
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
   if (auto Err = dwarf2yaml(*DICtx, Y->DWARF))
-    return errorCodeToError(Err);
+    return std::move(Err);
   return std::move(Y);
 }
 
@@ -543,20 +543,20 @@ Error macho2yaml(raw_ostream &Out, const object::MachOUniversalBinary &Obj) {
   return Error::success();
 }
 
-std::error_code macho2yaml(raw_ostream &Out, const object::Binary &Binary) {
+Error macho2yaml(raw_ostream &Out, const object::Binary &Binary) {
   if (const auto *MachOObj = dyn_cast<object::MachOUniversalBinary>(&Binary)) {
     if (auto Err = macho2yaml(Out, *MachOObj)) {
-      return errorToErrorCode(std::move(Err));
+      return Err;
     }
-    return obj2yaml_error::success;
+    return Error::success();
   }
 
   if (const auto *MachOObj = dyn_cast<object::MachOObjectFile>(&Binary)) {
     if (auto Err = macho2yaml(Out, *MachOObj)) {
-      return errorToErrorCode(std::move(Err));
+      return Err;
     }
-    return obj2yaml_error::success;
+    return Error::success();
   }
 
-  return obj2yaml_error::unsupported_obj_file_format;
+  return errorCodeToError(obj2yaml_error::unsupported_obj_file_format);
 }

@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
 
@@ -57,7 +58,7 @@ public:
   DWARFDebugArangeSet() { clear(); }
 
   void clear();
-  bool extract(DataExtractor data, uint64_t *offset_ptr);
+  Error extract(DataExtractor data, uint64_t *offset_ptr);
   void dump(raw_ostream &OS) const;
 
   uint32_t getCompileUnitDIEOffset() const { return HeaderData.CuOffset; }
