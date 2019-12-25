@@ -1133,13 +1133,16 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
     Ret = getSymbolNMTypeChar(*MachO, I);
   else if (WasmObjectFile *Wasm = dyn_cast<WasmObjectFile>(&Obj))
     Ret = getSymbolNMTypeChar(*Wasm, I);
-  else
-    Ret = getSymbolNMTypeChar(cast<ELFObjectFileBase>(Obj), I);
+  else if (ELFObjectFileBase *ELF = dyn_cast<ELFObjectFileBase>(&Obj)) {
+    if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
+      return 'i';
+    Ret = getSymbolNMTypeChar(*ELF, I);
+    if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
+      return Ret;
+  } else
+    llvm_unreachable("unknown binary format");
 
   if (!(Symflags & object::SymbolRef::SF_Global))
-    return Ret;
-
-  if (Obj.isELF() && ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
     return Ret;
 
   return toupper(Ret);
