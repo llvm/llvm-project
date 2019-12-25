@@ -47,9 +47,6 @@ private:
   MachineInstr *findFlagsImpDef(MachineBasicBlock *MBB,
                                 MachineBasicBlock::reverse_iterator MI);
 
-  // Return true if MI imp-uses eflags.
-  bool impUsesFlags(MachineInstr *MI);
-
   // Return true if this is the opcode of a SetCC instruction with a register
   // output.
   bool isSetCCr(unsigned Opode);
@@ -77,19 +74,10 @@ X86FixupSetCCPass::findFlagsImpDef(MachineBasicBlock *MBB,
   // FIXME: Should this be instr_rend(), and MI be reverse_instr_iterator?
   auto MBBStart = MBB->rend();
   for (int i = 0; (i < SearchBound) && (MI != MBBStart); ++i, ++MI)
-    for (auto &Op : MI->implicit_operands())
-      if (Op.isReg() && (Op.getReg() == X86::EFLAGS) && Op.isDef())
-        return &*MI;
+    if (MI->definesRegister(X86::EFLAGS))
+      return &*MI;
 
   return nullptr;
-}
-
-bool X86FixupSetCCPass::impUsesFlags(MachineInstr *MI) {
-  for (auto &Op : MI->implicit_operands())
-    if (Op.isReg() && (Op.getReg() == X86::EFLAGS) && Op.isUse())
-      return true;
-
-  return false;
 }
 
 bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
@@ -126,7 +114,7 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
       // it, itself, by definition, clobbers eflags. But it may happen that
       // FlagsDefMI also *uses* eflags, in which case the transformation is
       // invalid.
-      if (impUsesFlags(FlagsDefMI))
+      if (FlagsDefMI->readsRegister(X86::EFLAGS))
         continue;
 
       ++NumSubstZexts;
