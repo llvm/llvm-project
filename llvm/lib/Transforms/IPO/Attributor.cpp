@@ -1993,53 +1993,62 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
   AAUndefinedBehaviorImpl(const IRPosition &IRP) : AAUndefinedBehavior(IRP) {}
 
   /// See AbstractAttribute::updateImpl(...).
+  // TODO: We should not only check instructions that access memory
+  // through a pointer (i.e. also branches etc.)
   ChangeStatus updateImpl(Attributor &A) override {
-    size_t PrevSize = NoUBLoads.size();
+    const size_t PrevSize = NoUBMemAccessInsts.size();
 
-    // TODO: We should not only check for load instructions.
-    auto InspectLoadForUB = [&](Instruction &I) {
+    auto InspectMemAccessInstForUB = [&](Instruction &I) {
       // Skip instructions that are already saved.
-      if (NoUBLoads.count(&I) || UBLoads.count(&I))
+      if (NoUBMemAccessInsts.count(&I) || UBMemAccessInsts.count(&I))
         return true;
 
-      Value *PtrOp = cast<LoadInst>(&I)->getPointerOperand();
+      // `InspectMemAccessInstForUB` is only called on instructions
+      // for which getPointerOperand() should give us their
+      // pointer operand unless they're volatile.
+      const Value *PtrOp = getPointerOperand(&I);
+      if (!PtrOp)
+        return true;
 
-      // A load is considered UB only if it dereferences a constant
-      // null pointer.
+      // A memory access through a pointer is considered UB
+      // only if the pointer has constant null value.
+      // TODO: Expand it to not only check constant values.
       if (!isa<ConstantPointerNull>(PtrOp)) {
-        NoUBLoads.insert(&I);
+        NoUBMemAccessInsts.insert(&I);
         return true;
       }
-      Type *PtrTy = PtrOp->getType();
+      const Type *PtrTy = PtrOp->getType();
 
-      // Because we only consider loads inside functions,
+      // Because we only consider instructions inside functions,
       // assume that a parent function exists.
       const Function *F = I.getFunction();
 
-      // A dereference on constant null is only considered UB
-      // if null dereference is _not_ defined for the target platform.
-      // TODO: Expand it to not only check constant values.
+      // A memory access using constant null pointer is only considered UB
+      // if null pointer is _not_ defined for the target platform.
       if (!llvm::NullPointerIsDefined(F, PtrTy->getPointerAddressSpace()))
-        UBLoads.insert(&I);
+        UBMemAccessInsts.insert(&I);
       else
-        NoUBLoads.insert(&I);
+        NoUBMemAccessInsts.insert(&I);
       return true;
     };
 
-    A.checkForAllInstructions(InspectLoadForUB, *this, {Instruction::Load});
-    if (PrevSize != NoUBLoads.size())
+    A.checkForAllInstructions(InspectMemAccessInstForUB, *this,
+                              {Instruction::Load, Instruction::Store,
+                               Instruction::AtomicCmpXchg,
+                               Instruction::AtomicRMW});
+    if (PrevSize != NoUBMemAccessInsts.size())
       return ChangeStatus::CHANGED;
     return ChangeStatus::UNCHANGED;
   }
 
   bool isAssumedToCauseUB(Instruction *I) const override {
-    return UBLoads.count(I);
+    return UBMemAccessInsts.count(I);
   }
 
   ChangeStatus manifest(Attributor &A) override {
-    if (!UBLoads.size())
+    if (!UBMemAccessInsts.size())
       return ChangeStatus::UNCHANGED;
-    for (Instruction *I : UBLoads)
+    for (Instruction *I : UBMemAccessInsts)
       changeToUnreachable(I, /* UseLLVMTrap */ false);
     return ChangeStatus::CHANGED;
   }
@@ -2050,20 +2059,21 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
   }
 
 protected:
-  // A set of all the (live) load instructions that _are_ assumed to cause UB.
-  SmallPtrSet<Instruction *, 8> UBLoads;
+  // A set of all the (live) memory accessing instructions that _are_ assumed to
+  // cause UB.
+  SmallPtrSet<Instruction *, 8> UBMemAccessInsts;
 
 private:
-  // A set of all the (live) load instructions that are _not_ assumed to cause
-  // UB.
+  // A set of all the (live) memory accessing instructions
+  // that are _not_ assumed to cause UB.
   //   Note: The correctness of the procedure depends on the fact that this
   //   set stops changing after some point. "Change" here means that the size
   //   of the set changes. The size of this set is monotonically increasing
-  //   (we only add items to it) and is upper bounded by the number of load
-  //   instructions in the processed function (we can never save more elements
-  //   in this set than this number). Hence, the size of this set, at some
-  //   point, will stop increasing, effectively reaching a fixpoint.
-  SmallPtrSet<Instruction *, 8> NoUBLoads;
+  //   (we only add items to it) and is upper bounded by the number of memory
+  //   accessing instructions in the processed function (we can never save more
+  //   elements in this set than this number). Hence, the size of this set, at
+  //   some point, will stop increasing, effectively reaching a fixpoint.
+  SmallPtrSet<Instruction *, 8> NoUBMemAccessInsts;
 };
 
 struct AAUndefinedBehaviorFunction final : AAUndefinedBehaviorImpl {
@@ -2075,7 +2085,7 @@ struct AAUndefinedBehaviorFunction final : AAUndefinedBehaviorImpl {
     STATS_DECL(UndefinedBehaviorInstruction, Instruction,
                "Number of instructions known to have UB");
     BUILD_STAT_NAME(UndefinedBehaviorInstruction, Instruction) +=
-        UBLoads.size();
+        UBMemAccessInsts.size();
   }
 };
 
@@ -5573,6 +5583,8 @@ void Attributor::initializeInformationCache(Function &F) {
     case Instruction::Invoke:
     case Instruction::CleanupRet:
     case Instruction::CatchSwitch:
+    case Instruction::AtomicRMW:
+    case Instruction::AtomicCmpXchg:
     case Instruction::Resume:
     case Instruction::Ret:
       IsInterestingOpcode = true;
@@ -5812,9 +5824,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const IRPosition &Pos) {
 }
 
 template <typename base_ty, base_ty BestState, base_ty WorstState>
-raw_ostream &
-llvm::operator<<(raw_ostream &OS,
-                 const IntegerStateBase<base_ty, BestState, WorstState> &S) {
+raw_ostream &llvm::
+operator<<(raw_ostream &OS,
+           const IntegerStateBase<base_ty, BestState, WorstState> &S) {
   return OS << "(" << S.getKnown() << "-" << S.getAssumed() << ")"
             << static_cast<const AbstractState &>(S);
 }
