@@ -1337,7 +1337,7 @@ VOP3P Modifiers
 
 This section describes modifiers of *regular* VOP3P instructions.
 
-*v_mad_mix_f32*, *v_mad_mixhi_f16* and *v_mad_mixlo_f16*
+*v_mad_mix\** and *v_fma_mix\**
 instructions use these modifiers :ref:`in a special manner<amdgpu_synid_mad_mix>`.
 
 GFX9 and GFX10 only.
@@ -1494,8 +1494,8 @@ See a description :ref:`here<amdgpu_synid_clamp>`.
 VOP3P V_MAD_MIX Modifiers
 -------------------------
 
-*v_mad_mix_f32*, *v_mad_mixhi_f16* and *v_mad_mixlo_f16* instructions
-use *op_sel* and *op_sel_hi* modifiers
+*v_mad_mix\** and *v_fma_mix\**
+instructions use *op_sel* and *op_sel_hi* modifiers
 in a manner different from *regular* VOP3P instructions.
 
 See a description below.
@@ -1581,3 +1581,52 @@ clamp
 ~~~~~
 
 See a description :ref:`here<amdgpu_synid_clamp>`.
+
+VOP3P MFMA Modifiers
+--------------------
+
+.. _amdgpu_synid_cbsz:
+
+cbsz
+~~~~
+
+    =============================== ==================================================================
+    Syntax                          Description
+    =============================== ==================================================================
+    cbsz:[{0..7}]                   TBD
+    =============================== ==================================================================
+
+Note: numeric value may be specified as either
+an :ref:`integer number<amdgpu_synid_integer_number>` or
+an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+
+.. _amdgpu_synid_abid:
+
+abid
+~~~~
+
+    =============================== ==================================================================
+    Syntax                          Description
+    =============================== ==================================================================
+    abid:[{0..15}]                  TBD
+    =============================== ==================================================================
+
+Note: numeric value may be specified as either
+an :ref:`integer number<amdgpu_synid_integer_number>` or
+an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+
+.. _amdgpu_synid_blgp:
+
+blgp
+~~~~
+
+    =============================== ==================================================================
+    Syntax                          Description
+    =============================== ==================================================================
+    blgp:[{0..7}]                   TBD
+    =============================== ==================================================================
+
+Note: numeric value may be specified as either
+an :ref:`integer number<amdgpu_synid_integer_number>` or
+an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+
