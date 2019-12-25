@@ -5,20 +5,25 @@
     *                                                *
     **************************************************
 
-============================
-Syntax of GFX7 Instructions
-============================
+====================================================================================
+Syntax of Core GFX7 Instructions
+====================================================================================
 
 .. contents::
   :local:
+
+Introduction
+============
+
+This document describes the syntax of *core* GFX7 instructions.
 
 Notation
 ========
 
 Notation used in this document is explained :ref:`here<amdgpu_syn_instruction_notation>`.
 
-Introduction
-============
+Overvew
+=======
 
 An overview of generic syntax and other features of AMDGPU instructions may be found :ref:`in this document<amdgpu_syn_instructions>`.
 
