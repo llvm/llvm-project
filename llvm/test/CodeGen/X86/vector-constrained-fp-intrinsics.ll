@@ -4445,14 +4445,10 @@ define <4 x i32> @constrained_vector_fptoui_v4i32_v4f32() #0 {
 ;
 ; AVX512-LABEL: constrained_vector_fptoui_v4i32_v4f32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttss2usi {{.*}}(%rip), %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    vcvttss2usi {{.*}}(%rip), %eax
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vcvttss2usi {{.*}}(%rip), %eax
-; AVX512-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vcvttss2usi {{.*}}(%rip), %eax
-; AVX512-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4.2E+1,4.3E+1,4.4E+1,4.5E+1]
+; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:
   %result = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f32(
@@ -4990,14 +4986,10 @@ define <4 x i32> @constrained_vector_fptoui_v4i32_v4f64() #0 {
 ;
 ; AVX512-LABEL: constrained_vector_fptoui_v4i32_v4f64:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %eax
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %eax
-; AVX512-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vcvttsd2usi {{.*}}(%rip), %eax
-; AVX512-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [4.2100000000000001E+1,4.2200000000000003E+1,4.2299999999999997E+1,4.2399999999999999E+1]
+; AVX512-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:
   %result = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f64(
