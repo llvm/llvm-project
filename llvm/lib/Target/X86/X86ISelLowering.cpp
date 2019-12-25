@@ -19776,9 +19776,13 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
           Opc = IsSigned ? ISD::STRICT_FP_TO_SINT : ISD::STRICT_FP_TO_UINT;
         else
           Opc = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
-        Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8f64,
-                          DAG.getUNDEF(MVT::v8f64),
-                          Src, DAG.getIntPtrConstant(0, dl));
+        // Need to concat with zero vector for strict fp to avoid spurious
+        // exceptions.
+        // TODO: Should we just do this for non-strict as well?
+        SDValue Tmp = IsStrict ? DAG.getConstantFP(0.0, dl, MVT::v8f64)
+                               : DAG.getUNDEF(MVT::v8f64);
+        Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8f64, Tmp, Src,
+                          DAG.getIntPtrConstant(0, dl));
       }
       SDValue Res, Chain;
       if (IsStrict) {
