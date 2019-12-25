@@ -907,10 +907,8 @@ CompilerType ClangASTContext::GetBasicType(lldb::BasicType basic_type) {
 }
 
 CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
-    const char *type_name, uint32_t dw_ate, uint32_t bit_size) {
+    llvm::StringRef type_name, uint32_t dw_ate, uint32_t bit_size) {
   ASTContext &ast = getASTContext();
-
-#define streq(a, b) strcmp(a, b) == 0
 
   switch (dw_ate) {
   default:
@@ -934,16 +932,13 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
   case DW_ATE_lo_user:
     // This has been seen to mean DW_AT_complex_integer
-    if (type_name) {
-      if (::strstr(type_name, "complex")) {
-        CompilerType complex_int_clang_type =
-            GetBuiltinTypeForDWARFEncodingAndBitSize("int", DW_ATE_signed,
-                                                     bit_size / 2);
-        return CompilerType(
-            this,
-            ast.getComplexType(ClangUtil::GetQualType(complex_int_clang_type))
-                .getAsOpaquePtr());
-      }
+    if (type_name.contains("complex")) {
+      CompilerType complex_int_clang_type =
+          GetBuiltinTypeForDWARFEncodingAndBitSize("int", DW_ATE_signed,
+                                                   bit_size / 2);
+      return CompilerType(this, ast.getComplexType(ClangUtil::GetQualType(
+                                                       complex_int_clang_type))
+                                    .getAsOpaquePtr());
     }
     break;
 
@@ -966,13 +961,13 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
 
   case DW_ATE_float:
-    if (streq(type_name, "float") &&
+    if (type_name == "float" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.FloatTy))
       return CompilerType(this, ast.FloatTy.getAsOpaquePtr());
-    if (streq(type_name, "double") &&
+    if (type_name == "double" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.DoubleTy))
       return CompilerType(this, ast.DoubleTy.getAsOpaquePtr());
-    if (streq(type_name, "long double") &&
+    if (type_name == "long double" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleTy))
       return CompilerType(this, ast.LongDoubleTy.getAsOpaquePtr());
     // Fall back to not requiring a name match
@@ -987,31 +982,31 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
 
   case DW_ATE_signed:
-    if (type_name) {
-      if (streq(type_name, "wchar_t") &&
+    if (!type_name.empty()) {
+      if (type_name == "wchar_t" &&
           QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy) &&
           (getTargetInfo() &&
            TargetInfo::isTypeSigned(getTargetInfo()->getWCharType())))
         return CompilerType(this, ast.WCharTy.getAsOpaquePtr());
-      if (streq(type_name, "void") &&
+      if (type_name == "void" &&
           QualTypeMatchesBitSize(bit_size, ast, ast.VoidTy))
         return CompilerType(this, ast.VoidTy.getAsOpaquePtr());
-      if (strstr(type_name, "long long") &&
+      if (type_name.contains("long long") &&
           QualTypeMatchesBitSize(bit_size, ast, ast.LongLongTy))
         return CompilerType(this, ast.LongLongTy.getAsOpaquePtr());
-      if (strstr(type_name, "long") &&
+      if (type_name.contains("long") &&
           QualTypeMatchesBitSize(bit_size, ast, ast.LongTy))
         return CompilerType(this, ast.LongTy.getAsOpaquePtr());
-      if (strstr(type_name, "short") &&
+      if (type_name.contains("short") &&
           QualTypeMatchesBitSize(bit_size, ast, ast.ShortTy))
         return CompilerType(this, ast.ShortTy.getAsOpaquePtr());
-      if (strstr(type_name, "char")) {
+      if (type_name.contains("char")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
           return CompilerType(this, ast.CharTy.getAsOpaquePtr());
         if (QualTypeMatchesBitSize(bit_size, ast, ast.SignedCharTy))
           return CompilerType(this, ast.SignedCharTy.getAsOpaquePtr());
       }
-      if (strstr(type_name, "int")) {
+      if (type_name.contains("int")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.IntTy))
           return CompilerType(this, ast.IntTy.getAsOpaquePtr());
         if (QualTypeMatchesBitSize(bit_size, ast, ast.Int128Ty))
@@ -1034,8 +1029,7 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
 
   case DW_ATE_signed_char:
-    if (ast.getLangOpts().CharIsSigned && type_name &&
-        streq(type_name, "char")) {
+    if (ast.getLangOpts().CharIsSigned && type_name == "char") {
       if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
         return CompilerType(this, ast.CharTy.getAsOpaquePtr());
     }
@@ -1044,27 +1038,27 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
 
   case DW_ATE_unsigned:
-    if (type_name) {
-      if (streq(type_name, "wchar_t")) {
+    if (!type_name.empty()) {
+      if (type_name == "wchar_t") {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy)) {
           if (!(getTargetInfo() &&
                 TargetInfo::isTypeSigned(getTargetInfo()->getWCharType())))
             return CompilerType(this, ast.WCharTy.getAsOpaquePtr());
         }
       }
-      if (strstr(type_name, "long long")) {
+      if (type_name.contains("long long")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedLongLongTy))
           return CompilerType(this, ast.UnsignedLongLongTy.getAsOpaquePtr());
-      } else if (strstr(type_name, "long")) {
+      } else if (type_name.contains("long")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedLongTy))
           return CompilerType(this, ast.UnsignedLongTy.getAsOpaquePtr());
-      } else if (strstr(type_name, "short")) {
+      } else if (type_name.contains("short")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedShortTy))
           return CompilerType(this, ast.UnsignedShortTy.getAsOpaquePtr());
-      } else if (strstr(type_name, "char")) {
+      } else if (type_name.contains("char")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedCharTy))
           return CompilerType(this, ast.UnsignedCharTy.getAsOpaquePtr());
-      } else if (strstr(type_name, "int")) {
+      } else if (type_name.contains("int")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedIntTy))
           return CompilerType(this, ast.UnsignedIntTy.getAsOpaquePtr());
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedInt128Ty))
@@ -1087,8 +1081,7 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
 
   case DW_ATE_unsigned_char:
-    if (!ast.getLangOpts().CharIsSigned && type_name &&
-        streq(type_name, "char")) {
+    if (!ast.getLangOpts().CharIsSigned && type_name == "char") {
       if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
         return CompilerType(this, ast.CharTy.getAsOpaquePtr());
     }
@@ -1102,23 +1095,24 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
 
   case DW_ATE_UTF:
-    if (type_name) {
-      if (streq(type_name, "char16_t"))
+    if (!type_name.empty()) {
+      if (type_name == "char16_t")
         return CompilerType(this, ast.Char16Ty.getAsOpaquePtr());
-      if (streq(type_name, "char32_t"))
+      if (type_name == "char32_t")
         return CompilerType(this, ast.Char32Ty.getAsOpaquePtr());
-      if (streq(type_name, "char8_t"))
+      if (type_name == "char8_t")
         return CompilerType(this, ast.Char8Ty.getAsOpaquePtr());
     }
     break;
   }
   // This assert should fire for anything that we don't catch above so we know
   // to fix any issues we run into.
-  if (type_name) {
-    Host::SystemLog(Host::eSystemLogError, "error: need to add support for "
-                                           "DW_TAG_base_type '%s' encoded with "
-                                           "DW_ATE = 0x%x, bit_size = %u\n",
-                    type_name, dw_ate, bit_size);
+  if (!type_name.empty()) {
+    std::string type_name_str = type_name.str();
+    Host::SystemLog(Host::eSystemLogError,
+                    "error: need to add support for DW_TAG_base_type '%s' "
+                    "encoded with DW_ATE = 0x%x, bit_size = %u\n",
+                    type_name_str.c_str(), dw_ate, bit_size);
   } else {
     Host::SystemLog(Host::eSystemLogError, "error: need to add support for "
                                            "DW_TAG_base_type encoded with "
