@@ -1512,14 +1512,12 @@ static CanQualType GetConversionType(ASTContext &Context, NamedDecl *Conv) {
 /// \param VOutput the set to which to add conversions from virtual bases
 /// \param HiddenVBaseCs the set of conversions which were hidden in a
 ///   virtual base along some inheritance path
-static void CollectVisibleConversions(ASTContext &Context,
-                                      CXXRecordDecl *Record,
-                                      bool InVirtual,
-                                      AccessSpecifier Access,
-                  const llvm::SmallPtrSet<CanQualType, 8> &ParentHiddenTypes,
-                                      ASTUnresolvedSet &Output,
-                                      UnresolvedSetImpl &VOutput,
-                           llvm::SmallPtrSet<NamedDecl*, 8> &HiddenVBaseCs) {
+static void CollectVisibleConversions(
+    ASTContext &Context, const CXXRecordDecl *Record, bool InVirtual,
+    AccessSpecifier Access,
+    const llvm::SmallPtrSet<CanQualType, 8> &ParentHiddenTypes,
+    ASTUnresolvedSet &Output, UnresolvedSetImpl &VOutput,
+    llvm::SmallPtrSet<NamedDecl *, 8> &HiddenVBaseCs) {
   // The set of types which have conversions in this class or its
   // subclasses.  As an optimization, we don't copy the derived set
   // unless it might change.
@@ -1560,7 +1558,7 @@ static void CollectVisibleConversions(ASTContext &Context,
 
   // Collect information recursively from any base classes.
   for (const auto &I : Record->bases()) {
-    const RecordType *RT = I.getType()->getAs<RecordType>();
+    const auto *RT = I.getType()->getAs<RecordType>();
     if (!RT) continue;
 
     AccessSpecifier BaseAccess
@@ -1578,7 +1576,7 @@ static void CollectVisibleConversions(ASTContext &Context,
 /// This would be extremely straightforward if it weren't for virtual
 /// bases.  It might be worth special-casing that, really.
 static void CollectVisibleConversions(ASTContext &Context,
-                                      CXXRecordDecl *Record,
+                                      const CXXRecordDecl *Record,
                                       ASTUnresolvedSet &Output) {
   // The collection of all conversions in virtual bases that we've
   // found.  These will be added to the output as long as they don't
@@ -1602,7 +1600,7 @@ static void CollectVisibleConversions(ASTContext &Context,
 
   // Recursively collect conversions from base classes.
   for (const auto &I : Record->bases()) {
-    const RecordType *RT = I.getType()->getAs<RecordType>();
+    const auto *RT = I.getType()->getAs<RecordType>();
     if (!RT) continue;
 
     CollectVisibleConversions(Context, cast<CXXRecordDecl>(RT->getDecl()),
@@ -1621,7 +1619,7 @@ static void CollectVisibleConversions(ASTContext &Context,
 /// getVisibleConversionFunctions - get all conversion functions visible
 /// in current class; including conversion function templates.
 llvm::iterator_range<CXXRecordDecl::conversion_iterator>
-CXXRecordDecl::getVisibleConversionFunctions() {
+CXXRecordDecl::getVisibleConversionFunctions() const {
   ASTContext &Ctx = getASTContext();
 
   ASTUnresolvedSet *Set;

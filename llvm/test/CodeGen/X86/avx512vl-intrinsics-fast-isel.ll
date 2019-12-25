@@ -682,17 +682,15 @@ define <2 x i64> @test_mm256_mask_cvttpd_epi32(<2 x i64> %__W, i8 zeroext %__U, 
 ; X86-LABEL: test_mm256_mask_cvttpd_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    vcvttpd2dq %ymm1, %xmm1
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; X86-NEXT:    vcvttpd2dq %ymm1, %xmm0 {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_mask_cvttpd_epi32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvttpd2dq %ymm1, %xmm1
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vcvttpd2dq %ymm1, %xmm0 {%k1}
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -709,17 +707,15 @@ define <2 x i64> @test_mm256_maskz_cvttpd_epi32(i8 zeroext %__U, <4 x double> %_
 ; X86-LABEL: test_mm256_maskz_cvttpd_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    vcvttpd2dq %ymm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_maskz_cvttpd_epi32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    vcvttpd2dq %ymm0, %xmm0 {%k1} {z}
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -798,16 +794,14 @@ define <2 x i64> @test_mm256_mask_cvttpd_epu32(<2 x i64> %__W, i8 zeroext %__U, 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vcvttpd2udq %ymm1, %xmm1
-; X86-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; X86-NEXT:    vcvttpd2udq %ymm1, %xmm0 {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_mask_cvttpd_epu32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttpd2udq %ymm1, %xmm1
-; X64-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vcvttpd2udq %ymm1, %xmm0 {%k1}
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -822,16 +816,14 @@ define <2 x i64> @test_mm256_maskz_cvttpd_epu32(i8 zeroext %__U, <4 x double> %_
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vcvttpd2udq %ymm0, %xmm0
-; X86-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    vcvttpd2udq %ymm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_maskz_cvttpd_epu32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttpd2udq %ymm0, %xmm0
-; X64-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    vcvttpd2udq %ymm0, %xmm0 {%k1} {z}
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -844,16 +836,14 @@ define <2 x i64> @test_mm_mask_cvttps_epi32(<2 x i64> %__W, i8 zeroext %__U, <4 
 ; X86-LABEL: test_mm_mask_cvttps_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    vcvttps2dq %xmm1, %xmm1
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; X86-NEXT:    vcvttps2dq %xmm1, %xmm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_cvttps_epi32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvttps2dq %xmm1, %xmm1
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vcvttps2dq %xmm1, %xmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %__A) #8
@@ -869,16 +859,14 @@ define <2 x i64> @test_mm_maskz_cvttps_epi32(i8 zeroext %__U, <4 x float> %__A) 
 ; X86-LABEL: test_mm_maskz_cvttps_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    vcvttps2dq %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_cvttps_epi32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    vcvttps2dq %xmm0, %xmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %__A) #8
@@ -893,16 +881,14 @@ define <4 x i64> @test_mm256_mask_cvttps_epi32(<4 x i64> %__W, i8 zeroext %__U, 
 ; X86-LABEL: test_mm256_mask_cvttps_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    vcvttps2dq %ymm1, %ymm1
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1}
+; X86-NEXT:    vcvttps2dq %ymm1, %ymm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_mask_cvttps_epi32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvttps2dq %ymm1, %ymm1
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1}
+; X64-NEXT:    vcvttps2dq %ymm1, %ymm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %__A) #8
@@ -917,16 +903,14 @@ define <4 x i64> @test_mm256_maskz_cvttps_epi32(i8 zeroext %__U, <8 x float> %__
 ; X86-LABEL: test_mm256_maskz_cvttps_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; X86-NEXT:    vcvttps2dq %ymm0, %ymm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_maskz_cvttps_epi32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; X64-NEXT:    vcvttps2dq %ymm0, %ymm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %__A) #8
@@ -952,15 +936,13 @@ define <2 x i64> @test_mm_mask_cvttps_epu32(<2 x i64> %__W, i8 zeroext %__U, <4 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vcvttps2udq %xmm1, %xmm1
-; X86-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; X86-NEXT:    vcvttps2udq %xmm1, %xmm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_cvttps_epu32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttps2udq %xmm1, %xmm1
-; X64-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vcvttps2udq %xmm1, %xmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__W to <4 x i32>
@@ -974,15 +956,13 @@ define <2 x i64> @test_mm_maskz_cvttps_epu32(i8 zeroext %__U, <4 x float> %__A) 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vcvttps2udq %xmm0, %xmm0
-; X86-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    vcvttps2udq %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_cvttps_epu32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttps2udq %xmm0, %xmm0
-; X64-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    vcvttps2udq %xmm0, %xmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <4 x i32> @llvm.x86.avx512.mask.cvttps2udq.128(<4 x float> %__A, <4 x i32> zeroinitializer, i8 %__U) #8
@@ -1006,15 +986,13 @@ define <4 x i64> @test_mm256_mask_cvttps_epu32(<4 x i64> %__W, i8 zeroext %__U, 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vcvttps2udq %ymm1, %ymm1
-; X86-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1}
+; X86-NEXT:    vcvttps2udq %ymm1, %ymm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_mask_cvttps_epu32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttps2udq %ymm1, %ymm1
-; X64-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1}
+; X64-NEXT:    vcvttps2udq %ymm1, %ymm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__W to <8 x i32>
@@ -1028,15 +1006,13 @@ define <4 x i64> @test_mm256_maskz_cvttps_epu32(i8 zeroext %__U, <8 x float> %__
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vcvttps2udq %ymm0, %ymm0
-; X86-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; X86-NEXT:    vcvttps2udq %ymm0, %ymm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_maskz_cvttps_epu32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvttps2udq %ymm0, %ymm0
-; X64-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; X64-NEXT:    vcvttps2udq %ymm0, %ymm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <8 x i32> @llvm.x86.avx512.mask.cvttps2udq.256(<8 x float> %__A, <8 x i32> zeroinitializer, i8 %__U) #8

@@ -12,6 +12,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/Basic/OpenMPKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -734,10 +735,12 @@ static bool parseDeclareSimdClauses(
           CKind == OMPC_linear) {
         Parser::OpenMPVarListDataTy Data;
         SmallVectorImpl<Expr *> *Vars = &Uniforms;
-        if (CKind == OMPC_aligned)
+        if (CKind == OMPC_aligned) {
           Vars = &Aligneds;
-        else if (CKind == OMPC_linear)
+        } else if (CKind == OMPC_linear) {
+          Data.ExtraModifier = OMPC_LINEAR_val;
           Vars = &Linears;
+        }
 
         P.ConsumeToken();
         if (P.ParseOpenMPVarList(OMPD_declare_simd,
@@ -746,11 +749,15 @@ static bool parseDeclareSimdClauses(
         if (CKind == OMPC_aligned) {
           Alignments.append(Aligneds.size() - Alignments.size(), Data.TailExpr);
         } else if (CKind == OMPC_linear) {
-          if (P.getActions().CheckOpenMPLinearModifier(Data.LinKind,
-                                                       Data.DepLinMapLoc))
-            Data.LinKind = OMPC_LINEAR_val;
+          assert(0 <= Data.ExtraModifier &&
+                 Data.ExtraModifier <= OMPC_LINEAR_unknown &&
+                 "Unexpected linear modifier.");
+          if (P.getActions().CheckOpenMPLinearModifier(
+                  static_cast<OpenMPLinearClauseKind>(Data.ExtraModifier),
+                  Data.DepLinMapLastLoc))
+            Data.ExtraModifier = OMPC_LINEAR_val;
           LinModifiers.append(Linears.size() - LinModifiers.size(),
-                              Data.LinKind);
+                              Data.ExtraModifier);
           Steps.append(Linears.size() - Steps.size(), Data.TailExpr);
         }
       } else
@@ -2640,8 +2647,8 @@ static void parseMapType(Parser &P, Parser::OpenMPVarListDataTy &Data) {
     P.Diag(Tok, diag::err_omp_map_type_missing);
     return;
   }
-  Data.MapType = isMapType(P);
-  if (Data.MapType == OMPC_MAP_unknown)
+  Data.ExtraModifier = isMapType(P);
+  if (Data.ExtraModifier == OMPC_MAP_unknown)
     P.Diag(Tok, diag::err_omp_unknown_map_type);
   P.ConsumeToken();
 }
@@ -2686,20 +2693,18 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Data.ReductionOrMapperId =
           Actions.GetNameFromUnqualifiedId(UnqualifiedReductionId);
   } else if (Kind == OMPC_depend) {
-  // Handle dependency type for depend clause.
+    // Handle dependency type for depend clause.
     ColonProtectionRAIIObject ColonRAII(*this);
-    Data.DepKind =
-        static_cast<OpenMPDependClauseKind>(getOpenMPSimpleClauseType(
-            Kind, Tok.is(tok::identifier) ? PP.getSpelling(Tok) : ""));
-    Data.DepLinMapLoc = Tok.getLocation();
-
-    if (Data.DepKind == OMPC_DEPEND_unknown) {
+    Data.ExtraModifier = getOpenMPSimpleClauseType(
+        Kind, Tok.is(tok::identifier) ? PP.getSpelling(Tok) : "");
+    Data.DepLinMapLastLoc = Tok.getLocation();
+    if (Data.ExtraModifier == OMPC_DEPEND_unknown) {
       SkipUntil(tok::colon, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
     } else {
       ConsumeToken();
       // Special processing for depend(source) clause.
-      if (DKind == OMPD_ordered && Data.DepKind == OMPC_DEPEND_source) {
+      if (DKind == OMPD_ordered && Data.ExtraModifier == OMPC_DEPEND_source) {
         // Parse ')'.
         T.consumeClose();
         return false;
@@ -2714,12 +2719,31 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     }
   } else if (Kind == OMPC_linear) {
     // Try to parse modifier if any.
+    Data.ExtraModifier = OMPC_LINEAR_val;
     if (Tok.is(tok::identifier) && PP.LookAhead(0).is(tok::l_paren)) {
-      Data.LinKind = static_cast<OpenMPLinearClauseKind>(
-          getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok)));
-      Data.DepLinMapLoc = ConsumeToken();
+      Data.ExtraModifier = getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok));
+      Data.DepLinMapLastLoc = ConsumeToken();
       LinearT.consumeOpen();
       NeedRParenForLinear = true;
+    }
+  } else if (Kind == OMPC_lastprivate) {
+    // Try to parse modifier if any.
+    Data.ExtraModifier = OMPC_LASTPRIVATE_unknown;
+    // Conditional modifier allowed only in OpenMP 5.0 and not supported in
+    // distribute and taskloop based directives.
+    if ((getLangOpts().OpenMP >= 50 && !isOpenMPDistributeDirective(DKind) &&
+         !isOpenMPTaskLoopDirective(DKind)) &&
+        Tok.is(tok::identifier) && PP.LookAhead(0).is(tok::colon)) {
+      Data.ExtraModifier = getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok));
+      Data.DepLinMapLastLoc = Tok.getLocation();
+      if (Data.ExtraModifier == OMPC_LASTPRIVATE_unknown) {
+        SkipUntil(tok::colon, tok::r_paren, tok::annot_pragma_openmp_end,
+                  StopBeforeMatch);
+      } else {
+        ConsumeToken();
+      }
+      assert(Tok.is(tok::colon) && "Expected colon.");
+      Data.ColonLoc = ConsumeToken();
     }
   } else if (Kind == OMPC_map) {
     // Handle map type for map clause.
@@ -2728,7 +2752,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     // The first identifier may be a list item, a map-type or a
     // map-type-modifier. The map-type can also be delete which has the same
     // spelling of the C++ delete keyword.
-    Data.DepLinMapLoc = Tok.getLocation();
+    Data.ExtraModifier = OMPC_MAP_unknown;
+    Data.DepLinMapLastLoc = Tok.getLocation();
 
     // Check for presence of a colon in the map clause.
     TentativeParsingAction TPA(*this);
@@ -2748,8 +2773,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       else
         SkipUntil(tok::colon, tok::annot_pragma_openmp_end, StopBeforeMatch);
     }
-    if (Data.MapType == OMPC_MAP_unknown) {
-      Data.MapType = OMPC_MAP_tofrom;
+    if (Data.ExtraModifier == OMPC_MAP_unknown) {
+      Data.ExtraModifier = OMPC_MAP_tofrom;
       Data.IsMapTypeImplicit = true;
     }
 
@@ -2815,8 +2840,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       (Kind != OMPC_reduction && Kind != OMPC_task_reduction &&
        Kind != OMPC_in_reduction && Kind != OMPC_depend && Kind != OMPC_map) ||
       (Kind == OMPC_reduction && !InvalidReductionId) ||
-      (Kind == OMPC_map && Data.MapType != OMPC_MAP_unknown) ||
-      (Kind == OMPC_depend && Data.DepKind != OMPC_DEPEND_unknown);
+      (Kind == OMPC_map && Data.ExtraModifier != OMPC_MAP_unknown) ||
+      (Kind == OMPC_depend && Data.ExtraModifier != OMPC_DEPEND_unknown);
   const bool MayHaveTail = (Kind == OMPC_linear || Kind == OMPC_aligned);
   while (IsComma || (Tok.isNot(tok::r_paren) && Tok.isNot(tok::colon) &&
                      Tok.isNot(tok::annot_pragma_openmp_end))) {
@@ -2866,7 +2891,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   Data.RLoc = Tok.getLocation();
   if (!T.consumeClose())
     Data.RLoc = T.getCloseLocation();
-  return (Kind == OMPC_depend && Data.DepKind != OMPC_DEPEND_unknown &&
+  return (Kind == OMPC_depend && Data.ExtraModifier != OMPC_DEPEND_unknown &&
           Vars.empty()) ||
          (Kind != OMPC_depend && Kind != OMPC_map && Vars.empty()) ||
          (MustHaveTail && !Data.TailExpr) || InvalidReductionId ||
@@ -2936,8 +2961,8 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
   OMPVarListLocTy Locs(Loc, LOpen, Data.RLoc);
   return Actions.ActOnOpenMPVarListClause(
       Kind, Vars, Data.TailExpr, Locs, Data.ColonLoc,
-      Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId, Data.DepKind,
-      Data.LinKind, Data.MapTypeModifiers, Data.MapTypeModifiersLoc,
-      Data.MapType, Data.IsMapTypeImplicit, Data.DepLinMapLoc);
+      Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId,
+      Data.ExtraModifier, Data.MapTypeModifiers, Data.MapTypeModifiersLoc,
+      Data.IsMapTypeImplicit, Data.DepLinMapLastLoc);
 }
 

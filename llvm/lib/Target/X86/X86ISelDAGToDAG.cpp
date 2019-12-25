@@ -537,15 +537,16 @@ namespace {
 // type.
 static bool isLegalMaskCompare(SDNode *N, const X86Subtarget *Subtarget) {
   unsigned Opcode = N->getOpcode();
-  if (Opcode == X86ISD::CMPM || Opcode == ISD::SETCC ||
-      Opcode == X86ISD::CMPM_SAE || Opcode == X86ISD::VFPCLASS) {
+  if (Opcode == X86ISD::CMPM || Opcode == X86ISD::STRICT_CMPM ||
+      Opcode == ISD::SETCC || Opcode == X86ISD::CMPM_SAE ||
+      Opcode == X86ISD::VFPCLASS) {
     // We can get 256-bit 8 element types here without VLX being enabled. When
     // this happens we will use 512-bit operations and the mask will not be
     // zero extended.
     EVT OpVT = N->getOperand(0).getValueType();
-    // The first operand of X86ISD::CMPM is chain, so we need to get the second
-    // operand.
-    if (Opcode == X86ISD::CMPM)
+    // The first operand of X86ISD::STRICT_CMPM is chain, so we need to get the
+    // second operand.
+    if (Opcode == X86ISD::STRICT_CMPM)
       OpVT = N->getOperand(1).getValueType();
     if (OpVT.is256BitVector() || OpVT.is128BitVector())
       return Subtarget->hasVLX();
@@ -827,10 +828,10 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       unsigned NewOpc;
       switch (N->getOpcode()) {
       default: llvm_unreachable("Unexpected opcode!");
-      case ISD::STRICT_FP_TO_SINT:
-      case ISD::FP_TO_SINT: NewOpc = X86ISD::CVTTP2SI; break;
-      case ISD::STRICT_FP_TO_UINT:
-      case ISD::FP_TO_UINT: NewOpc = X86ISD::CVTTP2UI; break;
+      case ISD::STRICT_FP_TO_SINT: NewOpc = X86ISD::STRICT_CVTTP2SI; break;
+      case ISD::FP_TO_SINT:        NewOpc = X86ISD::CVTTP2SI;        break;
+      case ISD::STRICT_FP_TO_UINT: NewOpc = X86ISD::STRICT_CVTTP2UI; break;
+      case ISD::FP_TO_UINT:        NewOpc = X86ISD::CVTTP2UI;        break;
       }
       SDValue Res;
       if (N->isStrictFPOpcode())
@@ -839,8 +840,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
                             {N->getOperand(0), N->getOperand(1)});
       else
         Res =
-            CurDAG->getNode(NewOpc, SDLoc(N), {N->getValueType(0), MVT::Other},
-                            {CurDAG->getEntryNode(), N->getOperand(0)});
+            CurDAG->getNode(NewOpc, SDLoc(N), N->getValueType(0),
+                            N->getOperand(0));
       --I;
       if (N->isStrictFPOpcode()) {
         SDValue From[] = {SDValue(N, 0), SDValue(N, 1)};
@@ -5246,13 +5247,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SelectCode(Res.getNode());
     return;
   }
-  case ISD::STRICT_FP_TO_SINT:
-  case ISD::STRICT_FP_TO_UINT:
-    // FIXME: Remove when we have isel patterns for strict versions of these
-    // nodes.
-    if (!TLI->isStrictFPEnabled())
-      CurDAG->mutateStrictFPToFP(Node);
-    break;
   }
 
   SelectCode(Node);

@@ -195,7 +195,7 @@ public:
 
   /// isExportedInst - Return true if the specified value is an instruction
   /// exported from its block.
-  bool isExportedInst(const Value *V) {
+  bool isExportedInst(const Value *V) const {
     return ValueMap.count(V);
   }
 

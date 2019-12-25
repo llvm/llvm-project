@@ -1,9 +1,9 @@
 # Check only conditional jumps and unconditional jumps are aligned with option --x86-align-branch-boundary=32 --x86-align-branch=jcc+jmp
-# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=32 --x86-align-branch=jcc+jmp %S/align-branch-64-1a.s | llvm-objdump -d  - > %t1
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=32 --x86-align-branch=jcc+jmp %p/Inputs/align-branch-64-1.s | llvm-objdump -d  - > %t1
 # RUN: FileCheck --input-file=%t1 %s --check-prefixes=CHECK,SHORT-NOP
 
 # Check long NOP can be emitted to align branch if the target cpu support long nop.
-# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=32 -mcpu=x86-64 --x86-align-branch=jcc+jmp %S/align-branch-64-1a.s | llvm-objdump -d  - >%t2
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=32 -mcpu=x86-64 --x86-align-branch=jcc+jmp %p/Inputs/align-branch-64-1.s | llvm-objdump -d  - >%t2
 # RUN: FileCheck --input-file=%t2 %s --check-prefixes=CHECK,LONG-NOP
 
 # CHECK: 0000000000000000 foo:

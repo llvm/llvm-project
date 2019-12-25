@@ -242,13 +242,13 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: }
 
 #ifdef OMP5
-#pragma omp target simd if (target:argc > 0) if(simd:argc) nontemporal(argc, c, d)
+#pragma omp target simd if (target:argc > 0) if(simd:argc) nontemporal(argc, c, d) lastprivate(conditional: d, f)
 #else
 #pragma omp target simd if (target:argc > 0)
 #endif // OMP5
   for (int i = 0; i < 2; ++i) {}
   // OMP45: #pragma omp target simd if(target: argc > 0)
-  // OMP50: #pragma omp target simd if(target: argc > 0) if(simd: argc) nontemporal(argc,c,d)
+  // OMP50: #pragma omp target simd if(target: argc > 0) if(simd: argc) nontemporal(argc,c,d) lastprivate(conditional: d,f)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 

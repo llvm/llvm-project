@@ -453,17 +453,6 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
 void SymbolFileDWARF::InitializeObject() {
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
 
-  Module &module = *GetObjectFile()->GetModule();
-
-  for (const FileSpec &symlink : GetSymlinkPaths()) {
-    FileSpec resolved;
-    Status status = FileSystem::Instance().Readlink(symlink, resolved);
-    if (status.Success())
-      module.GetSourceMappingList().Append(ConstString(symlink.GetPath()),
-                                           ConstString(resolved.GetPath()),
-                                           /*notify=*/true);
-  }
-
   if (!GetGlobalPluginProperties()->IgnoreFileIndexes()) {
     DWARFDataExtractor apple_names, apple_namespaces, apple_types, apple_objc;
     LoadSectionData(eSectionTypeDWARFAppleNames, apple_names);

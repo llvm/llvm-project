@@ -512,13 +512,14 @@ static bool isInt64Immediate(SDValue N, uint64_t &Imm) {
   return isInt64Immediate(N.getNode(), Imm);
 }
 
-static unsigned getBranchHint(unsigned PCC, FunctionLoweringInfo *FuncInfo,
+static unsigned getBranchHint(unsigned PCC,
+                              const FunctionLoweringInfo &FuncInfo,
                               const SDValue &DestMBB) {
   assert(isa<BasicBlockSDNode>(DestMBB));
 
-  if (!FuncInfo->BPI) return PPC::BR_NO_HINT;
+  if (!FuncInfo.BPI) return PPC::BR_NO_HINT;
 
-  const BasicBlock *BB = FuncInfo->MBB->getBasicBlock();
+  const BasicBlock *BB = FuncInfo.MBB->getBasicBlock();
   const Instruction *BBTerm = BB->getTerminator();
 
   if (BBTerm->getNumSuccessors() != 2) return PPC::BR_NO_HINT;
@@ -526,8 +527,8 @@ static unsigned getBranchHint(unsigned PCC, FunctionLoweringInfo *FuncInfo,
   const BasicBlock *TBB = BBTerm->getSuccessor(0);
   const BasicBlock *FBB = BBTerm->getSuccessor(1);
 
-  auto TProb = FuncInfo->BPI->getEdgeProbability(BB, TBB);
-  auto FProb = FuncInfo->BPI->getEdgeProbability(BB, FBB);
+  auto TProb = FuncInfo.BPI->getEdgeProbability(BB, TBB);
+  auto FProb = FuncInfo.BPI->getEdgeProbability(BB, FBB);
 
   // We only want to handle cases which are easy to predict at static time, e.g.
   // C++ throw statement, that is very likely not taken, or calling never
@@ -547,7 +548,7 @@ static unsigned getBranchHint(unsigned PCC, FunctionLoweringInfo *FuncInfo,
   if (std::max(TProb, FProb) / Threshold < std::min(TProb, FProb))
     return PPC::BR_NO_HINT;
 
-  LLVM_DEBUG(dbgs() << "Use branch hint for '" << FuncInfo->Fn->getName()
+  LLVM_DEBUG(dbgs() << "Use branch hint for '" << FuncInfo.Fn->getName()
                     << "::" << BB->getName() << "'\n"
                     << " -> " << TBB->getName() << ": " << TProb << "\n"
                     << " -> " << FBB->getName() << ": " << FProb << "\n");
@@ -5002,7 +5003,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // Prevent PPC::PRED_* from being selected into LI.
     unsigned PCC = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
     if (EnableBranchHint)
-      PCC |= getBranchHint(PCC, FuncInfo, N->getOperand(3));
+      PCC |= getBranchHint(PCC, *FuncInfo, N->getOperand(3));
 
     SDValue Pred = getI32Imm(PCC, dl);
     SDValue Ops[] = { Pred, N->getOperand(2), N->getOperand(3),
@@ -5045,7 +5046,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     }
 
     if (EnableBranchHint)
-      PCC |= getBranchHint(PCC, FuncInfo, N->getOperand(4));
+      PCC |= getBranchHint(PCC, *FuncInfo, N->getOperand(4));
 
     SDValue CondCode = SelectCC(N->getOperand(2), N->getOperand(3), CC, dl);
     SDValue Ops[] = { getI32Imm(PCC, dl), CondCode,

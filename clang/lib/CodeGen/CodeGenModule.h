@@ -1157,14 +1157,6 @@ public:
   /// It's up to you to ensure that this is safe.
   void AddDefaultFnAttrs(llvm::Function &F);
 
-  /// Parses the target attributes passed in, and returns only the ones that are
-  /// valid feature names.
-  ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD);
-
-  // Fills in the supplied string map with the set of target features for the
-  // passed in function.
-  void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap, GlobalDecl GD);
-
   StringRef getMangledName(GlobalDecl GD);
   StringRef getBlockMangledName(GlobalDecl GD, const BlockDecl *BD);
 

@@ -250,7 +250,7 @@ function(add_redirector_object target_name)
   )
 endfunction(add_redirector_object)
 
-# Rule to build a shared library of redirector objects
+# Rule to build a shared library of redirector objects.
 function(add_redirector_library target_name)
   cmake_parse_arguments(
     "REDIRECTOR_LIBRARY"
@@ -287,6 +287,15 @@ function(add_redirector_library target_name)
   )
 endfunction(add_redirector_library)
 
+# Rule to add a gtest unittest.
+# Usage
+#    add_libc_unittest(
+#      <target name>
+#      SUITE <name of the suite this test belongs to>
+#      SRCS  <list of .cpp files for the test>
+#      HDRS  <list of .h files for the test>
+#      DEPENDS <list of dependencies>
+#    )
 function(add_libc_unittest target_name)
   if(NOT LLVM_INCLUDE_TESTS)
     return()
@@ -306,15 +315,19 @@ function(add_libc_unittest target_name)
     message(FATAL_ERROR "'add_libc_unittest' target requires a DEPENDS list of 'add_entrypoint_object' targets.")
   endif()
 
-  set(entrypoint_objects "")
+  set(library_deps "")
   foreach(dep IN LISTS LIBC_UNITTEST_DEPENDS)
     get_target_property(dep_type ${dep} "TARGET_TYPE")
-    string(COMPARE EQUAL ${dep_type} ${ENTRYPOINT_OBJ_TARGET_TYPE} dep_is_entrypoint)
-    if(NOT dep_is_entrypoint)
-      message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_unittest' is not an 'add_entrypoint_object' target.")
+    if (dep_type)
+      string(COMPARE EQUAL ${dep_type} ${ENTRYPOINT_OBJ_TARGET_TYPE} dep_is_entrypoint)
+      if(dep_is_entrypoint)
+        get_target_property(obj_file ${dep} "OBJECT_FILE_RAW")
+        list(APPEND library_deps ${obj_file})
+        continue()
+      endif()
     endif()
-    get_target_property(obj_file ${dep} "OBJECT_FILE_RAW")
-    list(APPEND entrypoint_objects "${obj_file}")
+    # TODO: Check if the dep is a normal CMake library target. If yes, then add it
+    # to the list of library_deps.
   endforeach(dep)
 
   add_executable(
@@ -329,8 +342,13 @@ function(add_libc_unittest target_name)
       ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include
       ${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock/include
       ${LIBC_SOURCE_DIR}
+      ${LIBC_BUILD_DIR}
   )
-  target_link_libraries(${target_name} PRIVATE ${entrypoint_objects} gtest_main gtest)
+
+  if(library_deps)
+    target_link_libraries(${target_name} PRIVATE ${library_deps})
+  endif()
+
   set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
   add_dependencies(
@@ -338,6 +356,9 @@ function(add_libc_unittest target_name)
     ${LIBC_UNITTEST_DEPENDS}
     gtest
   )
+
+  target_link_libraries(${target_name} PRIVATE gtest_main gtest)
+
   add_custom_command(
     TARGET ${target_name}
     POST_BUILD

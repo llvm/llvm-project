@@ -543,7 +543,7 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    fldt 8(%ebp)
 ; X86-NEXT:    flds {{\.LCPI.*}}
-; X86-NEXT:    fucom %st(1)
+; X86-NEXT:    fcom %st(1)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
@@ -579,7 +579,7 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    flds {{.*}}(%rip)
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    fucomi %st(1), %st
+; X64-NEXT:    fcomi %st(1), %st
 ; X64-NEXT:    setbe %al
 ; X64-NEXT:    fldz
 ; X64-NEXT:    fxch %st(1)

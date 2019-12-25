@@ -60,7 +60,15 @@ def Linux : StandardSpec<"Linux"> {
       []  // Functions
   >;
 
+  HeaderSpec SysMMan = HeaderSpec<
+      "sys/mman.h",
+      [Macro<"MAP_ANONYMOUS">],
+      [], // Types
+      []  // Functions
+  >;
+
   let Headers = [
     Errno,
+    SysMMan,
   ];
 }

@@ -1,4 +1,6 @@
 def POSIX : StandardSpec<"POSIX"> {
+  NamedType OffTType = NamedType<"off_t">;
+
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
       [
@@ -85,7 +87,47 @@ def POSIX : StandardSpec<"POSIX"> {
       []  // Functions
   >;
 
+  HeaderSpec SysMMan = HeaderSpec<
+      "sys/mman.h",
+      [
+        // TODO: Add a facility to bunch macros into bitwise-or-able groups.
+        // POSIX requires it, so such thing should be captured in this spec.
+        Macro<"PROT_EXEC">,
+        Macro<"PROT_NONE">,
+        Macro<"PROT_READ">,
+        Macro<"PROT_WRITE">,
+
+        Macro<"MAP_FIXED">,
+        Macro<"MAP_PRIVATE">,
+        Macro<"MAP_SHARED">,
+
+        Macro<"MAP_FAILED">,
+      ],
+      [
+        SizeTType,
+        OffTType,
+      ],
+      [
+        FunctionSpec<
+            "mmap",
+            RetValSpec<VoidPtr>,
+            [ArgSpec<VoidPtr>,
+             ArgSpec<SizeTType>,
+             ArgSpec<IntType>,
+             ArgSpec<IntType>,
+             ArgSpec<IntType>,
+             ArgSpec<OffTType>]
+        >,
+        FunctionSpec<
+            "munmap",
+            RetValSpec<IntType>,
+            [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+        >,
+      ]
+  >;
+
   let Headers = [
     Errno,
+    SysMMan,
   ];
 }

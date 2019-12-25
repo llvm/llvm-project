@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SUPPORT_COMMON_H
 #define LLVM_LIBC_SUPPORT_COMMON_H
 
-#define INLINE_ASM __asm__ __volatile__
+#define LIBC_INLINE_ASM __asm__ __volatile__
 
-<!> The entrypoint macro has a platform specific definition. So, we include the
-<!> right definition at build time.
-%%include_file(${entrypoint_macro})
+<!> Include the platform specific definitions at build time. For example, that
+<!> of entrypoint macro.
+%%include_file(${platform_defs})
 
 #endif // LLVM_LIBC_SUPPORT_COMMON_H

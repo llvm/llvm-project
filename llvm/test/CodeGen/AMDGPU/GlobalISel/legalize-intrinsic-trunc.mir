@@ -29,18 +29,14 @@ body: |
     ; VI-LABEL: name: test_intrinsic_trunc_s16
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; VI: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT]]
-    ; VI: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC]](s32)
-    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
+    ; VI: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC]]
+    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INTRINSIC_TRUNC]](s16)
     ; VI: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_intrinsic_trunc_s16
     ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX9: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX9: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT]]
-    ; GFX9: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC]](s32)
-    ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
+    ; GFX9: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC]]
+    ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INTRINSIC_TRUNC]](s16)
     ; GFX9: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0

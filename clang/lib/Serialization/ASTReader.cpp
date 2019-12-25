@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/OpenMPKinds.h"
 #include "clang/Serialization/ASTRecordReader.h"
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
@@ -11878,6 +11879,9 @@ void OMPClauseReader::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
 void OMPClauseReader::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
   VisitOMPClauseWithPostUpdate(C);
   C->setLParenLoc(Record.readSourceLocation());
+  C->setKind(Record.readEnum<OpenMPLastprivateModifier>());
+  C->setKindLoc(Record.readSourceLocation());
+  C->setColonLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);

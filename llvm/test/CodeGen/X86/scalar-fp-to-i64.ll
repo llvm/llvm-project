@@ -42,19 +42,17 @@ define i64 @f_to_u64(float %a) nounwind {
 ; AVX512DQVL_32_WIN-LABEL: f_to_u64:
 ; AVX512DQVL_32_WIN:       # %bb.0:
 ; AVX512DQVL_32_WIN-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512DQVL_32_WIN-NEXT:    vcvttps2uqq %xmm0, %ymm0
+; AVX512DQVL_32_WIN-NEXT:    vcvttps2uqq %xmm0, %xmm0
 ; AVX512DQVL_32_WIN-NEXT:    vmovd %xmm0, %eax
 ; AVX512DQVL_32_WIN-NEXT:    vpextrd $1, %xmm0, %edx
-; AVX512DQVL_32_WIN-NEXT:    vzeroupper
 ; AVX512DQVL_32_WIN-NEXT:    retl
 ;
 ; AVX512DQVL_32_LIN-LABEL: f_to_u64:
 ; AVX512DQVL_32_LIN:       # %bb.0:
 ; AVX512DQVL_32_LIN-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512DQVL_32_LIN-NEXT:    vcvttps2uqq %xmm0, %ymm0
+; AVX512DQVL_32_LIN-NEXT:    vcvttps2uqq %xmm0, %xmm0
 ; AVX512DQVL_32_LIN-NEXT:    vmovd %xmm0, %eax
 ; AVX512DQVL_32_LIN-NEXT:    vpextrd $1, %xmm0, %edx
-; AVX512DQVL_32_LIN-NEXT:    vzeroupper
 ; AVX512DQVL_32_LIN-NEXT:    retl
 ;
 ; AVX512_64-LABEL: f_to_u64:
@@ -337,19 +335,17 @@ define i64 @f_to_s64(float %a) nounwind {
 ; AVX512DQVL_32_WIN-LABEL: f_to_s64:
 ; AVX512DQVL_32_WIN:       # %bb.0:
 ; AVX512DQVL_32_WIN-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512DQVL_32_WIN-NEXT:    vcvttps2qq %xmm0, %ymm0
+; AVX512DQVL_32_WIN-NEXT:    vcvttps2qq %xmm0, %xmm0
 ; AVX512DQVL_32_WIN-NEXT:    vmovd %xmm0, %eax
 ; AVX512DQVL_32_WIN-NEXT:    vpextrd $1, %xmm0, %edx
-; AVX512DQVL_32_WIN-NEXT:    vzeroupper
 ; AVX512DQVL_32_WIN-NEXT:    retl
 ;
 ; AVX512DQVL_32_LIN-LABEL: f_to_s64:
 ; AVX512DQVL_32_LIN:       # %bb.0:
 ; AVX512DQVL_32_LIN-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512DQVL_32_LIN-NEXT:    vcvttps2qq %xmm0, %ymm0
+; AVX512DQVL_32_LIN-NEXT:    vcvttps2qq %xmm0, %xmm0
 ; AVX512DQVL_32_LIN-NEXT:    vmovd %xmm0, %eax
 ; AVX512DQVL_32_LIN-NEXT:    vpextrd $1, %xmm0, %edx
-; AVX512DQVL_32_LIN-NEXT:    vzeroupper
 ; AVX512DQVL_32_LIN-NEXT:    retl
 ;
 ; AVX512_64-LABEL: f_to_s64:
@@ -524,19 +520,17 @@ define i64 @d_to_u64(double %a) nounwind {
 ; AVX512DQVL_32_WIN-LABEL: d_to_u64:
 ; AVX512DQVL_32_WIN:       # %bb.0:
 ; AVX512DQVL_32_WIN-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512DQVL_32_WIN-NEXT:    vcvttpd2uqq %ymm0, %ymm0
+; AVX512DQVL_32_WIN-NEXT:    vcvttpd2uqq %xmm0, %xmm0
 ; AVX512DQVL_32_WIN-NEXT:    vmovd %xmm0, %eax
 ; AVX512DQVL_32_WIN-NEXT:    vpextrd $1, %xmm0, %edx
-; AVX512DQVL_32_WIN-NEXT:    vzeroupper
 ; AVX512DQVL_32_WIN-NEXT:    retl
 ;
 ; AVX512DQVL_32_LIN-LABEL: d_to_u64:
 ; AVX512DQVL_32_LIN:       # %bb.0:
 ; AVX512DQVL_32_LIN-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512DQVL_32_LIN-NEXT:    vcvttpd2uqq %ymm0, %ymm0
+; AVX512DQVL_32_LIN-NEXT:    vcvttpd2uqq %xmm0, %xmm0
 ; AVX512DQVL_32_LIN-NEXT:    vmovd %xmm0, %eax
 ; AVX512DQVL_32_LIN-NEXT:    vpextrd $1, %xmm0, %edx
-; AVX512DQVL_32_LIN-NEXT:    vzeroupper
 ; AVX512DQVL_32_LIN-NEXT:    retl
 ;
 ; AVX512_64-LABEL: d_to_u64:
@@ -819,19 +813,17 @@ define i64 @d_to_s64(double %a) nounwind {
 ; AVX512DQVL_32_WIN-LABEL: d_to_s64:
 ; AVX512DQVL_32_WIN:       # %bb.0:
 ; AVX512DQVL_32_WIN-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512DQVL_32_WIN-NEXT:    vcvttpd2qq %ymm0, %ymm0
+; AVX512DQVL_32_WIN-NEXT:    vcvttpd2qq %xmm0, %xmm0
 ; AVX512DQVL_32_WIN-NEXT:    vmovd %xmm0, %eax
 ; AVX512DQVL_32_WIN-NEXT:    vpextrd $1, %xmm0, %edx
-; AVX512DQVL_32_WIN-NEXT:    vzeroupper
 ; AVX512DQVL_32_WIN-NEXT:    retl
 ;
 ; AVX512DQVL_32_LIN-LABEL: d_to_s64:
 ; AVX512DQVL_32_LIN:       # %bb.0:
 ; AVX512DQVL_32_LIN-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512DQVL_32_LIN-NEXT:    vcvttpd2qq %ymm0, %ymm0
+; AVX512DQVL_32_LIN-NEXT:    vcvttpd2qq %xmm0, %xmm0
 ; AVX512DQVL_32_LIN-NEXT:    vmovd %xmm0, %eax
 ; AVX512DQVL_32_LIN-NEXT:    vpextrd $1, %xmm0, %edx
-; AVX512DQVL_32_LIN-NEXT:    vzeroupper
 ; AVX512DQVL_32_LIN-NEXT:    retl
 ;
 ; AVX512_64-LABEL: d_to_s64:

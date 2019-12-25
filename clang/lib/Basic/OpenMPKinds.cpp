@@ -175,6 +175,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
 #define OPENMP_DEVICE_TYPE_KIND(Name) .Case(#Name, OMPC_DEVICE_TYPE_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_DEVICE_TYPE_unknown);
+  case OMPC_lastprivate:
+    return llvm::StringSwitch<OpenMPLastprivateModifier>(Str)
+#define OPENMP_LASTPRIVATE_KIND(Name) .Case(#Name, OMPC_LASTPRIVATE_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_LASTPRIVATE_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -187,7 +192,6 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_firstprivate:
-  case OMPC_lastprivate:
   case OMPC_shared:
   case OMPC_reduction:
   case OMPC_task_reduction:
@@ -370,6 +374,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'device_type' clause type");
+  case OMPC_lastprivate:
+    switch (Type) {
+    case OMPC_LASTPRIVATE_unknown:
+      return "unknown";
+#define OPENMP_LASTPRIVATE_KIND(Name)                                          \
+    case OMPC_LASTPRIVATE_##Name:                                              \
+      return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'lastprivate' clause type");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -382,7 +396,6 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_firstprivate:
-  case OMPC_lastprivate:
   case OMPC_shared:
   case OMPC_reduction:
   case OMPC_task_reduction:

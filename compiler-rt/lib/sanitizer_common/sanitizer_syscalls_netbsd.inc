@@ -42,7 +42,7 @@
 // DO NOT EDIT! THIS FILE HAS BEEN GENERATED!
 //
 // Generated with: generate_netbsd_syscalls.awk
-// Generated date: 2019-11-01
+// Generated date: 2019-12-24
 // Generated from: syscalls.master,v 1.296 2019/09/22 22:59:39 christos Exp
 //
 //===----------------------------------------------------------------------===//
@@ -323,6 +323,16 @@ PRE_SYSCALL(ptrace)
     PRE_READ(addr_, struct_ptrace_ptrace_siginfo_struct_sz);
   } else if (req_ == ptrace_pt_get_siginfo) {
     PRE_WRITE(addr_, struct_ptrace_ptrace_siginfo_struct_sz);
+  } else if (req_ == ptrace_pt_lwpstatus) {
+    struct __sanitizer_ptrace_lwpstatus *addr =
+        (struct __sanitizer_ptrace_lwpstatus *)addr_;
+    PRE_READ(&addr->pl_lwpid, sizeof(__sanitizer_lwpid_t));
+    PRE_WRITE(addr, struct_ptrace_ptrace_lwpstatus_struct_sz);
+  } else if (req_ == ptrace_pt_lwpnext) {
+    struct __sanitizer_ptrace_lwpstatus *addr =
+        (struct __sanitizer_ptrace_lwpstatus *)addr_;
+    PRE_READ(&addr->pl_lwpid, sizeof(__sanitizer_lwpid_t));
+    PRE_WRITE(addr, struct_ptrace_ptrace_lwpstatus_struct_sz);
   } else if (req_ == ptrace_pt_setregs) {
     PRE_READ(addr_, struct_ptrace_reg_struct_sz);
   } else if (req_ == ptrace_pt_getregs) {
@@ -366,6 +376,16 @@ POST_SYSCALL(ptrace)
       POST_READ(addr_, struct_ptrace_ptrace_siginfo_struct_sz);
     } else if (req_ == ptrace_pt_get_siginfo) {
       POST_WRITE(addr_, struct_ptrace_ptrace_siginfo_struct_sz);
+    } else if (req_ == ptrace_pt_lwpstatus) {
+      struct __sanitizer_ptrace_lwpstatus *addr =
+          (struct __sanitizer_ptrace_lwpstatus *)addr_;
+      POST_READ(&addr->pl_lwpid, sizeof(__sanitizer_lwpid_t));
+      POST_WRITE(addr, struct_ptrace_ptrace_lwpstatus_struct_sz);
+    } else if (req_ == ptrace_pt_lwpnext) {
+      struct __sanitizer_ptrace_lwpstatus *addr =
+          (struct __sanitizer_ptrace_lwpstatus *)addr_;
+      POST_READ(&addr->pl_lwpid, sizeof(__sanitizer_lwpid_t));
+      POST_WRITE(addr, struct_ptrace_ptrace_lwpstatus_struct_sz);
     } else if (req_ == ptrace_pt_setregs) {
       POST_READ(addr_, struct_ptrace_reg_struct_sz);
     } else if (req_ == ptrace_pt_getregs) {

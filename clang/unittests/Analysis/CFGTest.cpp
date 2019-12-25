@@ -30,6 +30,22 @@ TEST(CFG, RangeBasedForOverDependentType) {
   EXPECT_EQ(BuildResult::SawFunctionBody, BuildCFG(Code).getStatus());
 }
 
+TEST(CFG, StaticInitializerLastCondition) {
+  const char *Code = "void f() {\n"
+                     "  int i = 5 ;\n"
+                     "  static int j = 3 ;\n"
+                     "}\n";
+  CFG::BuildOptions Options;
+  Options.AddStaticInitBranches = true;
+  Options.setAllAlwaysAdd();
+  BuildResult B = BuildCFG(Code, Options);
+  EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
+  EXPECT_EQ(1u, B.getCFG()->getEntry().succ_size());
+  CFGBlock *Block = *B.getCFG()->getEntry().succ_begin();
+  EXPECT_TRUE(isa<DeclStmt>(Block->getTerminatorStmt()));
+  EXPECT_EQ(nullptr, Block->getLastCondition());
+}
+
 // Constructing a CFG containing a delete expression on a dependent type should
 // not crash.
 TEST(CFG, DeleteExpressionOnDependentType) {

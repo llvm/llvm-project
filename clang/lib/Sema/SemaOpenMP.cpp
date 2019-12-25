@@ -12402,11 +12402,10 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     OpenMPClauseKind Kind, ArrayRef<Expr *> VarList, Expr *TailExpr,
     const OMPVarListLocTy &Locs, SourceLocation ColonLoc,
     CXXScopeSpec &ReductionOrMapperIdScopeSpec,
-    DeclarationNameInfo &ReductionOrMapperId, OpenMPDependClauseKind DepKind,
-    OpenMPLinearClauseKind LinKind,
+    DeclarationNameInfo &ReductionOrMapperId, int ExtraModifier,
     ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
-    ArrayRef<SourceLocation> MapTypeModifiersLoc, OpenMPMapClauseKind MapType,
-    bool IsMapTypeImplicit, SourceLocation DepLinMapLoc) {
+    ArrayRef<SourceLocation> MapTypeModifiersLoc, bool IsMapTypeImplicit,
+    SourceLocation DepLinMapLastLoc) {
   SourceLocation StartLoc = Locs.StartLoc;
   SourceLocation LParenLoc = Locs.LParenLoc;
   SourceLocation EndLoc = Locs.EndLoc;
@@ -12419,7 +12418,11 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     Res = ActOnOpenMPFirstprivateClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_lastprivate:
-    Res = ActOnOpenMPLastprivateClause(VarList, StartLoc, LParenLoc, EndLoc);
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_LASTPRIVATE_unknown &&
+           "Unexpected lastprivate modifier.");
+    Res = ActOnOpenMPLastprivateClause(
+        VarList, static_cast<OpenMPLastprivateModifier>(ExtraModifier),
+        DepLinMapLastLoc, ColonLoc, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_shared:
     Res = ActOnOpenMPSharedClause(VarList, StartLoc, LParenLoc, EndLoc);
@@ -12440,8 +12443,12 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
                                        ReductionOrMapperId);
     break;
   case OMPC_linear:
-    Res = ActOnOpenMPLinearClause(VarList, TailExpr, StartLoc, LParenLoc,
-                                  LinKind, DepLinMapLoc, ColonLoc, EndLoc);
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_LINEAR_unknown &&
+           "Unexpected linear modifier.");
+    Res = ActOnOpenMPLinearClause(
+        VarList, TailExpr, StartLoc, LParenLoc,
+        static_cast<OpenMPLinearClauseKind>(ExtraModifier), DepLinMapLastLoc,
+        ColonLoc, EndLoc);
     break;
   case OMPC_aligned:
     Res = ActOnOpenMPAlignedClause(VarList, TailExpr, StartLoc, LParenLoc,
@@ -12457,14 +12464,19 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     Res = ActOnOpenMPFlushClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_depend:
-    Res = ActOnOpenMPDependClause(DepKind, DepLinMapLoc, ColonLoc, VarList,
-                                  StartLoc, LParenLoc, EndLoc);
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_DEPEND_unknown &&
+           "Unexpected depend modifier.");
+    Res = ActOnOpenMPDependClause(
+        static_cast<OpenMPDependClauseKind>(ExtraModifier), DepLinMapLastLoc,
+        ColonLoc, VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_map:
-    Res = ActOnOpenMPMapClause(MapTypeModifiers, MapTypeModifiersLoc,
-                               ReductionOrMapperIdScopeSpec,
-                               ReductionOrMapperId, MapType, IsMapTypeImplicit,
-                               DepLinMapLoc, ColonLoc, VarList, Locs);
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_MAP_unknown &&
+           "Unexpected map modifier.");
+    Res = ActOnOpenMPMapClause(
+        MapTypeModifiers, MapTypeModifiersLoc, ReductionOrMapperIdScopeSpec,
+        ReductionOrMapperId, static_cast<OpenMPMapClauseKind>(ExtraModifier),
+        IsMapTypeImplicit, DepLinMapLastLoc, ColonLoc, VarList, Locs);
     break;
   case OMPC_to:
     Res = ActOnOpenMPToClause(VarList, ReductionOrMapperIdScopeSpec,
@@ -12990,10 +13002,19 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
                                        buildPreInits(Context, ExprCaptures));
 }
 
-OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
-                                              SourceLocation StartLoc,
-                                              SourceLocation LParenLoc,
-                                              SourceLocation EndLoc) {
+OMPClause *Sema::ActOnOpenMPLastprivateClause(
+    ArrayRef<Expr *> VarList, OpenMPLastprivateModifier LPKind,
+    SourceLocation LPKindLoc, SourceLocation ColonLoc, SourceLocation StartLoc,
+    SourceLocation LParenLoc, SourceLocation EndLoc) {
+  if (LPKind == OMPC_LASTPRIVATE_unknown && LPKindLoc.isValid()) {
+    assert(ColonLoc.isValid() && "Colon location must be valid.");
+    Diag(LPKindLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_lastprivate, /*First=*/0,
+                                   /*Last=*/OMPC_LASTPRIVATE_unknown)
+        << getOpenMPClauseName(OMPC_lastprivate);
+    return nullptr;
+  }
+
   SmallVector<Expr *, 8> Vars;
   SmallVector<Expr *, 8> SrcExprs;
   SmallVector<Expr *, 8> DstExprs;
@@ -13038,6 +13059,19 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
     // const-qualified type unless it is of class type with a mutable member.
     if (rejectConstNotMutableType(*this, D, Type, OMPC_lastprivate, ELoc))
       continue;
+
+    // OpenMP 5.0 [2.19.4.5 lastprivate Clause, Restrictions]
+    // A list item that appears in a lastprivate clause with the conditional
+    // modifier must be a scalar variable.
+    if (LPKind == OMPC_LASTPRIVATE_conditional && !Type->isScalarType()) {
+      Diag(ELoc, diag::err_omp_lastprivate_conditional_non_scalar);
+      bool IsDecl = !VD || VD->isThisDeclarationADefinition(Context) ==
+                               VarDecl::DeclarationOnly;
+      Diag(D->getLocation(),
+           IsDecl ? diag::note_previous_decl : diag::note_defined_here)
+          << D;
+      continue;
+    }
 
     OpenMPDirectiveKind CurrDir = DSAStack->getCurrentDirective();
     // OpenMP [2.14.1.1, Data-sharing Attribute Rules for Variables Referenced
@@ -13147,6 +13181,7 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
 
   return OMPLastprivateClause::Create(Context, StartLoc, LParenLoc, EndLoc,
                                       Vars, SrcExprs, DstExprs, AssignmentOps,
+                                      LPKind, LPKindLoc, ColonLoc,
                                       buildPreInits(Context, ExprCaptures),
                                       buildPostUpdate(*this, ExprPostUpdates));
 }

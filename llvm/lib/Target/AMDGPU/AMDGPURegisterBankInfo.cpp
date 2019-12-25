@@ -2580,6 +2580,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     default:
       return getInvalidInstructionMapping();
     case Intrinsic::amdgcn_div_fmas:
+    case Intrinsic::amdgcn_div_fixup:
     case Intrinsic::amdgcn_trig_preop:
     case Intrinsic::amdgcn_sin:
     case Intrinsic::amdgcn_cos:

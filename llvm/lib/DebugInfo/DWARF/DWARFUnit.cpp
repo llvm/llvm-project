@@ -259,23 +259,26 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
                               const DWARFUnitIndex *Index,
                               const DWARFUnitIndex::Entry *Entry) {
   Offset = *offset_ptr;
+  Error Err = Error::success();
   IndexEntry = Entry;
   if (!IndexEntry && Index)
     IndexEntry = Index->getFromOffset(*offset_ptr);
-  Length = debug_info.getRelocatedValue(4, offset_ptr);
+  Length = debug_info.getRelocatedValue(4, offset_ptr, nullptr, &Err);
   FormParams.Format = DWARF32;
   if (Length == dwarf::DW_LENGTH_DWARF64) {
-    Length = debug_info.getU64(offset_ptr);
+    Length = debug_info.getU64(offset_ptr, &Err);
     FormParams.Format = DWARF64;
   }
-  FormParams.Version = debug_info.getU16(offset_ptr);
+  FormParams.Version = debug_info.getU16(offset_ptr, &Err);
   if (FormParams.Version >= 5) {
-    UnitType = debug_info.getU8(offset_ptr);
-    FormParams.AddrSize = debug_info.getU8(offset_ptr);
-    AbbrOffset = debug_info.getRelocatedValue(FormParams.getDwarfOffsetByteSize(), offset_ptr);
+    UnitType = debug_info.getU8(offset_ptr, &Err);
+    FormParams.AddrSize = debug_info.getU8(offset_ptr, &Err);
+    AbbrOffset = debug_info.getRelocatedValue(
+        FormParams.getDwarfOffsetByteSize(), offset_ptr, nullptr, &Err);
   } else {
-    AbbrOffset = debug_info.getRelocatedValue(FormParams.getDwarfOffsetByteSize(), offset_ptr);
-    FormParams.AddrSize = debug_info.getU8(offset_ptr);
+    AbbrOffset = debug_info.getRelocatedValue(
+        FormParams.getDwarfOffsetByteSize(), offset_ptr, nullptr, &Err);
+    FormParams.AddrSize = debug_info.getU8(offset_ptr, &Err);
     // Fake a unit type based on the section type.  This isn't perfect,
     // but distinguishing compile and type units is generally enough.
     if (SectionKind == DW_SECT_TYPES)
@@ -295,11 +298,14 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
     AbbrOffset = AbbrEntry->Offset;
   }
   if (isTypeUnit()) {
-    TypeHash = debug_info.getU64(offset_ptr);
-    TypeOffset =
-        debug_info.getUnsigned(offset_ptr, FormParams.getDwarfOffsetByteSize());
+    TypeHash = debug_info.getU64(offset_ptr, &Err);
+    TypeOffset = debug_info.getUnsigned(
+        offset_ptr, FormParams.getDwarfOffsetByteSize(), &Err);
   } else if (UnitType == DW_UT_split_compile || UnitType == DW_UT_skeleton)
-    DWOId = debug_info.getU64(offset_ptr);
+    DWOId = debug_info.getU64(offset_ptr, &Err);
+
+  if (errorToBool(std::move(Err)))
+    return false;
 
   // Header fields all parsed, capture the size of this unit header.
   assert(*offset_ptr - Offset <= 255 && "unexpected header size");
