@@ -4,7 +4,7 @@
 ; This test runs twice with different options regarding the frame pointer:
 ; first the elimination is disabled, then it is enabled. The disabled case is
 ; the "control group".
-; The function 'foo' below is marked with the "no-frame-pointer-elim-non-leaf"
+; The function 'foo' below is marked with the "frame-pointer"="non-leaf"
 ; attribute which dictates that the frame pointer should not be eliminated
 ; unless the function is a leaf (i.e. it doesn't call any other function).
 ; Now, 'foo' is not a leaf function, because it performs a TLS access which on

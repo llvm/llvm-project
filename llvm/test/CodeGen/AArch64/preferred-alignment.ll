@@ -23,6 +23,6 @@ entry:
 
 declare i32 @bar(i8*, i16*, i32*) #1
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="false" }
-attributes #1 = { "no-frame-pointer-elim"="false" }
+attributes #0 = { nounwind "frame-pointer"="none" }
+attributes #1 = { "frame-pointer"="none" }
 

@@ -89,7 +89,7 @@ define void @test3(%struct.S* %d, %struct.S* %s) #0 {
 
 declare void @g(i32*)
 
-; Set "no-frame-pointer-elim" to increase register pressure
+; Set "frame-pointer"="all" to increase register pressure
 attributes #0 = { "frame-pointer"="all" }
 
 ; Function Attrs: nounwind

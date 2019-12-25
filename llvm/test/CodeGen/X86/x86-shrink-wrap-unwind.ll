@@ -58,7 +58,7 @@ false:
 
 declare i32 @doSomething(i32, i32*)
 
-attributes #0 = { "no-frame-pointer-elim"="false" }
+attributes #0 = { "frame-pointer"="none" }
 
 ; Shrink-wrapping should occur here. We have a frame pointer.
 ; CHECK-LABEL: frameUnwind:
@@ -150,7 +150,7 @@ false:
   ret i32 %tmp.0
 }
 
-attributes #2 = { "no-frame-pointer-elim"="false" nounwind }
+attributes #2 = { "frame-pointer"="none" nounwind }
 
 
 ; Check that we generate correct code for segmented stack.

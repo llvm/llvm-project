@@ -13,7 +13,7 @@
 
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-  attributes #0 = { nounwind "no-frame-pointer-elim"="false" }
+  attributes #0 = { nounwind "frame-pointer"="none" }
   attributes #1 = { nounwind readnone }
 
   !llvm.dbg.cu = !{!0}

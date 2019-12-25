@@ -14,4 +14,4 @@ define void @test() #0 {
   ret void
 }
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="false" }
+attributes #0 = { nounwind "frame-pointer"="none" }
