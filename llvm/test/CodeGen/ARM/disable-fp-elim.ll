@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple armv7-none-linux-gnueabi -frame-pointer=none -O0 | FileCheck %s --check-prefix=DISABLE-FP-ELIM
 
 ; Check that command line option "-frame-pointer=all" overrides function attribute
-; "no-frame-pointer-elim". Also, check frame pointer elimination is disabled
+; "frame-pointer"="all". Also, check frame pointer elimination is disabled
 ; when fast-isel is used.
 
 ; ENABLE-FP-ELIM-NOT: .setfp
@@ -22,4 +22,4 @@ entry:
 
 declare i32 @foo2(i32)
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind "frame-pointer"="all" }

@@ -1489,7 +1489,7 @@ for.inc:
   br i1 %cmp, label %for.cond8, label %fn1.exit
 }
 
-attributes #4 = { "no-frame-pointer-elim"="true" }
+attributes #4 = { "frame-pointer"="all" }
 
 @x = external global i32, align 4
 @y = external global i32, align 4
@@ -1580,4 +1580,4 @@ define void @infiniteLoopNoSuccessor() #5 {
 
 declare void @somethingElse(...)
 
-attributes #5 = { nounwind  "no-frame-pointer-elim-non-leaf" }
+attributes #5 = { nounwind "frame-pointer"="non-leaf" }

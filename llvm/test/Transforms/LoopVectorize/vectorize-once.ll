@@ -65,7 +65,7 @@ _ZSt10accumulateIPiiET0_T_S2_S1_.exit:            ; preds = %for.body.i, %entry
   ret i32 %__init.addr.0.lcssa.i
 }
 
-attributes #0 = { nounwind readonly ssp uwtable "fp-contract-model"="standard" "no-frame-pointer-elim" "no-frame-pointer-elim-non-leaf" "realign-stack" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #0 = { nounwind readonly ssp uwtable "fp-contract-model"="standard" "frame-pointer"="non-leaf" "realign-stack" "relocation-model"="pic" "ssp-buffers-size"="8" }
 
 ; CHECK: !0 = distinct !{!0, !1}
 ; CHECK: !1 = !{!"llvm.loop.isvectorized", i32 1}

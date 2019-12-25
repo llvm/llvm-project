@@ -89,8 +89,8 @@ define void @test3(%struct.S* %d, %struct.S* %s) #0 {
 
 declare void @g(i32*)
 
-; Set "no-frame-pointer-elim" to increase register pressure
-attributes #0 = { "no-frame-pointer-elim"="true" }
+; Set "frame-pointer"="all" to increase register pressure
+attributes #0 = { "frame-pointer"="all" }
 
 ; Function Attrs: nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1

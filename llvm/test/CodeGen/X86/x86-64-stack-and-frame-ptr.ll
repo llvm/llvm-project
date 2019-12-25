@@ -29,6 +29,6 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind uwtable "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf"}
+attributes #0 = { nounwind uwtable "frame-pointer"="all"}
 
 

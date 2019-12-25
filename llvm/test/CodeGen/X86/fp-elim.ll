@@ -31,7 +31,7 @@ entry:
   ret void
 }
 
-define i32 @t3() "no-frame-pointer-elim-non-leaf" nounwind readnone {
+define i32 @t3() "frame-pointer"="non-leaf" nounwind readnone {
 entry:
 ; FP-ELIM-LABEL:  t3:
 ; FP-ELIM-NEXT:     movl
@@ -44,7 +44,7 @@ entry:
   ret i32 10
 }
 
-define void @t4() "no-frame-pointer-elim-non-leaf" nounwind {
+define void @t4() "frame-pointer"="non-leaf" nounwind {
 entry:
 ; FP-ELIM-LABEL:  t4:
 ; FP-ELIM-NEXT:     pushl %ebp

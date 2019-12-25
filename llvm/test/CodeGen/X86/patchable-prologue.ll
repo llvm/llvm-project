@@ -13,7 +13,7 @@ define void @f0() "patchable-function"="prologue-short-redirect" {
   ret void
 }
 
-define void @f1() "patchable-function"="prologue-short-redirect" "no-frame-pointer-elim"="true" {
+define void @f1() "patchable-function"="prologue-short-redirect" "frame-pointer"="all" {
 ; CHECK-LABEL: _f1
 ; CHECK-NEXT: ff f5 	pushq	%rbp
 

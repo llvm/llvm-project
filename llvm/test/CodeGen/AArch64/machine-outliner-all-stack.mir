@@ -13,7 +13,7 @@
   define void @stack-save1() #0 { ret void }
   define void @stack-save2() #0 { ret void }
   define void @stack-save3() #0 { ret void }
-  attributes #0 = { minsize noinline noredzone "no-frame-pointer-elim"="true" }
+  attributes #0 = { minsize noinline noredzone "frame-pointer"="all" }
 ...
 ---
 

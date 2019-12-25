@@ -2,7 +2,7 @@
 ; Radar 7937664
 %struct.AppleEvent = type opaque
 
-define void @DisposeDMNotificationUPP(void (%struct.AppleEvent*)* %userUPP) "no-frame-pointer-elim-non-leaf" nounwind ssp {
+define void @DisposeDMNotificationUPP(void (%struct.AppleEvent*)* %userUPP) "frame-pointer"="non-leaf" nounwind ssp {
 entry:
   %userUPP_addr = alloca void (%struct.AppleEvent*)* ; <void (%struct.AppleEvent*)**> [#uses=1]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]

@@ -14,7 +14,7 @@ define void @leaf() {
 
 ; Leaf function, frame pointer is requested but we don't need any stack frame,
 ; so don't create a frame pointer.
-define void @leaf_nofpelim() "no-frame-pointer-elim"="true" {
+define void @leaf_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: leaf_nofpelim:
 ; CHECK-NOT: push
 ; CHECK-NOT: sp
@@ -25,7 +25,7 @@ define void @leaf_nofpelim() "no-frame-pointer-elim"="true" {
 
 ; Leaf function, frame pointer is requested and we need a stack frame, so we
 ; need to use a frame pointer.
-define void @leaf_lowreg_nofpelim() "no-frame-pointer-elim"="true" {
+define void @leaf_lowreg_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: leaf_lowreg_nofpelim:
 ; CHECK: push {r4, r6, r7, lr}
 ; CHECK: add r7, sp, #8
@@ -38,7 +38,7 @@ define void @leaf_lowreg_nofpelim() "no-frame-pointer-elim"="true" {
 ; need to use a frame pointer. A high register is pushed to the stack, so we
 ; must use two push/pop instructions to ensure that fp and sp are adjacent on
 ; the stack.
-define void @leaf_highreg_nofpelim() "no-frame-pointer-elim"="true" {
+define void @leaf_highreg_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: leaf_highreg_nofpelim:
 ; CHECK: push {r6, r7, lr}
 ; CHECK: add r7, sp, #4
@@ -51,7 +51,7 @@ define void @leaf_highreg_nofpelim() "no-frame-pointer-elim"="true" {
 
 ; Leaf function, frame pointer requested for non-leaf functions only, so no
 ; need for a stack frame.
-define void @leaf_nononleaffpelim() "no-frame-pointer-elim-non-leaf" {
+define void @leaf_nononleaffpelim() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: leaf_nononleaffpelim:
 ; CHECK-NOT: push
 ; CHECK-NOT: sp
@@ -72,7 +72,7 @@ define void @call() {
 }
 
 ; Has a call, and frame pointer requested.
-define void @call_nofpelim() "no-frame-pointer-elim"="true" {
+define void @call_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: call_nofpelim:
 ; CHECK: push {r7, lr}
 ; CHECK: mov r7, sp
@@ -83,7 +83,7 @@ define void @call_nofpelim() "no-frame-pointer-elim"="true" {
 }
 
 ; Has a call, and frame pointer requested for non-leaf function.
-define void @call_nononleaffpelim() "no-frame-pointer-elim-non-leaf" {
+define void @call_nononleaffpelim() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: call_nononleaffpelim:
 ; CHECK: push {r7, lr}
 ; CHECK: mov r7, sp
@@ -107,7 +107,7 @@ define void @highreg() {
 
 ; Has a high register clobbered, frame pointer requested. We need to split the
 ; push into two, to ensure that r7 and sp are adjacent on the stack.
-define void @highreg_nofpelim() "no-frame-pointer-elim"="true" {
+define void @highreg_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: highreg_nofpelim:
 ; CHECK: push {[[DUMMYREG:r[0-9]+]], r7, lr}
 ; CHECK: add r7, sp, #4
@@ -137,7 +137,7 @@ define void @highreg_alloca(i32 %a) {
 
 ; Has a high register clobbered, frame required due to both variable-sized
 ; alloca and ABI. We do need to split the push/pop here.
-define void @highreg_alloca_nofpelim(i32 %a) "no-frame-pointer-elim"="true" {
+define void @highreg_alloca_nofpelim(i32 %a) "frame-pointer"="all" {
 ; CHECK-LABEL: highreg_alloca_nofpelim:
 ; CHECK: push {[[SOMEREGS:.*]], r7, lr}
 ; CHECK: add r7, sp, #{{[0-9]+}}

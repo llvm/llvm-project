@@ -24,7 +24,7 @@ define i32 @foo1(i32) local_unnamed_addr #0 {
   ret i32 undef
 }
 
-attributes #0 = { noredzone nounwind ssp uwtable "no-frame-pointer-elim"="false" }
+attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="none" }
 
 !2 = !{!3, !3, i64 0}
 !3 = !{!"int", !4, i64 0}

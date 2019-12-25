@@ -11,5 +11,5 @@ define void @f() #0 {
 }
 
 ; ENABLED: attributes #[[ATTRS]] = { "bugpoint-crash" }
-; DISABLED: attributes #[[ATTRS]] = { noinline "bugpoint-crash" "no-frame-pointer-elim-non-leaf" }
-attributes #0 = { noinline "bugpoint-crash" "no-frame-pointer-elim-non-leaf" }
+; DISABLED: attributes #[[ATTRS]] = { noinline "bugpoint-crash" "frame-pointer"="non-leaf" }
+attributes #0 = { noinline "bugpoint-crash" "frame-pointer"="non-leaf" }

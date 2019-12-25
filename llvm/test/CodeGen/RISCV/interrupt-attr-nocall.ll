@@ -760,4 +760,4 @@ define void @foo_fp_double() nounwind #1 {
 }
 
 attributes #0 = { "interrupt"="machine" }
-attributes #1 = { "interrupt"="machine" "no-frame-pointer-elim"="true" }
+attributes #1 = { "interrupt"="machine" "frame-pointer"="all" }
