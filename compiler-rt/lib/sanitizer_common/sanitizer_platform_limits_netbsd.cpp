@@ -77,8 +77,8 @@
 #ifndef PT_LWPSTATUS
 #define PT_LWPSTATUS 24
 #endif
-#ifndef PT_LWPSTATUS
-#define PT_LWPSTATUS 25
+#ifndef PT_LWPNEXT
+#define PT_LWPNEXT 25
 #endif
 
 #include <sys/resource.h>
