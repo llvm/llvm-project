@@ -1754,10 +1754,9 @@ define <2 x i1> @strict_vector_fptoui_v2f64_to_v2i1(<2 x double> %a) #0 {
 ; AVX512VL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: strict_vector_fptoui_v2f64_to_v2i1:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvttpd2udq %zmm0, %ymm0
 ; AVX512DQ-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k0
