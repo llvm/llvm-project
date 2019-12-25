@@ -104,7 +104,15 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
 
   BasicBlock *CBB = BasicBlock::Create(Ctx, "", F);
   new UnreachableInst(Ctx, CBB);
-  OMPBuilder.setCancellationBlock(CBB);
+  auto FiniCB = [CBB](llvm::OpenMPIRBuilder::InsertPointTy IP) {
+    assert(IP.getBlock()->end() == IP.getPoint() &&
+           "Clang CG should cause non-terminated block!");
+    BranchInst::Create(CBB, IP.getBlock());
+  };
+  // Emulate an outer parallel.
+  llvm::OpenMPIRBuilder::FinalizationInfo FI(
+      {FiniCB, OMPD_parallel, /* HasCancel */ true});
+  OMPBuilder.pushFinalizationCB(std::move(FI));
 
   IRBuilder<> Builder(BB);
 
@@ -113,7 +121,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
   Builder.restoreIP(NewIP);
   EXPECT_FALSE(M->global_empty());
   EXPECT_EQ(M->size(), 3U);
-  EXPECT_EQ(F->size(), 3U);
+  EXPECT_EQ(F->size(), 4U);
   EXPECT_EQ(BB->size(), 4U);
 
   CallInst *GTID = dyn_cast<CallInst>(&BB->front());
@@ -133,9 +141,14 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
   Instruction *BarrierBBTI = Barrier->getParent()->getTerminator();
   EXPECT_EQ(BarrierBBTI->getNumSuccessors(), 2U);
   EXPECT_EQ(BarrierBBTI->getSuccessor(0), NewIP.getBlock());
-  EXPECT_EQ(BarrierBBTI->getSuccessor(1), CBB);
+  EXPECT_EQ(BarrierBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
+            1U);
+  EXPECT_EQ(BarrierBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0),
+            CBB);
 
   EXPECT_EQ(cast<CallInst>(Barrier)->getArgOperand(1), GTID);
+
+  OMPBuilder.popFinalizationCB();
 
   Builder.CreateUnreachable();
   EXPECT_FALSE(verifyModule(*M));

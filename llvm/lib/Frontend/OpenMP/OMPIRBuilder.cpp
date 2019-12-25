@@ -205,7 +205,8 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
   // If we are in a cancellable parallel region, barriers are cancellation
   // points.
   // TODO: Check why we would force simple calls or to ignore the cancel flag.
-  bool UseCancelBarrier = !ForceSimpleCall && CancellationBlock;
+  bool UseCancelBarrier =
+      !ForceSimpleCall && isLastFinalizationInfoCancellable(OMPD_parallel);
 
   Value *Result = Builder.CreateCall(
       getOrCreateRuntimeFunction(UseCancelBarrier ? OMPRTL___kmpc_cancel_barrier
@@ -217,19 +218,22 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
     BasicBlock *BB = Builder.GetInsertBlock();
     BasicBlock *NonCancellationBlock = BasicBlock::Create(
         BB->getContext(), BB->getName() + ".cont", BB->getParent());
+    BasicBlock *CancellationBlock = BasicBlock::Create(
+        BB->getContext(), BB->getName() + ".cncl", BB->getParent());
 
     // Jump to them based on the return value.
     Value *Cmp = Builder.CreateIsNull(Result);
     Builder.CreateCondBr(Cmp, NonCancellationBlock, CancellationBlock,
                          /* TODO weight */ nullptr, nullptr);
 
-    Builder.SetInsertPoint(NonCancellationBlock);
-    assert(CancellationBlock->getParent() == BB->getParent() &&
-           "Unexpected cancellation block parent!");
+    // From the cancellation block we finalize all variables and go to the
+    // post finalization block that is known to the FiniCB callback.
+    Builder.SetInsertPoint(CancellationBlock);
+    auto &FI = FinalizationStack.back();
+    FI.FiniCB(Builder.saveIP());
 
-    // TODO: This is a workaround for now, we always reset the cancellation
-    // block until we manage it ourselves here.
-    CancellationBlock = nullptr;
+    // The continuation block is where code generation continues.
+    Builder.SetInsertPoint(NonCancellationBlock);
   }
 
   return Builder.saveIP();
