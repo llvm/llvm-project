@@ -651,30 +651,7 @@ define <8 x i32> @strict_vector_fptosi_v8f64_to_v8i32(<8 x double> %a) #0 {
 define <8 x i32> @strict_vector_fptoui_v8f64_to_v8i32(<8 x double> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v8f64_to_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; CHECK-NEXT:    vcvttsd2usi %xmm2, %eax
-; CHECK-NEXT:    vcvttsd2usi %xmm1, %ecx
-; CHECK-NEXT:    vmovd %ecx, %xmm1
-; CHECK-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm2
-; CHECK-NEXT:    vcvttsd2usi %xmm2, %eax
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm2[1,0]
-; CHECK-NEXT:    vcvttsd2usi %xmm2, %eax
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; CHECK-NEXT:    vcvttsd2usi %xmm2, %eax
-; CHECK-NEXT:    vcvttsd2usi %xmm0, %ecx
-; CHECK-NEXT:    vmovd %ecx, %xmm2
-; CHECK-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vcvttsd2usi %xmm0, %eax
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vcvttsd2usi %xmm0, %eax
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
-; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vcvttpd2udq %zmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i32> @llvm.experimental.constrained.fptoui.v8i32.v8f64(<8 x double> %a,
                                               metadata !"fpexcept.strict")

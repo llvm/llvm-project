@@ -934,11 +934,7 @@ define <2 x i32> @strict_vector_fptoui_v2f64_to_v2i32(<2 x double> %a) #0 {
 ;
 ; AVX512VL-LABEL: strict_vector_fptoui_v2f64_to_v2i32:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX512VL-NEXT:    vcvttsd2usi %xmm1, %eax
-; AVX512VL-NEXT:    vcvttsd2usi %xmm0, %ecx
-; AVX512VL-NEXT:    vmovd %ecx, %xmm0
-; AVX512VL-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX512VL-NEXT:    vcvttpd2udq %xmm0, %xmm0
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512DQ-LABEL: strict_vector_fptoui_v2f64_to_v2i32:
@@ -1758,21 +1754,11 @@ define <2 x i1> @strict_vector_fptoui_v2f64_to_v2i1(<2 x double> %a) #0 {
 ; AVX512VL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
+; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: strict_vector_fptoui_v2f64_to_v2i1:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vcvttsd2usi %xmm0, %eax
-; AVX512DQ-NEXT:    vmovd %eax, %xmm1
-; AVX512DQ-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512DQ-NEXT:    vcvttsd2usi %xmm2, %ecx
-; AVX512DQ-NEXT:    vcvttsd2usi %xmm0, %edx
-; AVX512DQ-NEXT:    vmovd %edx, %xmm0
-; AVX512DQ-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vcvttpd2udq %zmm0, %ymm0
 ; AVX512DQ-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k0
 ; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
@@ -2281,32 +2267,16 @@ define <4 x i32> @strict_vector_fptoui_v4f32_to_v4i32(<4 x float> %a) #0 {
 ;
 ; AVX512VL-LABEL: strict_vector_fptoui_v4f32_to_v4i32:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    vcvttss2usi %xmm1, %eax
-; AVX512VL-NEXT:    vcvttss2usi %xmm0, %ecx
-; AVX512VL-NEXT:    vmovd %ecx, %xmm1
-; AVX512VL-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512VL-NEXT:    vcvttss2usi %xmm2, %eax
-; AVX512VL-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    vcvttss2usi %xmm0, %eax
-; AVX512VL-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; AVX512VL-NEXT:    vcvttps2udq %xmm0, %xmm0
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
+; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: strict_vector_fptoui_v4f32_to_v4i32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512DQ-NEXT:    vcvttss2usi %xmm1, %eax
-; AVX512DQ-NEXT:    vcvttss2usi %xmm0, %ecx
-; AVX512DQ-NEXT:    vmovd %ecx, %xmm1
-; AVX512DQ-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512DQ-NEXT:    vcvttss2usi %xmm2, %eax
-; AVX512DQ-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512DQ-NEXT:    vcvttss2usi %xmm0, %eax
-; AVX512DQ-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vcvttps2udq %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f32(<4 x float> %a,
                                               metadata !"fpexcept.strict")
