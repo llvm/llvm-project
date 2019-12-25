@@ -1686,6 +1686,32 @@ struct AAWillReturn
   static const char ID;
 };
 
+/// An abstract attribute for undefined behavior.
+struct AAUndefinedBehavior
+    : public StateWrapper<BooleanState, AbstractAttribute>,
+      public IRPosition {
+  AAUndefinedBehavior(const IRPosition &IRP) : IRPosition(IRP) {}
+
+  /// Return true if "undefined behavior" is assumed.
+  bool isAssumedToCauseUB() const { return getAssumed(); }
+
+  /// Return true if "undefined behavior" is assumed for a specific instruction.
+  virtual bool isAssumedToCauseUB(Instruction *I) const = 0;
+
+  /// Return true if "undefined behavior" is known.
+  bool isKnownToCauseUB() const { return getKnown(); }
+
+  /// Return an IR position, see struct IRPosition.
+  const IRPosition &getIRPosition() const override { return *this; }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAUndefinedBehavior &createForPosition(const IRPosition &IRP,
+                                                Attributor &A);
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 /// An abstract interface to determine reachability of point A to B.
 struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute>,
                         public IRPosition {

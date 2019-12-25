@@ -1987,6 +1987,98 @@ struct AANoRecurseCallSite final : AANoRecurseImpl {
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(norecurse); }
 };
 
+/// -------------------- Undefined-Behavior Attributes ------------------------
+
+struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
+  AAUndefinedBehaviorImpl(const IRPosition &IRP) : AAUndefinedBehavior(IRP) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    size_t PrevSize = NoUBLoads.size();
+
+    // TODO: We should not only check for load instructions.
+    auto InspectLoadForUB = [&](Instruction &I) {
+      // Skip instructions that are already saved.
+      if (NoUBLoads.count(&I) || UBLoads.count(&I))
+        return true;
+
+      Value *PtrOp = cast<LoadInst>(&I)->getPointerOperand();
+
+      // A load is considered UB only if it dereferences a constant
+      // null pointer.
+      if (!isa<ConstantPointerNull>(PtrOp)) {
+        NoUBLoads.insert(&I);
+        return true;
+      }
+      Type *PtrTy = PtrOp->getType();
+
+      // Because we only consider loads inside functions,
+      // assume that a parent function exists.
+      const Function *F = I.getFunction();
+
+      // A dereference on constant null is only considered UB
+      // if null dereference is _not_ defined for the target platform.
+      // TODO: Expand it to not only check constant values.
+      if (!llvm::NullPointerIsDefined(F, PtrTy->getPointerAddressSpace()))
+        UBLoads.insert(&I);
+      else
+        NoUBLoads.insert(&I);
+      return true;
+    };
+
+    A.checkForAllInstructions(InspectLoadForUB, *this, {Instruction::Load});
+    if (PrevSize != NoUBLoads.size())
+      return ChangeStatus::CHANGED;
+    return ChangeStatus::UNCHANGED;
+  }
+
+  bool isAssumedToCauseUB(Instruction *I) const override {
+    return UBLoads.count(I);
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (!UBLoads.size())
+      return ChangeStatus::UNCHANGED;
+    for (Instruction *I : UBLoads)
+      changeToUnreachable(I, /* UseLLVMTrap */ false);
+    return ChangeStatus::CHANGED;
+  }
+
+  /// See AbstractAttribute::getAsStr()
+  const std::string getAsStr() const override {
+    return getAssumed() ? "undefined-behavior" : "no-ub";
+  }
+
+protected:
+  // A set of all the (live) load instructions that _are_ assumed to cause UB.
+  SmallPtrSet<Instruction *, 8> UBLoads;
+
+private:
+  // A set of all the (live) load instructions that are _not_ assumed to cause
+  // UB.
+  //   Note: The correctness of the procedure depends on the fact that this
+  //   set stops changing after some point. "Change" here means that the size
+  //   of the set changes. The size of this set is monotonically increasing
+  //   (we only add items to it) and is upper bounded by the number of load
+  //   instructions in the processed function (we can never save more elements
+  //   in this set than this number). Hence, the size of this set, at some
+  //   point, will stop increasing, effectively reaching a fixpoint.
+  SmallPtrSet<Instruction *, 8> NoUBLoads;
+};
+
+struct AAUndefinedBehaviorFunction final : AAUndefinedBehaviorImpl {
+  AAUndefinedBehaviorFunction(const IRPosition &IRP)
+      : AAUndefinedBehaviorImpl(IRP) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECL(UndefinedBehaviorInstruction, Instruction,
+               "Number of instructions known to have UB");
+    BUILD_STAT_NAME(UndefinedBehaviorInstruction, Instruction) +=
+        UBLoads.size();
+  }
+};
+
 /// ------------------------ Will-Return Attributes ----------------------------
 
 // Helper function that checks whether a function has any cycle.
@@ -5523,6 +5615,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Every function might be "will-return".
   getOrCreateAAFor<AAWillReturn>(FPos);
 
+  // Every function might contain instructions that cause "undefined behavior".
+  getOrCreateAAFor<AAUndefinedBehavior>(FPos);
+
   // Every function can be nounwind.
   getOrCreateAAFor<AANoUnwind>(FPos);
 
@@ -5827,6 +5922,7 @@ const char AANoFree::ID = 0;
 const char AANonNull::ID = 0;
 const char AANoRecurse::ID = 0;
 const char AAWillReturn::ID = 0;
+const char AAUndefinedBehavior::ID = 0;
 const char AANoAlias::ID = 0;
 const char AAReachability::ID = 0;
 const char AANoReturn::ID = 0;
@@ -5949,6 +6045,7 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReachability)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
 
 CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
 
