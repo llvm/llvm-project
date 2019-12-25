@@ -5781,6 +5781,10 @@ Instructions
    AMDGPU/AMDGPUAsmGFX7
    AMDGPU/AMDGPUAsmGFX8
    AMDGPU/AMDGPUAsmGFX9
+   AMDGPU/AMDGPUAsmGFX900
+   AMDGPU/AMDGPUAsmGFX904
+   AMDGPU/AMDGPUAsmGFX906
+   AMDGPU/AMDGPUAsmGFX908
    AMDGPU/AMDGPUAsmGFX10
    AMDGPUModifierSyntax
    AMDGPUOperandSyntax
@@ -5792,17 +5796,37 @@ An instruction has the following :doc:`syntax<AMDGPUInstructionSyntax>`:
   | ``<``\ *opcode*\ ``> <``\ *operand0*\ ``>, <``\ *operand1*\ ``>,...
     <``\ *modifier0*\ ``> <``\ *modifier1*\ ``>...``
 
-:doc:`Operands<AMDGPUOperandSyntax>` are normally comma-separated while
+:doc:`Operands<AMDGPUOperandSyntax>` are comma-separated while
 :doc:`modifiers<AMDGPUModifierSyntax>` are space-separated.
 
-The order of *operands* and *modifiers* is fixed.
-Most *modifiers* are optional and may be omitted.
+The order of operands and modifiers is fixed.
+Most modifiers are optional and may be omitted.
 
-See detailed instruction syntax description for
-:doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`, :doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`,
-:doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`, and :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>`.
+Links to detailed instruction syntax description may be found in the following
+table. Note that features under development are not included
+in this description.
 
-Note that features under development are not included in this description.
+    ==================================== ======================================
+    Core ISA                             ISA Extensions
+    ==================================== ======================================
+    :doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`    \-
+    :doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`    \-
+    :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`    :doc:`gfx900<AMDGPU/AMDGPUAsmGFX900>`
+
+                                         :doc:`gfx902<AMDGPU/AMDGPUAsmGFX900>`
+
+                                         :doc:`gfx904<AMDGPU/AMDGPUAsmGFX904>`
+
+                                         :doc:`gfx906<AMDGPU/AMDGPUAsmGFX906>`
+
+                                         :doc:`gfx908<AMDGPU/AMDGPUAsmGFX908>`
+
+                                         :doc:`gfx909<AMDGPU/AMDGPUAsmGFX900>`
+
+    :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>`  gfx1011
+
+                                         gfx1012
+    ==================================== ======================================
 
 For more information about instructions, their semantics and supported
 combinations of operands, refer to one of instruction set architecture manuals

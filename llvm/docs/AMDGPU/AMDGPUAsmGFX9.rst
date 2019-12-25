@@ -5,20 +5,25 @@
     *                                                *
     **************************************************
 
-============================
-Syntax of GFX9 Instructions
-============================
+====================================================================================
+Syntax of Core GFX9 Instructions
+====================================================================================
 
 .. contents::
   :local:
+
+Introduction
+============
+
+This document describes the syntax of *core* GFX9 instructions.
 
 Notation
 ========
 
 Notation used in this document is explained :ref:`here<amdgpu_syn_instruction_notation>`.
 
-Introduction
-============
+Overvew
+=======
 
 An overview of generic syntax and other features of AMDGPU instructions may be found :ref:`in this document<amdgpu_syn_instructions>`.
 
@@ -1637,9 +1642,6 @@ VOP3P
 
     **INSTRUCTION**           **DST**      **SRC0**        **SRC1**     **SRC2**       **MODIFIERS**
     \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
-    v_mad_mix_f32         :ref:`vdst<amdgpu_synid9_vdst32_0>`,    :ref:`src0<amdgpu_synid9_src32_2>`::ref:`fx<amdgpu_synid9_mad_type_dev>`,    :ref:`src1<amdgpu_synid9_src32_3>`::ref:`fx<amdgpu_synid9_mad_type_dev>`, :ref:`src2<amdgpu_synid9_src32_3>`::ref:`fx<amdgpu_synid9_mad_type_dev>`    :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>` :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
-    v_mad_mixhi_f16       :ref:`vdst<amdgpu_synid9_vdst32_0>`,    :ref:`src0<amdgpu_synid9_src32_2>`::ref:`fx<amdgpu_synid9_mad_type_dev>`,    :ref:`src1<amdgpu_synid9_src32_3>`::ref:`fx<amdgpu_synid9_mad_type_dev>`, :ref:`src2<amdgpu_synid9_src32_3>`::ref:`fx<amdgpu_synid9_mad_type_dev>`    :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>` :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
-    v_mad_mixlo_f16       :ref:`vdst<amdgpu_synid9_vdst32_0>`,    :ref:`src0<amdgpu_synid9_src32_2>`::ref:`fx<amdgpu_synid9_mad_type_dev>`,    :ref:`src1<amdgpu_synid9_src32_3>`::ref:`fx<amdgpu_synid9_mad_type_dev>`, :ref:`src2<amdgpu_synid9_src32_3>`::ref:`fx<amdgpu_synid9_mad_type_dev>`    :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>` :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
     v_pk_add_f16          :ref:`vdst<amdgpu_synid9_vdst32_0>`,    :ref:`src0<amdgpu_synid9_src32_2>`,       :ref:`src1<amdgpu_synid9_src32_3>`                :ref:`op_sel<amdgpu_synid_op_sel>` :ref:`op_sel_hi<amdgpu_synid_op_sel_hi>` :ref:`neg_lo<amdgpu_synid_neg_lo>` :ref:`neg_hi<amdgpu_synid_neg_hi>` :ref:`clamp<amdgpu_synid_clamp>`
     v_pk_add_i16          :ref:`vdst<amdgpu_synid9_vdst32_0>`,    :ref:`src0<amdgpu_synid9_src32_2>`,       :ref:`src1<amdgpu_synid9_src32_3>`                :ref:`op_sel<amdgpu_synid_op_sel>` :ref:`op_sel_hi<amdgpu_synid_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
     v_pk_add_u16          :ref:`vdst<amdgpu_synid9_vdst32_0>`,    :ref:`src0<amdgpu_synid9_src32_2>`,       :ref:`src1<amdgpu_synid9_src32_3>`                :ref:`op_sel<amdgpu_synid_op_sel>` :ref:`op_sel_hi<amdgpu_synid_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
@@ -2096,7 +2098,6 @@ VOPC
     gfx9_vsrc32_0
     gfx9_vsrc32_1
     gfx9_vsrc64_0
-    gfx9_mad_type_dev
     gfx9_mod_dpp_sdwa_abs_neg
     gfx9_mod_sdwa_sext
     gfx9_mod_vop3_abs_neg
