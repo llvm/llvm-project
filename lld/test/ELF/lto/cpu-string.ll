@@ -22,4 +22,4 @@ entry:
   ret void
 }
 
-attributes #0 = { "no-frame-pointer-elim"="true" }
+attributes #0 = { "frame-pointer"="all" }

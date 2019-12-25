@@ -113,5 +113,5 @@ entry:
 declare i32 @GetValue(...) local_unnamed_addr
 
 attributes #0 = { minsize nounwind optsize }
-attributes #4 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-jump-tables"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a15" "target-features"="+dsp,+hwdiv,+hwdiv-arm,+neon,+vfp4" "use-soft-float"="false" }
+attributes #4 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-jump-tables"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a15" "target-features"="+dsp,+hwdiv,+hwdiv-arm,+neon,+vfp4" "use-soft-float"="false" }
 

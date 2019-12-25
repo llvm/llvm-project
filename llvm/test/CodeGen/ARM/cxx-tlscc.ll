@@ -33,7 +33,7 @@ declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
 ; THUMB: blx
 ; THUMB: r4
 ; THUMB: pop {{.*}}r4
-define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind "no-frame-pointer-elim"="true" {
+define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind "frame-pointer"="all" {
   %.b.i = load i1, i1* @__tls_guard, align 1
   br i1 %.b.i, label %__tls_init.exit, label %init.i
 
@@ -95,7 +95,7 @@ __tls_init.exit:
 ; CHECK-O0-NOT: vpop
 ; CHECK-O0-NOT: vldr
 ; CHECK-O0: pop
-define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind "no-frame-pointer-elim"="true" {
+define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind "frame-pointer"="all" {
   ret i32* @sum1
 }
 
@@ -109,7 +109,7 @@ define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind "no-frame-pointer-elim"
 ; CHECK-O0-NOT: vldr
 ; CHECK-O0: pop
 declare cxx_fast_tlscc void @tls_helper()
-define cxx_fast_tlscc %class.C* @tls_test2() #1 "no-frame-pointer-elim"="true" {
+define cxx_fast_tlscc %class.C* @tls_test2() #1 "frame-pointer"="all" {
   call cxx_fast_tlscc void @tls_helper()
   ret %class.C* @tC
 }
@@ -119,7 +119,7 @@ define cxx_fast_tlscc %class.C* @tls_test2() #1 "no-frame-pointer-elim"="true" {
 declare %class.C* @_ZN1CD1Ev(%class.C* readnone returned %this)
 ; CHECK-LABEL: tls_test
 ; CHECK: bl __tlv_atexit
-define cxx_fast_tlscc void @__tls_test() "no-frame-pointer-elim"="true" {
+define cxx_fast_tlscc void @__tls_test() "frame-pointer"="all" {
 entry:
   store i32 0, i32* getelementptr inbounds (%class.C, %class.C* @tC, i64 0, i32 0), align 4
   %0 = tail call i32 @_tlv_atexit(void (i8*)* bitcast (%class.C* (%class.C*)* @_ZN1CD1Ev to void (i8*)*), i8* bitcast (%class.C* @tC to i8*), i8* nonnull @__dso_handle) #1
@@ -127,7 +127,7 @@ entry:
 }
 
 declare void @somefunc()
-define cxx_fast_tlscc void @test_ccmismatch_notail() "no-frame-pointer-elim"="true" {
+define cxx_fast_tlscc void @test_ccmismatch_notail() "frame-pointer"="all" {
 ; A tail call is not possible here because somefunc does not preserve enough
 ; registers.
 ; CHECK-LABEL: test_ccmismatch_notail:
@@ -138,7 +138,7 @@ define cxx_fast_tlscc void @test_ccmismatch_notail() "no-frame-pointer-elim"="tr
 }
 
 declare cxx_fast_tlscc void @some_fast_tls_func()
-define void @test_ccmismatch_tail() "no-frame-pointer-elim"="true" {
+define void @test_ccmismatch_tail() "frame-pointer"="all" {
 ; We can perform a tail call here because some_fast_tls_func preserves all
 ; necessary registers (and more).
 ; CHECK-LABEL: test_ccmismatch_tail:
@@ -148,5 +148,5 @@ define void @test_ccmismatch_tail() "no-frame-pointer-elim"="true" {
   ret void
 }
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind "frame-pointer"="all" }
 attributes #1 = { nounwind }

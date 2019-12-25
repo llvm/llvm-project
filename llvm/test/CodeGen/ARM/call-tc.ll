@@ -10,14 +10,14 @@
 
 declare void @g(i32, i32, i32, i32)
 
-define void @t1() "no-frame-pointer-elim"="true" {
+define void @t1() "frame-pointer"="all" {
 ; CHECKELF-LABEL: t1:
 ; CHECKELF: bl g
         call void @g( i32 1, i32 2, i32 3, i32 4 )
         ret void
 }
 
-define void @t2() "no-frame-pointer-elim"="true" {
+define void @t2() "frame-pointer"="all" {
 ; CHECKV6-LABEL: t2:
 ; CHECKV6: bx r0
 ; CHECKT2D-LABEL: t2:
@@ -29,7 +29,7 @@ define void @t2() "no-frame-pointer-elim"="true" {
         ret void
 }
 
-define void @t3() "no-frame-pointer-elim"="true" {
+define void @t3() "frame-pointer"="all" {
 ; CHECKV6-LABEL: t3:
 ; CHECKV6: b _t2
 ; CHECKELF-LABEL: t3:
@@ -42,7 +42,7 @@ define void @t3() "no-frame-pointer-elim"="true" {
 }
 
 ; Sibcall optimization of expanded libcalls. rdar://8707777
-define double @t4(double %a) nounwind readonly ssp "no-frame-pointer-elim"="true" {
+define double @t4(double %a) nounwind readonly ssp "frame-pointer"="all" {
 entry:
 ; CHECKV6-LABEL: t4:
 ; CHECKV6: b _sin
@@ -52,7 +52,7 @@ entry:
   ret double %0
 }
 
-define float @t5(float %a) nounwind readonly ssp "no-frame-pointer-elim"="true" {
+define float @t5(float %a) nounwind readonly ssp "frame-pointer"="all" {
 entry:
 ; CHECKV6-LABEL: t5:
 ; CHECKV6: b _sinf
@@ -66,7 +66,7 @@ declare float @sinf(float) nounwind readonly
 
 declare double @sin(double) nounwind readonly
 
-define i32 @t6(i32 %a, i32 %b) nounwind readnone "no-frame-pointer-elim"="true" {
+define i32 @t6(i32 %a, i32 %b) nounwind readnone "frame-pointer"="all" {
 entry:
 ; CHECKV6-LABEL: t6:
 ; CHECKV6: b ___divsi3
@@ -80,7 +80,7 @@ entry:
 ; rdar://8309338
 declare void @foo() nounwind
 
-define void @t7() nounwind "no-frame-pointer-elim"="true" {
+define void @t7() nounwind "frame-pointer"="all" {
 entry:
 ; CHECKT2D-LABEL: t7:
 ; CHECKT2D: it ne
@@ -101,7 +101,7 @@ bb:
 
 ; Make sure codegenprep is duplicating ret instructions to enable tail calls.
 ; rdar://11140249
-define i32 @t8(i32 %x) nounwind ssp "no-frame-pointer-elim"="true" {
+define i32 @t8(i32 %x) nounwind ssp "frame-pointer"="all" {
 entry:
 ; CHECKT2D-LABEL: t8:
 ; CHECKT2D-NOT: push
@@ -148,7 +148,7 @@ declare i32 @c(i32)
 
 @x = external global i32, align 4
 
-define i32 @t9() nounwind "no-frame-pointer-elim"="true" {
+define i32 @t9() nounwind "frame-pointer"="all" {
 ; CHECKT2D-LABEL: t9:
 ; CHECKT2D: bl __ZN9MutexLockC1Ev
 ; CHECKT2D: bl __ZN9MutexLockD1Ev
@@ -168,7 +168,7 @@ declare %class.MutexLock* @_ZN9MutexLockD1Ev(%class.MutexLock*) unnamed_addr nou
 ; rdar://13827621
 ; Correctly preserve the input chain for the tailcall node in the bitcast case,
 ; otherwise the call to floorf is lost.
-define float @libcall_tc_test2(float* nocapture %a, float %b) "no-frame-pointer-elim"="true" {
+define float @libcall_tc_test2(float* nocapture %a, float %b) "frame-pointer"="all" {
 ; CHECKT2D-LABEL: libcall_tc_test2:
 ; CHECKT2D: bl _floorf
 ; CHECKT2D: b.w _truncf

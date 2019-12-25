@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios | FileCheck %s
 ; rdar://8690640
 
-define i32* @t(i32* %x) nounwind "no-frame-pointer-elim"="true" {
+define i32* @t(i32* %x) nounwind "frame-pointer"="all" {
 entry:
 ; CHECK-LABEL: t:
 ; CHECK: push

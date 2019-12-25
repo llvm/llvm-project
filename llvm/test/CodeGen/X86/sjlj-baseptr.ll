@@ -9,7 +9,7 @@ declare i32 @llvm.eh.sjlj.setjmp(i8*) nounwind
 
 declare void @whatever(i64, %Foo*, i8**, i8*, i8*, i32)  #0
 
-attributes #0 = { nounwind uwtable "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind uwtable "frame-pointer"="all" }
 
 define i32 @test1(i64 %n, %Foo* byval nocapture readnone align 8 %f) #0 {
 entry:

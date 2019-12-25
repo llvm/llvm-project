@@ -44,4 +44,4 @@ b14:                                              ; preds = %b11, %b9, %b3
   ret i64 %v15
 }
 
-attributes #0 = { norecurse nounwind readnone sspstrong "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "stack-protector-buffer-size"="8" "target-cpu"="ppc" }
+attributes #0 = { norecurse nounwind readnone sspstrong "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "stack-protector-buffer-size"="8" "target-cpu"="ppc" }

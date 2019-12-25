@@ -14,7 +14,7 @@ declare i1 @getbool()
 declare void @foo(i32)
 declare i32 @bar(i32)
 
-define i32 @test(i32 %in1, i32 %in2) nounwind "no-frame-pointer-elim"="true" {
+define i32 @test(i32 %in1, i32 %in2) nounwind "frame-pointer"="all" {
 entry:
   %call = tail call zeroext i1 @getbool() nounwind
   br i1 %call, label %sw.bb18, label %sw.bb2

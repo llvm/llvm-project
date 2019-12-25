@@ -42,4 +42,4 @@ cleanup:
   ret void
 }
 
-attributes #0 = { optsize "no-frame-pointer-elim"="true" }
+attributes #0 = { optsize "frame-pointer"="all" }

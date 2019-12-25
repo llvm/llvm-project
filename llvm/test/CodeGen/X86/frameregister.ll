@@ -27,4 +27,4 @@ declare void @llvm.write_register.i64(metadata, i64) nounwind
 ; CHECK-NOT: .asciz  "rbp"
 !0 = !{!"rbp\00"}
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind "frame-pointer"="all" }
