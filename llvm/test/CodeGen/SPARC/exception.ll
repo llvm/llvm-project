@@ -151,7 +151,7 @@ declare i32 @puts(i8* nocapture readonly) #1
 
 declare i32 @__gxx_personality_v0(i32, i64, i8*, i8*)
 
-attributes #0 = { "no-frame-pointer-elim-non-leaf"="false" }
+attributes #0 = { "frame-pointer"="none" }
 attributes #1 = { nounwind }
 attributes #2 = { noreturn }
 attributes #3 = { nounwind readnone }

@@ -16,4 +16,4 @@ define fastcc void @foo(i32 %a, i32 %b) #0 {
   ret void
 }
 
-attributes #0 = { nounwind optsize "no-frame-pointer-elim-non-leaf"}
+attributes #0 = { nounwind optsize "frame-pointer"="all" }
