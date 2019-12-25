@@ -176,7 +176,8 @@ public:
 
     /// Copy the value from the given option into this one.
     void copyValueFrom(const OptionBase &other) final {
-      (*this) = ArrayRef<DataType>((ListOption<DataType> &)other);
+      (*this) = ArrayRef<DataType>(
+          (ListOption<DataType> &)(const_cast<OptionBase &>(other)));
     }
   };
 
