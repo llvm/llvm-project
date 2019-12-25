@@ -70,4 +70,4 @@ for.end38:                                        ; preds = %for.inc20, %entry
 ; Function Attrs: nounwind
 declare double @sqrt(double) #1
 
-attributes #0 = { "no-frame-pointer-elim-non-leaf" }
+attributes #0 = { "frame-pointer"="non-leaf" }

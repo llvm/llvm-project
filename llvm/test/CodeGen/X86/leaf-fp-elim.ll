@@ -6,7 +6,7 @@ target triple = "x86_64-apple-darwin11.0"
 @msg = internal global i8* null                   ; <i8**> [#uses=1]
 @.str = private constant [2 x i8] c"x\00", align 1 ; <[2 x i8]*> [#uses=1]
 
-define void @test(i8* %p) "no-frame-pointer-elim-non-leaf" nounwind optsize ssp {
+define void @test(i8* %p) "frame-pointer"="non-leaf" nounwind optsize ssp {
 
 ; No stack frame, please.
 ; CHECK:     _test
