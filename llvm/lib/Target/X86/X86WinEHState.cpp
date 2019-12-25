@@ -179,11 +179,6 @@ bool WinEHStatePass::runOnFunction(Function &F) {
                       {Int8PtrType, Type::getInt32Ty(TheModule->getContext())},
                       /*isVarArg=*/true));
 
-  // Disable frame pointer elimination in this function.
-  // FIXME: Do the nested handlers need to keep the parent ebp in ebp, or can we
-  // use an arbitrary register?
-  F.addFnAttr("no-frame-pointer-elim", "true");
-
   emitExceptionRegistrationRecord(&F);
 
   // The state numbers calculated here in IR must agree with what we calculate
