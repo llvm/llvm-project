@@ -19762,39 +19762,33 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     if (VT == MVT::v2i1 && SrcVT == MVT::v2f64) {
       MVT ResVT = MVT::v4i32;
       MVT TruncVT = MVT::v4i1;
+      unsigned Opc;
+      if (IsStrict)
+        Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
+      else
+        Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+
       if (!IsSigned && !Subtarget.hasVLX()) {
         // Widen to 512-bits.
         ResVT = MVT::v8i32;
         TruncVT = MVT::v8i1;
-        unsigned Opc = IsStrict ? ISD::STRICT_FP_TO_UINT : ISD::FP_TO_UINT;
+        if (IsStrict)
+          Opc = IsSigned ? ISD::STRICT_FP_TO_SINT : ISD::STRICT_FP_TO_UINT;
+        else
+          Opc = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
         Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8f64,
                           DAG.getUNDEF(MVT::v8f64),
                           Src, DAG.getIntPtrConstant(0, dl));
-        SDValue Res, Chain;
-        if (IsStrict) {
-          Res = DAG.getNode(Opc, dl, {ResVT, MVT::Other},
-                            {Op.getOperand(0), Src});
-          Chain = Res.getValue(1);
-        } else
-          Res = DAG.getNode(Opc, dl, ResVT, Src);
-        Res = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Res);
-        Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i1, Res,
-                          DAG.getIntPtrConstant(0, dl));
-        if (IsStrict)
-          return DAG.getMergeValues({Res, Chain}, dl);
-        return Res;
       }
       SDValue Res, Chain;
       if (IsStrict) {
-        unsigned Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI
-                                : X86ISD::STRICT_CVTTP2UI;
         Res =
             DAG.getNode(Opc, dl, {ResVT, MVT::Other}, {Op->getOperand(0), Src});
         Chain = Res.getValue(1);
       } else {
-        unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
         Res = DAG.getNode(Opc, dl, ResVT, Src);
       }
+
       Res = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Res);
       Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i1, Res,
                         DAG.getIntPtrConstant(0, dl));
