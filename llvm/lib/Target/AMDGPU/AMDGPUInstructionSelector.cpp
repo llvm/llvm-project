@@ -387,20 +387,25 @@ bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectG_UADDO_USUBO(MachineInstr &I) const {
+bool AMDGPUInstructionSelector::selectG_UADDO_USUBO_UADDE_USUBE(
+  MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
   const DebugLoc &DL = I.getDebugLoc();
   Register Dst0Reg = I.getOperand(0).getReg();
   Register Dst1Reg = I.getOperand(1).getReg();
-  const bool IsAdd = I.getOpcode() == AMDGPU::G_UADDO;
+  const bool IsAdd = I.getOpcode() == AMDGPU::G_UADDO ||
+                     I.getOpcode() == AMDGPU::G_UADDE;
+  const bool HasCarryIn = I.getOpcode() == AMDGPU::G_UADDE ||
+                          I.getOpcode() == AMDGPU::G_USUBE;
 
   if (isVCC(Dst1Reg, *MRI)) {
-    // The name of the opcodes are misleading. v_add_i32/v_sub_i32 have unsigned
-    // carry out despite the _i32 name. These were renamed in VI to _U32.
-    // FIXME: We should probably rename the opcodes here.
-    unsigned NewOpc = IsAdd ? AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
-    I.setDesc(TII.get(NewOpc));
+      // The name of the opcodes are misleading. v_add_i32/v_sub_i32 have unsigned
+      // carry out despite the _i32 name. These were renamed in VI to _U32.
+      // FIXME: We should probably rename the opcodes here.
+    unsigned NoCarryOpc = IsAdd ? AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
+    unsigned CarryOpc = IsAdd ? AMDGPU::V_ADDC_U32_e64 : AMDGPU::V_SUBB_U32_e64;
+    I.setDesc(TII.get(HasCarryIn ? CarryOpc : NoCarryOpc));
     I.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
     I.addOperand(*MF, MachineOperand::CreateImm(0));
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
@@ -408,8 +413,16 @@ bool AMDGPUInstructionSelector::selectG_UADDO_USUBO(MachineInstr &I) const {
 
   Register Src0Reg = I.getOperand(2).getReg();
   Register Src1Reg = I.getOperand(3).getReg();
-  unsigned NewOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
-  BuildMI(*BB, &I, DL, TII.get(NewOpc), Dst0Reg)
+
+  if (HasCarryIn) {
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::SCC)
+      .addReg(I.getOperand(4).getReg());
+  }
+
+  unsigned NoCarryOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
+  unsigned CarryOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
+
+  BuildMI(*BB, &I, DL, TII.get(HasCarryIn ? CarryOpc : NoCarryOpc), Dst0Reg)
     .add(I.getOperand(2))
     .add(I.getOperand(3));
   BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Dst1Reg)
@@ -421,6 +434,11 @@ bool AMDGPUInstructionSelector::selectG_UADDO_USUBO(MachineInstr &I) const {
   if (!RBI.constrainGenericRegister(Dst0Reg, AMDGPU::SReg_32RegClass, *MRI) ||
       !RBI.constrainGenericRegister(Src0Reg, AMDGPU::SReg_32RegClass, *MRI) ||
       !RBI.constrainGenericRegister(Src1Reg, AMDGPU::SReg_32RegClass, *MRI))
+    return false;
+
+  if (HasCarryIn &&
+      !RBI.constrainGenericRegister(I.getOperand(4).getReg(),
+                                    AMDGPU::SReg_32RegClass, *MRI))
     return false;
 
   I.eraseFromParent();
@@ -1611,7 +1629,9 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_ADD_SUB(I);
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_USUBO:
-    return selectG_UADDO_USUBO(I);
+  case TargetOpcode::G_UADDE:
+  case TargetOpcode::G_USUBE:
+    return selectG_UADDO_USUBO_UADDE_USUBE(I);
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_BITCAST:
   case TargetOpcode::G_PTRTOINT:
