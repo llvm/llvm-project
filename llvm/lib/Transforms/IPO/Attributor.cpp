@@ -4072,6 +4072,14 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     return Changed | AAValueSimplify::manifest(A);
   }
 
+  /// See AbstractState::indicatePessimisticFixpoint(...).
+  ChangeStatus indicatePessimisticFixpoint() override {
+    // NOTE: Associated value will be returned in a pessimistic fixpoint and is
+    // regarded as known. That's why`indicateOptimisticFixpoint` is called.
+    SimplifiedAssociatedValue = &getAssociatedValue();
+    return indicateOptimisticFixpoint();
+  }
+
 protected:
   // An assumed simplified value. Initially, it is set to Optional::None, which
   // means that the value is not clear under current assumption. If in the
@@ -4171,7 +4179,7 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     Value &V = getAnchorValue();
 
     // TODO: add other stuffs
-    if (isa<Constant>(V) || isa<UndefValue>(V))
+    if (isa<Constant>(V))
       indicatePessimisticFixpoint();
   }
 
