@@ -104,7 +104,7 @@ declare i64 @llvm.hexagon.M2.dpmpyss.s0(i32, i32) #1
 
 declare i64 @llvm.hexagon.A2.vaddhs(i64, i64) #1
 
-attributes #0 = { nounwind "fp-contract-model"="standard" "no-frame-pointer-elim-non-leaf" "realign-stack" "relocation-model"="static" "ssp-buffers-size"="8" }
+attributes #0 = { nounwind "fp-contract-model"="standard" "frame-pointer"="non-leaf" "realign-stack" "relocation-model"="static" "ssp-buffers-size"="8" }
 attributes #1 = { nounwind readnone }
 
 !0 = !{!"short", !1}

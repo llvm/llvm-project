@@ -42,7 +42,7 @@ declare i32 @g(...)
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind ssp uwtable "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind ssp uwtable "frame-pointer"="all" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 

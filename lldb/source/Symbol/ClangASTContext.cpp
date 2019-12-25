@@ -53,8 +53,8 @@
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/ClangASTImporter.h"
+#include "lldb/Symbol/ClangASTMetadata.h"
 #include "lldb/Symbol/ClangExternalASTSourceCallbacks.h"
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -569,12 +569,6 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
   } else if (target && target->IsValid()) {
     std::shared_ptr<ClangASTContextForExpressions> ast_sp(
         new ClangASTContextForExpressions(*target, fixed_arch));
-    ast_sp->m_scratch_ast_source_up.reset(new ClangASTSource(
-        target->shared_from_this(), target->GetClangASTImporter()));
-    ast_sp->m_scratch_ast_source_up->InstallASTContext(*ast_sp);
-    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
-        ast_sp->m_scratch_ast_source_up->CreateProxy());
-    ast_sp->SetExternalSource(proxy_ast_source);
     return ast_sp;
   }
   return lldb::TypeSystemSP();
@@ -630,7 +624,6 @@ void ClangASTContext::Finalize() {
   m_diagnostics_engine_up.reset();
   m_source_manager_up.reset();
   m_language_options_up.reset();
-  m_scratch_ast_source_up.reset();
 }
 
 void ClangASTContext::setSema(Sema *s) {
@@ -2340,31 +2333,29 @@ void ClangASTContext::SetMetadataAsUserID(const clang::Type *type,
 
 void ClangASTContext::SetMetadata(const clang::Decl *object,
                                   ClangASTMetadata &metadata) {
-  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
-          getASTContext().getExternalSource()))
-    A->SetMetadata(object, metadata);
+  m_decl_metadata[object] = metadata;
 }
 
 void ClangASTContext::SetMetadata(const clang::Type *object,
                                   ClangASTMetadata &metadata) {
-  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
-          getASTContext().getExternalSource()))
-    A->SetMetadata(object, metadata);
+  m_type_metadata[object] = metadata;
 }
 
 ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
                                                const clang::Decl *object) {
-  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
-          ast->getExternalSource()))
-    return A->GetMetadata(object);
+  ClangASTContext *self = GetASTContext(ast);
+  auto It = self->m_decl_metadata.find(object);
+  if (It != self->m_decl_metadata.end())
+    return &It->second;
   return nullptr;
 }
 
 ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
                                                const clang::Type *object) {
-  if (auto *A = llvm::dyn_cast_or_null<ClangExternalASTSourceCommon>(
-          ast->getExternalSource()))
-    return A->GetMetadata(object);
+  ClangASTContext *self = GetASTContext(ast);
+  auto It = self->m_type_metadata.find(object);
+  if (It != self->m_type_metadata.end())
+    return &It->second;
   return nullptr;
 }
 
@@ -9383,7 +9374,19 @@ ClangASTContext::DeclContextGetClangASTContext(const CompilerDeclContext &dc) {
 ClangASTContextForExpressions::ClangASTContextForExpressions(Target &target,
                                                              ArchSpec arch)
     : ClangASTContext(arch), m_target_wp(target.shared_from_this()),
-      m_persistent_variables(new ClangPersistentVariables) {}
+      m_persistent_variables(new ClangPersistentVariables) {
+  m_scratch_ast_source_up.reset(new ClangASTSource(
+      target.shared_from_this(), target.GetClangASTImporter()));
+  m_scratch_ast_source_up->InstallASTContext(*this);
+  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
+      m_scratch_ast_source_up->CreateProxy());
+  SetExternalSource(proxy_ast_source);
+}
+
+void ClangASTContextForExpressions::Finalize() {
+  ClangASTContext::Finalize();
+  m_scratch_ast_source_up.reset();
+}
 
 UserExpression *ClangASTContextForExpressions::GetUserExpression(
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,

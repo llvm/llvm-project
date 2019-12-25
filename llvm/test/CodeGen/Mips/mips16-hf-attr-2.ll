@@ -25,21 +25,21 @@ declare float @foo(float) #2
 
 attributes #0 = {
   nounwind
-  "less-precise-fpmad"="false" "no-frame-pointer-elim"="true"
-  "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false"
+  "less-precise-fpmad"="false" "frame-pointer"="all"
+ "frame-pointer"="non-leaf" "no-infs-fp-math"="false"
   "no-nans-fp-math"="false" "stack-protector-buffer-size"="8"
   "unsafe-fp-math"="false" "use-soft-float"="false"
 }
 attributes #1 = {
   nounwind
-  "less-precise-fpmad"="false" "no-frame-pointer-elim"="true"
-  "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false"
+  "less-precise-fpmad"="false" "frame-pointer"="all"
+ "frame-pointer"="non-leaf" "no-infs-fp-math"="false"
   "no-nans-fp-math"="false" "stack-protector-buffer-size"="8"
   "unsafe-fp-math"="false" "use-soft-float"="true"
 }
 attributes #2 = {
-  "less-precise-fpmad"="false" "no-frame-pointer-elim"="true"
-  "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false"
+  "less-precise-fpmad"="false" "frame-pointer"="all"
+ "frame-pointer"="non-leaf" "no-infs-fp-math"="false"
   "no-nans-fp-math"="false" "stack-protector-buffer-size"="8"
   "unsafe-fp-math"="false" "use-soft-float"="true"
 }

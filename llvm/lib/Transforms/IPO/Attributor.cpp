@@ -1987,6 +1987,108 @@ struct AANoRecurseCallSite final : AANoRecurseImpl {
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(norecurse); }
 };
 
+/// -------------------- Undefined-Behavior Attributes ------------------------
+
+struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
+  AAUndefinedBehaviorImpl(const IRPosition &IRP) : AAUndefinedBehavior(IRP) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  // TODO: We should not only check instructions that access memory
+  // through a pointer (i.e. also branches etc.)
+  ChangeStatus updateImpl(Attributor &A) override {
+    const size_t PrevSize = NoUBMemAccessInsts.size();
+
+    auto InspectMemAccessInstForUB = [&](Instruction &I) {
+      // Skip instructions that are already saved.
+      if (NoUBMemAccessInsts.count(&I) || UBMemAccessInsts.count(&I))
+        return true;
+
+      // `InspectMemAccessInstForUB` is only called on instructions
+      // for which getPointerOperand() should give us their
+      // pointer operand unless they're volatile.
+      const Value *PtrOp = getPointerOperand(&I);
+      if (!PtrOp)
+        return true;
+
+      // A memory access through a pointer is considered UB
+      // only if the pointer has constant null value.
+      // TODO: Expand it to not only check constant values.
+      if (!isa<ConstantPointerNull>(PtrOp)) {
+        NoUBMemAccessInsts.insert(&I);
+        return true;
+      }
+      const Type *PtrTy = PtrOp->getType();
+
+      // Because we only consider instructions inside functions,
+      // assume that a parent function exists.
+      const Function *F = I.getFunction();
+
+      // A memory access using constant null pointer is only considered UB
+      // if null pointer is _not_ defined for the target platform.
+      if (!llvm::NullPointerIsDefined(F, PtrTy->getPointerAddressSpace()))
+        UBMemAccessInsts.insert(&I);
+      else
+        NoUBMemAccessInsts.insert(&I);
+      return true;
+    };
+
+    A.checkForAllInstructions(InspectMemAccessInstForUB, *this,
+                              {Instruction::Load, Instruction::Store,
+                               Instruction::AtomicCmpXchg,
+                               Instruction::AtomicRMW});
+    if (PrevSize != NoUBMemAccessInsts.size())
+      return ChangeStatus::CHANGED;
+    return ChangeStatus::UNCHANGED;
+  }
+
+  bool isAssumedToCauseUB(Instruction *I) const override {
+    return UBMemAccessInsts.count(I);
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (!UBMemAccessInsts.size())
+      return ChangeStatus::UNCHANGED;
+    for (Instruction *I : UBMemAccessInsts)
+      changeToUnreachable(I, /* UseLLVMTrap */ false);
+    return ChangeStatus::CHANGED;
+  }
+
+  /// See AbstractAttribute::getAsStr()
+  const std::string getAsStr() const override {
+    return getAssumed() ? "undefined-behavior" : "no-ub";
+  }
+
+protected:
+  // A set of all the (live) memory accessing instructions that _are_ assumed to
+  // cause UB.
+  SmallPtrSet<Instruction *, 8> UBMemAccessInsts;
+
+private:
+  // A set of all the (live) memory accessing instructions
+  // that are _not_ assumed to cause UB.
+  //   Note: The correctness of the procedure depends on the fact that this
+  //   set stops changing after some point. "Change" here means that the size
+  //   of the set changes. The size of this set is monotonically increasing
+  //   (we only add items to it) and is upper bounded by the number of memory
+  //   accessing instructions in the processed function (we can never save more
+  //   elements in this set than this number). Hence, the size of this set, at
+  //   some point, will stop increasing, effectively reaching a fixpoint.
+  SmallPtrSet<Instruction *, 8> NoUBMemAccessInsts;
+};
+
+struct AAUndefinedBehaviorFunction final : AAUndefinedBehaviorImpl {
+  AAUndefinedBehaviorFunction(const IRPosition &IRP)
+      : AAUndefinedBehaviorImpl(IRP) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECL(UndefinedBehaviorInstruction, Instruction,
+               "Number of instructions known to have UB");
+    BUILD_STAT_NAME(UndefinedBehaviorInstruction, Instruction) +=
+        UBMemAccessInsts.size();
+  }
+};
+
 /// ------------------------ Will-Return Attributes ----------------------------
 
 // Helper function that checks whether a function has any cycle.
@@ -3970,6 +4072,14 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     return Changed | AAValueSimplify::manifest(A);
   }
 
+  /// See AbstractState::indicatePessimisticFixpoint(...).
+  ChangeStatus indicatePessimisticFixpoint() override {
+    // NOTE: Associated value will be returned in a pessimistic fixpoint and is
+    // regarded as known. That's why`indicateOptimisticFixpoint` is called.
+    SimplifiedAssociatedValue = &getAssociatedValue();
+    return indicateOptimisticFixpoint();
+  }
+
 protected:
   // An assumed simplified value. Initially, it is set to Optional::None, which
   // means that the value is not clear under current assumption. If in the
@@ -4069,7 +4179,7 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     Value &V = getAnchorValue();
 
     // TODO: add other stuffs
-    if (isa<Constant>(V) || isa<UndefValue>(V))
+    if (isa<Constant>(V))
       indicatePessimisticFixpoint();
   }
 
@@ -5481,6 +5591,8 @@ void Attributor::initializeInformationCache(Function &F) {
     case Instruction::Invoke:
     case Instruction::CleanupRet:
     case Instruction::CatchSwitch:
+    case Instruction::AtomicRMW:
+    case Instruction::AtomicCmpXchg:
     case Instruction::Resume:
     case Instruction::Ret:
       IsInterestingOpcode = true;
@@ -5522,6 +5634,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
   // Every function might be "will-return".
   getOrCreateAAFor<AAWillReturn>(FPos);
+
+  // Every function might contain instructions that cause "undefined behavior".
+  getOrCreateAAFor<AAUndefinedBehavior>(FPos);
 
   // Every function can be nounwind.
   getOrCreateAAFor<AANoUnwind>(FPos);
@@ -5717,9 +5832,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const IRPosition &Pos) {
 }
 
 template <typename base_ty, base_ty BestState, base_ty WorstState>
-raw_ostream &
-llvm::operator<<(raw_ostream &OS,
-                 const IntegerStateBase<base_ty, BestState, WorstState> &S) {
+raw_ostream &llvm::
+operator<<(raw_ostream &OS,
+           const IntegerStateBase<base_ty, BestState, WorstState> &S) {
   return OS << "(" << S.getKnown() << "-" << S.getAssumed() << ")"
             << static_cast<const AbstractState &>(S);
 }
@@ -5827,6 +5942,7 @@ const char AANoFree::ID = 0;
 const char AANonNull::ID = 0;
 const char AANoRecurse::ID = 0;
 const char AAWillReturn::ID = 0;
+const char AAUndefinedBehavior::ID = 0;
 const char AANoAlias::ID = 0;
 const char AAReachability::ID = 0;
 const char AANoReturn::ID = 0;
@@ -5949,6 +6065,7 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReachability)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
 
 CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
 

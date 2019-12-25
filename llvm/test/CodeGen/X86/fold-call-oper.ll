@@ -45,4 +45,4 @@ for.inc8.i:                                       ; preds = %if.then.i, %for.bod
   br label %for.body3.i
 }
 
-attributes #0 = { noreturn uwtable "no-frame-pointer-elim"="true" }
+attributes #0 = { noreturn uwtable "frame-pointer"="all" }

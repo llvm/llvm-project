@@ -19,7 +19,7 @@ define i32 @f1(float %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI0_0
 ; CHECK-NEXT:    le %f1, 0(%r1)
-; CHECK-NEXT:    cebr %f0, %f1
+; CHECK-NEXT:    kebr %f0, %f1
 ; CHECK-NEXT:    jnl .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lhi %r0, 0
@@ -43,7 +43,7 @@ define i32 @f2(double %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI1_0
 ; CHECK-NEXT:    ldeb %f1, 0(%r1)
-; CHECK-NEXT:    cdbr %f0, %f1
+; CHECK-NEXT:    kdbr %f0, %f1
 ; CHECK-NEXT:    jnl .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lhi %r0, 0
@@ -69,7 +69,7 @@ define i32 @f3(fp128 *%src) #0 {
 ; CHECK-NEXT:    ld %f2, 8(%r2)
 ; CHECK-NEXT:    larl %r1, .LCPI2_0
 ; CHECK-NEXT:    lxeb %f1, 0(%r1)
-; CHECK-NEXT:    cxbr %f0, %f1
+; CHECK-NEXT:    kxbr %f0, %f1
 ; CHECK-NEXT:    jnl .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lhi %r0, 0

@@ -15,7 +15,7 @@
     ret void
   }
   
-  attributes #0 = { nounwind "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "target-cpu"="pwr7" }
+  attributes #0 = { nounwind "frame-pointer"="all" "target-cpu"="pwr7" }
   
   !llvm.module.flags = !{!0}
   

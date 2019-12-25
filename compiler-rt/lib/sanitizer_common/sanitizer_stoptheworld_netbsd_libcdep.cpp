@@ -120,10 +120,18 @@ bool ThreadSuspender::SuspendAllThreads() {
 
   VReport(2, "Attached to process %d.\n", pid_);
 
+#ifdef PT_LWPNEXT
+  struct ptrace_lwpstatus pl;
+  int op = PT_LWPNEXT;
+#else
   struct ptrace_lwpinfo pl;
-  int val;
+  int op = PT_LWPINFO;
+#endif
+
   pl.pl_lwpid = 0;
-  while ((val = ptrace(PT_LWPINFO, pid_, (void *)&pl, sizeof(pl))) != -1 &&
+
+  int val;
+  while ((val = ptrace(op, pid_, (void *)&pl, sizeof(pl))) != -1 &&
          pl.pl_lwpid != 0) {
     suspended_threads_list_.Append(pl.pl_lwpid);
     VReport(2, "Appended thread %d in process %d.\n", pl.pl_lwpid, pid_);

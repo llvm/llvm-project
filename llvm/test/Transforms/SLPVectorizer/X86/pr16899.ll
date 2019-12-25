@@ -36,7 +36,7 @@ do.body:                                          ; preds = %do.body, %entry
   br label %do.body
 }
 
-attributes #0 = { noreturn nounwind readonly "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf"="true" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noreturn nounwind readonly "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !0 = !{!"any pointer", !1}
 !1 = !{!"omnipotent char", !2}

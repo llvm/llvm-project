@@ -26,4 +26,4 @@ bb:
 }
 
 attributes #0 = { naked }
-attributes #1 = { "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" }
+attributes #1 = { "frame-pointer"="all" }

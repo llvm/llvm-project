@@ -289,4 +289,4 @@ cleanup:
 }
 
 attributes #0 = { optsize }
-attributes #1 = { optsize "no-frame-pointer-elim"="true" }
+attributes #1 = { optsize "frame-pointer"="all" }

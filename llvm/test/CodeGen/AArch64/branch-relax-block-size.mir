@@ -30,7 +30,7 @@
 
   declare i32 @validate(i32*)
 
-  attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" }
+  attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "frame-pointer"="all" }
 
 ...
 ---

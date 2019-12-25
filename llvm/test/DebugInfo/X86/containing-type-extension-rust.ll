@@ -76,10 +76,10 @@ top:
 ; std::rt::lang_start
 declare i64 @_ZN3std2rt10lang_start17h2626caf1112a00beE(void ()*, i64, i8**) unnamed_addr #3
 
-attributes #0 = { uwtable "no-frame-pointer-elim"="true" "probe-stack"="__rust_probestack" }
+attributes #0 = { uwtable "frame-pointer"="all" "probe-stack"="__rust_probestack" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "no-frame-pointer-elim"="true" }
-attributes #3 = { "no-frame-pointer-elim"="true" "probe-stack"="__rust_probestack" }
+attributes #2 = { "frame-pointer"="all" }
+attributes #3 = { "frame-pointer"="all" "probe-stack"="__rust_probestack" }
 
 !llvm.module.flags = !{!6, !7}
 !llvm.dbg.cu = !{!8}

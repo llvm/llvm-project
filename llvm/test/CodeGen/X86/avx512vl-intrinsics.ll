@@ -3704,8 +3704,8 @@ define <4 x i32>@test_int_x86_avx512_mask_cvtt_pd2udq_256(<4 x double> %x0, <4 x
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vcvttpd2udq %ymm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0xfc,0x29,0x78,0xc8]
 ; X86-NEXT:    vcvttpd2udq %ymm0, %xmm0 # encoding: [0x62,0xf1,0xfc,0x28,0x78,0xc0]
-; X86-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x6f,0xc8]
 ; X86-NEXT:    vpaddd %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfe,0xc0]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -3713,8 +3713,8 @@ define <4 x i32>@test_int_x86_avx512_mask_cvtt_pd2udq_256(<4 x double> %x0, <4 x
 ; X64-LABEL: test_int_x86_avx512_mask_cvtt_pd2udq_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vcvttpd2udq %ymm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0xfc,0x29,0x78,0xc8]
 ; X64-NEXT:    vcvttpd2udq %ymm0, %xmm0 # encoding: [0x62,0xf1,0xfc,0x28,0x78,0xc0]
-; X64-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x6f,0xc8]
 ; X64-NEXT:    vpaddd %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfe,0xc0]
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
@@ -3731,16 +3731,16 @@ define <4 x i32>@test_int_x86_avx512_mask_cvtt_ps2udq_128(<4 x float> %x0, <4 x 
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vcvttps2udq %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x09,0x78,0xc8]
 ; X86-NEXT:    vcvttps2udq %xmm0, %xmm0 # encoding: [0x62,0xf1,0x7c,0x08,0x78,0xc0]
-; X86-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x6f,0xc8]
 ; X86-NEXT:    vpaddd %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfe,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_cvtt_ps2udq_128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vcvttps2udq %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x09,0x78,0xc8]
 ; X64-NEXT:    vcvttps2udq %xmm0, %xmm0 # encoding: [0x62,0xf1,0x7c,0x08,0x78,0xc0]
-; X64-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x6f,0xc8]
 ; X64-NEXT:    vpaddd %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfe,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx512.mask.cvttps2udq.128(<4 x float> %x0, <4 x i32> %x1, i8 %x2)
@@ -3756,16 +3756,16 @@ define <8 x i32>@test_int_x86_avx512_mask_cvtt_ps2udq_256(<8 x float> %x0, <8 x 
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vcvttps2udq %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x29,0x78,0xc8]
 ; X86-NEXT:    vcvttps2udq %ymm0, %ymm0 # encoding: [0x62,0xf1,0x7c,0x28,0x78,0xc0]
-; X86-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x29,0x6f,0xc8]
 ; X86-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xf5,0xfe,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_cvtt_ps2udq_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vcvttps2udq %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x29,0x78,0xc8]
 ; X64-NEXT:    vcvttps2udq %ymm0, %ymm0 # encoding: [0x62,0xf1,0x7c,0x28,0x78,0xc0]
-; X64-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x29,0x6f,0xc8]
 ; X64-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xf5,0xfe,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx512.mask.cvttps2udq.256(<8 x float> %x0, <8 x i32> %x1, i8 %x2)

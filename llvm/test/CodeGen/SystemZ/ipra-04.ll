@@ -31,4 +31,4 @@ bb:
   ret void
 }
 
-attributes #0 = { norecurse nounwind "no-frame-pointer-elim"="false" }
+attributes #0 = { norecurse nounwind "frame-pointer"="none" }

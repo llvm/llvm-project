@@ -15,7 +15,7 @@
     ret i32 %b
   }
 
-  attributes #0 = { "no-frame-pointer-elim"="false" }
+  attributes #0 = { "frame-pointer"="none" }
 
 ...
 ---

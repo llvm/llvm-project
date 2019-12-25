@@ -9768,6 +9768,9 @@ def warn_omp_declare_variant_marked_as_declare_variant : Warning<
 def note_omp_marked_declare_variant_here : Note<"marked as 'declare variant' here">;
 def err_omp_one_defaultmap_each_category: Error<
   "at most one defaultmap clause for each variable-category can appear on the directive">;
+def err_omp_lastprivate_conditional_non_scalar : Error<
+  "expected list item of scalar type in 'lastprivate' clause with 'conditional' modifier"
+  >;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

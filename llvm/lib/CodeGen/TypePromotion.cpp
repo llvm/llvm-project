@@ -104,17 +104,14 @@ DisablePromotion("disable-type-promotion", cl::Hidden, cl::init(true),
 
 namespace {
 class IRPromoter {
+  LLVMContext &Ctx;
+  IntegerType *OrigTy = nullptr;
+  unsigned PromotedWidth = 0;
+  IntegerType *ExtTy = nullptr;
   SmallPtrSet<Value*, 8> NewInsts;
   SmallPtrSet<Instruction*, 4> InstsToRemove;
   DenseMap<Value*, SmallVector<Type*, 4>> TruncTysMap;
   SmallPtrSet<Value*, 8> Promoted;
-  LLVMContext &Ctx;
-  // The type we promote to: always i32
-  IntegerType *ExtTy = nullptr;
-  // The type of the value that the search began from, either i8 or i16.
-  // This defines the max range of the values that we allow in the promoted
-  // tree.
-  IntegerType *OrigTy = nullptr;
   SetVector<Value*> *Visited;
   SmallPtrSetImpl<Value*> *Sources;
   SmallPtrSetImpl<Instruction*> *Sinks;
@@ -130,11 +127,14 @@ class IRPromoter {
   void Cleanup(void);
 
 public:
-  IRPromoter(Module *M) : Ctx(M->getContext()) { }
+  IRPromoter(LLVMContext &C, IntegerType *Ty, unsigned Width) :
+    Ctx(C), OrigTy(Ty), PromotedWidth(Width) {
+    ExtTy = IntegerType::get(Ctx, PromotedWidth);
+    assert(OrigTy->getPrimitiveSizeInBits() < ExtTy->getPrimitiveSizeInBits()
+           && "Original type not smaller than extended type");
+  }
 
-
-  void Mutate(Type *OrigTy, unsigned PromotedWidth,
-              SetVector<Value*> &Visited,
+  void Mutate(SetVector<Value*> &Visited,
               SmallPtrSetImpl<Value*> &Sources,
               SmallPtrSetImpl<Instruction*> &Sinks,
               SmallPtrSetImpl<Instruction*> &SafeToPromote,
@@ -142,20 +142,43 @@ public:
 };
 
 class TypePromotion : public FunctionPass {
-  IRPromoter *Promoter = nullptr;
+  unsigned TypeSize = 0;
+  LLVMContext *Ctx = nullptr;
+  unsigned RegisterBitWidth = 0;
   SmallPtrSet<Value*, 16> AllVisited;
   SmallPtrSet<Instruction*, 8> SafeToPromote;
   SmallPtrSet<Instruction*, 4> SafeWrap;
 
+  // Does V have the same size result type as TypeSize.
+  bool EqualTypeSize(Value *V);
+  // Does V have the same size, or narrower, result type as TypeSize.
+  bool LessOrEqualTypeSize(Value *V);
+  // Does V have a result type that is wider than TypeSize.
+  bool GreaterThanTypeSize(Value *V);
+  // Does V have a result type that is narrower than TypeSize.
+  bool LessThanTypeSize(Value *V);
+  // Should V be a leaf in the promote tree?
+  bool isSource(Value *V);
+  // Should V be a root in the promotion tree?
+  bool isSink(Value *V);
+  // Should we change the result type of V? It will result in the users of V
+  // being visited.
+  bool shouldPromote(Value *V);
+  // Is I an add or a sub, which isn't marked as nuw, but where a wrapping
+  // result won't affect the computation?
   bool isSafeWrap(Instruction *I);
+  // Can V have its integer type promoted, or can the type be ignored.
+  bool isSupportedType(Value *V);
+  // Is V an instruction with a supported opcode or another value that we can
+  // handle, such as constants and basic blocks.
   bool isSupportedValue(Value *V);
+  // Is V an instruction thats result can trivially promoted, or has safe
+  // wrapping.
   bool isLegalToPromote(Value *V);
   bool TryToPromote(Value *V, unsigned PromotedWidth);
 
 public:
   static char ID;
-  static unsigned TypeSize;
-  Type *OrigTy = nullptr;
 
   TypePromotion() : FunctionPass(ID) {}
 
@@ -166,9 +189,7 @@ public:
 
   StringRef getPassName() const override { return PASS_NAME; }
 
-  bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
-  bool doFinalization(Module &M) override;
 };
 
 }
@@ -182,41 +203,20 @@ static bool GenerateSignBits(Value *V) {
          Opc == Instruction::SRem || Opc == Instruction::SExt;
 }
 
-static bool EqualTypeSize(Value *V) {
-  return V->getType()->getScalarSizeInBits() == TypePromotion::TypeSize;
+bool TypePromotion::EqualTypeSize(Value *V) {
+  return V->getType()->getScalarSizeInBits() == TypeSize;
 }
 
-static bool LessOrEqualTypeSize(Value *V) {
-  return V->getType()->getScalarSizeInBits() <= TypePromotion::TypeSize;
+bool TypePromotion::LessOrEqualTypeSize(Value *V) {
+  return V->getType()->getScalarSizeInBits() <= TypeSize;
 }
 
-static bool GreaterThanTypeSize(Value *V) {
-  return V->getType()->getScalarSizeInBits() > TypePromotion::TypeSize;
+bool TypePromotion::GreaterThanTypeSize(Value *V) {
+  return V->getType()->getScalarSizeInBits() > TypeSize;
 }
 
-static bool LessThanTypeSize(Value *V) {
-  return V->getType()->getScalarSizeInBits() < TypePromotion::TypeSize;
-}
-
-/// Some instructions can use 8- and 16-bit operands, and we don't need to
-/// promote anything larger. We disallow booleans to make life easier when
-/// dealing with icmps but allow any other integer that is <= 16 bits. Void
-/// types are accepted so we can handle switches.
-static bool isSupportedType(Value *V) {
-  Type *Ty = V->getType();
-
-  // Allow voids and pointers, these won't be promoted.
-  if (Ty->isVoidTy() || Ty->isPointerTy())
-    return true;
-
-  if (auto *Ld = dyn_cast<LoadInst>(V))
-    Ty = cast<PointerType>(Ld->getPointerOperandType())->getElementType();
-
-  if (!isa<IntegerType>(Ty) ||
-      cast<IntegerType>(V->getType())->getBitWidth() == 1)
-    return false;
-
-  return LessOrEqualTypeSize(V);
+bool TypePromotion::LessThanTypeSize(Value *V) {
+  return V->getType()->getScalarSizeInBits() < TypeSize;
 }
 
 /// Return true if the given value is a source in the use-def chain, producing
@@ -226,7 +226,7 @@ static bool isSupportedType(Value *V) {
 /// return values because we only accept ones that guarantee a zeroext ret val.
 /// Many arguments will have the zeroext attribute too, so those would be free
 /// too.
-static bool isSource(Value *V) {
+bool TypePromotion::isSource(Value *V) {
   if (!isa<IntegerType>(V->getType()))
     return false;
 
@@ -247,7 +247,7 @@ static bool isSource(Value *V) {
 /// Return true if V will require any promoted values to be truncated for the
 /// the IR to remain valid. We can't mutate the value type of these
 /// instructions.
-static bool isSink(Value *V) {
+bool TypePromotion::isSink(Value *V) {
   // TODO The truncate also isn't actually necessary because we would already
   // proved that the data value is kept within the range of the original data
   // type.
@@ -380,12 +380,13 @@ bool TypePromotion::isSafeWrap(Instruction *I) {
   } else if (Total.ugt(Max))
     return false;
 
-  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for " << *I << "\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for "
+             << *I << "\n");
   SafeWrap.insert(I);
   return true;
 }
 
-static bool shouldPromote(Value *V) {
+bool TypePromotion::shouldPromote(Value *V) {
   if (!isa<IntegerType>(V->getType()) || isSink(V))
     return false;
 
@@ -540,7 +541,8 @@ void IRPromoter::PromoteTree() {
         I->setOperand(i, UndefValue::get(ExtTy));
     }
 
-    if (shouldPromote(I)) {
+    // Mutate the result type, unless this is an icmp.
+    if (!isa<ICmpInst>(I)) {
       I->mutateType(ExtTy);
       Promoted.insert(I);
     }
@@ -644,13 +646,6 @@ void IRPromoter::Cleanup() {
     I->dropAllReferences();
     I->eraseFromParent();
   }
-
-  InstsToRemove.clear();
-  NewInsts.clear();
-  TruncTysMap.clear();
-  Promoted.clear();
-  SafeToPromote->clear();
-  SafeWrap->clear();
 }
 
 void IRPromoter::ConvertTruncs() {
@@ -678,21 +673,13 @@ void IRPromoter::ConvertTruncs() {
   }
 }
 
-void IRPromoter::Mutate(Type *OrigTy, unsigned PromotedWidth,
-                        SetVector<Value*> &Visited,
+void IRPromoter::Mutate(SetVector<Value*> &Visited,
                         SmallPtrSetImpl<Value*> &Sources,
                         SmallPtrSetImpl<Instruction*> &Sinks,
                         SmallPtrSetImpl<Instruction*> &SafeToPromote,
                         SmallPtrSetImpl<Instruction*> &SafeWrap) {
   LLVM_DEBUG(dbgs() << "IR Promotion: Promoting use-def chains from "
-             << TypePromotion::TypeSize << " to " << PromotedWidth
-             << "-bits\n");
-
-  assert(isa<IntegerType>(OrigTy) && "expected integer type");
-  this->OrigTy = cast<IntegerType>(OrigTy);
-  ExtTy = IntegerType::get(Ctx, PromotedWidth);
-  assert(OrigTy->getPrimitiveSizeInBits() < ExtTy->getPrimitiveSizeInBits() &&
-         "original type not smaller than extended type");
+             << OrigTy->getBitWidth() << " to " << PromotedWidth << "-bits\n");
 
   this->Visited = &Visited;
   this->Sources = &Sources;
@@ -742,6 +729,24 @@ void IRPromoter::Mutate(Type *OrigTy, unsigned PromotedWidth,
   Cleanup();
 
   LLVM_DEBUG(dbgs() << "IR Promotion: Mutation complete\n");
+}
+
+/// We disallow booleans to make life easier when dealing with icmps but allow
+/// any other integer that fits in a scalar register. Void types are accepted
+/// so we can handle switches.
+bool TypePromotion::isSupportedType(Value *V) {
+  Type *Ty = V->getType();
+
+  // Allow voids and pointers, these won't be promoted.
+  if (Ty->isVoidTy() || Ty->isPointerTy())
+    return true;
+
+  if (!isa<IntegerType>(Ty) ||
+      cast<IntegerType>(Ty)->getBitWidth() == 1 ||
+      cast<IntegerType>(Ty)->getBitWidth() > RegisterBitWidth)
+    return false;
+
+  return LessOrEqualTypeSize(V);
 }
 
 /// We accept most instructions, as well as Arguments and ConstantInsts. We
@@ -813,7 +818,7 @@ bool TypePromotion::isLegalToPromote(Value *V) {
 }
 
 bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
-  OrigTy = V->getType();
+  Type *OrigTy = V->getType();
   TypeSize = OrigTy->getPrimitiveSizeInBits();
   SafeToPromote.clear();
   SafeWrap.clear();
@@ -903,26 +908,37 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
              for (auto *I : CurrentVisited)
                I->dump();
              );
+
   unsigned ToPromote = 0;
+  unsigned NonFreeArgs = 0;
+  SmallPtrSet<BasicBlock*, 4> Blocks;
   for (auto *V : CurrentVisited) {
-    if (Sources.count(V))
+    if (auto *I = dyn_cast<Instruction>(V))
+      Blocks.insert(I->getParent());
+
+    if (Sources.count(V)) {
+      if (auto *Arg = dyn_cast<Argument>(V))
+        if (!Arg->hasZExtAttr() && !Arg->hasSExtAttr())
+          ++NonFreeArgs;
       continue;
+    }
+
     if (Sinks.count(cast<Instruction>(V)))
       continue;
-    ++ToPromote;
-  }
+     ++ToPromote;
+   }
+
+  // DAG optimisations should be able to handle these cases better, especially
+  // for function arguments.
+  if (ToPromote < 2 || (Blocks.size() == 1 && (NonFreeArgs > SafeWrap.size())))
+    return false;
 
   if (ToPromote < 2)
     return false;
 
-  Promoter->Mutate(OrigTy, PromotedWidth, CurrentVisited, Sources, Sinks,
-                   SafeToPromote, SafeWrap);
+  IRPromoter Promoter(*Ctx, cast<IntegerType>(OrigTy), PromotedWidth);
+  Promoter.Mutate(CurrentVisited, Sources, Sinks, SafeToPromote, SafeWrap);
   return true;
-}
-
-bool TypePromotion::doInitialization(Module &M) {
-  Promoter = new IRPromoter(&M);
-  return false;
 }
 
 bool TypePromotion::runOnFunction(Function &F) {
@@ -942,11 +958,12 @@ bool TypePromotion::runOnFunction(Function &F) {
   const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
   const TargetTransformInfo &TII =
     getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  RegisterBitWidth = TII.getRegisterBitWidth(false);
+  Ctx = &F.getParent()->getContext();
 
   // Search up from icmps to try to promote their operands.
   for (BasicBlock &BB : F) {
-    auto &Insts = BB.getInstList();
-    for (auto &I : Insts) {
+    for (auto &I : BB) {
       if (AllVisited.count(&I))
         continue;
 
@@ -972,7 +989,7 @@ bool TypePromotion::runOnFunction(Function &F) {
             break;
 
           EVT PromotedVT = TLI->getTypeToTransformTo(ICmp->getContext(), SrcVT);
-          if (TII.getRegisterBitWidth(false) < PromotedVT.getSizeInBits()) {
+          if (RegisterBitWidth < PromotedVT.getSizeInBits()) {
             LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
                        << "for promoted type\n");
             break;
@@ -994,16 +1011,10 @@ bool TypePromotion::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-bool TypePromotion::doFinalization(Module &M) {
-  delete Promoter;
-  return false;
-}
-
 INITIALIZE_PASS_BEGIN(TypePromotion, DEBUG_TYPE, PASS_NAME, false, false)
 INITIALIZE_PASS_END(TypePromotion, DEBUG_TYPE, PASS_NAME, false, false)
 
 char TypePromotion::ID = 0;
-unsigned TypePromotion::TypeSize = 0;
 
 FunctionPass *llvm::createTypePromotionPass() {
   return new TypePromotion();

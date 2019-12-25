@@ -23,6 +23,6 @@ declare void @_Z1gPv(i8*)
 ; Function Attrs: nounwind
 declare i8* @llvm.eh.dwarf.cfa(i32) #1
 
-attributes #0 = { "no-frame-pointer-elim"="true" "target-cpu"="ppc64le" }
+attributes #0 = { "frame-pointer"="all" "target-cpu"="ppc64le" }
 attributes #1 = { nounwind }
 

@@ -203,13 +203,13 @@ supported include:
 
     For example, to assign the result to a class-typed value, you
     could write either of these:
-      ``BaseClass b = !getop<BaseClass>(someDag);``
+    ``BaseClass b = !getop<BaseClass>(someDag);``
 
-      ``BaseClass b = !cast<BaseClass>(!getop(someDag));``
+    ``BaseClass b = !cast<BaseClass>(!getop(someDag));``
 
     But to build a new dag node reusing the operator from another, no
     cast is necessary:
-      ``dag d = !dag(!getop(someDag), args, names);``
+    ``dag d = !dag(!getop(someDag), args, names);``
 
 ``!listconcat(a, b, ...)``
     A list value that is the result of concatenating the 'a' and 'b' lists.

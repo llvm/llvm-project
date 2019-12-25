@@ -61,7 +61,7 @@ entry:
 }
 
 
-define i32 @test1_nofpelim() "no-frame-pointer-elim"="true" {
+define i32 @test1_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: @test1_nofpelim
 ; CHECK: push
 entry:
@@ -69,7 +69,7 @@ entry:
   unreachable
 }
 
-define i32 @test2_nofpelim(i32 %x, i32 %y) "no-frame-pointer-elim"="true" {
+define i32 @test2_nofpelim(i32 %x, i32 %y) "frame-pointer"="all" {
 ; CHECK-LABEL: @test2_nofpelim
 ; CHECK: push
 entry:
@@ -90,7 +90,7 @@ if.end:                                           ; preds = %entry
 }
 
 ; Test case for PR17825.
-define i32 @test3_nofpelim() "no-frame-pointer-elim"="true" {
+define i32 @test3_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: @test3_nofpelim
 ; CHECK: push
 entry:
@@ -99,7 +99,7 @@ entry:
 }
 
 ; Test case for uwtable
-define i32 @test4_nofpelim() uwtable "no-frame-pointer-elim"="true" {
+define i32 @test4_nofpelim() uwtable "frame-pointer"="all" {
 ; CHECK-LABEL: @test4_nofpelim
 ; CHECK: push
 entry:
@@ -107,7 +107,7 @@ entry:
   unreachable
 }
 
-define i32 @test5_nofpelim() uwtable "no-frame-pointer-elim"="true" {
+define i32 @test5_nofpelim() uwtable "frame-pointer"="all" {
 ; CHECK-LABEL: @test5_nofpelim
 ; CHECK: push
 entry:

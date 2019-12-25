@@ -183,7 +183,7 @@ if.then343:                    ; preds = %entry
  ret void
 }
 
-attributes #0 = { sspstrong uwtable "no-frame-pointer-elim"="false" "target-cpu"="cortex-a7" }
+attributes #0 = { sspstrong uwtable "frame-pointer"="none" "target-cpu"="cortex-a7" }
 
 !1 = !{!2, !2, i64 0}
 !2 = !{!"float", !3, i64 0}

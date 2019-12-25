@@ -716,6 +716,25 @@ removeHostnameFromPathname(llvm::StringRef path_from_dwarf) {
   return path;
 }
 
+static FileSpec resolveCompDir(const FileSpec &path) {
+  bool is_symlink = SymbolFileDWARF::GetSymlinkPaths().FindFileIndex(
+                        0, path, /*full*/ true) != UINT32_MAX;
+
+  if (!is_symlink)
+    return path;
+
+  namespace fs = llvm::sys::fs;
+  if (fs::get_file_type(path.GetPath(), false) != fs::file_type::symlink_file)
+    return path;
+
+  FileSpec resolved_symlink;
+  const auto error = FileSystem::Instance().Readlink(path, resolved_symlink);
+  if (error.Success())
+    return resolved_symlink;
+
+  return path;
+}
+
 void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
   m_comp_dir = FileSpec();
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
@@ -727,7 +746,7 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
   if (!comp_dir.empty()) {
     FileSpec::Style comp_dir_style =
         FileSpec::GuessPathStyle(comp_dir).getValueOr(FileSpec::Style::native);
-    m_comp_dir = FileSpec(comp_dir, comp_dir_style);
+    m_comp_dir = resolveCompDir(FileSpec(comp_dir, comp_dir_style));
   } else {
     // Try to detect the style based on the DW_AT_name attribute, but just store
     // the detected style in the m_comp_dir field.

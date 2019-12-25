@@ -943,7 +943,7 @@ public:
   clang::DeclarationName
   GetDeclarationName(const char *name, const CompilerType &function_clang_type);
 
-protected:
+private:
   const clang::ClassTemplateSpecializationDecl *
   GetAsTemplateSpecialization(lldb::opaque_compiler_type_t type);
 
@@ -962,16 +962,23 @@ protected:
   std::unique_ptr<clang::Builtin::Context> m_builtins_up;
   std::unique_ptr<DWARFASTParserClang> m_dwarf_ast_parser_up;
   std::unique_ptr<PDBASTParser> m_pdb_ast_parser_up;
-  std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
+
+  typedef llvm::DenseMap<const clang::Decl *, ClangASTMetadata> DeclMetadataMap;
+  /// Maps Decls to their associated ClangASTMetadata.
+  DeclMetadataMap m_decl_metadata;
+
+  typedef llvm::DenseMap<const clang::Type *, ClangASTMetadata> TypeMetadataMap;
+  /// Maps Types to their associated ClangASTMetadata.
+  TypeMetadataMap m_type_metadata;
+
   /// The sema associated that is currently used to build this ASTContext.
   /// May be null if we are already done parsing this ASTContext or the
   /// ASTContext wasn't created by parsing source code.
   clang::Sema *m_sema = nullptr;
 
-private:
   // For ClangASTContext only
   ClangASTContext(const ClangASTContext &);
   const ClangASTContext &operator=(const ClangASTContext &);
@@ -985,6 +992,8 @@ public:
   ClangASTContextForExpressions(Target &target, ArchSpec arch);
 
   ~ClangASTContextForExpressions() override = default;
+
+  void Finalize() override;
 
   UserExpression *
   GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
@@ -1007,6 +1016,7 @@ private:
   std::unique_ptr<PersistentExpressionState>
       m_persistent_variables; // These are the persistent variables associated
                               // with this process for the expression parser
+  std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
 };
 
 } // namespace lldb_private

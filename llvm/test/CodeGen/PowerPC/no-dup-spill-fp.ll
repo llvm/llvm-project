@@ -20,7 +20,7 @@ entry:
 
 declare void @func()
 
-attributes #0 = { nounwind "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "target-cpu"="ppc64" }
+attributes #0 = { nounwind "frame-pointer"="all" "target-cpu"="ppc64" }
 attributes #1 = { nounwind }
 
 !0 = !{i32 57}

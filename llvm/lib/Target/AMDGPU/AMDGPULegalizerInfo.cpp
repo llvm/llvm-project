@@ -466,7 +466,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({S32, S64})
     .scalarize(0);
 
-  if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
+  if (ST.has16BitInsts()) {
+    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
+      .legalFor({S16, S32, S64})
+      .clampScalar(0, S16, S64)
+      .scalarize(0);
+  } else if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
     getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
       .legalFor({S32, S64})
       .clampScalar(0, S32, S64)
@@ -2295,8 +2300,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
-  switch (MI.getIntrinsicID()) {
-  case Intrinsic::amdgcn_if: {
+  auto IntrID = MI.getIntrinsicID();
+  switch (IntrID) {
+  case Intrinsic::amdgcn_if:
+  case Intrinsic::amdgcn_else: {
     if (MachineInstr *BrCond = verifyCFIntrinsic(MI, MRI)) {
       const SIRegisterInfo *TRI
         = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
@@ -2304,10 +2311,19 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
       B.setInstr(*BrCond);
       Register Def = MI.getOperand(1).getReg();
       Register Use = MI.getOperand(3).getReg();
-      B.buildInstr(AMDGPU::SI_IF)
-        .addDef(Def)
-        .addUse(Use)
-        .addMBB(BrCond->getOperand(1).getMBB());
+
+      if (IntrID == Intrinsic::amdgcn_if) {
+        B.buildInstr(AMDGPU::SI_IF)
+          .addDef(Def)
+          .addUse(Use)
+          .addMBB(BrCond->getOperand(1).getMBB());
+      } else {
+        B.buildInstr(AMDGPU::SI_ELSE)
+          .addDef(Def)
+          .addUse(Use)
+          .addMBB(BrCond->getOperand(1).getMBB())
+          .addImm(0);
+      }
 
       MRI.setRegClass(Def, TRI->getWaveMaskRegClass());
       MRI.setRegClass(Use, TRI->getWaveMaskRegClass());

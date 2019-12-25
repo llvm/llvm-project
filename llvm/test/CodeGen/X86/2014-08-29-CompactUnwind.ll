@@ -43,4 +43,4 @@ print_shadow_bytes.exit.i: ; preds = %print_shadow_bytes.exit.i, %0
 
 declare void @append(i64*, i8*, ...)
 
-attributes #0 = { "no-frame-pointer-elim"="false" }
+attributes #0 = { "frame-pointer"="none" }
