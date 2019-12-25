@@ -37,11 +37,43 @@ public:
   /// Add attributes known for \p FnID to \p Fn.
   void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
 
-  /// Set the cancellation block to \p CBB.
-  void setCancellationBlock(BasicBlock *CBB) { CancellationBlock = CBB; }
-
   /// Type used throughout for insertion points.
   using InsertPointTy = IRBuilder<>::InsertPoint;
+
+  /// Callback type for variable finalization (think destructors).
+  ///
+  /// \param CodeGenIP is the insertion point at which the finalization code
+  ///                  should be placed.
+  ///
+  /// A finalize callback knows about all objects that need finalization, e.g.
+  /// destruction, when the scope of the currently generated construct is left
+  /// at the time, and location, the callback is invoked.
+  using FinalizeCallbackTy = std::function<void(InsertPointTy /* CodeGenIP */)>;
+
+  struct FinalizationInfo {
+    /// The finalization callback provided by the last in-flight invocation of
+    /// CreateXXXX for the directive of kind DK.
+    FinalizeCallbackTy FiniCB;
+
+    /// The directive kind of the innermost directive that has an associated
+    /// region which might require finalization when it is left.
+    omp::Directive DK;
+
+    /// Flag to indicate if the directive is cancellable.
+    bool IsCancellable;
+  };
+
+  /// Push a finalization callback on the finalization stack.
+  ///
+  /// NOTE: Temporary solution until Clang CG is gone.
+  void pushFinalizationCB(const FinalizationInfo &FI) {
+    FinalizationStack.push_back(FI);
+  }
+
+  /// Pop the last finalization callback from the finalization stack.
+  ///
+  /// NOTE: Temporary solution until Clang CG is gone.
+  void popFinalizationCB() { FinalizationStack.pop_back(); }
 
   /// Description of a LLVM-IR insertion point (IP) and a debug/source location
   /// (filename, line, column, ...).
@@ -112,6 +144,19 @@ private:
                                 omp::Directive DK, bool ForceSimpleCall,
                                 bool CheckCancelFlag);
 
+  /// The finalization stack made up of finalize callbacks currently in-flight,
+  /// wrapped into FinalizationInfo objects that reference also the finalization
+  /// target block and the kind of cancellable directive.
+  SmallVector<FinalizationInfo, 8> FinalizationStack;
+
+  /// Return true if the last entry in the finalization stack is of kind \p DK
+  /// and cancellable.
+  bool isLastFinalizationInfoCancellable(omp::Directive DK) {
+    return !FinalizationStack.empty() &&
+           FinalizationStack.back().IsCancellable &&
+           FinalizationStack.back().DK == DK;
+  }
+
   /// Return the current thread ID.
   ///
   /// \param Ident The ident (ident_t*) describing the query origin.
@@ -122,9 +167,6 @@ private:
 
   /// The LLVM-IR Builder used to create IR.
   IRBuilder<> Builder;
-
-  /// TODO: Stub for a cancellation block stack.
-  BasicBlock *CancellationBlock = nullptr;
 
   /// Map to remember source location strings
   StringMap<Constant *> SrcLocStrMap;
