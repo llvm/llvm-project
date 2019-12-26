@@ -17,7 +17,9 @@ declare <4 x float> @llvm.experimental.constrained.fdiv.v4f32(<4 x float>, <4 x 
 declare <2 x double> @llvm.experimental.constrained.sqrt.v2f64(<2 x double>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float>, metadata, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(<2 x double>, metadata, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float>, metadata)
 declare <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double>, <2 x double>, <2 x double>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
 
@@ -398,5 +400,39 @@ define <2 x double> @f14(<2 x double> %a, <2 x double> %b, <2 x double> %c) #0 {
                                                                     metadata !"fpexcept.strict") #0
   ret <2 x double> %res
 }
+
+define <2 x double> @f15(<2 x float> %a) #0 {
+; SSE-LABEL: f15:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cvtps2pd %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: f15:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtps2pd %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %ret = call <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(
+                                <2 x float> %a,
+                                metadata !"fpexcept.strict") #0
+  ret <2 x double> %ret
+}
+
+define <2 x float> @f16(<2 x double> %a) #0 {
+; SSE-LABEL: f16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cvtpd2ps %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: f16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtpd2ps %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %ret = call <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(
+                                <2 x double> %a,
+                                metadata !"round.dynamic",
+                                metadata !"fpexcept.strict") #0
+  ret <2 x float> %ret
+}
+
 
 attributes #0 = { strictfp }
