@@ -367,25 +367,21 @@ def SPV_C_SubgroupVoteKHR                           : I32EnumAttrCase<"SubgroupV
 }
 def SPV_C_StorageBuffer16BitAccess                  : I32EnumAttrCase<"StorageBuffer16BitAccess", 4433> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_16bit_storage]>
   ];
 }
 def SPV_C_StoragePushConstant16                     : I32EnumAttrCase<"StoragePushConstant16", 4435> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_16bit_storage]>
   ];
 }
 def SPV_C_StorageInputOutput16                      : I32EnumAttrCase<"StorageInputOutput16", 4436> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_16bit_storage]>
   ];
 }
 def SPV_C_DeviceGroup                               : I32EnumAttrCase<"DeviceGroup", 4437> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_device_group]>
   ];
 }
@@ -401,43 +397,36 @@ def SPV_C_SampleMaskPostDepthCoverage               : I32EnumAttrCase<"SampleMas
 }
 def SPV_C_StorageBuffer8BitAccess                   : I32EnumAttrCase<"StorageBuffer8BitAccess", 4448> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_KHR_8bit_storage]>
   ];
 }
 def SPV_C_StoragePushConstant8                      : I32EnumAttrCase<"StoragePushConstant8", 4450> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_KHR_8bit_storage]>
   ];
 }
 def SPV_C_DenormPreserve                            : I32EnumAttrCase<"DenormPreserve", 4464> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>
   ];
 }
 def SPV_C_DenormFlushToZero                         : I32EnumAttrCase<"DenormFlushToZero", 4465> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>
   ];
 }
 def SPV_C_SignedZeroInfNanPreserve                  : I32EnumAttrCase<"SignedZeroInfNanPreserve", 4466> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>
   ];
 }
 def SPV_C_RoundingModeRTE                           : I32EnumAttrCase<"RoundingModeRTE", 4467> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>
   ];
 }
 def SPV_C_RoundingModeRTZ                           : I32EnumAttrCase<"RoundingModeRTZ", 4468> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>
   ];
 }
@@ -595,14 +584,12 @@ def SPV_C_GroupNonUniformQuad                       : I32EnumAttrCase<"GroupNonU
 def SPV_C_StorageUniform16                          : I32EnumAttrCase<"StorageUniform16", 4434> {
   list<I32EnumAttrCase> implies = [SPV_C_StorageBuffer16BitAccess];
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_16bit_storage]>
   ];
 }
 def SPV_C_UniformAndStorageBuffer8BitAccess         : I32EnumAttrCase<"UniformAndStorageBuffer8BitAccess", 4449> {
   list<I32EnumAttrCase> implies = [SPV_C_StorageBuffer8BitAccess];
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_KHR_8bit_storage]>
   ];
 }
@@ -708,21 +695,18 @@ def SPV_C_PipeStorage                               : I32EnumAttrCase<"PipeStora
 def SPV_C_DrawParameters                            : I32EnumAttrCase<"DrawParameters", 4427> {
   list<I32EnumAttrCase> implies = [SPV_C_Shader];
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_shader_draw_parameters]>
   ];
 }
 def SPV_C_MultiView                                 : I32EnumAttrCase<"MultiView", 4439> {
   list<I32EnumAttrCase> implies = [SPV_C_Shader];
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_multiview]>
   ];
 }
 def SPV_C_VariablePointersStorageBuffer             : I32EnumAttrCase<"VariablePointersStorageBuffer", 4441> {
   list<I32EnumAttrCase> implies = [SPV_C_Shader];
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_variable_pointers]>
   ];
 }
@@ -807,7 +791,6 @@ def SPV_C_RayTracingNV                              : I32EnumAttrCase<"RayTracin
 def SPV_C_PhysicalStorageBufferAddresses            : I32EnumAttrCase<"PhysicalStorageBufferAddresses", 5347> {
   list<I32EnumAttrCase> implies = [SPV_C_Shader];
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer]>
   ];
 }
@@ -874,7 +857,6 @@ def SPV_C_MultiViewport                             : I32EnumAttrCase<"MultiView
 def SPV_C_VariablePointers                          : I32EnumAttrCase<"VariablePointers", 4442> {
   list<I32EnumAttrCase> implies = [SPV_C_VariablePointersStorageBuffer];
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_variable_pointers]>
   ];
 }
@@ -1041,7 +1023,6 @@ def SPV_AM_Physical64              : I32EnumAttrCase<"Physical64", 2> {
 }
 def SPV_AM_PhysicalStorageBuffer64 : I32EnumAttrCase<"PhysicalStorageBuffer64", 5348> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer]>,
     Capability<[SPV_C_PhysicalStorageBufferAddresses]>
   ];
@@ -1266,35 +1247,30 @@ def SPV_BI_SubgroupLtMask              : I32EnumAttrCase<"SubgroupLtMask", 4420>
 }
 def SPV_BI_BaseVertex                  : I32EnumAttrCase<"BaseVertex", 4424> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_shader_draw_parameters]>,
     Capability<[SPV_C_DrawParameters]>
   ];
 }
 def SPV_BI_BaseInstance                : I32EnumAttrCase<"BaseInstance", 4425> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_shader_draw_parameters]>,
     Capability<[SPV_C_DrawParameters]>
   ];
 }
 def SPV_BI_DrawIndex                   : I32EnumAttrCase<"DrawIndex", 4426> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_shader_draw_parameters, SPV_NV_mesh_shader]>,
     Capability<[SPV_C_DrawParameters, SPV_C_MeshShadingNV]>
   ];
 }
 def SPV_BI_DeviceIndex                 : I32EnumAttrCase<"DeviceIndex", 4438> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_device_group]>,
     Capability<[SPV_C_DeviceGroup]>
   ];
 }
 def SPV_BI_ViewIndex                   : I32EnumAttrCase<"ViewIndex", 4440> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_multiview]>,
     Capability<[SPV_C_MultiView]>
   ];
@@ -1803,13 +1779,11 @@ def SPV_D_MaxByteOffsetId             : I32EnumAttrCase<"MaxByteOffsetId", 47> {
 }
 def SPV_D_NoSignedWrap                : I32EnumAttrCase<"NoSignedWrap", 4469> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_no_integer_wrap_decoration]>
   ];
 }
 def SPV_D_NoUnsignedWrap              : I32EnumAttrCase<"NoUnsignedWrap", 4470> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_no_integer_wrap_decoration]>
   ];
 }
@@ -1873,14 +1847,12 @@ def SPV_D_NonUniform                  : I32EnumAttrCase<"NonUniform", 5300> {
 }
 def SPV_D_RestrictPointer             : I32EnumAttrCase<"RestrictPointer", 5355> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer]>,
     Capability<[SPV_C_PhysicalStorageBufferAddresses]>
   ];
 }
 def SPV_D_AliasedPointer              : I32EnumAttrCase<"AliasedPointer", 5356> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer]>,
     Capability<[SPV_C_PhysicalStorageBufferAddresses]>
   ];
@@ -2161,35 +2133,30 @@ def SPV_EM_PostDepthCoverage                : I32EnumAttrCase<"PostDepthCoverage
 }
 def SPV_EM_DenormPreserve                   : I32EnumAttrCase<"DenormPreserve", 4459> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>,
     Capability<[SPV_C_DenormPreserve]>
   ];
 }
 def SPV_EM_DenormFlushToZero                : I32EnumAttrCase<"DenormFlushToZero", 4460> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>,
     Capability<[SPV_C_DenormFlushToZero]>
   ];
 }
 def SPV_EM_SignedZeroInfNanPreserve         : I32EnumAttrCase<"SignedZeroInfNanPreserve", 4461> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>,
     Capability<[SPV_C_SignedZeroInfNanPreserve]>
   ];
 }
 def SPV_EM_RoundingModeRTE                  : I32EnumAttrCase<"RoundingModeRTE", 4462> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>,
     Capability<[SPV_C_RoundingModeRTE]>
   ];
 }
 def SPV_EM_RoundingModeRTZ                  : I32EnumAttrCase<"RoundingModeRTZ", 4463> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_4>,
     Extension<[SPV_KHR_float_controls]>,
     Capability<[SPV_C_RoundingModeRTZ]>
   ];
@@ -2705,7 +2672,6 @@ def SPV_MM_OpenCL  : I32EnumAttrCase<"OpenCL", 2> {
 }
 def SPV_MM_Vulkan  : I32EnumAttrCase<"Vulkan", 3> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_KHR_vulkan_memory_model]>,
     Capability<[SPV_C_VulkanMemoryModel]>
   ];
@@ -2755,7 +2721,6 @@ def SPV_MS_MakeVisible            : BitEnumAttrCase<"MakeVisible", 0x4000> {
 }
 def SPV_MS_Volatile               : BitEnumAttrCase<"Volatile", 0x8000> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_KHR_vulkan_memory_model]>,
     Capability<[SPV_C_VulkanMemoryModel]>
   ];
@@ -2835,7 +2800,6 @@ def SPV_SC_AtomicCounter          : I32EnumAttrCase<"AtomicCounter", 10> {
 def SPV_SC_Image                  : I32EnumAttrCase<"Image", 11>;
 def SPV_SC_StorageBuffer          : I32EnumAttrCase<"StorageBuffer", 12> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_3>,
     Extension<[SPV_KHR_storage_buffer_storage_class, SPV_KHR_variable_pointers]>,
     Capability<[SPV_C_Shader]>
   ];
@@ -2878,7 +2842,6 @@ def SPV_SC_ShaderRecordBufferNV   : I32EnumAttrCase<"ShaderRecordBufferNV", 5343
 }
 def SPV_SC_PhysicalStorageBuffer  : I32EnumAttrCase<"PhysicalStorageBuffer", 5349> {
   list<Availability> availability = [
-    MinVersion<SPV_V_1_5>,
     Extension<[SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer]>,
     Capability<[SPV_C_PhysicalStorageBufferAddresses]>
   ];

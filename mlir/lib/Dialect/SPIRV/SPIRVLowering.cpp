@@ -247,9 +247,19 @@ spirv::SPIRVConversionTarget::SPIRVConversionTarget(
     givenExtensions.insert(
         *spirv::symbolizeExtension(extAttr.cast<StringAttr>().getValue()));
 
-  for (Attribute capAttr : targetEnv.capabilities())
-    givenCapabilities.insert(
-        static_cast<spirv::Capability>(capAttr.cast<IntegerAttr>().getInt()));
+  // Add extensions implied by the current version.
+  for (spirv::Extension ext : spirv::getImpliedExtensions(givenVersion))
+    givenExtensions.insert(ext);
+
+  for (Attribute capAttr : targetEnv.capabilities()) {
+    auto cap =
+        static_cast<spirv::Capability>(capAttr.cast<IntegerAttr>().getInt());
+    givenCapabilities.insert(cap);
+
+    // Add capabilities implied by the current capability.
+    for (spirv::Capability c : spirv::getRecursiveImpliedCapabilities(cap))
+      givenCapabilities.insert(c);
+  }
 }
 
 bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {

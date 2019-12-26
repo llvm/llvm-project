@@ -125,6 +125,7 @@ private:
 // StringAttr and IntegerAttr.
 class EnumAttrCase : public Attribute {
 public:
+  explicit EnumAttrCase(const llvm::Record *record);
   explicit EnumAttrCase(const llvm::DefInit *init);
 
   // Returns true if this EnumAttrCase is backed by a StringAttr.
