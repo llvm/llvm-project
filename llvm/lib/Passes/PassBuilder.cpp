@@ -242,6 +242,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   SLPVectorization = RunSLPVectorization;
   LoopUnrolling = true;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
+  Coroutines = false;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
 }
@@ -721,6 +722,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   EarlyFPM.addPass(SROA());
   EarlyFPM.addPass(EarlyCSEPass());
   EarlyFPM.addPass(LowerExpectIntrinsicPass());
+  if (PTO.Coroutines)
+    EarlyFPM.addPass(CoroEarlyPass());
   if (Level == OptimizationLevel::O3)
     EarlyFPM.addPass(CallSiteSplittingPass());
 
@@ -843,6 +846,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   MainCGPipeline.addPass(InlinerPass(IP));
 
   MainCGPipeline.addPass(AttributorCGSCCPass());
+
+  if (PTO.Coroutines) {
+    MainCGPipeline.addPass(CoroSplitPass());
+    MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(CoroElidePass()));
+  }
 
   // Now deduce any function attributes based in the current code.
   MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
@@ -1046,6 +1054,9 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // inserting redundancies into the program. This even includes SimplifyCFG.
   OptimizePM.addPass(SpeculateAroundPHIsPass());
 
+  if (PTO.Coroutines)
+    OptimizePM.addPass(CoroCleanupPass());
+
   for (auto &C : OptimizerLastEPCallbacks)
     C(OptimizePM, Level);
 
@@ -1128,6 +1139,12 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level,
 
   // Reduce the size of the IR as much as possible.
   MPM.addPass(GlobalOptPass());
+
+  // Module simplification splits coroutines, but does not fully clean up
+  // coroutine intrinsics. To ensure ThinLTO optimization passes don't trip up
+  // on these, we schedule the cleanup here.
+  if (PTO.Coroutines)
+    MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
 
   return MPM;
 }
@@ -1965,6 +1982,20 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
             /* RunProfileGen */ (PGOOpt->Action == PGOOptions::IRInstr),
             /* IsCS */ false, PGOOpt->ProfileFile,
             PGOOpt->ProfileRemappingFile);
+
+      // For IR that makes use of coroutines intrinsics, coroutine passes must
+      // be run, even at -O0.
+      if (PTO.Coroutines) {
+        MPM.addPass(createModuleToFunctionPassAdaptor(CoroEarlyPass()));
+
+        CGSCCPassManager CGPM(DebugLogging);
+        CGPM.addPass(CoroSplitPass());
+        CGPM.addPass(createCGSCCToFunctionPassAdaptor(CoroElidePass()));
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+
+        MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
+      }
+
       // Do nothing else at all!
       return Error::success();
     }
