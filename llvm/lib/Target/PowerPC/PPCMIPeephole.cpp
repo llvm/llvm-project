@@ -919,8 +919,12 @@ bool PPCMIPeephole::simplifyCode(void) {
 
           LLVM_DEBUG(dbgs() << "With: ");
           LLVM_DEBUG(MI.dump());
-        } else if (isRunOfOnes((unsigned)(FinalMask.getZExtValue()), NewMB,
-                               NewME) || SrcMaskFull) {
+        } else if ((isRunOfOnes((unsigned)(FinalMask.getZExtValue()), NewMB,
+                               NewME) && NewMB <= NewME)|| SrcMaskFull) {
+          // Here we only handle MBMI <= MEMI case, so NewMB must be no bigger
+          // than NewME. Otherwise we get a 64 bit value after folding, but MI
+          // return a 32 bit value.
+
           // If FoldingReg has only one use and it it not RLWINMo and
           // RLWINM8o, safe to delete its def SrcMI. Otherwise keep it.
           if (MRI->hasOneNonDBGUse(FoldingReg) &&
