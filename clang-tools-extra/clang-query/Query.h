@@ -44,6 +44,7 @@ struct Query : llvm::RefCountedBase<Query> {
   /// \return false if an error occurs, otherwise return true.
   virtual bool run(llvm::raw_ostream &OS, QuerySession &QS) const = 0;
 
+  StringRef RemainingContent;
   const QueryKind Kind;
 };
 
