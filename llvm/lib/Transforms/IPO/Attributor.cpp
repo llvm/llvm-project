@@ -2049,7 +2049,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     if (!UBMemAccessInsts.size())
       return ChangeStatus::UNCHANGED;
     for (Instruction *I : UBMemAccessInsts)
-      changeToUnreachable(I, /* UseLLVMTrap */ false);
+      A.changeToUnreachableAfterManifest(I);
     return ChangeStatus::CHANGED;
   }
 
@@ -2736,7 +2736,7 @@ struct AAIsDeadFunction : public AAIsDead {
 
       BB = SplitPos->getParent();
       SplitBlock(BB, SplitPos);
-      changeToUnreachable(BB->getTerminator(), /* UseLLVMTrap */ false);
+      A.changeToUnreachableAfterManifest(BB->getTerminator());
       HasChanged = ChangeStatus::CHANGED;
     }
 
@@ -5459,7 +5459,6 @@ ChangeStatus Attributor::run(Module &M) {
 
     SmallVector<Instruction *, 32> DeadInsts;
     SmallVector<Instruction *, 32> TerminatorsToFold;
-    SmallVector<Instruction *, 32> UnreachablesToInsert;
 
     for (auto &It : ToBeChangedUses) {
       Use *U = It.first;
@@ -5476,13 +5475,13 @@ ChangeStatus Attributor::run(Module &M) {
       if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
         Instruction *UserI = cast<Instruction>(U->getUser());
         if (isa<UndefValue>(NewV)) {
-          UnreachablesToInsert.push_back(UserI);
+          ToBeChangedToUnreachableInsts.insert(UserI);
         } else {
           TerminatorsToFold.push_back(UserI);
         }
       }
     }
-    for (Instruction *I : UnreachablesToInsert)
+    for (Instruction *I : ToBeChangedToUnreachableInsts)
       changeToUnreachable(I, /* UseLLVMTrap */ false);
     for (Instruction *I : TerminatorsToFold)
       ConstantFoldTerminator(I->getParent());

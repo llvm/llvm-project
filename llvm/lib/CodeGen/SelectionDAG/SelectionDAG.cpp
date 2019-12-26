@@ -8152,9 +8152,9 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
       Expr = *Fragment;
     }
     // Clone the SDDbgValue and move it to To.
-    SDDbgValue *Clone =
-        getDbgValue(Var, Expr, ToNode, To.getResNo(), Dbg->isIndirect(),
-                    Dbg->getDebugLoc(), Dbg->getOrder());
+    SDDbgValue *Clone = getDbgValue(
+        Var, Expr, ToNode, To.getResNo(), Dbg->isIndirect(), Dbg->getDebugLoc(),
+        std::max(ToNode->getIROrder(), Dbg->getOrder()));
     ClonedDVs.push_back(Clone);
 
     if (InvalidateDbg) {

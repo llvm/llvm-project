@@ -437,6 +437,25 @@ class LOAD<BPFWidthModifer SizeOp, string OpcodeStr, list<dag> Pattern>
 class LOADi64<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
     : LOAD<SizeOp, OpcodeStr, [(set i64:$dst, (OpNode ADDRri:$addr))]>;
 
+let isCodeGenOnly = 1 in {
+  def CORE_MEM : TYPE_LD_ST<BPF_MEM.Value, BPF_W.Value,
+                            (outs GPR:$dst),
+                            (ins u64imm:$opcode, GPR:$src, u64imm:$offset),
+                            "$dst = core_mem($opcode, $src, $offset)",
+                            []>;
+  def CORE_ALU32_MEM : TYPE_LD_ST<BPF_MEM.Value, BPF_W.Value,
+                                  (outs GPR32:$dst),
+                                  (ins u64imm:$opcode, GPR:$src, u64imm:$offset),
+                                  "$dst = core_alu32_mem($opcode, $src, $offset)",
+                                  []>;
+  let Constraints = "$dst = $src" in {
+    def CORE_SHIFT : ALU_RR<BPF_ALU64, BPF_LSH,
+                             (outs GPR:$dst),
+                             (ins u64imm:$opcode, GPR:$src, u64imm:$offset),
+                             "$dst = core_shift($opcode, $src, $offset)",
+                             []>;
+  }
+}
 
 let Predicates = [BPFNoALU32] in {
   def LDW : LOADi64<BPF_W, "u32", zextloadi32>;

@@ -20,10 +20,8 @@ entry:
 }
 
 ; CHECK-LABEL: test
-; CHECK:       r2 = 4
-; CHECK:       r1 += r2
-; CHECK-ALU64: r0 = *(u32 *)(r1 + 0)
-; CHECK-ALU32: w0 = *(u32 *)(r1 + 0)
+; CHECK-ALU64: r0 = *(u32 *)(r1 + 4)
+; CHECK-ALU32: w0 = *(u32 *)(r1 + 4)
 ; CHECK:       exit
 ;
 ; CHECK:       .long   1                       # BTF_KIND_STRUCT(id = 2)

@@ -247,7 +247,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
   auto FiniCB = [&](InsertPointTy CodeGenIP) { ++NumFinalizationPoints; };
 
   IRBuilder<>::InsertPoint AfterIP = OMPBuilder.CreateParallel(
-      Loc, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr, OMP_PB_default, false);
+      Loc, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr, OMP_PROC_BIND_default, false);
 
   EXPECT_EQ(NumBodiesGenerated, 1U);
   EXPECT_EQ(NumPrivatizedVars, 1U);
@@ -342,7 +342,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
 
   IRBuilder<>::InsertPoint AfterIP = OMPBuilder.CreateParallel(
       Loc, BodyGenCB, PrivCB, FiniCB, Builder.CreateIsNotNull(F->arg_begin()),
-      nullptr, OMP_PB_default, false);
+      nullptr, OMP_PROC_BIND_default, false);
 
   EXPECT_EQ(NumBodiesGenerated, 1U);
   EXPECT_EQ(NumPrivatizedVars, 1U);
@@ -466,7 +466,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
 
   IRBuilder<>::InsertPoint AfterIP = OMPBuilder.CreateParallel(
       Loc, BodyGenCB, PrivCB, FiniCB, Builder.CreateIsNotNull(F->arg_begin()),
-      nullptr, OMP_PB_default, true);
+      nullptr, OMP_PROC_BIND_default, true);
 
   EXPECT_EQ(NumBodiesGenerated, 1U);
   EXPECT_EQ(NumPrivatizedVars, 0U);
