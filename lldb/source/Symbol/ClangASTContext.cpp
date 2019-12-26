@@ -915,7 +915,7 @@ CompilerType ClangASTContext::GetBasicType(lldb::BasicType basic_type) {
       GetOpaqueCompilerType(&ast, basic_type);
 
   if (clang_type)
-    return CompilerType(GetASTContext(&ast), clang_type);
+    return CompilerType(this, clang_type);
   return CompilerType();
 }
 
@@ -2749,9 +2749,7 @@ bool ClangASTContext::IsVectorType(lldb::opaque_compiler_type_t type,
 
 bool ClangASTContext::IsRuntimeGeneratedType(
     lldb::opaque_compiler_type_t type) {
-  clang::DeclContext *decl_ctx =
-      ClangASTContext::GetASTContext(&getASTContext())
-          ->GetDeclContextForType(GetQualType(type));
+  clang::DeclContext *decl_ctx = GetDeclContextForType(GetQualType(type));
   if (!decl_ctx)
     return false;
 
@@ -7777,9 +7775,8 @@ clang::ObjCMethodDecl *ClangASTContext::AddMethodToObjCObjectType(
       clang::SourceLocation(), // endLoc,
       method_selector, method_function_prototype->getReturnType(),
       nullptr, // TypeSourceInfo *ResultTInfo,
-      ClangASTContext::GetASTContext(&ast)->GetDeclContextForType(
-          ClangUtil::GetQualType(type)),
-      isInstance, isVariadic, isPropertyAccessor, isSynthesizedAccessorStub,
+      lldb_ast->GetDeclContextForType(ClangUtil::GetQualType(type)), isInstance,
+      isVariadic, isPropertyAccessor, isSynthesizedAccessorStub,
       isImplicitlyDeclared, isDefined, impControl, HasRelatedResultType);
 
   if (objc_method_decl == nullptr)

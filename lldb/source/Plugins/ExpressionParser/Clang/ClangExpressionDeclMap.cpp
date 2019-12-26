@@ -817,9 +817,8 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context,
 
     QualType class_qual_type(class_decl->getTypeForDecl(), 0);
 
-    TypeFromUser class_user_type(
-        class_qual_type.getAsOpaquePtr(),
-        ClangASTContext::GetASTContext(&class_decl->getASTContext()));
+    TypeFromUser class_user_type(class_qual_type.getAsOpaquePtr(),
+                                 function_decl_ctx.GetTypeSystem());
 
     LLDB_LOG(log, "  CEDM::FEVD[{0}] Adding type for $__lldb_class: {1}",
              current_id, class_qual_type.getAsString());
@@ -832,9 +831,8 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context,
       QualType class_pointer_type =
           method_decl->getASTContext().getPointerType(class_qual_type);
 
-      TypeFromUser self_user_type(
-          class_pointer_type.getAsOpaquePtr(),
-          ClangASTContext::GetASTContext(&method_decl->getASTContext()));
+      TypeFromUser self_user_type(class_pointer_type.getAsOpaquePtr(),
+                                  function_decl_ctx.GetTypeSystem());
 
       m_struct_vars->m_object_pointer_type = self_user_type;
     }
@@ -927,9 +925,8 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context,
       return; // This is unlikely, but we have seen crashes where this
               // occurred
 
-    TypeFromUser class_user_type(
-        QualType(interface_type, 0).getAsOpaquePtr(),
-        ClangASTContext::GetASTContext(&method_decl->getASTContext()));
+    TypeFromUser class_user_type(QualType(interface_type, 0).getAsOpaquePtr(),
+                                 function_decl_ctx.GetTypeSystem());
 
     LLDB_LOG(log, "  FEVD[{0}] Adding type for $__lldb_objc_class: {1}",
              current_id, ClangUtil::ToString(interface_type));
@@ -943,18 +940,16 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context,
           method_decl->getASTContext().getObjCObjectPointerType(
               QualType(interface_type, 0));
 
-      TypeFromUser self_user_type(
-          class_pointer_type.getAsOpaquePtr(),
-          ClangASTContext::GetASTContext(&method_decl->getASTContext()));
+      TypeFromUser self_user_type(class_pointer_type.getAsOpaquePtr(),
+                                  function_decl_ctx.GetTypeSystem());
 
       m_struct_vars->m_object_pointer_type = self_user_type;
     } else {
       // self is a Class pointer
       QualType class_type = method_decl->getASTContext().getObjCClassType();
 
-      TypeFromUser self_user_type(
-          class_type.getAsOpaquePtr(),
-          ClangASTContext::GetASTContext(&method_decl->getASTContext()));
+      TypeFromUser self_user_type(class_type.getAsOpaquePtr(),
+                                  function_decl_ctx.GetTypeSystem());
 
       m_struct_vars->m_object_pointer_type = self_user_type;
     }
