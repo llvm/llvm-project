@@ -3,7 +3,6 @@ add_llvm_library(LLVMTapirOpts
   CilkABI.cpp
   CilkRABI.cpp
   DRFScopedNoAliasAA.cpp
-  LoopSpawning.cpp
   LoopSpawningTI.cpp
   LoopStripMine.cpp
   LoopStripMinePass.cpp

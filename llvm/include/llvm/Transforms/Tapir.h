@@ -23,12 +23,6 @@ enum class TapirTargetID;
 
 //===----------------------------------------------------------------------===//
 //
-// LoopSpawning - Create a loop spawning pass.
-//
-Pass *createLoopSpawningPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LoopSpawningTI - Create a loop spawning pass that uses Task Info.
 //
 Pass *createLoopSpawningTIPass();

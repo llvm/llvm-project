@@ -15,41 +15,11 @@
 #define CILK_ABI_H_
 
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/Transforms/Tapir/LoopSpawning.h"
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
 #include "llvm/Transforms/Tapir/TapirLoopInfo.h"
 
 namespace llvm {
 class Value;
-
-/// CilkABILoopSpawning uses the Cilk Plus ABI to handle Tapir loops.
-class CilkABILoopSpawning : public LoopOutline {
-public:
-  CilkABILoopSpawning(Loop *OrigLoop, unsigned Grainsize, ScalarEvolution &SE,
-                      LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
-                      OptimizationRemarkEmitter &ORE)
-      : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE),
-        M(*OrigLoop->getHeader()->getModule()),
-        SpecifiedGrainsize(Grainsize)
-  {}
-
-  bool processLoop();
-
-  virtual ~CilkABILoopSpawning() {}
-
-protected:
-  Value *canonicalizeLoopLatch(PHINode *IV, Value *Limit);
-
-  Module &M;
-  unsigned SpecifiedGrainsize;
-
-  // Opaque Cilk RTS functions
-  Function *CilkRTSCilkFor32 = nullptr;
-  Function *CilkRTSCilkFor64 = nullptr;
-
-  Function *Get__cilkrts_cilk_for_32();
-  Function *Get__cilkrts_cilk_for_64();
-};
 
 class CilkABI : public TapirTarget {
   ValueToValueMapTy DetachCtxToStackFrame;

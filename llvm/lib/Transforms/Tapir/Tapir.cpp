@@ -26,7 +26,6 @@ using namespace llvm;
 /// initializeTapirOpts - Initialize all passes linked into the
 /// TapirOpts library.
 void llvm::initializeTapirOpts(PassRegistry &Registry) {
-  initializeLoopSpawningPass(Registry);
   initializeLoopSpawningTIPass(Registry);
   initializeLowerTapirToTargetPass(Registry);
   initializeAnalyzeTapirPass(Registry);
