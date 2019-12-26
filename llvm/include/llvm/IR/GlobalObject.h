@@ -183,7 +183,7 @@ public:
   void copyMetadata(const GlobalObject *Src, unsigned Offset);
 
   void addTypeMetadata(unsigned Offset, Metadata *TypeID);
-  void addVCallVisibilityMetadata(VCallVisibility Visibility);
+  void setVCallVisibilityMetadata(VCallVisibility Visibility);
   VCallVisibility getVCallVisibility() const;
 
 protected:

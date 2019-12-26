@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -emit-llvm -fvirtual-function-elimination -fwhole-program-vtables -o - %s | FileCheck %s
+// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -emit-llvm -fvirtual-function-elimination -fwhole-program-vtables -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-VFE
+// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -emit-llvm -fwhole-program-vtables -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOVFE
 
 
 // Anonymous namespace.
@@ -83,6 +84,7 @@ void *construct_G() {
   return new G();
 }
 
-
 // CHECK-DAG: [[VIS_DSO]] = !{i64 1}
 // CHECK-DAG: [[VIS_TU]] = !{i64 2}
+// CHECK-VFE-DAG: !{i32 1, !"Virtual Function Elim", i32 1}
+// CHECK-NOVFE-DAG: !{i32 1, !"Virtual Function Elim", i32 0}

@@ -111,6 +111,9 @@ static bool splitGlobal(GlobalVariable &GV) {
                             ConstantInt::get(Int32Ty, ByteOffset - SplitBegin)),
                         Type->getOperand(1)}));
     }
+
+    if (GV.hasMetadata(LLVMContext::MD_vcall_visibility))
+      SplitGV->setVCallVisibilityMetadata(GV.getVCallVisibility());
   }
 
   for (User *U : GV.users()) {
