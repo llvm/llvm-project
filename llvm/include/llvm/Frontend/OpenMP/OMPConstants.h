@@ -49,6 +49,16 @@ enum class RuntimeFunction {
 #define OMP_RTL(Enum, ...) constexpr auto Enum = omp::RuntimeFunction::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
+/// IDs for the different proc bind kinds.
+enum class ProcBindKind {
+#define OMP_PROC_BIND_KIND(Enum, Str, Value) Enum = Value,
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+};
+
+#define OMP_PROC_BIND_KIND(Enum, ...)                                          \
+  constexpr auto Enum = omp::ProcBindKind::Enum;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+
 /// IDs for all omp runtime library ident_t flag encodings (see
 /// their defintion in openmp/runtime/src/kmp.h).
 enum class IdentFlag {
@@ -67,8 +77,8 @@ Directive getOpenMPDirectiveKind(StringRef Str);
 StringRef getOpenMPDirectiveName(Directive D);
 
 /// Forward declarations for LLVM-IR types (simple, function and structure) are
-/// generated below. Their names are defined and used in OpenMPKinds.def. Here
-/// we provide the forward declarations, the initializeTypes function will
+/// generated below. Their names are defined and used in OpenMP/OMPKinds.def.
+/// Here we provide the forward declarations, the initializeTypes function will
 /// provide the values.
 ///
 ///{
@@ -83,10 +93,10 @@ namespace types {
   extern PointerType *VarName##Ptr;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
-/// Helper to initialize all types defined in OpenMPKinds.def.
+/// Helper to initialize all types defined in OpenMP/OMPKinds.def.
 void initializeTypes(Module &M);
 
-/// Helper to uninitialize all types defined in OpenMPKinds.def.
+/// Helper to uninitialize all types defined in OpenMP/OMPKinds.def.
 void uninitializeTypes();
 
 } // namespace types

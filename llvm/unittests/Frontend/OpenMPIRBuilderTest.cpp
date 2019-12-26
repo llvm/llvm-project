@@ -14,6 +14,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -99,20 +100,18 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
 
   BasicBlock *CBB = BasicBlock::Create(Ctx, "", F);
   new UnreachableInst(Ctx, CBB);
-  auto FiniCB = [CBB](llvm::OpenMPIRBuilder::InsertPointTy IP) {
-    assert(IP.getBlock()->end() == IP.getPoint() &&
-           "Clang CG should cause non-terminated block!");
+  auto FiniCB = [&](InsertPointTy IP) {
+    ASSERT_NE(IP.getBlock(), nullptr);
+    ASSERT_EQ(IP.getBlock()->end(), IP.getPoint());
     BranchInst::Create(CBB, IP.getBlock());
   };
-  // Emulate an outer parallel.
-  llvm::OpenMPIRBuilder::FinalizationInfo FI(
-      {FiniCB, OMPD_parallel, /* HasCancel */ true});
-  OMPBuilder.pushFinalizationCB(std::move(FI));
+  OMPBuilder.pushFinalizationCB({FiniCB, OMPD_parallel, true});
 
   IRBuilder<> Builder(BB);
 
@@ -141,6 +140,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
   Instruction *BarrierBBTI = Barrier->getParent()->getTerminator();
   EXPECT_EQ(BarrierBBTI->getNumSuccessors(), 2U);
   EXPECT_EQ(BarrierBBTI->getSuccessor(0), NewIP.getBlock());
+  EXPECT_EQ(BarrierBBTI->getSuccessor(1)->size(), 1U);
   EXPECT_EQ(BarrierBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
             1U);
   EXPECT_EQ(BarrierBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0),
@@ -188,4 +188,309 @@ TEST_F(OpenMPIRBuilderTest, DbgLoc) {
     return;
   EXPECT_EQ(SrcSrc->getAsCString(), ";test.dbg;foo;3;7;;");
 }
+
+TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  AllocaInst *PrivAI = nullptr;
+
+  unsigned NumBodiesGenerated = 0;
+  unsigned NumPrivatizedVars = 0;
+  unsigned NumFinalizationPoints = 0;
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       BasicBlock &ContinuationIP) {
+    ++NumBodiesGenerated;
+
+    Builder.restoreIP(AllocaIP);
+    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Builder.CreateStore(F->arg_begin(), PrivAI);
+
+    Builder.restoreIP(CodeGenIP);
+    Value *PrivLoad = Builder.CreateLoad(PrivAI, "local.use");
+    Value *Cmp = Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
+    Instruction *ThenTerm, *ElseTerm;
+    SplitBlockAndInsertIfThenElse(Cmp, CodeGenIP.getBlock()->getTerminator(),
+                                  &ThenTerm, &ElseTerm);
+
+    Builder.SetInsertPoint(ThenTerm);
+    Builder.CreateBr(&ContinuationIP);
+    ThenTerm->eraseFromParent();
+  };
+
+  auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                    Value &VPtr, Value *&ReplacementValue) -> InsertPointTy {
+    ++NumPrivatizedVars;
+
+    if (!isa<AllocaInst>(VPtr)) {
+      EXPECT_EQ(&VPtr, F->arg_begin());
+      ReplacementValue = &VPtr;
+      return CodeGenIP;
+    }
+
+    // Trivial copy (=firstprivate).
+    Builder.restoreIP(AllocaIP);
+    Type *VTy = VPtr.getType()->getPointerElementType();
+    Value *V = Builder.CreateLoad(VTy, &VPtr, VPtr.getName() + ".reload");
+    ReplacementValue = Builder.CreateAlloca(VTy, 0, VPtr.getName() + ".copy");
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateStore(V, ReplacementValue);
+    return CodeGenIP;
+  };
+
+  auto FiniCB = [&](InsertPointTy CodeGenIP) { ++NumFinalizationPoints; };
+
+  IRBuilder<>::InsertPoint AfterIP = OMPBuilder.CreateParallel(
+      Loc, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr, OMP_PB_default, false);
+
+  EXPECT_EQ(NumBodiesGenerated, 1U);
+  EXPECT_EQ(NumPrivatizedVars, 1U);
+  EXPECT_EQ(NumFinalizationPoints, 1U);
+
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+
+  EXPECT_NE(PrivAI, nullptr);
+  Function *OutlinedFn = PrivAI->getFunction();
+  EXPECT_NE(F, OutlinedFn);
+  EXPECT_FALSE(verifyModule(*M));
+
+  EXPECT_TRUE(OutlinedFn->hasInternalLinkage());
+  EXPECT_EQ(OutlinedFn->arg_size(), 3U);
+
+  EXPECT_EQ(&OutlinedFn->getEntryBlock(), PrivAI->getParent());
+  EXPECT_EQ(OutlinedFn->getNumUses(), 1U);
+  User *Usr = OutlinedFn->user_back();
+  ASSERT_TRUE(isa<ConstantExpr>(Usr));
+  CallInst *ForkCI = dyn_cast<CallInst>(Usr->user_back());
+  ASSERT_NE(ForkCI, nullptr);
+
+  EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call");
+  EXPECT_EQ(ForkCI->getNumArgOperands(), 4U);
+  EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
+  EXPECT_EQ(ForkCI->getArgOperand(1),
+            ConstantInt::get(Type::getInt32Ty(Ctx), 1U));
+  EXPECT_EQ(ForkCI->getArgOperand(2), Usr);
+  EXPECT_EQ(ForkCI->getArgOperand(3), F->arg_begin());
+}
+
+TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  AllocaInst *PrivAI = nullptr;
+
+  unsigned NumBodiesGenerated = 0;
+  unsigned NumPrivatizedVars = 0;
+  unsigned NumFinalizationPoints = 0;
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       BasicBlock &ContinuationIP) {
+    ++NumBodiesGenerated;
+
+    Builder.restoreIP(AllocaIP);
+    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Builder.CreateStore(F->arg_begin(), PrivAI);
+
+    Builder.restoreIP(CodeGenIP);
+    Value *PrivLoad = Builder.CreateLoad(PrivAI, "local.use");
+    Value *Cmp = Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
+    Instruction *ThenTerm, *ElseTerm;
+    SplitBlockAndInsertIfThenElse(Cmp, CodeGenIP.getBlock()->getTerminator(),
+                                  &ThenTerm, &ElseTerm);
+
+    Builder.SetInsertPoint(ThenTerm);
+    Builder.CreateBr(&ContinuationIP);
+    ThenTerm->eraseFromParent();
+  };
+
+  auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                    Value &VPtr, Value *&ReplacementValue) -> InsertPointTy {
+    ++NumPrivatizedVars;
+
+    if (!isa<AllocaInst>(VPtr)) {
+      EXPECT_EQ(&VPtr, F->arg_begin());
+      ReplacementValue = &VPtr;
+      return CodeGenIP;
+    }
+
+    // Trivial copy (=firstprivate).
+    Builder.restoreIP(AllocaIP);
+    Type *VTy = VPtr.getType()->getPointerElementType();
+    Value *V = Builder.CreateLoad(VTy, &VPtr, VPtr.getName() + ".reload");
+    ReplacementValue = Builder.CreateAlloca(VTy, 0, VPtr.getName() + ".copy");
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateStore(V, ReplacementValue);
+    return CodeGenIP;
+  };
+
+  auto FiniCB = [&](InsertPointTy CodeGenIP) {
+    ++NumFinalizationPoints;
+    // No destructors.
+  };
+
+  IRBuilder<>::InsertPoint AfterIP = OMPBuilder.CreateParallel(
+      Loc, BodyGenCB, PrivCB, FiniCB, Builder.CreateIsNotNull(F->arg_begin()),
+      nullptr, OMP_PB_default, false);
+
+  EXPECT_EQ(NumBodiesGenerated, 1U);
+  EXPECT_EQ(NumPrivatizedVars, 1U);
+  EXPECT_EQ(NumFinalizationPoints, 1U);
+
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+
+  EXPECT_NE(PrivAI, nullptr);
+  Function *OutlinedFn = PrivAI->getFunction();
+  EXPECT_NE(F, OutlinedFn);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  EXPECT_TRUE(OutlinedFn->hasInternalLinkage());
+  EXPECT_EQ(OutlinedFn->arg_size(), 3U);
+
+  EXPECT_EQ(&OutlinedFn->getEntryBlock(), PrivAI->getParent());
+  ASSERT_EQ(OutlinedFn->getNumUses(), 2U);
+
+  CallInst *DirectCI = nullptr;
+  CallInst *ForkCI = nullptr;
+  for (User *Usr : OutlinedFn->users()) {
+    if (isa<CallInst>(Usr)) {
+      ASSERT_EQ(DirectCI, nullptr);
+      DirectCI = cast<CallInst>(Usr);
+    } else {
+      ASSERT_TRUE(isa<ConstantExpr>(Usr));
+      ASSERT_EQ(Usr->getNumUses(), 1U);
+      ASSERT_TRUE(isa<CallInst>(Usr->user_back()));
+      ForkCI = cast<CallInst>(Usr->user_back());
+    }
+  }
+
+  EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call");
+  EXPECT_EQ(ForkCI->getNumArgOperands(), 4U);
+  EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
+  EXPECT_EQ(ForkCI->getArgOperand(1),
+            ConstantInt::get(Type::getInt32Ty(Ctx), 1));
+  EXPECT_EQ(ForkCI->getArgOperand(3), F->arg_begin());
+
+  EXPECT_EQ(DirectCI->getCalledFunction(), OutlinedFn);
+  EXPECT_EQ(DirectCI->getNumArgOperands(), 3U);
+  EXPECT_TRUE(isa<AllocaInst>(DirectCI->getArgOperand(0)));
+  EXPECT_TRUE(isa<AllocaInst>(DirectCI->getArgOperand(1)));
+  EXPECT_EQ(DirectCI->getArgOperand(2), F->arg_begin());
+}
+
+TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  unsigned NumBodiesGenerated = 0;
+  unsigned NumPrivatizedVars = 0;
+  unsigned NumFinalizationPoints = 0;
+
+  CallInst *CheckedBarrier = nullptr;
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       BasicBlock &ContinuationIP) {
+    ++NumBodiesGenerated;
+
+    Builder.restoreIP(CodeGenIP);
+
+    // Create three barriers, two cancel barriers but only one checked.
+    Function *CBFn, *BFn;
+
+    Builder.restoreIP(
+        OMPBuilder.CreateBarrier(Builder.saveIP(), OMPD_parallel));
+
+    CBFn = M->getFunction("__kmpc_cancel_barrier");
+    BFn = M->getFunction("__kmpc_barrier");
+    ASSERT_NE(CBFn, nullptr);
+    ASSERT_EQ(BFn, nullptr);
+    ASSERT_EQ(CBFn->getNumUses(), 1U);
+    ASSERT_TRUE(isa<CallInst>(CBFn->user_back()));
+    ASSERT_EQ(CBFn->user_back()->getNumUses(), 1U);
+    CheckedBarrier = cast<CallInst>(CBFn->user_back());
+
+    Builder.restoreIP(
+        OMPBuilder.CreateBarrier(Builder.saveIP(), OMPD_parallel, true));
+    CBFn = M->getFunction("__kmpc_cancel_barrier");
+    BFn = M->getFunction("__kmpc_barrier");
+    ASSERT_NE(CBFn, nullptr);
+    ASSERT_NE(BFn, nullptr);
+    ASSERT_EQ(CBFn->getNumUses(), 1U);
+    ASSERT_EQ(BFn->getNumUses(), 1U);
+    ASSERT_TRUE(isa<CallInst>(BFn->user_back()));
+    ASSERT_EQ(BFn->user_back()->getNumUses(), 0U);
+
+    Builder.restoreIP(OMPBuilder.CreateBarrier(Builder.saveIP(), OMPD_parallel,
+                                               false, false));
+    ASSERT_EQ(CBFn->getNumUses(), 2U);
+    ASSERT_EQ(BFn->getNumUses(), 1U);
+    ASSERT_TRUE(CBFn->user_back() != CheckedBarrier);
+    ASSERT_TRUE(isa<CallInst>(CBFn->user_back()));
+    ASSERT_EQ(CBFn->user_back()->getNumUses(), 0U);
+  };
+
+  auto PrivCB = [&](InsertPointTy, InsertPointTy, Value &V,
+                    Value *&) -> InsertPointTy {
+    ++NumPrivatizedVars;
+    llvm_unreachable("No privatization callback call expected!");
+  };
+
+  FunctionType *FakeDestructorTy =
+      FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)},
+                        /*isVarArg=*/false);
+  auto *FakeDestructor = Function::Create(
+      FakeDestructorTy, Function::ExternalLinkage, "fakeDestructor", M.get());
+
+  auto FiniCB = [&](InsertPointTy IP) {
+    ++NumFinalizationPoints;
+    Builder.restoreIP(IP);
+    Builder.CreateCall(FakeDestructor,
+                       {Builder.getInt32(NumFinalizationPoints)});
+  };
+
+  IRBuilder<>::InsertPoint AfterIP = OMPBuilder.CreateParallel(
+      Loc, BodyGenCB, PrivCB, FiniCB, Builder.CreateIsNotNull(F->arg_begin()),
+      nullptr, OMP_PB_default, true);
+
+  EXPECT_EQ(NumBodiesGenerated, 1U);
+  EXPECT_EQ(NumPrivatizedVars, 0U);
+  EXPECT_EQ(NumFinalizationPoints, 2U);
+  EXPECT_EQ(FakeDestructor->getNumUses(), 2U);
+
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  BasicBlock *ExitBB = nullptr;
+  for (const User *Usr : FakeDestructor->users()) {
+    const CallInst *CI = dyn_cast<CallInst>(Usr);
+    ASSERT_EQ(CI->getCalledFunction(), FakeDestructor);
+    ASSERT_TRUE(isa<BranchInst>(CI->getNextNode()));
+    ASSERT_EQ(CI->getNextNode()->getNumSuccessors(), 1U);
+    if (ExitBB)
+      ASSERT_EQ(CI->getNextNode()->getSuccessor(0), ExitBB);
+    else
+      ExitBB = CI->getNextNode()->getSuccessor(0);
+    ASSERT_EQ(ExitBB->size(), 1U);
+    ASSERT_TRUE(isa<ReturnInst>(ExitBB->front()));
+  }
+}
+
 } // namespace

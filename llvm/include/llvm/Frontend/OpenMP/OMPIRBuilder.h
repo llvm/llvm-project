@@ -75,6 +75,40 @@ public:
   /// NOTE: Temporary solution until Clang CG is gone.
   void popFinalizationCB() { FinalizationStack.pop_back(); }
 
+  /// Callback type for body (=inner region) code generation
+  ///
+  /// The callback takes code locations as arguments, each describing a
+  /// location at which code might need to be generated or a location that is
+  /// the target of control transfer.
+  ///
+  /// \param AllocaIP is the insertion point at which new alloca instructions
+  ///                 should be placed.
+  /// \param CodeGenIP is the insertion point at which the body code should be
+  ///                  placed.
+  /// \param ContinuationBB is the basic block target to leave the body.
+  ///
+  /// Note that all blocks pointed to by the arguments have terminators.
+  using BodyGenCallbackTy = function_ref<void(
+      InsertPointTy /* AllocaIP */, InsertPointTy /* CodeGenIP */,
+      BasicBlock & /* ContinuationBB */)>;
+
+  /// Callback type for variable privatization (think copy & default
+  /// constructor).
+  ///
+  /// \param AllocaIP is the insertion point at which new alloca instructions
+  ///                 should be placed.
+  /// \param CodeGenIP is the insertion point at which the privatization code
+  ///                  should be placed.
+  /// \param Val The value beeing copied/created.
+  /// \param ReplVal The replacement value, thus a copy or new created version
+  ///                of \p Val.
+  ///
+  /// \returns The new insertion point where code generation continues and
+  ///          \p ReplVal the replacement of \p Val.
+  using PrivatizeCallbackTy = function_ref<InsertPointTy(
+      InsertPointTy /* AllocaIP */, InsertPointTy /* CodeGenIP */,
+      Value & /* Val */, Value *& /* ReplVal */)>;
+
   /// Description of a LLVM-IR insertion point (IP) and a debug/source location
   /// (filename, line, column, ...).
   struct LocationDescription {
@@ -104,6 +138,24 @@ public:
   InsertPointTy CreateBarrier(const LocationDescription &Loc, omp::Directive DK,
                               bool ForceSimpleCall = false,
                               bool CheckCancelFlag = true);
+
+  /// Generator for '#omp parallel'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param PrivCB Callback to copy a given variable (think copy constructor).
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \param IfCondition The evaluated 'if' clause expression, if any.
+  /// \param NumThreads The evaluated 'num_threads' clause expression, if any.
+  /// \param ProcBind The value of the 'proc_bind' clause (see ProcBindKind).
+  /// \param IsCancellable Flag to indicate a cancellable parallel region.
+  ///
+  /// \returns The insertion position *after* the parallel.
+  IRBuilder<>::InsertPoint
+  CreateParallel(const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
+                 PrivatizeCallbackTy PrivCB, FinalizeCallbackTy FiniCB,
+                 Value *IfCondition, Value *NumThreads,
+                 omp::ProcBindKind ProcBind, bool IsCancellable);
 
   ///}
 
