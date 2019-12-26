@@ -861,6 +861,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, Custom);
     setOperationAction(ISD::SELECT,             MVT::v4f32, Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v4i32, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v4i32, Custom);
 
     setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
     setOperationAction(ISD::STORE,              MVT::v2f32, Custom);
@@ -1170,6 +1171,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v8i32, Legal);
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
+    setOperationAction(ISD::STRICT_SINT_TO_FP,  MVT::v8i32, Legal);
 
     setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FADD,        MVT::v8f32, Legal);
@@ -1296,6 +1298,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       // The custom lowering for UINT_TO_FP for v8i32 becomes interesting
       // when we have a 256bit-wide blend with immediate.
       setOperationAction(ISD::UINT_TO_FP, MVT::v8i32, Custom);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v8i32, Custom);
 
       // AVX2 also has wider vector sign/zero extending loads, VPMOV[SZ]X
       for (auto LoadExtOp : { ISD::SEXTLOAD, ISD::ZEXTLOAD }) {
@@ -1459,6 +1462,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v16i32, Legal);
     setOperationAction(ISD::SINT_TO_FP,        MVT::v16i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,        MVT::v16i32, Legal);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v16i32, Legal);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v16i32, Legal);
 
     setOperationAction(ISD::STRICT_FADD,      MVT::v16f32, Legal);
     setOperationAction(ISD::STRICT_FADD,      MVT::v8f64,  Legal);
@@ -1557,9 +1562,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (Subtarget.hasDQI()) {
       setOperationAction(ISD::SINT_TO_FP, MVT::v8i64, Legal);
       setOperationAction(ISD::UINT_TO_FP, MVT::v8i64, Legal);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v8i64, Legal);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v8i64, Legal);
       setOperationAction(ISD::FP_TO_SINT, MVT::v8i64, Legal);
       setOperationAction(ISD::FP_TO_UINT, MVT::v8i64, Legal);
-
       setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v8i64, Legal);
       setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v8i64, Legal);
 
@@ -1632,6 +1638,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v2i32, Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v8i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v8i32, Legal);
+    setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v4i32, Legal);
 
     for (auto VT : { MVT::v2i64, MVT::v4i64 }) {
       setOperationAction(ISD::SMAX, VT, Legal);
@@ -1658,6 +1666,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : { MVT::v2i64, MVT::v4i64 }) {
         setOperationAction(ISD::SINT_TO_FP,        VT, Legal);
         setOperationAction(ISD::UINT_TO_FP,        VT, Legal);
+        setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Legal);
+        setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Legal);
         setOperationAction(ISD::FP_TO_SINT,        VT, Legal);
         setOperationAction(ISD::FP_TO_UINT,        VT, Legal);
         setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Legal);
@@ -1966,6 +1976,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTargetDAGCombine(ISD::ZERO_EXTEND_VECTOR_INREG);
   setTargetDAGCombine(ISD::SINT_TO_FP);
   setTargetDAGCombine(ISD::UINT_TO_FP);
+  setTargetDAGCombine(ISD::STRICT_SINT_TO_FP);
+  setTargetDAGCombine(ISD::STRICT_UINT_TO_FP);
   setTargetDAGCombine(ISD::SETCC);
   setTargetDAGCombine(ISD::MUL);
   setTargetDAGCombine(ISD::XOR);
@@ -18560,6 +18572,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   unsigned OpNo = IsStrict ? 1 : 0;
   SDValue Src = Op.getOperand(OpNo);
+  SDValue Chain = IsStrict ? Op->getOperand(0) : DAG.getEntryNode();
   MVT SrcVT = Src.getSimpleValueType();
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
@@ -18568,8 +18581,14 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
     return Extract;
 
   if (SrcVT.isVector()) {
-    if (SrcVT == MVT::v2i32 && VT == MVT::v2f64 && !IsStrict) {
-      // FIXME: A strict version of CVTSI2P is needed.
+    if (SrcVT == MVT::v2i32 && VT == MVT::v2f64) {
+      // Note: Since v2f64 is a legal type. We don't need to zero extend the
+      // source for strict FP.
+      if (IsStrict)
+        return DAG.getNode(
+            X86ISD::STRICT_CVTSI2P, dl, {VT, MVT::Other},
+            {Chain, DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
+                                DAG.getUNDEF(SrcVT))});
       return DAG.getNode(X86ISD::CVTSI2P, dl, VT,
                          DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
                                      DAG.getUNDEF(SrcVT)));
@@ -18597,7 +18616,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
     SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i32, Src);
     if (IsStrict)
       return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
-                         {Op.getOperand(0), Ext});
+                         {Chain, Ext});
 
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Ext);
   }
@@ -18617,7 +18636,6 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   auto PtrVT = getPointerTy(MF.getDataLayout());
   int SSFI = MF.getFrameInfo().CreateStackObject(Size, Size, false);
   SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
-  SDValue Chain = IsStrict ? Op->getOperand(0) : DAG.getEntryNode();
   Chain = DAG.getStore(
       Chain, dl, ValueToStore, StackSlot,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI));
@@ -18844,19 +18862,21 @@ static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, SelectionDAG &DAG,
   if (Op.getSimpleValueType() != MVT::v2f64)
     return SDValue();
 
-  // FIXME: Need to fix the lack of StrictFP support here.
-  if (Op.getNode()->isStrictFPOpcode())
-    return SDValue();
+  bool IsStrict = Op->isStrictFPOpcode();
 
-  SDValue N0 = Op.getOperand(0);
+  SDValue N0 = Op.getOperand(IsStrict ? 1 : 0);
   assert(N0.getSimpleValueType() == MVT::v2i32 && "Unexpected input type");
 
   // Legalize to v4i32 type.
   N0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i32, N0,
                    DAG.getUNDEF(MVT::v2i32));
 
-  if (Subtarget.hasAVX512())
+  if (Subtarget.hasAVX512()) {
+    if (IsStrict)
+      return DAG.getNode(X86ISD::STRICT_CVTUI2P, DL, {MVT::v2f64, MVT::Other},
+                         {Op.getOperand(0), N0});
     return DAG.getNode(X86ISD::CVTUI2P, DL, MVT::v2f64, N0);
+  }
 
   // Same implementation as VectorLegalizer::ExpandUINT_TO_FLOAT,
   // but using v2i32 to v2f64 with X86ISD::CVTSI2P.
@@ -18869,6 +18889,21 @@ static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, SelectionDAG &DAG,
   // Clear upper part of LO, lower HI.
   SDValue HI = DAG.getNode(ISD::SRL, DL, MVT::v4i32, N0, HalfWord);
   SDValue LO = DAG.getNode(ISD::AND, DL, MVT::v4i32, N0, HalfWordMask);
+
+  if (IsStrict) {
+    SDValue fHI = DAG.getNode(X86ISD::STRICT_CVTSI2P, DL,
+                              {MVT::v2f64, MVT::Other}, {Op.getOperand(0), HI});
+    fHI = DAG.getNode(ISD::STRICT_FMUL, DL, {MVT::v2f64, MVT::Other},
+                      {fHI.getValue(1), fHI, TWOHW});
+    SDValue fLO = DAG.getNode(X86ISD::STRICT_CVTSI2P, DL,
+                              {MVT::v2f64, MVT::Other}, {Op.getOperand(0), LO});
+    SDValue Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                                fHI.getValue(1), fLO.getValue(1));
+
+    // Add the two halves
+    return DAG.getNode(ISD::STRICT_FADD, DL, {MVT::v2f64, MVT::Other},
+                       {Chain, fHI, fLO});
+  }
 
   SDValue fHI = DAG.getNode(X86ISD::CVTSI2P, DL, MVT::v2f64, HI);
           fHI = DAG.getNode(ISD::FMUL, DL, MVT::v2f64, fHI, TWOHW);
@@ -18902,7 +18937,8 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc DL(Op);
-  SDValue V = Op->getOperand(0);
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue V = Op->getOperand(IsStrict ? 1 : 0);
   MVT VecIntVT = V.getSimpleValueType();
   bool Is128 = VecIntVT == MVT::v4i32;
   MVT VecFloatVT = Is128 ? MVT::v4f32 : MVT::v8f32;
@@ -18965,10 +19001,18 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
   //     float4 fhi = (float4) hi - (0x1.0p39f + 0x1.0p23f);
   SDValue HighBitcast = DAG.getBitcast(VecFloatVT, High);
   // TODO: Are there any fast-math-flags to propagate here?
+  //     (float4) lo;
+  SDValue LowBitcast = DAG.getBitcast(VecFloatVT, Low);
+  //     return (float4) lo + fhi;
+  if (IsStrict) {
+    SDValue FHigh = DAG.getNode(ISD::STRICT_FADD, DL, {VecFloatVT, MVT::Other},
+                                {Op.getOperand(0), HighBitcast, VecCstFAdd});
+    return DAG.getNode(ISD::STRICT_FADD, DL, {VecFloatVT, MVT::Other},
+                       {FHigh.getValue(1), LowBitcast, FHigh});
+  }
+
   SDValue FHigh =
       DAG.getNode(ISD::FADD, DL, VecFloatVT, HighBitcast, VecCstFAdd);
-  //     return (float4) lo + fhi;
-  SDValue LowBitcast = DAG.getBitcast(VecFloatVT, Low);
   return DAG.getNode(ISD::FADD, DL, VecFloatVT, LowBitcast, FHigh);
 }
 
@@ -19108,6 +19152,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (IsStrict) {
     SDValue Add = DAG.getNode(ISD::STRICT_FADD, dl, {MVT::f80, MVT::Other},
                               {Chain, Fild, Fudge});
+    // STRICT_FP_ROUND can't handle equal types.
+    if (DstVT == MVT::f80)
+      return Add;
     return DAG.getNode(ISD::STRICT_FP_ROUND, dl, {DstVT, MVT::Other},
                        {Add.getValue(1), Add, DAG.getIntPtrConstant(0, dl)});
   }
@@ -29402,6 +29449,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CVTTS2UI_SAE:       return "X86ISD::CVTTS2UI_SAE";
   case X86ISD::CVTSI2P:            return "X86ISD::CVTSI2P";
   case X86ISD::CVTUI2P:            return "X86ISD::CVTUI2P";
+  case X86ISD::STRICT_CVTSI2P:     return "X86ISD::STRICT_CVTSI2P";
+  case X86ISD::STRICT_CVTUI2P:     return "X86ISD::STRICT_CVTUI2P";
   case X86ISD::MCVTSI2P:           return "X86ISD::MCVTSI2P";
   case X86ISD::MCVTUI2P:           return "X86ISD::MCVTUI2P";
   case X86ISD::VFPCLASS:           return "X86ISD::VFPCLASS";
@@ -34804,6 +34853,8 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       break;
     case X86ISD::STRICT_CVTTP2SI:
     case X86ISD::STRICT_CVTTP2UI:
+    case X86ISD::STRICT_CVTSI2P:
+    case X86ISD::STRICT_CVTUI2P:
       if (In.getOperand(1).getValueType() == MVT::v2f64 ||
           In.getOperand(1).getValueType() == MVT::v2i64)
         return N->getOperand(0);
@@ -43627,16 +43678,18 @@ static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
   // unary operation isn't a bitwise AND, or if the sizes of the operations
   // aren't the same.
   EVT VT = N->getValueType(0);
-  if (!VT.isVector() || N->getOperand(0)->getOpcode() != ISD::AND ||
-      N->getOperand(0)->getOperand(0)->getOpcode() != ISD::SETCC ||
-      VT.getSizeInBits() != N->getOperand(0).getValueSizeInBits())
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Op0 = N->getOperand(IsStrict ? 1 : 0);
+  if (!VT.isVector() || Op0->getOpcode() != ISD::AND ||
+      Op0->getOperand(0)->getOpcode() != ISD::SETCC ||
+      VT.getSizeInBits() != Op0.getValueSizeInBits())
     return SDValue();
 
   // Now check that the other operand of the AND is a constant. We could
   // make the transformation for non-constant splats as well, but it's unclear
   // that would be a benefit as it would not eliminate any operations, just
   // perform one more step in scalar code before moving to the vector unit.
-  if (auto *BV = dyn_cast<BuildVectorSDNode>(N->getOperand(0).getOperand(1))) {
+  if (auto *BV = dyn_cast<BuildVectorSDNode>(Op0.getOperand(1))) {
     // Bail out if the vector isn't a constant.
     if (!BV->isConstant())
       return SDValue();
@@ -43646,12 +43699,19 @@ static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
     EVT IntVT = BV->getValueType(0);
     // Create a new constant of the appropriate type for the transformed
     // DAG.
-    SDValue SourceConst = DAG.getNode(N->getOpcode(), DL, VT, SDValue(BV, 0));
+    SDValue SourceConst;
+    if (IsStrict)
+      SourceConst = DAG.getNode(N->getOpcode(), DL, {VT, MVT::Other},
+                                {N->getOperand(0), SDValue(BV, 0)});
+    else
+      SourceConst = DAG.getNode(N->getOpcode(), DL, VT, SDValue(BV, 0));
     // The AND node needs bitcasts to/from an integer vector type around it.
     SDValue MaskConst = DAG.getBitcast(IntVT, SourceConst);
-    SDValue NewAnd = DAG.getNode(ISD::AND, DL, IntVT,
-                                 N->getOperand(0)->getOperand(0), MaskConst);
+    SDValue NewAnd = DAG.getNode(ISD::AND, DL, IntVT, Op0->getOperand(0),
+                                 MaskConst);
     SDValue Res = DAG.getBitcast(VT, NewAnd);
+    if (IsStrict)
+      return DAG.getMergeValues({Res, SourceConst.getValue(1)}, DL);
     return Res;
   }
 
@@ -43695,7 +43755,8 @@ static SDValue combineToFPTruncExtElt(SDNode *N, SelectionDAG &DAG) {
 
 static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
-  SDValue Op0 = N->getOperand(0);
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Op0 = N->getOperand(IsStrict ? 1 : 0);
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
 
@@ -43709,14 +43770,21 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
     SDValue P = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op0);
 
     // UINT_TO_FP isn't legal without AVX512 so use SINT_TO_FP.
+    if (IsStrict)
+      return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
+                         {N->getOperand(0), P});
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
   }
 
   // Since UINT_TO_FP is legal (it's marked custom), dag combiner won't
   // optimize it to a SINT_TO_FP when the sign bit is known zero. Perform
   // the optimization here.
-  if (DAG.SignBitIsZero(Op0))
+  if (DAG.SignBitIsZero(Op0)) {
+    if (IsStrict)
+      return DAG.getNode(ISD::STRICT_SINT_TO_FP, SDLoc(N), {VT, MVT::Other},
+                         {N->getOperand(0), Op0});
     return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, Op0);
+  }
 
   return SDValue();
 }
@@ -43726,11 +43794,12 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   // First try to optimize away the conversion entirely when it's
   // conditionally from a constant. Vectors only.
+  bool IsStrict = N->isStrictFPOpcode();
   if (SDValue Res = combineVectorCompareAndMaskUnaryOp(N, DAG))
     return Res;
 
   // Now move on to more general possibilities.
-  SDValue Op0 = N->getOperand(0);
+  SDValue Op0 = N->getOperand(IsStrict ? 1 : 0);
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
 
@@ -43742,6 +43811,9 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
     EVT DstVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                                  InVT.getVectorNumElements());
     SDValue P = DAG.getNode(ISD::SIGN_EXTEND, dl, DstVT, Op0);
+    if (IsStrict)
+      return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
+                         {N->getOperand(0), P});
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
   }
 
@@ -43759,6 +43831,9 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
       SDLoc dl(N);
       if (DCI.isBeforeLegalize() || TruncVT != MVT::v2i32) {
         SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Op0);
+        if (IsStrict)
+          return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
+                             {N->getOperand(0), Trunc});
         return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Trunc);
       }
       // If we're after legalize and the type is v2i32 we need to shuffle and
@@ -43767,6 +43842,9 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
       SDValue Cast = DAG.getBitcast(MVT::v4i32, Op0);
       SDValue Shuf = DAG.getVectorShuffle(MVT::v4i32, dl, Cast, Cast,
                                           { 0, 2, -1, -1 });
+      if (IsStrict)
+        return DAG.getNode(X86ISD::STRICT_CVTSI2P, dl, {VT, MVT::Other},
+                           {N->getOperand(0), Shuf});
       return DAG.getNode(X86ISD::CVTSI2P, dl, VT, Shuf);
     }
   }
@@ -43796,6 +43874,9 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
       return Tmp.first;
     }
   }
+
+  if (IsStrict)
+    return SDValue();
 
   if (SDValue V = combineToFPTruncExtElt(N, DAG))
     return V;
@@ -45420,8 +45501,12 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return combineStore(N, DAG, DCI, Subtarget);
   case ISD::MSTORE:         return combineMaskedStore(N, DAG, DCI, Subtarget);
-  case ISD::SINT_TO_FP:     return combineSIntToFP(N, DAG, DCI, Subtarget);
-  case ISD::UINT_TO_FP:     return combineUIntToFP(N, DAG, Subtarget);
+  case ISD::SINT_TO_FP:
+  case ISD::STRICT_SINT_TO_FP:
+    return combineSIntToFP(N, DAG, DCI, Subtarget);
+  case ISD::UINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+    return combineUIntToFP(N, DAG, Subtarget);
   case ISD::FADD:
   case ISD::FSUB:           return combineFaddFsub(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, Subtarget);
