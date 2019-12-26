@@ -5,11 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This pass lowers coroutine intrinsics that hide the details of the exact
-// calling convention for coroutine resume and destroy functions and details of
-// the structure of the coroutine frame.
-//===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
@@ -219,9 +216,23 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
   return Changed;
 }
 
-//===----------------------------------------------------------------------===//
-//                              Top Level Driver
-//===----------------------------------------------------------------------===//
+static bool declaresCoroEarlyIntrinsics(const Module &M) {
+  return coro::declaresIntrinsics(
+      M, {"llvm.coro.id", "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
+          "llvm.coro.destroy", "llvm.coro.done", "llvm.coro.end",
+          "llvm.coro.noop", "llvm.coro.free", "llvm.coro.promise",
+          "llvm.coro.resume", "llvm.coro.suspend"});
+}
+
+PreservedAnalyses CoroEarlyPass::run(Function &F, FunctionAnalysisManager &) {
+  Module &M = *F.getParent();
+  if (!declaresCoroEarlyIntrinsics(M) || !Lowerer(M).lowerEarlyIntrinsics(F))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
 
 namespace {
 
@@ -236,17 +247,7 @@ struct CoroEarlyLegacy : public FunctionPass {
   // This pass has work to do only if we find intrinsics we are going to lower
   // in the module.
   bool doInitialization(Module &M) override {
-    if (coro::declaresIntrinsics(M, {"llvm.coro.id",
-                                     "llvm.coro.id.retcon",
-                                     "llvm.coro.id.retcon.once",
-                                     "llvm.coro.destroy",
-                                     "llvm.coro.done",
-                                     "llvm.coro.end",
-                                     "llvm.coro.noop", 
-                                     "llvm.coro.free",
-                                     "llvm.coro.promise",
-                                     "llvm.coro.resume",
-                                     "llvm.coro.suspend"}))
+    if (declaresCoroEarlyIntrinsics(M))
       L = std::make_unique<Lowerer>(M);
     return false;
   }
