@@ -223,7 +223,7 @@ struct BTFLineInfo {
   uint32_t ColumnNum;   ///< the column number
 };
 
-/// Represent one offset relocation.
+/// Represent one field relocation.
 struct BTFFieldReloc {
   const MCSymbol *Label;  ///< MCSymbol identifying insn for the reloc
   uint32_t TypeID;        ///< Type ID
@@ -296,15 +296,15 @@ class BTFDebug : public DebugHandlerBase {
   /// Generate types for function prototypes.
   void processFuncPrototypes();
 
-  /// Generate one offset relocation record.
-  void generateFieldReloc(const MachineInstr *MI, const MCSymbol *ORSym,
-                           DIType *RootTy, StringRef AccessPattern);
+  /// Generate one field relocation record.
+  void generateFieldReloc(const MCSymbol *ORSym, DIType *RootTy,
+                          StringRef AccessPattern);
 
   /// Populating unprocessed struct type.
   unsigned populateStructType(const DIType *Ty);
 
-  /// Process LD_imm64 instructions.
-  void processLDimm64(const MachineInstr *MI);
+  /// Process relocation instructions.
+  void processReloc(const MachineOperand &MO);
 
   /// Emit common header of .BTF and .BTF.ext sections.
   void emitCommonHeader();
