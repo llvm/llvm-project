@@ -3874,37 +3874,15 @@ void CGOpenMPRuntime::emitNumThreadsClause(CodeGenFunction &CGF,
 }
 
 void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
-                                         OpenMPProcBindClauseKind ProcBind,
+                                         ProcBindKind ProcBind,
                                          SourceLocation Loc) {
   if (!CGF.HaveInsertPoint())
     return;
-  // Constants for proc bind value accepted by the runtime.
-  enum ProcBindTy {
-    ProcBindFalse = 0,
-    ProcBindTrue,
-    ProcBindMaster,
-    ProcBindClose,
-    ProcBindSpread,
-    ProcBindIntel,
-    ProcBindDefault
-  } RuntimeProcBind;
-  switch (ProcBind) {
-  case OMPC_PROC_BIND_master:
-    RuntimeProcBind = ProcBindMaster;
-    break;
-  case OMPC_PROC_BIND_close:
-    RuntimeProcBind = ProcBindClose;
-    break;
-  case OMPC_PROC_BIND_spread:
-    RuntimeProcBind = ProcBindSpread;
-    break;
-  case OMPC_PROC_BIND_unknown:
-    llvm_unreachable("Unsupported proc_bind value.");
-  }
+  assert(ProcBind != OMP_PROC_BIND_unknown && "Unsupported proc_bind value.");
   // Build call __kmpc_push_proc_bind(&loc, global_tid, proc_bind)
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
-      llvm::ConstantInt::get(CGM.IntTy, RuntimeProcBind, /*isSigned=*/true)};
+      llvm::ConstantInt::get(CGM.IntTy, unsigned(ProcBind), /*isSigned=*/true)};
   CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_push_proc_bind), Args);
 }
 
@@ -11540,7 +11518,7 @@ void CGOpenMPSIMDRuntime::emitNumThreadsClause(CodeGenFunction &CGF,
 }
 
 void CGOpenMPSIMDRuntime::emitProcBindClause(CodeGenFunction &CGF,
-                                             OpenMPProcBindClauseKind ProcBind,
+                                             ProcBindKind ProcBind,
                                              SourceLocation Loc) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
