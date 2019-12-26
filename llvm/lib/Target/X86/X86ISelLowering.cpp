@@ -18586,8 +18586,8 @@ static SDValue lowerINT_TO_FP_vXi64(SDValue Op, SelectionDAG &DAG,
   bool IsStrict = Op->isStrictFPOpcode();
   MVT VT = Op->getSimpleValueType(0);
   SDValue Src = Op->getOperand(IsStrict ? 1 : 0);
-  MVT SrcVT = Src.getSimpleValueType();
-  assert((SrcVT == MVT::v2i64 || SrcVT == MVT::v4i64) &&
+  assert((Src.getSimpleValueType() == MVT::v2i64 ||
+          Src.getSimpleValueType() == MVT::v4i64) &&
          "Unsupported custom type");
 
   // With AVX512DQ, but not VLX we need to widen to get a 512-bit result type.
