@@ -1148,11 +1148,10 @@ define <2 x i32> @strict_vector_fptoui_v2f64_to_v2i32(<2 x double> %a) #0 {
 ;
 ; AVX512F-LABEL: strict_vector_fptoui_v2f64_to_v2i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX512F-NEXT:    vcvttsd2usi %xmm1, %eax
-; AVX512F-NEXT:    vcvttsd2usi %xmm0, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm0
-; AVX512F-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovaps %xmm0, %xmm0
+; AVX512F-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512VL-LABEL: strict_vector_fptoui_v2f64_to_v2i32:
@@ -1162,11 +1161,10 @@ define <2 x i32> @strict_vector_fptoui_v2f64_to_v2i32(<2 x double> %a) #0 {
 ;
 ; AVX512DQ-LABEL: strict_vector_fptoui_v2f64_to_v2i32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX512DQ-NEXT:    vcvttsd2usi %xmm1, %eax
-; AVX512DQ-NEXT:    vcvttsd2usi %xmm0, %ecx
-; AVX512DQ-NEXT:    vmovd %ecx, %xmm0
-; AVX512DQ-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
+; AVX512DQ-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512VLDQ-LABEL: strict_vector_fptoui_v2f64_to_v2i32:
