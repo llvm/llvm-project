@@ -1637,10 +1637,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v8i32, Legal);
     setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v4i32, Legal);
     setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v2i32, Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v8i32, Legal);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v4i32, Legal);
-    setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v8i32, Legal);
-    setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v4i32, Legal);
+    setOperationAction(ISD::UINT_TO_FP, MVT::v8i32,
+                       Subtarget.hasVLX() ? Legal : Custom);
+    setOperationAction(ISD::UINT_TO_FP, MVT::v4i32,
+                       Subtarget.hasVLX() ? Legal : Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v8i32,
+                       Subtarget.hasVLX() ? Legal : Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i32,
+                       Subtarget.hasVLX() ? Legal : Custom);
 
     for (auto VT : { MVT::v2i64, MVT::v4i64 }) {
       setOperationAction(ISD::SMAX, VT, Legal);
@@ -1665,10 +1669,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (Subtarget.hasDQI()) {
       for (auto VT : { MVT::v2i64, MVT::v4i64 }) {
-        setOperationAction(ISD::SINT_TO_FP,        VT, Legal);
-        setOperationAction(ISD::UINT_TO_FP,        VT, Legal);
-        setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Legal);
-        setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Legal);
+        setOperationAction(ISD::SINT_TO_FP, VT,
+                           Subtarget.hasVLX() ? Legal : Custom);
+        setOperationAction(ISD::UINT_TO_FP, VT,
+                           Subtarget.hasVLX() ? Legal : Custom);
+        setOperationAction(ISD::STRICT_SINT_TO_FP, VT,
+                           Subtarget.hasVLX() ? Legal : Custom);
+        setOperationAction(ISD::STRICT_UINT_TO_FP, VT,
+                           Subtarget.hasVLX() ? Legal : Custom);
         setOperationAction(ISD::FP_TO_SINT,        VT, Legal);
         setOperationAction(ISD::FP_TO_UINT,        VT, Legal);
         setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Legal);
@@ -18570,6 +18578,46 @@ static SDValue vectorizeExtractedCast(SDValue Cast, SelectionDAG &DAG,
                      DAG.getIntPtrConstant(0, DL));
 }
 
+static SDValue lowerINT_TO_FP_vXi64(SDValue Op, SelectionDAG &DAG,
+                                    const X86Subtarget &Subtarget) {
+  assert(Subtarget.hasDQI() && !Subtarget.hasVLX() && "Unexpected features");
+
+  SDLoc DL(Op);
+  bool IsStrict = Op->isStrictFPOpcode();
+  MVT VT = Op->getSimpleValueType(0);
+  SDValue Src = Op->getOperand(IsStrict ? 1 : 0);
+  MVT SrcVT = Src.getSimpleValueType();
+  assert((SrcVT == MVT::v2i64 || SrcVT == MVT::v4i64) &&
+         "Unsupported custom type");
+
+  // With AVX512DQ, but not VLX we need to widen to get a 512-bit result type.
+  assert((VT == MVT::v4f32 || VT == MVT::v2f64 || VT == MVT::v4f64) &&
+         "Unexpected VT!");
+  MVT WideVT = VT == MVT::v4f32 ? MVT::v8f32 : MVT::v8f64;
+
+  // Need to concat with zero vector for strict fp to avoid spurious
+  // exceptions.
+  SDValue Tmp =
+      IsStrict ? DAG.getConstant(0, DL, MVT::v8i64) : DAG.getUNDEF(MVT::v8i64);
+  Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v8i64, Tmp, Src,
+                    DAG.getIntPtrConstant(0, DL));
+  SDValue Res, Chain;
+  if (IsStrict) {
+    Res = DAG.getNode(Op.getOpcode(), DL, {WideVT, MVT::Other},
+                      {Op->getOperand(0), Src});
+    Chain = Res.getValue(1);
+  } else {
+    Res = DAG.getNode(Op.getOpcode(), DL, WideVT, Src);
+  }
+
+  Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                    DAG.getIntPtrConstant(0, DL));
+
+  if (IsStrict)
+    return DAG.getMergeValues({Res, Chain}, DL);
+  return Res;
+}
+
 SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
                                            SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
@@ -18596,6 +18644,9 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
                          DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
                                      DAG.getUNDEF(SrcVT)));
     }
+    if (SrcVT == MVT::v2i64 || SrcVT == MVT::v4i64)
+      return lowerINT_TO_FP_vXi64(Op, DAG, Subtarget);
+
     return SDValue();
   }
 
@@ -18936,6 +18987,49 @@ static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, SelectionDAG &DAG,
 
 static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
+  SDLoc DL(Op);
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue V = Op->getOperand(IsStrict ? 1 : 0);
+  MVT VecIntVT = V.getSimpleValueType();
+  assert((VecIntVT == MVT::v4i32 || VecIntVT == MVT::v8i32) &&
+         "Unsupported custom type");
+
+  if (Subtarget.hasAVX512()) {
+    // With AVX512, but not VLX we need to widen to get a 512-bit result type.
+    assert(!Subtarget.hasVLX() && "Unexpected features");
+    MVT VT = Op->getSimpleValueType(0);
+
+    // v8i32->v8f64 is legal with AVX512 so just return it.
+    if (VT == MVT::v8f64)
+      return Op;
+
+    assert((VT == MVT::v4f32 || VT == MVT::v8f32 || VT == MVT::v4f64) &&
+           "Unexpected VT!");
+    MVT WideVT = VT == MVT::v4f64 ? MVT::v8f64 : MVT::v16f32;
+    MVT WideIntVT = VT == MVT::v4f64 ? MVT::v8i32 : MVT::v16i32;
+    // Need to concat with zero vector for strict fp to avoid spurious
+    // exceptions.
+    SDValue Tmp =
+        IsStrict ? DAG.getConstant(0, DL, WideIntVT) : DAG.getUNDEF(WideIntVT);
+    V = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideIntVT, Tmp, V,
+                    DAG.getIntPtrConstant(0, DL));
+    SDValue Res, Chain;
+    if (IsStrict) {
+      Res = DAG.getNode(ISD::STRICT_UINT_TO_FP, DL, {WideVT, MVT::Other},
+                        {Op->getOperand(0), V});
+      Chain = Res.getValue(1);
+    } else {
+      Res = DAG.getNode(ISD::UINT_TO_FP, DL, WideVT, V);
+    }
+
+    Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                      DAG.getIntPtrConstant(0, DL));
+
+    if (IsStrict)
+      return DAG.getMergeValues({Res, Chain}, DL);
+    return Res;
+  }
+
   // The algorithm is the following:
   // #ifdef __SSE4_1__
   //     uint4 lo = _mm_blend_epi16( v, (uint4) 0x4b000000, 0xaa);
@@ -18957,19 +19051,12 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
   if (DAG.getTarget().Options.UnsafeFPMath)
     return SDValue();
 
-  SDLoc DL(Op);
-  bool IsStrict = Op->isStrictFPOpcode();
-  SDValue V = Op->getOperand(IsStrict ? 1 : 0);
-  MVT VecIntVT = V.getSimpleValueType();
   bool Is128 = VecIntVT == MVT::v4i32;
   MVT VecFloatVT = Is128 ? MVT::v4f32 : MVT::v8f32;
   // If we convert to something else than the supported type, e.g., to v4f64,
   // abort early.
   if (VecFloatVT != Op->getSimpleValueType(0))
     return SDValue();
-
-  assert((VecIntVT == MVT::v4i32 || VecIntVT == MVT::v8i32) &&
-         "Unsupported custom type");
 
   // In the #idef/#else code, we have in common:
   // - The vector of constants:
@@ -19051,8 +19138,10 @@ static SDValue lowerUINT_TO_FP_vec(SDValue Op, SelectionDAG &DAG,
     return lowerUINT_TO_FP_v2i32(Op, DAG, Subtarget, dl);
   case MVT::v4i32:
   case MVT::v8i32:
-    assert(!Subtarget.hasAVX512());
     return lowerUINT_TO_FP_vXi32(Op, DAG, Subtarget);
+  case MVT::v2i64:
+  case MVT::v4i64:
+    return lowerINT_TO_FP_vXi64(Op, DAG, Subtarget);
   }
 }
 
@@ -19064,7 +19153,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   SDLoc dl(Op);
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   MVT SrcVT = Src.getSimpleValueType();
-  MVT DstVT = Op.getSimpleValueType();
+  MVT DstVT = Op->getSimpleValueType(0);
   SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
 
   if (DstVT == MVT::f128)
