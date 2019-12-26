@@ -6318,7 +6318,7 @@ define <2 x double> @constrained_vector_sitofp_v2f64_v2i64(<2 x i64> %x) #0 {
 ;
 ; AVX512DQ-LABEL: constrained_vector_sitofp_v2f64_v2i64:
 ; AVX512DQ:       # %bb.0: # %entry
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -6617,7 +6617,7 @@ define <4 x double> @constrained_vector_sitofp_v4f64_v4i64(<4 x i64> %x) #0 {
 ;
 ; AVX512DQ-LABEL: constrained_vector_sitofp_v4f64_v4i64:
 ; AVX512DQ:       # %bb.0: # %entry
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
@@ -6687,7 +6687,7 @@ define <4 x float> @constrained_vector_sitofp_v4f32_v4i64(<4 x i64> %x) #0 {
 ;
 ; AVX512DQ-LABEL: constrained_vector_sitofp_v4f32_v4i64:
 ; AVX512DQ:       # %bb.0: # %entry
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvtqq2ps %zmm0, %ymm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -6939,7 +6939,7 @@ define <2 x double> @constrained_vector_uitofp_v2f64_v2i64(<2 x i64> %x) #0 {
 ;
 ; AVX512DQ-LABEL: constrained_vector_uitofp_v2f64_v2i64:
 ; AVX512DQ:       # %bb.0: # %entry
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -7348,7 +7348,7 @@ define <4 x double> @constrained_vector_uitofp_v4f64_v4i32(<4 x i32> %x) #0 {
 ;
 ; AVX512-LABEL: constrained_vector_uitofp_v4f64_v4i32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtudq2pd %ymm0, %zmm0
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
@@ -7383,7 +7383,7 @@ define <4 x float> @constrained_vector_uitofp_v4f32_v4i32(<4 x i32> %x) #0 {
 ;
 ; AVX512-LABEL: constrained_vector_uitofp_v4f32_v4i32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtudq2ps %zmm0, %zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
@@ -7448,7 +7448,7 @@ define <4 x double> @constrained_vector_uitofp_v4f64_v4i64(<4 x i64> %x) #0 {
 ;
 ; AVX512DQ-LABEL: constrained_vector_uitofp_v4f64_v4i64:
 ; AVX512DQ:       # %bb.0: # %entry
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
@@ -7605,7 +7605,7 @@ define <4 x float> @constrained_vector_uitofp_v4f32_v4i64(<4 x i64> %x) #0 {
 ;
 ; AVX512DQ-LABEL: constrained_vector_uitofp_v4f32_v4i64:
 ; AVX512DQ:       # %bb.0: # %entry
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvtuqq2ps %zmm0, %ymm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
