@@ -129,7 +129,12 @@ def getDarwinOSTriples():
 
 def getPlatform():
     """Returns the target platform which the tests are running on."""
-    platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    triple = lldb.DBG.GetSelectedPlatform().GetTriple()
+    if triple is None:
+      # It might be an unconnected remote platform.
+      return ''
+
+    platform = triple.split('-')[2]
     if platform.startswith('freebsd'):
         platform = 'freebsd'
     elif platform.startswith('netbsd'):
