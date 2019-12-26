@@ -2349,21 +2349,22 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
 
   m_thread_ids.clear();
   m_thread_pcs.clear();
+
   // Set the thread stop info. It might have a "threads" key whose value is a
   // list of all thread IDs in the current process, so m_thread_ids might get
   // set.
+  // Check to see if SetThreadStopInfo() filled in m_thread_ids?
+  if (m_thread_ids.empty()) {
+      // No, we need to fetch the thread list manually
+      UpdateThreadIDList();
+  }
+
+  // We might set some stop info's so make sure the thread list is up to
+  // date before we do that or we might overwrite what was computed here.
+  UpdateThreadListIfNeeded();
 
   // Scope for the lock
   {
-    // Check to see if SetThreadStopInfo() filled in m_thread_ids?
-    if (m_thread_ids.empty()) {
-        // No, we need to fetch the thread list manually
-        UpdateThreadIDList();
-    }
-    // We might set some stop info's so make sure the thread list is up to
-    // date before we do that or we might overwrite what was computed here.
-    UpdateThreadListIfNeeded();
-
     // Lock the thread stack while we access it
     std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
     // Get the number of stop packets on the stack
