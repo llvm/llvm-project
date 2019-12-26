@@ -1437,14 +1437,13 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
         addSym(DT_FINI, b);
   }
 
-  bool hasVerNeed = SharedFile::vernauxNum != 0;
-  if (hasVerNeed || part.verDef)
+  if (part.verSym && part.verSym->isNeeded())
     addInSec(DT_VERSYM, part.verSym);
-  if (part.verDef) {
+  if (part.verDef && part.verDef->isLive()) {
     addInSec(DT_VERDEF, part.verDef);
     addInt(DT_VERDEFNUM, getVerDefNum());
   }
-  if (hasVerNeed) {
+  if (part.verNeed && part.verNeed->isNeeded()) {
     addInSec(DT_VERNEED, part.verNeed);
     unsigned needNum = 0;
     for (SharedFile *f : sharedFiles)
@@ -2963,7 +2962,8 @@ void VersionTableSection::writeTo(uint8_t *buf) {
 }
 
 bool VersionTableSection::isNeeded() const {
-  return getPartition().verDef || getPartition().verNeed->isNeeded();
+  return isLive() &&
+         (getPartition().verDef || getPartition().verNeed->isNeeded());
 }
 
 void addVerneed(Symbol *ss) {
@@ -3051,7 +3051,7 @@ template <class ELFT> size_t VersionNeedSection<ELFT>::getSize() const {
 }
 
 template <class ELFT> bool VersionNeedSection<ELFT>::isNeeded() const {
-  return SharedFile::vernauxNum != 0;
+  return isLive() && SharedFile::vernauxNum != 0;
 }
 
 void MergeSyntheticSection::addSection(MergeInputSection *ms) {
