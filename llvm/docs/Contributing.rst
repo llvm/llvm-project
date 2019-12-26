@@ -110,6 +110,8 @@ patch, or the Phabricator review with "Ping." The common courtesy 'ping' rate
 is once a week. Please remember that you are asking for valuable time from other
 professional developers.
 
+For more information on LLVM's code-review process, please see :doc:`CodeReview`.
+
 
 Helpful Information About LLVM
 ==============================
