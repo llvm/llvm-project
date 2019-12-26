@@ -6852,7 +6852,7 @@ define <2 x double> @constrained_vector_uitofp_v2f64_v2i32(<2 x i32> %x) #0 {
 ;
 ; AVX512-LABEL: constrained_vector_uitofp_v2f64_v2i32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512-NEXT:    vcvtudq2pd %ymm0, %zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
