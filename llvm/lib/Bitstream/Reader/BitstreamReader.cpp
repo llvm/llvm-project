@@ -88,37 +88,6 @@ static Expected<uint64_t> readAbbreviatedField(BitstreamCursor &Cursor,
   llvm_unreachable("invalid abbreviation encoding");
 }
 
-static Error skipAbbreviatedField(BitstreamCursor &Cursor,
-                                  const BitCodeAbbrevOp &Op) {
-  assert(!Op.isLiteral() && "Not to be used with literals!");
-
-  // Decode the value as we are commanded.
-  switch (Op.getEncoding()) {
-  case BitCodeAbbrevOp::Array:
-  case BitCodeAbbrevOp::Blob:
-    llvm_unreachable("Should not reach here");
-  case BitCodeAbbrevOp::Fixed:
-    assert((unsigned)Op.getEncodingData() <= Cursor.MaxChunkSize);
-    if (Expected<unsigned> Res = Cursor.Read((unsigned)Op.getEncodingData()))
-      break;
-    else
-      return Res.takeError();
-  case BitCodeAbbrevOp::VBR:
-    assert((unsigned)Op.getEncodingData() <= Cursor.MaxChunkSize);
-    if (Expected<uint64_t> Res =
-            Cursor.ReadVBR64((unsigned)Op.getEncodingData()))
-      break;
-    else
-      return Res.takeError();
-  case BitCodeAbbrevOp::Char6:
-    if (Expected<unsigned> Res = Cursor.Read(6))
-      break;
-    else
-      return Res.takeError();
-  }
-  return ErrorSuccess();
-}
-
 /// skipRecord - Read the current record and discard it.
 Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
   // Skip unabbreviated records by reading past their entries.
@@ -163,9 +132,10 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
 
     if (Op.getEncoding() != BitCodeAbbrevOp::Array &&
         Op.getEncoding() != BitCodeAbbrevOp::Blob) {
-      if (Error Err = skipAbbreviatedField(*this, Op))
-        return std::move(Err);
-      continue;
+      if (Expected<uint64_t> MaybeField = readAbbreviatedField(*this, Op))
+        continue;
+      else
+        return MaybeField.takeError();
     }
 
     if (Op.getEncoding() == BitCodeAbbrevOp::Array) {
