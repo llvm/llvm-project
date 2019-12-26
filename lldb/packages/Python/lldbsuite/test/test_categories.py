@@ -37,6 +37,7 @@ all_categories = {
     'frame-diagnose': 'Frame diagnose tests',
     'darwin-log': 'Darwin log tests',
     'watchpoint': 'Watchpoint-related tests',
+    'lldb-vscode': 'Visual Studio Code debug adaptor tests',
 }
 
 
