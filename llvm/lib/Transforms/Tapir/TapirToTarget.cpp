@@ -365,7 +365,7 @@ struct LowerTapirToTarget : public ModulePass {
   }
 
   StringRef getPassName() const override {
-    return "LowerTapirToTarget";
+    return "Lower Tapir to target";
   }
 
   bool runOnModule(Module &M) override;
