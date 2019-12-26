@@ -28706,23 +28706,32 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       assert(getTypeAction(*DAG.getContext(), VT) == TypeWidenVector &&
              "Unexpected type action!");
       if (Src.getValueType() == MVT::v2f64) {
+        unsigned Opc;
+        if (IsStrict)
+          Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
+        else
+          Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+
+        // If we have VLX we can emit a target specific FP_TO_UINT node,.
         if (!IsSigned && !Subtarget.hasVLX()) {
-          // If we have VLX we can emit a target specific FP_TO_UINT node,
-          // otherwise we can defer to the generic legalizer which will widen
+          // Otherwise we can defer to the generic legalizer which will widen
           // the input as well. This will be further widened during op
           // legalization to v8i32<-v8f64.
-          return;
+          // For strict nodes we'll need to widen ourselves.
+          // FIXME: Fix the type legalizer to safely widen strict nodes?
+          if (!IsStrict)
+            return;
+          Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f64, Src,
+                            DAG.getConstantFP(0.0, dl, MVT::v2f64));
+          Opc = N->getOpcode();
         }
         SDValue Res;
         SDValue Chain;
         if (IsStrict) {
-          unsigned Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI
-                                  : X86ISD::STRICT_CVTTP2UI;
           Res = DAG.getNode(Opc, dl, {MVT::v4i32, MVT::Other},
                             {N->getOperand(0), Src});
           Chain = Res.getValue(1);
         } else {
-          unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
           Res = DAG.getNode(Opc, dl, MVT::v4i32, Src);
         }
         Results.push_back(Res);
