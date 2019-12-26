@@ -1000,6 +1000,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v2i32, Custom);
 
     // Fast v2f32 UINT_TO_FP( v2i32 ) custom conversion.
+    // FIXME: Does this apply to STRICT_UINT_TO_FP?
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2f32, Custom);
 
     setOperationAction(ISD::FP_EXTEND,          MVT::v2f32, Custom);
@@ -1843,9 +1844,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (Subtarget.hasDQI()) {
       // Fast v2f32 SINT_TO_FP( v2i64 ) custom conversion.
       // v2f32 UINT_TO_FP is already custom under SSE2.
-      setOperationAction(ISD::SINT_TO_FP,    MVT::v2f32, Custom);
+      setOperationAction(ISD::SINT_TO_FP,        MVT::v2f32, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v2f32, Custom);
       assert(isOperationCustom(ISD::UINT_TO_FP, MVT::v2f32) &&
              "Unexpected operation action!");
+      setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v2f32, Custom);
       // v2i64 FP_TO_S/UINT(v2f32) custom conversion.
       setOperationAction(ISD::FP_TO_SINT,        MVT::v2f32, Custom);
       setOperationAction(ISD::FP_TO_UINT,        MVT::v2f32, Custom);
@@ -28778,26 +28781,47 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     return;
   }
-  case ISD::SINT_TO_FP: {
+  case ISD::SINT_TO_FP:
+  case ISD::STRICT_SINT_TO_FP: {
     assert(Subtarget.hasDQI() && Subtarget.hasVLX() && "Requires AVX512DQVL!");
-    SDValue Src = N->getOperand(0);
+    bool IsStrict = N->isStrictFPOpcode();
+    SDValue Src = N->getOperand(IsStrict ? 1 : 0);
     if (N->getValueType(0) != MVT::v2f32 || Src.getValueType() != MVT::v2i64)
       return;
-    Results.push_back(DAG.getNode(X86ISD::CVTSI2P, dl, MVT::v4f32, Src));
+    if (IsStrict) {
+      SDValue Res =
+          DAG.getNode(X86ISD::STRICT_CVTSI2P, dl, {MVT::v4f32, MVT::Other},
+                      {N->getOperand(0), Src});
+      Results.push_back(Res);
+      Results.push_back(Res.getValue(1));
+    } else {
+      Results.push_back(DAG.getNode(X86ISD::CVTSI2P, dl, MVT::v4f32, Src));
+    }
     return;
   }
-  case ISD::UINT_TO_FP: {
+  case ISD::UINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP: {
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
+    bool IsStrict = N->isStrictFPOpcode();
     EVT VT = N->getValueType(0);
     if (VT != MVT::v2f32)
       return;
-    SDValue Src = N->getOperand(0);
+    SDValue Src = N->getOperand(IsStrict ? 1 : 0);
     EVT SrcVT = Src.getValueType();
     if (Subtarget.hasDQI() && Subtarget.hasVLX() && SrcVT == MVT::v2i64) {
-      Results.push_back(DAG.getNode(X86ISD::CVTUI2P, dl, MVT::v4f32, Src));
+      if (IsStrict) {
+        SDValue Res =
+            DAG.getNode(X86ISD::STRICT_CVTUI2P, dl, {MVT::v4f32, MVT::Other},
+                        {N->getOperand(0), Src});
+        Results.push_back(Res);
+        Results.push_back(Res.getValue(1));
+      } else {
+        Results.push_back(DAG.getNode(X86ISD::CVTUI2P, dl, MVT::v4f32, Src));
+      }
       return;
     }
-    if (SrcVT != MVT::v2i32)
+    // FIXME: Is this safe for strict fp?
+    if (SrcVT != MVT::v2i32 || IsStrict)
       return;
     SDValue ZExtIn = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v2i64, Src);
     SDValue VBias =
