@@ -121,24 +121,10 @@ define <2 x float> @sitofp_v2i64_v2f32(<2 x i64> %x) #0 {
 ; AVX512DQ-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; AVX512DQ-64-NEXT:    retq
 ;
-; AVX512DQVL-32-LABEL: sitofp_v2i64_v2f32:
-; AVX512DQVL-32:       # %bb.0:
-; AVX512DQVL-32-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512DQVL-32-NEXT:    vcvtqq2ps %ymm0, %xmm1
-; AVX512DQVL-32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX512DQVL-32-NEXT:    vcvtqq2ps %ymm0, %xmm0
-; AVX512DQVL-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
-; AVX512DQVL-32-NEXT:    vzeroupper
-; AVX512DQVL-32-NEXT:    retl
-;
-; AVX512DQVL-64-LABEL: sitofp_v2i64_v2f32:
-; AVX512DQVL-64:       # %bb.0:
-; AVX512DQVL-64-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512DQVL-64-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
-; AVX512DQVL-64-NEXT:    vmovq %xmm0, %rax
-; AVX512DQVL-64-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
-; AVX512DQVL-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX512DQVL-64-NEXT:    retq
+; AVX512DQVL-LABEL: sitofp_v2i64_v2f32:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vcvtqq2ps %xmm0, %xmm0
+; AVX512DQVL-NEXT:    ret{{[l|q]}}
  %result = call <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i64(<2 x i64> %x,
                                                               metadata !"round.dynamic",
                                                               metadata !"fpexcept.strict") #0
@@ -318,24 +304,10 @@ define <2 x float> @uitofp_v2i64_v2f32(<2 x i64> %x) #0 {
 ; AVX512DQ-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; AVX512DQ-64-NEXT:    retq
 ;
-; AVX512DQVL-32-LABEL: uitofp_v2i64_v2f32:
-; AVX512DQVL-32:       # %bb.0:
-; AVX512DQVL-32-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512DQVL-32-NEXT:    vcvtuqq2ps %ymm0, %xmm1
-; AVX512DQVL-32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX512DQVL-32-NEXT:    vcvtuqq2ps %ymm0, %xmm0
-; AVX512DQVL-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
-; AVX512DQVL-32-NEXT:    vzeroupper
-; AVX512DQVL-32-NEXT:    retl
-;
-; AVX512DQVL-64-LABEL: uitofp_v2i64_v2f32:
-; AVX512DQVL-64:       # %bb.0:
-; AVX512DQVL-64-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512DQVL-64-NEXT:    vcvtusi2ss %rax, %xmm1, %xmm1
-; AVX512DQVL-64-NEXT:    vmovq %xmm0, %rax
-; AVX512DQVL-64-NEXT:    vcvtusi2ss %rax, %xmm2, %xmm0
-; AVX512DQVL-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX512DQVL-64-NEXT:    retq
+; AVX512DQVL-LABEL: uitofp_v2i64_v2f32:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vcvtuqq2ps %xmm0, %xmm0
+; AVX512DQVL-NEXT:    ret{{[l|q]}}
  %result = call <2 x float> @llvm.experimental.constrained.uitofp.v2f32.v2i64(<2 x i64> %x,
                                                               metadata !"round.dynamic",
                                                               metadata !"fpexcept.strict") #0
