@@ -410,6 +410,7 @@ def DYNALLOC8 : PPCEmitTimePseudo<(outs g8rc:$result), (ins g8rc:$negsize, memri
 def DYNAREAOFFSET8 : PPCEmitTimePseudo<(outs i64imm:$result), (ins memri:$fpsi), "#DYNAREAOFFSET8",
                        [(set i64:$result, (PPCdynareaoffset iaddr:$fpsi))]>;
 
+let hasSideEffects = 0 in {
 let Defs = [LR8] in {
 def MTLR8  : XFXForm_7_ext<31, 467, 8, (outs), (ins g8rc:$rS),
                            "mtlr $rS", IIC_SprMTSPR>,
@@ -421,6 +422,7 @@ def MFLR8  : XFXForm_1_ext<31, 339, 8, (outs g8rc:$rT), (ins),
              PPC970_DGroup_First, PPC970_Unit_FXU;
 }
 } // Interpretation64Bit
+}
 
 //===----------------------------------------------------------------------===//
 // Fixed point instructions.

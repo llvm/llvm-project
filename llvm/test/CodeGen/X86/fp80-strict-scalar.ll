@@ -21,6 +21,16 @@ declare i8  @llvm.experimental.constrained.fptoui.i8.x86_fp80(x86_fp80, metadata
 declare i16 @llvm.experimental.constrained.fptoui.i16.x86_fp80(x86_fp80, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.x86_fp80(x86_fp80, metadata)
 declare i64 @llvm.experimental.constrained.fptoui.i64.x86_fp80(x86_fp80, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i1(i1, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i8(i8, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i16(i16, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i32(i32, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i64(i64, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i1(i1, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i8(i8, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i16(i16, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i32(i32, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i64(i64, metadata, metadata)
 
 define x86_fp80 @fadd_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X86-LABEL: fadd_fp80:
@@ -599,6 +609,266 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
   %result = call i64 @llvm.experimental.constrained.fptoui.i64.x86_fp80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i64 %result
+}
+
+define x86_fp80 @sint1_to_fp80(i1 %x) #0 {
+; X86-LABEL: sint1_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    andb $1, %al
+; X86-NEXT:    negb %al
+; X86-NEXT:    movsbl %al, %eax
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    filds {{[0-9]+}}(%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: sint1_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    andb $1, %dil
+; X64-NEXT:    negb %dil
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i1(i1 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
+}
+
+define x86_fp80 @sint8_to_fp80(i8 %x) #0 {
+; X86-LABEL: sint8_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    filds {{[0-9]+}}(%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: sint8_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i8(i8 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
+}
+
+define x86_fp80 @sint16_to_fp80(i16 %x) #0 {
+; X86-LABEL: sint16_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    filds {{[0-9]+}}(%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: sint16_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i16(i16 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
+}
+
+define x86_fp80 @sint32_to_fp80(i32 %x) #0 {
+; X86-LABEL: sint32_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    fildl (%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: sint32_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i32(i32 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
+}
+
+define x86_fp80 @sint64_to_fp80(i64 %x) #0 {
+; X86-LABEL: sint64_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-NEXT:    retl
+;
+; X64-LABEL: sint64_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i64(i64 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
+}
+
+define x86_fp80 @uint1_to_fp80(i1 %x) #0 {
+; X86-LABEL: uint1_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    andb $1, %al
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    filds {{[0-9]+}}(%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: uint1_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    andl $1, %edi
+; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i1(i1 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
+}
+
+define x86_fp80 @uint8_to_fp80(i8 %x) #0 {
+; X86-LABEL: uint8_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    filds {{[0-9]+}}(%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: uint8_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i8(i8 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
+}
+
+define x86_fp80 @uint16_to_fp80(i16 %x) #0 {
+; X86-LABEL: uint16_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    fildl (%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: uint16_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i16(i16 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
+}
+
+define x86_fp80 @uint32_to_fp80(i32 %x) #0 {
+; X86-LABEL: uint32_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    fildll (%esp)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: uint32_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i32(i32 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
+}
+
+define x86_fp80 @uint64_to_fp80(i64 %x) #0 {
+; X86-LABEL: uint64_to_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    setns %al
+; X86-NEXT:    fildll (%esp)
+; X86-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: uint64_to_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    testq %rdi, %rdi
+; X64-NEXT:    setns %al
+; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fadds {{\.LCPI.*}}(,%rax,4)
+; X64-NEXT:    retq
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i64(i64 %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret x86_fp80 %result
 }
 
 attributes #0 = { strictfp }

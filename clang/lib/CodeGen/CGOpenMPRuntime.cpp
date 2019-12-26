@@ -1441,6 +1441,50 @@ CGOpenMPRuntime::getUserDefinedReduction(const OMPDeclareReductionDecl *D) {
   return UDRMap.lookup(D);
 }
 
+// Temporary RAII solution to perform a push/pop stack event on the OpenMP IR
+// Builder if one is present.
+struct PushAndPopStackRAII {
+  PushAndPopStackRAII(llvm::OpenMPIRBuilder *OMPBuilder, CodeGenFunction &CGF,
+                      bool HasCancel)
+      : OMPBuilder(OMPBuilder) {
+    if (!OMPBuilder)
+      return;
+
+    // The following callback is the crucial part of clangs cleanup process.
+    //
+    // NOTE:
+    // Once the OpenMPIRBuilder is used to create parallel regions (and
+    // similar), the cancellation destination (Dest below) is determined via
+    // IP. That means if we have variables to finalize we split the block at IP,
+    // use the new block (=BB) as destination to build a JumpDest (via
+    // getJumpDestInCurrentScope(BB)) which then is fed to
+    // EmitBranchThroughCleanup. Furthermore, there will not be the need
+    // to push & pop an FinalizationInfo object.
+    // The FiniCB will still be needed but at the point where the
+    // OpenMPIRBuilder is asked to construct a parallel (or similar) construct.
+    auto FiniCB = [&CGF](llvm::OpenMPIRBuilder::InsertPointTy IP) {
+      assert(IP.getBlock()->end() == IP.getPoint() &&
+             "Clang CG should cause non-terminated block!");
+      CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
+      CGF.Builder.restoreIP(IP);
+      CodeGenFunction::JumpDest Dest =
+          CGF.getOMPCancelDestination(OMPD_parallel);
+      CGF.EmitBranchThroughCleanup(Dest);
+    };
+
+    // TODO: Remove this once we emit parallel regions through the
+    //       OpenMPIRBuilder as it can do this setup internally.
+    llvm::OpenMPIRBuilder::FinalizationInfo FI(
+        {FiniCB, OMPD_parallel, HasCancel});
+    OMPBuilder->pushFinalizationCB(std::move(FI));
+  }
+  ~PushAndPopStackRAII() {
+    if (OMPBuilder)
+      OMPBuilder->popFinalizationCB();
+  }
+  llvm::OpenMPIRBuilder *OMPBuilder;
+};
+
 static llvm::Function *emitParallelOrTeamsOutlinedFunction(
     CodeGenModule &CGM, const OMPExecutableDirective &D, const CapturedStmt *CS,
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
@@ -1465,6 +1509,11 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   else if (const auto *OPFD =
                dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&D))
     HasCancel = OPFD->hasCancel();
+
+  // TODO: Temporarily inform the OpenMPIRBuilder, if any, about the new
+  //       parallel region to make cancellation barriers work properly.
+  llvm::OpenMPIRBuilder *OMPBuilder = CGM.getOpenMPIRBuilder();
+  PushAndPopStackRAII PSR(OMPBuilder, CGF, HasCancel);
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
@@ -3488,21 +3537,8 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
       dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
   llvm::OpenMPIRBuilder *OMPBuilder = CGF.CGM.getOpenMPIRBuilder();
   if (OMPBuilder) {
-    // TODO: Move cancelation point handling into the IRBuilder.
-    if (EmitChecks && !ForceSimpleCall && OMPRegionInfo &&
-        OMPRegionInfo->hasCancel() && CGF.Builder.GetInsertBlock()) {
-      CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-      llvm::BasicBlock *ExitBB = CGF.createBasicBlock(
-          ".cancel.exit", CGF.Builder.GetInsertBlock()->getParent());
-      OMPBuilder->setCancellationBlock(ExitBB);
-      CGF.Builder.SetInsertPoint(ExitBB);
-      CodeGenFunction::JumpDest CancelDestination =
-          CGF.getOMPCancelDestination(OMPRegionInfo->getDirectiveKind());
-      CGF.EmitBranchThroughCleanup(CancelDestination);
-    }
-    auto IP = OMPBuilder->CreateBarrier(CGF.Builder, Kind, ForceSimpleCall,
-                                        EmitChecks);
-    CGF.Builder.restoreIP(IP);
+    CGF.Builder.restoreIP(OMPBuilder->CreateBarrier(
+        CGF.Builder, Kind, ForceSimpleCall, EmitChecks));
     return;
   }
 

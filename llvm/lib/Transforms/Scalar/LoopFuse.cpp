@@ -257,7 +257,12 @@ struct FusionCandidate {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
-    dbgs() << "\tGuardBranch: "
+    dbgs() << "\tGuardBranch: ";
+    if (GuardBranch)
+      dbgs() << *GuardBranch;
+    else
+      dbgs() << "nullptr";
+    dbgs() << "\n"
            << (GuardBranch ? GuardBranch->getName() : "nullptr") << "\n"
            << "\tPreheader: " << (Preheader ? Preheader->getName() : "nullptr")
            << "\n"

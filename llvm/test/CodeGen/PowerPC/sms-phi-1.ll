@@ -36,8 +36,8 @@ define void @main() nounwind #0 {
 ; CHECK-NEXT:    stwu 4, 4(3)
 ; CHECK-NEXT:    addi 1, 1, 48
 ; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %1 = tail call i64 @strtol()
   %2 = trunc i64 %1 to i32

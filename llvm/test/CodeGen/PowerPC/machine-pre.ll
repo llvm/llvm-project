@@ -134,10 +134,10 @@ define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) nounwind {
 ; CHECK-P9-NEXT:  .LBB1_10: # %cleanup20
 ; CHECK-P9-NEXT:    addi r1, r1, 80
 ; CHECK-P9-NEXT:    ld r0, 16(r1)
-; CHECK-P9-NEXT:    mtlr r0
 ; CHECK-P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P9-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-P9-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
+; CHECK-P9-NEXT:    mtlr r0
 ; CHECK-P9-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; CHECK-P9-NEXT:    blr
 entry:
