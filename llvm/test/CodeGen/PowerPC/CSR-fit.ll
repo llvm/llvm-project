@@ -27,9 +27,9 @@ define dso_local signext i32 @caller1(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
-; CHECK-PWR8-NEXT:    mtlr r0
 ; CHECK-PWR8-NEXT:    ld r15, -136(r1) # 8-byte Folded Reload
 ; CHECK-PWR8-NEXT:    ld r14, -144(r1) # 8-byte Folded Reload
+; CHECK-PWR8-NEXT:    mtlr r0
 ; CHECK-PWR8-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: caller1:
@@ -51,9 +51,9 @@ define dso_local signext i32 @caller1(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR9-NEXT:    nop
 ; CHECK-PWR9-NEXT:    addi r1, r1, 176
 ; CHECK-PWR9-NEXT:    ld r0, 16(r1)
-; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    ld r15, -136(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-NEXT:    ld r14, -144(r1) # 8-byte Folded Reload
+; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    blr
 entry:
   %0 = tail call i32 asm "add $0, $1, $2", "=r,r,r,~{r14},~{r15}"(i32 %a, i32 %b)
@@ -81,9 +81,9 @@ define dso_local signext i32 @caller2(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
-; CHECK-PWR8-NEXT:    mtlr r0
 ; CHECK-PWR8-NEXT:    lfd f15, -136(r1) # 8-byte Folded Reload
 ; CHECK-PWR8-NEXT:    lfd f14, -144(r1) # 8-byte Folded Reload
+; CHECK-PWR8-NEXT:    mtlr r0
 ; CHECK-PWR8-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: caller2:
@@ -105,9 +105,9 @@ define dso_local signext i32 @caller2(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR9-NEXT:    nop
 ; CHECK-PWR9-NEXT:    addi r1, r1, 176
 ; CHECK-PWR9-NEXT:    ld r0, 16(r1)
-; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    lfd f15, -136(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-NEXT:    lfd f14, -144(r1) # 8-byte Folded Reload
+; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    blr
 entry:
   %0 = tail call i32 asm "add $0, $1, $2", "=r,r,r,~{f14},~{f15}"(i32 %a, i32 %b)

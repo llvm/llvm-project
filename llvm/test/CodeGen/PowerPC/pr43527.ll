@@ -34,9 +34,9 @@ define dso_local void @test(i64 %arg, i64 %arg1) {
 ; CHECK-NEXT:    stb r3, 0(r3)
 ; CHECK-NEXT:    addi r1, r1, 64
 ; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_5: # %bb2
 ; CHECK-NEXT:  .LBB0_6: # %bb14
