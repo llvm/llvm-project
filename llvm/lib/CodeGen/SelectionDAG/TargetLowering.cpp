@@ -285,6 +285,22 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
                                          ISD::CondCode &CCCode,
                                          const SDLoc &dl, const SDValue OldLHS,
                                          const SDValue OldRHS) const {
+  SDValue Chain;
+  return softenSetCCOperands(DAG, VT, NewLHS, NewRHS, CCCode, dl, OldLHS,
+                             OldRHS, Chain);
+}
+
+void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
+                                         SDValue &NewLHS, SDValue &NewRHS,
+                                         ISD::CondCode &CCCode,
+                                         const SDLoc &dl, const SDValue OldLHS,
+                                         const SDValue OldRHS,
+                                         SDValue &Chain,
+                                         bool IsSignaling) const {
+  // FIXME: Currently we cannot really respect all IEEE predicates due to libgcc
+  // not supporting it. We can update this code when libgcc provides such
+  // functions.
+
   assert((VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128 || VT == MVT::ppcf128)
          && "Unsupported setcc type!");
 
@@ -390,7 +406,8 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   EVT OpsVT[2] = { OldLHS.getValueType(),
                    OldRHS.getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, RetVT, true);
-  NewLHS = makeLibCall(DAG, LC1, RetVT, Ops, CallOptions, dl).first;
+  auto Call = makeLibCall(DAG, LC1, RetVT, Ops, CallOptions, dl, Chain);
+  NewLHS = Call.first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
 
   CCCode = getCmpLibcallCC(LC1);
@@ -399,16 +416,22 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     CCCode = getSetCCInverse(CCCode, RetVT);
   }
 
-  if (LC2 != RTLIB::UNKNOWN_LIBCALL) {
+  if (LC2 == RTLIB::UNKNOWN_LIBCALL) {
+    // Update Chain.
+    Chain = Call.second;
+  } else {
     SDValue Tmp = DAG.getNode(
         ISD::SETCC, dl,
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
         NewLHS, NewRHS, DAG.getCondCode(CCCode));
-    NewLHS = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl).first;
+    auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
     NewLHS = DAG.getNode(
         ISD::SETCC, dl,
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
-        NewLHS, NewRHS, DAG.getCondCode(getCmpLibcallCC(LC2)));
+        Call2.first, NewRHS, DAG.getCondCode(getCmpLibcallCC(LC2)));
+    if (Chain)
+      Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Call.second,
+                          Call2.second);
     NewLHS = DAG.getNode(ISD::OR, dl, Tmp.getValueType(), Tmp, NewLHS);
     NewRHS = SDValue();
   }
