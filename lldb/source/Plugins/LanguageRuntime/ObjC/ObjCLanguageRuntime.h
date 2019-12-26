@@ -145,11 +145,8 @@ public:
     virtual ~EncodingToType();
 
     virtual CompilerType RealizeType(ClangASTContext &ast_ctx, const char *name,
-                                     bool for_expression);
+                                     bool for_expression) = 0;
     virtual CompilerType RealizeType(const char *name, bool for_expression);
-
-    virtual CompilerType RealizeType(clang::ASTContext &ast_ctx,
-                                     const char *name, bool for_expression) = 0;
 
   protected:
     std::unique_ptr<ClangASTContext> m_scratch_ast_ctx_up;
