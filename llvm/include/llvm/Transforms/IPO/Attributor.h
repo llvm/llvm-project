@@ -823,6 +823,12 @@ struct Attributor {
     return true;
   }
 
+  /// Record that \p I is to be replaced with `unreachable` after information
+  /// was manifested.
+  void changeToUnreachableAfterManifest(Instruction *I) {
+    ToBeChangedToUnreachableInsts.insert(I);
+  }
+
   /// Record that \p I is deleted after information was manifested. This also
   /// triggers deletion of trivially dead istructions.
   void deleteAfterManifest(Instruction &I) { ToBeDeletedInsts.insert(&I); }
@@ -1030,6 +1036,9 @@ private:
   /// Uses we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.
   DenseMap<Use *, Value *> ToBeChangedUses;
+
+  /// Instructions we replace with `unreachable` insts after manifest is done.
+  SmallPtrSet<Instruction *, 8> ToBeChangedToUnreachableInsts;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
