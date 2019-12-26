@@ -26,10 +26,7 @@ namespace query {
 // is found before End, return StringRef().  Begin is adjusted to exclude the
 // lexed region.
 StringRef QueryParser::lexWord() {
-  Line = Line.drop_while([this](char c) {
-    // Don't trim newlines.
-    return StringRef(" \t\v\f\r").contains(c);
-  });
+  Line = Line.ltrim();
 
   if (Line.empty())
     // Even though the Line is empty, it contains a pointer and
@@ -37,12 +34,12 @@ StringRef QueryParser::lexWord() {
     // code completion.
     return Line;
 
-  StringRef Word;
-  if (Line.front() == '#')
-    Word = Line.substr(0, 1);
-  else
-    Word = Line.take_until(isWhitespace);
+  if (Line.front() == '#') {
+    Line = {};
+    return StringRef();
+  }
 
+  StringRef Word = Line.take_until(isWhitespace);
   Line = Line.drop_front(Word.size());
   return Word;
 }
@@ -128,25 +125,9 @@ template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
 }
 
 QueryRef QueryParser::endQuery(QueryRef Q) {
-  StringRef Extra = Line;
-  StringRef ExtraTrimmed = Extra.drop_while(
-      [](char c) { return StringRef(" \t\v\f\r").contains(c); });
-
-  if ((!ExtraTrimmed.empty() && ExtraTrimmed[0] == '\n') ||
-      (ExtraTrimmed.size() >= 2 && ExtraTrimmed[0] == '\r' &&
-       ExtraTrimmed[1] == '\n'))
-    Q->RemainingContent = Extra;
-  else {
-    StringRef TrailingWord = lexWord();
-    if (TrailingWord.front() == '#') {
-      Line = Line.drop_until([](char c) { return c == '\n'; });
-      Line = Line.drop_front();
-      return endQuery(Q);
-    }
-    if (!TrailingWord.empty()) {
-      return new InvalidQuery("unexpected extra input: '" + Extra + "'");
-    }
-  }
+  const StringRef Extra = Line;
+  if (!lexWord().empty())
+    return new InvalidQuery("unexpected extra input: '" + Extra + "'");
   return Q;
 }
 
@@ -212,11 +193,7 @@ QueryRef QueryParser::doParse() {
   switch (QKind) {
   case PQK_Comment:
   case PQK_NoOp:
-    Line = Line.drop_until([](char c) { return c == '\n'; });
-    Line = Line.drop_front();
-    if (Line.empty())
-      return new NoOpQuery;
-    return doParse();
+    return new NoOpQuery;
 
   case PQK_Help:
     return endQuery(new HelpQuery);
@@ -240,9 +217,7 @@ QueryRef QueryParser::doParse() {
       return makeInvalidQueryFromDiagnostics(Diag);
     }
 
-    auto *Q = new LetQuery(Name, Value);
-    Q->RemainingContent = Line;
-    return Q;
+    return new LetQuery(Name, Value);
   }
 
   case PQK_Match: {
@@ -251,17 +226,12 @@ QueryRef QueryParser::doParse() {
 
     Diagnostics Diag;
     auto MatcherSource = Line.trim();
-    auto OrigMatcherSource = MatcherSource;
     Optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
         MatcherSource, nullptr, &QS.NamedValues, &Diag);
     if (!Matcher) {
       return makeInvalidQueryFromDiagnostics(Diag);
     }
-    auto ActualSource = OrigMatcherSource.slice(0, OrigMatcherSource.size() -
-                                                       MatcherSource.size());
-    auto *Q = new MatchQuery(ActualSource, *Matcher);
-    Q->RemainingContent = MatcherSource;
-    return Q;
+    return new MatchQuery(MatcherSource, *Matcher);
   }
 
   case PQK_Set: {
