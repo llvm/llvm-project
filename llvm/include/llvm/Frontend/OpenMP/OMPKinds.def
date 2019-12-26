@@ -167,6 +167,11 @@ __OMP_RTL(__kmpc_barrier, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_cancel_barrier, false, Int32, IdentPtr, Int32)
 __OMP_RTL(__kmpc_global_thread_num, false, Int32, IdentPtr)
 __OMP_RTL(__kmpc_fork_call, true, Void, IdentPtr, Int32, ParallelTaskPtr)
+__OMP_RTL(__kmpc_push_num_threads, false, Void, IdentPtr, Int32, /* Int */Int32)
+__OMP_RTL(__kmpc_push_proc_bind, false, Void, IdentPtr, Int32, /* Int */Int32)
+__OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
+
 __OMP_RTL(omp_get_thread_num, false, Int32, )
 
 #undef __OMP_RTL
@@ -232,5 +237,28 @@ __OMP_IDENT_FLAG(BARRIER_IMPL_WORKSHARE, 0x01C0)
 
 #undef __OMP_IDENT_FLAG
 #undef OMP_IDENT_FLAG
+
+///}
+
+
+/// Proc bind kinds
+///
+///{
+
+#ifndef OMP_PROC_BIND_KIND
+#define OMP_PROC_BIND_KIND(Enum, Str, Value)
+#endif
+
+#define __OMP_PROC_BIND_KIND(Name, Value)                                      \
+  OMP_PROC_BIND_KIND(OMP_PB_##Name, #Name, Value)
+
+__OMP_PROC_BIND_KIND(master, 2)
+__OMP_PROC_BIND_KIND(close, 3)
+__OMP_PROC_BIND_KIND(spread, 4)
+__OMP_PROC_BIND_KIND(default, 6)
+__OMP_PROC_BIND_KIND(unknown, 7)
+
+#undef __OMP_PROC_BIND_KIND
+#undef OMP_PROC_BIND_KIND
 
 ///}
