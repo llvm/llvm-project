@@ -194,7 +194,7 @@ class Configuration(object):
                 # ValgrindExecutor is supposed to go. It is likely
                 # that the user wants it at the end, but we have no
                 # way of getting at that easily.
-                selt.lit_config.fatal("Cannot infer how to create a Valgrind "
+                self.lit_config.fatal("Cannot infer how to create a Valgrind "
                                       " executor.")
         else:
             te = LocalExecutor()
