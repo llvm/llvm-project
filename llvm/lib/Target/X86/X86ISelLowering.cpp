@@ -18870,16 +18870,34 @@ static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, SelectionDAG &DAG,
   SDValue N0 = Op.getOperand(IsStrict ? 1 : 0);
   assert(N0.getSimpleValueType() == MVT::v2i32 && "Unexpected input type");
 
-  // Legalize to v4i32 type.
-  N0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i32, N0,
-                   DAG.getUNDEF(MVT::v2i32));
-
   if (Subtarget.hasAVX512()) {
+    if (!Subtarget.hasVLX()) {
+      // Let generic type legalization widen this.
+      if (!IsStrict)
+        return SDValue();
+      // Otherwise pad the integer input with 0s and widen the operation.
+      N0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i32, N0,
+                       DAG.getConstant(0, DL, MVT::v2i32));
+      SDValue Res = DAG.getNode(Op->getOpcode(), DL, {MVT::v4f64, MVT::Other},
+                                {Op.getOperand(0), N0});
+      SDValue Chain = Res.getValue(1);
+      Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2f64, Res,
+                        DAG.getIntPtrConstant(0, DL));
+      return DAG.getMergeValues({Res, Chain}, DL);
+    }
+
+    // Legalize to v4i32 type.
+    N0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i32, N0,
+                     DAG.getUNDEF(MVT::v2i32));
     if (IsStrict)
       return DAG.getNode(X86ISD::STRICT_CVTUI2P, DL, {MVT::v2f64, MVT::Other},
                          {Op.getOperand(0), N0});
     return DAG.getNode(X86ISD::CVTUI2P, DL, MVT::v2f64, N0);
   }
+
+  // Legalize to v4i32 type.
+  N0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i32, N0,
+                   DAG.getUNDEF(MVT::v2i32));
 
   // Same implementation as VectorLegalizer::ExpandUINT_TO_FLOAT,
   // but using v2i32 to v2f64 with X86ISD::CVTSI2P.
@@ -45303,7 +45321,7 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
         return DAG.getNode(X86ISD::CVTSI2P, SDLoc(N), VT, InVec.getOperand(0));
       }
       // v2f64 CVTUDQ2PD(v4i32).
-      if (InOpcode == ISD::UINT_TO_FP &&
+      if (InOpcode == ISD::UINT_TO_FP && Subtarget.hasVLX() &&
           InVec.getOperand(0).getValueType() == MVT::v4i32) {
         return DAG.getNode(X86ISD::CVTUI2P, SDLoc(N), VT, InVec.getOperand(0));
       }

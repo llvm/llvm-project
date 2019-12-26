@@ -3593,7 +3593,7 @@ define <2 x double> @uitofp_load_4i32_to_2f64_2(<4 x i32>* %x) {
 ;
 ; AVX512F-LABEL: uitofp_load_4i32_to_2f64_2:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -3606,7 +3606,7 @@ define <2 x double> @uitofp_load_4i32_to_2f64_2(<4 x i32>* %x) {
 ;
 ; AVX512DQ-LABEL: uitofp_load_4i32_to_2f64_2:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
