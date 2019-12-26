@@ -645,6 +645,15 @@ def X86any_cvttp2ui : PatFrags<(ops node:$src),
 
 def X86VSintToFP      : SDNode<"X86ISD::CVTSI2P",  SDTVintToFP>;
 def X86VUintToFP      : SDNode<"X86ISD::CVTUI2P",  SDTVintToFP>;
+def X86strict_VSintToFP : SDNode<"X86ISD::STRICT_CVTSI2P",  SDTVintToFP, [SDNPHasChain]>;
+def X86strict_VUintToFP : SDNode<"X86ISD::STRICT_CVTUI2P",  SDTVintToFP, [SDNPHasChain]>;
+def X86any_VSintToFP : PatFrags<(ops node:$src),
+                                [(X86strict_VSintToFP node:$src),
+                                 (X86VSintToFP node:$src)]>;
+def X86any_VUintToFP : PatFrags<(ops node:$src),
+                                [(X86strict_VUintToFP node:$src),
+                                 (X86VUintToFP node:$src)]>;
+
 
 // cvt int-to-fp staff
 def X86cvtp2Int      : SDNode<"X86ISD::CVTP2SI",  SDTFloatToInt>;

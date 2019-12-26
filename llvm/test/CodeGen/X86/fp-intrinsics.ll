@@ -2201,27 +2201,17 @@ entry:
 define double @sifdl(i64 %x) #0 {
 ; X87-LABEL: sifdl:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    subl $12, %esp
-; X87-NEXT:    .cfi_def_cfa_offset 16
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildll (%esp)
-; X87-NEXT:    addl $12, %esp
-; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: sifdl:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    subl $20, %esp
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fstpl (%esp)
 ; X86-SSE-NEXT:    fldl (%esp)
-; X86-SSE-NEXT:    addl $20, %esp
+; X86-SSE-NEXT:    addl $12, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE-NEXT:    retl
 ;
@@ -2244,27 +2234,17 @@ entry:
 define float @siffl(i64 %x) #0 {
 ; X87-LABEL: siffl:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    subl $12, %esp
-; X87-NEXT:    .cfi_def_cfa_offset 16
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildll (%esp)
-; X87-NEXT:    addl $12, %esp
-; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: siffl:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    subl $20, %esp
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    addl $20, %esp
+; X86-SSE-NEXT:    fstps (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    popl %eax
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE-NEXT:    retl
 ;

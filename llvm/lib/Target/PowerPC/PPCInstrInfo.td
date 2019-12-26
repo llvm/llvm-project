@@ -2698,6 +2698,7 @@ def MTCTRloop : XFXForm_7_ext<31, 467, 9, (outs), (ins gprc:$rS),
                 PPC970_DGroup_First, PPC970_Unit_FXU;
 }
 
+let hasSideEffects = 0 in {
 let Defs = [LR] in {
 def MTLR  : XFXForm_7_ext<31, 467, 8, (outs), (ins gprc:$rS),
                           "mtlr $rS", IIC_SprMTSPR>,
@@ -2707,6 +2708,7 @@ let Uses = [LR] in {
 def MFLR  : XFXForm_1_ext<31, 339, 8, (outs gprc:$rT), (ins),
                           "mflr $rT", IIC_SprMFSPR>,
             PPC970_DGroup_First, PPC970_Unit_FXU;
+}
 }
 
 let isCodeGenOnly = 1 in {

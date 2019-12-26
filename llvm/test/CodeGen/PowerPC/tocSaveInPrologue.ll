@@ -43,10 +43,10 @@ define dso_local void @test(void (i32)* nocapture %fp, i32 signext %Arg, i32 sig
 ; CHECK-NEXT:    ld 2, 24(r1)
 ; CHECK-NEXT:    addi r1, r1, 64
 ; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
   %cmp7 = icmp sgt i32 %Len, 0

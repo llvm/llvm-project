@@ -1375,12 +1375,12 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
 ; PC64LE-NEXT:    stfd 1, -16(30)
 ; PC64LE-NEXT:    addi 1, 1, 80
 ; PC64LE-NEXT:    ld 0, 16(1)
-; PC64LE-NEXT:    mtlr 0
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    lfd 30, -16(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    ld 30, -40(1) # 8-byte Folded Reload
-; PC64LE-NEXT:    ld 29, -48(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    lfd 29, -24(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    ld 29, -48(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    mtlr 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: test_constrained_libcall_multichain:
@@ -1426,12 +1426,12 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
 ; PC64LE9-NEXT:    stfd 1, -16(30)
 ; PC64LE9-NEXT:    addi 1, 1, 80
 ; PC64LE9-NEXT:    ld 0, 16(1)
-; PC64LE9-NEXT:    mtlr 0
 ; PC64LE9-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
 ; PC64LE9-NEXT:    lfd 30, -16(1) # 8-byte Folded Reload
-; PC64LE9-NEXT:    lfd 29, -24(1) # 8-byte Folded Reload
 ; PC64LE9-NEXT:    ld 30, -40(1) # 8-byte Folded Reload
 ; PC64LE9-NEXT:    ld 29, -48(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    lfd 29, -24(1) # 8-byte Folded Reload
 ; PC64LE9-NEXT:    blr
 ;
 ; PC64-LABEL: test_constrained_libcall_multichain:
