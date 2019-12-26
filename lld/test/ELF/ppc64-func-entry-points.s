@@ -3,13 +3,13 @@
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-func-global-entry.s -o %t2.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-func-local-entry.s -o %t3.o
-// RUN: ld.lld -dynamic-linker /lib64/ld64.so.2 %t.o %t2.o %t3.o -o %t
+// RUN: ld.lld %t.o %t2.o %t3.o -o %t
 // RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-func-global-entry.s -o %t2.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-func-local-entry.s -o %t3.o
-// RUN: ld.lld -dynamic-linker /lib64/ld64.so.2 %t.o %t2.o %t3.o -o %t
+// RUN: ld.lld %t.o %t2.o %t3.o -o %t
 // RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 	.text
