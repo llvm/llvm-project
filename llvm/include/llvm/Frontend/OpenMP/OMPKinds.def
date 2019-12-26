@@ -250,7 +250,7 @@ __OMP_IDENT_FLAG(BARRIER_IMPL_WORKSHARE, 0x01C0)
 #endif
 
 #define __OMP_PROC_BIND_KIND(Name, Value)                                      \
-  OMP_PROC_BIND_KIND(OMP_PB_##Name, #Name, Value)
+  OMP_PROC_BIND_KIND(OMP_PROC_BIND_##Name, #Name, Value)
 
 __OMP_PROC_BIND_KIND(master, 2)
 __OMP_PROC_BIND_KIND(close, 3)
