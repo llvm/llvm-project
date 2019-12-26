@@ -118,31 +118,24 @@ GetBuiltinTypeForPDBEncodingAndBitSize(ClangASTContext &clang_ast,
     return clang_ast.GetBasicType(eBasicTypeBool);
   case PDB_BuiltinType::Long:
     if (width == ast.getTypeSize(ast.LongTy))
-      return CompilerType(ClangASTContext::GetASTContext(&ast),
-                          ast.LongTy.getAsOpaquePtr());
+      return CompilerType(&clang_ast, ast.LongTy.getAsOpaquePtr());
     if (width == ast.getTypeSize(ast.LongLongTy))
-      return CompilerType(ClangASTContext::GetASTContext(&ast),
-                          ast.LongLongTy.getAsOpaquePtr());
+      return CompilerType(&clang_ast, ast.LongLongTy.getAsOpaquePtr());
     break;
   case PDB_BuiltinType::ULong:
     if (width == ast.getTypeSize(ast.UnsignedLongTy))
-      return CompilerType(ClangASTContext::GetASTContext(&ast),
-                          ast.UnsignedLongTy.getAsOpaquePtr());
+      return CompilerType(&clang_ast, ast.UnsignedLongTy.getAsOpaquePtr());
     if (width == ast.getTypeSize(ast.UnsignedLongLongTy))
-      return CompilerType(ClangASTContext::GetASTContext(&ast),
-                          ast.UnsignedLongLongTy.getAsOpaquePtr());
+      return CompilerType(&clang_ast, ast.UnsignedLongLongTy.getAsOpaquePtr());
     break;
   case PDB_BuiltinType::WCharT:
     if (width == ast.getTypeSize(ast.WCharTy))
-      return CompilerType(ClangASTContext::GetASTContext(&ast),
-                          ast.WCharTy.getAsOpaquePtr());
+      return CompilerType(&clang_ast, ast.WCharTy.getAsOpaquePtr());
     break;
   case PDB_BuiltinType::Char16:
-    return CompilerType(ClangASTContext::GetASTContext(&ast),
-                        ast.Char16Ty.getAsOpaquePtr());
+    return CompilerType(&clang_ast, ast.Char16Ty.getAsOpaquePtr());
   case PDB_BuiltinType::Char32:
-    return CompilerType(ClangASTContext::GetASTContext(&ast),
-                        ast.Char32Ty.getAsOpaquePtr());
+    return CompilerType(&clang_ast, ast.Char32Ty.getAsOpaquePtr());
   case PDB_BuiltinType::Float:
     // Note: types `long double` and `double` have same bit size in MSVC and
     // there is no information in the PDB to distinguish them. So when falling
