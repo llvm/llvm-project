@@ -34,8 +34,8 @@ define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-PWR9-NEXT:    extsw r3, r3
 ; CHECK-PWR9-NEXT:    addi r1, r1, 48
 ; CHECK-PWR9-NEXT:    ld r0, 16(r1)
-; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    blr
 ;
 ; CHECK-LABEL: test1:
@@ -116,8 +116,8 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-PWR9-NEXT:    extsw r3, r3
 ; CHECK-PWR9-NEXT:    addi r1, r1, 48
 ; CHECK-PWR9-NEXT:    ld r0, 16(r1)
-; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    blr
 ;
 ; CHECK-LABEL: test2:
@@ -199,9 +199,9 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-PWR9-NEXT:    mr r3, r30
 ; CHECK-PWR9-NEXT:    addi r1, r1, 64
 ; CHECK-PWR9-NEXT:    ld r0, 16(r1)
-; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-PWR9-NEXT:    mtlr r0
 ; CHECK-PWR9-NEXT:    blr
 ;
 ; CHECK-LABEL: test3:

@@ -54,9 +54,9 @@ define void @phi3(i32*) nounwind {
 ; CHECK-NEXT:    stdu 3, 8(4)
 ; CHECK-NEXT:    addi 1, 1, 64
 ; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %2 = tail call noalias i8* @malloc()
   %3 = bitcast i8* %2 to %0**
