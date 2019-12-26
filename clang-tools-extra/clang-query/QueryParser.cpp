@@ -26,7 +26,7 @@ namespace query {
 // is found before End, return StringRef().  Begin is adjusted to exclude the
 // lexed region.
 StringRef QueryParser::lexWord() {
-  Line = Line.drop_while([this](char c) {
+  Line = Line.drop_while([](char c) {
     // Don't trim newlines.
     return StringRef(" \t\v\f\r").contains(c);
   });

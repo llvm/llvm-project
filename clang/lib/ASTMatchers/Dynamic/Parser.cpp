@@ -297,7 +297,7 @@ private:
 
   /// Consume all leading whitespace from \c Code.
   void consumeWhitespace() {
-    Code = Code.drop_while([this](char c) {
+    Code = Code.drop_while([](char c) {
       // Don't trim newlines.
       return StringRef(" \t\v\f\r").contains(c);
     });
