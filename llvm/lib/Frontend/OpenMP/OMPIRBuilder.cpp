@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -501,9 +502,20 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
       dbgs() << " PBR: " << BB->getName() << "\n";
   });
 
+  // Add some known attributes to the outlined function.
   Function *OutlinedFn = Extractor.extractCodeRegion(CEAC);
+  OutlinedFn->addParamAttr(0, Attribute::NoAlias);
+  OutlinedFn->addParamAttr(1, Attribute::NoAlias);
+  OutlinedFn->addFnAttr(Attribute::NoUnwind);
+  OutlinedFn->addFnAttr(Attribute::NoRecurse);
+
   LLVM_DEBUG(dbgs() << "After      outlining: " << *UI->getFunction() << "\n");
   LLVM_DEBUG(dbgs() << "   Outlined function: " << *OutlinedFn << "\n");
+
+  // For compability with the clang CG we move the outlined function after the
+  // one with the parallel region.
+  OutlinedFn->removeFromParent();
+  M.getFunctionList().insertAfter(OuterFn->getIterator(), OutlinedFn);
 
   // Remove the artificial entry introduced by the extractor right away, we
   // made our own entry block after all.
@@ -535,6 +547,23 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
   RealArgs.append(CI->arg_begin() + /* tid & bound tid */ 2, CI->arg_end());
 
   FunctionCallee RTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_fork_call);
+  if (auto *F = dyn_cast<llvm::Function>(RTLFn.getCallee())) {
+    if (!F->hasMetadata(llvm::LLVMContext::MD_callback)) {
+      llvm::LLVMContext &Ctx = F->getContext();
+      MDBuilder MDB(Ctx);
+      // Annotate the callback behavior of the __kmpc_fork_call:
+      //  - The callback callee is argument number 2 (microtask).
+      //  - The first two arguments of the callback callee are unknown (-1).
+      //  - All variadic arguments to the __kmpc_fork_call are passed to the
+      //    callback callee.
+      F->addMetadata(
+          llvm::LLVMContext::MD_callback,
+          *llvm::MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                      2, {-1, -1},
+                                      /* VarArgsArePassed */ true)}));
+    }
+  }
+
   Builder.CreateCall(RTLFn, RealArgs);
 
   LLVM_DEBUG(dbgs() << "With fork_call placed: "

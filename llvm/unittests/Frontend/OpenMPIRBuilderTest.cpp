@@ -376,6 +376,10 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
   Function *OutlinedFn = PrivAI->getFunction();
   EXPECT_NE(F, OutlinedFn);
   EXPECT_FALSE(verifyModule(*M));
+  EXPECT_TRUE(OutlinedFn->hasFnAttribute(Attribute::NoUnwind));
+  EXPECT_TRUE(OutlinedFn->hasFnAttribute(Attribute::NoRecurse));
+  EXPECT_TRUE(OutlinedFn->hasParamAttribute(0, Attribute::NoAlias));
+  EXPECT_TRUE(OutlinedFn->hasParamAttribute(1, Attribute::NoAlias));
 
   EXPECT_TRUE(OutlinedFn->hasInternalLinkage());
   EXPECT_EQ(OutlinedFn->arg_size(), 3U);
