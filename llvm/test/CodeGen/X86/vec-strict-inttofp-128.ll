@@ -3,10 +3,14 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=SSE,SSE-64
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX1,AVX-32,AVX1-32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX1,AVX-64,AVX1-64
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512f,avx512vl -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512VL,AVX-32,AVX512VL-32
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,avx512vl -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512VL,AVX-64,AVX512VL-64
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512f -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512F,AVX-32,AVX512F-32
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512F,AVX-64,AVX512F-64
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=avx512vl -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512VL,AVX-32,AVX512VL-32
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512vl -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512VL,AVX-64,AVX512VL-64
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=avx512f,avx512dq -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512DQ,AVX512DQ-32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f,avx512dq -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512DQ,AVX512DQ-64
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=avx512dq,avx512vl -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512DQVL,AVX512DQVL-32
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512dq,avx512vl -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512DQVL,AVX512DQVL-64
 
 declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i1(<4 x i1>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i1(<4 x i1>, metadata, metadata)
@@ -72,6 +76,13 @@ define <4 x float> @uitofp_v4i1_v4f32(<4 x i1> %x) #0 {
 ; AVX1-64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX1-64-NEXT:    retq
 ;
+; AVX512F-LABEL: uitofp_v4i1_v4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX512F-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX512F-NEXT:    ret{{[l|q]}}
+;
 ; AVX512VL-32-LABEL: uitofp_v4i1_v4f32:
 ; AVX512VL-32:       # %bb.0:
 ; AVX512VL-32-NEXT:    vpandd {{\.LCPI.*}}{1to4}, %xmm0, %xmm0
@@ -90,6 +101,18 @@ define <4 x float> @uitofp_v4i1_v4f32(<4 x i1> %x) #0 {
 ; AVX512DQ-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
+;
+; AVX512DQVL-32-LABEL: uitofp_v4i1_v4f32:
+; AVX512DQVL-32:       # %bb.0:
+; AVX512DQVL-32-NEXT:    vandps {{\.LCPI.*}}{1to4}, %xmm0, %xmm0
+; AVX512DQVL-32-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX512DQVL-32-NEXT:    retl
+;
+; AVX512DQVL-64-LABEL: uitofp_v4i1_v4f32:
+; AVX512DQVL-64:       # %bb.0:
+; AVX512DQVL-64-NEXT:    vandps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512DQVL-64-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX512DQVL-64-NEXT:    retq
  %result = call <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i1(<4 x i1> %x,
                                                               metadata !"round.dynamic",
                                                               metadata !"fpexcept.strict") #0
@@ -231,11 +254,21 @@ define <4 x float> @uitofp_v4i32_v4f32(<4 x i32> %x) #0 {
 ; AVX1-64-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX1-64-NEXT:    retq
 ;
+; FIXME: This is an unsafe behavior for strict FP
+; AVX512F-LABEL: uitofp_v4i32_v4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    ret{{[l|q]}}
+;
 ; AVX512VL-LABEL: uitofp_v4i32_v4f32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvtudq2ps %xmm0, %xmm0
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
+; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: uitofp_v4i32_v4f32:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
@@ -243,6 +276,11 @@ define <4 x float> @uitofp_v4i32_v4f32(<4 x i32> %x) #0 {
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
+;
+; AVX512DQVL-LABEL: uitofp_v4i32_v4f32:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vcvtudq2ps %xmm0, %xmm0
+; AVX512DQVL-NEXT:    ret{{[l|q]}}
  %result = call <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32> %x,
                                                               metadata !"round.dynamic",
                                                               metadata !"fpexcept.strict") #0
@@ -300,6 +338,14 @@ define <2 x double> @uitofp_v2i1_v2f64(<2 x i1> %x) #0 {
 ; AVX1-64-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; AVX1-64-NEXT:    retq
 ;
+; AVX512F-LABEL: uitofp_v2i1_v2f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX512F-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX512F-NEXT:    ret{{[l|q]}}
+;
 ; AVX512VL-32-LABEL: uitofp_v2i1_v2f64:
 ; AVX512VL-32:       # %bb.0:
 ; AVX512VL-32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -321,6 +367,20 @@ define <2 x double> @uitofp_v2i1_v2f64(<2 x i1> %x) #0 {
 ; AVX512DQ-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
+;
+; AVX512DQVL-32-LABEL: uitofp_v2i1_v2f64:
+; AVX512DQVL-32:       # %bb.0:
+; AVX512DQVL-32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX512DQVL-32-NEXT:    vandps {{\.LCPI.*}}{1to4}, %xmm0, %xmm0
+; AVX512DQVL-32-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX512DQVL-32-NEXT:    retl
+;
+; AVX512DQVL-64-LABEL: uitofp_v2i1_v2f64:
+; AVX512DQVL-64:       # %bb.0:
+; AVX512DQVL-64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX512DQVL-64-NEXT:    vandps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512DQVL-64-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX512DQVL-64-NEXT:    retq
  %result = call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i1(<2 x i1> %x,
                                                               metadata !"round.dynamic",
                                                               metadata !"fpexcept.strict") #0
@@ -466,11 +526,21 @@ define <2 x double> @uitofp_v2i32_v2f64(<2 x i32> %x) #0 {
 ; AVX1-64-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX1-64-NEXT:    retq
 ;
+; FIXME: This is an unsafe behavior for strict FP
+; AVX512F-LABEL: uitofp_v2i32_v2f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    ret{{[l|q]}}
+;
 ; AVX512VL-LABEL: uitofp_v2i32_v2f64:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %xmm0
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
+; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: uitofp_v2i32_v2f64:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
@@ -478,6 +548,11 @@ define <2 x double> @uitofp_v2i32_v2f64(<2 x i32> %x) #0 {
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
+;
+; AVX512DQVL-LABEL: uitofp_v2i32_v2f64:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vcvtudq2pd %xmm0, %xmm0
+; AVX512DQVL-NEXT:    ret{{[l|q]}}
  %result = call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i32(<2 x i32> %x,
                                                               metadata !"round.dynamic",
                                                               metadata !"fpexcept.strict") #0
@@ -552,6 +627,7 @@ define <2 x double> @sitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; AVX-64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-64-NEXT:    retq
 ;
+; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: sitofp_v2i64_v2f64:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
@@ -559,6 +635,11 @@ define <2 x double> @sitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
+;
+; AVX512DQVL-LABEL: sitofp_v2i64_v2f64:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vcvtqq2pd %xmm0, %xmm0
+; AVX512DQVL-NEXT:    ret{{[l|q]}}
  %result = call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %x,
                                                               metadata !"round.dynamic",
                                                               metadata !"fpexcept.strict") #0
@@ -610,6 +691,28 @@ define <2 x double> @uitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; AVX1-64-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
 ; AVX1-64-NEXT:    retq
 ;
+; AVX512F-32-LABEL: uitofp_v2i64_v2f64:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-32-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX512F-32-NEXT:    vpor {{\.LCPI.*}}, %xmm1, %xmm1
+; AVX512F-32-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX512F-32-NEXT:    vpor {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX512F-32-NEXT:    vsubpd {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX512F-32-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: uitofp_v2i64_v2f64:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX512F-64-NEXT:    vpor {{.*}}(%rip), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX512F-64-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512F-64-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
+; AVX512F-64-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX512F-64-NEXT:    retq
+;
 ; AVX512VL-32-LABEL: uitofp_v2i64_v2f64:
 ; AVX512VL-32:       # %bb.0:
 ; AVX512VL-32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm1
@@ -630,6 +733,7 @@ define <2 x double> @uitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; AVX512VL-64-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
 ; AVX512VL-64-NEXT:    retq
 ;
+; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: uitofp_v2i64_v2f64:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
@@ -637,6 +741,11 @@ define <2 x double> @uitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
+;
+; AVX512DQVL-LABEL: uitofp_v2i64_v2f64:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vcvtuqq2pd %xmm0, %xmm0
+; AVX512DQVL-NEXT:    ret{{[l|q]}}
  %result = call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %x,
                                                               metadata !"round.dynamic",
                                                               metadata !"fpexcept.strict") #0
