@@ -2900,11 +2900,15 @@ void AssemblyWriter::printAliasSummary(const AliasSummary *AS) {
 }
 
 void AssemblyWriter::printGlobalVarSummary(const GlobalVarSummary *GS) {
+  auto VTableFuncs = GS->vTableFuncs();
   Out << ", varFlags: (readonly: " << GS->VarFlags.MaybeReadOnly << ", "
       << "writeonly: " << GS->VarFlags.MaybeWriteOnly << ", "
-      << "constant: " << GS->VarFlags.Constant << ")";
+      << "constant: " << GS->VarFlags.Constant;
+  if (!VTableFuncs.empty())
+    Out << ", "
+        << "vcall_visibility: " << GS->VarFlags.VCallVisibility;
+  Out << ")";
 
-  auto VTableFuncs = GS->vTableFuncs();
   if (!VTableFuncs.empty()) {
     Out << ", vTableFuncs: (";
     FieldSeparator FS;

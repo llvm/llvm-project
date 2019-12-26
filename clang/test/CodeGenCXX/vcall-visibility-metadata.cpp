@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -emit-llvm -fvirtual-function-elimination -fwhole-program-vtables -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-VFE
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -emit-llvm -fwhole-program-vtables -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOVFE
 
+// Check that in ThinLTO we also get vcall_visibility summary entries in the bitcode
+// RUN: %clang_cc1 -flto=thin -flto-unit -triple x86_64-unknown-linux -emit-llvm-bc -fwhole-program-vtables -o - %s | llvm-dis -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOVFE --check-prefix=CHECK-SUMMARY
+
 
 // Anonymous namespace.
 namespace {
@@ -88,3 +91,11 @@ void *construct_G() {
 // CHECK-DAG: [[VIS_TU]] = !{i64 2}
 // CHECK-VFE-DAG: !{i32 1, !"Virtual Function Elim", i32 1}
 // CHECK-NOVFE-DAG: !{i32 1, !"Virtual Function Elim", i32 0}
+
+// CHECK-SUMMARY-DAG: gv: (name: "_ZTV1B", {{.*}} vcall_visibility: 1
+// CHECK-SUMMARY-DAG: gv: (name: "_ZTVN12_GLOBAL__N_11FE", {{.*}} vcall_visibility: 0
+// CHECK-SUMMARY-DAG: gv: (name: "_ZTV1D", {{.*}} vcall_visibility: 0
+// CHECK-SUMMARY-DAG: gv: (name: "_ZTV1C", {{.*}} vcall_visibility: 0
+// CHECK-SUMMARY-DAG: gv: (name: "_ZTV1E", {{.*}} vcall_visibility: 0
+// CHECK-SUMMARY-DAG: gv: (name: "_ZTVN12_GLOBAL__N_11AE", {{.*}} vcall_visibility: 2
+// CHECK-SUMMARY-DAG: gv: (name: "_ZTVN12_GLOBAL__N_11GE", {{.*}} vcall_visibility: 1
