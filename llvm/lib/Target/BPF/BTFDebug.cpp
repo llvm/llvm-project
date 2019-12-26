@@ -937,9 +937,8 @@ unsigned BTFDebug::populateStructType(const DIType *Ty) {
 }
 
 /// Generate a struct member field relocation.
-void BTFDebug::generateFieldReloc(const MachineInstr *MI,
-                                   const MCSymbol *ORSym, DIType *RootTy,
-                                   StringRef AccessPattern) {
+void BTFDebug::generateFieldReloc(const MCSymbol *ORSym, DIType *RootTy,
+                                  StringRef AccessPattern) {
   unsigned RootId = populateStructType(RootTy);
   size_t FirstDollar = AccessPattern.find_first_of('$');
   size_t FirstColon = AccessPattern.find_first_of(':');
@@ -959,33 +958,8 @@ void BTFDebug::generateFieldReloc(const MachineInstr *MI,
   FieldRelocTable[SecNameOff].push_back(FieldReloc);
 }
 
-void BTFDebug::processLDimm64(const MachineInstr *MI) {
-  // If the insn is an LD_imm64, the following two cases
-  // will generate an .BTF.ext record.
-  //
-  // If the insn is "r2 = LD_imm64 @__BTF_...",
-  // add this insn into the .BTF.ext FieldReloc subsection.
-  // Relocation looks like:
-  //  . SecName:
-  //    . InstOffset
-  //    . TypeID
-  //    . OffSetNameOff
-  // Later, the insn is replaced with "r2 = <offset>"
-  // where "<offset>" equals to the offset based on current
-  // type definitions.
-  //
-  // If the insn is "r2 = LD_imm64 @VAR" and VAR is
-  // a patchable external global, add this insn into the .BTF.ext
-  // ExternReloc subsection.
-  // Relocation looks like:
-  //  . SecName:
-  //    . InstOffset
-  //    . ExternNameOff
-  // Later, the insn is replaced with "r2 = <value>" or
-  // "LD_imm64 r2, <value>" where "<value>" = 0.
-
+void BTFDebug::processReloc(const MachineOperand &MO) {
   // check whether this is a candidate or not
-  const MachineOperand &MO = MI->getOperand(1);
   if (MO.isGlobal()) {
     const GlobalValue *GVal = MO.getGlobal();
     auto *GVar = dyn_cast<GlobalVariable>(GVal);
@@ -995,7 +969,7 @@ void BTFDebug::processLDimm64(const MachineInstr *MI) {
 
       MDNode *MDN = GVar->getMetadata(LLVMContext::MD_preserve_access_index);
       DIType *Ty = dyn_cast<DIType>(MDN);
-      generateFieldReloc(MI, ORSym, Ty, GVar->getName());
+      generateFieldReloc(ORSym, Ty, GVar->getName());
     }
   }
 }
@@ -1020,8 +994,25 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
       return;
   }
 
-  if (MI->getOpcode() == BPF::LD_imm64)
-    processLDimm64(MI);
+  if (MI->getOpcode() == BPF::LD_imm64) {
+    // If the insn is "r2 = LD_imm64 @<an AmaAttr global>",
+    // add this insn into the .BTF.ext FieldReloc subsection.
+    // Relocation looks like:
+    //  . SecName:
+    //    . InstOffset
+    //    . TypeID
+    //    . OffSetNameOff
+    //    . RelocType
+    // Later, the insn is replaced with "r2 = <offset>"
+    // where "<offset>" equals to the offset based on current
+    // type definitions.
+    processReloc(MI->getOperand(1));
+  } else if (MI->getOpcode() == BPF::CORE_MEM ||
+             MI->getOpcode() == BPF::CORE_ALU32_MEM ||
+             MI->getOpcode() == BPF::CORE_SHIFT) {
+    // relocation insn is a load, store or shift insn.
+    processReloc(MI->getOperand(3));
+  }
 
   // Skip this instruction if no DebugLoc or the DebugLoc
   // is the same as the previous instruction.
@@ -1144,6 +1135,25 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
         uint32_t Imm = PatchImms[GVar->getName().str()];
         OutMI.setOpcode(BPF::MOV_ri);
         OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+        OutMI.addOperand(MCOperand::createImm(Imm));
+        return true;
+      }
+    }
+  } else if (MI->getOpcode() == BPF::CORE_MEM ||
+             MI->getOpcode() == BPF::CORE_ALU32_MEM ||
+             MI->getOpcode() == BPF::CORE_SHIFT) {
+    const MachineOperand &MO = MI->getOperand(3);
+    if (MO.isGlobal()) {
+      const GlobalValue *GVal = MO.getGlobal();
+      auto *GVar = dyn_cast<GlobalVariable>(GVal);
+      if (GVar && GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr)) {
+        uint32_t Imm = PatchImms[GVar->getName().str()];
+        OutMI.setOpcode(MI->getOperand(1).getImm());
+        if (MI->getOperand(0).isImm())
+          OutMI.addOperand(MCOperand::createImm(MI->getOperand(0).getImm()));
+        else
+          OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+        OutMI.addOperand(MCOperand::createReg(MI->getOperand(2).getReg()));
         OutMI.addOperand(MCOperand::createImm(Imm));
         return true;
       }
