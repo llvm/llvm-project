@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
 
@@ -1161,7 +1162,7 @@ public:
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
   virtual void emitProcBindClause(CodeGenFunction &CGF,
-                                  OpenMPProcBindClauseKind ProcBind,
+                                  llvm::omp::ProcBindKind ProcBind,
                                   SourceLocation Loc);
 
   /// Returns address of the threadprivate variable for the current
@@ -1910,7 +1911,7 @@ public:
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
   void emitProcBindClause(CodeGenFunction &CGF,
-                          OpenMPProcBindClauseKind ProcBind,
+                          llvm::omp::ProcBindKind ProcBind,
                           SourceLocation Loc) override;
 
   /// Returns address of the threadprivate variable for the current

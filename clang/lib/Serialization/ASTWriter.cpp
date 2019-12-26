@@ -6090,7 +6090,7 @@ void OMPClauseWriter::VisitOMPDefaultClause(OMPDefaultClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
-  Record.push_back(C->getProcBindKind());
+  Record.push_back(unsigned(C->getProcBindKind()));
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getProcBindKindKwLoc());
 }

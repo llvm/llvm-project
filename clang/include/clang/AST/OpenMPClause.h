@@ -30,6 +30,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -945,7 +946,7 @@ class OMPProcBindClause : public OMPClause {
   SourceLocation LParenLoc;
 
   /// A kind of the 'proc_bind' clause.
-  OpenMPProcBindClauseKind Kind = OMPC_PROC_BIND_unknown;
+  llvm::omp::ProcBindKind Kind = llvm::omp::OMP_PROC_BIND_unknown;
 
   /// Start location of the kind in source code.
   SourceLocation KindKwLoc;
@@ -953,7 +954,7 @@ class OMPProcBindClause : public OMPClause {
   /// Set kind of the clause.
   ///
   /// \param K Kind of clause.
-  void setProcBindKind(OpenMPProcBindClauseKind K) { Kind = K; }
+  void setProcBindKind(llvm::omp::ProcBindKind K) { Kind = K; }
 
   /// Set clause kind location.
   ///
@@ -969,7 +970,7 @@ public:
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPProcBindClause(OpenMPProcBindClauseKind A, SourceLocation ALoc,
+  OMPProcBindClause(llvm::omp::ProcBindKind A, SourceLocation ALoc,
                     SourceLocation StartLoc, SourceLocation LParenLoc,
                     SourceLocation EndLoc)
       : OMPClause(OMPC_proc_bind, StartLoc, EndLoc), LParenLoc(LParenLoc),
@@ -986,7 +987,7 @@ public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Returns kind of the clause.
-  OpenMPProcBindClauseKind getProcBindKind() const { return Kind; }
+  llvm::omp::ProcBindKind getProcBindKind() const { return Kind; }
 
   /// Returns location of clause kind.
   SourceLocation getProcBindKindKwLoc() const { return KindKwLoc; }

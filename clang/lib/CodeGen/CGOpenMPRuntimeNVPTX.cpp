@@ -1935,7 +1935,7 @@ CGOpenMPRuntimeNVPTX::CGOpenMPRuntimeNVPTX(CodeGenModule &CGM)
 }
 
 void CGOpenMPRuntimeNVPTX::emitProcBindClause(CodeGenFunction &CGF,
-                                              OpenMPProcBindClauseKind ProcBind,
+                                              ProcBindKind ProcBind,
                                               SourceLocation Loc) {
   // Do nothing in case of SPMD mode and L0 parallel.
   if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_SPMD)
