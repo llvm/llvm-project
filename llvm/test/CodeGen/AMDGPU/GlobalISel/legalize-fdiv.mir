@@ -374,8 +374,8 @@ body: |
     ; SI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV7]](s32), [[UV9]]
     ; SI: [[XOR:%[0-9]+]]:_(s1) = G_XOR [[ICMP]], [[ICMP1]]
     ; SI: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[XOR]](s1)
-    ; SI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY1]](s64), [[COPY]](s64)
-    ; SI: $vgpr0_vgpr1 = COPY %2(s64)
+    ; SI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY1]](s64), [[COPY]](s64)
+    ; SI: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; VI-LABEL: name: test_fdiv_s64
     ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; VI: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
@@ -399,8 +399,8 @@ body: |
     ; VI: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; VI: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; VI: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; VI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY1]](s64), [[COPY]](s64)
-    ; VI: $vgpr0_vgpr1 = COPY %2(s64)
+    ; VI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY1]](s64), [[COPY]](s64)
+    ; VI: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; GFX9-LABEL: name: test_fdiv_s64
     ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
@@ -424,8 +424,8 @@ body: |
     ; GFX9: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; GFX9: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; GFX9: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY1]](s64), [[COPY]](s64)
-    ; GFX9: $vgpr0_vgpr1 = COPY %2(s64)
+    ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY1]](s64), [[COPY]](s64)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_s64
     ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX9-UNSAFE: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
@@ -455,8 +455,8 @@ body: |
     ; GFX10: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; GFX10: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; GFX10: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; GFX10: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY1]](s64), [[COPY]](s64)
-    ; GFX10: $vgpr0_vgpr1 = COPY %2(s64)
+    ; GFX10: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY1]](s64), [[COPY]](s64)
+    ; GFX10: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = G_FDIV %0, %1
@@ -1025,7 +1025,7 @@ body: |
     ; SI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV11]](s32), [[UV13]]
     ; SI: [[XOR:%[0-9]+]]:_(s1) = G_XOR [[ICMP]], [[ICMP1]]
     ; SI: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[XOR]](s1)
-    ; SI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %7(s64), [[INT5]](s64), [[UV2]](s64), [[UV]](s64)
+    ; SI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[UV2]](s64), [[UV]](s64)
     ; SI: [[INT7:%[0-9]+]]:_(s64), [[INT8:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s64), [[UV3]](s64), 1
     ; SI: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[INT7]]
     ; SI: [[INT9:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT7]](s64)
@@ -1052,8 +1052,8 @@ body: |
     ; SI: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV23]](s32), [[UV25]]
     ; SI: [[XOR1:%[0-9]+]]:_(s1) = G_XOR [[ICMP2]], [[ICMP3]]
     ; SI: [[INT12:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA9]](s64), [[FMA8]](s64), [[MV1]](s64), [[XOR1]](s1)
-    ; SI: [[INT13:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %8(s64), [[INT12]](s64), [[UV3]](s64), [[UV1]](s64)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR %7(s64), %8(s64)
+    ; SI: [[INT13:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT12]](s64), [[UV3]](s64), [[UV1]](s64)
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[INT6]](s64), [[INT13]](s64)
     ; SI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; VI-LABEL: name: test_fdiv_v2s64
     ; VI: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
@@ -1080,7 +1080,7 @@ body: |
     ; VI: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; VI: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; VI: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; VI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %7(s64), [[INT5]](s64), [[UV2]](s64), [[UV]](s64)
+    ; VI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[UV2]](s64), [[UV]](s64)
     ; VI: [[INT7:%[0-9]+]]:_(s64), [[INT8:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s64), [[UV3]](s64), 1
     ; VI: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[INT7]]
     ; VI: [[INT9:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT7]](s64)
@@ -1100,8 +1100,8 @@ body: |
     ; VI: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL3]](s32), [[ADD3]](s32)
     ; VI: [[FMA9:%[0-9]+]]:_(s64) = G_FMA [[FNEG1]], [[MV1]], [[INT10]]
     ; VI: [[INT12:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA9]](s64), [[FMA8]](s64), [[MV1]](s64), [[INT11]](s1)
-    ; VI: [[INT13:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %8(s64), [[INT12]](s64), [[UV3]](s64), [[UV1]](s64)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR %7(s64), %8(s64)
+    ; VI: [[INT13:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT12]](s64), [[UV3]](s64), [[UV1]](s64)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[INT6]](s64), [[INT13]](s64)
     ; VI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; GFX9-LABEL: name: test_fdiv_v2s64
     ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
@@ -1128,7 +1128,7 @@ body: |
     ; GFX9: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; GFX9: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; GFX9: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %7(s64), [[INT5]](s64), [[UV2]](s64), [[UV]](s64)
+    ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[UV2]](s64), [[UV]](s64)
     ; GFX9: [[INT7:%[0-9]+]]:_(s64), [[INT8:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s64), [[UV3]](s64), 1
     ; GFX9: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[INT7]]
     ; GFX9: [[INT9:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT7]](s64)
@@ -1148,8 +1148,8 @@ body: |
     ; GFX9: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL3]](s32), [[ADD3]](s32)
     ; GFX9: [[FMA9:%[0-9]+]]:_(s64) = G_FMA [[FNEG1]], [[MV1]], [[INT10]]
     ; GFX9: [[INT12:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA9]](s64), [[FMA8]](s64), [[MV1]](s64), [[INT11]](s1)
-    ; GFX9: [[INT13:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %8(s64), [[INT12]](s64), [[UV3]](s64), [[UV1]](s64)
-    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR %7(s64), %8(s64)
+    ; GFX9: [[INT13:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT12]](s64), [[UV3]](s64), [[UV1]](s64)
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[INT6]](s64), [[INT13]](s64)
     ; GFX9: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_v2s64
     ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
@@ -1187,7 +1187,7 @@ body: |
     ; GFX10: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; GFX10: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; GFX10: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; GFX10: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %7(s64), [[INT5]](s64), [[UV2]](s64), [[UV]](s64)
+    ; GFX10: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[UV2]](s64), [[UV]](s64)
     ; GFX10: [[INT7:%[0-9]+]]:_(s64), [[INT8:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s64), [[UV3]](s64), 1
     ; GFX10: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[INT7]]
     ; GFX10: [[INT9:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT7]](s64)
@@ -1207,8 +1207,8 @@ body: |
     ; GFX10: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL3]](s32), [[ADD3]](s32)
     ; GFX10: [[FMA9:%[0-9]+]]:_(s64) = G_FMA [[FNEG1]], [[MV1]], [[INT10]]
     ; GFX10: [[INT12:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA9]](s64), [[FMA8]](s64), [[MV1]](s64), [[INT11]](s1)
-    ; GFX10: [[INT13:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %8(s64), [[INT12]](s64), [[UV3]](s64), [[UV1]](s64)
-    ; GFX10: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR %7(s64), %8(s64)
+    ; GFX10: [[INT13:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT12]](s64), [[UV3]](s64), [[UV1]](s64)
+    ; GFX10: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[INT6]](s64), [[INT13]](s64)
     ; GFX10: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
@@ -2259,8 +2259,8 @@ body: |
     ; SI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV7]](s32), [[UV9]]
     ; SI: [[XOR:%[0-9]+]]:_(s1) = G_XOR [[ICMP]], [[ICMP1]]
     ; SI: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[XOR]](s1)
-    ; SI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
-    ; SI: $vgpr0_vgpr1 = COPY %2(s64)
+    ; SI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
+    ; SI: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; VI-LABEL: name: test_fdiv_s64_constant_one_rcp
     ; VI: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
     ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
@@ -2283,8 +2283,8 @@ body: |
     ; VI: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; VI: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; VI: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; VI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
-    ; VI: $vgpr0_vgpr1 = COPY %2(s64)
+    ; VI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
+    ; VI: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; GFX9-LABEL: name: test_fdiv_s64_constant_one_rcp
     ; GFX9: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
     ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
@@ -2307,8 +2307,8 @@ body: |
     ; GFX9: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; GFX9: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; GFX9: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
-    ; GFX9: $vgpr0_vgpr1 = COPY %2(s64)
+    ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_s64_constant_one_rcp
     ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX9-UNSAFE: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[COPY]](s64)
@@ -2335,8 +2335,8 @@ body: |
     ; GFX10: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; GFX10: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; GFX10: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; GFX10: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
-    ; GFX10: $vgpr0_vgpr1 = COPY %2(s64)
+    ; GFX10: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
+    ; GFX10: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     %0:_(s64) = G_FCONSTANT double 1.0
     %1:_(s64) = COPY $vgpr0_vgpr1
     %2:_(s64) = G_FDIV %0, %1
@@ -2384,8 +2384,8 @@ body: |
     ; SI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV7]](s32), [[UV9]]
     ; SI: [[XOR:%[0-9]+]]:_(s1) = G_XOR [[ICMP]], [[ICMP1]]
     ; SI: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[XOR]](s1)
-    ; SI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
-    ; SI: $vgpr0_vgpr1 = COPY %2(s64)
+    ; SI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
+    ; SI: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; VI-LABEL: name: test_fdiv_s64_constant_negative_one_rcp
     ; VI: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double -1.000000e+00
     ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
@@ -2409,8 +2409,8 @@ body: |
     ; VI: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; VI: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; VI: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; VI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
-    ; VI: $vgpr0_vgpr1 = COPY %2(s64)
+    ; VI: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
+    ; VI: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; GFX9-LABEL: name: test_fdiv_s64_constant_negative_one_rcp
     ; GFX9: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double -1.000000e+00
     ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
@@ -2434,8 +2434,8 @@ body: |
     ; GFX9: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; GFX9: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; GFX9: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
-    ; GFX9: $vgpr0_vgpr1 = COPY %2(s64)
+    ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_s64_constant_negative_one_rcp
     ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX9-UNSAFE: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY]]
@@ -2464,8 +2464,8 @@ body: |
     ; GFX10: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; GFX10: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[MV]], [[INT3]]
     ; GFX10: [[INT5:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s64), [[FMA3]](s64), [[MV]](s64), [[INT4]](s1)
-    ; GFX10: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), def %2(s64), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
-    ; GFX10: $vgpr0_vgpr1 = COPY %2(s64)
+    ; GFX10: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
+    ; GFX10: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     %0:_(s64) = G_FCONSTANT double -1.0
     %1:_(s64) = COPY $vgpr0_vgpr1
     %2:_(s64) = G_FDIV %0, %1
