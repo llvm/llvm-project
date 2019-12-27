@@ -696,9 +696,8 @@ static bool applyCmpPredicate(CmpIPredicate predicate, const APInt &lhs,
     return lhs.ugt(rhs);
   case CmpIPredicate::uge:
     return lhs.uge(rhs);
-  default:
-    llvm_unreachable("unknown comparison predicate");
   }
+  llvm_unreachable("unknown comparison predicate");
 }
 
 // Constant folding hook for comparisons.
