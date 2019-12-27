@@ -342,15 +342,32 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
   }
 }
 
+static bool memOpHasNoClobbered(const MachineMemOperand *MMO) {
+  const Instruction *I = dyn_cast_or_null<Instruction>(MMO->getValue());
+  return I && I->getMetadata("amdgpu.noclobber");
+}
+
 // FIXME: Returns uniform if there's no source value information. This is
 // probably wrong.
-static bool isInstrUniformNonExtLoadAlign4(const MachineInstr &MI) {
+static bool isScalarLoadLegal(const MachineInstr &MI) {
   if (!MI.hasOneMemOperand())
     return false;
 
   const MachineMemOperand *MMO = *MI.memoperands_begin();
+  const unsigned AS = MMO->getAddrSpace();
+  const bool IsConst = AS == AMDGPUAS::CONSTANT_ADDRESS ||
+                       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
+
+  // There are no extending SMRD/SMEM loads, and they require 4-byte alignment.
   return MMO->getSize() >= 4 && MMO->getAlignment() >= 4 &&
-         AMDGPUInstrInfo::isUniformMMO(MMO);
+    // Can't do a scalar atomic load.
+    !MMO->isAtomic() &&
+    // Don't use scalar loads for volatile accesses to non-constant address
+    // spaces.
+    (IsConst || !MMO->isVolatile()) &&
+    // Memory must be known constant, or not written before this load.
+    (IsConst || MMO->isInvariant() || memOpHasNoClobbered(MMO)) &&
+    AMDGPUInstrInfo::isUniformMMO(MMO);
 }
 
 RegisterBankInfo::InstructionMappings
@@ -467,9 +484,10 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
     unsigned PtrSize = PtrTy.getSizeInBits();
     unsigned AS = PtrTy.getAddressSpace();
     LLT LoadTy = MRI.getType(MI.getOperand(0).getReg());
+
     if ((AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
          AS != AMDGPUAS::PRIVATE_ADDRESS) &&
-        isInstrUniformNonExtLoadAlign4(MI)) {
+        isScalarLoadLegal(MI)) {
       const InstructionMapping &SSMapping = getInstructionMapping(
           1, 1, getOperandsMapping(
                     {AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size),
@@ -2077,7 +2095,7 @@ AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
   if (PtrBank == &AMDGPU::SGPRRegBank &&
       (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
        AS != AMDGPUAS::PRIVATE_ADDRESS) &&
-      isInstrUniformNonExtLoadAlign4(MI)) {
+      isScalarLoadLegal(MI)) {
     // We have a uniform instruction so we want to use an SMRD load
     ValMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
     PtrMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, PtrSize);
