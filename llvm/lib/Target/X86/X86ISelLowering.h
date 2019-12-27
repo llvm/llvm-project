@@ -296,10 +296,10 @@ namespace llvm {
       VMTRUNC, VMTRUNCUS, VMTRUNCS,
 
       // Vector FP extend.
-      VFPEXT, VFPEXT_SAE, VFPEXTS, VFPEXTS_SAE,
+      VFPEXT, VFPEXT_SAE, VFPEXTS, VFPEXTS_SAE, STRICT_VFPEXT,
 
       // Vector FP round.
-      VFPROUND, VFPROUND_RND, VFPROUNDS, VFPROUNDS_RND,
+      VFPROUND, VFPROUND_RND, VFPROUNDS, VFPROUNDS_RND, STRICT_VFPROUND,
 
       // Masked version of above. Used for v2f64->v4f32.
       // SRC, PASSTHRU, MASK

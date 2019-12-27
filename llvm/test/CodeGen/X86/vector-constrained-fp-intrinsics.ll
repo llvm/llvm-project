@@ -5433,20 +5433,12 @@ entry:
 define <2 x float> @constrained_vector_fptrunc_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptrunc_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm0
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    cvtpd2ps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_fptrunc_v2f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vcvtpd2psx {{.*}}(%rip), %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(
@@ -5492,17 +5484,9 @@ entry:
 define <4 x float> @constrained_vector_fptrunc_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptrunc_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    cvtsd2ss %xmm1, %xmm1
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm2
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm0
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; CHECK-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    cvtpd2ps {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    cvtpd2ps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_fptrunc_v4f64:
@@ -5540,20 +5524,12 @@ entry:
 define <2 x double> @constrained_vector_fpext_v2f32() #0 {
 ; CHECK-LABEL: constrained_vector_fpext_v2f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    cvtss2sd %xmm0, %xmm1
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
-; CHECK-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    cvtps2pd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_fpext_v2f32:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vcvtps2pd {{.*}}(%rip), %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(
@@ -5597,16 +5573,8 @@ entry:
 define <4 x double> @constrained_vector_fpext_v4f32() #0 {
 ; CHECK-LABEL: constrained_vector_fpext_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    cvtss2sd %xmm0, %xmm1
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
-; CHECK-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    cvtss2sd %xmm1, %xmm2
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    cvtss2sd %xmm1, %xmm1
-; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; CHECK-NEXT:    cvtps2pd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    cvtps2pd {{.*}}(%rip), %xmm1
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_fpext_v4f32:

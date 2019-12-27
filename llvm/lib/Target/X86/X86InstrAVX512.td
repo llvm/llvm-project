@@ -7589,7 +7589,7 @@ multiclass avx512_cvtps2pd<bits<8> opc, string OpcodeStr,
   }
   let Predicates = [HasVLX] in {
     defm Z128 : avx512_vcvt_fpextend<opc, OpcodeStr, v2f64x_info, v4f32x_info,
-                               X86vfpext, sched.XMM, "{1to2}", "", f64mem>, EVEX_V128;
+                               X86any_vfpext, sched.XMM, "{1to2}", "", f64mem>, EVEX_V128;
     defm Z256 : avx512_vcvt_fpextend<opc, OpcodeStr, v4f64x_info, v4f32x_info, any_fpextend,
                                sched.YMM>, EVEX_V256;
   }
@@ -7719,7 +7719,7 @@ let Predicates = [HasVLX] in {
 
   // Special patterns to allow use of X86vmfpround for masking. Instruction
   // patterns have been disabled with null_frag.
-  def : Pat<(X86vfpround (v2f64 VR128X:$src)),
+  def : Pat<(X86any_vfpround (v2f64 VR128X:$src)),
             (VCVTPD2PSZ128rr VR128X:$src)>;
   def : Pat<(X86vmfpround (v2f64 VR128X:$src), (v4f32 VR128X:$src0),
                           VK2WM:$mask),
@@ -7728,7 +7728,7 @@ let Predicates = [HasVLX] in {
                           VK2WM:$mask),
             (VCVTPD2PSZ128rrkz VK2WM:$mask, VR128X:$src)>;
 
-  def : Pat<(X86vfpround (loadv2f64 addr:$src)),
+  def : Pat<(X86any_vfpround (loadv2f64 addr:$src)),
             (VCVTPD2PSZ128rm addr:$src)>;
   def : Pat<(X86vmfpround (loadv2f64 addr:$src), (v4f32 VR128X:$src0),
                           VK2WM:$mask),
@@ -7737,7 +7737,7 @@ let Predicates = [HasVLX] in {
                           VK2WM:$mask),
             (VCVTPD2PSZ128rmkz VK2WM:$mask, addr:$src)>;
 
-  def : Pat<(X86vfpround (v2f64 (X86VBroadcastld64 addr:$src))),
+  def : Pat<(X86any_vfpround (v2f64 (X86VBroadcastld64 addr:$src))),
             (VCVTPD2PSZ128rmb addr:$src)>;
   def : Pat<(X86vmfpround (v2f64 (X86VBroadcastld64 addr:$src)),
                           (v4f32 VR128X:$src0), VK2WM:$mask),
