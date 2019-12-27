@@ -882,53 +882,44 @@ void DependenceInfo::removeMatchingExtensions(Subscript *Pair) {
   }
 }
 
+// Examine the scev and return true iff it's linear.
+// Collect any loops mentioned in the set of "Loops".
+bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
+                                    SmallBitVector &Loops, bool IsSrc) {
+  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
+  if (!AddRec)
+    return isLoopInvariant(Expr, LoopNest);
+  const SCEV *Start = AddRec->getStart();
+  const SCEV *Step = AddRec->getStepRecurrence(*SE);
+  const SCEV *UB = SE->getBackedgeTakenCount(AddRec->getLoop());
+  if (!isa<SCEVCouldNotCompute>(UB)) {
+    if (SE->getTypeSizeInBits(Start->getType()) <
+        SE->getTypeSizeInBits(UB->getType())) {
+      if (!AddRec->getNoWrapFlags())
+        return false;
+    }
+  }
+  if (!isLoopInvariant(Step, LoopNest))
+    return false;
+  if (IsSrc)
+    Loops.set(mapSrcLoop(AddRec->getLoop()));
+  else
+    Loops.set(mapDstLoop(AddRec->getLoop()));
+  return checkSubscript(Start, LoopNest, Loops, IsSrc);
+}
 
 // Examine the scev and return true iff it's linear.
 // Collect any loops mentioned in the set of "Loops".
 bool DependenceInfo::checkSrcSubscript(const SCEV *Src, const Loop *LoopNest,
                                        SmallBitVector &Loops) {
-  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Src);
-  if (!AddRec)
-    return isLoopInvariant(Src, LoopNest);
-  const SCEV *Start = AddRec->getStart();
-  const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  const SCEV *UB = SE->getBackedgeTakenCount(AddRec->getLoop());
-  if (!isa<SCEVCouldNotCompute>(UB)) {
-    if (SE->getTypeSizeInBits(Start->getType()) <
-        SE->getTypeSizeInBits(UB->getType())) {
-      if (!AddRec->getNoWrapFlags())
-        return false;
-    }
-  }
-  if (!isLoopInvariant(Step, LoopNest))
-    return false;
-  Loops.set(mapSrcLoop(AddRec->getLoop()));
-  return checkSrcSubscript(Start, LoopNest, Loops);
+  return checkSubscript(Src, LoopNest, Loops, true);
 }
-
-
 
 // Examine the scev and return true iff it's linear.
 // Collect any loops mentioned in the set of "Loops".
 bool DependenceInfo::checkDstSubscript(const SCEV *Dst, const Loop *LoopNest,
                                        SmallBitVector &Loops) {
-  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  if (!AddRec)
-    return isLoopInvariant(Dst, LoopNest);
-  const SCEV *Start = AddRec->getStart();
-  const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  const SCEV *UB = SE->getBackedgeTakenCount(AddRec->getLoop());
-  if (!isa<SCEVCouldNotCompute>(UB)) {
-    if (SE->getTypeSizeInBits(Start->getType()) <
-        SE->getTypeSizeInBits(UB->getType())) {
-      if (!AddRec->getNoWrapFlags())
-        return false;
-    }
-  }
-  if (!isLoopInvariant(Step, LoopNest))
-    return false;
-  Loops.set(mapDstLoop(AddRec->getLoop()));
-  return checkDstSubscript(Start, LoopNest, Loops);
+  return checkSubscript(Dst, LoopNest, Loops, false);
 }
 
 
