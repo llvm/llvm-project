@@ -180,3 +180,32 @@ define void @f6(void (i16) *%fn) {
   call void %fn(i16 0)
   ret void
 }
+
+; CHECK-LABEL: llvm.func @FPArithmetic(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm.double, %arg3: !llvm.double)
+define void @FPArithmetic(float %a, float %b, double %c, double %d) {
+  ; CHECK: %[[a1:[0-9]+]] = llvm.mlir.constant(3.030000e+01 : f64) : !llvm.double
+  ; CHECK: %[[a2:[0-9]+]] = llvm.mlir.constant(3.030000e+01 : f32) : !llvm.float
+  ; CHECK: %[[a3:[0-9]+]] = llvm.fadd %[[a2]], %arg0 : !llvm.float
+  %1 = fadd float 0x403E4CCCC0000000, %a
+  ; CHECK: %[[a4:[0-9]+]] = llvm.fadd %arg0, %arg1 : !llvm.float
+  %2 = fadd float %a, %b
+  ; CHECK: %[[a5:[0-9]+]] = llvm.fadd %[[a1]], %arg2 : !llvm.double
+  %3 = fadd double 3.030000e+01, %c
+  ; CHECK: %[[a6:[0-9]+]] = llvm.fsub %arg0, %arg1 : !llvm.float
+  %4 = fsub float %a, %b
+  ; CHECK: %[[a7:[0-9]+]] = llvm.fsub %arg2, %arg3 : !llvm.double
+  %5 = fsub double %c, %d
+  ; CHECK: %[[a8:[0-9]+]] = llvm.fmul %arg0, %arg1 : !llvm.float
+  %6 = fmul float %a, %b
+  ; CHECK: %[[a9:[0-9]+]] = llvm.fmul %arg2, %arg3 : !llvm.double
+  %7 = fmul double %c, %d
+  ; CHECK: %[[a10:[0-9]+]] = llvm.fdiv %arg0, %arg1 : !llvm.float
+  %8 = fdiv float %a, %b
+  ; CHECK: %[[a12:[0-9]+]] = llvm.fdiv %arg2, %arg3 : !llvm.double
+  %9 = fdiv double %c, %d
+  ; CHECK: %[[a11:[0-9]+]] = llvm.frem %arg0, %arg1 : !llvm.float
+  %10 = frem float %a, %b
+  ; CHECK: %[[a13:[0-9]+]] = llvm.frem %arg2, %arg3 : !llvm.double
+  %11 = frem double %c, %d
+  ret void
+}

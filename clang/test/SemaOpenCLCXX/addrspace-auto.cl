@@ -6,30 +6,30 @@ auto ai = i;
 
 kernel void test() {
   int i;
-  //CHECK: VarDecl {{.*}} ai 'int':'int'
+  //CHECK: VarDecl {{.*}} ai '__private int':'__private int'
   auto ai = i;
 
   constexpr int c = 1;
   //CHECK: VarDecl {{.*}} used cai '__constant int':'__constant int'
   __constant auto cai = c;
-  //CHECK: VarDecl {{.*}} aii 'int':'int'
+  //CHECK: VarDecl {{.*}} aii '__private int':'__private int'
   auto aii = cai;
 
-  //CHECK: VarDecl {{.*}} ref 'int &'
+  //CHECK: VarDecl {{.*}} ref '__private int &__private'
   auto &ref = i;
-  //CHECK: VarDecl {{.*}} ptr 'int *'
+  //CHECK: VarDecl {{.*}} ptr '__private int *__private'
   auto *ptr = &i;
-  //CHECK: VarDecl {{.*}} ref_c '__constant int &'
+  //CHECK: VarDecl {{.*}} ref_c '__constant int &__private'
   auto &ref_c = cai;
 
-  //CHECK: VarDecl {{.*}} ptrptr 'int *__generic *'
+  //CHECK: VarDecl {{.*}} ptrptr '__private int *__generic *__private'
   auto **ptrptr = &ptr;
-  //CHECK: VarDecl {{.*}} refptr 'int *__generic &'
+  //CHECK: VarDecl {{.*}} refptr '__private int *__generic &__private'
   auto *&refptr = ptr;
 
-  //CHECK: VarDecl {{.*}} invalid gref '__global auto &'
-  __global auto &gref = i; //expected-error{{variable 'gref' with type '__global auto &' has incompatible initializer of type 'int'}}
+  //CHECK: VarDecl {{.*}} invalid gref '__global auto &__private'
+  __global auto &gref = i; //expected-error{{variable 'gref' with type '__global auto &__private' has incompatible initializer of type '__private int'}}
   __local int *ptr_l;
-  //CHECK: VarDecl {{.*}} invalid gptr '__global auto *'
-  __global auto *gptr = ptr_l; //expected-error{{variable 'gptr' with type '__global auto *' has incompatible initializer of type '__local int *'}}
+  //CHECK: VarDecl {{.*}} invalid gptr '__global auto *__private'
+  __global auto *gptr = ptr_l; //expected-error{{variable 'gptr' with type '__global auto *__private' has incompatible initializer of type '__local int *__private'}}
 }

@@ -12,7 +12,7 @@ void f1() {
   };
   f0(bl1);
   f0(bl2);
-  bl1 = bl2;          // expected-error{{invalid operands to binary expression ('int (__generic ^const)(void)' and 'int (__generic ^const)(void)')}}
+  bl1 = bl2;          // expected-error{{invalid operands to binary expression ('int (__generic ^const __private)(void)' and 'int (__generic ^const __private)(void)')}}
   int (^const bl3)(); // expected-error{{invalid block variable declaration - must be initialized}}
 }
 
@@ -53,18 +53,18 @@ void f5(int i) {
   bl2_t bl2 = ^(int i) {
     return 2;
   };
-  bl2_t arr[] = {bl1, bl2}; // expected-error {{array of 'bl2_t' (aka 'int (__generic ^const)(int)') type is invalid in OpenCL}}
+  bl2_t arr[] = {bl1, bl2}; // expected-error {{array of 'bl2_t' (aka 'int (__generic ^const)(__private int)') type is invalid in OpenCL}}
   int tmp = i ? bl1(i)      // expected-error {{block type cannot be used as expression in ternary expression in OpenCL}}
               : bl2(i);     // expected-error {{block type cannot be used as expression in ternary expression in OpenCL}}
 }
 // A block pointer type and all pointer operations are disallowed
-void f6(bl2_t *bl_ptr) { // expected-error{{pointer to type 'bl2_t' (aka 'int (__generic ^const)(int)') is invalid in OpenCL}}
+void f6(bl2_t *bl_ptr) { // expected-error{{pointer to type 'bl2_t' (aka 'int (__generic ^const)(__private int)') is invalid in OpenCL}}
   bl2_t bl = ^(int i) {
     return 1;
   };
-  bl2_t *p; // expected-error {{pointer to type 'bl2_t' (aka 'int (__generic ^const)(int)') is invalid in OpenCL}}
-  *bl;      // expected-error {{invalid argument type 'bl2_t' (aka 'int (__generic ^const)(int)') to unary expression}}
-  &bl;      // expected-error {{invalid argument type 'bl2_t' (aka 'int (__generic ^const)(int)') to unary expression}}
+  bl2_t *p; // expected-error {{pointer to type 'bl2_t' (aka 'int (__generic ^const)(__private int)') is invalid in OpenCL}}
+  *bl;      // expected-error {{invalid argument type '__private bl2_t' (aka 'int (__generic ^const __private)(__private int)') to unary expression}}
+  &bl;      // expected-error {{invalid argument type '__private bl2_t' (aka 'int (__generic ^const __private)(__private int)') to unary expression}}
 }
 // A block can't reference another block
 kernel void f7() {

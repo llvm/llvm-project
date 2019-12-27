@@ -6580,7 +6580,7 @@ MachineInstr *SIInstrInfo::createPHISourceCopy(
        InsPt->getOpcode() == AMDGPU::SI_IF_BREAK) &&
       InsPt->definesRegister(Src)) {
     InsPt++;
-    return BuildMI(MBB, InsPt, InsPt->getDebugLoc(),
+    return BuildMI(MBB, InsPt, DL,
                    get(ST.isWave32() ? AMDGPU::S_MOV_B32_term
                                      : AMDGPU::S_MOV_B64_term),
                    Dst)

@@ -230,3 +230,104 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("et ", Comps[0].TypedText);
   EXPECT_EQ("let", Comps[0].DisplayText);
 }
+
+TEST_F(QueryParserTest, Multiline) {
+
+  // Single string with multiple commands
+  QueryRef Q = parse(R"matcher(
+set bind-root false
+set output dump
+    )matcher");
+
+  ASSERT_TRUE(isa<SetQuery<bool>>(Q));
+
+  Q = parse(Q->RemainingContent);
+  ASSERT_TRUE(isa<SetExclusiveOutputQuery>(Q));
+
+  // Missing newline
+  Q = parse(R"matcher(
+set bind-root false set output dump
+    )matcher");
+
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("unexpected extra input: ' set output dump\n    '",
+            cast<InvalidQuery>(Q)->ErrStr);
+
+  // Commands which do their own parsing
+  Q = parse(R"matcher(
+let fn functionDecl(hasName("foo"))
+match callExpr(callee(functionDecl()))
+    )matcher");
+
+  ASSERT_TRUE(isa<LetQuery>(Q));
+
+  Q = parse(Q->RemainingContent);
+  ASSERT_TRUE(isa<MatchQuery>(Q));
+
+  // Multi-line matcher
+  Q = parse(R"matcher(
+match callExpr(callee(
+    functionDecl().bind("fn")
+    ))
+
+    )matcher");
+
+  ASSERT_TRUE(isa<MatchQuery>(Q));
+
+  // Comment locations
+  Q = parse(R"matcher(
+#nospacecomment
+# Leading comment
+match callExpr ( # Trailing comment
+            # Comment alone on line
+
+            callee(
+            functionDecl(
+            ).bind(
+            "fn"
+            )
+            )) # Comment trailing close
+# Comment after match
+    )matcher");
+
+  ASSERT_TRUE(isa<MatchQuery>(Q));
+
+  // \r\n
+  Q = parse("set bind-root false\r\nset output dump");
+
+  ASSERT_TRUE(isa<SetQuery<bool>>(Q));
+
+  Q = parse(Q->RemainingContent);
+  ASSERT_TRUE(isa<SetExclusiveOutputQuery>(Q));
+
+  // Leading and trailing space in lines
+  Q = parse("  set bind-root false  \r\n  set output dump  ");
+
+  ASSERT_TRUE(isa<SetQuery<bool>>(Q));
+
+  Q = parse(Q->RemainingContent);
+  ASSERT_TRUE(isa<SetExclusiveOutputQuery>(Q));
+
+  // Incomplete commands
+  Q = parse("set\nbind-root false");
+
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("expected variable name", cast<InvalidQuery>(Q)->ErrStr);
+
+  Q = parse("set bind-root\nfalse");
+
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("expected 'true' or 'false', got ''",
+            cast<InvalidQuery>(Q)->ErrStr);
+
+  Q = parse(R"matcher(
+match callExpr
+(
+)
+    )matcher");
+
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("1:9: Error parsing matcher. Found token <NewLine> "
+            "while looking for '('.",
+            cast<InvalidQuery>(Q)->ErrStr);
+}

@@ -27,7 +27,7 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         # Build dictionary to have unique executable names for each test
         # method.
 
-    @expectedFailureAll(
+    @skipIf(
         oslist=["linux"],
         archs=[
             'aarch64',

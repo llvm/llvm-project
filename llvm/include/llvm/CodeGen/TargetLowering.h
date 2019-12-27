@@ -1539,16 +1539,6 @@ public:
   /// have to be legal as the hook is used before type legalization.
   virtual bool isSafeMemOpType(MVT /*VT*/) const { return true; }
 
-  /// Determine if we should use _setjmp or setjmp to implement llvm.setjmp.
-  bool usesUnderscoreSetJmp() const {
-    return UseUnderscoreSetJmp;
-  }
-
-  /// Determine if we should use _longjmp or longjmp to implement llvm.longjmp.
-  bool usesUnderscoreLongJmp() const {
-    return UseUnderscoreLongJmp;
-  }
-
   /// Return lower limit for number of blocks in a jump table.
   virtual unsigned getMinimumJumpTableEntries() const;
 
@@ -1947,18 +1937,6 @@ protected:
   /// Specify the target scheduling preference.
   void setSchedulingPreference(Sched::Preference Pref) {
     SchedPreferenceInfo = Pref;
-  }
-
-  /// Indicate whether this target prefers to use _setjmp to implement
-  /// llvm.setjmp or the version without _.  Defaults to false.
-  void setUseUnderscoreSetJmp(bool Val) {
-    UseUnderscoreSetJmp = Val;
-  }
-
-  /// Indicate whether this target prefers to use _longjmp to implement
-  /// llvm.longjmp or the version without _.  Defaults to false.
-  void setUseUnderscoreLongJmp(bool Val) {
-    UseUnderscoreLongJmp = Val;
   }
 
   /// Indicate the minimum number of blocks to generate jump tables.
@@ -2696,16 +2674,6 @@ private:
   /// instructions and should attempt to combine flow control instructions via
   /// predication.
   bool JumpIsExpensive;
-
-  /// This target prefers to use _setjmp to implement llvm.setjmp.
-  ///
-  /// Defaults to false.
-  bool UseUnderscoreSetJmp;
-
-  /// This target prefers to use _longjmp to implement llvm.longjmp.
-  ///
-  /// Defaults to false.
-  bool UseUnderscoreLongJmp;
 
   /// Information about the contents of the high-bits in boolean values held in
   /// a type wider than i1. See getBooleanContents.

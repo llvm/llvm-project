@@ -16,34 +16,34 @@ struct st{};
 // negative test cases for initializers
 void foo(char c, float f, void* v, struct st ss) {
   intel_sub_group_avc_mce_payload_t payload_mce = 0; // No zero initializer for mce types
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_mce_payload_t' with an expression of incompatible type 'int'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_mce_payload_t' with an expression of incompatible type 'int'}}
   intel_sub_group_avc_ime_payload_t payload_ime = 1; // No literal initializer for *payload_t types
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_ime_payload_t' with an expression of incompatible type 'int'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_ime_payload_t' with an expression of incompatible type 'int'}}
   intel_sub_group_avc_ref_payload_t payload_ref = f;
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_ref_payload_t' with an expression of incompatible type 'float'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_ref_payload_t' with an expression of incompatible type '__private float'}}
   intel_sub_group_avc_sic_payload_t payload_sic = ss;
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_sic_payload_t' with an expression of incompatible type 'struct st'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_sic_payload_t' with an expression of incompatible type '__private struct st'}}
 
   intel_sub_group_avc_mce_result_t result_mce = 0; // No zero initializer for mce types
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_mce_result_t' with an expression of incompatible type 'int'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_mce_result_t' with an expression of incompatible type 'int'}}
   intel_sub_group_avc_ime_result_t result_ime = 1; // No literal initializer for *result_t types
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_ime_result_t' with an expression of incompatible type 'int'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_ime_result_t' with an expression of incompatible type 'int'}}
   intel_sub_group_avc_ref_result_t result_ref = f;
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_ref_result_t' with an expression of incompatible type 'float'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_ref_result_t' with an expression of incompatible type '__private float'}}
   intel_sub_group_avc_sic_result_t result_sic = ss;
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_sic_result_t' with an expression of incompatible type 'struct st'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_sic_result_t' with an expression of incompatible type '__private struct st'}}
 
   intel_sub_group_avc_ime_result_single_reference_streamout_t sstreamout = v;
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_ime_result_single_reference_streamout_t' with an expression of incompatible type 'void *'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_ime_result_single_reference_streamout_t' with an expression of incompatible type '__private void *__private'}}
 
   intel_sub_group_avc_ime_result_dual_reference_streamout_t dstreamin_list = {0x0, 0x1};
   // expected-warning@-1 {{excess elements in struct initializer}}
   intel_sub_group_avc_ime_dual_reference_streamin_t dstreamin_list2 = {};
   // expected-error@-1 {{scalar initializer cannot be empty}}
   intel_sub_group_avc_ime_single_reference_streamin_t dstreamin_list3 = {c};
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_ime_single_reference_streamin_t' with an expression of incompatible type 'char'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_ime_single_reference_streamin_t' with an expression of incompatible type '__private char'}}
   intel_sub_group_avc_ime_dual_reference_streamin_t dstreamin_list4 = {1};
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_ime_dual_reference_streamin_t' with an expression of incompatible type 'int'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_ime_dual_reference_streamin_t' with an expression of incompatible type 'int'}}
 }
 
 // negative tests for initializers and assignment
@@ -53,12 +53,12 @@ void far() {
 
   intel_sub_group_avc_ime_payload_t payload_ime;
   intel_sub_group_avc_ref_payload_t payload_ref = payload_ime;
-  // expected-error@-1 {{initializing 'intel_sub_group_avc_ref_payload_t' with an expression of incompatible type 'intel_sub_group_avc_ime_payload_t'}}
+  // expected-error@-1 {{initializing '__private intel_sub_group_avc_ref_payload_t' with an expression of incompatible type '__private intel_sub_group_avc_ime_payload_t'}}
 
   intel_sub_group_avc_sic_result_t result_sic;
   intel_sub_group_avc_ime_result_t result_ime;
   result_sic = result_ime;
-  // expected-error@-1 {{assigning to 'intel_sub_group_avc_sic_result_t' from incompatible type 'intel_sub_group_avc_ime_result_t'}}
+  // expected-error@-1 {{assigning to '__private intel_sub_group_avc_sic_result_t' from incompatible type '__private intel_sub_group_avc_ime_result_t'}}
 }
 
 // Using 0x0 directly allows us not to include opencl-c.h header and not to

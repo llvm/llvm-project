@@ -25,11 +25,11 @@ void myReadWrite(read_write image1d_t); // expected-error {{access qualifier 're
 
 
 kernel void k1(img1d_wo img) {
-  myRead(img); // expected-error {{passing 'img1d_wo' (aka '__write_only image1d_t') to parameter of incompatible type '__read_only image1d_t'}}
+  myRead(img); // expected-error {{passing '__private img1d_wo' (aka '__private __write_only image1d_t') to parameter of incompatible type '__read_only image1d_t'}}
 }
 
 kernel void k2(img1d_ro img) {
-  myWrite(img); // expected-error {{passing 'img1d_ro' (aka '__read_only image1d_t') to parameter of incompatible type '__write_only image1d_t'}}
+  myWrite(img); // expected-error {{passing '__private img1d_ro' (aka '__private __read_only image1d_t') to parameter of incompatible type '__write_only image1d_t'}}
 }
 
 kernel void k3(img1d_wo img) {
@@ -43,7 +43,7 @@ kernel void k4(img1d_rw img) {
 #endif
 
 kernel void k5(img1d_ro_default img) {
-  myWrite(img); // expected-error {{passing 'img1d_ro_default' (aka '__read_only image1d_t') to parameter of incompatible type '__write_only image1d_t'}}
+  myWrite(img); // expected-error {{passing '__private img1d_ro_default' (aka '__private __read_only image1d_t') to parameter of incompatible type '__write_only image1d_t'}}
 }
 
 kernel void k6(img1d_ro img) {
@@ -71,7 +71,7 @@ kernel void k13(__read_write image1d_t i){} // expected-error{{access qualifier 
 #if __OPENCL_C_VERSION__ >= 200
 void myPipeWrite(write_only pipe int); // expected-note {{passing argument to parameter here}}
 kernel void k14(read_only pipe int p) {
-  myPipeWrite(p); // expected-error {{passing 'read_only pipe int' to parameter of incompatible type 'write_only pipe int'}}
+  myPipeWrite(p); // expected-error {{passing '__private read_only pipe int' to parameter of incompatible type 'write_only pipe int'}}
 }
 #endif
 
@@ -93,7 +93,7 @@ kernel void pipe_ro_twice_typedef(read_only ROPipeInt i){} // expected-warning{{
 // expected-note@-2 {{previously declared 'read_only' here}}
 
 kernel void pass_ro_typedef_to_wo(ROPipeInt p) {
-  myPipeWrite(p); // expected-error {{passing 'ROPipeInt' (aka 'read_only pipe int') to parameter of incompatible type 'write_only pipe int'}}
+  myPipeWrite(p); // expected-error {{passing '__private ROPipeInt' (aka '__private read_only pipe int') to parameter of incompatible type 'write_only pipe int'}}
   // expected-note@-25 {{passing argument to parameter here}}
 }
 #endif

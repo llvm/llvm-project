@@ -91,7 +91,7 @@ kernel void enqueue_kernel_tests() {
                  },
                  c, 1024L);
 #ifdef WCONV
-// expected-warning-re@-2{{implicit conversion changes signedness: 'char' to 'unsigned {{int|long}}'}}
+// expected-warning-re@-2{{implicit conversion changes signedness: '__private char' to 'unsigned {{int|long}}'}}
 #endif
 #define UINT_MAX 4294967295
 

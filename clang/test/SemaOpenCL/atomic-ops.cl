@@ -77,18 +77,18 @@ void f(atomic_int *i, const atomic_int *ci,
 
   __opencl_atomic_fetch_min(i, 1, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_fetch_max(i, 1, memory_order_seq_cst, memory_scope_work_group);
-  __opencl_atomic_fetch_min(d, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer or pointer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
-  __opencl_atomic_fetch_max(d, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer or pointer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
+  __opencl_atomic_fetch_min(d, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
+  __opencl_atomic_fetch_max(d, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
 
   bool cmpexch_1 = __opencl_atomic_compare_exchange_strong(i, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
   bool cmpexch_2 = __opencl_atomic_compare_exchange_strong(p, P, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
-  bool cmpexch_3 = __opencl_atomic_compare_exchange_strong(d, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{incompatible pointer types passing '__generic int *' to parameter of type '__generic float *'}}
-  (void)__opencl_atomic_compare_exchange_strong(i, CI, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{passing 'const __generic int *' to parameter of type '__generic int *' discards qualifiers}}
+  bool cmpexch_3 = __opencl_atomic_compare_exchange_strong(d, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{incompatible pointer types passing '__generic int *__private' to parameter of type '__generic float *'}}
+  (void)__opencl_atomic_compare_exchange_strong(i, CI, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{passing 'const __generic int *__private' to parameter of type '__generic int *' discards qualifiers}}
 
   bool cmpexchw_1 = __opencl_atomic_compare_exchange_weak(i, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
   bool cmpexchw_2 = __opencl_atomic_compare_exchange_weak(p, P, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
-  bool cmpexchw_3 = __opencl_atomic_compare_exchange_weak(d, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{incompatible pointer types passing '__generic int *' to parameter of type '__generic float *'}}
-  (void)__opencl_atomic_compare_exchange_weak(i, CI, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{passing 'const __generic int *' to parameter of type '__generic int *' discards qualifiers}}
+  bool cmpexchw_3 = __opencl_atomic_compare_exchange_weak(d, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{incompatible pointer types passing '__generic int *__private' to parameter of type '__generic float *'}}
+  (void)__opencl_atomic_compare_exchange_weak(i, CI, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{passing 'const __generic int *__private' to parameter of type '__generic int *' discards qualifiers}}
 
   // Pointers to different address spaces are allowed.
   bool cmpexch_10 = __opencl_atomic_compare_exchange_strong((global atomic_int *)0x308, (constant int *)0x309, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
@@ -107,7 +107,7 @@ void memory_checks(atomic_int *Ap, int *p, int val) {
   float forder;
   (void)__opencl_atomic_load(Ap, forder, memory_scope_work_group);
   struct S s;
-  (void)__opencl_atomic_load(Ap, s, memory_scope_work_group); // expected-error {{passing 'struct S' to parameter of incompatible type 'int'}}
+  (void)__opencl_atomic_load(Ap, s, memory_scope_work_group); // expected-error {{passing '__private struct S' to parameter of incompatible type 'int'}}
 
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_work_group);
   (void)__opencl_atomic_load(Ap, memory_order_acquire, memory_scope_work_group);
@@ -187,7 +187,7 @@ void synchscope_checks(atomic_int *Ap, int scope) {
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, 1.0f);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, fscope);
   struct S s;
-  (void)__opencl_atomic_load(Ap, memory_order_relaxed, s); //expected-error{{passing 'struct S' to parameter of incompatible type 'int'}}
+  (void)__opencl_atomic_load(Ap, memory_order_relaxed, s); //expected-error{{passing '__private struct S' to parameter of incompatible type 'int'}}
 }
 
 void nullPointerWarning(atomic_int *Ap, int *p, int val) {
