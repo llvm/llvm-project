@@ -1947,8 +1947,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (Subtarget.is32Bit() &&
       (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()))
     for (ISD::NodeType Op :
-         {ISD::FCEIL, ISD::FCOS, ISD::FEXP, ISD::FFLOOR, ISD::FREM, ISD::FLOG,
-          ISD::FLOG10, ISD::FPOW, ISD::FSIN})
+         {ISD::FCEIL,  ISD::STRICT_FCEIL,
+          ISD::FCOS,   ISD::STRICT_FCOS,
+          ISD::FEXP,   ISD::STRICT_FEXP,
+          ISD::FFLOOR, ISD::STRICT_FFLOOR,
+          ISD::FREM,   ISD::STRICT_FREM,
+          ISD::FLOG,   ISD::STRICT_FLOG,
+          ISD::FLOG10, ISD::STRICT_FLOG10,
+          ISD::FPOW,   ISD::STRICT_FPOW,
+          ISD::FSIN,   ISD::STRICT_FSIN})
       if (isOperationExpand(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
 
