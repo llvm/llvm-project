@@ -44,7 +44,7 @@ void test_f2(void) {
   struct A test_A2; // expected-error {{use of type 'struct A' requires my_ext extension to be enabled}}
   const struct A test_A_local; // expected-error {{use of type 'struct A' requires my_ext extension to be enabled}}
   TypedefOfA test_typedef_A; // expected-error {{use of type 'TypedefOfA' (aka 'struct A') requires my_ext extension to be enabled}}
-  PointerOfA test_A_pointer; // expected-error {{use of type 'PointerOfA' (aka 'const struct A *') requires my_ext extension to be enabled}}
+  PointerOfA test_A_pointer; // expected-error {{use of type 'PointerOfA' (aka 'const __private struct A *') requires my_ext extension to be enabled}}
   f(); // expected-error {{use of declaration 'f' requires my_ext extension to be enabled}}
   g(0); // expected-error {{no matching function for call to 'g'}}
         // expected-note@extension-begin.h:18 {{candidate unavailable as it requires OpenCL extension 'my_ext' to be enabled}}

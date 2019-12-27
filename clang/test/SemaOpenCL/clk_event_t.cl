@@ -12,7 +12,7 @@ int clk_event_tests() {
   clk_event_t ce2;
   clk_event_t ce3 = CLK_NULL_EVENT;
 
-  if (e == ce1) { // expected-error {{invalid operands to binary expression ('event_t' and 'clk_event_t')}}
+  if (e == ce1) { // expected-error {{invalid operands to binary expression ('__private event_t' and '__private clk_event_t')}}
     return 9;
   }
 

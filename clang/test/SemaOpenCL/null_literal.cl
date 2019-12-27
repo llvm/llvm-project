@@ -11,14 +11,14 @@ global int* ptr2 = (global void*)0;
 
 constant int* ptr3 = NULL;
 
-constant int* ptr4 = (global void*)0; // expected-error{{initializing '__constant int *' with an expression of type '__global void *' changes address space of pointer}}
+constant int* ptr4 = (global void*)0; // expected-error{{initializing '__constant int *__private' with an expression of type '__global void *' changes address space of pointer}}
 
 #ifdef CL20
 // Accept explicitly pointer to generic address space in OpenCL v2.0.
 global int* ptr5 = (generic void*)0;
 #endif
 
-global int* ptr6 = (local void*)0; // expected-error{{initializing '__global int *' with an expression of type '__local void *' changes address space of pointer}}
+global int* ptr6 = (local void*)0; // expected-error{{initializing '__global int *__private' with an expression of type '__local void *' changes address space of pointer}}
 
 bool cmp = ptr1 == NULL;
 
