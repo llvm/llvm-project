@@ -60,6 +60,11 @@ public:
   EarlyTailDuplicate() : TailDuplicateBase(ID, true) {
     initializeEarlyTailDuplicatePass(*PassRegistry::getPassRegistry());
   }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties()
+      .set(MachineFunctionProperties::Property::NoPHIs);
+  }
 };
 
 } // end anonymous namespace
