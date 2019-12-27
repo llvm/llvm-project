@@ -90,10 +90,10 @@ DWARFDebugArangeSet::extract(DataExtractor data, uint64_t *offset_ptr) {
       if (arangeDescriptor.Address || arangeDescriptor.Length)
         ArangeDescriptors.push_back(arangeDescriptor);
       else
-        break; // We are done if we get a zero address and length
+        return true; // We are done if we get a zero address and length
     }
 
-    return !ArangeDescriptors.empty();
+    return false; // No termination tuple is found.
   }
   return false;
 }
