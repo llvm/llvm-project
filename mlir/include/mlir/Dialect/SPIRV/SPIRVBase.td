@@ -16,6 +16,7 @@
 #define SPIRV_BASE
 
 include "mlir/IR/OpBase.td"
+include "mlir/Dialect/SPIRV/SPIRVAvailability.td"
 
 //===----------------------------------------------------------------------===//
 // SPIR-V dialect definitions
@@ -43,6 +44,142 @@ def SPV_Dialect : Dialect {
   }];
 
   let cppNamespace = "spirv";
+}
+
+//===----------------------------------------------------------------------===//
+// SPIR-V availability definitions
+//===----------------------------------------------------------------------===//
+
+def SPV_V_1_0 : I32EnumAttrCase<"V_1_0", 0>;
+def SPV_V_1_1 : I32EnumAttrCase<"V_1_1", 1>;
+def SPV_V_1_2 : I32EnumAttrCase<"V_1_2", 2>;
+def SPV_V_1_3 : I32EnumAttrCase<"V_1_3", 3>;
+def SPV_V_1_4 : I32EnumAttrCase<"V_1_4", 4>;
+def SPV_V_1_5 : I32EnumAttrCase<"V_1_5", 5>;
+
+def SPV_VersionAttr : I32EnumAttr<"Version", "valid SPIR-V version", [
+    SPV_V_1_0, SPV_V_1_1, SPV_V_1_2, SPV_V_1_3, SPV_V_1_4, SPV_V_1_5]> {
+  let cppNamespace = "::mlir::spirv";
+}
+
+class MinVersion<I32EnumAttrCase min> : MinVersionBase<
+    "QueryMinVersionInterface", SPV_VersionAttr, min> {
+  let interfaceDescription = [{
+    Querying interface for minimal required SPIR-V version.
+
+    This interface provides a `getMinVersion()` method to query the minimal
+    required version for the implementing SPIR-V operation. The returned value
+    is a `mlir::spirv::Version` enumerant.
+  }];
+}
+
+class MaxVersion<I32EnumAttrCase max> : MaxVersionBase<
+    "QueryMaxVersionInterface", SPV_VersionAttr, max> {
+  let interfaceDescription = [{
+    Querying interface for maximal supported SPIR-V version.
+
+    This interface provides a `getMaxVersion()` method to query the maximal
+    supported version for the implementing SPIR-V operation. The returned value
+    is a `mlir::spirv::Version` enumerant.
+  }];
+}
+
+class Extension<list<StrEnumAttrCase> extensions> : Availability {
+  let interfaceName = "QueryExtensionInterface";
+  let interfaceDescription = [{
+    Querying interface for required SPIR-V extensions.
+
+    This interface provides a `getExtensions()` method to query the required
+    extensions for the implementing SPIR-V operation. The returned value
+    is a nested vector whose element is `mlir::spirv::Extension`s. The outer
+    vector's elements (which are vectors) should be interpreted as conjunction
+    while the innner vector's elements (which are `mlir::spirv::Extension`s)
+    should be interpreted as disjunction. For example, given
+
+    ```
+    {{Extension::A, Extension::B}, {Extension::C}, {{Extension::D, Extension::E}}
+    ```
+
+    The operation instance is available when (`Extension::A` OR `Extension::B`)
+    AND (`Extension::C`) AND (`Extension::D` OR `Extension::E`) is enabled.
+  }];
+
+  // TODO(antiagainst): Using SmallVector<SmallVector<...>> is an anti-pattern.
+  // Find a better way for this.
+  let queryFnRetType = "::llvm::SmallVector<::llvm::SmallVector<"
+                          "::mlir::spirv::Extension, 1>, 1>";
+  let queryFnName = "getExtensions";
+
+  let mergeAction = !if(
+      !empty(extensions), "", "$overall.emplace_back($instance)");
+  let initializer = "{}";
+  let instanceType = "::llvm::SmallVector<::mlir::spirv::Extension, 1>";
+
+  // Compose all capabilities as an C++ initializer list
+  let instance = "std::initializer_list<::mlir::spirv::Extension>{" #
+                 StrJoin<!foreach(
+                   ext, extensions,
+                   "::mlir::spirv::Extension::" # ext.symbol)>.result #
+                 "}";
+}
+
+class Capability<list<I32EnumAttrCase> capabilities> : Availability {
+  let interfaceName = "QueryCapabilityInterface";
+  let interfaceDescription = [{
+    Querying interface for required SPIR-V capabilities.
+
+    This interface provides a `getCapabilities()` method to query the required
+    capabilities for the implementing SPIR-V operation. The returned value
+    is a neted vector whose element is `mlir::spirv::Capability`s. The outer
+    vector's elements (which are vectors) should be interpreted as conjunction
+    while the innner vector's elements (which are `mlir::spirv::Capability`s)
+    should be interpreted as disjunction. For example, given
+
+    ```
+    {{Capability::A, Capability::B}, {Capability::C}, {{Capability::D, Capability::E}}
+    ```
+
+    The operation instance is available when (`Capability::A` OR `Capability::B`)
+    AND (`Capability::C`) AND (`Capability::D` OR `Capability::E`) is enabled.
+  }];
+
+  let queryFnRetType = "::llvm::SmallVector<::llvm::SmallVector<"
+                          "::mlir::spirv::Capability, 1>, 1>";
+  let queryFnName = "getCapabilities";
+
+  let mergeAction = !if(
+      !empty(capabilities), "", "$overall.emplace_back($instance)");
+  let initializer = "{}";
+  let instanceType = "::llvm::SmallVector<::mlir::spirv::Capability, 1>";
+
+  // Compose all capabilities as an C++ initializer list
+  let instance = "std::initializer_list<::mlir::spirv::Capability>{" #
+                 StrJoin<!foreach(
+                   cap, capabilities,
+                   "::mlir::spirv::Capability::" # cap.symbol)>.result #
+                 "}";
+}
+
+// TODO(antiagainst): the following interfaces definitions are duplicating with
+// the above. Remove them once we are able to support dialect-specific contents
+// in ODS.
+def QueryMinVersionInterface : OpInterface<"QueryMinVersionInterface"> {
+  let methods = [InterfaceMethod<"", "::mlir::spirv::Version", "getMinVersion">];
+}
+def QueryMaxVersionInterface : OpInterface<"QueryMaxVersionInterface"> {
+  let methods = [InterfaceMethod<"", "::mlir::spirv::Version", "getMaxVersion">];
+}
+def QueryExtensionInterface : OpInterface<"QueryExtensionInterface"> {
+  let methods = [InterfaceMethod<
+    "",
+    "::llvm::SmallVector<::llvm::SmallVector<::mlir::spirv::Extension, 1>, 1>",
+    "getExtensions">];
+}
+def QueryCapabilityInterface : OpInterface<"QueryCapabilityInterface"> {
+  let methods = [InterfaceMethod<
+    "",
+    "::llvm::SmallVector<::llvm::SmallVector<::mlir::spirv::Capability, 1>, 1>",
+    "getCapabilities">];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1216,7 +1353,22 @@ def SPV_OpcodeAttr :
 
 // Base class for all SPIR-V ops.
 class SPV_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<SPV_Dialect, mnemonic, traits> {
+    Op<SPV_Dialect, mnemonic, !listconcat(traits, [
+         // TODO(antiagainst): We don't need all of the following traits for
+         // every op; only the suitabble ones should be added automatically
+         // after ODS supports dialect-specific contents.
+         DeclareOpInterfaceMethods<QueryMinVersionInterface>,
+         DeclareOpInterfaceMethods<QueryMaxVersionInterface>,
+         DeclareOpInterfaceMethods<QueryExtensionInterface>,
+         DeclareOpInterfaceMethods<QueryCapabilityInterface>
+       ])> {
+  // Availability specification for this op itself.
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[]>
+  ];
 
   // For each SPIR-V op, the following static functions need to be defined
   // in SPVOps.cpp:
