@@ -696,9 +696,8 @@ static bool applyCmpPredicate(CmpIPredicate predicate, const APInt &lhs,
     return lhs.ugt(rhs);
   case CmpIPredicate::uge:
     return lhs.uge(rhs);
-  default:
-    llvm_unreachable("unknown comparison predicate");
   }
+  llvm_unreachable("unknown comparison predicate");
 }
 
 // Constant folding hook for comparisons.
@@ -2785,21 +2784,6 @@ SubViewOp::getStaticStrides(SmallVectorImpl<int64_t> &staticStrides) {
     staticStrides[resultStride.index()] = resultStride.value() / baseStride;
   }
   return success();
-}
-
-static bool hasConstantOffsetSizesAndStrides(MemRefType memrefType) {
-  if (memrefType.getNumDynamicDims() > 0)
-    return false;
-  // Get offset and strides.
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(memrefType, strides, offset)))
-    return false;
-  // Return 'false' if any of offset or strides is dynamic.
-  if (offset == MemRefType::getDynamicStrideOrOffset() ||
-      llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset()))
-    return false;
-  return true;
 }
 
 namespace {

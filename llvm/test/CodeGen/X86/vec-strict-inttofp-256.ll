@@ -163,10 +163,9 @@ define <8 x float> @uitofp_v8i32_v8f32(<8 x i32> %x) #0 {
 ; AVX1-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    ret{{[l|q]}}
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512F-LABEL: uitofp_v8i32_v8f32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -176,10 +175,9 @@ define <8 x float> @uitofp_v8i32_v8f32(<8 x i32> %x) #0 {
 ; AVX512VL-NEXT:    vcvtudq2ps %ymm0, %ymm0
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: uitofp_v8i32_v8f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvtudq2ps %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
@@ -330,10 +328,9 @@ define <4 x double> @uitofp_v4i32_v4f64(<4 x i32> %x) #0 {
 ; AVX1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    ret{{[l|q]}}
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512F-LABEL: uitofp_v4i32_v4f64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -343,10 +340,9 @@ define <4 x double> @uitofp_v4i32_v4f64(<4 x i32> %x) #0 {
 ; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %ymm0
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: uitofp_v4i32_v4f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
@@ -412,10 +408,9 @@ define <4 x double> @sitofp_v4i64_v4f64(<4 x i64> %x) #0 {
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: sitofp_v4i64_v4f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
@@ -503,10 +498,9 @@ define <4 x double> @uitofp_v4i64_v4f64(<4 x i64> %x) #0 {
 ; AVX512VL-64-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; AVX512VL-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: uitofp_v4i64_v4f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}

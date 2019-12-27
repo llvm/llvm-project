@@ -12,6 +12,8 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=avx512dq,avx512vl -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512DQVL,AVX512DQVL-32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512dq,avx512vl -O3 -disable-strictnode-mutation | FileCheck %s --check-prefixes=AVX,AVX512DQVL,AVX512DQVL-64
 
+declare <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i32(<2 x i32>, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.uitofp.v2f32.v2i32(<2 x i32>, metadata, metadata)
 declare <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i64(<2 x i64>, metadata, metadata)
 declare <2 x float> @llvm.experimental.constrained.uitofp.v2f32.v2i64(<2 x i64>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i1(<4 x i1>, metadata, metadata)
@@ -32,6 +34,58 @@ declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i32(<2 x i32>
 declare <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i32(<2 x i32>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64>, metadata, metadata)
+
+define <2 x float> @sitofp_v2i32_v2f32(<2 x i32> %x) #0 {
+; SSE-LABEL: sitofp_v2i32_v2f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    cvtsi2ss %eax, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: sitofp_v2i32_v2f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractps $1, %xmm0, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm2, %xmm0
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    ret{{[l|q]}}
+ %result = call <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i32(<2 x i32> %x,
+                                                              metadata !"round.dynamic",
+                                                              metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
+
+define <2 x float> @uitofp_v2i32_v2f32(<2 x i32> %x) #0 {
+; SSE-LABEL: uitofp_v2i32_v2f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorpd %xmm1, %xmm1
+; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE-NEXT:    movapd {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE-NEXT:    orpd %xmm1, %xmm0
+; SSE-NEXT:    subpd %xmm1, %xmm0
+; SSE-NEXT:    cvtpd2ps %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: uitofp_v2i32_v2f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vcvtpd2ps %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+ %result = call <2 x float> @llvm.experimental.constrained.uitofp.v2f32.v2i32(<2 x i32> %x,
+                                                              metadata !"round.dynamic",
+                                                              metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
 
 define <2 x float> @sitofp_v2i64_v2f32(<2 x i64> %x) #0 {
 ; SSE-32-LABEL: sitofp_v2i64_v2f32:
@@ -181,10 +235,10 @@ define <2 x float> @uitofp_v2i64_v2f32(<2 x i64> %x) #0 {
 ; SSE-64-NEXT:    cmovnsq %rax, %rdx
 ; SSE-64-NEXT:    xorps %xmm0, %xmm0
 ; SSE-64-NEXT:    cvtsi2ss %rdx, %xmm0
-; SSE-64-NEXT:    jns .LBB1_2
+; SSE-64-NEXT:    jns .LBB3_2
 ; SSE-64-NEXT:  # %bb.1:
 ; SSE-64-NEXT:    addss %xmm0, %xmm0
-; SSE-64-NEXT:  .LBB1_2:
+; SSE-64-NEXT:  .LBB3_2:
 ; SSE-64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
 ; SSE-64-NEXT:    movq %xmm1, %rax
 ; SSE-64-NEXT:    movq %rax, %rcx
@@ -196,10 +250,10 @@ define <2 x float> @uitofp_v2i64_v2f32(<2 x i64> %x) #0 {
 ; SSE-64-NEXT:    cmovnsq %rax, %rdx
 ; SSE-64-NEXT:    xorps %xmm1, %xmm1
 ; SSE-64-NEXT:    cvtsi2ss %rdx, %xmm1
-; SSE-64-NEXT:    jns .LBB1_4
+; SSE-64-NEXT:    jns .LBB3_4
 ; SSE-64-NEXT:  # %bb.3:
 ; SSE-64-NEXT:    addss %xmm1, %xmm1
-; SSE-64-NEXT:  .LBB1_4:
+; SSE-64-NEXT:  .LBB3_4:
 ; SSE-64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-64-NEXT:    retq
 ;
@@ -247,10 +301,10 @@ define <2 x float> @uitofp_v2i64_v2f32(<2 x i64> %x) #0 {
 ; AVX1-64-NEXT:    testq %rax, %rax
 ; AVX1-64-NEXT:    cmovnsq %rax, %rdx
 ; AVX1-64-NEXT:    vcvtsi2ss %rdx, %xmm1, %xmm1
-; AVX1-64-NEXT:    jns .LBB1_2
+; AVX1-64-NEXT:    jns .LBB3_2
 ; AVX1-64-NEXT:  # %bb.1:
 ; AVX1-64-NEXT:    vaddss %xmm1, %xmm1, %xmm1
-; AVX1-64-NEXT:  .LBB1_2:
+; AVX1-64-NEXT:  .LBB3_2:
 ; AVX1-64-NEXT:    vmovq %xmm0, %rax
 ; AVX1-64-NEXT:    movq %rax, %rcx
 ; AVX1-64-NEXT:    shrq %rcx
@@ -260,10 +314,10 @@ define <2 x float> @uitofp_v2i64_v2f32(<2 x i64> %x) #0 {
 ; AVX1-64-NEXT:    testq %rax, %rax
 ; AVX1-64-NEXT:    cmovnsq %rax, %rdx
 ; AVX1-64-NEXT:    vcvtsi2ss %rdx, %xmm2, %xmm0
-; AVX1-64-NEXT:    jns .LBB1_4
+; AVX1-64-NEXT:    jns .LBB3_4
 ; AVX1-64-NEXT:  # %bb.3:
 ; AVX1-64-NEXT:    vaddss %xmm0, %xmm0, %xmm0
-; AVX1-64-NEXT:  .LBB1_4:
+; AVX1-64-NEXT:  .LBB3_4:
 ; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; AVX1-64-NEXT:    retq
 ;
@@ -537,10 +591,9 @@ define <4 x float> @uitofp_v4i32_v4f32(<4 x i32> %x) #0 {
 ; AVX1-64-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX1-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512F-LABEL: uitofp_v4i32_v4f32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -551,10 +604,9 @@ define <4 x float> @uitofp_v4i32_v4f32(<4 x i32> %x) #0 {
 ; AVX512VL-NEXT:    vcvtudq2ps %xmm0, %xmm0
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: uitofp_v4i32_v4f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvtudq2ps %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -809,10 +861,9 @@ define <2 x double> @uitofp_v2i32_v2f64(<2 x i32> %x) #0 {
 ; AVX1-64-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX1-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512F-LABEL: uitofp_v2i32_v2f64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -823,10 +874,9 @@ define <2 x double> @uitofp_v2i32_v2f64(<2 x i32> %x) #0 {
 ; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %xmm0
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: uitofp_v2i32_v2f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512DQ-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -910,10 +960,9 @@ define <2 x double> @sitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; AVX-64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: sitofp_v2i64_v2f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -1016,10 +1065,9 @@ define <2 x double> @uitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; AVX512VL-64-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
 ; AVX512VL-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: uitofp_v2i64_v2f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
