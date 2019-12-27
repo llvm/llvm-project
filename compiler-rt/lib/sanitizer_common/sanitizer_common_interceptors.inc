@@ -9644,75 +9644,6 @@ INTERCEPTOR(int, getentropy, void *buf, SIZE_T buflen) {
 #define INIT_GETENTROPY
 #endif
 
-#if SANITIZER_INTERCEPT_QSORT
-// Glibc qsort uses a temporary buffer allocated either on stack or on heap.
-// Poisoned memory from there may get copied into the comparator arguments,
-// where it needs to be dealt with. But even that is not enough - the results of
-// the sort may be copied into the input/output array based on the results of
-// the comparator calls, but directly from the temp memory, bypassing the
-// unpoisoning done in wrapped_qsort_compar. We deal with this by, again,
-// unpoisoning the entire array after the sort is done.
-//
-// We can not check that the entire array is initialized at the beginning. IMHO,
-// it's fine for parts of the sorted objects to contain uninitialized memory,
-// ex. as padding in structs.
-typedef int (*qsort_compar_f)(const void *, const void *);
-static THREADLOCAL qsort_compar_f qsort_compar;
-static THREADLOCAL SIZE_T qsort_size;
-int wrapped_qsort_compar(const void *a, const void *b) {
-  COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, qsort_size);
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, qsort_size);
-  return qsort_compar(a, b);
-}
-
-INTERCEPTOR(void, qsort, void *base, SIZE_T nmemb, SIZE_T size,
-            qsort_compar_f compar) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, qsort, base, nmemb, size, compar);
-  qsort_compar_f old_compar = qsort_compar;
-  qsort_compar = compar;
-  SIZE_T old_size = qsort_size;
-  qsort_size = size;
-  REAL(qsort)(base, nmemb, size, wrapped_qsort_compar);
-  qsort_compar = old_compar;
-  qsort_size = old_size;
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, base, nmemb * size);
-}
-#define INIT_QSORT COMMON_INTERCEPT_FUNCTION(qsort)
-#else
-#define INIT_QSORT
-#endif
-
-#if SANITIZER_INTERCEPT_QSORT_R
-typedef int (*qsort_r_compar_f)(const void *, const void *, void *);
-static THREADLOCAL qsort_r_compar_f qsort_r_compar;
-static THREADLOCAL SIZE_T qsort_r_size;
-int wrapped_qsort_r_compar(const void *a, const void *b, void *arg) {
-  COMMON_INTERCEPTOR_UNPOISON_PARAM(3);
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, qsort_r_size);
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, qsort_r_size);
-  return qsort_r_compar(a, b, arg);
-}
-
-INTERCEPTOR(void, qsort_r, void *base, SIZE_T nmemb, SIZE_T size,
-            qsort_r_compar_f compar, void *arg) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, qsort_r, base, nmemb, size, compar, arg);
-  qsort_r_compar_f old_compar = qsort_r_compar;
-  qsort_r_compar = compar;
-  SIZE_T old_size = qsort_r_size;
-  qsort_r_size = size;
-  REAL(qsort_r)(base, nmemb, size, wrapped_qsort_r_compar, arg);
-  qsort_r_compar = old_compar;
-  qsort_r_size = old_size;
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, base, nmemb * size);
-}
-#define INIT_QSORT_R COMMON_INTERCEPT_FUNCTION(qsort_r)
-#else
-#define INIT_QSORT_R
-#endif
-
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 static void InitializeCommonInterceptors() {
@@ -10016,8 +9947,6 @@ static void InitializeCommonInterceptors() {
   INIT_CRYPT;
   INIT_CRYPT_R;
   INIT_GETENTROPY;
-  INIT_QSORT;
-  INIT_QSORT_R;
 
   INIT___PRINTF_CHK;
 }
