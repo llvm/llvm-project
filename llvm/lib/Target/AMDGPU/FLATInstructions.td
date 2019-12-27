@@ -759,7 +759,6 @@ def : FlatLoadPat <FLAT_LOAD_USHORT, zextloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, load_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
-def : FlatLoadPat <FLAT_LOAD_DWORDX4, load_flat, v4i32>;
 
 def : FlatLoadAtomicPat <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
 def : FlatLoadAtomicPat <FLAT_LOAD_DWORDX2, atomic_load_64_flat, i64>;
@@ -778,7 +777,11 @@ def : FlatLoadPat <FLAT_LOAD_DWORDX2, load_flat, vt>;
 }
 
 def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, v3i32, VReg_96>;
-def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, v4i32, VReg_128>;
+
+foreach vt = VReg_128.RegTypes in {
+def : FlatLoadPat <FLAT_LOAD_DWORDX4, load_flat, vt>;
+def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, vt, VReg_128>;
+}
 
 def : FlatStoreAtomicPat <FLAT_STORE_DWORD, atomic_store_flat_32, i32>;
 def : FlatStoreAtomicPat <FLAT_STORE_DWORDX2, atomic_store_flat_64, i64, VReg_64>;
@@ -859,7 +862,11 @@ def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX2, store_global, vt, VReg_64>;
 }
 
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX3, load_global, v3i32>;
-def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX4, load_global, v4i32>;
+
+foreach vt = VReg_128.RegTypes in {
+def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX4, load_global, vt>;
+def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX4, store_global, vt, VReg_128>;
+}
 
 def : FlatLoadAtomicPat <GLOBAL_LOAD_DWORD, atomic_load_32_global, i32>;
 def : FlatLoadAtomicPat <GLOBAL_LOAD_DWORDX2, atomic_load_64_global, i64>;
@@ -869,7 +876,6 @@ def : FlatStoreSignedPat <GLOBAL_STORE_BYTE, truncstorei8_global, i16, VGPR_32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, truncstorei16_global, i32, VGPR_32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, store_global, i16, VGPR_32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX3, store_global, v3i32, VReg_96>;
-def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX4, store_global, v4i32, VReg_128>;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 def : FlatStoreSignedPat <GLOBAL_STORE_SHORT_D16_HI, truncstorei16_hi16_global, i32>;
