@@ -14,6 +14,7 @@
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
+#include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
@@ -2997,6 +2998,9 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   else
     CGF.EmitStoreThroughLValue(RValue::get(Result), LHSLV);
 
+  if (CGF.getLangOpts().OpenMP)
+    CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF,
+                                                                  E->getLHS());
   return LHSLV;
 }
 

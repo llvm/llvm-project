@@ -1,15 +1,15 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=45 | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s -fopenmp-version=45
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - -fopenmp-version=45 | FileCheck %s --check-prefix=TERM_DEBUG
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50 --check-prefix=OMP50RT
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s -fopenmp-version=50 -DOMP5
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50 --check-prefix=OMP50RT
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck --check-prefix=TERM_DEBUG %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=45 | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s -fopenmp-version=45
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - -fopenmp-version=45 | FileCheck --check-prefix=TERM_DEBUG %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s -fopenmp-version=50 -DOMP5
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
@@ -17,7 +17,14 @@
  #ifndef HEADER
  #define HEADER
 
+#ifdef OMP5
+#define CONDITIONAL conditional :
+#else
+#define CONDITIONAL
+#endif //OMP5
 // CHECK: [[SS_TY:%.+]] = type { i32 }
+// OMP50-DAG: [[LAST_IV:@.+]] = {{.*}}common global i64 0
+// OMP50-DAG: [[LAST_A:@.+]] = {{.*}}common global i32 0
 
 long long get_val() { return 0; }
 double *g_ptr;
@@ -214,7 +221,7 @@ void simple(float *a, float *b, float *c, float *d) {
   int A;
   // CHECK: store i32 -1, i32* [[A:%.+]],
   A = -1;
-  #pragma omp simd lastprivate(A)
+  #pragma omp simd lastprivate(CONDITIONAL A)
 // CHECK: store i64 0, i64* [[OMP_IV7:%[^,]+]]
 // CHECK: br label %[[SIMD_LOOP7_COND:[^,]+]]
 // CHECK: [[SIMD_LOOP7_COND]]:
@@ -229,15 +236,32 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: [[LC_IT_2:%.+]] = add nsw i64 -10, [[LC_IT_1]]
 // CHECK-NEXT: store i64 [[LC_IT_2]], i64* [[LC:%[^,]+]],{{.+}}!llvm.access.group
 // CHECK-NEXT: [[LC_VAL:%.+]] = load i64, i64* [[LC]]{{.+}}!llvm.access.group
-// CHECK-NEXT: [[CONV:%.+]] = trunc i64 [[LC_VAL]] to i32
-// CHECK-NEXT: store i32 [[CONV]], i32* [[A_PRIV:%[^,]+]],{{.+}}!llvm.access.group
-    A = i;
+// CHECK-NEXT: [[A_VAL:%.+]] = load i32, i32* [[A_PRIV:%[^,]+]],{{.+}}!llvm.access.group
+// CHECK-NEXT: [[CAST:%.+]] = sext i32 [[A_VAL]] to i64
+// CHECK-NEXT: [[ADD:%.+]] = add nsw i64 [[CAST]], [[LC_VAL]]
+// CHECK-NEXT: [[CONV:%.+]] = trunc i64 [[ADD]] to i32
+// CHECK-NEXT: store i32 [[CONV]], i32* [[A_PRIV]],{{.+}}!llvm.access.group
+// OMP50-NEXT: [[IV:%.+]] = load i64, i64* [[OMP_IV7]],{{.+}}!llvm.access.group
+// OMP50RT:    call void @__kmpc_critical(%struct.ident_t* {{.+}}, i32 [[GTID:%.+]], [8 x i32]* [[A_REGION:@.+]]),{{.+}}!llvm.access.group
+// OMP50-NEXT: [[LAST_IV_VAL:%.+]] = load i64, i64* [[LAST_IV]],{{.+}}!llvm.access.group
+// OMP50-NEXT: [[CMP:%.+]] = icmp sle i64 [[LAST_IV_VAL]], [[IV]]
+// OMP50-NEXT: br i1 [[CMP]], label %[[LP_THEN:.+]], label %[[LP_DONE:[^,]+]]
+// OMP50:      [[LP_THEN]]:
+// OMP50-NEXT: store i64 [[IV]], i64* [[LAST_IV]],{{.+}}!llvm.access.group
+// OMP50-NEXT: [[A_VAL:%.+]] = load i32, i32* [[A_PRIV]],{{.+}}!llvm.access.group
+// OMP50-NEXT: store i32 [[A_VAL]], i32* [[LAST_A]],{{.+}}!llvm.access.group
+// OMP50-NEXT: br label %[[LP_DONE]]
+// OMP50:      [[LP_DONE]]:
+// OMP50RT-NEXT: call void @__kmpc_end_critical(%struct.ident_t* {{.+}}, i32 [[GTID]], [8 x i32]* [[A_REGION]]),{{.+}}!llvm.access.group
+    A += i;
 // CHECK: [[IV7_2:%.+]] = load i64, i64* [[OMP_IV7]]{{.*}}!llvm.access.group
 // CHECK-NEXT: [[ADD7_2:%.+]] = add nsw i64 [[IV7_2]], 1
 // CHECK-NEXT: store i64 [[ADD7_2]], i64* [[OMP_IV7]]{{.*}}!llvm.access.group
   }
 // CHECK: [[SIMPLE_LOOP7_END]]:
 // CHECK-NEXT: store i64 11, i64*
+// OMP50-NEXT: [[LAST_A_VAL:%.+]] = load i32, i32* [[LAST_A]],
+// OMP50-NEXT: store i32 [[LAST_A_VAL]], i32* [[A_PRIV]],
 // CHECK-NEXT: [[A_PRIV_VAL:%.+]] = load i32, i32* [[A_PRIV]],
 // CHECK-NEXT: store i32 [[A_PRIV_VAL]], i32* [[A]],
   int R;
