@@ -52,14 +52,40 @@ define <2 x float> @uitofp_2i32_to_2f32(<2 x i32> %a) {
 ; SSE41-NEXT:    cvtpd2ps %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: uitofp_2i32_to_2f32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vcvtpd2ps %xmm0, %xmm0
-; AVX-NEXT:    retq
+; VEX-LABEL: uitofp_2i32_to_2f32:
+; VEX:       # %bb.0:
+; VEX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; VEX-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; VEX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; VEX-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
+; VEX-NEXT:    vcvtpd2ps %xmm0, %xmm0
+; VEX-NEXT:    retq
+;
+; AVX512F-LABEL: uitofp_2i32_to_2f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: uitofp_2i32_to_2f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vcvtudq2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512DQ-LABEL: uitofp_2i32_to_2f32:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: uitofp_2i32_to_2f32:
+; AVX512VLDQ:       # %bb.0:
+; AVX512VLDQ-NEXT:    vcvtudq2ps %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    retq
   %cvt = uitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %cvt
 }
