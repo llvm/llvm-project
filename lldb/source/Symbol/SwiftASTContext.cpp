@@ -38,6 +38,7 @@
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
 #include "swift/Basic/Dwarf.h"
 #include "swift/Basic/LangOptions.h"
+#include "swift/Basic/Located.h"
 #include "swift/Basic/Platform.h"
 #include "swift/Basic/PrimarySpecificPaths.h"
 #include "swift/Basic/SourceManager.h"
@@ -3711,7 +3712,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
     return nullptr;
   }
 
-  typedef std::pair<swift::Identifier, swift::SourceLoc> ModuleNameSpec;
+  typedef swift::Located<swift::Identifier> ModuleNameSpec;
   llvm::StringRef module_basename_sref = module.path.front().GetStringRef();
   ModuleNameSpec name_pair(ast->getIdentifier(module_basename_sref),
                            swift::SourceLoc());
@@ -3794,7 +3795,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
         ast->SearchPathOpts.ImportSearchPaths.push_back(
             std::move(module_directory));
 
-      typedef std::pair<swift::Identifier, swift::SourceLoc> ModuleNameSpec;
+      typedef swift::Located<swift::Identifier> ModuleNameSpec;
       llvm::StringRef module_basename_sref(module_basename.GetCString());
       ModuleNameSpec name_pair(ast->getIdentifier(module_basename_sref),
                                swift::SourceLoc());
