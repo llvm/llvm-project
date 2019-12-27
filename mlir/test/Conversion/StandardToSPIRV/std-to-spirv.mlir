@@ -135,6 +135,46 @@ func @constant() {
 }
 
 //===----------------------------------------------------------------------===//
+// std logical binary operations
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @logical_scalar
+func @logical_scalar(%arg0 : i1, %arg1 : i1) {
+  // CHECK: spv.LogicalAnd
+  %0 = and %arg0, %arg1 : i1
+  // CHECK: spv.LogicalOr
+  %1 = or %arg0, %arg1 : i1
+  return
+}
+
+// CHECK-LABEL: @logical_vector
+func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+  // CHECK: spv.LogicalAnd
+  %0 = and %arg0, %arg1 : vector<4xi1>
+  // CHECK: spv.LogicalOr
+  %1 = or %arg0, %arg1 : vector<4xi1>
+  return
+}
+
+// CHECK-LABEL: @logical_scalar_fail
+func @logical_scalar_fail(%arg0 : i32, %arg1 : i32) {
+  // CHECK-NOT: spv.LogicalAnd
+  %0 = and %arg0, %arg1 : i32
+  // CHECK-NOT: spv.LogicalOr
+  %1 = or %arg0, %arg1 : i32
+  return
+}
+
+// CHECK-LABEL: @logical_vector_fail
+func @logical_vector_fail(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
+  // CHECK-NOT: spv.LogicalAnd
+  %0 = and %arg0, %arg1 : vector<4xi32>
+  // CHECK-NOT: spv.LogicalOr
+  %1 = or %arg0, %arg1 : vector<4xi32>
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // std.select
 //===----------------------------------------------------------------------===//
 
