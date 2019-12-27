@@ -66,9 +66,9 @@ void atomic_ops_test() {
   atomic_int i;
   foo(&i);
 // OpenCL v2.0 s6.13.11.8, arithemtic operations are not permitted on atomic types.
-  i++; // expected-error {{invalid argument type 'atomic_int' (aka '_Atomic(int)') to unary expression}}
+  i++; // expected-error {{invalid argument type '__private atomic_int' (aka '__private _Atomic(int)') to unary expression}}
   i = 1; // expected-error {{atomic variable can be assigned to a variable only in global address space}}
-  i += 1; // expected-error {{invalid operands to binary expression ('atomic_int' (aka '_Atomic(int)') and 'int')}}
-  i = i + i; // expected-error {{invalid operands to binary expression ('atomic_int' (aka '_Atomic(int)') and 'atomic_int')}}
+  i += 1; // expected-error {{invalid operands to binary expression ('__private atomic_int' (aka '__private _Atomic(int)') and 'int')}}
+  i = i + i; // expected-error {{invalid operands to binary expression ('__private atomic_int' (aka '__private _Atomic(int)') and '__private atomic_int')}}
 }
 #endif

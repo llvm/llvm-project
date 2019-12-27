@@ -14,10 +14,10 @@ kernel void foo4(long2 in, global long2 *out) { *out = 5 + in;}
 
 kernel void foo5(float2 in, global float2 *out) {
     float* f;
-    *out = f + in; // expected-error{{cannot convert between vector and non-scalar values ('float *' and 'float2' (vector of 2 'float' values))}}
+    *out = f + in; // expected-error{{cannot convert between vector and non-scalar values ('__private float *' and 'float2' (vector of 2 'float' values))}}
 }
 
 kernel void foo6(int2 in, global int2 *out) {
     int* f;
-    *out = f + in; // expected-error{{cannot convert between vector and non-scalar values ('int *' and 'int2' (vector of 2 'int' values))}}
+    *out = f + in; // expected-error{{cannot convert between vector and non-scalar values ('__private int *' and 'int2' (vector of 2 'int' values))}}
 }

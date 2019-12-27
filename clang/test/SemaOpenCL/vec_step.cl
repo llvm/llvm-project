@@ -26,7 +26,7 @@ void foo(int3 arg1, int8 arg2) {
   int res11[vec_step(int16) == 16 ? 1 : -1];
   int res12[vec_step(void) == 1 ? 1 : -1];
 
-  int res13 = vec_step(*incomplete1); // expected-error {{'vec_step' requires built-in scalar or vector type, 'struct S' invalid}}
-  int res14 = vec_step(int16*); // expected-error {{'vec_step' requires built-in scalar or vector type, 'int16 *' invalid}}
+  int res13 = vec_step(*incomplete1); // expected-error {{'vec_step' requires built-in scalar or vector type, '__private struct S' invalid}}
+  int res14 = vec_step(int16*); // expected-error {{'vec_step' requires built-in scalar or vector type, '__private int16 *' invalid}}
   int res15 = vec_step(void(void)); // expected-error {{'vec_step' requires built-in scalar or vector type, 'void (void)' invalid}}
 }

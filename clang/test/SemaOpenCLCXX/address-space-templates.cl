@@ -19,7 +19,7 @@ T *foo2(T *i) {
 
 template <typename T>
 void foo3() {
-  __private T ii; // expected-error{{conflicting address space qualifiers are provided between types 'T' and '__global int'}}
+  __private T ii; // expected-error{{conflicting address space qualifiers are provided between types '__private T' and '__global int'}}
 }
 
 void bar() {

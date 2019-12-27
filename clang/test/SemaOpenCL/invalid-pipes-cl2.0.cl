@@ -6,7 +6,7 @@ global reserve_id_t rid;          // expected-error {{the '__global reserve_id_t
 
 extern pipe write_only int get_pipe(); // expected-error-re{{type '__global write_only pipe int ({{(void)?}})' can only be used as a function parameter in OpenCL}} expected-error{{'write_only' attribute only applies to parameters and typedefs}}
 
-kernel void test_invalid_reserved_id(reserve_id_t ID) { // expected-error {{'reserve_id_t' cannot be used as the type of a kernel parameter}}
+kernel void test_invalid_reserved_id(reserve_id_t ID) { // expected-error {{'__private reserve_id_t' cannot be used as the type of a kernel parameter}}
 }
 
 void test1(pipe int *p) {// expected-error {{pipes packet types cannot be of reference type}}
@@ -16,15 +16,15 @@ void test2(pipe p) {// expected-error {{missing actual type specifier for pipe}}
 void test3(int pipe p) {// expected-error {{cannot combine with previous 'int' declaration specifier}}
 }
 void test4() {
-  pipe int p; // expected-error {{type 'read_only pipe int' can only be used as a function parameter}}
+  pipe int p; // expected-error {{type '__private read_only pipe int' can only be used as a function parameter}}
   //TODO: fix parsing of this pipe int (*p);
 }
 
 void test5(pipe int p) {
-  p+p; // expected-error{{invalid operands to binary expression ('read_only pipe int' and 'read_only pipe int')}}
-  p=p; // expected-error{{invalid operands to binary expression ('read_only pipe int' and 'read_only pipe int')}}
-  &p; // expected-error{{invalid argument type 'read_only pipe int' to unary expression}}
-  *p; // expected-error{{invalid argument type 'read_only pipe int' to unary expression}}
+  p+p; // expected-error{{invalid operands to binary expression ('__private read_only pipe int' and '__private read_only pipe int')}}
+  p=p; // expected-error{{invalid operands to binary expression ('__private read_only pipe int' and '__private read_only pipe int')}}
+  &p; // expected-error{{invalid argument type '__private read_only pipe int' to unary expression}}
+  *p; // expected-error{{invalid argument type '__private read_only pipe int' to unary expression}}
 }
 
 typedef pipe int pipe_int_t;
@@ -32,7 +32,7 @@ pipe_int_t test6() {} // expected-error{{declaring function return value of type
 
 bool test_id_comprision(void) {
   reserve_id_t id1, id2;
-  return (id1 == id2);          // expected-error {{invalid operands to binary expression ('reserve_id_t' and 'reserve_id_t')}}
+  return (id1 == id2);          // expected-error {{invalid operands to binary expression ('__private reserve_id_t' and '__private reserve_id_t')}}
 }
 
 // Tests ASTContext::mergeTypes rejects this.

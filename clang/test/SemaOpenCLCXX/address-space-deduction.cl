@@ -30,8 +30,8 @@ struct c2 {
 
 template <class T>
 struct x1 {
-//CHECK: -CXXMethodDecl {{.*}} operator= 'x1<T> &(const x1<T> &){{( __attribute__.*)?}} __generic'
-//CHECK: -CXXMethodDecl {{.*}} operator= '__generic x1<int> &(const __generic x1<int> &){{( __attribute__.*)?}} __generic'
+//CHECK: -CXXMethodDecl {{.*}} operator= 'x1<T> &(const x1<T> &__private){{( __attribute__.*)?}} __generic'
+//CHECK: -CXXMethodDecl {{.*}} operator= '__generic x1<int> &(const __generic x1<int> &__private){{( __attribute__.*)?}} __generic'
   x1<T>& operator=(const x1<T>& xx) {
     y = xx.y;
     return *this;
@@ -41,8 +41,8 @@ struct x1 {
 
 template <class T>
 struct x2 {
-//CHECK: -CXXMethodDecl {{.*}} foo 'void (x1<T> *){{( __attribute__.*)?}} __generic'
-//CHECK: -CXXMethodDecl {{.*}} foo 'void (__generic x1<int> *){{( __attribute__.*)?}} __generic'
+//CHECK: -CXXMethodDecl {{.*}} foo 'void (x1<T> *__private){{( __attribute__.*)?}} __generic'
+//CHECK: -CXXMethodDecl {{.*}} foo 'void (__generic x1<int> *__private){{( __attribute__.*)?}} __generic'
   void foo(x1<T>* xx) {
     m[0] = *xx;
   }
@@ -57,10 +57,10 @@ void bar(__global x1<int> *xx, __global x2<int> *bar) {
 template <typename T>
 class x3 : public T {
 public:
-  //CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &){{( __attribute__.*)?}} __generic'
+  //CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &__private){{( __attribute__.*)?}} __generic'
   x3(const x3 &t);
 };
-//CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &){{( __attribute__.*)?}} __generic'
+//CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &__private){{( __attribute__.*)?}} __generic'
 template <typename T>
 x3<T>::x3(const x3<T> &t) {}
 
@@ -68,7 +68,7 @@ template <class T>
 T xxx(T *in1, T in2) {
   // This pointer can't be deduced to generic because addr space
   // will be taken from the template argument.
-  //CHECK: `-VarDecl {{.*}} i 'T *' cinit
+  //CHECK: `-VarDecl {{.*}} '__private T *__private' cinit
   T *i = in1;
   T ii;
   __private T *ptr = &ii;
@@ -92,15 +92,15 @@ __kernel void test() {
 }
 
 // Addr space for pointer/reference to an array
-//CHECK: FunctionDecl {{.*}} t1 'void (const float (__generic &)[2])'
+//CHECK: FunctionDecl {{.*}} t1 'void (const float (__generic &__private)[2])'
 void t1(const float (&fYZ)[2]);
-//CHECK: FunctionDecl {{.*}} t2 'void (const float (__generic *)[2])'
+//CHECK: FunctionDecl {{.*}} t2 'void (const float (__generic *__private)[2])'
 void t2(const float (*fYZ)[2]);
-//CHECK: FunctionDecl {{.*}} t3 'void (float (((__generic *)))[2])'
+//CHECK: FunctionDecl {{.*}} t3 'void (float (((__generic *__private)))[2])'
 void t3(float(((*fYZ)))[2]);
-//CHECK: FunctionDecl {{.*}} t4 'void (float (((__generic *__generic *)))[2])'
+//CHECK: FunctionDecl {{.*}} t4 'void (float (((__generic *__generic *__private)))[2])'
 void t4(float(((**fYZ)))[2]);
-//CHECK: FunctionDecl {{.*}} t5 'void (float (__generic *(__generic *))[2])'
+//CHECK: FunctionDecl {{.*}} t5 'void (float (__generic *(__generic *__private))[2])'
 void t5(float (*(*fYZ))[2]);
 
 __kernel void k() {
