@@ -2420,6 +2420,9 @@ struct __sanitizer_cdbw {
 
 #define SIGACTION_SYMNAME __sigaction14
 
+// Compat with 9.0
+extern unsigned struct_statvfs90_sz;
+
 #endif  // SANITIZER_NETBSD
 
 #endif

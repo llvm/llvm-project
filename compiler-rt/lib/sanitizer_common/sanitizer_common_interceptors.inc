@@ -79,13 +79,15 @@
 #define devname __devname50
 #define fgetpos __fgetpos50
 #define fsetpos __fsetpos50
+#define fstatvfs __fstatvfs90
+#define fstatvfs1 __fstatvfs190
 #define fts_children __fts_children60
 #define fts_close __fts_close60
 #define fts_open __fts_open60
 #define fts_read __fts_read60
 #define fts_set __fts_set60
 #define getitimer __getitimer50
-#define getmntinfo __getmntinfo13
+#define getmntinfo __getmntinfo90
 #define getpwent __getpwent50
 #define getpwnam __getpwnam50
 #define getpwnam_r __getpwnam_r50
@@ -95,6 +97,7 @@
 #define getutxent __getutxent50
 #define getutxid __getutxid50
 #define getutxline __getutxline50
+#define getvfsstat __getvfsstat90
 #define pututxline __pututxline50
 #define glob __glob30
 #define gmtime __gmtime50
@@ -116,6 +119,8 @@
 #define sigprocmask __sigprocmask14
 #define sigtimedwait __sigtimedwait50
 #define stat __stat50
+#define statvfs __statvfs90
+#define statvfs1 __statvfs190
 #define time __time50
 #define times __times13
 #define unvis __unvis50
@@ -9707,6 +9712,8 @@ INTERCEPTOR(void, qsort_r, void *base, SIZE_T nmemb, SIZE_T size,
 #else
 #define INIT_QSORT_R
 #endif
+
+#include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 static void InitializeCommonInterceptors() {
 #if SI_POSIX
