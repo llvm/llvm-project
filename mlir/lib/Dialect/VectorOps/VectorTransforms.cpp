@@ -104,21 +104,6 @@ static Operation *cloneOpWithOperandsAndTypes(PatternRewriter &builder,
   return builder.createOperation(res);
 }
 
-static Value makeSplatZero(Location loc, PatternRewriter &rewriter,
-                           VectorType vt) {
-  auto t = vt.getElementType();
-  Value f = nullptr;
-  if (t.isBF16() || t.isF16())
-    f = rewriter.create<ConstantOp>(loc, t, rewriter.getF64FloatAttr(0.0f));
-  else if (t.isF32())
-    f = rewriter.create<ConstantOp>(loc, t, rewriter.getF32FloatAttr(0.0f));
-  else if (t.isF64())
-    f = rewriter.create<ConstantOp>(loc, t, rewriter.getF64FloatAttr(0.0f));
-  if (f)
-    return rewriter.create<SplatOp>(loc, vt, f);
-  llvm_unreachable("Unsupported type in `makeSplatZero`");
-}
-
 // Populates 'resultElements[indexMap[i]]' with elements from 'inputElements[i]'
 // for each index 'i' in inputElements with a valid mapping in 'indexMap'.
 static void getMappedElements(const DenseMap<int64_t, int64_t> &indexMap,
