@@ -6828,14 +6828,22 @@ define <2 x float> @constrained_vector_uitofp_v2f32_v2i32(<2 x i32> %x) #0 {
 ; CHECK-NEXT:    cvtpd2ps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_uitofp_v2f32_v2i32:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vcvtpd2ps %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: constrained_vector_uitofp_v2f32_v2i32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtpd2ps %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_uitofp_v2f32_v2i32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
 entry:
   %result = call <2 x float>
            @llvm.experimental.constrained.uitofp.v2f32.v2i32(<2 x i32> %x,
