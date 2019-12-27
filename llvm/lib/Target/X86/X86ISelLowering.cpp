@@ -29012,7 +29012,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     if (SrcVT != MVT::v2i32)
       return;
 
-    if (IsSigned) {
+    if (IsSigned || Subtarget.hasAVX512()) {
       if (!IsStrict)
         return;
 
