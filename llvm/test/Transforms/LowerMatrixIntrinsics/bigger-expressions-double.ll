@@ -462,15 +462,34 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 
 ; CHECK-NEXT:    [[TMP106:%.*]] = shufflevector <1 x double> [[TMP105]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP107:%.*]] = shufflevector <3 x double> [[TMP97]], <3 x double> [[TMP106]], <3 x i32> <i32 0, i32 1, i32 3>
-; CHECK-NEXT:    [[TMP108:%.*]] = shufflevector <3 x double> [[TMP47]], <3 x double> [[TMP77]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP109:%.*]] = shufflevector <3 x double> [[TMP107]], <3 x double> undef, <6 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP110:%.*]] = shufflevector <6 x double> [[TMP108]], <6 x double> [[TMP109]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 
-; Load %C and add result of multiply.
+; Load %C.
 
 ; CHECK-NEXT:    [[C:%.*]] = load <9 x double>, <9 x double>* [[C_PTR:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = fadd <9 x double> [[C]], [[TMP110]]
-; CHECK-NEXT:    store <9 x double> [[RES]], <9 x double>* [[C_PTR]]
+
+; Extract columns from %C.
+
+; CHECK-NEXT:    [[SPLIT84:%.*]] = shufflevector <9 x double> [[C]], <9 x double> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[SPLIT85:%.*]] = shufflevector <9 x double> [[C]], <9 x double> undef, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[SPLIT86:%.*]] = shufflevector <9 x double> [[C]], <9 x double> undef, <3 x i32> <i32 6, i32 7, i32 8>
+
+; Add column vectors.
+
+; CHECK-NEXT:    [[TMP108:%.*]] = fadd <3 x double> [[SPLIT84]], [[TMP47]]
+; CHECK-NEXT:    [[TMP109:%.*]] = fadd <3 x double> [[SPLIT85]], [[TMP77]]
+; CHECK-NEXT:    [[TMP110:%.*]] = fadd <3 x double> [[SPLIT86]], [[TMP107]]
+
+; Store result columns.
+
+; CHECK-NEXT:    [[TMP111:%.*]] = bitcast <9 x double>* [[C_PTR]] to double*
+; CHECK-NEXT:    [[TMP112:%.*]] = bitcast double* [[TMP111]] to <3 x double>*
+; CHECK-NEXT:    store <3 x double> [[TMP108]], <3 x double>* [[TMP112]], align 8
+; CHECK-NEXT:    [[TMP113:%.*]] = getelementptr double, double* [[TMP111]], i32 3
+; CHECK-NEXT:    [[TMP114:%.*]] = bitcast double* [[TMP113]] to <3 x double>*
+; CHECK-NEXT:    store <3 x double> [[TMP109]], <3 x double>* [[TMP114]], align 8
+; CHECK-NEXT:    [[TMP115:%.*]] = getelementptr double, double* [[TMP111]], i32 6
+; CHECK-NEXT:    [[TMP116:%.*]] = bitcast double* [[TMP115]] to <3 x double>*
+; CHECK-NEXT:    store <3 x double> [[TMP110]], <3 x double>* [[TMP116]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
