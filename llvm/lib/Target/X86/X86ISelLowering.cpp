@@ -1000,8 +1000,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v2i32, Custom);
 
     // Fast v2f32 UINT_TO_FP( v2i32 ) custom conversion.
-    // FIXME: Does this apply to STRICT_UINT_TO_FP?
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2f32, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v2f32, Custom);
 
     setOperationAction(ISD::FP_EXTEND,          MVT::v2f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v2f32, Custom);
@@ -1857,8 +1857,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SINT_TO_FP,        MVT::v2f32, Custom);
       setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v2f32, Custom);
       assert(isOperationCustom(ISD::UINT_TO_FP, MVT::v2f32) &&
+             isOperationCustom(ISD::STRICT_UINT_TO_FP, MVT::v2f32) &&
              "Unexpected operation action!");
-      setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v2f32, Custom);
       // v2i64 FP_TO_S/UINT(v2f32) custom conversion.
       setOperationAction(ISD::FP_TO_SINT,        MVT::v2f32, Custom);
       setOperationAction(ISD::FP_TO_UINT,        MVT::v2f32, Custom);
@@ -28926,8 +28926,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
       return;
     }
-    // FIXME: Is this safe for strict fp?
-    if (SrcVT != MVT::v2i32 || IsSigned || IsStrict)
+    if (SrcVT != MVT::v2i32 || IsSigned)
       return;
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
     SDValue ZExtIn = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v2i64, Src);
@@ -28936,9 +28935,19 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Or = DAG.getNode(ISD::OR, dl, MVT::v2i64, ZExtIn,
                              DAG.getBitcast(MVT::v2i64, VBias));
     Or = DAG.getBitcast(MVT::v2f64, Or);
-    // TODO: Are there any fast-math-flags to propagate here?
-    SDValue Sub = DAG.getNode(ISD::FSUB, dl, MVT::v2f64, Or, VBias);
-    Results.push_back(DAG.getNode(X86ISD::VFPROUND, dl, MVT::v4f32, Sub));
+    if (IsStrict) {
+      SDValue Sub = DAG.getNode(ISD::STRICT_FSUB, dl, {MVT::v2f64, MVT::Other},
+                                {N->getOperand(0), Or, VBias});
+      SDValue Res = DAG.getNode(X86ISD::STRICT_VFPROUND, dl,
+                                {MVT::v4f32, MVT::Other},
+                                {Sub.getValue(1), Sub});
+      Results.push_back(Res);
+      Results.push_back(Res.getValue(1));
+    } else {
+      // TODO: Are there any fast-math-flags to propagate here?
+      SDValue Sub = DAG.getNode(ISD::FSUB, dl, MVT::v2f64, Or, VBias);
+      Results.push_back(DAG.getNode(X86ISD::VFPROUND, dl, MVT::v4f32, Sub));
+    }
     return;
   }
   case ISD::STRICT_FP_ROUND:
