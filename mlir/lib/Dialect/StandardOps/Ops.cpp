@@ -2513,6 +2513,7 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
     auto newMemRefType =
         MemRefType::get(newShapeConstants, memrefType.getElementType(), {map},
                         memrefType.getMemorySpace());
+    (void)dynamicOffsetOperandCount; // unused in opt mode
     assert(static_cast<int64_t>(newOperands.size()) ==
            dynamicOffsetOperandCount + newMemRefType.getNumDynamicDims());
 
