@@ -6220,23 +6220,14 @@ entry:
 define <2 x float> @constrained_vector_sitofp_v2f32_v2i32(<2 x i32> %x) #0 {
 ; CHECK-LABEL: constrained_vector_sitofp_v2f32_v2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    cvtsi2ss %eax, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    cvtsi2ss %eax, %xmm0
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_sitofp_v2f32_v2i32:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vextractps $1, %xmm0, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm1, %xmm1
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm2, %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call <2 x float>
