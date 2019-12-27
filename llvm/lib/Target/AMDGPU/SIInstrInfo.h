@@ -977,7 +977,7 @@ public:
   MachineInstr *createPHISourceCopy(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator InsPt,
                                     const DebugLoc &DL, Register Src,
-                                    Register SrcSubReg,
+                                    unsigned SrcSubReg,
                                     Register Dst) const override;
 
   bool isWave32() const;

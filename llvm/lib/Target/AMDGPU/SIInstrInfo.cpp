@@ -6573,7 +6573,7 @@ MachineInstr *SIInstrInfo::createPHIDestinationCopy(
 
 MachineInstr *SIInstrInfo::createPHISourceCopy(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsPt,
-    const DebugLoc &DL, Register Src, Register SrcSubReg, Register Dst) const {
+    const DebugLoc &DL, Register Src, unsigned SrcSubReg, Register Dst) const {
   if (InsPt != MBB.end() &&
       (InsPt->getOpcode() == AMDGPU::SI_IF ||
        InsPt->getOpcode() == AMDGPU::SI_ELSE ||
