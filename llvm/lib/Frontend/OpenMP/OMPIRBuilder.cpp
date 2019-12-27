@@ -271,7 +271,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
         getOrCreateRuntimeFunction(OMPRTL___kmpc_push_num_threads), Args);
   }
 
-  if (ProcBind != OMP_PB_default) {
+  if (ProcBind != OMP_PROC_BIND_default) {
     // Build call __kmpc_push_proc_bind(&Ident, global_tid, proc_bind)
     Value *Args[] = {
         Ident, ThreadID,

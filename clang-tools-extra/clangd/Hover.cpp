@@ -195,7 +195,7 @@ const NamedDecl *getDeclForComment(const NamedDecl *D) {
       return VTSD->getTemplateInstantiationPattern();
   if (auto *FD = D->getAsFunction())
     if (FD->isTemplateInstantiation())
-      return FD->getTemplateSpecializationInfo()->getTemplate();
+      return FD->getTemplateInstantiationPattern();
   return D;
 }
 

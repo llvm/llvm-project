@@ -1455,6 +1455,24 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Struct;
             HI.Documentation = "auto on alias";
           }},
+      {
+          R"cpp(// should not crash.
+          template <class T> struct cls {
+            int method();
+          };
+
+          auto test = cls<int>().[[m^ethod]]();
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Definition = "int method()";
+            HI.Kind = index::SymbolKind::InstanceMethod;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "cls<int>::";
+            HI.Name = "method";
+            HI.Parameters.emplace();
+            HI.ReturnType = "int";
+            HI.Type = "int ()";
+          }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
