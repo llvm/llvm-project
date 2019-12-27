@@ -135,7 +135,7 @@ StringRef getOutputSectionName(const InputSectionBase *s) {
 }
 
 static bool needsInterpSection() {
-  return !config->shared && !config->dynamicLinker.empty() &&
+  return !sharedFiles.empty() && !config->dynamicLinker.empty() &&
          script->needsInterpSection();
 }
 
