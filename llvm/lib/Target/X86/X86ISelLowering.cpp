@@ -28858,6 +28858,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         return;
       }
 
+      // Custom widen strict v2f32->v2i32 by padding with zeros.
+      // FIXME: Should generic type legalizer do this?
+      if (Src.getValueType() == MVT::v2f32 && IsStrict) {
+        Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
+                          DAG.getConstantFP(0.0, dl, MVT::v2f32));
+        SDValue Res = DAG.getNode(N->getOpcode(), dl, {MVT::v4i32, MVT::Other},
+                                  {N->getOperand(0), Src});
+        Results.push_back(Res);
+        Results.push_back(Res.getValue(1));
+        return;
+      }
+
       // The FP_TO_INTHelper below only handles f32/f64/f80 scalar inputs,
       // so early out here.
       return;
