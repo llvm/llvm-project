@@ -69,16 +69,13 @@ bool runCommandsInFile(const char *ExeName, std::string const &FileName,
     llvm::errs() << ExeName << ": cannot open " << FileName << "\n";
     return 1;
   }
+  while (Input.good()) {
+    std::string Line;
+    std::getline(Input, Line);
 
-  std::string FileContent((std::istreambuf_iterator<char>(Input)),
-                          std::istreambuf_iterator<char>());
-
-  StringRef FileContentRef(FileContent);
-  while (!FileContentRef.empty()) {
-    QueryRef Q = QueryParser::parse(FileContentRef, QS);
+    QueryRef Q = QueryParser::parse(Line, QS);
     if (!Q->run(llvm::outs(), QS))
       return true;
-    FileContentRef = Q->RemainingContent;
   }
   return false;
 }
