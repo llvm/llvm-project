@@ -3951,7 +3951,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
             return eraseInstFromFunction(CI);
 
           // Bail if we cross over an intrinsic with side effects, such as
-          // llvm.stacksave, llvm.read_register, or llvm.setjmp.
+          // llvm.stacksave, or llvm.read_register.
           if (II2->mayHaveSideEffects()) {
             CannotRemove = true;
             break;

@@ -162,19 +162,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setLibcallName(RTLIB::POWI_F64, nullptr);
   }
 
-  if (Subtarget.isTargetDarwin()) {
-    // Darwin should use _setjmp/_longjmp instead of setjmp/longjmp.
-    setUseUnderscoreSetJmp(false);
-    setUseUnderscoreLongJmp(false);
-  } else if (Subtarget.isTargetWindowsGNU()) {
-    // MS runtime is weird: it exports _setjmp, but longjmp!
-    setUseUnderscoreSetJmp(true);
-    setUseUnderscoreLongJmp(false);
-  } else {
-    setUseUnderscoreSetJmp(true);
-    setUseUnderscoreLongJmp(true);
-  }
-
   // If we don't have cmpxchg8b(meaing this is a 386/486), limit atomic size to
   // 32 bits so the AtomicExpandPass will expand it so we don't need cmpxchg8b.
   // FIXME: Should we be limitting the atomic size on other configs? Default is
