@@ -254,34 +254,6 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     break;
   }
 
-    // The setjmp/longjmp intrinsics should only exist in the code if it was
-    // never optimized (ie, right out of the CFE), or if it has been hacked on
-    // by the lowerinvoke pass.  In both cases, the right thing to do is to
-    // convert the call to an explicit setjmp or longjmp call.
-  case Intrinsic::setjmp: {
-    Value *V = ReplaceCallWith("setjmp", CI, CS.arg_begin(), CS.arg_end(),
-                               Type::getInt32Ty(Context));
-    if (!CI->getType()->isVoidTy())
-      CI->replaceAllUsesWith(V);
-    break;
-  }
-  case Intrinsic::sigsetjmp:
-     if (!CI->getType()->isVoidTy())
-       CI->replaceAllUsesWith(Constant::getNullValue(CI->getType()));
-     break;
-
-  case Intrinsic::longjmp: {
-    ReplaceCallWith("longjmp", CI, CS.arg_begin(), CS.arg_end(),
-                    Type::getVoidTy(Context));
-    break;
-  }
-
-  case Intrinsic::siglongjmp: {
-    // Insert the call to abort
-    ReplaceCallWith("abort", CI, CS.arg_end(), CS.arg_end(),
-                    Type::getVoidTy(Context));
-    break;
-  }
   case Intrinsic::ctpop:
     CI->replaceAllUsesWith(LowerCTPOP(Context, CI->getArgOperand(0), CI));
     break;
