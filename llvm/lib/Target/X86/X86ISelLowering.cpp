@@ -987,6 +987,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v2i32, Custom);
 
     // Fast v2f32 UINT_TO_FP( v2i32 ) custom conversion.
+    setOperationAction(ISD::SINT_TO_FP,         MVT::v2f32, Custom);
+    setOperationAction(ISD::STRICT_SINT_TO_FP,  MVT::v2f32, Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2f32, Custom);
     setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v2f32, Custom);
 
@@ -1848,8 +1850,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (Subtarget.hasDQI()) {
       // Fast v2f32 SINT_TO_FP( v2i64 ) custom conversion.
       // v2f32 UINT_TO_FP is already custom under SSE2.
-      setOperationAction(ISD::SINT_TO_FP,        MVT::v2f32, Custom);
-      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v2f32, Custom);
       assert(isOperationCustom(ISD::UINT_TO_FP, MVT::v2f32) &&
              isOperationCustom(ISD::STRICT_UINT_TO_FP, MVT::v2f32) &&
              "Unexpected operation action!");
@@ -29009,8 +29009,24 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
       return;
     }
-    if (SrcVT != MVT::v2i32 || IsSigned)
+    if (SrcVT != MVT::v2i32)
       return;
+
+    if (IsSigned) {
+      if (!IsStrict)
+        return;
+
+      // Custom widen strict v2i32->v2f32 to avoid scalarization.
+      // FIXME: Should generic type legalizer do this?
+      Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
+                        DAG.getConstant(0, dl, MVT::v2i32));
+      SDValue Res = DAG.getNode(N->getOpcode(), dl, {MVT::v4f32, MVT::Other},
+                                {N->getOperand(0), Src});
+      Results.push_back(Res);
+      Results.push_back(Res.getValue(1));
+      return;
+    }
+
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
     SDValue ZExtIn = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v2i64, Src);
     SDValue VBias =
