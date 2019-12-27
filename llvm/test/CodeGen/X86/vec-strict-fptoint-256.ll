@@ -197,10 +197,9 @@ define <4 x i64> @strict_vector_fptosi_v4f64_to_v4i64(<4 x double> %a) #0 {
 ; AVX512VL-64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VL-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: strict_vector_fptosi_v4f64_to_v4i64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvttpd2qq %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
@@ -569,10 +568,9 @@ define <4 x i64> @strict_vector_fptoui_v4f64_to_v4i64(<4 x double> %a) #0 {
 ; AVX512VL-64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VL-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: strict_vector_fptoui_v4f64_to_v4i64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvttpd2uqq %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
@@ -746,10 +744,9 @@ define <4 x i64> @strict_vector_fptosi_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512VL-64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VL-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: strict_vector_fptosi_v4f32_to_v4i64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvttps2qq %ymm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
@@ -1118,10 +1115,9 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512VL-64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VL-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: strict_vector_fptoui_v4f32_to_v4i64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvttps2uqq %ymm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
@@ -1195,10 +1191,9 @@ define <4 x i32> @strict_vector_fptoui_v4f64_to_v4i32(<4 x double> %a) #0 {
 ; AVX-64-NEXT:    vzeroupper
 ; AVX-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512F-LABEL: strict_vector_fptoui_v4f64_to_v4i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512F-NEXT:    vcvttpd2udq %zmm0, %ymm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512F-NEXT:    vzeroupper
@@ -1210,10 +1205,9 @@ define <4 x i32> @strict_vector_fptoui_v4f64_to_v4i32(<4 x double> %a) #0 {
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: strict_vector_fptoui_v4f64_to_v4i32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvttpd2udq %zmm0, %ymm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -1472,10 +1466,9 @@ define <8 x i32> @strict_vector_fptoui_v8f32_to_v8i32(<8 x float> %a) #0 {
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-64-NEXT:    retq
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512F-LABEL: strict_vector_fptoui_v8f32_to_v8i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512F-NEXT:    vcvttps2udq %zmm0, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -1485,10 +1478,9 @@ define <8 x i32> @strict_vector_fptoui_v8f32_to_v8i32(<8 x float> %a) #0 {
 ; AVX512VL-NEXT:    vcvttps2udq %ymm0, %ymm0
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
-; FIXME: This is an unsafe behavior for strict FP
 ; AVX512DQ-LABEL: strict_vector_fptoui_v8f32_to_v8i32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vcvttps2udq %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}

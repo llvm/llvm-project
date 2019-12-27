@@ -8367,23 +8367,6 @@ let Predicates = [HasDQI, HasVLX] in {
             (VCVTTPS2UQQZ128rmkz VK2WM:$mask, addr:$src)>;
 }
 
-let Predicates = [HasAVX512, NoVLX] in {
-def : Pat<(v8i32 (X86any_cvttp2ui (v8f32 VR256X:$src1))),
-          (EXTRACT_SUBREG (v16i32 (VCVTTPS2UDQZrr
-           (v16f32 (INSERT_SUBREG (IMPLICIT_DEF),
-                                  VR256X:$src1, sub_ymm)))), sub_ymm)>;
-
-def : Pat<(v4i32 (X86any_cvttp2ui (v4f32 VR128X:$src1))),
-          (EXTRACT_SUBREG (v16i32 (VCVTTPS2UDQZrr
-           (v16f32 (INSERT_SUBREG (IMPLICIT_DEF),
-                                  VR128X:$src1, sub_xmm)))), sub_xmm)>;
-
-def : Pat<(v4i32 (X86any_cvttp2ui (v4f64 VR256X:$src1))),
-          (EXTRACT_SUBREG (v8i32 (VCVTTPD2UDQZrr
-           (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
-                                 VR256X:$src1, sub_ymm)))), sub_xmm)>;
-}
-
 let Predicates = [HasVLX] in {
   def : Pat<(v2f64 (X86any_VSintToFP (bc_v4i32 (v2i64 (X86vzload64 addr:$src))))),
             (VCVTDQ2PDZ128rm addr:$src)>;
@@ -8466,38 +8449,6 @@ let Predicates = [HasDQI, HasVLX] in {
   def : Pat<(X86VMUintToFP (v2i64 (X86VBroadcastld64 addr:$src)),
                            v4f32x_info.ImmAllZerosV, VK2WM:$mask),
             (VCVTUQQ2PSZ128rmbkz VK2WM:$mask, addr:$src)>;
-}
-
-let Predicates = [HasDQI, NoVLX] in {
-def : Pat<(v2i64 (X86any_cvttp2si (v2f64 VR128X:$src1))),
-          (EXTRACT_SUBREG (v8i64 (VCVTTPD2QQZrr
-           (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
-                                  VR128X:$src1, sub_xmm)))), sub_xmm)>;
-
-def : Pat<(v4i64 (X86any_cvttp2si (v4f32 VR128X:$src1))),
-          (EXTRACT_SUBREG (v8i64 (VCVTTPS2QQZrr
-           (v8f32 (INSERT_SUBREG (IMPLICIT_DEF),
-                                  VR128X:$src1, sub_xmm)))), sub_ymm)>;
-
-def : Pat<(v4i64 (X86any_cvttp2si (v4f64 VR256X:$src1))),
-          (EXTRACT_SUBREG (v8i64 (VCVTTPD2QQZrr
-           (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
-                                  VR256X:$src1, sub_ymm)))), sub_ymm)>;
-
-def : Pat<(v2i64 (X86any_cvttp2ui (v2f64 VR128X:$src1))),
-          (EXTRACT_SUBREG (v8i64 (VCVTTPD2UQQZrr
-           (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
-                                  VR128X:$src1, sub_xmm)))), sub_xmm)>;
-
-def : Pat<(v4i64 (X86any_cvttp2ui (v4f32 VR128X:$src1))),
-          (EXTRACT_SUBREG (v8i64 (VCVTTPS2UQQZrr
-           (v8f32 (INSERT_SUBREG (IMPLICIT_DEF),
-                                  VR128X:$src1, sub_xmm)))), sub_ymm)>;
-
-def : Pat<(v4i64 (X86any_cvttp2ui (v4f64 VR256X:$src1))),
-          (EXTRACT_SUBREG (v8i64 (VCVTTPD2UQQZrr
-           (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
-                                  VR256X:$src1, sub_ymm)))), sub_ymm)>;
 }
 
 //===----------------------------------------------------------------------===//
