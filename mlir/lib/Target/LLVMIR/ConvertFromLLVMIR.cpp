@@ -203,6 +203,12 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
   if (auto *c = dyn_cast<llvm::ConstantDataArray>(value))
     if (c->isString())
       return b.getStringAttr(c->getAsString());
+  if (auto *c = dyn_cast<llvm::ConstantFP>(value)) {
+    if (c->getType()->isDoubleTy())
+      return b.getFloatAttr(FloatType::getF64(context), c->getValueAPF());
+    else if (c->getType()->isFloatingPointTy())
+      return b.getFloatAttr(FloatType::getF32(context), c->getValueAPF());
+  }
   return Attribute();
 }
 
