@@ -49,7 +49,7 @@ bool isProducedByOpOfType(Operation *consumerOp, Value consumedView) {
 // success.
 ////////////////////////////////////////////////////////////////////////////////
 
-/// Tiles `op` by `sizes` permuting the looops according to `permutation`
+/// Tiles `op` by `sizes` permuting the loops according to `permutation`
 /// and sets the attribute `kLinalgTransformMarker` to `linalgMarker`.
 /// The permutation is expressed as a list of integers that specify
 /// the new ordering of the loop nest. The length of `permutation`
