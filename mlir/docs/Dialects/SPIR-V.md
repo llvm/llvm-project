@@ -453,8 +453,8 @@ can be represented in the dialect as
 ```
 
 Operation documentation is written in each op's Op Definition Spec using
-TableGen. A markdown version of the doc can be generated using `mlir-tblgen
--gen-doc`.
+TableGen. A markdown version of the doc can be found at
+[mlir.llvm.org][LlvmMlirSpirvDoc] or generated using `mlir-tblgen -gen-doc`.
 
 ### Ops from extended instruction sets
 
@@ -1015,9 +1015,9 @@ For example, to add the definition for SPIR-V storage class in to
 [RuntimeArrayType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeRuntimeArray
 [StructType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#Structure
 [SpirvTools]: https://github.com/KhronosGroup/SPIRV-Tools
-[Rationale]: https://github.com/tensorflow/mlir/blob/master/g3doc/Rationale.md#block-arguments-vs-phi-nodes
-[ODS]: https://github.com/tensorflow/mlir/blob/master/g3doc/OpDefinitions.md
-[GreedyPatternRewriter]: https://github.com/tensorflow/mlir/blob/master/lib/Transforms/Utils/GreedyPatternRewriteDriver.cpp
+[Rationale]: https://github.com/llvm/llvm-project/blob/master/mlir/docs/Rationale.md#block-arguments-vs-phi-nodes
+[ODS]: https://github.com/llvm/llvm-project/blob/master/mlir/docs/OpDefinitions.md
+[GreedyPatternRewriter]: https://github.com/llvm/llvm-project/blob/master/mlir/lib/Transforms/Utils/GreedyPatternRewriteDriver.cpp
 [MlirSpirvHeaders]: https://github.com/tensorflow/mlir/tree/master/include/mlir/Dialect/SPIRV
 [MlirSpirvLibs]: https://github.com/tensorflow/mlir/tree/master/lib/Dialect/SPIRV
 [MlirSpirvTests]: https://github.com/tensorflow/mlir/tree/master/test/Dialect/SPIRV
@@ -1026,14 +1026,15 @@ For example, to add the definition for SPIR-V storage class in to
 [MlirGpuToSpirvLibs]: https://github.com/tensorflow/mlir/tree/master/lib/Conversion/GPUToSPIRV
 [MlirStdToSpirvHeaders]: https://github.com/tensorflow/mlir/tree/master/include/mlir/Conversion/StandardToSPIRV
 [MlirStdToSpirvLibs]: https://github.com/tensorflow/mlir/tree/master/lib/Conversion/StandardToSPIRV
-[MlirSpirvDialect]: https://github.com/tensorflow/mlir/blob/master/include/mlir/Dialect/SPIRV/SPIRVDialect.h
-[MlirSpirvTypes]: https://github.com/tensorflow/mlir/blob/master/include/mlir/Dialect/SPIRV/SPIRVTypes.h
-[MlirSpirvOps]: https://github.com/tensorflow/mlir/blob/master/include/mlir/Dialect/SPIRV/SPIRVOps.h
-[MlirSpirvSerialization]: https://github.com/tensorflow/mlir/blob/master/include/mlir/Dialect/SPIRV/Serialization.h
-[MlirSpirvBase]: https://github.com/tensorflow/mlir/blob/master/include/mlir/Dialect/SPIRV/SPIRVBase.td
-[MlirSpirvPasses]: https://github.com/tensorflow/mlir/blob/master/include/mlir/Dialect/SPIRV/Passes.h
-[MlirSpirvLowering]: https://github.com/tensorflow/mlir/blob/master/include/mlir/Dialect/SPIRV/SPIRVLowering.h
-[MlirSpirvAbi]: https://github.com/tensorflow/mlir/blob/master/include/mlir/Dialect/SPIRV/SPIRVLowering.td
+[MlirSpirvDialect]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVDialect.h
+[MlirSpirvTypes]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVTypes.h
+[MlirSpirvOps]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVOps.h
+[MlirSpirvSerialization]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/Serialization.h
+[MlirSpirvBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVBase.td
+[MlirSpirvPasses]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/Passes.h
+[MlirSpirvLowering]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVLowering.h
+[MlirSpirvAbi]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVLowering.td
 [GitHubDialectTracking]: https://github.com/tensorflow/mlir/issues/302
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
-[GenSpirvUtilsPy]: https://github.com/tensorflow/mlir/blob/master/utils/spirv/gen_spirv_dialect.py
+[GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/master/mlir/utils/spirv/gen_spirv_dialect.py
+[LlvmMlirSpirvDoc]: https://mlir.llvm.org/docs/Dialects/SPIRVOps/
