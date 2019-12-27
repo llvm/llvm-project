@@ -281,6 +281,24 @@ public:
     return true;
   }
 
+  bool isUniformShape(Value *V) {
+    Instruction *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return true;
+
+    switch (I->getOpcode()) {
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul: // Scalar multiply.
+    case Instruction::Add:
+    case Instruction::Mul:
+    case Instruction::Sub:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// Returns true if shape information can be used for \p V. The supported
   /// instructions must match the instructions that can be lowered by this pass.
   bool supportsShapeInfo(Value *V) {
@@ -299,7 +317,7 @@ public:
       default:
         return false;
       }
-    return isa<StoreInst>(Inst);
+    return isUniformShape(V) || isa<StoreInst>(V);
   }
 
   /// Propagate the shape information of instructions to their users.
@@ -366,6 +384,15 @@ public:
         if (OpShape != ShapeMap.end())
           setShapeInfo(Inst, OpShape->second);
         continue;
+      } else if (isUniformShape(Inst)) {
+        // Find the first operand that has a known shape and use that.
+        for (auto &Op : Inst->operands()) {
+          auto OpShape = ShapeMap.find(Op.get());
+          if (OpShape != ShapeMap.end()) {
+            Propagate |= setShapeInfo(Inst, OpShape->second);
+            break;
+          }
+        }
       }
 
       if (Propagate)
@@ -390,7 +417,9 @@ public:
 
         Value *Op1;
         Value *Op2;
-        if (match(&Inst, m_Store(m_Value(Op1), m_Value(Op2))))
+        if (auto *BinOp = dyn_cast<BinaryOperator>(&Inst))
+          Changed |= VisitBinaryOperator(BinOp);
+        else if (match(&Inst, m_Store(m_Value(Op1), m_Value(Op2))))
           Changed |= VisitStore(&Inst, Op1, Op2, Builder);
       }
     }
@@ -671,6 +700,49 @@ public:
       return false;
 
     LowerStore(Inst, StoredVal, Ptr, Builder.getInt32(I->second.NumRows), I->second);
+    return true;
+  }
+
+  /// Lower binary operators, if shape information is available.
+  bool VisitBinaryOperator(BinaryOperator *Inst) {
+    auto I = ShapeMap.find(Inst);
+    if (I == ShapeMap.end())
+      return false;
+
+    Value *Lhs = Inst->getOperand(0);
+    Value *Rhs = Inst->getOperand(1);
+
+    IRBuilder<> Builder(Inst);
+    ShapeInfo &Shape = I->second;
+
+    ColumnMatrixTy LoweredLhs = getMatrix(Lhs, Shape, Builder);
+    ColumnMatrixTy LoweredRhs = getMatrix(Rhs, Shape, Builder);
+
+    // Add each column and store the result back into the opmapping
+    ColumnMatrixTy Result;
+    auto BuildColumnOp = [&Builder, Inst](Value *LHS, Value *RHS) {
+      switch (Inst->getOpcode()) {
+      case Instruction::Add:
+        return Builder.CreateAdd(LHS, RHS);
+      case Instruction::Mul:
+        return Builder.CreateMul(LHS, RHS);
+      case Instruction::Sub:
+        return Builder.CreateSub(LHS, RHS);
+      case Instruction::FAdd:
+        return Builder.CreateFAdd(LHS, RHS);
+      case Instruction::FMul:
+        return Builder.CreateFMul(LHS, RHS);
+      case Instruction::FSub:
+        return Builder.CreateFSub(LHS, RHS);
+      default:
+        llvm_unreachable("Unsupported binary operator for matrix");
+      }
+    };
+    for (unsigned C = 0; C < Shape.NumColumns; ++C)
+      Result.addColumn(
+          BuildColumnOp(LoweredLhs.getColumn(C), LoweredRhs.getColumn(C)));
+
+    finalizeLowering(Inst, Result, Builder);
     return true;
   }
 };
