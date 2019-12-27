@@ -2147,8 +2147,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV64(MachineInstr &MI,
     .addUse(Scale)
     .setMIFlags(Flags);
 
-  B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, {S64}, false)
-    .addDef(Res)
+  B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, makeArrayRef(Res), false)
     .addUse(Fmas.getReg(0))
     .addUse(RHS)
     .addUse(LHS)

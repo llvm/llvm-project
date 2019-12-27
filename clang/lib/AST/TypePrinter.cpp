@@ -1784,7 +1784,7 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
   case LangAS::opencl_local:
     return "__local";
   case LangAS::opencl_private:
-    return "";
+    return "__private";
   case LangAS::opencl_constant:
     return "__constant";
   case LangAS::opencl_generic:

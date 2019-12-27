@@ -22,10 +22,10 @@ void langas() {
   // CHECK: VarDecl {{.*}} z_constant '__constant int *'
   [[clang::opencl_constant]] int *z_constant;
 
-  // CHECK: VarDecl {{.*}} x_private 'int *'
+  // CHECK: VarDecl {{.*}} x_private '__private int *'
   __attribute__((opencl_private)) int *x_private;
 
-  // CHECK: VarDecl {{.*}} z_private 'int *'
+  // CHECK: VarDecl {{.*}} z_private '__private int *'
   [[clang::opencl_private]] int *z_private;
 
   // CHECK: VarDecl {{.*}} x_generic '__generic int *'

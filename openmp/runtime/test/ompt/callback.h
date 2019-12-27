@@ -358,6 +358,9 @@ on_ompt_callback_sync_region(
           printf("%" PRIu64 ": ompt_event_taskgroup_begin: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, parallel_data->value, task_data->value, codeptr_ra);
           break;
         case ompt_sync_region_reduction:
+          printf("ompt_sync_region_reduction should never be passed to "
+                 "on_ompt_callback_sync_region\n");
+          exit(-1);
           break;
       }
       break;
@@ -377,6 +380,9 @@ on_ompt_callback_sync_region(
           printf("%" PRIu64 ": ompt_event_taskgroup_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, codeptr_ra);
           break;
         case ompt_sync_region_reduction:
+          printf("ompt_sync_region_reduction should never be passed to "
+                 "on_ompt_callback_sync_region\n");
+          exit(-1);
           break;
       }
       break;
@@ -409,6 +415,9 @@ on_ompt_callback_sync_region_wait(
           printf("%" PRIu64 ": ompt_event_wait_taskgroup_begin: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, parallel_data->value, task_data->value, codeptr_ra);
           break;
         case ompt_sync_region_reduction:
+          printf("ompt_sync_region_reduction should never be passed to "
+                 "on_ompt_callback_sync_region_wait\n");
+          exit(-1);
           break;
       }
       break;
@@ -428,9 +437,35 @@ on_ompt_callback_sync_region_wait(
           printf("%" PRIu64 ": ompt_event_wait_taskgroup_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, codeptr_ra);
           break;
         case ompt_sync_region_reduction:
+          printf("ompt_sync_region_reduction should never be passed to "
+                 "on_ompt_callback_sync_region_wait\n");
+          exit(-1);
           break;
       }
       break;
+  }
+}
+
+static void on_ompt_callback_reduction(ompt_sync_region_t kind,
+                                       ompt_scope_endpoint_t endpoint,
+                                       ompt_data_t *parallel_data,
+                                       ompt_data_t *task_data,
+                                       const void *codeptr_ra) {
+  switch (endpoint) {
+  case ompt_scope_begin:
+    printf("%" PRIu64 ": ompt_event_reduction_begin: parallel_id=%" PRIu64
+           ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
+           ompt_get_thread_data()->value,
+           (parallel_data) ? parallel_data->value : 0, task_data->value,
+           codeptr_ra);
+    break;
+  case ompt_scope_end:
+    printf("%" PRIu64 ": ompt_event_reduction_end: parallel_id=%" PRIu64
+           ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
+           ompt_get_thread_data()->value,
+           (parallel_data) ? parallel_data->value : 0, task_data->value,
+           codeptr_ra);
+    break;
   }
 }
 
@@ -784,6 +819,7 @@ int ompt_initialize(
   register_callback(ompt_callback_nest_lock);
   register_callback(ompt_callback_sync_region);
   register_callback_t(ompt_callback_sync_region_wait, ompt_callback_sync_region_t);
+  register_callback_t(ompt_callback_reduction, ompt_callback_sync_region_t);
   register_callback(ompt_callback_control_tool);
   register_callback(ompt_callback_flush);
   register_callback(ompt_callback_cancel);
