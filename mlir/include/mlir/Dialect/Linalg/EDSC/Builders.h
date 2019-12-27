@@ -32,9 +32,8 @@ inline StringRef toString(IterType t) {
     return getParallelIteratorTypeName();
   case IterType::Reduction:
     return getReductionIteratorTypeName();
-  default:
-    llvm_unreachable("Unsupport IterType");
   }
+  llvm_unreachable("Unsupported IterType");
 }
 
 /// A StructuredIndexed represents a captured value that can be indexed and
