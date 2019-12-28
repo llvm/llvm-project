@@ -19,11 +19,16 @@
 
 namespace mlir {
 
+class Block;
 class IROperand;
 class Operation;
 class Value;
 template <typename OperandType> class ValueUseIterator;
 template <typename OperandType> class ValueUserIterator;
+
+//===----------------------------------------------------------------------===//
+// IRObjectWithUseList
+//===----------------------------------------------------------------------===//
 
 class IRObjectWithUseList {
 public:
@@ -75,6 +80,10 @@ private:
   friend class IROperand;
   IROperand *firstUse = nullptr;
 };
+
+//===----------------------------------------------------------------------===//
+// IROperand
+//===----------------------------------------------------------------------===//
 
 /// A reference to a value, suitable for use as an operand of an operation.
 class IROperand {
@@ -168,6 +177,36 @@ private:
   }
 };
 
+//===----------------------------------------------------------------------===//
+// BlockOperand
+//===----------------------------------------------------------------------===//
+
+/// Terminator operations can have Block operands to represent successors.
+class BlockOperand : public IROperand {
+public:
+  using IROperand::IROperand;
+
+  /// Return the current block being used by this operand.
+  Block *get();
+
+  /// Set the current value being used by this operand.
+  void set(Block *block);
+
+  /// Return which operand this is in the operand list of the User.
+  unsigned getOperandNumber();
+
+private:
+  /// The number of OpOperands that correspond with this block operand.
+  unsigned numSuccessorOperands = 0;
+
+  /// Allow access to 'numSuccessorOperands'.
+  friend Operation;
+};
+
+//===----------------------------------------------------------------------===//
+// OpOperand
+//===----------------------------------------------------------------------===//
+
 /// A reference to a value, suitable for use as an operand of an operation.
 class OpOperand : public IROperand {
 public:
@@ -184,23 +223,9 @@ public:
   unsigned getOperandNumber();
 };
 
-/// A reference to a value, suitable for use as an operand of an operation,
-/// operation, etc.  IRValueTy is the root type to use for values this tracks,
-/// and SSAUserTy is the type that will contain operands.
-template <typename IRValueTy> class IROperandImpl : public IROperand {
-public:
-  IROperandImpl(Operation *owner) : IROperand(owner) {}
-  IROperandImpl(Operation *owner, IRValueTy *value) : IROperand(owner, value) {}
-
-  /// Return the current value being used by this operand.
-  IRValueTy *get() { return (IRValueTy *)IROperand::get(); }
-
-  /// Set the current value being used by this operand.
-  void set(IRValueTy *newValue) { IROperand::set(newValue); }
-
-  /// Return which operand this is in the operand list of the User.
-  unsigned getOperandNumber();
-};
+//===----------------------------------------------------------------------===//
+// ValueUseIterator
+//===----------------------------------------------------------------------===//
 
 /// An iterator over all uses of a ValueBase.
 template <typename OperandType>
@@ -254,6 +279,10 @@ inline auto IRObjectWithUseList::getUses() const -> use_range {
 inline bool IRObjectWithUseList::hasOneUse() const {
   return firstUse && firstUse->getNextOperandUsingThisValue() == nullptr;
 }
+
+//===----------------------------------------------------------------------===//
+// ValueUserIterator
+//===----------------------------------------------------------------------===//
 
 /// An iterator over all users of a ValueBase.
 template <typename OperandType>
