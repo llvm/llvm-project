@@ -64,7 +64,7 @@ LBB0_2:                                 # %return
 // CHECK-NEXT:   Section:             IMAGE_SYM_ABSOLUTE (-1)
 // CHECK-NEXT:   BaseType:            Null
 // CHECK-NEXT:   ComplexType:         Null
-// CHECK-NEXT:   StorageClass:        Static
+// CHECK-NEXT:   StorageClass:        External
 // CHECK-NEXT:   AuxSymbolCount:      0
 // CHECK-NEXT: }
 
@@ -88,6 +88,6 @@ LBB0_2:                                 # %return
 // CHECK-NEXT:   Section: .text
 // CHECK-NEXT:   BaseType: Null
 // CHECK-NEXT:   ComplexType: Null
-// CHECK-NEXT:   StorageClass: Static
+// CHECK-NEXT:   StorageClass: External
 // CHECK-NEXT:   AuxSymbolCount: 0
 // CHECK-NEXT: }
