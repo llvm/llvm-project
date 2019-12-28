@@ -15,16 +15,17 @@ using namespace lldb_private;
 
 uint32_t ClangDeclVendor::FindDecls(ConstString name, bool append,
                                     uint32_t max_matches,
-                                    std::vector<CompilerDecl> &decls) {
+                                    std::vector<clang::NamedDecl *> &decls) {
   if (!append)
     decls.clear();
 
-  std::vector<clang::NamedDecl *> named_decls;
-  uint32_t ret = FindDecls(name, /*append*/ false, max_matches, named_decls);
-  for (auto *named_decl : named_decls) {
-    decls.push_back(CompilerDecl(
-        ClangASTContext::GetASTContext(&named_decl->getASTContext()),
-        named_decl));
+  std::vector<CompilerDecl> compiler_decls;
+  uint32_t ret = FindDecls(name, /*append*/ false, max_matches, compiler_decls);
+  for (CompilerDecl compiler_decl : compiler_decls) {
+    clang::Decl *d =
+        reinterpret_cast<clang::Decl *>(compiler_decl.GetOpaqueDecl());
+    clang::NamedDecl *nd = llvm::cast<clang::NamedDecl>(d);
+    decls.push_back(nd);
   }
   return ret;
 }
