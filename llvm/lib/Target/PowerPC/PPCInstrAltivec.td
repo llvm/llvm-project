@@ -711,7 +711,7 @@ def VSPLTW : VXForm_1<652, (outs vrrc:$vD), (ins u5imm:$UIMM, vrrc:$vB),
                       "vspltw $vD, $vB, $UIMM", IIC_VecPerm,
                       [(set v16i8:$vD,
                         (vspltw_shuffle:$UIMM v16i8:$vB, (undef)))]>;
-let isCodeGenOnly = 1 in {
+let isCodeGenOnly = 1, hasSideEffects = 0 in {
   def VSPLTBs : VXForm_1<524, (outs vrrc:$vD), (ins u5imm:$UIMM, vfrc:$vB),
                          "vspltb $vD, $vB, $UIMM", IIC_VecPerm, []>;
   def VSPLTHs : VXForm_1<588, (outs vrrc:$vD), (ins u5imm:$UIMM, vfrc:$vB),
@@ -1378,12 +1378,14 @@ def VEXTRACTUW : VX1_VT5_UIM5_VB5<653, "vextractuw", []>;
 def VEXTRACTD  : VX1_VT5_UIM5_VB5<717, "vextractd" , []>;
 
 // Vector Extract Unsigned Byte/Halfword/Word Left/Right-Indexed
+let hasSideEffects = 0 in {
 def VEXTUBLX : VX1_RT5_RA5_VB5<1549, "vextublx", []>;
 def VEXTUBRX : VX1_RT5_RA5_VB5<1805, "vextubrx", []>;
 def VEXTUHLX : VX1_RT5_RA5_VB5<1613, "vextuhlx", []>;
 def VEXTUHRX : VX1_RT5_RA5_VB5<1869, "vextuhrx", []>;
 def VEXTUWLX : VX1_RT5_RA5_VB5<1677, "vextuwlx", []>;
 def VEXTUWRX : VX1_RT5_RA5_VB5<1933, "vextuwrx", []>;
+}
 
 // Vector Insert Element Instructions
 def VINSERTB : VXForm_1<781, (outs vrrc:$vD),

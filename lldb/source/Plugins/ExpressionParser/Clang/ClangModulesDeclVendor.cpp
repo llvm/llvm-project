@@ -80,7 +80,7 @@ public:
                                 Stream &error_stream) override;
 
   uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
-                     std::vector<clang::NamedDecl *> &decls) override;
+                     std::vector<CompilerDecl> &decls) override;
 
   void ForEachMacro(const ModuleVector &modules,
                     std::function<bool(const std::string &)> handler) override;
@@ -356,7 +356,7 @@ bool ClangModulesDeclVendorImpl::AddModulesForCompileUnit(
 uint32_t
 ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
                                       uint32_t max_matches,
-                                      std::vector<clang::NamedDecl *> &decls) {
+                                      std::vector<CompilerDecl> &decls) {
   if (!m_enabled) {
     return 0;
   }
@@ -382,7 +382,7 @@ ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
     if (num_matches >= max_matches)
       return num_matches;
 
-    decls.push_back(named_decl);
+    decls.push_back(CompilerDecl(m_ast_context.get(), named_decl));
     ++num_matches;
   }
 
