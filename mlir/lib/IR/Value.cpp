@@ -33,6 +33,39 @@ Region *Value::getParentRegion() {
 }
 
 //===----------------------------------------------------------------------===//
+// BlockOperand
+//===----------------------------------------------------------------------===//
+
+/// Return the current block being used by this operand.
+Block *BlockOperand::get() { return static_cast<Block *>(IROperand::get()); }
+
+/// Set the current value being used by this operand.
+void BlockOperand::set(Block *block) { IROperand::set(block); }
+
+/// Return which operand this is in the operand list.
+unsigned BlockOperand::getOperandNumber() {
+  return this - &getOwner()->getBlockOperands()[0];
+}
+
+//===----------------------------------------------------------------------===//
+// OpOperand
+//===----------------------------------------------------------------------===//
+
+OpOperand::OpOperand(Operation *owner, Value value)
+    : IROperand(owner, value.impl) {}
+
+/// Return the current value being used by this operand.
+Value OpOperand::get() { return (detail::ValueImpl *)IROperand::get(); }
+
+/// Set the current value being used by this operand.
+void OpOperand::set(Value newValue) { IROperand::set(newValue.impl); }
+
+/// Return which operand this is in the operand list.
+unsigned OpOperand::getOperandNumber() {
+  return this - &getOwner()->getOpOperands()[0];
+}
+
+//===----------------------------------------------------------------------===//
 // IRObjectWithUseList implementation.
 //===----------------------------------------------------------------------===//
 
