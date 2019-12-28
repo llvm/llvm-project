@@ -50,14 +50,6 @@ static CallInst *ReplaceCallWith(const char *NewFn, CallInst *CI,
   return NewCI;
 }
 
-// VisualStudio defines setjmp as _setjmp
-#if defined(_MSC_VER) && defined(setjmp) && \
-                         !defined(setjmp_undefined_for_msvc)
-#  pragma push_macro("setjmp")
-#  undef setjmp
-#  define setjmp_undefined_for_msvc
-#endif
-
 /// Emit the code to lower bswap of V before the specified instruction IP.
 static Value *LowerBSWAP(LLVMContext &Context, Value *V, Instruction *IP) {
   assert(V->getType()->isIntOrIntVectorTy() && "Can't bswap a non-integer type!");

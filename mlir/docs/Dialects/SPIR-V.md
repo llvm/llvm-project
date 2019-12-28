@@ -862,7 +862,7 @@ organization:
 
 *   [SPIRVDialect.h][MlirSpirvDialect] defines the SPIR-V dialect.
 *   [SPIRVTypes.h][MlirSpirvTypes] defines all SPIR-V specific types.
-*   [SPIRVOps.h][MlirSPirvOps] defines all SPIR-V operations.
+*   [SPIRVOps.h][MlirSPirvOpsH] defines all SPIR-V operations.
 *   [Serialization.h][MlirSpirvSerialization] defines the entry points for
     serialization and deserialization.
 
@@ -980,6 +980,44 @@ Note that the generated SPIR-V op definition is just a best-effort template; it
 is still expected to be updated to have more accurate traits, arguments, and
 results.
 
+It is also expected that a custom assembly form is defined for the new op,
+which will require providing the parser and printer. The EBNF form of the
+custom assembly should be described in the op's description and the parser
+and printer should be placed in [`SPIRVOps.cpp`][MlirSpirvOpsCpp] with the
+following signatures:
+
+```c++
+static ParseResult parse<spirv-op-symbol>Op(OpAsmParser &parser,
+                                            OperationState &state);
+static void print(spirv::<spirv-op-symbol>Op op, OpAsmPrinter &printer);
+```
+
+See any existing op as an example.
+
+Verification should be provided for the new op to cover all the rules described
+in the SPIR-V specification. Choosing the proper ODS types and attribute kinds,
+which can be found in [`SPIRVBase.td`][MlirSpirvBase], can help here. Still
+sometimes we need to manually write additional verification logic in
+[`SPIRVOps.cpp`][MlirSpirvOpsCpp] in a function with the following signature:
+
+```c++
+static LogicalResult verify(spirv::<spirv-op-symbol>Op op);
+```
+
+See any such function in [`SPIRVOps.cpp`][MlirSpirvOpsCpp] as an example.
+
+If no additional verification is needed, one need to add the following to
+the op's Op Definition Spec:
+
+```
+let verifier = [{ return success(); }];
+```
+
+To suppress the requirement of the above C++ verification function.
+
+Tests for the op's custom assembly form and verification should be added to
+the proper file in test/Dialect/SPIRV/.
+
 The generated op will automatically gain the logic for (de)serialization.
 However, tests still need to be coupled with the change to make sure no
 surprises. Serialization tests live in test/Dialect/SPIRV/Serialization.
@@ -999,6 +1037,12 @@ For example, to add the definition for SPIR-V storage class in to
 ```sh
 ./define_enum.sh StorageClass
 ```
+
+### Add a new custom type
+
+SPIR-V specific types are defined in [`SPIRVTypes.h`][MlirSpirvTypes]. See
+examples there and the [tutorial][CustomTypeAttrTutorial] for defining new
+custom types.
 
 ### Add a new conversion
 
@@ -1028,13 +1072,15 @@ For example, to add the definition for SPIR-V storage class in to
 [MlirStdToSpirvLibs]: https://github.com/tensorflow/mlir/tree/master/lib/Conversion/StandardToSPIRV
 [MlirSpirvDialect]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVDialect.h
 [MlirSpirvTypes]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVTypes.h
-[MlirSpirvOps]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVOps.h
+[MlirSpirvOpsH]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVOps.h
 [MlirSpirvSerialization]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/Serialization.h
 [MlirSpirvBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVBase.td
 [MlirSpirvPasses]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/Passes.h
 [MlirSpirvLowering]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVLowering.h
 [MlirSpirvAbi]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVLowering.td
+[MlirSpirvOpsCpp]: https://github.com/llvm/llvm-project/blob/master/mlir/lib/Dialect/SPIRV/SPIRVOps.cpp
 [GitHubDialectTracking]: https://github.com/tensorflow/mlir/issues/302
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
 [GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/master/mlir/utils/spirv/gen_spirv_dialect.py
 [LlvmMlirSpirvDoc]: https://mlir.llvm.org/docs/Dialects/SPIRVOps/
+[CustomTypeAttrTutorial]: https://github.com/llvm/llvm-project/blob/master/mlir/docs/DefiningAttributesAndTypes.md

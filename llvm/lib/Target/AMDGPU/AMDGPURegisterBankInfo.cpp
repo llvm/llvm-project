@@ -1022,7 +1022,7 @@ void AMDGPURegisterBankInfo::constrainOpWithReadfirstlane(
     return;
 
   MachineIRBuilder B(MI);
-  Register SGPR = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+  Register SGPR = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
   B.buildInstr(AMDGPU::V_READFIRSTLANE_B32)
     .addDef(SGPR)
     .addReg(Reg);

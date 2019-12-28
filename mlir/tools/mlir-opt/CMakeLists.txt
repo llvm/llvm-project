@@ -41,6 +41,7 @@ set(LIBS
   MLIRROCDLIR
   MLIRSPIRV
   MLIRStandardToSPIRVTransforms
+  MLIRSPIRVTestPasses
   MLIRSPIRVTransforms
   MLIRStandardOps
   MLIRStandardToLLVM
