@@ -223,6 +223,17 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "}\n"
   );
 
+  TypeNameVisitor InlineNamespace;
+  InlineNamespace.ExpectedQualTypeNames["c"] = "B::C";
+  InlineNamespace.runOver("inline namespace A {\n"
+                          "  namespace B {\n"
+                          "    class C {};\n"
+                          "  }\n"
+                          "}\n"
+                          "using namespace A::B;\n"
+                          "C c;\n",
+                          TypeNameVisitor::Lang_CXX11);
+
   TypeNameVisitor AnonStrucs;
   AnonStrucs.ExpectedQualTypeNames["a"] = "short";
   AnonStrucs.ExpectedQualTypeNames["un_in_st_1"] =
