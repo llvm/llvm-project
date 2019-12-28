@@ -21,12 +21,10 @@ public:
 
   virtual ~ClangDeclVendor() {}
 
-  uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
-                     std::vector<CompilerDecl> &decls) override;
+  using DeclVendor::FindDecls;
 
-  virtual uint32_t FindDecls(ConstString name, bool append,
-                             uint32_t max_matches,
-                             std::vector<clang::NamedDecl *> &decls) = 0;
+  uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
+                     std::vector<clang::NamedDecl *> &decls);
 
   static bool classof(const DeclVendor *vendor) {
     return vendor->GetKind() >= eClangDeclVendor &&
