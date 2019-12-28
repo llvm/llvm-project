@@ -39,8 +39,6 @@ public:
 
   void run(raw_ostream &OS, bool Enums);
 
-  void EmitPrefix(raw_ostream &OS);
-
   void EmitEnumInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitTargetInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitIntrinsicToNameTable(const CodeGenIntrinsicTable &Ints,
@@ -51,7 +49,6 @@ public:
   void EmitAttributes(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints, bool IsGCC,
                                  raw_ostream &OS);
-  void EmitSuffix(raw_ostream &OS);
 };
 } // End anonymous namespace
 
@@ -68,8 +65,6 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
     // Emit the enum information.
     EmitEnumInfo(Ints, OS);
   } else {
-    EmitPrefix(OS);
-
     // Emit the target metadata.
     EmitTargetInfo(Ints, OS);
 
@@ -90,27 +85,7 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit code to translate MS builtins into LLVM intrinsics.
     EmitIntrinsicToBuiltinMap(Ints, false, OS);
-
-    EmitSuffix(OS);
   }
-}
-
-void IntrinsicEmitter::EmitPrefix(raw_ostream &OS) {
-  OS << "// VisualStudio defines setjmp as _setjmp\n"
-        "#if defined(_MSC_VER) && defined(setjmp) && \\\n"
-        "                         !defined(setjmp_undefined_for_msvc)\n"
-        "#  pragma push_macro(\"setjmp\")\n"
-        "#  undef setjmp\n"
-        "#  define setjmp_undefined_for_msvc\n"
-        "#endif\n\n";
-}
-
-void IntrinsicEmitter::EmitSuffix(raw_ostream &OS) {
-  OS << "#if defined(_MSC_VER) && defined(setjmp_undefined_for_msvc)\n"
-        "// let's return it to _setjmp state\n"
-        "#  pragma pop_macro(\"setjmp\")\n"
-        "#  undef setjmp_undefined_for_msvc\n"
-        "#endif\n\n";
 }
 
 void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
@@ -143,8 +118,6 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     OS << "namespace llvm {\n";
     OS << "namespace Intrinsic {\n";
     OS << "enum " << UpperPrefix << "Intrinsics : unsigned {\n";
-  } else {
-    EmitPrefix(OS);
   }
 
   OS << "// Enum values for intrinsics\n";
@@ -165,7 +138,6 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   // Emit num_intrinsics into the target neutral enum.
   if (IntrinsicPrefix.empty()) {
     OS << "    num_intrinsics = " << (Ints.size() + 1) << "\n";
-    EmitSuffix(OS);
   } else {
     OS << "}; // enum\n";
     OS << "} // namespace Intrinsic\n";
