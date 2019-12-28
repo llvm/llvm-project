@@ -22,6 +22,8 @@ declare <8 x double> @llvm.experimental.constrained.sitofp.v8f64.v8i32(<8 x i32>
 declare <8 x double> @llvm.experimental.constrained.uitofp.v8f64.v8i32(<8 x i32>, metadata, metadata)
 declare <8 x double> @llvm.experimental.constrained.sitofp.v8f64.v8i64(<8 x i64>, metadata, metadata)
 declare <8 x double> @llvm.experimental.constrained.uitofp.v8f64.v8i64(<8 x i64>, metadata, metadata)
+declare <8 x float> @llvm.experimental.constrained.sitofp.v8f32.v8i64(<8 x i64>, metadata, metadata)
+declare <8 x float> @llvm.experimental.constrained.uitofp.v8f32.v8i64(<8 x i64>, metadata, metadata)
 
 define <16 x float> @sitofp_v16i1_v16f32(<16 x i1> %x) #0 {
 ; CHECK-LABEL: sitofp_v16i1_v16f32:
@@ -385,6 +387,236 @@ define <8 x double> @uitofp_v8i64_v8f64(<8 x i64> %x) #0 {
                                                               metadata !"round.dynamic",
                                                               metadata !"fpexcept.strict") #0
   ret <8 x double> %result
+}
+
+define <8 x float> @sitofp_v8i64_v8f32(<8 x i64> %x) #0 {
+; NODQ-32-LABEL: sitofp_v8i64_v8f32:
+; NODQ-32:       # %bb.0:
+; NODQ-32-NEXT:    pushl %ebp
+; NODQ-32-NEXT:    .cfi_def_cfa_offset 8
+; NODQ-32-NEXT:    .cfi_offset %ebp, -8
+; NODQ-32-NEXT:    movl %esp, %ebp
+; NODQ-32-NEXT:    .cfi_def_cfa_register %ebp
+; NODQ-32-NEXT:    andl $-8, %esp
+; NODQ-32-NEXT:    subl $96, %esp
+; NODQ-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
+; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
+; NODQ-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; NODQ-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fstps (%esp)
+; NODQ-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; NODQ-32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; NODQ-32-NEXT:    movl %ebp, %esp
+; NODQ-32-NEXT:    popl %ebp
+; NODQ-32-NEXT:    .cfi_def_cfa %esp, 4
+; NODQ-32-NEXT:    retl
+;
+; NODQ-64-LABEL: sitofp_v8i64_v8f32:
+; NODQ-64:       # %bb.0:
+; NODQ-64-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
+; NODQ-64-NEXT:    vpextrq $1, %xmm1, %rax
+; NODQ-64-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; NODQ-64-NEXT:    vmovq %xmm1, %rax
+; NODQ-64-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm1
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; NODQ-64-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
+; NODQ-64-NEXT:    vmovq %xmm2, %rax
+; NODQ-64-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm3
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
+; NODQ-64-NEXT:    vpextrq $1, %xmm2, %rax
+; NODQ-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm2
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
+; NODQ-64-NEXT:    vpextrq $1, %xmm0, %rax
+; NODQ-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm2
+; NODQ-64-NEXT:    vmovq %xmm0, %rax
+; NODQ-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm3
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; NODQ-64-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; NODQ-64-NEXT:    vmovq %xmm0, %rax
+; NODQ-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm3
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
+; NODQ-64-NEXT:    vpextrq $1, %xmm0, %rax
+; NODQ-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm0
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; NODQ-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; NODQ-64-NEXT:    retq
+;
+; DQ-LABEL: sitofp_v8i64_v8f32:
+; DQ:       # %bb.0:
+; DQ-NEXT:    vcvtqq2ps %zmm0, %ymm0
+; DQ-NEXT:    ret{{[l|q]}}
+ %result = call <8 x float> @llvm.experimental.constrained.sitofp.v8f32.v8i64(<8 x i64> %x,
+                                                              metadata !"round.dynamic",
+                                                              metadata !"fpexcept.strict") #0
+  ret <8 x float> %result
+}
+
+define <8 x float> @uitofp_v8i64_v8f32(<8 x i64> %x) #0 {
+; NODQ-32-LABEL: uitofp_v8i64_v8f32:
+; NODQ-32:       # %bb.0:
+; NODQ-32-NEXT:    pushl %ebp
+; NODQ-32-NEXT:    .cfi_def_cfa_offset 8
+; NODQ-32-NEXT:    .cfi_offset %ebp, -8
+; NODQ-32-NEXT:    movl %esp, %ebp
+; NODQ-32-NEXT:    .cfi_def_cfa_register %ebp
+; NODQ-32-NEXT:    andl $-8, %esp
+; NODQ-32-NEXT:    subl $96, %esp
+; NODQ-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; NODQ-32-NEXT:    vmovlps %xmm3, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm3[2,3,0,1]
+; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
+; NODQ-32-NEXT:    vmovlps %xmm2, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm2[2,3,0,1]
+; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
+; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vpermilps {{.*#+}} xmm4 = xmm1[2,3,0,1]
+; NODQ-32-NEXT:    vmovlps %xmm4, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractps $1, %xmm0, %eax
+; NODQ-32-NEXT:    xorl %ecx, %ecx
+; NODQ-32-NEXT:    testl %eax, %eax
+; NODQ-32-NEXT:    setns %cl
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; NODQ-32-NEXT:    fstps (%esp)
+; NODQ-32-NEXT:    vextractps $3, %xmm0, %eax
+; NODQ-32-NEXT:    xorl %ecx, %ecx
+; NODQ-32-NEXT:    testl %eax, %eax
+; NODQ-32-NEXT:    setns %cl
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractps $1, %xmm3, %eax
+; NODQ-32-NEXT:    xorl %ecx, %ecx
+; NODQ-32-NEXT:    testl %eax, %eax
+; NODQ-32-NEXT:    setns %cl
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractps $3, %xmm3, %eax
+; NODQ-32-NEXT:    xorl %ecx, %ecx
+; NODQ-32-NEXT:    testl %eax, %eax
+; NODQ-32-NEXT:    setns %cl
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractps $1, %xmm2, %eax
+; NODQ-32-NEXT:    xorl %ecx, %ecx
+; NODQ-32-NEXT:    testl %eax, %eax
+; NODQ-32-NEXT:    setns %cl
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractps $3, %xmm2, %eax
+; NODQ-32-NEXT:    xorl %ecx, %ecx
+; NODQ-32-NEXT:    testl %eax, %eax
+; NODQ-32-NEXT:    setns %cl
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractps $1, %xmm1, %eax
+; NODQ-32-NEXT:    xorl %ecx, %ecx
+; NODQ-32-NEXT:    testl %eax, %eax
+; NODQ-32-NEXT:    setns %cl
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vextractps $3, %xmm1, %eax
+; NODQ-32-NEXT:    xorl %ecx, %ecx
+; NODQ-32-NEXT:    testl %eax, %eax
+; NODQ-32-NEXT:    setns %cl
+; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; NODQ-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; NODQ-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
+; NODQ-32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; NODQ-32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; NODQ-32-NEXT:    movl %ebp, %esp
+; NODQ-32-NEXT:    popl %ebp
+; NODQ-32-NEXT:    .cfi_def_cfa %esp, 4
+; NODQ-32-NEXT:    retl
+;
+; NODQ-64-LABEL: uitofp_v8i64_v8f32:
+; NODQ-64:       # %bb.0:
+; NODQ-64-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
+; NODQ-64-NEXT:    vpextrq $1, %xmm1, %rax
+; NODQ-64-NEXT:    vcvtusi2ss %rax, %xmm2, %xmm2
+; NODQ-64-NEXT:    vmovq %xmm1, %rax
+; NODQ-64-NEXT:    vcvtusi2ss %rax, %xmm3, %xmm1
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; NODQ-64-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
+; NODQ-64-NEXT:    vmovq %xmm2, %rax
+; NODQ-64-NEXT:    vcvtusi2ss %rax, %xmm3, %xmm3
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
+; NODQ-64-NEXT:    vpextrq $1, %xmm2, %rax
+; NODQ-64-NEXT:    vcvtusi2ss %rax, %xmm4, %xmm2
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
+; NODQ-64-NEXT:    vpextrq $1, %xmm0, %rax
+; NODQ-64-NEXT:    vcvtusi2ss %rax, %xmm4, %xmm2
+; NODQ-64-NEXT:    vmovq %xmm0, %rax
+; NODQ-64-NEXT:    vcvtusi2ss %rax, %xmm4, %xmm3
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; NODQ-64-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; NODQ-64-NEXT:    vmovq %xmm0, %rax
+; NODQ-64-NEXT:    vcvtusi2ss %rax, %xmm4, %xmm3
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
+; NODQ-64-NEXT:    vpextrq $1, %xmm0, %rax
+; NODQ-64-NEXT:    vcvtusi2ss %rax, %xmm4, %xmm0
+; NODQ-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; NODQ-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; NODQ-64-NEXT:    retq
+;
+; DQ-LABEL: uitofp_v8i64_v8f32:
+; DQ:       # %bb.0:
+; DQ-NEXT:    vcvtuqq2ps %zmm0, %ymm0
+; DQ-NEXT:    ret{{[l|q]}}
+ %result = call <8 x float> @llvm.experimental.constrained.uitofp.v8f32.v8i64(<8 x i64> %x,
+                                                              metadata !"round.dynamic",
+                                                              metadata !"fpexcept.strict") #0
+  ret <8 x float> %result
 }
 
 attributes #0 = { strictfp }
