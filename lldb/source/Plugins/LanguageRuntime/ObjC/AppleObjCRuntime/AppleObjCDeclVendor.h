@@ -28,7 +28,7 @@ public:
   }
 
   uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
-                     std::vector<clang::NamedDecl *> &decls) override;
+                     std::vector<CompilerDecl> &decls) override;
 
   friend class AppleObjCExternalASTSource;
 
