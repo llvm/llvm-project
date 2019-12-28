@@ -20,17 +20,14 @@
 #include "llvm/ADT/Twine.h"
 
 namespace mlir {
-/// Terminator operations can have Block operands to represent successors.
-using BlockOperand = IROperandImpl<Block>;
-
 /// Operation is a basic unit of execution within a function. Operations can
 /// be nested within other operations effectively forming a tree. Child
 /// operations are organized into operation blocks represented by a 'Block'
 /// class.
 class Operation final
     : public llvm::ilist_node_with_parent<Operation, Block>,
-      private llvm::TrailingObjects<Operation, OpResult, BlockOperand, unsigned,
-                                    Region, detail::OperandStorage> {
+      private llvm::TrailingObjects<Operation, OpResult, BlockOperand, Region,
+                                    detail::OperandStorage> {
 public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
@@ -406,7 +403,7 @@ public:
   unsigned getNumSuccessorOperands(unsigned index) {
     assert(!isKnownNonTerminator() && "only terminators may have successors");
     assert(index < getNumSuccessors());
-    return getTrailingObjects<unsigned>()[index];
+    return getBlockOperands()[index].numSuccessorOperands;
   }
 
   Block *getSuccessor(unsigned index) {
@@ -422,7 +419,7 @@ public:
     assert(opIndex < getNumSuccessorOperands(succIndex));
     getOperandStorage().eraseOperand(getSuccessorOperandIndex(succIndex) +
                                      opIndex);
-    --getTrailingObjects<unsigned>()[succIndex];
+    --getBlockOperands()[succIndex].numSuccessorOperands;
   }
 
   /// Get the index of the first operand of the successor at the provided
@@ -626,8 +623,8 @@ private:
   friend class llvm::ilist_node_with_parent<Operation, Block>;
 
   // This stuff is used by the TrailingObjects template.
-  friend llvm::TrailingObjects<Operation, OpResult, BlockOperand, unsigned,
-                               Region, detail::OperandStorage>;
+  friend llvm::TrailingObjects<Operation, OpResult, BlockOperand, Region,
+                               detail::OperandStorage>;
   size_t numTrailingObjects(OverloadToken<OpResult>) const {
     return numResults;
   }
@@ -635,7 +632,6 @@ private:
     return numSuccs;
   }
   size_t numTrailingObjects(OverloadToken<Region>) const { return numRegions; }
-  size_t numTrailingObjects(OverloadToken<unsigned>) const { return numSuccs; }
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, Operation &op) {

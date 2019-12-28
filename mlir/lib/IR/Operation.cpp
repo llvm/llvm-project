@@ -75,36 +75,6 @@ unsigned OpResult::getResultNumber() const {
 }
 
 //===----------------------------------------------------------------------===//
-// OpOperand
-//===----------------------------------------------------------------------===//
-
-OpOperand::OpOperand(Operation *owner, Value value)
-    : IROperand(owner, value.impl) {}
-
-/// Return the current value being used by this operand.
-Value OpOperand::get() { return (detail::ValueImpl *)IROperand::get(); }
-
-/// Set the current value being used by this operand.
-void OpOperand::set(Value newValue) { IROperand::set(newValue.impl); }
-
-/// Return which operand this is in the operand list.
-unsigned OpOperand::getOperandNumber() {
-  return this - &getOwner()->getOpOperands()[0];
-}
-
-//===----------------------------------------------------------------------===//
-// BlockOperand
-//===----------------------------------------------------------------------===//
-
-// TODO: This namespace is only required because of a bug in GCC<7.0.
-namespace mlir {
-/// Return which operand this is in the operand list.
-template <> unsigned BlockOperand::getOperandNumber() {
-  return this - &getOwner()->getBlockOperands()[0];
-}
-} // end namespace mlir
-
-//===----------------------------------------------------------------------===//
 // Operation
 //===----------------------------------------------------------------------===//
 
@@ -159,10 +129,10 @@ Operation *Operation::create(Location location, OperationName name,
   unsigned numOperands = operands.size() - numSuccessors;
 
   // Compute the byte size for the operation and the operand storage.
-  auto byteSize = totalSizeToAlloc<OpResult, BlockOperand, unsigned, Region,
-                                   detail::OperandStorage>(
-      resultTypes.size(), numSuccessors, numSuccessors, numRegions,
-      /*detail::OperandStorage*/ 1);
+  auto byteSize =
+      totalSizeToAlloc<OpResult, BlockOperand, Region, detail::OperandStorage>(
+          resultTypes.size(), numSuccessors, numRegions,
+          /*detail::OperandStorage*/ 1);
   byteSize += llvm::alignTo(detail::OperandStorage::additionalAllocSize(
                                 numOperands, resizableOperandList),
                             alignof(Operation));
@@ -212,9 +182,7 @@ Operation *Operation::create(Location location, OperationName name,
   assert(!op->isKnownNonTerminator() &&
          "Unexpected nullptr in operand list when creating non-terminator.");
   auto instBlockOperands = op->getBlockOperands();
-  unsigned *succOperandCountIt = op->getTrailingObjects<unsigned>();
-  unsigned *succOperandCountE = succOperandCountIt + numSuccessors;
-  (void)succOperandCountE;
+  unsigned *succOperandCount = nullptr;
 
   for (; operandIt != operandE; ++operandIt) {
     // If we encounter a sentinel branch to the next operand update the count
@@ -222,22 +190,15 @@ Operation *Operation::create(Location location, OperationName name,
     if (!operands[operandIt]) {
       assert(currentSuccNum < numSuccessors);
 
-      // After the first iteration update the successor operand count
-      // variable.
-      if (currentSuccNum != 0) {
-        ++succOperandCountIt;
-        assert(succOperandCountIt != succOperandCountE &&
-               "More sentinel operands than successors.");
-      }
-
       new (&instBlockOperands[currentSuccNum])
           BlockOperand(op, successors[currentSuccNum]);
-      *succOperandCountIt = 0;
+      succOperandCount =
+          &instBlockOperands[currentSuccNum].numSuccessorOperands;
       ++currentSuccNum;
       continue;
     }
     new (&opOperands[nextOperand++]) OpOperand(op, operands[operandIt]);
-    ++(*succOperandCountIt);
+    ++(*succOperandCount);
   }
 
   // Verify that the amount of sentinel operands is equivalent to the number of
@@ -607,10 +568,12 @@ unsigned Operation::getSuccessorOperandIndex(unsigned index) {
   // Count the number of operands for each of the successors after, and
   // including, the one at 'index'. This is based upon the assumption that all
   // non successor operands are placed at the beginning of the operand list.
-  auto *successorOpCountBegin = getTrailingObjects<unsigned>();
+  auto blockOperands = getBlockOperands().drop_front(index);
   unsigned postSuccessorOpCount =
-      std::accumulate(successorOpCountBegin + index,
-                      successorOpCountBegin + getNumSuccessors(), 0u);
+      std::accumulate(blockOperands.begin(), blockOperands.end(), 0u,
+                      [](unsigned cur, const BlockOperand &operand) {
+                        return cur + operand.numSuccessorOperands;
+                      });
   return getNumOperands() - postSuccessorOpCount;
 }
 
@@ -619,10 +582,10 @@ Operation::decomposeSuccessorOperandIndex(unsigned operandIndex) {
   assert(!isKnownNonTerminator() && "only terminators may have successors");
   assert(operandIndex < getNumOperands());
   unsigned currentOperandIndex = getNumOperands();
-  auto *successorOperandCounts = getTrailingObjects<unsigned>();
+  auto blockOperands = getBlockOperands();
   for (unsigned i = 0, e = getNumSuccessors(); i < e; i++) {
     unsigned successorIndex = e - i - 1;
-    currentOperandIndex -= successorOperandCounts[successorIndex];
+    currentOperandIndex -= blockOperands[successorIndex].numSuccessorOperands;
     if (currentOperandIndex <= operandIndex)
       return std::make_pair(successorIndex, operandIndex - currentOperandIndex);
   }
