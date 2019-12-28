@@ -348,7 +348,7 @@ class TargetRegisterClass;
 
     void HandleByVal(CCState *, unsigned &, unsigned) const override;
 
-    Register getRegisterByName(const char* RegName, EVT VT,
+    Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 
     /// If a physical register, this returns the register that receives the
