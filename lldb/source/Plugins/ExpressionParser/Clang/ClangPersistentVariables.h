@@ -62,7 +62,8 @@ public:
   llvm::Optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
 
-  void RegisterPersistentDecl(ConstString name, clang::NamedDecl *decl);
+  void RegisterPersistentDecl(ConstString name, clang::NamedDecl *decl,
+                              ClangASTContext *ctx);
 
   clang::NamedDecl *GetPersistentDecl(ConstString name);
 
@@ -80,7 +81,14 @@ private:
   // The counter used by GetNextPersistentVariableName
   uint32_t m_next_persistent_variable_id = 0;
 
-  typedef llvm::DenseMap<const char *, clang::NamedDecl *> PersistentDeclMap;
+  struct PersistentDecl {
+    /// The persistent decl.
+    clang::NamedDecl *m_decl = nullptr;
+    /// The ClangASTContext for the ASTContext of m_decl.
+    ClangASTContext *m_context = nullptr;
+  };
+
+  typedef llvm::DenseMap<const char *, PersistentDecl> PersistentDeclMap;
   PersistentDeclMap
       m_persistent_decls; ///< Persistent entities declared by the user.
 
