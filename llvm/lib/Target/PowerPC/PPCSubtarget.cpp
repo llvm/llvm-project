@@ -100,6 +100,7 @@ void PPCSubtarget::initializeEnvironment() {
   IsPPC6xx = false;
   IsE500 = false;
   FeatureMFTB = false;
+  AllowsUnalignedFPAccess = false;
   DeprecatedDST = false;
   HasLazyResolverStubs = false;
   HasICBT = false;
