@@ -106,3 +106,9 @@ void F2() {
 }
 
 }
+
+// Test class/struct redeclaration where the subsequent
+// declaration has a uuid attribute
+struct X{};
+
+struct __declspec(uuid("00000000-0000-0000-0000-000000000000")) X;
