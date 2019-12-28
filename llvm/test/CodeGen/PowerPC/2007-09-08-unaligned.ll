@@ -1,4 +1,5 @@
-; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mattr=-vsx \
+; RUN:   -mattr=+allow-unaligned-fp-access < %s | FileCheck %s
 ; ModuleID = 'foo.c'
 
 target triple = "powerpc-unknown-linux-gnu"
