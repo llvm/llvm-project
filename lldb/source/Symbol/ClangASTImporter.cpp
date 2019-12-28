@@ -737,9 +737,12 @@ bool ClangASTImporter::RequireCompleteType(clang::QualType type) {
 ClangASTMetadata *ClangASTImporter::GetDeclMetadata(const clang::Decl *decl) {
   DeclOrigin decl_origin = GetDeclOrigin(decl);
 
-  if (decl_origin.Valid())
-    return ClangASTContext::GetMetadata(decl_origin.ctx, decl_origin.decl);
-  return ClangASTContext::GetMetadata(&decl->getASTContext(), decl);
+  if (decl_origin.Valid()) {
+    ClangASTContext *ast = ClangASTContext::GetASTContext(decl_origin.ctx);
+    return ast->GetMetadata(decl_origin.decl);
+  }
+  ClangASTContext *ast = ClangASTContext::GetASTContext(&decl->getASTContext());
+  return ast->GetMetadata(decl);
 }
 
 ClangASTImporter::DeclOrigin

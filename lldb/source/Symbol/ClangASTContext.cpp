@@ -2335,20 +2335,16 @@ void ClangASTContext::SetMetadata(const clang::Type *object,
   m_type_metadata[object] = metadata;
 }
 
-ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
-                                               const clang::Decl *object) {
-  ClangASTContext *self = GetASTContext(ast);
-  auto It = self->m_decl_metadata.find(object);
-  if (It != self->m_decl_metadata.end())
+ClangASTMetadata *ClangASTContext::GetMetadata(const clang::Decl *object) {
+  auto It = m_decl_metadata.find(object);
+  if (It != m_decl_metadata.end())
     return &It->second;
   return nullptr;
 }
 
-ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
-                                               const clang::Type *object) {
-  ClangASTContext *self = GetASTContext(ast);
-  auto It = self->m_type_metadata.find(object);
-  if (It != self->m_type_metadata.end())
+ClangASTMetadata *ClangASTContext::GetMetadata(const clang::Type *object) {
+  auto It = m_type_metadata.find(object);
+  if (It != m_type_metadata.end())
     return &It->second;
   return nullptr;
 }
@@ -2746,8 +2742,7 @@ bool ClangASTContext::IsRuntimeGeneratedType(
   clang::ObjCInterfaceDecl *result_iface_decl =
       llvm::dyn_cast<clang::ObjCInterfaceDecl>(decl_ctx);
 
-  ClangASTMetadata *ast_metadata =
-      ClangASTContext::GetMetadata(&getASTContext(), result_iface_decl);
+  ClangASTMetadata *ast_metadata = GetMetadata(result_iface_decl);
   if (!ast_metadata)
     return false;
   return (ast_metadata->GetISAPtr() != 0);
@@ -3398,8 +3393,7 @@ bool ClangASTContext::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
             if (is_complete)
               success = cxx_record_decl->isDynamicClass();
             else {
-              ClangASTMetadata *metadata = ClangASTContext::GetMetadata(
-                  &getASTContext(), cxx_record_decl);
+              ClangASTMetadata *metadata = GetMetadata(cxx_record_decl);
               if (metadata)
                 success = metadata->GetIsDynamicCXXType();
               else {
@@ -8729,8 +8723,7 @@ void ClangASTContext::DumpTypeDescription(lldb::opaque_compiler_type_t type) {
 
   CompilerType ct(this, type);
   const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
-  ClangASTMetadata *metadata =
-      ClangASTContext::GetMetadata(&getASTContext(), clang_type);
+  ClangASTMetadata *metadata = GetMetadata(clang_type);
   if (metadata) {
     metadata->Dump(&s);
   }
@@ -9268,8 +9261,7 @@ bool ClangASTContext::DeclContextIsClassMethod(
       return true;
     } else if (clang::FunctionDecl *function_decl =
                    llvm::dyn_cast<clang::FunctionDecl>(decl_ctx)) {
-      ClangASTMetadata *metadata =
-          GetMetadata(&decl_ctx->getParentASTContext(), function_decl);
+      ClangASTMetadata *metadata = GetMetadata(function_decl);
       if (metadata && metadata->HasObjectPtr()) {
         if (is_instance_method_ptr)
           *is_instance_method_ptr = true;
@@ -9347,10 +9339,8 @@ ClangASTContext::DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc) {
 ClangASTMetadata *
 ClangASTContext::DeclContextGetMetaData(const CompilerDeclContext &dc,
                                         const Decl *object) {
-  clang::ASTContext *ast = DeclContextGetClangASTContext(dc);
-  if (ast)
-    return ClangASTContext::GetMetadata(ast, object);
-  return nullptr;
+  ClangASTContext *ast = llvm::cast<ClangASTContext>(dc.GetTypeSystem());
+  return ast->GetMetadata(object);
 }
 
 clang::ASTContext *
