@@ -38,6 +38,6 @@ a=b
 // CHECK-NEXT:   Section: .data (2)
 // CHECK-NEXT:   BaseType: Null (0x0)
 // CHECK-NEXT:   ComplexType: Null (0x0)
-// CHECK-NEXT:   StorageClass: Static (0x3)
+// CHECK-NEXT:   StorageClass: External (0x2)
 // CHECK-NEXT:   AuxSymbolCount: 0
 // CHECK-NEXT: }
