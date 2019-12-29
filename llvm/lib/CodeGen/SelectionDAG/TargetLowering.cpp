@@ -4498,6 +4498,12 @@ static void ChooseConstraint(TargetLowering::AsmOperandInfo &OpInfo,
     TargetLowering::ConstraintType CType =
       TLI.getConstraintType(OpInfo.Codes[i]);
 
+    // Indirect 'other' or 'immediate' constraints are not allowed.
+    if (OpInfo.isIndirect && !(CType == TargetLowering::C_Memory ||
+                               CType == TargetLowering::C_Register ||
+                               CType == TargetLowering::C_RegisterClass))
+      continue;
+
     // If this is an 'other' or 'immediate' constraint, see if the operand is
     // valid for it. For example, on X86 we might have an 'rI' constraint. If
     // the operand is an integer in the range [0..31] we want to use I (saving a

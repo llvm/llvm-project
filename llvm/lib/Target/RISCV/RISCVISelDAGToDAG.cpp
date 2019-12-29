@@ -173,7 +173,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
     const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
   switch (ConstraintID) {
-  case InlineAsm::Constraint_i:
   case InlineAsm::Constraint_m:
     // We just support simple memory operands that have a single address
     // operand and need no special handling.
