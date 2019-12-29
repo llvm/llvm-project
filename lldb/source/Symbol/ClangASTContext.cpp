@@ -1179,25 +1179,13 @@ CompilerType ClangASTContext::GetTypeForDecl(clang::NamedDecl *decl) {
 }
 
 CompilerType ClangASTContext::GetTypeForDecl(TagDecl *decl) {
-  // No need to call the getASTContext() accessor (which can create the AST if
-  // it isn't created yet, because we can't have created a decl in this
-  // AST if our AST didn't already exist...
-  ASTContext *ast = &decl->getASTContext();
-  if (ast)
-    return CompilerType(ClangASTContext::GetASTContext(ast),
-                        ast->getTagDeclType(decl).getAsOpaquePtr());
-  return CompilerType();
+  return CompilerType(this,
+                      getASTContext().getTagDeclType(decl).getAsOpaquePtr());
 }
 
 CompilerType ClangASTContext::GetTypeForDecl(ObjCInterfaceDecl *decl) {
-  // No need to call the getASTContext() accessor (which can create the AST if
-  // it isn't created yet, because we can't have created a decl in this
-  // AST if our AST didn't already exist...
-  ASTContext *ast = &decl->getASTContext();
-  if (ast)
-    return CompilerType(ClangASTContext::GetASTContext(ast),
-                        ast->getObjCInterfaceType(decl).getAsOpaquePtr());
-  return CompilerType();
+  return CompilerType(
+      this, getASTContext().getObjCInterfaceType(decl).getAsOpaquePtr());
 }
 
 #pragma mark Structure, Unions, Classes
@@ -9183,7 +9171,7 @@ uint32_t ClangASTContext::CountDeclLevels(clang::DeclContext *frame_decl_ctx,
                   continue;
                 // Check types, if one was provided.
                 if (child_type) {
-                  CompilerType clang_type = ClangASTContext::GetTypeForDecl(nd);
+                  CompilerType clang_type = GetTypeForDecl(nd);
                   if (!AreTypesSame(clang_type, *child_type,
                                     /*ignore_qualifiers=*/true))
                     continue;
