@@ -735,9 +735,10 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent) const {
 void VPWidenMemoryInstructionRecipe::print(raw_ostream &O,
                                            const Twine &Indent) const {
   O << " +\n" << Indent << "\"WIDEN " << VPlanIngredient(&Instr);
-  if (User) {
+  VPValue *Mask = getMask();
+  if (Mask) {
     O << ", ";
-    User->getOperand(0)->printAsOperand(O);
+    Mask->printAsOperand(O);
   }
   O << "\\l\"";
 }
