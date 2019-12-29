@@ -614,7 +614,8 @@ bool Parser::parseExpressionImpl(VariantValue *Value) {
   case TokenInfo::TK_Period:
   case TokenInfo::TK_InvalidChar:
     const TokenInfo Token = Tokenizer->consumeNextToken();
-    Error->addError(Token.Range, Error->ET_ParserInvalidToken) << (Token.Kind == TokenInfo::TK_NewLine ? "NewLine" : Token.Text);
+    Error->addError(Token.Range, Error->ET_ParserInvalidToken)
+        << (Token.Kind == TokenInfo::TK_NewLine ? "NewLine" : Token.Text);
     return false;
   }
 
