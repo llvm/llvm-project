@@ -348,4 +348,12 @@ match callExpr
 
   ASSERT_TRUE(isa<InvalidQuery>(Q));
   EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.", cast<InvalidQuery>(Q)->ErrStr);
+
+  Q = parse("\nm parmVarDecl()\nlet someMatcher\n");
+
+  ASSERT_TRUE(isa<MatchQuery>(Q));
+  Q = parse(Q->RemainingContent);
+
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.", cast<InvalidQuery>(Q)->ErrStr);
 }
