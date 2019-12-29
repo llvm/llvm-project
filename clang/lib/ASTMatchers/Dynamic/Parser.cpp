@@ -354,13 +354,6 @@ struct Parser::ScopedContextEntry {
 bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
   const TokenInfo NameToken = Tokenizer->consumeNextToken();
 
-  if (Tokenizer->nextTokenKind() == TokenInfo::TK_NewLine) {
-    Error->addError(Tokenizer->peekNextToken().Range,
-                    Error->ET_ParserNoOpenParen)
-        << "NewLine";
-    return false;
-  }
-
   if (Tokenizer->nextTokenKind() != TokenInfo::TK_OpenParen) {
     // Parse as a named value.
     if (const VariantValue NamedValue =
@@ -388,6 +381,14 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
       }
       return false;
     }
+
+    if (Tokenizer->nextTokenKind() == TokenInfo::TK_NewLine) {
+      Error->addError(Tokenizer->peekNextToken().Range,
+                      Error->ET_ParserNoOpenParen)
+          << "NewLine";
+      return false;
+    }
+
     // If the syntax is correct and the name is not a matcher either, report
     // unknown named value.
     if ((Tokenizer->nextTokenKind() == TokenInfo::TK_Comma ||
