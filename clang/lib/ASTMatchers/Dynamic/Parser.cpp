@@ -607,15 +607,13 @@ bool Parser::parseExpressionImpl(VariantValue *Value) {
     // This error was already reported by the tokenizer.
     return false;
   case TokenInfo::TK_NewLine:
-    llvm_unreachable("Newline should never be found here");
-    return false;
   case TokenInfo::TK_OpenParen:
   case TokenInfo::TK_CloseParen:
   case TokenInfo::TK_Comma:
   case TokenInfo::TK_Period:
   case TokenInfo::TK_InvalidChar:
     const TokenInfo Token = Tokenizer->consumeNextToken();
-    Error->addError(Token.Range, Error->ET_ParserInvalidToken) << Token.Text;
+    Error->addError(Token.Range, Error->ET_ParserInvalidToken) << (Token.Kind == TokenInfo::TK_NewLine ? "NewLine" : Token.Text);
     return false;
   }
 
