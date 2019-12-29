@@ -132,20 +132,10 @@ public:
   void SetMetadataAsUserID(const clang::Type *type, lldb::user_id_t user_id);
 
   void SetMetadata(const clang::Decl *object, ClangASTMetadata &meta_data);
+
   void SetMetadata(const clang::Type *object, ClangASTMetadata &meta_data);
-  ClangASTMetadata *GetMetadata(const clang::Decl *object) {
-    return GetMetadata(&getASTContext(), object);
-  }
-
-  static ClangASTMetadata *GetMetadata(clang::ASTContext *ast,
-                                       const clang::Decl *object);
-
-  ClangASTMetadata *GetMetadata(const clang::Type *object) {
-    return GetMetadata(&getASTContext(), object);
-  }
-
-  static ClangASTMetadata *GetMetadata(clang::ASTContext *ast,
-                                       const clang::Type *object);
+  ClangASTMetadata *GetMetadata(const clang::Decl *object);
+  ClangASTMetadata *GetMetadata(const clang::Type *object);
 
   // Basic Types
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
