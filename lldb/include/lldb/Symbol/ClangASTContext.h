@@ -315,36 +315,16 @@ public:
                             const CompilerType &function_Type, int storage,
                             bool is_inline);
 
-  static CompilerType CreateFunctionType(clang::ASTContext *ast,
-                                         const CompilerType &result_type,
-                                         const CompilerType *args,
-                                         unsigned num_args, bool is_variadic,
-                                         unsigned type_quals,
-                                         clang::CallingConv cc);
-
-  static CompilerType CreateFunctionType(clang::ASTContext *ast,
-                                         const CompilerType &result_type,
-                                         const CompilerType *args,
-                                         unsigned num_args, bool is_variadic,
-                                         unsigned type_quals) {
-    return ClangASTContext::CreateFunctionType(
-        ast, result_type, args, num_args, is_variadic, type_quals, clang::CC_C);
-  }
+  CompilerType CreateFunctionType(const CompilerType &result_type,
+                                  const CompilerType *args, unsigned num_args,
+                                  bool is_variadic, unsigned type_quals,
+                                  clang::CallingConv cc);
 
   CompilerType CreateFunctionType(const CompilerType &result_type,
                                   const CompilerType *args, unsigned num_args,
                                   bool is_variadic, unsigned type_quals) {
-    return ClangASTContext::CreateFunctionType(
-        &getASTContext(), result_type, args, num_args, is_variadic, type_quals);
-  }
-
-  CompilerType CreateFunctionType(const CompilerType &result_type,
-                                  const CompilerType *args, unsigned num_args,
-                                  bool is_variadic, unsigned type_quals,
-                                  clang::CallingConv cc) {
-    return ClangASTContext::CreateFunctionType(&getASTContext(), result_type,
-                                               args, num_args, is_variadic,
-                                               type_quals, cc);
+    return CreateFunctionType(result_type, args, num_args, is_variadic,
+                              type_quals, clang::CC_C);
   }
 
   clang::ParmVarDecl *CreateParameterDeclaration(clang::DeclContext *decl_ctx,
