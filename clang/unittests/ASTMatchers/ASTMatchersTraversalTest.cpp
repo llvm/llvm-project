@@ -1760,6 +1760,7 @@ void func13() {
 
 void func14() {
   [] <typename TemplateType> (TemplateType t, TemplateType u) { int e = t + u; };
+  float i = 42.0;
 }
 
 )cpp";
@@ -1849,6 +1850,11 @@ void func14() {
                      lambdaExpr(
                          forFunction(functionDecl(hasName("func14"))),
                          has(templateTypeParmDecl(hasName("TemplateType")))))));
+
+  EXPECT_TRUE(
+      matches(Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                             functionDecl(hasName("func14"),
+                                          hasDescendant(floatLiteral())))));
 }
 
 TEST(IgnoringImpCasts, MatchesImpCasts) {
