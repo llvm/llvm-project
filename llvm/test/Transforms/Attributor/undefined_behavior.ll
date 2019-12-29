@@ -8,9 +8,10 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; -- Load tests --
 
-; ATTRIBUTOR-LABEL: define void @load_wholly_unreachable()
 define void @load_wholly_unreachable() {
-; ATTRIBUTOR-NEXT: unreachable
+; ATTRIBUTOR-LABEL: @load_wholly_unreachable(
+; ATTRIBUTOR-NEXT:    unreachable
+;
   %a = load i32, i32* null
   ret void
 }
@@ -37,6 +38,22 @@ define void @load_null_pointer_is_defined() "null-pointer-is-valid"="true" {
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %a = load i32, i32* null
+  ret void
+}
+
+define internal i32* @ret_null() {
+  ret i32* null
+}
+
+; FIXME: null is propagated but the instruction
+; is not changed to unreachable.
+define void @load_null_propagated() {
+; ATTRIBUTOR-LABEL: @load_null_propagated(
+; ATTRIBUTOR-NEXT:    [[A:%.*]] = load i32, i32* null
+; ATTRIBUTOR-NEXT:    ret void
+;
+  %ptr = call i32* @ret_null()
+  %a = load i32, i32* %ptr
   ret void
 }
 
@@ -143,4 +160,136 @@ define void @atomiccmpxchg_null_pointer_is_defined() "null-pointer-is-valid"="tr
 ;
   %a = cmpxchg i32* null, i32 2, i32 3 acq_rel monotonic
   ret void
+}
+
+; Note: The unreachable on %t and %e is _not_ from AAUndefinedBehavior
+
+define i32 @cond_br_on_undef() {
+; ATTRIBUTOR-LABEL: @cond_br_on_undef(
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       t:
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       e:
+; ATTRIBUTOR-NEXT:    unreachable
+;
+
+  br i1 undef, label %t, label %e
+t:
+  ret i32 1
+e:
+  ret i32 2
+}
+
+; More complicated branching
+define void @cond_br_on_undef2(i1 %cond) {
+; ATTRIBUTOR-LABEL: @cond_br_on_undef2(
+; ATTRIBUTOR-NEXT:    br i1 [[COND:%.*]], label [[T1:%.*]], label [[E1:%.*]]
+; ATTRIBUTOR:       t1:
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       t2:
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       e2:
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       e1:
+; ATTRIBUTOR-NEXT:    ret void
+;
+
+  ; Valid branch - verify that this is not converted
+  ; to unreachable.
+  br i1 %cond, label %t1, label %e1
+t1:
+  br i1 undef, label %t2, label %e2
+t2:
+  ret void
+e2:
+  ret void
+e1:
+  ret void
+}
+
+define i1 @ret_undef() {
+  ret i1 undef
+}
+
+define void @cond_br_on_undef_interproc() {
+; ATTRIBUTOR-LABEL: @cond_br_on_undef_interproc(
+; ATTRIBUTOR-NEXT:    %cond = call i1 @ret_undef()
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       t:
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       e:
+; ATTRIBUTOR-NEXT:    unreachable
+  
+  %cond = call i1 @ret_undef()
+  br i1 %cond, label %t, label %e
+t:
+  ret void
+e:
+  ret void
+}
+
+define i1 @ret_undef2() {
+  br i1 true, label %t, label %e
+t:
+  ret i1 undef
+e:
+  ret i1 undef
+}
+
+; More complicated interproc deduction of undef
+define void @cond_br_on_undef_interproc2() {
+; ATTRIBUTOR-LABEL: @cond_br_on_undef_interproc2(
+; ATTRIBUTOR-NEXT:    %cond = call i1 @ret_undef2()
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       t:
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       e:
+; ATTRIBUTOR-NEXT:    unreachable
+  %cond = call i1 @ret_undef2()
+  br i1 %cond, label %t, label %e
+t:
+  ret void
+e:
+  ret void
+}
+
+; Branch on undef that depends on propagation of
+; undef of a previous instruction.
+; FIXME: Currently it doesn't propagate the undef.
+define i32 @cond_br_on_undef3() {
+; ATTRIBUTOR-LABEL: @cond_br_on_undef3(
+; ATTRIBUTOR-NEXT:    %cond = icmp ne i32 1, undef
+; ATTRIBUTOR-NEXT:    br i1 %cond, label %t, label %e
+; ATTRIBUTOR:       t:
+; ATTRIBUTOR-NEXT:    ret i32 1
+; ATTRIBUTOR:       e:
+; ATTRIBUTOR-NEXT:    ret i32 2
+
+  %cond = icmp ne i32 1, undef
+  br i1 %cond, label %t, label %e
+t:
+  ret i32 1
+e:
+  ret i32 2
+}
+
+; Branch on undef because of uninitialized value.
+; FIXME: Currently it doesn't propagate the undef.
+define i32 @cond_br_on_undef_uninit() {
+; ATTRIBUTOR-LABEL: @cond_br_on_undef_uninit(
+; ATTRIBUTOR-NEXT:    %alloc = alloca i1
+; ATTRIBUTOR-NEXT:    %cond = load i1, i1* %alloc
+; ATTRIBUTOR-NEXT:    br i1 %cond, label %t, label %e
+; ATTRIBUTOR:       t:
+; ATTRIBUTOR-NEXT:    ret i32 1
+; ATTRIBUTOR:       e:
+; ATTRIBUTOR-NEXT:    ret i32 2
+  
+  %alloc = alloca i1
+  %cond = load i1, i1* %alloc
+  br i1 %cond, label %t, label %e
+t:
+  ret i32 1
+e:
+  ret i32 2
 }

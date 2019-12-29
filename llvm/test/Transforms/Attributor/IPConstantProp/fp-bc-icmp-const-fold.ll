@@ -7,7 +7,7 @@ define void @test(i32 signext %n) {
 ; CHECK-LABEL: define {{[^@]+}}@test
 ; CHECK-SAME: (i32 signext [[N:%.*]])
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.then:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
