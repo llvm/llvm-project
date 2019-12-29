@@ -352,15 +352,9 @@ public:
 
   // Integer type functions
 
-  static CompilerType GetIntTypeFromBitSize(clang::ASTContext *ast,
-                                            size_t bit_size, bool is_signed);
+  CompilerType GetIntTypeFromBitSize(size_t bit_size, bool is_signed);
 
-  CompilerType GetPointerSizedIntType(bool is_signed) {
-    return GetPointerSizedIntType(&getASTContext(), is_signed);
-  }
-
-  static CompilerType GetPointerSizedIntType(clang::ASTContext *ast,
-                                             bool is_signed);
+  CompilerType GetPointerSizedIntType(bool is_signed);
 
   // Floating point functions
 

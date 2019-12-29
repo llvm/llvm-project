@@ -2094,66 +2094,53 @@ ClangASTContext::CreateEnumerationType(const char *name, DeclContext *decl_ctx,
   return CompilerType();
 }
 
-CompilerType ClangASTContext::GetIntTypeFromBitSize(clang::ASTContext *ast,
-                                                    size_t bit_size,
+CompilerType ClangASTContext::GetIntTypeFromBitSize(size_t bit_size,
                                                     bool is_signed) {
-  if (ast) {
-    auto *clang_ast_context = ClangASTContext::GetASTContext(ast);
-    if (is_signed) {
-      if (bit_size == ast->getTypeSize(ast->SignedCharTy))
-        return CompilerType(clang_ast_context,
-                            ast->SignedCharTy.getAsOpaquePtr());
+  clang::ASTContext &ast = getASTContext();
 
-      if (bit_size == ast->getTypeSize(ast->ShortTy))
-        return CompilerType(clang_ast_context, ast->ShortTy.getAsOpaquePtr());
+  if (is_signed) {
+    if (bit_size == ast.getTypeSize(ast.SignedCharTy))
+      return CompilerType(this, ast.SignedCharTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->IntTy))
-        return CompilerType(clang_ast_context, ast->IntTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.ShortTy))
+      return CompilerType(this, ast.ShortTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->LongTy))
-        return CompilerType(clang_ast_context, ast->LongTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.IntTy))
+      return CompilerType(this, ast.IntTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->LongLongTy))
-        return CompilerType(clang_ast_context,
-                            ast->LongLongTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.LongTy))
+      return CompilerType(this, ast.LongTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->Int128Ty))
-        return CompilerType(clang_ast_context, ast->Int128Ty.getAsOpaquePtr());
-    } else {
-      if (bit_size == ast->getTypeSize(ast->UnsignedCharTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedCharTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.LongLongTy))
+      return CompilerType(this, ast.LongLongTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedShortTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedShortTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.Int128Ty))
+      return CompilerType(this, ast.Int128Ty.getAsOpaquePtr());
+  } else {
+    if (bit_size == ast.getTypeSize(ast.UnsignedCharTy))
+      return CompilerType(this, ast.UnsignedCharTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedIntTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedIntTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.UnsignedShortTy))
+      return CompilerType(this, ast.UnsignedShortTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedLongTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedLongTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.UnsignedIntTy))
+      return CompilerType(this, ast.UnsignedIntTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedLongLongTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedLongLongTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.UnsignedLongTy))
+      return CompilerType(this, ast.UnsignedLongTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedInt128Ty))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedInt128Ty.getAsOpaquePtr());
-    }
+    if (bit_size == ast.getTypeSize(ast.UnsignedLongLongTy))
+      return CompilerType(this, ast.UnsignedLongLongTy.getAsOpaquePtr());
+
+    if (bit_size == ast.getTypeSize(ast.UnsignedInt128Ty))
+      return CompilerType(this, ast.UnsignedInt128Ty.getAsOpaquePtr());
   }
   return CompilerType();
 }
 
-CompilerType ClangASTContext::GetPointerSizedIntType(clang::ASTContext *ast,
-                                                     bool is_signed) {
-  if (ast)
-    return GetIntTypeFromBitSize(ast, ast->getTypeSize(ast->VoidPtrTy),
-                                 is_signed);
-  return CompilerType();
+CompilerType ClangASTContext::GetPointerSizedIntType(bool is_signed) {
+  return GetIntTypeFromBitSize(
+      getASTContext().getTypeSize(getASTContext().VoidPtrTy), is_signed);
 }
 
 void ClangASTContext::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
