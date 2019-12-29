@@ -847,8 +847,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::VSELECT,            MVT::v4f32, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, Custom);
     setOperationAction(ISD::SELECT,             MVT::v4f32, Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v4i32, Custom);
-    setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v4i32, Custom);
 
     setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
     setOperationAction(ISD::STORE,              MVT::v2f32, Custom);
@@ -985,6 +983,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2i32, Custom);
     setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v2i32, Custom);
+
+    setOperationAction(ISD::UINT_TO_FP,         MVT::v4i32, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v4i32, Custom);
 
     // Fast v2f32 UINT_TO_FP( v2i32 ) custom conversion.
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2f32, Custom);
