@@ -230,9 +230,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = TT.isOSBinFormatMachO();
   }
 
-  // Outlining is available for x86-64.
-  if (TT.getArch() == Triple::x86_64)
-    setMachineOutliner(true);
+  setMachineOutliner(true);
 
   initAsmInfo();
 }

@@ -101,8 +101,8 @@ func @mixed_alloc(%arg0: index, %arg1: index) -> memref<?x42x?xf32> {
 //  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  llvm.insertvalue %[[off]], %{{.*}}[2] : !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }">
 //  CHECK-NEXT:  %[[st2:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[st1:.*]] = llvm.mul %{{.*}}, %[[c42]] : !llvm.i64
-//  CHECK-NEXT:  %[[st0:.*]] = llvm.mul %{{.*}}, %[[M]] : !llvm.i64
+//  CHECK-NEXT:  %[[st1:.*]] = llvm.mul %{{.*}}, %[[N]] : !llvm.i64
+//  CHECK-NEXT:  %[[st0:.*]] = llvm.mul %{{.*}}, %[[c42]] : !llvm.i64
 //  CHECK-NEXT:  llvm.insertvalue %[[M]], %{{.*}}[3, 0] : !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }">
 //  CHECK-NEXT:  llvm.insertvalue %[[st0]], %{{.*}}[4, 0] : !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }">
 //  CHECK-NEXT:  llvm.insertvalue %[[c42]], %{{.*}}[3, 1] : !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }">
@@ -142,7 +142,7 @@ func @dynamic_alloc(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 //  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  llvm.insertvalue %[[off]], %{{.*}}[2] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
 //  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[st0:.*]] = llvm.mul %{{.*}}, %[[M]] : !llvm.i64
+//  CHECK-NEXT:  %[[st0:.*]] = llvm.mul %{{.*}}, %[[N]] : !llvm.i64
 //  CHECK-NEXT:  llvm.insertvalue %[[M]], %{{.*}}[3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
 //  CHECK-NEXT:  llvm.insertvalue %[[st0]], %{{.*}}[4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
 //  CHECK-NEXT:  llvm.insertvalue %[[N]], %{{.*}}[3, 1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
