@@ -1930,13 +1930,11 @@ FunctionDecl *ClangASTContext::CreateFunctionDeclaration(
   return func_decl;
 }
 
-CompilerType ClangASTContext::CreateFunctionType(
-    ASTContext *ast, const CompilerType &result_type, const CompilerType *args,
-    unsigned num_args, bool is_variadic, unsigned type_quals,
-    clang::CallingConv cc) {
-  if (ast == nullptr)
-    return CompilerType(); // invalid AST
-
+CompilerType
+ClangASTContext::CreateFunctionType(const CompilerType &result_type,
+                                    const CompilerType *args, unsigned num_args,
+                                    bool is_variadic, unsigned type_quals,
+                                    clang::CallingConv cc) {
   if (!result_type || !ClangUtil::IsClangType(result_type))
     return CompilerType(); // invalid return type
 
@@ -1967,9 +1965,11 @@ CompilerType ClangASTContext::CreateFunctionType(
   proto_info.TypeQuals = clang::Qualifiers::fromFastMask(type_quals);
   proto_info.RefQualifier = RQ_None;
 
-  return CompilerType(ClangASTContext::GetASTContext(ast),
-                      ast->getFunctionType(ClangUtil::GetQualType(result_type),
-                                           qual_type_args, proto_info).getAsOpaquePtr());
+  return CompilerType(this,
+                      getASTContext()
+                          .getFunctionType(ClangUtil::GetQualType(result_type),
+                                           qual_type_args, proto_info)
+                          .getAsOpaquePtr());
 }
 
 ParmVarDecl *ClangASTContext::CreateParameterDeclaration(
