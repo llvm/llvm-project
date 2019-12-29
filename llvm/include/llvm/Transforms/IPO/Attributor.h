@@ -823,6 +823,38 @@ struct Attributor {
     return true;
   }
 
+  /// Get pointer operand of memory accessing instruction. If \p I is
+  /// not a memory accessing instruction, return nullptr. If \p AllowVolatile,
+  /// is set to false and the instruction is volatile, return nullptr.
+  static const Value *getPointerOperand(const Instruction *I,
+                                        bool AllowVolatile) {
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      if (!AllowVolatile && LI->isVolatile())
+        return nullptr;
+      return LI->getPointerOperand();
+    }
+
+    if (auto *SI = dyn_cast<StoreInst>(I)) {
+      if (!AllowVolatile && SI->isVolatile())
+        return nullptr;
+      return SI->getPointerOperand();
+    }
+
+    if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(I)) {
+      if (!AllowVolatile && CXI->isVolatile())
+        return nullptr;
+      return CXI->getPointerOperand();
+    }
+
+    if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
+      if (!AllowVolatile && RMWI->isVolatile())
+        return nullptr;
+      return RMWI->getPointerOperand();
+    }
+
+    return nullptr;
+  }
+
   /// Record that \p I is to be replaced with `unreachable` after information
   /// was manifested.
   void changeToUnreachableAfterManifest(Instruction *I) {
@@ -1709,6 +1741,9 @@ struct AAUndefinedBehavior
 
   /// Return true if "undefined behavior" is known.
   bool isKnownToCauseUB() const { return getKnown(); }
+
+  /// Return true if "undefined behavior" is known for a specific instruction.
+  virtual bool isKnownToCauseUB(Instruction *I) const = 0;
 
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const override { return *this; }
