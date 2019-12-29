@@ -250,7 +250,7 @@ QueryRef QueryParser::doParse() {
       return completeMatcherExpression();
 
     Diagnostics Diag;
-    auto MatcherSource = Line.trim();
+    auto MatcherSource = Line.ltrim();
     auto OrigMatcherSource = MatcherSource;
     Optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
         MatcherSource, nullptr, &QS.NamedValues, &Diag);
