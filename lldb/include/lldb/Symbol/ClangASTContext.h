@@ -164,11 +164,11 @@ public:
   static bool AreTypesSame(CompilerType type1, CompilerType type2,
                            bool ignore_qualifiers = false);
 
-  static CompilerType GetTypeForDecl(clang::NamedDecl *decl);
+  CompilerType GetTypeForDecl(clang::NamedDecl *decl);
 
-  static CompilerType GetTypeForDecl(clang::TagDecl *decl);
+  CompilerType GetTypeForDecl(clang::TagDecl *decl);
 
-  static CompilerType GetTypeForDecl(clang::ObjCInterfaceDecl *objc_decl);
+  CompilerType GetTypeForDecl(clang::ObjCInterfaceDecl *objc_decl);
 
   template <typename RecordDeclType>
   CompilerType
