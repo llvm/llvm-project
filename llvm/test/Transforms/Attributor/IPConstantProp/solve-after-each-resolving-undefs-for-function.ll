@@ -7,7 +7,7 @@ define internal i32 @testf(i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_COND:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.cond:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_END]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.then:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:

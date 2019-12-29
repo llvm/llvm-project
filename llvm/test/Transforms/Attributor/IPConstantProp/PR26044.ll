@@ -9,13 +9,12 @@ define void @fn2(i32* %P) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    br i1 undef, label [[IF_END]], label [[IF_END]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ], [ null, [[FOR_COND1]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* undef, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]])
 ; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]]
-; CHECK-NEXT:    br label [[FOR_COND1]]
+; CHECK-NEXT:    br label %for.cond1
 ;
 entry:
   br label %if.end
@@ -51,13 +50,12 @@ define void @fn_no_null_opt(i32* %P) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    br i1 undef, label [[IF_END]], label [[IF_END]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ], [ null, [[FOR_COND1]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* undef, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
 ; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]]
-; CHECK-NEXT:    br label [[FOR_COND1]]
+; CHECK-NEXT:    br label %for.cond1
 ;
 entry:
   br label %if.end
