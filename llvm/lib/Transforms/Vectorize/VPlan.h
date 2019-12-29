@@ -1015,7 +1015,7 @@ public:
 
   /// Return the mask used by this recipe. Note that a full mask is represented
   /// by a nullptr.
-  VPValue *getMask() {
+  VPValue *getMask() const {
     // Mask is the last operand.
     return User ? User->getOperand(User->getNumOperands() - 1) : nullptr;
   }
