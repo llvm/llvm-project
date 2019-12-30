@@ -220,8 +220,16 @@ void X86AsmPrinter::PrintOperand(const MachineInstr *MI, unsigned OpNo,
 
   case MachineOperand::MO_ConstantPoolIndex:
   case MachineOperand::MO_GlobalAddress: {
-    if (IsATT)
+    switch (MI->getInlineAsmDialect()) {
+    default:
+      llvm_unreachable("unknown assembly dialect!");
+    case InlineAsm::AD_ATT:
       O << '$';
+      break;
+    case InlineAsm::AD_Intel:
+      O << "offset ";
+      break;
+    }
     PrintSymbolOperand(MO, O);
     break;
   }
