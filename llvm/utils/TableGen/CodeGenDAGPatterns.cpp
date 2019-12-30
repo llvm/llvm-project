@@ -1315,13 +1315,29 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
 
   // Handle arbitrary node predicates.
   assert(hasPredCode() && "Don't have any predicate code!");
+
+  // If this is using PatFrags, there are multiple trees to search. They should
+  // all have the same class.  FIXME: Is there a way to find a common
+  // superclass?
   StringRef ClassName;
-  if (PatFragRec->getOnlyTree()->isLeaf())
-    ClassName = "SDNode";
-  else {
-    Record *Op = PatFragRec->getOnlyTree()->getOperator();
-    ClassName = PatFragRec->getDAGPatterns().getSDNodeInfo(Op).getSDClassName();
+  for (const auto &Tree : PatFragRec->getTrees()) {
+    StringRef TreeClassName;
+    if (Tree->isLeaf())
+      TreeClassName = "SDNode";
+    else {
+      Record *Op = Tree->getOperator();
+      const SDNodeInfo &Info = PatFragRec->getDAGPatterns().getSDNodeInfo(Op);
+      TreeClassName = Info.getSDClassName();
+    }
+
+    if (ClassName.empty())
+      ClassName = TreeClassName;
+    else if (ClassName != TreeClassName) {
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "PatFrags trees do not have consistent class");
+    }
   }
+
   std::string Result;
   if (ClassName == "SDNode")
     Result = "    SDNode *N = Node;\n";
