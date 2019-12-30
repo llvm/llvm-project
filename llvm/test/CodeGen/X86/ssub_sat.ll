@@ -231,14 +231,14 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    pcmpgtd %xmm2, %xmm1
 ; X64-NEXT:    pcmpgtd %xmm3, %xmm0
 ; X64-NEXT:    pxor %xmm1, %xmm0
-; X64-NEXT:    pcmpgtd %xmm3, %xmm2
-; X64-NEXT:    movdqa %xmm2, %xmm1
+; X64-NEXT:    movdqa %xmm3, %xmm1
 ; X64-NEXT:    pandn {{.*}}(%rip), %xmm1
+; X64-NEXT:    pcmpgtd %xmm3, %xmm2
 ; X64-NEXT:    psrld $1, %xmm2
-; X64-NEXT:    por %xmm1, %xmm2
-; X64-NEXT:    pand %xmm0, %xmm2
+; X64-NEXT:    por %xmm2, %xmm1
+; X64-NEXT:    pand %xmm0, %xmm1
 ; X64-NEXT:    pandn %xmm3, %xmm0
-; X64-NEXT:    por %xmm2, %xmm0
+; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    retq
   %tmp = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %x, <4 x i32> %y)
   ret <4 x i32> %tmp
