@@ -23,8 +23,8 @@ entry:
 ; CHECK: .quad .Ltmp1
 ; CHECK: .text
 ; CHECK: .Ltmp1:
-; CHECK: brcl 0, .Ltmp2
 ; CHECK: .Ltmp2:
+; CHECK: brcl 0, .Ltmp2
 ; CHECK: br %r14
 }
 
