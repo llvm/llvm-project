@@ -10,7 +10,7 @@ define float @test1(float %x) nounwind  {
 ; CHECK-LABEL: test1:
 ; CHECK: frim 1, 1
 ; CHECK-VSX-LABEL: test1:
-; CHECK-VSX: frim 1, 1
+; CHECK-VSX: xsrdpim 1, 1
 }
 
 declare float @floorf(float) nounwind readnone
@@ -34,7 +34,7 @@ define float @test3(float %x) nounwind  {
 ; CHECK-LABEL: test3:
 ; CHECK: frin 1, 1
 ; CHECK-VSX-LABEL: test3:
-; CHECK-VSX: frin 1, 1
+; CHECK-VSX: xsrdpi 1, 1
 }
 
 declare float @roundf(float) nounwind readnone
@@ -58,7 +58,7 @@ define float @test5(float %x) nounwind  {
 ; CHECK-LABEL: test5:
 ; CHECK: frip 1, 1
 ; CHECK-VSX-LABEL: test5:
-; CHECK-VSX: frip 1, 1
+; CHECK-VSX: xsrdpip 1, 1
 }
 
 declare float @ceilf(float) nounwind readnone
@@ -82,7 +82,7 @@ define float @test9(float %x) nounwind  {
 ; CHECK-LABEL: test9:
 ; CHECK: friz 1, 1
 ; CHECK-VSX-LABEL: test9:
-; CHECK-VSX: friz 1, 1
+; CHECK-VSX: xsrdpiz 1, 1
 }
 
 declare float @truncf(float) nounwind readnone
