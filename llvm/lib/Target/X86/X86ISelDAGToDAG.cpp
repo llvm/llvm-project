@@ -5259,10 +5259,6 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
   switch (ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
-  case InlineAsm::Constraint_i:
-    // FIXME: It seems strange that 'i' is needed here since it's supposed to
-    //        be an immediate and not a memory constraint.
-    LLVM_FALLTHROUGH;
   case InlineAsm::Constraint_o: // offsetable        ??
   case InlineAsm::Constraint_v: // not offsetable    ??
   case InlineAsm::Constraint_m: // memory
