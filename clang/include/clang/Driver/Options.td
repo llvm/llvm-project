@@ -2481,6 +2481,7 @@ def mrecord_mcount : Flag<["-"], "mrecord-mcount">, HelpText<"Generate a __mcoun
   Flags<[CC1Option]>, Group<m_Group>;
 def mpacked_stack : Flag<["-"], "mpacked-stack">, HelpText<"Use packed stack layout (SystemZ only).">,
   Flags<[CC1Option]>, Group<m_Group>;
+def mno_packed_stack : Flag<["-"], "mno-packed-stack">, Flags<[CC1Option]>, Group<m_Group>;
 def mips16 : Flag<["-"], "mips16">, Group<m_mips_Features_Group>;
 def mno_mips16 : Flag<["-"], "mno-mips16">, Group<m_mips_Features_Group>;
 def mmicromips : Flag<["-"], "mmicromips">, Group<m_mips_Features_Group>;
