@@ -390,6 +390,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i32, Legal);
     setOperationAction(ISD::BITCAST, MVT::i64, Legal);
     setOperationAction(ISD::BITCAST, MVT::f64, Legal);
+    if (TM.Options.UnsafeFPMath) {
+      setOperationAction(ISD::LRINT, MVT::f64, Legal);
+      setOperationAction(ISD::LRINT, MVT::f32, Legal);
+      setOperationAction(ISD::LLRINT, MVT::f64, Legal);
+      setOperationAction(ISD::LLRINT, MVT::f32, Legal);
+      setOperationAction(ISD::LROUND, MVT::f64, Legal);
+      setOperationAction(ISD::LROUND, MVT::f32, Legal);
+      setOperationAction(ISD::LLROUND, MVT::f64, Legal);
+      setOperationAction(ISD::LLROUND, MVT::f32, Legal);
+    }
   } else {
     setOperationAction(ISD::BITCAST, MVT::f32, Expand);
     setOperationAction(ISD::BITCAST, MVT::i32, Expand);
@@ -777,8 +787,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FTRUNC, MVT::v2f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::v2f64, Legal);
       setOperationAction(ISD::FROUND, MVT::v2f64, Legal);
+      setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
+      setOperationAction(ISD::FROUND, MVT::f64, Legal);
 
+      setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
+      setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
+      setOperationAction(ISD::FROUND, MVT::f32, Legal);
 
       setOperationAction(ISD::MUL, MVT::v2f64, Legal);
       setOperationAction(ISD::FMA, MVT::v2f64, Legal);
