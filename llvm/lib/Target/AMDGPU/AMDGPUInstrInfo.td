@@ -246,7 +246,7 @@ def AMDGPUdiv_fmas : SDNode<"AMDGPUISD::DIV_FMAS", AMDGPUFmasOp,
 // Denominator, src2 = Numerator).
 def AMDGPUdiv_fixup_impl : SDNode<"AMDGPUISD::DIV_FIXUP", SDTFPTernaryOp>;
 
-def AMDGPUfmad_ftz : SDNode<"AMDGPUISD::FMAD_FTZ", SDTFPTernaryOp>;
+def AMDGPUfmad_ftz_impl : SDNode<"AMDGPUISD::FMAD_FTZ", SDTFPTernaryOp>;
 
 // Look Up 2.0 / pi src0 with segment select src1[4:0]
 def AMDGPUtrig_preop : SDNode<"AMDGPUISD::TRIG_PREOP", AMDGPUTrigPreOp>;
@@ -461,3 +461,7 @@ def AMDGPUpk_i16_i32 : PatFrags<(ops node:$src0, node:$src1),
 def AMDGPUpk_u16_u32 : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_cvt_pk_u16 node:$src0, node:$src1),
   (AMDGPUpk_u16_u32_impl node:$src0, node:$src1)]>;
+
+def AMDGPUfmad_ftz : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_fmad_ftz node:$src0, node:$src1, node:$src2),
+   (AMDGPUfmad_ftz_impl node:$src0, node:$src1, node:$src2)]>;

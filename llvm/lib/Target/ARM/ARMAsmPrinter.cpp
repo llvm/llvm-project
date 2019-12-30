@@ -1170,10 +1170,12 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         break;
       case ARM::ADDri:
       case ARM::t2ADDri:
+      case ARM::t2ADDri12:
         Offset = -MI->getOperand(2).getImm();
         break;
       case ARM::SUBri:
       case ARM::t2SUBri:
+      case ARM::t2SUBri12:
         Offset = MI->getOperand(2).getImm();
         break;
       case ARM::tSUBspi:
