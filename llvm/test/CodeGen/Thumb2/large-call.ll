@@ -9,7 +9,7 @@ target triple = "thumbv7-apple-ios0.0.0"
 ; CHECK: main
 ; CHECK: vmov.f64
 ; Adjust SP for the large call
-; CHECK: sub sp,
+; CHECK: subw sp, sp, #3720
 ; Store to call frame + #8
 ; CHECK: vstr{{.*\[}}sp, #8]
 ; Don't clobber that store until the call.
