@@ -82,6 +82,30 @@ static inline bool isRunOfOnes(unsigned Val, unsigned &MB, unsigned &ME) {
   return false;
 }
 
+static inline bool isRunOfOnes64(uint64_t Val, unsigned &MB, unsigned &ME) {
+  if (!Val)
+    return false;
+
+  if (isShiftedMask_64(Val)) {
+    // look for the first non-zero bit
+    MB = countLeadingZeros(Val);
+    // look for the first zero bit after the run of ones
+    ME = countLeadingZeros((Val - 1) ^ Val);
+    return true;
+  } else {
+    Val = ~Val; // invert mask
+    if (isShiftedMask_64(Val)) {
+      // effectively look for the first zero bit
+      ME = countLeadingZeros(Val) - 1;
+      // effectively look for the first one bit after the run of zeros
+      MB = countLeadingZeros((Val - 1) ^ Val) + 1;
+      return true;
+    }
+  }
+  // no run present
+  return false;
+}
+
 } // end namespace llvm
 
 // Generated files will use "namespace PPC". To avoid symbol clash,
