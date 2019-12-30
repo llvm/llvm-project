@@ -145,7 +145,7 @@ f:
 define internal i1 @ipccp2i(i1 %a) {
 ; CHECK-LABEL: define {{[^@]+}}@ipccp2i
 ; CHECK-SAME: (i1 returned [[A:%.*]]) #0
-; CHECK-NEXT:    br i1 true, label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    br label %t
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
