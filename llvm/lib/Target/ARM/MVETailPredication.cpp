@@ -209,7 +209,7 @@ bool MVETailPredication::isTailPredicate(Instruction *I, Value *NumElements) {
   // The vector icmp
   if (!match(I, m_ICmp(Pred, m_Instruction(Induction),
                        m_Instruction(Shuffle))) ||
-      Pred != ICmpInst::ICMP_ULE || !L->isLoopInvariant(Shuffle))
+      Pred != ICmpInst::ICMP_ULE)
     return false;
 
   // First find the stuff outside the loop which is setting up the limit
@@ -231,7 +231,7 @@ bool MVETailPredication::isTailPredicate(Instruction *I, Value *NumElements) {
   if (!match(BECount, m_Add(m_Value(TripCount), m_AllOnes())))
     return false;
 
-  if (TripCount != NumElements)
+  if (TripCount != NumElements || !L->isLoopInvariant(BECount))
     return false;
 
   // Now back to searching inside the loop body...

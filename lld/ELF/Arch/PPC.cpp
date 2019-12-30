@@ -10,6 +10,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/Endian.h"
 
@@ -35,6 +36,8 @@ public:
                 uint64_t pltEntryAddr) const override {
     llvm_unreachable("should call writePPC32GlinkSection() instead");
   }
+  void writeIplt(uint8_t *buf, const Symbol &sym,
+                 uint64_t pltEntryAddr) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   bool needsThunk(RelExpr expr, RelType relocType, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
@@ -144,7 +147,7 @@ PPC::PPC() {
   gotPltHeaderEntriesNum = 0;
   pltHeaderSize = 64; // size of PLTresolve in .glink
   pltEntrySize = 4;
-  ipltEntrySize = 4;
+  ipltEntrySize = 16;
 
   needsThunks = true;
 
@@ -156,6 +159,13 @@ PPC::PPC() {
   defaultImageBase = 0x10000000;
 
   write32(trapInstr.data(), 0x7fe00008);
+}
+
+void PPC::writeIplt(uint8_t *buf, const Symbol &sym,
+                    uint64_t /*pltEntryAddr*/) const {
+  // In -pie or -shared mode, assume r30 points to .got2+0x8000, and use a
+  // .got2.plt_pic32. thunk.
+  writePPC32PltCallStub(buf, sym.getGotPltVA(), sym.file, 0x8000);
 }
 
 void PPC::writeGotHeader(uint8_t *buf) const {

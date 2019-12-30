@@ -971,8 +971,16 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
 
       // Patch a nop (0x60000000) to a ld.
       if (rel.sym->needsTocRestore) {
-        if (bufLoc + 8 > bufEnd || read32(bufLoc + 4) != 0x60000000) {
-          error(getErrorLocation(bufLoc) + "call lacks nop, can't restore toc");
+        // gcc/gfortran 5.4, 6.3 and earlier versions do not add nop for
+        // recursive calls even if the function is preemptible. This is not
+        // wrong in the common case where the function is not preempted at
+        // runtime. Just ignore.
+        if ((bufLoc + 8 > bufEnd || read32(bufLoc + 4) != 0x60000000) &&
+            rel.sym->file != file) {
+          // Use substr(6) to remove the "__plt_" prefix.
+          errorOrWarn(getErrorLocation(bufLoc) + "call to " +
+                      lld::toString(*rel.sym).substr(6) +
+                      " lacks nop, can't restore toc");
           break;
         }
         write32(bufLoc + 4, 0xe8410018); // ld %r2, 24(%r1)

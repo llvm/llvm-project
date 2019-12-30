@@ -401,13 +401,12 @@ bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectG_UADDO_USUBO(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = I.getDebugLoc();
   Register Dst0Reg = I.getOperand(0).getReg();
   Register Dst1Reg = I.getOperand(1).getReg();
   const bool IsAdd = I.getOpcode() == AMDGPU::G_UADDO;
 
-  if (!isSCC(Dst1Reg, MRI)) {
+  if (!isSCC(Dst1Reg, *MRI)) {
     // The name of the opcodes are misleading. v_add_i32/v_sub_i32 have unsigned
     // carry out despite the _i32 name. These were renamed in VI to _U32.
     // FIXME: We should probably rename the opcodes here.
@@ -427,12 +426,12 @@ bool AMDGPUInstructionSelector::selectG_UADDO_USUBO(MachineInstr &I) const {
   BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Dst1Reg)
     .addReg(AMDGPU::SCC);
 
-  if (!MRI.getRegClassOrNull(Dst1Reg))
-    MRI.setRegClass(Dst1Reg, &AMDGPU::SReg_32RegClass);
+  if (!MRI->getRegClassOrNull(Dst1Reg))
+    MRI->setRegClass(Dst1Reg, &AMDGPU::SReg_32RegClass);
 
-  if (!RBI.constrainGenericRegister(Dst0Reg, AMDGPU::SReg_32RegClass, MRI) ||
-      !RBI.constrainGenericRegister(Src0Reg, AMDGPU::SReg_32RegClass, MRI) ||
-      !RBI.constrainGenericRegister(Src1Reg, AMDGPU::SReg_32RegClass, MRI))
+  if (!RBI.constrainGenericRegister(Dst0Reg, AMDGPU::SReg_32RegClass, *MRI) ||
+      !RBI.constrainGenericRegister(Src0Reg, AMDGPU::SReg_32RegClass, *MRI) ||
+      !RBI.constrainGenericRegister(Src1Reg, AMDGPU::SReg_32RegClass, *MRI))
     return false;
 
   I.eraseFromParent();
@@ -2135,9 +2134,8 @@ AMDGPUInstructionSelector::selectDS1Addr1Offset(MachineOperand &Root) const {
 
 void AMDGPUInstructionSelector::renderTruncImm32(MachineInstrBuilder &MIB,
                                                  const MachineInstr &MI) const {
-  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
-  Optional<int64_t> CstVal = getConstantVRegVal(MI.getOperand(0).getReg(), MRI);
+  Optional<int64_t> CstVal = getConstantVRegVal(MI.getOperand(0).getReg(), *MRI);
   assert(CstVal && "Expected constant value");
   MIB.addImm(CstVal.getValue());
 }

@@ -9,6 +9,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/Endian.h"
 
@@ -202,6 +203,8 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  void writeIplt(uint8_t *buf, const Symbol &sym,
+                 uint64_t pltEntryAddr) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
   void writeGotHeader(uint8_t *buf) const override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
@@ -298,7 +301,7 @@ PPC64::PPC64() {
   symbolicRel = R_PPC64_ADDR64;
   pltHeaderSize = 60;
   pltEntrySize = 4;
-  ipltEntrySize = 4;
+  ipltEntrySize = 16; // PPC64PltCallStub::size
   gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 1;
   gotPltHeaderEntriesNum = 2;
@@ -674,6 +677,11 @@ void PPC64::writePlt(uint8_t *buf, const Symbol &sym,
   int32_t offset = pltHeaderSize + sym.pltIndex * pltEntrySize;
   // bl __glink_PLTresolve
   write32(buf, 0x48000000 | ((-offset) & 0x03FFFFFc));
+}
+
+void PPC64::writeIplt(uint8_t *buf, const Symbol &sym,
+                      uint64_t /*pltEntryAddr*/) const {
+  writePPC64LoadAndBranch(buf, sym.getGotPltVA() - getPPC64TocBase());
 }
 
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType type, uint64_t val) {

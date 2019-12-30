@@ -12,7 +12,7 @@
 # RUN: llvm-objdump -d -r %t | FileCheck %s
 # RUN: not ld.lld -shared %t1.o %t2.o -o %t 2>&1 | FileCheck --check-prefix=FAIL %s
 
-# FAIL: call lacks nop, can't restore toc
+# FAIL: call to def lacks nop, can't restore toc
 
 # Test to document the toc-restore behavior with -Bsymbolic option. Since
 # -Bsymbolic causes the call to bind to the internal defintion we know the

@@ -303,50 +303,41 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
       continue;
     }
 
-    bool HasCCOut = true;
-    if (BaseReg == ARM::SP) {
-      // sub sp, sp, #imm7
-      if (DestReg == ARM::SP && (ThisVal < ((1 << 7)-1) * 4)) {
-        assert((ThisVal & 3) == 0 && "Stack update is not multiple of 4?");
-        Opc = isSub ? ARM::tSUBspi : ARM::tADDspi;
-        BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg)
-            .addReg(BaseReg)
-            .addImm(ThisVal / 4)
-            .setMIFlags(MIFlags)
-            .add(predOps(ARMCC::AL));
-        NumBytes = 0;
-        continue;
-      }
+    assert((DestReg != ARM::SP || BaseReg == ARM::SP) &&
+           "Writing to SP, from other register.");
 
-      // sub rd, sp, so_imm
-      Opc = isSub ? ARM::t2SUBri : ARM::t2ADDri;
-      if (ARM_AM::getT2SOImmVal(NumBytes) != -1) {
-        NumBytes = 0;
-      } else {
-        // FIXME: Move this to ARMAddressingModes.h?
-        unsigned RotAmt = countLeadingZeros(ThisVal);
-        ThisVal = ThisVal & ARM_AM::rotr32(0xff000000U, RotAmt);
-        NumBytes &= ~ThisVal;
-        assert(ARM_AM::getT2SOImmVal(ThisVal) != -1 &&
-               "Bit extraction didn't work?");
-      }
+    // Try to use T1, as it smaller
+    if ((DestReg == ARM::SP) && (ThisVal < ((1 << 7) - 1) * 4)) {
+      assert((ThisVal & 3) == 0 && "Stack update is not multiple of 4?");
+      Opc = isSub ? ARM::tSUBspi : ARM::tADDspi;
+      BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg)
+          .addReg(BaseReg)
+          .addImm(ThisVal / 4)
+          .setMIFlags(MIFlags)
+          .add(predOps(ARMCC::AL));
+      break;
+    }
+    bool HasCCOut = true;
+    int ImmIsT2SO = ARM_AM::getT2SOImmVal(ThisVal);
+
+    Opc = isSub ? ARM::t2SUBri : ARM::t2ADDri;
+    // Prefer T2: sub rd, rn, so_imm | sub sp, sp, so_imm
+    if (ImmIsT2SO != -1) {
+      NumBytes = 0;
+    } else if (ThisVal < 4096) {
+      // Prefer T3 if can make it in a single go: subw rd, rn, imm12 | subw sp,
+      // sp, imm12
+      Opc = isSub ? ARM::t2SUBri12 : ARM::t2ADDri12;
+      HasCCOut = false;
+      NumBytes = 0;
     } else {
-      assert(DestReg != ARM::SP && BaseReg != ARM::SP);
-      Opc = isSub ? ARM::t2SUBri : ARM::t2ADDri;
-      if (ARM_AM::getT2SOImmVal(NumBytes) != -1) {
-        NumBytes = 0;
-      } else if (ThisVal < 4096) {
-        Opc = isSub ? ARM::t2SUBri12 : ARM::t2ADDri12;
-        HasCCOut = false;
-        NumBytes = 0;
-      } else {
-        // FIXME: Move this to ARMAddressingModes.h?
-        unsigned RotAmt = countLeadingZeros(ThisVal);
-        ThisVal = ThisVal & ARM_AM::rotr32(0xff000000U, RotAmt);
-        NumBytes &= ~ThisVal;
-        assert(ARM_AM::getT2SOImmVal(ThisVal) != -1 &&
-               "Bit extraction didn't work?");
-      }
+      // Use one T2 instruction to reduce NumBytes
+      // FIXME: Move this to ARMAddressingModes.h?
+      unsigned RotAmt = countLeadingZeros(ThisVal);
+      ThisVal = ThisVal & ARM_AM::rotr32(0xff000000U, RotAmt);
+      NumBytes &= ~ThisVal;
+      assert(ARM_AM::getT2SOImmVal(ThisVal) != -1 &&
+             "Bit extraction didn't work?");
     }
 
     // Build the new ADD / SUB.

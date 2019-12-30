@@ -6,7 +6,7 @@ define internal i32 @callee(i1 %C, i32* %P) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
 ; CHECK-SAME: (i1 [[C:%.*]], i32* noalias nocapture nofree readnone [[P:%.*]])
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    br label [[T:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    ret i32 17
 ; CHECK:       F:

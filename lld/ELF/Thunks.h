@@ -14,6 +14,7 @@
 namespace lld {
 namespace elf {
 class Defined;
+class InputFile;
 class Symbol;
 class ThunkSection;
 // Class to describe an instance of a Thunk.
@@ -67,6 +68,10 @@ public:
 // For a Relocation to symbol S create a Thunk to be added to a synthetic
 // ThunkSection.
 Thunk *addThunk(const InputSection &isec, Relocation &rel);
+
+void writePPC32PltCallStub(uint8_t *buf, uint64_t gotPltVA,
+                           const InputFile *file, int64_t addend);
+void writePPC64LoadAndBranch(uint8_t *buf, int64_t offset);
 
 } // namespace elf
 } // namespace lld

@@ -63,13 +63,12 @@ define <3 x double> @known_positive_sign_arg_vec(<3 x double> %x, <3 x i32> %y) 
   ret <3 x double> %r
 }
 
-; TODO: The magnitude operand of the 1st copysign is irrelevant.
+; The magnitude operand of the 1st copysign is irrelevant.
 ; copysign(x, copysign(y, z)) --> copysign(x, z)
 
 define float @copysign_sign_arg(float %x, float %y, float %z) {
 ; CHECK-LABEL: @copysign_sign_arg(
-; CHECK-NEXT:    [[S:%.*]] = call reassoc float @llvm.copysign.f32(float [[Y:%.*]], float [[Z:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call ninf float @llvm.copysign.f32(float [[X:%.*]], float [[S]])
+; CHECK-NEXT:    [[R:%.*]] = call ninf float @llvm.copysign.f32(float [[X:%.*]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = call reassoc float @llvm.copysign.f32(float %y, float %z)

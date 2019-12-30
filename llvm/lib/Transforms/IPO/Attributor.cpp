@@ -2574,9 +2574,7 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
       return ChangeStatus::UNCHANGED;
 
     UndefValue &UV = *UndefValue::get(V.getType());
-    bool AnyChange = false;
-    for (Use &U : V.uses())
-      AnyChange |= A.changeUseAfterManifest(U, UV);
+    bool AnyChange = A.changeValueAfterManifest(V, UV);
     return AnyChange ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
@@ -4149,7 +4147,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       if (!V.user_empty() && &V != C && V.getType() == C->getType()) {
         LLVM_DEBUG(dbgs() << "[Attributor][ValueSimplify] " << V << " -> " << *C
                           << "\n");
-        replaceAllInstructionUsesWith(V, *C);
+        A.changeValueAfterManifest(V, *C);
         Changed = ChangeStatus::CHANGED;
       }
     }
