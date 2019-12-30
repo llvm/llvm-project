@@ -334,7 +334,8 @@ match callExpr
   Q = parse("let someMatcher\nm parmVarDecl()");
 
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.", cast<InvalidQuery>(Q)->ErrStr);
+  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.",
+            cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("\nm parmVarDecl()\nlet someMatcher\nm parmVarDecl()");
 
@@ -342,12 +343,14 @@ match callExpr
   Q = parse(Q->RemainingContent);
 
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.", cast<InvalidQuery>(Q)->ErrStr);
+  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.",
+            cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("\nlet someMatcher\n");
 
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.", cast<InvalidQuery>(Q)->ErrStr);
+  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.",
+            cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("\nm parmVarDecl()\nlet someMatcher\n");
 
@@ -355,7 +358,8 @@ match callExpr
   Q = parse(Q->RemainingContent);
 
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.", cast<InvalidQuery>(Q)->ErrStr);
+  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.",
+            cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse(R"matcher(
 
@@ -368,8 +372,8 @@ m parmVarDecl(
 
   ASSERT_TRUE(isa<LetQuery>(Q));
   {
-  llvm::raw_null_ostream NullOutStream;
-  dyn_cast<LetQuery>(Q)->run(NullOutStream, QS);
+    llvm::raw_null_ostream NullOutStream;
+    dyn_cast<LetQuery>(Q)->run(NullOutStream, QS);
   }
 
   Q = parse(Q->RemainingContent);

@@ -5,10 +5,7 @@
 define i32 @test1(i32 %a) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 4, 32767
-; CHECK-NEXT:    ori 4, 4, 65535
-; CHECK-NEXT:    sldi 4, 4, 1
-; CHECK-NEXT:    and 3, 3, 4
+; CHECK-NEXT:    rlwinm 3, 3, 0, 0, 30
 ; CHECK-NEXT:    blr
   %and = and i32 %a, -2
   ret i32 %and

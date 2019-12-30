@@ -976,9 +976,7 @@ namespace llvm {
 
     unsigned
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
-      if (ConstraintCode == "i")
-        return InlineAsm::Constraint_i;
-      else if (ConstraintCode == "o")
+      if (ConstraintCode == "o")
         return InlineAsm::Constraint_o;
       else if (ConstraintCode == "v")
         return InlineAsm::Constraint_v;

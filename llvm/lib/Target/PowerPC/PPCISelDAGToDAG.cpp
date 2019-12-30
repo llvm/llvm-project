@@ -310,7 +310,6 @@ namespace {
         errs() << "ConstraintID: " << ConstraintID << "\n";
         llvm_unreachable("Unexpected asm memory constraint");
       case InlineAsm::Constraint_es:
-      case InlineAsm::Constraint_i:
       case InlineAsm::Constraint_m:
       case InlineAsm::Constraint_o:
       case InlineAsm::Constraint_Q:
@@ -4456,6 +4455,26 @@ bool PPCDAGToDAGISel::tryAndWithMask(SDNode *N) {
       SDValue Ops[] = { Val, getI32Imm(SH, dl), getI32Imm(MB, dl) };
       CurDAG->SelectNodeTo(N, PPC::RLDICR, MVT::i64, Ops);
       return true;
+    }
+
+    // It is not 16-bit imm that means we need two instructions at least if
+    // using "and" instruction. Try to exploit it with rotate mask instructions.
+    if (isRunOfOnes64(Imm64, MB, ME)) {
+      if (MB >= 32 && MB <= ME) {
+        //                MB  ME
+        // +----------------------+
+        // |xxxxxxxxxxx00011111000|
+        // +----------------------+
+        //  0         32         64
+        // We can only do it if the MB is larger than 32 and MB <= ME
+        // as RLWINM will replace the content of [0 - 32) with [32 - 64) even
+        // we didn't rotate it.
+        SDValue Ops[] = { Val, getI64Imm(0, dl), getI64Imm(MB - 32, dl),
+                          getI64Imm(ME - 32, dl) };
+        CurDAG->SelectNodeTo(N, PPC::RLWINM8, MVT::i64, Ops);
+        return true;
+      }
+      // TODO - handle it with rldicl + rldicl
     }
   }
 

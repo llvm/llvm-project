@@ -304,7 +304,6 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
   switch(ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
-  case InlineAsm::Constraint_i:
   case InlineAsm::Constraint_m:
   case InlineAsm::Constraint_Q:
     // We need to make sure that this one operand does not end up in XZR, thus
