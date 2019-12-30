@@ -299,7 +299,7 @@ define i64 @popa_i16_i64(i16 %x) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    clrldi 3, 3, 48
 ; FAST-NEXT:    popcntd 3, 3
-; FAST-NEXT:    andi. 3, 3, 16
+; FAST-NEXT:    rlwinm 3, 3, 0, 27, 27
 ; FAST-NEXT:    blr
 ;
 ; SLOW-LABEL: popa_i16_i64:
@@ -325,7 +325,7 @@ define i64 @popa_i16_i64(i16 %x) {
 ; SLOW-NEXT:    ori 4, 4, 257
 ; SLOW-NEXT:    mullw 3, 3, 4
 ; SLOW-NEXT:    srwi 3, 3, 24
-; SLOW-NEXT:    andi. 3, 3, 16
+; SLOW-NEXT:    rlwinm 3, 3, 0, 27, 27
 ; SLOW-NEXT:    blr
   %pop = call i16 @llvm.ctpop.i16(i16 %x)
   %z = zext i16 %pop to i64 ; SimplifyDemandedBits may turn zext (or sext) into aext

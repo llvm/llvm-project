@@ -7,12 +7,12 @@ define signext i32 @fn1(i32 %baz) {
   %2 = zext i32 %1 to i64
   %3 = shl i64 %2, 48
   %4 = ashr exact i64 %3, 48
-; CHECK: ANDI8o killed {{[^,]+}}, 65520, implicit-def dead $cr0
+; CHECK: RLWINM8 killed {{[^,]+}}, 0, 16, 27
 ; CHECK: CMPLDI
 ; CHECK: BCC
 
 ; CHECK: ANDI8o {{[^,]+}}, 65520, implicit-def $cr0
-; CHECK: COPY $cr0
+; CHECK: COPY killed $cr0
 ; CHECK: BCC
   %5 = icmp eq i64 %4, 0
   br i1 %5, label %foo, label %bar
