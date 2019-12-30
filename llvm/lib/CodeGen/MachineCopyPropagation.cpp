@@ -78,6 +78,7 @@ using namespace llvm;
 
 STATISTIC(NumDeletes, "Number of dead copies deleted");
 STATISTIC(NumCopyForwards, "Number of copy uses forwarded");
+STATISTIC(NumCopyBackwardPropagated, "Number of copy defs backward propagated");
 DEBUG_COUNTER(FwdCounter, "machine-cp-fwd",
               "Controls which register COPYs are forwarded");
 
@@ -793,6 +794,7 @@ void MachineCopyPropagation::propagateDefs(MachineInstr &MI) {
     LLVM_DEBUG(dbgs() << "MCP: After replacement: " << MI << "\n");
     MaybeDeadCopies.insert(Copy);
     Changed = true;
+    ++NumCopyBackwardPropagated;
   }
 }
 
@@ -849,8 +851,10 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     }
   }
 
-  for (auto *Copy : MaybeDeadCopies)
+  for (auto *Copy : MaybeDeadCopies) {
     Copy->eraseFromParent();
+    ++NumDeletes;
+  }
 
   MaybeDeadCopies.clear();
   CopyDbgUsers.clear();
