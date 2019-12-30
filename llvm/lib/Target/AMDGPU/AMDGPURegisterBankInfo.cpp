@@ -2100,6 +2100,21 @@ static unsigned regBankUnion(unsigned RB0, unsigned RB1) {
     AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
 }
 
+static int regBankBoolUnion(int RB0, int RB1) {
+  if (RB0 == -1)
+    return RB1;
+  if (RB1 == -1)
+    return RB0;
+
+  // vcc, vcc -> vcc
+  if (RB0 == AMDGPU::VCCRegBankID && RB1 == AMDGPU::VCCRegBankID)
+    return AMDGPU::VCCRegBankID;
+
+  // vcc, sgpr -> vgpr
+  // vcc, vgpr -> vgpr
+  return regBankUnion(RB0, RB1);
+}
+
 const RegisterBankInfo::ValueMapping *
 AMDGPURegisterBankInfo::getSGPROpMapping(Register Reg,
                                          const MachineRegisterInfo &MRI,
@@ -2167,6 +2182,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   if (MI.getOpcode() == TargetOpcode::G_PHI) {
     // TODO: Generate proper invalid bank enum.
     int ResultBank = -1;
+    Register DstReg = MI.getOperand(0).getReg();
+
+    // Sometimes the result may have already been assigned a bank.
+    if (const RegisterBank *DstBank = getRegBank(DstReg, MRI, *TRI))
+      ResultBank = DstBank->getID();
 
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
       Register Reg = MI.getOperand(I).getReg();
@@ -2179,25 +2199,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       }
 
       unsigned OpBank = Bank->getID();
-      // scc, scc -> sgpr
-      if (OpBank == AMDGPU::SCCRegBankID) {
-        // There's only one SCC register, so a phi requires copying to SGPR.
+      if (OpBank == AMDGPU::SCCRegBankID)
         OpBank = AMDGPU::SGPRRegBankID;
-      } else if (OpBank == AMDGPU::VCCRegBankID) {
-        // vcc, vcc -> vcc
-        // vcc, sgpr -> vgpr
-        if (ResultBank != -1 && ResultBank != AMDGPU::VCCRegBankID) {
-          ResultBank = AMDGPU::VGPRRegBankID;
-          break;
-        }
-      }
 
-      ResultBank = OpBank;
+      ResultBank = regBankBoolUnion(ResultBank, OpBank);
     }
 
     assert(ResultBank != -1);
 
-    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    unsigned Size = MRI.getType(DstReg).getSizeInBits();
 
     const ValueMapping &ValMap =
         getValueMapping(0, Size, getRegBank(ResultBank));
