@@ -216,39 +216,88 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
                                                   : OMPRTL___kmpc_barrier),
       Args);
 
-  if (UseCancelBarrier && CheckCancelFlag) {
-    // For a cancel barrier we create two new blocks.
-    BasicBlock *BB = Builder.GetInsertBlock();
-    BasicBlock *NonCancellationBlock;
-    if (Builder.GetInsertPoint() == BB->end()) {
-      // TODO: This branch will not be needed once we moved to the
-      // OpenMPIRBuilder codegen completely.
-      NonCancellationBlock = BasicBlock::Create(
-          BB->getContext(), BB->getName() + ".cont", BB->getParent());
-    } else {
-      NonCancellationBlock = SplitBlock(BB, &*Builder.GetInsertPoint());
-      BB->getTerminator()->eraseFromParent();
-      Builder.SetInsertPoint(BB);
-    }
-    BasicBlock *CancellationBlock = BasicBlock::Create(
-        BB->getContext(), BB->getName() + ".cncl", BB->getParent());
-
-    // Jump to them based on the return value.
-    Value *Cmp = Builder.CreateIsNull(Result);
-    Builder.CreateCondBr(Cmp, NonCancellationBlock, CancellationBlock,
-                         /* TODO weight */ nullptr, nullptr);
-
-    // From the cancellation block we finalize all variables and go to the
-    // post finalization block that is known to the FiniCB callback.
-    Builder.SetInsertPoint(CancellationBlock);
-    auto &FI = FinalizationStack.back();
-    FI.FiniCB(Builder.saveIP());
-
-    // The continuation block is where code generation continues.
-    Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin());
-  }
+  if (UseCancelBarrier && CheckCancelFlag)
+    emitCancelationCheckImpl(Result, OMPD_parallel);
 
   return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::CreateCancel(const LocationDescription &Loc,
+                              Value *IfCondition,
+                              omp::Directive CanceledDirective) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // LLVM utilities like blocks with terminators.
+  auto *UI = Builder.CreateUnreachable();
+
+  Instruction *ThenTI = UI, *ElseTI = nullptr;
+  if (IfCondition)
+    SplitBlockAndInsertIfThenElse(IfCondition, UI, &ThenTI, &ElseTI);
+  Builder.SetInsertPoint(ThenTI);
+
+  Value *CancelKind = nullptr;
+  switch (CanceledDirective) {
+#define OMP_CANCEL_KIND(Enum, Str, DirectiveEnum, Value)                       \
+  case DirectiveEnum:                                                          \
+    CancelKind = Builder.getInt32(Value);                                      \
+    break;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  default:
+    llvm_unreachable("Unknown cancel kind!");
+  }
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
+  Value *Result = Builder.CreateCall(
+      getOrCreateRuntimeFunction(OMPRTL___kmpc_cancel), Args);
+
+  // The actual cancel logic is shared with others, e.g., cancel_barriers.
+  emitCancelationCheckImpl(Result, CanceledDirective);
+
+  // Update the insertion point and remove the terminator we introduced.
+  Builder.SetInsertPoint(UI->getParent());
+  UI->eraseFromParent();
+
+  return Builder.saveIP();
+}
+
+void OpenMPIRBuilder::emitCancelationCheckImpl(
+    Value *CancelFlag, omp::Directive CanceledDirective) {
+  assert(isLastFinalizationInfoCancellable(CanceledDirective) &&
+         "Unexpected cancellation!");
+
+  // For a cancel barrier we create two new blocks.
+  BasicBlock *BB = Builder.GetInsertBlock();
+  BasicBlock *NonCancellationBlock;
+  if (Builder.GetInsertPoint() == BB->end()) {
+    // TODO: This branch will not be needed once we moved to the
+    // OpenMPIRBuilder codegen completely.
+    NonCancellationBlock = BasicBlock::Create(
+        BB->getContext(), BB->getName() + ".cont", BB->getParent());
+  } else {
+    NonCancellationBlock = SplitBlock(BB, &*Builder.GetInsertPoint());
+    BB->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(BB);
+  }
+  BasicBlock *CancellationBlock = BasicBlock::Create(
+      BB->getContext(), BB->getName() + ".cncl", BB->getParent());
+
+  // Jump to them based on the return value.
+  Value *Cmp = Builder.CreateIsNull(CancelFlag);
+  Builder.CreateCondBr(Cmp, NonCancellationBlock, CancellationBlock,
+                       /* TODO weight */ nullptr, nullptr);
+
+  // From the cancellation block we finalize all variables and go to the
+  // post finalization block that is known to the FiniCB callback.
+  Builder.SetInsertPoint(CancellationBlock);
+  auto &FI = FinalizationStack.back();
+  FI.FiniCB(Builder.saveIP());
+
+  // The continuation block is where code generation continues.
+  Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin());
 }
 
 IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
