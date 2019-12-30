@@ -63,7 +63,7 @@ define <3 x double> @known_positive_sign_arg_vec(<3 x double> %x, <3 x i32> %y) 
   ret <3 x double> %r
 }
 
-; TODO: The magnitude operand of the 1st copysign is irrelevant.
+; The magnitude operand of the 1st copysign is irrelevant.
 ; copysign(x, copysign(y, z)) --> copysign(x, z)
 
 define float @copysign_sign_arg(float %x, float %y, float %z) {
