@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8.1m.main -mattr=+lob -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve,+lob -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
 
 # The CPSR is not dead:
 #
