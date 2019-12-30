@@ -205,6 +205,9 @@ __OMP_ATTRS_SET(GetterAttrs,
 #define __OMP_RTL_ATTRS(Name, FnAttrSet, RetAttrSet, ArgAttrSets)              \
   OMP_RTL_ATTRS(OMPRTL_##Name, FnAttrSet, RetAttrSet, ArgAttrSets)
 
+__OMP_RTL_ATTRS(__kmpc_fork_call, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
 __OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(omp_get_thread_num, GetterAttrs, AttributeSet(), {})
 
