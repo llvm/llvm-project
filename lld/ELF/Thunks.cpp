@@ -707,13 +707,13 @@ InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
   return dyn_cast<InputSection>(dr.section);
 }
 
-void PPC32PltCallStub::writeTo(uint8_t *buf) {
+void writePPC32PltCallStub(uint8_t *buf, uint64_t gotPltVA,
+                           const InputFile *file, int64_t addend) {
   if (!config->isPic) {
-    uint64_t va = destination.getGotPltVA();
-    write32(buf + 0, 0x3d600000 | (va + 0x8000) >> 16); // lis r11,ha
-    write32(buf + 4, 0x816b0000 | (uint16_t)va);        // lwz r11,l(r11)
-    write32(buf + 8, 0x7d6903a6);                       // mtctr r11
-    write32(buf + 12, 0x4e800420);                      // bctr
+    write32(buf + 0, 0x3d600000 | (gotPltVA + 0x8000) >> 16); // lis r11,ha
+    write32(buf + 4, 0x816b0000 | (uint16_t)gotPltVA);        // lwz r11,l(r11)
+    write32(buf + 8, 0x7d6903a6);                             // mtctr r11
+    write32(buf + 12, 0x4e800420);                            // bctr
     return;
   }
   uint32_t offset;
@@ -721,12 +721,12 @@ void PPC32PltCallStub::writeTo(uint8_t *buf) {
     // The stub loads an address relative to r30 (.got2+Addend). Addend is
     // almost always 0x8000. The address of .got2 is different in another object
     // file, so a stub cannot be shared.
-    offset = destination.getGotPltVA() - (in.ppc32Got2->getParent()->getVA() +
-                                          file->ppc32Got2OutSecOff + addend);
+    offset = gotPltVA - (in.ppc32Got2->getParent()->getVA() +
+                         file->ppc32Got2OutSecOff + addend);
   } else {
     // The stub loads an address relative to _GLOBAL_OFFSET_TABLE_ (which is
     // currently the address of .got).
-    offset = destination.getGotPltVA() - in.got->getVA();
+    offset = gotPltVA - in.got->getVA();
   }
   uint16_t ha = (offset + 0x8000) >> 16, l = (uint16_t)offset;
   if (ha == 0) {
@@ -740,6 +740,10 @@ void PPC32PltCallStub::writeTo(uint8_t *buf) {
     write32(buf + 8, 0x7d6903a6);      // mtctr r11
     write32(buf + 12, 0x4e800420);     // bctr
   }
+}
+
+void PPC32PltCallStub::writeTo(uint8_t *buf) {
+  writePPC32PltCallStub(buf, destination.getGotPltVA(), file, addend);
 }
 
 void PPC32PltCallStub::addSymbols(ThunkSection &isec) {
