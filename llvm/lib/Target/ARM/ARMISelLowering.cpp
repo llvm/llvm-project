@@ -14913,6 +14913,7 @@ bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
     switch (I->getOpcode()) {
     case Instruction::Add:
     case Instruction::Mul:
+    case Instruction::ICmp:
       return true;
     case Instruction::Sub:
     case Instruction::Shl:
