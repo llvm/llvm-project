@@ -112,7 +112,7 @@ int main (int argc, char **argv) {
 // ALL:       define linkonce_odr {{[a-z\_\b]*[ ]?i32}} [[TMAIN]](i8** %argc)
 // ALL:       store i8** %argc, i8*** [[ARGC_ADDR:%.+]],
 // CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***, i{{64|32}})* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]], i{{64|32}} %{{.+}})
-// IRBUILDER:   call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***, i64)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]], i64 %{{.+}})
+// IRBUILDER:   call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***, i{{64|32}})* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]], i{{64|32}} %{{.+}})
 // ALL:  ret i32 0
 // ALL-NEXT:  }
 // ALL-DEBUG:       define linkonce_odr i32 [[TMAIN]](i8** %argc)
@@ -124,7 +124,7 @@ int main (int argc, char **argv) {
 // CHECK-DEBUG:  [[KMPC_LOC_PSOURCE_REF:%.+]] = getelementptr inbounds %struct.ident_t, %struct.ident_t* [[LOC_2_ADDR]], i32 0, i32 4
 // CHECK-DEBUG-NEXT:  store i8* getelementptr inbounds ([{{.+}} x i8], [{{.+}} x i8]* [[LOC2]], i32 0, i32 0), i8** [[KMPC_LOC_PSOURCE_REF]]
 // CHECK-DEBUG-NEXT:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[LOC_2_ADDR]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***, i64)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]], i64 %{{.+}})
-// IRBUILDER-DEBUG:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.*}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***, i64)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]], i64 %{{.+}})
+// IRBUILDER-DEBUG:   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.*}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***, i64)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]], i64 %{{.+}})
 // ALL-DEBUG:  ret i32 0
 // ALL-DEBUG-NEXT:  }
 
