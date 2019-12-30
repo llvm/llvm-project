@@ -418,6 +418,16 @@ LazyCallGraph::SCC &updateCGAndAnalysisManagerForFunctionPass(
     LazyCallGraph &G, LazyCallGraph::SCC &C, LazyCallGraph::Node &N,
     CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR);
 
+/// Helper to update the call graph after running a CGSCC pass.
+///
+/// CGSCC passes can only mutate the call graph in specific ways. This
+/// routine provides a helper that updates the call graph in those ways
+/// including returning whether any changes were made and populating a CG
+/// update result struct for the overall CGSCC walk.
+LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
+    LazyCallGraph &G, LazyCallGraph::SCC &C, LazyCallGraph::Node &N,
+    CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR);
+
 /// Adaptor that maps from a SCC to its functions.
 ///
 /// Designed to allow composition of a FunctionPass(Manager) and
