@@ -1424,9 +1424,9 @@ public:
 private:
   /// Add to the given dominator tree the header block and every new basic block
   /// that was created between it and the latch block, inclusive.
-  static void updateDominatorTree(DominatorTree *DT,
+  static void updateDominatorTree(DominatorTree *DT, BasicBlock *LoopLatchBB,
                                   BasicBlock *LoopPreHeaderBB,
-                                  BasicBlock *LoopLatchBB);
+                                  BasicBlock *LoopExitBB);
 };
 
 /// VPlanPrinter prints a given VPlan to a given output stream. The printing is

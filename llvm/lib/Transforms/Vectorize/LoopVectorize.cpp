@@ -548,10 +548,6 @@ protected:
   /// represented as.
   void truncateToMinimalBitwidths();
 
-  /// Insert the new loop to the loop hierarchy and pass manager
-  /// and update the analysis passes.
-  void updateAnalysis();
-
   /// Create a broadcast instruction. This method generates a broadcast
   /// instruction (shuffle) for loop invariant values and for the induction
   /// value. If this is the induction variable then we extend it to N, N+1, ...
@@ -2708,14 +2704,18 @@ void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
         "min.iters.check");
 
   // Create new preheader for vector loop.
-  LoopVectorPreHeader = TCCheckBlock->splitBasicBlock(
-      TCCheckBlock->getTerminator(), "vector.ph");
-  // Update dominator tree immediately if the generated block is a
-  // LoopBypassBlock because SCEV expansions to generate loop bypass
-  // checks may query it before the current function is finished.
-  DT->addNewBlock(LoopVectorPreHeader, TCCheckBlock);
-  if (L->getParentLoop())
-    L->getParentLoop()->addBasicBlockToLoop(LoopVectorPreHeader, *LI);
+  LoopVectorPreHeader =
+      SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(), DT, LI, nullptr,
+                 "vector.ph");
+
+  assert(DT->properlyDominates(DT->getNode(TCCheckBlock),
+                               DT->getNode(Bypass)->getIDom()) &&
+         "TC check is expected to dominate Bypass");
+
+  // Update dominator for Bypass & LoopExit.
+  DT->changeImmediateDominator(Bypass, TCCheckBlock);
+  DT->changeImmediateDominator(LoopExitBlock, TCCheckBlock);
+
   ReplaceInstWithInst(
       TCCheckBlock->getTerminator(),
       BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters));
@@ -2744,14 +2744,16 @@ void InnerLoopVectorizer::emitSCEVChecks(Loop *L, BasicBlock *Bypass) {
 
   SCEVCheckBlock->setName("vector.scevcheck");
   // Create new preheader for vector loop.
-  LoopVectorPreHeader = SCEVCheckBlock->splitBasicBlock(
-      SCEVCheckBlock->getTerminator(), "vector.ph");
-  // Update dominator tree immediately if the generated block is a
-  // LoopBypassBlock because SCEV expansions to generate loop bypass
-  // checks may query it before the current function is finished.
-  DT->addNewBlock(LoopVectorPreHeader, SCEVCheckBlock);
-  if (L->getParentLoop())
-    L->getParentLoop()->addBasicBlockToLoop(LoopVectorPreHeader, *LI);
+  LoopVectorPreHeader =
+      SplitBlock(SCEVCheckBlock, SCEVCheckBlock->getTerminator(), DT, LI,
+                 nullptr, "vector.ph");
+
+  // Update dominator only if this is first RT check.
+  if (LoopBypassBlocks.empty()) {
+    DT->changeImmediateDominator(Bypass, SCEVCheckBlock);
+    DT->changeImmediateDominator(LoopExitBlock, SCEVCheckBlock);
+  }
+
   ReplaceInstWithInst(
       SCEVCheckBlock->getTerminator(),
       BranchInst::Create(Bypass, LoopVectorPreHeader, SCEVCheck));
@@ -2794,15 +2796,16 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
 
   MemCheckBlock->setName("vector.memcheck");
   // Create new preheader for vector loop.
-  LoopVectorPreHeader = MemCheckBlock->splitBasicBlock(
-      MemCheckBlock->getTerminator(), "vector.ph");
-  // Update dominator tree immediately if the generated block is a
-  // LoopBypassBlock because SCEV expansions to generate loop bypass
-  // checks may query it before the current function is finished.
-  DT->addNewBlock(LoopVectorPreHeader, MemCheckBlock);
+  LoopVectorPreHeader =
+      SplitBlock(MemCheckBlock, MemCheckBlock->getTerminator(), DT, LI, nullptr,
+                 "vector.ph");
 
-  if (L->getParentLoop())
-    L->getParentLoop()->addBasicBlockToLoop(LoopVectorPreHeader, *LI);
+  // Update dominator only if this is first RT check.
+  if (LoopBypassBlocks.empty()) {
+    DT->changeImmediateDominator(Bypass, MemCheckBlock);
+    DT->changeImmediateDominator(LoopExitBlock, MemCheckBlock);
+  }
+
   ReplaceInstWithInst(
       MemCheckBlock->getTerminator(),
       BranchInst::Create(Bypass, LoopVectorPreHeader, MemRuntimeCheck));
@@ -2957,15 +2960,24 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   LoopScalarBody = OrigLoop->getHeader();
   LoopVectorPreHeader = OrigLoop->getLoopPreheader();
   LoopExitBlock = OrigLoop->getExitBlock();
-  assert(LoopVectorPreHeader && "Invalid loop structure");
   assert(LoopExitBlock && "Must have an exit block");
+  assert(LoopVectorPreHeader && "Invalid loop structure");
 
-  LoopVectorBody = LoopVectorPreHeader->splitBasicBlock(
-      LoopVectorPreHeader->getTerminator(), "vector.body");
-  LoopMiddleBlock = LoopVectorBody->splitBasicBlock(
-      LoopVectorBody->getTerminator(), "middle.block");
-  LoopScalarPreHeader = LoopMiddleBlock->splitBasicBlock(
-      LoopMiddleBlock->getTerminator(), "scalar.ph");
+  LoopMiddleBlock =
+      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
+                 LI, nullptr, "middle.block");
+  LoopScalarPreHeader =
+      SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
+                 nullptr, "scalar.ph");
+  // We intentionally don't let SplitBlock to update LoopInfo since
+  // LoopVectorBody should belong to another loop than LoopVectorPreHeader.
+  // LoopVectorBody is explicitly added to the correct place few lines later.
+  LoopVectorBody =
+      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
+                 nullptr, nullptr, "vector.body");
+
+  // Update dominator for loop exit.
+  DT->changeImmediateDominator(LoopExitBlock, LoopMiddleBlock);
 
   // Create and register the new vector loop.
   Loop *Lp = LI->AllocateLoop();
@@ -2975,8 +2987,6 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // before calling any utilities such as SCEV that require valid LoopInfo.
   if (ParentLoop) {
     ParentLoop->addChildLoop(Lp);
-    ParentLoop->addBasicBlockToLoop(LoopScalarPreHeader, *LI);
-    ParentLoop->addBasicBlockToLoop(LoopMiddleBlock, *LI);
   } else {
     LI->addTopLevelLoop(Lp);
   }
@@ -3115,6 +3125,11 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
 
   LoopVectorizeHints Hints(Lp, true, *ORE);
   Hints.setAlreadyVectorized();
+
+#ifdef EXPENSIVE_CHECKS
+  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+  LI->verify(*DT);
+#endif
 
   return LoopVectorPreHeader;
 }
@@ -3451,15 +3466,8 @@ void InnerLoopVectorizer::fixVectorizedLoop() {
   // This is the second stage of vectorizing recurrences.
   fixCrossIterationPHIs();
 
-  // Update the dominator tree.
-  //
-  // FIXME: After creating the structure of the new loop, the dominator tree is
-  //        no longer up-to-date, and it remains that way until we update it
-  //        here. An out-of-date dominator tree is problematic for SCEV,
-  //        because SCEVExpander uses it to guide code generation. The
-  //        vectorizer use SCEVExpanders in several places. Instead, we should
-  //        keep the dominator tree up-to-date as we go.
-  updateAnalysis();
+  // Forget the original basic block.
+  PSE.getSE()->forgetLoop(OrigLoop);
 
   // Fix-up external users of the induction variables.
   for (auto &Entry : *Legal->getInductionVars())
@@ -4401,26 +4409,6 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
     LLVM_DEBUG(dbgs() << "LV: Found an unhandled instruction: " << I);
     llvm_unreachable("Unhandled instruction!");
   } // end of switch.
-}
-
-void InnerLoopVectorizer::updateAnalysis() {
-  // Forget the original basic block.
-  PSE.getSE()->forgetLoop(OrigLoop);
-
-  // DT is not kept up-to-date for outer loop vectorization
-  if (EnableVPlanNativePath)
-    return;
-
-  // Update the dominator tree information.
-  assert(DT->properlyDominates(LoopBypassBlocks.front(), LoopExitBlock) &&
-         "Entry does not dominate exit.");
-
-  DT->addNewBlock(LoopMiddleBlock,
-                  LI->getLoopFor(LoopVectorBody)->getLoopLatch());
-  DT->addNewBlock(LoopScalarPreHeader, LoopBypassBlocks[0]);
-  DT->changeImmediateDominator(LoopScalarBody, LoopScalarPreHeader);
-  DT->changeImmediateDominator(LoopExitBlock, LoopBypassBlocks[0]);
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 }
 
 void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
