@@ -5804,10 +5804,6 @@ bool AsmParser::parseMSInlineAsm(
     for (unsigned i = 1, e = Info.ParsedOperands.size(); i != e; ++i) {
       MCParsedAsmOperand &Operand = *Info.ParsedOperands[i];
 
-      // Immediate.
-      if (Operand.isImm())
-        continue;
-
       // Register operand.
       if (Operand.isReg() && !Operand.needAddressOf() &&
           !getTargetParser().OmitRegisterFromClobberLists(Operand.getReg())) {
@@ -5827,18 +5823,27 @@ bool AsmParser::parseMSInlineAsm(
       if (!OpDecl)
         continue;
 
+      StringRef Constraint = Operand.getConstraint();
+      if (Operand.isImm()) {
+        // Offset as immediate
+        if (Operand.isOffsetOfLocal())
+          Constraint = "r";
+        else
+          Constraint = "i";
+      }
+
       bool isOutput = (i == 1) && Desc.mayStore();
       SMLoc Start = SMLoc::getFromPointer(SymName.data());
       if (isOutput) {
         ++InputIdx;
         OutputDecls.push_back(OpDecl);
         OutputDeclsAddressOf.push_back(Operand.needAddressOf());
-        OutputConstraints.push_back(("=" + Operand.getConstraint()).str());
+        OutputConstraints.push_back(("=" + Constraint).str());
         AsmStrRewrites.emplace_back(AOK_Output, Start, SymName.size());
       } else {
         InputDecls.push_back(OpDecl);
         InputDeclsAddressOf.push_back(Operand.needAddressOf());
-        InputConstraints.push_back(Operand.getConstraint().str());
+        InputConstraints.push_back(Constraint.str());
         if (Operand.isCallOperand())
           AsmStrRewrites.emplace_back(AOK_CallInput, Start, SymName.size());
         else
@@ -5889,7 +5894,11 @@ bool AsmParser::parseMSInlineAsm(
   const char *AsmStart = ASMString.begin();
   const char *AsmEnd = ASMString.end();
   array_pod_sort(AsmStrRewrites.begin(), AsmStrRewrites.end(), rewritesSort);
-  for (const AsmRewrite &AR : AsmStrRewrites) {
+  for (auto it = AsmStrRewrites.begin(); it != AsmStrRewrites.end(); ++it) {
+    const AsmRewrite &AR = *it;
+    // Check if this has already been covered by another rewrite...
+    if (AR.Done)
+      continue;
     AsmRewriteKind Kind = AR.Kind;
 
     const char *Loc = AR.Loc.getPointer();
@@ -5920,9 +5929,32 @@ bool AsmParser::parseMSInlineAsm(
         OS << (AR.IntelExp.hasBaseReg() ? " + " : "")
            << AR.IntelExp.IndexReg;
       if (AR.IntelExp.Scale > 1)
-          OS << " * $$" << AR.IntelExp.Scale;
-      if (AR.IntelExp.Imm || !AR.IntelExp.hasRegs())
-        OS << (AR.IntelExp.hasRegs() ? " + $$" : "$$") << AR.IntelExp.Imm;
+        OS << " * $$" << AR.IntelExp.Scale;
+      if (AR.IntelExp.hasOffset()) {
+        if (AR.IntelExp.hasRegs())
+          OS << " + ";
+        // Fuse this rewrite with a rewrite of the offset name, if present.
+        StringRef OffsetName = AR.IntelExp.OffsetName;
+        SMLoc OffsetLoc = SMLoc::getFromPointer(AR.IntelExp.OffsetName.data());
+        size_t OffsetLen = OffsetName.size();
+        auto rewrite_it = std::find_if(
+            it, AsmStrRewrites.end(), [&](const AsmRewrite &FusingAR) {
+              return FusingAR.Loc == OffsetLoc && FusingAR.Len == OffsetLen &&
+                     (FusingAR.Kind == AOK_Input ||
+                      FusingAR.Kind == AOK_CallInput);
+            });
+        if (rewrite_it == AsmStrRewrites.end()) {
+          OS << "offset " << OffsetName;
+        } else if (rewrite_it->Kind == AOK_CallInput) {
+          OS << "${" << InputIdx++ << ":P}";
+          rewrite_it->Done = true;
+        } else {
+          OS << '$' << InputIdx++;
+          rewrite_it->Done = true;
+        }
+      }
+      if (AR.IntelExp.Imm || AR.IntelExp.emitImm())
+        OS << (AR.IntelExp.emitImm() ? "$$" : " + $$") << AR.IntelExp.Imm;
       if (AR.IntelExp.NeedBracs)
         OS << "]";
       break;

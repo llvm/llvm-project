@@ -707,8 +707,13 @@ void Sema::FillInlineAsmIdentifierInfo(Expr *Res,
   if (T->isFunctionType() || T->isDependentType())
     return Info.setLabel(Res);
   if (Res->isRValue()) {
-    if (isa<clang::EnumType>(T) && Res->EvaluateAsRValue(Eval, Context))
+    bool IsEnum = isa<clang::EnumType>(T);
+    if (DeclRefExpr *DRE = dyn_cast<clang::DeclRefExpr>(Res))
+      if (DRE->getDecl()->getKind() == Decl::EnumConstant)
+        IsEnum = true;
+    if (IsEnum && Res->EvaluateAsRValue(Eval, Context))
       return Info.setEnum(Eval.Val.getInt().getSExtValue());
+
     return Info.setLabel(Res);
   }
   unsigned Size = Context.getTypeSizeInChars(T).getQuantity();

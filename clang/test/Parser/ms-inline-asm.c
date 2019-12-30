@@ -57,6 +57,11 @@ void t13() {
   __asm m{o}v eax, ebx // expected-error {{unknown token in expression}}
 }
 
+void t14() {
+  enum { A = 1, B };
+  __asm mov eax, offset A // expected-error {{offset operator cannot yet handle constants}}
+}
+
 int t_fail() { // expected-note {{to match this}}
   __asm 
   __asm { // expected-error 3 {{expected}} expected-note {{to match this}}
