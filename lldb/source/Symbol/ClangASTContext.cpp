@@ -764,56 +764,54 @@ ClangASTContext::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
   switch (encoding) {
   case eEncodingInvalid:
     if (QualTypeMatchesBitSize(bit_size, ast, ast.VoidPtrTy))
-      return CompilerType(this, ast.VoidPtrTy.getAsOpaquePtr());
+      return GetType(ast.VoidPtrTy);
     break;
 
   case eEncodingUint:
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedCharTy))
-      return CompilerType(this, ast.UnsignedCharTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedCharTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedShortTy))
-      return CompilerType(this, ast.UnsignedShortTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedShortTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedIntTy))
-      return CompilerType(this, ast.UnsignedIntTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedIntTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedLongTy))
-      return CompilerType(this, ast.UnsignedLongTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedLongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedLongLongTy))
-      return CompilerType(this, ast.UnsignedLongLongTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedLongLongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedInt128Ty))
-      return CompilerType(this, ast.UnsignedInt128Ty.getAsOpaquePtr());
+      return GetType(ast.UnsignedInt128Ty);
     break;
 
   case eEncodingSint:
     if (QualTypeMatchesBitSize(bit_size, ast, ast.SignedCharTy))
-      return CompilerType(this, ast.SignedCharTy.getAsOpaquePtr());
+      return GetType(ast.SignedCharTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.ShortTy))
-      return CompilerType(this, ast.ShortTy.getAsOpaquePtr());
+      return GetType(ast.ShortTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.IntTy))
-      return CompilerType(this, ast.IntTy.getAsOpaquePtr());
+      return GetType(ast.IntTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.LongTy))
-      return CompilerType(this, ast.LongTy.getAsOpaquePtr());
+      return GetType(ast.LongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.LongLongTy))
-      return CompilerType(this, ast.LongLongTy.getAsOpaquePtr());
+      return GetType(ast.LongLongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.Int128Ty))
-      return CompilerType(this, ast.Int128Ty.getAsOpaquePtr());
+      return GetType(ast.Int128Ty);
     break;
 
   case eEncodingIEEE754:
     if (QualTypeMatchesBitSize(bit_size, ast, ast.FloatTy))
-      return CompilerType(this, ast.FloatTy.getAsOpaquePtr());
+      return GetType(ast.FloatTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.DoubleTy))
-      return CompilerType(this, ast.DoubleTy.getAsOpaquePtr());
+      return GetType(ast.DoubleTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleTy))
-      return CompilerType(this, ast.LongDoubleTy.getAsOpaquePtr());
+      return GetType(ast.LongDoubleTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.HalfTy))
-      return CompilerType(this, ast.HalfTy.getAsOpaquePtr());
+      return GetType(ast.HalfTy);
     break;
 
   case eEncodingVector:
     // Sanity check that bit_size is a multiple of 8's.
     if (bit_size && !(bit_size & 0x7u))
-      return CompilerType(this,
-                          ast.getExtVectorType(ast.UnsignedCharTy, bit_size / 8)
-                              .getAsOpaquePtr());
+      return GetType(ast.getExtVectorType(ast.UnsignedCharTy, bit_size / 8));
     break;
   }
 
@@ -916,18 +914,18 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
   case DW_ATE_address:
     if (QualTypeMatchesBitSize(bit_size, ast, ast.VoidPtrTy))
-      return CompilerType(this, ast.VoidPtrTy.getAsOpaquePtr());
+      return GetType(ast.VoidPtrTy);
     break;
 
   case DW_ATE_boolean:
     if (QualTypeMatchesBitSize(bit_size, ast, ast.BoolTy))
-      return CompilerType(this, ast.BoolTy.getAsOpaquePtr());
+      return GetType(ast.BoolTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedCharTy))
-      return CompilerType(this, ast.UnsignedCharTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedCharTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedShortTy))
-      return CompilerType(this, ast.UnsignedShortTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedShortTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedIntTy))
-      return CompilerType(this, ast.UnsignedIntTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedIntTy);
     break;
 
   case DW_ATE_lo_user:
@@ -936,49 +934,46 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
       CompilerType complex_int_clang_type =
           GetBuiltinTypeForDWARFEncodingAndBitSize("int", DW_ATE_signed,
                                                    bit_size / 2);
-      return CompilerType(this, ast.getComplexType(ClangUtil::GetQualType(
-                                                       complex_int_clang_type))
-                                    .getAsOpaquePtr());
+      return GetType(
+          ast.getComplexType(ClangUtil::GetQualType(complex_int_clang_type)));
     }
     break;
 
   case DW_ATE_complex_float:
     if (QualTypeMatchesBitSize(bit_size, ast, ast.FloatComplexTy))
-      return CompilerType(this, ast.FloatComplexTy.getAsOpaquePtr());
+      return GetType(ast.FloatComplexTy);
     else if (QualTypeMatchesBitSize(bit_size, ast, ast.DoubleComplexTy))
-      return CompilerType(this, ast.DoubleComplexTy.getAsOpaquePtr());
+      return GetType(ast.DoubleComplexTy);
     else if (QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleComplexTy))
-      return CompilerType(this, ast.LongDoubleComplexTy.getAsOpaquePtr());
+      return GetType(ast.LongDoubleComplexTy);
     else {
       CompilerType complex_float_clang_type =
           GetBuiltinTypeForDWARFEncodingAndBitSize("float", DW_ATE_float,
                                                    bit_size / 2);
-      return CompilerType(
-          this,
-          ast.getComplexType(ClangUtil::GetQualType(complex_float_clang_type))
-              .getAsOpaquePtr());
+      return GetType(
+          ast.getComplexType(ClangUtil::GetQualType(complex_float_clang_type)));
     }
     break;
 
   case DW_ATE_float:
     if (type_name == "float" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.FloatTy))
-      return CompilerType(this, ast.FloatTy.getAsOpaquePtr());
+      return GetType(ast.FloatTy);
     if (type_name == "double" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.DoubleTy))
-      return CompilerType(this, ast.DoubleTy.getAsOpaquePtr());
+      return GetType(ast.DoubleTy);
     if (type_name == "long double" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleTy))
-      return CompilerType(this, ast.LongDoubleTy.getAsOpaquePtr());
+      return GetType(ast.LongDoubleTy);
     // Fall back to not requiring a name match
     if (QualTypeMatchesBitSize(bit_size, ast, ast.FloatTy))
-      return CompilerType(this, ast.FloatTy.getAsOpaquePtr());
+      return GetType(ast.FloatTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.DoubleTy))
-      return CompilerType(this, ast.DoubleTy.getAsOpaquePtr());
+      return GetType(ast.DoubleTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleTy))
-      return CompilerType(this, ast.LongDoubleTy.getAsOpaquePtr());
+      return GetType(ast.LongDoubleTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.HalfTy))
-      return CompilerType(this, ast.HalfTy.getAsOpaquePtr());
+      return GetType(ast.HalfTy);
     break;
 
   case DW_ATE_signed:
@@ -987,54 +982,54 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
           QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy) &&
           (getTargetInfo() &&
            TargetInfo::isTypeSigned(getTargetInfo()->getWCharType())))
-        return CompilerType(this, ast.WCharTy.getAsOpaquePtr());
+        return GetType(ast.WCharTy);
       if (type_name == "void" &&
           QualTypeMatchesBitSize(bit_size, ast, ast.VoidTy))
-        return CompilerType(this, ast.VoidTy.getAsOpaquePtr());
+        return GetType(ast.VoidTy);
       if (type_name.contains("long long") &&
           QualTypeMatchesBitSize(bit_size, ast, ast.LongLongTy))
-        return CompilerType(this, ast.LongLongTy.getAsOpaquePtr());
+        return GetType(ast.LongLongTy);
       if (type_name.contains("long") &&
           QualTypeMatchesBitSize(bit_size, ast, ast.LongTy))
-        return CompilerType(this, ast.LongTy.getAsOpaquePtr());
+        return GetType(ast.LongTy);
       if (type_name.contains("short") &&
           QualTypeMatchesBitSize(bit_size, ast, ast.ShortTy))
-        return CompilerType(this, ast.ShortTy.getAsOpaquePtr());
+        return GetType(ast.ShortTy);
       if (type_name.contains("char")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
-          return CompilerType(this, ast.CharTy.getAsOpaquePtr());
+          return GetType(ast.CharTy);
         if (QualTypeMatchesBitSize(bit_size, ast, ast.SignedCharTy))
-          return CompilerType(this, ast.SignedCharTy.getAsOpaquePtr());
+          return GetType(ast.SignedCharTy);
       }
       if (type_name.contains("int")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.IntTy))
-          return CompilerType(this, ast.IntTy.getAsOpaquePtr());
+          return GetType(ast.IntTy);
         if (QualTypeMatchesBitSize(bit_size, ast, ast.Int128Ty))
-          return CompilerType(this, ast.Int128Ty.getAsOpaquePtr());
+          return GetType(ast.Int128Ty);
       }
     }
     // We weren't able to match up a type name, just search by size
     if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
-      return CompilerType(this, ast.CharTy.getAsOpaquePtr());
+      return GetType(ast.CharTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.ShortTy))
-      return CompilerType(this, ast.ShortTy.getAsOpaquePtr());
+      return GetType(ast.ShortTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.IntTy))
-      return CompilerType(this, ast.IntTy.getAsOpaquePtr());
+      return GetType(ast.IntTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.LongTy))
-      return CompilerType(this, ast.LongTy.getAsOpaquePtr());
+      return GetType(ast.LongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.LongLongTy))
-      return CompilerType(this, ast.LongLongTy.getAsOpaquePtr());
+      return GetType(ast.LongLongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.Int128Ty))
-      return CompilerType(this, ast.Int128Ty.getAsOpaquePtr());
+      return GetType(ast.Int128Ty);
     break;
 
   case DW_ATE_signed_char:
     if (ast.getLangOpts().CharIsSigned && type_name == "char") {
       if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
-        return CompilerType(this, ast.CharTy.getAsOpaquePtr());
+        return GetType(ast.CharTy);
     }
     if (QualTypeMatchesBitSize(bit_size, ast, ast.SignedCharTy))
-      return CompilerType(this, ast.SignedCharTy.getAsOpaquePtr());
+      return GetType(ast.SignedCharTy);
     break;
 
   case DW_ATE_unsigned:
@@ -1043,52 +1038,52 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
         if (QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy)) {
           if (!(getTargetInfo() &&
                 TargetInfo::isTypeSigned(getTargetInfo()->getWCharType())))
-            return CompilerType(this, ast.WCharTy.getAsOpaquePtr());
+            return GetType(ast.WCharTy);
         }
       }
       if (type_name.contains("long long")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedLongLongTy))
-          return CompilerType(this, ast.UnsignedLongLongTy.getAsOpaquePtr());
+          return GetType(ast.UnsignedLongLongTy);
       } else if (type_name.contains("long")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedLongTy))
-          return CompilerType(this, ast.UnsignedLongTy.getAsOpaquePtr());
+          return GetType(ast.UnsignedLongTy);
       } else if (type_name.contains("short")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedShortTy))
-          return CompilerType(this, ast.UnsignedShortTy.getAsOpaquePtr());
+          return GetType(ast.UnsignedShortTy);
       } else if (type_name.contains("char")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedCharTy))
-          return CompilerType(this, ast.UnsignedCharTy.getAsOpaquePtr());
+          return GetType(ast.UnsignedCharTy);
       } else if (type_name.contains("int")) {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedIntTy))
-          return CompilerType(this, ast.UnsignedIntTy.getAsOpaquePtr());
+          return GetType(ast.UnsignedIntTy);
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedInt128Ty))
-          return CompilerType(this, ast.UnsignedInt128Ty.getAsOpaquePtr());
+          return GetType(ast.UnsignedInt128Ty);
       }
     }
     // We weren't able to match up a type name, just search by size
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedCharTy))
-      return CompilerType(this, ast.UnsignedCharTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedCharTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedShortTy))
-      return CompilerType(this, ast.UnsignedShortTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedShortTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedIntTy))
-      return CompilerType(this, ast.UnsignedIntTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedIntTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedLongTy))
-      return CompilerType(this, ast.UnsignedLongTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedLongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedLongLongTy))
-      return CompilerType(this, ast.UnsignedLongLongTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedLongLongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedInt128Ty))
-      return CompilerType(this, ast.UnsignedInt128Ty.getAsOpaquePtr());
+      return GetType(ast.UnsignedInt128Ty);
     break;
 
   case DW_ATE_unsigned_char:
     if (!ast.getLangOpts().CharIsSigned && type_name == "char") {
       if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
-        return CompilerType(this, ast.CharTy.getAsOpaquePtr());
+        return GetType(ast.CharTy);
     }
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedCharTy))
-      return CompilerType(this, ast.UnsignedCharTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedCharTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedShortTy))
-      return CompilerType(this, ast.UnsignedShortTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedShortTy);
     break;
 
   case DW_ATE_imaginary_float:
@@ -1097,11 +1092,11 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
   case DW_ATE_UTF:
     if (!type_name.empty()) {
       if (type_name == "char16_t")
-        return CompilerType(this, ast.Char16Ty.getAsOpaquePtr());
+        return GetType(ast.Char16Ty);
       if (type_name == "char32_t")
-        return CompilerType(this, ast.Char32Ty.getAsOpaquePtr());
+        return GetType(ast.Char32Ty);
       if (type_name == "char8_t")
-        return CompilerType(this, ast.Char8Ty.getAsOpaquePtr());
+        return GetType(ast.Char8Ty);
     }
     break;
   }
@@ -1129,7 +1124,7 @@ CompilerType ClangASTContext::GetCStringType(bool is_const) {
   if (is_const)
     char_type.addConst();
 
-  return CompilerType(this, ast.getPointerType(char_type).getAsOpaquePtr());
+  return GetType(ast.getPointerType(char_type));
 }
 
 bool ClangASTContext::AreTypesSame(CompilerType type1, CompilerType type2,
@@ -1179,13 +1174,11 @@ CompilerType ClangASTContext::GetTypeForDecl(clang::NamedDecl *decl) {
 }
 
 CompilerType ClangASTContext::GetTypeForDecl(TagDecl *decl) {
-  return CompilerType(this,
-                      getASTContext().getTagDeclType(decl).getAsOpaquePtr());
+  return GetType(getASTContext().getTagDeclType(decl));
 }
 
 CompilerType ClangASTContext::GetTypeForDecl(ObjCInterfaceDecl *decl) {
-  return CompilerType(
-      this, getASTContext().getObjCInterfaceType(decl).getAsOpaquePtr());
+  return GetType(getASTContext().getObjCInterfaceType(decl));
 }
 
 #pragma mark Structure, Unions, Classes
@@ -1259,7 +1252,7 @@ CompilerType ClangASTContext::CreateRecordType(DeclContext *decl_ctx,
     if (decl_ctx)
       decl_ctx->addDecl(decl);
 
-    return CompilerType(this, ast.getTagDeclType(decl).getAsOpaquePtr());
+    return GetType(ast.getTagDeclType(decl));
   }
   return CompilerType();
 }
@@ -1479,9 +1472,7 @@ CompilerType ClangASTContext::CreateClassTemplateSpecializationType(
     ClassTemplateSpecializationDecl *class_template_specialization_decl) {
   if (class_template_specialization_decl) {
     ASTContext &ast = getASTContext();
-    return CompilerType(this,
-                        ast.getTagDeclType(class_template_specialization_decl)
-                            .getAsOpaquePtr());
+    return GetType(ast.getTagDeclType(class_template_specialization_decl));
   }
   return CompilerType();
 }
@@ -1607,7 +1598,7 @@ CompilerType ClangASTContext::CreateObjCClass(llvm::StringRef name,
   if (decl && metadata)
     SetMetadata(decl, *metadata);
 
-  return CompilerType(this, ast.getObjCInterfaceType(decl).getAsOpaquePtr());
+  return GetType(ast.getObjCInterfaceType(decl));
 }
 
 static inline bool BaseSpecifierIsEmpty(const CXXBaseSpecifier *b) {
@@ -1940,11 +1931,8 @@ ClangASTContext::CreateFunctionType(const CompilerType &result_type,
   proto_info.TypeQuals = clang::Qualifiers::fromFastMask(type_quals);
   proto_info.RefQualifier = RQ_None;
 
-  return CompilerType(this,
-                      getASTContext()
-                          .getFunctionType(ClangUtil::GetQualType(result_type),
-                                           qual_type_args, proto_info)
-                          .getAsOpaquePtr());
+  return GetType(getASTContext().getFunctionType(
+      ClangUtil::GetQualType(result_type), qual_type_args, proto_info));
 }
 
 ParmVarDecl *ClangASTContext::CreateParameterDeclaration(
@@ -1974,7 +1962,7 @@ ClangASTContext::CreateBlockPointerType(const CompilerType &function_type) {
   QualType block_type = m_ast_up->getBlockPointerType(
       clang::QualType::getFromOpaquePtr(function_type.GetOpaqueQualType()));
 
-  return CompilerType(this, block_type.getAsOpaquePtr());
+  return GetType(block_type);
 }
 
 #pragma mark Array Types
@@ -1986,24 +1974,18 @@ CompilerType ClangASTContext::CreateArrayType(const CompilerType &element_type,
     ASTContext &ast = getASTContext();
 
     if (is_vector) {
-      return CompilerType(
-          this, ast.getExtVectorType(ClangUtil::GetQualType(element_type),
-                                     element_count)
-                    .getAsOpaquePtr());
+      return GetType(ast.getExtVectorType(ClangUtil::GetQualType(element_type),
+                                          element_count));
     } else {
 
       llvm::APInt ap_element_count(64, element_count);
       if (element_count == 0) {
-        return CompilerType(this, ast.getIncompleteArrayType(
-                                         ClangUtil::GetQualType(element_type),
-                                         clang::ArrayType::Normal, 0)
-                                      .getAsOpaquePtr());
+        return GetType(ast.getIncompleteArrayType(
+            ClangUtil::GetQualType(element_type), clang::ArrayType::Normal, 0));
       } else {
-        return CompilerType(
-            this, ast.getConstantArrayType(ClangUtil::GetQualType(element_type),
-                                           ap_element_count, nullptr,
-                                           clang::ArrayType::Normal, 0)
-                      .getAsOpaquePtr());
+        return GetType(ast.getConstantArrayType(
+            ClangUtil::GetQualType(element_type), ap_element_count, nullptr,
+            clang::ArrayType::Normal, 0));
       }
     }
   }
@@ -2077,7 +2059,7 @@ ClangASTContext::CreateEnumerationType(const char *name, DeclContext *decl_ctx,
 
     enum_decl->setAccess(AS_public); // TODO respect what's in the debug info
 
-    return CompilerType(this, ast.getTagDeclType(enum_decl).getAsOpaquePtr());
+    return GetType(ast.getTagDeclType(enum_decl));
   }
   return CompilerType();
 }
@@ -2088,40 +2070,40 @@ CompilerType ClangASTContext::GetIntTypeFromBitSize(size_t bit_size,
 
   if (is_signed) {
     if (bit_size == ast.getTypeSize(ast.SignedCharTy))
-      return CompilerType(this, ast.SignedCharTy.getAsOpaquePtr());
+      return GetType(ast.SignedCharTy);
 
     if (bit_size == ast.getTypeSize(ast.ShortTy))
-      return CompilerType(this, ast.ShortTy.getAsOpaquePtr());
+      return GetType(ast.ShortTy);
 
     if (bit_size == ast.getTypeSize(ast.IntTy))
-      return CompilerType(this, ast.IntTy.getAsOpaquePtr());
+      return GetType(ast.IntTy);
 
     if (bit_size == ast.getTypeSize(ast.LongTy))
-      return CompilerType(this, ast.LongTy.getAsOpaquePtr());
+      return GetType(ast.LongTy);
 
     if (bit_size == ast.getTypeSize(ast.LongLongTy))
-      return CompilerType(this, ast.LongLongTy.getAsOpaquePtr());
+      return GetType(ast.LongLongTy);
 
     if (bit_size == ast.getTypeSize(ast.Int128Ty))
-      return CompilerType(this, ast.Int128Ty.getAsOpaquePtr());
+      return GetType(ast.Int128Ty);
   } else {
     if (bit_size == ast.getTypeSize(ast.UnsignedCharTy))
-      return CompilerType(this, ast.UnsignedCharTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedCharTy);
 
     if (bit_size == ast.getTypeSize(ast.UnsignedShortTy))
-      return CompilerType(this, ast.UnsignedShortTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedShortTy);
 
     if (bit_size == ast.getTypeSize(ast.UnsignedIntTy))
-      return CompilerType(this, ast.UnsignedIntTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedIntTy);
 
     if (bit_size == ast.getTypeSize(ast.UnsignedLongTy))
-      return CompilerType(this, ast.UnsignedLongTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedLongTy);
 
     if (bit_size == ast.getTypeSize(ast.UnsignedLongLongTy))
-      return CompilerType(this, ast.UnsignedLongLongTy.getAsOpaquePtr());
+      return GetType(ast.UnsignedLongLongTy);
 
     if (bit_size == ast.getTypeSize(ast.UnsignedInt128Ty))
-      return CompilerType(this, ast.UnsignedInt128Ty.getAsOpaquePtr());
+      return GetType(ast.UnsignedInt128Ty);
   }
   return CompilerType();
 }
@@ -2682,8 +2664,7 @@ bool ClangASTContext::IsVectorType(lldb::opaque_compiler_type_t type,
       if (size)
         *size = vector_type->getNumElements();
       if (element_type)
-        *element_type =
-            CompilerType(this, vector_type->getElementType().getAsOpaquePtr());
+        *element_type = GetType(vector_type->getElementType());
     }
     return true;
   } break;
@@ -3372,9 +3353,7 @@ bool ClangASTContext::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
               if (metadata)
                 success = metadata->GetIsDynamicCXXType();
               else {
-                is_complete =
-                    CompilerType(this, pointee_qual_type.getAsOpaquePtr())
-                        .GetCompleteType();
+                is_complete = GetType(pointee_qual_type).GetCompleteType();
                 if (is_complete)
                   success = cxx_record_decl->isDynamicClass();
                 else
@@ -3708,12 +3687,10 @@ ClangASTContext::GetTypeInfo(lldb::opaque_compiler_type_t type,
     return eTypeIsTemplate;
 
   case clang::Type::Typedef:
-    return eTypeIsTypedef |
-           CompilerType(this, llvm::cast<clang::TypedefType>(qual_type)
-                                  ->getDecl()
-                                  ->getUnderlyingType()
-                                  .getAsOpaquePtr())
-               .GetTypeInfo(pointee_or_element_clang_type);
+    return eTypeIsTypedef | GetType(llvm::cast<clang::TypedefType>(qual_type)
+                                        ->getDecl()
+                                        ->getUnderlyingType())
+                                .GetTypeInfo(pointee_or_element_clang_type);
   case clang::Type::UnresolvedUsing:
     return 0;
 
@@ -3811,10 +3788,9 @@ ClangASTContext::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
       }
       break;
     case clang::Type::Typedef:
-      return CompilerType(this, llvm::cast<clang::TypedefType>(qual_type)
-                                    ->getDecl()
-                                    ->getUnderlyingType()
-                                    .getAsOpaquePtr())
+      return GetType(llvm::cast<clang::TypedefType>(qual_type)
+                         ->getDecl()
+                         ->getUnderlyingType())
           .GetMinimumLanguage();
     }
   }
@@ -3962,8 +3938,8 @@ ClangASTContext::GetArrayElementType(lldb::opaque_compiler_type_t type,
     if (!array_eletype)
       return CompilerType();
 
-    CompilerType element_type(
-        this, array_eletype->getCanonicalTypeUnqualified().getAsOpaquePtr());
+    CompilerType element_type =
+        GetType(array_eletype->getCanonicalTypeUnqualified());
 
     // TODO: the real stride will be >= this value.. find the real one!
     if (stride)
@@ -3981,19 +3957,12 @@ CompilerType ClangASTContext::GetArrayType(lldb::opaque_compiler_type_t type,
     clang::QualType qual_type(GetCanonicalQualType(type));
     clang::ASTContext &ast_ctx = getASTContext();
     if (size != 0)
-      return CompilerType(
-          this, ast_ctx
-                    .getConstantArrayType(
-                        qual_type, llvm::APInt(64, size), nullptr,
-                        clang::ArrayType::ArraySizeModifier::Normal, 0)
-                    .getAsOpaquePtr());
+      return GetType(ast_ctx.getConstantArrayType(
+          qual_type, llvm::APInt(64, size), nullptr,
+          clang::ArrayType::ArraySizeModifier::Normal, 0));
     else
-      return CompilerType(
-          this,
-          ast_ctx
-              .getIncompleteArrayType(
-                  qual_type, clang::ArrayType::ArraySizeModifier::Normal, 0)
-              .getAsOpaquePtr());
+      return GetType(ast_ctx.getIncompleteArrayType(
+          qual_type, clang::ArrayType::ArraySizeModifier::Normal, 0));
   }
 
   return CompilerType();
@@ -4002,7 +3971,7 @@ CompilerType ClangASTContext::GetArrayType(lldb::opaque_compiler_type_t type,
 CompilerType
 ClangASTContext::GetCanonicalType(lldb::opaque_compiler_type_t type) {
   if (type)
-    return CompilerType(this, GetCanonicalQualType(type).getAsOpaquePtr());
+    return GetType(GetCanonicalQualType(type));
   return CompilerType();
 }
 
@@ -4022,9 +3991,8 @@ static clang::QualType GetFullyUnqualifiedType_Impl(clang::ASTContext *ast,
 CompilerType
 ClangASTContext::GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) {
   if (type)
-    return CompilerType(
-        this, GetFullyUnqualifiedType_Impl(&getASTContext(), GetQualType(type))
-                  .getAsOpaquePtr());
+    return GetType(
+        GetFullyUnqualifiedType_Impl(&getASTContext(), GetQualType(type)));
   return CompilerType();
 }
 
@@ -4047,7 +4015,7 @@ CompilerType ClangASTContext::GetFunctionArgumentTypeAtIndex(
     if (func) {
       const uint32_t num_args = func->getNumParams();
       if (idx < num_args)
-        return CompilerType(this, func->getParamType(idx).getAsOpaquePtr());
+        return GetType(func->getParamType(idx));
     }
   }
   return CompilerType();
@@ -4060,7 +4028,7 @@ ClangASTContext::GetFunctionReturnType(lldb::opaque_compiler_type_t type) {
     const clang::FunctionProtoType *func =
         llvm::dyn_cast<clang::FunctionProtoType>(qual_type.getTypePtr());
     if (func)
-      return CompilerType(this, func->getReturnType().getAsOpaquePtr());
+      return GetType(func->getReturnType());
   }
   return CompilerType();
 }
@@ -4161,8 +4129,7 @@ ClangASTContext::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
                 kind = lldb::eMemberFunctionKindDestructor;
               else
                 kind = lldb::eMemberFunctionKindInstanceMethod;
-              clang_type = CompilerType(
-                  this, cxx_method_decl->getType().getAsOpaquePtr());
+              clang_type = GetType(cxx_method_decl->getType());
               clang_decl = CompilerDecl(this, cxx_method_decl);
             }
           }
@@ -4246,8 +4213,7 @@ ClangASTContext::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
 CompilerType
 ClangASTContext::GetNonReferenceType(lldb::opaque_compiler_type_t type) {
   if (type)
-    return CompilerType(
-        this, GetQualType(type).getNonReferenceType().getAsOpaquePtr());
+    return GetType(GetQualType(type).getNonReferenceType());
   return CompilerType();
 }
 
@@ -4277,7 +4243,7 @@ CompilerType ClangASTContext::CreateTypedefType(
     decl_ctx->addDecl(decl);
 
     // Get a uniqued clang::QualType for the typedef decl type
-    return CompilerType(ast, clang_ast.getTypedefType(decl).getAsOpaquePtr());
+    return ast->GetType(clang_ast.getTypedefType(decl));
   }
   return CompilerType();
 }
@@ -4286,8 +4252,7 @@ CompilerType
 ClangASTContext::GetPointeeType(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType qual_type(GetQualType(type));
-    return CompilerType(
-        this, qual_type.getTypePtr()->getPointeeType().getAsOpaquePtr());
+    return GetType(qual_type.getTypePtr()->getPointeeType());
   }
   return CompilerType();
 }
@@ -4301,13 +4266,10 @@ ClangASTContext::GetPointerType(lldb::opaque_compiler_type_t type) {
     switch (type_class) {
     case clang::Type::ObjCObject:
     case clang::Type::ObjCInterface:
-      return CompilerType(
-          this,
-          getASTContext().getObjCObjectPointerType(qual_type).getAsOpaquePtr());
+      return GetType(getASTContext().getObjCObjectPointerType(qual_type));
 
     default:
-      return CompilerType(
-          this, getASTContext().getPointerType(qual_type).getAsOpaquePtr());
+      return GetType(getASTContext().getPointerType(qual_type));
     }
   }
   return CompilerType();
@@ -4316,9 +4278,7 @@ ClangASTContext::GetPointerType(lldb::opaque_compiler_type_t type) {
 CompilerType
 ClangASTContext::GetLValueReferenceType(lldb::opaque_compiler_type_t type) {
   if (type)
-    return CompilerType(this, getASTContext()
-                                  .getLValueReferenceType(GetQualType(type))
-                                  .getAsOpaquePtr());
+    return GetType(getASTContext().getLValueReferenceType(GetQualType(type)));
   else
     return CompilerType();
 }
@@ -4326,9 +4286,7 @@ ClangASTContext::GetLValueReferenceType(lldb::opaque_compiler_type_t type) {
 CompilerType
 ClangASTContext::GetRValueReferenceType(lldb::opaque_compiler_type_t type) {
   if (type)
-    return CompilerType(this, getASTContext()
-                                  .getRValueReferenceType(GetQualType(type))
-                                  .getAsOpaquePtr());
+    return GetType(getASTContext().getRValueReferenceType(GetQualType(type)));
   else
     return CompilerType();
 }
@@ -4336,8 +4294,7 @@ ClangASTContext::GetRValueReferenceType(lldb::opaque_compiler_type_t type) {
 CompilerType ClangASTContext::GetAtomicType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return CompilerType();
-  return CompilerType(
-      this, getASTContext().getAtomicType(GetQualType(type)).getAsOpaquePtr());
+  return GetType(getASTContext().getAtomicType(GetQualType(type)));
 }
 
 CompilerType
@@ -4345,7 +4302,7 @@ ClangASTContext::AddConstModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));
     result.addConst();
-    return CompilerType(this, result.getAsOpaquePtr());
+    return GetType(result);
   }
   return CompilerType();
 }
@@ -4355,7 +4312,7 @@ ClangASTContext::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));
     result.addVolatile();
-    return CompilerType(this, result.getAsOpaquePtr());
+    return GetType(result);
   }
   return CompilerType();
 }
@@ -4365,7 +4322,7 @@ ClangASTContext::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));
     result.addRestrict();
-    return CompilerType(this, result.getAsOpaquePtr());
+    return GetType(result);
   }
   return CompilerType();
 }
@@ -4405,7 +4362,7 @@ ClangASTContext::CreateTypedef(lldb::opaque_compiler_type_t type,
     decl->setAccess(clang::AS_public); // TODO respect proper access specifier
 
     // Get a uniqued clang::QualType for the typedef decl type
-    return CompilerType(this, clang_ast.getTypedefType(decl).getAsOpaquePtr());
+    return GetType(clang_ast.getTypedefType(decl));
   }
   return CompilerType();
 }
@@ -4416,8 +4373,7 @@ ClangASTContext::GetTypedefedType(lldb::opaque_compiler_type_t type) {
     const clang::TypedefType *typedef_type =
         llvm::dyn_cast<clang::TypedefType>(GetQualType(type));
     if (typedef_type)
-      return CompilerType(
-          this, typedef_type->getDecl()->getUnderlyingType().getAsOpaquePtr());
+      return GetType(typedef_type->getDecl()->getUnderlyingType());
   }
   return CompilerType();
 }
@@ -4466,8 +4422,7 @@ ClangASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
         ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*process);
         if (objc_runtime) {
           uint64_t bit_size = 0;
-          if (objc_runtime->GetTypeBitSize(
-                  CompilerType(this, qual_type.getAsOpaquePtr()), bit_size))
+          if (objc_runtime->GetTypeBitSize(GetType(qual_type), bit_size))
             return bit_size;
         }
       } else {
@@ -4725,9 +4680,7 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
       const clang::ComplexType *complex_type =
           qual_type->getAsComplexIntegerType();
       if (complex_type)
-        encoding =
-            CompilerType(this, complex_type->getElementType().getAsOpaquePtr())
-                .GetEncoding(count);
+        encoding = GetType(complex_type->getElementType()).GetEncoding(count);
       else
         encoding = lldb::eEncodingSint;
     }
@@ -5042,8 +4995,7 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
         llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr());
     clang::QualType pointee_type = pointer_type->getPointeeType();
     uint32_t num_pointee_children =
-        CompilerType(this, pointee_type.getAsOpaquePtr())
-            .GetNumChildren(omit_empty_base_classes, exe_ctx);
+        GetType(pointee_type).GetNumChildren(omit_empty_base_classes, exe_ctx);
     // If this type points to a simple type, then it has 1 child
     if (num_pointee_children == 0)
       num_children = 1;
@@ -5076,8 +5028,7 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
         llvm::cast<clang::PointerType>(qual_type.getTypePtr());
     clang::QualType pointee_type(pointer_type->getPointeeType());
     uint32_t num_pointee_children =
-        CompilerType(this, pointee_type.getAsOpaquePtr())
-      .GetNumChildren(omit_empty_base_classes, exe_ctx);
+        GetType(pointee_type).GetNumChildren(omit_empty_base_classes, exe_ctx);
     if (num_pointee_children == 0) {
       // We have a pointer to a pointee type that claims it has no children. We
       // will want to look at
@@ -5092,8 +5043,7 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
         llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
     clang::QualType pointee_type = reference_type->getPointeeType();
     uint32_t num_pointee_children =
-        CompilerType(this, pointee_type.getAsOpaquePtr())
-            .GetNumChildren(omit_empty_base_classes, exe_ctx);
+        GetType(pointee_type).GetNumChildren(omit_empty_base_classes, exe_ctx);
     // If this type points to a simple type, then it has 1 child
     if (num_pointee_children == 0)
       num_children = 1;
@@ -5194,8 +5144,7 @@ void ClangASTContext::ForEachEnumerator(
   if (enum_type) {
     const clang::EnumDecl *enum_decl = enum_type->getDecl();
     if (enum_decl) {
-      CompilerType integer_type(this,
-                                enum_decl->getIntegerType().getAsOpaquePtr());
+      CompilerType integer_type = GetType(enum_decl->getIntegerType());
 
       clang::EnumDecl::enumerator_iterator enum_pos, enum_end_pos;
       for (enum_pos = enum_decl->enumerator_begin(),
@@ -5381,7 +5330,7 @@ CompilerType ClangASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
           if (is_bitfield_ptr)
             *is_bitfield_ptr = is_bitfield;
 
-          return CompilerType(this, field->getType().getAsOpaquePtr());
+          return GetType(field->getType());
         }
       }
     }
@@ -5539,7 +5488,7 @@ CompilerType ClangASTContext::GetDirectBaseClassAtIndex(
                         .getQuantity() *
                     8;
             }
-            return CompilerType(this, base_class->getType().getAsOpaquePtr());
+            return GetType(base_class->getType());
           }
         }
       }
@@ -5563,10 +5512,8 @@ CompilerType ClangASTContext::GetDirectBaseClassAtIndex(
           if (superclass_interface_decl) {
             if (bit_offset_ptr)
               *bit_offset_ptr = 0;
-            return CompilerType(
-                this, getASTContext()
-                          .getObjCInterfaceType(superclass_interface_decl)
-                          .getAsOpaquePtr());
+            return GetType(getASTContext().getObjCInterfaceType(
+                superclass_interface_decl));
           }
         }
       }
@@ -5586,10 +5533,8 @@ CompilerType ClangASTContext::GetDirectBaseClassAtIndex(
           if (superclass_interface_decl) {
             if (bit_offset_ptr)
               *bit_offset_ptr = 0;
-            return CompilerType(
-                this, getASTContext()
-                          .getObjCInterfaceType(superclass_interface_decl)
-                          .getAsOpaquePtr());
+            return GetType(getASTContext().getObjCInterfaceType(
+                superclass_interface_decl));
           }
         }
       }
@@ -5632,7 +5577,7 @@ CompilerType ClangASTContext::GetVirtualBaseClassAtIndex(
                       .getQuantity() *
                   8;
             }
-            return CompilerType(this, base_class->getType().getAsOpaquePtr());
+            return GetType(base_class->getType());
           }
         }
       }
@@ -5820,8 +5765,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
         child_byte_size =
             getASTContext().getTypeSize(getASTContext().ObjCBuiltinClassTy) /
             CHAR_BIT;
-        return CompilerType(
-            this, getASTContext().ObjCBuiltinClassTy.getAsOpaquePtr());
+        return GetType(getASTContext().ObjCBuiltinClassTy);
 
       default:
         break;
@@ -5884,8 +5828,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
 
             // Base classes should be a multiple of 8 bits in size
             child_byte_offset = bit_offset / 8;
-            CompilerType base_class_clang_type(
-                this, base_class->getType().getAsOpaquePtr());
+            CompilerType base_class_clang_type = GetType(base_class->getType());
             child_name = base_class_clang_type.GetTypeName().AsCString("");
             Optional<uint64_t> size =
                 base_class_clang_type.GetBitSize(get_exe_scope());
@@ -5917,8 +5860,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
 
           // Figure out the type byte size (field_type_info.first) and
           // alignment (field_type_info.second) from the AST context.
-          CompilerType field_clang_type(this,
-                                        field->getType().getAsOpaquePtr());
+          CompilerType field_clang_type = GetType(field->getType());
           assert(field_idx < record_layout.getFieldCount());
           Optional<uint64_t> size =
               field_clang_type.GetByteSize(get_exe_scope());
@@ -5964,10 +5906,9 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
               class_interface_decl->getSuperClass();
           if (superclass_interface_decl) {
             if (omit_empty_base_classes) {
-              CompilerType base_class_clang_type(
-                  this, getASTContext()
-                            .getObjCInterfaceType(superclass_interface_decl)
-                            .getAsOpaquePtr());
+              CompilerType base_class_clang_type =
+                  GetType(getASTContext().getObjCInterfaceType(
+                      superclass_interface_decl));
               if (base_class_clang_type.GetNumChildren(omit_empty_base_classes,
                                                        exe_ctx) > 0) {
                 if (idx == 0) {
@@ -5985,7 +5926,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
                   child_byte_offset = 0;
                   child_is_base_class = true;
 
-                  return CompilerType(this, ivar_qual_type.getAsOpaquePtr());
+                  return GetType(ivar_qual_type);
                 }
 
                 ++child_idx;
@@ -6029,8 +5970,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
                   ObjCLanguageRuntime *objc_runtime =
                       ObjCLanguageRuntime::Get(*process);
                   if (objc_runtime != nullptr) {
-                    CompilerType parent_ast_type(
-                        this, parent_qual_type.getAsOpaquePtr());
+                    CompilerType parent_ast_type = GetType(parent_qual_type);
                     child_byte_offset = objc_runtime->GetByteOffsetForIvar(
                         parent_ast_type, ivar_decl->getNameAsString().c_str());
                   }
@@ -6060,7 +6000,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
 
                   child_bitfield_bit_offset = bit_offset % 8;
                 }
-                return CompilerType(this, ivar_qual_type.getAsOpaquePtr());
+                return GetType(ivar_qual_type);
               }
               ++child_idx;
             }
@@ -6111,8 +6051,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
       const clang::VectorType *array =
           llvm::cast<clang::VectorType>(parent_qual_type.getTypePtr());
       if (array) {
-        CompilerType element_type(this,
-                                  array->getElementType().getAsOpaquePtr());
+        CompilerType element_type = GetType(array->getElementType());
         if (element_type.GetCompleteType()) {
           char element_name[64];
           ::snprintf(element_name, sizeof(element_name), "[%" PRIu64 "]",
@@ -6134,8 +6073,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
     if (ignore_array_bounds || idx_is_valid) {
       const clang::ArrayType *array = GetQualType(type)->getAsArrayTypeUnsafe();
       if (array) {
-        CompilerType element_type(this,
-                                  array->getElementType().getAsOpaquePtr());
+        CompilerType element_type = GetType(array->getElementType());
         if (element_type.GetCompleteType()) {
           child_name = llvm::formatv("[{0}]", idx);
           if (Optional<uint64_t> size =
@@ -6193,8 +6131,8 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
     if (idx_is_valid) {
       const clang::ReferenceType *reference_type =
           llvm::cast<clang::ReferenceType>(parent_qual_type.getTypePtr());
-      CompilerType pointee_clang_type(
-          this, reference_type->getPointeeType().getAsOpaquePtr());
+      CompilerType pointee_clang_type =
+          GetType(reference_type->getPointeeType());
       if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
         child_is_deref_of_parent = false;
         bool tmp_child_is_deref_of_parent = false;
@@ -6346,7 +6284,7 @@ size_t ClangASTContext::GetIndexOfChildMemberWithName(
              field != field_end; ++field, ++child_idx) {
           llvm::StringRef field_name = field->getName();
           if (field_name.empty()) {
-            CompilerType field_type(this, field->getType().getAsOpaquePtr());
+            CompilerType field_type = GetType(field->getType());
             child_indexes.push_back(child_idx);
             if (field_type.GetIndexOfChildMemberWithName(
                     name, omit_empty_base_classes, child_indexes))
@@ -6457,10 +6395,9 @@ size_t ClangASTContext::GetIndexOfChildMemberWithName(
               // superclass...
               child_indexes.push_back(0);
 
-              CompilerType superclass_clang_type(
-                  this, getASTContext()
-                            .getObjCInterfaceType(superclass_interface_decl)
-                            .getAsOpaquePtr());
+              CompilerType superclass_clang_type =
+                  GetType(getASTContext().getObjCInterfaceType(
+                      superclass_interface_decl));
               if (superclass_clang_type.GetIndexOfChildMemberWithName(
                       name, omit_empty_base_classes, child_indexes)) {
                 // We did find an ivar in a superclass so just return the
@@ -6478,10 +6415,9 @@ size_t ClangASTContext::GetIndexOfChildMemberWithName(
       break;
 
     case clang::Type::ObjCObjectPointer: {
-      CompilerType objc_object_clang_type(
-          this, llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr())
-                    ->getPointeeType()
-                    .getAsOpaquePtr());
+      CompilerType objc_object_clang_type = GetType(
+          llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr())
+              ->getPointeeType());
       return objc_object_clang_type.GetIndexOfChildMemberWithName(
           name, omit_empty_base_classes, child_indexes);
     } break;
@@ -6531,7 +6467,7 @@ size_t ClangASTContext::GetIndexOfChildMemberWithName(
       const clang::ReferenceType *reference_type =
           llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
       clang::QualType pointee_type(reference_type->getPointeeType());
-      CompilerType pointee_clang_type(this, pointee_type.getAsOpaquePtr());
+      CompilerType pointee_clang_type = GetType(pointee_type);
 
       if (pointee_clang_type.IsAggregateType()) {
         return pointee_clang_type.GetIndexOfChildMemberWithName(
@@ -6597,8 +6533,7 @@ ClangASTContext::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                 !ClangASTContext::RecordHasFields(base_class_decl))
               continue;
 
-            CompilerType base_class_clang_type(
-                this, base_class->getType().getAsOpaquePtr());
+            CompilerType base_class_clang_type = GetType(base_class->getType());
             std::string base_class_type_name(
                 base_class_clang_type.GetTypeName().AsCString(""));
             if (base_class_type_name == name)
@@ -6661,10 +6596,9 @@ ClangASTContext::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
 
     case clang::Type::ObjCObjectPointer: {
-      CompilerType pointee_clang_type(
-          this, llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr())
-                    ->getPointeeType()
-                    .getAsOpaquePtr());
+      CompilerType pointee_clang_type = GetType(
+          llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr())
+              ->getPointeeType());
       return pointee_clang_type.GetIndexOfChildWithName(
           name, omit_empty_base_classes);
     } break;
@@ -6713,8 +6647,7 @@ ClangASTContext::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
     case clang::Type::RValueReference: {
       const clang::ReferenceType *reference_type =
           llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
-      CompilerType pointee_type(
-          this, reference_type->getPointeeType().getAsOpaquePtr());
+      CompilerType pointee_type = GetType(reference_type->getPointeeType());
 
       if (pointee_type.IsAggregateType()) {
         return pointee_type.GetIndexOfChildWithName(name,
@@ -6725,8 +6658,7 @@ ClangASTContext::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
     case clang::Type::Pointer: {
       const clang::PointerType *pointer_type =
           llvm::cast<clang::PointerType>(qual_type.getTypePtr());
-      CompilerType pointee_type(
-          this, pointer_type->getPointeeType().getAsOpaquePtr());
+      CompilerType pointee_type = GetType(pointer_type->getPointeeType());
 
       if (pointee_type.IsAggregateType()) {
         return pointee_type.GetIndexOfChildWithName(name,
@@ -6864,7 +6796,7 @@ ClangASTContext::GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
   if (template_arg.getKind() != clang::TemplateArgument::Type)
     return CompilerType();
 
-  return CompilerType(this, template_arg.getAsType().getAsOpaquePtr());
+  return GetType(template_arg.getAsType());
 }
 
 Optional<CompilerType::IntegralTemplateArgument>
@@ -6881,8 +6813,7 @@ ClangASTContext::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
     return llvm::None;
 
   return {
-      {template_arg.getAsIntegral(),
-       CompilerType(this, template_arg.getIntegralType().getAsOpaquePtr())}};
+      {template_arg.getAsIntegral(), GetType(template_arg.getIntegralType())}};
 }
 
 CompilerType ClangASTContext::GetTypeForFormatters(void *type) {
@@ -7461,8 +7392,7 @@ bool ClangASTContext::AddObjCClassProperty(
   if (property_clang_type.IsValid())
     property_clang_type_to_access = property_clang_type;
   else if (ivar_decl)
-    property_clang_type_to_access =
-        CompilerType(ast, ivar_decl->getType().getAsOpaquePtr());
+    property_clang_type_to_access = ast->GetType(ivar_decl->getType());
 
   if (!class_interface_decl || !property_clang_type_to_access.IsValid())
     return false;
@@ -7985,7 +7915,7 @@ ClangASTContext::GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) {
     if (enutype) {
       clang::EnumDecl *enum_decl = enutype->getDecl();
       if (enum_decl)
-        return CompilerType(this, enum_decl->getIntegerType().getAsOpaquePtr());
+        return GetType(enum_decl->getIntegerType());
     }
   }
   return CompilerType();
@@ -8000,11 +7930,9 @@ ClangASTContext::CreateMemberPointerType(const CompilerType &type,
         llvm::dyn_cast<ClangASTContext>(type.GetTypeSystem());
     if (!ast)
       return CompilerType();
-    return CompilerType(ast, ast->getASTContext()
-                                 .getMemberPointerType(
-                                     ClangUtil::GetQualType(pointee_type),
-                                     ClangUtil::GetQualType(type).getTypePtr())
-                                 .getAsOpaquePtr());
+    return ast->GetType(ast->getASTContext().getMemberPointerType(
+        ClangUtil::GetQualType(pointee_type),
+        ClangUtil::GetQualType(type).getTypePtr()));
   }
   return CompilerType();
 }
@@ -8134,8 +8062,7 @@ void ClangASTContext::DumpValue(
               getASTContext().getTypeInfo(base_class_qual_type);
 
           // Dump the value of the member
-          CompilerType base_clang_type(this,
-                                       base_class_qual_type.getAsOpaquePtr());
+          CompilerType base_clang_type = GetType(base_class_qual_type);
           base_clang_type.DumpValue(
               exe_ctx,
               s, // Stream to dump to
@@ -8201,7 +8128,7 @@ void ClangASTContext::DumpValue(
         s->Printf("%s = ", field->getNameAsString().c_str());
 
         // Dump the value of the member
-        CompilerType field_clang_type(this, field_type.getAsOpaquePtr());
+        CompilerType field_clang_type = GetType(field_type);
         field_clang_type.DumpValue(
             exe_ctx,
             s, // Stream to dump to
@@ -8281,7 +8208,7 @@ void ClangASTContext::DumpValue(
       s->PutChar('"');
       return;
     } else {
-      CompilerType element_clang_type(this, element_qual_type.getAsOpaquePtr());
+      CompilerType element_clang_type = GetType(element_qual_type);
       lldb::Format element_format = element_clang_type.GetFormat();
 
       for (element_idx = 0; element_idx < element_count; ++element_idx) {
@@ -8332,7 +8259,7 @@ void ClangASTContext::DumpValue(
             ->getDecl()
             ->getUnderlyingType();
 
-    CompilerType typedef_clang_type(this, typedef_qual_type.getAsOpaquePtr());
+    CompilerType typedef_clang_type = GetType(typedef_qual_type);
     lldb::Format typedef_format = typedef_clang_type.GetFormat();
     clang::TypeInfo typedef_type_info =
         getASTContext().getTypeInfo(typedef_qual_type);
@@ -8357,8 +8284,7 @@ void ClangASTContext::DumpValue(
   case clang::Type::Auto: {
     clang::QualType elaborated_qual_type =
         llvm::cast<clang::AutoType>(qual_type)->getDeducedType();
-    CompilerType elaborated_clang_type(this,
-                                       elaborated_qual_type.getAsOpaquePtr());
+    CompilerType elaborated_clang_type = GetType(elaborated_qual_type);
     lldb::Format elaborated_format = elaborated_clang_type.GetFormat();
     clang::TypeInfo elaborated_type_info =
         getASTContext().getTypeInfo(elaborated_qual_type);
@@ -8383,8 +8309,7 @@ void ClangASTContext::DumpValue(
   case clang::Type::Elaborated: {
     clang::QualType elaborated_qual_type =
         llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType();
-    CompilerType elaborated_clang_type(this,
-                                       elaborated_qual_type.getAsOpaquePtr());
+    CompilerType elaborated_clang_type = GetType(elaborated_qual_type);
     lldb::Format elaborated_format = elaborated_clang_type.GetFormat();
     clang::TypeInfo elaborated_type_info =
         getASTContext().getTypeInfo(elaborated_qual_type);
@@ -8409,7 +8334,7 @@ void ClangASTContext::DumpValue(
   case clang::Type::Paren: {
     clang::QualType desugar_qual_type =
         llvm::cast<clang::ParenType>(qual_type)->desugar();
-    CompilerType desugar_clang_type(this, desugar_qual_type.getAsOpaquePtr());
+    CompilerType desugar_clang_type = GetType(desugar_qual_type);
 
     lldb::Format desugar_format = desugar_clang_type.GetFormat();
     clang::TypeInfo desugar_type_info =
@@ -8550,7 +8475,7 @@ bool ClangASTContext::DumpTypeValue(
           llvm::cast<clang::TypedefType>(qual_type)
               ->getDecl()
               ->getUnderlyingType();
-      CompilerType typedef_clang_type(this, typedef_qual_type.getAsOpaquePtr());
+      CompilerType typedef_clang_type = GetType(typedef_qual_type);
       if (format == eFormatDefault)
         format = typedef_clang_type.GetFormat();
       clang::TypeInfo typedef_type_info =
@@ -8969,10 +8894,10 @@ CompilerDeclContext ClangASTContext::DeclGetDeclContext(void *opaque_decl) {
 CompilerType ClangASTContext::DeclGetFunctionReturnType(void *opaque_decl) {
   if (clang::FunctionDecl *func_decl =
           llvm::dyn_cast<clang::FunctionDecl>((clang::Decl *)opaque_decl))
-    return CompilerType(this, func_decl->getReturnType().getAsOpaquePtr());
+    return GetType(func_decl->getReturnType());
   if (clang::ObjCMethodDecl *objc_method =
           llvm::dyn_cast<clang::ObjCMethodDecl>((clang::Decl *)opaque_decl))
-    return CompilerType(this, objc_method->getReturnType().getAsOpaquePtr());
+    return GetType(objc_method->getReturnType());
   else
     return CompilerType();
 }
@@ -8995,15 +8920,13 @@ CompilerType ClangASTContext::DeclGetFunctionArgumentType(void *opaque_decl,
     if (idx < func_decl->param_size()) {
       ParmVarDecl *var_decl = func_decl->getParamDecl(idx);
       if (var_decl)
-        return CompilerType(this, var_decl->getOriginalType().getAsOpaquePtr());
+        return GetType(var_decl->getOriginalType());
     }
   } else if (clang::ObjCMethodDecl *objc_method =
                  llvm::dyn_cast<clang::ObjCMethodDecl>(
                      (clang::Decl *)opaque_decl)) {
     if (idx < objc_method->param_size())
-      return CompilerType(
-          this,
-          objc_method->parameters()[idx]->getOriginalType().getAsOpaquePtr());
+      return GetType(objc_method->parameters()[idx]->getOriginalType());
   }
   return CompilerType();
 }

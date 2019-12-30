@@ -164,6 +164,22 @@ public:
   static bool AreTypesSame(CompilerType type1, CompilerType type2,
                            bool ignore_qualifiers = false);
 
+  /// Creates a CompilerType form the given QualType with the current
+  /// ClangASTContext instance as the CompilerType's typesystem.
+  /// \param qt The QualType for a type that belongs to the ASTContext of this
+  ///           ClangASTContext.
+  /// \return The CompilerType representing the given QualType. If the
+  ///         QualType's type pointer is a nullptr then the function returns an
+  ///         invalid CompilerType.
+  CompilerType GetType(clang::QualType qt) {
+    if (qt.getTypePtrOrNull() == nullptr)
+      return CompilerType();
+    // Check that the type actually belongs to this ClangASTContext.
+    assert(qt->getAsTagDecl() == nullptr ||
+           &qt->getAsTagDecl()->getASTContext() == &getASTContext());
+    return CompilerType(this, qt.getAsOpaquePtr());
+  }
+
   CompilerType GetTypeForDecl(clang::NamedDecl *decl);
 
   CompilerType GetTypeForDecl(clang::TagDecl *decl);

@@ -2086,8 +2086,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
           clang::TypeSourceInfo *type_source_info =
               base_class->getTypeSourceInfo();
           if (type_source_info) {
-            CompilerType base_class_type(
-                &m_ast, type_source_info->getType().getAsOpaquePtr());
+            CompilerType base_class_type =
+                m_ast.GetType(type_source_info->getType());
             if (!base_class_type.GetCompleteType()) {
               auto module = dwarf->GetObjectFile()->GetModule();
               module->ReportError(":: Class '%s' has a base class '%s' which "
