@@ -237,6 +237,8 @@ public:
   LegalizeResult lowerExtract(MachineInstr &MI);
   LegalizeResult lowerInsert(MachineInstr &MI);
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
+  LegalizeResult lowerBswap(MachineInstr &MI);
+  LegalizeResult lowerBitreverse(MachineInstr &MI);
 
 private:
   MachineRegisterInfo &MRI;
