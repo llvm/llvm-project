@@ -198,6 +198,10 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       })
       .maxScalar(0, s32);
 
+  getActionDefinitionsBuilder(G_BITREVERSE)
+      .lowerFor({s32})
+      .maxScalar(0, s32);
+
   // FP instructions
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor({s32, s64});
