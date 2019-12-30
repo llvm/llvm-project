@@ -6,11 +6,11 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define internal i32 @callee(i1 %C, i32* %P) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
 ; CHECK-SAME: (i1 [[C:%.*]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
-; CHECK-NEXT:    br i1 false, label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    br label [[F:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       F:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   br i1 %C, label %T, label %F
