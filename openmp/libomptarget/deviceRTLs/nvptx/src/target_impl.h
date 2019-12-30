@@ -102,15 +102,15 @@ INLINE uint32_t __kmpc_impl_smid() {
   return id;
 }
 
-INLINE double __target_impl_get_wtick() {
+INLINE double __kmpc_impl_get_wtick() {
   // Timer precision is 1ns
   return ((double)1E-9);
 }
 
-INLINE double __target_impl_get_wtime() {
+INLINE double __kmpc_impl_get_wtime() {
   unsigned long long nsecs;
   asm("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
-  return (double)nsecs * __target_impl_get_wtick();
+  return (double)nsecs * __kmpc_impl_get_wtick();
 }
 
 INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
