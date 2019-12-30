@@ -38,9 +38,8 @@ define double @negation_propagation(double* %arg, double %arg1, double %arg2) {
 define { double, double } @testfn(double %x, double %y) #0 {
 ; CHECK-LABEL: testfn:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub d2, d0, d1
-; CHECK-NEXT:    fsub d1, d1, d0
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fsub d0, d0, d1
+; CHECK-NEXT:    fneg d1, d0
 ; CHECK-NEXT:    ret
   %sub = fsub fast double %x, %y
   %neg = fneg fast double %sub
