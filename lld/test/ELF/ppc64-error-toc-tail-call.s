@@ -11,10 +11,16 @@
 // RUN: not ld.lld %t.o %t2.so -o %t 2>&1 | FileCheck %s
 
 # A tail call to an external function without a nop should issue an error.
-// CHECK: call lacks nop, can't restore toc
+// CHECK: call to foo lacks nop, can't restore toc
+// CHECK-NOT: lacks nop
     .text
     .abiversion 2
 
 .global _start
 _start:
   b foo
+
+  // gcc/gfortran 5.4, 6.3 and earlier versions do not add nop for recursive
+  // calls.
+  b _start
+  b _start

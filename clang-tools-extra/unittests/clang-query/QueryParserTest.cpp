@@ -330,4 +330,53 @@ match callExpr
   EXPECT_EQ("1:9: Error parsing matcher. Found token <NewLine> "
             "while looking for '('.",
             cast<InvalidQuery>(Q)->ErrStr);
+
+  Q = parse("let someMatcher\nm parmVarDecl()");
+
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.",
+            cast<InvalidQuery>(Q)->ErrStr);
+
+  Q = parse("\nm parmVarDecl()\nlet someMatcher\nm parmVarDecl()");
+
+  ASSERT_TRUE(isa<MatchQuery>(Q));
+  Q = parse(Q->RemainingContent);
+
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.",
+            cast<InvalidQuery>(Q)->ErrStr);
+
+  Q = parse("\nlet someMatcher\n");
+
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.",
+            cast<InvalidQuery>(Q)->ErrStr);
+
+  Q = parse("\nm parmVarDecl()\nlet someMatcher\n");
+
+  ASSERT_TRUE(isa<MatchQuery>(Q));
+  Q = parse(Q->RemainingContent);
+
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("1:1: Invalid token <NewLine> found when looking for a value.",
+            cast<InvalidQuery>(Q)->ErrStr);
+
+  Q = parse(R"matcher(
+
+let Construct parmVarDecl()
+
+m parmVarDecl(
+    Construct
+)
+)matcher");
+
+  ASSERT_TRUE(isa<LetQuery>(Q));
+  {
+    llvm::raw_null_ostream NullOutStream;
+    dyn_cast<LetQuery>(Q)->run(NullOutStream, QS);
+  }
+
+  Q = parse(Q->RemainingContent);
+
+  ASSERT_TRUE(isa<MatchQuery>(Q));
 }

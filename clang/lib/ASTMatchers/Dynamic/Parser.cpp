@@ -354,13 +354,6 @@ struct Parser::ScopedContextEntry {
 bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
   const TokenInfo NameToken = Tokenizer->consumeNextToken();
 
-  if (Tokenizer->nextTokenKind() == TokenInfo::TK_NewLine) {
-    Error->addError(Tokenizer->peekNextToken().Range,
-                    Error->ET_ParserNoOpenParen)
-        << "NewLine";
-    return false;
-  }
-
   if (Tokenizer->nextTokenKind() != TokenInfo::TK_OpenParen) {
     // Parse as a named value.
     if (const VariantValue NamedValue =
@@ -388,6 +381,14 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
       }
       return false;
     }
+
+    if (Tokenizer->nextTokenKind() == TokenInfo::TK_NewLine) {
+      Error->addError(Tokenizer->peekNextToken().Range,
+                      Error->ET_ParserNoOpenParen)
+          << "NewLine";
+      return false;
+    }
+
     // If the syntax is correct and the name is not a matcher either, report
     // unknown named value.
     if ((Tokenizer->nextTokenKind() == TokenInfo::TK_Comma ||
@@ -607,15 +608,14 @@ bool Parser::parseExpressionImpl(VariantValue *Value) {
     // This error was already reported by the tokenizer.
     return false;
   case TokenInfo::TK_NewLine:
-    llvm_unreachable("Newline should never be found here");
-    return false;
   case TokenInfo::TK_OpenParen:
   case TokenInfo::TK_CloseParen:
   case TokenInfo::TK_Comma:
   case TokenInfo::TK_Period:
   case TokenInfo::TK_InvalidChar:
     const TokenInfo Token = Tokenizer->consumeNextToken();
-    Error->addError(Token.Range, Error->ET_ParserInvalidToken) << Token.Text;
+    Error->addError(Token.Range, Error->ET_ParserInvalidToken)
+        << (Token.Kind == TokenInfo::TK_NewLine ? "NewLine" : Token.Text);
     return false;
   }
 

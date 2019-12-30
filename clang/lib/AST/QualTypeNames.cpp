@@ -192,7 +192,7 @@ static NestedNameSpecifier *createOuterNNS(const ASTContext &Ctx, const Decl *D,
       // Ignore inline namespace;
       NS = dyn_cast<NamespaceDecl>(NS->getDeclContext());
     }
-    if (NS->getDeclName()) {
+    if (NS && NS->getDeclName()) {
       return createNestedNameSpecifier(Ctx, NS, WithGlobalNsPrefix);
     }
     return nullptr;  // no starting '::', no anonymous

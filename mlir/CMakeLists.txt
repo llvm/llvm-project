@@ -86,6 +86,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     FILES_MATCHING
     PATTERN "*.h"
     PATTERN "*.inc"
+    PATTERN "*.td"
     PATTERN "LICENSE.TXT"
     )
 

@@ -1,3 +1,4 @@
+add_subdirectory(Dialect)
 add_subdirectory(EDSC)
 add_subdirectory(mlir-cpu-runner)
 add_subdirectory(SDBM)

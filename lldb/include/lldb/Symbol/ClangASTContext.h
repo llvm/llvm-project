@@ -132,20 +132,10 @@ public:
   void SetMetadataAsUserID(const clang::Type *type, lldb::user_id_t user_id);
 
   void SetMetadata(const clang::Decl *object, ClangASTMetadata &meta_data);
+
   void SetMetadata(const clang::Type *object, ClangASTMetadata &meta_data);
-  ClangASTMetadata *GetMetadata(const clang::Decl *object) {
-    return GetMetadata(&getASTContext(), object);
-  }
-
-  static ClangASTMetadata *GetMetadata(clang::ASTContext *ast,
-                                       const clang::Decl *object);
-
-  ClangASTMetadata *GetMetadata(const clang::Type *object) {
-    return GetMetadata(&getASTContext(), object);
-  }
-
-  static ClangASTMetadata *GetMetadata(clang::ASTContext *ast,
-                                       const clang::Type *object);
+  ClangASTMetadata *GetMetadata(const clang::Decl *object);
+  ClangASTMetadata *GetMetadata(const clang::Type *object);
 
   // Basic Types
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
@@ -174,11 +164,11 @@ public:
   static bool AreTypesSame(CompilerType type1, CompilerType type2,
                            bool ignore_qualifiers = false);
 
-  static CompilerType GetTypeForDecl(clang::NamedDecl *decl);
+  CompilerType GetTypeForDecl(clang::NamedDecl *decl);
 
-  static CompilerType GetTypeForDecl(clang::TagDecl *decl);
+  CompilerType GetTypeForDecl(clang::TagDecl *decl);
 
-  static CompilerType GetTypeForDecl(clang::ObjCInterfaceDecl *objc_decl);
+  CompilerType GetTypeForDecl(clang::ObjCInterfaceDecl *objc_decl);
 
   template <typename RecordDeclType>
   CompilerType
@@ -325,36 +315,16 @@ public:
                             const CompilerType &function_Type, int storage,
                             bool is_inline);
 
-  static CompilerType CreateFunctionType(clang::ASTContext *ast,
-                                         const CompilerType &result_type,
-                                         const CompilerType *args,
-                                         unsigned num_args, bool is_variadic,
-                                         unsigned type_quals,
-                                         clang::CallingConv cc);
-
-  static CompilerType CreateFunctionType(clang::ASTContext *ast,
-                                         const CompilerType &result_type,
-                                         const CompilerType *args,
-                                         unsigned num_args, bool is_variadic,
-                                         unsigned type_quals) {
-    return ClangASTContext::CreateFunctionType(
-        ast, result_type, args, num_args, is_variadic, type_quals, clang::CC_C);
-  }
+  CompilerType CreateFunctionType(const CompilerType &result_type,
+                                  const CompilerType *args, unsigned num_args,
+                                  bool is_variadic, unsigned type_quals,
+                                  clang::CallingConv cc);
 
   CompilerType CreateFunctionType(const CompilerType &result_type,
                                   const CompilerType *args, unsigned num_args,
                                   bool is_variadic, unsigned type_quals) {
-    return ClangASTContext::CreateFunctionType(
-        &getASTContext(), result_type, args, num_args, is_variadic, type_quals);
-  }
-
-  CompilerType CreateFunctionType(const CompilerType &result_type,
-                                  const CompilerType *args, unsigned num_args,
-                                  bool is_variadic, unsigned type_quals,
-                                  clang::CallingConv cc) {
-    return ClangASTContext::CreateFunctionType(&getASTContext(), result_type,
-                                               args, num_args, is_variadic,
-                                               type_quals, cc);
+    return CreateFunctionType(result_type, args, num_args, is_variadic,
+                              type_quals, clang::CC_C);
   }
 
   clang::ParmVarDecl *CreateParameterDeclaration(clang::DeclContext *decl_ctx,
@@ -382,15 +352,9 @@ public:
 
   // Integer type functions
 
-  static CompilerType GetIntTypeFromBitSize(clang::ASTContext *ast,
-                                            size_t bit_size, bool is_signed);
+  CompilerType GetIntTypeFromBitSize(size_t bit_size, bool is_signed);
 
-  CompilerType GetPointerSizedIntType(bool is_signed) {
-    return GetPointerSizedIntType(&getASTContext(), is_signed);
-  }
-
-  static CompilerType GetPointerSizedIntType(clang::ASTContext *ast,
-                                             bool is_signed);
+  CompilerType GetPointerSizedIntType(bool is_signed);
 
   // Floating point functions
 

@@ -8919,17 +8919,11 @@ bool InitializationSequence::Diagnose(Sema &S,
       S.Diag(Kind.getLocation(), diag::err_reference_bind_drops_quals)
           << NonRefType << SourceType << 1 /*addr space*/
           << Args[0]->getSourceRange();
-    else if (DroppedQualifiers.hasQualifiers())
+    else
       S.Diag(Kind.getLocation(), diag::err_reference_bind_drops_quals)
           << NonRefType << SourceType << 0 /*cv quals*/
           << Qualifiers::fromCVRMask(DroppedQualifiers.getCVRQualifiers())
           << DroppedQualifiers.getCVRQualifiers() << Args[0]->getSourceRange();
-    else
-      // FIXME: Consider decomposing the type and explaining which qualifiers
-      // were dropped where, or on which level a 'const' is missing, etc.
-      S.Diag(Kind.getLocation(), diag::err_reference_bind_drops_quals)
-          << NonRefType << SourceType << 2 /*incompatible quals*/
-          << Args[0]->getSourceRange();
     break;
   }
 

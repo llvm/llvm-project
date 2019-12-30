@@ -1179,25 +1179,13 @@ CompilerType ClangASTContext::GetTypeForDecl(clang::NamedDecl *decl) {
 }
 
 CompilerType ClangASTContext::GetTypeForDecl(TagDecl *decl) {
-  // No need to call the getASTContext() accessor (which can create the AST if
-  // it isn't created yet, because we can't have created a decl in this
-  // AST if our AST didn't already exist...
-  ASTContext *ast = &decl->getASTContext();
-  if (ast)
-    return CompilerType(ClangASTContext::GetASTContext(ast),
-                        ast->getTagDeclType(decl).getAsOpaquePtr());
-  return CompilerType();
+  return CompilerType(this,
+                      getASTContext().getTagDeclType(decl).getAsOpaquePtr());
 }
 
 CompilerType ClangASTContext::GetTypeForDecl(ObjCInterfaceDecl *decl) {
-  // No need to call the getASTContext() accessor (which can create the AST if
-  // it isn't created yet, because we can't have created a decl in this
-  // AST if our AST didn't already exist...
-  ASTContext *ast = &decl->getASTContext();
-  if (ast)
-    return CompilerType(ClangASTContext::GetASTContext(ast),
-                        ast->getObjCInterfaceType(decl).getAsOpaquePtr());
-  return CompilerType();
+  return CompilerType(
+      this, getASTContext().getObjCInterfaceType(decl).getAsOpaquePtr());
 }
 
 #pragma mark Structure, Unions, Classes
@@ -1917,13 +1905,11 @@ FunctionDecl *ClangASTContext::CreateFunctionDeclaration(
   return func_decl;
 }
 
-CompilerType ClangASTContext::CreateFunctionType(
-    ASTContext *ast, const CompilerType &result_type, const CompilerType *args,
-    unsigned num_args, bool is_variadic, unsigned type_quals,
-    clang::CallingConv cc) {
-  if (ast == nullptr)
-    return CompilerType(); // invalid AST
-
+CompilerType
+ClangASTContext::CreateFunctionType(const CompilerType &result_type,
+                                    const CompilerType *args, unsigned num_args,
+                                    bool is_variadic, unsigned type_quals,
+                                    clang::CallingConv cc) {
   if (!result_type || !ClangUtil::IsClangType(result_type))
     return CompilerType(); // invalid return type
 
@@ -1954,9 +1940,11 @@ CompilerType ClangASTContext::CreateFunctionType(
   proto_info.TypeQuals = clang::Qualifiers::fromFastMask(type_quals);
   proto_info.RefQualifier = RQ_None;
 
-  return CompilerType(ClangASTContext::GetASTContext(ast),
-                      ast->getFunctionType(ClangUtil::GetQualType(result_type),
-                                           qual_type_args, proto_info).getAsOpaquePtr());
+  return CompilerType(this,
+                      getASTContext()
+                          .getFunctionType(ClangUtil::GetQualType(result_type),
+                                           qual_type_args, proto_info)
+                          .getAsOpaquePtr());
 }
 
 ParmVarDecl *ClangASTContext::CreateParameterDeclaration(
@@ -2094,66 +2082,53 @@ ClangASTContext::CreateEnumerationType(const char *name, DeclContext *decl_ctx,
   return CompilerType();
 }
 
-CompilerType ClangASTContext::GetIntTypeFromBitSize(clang::ASTContext *ast,
-                                                    size_t bit_size,
+CompilerType ClangASTContext::GetIntTypeFromBitSize(size_t bit_size,
                                                     bool is_signed) {
-  if (ast) {
-    auto *clang_ast_context = ClangASTContext::GetASTContext(ast);
-    if (is_signed) {
-      if (bit_size == ast->getTypeSize(ast->SignedCharTy))
-        return CompilerType(clang_ast_context,
-                            ast->SignedCharTy.getAsOpaquePtr());
+  clang::ASTContext &ast = getASTContext();
 
-      if (bit_size == ast->getTypeSize(ast->ShortTy))
-        return CompilerType(clang_ast_context, ast->ShortTy.getAsOpaquePtr());
+  if (is_signed) {
+    if (bit_size == ast.getTypeSize(ast.SignedCharTy))
+      return CompilerType(this, ast.SignedCharTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->IntTy))
-        return CompilerType(clang_ast_context, ast->IntTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.ShortTy))
+      return CompilerType(this, ast.ShortTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->LongTy))
-        return CompilerType(clang_ast_context, ast->LongTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.IntTy))
+      return CompilerType(this, ast.IntTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->LongLongTy))
-        return CompilerType(clang_ast_context,
-                            ast->LongLongTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.LongTy))
+      return CompilerType(this, ast.LongTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->Int128Ty))
-        return CompilerType(clang_ast_context, ast->Int128Ty.getAsOpaquePtr());
-    } else {
-      if (bit_size == ast->getTypeSize(ast->UnsignedCharTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedCharTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.LongLongTy))
+      return CompilerType(this, ast.LongLongTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedShortTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedShortTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.Int128Ty))
+      return CompilerType(this, ast.Int128Ty.getAsOpaquePtr());
+  } else {
+    if (bit_size == ast.getTypeSize(ast.UnsignedCharTy))
+      return CompilerType(this, ast.UnsignedCharTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedIntTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedIntTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.UnsignedShortTy))
+      return CompilerType(this, ast.UnsignedShortTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedLongTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedLongTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.UnsignedIntTy))
+      return CompilerType(this, ast.UnsignedIntTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedLongLongTy))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedLongLongTy.getAsOpaquePtr());
+    if (bit_size == ast.getTypeSize(ast.UnsignedLongTy))
+      return CompilerType(this, ast.UnsignedLongTy.getAsOpaquePtr());
 
-      if (bit_size == ast->getTypeSize(ast->UnsignedInt128Ty))
-        return CompilerType(clang_ast_context,
-                            ast->UnsignedInt128Ty.getAsOpaquePtr());
-    }
+    if (bit_size == ast.getTypeSize(ast.UnsignedLongLongTy))
+      return CompilerType(this, ast.UnsignedLongLongTy.getAsOpaquePtr());
+
+    if (bit_size == ast.getTypeSize(ast.UnsignedInt128Ty))
+      return CompilerType(this, ast.UnsignedInt128Ty.getAsOpaquePtr());
   }
   return CompilerType();
 }
 
-CompilerType ClangASTContext::GetPointerSizedIntType(clang::ASTContext *ast,
-                                                     bool is_signed) {
-  if (ast)
-    return GetIntTypeFromBitSize(ast, ast->getTypeSize(ast->VoidPtrTy),
-                                 is_signed);
-  return CompilerType();
+CompilerType ClangASTContext::GetPointerSizedIntType(bool is_signed) {
+  return GetIntTypeFromBitSize(
+      getASTContext().getTypeSize(getASTContext().VoidPtrTy), is_signed);
 }
 
 void ClangASTContext::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
@@ -2335,20 +2310,16 @@ void ClangASTContext::SetMetadata(const clang::Type *object,
   m_type_metadata[object] = metadata;
 }
 
-ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
-                                               const clang::Decl *object) {
-  ClangASTContext *self = GetASTContext(ast);
-  auto It = self->m_decl_metadata.find(object);
-  if (It != self->m_decl_metadata.end())
+ClangASTMetadata *ClangASTContext::GetMetadata(const clang::Decl *object) {
+  auto It = m_decl_metadata.find(object);
+  if (It != m_decl_metadata.end())
     return &It->second;
   return nullptr;
 }
 
-ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
-                                               const clang::Type *object) {
-  ClangASTContext *self = GetASTContext(ast);
-  auto It = self->m_type_metadata.find(object);
-  if (It != self->m_type_metadata.end())
+ClangASTMetadata *ClangASTContext::GetMetadata(const clang::Type *object) {
+  auto It = m_type_metadata.find(object);
+  if (It != m_type_metadata.end())
     return &It->second;
   return nullptr;
 }
@@ -2746,8 +2717,7 @@ bool ClangASTContext::IsRuntimeGeneratedType(
   clang::ObjCInterfaceDecl *result_iface_decl =
       llvm::dyn_cast<clang::ObjCInterfaceDecl>(decl_ctx);
 
-  ClangASTMetadata *ast_metadata =
-      ClangASTContext::GetMetadata(&getASTContext(), result_iface_decl);
+  ClangASTMetadata *ast_metadata = GetMetadata(result_iface_decl);
   if (!ast_metadata)
     return false;
   return (ast_metadata->GetISAPtr() != 0);
@@ -3398,8 +3368,7 @@ bool ClangASTContext::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
             if (is_complete)
               success = cxx_record_decl->isDynamicClass();
             else {
-              ClangASTMetadata *metadata = ClangASTContext::GetMetadata(
-                  &getASTContext(), cxx_record_decl);
+              ClangASTMetadata *metadata = GetMetadata(cxx_record_decl);
               if (metadata)
                 success = metadata->GetIsDynamicCXXType();
               else {
@@ -8729,8 +8698,7 @@ void ClangASTContext::DumpTypeDescription(lldb::opaque_compiler_type_t type) {
 
   CompilerType ct(this, type);
   const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
-  ClangASTMetadata *metadata =
-      ClangASTContext::GetMetadata(&getASTContext(), clang_type);
+  ClangASTMetadata *metadata = GetMetadata(clang_type);
   if (metadata) {
     metadata->Dump(&s);
   }
@@ -9203,7 +9171,7 @@ uint32_t ClangASTContext::CountDeclLevels(clang::DeclContext *frame_decl_ctx,
                   continue;
                 // Check types, if one was provided.
                 if (child_type) {
-                  CompilerType clang_type = ClangASTContext::GetTypeForDecl(nd);
+                  CompilerType clang_type = GetTypeForDecl(nd);
                   if (!AreTypesSame(clang_type, *child_type,
                                     /*ignore_qualifiers=*/true))
                     continue;
@@ -9268,8 +9236,7 @@ bool ClangASTContext::DeclContextIsClassMethod(
       return true;
     } else if (clang::FunctionDecl *function_decl =
                    llvm::dyn_cast<clang::FunctionDecl>(decl_ctx)) {
-      ClangASTMetadata *metadata =
-          GetMetadata(&decl_ctx->getParentASTContext(), function_decl);
+      ClangASTMetadata *metadata = GetMetadata(function_decl);
       if (metadata && metadata->HasObjectPtr()) {
         if (is_instance_method_ptr)
           *is_instance_method_ptr = true;
@@ -9347,10 +9314,8 @@ ClangASTContext::DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc) {
 ClangASTMetadata *
 ClangASTContext::DeclContextGetMetaData(const CompilerDeclContext &dc,
                                         const Decl *object) {
-  clang::ASTContext *ast = DeclContextGetClangASTContext(dc);
-  if (ast)
-    return ClangASTContext::GetMetadata(ast, object);
-  return nullptr;
+  ClangASTContext *ast = llvm::cast<ClangASTContext>(dc.GetTypeSystem());
+  return ast->GetMetadata(object);
 }
 
 clang::ASTContext *

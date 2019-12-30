@@ -16,15 +16,17 @@
 include "mlir/Dialect/StandardOps/Ops.td"
 include "mlir/Dialect/SPIRV/SPIRVOps.td"
 
-class BinaryOpPattern<Op src, Op tgt> :
-      Pat<(src SPV_ScalarOrVector:$l, SPV_ScalarOrVector:$r),
+class BinaryOpPattern<Type type, Op src, Op tgt> :
+      Pat<(src SPV_ScalarOrVectorOf<type>:$l, SPV_ScalarOrVectorOf<type>:$r),
           (tgt $l, $r)>;
 
-def : BinaryOpPattern<AddFOp, SPV_FAddOp>;
-def : BinaryOpPattern<DivFOp, SPV_FDivOp>;
-def : BinaryOpPattern<MulFOp, SPV_FMulOp>;
-def : BinaryOpPattern<RemFOp, SPV_FRemOp>;
-def : BinaryOpPattern<SubFOp, SPV_FSubOp>;
+def : BinaryOpPattern<SPV_Bool, AndOp, SPV_LogicalAndOp>;
+def : BinaryOpPattern<SPV_Bool, OrOp, SPV_LogicalOrOp>;
+def : BinaryOpPattern<SPV_Float, AddFOp, SPV_FAddOp>;
+def : BinaryOpPattern<SPV_Float, DivFOp, SPV_FDivOp>;
+def : BinaryOpPattern<SPV_Float, MulFOp, SPV_FMulOp>;
+def : BinaryOpPattern<SPV_Float, RemFOp, SPV_FRemOp>;
+def : BinaryOpPattern<SPV_Float, SubFOp, SPV_FSubOp>;
 
 // Constant Op
 // TODO(ravishankarm): Handle lowering other constant types.

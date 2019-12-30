@@ -2295,4 +2295,26 @@ TEST_F(ConstantRangeTest, Abs) {
   });
 }
 
+TEST_F(ConstantRangeTest, castOps) {
+  ConstantRange A(APInt(16, 66), APInt(16, 128));
+  ConstantRange FpToI8 = A.castOp(Instruction::FPToSI, 8);
+  EXPECT_EQ(8u, FpToI8.getBitWidth());
+  EXPECT_TRUE(FpToI8.isFullSet());
+
+  ConstantRange FpToI16 = A.castOp(Instruction::FPToSI, 16);
+  EXPECT_EQ(16u, FpToI16.getBitWidth());
+  EXPECT_EQ(A, FpToI16);
+
+  ConstantRange FPExtToDouble = A.castOp(Instruction::FPExt, 64);
+  EXPECT_EQ(64u, FPExtToDouble.getBitWidth());
+  EXPECT_TRUE(FPExtToDouble.isFullSet());
+
+  ConstantRange PtrToInt = A.castOp(Instruction::PtrToInt, 64);
+  EXPECT_EQ(64u, PtrToInt.getBitWidth());
+  EXPECT_TRUE(PtrToInt.isFullSet());
+
+  ConstantRange IntToPtr = A.castOp(Instruction::IntToPtr, 64);
+  EXPECT_EQ(64u, IntToPtr.getBitWidth());
+  EXPECT_TRUE(IntToPtr.isFullSet());
+}
 }  // anonymous namespace
