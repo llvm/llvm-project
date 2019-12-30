@@ -1075,6 +1075,27 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_BSWAP: {
+    if (SizeOp0 % NarrowSize != 0)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    SmallVector<Register, 2> SrcRegs, DstRegs;
+    unsigned NumParts = SizeOp0 / NarrowSize;
+    extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, SrcRegs);
+
+    for (unsigned i = 0; i < NumParts; ++i) {
+      auto DstPart = MIRBuilder.buildInstr(MI.getOpcode(), {NarrowTy},
+                                           {SrcRegs[NumParts - 1 - i]});
+      DstRegs.push_back(DstPart.getReg(0));
+    }
+
+    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), DstRegs);
+
+    Observer.changedInstr(MI);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 
@@ -2289,6 +2310,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerExtract(MI);
   case G_INSERT:
     return lowerInsert(MI);
+  case G_BSWAP:
+    return lowerBswap(MI);
   }
 }
 
@@ -4323,6 +4346,41 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
       IsAdd ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGT, BoolTy, RHS, Zero);
 
   MIRBuilder.buildXor(Dst1, ConditionRHS, ResultLowerThanLHS);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerBswap(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  const LLT Ty = MRI.getType(Src);
+  unsigned SizeInBytes = Ty.getSizeInBytes();
+  unsigned BaseShiftAmt = (SizeInBytes - 1) * 8;
+
+  // Swap most and least significant byte, set remaining bytes in Res to zero.
+  auto ShiftAmt = MIRBuilder.buildConstant(Ty, BaseShiftAmt);
+  auto LSByteShiftedLeft = MIRBuilder.buildShl(Ty, Src, ShiftAmt);
+  auto MSByteShiftedRight = MIRBuilder.buildLShr(Ty, Src, ShiftAmt);
+  auto Res = MIRBuilder.buildOr(Ty, MSByteShiftedRight, LSByteShiftedLeft);
+
+  // Set i-th high/low byte in Res to i-th low/high byte from Src.
+  for (unsigned i = 1; i < SizeInBytes / 2; ++i) {
+    // AND with Mask leaves byte i unchanged and sets remaining bytes to 0.
+    APInt APMask(SizeInBytes * 8, 0xFF << (i * 8));
+    auto Mask = MIRBuilder.buildConstant(Ty, APMask);
+    auto ShiftAmt = MIRBuilder.buildConstant(Ty, BaseShiftAmt - 16 * i);
+    // Low byte shifted left to place of high byte: (Src & Mask) << ShiftAmt.
+    auto LoByte = MIRBuilder.buildAnd(Ty, Src, Mask);
+    auto LoShiftedLeft = MIRBuilder.buildShl(Ty, LoByte, ShiftAmt);
+    Res = MIRBuilder.buildOr(Ty, Res, LoShiftedLeft);
+    // High byte shifted right to place of low byte: (Src >> ShiftAmt) & Mask.
+    auto SrcShiftedRight = MIRBuilder.buildLShr(Ty, Src, ShiftAmt);
+    auto HiShiftedRight = MIRBuilder.buildAnd(Ty, SrcShiftedRight, Mask);
+    Res = MIRBuilder.buildOr(Ty, Res, HiShiftedRight);
+  }
+  Res.getInstr()->getOperand(0).setReg(Dst);
+
   MI.eraseFromParent();
   return Legalized;
 }
