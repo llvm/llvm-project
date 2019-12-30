@@ -42496,8 +42496,7 @@ static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue LHS = N->getOperand(0);
-  auto *RHSC = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!RHSC || RHSC->getZExtValue() != 1 || LHS->getOpcode() != X86ISD::SETCC)
+  if (!OneConstant(N->getOperand(1)) || LHS->getOpcode() != X86ISD::SETCC)
     return SDValue();
 
   X86::CondCode NewCC = X86::GetOppositeBranchCondition(
