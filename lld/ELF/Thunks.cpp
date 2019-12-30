@@ -761,7 +761,7 @@ bool PPC32PltCallStub::isCompatibleWith(const InputSection &isec,
   return !config->isPic || (isec.file == file && rel.addend == addend);
 }
 
-static void writePPCLoadAndBranch(uint8_t *buf, int64_t offset) {
+void writePPC64LoadAndBranch(uint8_t *buf, int64_t offset) {
   uint16_t offHa = (offset + 0x8000) >> 16;
   uint16_t offLo = offset & 0xffff;
 
@@ -775,7 +775,7 @@ void PPC64PltCallStub::writeTo(uint8_t *buf) {
   int64_t offset = destination.getGotPltVA() - getPPC64TocBase();
   // Save the TOC pointer to the save-slot reserved in the call frame.
   write32(buf + 0, 0xf8410018); // std     r2,24(r1)
-  writePPCLoadAndBranch(buf + 4, offset);
+  writePPC64LoadAndBranch(buf + 4, offset);
 }
 
 void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
@@ -787,7 +787,7 @@ void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
   int64_t offset = in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
                    getPPC64TocBase();
-  writePPCLoadAndBranch(buf, offset);
+  writePPC64LoadAndBranch(buf, offset);
 }
 
 void PPC64LongBranchThunk::addSymbols(ThunkSection &isec) {
