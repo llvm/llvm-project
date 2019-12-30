@@ -71,8 +71,8 @@ Sections:
 ## of the first SHT_NULL section.
 
 # RUN: yaml2obj --docnum=4 %s -o %t4
-# RUN: ls -l %t3 | tr -s ' ' | cut -d ' ' -f 5 > %t.txt
-# RUN: ls -l %t4 | tr -s ' ' | cut -d ' ' -f 5 >> %t.txt
+# RUN: wc -c < %t3 > %t.txt
+# RUN: wc -c < %t4 >> %t.txt
 # RUN: FileCheck %s --input-file=%t.txt --check-prefix=SIZE
 
 # SIZE: [[FILESIZE:.*]]
