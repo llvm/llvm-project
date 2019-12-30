@@ -786,6 +786,7 @@ void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
   Defined *s = addSymbol(saver.save("__plt_" + destination.getName()), STT_FUNC,
                          0, isec);
   s->needsTocRestore = true;
+  s->file = destination.file;
 }
 
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
