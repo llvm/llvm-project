@@ -2526,6 +2526,43 @@ def : Pat<(i64 (bitconvert f64:$S)),
 // (move to FPR, nothing else needed)
 def : Pat<(f64 (bitconvert i64:$S)),
           (f64 (MTVSRD $S))>;
+
+// Rounding to integer.
+def : Pat<(i64 (lrint f64:$S)),
+          (i64 (MFVSRD (FCTID $S)))>;
+def : Pat<(i64 (lrint f32:$S)),
+          (i64 (MFVSRD (FCTID (COPY_TO_REGCLASS $S, F8RC))))>;
+def : Pat<(i64 (llrint f64:$S)),
+          (i64 (MFVSRD (FCTID $S)))>;
+def : Pat<(i64 (llrint f32:$S)),
+          (i64 (MFVSRD (FCTID (COPY_TO_REGCLASS $S, F8RC))))>;
+def : Pat<(i64 (lround f64:$S)),
+          (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
+def : Pat<(i64 (lround f32:$S)),
+          (i64 (MFVSRD (FCTID (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
+def : Pat<(i64 (llround f64:$S)),
+          (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
+def : Pat<(i64 (llround f32:$S)),
+          (i64 (MFVSRD (FCTID (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
+}
+
+let Predicates = [HasVSX] in {
+// Rounding for single precision.
+def : Pat<(f32 (fround f32:$S)),
+          (f32 (COPY_TO_REGCLASS (XSRDPI
+                                   (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
+def : Pat<(f32 (fnearbyint f32:$S)),
+          (f32 (COPY_TO_REGCLASS (XSRDPIC
+                                   (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
+def : Pat<(f32 (ffloor f32:$S)),
+          (f32 (COPY_TO_REGCLASS (XSRDPIM
+                                   (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
+def : Pat<(f32 (fceil f32:$S)),
+          (f32 (COPY_TO_REGCLASS (XSRDPIP
+                                   (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
+def : Pat<(f32 (ftrunc f32:$S)),
+          (f32 (COPY_TO_REGCLASS (XSRDPIZ
+                                   (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
 }
 
 // Materialize a zero-vector of long long
