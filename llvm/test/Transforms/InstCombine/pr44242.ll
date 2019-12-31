@@ -10,17 +10,17 @@ define float @sitofp(float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop_header:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[VAL_INCR:%.*]], [[LOOP:%.*]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[PHITMP:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAL_INCR_CASTED:%.*]], [[LOOP:%.*]] ]
+; CHECK-NEXT:    [[VAL_CASTED:%.*]] = bitcast i32 [[VAL]] to float
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[VAL_CASTED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[VAL_INCR]] = fadd float [[TMP0]], 1.000000e+00
-; CHECK-NEXT:    [[VAL_INCR_CASTED:%.*]] = bitcast float [[VAL_INCR]] to i32
-; CHECK-NEXT:    [[PHITMP]] = sitofp i32 [[VAL_INCR_CASTED]] to float
+; CHECK-NEXT:    [[VAL_INCR:%.*]] = fadd float [[VAL_CASTED]], 1.000000e+00
+; CHECK-NEXT:    [[VAL_INCR_CASTED]] = bitcast float [[VAL_INCR]] to i32
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       end:
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    [[RESULT:%.*]] = sitofp i32 [[VAL]] to float
+; CHECK-NEXT:    ret float [[RESULT]]
 ;
 entry:
   br label %loop_header
@@ -44,16 +44,17 @@ define <2 x i16> @bitcast(float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop_header:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[VAL_INCR:%.*]], [[LOOP:%.*]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = phi <2 x i16> [ zeroinitializer, [[ENTRY]] ], [ [[PHITMP:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAL_INCR_CASTED:%.*]], [[LOOP:%.*]] ]
+; CHECK-NEXT:    [[VAL_CASTED:%.*]] = bitcast i32 [[VAL]] to float
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[VAL_CASTED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[VAL_INCR]] = fadd float [[TMP0]], 1.000000e+00
-; CHECK-NEXT:    [[PHITMP]] = bitcast float [[VAL_INCR]] to <2 x i16>
+; CHECK-NEXT:    [[VAL_INCR:%.*]] = fadd float [[VAL_CASTED]], 1.000000e+00
+; CHECK-NEXT:    [[VAL_INCR_CASTED]] = bitcast float [[VAL_INCR]] to i32
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       end:
-; CHECK-NEXT:    ret <2 x i16> [[VAL]]
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast i32 [[VAL]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[RESULT]]
 ;
 entry:
   br label %loop_header
@@ -79,12 +80,12 @@ define void @store_volatile(float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop_header:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[VAL_INCR:%.*]], [[LOOP:%.*]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[VAL_INCR_CASTED:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAL_INCR_CASTED:%.*]], [[LOOP:%.*]] ]
+; CHECK-NEXT:    [[VAL_CASTED:%.*]] = bitcast i32 [[VAL]] to float
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[VAL_CASTED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[VAL_INCR]] = fadd float [[TMP0]], 1.000000e+00
+; CHECK-NEXT:    [[VAL_INCR:%.*]] = fadd float [[VAL_CASTED]], 1.000000e+00
 ; CHECK-NEXT:    [[VAL_INCR_CASTED]] = bitcast float [[VAL_INCR]] to i32
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       end:
@@ -113,13 +114,11 @@ define void @store_address(i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop_header:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi float* [ bitcast (i32* @global to float*), [[ENTRY:%.*]] ], [ [[VAL_INCR:%.*]], [[LOOP:%.*]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32* [ @global, [[ENTRY]] ], [ [[VAL_INCR_CASTED:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32* [ @global, [[ENTRY:%.*]] ], [ [[VAL_INCR1:%.*]], [[LOOP:%.*]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[VAL_INCR]] = getelementptr float, float* [[TMP0]], i64 1
-; CHECK-NEXT:    [[VAL_INCR_CASTED]] = bitcast float* [[VAL_INCR]] to i32*
+; CHECK-NEXT:    [[VAL_INCR1]] = getelementptr i32, i32* [[VAL]], i64 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       end:
 ; CHECK-NEXT:    store i32 0, i32* [[VAL]], align 4
@@ -150,19 +149,18 @@ define i32 @multiple_phis(float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop_header:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[LOOP_END:%.*]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[VAL2:%.*]], [[LOOP_END]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAL2:%.*]], [[LOOP_END:%.*]] ]
+; CHECK-NEXT:    [[VAL_CASTED:%.*]] = bitcast i32 [[VAL]] to float
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[VAL_CASTED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[TMP0]], 2.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[VAL_CASTED]], 2.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF:%.*]], label [[LOOP_END]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[VAL_INCR:%.*]] = fadd float [[TMP0]], 1.000000e+00
+; CHECK-NEXT:    [[VAL_INCR:%.*]] = fadd float [[VAL_CASTED]], 1.000000e+00
 ; CHECK-NEXT:    [[VAL_INCR_CASTED:%.*]] = bitcast float [[VAL_INCR]] to i32
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop_end:
-; CHECK-NEXT:    [[TMP1]] = phi float [ [[TMP0]], [[LOOP]] ], [ [[VAL_INCR]], [[IF]] ]
 ; CHECK-NEXT:    [[VAL2]] = phi i32 [ [[VAL]], [[LOOP]] ], [ [[VAL_INCR_CASTED]], [[IF]] ]
 ; CHECK-NEXT:    store volatile i32 [[VAL2]], i32* @global, align 4
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
