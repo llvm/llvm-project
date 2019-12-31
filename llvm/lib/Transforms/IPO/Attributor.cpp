@@ -4275,7 +4275,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     // NOTE: Associated value will be returned in a pessimistic fixpoint and is
     // regarded as known. That's why`indicateOptimisticFixpoint` is called.
     SimplifiedAssociatedValue = &getAssociatedValue();
-    return indicateOptimisticFixpoint();
+    indicateOptimisticFixpoint();
+    return ChangeStatus::CHANGED;
   }
 
 protected:
