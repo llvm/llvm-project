@@ -1129,6 +1129,23 @@ using HasDeclarationSupportedTypes =
              TemplateSpecializationType, TemplateTypeParmType, TypedefType,
              UnresolvedUsingType, ObjCIvarRefExpr>;
 
+template <template <typename ToArg, typename FromArg> class ArgumentAdapterT,
+          typename T, typename ToTypes>
+class ArgumentAdaptingMatcherFuncAdaptor {
+public:
+  explicit ArgumentAdaptingMatcherFuncAdaptor(const Matcher<T> &InnerMatcher)
+      : InnerMatcher(InnerMatcher) {}
+
+  using ReturnTypes = ToTypes;
+
+  template <typename To> operator Matcher<To>() const {
+    return Matcher<To>(new ArgumentAdapterT<To, T>(InnerMatcher));
+  }
+
+private:
+  const Matcher<T> InnerMatcher;
+};
+
 /// Converts a \c Matcher<T> to a matcher of desired type \c To by
 /// "adapting" a \c To into a \c T.
 ///
@@ -1146,28 +1163,16 @@ template <template <typename ToArg, typename FromArg> class ArgumentAdapterT,
           typename FromTypes = AdaptativeDefaultFromTypes,
           typename ToTypes = AdaptativeDefaultToTypes>
 struct ArgumentAdaptingMatcherFunc {
-  template <typename T> class Adaptor {
-  public:
-    explicit Adaptor(const Matcher<T> &InnerMatcher)
-        : InnerMatcher(InnerMatcher) {}
-
-    using ReturnTypes = ToTypes;
-
-    template <typename To> operator Matcher<To>() const {
-      return Matcher<To>(new ArgumentAdapterT<To, T>(InnerMatcher));
-    }
-
-  private:
-    const Matcher<T> InnerMatcher;
-  };
-
   template <typename T>
-  static Adaptor<T> create(const Matcher<T> &InnerMatcher) {
-    return Adaptor<T>(InnerMatcher);
+  static ArgumentAdaptingMatcherFuncAdaptor<ArgumentAdapterT, T, ToTypes>
+  create(const Matcher<T> &InnerMatcher) {
+    return ArgumentAdaptingMatcherFuncAdaptor<ArgumentAdapterT, T, ToTypes>(
+        InnerMatcher);
   }
 
   template <typename T>
-  Adaptor<T> operator()(const Matcher<T> &InnerMatcher) const {
+  ArgumentAdaptingMatcherFuncAdaptor<ArgumentAdapterT, T, ToTypes>
+  operator()(const Matcher<T> &InnerMatcher) const {
     return create(InnerMatcher);
   }
 };
