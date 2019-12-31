@@ -20551,6 +20551,19 @@ static bool hasNonFlagsUse(SDValue Op) {
   return false;
 }
 
+// Transform to an x86-specific ALU node with flags if there is a chance of
+// using an RMW op or only the flags are used. Otherwise, leave
+// the node alone and emit a 'cmp' or 'test' instruction.
+static bool isProfitableToUseFlagOp(SDValue Op) {
+  for (SDNode *U : Op->uses())
+    if (U->getOpcode() != ISD::CopyToReg &&
+        U->getOpcode() != ISD::SETCC &&
+        U->getOpcode() != ISD::STORE)
+      return false;
+
+  return true;
+}
+
 /// Emit nodes that will be selected as "test Op0,Op0", or something
 /// equivalent.
 static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
@@ -20614,15 +20627,8 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
   case ISD::SUB:
   case ISD::OR:
   case ISD::XOR:
-    // Transform to an x86-specific ALU node with flags if there is a chance of
-    // using an RMW op or only the flags are used. Otherwise, leave
-    // the node alone and emit a 'test' instruction.
-    for (SDNode::use_iterator UI = Op.getNode()->use_begin(),
-           UE = Op.getNode()->use_end(); UI != UE; ++UI)
-      if (UI->getOpcode() != ISD::CopyToReg &&
-          UI->getOpcode() != ISD::SETCC &&
-          UI->getOpcode() != ISD::STORE)
-        goto default_case;
+    if (!isProfitableToUseFlagOp(Op))
+      break;
 
     // Otherwise use a regular EFLAGS-setting instruction.
     switch (ArithOp.getOpcode()) {
@@ -20650,7 +20656,6 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
                        Op->getOperand(1)).getValue(1);
   }
   default:
-  default_case:
     break;
   }
 
@@ -21685,6 +21690,22 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
       }
 
       return Op0.getOperand(1);
+    }
+  }
+
+  // Try to use the carry flag from the add in place of an separate CMP for:
+  // (seteq (add X, -1), -1). Similar for setne.
+  if (isAllOnesConstant(Op1) && Op0.getOpcode() == ISD::ADD &&
+      Op0.getOperand(1) == Op1 && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+    if (isProfitableToUseFlagOp(Op0)) {
+      SDVTList VTs = DAG.getVTList(Op0.getValueType(), MVT::i32);
+
+      SDValue New = DAG.getNode(X86ISD::ADD, dl, VTs, Op0.getOperand(0),
+                                Op0.getOperand(1));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(Op0.getNode(), 0), New);
+      X86::CondCode CCode = CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B;
+      X86CC = DAG.getTargetConstant(CCode, dl, MVT::i8);
+      return SDValue(New.getNode(), 1);
     }
   }
 

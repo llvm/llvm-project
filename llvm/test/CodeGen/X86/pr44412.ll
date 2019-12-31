@@ -14,9 +14,8 @@ define void @bar(i32 %0, i32 %1) nounwind {
 ; CHECK-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    decl %ebx
-; CHECK-NEXT:    cmpl $-1, %ebx
-; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:    addl $-1, %ebx
+; CHECK-NEXT:    jb .LBB0_2
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -47,9 +46,8 @@ define void @baz(i32 %0, i32 %1) nounwind {
 ; CHECK-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    decl %ebx
-; CHECK-NEXT:    cmpl $-1, %ebx
-; CHECK-NEXT:    je .LBB1_2
+; CHECK-NEXT:    addl $-1, %ebx
+; CHECK-NEXT:    jae .LBB1_2
 ; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
