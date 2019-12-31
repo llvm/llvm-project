@@ -1199,6 +1199,24 @@ public:
   }
 };
 
+template <typename MatcherType> class TraversalWrapper {
+public:
+  TraversalWrapper(ast_type_traits::TraversalKind TK,
+                   const MatcherType &InnerMatcher)
+      : TK(TK), InnerMatcher(InnerMatcher) {}
+
+  template <typename T> operator Matcher<T>() const {
+    return internal::DynTypedMatcher::constructRestrictedWrapper(
+               new internal::TraversalMatcher<T>(TK, InnerMatcher),
+               ast_type_traits::ASTNodeKind::getFromNodeKind<T>())
+        .template unconditionalConvertTo<T>();
+  }
+
+private:
+  ast_type_traits::TraversalKind TK;
+  MatcherType InnerMatcher;
+};
+
 /// A PolymorphicMatcherWithParamN<MatcherT, P1, ..., PN> object can be
 /// created from N parameters p1, ..., pN (of type P1, ..., PN) and
 /// used as a Matcher<T> where a MatcherT<T, P1, ..., PN>(p1, ..., pN)
