@@ -428,14 +428,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSUB,        MVT::v4f16, Promote);
     setOperationAction(ISD::FMUL,        MVT::v4f16, Promote);
     setOperationAction(ISD::FDIV,        MVT::v4f16, Promote);
-    setOperationAction(ISD::FP_EXTEND,   MVT::v4f16, Promote);
-    setOperationAction(ISD::FP_ROUND,    MVT::v4f16, Promote);
     AddPromotedToType(ISD::FADD,         MVT::v4f16, MVT::v4f32);
     AddPromotedToType(ISD::FSUB,         MVT::v4f16, MVT::v4f32);
     AddPromotedToType(ISD::FMUL,         MVT::v4f16, MVT::v4f32);
     AddPromotedToType(ISD::FDIV,         MVT::v4f16, MVT::v4f32);
-    AddPromotedToType(ISD::FP_EXTEND,    MVT::v4f16, MVT::v4f32);
-    AddPromotedToType(ISD::FP_ROUND,     MVT::v4f16, MVT::v4f32);
 
     setOperationAction(ISD::FABS,        MVT::v4f16, Expand);
     setOperationAction(ISD::FNEG,        MVT::v4f16, Expand);
