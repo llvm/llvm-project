@@ -27,7 +27,7 @@ class Value;
 
 namespace detail {
 /// The internal implementation of a Value.
-class ValueImpl : public IRObjectWithUseList {
+class ValueImpl {
 protected:
   /// This enumerates all of the SSA value kinds.
   enum class Kind {
@@ -46,7 +46,8 @@ private:
 };
 
 /// The internal implementation of a BlockArgument.
-class BlockArgumentImpl : public ValueImpl {
+class BlockArgumentImpl : public ValueImpl,
+                          public IRObjectWithUseList<OpOperand> {
   BlockArgumentImpl(Type type, Block *owner)
       : ValueImpl(Kind::BlockArgument, type), owner(owner) {}
 
@@ -132,13 +133,6 @@ public:
   /// place.
   void setType(Type newType) { impl->typeAndKind.setPointer(newType); }
 
-  /// Replace all uses of 'this' value with the new value, updating anything in
-  /// the IR that uses 'this' to use the other value instead.  When this returns
-  /// there are zero uses of 'this'.
-  void replaceAllUsesWith(Value newValue) const {
-    impl->replaceAllUsesWith(newValue.impl);
-  }
-
   /// If this value is the result of an operation, return the operation that
   /// defines it.
   Operation *getDefiningOp() const;
@@ -150,32 +144,52 @@ public:
   /// Return the Region in which this Value is defined.
   Region *getParentRegion();
 
-  using use_iterator = ValueUseIterator<OpOperand>;
-  using use_range = iterator_range<use_iterator>;
+  //===--------------------------------------------------------------------===//
+  // UseLists
+  //===--------------------------------------------------------------------===//
 
-  inline use_iterator use_begin();
-  inline use_iterator use_end();
-
-  /// Returns a range of all uses, which is useful for iterating over all uses.
-  inline use_range getUses();
-
-  using user_iterator = ValueUserIterator<IROperand>;
-  using user_range = iterator_range<user_iterator>;
-
-  user_iterator user_begin() const { return impl->user_begin(); }
-  user_iterator user_end() const { return impl->user_end(); }
-
-  /// Returns a range of all users.
-  user_range getUsers() const { return impl->getUsers(); }
-
-  /// Returns true if this value has no uses.
-  bool use_empty() const { return impl->use_empty(); }
-
-  /// Returns true if this value has exactly one use.
-  bool hasOneUse() const { return impl->hasOneUse(); }
+  /// Provide the use list that is attached to this value.
+  IRObjectWithUseList<OpOperand> *getUseList() const;
 
   /// Drop all uses of this object from their respective owners.
-  void dropAllUses() const { impl->dropAllUses(); }
+  void dropAllUses() const;
+
+  /// Replace all uses of 'this' value with the new value, updating anything in
+  /// the IR that uses 'this' to use the other value instead.  When this returns
+  /// there are zero uses of 'this'.
+  void replaceAllUsesWith(Value newValue) const;
+
+  //===--------------------------------------------------------------------===//
+  // Uses
+
+  /// This class implements an iterator over the uses of a value.
+  using use_iterator = FilteredValueUseIterator<OpOperand>;
+  using use_range = iterator_range<use_iterator>;
+
+  use_iterator use_begin() const;
+  use_iterator use_end() const { return use_iterator(); }
+
+  /// Returns a range of all uses, which is useful for iterating over all uses.
+  use_range getUses() const { return {use_begin(), use_end()}; }
+
+  /// Returns true if this value has exactly one use.
+  bool hasOneUse() const;
+
+  /// Returns true if this value has no uses.
+  bool use_empty() const;
+
+  //===--------------------------------------------------------------------===//
+  // Users
+
+  using user_iterator = ValueUserIterator<use_iterator, OpOperand>;
+  using user_range = iterator_range<user_iterator>;
+
+  user_iterator user_begin() const { return use_begin(); }
+  user_iterator user_end() const { return use_end(); }
+  user_range getUsers() const { return {user_begin(), user_end()}; }
+
+  //===--------------------------------------------------------------------===//
+  // Utilities
 
   void print(raw_ostream &os);
   void dump();
@@ -199,17 +213,6 @@ protected:
 inline raw_ostream &operator<<(raw_ostream &os, Value value) {
   value.print(os);
   return os;
-}
-
-// Utility functions for iterating through Value uses.
-inline auto Value::use_begin() -> use_iterator {
-  return use_iterator((OpOperand *)impl->getFirstUse());
-}
-
-inline auto Value::use_end() -> use_iterator { return use_iterator(nullptr); }
-
-inline auto Value::getUses() -> iterator_range<use_iterator> {
-  return {use_begin(), use_end()};
 }
 
 /// Block arguments are values.
@@ -248,6 +251,9 @@ private:
 
   /// Allow access to `create` and `destroy`.
   friend Block;
+
+  /// Allow access to 'getImpl'.
+  friend Value;
 };
 
 /// This is a value defined by a result of an operation.

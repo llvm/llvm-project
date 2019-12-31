@@ -29,13 +29,9 @@ template <> struct GraphTraits<Block *> {
   using GraphType = Block *;
   using NodeRef = Operation *;
 
-  using ChildIteratorType = UseIterator;
-  static ChildIteratorType child_begin(NodeRef n) {
-    return ChildIteratorType(n);
-  }
-  static ChildIteratorType child_end(NodeRef n) {
-    return ChildIteratorType(n, /*end=*/true);
-  }
+  using ChildIteratorType = Operation::user_iterator;
+  static ChildIteratorType child_begin(NodeRef n) { return n->user_begin(); }
+  static ChildIteratorType child_end(NodeRef n) { return n->user_end(); }
 
   // Operation's destructor is private so use Operation* instead and use
   // mapped iterator.
