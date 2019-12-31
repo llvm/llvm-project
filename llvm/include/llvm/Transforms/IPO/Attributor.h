@@ -694,7 +694,11 @@ struct Attributor {
       : InfoCache(InfoCache), DepRecomputeInterval(DepRecomputeInterval),
         Whitelist(Whitelist) {}
 
-  ~Attributor() { DeleteContainerPointers(AllAbstractAttributes); }
+  ~Attributor() {
+    DeleteContainerPointers(AllAbstractAttributes);
+    for (auto &It : ArgumentReplacementMap)
+      DeleteContainerPointers(It.second);
+  }
 
   /// Run the analyses until a fixpoint is reached or enforced (timeout).
   ///
