@@ -30,6 +30,12 @@ public:
   /// Lifetime management
   virtual void reset() {}
 
+  /// Emit the prefixes of given instruction on the output stream.
+  ///
+  /// \param Inst a single low-level machine instruction.
+  /// \param OS output stream.
+  virtual void emitPrefix(const MCInst &Inst, raw_ostream &OS,
+                          const MCSubtargetInfo &STI) const {}
   /// EncodeInstruction - Encode the given \p Inst to bytes on the output
   /// stream \p OS.
   virtual void encodeInstruction(const MCInst &Inst, raw_ostream &OS,
