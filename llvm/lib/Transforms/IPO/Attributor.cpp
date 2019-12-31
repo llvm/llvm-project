@@ -4933,7 +4933,8 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
   // it is, any information derived would be irrelevant anyway as we cannot
   // check the potential aliases introduced by the capture. However, no need
   // to fall back to anythign less optimistic than the function state.
-  const auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
+  const auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(
+      *this, IRP, /* TrackDependence */ true, DepClassTy::OPTIONAL);
   if (!ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
     S.intersectAssumedBits(FnMemAssumedState);
     return ChangeStatus::CHANGED;
@@ -5822,7 +5823,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         getOrCreateAAFor<AAIsDead>(CSRetPos);
       }
 
-      for (int i = 0, e = Callee->arg_size(); i < e; i++) {
+      for (int i = 0, e = CS.getNumArgOperands(); i < e; i++) {
 
         IRPosition CSArgPos = IRPosition::callsite_argument(CS, i);
 
@@ -5846,6 +5847,10 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
         // Call site argument attribute "align".
         getOrCreateAAFor<AAAlign>(CSArgPos);
+
+        // Call site argument attribute
+        // "readnone/readonly/writeonly/..."
+        getOrCreateAAFor<AAMemoryBehavior>(CSArgPos);
 
         // Call site argument attribute "nofree".
         getOrCreateAAFor<AANoFree>(CSArgPos);

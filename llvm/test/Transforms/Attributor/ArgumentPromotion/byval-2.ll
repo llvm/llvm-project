@@ -33,7 +33,7 @@ define i32 @test(i32* %X) {
 ; CHECK-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; CHECK-NEXT:    store i64 2, i64* [[TMP4]], align 4
-; CHECK-NEXT:    call void @f(%struct.ss* noalias nocapture nofree nonnull byval align 8 dereferenceable(12) [[S]], i32* nocapture nofree readonly byval [[X]])
+; CHECK-NEXT:    call void @f(%struct.ss* noalias nocapture nofree nonnull readonly byval align 8 dereferenceable(12) [[S]], i32* nocapture nofree readonly byval [[X]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
