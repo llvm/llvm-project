@@ -34,7 +34,7 @@ F:
 
 define i32 @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo()
-; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32* noalias nofree null)
+; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32* noalias nofree readonly null)
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %X = call i32 @callee(i1 false, i32* null)             ; <i32> [#uses=1]

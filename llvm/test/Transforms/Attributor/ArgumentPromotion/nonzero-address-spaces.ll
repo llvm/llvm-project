@@ -11,7 +11,7 @@ target datalayout = "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8"
 define i32 @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar() addrspace(1)
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call addrspace(1) i32 @foo(i32* nofree nonnull align 4 dereferenceable(4) undef)
+; CHECK-NEXT:    [[CALL:%.*]] = call addrspace(1) i32 @foo()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    unreachable
@@ -23,8 +23,7 @@ entry:
 }
 
 define internal i32 @foo(i32*) {
-; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i32* nocapture nofree nonnull readnone align 4 dereferenceable(4) [[TMP0:%.*]]) addrspace(1)
+; CHECK-LABEL: define {{[^@]+}}@foo() addrspace(1)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call addrspace(0) void asm sideeffect "ldr r0, [r0] \0Abx lr \0A", ""()

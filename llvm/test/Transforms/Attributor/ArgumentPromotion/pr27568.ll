@@ -3,8 +3,7 @@
 target triple = "x86_64-pc-windows-msvc"
 
 define internal void @callee(i8*) {
-; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i8* noalias nocapture nofree readnone [[TMP0:%.*]])
+; CHECK-LABEL: define {{[^@]+}}@callee()
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @thunk()
 ; CHECK-NEXT:    ret void
@@ -23,7 +22,7 @@ define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    ret void
 ; CHECK:       cpad:
 ; CHECK-NEXT:    [[PAD:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    call void @callee(i8* noalias nofree undef) [ "funclet"(token [[PAD]]) ]
+; CHECK-NEXT:    call void @callee() [ "funclet"(token [[PAD]]) ]
 ; CHECK-NEXT:    cleanupret from [[PAD]] unwind to caller
 ;
 entry:

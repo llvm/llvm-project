@@ -19,7 +19,7 @@ define i32 @f(i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32
 ; CHECK-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32* noalias nocapture nofree nonnull align 4 dereferenceable(4) [[X_ADDR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X_ADDR]])
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:

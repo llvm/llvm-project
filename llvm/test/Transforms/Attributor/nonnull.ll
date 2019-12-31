@@ -165,8 +165,12 @@ define void @test13_helper() {
   tail call void @test13(i8* %nonnullptr, i8* %maybenullptr, i8* %nonnullptr)
   ret void
 }
+declare void @use_i8_ptr(i8* nofree) readnone nounwind
 define internal void @test13(i8* %a, i8* %b, i8* %c) {
 ; ATTRIBUTOR: define internal void @test13(i8* nocapture nofree nonnull readnone %a, i8* nocapture nofree readnone %b, i8* nocapture nofree readnone %c)
+  call void @use_i8_ptr(i8* %a)
+  call void @use_i8_ptr(i8* %b)
+  call void @use_i8_ptr(i8* %c)
   ret void
 }
 
@@ -199,14 +203,14 @@ bb1:                                              ; preds = %bb
 
 bb4:                                              ; preds = %bb1
   %tmp5 = getelementptr inbounds i32, i32* %arg, i64 1
-; ATTRIBUTOR: %tmp5b = tail call nonnull i32* @f3(i32* nofree nonnull %tmp5)
+; ATTRIBUTOR: %tmp5b = tail call nonnull i32* @f3(i32* nofree nonnull readonly %tmp5)
   %tmp5b = tail call i32* @f3(i32* %tmp5)
   %tmp5c = getelementptr inbounds i32, i32* %tmp5b, i64 -1
   br label %bb9
 
 bb6:                                              ; preds = %bb1
 ; FIXME: missing nonnull. It should be @f2(i32* nonnull %arg)
-; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* nofree %arg)
+; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* nofree readonly %arg)
   %tmp7 = tail call i32* @f2(i32* %arg)
   ret i32* %tmp7
 
@@ -221,7 +225,7 @@ define internal i32* @f2(i32* %arg) {
 bb:
 
 ; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg)
-; ATTRIBUTOR:   %tmp = tail call nonnull i32* @f1(i32* nofree %arg)
+; ATTRIBUTOR:   %tmp = tail call nonnull i32* @f1(i32* nofree readonly %arg)
   %tmp = tail call i32* @f1(i32* %arg)
   ret i32* %tmp
 }
@@ -231,7 +235,7 @@ define dso_local noalias i32* @f3(i32* %arg) {
 ; ATTRIBUTOR: define dso_local noalias nonnull i32* @f3(i32* nofree readonly %arg)
 bb:
 ; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg)
-; ATTRIBUTOR:   %tmp = call nonnull i32* @f1(i32* nofree %arg)
+; ATTRIBUTOR:   %tmp = call nonnull i32* @f1(i32* nofree readonly %arg)
   %tmp = call i32* @f1(i32* %arg)
   ret i32* %tmp
 }
@@ -455,7 +459,7 @@ define i8 @parent7(i8* %a) {
 
 
 ; ATTRIBUTOR-LABEL: @parent7(i8* nonnull %a)
-; ATTRIBUTOR-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* nonnull %a)
+; ATTRIBUTOR-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* nonnull readonly %a)
 ; ATTRIBUTOR-NEXT:    call void @use1nonnull(i8* nonnull %a)
 
 ; ATTRIBUTOR-NEXT: ret i8 [[RET]]

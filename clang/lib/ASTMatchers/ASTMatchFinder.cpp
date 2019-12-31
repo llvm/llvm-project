@@ -248,7 +248,7 @@ public:
     if (!match(*Node->getBody()))
       return false;
 
-    return false;
+    return true;
   }
 
   bool shouldVisitTemplateInstantiations() const { return true; }

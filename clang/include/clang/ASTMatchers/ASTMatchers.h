@@ -714,6 +714,52 @@ internal::Matcher<T> traverse(ast_type_traits::TraversalKind TK,
       .template unconditionalConvertTo<T>();
 }
 
+template <typename... T>
+internal::TraversalWrapper<internal::VariadicOperatorMatcher<T...>>
+traverse(ast_type_traits::TraversalKind TK,
+         const internal::VariadicOperatorMatcher<T...> &InnerMatcher) {
+  return internal::TraversalWrapper<internal::VariadicOperatorMatcher<T...>>(
+      TK, InnerMatcher);
+}
+
+template <template <typename ToArg, typename FromArg> class ArgumentAdapterT,
+          typename T, typename ToTypes>
+internal::TraversalWrapper<
+    internal::ArgumentAdaptingMatcherFuncAdaptor<ArgumentAdapterT, T, ToTypes>>
+traverse(ast_type_traits::TraversalKind TK,
+         const internal::ArgumentAdaptingMatcherFuncAdaptor<
+             ArgumentAdapterT, T, ToTypes> &InnerMatcher) {
+  return internal::TraversalWrapper<
+      internal::ArgumentAdaptingMatcherFuncAdaptor<ArgumentAdapterT, T,
+                                                   ToTypes>>(TK, InnerMatcher);
+}
+
+template <template <typename T, typename P1> class MatcherT, typename P1,
+          typename ReturnTypesF>
+internal::TraversalWrapper<
+    internal::PolymorphicMatcherWithParam1<MatcherT, P1, ReturnTypesF>>
+traverse(
+    ast_type_traits::TraversalKind TK,
+    const internal::PolymorphicMatcherWithParam1<MatcherT, P1, ReturnTypesF>
+        &InnerMatcher) {
+  return internal::TraversalWrapper<
+      internal::PolymorphicMatcherWithParam1<MatcherT, P1, ReturnTypesF>>(
+      TK, InnerMatcher);
+}
+
+template <template <typename T, typename P1, typename P2> class MatcherT,
+          typename P1, typename P2, typename ReturnTypesF>
+internal::TraversalWrapper<
+    internal::PolymorphicMatcherWithParam2<MatcherT, P1, P2, ReturnTypesF>>
+traverse(
+    ast_type_traits::TraversalKind TK,
+    const internal::PolymorphicMatcherWithParam2<MatcherT, P1, P2, ReturnTypesF>
+        &InnerMatcher) {
+  return internal::TraversalWrapper<
+      internal::PolymorphicMatcherWithParam2<MatcherT, P1, P2, ReturnTypesF>>(
+      TK, InnerMatcher);
+}
+
 /// Matches expressions that match InnerMatcher after any implicit AST
 /// nodes are stripped off.
 ///
