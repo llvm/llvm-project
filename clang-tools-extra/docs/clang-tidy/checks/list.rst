@@ -202,7 +202,7 @@ Clang-Tidy Checks
    `modernize-deprecated-ios-base-aliases <modernize-deprecated-ios-base-aliases.html>`_, "Yes", "low"
    `modernize-loop-convert <modernize-loop-convert.html>`_, "Yes", "style"
    `modernize-make-shared <modernize-make-shared.html>`_, "Yes", "low"
-   `modernize-make-unique <modernize-make-unique.html>`_, , "low"
+   `modernize-make-unique <modernize-make-unique.html>`_, "Yes", "low"
    `modernize-pass-by-value <modernize-pass-by-value.html>`_, "Yes", "low"
    `modernize-raw-string-literal <modernize-raw-string-literal.html>`_, "Yes", "style"
    `modernize-redundant-void-arg <modernize-redundant-void-arg.html>`_, "Yes", "style"
