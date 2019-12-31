@@ -2370,6 +2370,12 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
         llvm_unreachable("all uses should be handled");
       }
     }
+
+    // At this point the old phi has either no users, or is only used
+    // in other old phis. Replace with undef to break circles and remove
+    // the instruction.
+    replaceInstUsesWith(*OldPN, UndefValue::get(OldPN->getType()));
+    eraseInstFromFunction(*OldPN);
   }
 
   return RetVal;
