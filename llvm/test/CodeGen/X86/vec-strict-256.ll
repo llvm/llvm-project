@@ -18,6 +18,16 @@ declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float
 declare <4 x float> @llvm.experimental.constrained.fptrunc.v4f32.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fma.v4f64(<4 x double>, <4 x double>, <4 x double>, metadata, metadata)
 declare <8 x float> @llvm.experimental.constrained.fma.v8f32(<8 x float>, <8 x float>, <8 x float>, metadata, metadata)
+declare <8 x float> @llvm.experimental.constrained.ceil.v8f32(<8 x float>, metadata)
+declare <4 x double>  @llvm.experimental.constrained.ceil.v4f64(<4 x double>, metadata)
+declare <8 x float> @llvm.experimental.constrained.floor.v8f32(<8 x float>, metadata)
+declare <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double>, metadata)
+declare <8 x float> @llvm.experimental.constrained.trunc.v8f32(<8 x float>, metadata)
+declare <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double>, metadata)
+declare <8 x float> @llvm.experimental.constrained.rint.v8f32(<8 x float>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.rint.v4f64(<4 x double>, metadata, metadata)
+declare <8 x float> @llvm.experimental.constrained.nearbyint.v8f32(<8 x float>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(<4 x double>, metadata, metadata)
 
 define <4 x double> @f1(<4 x double> %a, <4 x double> %b) #0 {
 ; CHECK-LABEL: f1:
@@ -175,6 +185,113 @@ define <4 x double> @f14(<4 x double> %a, <4 x double> %b, <4 x double> %c) #0 {
   %res = call <4 x double> @llvm.experimental.constrained.fma.v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %c,
                                                                     metadata !"round.dynamic",
                                                                     metadata !"fpexcept.strict") #0
+  ret <4 x double> %res
+}
+
+define <8 x float> @fceilv8f32(<8 x float> %f) #0 {
+; CHECK-LABEL: fceilv8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundps $10, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x float> @llvm.experimental.constrained.ceil.v8f32(
+                          <8 x float> %f, metadata !"fpexcept.strict")
+  ret <8 x float> %res
+}
+
+define <4 x double> @fceilv4f64(<4 x double> %f) #0 {
+; CHECK-LABEL: fceilv4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundpd $10, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <4 x double> @llvm.experimental.constrained.ceil.v4f64(
+                        <4 x double> %f, metadata !"fpexcept.strict")
+  ret <4 x double> %res
+}
+
+define <8 x float> @ffloorv8f32(<8 x float> %f) #0 {
+; CHECK-LABEL: ffloorv8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundps $9, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x float> @llvm.experimental.constrained.floor.v8f32(
+                          <8 x float> %f, metadata !"fpexcept.strict")
+  ret <8 x float> %res
+}
+
+define <4 x double> @ffloorv4f64(<4 x double> %f) #0 {
+; CHECK-LABEL: ffloorv4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundpd $9, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <4 x double> @llvm.experimental.constrained.floor.v4f64(
+                        <4 x double> %f, metadata !"fpexcept.strict")
+  ret <4 x double> %res
+}
+
+
+define <8 x float> @ftruncv8f32(<8 x float> %f) #0 {
+; CHECK-LABEL: ftruncv8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundps $11, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x float> @llvm.experimental.constrained.trunc.v8f32(
+                          <8 x float> %f, metadata !"fpexcept.strict")
+  ret <8 x float> %res
+}
+
+define <4 x double> @ftruncv4f64(<4 x double> %f) #0 {
+; CHECK-LABEL: ftruncv4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundpd $11, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <4 x double> @llvm.experimental.constrained.trunc.v4f64(
+                        <4 x double> %f, metadata !"fpexcept.strict")
+  ret <4 x double> %res
+}
+
+
+define <8 x float> @frintv8f32(<8 x float> %f) #0 {
+; CHECK-LABEL: frintv8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundps $4, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x float> @llvm.experimental.constrained.rint.v8f32(
+                          <8 x float> %f,
+                          metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <8 x float> %res
+}
+
+define <4 x double> @frintv4f64(<4 x double> %f) #0 {
+; CHECK-LABEL: frintv4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundpd $4, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <4 x double> @llvm.experimental.constrained.rint.v4f64(
+                        <4 x double> %f,
+                        metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <4 x double> %res
+}
+
+
+define <8 x float> @fnearbyintv8f32(<8 x float> %f) #0 {
+; CHECK-LABEL: fnearbyintv8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundps $12, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x float> @llvm.experimental.constrained.nearbyint.v8f32(
+                          <8 x float> %f,
+                          metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <8 x float> %res
+}
+
+define <4 x double> @fnearbyintv4f64(<4 x double> %f) #0 {
+; CHECK-LABEL: fnearbyintv4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundpd $12, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(
+                        <4 x double> %f,
+                        metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x double> %res
 }
 
