@@ -280,17 +280,7 @@ struct IRPosition {
   }
 
   /// Return the associated argument, if any.
-  Argument *getAssociatedArgument() const {
-    if (auto *Arg = dyn_cast<Argument>(&getAnchorValue()))
-      return Arg;
-    int ArgNo = getArgNo();
-    if (ArgNo < 0)
-      return nullptr;
-    Function *AssociatedFn = getAssociatedFunction();
-    if (!AssociatedFn || AssociatedFn->arg_size() <= unsigned(ArgNo))
-      return nullptr;
-    return AssociatedFn->arg_begin() + ArgNo;
-  }
+  Argument *getAssociatedArgument() const;
 
   /// Return true if the position refers to a function interface, that is the
   /// function scope, the function return, or an argumnt.
