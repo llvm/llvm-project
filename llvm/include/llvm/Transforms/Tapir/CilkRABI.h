@@ -82,7 +82,7 @@ public:
   CilkRABI(Module &M);
   ~CilkRABI() { DetachCtxToStackFrame.clear(); }
   Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
-  void lowerSync(SyncInst &inst) override final;
+  void lowerSync(SyncInst &SI) override final;
 
   void preProcessFunction(Function &F, TaskInfo &TI) override final;
   void postProcessFunction(Function &F) override final;

@@ -99,7 +99,7 @@ public:
   CilkABI(Module &M);
   ~CilkABI() { DetachCtxToStackFrame.clear(); }
   Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
-  void lowerSync(SyncInst &inst) override final;
+  void lowerSync(SyncInst &SI) override final;
 
   ArgStructMode getArgStructMode() const override final;
   void addHelperAttributes(Function &F) override final;
