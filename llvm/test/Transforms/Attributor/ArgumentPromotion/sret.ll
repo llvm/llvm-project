@@ -28,7 +28,7 @@ define void @f() {
 ; CHECK-LABEL: define {{[^@]+}}@f()
 ; CHECK-NEXT:    [[R:%.*]] = alloca i32
 ; CHECK-NEXT:    [[PAIR:%.*]] = alloca { i32, i32 }
-; CHECK-NEXT:    call void @add({ i32, i32 }* noalias nocapture nofree nonnull align 8 dereferenceable(8) [[PAIR]], i32* noalias nocapture nofree nonnull sret align 4 dereferenceable(4) [[R]])
+; CHECK-NEXT:    call void @add({ i32, i32 }* noalias nocapture nofree nonnull readonly align 8 dereferenceable(8) [[PAIR]], i32* noalias nocapture nofree nonnull sret writeonly align 4 dereferenceable(4) [[R]])
 ; CHECK-NEXT:    ret void
 ;
   %r = alloca i32

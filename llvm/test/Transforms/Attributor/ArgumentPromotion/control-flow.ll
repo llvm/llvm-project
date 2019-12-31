@@ -26,7 +26,7 @@ F:
 define i32 @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 true, i32* noalias nofree undef)
+; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 true, i32* noalias nofree readnone undef)
 ; CHECK-NEXT:    ret i32 17
 ;
 entry:

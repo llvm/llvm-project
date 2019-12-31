@@ -15,7 +15,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @run() {
 ; CHECK-LABEL: define {{[^@]+}}@run()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @CaptureAStruct(%struct.Foo* nofree nonnull align 8 dereferenceable(16) @a)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @CaptureAStruct(%struct.Foo* nofree nonnull readonly align 8 dereferenceable(16) @a)
 ; CHECK-NEXT:    unreachable
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    unreachable
