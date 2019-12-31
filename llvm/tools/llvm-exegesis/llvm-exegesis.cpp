@@ -242,6 +242,13 @@ void benchmarkMain() {
   InitializeNativeExegesisTarget();
 
   const LLVMState State(CpuName);
+
+  const std::unique_ptr<BenchmarkRunner> Runner =
+      State.getExegesisTarget().createBenchmarkRunner(BenchmarkMode, State);
+  if (!Runner) {
+    report_fatal_error("cannot create benchmark runner");
+  }
+
   const auto Opcodes = getOpcodesOrDie(State.getInstrInfo());
 
   const auto Repetitor = SnippetRepetitor::Create(RepetitionMode, State);
@@ -270,12 +277,6 @@ void benchmarkMain() {
     }
   } else {
     Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
-  }
-
-  const std::unique_ptr<BenchmarkRunner> Runner =
-      State.getExegesisTarget().createBenchmarkRunner(BenchmarkMode, State);
-  if (!Runner) {
-    report_fatal_error("cannot create benchmark runner");
   }
 
   if (NumRepetitions == 0)
