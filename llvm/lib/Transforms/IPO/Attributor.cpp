@@ -3666,6 +3666,18 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
     return AAAlignImpl::manifest(A);
   }
 
+  /// See AbstractAttribute::updateImpl(Attributor &A).
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Changed = AAAlignFloating::updateImpl(A);
+    if (Argument *Arg = getAssociatedArgument()) {
+      const auto &ArgAlignAA = A.getAAFor<AAAlign>(
+          *this, IRPosition::argument(*Arg), /* TrackDependence */ false,
+          DepClassTy::OPTIONAL);
+      takeKnownMaximum(ArgAlignAA.getKnownAlign());
+    }
+    return Changed;
+  }
+
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(aligned) }
 };
