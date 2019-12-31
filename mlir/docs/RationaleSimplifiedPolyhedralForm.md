@@ -1,4 +1,4 @@
-# MLIR: The case for a <em>simplified</em> polyhedral form
+# MLIR: The case for a simplified polyhedral form
 
 MLIR embraces polyhedral compiler techniques for their many advantages
 representing and transforming dense numerical kernels, but it uses a form that
@@ -80,7 +80,7 @@ will abstract them into S1/S2/S3 in the discussion below. Originally, we planned
 to represent this with a classical form like (syntax details are not important
 and probably slightly incorrect below):
 
-```
+```mlir
   mlfunc @simple_example(... %N) {
     %tmp = call @S1(%X, %i, %j)
       domain: (0 <= %i < %N), (0 <= %j < %N)
@@ -104,7 +104,7 @@ a better fit for our needs, because it exposes important structure that will
 make analyses and optimizations more efficient, and also makes the scoping of
 SSA values more explicit. This leads us to a representation along the lines of:
 
-```
+```mlir
   mlfunc @simple_example(... %N) {
     d0/d1 = mlspace
     for S1(d0), S2(d0), S3(d0) {
@@ -132,7 +132,7 @@ interesting features, including the ability for instructions within a loop nest
 to have non-equal domains, like this - the second instruction ignores the outer
 10 points inside the loop:
 
-```
+```mlir
   mlfunc @reduced_domain_example(... %N) {
     d0/d1 = mlspace
     for S1(d0), S2(d0) {
@@ -151,7 +151,7 @@ It also allows schedule remapping within the instruction, like this example that
 introduces a diagonal skew through a simple change to the schedules of the two
 instructions:
 
-```
+```mlir
   mlfunc @skewed_domain_example(... %N) {
     d0/d1 = mlspace
     for S1(d0), S2(d0+d1) {
@@ -350,7 +350,7 @@ In the traditional form though, this is not the case: it seems that a lot of
 knowledge about how codegen will emit the code is necessary to determine if SSA
 form is correct or not. For example, this is invalid code:
 
-```
+```mlir
   %tmp = call @S1(%X, %0, %1)
     domain: (10 <= %i < %N), (0 <= %j < %N)
     schedule: (i, j)
