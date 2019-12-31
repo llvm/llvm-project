@@ -11669,20 +11669,20 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                        MI.getOpcode() == PPC::ANDIo_1_GT_BIT8)
                           ? PPC::ANDI8o
                           : PPC::ANDIo;
-    bool isEQ = (MI.getOpcode() == PPC::ANDIo_1_EQ_BIT ||
+    bool IsEQ = (MI.getOpcode() == PPC::ANDIo_1_EQ_BIT ||
                  MI.getOpcode() == PPC::ANDIo_1_EQ_BIT8);
 
     MachineRegisterInfo &RegInfo = F->getRegInfo();
     Register Dest = RegInfo.createVirtualRegister(
         Opcode == PPC::ANDIo ? &PPC::GPRCRegClass : &PPC::G8RCRegClass);
 
-    DebugLoc dl = MI.getDebugLoc();
-    BuildMI(*BB, MI, dl, TII->get(Opcode), Dest)
+    DebugLoc Dl = MI.getDebugLoc();
+    BuildMI(*BB, MI, Dl, TII->get(Opcode), Dest)
         .addReg(MI.getOperand(1).getReg())
         .addImm(1);
-    BuildMI(*BB, MI, dl, TII->get(TargetOpcode::COPY),
+    BuildMI(*BB, MI, Dl, TII->get(TargetOpcode::COPY),
             MI.getOperand(0).getReg())
-        .addReg(isEQ ? PPC::CR0EQ : PPC::CR0GT);
+        .addReg(IsEQ ? PPC::CR0EQ : PPC::CR0GT);
   } else if (MI.getOpcode() == PPC::TCHECK_RET) {
     DebugLoc Dl = MI.getDebugLoc();
     MachineRegisterInfo &RegInfo = F->getRegInfo();
