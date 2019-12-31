@@ -84,25 +84,29 @@ class LinalgOpToAffineLoops<string OpType> : NativeCodeCall<
   "  return matchFailure();">;
 
 //===----------------------------------------------------------------------===//
-// Linalg to vector contraction patterns.
+// Linalg to vector patterns precondition and DRR.
 //===----------------------------------------------------------------------===//
-class VectorizeGenericLinalgOp<string OpType> : NativeCodeCall<
-  "if (failed(vectorizeGenericLinalgOp($_builder, op))) " #
-  "  return matchFailure();">;
+def PreconditionVectorizeGenericLinalgOp : CPred<
+  "succeeded(vectorizeGenericLinalgOpPrecondition(op))">;
+def VectorizeGenericLinalgOp : NativeCodeCall<
+  "vectorizeGenericLinalgOp($_builder, op)">;
 
 //===----------------------------------------------------------------------===//
-// Linalg generic permutation patterns.
+// Linalg generic permutation patterns precondition and DRR.
 //===----------------------------------------------------------------------===//
+class PreconditionPermuteGenericLinalgOp<list<int> permutation> : CPred<
+  "succeeded(permuteGenericLinalgOpPrecondition(op, {" #
+  StrJoinInt<permutation>.result # "}))">;
 class PermuteGenericLinalgOp<list<int> permutation, string value> :
   NativeCodeCall<
-    "if (failed(permuteGenericLinalgOp($_builder, op, {" #
-    StrJoinInt<permutation>.result # "}, \"" # value # "\"))) " #
-    "  return matchFailure();">;
+    "permuteGenericLinalgOp($_builder, op, {" # StrJoinInt<permutation>.result #
+    "}, \"" # value # "\")">;
 
 //===----------------------------------------------------------------------===//
-// Linalg promote subview operands.
+// Linalg promote subview operands precondition and DRR.
 //===----------------------------------------------------------------------===//
-class PromoteSubviewsLinalgOp<string OpType> : NativeCodeCall<
-  "if (failed(promoteSubviewsLinalgOp($_builder, op))) " #
-  "  return matchFailure();">;
+def PreconditionPromoteSubviewsLinalgOp : CPred<
+  "succeeded(promoteSubviewsLinalgOpPrecondition(op))">;
+def PromoteSubviewsLinalgOp : NativeCodeCall<
+  "promoteSubviewsLinalgOp($_builder, op)">;
 #endif // LINALG_TRANSFORMS

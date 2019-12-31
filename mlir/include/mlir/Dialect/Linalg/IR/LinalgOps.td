@@ -59,7 +59,8 @@ def Linalg_RangeOp :
 }
 
 def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
-    Arguments<(ins AnyStridedMemRef:$view, Variadic<AnyTypeOf<[Range, Index]>>:$indexings)>,
+    Arguments<(ins AnyStridedMemRef:$view,
+                   Variadic<AnyTypeOf<[Range, Index]>>:$indexings)>,
     Results<(outs AnyStridedMemRef)> {
   let summary = "Produce a rank-reduced `subview` of a base `view`.";
   let description = [{
@@ -108,11 +109,11 @@ def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
 
   let extraClassDeclaration = [{
     enum { FirstIndexingOperand = 1 };
-    unsigned getRank() { return getViewType().getRank(); }
-    Type getElementType() { return getViewType().getElementType(); }
-    MemRefType getViewType() { return getType().cast<MemRefType>(); }
+    unsigned getRank() { return getShapedType().getRank(); }
+    Type getElementType() { return getShapedType().getElementType(); }
+    ShapedType getShapedType() { return getType().cast<ShapedType>(); }
     unsigned getBaseViewRank() { return getBaseViewType().getRank(); }
-    MemRefType getBaseViewType() { return view()->getType().cast<MemRefType>(); }
+    ShapedType getBaseViewType() { return view()->getType().cast<ShapedType>();}
 
     // Get the underlying indexing at a given rank.
     Value indexing(unsigned rank) { return *(indexings().begin() + rank); }
@@ -131,7 +132,7 @@ def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
 def Linalg_TransposeOp : Linalg_Op<"transpose", [NoSideEffect]>,
     Arguments<(ins AnyStridedMemRef:$view, AffineMapAttr:$permutation)>,
     Results<(outs AnyStridedMemRef)> {
-  let summary = "transpose operation produces a new strided memref (metadata-only)";
+  let summary = "`transpose` produces a new strided memref (metadata-only)";
   let description = [{
     The `linalg.transpose` op produces a strided memref whose sizes and strides
     are a permutation of the original `view`. This is a pure metadata
@@ -151,14 +152,14 @@ def Linalg_TransposeOp : Linalg_Op<"transpose", [NoSideEffect]>,
   let verifier = [{
     if (!permutation().isPermutation())
       return emitOpError("expected a permutation map");
-    if (permutation().getNumDims() != getViewType().getRank())
+    if (permutation().getNumDims() != getShapedType().getRank())
       return emitOpError("expected a permutation map of same rank as the view");
     return success();
   }];
 
   let extraClassDeclaration = [{
     static StringRef getPermutationAttrName() { return "permutation"; }
-    MemRefType getViewType() { return view()->getType().cast<MemRefType>(); }
+    ShapedType getShapedType() { return view()->getType().cast<ShapedType>(); }
   }];
 }
 
