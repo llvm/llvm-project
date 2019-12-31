@@ -45722,6 +45722,9 @@ static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI) {
   EVT VT = N->getValueType(0);
 
+  if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
+    return DAG.getConstant(0, SDLoc(N), VT);
+
   APInt KnownUndef, KnownZero;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   APInt DemandedElts = APInt::getAllOnesValue(VT.getVectorNumElements());
