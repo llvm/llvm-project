@@ -4141,7 +4141,7 @@ public:
 
   // Turn a store of a vector type into stores of the individual elements.
   /// \param ST Store with a vector value type
-  /// \returns MERGE_VALUs of the individual store chains.
+  /// \returns TokenFactor of the individual store chains.
   SDValue scalarizeVectorStore(StoreSDNode *ST, SelectionDAG &DAG) const;
 
   /// Expands an unaligned load to 2 half-size loads for an integer, and
