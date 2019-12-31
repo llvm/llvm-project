@@ -25,7 +25,8 @@ namespace mlir {
 /// operations are organized into operation blocks represented by a 'Block'
 /// class.
 class Operation final
-    : public llvm::ilist_node_with_parent<Operation, Block>,
+    : public IRMultiObjectWithUseList<OpOperand>,
+      public llvm::ilist_node_with_parent<Operation, Block>,
       private llvm::TrailingObjects<Operation, OpResult, BlockOperand, Region,
                                     detail::OperandStorage> {
 public:
@@ -236,9 +237,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Results
   //===--------------------------------------------------------------------===//
-
-  /// Return true if there are no users of any results of this operation.
-  bool use_empty();
 
   unsigned getNumResults() { return numResults; }
 
@@ -639,32 +637,6 @@ inline raw_ostream &operator<<(raw_ostream &os, Operation &op) {
   return os;
 }
 
-/// This class implements use iterator for the Operation. This iterates over all
-/// uses of all results of an Operation.
-class UseIterator final
-    : public llvm::iterator_facade_base<UseIterator, std::forward_iterator_tag,
-                                        Operation *> {
-public:
-  /// Initialize UseIterator for op, specify end to return iterator to last use.
-  explicit UseIterator(Operation *op, bool end = false);
-
-  UseIterator &operator++();
-  Operation *operator->() { return use->getOwner(); }
-  Operation *operator*() { return use->getOwner(); }
-
-  bool operator==(const UseIterator &other) const;
-  bool operator!=(const UseIterator &other) const;
-
-private:
-  void skipOverResultsWithNoUsers();
-
-  /// The operation whose uses are being iterated over.
-  Operation *op;
-  /// The result of op who's uses are being iterated over.
-  Operation::result_iterator res;
-  /// The use of the result.
-  Value::use_iterator use;
-};
 } // end namespace mlir
 
 namespace llvm {
