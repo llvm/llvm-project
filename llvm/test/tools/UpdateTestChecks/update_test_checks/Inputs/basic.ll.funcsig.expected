@@ -5,7 +5,7 @@
 define i32 @common_sub_operand(i32 %X, i32 %Y) {
 ; CHECK-LABEL: define {{[^@]+}}@common_sub_operand
 ; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    ret i32 [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %Z = sub i32 %X, %Y
   %Q = add i32 %Z, %Y
