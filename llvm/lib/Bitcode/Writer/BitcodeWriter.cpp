@@ -1661,7 +1661,6 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(N->getSplitDebugInlining());
   Record.push_back(N->getDebugInfoForProfiling());
   Record.push_back((unsigned)N->getNameTableKind());
-  Record.push_back(N->getRangesBaseAddress());
 
   Stream.EmitRecord(bitc::METADATA_COMPILE_UNIT, Record, Abbrev);
   Record.clear();
