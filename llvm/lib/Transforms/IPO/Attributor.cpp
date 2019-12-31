@@ -5914,6 +5914,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures() {
       SmallVector<AttributeSet, 16> NewArgOperandAttributes;
       for (unsigned OldArgNum = 0; OldArgNum < ARIs.size(); ++OldArgNum) {
         unsigned NewFirstArgNum = NewArgOperands.size();
+        (void)NewFirstArgNum; // only used inside assert.
         if (ArgumentReplacementInfo *ARI = ARIs[OldArgNum]) {
           if (ARI->ACSRepairCB)
             ARI->ACSRepairCB(*ARI, ACS, NewArgOperands);
@@ -5974,6 +5975,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures() {
     // Use the CallSiteReplacementCreator to create replacement call sites.
     bool Success =
         checkForAllCallSites(CallSiteReplacementCreator, *OldFn, true, nullptr);
+    (void)Success;
     assert(Success && "Assumed call site replacement to succeed!");
 
     // Rewire the arguments.
