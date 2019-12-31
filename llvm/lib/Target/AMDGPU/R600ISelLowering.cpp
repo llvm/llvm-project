@@ -1456,7 +1456,9 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if ((LoadNode->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       LoadNode->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) &&
       VT.isVector()) {
-      return scalarizeVectorLoad(LoadNode, DAG);
+    SDValue Ops[2];
+    std::tie(Ops[0], Ops[1]) = scalarizeVectorLoad(LoadNode, DAG);
+    return DAG.getMergeValues(Ops, DL);
   }
 
   // This is still used for explicit load from addrspace(8)

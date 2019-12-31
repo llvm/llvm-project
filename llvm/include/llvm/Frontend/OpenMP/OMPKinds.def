@@ -164,11 +164,13 @@ __OMP_FUNCTION_TYPE(ParallelTask, true, Void, Int32Ptr, Int32Ptr)
   OMP_RTL(OMPRTL_##Name, #Name, IsVarArg, ReturnType, __VA_ARGS__)
 
 __OMP_RTL(__kmpc_barrier, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_cancel, false, Int32, IdentPtr, Int32, Int32)
 __OMP_RTL(__kmpc_cancel_barrier, false, Int32, IdentPtr, Int32)
 __OMP_RTL(__kmpc_global_thread_num, false, Int32, IdentPtr)
 __OMP_RTL(__kmpc_fork_call, true, Void, IdentPtr, Int32, ParallelTaskPtr)
-__OMP_RTL(__kmpc_push_num_threads, false, Void, IdentPtr, Int32, /* Int */Int32)
-__OMP_RTL(__kmpc_push_proc_bind, false, Void, IdentPtr, Int32, /* Int */Int32)
+__OMP_RTL(__kmpc_push_num_threads, false, Void, IdentPtr, Int32,
+          /* Int */ Int32)
+__OMP_RTL(__kmpc_push_proc_bind, false, Void, IdentPtr, Int32, /* Int */ Int32)
 __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
 
@@ -202,6 +204,9 @@ __OMP_ATTRS_SET(GetterAttrs,
 
 #define __OMP_RTL_ATTRS(Name, FnAttrSet, RetAttrSet, ArgAttrSets)              \
   OMP_RTL_ATTRS(OMPRTL_##Name, FnAttrSet, RetAttrSet, ArgAttrSets)
+
+__OMP_RTL_ATTRS(__kmpc_fork_call, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
 
 __OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(omp_get_thread_num, GetterAttrs, AttributeSet(), {})
@@ -240,6 +245,26 @@ __OMP_IDENT_FLAG(BARRIER_IMPL_WORKSHARE, 0x01C0)
 
 ///}
 
+/// KMP cancel kind
+///
+///{
+
+#ifndef OMP_CANCEL_KIND
+#define OMP_CANCEL_KIND(Enum, Str, DirectiveEnum, Value)
+#endif
+
+#define __OMP_CANCEL_KIND(Name, Value)                                         \
+  OMP_CANCEL_KIND(OMP_CANCEL_KIND_##Name, #Name, OMPD_##Name, Value)
+
+__OMP_CANCEL_KIND(parallel, 1)
+__OMP_CANCEL_KIND(for, 2)
+__OMP_CANCEL_KIND(sections, 3)
+__OMP_CANCEL_KIND(taskgroup, 4)
+
+#undef __OMP_CANCEL_KIND
+#undef OMP_CANCEL_KIND
+
+///}
 
 /// Proc bind kinds
 ///

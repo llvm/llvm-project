@@ -4136,12 +4136,13 @@ public:
 
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
-  /// \returns MERGE_VALUEs of the scalar loads with their chains.
-  SDValue scalarizeVectorLoad(LoadSDNode *LD, SelectionDAG &DAG) const;
+  /// \returns BUILD_VECTOR and TokenFactor nodes.
+  std::pair<SDValue, SDValue> scalarizeVectorLoad(LoadSDNode *LD,
+                                                  SelectionDAG &DAG) const;
 
   // Turn a store of a vector type into stores of the individual elements.
   /// \param ST Store with a vector value type
-  /// \returns MERGE_VALUs of the individual store chains.
+  /// \returns TokenFactor of the individual store chains.
   SDValue scalarizeVectorStore(StoreSDNode *ST, SelectionDAG &DAG) const;
 
   /// Expands an unaligned load to 2 half-size loads for an integer, and

@@ -3345,17 +3345,10 @@ static Value* buildFMulAdd(llvm::BinaryOperator *MulOp, Value *Addend,
 
   Value *MulOp0 = MulOp->getOperand(0);
   Value *MulOp1 = MulOp->getOperand(1);
-  if (negMul) {
-    MulOp0 =
-      Builder.CreateFSub(
-        llvm::ConstantFP::getZeroValueForNegation(MulOp0->getType()), MulOp0,
-        "neg");
-  } else if (negAdd) {
-    Addend =
-      Builder.CreateFSub(
-        llvm::ConstantFP::getZeroValueForNegation(Addend->getType()), Addend,
-        "neg");
-  }
+  if (negMul)
+    MulOp0 = Builder.CreateFNeg(MulOp0, "neg");
+  if (negAdd)
+    Addend = Builder.CreateFNeg(Addend, "neg");
 
   Value *FMulAdd = Builder.CreateCall(
       CGF.CGM.getIntrinsic(llvm::Intrinsic::fmuladd, Addend->getType()),

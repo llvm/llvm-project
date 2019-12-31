@@ -7489,8 +7489,11 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // resource descriptor, we can only make private accesses up to a certain
     // size.
     switch (Subtarget->getMaxPrivateElementSize()) {
-    case 4:
-      return scalarizeVectorLoad(Load, DAG);
+    case 4: {
+      SDValue Ops[2];
+      std::tie(Ops[0], Ops[1]) = scalarizeVectorLoad(Load, DAG);
+      return DAG.getMergeValues(Ops, DL);
+    }
     case 8:
       if (NumElements > 2)
         return SplitVectorLoad(Op, DAG);

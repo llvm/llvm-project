@@ -99,6 +99,122 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   EXPECT_FALSE(verifyModule(*M));
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateCancel) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  BasicBlock *CBB = BasicBlock::Create(Ctx, "", F);
+  new UnreachableInst(Ctx, CBB);
+  auto FiniCB = [&](InsertPointTy IP) {
+    ASSERT_NE(IP.getBlock(), nullptr);
+    ASSERT_EQ(IP.getBlock()->end(), IP.getPoint());
+    BranchInst::Create(CBB, IP.getBlock());
+  };
+  OMPBuilder.pushFinalizationCB({FiniCB, OMPD_parallel, true});
+
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  auto NewIP = OMPBuilder.CreateCancel(Loc, nullptr, OMPD_parallel);
+  Builder.restoreIP(NewIP);
+  EXPECT_FALSE(M->global_empty());
+  EXPECT_EQ(M->size(), 3U);
+  EXPECT_EQ(F->size(), 4U);
+  EXPECT_EQ(BB->size(), 4U);
+
+  CallInst *GTID = dyn_cast<CallInst>(&BB->front());
+  EXPECT_NE(GTID, nullptr);
+  EXPECT_EQ(GTID->getNumArgOperands(), 1U);
+  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
+  EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
+
+  CallInst *Cancel = dyn_cast<CallInst>(GTID->getNextNode());
+  EXPECT_NE(Cancel, nullptr);
+  EXPECT_EQ(Cancel->getNumArgOperands(), 3U);
+  EXPECT_EQ(Cancel->getCalledFunction()->getName(), "__kmpc_cancel");
+  EXPECT_FALSE(Cancel->getCalledFunction()->doesNotAccessMemory());
+  EXPECT_FALSE(Cancel->getCalledFunction()->doesNotFreeMemory());
+  EXPECT_EQ(Cancel->getNumUses(), 1U);
+  Instruction *CancelBBTI = Cancel->getParent()->getTerminator();
+  EXPECT_EQ(CancelBBTI->getNumSuccessors(), 2U);
+  EXPECT_EQ(CancelBBTI->getSuccessor(0), NewIP.getBlock());
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->size(), 1U);
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
+            1U);
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0),
+            CBB);
+
+  EXPECT_EQ(cast<CallInst>(Cancel)->getArgOperand(1), GTID);
+
+  OMPBuilder.popFinalizationCB();
+
+  Builder.CreateUnreachable();
+  EXPECT_FALSE(verifyModule(*M));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  BasicBlock *CBB = BasicBlock::Create(Ctx, "", F);
+  new UnreachableInst(Ctx, CBB);
+  auto FiniCB = [&](InsertPointTy IP) {
+    ASSERT_NE(IP.getBlock(), nullptr);
+    ASSERT_EQ(IP.getBlock()->end(), IP.getPoint());
+    BranchInst::Create(CBB, IP.getBlock());
+  };
+  OMPBuilder.pushFinalizationCB({FiniCB, OMPD_parallel, true});
+
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  auto NewIP = OMPBuilder.CreateCancel(Loc, Builder.getTrue(), OMPD_parallel);
+  Builder.restoreIP(NewIP);
+  EXPECT_FALSE(M->global_empty());
+  EXPECT_EQ(M->size(), 3U);
+  EXPECT_EQ(F->size(), 7U);
+  EXPECT_EQ(BB->size(), 1U);
+  ASSERT_TRUE(isa<BranchInst>(BB->getTerminator()));
+  ASSERT_EQ(BB->getTerminator()->getNumSuccessors(), 2U);
+  BB = BB->getTerminator()->getSuccessor(0);
+  EXPECT_EQ(BB->size(), 4U);
+
+
+  CallInst *GTID = dyn_cast<CallInst>(&BB->front());
+  EXPECT_NE(GTID, nullptr);
+  EXPECT_EQ(GTID->getNumArgOperands(), 1U);
+  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
+  EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
+
+  CallInst *Cancel = dyn_cast<CallInst>(GTID->getNextNode());
+  EXPECT_NE(Cancel, nullptr);
+  EXPECT_EQ(Cancel->getNumArgOperands(), 3U);
+  EXPECT_EQ(Cancel->getCalledFunction()->getName(), "__kmpc_cancel");
+  EXPECT_FALSE(Cancel->getCalledFunction()->doesNotAccessMemory());
+  EXPECT_FALSE(Cancel->getCalledFunction()->doesNotFreeMemory());
+  EXPECT_EQ(Cancel->getNumUses(), 1U);
+  Instruction *CancelBBTI = Cancel->getParent()->getTerminator();
+  EXPECT_EQ(CancelBBTI->getNumSuccessors(), 2U);
+  EXPECT_EQ(CancelBBTI->getSuccessor(0)->size(), 1U);
+  EXPECT_EQ(CancelBBTI->getSuccessor(0)->getUniqueSuccessor(), NewIP.getBlock());
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->size(), 1U);
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
+            1U);
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0),
+            CBB);
+
+  EXPECT_EQ(cast<CallInst>(Cancel)->getArgOperand(1), GTID);
+
+  OMPBuilder.popFinalizationCB();
+
+  Builder.CreateUnreachable();
+  EXPECT_FALSE(verifyModule(*M));
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -260,6 +376,10 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
   Function *OutlinedFn = PrivAI->getFunction();
   EXPECT_NE(F, OutlinedFn);
   EXPECT_FALSE(verifyModule(*M));
+  EXPECT_TRUE(OutlinedFn->hasFnAttribute(Attribute::NoUnwind));
+  EXPECT_TRUE(OutlinedFn->hasFnAttribute(Attribute::NoRecurse));
+  EXPECT_TRUE(OutlinedFn->hasParamAttribute(0, Attribute::NoAlias));
+  EXPECT_TRUE(OutlinedFn->hasParamAttribute(1, Attribute::NoAlias));
 
   EXPECT_TRUE(OutlinedFn->hasInternalLinkage());
   EXPECT_EQ(OutlinedFn->arg_size(), 3U);

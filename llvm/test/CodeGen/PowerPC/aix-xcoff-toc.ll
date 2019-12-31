@@ -1,3 +1,5 @@
+; This file tests TOC entry generation and undefined symbol generation.
+
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefixes CHECK,CHECK32 %s
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff < %s 2>&1 | FileCheck --check-prefixes CHECK,CHECK64  %s
 
@@ -42,6 +44,8 @@ define void @foobar() {
   ret void
 }
 
+; Test tc entry assembly generation.
+
 ; CHECK-NOT: .comm a
 ; CHECK-NOT: .lcomm a
 ; CHECK-NOT: .comm b
@@ -68,6 +72,9 @@ define void @foobar() {
 ; CHECK-NEXT: .tc   foo[TC],foo[DS]
 ; CHECK-NEXT: LC7:
 ; CHECK-NEXT: .tc   foobar[TC],foobar[DS]
+
+
+; Test undefined symbol generation.
 
 ; SYM:       File: {{.*}}aix-xcoff-toc.ll.tmp.o
 ; SYM:       Symbol {{[{][[:space:]] *}}Index: [[#UNDEF_INDX:]]{{[[:space:]] *}}Name: a
@@ -148,6 +155,9 @@ define void @foobar() {
 ; SYM-NEXT:     StabSectNum: 0x0
 ; SYM-NEXT:   }
 ; SYM-NEXT: }
+
+; Test TOC entry symbol generation.
+
 ; SYM:       Symbol {{[{][[:space:]] *}}Index: [[#TOC_INDX:]]{{[[:space:]] *}}Name: TOC
 ; SYM-NEXT:    Value (RelocatableAddress): 0xA8
 ; SYM-NEXT:    Section: .data

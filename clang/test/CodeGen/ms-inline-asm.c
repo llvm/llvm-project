@@ -190,14 +190,20 @@ void t15() {
 // CHECK: mov eax, $1
   __asm mov eax, offset gvar ; eax = address of gvar
 // CHECK: mov eax, $2
-// CHECK: "*m,r,r,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}}, i32* @{{.*}})
+  __asm mov eax, offset gvar+1 ; eax = 1 + address of gvar
+// CHECK: mov eax, $3 + $$1
+  __asm mov eax, 1+offset gvar ; eax = 1 + address of gvar
+// CHECK: mov eax, $4 + $$1
+  __asm mov eax, 1+offset gvar+1 ; eax = 2 + address of gvar
+// CHECK: mov eax, $5 + $$2
+// CHECK: "*m,r,i,i,i,i,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}}, i32* @{{.*}}, i32* @{{.*}}, i32* @{{.*}}, i32* @{{.*}})
 }
 
 void t16() {
   int var = 10;
-  __asm mov [eax], offset var
+  __asm mov dword ptr [eax], offset var
 // CHECK: t16
-// CHECK: call void asm sideeffect inteldialect "mov [eax], $0", "r,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov dword ptr [eax], $0", "r,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
 }
 
 void t17() {
