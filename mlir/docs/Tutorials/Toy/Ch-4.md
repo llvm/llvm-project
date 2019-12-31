@@ -296,7 +296,7 @@ def ShapeInferenceOpInterface : OpInterface<"ShapeInference"> {
 Now that the interface is defined, we can add it to the necessary Toy operations
 in a similar way to how we added the `CallOpInterface` to the GenericCallOp:
 
-```
+```tablegen
 def MulOp : Toy_Op<"mul",
     [..., DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   ...
