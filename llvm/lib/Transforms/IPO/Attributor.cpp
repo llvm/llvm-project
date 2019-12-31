@@ -2683,6 +2683,19 @@ struct AAIsDeadArgument : public AAIsDeadFloating {
       indicatePessimisticFixpoint();
   }
 
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    ChangeStatus Changed = AAIsDeadFloating::manifest(A);
+    Argument &Arg = *getAssociatedArgument();
+    if (Arg.getParent()->hasLocalLinkage())
+      if (A.registerFunctionSignatureRewrite(
+              Arg, /* ReplacementTypes */ {},
+              Attributor::ArgumentReplacementInfo::CalleeRepairCBTy{},
+              Attributor::ArgumentReplacementInfo::ACSRepairCBTy{}))
+        return ChangeStatus::CHANGED;
+    return Changed;
+  }
+
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(IsDead) }
 };
@@ -5733,6 +5746,9 @@ ChangeStatus Attributor::run(Module &M) {
     }
   }
 
+  // Rewrite the functions as requested during manifest.
+  ManifestChange = ManifestChange | rewriteFunctionSignatures();
+
   if (VerifyMaxFixpointIterations &&
       IterationCounter != MaxFixpointIterations) {
     errs() << "\n[Attributor] Fixpoint iteration done after: "
@@ -5743,6 +5759,249 @@ ChangeStatus Attributor::run(Module &M) {
   }
 
   return ManifestChange;
+}
+
+bool Attributor::registerFunctionSignatureRewrite(
+    Argument &Arg, ArrayRef<Type *> ReplacementTypes,
+    ArgumentReplacementInfo::CalleeRepairCBTy &&CalleeRepairCB,
+    ArgumentReplacementInfo::ACSRepairCBTy &&ACSRepairCB) {
+
+  auto CallSiteCanBeChanged = [](AbstractCallSite ACS) {
+    // Forbid must-tail calls for now.
+    return !ACS.isCallbackCall() && !ACS.getCallSite().isMustTailCall();
+  };
+
+  Function *Fn = Arg.getParent();
+  // Avoid var-arg functions for now.
+  if (Fn->isVarArg()) {
+    LLVM_DEBUG(dbgs() << "[Attributor] Cannot rewrite var-args functions\n");
+    return false;
+  }
+
+  // Avoid functions with complicated argument passing semantics.
+  AttributeList FnAttributeList = Fn->getAttributes();
+  if (FnAttributeList.hasAttrSomewhere(Attribute::Nest) ||
+      FnAttributeList.hasAttrSomewhere(Attribute::StructRet) ||
+      FnAttributeList.hasAttrSomewhere(Attribute::InAlloca)) {
+    LLVM_DEBUG(
+        dbgs() << "[Attributor] Cannot rewrite due to complex attribute\n");
+    return false;
+  }
+
+  // Avoid callbacks for now.
+  if (!checkForAllCallSites(CallSiteCanBeChanged, *Fn, true, nullptr)) {
+    LLVM_DEBUG(dbgs() << "[Attributor] Cannot rewrite all call sites\n");
+    return false;
+  }
+
+  auto InstPred = [](Instruction &I) {
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      return !CI->isMustTailCall();
+    return true;
+  };
+
+  // Forbid must-tail calls for now.
+  // TODO:
+  bool AnyDead;
+  auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(*Fn);
+  if (!checkForAllInstructionsImpl(OpcodeInstMap, InstPred, nullptr, AnyDead,
+                                   {Instruction::Call})) {
+    LLVM_DEBUG(dbgs() << "[Attributor] Cannot rewrite due to instructions\n");
+    return false;
+  }
+
+  SmallVectorImpl<ArgumentReplacementInfo *> &ARIs = ArgumentReplacementMap[Fn];
+  if (ARIs.size() == 0)
+    ARIs.resize(Fn->arg_size());
+
+  // If we have a replacement already with less than or equal new arguments,
+  // ignore this request.
+  ArgumentReplacementInfo *&ARI = ARIs[Arg.getArgNo()];
+  if (ARI && ARI->getNumReplacementArgs() <= ReplacementTypes.size()) {
+    LLVM_DEBUG(dbgs() << "[Attributor] Existing rewrite is preferred\n");
+    return false;
+  }
+
+  // If we have a replacement already but we like the new one better, delete
+  // the old.
+  if (ARI)
+    delete ARI;
+
+  // Remember the replacement.
+  ARI = new ArgumentReplacementInfo(*this, Arg, ReplacementTypes,
+                                    std::move(CalleeRepairCB),
+                                    std::move(ACSRepairCB));
+
+  return true;
+}
+
+ChangeStatus Attributor::rewriteFunctionSignatures() {
+  ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+  for (auto &It : ArgumentReplacementMap) {
+    Function *OldFn = It.getFirst();
+
+    // Deleted functions do not require rewrites.
+    if (ToBeDeletedFunctions.count(OldFn))
+      continue;
+
+    const SmallVectorImpl<ArgumentReplacementInfo *> &ARIs = It.getSecond();
+    assert(ARIs.size() == OldFn->arg_size() && "Inconsistent state!");
+
+    SmallVector<Type *, 16> NewArgumentTypes;
+    SmallVector<AttributeSet, 16> NewArgumentAttributes;
+
+    // Collect replacement argument types and copy over existing attributes.
+    AttributeList OldFnAttributeList = OldFn->getAttributes();
+    for (Argument &Arg : OldFn->args()) {
+      if (ArgumentReplacementInfo *ARI = ARIs[Arg.getArgNo()]) {
+        NewArgumentTypes.append(ARI->ReplacementTypes.begin(),
+                                ARI->ReplacementTypes.end());
+        NewArgumentAttributes.append(ARI->getNumReplacementArgs(),
+                                     AttributeSet());
+      } else {
+        NewArgumentTypes.push_back(Arg.getType());
+        NewArgumentAttributes.push_back(
+            OldFnAttributeList.getParamAttributes(Arg.getArgNo()));
+      }
+    }
+
+    FunctionType *OldFnTy = OldFn->getFunctionType();
+    Type *RetTy = OldFnTy->getReturnType();
+
+    // Construct the new function type using the new arguments types.
+    FunctionType *NewFnTy =
+        FunctionType::get(RetTy, NewArgumentTypes, OldFnTy->isVarArg());
+
+    LLVM_DEBUG(dbgs() << "[Attributor] Function rewrite '" << OldFn->getName()
+                      << "' from " << *OldFn->getFunctionType() << " to "
+                      << *NewFnTy << "\n");
+
+    // Create the new function body and insert it into the module.
+    Function *NewFn = Function::Create(NewFnTy, OldFn->getLinkage(),
+                                       OldFn->getAddressSpace(), "");
+    OldFn->getParent()->getFunctionList().insert(OldFn->getIterator(), NewFn);
+    NewFn->takeName(OldFn);
+    NewFn->copyAttributesFrom(OldFn);
+
+    // Patch the pointer to LLVM function in debug info descriptor.
+    NewFn->setSubprogram(OldFn->getSubprogram());
+    OldFn->setSubprogram(nullptr);
+
+    // Recompute the parameter attributes list based on the new arguments for
+    // the function.
+    LLVMContext &Ctx = OldFn->getContext();
+    NewFn->setAttributes(AttributeList::get(
+        Ctx, OldFnAttributeList.getFnAttributes(),
+        OldFnAttributeList.getRetAttributes(), NewArgumentAttributes));
+
+    // Since we have now created the new function, splice the body of the old
+    // function right into the new function, leaving the old rotting hulk of the
+    // function empty.
+    NewFn->getBasicBlockList().splice(NewFn->begin(),
+                                      OldFn->getBasicBlockList());
+
+    // Set of all "call-like" instructions that invoke the old function.
+    SmallPtrSet<Instruction *, 8> OldCallSites;
+
+    // Callback to create a new "call-like" instruction for a given one.
+    auto CallSiteReplacementCreator = [&](AbstractCallSite ACS) {
+      CallBase *OldCB = cast<CallBase>(ACS.getInstruction());
+      const AttributeList &OldCallAttributeList = OldCB->getAttributes();
+
+      // Collect the new argument operands for the replacement call site.
+      SmallVector<Value *, 16> NewArgOperands;
+      SmallVector<AttributeSet, 16> NewArgOperandAttributes;
+      for (unsigned OldArgNum = 0; OldArgNum < ARIs.size(); ++OldArgNum) {
+        unsigned NewFirstArgNum = NewArgOperands.size();
+        if (ArgumentReplacementInfo *ARI = ARIs[OldArgNum]) {
+          if (ARI->ACSRepairCB)
+            ARI->ACSRepairCB(*ARI, ACS, NewArgOperands);
+          assert(ARI->getNumReplacementArgs() + NewFirstArgNum ==
+                     NewArgOperands.size() &&
+                 "ACS repair callback did not provide as many operand as new "
+                 "types were registered!");
+          // TODO: Exose the attribute set to the ACS repair callback
+          NewArgOperandAttributes.append(ARI->ReplacementTypes.size(),
+                                         AttributeSet());
+        } else {
+          NewArgOperands.push_back(ACS.getCallArgOperand(OldArgNum));
+          NewArgOperandAttributes.push_back(
+              OldCallAttributeList.getParamAttributes(OldArgNum));
+        }
+      }
+
+      assert(NewArgOperands.size() == NewArgOperandAttributes.size() &&
+             "Mismatch # argument operands vs. # argument operand attributes!");
+      assert(NewArgOperands.size() == NewFn->arg_size() &&
+             "Mismatch # argument operands vs. # function arguments!");
+
+      SmallVector<OperandBundleDef, 4> OperandBundleDefs;
+      OldCB->getOperandBundlesAsDefs(OperandBundleDefs);
+
+      // Create a new call or invoke instruction to replace the old one.
+      CallBase *NewCB;
+      if (InvokeInst *II = dyn_cast<InvokeInst>(OldCB)) {
+        NewCB =
+            InvokeInst::Create(NewFn, II->getNormalDest(), II->getUnwindDest(),
+                               NewArgOperands, OperandBundleDefs, "", OldCB);
+      } else {
+        auto *NewCI = CallInst::Create(NewFn, NewArgOperands, OperandBundleDefs,
+                                       "", OldCB);
+        NewCI->setTailCallKind(cast<CallInst>(OldCB)->getTailCallKind());
+        NewCB = NewCI;
+      }
+
+      // Copy over various properties and the new attributes.
+      OldCB->replaceAllUsesWith(NewCB);
+      uint64_t W;
+      if (OldCB->extractProfTotalWeight(W))
+        NewCB->setProfWeight(W);
+      NewCB->setCallingConv(OldCB->getCallingConv());
+      NewCB->setDebugLoc(OldCB->getDebugLoc());
+      NewCB->takeName(OldCB);
+      NewCB->setAttributes(AttributeList::get(
+          Ctx, OldCallAttributeList.getFnAttributes(),
+          OldCallAttributeList.getRetAttributes(), NewArgOperandAttributes));
+
+      bool Inserted = OldCallSites.insert(OldCB).second;
+      assert(Inserted && "Call site was old twice!");
+      (void)Inserted;
+
+      return true;
+    };
+
+    // Use the CallSiteReplacementCreator to create replacement call sites.
+    bool Success =
+        checkForAllCallSites(CallSiteReplacementCreator, *OldFn, true, nullptr);
+    assert(Success && "Assumed call site replacement to succeed!");
+
+    // Rewire the arguments.
+    auto OldFnArgIt = OldFn->arg_begin();
+    auto NewFnArgIt = NewFn->arg_begin();
+    for (unsigned OldArgNum = 0; OldArgNum < ARIs.size();
+         ++OldArgNum, ++OldFnArgIt) {
+      if (ArgumentReplacementInfo *ARI = ARIs[OldArgNum]) {
+        if (ARI->CalleeRepairCB)
+          ARI->CalleeRepairCB(*ARI, *NewFn, NewFnArgIt);
+        NewFnArgIt += ARI->ReplacementTypes.size();
+      } else {
+        NewFnArgIt->takeName(&*OldFnArgIt);
+        OldFnArgIt->replaceAllUsesWith(&*NewFnArgIt);
+        ++NewFnArgIt;
+      }
+    }
+
+    // Eliminate the instructions *after* we visited all of them.
+    for (Instruction *OldCallSite : OldCallSites)
+      OldCallSite->eraseFromParent();
+
+    assert(OldFn->getNumUses() == 0 && "Unexpected leftover uses!");
+    OldFn->eraseFromParent();
+    Changed = ChangeStatus::CHANGED;
+  }
+
+  return Changed;
 }
 
 void Attributor::initializeInformationCache(Function &F) {

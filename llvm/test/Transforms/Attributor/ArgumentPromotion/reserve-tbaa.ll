@@ -15,7 +15,7 @@
 
 define internal fastcc void @fn(i32* nocapture readonly %p1, i64* nocapture readonly %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@fn
-; CHECK-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P1:%.*]], i64* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[P2:%.*]])
+; CHECK-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P1:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* undef, align 8, !tbaa !0
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[TMP0]] to i32
@@ -40,7 +40,7 @@ define i32 @main() {
 ; CHECK-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa !7
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa !7
 ; CHECK-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa !4
-; CHECK-NEXT:    call fastcc void @fn(i32* nofree nonnull readonly align 4 dereferenceable(4) @g, i64* nofree nonnull readonly align 8 dereferenceable(8) undef)
+; CHECK-NEXT:    call fastcc void @fn(i32* nofree nonnull readonly align 4 dereferenceable(4) @g)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

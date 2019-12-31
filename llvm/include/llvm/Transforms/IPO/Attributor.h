@@ -884,6 +884,97 @@ struct Attributor {
   bool checkForAllUses(const function_ref<bool(const Use &, bool &)> &Pred,
                        const AbstractAttribute &QueryingAA, const Value &V);
 
+  /// Helper struct used in the communication between an abstract attribute (AA)
+  /// that wants to change the signature of a function and the Attributor which
+  /// applies the changes. The struct is partially initialized with the
+  /// information from the AA (see the constructor). All other members are
+  /// provided by the Attributor prior to invoking any callbacks.
+  struct ArgumentReplacementInfo {
+    /// Callee repair callback type
+    ///
+    /// The function repair callback is invoked once to rewire the replacement
+    /// arguments in the body of the new function. The argument replacement info
+    /// is passed, as build from the registerFunctionSignatureRewrite call, as
+    /// well as the replacement function and an iteratore to the first
+    /// replacement argument.
+    using CalleeRepairCBTy = std::function<void(
+        const ArgumentReplacementInfo &, Function &, Function::arg_iterator)>;
+
+    /// Abstract call site (ACS) repair callback type
+    ///
+    /// The abstract call site repair callback is invoked once on every abstract
+    /// call site of the replaced function (\see ReplacedFn). The callback needs
+    /// to provide the operands for the call to the new replacement function.
+    /// The number and type of the operands appended to the provided vector
+    /// (second argument) is defined by the number and types determined through
+    /// the replacement type vector (\see ReplacementTypes). The first argument
+    /// is the ArgumentReplacementInfo object registered with the Attributor
+    /// through the registerFunctionSignatureRewrite call.
+    using ACSRepairCBTy =
+        std::function<void(const ArgumentReplacementInfo &, AbstractCallSite,
+                           SmallVectorImpl<Value *> &)>;
+
+    /// Simple getters, see the corresponding members for details.
+    ///{
+
+    Attributor &getAttributor() const { return A; }
+    const Function &getReplacedFn() const { return ReplacedFn; }
+    const Argument &getReplacedArg() const { return ReplacedArg; }
+    unsigned getNumReplacementArgs() const { return ReplacementTypes.size(); }
+    const SmallVectorImpl<Type *> &getReplacementTypes() const {
+      return ReplacementTypes;
+    }
+
+    ///}
+
+  private:
+    /// Constructor that takes the argument to be replaced, the types of
+    /// the replacement arguments, as well as callbacks to repair the call sites
+    /// and new function after the replacement happened.
+    ArgumentReplacementInfo(Attributor &A, Argument &Arg,
+                            ArrayRef<Type *> ReplacementTypes,
+                            CalleeRepairCBTy &&CalleeRepairCB,
+                            ACSRepairCBTy &&ACSRepairCB)
+        : A(A), ReplacedFn(*Arg.getParent()), ReplacedArg(Arg),
+          ReplacementTypes(ReplacementTypes.begin(), ReplacementTypes.end()),
+          CalleeRepairCB(std::move(CalleeRepairCB)),
+          ACSRepairCB(std::move(ACSRepairCB)) {}
+
+    /// Reference to the attributor to allow access from the callbacks.
+    Attributor &A;
+
+    /// The "old" function replaced by ReplacementFn.
+    const Function &ReplacedFn;
+
+    /// The "old" argument replaced by new ones defined via ReplacementTypes.
+    const Argument &ReplacedArg;
+
+    /// The types of the arguments replacing ReplacedArg.
+    const SmallVector<Type *, 8> ReplacementTypes;
+
+    /// Callee repair callback, see CalleeRepairCBTy.
+    const CalleeRepairCBTy CalleeRepairCB;
+
+    /// Abstract call site (ACS) repair callback, see ACSRepairCBTy.
+    const ACSRepairCBTy ACSRepairCB;
+
+    /// Allow access to the private members from the Attributor.
+    friend struct Attributor;
+  };
+
+  /// Register a rewrite for a function signature.
+  ///
+  /// The argument \p Arg is replaced with new ones defined by the number,
+  /// order, and types in \p ReplacementTypes. The rewiring at the call sites is
+  /// done through \p ACSRepairCB and at the callee site through
+  /// \p CalleeRepairCB.
+  ///
+  /// \returns True, if the replacement was registered, false otherwise.
+  bool registerFunctionSignatureRewrite(
+      Argument &Arg, ArrayRef<Type *> ReplacementTypes,
+      ArgumentReplacementInfo::CalleeRepairCBTy &&CalleeRepairCB,
+      ArgumentReplacementInfo::ACSRepairCBTy &&ACSRepairCB);
+
   /// Check \p Pred on all function call sites.
   ///
   /// This method will evaluate \p Pred on call sites and return
@@ -1018,6 +1109,11 @@ private:
     return nullptr;
   }
 
+  /// Apply all requested function signature rewrites
+  /// (\see registerFunctionSignatureRewrite) and return Changed if the module
+  /// was altered.
+  ChangeStatus rewriteFunctionSignatures();
+
   /// The set of all abstract attributes.
   ///{
   using AAVector = SmallVector<AbstractAttribute *, 64>;
@@ -1048,6 +1144,10 @@ private:
   using QueryMapTy = MapVector<const AbstractAttribute *, QueryMapValueTy>;
   QueryMapTy QueryMap;
   ///}
+
+  /// Map to remember all requested signature changes (= argument replacements).
+  DenseMap<Function *, SmallVector<ArgumentReplacementInfo *, 8>>
+      ArgumentReplacementMap;
 
   /// The information cache that holds pre-processed (LLVM-IR) information.
   InformationCache &InfoCache;
