@@ -142,8 +142,6 @@ private:
 
   uint8_t determineREXPrefix(const MCInst &MI, uint64_t TSFlags, int MemOperand,
                              const MCInstrDesc &Desc) const;
-
-  bool isPCRel32Branch(const MCInst &MI) const;
 };
 
 } // end anonymous namespace
@@ -266,7 +264,7 @@ static bool hasSecRelSymbolRef(const MCExpr *Expr) {
   return false;
 }
 
-bool X86MCCodeEmitter::isPCRel32Branch(const MCInst &MI) const {
+static bool isPCRel32Branch(const MCInst &MI, const MCInstrInfo &MCII) {
   unsigned Opcode = MI.getOpcode();
   const MCInstrDesc &Desc = MCII.get(Opcode);
   if ((Opcode != X86::CALL64pcrel32 && Opcode != X86::JMP_4) ||
@@ -1388,7 +1386,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   case X86II::RawFrm:
     emitByte(BaseOpcode + OpcodeOffset, CurByte, OS);
 
-    if (!STI.hasFeature(X86::Mode64Bit) || !isPCRel32Branch(MI))
+    if (!STI.hasFeature(X86::Mode64Bit) || !isPCRel32Branch(MI, MCII))
       break;
 
     const MCOperand &Op = MI.getOperand(CurOp++);
