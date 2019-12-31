@@ -23,7 +23,7 @@ define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    ret void
 ; CHECK:       cpad:
 ; CHECK-NEXT:    [[PAD:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    call void @callee(i8* noalias nofree undef) [ "funclet"(token [[PAD]]) ]
+; CHECK-NEXT:    call void @callee(i8* noalias nofree readnone undef) [ "funclet"(token [[PAD]]) ]
 ; CHECK-NEXT:    cleanupret from [[PAD]] unwind to caller
 ;
 entry:
