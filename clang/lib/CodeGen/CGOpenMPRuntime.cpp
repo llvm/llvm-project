@@ -3043,10 +3043,15 @@ Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
                                                           QualType VarType,
                                                           StringRef Name) {
   std::string Suffix = getName({"artificial", ""});
-  std::string CacheSuffix = getName({"cache", ""});
   llvm::Type *VarLVType = CGF.ConvertTypeForMem(VarType);
   llvm::Value *GAddr =
       getOrCreateInternalVariable(VarLVType, Twine(Name).concat(Suffix));
+  if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMPUseTLS &&
+      CGM.getTarget().isTLSSupported()) {
+    cast<llvm::GlobalVariable>(GAddr)->setThreadLocal(/*Val=*/true);
+    return Address(GAddr, CGM.getContext().getTypeAlignInChars(VarType));
+  }
+  std::string CacheSuffix = getName({"cache", ""});
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, SourceLocation()),
       getThreadID(CGF, SourceLocation()),
@@ -3060,7 +3065,7 @@ Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
           CGF.EmitRuntimeCall(
               createRuntimeFunction(OMPRTL__kmpc_threadprivate_cached), Args),
           VarLVType->getPointerTo(/*AddrSpace=*/0)),
-      CGM.getPointerAlign());
+      CGM.getContext().getTypeAlignInChars(VarType));
 }
 
 void CGOpenMPRuntime::emitIfClause(CodeGenFunction &CGF, const Expr *Cond,
