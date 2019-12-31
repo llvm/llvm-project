@@ -184,7 +184,12 @@ using TaskOutlineMapTy = DenseMap<Task *, TaskOutlineInfo>;
 ///   TapirTarget::postProcessHelper(Helper).
 class TapirTarget {
 protected:
+  /// The Module of the original Tapir code.
   Module &M;
+  /// The Module into which the outlined Helper functions will be placed.
+  Module &DestM;
+
+  TapirTarget(Module &M, Module &DestM) : M(M), DestM(DestM) {}
 public:
   // Enumeration of ways arguments can be passed to outlined functions.
   enum class ArgStructMode
@@ -194,7 +199,7 @@ public:
      Dynamic // Dynamically allocate a structure to store arguments.
     };
 
-  TapirTarget(Module &M) : M(M) {}
+  TapirTarget(Module &M) : M(M), DestM(M) {}
   virtual ~TapirTarget() {}
 
   /// Lower a call to the tapir.loop.grainsize intrinsic into a grainsize
@@ -219,7 +224,8 @@ public:
 
   /// Process Function F before any function outlining is performed.  This
   /// routine should not modify the CFG structure.
-  virtual void preProcessFunction(Function &F, TaskInfo &TI) = 0;
+  virtual void preProcessFunction(Function &F, TaskInfo &TI,
+                                  bool OutliningTapirLoops = false) = 0;
 
   /// Returns an ArgStructMode enum value describing how inputs to a task should
   /// be passed to the task, e.g., directly as arguments to the outlined
@@ -228,8 +234,11 @@ public:
 
   /// Get the return type of an outlined function for a task.
   virtual Type *getReturnType() const {
-    return Type::getVoidTy(M.getContext());
+    return Type::getVoidTy(DestM.getContext());
   }
+
+  /// Get the Module where outlined Helper will be placed.
+  Module &getDestinationModule() const { return DestM; }
 
   // Add attributes to the Function Helper produced from outlining a task.
   virtual void addHelperAttributes(Function &Helper) {}
@@ -248,7 +257,8 @@ public:
   virtual void processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) = 0;
 
   // Process Function F at the end of the lowering process.
-  virtual void postProcessFunction(Function &F) = 0;
+  virtual void postProcessFunction(Function &F,
+                                   bool OutliningTapirLoops = false) = 0;
 
   // Process a generated helper Function F produced via outlining, at the end of
   // the lowering process.
@@ -272,7 +282,9 @@ public:
 /// 1) Analyze all loops in Function F to discover Tapir loops that are amenable
 /// to LoopSpawningTI.
 ///
-/// 2) Process each Tapir loop L as follows:
+/// 2) Run TapirTarget::preProcessFunction(F, OutliningTapirLoops = true).
+///
+/// 3) Process each Tapir loop L as follows:
 ///
 ///   a) Prepare the set of inputs to the helper function derived from the Tapir
 ///   task in L, using the return value of OutlineProcessor::getArgStructMode()
@@ -285,13 +297,16 @@ public:
 ///
 ///   c) Outline L into a Function Helper, whose inputs are the prepared set of
 ///   inputs produced in step 2b and whose return type is void.  This outlining
-///   step uses OutlineProcessor::getIVArgIndex() to identify the helper input
-///   parameter that specifies the strating iteration number.
+///   step uses OutlineProcessor::getIVArgIndex() and
+///   OutlineProcessor::getLimitArgIndex() to identify the helper input
+///   parameters that specify the strating and ending iterations, respectively.
 ///
 ///   d) Call OutlineProcessor::postProcessOutline(Helper).
 ///
-/// 3) For each Tapir loop L in F in post-order, run
+/// 4) For each Tapir loop L in F in post-order, run
 /// OutlineProcessor::processOutlinedLoopCall().
+///
+/// 5) Run TapirTarget::postProcessFunction(F, OutliningTapirLoops = true).
 ///
 /// Two generic loop-outline processors are provided with LoopSpawningTI.  The
 /// default loop-outline processor performs no special modifications to outlined
@@ -300,11 +315,16 @@ public:
 /// divide-and-conquer.
 class LoopOutlineProcessor {
 protected:
+  /// The Module of the original Tapir code.
   Module &M;
+  /// The Module into which the outlined Helper functions will be placed.
+  Module &DestM;
+
+  LoopOutlineProcessor(Module &M, Module &DestM) : M(M), DestM(DestM) {}
 public:
   using ArgStructMode = TapirTarget::ArgStructMode;
 
-  LoopOutlineProcessor(Module &M) : M(M) {}
+  LoopOutlineProcessor(Module &M) : M(M), DestM(M) {}
   virtual ~LoopOutlineProcessor() = default;
 
   /// Returns an ArgStructMode enum value describing how inputs to the
@@ -326,20 +346,35 @@ public:
       ValueSet &InputSet, const SmallVectorImpl<Value *> &LCArgs,
       const SmallVectorImpl<Value *> &LCInputs, const ValueSet &TLInputsFixed);
 
+  /// Get the Module where outlined Helper will be placed.
+  Module &getDestinationModule() const { return DestM; }
+
   /// Returns an integer identifying the index of the helper-function argument
-  /// in Args which specifies the starting iteration number.  This return value
+  /// in Args that specifies the starting iteration number.  This return value
   /// must complement the behavior of setupLoopOutlineArgs().
-  //
-  // TODO: LoopSpawningTI current assumes that loop-control inputs are
-  // consecutive in Args, i.e., if Args[I] specifies the start iteration, then
-  // Args[I+1] specifies the end iteration.  This appears to be a common
-  // pattern, but we might want to revisit this assumption later.
   virtual unsigned getIVArgIndex(const Function &F, const ValueSet &Args) const;
+
+  /// Returns an integer identifying the index of the helper-function argument
+  /// in Args that specifies the ending iteration number.  This return value
+  /// must complement the behavior of setupLoopOutlineArgs().
+  virtual unsigned getLimitArgIndex(const Function &F,
+                                    const ValueSet &Args) const {
+    return getIVArgIndex(F, Args) + 1;
+  }
 
   /// Processes an outlined Function Helper for a Tapir loop, just after the
   /// function has been outlined.
   virtual void postProcessOutline(TapirLoopInfo &TL, TaskOutlineInfo &Out,
                                   ValueToValueMapTy &VMap);
+
+  /// Add syncs to the escape points of each helper function.  This operation is
+  /// a common post-processing step for outlined helper functions.
+  void addSyncToOutlineReturns(TapirLoopInfo &TL, TaskOutlineInfo &Out,
+                               ValueToValueMapTy &VMap);
+
+  /// Remap any data members of the LoopOutlineProcessor.  This method is called
+  /// whenever a loop L is outlined, in order to update data for subloops of L.
+  virtual void remapData(ValueToValueMapTy &VMap) {};
 
   /// Processes a call to an outlined Function Helper for a Tapir loop.
   virtual void processOutlinedLoopCall(TapirLoopInfo &TL, TaskOutlineInfo &TOI,
@@ -399,8 +434,9 @@ void getTaskBlocks(Task *T, std::vector<BasicBlock *> &TaskBlocks,
 /// function.  The map \p VMap is updated with the mapping of instructions in
 /// \p T to instructions in the new helper function.
 Function *createHelperForTask(
-    Function &F, Task *T, ValueSet &Inputs, ValueToValueMapTy &VMap,
-    Type *ReturnType, AssumptionCache *AC, DominatorTree *DT);
+    Function &F, Task *T, ValueSet &Inputs, Module *DestM,
+    ValueToValueMapTy &VMap, Type *ReturnType, AssumptionCache *AC,
+    DominatorTree *DT);
 
 /// Replaces the detach instruction that spawns task \p T, with associated
 /// TaskOutlineInfo \p Out, with a call or invoke to the outlined helper function
@@ -414,9 +450,9 @@ Instruction *replaceDetachWithCallToOutline(
 /// function is returned as a TaskOutlineInfo structure.
 TaskOutlineInfo outlineTask(
     Task *T, ValueSet &Inputs, SmallVectorImpl<Value *> &HelperInputs,
-    ValueToValueMapTy &VMap, TapirTarget::ArgStructMode useArgStruct,
-    Type *ReturnType, ValueToValueMapTy &InputMap, AssumptionCache *AC,
-    DominatorTree *DT);
+    Module *DestM, ValueToValueMapTy &VMap,
+    TapirTarget::ArgStructMode useArgStruct, Type *ReturnType,
+    ValueToValueMapTy &InputMap, AssumptionCache *AC, DominatorTree *DT);
 
 //----------------------------------------------------------------------------//
 // Methods for lowering Tapir loops

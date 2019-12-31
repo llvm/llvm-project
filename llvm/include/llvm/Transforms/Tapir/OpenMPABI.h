@@ -43,8 +43,10 @@ public:
   Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
   void lowerSync(SyncInst &SI) override final;
 
-  void preProcessFunction(Function &F, TaskInfo &TI) override final;
-  void postProcessFunction(Function &F) override final;
+  void preProcessFunction(Function &F, TaskInfo &TI,
+                          bool OutliningTapirLoops) override final;
+  void postProcessFunction(Function &F, bool OutliningTapirLoops)
+    override final;
   void postProcessHelper(Function &F) override final;
 
   void processOutlinedTask(Function &F) override final;

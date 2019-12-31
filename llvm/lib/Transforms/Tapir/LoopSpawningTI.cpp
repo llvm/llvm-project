@@ -62,14 +62,20 @@ using namespace llvm;
 #define DEBUG_TYPE LS_NAME
 
 STATISTIC(TapirLoopsFound,
-          "Number of Tapir loops converted to divide-and-conquer iteration spawning");
+          "Number of Tapir loops discovered spawning");
 STATISTIC(LoopsConvertedToDAC,
-          "Number of Tapir loops converted to divide-and-conquer iteration spawning");
+          "Number of Tapir loops converted to divide-and-conquer iteration "
+          "spawning");
 
 /// The default loop-outline processor leaves the outlined Tapir loop as is.
 class DefaultLoopOutlineProcessor : public LoopOutlineProcessor {
 public:
   DefaultLoopOutlineProcessor(Module &M) : LoopOutlineProcessor(M) {}
+  void postProcessOutline(TapirLoopInfo &TL, TaskOutlineInfo &Out,
+                          ValueToValueMapTy &VMap) override final {
+    LoopOutlineProcessor::postProcessOutline(TL, Out, VMap);
+    addSyncToOutlineReturns(TL, Out, VMap);
+  }
 };
 
 /// The DACSpawning loop-outline processor transforms an outlined Tapir loop to
@@ -82,6 +88,9 @@ public:
     LoopOutlineProcessor::postProcessOutline(TL, Out, VMap);
     implementDACIterSpawnOnHelper(TL, Out, VMap);
     ++LoopsConvertedToDAC;
+
+    // Add syncs to all exits of the outline.
+    addSyncToOutlineReturns(TL, Out, VMap);
   }
 
 private:
@@ -155,6 +164,20 @@ void LoopOutlineProcessor::postProcessOutline(TapirLoopInfo &TL,
   Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   // The helper is private to this module.
   Helper->setLinkage(GlobalValue::PrivateLinkage);
+}
+
+void LoopOutlineProcessor::addSyncToOutlineReturns(TapirLoopInfo &TL,
+                                                   TaskOutlineInfo &Out,
+                                                   ValueToValueMapTy &VMap) {
+  Value *SyncRegion =
+    cast<Value>(VMap[TL.getTask()->getDetach()->getSyncRegion()]);
+  EscapeEnumerator EE(*Out.Outline, "ls.sync", false);
+  while (IRBuilder<> *AtExit = EE.Next()) {
+    BasicBlock *Exit = AtExit->GetInsertBlock();
+    BasicBlock *NewExit = SplitBlock(Exit, Exit->getTerminator());
+    SyncInst *NewSync = SyncInst::Create(NewExit, SyncRegion);
+    ReplaceInstWithInst(Exit->getTerminator(), NewSync);
+  }
 }
 
 /// Create an analysis remark that explains why vectorization failed
@@ -314,7 +337,8 @@ private:
   // mapping of values in the original function to values in the outlined
   // helper.
   Function *createHelperForTapirLoop(TapirLoopInfo *TL, ValueSet &Args,
-                                     unsigned IVArgOffset,
+                                     unsigned IVArgIndex,
+                                     unsigned LimitArgIndex, Module *DestM,
                                      ValueToValueMapTy &VMap,
                                      ValueToValueMapTy &InputMap);
 
@@ -875,7 +899,8 @@ void LoopSpawningImpl::getAllTapirLoopInputs(
 
 static void updateClonedIVs(
     TapirLoopInfo *TL, BasicBlock *OrigPreheader,
-    ValueSet &Args, ValueToValueMapTy &VMap, unsigned IVArgIndex) {
+    ValueSet &Args, ValueToValueMapTy &VMap, unsigned IVArgIndex,
+    unsigned NextIVArgOffset = 3) {
   auto &PrimaryInduction = TL->getPrimaryInduction();
   PHINode *PrimaryPhi = PrimaryInduction.first;
 
@@ -888,9 +913,10 @@ static void updateClonedIVs(
   assert(TL->getInductionVars()->size() == 1 &&
          "updateClonedIVs to process multiple inductions.");
 
-  // The next argument that provides an input to an IV is 3 after the input for
-  // the primary induction variable.
-  unsigned ArgIdx = IVArgIndex + 3;
+  // Get the next argument that provides an input to an IV, which is typically 3
+  // after the input for the primary induction variable, after the end-teration
+  // and grainsize arguments.
+  unsigned ArgIdx = IVArgIndex + NextIVArgOffset;
   for (auto &InductionEntry : *TL->getInductionVars()) {
     PHINode *OrigPhi = InductionEntry.first;
     InductionDescriptor II = InductionEntry.second;
@@ -914,7 +940,7 @@ static void updateClonedIVs(
     if (OrigPhi == PrimaryPhi)
       NewPhi->setIncomingValue(BBIdx, VMap[PrimaryArg]);
     else
-      // TODO: Because of the assertion above, this line should never run.,
+      // TODO: Because of the assertion above, this line should never run.
       NewPhi->setIncomingValue(BBIdx, VMap[Args[ArgIdx++]]);
   }
 }
@@ -924,7 +950,8 @@ static void updateClonedIVs(
 /// mapping of values in the original function to values in the outlined helper.
 Function *LoopSpawningImpl::createHelperForTapirLoop(
     TapirLoopInfo *TL, ValueSet &Args, unsigned IVArgIndex,
-    ValueToValueMapTy &VMap, ValueToValueMapTy &InputMap) {
+    unsigned LimitArgIndex, Module *DestM, ValueToValueMapTy &VMap,
+    ValueToValueMapTy &InputMap) {
   Task *T = TL->getTask();
   Loop *L = TL->getLoop();
   BasicBlock *Header = L->getHeader();
@@ -951,14 +978,14 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
   // If the trip count is variable and we're not otherwise passing the trip
   // count as an argument, temporarily map the trip count to the end argument.
   if (!isa<Constant>(TL->getTripCount()) && !Args.count(TL->getTripCount()))
-    VMap[TL->getTripCount()] = Args[IVArgIndex + 1];
+    VMap[TL->getTripCount()] = Args[LimitArgIndex];
 
   Twine NameSuffix = ".ls" + Twine(TL->getLoop()->getLoopDepth());
   SmallVector<ReturnInst *, 4> Returns;  // Ignore returns cloned.
   ValueSet Outputs;  // Outputs must be empty.
   Function *Helper =
     CreateHelper(Args, Outputs, TLBlocks, Header,
-                 Preheader, TL->getExitBlock(), VMap, F.getParent(),
+                 Preheader, TL->getExitBlock(), VMap, DestM,
                  F.getSubprogram() != nullptr, Returns,
                  NameSuffix.str(), nullptr, &DetachedRethrowBlocks,
                  &SharedEHEntries, TL->getUnwindDest(), InputSyncRegion,
@@ -980,7 +1007,7 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
   assert(TL->getCondition()->getOperand(TripCountIdx) == TripCount &&
          "Trip count not used in condition");
   ICmpInst *ClonedCond = cast<ICmpInst>(VMap[TL->getCondition()]);
-  ClonedCond->setOperand(TripCountIdx, VMap[Args[IVArgIndex + 1]]);
+  ClonedCond->setOperand(TripCountIdx, VMap[Args[LimitArgIndex]]);
 
   // If the trip count is variable and we're not passing the trip count as an
   // argument, undo the eariler temporarily mapping.
@@ -1050,20 +1077,6 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
   VMap[DI] = DetachRepl;
 
   return Helper;
-}
-
-/// Add syncs to the escape points of each helper function.
-static void addSyncToOutlineReturns(TapirLoopInfo &TL, TaskOutlineInfo &Out,
-                                    ValueToValueMapTy &VMap) {
-  Value *SyncRegion =
-    cast<Value>(VMap[TL.getTask()->getDetach()->getSyncRegion()]);
-  EscapeEnumerator EE(*Out.Outline, "ls.sync", false);
-  while (IRBuilder<> *AtExit = EE.Next()) {
-    BasicBlock *Exit = AtExit->GetInsertBlock();
-    BasicBlock *NewExit = SplitBlock(Exit, Exit->getTerminator());
-    SyncInst *NewSync = SyncInst::Create(NewExit, SyncRegion);
-    ReplaceInstWithInst(Exit->getTerminator(), NewSync);
-  }
 }
 
 /// Outline all recorded Tapir loops in the function.
@@ -1157,7 +1170,8 @@ TaskOutlineMapTy LoopSpawningImpl::outlineAllTapirLoops() {
     // Create the helper function.
     Function *Outline = createHelperForTapirLoop(
         TL, LoopArgs[L], OutlineProcessors[TL]->getIVArgIndex(F, LoopArgs[L]),
-        VMap, InputMap);
+        OutlineProcessors[TL]->getLimitArgIndex(F, LoopArgs[L]),
+        &OutlineProcessors[TL]->getDestinationModule(), VMap, InputMap);
     TaskToOutline[T] = TaskOutlineInfo(Outline, LoopInputSets[L],
                                        LoopArgStarts[L],
                                        L->getLoopPreheader()->getTerminator(),
@@ -1172,13 +1186,6 @@ TaskOutlineMapTy LoopSpawningImpl::outlineAllTapirLoops() {
           dbgs() << "\t" << *V << "\n";
       });
 
-    // Add syncs to all exits of the outline.
-    //
-    // TODO: Consider moving this step to another ABI-specific outline
-    // post-processor.  This step is necessary at least for the Cilk model,
-    // which assumes that functions are synced when they return.
-    addSyncToOutlineReturns(*TL, TaskToOutline[T], VMap);
-
     {
       TapirLoopHints Hints(L);
       Hints.clearClonedLoopMetadata(VMap);
@@ -1191,8 +1198,10 @@ TaskOutlineMapTy LoopSpawningImpl::outlineAllTapirLoops() {
       for (Loop *SubL : *L) {
         if (TapirLoopInfo *SubTL = getTapirLoop(SubL)) {
           Task *SubT = SubTL->getTask();
-          if (TaskToOutline.count(SubT))
+          if (TaskToOutline.count(SubT)) {
             TaskToOutline[SubT].remapOutlineInfo(VMap, InputMap);
+            OutlineProcessors[SubTL]->remapData(VMap);
+          }
         }
       }
     }
@@ -1214,6 +1223,9 @@ bool LoopSpawningImpl::run() {
   if (TapirLoops.empty())
     return false;
 
+  // Perform any Target-dependent preprocessing of F.
+  Target->preProcessFunction(F, TI, true);
+
   // Outline all Tapir loops.
   TaskOutlineMapTy TapirLoopOutlines = outlineAllTapirLoops();
 
@@ -1222,6 +1234,9 @@ bool LoopSpawningImpl::run() {
     if (TapirLoopInfo *TL = getTapirLoop(T))
       OutlineProcessors[TL]->processOutlinedLoopCall(*TL, TapirLoopOutlines[T],
                                                      DT);
+
+  // Perform any Target-dependent postprocessing of F.
+  Target->postProcessFunction(F, true);
 
   return true;
 }

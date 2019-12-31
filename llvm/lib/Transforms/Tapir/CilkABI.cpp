@@ -38,6 +38,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cilkabi"
 
+STATISTIC(LoopsUsingRuntimeCilkFor,
+          "Number of Tapir loops implemented using runtime cilk_for");
+
 static cl::opt<bool> fastCilk(
     "fast-cilk", cl::init(false), cl::Hidden,
     cl::desc("Attempt faster Cilk call implementation"));
@@ -1739,7 +1742,12 @@ static inline void inlineCilkFunctions(Function &F) {
     llvm_unreachable("Tapir->CilkABI lowering produced bad IR!");
 }
 
-void CilkABI::preProcessFunction(Function &F, TaskInfo &TI) {
+void CilkABI::preProcessFunction(Function &F, TaskInfo &TI,
+                                 bool OutliningTapirLoops) {
+  if (OutliningTapirLoops)
+    // Don't do any preprocessing when outlining Tapir loops.
+    return;
+
   LLVM_DEBUG(dbgs() << "CilkABI processing function " << F.getName() << "\n");
   if (fastCilk && F.getName() == "main") {
     IRBuilder<> B(F.getEntryBlock().getTerminator());
@@ -1747,7 +1755,11 @@ void CilkABI::preProcessFunction(Function &F, TaskInfo &TI) {
   }
 }
 
-void CilkABI::postProcessFunction(Function &F) {
+void CilkABI::postProcessFunction(Function &F, bool OutliningTapirLoops) {
+  if (OutliningTapirLoops)
+    // Don't do any preprocessing when outlining Tapir loops.
+    return;
+
   if (!DebugABICalls)
     inlineCilkFunctions(F);
 }
@@ -1813,6 +1825,8 @@ void RuntimeCilkFor::postProcessOutline(TapirLoopInfo &TL, TaskOutlineInfo &Out,
     Helper->removeFnAttr(Attribute::ArgMemOnly);
     Helper->removeFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
   }
+
+  addSyncToOutlineReturns(TL, Out, VMap);
 }
 
 void RuntimeCilkFor::processOutlinedLoopCall(TapirLoopInfo &TL,
@@ -1824,11 +1838,11 @@ void RuntimeCilkFor::processOutlinedLoopCall(TapirLoopInfo &TL,
   BasicBlock *CallCont = TOI.ReplRet;
   BasicBlock *UnwindDest = TOI.ReplUnwind;
   Function *Parent = ReplCall->getFunction();
-  Module &M = *Parent->getParent();
   unsigned IVArgIndex = getIVArgIndex(*Parent, TOI.InputSet);
   Type *PrimaryIVTy =
       ReplCall->getArgOperand(IVArgIndex)->getType();
-  Value *TripCount = ReplCall->getArgOperand(IVArgIndex + 1);
+  Value *TripCount = ReplCall->getArgOperand(
+      getLimitArgIndex(*Parent, TOI.InputSet));
   Value *GrainsizeVal = ReplCall->getArgOperand(IVArgIndex + 2);
 
   // Get the correct CilkForABI call.
@@ -1882,6 +1896,8 @@ void RuntimeCilkFor::processOutlinedLoopCall(TapirLoopInfo &TL,
     TOI.replaceReplCall(Call);
     ReplCall->eraseFromParent();
   }
+
+  ++LoopsUsingRuntimeCilkFor;
 
   // If we're not using dynamic argument structs, then no further processing is
   // needed.

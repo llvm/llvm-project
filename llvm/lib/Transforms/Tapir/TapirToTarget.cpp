@@ -147,7 +147,8 @@ TapirToTargetImpl::outlineAllTasks(Function &F, DominatorTree &DT,
 
     ValueToValueMapTy VMap;
     ValueToValueMapTy InputMap;
-    TaskToOutline[T] = outlineTask(T, TaskInputs[T], HelperInputs[T], VMap,
+    TaskToOutline[T] = outlineTask(T, TaskInputs[T], HelperInputs[T],
+                                   &Target->getDestinationModule(), VMap,
                                    Target->getArgStructMode(),
                                    Target->getReturnType(), InputMap, &AC, &DT);
     // If the detach for task T does not catch an exception from the task, then

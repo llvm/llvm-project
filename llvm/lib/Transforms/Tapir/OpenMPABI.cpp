@@ -551,12 +551,22 @@ void OpenMPABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
   TOI.Outline = formatFunctionToTask(Outline, ReplCall);
 }
 
-void llvm::OpenMPABI::preProcessFunction(Function &F, TaskInfo &TI) {
+void OpenMPABI::preProcessFunction(Function &F, TaskInfo &TI,
+                                   bool OutliningTapirLoops) {
+  if (OutliningTapirLoops)
+    // Don't do any preprocessing when outlining Tapir loops.
+    return;
+
   getOrCreateIdentTy(M);
   getOrCreateDefaultLocation(M);
 }
 
-void llvm::OpenMPABI::postProcessFunction(Function &F) {
+void OpenMPABI::postProcessFunction(Function &F,
+                                    bool OutliningTapirLoops) {
+  if (OutliningTapirLoops)
+    // Don't do any postprocessing when outlining Tapir loops.
+    return;
+
   if (fastOpenMP) return;
 
   auto& Context = F.getContext();

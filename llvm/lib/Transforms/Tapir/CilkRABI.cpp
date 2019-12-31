@@ -1018,12 +1018,21 @@ static inline void inlineCilkFunctions(Function &F) {
     llvm_unreachable("Tapir->CilkABI lowering produced bad IR!");
 }
 
-void CilkRABI::preProcessFunction(Function &F, TaskInfo &TI) {
+void CilkRABI::preProcessFunction(Function &F, TaskInfo &TI,
+                                  bool OutliningTapirLoops) {
+  if (OutliningTapirLoops)
+    // Don't do any preprocessing when outlining Tapir loops.
+    return;
+
   if (F.getName() == "main")
     F.setName("cilk_main");
 }
 
-void CilkRABI::postProcessFunction(Function &F) {
+void CilkRABI::postProcessFunction(Function &F, bool OutliningTapirLoops) {
+  if (OutliningTapirLoops)
+    // Don't do any postprocessing when outlining Tapir loops.
+    return;
+
   inlineCilkFunctions(F);
 }
 

@@ -382,8 +382,9 @@ void llvm::getTaskBlocks(Task *T, std::vector<BasicBlock *> &TaskBlocks,
 /// function.  The map \p VMap is updated with the mapping of instructions in
 /// \p T to instructions in the new helper function.
 Function *llvm::createHelperForTask(
-    Function &F, Task *T, ValueSet &Args, ValueToValueMapTy &VMap,
-    Type *ReturnType, AssumptionCache *AC, DominatorTree *DT) {
+    Function &F, Task *T, ValueSet &Args, Module *DestM,
+    ValueToValueMapTy &VMap, Type *ReturnType, AssumptionCache *AC,
+    DominatorTree *DT) {
   // Collect all basic blocks in this task.
   std::vector<BasicBlock *> TaskBlocks;
   // Reattach instructions and detached rethrows in this task might need special
@@ -403,7 +404,7 @@ Function *llvm::createHelperForTask(
   Twine NameSuffix = ".otd" + Twine(T->getTaskDepth());
   Function *Helper =
     CreateHelper(Args, Outputs, TaskBlocks, T->getEntry(),
-                 DI->getParent(), DI->getContinue(), VMap, F.getParent(),
+                 DI->getParent(), DI->getContinue(), VMap, DestM,
                  F.getSubprogram() != nullptr, Returns,
                  NameSuffix.str(), &ReattachBlocks,
                  &DetachedRethrowBlocks, &SharedEHEntries, nullptr, nullptr,
@@ -521,9 +522,9 @@ Instruction *llvm::replaceDetachWithCallToOutline(
 /// function is returned as a TaskOutlineInfo structure.
 TaskOutlineInfo llvm::outlineTask(
     Task *T, ValueSet &Inputs, SmallVectorImpl<Value *> &HelperInputs,
-    ValueToValueMapTy &VMap, TapirTarget::ArgStructMode useArgStruct,
-    Type *ReturnType, ValueToValueMapTy &InputMap, AssumptionCache *AC,
-    DominatorTree *DT) {
+    Module *DestM, ValueToValueMapTy &VMap,
+    TapirTarget::ArgStructMode useArgStruct, Type *ReturnType,
+    ValueToValueMapTy &InputMap, AssumptionCache *AC, DominatorTree *DT) {
   assert(!T->isRootTask() && "Cannot outline the root task.");
   Function &F = *T->getEntry()->getParent();
   DetachInst *DI = T->getDetach();
@@ -534,15 +535,14 @@ TaskOutlineInfo llvm::outlineTask(
     fixupHelperInputs(F, T, Inputs, HelperArgs, DI,
                       T->getEntry()->getFirstNonPHIOrDbgOrLifetime(),
                       useArgStruct, InputMap);
-  // SmallVector<Value *, 8> HelperInputs;
   for (Value *V : HelperArgs)
     HelperInputs.push_back(V);
 
   // Clone the blocks into a helper function.
-  Function *Helper = createHelperForTask(F, T, HelperArgs, VMap, ReturnType, AC,
-                                         DT);
-  return TaskOutlineInfo(Helper, Inputs, /*HelperInputs,*/ ArgsStart, DI,
-                         DI->getContinue(), DI->getUnwindDest());
+  Function *Helper = createHelperForTask(F, T, HelperArgs, DestM, VMap,
+                                         ReturnType, AC, DT);
+  return TaskOutlineInfo(Helper, Inputs, ArgsStart, DI, DI->getContinue(),
+                         DI->getUnwindDest());
 }
 
 //----------------------------------------------------------------------------//
