@@ -1214,41 +1214,6 @@ struct MisleadingIndentationChecker {
     if (Kind == MSK_else && !ShouldSkip)
       P.MisleadingIndentationElseLoc = SL;
   }
-
-  /// Compute the column number will aligning tabs on TabStop (-ftabstop), this
-  /// gives the visual indentation of the SourceLocation.
-  static unsigned getVisualIndentation(SourceManager &SM, SourceLocation Loc) {
-    unsigned TabStop = SM.getDiagnostics().getDiagnosticOptions().TabStop;
-
-    unsigned ColNo = SM.getSpellingColumnNumber(Loc);
-    if (ColNo == 0 || TabStop == 1)
-      return ColNo;
-
-    std::pair<FileID, unsigned> FIDAndOffset = SM.getDecomposedLoc(Loc);
-
-    bool Invalid;
-    StringRef BufData = SM.getBufferData(FIDAndOffset.first, &Invalid);
-    if (Invalid)
-      return 0;
-
-    const char *EndPos = BufData.data() + FIDAndOffset.second;
-    assert(FIDAndOffset.second > ColNo &&
-           "Column number smaller than file offset?");
-
-    unsigned VisualColumn = 0; // Stored as 0-based column, here.
-    // Loop from beginning of line up to Loc's file position, counting columns,
-    // expanding tabs.
-    for (const char *CurPos = EndPos - (ColNo - 1); CurPos != EndPos;
-         ++CurPos) {
-      if (*CurPos == '\t')
-        // Advance visual column to next tabstop.
-        VisualColumn += (TabStop - VisualColumn % TabStop);
-      else
-        VisualColumn++;
-    }
-    return VisualColumn + 1;
-  }
-
   void Check() {
     Token Tok = P.getCurToken();
     if (P.getActions().getDiagnostics().isIgnored(
@@ -1265,9 +1230,9 @@ struct MisleadingIndentationChecker {
       P.MisleadingIndentationElseLoc = SourceLocation();
 
     SourceManager &SM = P.getPreprocessor().getSourceManager();
-    unsigned PrevColNum = getVisualIndentation(SM, PrevLoc);
-    unsigned CurColNum = getVisualIndentation(SM, Tok.getLocation());
-    unsigned StmtColNum = getVisualIndentation(SM, StmtLoc);
+    unsigned PrevColNum = SM.getSpellingColumnNumber(PrevLoc);
+    unsigned CurColNum = SM.getSpellingColumnNumber(Tok.getLocation());
+    unsigned StmtColNum = SM.getSpellingColumnNumber(StmtLoc);
 
     if (PrevColNum != 0 && CurColNum != 0 && StmtColNum != 0 &&
         ((PrevColNum > StmtColNum && PrevColNum == CurColNum) ||

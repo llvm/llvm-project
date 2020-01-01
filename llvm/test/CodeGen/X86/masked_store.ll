@@ -4915,10 +4915,6 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    andl $1, %esi
 ; AVX512F-NEXT:    kmovw %esi, %k0
-; AVX512F-NEXT:    kxorw %k0, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $1, %k1, %k1
-; AVX512F-NEXT:    kshiftlw $1, %k1, %k1
-; AVX512F-NEXT:    korw %k0, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $2, %k0, %k1
 ; AVX512F-NEXT:    kshiftlw $2, %k1, %k1
 ; AVX512F-NEXT:    kshiftlw $15, %k0, %k0
@@ -4948,10 +4944,6 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; AVX512VLDQ-NEXT:    kmovw %esi, %k0
 ; AVX512VLDQ-NEXT:    kshiftlb $7, %k0, %k0
 ; AVX512VLDQ-NEXT:    kshiftrb $7, %k0, %k0
-; AVX512VLDQ-NEXT:    kxorw %k0, %k0, %k1
-; AVX512VLDQ-NEXT:    kshiftrb $1, %k1, %k1
-; AVX512VLDQ-NEXT:    kshiftlb $1, %k1, %k1
-; AVX512VLDQ-NEXT:    korb %k0, %k1, %k0
 ; AVX512VLDQ-NEXT:    kshiftrb $2, %k0, %k1
 ; AVX512VLDQ-NEXT:    kshiftlb $2, %k1, %k1
 ; AVX512VLDQ-NEXT:    kshiftlb $7, %k0, %k0
@@ -4977,10 +4969,6 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    andl $1, %esi
 ; AVX512VLBW-NEXT:    kmovw %esi, %k0
-; AVX512VLBW-NEXT:    kxorw %k0, %k0, %k1
-; AVX512VLBW-NEXT:    kshiftrw $1, %k1, %k1
-; AVX512VLBW-NEXT:    kshiftlw $1, %k1, %k1
-; AVX512VLBW-NEXT:    korw %k0, %k1, %k0
 ; AVX512VLBW-NEXT:    kshiftrw $2, %k0, %k1
 ; AVX512VLBW-NEXT:    kshiftlw $2, %k1, %k1
 ; AVX512VLBW-NEXT:    kshiftlw $15, %k0, %k0

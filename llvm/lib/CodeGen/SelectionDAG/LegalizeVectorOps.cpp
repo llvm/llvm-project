@@ -512,6 +512,11 @@ SDValue VectorLegalizer::Promote(SDValue Op) {
   case ISD::STRICT_FP_TO_SINT:
     // Promote the operation by extending the operand.
     return PromoteFP_TO_INT(Op);
+  case ISD::FP_ROUND:
+  case ISD::FP_EXTEND:
+    // These operations are used to do promotion so they can't be promoted
+    // themselves.
+    llvm_unreachable("Don't know how to promote this operation!");
   }
 
   // There are currently two cases of vector promotion:
