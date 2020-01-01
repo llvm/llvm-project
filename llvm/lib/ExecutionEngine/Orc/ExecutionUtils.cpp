@@ -121,7 +121,7 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
       JD.getExecutionSession(),
       (*CtorDtors.begin()).Func->getParent()->getDataLayout());
 
-  for (const auto &CtorDtor : CtorDtors) {
+  for (auto CtorDtor : CtorDtors) {
     assert(CtorDtor.Func && CtorDtor.Func->hasName() &&
            "Ctor/Dtor function must be named to be runnable under the JIT");
 

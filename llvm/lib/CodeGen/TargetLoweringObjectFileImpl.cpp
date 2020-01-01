@@ -273,7 +273,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
 
     Streamer.SwitchSection(S);
 
-    for (const auto &Operand : LinkerOptions->operands()) {
+    for (const auto *Operand : LinkerOptions->operands()) {
       if (cast<MDNode>(Operand)->getNumOperands() != 2)
         report_fatal_error("invalid llvm.linker.options");
       for (const auto &Option : cast<MDNode>(Operand)->operands()) {
@@ -289,7 +289,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
 
     Streamer.SwitchSection(S);
 
-    for (const auto &Operand : DependentLibraries->operands()) {
+    for (const auto *Operand : DependentLibraries->operands()) {
       Streamer.EmitBytes(
           cast<MDString>(cast<MDNode>(Operand)->getOperand(0))->getString());
       Streamer.EmitIntValue(0, 1);
@@ -885,7 +885,7 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
                                                        Module &M) const {
   // Emit the linker options if present.
   if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
-    for (const auto &Option : LinkerOptions->operands()) {
+    for (const auto *Option : LinkerOptions->operands()) {
       SmallVector<std::string, 4> StrOptions;
       for (const auto &Piece : cast<MDNode>(Option)->operands())
         StrOptions.push_back(cast<MDString>(Piece)->getString());
@@ -1449,7 +1449,7 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
     // linker.
     MCSection *Sec = getDrectveSection();
     Streamer.SwitchSection(Sec);
-    for (const auto &Option : LinkerOptions->operands()) {
+    for (const auto *Option : LinkerOptions->operands()) {
       for (const auto &Piece : cast<MDNode>(Option)->operands()) {
         // Lead with a space for consistency with our dllexport implementation.
         std::string Directive(" ");

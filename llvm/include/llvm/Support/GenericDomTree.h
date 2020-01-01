@@ -778,13 +778,13 @@ protected:
     NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
 
     std::vector<NodeRef> PredBlocks;
-    for (const auto &Pred : children<Inverse<N>>(NewBB))
+    for (auto Pred : children<Inverse<N>>(NewBB))
       PredBlocks.push_back(Pred);
 
     assert(!PredBlocks.empty() && "No predblocks?");
 
     bool NewBBDominatesNewBBSucc = true;
-    for (const auto &Pred : children<Inverse<N>>(NewBBSucc)) {
+    for (auto Pred : children<Inverse<N>>(NewBBSucc)) {
       if (Pred != NewBB && !dominates(NewBBSucc, Pred) &&
           isReachableFromEntry(Pred)) {
         NewBBDominatesNewBBSucc = false;

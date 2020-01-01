@@ -3038,7 +3038,7 @@ static bool isVectorReductionOp(const User *I) {
     if (!Visited.insert(User).second)
       continue;
 
-    for (const auto &U : User->users()) {
+    for (const auto *U : User->users()) {
       auto Inst = dyn_cast<Instruction>(U);
       if (!Inst)
         return false;

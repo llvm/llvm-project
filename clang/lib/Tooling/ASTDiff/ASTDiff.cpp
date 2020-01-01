@@ -787,7 +787,7 @@ void ASTDiff::Impl::addOptimalMapping(Mapping &M, NodeId Id1,
     return;
   ZhangShashaMatcher Matcher(*this, T1, T2, Id1, Id2);
   std::vector<std::pair<NodeId, NodeId>> R = Matcher.getMatchingNodes();
-  for (const auto Tuple : R) {
+  for (const auto &Tuple : R) {
     NodeId Src = Tuple.first;
     NodeId Dst = Tuple.second;
     if (!M.hasSrc(Src) && !M.hasDst(Dst))

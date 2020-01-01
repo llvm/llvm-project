@@ -297,7 +297,7 @@ Optional<ArrayRef<uint8_t>> getBuildID(const ELFFile<ELFT> *Obj) {
     if (P.p_type != ELF::PT_NOTE)
       continue;
     Error Err = Error::success();
-    for (const auto &N : Obj->notes(P, Err))
+    for (auto N : Obj->notes(P, Err))
       if (N.getType() == ELF::NT_GNU_BUILD_ID && N.getName() == ELF::ELF_NOTE_GNU)
         return N.getDesc();
   }

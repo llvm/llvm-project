@@ -233,7 +233,7 @@ void DomTreeUpdater::applyUpdates(ArrayRef<DominatorTree::UpdateType> Updates) {
     return;
 
   if (Strategy == UpdateStrategy::Lazy) {
-    for (const auto U : Updates)
+    for (const auto &U : Updates)
       if (!isSelfDominance(U))
         PendUpdates.push_back(U);
 
@@ -253,7 +253,7 @@ void DomTreeUpdater::applyUpdatesPermissive(
 
   SmallSet<std::pair<BasicBlock *, BasicBlock *>, 8> Seen;
   SmallVector<DominatorTree::UpdateType, 8> DeduplicatedUpdates;
-  for (const auto U : Updates) {
+  for (const auto &U : Updates) {
     auto Edge = std::make_pair(U.getFrom(), U.getTo());
     // Because it is illegal to submit updates that have already been applied
     // and updates to an edge need to be strictly ordered,
