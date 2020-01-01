@@ -897,27 +897,50 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       continue;
     }
     case ISD::FCEIL:
+    case ISD::STRICT_FCEIL:
     case ISD::FFLOOR:
+    case ISD::STRICT_FFLOOR:
     case ISD::FTRUNC:
+    case ISD::STRICT_FTRUNC:
     case ISD::FNEARBYINT:
-    case ISD::FRINT: {
+    case ISD::STRICT_FNEARBYINT:
+    case ISD::FRINT:
+    case ISD::STRICT_FRINT: {
       // Replace fp rounding with their X86 specific equivalent so we don't
       // need 2 sets of patterns.
       unsigned Imm;
       switch (N->getOpcode()) {
       default: llvm_unreachable("Unexpected opcode!");
+      case ISD::STRICT_FCEIL:
       case ISD::FCEIL:      Imm = 0xA; break;
+      case ISD::STRICT_FFLOOR:
       case ISD::FFLOOR:     Imm = 0x9; break;
+      case ISD::STRICT_FTRUNC:
       case ISD::FTRUNC:     Imm = 0xB; break;
+      case ISD::STRICT_FNEARBYINT:
       case ISD::FNEARBYINT: Imm = 0xC; break;
+      case ISD::STRICT_FRINT:
       case ISD::FRINT:      Imm = 0x4; break;
       }
       SDLoc dl(N);
-      SDValue Res = CurDAG->getNode(
-          X86ISD::VRNDSCALE, dl, N->getValueType(0), N->getOperand(0),
-          CurDAG->getTargetConstant(Imm, dl, MVT::i8));
+      bool IsStrict = N->isStrictFPOpcode();
+      SDValue Res;
+      if (IsStrict)
+        Res = CurDAG->getNode(X86ISD::STRICT_VRNDSCALE, dl,
+                              {N->getValueType(0), MVT::Other},
+                              {N->getOperand(0), N->getOperand(1),
+                               CurDAG->getTargetConstant(Imm, dl, MVT::i8)});
+      else
+        Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl, N->getValueType(0),
+                              N->getOperand(0),
+                              CurDAG->getTargetConstant(Imm, dl, MVT::i8));
       --I;
-      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      if (IsStrict) {
+        SDValue From[] = {SDValue(N, 0), SDValue(N, 1)};
+        SDValue To[] = {Res.getValue(0), Res.getValue(1)};
+        CurDAG->ReplaceAllUsesOfValuesWith(From, To, 2);
+      } else
+        CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
       CurDAG->DeleteNode(N);
       continue;
