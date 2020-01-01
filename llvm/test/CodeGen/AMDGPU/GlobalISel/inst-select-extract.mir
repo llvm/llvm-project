@@ -157,3 +157,23 @@ body: |
 
     S_ENDPGM 0, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %5, implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %13, implicit %14, implicit %15, implicit %16, implicit %17, implicit %18, implicit %19, implicit %20, implicit %21, implicit %22, implicit %23, implicit %24, implicit %25, implicit %26, implicit %27, implicit %28, implicit %29, implicit %30, implicit %31, implicit %32
 ...
+
+# TODO: Handle offset 32
+---
+name:            extract_sgpr_s64_from_s128
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: extract_sgpr_s64_from_s128
+    ; CHECK: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY [[DEF]].sub0_sub1
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY [[DEF]].sub2_sub3
+    ; CHECK: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY1]]
+    %0:sgpr(s128) = G_IMPLICIT_DEF
+    %1:sgpr(s64) = G_EXTRACT %0, 0
+    %2:sgpr(s64) = G_EXTRACT %0, 64
+    S_ENDPGM 0, implicit %1, implicit %2
+
+...
