@@ -115,6 +115,10 @@ private:
                    MachineBasicBlock::iterator TestPos, DebugLoc TestLoc,
                    MachineInstr &CMovI, MachineOperand &FlagUse,
                    CondRegArray &CondRegs);
+  void rewriteFCMov(MachineBasicBlock &TestMBB,
+                    MachineBasicBlock::iterator TestPos, DebugLoc TestLoc,
+                    MachineInstr &CMovI, MachineOperand &FlagUse,
+                    CondRegArray &CondRegs);
   void rewriteCondJmp(MachineBasicBlock &TestMBB,
                       MachineBasicBlock::iterator TestPos, DebugLoc TestLoc,
                       MachineInstr &JmpI, CondRegArray &CondRegs);
@@ -332,6 +336,28 @@ static MachineBasicBlock &splitBlock(MachineBasicBlock &MBB,
   }
 
   return NewMBB;
+}
+
+static X86::CondCode getCondFromFCMOV(unsigned Opcode) {
+  switch (Opcode) {
+  default: return X86::COND_INVALID;
+  case X86::CMOVBE_Fp32:  case X86::CMOVBE_Fp64:  case X86::CMOVBE_Fp80:
+    return X86::COND_BE;
+  case X86::CMOVB_Fp32:   case X86::CMOVB_Fp64:   case X86::CMOVB_Fp80:
+    return X86::COND_B;
+  case X86::CMOVE_Fp32:   case X86::CMOVE_Fp64:   case X86::CMOVE_Fp80:
+    return X86::COND_E;
+  case X86::CMOVNBE_Fp32: case X86::CMOVNBE_Fp64: case X86::CMOVNBE_Fp80:
+    return X86::COND_A;
+  case X86::CMOVNB_Fp32:  case X86::CMOVNB_Fp64:  case X86::CMOVNB_Fp80:
+    return X86::COND_AE;
+  case X86::CMOVNE_Fp32:  case X86::CMOVNE_Fp64:  case X86::CMOVNE_Fp80:
+    return X86::COND_NE;
+  case X86::CMOVNP_Fp32:  case X86::CMOVNP_Fp64:  case X86::CMOVNP_Fp80:
+    return X86::COND_NP;
+  case X86::CMOVP_Fp32:   case X86::CMOVP_Fp64:   case X86::CMOVP_Fp80:
+    return X86::COND_P;
+  }
 }
 
 bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
@@ -593,6 +619,8 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
         // Otherwise we can just rewrite in-place.
         if (X86::getCondFromCMov(MI) != X86::COND_INVALID) {
           rewriteCMov(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
+        } else if (getCondFromFCMOV(MI.getOpcode()) != X86::COND_INVALID) {
+          rewriteFCMov(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
         } else if (X86::getCondFromSETCC(MI) != X86::COND_INVALID) {
           rewriteSetCC(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
         } else if (MI.getOpcode() == TargetOpcode::COPY) {
@@ -850,6 +878,51 @@ void X86FlagsCopyLoweringPass::rewriteCMov(MachineBasicBlock &TestMBB,
       .setImm(Inverted ? X86::COND_E : X86::COND_NE);
   FlagUse.setIsKill(true);
   LLVM_DEBUG(dbgs() << "    fixed cmov: "; CMovI.dump());
+}
+
+void X86FlagsCopyLoweringPass::rewriteFCMov(MachineBasicBlock &TestMBB,
+                                            MachineBasicBlock::iterator TestPos,
+                                            DebugLoc TestLoc,
+                                            MachineInstr &CMovI,
+                                            MachineOperand &FlagUse,
+                                            CondRegArray &CondRegs) {
+  // First get the register containing this specific condition.
+  X86::CondCode Cond = getCondFromFCMOV(CMovI.getOpcode());
+  unsigned CondReg;
+  bool Inverted;
+  std::tie(CondReg, Inverted) =
+      getCondOrInverseInReg(TestMBB, TestPos, TestLoc, Cond, CondRegs);
+
+  MachineBasicBlock &MBB = *CMovI.getParent();
+
+  // Insert a direct test of the saved register.
+  insertTest(MBB, CMovI.getIterator(), CMovI.getDebugLoc(), CondReg);
+
+  auto getFCMOVOpcode = [](unsigned Opcode, bool Inverted) {
+    switch (Opcode) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case X86::CMOVBE_Fp32: case X86::CMOVNBE_Fp32:
+    case X86::CMOVB_Fp32:  case X86::CMOVNB_Fp32:
+    case X86::CMOVE_Fp32:  case X86::CMOVNE_Fp32:
+    case X86::CMOVP_Fp32:  case X86::CMOVNP_Fp32:
+      return Inverted ? X86::CMOVE_Fp32 : X86::CMOVNE_Fp32;
+    case X86::CMOVBE_Fp64: case X86::CMOVNBE_Fp64:
+    case X86::CMOVB_Fp64:  case X86::CMOVNB_Fp64:
+    case X86::CMOVE_Fp64:  case X86::CMOVNE_Fp64:
+    case X86::CMOVP_Fp64:  case X86::CMOVNP_Fp64:
+      return Inverted ? X86::CMOVE_Fp64 : X86::CMOVNE_Fp64;
+    case X86::CMOVBE_Fp80: case X86::CMOVNBE_Fp80:
+    case X86::CMOVB_Fp80:  case X86::CMOVNB_Fp80:
+    case X86::CMOVE_Fp80:  case X86::CMOVNE_Fp80:
+    case X86::CMOVP_Fp80:  case X86::CMOVNP_Fp80:
+      return Inverted ? X86::CMOVE_Fp80 : X86::CMOVNE_Fp80;
+    }
+  };
+
+  // Rewrite the CMov to use the !ZF flag from the test.
+  CMovI.setDesc(TII->get(getFCMOVOpcode(CMovI.getOpcode(), Inverted)));
+  FlagUse.setIsKill(true);
+  LLVM_DEBUG(dbgs() << "    fixed fcmov: "; CMovI.dump());
 }
 
 void X86FlagsCopyLoweringPass::rewriteCondJmp(
