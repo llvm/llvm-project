@@ -13350,6 +13350,16 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
   if (TLI.isNegatibleForFree(N0, DAG, LegalOperations, ForCodeSize))
     return TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
 
+  // -(X-Y) -> (Y-X) is unsafe because when X==Y, -0.0 != +0.0 FIXME: This is
+  // duplicated in isNegatibleForFree, but isNegatibleForFree doesn't know it
+  // was called from a context with a nsz flag if the input fsub does not.
+  if (N0.getOpcode() == ISD::FSUB &&
+      (DAG.getTarget().Options.NoSignedZerosFPMath ||
+       N->getFlags().hasNoSignedZeros()) && N0.hasOneUse()) {
+    return DAG.getNode(ISD::FSUB, SDLoc(N), VT, N0.getOperand(1),
+                       N0.getOperand(0), N->getFlags());
+  }
+
   // Transform fneg(bitconvert(x)) -> bitconvert(x ^ sign) to avoid loading
   // constant pool values.
   if (!TLI.isFNegFree(VT) &&
