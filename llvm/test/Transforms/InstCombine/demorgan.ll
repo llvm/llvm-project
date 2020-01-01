@@ -459,7 +459,7 @@ define i32 @PR28476(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR28476(
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[Y:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[CMP1]], [[CMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[CMP0]], [[CMP1]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;

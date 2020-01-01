@@ -3499,6 +3499,7 @@ bool InstCombiner::run() {
       }
       MadeIRChange = true;
     }
+    Worklist.AddDeferredInstructions();
   }
 
   Worklist.Zap();
@@ -3664,7 +3665,7 @@ static bool combineInstructionsOverFunction(
   IRBuilder<TargetFolder, IRBuilderCallbackInserter> Builder(
       F.getContext(), TargetFolder(DL),
       IRBuilderCallbackInserter([&Worklist, &AC](Instruction *I) {
-        Worklist.Add(I);
+        Worklist.AddDeferred(I);
         if (match(I, m_Intrinsic<Intrinsic::assume>()))
           AC.registerAssumption(cast<CallInst>(I));
       }));
