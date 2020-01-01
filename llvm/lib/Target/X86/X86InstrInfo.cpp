@@ -2305,7 +2305,7 @@ unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand) {
   default: llvm_unreachable("Illegal register size!");
   case 2: return HasMemoryOperand ? X86::CMOV16rm : X86::CMOV16rr;
   case 4: return HasMemoryOperand ? X86::CMOV32rm : X86::CMOV32rr;
-  case 8: return HasMemoryOperand ? X86::CMOV32rm : X86::CMOV64rr;
+  case 8: return HasMemoryOperand ? X86::CMOV64rm : X86::CMOV64rr;
   }
 }
 
