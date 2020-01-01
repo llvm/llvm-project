@@ -3766,7 +3766,7 @@ Operation *OperationParser::parseGenericOperation() {
   }
 
   // Add the successors, and their operands after the proper operands.
-  for (const auto &succ : llvm::zip(successors, successorOperands)) {
+  for (auto succ : llvm::zip(successors, successorOperands)) {
     Block *successor = std::get<0>(succ);
     const SmallVector<Value, 4> &operands = std::get<1>(succ);
     result.addSuccessor(successor, operands);
@@ -4176,7 +4176,7 @@ public:
 
     SmallVector<std::pair<OperationParser::SSAUseInfo, Type>, 2>
         regionArguments;
-    for (const auto &pair : llvm::zip(arguments, argTypes)) {
+    for (auto pair : llvm::zip(arguments, argTypes)) {
       const OperandType &operand = std::get<0>(pair);
       Type type = std::get<1>(pair);
       OperationParser::SSAUseInfo operandInfo = {operand.name, operand.number,
