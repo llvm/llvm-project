@@ -509,6 +509,7 @@ TEST(StringRefTest, Count) {
   EXPECT_EQ(1U, Str.count("hello"));
   EXPECT_EQ(1U, Str.count("ello"));
   EXPECT_EQ(0U, Str.count("zz"));
+  EXPECT_EQ(0U, Str.count(""));
 
   StringRef OverlappingAbba("abbabba");
   EXPECT_EQ(1U, OverlappingAbba.count("abba"));
