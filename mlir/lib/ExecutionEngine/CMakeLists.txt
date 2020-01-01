@@ -14,7 +14,15 @@ target_link_libraries(MLIRExecutionEngine
   LLVMBitWriter
   LLVMExecutionEngine
   LLVMOrcJIT
+  LLVMJITLink
   LLVMSupport
+  LLVMAnalysis
+  LLVMAggressiveInstCombine
+  LLVMInstCombine
+  LLVMMC
+  LLVMScalarOpts
+  LLVMTarget
+  LLVMVectorize
   LLVMTransformUtils
 
   ${outlibs})

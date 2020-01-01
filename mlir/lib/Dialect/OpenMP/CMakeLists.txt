@@ -6,3 +6,4 @@ add_llvm_library(MLIROpenMP
   )
 
 add_dependencies(MLIROpenMP MLIROpenMPOpsIncGen)
+target_link_libraries(MLIROpenMP MLIRIR)

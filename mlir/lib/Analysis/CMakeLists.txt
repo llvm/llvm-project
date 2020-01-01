@@ -23,6 +23,5 @@ add_dependencies(MLIRAnalysis
   MLIRCallOpInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
   MLIRLoopOps
-  MLIRVectorOps
   )
-target_link_libraries(MLIRAnalysis MLIRAffineOps MLIRLoopOps MLIRVectorOps)
+target_link_libraries(MLIRAnalysis MLIRAffineOps MLIRLoopOps)

@@ -7,6 +7,7 @@ endfunction()
 # TODO: This is to handle the current static registration, but should be
 # factored out a bit.
 function(whole_archive_link target)
+  add_dependencies(${target} ${ARGN})
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set(link_flags "-L${CMAKE_BINARY_DIR}/lib ")
     FOREACH(LIB ${ARGN})
