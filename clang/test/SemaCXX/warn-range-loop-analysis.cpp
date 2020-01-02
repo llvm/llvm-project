@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wloop-analysis -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wrange-loop-analysis -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wloop-analysis -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 template <typename return_type>
 struct Iterator {
@@ -67,14 +68,17 @@ void test0() {
   for (const int &x : int_non_ref_container) {}
   // expected-warning@-1 {{loop variable 'x' is always a copy because the range of type 'Container<int>' does not return a reference}}
   // expected-note@-2 {{use non-reference type 'int'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
 
   for (const double &x : int_container) {}
   // expected-warning@-1 {{loop variable 'x' has type 'const double &' but is initialized with type 'int' resulting in a copy}}
   // expected-note@-2 {{use non-reference type 'double' to keep the copy or type 'const int &' to prevent copying}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:22}:""
 
   for (const Bar x : bar_container) {}
   // expected-warning@-1 {{loop variable 'x' of type 'const Bar' creates a copy from type 'const Bar'}}
   // expected-note@-2 {{use reference type 'const Bar &' to prevent copying}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:18}:"&"
 }
 
 void test1() {
@@ -83,6 +87,7 @@ void test1() {
   for (const int &x : A) {}
   // expected-warning@-1 {{always a copy}}
   // expected-note@-2 {{'int'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : A) {}
   // No warning, non-reference type indicates copy is made
   //for (int &x : A) {}
@@ -93,6 +98,7 @@ void test1() {
   for (const double &x : A) {}
   // expected-warning@-1 {{always a copy}}
   // expected-note@-2 {{'double'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:22}:""
   for (const double x : A) {}
   // No warning, non-reference type indicates copy is made
   //for (double &x : A) {}
@@ -103,6 +109,7 @@ void test1() {
   for (const Bar &x : A) {}
   // expected-warning@-1 {{always a copy}}
   // expected-note@-2 {{'Bar'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : A) {}
   // No warning, non-reference type indicates copy is made
   //for (Bar &x : A) {}
@@ -126,6 +133,7 @@ void test2() {
   for (const double &x : B) {}
   // expected-warning@-1 {{resulting in a copy}}
   // expected-note-re@-2 {{'double'{{.*}}'const int &'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:22}:""
   for (const double x : B) {}
   //for (double &x : B) {}
   // Binding error
@@ -135,6 +143,7 @@ void test2() {
   for (const Bar &x : B) {}
   // expected-warning@-1 {{resulting in a copy}}
   // expected-note@-2 {{'Bar'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : B) {}
   //for (Bar &x : B) {}
   // Binding error
@@ -148,6 +157,7 @@ void test3() {
   for (const Bar &x : C) {}
   // expected-warning@-1 {{always a copy}}
   // expected-note@-2 {{'Bar'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : C) {}
   // No warning, non-reference type indicates copy is made
   //for (Bar &x : C) {}
@@ -158,6 +168,7 @@ void test3() {
   for (const int &x : C) {}
   // expected-warning@-1 {{always a copy}}
   // expected-note@-2 {{'int'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : C) {}
   // No warning, copy made
   //for (int &x : C) {}
@@ -174,6 +185,7 @@ void test4() {
   for (const Bar x : D) {}
   // expected-warning@-1 {{creates a copy}}
   // expected-note@-2 {{'const Bar &'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:18}:"&"
   for (Bar &x : D) {}
   // No warning
   for (Bar x : D) {}
@@ -182,6 +194,7 @@ void test4() {
   for (const int &x : D) {}
   // expected-warning@-1 {{resulting in a copy}}
   // expected-note-re@-2 {{'int'{{.*}}'const Bar &'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : D) {}
   // No warning
   //for (int &x : D) {}
@@ -196,6 +209,7 @@ void test5() {
   for (const Bar &x : E) {}
   // expected-warning@-1 {{always a copy}}
   // expected-note@-2 {{'Bar'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : E) {}
   // No warning, non-reference type indicates copy is made
   //for (Bar &x : E) {}
@@ -210,6 +224,7 @@ void test6() {
   for (const Bar &x : F) {}
   // expected-warning@-1 {{resulting in a copy}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const Foo &'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : F) {}
   // No warning.
   //for (Bar &x : F) {}
@@ -233,6 +248,7 @@ void test7() {
   for (const int &x : G) {}
   // expected-warning@-1 {{resulting in a copy}}
   // expected-note-re@-2 {{'int'{{.*}}'const double &'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : G) {}
   // No warning
   //for (int &x : G) {}
@@ -243,6 +259,7 @@ void test7() {
   for (const Bar &x : G) {}
   // expected-warning@-1 {{resulting in a copy}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const double &'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : G) {}
   // No warning
   //for (int &Bar : G) {}
@@ -266,6 +283,7 @@ void test8() {
   for (const Bar &x : H) {}
   // expected-warning@-1 {{resulting in a copy}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const Foo &'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : H) {}
   // No warning
   //for (Bar &x: H) {}
@@ -282,6 +300,7 @@ void test9() {
   for (const Bar x : I) {}
   // expected-warning@-1 {{creates a copy}}
   // expected-note@-2 {{'const Bar &'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:18}:"&"
   for (Bar &x : I) {}
   // No warning
   for (Bar x : I) {}
@@ -290,10 +309,35 @@ void test9() {
   for (const int &x : I) {}
   // expected-warning@-1 {{resulting in a copy}}
   // expected-note-re@-2 {{'int'{{.*}}'const Bar &'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : I) {}
   // No warning
   //for (int &x : I) {}
   // Binding error
   for (int x : I) {}
   // No warning
+}
+
+void test10() {
+  Container<Bar> C;
+
+  for (const Bar &x : C) {}
+  // expected-warning@-1 {{always a copy}}
+  // expected-note@-2 {{'Bar'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
+
+  for (const Bar& x : C) {}
+  // expected-warning@-1 {{always a copy}}
+  // expected-note@-2 {{'Bar'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:""
+
+  for (const Bar & x : C) {}
+  // expected-warning@-1 {{always a copy}}
+  // expected-note@-2 {{'Bar'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:20}:""
+
+  for (const Bar&x : C) {}
+  // expected-warning@-1 {{always a copy}}
+  // expected-note@-2 {{'Bar'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:" "
 }
