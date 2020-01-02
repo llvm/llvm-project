@@ -220,6 +220,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   clang-resource-headers
   clang-include-fixer
   clang-refactor
+  clang-scan-deps
   clang-tidy
   clangd
   builtins
