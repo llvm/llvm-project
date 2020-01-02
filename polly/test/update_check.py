@@ -15,7 +15,7 @@ polly_src_dir = '''@POLLY_SOURCE_DIR@'''
 polly_lib_dir = '''@POLLY_LIB_DIR@'''
 shlibext = '''@LLVM_SHLIBEXT@'''
 llvm_tools_dir = '''@LLVM_TOOLS_DIR@'''
-link_polly_into_tools = not '''@LINK_POLLY_INTO_TOOLS@'''.lower() in {'','0','n','no','off','false','notfound','link_polly_into_tools-notfound'}
+llvm_polly_link_into_tools = not '''@LLVM_POLLY_LINK_INTO_TOOLS@'''.lower() in {'','0','n','no','off','false','notfound','llvm_polly_link_into_tools-notfound'}
 
 runre = re.compile(r'\s*\;\s*RUN\s*\:(?P<tool>.*)')
 filecheckre = re.compile(r'\s*(?P<tool>.*)\|\s*(?P<filecheck>FileCheck\s[^|]*)')
@@ -298,7 +298,7 @@ def main():
             toolarg = toolarg.replace('%s', filename)
             toolarg = toolarg.replace('%S', os.path.dirname(filename))
             if toolarg == '%loadPolly':
-                if not link_polly_into_tools:
+                if not llvm_polly_link_into_tools:
                     newtool += ['-load',os.path.join(polly_lib_dir,'LLVMPolly' + shlibext)]
                 newtool.append('-polly-process-unprofitable')
                 newtool.append('-polly-remarks-minimal')

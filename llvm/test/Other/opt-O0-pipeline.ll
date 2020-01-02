@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-- -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt -mtriple=x86_64-- -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,%llvmcheckext
 
 ; REQUIRES: asserts
 
@@ -6,6 +6,7 @@
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Module Verifier
+; CHECK-EXT:     Good Bye World Pass
 ; CHECK-NEXT:     Instrument function entry/exit with calls to e.g. mcount() (pre inlining)
 ; CHECK-NEXT: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
