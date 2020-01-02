@@ -3982,11 +3982,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Walk the register/memloc assignments, inserting copies/loads.
-  for (unsigned i = 0, realArgIdx = 0, e = ArgLocs.size(); i != e;
-       ++i, ++realArgIdx) {
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
-    SDValue Arg = OutVals[realArgIdx];
-    ISD::ArgFlagsTy Flags = Outs[realArgIdx].Flags;
+    SDValue Arg = OutVals[i];
+    ISD::ArgFlagsTy Flags = Outs[i].Flags;
 
     // Promote the value if needed.
     switch (VA.getLocInfo()) {
@@ -4001,7 +4000,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::AExt:
-      if (Outs[realArgIdx].ArgVT == MVT::i1) {
+      if (Outs[i].ArgVT == MVT::i1) {
         // AAPCS requires i1 to be zero-extended to 8-bits by the caller.
         Arg = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Arg);
         Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i8, Arg);
@@ -4030,7 +4029,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
 
     if (VA.isRegLoc()) {
-      if (realArgIdx == 0 && Flags.isReturned() && !Flags.isSwiftSelf() &&
+      if (i == 0 && Flags.isReturned() && !Flags.isSwiftSelf() &&
           Outs[0].VT == MVT::i64) {
         assert(VA.getLocVT() == MVT::i64 &&
                "unexpected calling convention register assignment");
