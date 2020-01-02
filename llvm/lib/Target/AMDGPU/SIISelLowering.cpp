@@ -2792,10 +2792,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   MVT PtrVT = MVT::i32;
 
   // Walk the register/memloc assignments, inserting copies/loads.
-  for (unsigned i = 0, realArgIdx = 0, e = ArgLocs.size(); i != e;
-       ++i, ++realArgIdx) {
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
-    SDValue Arg = OutVals[realArgIdx];
+    SDValue Arg = OutVals[i];
 
     // Promote the value if needed.
     switch (VA.getLocInfo()) {
@@ -2835,7 +2834,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       MaybeAlign Alignment;
 
       if (IsTailCall) {
-        ISD::ArgFlagsTy Flags = Outs[realArgIdx].Flags;
+        ISD::ArgFlagsTy Flags = Outs[i].Flags;
         unsigned OpSize = Flags.isByVal() ?
           Flags.getByValSize() : VA.getValVT().getStoreSize();
 
