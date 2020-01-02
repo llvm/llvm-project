@@ -36,19 +36,21 @@ macro(add_optional_dependency variable description package found)
     set(maybe_required REQUIRED)
   else()
     set(find_package FALSE)
-    set(${variable} FALSE PARENT_SCOPE)
+    set(${variable} FALSE)
   endif()
 
   if(${find_package})
     find_package(${package} ${maybe_required})
     set(${variable} "${${found}}")
   endif()
+
+  message(STATUS "${description}: ${${variable}}")
 endmacro()
 
-add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support." LibEdit LibEdit_FOUND)
-add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support." CursesAndPanel CURSESANDPANEL_FOUND)
-add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support." LibLZMA LIBLZMA_FOUND)
-add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support." Lua LUA_FOUND)
+add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
+add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
+add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
+add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" Lua LUA_FOUND)
 
 set(default_enable_python ON)
 
