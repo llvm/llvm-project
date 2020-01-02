@@ -29,3 +29,23 @@ func @subgroup_ballot(%predicate: i1) -> vector<4xi32> {
   %0 = spv.GroupNonUniformBallot "Workgroup" %predicate : vector<4xi32>
   return %0: vector<4xi32>
 }
+
+// CHECK-LABEL: module_logical_glsl450
+func @module_logical_glsl450() {
+  // CHECK: spv.module min version: V_1_0
+  // CHECK: spv.module max version: V_1_5
+  // CHECK: spv.module extensions: [ ]
+  // CHECK: spv.module capabilities: [ ]
+  spv.module "Logical" "GLSL450" { }
+  return
+}
+
+// CHECK-LABEL: module_physical_storage_buffer64_vulkan
+func @module_physical_storage_buffer64_vulkan() {
+  // CHECK: spv.module min version: V_1_5
+  // CHECK: spv.module max version: V_1_5
+  // CHECK: spv.module extensions: [ [SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer] ]
+  // CHECK: spv.module capabilities: [ [PhysicalStorageBufferAddresses] [VulkanMemoryModel] ]
+  spv.module "PhysicalStorageBuffer64" "Vulkan" { }
+  return
+}

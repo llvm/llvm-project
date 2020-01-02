@@ -30,18 +30,19 @@ void TestAvailability::runOnFunction() {
     if (op->getDialect() != spvDialect)
       return WalkResult::advance();
 
+    auto opName = op->getName();
     auto &os = llvm::outs();
 
     if (auto minVersion = dyn_cast<spirv::QueryMinVersionInterface>(op))
-      os << " min version: "
+      os << opName << " min version: "
          << spirv::stringifyVersion(minVersion.getMinVersion()) << "\n";
 
     if (auto maxVersion = dyn_cast<spirv::QueryMaxVersionInterface>(op))
-      os << " max version: "
+      os << opName << " max version: "
          << spirv::stringifyVersion(maxVersion.getMaxVersion()) << "\n";
 
     if (auto extension = dyn_cast<spirv::QueryExtensionInterface>(op)) {
-      os << " extensions: [";
+      os << opName << " extensions: [";
       for (const auto &exts : extension.getExtensions()) {
         os << " [";
         interleaveComma(exts, os, [&](spirv::Extension ext) {
@@ -53,7 +54,7 @@ void TestAvailability::runOnFunction() {
     }
 
     if (auto capability = dyn_cast<spirv::QueryCapabilityInterface>(op)) {
-      os << " capabilities: [";
+      os << opName << " capabilities: [";
       for (const auto &caps : capability.getCapabilities()) {
         os << " [";
         interleaveComma(caps, os, [&](spirv::Capability cap) {
