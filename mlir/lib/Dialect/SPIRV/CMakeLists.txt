@@ -18,6 +18,7 @@ add_llvm_library(MLIRSPIRV
 add_dependencies(MLIRSPIRV
   MLIRSPIRVAvailabilityIncGen
   MLIRSPIRVCanonicalizationIncGen
+  MLIRSPIRVEnumAvailabilityIncGen
   MLIRSPIRVEnumsIncGen
   MLIRSPIRVOpsIncGen
   MLIRSPIRVOpUtilsGen

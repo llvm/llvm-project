@@ -467,7 +467,13 @@ def SPV_CapabilityAttr :
 def SPV_AM_Logical                 : I32EnumAttrCase<"Logical", 0>;
 def SPV_AM_Physical32              : I32EnumAttrCase<"Physical32", 1>;
 def SPV_AM_Physical64              : I32EnumAttrCase<"Physical64", 2>;
-def SPV_AM_PhysicalStorageBuffer64 : I32EnumAttrCase<"PhysicalStorageBuffer64", 5348>;
+def SPV_AM_PhysicalStorageBuffer64 : I32EnumAttrCase<"PhysicalStorageBuffer64", 5348> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Extension<[SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer]>,
+    Capability<[SPV_C_PhysicalStorageBufferAddresses]>
+  ];
+}
 
 def SPV_AddressingModelAttr :
     I32EnumAttr<"AddressingModel", "valid SPIR-V AddressingModel", [
@@ -944,7 +950,12 @@ def SPV_MemoryAccessAttr :
 def SPV_MM_Simple  : I32EnumAttrCase<"Simple", 0>;
 def SPV_MM_GLSL450 : I32EnumAttrCase<"GLSL450", 1>;
 def SPV_MM_OpenCL  : I32EnumAttrCase<"OpenCL", 2>;
-def SPV_MM_Vulkan  : I32EnumAttrCase<"Vulkan", 3>;
+def SPV_MM_Vulkan  : I32EnumAttrCase<"Vulkan", 3> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Capability<[SPV_C_VulkanMemoryModel]>
+  ];
+}
 
 def SPV_MemoryModelAttr :
     I32EnumAttr<"MemoryModel", "valid SPIR-V MemoryModel", [

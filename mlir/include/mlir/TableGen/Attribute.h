@@ -135,6 +135,9 @@ public:
 
   // Returns the value of this enum attribute case.
   int64_t getValue() const;
+
+  // Returns the TableGen definition this EnumAttrCase was constructed from.
+  const llvm::Record &getDef() const;
 };
 
 // Wrapper class providing helper methods for accessing enum attributes defined
@@ -145,6 +148,8 @@ public:
   explicit EnumAttr(const llvm::Record *record);
   explicit EnumAttr(const llvm::Record &record);
   explicit EnumAttr(const llvm::DefInit *init);
+
+  static bool classof(const Attribute *attr);
 
   // Returns true if this is a bit enum attribute.
   bool isBitEnum() const;

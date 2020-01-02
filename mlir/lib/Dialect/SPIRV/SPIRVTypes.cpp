@@ -22,6 +22,8 @@ using namespace mlir::spirv;
 
 // Pull in all enum utility function definitions
 #include "mlir/Dialect/SPIRV/SPIRVEnums.cpp.inc"
+// Pull in all enum type availability query function definitions
+#include "mlir/Dialect/SPIRV/SPIRVEnumAvailability.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // ArrayType
