@@ -72,7 +72,7 @@ bool isRSAllocationTyCallSite(llvm::Module &module, llvm::CallInst *call_inst) {
   (void)module;
   if (!call_inst->hasByValArgument())
     return false;
-  for (const auto &param : call_inst->operand_values())
+  for (const auto *param : call_inst->operand_values())
     if (isRSAllocationPtrTy(param->getType()))
       return true;
   return false;

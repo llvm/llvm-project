@@ -35,7 +35,7 @@ void LoopBase<BlockT, LoopT>::getExitingBlocks(
     SmallVectorImpl<BlockT *> &ExitingBlocks) const {
   assert(!isInvalid() && "Loop not in a valid state!");
   for (const auto BB : blocks())
-    for (const auto &Succ : children<BlockT *>(BB))
+    for (auto *Succ : children<BlockT *>(BB))
       if (!contains(Succ)) {
         // Not in current loop? It must be an exit block.
         ExitingBlocks.push_back(BB);
@@ -63,7 +63,7 @@ void LoopBase<BlockT, LoopT>::getExitBlocks(
     SmallVectorImpl<BlockT *> &ExitBlocks) const {
   assert(!isInvalid() && "Loop not in a valid state!");
   for (const auto BB : blocks())
-    for (const auto &Succ : children<BlockT *>(BB))
+    for (auto *Succ : children<BlockT *>(BB))
       if (!contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitBlocks.push_back(Succ);
@@ -142,7 +142,7 @@ void LoopBase<BlockT, LoopT>::getExitEdges(
     SmallVectorImpl<Edge> &ExitEdges) const {
   assert(!isInvalid() && "Loop not in a valid state!");
   for (const auto BB : blocks())
-    for (const auto &Succ : children<BlockT *>(BB))
+    for (auto *Succ : children<BlockT *>(BB))
       if (!contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitEdges.emplace_back(BB, Succ);

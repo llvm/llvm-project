@@ -792,7 +792,7 @@ void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *Decl = Result.Nodes.getNodeAs<UsingDecl>("using")) {
-    for (const auto &Shadow : Decl->shadows()) {
+    for (const auto *Shadow : Decl->shadows()) {
       addUsage(NamingCheckFailures, Shadow->getTargetDecl(),
                Decl->getNameInfo().getSourceRange());
     }

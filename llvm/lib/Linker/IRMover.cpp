@@ -1099,7 +1099,7 @@ Error IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
 }
 
 void IRLinker::flushRAUWWorklist() {
-  for (const auto Elem : RAUWWorklist) {
+  for (const auto &Elem : RAUWWorklist) {
     GlobalValue *Old;
     Value *New;
     std::tie(Old, New) = Elem;

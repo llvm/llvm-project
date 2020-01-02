@@ -2584,7 +2584,7 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
 }
 
 void CodeGenModule::registerGlobalDtorsWithAtExit() {
-  for (const auto I : DtorsUsingAtExit) {
+  for (const auto &I : DtorsUsingAtExit) {
     int Priority = I.first;
     const llvm::TinyPtrVector<llvm::Function *> &Dtors = I.second;
 
