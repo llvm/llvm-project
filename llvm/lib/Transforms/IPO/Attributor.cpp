@@ -3466,7 +3466,8 @@ static unsigned int getKnownAlignForUse(Attributor &A,
   // We need to follow common pointer manipulation uses to the accesses they
   // feed into.
   if (isa<CastInst>(I)) {
-    TrackUse = true;
+    // Follow all but ptr2int casts.
+    TrackUse = !isa<PtrToIntInst>(I);
     return 0;
   }
   if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
