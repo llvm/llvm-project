@@ -545,9 +545,9 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
   else {
     MCSymbol *DotSym = OutContext.createTempSymbol();
     const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
+    OutStreamer.EmitLabel(DotSym);
     OutStreamer.EmitInstruction(MCInstBuilder(SystemZ::BRCLAsm)
                                   .addImm(0).addExpr(Dot), STI);
-    OutStreamer.EmitLabel(DotSym);
     return 6;
   }
 }
