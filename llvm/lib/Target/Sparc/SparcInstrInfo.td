@@ -1676,10 +1676,10 @@ def : Pat<(store (i32 0), ADDRri:$dst), (STri ADDRri:$dst, (i32 G0))>;
 
 // store bar for all atomic_fence in V8.
 let Predicates = [HasNoV9] in
-  def : Pat<(atomic_fence imm, imm), (STBAR)>;
+  def : Pat<(atomic_fence timm, timm), (STBAR)>;
 
 let Predicates = [HasV9] in
-  def : Pat<(atomic_fence imm, imm), (MEMBARi 0xf)>;
+  def : Pat<(atomic_fence timm, timm), (MEMBARi 0xf)>;
 
 // atomic_load addr -> load addr
 def : Pat<(i32 (atomic_load_8 ADDRrr:$src)), (LDUBrr ADDRrr:$src)>;
