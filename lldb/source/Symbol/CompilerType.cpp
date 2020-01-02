@@ -26,12 +26,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-CompilerType::CompilerType(TypeSystem *type_system,
-                           lldb::opaque_compiler_type_t type)
-    : m_type(type), m_type_system(type_system) {}
-
-CompilerType::~CompilerType() {}
-
 // Tests
 
 bool CompilerType::IsAggregateType() const {
