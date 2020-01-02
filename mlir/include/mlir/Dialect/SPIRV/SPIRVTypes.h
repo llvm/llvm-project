@@ -17,8 +17,21 @@
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 
+// Forward declare enum classes related to op availability. Their definitions
+// are in the TableGen'erated SPIRVEnums.h.inc and can be referenced by other
+// dclarations in SPIRVEnums.h.inc.
+namespace mlir {
+namespace spirv {
+enum class Version : uint32_t;
+enum class Extension;
+enum class Capability : uint32_t;
+} // namespace spirv
+} // namespace mlir
+
 // Pull in all enum type definitions and utility function declarations
 #include "mlir/Dialect/SPIRV/SPIRVEnums.h.inc"
+// Pull in all enum type availability query function declarations
+#include "mlir/Dialect/SPIRV/SPIRVEnumAvailability.h.inc"
 
 #include <tuple>
 
