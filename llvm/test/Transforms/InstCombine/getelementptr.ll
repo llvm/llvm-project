@@ -1168,3 +1168,43 @@ define <2 x i32*> @PR32414(i32** %ptr) {
   %tmp1 = getelementptr inbounds i32, i32* %tmp0, <2 x i64> <i64 0, i64 1>
   ret <2 x i32*> %tmp1
 }
+
+define i32* @test_bitcast_nzgep([1 x i32]* %base, i64 %idx) {
+; CHECK-LABEL: @test_bitcast_nzgep(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [1 x i32], [1 x i32]* [[BASE:%.*]], i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret i32* [[PTR]]
+;
+  %base2 = bitcast [1 x i32]* %base to i32*
+  %ptr = getelementptr inbounds i32, i32* %base2, i64 %idx
+  ret i32* %ptr
+}
+
+define i32* @test_zgep_nzgep([1 x i32]* %base, i64 %idx) {
+; CHECK-LABEL: @test_zgep_nzgep(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [1 x i32], [1 x i32]* [[BASE:%.*]], i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret i32* [[PTR]]
+;
+  %base2 = getelementptr [1 x i32], [1 x i32]* %base, i64 0, i64 0
+  %ptr = getelementptr inbounds i32, i32* %base2, i64 %idx
+  ret i32* %ptr
+}
+
+define i32* @test_nzgep_zgep([1 x i32]* %base, i64 %idx) {
+; CHECK-LABEL: @test_nzgep_zgep(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [1 x i32], [1 x i32]* [[BASE:%.*]], i64 [[IDX:%.*]], i64 0
+; CHECK-NEXT:    ret i32* [[PTR]]
+;
+  %base2 = getelementptr inbounds [1 x i32], [1 x i32]* %base, i64 %idx
+  %ptr = getelementptr [1 x i32], [1 x i32]* %base2, i64 0, i64 0
+  ret i32* %ptr
+}
+
+define i32* @test_gep_inbounds_of_gep(i32* %base) {
+; CHECK-LABEL: @test_gep_inbounds_of_gep(
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i32, i32* [[BASE:%.*]], i64 8
+; CHECK-NEXT:    ret i32* [[PTR2]]
+;
+  %ptr1 = getelementptr i32, i32* %base, i64 4
+  %ptr2 = getelementptr inbounds i32, i32* %ptr1, i64 4
+  ret i32* %ptr2
+}
