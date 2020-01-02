@@ -35,7 +35,7 @@ func @module_logical_glsl450() {
   // CHECK: spv.module min version: V_1_0
   // CHECK: spv.module max version: V_1_5
   // CHECK: spv.module extensions: [ ]
-  // CHECK: spv.module capabilities: [ ]
+  // CHECK: spv.module capabilities: [ [Shader] ]
   spv.module "Logical" "GLSL450" { }
   return
 }
