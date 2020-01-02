@@ -151,8 +151,8 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
 
 // Verifies if a module has named values listed. Also, in debug mode verifies
 // that names are intrinsic names.
-bool coro::declaresIntrinsics(Module &M,
-                              std::initializer_list<StringRef> List) {
+bool coro::declaresIntrinsics(const Module &M,
+                              const std::initializer_list<StringRef> List) {
   for (StringRef Name : List) {
     assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");
     if (M.getNamedValue(Name))
