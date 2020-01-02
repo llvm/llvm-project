@@ -63,7 +63,7 @@ public:
   //   namespace::storage TblgenStruct::field1() const;
   const char *fieldInfo = R"(  {0} {1}() const;
 )";
-  for (const auto field : fields) {
+  for (auto field : fields) {
     auto name = field.getName();
     auto type = field.getType();
     auto storage = type.getStorageType();
