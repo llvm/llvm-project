@@ -8,6 +8,8 @@ else()
     LLVMCore
     LLVMipo
     LLVMPasses
+    DEPENDS
+    intrinsics_gen
     )
 endif()
 
