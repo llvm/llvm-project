@@ -46,7 +46,7 @@ struct Inliner : public FunctionPass<Inliner> {
       if (failed(inlineRegion(
               interface, &callee.body(), caller,
               llvm::to_vector<8>(caller.getArgOperands()),
-              llvm::to_vector<8>(caller.getResults()), caller.getLoc(),
+              SmallVector<Value, 8>(caller.getResults()), caller.getLoc(),
               /*shouldCloneInlinedRegion=*/!callee.getResult()->hasOneUse())))
         continue;
 
