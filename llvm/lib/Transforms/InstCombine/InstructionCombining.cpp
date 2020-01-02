@@ -2450,12 +2450,13 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
         replaceInstUsesWith(*C,
                             ConstantInt::get(Type::getInt1Ty(C->getContext()),
                                              C->isFalseWhenEqual()));
-      } else if (isa<BitCastInst>(I) || isa<GetElementPtrInst>(I) ||
-                 isa<AddrSpaceCastInst>(I)) {
-        replaceInstUsesWith(*I, UndefValue::get(I->getType()));
       } else if (auto *SI = dyn_cast<StoreInst>(I)) {
         for (auto *DII : DIIs)
           ConvertDebugDeclareToDebugValue(DII, SI, *DIB);
+      } else {
+        // Casts, GEP, or anything else: we're about to delete this instruction,
+        // so it can not have any valid uses.
+        replaceInstUsesWith(*I, UndefValue::get(I->getType()));
       }
       eraseInstFromFunction(*I);
     }
