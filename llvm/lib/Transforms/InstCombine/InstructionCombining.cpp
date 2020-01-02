@@ -1649,6 +1649,15 @@ Instruction *InstCombiner::narrowMathIfNoOverflow(BinaryOperator &BO) {
   return CastInst::Create(CastOpc, NarrowBO, BO.getType());
 }
 
+bool isMergedGEPInBounds(GEPOperator &GEP1, GEPOperator &GEP2) {
+  // At least one GEP must be inbounds.
+  if (!GEP1.isInBounds() && !GEP2.isInBounds())
+    return false;
+
+  return (GEP1.isInBounds() || GEP1.hasAllZeroIndices()) &&
+         (GEP2.isInBounds() || GEP2.hasAllZeroIndices());
+}
+
 Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
   Type *GEPType = GEP.getType();
@@ -1922,7 +1931,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
       // Update the GEP in place if possible.
       if (Src->getNumOperands() == 2) {
-        GEP.setIsInBounds(GEP.isInBounds() && Src->isInBounds());
+        GEP.setIsInBounds(isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP)));
         GEP.setOperand(0, Src->getOperand(0));
         GEP.setOperand(1, Sum);
         return &GEP;
@@ -1939,7 +1948,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
 
     if (!Indices.empty())
-      return GEP.isInBounds() && Src->isInBounds()
+      return isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))
                  ? GetElementPtrInst::CreateInBounds(
                        Src->getSourceElementType(), Src->getOperand(0), Indices,
                        GEP.getName())
