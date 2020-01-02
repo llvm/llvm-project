@@ -29,7 +29,7 @@ class NInputs<int args_in> :
 class NOutputs<int args_out> :
   NativeOpTrait<"linalg::NOutputs<" # !cast<string>(args_out) # ">::Impl"> {}
 
-def ViewTraits : NativeOpTrait<"linalg::ViewTraits">;
+def StructuredOpTraits : NativeOpTrait<"linalg::StructuredOpTraits">;
 
 // The linalg 'LinalgStructuredInterface' provides access to the 'LinalgOp'
 // interface.
@@ -147,7 +147,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
 // depending on the specific Linalg op.
 class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
   : Op<Linalg_Dialect, mnemonic,
-       !listconcat(props, [ViewTraits, LinalgStructuredInterface])> {
+       !listconcat(props, [StructuredOpTraits, LinalgStructuredInterface])> {
   let parser = [{ return parseLinalgStructuredOp(parser, result); }];
   let printer = [{ printLinalgStructuredOp(p, *this); }];
 }
