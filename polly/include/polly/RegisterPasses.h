@@ -16,7 +16,7 @@
 namespace llvm {
 class PassRegistry;
 class PassBuilder;
-class PassPluginLibraryInfo;
+struct PassPluginLibraryInfo;
 namespace legacy {
 class PassManagerBase;
 } // namespace legacy
