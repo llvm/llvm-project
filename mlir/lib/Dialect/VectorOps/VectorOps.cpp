@@ -1349,7 +1349,7 @@ public:
     // Compute slice of vector mask region.
     SmallVector<int64_t, 4> sliceMaskDimSizes;
     assert(sliceOffsets.size() == maskDimSizes.size());
-    for (const auto &it : llvm::zip(maskDimSizes, sliceOffsets, sliceSizes)) {
+    for (auto it : llvm::zip(maskDimSizes, sliceOffsets, sliceSizes)) {
       int64_t maskDimSize = std::get<0>(it);
       int64_t sliceOffset = std::get<1>(it);
       int64_t sliceSize = std::get<2>(it);

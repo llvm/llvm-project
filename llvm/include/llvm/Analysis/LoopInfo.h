@@ -208,7 +208,7 @@ public:
   bool isLoopExiting(const BlockT *BB) const {
     assert(!isInvalid() && "Loop not in a valid state!");
     assert(contains(BB) && "Exiting block must be part of the loop");
-    for (const auto &Succ : children<const BlockT *>(BB)) {
+    for (const auto *Succ : children<const BlockT *>(BB)) {
       if (!contains(Succ))
         return true;
     }

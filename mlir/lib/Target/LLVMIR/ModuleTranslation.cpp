@@ -409,7 +409,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // Add function arguments to the value remapping table.
   // If there was noalias info then we decorate each argument accordingly.
   unsigned int argIdx = 0;
-  for (const auto &kvp : llvm::zip(func.getArguments(), llvmFunc->args())) {
+  for (auto kvp : llvm::zip(func.getArguments(), llvmFunc->args())) {
     llvm::Argument &llvmArg = std::get<1>(kvp);
     BlockArgument mlirArg = std::get<0>(kvp);
 

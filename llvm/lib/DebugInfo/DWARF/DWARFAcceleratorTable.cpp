@@ -277,7 +277,7 @@ Optional<DWARFFormValue>
 AppleAcceleratorTable::Entry::lookup(HeaderData::AtomType Atom) const {
   assert(HdrData && "Dereferencing end iterator?");
   assert(HdrData->Atoms.size() == Values.size());
-  for (const auto &Tuple : zip_first(HdrData->Atoms, Values)) {
+  for (auto Tuple : zip_first(HdrData->Atoms, Values)) {
     if (std::get<0>(Tuple).first == Atom)
       return std::get<1>(Tuple);
   }
@@ -531,7 +531,7 @@ DWARFDebugNames::Entry::Entry(const NameIndex &NameIdx, const Abbrev &Abbr)
 Optional<DWARFFormValue>
 DWARFDebugNames::Entry::lookup(dwarf::Index Index) const {
   assert(Abbr->Attributes.size() == Values.size());
-  for (const auto &Tuple : zip_first(Abbr->Attributes, Values)) {
+  for (auto Tuple : zip_first(Abbr->Attributes, Values)) {
     if (std::get<0>(Tuple).Index == Index)
       return std::get<1>(Tuple);
   }
@@ -565,7 +565,7 @@ void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
   W.printHex("Abbrev", Abbr->Code);
   W.startLine() << formatv("Tag: {0}\n", Abbr->Tag);
   assert(Abbr->Attributes.size() == Values.size());
-  for (const auto &Tuple : zip_first(Abbr->Attributes, Values)) {
+  for (auto Tuple : zip_first(Abbr->Attributes, Values)) {
     W.startLine() << formatv("{0}: ", std::get<0>(Tuple).Index);
     std::get<1>(Tuple).dump(W.getOStream());
     W.getOStream() << '\n';

@@ -536,17 +536,17 @@ define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    psllq $63, %xmm0
 ; SSE41-NEXT:    psrad $31, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    paddq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: shrunkblend_nonvselectuse:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsllq $63, %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpgtq %xmm0, %xmm3, %xmm0
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %x = select <2 x i1> %cond, <2 x i64> %a, <2 x i64> %b

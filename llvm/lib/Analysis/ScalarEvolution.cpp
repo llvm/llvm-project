@@ -12527,7 +12527,7 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(
     const PredicatedScalarEvolution &Init)
     : RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L), Preds(Init.Preds),
       Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {
-  for (const auto &I : Init.FlagsMap)
+  for (auto I : Init.FlagsMap)
     FlagsMap.insert(I);
 }
 

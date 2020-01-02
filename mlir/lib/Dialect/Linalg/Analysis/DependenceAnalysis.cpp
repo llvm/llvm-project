@@ -24,6 +24,7 @@ using namespace mlir::linalg;
 
 using llvm::dbgs;
 
+#ifndef NDEBUG
 static StringRef toStringRef(LinalgDependenceGraph::DependenceType dt) {
   switch (dt) {
   case LinalgDependenceGraph::DependenceType::RAW:
@@ -39,6 +40,7 @@ static StringRef toStringRef(LinalgDependenceGraph::DependenceType dt) {
   }
   llvm_unreachable("Unexpected DependenceType");
 }
+#endif
 
 Value Aliases::find(Value v) {
   if (v.isa<BlockArgument>())
@@ -100,7 +102,6 @@ void LinalgDependenceGraph::addDependenceElem(DependenceType dt,
                                               LinalgOpView dependentOpView) {
   LLVM_DEBUG(dbgs() << "\nAdd dep type " << toStringRef(dt) << ":\t"
                     << *indexingOpView.op << " -> " << *dependentOpView.op);
-  (void)toStringRef;
   dependencesFromGraphs[dt][indexingOpView.op].push_back(
       LinalgDependenceGraphElem{dependentOpView, indexingOpView.view});
   dependencesIntoGraphs[dt][dependentOpView.op].push_back(

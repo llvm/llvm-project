@@ -480,7 +480,7 @@ we can have
 
 ```mlir
 %1 = "spv.GLSL.Log"(%cst) : (f32) -> (f32)
-%2 = "spv.GLSL.Sqrt(%cst) : (f32) -> (f32)
+%2 = "spv.GLSL.Sqrt"(%cst) : (f32) -> (f32)
 ```
 
 ## Control Flow
@@ -1059,17 +1059,17 @@ custom types.
 [RuntimeArrayType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeRuntimeArray
 [StructType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#Structure
 [SpirvTools]: https://github.com/KhronosGroup/SPIRV-Tools
-[Rationale]: https://github.com/llvm/llvm-project/blob/master/mlir/docs/Rationale.md#block-arguments-vs-phi-nodes
-[ODS]: https://github.com/llvm/llvm-project/blob/master/mlir/docs/OpDefinitions.md
+[Rationale]: https://mlir.llvm.org/docs/Rationale/#block-arguments-vs-phi-nodes
+[ODS]: https://mlir.llvm.org/docs/OpDefinitions/
 [GreedyPatternRewriter]: https://github.com/llvm/llvm-project/blob/master/mlir/lib/Transforms/Utils/GreedyPatternRewriteDriver.cpp
-[MlirSpirvHeaders]: https://github.com/tensorflow/mlir/tree/master/include/mlir/Dialect/SPIRV
-[MlirSpirvLibs]: https://github.com/tensorflow/mlir/tree/master/lib/Dialect/SPIRV
-[MlirSpirvTests]: https://github.com/tensorflow/mlir/tree/master/test/Dialect/SPIRV
-[MlirSpirvUnittests]: https://github.com/tensorflow/mlir/tree/master/unittests/Dialect/SPIRV
-[MlirGpuToSpirvHeaders]: https://github.com/tensorflow/mlir/tree/master/include/mlir/Conversion/GPUToSPIRV
-[MlirGpuToSpirvLibs]: https://github.com/tensorflow/mlir/tree/master/lib/Conversion/GPUToSPIRV
-[MlirStdToSpirvHeaders]: https://github.com/tensorflow/mlir/tree/master/include/mlir/Conversion/StandardToSPIRV
-[MlirStdToSpirvLibs]: https://github.com/tensorflow/mlir/tree/master/lib/Conversion/StandardToSPIRV
+[MlirSpirvHeaders]: https://github.com/llvm/llvm-project/tree/master/mlir/include/mlir/Dialect/SPIRV
+[MlirSpirvLibs]: https://github.com/llvm/llvm-project/tree/master/mlir/lib/Dialect/SPIRV
+[MlirSpirvTests]: https://github.com/llvm/llvm-project/tree/master/mlir/test/Dialect/SPIRV
+[MlirSpirvUnittests]: https://github.com/llvm/llvm-project/tree/master/mlir/unittests/Dialect/SPIRV
+[MlirGpuToSpirvHeaders]: https://github.com/llvm/llvm-project/tree/master/mlir/include/mlir/Conversion/GPUToSPIRV
+[MlirGpuToSpirvLibs]: https://github.com/llvm/llvm-project/tree/master/mlir/lib/Conversion/GPUToSPIRV
+[MlirStdToSpirvHeaders]: https://github.com/llvm/llvm-project/tree/master/mlir/include/mlir/Conversion/StandardToSPIRV
+[MlirStdToSpirvLibs]: https://github.com/llvm/llvm-project/tree/master/mlir/lib/Conversion/StandardToSPIRV
 [MlirSpirvDialect]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVDialect.h
 [MlirSpirvTypes]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVTypes.h
 [MlirSpirvOpsH]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVOps.h
@@ -1083,4 +1083,4 @@ custom types.
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
 [GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/master/mlir/utils/spirv/gen_spirv_dialect.py
 [LlvmMlirSpirvDoc]: https://mlir.llvm.org/docs/Dialects/SPIRVOps/
-[CustomTypeAttrTutorial]: https://github.com/llvm/llvm-project/blob/master/mlir/docs/DefiningAttributesAndTypes.md
+[CustomTypeAttrTutorial]: https://mlir.llvm.org/docs/DefiningAttributesAndTypes/

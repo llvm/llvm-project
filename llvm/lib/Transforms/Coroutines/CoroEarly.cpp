@@ -22,7 +22,7 @@ using namespace llvm;
 #define DEBUG_TYPE "coro-early"
 
 namespace {
-// Created on demand if CoroEarly pass has work to do.
+// Created on demand if the coro-early pass has work to do.
 class Lowerer : public coro::LowererBase {
   IRBuilder<> Builder;
   PointerType *const AnyResumeFnPtrTy;
@@ -225,10 +225,10 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
 
 namespace {
 
-struct CoroEarly : public FunctionPass {
+struct CoroEarlyLegacy : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid.
-  CoroEarly() : FunctionPass(ID) {
-    initializeCoroEarlyPass(*PassRegistry::getPassRegistry());
+  CoroEarlyLegacy() : FunctionPass(ID) {
+    initializeCoroEarlyLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   std::unique_ptr<Lowerer> L;
@@ -267,8 +267,8 @@ struct CoroEarly : public FunctionPass {
 };
 }
 
-char CoroEarly::ID = 0;
-INITIALIZE_PASS(CoroEarly, "coro-early", "Lower early coroutine intrinsics",
-                false, false)
+char CoroEarlyLegacy::ID = 0;
+INITIALIZE_PASS(CoroEarlyLegacy, "coro-early",
+                "Lower early coroutine intrinsics", false, false)
 
-Pass *llvm::createCoroEarlyPass() { return new CoroEarly(); }
+Pass *llvm::createCoroEarlyLegacyPass() { return new CoroEarlyLegacy(); }

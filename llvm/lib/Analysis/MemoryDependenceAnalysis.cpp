@@ -1494,7 +1494,7 @@ void MemoryDependenceResults::RemoveCachedNonLocalPointerDependencies(
     if (auto *I = dyn_cast<Instruction>(P.getPointer())) {
       auto toRemoveIt = ReverseNonLocalDefsCache.find(I);
       if (toRemoveIt != ReverseNonLocalDefsCache.end()) {
-        for (const auto &entry : toRemoveIt->second)
+        for (const auto *entry : toRemoveIt->second)
           NonLocalDefsCache.erase(entry);
         ReverseNonLocalDefsCache.erase(toRemoveIt);
       }

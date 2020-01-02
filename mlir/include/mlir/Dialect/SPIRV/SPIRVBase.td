@@ -25,22 +25,24 @@ include "mlir/Dialect/SPIRV/SPIRVAvailability.td"
 def SPV_Dialect : Dialect {
   let name = "spv";
 
+  let summary = "The SPIR-V dialect in MLIR.";
+
   let description = [{
-    The SPIR-V dialect in MLIR.
+    SPIR-V is a binary intermediate language for representing graphical-shader
+    stages and compute kernels for multiple Khronos APIs, including OpenCL,
+    OpenGL, and Vulkan.
+    See https://www.khronos.org/registry/spir-v for more details regarding
+    SPIR-V itself.
 
-    SPIR-V is the Khronos Group's binary intermediate language for representing
-    graphical-shader stages and compute kernels for multiple Khronos APIs,
-    including OpenCL, OpenGL, and Vulkan.
-    See https://www.khronos.org/registry/spir-v for more details.
-
-    This dialect aims to be a simple proxy for the SPIR-V binary format to
-    enable straightforward and lightweight conversion from/to the binary
-    format. Ops in this dialect should stay at the same semantic level and
-    try to be a mechanical mapping to the corresponding SPIR-V instructions;
-    but they may deviate representationally to allow using MLIR mechanisms.
-    As a convention, if such deviation happens, the op name follows "snake_case"
-    style; otherwise, the op name just follows the SPIR-V mnemonic (by removing
-    the leading `Op` prefix) to use "CamelCase" style.
+    The SPIR-V dialect aims to be a proper compiler intermediate representation
+    to faciliate transformations. Ops in this dialect stay at the same semantic
+    level as the SPIR-V specification and try to have one-to-one mapping to the
+    corresponding SPIR-V instructions; but they may deviate representationally
+    to utilize MLIR mechanisms if it results in better representation and thus
+    benefits transformations. The dialect also aims to maintain straightforward
+    serialization into and deserialization from the SPIR-V binary format.
+    See https://mlir.llvm.org/docs/Dialects/SPIR-V/ for more details regarding
+    high-level designs and implementation structures of the SPIR-V dialect.
   }];
 
   let cppNamespace = "spirv";

@@ -2762,16 +2762,20 @@ static void DiagnoseForRangeReferenceVariableCopies(Sema &SemaRef,
     QualType NewReferenceType =
         SemaRef.Context.getLValueReferenceType(E->getType().withConst());
     SemaRef.Diag(VD->getBeginLoc(), diag::note_use_type_or_non_reference)
-        << NonReferenceType << NewReferenceType << VD->getSourceRange();
-  } else {
+        << NonReferenceType << NewReferenceType << VD->getSourceRange()
+        << FixItHint::CreateRemoval(VD->getTypeSpecEndLoc());
+  } else if (!VariableType->isRValueReferenceType()) {
     // The range always returns a copy, so a temporary is always created.
     // Suggest removing the reference from the loop variable.
+    // If the type is a rvalue reference do not warn since that changes the
+    // semantic of the code.
     SemaRef.Diag(VD->getLocation(), diag::warn_for_range_variable_always_copy)
         << VD << RangeInitType;
     QualType NonReferenceType = VariableType.getNonReferenceType();
     NonReferenceType.removeLocalConst();
     SemaRef.Diag(VD->getBeginLoc(), diag::note_use_non_reference_type)
-        << NonReferenceType << VD->getSourceRange();
+        << NonReferenceType << VD->getSourceRange()
+        << FixItHint::CreateRemoval(VD->getTypeSpecEndLoc());
   }
 }
 
@@ -2808,7 +2812,8 @@ static void DiagnoseForRangeConstVariableCopies(Sema &SemaRef,
       << VD << VariableType << InitExpr->getType();
   SemaRef.Diag(VD->getBeginLoc(), diag::note_use_reference_type)
       << SemaRef.Context.getLValueReferenceType(VariableType)
-      << VD->getSourceRange();
+      << VD->getSourceRange()
+      << FixItHint::CreateInsertion(VD->getLocation(), "&");
 }
 
 /// DiagnoseForRangeVariableCopies - Diagnose three cases and fixes for them.

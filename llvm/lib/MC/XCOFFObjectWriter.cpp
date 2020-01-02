@@ -570,7 +570,7 @@ void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
         writeSymbolTableEntryForControlSection(
             Csect, SectionIndex, Csect.MCCsect->getStorageClass());
 
-        for (const auto Sym : Csect.Syms)
+        for (const auto &Sym : Csect.Syms)
           writeSymbolTableEntryForCsectMemberLabel(
               Sym, Csect, SectionIndex, Layout.getSymbolOffset(*(Sym.MCSym)));
       }

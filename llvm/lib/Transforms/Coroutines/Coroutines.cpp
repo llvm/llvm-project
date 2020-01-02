@@ -43,39 +43,39 @@
 using namespace llvm;
 
 void llvm::initializeCoroutines(PassRegistry &Registry) {
-  initializeCoroEarlyPass(Registry);
-  initializeCoroSplitPass(Registry);
-  initializeCoroElidePass(Registry);
-  initializeCoroCleanupPass(Registry);
+  initializeCoroEarlyLegacyPass(Registry);
+  initializeCoroSplitLegacyPass(Registry);
+  initializeCoroElideLegacyPass(Registry);
+  initializeCoroCleanupLegacyPass(Registry);
 }
 
 static void addCoroutineOpt0Passes(const PassManagerBuilder &Builder,
                                    legacy::PassManagerBase &PM) {
-  PM.add(createCoroSplitPass());
-  PM.add(createCoroElidePass());
+  PM.add(createCoroSplitLegacyPass());
+  PM.add(createCoroElideLegacyPass());
 
   PM.add(createBarrierNoopPass());
-  PM.add(createCoroCleanupPass());
+  PM.add(createCoroCleanupLegacyPass());
 }
 
 static void addCoroutineEarlyPasses(const PassManagerBuilder &Builder,
                                     legacy::PassManagerBase &PM) {
-  PM.add(createCoroEarlyPass());
+  PM.add(createCoroEarlyLegacyPass());
 }
 
 static void addCoroutineScalarOptimizerPasses(const PassManagerBuilder &Builder,
                                               legacy::PassManagerBase &PM) {
-  PM.add(createCoroElidePass());
+  PM.add(createCoroElideLegacyPass());
 }
 
 static void addCoroutineSCCPasses(const PassManagerBuilder &Builder,
                                   legacy::PassManagerBase &PM) {
-  PM.add(createCoroSplitPass());
+  PM.add(createCoroSplitLegacyPass());
 }
 
 static void addCoroutineOptimizerLastPasses(const PassManagerBuilder &Builder,
                                             legacy::PassManagerBase &PM) {
-  PM.add(createCoroCleanupPass());
+  PM.add(createCoroCleanupLegacyPass());
 }
 
 void llvm::addCoroutinePassesToExtensionPoints(PassManagerBuilder &Builder) {
@@ -151,8 +151,8 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
 
 // Verifies if a module has named values listed. Also, in debug mode verifies
 // that names are intrinsic names.
-bool coro::declaresIntrinsics(Module &M,
-                              std::initializer_list<StringRef> List) {
+bool coro::declaresIntrinsics(const Module &M,
+                              const std::initializer_list<StringRef> List) {
   for (StringRef Name : List) {
     assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");
     if (M.getNamedValue(Name))
@@ -635,17 +635,17 @@ void AnyCoroIdRetconInst::checkWellFormed() const {
 }
 
 void LLVMAddCoroEarlyPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createCoroEarlyPass());
+  unwrap(PM)->add(createCoroEarlyLegacyPass());
 }
 
 void LLVMAddCoroSplitPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createCoroSplitPass());
+  unwrap(PM)->add(createCoroSplitLegacyPass());
 }
 
 void LLVMAddCoroElidePass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createCoroElidePass());
+  unwrap(PM)->add(createCoroElideLegacyPass());
 }
 
 void LLVMAddCoroCleanupPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createCoroCleanupPass());
+  unwrap(PM)->add(createCoroCleanupLegacyPass());
 }
