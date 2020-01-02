@@ -185,7 +185,7 @@ void transformIndexedGenericOpIndices(
   // TODO(pifon): Add support for `linalg.indexed_generic` with `fun` attribute.
   auto &region = indexedGenericOp.region();
   if (region.empty()) {
-    indexedGenericOp.emitError("op expected a region");
+    indexedGenericOp.emitOpError("expected a region");
     return;
   }
   auto &block = region.getBlocks().front();

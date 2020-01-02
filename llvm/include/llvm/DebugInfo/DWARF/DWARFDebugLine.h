@@ -280,11 +280,10 @@ public:
     void clear();
 
     /// Parse prologue and all rows.
-    Error parse(
-        DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
-        const DWARFContext &Ctx, const DWARFUnit *U,
-        std::function<void(Error)> RecoverableErrorCallback,
-        raw_ostream *OS = nullptr);
+    Error parse(DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
+                const DWARFContext &Ctx, const DWARFUnit *U,
+                function_ref<void(Error)> RecoverableErrorCallback,
+                raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -309,10 +308,10 @@ public:
   };
 
   const LineTable *getLineTable(uint64_t Offset) const;
-  Expected<const LineTable *> getOrParseLineTable(
-      DWARFDataExtractor &DebugLineData, uint64_t Offset,
-      const DWARFContext &Ctx, const DWARFUnit *U,
-      std::function<void(Error)> RecoverableErrorCallback);
+  Expected<const LineTable *>
+  getOrParseLineTable(DWARFDataExtractor &DebugLineData, uint64_t Offset,
+                      const DWARFContext &Ctx, const DWARFUnit *U,
+                      function_ref<void(Error)> RecoverableErrorCallback);
 
   /// Helper to allow for parsing of an entire .debug_line section in sequence.
   class SectionParser {

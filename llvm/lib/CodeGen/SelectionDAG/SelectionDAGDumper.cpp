@@ -547,8 +547,8 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   if (getFlags().hasVectorReduction())
     OS << " vector-reduction";
 
-  if (getFlags().hasFPExcept())
-    OS << " fpexcept";
+  if (getFlags().hasNoFPExcept())
+    OS << " nofpexcept";
 
   if (const MachineSDNode *MN = dyn_cast<MachineSDNode>(this)) {
     if (!MN->memoperands_empty()) {

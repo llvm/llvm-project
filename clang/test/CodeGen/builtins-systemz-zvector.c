@@ -4442,14 +4442,14 @@ void test_float(void) {
 
   vd = vec_nabs(vd);
   // CHECK: [[ABS:%[^ ]+]] = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{.*}})
-  // CHECK-NEXT: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[ABS]]
+  // CHECK-NEXT: fneg <2 x double> [[ABS]]
   // CHECK-ASM: vflndb
 
   vd = vec_madd(vd, vd, vd);
   // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfmadb
   vd = vec_msub(vd, vd, vd);
-  // CHECK: [[NEG:%[^ ]+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> %{{.*}}
   // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]])
   // CHECK-ASM: vfmsdb
   vd = vec_sqrt(vd);

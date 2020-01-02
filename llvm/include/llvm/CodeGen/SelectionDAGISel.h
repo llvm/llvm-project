@@ -310,6 +310,9 @@ public:
     return false;
   }
 
+  /// Return whether the node may raise an FP exception.
+  bool mayRaiseFPException(SDNode *Node) const;
+
   bool isOrEquivalentToAdd(const SDNode *N) const;
 
 private:

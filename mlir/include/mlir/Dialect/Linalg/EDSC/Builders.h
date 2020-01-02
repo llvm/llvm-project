@@ -37,12 +37,12 @@ inline StringRef toString(IterType t) {
 }
 
 /// A StructuredIndexed represents a captured value that can be indexed and
-/// passed to the `makeLinalgGenericOp`. It allows writing intuitive index
+/// passed to the `makeGenericLinalgOp`. It allows writing intuitive index
 /// expressions such as:
 ///
 /// ```
 ///      StructuredIndexed A(vA), B(vB), C(vC);
-///      makeLinalgGenericOp({A({m, n}), B({k, n})}, {C({m, n})}, ... );
+///      makeGenericLinalgOp({A({m, n}), B({k, n})}, {C({m, n})}, ... );
 /// ```
 struct StructuredIndexed {
   StructuredIndexed(Value v) : value(v) {}
@@ -67,7 +67,7 @@ private:
 
 inline void defaultRegionBuilder(ArrayRef<BlockArgument> args) {}
 
-Operation *makeLinalgGenericOp(
+Operation *makeGenericLinalgOp(
     ArrayRef<IterType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
     ArrayRef<StructuredIndexed> outputs,
     function_ref<void(ArrayRef<BlockArgument>)> regionBuilder =

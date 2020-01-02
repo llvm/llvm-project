@@ -1,18 +1,18 @@
-# RUN: llc -mtriple=arm-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv7-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
 ---
 name:            foo
 body:             |
   bb.0:
-    Bcc %bb.2, 0, $cpsr
+    tBcc %bb.2, 0, $cpsr
 
   bb.1:
   successors:
-    BX_RET 14, _
+    tBX_RET 14, _
 
   bb.2:
   successors:
     $sp = tADDspi $sp, 2, 14, _
-    BX_RET 14, _
+    tBX_RET 14, _
 ...
 
 # Simple testcase with unanalyzable instructions in both TBB and FBB.
@@ -20,6 +20,6 @@ body:             |
 # CHECK: body:             |
 # CHECK:   bb.0:
 # CHECK:     $sp = tADDspi $sp, 2, 0, $cpsr
-# CHECK:     BX_RET 0, $cpsr
-# CHECK:     BX_RET 14, $noreg
+# CHECK:     tBX_RET 0, $cpsr
+# CHECK:     tBX_RET 14, $noreg
 

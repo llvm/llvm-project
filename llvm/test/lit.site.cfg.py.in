@@ -2,6 +2,9 @@
 
 import sys
 
+def cmake_bool(val):
+    return val.lower() in (1, "on", "yes", "true", "y",)
+
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
@@ -33,7 +36,7 @@ config.host_cxx = "@HOST_CXX@"
 config.host_ldflags = '@HOST_LDFLAGS@'
 config.llvm_use_intel_jitevents = @LLVM_USE_INTEL_JITEVENTS@
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
-config.have_zlib = @LLVM_ENABLE_ZLIB@
+config.have_zlib = @HAVE_LIBZ@
 config.have_libxar = @HAVE_LIBXAR@
 config.have_dia_sdk = @LLVM_ENABLE_DIA_SDK@
 config.enable_ffi = @LLVM_ENABLE_FFI@
@@ -47,6 +50,7 @@ config.host_arch = "@HOST_ARCH@"
 config.have_opt_viewer_modules = @LLVM_HAVE_OPT_VIEWER_MODULES@
 config.libcxx_used = @LLVM_LIBCXX_USED@
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
+config.linked_bye_extension = cmake_bool("@LLVM_BYE_LINK_INTO_TOOLS@")
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

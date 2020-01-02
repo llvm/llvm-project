@@ -55,7 +55,8 @@ public:
 ///   class DotOp : public Op<DotOp, OpTrait::ViewTrait> {
 ///
 template <typename ConcreteType>
-class ViewTraits : public OpTrait::TraitBase<ConcreteType, ViewTraits> {
+class StructuredOpTraits
+    : public OpTrait::TraitBase<ConcreteType, StructuredOpTraits> {
 private:
   /// Return the number of input views. For internal use only.
   unsigned nInputs() {

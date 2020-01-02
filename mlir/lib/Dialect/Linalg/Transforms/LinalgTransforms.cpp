@@ -153,8 +153,8 @@ static bool isMatmul(linalg::GenericOp genericOp) {
          genericOp.indexing_maps() == maps && hasMultiplyAddBody(genericOp);
 }
 
-LogicalResult mlir::linalg::vectorizeGenericOp(PatternRewriter &rewriter,
-                                               Operation *op) {
+LogicalResult mlir::linalg::vectorizeGenericLinalgOp(PatternRewriter &rewriter,
+                                                     Operation *op) {
   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE
                        "]: Rewrite linalg op as vector.contract: "
                     << *op << ":\n");
@@ -223,7 +223,7 @@ mlir::linalg::permuteGenericLinalgOp(PatternRewriter &rewriter, Operation *op,
   return success();
 }
 
-LogicalResult mlir::linalg::linalgOpPromoteSubviews(PatternRewriter &rewriter,
+LogicalResult mlir::linalg::promoteSubviewsLinalgOp(PatternRewriter &rewriter,
                                                     Operation *op) {
   LinalgOp linOp = dyn_cast<LinalgOp>(op);
   SetVector<Value> subViews;

@@ -32,14 +32,10 @@ add_llvm_tool(bugpoint
   ToolRunner.cpp
   bugpoint.cpp
 
+  ENABLE_PLUGINS
+
   DEPENDS
   intrinsics_gen
   SUPPORT_PLUGINS
   )
 export_executable_symbols(bugpoint)
-
-if(WITH_POLLY AND LINK_POLLY_INTO_TOOLS)
-  target_link_libraries(bugpoint PRIVATE Polly)
-  # Ensure LLVMTarget can resolve dependences in Polly.
-  target_link_libraries(bugpoint PRIVATE LLVMTarget)
-endif(WITH_POLLY AND LINK_POLLY_INTO_TOOLS)
