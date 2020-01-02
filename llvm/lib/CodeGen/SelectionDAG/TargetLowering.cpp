@@ -6190,8 +6190,10 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
       // incoming STRICT_UINT_TO_FP node; the STRICT_FADD node can
       // never raise any exception.
       SDNodeFlags Flags;
-      Flags.setFPExcept(Node->getFlags().hasFPExcept());
+      Flags.setNoFPExcept(Node->getFlags().hasNoFPExcept());
       Fast->setFlags(Flags);
+      Flags.setNoFPExcept(true);
+      Slow->setFlags(Flags);
     } else {
       SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Or);
       Slow = DAG.getNode(ISD::FADD, dl, DstVT, SignCvt, SignCvt);

@@ -3458,6 +3458,17 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if ((EmitNodeInfo & OPFL_GlueInput) && InputGlue.getNode() != nullptr)
         Ops.push_back(InputGlue);
 
+      // Check whether any matched node could raise an FP exception.  Since all
+      // such nodes must have a chain, it suffices to check ChainNodesMatched.
+      // We need to perform this check before potentially modifying one of the
+      // nodes via MorphNode.
+      bool MayRaiseFPException = false;
+      for (auto *N : ChainNodesMatched)
+        if (mayRaiseFPException(N) && !N->getFlags().hasNoFPExcept()) {
+          MayRaiseFPException = true;
+          break;
+        }
+
       // Create the node.
       MachineSDNode *Res = nullptr;
       bool IsMorphNodeTo = Opcode == OPC_MorphNodeTo ||
@@ -3487,6 +3498,14 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         });
         Res = cast<MachineSDNode>(MorphNode(NodeToMatch, TargetOpc, VTList,
                                             Ops, EmitNodeInfo));
+      }
+
+      // Set the NoFPExcept flag when no original matched node could
+      // raise an FP exception, but the new node potentially might.
+      if (!MayRaiseFPException && mayRaiseFPException(Res)) {
+        SDNodeFlags Flags = Res->getFlags();
+        Flags.setNoFPExcept(true);
+        Res->setFlags(Flags);
       }
 
       // If the node had chain/glue results, update our notion of the current
@@ -3642,6 +3661,21 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       MatchScopes.pop_back();
     }
   }
+}
+
+/// Return whether the node may raise an FP exception.
+bool SelectionDAGISel::mayRaiseFPException(SDNode *N) const {
+  // For machine opcodes, consult the MCID flag.
+  if (N->isMachineOpcode()) {
+    const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
+    return MCID.mayRaiseFPException();
+  }
+
+  // For ISD opcodes, only StrictFP opcodes may raise an FP
+  // exception.
+  if (N->isTargetOpcode())
+    return N->isTargetStrictFPOpcode();
+  return N->isStrictFPOpcode();
 }
 
 bool SelectionDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
