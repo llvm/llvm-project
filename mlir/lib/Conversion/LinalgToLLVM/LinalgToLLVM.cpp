@@ -186,7 +186,8 @@ public:
     auto int64Ty = lowering.convertType(rewriter.getIntegerType(64))
                        .cast<LLVM::LLVMType>();
 
-    BaseViewConversionHelper desc(lowering.convertType(sliceOp.getViewType()));
+    BaseViewConversionHelper desc(
+        lowering.convertType(sliceOp.getShapedType()));
 
     // TODO(ntv): extract sizes and emit asserts.
     SmallVector<Value, 4> strides(memRefType.getRank());
@@ -215,7 +216,7 @@ public:
     desc.setOffset(baseOffset);
 
     // Corner case, no sizes or strides: early return the descriptor.
-    if (sliceOp.getViewType().getRank() == 0)
+    if (sliceOp.getShapedType().getRank() == 0)
       return rewriter.replaceOp(op, {desc}), matchSuccess();
 
     Value zero =
@@ -279,7 +280,7 @@ public:
       return rewriter.replaceOp(op, {baseDesc}), matchSuccess();
 
     BaseViewConversionHelper desc(
-        lowering.convertType(transposeOp.getViewType()));
+        lowering.convertType(transposeOp.getShapedType()));
 
     // Copy the base and aligned pointers from the old descriptor to the new
     // one.

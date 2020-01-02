@@ -139,6 +139,29 @@ func @generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, %ar
 // CHECK-LABEL: func @generic
 //       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64, fun = @foo, indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel"], library_call = "some_external_function_name_1"} %{{.*}}, %{{.*}} {foo = 1 : i64}: memref<?x?xvector<3x4xi4>, #[[strided2D]]>, memref<?x?x?xf32, #[[strided3D]]>
 
+func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
+  linalg.generic #trait %arg0, %arg1 {foo = 1} : tensor<?x?xvector<3x4xi4>>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
+  return
+}
+// CHECK-LABEL: func @generic_with_tensor_input
+//       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64, fun = @foo, indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel"], library_call = "some_external_function_name_1"} %{{.*}}, %{{.*}} {foo = 1 : i64}: tensor<?x?xvector<3x4xi4>>, memref<?x?x?xf32, #[[strided3D]]>
+
+func @generic_with_tensor_output(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, %arg1: tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>) {
+  %0 = linalg.generic #trait %arg0, %arg1 {foo = 1} : memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+// CHECK-LABEL: func @generic_with_tensor_output
+//       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64, fun = @foo, indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel"], library_call = "some_external_function_name_1"} %{{.*}}, %{{.*}} {foo = 1 : i64}: memref<?x?xvector<3x4xi4>, #[[strided2D]]>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
+//       CHECK:   return {{.*}} : tensor<?x?x?xf32>
+
+func @generic_with_tensor_input_and_output(%arg0: tensor<?x?xvector<3x4xi4>>, %arg1: tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>) {
+  %0 = linalg.generic #trait %arg0, %arg1 {foo = 1} : tensor<?x?xvector<3x4xi4>>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+// CHECK-LABEL: func @generic_with_tensor_input_and_output
+//       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64, fun = @foo, indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel"], library_call = "some_external_function_name_1"} %{{.*}}, %{{.*}} {foo = 1 : i64}: tensor<?x?xvector<3x4xi4>>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
+//       CHECK:   return {{.*}} : tensor<?x?x?xf32>
+
 #trait2 = {
   args_in = 1,
   args_out = 1,
