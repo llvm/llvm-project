@@ -111,6 +111,8 @@ private:
                     Callback<std::vector<SymbolDetails>>);
   void onSelectionRange(const SelectionRangeParams &,
                         Callback<std::vector<SelectionRange>>);
+  void onDocumentLink(const DocumentLinkParams &,
+                      Callback<std::vector<DocumentLink>>);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
