@@ -342,14 +342,14 @@ declare i64 @llvm.llround.i64.f32(float)
 
 define dso_local double @test_nearbyint(double %d) local_unnamed_addr {
 ; BE-LABEL: test_nearbyint:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    xsrdpic f1, f1
-; BE-NEXT:    blr
+; BE:    # %bb.0: # %entry
+; BE:    bl nearbyint
+; BE:    blr
 ;
 ; CHECK-LABEL: test_nearbyint:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsrdpic f1, f1
-; CHECK-NEXT:    blr
+; CHECK:    # %bb.0: # %entry
+; CHECK:    bl nearbyint
+; CHECK:    blr
 ;
 ; FAST-LABEL: test_nearbyint:
 ; FAST:       # %bb.0: # %entry
@@ -364,14 +364,14 @@ declare double @llvm.nearbyint.f64(double)
 
 define dso_local float @test_nearbyintf(float %f) local_unnamed_addr {
 ; BE-LABEL: test_nearbyintf:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    xsrdpic f1, f1
-; BE-NEXT:    blr
+; BE:    # %bb.0: # %entry
+; BE:    bl nearbyint
+; BE:    blr
 ;
 ; CHECK-LABEL: test_nearbyintf:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsrdpic f1, f1
-; CHECK-NEXT:    blr
+; CHECK:    # %bb.0: # %entry
+; CHECK:    bl nearbyintf
+; CHECK:    blr
 ;
 ; FAST-LABEL: test_nearbyintf:
 ; FAST:       # %bb.0: # %entry

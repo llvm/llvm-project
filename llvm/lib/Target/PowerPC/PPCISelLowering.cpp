@@ -782,17 +782,22 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       }
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f64, Legal);
 
+      // The nearbyint variants are not allowed to raise the inexact exception
+      // so we can only code-gen them with unsafe math.
+      if (TM.Options.UnsafeFPMath) {
+        setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
+        setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
+      }
+
       setOperationAction(ISD::FFLOOR, MVT::v2f64, Legal);
       setOperationAction(ISD::FCEIL, MVT::v2f64, Legal);
       setOperationAction(ISD::FTRUNC, MVT::v2f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::v2f64, Legal);
       setOperationAction(ISD::FROUND, MVT::v2f64, Legal);
-      setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
       setOperationAction(ISD::FROUND, MVT::f64, Legal);
 
       setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
-      setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
       setOperationAction(ISD::FROUND, MVT::f32, Legal);
 
       setOperationAction(ISD::MUL, MVT::v2f64, Legal);
