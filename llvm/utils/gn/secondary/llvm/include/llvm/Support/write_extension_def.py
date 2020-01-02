@@ -13,6 +13,7 @@ def main():
     args = parser.parse_args()
 
     output = ''.join(['HANDLE_EXTENSION(%s)\n' % ext for ext in args.exts])
+    output += '#undef HANDLE_EXTENSION\n'
 
     if not os.path.exists(args.output) or open(args.output).read() != output:
         open(args.output, 'w').write(output)
