@@ -187,7 +187,7 @@ public:
     // If we're adding this to all sub-commands, add it to the ones that have
     // already been registered.
     if (SC == &*AllSubCommands) {
-      for (const auto &Sub : RegisteredSubCommands) {
+      for (auto *Sub : RegisteredSubCommands) {
         if (SC == Sub)
           continue;
         addLiteralOption(Opt, Sub, Name);
@@ -243,7 +243,7 @@ public:
     // If we're adding this to all sub-commands, add it to the ones that have
     // already been registered.
     if (SC == &*AllSubCommands) {
-      for (const auto &Sub : RegisteredSubCommands) {
+      for (auto *Sub : RegisteredSubCommands) {
         if (SC == Sub)
           continue;
         addOption(O, Sub);
@@ -318,7 +318,7 @@ public:
   }
 
   bool hasOptions() const {
-    for (const auto &S : RegisteredSubCommands) {
+    for (const auto *S : RegisteredSubCommands) {
       if (hasOptions(*S))
         return true;
     }
@@ -2112,7 +2112,7 @@ static void sortOpts(StringMap<Option *> &OptMap,
 static void
 sortSubCommands(const SmallPtrSetImpl<SubCommand *> &SubMap,
                 SmallVectorImpl<std::pair<const char *, SubCommand *>> &Subs) {
-  for (const auto &S : SubMap) {
+  for (auto *S : SubMap) {
     if (S->getName().empty())
       continue;
     Subs.push_back(std::make_pair(S->getName().data(), S));

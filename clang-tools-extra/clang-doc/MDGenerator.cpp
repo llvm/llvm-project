@@ -215,7 +215,7 @@ static void genMarkdown(const RecordInfo &I, llvm::raw_ostream &OS) {
 
   if (!I.Members.empty()) {
     writeHeader("Members", 2, OS);
-    for (const auto Member : I.Members) {
+    for (const auto &Member : I.Members) {
       std::string Access = getAccess(Member.Access);
       if (Access != "")
         writeLine(Access + " " + Member.Type.Name + " " + Member.Name, OS);

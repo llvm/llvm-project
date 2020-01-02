@@ -167,7 +167,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   bool TraverseBlockExpr(BlockExpr *BE) { return true; }
   bool TraverseLambdaExpr(LambdaExpr *LE) {
     // Traverse the captures, but not the body.
-    for (const auto &C : zip(LE->captures(), LE->capture_inits()))
+    for (auto C : zip(LE->captures(), LE->capture_inits()))
       TraverseLambdaCapture(LE, &std::get<0>(C), std::get<1>(C));
     return true;
   }

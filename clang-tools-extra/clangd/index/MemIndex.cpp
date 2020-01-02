@@ -36,7 +36,7 @@ bool MemIndex::fuzzyFind(
       Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max());
   FuzzyMatcher Filter(Req.Query);
   bool More = false;
-  for (const auto Pair : Index) {
+  for (const auto &Pair : Index) {
     const Symbol *Sym = Pair.second;
 
     // Exact match against all possible scopes.

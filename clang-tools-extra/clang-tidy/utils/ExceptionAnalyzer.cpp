@@ -125,7 +125,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
 
   auto Result = ExceptionInfo::createUnknown();
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
-    for (const QualType Ex : FPT->exceptions())
+    for (const QualType &Ex : FPT->exceptions())
       Result.registerException(Ex.getTypePtr());
   }
   return Result;
