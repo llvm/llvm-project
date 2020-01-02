@@ -29,10 +29,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
-static MachineModuleInfoMachO &getMachOMMI(AsmPrinter &AP) {
-  return AP.MMI->getObjFileInfo<MachineModuleInfoMachO>();
-}
-
 static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
                                       AsmPrinter &AP) {
   const TargetMachine &TM = AP.TM;
@@ -41,13 +37,6 @@ static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
   MCContext &Ctx = AP.OutContext;
 
   SmallString<128> Name;
-  StringRef Suffix;
-  if (MO.getTargetFlags() & PPCII::MO_NLP_FLAG)
-    Suffix = "$non_lazy_ptr";
-
-  if (!Suffix.empty())
-    Name += DL.getPrivateGlobalPrefix();
-
   if (!MO.isGlobal()) {
     assert(MO.isSymbol() && "Isn't a symbol reference");
     Mangler::getNameWithPrefix(Name, MO.getSymbolName(), DL);
@@ -56,24 +45,7 @@ static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
     TM.getNameWithPrefix(Name, GV, Mang);
   }
 
-  Name += Suffix;
   MCSymbol *Sym = Ctx.getOrCreateSymbol(Name);
-
-  // If the symbol reference is actually to a non_lazy_ptr, not to the symbol,
-  // then add the suffix.
-  if (MO.getTargetFlags() & PPCII::MO_NLP_FLAG) {
-    MachineModuleInfoMachO &MachO = getMachOMMI(AP);
-
-    MachineModuleInfoImpl::StubValueTy &StubSym = MachO.getGVStubEntry(Sym);
-
-    if (!StubSym.getPointer()) {
-      assert(MO.isGlobal() && "Extern symbol not handled yet");
-      StubSym = MachineModuleInfoImpl::
-                   StubValueTy(AP.getSymbol(MO.getGlobal()),
-                               !MO.getGlobal()->hasInternalLinkage());
-    }
-    return Sym;
-  }
 
   return Sym;
 }
