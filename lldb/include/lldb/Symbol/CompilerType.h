@@ -30,14 +30,13 @@ class DataExtractor;
 class CompilerType {
 public:
   // Constructors and Destructors
-  CompilerType(TypeSystem *type_system, lldb::opaque_compiler_type_t type);
+  CompilerType(TypeSystem *type_system, lldb::opaque_compiler_type_t type)
+      : m_type(type), m_type_system(type_system) {}
 
   CompilerType(const CompilerType &rhs)
       : m_type(rhs.m_type), m_type_system(rhs.m_type_system) {}
 
-  CompilerType() : m_type(nullptr), m_type_system(nullptr) {}
-
-  ~CompilerType();
+  CompilerType() = default;
 
   // Operators
 
@@ -368,8 +367,8 @@ public:
   }
 
 private:
-  lldb::opaque_compiler_type_t m_type;
-  TypeSystem *m_type_system;
+  lldb::opaque_compiler_type_t m_type = nullptr;
+  TypeSystem *m_type_system = nullptr;
 };
 
 bool operator==(const CompilerType &lhs, const CompilerType &rhs);
