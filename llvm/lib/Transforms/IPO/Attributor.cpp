@@ -5695,13 +5695,6 @@ ChangeStatus Attributor::run(Module &M) {
       BUILD_STAT_NAME(AAIsDead, BasicBlock) += ToBeDeletedBlocks.size();
     }
 
-    STATS_DECL(AAIsDead, Function, "Number of dead functions deleted.");
-    for (Function *Fn : ToBeDeletedFunctions) {
-      Fn->replaceAllUsesWith(UndefValue::get(Fn->getType()));
-      Fn->eraseFromParent();
-      STATS_TRACK(AAIsDead, Function);
-    }
-
     // Identify dead internal functions and delete them. This happens outside
     // the other fixpoint analysis as we might treat potentially dead functions
     // as live to lower the number of iterations. If they happen to be dead, the
@@ -5719,15 +5712,15 @@ ChangeStatus Attributor::run(Module &M) {
         if (!F)
           continue;
 
-        if (!checkForAllCallSites([](AbstractCallSite ACS) { return false; },
-                                  *F, true, nullptr))
+        if (!checkForAllCallSites(
+                [this](AbstractCallSite ACS) {
+                  return ToBeDeletedFunctions.count(
+                      ACS.getInstruction()->getFunction());
+                },
+                *F, true, nullptr))
           continue;
 
-        STATS_TRACK(AAIsDead, Function);
         ToBeDeletedFunctions.insert(F);
-        F->deleteBody();
-        F->replaceAllUsesWith(UndefValue::get(F->getType()));
-        F->eraseFromParent();
         InternalFns[u] = nullptr;
         FoundDeadFn = true;
       }
@@ -5736,6 +5729,14 @@ ChangeStatus Attributor::run(Module &M) {
 
   // Rewrite the functions as requested during manifest.
   ManifestChange = ManifestChange | rewriteFunctionSignatures();
+
+  STATS_DECL(AAIsDead, Function, "Number of dead functions deleted.");
+  BUILD_STAT_NAME(AAIsDead, Function) += ToBeDeletedFunctions.size();
+  for (Function *Fn : ToBeDeletedFunctions) {
+    Fn->deleteBody();
+    Fn->replaceAllUsesWith(UndefValue::get(Fn->getType()));
+    Fn->eraseFromParent();
+  }
 
   if (VerifyMaxFixpointIterations &&
       IterationCounter != MaxFixpointIterations) {
