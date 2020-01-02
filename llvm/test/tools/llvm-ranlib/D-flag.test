@@ -3,6 +3,7 @@
 ## Important: all `llvm-ar tv` calls must use TZ=UTC to produce identical values
 # RUN: yaml2obj %S/../llvm-ar/Inputs/add-lib1.yaml -o %t.o
 # RUN: env TZ=UTC touch -t 200001020304 %t.o
+# RUN: chmod 644 %t.o
 # RUN: rm -f %t.a %t-no-index.a && llvm-ar cqSU %t-no-index.a %t.o
 
 ## Check that the intial listing has real values:
