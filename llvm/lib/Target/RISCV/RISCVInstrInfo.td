@@ -1019,13 +1019,13 @@ defm : StPat<store, SW, GPR>, Requires<[IsRV32]>;
 // Manual: Volume I.
 
 // fence acquire -> fence r, rw
-def : Pat<(atomic_fence (XLenVT 4), (imm)), (FENCE 0b10, 0b11)>;
+def : Pat<(atomic_fence (XLenVT 4), (timm)), (FENCE 0b10, 0b11)>;
 // fence release -> fence rw, w
-def : Pat<(atomic_fence (XLenVT 5), (imm)), (FENCE 0b11, 0b1)>;
+def : Pat<(atomic_fence (XLenVT 5), (timm)), (FENCE 0b11, 0b1)>;
 // fence acq_rel -> fence.tso
-def : Pat<(atomic_fence (XLenVT 6), (imm)), (FENCE_TSO)>;
+def : Pat<(atomic_fence (XLenVT 6), (timm)), (FENCE_TSO)>;
 // fence seq_cst -> fence rw, rw
-def : Pat<(atomic_fence (XLenVT 7), (imm)), (FENCE 0b11, 0b11)>;
+def : Pat<(atomic_fence (XLenVT 7), (timm)), (FENCE 0b11, 0b11)>;
 
 // Lowering for atomic load and store is defined in RISCVInstrInfoA.td.
 // Although these are lowered to fence+load/store instructions defined in the
