@@ -612,9 +612,8 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
       auto *clang_ast_context = ClangASTContext::GetScratch(
           *valobj_sp->GetExecutionContextRef().GetTargetSP());
       if (clang_ast_context)
-        m_id_type = CompilerType(clang_ast_context,
-                                 clang_ast_context->getASTContext()
-                                     .ObjCBuiltinIdTy.getAsOpaquePtr());
+        m_id_type = clang_ast_context->GetType(
+            clang_ast_context->getASTContext().ObjCBuiltinIdTy);
     }
   }
 }
