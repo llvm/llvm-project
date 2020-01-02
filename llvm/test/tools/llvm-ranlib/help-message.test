@@ -14,4 +14,4 @@
 # RUN: llvm-ranlib -Dhv | FileCheck %s --check-prefix=HELP
 
 # HELP: USAGE: llvm-ranlib
-# VERSION: LLVM version
+# VERSION: version
