@@ -293,10 +293,10 @@ namespace llvm {
       VMTRUNC, VMTRUNCUS, VMTRUNCS,
 
       // Vector FP extend.
-      VFPEXT, VFPEXT_SAE, VFPEXTS, VFPEXTS_SAE, STRICT_VFPEXT,
+      VFPEXT, VFPEXT_SAE, VFPEXTS, VFPEXTS_SAE,
 
       // Vector FP round.
-      VFPROUND, VFPROUND_RND, VFPROUNDS, VFPROUNDS_RND, STRICT_VFPROUND,
+      VFPROUND, VFPROUND_RND, VFPROUNDS, VFPROUNDS_RND,
 
       // Masked version of above. Used for v2f64->v4f32.
       // SRC, PASSTHRU, MASK
@@ -419,7 +419,7 @@ namespace llvm {
       // RndScale - Round FP Values To Include A Given Number Of Fraction Bits.
       // Also used by the legacy (V)ROUND intrinsics where we mask out the
       // scaling part of the immediate.
-      VRNDSCALE, VRNDSCALE_SAE, VRNDSCALES, VRNDSCALES_SAE, STRICT_VRNDSCALE,
+      VRNDSCALE, VRNDSCALE_SAE, VRNDSCALES, VRNDSCALES_SAE,
       // Tests Types Of a FP Values for packed types.
       VFPCLASS,
       // Tests Types Of a FP Values for scalar types.
@@ -506,7 +506,6 @@ namespace llvm {
 
       // Vector signed/unsigned integer to float/double.
       CVTSI2P, CVTUI2P,
-      STRICT_CVTSI2P, STRICT_CVTUI2P,
 
       // Masked versions of above. Used for v2f64->v4f32.
       // SRC, PASSTHRU, MASK
@@ -612,6 +611,20 @@ namespace llvm {
 
       // Vector float/double to signed/unsigned integer with truncation.
       STRICT_CVTTP2SI, STRICT_CVTTP2UI,
+
+      // Vector FP extend.
+      STRICT_VFPEXT,
+
+      // Vector FP round.
+      STRICT_VFPROUND,
+
+      // RndScale - Round FP Values To Include A Given Number Of Fraction Bits.
+      // Also used by the legacy (V)ROUND intrinsics where we mask out the
+      // scaling part of the immediate.
+      STRICT_VRNDSCALE,
+
+      // Vector signed/unsigned integer to float/double.
+      STRICT_CVTSI2P, STRICT_CVTUI2P,
 
       // Compare and swap.
       LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
