@@ -1165,9 +1165,9 @@ public:
   /// Result proxy object for \c OuterAnalysisManagerProxy.
   class Result {
   public:
-    explicit Result(const AnalysisManagerT &AM) : AM(&AM) {}
+    explicit Result(const AnalysisManagerT &OuterAM) : OuterAM(&OuterAM) {}
 
-    const AnalysisManagerT &getManager() const { return *AM; }
+    const AnalysisManagerT &getManager() const { return *OuterAM; }
 
     /// When invalidation occurs, remove any registered invalidation events.
     bool invalidate(
@@ -1219,7 +1219,7 @@ public:
     }
 
   private:
-    const AnalysisManagerT *AM;
+    const AnalysisManagerT *OuterAM;
 
     /// A map from an outer analysis ID to the set of this IR-unit's analyses
     /// which need to be invalidated.
@@ -1227,14 +1227,15 @@ public:
         OuterAnalysisInvalidationMap;
   };
 
-  OuterAnalysisManagerProxy(const AnalysisManagerT &AM) : AM(&AM) {}
+  OuterAnalysisManagerProxy(const AnalysisManagerT &OuterAM)
+      : OuterAM(&OuterAM) {}
 
   /// Run the analysis pass and create our proxy result object.
-  /// Nothing to see here, it just forwards the \c AM reference into the
+  /// Nothing to see here, it just forwards the \c OuterAM reference into the
   /// result.
   Result run(IRUnitT &, AnalysisManager<IRUnitT, ExtraArgTs...> &,
              ExtraArgTs...) {
-    return Result(*AM);
+    return Result(*OuterAM);
   }
 
 private:
@@ -1243,7 +1244,7 @@ private:
 
   static AnalysisKey Key;
 
-  const AnalysisManagerT *AM;
+  const AnalysisManagerT *OuterAM;
 };
 
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
