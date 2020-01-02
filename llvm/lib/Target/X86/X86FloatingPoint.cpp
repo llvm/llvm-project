@@ -978,7 +978,6 @@ void FPS::shuffleStackTop(const unsigned char *FixStack,
 void FPS::handleCall(MachineBasicBlock::iterator &I) {
   MachineInstr &MI = *I;
   unsigned STReturns = 0;
-  const MachineFunction* MF = I->getParent()->getParent();
 
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &Op = MI.getOperand(i);
