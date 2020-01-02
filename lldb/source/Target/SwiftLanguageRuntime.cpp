@@ -1,8 +1,8 @@
-//===-- SwiftLanguageRuntime.cpp --------------------------------*- C++ -*-===//
+//===-- SwiftLanguageRuntime.cpp ------------------------------------------===//
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2018 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2019 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -22,11 +22,11 @@
 #include "swift/ABI/System.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTMangler.h"
+#include "swift/AST/ASTWalker.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/ExistentialLayout.h"
 #include "swift/AST/Module.h"
 #include "swift/AST/Types.h"
-#include "swift/AST/ASTWalker.h"
 #include "swift/Basic/SourceLoc.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
@@ -172,8 +172,7 @@ void SwiftLanguageRuntime::SetupReflection() {
 }
 
 SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
-    : LanguageRuntime(process) {
-}
+    : LanguageRuntime(process) {}
 
 bool SwiftLanguageRuntime::IsABIStable() {
   SetupABIBit();
@@ -221,7 +220,7 @@ FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
     found_module = true;
     SymbolContextList sc_list;
     if (!image->FindSymbolsWithNameAndType(ConstString(object), sym_type,
-                                          sc_list))
+                                           sc_list))
       continue;
     if (sc_list.GetSize() != 1)
       continue;
@@ -277,9 +276,9 @@ void SwiftLanguageRuntime::SetupExclusivity() {
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   if (log)
-    log->Printf("SwiftLanguageRuntime: _swift_disableExclusivityChecking = %lu",
-                m_dynamic_exclusivity_flag_addr ?
-                *m_dynamic_exclusivity_flag_addr : 0);
+    log->Printf(
+        "SwiftLanguageRuntime: _swift_disableExclusivityChecking = %lu",
+        m_dynamic_exclusivity_flag_addr ? *m_dynamic_exclusivity_flag_addr : 0);
 }
 
 llvm::Optional<lldb::addr_t>
@@ -433,9 +432,10 @@ static bool GetObjectDescription_ResultVariable(Process *process, Stream &str,
   dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(
       nullptr);
   if (lldb_private::formatters::swift::String_SummaryProvider(
-          *result_sp.get(), str, TypeSummaryOptions()
-                                     .SetLanguage(lldb::eLanguageTypeSwift)
-                                     .SetCapping(eTypeSummaryUncapped),
+          *result_sp.get(), str,
+          TypeSummaryOptions()
+              .SetLanguage(lldb::eLanguageTypeSwift)
+              .SetCapping(eTypeSummaryUncapped),
           dump_options)) {
     if (log)
       log->Printf("[GetObjectDescription_ResultVariable] expression completed "
@@ -539,9 +539,10 @@ static bool GetObjectDescription_ObjectReference(Process *process, Stream &str,
   dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(
       nullptr);
   if (lldb_private::formatters::swift::String_SummaryProvider(
-          *result_sp.get(), str, TypeSummaryOptions()
-                                     .SetLanguage(lldb::eLanguageTypeSwift)
-                                     .SetCapping(eTypeSummaryUncapped),
+          *result_sp.get(), str,
+          TypeSummaryOptions()
+              .SetLanguage(lldb::eLanguageTypeSwift)
+              .SetCapping(eTypeSummaryUncapped),
           dump_options)) {
     if (log)
       log->Printf("[GetObjectDescription_ObjectReference] expression completed "
@@ -609,9 +610,8 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
     return false;
   }
 
-  if (0 ==
-      process->WriteMemory(copy_location, data_extractor.GetDataStart(),
-                           data_extractor.GetByteSize(), error)) {
+  if (0 == process->WriteMemory(copy_location, data_extractor.GetDataStart(),
+                                data_extractor.GetByteSize(), error)) {
     if (log)
       log->Printf("[GetObjectDescription_ObjectCopy] memory copy failed");
     return false;
@@ -704,9 +704,10 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
   dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(
       nullptr);
   if (lldb_private::formatters::swift::String_SummaryProvider(
-          *result_sp.get(), str, TypeSummaryOptions()
-                                     .SetLanguage(lldb::eLanguageTypeSwift)
-                                     .SetCapping(eTypeSummaryUncapped),
+          *result_sp.get(), str,
+          TypeSummaryOptions()
+              .SetLanguage(lldb::eLanguageTypeSwift)
+              .SetCapping(eTypeSummaryUncapped),
           dump_options)) {
     if (log)
       log->Printf("[GetObjectDescription_ObjectCopy] expression completed "
@@ -862,8 +863,7 @@ SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, bool simplified,
   return swift::Demangle::demangleSymbolAsString(symbol, options);
 }
 
-bool SwiftLanguageRuntime::IsSwiftClassName(const char *name)
-{
+bool SwiftLanguageRuntime::IsSwiftClassName(const char *name) {
   return swift::Demangle::isClass(name);
 }
 
@@ -1264,18 +1264,18 @@ public:
   virtual ~LLDBMemoryReader() = default;
 
   bool queryDataLayout(DataLayoutQueryType type, void *inBuffer,
-                        void *outBuffer) override {
+                       void *outBuffer) override {
     switch (type) {
-      case DLQ_GetPointerSize: {
-        auto result = static_cast<uint8_t *>(outBuffer);
-        *result = m_process->GetAddressByteSize();
-        return true;
-      }
-      case DLQ_GetSizeSize: {
-        auto result = static_cast<uint8_t *>(outBuffer);
-        *result = m_process->GetAddressByteSize();  // FIXME: sizeof(size_t)
-        return true;
-      }
+    case DLQ_GetPointerSize: {
+      auto result = static_cast<uint8_t *>(outBuffer);
+      *result = m_process->GetAddressByteSize();
+      return true;
+    }
+    case DLQ_GetSizeSize: {
+      auto result = static_cast<uint8_t *>(outBuffer);
+      *result = m_process->GetAddressByteSize(); // FIXME: sizeof(size_t)
+      return true;
+    }
     }
 
     return false;
@@ -1310,7 +1310,7 @@ public:
         tmp_sc_list.GetContextAtIndex(idx, sym_ctx);
         if (sym_ctx.symbol &&
             sym_ctx.symbol->GetType() != lldb::eSymbolTypeUndefined) {
-            sc_list.Append(sym_ctx);
+          sc_list.Append(sym_ctx);
         }
       }
     }
@@ -1343,8 +1343,8 @@ public:
       auto other_load_addr =
           sym_ctx.symbol->GetLoadAddress(&m_process->GetTarget());
       uint64_t other_sym_value =
-           m_process->GetTarget().ReadUnsignedIntegerFromMemory(
-               load_addr, false, m_process->GetAddressByteSize(), 0, error);
+          m_process->GetTarget().ReadUnsignedIntegerFromMemory(
+              load_addr, false, m_process->GetAddressByteSize(), 0, error);
       if (sym_value != other_sym_value) {
         LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
                  "[MemoryReader] symbol resoution failed {0}", name);
@@ -1365,7 +1365,7 @@ public:
         // If this crashes, the assumptions stated in
         // GetDynamicTypeAndAddress_Protocol() most likely no longer
         // hold.
-        memcpy(dest, (void *) addr, size);
+        memcpy(dest, (void *)addr, size);
         return true;
       }
     }
@@ -1379,8 +1379,7 @@ public:
 
     if (size > m_max_read_amount) {
       if (log)
-        log->Printf(
-            "[MemoryReader] memory read exceeds maximum allowed size");
+        log->Printf("[MemoryReader] memory read exceeds maximum allowed size");
       return false;
     }
 
@@ -1472,8 +1471,8 @@ SwiftLanguageRuntime::GetMemoryReader() {
 
 void SwiftLanguageRuntime::PushLocalBuffer(uint64_t local_buffer,
                                            uint64_t local_buffer_size) {
-  ((LLDBMemoryReader *)GetMemoryReader().get())->pushLocalBuffer(
-        local_buffer, local_buffer_size);
+  ((LLDBMemoryReader *)GetMemoryReader().get())
+      ->pushLocalBuffer(local_buffer, local_buffer_size);
 }
 
 void SwiftLanguageRuntime::PopLocalBuffer() {
@@ -1599,13 +1598,11 @@ public:
   }
 };
 
-}
+} // namespace
 
-llvm::Optional<uint64_t>
-SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
-                                              ValueObject *instance,
-                                              ConstString member_name,
-                                              Status *error) {
+llvm::Optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
+    CompilerType instance_type, ValueObject *instance, ConstString member_name,
+    Status *error) {
   if (!instance_type.IsValid())
     return llvm::None;
 
@@ -1623,7 +1620,7 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
     if (!scratch_ctx)
       return llvm::None;
   }
-  
+
   auto *remote_ast = &GetRemoteASTContext(*module_ctx);
 
   if (log)
@@ -1693,7 +1690,7 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
   bool safe_to_use_remote_ast = true;
   if (swift::Decl *type_decl = swift_type->getNominalOrBoundGenericNominal())
     safe_to_use_remote_ast &= ASTVerifier::Verify(type_decl);
- 
+
   // Use RemoteAST to determine the member offset.
   if (safe_to_use_remote_ast) {
     swift::remoteAST::Result<uint64_t> result = remote_ast->getOffsetOfMember(
@@ -1809,7 +1806,7 @@ static bool IsScratchContextLocked(Target &target) {
 
 /// Determine whether the scratch SwiftASTContext has been locked.
 static bool IsScratchContextLocked(TargetSP target) {
-    return target ? IsScratchContextLocked(*target) : true;
+  return target ? IsScratchContextLocked(*target) : true;
 }
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
@@ -1864,7 +1861,7 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
 
   unsigned index = SwiftASTContext::ProtocolInfo::error_instance_index;
   ValueObjectSP instance_type_sp(
-                  in_value.GetStaticValue()->GetChildAtIndex(index, true));
+      in_value.GetStaticValue()->GetChildAtIndex(index, true));
   if (!instance_type_sp)
     return false;
   lldb::addr_t metadata_location = instance_type_sp->GetValueAsUnsigned(0);
@@ -1872,11 +1869,11 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
     return false;
 
   SetupSwiftError();
-  if (GetSwiftNativeNSErrorISA()) {
+  if (auto swift_native_nserror_isa = GetSwiftNativeNSErrorISA()) {
     if (auto objc_runtime = GetObjCRuntime()) {
       if (auto descriptor =
               objc_runtime->GetClassDescriptor(*instance_type_sp)) {
-        if (descriptor->GetISA() != *GetSwiftNativeNSErrorISA()) {
+        if (descriptor->GetISA() != *swift_native_nserror_isa) {
           // not a __SwiftNativeNSError - but statically typed as ErrorType
           // return true here
           return true;
@@ -1922,15 +1919,13 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
     ValueObject &in_value, CompilerType protocol_type,
-    SwiftASTContext &scratch_ctx,
-    lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name,
-    Address &address) {
+    SwiftASTContext &scratch_ctx, lldb::DynamicValueType use_dynamic,
+    TypeAndOrName &class_type_or_name, Address &address) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
   auto &target = m_process->GetTarget();
   assert(IsScratchContextLocked(target) &&
-          "Swift scratch context not locked ahead");
+         "Swift scratch context not locked ahead");
   auto &remote_ast = GetRemoteASTContext(scratch_ctx);
 
   lldb::addr_t existential_address;
@@ -2044,77 +2039,77 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
     while (target_swift_type->hasOpaqueArchetype()) {
       auto old_type = target_swift_type;
       target_swift_type = target_swift_type.subst(
-        [&](swift::SubstitutableType *type) -> swift::Type {
-          auto opaque_type =
-                          llvm::dyn_cast<swift::OpaqueTypeArchetypeType>(type);
-          if (!opaque_type)
-            return type;
-          
-          // Try to find the symbol for the opaque type descriptor in the
-          // process.
-          auto mangled_name = ConstString(
-                    mangler.mangleOpaqueTypeDescriptor(opaque_type->getDecl()));
-          
-          SymbolContextList found;
-          target.GetImages().FindSymbolsWithNameAndType(mangled_name,
-                                                        eSymbolTypeData, found);
-          
-          if (found.GetSize() == 0)
-            return type;
-          
-          swift::Type result_type;
-          
-          for (unsigned i = 0, e = found.GetSize(); i < e; ++i) {
-            SymbolContext found_sc;
-            if (!found.GetContextAtIndex(i, found_sc))
-              continue;
-            
-            // See if the symbol has an address.
-            if (!found_sc.symbol)
-              continue;
-
-            auto addr = found_sc.symbol->GetAddress()
-              .GetLoadAddress(&target);
-            if (!addr || addr == LLDB_INVALID_ADDRESS)
-              continue;
-
-            // Ask RemoteAST to get the underlying type out of the descriptor.
-            auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
-            auto underlying_type_result =
-            remote_ast.getUnderlyingTypeForOpaqueType(
-                                            swift::remote::RemoteAddress(addr),
-                                            opaque_type->getSubstitutions(),
-                                            opaque_type->getOrdinal());
-            
-            if (!underlying_type_result)
-              continue;
-
-            // If we haven't yet gotten an underlying type, use this as our
-            // possible result.
-            if (!result_type) {
-              result_type = underlying_type_result.getValue();
-            }
-            // If we have two possibilities, they should match.
-            else if (!result_type->isEqual(underlying_type_result.getValue())) {
+          [&](swift::SubstitutableType *type) -> swift::Type {
+            auto opaque_type =
+                llvm::dyn_cast<swift::OpaqueTypeArchetypeType>(type);
+            if (!opaque_type)
               return type;
+
+            // Try to find the symbol for the opaque type descriptor in the
+            // process.
+            auto mangled_name = ConstString(
+                mangler.mangleOpaqueTypeDescriptor(opaque_type->getDecl()));
+
+            SymbolContextList found;
+            target.GetImages().FindSymbolsWithNameAndType(
+                mangled_name, eSymbolTypeData, found);
+
+            if (found.GetSize() == 0)
+              return type;
+
+            swift::Type result_type;
+
+            for (unsigned i = 0, e = found.GetSize(); i < e; ++i) {
+              SymbolContext found_sc;
+              if (!found.GetContextAtIndex(i, found_sc))
+                continue;
+
+              // See if the symbol has an address.
+              if (!found_sc.symbol)
+                continue;
+
+              auto addr = found_sc.symbol->GetAddress().GetLoadAddress(&target);
+              if (!addr || addr == LLDB_INVALID_ADDRESS)
+                continue;
+
+              // Ask RemoteAST to get the underlying type out of the descriptor.
+              auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
+              auto underlying_type_result =
+                  remote_ast.getUnderlyingTypeForOpaqueType(
+                      swift::remote::RemoteAddress(addr),
+                      opaque_type->getSubstitutions(),
+                      opaque_type->getOrdinal());
+
+              if (!underlying_type_result)
+                continue;
+
+              // If we haven't yet gotten an underlying type, use this as our
+              // possible result.
+              if (!result_type) {
+                result_type = underlying_type_result.getValue();
+              }
+              // If we have two possibilities, they should match.
+              else if (!result_type->isEqual(
+                           underlying_type_result.getValue())) {
+                return type;
+              }
             }
-          }
-          
-          if (!result_type)
-            return type;
-          
-          return result_type;
-        },
-        swift::LookUpConformanceInModule(module_decl),
-        swift::SubstFlags::DesugarMemberTypes
-          | swift::SubstFlags::SubstituteOpaqueArchetypes);
-      
+
+            if (!result_type)
+              return type;
+
+            return result_type;
+          },
+          swift::LookUpConformanceInModule(module_decl),
+          swift::SubstFlags::DesugarMemberTypes |
+              swift::SubstFlags::SubstituteOpaqueArchetypes);
+
       // Stop if we've reached a fixpoint where we can't further resolve opaque
       // types.
       if (old_type->isEqual(target_swift_type))
         break;
     }
-    
+
     target_swift_type = target_swift_type.subst(
         [this, &stack_frame,
          &scratch_ctx](swift::SubstitutableType *type) -> swift::Type {
@@ -2377,7 +2372,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ClangType(
     bge->addChild(ety, factory);
     NodePointer e = factory.createNode(Node::Kind::Enum);
     e->addChild(factory.createNode(Node::Kind::Module, "Swift"), factory);
-    e->addChild(factory.createNode(Node::Kind::Identifier, "Optional"), factory);
+    e->addChild(factory.createNode(Node::Kind::Identifier, "Optional"),
+                factory);
     ety->addChild(e, factory);
     NodePointer list = factory.createNode(Node::Kind::TypeList);
     bge->addChild(list, factory);
@@ -2480,9 +2476,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     success = GetDynamicTypeAndAddress_Class(
         in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsProtocol))
-    success = GetDynamicTypeAndAddress_Protocol(
-        in_value, val_type, *scratch_ctx, use_dynamic,
-        class_type_or_name, address);
+    success = GetDynamicTypeAndAddress_Protocol(in_value, val_type,
+                                                *scratch_ctx, use_dynamic,
+                                                class_type_or_name, address);
   else {
     // Perform archetype binding in the scratch context.
     auto *frame = in_value.GetExecutionContextRef().GetFrameSP().get();
@@ -2495,16 +2491,15 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
 
     Flags subst_type_info(bound_type.GetTypeInfo());
     if (subst_type_info.AnySet(eTypeIsClass)) {
-      success = GetDynamicTypeAndAddress_Class(in_value, *scratch_ctx, use_dynamic,
-                                               class_type_or_name, address);
+      success = GetDynamicTypeAndAddress_Class(
+          in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
     } else if (subst_type_info.AnySet(eTypeIsProtocol)) {
       success = GetDynamicTypeAndAddress_Protocol(in_value, bound_type,
                                                   *scratch_ctx, use_dynamic,
                                                   class_type_or_name, address);
     } else {
-      success = GetDynamicTypeAndAddress_Value(in_value, bound_type,
-                                               use_dynamic, class_type_or_name,
-                                               address);
+      success = GetDynamicTypeAndAddress_Value(
+          in_value, bound_type, use_dynamic, class_type_or_name, address);
     }
   }
 
@@ -2546,8 +2541,7 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
     should_be_made_into_ref = true;
   else if (type_flags.AllSet(eTypeIsSwift | eTypeIsProtocol))
     should_be_made_into_ptr =
-        dynamic_type.IsRuntimeGeneratedType() &&
-        !dynamic_type.IsPointerType();
+        dynamic_type.IsRuntimeGeneratedType() && !dynamic_type.IsPointerType();
 
   if (type_and_or_name.HasType()) {
     // The type will always be the type of the dynamic object.  If our
@@ -2618,7 +2612,7 @@ SwiftLanguageRuntime::FixupPointerValue(lldb::addr_t addr, CompilerType type) {
   case llvm::Triple::ArchType::systemz:
     return {addr & ~SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK, false};
   case llvm::Triple::ArchType::ppc64le:
-    return { addr & ~SWIFT_ABI_POWERPC64_SWIFT_SPARE_BITS_MASK, false};
+    return {addr & ~SWIFT_ABI_POWERPC64_SWIFT_SPARE_BITS_MASK, false};
   default:
     break;
   }
@@ -2683,13 +2677,15 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetBitSize(CompilerType type) {
   return {};
 }
 
-llvm::Optional<uint64_t> SwiftLanguageRuntime::GetByteStride(CompilerType type) {
+llvm::Optional<uint64_t>
+SwiftLanguageRuntime::GetByteStride(CompilerType type) {
   if (auto *type_info = GetTypeInfo(type))
     return type_info->getStride();
   return {};
 }
 
-llvm::Optional<size_t> SwiftLanguageRuntime::GetBitAlignment(CompilerType type) {
+llvm::Optional<size_t>
+SwiftLanguageRuntime::GetBitAlignment(CompilerType type) {
   if (auto *type_info = GetTypeInfo(type))
     return type_info->getAlignment();
   return {};
@@ -2734,8 +2730,7 @@ SwiftLanguageRuntime::GetConcreteType(ExecutionContextScope *exe_scope,
 
 namespace {
 
-enum class ThunkKind
-{
+enum class ThunkKind {
   Unknown = 0,
   AllocatingInit,
   PartialApply,
@@ -2744,25 +2739,23 @@ enum class ThunkKind
   ProtocolConformance,
 };
 
-enum class ThunkAction
-{
+enum class ThunkAction {
   Unknown = 0,
   GetThunkTarget,
   StepIntoConformance,
   StepThrough
 };
 
-}
+} // namespace
 
-static ThunkKind
-GetThunkKind(llvm::StringRef symbol_name)
-{
+static ThunkKind GetThunkKind(llvm::StringRef symbol_name) {
   swift::Demangle::Node::Kind kind;
   swift::Demangle::Context demangle_ctx;
   if (!demangle_ctx.isThunkSymbol(symbol_name))
     return ThunkKind::Unknown;
 
-  swift::Demangle::NodePointer nodes = demangle_ctx.demangleSymbolAsNode(symbol_name);
+  swift::Demangle::NodePointer nodes =
+      demangle_ctx.demangleSymbolAsNode(symbol_name);
   size_t num_global_children = nodes->getNumChildren();
   if (num_global_children == 0)
     return ThunkKind::Unknown;
@@ -2774,16 +2767,15 @@ GetThunkKind(llvm::StringRef symbol_name)
 
   swift::Demangle::NodePointer node_ptr = nodes->getFirstChild();
   kind = node_ptr->getKind();
-  switch (kind)
-  {
+  switch (kind) {
   case swift::Demangle::Node::Kind::ObjCAttribute:
-        return ThunkKind::ObjCAttribute;
+    return ThunkKind::ObjCAttribute;
     break;
   case swift::Demangle::Node::Kind::ProtocolWitness:
     if (node_ptr->getNumChildren() == 0)
       return ThunkKind::Unknown;
-    if (node_ptr->getFirstChild()->getKind() 
-           == swift::Demangle::Node::Kind::ProtocolConformance)
+    if (node_ptr->getFirstChild()->getKind() ==
+        swift::Demangle::Node::Kind::ProtocolConformance)
       return ThunkKind::ProtocolConformance;
     break;
   case swift::Demangle::Node::Kind::ReabstractionThunkHelper:
@@ -2793,8 +2785,8 @@ GetThunkKind(llvm::StringRef symbol_name)
   case swift::Demangle::Node::Kind::Allocator:
     if (node_ptr->getNumChildren() == 0)
       return ThunkKind::Unknown;
-    if (node_ptr->getFirstChild()->getKind() 
-           == swift::Demangle::Node::Kind::Class)
+    if (node_ptr->getFirstChild()->getKind() ==
+        swift::Demangle::Node::Kind::Class)
       return ThunkKind::AllocatingInit;
     break;
   default:
@@ -2803,43 +2795,38 @@ GetThunkKind(llvm::StringRef symbol_name)
 
   return ThunkKind::Unknown;
 }
-static const char *GetThunkKindName (ThunkKind kind)
-{
-  switch (kind)
-  {
-    case ThunkKind::Unknown:
-      return "Unknown";
-    case ThunkKind::AllocatingInit:
-      return "StepThrough";
-    case ThunkKind::PartialApply:
-      return "GetThunkTarget";
-    case ThunkKind::ObjCAttribute:
-      return "GetThunkTarget";
-    case ThunkKind::Reabstraction:
-      return "GetThunkTarget";
-    case ThunkKind::ProtocolConformance:
-      return "StepIntoConformance";
+static const char *GetThunkKindName(ThunkKind kind) {
+  switch (kind) {
+  case ThunkKind::Unknown:
+    return "Unknown";
+  case ThunkKind::AllocatingInit:
+    return "StepThrough";
+  case ThunkKind::PartialApply:
+    return "GetThunkTarget";
+  case ThunkKind::ObjCAttribute:
+    return "GetThunkTarget";
+  case ThunkKind::Reabstraction:
+    return "GetThunkTarget";
+  case ThunkKind::ProtocolConformance:
+    return "StepIntoConformance";
   }
 }
 
-static ThunkAction
-GetThunkAction (ThunkKind kind)
-{
-    switch (kind)
-    {
-      case ThunkKind::Unknown:
-        return ThunkAction::Unknown;
-      case ThunkKind::AllocatingInit:
-        return ThunkAction::StepThrough;
-      case ThunkKind::PartialApply:
-        return ThunkAction::GetThunkTarget;
-      case ThunkKind::ObjCAttribute:
-        return ThunkAction::GetThunkTarget;
-      case ThunkKind::Reabstraction:
-        return ThunkAction::StepThrough;
-      case ThunkKind::ProtocolConformance:
-        return ThunkAction::StepIntoConformance;
-    }
+static ThunkAction GetThunkAction(ThunkKind kind) {
+  switch (kind) {
+  case ThunkKind::Unknown:
+    return ThunkAction::Unknown;
+  case ThunkKind::AllocatingInit:
+    return ThunkAction::StepThrough;
+  case ThunkKind::PartialApply:
+    return ThunkAction::GetThunkTarget;
+  case ThunkKind::ObjCAttribute:
+    return ThunkAction::GetThunkTarget;
+  case ThunkKind::Reabstraction:
+    return ThunkAction::StepThrough;
+  case ThunkKind::ProtocolConformance:
+    return ThunkAction::StepIntoConformance;
+  }
 }
 
 bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
@@ -2847,18 +2834,20 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
                                                    SymbolContext &sc) {
   if (!curr_sc.module_sp)
     return false;
-    
+
   SymbolContextList sc_list;
   swift::Demangle::Context demangle_ctx;
   // Make sure this is a partial apply:
-  
-  std::string apply_target = demangle_ctx.getThunkTarget(apply_name.GetStringRef());
+
+  std::string apply_target =
+      demangle_ctx.getThunkTarget(apply_name.GetStringRef());
   if (!apply_target.empty()) {
     size_t num_symbols = curr_sc.module_sp->FindFunctions(
-        ConstString(apply_target), NULL, eFunctionNameTypeFull, true, false, false, sc_list);
+        ConstString(apply_target), NULL, eFunctionNameTypeFull, true, false,
+        false, sc_list);
     if (num_symbols == 0)
       return false;
-      
+
     CompileUnit *curr_cu = curr_sc.comp_unit;
 
     size_t num_found = 0;
@@ -2887,7 +2876,8 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
 
 bool SwiftLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
 
-  llvm::StringRef symbol_name = symbol.GetMangled().GetMangledName().GetStringRef();
+  llvm::StringRef symbol_name =
+      symbol.GetMangled().GetMangledName().GetStringRef();
   if (symbol_name.empty())
     return false;
 
@@ -2919,12 +2909,12 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   // is fast to do and
   // keeps this list and the one in IsSymbolARuntimeThunk in sync.
   if (!symbol || !IsSymbolARuntimeThunk(*symbol))
-      return new_thread_plan_sp;
-      
+    return new_thread_plan_sp;
+
   // Only do this if you are at the beginning of the thunk function:
   lldb::addr_t cur_addr = thread.GetRegisterContext()->GetPC();
-  lldb::addr_t symbol_addr = symbol->GetAddress().GetLoadAddress(
-      &thread.GetProcess()->GetTarget());
+  lldb::addr_t symbol_addr =
+      symbol->GetAddress().GetLoadAddress(&thread.GetProcess()->GetTarget());
 
   if (symbol_addr != cur_addr)
     return new_thread_plan_sp;
@@ -2932,161 +2922,150 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   Address target_address;
   ConstString symbol_mangled_name = symbol->GetMangled().GetMangledName();
   const char *symbol_name = symbol_mangled_name.AsCString();
-  
+
   ThunkKind thunk_kind = GetThunkKind(symbol_mangled_name.GetStringRef());
   ThunkAction thunk_action = GetThunkAction(thunk_kind);
-  
 
-  switch (thunk_action)
-  {
-    case ThunkAction::Unknown:
-      return new_thread_plan_sp;
-    case ThunkAction::GetThunkTarget:
-    {
-      swift::Demangle::Context demangle_ctx;
-      std::string thunk_target = demangle_ctx.getThunkTarget(symbol_name);
-      if (thunk_target.empty())
-      {
-        if (log)
-          log->Printf("Stepped to thunk \"%s\" (kind: %s) but could not "
-                      "find the thunk target. ",
-                      symbol_name,
-                      GetThunkKindName(thunk_kind));
-        return new_thread_plan_sp;
-      }
+  switch (thunk_action) {
+  case ThunkAction::Unknown:
+    return new_thread_plan_sp;
+  case ThunkAction::GetThunkTarget: {
+    swift::Demangle::Context demangle_ctx;
+    std::string thunk_target = demangle_ctx.getThunkTarget(symbol_name);
+    if (thunk_target.empty()) {
       if (log)
-        log->Printf("Stepped to thunk \"%s\" (kind: %s) stepping to target: \"%s\".",
-                    symbol_name, GetThunkKindName(thunk_kind), thunk_target.c_str());
-
-      ModuleList modules = thread.GetProcess()->GetTarget().GetImages();
-      SymbolContextList sc_list;
-      modules.FindFunctionSymbols(ConstString(thunk_target),
-                                    eFunctionNameTypeFull, sc_list);
-      if (sc_list.GetSize() == 1) {
-        SymbolContext sc;
-        sc_list.GetContextAtIndex(0, sc);
-
-        if (sc.symbol)
-          target_address = sc.symbol->GetAddress();
-      }
-    }
-    break;
-    case ThunkAction::StepIntoConformance:
-    {
-      // The TTW symbols encode the protocol conformance requirements and it
-      // is possible to go to
-      // the AST and get it to replay the logic that it used to determine
-      // what to dispatch to.
-      // But that ties us too closely to the logic of the compiler, and
-      // these thunks are quite
-      // simple, they just do a little retaining, and then call the correct
-      // function.
-      // So for simplicity's sake, I'm just going to get the base name of
-      // the function
-      // this protocol thunk is preparing to call, then step into through
-      // the thunk, stopping if I end up
-      // in a frame with that function name.
-
-      swift::Demangle::Context demangle_ctx;
-      swift::Demangle::NodePointer demangled_nodes =
-          demangle_ctx.demangleSymbolAsNode(symbol_mangled_name.GetStringRef());
-
-      // Now find the ProtocolWitness node in the demangled result.
-
-      swift::Demangle::NodePointer witness_node = demangled_nodes;
-      bool found_witness_node = false;
-      while (witness_node) {
-        if (witness_node->getKind() ==
-            swift::Demangle::Node::Kind::ProtocolWitness) {
-          found_witness_node = true;
-          break;
-        }
-        witness_node = witness_node->getFirstChild();
-      }
-      if (!found_witness_node) {
-        if (log)
-          log->Printf("Stepped into witness thunk \"%s\" but could not "
-                      "find the ProtocolWitness node in the demangled "
-                      "nodes.",
-                      symbol_name);
-        return new_thread_plan_sp;
-      }
-
-      size_t num_children = witness_node->getNumChildren();
-      if (num_children < 2) {
-        if (log)
-          log->Printf("Stepped into witness thunk \"%s\" but the "
-                      "ProtocolWitness node doesn't have enough nodes.",
-                      symbol_name);
-        return new_thread_plan_sp;
-      }
-
-      swift::Demangle::NodePointer function_node =
-          witness_node->getChild(1);
-      if (function_node == nullptr ||
-          function_node->getKind() !=
-              swift::Demangle::Node::Kind::Function) {
-        if (log)
-          log->Printf("Stepped into witness thunk \"%s\" but could not "
-                      "find the function in the ProtocolWitness node.",
-                      symbol_name);
-        return new_thread_plan_sp;
-      }
-
-      // Okay, now find the name of this function.
-      num_children = function_node->getNumChildren();
-      swift::Demangle::NodePointer name_node(nullptr);
-      for (size_t i = 0; i < num_children; i++) {
-        if (function_node->getChild(i)->getKind() ==
-            swift::Demangle::Node::Kind::Identifier) {
-          name_node = function_node->getChild(i);
-          break;
-        }
-      }
-
-      if (!name_node) {
-        if (log)
-          log->Printf("Stepped into witness thunk \"%s\" but could not "
-                      "find the Function name in the function node.",
-                      symbol_name);
-        return new_thread_plan_sp;
-      }
-
-      std::string function_name(name_node->getText());
-      if (function_name.empty()) {
-        if (log)
-          log->Printf("Stepped into witness thunk \"%s\" but the Function "
-                      "name was empty.",
-                      symbol_name);
-        return new_thread_plan_sp;
-      }
-
-      // We have to get the address range of the thunk symbol, and make a
-      // "step through range stepping in"
-      AddressRange sym_addr_range(sc.symbol->GetAddress(),
-                                  sc.symbol->GetByteSize());
-      new_thread_plan_sp.reset(new ThreadPlanStepInRange(
-          thread, sym_addr_range, sc, function_name.c_str(),
-          eOnlyDuringStepping, eLazyBoolNo, eLazyBoolNo));
-      return new_thread_plan_sp;
-
-    }
-    break;
-    case ThunkAction::StepThrough:
-    {
-      if (log)
-        log->Printf("Stepping through thunk: %s kind: %s",
+        log->Printf("Stepped to thunk \"%s\" (kind: %s) but could not "
+                    "find the thunk target. ",
                     symbol_name, GetThunkKindName(thunk_kind));
-      AddressRange sym_addr_range(sc.symbol->GetAddress(),
-                                  sc.symbol->GetByteSize());
-      new_thread_plan_sp.reset(new ThreadPlanStepInRange(
-          thread, sym_addr_range, sc, nullptr, eOnlyDuringStepping,
-          eLazyBoolNo, eLazyBoolNo));
       return new_thread_plan_sp;
     }
-    break;
+    if (log)
+      log->Printf(
+          "Stepped to thunk \"%s\" (kind: %s) stepping to target: \"%s\".",
+          symbol_name, GetThunkKindName(thunk_kind), thunk_target.c_str());
+
+    ModuleList modules = thread.GetProcess()->GetTarget().GetImages();
+    SymbolContextList sc_list;
+    modules.FindFunctionSymbols(ConstString(thunk_target),
+                                eFunctionNameTypeFull, sc_list);
+    if (sc_list.GetSize() == 1) {
+      SymbolContext sc;
+      sc_list.GetContextAtIndex(0, sc);
+
+      if (sc.symbol)
+        target_address = sc.symbol->GetAddress();
+    }
+  } break;
+  case ThunkAction::StepIntoConformance: {
+    // The TTW symbols encode the protocol conformance requirements and it
+    // is possible to go to
+    // the AST and get it to replay the logic that it used to determine
+    // what to dispatch to.
+    // But that ties us too closely to the logic of the compiler, and
+    // these thunks are quite
+    // simple, they just do a little retaining, and then call the correct
+    // function.
+    // So for simplicity's sake, I'm just going to get the base name of
+    // the function
+    // this protocol thunk is preparing to call, then step into through
+    // the thunk, stopping if I end up
+    // in a frame with that function name.
+
+    swift::Demangle::Context demangle_ctx;
+    swift::Demangle::NodePointer demangled_nodes =
+        demangle_ctx.demangleSymbolAsNode(symbol_mangled_name.GetStringRef());
+
+    // Now find the ProtocolWitness node in the demangled result.
+
+    swift::Demangle::NodePointer witness_node = demangled_nodes;
+    bool found_witness_node = false;
+    while (witness_node) {
+      if (witness_node->getKind() ==
+          swift::Demangle::Node::Kind::ProtocolWitness) {
+        found_witness_node = true;
+        break;
+      }
+      witness_node = witness_node->getFirstChild();
+    }
+    if (!found_witness_node) {
+      if (log)
+        log->Printf("Stepped into witness thunk \"%s\" but could not "
+                    "find the ProtocolWitness node in the demangled "
+                    "nodes.",
+                    symbol_name);
+      return new_thread_plan_sp;
+    }
+
+    size_t num_children = witness_node->getNumChildren();
+    if (num_children < 2) {
+      if (log)
+        log->Printf("Stepped into witness thunk \"%s\" but the "
+                    "ProtocolWitness node doesn't have enough nodes.",
+                    symbol_name);
+      return new_thread_plan_sp;
+    }
+
+    swift::Demangle::NodePointer function_node = witness_node->getChild(1);
+    if (function_node == nullptr ||
+        function_node->getKind() != swift::Demangle::Node::Kind::Function) {
+      if (log)
+        log->Printf("Stepped into witness thunk \"%s\" but could not "
+                    "find the function in the ProtocolWitness node.",
+                    symbol_name);
+      return new_thread_plan_sp;
+    }
+
+    // Okay, now find the name of this function.
+    num_children = function_node->getNumChildren();
+    swift::Demangle::NodePointer name_node(nullptr);
+    for (size_t i = 0; i < num_children; i++) {
+      if (function_node->getChild(i)->getKind() ==
+          swift::Demangle::Node::Kind::Identifier) {
+        name_node = function_node->getChild(i);
+        break;
+      }
+    }
+
+    if (!name_node) {
+      if (log)
+        log->Printf("Stepped into witness thunk \"%s\" but could not "
+                    "find the Function name in the function node.",
+                    symbol_name);
+      return new_thread_plan_sp;
+    }
+
+    std::string function_name(name_node->getText());
+    if (function_name.empty()) {
+      if (log)
+        log->Printf("Stepped into witness thunk \"%s\" but the Function "
+                    "name was empty.",
+                    symbol_name);
+      return new_thread_plan_sp;
+    }
+
+    // We have to get the address range of the thunk symbol, and make a
+    // "step through range stepping in"
+    AddressRange sym_addr_range(sc.symbol->GetAddress(),
+                                sc.symbol->GetByteSize());
+    new_thread_plan_sp.reset(new ThreadPlanStepInRange(
+        thread, sym_addr_range, sc, function_name.c_str(), eOnlyDuringStepping,
+        eLazyBoolNo, eLazyBoolNo));
+    return new_thread_plan_sp;
+
+  } break;
+  case ThunkAction::StepThrough: {
+    if (log)
+      log->Printf("Stepping through thunk: %s kind: %s", symbol_name,
+                  GetThunkKindName(thunk_kind));
+    AddressRange sym_addr_range(sc.symbol->GetAddress(),
+                                sc.symbol->GetByteSize());
+    new_thread_plan_sp.reset(new ThreadPlanStepInRange(
+        thread, sym_addr_range, sc, nullptr, eOnlyDuringStepping, eLazyBoolNo,
+        eLazyBoolNo));
+    return new_thread_plan_sp;
+  } break;
   }
-    
+
   if (target_address.IsValid()) {
     new_thread_plan_sp.reset(
         new ThreadPlanRunToAddress(thread, target_address, stop_others));
@@ -3226,25 +3205,25 @@ void SwiftLanguageRuntime::SwiftExceptionPrecondition::AddEnumSpec(
 SwiftLanguageRuntime::SwiftExceptionPrecondition::SwiftExceptionPrecondition() {
 }
 
-ValueObjectSP
-SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
-    Value &value, ConstString name, bool persistent)
-{
+ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
+    Value &value, ConstString name, bool persistent) {
   ValueObjectSP error_valobj_sp;
-  auto type_system_or_err = m_process->GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+  auto type_system_or_err =
+      m_process->GetTarget().GetScratchTypeSystemForLanguage(
+          eLanguageTypeSwift);
   if (!type_system_or_err)
     return error_valobj_sp;
 
-  auto *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+  auto *ast_context =
+      llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
   if (!ast_context)
     return error_valobj_sp;
 
   CompilerType swift_error_proto_type = ast_context->GetErrorType();
   value.SetCompilerType(swift_error_proto_type);
-  
-  error_valobj_sp = ValueObjectConstResult::Create(
-      m_process, value, name);
-  
+
+  error_valobj_sp = ValueObjectConstResult::Create(m_process, value, name);
+
   if (error_valobj_sp && error_valobj_sp->GetError().Success()) {
     error_valobj_sp = error_valobj_sp->GetQualifiedRepresentationIfAvailable(
         lldb::eDynamicCanRunTarget, true);
@@ -3255,7 +3234,7 @@ SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
 
   if (persistent && error_valobj_sp) {
     ExecutionContext ctx =
-      error_valobj_sp->GetExecutionContextRef().Lock(false);
+        error_valobj_sp->GetExecutionContextRef().Lock(false);
     auto *exe_scope = ctx.GetBestExecutionContextScope();
     if (!exe_scope)
       return error_valobj_sp;
@@ -3329,9 +3308,8 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
     return error_valobj_sp;
 
   error_valobj_sp = ValueObjectConstResult::Create(
-      exe_scope, swift_error_proto_type,
-      variable_name, buffer, endian::InlHostByteOrder(),
-      exe_ctx.GetAddressByteSize());
+      exe_scope, swift_error_proto_type, variable_name, buffer,
+      endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize());
   if (error_valobj_sp->GetError().Fail())
     return error_valobj_sp;
 
@@ -3342,13 +3320,15 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
 
 void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
                                                lldb::addr_t addr) {
-  auto type_system_or_err = target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+  auto type_system_or_err =
+      target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
   if (!type_system_or_err) {
     llvm::consumeError(type_system_or_err.takeError());
     return;
   }
 
-  auto *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+  auto *ast_context =
+      llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
   if (ast_context && !ast_context->HasFatalErrors()) {
     SwiftPersistentExpressionState *persistent_state =
         llvm::cast<SwiftPersistentExpressionState>(
@@ -3369,10 +3349,10 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
       const auto introducer = swift::VarDecl::Introducer::Let;
       const bool is_capture_list = false;
 
-      swift::VarDecl *var_decl = new (*ast_context->GetASTContext())
-          swift::VarDecl(is_static, introducer, is_capture_list, swift::SourceLoc(),
-                         ast_context->GetIdentifier(name.GetCString()),
-                         module_decl);
+      swift::VarDecl *var_decl =
+          new (*ast_context->GetASTContext()) swift::VarDecl(
+              is_static, introducer, is_capture_list, swift::SourceLoc(),
+              ast_context->GetIdentifier(name.GetCString()), module_decl);
       var_decl->setInterfaceType(GetSwiftType(ast_context->GetErrorType()));
       var_decl->setDebuggerVar(true);
 
@@ -3564,8 +3544,7 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer(lldb::addr_t addr,
   return addr & ~mask;
 }
 
-lldb::addr_t
-SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
+lldb::addr_t SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
     lldb::addr_t addr,
     SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy) {
 
@@ -3573,7 +3552,7 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
     return addr;
 
   AppleObjCRuntime *objc_runtime = GetObjCRuntime();
-  
+
   if (objc_runtime) {
     // tagged pointers don't perform any masking
     if (objc_runtime->IsTaggedPointer(addr))
@@ -3618,18 +3597,18 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
 
   lldb::addr_t mask = 0;
 
-  if (strategy == SwiftASTContext::NonTriviallyManagedReferenceStrategy::eWeak) {
+  if (strategy ==
+      SwiftASTContext::NonTriviallyManagedReferenceStrategy::eWeak) {
     bool is_indirect = true;
-    
+
     // On non-objc platforms, the weak reference pointer always pointed to a
     // runtime structure.
     // For ObjC platforms, the masked value determines whether it is indirect.
-    
+
     uint32_t value = 0;
-    
-    if (objc_runtime)
-    {
-    
+
+    if (objc_runtime) {
+
       if (is_intel) {
         if (is_64) {
           mask = SWIFT_ABI_X86_64_OBJC_WEAK_REFERENCE_MARKER_MASK;
@@ -3640,41 +3619,39 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
         }
       } else if (is_arm) {
         if (is_64) {
-            mask = SWIFT_ABI_ARM64_OBJC_WEAK_REFERENCE_MARKER_MASK;
-            value = SWIFT_ABI_ARM64_OBJC_WEAK_REFERENCE_MARKER_VALUE;
+          mask = SWIFT_ABI_ARM64_OBJC_WEAK_REFERENCE_MARKER_MASK;
+          value = SWIFT_ABI_ARM64_OBJC_WEAK_REFERENCE_MARKER_VALUE;
         } else {
-            mask = SWIFT_ABI_ARM_OBJC_WEAK_REFERENCE_MARKER_MASK;
-            value = SWIFT_ABI_ARM_OBJC_WEAK_REFERENCE_MARKER_VALUE;
+          mask = SWIFT_ABI_ARM_OBJC_WEAK_REFERENCE_MARKER_MASK;
+          value = SWIFT_ABI_ARM_OBJC_WEAK_REFERENCE_MARKER_VALUE;
         }
       }
     } else {
-        // This name is a little confusing. The "DEFAULT" marking in System.h
-        // is supposed to mean: the value for non-ObjC platforms.  So
-        // DEFAULT_OBJC here actually means "non-ObjC".
-        mask = SWIFT_ABI_DEFAULT_OBJC_WEAK_REFERENCE_MARKER_MASK;
-        value = SWIFT_ABI_DEFAULT_OBJC_WEAK_REFERENCE_MARKER_VALUE;
+      // This name is a little confusing. The "DEFAULT" marking in System.h
+      // is supposed to mean: the value for non-ObjC platforms.  So
+      // DEFAULT_OBJC here actually means "non-ObjC".
+      mask = SWIFT_ABI_DEFAULT_OBJC_WEAK_REFERENCE_MARKER_MASK;
+      value = SWIFT_ABI_DEFAULT_OBJC_WEAK_REFERENCE_MARKER_VALUE;
     }
-    
+
     is_indirect = ((addr & mask) == value);
-    
+
     if (!is_indirect)
       return addr;
-    
+
     // The masked value of address is a pointer to the runtime structure.
     // The first field of the structure is the actual pointer.
     Process *process = GetProcess();
     Status error;
-    
+
     lldb::addr_t masked_addr = addr & ~mask;
     lldb::addr_t isa_addr = process->ReadPointerFromMemory(masked_addr, error);
-    if (error.Fail())
-    {
-        // FIXME: do some logging here.
-        return addr;
+    if (error.Fail()) {
+      // FIXME: do some logging here.
+      return addr;
     }
     return isa_addr;
-    
-      
+
   } else {
     if (is_arm && is_64)
       mask = SWIFT_ABI_ARM64_OBJC_NUM_RESERVED_LOW_BITS;
@@ -3687,7 +3664,7 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
 
     return addr & ~mask;
   }
-  
+
   return addr;
 }
 
@@ -3884,147 +3861,165 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
 
 void SwiftLanguageRuntime::WillStartExecutingUserExpression(
     bool runs_in_playground_or_repl) {
+  if (runs_in_playground_or_repl)
+    return;
+
   std::lock_guard<std::mutex> lock(m_active_user_expr_mutex);
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  LLDB_LOG(log,
+           "SwiftLanguageRuntime: starting user expression. "
+           "Number active: %u",
+           m_active_user_expr_count + 1);
+  if (m_active_user_expr_count++ > 0)
+    return;
 
-  if (!runs_in_playground_or_repl && m_active_user_expr_count == 0 &&
-      GetDynamicExclusivityFlagAddr()) {
-    // We're executing the first user expression. Toggle the flag.
-    auto type_system_or_err =
-        m_process->GetTarget().GetScratchTypeSystemForLanguage(
-            eLanguageTypeC_plus_plus);
-    if (!type_system_or_err) {
-      LLDB_LOG_ERROR(log, type_system_or_err.takeError(),
-                     "SwiftLanguageRuntime: Unable to get pointer to type system");
-      return;
-    }
-
-    ConstString BoolName("bool");
-    llvm::Optional<uint64_t> bool_size =
-        type_system_or_err->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
-    if (!bool_size)
-      return;
-
-    Status error;
-    Scalar original_value;
-    m_process->ReadScalarIntegerFromMemory(*GetDynamicExclusivityFlagAddr(),
-                                           *bool_size, false, original_value,
-                                           error);
-
-    m_original_dynamic_exclusivity_flag_state = original_value.UInt() != 0;
-
-    if (error.Fail()) {
-      if (log)
-        log->Printf("SwiftLanguageRuntime: Unable to read "
-                    "disableExclusivityChecking flag state: %s",
-                    error.AsCString());
-    } else {
-      Scalar new_value(1U);
-      m_process->WriteScalarToMemory(*m_dynamic_exclusivity_flag_addr,
-                                     new_value, *bool_size, error);
-      if (error.Fail()) {
-        if (log)
-          log->Printf("SwiftLanguageRuntime: Unable to set "
-                      "disableExclusivityChecking flag state: %s",
-                      error.AsCString());
-      } else {
-        if (log)
-          log->Printf("SwiftLanguageRuntime: Changed "
-                      "disableExclusivityChecking flag state from %u to 1",
-                      m_original_dynamic_exclusivity_flag_state);
-      }
-    }
+  auto dynamic_exlusivity_flag_addr = GetDynamicExclusivityFlagAddr();
+  if (!dynamic_exlusivity_flag_addr) {
+    LLDB_LOG(log, "Failed to get address of disableExclusivityChecking flag");
+    return;
   }
-  ++m_active_user_expr_count;
 
-  if (log)
-    log->Printf("SwiftLanguageRuntime: starting user expression. "
-                "Number active: %u", m_active_user_expr_count);
+  // We're executing the first user expression. Toggle the flag.
+  auto type_system_or_err =
+      m_process->GetTarget().GetScratchTypeSystemForLanguage(
+          eLanguageTypeC_plus_plus);
+  if (!type_system_or_err) {
+    LLDB_LOG_ERROR(
+        log, type_system_or_err.takeError(),
+        "SwiftLanguageRuntime: Unable to get pointer to type system");
+    return;
+  }
+
+  ConstString BoolName("bool");
+  llvm::Optional<uint64_t> bool_size =
+      type_system_or_err->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+  if (!bool_size)
+    return;
+
+  Status error;
+  Scalar original_value;
+  m_process->ReadScalarIntegerFromMemory(
+      *dynamic_exlusivity_flag_addr, *bool_size, false, original_value, error);
+
+  m_original_dynamic_exclusivity_flag_state = original_value.UInt() != 0;
+  if (error.Fail()) {
+    LLDB_LOG(log,
+             "SwiftLanguageRuntime: Unable to read disableExclusivityChecking "
+             "flag state: %s",
+             error.AsCString());
+    return;
+  }
+
+  Scalar new_value(1U);
+  m_process->WriteScalarToMemory(*m_dynamic_exclusivity_flag_addr, new_value,
+                                 *bool_size, error);
+  if (error.Fail()) {
+    LLDB_LOG(log,
+             "SwiftLanguageRuntime: Unable to set disableExclusivityChecking "
+             "flag state: %s",
+             error.AsCString());
+    return;
+  }
+
+  LLDB_LOG(log,
+           "SwiftLanguageRuntime: Changed disableExclusivityChecking flag "
+           "state from %u to 1",
+           m_original_dynamic_exclusivity_flag_state);
 }
 
 void SwiftLanguageRuntime::DidFinishExecutingUserExpression(
     bool runs_in_playground_or_repl) {
+  if (runs_in_playground_or_repl)
+    return;
+
   std::lock_guard<std::mutex> lock(m_active_user_expr_mutex);
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   --m_active_user_expr_count;
-  if (log)
-    log->Printf("SwiftLanguageRuntime: finished user expression. "
-                "Number active: %u", m_active_user_expr_count);
+  LLDB_LOG(log,
+           "SwiftLanguageRuntime: finished user expression. "
+           "Number active: %u",
+           m_active_user_expr_count);
 
-  if (!runs_in_playground_or_repl && m_active_user_expr_count == 0 &&
-      GetDynamicExclusivityFlagAddr()) {
-    auto type_system_or_err =
-        m_process->GetTarget().GetScratchTypeSystemForLanguage(
-            eLanguageTypeC_plus_plus);
-    if (!type_system_or_err) {
-      LLDB_LOG_ERROR(log, type_system_or_err.takeError(),
-                     "SwiftLanguageRuntime: Unable to get pointer to type system");
-      return;
-    }
+  if (m_active_user_expr_count > 0)
+    return;
 
-    ConstString BoolName("bool");
-    llvm::Optional<uint64_t> bool_size =
-        type_system_or_err->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
-    if (!bool_size)
-      return;
-
-    Status error;
-    Scalar original_value(m_original_dynamic_exclusivity_flag_state ? 1U : 0U);
-    m_process->WriteScalarToMemory(*GetDynamicExclusivityFlagAddr(),
-                                   original_value, *bool_size, error);
-    if (error.Fail()) {
-      if (log)
-        log->Printf("SwiftLanguageRuntime: Unable to reset "
-                    "disableExclusivityChecking flag state: %s",
-                    error.AsCString());
-    } else {
-      if (log)
-        log->Printf("SwiftLanguageRuntime: Changed "
-                    "disableExclusivityChecking flag state back to %u",
-                    m_original_dynamic_exclusivity_flag_state);
-    }
+  auto dynamic_exlusivity_flag_addr = GetDynamicExclusivityFlagAddr();
+  if (!dynamic_exlusivity_flag_addr) {
+    LLDB_LOG(log, "Failed to get address of disableExclusivityChecking flag");
+    return;
   }
+
+  auto type_system_or_err =
+      m_process->GetTarget().GetScratchTypeSystemForLanguage(
+          eLanguageTypeC_plus_plus);
+  if (!type_system_or_err) {
+    LLDB_LOG_ERROR(
+        log, type_system_or_err.takeError(),
+        "SwiftLanguageRuntime: Unable to get pointer to type system");
+    return;
+  }
+
+  ConstString BoolName("bool");
+  llvm::Optional<uint64_t> bool_size =
+      type_system_or_err->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+  if (!bool_size)
+    return;
+
+  Status error;
+  Scalar original_value(m_original_dynamic_exclusivity_flag_state ? 1U : 0U);
+  m_process->WriteScalarToMemory(*dynamic_exlusivity_flag_addr, original_value,
+                                 *bool_size, error);
+  if (error.Fail()) {
+    LLDB_LOG(log,
+             "SwiftLanguageRuntime: Unable to reset "
+             "disableExclusivityChecking flag state: %s",
+             error.AsCString());
+    return;
+  }
+  if (log)
+    LLDB_LOG(log,
+             "SwiftLanguageRuntime: Changed "
+             "disableExclusivityChecking flag state back to %u",
+             m_original_dynamic_exclusivity_flag_state);
 }
 
 llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
-    lldb::StackFrameSP frame_sp)
-{
+    lldb::StackFrameSP frame_sp) {
   llvm::Optional<Value> error_val;
 
   llvm::StringRef error_reg_name;
   ArchSpec arch_spec(GetTargetRef().GetArchitecture());
   switch (arch_spec.GetMachine()) {
-    case llvm::Triple::ArchType::arm:
-      error_reg_name = "r6";
-      break;
-    case llvm::Triple::ArchType::aarch64:
-      error_reg_name = "x21";
-      break;
-    case llvm::Triple::ArchType::x86_64:
-      error_reg_name = "r12";
-      break;
-    default:
-      break;
+  case llvm::Triple::ArchType::arm:
+    error_reg_name = "r6";
+    break;
+  case llvm::Triple::ArchType::aarch64:
+    error_reg_name = "x21";
+    break;
+  case llvm::Triple::ArchType::x86_64:
+    error_reg_name = "r12";
+    break;
+  default:
+    break;
   }
-  
-  
+
   if (error_reg_name.empty())
-      return error_val;
-      
+    return error_val;
+
   RegisterContextSP reg_ctx = frame_sp->GetRegisterContext();
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(error_reg_name);
-  lldbassert(reg_info && "didn't get the right register name for swift error register");
+  lldbassert(reg_info &&
+             "didn't get the right register name for swift error register");
   if (!reg_info)
     return error_val;
-  
+
   RegisterValue reg_value;
-  if (!reg_ctx->ReadRegister(reg_info, reg_value))
-  {
+  if (!reg_ctx->ReadRegister(reg_info, reg_value)) {
     // Do some logging here.
     return error_val;
   }
-  
+
   lldb::addr_t error_addr = reg_value.GetAsUInt64();
   if (error_addr == 0)
     return error_val;
@@ -4033,7 +4028,7 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
   if (reg_value.GetScalarValue(val.GetScalar())) {
     val.SetValueType(Value::eValueTypeScalar);
     val.SetContext(Value::eContextTypeRegisterInfo,
-                     const_cast<RegisterInfo *>(reg_info));
+                   const_cast<RegisterInfo *>(reg_info));
     error_val = val;
   }
   return error_val;
@@ -4042,23 +4037,22 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
 llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
     lldb::StackFrameSP frame_sp, bool &need_to_check_after_return) {
   llvm::Optional<Value> error_val;
-  
-  if (!frame_sp)
-  {
+
+  if (!frame_sp) {
     need_to_check_after_return = false;
     return error_val;
   }
-  
+
   // For Architectures where the error isn't returned in a register,
   // there's a magic variable that points to the value.  Check that first:
-  
+
   ConstString error_location_name("$error");
   VariableListSP variables_sp = frame_sp->GetInScopeVariableList(false);
   VariableSP error_loc_var_sp = variables_sp->FindVariable(
       error_location_name, eValueTypeVariableArgument);
   if (error_loc_var_sp) {
     need_to_check_after_return = false;
-    
+
     ValueObjectSP error_loc_val_sp = frame_sp->GetValueObjectForFrameVariable(
         error_loc_var_sp, eNoDynamicValues);
     if (error_loc_val_sp && error_loc_val_sp->GetError().Success())
@@ -4066,21 +4060,20 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
 
     return error_val;
   }
-  
-  // Otherwise, see if we know which register it lives in from the calling convention.
-  // This should probably go in the ABI plugin not here, but the Swift ABI can change with
-  // swiftlang versions and that would make it awkward in the ABI.
-  
+
+  // Otherwise, see if we know which register it lives in from the calling
+  // convention. This should probably go in the ABI plugin not here, but the
+  // Swift ABI can change with swiftlang versions and that would make it awkward
+  // in the ABI.
+
   Function *func = frame_sp->GetSymbolContext(eSymbolContextFunction).function;
-  if (!func)
-  {
+  if (!func) {
     need_to_check_after_return = false;
     return error_val;
   }
-  
+
   need_to_check_after_return = func->CanThrow();
   return error_val;
-
 }
 
 //------------------------------------------------------------------
@@ -4124,9 +4117,9 @@ SwiftDemangleNodeKindToCString(const swift::Demangle::Node::Kind node_kind) {
 }
 
 static OptionDefinition g_swift_demangle_options[] = {
-  // clang-format off
+    // clang-format off
   {LLDB_OPT_SET_1, false, "expand", 'e', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Whether LLDB should print the demangled tree"},
-  // clang-format on
+    // clang-format on
 };
 
 class CommandObjectSwift_Demangle : public CommandObjectParsed {
@@ -4150,7 +4143,7 @@ public:
     virtual ~CommandOptions() {}
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                                 ExecutionContext *execution_context) override {
+                          ExecutionContext *execution_context) override {
       Status error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
