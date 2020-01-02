@@ -2579,7 +2579,6 @@ void DWARFASTParserClang::ParseSingleMember(
     }
 
     if (prop_name) {
-      ConstString fixed_getter;
       ConstString fixed_setter;
 
       // Check if the property getter/setter were provided as full names.
