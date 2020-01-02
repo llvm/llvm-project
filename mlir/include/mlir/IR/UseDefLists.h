@@ -47,8 +47,8 @@ public:
   /// the IR that uses 'this' to use the other value instead.  When this returns
   /// there are zero uses of 'this'.
   void replaceAllUsesWith(typename OperandType::ValueType newValue) {
-    assert(this != OperandType::getUseList(newValue) &&
-           "cannot RAUW a value with itself");
+    assert(!newValue || this != OperandType::getUseList(newValue) &&
+                            "cannot RAUW a value with itself");
     while (!use_empty())
       use_begin()->set(newValue);
   }
@@ -126,8 +126,8 @@ public:
   void replaceAllUsesWith(ValueType oldValue, ValueType newValue) {
     assert(this == OperandType::getUseList(oldValue) &&
            "value not attached to this use list");
-    assert(this != OperandType::getUseList(newValue) &&
-           "cannot RAUW a value with itself");
+    assert(!newValue || this != OperandType::getUseList(newValue) &&
+                            "cannot RAUW a value with itself");
     for (OperandType &use : llvm::make_early_inc_range(getUses(oldValue)))
       use.set(newValue);
   }
@@ -336,6 +336,9 @@ public:
 
   /// Return the current value being used by this operand.
   Value get() const;
+
+  /// Set the operand to the given value.
+  void set(Value value);
 
   /// Return which operand this is in the operand list of the User.
   unsigned getOperandNumber();
