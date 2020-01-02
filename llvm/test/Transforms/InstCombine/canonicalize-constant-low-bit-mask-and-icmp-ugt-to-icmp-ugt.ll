@@ -108,6 +108,18 @@ define <3 x i1> @p3_vec_splat_undef() {
   ret <3 x i1> %ret
 }
 
+define <3 x i1> @p3_vec_nonsplat_undef() {
+; CHECK-LABEL: @p3_vec_nonsplat_undef(
+; CHECK-NEXT:    [[X:%.*]] = call <3 x i8> @gen3x8()
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <3 x i8> [[X]], <i8 3, i8 undef, i8 15>
+; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
+;
+  %x = call <3 x i8> @gen3x8()
+  %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 15>
+  %ret = icmp ugt <3 x i8> %x, %tmp0
+  ret <3 x i1> %ret
+}
+
 ; ============================================================================ ;
 ; Commutativity tests.
 ; ============================================================================ ;
