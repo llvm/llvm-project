@@ -158,8 +158,9 @@ private:
 
 } // end anonymous namespace
 
-static void maybeFreeRetconStorage(IRBuilder<> &Builder, coro::Shape &Shape,
-                                   Value *FramePtr, CallGraph *CG) {
+static void maybeFreeRetconStorage(IRBuilder<> &Builder,
+                                   const coro::Shape &Shape, Value *FramePtr,
+                                   CallGraph *CG) {
   assert(Shape.ABI == coro::ABI::Retcon ||
          Shape.ABI == coro::ABI::RetconOnce);
   if (Shape.RetconLowering.IsFrameInlineInStorage)
@@ -169,9 +170,9 @@ static void maybeFreeRetconStorage(IRBuilder<> &Builder, coro::Shape &Shape,
 }
 
 /// Replace a non-unwind call to llvm.coro.end.
-static void replaceFallthroughCoroEnd(CoroEndInst *End, coro::Shape &Shape,
-                                      Value *FramePtr, bool InResume,
-                                      CallGraph *CG) {
+static void replaceFallthroughCoroEnd(CoroEndInst *End,
+                                      const coro::Shape &Shape, Value *FramePtr,
+                                      bool InResume, CallGraph *CG) {
   // Start inserting right before the coro.end.
   IRBuilder<> Builder(End);
 
@@ -219,7 +220,7 @@ static void replaceFallthroughCoroEnd(CoroEndInst *End, coro::Shape &Shape,
 }
 
 /// Replace an unwind call to llvm.coro.end.
-static void replaceUnwindCoroEnd(CoroEndInst *End, coro::Shape &Shape,
+static void replaceUnwindCoroEnd(CoroEndInst *End, const coro::Shape &Shape,
                                  Value *FramePtr, bool InResume, CallGraph *CG){
   IRBuilder<> Builder(End);
 
@@ -246,7 +247,7 @@ static void replaceUnwindCoroEnd(CoroEndInst *End, coro::Shape &Shape,
   }
 }
 
-static void replaceCoroEnd(CoroEndInst *End, coro::Shape &Shape,
+static void replaceCoroEnd(CoroEndInst *End, const coro::Shape &Shape,
                            Value *FramePtr, bool InResume, CallGraph *CG) {
   if (End->isUnwind())
     replaceUnwindCoroEnd(End, Shape, FramePtr, InResume, CG);
@@ -782,7 +783,7 @@ static Function *createClone(Function &F, const Twine &Suffix,
 }
 
 /// Remove calls to llvm.coro.end in the original function.
-static void removeCoroEnds(coro::Shape &Shape, CallGraph *CG) {
+static void removeCoroEnds(const coro::Shape &Shape, CallGraph *CG) {
   for (auto End : Shape.CoroEnds) {
     replaceCoroEnd(End, Shape, Shape.FramePtr, /*in resume*/ false, CG);
   }
