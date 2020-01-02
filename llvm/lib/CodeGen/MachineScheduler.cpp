@@ -2088,7 +2088,8 @@ getOtherResourceCount(unsigned &OtherCritIdx) {
   return OtherCritCount;
 }
 
-void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle) {
+template <bool InPQueue>
+void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, unsigned Idx) {
   assert(SU->getInstr() && "Scheduled SUnit must have instr");
 
 #ifndef NDEBUG
@@ -2105,11 +2106,19 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle) {
   // Check for interlocks first. For the purpose of other heuristics, an
   // instruction that cannot issue appears as if it's not in the ReadyQueue.
   bool IsBuffered = SchedModel->getMicroOpBufferSize() != 0;
-  if ((!IsBuffered && ReadyCycle > CurrCycle) || checkHazard(SU) ||
-      Available.size() >= ReadyListLimit)
-    Pending.push(SU);
-  else
+  bool HazardDetected = (!IsBuffered && ReadyCycle > CurrCycle) ||
+                        checkHazard(SU) || (Available.size() >= ReadyListLimit);
+
+  if (!HazardDetected) {
     Available.push(SU);
+
+    if (InPQueue)
+      Pending.remove(Pending.begin() + Idx);
+    return;
+  }
+
+  if (!InPQueue)
+    Pending.push(SU);
 }
 
 /// Move the boundary of scheduled code by one cycle.
@@ -2349,26 +2358,21 @@ void SchedBoundary::releasePending() {
 
   // Check to see if any of the pending instructions are ready to issue.  If
   // so, add them to the available queue.
-  bool IsBuffered = SchedModel->getMicroOpBufferSize() != 0;
-  for (unsigned i = 0, e = Pending.size(); i != e; ++i) {
-    SUnit *SU = *(Pending.begin()+i);
+  for (unsigned I = 0, E = Pending.size(); I < E; ++I) {
+    SUnit *SU = *(Pending.begin() + I);
     unsigned ReadyCycle = isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
 
     if (ReadyCycle < MinReadyCycle)
       MinReadyCycle = ReadyCycle;
 
-    if (!IsBuffered && ReadyCycle > CurrCycle)
-      continue;
-
-    if (checkHazard(SU))
-      continue;
-
     if (Available.size() >= ReadyListLimit)
       break;
 
-    Available.push(SU);
-    Pending.remove(Pending.begin()+i);
-    --i; --e;
+    releaseNode<true>(SU, ReadyCycle, I);
+    if (E != Pending.size()) {
+      --I;
+      --E;
+    }
   }
   CheckPending = false;
 }
