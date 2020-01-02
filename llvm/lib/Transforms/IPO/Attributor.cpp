@@ -5727,11 +5727,12 @@ ChangeStatus Attributor::run(Module &M) {
     }
   }
 
+  STATS_DECL(AAIsDead, Function, "Number of dead functions deleted.");
+  BUILD_STAT_NAME(AAIsDead, Function) += ToBeDeletedFunctions.size();
+
   // Rewrite the functions as requested during manifest.
   ManifestChange = ManifestChange | rewriteFunctionSignatures();
 
-  STATS_DECL(AAIsDead, Function, "Number of dead functions deleted.");
-  BUILD_STAT_NAME(AAIsDead, Function) += ToBeDeletedFunctions.size();
   for (Function *Fn : ToBeDeletedFunctions) {
     Fn->deleteBody();
     Fn->replaceAllUsesWith(UndefValue::get(Fn->getType()));
@@ -5890,8 +5891,9 @@ ChangeStatus Attributor::rewriteFunctionSignatures() {
     NewFn->getBasicBlockList().splice(NewFn->begin(),
                                       OldFn->getBasicBlockList());
 
-    // Set of all "call-like" instructions that invoke the old function.
-    SmallPtrSet<Instruction *, 8> OldCallSites;
+    // Set of all "call-like" instructions that invoke the old function mapped
+    // to their new replacements.
+    SmallVector<std::pair<CallBase *, CallBase *>, 8> CallSitePairs;
 
     // Callback to create a new "call-like" instruction for a given one.
     auto CallSiteReplacementCreator = [&](AbstractCallSite ACS) {
@@ -5943,7 +5945,6 @@ ChangeStatus Attributor::rewriteFunctionSignatures() {
       }
 
       // Copy over various properties and the new attributes.
-      OldCB->replaceAllUsesWith(NewCB);
       uint64_t W;
       if (OldCB->extractProfTotalWeight(W))
         NewCB->setProfWeight(W);
@@ -5954,10 +5955,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures() {
           Ctx, OldCallAttributeList.getFnAttributes(),
           OldCallAttributeList.getRetAttributes(), NewArgOperandAttributes));
 
-      bool Inserted = OldCallSites.insert(OldCB).second;
-      assert(Inserted && "Call site was old twice!");
-      (void)Inserted;
-
+      CallSitePairs.push_back({OldCB, NewCB});
       return true;
     };
 
@@ -5984,11 +5982,15 @@ ChangeStatus Attributor::rewriteFunctionSignatures() {
     }
 
     // Eliminate the instructions *after* we visited all of them.
-    for (Instruction *OldCallSite : OldCallSites)
-      OldCallSite->eraseFromParent();
+    for (auto &CallSitePair : CallSitePairs) {
+      CallBase &OldCB = *CallSitePair.first;
+      CallBase &NewCB = *CallSitePair.second;
+      OldCB.replaceAllUsesWith(&NewCB);
+      OldCB.eraseFromParent();
+    }
 
-    assert(OldFn->getNumUses() == 0 && "Unexpected leftover uses!");
-    OldFn->eraseFromParent();
+    ToBeDeletedFunctions.insert(OldFn);
+
     Changed = ChangeStatus::CHANGED;
   }
 
