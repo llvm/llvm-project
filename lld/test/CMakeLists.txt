@@ -4,17 +4,8 @@ set(LLVM_BUILD_MODE "%(build_mode)s")
 set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}/%(build_config)s")
 set(LLVM_LIBS_DIR "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/%(build_config)s")
 
-if(LLD_BUILT_STANDALONE)
-  # Set HAVE_LIBZ according to recorded LLVM_ENABLE_ZLIB value. This
-  # value is forced to 0 if zlib was not found, so it is fine to use it
-  # instead of HAVE_LIBZ (not recorded).
-  if(LLVM_ENABLE_ZLIB)
-    set(HAVE_LIBZ 1)
-  endif()
-endif()
-
 llvm_canonicalize_cmake_booleans(
-  HAVE_LIBZ
+  LLVM_ENABLE_ZLIB
   LLVM_LIBXML2_ENABLED
   )
 
