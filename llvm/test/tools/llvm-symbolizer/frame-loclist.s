@@ -45,13 +45,13 @@
 // DW_AT_location        (DW_OP_breg29 W29-4)
 // CHECK0:      func00
 // CHECK0-NEXT: x
-// CHECK0-NEXT: /tmp/dbg.c:4
+// CHECK0-NEXT: {{.*}}dbg.c:4
 // CHECK0-NEXT: -4 4 ??
 
 // DW_AT_location        (DW_OP_fbreg -4)
 // CHECK1:      func0{{$}}
 // CHECK1-NEXT: x
-// CHECK1-NEXT: /tmp/dbg.c:9
+// CHECK1-NEXT: {{.*}}dbg.c:9
 // CHECK1-NEXT: -4 4 ??
 
 // DW_AT_location        (0x00000000: 
@@ -59,7 +59,7 @@
 //   [0x0000000000000058, 0x000000000000005c): DW_OP_reg0 W0)
 // CHECK2:      func1
 // CHECK2-NEXT: x
-// CHECK2-NEXT: /tmp/dbg.c:14
+// CHECK2-NEXT: {{.*}}dbg.c:14
 // CHECK2-NEXT: -4 4 ??
 
 // DW_AT_location        (0x00000037: 
@@ -68,7 +68,7 @@
 //    [0x0000000000000088, 0x000000000000008c): DW_OP_reg0 W0)
 // CHECK3:      func2
 // CHECK3-NEXT: x
-// CHECK3-NEXT: /tmp/dbg.c:20
+// CHECK3-NEXT: {{.*}}dbg.c:20
 // CHECK3-NEXT: -4 4 ??
 
 // No stack location.
@@ -77,11 +77,11 @@
 //     [0x00000000000000a0, 0x00000000000000ac): DW_OP_reg19 W19)
 // CHECK4:      func3
 // CHECK4-NEXT: b
-// CHECK4-NEXT: /tmp/dbg.c:25
+// CHECK4-NEXT: {{.*}}dbg.c:25
 // CHECK4-NEXT: ?? 4 ??
 // CHECK4-NEXT: func3
 // CHECK4-NEXT: x
-// CHECK4-NEXT: /tmp/dbg.c:26
+// CHECK4-NEXT: {{.*}}dbg.c:26
 // CHECK4-NEXT: ?? 4 ??
 //
 	.text
