@@ -69,6 +69,7 @@ write_lit_config("lit_site_cfg") {
 
     # No bindings are implemented in the GN build.
     "LLVM_BINDINGS=",
+    "LLVM_BYE_LINK_INTO_TOOLS=0",
 
     "GO_EXECUTABLE=",
     "LLVM_INCLUDE_GO_TESTS=0",
