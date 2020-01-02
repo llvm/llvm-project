@@ -145,7 +145,7 @@ if (LLDB_ENABLE_PYTHON)
     if(Python3_VERSION VERSION_LESS 3.5)
       message(SEND_ERROR "Python 3.5 or newer is required (found: ${Python3_VERSION}")
     endif()
-    set(PYTHON_LIBRARY ${Python3_LIBRARIES})
+    set(PYTHON_LIBRARIES ${Python3_LIBRARIES})
     include_directories(${Python3_INCLUDE_DIRS})
 
     if (NOT LLDB_RELOCATABLE_PYTHON)
@@ -178,7 +178,7 @@ endif()
 
 if (NOT LLDB_ENABLE_PYTHON)
   unset(PYTHON_INCLUDE_DIR)
-  unset(PYTHON_LIBRARY)
+  unset(PYTHON_LIBRARIES)
   unset(PYTHON_EXECUTABLE)
 endif()
 
