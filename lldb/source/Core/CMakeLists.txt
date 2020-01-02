@@ -99,7 +99,7 @@ add_dependencies(lldbCore
 set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 4)
 
 if (LLDB_ENABLE_LIBEDIT)
-  target_include_directories(lldbCore PRIVATE ${libedit_INCLUDE_DIRS})
+  target_include_directories(lldbCore PRIVATE ${LibEdit_INCLUDE_DIRS})
 endif()
 
 if (LLDB_ENABLE_CURSES)
