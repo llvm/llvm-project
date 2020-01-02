@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
+# RUN: llc -mtriple=armv7-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
 ---
 name:            foo
 body:             |

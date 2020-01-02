@@ -1,22 +1,22 @@
-# RUN: llc -mtriple=arm-apple-ios -run-pass=if-converter -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv7-apple-ios -run-pass=if-converter -verify-machineinstrs %s -o - | FileCheck %s
 ...
 ---
 name:            foo
 body:             |
   bb.0:
-    Bcc %bb.2, 1, $cpsr
+    tBcc %bb.2, 1, $cpsr
 
   bb.1:
     $sp = tADDspi $sp, 2, 14, _
-    B %bb.1
+    tB %bb.1, 14, $noreg
 
   bb.2:
-    Bcc %bb.3, 0, $cpsr
-    B %bb.2
+    tBcc %bb.3, 0, $cpsr
+    tB %bb.2, 14, $noreg
 
   bb.3:
-    Bcc %bb.1, 1, $cpsr
-    B %bb.1
+    tBcc %bb.1, 1, $cpsr
+    tB %bb.1, 14, $noreg
 ...
 
 # Both branches in bb.3 jump to bb.1. IfConversion shouldn't treat this as a
