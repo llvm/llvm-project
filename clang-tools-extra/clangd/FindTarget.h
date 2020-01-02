@@ -79,6 +79,36 @@ class DeclRelationSet;
 llvm::SmallVector<const Decl *, 1>
 targetDecl(const ast_type_traits::DynTypedNode &, DeclRelationSet Mask);
 
+/// Similar to targetDecl(), however instead of applying a filter, all possible
+/// decls are returned along with their DeclRelationSets.
+/// This is suitable for indexing, where everything is recorded and filtering
+/// is applied later.
+llvm::SmallVector<std::pair<const Decl *, DeclRelationSet>, 1>
+allTargetDecls(const ast_type_traits::DynTypedNode &);
+
+enum class DeclRelation : unsigned {
+  // Template options apply when the declaration is an instantiated template.
+  // e.g. [[vector<int>]] vec;
+
+  /// This is the template instantiation that was referred to.
+  /// e.g. template<> class vector<int> (the implicit specialization)
+  TemplateInstantiation,
+  /// This is the pattern the template specialization was instantiated from.
+  /// e.g. class vector<T> (the pattern within the primary template)
+  TemplatePattern,
+
+  // Alias options apply when the declaration is an alias.
+  // e.g. namespace clang { [[StringRef]] S; }
+
+  /// This declaration is an alias that was referred to.
+  /// e.g. using llvm::StringRef (the UsingDecl directly referenced).
+  Alias,
+  /// This is the underlying declaration for an alias, decltype etc.
+  /// e.g. class llvm::StringRef (the underlying declaration referenced).
+  Underlying,
+};
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, DeclRelation);
+
 /// Information about a reference written in the source code, independent of the
 /// actual AST node that this reference lives in.
 /// Useful for tools that are source-aware, e.g. refactorings.
@@ -111,35 +141,20 @@ void findExplicitReferences(const Decl *D,
 void findExplicitReferences(const ASTContext &AST,
                             llvm::function_ref<void(ReferenceLoc)> Out);
 
-/// Similar to targetDecl(), however instead of applying a filter, all possible
-/// decls are returned along with their DeclRelationSets.
-/// This is suitable for indexing, where everything is recorded and filtering
-/// is applied later.
-llvm::SmallVector<std::pair<const Decl *, DeclRelationSet>, 1>
-allTargetDecls(const ast_type_traits::DynTypedNode &);
+/// Find declarations explicitly referenced in the source code defined by \p N.
+/// For templates, will prefer to return a template instantiation whenever
+/// possible. However, can also return a template pattern if the specialization
+/// cannot be picked, e.g. in dependent code or when there is no corresponding
+/// Decl for a template instantitation, e.g. for templated using decls:
+///    template <class T> using Ptr = T*;
+///    Ptr<int> x;
+///    ^~~ there is no Decl for 'Ptr<int>', so we return the template pattern.
+/// \p Mask should not contain TemplatePattern or TemplateInstantiation.
+llvm::SmallVector<const NamedDecl *, 1>
+explicitReferenceTargets(ast_type_traits::DynTypedNode N,
+                         DeclRelationSet Mask);
 
-enum class DeclRelation : unsigned {
-  // Template options apply when the declaration is an instantiated template.
-  // e.g. [[vector<int>]] vec;
-
-  /// This is the template instantiation that was referred to.
-  /// e.g. template<> class vector<int> (the implicit specialization)
-  TemplateInstantiation,
-  /// This is the pattern the template specialization was instantiated from.
-  /// e.g. class vector<T> (the pattern within the primary template)
-  TemplatePattern,
-
-  // Alias options apply when the declaration is an alias.
-  // e.g. namespace clang { [[StringRef]] S; }
-
-  /// This declaration is an alias that was referred to.
-  /// e.g. using llvm::StringRef (the UsingDecl directly referenced).
-  Alias,
-  /// This is the underlying declaration for an alias, decltype etc.
-  /// e.g. class llvm::StringRef (the underlying declaration referenced).
-  Underlying,
-};
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, DeclRelation);
+// Boring implementation details of bitfield.
 
 class DeclRelationSet {
   using Set = std::bitset<static_cast<unsigned>(DeclRelation::Underlying) + 1>;
@@ -182,18 +197,6 @@ inline DeclRelationSet operator&(DeclRelation L, DeclRelation R) {
 inline DeclRelationSet operator~(DeclRelation R) { return ~DeclRelationSet(R); }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, DeclRelationSet);
 
-/// Find declarations explicitly referenced in the source code defined by \p N.
-/// For templates, will prefer to return a template instantiation whenever
-/// possible. However, can also return a template pattern if the specialization
-/// cannot be picked, e.g. in dependent code or when there is no corresponding
-/// Decl for a template instantitation, e.g. for templated using decls:
-///    template <class T> using Ptr = T*;
-///    Ptr<int> x;
-///    ^~~ there is no Decl for 'Ptr<int>', so we return the template pattern.
-/// \p Mask should not contain TemplatePattern or TemplateInstantiation.
-llvm::SmallVector<const NamedDecl *, 1>
-explicitReferenceTargets(ast_type_traits::DynTypedNode N,
-                         DeclRelationSet Mask = {});
 } // namespace clangd
 } // namespace clang
 
