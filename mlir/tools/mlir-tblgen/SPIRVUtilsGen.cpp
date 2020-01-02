@@ -323,6 +323,9 @@ static void emitAvailabilityQueryForIntEnum(const Record &enumDef,
                     enumerant.getSymbol(), avail.getMergeInstanceType(),
                     avail.getMergeInstance());
     }
+    // Only emit default if uncovered cases.
+    if (classCasePair.getValue().size() < enumAttr.getAllCases().size())
+      os << "  default: break;\n";
     os << "  }\n"
        << "  return llvm::None;\n"
        << "}\n";
@@ -367,6 +370,7 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
                     enumerant.getSymbol(), avail.getMergeInstanceType(),
                     avail.getMergeInstance());
     }
+    os << "  default: break;\n";
     os << "  }\n"
        << "  return llvm::None;\n"
        << "}\n";
