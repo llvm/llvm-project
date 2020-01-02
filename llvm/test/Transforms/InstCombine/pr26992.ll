@@ -9,7 +9,7 @@ define i1 @test1(i8* %p) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    invoke void @may_throw()
 ; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       invoke.cont:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[P]], i64 2
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, i8* [[P]], i64 2
 ; CHECK-NEXT:    invoke void @may_throw()
 ; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       catch.dispatch:

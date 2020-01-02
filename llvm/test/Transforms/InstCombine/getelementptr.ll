@@ -1201,7 +1201,7 @@ define i32* @test_nzgep_zgep([1 x i32]* %base, i64 %idx) {
 
 define i32* @test_gep_inbounds_of_gep(i32* %base) {
 ; CHECK-LABEL: @test_gep_inbounds_of_gep(
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i32, i32* [[BASE:%.*]], i64 8
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i32, i32* [[BASE:%.*]], i64 8
 ; CHECK-NEXT:    ret i32* [[PTR2]]
 ;
   %ptr1 = getelementptr i32, i32* %base, i64 4
