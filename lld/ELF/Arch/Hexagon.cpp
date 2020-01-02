@@ -125,6 +125,13 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_GOT_16_X:
   case R_HEX_GOT_32_6_X:
     return R_GOTPLT;
+  case R_HEX_TPREL_11_X:
+  case R_HEX_TPREL_16:
+  case R_HEX_TPREL_16_X:
+  case R_HEX_TPREL_32_6_X:
+  case R_HEX_TPREL_HI16:
+  case R_HEX_TPREL_LO16:
+    return R_TLS;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
@@ -222,6 +229,7 @@ void Hexagon::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_HEX_11_X:
   case R_HEX_GOT_11_X:
   case R_HEX_GOTREL_11_X:
+  case R_HEX_TPREL_11_X:
     or32le(loc, applyMask(findMaskR11(read32le(loc)), val & 0x3f));
     break;
   case R_HEX_12_X:
@@ -230,7 +238,11 @@ void Hexagon::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_HEX_16_X: // These relocs only have 6 effective bits.
   case R_HEX_GOT_16_X:
   case R_HEX_GOTREL_16_X:
+  case R_HEX_TPREL_16_X:
     or32le(loc, applyMask(findMaskR16(read32le(loc)), val & 0x3f));
+    break;
+  case R_HEX_TPREL_16:
+    or32le(loc, applyMask(findMaskR16(read32le(loc)), val & 0xffff));
     break;
   case R_HEX_32:
   case R_HEX_32_PCREL:
@@ -239,6 +251,7 @@ void Hexagon::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_HEX_32_6_X:
   case R_HEX_GOT_32_6_X:
   case R_HEX_GOTREL_32_6_X:
+  case R_HEX_TPREL_32_6_X:
     or32le(loc, applyMask(0x0fff3fff, val >> 6));
     break;
   case R_HEX_B9_PCREL:
@@ -272,10 +285,12 @@ void Hexagon::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     break;
   case R_HEX_GOTREL_HI16:
   case R_HEX_HI16:
+  case R_HEX_TPREL_HI16:
     or32le(loc, applyMask(0x00c03fff, val >> 16));
     break;
   case R_HEX_GOTREL_LO16:
   case R_HEX_LO16:
+  case R_HEX_TPREL_LO16:
     or32le(loc, applyMask(0x00c03fff, val));
     break;
   default:
