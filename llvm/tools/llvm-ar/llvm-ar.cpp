@@ -64,8 +64,10 @@ const char RanlibHelp[] = R"(OVERVIEW: LLVM Ranlib (llvm-ranlib)
 USAGE: llvm-ranlib <archive-file>
 
 OPTIONS:
-  -h --help                         - Display available options
-  --version                         - Display the version of this program
+  -h --help             - Display available options
+  -v --version          - Display the version of this program
+  -D                    - Use zero for timestamps and uids/gids (default)
+  -U                    - Use actual timestamps and uids/gids
 )";
 
 const char ArHelp[] = R"(OVERVIEW: LLVM Archiver
@@ -1156,13 +1158,33 @@ static int ar_main(int argc, char **argv) {
 static int ranlib_main(int argc, char **argv) {
   bool ArchiveSpecified = false;
   for (int i = 1; i < argc; ++i) {
-    if (handleGenericOption(argv[i])) {
+    StringRef arg(argv[i]);
+    if (handleGenericOption(arg)) {
       return 0;
+    } else if (arg.consume_front("-")) {
+      // Handle the -D/-U flag
+      while (!arg.empty()) {
+        if (arg.front() == 'D') {
+          Deterministic = true;
+        } else if (arg.front() == 'U') {
+          Deterministic = false;
+        } else if (arg.front() == 'h') {
+          printHelpMessage();
+          return 0;
+        } else if (arg.front() == 'v') {
+          cl::PrintVersionMessage();
+          return 0;
+        } else {
+          // TODO: GNU ranlib also supports a -t flag
+          fail("Invalid option: '-" + arg + "'");
+        }
+        arg = arg.drop_front(1);
+      }
     } else {
       if (ArchiveSpecified)
         fail("exactly one archive should be specified");
       ArchiveSpecified = true;
-      ArchiveName = argv[i];
+      ArchiveName = arg.str();
     }
   }
   if (!ArchiveSpecified) {
