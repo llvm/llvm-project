@@ -525,18 +525,15 @@ define x86_regcallcc x86_fp80 @test_argRetf80(x86_fp80 %a0) nounwind {
 }
 
 ; Test regcall when receiving/returning long double
-define double @test_argParamf80(x86_fp80 %a0) nounwind {
+define x86_regcallcc double @test_argParamf80(x86_fp80 %a0) nounwind {
 ; X32-LABEL: test_argParamf80:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $16, %esp
-; X32-NEXT:    fldt 8(%ebp)
-; X32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X32-NEXT:    subl $8, %esp
+; X32-NEXT:    fstpl (%esp)
 ; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vmovsd %xmm0, (%esp)
-; X32-NEXT:    fldl (%esp)
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
@@ -544,7 +541,6 @@ define double @test_argParamf80(x86_fp80 %a0) nounwind {
 ; WIN64-LABEL: test_argParamf80:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rax
-; WIN64-NEXT:    fldt (%rcx)
 ; WIN64-NEXT:    fstpl (%rsp)
 ; WIN64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; WIN64-NEXT:    popq %rax
@@ -552,7 +548,6 @@ define double @test_argParamf80(x86_fp80 %a0) nounwind {
 ;
 ; LINUXOSX64-LABEL: test_argParamf80:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; LINUXOSX64-NEXT:    fstpl -{{[0-9]+}}(%rsp)
 ; LINUXOSX64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; LINUXOSX64-NEXT:    retq
