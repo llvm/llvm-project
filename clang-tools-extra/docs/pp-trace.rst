@@ -104,16 +104,16 @@ With real data:::
 
   ---
   - Callback: FileChanged
-    Loc: "c:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-include.cpp:1:1"
+    Loc: "c:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-include.cpp:1:1"
     Reason: EnterFile
     FileType: C_User
     PrevFID: (invalid)
     (etc.)
   - Callback: FileChanged
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-include.cpp:5:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-include.cpp:5:1"
     Reason: ExitFile
     FileType: C_User
-    PrevFID: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/Input/Level1B.h"
+    PrevFID: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/Input/Level1B.h"
   - Callback: EndOfMainFile
   ...
 
@@ -172,7 +172,7 @@ PrevFID          ((file)|(invalid))                                   FileID    
 Example:::
 
   - Callback: FileChanged
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-include.cpp:1:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-include.cpp:1:1"
     Reason: EnterFile
     FileType: C_User
     PrevFID: (invalid)
@@ -248,8 +248,8 @@ Example:::
     FileName: "Input/Level1B.h"
     IsAngled: false
     FilenameRange: "Input/Level1B.h"
-    File: "D:/Clang/llvmnewmod/tools/clang/tools/extra/test/pp-trace/Input/Level1B.h"
-    SearchPath: "D:/Clang/llvmnewmod/tools/clang/tools/extra/test/pp-trace"
+    File: "D:/Clang/llvmnewmod/clang-tools-extra/test/pp-trace/Input/Level1B.h"
+    SearchPath: "D:/Clang/llvmnewmod/clang-tools-extra/test/pp-trace"
     RelativePath: "Input/Level1B.h"
     Imported: (null)
 
@@ -271,8 +271,8 @@ Imported         ((module name)|(null))                               const Modu
 Example:::
 
   - Callback: moduleImport
-    ImportLoc: "d:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-modules.cpp:4:2"
-    Path: [{Name: Level1B, Loc: "d:/Clang/llvmnewmod/tools/clang/tools/extra/test/pp-trace/pp-trace-modules.cpp:4:9"}, {Name: Level2B, Loc: "d:/Clang/llvmnewmod/tools/clang/tools/extra/test/pp-trace/pp-trace-modules.cpp:4:17"}]
+    ImportLoc: "d:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-modules.cpp:4:2"
+    Path: [{Name: Level1B, Loc: "d:/Clang/llvmnewmod/clang-tools-extra/test/pp-trace/pp-trace-modules.cpp:4:9"}, {Name: Level2B, Loc: "d:/Clang/llvmnewmod/clang-tools-extra/test/pp-trace/pp-trace-modules.cpp:4:17"}]
     Imported: Level2B
 
 `EndOfMainFile <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a63e170d069e99bc1c9c7ea0f3bed8bcc>`_ Callback
@@ -309,7 +309,7 @@ str              (name)                                               const std:
 Example:::
 
   - Callback: Ident
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-ident.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-ident.cpp:3:1"
     str: "$Id$"
 
 `PragmaDirective <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a0a2d7a72c62184b3cbde31fb62c6f2f7>`_ Callback
@@ -329,7 +329,7 @@ Introducer       (PIK_HashPragma|PIK__Pragma|PIK___pragma)            PragmaIntr
 Example:::
 
   - Callback: PragmaDirective
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Introducer: PIK_HashPragma
 
 `PragmaComment <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ace0d940fc2c12ab76441466aab58dc37>`_ Callback
@@ -350,7 +350,7 @@ Str              (message directive)                                  const std:
 Example:::
 
   - Callback: PragmaComment
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Kind: library
     Str: kernel32.lib
 
@@ -372,7 +372,7 @@ Value            (string)                                             const std:
 Example:::
 
   - Callback: PragmaDetectMismatch
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Name: name
     Value: value
 
@@ -393,7 +393,7 @@ DebugType        (string)                                             StringRef 
 Example:::
 
   - Callback: PragmaDebug
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     DebugType: warning
 
 `PragmaMessage <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#abb42935d9a9fd8e2c4f51cfdc4ea2ae1>`_ Callback
@@ -415,7 +415,7 @@ Str              (string)                                             StringRef 
 Example:::
 
   - Callback: PragmaMessage
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Namespace: "GCC"
     Kind: PMK_Message
     Str: The message text.
@@ -437,7 +437,7 @@ Namespace        (name)                                               StringRef 
 Example:::
 
   - Callback: PragmaDiagnosticPush
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Namespace: "GCC"
 
 `PragmaDiagnosticPop <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ac94d789873122221fba8d76f6c5ea45e>`_ Callback
@@ -457,7 +457,7 @@ Namespace        (name)                                               StringRef 
 Example:::
 
   - Callback: PragmaDiagnosticPop
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Namespace: "GCC"
 
 `PragmaDiagnostic <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#afe7938f38a83cb7b4b25a13edfdd7bdd>`_ Callback
@@ -479,7 +479,7 @@ Str              (string)                                             StringRef 
 Example:::
 
   - Callback: PragmaDiagnostic
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Namespace: "GCC"
     mapping: MAP_WARNING
     Str: WarningName
@@ -503,9 +503,9 @@ State            (1|0)                                                unsigned  
 Example:::
 
   - Callback: PragmaOpenCLExtension
-    NameLoc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:10"
+    NameLoc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:10"
     Name: Name
-    StateLoc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:18"
+    StateLoc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:18"
     State: 1
 
 `PragmaWarning <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#aa17169d25fa1cf0a6992fc944d1d8730>`_ Callback
@@ -526,7 +526,7 @@ Ids              [(number)[, ...]]                                    ArrayRef<i
 Example:::
 
   - Callback: PragmaWarning
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     WarningSpec: disable
     Ids: 1,2,3
 
@@ -547,7 +547,7 @@ Level            (number)                                             int       
 Example:::
 
   - Callback: PragmaWarningPush
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Level: 1
 
 `PragmaWarningPop <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ac98d502af8811b8a6e7342d7cd2b3b95>`_ Callback
@@ -566,7 +566,7 @@ Loc              "(file):(line):(col)"                                SourceLoca
 Example:::
 
   - Callback: PragmaWarningPop
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
 
 `MacroExpands <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a9bc725209d3a071ea649144ab996d515>`_ Callback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -652,7 +652,7 @@ Example:::
   - Callback: Defined
     MacroNameTok: MACRO
     MacroDirective: (null)
-    Range: ["D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:5", "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:19"]
+    Range: ["D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:5", "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:19"]
 
 `SourceRangeSkipped <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#abdb4ebe11610f079ac33515965794b46>`_ Callback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -670,7 +670,7 @@ Range            ["(file):(line):(col)", "(file):(line):(col)"]       SourceRang
 Example:::
 
   - Callback: SourceRangeSkipped
-    Range: [":/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:2", ":/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:9:2"]
+    Range: [":/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:2", ":/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:9:2"]
 
 `If <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a645edcb0d6becbc6f256f02fd1287778>`_ Callback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -690,8 +690,8 @@ ConditionValue   (true|false)                                         bool      
 Example:::
 
   - Callback: If
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:2"
-    ConditionRange: ["D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:4", "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:9:1"]
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:2"
+    ConditionRange: ["D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:4", "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:9:1"]
     ConditionValue: false
 
 `Elif <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a180c9e106a28d60a6112e16b1bb8302a>`_ Callback
@@ -713,10 +713,10 @@ IfLoc            "(file):(line):(col)"                                SourceLoca
 Example:::
 
   - Callback: Elif
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:10:2"
-    ConditionRange: ["D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:10:4", "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:11:1"]
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:10:2"
+    ConditionRange: ["D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:10:4", "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:11:1"]
     ConditionValue: false
-    IfLoc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:2"
+    IfLoc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:2"
 
 `Ifdef <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a0ce79575dda307784fd51a6dd4eec33d>`_ Callback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -736,7 +736,7 @@ MacroDirective   (MD_Define|MD_Undefine|MD_Visibility)                const Macr
 Example:::
 
   - Callback: Ifdef
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-conditional.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-conditional.cpp:3:1"
     MacroNameTok: MACRO
     MacroDirective: MD_Define
 
@@ -758,7 +758,7 @@ MacroDirective   (MD_Define|MD_Undefine|MD_Visibility)                const Macr
 Example:::
 
   - Callback: Ifndef
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-conditional.cpp:3:1"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-conditional.cpp:3:1"
     MacroNameTok: MACRO
     MacroDirective: MD_Define
 
@@ -779,8 +779,8 @@ IfLoc            "(file):(line):(col)"                                SourceLoca
 Example:::
 
   - Callback: Else
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:10:2"
-    IfLoc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:2"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:10:2"
+    IfLoc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:2"
 
 `Endif <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#afc62ca1401125f516d58b1629a2093ce>`_ Callback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -799,8 +799,8 @@ IfLoc            "(file):(line):(col)"                                SourceLoca
 Example:::
 
   - Callback: Endif
-    Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:10:2"
-    IfLoc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:2"
+    Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:10:2"
+    IfLoc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:2"
 
 Building pp-trace
 =================
