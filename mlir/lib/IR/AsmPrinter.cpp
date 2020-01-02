@@ -1840,7 +1840,7 @@ void OperationPrinter::printValueIDImpl(Value value, bool printResultNo,
   }
 
   stream << '%';
-  if (it->second != nameSentinel) {
+  if (it->second != (unsigned)nameSentinel) {
     stream << it->second;
   } else {
     auto nameIt = valueNames.find(lookupValue);
@@ -1876,7 +1876,7 @@ void OperationPrinter::shadowRegionArgs(Region &region, ValueRange namesToUse) {
     printValueIDImpl(nameToUse, /*printResultNo=*/true, nameStream);
 
     // Entry block arguments should already have a pretty "arg" name.
-    assert(valueIDs[nameToReplace] == nameSentinel);
+    assert(valueIDs[nameToReplace] == (unsigned)nameSentinel);
 
     // Use the name without the leading %.
     auto name = StringRef(nameStream.str()).drop_front();
