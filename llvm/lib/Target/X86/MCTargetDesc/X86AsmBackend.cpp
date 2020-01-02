@@ -117,7 +117,7 @@ public:
 
 X86AlignBranchKind X86AlignBranchKindLoc;
 
-cl::opt<uint64_t> X86AlignBranchBoundary(
+cl::opt<unsigned> X86AlignBranchBoundary(
     "x86-align-branch-boundary", cl::init(0),
     cl::desc(
         "Control how the assembler should align branches with NOP. If the "
