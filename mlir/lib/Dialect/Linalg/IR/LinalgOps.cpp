@@ -103,13 +103,13 @@ template <> LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
   auto nViews = op.getNumInputsAndOutputs();
   auto nInputViews = op.getNumInputs();
   if (block.getNumArguments() != nViews)
-    return op.emitError(
-        "op expected number of block arguments to match number of views");
+    return op.emitOpError(
+        "expected number of block arguments to match number of views");
 
   for (unsigned i = 0; i < nViews; ++i) {
     auto viewType = op.getViewType(i);
     if (viewType.getElementType() != block.getArgument(i)->getType())
-      return op.emitError("op expected block argument ")
+      return op.emitOpError("expected block argument ")
              << i << " of the same type as elemental type of "
              << ((i < nInputViews) ? "input " : "output ")
              << "view: " << viewType;
@@ -122,13 +122,13 @@ template <> LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
   auto nLoops = op.getNumLoops();
   auto nViews = op.getNumInputsAndOutputs();
   if (block.getNumArguments() != nViews + nLoops)
-    return op.emitError(
-        "op expected number of block arguments to match number of views + "
+    return op.emitOpError(
+        "expected number of block arguments to match number of views + "
         "number of loops");
 
   for (unsigned i = 0; i < nLoops; ++i) {
     if (!block.getArgument(i)->getType().isIndex())
-      return op.emitError("op expected block argument ")
+      return op.emitOpError("expected block argument ")
              << i << " to be of IndexType";
   }
 
@@ -137,7 +137,7 @@ template <> LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
     auto viewType = op.getViewType(i);
     if (viewType.getElementType() !=
         block.getArgument(memrefArgIndex)->getType())
-      return op.emitError("op expected block argument ")
+      return op.emitOpError("expected block argument ")
              << memrefArgIndex << " of the same type as elemental type of "
              << ((i < nInputViews) ? "input " : "output ")
              << "view: " << viewType;
@@ -152,24 +152,24 @@ template <> LogicalResult verifyFuncArgs(GenericOp op, FunctionType funType) {
   auto nViews = op.getNumInputsAndOutputs();
   auto nInputViews = op.getNumInputs();
   if (funType.getNumInputs() != nViews)
-    return op.emitError("op expected fun arguments to match number of views");
+    return op.emitOpError("expected fun arguments to match number of views");
   if (funType.getNumResults() != op.getNumOutputs())
-    return op.emitError(
-        "op expected fun results to match number of output views");
+    return op.emitOpError(
+        "expected fun results to match number of output views");
 
   for (auto en : llvm::enumerate(op.indexing_maps())) {
     auto idx = en.index();
     auto view = (idx < nInputViews) ? op.getInputViewType(idx)
                                     : op.getOutputViewType(idx - nInputViews);
     if (funType.getInput(idx) != view.getElementType())
-      return op.emitError("op expected fun argument ")
+      return op.emitOpError("expected fun argument ")
              << idx << " of the same type as elemental type "
              << view.getElementType() << " of view " << idx;
 
     if (idx >= nInputViews) {
       auto resultIdx = idx - nInputViews;
       if (funType.getResult(resultIdx) != view.getElementType())
-        return op.emitError("op expected fun result ")
+        return op.emitOpError("expected fun result ")
                << resultIdx << " of the same type as elemental type "
                << view.getElementType() << " of view " << idx;
     }
@@ -184,14 +184,14 @@ LogicalResult verifyFuncArgs(IndexedGenericOp op, FunctionType funType) {
   auto nOutputs = op.getNumOutputs();
   auto nViews = op.getNumInputsAndOutputs();
   if (funType.getNumInputs() != nViews + nLoops)
-    return op.emitError(
-        "op expected fun arguments to match number of views + number of loops");
+    return op.emitOpError(
+        "expected fun arguments to match number of views + number of loops");
   if (funType.getNumResults() != nOutputs)
-    return op.emitError(
-        "op expected fun results to match number of output views");
+    return op.emitOpError(
+        "expected fun results to match number of output views");
   for (unsigned i = 0; i < nLoops; ++i) {
     if (!funType.getInput(i).isIndex())
-      return op.emitError("op expected fun argument ")
+      return op.emitOpError("expected fun argument ")
              << i << " to be of IndexType";
   }
   for (auto en : llvm::enumerate(op.indexing_maps())) {
@@ -200,14 +200,14 @@ LogicalResult verifyFuncArgs(IndexedGenericOp op, FunctionType funType) {
     auto view = (idx < nInputViews) ? op.getInputViewType(idx)
                                     : op.getOutputViewType(idx - nInputViews);
     if (funType.getInput(funIdx) != view.getElementType())
-      return op.emitError("op expected fun argument ")
+      return op.emitOpError("expected fun argument ")
              << funIdx << " of the same type as elemental type "
              << view.getElementType() << " of view " << idx;
 
     if (idx >= nInputViews) {
       auto resultIdx = idx - nInputViews;
       if (funType.getResult(resultIdx) != view.getElementType())
-        return op.emitError("op expected fun result ")
+        return op.emitOpError("expected fun result ")
                << resultIdx << " of the same type as elemental type "
                << view.getElementType() << " of view " << idx;
     }
@@ -221,20 +221,20 @@ LogicalResult verifyGenericOp(GenericOpType op) {
   auto nLoops = op.getNumLoops();
   auto nViews = op.getNumInputsAndOutputs();
   if (nViews != llvm::size(op.views()))
-    return op.emitError("op expected exactly ") << nViews << " view operands";
+    return op.emitOpError("expected exactly ") << nViews << " view operands";
 
   auto &region = op.region();
   auto funOp = op.getFunction();
   auto funType = funOp ? funOp.getType() : FunctionType();
   if (!region.empty()) {
     if (region.getBlocks().size() != 1)
-      return op.emitError("op expected region with 1 block");
+      return op.emitOpError("expected region with 1 block");
     if (failed(verifyBlockArgs(op, region.getBlocks().front())))
       return failure();
   } else {
     if (!funOp || !funOp.getType())
-      return op.emitError(
-          "op expected fun attribute to refer to a defined symbol");
+      return op.emitOpError(
+          "expected fun attribute to refer to a defined symbol");
     if (failed(verifyFuncArgs(op, funType)))
       return failure();
   }
@@ -249,31 +249,31 @@ LogicalResult verifyGenericOp(GenericOpType op) {
                                     : op.getOutputViewType(idx - nInputViews);
 
     if (m.getNumSymbols() != 0)
-      return op.emitError("op expected indexing_map #")
+      return op.emitOpError("expected indexing_map #")
              << idx << " to have no symbols";
 
     if (m.getNumDims() != nLoops)
-      return op.emitError("op expected indexing_map #")
+      return op.emitOpError("expected indexing_map #")
              << idx << " to have " << nLoops
              << " dim(s) to match the number of loops";
 
     if (m.getNumResults() == 1 && view.getRank() == 0) {
       auto cst = m.getResult(0).template dyn_cast<AffineConstantExpr>();
       if (!cst || cst.getValue() != 0)
-        return op.emitError("op expected indexing_map #")
+        return op.emitOpError("expected indexing_map #")
                << idx << " to be 0 to match 0-D view: " << view;
     }
 
     if (m.getNumResults() != view.getRank())
-      return op.emitError("op expected indexing_map #")
+      return op.emitOpError("expected indexing_map #")
              << idx << " results to match view rank: " << view;
   }
 
   auto concatMap = concatAffineMaps(indexingMaps);
   auto aggregateMap = inversePermutation(concatMap);
   if (!aggregateMap)
-    return op.emitError("op expected the concatenation of maps in indexing_map "
-                        "to be invertible");
+    return op.emitOpError("expected the concatenation of maps in indexing_map "
+                          "to be invertible");
 
   return success();
 }
@@ -471,7 +471,7 @@ LogicalResult verifyYield(YieldOp op, GenericOpType genericOp) {
   for (unsigned i = 0; i != nOutputViews; ++i) {
     auto elementType = genericOp.getOutputViewType(i).getElementType();
     if (op.getOperand(i)->getType() != elementType)
-      return op.emitError("type of return operand ")
+      return op.emitOpError("type of return operand ")
              << i << " (" << op.getOperand(i)->getType()
              << ") doesn't match view element type (" << elementType << ")";
   }
