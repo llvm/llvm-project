@@ -1491,7 +1491,7 @@ void Util::addRebaseAndBindingInfo(const lld::File &atomFile,
 
 void Util::fixLazyReferenceImm(const DefinedAtom *atom, uint32_t offset,
                                NormalizedFile &file) {
-  for (const auto &ref : *atom) {
+  for (const Reference *ref : *atom) {
     const DefinedAtom *da = dyn_cast<DefinedAtom>(ref->target());
     if (da == nullptr)
       return;

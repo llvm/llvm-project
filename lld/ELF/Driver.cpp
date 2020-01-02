@@ -165,10 +165,7 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
   std::vector<std::pair<MemoryBufferRef, uint64_t>> v;
   Error err = Error::success();
   bool addToTar = file->isThin() && tar;
-  for (const ErrorOr<Archive::Child> &cOrErr : file->children(err)) {
-    Archive::Child c =
-        CHECK(cOrErr, mb.getBufferIdentifier() +
-                          ": could not get the child of the archive");
+  for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
