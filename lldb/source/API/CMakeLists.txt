@@ -172,9 +172,9 @@ endif()
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   # Only MSVC has the ABI compatibility problem and avoids using FindPythonLibs,
-  # so only it needs to explicitly link against ${PYTHON_LIBRARY}
+  # so only it needs to explicitly link against ${PYTHON_LIBRARIES}
   if (MSVC AND LLDB_ENABLE_PYTHON)
-    target_link_libraries(liblldb PRIVATE ${PYTHON_LIBRARY})
+    target_link_libraries(liblldb PRIVATE ${PYTHON_LIBRARIES})
   endif()
 else()
   set_target_properties(liblldb
