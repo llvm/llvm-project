@@ -64,11 +64,11 @@ void test_float(void) {
 
   vd = __builtin_s390_vfnmadb(vd, vd, vd);
   // CHECK: [[RES:%[^ ]+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[RES]]
+  // CHECK: fneg <2 x double> [[RES]]
   vd = __builtin_s390_vfnmsdb(vd, vd, vd);
-  // CHECK: [[NEG:%[^ ]+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[RES:%[^ ]+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]])
-  // CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[RES]]
+  // CHECK: fneg <2 x double> [[RES]]
 
   vsi = __builtin_s390_vfcesbs(vf, vf, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfcesbs(<4 x float> %{{.*}}, <4 x float> %{{.*}})
@@ -102,21 +102,21 @@ void test_float(void) {
   vf = __builtin_s390_vfmasb(vf, vf, vf);
   // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
   vf = __builtin_s390_vfmssb(vf, vf, vf);
-  // CHECK: [[NEG:%[^ ]+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%[^ ]+]] = fneg <4 x float> %{{.*}}
   // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]])
   vf = __builtin_s390_vfnmasb(vf, vf, vf);
   // CHECK: [[RES:%[^ ]+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[RES]]
+  // CHECK: fneg <4 x float> [[RES]]
   vf = __builtin_s390_vfnmssb(vf, vf, vf);
-  // CHECK: [[NEG:%[^ ]+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%[^ ]+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[RES:%[^ ]+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]])
-  // CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[RES]]
+  // CHECK: fneg <4 x float> [[RES]]
 
   vf = __builtin_s390_vflpsb(vf);
   // CHECK: call <4 x float> @llvm.fabs.v4f32(<4 x float> %{{.*}})
   vf = __builtin_s390_vflnsb(vf);
   // CHECK: [[ABS:%[^ ]+]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> %{{.*}})
-  // CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[ABS]]
+  // CHECK: fneg <4 x float> [[ABS]]
 
   vf = __builtin_s390_vfisb(vf, 0, 0);
   // CHECK: call <4 x float> @llvm.rint.v4f32(<4 x float> %{{.*}})
