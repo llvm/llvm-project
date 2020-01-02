@@ -646,6 +646,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // Split vector extloads.
     unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+    unsigned Align = Query.MMODescrs[0].AlignInBits;
+
+    if (MemSize < DstTy.getSizeInBits())
+      MemSize = std::max(MemSize, Align);
+
     if (DstTy.isVector() && DstTy.getSizeInBits() > MemSize)
       return true;
 
@@ -660,7 +665,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     if (NumRegs == 3 && !ST.hasDwordx3LoadStores())
       return true;
 
-    unsigned Align = Query.MMODescrs[0].AlignInBits;
     if (Align < MemSize) {
       const SITargetLowering *TLI = ST.getTargetLowering();
       return !TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS, Align / 8);
@@ -802,13 +806,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           unsigned MemSize = Query.MMODescrs[0].SizeInBits;
           unsigned Align = Query.MMODescrs[0].AlignInBits;
 
-          // No extending vector loads.
-          if (Size > MemSize && Ty0.isVector())
-            return false;
-
           // FIXME: Widening store from alignment not valid.
           if (MemSize < Size)
             MemSize = std::max(MemSize, Align);
+
+          // No extending vector loads.
+          if (Size > MemSize && Ty0.isVector())
+            return false;
 
           switch (MemSize) {
           case 8:
