@@ -186,7 +186,7 @@ op->emitError("...").attachNote() << "...";
 ## InFlight Diagnostic
 
 Now that [Diagnostics](#diagnostic) have been explained, we introduce the
-`InFlightDiagnostic`. is an RAII wrapper around a diagnostic that is set to be
+`InFlightDiagnostic`, an RAII wrapper around a diagnostic that is set to be
 reported. This allows for modifying a diagnostic while it is still in flight. If
 it is not reported directly by the user it will automatically report when
 destroyed.
