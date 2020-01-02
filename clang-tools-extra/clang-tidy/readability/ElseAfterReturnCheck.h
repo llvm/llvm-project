@@ -20,10 +20,14 @@ namespace readability {
 /// http://llvm.org/docs/CodingStandards.html#don-t-use-else-after-a-return
 class ElseAfterReturnCheck : public ClangTidyCheck {
 public:
-  ElseAfterReturnCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  ElseAfterReturnCheck(StringRef Name, ClangTidyContext *Context);
+
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  const bool WarnOnUnfixable;
 };
 
 } // namespace readability
