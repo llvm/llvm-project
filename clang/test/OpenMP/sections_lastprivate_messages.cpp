@@ -114,6 +114,11 @@ int foomain(int argc, char **argv) {
     foo();
   }
 #pragma omp parallel
+#pragma omp sections lastprivate(foo:argc) // omp50-error {{expected 'conditional' in OpenMP clause 'lastprivate'}} omp45-error {{expected ',' or ')' in 'lastprivate' clause}} omp45-error {{expected ')'}} omp45-error {{expected variable name}} omp45-note {{to match this '('}}
+  {
+    foo();
+  }
+#pragma omp parallel
 #pragma omp sections lastprivate(S1) // expected-error {{'S1' does not refer to a value}}
   {
     foo();

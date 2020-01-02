@@ -111,6 +111,10 @@ int foomain(int argc, char **argv) {
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp parallel
+#pragma omp for simd lastprivate(foo:argc) // omp50-error {{expected 'conditional' in OpenMP clause 'lastprivate'}} omp45-error {{expected ',' or ')' in 'lastprivate' clause}} omp45-error {{expected ')'}} omp45-error {{expected variable name}} omp45-note {{to match this '('}}
+  for (int k = 0; k < argc; ++k)
+    ++k;
+#pragma omp parallel
 #pragma omp for simd lastprivate(z, a, b) // expected-error {{lastprivate variable with incomplete type 'S1'}}
   for (int k = 0; k < argc; ++k)
     ++k;
