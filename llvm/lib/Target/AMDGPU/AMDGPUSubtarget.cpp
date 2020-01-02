@@ -45,6 +45,11 @@ static cl::opt<bool> DisablePowerSched(
   cl::desc("Disable scheduling to minimize mAI power bursts"),
   cl::init(false));
 
+static cl::opt<bool> EnableVGPRIndexMode(
+  "amdgpu-vgpr-index-mode",
+  cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
+  cl::init(false));
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 R600Subtarget &
@@ -559,6 +564,10 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
 
 bool GCNSubtarget::hasMadF16() const {
   return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16) != -1;
+}
+
+bool GCNSubtarget::useVGPRIndexMode() const {
+  return !hasMovrel() || (EnableVGPRIndexMode && hasVGPRIndexMode());
 }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {

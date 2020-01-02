@@ -90,11 +90,6 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
-static cl::opt<bool> EnableVGPRIndexMode(
-  "amdgpu-vgpr-index-mode",
-  cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
-  cl::init(false));
-
 static cl::opt<bool> DisableLoopAlignment(
   "amdgpu-disable-loop-alignment",
   cl::desc("Do not align and prefetch loops"),
@@ -3415,7 +3410,7 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
   std::tie(SubReg, Offset)
     = computeIndirectRegAndOffset(TRI, VecRC, SrcReg, Offset);
 
-  bool UseGPRIdxMode = ST.useVGPRIndexMode(EnableVGPRIndexMode);
+  const bool UseGPRIdxMode = ST.useVGPRIndexMode();
 
   if (setM0ToIndexFromSGPR(TII, MRI, MI, Offset, UseGPRIdxMode, true)) {
     MachineBasicBlock::iterator I(&MI);
@@ -3510,7 +3505,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   std::tie(SubReg, Offset) = computeIndirectRegAndOffset(TRI, VecRC,
                                                          SrcVec->getReg(),
                                                          Offset);
-  bool UseGPRIdxMode = ST.useVGPRIndexMode(EnableVGPRIndexMode);
+  const bool UseGPRIdxMode = ST.useVGPRIndexMode();
 
   if (Idx->getReg() == AMDGPU::NoRegister) {
     MachineBasicBlock::iterator I(&MI);
