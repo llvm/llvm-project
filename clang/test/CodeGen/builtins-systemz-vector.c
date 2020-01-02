@@ -584,14 +584,14 @@ void test_float(void) {
   vd = __builtin_s390_vfmadb(vd, vd, vd);
   // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   vd = __builtin_s390_vfmsdb(vd, vd, vd);
-  // CHECK: [[NEG:%[^ ]+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> %{{.*}}
   // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]])
 
   vd = __builtin_s390_vflpdb(vd);
   // CHECK: call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{.*}})
   vd = __builtin_s390_vflndb(vd);
   // CHECK: [[ABS:%[^ ]+]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{.*}})
-  // CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[ABS]]
+  // CHECK: fneg <2 x double> [[ABS]]
 
   vd = __builtin_s390_vfidb(vd, 0, 0);
   // CHECK: call <2 x double> @llvm.rint.v2f64(<2 x double> %{{.*}})
