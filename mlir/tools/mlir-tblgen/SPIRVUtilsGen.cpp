@@ -932,6 +932,8 @@ static void emitDeserializationDispatch(const Operator &op, const Record *def,
 /// of the operation.
 static void finalizeDispatchDeserializationFn(StringRef opcode,
                                               raw_ostream &os) {
+  os << "  default:\n";
+  os << "    ;\n";
   os << "  }\n";
   StringRef opcodeVar("opcodeString");
   os << formatv("  auto {0} = spirv::stringifyOpcode({1});\n", opcodeVar,
