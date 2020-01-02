@@ -29,17 +29,17 @@
 ## Check that the -D/-U option is only accepted with a single dash. This matches
 ## the GNU ranlib behaviour.
 # RUN: not llvm-ranlib --D %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-D
-# BAD-OPT-D: llvm-ranlib: error: Invalid option: '--D'
+# BAD-OPT-D: error: Invalid option: '--D'
 # RUN: not llvm-ranlib --U %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-U
-# BAD-OPT-U: llvm-ranlib: error: Invalid option: '--U'
+# BAD-OPT-U: error: Invalid option: '--U'
 # RUN: not llvm-ranlib -x %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-x
-# BAD-OPT-x: llvm-ranlib: error: Invalid option: '-x'
+# BAD-OPT-x: error: Invalid option: '-x'
 
 ## If the first argument starts with value flags, the error message only shows
 ## the remainder of the parsed string:
 # RUN: not llvm-ranlib -Dx %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-x
 # RUN: not llvm-ranlib -DxD %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-xD
-# BAD-OPT-xD: llvm-ranlib: error: Invalid option: '-xD'
+# BAD-OPT-xD: error: Invalid option: '-xD'
 
 # DETERMINISTIC-VALUES: {{[rwx-]+}} 0/0    712 Jan  1 00:00 1970 D-flag.test.tmp.o
 # REAL-VALUES: {{[rwx-]+}} {{[0-9]+}}/{{[0-9]+}} 712 Jan  2 03:04 2000 D-flag.test.tmp.o
