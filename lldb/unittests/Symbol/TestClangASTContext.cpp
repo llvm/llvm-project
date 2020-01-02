@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestingSupport/SubsystemRAII.h"
+#include "TestingSupport/Symbol/ClangTestUtils.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -470,4 +471,52 @@ TEST_F(TestClangASTContext, TestGetTypeClassNested) {
   QualType t_base = ctxt.getTypeOfType(makeConstInt(ctxt));
   QualType t = ctxt.getTypeOfType(t_base);
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
+}
+
+TEST_F(TestClangASTContext, TestFunctionTemplateConstruction) {
+  // Tests creating a function template.
+
+  CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+  clang::TranslationUnitDecl *TU = m_ast->GetTranslationUnitDecl();
+
+  // Prepare the declarations/types we need for the template.
+  CompilerType clang_type =
+      m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
+  FunctionDecl *func =
+      m_ast->CreateFunctionDeclaration(TU, "foo", clang_type, 0, false);
+  ClangASTContext::TemplateParameterInfos empty_params;
+
+  // Create the actual function template.
+  clang::FunctionTemplateDecl *func_template =
+      m_ast->CreateFunctionTemplateDecl(TU, func, "foo", empty_params);
+
+  EXPECT_EQ(TU, func_template->getDeclContext());
+  EXPECT_EQ("foo", func_template->getName());
+  EXPECT_EQ(clang::AccessSpecifier::AS_none, func_template->getAccess());
+}
+
+TEST_F(TestClangASTContext, TestFunctionTemplateInRecordConstruction) {
+  // Tests creating a function template inside a record.
+
+  CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+
+  // Create a record we can put the function template int.
+  CompilerType record_type =
+      clang_utils::createRecordWithField(*m_ast, "record", int_type, "field");
+  clang::TagDecl *record = ClangUtil::GetAsTagDecl(record_type);
+
+  // Prepare the declarations/types we need for the template.
+  CompilerType clang_type =
+      m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
+  FunctionDecl *func =
+      m_ast->CreateFunctionDeclaration(record, "foo", clang_type, 0, false);
+  ClangASTContext::TemplateParameterInfos empty_params;
+
+  // Create the actual function template.
+  clang::FunctionTemplateDecl *func_template =
+      m_ast->CreateFunctionTemplateDecl(record, func, "foo", empty_params);
+
+  EXPECT_EQ(record, func_template->getDeclContext());
+  EXPECT_EQ("foo", func_template->getName());
+  EXPECT_EQ(clang::AccessSpecifier::AS_public, func_template->getAccess());
 }
