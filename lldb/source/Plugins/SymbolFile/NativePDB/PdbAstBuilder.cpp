@@ -1078,7 +1078,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
     PdbCompilandSymId param_uid(func_id.modi, record_offset);
     clang::QualType qt = GetOrCreateType(param_type);
 
-    CompilerType param_type_ct(&m_clang, qt.getAsOpaquePtr());
+    CompilerType param_type_ct = m_clang.GetType(qt);
     clang::ParmVarDecl *param = m_clang.CreateParameterDeclaration(
         &function_decl, param_name.str().c_str(), param_type_ct,
         clang::SC_None, true);
