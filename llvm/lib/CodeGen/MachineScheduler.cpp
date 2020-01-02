@@ -2088,6 +2088,11 @@ getOtherResourceCount(unsigned &OtherCritIdx) {
   return OtherCritCount;
 }
 
+template void SchedBoundary::releaseNode<true>(SUnit *SU, unsigned ReadyCycle,
+                                               unsigned Idx);
+template void SchedBoundary::releaseNode<false>(SUnit *SU, unsigned ReadyCycle,
+                                                unsigned Idx);
+
 template <bool InPQueue>
 void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, unsigned Idx) {
   assert(SU->getInstr() && "Scheduled SUnit must have instr");
