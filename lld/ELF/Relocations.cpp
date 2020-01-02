@@ -177,7 +177,9 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
     return 1;
   }
 
-  bool canRelax = config->emachine != EM_ARM && config->emachine != EM_RISCV;
+  bool canRelax = config->emachine != EM_ARM &&
+                  config->emachine != EM_HEXAGON &&
+                  config->emachine != EM_RISCV;
 
   // If we are producing an executable and the symbol is non-preemptable, it
   // must be defined and the code sequence can be relaxed to use Local-Exec.
