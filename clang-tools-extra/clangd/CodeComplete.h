@@ -61,7 +61,7 @@ struct CodeCompleteOptions {
   bool IncludeIneligibleResults = false;
 
   /// Combine overloads into a single completion item where possible.
-  /// If none, the the implementation may choose an appropriate behavior.
+  /// If none, the implementation may choose an appropriate behavior.
   /// (In practice, ClangdLSPServer enables bundling if the client claims
   /// to supports signature help).
   llvm::Optional<bool> BundleOverloads;
