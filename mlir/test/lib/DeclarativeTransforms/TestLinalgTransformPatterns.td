@@ -100,27 +100,39 @@ def : Pattern<(DotOp:$op $_, $_, $_),
 // Linalg to vector contraction patterns.
 //===----------------------------------------------------------------------===//
 def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
-              [(VectorizeGenericLinalgOp<"GenericOp">)],
-              [(Constraint<HasLinalgTransformMarker<"_marked_matmul_">>)]>;
+             [(VectorizeGenericLinalgOp)],
+             [(Constraint<And<[
+               HasLinalgTransformMarker<"_marked_matmul_">,
+               PreconditionVectorizeGenericLinalgOp
+               ]>>)]>;
 
 //===----------------------------------------------------------------------===//
 // Linalg generic permutation patterns.
 //===----------------------------------------------------------------------===//
 def : Pat<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
-              (PermuteGenericLinalgOp<[1,2,0],"PERMUTED">),
-              [(Constraint<And<[HasNoLinalgTransformMarker,
-                           AffineMapDomainHasDim<3>]>>)]>;
+              (PermuteGenericLinalgOp<[1, 2, 0], "PERMUTE"> $op),
+              [(Constraint<And<[
+                HasNoLinalgTransformMarker,
+                AffineMapDomainHasDim<3>,
+                PreconditionPermuteGenericLinalgOp<[1, 2, 0]>
+              ]>>)]>;
 
 def : Pat<(IndexedGenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
-              (PermuteGenericLinalgOp<[1,2,0],"PERMUTED">),
-              [(Constraint<And<[HasNoLinalgTransformMarker,
-                           AffineMapDomainHasDim<3>]>>)]>;
+              (PermuteGenericLinalgOp<[1, 2, 0], "PERMUTE"> $op),
+              [(Constraint<And<[
+                HasNoLinalgTransformMarker,
+                AffineMapDomainHasDim<3>,
+                PreconditionPermuteGenericLinalgOp<[1, 2, 0]>
+              ]>>)]>;
 
 //===----------------------------------------------------------------------===//
 // Linalg subview operands promotion.
 //===----------------------------------------------------------------------===//
 def : Pat<(MatmulOp:$op $_, $_, $_),
-          (PromoteSubviewsLinalgOp<"MatmulOp">),
-          [(Constraint<HasOperandsOfType<"SubViewOp">>),
-          (Constraint<HasLinalgTransformMarker<"_promote_views_">>)]>;
+          (PromoteSubviewsLinalgOp),
+          [(Constraint<And<[
+              PreconditionPromoteSubviewsLinalgOp,
+              HasOperandsOfType<"SubViewOp">,
+              HasLinalgTransformMarker<"_promote_views_">]>>
+           )]>;
 #endif // TEST_LINALG_TRANSFORMS_PATTERNS

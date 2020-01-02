@@ -61,6 +61,10 @@ static void printGenericOp(OpAsmPrinter &p, GenericOpType op) {
     p.printRegion(op.region());
   p.printOptionalAttrDict(op.getAttrs(), attrNames);
   p << ": " << op.getOperandTypes();
+
+  auto outputTensorTypes = op.getResultTypes();
+  if (!outputTensorTypes.empty())
+    p << " -> " << outputTensorTypes;
 }
 
 static void print(OpAsmPrinter &p, GenericOp op) { printGenericOp(p, op); }
@@ -92,6 +96,13 @@ static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
   if (parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonTypeList(operandTypes))
     return failure();
+  // Generic ops may specify that a subset of its outputs are tensors. Such
+  // outputs are specified in the result type.
+  SmallVector<Type, 8> tensorResultTypes;
+  if (parser.parseOptionalArrowTypeList(tensorResultTypes))
+    return failure();
+  if (!tensorResultTypes.empty())
+    result.addTypes(tensorResultTypes);
   return parser.resolveOperands(operandsInfo, operandTypes,
                                 parser.getCurrentLocation(), result.operands);
 }
@@ -107,7 +118,7 @@ template <> LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
         "expected number of block arguments to match number of views");
 
   for (unsigned i = 0; i < nViews; ++i) {
-    auto viewType = op.getViewType(i);
+    auto viewType = op.getShapedType(i);
     if (viewType.getElementType() != block.getArgument(i)->getType())
       return op.emitOpError("expected block argument ")
              << i << " of the same type as elemental type of "
@@ -134,7 +145,7 @@ template <> LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
 
   for (unsigned i = 0; i < nViews; ++i) {
     unsigned memrefArgIndex = i + nLoops;
-    auto viewType = op.getViewType(i);
+    auto viewType = op.getShapedType(i);
     if (viewType.getElementType() !=
         block.getArgument(memrefArgIndex)->getType())
       return op.emitOpError("expected block argument ")
@@ -159,8 +170,8 @@ template <> LogicalResult verifyFuncArgs(GenericOp op, FunctionType funType) {
 
   for (auto en : llvm::enumerate(op.indexing_maps())) {
     auto idx = en.index();
-    auto view = (idx < nInputViews) ? op.getInputViewType(idx)
-                                    : op.getOutputViewType(idx - nInputViews);
+    auto view = (idx < nInputViews) ? op.getInputShapedType(idx)
+                                    : op.getOutputShapedType(idx - nInputViews);
     if (funType.getInput(idx) != view.getElementType())
       return op.emitOpError("expected fun argument ")
              << idx << " of the same type as elemental type "
@@ -197,8 +208,8 @@ LogicalResult verifyFuncArgs(IndexedGenericOp op, FunctionType funType) {
   for (auto en : llvm::enumerate(op.indexing_maps())) {
     auto idx = en.index();
     auto funIdx = nLoops + idx;
-    auto view = (idx < nInputViews) ? op.getInputViewType(idx)
-                                    : op.getOutputViewType(idx - nInputViews);
+    auto view = (idx < nInputViews) ? op.getInputShapedType(idx)
+                                    : op.getOutputShapedType(idx - nInputViews);
     if (funType.getInput(funIdx) != view.getElementType())
       return op.emitOpError("expected fun argument ")
              << funIdx << " of the same type as elemental type "
@@ -245,8 +256,8 @@ LogicalResult verifyGenericOp(GenericOpType op) {
     auto idx = en.index();
     auto m = en.value().template cast<AffineMapAttr>().getValue();
     indexingMaps.push_back(m); // Save reference to map for further checks.
-    auto view = (idx < nInputViews) ? op.getInputViewType(idx)
-                                    : op.getOutputViewType(idx - nInputViews);
+    auto view = (idx < nInputViews) ? op.getInputShapedType(idx)
+                                    : op.getOutputShapedType(idx - nInputViews);
 
     if (m.getNumSymbols() != 0)
       return op.emitOpError("expected indexing_map #")
@@ -274,6 +285,22 @@ LogicalResult verifyGenericOp(GenericOpType op) {
   if (!aggregateMap)
     return op.emitOpError("expected the concatenation of maps in indexing_map "
                           "to be invertible");
+
+  auto outputTensorTypes = op.getOutputTensorTypes();
+  if (outputTensorTypes.size() != op.getNumResults())
+    return op.emitOpError("expected #output tensor operands (")
+           << outputTensorTypes.size() << ") to match #results ("
+           << op.getNumResults() << ")";
+
+  unsigned index = 0;
+  for (auto it : llvm::zip(op.getResultTypes(), outputTensorTypes)) {
+    auto resTy = std::get<0>(it);
+    auto outOpTy = std::get<1>(it);
+    if (resTy != outOpTy)
+      return op.emitOpError("result #")
+             << index << " must be " << outOpTy << ", but got " << resTy;
+    ++index;
+  }
 
   return success();
 }
@@ -465,11 +492,11 @@ LogicalResult verifyYield(YieldOp op, GenericOpType genericOp) {
   // The operand number and types must match the view element types.
   auto nOutputViews = genericOp.getNumOutputs();
   if (op.getNumOperands() != nOutputViews)
-    return op.emitOpError("op expected ")
+    return op.emitOpError("expected ")
            << nOutputViews << " operand to match enclosing linalg.generic op";
 
   for (unsigned i = 0; i != nOutputViews; ++i) {
-    auto elementType = genericOp.getOutputViewType(i).getElementType();
+    auto elementType = genericOp.getOutputShapedType(i).getElementType();
     if (op.getOperand(i)->getType() != elementType)
       return op.emitOpError("type of return operand ")
              << i << " (" << op.getOperand(i)->getType()
@@ -481,7 +508,7 @@ LogicalResult verifyYield(YieldOp op, GenericOpType genericOp) {
 static LogicalResult verify(YieldOp op) {
   auto *parentOp = op.getParentOp();
   if (parentOp->getNumRegions() != 1 || parentOp->getRegion(0).empty())
-    return op.emitOpError("op expected single non-empty parent region");
+    return op.emitOpError("expected single non-empty parent region");
 
   auto genericOp = dyn_cast<GenericOp>(parentOp);
   if (genericOp)
@@ -536,7 +563,7 @@ static ParseResult parseLinalgStructuredOp(OpAsmParser &parser,
 }
 
 static LogicalResult verify(FillOp op) {
-  auto viewType = op.getOutputViewType(0);
+  auto viewType = op.getOutputShapedType(0);
   auto fillType = op.value()->getType();
   if (viewType.getElementType() != fillType)
     return op.emitOpError("expects fill type to match view elemental type");
@@ -544,8 +571,8 @@ static LogicalResult verify(FillOp op) {
 }
 
 static LogicalResult verify(CopyOp op) {
-  auto outputViewType = op.getOutputViewType(0);
-  auto inputViewType = op.getInputViewType(0);
+  auto outputViewType = op.getOutputShapedType(0);
+  auto inputViewType = op.getInputShapedType(0);
   if (inputViewType.getElementType() != outputViewType.getElementType())
     return op.emitOpError("expects views of the same type");
   if (inputViewType.getRank() != outputViewType.getRank())
@@ -675,8 +702,8 @@ SmallVector<AffineMap, 4> mlir::linalg::loopToOperandRangesMaps(Operation *op) {
     // I(input_perm(ivs)) -> O(output_perm(ivs))
     auto maybeInputMap = copyOp.inputPermutation();
     auto maybeOutputMap = copyOp.outputPermutation();
-    unsigned inputRank = copyOp.getInputViewType(0).getRank();
-    unsigned outputRank = copyOp.getOutputViewType(0).getRank();
+    unsigned inputRank = copyOp.getInputShapedType(0).getRank();
+    unsigned outputRank = copyOp.getOutputShapedType(0).getRank();
     return SmallVector<AffineMap, 4>{
         extractOrIdentityMap(maybeInputMap, inputRank, context),
         extractOrIdentityMap(maybeOutputMap, outputRank, context)};
