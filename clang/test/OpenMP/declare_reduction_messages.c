@@ -45,6 +45,8 @@ struct S {
   int s;
 };
 #pragma omp declare reduction(+: struct S: omp_out.s += omp_in.s) // initializer(omp_priv = { .s = 0 })
+#pragma omp declare reduction(&: struct S: omp_out.s += omp_in.s) initializer(omp_priv = { .s = 0 })
+#pragma omp declare reduction(|: struct S: omp_out.s += omp_in.s) initializer(omp_priv = { 0 })
 
 int fun(int arg) {
   struct S s;// expected-note {{'s' defined here}}

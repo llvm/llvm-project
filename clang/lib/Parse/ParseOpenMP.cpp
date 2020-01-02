@@ -430,7 +430,7 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
     }
 
     PreferredType.enterVariableInit(Tok.getLocation(), OmpPrivParm);
-    ExprResult Init = ParseAssignmentExpression();
+    ExprResult Init = ParseInitializer();
 
     if (Init.isInvalid()) {
       SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
