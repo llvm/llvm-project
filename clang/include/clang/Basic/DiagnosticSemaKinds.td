@@ -2631,7 +2631,7 @@ def err_nsobject_attribute : Error<
 def err_attributes_are_not_compatible : Error<
   "%0 and %1 attributes are not compatible">;
 def err_attribute_invalid_argument : Error<
-  "%select{'void'|a reference type|an array type|a non-vector or "
+  "%select{a reference type|an array type|a non-vector or "
   "non-vectorizable scalar type}0 is an invalid argument to attribute %1">;
 def err_attribute_wrong_number_arguments : Error<
   "%0 attribute %plural{0:takes no arguments|1:takes one argument|"
