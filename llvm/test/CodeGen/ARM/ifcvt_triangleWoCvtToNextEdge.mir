@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumb-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
 --- |
   declare void @__stack_chk_fail()
   declare void @bar()
@@ -12,11 +12,11 @@ name:            foo
 body:             |
 
   bb.0:
-    Bcc %bb.1, 1, $cpsr
-    B %bb.2
+    tBcc %bb.1, 1, $cpsr
+    tB %bb.2, 14, $noreg
 
   bb.1:
-    Bcc %bb.3, 0, $cpsr
+    tBcc %bb.3, 0, $cpsr
 
   bb.2:
   successors:
@@ -38,7 +38,7 @@ body:             |
 
 # CHECK:     bb.0:
 # CHECK:       successors: %bb.2(0x40000000), %bb.1(0x40000000)
-# CHECK:       Bcc %bb.2, 1, $cpsr
+# CHECK:       tBcc %bb.2, 1, $cpsr
 
 # CHECK:     bb.1:
 # CHECK-NOT:   successors: %bb
