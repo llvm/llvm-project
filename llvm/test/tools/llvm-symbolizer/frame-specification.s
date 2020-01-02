@@ -15,7 +15,7 @@
 
 // CHECK:      {{^f$}}
 // CHECK-NEXT: {{^x$}}
-// CHECK-NEXT: /tmp/dbg.cc:6
+// CHECK-NEXT: {{.*}}dbg.cc:6
 // CHECK-NEXT: -4 4 ??
 
 	.text
