@@ -117,6 +117,10 @@ endif()
 # Don't look for these libraries if we're using MSan, since uninstrumented third
 # party code may call MSan interceptors like strlen, leading to false positives.
 if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
+  if(LLVM_ENABLE_ZLIB)
+    find_package(ZLIB REQUIRED)
+  endif()
+
   # Don't look for these libraries on Windows.
   if (NOT PURE_WINDOWS)
     # Skip libedit if using ASan as it contains memory leaks.
@@ -502,21 +506,7 @@ else( LLVM_ENABLE_THREADS )
 endif()
 
 if(LLVM_ENABLE_ZLIB)
-  if(LLVM_ENABLE_ZLIB STREQUAL FORCE_ON)
-    find_package(ZLIB REQUIRED)
-  else()
-    find_package(ZLIB)
-  endif()
-
-  if(ZLIB_FOUND)
-    set(LLVM_ENABLE_ZLIB "YES" CACHE STRING
-      "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON"
-      FORCE)
-  else()
-    set(LLVM_ENABLE_ZLIB "NO" CACHE STRING
-      "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON"
-      FORCE)
-  endif()
+  find_package(ZLIB REQUIRED)
 endif()
 
 if (LLVM_ENABLE_DOXYGEN)

@@ -1,7 +1,4 @@
-if(LLVM_ENABLE_ZLIB)
-  set(system_libs ${ZLIB_LIBRARY})
-endif()
-
+set(system_libs ${ZLIB_LIBRARY})
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
