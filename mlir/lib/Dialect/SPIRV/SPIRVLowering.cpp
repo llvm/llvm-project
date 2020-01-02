@@ -9,51 +9,14 @@
 // This file implements utilities used to lower to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
 #include "mlir/Dialect/SPIRV/LayoutUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "llvm/ADT/Sequence.h"
 
 using namespace mlir;
-
-//===----------------------------------------------------------------------===//
-// Attributes for ABI
-//===----------------------------------------------------------------------===//
-
-// Pull in the attributes needed for lowering.
-namespace mlir {
-#include "mlir/Dialect/SPIRV/SPIRVLowering.cpp.inc"
-}
-
-StringRef mlir::spirv::getInterfaceVarABIAttrName() {
-  return "spirv.interface_var_abi";
-}
-
-mlir::spirv::InterfaceVarABIAttr
-mlir::spirv::getInterfaceVarABIAttr(unsigned descriptorSet, unsigned binding,
-                                    spirv::StorageClass storageClass,
-                                    MLIRContext *context) {
-  Type i32Type = IntegerType::get(32, context);
-  return mlir::spirv::InterfaceVarABIAttr::get(
-      IntegerAttr::get(i32Type, descriptorSet),
-      IntegerAttr::get(i32Type, binding),
-      IntegerAttr::get(i32Type, static_cast<int64_t>(storageClass)), context);
-}
-
-StringRef mlir::spirv::getEntryPointABIAttrName() {
-  return "spirv.entry_point_abi";
-}
-
-mlir::spirv::EntryPointABIAttr
-mlir::spirv::getEntryPointABIAttr(ArrayRef<int32_t> localSize,
-                                  MLIRContext *context) {
-  assert(localSize.size() == 3);
-  return mlir::spirv::EntryPointABIAttr::get(
-      DenseElementsAttr::get<int32_t>(
-          VectorType::get(3, IntegerType::get(32, context)), localSize)
-          .cast<DenseIntElementsAttr>(),
-      context);
-}
 
 //===----------------------------------------------------------------------===//
 // Type Conversion
