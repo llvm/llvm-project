@@ -1114,7 +1114,8 @@ class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  LLVMPointerToElt<0>, llvm_anyvector_ty
+                  LLVMPointerToElt<0>,
+                  LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
 
