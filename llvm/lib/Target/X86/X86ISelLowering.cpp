@@ -37602,37 +37602,55 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
   if (VT.is512BitVector())
     return SDValue();
 
-  // TODO: Add other opcodes eventually lowered into BLEND.
-  for (SDNode::use_iterator UI = Cond->use_begin(), UE = Cond->use_end();
-       UI != UE; ++UI)
-    if ((UI->getOpcode() != ISD::VSELECT &&
-         UI->getOpcode() != X86ISD::BLENDV) ||
-        UI.getOperandNo() != 0)
+  auto OnlyUsedAsSelectCond = [](SDValue Cond) {
+    for (SDNode::use_iterator UI = Cond->use_begin(), UE = Cond->use_end();
+         UI != UE; ++UI)
+      if ((UI->getOpcode() != ISD::VSELECT &&
+           UI->getOpcode() != X86ISD::BLENDV) ||
+          UI.getOperandNo() != 0)
+        return false;
+
+    return true;
+  };
+
+  if (OnlyUsedAsSelectCond(Cond)) {
+    APInt DemandedMask(APInt::getSignMask(BitWidth));
+    KnownBits Known;
+    TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                          !DCI.isBeforeLegalizeOps());
+    if (!TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO, 0, true))
       return SDValue();
 
+    // If we changed the computation somewhere in the DAG, this change will
+    // affect all users of Cond. Update all the nodes so that we do not use
+    // the generic VSELECT anymore. Otherwise, we may perform wrong
+    // optimizations as we messed with the actual expectation for the vector
+    // boolean values.
+    for (SDNode *U : Cond->uses()) {
+      if (U->getOpcode() == X86ISD::BLENDV)
+        continue;
+
+      SDValue SB = DAG.getNode(X86ISD::BLENDV, SDLoc(U), U->getValueType(0),
+                               Cond, U->getOperand(1), U->getOperand(2));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(U, 0), SB);
+      DCI.AddToWorklist(U);
+    }
+    DCI.CommitTargetLoweringOpt(TLO);
+    return SDValue(N, 0);
+  }
+
+  // Otherwise we can still at least try to simplify multiple use bits.
   APInt DemandedMask(APInt::getSignMask(BitWidth));
+  APInt DemandedElts(APInt::getAllOnesValue(VT.getVectorNumElements()));
   KnownBits Known;
   TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                         !DCI.isBeforeLegalizeOps());
-  if (!TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO, 0, true))
-    return SDValue();
+  if (SDValue V = TLI.SimplifyMultipleUseDemandedBits(Cond, DemandedMask,
+                                                      DemandedElts, DAG, 0))
+    return DAG.getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0),
+                       V, N->getOperand(1), N->getOperand(2));
 
-  // If we changed the computation somewhere in the DAG, this change will
-  // affect all users of Cond. Update all the nodes so that we do not use
-  // the generic VSELECT anymore. Otherwise, we may perform wrong
-  // optimizations as we messed with the actual expectation for the vector
-  // boolean values.
-  for (SDNode *U : Cond->uses()) {
-    if (U->getOpcode() == X86ISD::BLENDV)
-      continue;
-
-    SDValue SB = DAG.getNode(X86ISD::BLENDV, SDLoc(U), U->getValueType(0),
-                             Cond, U->getOperand(1), U->getOperand(2));
-    DAG.ReplaceAllUsesOfValueWith(SDValue(U, 0), SB);
-    DCI.AddToWorklist(U);
-  }
-  DCI.CommitTargetLoweringOpt(TLO);
-  return SDValue(N, 0);
+  return SDValue();
 }
 
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
