@@ -111,6 +111,11 @@ Value OpOperand::get() const {
   return IROperand<OpOperand, detail::OpaqueValue>::get();
 }
 
+/// Set the operand to the given value.
+void OpOperand::set(Value value) {
+  IROperand<OpOperand, detail::OpaqueValue>::set(value);
+}
+
 /// Return which operand this is in the operand list.
 unsigned OpOperand::getOperandNumber() {
   return this - &getOwner()->getOpOperands()[0];
