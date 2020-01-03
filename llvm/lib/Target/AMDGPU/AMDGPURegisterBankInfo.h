@@ -45,7 +45,8 @@ public:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
-private:
+  bool buildVCopy(MachineIRBuilder &B, Register DstReg, Register SrcReg) const;
+
   bool collectWaterfallOperands(
     SmallSet<Register, 4> &SGPROperandRegs,
     MachineInstr &MI,
