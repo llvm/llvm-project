@@ -98,14 +98,16 @@ ValueHandle LoopNestRangeBuilder::LoopNestRangeBuilder::operator()(
 }
 
 template <>
-GenericLoopNestRangeBuilder<loop::ForOp>::GenericLoopNestRangeBuilder(
-    ArrayRef<edsc::ValueHandle *> ivs, ArrayRef<Value> ranges) {
+mlir::edsc::GenericLoopNestRangeBuilder<
+    loop::ForOp>::GenericLoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
+                                              ArrayRef<Value> ranges) {
   builder = std::make_unique<LoopNestRangeBuilder>(ivs, ranges);
 }
 
 template <>
-GenericLoopNestRangeBuilder<AffineForOp>::GenericLoopNestRangeBuilder(
-    ArrayRef<ValueHandle *> ivs, ArrayRef<Value> ranges) {
+mlir::edsc::GenericLoopNestRangeBuilder<
+    AffineForOp>::GenericLoopNestRangeBuilder(ArrayRef<ValueHandle *> ivs,
+                                              ArrayRef<Value> ranges) {
   SmallVector<ValueHandle, 4> lbs;
   SmallVector<ValueHandle, 4> ubs;
   SmallVector<int64_t, 4> steps;
