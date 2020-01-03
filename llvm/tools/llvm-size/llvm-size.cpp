@@ -446,7 +446,8 @@ static void printObjectSectionSizes(ObjectFile *Obj) {
     fmt << "%-" << max_name_len << "s "
         << "%#" << max_size_len << radix_fmt << "\n";
     outs() << format(fmt.str().c_str(), static_cast<const char *>("Total"),
-                     total);
+                     total)
+           << "\n\n";
   } else {
     // The Berkeley format does not display individual section sizes. It
     // displays the cumulative size for each section type.
@@ -839,9 +840,6 @@ static void printFileSectionSizes(StringRef file) {
   } else {
     error("unsupported file type", file);
   }
-  // System V adds an extra newline at the end of each file.
-  if (OutputFormat == sysv)
-    outs() << "\n";
 }
 
 static void printBerkeleyTotals() {
