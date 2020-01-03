@@ -1717,11 +1717,11 @@ def VCVTPD2PSrm : VPDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
 
 def VCVTPD2PSYrr : VPDI<0x5A, MRMSrcReg, (outs VR128:$dst), (ins VR256:$src),
                         "cvtpd2ps\t{$src, $dst|$dst, $src}",
-                        [(set VR128:$dst, (X86vfpround VR256:$src))]>,
+                        [(set VR128:$dst, (X86any_vfpround VR256:$src))]>,
                         VEX, VEX_L, Sched<[WriteCvtPD2PSY]>, VEX_WIG;
 def VCVTPD2PSYrm : VPDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
                         "cvtpd2ps{y}\t{$src, $dst|$dst, $src}",
-                        [(set VR128:$dst, (X86vfpround (loadv4f64 addr:$src)))]>,
+                        [(set VR128:$dst, (X86any_vfpround (loadv4f64 addr:$src)))]>,
                         VEX, VEX_L, Sched<[WriteCvtPD2PSY.Folded]>, VEX_WIG;
 } // Predicates = [HasAVX, NoVLX]
 

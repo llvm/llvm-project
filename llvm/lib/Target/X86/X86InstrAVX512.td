@@ -7598,7 +7598,7 @@ multiclass avx512_cvtps2pd<bits<8> opc, string OpcodeStr,
 // Truncate Double to Float
 multiclass avx512_cvtpd2ps<bits<8> opc, string OpcodeStr, X86SchedWriteWidths sched> {
   let Predicates = [HasAVX512] in {
-    defm Z : avx512_vcvt_fp<opc, OpcodeStr, v8f32x_info, v8f64_info, X86vfpround, sched.ZMM>,
+    defm Z : avx512_vcvt_fp<opc, OpcodeStr, v8f32x_info, v8f64_info, X86any_vfpround, sched.ZMM>,
              avx512_vcvt_fp_rc<opc, OpcodeStr, v8f32x_info, v8f64_info,
                                X86vfproundRnd, sched.ZMM>, EVEX_V512;
   }
@@ -7606,7 +7606,7 @@ multiclass avx512_cvtpd2ps<bits<8> opc, string OpcodeStr, X86SchedWriteWidths sc
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v2f64x_info,
                                null_frag, sched.XMM, "{1to2}", "{x}", f128mem, VK2WM>,
                                EVEX_V128;
-    defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v4f64x_info, X86vfpround,
+    defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v4f64x_info, X86any_vfpround,
                                sched.YMM, "{1to4}", "{y}">, EVEX_V256;
   }
 
