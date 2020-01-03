@@ -591,6 +591,50 @@ namespace foo = a;
   |-a
   `-;
 )txt"},
+      // Free-standing classes, must live inside a SimpleDeclaration.
+      {R"cpp(
+sturct X;
+struct X {};
+
+struct Y *y1;
+struct Y {} *y2;
+
+struct {} *a1;
+    )cpp",
+       R"txt(
+*: TranslationUnit
+|-SimpleDeclaration
+| |-sturct
+| |-X
+| `-;
+|-SimpleDeclaration
+| |-struct
+| |-X
+| |-{
+| |-}
+| `-;
+|-SimpleDeclaration
+| |-struct
+| |-Y
+| |-*
+| |-y1
+| `-;
+|-SimpleDeclaration
+| |-struct
+| |-Y
+| |-{
+| |-}
+| |-*
+| |-y2
+| `-;
+`-SimpleDeclaration
+  |-struct
+  |-{
+  |-}
+  |-*
+  |-a1
+  `-;
+)txt"},
       {R"cpp(
 namespace ns {}
 using namespace ::ns;
@@ -646,24 +690,25 @@ template <class T> struct X {
   | |-class
   | `-T
   |->
-  |-struct
-  |-X
-  |-{
-  |-UsingDeclaration
-  | |-using
-  | |-T
-  | |-::
-  | |-foo
-  | `-;
-  |-UsingDeclaration
-  | |-using
-  | |-typename
-  | |-T
-  | |-::
-  | |-bar
-  | `-;
-  |-}
-  `-;
+  `-SimpleDeclaration
+    |-struct
+    |-X
+    |-{
+    |-UsingDeclaration
+    | |-using
+    | |-T
+    | |-::
+    | |-foo
+    | `-;
+    |-UsingDeclaration
+    | |-using
+    | |-typename
+    | |-T
+    | |-::
+    | |-bar
+    | `-;
+    |-}
+    `-;
        )txt"},
       {R"cpp(
 using type = int;

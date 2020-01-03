@@ -45,6 +45,23 @@ public:
   /// Provides a hook for materializing a constant to this dialect.
   Operation *materializeConstant(OpBuilder &builder, Attribute value, Type type,
                                  Location loc) override;
+
+  /// Provides a hook for verifying SPIR-V dialect attributes attached to the
+  /// given op.
+  LogicalResult verifyOperationAttribute(Operation *op,
+                                         NamedAttribute attribute) override;
+
+  /// Provides a hook for verifying SPIR-V dialect attributes attached to the
+  /// given op's region argument.
+  LogicalResult verifyRegionArgAttribute(Operation *op, unsigned regionIndex,
+                                         unsigned argIndex,
+                                         NamedAttribute attribute) override;
+
+  /// Provides a hook for verifying SPIR-V dialect attributes attached to the
+  /// given op's region result.
+  LogicalResult verifyRegionResultAttribute(Operation *op, unsigned regionIndex,
+                                            unsigned resultIndex,
+                                            NamedAttribute attribute) override;
 };
 
 } // end namespace spirv

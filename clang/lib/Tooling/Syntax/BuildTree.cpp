@@ -343,9 +343,13 @@ public:
   }
 
   bool WalkUpFromTagDecl(TagDecl *C) {
-    // Avoid building UnknownDeclaration here, syntatically 'struct X {}' and
-    // similar are part of declaration specifiers and do not introduce a new
-    // top-level declaration.
+    // FIXME: build the ClassSpecifier node.
+    if (C->isFreeStanding()) {
+      // Class is a declaration specifier and needs a spanning declaration node.
+      Builder.foldNode(Builder.getRange(C),
+                       new (allocator()) syntax::SimpleDeclaration);
+      return true;
+    }
     return true;
   }
 
