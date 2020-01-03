@@ -379,6 +379,13 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
   addAllExtLoads(MVT::v4i32, MVT::v4i16, Legal);
   addAllExtLoads(MVT::v4i32, MVT::v4i8, Legal);
 
+  // It is legal to sign extend from v4i8/v4i16 to v4i32 or v8i8 to v8i16.
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i8,  Legal);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i16, Legal);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i32, Legal);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v8i8,  Legal);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v8i16, Legal);
+
   // Some truncating stores are legal too.
   setTruncStoreAction(MVT::v4i32, MVT::v4i16, Legal);
   setTruncStoreAction(MVT::v4i32, MVT::v4i8,  Legal);

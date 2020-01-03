@@ -1536,6 +1536,10 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
   setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
 
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i8,  Legal);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i16, Legal);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i32, Legal);
+
   // Types natively supported:
   for (MVT NativeVT : {MVT::v8i1, MVT::v4i1, MVT::v2i1, MVT::v4i8,
                        MVT::v8i8, MVT::v2i16, MVT::v4i16, MVT::v2i32}) {
