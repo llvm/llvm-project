@@ -17,9 +17,8 @@
 define i32 @t0_32(i32 %ptr, i32 %alignment) nounwind {
 ; CHECK-LABEL: t0_32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w1, #1 // =1
-; CHECK-NEXT:    and w8, w0, w8
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    and w0, w0, w8
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1
   %bias = and i32 %ptr, %mask
@@ -29,9 +28,8 @@ define i32 @t0_32(i32 %ptr, i32 %alignment) nounwind {
 define i64 @t1_64(i64 %ptr, i64 %alignment) nounwind {
 ; CHECK-LABEL: t1_64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x8, x1, #1 // =1
-; CHECK-NEXT:    and x8, x0, x8
-; CHECK-NEXT:    sub x0, x0, x8
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    and x0, x0, x8
 ; CHECK-NEXT:    ret
   %mask = add i64 %alignment, -1
   %bias = and i64 %ptr, %mask
@@ -42,9 +40,8 @@ define i64 @t1_64(i64 %ptr, i64 %alignment) nounwind {
 define i32 @t2_commutative(i32 %ptr, i32 %alignment) nounwind {
 ; CHECK-LABEL: t2_commutative:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w1, #1 // =1
-; CHECK-NEXT:    and w8, w8, w0
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    and w0, w0, w8
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1
   %bias = and i32 %mask, %ptr ; swapped
@@ -57,9 +54,9 @@ define i32 @t2_commutative(i32 %ptr, i32 %alignment) nounwind {
 define i32 @t3_extrause0(i32 %ptr, i32 %alignment, i32* %mask_storage) nounwind {
 ; CHECK-LABEL: t3_extrause0:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w9, w1
 ; CHECK-NEXT:    sub w8, w1, #1 // =1
-; CHECK-NEXT:    and w9, w0, w8
-; CHECK-NEXT:    sub w0, w0, w9
+; CHECK-NEXT:    and w0, w0, w9
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1

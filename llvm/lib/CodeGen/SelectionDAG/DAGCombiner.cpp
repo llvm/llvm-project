@@ -3104,6 +3104,21 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                        DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(1),
                                    N1.getOperand(0)));
 
+  // A - (A & (B - 1))  ->  A & (0 - B)
+  if (N1.getOpcode() == ISD::AND && N1.hasOneUse()) {
+    SDValue A = N1.getOperand(0);
+    SDValue BDec = N1.getOperand(1);
+    if (A != N0)
+      std::swap(A, BDec);
+    if (A == N0 && BDec.getOpcode() == ISD::ADD &&
+        isAllOnesOrAllOnesSplat(BDec->getOperand(1))) {
+      SDValue B = BDec.getOperand(0);
+      SDValue NegB =
+          DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), B);
+      return DAG.getNode(ISD::AND, DL, VT, A, NegB);
+    }
+  }
+
   // fold (X - (-Y * Z)) -> (X + (Y * Z))
   if (N1.getOpcode() == ISD::MUL && N1.hasOneUse()) {
     if (N1.getOperand(0).getOpcode() == ISD::SUB &&
