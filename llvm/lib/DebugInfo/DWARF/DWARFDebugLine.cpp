@@ -190,7 +190,6 @@ parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
 // the end of the prologue.
 static llvm::Expected<ContentDescriptors>
 parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
-                   uint64_t EndPrologueOffset,
                    DWARFDebugLine::ContentTypeTracker *ContentTypes) {
   ContentDescriptors Descriptors;
   int FormatCount = DebugLineData.getU8(OffsetPtr);
@@ -216,15 +215,14 @@ parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
 
 static Error
 parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
-                     uint64_t *OffsetPtr, uint64_t EndPrologueOffset,
-                     const dwarf::FormParams &FormParams,
+                     uint64_t *OffsetPtr, const dwarf::FormParams &FormParams,
                      const DWARFContext &Ctx, const DWARFUnit *U,
                      DWARFDebugLine::ContentTypeTracker &ContentTypes,
                      std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   // Get the directory entry description.
   llvm::Expected<ContentDescriptors> DirDescriptors =
-      parseV5EntryFormat(DebugLineData, OffsetPtr, EndPrologueOffset, nullptr);
+      parseV5EntryFormat(DebugLineData, OffsetPtr, nullptr);
   if (!DirDescriptors)
     return DirDescriptors.takeError();
 
@@ -251,8 +249,8 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
   }
 
   // Get the file entry description.
-  llvm::Expected<ContentDescriptors> FileDescriptors = parseV5EntryFormat(
-      DebugLineData, OffsetPtr, EndPrologueOffset, &ContentTypes);
+  llvm::Expected<ContentDescriptors> FileDescriptors =
+      parseV5EntryFormat(DebugLineData, OffsetPtr, &ContentTypes);
   if (!FileDescriptors)
     return FileDescriptors.takeError();
 
@@ -349,9 +347,9 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
   }
 
   if (getVersion() >= 5) {
-    if (Error e = parseV5DirFileTables(
-            DebugLineData, OffsetPtr, EndPrologueOffset, FormParams, Ctx, U,
-            ContentTypes, IncludeDirectories, FileNames)) {
+    if (Error E =
+            parseV5DirFileTables(DebugLineData, OffsetPtr, FormParams, Ctx, U,
+                                 ContentTypes, IncludeDirectories, FileNames)) {
       return joinErrors(
           createStringError(
               errc::invalid_argument,
@@ -359,7 +357,7 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
               " found an invalid directory or file table description at"
               " 0x%8.8" PRIx64,
               PrologueOffset, *OffsetPtr),
-          std::move(e));
+          std::move(E));
     }
   } else
     parseV2DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
