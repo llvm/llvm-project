@@ -1,17 +1,17 @@
-; RUN: llc -o - %s | FileCheck %s
+; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-android24"
 
-; CHECK: .Linfo_string5:
-; CHECK-NEXT: .asciz "y"
-; CHECK: .Linfo_string7:
-; CHECK-NEXT: .asciz "x"
+; CHECK:      DW_TAG_variable
+; CHECK-NOT:  DW_TAG
+; CHECK:        DW_AT_LLVM_tag_offset (0x80)
+; CHECK-NEXT:   DW_AT_name    ("y")
 
-; CHECK:      .byte   128                     // DW_AT_LLVM_tag_offset
-; CHECK-NEXT: .word   .Linfo_string5          // DW_AT_name
-; CHECK:      .byte   0                       // DW_AT_LLVM_tag_offset
-; CHECK-NEXT: .word   .Linfo_string7          // DW_AT_name
+; CHECK:      DW_TAG_variable
+; CHECK-NOT:  DW_TAG
+; CHECK:        DW_AT_LLVM_tag_offset (0x00)
+; CHECK-NEXT:   DW_AT_name    ("x")
 
 define dso_local void @f() !dbg !14 {
   %1 = alloca i32, align 4

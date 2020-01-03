@@ -222,6 +222,33 @@ public:
     ~NontemporalDeclsRAII();
   };
 
+  /// Maps the expression for the lastprivate variable to the global copy used
+  /// to store new value because original variables are not mapped in inner
+  /// parallel regions. Only private copies are captured but we need also to
+  /// store private copy in shared address.
+  /// Also, stores the expression for the private loop counter and it
+  /// threaprivate name.
+  struct LastprivateConditionalData {
+    llvm::SmallDenseMap<CanonicalDeclPtr<const Decl>, SmallString<16>>
+        DeclToUniqeName;
+    LValue IVLVal;
+    SmallString<16> IVName;
+    /// True if original lvalue for loop counter can be used in codegen (simd
+    /// region or simd only mode) and no need to create threadprivate
+    /// references.
+    bool UseOriginalIV = false;
+  };
+  /// Manages list of lastprivate conditional decls for the specified directive.
+  class LastprivateConditionalRAII {
+    CodeGenModule &CGM;
+    const bool NeedToPush;
+
+  public:
+    LastprivateConditionalRAII(CodeGenFunction &CGF,
+                               const OMPExecutableDirective &S, LValue IVLVal);
+    ~LastprivateConditionalRAII();
+  };
+
 protected:
   CodeGenModule &CGM;
   StringRef FirstSeparator, Separator;
@@ -665,6 +692,11 @@ private:
   /// Stack for list of declarations in current context marked as nontemporal.
   /// The set is the union of all current stack elements.
   llvm::SmallVector<NontemporalDeclsSet, 4> NontemporalDeclsStack;
+
+  /// Stack for list of addresses of declarations in current context marked as
+  /// lastprivate conditional. The set is the union of all current stack
+  /// elements.
+  llvm::SmallVector<LastprivateConditionalData, 4> LastprivateConditionalStack;
 
   /// Flag for keeping track of weather a requires unified_shared_memory
   /// directive is present.
@@ -1683,6 +1715,31 @@ public:
   /// Checks if the \p VD variable is marked as nontemporal declaration in
   /// current context.
   bool isNontemporalDecl(const ValueDecl *VD) const;
+
+  /// Checks if the provided \p LVal is lastprivate conditional and emits the
+  /// code to update the value of the original variable.
+  /// \code
+  /// lastprivate(conditional: a)
+  /// ...
+  /// <type> a;
+  /// lp_a = ...;
+  /// #pragma omp critical(a)
+  /// if (last_iv_a <= iv) {
+  ///   last_iv_a = iv;
+  ///   global_a = lp_a;
+  /// }
+  /// \endcode
+  virtual void checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
+                                                  const Expr *LHS);
+
+  /// Gets the address of the global copy used for lastprivate conditional
+  /// update, if any.
+  /// \param PrivLVal LValue for the private copy.
+  /// \param VD Original lastprivate declaration.
+  virtual void emitLastprivateConditionalFinalUpdate(CodeGenFunction &CGF,
+                                                     LValue PrivLVal,
+                                                     const VarDecl *VD,
+                                                     SourceLocation Loc);
 };
 
 /// Class supports emissionof SIMD-only code.

@@ -114,7 +114,7 @@ void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 
   // Find ownership transfers via copy construction and assignment.
-  // AutoPtrOwnershipTransferId is bound to the the part that has to be wrapped
+  // AutoPtrOwnershipTransferId is bound to the part that has to be wrapped
   // into std::move().
   //   std::auto_ptr<int> i, j;
   //   i = j;

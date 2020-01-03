@@ -43,7 +43,7 @@ class GlobalTypeTableBuilder : public TypeCollection {
   /// Contains a list of all records indexed by TypeIndex.toArrayIndex().
   SmallVector<ArrayRef<uint8_t>, 2> SeenRecords;
 
-  /// Contains a list of all hash values inexed by TypeIndex.toArrayIndex().
+  /// Contains a list of all hash values indexed by TypeIndex.toArrayIndex().
   SmallVector<GloballyHashedType, 2> SeenHashes;
 
 public:

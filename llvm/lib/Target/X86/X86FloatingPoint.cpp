@@ -976,22 +976,23 @@ void FPS::shuffleStackTop(const unsigned char *FixStack,
 //===----------------------------------------------------------------------===//
 
 void FPS::handleCall(MachineBasicBlock::iterator &I) {
+  MachineInstr &MI = *I;
   unsigned STReturns = 0;
-  const MachineFunction* MF = I->getParent()->getParent();
 
-  for (const auto &MO : I->operands()) {
-    if (!MO.isReg())
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    MachineOperand &Op = MI.getOperand(i);
+    if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
       continue;
 
-    unsigned R = MO.getReg() - X86::FP0;
+    assert(Op.isImplicit() && "Expected implicit def/use");
 
-    if (R < 8) {
-      if (MF->getFunction().getCallingConv() != CallingConv::X86_RegCall) {
-        assert(MO.isDef() && MO.isImplicit());
-      }
+    if (Op.isDef())
+      STReturns |= 1 << getFPReg(Op);
 
-      STReturns |= 1 << R;
-    }
+    // Remove the operand so that later passes don't see it.
+    MI.RemoveOperand(i);
+    --i;
+    --e;
   }
 
   unsigned N = countTrailingOnes(STReturns);

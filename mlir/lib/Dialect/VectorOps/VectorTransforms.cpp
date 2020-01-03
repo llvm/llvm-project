@@ -462,7 +462,7 @@ getVectorElementwiseOpUnrollState(Operation *op, ArrayRef<int64_t> targetShape,
 }
 
 // Entry point for unrolling declarative pattern rewrites.
-Value mlir::vector::unrollSingleResultOpMatchingType(
+SmallVector<Value, 1> mlir::vector::unrollSingleResultOpMatchingType(
     PatternRewriter &builder, Operation *op, ArrayRef<int64_t> targetShape) {
   assert(op->getNumResults() == 1 && "Expected single result operation");
 
@@ -482,8 +482,8 @@ Value mlir::vector::unrollSingleResultOpMatchingType(
   }
 
   // Unroll 'op' with 'iterationBounds' to 'targetShape'.
-  return unrollSingleResultStructuredOp(op, iterationBounds, vectors,
-                                        resultIndex, targetShape, builder);
+  return SmallVector<Value, 1>{unrollSingleResultStructuredOp(
+      op, iterationBounds, vectors, resultIndex, targetShape, builder)};
 }
 
 // Generates slices of 'vectorType' according to 'sizes' and 'strides, and

@@ -18,7 +18,6 @@
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
-class Block;
 class BlockArgument;
 class Operation;
 class OpResult;
@@ -26,48 +25,8 @@ class Region;
 class Value;
 
 namespace detail {
-/// The internal implementation of a Value.
-class ValueImpl {
-protected:
-  /// This enumerates all of the SSA value kinds.
-  enum class Kind {
-    BlockArgument,
-    OpResult,
-  };
-
-  ValueImpl(Kind kind, Type type) : typeAndKind(type, kind) {}
-
-private:
-  /// The type of the value and its kind.
-  llvm::PointerIntPair<Type, 1, Kind> typeAndKind;
-
-  /// Allow access to 'typeAndKind'.
-  friend Value;
-};
-
 /// The internal implementation of a BlockArgument.
-class BlockArgumentImpl : public ValueImpl,
-                          public IRObjectWithUseList<OpOperand> {
-  BlockArgumentImpl(Type type, Block *owner)
-      : ValueImpl(Kind::BlockArgument, type), owner(owner) {}
-
-  /// The owner of this argument.
-  Block *owner;
-
-  /// Allow access to owner and constructor.
-  friend BlockArgument;
-};
-
-class OpResultImpl : public ValueImpl {
-  OpResultImpl(Type type, Operation *owner)
-      : ValueImpl(Kind::OpResult, type), owner(owner) {}
-
-  /// The owner of this result.
-  Operation *owner;
-
-  /// Allow access to owner and the constructor.
-  friend OpResult;
-};
+class BlockArgumentImpl;
 } // end namespace detail
 
 /// This class represents an instance of an SSA value in the MLIR system,
@@ -76,34 +35,59 @@ class OpResultImpl : public ValueImpl {
 /// class has value-type semantics and is just a simple wrapper around a
 /// ValueImpl that is either owner by a block(in the case of a BlockArgument) or
 /// an Operation(in the case of an OpResult).
-///
 class Value {
 public:
-  /// This enumerates all of the SSA value kinds in the MLIR system.
+  /// The enumeration represents the various different kinds of values the
+  /// internal representation may take. We steal 2 bits to support a total of 4
+  /// possible values.
   enum class Kind {
-    BlockArgument,
-    OpResult,
+    /// The first N kinds are all inline operation results. An inline operation
+    /// result means that the kind represents the result number, and the owner
+    /// pointer is the owning `Operation*`. Note: These are packed first to make
+    /// result number lookups more efficient.
+    OpResult0 = 0,
+    OpResult1 = 1,
+
+    /// The next kind represents a 'trailing' operation result. This is for
+    /// results with numbers larger than we can represent inline. The owner here
+    /// is an `TrailingOpResult*` that points to a trailing storage on the
+    /// parent operation.
+    TrailingOpResult = 2,
+
+    /// The last kind represents a block argument. The owner here is a
+    /// `BlockArgumentImpl*`.
+    BlockArgument = 3
   };
 
-  Value(std::nullptr_t) : impl(nullptr) {}
-  Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
+  /// This value represents the 'owner' of the value and its kind. See the
+  /// 'Kind' enumeration above for a more detailed description of each kind of
+  /// owner.
+  struct ImplTypeTraits : public llvm::PointerLikeTypeTraits<void *> {
+    // We know that all pointers within the ImplType are aligned by 8-bytes,
+    // meaning that we can steal up to 3 bits for the different values.
+    enum { NumLowBitsAvailable = 3 };
+  };
+  using ImplType = llvm::PointerIntPair<void *, 2, Kind, ImplTypeTraits>;
+
+public:
+  Value(std::nullptr_t) : ownerAndKind() {}
+  Value(ImplType ownerAndKind = {}) : ownerAndKind(ownerAndKind) {}
   Value(const Value &) = default;
   Value &operator=(const Value &) = default;
-  ~Value() {}
 
   template <typename U> bool isa() const {
-    assert(impl && "isa<> used on a null type.");
+    assert(*this && "isa<> used on a null type.");
     return U::classof(*this);
   }
   template <typename U> U dyn_cast() const {
-    return isa<U>() ? U(impl) : U(nullptr);
+    return isa<U>() ? U(ownerAndKind) : U(nullptr);
   }
   template <typename U> U dyn_cast_or_null() const {
-    return (impl && isa<U>()) ? U(impl) : U(nullptr);
+    return (*this && isa<U>()) ? U(ownerAndKind) : U(nullptr);
   }
   template <typename U> U cast() const {
     assert(isa<U>());
-    return U(impl);
+    return U(ownerAndKind);
   }
 
   /// Temporary methods to enable transition of Value to being used as a
@@ -112,15 +96,14 @@ public:
   Value operator*() const { return *this; }
   Value *operator->() const { return const_cast<Value *>(this); }
 
-  operator bool() const { return impl; }
-  bool operator==(const Value &other) const { return impl == other.impl; }
+  operator bool() const { return ownerAndKind.getPointer(); }
+  bool operator==(const Value &other) const {
+    return ownerAndKind == other.ownerAndKind;
+  }
   bool operator!=(const Value &other) const { return !(*this == other); }
 
-  /// Return the kind of this value.
-  Kind getKind() const { return (Kind)impl->typeAndKind.getInt(); }
-
   /// Return the type of this value.
-  Type getType() const { return impl->typeAndKind.getPointer(); }
+  Type getType() const;
 
   /// Utility to get the associated MLIRContext that this value is defined in.
   MLIRContext *getContext() const { return getType().getContext(); }
@@ -131,7 +114,7 @@ public:
   /// completely invalid IR very easily.  It is strongly recommended that you
   /// recreate IR objects with the right types instead of mutating them in
   /// place.
-  void setType(Type newType) { impl->typeAndKind.setPointer(newType); }
+  void setType(Type newType);
 
   /// If this value is the result of an operation, return the operation that
   /// defines it.
@@ -191,29 +174,62 @@ public:
   //===--------------------------------------------------------------------===//
   // Utilities
 
+  /// Returns the kind of this value.
+  Kind getKind() const { return ownerAndKind.getInt(); }
+
   void print(raw_ostream &os);
   void dump();
 
   /// Methods for supporting PointerLikeTypeTraits.
-  void *getAsOpaquePointer() const { return static_cast<void *>(impl); }
+  void *getAsOpaquePointer() const { return ownerAndKind.getOpaqueValue(); }
   static Value getFromOpaquePointer(const void *pointer) {
-    return reinterpret_cast<detail::ValueImpl *>(const_cast<void *>(pointer));
+    Value value;
+    value.ownerAndKind.setFromOpaqueValue(const_cast<void *>(pointer));
+    return value;
   }
 
   friend ::llvm::hash_code hash_value(Value arg);
 
 protected:
-  /// The internal implementation of this value.
-  mutable detail::ValueImpl *impl;
+  /// Returns true if the given operation result can be packed inline.
+  static bool canPackResultInline(unsigned resultNo) {
+    return resultNo < static_cast<unsigned>(Kind::TrailingOpResult);
+  }
 
-  /// Allow access to 'impl'.
-  friend OpOperand;
+  /// Construct a value.
+  Value(detail::BlockArgumentImpl *impl);
+  Value(Operation *op, unsigned resultNo);
+
+  /// This value represents the 'owner' of the value and its kind. See the
+  /// 'Kind' enumeration above for a more detailed description of each kind of
+  /// owner.
+  ImplType ownerAndKind;
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, Value value) {
   value.print(os);
   return os;
 }
+
+//===----------------------------------------------------------------------===//
+// BlockArgument
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+/// The internal implementation of a BlockArgument.
+class BlockArgumentImpl : public IRObjectWithUseList<OpOperand> {
+  BlockArgumentImpl(Type type, Block *owner) : type(type), owner(owner) {}
+
+  /// The type of this argument.
+  Type type;
+
+  /// The owner of this argument.
+  Block *owner;
+
+  /// Allow access to owner and constructor.
+  friend BlockArgument;
+};
+} // end namespace detail
 
 /// Block arguments are values.
 class BlockArgument : public Value {
@@ -232,6 +248,12 @@ public:
   /// Returns the block that owns this argument.
   Block *getOwner() const { return getImpl()->owner; }
 
+  /// Return the type of this value.
+  Type getType() const { return getImpl()->type; }
+
+  /// Set the type of this value.
+  void setType(Type newType) { getImpl()->type = newType; }
+
   /// Returns the number of this argument.
   unsigned getArgNumber() const;
 
@@ -246,7 +268,8 @@ private:
 
   /// Get a raw pointer to the internal implementation.
   detail::BlockArgumentImpl *getImpl() const {
-    return reinterpret_cast<detail::BlockArgumentImpl *>(impl);
+    return reinterpret_cast<detail::BlockArgumentImpl *>(
+        ownerAndKind.getPointer());
   }
 
   /// Allow access to `create` and `destroy`.
@@ -256,6 +279,10 @@ private:
   friend Value;
 };
 
+//===----------------------------------------------------------------------===//
+// OpResult
+//===----------------------------------------------------------------------===//
+
 /// This is a value defined by a result of an operation.
 class OpResult : public Value {
 public:
@@ -264,30 +291,23 @@ public:
   /// Temporary methods to enable transition of Value to being used as a
   /// value-type.
   /// TODO(riverriddle) Remove these when all usages have been removed.
-  OpResult *operator*() { return this; }
+  OpResult operator*() { return *this; }
   OpResult *operator->() { return this; }
 
-  static bool classof(Value value) { return value.getKind() == Kind::OpResult; }
+  static bool classof(Value value) {
+    return value.getKind() != Kind::BlockArgument;
+  }
 
   /// Returns the operation that owns this result.
-  Operation *getOwner() const { return getImpl()->owner; }
+  Operation *getOwner() const;
 
   /// Returns the number of this result.
   unsigned getResultNumber() const;
 
 private:
-  /// Allocate a new result with the given type and owner.
-  static OpResult create(Type type, Operation *owner) {
-    return new detail::OpResultImpl(type, owner);
-  }
-
-  /// Destroy and deallocate this result.
-  void destroy() { delete getImpl(); }
-
-  /// Get a raw pointer to the internal implementation.
-  detail::OpResultImpl *getImpl() const {
-    return reinterpret_cast<detail::OpResultImpl *>(impl);
-  }
+  /// Given a number of operation results, returns the number that need to be
+  /// stored as trailing.
+  static unsigned getNumTrailing(unsigned numResults);
 
   /// Allow access to `create` and `destroy`.
   friend Operation;
@@ -295,7 +315,7 @@ private:
 
 /// Make Value hashable.
 inline ::llvm::hash_code hash_value(Value arg) {
-  return ::llvm::hash_value(arg.impl);
+  return ::llvm::hash_value(arg.ownerAndKind.getOpaqueValue());
 }
 
 } // namespace mlir
@@ -305,16 +325,16 @@ namespace llvm {
 template <> struct DenseMapInfo<mlir::Value> {
   static mlir::Value getEmptyKey() {
     auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Value(static_cast<mlir::detail::ValueImpl *>(pointer));
+    return mlir::Value::getFromOpaquePointer(pointer);
   }
   static mlir::Value getTombstoneKey() {
     auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Value(static_cast<mlir::detail::ValueImpl *>(pointer));
+    return mlir::Value::getFromOpaquePointer(pointer);
   }
   static unsigned getHashValue(mlir::Value val) {
     return mlir::hash_value(val);
   }
-  static bool isEqual(mlir::Value LHS, mlir::Value RHS) { return LHS == RHS; }
+  static bool isEqual(mlir::Value lhs, mlir::Value rhs) { return lhs == rhs; }
 };
 
 /// Allow stealing the low bits of a value.
@@ -328,18 +348,20 @@ public:
   }
   enum {
     NumLowBitsAvailable =
-        PointerLikeTypeTraits<mlir::detail::ValueImpl *>::NumLowBitsAvailable
+        PointerLikeTypeTraits<mlir::Value::ImplType>::NumLowBitsAvailable
   };
 };
 
 template <> struct DenseMapInfo<mlir::BlockArgument> {
   static mlir::BlockArgument getEmptyKey() {
     auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::BlockArgument(static_cast<mlir::detail::ValueImpl *>(pointer));
+    return mlir::BlockArgument(
+        mlir::Value::ImplType::getFromOpaqueValue(pointer));
   }
   static mlir::BlockArgument getTombstoneKey() {
     auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::BlockArgument(static_cast<mlir::detail::ValueImpl *>(pointer));
+    return mlir::BlockArgument(
+        mlir::Value::ImplType::getFromOpaqueValue(pointer));
   }
   static unsigned getHashValue(mlir::BlockArgument val) {
     return mlir::hash_value(val);
@@ -360,7 +382,7 @@ public:
   }
   enum {
     NumLowBitsAvailable =
-        PointerLikeTypeTraits<mlir::detail::ValueImpl *>::NumLowBitsAvailable
+        PointerLikeTypeTraits<mlir::Value>::NumLowBitsAvailable
   };
 };
 } // end namespace llvm

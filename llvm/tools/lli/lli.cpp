@@ -792,11 +792,15 @@ int runOrcLazyJIT(const char *ProgName) {
     });
     return TSM;
   });
-  J->getMainJITDylib().addGenerator(
-      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-          J->getDataLayout().getGlobalPrefix())));
 
   orc::MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
+  J->getMainJITDylib().addGenerator(
+      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+          J->getDataLayout().getGlobalPrefix(),
+          [MainName = Mangle("main")](const orc::SymbolStringPtr &Name) {
+            return Name != MainName;
+          })));
+
   orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
   ExitOnErr(CXXRuntimeOverrides.enable(J->getMainJITDylib(), Mangle));
 

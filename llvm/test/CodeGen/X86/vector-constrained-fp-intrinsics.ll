@@ -7317,7 +7317,7 @@ define <4 x float> @constrained_vector_uitofp_v4f32_v4i32(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    por {{.*}}(%rip), %xmm1
 ; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    addps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    subps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    addps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
@@ -7326,7 +7326,7 @@ define <4 x float> @constrained_vector_uitofp_v4f32_v4i32(<4 x i32> %x) #0 {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
 ; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;

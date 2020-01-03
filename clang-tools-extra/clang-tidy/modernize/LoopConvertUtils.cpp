@@ -867,7 +867,7 @@ std::string VariableNamer::createIndexName() {
   return OldIndex->getName();
 }
 
-/// Determines whether or not the the name \a Symbol conflicts with
+/// Determines whether or not the name \a Symbol conflicts with
 /// language keywords or defined macros. Also checks if the name exists in
 /// LoopContext, any of its parent contexts, or any of its child statements.
 ///

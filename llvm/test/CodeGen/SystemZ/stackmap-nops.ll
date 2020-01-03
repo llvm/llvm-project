@@ -11,108 +11,121 @@ entry:
 ; CHECK:      bc 0, 0
 
 ; 6
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 
 ; 8
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 ; CHECK:      bcr 0, %r0
 
 ; 10
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 ; CHECK:      bc 0, 0
 
 ; 12
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 
 ; 14
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 ; CHECK:      bcr 0, %r0
 
 ; 16
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 ; CHECK:      bc 0, 0
 
 ; 18
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 
 ; 20
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 ; CHECK:      bcr 0, %r0
 
 ; 22
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 ; CHECK:      bc 0, 0
 
 ; 24
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 
 ; 26
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 ; CHECK:      bcr 0, %r0
 
 ; 28
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 ; CHECK:      bc 0, 0
 
 ; 30
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
-; CHECK:      brcl 0, [[LAB:.Ltmp[0-9]+]]
-; CHECK-NEXT: [[LAB]]:
+; CHECK:      .Ltmp
+; CHECK-NEXT: [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
+; CHECK:      [[LAB:.Ltmp[0-9]+]]:
+; CHECK-NEXT: brcl 0, [[LAB]]
 
   tail call void (i64, i32, ...) @llvm.experimental.stackmap(i64  0, i32  0)
   tail call void (i64, i32, ...) @llvm.experimental.stackmap(i64  2, i32  2)

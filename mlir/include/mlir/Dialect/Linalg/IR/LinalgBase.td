@@ -19,9 +19,10 @@ def Linalg_Dialect : Dialect {
   let name = "linalg";
   let description = [{
     The `linalg` dialect groups together a set of types, operations and
-    transformations that are useful to implement a structured abstraction where
-    ops can lower to scalar load/store and operations or to more general library
-    calls.
+    transformations that are useful to implement a structured abstraction on
+    buffers and tensors. These abstractions are useful for transformations and
+    can lower to scalar load/store and other operations or to more general
+    library calls.
 
     The `linalg` dialect manipulates the following types and operations:
 
@@ -67,12 +68,13 @@ def Linalg_Dialect : Dialect {
     A set of payload carrying operations that implement the [structured ops](
     https://docs.google.com/presentation/d/1P-j1GrH6Q5gLBjao0afQ-GfvcAeF-QU4GXXeSy0eJ9I/edit#slide=id.p
     )
-    abstraction on buffers. `linalg` has `2` generic operations `linalg.generic`
-    and `linalg.indexed_generic` for expressing custom operations. This is
-    subject to further evolution as transformations and analyses continue to be
-    developed.
+    abstraction on tensors and buffers. `linalg` has `2` generic operations
+    `linalg.generic` and `linalg.indexed_generic` for expressing custom
+    operations.
+    This is subject to further evolution as transformations and analyses
+    continue to be developed.
 
-    Additionally, `linalg` provides some common named operations:
+    Additionally, `linalg` provides some commonly named operations:
 
         * `linalg.copy`,
         * `linalg.fill`,

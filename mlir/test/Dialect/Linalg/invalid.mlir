@@ -423,6 +423,51 @@ func @generic_fun_result_0_element_type(%arg0: memref<?xf32, (i)[off]->(off + i)
 
 // -----
 
+func @generic_result_tensor_type(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
+  // expected-error @+1 {{op result #0 must be ranked tensor of any type values, but got 'f32'}}
+  %0 = linalg.generic {
+    args_in = 0,
+    args_out = 1,
+    indexing_maps = [ (i) -> (i) ],
+    iterator_types = ["parallel"]
+  } %arg0 {
+    ^bb(%i: f32):
+      linalg.yield %i: f32
+  }: memref<?xf32, (i)[off]->(off + i)> -> f32
+}
+
+// -----
+
+func @generic_result_tensor_count(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
+  // expected-error @+1 {{op expected #output tensor operands (0) to match #results (1)}}
+  %0 = linalg.generic {
+    args_in = 0,
+    args_out = 1,
+    indexing_maps = [ (i) -> (i) ],
+    iterator_types = ["parallel"]
+  } %arg0 {
+    ^bb(%i: f32):
+      linalg.yield %i: f32
+  }: memref<?xf32, (i)[off]->(off + i)> -> tensor<?xf32>
+}
+
+// -----
+
+func @generic_result_tensor_type(%arg0: tensor<?xf32>) {
+  // expected-error @+1 {{op result #0 must be 'tensor<?xf32>', but got 'tensor<?x?xf32>'}}
+  %0 = linalg.generic {
+    args_in = 0,
+    args_out = 1,
+    indexing_maps = [ (i) -> (i) ],
+    iterator_types = ["parallel"]
+  } %arg0 {
+    ^bb(%i: f32):
+      linalg.yield %i: f32
+  }: tensor<?xf32> -> tensor<?x?xf32>
+}
+
+// -----
+
 func @generic_fun_result_0_element_type(%arg0: memref<?xf32>) {
   // expected-error @+1 {{'linalg.dot' op expected 3 or more operands}}
   linalg.dot(%arg0, %arg0): memref<?xf32>, memref<?xf32>

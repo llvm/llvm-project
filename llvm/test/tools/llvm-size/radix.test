@@ -49,6 +49,7 @@
 # OCT-SYSV-NEXT: .bss          04     01
 # OCT-SYSV-NEXT: Total         07
 # OCT-SYSV-EMPTY:
+# OCT-SYSV-EMPTY:
 # OCT-SYSV-NEXT: [[FILE2]]  :
 # OCT-SYSV-NEXT: section     size   addr
 # OCT-SYSV-NEXT: .blob        010    040
@@ -69,6 +70,7 @@
 # DEC-SYSV-NEXT: .bss           4      1
 # DEC-SYSV-NEXT: Total          7
 # DEC-SYSV-EMPTY:
+# DEC-SYSV-EMPTY:
 # DEC-SYSV-NEXT: [[FILE2]]  :
 # DEC-SYSV-NEXT: section     size   addr
 # DEC-SYSV-NEXT: .blob          8     32
@@ -88,6 +90,7 @@
 # HEX-SYSV-NEXT: .data        0x2    0x2
 # HEX-SYSV-NEXT: .bss         0x4    0x1
 # HEX-SYSV-NEXT: Total        0x7
+# HEX-SYSV-EMPTY:
 # HEX-SYSV-EMPTY:
 # HEX-SYSV-NEXT: [[FILE2]]  :
 # HEX-SYSV-NEXT: section     size   addr

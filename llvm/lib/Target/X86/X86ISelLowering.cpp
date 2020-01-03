@@ -2039,6 +2039,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setPrefFunctionAlignment(Align(16));
 
   verifyIntrinsicTables();
+
+  // Default to having -disable-strictnode-mutation on
+  IsStrictFPEnabled = true;
 }
 
 // This has so far only been implemented for 64-bit MachO.
@@ -5916,11 +5919,29 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
   // Widen the vector if needed.
   Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideOpVT, Undef, Vec, ZeroIdx);
 
-  // Clear the upper bits of the subvector and move it to its insert position.
   unsigned ShiftLeft = NumElems - SubVecNumElems;
+  unsigned ShiftRight = NumElems - SubVecNumElems - IdxVal;
+
+  // Do an optimization for the the most frequently used types.
+  if (WideOpVT != MVT::v64i1 || Subtarget.is64Bit()) {
+    APInt Mask0 = APInt::getBitsSet(NumElems, IdxVal, IdxVal + SubVecNumElems);
+    Mask0.flipAllBits();
+    SDValue CMask0 = DAG.getConstant(Mask0, dl, MVT::getIntegerVT(NumElems));
+    SDValue VMask0 = DAG.getNode(ISD::BITCAST, dl, WideOpVT, CMask0);
+    Vec = DAG.getNode(ISD::AND, dl, WideOpVT, Vec, VMask0);
+    SubVec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
+                         DAG.getTargetConstant(ShiftLeft, dl, MVT::i8));
+    SubVec = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, SubVec,
+                         DAG.getTargetConstant(ShiftRight, dl, MVT::i8));
+    Op = DAG.getNode(ISD::OR, dl, WideOpVT, Vec, SubVec);
+
+    // Reduce to original width if needed.
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
+  }
+
+  // Clear the upper bits of the subvector and move it to its insert position.
   SubVec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
                        DAG.getTargetConstant(ShiftLeft, dl, MVT::i8));
-  unsigned ShiftRight = NumElems - SubVecNumElems - IdxVal;
   SubVec = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, SubVec,
                        DAG.getTargetConstant(ShiftRight, dl, MVT::i8));
 
@@ -19062,15 +19083,6 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
   //     float4 fhi = (float4) hi - (0x1.0p39f + 0x1.0p23f);
   //     return (float4) lo + fhi;
 
-  // We shouldn't use it when unsafe-fp-math is enabled though: we might later
-  // reassociate the two FADDs, and if we do that, the algorithm fails
-  // spectacularly (PR24512).
-  // FIXME: If we ever have some kind of Machine FMF, this should be marked
-  // as non-fast and always be enabled. Why isn't SDAG FMF enough? Because
-  // there's also the MachineCombiner reassociations happening on Machine IR.
-  if (DAG.getTarget().Options.UnsafeFPMath)
-    return SDValue();
-
   bool Is128 = VecIntVT == MVT::v4i32;
   MVT VecFloatVT = Is128 ? MVT::v4f32 : MVT::v8f32;
   // If we convert to something else than the supported type, e.g., to v4f64,
@@ -19122,25 +19134,28 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
     High = DAG.getNode(ISD::OR, DL, VecIntVT, HighShift, VecCstHigh);
   }
 
-  // Create the vector constant for -(0x1.0p39f + 0x1.0p23f).
-  SDValue VecCstFAdd = DAG.getConstantFP(
-      APFloat(APFloat::IEEEsingle(), APInt(32, 0xD3000080)), DL, VecFloatVT);
+  // Create the vector constant for (0x1.0p39f + 0x1.0p23f).
+  SDValue VecCstFSub = DAG.getConstantFP(
+      APFloat(APFloat::IEEEsingle(), APInt(32, 0x53000080)), DL, VecFloatVT);
 
   //     float4 fhi = (float4) hi - (0x1.0p39f + 0x1.0p23f);
+  // NOTE: By using fsub of a positive constant instead of fadd of a negative
+  // constant, we avoid reassociation in MachineCombiner when unsafe-fp-math is
+  // enabled. See PR24512.
   SDValue HighBitcast = DAG.getBitcast(VecFloatVT, High);
   // TODO: Are there any fast-math-flags to propagate here?
   //     (float4) lo;
   SDValue LowBitcast = DAG.getBitcast(VecFloatVT, Low);
   //     return (float4) lo + fhi;
   if (IsStrict) {
-    SDValue FHigh = DAG.getNode(ISD::STRICT_FADD, DL, {VecFloatVT, MVT::Other},
-                                {Op.getOperand(0), HighBitcast, VecCstFAdd});
+    SDValue FHigh = DAG.getNode(ISD::STRICT_FSUB, DL, {VecFloatVT, MVT::Other},
+                                {Op.getOperand(0), HighBitcast, VecCstFSub});
     return DAG.getNode(ISD::STRICT_FADD, DL, {VecFloatVT, MVT::Other},
                        {FHigh.getValue(1), LowBitcast, FHigh});
   }
 
   SDValue FHigh =
-      DAG.getNode(ISD::FADD, DL, VecFloatVT, HighBitcast, VecCstFAdd);
+      DAG.getNode(ISD::FSUB, DL, VecFloatVT, HighBitcast, VecCstFSub);
   return DAG.getNode(ISD::FADD, DL, VecFloatVT, LowBitcast, FHigh);
 }
 

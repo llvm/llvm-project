@@ -68,6 +68,7 @@ Operation *mlir::edsc::makeGenericLinalgOp(
       edsc::ScopedContext::getBuilder()
           .create<linalg::GenericOp>(
               edsc::ScopedContext::getLocation(),
+              ArrayRef<Type>{}, // TODO(ntv): support tensors
               values,
               IntegerAttr::get(IntegerType::get(64, ctx), nInputs),
               IntegerAttr::get(IntegerType::get(64, ctx), nOutputs),

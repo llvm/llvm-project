@@ -1045,6 +1045,18 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
   llvm::BasicBlock *ThenBB = nullptr;
   llvm::BasicBlock *DoneBB = nullptr;
   if (IsLastIterCond) {
+    // Emit implicit barrier if at least one lastprivate conditional is found
+    // and this is not a simd mode.
+    if (!getLangOpts().OpenMPSimd &&
+        llvm::any_of(D.getClausesOfKind<OMPLastprivateClause>(),
+                     [](const OMPLastprivateClause *C) {
+                       return C->getKind() == OMPC_LASTPRIVATE_conditional;
+                     })) {
+      CGM.getOpenMPRuntime().emitBarrierCall(*this, D.getBeginLoc(),
+                                             OMPD_unknown,
+                                             /*EmitChecks=*/false,
+                                             /*ForceSimpleCall=*/true);
+    }
     ThenBB = createBasicBlock(".omp.lastprivate.then");
     DoneBB = createBasicBlock(".omp.lastprivate.done");
     Builder.CreateCondBr(IsLastIterCond, ThenBB, DoneBB);
@@ -1083,14 +1095,19 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
             cast<VarDecl>(cast<DeclRefExpr>(*ISrcRef)->getDecl());
         const auto *DestVD =
             cast<VarDecl>(cast<DeclRefExpr>(*IDestRef)->getDecl());
-        // Get the address of the original variable.
-        Address OriginalAddr = GetAddrOfLocalVar(DestVD);
         // Get the address of the private variable.
         Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
         if (const auto *RefTy = PrivateVD->getType()->getAs<ReferenceType>())
           PrivateAddr =
               Address(Builder.CreateLoad(PrivateAddr),
                       getNaturalTypeAlignment(RefTy->getPointeeType()));
+        // Store the last value to the private copy in the last iteration.
+        if (C->getKind() == OMPC_LASTPRIVATE_conditional)
+          CGM.getOpenMPRuntime().emitLastprivateConditionalFinalUpdate(
+              *this, MakeAddrLValue(PrivateAddr, (*IRef)->getType()), PrivateVD,
+              (*IRef)->getExprLoc());
+        // Get the address of the original variable.
+        Address OriginalAddr = GetAddrOfLocalVar(DestVD);
         EmitOMPCopy(Type, OriginalAddr, PrivateAddr, DestVD, SrcVD, AssignOp);
       }
       ++IRef;
@@ -1974,6 +1991,8 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
     CGF.EmitOMPLinearClause(S, LoopScope);
     CGF.EmitOMPPrivateClause(S, LoopScope);
     CGF.EmitOMPReductionClauseInit(S, LoopScope);
+    CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(
+        CGF, S, CGF.EmitLValue(S.getIterationVariable()));
     bool HasLastprivateClause = CGF.EmitOMPLastprivateClauseInit(S, LoopScope);
     (void)LoopScope.Privatize();
     if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
@@ -2546,6 +2565,8 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
             /*ForceSimpleCall=*/true);
       }
       EmitOMPPrivateClause(S, LoopScope);
+      CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(
+          *this, S, EmitLValue(S.getIterationVariable()));
       HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
       EmitOMPReductionClauseInit(S, LoopScope);
       EmitOMPPrivateLoopCounters(S, LoopScope);
@@ -2856,6 +2877,7 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
           /*ForceSimpleCall=*/true);
     }
     CGF.EmitOMPPrivateClause(S, LoopScope);
+    CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(CGF, S, IV);
     HasLastprivates = CGF.EmitOMPLastprivateClauseInit(S, LoopScope);
     CGF.EmitOMPReductionClauseInit(S, LoopScope);
     (void)LoopScope.Privatize();

@@ -194,6 +194,13 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::XOR,                BoolV, Legal);
   }
 
+  if (Use64b)
+    for (MVT T: {MVT::v32i8, MVT::v32i16, MVT::v16i8, MVT::v16i16, MVT::v16i32})
+      setOperationAction(ISD::SIGN_EXTEND_INREG, T, Legal);
+  else
+    for (MVT T: {MVT::v64i8, MVT::v64i16, MVT::v32i8, MVT::v32i16, MVT::v32i32})
+      setOperationAction(ISD::SIGN_EXTEND_INREG, T, Legal);
+
   setTargetDAGCombine(ISD::VSELECT);
 }
 
