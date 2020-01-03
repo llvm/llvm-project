@@ -30,8 +30,8 @@ ASTStructExtractor::ASTStructExtractor(ASTConsumer *passthrough,
                                        const char *struct_name,
                                        ClangFunctionCaller &function)
     : m_ast_context(nullptr), m_passthrough(passthrough),
-      m_passthrough_sema(nullptr), m_sema(nullptr), m_action(nullptr),
-      m_function(function), m_struct_name(struct_name) {
+      m_passthrough_sema(nullptr), m_sema(nullptr), m_function(function),
+      m_struct_name(struct_name) {
   if (!m_passthrough)
     return;
 
@@ -170,7 +170,6 @@ void ASTStructExtractor::PrintStats() {
 
 void ASTStructExtractor::InitializeSema(Sema &S) {
   m_sema = &S;
-  m_action = reinterpret_cast<Action *>(m_sema);
 
   if (m_passthrough_sema)
     m_passthrough_sema->InitializeSema(S);
@@ -178,7 +177,6 @@ void ASTStructExtractor::InitializeSema(Sema &S) {
 
 void ASTStructExtractor::ForgetSema() {
   m_sema = nullptr;
-  m_action = nullptr;
 
   if (m_passthrough_sema)
     m_passthrough_sema->ForgetSema();
