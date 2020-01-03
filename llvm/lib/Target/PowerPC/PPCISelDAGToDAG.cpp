@@ -3833,7 +3833,11 @@ SDValue PPCDAGToDAGISel::SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   return SDValue(CurDAG->getMachineNode(Opc, dl, MVT::i32, LHS, RHS), 0);
 }
 
-static PPC::Predicate getPredicateForSetCC(ISD::CondCode CC) {
+static PPC::Predicate getPredicateForSetCC(ISD::CondCode CC, const EVT &VT,
+                                           const PPCSubtarget *Subtarget) {
+  // For SPE instructions, the result is in GT bit of the CR
+  bool UseSPE = Subtarget->hasSPE() && VT.isFloatingPoint();
+
   switch (CC) {
   case ISD::SETUEQ:
   case ISD::SETONE:
@@ -3842,17 +3846,23 @@ static PPC::Predicate getPredicateForSetCC(ISD::CondCode CC) {
     llvm_unreachable("Should be lowered by legalize!");
   default: llvm_unreachable("Unknown condition!");
   case ISD::SETOEQ:
-  case ISD::SETEQ:  return PPC::PRED_EQ;
+  case ISD::SETEQ:
+    return UseSPE ? PPC::PRED_GT : PPC::PRED_EQ;
   case ISD::SETUNE:
-  case ISD::SETNE:  return PPC::PRED_NE;
+  case ISD::SETNE:
+    return UseSPE ? PPC::PRED_LE : PPC::PRED_NE;
   case ISD::SETOLT:
-  case ISD::SETLT:  return PPC::PRED_LT;
+  case ISD::SETLT:
+    return UseSPE ? PPC::PRED_GT : PPC::PRED_LT;
   case ISD::SETULE:
-  case ISD::SETLE:  return PPC::PRED_LE;
+  case ISD::SETLE:
+    return UseSPE ? PPC::PRED_LE : PPC::PRED_LE;
   case ISD::SETOGT:
-  case ISD::SETGT:  return PPC::PRED_GT;
+  case ISD::SETGT:
+    return UseSPE ? PPC::PRED_GT : PPC::PRED_GT;
   case ISD::SETUGE:
-  case ISD::SETGE:  return PPC::PRED_GE;
+  case ISD::SETGE:
+    return UseSPE ? PPC::PRED_LE : PPC::PRED_GE;
   case ISD::SETO:   return PPC::PRED_NU;
   case ISD::SETUO:  return PPC::PRED_UN;
     // These two are invalid for floating point.  Assume we have int.
@@ -4918,7 +4928,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     }
 
-    unsigned BROpc = getPredicateForSetCC(CC);
+    unsigned BROpc =
+        getPredicateForSetCC(CC, N->getOperand(0).getValueType(), PPCSubTarget);
 
     unsigned SelectCCOp;
     if (N->getValueType(0) == MVT::i32)
@@ -5041,7 +5052,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   }
   case ISD::BR_CC: {
     ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
-    unsigned PCC = getPredicateForSetCC(CC);
+    unsigned PCC =
+        getPredicateForSetCC(CC, N->getOperand(2).getValueType(), PPCSubTarget);
 
     if (N->getOperand(2).getValueType() == MVT::i1) {
       unsigned Opc;

@@ -91,93 +91,177 @@ define float @test_dtos(double %a) {
   ret float %v
 }
 
-define i1 @test_fcmpgt(float %a, float %b) {
+define i32 @test_fcmpgt(float %a, float %b) {
 ; CHECK-LABEL: test_fcmpgt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    efscmpgt 0, 3, 4
+; CHECK-NEXT:    ble 0, .LBB8_2
+; CHECK-NEXT:  # %bb.1: # %tr
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    bclr 12, 1, 0
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
+; CHECK-NEXT:    b .LBB8_3
+; CHECK-NEXT:  .LBB8_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB8_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp ogt float %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp ogt float %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_fcmpugt(float %a, float %b) {
+define i32 @test_fcmpugt(float %a, float %b) {
 ; CHECK-LABEL: test_fcmpugt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    efscmpeq 0, 3, 3
-; CHECK-NEXT:    efscmpeq 1, 4, 4
-; CHECK-NEXT:    crnand 20, 5, 1
-; CHECK-NEXT:    efscmpgt 0, 3, 4
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crnor 20, 1, 20
-; CHECK-NEXT:    bc 12, 20, .LBB9_2
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    efscmpeq 0, 4, 4
+; CHECK-NEXT:    bc 4, 1, .LBB9_4
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB9_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    efscmpeq 0, 3, 3
+; CHECK-NEXT:    bc 4, 1, .LBB9_4
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    efscmpgt 0, 3, 4
+; CHECK-NEXT:    bc 12, 1, .LBB9_4
+; CHECK-NEXT:  # %bb.3: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    b .LBB9_5
+; CHECK-NEXT:  .LBB9_4: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:  .LBB9_5: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp ugt float %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp ugt float %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_fcmple(float %a, float %b) {
+define i32 @test_fcmple(float %a, float %b) {
 ; CHECK-LABEL: test_fcmple:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    efscmpeq 0, 4, 4
-; CHECK-NEXT:    efscmpeq 1, 3, 3
-; CHECK-NEXT:    crand 20, 5, 1
-; CHECK-NEXT:    efscmpgt 0, 3, 4
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crorc 20, 1, 20
-; CHECK-NEXT:    bc 12, 20, .LBB10_2
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    efscmpeq 0, 3, 3
+; CHECK-NEXT:    bc 4, 1, .LBB10_4
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB10_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    efscmpeq 0, 4, 4
+; CHECK-NEXT:    bc 4, 1, .LBB10_4
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    efscmpgt 0, 3, 4
+; CHECK-NEXT:    bc 12, 1, .LBB10_4
+; CHECK-NEXT:  # %bb.3: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    b .LBB10_5
+; CHECK-NEXT:  .LBB10_4: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB10_5: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp ole float %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp ole float %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_fcmpule(float %a, float %b) {
+define i32 @test_fcmpule(float %a, float %b) {
 ; CHECK-LABEL: test_fcmpule:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    efscmpgt 0, 3, 4
-; CHECK-NEXT:    bc 12, 1, .LBB11_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB11_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    bgt 0, .LBB11_2
+; CHECK-NEXT:  # %bb.1: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    b .LBB11_3
+; CHECK-NEXT:  .LBB11_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB11_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp ule float %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp ule float %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_fcmpeq(float %a, float %b) {
+; The type of comparison found in C's if (x == y)
+define i32 @test_fcmpeq(float %a, float %b) {
 ; CHECK-LABEL: test_fcmpeq:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    efscmpeq 0, 3, 4
+; CHECK-NEXT:    ble 0, .LBB12_2
+; CHECK-NEXT:  # %bb.1: # %tr
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    bclr 12, 1, 0
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
+; CHECK-NEXT:    b .LBB12_3
+; CHECK-NEXT:  .LBB12_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB12_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp oeq float %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp oeq float %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
 ; (un)ordered tests are expanded to une and oeq so verify
@@ -261,36 +345,68 @@ define i1 @test_fcmpne(float %a, float %b) {
   ret i1 %r
 }
 
-define i1 @test_fcmpune(float %a, float %b) {
+define i32 @test_fcmpune(float %a, float %b) {
 ; CHECK-LABEL: test_fcmpune:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    efscmpeq 0, 3, 4
-; CHECK-NEXT:    bc 12, 1, .LBB17_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB17_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    bgt 0, .LBB17_2
+; CHECK-NEXT:  # %bb.1: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    b .LBB17_3
+; CHECK-NEXT:  .LBB17_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB17_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp une float %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp une float %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_fcmplt(float %a, float %b) {
+define i32 @test_fcmplt(float %a, float %b) {
 ; CHECK-LABEL: test_fcmplt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    efscmplt 0, 3, 4
+; CHECK-NEXT:    ble 0, .LBB18_2
+; CHECK-NEXT:  # %bb.1: # %tr
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    bclr 12, 1, 0
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
+; CHECK-NEXT:    b .LBB18_3
+; CHECK-NEXT:  .LBB18_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB18_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp olt float %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp olt float %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
 define i1 @test_fcmpult(float %a, float %b) {
@@ -314,43 +430,76 @@ define i1 @test_fcmpult(float %a, float %b) {
   ret i1 %r
 }
 
-define i1 @test_fcmpge(float %a, float %b) {
+define i32 @test_fcmpge(float %a, float %b) {
 ; CHECK-LABEL: test_fcmpge:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    efscmpeq 0, 4, 4
-; CHECK-NEXT:    efscmpeq 1, 3, 3
-; CHECK-NEXT:    crand 20, 5, 1
-; CHECK-NEXT:    efscmplt 0, 3, 4
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crorc 20, 1, 20
-; CHECK-NEXT:    bc 12, 20, .LBB20_2
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    efscmpeq 0, 3, 3
+; CHECK-NEXT:    bc 4, 1, .LBB20_4
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB20_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    efscmpeq 0, 4, 4
+; CHECK-NEXT:    bc 4, 1, .LBB20_4
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    efscmplt 0, 3, 4
+; CHECK-NEXT:    bc 12, 1, .LBB20_4
+; CHECK-NEXT:  # %bb.3: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    b .LBB20_5
+; CHECK-NEXT:  .LBB20_4: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB20_5: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp oge float %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp oge float %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_fcmpuge(float %a, float %b) {
+define i32 @test_fcmpuge(float %a, float %b) {
 ; CHECK-LABEL: test_fcmpuge:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    efscmplt 0, 3, 4
-; CHECK-NEXT:    bc 12, 1, .LBB21_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB21_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    bgt 0, .LBB21_2
+; CHECK-NEXT:  # %bb.1: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    b .LBB21_3
+; CHECK-NEXT:  .LBB21_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB21_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp uge float %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp uge float %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
+
 
 define i32 @test_ftoui(float %a) {
 ; CHECK-LABEL: test_ftoui:
@@ -575,126 +724,221 @@ define i1 @test_dcmpord(double %a, double %b) {
   ret i1 %r
 }
 
-define i1 @test_dcmpgt(double %a, double %b) {
+define i32 @test_dcmpgt(double %a, double %b) {
 ; CHECK-LABEL: test_dcmpgt:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    evmergelo 5, 5, 6
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:    efdcmpgt 0, 3, 5
+; CHECK-NEXT:    ble 0, .LBB37_2
+; CHECK-NEXT:  # %bb.1: # %tr
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    bclr 12, 1, 0
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
+; CHECK-NEXT:    b .LBB37_3
+; CHECK-NEXT:  .LBB37_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB37_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp ogt double %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp ogt double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_dcmpugt(double %a, double %b) {
+define i32 @test_dcmpugt(double %a, double %b) {
 ; CHECK-LABEL: test_dcmpugt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    evmergelo 5, 5, 6
-; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    li 7, 1
-; CHECK-NEXT:    efdcmpeq 0, 3, 3
-; CHECK-NEXT:    efdcmpeq 1, 5, 5
-; CHECK-NEXT:    efdcmpgt 5, 3, 5
-; CHECK-NEXT:    crnand 24, 5, 1
-; CHECK-NEXT:    crnor 20, 21, 24
-; CHECK-NEXT:    bc 12, 20, .LBB38_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB38_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
-; CHECK-NEXT:    blr
-  entry:
-  %r = fcmp ugt double %a, %b
-  ret i1 %r
-}
-
-define i1 @test_dcmple(double %a, double %b) {
-; CHECK-LABEL: test_dcmple:
-; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    evmergelo 3, 3, 4
 ; CHECK-NEXT:    evmergelo 4, 5, 6
-; CHECK-NEXT:    li 7, 1
 ; CHECK-NEXT:    efdcmpeq 0, 4, 4
-; CHECK-NEXT:    efdcmpeq 1, 3, 3
-; CHECK-NEXT:    efdcmpgt 5, 3, 4
-; CHECK-NEXT:    crand 24, 5, 1
-; CHECK-NEXT:    crorc 20, 21, 24
-; CHECK-NEXT:    bc 12, 20, .LBB39_2
+; CHECK-NEXT:    bc 4, 1, .LBB38_4
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB39_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    efdcmpeq 0, 3, 3
+; CHECK-NEXT:    bc 4, 1, .LBB38_4
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    efdcmpgt 0, 3, 4
+; CHECK-NEXT:    bc 12, 1, .LBB38_4
+; CHECK-NEXT:  # %bb.3: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    b .LBB38_5
+; CHECK-NEXT:  .LBB38_4: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:  .LBB38_5: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp ole double %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp ugt double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_dcmpule(double %a, double %b) {
+define i32 @test_dcmple(double %a, double %b) {
+; CHECK-LABEL: test_dcmple:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    evmergelo 5, 5, 6
+; CHECK-NEXT:    evmergelo 3, 3, 4
+; CHECK-NEXT:    efdcmpgt 0, 3, 5
+; CHECK-NEXT:    bgt 0, .LBB39_2
+; CHECK-NEXT:  # %bb.1: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    b .LBB39_3
+; CHECK-NEXT:  .LBB39_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB39_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
+; CHECK-NEXT:    blr
+  entry:
+  %r = alloca i32, align 4
+  %c = fcmp ule double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
+}
+
+define i32 @test_dcmpule(double %a, double %b) {
 ; CHECK-LABEL: test_dcmpule:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    evmergelo 5, 5, 6
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    li 7, 1
 ; CHECK-NEXT:    efdcmpgt 0, 3, 5
-; CHECK-NEXT:    bc 12, 1, .LBB40_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB40_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    bgt 0, .LBB40_2
+; CHECK-NEXT:  # %bb.1: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    b .LBB40_3
+; CHECK-NEXT:  .LBB40_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB40_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp ule double %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp ule double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_dcmpeq(double %a, double %b) {
+; The type of comparison found in C's if (x == y)
+define i32 @test_dcmpeq(double %a, double %b) {
 ; CHECK-LABEL: test_dcmpeq:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    evmergelo 5, 5, 6
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:    efdcmpeq 0, 3, 5
+; CHECK-NEXT:    ble 0, .LBB41_2
+; CHECK-NEXT:  # %bb.1: # %tr
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    bclr 12, 1, 0
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
+; CHECK-NEXT:    b .LBB41_3
+; CHECK-NEXT:  .LBB41_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB41_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp oeq double %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp oeq double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_dcmpueq(double %a, double %b) {
+define i32 @test_dcmpueq(double %a, double %b) {
 ; CHECK-LABEL: test_dcmpueq:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    evmergelo 5, 5, 6
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    li 7, 1
-; CHECK-NEXT:    efdcmpeq 0, 3, 3
-; CHECK-NEXT:    efdcmpeq 1, 5, 5
-; CHECK-NEXT:    efdcmpeq 5, 3, 5
-; CHECK-NEXT:    crnand 24, 5, 1
-; CHECK-NEXT:    crnor 20, 21, 24
-; CHECK-NEXT:    bc 12, 20, .LBB42_2
+; CHECK-NEXT:    evmergelo 4, 5, 6
+; CHECK-NEXT:    efdcmpeq 0, 4, 4
+; CHECK-NEXT:    bc 4, 1, .LBB42_4
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB42_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    efdcmpeq 0, 3, 3
+; CHECK-NEXT:    bc 4, 1, .LBB42_4
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    efdcmpeq 0, 3, 4
+; CHECK-NEXT:    bc 12, 1, .LBB42_4
+; CHECK-NEXT:  # %bb.3: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    b .LBB42_5
+; CHECK-NEXT:  .LBB42_4: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:  .LBB42_5: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp ueq double %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp ueq double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
 define i1 @test_dcmpne(double %a, double %b) {
@@ -720,63 +964,112 @@ define i1 @test_dcmpne(double %a, double %b) {
   ret i1 %r
 }
 
-define i1 @test_dcmpune(double %a, double %b) {
+define i32 @test_dcmpune(double %a, double %b) {
 ; CHECK-LABEL: test_dcmpune:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    evmergelo 5, 5, 6
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    li 7, 1
 ; CHECK-NEXT:    efdcmpeq 0, 3, 5
-; CHECK-NEXT:    bc 12, 1, .LBB44_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB44_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    bgt 0, .LBB44_2
+; CHECK-NEXT:  # %bb.1: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    b .LBB44_3
+; CHECK-NEXT:  .LBB44_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB44_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp une double %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp une double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_dcmplt(double %a, double %b) {
+define i32 @test_dcmplt(double %a, double %b) {
 ; CHECK-LABEL: test_dcmplt:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    evmergelo 5, 5, 6
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:    efdcmplt 0, 3, 5
+; CHECK-NEXT:    ble 0, .LBB45_2
+; CHECK-NEXT:  # %bb.1: # %tr
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    bclr 12, 1, 0
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
+; CHECK-NEXT:    b .LBB45_3
+; CHECK-NEXT:  .LBB45_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB45_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp olt double %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp olt double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
-define i1 @test_dcmpult(double %a, double %b) {
+define i32 @test_dcmpult(double %a, double %b) {
 ; CHECK-LABEL: test_dcmpult:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    evmergelo 5, 5, 6
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    li 7, 1
-; CHECK-NEXT:    efdcmpeq 0, 3, 3
-; CHECK-NEXT:    efdcmpeq 1, 5, 5
-; CHECK-NEXT:    efdcmplt 5, 3, 5
-; CHECK-NEXT:    crnand 24, 5, 1
-; CHECK-NEXT:    crnor 20, 21, 24
-; CHECK-NEXT:    bc 12, 20, .LBB46_2
+; CHECK-NEXT:    evmergelo 4, 5, 6
+; CHECK-NEXT:    efdcmpeq 0, 4, 4
+; CHECK-NEXT:    bc 4, 1, .LBB46_4
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB46_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    efdcmpeq 0, 3, 3
+; CHECK-NEXT:    bc 4, 1, .LBB46_4
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    efdcmplt 0, 3, 4
+; CHECK-NEXT:    bc 12, 1, .LBB46_4
+; CHECK-NEXT:  # %bb.3: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    b .LBB46_5
+; CHECK-NEXT:  .LBB46_4: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:  .LBB46_5: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp ult double %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp ult double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
 define i1 @test_dcmpge(double %a, double %b) {
@@ -802,23 +1095,38 @@ define i1 @test_dcmpge(double %a, double %b) {
   ret i1 %r
 }
 
-define i1 @test_dcmpuge(double %a, double %b) {
+define i32 @test_dcmpuge(double %a, double %b) {
 ; CHECK-LABEL: test_dcmpuge:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    evmergelo 5, 5, 6
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    li 7, 1
 ; CHECK-NEXT:    efdcmplt 0, 3, 5
-; CHECK-NEXT:    bc 12, 1, .LBB48_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 7, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB48_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    bgt 0, .LBB48_2
+; CHECK-NEXT:  # %bb.1: # %tr
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    b .LBB48_3
+; CHECK-NEXT:  .LBB48_2: # %fa
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB48_3: # %ret
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
   entry:
-  %r = fcmp uge double %a, %b
-  ret i1 %r
+  %r = alloca i32, align 4
+  %c = fcmp uge double %a, %b
+  br i1 %c, label %tr, label %fa
+tr:
+  store i32 1, i32* %r, align 4
+  br label %ret
+fa:
+  store i32 0, i32* %r, align 4
+  br label %ret
+ret:
+  %0 = load i32, i32* %r, align 4
+  ret i32 %0
 }
 
 define double @test_dselect(double %a, double %b, i1 %c) {
