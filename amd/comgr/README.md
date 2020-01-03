@@ -7,54 +7,56 @@ objects. The API is documented in the [header file](include/amd_comgr.h).
 Build the Code Object Manager
 -----------------------------
 
-Comgr depends on LLVM, and optionally depends on
+Comgr depends on [LLVM](https://github.com/RadeonOpenCompute/llvm-project) and
 [AMDDeviceLibs](https://github.com/RadeonOpenCompute/ROCm-Device-Libs). The
 `CMAKE_PREFIX_PATH` must include either the build directory or install prefix
-of both of these components. Comgr also depends on yaml-cpp, but version
-[0.6.2](https://github.com/jbeder/yaml-cpp/releases/tag/yaml-cpp-0.6.2) is
-included in-tree.
-
-Comgr depends on Clang and LLD, which should be built as a part of the LLVM
-distribution used. The LLVM, Clang, and LLD used must be from the amd-common
-branches of their respective repositories on the [RadeonOpenCompute
-Github](https://github.com/RadeonOpenCompute) organisation.
+of both of these components. Both should be built using sources with the same
+ROCm release tag, or from the amd-stg-open branch. LLVM should be built with at
+least `LLVM_ENABLE_PROJECTS='llvm;clang;lld'` and
+`LLVM_TARGETS_TO_BUILD='AMDGPU;X86'`.
 
 An example command-line to build Comgr on Linux is:
 
-    $ cd ~/llvm/
+    $ cd ~/llvm-project/
     $ mkdir build
     $ cd build
     $ cmake -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=dist \
-        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ..
+        -DLLVM_ENABLE_PROJECTS="llvm;clang;lld" \
+        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ../llvm
     $ make
-    $ make install
-    $ # build AMDDeviceLibs
+    $ cd ~/device-libs/
+    $ mkdir build
+    $ cd build
+    $ cmake -DLLVM_DIR=~/llvm-project/build ..
+    $ make
     $ cd ~/support/lib/comgr
     $ mkdir build
     $ cd build
     $ cmake -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_PREFIX_PATH="~/llvm/build/dist;path/to/device-libs" ..
+        -DCMAKE_PREFIX_PATH="~/llvm/build;~/device-libs/build" ..
     $ make
     $ make test
 
 The equivalent on Windows will use another build tool, such as msbuild or
 Visual Studio:
 
-    $ cd "%HOMEPATH%\llvm"
+    $ cd "%HOMEPATH%\llvm-project"
     $ mkdir build
     $ cd build
     $ cmake -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=dist \
-        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ..
+        -DLLVM_ENABLE_PROJECTS='llvm;clang;lld' \
+        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" "..\llvm"
     $ msbuild ALL_BUILD.vcxproj
-    $ msbuild INSTALL.vcxproj
-    $ rem build AMDDeviceLibs
+    $ cd "%HOMEPATH%\device-libs"
+    $ mkdir build
+    $ cd build
+    $ cmake -DLLVM_DIR="%HOMEPATH%\llvm-project\build" ..
+    $ msbuild ALL_BUILD.vcxproj
     $ cd "%HOMEPATH%\support\lib\comgr"
     $ mkdir build
     $ cd build
     $ cmake -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_PREFIX_PATH="%HOMEPATH%\llvm\build\dist;path\to\device-libs" ..
+        -DCMAKE_PREFIX_PATH="%HOMEPATH%\llvm\build;%HOMEPATH%\device-libs\build" ..
     $ msbuild ALL_BUILD.vcxproj
     $ msbuild RUN_TESTS.vcxproj
 
