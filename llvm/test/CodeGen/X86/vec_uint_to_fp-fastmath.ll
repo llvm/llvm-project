@@ -11,72 +11,90 @@
 ; RUN: llc < %s -mtriple=x86_64 -enable-unsafe-fp-math -mattr=+avx512vl \
 ; RUN:   | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512VL
 
+; Check that the constant used in the vectors are the right ones.
 ; SSE2: [[MASKCSTADDR:.LCPI[0-9_]+]]:
 ; SSE2-NEXT: .long 65535 # 0xffff
 ; SSE2-NEXT: .long 65535 # 0xffff
 ; SSE2-NEXT: .long 65535 # 0xffff
 ; SSE2-NEXT: .long 65535 # 0xffff
 
-; CST: [[FPMASKCSTADDR:.LCPI[0-9_]+]]:
-; CST-NEXT: .long 1199570944 # float 65536
-; CST-NEXT: .long 1199570944 # float 65536
-; CST-NEXT: .long 1199570944 # float 65536
-; CST-NEXT: .long 1199570944 # float 65536
+; CST: [[LOWCSTADDR:.LCPI[0-9_]+]]:
+; CST-NEXT: .long 1258291200 # 0x4b000000
+; CST-NEXT: .long 1258291200 # 0x4b000000
+; CST-NEXT: .long 1258291200 # 0x4b000000
+; CST-NEXT: .long 1258291200 # 0x4b000000
 
-; AVX2: [[FPMASKCSTADDR:.LCPI[0-9_]+]]:
-; AVX2-NEXT: .long 1199570944 # float 65536
+; CST: [[HIGHCSTADDR:.LCPI[0-9_]+]]:
+; CST-NEXT: .long 1392508928 # 0x53000000
+; CST-NEXT: .long 1392508928 # 0x53000000
+; CST-NEXT: .long 1392508928 # 0x53000000
+; CST-NEXT: .long 1392508928 # 0x53000000
+
+; CST: [[MAGICCSTADDR:.LCPI[0-9_]+]]:
+; CST-NEXT: .long 1392509056 # float 5.49764202E+11
+; CST-NEXT: .long 1392509056 # float 5.49764202E+11
+; CST-NEXT: .long 1392509056 # float 5.49764202E+11
+; CST-NEXT: .long 1392509056 # float 5.49764202E+11
+
+; AVX2: [[LOWCSTADDR:.LCPI[0-9_]+]]:
+; AVX2-NEXT: .long 1258291200 # 0x4b000000
+
+; AVX2: [[HIGHCSTADDR:.LCPI[0-9_]+]]:
+; AVX2-NEXT: .long 1392508928 # 0x53000000
+
+; AVX2: [[MAGICCSTADDR:.LCPI[0-9_]+]]:
+; AVX2-NEXT: .long 1392509056 # float 5.49764202E+11
 
 define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; SSE2-LABEL: test_uitofp_v4i32_to_v4f32:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [65535,65535,65535,65535]
-; SSE2-NEXT:    andps %xmm0, %xmm1
-; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
-; SSE2-NEXT:    psrld $16, %xmm0
-; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
-; SSE2-NEXT:    mulps [[FPMASKCSTADDR]](%rip), %xmm0
-; SSE2-NEXT:    addps %xmm1, %xmm0
-; SSE2-NEXT:    retq
+; SSE2: movdqa [[MASKCSTADDR]](%rip), [[MASK:%xmm[0-9]+]]
+; SSE2-NEXT: pand %xmm0, [[MASK]]
+; After this instruction, MASK will have the value of the low parts
+; of the vector.
+; SSE2-NEXT: por [[LOWCSTADDR]](%rip), [[MASK]]
+; SSE2-NEXT: psrld $16, %xmm0
+; SSE2-NEXT: por [[HIGHCSTADDR]](%rip), %xmm0
+; SSE2-NEXT: subps [[MAGICCSTADDR]](%rip), %xmm0
+; SSE2-NEXT: addps [[MASK]], %xmm0
+; SSE2-NEXT: retq
 ;
+; Currently we commute the arguments of the first blend, but this could be
+; improved to match the lowering of the second blend.
 ; SSE41-LABEL: test_uitofp_v4i32_to_v4f32:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
-; SSE41-NEXT:    cvtdq2ps %xmm1, %xmm1
-; SSE41-NEXT:    psrld $16, %xmm0
-; SSE41-NEXT:    cvtdq2ps %xmm0, %xmm0
-; SSE41-NEXT:    mulps [[FPMASKCSTADDR]](%rip), %xmm0
-; SSE41-NEXT:    addps %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; SSE41: movdqa [[LOWCSTADDR]](%rip), [[LOWVEC:%xmm[0-9]+]]
+; SSE41-NEXT: pblendw $85, %xmm0, [[LOWVEC]]
+; SSE41-NEXT: psrld $16, %xmm0
+; SSE41-NEXT: pblendw $170, [[HIGHCSTADDR]](%rip), %xmm0
+; SSE41-NEXT: subps [[MAGICCSTADDR]](%rip), %xmm0
+; SSE41-NEXT: addps [[LOWVEC]], %xmm0
+; SSE41-NEXT: retq
 ;
 ; AVX-LABEL: test_uitofp_v4i32_to_v4f32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
-; AVX-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX-NEXT:    vmulps [[FPMASKCSTADDR]](%rip), %xmm0, %xmm0
-; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX: vpblendw $170, [[LOWCSTADDR]](%rip), %xmm0, [[LOWVEC:%xmm[0-9]+]]
+; AVX-NEXT: vpsrld $16, %xmm0, [[SHIFTVEC:%xmm[0-9]+]]
+; AVX-NEXT: vpblendw $170, [[HIGHCSTADDR]](%rip), [[SHIFTVEC]], [[HIGHVEC:%xmm[0-9]+]]
+; AVX-NEXT: vsubps [[MAGICCSTADDR]](%rip), [[HIGHVEC]], [[TMP:%xmm[0-9]+]]
+; AVX-NEXT: vaddps [[TMP]], [[LOWVEC]], %xmm0
+; AVX-NEXT: retq
 ;
+; The lowering for AVX2 is a bit messy, because we select broadcast
+; instructions, instead of folding the constant loads.
 ; AVX2-LABEL: test_uitofp_v4i32_to_v4f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX2-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; AVX2-NEXT:    vbroadcastss [[FPMASKCSTADDR]](%rip), %xmm2
-; AVX2-NEXT:    vmulps %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
-; AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX2-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    retq
+; AVX2: vpbroadcastd [[LOWCSTADDR]](%rip), [[LOWCST:%xmm[0-9]+]]
+; AVX2-NEXT: vpblendw $170, [[LOWCST]], %xmm0, [[LOWVEC:%xmm[0-9]+]]
+; AVX2-NEXT: vpsrld $16, %xmm0, [[SHIFTVEC:%xmm[0-9]+]]
+; AVX2-NEXT: vpbroadcastd [[HIGHCSTADDR]](%rip), [[HIGHCST:%xmm[0-9]+]]
+; AVX2-NEXT: vpblendw $170, [[HIGHCST]], [[SHIFTVEC]], [[HIGHVEC:%xmm[0-9]+]]
+; AVX2-NEXT: vbroadcastss [[MAGICCSTADDR]](%rip), [[MAGICCST:%xmm[0-9]+]]
+; AVX2-NEXT: vsubps [[MAGICCST]], [[HIGHVEC]], [[TMP:%xmm[0-9]+]]
+; AVX2-NEXT: vaddps [[TMP]], [[LOWVEC]], %xmm0
+; AVX2-NEXT: retq
 ;
 ; AVX512F-LABEL: test_uitofp_v4i32_to_v4f32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512F-NEXT:    # kill
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -88,86 +106,76 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
   ret <4 x float> %tmp
 }
 
-; AVX: [[FPMASKCSTADDR_v8:.LCPI[0-9_]+]]:
-; AVX-NEXT: .long 1199570944 # float 65536
-; AVX-NEXT: .long 1199570944 # float 65536
-; AVX-NEXT: .long 1199570944 # float 65536
-; AVX-NEXT: .long 1199570944 # float 65536
+; Match the AVX2 constants used in the next function
+; AVX2: [[LOWCSTADDR:.LCPI[0-9_]+]]:
+; AVX2-NEXT: .long 1258291200 # 0x4b000000
 
-; AVX: [[MASKCSTADDR_v8:.LCPI[0-9_]+]]:
-; AVX-NEXT: .long 65535 # 0xffff
-; AVX-NEXT: .long 65535 # 0xffff
-; AVX-NEXT: .long 65535 # 0xffff
-; AVX-NEXT: .long 65535 # 0xffff
+; AVX2: [[HIGHCSTADDR:.LCPI[0-9_]+]]:
+; AVX2-NEXT: .long 1392508928 # 0x53000000
 
-; AVX2: [[FPMASKCSTADDR_v8:.LCPI[0-9_]+]]:
-; AVX2-NEXT: .long 1199570944 # float 65536
+; AVX2: [[MAGICCSTADDR:.LCPI[0-9_]+]]:
+; AVX2-NEXT: .long 1392509056 # float 5.49764202E+11
 
 define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
+; Legalization will break the thing is 2 x <4 x i32> on anthing prior AVX.
+; The constant used for in the vector instruction are shared between the
+; two sequences of instructions.
+;
 ; SSE2-LABEL: test_uitofp_v8i32_to_v8f32:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    psrld $16, %xmm2
-; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
-; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
-; SSE2-NEXT:    mulps %xmm3, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm4, %xmm0
-; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
-; SSE2-NEXT:    addps %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    psrld $16, %xmm2
-; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
-; SSE2-NEXT:    mulps %xmm3, %xmm2
-; SSE2-NEXT:    pand %xmm4, %xmm1
-; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
-; SSE2-NEXT:    addps %xmm2, %xmm1
-; SSE2-NEXT:    retq
+; SSE2: movdqa {{.*#+}} [[MASK:xmm[0-9]+]] = [65535,65535,65535,65535]
+; SSE2-NEXT: movdqa %xmm0, [[VECLOW:%xmm[0-9]+]]
+; SSE2-NEXT: pand %[[MASK]], [[VECLOW]]
+; SSE2-NEXT: movdqa {{.*#+}} [[LOWCST:xmm[0-9]+]] = [1258291200,1258291200,1258291200,1258291200]
+; SSE2-NEXT: por %[[LOWCST]], [[VECLOW]]
+; SSE2-NEXT: psrld $16, %xmm0
+; SSE2-NEXT: movdqa {{.*#+}} [[HIGHCST:xmm[0-9]+]] = [1392508928,1392508928,1392508928,1392508928]
+; SSE2-NEXT: por %[[HIGHCST]], %xmm0
+; SSE2-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [5.49764202E+11,5.49764202E+11,5.49764202E+11,5.49764202E+11]
+; SSE2-NEXT: subps %[[MAGICCST]], %xmm0
+; SSE2-NEXT: addps [[VECLOW]], %xmm0
+; MASK is the low vector of the second part after this point.
+; SSE2-NEXT: pand %xmm1, %[[MASK]]
+; SSE2-NEXT: por %[[LOWCST]], %[[MASK]]
+; SSE2-NEXT: psrld $16, %xmm1
+; SSE2-NEXT: por %[[HIGHCST]], %xmm1
+; SSE2-NEXT: subps %[[MAGICCST]], %xmm1
+; SSE2-NEXT: addps %[[MASK]], %xmm1
+; SSE2-NEXT: retq
 ;
 ; SSE41-LABEL: test_uitofp_v8i32_to_v8f32:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    psrld $16, %xmm2
-; SSE41-NEXT:    cvtdq2ps %xmm2, %xmm2
-; SSE41-NEXT:    movaps {{.*#+}} xmm3 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
-; SSE41-NEXT:    mulps %xmm3, %xmm2
-; SSE41-NEXT:    pxor %xmm4, %xmm4
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm4[1],xmm0[2],xmm4[3],xmm0[4],xmm4[5],xmm0[6],xmm4[7]
-; SSE41-NEXT:    cvtdq2ps %xmm0, %xmm0
-; SSE41-NEXT:    addps %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm1, %xmm2
-; SSE41-NEXT:    psrld $16, %xmm2
-; SSE41-NEXT:    cvtdq2ps %xmm2, %xmm2
-; SSE41-NEXT:    mulps %xmm3, %xmm2
-; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0],xmm4[1],xmm1[2],xmm4[3],xmm1[4],xmm4[5],xmm1[6],xmm4[7]
-; SSE41-NEXT:    cvtdq2ps %xmm1, %xmm1
-; SSE41-NEXT:    addps %xmm2, %xmm1
-; SSE41-NEXT:    retq
+; SSE41: movdqa {{.*#+}} [[LOWCST:xmm[0-9]+]] = [1258291200,1258291200,1258291200,1258291200]
+; SSE41-NEXT: movdqa %xmm0, [[VECLOW:%xmm[0-9]+]]
+; SSE41-NEXT: pblendw $170, %[[LOWCST]], [[VECLOW]]
+; SSE41-NEXT: psrld $16, %xmm0
+; SSE41-NEXT: movdqa {{.*#+}} [[HIGHCST:xmm[0-9]+]] = [1392508928,1392508928,1392508928,1392508928]
+; SSE41-NEXT: pblendw $170, %[[HIGHCST]], %xmm0
+; SSE41-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [5.49764202E+11,5.49764202E+11,5.49764202E+11,5.49764202E+11]
+; SSE41-NEXT: subps %[[MAGICCST]], %xmm0
+; SSE41-NEXT: addps [[VECLOW]], %xmm0
+; LOWCST is the low vector of the second part after this point.
+; The operands of the blend are inverted because we reuse xmm1
+; in the next shift.
+; SSE41-NEXT: pblendw $85, %xmm1, %[[LOWCST]]
+; SSE41-NEXT: psrld $16, %xmm1
+; SSE41-NEXT: pblendw $170, %[[HIGHCST]], %xmm1
+; SSE41-NEXT: subps %[[MAGICCST]], %xmm1
+; SSE41-NEXT: addps %[[LOWCST]], %xmm1
+; SSE41-NEXT: retq
 ;
-; AVX-LABEL: test_uitofp_v8i32_to_v8f32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vpsrld $16, %xmm2, %xmm2
-; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX-NEXT:    vcvtdq2ps %ymm1, %ymm1
-; AVX-NEXT:    vmulps [[FPMASKCSTADDR_v8]](%rip), %ymm1, %ymm1
-; AVX-NEXT:    vandps [[MASKCSTADDR_v8]](%rip), %ymm0, %ymm0
-; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX-NEXT:    vaddps %ymm0, %ymm1, %ymm0
-; AVX-NEXT:    retq
+; Test that we are not lowering uinttofp to scalars
+; AVX-NOT: cvtsd2ss
+; AVX: retq
 ;
 ; AVX2-LABEL: test_uitofp_v8i32_to_v8f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm1
-; AVX2-NEXT:    vcvtdq2ps %ymm1, %ymm1
-; AVX2-NEXT:    vbroadcastss [[FPMASKCSTADDR_v8]](%rip), %ymm2
-; AVX2-NEXT:    vmulps %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7],ymm0[8],ymm2[9],ymm0[10],ymm2[11],ymm0[12],ymm2[13],ymm0[14],ymm2[15]
-; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX2-NEXT:    vaddps %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    retq
+; AVX2: vpbroadcastd [[LOWCSTADDR]](%rip), [[LOWCST:%ymm[0-9]+]]
+; AVX2-NEXT: vpblendw $170, [[LOWCST]], %ymm0, [[LOWVEC:%ymm[0-9]+]]
+; AVX2-NEXT: vpsrld $16, %ymm0, [[SHIFTVEC:%ymm[0-9]+]]
+; AVX2-NEXT: vpbroadcastd [[HIGHCSTADDR]](%rip), [[HIGHCST:%ymm[0-9]+]]
+; AVX2-NEXT: vpblendw $170, [[HIGHCST]], [[SHIFTVEC]], [[HIGHVEC:%ymm[0-9]+]]
+; AVX2-NEXT: vbroadcastss [[MAGICCSTADDR]](%rip), [[MAGICCST:%ymm[0-9]+]]
+; AVX2-NEXT: vsubps [[MAGICCST]], [[HIGHVEC]], [[TMP:%ymm[0-9]+]]
+; AVX2-NEXT: vaddps [[TMP]], [[LOWVEC]], %ymm0
+; AVX2-NEXT: retq
 ;
 ; AVX512F-LABEL: test_uitofp_v8i32_to_v8f32:
 ; AVX512F:       # %bb.0:
