@@ -1,5 +1,5 @@
-; RUN: llc -disable-strictnode-mutation < %s -mtriple=i686-unknown-unknown -mattr=+avx512f -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-32
-; RUN: llc -disable-strictnode-mutation < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-64
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512f -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-32
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-64
 
 define <16 x i32> @test_v16f32_oeq_q(<16 x i32> %a, <16 x i32> %b, <16 x float> %f1, <16 x float> %f2) #0 {
 ; AVX512-32-LABEL: test_v16f32_oeq_q:

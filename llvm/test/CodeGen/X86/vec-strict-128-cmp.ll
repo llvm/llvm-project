@@ -1,9 +1,9 @@
-; RUN: llc -disable-strictnode-mutation < %s -mtriple=i686-unknown-unknown -mattr=+sse2 -O3 | FileCheck %s --check-prefixes=CHECK,SSE
-; RUN: llc -disable-strictnode-mutation < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 -O3 | FileCheck %s --check-prefixes=CHECK,SSE
-; RUN: llc -disable-strictnode-mutation < %s -mtriple=i686-unknown-unknown -mattr=+avx -O3 | FileCheck %s --check-prefixes=CHECK,AVX
-; RUN: llc -disable-strictnode-mutation < %s -mtriple=x86_64-unknown-unknown -mattr=+avx -O3 | FileCheck %s --check-prefixes=CHECK,AVX
-; RUN: llc -disable-strictnode-mutation < %s -mtriple=i686-unknown-unknown -mattr=+avx512f -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-32
-; RUN: llc -disable-strictnode-mutation < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-64
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse2 -O3 | FileCheck %s --check-prefixes=CHECK,SSE
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 -O3 | FileCheck %s --check-prefixes=CHECK,SSE
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx -O3 | FileCheck %s --check-prefixes=CHECK,AVX
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx -O3 | FileCheck %s --check-prefixes=CHECK,AVX
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512f -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-32
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-64
 
 define <4 x i32> @test_v4f32_oeq_q(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, <4 x float> %f2) #0 {
 ; SSE-LABEL: test_v4f32_oeq_q:
