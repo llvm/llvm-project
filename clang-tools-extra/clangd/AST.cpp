@@ -8,8 +8,10 @@
 
 #include "AST.h"
 
+#include "FindTarget.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -299,32 +301,21 @@ llvm::Optional<SymbolID> getSymbolID(const llvm::StringRef MacroName,
   return SymbolID(USR);
 }
 
-std::string shortenNamespace(const llvm::StringRef OriginalName,
-                             const llvm::StringRef CurrentNamespace) {
-  llvm::SmallVector<llvm::StringRef, 8> OriginalParts;
-  llvm::SmallVector<llvm::StringRef, 8> CurrentParts;
-  llvm::SmallVector<llvm::StringRef, 8> Result;
-  OriginalName.split(OriginalParts, "::");
-  CurrentNamespace.split(CurrentParts, "::");
-  auto MinLength = std::min(CurrentParts.size(), OriginalParts.size());
-
-  unsigned DifferentAt = 0;
-  while (DifferentAt < MinLength &&
-         CurrentParts[DifferentAt] == OriginalParts[DifferentAt]) {
-    DifferentAt++;
-  }
-
-  for (unsigned i = DifferentAt; i < OriginalParts.size(); ++i) {
-    Result.push_back(OriginalParts[i]);
-  }
-  return join(Result, "::");
-}
-
-std::string printType(const QualType QT, const DeclContext &Context) {
-  PrintingPolicy PP(Context.getParentASTContext().getPrintingPolicy());
-  PP.SuppressUnwrittenScope = 1;
-  PP.SuppressTagKeyword = 1;
-  return shortenNamespace(QT.getAsString(PP), printNamespaceScope(Context));
+// FIXME: This should be handled while printing underlying decls instead.
+std::string printType(const QualType QT, const DeclContext &CurContext) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  auto Decls = explicitReferenceTargets(
+      ast_type_traits::DynTypedNode::create(QT), DeclRelation::Alias);
+  if (!Decls.empty())
+    OS << getQualification(CurContext.getParentASTContext(), &CurContext,
+                           Decls.front(),
+                           /*VisibleNamespaces=*/llvm::ArrayRef<std::string>{});
+  PrintingPolicy PP(CurContext.getParentASTContext().getPrintingPolicy());
+  PP.SuppressScope = true;
+  PP.SuppressTagKeyword = true;
+  QT.print(OS, PP);
+  return OS.str();
 }
 
 QualType declaredType(const TypeDecl *D) {
@@ -464,7 +455,7 @@ std::string getQualification(ASTContext &Context,
 
 std::string getQualification(ASTContext &Context,
                              const DeclContext *DestContext,
-                             SourceLocation InsertionPoint, const NamedDecl *ND,
+                             const NamedDecl *ND,
                              llvm::ArrayRef<std::string> VisibleNamespaces) {
   for (llvm::StringRef NS : VisibleNamespaces) {
     assert(NS.endswith("::"));

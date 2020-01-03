@@ -15,6 +15,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
@@ -24,29 +25,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-
-TEST(ShortenNamespace, All) {
-  ASSERT_EQ("TestClass", shortenNamespace("TestClass", ""));
-
-  ASSERT_EQ("TestClass", shortenNamespace(
-      "testnamespace::TestClass", "testnamespace"));
-
-  ASSERT_EQ(
-      "namespace1::TestClass",
-      shortenNamespace("namespace1::TestClass", "namespace2"));
-
-  ASSERT_EQ("TestClass",
-            shortenNamespace("testns1::testns2::TestClass",
-                             "testns1::testns2"));
-
-  ASSERT_EQ(
-      "testns2::TestClass",
-      shortenNamespace("testns1::testns2::TestClass", "testns1"));
-
-  ASSERT_EQ("TestClass<testns1::OtherClass>",
-            shortenNamespace(
-                "testns1::TestClass<testns1::OtherClass>", "testns1"));
-}
 
 TEST(GetDeducedType, KwAutoExpansion) {
   struct Test {
@@ -166,14 +144,70 @@ TEST(ClangdAST, GetQualification) {
                   Case.Qualifications[I]);
       } else {
         EXPECT_EQ(getQualification(AST.getASTContext(),
-                                   D->getLexicalDeclContext(), D->getBeginLoc(),
-                                   TargetDecl, Case.VisibleNamespaces),
+                                   D->getLexicalDeclContext(), TargetDecl,
+                                   Case.VisibleNamespaces),
                   Case.Qualifications[I]);
       }
     }
   }
 }
 
+TEST(ClangdAST, PrintType) {
+  const struct {
+    llvm::StringRef Test;
+    std::vector<llvm::StringRef> Types;
+  } Cases[] = {
+      {
+          R"cpp(
+            namespace ns1 { namespace ns2 { class Foo {}; } }
+            void insert(); // ns1::ns2::Foo
+            namespace ns1 {
+              void insert(); // ns2::Foo
+              namespace ns2 {
+                void insert(); // Foo
+              }
+            }
+          )cpp",
+          {"ns1::ns2::Foo", "ns2::Foo", "Foo"},
+      },
+      {
+          R"cpp(
+            namespace ns1 {
+              typedef int Foo;
+            }
+            void insert(); // ns1::Foo
+            namespace ns1 {
+              void insert(); // Foo
+            }
+          )cpp",
+          {"ns1::Foo", "Foo"},
+      },
+  };
+  for (const auto &Case : Cases) {
+    Annotations Test(Case.Test);
+    TestTU TU = TestTU::withCode(Test.code());
+    ParsedAST AST = TU.build();
+    std::vector<const DeclContext *> InsertionPoints;
+    const TypeDecl *TargetDecl = nullptr;
+    findDecl(AST, [&](const NamedDecl &ND) {
+      if (ND.getNameAsString() == "Foo") {
+        if (const auto *TD = llvm::dyn_cast<TypeDecl>(&ND)) {
+          TargetDecl = TD;
+          return true;
+        }
+      } else if (ND.getNameAsString() == "insert")
+        InsertionPoints.push_back(ND.getDeclContext());
+      return false;
+    });
+
+    ASSERT_EQ(InsertionPoints.size(), Case.Types.size());
+    for (size_t I = 0, E = InsertionPoints.size(); I != E; ++I) {
+      const auto *DC = InsertionPoints[I];
+      EXPECT_EQ(printType(AST.getASTContext().getTypeDeclType(TargetDecl), *DC),
+                Case.Types[I]);
+    }
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

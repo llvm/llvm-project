@@ -1879,6 +1879,16 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
           Y, Builder.CreateNot(Op1, Op1->getName() + ".not"));
   }
 
+  {
+    // (sub (and Op1, (neg X)), Op1) --> neg (and Op1, (add X, -1))
+    Value *X;
+    if (match(Op0, m_OneUse(m_c_And(m_Specific(Op1),
+                                    m_OneUse(m_Neg(m_Value(X))))))) {
+      return BinaryOperator::CreateNeg(Builder.CreateAnd(
+          Op1, Builder.CreateAdd(X, Constant::getAllOnesValue(I.getType()))));
+    }
+  }
+
   if (Op1->hasOneUse()) {
     Value *X = nullptr, *Y = nullptr, *Z = nullptr;
     Constant *C = nullptr;

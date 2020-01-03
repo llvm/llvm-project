@@ -86,15 +86,12 @@ llvm::DenseSet<const Decl *> locateDeclAt(ParsedAST &AST,
     return {};
 
   llvm::DenseSet<const Decl *> Result;
-  for (const auto *D :
+  for (const NamedDecl *D :
        targetDecl(SelectedNode->ASTNode,
                   DeclRelation::Alias | DeclRelation::TemplatePattern)) {
-    const auto *ND = llvm::dyn_cast<NamedDecl>(D);
-    if (!ND)
-      continue;
     // Get to CXXRecordDecl from constructor or destructor.
-    ND = tooling::getCanonicalSymbolDeclaration(ND);
-    Result.insert(ND);
+    D = tooling::getCanonicalSymbolDeclaration(D);
+    Result.insert(D);
   }
   return Result;
 }

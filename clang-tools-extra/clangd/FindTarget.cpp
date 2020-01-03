@@ -119,10 +119,10 @@ getMembersReferencedViaDependentName(const Type *T, const DeclarationName &Name,
 struct TargetFinder {
   using RelSet = DeclRelationSet;
   using Rel = DeclRelation;
-  llvm::SmallDenseMap<const Decl *, RelSet> Decls;
+  llvm::SmallDenseMap<const NamedDecl *, RelSet> Decls;
   RelSet Flags;
 
-  static const Decl *getTemplatePattern(const Decl *D) {
+  static const NamedDecl *getTemplatePattern(const NamedDecl *D) {
     if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(D)) {
       return CRD->getTemplateInstantiationPattern();
     } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
@@ -134,12 +134,12 @@ struct TargetFinder {
     } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
       return ED->getInstantiatedFromMemberEnum();
     } else if (isa<FieldDecl>(D) || isa<TypedefNameDecl>(D)) {
-      const auto *ND = cast<NamedDecl>(D);
-      if (const DeclContext *Parent = dyn_cast_or_null<DeclContext>(
-              getTemplatePattern(llvm::cast<Decl>(ND->getDeclContext()))))
-        for (const NamedDecl *BaseND : Parent->lookup(ND->getDeclName()))
-          if (!BaseND->isImplicit() && BaseND->getKind() == ND->getKind())
-            return BaseND;
+      if (const auto *Parent = llvm::dyn_cast<NamedDecl>(D->getDeclContext()))
+        if (const DeclContext *ParentPat =
+                dyn_cast_or_null<DeclContext>(getTemplatePattern(Parent)))
+          for (const NamedDecl *BaseND : ParentPat->lookup(D->getDeclName()))
+            if (!BaseND->isImplicit() && BaseND->getKind() == D->getKind())
+              return BaseND;
     } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
       if (const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext())) {
         if (const EnumDecl *Pattern = ED->getInstantiatedFromMemberEnum()) {
@@ -156,14 +156,15 @@ struct TargetFinder {
          nodeToString(ast_type_traits::DynTypedNode::create(Node)));
   }
 
-  void report(const Decl *D, RelSet Flags) {
+  void report(const NamedDecl *D, RelSet Flags) {
     dlog("--> [{0}] {1}", Flags,
          nodeToString(ast_type_traits::DynTypedNode::create(*D)));
     Decls[D] |= Flags;
   }
 
 public:
-  void add(const Decl *D, RelSet Flags) {
+  void add(const Decl *Dcl, RelSet Flags) {
+    const NamedDecl *D = llvm::dyn_cast<NamedDecl>(Dcl);
     if (!D)
       return;
     debug(*D, Flags);
@@ -405,7 +406,7 @@ public:
 
 } // namespace
 
-llvm::SmallVector<std::pair<const Decl *, DeclRelationSet>, 1>
+llvm::SmallVector<std::pair<const NamedDecl *, DeclRelationSet>, 1>
 allTargetDecls(const ast_type_traits::DynTypedNode &N) {
   dlog("allTargetDecls({0})", nodeToString(N));
   TargetFinder Finder;
@@ -428,9 +429,9 @@ allTargetDecls(const ast_type_traits::DynTypedNode &N) {
   return {Finder.Decls.begin(), Finder.Decls.end()};
 }
 
-llvm::SmallVector<const Decl *, 1>
+llvm::SmallVector<const NamedDecl *, 1>
 targetDecl(const ast_type_traits::DynTypedNode &N, DeclRelationSet Mask) {
-  llvm::SmallVector<const Decl *, 1> Result;
+  llvm::SmallVector<const NamedDecl *, 1> Result;
   for (const auto &Entry : allTargetDecls(N)) {
     if (!(Entry.second & ~Mask))
       Result.push_back(Entry.first);
@@ -456,12 +457,12 @@ explicitReferenceTargets(DynTypedNode N, DeclRelationSet Mask) {
     if (D.second & ~Mask)
       continue;
     if (D.second & DeclRelation::TemplatePattern) {
-      TemplatePatterns.push_back(llvm::cast<NamedDecl>(D.first));
+      TemplatePatterns.push_back(D.first);
       continue;
     }
     if (D.second & DeclRelation::TemplateInstantiation)
       SeenTemplateInstantiations = true;
-    Targets.push_back(llvm::cast<NamedDecl>(D.first));
+    Targets.push_back(D.first);
   }
   if (!SeenTemplateInstantiations)
     Targets.insert(Targets.end(), TemplatePatterns.begin(),

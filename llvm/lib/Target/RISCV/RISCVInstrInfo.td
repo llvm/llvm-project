@@ -898,7 +898,7 @@ def : Pat<(brind GPR:$rs1), (PseudoBRIND GPR:$rs1, 0)>;
 def : Pat<(brind (add GPR:$rs1, simm12:$imm12)),
           (PseudoBRIND GPR:$rs1, simm12:$imm12)>;
 
-// PsuedoCALLReg is a generic pseudo instruction for calls which will eventually
+// PseudoCALLReg is a generic pseudo instruction for calls which will eventually
 // expand to auipc and jalr while encoding, with any given register used as the
 // destination.
 // Define AsmString to print "call" when compile with -S flag.

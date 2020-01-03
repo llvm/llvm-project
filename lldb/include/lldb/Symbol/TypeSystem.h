@@ -49,7 +49,25 @@ struct LanguageSet {
   bool operator[](unsigned i) const;
 };
 
-/// Interface for representing the Type Systems in different languages.
+/// Interface for representing a type system.
+///
+/// Implemented by language plugins to define the type system for a given
+/// language.
+///
+/// This interface extensively used opaque pointers to prevent that generic
+/// LLDB code has dependencies on language plugins. The type and semantics of
+/// these opaque pointers are defined by the TypeSystem implementation inside
+/// the respective language plugin. Opaque pointers from one TypeSystem
+/// instance should never be passed to a different TypeSystem instance (even
+/// when the language plugin for both TypeSystem instances is the same).
+///
+/// Most of the functions in this class should not be called directly but only
+/// called by their respective counterparts in CompilerType, CompilerDecl and
+/// CompilerDeclContext.
+///
+/// \see lldb_private::CompilerType
+/// \see lldb_private::CompilerDecl
+/// \see lldb_private::CompilerDeclContext
 class TypeSystem : public PluginInterface {
 public:
   // Constructors and Destructors

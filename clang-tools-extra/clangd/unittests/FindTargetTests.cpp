@@ -34,7 +34,7 @@ namespace {
 struct PrintedDecl {
   PrintedDecl(const char *Name, DeclRelationSet Relations = {})
       : Name(Name), Relations(Relations) {}
-  PrintedDecl(const Decl *D, DeclRelationSet Relations = {})
+  PrintedDecl(const NamedDecl *D, DeclRelationSet Relations = {})
       : Relations(Relations) {
     std::string S;
     llvm::raw_string_ostream OS(S);

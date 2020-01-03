@@ -17,7 +17,6 @@ namespace Builtin {
 class Context;
 }
 
-class Action;
 class ASTConsumer;
 class ASTContext;
 class ASTRecordLayout;

@@ -196,14 +196,6 @@ parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
   int FormatCount = DebugLineData.getU8(OffsetPtr);
   bool HasPath = false;
   for (int I = 0; I != FormatCount; ++I) {
-    if (*OffsetPtr >= EndPrologueOffset)
-      return createStringError(
-          errc::invalid_argument,
-          "failed to parse entry content descriptions at offset "
-          "0x%8.8" PRIx64
-          " because offset extends beyond the prologue end at offset "
-          "0x%8.8" PRIx64,
-          *OffsetPtr, EndPrologueOffset);
     ContentDescriptor Descriptor;
     Descriptor.Type =
       dwarf::LineNumberEntryFormat(DebugLineData.getULEB128(OffsetPtr));
@@ -239,14 +231,6 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
   // Get the directory entries, according to the format described above.
   int DirEntryCount = DebugLineData.getU8(OffsetPtr);
   for (int I = 0; I != DirEntryCount; ++I) {
-    if (*OffsetPtr >= EndPrologueOffset)
-      return createStringError(
-          errc::invalid_argument,
-          "failed to parse directory entry at offset "
-          "0x%8.8" PRIx64
-          " because offset extends beyond the prologue end at offset "
-          "0x%8.8" PRIx64,
-          *OffsetPtr, EndPrologueOffset);
     for (auto Descriptor : *DirDescriptors) {
       DWARFFormValue Value(Descriptor.Form);
       switch (Descriptor.Type) {
@@ -275,14 +259,6 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
   // Get the file entries, according to the format described above.
   int FileEntryCount = DebugLineData.getU8(OffsetPtr);
   for (int I = 0; I != FileEntryCount; ++I) {
-    if (*OffsetPtr >= EndPrologueOffset)
-      return createStringError(
-          errc::invalid_argument,
-          "failed to parse file entry at offset "
-          "0x%8.8" PRIx64
-          " because offset extends beyond the prologue end at offset "
-          "0x%8.8" PRIx64,
-          *OffsetPtr, EndPrologueOffset);
     DWARFDebugLine::FileNameEntry FileEntry;
     for (auto Descriptor : *FileDescriptors) {
       DWARFFormValue Value(Descriptor.Form);
@@ -1050,7 +1026,10 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
   if (Kind == FileLineInfoKind::None || !hasFileAtIndex(FileIndex))
     return false;
   const FileNameEntry &Entry = getFileNameEntry(FileIndex);
-  StringRef FileName = Entry.Name.getAsCString().getValue();
+  Optional<const char *> Name = Entry.Name.getAsCString();
+  if (!Name)
+    return false;
+  StringRef FileName = *Name;
   if (Kind != FileLineInfoKind::AbsoluteFilePath ||
       isPathAbsoluteOnWindowsOrPosix(FileName)) {
     Result = FileName;
