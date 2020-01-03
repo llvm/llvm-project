@@ -157,56 +157,6 @@ class WatchpointCommandsTestCase(TestBase):
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
-    def test_rw_watchpoint_delete(self):
-        """Test delete watchpoint and expect not to stop for watchpoint."""
-        self.build(dictionary=self.d)
-        self.setTearDownCleanup(dictionary=self.d)
-
-        exe = self.getBuildArtifact(self.exe_name)
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
-        lldbutil.run_break_set_by_file_and_line(
-            self, None, self.line, num_expected_locations=1)
-
-        # Run the program.
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # We should be stopped again due to the breakpoint.
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
-
-        # Now let's set a read_write-type watchpoint for 'global'.
-        # There should be two watchpoint hits (see main.c).
-        self.expect(
-            "watchpoint set variable -w read_write global",
-            WATCHPOINT_CREATED,
-            substrs=[
-                'Watchpoint created',
-                'size = 4',
-                'type = rw',
-                '%s:%d' %
-                (self.source,
-                 self.decl)])
-
-        # Delete the watchpoint immediately using the force option.
-        self.expect("watchpoint delete --force",
-                    substrs=['All watchpoints removed.'])
-
-        # Use the '-v' option to do verbose listing of the watchpoint.
-        self.runCmd("watchpoint list -v")
-
-        self.runCmd("process continue")
-
-        # There should be no more watchpoint hit and the process status should
-        # be 'exited'.
-        self.expect("process status",
-                    substrs=['exited'])
-
-    # Read-write watchpoints not supported on SystemZ
-    @expectedFailureAll(archs=['s390x'])
     def test_rw_watchpoint_set_ignore_count(self):
         """Test watchpoint ignore count and expect to not to stop at all."""
         self.build(dictionary=self.d)
