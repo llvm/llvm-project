@@ -205,6 +205,7 @@ MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
 
 BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
+  Reserved.set(AMDGPU::MODE);
 
   // EXEC_LO and EXEC_HI could be allocated and used as regular register, but
   // this seems likely to result in bugs, so I'm marking them as reserved.
@@ -1648,15 +1649,16 @@ SIRegisterInfo::getRegClassForReg(const MachineRegisterInfo &MRI,
 bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
                             Register Reg) const {
   const TargetRegisterClass *RC = getRegClassForReg(MRI, Reg);
-  assert(RC && "Register class for the reg not found");
-  return hasVGPRs(RC);
+  // Registers without classes are unaddressable, SGPR-like registers.
+  return RC && hasVGPRs(RC);
 }
 
 bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
                             Register Reg) const {
   const TargetRegisterClass *RC = getRegClassForReg(MRI, Reg);
-  assert(RC && "Register class for the reg not found");
-  return hasAGPRs(RC);
+
+  // Registers without classes are unaddressable, SGPR-like registers.
+  return RC && hasAGPRs(RC);
 }
 
 bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
