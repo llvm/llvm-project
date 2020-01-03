@@ -822,12 +822,12 @@ getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
   int64_t Offset;
   if (Def->getOpcode() == AMDGPU::G_ADD) {
     // TODO: Handle G_OR used for add case
-    if (mi_match(Def->getOperand(1).getReg(), MRI, m_ICst(Offset)))
-      return std::make_tuple(Def->getOperand(0).getReg(), Offset, Def);
+    if (mi_match(Def->getOperand(2).getReg(), MRI, m_ICst(Offset)))
+      return std::make_tuple(Def->getOperand(1).getReg(), Offset, Def);
 
     // FIXME: matcher should ignore copies
-    if (mi_match(Def->getOperand(1).getReg(), MRI, m_Copy(m_ICst(Offset))))
-      return std::make_tuple(Def->getOperand(0).getReg(), Offset, Def);
+    if (mi_match(Def->getOperand(2).getReg(), MRI, m_Copy(m_ICst(Offset))))
+      return std::make_tuple(Def->getOperand(1).getReg(), Offset, Def);
   }
 
   return std::make_tuple(Reg, 0, Def);
