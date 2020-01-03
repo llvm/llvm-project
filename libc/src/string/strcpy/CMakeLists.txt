@@ -7,13 +7,3 @@ add_entrypoint_object(
   DEPENDS
     string_h
 )
-
-add_libc_unittest(
-  strcpy_test
-  SUITE
-    libc_string_unittests
-  SRCS
-    strcpy_test.cpp
-  DEPENDS
-    strcpy
-)

@@ -8,14 +8,3 @@ add_entrypoint_object(
     strcpy
     string_h
 )
-
-add_libc_unittest(
-  strcat_test
-  SUITE
-    libc_string_unittests
-  SRCS
-    strcat_test.cpp
-  DEPENDS
-    strcat
-    strcpy
-)
