@@ -119,7 +119,7 @@ ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::JumpTable, MVT::i32, Custom);
 
-  // Have psuedo instruction for frame addresses.
+  // Have pseudo instruction for frame addresses.
   setOperationAction(ISD::FRAMEADDR, MVT::i32, Legal);
   // Custom lower global addresses.
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
