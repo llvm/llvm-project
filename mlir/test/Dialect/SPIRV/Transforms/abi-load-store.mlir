@@ -19,34 +19,34 @@ spv.module "Logical" "GLSL450" {
   // CHECK-DAG: spv.globalVariable [[VAR6:@.*]] bind(0, 6) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
   // CHECK: func [[FN:@.*]]()
   func @load_store_kernel(%arg0: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
-                          {spirv.interface_var_abi = {binding = 0 : i32,
-                                                      descriptor_set = 0 : i32,
-                                                      storage_class = 12 : i32}},
+                          {spv.interface_var_abi = {binding = 0 : i32,
+                                                    descriptor_set = 0 : i32,
+                                                    storage_class = 12 : i32}},
                           %arg1: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
-                          {spirv.interface_var_abi = {binding = 1 : i32,
-                                                      descriptor_set = 0 : i32,
-                                                      storage_class = 12 : i32}},
+                          {spv.interface_var_abi = {binding = 1 : i32,
+                                                    descriptor_set = 0 : i32,
+                                                    storage_class = 12 : i32}},
                           %arg2: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
-                          {spirv.interface_var_abi = {binding = 2 : i32,
-                                                      descriptor_set = 0 : i32,
-                                                      storage_class = 12 : i32}},
+                          {spv.interface_var_abi = {binding = 2 : i32,
+                                                    descriptor_set = 0 : i32,
+                                                    storage_class = 12 : i32}},
                           %arg3: i32
-                          {spirv.interface_var_abi = {binding = 3 : i32,
-                                                      descriptor_set = 0 : i32,
-                                                      storage_class = 12 : i32}},
+                          {spv.interface_var_abi = {binding = 3 : i32,
+                                                    descriptor_set = 0 : i32,
+                                                    storage_class = 12 : i32}},
                           %arg4: i32
-                          {spirv.interface_var_abi = {binding = 4 : i32,
-                                                      descriptor_set = 0 : i32,
-                                                      storage_class = 12 : i32}},
+                          {spv.interface_var_abi = {binding = 4 : i32,
+                                                    descriptor_set = 0 : i32,
+                                                    storage_class = 12 : i32}},
                           %arg5: i32
-                          {spirv.interface_var_abi = {binding = 5 : i32,
-                                                      descriptor_set = 0 : i32,
-                                                      storage_class = 12 : i32}},
+                          {spv.interface_var_abi = {binding = 5 : i32,
+                                                    descriptor_set = 0 : i32,
+                                                    storage_class = 12 : i32}},
                           %arg6: i32
-                          {spirv.interface_var_abi = {binding = 6 : i32,
-                                                      descriptor_set = 0 : i32,
-                                                      storage_class = 12 : i32}})
-  attributes  {spirv.entry_point_abi = {local_size = dense<[32, 1, 1]> : vector<3xi32>}} {
+                          {spv.interface_var_abi = {binding = 6 : i32,
+                                                    descriptor_set = 0 : i32,
+                                                    storage_class = 12 : i32}})
+  attributes  {spv.entry_point_abi = {local_size = dense<[32, 1, 1]> : vector<3xi32>}} {
     // CHECK: [[ADDRESSARG6:%.*]] = spv._address_of [[VAR6]]
     // CHECK: [[CONST6:%.*]] = spv.constant 0 : i32
     // CHECK: [[ARG6PTR:%.*]] = spv.AccessChain [[ADDRESSARG6]]{{\[}}[[CONST6]]
