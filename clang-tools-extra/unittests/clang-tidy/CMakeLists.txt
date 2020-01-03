@@ -29,7 +29,6 @@ clang_target_link_libraries(ClangTidyTests
   clangBasic
   clangFrontend
   clangLex
-  clangSema
   clangSerialization
   clangTooling
   clangToolingCore
