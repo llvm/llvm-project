@@ -598,6 +598,9 @@ TEST(Hover, NoHover) {
                func<1>();
             }
           )cpp",
+      R"cpp(// non-named decls don't get hover. Don't crash!
+            ^static_assert(1, "");
+          )cpp",
   };
 
   for (const auto &Test : Tests) {
