@@ -163,13 +163,13 @@ define <4 x i32> @test14(<4 x i32> %A) {
   ret <4 x i32> %1
 }
 
-; FIXME: X & undef must fold to 0. So lane 0 must choose from the zero vector.
+; X & undef must fold to 0. So lane 0 must choose from the zero vector.
 
 define <4 x i32> @undef_lane(<4 x i32> %x) {
 ; CHECK-LABEL: undef_lane:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
+; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3]
 ; CHECK-NEXT:    retq
   %r = and <4 x i32> %x, <i32 undef, i32 4294967295, i32 0, i32 4294967295>
   ret <4 x i32> %r
