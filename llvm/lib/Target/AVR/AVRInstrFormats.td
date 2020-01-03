@@ -42,8 +42,8 @@ class AVRInst32<dag outs, dag ins, string asmstr, list<dag> pattern>
 }
 
 // A class for pseudo instructions.
-// Psuedo instructions are not real AVR instructions. The DAG stores
-// psuedo instructions which are replaced by real AVR instructions by
+// Pseudo instructions are not real AVR instructions. The DAG stores
+// pseudo instructions which are replaced by real AVR instructions by
 // AVRExpandPseudoInsts.cpp.
 //
 // For example, the ADDW (add wide, as in add 16 bit values) instruction
