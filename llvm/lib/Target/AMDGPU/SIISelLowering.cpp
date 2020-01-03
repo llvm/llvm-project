@@ -3465,30 +3465,6 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
   return LoopBB;
 }
 
-static unsigned getIndirectRegWritePseudo(const SIRegisterInfo &TRI,
-                                 const TargetRegisterClass *VecRC) {
-  switch (TRI.getRegSizeInBits(*VecRC)) {
-  case 32: // 4 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V1;
-  case 64: // 8 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V2;
-  case 96: // 12 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V3;
-  case 128: // 16 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V4;
-  case 160: // 20 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V5;
-  case 256: // 32 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V8;
-  case 512: // 64 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V16;
-  case 1024: // 128 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V32;
-  default:
-    llvm_unreachable("unsupported size for IndirectRegWrite pseudos");
-  }
-}
-
 static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
                                           MachineBasicBlock &MBB,
                                           const GCNSubtarget &ST) {
@@ -3528,12 +3504,12 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
     return &MBB;
   }
 
+  const MCInstrDesc &MovRelDesc
+    = TII->getIndirectRegWritePseudo(TRI.getRegSizeInBits(*VecRC), 4, false);
+
   if (setM0ToIndexFromSGPR(TII, MRI, MI, Offset, UseGPRIdxMode, false)) {
     MachineBasicBlock::iterator I(&MI);
     const DebugLoc &DL = MI.getDebugLoc();
-
-    const MCInstrDesc &MovRelDesc
-      = TII->get(getIndirectRegWritePseudo(TRI, VecRC));
     BuildMI(MBB, I, DL, MovRelDesc, Dst)
       .addReg(SrcVec->getReg())
       .add(*Val)
@@ -3556,7 +3532,6 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
                               Offset, UseGPRIdxMode, false);
   MachineBasicBlock *LoopBB = InsPt->getParent();
 
-  const MCInstrDesc &MovRelDesc = TII->get(getIndirectRegWritePseudo(TRI, VecRC));
   BuildMI(*LoopBB, InsPt, DL, MovRelDesc, Dst)
     .addReg(PhiReg)
     .add(*Val)
