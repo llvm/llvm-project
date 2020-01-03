@@ -14,6 +14,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_USE_INTEL_JITEVENTS
   LLVM_BUILD_EXAMPLES
   LLVM_ENABLE_PLUGINS
+  LLVM_BYE_LINK_INTO_TOOLS
   )
 
 configure_lit_site_cfg(
