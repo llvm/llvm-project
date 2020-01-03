@@ -22,6 +22,19 @@ using namespace llvm::opt;
 namespace clang {
 namespace driver {
 namespace toolchains {
+
+namespace dpu {
+void addDPUTargetOptions(const llvm::opt::ArgList &Args,
+                         llvm::opt::ArgStringList &CmdArgs) {
+  // add debug information by default if -g0 is not specified
+  Arg *A = Args.getLastArg(options::OPT_g_Group);
+  if (!A || !A->getOption().matches(options::OPT_g0)) {
+    CmdArgs.push_back("-debug-info-kind=limited");
+    CmdArgs.push_back("-dwarf-version=4");
+  }
+}
+} // namespace dpu
+
 void DPURTE::AddClangSystemIncludeArgs(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
@@ -73,8 +86,6 @@ void DPURTE::addClangTargetOptions(
   CC1Args.push_back("-fstack-size-section");
   CC1Args.push_back("-fdata-sections");
 
-  CC1Args.push_back("-debug-info-kind=limited");
-  CC1Args.push_back("-dwarf-version=4");
   if (DriverArgs.hasArg(options::OPT_pg)) {
     CC1Args.push_back("-DDPU_PROFILING");
   }
