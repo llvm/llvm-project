@@ -540,7 +540,7 @@ bool SwiftASTManipulator::RewriteResult() {
     // First step, walk the function body converting returns to assignments to
     // temp variables + return:
 
-    for (swift::Decl *decl : m_source_file.Decls) {
+    for (swift::Decl *decl : m_source_file.getTopLevelDecls()) {
       if (auto top_level_code_decl =
               llvm::dyn_cast<swift::TopLevelCodeDecl>(decl)) {
         return_finder.SetDeclContext(top_level_code_decl);
@@ -551,8 +551,8 @@ bool SwiftASTManipulator::RewriteResult() {
     // Second step, fetch the last expression, and if it is non-null, set it to
     // a temp result as well:
 
-    if (!m_source_file.Decls.empty()) {
-      swift::Decl *last_decl = *(m_source_file.Decls.end() - 1);
+    if (!m_source_file.getTopLevelDecls().empty()) {
+      swift::Decl *last_decl = *(m_source_file.getTopLevelDecls().end() - 1);
 
       if (auto last_top_level_code_decl =
               llvm::dyn_cast<swift::TopLevelCodeDecl>(last_decl)) {
@@ -707,7 +707,7 @@ void SwiftASTManipulator::FindVariableDeclarations(
   };
 
   if (m_repl) {
-    for (swift::Decl *decl : m_source_file.Decls) {
+    for (swift::Decl *decl : m_source_file.getTopLevelDecls()) {
       if (swift::VarDecl *var_decl = llvm::dyn_cast<swift::VarDecl>(decl)) {
         if (!var_decl->getName().str().startswith("$")) {
           register_one_var(var_decl);
@@ -750,7 +750,7 @@ void SwiftASTManipulator::FindNonVariableDeclarations(
   if (!m_repl)
     return; // we don't do this for non-REPL expressions... yet
 
-  for (swift::Decl *decl : m_source_file.Decls) {
+  for (swift::Decl *decl : m_source_file.getTopLevelDecls()) {
     if (swift::ValueDecl *value_decl = llvm::dyn_cast<swift::ValueDecl>(decl)) {
       if (!llvm::isa<swift::VarDecl>(value_decl) && value_decl->hasName()) {
         non_variables.push_back(value_decl);
@@ -1078,9 +1078,8 @@ bool SwiftASTManipulator::AddExternalVariables(
 
     redirected_var_decl->setImplicit(true);
 
-    m_source_file.Decls.insert(m_source_file.Decls.begin(), top_level_code);
-    m_source_file.Decls.insert(m_source_file.Decls.begin(),
-                               redirected_var_decl);
+    m_source_file.addTopLevelDecl(top_level_code);
+    m_source_file.addTopLevelDecl(redirected_var_decl);
 
     variable.m_decl = redirected_var_decl;
 
@@ -1355,7 +1354,7 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
     if (make_private) {
       type_alias_decl->overwriteAccess(swift::AccessLevel::Private);
     }
-    m_source_file.Decls.push_back(type_alias_decl);
+    m_source_file.addTopLevelDecl(type_alias_decl);
   }
 
   return type_alias_decl;
