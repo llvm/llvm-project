@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm;
@@ -201,21 +202,6 @@ private:
 } // end anonymous namespace
 
 const TypeIndex TypeStreamMerger::Untranslated(SimpleTypeKind::NotTranslated);
-
-static bool isIdRecord(TypeLeafKind K) {
-  switch (K) {
-  case TypeLeafKind::LF_FUNC_ID:
-  case TypeLeafKind::LF_MFUNC_ID:
-  case TypeLeafKind::LF_STRING_ID:
-  case TypeLeafKind::LF_SUBSTR_LIST:
-  case TypeLeafKind::LF_BUILDINFO:
-  case TypeLeafKind::LF_UDT_SRC_LINE:
-  case TypeLeafKind::LF_UDT_MOD_SRC_LINE:
-    return true;
-  default:
-    return false;
-  }
-}
 
 void TypeStreamMerger::addMapping(TypeIndex Idx) {
   if (!IsSecondPass) {
