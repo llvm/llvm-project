@@ -13498,7 +13498,8 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
     }
   }
   if (ReductionIdScopeSpec.isSet()) {
-    SemaRef.Diag(Loc, diag::err_omp_not_resolved_reduction_identifier) << Range;
+    SemaRef.Diag(Loc, diag::err_omp_not_resolved_reduction_identifier)
+        << Ty << Range;
     return ExprError();
   }
   return ExprEmpty();
