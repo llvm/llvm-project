@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GIMatchDagPredicate.h"
+
 #include "llvm/TableGen/Record.h"
 
 #include "GIMatchDagOperands.h"
@@ -30,6 +31,21 @@ GIMatchDagOpcodePredicate::GIMatchDagOpcodePredicate(
 
 void GIMatchDagOpcodePredicate::printDescription(raw_ostream &OS) const {
   OS << "$mi.getOpcode() == " << Instr.TheDef->getName();
+}
+
+GIMatchDagOneOfOpcodesPredicate::GIMatchDagOneOfOpcodesPredicate(
+    GIMatchDagContext &Ctx, StringRef Name)
+    : GIMatchDagPredicate(GIMatchDagPredicateKind_OneOfOpcodes, Name,
+                          Ctx.makeMIPredicateOperandList()) {}
+
+void GIMatchDagOneOfOpcodesPredicate::printDescription(raw_ostream &OS) const {
+  OS << "$mi.getOpcode() == oneof(";
+  StringRef Separator = "";
+  for (const CodeGenInstruction *Instr : Instrs) {
+    OS << Separator << Instr->TheDef->getName();
+    Separator = ",";
+  }
+  OS << ")";
 }
 
 GIMatchDagSameMOPredicate::GIMatchDagSameMOPredicate(GIMatchDagContext &Ctx,
