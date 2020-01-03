@@ -935,27 +935,16 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
                    ResultSet &results) override {
       bool result = false;
 
-      Process *process = exe_scope->CalculateProcess().get();
-      if (process) {
-        auto objc_runtime = ObjCLanguageRuntime::Get(*process);
-        if (objc_runtime) {
-          auto decl_vendor = objc_runtime->GetDeclVendor();
-          if (decl_vendor) {
-            std::vector<CompilerDecl> decls;
+      if (auto *process = exe_scope->CalculateProcess().get()) {
+        if (auto *objc_runtime = ObjCLanguageRuntime::Get(*process)) {
+          if (auto *decl_vendor = objc_runtime->GetDeclVendor()) {
             ConstString name(key);
-            decl_vendor->FindDecls(name, true, UINT32_MAX, decls);
-            for (auto decl : decls) {
-              if (decl) {
-                auto *ctx = llvm::dyn_cast<ClangASTContext>(decl.GetTypeSystem());
-                if (ctx)
-                  if (CompilerType candidate =
-                          ctx->GetTypeForDecl(decl.GetOpaqueDecl())) {
-                    result = true;
-                    std::unique_ptr<Language::TypeScavenger::Result> result(
-                        new ObjCScavengerResult(candidate));
-                    results.insert(std::move(result));
-                  }
-              }
+            for (const CompilerType &type :
+                 decl_vendor->FindTypes(name, /*max_matches*/ UINT32_MAX)) {
+              result = true;
+              std::unique_ptr<Language::TypeScavenger::Result> result(
+                  new ObjCScavengerResult(type));
+              results.insert(std::move(result));
             }
           }
         }
@@ -976,17 +965,13 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
       if (auto *target = exe_scope->CalculateTarget().get()) {
         if (auto *clang_modules_decl_vendor =
                 target->GetClangModulesDeclVendor()) {
-          std::vector<clang::NamedDecl *> decls;
           ConstString key_cs(key);
-
-          if (clang_modules_decl_vendor->FindDecls(key_cs, false, UINT32_MAX,
-                                                   decls) > 0 &&
-              !decls.empty()) {
-            CompilerType module_type =
-                ClangASTContext::GetTypeForDecl(decls.front());
+          auto types = clang_modules_decl_vendor->FindTypes(
+              key_cs, /*max_matches*/ UINT32_MAX);
+          if (!types.empty()) {
             result = true;
             std::unique_ptr<Language::TypeScavenger::Result> result(
-                new ObjCScavengerResult(module_type));
+                new ObjCScavengerResult(types.front()));
             results.insert(std::move(result));
           }
         }
@@ -997,7 +982,7 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
 
     friend class lldb_private::ObjCLanguage;
   };
-  
+
   class ObjCDebugInfoScavenger : public Language::ImageListTypeScavenger {
   public:
     CompilerType AdjustForInclusion(CompilerType &candidate) override {
