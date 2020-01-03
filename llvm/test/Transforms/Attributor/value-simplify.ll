@@ -273,4 +273,53 @@ define void @complicated_args_byval() {
   ret void
 }
 
+define void @fixpoint_changed(i32* %p) {
+; CHECK-LABEL: define {{[^@]+}}@fixpoint_changed
+; CHECK-SAME: (i32* nocapture nofree writeonly [[P:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[J_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[SW_EPILOG:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[J_0]], 30
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    switch i32 [[J_0]], label [[SW_EPILOG]] [
+; CHECK-NEXT:    i32 1, label [[SW_BB:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       sw.bb:
+; CHECK-NEXT:    br label [[SW_EPILOG]]
+; CHECK:       sw.epilog:
+; CHECK-NEXT:    [[X_0:%.*]] = phi i32 [ 255, [[FOR_BODY]] ], [ 253, [[SW_BB]] ]
+; CHECK-NEXT:    store i32 [[X_0]], i32* [[P]]
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[J_0]], 1
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %j.0 = phi i32 [ 0, %entry ], [ %inc, %sw.epilog ]
+  %cmp = icmp slt i32 %j.0, 30
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:
+  switch i32 %j.0, label %sw.epilog [
+  i32 1, label %sw.bb
+  ]
+
+sw.bb:
+  br label %sw.epilog
+
+sw.epilog:
+  %x.0 = phi i32 [ 255, %for.body ], [ 253, %sw.bb ]
+  store i32 %x.0, i32* %p
+  %inc = add nsw i32 %j.0, 1
+  br label %for.cond
+
+for.end:
+  ret void
+}
+
 ; UTC_ARGS: --turn off

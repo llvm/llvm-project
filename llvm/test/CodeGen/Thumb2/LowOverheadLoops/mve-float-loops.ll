@@ -1518,7 +1518,7 @@ for.body:                                         ; preds = %for.body.preheader1
 define arm_aapcs_vfpcc float @half_half_mac(half* nocapture readonly %a, half* nocapture readonly %b, i32 %N) {
 ; CHECK-LABEL: half_half_mac:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cbz r2, .LBB9_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    subs r3, r2, #1
@@ -1527,18 +1527,16 @@ define arm_aapcs_vfpcc float @half_half_mac(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    bhs .LBB9_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    vldr s0, .LCPI9_0
-; CHECK-NEXT:    mov r5, r4
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB9_6
 ; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    vldr s0, .LCPI9_0
 ; CHECK-NEXT:    b .LBB9_9
 ; CHECK-NEXT:  .LBB9_4: @ %for.body.preheader.new
-; CHECK-NEXT:    subs r2, r2, r4
+; CHECK-NEXT:    bic r2, r2, #3
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vldr s0, .LCPI9_0
-; CHECK-NEXT:    mov r5, r4
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
 ; CHECK-NEXT:    sub.w r3, r0, #8
@@ -1571,10 +1569,10 @@ define arm_aapcs_vfpcc float @half_half_mac(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2
 ; CHECK-NEXT:    le lr, .LBB9_5
 ; CHECK-NEXT:  .LBB9_6: @ %for.cond.cleanup.loopexit.unr-lcssa
-; CHECK-NEXT:    wls lr, r5, .LBB9_9
+; CHECK-NEXT:    wls lr, r4, .LBB9_9
 ; CHECK-NEXT:  @ %bb.7: @ %for.body.epil.preheader
 ; CHECK-NEXT:    mvn r2, #1
-; CHECK-NEXT:    mov lr, r5
+; CHECK-NEXT:    mov lr, r4
 ; CHECK-NEXT:    add.w r2, r2, r12, lsl #1
 ; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    add r1, r2
@@ -1589,7 +1587,7 @@ define arm_aapcs_vfpcc float @half_half_mac(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2
 ; CHECK-NEXT:    le lr, .LBB9_8
 ; CHECK-NEXT:  .LBB9_9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.10:
 ; CHECK-NEXT:  .LCPI9_0:
@@ -1679,7 +1677,7 @@ for.body:                                         ; preds = %for.body, %for.body
 define arm_aapcs_vfpcc float @half_half_acc(half* nocapture readonly %a, half* nocapture readonly %b, i32 %N) {
 ; CHECK-LABEL: half_half_acc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cbz r2, .LBB10_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    subs r3, r2, #1
@@ -1688,18 +1686,16 @@ define arm_aapcs_vfpcc float @half_half_acc(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    bhs .LBB10_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    vldr s0, .LCPI10_0
-; CHECK-NEXT:    mov r5, r4
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB10_6
 ; CHECK-NEXT:  .LBB10_3:
 ; CHECK-NEXT:    vldr s0, .LCPI10_0
 ; CHECK-NEXT:    b .LBB10_9
 ; CHECK-NEXT:  .LBB10_4: @ %for.body.preheader.new
-; CHECK-NEXT:    subs r2, r2, r4
+; CHECK-NEXT:    bic r2, r2, #3
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vldr s0, .LCPI10_0
-; CHECK-NEXT:    mov r5, r4
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
 ; CHECK-NEXT:    sub.w r3, r0, #8
@@ -1732,10 +1728,10 @@ define arm_aapcs_vfpcc float @half_half_acc(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2
 ; CHECK-NEXT:    le lr, .LBB10_5
 ; CHECK-NEXT:  .LBB10_6: @ %for.cond.cleanup.loopexit.unr-lcssa
-; CHECK-NEXT:    wls lr, r5, .LBB10_9
+; CHECK-NEXT:    wls lr, r4, .LBB10_9
 ; CHECK-NEXT:  @ %bb.7: @ %for.body.epil.preheader
 ; CHECK-NEXT:    mvn r2, #1
-; CHECK-NEXT:    mov lr, r5
+; CHECK-NEXT:    mov lr, r4
 ; CHECK-NEXT:    add.w r2, r2, r12, lsl #1
 ; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    add r1, r2
@@ -1750,7 +1746,7 @@ define arm_aapcs_vfpcc float @half_half_acc(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2
 ; CHECK-NEXT:    le lr, .LBB10_8
 ; CHECK-NEXT:  .LBB10_9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.10:
 ; CHECK-NEXT:  .LCPI10_0:
@@ -1840,7 +1836,7 @@ for.body:                                         ; preds = %for.body, %for.body
 define arm_aapcs_vfpcc float @half_short_mac(half* nocapture readonly %a, i16* nocapture readonly %b, i32 %N) {
 ; CHECK-LABEL: half_short_mac:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    cbz r2, .LBB11_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    subs r3, r2, #1
@@ -1849,18 +1845,16 @@ define arm_aapcs_vfpcc float @half_short_mac(half* nocapture readonly %a, i16* n
 ; CHECK-NEXT:    bhs .LBB11_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    vldr s0, .LCPI11_0
-; CHECK-NEXT:    mov r8, r7
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB11_6
 ; CHECK-NEXT:  .LBB11_3:
 ; CHECK-NEXT:    vldr s0, .LCPI11_0
 ; CHECK-NEXT:    b .LBB11_9
 ; CHECK-NEXT:  .LBB11_4: @ %for.body.preheader.new
-; CHECK-NEXT:    subs r2, r2, r7
+; CHECK-NEXT:    bic r2, r2, #3
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vldr s0, .LCPI11_0
-; CHECK-NEXT:    mov r8, r7
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
 ; CHECK-NEXT:    movs r3, #0
@@ -1901,13 +1895,13 @@ define arm_aapcs_vfpcc float @half_short_mac(half* nocapture readonly %a, i16* n
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2
 ; CHECK-NEXT:    le lr, .LBB11_5
 ; CHECK-NEXT:  .LBB11_6: @ %for.cond.cleanup.loopexit.unr-lcssa
-; CHECK-NEXT:    wls lr, r8, .LBB11_9
+; CHECK-NEXT:    wls lr, r7, .LBB11_9
 ; CHECK-NEXT:  @ %bb.7: @ %for.body.epil.preheader
 ; CHECK-NEXT:    mvn r3, #1
 ; CHECK-NEXT:    add.w r2, r3, r12, lsl #1
 ; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    add r1, r2
-; CHECK-NEXT:    mov lr, r8
+; CHECK-NEXT:    mov lr, r7
 ; CHECK-NEXT:  .LBB11_8: @ %for.body.epil
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrsh r2, [r1, #2]!
@@ -1920,7 +1914,7 @@ define arm_aapcs_vfpcc float @half_short_mac(half* nocapture readonly %a, i16* n
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2
 ; CHECK-NEXT:    le lr, .LBB11_8
 ; CHECK-NEXT:  .LBB11_9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.10:
 ; CHECK-NEXT:  .LCPI11_0:
