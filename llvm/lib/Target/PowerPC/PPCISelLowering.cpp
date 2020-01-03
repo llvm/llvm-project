@@ -6826,9 +6826,6 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (ArgFlags.isByVal())
     report_fatal_error("Passing structure by value is unimplemented.");
 
-  if (ArgFlags.isSRet())
-    report_fatal_error("Struct return arguments are unimplemented.");
-
   if (ArgFlags.isNest())
     report_fatal_error("Nest arguments are unimplemented.");
 
