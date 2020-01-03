@@ -98,8 +98,22 @@
 ## Case 8: Very short prologue length for V5 (ends during parameters).
 # NONFATAL: debug_line[0x00000183]
 # NONFATAL-NEXT: Line table prologue
+# NONFATAL-NOT:  Address
 
-## TODO: Add checks here for remaining tables.
+## Case 9: V5 prologue ends during file table.
+# NONFATAL: debug_line[0x000001be]
+# NONFATAL-NEXT: Line table prologue
+# NONFATAL-NOT:  Address
+
+## Case 10: V5 prologue ends during directory table.
+# NONFATAL: debug_line[0x000001f9]
+# NONFATAL-NEXT: Line table prologue
+# NONFATAL-NOT:  Address
+
+## Case 11: V5 invalid MD5 hash form.
+# NONFATAL: debug_line[0x00000234]
+# NONFATAL-NEXT: Line table prologue
+# NONFATAL-NOT:  Address
 
 # NONFATAL: debug_line[0x00000271]
 # NONFATAL-NOT: debug_line[{{.*}}]
