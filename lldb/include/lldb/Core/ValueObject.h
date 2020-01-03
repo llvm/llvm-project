@@ -973,7 +973,6 @@ protected:
 
 private:
   virtual CompilerType MaybeCalculateCompleteType();
-  void UpdateChildrenAddressType();
 
   lldb::ValueObjectSP GetValueForExpressionPath_Impl(
       llvm::StringRef expression_cstr,
