@@ -23,10 +23,10 @@
 ; CST-NEXT: .long	1392508928              ## 0x53000000
 
 ; CST: [[MAGICCSTADDR:LCPI0_[0-9]+]]:
-; CST-NEXT: .long	3539992704              ## float -5.49764202E+11
-; CST-NEXT: .long	3539992704              ## float -5.49764202E+11
-; CST-NEXT: .long	3539992704              ## float -5.49764202E+11
-; CST-NEXT: .long	3539992704              ## float -5.49764202E+11
+; CST-NEXT: .long	1392509056              ## float 5.49764202E+11
+; CST-NEXT: .long	1392509056              ## float 5.49764202E+11
+; CST-NEXT: .long	1392509056              ## float 5.49764202E+11
+; CST-NEXT: .long	1392509056              ## float 5.49764202E+11
 
 ; AVX2: [[LOWCSTADDR:LCPI0_[0-9]+]]:
 ; AVX2-NEXT: .long	1258291200              ## 0x4b000000
@@ -35,7 +35,7 @@
 ; AVX2-NEXT: .long	1392508928              ## 0x53000000
 
 ; AVX2: [[MAGICCSTADDR:LCPI0_[0-9]+]]:
-; AVX2-NEXT: .long	3539992704              ## float -5.49764202E+11
+; AVX2-NEXT: .long	1392509056              ## float 5.49764202E+11
 
 define <4 x float> @test1(<4 x i32> %A) nounwind {
 ; CHECK-LABEL: test1:
@@ -47,7 +47,7 @@ define <4 x float> @test1(<4 x i32> %A) nounwind {
 ; SSE-NEXT: por [[LOWCSTADDR]](%rip), [[MASK]]
 ; SSE-NEXT: psrld $16, %xmm0
 ; SSE-NEXT: por [[HIGHCSTADDR]](%rip), %xmm0
-; SSE-NEXT: addps [[MAGICCSTADDR]](%rip), %xmm0
+; SSE-NEXT: subps [[MAGICCSTADDR]](%rip), %xmm0
 ; SSE-NEXT: addps [[MASK]], %xmm0
 ; SSE-NEXT: retq
 ;
@@ -57,14 +57,14 @@ define <4 x float> @test1(<4 x i32> %A) nounwind {
 ; SSE41-NEXT: pblendw $85, %xmm0, [[LOWVEC]]
 ; SSE41-NEXT: psrld $16, %xmm0
 ; SSE41-NEXT: pblendw $170, [[HIGHCSTADDR]](%rip), %xmm0
-; SSE41-NEXT: addps [[MAGICCSTADDR]](%rip), %xmm0
+; SSE41-NEXT: subps [[MAGICCSTADDR]](%rip), %xmm0
 ; SSE41-NEXT: addps [[LOWVEC]], %xmm0
 ; SSE41-NEXT: retq
 ;
 ; AVX: vpblendw $170, [[LOWCSTADDR]](%rip), %xmm0, [[LOWVEC:%xmm[0-9]+]]
 ; AVX-NEXT: vpsrld $16, %xmm0, [[SHIFTVEC:%xmm[0-9]+]]
 ; AVX-NEXT: vpblendw $170, [[HIGHCSTADDR]](%rip), [[SHIFTVEC]], [[HIGHVEC:%xmm[0-9]+]]
-; AVX-NEXT: vaddps [[MAGICCSTADDR]](%rip), [[HIGHVEC]], [[TMP:%xmm[0-9]+]]
+; AVX-NEXT: vsubps [[MAGICCSTADDR]](%rip), [[HIGHVEC]], [[TMP:%xmm[0-9]+]]
 ; AVX-NEXT: vaddps [[TMP]], [[LOWVEC]], %xmm0
 ; AVX-NEXT: retq
 ;
@@ -76,7 +76,7 @@ define <4 x float> @test1(<4 x i32> %A) nounwind {
 ; AVX2-NEXT: vpbroadcastd [[HIGHCSTADDR]](%rip), [[HIGHCST:%xmm[0-9]+]]
 ; AVX2-NEXT: vpblendw $170, [[HIGHCST]], [[SHIFTVEC]], [[HIGHVEC:%xmm[0-9]+]]
 ; AVX2-NEXT: vbroadcastss [[MAGICCSTADDR]](%rip), [[MAGICCST:%xmm[0-9]+]]
-; AVX2-NEXT: vaddps [[MAGICCST]], [[HIGHVEC]], [[TMP:%xmm[0-9]+]]
+; AVX2-NEXT: vsubps [[MAGICCST]], [[HIGHVEC]], [[TMP:%xmm[0-9]+]]
 ; AVX2-NEXT: vaddps [[TMP]], [[LOWVEC]], %xmm0
 ; AVX2-NEXT: retq
   %C = uitofp <4 x i32> %A to <4 x float>
@@ -91,7 +91,7 @@ define <4 x float> @test1(<4 x i32> %A) nounwind {
 ; AVX2-NEXT: .long	1392508928              ## 0x53000000
 
 ; AVX2: [[MAGICCSTADDR:LCPI1_[0-9]+]]:
-; AVX2-NEXT: .long	3539992704              ## float -5.49764202E+11
+; AVX2-NEXT: .long	1392509056              ## float 5.49764202E+11
 
 define <8 x float> @test2(<8 x i32> %A) nounwind {
 ; CHECK-LABEL: test2:
@@ -107,15 +107,15 @@ define <8 x float> @test2(<8 x i32> %A) nounwind {
 ; SSE-NEXT: psrld $16, %xmm0
 ; SSE-NEXT: movdqa {{.*#+}} [[HIGHCST:xmm[0-9]+]] = [1392508928,1392508928,1392508928,1392508928]
 ; SSE-NEXT: por %[[HIGHCST]], %xmm0
-; SSE-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [-5.49764202E+11,-5.49764202E+11,-5.49764202E+11,-5.49764202E+11]
-; SSE-NEXT: addps %[[MAGICCST]], %xmm0
+; SSE-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [5.49764202E+11,5.49764202E+11,5.49764202E+11,5.49764202E+11]
+; SSE-NEXT: subps %[[MAGICCST]], %xmm0
 ; SSE-NEXT: addps [[VECLOW]], %xmm0
 ; MASK is the low vector of the second part after this point.
 ; SSE-NEXT: pand %xmm1, %[[MASK]]
 ; SSE-NEXT: por %[[LOWCST]], %[[MASK]]
 ; SSE-NEXT: psrld $16, %xmm1
 ; SSE-NEXT: por %[[HIGHCST]], %xmm1
-; SSE-NEXT: addps %[[MAGICCST]], %xmm1
+; SSE-NEXT: subps %[[MAGICCST]], %xmm1
 ; SSE-NEXT: addps %[[MASK]], %xmm1
 ; SSE-NEXT: retq
 ;
@@ -125,8 +125,8 @@ define <8 x float> @test2(<8 x i32> %A) nounwind {
 ; SSE41-NEXT: psrld $16, %xmm0
 ; SSE41-NEXT: movdqa {{.*#+}} [[HIGHCST:xmm[0-9]+]] = [1392508928,1392508928,1392508928,1392508928]
 ; SSE41-NEXT: pblendw $170, %[[HIGHCST]], %xmm0
-; SSE41-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [-5.49764202E+11,-5.49764202E+11,-5.49764202E+11,-5.49764202E+11]
-; SSE41-NEXT: addps %[[MAGICCST]], %xmm0
+; SSE41-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [5.49764202E+11,5.49764202E+11,5.49764202E+11,5.49764202E+11]
+; SSE41-NEXT: subps %[[MAGICCST]], %xmm0
 ; SSE41-NEXT: addps [[VECLOW]], %xmm0
 ; LOWCST is the low vector of the second part after this point.
 ; The operands of the blend are inverted because we reuse xmm1
@@ -134,7 +134,7 @@ define <8 x float> @test2(<8 x i32> %A) nounwind {
 ; SSE41-NEXT: pblendw $85, %xmm1, %[[LOWCST]]
 ; SSE41-NEXT: psrld $16, %xmm1
 ; SSE41-NEXT: pblendw $170, %[[HIGHCST]], %xmm1
-; SSE41-NEXT: addps %[[MAGICCST]], %xmm1
+; SSE41-NEXT: subps %[[MAGICCST]], %xmm1
 ; SSE41-NEXT: addps %[[LOWCST]], %xmm1
 ; SSE41-NEXT: retq
 ;
@@ -148,7 +148,7 @@ define <8 x float> @test2(<8 x i32> %A) nounwind {
 ; AVX2-NEXT: vpbroadcastd [[HIGHCSTADDR]](%rip), [[HIGHCST:%ymm[0-9]+]]
 ; AVX2-NEXT: vpblendw $170, [[HIGHCST]], [[SHIFTVEC]], [[HIGHVEC:%ymm[0-9]+]]
 ; AVX2-NEXT: vbroadcastss [[MAGICCSTADDR]](%rip), [[MAGICCST:%ymm[0-9]+]]
-; AVX2-NEXT: vaddps [[MAGICCST]], [[HIGHVEC]], [[TMP:%ymm[0-9]+]]
+; AVX2-NEXT: vsubps [[MAGICCST]], [[HIGHVEC]], [[TMP:%ymm[0-9]+]]
 ; AVX2-NEXT: vaddps [[TMP]], [[LOWVEC]], %ymm0
 ; AVX2-NEXT: retq
   %C = uitofp <8 x i32> %A to <8 x float>
