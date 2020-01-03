@@ -13,6 +13,7 @@
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
@@ -636,4 +637,63 @@ Operation *SPIRVDialect::materializeConstant(OpBuilder &builder,
     return nullptr;
 
   return builder.create<spirv::ConstantOp>(loc, type, value);
+}
+
+//===----------------------------------------------------------------------===//
+// Shader Interface ABI
+//===----------------------------------------------------------------------===//
+
+LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
+                                                     NamedAttribute attribute) {
+  StringRef symbol = attribute.first.strref();
+  Attribute attr = attribute.second;
+
+  if (symbol != spirv::getEntryPointABIAttrName())
+    return op->emitError("found unsupported '")
+           << symbol << "' attribute on operation";
+
+  if (!spirv::EntryPointABIAttr::classof(attr))
+    return op->emitError("'")
+           << symbol
+           << "' attribute must be a dictionary attribute containing one "
+              "integer elements attribute: 'local_size'";
+
+  return success();
+}
+
+// Verifies the given SPIR-V `attribute` attached to a region's argument or
+// result and reports error to the given location if invalid.
+static LogicalResult
+verifyRegionAttribute(Location loc, NamedAttribute attribute, bool forArg) {
+  StringRef symbol = attribute.first.strref();
+  Attribute attr = attribute.second;
+
+  if (symbol != spirv::getInterfaceVarABIAttrName())
+    return emitError(loc, "found unsupported '")
+           << symbol << "' attribute on region "
+           << (forArg ? "argument" : "result");
+
+  if (!spirv::InterfaceVarABIAttr::classof(attr))
+    return emitError(loc, "'")
+           << symbol
+           << "' attribute must be a dictionary attribute containing three "
+              "integer attributes: 'descriptor_set', 'binding', and "
+              "'storage_class'";
+
+  return success();
+}
+
+LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
+                                                     unsigned /*regionIndex*/,
+                                                     unsigned /*argIndex*/,
+                                                     NamedAttribute attribute) {
+  return verifyRegionAttribute(op->getLoc(), attribute,
+                               /*forArg=*/true);
+}
+
+LogicalResult SPIRVDialect::verifyRegionResultAttribute(
+    Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
+    NamedAttribute attribute) {
+  return verifyRegionAttribute(op->getLoc(), attribute,
+                               /*forArg=*/false);
 }
