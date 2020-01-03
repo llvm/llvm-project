@@ -12,7 +12,7 @@ add_llvm_library(MLIRSPIRV
   TargetAndABI.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/SPIRV
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
   )
 
 add_dependencies(MLIRSPIRV
