@@ -13,7 +13,7 @@ high-performance target-specific code.
 
 This document defines and describes the key concepts in MLIR, and is intended to
 be a dry reference document - the [rationale documentation](Rationale.md),
-[glossary](Glossary.md), and other content are hosted elsewhere.
+[glossary](https://mlir.llvm.org/getting_started/Glossary/), and other content are hosted elsewhere.
 
 MLIR is designed to be used in three different forms: a human-readable textual
 form suitable for debugging, an in-memory form suitable for programmatic
@@ -1455,7 +1455,7 @@ This attribute can only be held internally by
 attribute dictionary), i.e. no other attribute kinds such as Locations or
 extended attribute kinds. If a reference to a symbol is necessary from outside
 of the symbol table that the symbol is defined in, a
-[string attribute](string-attribute) can be used to refer to the symbol name.
+[string attribute](#string-attribute) can be used to refer to the symbol name.
 
 **Rationale:** Given that MLIR models global accesses with symbol references, to
 enable efficient multi-threading, it becomes difficult to effectively reason
