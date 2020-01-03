@@ -1,4 +1,4 @@
-; RUN: opt %s %loadbye -goodbye -wave-goodbye -disable-output | FileCheck %s
+; RUN: opt %s %loadbye -goodbye -wave-goodbye -disable-output 2>&1 | FileCheck %s
 ; REQUIRES: plugins, examples
 ; CHECK: Bye
 
