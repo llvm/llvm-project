@@ -3104,7 +3104,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                        DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(1),
                                    N1.getOperand(0)));
 
-  // A - (A & (B - 1))  ->  A & (0 - B)
+  // A - (A & (B - 1))  ->  A & (~(B - 1))  ->  A & (0 - B)
   if (N1.getOpcode() == ISD::AND && N1.hasOneUse()) {
     SDValue A = N1.getOperand(0);
     SDValue BDec = N1.getOperand(1);
