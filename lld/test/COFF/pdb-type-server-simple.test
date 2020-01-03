@@ -106,3 +106,15 @@ SUMMARY-NEXT:               3 Output PDB strings
 SUMMARY-NEXT:               4 Global symbol records
 SUMMARY-NEXT:              14 Module symbol records
 SUMMARY-NEXT:               2 Public symbol records
+
+SUMMARY:      Top 10 types responsible for the most TPI input:
+SUMMARY-NEXT:        index     total bytes   count     size
+SUMMARY-NEXT:       0x1006:             36 =     1 *     36
+SUMMARY: Run llvm-pdbutil to print details about a particular record:
+SUMMARY-NEXT: llvm-pdbutil dump -types -type-index 0x1006 t.pdb
+
+SUMMARY:      Top 10 types responsible for the most IPI input:
+SUMMARY-NEXT:        index     total bytes   count     size
+SUMMARY-NEXT:       0x1006:            256 =     1 *    256
+SUMMARY: Run llvm-pdbutil to print details about a particular record:
+SUMMARY-NEXT: llvm-pdbutil dump -ids -id-index 0x1006 t.pdb
