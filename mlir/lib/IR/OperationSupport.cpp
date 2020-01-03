@@ -152,8 +152,8 @@ OperandRange::OperandRange(Operation *op)
 ResultRange::ResultRange(Operation *op)
     : ResultRange(op, /*startIndex=*/0, op->getNumResults()) {}
 
-/// See `detail::indexed_accessor_range_base` for details.
-OpResult ResultRange::dereference_iterator(Operation *op, ptrdiff_t index) {
+/// See `indexed_accessor_range` for details.
+OpResult ResultRange::dereference(Operation *op, ptrdiff_t index) {
   return op->getResult(index);
 }
 
