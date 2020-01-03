@@ -1130,439 +1130,438 @@ define void @v64i1_shuffle(<64 x i8>* %x, <64 x i8>* %y) "min-legal-vector-width
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
 ; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm0
 ; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k0
-; CHECK-NEXT:    kshiftrd $3, %k0, %k1
-; CHECK-NEXT:    kshiftlq $2, %k0, %k2
-; CHECK-NEXT:    kshiftlq $1, %k0, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $1, %k0, %k3
-; CHECK-NEXT:    kshiftlq $63, %k3, %k3
-; CHECK-NEXT:    kshiftrq $63, %k3, %k3
-; CHECK-NEXT:    korq %k2, %k3, %k2
-; CHECK-NEXT:    kshiftlq $3, %k0, %k3
-; CHECK-NEXT:    kshiftlq $2, %k1, %k1
-; CHECK-NEXT:    korq %k1, %k3, %k1
-; CHECK-NEXT:    kshiftrd $2, %k0, %k3
-; CHECK-NEXT:    kshiftlq $62, %k2, %k2
+; CHECK-NEXT:    kshiftrd $1, %k0, %k1
+; CHECK-NEXT:    movq $-3, %rax
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftlq $63, %k0, %k2
 ; CHECK-NEXT:    kshiftrq $62, %k2, %k2
-; CHECK-NEXT:    korq %k1, %k2, %k1
-; CHECK-NEXT:    kshiftlq $4, %k0, %k2
-; CHECK-NEXT:    kshiftlq $3, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $5, %k0, %k3
-; CHECK-NEXT:    kshiftlq $61, %k1, %k1
-; CHECK-NEXT:    kshiftrq $61, %k1, %k1
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $5, %k0, %k2
-; CHECK-NEXT:    kshiftlq $4, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $4, %k0, %k3
-; CHECK-NEXT:    kshiftlq $60, %k1, %k1
-; CHECK-NEXT:    kshiftrq $60, %k1, %k1
+; CHECK-NEXT:    movq $-5, %rax
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $3, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $61, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $6, %k0, %k2
-; CHECK-NEXT:    kshiftlq $5, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $7, %k0, %k3
-; CHECK-NEXT:    kshiftlq $59, %k1, %k1
-; CHECK-NEXT:    kshiftrq $59, %k1, %k1
+; CHECK-NEXT:    movq $-9, %rax
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $2, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $60, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $7, %k0, %k2
-; CHECK-NEXT:    kshiftlq $6, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $6, %k0, %k3
-; CHECK-NEXT:    kshiftlq $58, %k1, %k1
-; CHECK-NEXT:    kshiftrq $58, %k1, %k1
+; CHECK-NEXT:    movq $-17, %rax
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $5, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $59, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $8, %k0, %k2
-; CHECK-NEXT:    kshiftlq $7, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $9, %k0, %k3
-; CHECK-NEXT:    kshiftlq $57, %k1, %k1
-; CHECK-NEXT:    kshiftrq $57, %k1, %k1
+; CHECK-NEXT:    movq $-33, %rax
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $4, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $58, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $9, %k0, %k2
-; CHECK-NEXT:    kshiftlq $8, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $8, %k0, %k3
-; CHECK-NEXT:    kshiftlq $56, %k1, %k1
-; CHECK-NEXT:    kshiftrq $56, %k1, %k1
+; CHECK-NEXT:    movq $-65, %rax
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $7, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $57, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $10, %k0, %k2
-; CHECK-NEXT:    kshiftlq $9, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $11, %k0, %k3
-; CHECK-NEXT:    kshiftlq $55, %k1, %k1
-; CHECK-NEXT:    kshiftrq $55, %k1, %k1
+; CHECK-NEXT:    movq $-129, %rax
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $6, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $56, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $11, %k0, %k2
-; CHECK-NEXT:    kshiftlq $10, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $10, %k0, %k3
-; CHECK-NEXT:    kshiftlq $54, %k1, %k1
-; CHECK-NEXT:    kshiftrq $54, %k1, %k1
+; CHECK-NEXT:    movq $-257, %rax # imm = 0xFEFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $9, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $55, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $12, %k0, %k2
-; CHECK-NEXT:    kshiftlq $11, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $13, %k0, %k3
-; CHECK-NEXT:    kshiftlq $53, %k1, %k1
-; CHECK-NEXT:    kshiftrq $53, %k1, %k1
+; CHECK-NEXT:    movq $-513, %rax # imm = 0xFDFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $8, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $54, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $13, %k0, %k2
-; CHECK-NEXT:    kshiftlq $12, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $12, %k0, %k3
-; CHECK-NEXT:    kshiftlq $52, %k1, %k1
-; CHECK-NEXT:    kshiftrq $52, %k1, %k1
+; CHECK-NEXT:    movq $-1025, %rax # imm = 0xFBFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $11, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $53, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $14, %k0, %k2
-; CHECK-NEXT:    kshiftlq $13, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $15, %k0, %k3
-; CHECK-NEXT:    kshiftlq $51, %k1, %k1
-; CHECK-NEXT:    kshiftrq $51, %k1, %k1
+; CHECK-NEXT:    movq $-2049, %rax # imm = 0xF7FF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $10, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $52, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $15, %k0, %k2
-; CHECK-NEXT:    kshiftlq $14, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $14, %k0, %k3
-; CHECK-NEXT:    kshiftlq $50, %k1, %k1
-; CHECK-NEXT:    kshiftrq $50, %k1, %k1
+; CHECK-NEXT:    movq $-4097, %rax # imm = 0xEFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $13, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $51, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $16, %k0, %k2
-; CHECK-NEXT:    kshiftlq $15, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $17, %k0, %k3
-; CHECK-NEXT:    kshiftlq $49, %k1, %k1
-; CHECK-NEXT:    kshiftrq $49, %k1, %k1
+; CHECK-NEXT:    movq $-8193, %rax # imm = 0xDFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $12, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $50, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $17, %k0, %k2
-; CHECK-NEXT:    kshiftlq $16, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $16, %k0, %k3
-; CHECK-NEXT:    kshiftlq $48, %k1, %k1
-; CHECK-NEXT:    kshiftrq $48, %k1, %k1
+; CHECK-NEXT:    movq $-16385, %rax # imm = 0xBFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $15, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $49, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $18, %k0, %k2
-; CHECK-NEXT:    kshiftlq $17, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $19, %k0, %k3
-; CHECK-NEXT:    kshiftlq $47, %k1, %k1
-; CHECK-NEXT:    kshiftrq $47, %k1, %k1
+; CHECK-NEXT:    movq $-32769, %rax # imm = 0xFFFF7FFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $14, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $48, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $19, %k0, %k2
-; CHECK-NEXT:    kshiftlq $18, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $18, %k0, %k3
-; CHECK-NEXT:    kshiftlq $46, %k1, %k1
-; CHECK-NEXT:    kshiftrq $46, %k1, %k1
+; CHECK-NEXT:    movq $-65537, %rax # imm = 0xFFFEFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $17, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $47, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $20, %k0, %k2
-; CHECK-NEXT:    kshiftlq $19, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $21, %k0, %k3
-; CHECK-NEXT:    kshiftlq $45, %k1, %k1
-; CHECK-NEXT:    kshiftrq $45, %k1, %k1
+; CHECK-NEXT:    movq $-131073, %rax # imm = 0xFFFDFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $16, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $46, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $21, %k0, %k2
-; CHECK-NEXT:    kshiftlq $20, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $20, %k0, %k3
-; CHECK-NEXT:    kshiftlq $44, %k1, %k1
-; CHECK-NEXT:    kshiftrq $44, %k1, %k1
+; CHECK-NEXT:    movq $-262145, %rax # imm = 0xFFFBFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $19, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $45, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $22, %k0, %k2
-; CHECK-NEXT:    kshiftlq $21, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $23, %k0, %k3
-; CHECK-NEXT:    kshiftlq $43, %k1, %k1
-; CHECK-NEXT:    kshiftrq $43, %k1, %k1
+; CHECK-NEXT:    movq $-524289, %rax # imm = 0xFFF7FFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $18, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $44, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $23, %k0, %k2
-; CHECK-NEXT:    kshiftlq $22, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $22, %k0, %k3
-; CHECK-NEXT:    kshiftlq $42, %k1, %k1
-; CHECK-NEXT:    kshiftrq $42, %k1, %k1
+; CHECK-NEXT:    movq $-1048577, %rax # imm = 0xFFEFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $21, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $43, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $24, %k0, %k2
-; CHECK-NEXT:    kshiftlq $23, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $25, %k0, %k3
-; CHECK-NEXT:    kshiftlq $41, %k1, %k1
-; CHECK-NEXT:    kshiftrq $41, %k1, %k1
+; CHECK-NEXT:    movq $-2097153, %rax # imm = 0xFFDFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $20, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $42, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $25, %k0, %k2
-; CHECK-NEXT:    kshiftlq $24, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $24, %k0, %k3
-; CHECK-NEXT:    kshiftlq $40, %k1, %k1
-; CHECK-NEXT:    kshiftrq $40, %k1, %k1
+; CHECK-NEXT:    movq $-4194305, %rax # imm = 0xFFBFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $23, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $41, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $26, %k0, %k2
-; CHECK-NEXT:    kshiftlq $25, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $27, %k0, %k3
-; CHECK-NEXT:    kshiftlq $39, %k1, %k1
-; CHECK-NEXT:    kshiftrq $39, %k1, %k1
+; CHECK-NEXT:    movq $-8388609, %rax # imm = 0xFF7FFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $22, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $40, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $27, %k0, %k2
-; CHECK-NEXT:    kshiftlq $26, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $26, %k0, %k3
-; CHECK-NEXT:    kshiftlq $38, %k1, %k1
-; CHECK-NEXT:    kshiftrq $38, %k1, %k1
+; CHECK-NEXT:    movq $-16777217, %rax # imm = 0xFEFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $25, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $39, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $28, %k0, %k2
-; CHECK-NEXT:    kshiftlq $27, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $29, %k0, %k3
-; CHECK-NEXT:    kshiftlq $37, %k1, %k1
-; CHECK-NEXT:    kshiftrq $37, %k1, %k1
+; CHECK-NEXT:    movq $-33554433, %rax # imm = 0xFDFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $24, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $38, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $29, %k0, %k2
-; CHECK-NEXT:    kshiftlq $28, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $28, %k0, %k3
-; CHECK-NEXT:    kshiftlq $36, %k1, %k1
-; CHECK-NEXT:    kshiftrq $36, %k1, %k1
+; CHECK-NEXT:    movq $-67108865, %rax # imm = 0xFBFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $27, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $37, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k1, %k1
-; CHECK-NEXT:    kshiftlq $30, %k0, %k2
-; CHECK-NEXT:    kshiftlq $29, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $31, %k0, %k3
-; CHECK-NEXT:    kshiftlq $35, %k1, %k1
-; CHECK-NEXT:    kshiftrq $35, %k1, %k1
-; CHECK-NEXT:    korq %k2, %k1, %k2
-; CHECK-NEXT:    kshiftlq $31, %k0, %k1
-; CHECK-NEXT:    kshiftlq $30, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k1, %k3
+; CHECK-NEXT:    movq $-134217729, %rax # imm = 0xF7FFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $26, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $36, %k2, %k2
+; CHECK-NEXT:    korq %k2, %k1, %k1
+; CHECK-NEXT:    movq $-268435457, %rax # imm = 0xEFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $29, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $35, %k2, %k2
+; CHECK-NEXT:    korq %k2, %k1, %k1
+; CHECK-NEXT:    movq $-536870913, %rax # imm = 0xDFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $28, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $34, %k2, %k2
+; CHECK-NEXT:    korq %k2, %k1, %k1
+; CHECK-NEXT:    movq $-1073741825, %rax # imm = 0xBFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k1
+; CHECK-NEXT:    kshiftrd $31, %k0, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $33, %k2, %k2
+; CHECK-NEXT:    korq %k2, %k1, %k1
+; CHECK-NEXT:    movabsq $-2147483649, %rax # imm = 0xFFFFFFFF7FFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k1, %k2
 ; CHECK-NEXT:    vptestnmb %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    kshiftrd $30, %k0, %k0
-; CHECK-NEXT:    kshiftlq $34, %k2, %k2
-; CHECK-NEXT:    kshiftrq $34, %k2, %k2
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftlq $32, %k0, %k3
-; CHECK-NEXT:    kshiftlq $31, %k0, %k0
-; CHECK-NEXT:    korq %k0, %k3, %k0
-; CHECK-NEXT:    kshiftrd $1, %k1, %k3
-; CHECK-NEXT:    kshiftlq $33, %k2, %k2
-; CHECK-NEXT:    kshiftrq $33, %k2, %k2
-; CHECK-NEXT:    korq %k0, %k2, %k0
-; CHECK-NEXT:    kshiftlq $32, %k0, %k0
+; CHECK-NEXT:    kshiftlq $63, %k0, %k0
 ; CHECK-NEXT:    kshiftrq $32, %k0, %k0
-; CHECK-NEXT:    kshiftlq $33, %k0, %k2
-; CHECK-NEXT:    kshiftlq $32, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
+; CHECK-NEXT:    korq %k0, %k2, %k0
+; CHECK-NEXT:    movabsq $-4294967297, %rax # imm = 0xFFFFFFFEFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $1, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $31, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $34, %k0, %k2
-; CHECK-NEXT:    kshiftlq $33, %k1, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $3, %k1, %k3
-; CHECK-NEXT:    kshiftlq $31, %k0, %k0
-; CHECK-NEXT:    kshiftrq $31, %k0, %k0
+; CHECK-NEXT:    movabsq $-8589934593, %rax # imm = 0xFFFFFFFDFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftlq $63, %k1, %k2
+; CHECK-NEXT:    kshiftrq $30, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $35, %k0, %k2
-; CHECK-NEXT:    kshiftlq $34, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $2, %k1, %k3
-; CHECK-NEXT:    kshiftlq $30, %k0, %k0
-; CHECK-NEXT:    kshiftrq $30, %k0, %k0
+; CHECK-NEXT:    movabsq $-17179869185, %rax # imm = 0xFFFFFFFBFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $3, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $29, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $36, %k0, %k2
-; CHECK-NEXT:    kshiftlq $35, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $5, %k1, %k3
-; CHECK-NEXT:    kshiftlq $29, %k0, %k0
-; CHECK-NEXT:    kshiftrq $29, %k0, %k0
+; CHECK-NEXT:    movabsq $-34359738369, %rax # imm = 0xFFFFFFF7FFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $2, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $28, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $37, %k0, %k2
-; CHECK-NEXT:    kshiftlq $36, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $4, %k1, %k3
-; CHECK-NEXT:    kshiftlq $28, %k0, %k0
-; CHECK-NEXT:    kshiftrq $28, %k0, %k0
+; CHECK-NEXT:    movabsq $-68719476737, %rax # imm = 0xFFFFFFEFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $5, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $27, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $38, %k0, %k2
-; CHECK-NEXT:    kshiftlq $37, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $7, %k1, %k3
-; CHECK-NEXT:    kshiftlq $27, %k0, %k0
-; CHECK-NEXT:    kshiftrq $27, %k0, %k0
+; CHECK-NEXT:    movabsq $-137438953473, %rax # imm = 0xFFFFFFDFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $4, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $26, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $39, %k0, %k2
-; CHECK-NEXT:    kshiftlq $38, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $6, %k1, %k3
-; CHECK-NEXT:    kshiftlq $26, %k0, %k0
-; CHECK-NEXT:    kshiftrq $26, %k0, %k0
+; CHECK-NEXT:    movabsq $-274877906945, %rax # imm = 0xFFFFFFBFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $7, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $25, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $40, %k0, %k2
-; CHECK-NEXT:    kshiftlq $39, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $9, %k1, %k3
-; CHECK-NEXT:    kshiftlq $25, %k0, %k0
-; CHECK-NEXT:    kshiftrq $25, %k0, %k0
+; CHECK-NEXT:    movabsq $-549755813889, %rax # imm = 0xFFFFFF7FFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $6, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $24, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $41, %k0, %k2
-; CHECK-NEXT:    kshiftlq $40, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $8, %k1, %k3
-; CHECK-NEXT:    kshiftlq $24, %k0, %k0
-; CHECK-NEXT:    kshiftrq $24, %k0, %k0
+; CHECK-NEXT:    movabsq $-1099511627777, %rax # imm = 0xFFFFFEFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $9, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $23, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $42, %k0, %k2
-; CHECK-NEXT:    kshiftlq $41, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $11, %k1, %k3
-; CHECK-NEXT:    kshiftlq $23, %k0, %k0
-; CHECK-NEXT:    kshiftrq $23, %k0, %k0
+; CHECK-NEXT:    movabsq $-2199023255553, %rax # imm = 0xFFFFFDFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $8, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $22, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $43, %k0, %k2
-; CHECK-NEXT:    kshiftlq $42, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $10, %k1, %k3
-; CHECK-NEXT:    kshiftlq $22, %k0, %k0
-; CHECK-NEXT:    kshiftrq $22, %k0, %k0
+; CHECK-NEXT:    movabsq $-4398046511105, %rax # imm = 0xFFFFFBFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $11, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $21, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $44, %k0, %k2
-; CHECK-NEXT:    kshiftlq $43, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $13, %k1, %k3
-; CHECK-NEXT:    kshiftlq $21, %k0, %k0
-; CHECK-NEXT:    kshiftrq $21, %k0, %k0
+; CHECK-NEXT:    movabsq $-8796093022209, %rax # imm = 0xFFFFF7FFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $10, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $20, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $45, %k0, %k2
-; CHECK-NEXT:    kshiftlq $44, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $12, %k1, %k3
-; CHECK-NEXT:    kshiftlq $20, %k0, %k0
-; CHECK-NEXT:    kshiftrq $20, %k0, %k0
+; CHECK-NEXT:    movabsq $-17592186044417, %rax # imm = 0xFFFFEFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $13, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $19, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $46, %k0, %k2
-; CHECK-NEXT:    kshiftlq $45, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $15, %k1, %k3
-; CHECK-NEXT:    kshiftlq $19, %k0, %k0
-; CHECK-NEXT:    kshiftrq $19, %k0, %k0
+; CHECK-NEXT:    movabsq $-35184372088833, %rax # imm = 0xFFFFDFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $12, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $18, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $47, %k0, %k2
-; CHECK-NEXT:    kshiftlq $46, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $14, %k1, %k3
-; CHECK-NEXT:    kshiftlq $18, %k0, %k0
-; CHECK-NEXT:    kshiftrq $18, %k0, %k0
+; CHECK-NEXT:    movabsq $-70368744177665, %rax # imm = 0xFFFFBFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $15, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $17, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $48, %k0, %k2
-; CHECK-NEXT:    kshiftlq $47, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $17, %k1, %k3
-; CHECK-NEXT:    kshiftlq $17, %k0, %k0
-; CHECK-NEXT:    kshiftrq $17, %k0, %k0
+; CHECK-NEXT:    movabsq $-140737488355329, %rax # imm = 0xFFFF7FFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $14, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $16, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $49, %k0, %k2
-; CHECK-NEXT:    kshiftlq $48, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $16, %k1, %k3
-; CHECK-NEXT:    kshiftlq $16, %k0, %k0
-; CHECK-NEXT:    kshiftrq $16, %k0, %k0
+; CHECK-NEXT:    movabsq $-281474976710657, %rax # imm = 0xFFFEFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $17, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $15, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $50, %k0, %k2
-; CHECK-NEXT:    kshiftlq $49, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $19, %k1, %k3
-; CHECK-NEXT:    kshiftlq $15, %k0, %k0
-; CHECK-NEXT:    kshiftrq $15, %k0, %k0
+; CHECK-NEXT:    movabsq $-562949953421313, %rax # imm = 0xFFFDFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $16, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $14, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $51, %k0, %k2
-; CHECK-NEXT:    kshiftlq $50, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $18, %k1, %k3
-; CHECK-NEXT:    kshiftlq $14, %k0, %k0
-; CHECK-NEXT:    kshiftrq $14, %k0, %k0
+; CHECK-NEXT:    movabsq $-1125899906842625, %rax # imm = 0xFFFBFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $19, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $13, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $52, %k0, %k2
-; CHECK-NEXT:    kshiftlq $51, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $21, %k1, %k3
-; CHECK-NEXT:    kshiftlq $13, %k0, %k0
-; CHECK-NEXT:    kshiftrq $13, %k0, %k0
+; CHECK-NEXT:    movabsq $-2251799813685249, %rax # imm = 0xFFF7FFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $18, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $12, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $53, %k0, %k2
-; CHECK-NEXT:    kshiftlq $52, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $20, %k1, %k3
-; CHECK-NEXT:    kshiftlq $12, %k0, %k0
-; CHECK-NEXT:    kshiftrq $12, %k0, %k0
+; CHECK-NEXT:    movabsq $-4503599627370497, %rax # imm = 0xFFEFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $21, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $11, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $54, %k0, %k2
-; CHECK-NEXT:    kshiftlq $53, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $23, %k1, %k3
-; CHECK-NEXT:    kshiftlq $11, %k0, %k0
-; CHECK-NEXT:    kshiftrq $11, %k0, %k0
+; CHECK-NEXT:    movabsq $-9007199254740993, %rax # imm = 0xFFDFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $20, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $10, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $55, %k0, %k2
-; CHECK-NEXT:    kshiftlq $54, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $22, %k1, %k3
-; CHECK-NEXT:    kshiftlq $10, %k0, %k0
-; CHECK-NEXT:    kshiftrq $10, %k0, %k0
+; CHECK-NEXT:    movabsq $-18014398509481985, %rax # imm = 0xFFBFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $23, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $9, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $56, %k0, %k2
-; CHECK-NEXT:    kshiftlq $55, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $25, %k1, %k3
-; CHECK-NEXT:    kshiftlq $9, %k0, %k0
-; CHECK-NEXT:    kshiftrq $9, %k0, %k0
+; CHECK-NEXT:    movabsq $-36028797018963969, %rax # imm = 0xFF7FFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $22, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $8, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $57, %k0, %k2
-; CHECK-NEXT:    kshiftlq $56, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $24, %k1, %k3
-; CHECK-NEXT:    kshiftlq $8, %k0, %k0
-; CHECK-NEXT:    kshiftrq $8, %k0, %k0
+; CHECK-NEXT:    movabsq $-72057594037927937, %rax # imm = 0xFEFFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $25, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $7, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $58, %k0, %k2
-; CHECK-NEXT:    kshiftlq $57, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $27, %k1, %k3
-; CHECK-NEXT:    kshiftlq $7, %k0, %k0
-; CHECK-NEXT:    kshiftrq $7, %k0, %k0
+; CHECK-NEXT:    movabsq $-144115188075855873, %rax # imm = 0xFDFFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $24, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $6, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $59, %k0, %k2
-; CHECK-NEXT:    kshiftlq $58, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $26, %k1, %k3
-; CHECK-NEXT:    kshiftlq $6, %k0, %k0
-; CHECK-NEXT:    kshiftrq $6, %k0, %k0
+; CHECK-NEXT:    movabsq $-288230376151711745, %rax # imm = 0xFBFFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $27, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $5, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $60, %k0, %k2
-; CHECK-NEXT:    kshiftlq $59, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $29, %k1, %k3
-; CHECK-NEXT:    kshiftlq $5, %k0, %k0
-; CHECK-NEXT:    kshiftrq $5, %k0, %k0
+; CHECK-NEXT:    movabsq $-576460752303423489, %rax # imm = 0xF7FFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $26, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $4, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $61, %k0, %k2
-; CHECK-NEXT:    kshiftlq $60, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $28, %k1, %k3
-; CHECK-NEXT:    kshiftlq $4, %k0, %k0
-; CHECK-NEXT:    kshiftrq $4, %k0, %k0
+; CHECK-NEXT:    movabsq $-1152921504606846977, %rax # imm = 0xEFFFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $29, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $3, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $62, %k0, %k2
-; CHECK-NEXT:    kshiftlq $61, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftrd $31, %k1, %k3
-; CHECK-NEXT:    kshiftlq $3, %k0, %k0
-; CHECK-NEXT:    kshiftrq $3, %k0, %k0
+; CHECK-NEXT:    movabsq $-2305843009213693953, %rax # imm = 0xDFFFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $28, %k1, %k2
+; CHECK-NEXT:    kshiftlq $63, %k2, %k2
+; CHECK-NEXT:    kshiftrq $2, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
-; CHECK-NEXT:    kshiftlq $63, %k0, %k2
-; CHECK-NEXT:    kshiftlq $62, %k3, %k3
-; CHECK-NEXT:    korq %k3, %k2, %k2
-; CHECK-NEXT:    kshiftlq $2, %k0, %k0
-; CHECK-NEXT:    kshiftrq $2, %k0, %k0
+; CHECK-NEXT:    movabsq $-4611686018427387905, %rax # imm = 0xBFFFFFFFFFFFFFFF
+; CHECK-NEXT:    kmovq %rax, %k2
+; CHECK-NEXT:    kandq %k2, %k0, %k0
+; CHECK-NEXT:    kshiftrd $31, %k1, %k2
+; CHECK-NEXT:    kshiftlq $62, %k2, %k2
 ; CHECK-NEXT:    korq %k2, %k0, %k0
 ; CHECK-NEXT:    kshiftrd $30, %k1, %k1
 ; CHECK-NEXT:    kshiftlq $1, %k0, %k0
