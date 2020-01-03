@@ -577,7 +577,7 @@ define <4 x float> @uitofp_v4i32_v4f32(<4 x i32> %x) #0 {
 ; SSE-32-NEXT:    por {{\.LCPI.*}}, %xmm1
 ; SSE-32-NEXT:    psrld $16, %xmm0
 ; SSE-32-NEXT:    por {{\.LCPI.*}}, %xmm0
-; SSE-32-NEXT:    addps {{\.LCPI.*}}, %xmm0
+; SSE-32-NEXT:    subps {{\.LCPI.*}}, %xmm0
 ; SSE-32-NEXT:    addps %xmm1, %xmm0
 ; SSE-32-NEXT:    retl
 ;
@@ -588,7 +588,7 @@ define <4 x float> @uitofp_v4i32_v4f32(<4 x i32> %x) #0 {
 ; SSE-64-NEXT:    por {{.*}}(%rip), %xmm1
 ; SSE-64-NEXT:    psrld $16, %xmm0
 ; SSE-64-NEXT:    por {{.*}}(%rip), %xmm0
-; SSE-64-NEXT:    addps {{.*}}(%rip), %xmm0
+; SSE-64-NEXT:    subps {{.*}}(%rip), %xmm0
 ; SSE-64-NEXT:    addps %xmm1, %xmm0
 ; SSE-64-NEXT:    retq
 ;
@@ -597,7 +597,7 @@ define <4 x float> @uitofp_v4i32_v4f32(<4 x i32> %x) #0 {
 ; AVX1-32-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
 ; AVX1-32-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX1-32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; AVX1-32-NEXT:    vaddps {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX1-32-NEXT:    vsubps {{\.LCPI.*}}, %xmm0, %xmm0
 ; AVX1-32-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX1-32-NEXT:    retl
 ;
@@ -606,7 +606,7 @@ define <4 x float> @uitofp_v4i32_v4f32(<4 x i32> %x) #0 {
 ; AVX1-64-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
 ; AVX1-64-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX1-64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; AVX1-64-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-64-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-64-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX1-64-NEXT:    retq
 ;

@@ -78,7 +78,7 @@ define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
 ; SSE2-NEXT:    orps {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    psrld $16, %xmm1
 ; SSE2-NEXT:    por {{.*}}(%rip), %xmm1
-; SSE2-NEXT:    addps {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    subps {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    addps %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
