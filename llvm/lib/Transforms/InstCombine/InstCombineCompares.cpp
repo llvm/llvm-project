@@ -3364,6 +3364,23 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
     llvm_unreachable("All possible folds are handled.");
   }
 
+  // The mask value may be a vector constant that has undefined elements. But it
+  // may not be safe to propagate those undefs into the new compare, so replace
+  // those elements by copying an existing, defined, and safe scalar constant.
+  Type *OpTy = M->getType();
+  auto *VecC = dyn_cast<Constant>(M);
+  if (OpTy->isVectorTy() && VecC && VecC->containsUndefElement()) {
+    Constant *SafeReplacementConstant = nullptr;
+    for (unsigned i = 0, e = OpTy->getVectorNumElements(); i != e; ++i) {
+      if (!isa<UndefValue>(VecC->getAggregateElement(i))) {
+        SafeReplacementConstant = VecC->getAggregateElement(i);
+        break;
+      }
+    }
+    assert(SafeReplacementConstant && "Failed to find undef replacement");
+    M = Constant::replaceUndefsWith(VecC, SafeReplacementConstant);
+  }
+
   return Builder.CreateICmp(DstPred, X, M);
 }
 

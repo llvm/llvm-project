@@ -76,7 +76,7 @@ define <2 x i1> @p2_vec_nonsplat_edgecase() {
 define <3 x i1> @p3_vec_splat_undef() {
 ; CHECK-LABEL: @p3_vec_splat_undef(
 ; CHECK-NEXT:    [[X:%.*]] = call <3 x i8> @gen3x8()
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <3 x i8> [[X]], <i8 3, i8 undef, i8 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <3 x i8> [[X]], <i8 3, i8 3, i8 3>
 ; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
 ;
   %x = call <3 x i8> @gen3x8()
@@ -88,7 +88,7 @@ define <3 x i1> @p3_vec_splat_undef() {
 define <3 x i1> @p3_vec_nonsplat_undef() {
 ; CHECK-LABEL: @p3_vec_nonsplat_undef(
 ; CHECK-NEXT:    [[X:%.*]] = call <3 x i8> @gen3x8()
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <3 x i8> [[X]], <i8 15, i8 3, i8 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <3 x i8> [[X]], <i8 15, i8 3, i8 15>
 ; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
 ;
   %x = call <3 x i8> @gen3x8()
