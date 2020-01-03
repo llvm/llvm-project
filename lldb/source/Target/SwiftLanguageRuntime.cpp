@@ -1245,8 +1245,7 @@ const CompilerType &SwiftLanguageRuntime::GetBoxMetadataType() {
           ClangASTContext::GetScratch(GetProcess()->GetTarget())) {
     CompilerType voidstar =
         ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
-    CompilerType uint32 = ClangASTContext::GetIntTypeFromBitSize(
-        ast_ctx->getASTContext(), 32, false);
+    CompilerType uint32 = ast_ctx->GetIntTypeFromBitSize(32, false);
 
     m_box_metadata_type = ast_ctx->GetOrCreateStructForIdentifier(
         g_type_name, {{"kind", voidstar}, {"offset", uint32}}, is_packed);
@@ -1626,7 +1625,7 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
     if (!scratch_ctx)
       return llvm::None;
   }
-  
+
   auto *remote_ast = &GetRemoteASTContext(*module_ctx);
 
   if (log)
@@ -1696,7 +1695,7 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
   bool safe_to_use_remote_ast = true;
   if (swift::Decl *type_decl = swift_type->getNominalOrBoundGenericNominal())
     safe_to_use_remote_ast &= ASTVerifier::Verify(type_decl);
- 
+
   // Use RemoteAST to determine the member offset.
   if (safe_to_use_remote_ast) {
     swift::remoteAST::Result<uint64_t> result = remote_ast->getOffsetOfMember(
@@ -2052,26 +2051,26 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
                           llvm::dyn_cast<swift::OpaqueTypeArchetypeType>(type);
           if (!opaque_type)
             return type;
-          
+
           // Try to find the symbol for the opaque type descriptor in the
           // process.
           auto mangled_name = ConstString(
                     mangler.mangleOpaqueTypeDescriptor(opaque_type->getDecl()));
-          
+
           SymbolContextList found;
           target.GetImages().FindSymbolsWithNameAndType(mangled_name,
                                                         eSymbolTypeData, found);
-          
+
           if (found.GetSize() == 0)
             return type;
-          
+
           swift::Type result_type;
-          
+
           for (unsigned i = 0, e = found.GetSize(); i < e; ++i) {
             SymbolContext found_sc;
             if (!found.GetContextAtIndex(i, found_sc))
               continue;
-            
+
             // See if the symbol has an address.
             if (!found_sc.symbol)
               continue;
@@ -2088,7 +2087,7 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
                                             swift::remote::RemoteAddress(addr),
                                             opaque_type->getSubstitutions(),
                                             opaque_type->getOrdinal());
-            
+
             if (!underlying_type_result)
               continue;
 
@@ -2102,22 +2101,22 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
               return type;
             }
           }
-          
+
           if (!result_type)
             return type;
-          
+
           return result_type;
         },
         swift::LookUpConformanceInModule(module_decl),
         swift::SubstFlags::DesugarMemberTypes
           | swift::SubstFlags::SubstituteOpaqueArchetypes);
-      
+
       // Stop if we've reached a fixpoint where we can't further resolve opaque
       // types.
       if (old_type->isEqual(target_swift_type))
         break;
     }
-    
+
     target_swift_type = target_swift_type.subst(
         [this, &stack_frame,
          &scratch_ctx](swift::SubstitutableType *type) -> swift::Type {
@@ -2785,8 +2784,8 @@ GetThunkKind(llvm::StringRef symbol_name)
   case swift::Demangle::Node::Kind::ProtocolWitness:
     if (node_ptr->getNumChildren() == 0)
       return ThunkKind::Unknown;
-    if (node_ptr->getFirstChild()->getKind() 
-           == swift::Demangle::Node::Kind::ProtocolConformance)
+    if (node_ptr->getFirstChild()->getKind() ==
+        swift::Demangle::Node::Kind::ProtocolConformance)
       return ThunkKind::ProtocolConformance;
     break;
   case swift::Demangle::Node::Kind::ReabstractionThunkHelper:
@@ -2796,8 +2795,8 @@ GetThunkKind(llvm::StringRef symbol_name)
   case swift::Demangle::Node::Kind::Allocator:
     if (node_ptr->getNumChildren() == 0)
       return ThunkKind::Unknown;
-    if (node_ptr->getFirstChild()->getKind() 
-           == swift::Demangle::Node::Kind::Class)
+    if (node_ptr->getFirstChild()->getKind() ==
+        swift::Demangle::Node::Kind::Class)
       return ThunkKind::AllocatingInit;
     break;
   default:
@@ -2850,11 +2849,11 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
                                                    SymbolContext &sc) {
   if (!curr_sc.module_sp)
     return false;
-    
+
   SymbolContextList sc_list;
   swift::Demangle::Context demangle_ctx;
   // Make sure this is a partial apply:
-  
+
   std::string apply_target = demangle_ctx.getThunkTarget(apply_name.GetStringRef());
   if (!apply_target.empty()) {
     curr_sc.module_sp->FindFunctions(ConstString(apply_target), NULL,
@@ -2863,7 +2862,7 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
     size_t num_symbols = sc_list.GetSize();
     if (num_symbols == 0)
       return false;
-      
+
     CompileUnit *curr_cu = curr_sc.comp_unit;
 
     size_t num_found = 0;
@@ -2925,7 +2924,7 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   // keeps this list and the one in IsSymbolARuntimeThunk in sync.
   if (!symbol || !IsSymbolARuntimeThunk(*symbol))
       return new_thread_plan_sp;
-      
+
   // Only do this if you are at the beginning of the thunk function:
   lldb::addr_t cur_addr = thread.GetRegisterContext()->GetPC();
   lldb::addr_t symbol_addr = symbol->GetAddress().GetLoadAddress(
@@ -2937,10 +2936,9 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   Address target_address;
   ConstString symbol_mangled_name = symbol->GetMangled().GetMangledName();
   const char *symbol_name = symbol_mangled_name.AsCString();
-  
+
   ThunkKind thunk_kind = GetThunkKind(symbol_mangled_name.GetStringRef());
   ThunkAction thunk_action = GetThunkAction(thunk_kind);
-  
 
   switch (thunk_action)
   {
@@ -3091,7 +3089,7 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
     }
     break;
   }
-    
+
   if (target_address.IsValid()) {
     new_thread_plan_sp.reset(
         new ThreadPlanRunToAddress(thread, target_address, stop_others));
@@ -3248,10 +3246,10 @@ SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
 
   CompilerType swift_error_proto_type = ast_context->GetErrorType();
   value.SetCompilerType(swift_error_proto_type);
-  
+
   error_valobj_sp = ValueObjectConstResult::Create(
       m_process, value, name);
-  
+
   if (error_valobj_sp && error_valobj_sp->GetError().Success()) {
     error_valobj_sp = error_valobj_sp->GetQualifiedRepresentationIfAvailable(
         lldb::eDynamicCanRunTarget, true);
@@ -3580,7 +3578,7 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
     return addr;
 
   AppleObjCRuntime *objc_runtime = GetObjCRuntime();
-  
+
   if (objc_runtime) {
     // tagged pointers don't perform any masking
     if (objc_runtime->IsTaggedPointer(addr))
@@ -3627,16 +3625,16 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
 
   if (strategy == SwiftASTContext::NonTriviallyManagedReferenceStrategy::eWeak) {
     bool is_indirect = true;
-    
+
     // On non-objc platforms, the weak reference pointer always pointed to a
     // runtime structure.
     // For ObjC platforms, the masked value determines whether it is indirect.
-    
+
     uint32_t value = 0;
-    
+
     if (objc_runtime)
     {
-    
+
       if (is_intel) {
         if (is_64) {
           mask = SWIFT_ABI_X86_64_OBJC_WEAK_REFERENCE_MARKER_MASK;
@@ -3661,17 +3659,17 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
         mask = SWIFT_ABI_DEFAULT_OBJC_WEAK_REFERENCE_MARKER_MASK;
         value = SWIFT_ABI_DEFAULT_OBJC_WEAK_REFERENCE_MARKER_VALUE;
     }
-    
+
     is_indirect = ((addr & mask) == value);
-    
+
     if (!is_indirect)
       return addr;
-    
+
     // The masked value of address is a pointer to the runtime structure.
     // The first field of the structure is the actual pointer.
     Process *process = GetProcess();
     Status error;
-    
+
     lldb::addr_t masked_addr = addr & ~mask;
     lldb::addr_t isa_addr = process->ReadPointerFromMemory(masked_addr, error);
     if (error.Fail())
@@ -3680,8 +3678,7 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
         return addr;
     }
     return isa_addr;
-    
-      
+
   } else {
     if (is_arm && is_64)
       mask = SWIFT_ABI_ARM64_OBJC_NUM_RESERVED_LOW_BITS;
@@ -3694,7 +3691,7 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
 
     return addr & ~mask;
   }
-  
+
   return addr;
 }
 
@@ -4014,24 +4011,23 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
     default:
       break;
   }
-  
-  
+
   if (error_reg_name.empty())
       return error_val;
-      
+
   RegisterContextSP reg_ctx = frame_sp->GetRegisterContext();
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(error_reg_name);
   lldbassert(reg_info && "didn't get the right register name for swift error register");
   if (!reg_info)
     return error_val;
-  
+
   RegisterValue reg_value;
   if (!reg_ctx->ReadRegister(reg_info, reg_value))
   {
     // Do some logging here.
     return error_val;
   }
-  
+
   lldb::addr_t error_addr = reg_value.GetAsUInt64();
   if (error_addr == 0)
     return error_val;
@@ -4049,23 +4045,23 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
 llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
     lldb::StackFrameSP frame_sp, bool &need_to_check_after_return) {
   llvm::Optional<Value> error_val;
-  
+
   if (!frame_sp)
   {
     need_to_check_after_return = false;
     return error_val;
   }
-  
+
   // For Architectures where the error isn't returned in a register,
   // there's a magic variable that points to the value.  Check that first:
-  
+
   ConstString error_location_name("$error");
   VariableListSP variables_sp = frame_sp->GetInScopeVariableList(false);
   VariableSP error_loc_var_sp = variables_sp->FindVariable(
       error_location_name, eValueTypeVariableArgument);
   if (error_loc_var_sp) {
     need_to_check_after_return = false;
-    
+
     ValueObjectSP error_loc_val_sp = frame_sp->GetValueObjectForFrameVariable(
         error_loc_var_sp, eNoDynamicValues);
     if (error_loc_val_sp && error_loc_val_sp->GetError().Success())
@@ -4073,18 +4069,18 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
 
     return error_val;
   }
-  
+
   // Otherwise, see if we know which register it lives in from the calling convention.
   // This should probably go in the ABI plugin not here, but the Swift ABI can change with
   // swiftlang versions and that would make it awkward in the ABI.
-  
+
   Function *func = frame_sp->GetSymbolContext(eSymbolContextFunction).function;
   if (!func)
   {
     need_to_check_after_return = false;
     return error_val;
   }
-  
+
   need_to_check_after_return = func->CanThrow();
   return error_val;
 

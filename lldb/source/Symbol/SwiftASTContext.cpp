@@ -3392,12 +3392,10 @@ public:
 
       // Import the type into the DWARFImporter's context.
       clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
-      clang::ASTContext *from_ctx = type_system->getASTContext();
-      if (!from_ctx)
-        return true;
+      clang::ASTContext &from_ctx = type_system->getASTContext();
 
       clang::QualType qual_type = ClangUtil::GetQualType(compiler_type);
-      importType(qual_type, *from_ctx, to_ctx, kind, results);
+      importType(qual_type, from_ctx, to_ctx, kind, results);
 
       // If this is a module context, cache the result for the scratch context.
       if (m_swift_ast_ctx.GetModule())
