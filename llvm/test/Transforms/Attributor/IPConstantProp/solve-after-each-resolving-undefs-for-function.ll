@@ -33,11 +33,12 @@ define internal i32 @test1(i1 %c) {
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @testf(i1 [[C]])
-; CHECK-NEXT:    br label [[RET1:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 10, 10
+; CHECK-NEXT:    br i1 [[RES]], label [[RET1:%.*]], label [[RET2:%.*]]
 ; CHECK:       ret1:
 ; CHECK-NEXT:    ret i32 99
 ; CHECK:       ret2:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   br label %if.then
@@ -58,7 +59,7 @@ define i32 @main(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@main
 ; CHECK-SAME: (i1 [[C:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @test1(i1 [[C]])
-; CHECK-NEXT:    ret i32 99
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @test1(i1 %c)
   ret i32 %res
