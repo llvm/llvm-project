@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZ.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Host.h"
@@ -15,6 +16,22 @@ using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
+
+systemz::FloatABI systemz::getSystemZFloatABI(const Driver &D,
+                                              const ArgList &Args) {
+  // Hard float is the default.
+  systemz::FloatABI ABI = systemz::FloatABI::Hard;
+  if (Args.hasArg(options::OPT_mfloat_abi_EQ))
+    D.Diag(diag::err_drv_unsupported_opt)
+      << Args.getLastArg(options::OPT_mfloat_abi_EQ)->getAsString(Args);
+
+  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_msoft_float,
+                               options::OPT_mhard_float))
+    if (A->getOption().matches(clang::driver::options::OPT_msoft_float))
+      ABI = systemz::FloatABI::Soft;
+
+  return ABI;
+}
 
 std::string systemz::getSystemZTargetCPU(const ArgList &Args) {
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
@@ -33,7 +50,7 @@ std::string systemz::getSystemZTargetCPU(const ArgList &Args) {
   return "z10";
 }
 
-void systemz::getSystemZTargetFeatures(const ArgList &Args,
+void systemz::getSystemZTargetFeatures(const Driver &D, const ArgList &Args,
                                        std::vector<llvm::StringRef> &Features) {
   // -m(no-)htm overrides use of the transactional-execution facility.
   if (Arg *A = Args.getLastArg(options::OPT_mhtm, options::OPT_mno_htm)) {
@@ -49,4 +66,8 @@ void systemz::getSystemZTargetFeatures(const ArgList &Args,
     else
       Features.push_back("-vector");
   }
+
+  systemz::FloatABI FloatABI = systemz::getSystemZFloatABI(D, Args);
+  if (FloatABI == systemz::FloatABI::Soft)
+    Features.push_back("+soft-float");
 }
