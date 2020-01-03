@@ -214,22 +214,34 @@ define i32 @n7_different_ptrs_commutative(i32 %ptr0, i32 %ptr1, i32 %alignment) 
 }
 
 define i32 @n8_not_lowbit_mask(i32 %ptr, i32 %alignment) nounwind {
-; X86-LABEL: n8_not_lowbit_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    incl %ecx
-; X86-NEXT:    andl %eax, %ecx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    retl
+; NOBMI-X86-LABEL: n8_not_lowbit_mask:
+; NOBMI-X86:       # %bb.0:
+; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    incl %eax
+; NOBMI-X86-NEXT:    notl %eax
+; NOBMI-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    retl
 ;
-; X64-LABEL: n8_not_lowbit_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    incl %esi
-; X64-NEXT:    andl %edi, %esi
-; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    retq
+; BMI-X86-LABEL: n8_not_lowbit_mask:
+; BMI-X86:       # %bb.0:
+; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI-X86-NEXT:    incl %eax
+; BMI-X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; BMI-X86-NEXT:    retl
+;
+; NOBMI-X64-LABEL: n8_not_lowbit_mask:
+; NOBMI-X64:       # %bb.0:
+; NOBMI-X64-NEXT:    movl %esi, %eax
+; NOBMI-X64-NEXT:    incl %eax
+; NOBMI-X64-NEXT:    notl %eax
+; NOBMI-X64-NEXT:    andl %edi, %eax
+; NOBMI-X64-NEXT:    retq
+;
+; BMI-X64-LABEL: n8_not_lowbit_mask:
+; BMI-X64:       # %bb.0:
+; BMI-X64-NEXT:    incl %esi
+; BMI-X64-NEXT:    andnl %edi, %esi, %eax
+; BMI-X64-NEXT:    retq
   %mask = add i32 %alignment, 1 ; not -1
   %bias = and i32 %ptr, %mask
   %r = sub i32 %ptr, %bias

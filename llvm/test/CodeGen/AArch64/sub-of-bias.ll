@@ -17,8 +17,7 @@
 define i32 @t0_32(i32 %ptr, i32 %mask) nounwind {
 ; CHECK-LABEL: t0_32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w1
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    bic w0, w0, w1
 ; CHECK-NEXT:    ret
   %bias = and i32 %ptr, %mask
   %r = sub i32 %ptr, %bias
@@ -27,8 +26,7 @@ define i32 @t0_32(i32 %ptr, i32 %mask) nounwind {
 define i64 @t1_64(i64 %ptr, i64 %mask) nounwind {
 ; CHECK-LABEL: t1_64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, x1
-; CHECK-NEXT:    sub x0, x0, x8
+; CHECK-NEXT:    bic x0, x0, x1
 ; CHECK-NEXT:    ret
   %bias = and i64 %ptr, %mask
   %r = sub i64 %ptr, %bias
@@ -38,8 +36,7 @@ define i64 @t1_64(i64 %ptr, i64 %mask) nounwind {
 define i32 @t2_commutative(i32 %ptr, i32 %mask) nounwind {
 ; CHECK-LABEL: t2_commutative:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, w0
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    bic w0, w0, w1
 ; CHECK-NEXT:    ret
   %bias = and i32 %mask, %ptr ; swapped
   %r = sub i32 %ptr, %bias
@@ -87,8 +84,7 @@ define i32 @n5_different_ptrs_commutative(i32 %ptr0, i32 %ptr1, i32 %mask) nounw
 define i32 @n6_not_lowbit_mask(i32 %ptr, i32 %mask) nounwind {
 ; CHECK-LABEL: n6_not_lowbit_mask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w1
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    bic w0, w0, w1
 ; CHECK-NEXT:    ret
   %bias = and i32 %ptr, %mask
   %r = sub i32 %ptr, %bias

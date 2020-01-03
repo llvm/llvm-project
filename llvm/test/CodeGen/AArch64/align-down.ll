@@ -127,8 +127,7 @@ define i32 @n8_not_lowbit_mask(i32 %ptr, i32 %alignment) nounwind {
 ; CHECK-LABEL: n8_not_lowbit_mask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w1, #1 // =1
-; CHECK-NEXT:    and w8, w0, w8
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    bic w0, w0, w8
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, 1 ; not -1
   %bias = and i32 %ptr, %mask

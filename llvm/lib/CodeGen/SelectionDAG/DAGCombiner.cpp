@@ -3104,29 +3104,18 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                        DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(1),
                                    N1.getOperand(0)));
 
-  // A - (A & (B - 1))  ->  A & (~(B - 1))  ->  A & (0 - B)
-  if (N1.getOpcode() == ISD::AND && N1.hasOneUse()) {
+  // A - (A & B)  ->  A & (~B)
+  if (N1.getOpcode() == ISD::AND) {
     SDValue A = N1.getOperand(0);
-    SDValue BDec = N1.getOperand(1);
+    SDValue B = N1.getOperand(1);
     if (A != N0)
-      std::swap(A, BDec);
-    if (A == N0 && BDec.getOpcode() == ISD::ADD &&
-        isAllOnesOrAllOnesSplat(BDec->getOperand(1))) {
-      SDValue B = BDec.getOperand(0);
-      SDValue NegB =
-          DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), B);
-      return DAG.getNode(ISD::AND, DL, VT, A, NegB);
+      std::swap(A, B);
+    if (A == N0 &&
+        (N1.hasOneUse() || isConstantOrConstantVector(B, /*NoOpaques=*/true))) {
+      SDValue InvB =
+          DAG.getNode(ISD::XOR, DL, VT, B, DAG.getAllOnesConstant(DL, VT));
+      return DAG.getNode(ISD::AND, DL, VT, A, InvB);
     }
-  }
-
-  // A - (A & C) -> A & (~C)
-  if (N1.getOpcode() == ISD::AND && N1.getOperand(0) == N0 &&
-      isConstantOrConstantVector(N1.getOperand(1), /*NoOpaques=*/true)) {
-    SDValue InvC =
-        DAG.FoldConstantArithmetic(ISD::XOR, DL, VT, N1.getOperand(1).getNode(),
-                                   DAG.getAllOnesConstant(DL, VT).getNode());
-    assert(InvC && "Constant folding failed");
-    return DAG.getNode(ISD::AND, DL, VT, N0, InvC);
   }
 
   // fold (X - (-Y * Z)) -> (X + (Y * Z))

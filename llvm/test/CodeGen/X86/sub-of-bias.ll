@@ -18,65 +18,94 @@
 ; The basic positive tests
 
 define i32 @t0_32(i32 %ptr, i32 %mask) nounwind {
-; X86-LABEL: t0_32:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl %eax, %ecx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    retl
+; NOBMI-X86-LABEL: t0_32:
+; NOBMI-X86:       # %bb.0:
+; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    notl %eax
+; NOBMI-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    retl
 ;
-; X64-LABEL: t0_32:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl %edi, %esi
-; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    retq
+; BMI-X86-LABEL: t0_32:
+; BMI-X86:       # %bb.0:
+; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI-X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; BMI-X86-NEXT:    retl
+;
+; NOBMI-X64-LABEL: t0_32:
+; NOBMI-X64:       # %bb.0:
+; NOBMI-X64-NEXT:    movl %esi, %eax
+; NOBMI-X64-NEXT:    notl %eax
+; NOBMI-X64-NEXT:    andl %edi, %eax
+; NOBMI-X64-NEXT:    retq
+;
+; BMI-X64-LABEL: t0_32:
+; BMI-X64:       # %bb.0:
+; BMI-X64-NEXT:    andnl %edi, %esi, %eax
+; BMI-X64-NEXT:    retq
   %bias = and i32 %ptr, %mask
   %r = sub i32 %ptr, %bias
   ret i32 %r
 }
 define i64 @t1_64(i64 %ptr, i64 %mask) nounwind {
-; X86-LABEL: t1_64:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl %edx, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    andl %eax, %esi
-; X86-NEXT:    subl %esi, %eax
-; X86-NEXT:    sbbl %ecx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
+; NOBMI-X86-LABEL: t1_64:
+; NOBMI-X86:       # %bb.0:
+; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOBMI-X86-NEXT:    notl %eax
+; NOBMI-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    notl %edx
+; NOBMI-X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
+; NOBMI-X86-NEXT:    retl
 ;
-; X64-LABEL: t1_64:
-; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    andq %rdi, %rsi
-; X64-NEXT:    subq %rsi, %rax
-; X64-NEXT:    retq
+; BMI-X86-LABEL: t1_64:
+; BMI-X86:       # %bb.0:
+; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; BMI-X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; BMI-X86-NEXT:    andnl {{[0-9]+}}(%esp), %ecx, %edx
+; BMI-X86-NEXT:    retl
+;
+; NOBMI-X64-LABEL: t1_64:
+; NOBMI-X64:       # %bb.0:
+; NOBMI-X64-NEXT:    movq %rsi, %rax
+; NOBMI-X64-NEXT:    notq %rax
+; NOBMI-X64-NEXT:    andq %rdi, %rax
+; NOBMI-X64-NEXT:    retq
+;
+; BMI-X64-LABEL: t1_64:
+; BMI-X64:       # %bb.0:
+; BMI-X64-NEXT:    andnq %rdi, %rsi, %rax
+; BMI-X64-NEXT:    retq
   %bias = and i64 %ptr, %mask
   %r = sub i64 %ptr, %bias
   ret i64 %r
 }
 
 define i32 @t2_commutative(i32 %ptr, i32 %mask) nounwind {
-; X86-LABEL: t2_commutative:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl %eax, %ecx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    retl
+; NOBMI-X86-LABEL: t2_commutative:
+; NOBMI-X86:       # %bb.0:
+; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    notl %eax
+; NOBMI-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    retl
 ;
-; X64-LABEL: t2_commutative:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl %edi, %esi
-; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    retq
+; BMI-X86-LABEL: t2_commutative:
+; BMI-X86:       # %bb.0:
+; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI-X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; BMI-X86-NEXT:    retl
+;
+; NOBMI-X64-LABEL: t2_commutative:
+; NOBMI-X64:       # %bb.0:
+; NOBMI-X64-NEXT:    movl %esi, %eax
+; NOBMI-X64-NEXT:    notl %eax
+; NOBMI-X64-NEXT:    andl %edi, %eax
+; NOBMI-X64-NEXT:    retq
+;
+; BMI-X64-LABEL: t2_commutative:
+; BMI-X64:       # %bb.0:
+; BMI-X64-NEXT:    andnl %edi, %esi, %eax
+; BMI-X64-NEXT:    retq
   %bias = and i32 %mask, %ptr ; swapped
   %r = sub i32 %ptr, %bias
   ret i32 %r
@@ -150,20 +179,30 @@ define i32 @n5_different_ptrs_commutative(i32 %ptr0, i32 %ptr1, i32 %mask) nounw
 }
 
 define i32 @n6_not_lowbit_mask(i32 %ptr, i32 %mask) nounwind {
-; X86-LABEL: n6_not_lowbit_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl %eax, %ecx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    retl
+; NOBMI-X86-LABEL: n6_not_lowbit_mask:
+; NOBMI-X86:       # %bb.0:
+; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    notl %eax
+; NOBMI-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    retl
 ;
-; X64-LABEL: n6_not_lowbit_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl %edi, %esi
-; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    retq
+; BMI-X86-LABEL: n6_not_lowbit_mask:
+; BMI-X86:       # %bb.0:
+; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI-X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; BMI-X86-NEXT:    retl
+;
+; NOBMI-X64-LABEL: n6_not_lowbit_mask:
+; NOBMI-X64:       # %bb.0:
+; NOBMI-X64-NEXT:    movl %esi, %eax
+; NOBMI-X64-NEXT:    notl %eax
+; NOBMI-X64-NEXT:    andl %edi, %eax
+; NOBMI-X64-NEXT:    retq
+;
+; BMI-X64-LABEL: n6_not_lowbit_mask:
+; BMI-X64:       # %bb.0:
+; BMI-X64-NEXT:    andnl %edi, %esi, %eax
+; BMI-X64-NEXT:    retq
   %bias = and i32 %ptr, %mask
   %r = sub i32 %ptr, %bias
   ret i32 %r
