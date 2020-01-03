@@ -18,16 +18,14 @@
 define i32 @t0_32(i32 %alignment) nounwind {
 ; X86-LABEL: t0_32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    decl %eax
-; X86-NEXT:    notl %eax
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t0_32:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal -1(%rdi), %eax
-; X64-NEXT:    notl %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
 ; X64-NEXT:    retq
   %mask = add i32 %alignment, -1
   %invmask = xor i32 %mask, -1
@@ -36,18 +34,16 @@ define i32 @t0_32(i32 %alignment) nounwind {
 define i64 @t1_64(i64 %alignment) nounwind {
 ; X86-LABEL: t1_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    addl $-1, %eax
-; X86-NEXT:    adcl $-1, %edx
-; X86-NEXT:    notl %edx
-; X86-NEXT:    notl %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t1_64:
 ; X64:       # %bb.0:
-; X64-NEXT:    leaq -1(%rdi), %rax
-; X64-NEXT:    notq %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negq %rax
 ; X64-NEXT:    retq
   %mask = add i64 %alignment, -1
   %invmask = xor i64 %mask, -1
@@ -61,17 +57,18 @@ define i32 @t2_extrause(i32 %alignment, i32* %mask_storage) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    decl %eax
-; X86-NEXT:    movl %eax, (%ecx)
-; X86-NEXT:    notl %eax
+; X86-NEXT:    leal -1(%eax), %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    negl %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t2_extrause:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    decl %eax
-; X64-NEXT:    movl %eax, (%rsi)
-; X64-NEXT:    notl %eax
+; X64-NEXT:    leal -1(%rax), %ecx
+; X64-NEXT:    movl %ecx, (%rsi)
+; X64-NEXT:    negl %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %mask = add i32 %alignment, -1
   store i32 %mask, i32* %mask_storage
