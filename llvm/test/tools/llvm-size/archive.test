@@ -8,8 +8,7 @@
 # RUN: llvm-ar rc %t1.a
 
 # RUN: llvm-size -B %t1.a | count 0
-## Sysv output prints a single blank line in this case.
-# RUN: llvm-size -A %t1.a | FileCheck %s --implicit-check-not={{.}}
+# RUN: llvm-size -A %t1.a | count 0
 
 ## Case 2: Single member.
 # RUN: rm -f %t2.a
@@ -48,12 +47,14 @@
 # SYSV-3-NEXT: .bss           4      1
 # SYSV-3-NEXT: Total          7
 # SYSV-3-EMPTY:
+# SYSV-3-EMPTY:
 # SYSV-3-NEXT: archive.test.tmp1   (ex [[ARCHIVE2]]):
 # SYSV-3-NEXT: section     size   addr
 # SYSV-3-NEXT: .text          1      4
 # SYSV-3-NEXT: .data          2      2
 # SYSV-3-NEXT: .bss           4      1
 # SYSV-3-NEXT: Total          7
+# SYSV-3-EMPTY:
 # SYSV-3-EMPTY:
 # SYSV-3-NEXT: [[FILE2]]  :
 # SYSV-3-NEXT: section     size   addr
@@ -69,6 +70,8 @@
 # SYSV-1-NEXT: .data          2      2
 # SYSV-1-NEXT: .bss           4      1
 # SYSV-1-NEXT: Total          7
+# SYSV-1-EMPTY:
+# SYSV-1-EMPTY:
 
 # SYSV-2-NEXT: archive.test.tmp2   (ex [[ARCHIVE]]):
 # SYSV-2-NEXT: section     size   addr

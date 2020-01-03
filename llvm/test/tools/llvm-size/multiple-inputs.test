@@ -17,6 +17,7 @@
 # SYSV-NEXT: .bss           4      1
 # SYSV-NEXT: Total          7
 # SYSV-EMPTY:
+# SYSV-EMPTY:
 # SYSV-NEXT: [[FILE2]]  :
 # SYSV-NEXT: section     size   addr
 # SYSV-NEXT: .text          8     32
