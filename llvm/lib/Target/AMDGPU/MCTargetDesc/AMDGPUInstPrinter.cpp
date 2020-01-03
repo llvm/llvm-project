@@ -30,7 +30,7 @@ void AMDGPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                   StringRef Annot, const MCSubtargetInfo &STI,
                                   raw_ostream &OS) {
   OS.flush();
-  printInstruction(MI, STI, OS);
+  printInstruction(MI, Address, STI, OS);
   printAnnotation(OS, Annot);
 }
 
@@ -1347,7 +1347,7 @@ void R600InstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                 StringRef Annot, const MCSubtargetInfo &STI,
                                 raw_ostream &O) {
   O.flush();
-  printInstruction(MI, O);
+  printInstruction(MI, Address, O);
   printAnnotation(O, Annot);
 }
 

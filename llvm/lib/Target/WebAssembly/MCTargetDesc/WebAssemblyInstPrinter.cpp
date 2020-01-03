@@ -49,7 +49,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) {
   // Print the instruction (this uses the AsmStrings from the .td files).
-  printInstruction(MI, OS);
+  printInstruction(MI, Address, OS);
 
   // Print any additional variadic operands.
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());

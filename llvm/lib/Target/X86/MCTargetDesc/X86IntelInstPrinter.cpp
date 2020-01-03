@@ -47,7 +47,7 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     OS << "\tdata32";
   } else if (!printAliasInstr(MI, OS) &&
              !printVecCompareInstr(MI, OS))
-    printInstruction(MI, OS);
+    printInstruction(MI, Address, OS);
 
   // Next always print the annotation.
   printAnnotation(OS, Annot);

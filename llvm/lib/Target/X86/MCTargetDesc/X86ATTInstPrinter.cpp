@@ -70,7 +70,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   // Try to print any aliases first.
   else if (!printAliasInstr(MI, OS) &&
            !printVecCompareInstr(MI, OS))
-    printInstruction(MI, OS);
+    printInstruction(MI, Address, OS);
 
   // Next always print the annotation.
   printAnnotation(OS, Annot);

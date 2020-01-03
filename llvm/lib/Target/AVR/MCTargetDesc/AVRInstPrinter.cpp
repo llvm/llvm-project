@@ -79,7 +79,7 @@ void AVRInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     break;
   default:
     if (!printAliasInstr(MI, O))
-      printInstruction(MI, O);
+      printInstruction(MI, Address, O);
 
     printAnnotation(O, Annot);
     break;

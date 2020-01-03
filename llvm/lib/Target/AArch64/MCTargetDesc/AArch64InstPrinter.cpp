@@ -296,7 +296,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 
   if (!printAliasInstr(MI, STI, O))
-    printInstruction(MI, STI, O);
+    printInstruction(MI, Address, STI, O);
 
   printAnnotation(O, Annot);
 
