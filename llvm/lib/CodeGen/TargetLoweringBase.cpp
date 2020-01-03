@@ -696,6 +696,7 @@ void TargetLoweringBase::initActions() {
     // These operations default to expand for vector types.
     if (VT.isVector()) {
       setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+      setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
       setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, VT, Expand);
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Expand);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Expand);
