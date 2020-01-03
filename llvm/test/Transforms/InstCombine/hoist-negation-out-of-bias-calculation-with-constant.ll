@@ -15,8 +15,8 @@
 
 define i8 @t0(i8 %x) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 [[UNBIASEDX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -43
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 0, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[NEGBIAS]]
 ;
   %unbiasedx = and i8 %x, 42
@@ -26,8 +26,8 @@ define i8 @t0(i8 %x) {
 
 define <2 x i8> @t1_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t1_vec(
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and <2 x i8> [[X:%.*]], <i8 42, i8 42>
-; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> [[UNBIASEDX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -43, i8 -43>
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
 ;
   %unbiasedx = and <2 x i8> %x, <i8 42, i8 42>
@@ -37,8 +37,8 @@ define <2 x i8> @t1_vec(<2 x i8> %x) {
 
 define <2 x i8> @t2_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @t2_vec_undef(
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and <2 x i8> [[X:%.*]], <i8 42, i8 undef>
-; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> [[UNBIASEDX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -43, i8 undef>
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
 ;
   %unbiasedx = and <2 x i8> %x, <i8 42, i8 undef>
@@ -48,8 +48,8 @@ define <2 x i8> @t2_vec_undef(<2 x i8> %x) {
 
 define <2 x i8> @t3_vec_nonsplat(<2 x i8> %x) {
 ; CHECK-LABEL: @t3_vec_nonsplat(
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and <2 x i8> [[X:%.*]], <i8 42, i8 44>
-; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> [[UNBIASEDX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -43, i8 -45>
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
 ;
   %unbiasedx = and <2 x i8> %x, <i8 42, i8 44>

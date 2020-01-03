@@ -84,8 +84,8 @@ define <2 x i64> @test9vec(<2 x i64> %x) {
 
 define i64 @test10(i64 %x) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = sub i64 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], -2
+; CHECK-NEXT:    [[ADD:%.*]] = sub i64 0, [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sub = sub nsw i64 0, %x
