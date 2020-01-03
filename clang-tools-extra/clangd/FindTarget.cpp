@@ -617,13 +617,13 @@ llvm::SmallVector<ReferenceLoc, 2> refInTypeLoc(TypeLoc L) {
         DependentTemplateSpecializationTypeLoc L) {
       Ref = ReferenceLoc{
           L.getQualifierLoc(), L.getTemplateNameLoc(), /*IsDecl=*/false,
-          explicitReferenceTargets(DynTypedNode::create(L.getType()))};
+          explicitReferenceTargets(DynTypedNode::create(L.getType()), {})};
     }
 
     void VisitDependentNameTypeLoc(DependentNameTypeLoc L) {
       Ref = ReferenceLoc{
           L.getQualifierLoc(), L.getNameLoc(), /*IsDecl=*/false,
-          explicitReferenceTargets(DynTypedNode::create(L.getType()))};
+          explicitReferenceTargets(DynTypedNode::create(L.getType()), {})};
     }
 
     void VisitTypedefTypeLoc(TypedefTypeLoc L) {

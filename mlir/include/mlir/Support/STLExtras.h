@@ -294,10 +294,23 @@ class indexed_accessor_range
     : public detail::indexed_accessor_range_base<
           indexed_accessor_range<DerivedT, BaseT, T, PointerT, ReferenceT>,
           std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT> {
+public:
+  using detail::indexed_accessor_range_base<
+      indexed_accessor_range<DerivedT, BaseT, T, PointerT, ReferenceT>,
+      std::pair<BaseT, ptrdiff_t>, T, PointerT,
+      ReferenceT>::indexed_accessor_range_base;
+
+  /// Returns the current base of the range.
+  const BaseT &getBase() const { return this->base.first; }
+
+  /// Returns the current start index of the range.
+  ptrdiff_t getStartIndex() const { return this->base.second; }
+
 protected:
   indexed_accessor_range(BaseT base, ptrdiff_t startIndex, ptrdiff_t count)
       : detail::indexed_accessor_range_base<
-            DerivedT, std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT>(
+            indexed_accessor_range<DerivedT, BaseT, T, PointerT, ReferenceT>,
+            std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT>(
             std::make_pair(base, startIndex), count) {}
 
 private:

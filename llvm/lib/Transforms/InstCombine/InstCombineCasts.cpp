@@ -922,10 +922,24 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext,
     }
   }
 
-  // icmp ne A, B is equal to xor A, B when A and B only really have one bit.
-  // It is also profitable to transform icmp eq into not(xor(A, B)) because that
-  // may lead to additional simplifications.
   if (Cmp->isEquality() && Zext.getType() == Cmp->getOperand(0)->getType()) {
+    // Test if a bit is clear/set using a shifted-one mask:
+    // zext (icmp eq (and X, (1 << ShAmt)), 0) --> and (lshr (not X), ShAmt), 1
+    // zext (icmp ne (and X, (1 << ShAmt)), 0) --> and (lshr X, ShAmt), 1
+    Value *X, *ShAmt;
+    if (Cmp->hasOneUse() && match(Cmp->getOperand(1), m_ZeroInt()) &&
+        match(Cmp->getOperand(0),
+              m_OneUse(m_c_And(m_Shl(m_One(), m_Value(ShAmt)), m_Value(X))))) {
+      if (Cmp->getPredicate() == ICmpInst::ICMP_EQ)
+        X = Builder.CreateNot(X);
+      Value *Lshr = Builder.CreateLShr(X, ShAmt);
+      Value *And1 = Builder.CreateAnd(Lshr, ConstantInt::get(X->getType(), 1));
+      return replaceInstUsesWith(Zext, And1);
+    }
+
+    // icmp ne A, B is equal to xor A, B when A and B only really have one bit.
+    // It is also profitable to transform icmp eq into not(xor(A, B)) because
+    // that may lead to additional simplifications.
     if (IntegerType *ITy = dyn_cast<IntegerType>(Zext.getType())) {
       Value *LHS = Cmp->getOperand(0);
       Value *RHS = Cmp->getOperand(1);
@@ -2277,6 +2291,31 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
     }
   }
 
+  // Check that each user of each old PHI node is something that we can
+  // rewrite, so that all of the old PHI nodes can be cleaned up afterwards.
+  for (auto *OldPN : OldPhiNodes) {
+    for (User *V : OldPN->users()) {
+      if (auto *SI = dyn_cast<StoreInst>(V)) {
+        if (!SI->isSimple() || SI->getOperand(0) != OldPN)
+          return nullptr;
+      } else if (auto *BCI = dyn_cast<BitCastInst>(V)) {
+        // Verify it's a B->A cast.
+        Type *TyB = BCI->getOperand(0)->getType();
+        Type *TyA = BCI->getType();
+        if (TyA != DestTy || TyB != SrcTy)
+          return nullptr;
+      } else if (auto *PHI = dyn_cast<PHINode>(V)) {
+        // As long as the user is another old PHI node, then even if we don't
+        // rewrite it, the PHI web we're considering won't have any users
+        // outside itself, so it'll be dead.
+        if (OldPhiNodes.count(PHI) == 0)
+          return nullptr;
+      } else {
+        return nullptr;
+      }
+    }
+  }
+
   // For each old PHI node, create a corresponding new PHI node with a type A.
   SmallDenseMap<PHINode *, PHINode *> NewPNodes;
   for (auto *OldPN : OldPhiNodes) {
@@ -2321,24 +2360,28 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
     PHINode *NewPN = NewPNodes[OldPN];
     for (User *V : OldPN->users()) {
       if (auto *SI = dyn_cast<StoreInst>(V)) {
-        if (SI->isSimple() && SI->getOperand(0) == OldPN) {
-          Builder.SetInsertPoint(SI);
-          auto *NewBC =
-            cast<BitCastInst>(Builder.CreateBitCast(NewPN, SrcTy));
-          SI->setOperand(0, NewBC);
-          Worklist.Add(SI);
-          assert(hasStoreUsersOnly(*NewBC));
-        }
+        assert(SI->isSimple() && SI->getOperand(0) == OldPN);
+        Builder.SetInsertPoint(SI);
+        auto *NewBC =
+          cast<BitCastInst>(Builder.CreateBitCast(NewPN, SrcTy));
+        SI->setOperand(0, NewBC);
+        Worklist.Add(SI);
+        assert(hasStoreUsersOnly(*NewBC));
       }
       else if (auto *BCI = dyn_cast<BitCastInst>(V)) {
-        // Verify it's a B->A cast.
         Type *TyB = BCI->getOperand(0)->getType();
         Type *TyA = BCI->getType();
-        if (TyA == DestTy && TyB == SrcTy) {
-          Instruction *I = replaceInstUsesWith(*BCI, NewPN);
-          if (BCI == &CI)
-            RetVal = I;
-        }
+        assert(TyA == DestTy && TyB == SrcTy);
+        (void) TyA;
+        (void) TyB;
+        Instruction *I = replaceInstUsesWith(*BCI, NewPN);
+        if (BCI == &CI)
+          RetVal = I;
+      } else if (auto *PHI = dyn_cast<PHINode>(V)) {
+        assert(OldPhiNodes.count(PHI) > 0);
+        (void) PHI;
+      } else {
+        llvm_unreachable("all uses should be handled");
       }
     }
   }

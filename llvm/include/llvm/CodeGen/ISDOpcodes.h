@@ -937,11 +937,16 @@ namespace ISD {
     BUILTIN_OP_END
   };
 
+  /// FIRST_TARGET_STRICTFP_OPCODE - Target-specific pre-isel operations
+  /// which cannot raise FP exceptions should be less than this value.
+  /// Those that do must not be less than this value.
+  static const int FIRST_TARGET_STRICTFP_OPCODE = BUILTIN_OP_END+400;
+
   /// FIRST_TARGET_MEMORY_OPCODE - Target-specific pre-isel operations
   /// which do not reference a specific memory location should be less than
   /// this value. Those that do must not be less than this value, and can
   /// be used with SelectionDAG::getMemIntrinsicNode.
-  static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END+400;
+  static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END+500;
 
   //===--------------------------------------------------------------------===//
   /// MemIndexedMode enum - This enum defines the load / store indexed

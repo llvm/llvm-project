@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 '''A utility to update LLVM IR CHECK lines in C/C++ FileCheck test files.
 
 Example RUN lines in .c/.cc test files:
@@ -11,6 +11,8 @@ Usage:
 % utils/update_cc_test_checks.py --llvm-bin=release/bin test/a.cc
 % utils/update_cc_test_checks.py --clang=release/bin/clang /tmp/c/a.cc
 '''
+
+from __future__ import print_function
 
 import argparse
 import collections
@@ -37,18 +39,21 @@ SUBST = {
 def get_line2spell_and_mangled(args, clang_args):
   ret = {}
   # Use clang's JSON AST dump to get the mangled name
-  json_dump_args = [args.clang, *clang_args, '-fsyntax-only', '-o', '-']
+  json_dump_args = [args.clang] + clang_args + ['-fsyntax-only', '-o', '-']
   if '-cc1' not in json_dump_args:
     # For tests that invoke %clang instead if %clang_cc1 we have to use
     # -Xclang -ast-dump=json instead:
     json_dump_args.append('-Xclang')
   json_dump_args.append('-ast-dump=json')
   common.debug('Running', ' '.join(json_dump_args))
-  status = subprocess.run(json_dump_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  if status.returncode != 0:
+
+  popen = subprocess.Popen(json_dump_args, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, universal_newlines=True)
+  stdout, stderr = popen.communicate()
+  if popen.returncode != 0:
     sys.stderr.write('Failed to run ' + ' '.join(json_dump_args) + '\n')
-    sys.stderr.write(status.stderr.decode())
-    sys.stderr.write(status.stdout.decode())
+    sys.stderr.write(stderr)
+    sys.stderr.write(stdout)
     sys.exit(2)
 
   # Parse the clang JSON and add all children of type FunctionDecl.
@@ -75,7 +80,7 @@ def get_line2spell_and_mangled(args, clang_args):
     mangled = node.get('mangledName', spell)
     ret[int(line)-1] = (spell, mangled)
 
-  ast = json.loads(status.stdout.decode())
+  ast = json.loads(stdout)
   if ast['kind'] != 'TranslationUnitDecl':
     common.error('Clang AST dump JSON format changed?')
     sys.exit(2)

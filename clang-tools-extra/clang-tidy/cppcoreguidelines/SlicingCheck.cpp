@@ -75,7 +75,7 @@ void SlicingCheck::DiagnoseSlicedOverriddenMethods(
     const CXXRecordDecl &BaseDecl) {
   if (DerivedDecl.getCanonicalDecl() == BaseDecl.getCanonicalDecl())
     return;
-  for (const auto &Method : DerivedDecl.methods()) {
+  for (const auto *Method : DerivedDecl.methods()) {
     // Virtual destructors are OK. We're ignoring constructors since they are
     // tagged as overrides.
     if (isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method))

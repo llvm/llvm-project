@@ -21,7 +21,7 @@ define internal i32 @caller(i32* %B) {
 ; CHECK-SAME: (i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B:%.*]])
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32
 ; CHECK-NEXT:    store i32 1, i32* [[A]], align 4
-; CHECK-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
+; CHECK-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = alloca i32
@@ -34,7 +34,7 @@ define i32 @callercaller() {
 ; CHECK-LABEL: define {{[^@]+}}@callercaller()
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32
 ; CHECK-NEXT:    store i32 2, i32* [[B]], align 4
-; CHECK-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree nonnull align 4 dereferenceable(4) [[B]])
+; CHECK-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %B = alloca i32

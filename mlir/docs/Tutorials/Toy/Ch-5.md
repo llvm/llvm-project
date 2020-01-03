@@ -34,7 +34,7 @@ framework, we need to provide two things (and an optional third):
     -   This is the formal specification of what operations or dialects are
         legal for the conversion. Operations that aren't legal will require
         rewrite patterns to perform
-        [legalization](./../../Glossary.md#legalization).
+        [legalization](../../Glossary.md#legalization).
 
 *   A set of
     [Rewrite Patterns](../../DialectConversion.md#rewrite-pattern-specification)

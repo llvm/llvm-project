@@ -714,6 +714,52 @@ internal::Matcher<T> traverse(ast_type_traits::TraversalKind TK,
       .template unconditionalConvertTo<T>();
 }
 
+template <typename... T>
+internal::TraversalWrapper<internal::VariadicOperatorMatcher<T...>>
+traverse(ast_type_traits::TraversalKind TK,
+         const internal::VariadicOperatorMatcher<T...> &InnerMatcher) {
+  return internal::TraversalWrapper<internal::VariadicOperatorMatcher<T...>>(
+      TK, InnerMatcher);
+}
+
+template <template <typename ToArg, typename FromArg> class ArgumentAdapterT,
+          typename T, typename ToTypes>
+internal::TraversalWrapper<
+    internal::ArgumentAdaptingMatcherFuncAdaptor<ArgumentAdapterT, T, ToTypes>>
+traverse(ast_type_traits::TraversalKind TK,
+         const internal::ArgumentAdaptingMatcherFuncAdaptor<
+             ArgumentAdapterT, T, ToTypes> &InnerMatcher) {
+  return internal::TraversalWrapper<
+      internal::ArgumentAdaptingMatcherFuncAdaptor<ArgumentAdapterT, T,
+                                                   ToTypes>>(TK, InnerMatcher);
+}
+
+template <template <typename T, typename P1> class MatcherT, typename P1,
+          typename ReturnTypesF>
+internal::TraversalWrapper<
+    internal::PolymorphicMatcherWithParam1<MatcherT, P1, ReturnTypesF>>
+traverse(
+    ast_type_traits::TraversalKind TK,
+    const internal::PolymorphicMatcherWithParam1<MatcherT, P1, ReturnTypesF>
+        &InnerMatcher) {
+  return internal::TraversalWrapper<
+      internal::PolymorphicMatcherWithParam1<MatcherT, P1, ReturnTypesF>>(
+      TK, InnerMatcher);
+}
+
+template <template <typename T, typename P1, typename P2> class MatcherT,
+          typename P1, typename P2, typename ReturnTypesF>
+internal::TraversalWrapper<
+    internal::PolymorphicMatcherWithParam2<MatcherT, P1, P2, ReturnTypesF>>
+traverse(
+    ast_type_traits::TraversalKind TK,
+    const internal::PolymorphicMatcherWithParam2<MatcherT, P1, P2, ReturnTypesF>
+        &InnerMatcher) {
+  return internal::TraversalWrapper<
+      internal::PolymorphicMatcherWithParam2<MatcherT, P1, P2, ReturnTypesF>>(
+      TK, InnerMatcher);
+}
+
 /// Matches expressions that match InnerMatcher after any implicit AST
 /// nodes are stripped off.
 ///
@@ -4295,6 +4341,35 @@ AST_POLYMORPHIC_MATCHER(isConstexpr,
                                                         FunctionDecl,
                                                         IfStmt)) {
   return Node.isConstexpr();
+}
+
+/// Matches selection statements with initializer.
+///
+/// Given:
+/// \code
+///  void foo() {
+///    if (int i = foobar(); i > 0) {}
+///    switch (int i = foobar(); i) {}
+///    for (auto& a = get_range(); auto& x : a) {}
+///  }
+///  void bar() {
+///    if (foobar() > 0) {}
+///    switch (foobar()) {}
+///    for (auto& x : get_range()) {}
+///  }
+/// \endcode
+/// ifStmt(hasInitStatement(anything()))
+///   matches the if statement in foo but not in bar.
+/// switchStmt(hasInitStatement(anything()))
+///   matches the switch statement in foo but not in bar.
+/// cxxForRangeStmt(hasInitStatement(anything()))
+///   matches the range for statement in foo but not in bar.
+AST_POLYMORPHIC_MATCHER_P(hasInitStatement,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(IfStmt, SwitchStmt,
+                                                          CXXForRangeStmt),
+                          internal::Matcher<Stmt>, InnerMatcher) {
+  const Stmt *Init = Node.getInit();
+  return Init != nullptr && InnerMatcher.matches(*Init, Finder, Builder);
 }
 
 /// Matches the condition expression of an if statement, for loop,

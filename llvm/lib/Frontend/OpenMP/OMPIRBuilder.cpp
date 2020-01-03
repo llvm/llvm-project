@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -216,39 +217,88 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
                                                   : OMPRTL___kmpc_barrier),
       Args);
 
-  if (UseCancelBarrier && CheckCancelFlag) {
-    // For a cancel barrier we create two new blocks.
-    BasicBlock *BB = Builder.GetInsertBlock();
-    BasicBlock *NonCancellationBlock;
-    if (Builder.GetInsertPoint() == BB->end()) {
-      // TODO: This branch will not be needed once we moved to the
-      // OpenMPIRBuilder codegen completely.
-      NonCancellationBlock = BasicBlock::Create(
-          BB->getContext(), BB->getName() + ".cont", BB->getParent());
-    } else {
-      NonCancellationBlock = SplitBlock(BB, &*Builder.GetInsertPoint());
-      BB->getTerminator()->eraseFromParent();
-      Builder.SetInsertPoint(BB);
-    }
-    BasicBlock *CancellationBlock = BasicBlock::Create(
-        BB->getContext(), BB->getName() + ".cncl", BB->getParent());
-
-    // Jump to them based on the return value.
-    Value *Cmp = Builder.CreateIsNull(Result);
-    Builder.CreateCondBr(Cmp, NonCancellationBlock, CancellationBlock,
-                         /* TODO weight */ nullptr, nullptr);
-
-    // From the cancellation block we finalize all variables and go to the
-    // post finalization block that is known to the FiniCB callback.
-    Builder.SetInsertPoint(CancellationBlock);
-    auto &FI = FinalizationStack.back();
-    FI.FiniCB(Builder.saveIP());
-
-    // The continuation block is where code generation continues.
-    Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin());
-  }
+  if (UseCancelBarrier && CheckCancelFlag)
+    emitCancelationCheckImpl(Result, OMPD_parallel);
 
   return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::CreateCancel(const LocationDescription &Loc,
+                              Value *IfCondition,
+                              omp::Directive CanceledDirective) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // LLVM utilities like blocks with terminators.
+  auto *UI = Builder.CreateUnreachable();
+
+  Instruction *ThenTI = UI, *ElseTI = nullptr;
+  if (IfCondition)
+    SplitBlockAndInsertIfThenElse(IfCondition, UI, &ThenTI, &ElseTI);
+  Builder.SetInsertPoint(ThenTI);
+
+  Value *CancelKind = nullptr;
+  switch (CanceledDirective) {
+#define OMP_CANCEL_KIND(Enum, Str, DirectiveEnum, Value)                       \
+  case DirectiveEnum:                                                          \
+    CancelKind = Builder.getInt32(Value);                                      \
+    break;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  default:
+    llvm_unreachable("Unknown cancel kind!");
+  }
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
+  Value *Result = Builder.CreateCall(
+      getOrCreateRuntimeFunction(OMPRTL___kmpc_cancel), Args);
+
+  // The actual cancel logic is shared with others, e.g., cancel_barriers.
+  emitCancelationCheckImpl(Result, CanceledDirective);
+
+  // Update the insertion point and remove the terminator we introduced.
+  Builder.SetInsertPoint(UI->getParent());
+  UI->eraseFromParent();
+
+  return Builder.saveIP();
+}
+
+void OpenMPIRBuilder::emitCancelationCheckImpl(
+    Value *CancelFlag, omp::Directive CanceledDirective) {
+  assert(isLastFinalizationInfoCancellable(CanceledDirective) &&
+         "Unexpected cancellation!");
+
+  // For a cancel barrier we create two new blocks.
+  BasicBlock *BB = Builder.GetInsertBlock();
+  BasicBlock *NonCancellationBlock;
+  if (Builder.GetInsertPoint() == BB->end()) {
+    // TODO: This branch will not be needed once we moved to the
+    // OpenMPIRBuilder codegen completely.
+    NonCancellationBlock = BasicBlock::Create(
+        BB->getContext(), BB->getName() + ".cont", BB->getParent());
+  } else {
+    NonCancellationBlock = SplitBlock(BB, &*Builder.GetInsertPoint());
+    BB->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(BB);
+  }
+  BasicBlock *CancellationBlock = BasicBlock::Create(
+      BB->getContext(), BB->getName() + ".cncl", BB->getParent());
+
+  // Jump to them based on the return value.
+  Value *Cmp = Builder.CreateIsNull(CancelFlag);
+  Builder.CreateCondBr(Cmp, NonCancellationBlock, CancellationBlock,
+                       /* TODO weight */ nullptr, nullptr);
+
+  // From the cancellation block we finalize all variables and go to the
+  // post finalization block that is known to the FiniCB callback.
+  Builder.SetInsertPoint(CancellationBlock);
+  auto &FI = FinalizationStack.back();
+  FI.FiniCB(Builder.saveIP());
+
+  // The continuation block is where code generation continues.
+  Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin());
 }
 
 IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
@@ -452,9 +502,20 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
       dbgs() << " PBR: " << BB->getName() << "\n";
   });
 
+  // Add some known attributes to the outlined function.
   Function *OutlinedFn = Extractor.extractCodeRegion(CEAC);
+  OutlinedFn->addParamAttr(0, Attribute::NoAlias);
+  OutlinedFn->addParamAttr(1, Attribute::NoAlias);
+  OutlinedFn->addFnAttr(Attribute::NoUnwind);
+  OutlinedFn->addFnAttr(Attribute::NoRecurse);
+
   LLVM_DEBUG(dbgs() << "After      outlining: " << *UI->getFunction() << "\n");
   LLVM_DEBUG(dbgs() << "   Outlined function: " << *OutlinedFn << "\n");
+
+  // For compability with the clang CG we move the outlined function after the
+  // one with the parallel region.
+  OutlinedFn->removeFromParent();
+  M.getFunctionList().insertAfter(OuterFn->getIterator(), OutlinedFn);
 
   // Remove the artificial entry introduced by the extractor right away, we
   // made our own entry block after all.
@@ -486,6 +547,23 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
   RealArgs.append(CI->arg_begin() + /* tid & bound tid */ 2, CI->arg_end());
 
   FunctionCallee RTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_fork_call);
+  if (auto *F = dyn_cast<llvm::Function>(RTLFn.getCallee())) {
+    if (!F->hasMetadata(llvm::LLVMContext::MD_callback)) {
+      llvm::LLVMContext &Ctx = F->getContext();
+      MDBuilder MDB(Ctx);
+      // Annotate the callback behavior of the __kmpc_fork_call:
+      //  - The callback callee is argument number 2 (microtask).
+      //  - The first two arguments of the callback callee are unknown (-1).
+      //  - All variadic arguments to the __kmpc_fork_call are passed to the
+      //    callback callee.
+      F->addMetadata(
+          llvm::LLVMContext::MD_callback,
+          *llvm::MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                      2, {-1, -1},
+                                      /* VarArgsArePassed */ true)}));
+    }
+  }
+
   Builder.CreateCall(RTLFn, RealArgs);
 
   LLVM_DEBUG(dbgs() << "With fork_call placed: "

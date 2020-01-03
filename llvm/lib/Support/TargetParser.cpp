@@ -132,7 +132,7 @@ StringRef llvm::AMDGPU::getArchNameR600(GPUKind AK) {
 }
 
 AMDGPU::GPUKind llvm::AMDGPU::parseArchAMDGCN(StringRef CPU) {
-  for (const auto C : AMDGCNGPUs) {
+  for (const auto &C : AMDGCNGPUs) {
     if (CPU == C.Name)
       return C.Kind;
   }
@@ -141,7 +141,7 @@ AMDGPU::GPUKind llvm::AMDGPU::parseArchAMDGCN(StringRef CPU) {
 }
 
 AMDGPU::GPUKind llvm::AMDGPU::parseArchR600(StringRef CPU) {
-  for (const auto C : R600GPUs) {
+  for (const auto &C : R600GPUs) {
     if (CPU == C.Name)
       return C.Kind;
   }
@@ -163,12 +163,12 @@ unsigned AMDGPU::getArchAttrR600(GPUKind AK) {
 
 void AMDGPU::fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values) {
   // XXX: Should this only report unique canonical names?
-  for (const auto C : AMDGCNGPUs)
+  for (const auto &C : AMDGCNGPUs)
     Values.push_back(C.Name);
 }
 
 void AMDGPU::fillValidArchListR600(SmallVectorImpl<StringRef> &Values) {
-  for (const auto C : R600GPUs)
+  for (const auto &C : R600GPUs)
     Values.push_back(C.Name);
 }
 

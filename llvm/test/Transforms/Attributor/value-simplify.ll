@@ -210,7 +210,7 @@ define internal i32* @test_inalloca(i32* inalloca %a) {
 }
 define i32* @complicated_args_inalloca() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_inalloca()
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree null)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree writeonly null)
 ; CHECK-NEXT:    ret i32* [[CALL]]
 ;
   %call = call i32* @test_inalloca(i32* null)
@@ -229,7 +229,7 @@ define internal void @test_sret(%struct.X* sret %a, %struct.X** %b) {
 define void @complicated_args_sret(%struct.X** %b) {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_sret
 ; CHECK-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]])
-; CHECK-NEXT:    call void @test_sret(%struct.X* nofree null, %struct.X** nocapture nofree writeonly [[B]])
+; CHECK-NEXT:    call void @test_sret(%struct.X* nofree writeonly null, %struct.X** nocapture nofree writeonly [[B]])
 ; CHECK-NEXT:    ret void
 ;
   call void @test_sret(%struct.X* null, %struct.X** %b)
@@ -245,7 +245,7 @@ define internal %struct.X* @test_nest(%struct.X* nest %a) {
 }
 define %struct.X* @complicated_args_nest() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_nest()
-; CHECK-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nofree null)
+; CHECK-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nofree readnone null)
 ; CHECK-NEXT:    ret %struct.X* [[CALL]]
 ;
   %call = call %struct.X* @test_nest(%struct.X* null)
@@ -266,7 +266,7 @@ define internal void @test_byval(%struct.X* byval %a) {
 }
 define void @complicated_args_byval() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_byval()
-; CHECK-NEXT:    call void @test_byval(%struct.X* nofree nonnull align 8 dereferenceable(8) @S)
+; CHECK-NEXT:    call void @test_byval(%struct.X* nofree nonnull readonly align 8 dereferenceable(8) @S)
 ; CHECK-NEXT:    ret void
 ;
   call void @test_byval(%struct.X* @S)

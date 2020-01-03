@@ -512,6 +512,11 @@ SDValue VectorLegalizer::Promote(SDValue Op) {
   case ISD::STRICT_FP_TO_SINT:
     // Promote the operation by extending the operand.
     return PromoteFP_TO_INT(Op);
+  case ISD::FP_ROUND:
+  case ISD::FP_EXTEND:
+    // These operations are used to do promotion so they can't be promoted
+    // themselves.
+    llvm_unreachable("Don't know how to promote this operation!");
   }
 
   // There are currently two cases of vector promotion:
@@ -752,15 +757,7 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
     NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
     Value = DAG.getBuildVector(Op.getNode()->getValueType(0), dl, Vals);
   } else {
-    SDValue Scalarized = TLI.scalarizeVectorLoad(LD, DAG);
-    // Skip past MERGE_VALUE node if known.
-    if (Scalarized->getOpcode() == ISD::MERGE_VALUES) {
-      NewChain = Scalarized.getOperand(1);
-      Value = Scalarized.getOperand(0);
-    } else {
-      NewChain = Scalarized.getValue(1);
-      Value = Scalarized.getValue(0);
-    }
+    std::tie(Value, NewChain) = TLI.scalarizeVectorLoad(LD, DAG);
   }
 
   AddLegalizedOperand(Op.getValue(0), Value);

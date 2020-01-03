@@ -10,7 +10,7 @@ define i32 @fn2() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @b, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to i32*
-; CHECK-NEXT:    call fastcc void @fn1(i32* nofree [[TMP3]])
+; CHECK-NEXT:    call fastcc void @fn1(i32* nofree readonly align 4 [[TMP3]])
 ; CHECK-NEXT:    ret i32 undef
 ;
   %1 = load i32, i32* @b, align 4

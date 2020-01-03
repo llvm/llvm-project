@@ -189,7 +189,7 @@ utility:
 
 Exporting our module to LLVM IR generates:
 
-```.llvm
+```llvm
 define void @main() {
   ...
 
@@ -224,7 +224,7 @@ define void @main() {
 If we enable optimization on the generated LLVM IR, we can trim this down quite
 a bit:
 
-```.llvm
+```llvm
 define void @main()
   %0 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double 1.000000e+00)
   %1 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double 1.600000e+01)
@@ -237,7 +237,6 @@ define void @main()
   %putchar.2 = tail call i32 @putchar(i32 10)
   ret void
 }
-
 ```
 
 The full code listing for dumping LLVM IR can be found in `Ch6/toy.cpp` in the
@@ -308,7 +307,7 @@ int runJit(mlir::ModuleOp module) {
 
 You can play around with it from the build directory:
 
-```sh
+```shell
 $ echo 'def main() { print([[1, 2], [3, 4]]); }' | ./bin/toyc-ch6 -emit=jit
 1.000000 2.000000
 3.000000 4.000000

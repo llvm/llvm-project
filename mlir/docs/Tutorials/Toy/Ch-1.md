@@ -51,7 +51,7 @@ of rank <= 2, and the only datatype in Toy is a 64-bit floating point type (aka
 and deallocation is automatically managed. But enough with the long description;
 nothing is better than walking through an example to get a better understanding:
 
-```Toy {.toy}
+```toy
 def main() {
   # Define a variable `a` with shape <2, 3>, initialized with the literal value.
   # The shape is inferred from the supplied literal.
@@ -74,7 +74,7 @@ tensors, but we don't know their dimensions). They are specialized for every
 newly discovered signature at call sites. Let's revisit the previous example by
 adding a user-defined function:
 
-```Toy {.toy}
+```toy
 # User defined generic function that operates on unknown shaped arguments.
 def multiply_transpose(a, b) {
   return transpose(a) * transpose(b);

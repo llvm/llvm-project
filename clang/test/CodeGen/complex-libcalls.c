@@ -112,12 +112,10 @@ void foo(float f) {
 
   conj(f);       conjf(f);      conjl(f);
 
-// NO__ERRNO: declare { double, double } @conj(double, double) [[READNONE:#[0-9]+]]
-// NO__ERRNO: declare <2 x float> @conjf(<2 x float>) [[READNONE]]
-// NO__ERRNO: declare { x86_fp80, x86_fp80 } @conjl({ x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
-// HAS_ERRNO: declare { double, double } @conj(double, double) [[READNONE:#[0-9]+]]
-// HAS_ERRNO: declare <2 x float> @conjf(<2 x float>) [[READNONE]]
-// HAS_ERRNO: declare { x86_fp80, x86_fp80 } @conjl({ x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
+// NO__ERRNO-NOT: .conj
+// NO__ERRNO-NOT: @conj
+// HAS_ERRNO-NOT: .conj
+// HAS_ERRNO-NOT: @conj
 
   clog(f);       clogf(f);      clogl(f);
 
@@ -133,7 +131,7 @@ void foo(float f) {
 // NO__ERRNO: declare { double, double } @cproj(double, double) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @cprojf(<2 x float>) [[READNONE]]
 // NO__ERRNO: declare { x86_fp80, x86_fp80 } @cprojl({ x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
-// HAS_ERRNO: declare { double, double } @cproj(double, double) [[READNONE]]
+// HAS_ERRNO: declare { double, double } @cproj(double, double) [[READNONE:#[0-9]+]]
 // HAS_ERRNO: declare <2 x float> @cprojf(<2 x float>) [[READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @cprojl({ x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 

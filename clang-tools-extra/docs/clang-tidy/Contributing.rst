@@ -63,7 +63,7 @@ the LLVM System`_, `Using Clang Tools`_ and `How To Setup Clang Tooling For
 LLVM`_ documents to check out and build LLVM, Clang and Clang Extra Tools with
 CMake.
 
-Once you are done, change to the ``llvm/tools/clang/tools/extra`` directory, and
+Once you are done, change to the ``llvm/clang-tools-extra`` directory, and
 let's start!
 
 .. _Getting Started with the LLVM System: https://llvm.org/docs/GettingStarted.html
@@ -75,7 +75,7 @@ The Directory Structure
 -----------------------
 
 :program:`clang-tidy` source code resides in the
-``llvm/tools/clang/tools/extra`` directory and is structured as follows:
+``llvm/clang-tools-extra`` directory and is structured as follows:
 
 ::
 

@@ -34,3 +34,18 @@ define double @negation_propagation(double* %arg, double %arg1, double %arg2) {
   %t18 = fadd double %t16, %t7
   ret double %t18
 }
+
+define { double, double } @testfn(double %x, double %y) #0 {
+; CHECK-LABEL: testfn:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub d0, d0, d1
+; CHECK-NEXT:    fneg d1, d0
+; CHECK-NEXT:    ret
+  %sub = fsub fast double %x, %y
+  %neg = fneg fast double %sub
+  %r0 = insertvalue { double, double } undef, double %sub, 0
+  %r1 = insertvalue { double, double } %r0, double %neg, 1
+  ret { double, double } %r1
+}
+
+attributes #0 = { "no-signed-zeros-fp-math"="true" }

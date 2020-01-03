@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1136,7 +1137,11 @@ ComplexPairTy CodeGenFunction::EmitLoadOfComplex(LValue src,
 LValue CodeGenFunction::EmitComplexAssignmentLValue(const BinaryOperator *E) {
   assert(E->getOpcode() == BO_Assign);
   ComplexPairTy Val; // ignored
-  return ComplexExprEmitter(*this).EmitBinAssignLValue(E, Val);
+  LValue LVal = ComplexExprEmitter(*this).EmitBinAssignLValue(E, Val);
+  if (getLangOpts().OpenMP)
+    CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(*this,
+                                                              E->getLHS());
+  return LVal;
 }
 
 typedef ComplexPairTy (ComplexExprEmitter::*CompoundFunc)(

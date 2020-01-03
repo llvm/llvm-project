@@ -65,7 +65,7 @@ void llvm::omp::types::initializeTypes(Module &M) {
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
-  VarName##Ptr = PointerType::getUnqual(T);
+  VarName##Ptr = PointerType::getUnqual(VarName);
 #define OMP_STRUCT_TYPE(VarName, StructName, ...)                              \
   T = M.getTypeByName(StructName);                                             \
   if (!T)                                                                      \

@@ -235,6 +235,23 @@ static cl::opt<bool> EnablePruneUnprofitable(
     cl::desc("Bail out on unprofitable SCoPs before rescheduling"), cl::Hidden,
     cl::init(true), cl::cat(PollyCategory));
 
+namespace {
+
+/// Initialize Polly passes when library is loaded.
+///
+/// We use the constructor of a statically declared object to initialize the
+/// different Polly passes right after the Polly library is loaded. This ensures
+/// that the Polly passes are available e.g. in the 'opt' tool.
+class StaticInitializer {
+public:
+  StaticInitializer() {
+    llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
+    polly::initializePollyPasses(Registry);
+  }
+};
+static StaticInitializer InitializeEverything;
+} // end of anonymous namespace.
+
 namespace polly {
 void initializePollyPasses(PassRegistry &Registry) {
   initializeCodeGenerationPass(Registry);
@@ -690,7 +707,7 @@ parseTopLevelPipeline(ModulePassManager &MPM,
   return true;
 }
 
-void RegisterPollyPasses(PassBuilder &PB) {
+void registerPollyPasses(PassBuilder &PB) {
   PB.registerAnalysisRegistrationCallback(registerFunctionAnalyses);
   PB.registerPipelineParsingCallback(parseFunctionPipeline);
   PB.registerPipelineParsingCallback(parseScopPipeline);
@@ -702,9 +719,7 @@ void RegisterPollyPasses(PassBuilder &PB) {
 }
 } // namespace polly
 
-// Plugin Entrypoint:
-extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
-llvmGetPassPluginInfo() {
+llvm::PassPluginLibraryInfo getPollyPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Polly", LLVM_VERSION_STRING,
-          polly::RegisterPollyPasses};
+          polly::registerPollyPasses};
 }

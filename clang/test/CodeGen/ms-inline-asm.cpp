@@ -40,7 +40,7 @@ void t2() {
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: mov eax, $0
 // CHECK-SAME: mov eax, $1
-// CHECK-SAME: "r,r,~{eax},~{dirflag},~{fpsr},~{flags}"(i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3Bar3ptrE)
+// CHECK-SAME: "i,i,~{eax},~{dirflag},~{fpsr},~{flags}"(i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3Bar3ptrE)
 }
 
 // CHECK-LABEL: define void @_Z2t3v()

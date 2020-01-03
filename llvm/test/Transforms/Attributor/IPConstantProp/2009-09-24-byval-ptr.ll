@@ -52,8 +52,8 @@ entry:
 define i32 @unions() nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@unions()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @vfu1(%struct.MYstr* nofree nonnull byval align 8 dereferenceable(8) @mystr)
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(%struct.MYstr* nofree nonnull byval align 8 dereferenceable(8) @mystr)
+; CHECK-NEXT:    call void @vfu1(%struct.MYstr* nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(%struct.MYstr* nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
@@ -66,11 +66,11 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval align 4 %u) nounwind readonly 
 ; CHECK-LABEL: define {{[^@]+}}@vfu2_v2
 ; CHECK-SAME: (%struct.MYstr* nocapture nofree nonnull byval align 8 dereferenceable(8) [[U:%.*]])
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* %u, i32 0, i32 1
+; CHECK-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 99, i32* [[Z]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* %u, i32 0, i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* %u, i32 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
@@ -91,8 +91,8 @@ entry:
 define i32 @unions_v2() nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@unions_v2()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @vfu1(%struct.MYstr* nofree nonnull byval align 8 dereferenceable(8) @mystr)
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* nofree nonnull byval align 8 dereferenceable(8) @mystr)
+; CHECK-NEXT:    call void @vfu1(%struct.MYstr* nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:

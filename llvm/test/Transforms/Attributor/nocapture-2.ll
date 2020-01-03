@@ -275,7 +275,7 @@ entry:
 ;   not_captured_but_returned_1(a);
 ; }
 ;
-; CHECK: define void @test_not_captured_but_returned_calls(i64* nocapture nofree writeonly %a)
+; CHECK: define void @test_not_captured_but_returned_calls(i64* nocapture nofree writeonly align 8 %a)
 define void @test_not_captured_but_returned_calls(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -290,7 +290,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define i64* @negative_test_not_captured_but_returned_call_0a(i64* nofree returned writeonly "no-capture-maybe-returned" %a)
+; CHECK: define align 8 i64* @negative_test_not_captured_but_returned_call_0a(i64* nofree returned writeonly align 8 "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_0a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -304,7 +304,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define void @negative_test_not_captured_but_returned_call_0b(i64* nofree writeonly %a)
+; CHECK: define void @negative_test_not_captured_but_returned_call_0b(i64* nofree writeonly align 8 %a)
 define void @negative_test_not_captured_but_returned_call_0b(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -320,7 +320,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull align 8 dereferenceable(8) i64* @negative_test_not_captured_but_returned_call_1a(i64* nofree writeonly "no-capture-maybe-returned" %a)
+; CHECK: define nonnull align 8 dereferenceable(8) i64* @negative_test_not_captured_but_returned_call_1a(i64* nofree writeonly align 8 "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_1(i64* %a)
@@ -334,7 +334,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define void @negative_test_not_captured_but_returned_call_1b(i64* nofree writeonly %a)
+; CHECK: define void @negative_test_not_captured_but_returned_call_1b(i64* nofree writeonly align 8 %a)
 define void @negative_test_not_captured_but_returned_call_1b(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_1(i64* %a)

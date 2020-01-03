@@ -378,8 +378,8 @@ class X86VMemOperand<RegisterClass RC, string printMethod,
 
 def anymem : X86MemOperand<"printanymem">;
 def X86any_fcmp : PatFrags<(ops node:$lhs, node:$rhs),
-                          [(X86cmp node:$lhs, node:$rhs),
-                           (X86strict_fcmp node:$lhs, node:$rhs)]>;
+                          [(X86strict_fcmp node:$lhs, node:$rhs),
+                           (X86cmp node:$lhs, node:$rhs)]>;
 
 // FIXME: Right now we allow any size during parsing, but we might want to
 // restrict to only unsized memory.

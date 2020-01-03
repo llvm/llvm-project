@@ -979,25 +979,21 @@ foreach AS = [GlobalAS, LocalAS] in {
 //--------------------------------------------------------------------
 // OpenCL v1.1 s6.11.12, v1.2 s6.12.12, v2.0 s6.13.12 - Miscellaneous Vector Functions
 // --- Table 19 ---
-foreach name = ["shuffle"] in {
-  foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
-    foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
-      def : Builtin<name, [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
-                           GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
-                           GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
-                          Attr.Const>;
-    }
+foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
+  foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
+    def : Builtin<"shuffle", [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
+                              GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
+                              GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
+                  Attr.Const>;
   }
 }
-foreach name = ["shuffle2"] in {
-  foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
-    foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
-      def : Builtin<name, [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
-                           GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
-                           GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
-                           GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
-                          Attr.Const>;
-    }
+foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
+  foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
+    def : Builtin<"shuffle2", [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
+                               GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
+                               GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
+                               GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
+                  Attr.Const>;
   }
 }
 
@@ -1280,79 +1276,39 @@ let Extension = FuncExtKhrMipmapImage in {
   // Added to section 6.13.14.4.
   foreach aQual = ["WO"] in {
     foreach imgTy = [Image2d] in {
-      foreach name = ["write_imagef"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Float, 4>]>;
-      }
-      foreach name = ["write_imagei"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Int, 4>]>;
-      }
-      foreach name = ["write_imageui"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<UInt, 4>]>;
-      }
+      def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Float, 4>]>;
+      def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Int, 4>]>;
+      def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<UInt, 4>]>;
     }
-    foreach imgTy = [Image2dDepth] in {
-      foreach name = ["write_imagef"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, Float]>;
-      }
-    }
+    def : Builtin<"write_imagef", [Void, ImageType<Image2dDepth, aQual>, VectorType<Int, 2>, Int, Float]>;
     foreach imgTy = [Image1d] in {
-      foreach name = ["write_imagef"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, Int, Int, VectorType<Float, 4>]>;
-      }
-      foreach name = ["write_imagei"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, Int, Int, VectorType<Int, 4>]>;
-      }
-      foreach name = ["write_imageui"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, Int, Int, VectorType<UInt, 4>]>;
-      }
+      def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, Int, Int, VectorType<Float, 4>]>;
+      def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, Int, Int, VectorType<Int, 4>]>;
+      def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, Int, Int, VectorType<UInt, 4>]>;
     }
     foreach imgTy = [Image1dArray] in {
-      foreach name = ["write_imagef"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Float, 4>]>;
-      }
-      foreach name = ["write_imagei"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Int, 4>]>;
-      }
-      foreach name = ["write_imageui"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<UInt, 4>]>;
-      }
+      def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Float, 4>]>;
+      def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Int, 4>]>;
+      def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<UInt, 4>]>;
     }
     foreach imgTy = [Image2dArray] in {
-      foreach name = ["write_imagef"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Float, 4>]>;
-      }
-      foreach name = ["write_imagei"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Int, 4>]>;
-      }
-      foreach name = ["write_imageui"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<UInt, 4>]>;
-      }
+      def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Float, 4>]>;
+      def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Int, 4>]>;
+      def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<UInt, 4>]>;
     }
-    foreach imgTy = [Image2dArrayDepth] in {
-      foreach name = ["write_imagef"] in {
-        def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, Float]>;
-      }
-    }
+    def : Builtin<"write_imagef", [Void, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>, Int, Float]>;
     let Extension = FuncExtKhrMipmapAndWrite3d in {
       foreach imgTy = [Image3d] in {
-        foreach name = ["write_imagef"] in {
-          def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Float, 4>]>;
-        }
-        foreach name = ["write_imagei"] in {
-          def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Int, 4>]>;
-        }
-        foreach name = ["write_imageui"] in {
-          def : Builtin<name, [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<UInt, 4>]>;
-        }
+        def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Float, 4>]>;
+        def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Int, 4>]>;
+        def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<UInt, 4>]>;
       }
     }
   }
   // Added to section 6.13.14.5
   foreach aQual = ["RO", "WO", "RW"] in {
-    foreach name = ["get_image_num_mip_levels"] in {
-      foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
-        def : Builtin<name, [Int, ImageType<imgTy, aQual>]>;
-      }
+    foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
+      def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
     }
   }
 }

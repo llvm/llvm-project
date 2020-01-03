@@ -20,24 +20,31 @@ namespace lldb_private {
 
 class DataExtractor;
 
-// A class that can carry around a clang ASTContext and a opaque clang
-// QualType. A clang::QualType can be easily reconstructed from an opaque clang
-// type and often the ASTContext is needed when doing various type related
-// tasks, so this class allows both items to travel in a single very
-// lightweight class that can be used. There are many static equivalents of the
-// member functions that allow the ASTContext and the opaque clang QualType to
-// be specified for ease of use and to avoid code duplication.
+/// Represents a generic type in a programming language.
+///
+/// This class serves as an abstraction for a type inside one of the TypeSystems
+/// implemented by the language plugins. It does not have any actual logic in it
+/// but only stores an opaque pointer and a pointer to the TypeSystem that
+/// gives meaning to this opaque pointer. All methods of this class should call
+/// their respective method in the TypeSystem interface and pass the opaque
+/// pointer along.
+///
+/// \see lldb_private::TypeSystem
 class CompilerType {
 public:
-  // Constructors and Destructors
-  CompilerType(TypeSystem *type_system, lldb::opaque_compiler_type_t type);
+  /// Creates a CompilerType with the given TypeSystem and opaque compiler type.
+  ///
+  /// This constructor should only be called from the respective TypeSystem
+  /// implementation.
+  ///
+  /// \see lldb_private::ClangASTContext::GetType(clang::QualType)
+  CompilerType(TypeSystem *type_system, lldb::opaque_compiler_type_t type)
+      : m_type(type), m_type_system(type_system) {}
 
   CompilerType(const CompilerType &rhs)
       : m_type(rhs.m_type), m_type_system(rhs.m_type_system) {}
 
-  CompilerType() : m_type(nullptr), m_type_system(nullptr) {}
-
-  ~CompilerType();
+  CompilerType() = default;
 
   // Operators
 
@@ -368,8 +375,8 @@ public:
   }
 
 private:
-  lldb::opaque_compiler_type_t m_type;
-  TypeSystem *m_type_system;
+  lldb::opaque_compiler_type_t m_type = nullptr;
+  TypeSystem *m_type_system = nullptr;
 };
 
 bool operator==(const CompilerType &lhs, const CompilerType &rhs);

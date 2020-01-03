@@ -79,16 +79,24 @@ template <typename ConcreteOp>
 LogicalResult linalgOpToAffineLoops(PatternRewriter &rewriter, Operation *op);
 
 /// Rewrite a linalg.generic into a suitable vector.contraction op.
-LogicalResult vectorizeGenericOp(PatternRewriter &rewriter, Operation *op);
+LogicalResult vectorizeGenericLinalgOpPrecondition(Operation *op);
+SmallVector<Value, 0> vectorizeGenericLinalgOp(PatternRewriter &rewriter,
+                                               Operation *op);
 
 /// Emits a `generic` or `indexed_generic` operation with the `indexing_maps`
 /// and `iterator_types` permutated according to `permutation`.
-LogicalResult permuteGenericLinalgOp(PatternRewriter &rewriter, Operation *op,
-                                     ArrayRef<unsigned> permutation,
-                                     StringRef linalgMarker);
+LogicalResult
+permuteGenericLinalgOpPrecondition(Operation *op,
+                                   ArrayRef<unsigned> permutation);
+SmallVector<Value, 0> permuteGenericLinalgOp(PatternRewriter &rewriter,
+                                             Operation *op,
+                                             ArrayRef<unsigned> permutation,
+                                             StringRef linalgMarker);
 
-/// Promote std.subviews feeding linalg operations
-LogicalResult linalgOpPromoteSubviews(PatternRewriter &rewriter, Operation *op);
+/// Promote std.subviews feeding linalg operations.
+LogicalResult promoteSubviewsLinalgOpPrecondition(Operation *op);
+SmallVector<Value, 0> promoteSubviewsLinalgOp(PatternRewriter &rewriter,
+                                              Operation *op);
 
 } // namespace linalg
 } // namespace mlir

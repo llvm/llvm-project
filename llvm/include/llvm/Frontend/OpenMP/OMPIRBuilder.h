@@ -139,6 +139,17 @@ public:
                               bool ForceSimpleCall = false,
                               bool CheckCancelFlag = true);
 
+  /// Generator for '#omp cancel'
+  ///
+  /// \param Loc The location where the directive was encountered.
+  /// \param IfCondition The evaluated 'if' clause expression, if any.
+  /// \param CanceledDirective The kind of directive that is cancled.
+  ///
+  /// \returns The insertion point after the barrier.
+  InsertPointTy CreateCancel(const LocationDescription &Loc,
+                              Value *IfCondition,
+                              omp::Directive CanceledDirective);
+
   /// Generator for '#omp parallel'
   ///
   /// \param Loc The insert and source location description.
@@ -182,6 +193,13 @@ private:
   /// Return an ident_t* encoding the source location \p SrcLocStr and \p Flags.
   Value *getOrCreateIdent(Constant *SrcLocStr,
                           omp::IdentFlag Flags = omp::IdentFlag(0));
+
+  /// Generate control flow and cleanup for cancellation.
+  ///
+  /// \param CancelFlag Flag indicating if the cancellation is performed.
+  /// \param CanceledDirective The kind of directive that is cancled.
+  void emitCancelationCheckImpl(Value *CancelFlag,
+                                omp::Directive CanceledDirective);
 
   /// Generate a barrier runtime call.
   ///

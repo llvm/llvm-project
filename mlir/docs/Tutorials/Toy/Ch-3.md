@@ -28,7 +28,7 @@ Let's start with a simple pattern and try to eliminate a sequence of two
 transpose that cancel out: `transpose(transpose(X)) -> X`. Here is the
 corresponding Toy example:
 
-```Toy(.toy)
+```toy
 def transpose_transpose(x) {
   return transpose(transpose(x));
 }
@@ -146,7 +146,7 @@ input. The Canonicalizer knows to clean up dead operations; however, MLIR
 conservatively assumes that operations may have side-effects. We can fix this by
 adding a new trait, `NoSideEffect`, to our `TransposeOp`:
 
-```tablegen:
+```tablegen
 def TransposeOp : Toy_Op<"transpose", [NoSideEffect]> {...}
 ```
 
@@ -169,7 +169,7 @@ Declarative, rule-based pattern-match and rewrite (DRR) is an operation
 DAG-based declarative rewriter that provides a table-based syntax for
 pattern-match and rewrite rules:
 
-```tablegen:
+```tablegen
 class Pattern<
     dag sourcePattern, list<dag> resultPatterns,
     list<dag> additionalConstraints = [],
@@ -179,7 +179,7 @@ class Pattern<
 A redundant reshape optimization similar to SimplifyRedundantTranspose can be
 expressed more simply using DRR as follows:
 
-```tablegen:
+```tablegen
 // Reshape(Reshape(x)) = Reshape(x)
 def ReshapeReshapeOptPattern : Pat<(ReshapeOp(ReshapeOp $arg)),
                                    (ReshapeOp $arg)>;
@@ -193,7 +193,7 @@ transformation is conditional on some properties of the arguments and results.
 An example is a transformation that eliminates reshapes when they are redundant,
 i.e. when the input and output shapes are identical.
 
-```tablegen:
+```tablegen
 def TypesAreIdentical : Constraint<CPred<"$0->getType() == $1->getType()">>;
 def RedundantReshapeOptPattern : Pat<
   (ReshapeOp:$res $arg), (replaceWithValue $arg),
@@ -207,7 +207,7 @@ C++. An example of such an optimization is FoldConstantReshape, where we
 optimize Reshape of a constant value by reshaping the constant in place and
 eliminating the reshape operation.
 
-```tablegen:
+```tablegen
 def ReshapeConstant : NativeCodeCall<"$0.reshape(($1->getType()).cast<ShapedType>())">;
 def FoldConstantReshapeOptPattern : Pat<
   (ReshapeOp:$res (ConstantOp $arg)),

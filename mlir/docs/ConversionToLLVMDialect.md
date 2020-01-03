@@ -3,7 +3,7 @@
 Conversion from the Standard to the [LLVM Dialect](Dialects/LLVM.md) can be
 performed by the specialized dialect conversion pass by running
 
-```sh
+```shell
 mlir-opt -convert-std-to-llvm <filename.mlir>
 ```
 

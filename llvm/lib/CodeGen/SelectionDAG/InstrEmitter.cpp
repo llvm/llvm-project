@@ -882,7 +882,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
     if (Flags.hasExact())
       MI->setFlag(MachineInstr::MIFlag::IsExact);
 
-    if (Flags.hasFPExcept())
+    if (MI->getDesc().mayRaiseFPException() && !Flags.hasNoFPExcept())
       MI->setFlag(MachineInstr::MIFlag::FPExcept);
   }
 

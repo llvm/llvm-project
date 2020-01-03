@@ -47,7 +47,7 @@
 using namespace llvm;
 
 static cl::opt<bool>
-DisablePromotion("disable-type-promotion", cl::Hidden, cl::init(true),
+DisablePromotion("disable-type-promotion", cl::Hidden, cl::init(false),
                  cl::desc("Disable type promotion pass"));
 
 // The goal of this pass is to enable more efficient code generation for

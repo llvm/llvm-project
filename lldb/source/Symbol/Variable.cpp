@@ -705,9 +705,9 @@ static void PrivateAutoComplete(
             if (!var_sp)
               continue;
 
-            const char *variable_name = var_sp->GetName().AsCString();
-            if (strstr(variable_name, token.c_str()) == variable_name) {
-              if (strcmp(variable_name, token.c_str()) == 0) {
+            llvm::StringRef variable_name = var_sp->GetName().GetStringRef();
+            if (variable_name.startswith(token)) {
+              if (variable_name == token) {
                 Type *variable_type = var_sp->GetType();
                 if (variable_type) {
                   CompilerType variable_compiler_type(

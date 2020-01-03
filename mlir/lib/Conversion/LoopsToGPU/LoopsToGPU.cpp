@@ -375,7 +375,7 @@ LogicalResult createLaunchFromOp(OpTy rootForOp, ArrayRef<Value> numWorkGroups,
 
   // Replace values that are used within the region of the launchOp but are
   // defined outside. They all are replaced with kernel arguments.
-  for (const auto &pair :
+  for (auto pair :
        llvm::zip_first(valuesToForward, launchOp.getKernelArguments())) {
     Value from = std::get<0>(pair);
     Value to = std::get<1>(pair);
@@ -467,7 +467,7 @@ void LoopToGpuConverter::createLaunch(OpTy rootForOp, OpTy innermostForOp,
   // Remap the values defined outside the body to use kernel arguments instead.
   // The list of kernel arguments also contains the lower bounds for loops at
   // trailing positions, make sure we don't touch those.
-  for (const auto &pair :
+  for (auto pair :
        llvm::zip_first(valuesToForward, launchOp.getKernelArguments())) {
     Value from = std::get<0>(pair);
     Value to = std::get<1>(pair);

@@ -188,6 +188,15 @@ RelType RISCV::getDynRel(RelType type) const {
 RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
                           const uint8_t *loc) const {
   switch (type) {
+  case R_RISCV_NONE:
+    return R_NONE;
+  case R_RISCV_32:
+  case R_RISCV_64:
+  case R_RISCV_HI20:
+  case R_RISCV_LO12_I:
+  case R_RISCV_LO12_S:
+  case R_RISCV_RVC_LUI:
+    return R_ABS;
   case R_RISCV_ADD8:
   case R_RISCV_ADD16:
   case R_RISCV_ADD32:
@@ -229,9 +238,11 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_RELAX:
   case R_RISCV_ALIGN:
   case R_RISCV_TPREL_ADD:
-    return R_HINT;
+    return R_NONE;
   default:
-    return R_ABS;
+    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+          ") against symbol " + toString(s));
+    return R_NONE;
   }
 }
 
@@ -423,21 +434,9 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
   case R_RISCV_ALIGN:
   case R_RISCV_RELAX:
     return; // Ignored (for now)
-  case R_RISCV_NONE:
-    return; // Do nothing
 
-  // These are handled by the dynamic linker
-  case R_RISCV_RELATIVE:
-  case R_RISCV_COPY:
-  case R_RISCV_JUMP_SLOT:
-  // GP-relative relocations are only produced after relaxation, which
-  // we don't support for now
-  case R_RISCV_GPREL_I:
-  case R_RISCV_GPREL_S:
   default:
-    error(getErrorLocation(loc) +
-          "unimplemented relocation: " + toString(type));
-    return;
+    llvm_unreachable("unknown relocation");
   }
 }
 

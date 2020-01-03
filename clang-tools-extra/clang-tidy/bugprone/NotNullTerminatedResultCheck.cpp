@@ -393,7 +393,7 @@ static bool isDestExprFix(const MatchFinder::MatchResult &Result,
 }
 
 // If the destination array is the same length as the given length we have to
-// increase the capacity by one to create space for the the null terminator.
+// increase the capacity by one to create space for the null terminator.
 static bool isDestCapacityFix(const MatchFinder::MatchResult &Result,
                               DiagnosticBuilder &Diag) {
   bool IsOverflows = isDestCapacityOverflows(Result);

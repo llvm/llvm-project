@@ -421,7 +421,7 @@ std::shared_ptr<DebugSubsection> YAMLLinesSubsection::toCodeViewSubsection(
   for (const auto &LC : Lines.Blocks) {
     Result->createBlock(LC.FileName);
     if (Result->hasColumnInfo()) {
-      for (const auto &Item : zip(LC.Lines, LC.Columns)) {
+      for (auto Item : zip(LC.Lines, LC.Columns)) {
         auto &L = std::get<0>(Item);
         auto &C = std::get<1>(Item);
         uint32_t LE = L.LineStart + L.EndDelta;

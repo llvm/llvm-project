@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8.1m.main -mattr=+lob -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve,+lob -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
 
 # There are 2 SUBS, and the 2nd one is identified as the def.
 # Thus, the 1st is a use, and we shouldn't optimise away the SUBS.

@@ -105,10 +105,10 @@ INLINE uint32_t __kmpc_impl_smid() {
   return __smid();
 }
 
-INLINE double __target_impl_get_wtick() { return ((double)1E-9); }
+INLINE double __kmpc_impl_get_wtick() { return ((double)1E-9); }
 
 EXTERN uint64_t __clock64();
-INLINE double __target_impl_get_wtime() {
+INLINE double __kmpc_impl_get_wtime() {
   return ((double)1.0 / 745000000.0) * __clock64();
 }
 

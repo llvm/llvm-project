@@ -18,24 +18,24 @@ include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.td"
 include "mlir/Dialect/AffineOps/AffineOps.td"
 
 def HasNoLinalgTransformMarker : CPred<[{
-  !$0.getAttrOfType<StringAttr>(LinalgTransforms::kLinalgTransformMarker)
+  !op.getAttrOfType<StringAttr>(LinalgTransforms::kLinalgTransformMarker)
 }]>;
 
 class HasLinalgTransformMarker<string str> : CPred<[{
-  $0.getAttrOfType<StringAttr>(
+  op.getAttrOfType<StringAttr>(
     LinalgTransforms::kLinalgTransformMarker) &&
-  $0.getAttrOfType<StringAttr>(
+  op.getAttrOfType<StringAttr>(
     LinalgTransforms::kLinalgTransformMarker).getValue() == "}] # str # [{"}]>;
 
 class IsProducedByOpOfType<string str> :
-  CPred<"isProducedByOpOfType<" # str # ">($0, $1)">;
+  CPred<"isProducedByOpOfType<" # str # ">(op, $0)">;
 
 class AffineMapDomainHasDim<int n> : CPred<[{
-  $0.getAttrOfType<ArrayAttr>(getIndexingMapsAttrName()).getValue()[0].
+  op.getAttrOfType<ArrayAttr>(getIndexingMapsAttrName()).getValue()[0].
   cast<AffineMapAttr>().getValue().getNumDims() ==}] # n # [{}]>;
 
 class HasOperandsOfType<string type>: CPred<[{
-    llvm::any_of($0.getOperands(),
+    llvm::any_of(op.getOperands(),
         [](Value v) {
           return dyn_cast_or_null<}] # type # [{>(v->getDefiningOp());
         })
@@ -50,7 +50,7 @@ class HasOperandsOfType<string type>: CPred<[{
 // patterns.
 class TileAndFuseLinalgOp<
     list<int> sizes, list<int> operandIndices, string value> : NativeCodeCall<
-  "if (failed(tileAndFuseLinalgOpAndSetMarker($_builder, $0, {" #
+  "if (failed(tileAndFuseLinalgOpAndSetMarker($_builder, op, {" #
   StrJoinInt<sizes>.result # "}, {" # StrJoinInt<operandIndices>.result # "}," #
       " \"" # value # "\")))" #
   "  return matchFailure();">;
@@ -67,7 +67,7 @@ class TileAndFuseLinalgOp<
 // of elements as `sizes`.
 class TileLinalgOp<list<int> sizes, string value, list<int> permutation=[]> :
   NativeCodeCall<
-    "if (failed(tileLinalgOpAndSetMarker($_builder, $0, {" #
+    "if (failed(tileLinalgOpAndSetMarker($_builder, op, {" #
     StrJoinInt<sizes>.result # "}, \"" # value # "\", {" #
     StrJoinInt<permutation>.result # "})))" #
     "  return matchFailure();">;
@@ -76,33 +76,37 @@ class TileLinalgOp<list<int> sizes, string value, list<int> permutation=[]> :
 // Linalg to loop patterns.
 //===----------------------------------------------------------------------===//
 class LinalgOpToLoops<string OpType> : NativeCodeCall<
-  "if (failed(linalgOpToLoops<" # OpType # ">($_builder, $0))) " #
+  "if (failed(linalgOpToLoops<" # OpType # ">($_builder, op))) " #
   "  return matchFailure();">;
 
 class LinalgOpToAffineLoops<string OpType> : NativeCodeCall<
-  "if (failed(linalgOpToAffineLoops<" # OpType # ">($_builder, $0))) " #
+  "if (failed(linalgOpToAffineLoops<" # OpType # ">($_builder, op))) " #
   "  return matchFailure();">;
 
 //===----------------------------------------------------------------------===//
-// Linalg to vector contraction patterns.
+// Linalg to vector patterns precondition and DRR.
 //===----------------------------------------------------------------------===//
-class LinalgOpToVectorContraction<string OpType> : NativeCodeCall<
-  "if (failed(vectorizeGenericOp($_builder, $0))) " #
-  "  return matchFailure();">;
+def PreconditionVectorizeGenericLinalgOp : CPred<
+  "succeeded(vectorizeGenericLinalgOpPrecondition(op))">;
+def VectorizeGenericLinalgOp : NativeCodeCall<
+  "vectorizeGenericLinalgOp($_builder, op)">;
 
 //===----------------------------------------------------------------------===//
-// Linalg generic permutation patterns.
+// Linalg generic permutation patterns precondition and DRR.
 //===----------------------------------------------------------------------===//
+class PreconditionPermuteGenericLinalgOp<list<int> permutation> : CPred<
+  "succeeded(permuteGenericLinalgOpPrecondition(op, {" #
+  StrJoinInt<permutation>.result # "}))">;
 class PermuteGenericLinalgOp<list<int> permutation, string value> :
   NativeCodeCall<
-    "if (failed(permuteGenericLinalgOp($_builder, $0, {" #
-    StrJoinInt<permutation>.result # "}, \"" # value # "\"))) " #
-    "  return matchFailure();">;
+    "permuteGenericLinalgOp($_builder, op, {" # StrJoinInt<permutation>.result #
+    "}, \"" # value # "\")">;
 
 //===----------------------------------------------------------------------===//
-// Linalg promote subview operands.
+// Linalg promote subview operands precondition and DRR.
 //===----------------------------------------------------------------------===//
-class LinalgOpPromoteSubviews<string OpType> : NativeCodeCall<
-  "if (failed(linalgOpPromoteSubviews($_builder, $0))) " #
-  "  return matchFailure();">;
+def PreconditionPromoteSubviewsLinalgOp : CPred<
+  "succeeded(promoteSubviewsLinalgOpPrecondition(op))">;
+def PromoteSubviewsLinalgOp : NativeCodeCall<
+  "promoteSubviewsLinalgOp($_builder, op)">;
 #endif // LINALG_TRANSFORMS

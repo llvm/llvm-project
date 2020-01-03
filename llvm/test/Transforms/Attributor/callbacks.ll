@@ -13,7 +13,6 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; each other but argument 3-5 of the transitive call site in the caller match
 ; arguments 2-4 of the callback callee. Here we should see information and value
 ; transfer in both directions.
-; FIXME: The callee -> call site direction is not working yet.
 
 define void @t0_caller(i32* %a) {
 ; CHECK-LABEL: @t0_caller(
@@ -24,7 +23,8 @@ define void @t0_caller(i32* %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; CHECK-NEXT:    store i32 42, i32* [[B]], align 32
 ; CHECK-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias null, i32* nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* [[A:%.*]], i64 99, i32** nonnull align 64 dereferenceable(8) [[C]])
+; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias null, i32* nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A:%.*]], i64 99, i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C]])
+
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -41,7 +41,8 @@ entry:
 ; Note that the first two arguments are provided by the callback_broker according to the callback in !1 below!
 ; The others are annotated with alignment information, amongst others, or even replaced by the constants passed to the call.
 define internal void @t0_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, i64 %b, i32** %c) {
-; CHECK-LABEL: @t0_callback_callee(
+; CHECK-LABEL: define {{[^@]+}}@t0_callback_callee
+; CHECK-SAME: (i32* nocapture nonnull writeonly dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL:%.*]]

@@ -72,12 +72,22 @@ IBM - Official manuals and docs
 
 * `IBM AIX/5L for POWER Assembly Reference <http://publibn.boulder.ibm.com/doc_link/en_US/a_doc_lib/aixassem/alangref/alangreftfrm.htm>`_
 
+Embedded PowerPC Processors manuals and docs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* `Book E: Enhanced PowerPC Architecture <https://www.nxp.com/docs/en/user-guide/BOOK_EUM.pdf>`_
+
+* `EREF: A Programmer's Reference Manual for Freescale Embedded Processors (EREFRM) <https://www.nxp.com/files-static/32bit/doc/ref_manual/EREF_RM.pdf>`_
+
+* `Signal Processing Engine (SPE) Programming Environments Manual: A Supplement to the EREF <https://www.nxp.com/docs/en/reference-manual/SPEPEM.pdf>`_
+
+* `Variable-Length Encoding (VLE) Programming Environments Manual: A Supplement to the EREF <https://www.nxp.com/docs/en/reference-manual/VLEPEM.pdf>`_
+
 Other documents, collections, notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * `PowerPC Compiler Writer's Guide <http://www.ibm.com/chips/techlib/techlib.nsf/techdocs/852569B20050FF7785256996007558C6>`_
 * `Intro to PowerPC Architecture <http://www.ibm.com/developerworks/linux/library/l-powarch/>`_
-* `PowerPC Processor Manuals (embedded) <http://www.ibm.com/chips/techlib/techlib.nsf/products/PowerPC>`_
 * `Various IBM specifications and white papers <https://www.power.org/documentation/?document_company=105&document_category=all&publish_year=all&grid_order=DESC&grid_sort=title>`_
 * `PowerPC ABI documents <http://penguinppc.org/dev/#library>`_
 * `PowerPC64 alignment of long doubles (from GCC) <http://gcc.gnu.org/ml/gcc-patches/2003-09/msg00997.html>`_

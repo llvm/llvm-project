@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -fexceptions
+// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -fexceptions -std=c++17
 
 namespace std {
 struct string {
@@ -106,14 +106,110 @@ void foo() {
   }
 }
 
-extern int *g();
-extern void h(int **x);
+int g();
+int h(int);
 
-int *decl_in_condition() {
-  if (int *x = g()) {
-    return x;
+int declInConditionUsedInElse() {
+  if (int X = g()) { // comment-11
+    // CHECK-FIXES: {{^}}  int X = g();
+    // CHECK-FIXES-NEXT: {{^}}if (X) { // comment-11
+    return X;
+  } else { // comment-11
+           // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+           // CHECK-FIXES: {{^}}  } // comment-11
+    return h(X);
+  }
+}
+int declInConditionUnusedInElse() {
+  if (int X = g()) {
+    return h(X);
+  } else { // comment-12
+           // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+           // CHECK-FIXES: {{^}}  } // comment-12
+    return 0;
+  }
+}
+
+int varInitAndCondition() {
+  if (int X = g(); X != 0) { // comment-13
+    // CHECK-FIXES: {{^}}  int X = g();
+    // CHECK-FIXES-NEXT: {{^}}if ( X != 0) { // comment-13
+    return X;
+  } else { // comment-13
+           // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+           // CHECK-FIXES: {{^}}  } // comment-13
+    return h(X);
+  }
+}
+
+int varInitAndConditionUnusedInElse() {
+  if (int X = g(); X != 0) {
+    return X;
+  } else { // comment-14
+           // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+           // CHECK-FIXES: {{^}}  } // comment-14
+    return 0;
+  }
+}
+
+int initAndCondition() {
+  int X;
+  if (X = g(); X != 0) {
+    return X;
+  } else { // comment-15
+           // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+           // CHECK-FIXES: {{^}}  } // comment-15
+    return h(X);
+  }
+}
+
+int varInitAndConditionUnusedInElseWithDecl() {
+  int Y = g();
+  if (int X = g(); X != 0) {
+    return X;
+  } else { // comment-16
+           // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+           // CHECK-FIXES-NOT: {{^}}  } //comment-16
+    int Y = g();
+    h(Y);
+  }
+  return Y;
+}
+
+int varInitAndCondVarUsedInElse() {
+  if (int X = g(); int Y = g()) { // comment-17
+    // CHECK-FIXES:      {{^}}  int X = g();
+    // CHECK-FIXES-NEXT: {{^}}int Y = g();
+    // CHECK-FIXES-NEXT: {{^}}if ( Y) { // comment-17
+    return X ? X : Y;
+  } else { // comment-17
+           // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+           // CHECK-FIXES: {{^}}  } // comment-17
+    return X ? X : h(Y);
+  }
+}
+
+int lifeTimeExtensionTests(int a) {
+  if (a > 0) {
+    return a;
   } else {
-    h(&x);
-    return x;
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+    int b = 0;
+    h(b);
+  }
+  if (int b = a; (b & 1) == 0) {
+    return a;
+  } else {
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+    b++;
+  }
+  if (int b = a; b > 1) { // comment-18
+    // CHECK-FIXES:      {{^}}  int b = a;
+    // CHECK-FIXES-NEXT: {{^}}if ( b > 1) { // comment-18
+    return a;
+  } else { // comment-18
+           // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+           // CHECK-FIXES: {{^}}  } // comment-18
+    return b;
   }
 }

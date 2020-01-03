@@ -21,10 +21,10 @@ class CallGraph;
 class CallGraphSCC;
 class PassRegistry;
 
-void initializeCoroEarlyPass(PassRegistry &);
-void initializeCoroSplitPass(PassRegistry &);
-void initializeCoroElidePass(PassRegistry &);
-void initializeCoroCleanupPass(PassRegistry &);
+void initializeCoroEarlyLegacyPass(PassRegistry &);
+void initializeCoroSplitLegacyPass(PassRegistry &);
+void initializeCoroElideLegacyPass(PassRegistry &);
+void initializeCoroCleanupLegacyPass(PassRegistry &);
 
 // CoroEarly pass marks every function that has coro.begin with a string
 // attribute "coroutine.presplit"="0". CoroSplit pass processes the coroutine
@@ -43,7 +43,8 @@ void initializeCoroCleanupPass(PassRegistry &);
 
 namespace coro {
 
-bool declaresIntrinsics(Module &M, std::initializer_list<StringRef>);
+bool declaresIntrinsics(const Module &M,
+                        const std::initializer_list<StringRef>);
 void replaceAllCoroAllocs(CoroBeginInst *CB, bool Replacement);
 void replaceAllCoroFrees(CoroBeginInst *CB, Value *Replacement);
 void replaceCoroFree(CoroIdInst *CoroId, bool Elide);

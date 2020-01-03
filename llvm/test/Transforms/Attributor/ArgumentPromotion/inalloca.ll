@@ -55,7 +55,7 @@ define i32 @main() {
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    store i32 1, i32* [[F0]], align 4
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    store i32 2, i32* [[F1]], align 4
-; GLOBALOPT_ATTRIBUTOR-NEXT:    [[R:%.*]] = call fastcc i32 @f(%struct.ss* noalias nocapture nofree nonnull align 4 dereferenceable(8) [[S]])
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[R:%.*]] = call fastcc i32 @f(%struct.ss* noalias nocapture nofree nonnull readonly align 4 dereferenceable(8) [[S]])
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    ret i32 [[R]]
 ;
 entry:

@@ -8,7 +8,7 @@ define void @caller() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@caller()
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32
 ; CHECK-NEXT:    store i32 42, i32* [[X]], align 4
-; CHECK-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture nonnull align 4 dereferenceable(4) [[X]]), !prof !0
+; CHECK-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[X]]), !prof !0
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca i32

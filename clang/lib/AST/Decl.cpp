@@ -1820,6 +1820,12 @@ SourceLocation DeclaratorDecl::getTypeSpecStartLoc() const {
   return SourceLocation();
 }
 
+SourceLocation DeclaratorDecl::getTypeSpecEndLoc() const {
+  TypeSourceInfo *TSI = getTypeSourceInfo();
+  if (TSI) return TSI->getTypeLoc().getEndLoc();
+  return SourceLocation();
+}
+
 void DeclaratorDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
   if (QualifierLoc) {
     // Make sure the extended decl info is allocated.

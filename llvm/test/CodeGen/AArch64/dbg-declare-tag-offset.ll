@@ -1,17 +1,16 @@
-; RUN: llc -o - %s | FileCheck %s
+; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 target triple="aarch64--"
 
-; CHECK: .Linfo_string4:
-; CHECK-NEXT: .asciz "a"
-; CHECK: .Linfo_string6:
-; CHECK-NEXT: .asciz "b"
+; CHECK:      DW_TAG_variable
+; CHECK-NOT:  DW_TAG
+; CHECK:        DW_AT_LLVM_tag_offset (0x01)
+; CHECK-NEXT:   DW_AT_name    ("a")
 
-; CHECK: .byte 1 // DW_AT_LLVM_tag_offset
-; CHECK: .word .Linfo_string4 // DW_AT_name
-
-; CHECK: .byte 2 // DW_AT_LLVM_tag_offset
-; CHECK: .word .Linfo_string6 // DW_AT_name
+; CHECK:      DW_TAG_variable
+; CHECK-NOT:  DW_TAG
+; CHECK:        DW_AT_LLVM_tag_offset (0x02)
+; CHECK-NEXT:   DW_AT_name    ("b")
 
 define void @f() !dbg !6 {
 entry:

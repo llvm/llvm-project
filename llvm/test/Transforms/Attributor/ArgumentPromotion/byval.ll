@@ -51,8 +51,8 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; CHECK-NEXT:    store i64 2, i64* [[TMP4]], align 4
-; CHECK-NEXT:    call void @f(%struct.ss* noalias nocapture nofree nonnull byval align 8 dereferenceable(12) [[S]])
-; CHECK-NEXT:    call void @g(%struct.ss* noalias nocapture nofree nonnull byval align 32 dereferenceable(12) [[S]])
+; CHECK-NEXT:    call void @f(%struct.ss* noalias nocapture nofree nonnull readonly byval align 8 dereferenceable(12) [[S]])
+; CHECK-NEXT:    call void @g(%struct.ss* noalias nocapture nofree nonnull readonly byval align 32 dereferenceable(12) [[S]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

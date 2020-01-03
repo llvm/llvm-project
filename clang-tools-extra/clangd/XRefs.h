@@ -49,6 +49,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LocatedSymbol &);
 std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
                                           const SymbolIndex *Index = nullptr);
 
+/// Get all document links
+std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST);
+
 /// Returns highlights for all usages of a symbol at \p Pos.
 std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos);

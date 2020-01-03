@@ -74,3 +74,18 @@ float fp_contract_7(float a, float b, float c) {
   return (a = 2 * b) - c;
 }
 
+float fp_contract_8(float a, float b, float c) {
+// CHECK: _Z13fp_contract_8fff
+// CHECK: fneg float %c
+// CHECK: tail call float @llvm.fmuladd
+  #pragma STDC FP_CONTRACT ON
+  return a * b - c;
+}
+
+float fp_contract_9(float a, float b, float c) {
+// CHECK: _Z13fp_contract_9fff
+// CHECK: fneg float %a
+// CHECK: tail call float @llvm.fmuladd
+  #pragma STDC FP_CONTRACT ON
+  return c - a * b;
+}

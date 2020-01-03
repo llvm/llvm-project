@@ -150,7 +150,12 @@ OperandRange::OperandRange(Operation *op)
 // ResultRange
 
 ResultRange::ResultRange(Operation *op)
-    : ResultRange(op->getOpResults().data(), op->getNumResults()) {}
+    : ResultRange(op, /*startIndex=*/0, op->getNumResults()) {}
+
+/// See `detail::indexed_accessor_range_base` for details.
+OpResult ResultRange::dereference_iterator(Operation *op, ptrdiff_t index) {
+  return op->getResult(index);
+}
 
 //===----------------------------------------------------------------------===//
 // ValueRange
@@ -160,25 +165,26 @@ ValueRange::ValueRange(ArrayRef<Value> values)
 ValueRange::ValueRange(OperandRange values)
     : ValueRange(values.begin().getBase(), values.size()) {}
 ValueRange::ValueRange(ResultRange values)
-    : ValueRange(values.begin().getBase(), values.size()) {}
+    : ValueRange(
+          {values.getBase(), static_cast<unsigned>(values.getStartIndex())},
+          values.size()) {}
 
 /// See `detail::indexed_accessor_range_base` for details.
 ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
                                            ptrdiff_t index) {
-  if (OpOperand *operand = owner.dyn_cast<OpOperand *>())
-    return operand + index;
-  if (OpResult *result = owner.dyn_cast<OpResult *>())
-    return result + index;
-  return owner.get<const Value *>() + index;
+  if (auto *value = owner.ptr.dyn_cast<const Value *>())
+    return {value + index};
+  if (auto *operand = owner.ptr.dyn_cast<OpOperand *>())
+    return {operand + index};
+  Operation *operation = reinterpret_cast<Operation *>(owner.ptr.get<void *>());
+  return {operation, owner.startIndex + static_cast<unsigned>(index)};
 }
 /// See `detail::indexed_accessor_range_base` for details.
 Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
-  // Operands access the held value via 'get'.
-  if (OpOperand *operand = owner.dyn_cast<OpOperand *>())
+  if (auto *value = owner.ptr.dyn_cast<const Value *>())
+    return value[index];
+  if (auto *operand = owner.ptr.dyn_cast<OpOperand *>())
     return operand[index].get();
-  // An OpResult is a value, so we can return it directly.
-  if (OpResult *result = owner.dyn_cast<OpResult *>())
-    return result[index];
-  // Otherwise, this is a raw value array so just index directly.
-  return owner.get<const Value *>()[index];
+  Operation *operation = reinterpret_cast<Operation *>(owner.ptr.get<void *>());
+  return operation->getResult(owner.startIndex + index);
 }

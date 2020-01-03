@@ -59,7 +59,7 @@ features:
 The core construct for defining a rewrite rule is defined in
 [`OpBase.td`][OpBase] as
 
-```tblgen
+```tablegen
 class Pattern<
     dag sourcePattern, list<dag> resultPatterns,
     list<dag> additionalConstraints = [],
@@ -78,7 +78,7 @@ We allow multiple result patterns to support
 convert one DAG of operations to another DAG of operations. There is a handy
 wrapper of `Pattern`, `Pat`, which takes a single result pattern:
 
-```tblgen
+```tablegen
 class Pat<
     dag sourcePattern, dag resultPattern,
     list<dag> additionalConstraints = [],
@@ -113,7 +113,7 @@ attribute).
 
 For example,
 
-```tblgen
+```tablegen
 def AOp : Op<"a_op"> {
     let arguments = (ins
       AnyType:$a_input,
@@ -155,7 +155,7 @@ bound symbol, for example, `def : Pat<(AOp $a, F32Attr), ...>`.
 
 To match an DAG of ops, use nested `dag` objects:
 
-```tblgen
+```tablegen
 
 def BOp : Op<"b_op"> {
     let arguments = (ins);
@@ -182,7 +182,7 @@ that is, the following MLIR code:
 To bind a symbol to the results of a matched op for later reference, attach the
 symbol to the op itself:
 
-```tblgen
+```tablegen
 def : Pat<(AOp (BOp:$b_result), $attr), ...>;
 ```
 
@@ -200,7 +200,7 @@ potentially **apply transformations**.
 
 For example,
 
-```tblgen
+```tablegen
 def COp : Op<"c_op"> {
     let arguments = (ins
       AnyType:$c_input,
@@ -222,7 +222,7 @@ method.
 
 We can also reference symbols bound to matched op's results:
 
-```tblgen
+```tablegen
 def : Pat<(AOp (BOp:$b_result) $attr), (COp $b_result $attr)>;
 ```
 
@@ -253,7 +253,7 @@ the result type(s). The pattern author will need to define a custom builder
 that has result type deduction ability via `OpBuilder` in ODS. For example,
 in the following pattern
 
-```tblgen
+```tablegen
 def : Pat<(AOp $input, $attr), (COp (AOp $input, $attr) $attr)>;
 ```
 
@@ -282,7 +282,7 @@ parameters mismatch.
 
 `dag` objects can be nested to generate a DAG of operations:
 
-```tblgen
+```tablegen
 def : Pat<(AOp $input, $attr), (COp (BOp), $attr)>;
 ```
 
@@ -296,7 +296,7 @@ attaching symbols to the op. (But we **cannot** bind to op arguments given that
 they are referencing previously bound symbols.) This is useful for reusing
 newly created results where suitable. For example,
 
-```tblgen
+```tablegen
 def DOp : Op<"d_op"> {
     let arguments = (ins
       AnyType:$d_input1,
@@ -326,7 +326,7 @@ achieved by `NativeCodeCall`.
 For example, if we want to capture some op's attributes and group them as an
 array attribute to construct a new op:
 
-```tblgen
+```tablegen
 
 def TwoAttrOp : Op<"two_attr_op"> {
     let arguments = (ins
@@ -360,7 +360,7 @@ Attribute createArrayAttr(Builder &builder, Attribute a, Attribute b) {
 
 And then write the pattern as:
 
-```tblgen
+```tablegen
 def createArrayAttr : NativeCodeCall<"createArrayAttr($_builder, $0, $1)">;
 
 def : Pat<(TwoAttrOp $attr1, $attr2),
@@ -399,7 +399,7 @@ handy methods on `mlir::Builder`.
 `NativeCodeCall<"...">:$symbol`. For example, if we want to reverse the previous
 example and decompose the array attribute into two attributes:
 
-```tblgen
+```tablegen
 class getNthAttr<int n> : NativeCodeCall<"$_self.getValue()[" # n # "]">;
 
 def : Pat<(OneAttrOp $attr),
@@ -427,7 +427,7 @@ Operation *createMyOp(OpBuilder builder, Value input, Attribute attr);
 
 We can wrap it up and invoke it like:
 
-```tblgen
+```tablegen
 def createMyOp : NativeCodeCall<"createMyOp($_builder, $0, $1)">;
 
 def : Pat<(... $input, $attr), (createMyOp $input, $attr)>;
@@ -467,7 +467,7 @@ store %mem, %sum
 We cannot fit in with just one result pattern given `store` does not return a
 value. Instead we can use multiple result patterns:
 
-```tblgen
+```tablegen
 def : Pattern<(AddIOp $lhs, $rhs),
               [(StoreOp (AllocOp:$mem (ShapeOp %lhs)), (AddIOp $lhs, $rhs)),
                (LoadOp $mem)];
@@ -491,7 +491,7 @@ The `__N` suffix is specifying the `N`-th result as a whole (which can be
 [variadic](#supporting-variadic-ops)). For example, we can bind a symbol to some
 multi-result op and reference a specific result later:
 
-```tblgen
+```tablegen
 def ThreeResultOp : Op<"three_result_op"> {
     let arguments = (ins ...);
 
@@ -513,7 +513,7 @@ patterns.
 We can also bind a symbol and reference one of its specific result at the same
 time, which is typically useful when generating multi-result ops:
 
-```tblgen
+```tablegen
 // TwoResultOp has similar definition as ThreeResultOp, but only has two
 // results.
 
@@ -539,7 +539,7 @@ multiple declared values. So it means we do not necessarily need `N` result
 patterns to replace an `N`-result op. For example, to replace an op with three
 results, you can have
 
-```tblgen
+```tablegen
 // ThreeResultOp/TwoResultOp/OneResultOp generates three/two/one result(s),
 // respectively.
 
@@ -563,7 +563,7 @@ forbidden, i.e., the following is not allowed because that the first
 `TwoResultOp` generates two results but only the second result is used for
 replacing the matched op's result:
 
-```tblgen
+```tablegen
 def : Pattern<(ThreeResultOp ...),
               [(TwoResultOp ...), (TwoResultOp ...)]>;
 ```
@@ -584,7 +584,7 @@ regarding an op's values.
 The above terms are needed because ops can have multiple results, and some of the
 results can also be variadic. For example,
 
-```tblgen
+```tablegen
 def MultiVariadicOp : Op<"multi_variadic_op"> {
     let arguments = (ins
       AnyTensor:$input1,
@@ -617,7 +617,7 @@ results. The third parameter to `Pattern` (and `Pat`) is for this purpose.
 
 For example, we can write
 
-```tblgen
+```tablegen
 def HasNoUseOf: Constraint<
     CPred<"$_self->use_begin() == $_self->use_end()">, "has no use">;
 
@@ -687,4 +687,4 @@ deduction ability. See [building operations](#building-operations) for more
 details.
 
 [TableGen]: https://llvm.org/docs/TableGen/index.html
-[OpBase]: https://github.com/tensorflow/mlir/blob/master/include/mlir/IR/OpBase.td
+[OpBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/OpBase.td

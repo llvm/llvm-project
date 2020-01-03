@@ -20,17 +20,17 @@ class PassManagerBuilder;
 void addCoroutinePassesToExtensionPoints(PassManagerBuilder &Builder);
 
 /// Lower coroutine intrinsics that are not needed by later passes.
-Pass *createCoroEarlyPass();
+Pass *createCoroEarlyLegacyPass();
 
 /// Split up coroutines into multiple functions driving their state machines.
-Pass *createCoroSplitPass();
+Pass *createCoroSplitLegacyPass();
 
 /// Analyze coroutines use sites, devirtualize resume/destroy calls and elide
 /// heap allocation for coroutine frame where possible.
-Pass *createCoroElidePass();
+Pass *createCoroElideLegacyPass();
 
 /// Lower all remaining coroutine intrinsics.
-Pass *createCoroCleanupPass();
+Pass *createCoroCleanupLegacyPass();
 
 }
 

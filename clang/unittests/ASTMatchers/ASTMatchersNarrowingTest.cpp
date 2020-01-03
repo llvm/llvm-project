@@ -1071,6 +1071,35 @@ TEST(isConstexpr, MatchesConstexprDeclarations) {
                          LanguageMode::Cxx17OrLater));
 }
 
+TEST(hasInitStatement, MatchesSelectionInitializers) {
+  EXPECT_TRUE(matches("void baz() { if (int i = 1; i > 0) {} }",
+                      ifStmt(hasInitStatement(anything())),
+                      LanguageMode::Cxx17OrLater));
+  EXPECT_TRUE(notMatches("void baz() { if (int i = 1) {} }",
+                         ifStmt(hasInitStatement(anything()))));
+  EXPECT_TRUE(notMatches("void baz() { if (1 > 0) {} }",
+                         ifStmt(hasInitStatement(anything()))));
+  EXPECT_TRUE(matches(
+      "void baz(int i) { switch (int j = i; j) { default: break; } }",
+      switchStmt(hasInitStatement(anything())), LanguageMode::Cxx17OrLater));
+  EXPECT_TRUE(notMatches("void baz(int i) { switch (i) { default: break; } }",
+                         switchStmt(hasInitStatement(anything()))));
+}
+
+TEST(hasInitStatement, MatchesRangeForInitializers) {
+  EXPECT_TRUE(matches("void baz() {"
+                      "int items[] = {};"
+                      "for (auto &arr = items; auto &item : arr) {}"
+                      "}",
+                      cxxForRangeStmt(hasInitStatement(anything())),
+                      LanguageMode::Cxx2aOrLater));
+  EXPECT_TRUE(notMatches("void baz() {"
+                         "int items[] = {};"
+                         "for (auto &item : items) {}"
+                         "}",
+                         cxxForRangeStmt(hasInitStatement(anything()))));
+}
+
 TEST(TemplateArgumentCountIs, Matches) {
   EXPECT_TRUE(
     matches("template<typename T> struct C {}; C<int> c;",

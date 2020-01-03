@@ -25,8 +25,10 @@ namespace mlir {
 /// operations are organized into operation blocks represented by a 'Block'
 /// class.
 class Operation final
-    : public llvm::ilist_node_with_parent<Operation, Block>,
-      private llvm::TrailingObjects<Operation, OpResult, BlockOperand, Region,
+    : public IRMultiObjectWithUseList<OpOperand>,
+      public llvm::ilist_node_with_parent<Operation, Block>,
+      private llvm::TrailingObjects<Operation, detail::TrailingOpResult,
+                                    BlockOperand, Region,
                                     detail::OperandStorage> {
 public:
   /// Create a new Operation with the specific fields.
@@ -237,12 +239,11 @@ public:
   // Results
   //===--------------------------------------------------------------------===//
 
-  /// Return true if there are no users of any results of this operation.
-  bool use_empty();
+  /// Return the number of results held by this operation.
+  unsigned getNumResults();
 
-  unsigned getNumResults() { return numResults; }
-
-  Value getResult(unsigned idx) { return getOpResult(idx); }
+  /// Get the 'idx'th result of this operation.
+  OpResult getResult(unsigned idx) { return OpResult(this, idx); }
 
   /// Support result iteration.
   using result_range = ResultRange;
@@ -252,11 +253,8 @@ public:
   result_iterator result_end() { return getResults().end(); }
   result_range getResults() { return result_range(this); }
 
-  MutableArrayRef<OpResult> getOpResults() {
-    return {getTrailingObjects<OpResult>(), numResults};
-  }
-
-  OpResult &getOpResult(unsigned idx) { return getOpResults()[idx]; }
+  result_range getOpResults() { return getResults(); }
+  OpResult getOpResult(unsigned idx) { return getResult(idx); }
 
   /// Support result type iteration.
   using result_type_iterator = result_range::type_iterator;
@@ -574,7 +572,7 @@ private:
   bool hasValidOrder() { return orderIndex != kInvalidOrderIdx; }
 
 private:
-  Operation(Location location, OperationName name, unsigned numResults,
+  Operation(Location location, OperationName name, ArrayRef<Type> resultTypes,
             unsigned numSuccessors, unsigned numRegions,
             const NamedAttributeList &attributes);
 
@@ -585,6 +583,15 @@ private:
   /// Returns the operand storage object.
   detail::OperandStorage &getOperandStorage() {
     return *getTrailingObjects<detail::OperandStorage>();
+  }
+
+  /// Returns a raw pointer to the storage for the given trailing result. The
+  /// given result number should be 0-based relative to the trailing results,
+  /// and not all of the results of the operation. This method should generally
+  /// only be used by the 'Value' classes.
+  detail::TrailingOpResult *getTrailingResult(unsigned trailingResultNumber) {
+    return getTrailingObjects<detail::TrailingOpResult>() +
+           trailingResultNumber;
   }
 
   /// Provide a 'getParent' method for ilist_node_with_parent methods.
@@ -605,7 +612,18 @@ private:
   /// O(1) local dominance checks between operations.
   mutable unsigned orderIndex = 0;
 
-  const unsigned numResults, numSuccs, numRegions;
+  const unsigned numSuccs;
+  const unsigned numRegions : 31;
+
+  /// This holds the result types of the operation. There are three different
+  /// states recorded here:
+  /// - 0 results : The type below is null.
+  /// - 1 result  : The single result type is held here.
+  /// - N results : The type here is a tuple holding the result types.
+  /// Note: We steal a bit for 'hasSingleResult' from somewhere else so that we
+  /// can use 'resultType` in an ArrayRef<Type>.
+  bool hasSingleResult : 1;
+  Type resultType;
 
   /// This holds the name of the operation.
   OperationName name;
@@ -619,14 +637,18 @@ private:
   // allow block to access the 'orderIndex' field.
   friend class Block;
 
+  // allow value to access the 'getTrailingResult' method.
+  friend class Value;
+
   // allow ilist_node_with_parent to access the 'getParent' method.
   friend class llvm::ilist_node_with_parent<Operation, Block>;
 
   // This stuff is used by the TrailingObjects template.
-  friend llvm::TrailingObjects<Operation, OpResult, BlockOperand, Region,
-                               detail::OperandStorage>;
-  size_t numTrailingObjects(OverloadToken<OpResult>) const {
-    return numResults;
+  friend llvm::TrailingObjects<Operation, detail::TrailingOpResult,
+                               BlockOperand, Region, detail::OperandStorage>;
+  size_t numTrailingObjects(OverloadToken<detail::TrailingOpResult>) const {
+    return OpResult::getNumTrailing(
+        const_cast<Operation *>(this)->getNumResults());
   }
   size_t numTrailingObjects(OverloadToken<BlockOperand>) const {
     return numSuccs;
@@ -639,32 +661,6 @@ inline raw_ostream &operator<<(raw_ostream &os, Operation &op) {
   return os;
 }
 
-/// This class implements use iterator for the Operation. This iterates over all
-/// uses of all results of an Operation.
-class UseIterator final
-    : public llvm::iterator_facade_base<UseIterator, std::forward_iterator_tag,
-                                        Operation *> {
-public:
-  /// Initialize UseIterator for op, specify end to return iterator to last use.
-  explicit UseIterator(Operation *op, bool end = false);
-
-  UseIterator &operator++();
-  Operation *operator->() { return use->getOwner(); }
-  Operation *operator*() { return use->getOwner(); }
-
-  bool operator==(const UseIterator &other) const;
-  bool operator!=(const UseIterator &other) const;
-
-private:
-  void skipOverResultsWithNoUsers();
-
-  /// The operation whose uses are being iterated over.
-  Operation *op;
-  /// The result of op who's uses are being iterated over.
-  Operation::result_iterator res;
-  /// The use of the result.
-  Value::use_iterator use;
-};
 } // end namespace mlir
 
 namespace llvm {

@@ -21,7 +21,7 @@
 // Diagnostics:
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.external.yaml -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-DIAG-EXTERNAL %s
-// CHECK-DIAG-EXTERNAL: {{.*}}Inputs{{.}}external-names.h:{{[0-9]*:[0-9]*}}: warning: incompatible pointer
+// CHECK-DIAG-EXTERNAL: {{.*}}Inputs{{..?}}external-names.h:{{[0-9]*:[0-9]*}}: warning: incompatible pointer
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.yaml -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-DIAG %s
 // CHECK-DIAG-NOT: Inputs
@@ -31,7 +31,7 @@
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.external.yaml -triple %itanium_abi_triple -debug-info-kind=limited -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-DEBUG-EXTERNAL %s
 // CHECK-DEBUG-EXTERNAL: !DISubprogram({{.*}}file: ![[Num:[0-9]+]]
-// CHECK-DEBUG-EXTERNAL: ![[Num]] = !DIFile(filename: "{{[^"]*}}Inputs{{.}}external-names.h"
+// CHECK-DEBUG-EXTERNAL: ![[Num]] = !DIFile(filename: "{{[^"]*}}Inputs{{..?}}external-names.h"
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.yaml -triple %itanium_abi_triple -debug-info-kind=limited -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-DEBUG %s
 // CHECK-DEBUG-NOT: Inputs
@@ -42,7 +42,7 @@
 // RUN: %clang_cc1 -D REINCLUDE -I %t -ivfsoverlay %t.external.yaml -Eonly %s -MTfoo -dependency-file %t.external.dep
 // RUN: echo "EOF" >> %t.external.dep
 // RUN: cat %t.external.dep | FileCheck --check-prefix=CHECK-DEP-EXTERNAL %s
-// CHECK-DEP-EXTERNAL: Inputs{{.}}external-names.h
+// CHECK-DEP-EXTERNAL: Inputs{{..?}}external-names.h
 // CHECK-DEP-EXTERNAL-NEXT: EOF
 
 // RUN: %clang_cc1 -D REINCLUDE -I %t -ivfsoverlay %t.yaml -Eonly %s -MTfoo -dependency-file %t.dep

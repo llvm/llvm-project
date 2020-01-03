@@ -21,6 +21,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
@@ -1044,6 +1045,18 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
   llvm::BasicBlock *ThenBB = nullptr;
   llvm::BasicBlock *DoneBB = nullptr;
   if (IsLastIterCond) {
+    // Emit implicit barrier if at least one lastprivate conditional is found
+    // and this is not a simd mode.
+    if (!getLangOpts().OpenMPSimd &&
+        llvm::any_of(D.getClausesOfKind<OMPLastprivateClause>(),
+                     [](const OMPLastprivateClause *C) {
+                       return C->getKind() == OMPC_LASTPRIVATE_conditional;
+                     })) {
+      CGM.getOpenMPRuntime().emitBarrierCall(*this, D.getBeginLoc(),
+                                             OMPD_unknown,
+                                             /*EmitChecks=*/false,
+                                             /*ForceSimpleCall=*/true);
+    }
     ThenBB = createBasicBlock(".omp.lastprivate.then");
     DoneBB = createBasicBlock(".omp.lastprivate.done");
     Builder.CreateCondBr(IsLastIterCond, ThenBB, DoneBB);
@@ -1082,14 +1095,19 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
             cast<VarDecl>(cast<DeclRefExpr>(*ISrcRef)->getDecl());
         const auto *DestVD =
             cast<VarDecl>(cast<DeclRefExpr>(*IDestRef)->getDecl());
-        // Get the address of the original variable.
-        Address OriginalAddr = GetAddrOfLocalVar(DestVD);
         // Get the address of the private variable.
         Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
         if (const auto *RefTy = PrivateVD->getType()->getAs<ReferenceType>())
           PrivateAddr =
               Address(Builder.CreateLoad(PrivateAddr),
                       getNaturalTypeAlignment(RefTy->getPointeeType()));
+        // Store the last value to the private copy in the last iteration.
+        if (C->getKind() == OMPC_LASTPRIVATE_conditional)
+          CGM.getOpenMPRuntime().emitLastprivateConditionalFinalUpdate(
+              *this, MakeAddrLValue(PrivateAddr, (*IRef)->getType()), PrivateVD,
+              (*IRef)->getExprLoc());
+        // Get the address of the original variable.
+        Address OriginalAddr = GetAddrOfLocalVar(DestVD);
         EmitOMPCopy(Type, OriginalAddr, PrivateAddr, DestVD, SrcVD, AssignOp);
       }
       ++IRef;
@@ -1318,6 +1336,87 @@ static void emitEmptyBoundParameters(CodeGenFunction &,
                                      llvm::SmallVectorImpl<llvm::Value *> &) {}
 
 void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
+
+  if (llvm::OpenMPIRBuilder *OMPBuilder = CGM.getOpenMPIRBuilder()) {
+    // Check if we have any if clause associated with the directive.
+    llvm::Value *IfCond = nullptr;
+    if (const auto *C = S.getSingleClause<OMPIfClause>())
+      IfCond = EmitScalarExpr(C->getCondition(),
+                              /*IgnoreResultAssign=*/true);
+
+    llvm::Value *NumThreads = nullptr;
+    if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>())
+      NumThreads = EmitScalarExpr(NumThreadsClause->getNumThreads(),
+                                  /*IgnoreResultAssign=*/true);
+
+    ProcBindKind ProcBind = OMP_PROC_BIND_default;
+    if (const auto *ProcBindClause = S.getSingleClause<OMPProcBindClause>())
+      ProcBind = ProcBindClause->getProcBindKind();
+
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+
+    // The cleanup callback that finalizes all variabels at the given location,
+    // thus calls destructors etc.
+    auto FiniCB = [this](InsertPointTy IP) {
+      CGBuilderTy::InsertPointGuard IPG(Builder);
+      assert(IP.getBlock()->end() != IP.getPoint() &&
+             "OpenMP IR Builder should cause terminated block!");
+      llvm::BasicBlock *IPBB = IP.getBlock();
+      llvm::BasicBlock *DestBB = IPBB->splitBasicBlock(IP.getPoint());
+      IPBB->getTerminator()->eraseFromParent();
+      Builder.SetInsertPoint(IPBB);
+      CodeGenFunction::JumpDest Dest = getJumpDestInCurrentScope(DestBB);
+      EmitBranchThroughCleanup(Dest);
+    };
+
+    // Privatization callback that performs appropriate action for
+    // shared/private/firstprivate/lastprivate/copyin/... variables.
+    //
+    // TODO: This defaults to shared right now.
+    auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                     llvm::Value &Val, llvm::Value *&ReplVal) {
+      // The next line is appropriate only for variables (Val) with the
+      // data-sharing attribute "shared".
+      ReplVal = &Val;
+
+      return CodeGenIP;
+    };
+
+    const CapturedStmt *CS = S.getCapturedStmt(OMPD_parallel);
+    const Stmt *ParallelRegionBodyStmt = CS->getCapturedStmt();
+
+    auto BodyGenCB = [ParallelRegionBodyStmt,
+                      this](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                            llvm::BasicBlock &ContinuationBB) {
+      auto OldAllocaIP = AllocaInsertPt;
+      AllocaInsertPt = &*AllocaIP.getPoint();
+
+      auto OldReturnBlock = ReturnBlock;
+      ReturnBlock = getJumpDestInCurrentScope(&ContinuationBB);
+
+      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
+      CodeGenIPBB->splitBasicBlock(CodeGenIP.getPoint());
+      llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminator();
+      CodeGenIPBBTI->removeFromParent();
+
+      Builder.SetInsertPoint(CodeGenIPBB);
+
+      EmitStmt(ParallelRegionBodyStmt);
+
+      Builder.Insert(CodeGenIPBBTI);
+
+      AllocaInsertPt = OldAllocaIP;
+      ReturnBlock = OldReturnBlock;
+    };
+
+    CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
+    CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
+    Builder.restoreIP(OMPBuilder->CreateParallel(Builder, BodyGenCB, PrivCB,
+                                                 FiniCB, IfCond, NumThreads,
+                                                 ProcBind, S.hasCancel()));
+    return;
+  }
+
   // Emit parallel region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
@@ -1892,6 +1991,8 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
     CGF.EmitOMPLinearClause(S, LoopScope);
     CGF.EmitOMPPrivateClause(S, LoopScope);
     CGF.EmitOMPReductionClauseInit(S, LoopScope);
+    CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(
+        CGF, S, CGF.EmitLValue(S.getIterationVariable()));
     bool HasLastprivateClause = CGF.EmitOMPLastprivateClauseInit(S, LoopScope);
     (void)LoopScope.Privatize();
     if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
@@ -2464,6 +2565,8 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
             /*ForceSimpleCall=*/true);
       }
       EmitOMPPrivateClause(S, LoopScope);
+      CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(
+          *this, S, EmitLValue(S.getIterationVariable()));
       HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
       EmitOMPReductionClauseInit(S, LoopScope);
       EmitOMPPrivateLoopCounters(S, LoopScope);
@@ -2774,6 +2877,7 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
           /*ForceSimpleCall=*/true);
     }
     CGF.EmitOMPPrivateClause(S, LoopScope);
+    CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(CGF, S, IV);
     HasLastprivates = CGF.EmitOMPLastprivateClauseInit(S, LoopScope);
     CGF.EmitOMPReductionClauseInit(S, LoopScope);
     (void)LoopScope.Privatize();
@@ -4747,6 +4851,19 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
       break;
     }
   }
+  if (llvm::OpenMPIRBuilder *OMPBuilder = CGM.getOpenMPIRBuilder()) {
+    // TODO: This check is necessary as we only generate `omp parallel` through
+    // the OpenMPIRBuilder for now.
+    if (S.getCancelRegion() == OMPD_parallel) {
+      llvm::Value *IfCondition = nullptr;
+      if (IfCond)
+        IfCondition = EmitScalarExpr(IfCond,
+                                     /*IgnoreResultAssign=*/true);
+      return Builder.restoreIP(
+          OMPBuilder->CreateCancel(Builder, IfCondition, S.getCancelRegion()));
+    }
+  }
+
   CGM.getOpenMPRuntime().emitCancelCall(*this, S.getBeginLoc(), IfCond,
                                         S.getCancelRegion());
 }

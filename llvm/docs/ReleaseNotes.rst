@@ -93,6 +93,11 @@ Non-comprehensive list of changes in this release
 * ``Callbacks`` have been added to ``CommandLine Options``.  These can
   be used to validate of selectively enable other options.
 
+* The function attributes ``no-frame-pointer-elim`` and
+  ``no-frame-pointer-elim-non-leaf`` have been replaced by ``frame-pointer``,
+  which has 3 values: ``none``, ``non-leaf``, and ``all``. The values mean what
+  functions should retain frame pointers.
+
 Changes to the LLVM IR
 ----------------------
 

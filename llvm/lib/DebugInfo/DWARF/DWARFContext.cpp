@@ -874,7 +874,7 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
 }
 
 Expected<const DWARFDebugLine::LineTable *> DWARFContext::getLineTableForUnit(
-    DWARFUnit *U, std::function<void(Error)> RecoverableErrorCallback) {
+    DWARFUnit *U, function_ref<void(Error)> RecoverableErrorCallback) {
   if (!Line)
     Line.reset(new DWARFDebugLine);
 

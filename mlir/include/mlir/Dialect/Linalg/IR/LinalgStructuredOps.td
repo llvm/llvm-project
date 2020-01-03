@@ -29,7 +29,7 @@ class NInputs<int args_in> :
 class NOutputs<int args_out> :
   NativeOpTrait<"linalg::NOutputs<" # !cast<string>(args_out) # ">::Impl"> {}
 
-def ViewTraits : NativeOpTrait<"linalg::ViewTraits">;
+def StructuredOpTraits : NativeOpTrait<"linalg::StructuredOpTraits">;
 
 // The linalg 'LinalgStructuredInterface' provides access to the 'LinalgOp'
 // interface.
@@ -89,23 +89,32 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       "Value ", "getOutput", (ins "unsigned":$i)
     >,
     InterfaceMethod<[{
-        Query the index of the given input value, or `None` if the value is not
-        an input.
+        Return the index of the given input value `v`, or `None` if the value is
+        not an input.
       }],
-      "llvm::Optional<unsigned>", "getIndexOfInput", (ins "Value ":$view)
+      "llvm::Optional<unsigned>", "getIndexOfInput", (ins "Value ":$v)
     >,
     InterfaceMethod<[{
         Query the index of the given view value, or `None` if the value is not
-        an view.
+        a view.
       }],
       "llvm::Optional<unsigned>", "getIndexOfOutput", (ins "Value ":$view)
     >,
     InterfaceMethod<[{
-        Query the type of the input view at the given index.
-      }], "MemRefType", "getInputViewType", (ins "unsigned":$i)>,
+        Query the type of the input shape at the given index.
+      }], "ShapedType", "getInputShapedType", (ins "unsigned":$i)>,
     InterfaceMethod<[{
         Query the type of the output view at the given index.
-      }], "MemRefType", "getOutputViewType", (ins "unsigned":$i)>,
+      }], "ShapedType", "getOutputShapedType", (ins "unsigned":$i)>,
+    InterfaceMethod<[{
+        Query whether the op has only MemRef input and outputs.
+      }], "bool", "hasBufferSemantics">,
+    InterfaceMethod<[{
+        Query the subset of input operands that are of ranked tensor type.
+      }], "SmallVector<RankedTensorType, 4>", "getInputTensorTypes">,
+    InterfaceMethod<[{
+        Query the subset of output operands that are of ranked tensor type.
+      }], "SmallVector<RankedTensorType, 4>", "getOutputTensorTypes">,
 
     StaticInterfaceMethod<[{
         Create an operation of the current type with the given location,
@@ -147,7 +156,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
 // depending on the specific Linalg op.
 class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
   : Op<Linalg_Dialect, mnemonic,
-       !listconcat(props, [ViewTraits, LinalgStructuredInterface])> {
+       !listconcat(props, [StructuredOpTraits, LinalgStructuredInterface])> {
   let parser = [{ return parseLinalgStructuredOp(parser, result); }];
   let printer = [{ printLinalgStructuredOp(p, *this); }];
 }
@@ -340,7 +349,7 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
     ArrayAttr iterator_types() {
       // Outer parallel loops are always the number of output dimensions; i.e.
       // [ b, xs, q] in the TF notation above.
-      unsigned nPar = getOutputViewType(0).getRank();
+      unsigned nPar = getOutputShapedType(0).getRank();
       unsigned nRed = getNumInputFeatureDimensions();
       // Window loops are a special kind of reduction that is never tiled or
       // parallelized across; i.e. [zs] in the TF notation above whose number
@@ -374,8 +383,17 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
   let verifier = [{ return ::verify(*this); }];
 }
 
+def LinalgOperand: Type<
+  Or<[AnyRankedTensor.predicate, AnyStridedMemRef.predicate]>>;
+
+class LinalgOperandOfRank<int rank>: Type<
+  And<[
+    LinalgOperand.predicate,
+    CPred<"$_self.cast<ShapedType>().getRank() == " # rank>]
+  >>;
+
 class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, []> {
-  let arguments = (ins Variadic<AnyStridedMemRef>:$views,
+  let arguments = (ins Variadic<LinalgOperand>:$views,
                    I64Attr:$args_in,
                    I64Attr:$args_out,
                    AffineMapArrayAttr:$indexing_maps,
@@ -383,6 +401,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, []> {
                    OptionalAttr<StrAttr>:$doc,
                    OptionalAttr<FlatSymbolRefAttr>:$fun,
                    OptionalAttr<StrAttr>:$library_call);
+  let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
   let regions = (region AnyRegion:$region);
   let extraClassDeclaration = [{
     SmallVector<StringRef, 8> linalgTraitAttrNames() {
@@ -511,6 +530,28 @@ def GenericOp : GenericOpBase<"generic"> {
       }
     }
     ```
+
+    To allow progressive lowering from the value world (a.k.a tensor values) to
+    the buffer world (a.k.a memref values), a `linalg.generic` op accepts
+    mixing input and output ranked tensor values with input and output memrefs.
+
+    ```mlir
+      %1 = linalg.generic #trait_attribute %A, %B, %C {other-attributes} :
+        tensor<?x?xf32>,
+        memref<?x?xf32, stride_specification>,
+        tensor<?x?xf32>
+        -> (tensor<?x?xf32>)
+    ```
+
+    In this case, the number of return values must match the number of output
+    tensor arguments. The semantics is that the `linalg.generic` op
+    produces (i.e. allocates and fills) its return values.
+    Tensor values must be legalized by a buffer allocation pass before most
+    transformations can be applied. In particular, transformations that create
+    control flow around linalg.generic operations are not expected to mix with
+    tensors because SSA values do not escape naturally. Still, transformations
+    and rewrites that take advantage of tensor SSA values are expected to be
+    useful and will be added in the near future.
   }];
   let verifier = [{ return ::verify(*this); }];
 }
@@ -555,9 +596,11 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
       ```mlir
-        func @fma(%i: index, %j: index, %k: index, %a: f32, %b: f32, %c: f32)
+        func @fma(%offset_m: index, %offset_n: index, %offset_k: index,
+                  %a: f32, %b: f32, %c: f32)
           -> f32
         {
+          "some_optional_condition"(%offset_m, %offset_n, %offset_k)
           %d = mulf %a, %b: f32
           %e = addf %c, %d: f32
           return %e: f32
@@ -587,7 +630,7 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
 
     This may lower to either:
       ```mlir
-        call @linalg_matmul(%A, %B, %C) :
+        call @linalg_matmul(%offset_m, %offset_n, %offset_k, %A, %B, %C) :
           (memref<?x?xf32, stride_specification>,
            memref<?x?xf32, stride_specification>,
            memref<?x?xf32, stride_specification>)
@@ -609,6 +652,29 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
       }
     }
     ```
+
+    To allow progressive lowering from the value world (a.k.a tensor values) to
+    the buffer world (a.k.a memref values), a `linalg.indexed_generic` op
+    accepts mixing input and output ranked tensor values with input and output
+    memrefs.
+
+    ```mlir
+      %1 = linalg.indexed_generic #trait_attribute %A, %B, %C {other-attributes}
+      : tensor<?x?xf32>,
+        memref<?x?xf32, stride_specification>,
+        tensor<?x?xf32>
+        -> (tensor<?x?xf32>)
+    ```
+
+    In this case, the number of return values must match the number of output
+    tensor arguments. The semantics is that the `linalg.indexed_generic` op
+    produces (i.e. allocates and fills) its return values.
+    Tensor values must be legalized by a buffer allocation pass before most
+    transformations can be applied. In particular, transformations that create
+    control flow around linalg.generic operations are not expected to mix with
+    tensors because SSA values do not escape naturally. Still, transformations
+    and rewrites that take advantage of tensor SSA values are expected to be
+    useful and will be added in the near future.
   }];
   let verifier = [{ return ::verify(*this); }];
 }

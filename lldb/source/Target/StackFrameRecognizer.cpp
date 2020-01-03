@@ -39,7 +39,7 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
   ValueObjectListSP args =
       m_interpreter->GetRecognizedArguments(m_python_object_sp, frame);
   auto args_synthesized = ValueObjectListSP(new ValueObjectList());
-  for (const auto o : args->GetObjects()) {
+  for (const auto &o : args->GetObjects()) {
     args_synthesized->Append(ValueObjectRecognizerSynthesizedValue::Create(
         *o, eValueTypeVariableArgument));
   }

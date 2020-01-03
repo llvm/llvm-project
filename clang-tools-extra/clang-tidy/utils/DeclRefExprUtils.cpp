@@ -23,7 +23,7 @@ using llvm::SmallPtrSet;
 namespace {
 
 template <typename S> bool isSetDifferenceEmpty(const S &S1, const S &S2) {
-  for (const auto &E : S1)
+  for (auto E : S1)
     if (S2.count(E) == 0)
       return false;
   return true;

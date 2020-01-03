@@ -127,7 +127,7 @@ TEST_F(ObjCLocalizeStringLiteralTest, Test) {
   ExtraArgs.push_back("-x");
   ExtraArgs.push_back("objective-c");
 
-  // Ensure the the action can be initiated in the string literal.
+  // Ensure the action can be initiated in the string literal.
   EXPECT_AVAILABLE(R"(id x = ^[[@[[^"^t^est^"]]]];)");
 
   // Ensure that the action can't be initiated in other places.

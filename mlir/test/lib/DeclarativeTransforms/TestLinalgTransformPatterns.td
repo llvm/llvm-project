@@ -19,11 +19,11 @@ include "mlir/Dialect/Linalg/Transforms/LinalgTransformPatterns.td"
 //===----------------------------------------------------------------------===//
 // Test Linalg fusion patterns.
 //===----------------------------------------------------------------------===//
-def : Pat<(MatmulOp:$consumer $A, $B, $C),
-          (TileAndFuseLinalgOp<[100, 150], [0], "L1"> $consumer),
+def : Pat<(MatmulOp:$op $A, $_, $_),
+          (TileAndFuseLinalgOp<[100, 150], [0], "L1">),
           [
-            (Constraint<HasNoLinalgTransformMarker> $consumer),
-            (Constraint<IsProducedByOpOfType<"MatmulOp">> $consumer, $A),
+            (Constraint<HasNoLinalgTransformMarker>),
+            (Constraint<IsProducedByOpOfType<"MatmulOp">> $A),
           ],
           // In the buffer world there is no use-def chains or dags so benefits
           // cannot be computed automatically from the length of the matched
@@ -36,91 +36,103 @@ def : Pat<(MatmulOp:$consumer $A, $B, $C),
 //===----------------------------------------------------------------------===//
 // Linalg tiling patterns.
 //===----------------------------------------------------------------------===//
-def : Pat<(MatmulOp:$op $A, $B, $C),
-          (TileLinalgOp<[2000, 3000, 4000], "L3"> $op),
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (TileLinalgOp<[2000, 3000, 4000], "L3">),
           [(Constraint<Or<[HasNoLinalgTransformMarker,
-                           HasLinalgTransformMarker<"MEM">]>> $op)]>;
-def : Pat<(MatmulOp:$op $A, $B, $C),
-          (TileLinalgOp<[200, 300, 400], "L2"> $op),
-          [(Constraint<HasLinalgTransformMarker<"L3">> $op)]>;
-def : Pat<(MatmulOp:$op $A, $B, $C),
-          (TileLinalgOp<[20, 30, 40], "L1"> $op),
-          [(Constraint<HasLinalgTransformMarker<"L2">> $op)]>;
-def : Pat<(MatmulOp:$op $A, $B, $C),
-          (TileLinalgOp<[2, 3, 4], "REG"> $op),
-          [(Constraint<HasLinalgTransformMarker<"L1">> $op)]>;
+                           HasLinalgTransformMarker<"MEM">]>>)]>;
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (TileLinalgOp<[200, 300, 400], "L2">),
+          [(Constraint<HasLinalgTransformMarker<"L3">>)]>;
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (TileLinalgOp<[20, 30, 40], "L1">),
+          [(Constraint<HasLinalgTransformMarker<"L2">>)]>;
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (TileLinalgOp<[2, 3, 4], "REG">),
+          [(Constraint<HasLinalgTransformMarker<"L1">>)]>;
 
-def : Pattern<(MatvecOp:$op $A, $b, $c),
-              [(TileLinalgOp<[5, 6], "L1"> $op)],
-              [(Constraint<HasNoLinalgTransformMarker> $op)]>;
+def : Pattern<(MatvecOp:$op $_, $_, $_),
+              [(TileLinalgOp<[5, 6], "L1">)],
+              [(Constraint<HasNoLinalgTransformMarker>)]>;
 
-def : Pattern<(DotOp:$op $a, $b, $c),
-              [(TileLinalgOp<[8000], "L1"> $op)],
+def : Pattern<(DotOp:$op $_, $_, $_),
+              [(TileLinalgOp<[8000], "L1">)],
               [(Constraint<Or<[HasNoLinalgTransformMarker,
                                HasLinalgTransformMarker<"MEM">,
                                HasLinalgTransformMarker<"L3">,
-                               HasLinalgTransformMarker<"L2">]>> $op)]>;
-def : Pattern<(DotOp:$op $a, $b, $c),
-              [(TileLinalgOp<[8], "REG"> $op)],
-              [(Constraint<HasLinalgTransformMarker<"L1">> $op)]>;
+                               HasLinalgTransformMarker<"L2">]>>)]>;
+def : Pattern<(DotOp:$op $_, $_, $_),
+              [(TileLinalgOp<[8], "REG">)],
+              [(Constraint<HasLinalgTransformMarker<"L1">>)]>;
 
 //===----------------------------------------------------------------------===//
 // Linalg tiling and permutation patterns.
 //===----------------------------------------------------------------------===//
-def : Pat<(MatmulOp:$op $A, $B, $C),
-          (TileLinalgOp<[2000, 3000, 4000], "L2__with_perm__", [1,2,0]> $op),
-          [(Constraint<HasLinalgTransformMarker<"__with_perm__">> $op)]>;
-def : Pat<(MatmulOp:$op $A, $B, $C),
-          (TileLinalgOp<[200, 300, 400], "L1__with_perm__", [1,0,2]> $op),
-          [(Constraint<HasLinalgTransformMarker<"L2__with_perm__">> $op)]>;
-def : Pat<(MatmulOp:$op $A, $B, $C),
-          (TileLinalgOp<[20, 30, 40], "REG__with_perm__"> $op),
-          [(Constraint<HasLinalgTransformMarker<"L1__with_perm__">> $op)]>;
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (TileLinalgOp<[2000, 3000, 4000], "L2__with_perm__", [1,2,0]>),
+          [(Constraint<HasLinalgTransformMarker<"__with_perm__">>)]>;
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (TileLinalgOp<[200, 300, 400], "L1__with_perm__", [1,0,2]>),
+          [(Constraint<HasLinalgTransformMarker<"L2__with_perm__">>)]>;
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (TileLinalgOp<[20, 30, 40], "REG__with_perm__">),
+          [(Constraint<HasLinalgTransformMarker<"L1__with_perm__">>)]>;
 
 
-def : Pattern<(MatvecOp:$op $A, $b, $c),
-              [(TileLinalgOp<[5, 6], "L1__with_perm__", [1,0]> $op)],
-              [(Constraint<HasLinalgTransformMarker<"__with_perm__">> $op)]>;
+def : Pattern<(MatvecOp:$op $_, $_, $_),
+              [(TileLinalgOp<[5, 6], "L1__with_perm__", [1,0]>)],
+              [(Constraint<HasLinalgTransformMarker<"__with_perm__">>)]>;
 
-def : Pattern<(DotOp:$op $a, $b, $c),
-              [(TileLinalgOp<[8000], "L1__with_perm__"> $op)],
-              [(Constraint<HasLinalgTransformMarker<"__with_perm__">> $op)]>;
-def : Pattern<(DotOp:$op $a, $b, $c),
-              [(TileLinalgOp<[8], "REG__with_perm__"> $op)],
-              [(Constraint<HasLinalgTransformMarker<"L1__with_perm__">> $op)]>;
+def : Pattern<(DotOp:$op $_, $_, $_),
+              [(TileLinalgOp<[8000], "L1__with_perm__">)],
+              [(Constraint<HasLinalgTransformMarker<"__with_perm__">>)]>;
+def : Pattern<(DotOp:$op $_, $_, $_),
+              [(TileLinalgOp<[8], "REG__with_perm__">)],
+              [(Constraint<HasLinalgTransformMarker<"L1__with_perm__">>)]>;
 
 //===----------------------------------------------------------------------===//
 // Linalg to loops patterns.
 //===----------------------------------------------------------------------===//
-def : Pattern<(DotOp:$op $a, $b, $c),
-              [(LinalgOpToLoops<"DotOp"> $op)],
-              [(Constraint<HasLinalgTransformMarker<"REG">> $op)]>;
+def : Pattern<(DotOp:$op $_, $_, $_),
+              [(LinalgOpToLoops<"DotOp">)],
+              [(Constraint<HasLinalgTransformMarker<"REG">>)]>;
 
 //===----------------------------------------------------------------------===//
 // Linalg to vector contraction patterns.
 //===----------------------------------------------------------------------===//
-def : Pattern<(GenericOp:$op $_1, $_2, $_3, $_4, $_5, $_6, $_7, $_8),
-              [(LinalgOpToVectorContraction<"GenericOp"> $op)],
-              [(Constraint<HasLinalgTransformMarker<"_marked_matmul_">> $op)]>;
+def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
+             [(VectorizeGenericLinalgOp)],
+             [(Constraint<And<[
+               HasLinalgTransformMarker<"_marked_matmul_">,
+               PreconditionVectorizeGenericLinalgOp
+               ]>>)]>;
 
 //===----------------------------------------------------------------------===//
 // Linalg generic permutation patterns.
 //===----------------------------------------------------------------------===//
-def : Pat<(GenericOp:$op $_1, $_2, $_3, $_4, $_5, $_6, $_7, $_8),
-              (PermuteGenericLinalgOp<[1,2,0],"PERMUTED"> $op),
-              [(Constraint<And<[HasNoLinalgTransformMarker,
-                           AffineMapDomainHasDim<3>]>> $op)]>;
+def : Pat<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
+              (PermuteGenericLinalgOp<[1, 2, 0], "PERMUTE"> $op),
+              [(Constraint<And<[
+                HasNoLinalgTransformMarker,
+                AffineMapDomainHasDim<3>,
+                PreconditionPermuteGenericLinalgOp<[1, 2, 0]>
+              ]>>)]>;
 
-def : Pat<(IndexedGenericOp:$op $_1, $_2, $_3, $_4, $_5, $_6, $_7, $_8),
-              (PermuteGenericLinalgOp<[1,2,0],"PERMUTED"> $op),
-              [(Constraint<And<[HasNoLinalgTransformMarker,
-                           AffineMapDomainHasDim<3>]>> $op)]>;
+def : Pat<(IndexedGenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
+              (PermuteGenericLinalgOp<[1, 2, 0], "PERMUTE"> $op),
+              [(Constraint<And<[
+                HasNoLinalgTransformMarker,
+                AffineMapDomainHasDim<3>,
+                PreconditionPermuteGenericLinalgOp<[1, 2, 0]>
+              ]>>)]>;
 
 //===----------------------------------------------------------------------===//
 // Linalg subview operands promotion.
 //===----------------------------------------------------------------------===//
-def : Pat<(MatmulOp:$op $A, $B, $C),
-          (LinalgOpPromoteSubviews<"MatmulOp"> $op),
-          [(Constraint<HasOperandsOfType<"SubViewOp">> $op),
-          (Constraint<HasLinalgTransformMarker<"_promote_views_">> $op)]>;
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (PromoteSubviewsLinalgOp),
+          [(Constraint<And<[
+              PreconditionPromoteSubviewsLinalgOp,
+              HasOperandsOfType<"SubViewOp">,
+              HasLinalgTransformMarker<"_promote_views_">]>>
+           )]>;
 #endif // TEST_LINALG_TRANSFORMS_PATTERNS

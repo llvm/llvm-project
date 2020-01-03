@@ -12,10 +12,10 @@ void t1() {
 
 void t2() {
   int var = 10;
-  __asm mov [eax], offset var
+  __asm mov qword ptr [eax], offset var
 // CHECK: t2
 // CHECK: call void asm sideeffect inteldialect
-// CHECK-SAME: mov [eax], $0
+// CHECK-SAME: mov qword ptr [eax], $0
 // CHECK-SAME: "r,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
 }
 

@@ -4,7 +4,7 @@ endif()
 add_definitions(-DLLDB_PYTHON_RELATIVE_LIBDIR="${LLDB_PYTHON_RELATIVE_PATH}")
 
 if (LLDB_ENABLE_LIBEDIT)
-  list(APPEND LLDB_LIBEDIT_LIBS ${libedit_LIBRARIES})
+  list(APPEND LLDB_LIBEDIT_LIBS ${LibEdit_LIBRARIES})
 endif()
 
 add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
@@ -19,7 +19,7 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     lldbHost
     lldbInterpreter
     lldbTarget
-    ${PYTHON_LIBRARY}
+    ${PYTHON_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
 
   LINK_COMPONENTS
@@ -28,6 +28,6 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
 
 if (LLDB_ENABLE_LIBEDIT)
   target_include_directories(lldbPluginScriptInterpreterPython PUBLIC
-     ${libedit_INCLUDE_DIRS}
+    ${LibEdit_INCLUDE_DIRS}
   )
 endif()

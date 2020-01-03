@@ -69,6 +69,16 @@ define <3 x i1> @p3_vec_splat_undef(<3 x i8> %x) {
   ret <3 x i1> %ret
 }
 
+define <3 x i1> @p3_vec_nonsplat_undef(<3 x i8> %x) {
+; CHECK-LABEL: @p3_vec_nonsplat_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <3 x i8> [[X:%.*]], <i8 undef, i8 15, i8 3>
+; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
+;
+  %tmp0 = and <3 x i8> %x, <i8 undef, i8 15, i8 3>
+  %ret = icmp slt <3 x i8> %tmp0, %x
+  ret <3 x i1> %ret
+}
+
 ; ============================================================================ ;
 ; One-use tests. We don't care about multi-uses here.
 ; ============================================================================ ;

@@ -23,7 +23,7 @@ endif ()
 
 # Use an object-library to add the same files to multiple libs without requiring
 # the sources them to be recompiled for each of them.
-add_library(PollyCore OBJECT
+add_llvm_pass_plugin(Polly
   Analysis/DependenceInfo.cpp
   Analysis/PolyhedralInfo.cpp
   Analysis/ScopDetection.cpp
@@ -70,13 +70,13 @@ add_library(PollyCore OBJECT
   Transform/ScopInliner.cpp
   ${POLLY_HEADER_FILES}
   )
-set_target_properties(PollyCore PROPERTIES FOLDER "Polly")
+set_target_properties(obj.Polly PROPERTIES FOLDER "Polly")
+set_target_properties(Polly PROPERTIES FOLDER "Polly")
 
 # Create the library that can be linked into LLVM's tools and Polly's unittests.
 # It depends on all library it needs, such that with
 # LLVM_POLLY_LINK_INTO_TOOLS=ON, its dependencies like PollyISL are linked as
 # well.
-add_polly_library(Polly $<TARGET_OBJECTS:PollyCore>)
 target_link_libraries(Polly PUBLIC
   ${ISL_TARGET}
 )
@@ -124,6 +124,9 @@ else ()
     LLVMTarget
     LLVMVectorize
     )
+
+    # Polly-ACC requires the NVPTX target to be present in the executable it is linked to
+    set_property(TARGET bugpoint APPEND PROPERTY LINK_LIBRARIES LLVMTarget)
 endif ()
 
 # Create a loadable module Polly.so that can be loaded using
@@ -134,8 +137,8 @@ if (MSVC)
   set_target_properties(LLVMPolly PROPERTIES FOLDER "Polly")
 else ()
   add_polly_loadable_module(LLVMPolly
-    Polly.cpp
-    $<TARGET_OBJECTS:PollyCore>
+    Plugin/Polly.cpp
+    $<TARGET_OBJECTS:obj.Polly>
   )
 
   # Only add the dependencies that are not part of LLVM. The latter are assumed
@@ -159,5 +162,5 @@ endif ()
 
 if (TARGET intrinsics_gen)
   # Check if we are building as part of an LLVM build
-  add_dependencies(PollyCore intrinsics_gen)
+  add_dependencies(obj.Polly intrinsics_gen)
 endif()

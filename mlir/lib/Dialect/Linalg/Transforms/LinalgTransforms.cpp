@@ -114,6 +114,9 @@ bool mlir::linalg::detail::isProducedByOpOfTypeImpl(
   return false;
 }
 
+//============================================================================//
+// Precondition and transformation for vectorization of Linalg generic ops.
+//============================================================================//
 static bool hasMultiplyAddBody(linalg::GenericOp op) {
   auto &r = op.region();
   if (r.empty())
@@ -153,12 +156,8 @@ static bool isMatmul(linalg::GenericOp genericOp) {
          genericOp.indexing_maps() == maps && hasMultiplyAddBody(genericOp);
 }
 
-LogicalResult mlir::linalg::vectorizeGenericOp(PatternRewriter &rewriter,
-                                               Operation *op) {
-  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE
-                       "]: Rewrite linalg op as vector.contract: "
-                    << *op << ":\n");
-
+LogicalResult
+mlir::linalg::vectorizeGenericLinalgOpPrecondition(Operation *op) {
   // TODO(ntv): This is in fact much more general than just vectorization for
   // matmul ops.
   auto genericOp = dyn_cast<linalg::GenericOp>(op);
@@ -175,7 +174,20 @@ LogicalResult mlir::linalg::vectorizeGenericOp(PatternRewriter &rewriter,
   if (!llvm::all_of(genericOp.getInputsAndOutputs(),
                     isStaticMemRefWithIdentityLayout))
     return failure();
+  return success();
+}
 
+SmallVector<Value, 0>
+mlir::linalg::vectorizeGenericLinalgOp(PatternRewriter &rewriter,
+                                       Operation *op) {
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE
+                       "]: Rewrite linalg op as vector.contract: "
+                    << *op << ":\n");
+
+  assert(succeeded(vectorizeGenericLinalgOpPrecondition(op)) &&
+         "DRR failure case must be a precondition");
+
+  auto genericOp = cast<linalg::GenericOp>(op);
   edsc::ScopedContext scope(rewriter, op->getLoc());
   using edsc::intrinsics::std_load;
   using edsc::intrinsics::std_store;
@@ -188,16 +200,35 @@ LogicalResult mlir::linalg::vectorizeGenericOp(PatternRewriter &rewriter,
   auto vRes = vector_contract(vA, vB, vC, genericOp.indexing_maps(),
                               genericOp.iterator_types());
   std_store(vRes, vectorMemRefC);
+  return {};
+}
+
+//============================================================================//
+// Precondition and transformation for permutation of Linalg generic ops.
+//============================================================================//
+LogicalResult mlir::linalg::permuteGenericLinalgOpPrecondition(
+    Operation *op, ArrayRef<unsigned> permutation) {
+  if (permutation.empty())
+    return failure();
+  // Transformation applies to generic ops only.
+  if (!isa<GenericOp>(op) && !isa<IndexedGenericOp>(op))
+    return failure();
+  LinalgOp linOp = cast<LinalgOp>(op);
+  // Transformation applies to buffers only.
+  if (!linOp.hasBufferSemantics())
+    return failure();
   return success();
 }
 
-LogicalResult
+SmallVector<Value, 0>
 mlir::linalg::permuteGenericLinalgOp(PatternRewriter &rewriter, Operation *op,
                                      ArrayRef<unsigned> permutation,
                                      StringRef linalgMarker) {
-  // If permutation is empty, there is nothing to be done.
-  if (permutation.empty())
-    return failure();
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: Permute dims for linalg op: " << *op
+                    << ":\n");
+
+  assert(succeeded(permuteGenericLinalgOpPrecondition(op, permutation)) &&
+         "DRR failure case must be a precondition");
 
   auto linOp = cast<LinalgOp>(op);
   auto permutationMap = inversePermutation(
@@ -220,19 +251,41 @@ mlir::linalg::permuteGenericLinalgOp(PatternRewriter &rewriter, Operation *op,
   op->setAttr(LinalgTransforms::kLinalgTransformMarker,
               rewriter.getStringAttr(linalgMarker));
   linOp.clone(rewriter, linOp.getLoc(), op->getOperands());
+  return {};
+}
+
+//============================================================================//
+// Precondition and transformation for Linalg subview promotion.
+//============================================================================//
+LogicalResult mlir::linalg::promoteSubviewsLinalgOpPrecondition(Operation *op) {
+  LinalgOp linOp = dyn_cast<LinalgOp>(op);
+  // Transformation applies to buffers only.
+  if (!linOp || !linOp.hasBufferSemantics())
+    return failure();
+  if (llvm::none_of(linOp.getInputsAndOutputs(), [](Value v) {
+        return isa_and_nonnull<SubViewOp>(v.getDefiningOp());
+      }))
+    return failure();
   return success();
 }
 
-LogicalResult mlir::linalg::linalgOpPromoteSubviews(PatternRewriter &rewriter,
-                                                    Operation *op) {
-  LinalgOp linOp = dyn_cast<LinalgOp>(op);
+SmallVector<Value, 0>
+mlir::linalg::promoteSubviewsLinalgOp(PatternRewriter &rewriter,
+                                      Operation *op) {
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: Promote subviews for linalg op: "
+                    << *op << ":\n");
+
+  assert(succeeded(promoteSubviewsLinalgOpPrecondition(op)) &&
+         "DRR failure case must be a precondition");
+
+  LinalgOp linOp = cast<LinalgOp>(op);
   SetVector<Value> subViews;
   for (auto it : linOp.getInputsAndOutputs())
     if (auto sv = dyn_cast_or_null<SubViewOp>(it->getDefiningOp()))
       subViews.insert(sv);
   if (!subViews.empty()) {
-    auto resOp = promoteSubViewOperands(rewriter, linOp, subViews);
-    return success(resOp);
+    promoteSubViewOperands(rewriter, linOp, subViews);
+    return {};
   }
-  return failure();
+  llvm_unreachable("DRR failure case must be a precondition");
 }

@@ -186,8 +186,6 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
   constexpr const int NumMeasurements = 30;
   int64_t MinValue = std::numeric_limits<int64_t>::max();
   const char *CounterName = State.getPfmCounters().CycleCounter;
-  if (!CounterName)
-    report_fatal_error("sched model does not define a cycle counter");
   for (size_t I = 0; I < NumMeasurements; ++I) {
     auto ExpectedCounterValue = Executor.runAndMeasure(CounterName);
     if (!ExpectedCounterValue)

@@ -96,6 +96,8 @@ add_clang_library(clangCodeGen
   TargetInfo.cpp
   VarBypassDetector.cpp
 
+  ENABLE_PLUGINS
+
   DEPENDS
   ${codegen_deps}
 

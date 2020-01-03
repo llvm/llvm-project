@@ -32,7 +32,7 @@ static void getMaxDimIndex(ArrayRef<StructuredIndexed> structuredIndices,
   }
 }
 
-Operation *mlir::edsc::makeLinalgGenericOp(
+Operation *mlir::edsc::makeGenericLinalgOp(
     ArrayRef<IterType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
     ArrayRef<StructuredIndexed> outputs,
     function_ref<void(ArrayRef<BlockArgument>)> regionBuilder,
@@ -68,6 +68,7 @@ Operation *mlir::edsc::makeLinalgGenericOp(
       edsc::ScopedContext::getBuilder()
           .create<linalg::GenericOp>(
               edsc::ScopedContext::getLocation(),
+              ArrayRef<Type>{}, // TODO(ntv): support tensors
               values,
               IntegerAttr::get(IntegerType::get(64, ctx), nInputs),
               IntegerAttr::get(IntegerType::get(64, ctx), nOutputs),
@@ -118,7 +119,7 @@ Operation *mlir::edsc::ops::linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
     ValueHandle a(args[0]);
     linalg_yield(unaryOp(a));
   };
-  return makeLinalgGenericOp(iterTypes, {I}, {O}, fun);
+  return makeGenericLinalgOp(iterTypes, {I}, {O}, fun);
 }
 
 Operation *mlir::edsc::ops::linalg_pointwise_tanh(StructuredIndexed I,
@@ -141,7 +142,7 @@ Operation *mlir::edsc::ops::linalg_pointwise(BinaryPointwiseOpBuilder binaryOp,
     ValueHandle a(args[0]), b(args[1]);
     linalg_yield(binaryOp(a, b));
   };
-  return makeLinalgGenericOp(iterTypes, {I1, I2}, {O}, fun);
+  return makeGenericLinalgOp(iterTypes, {I1, I2}, {O}, fun);
 }
 
 Operation *mlir::edsc::ops::linalg_pointwise_add(StructuredIndexed I1,
@@ -170,7 +171,7 @@ Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
   AffineExpr m, n, k;
   bindDims(ScopedContext::getContext(), m, n, k);
   StructuredIndexed A(vA), B(vB), C(vC);
-  return makeLinalgGenericOp(
+  return makeGenericLinalgOp(
     {IterType::Parallel, IterType::Parallel, IterType::Reduction},
     {A({m, k}), B({k, n})},
     {C({m, n})},
@@ -198,7 +199,7 @@ Operation *mlir::edsc::ops::linalg_conv_nhwc(ValueHandle vI, ValueHandle vW,
   unsigned numDims = c.cast<AffineDimExpr>().getPosition() + 1;
   StructuredIndexed I(vI), W(vW), O(vO);
   // clang-format off
-  return makeLinalgGenericOp(
+  return makeGenericLinalgOp(
     {par, par, par, par, red, red, red}, {
       I({b,
          // Roundtrip to flattened form to serve as canonicalization and ensure
@@ -231,7 +232,7 @@ Operation *mlir::edsc::ops::linalg_dilated_conv_nhwc(
   bindDims(ctx, b, dm, c, h, w, kh, kw);
   unsigned numDims = kw.cast<AffineDimExpr>().getPosition() + 1;
   StructuredIndexed I(vI), W(vW), O(vO);
-  return makeLinalgGenericOp(
+  return makeGenericLinalgOp(
     {par, par, par, par, par, red, red}, {
       I({b,
          // Roundtrip to flattened form to serve as canonicalization and ensure

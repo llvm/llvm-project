@@ -1661,6 +1661,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
         }
       }
 
+      UpgradeFramePointerAttributes(B);
       MAttributeGroups[GrpID] = AttributeList::get(Context, Idx, B);
       break;
     }

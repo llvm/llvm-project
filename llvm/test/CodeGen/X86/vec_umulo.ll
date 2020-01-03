@@ -1528,27 +1528,25 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ;
 ; AVX512-LABEL: umulo_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512-NEXT:    vpextrq $1, %xmm1, %r8
-; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    vmovq %xmm1, %rdx
+; AVX512-NEXT:    vmovq %xmm0, %rcx
+; AVX512-NEXT:    vmovq %xmm1, %rsi
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rdx
 ; AVX512-NEXT:    mulq %rdx
-; AVX512-NEXT:    movq %rax, %rsi
-; AVX512-NEXT:    seto %r9b
-; AVX512-NEXT:    movq %rcx, %rax
-; AVX512-NEXT:    mulq %r8
+; AVX512-NEXT:    seto %r8b
 ; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vmovq %rsi, %xmm1
+; AVX512-NEXT:    movq %rcx, %rax
+; AVX512-NEXT:    mulq %rsi
+; AVX512-NEXT:    vmovq %rax, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    seto %al
-; AVX512-NEXT:    kmovd %eax, %k0
-; AVX512-NEXT:    kshiftlw $15, %k0, %k0
-; AVX512-NEXT:    kshiftrw $14, %k0, %k0
-; AVX512-NEXT:    kmovd %r9d, %k1
+; AVX512-NEXT:    movw $-3, %cx
+; AVX512-NEXT:    kmovd %ecx, %k0
+; AVX512-NEXT:    kmovd %eax, %k1
+; AVX512-NEXT:    kandw %k0, %k1, %k0
+; AVX512-NEXT:    kmovd %r8d, %k1
 ; AVX512-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kshiftlw $2, %k0, %k2
-; AVX512-NEXT:    korw %k2, %k1, %k1
+; AVX512-NEXT:    kshiftrw $14, %k1, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
@@ -1983,10 +1981,10 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX512-NEXT:    setne %cl
 ; AVX512-NEXT:    orb %al, %cl
 ; AVX512-NEXT:    setne %al
+; AVX512-NEXT:    kmovd %eax, %k1
+; AVX512-NEXT:    movw $-3, %ax
 ; AVX512-NEXT:    kmovd %eax, %k0
-; AVX512-NEXT:    kshiftlw $15, %k0, %k0
-; AVX512-NEXT:    kshiftrw $15, %k0, %k1
-; AVX512-NEXT:    kshiftlw $2, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k1
 ; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    mulb %sil
 ; AVX512-NEXT:    movl %eax, %edx
@@ -1996,12 +1994,12 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX512-NEXT:    orb %al, %cl
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    kmovd %eax, %k2
-; AVX512-NEXT:    kshiftlw $1, %k2, %k2
-; AVX512-NEXT:    korw %k2, %k0, %k2
-; AVX512-NEXT:    korw %k2, %k1, %k1
-; AVX512-NEXT:    kshiftlw $14, %k1, %k1
-; AVX512-NEXT:    kshiftrw $14, %k1, %k1
-; AVX512-NEXT:    kshiftlw $3, %k0, %k2
+; AVX512-NEXT:    kshiftlw $15, %k2, %k2
+; AVX512-NEXT:    kshiftrw $14, %k2, %k2
+; AVX512-NEXT:    korw %k2, %k1, %k2
+; AVX512-NEXT:    movw $-5, %ax
+; AVX512-NEXT:    kmovd %eax, %k1
+; AVX512-NEXT:    kandw %k1, %k2, %k2
 ; AVX512-NEXT:    movl %r11d, %eax
 ; AVX512-NEXT:    mulb %bl
 ; AVX512-NEXT:    movl %eax, %esi
@@ -2013,9 +2011,8 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX512-NEXT:    kmovd %eax, %k3
 ; AVX512-NEXT:    kshiftlw $2, %k3, %k3
 ; AVX512-NEXT:    korw %k3, %k2, %k2
-; AVX512-NEXT:    korw %k2, %k1, %k1
-; AVX512-NEXT:    kshiftlw $13, %k1, %k1
-; AVX512-NEXT:    kshiftrw $13, %k1, %k1
+; AVX512-NEXT:    kshiftlw $13, %k2, %k2
+; AVX512-NEXT:    kshiftrw $13, %k2, %k2
 ; AVX512-NEXT:    movl %r9d, %eax
 ; AVX512-NEXT:    mulb %r10b
 ; AVX512-NEXT:    # kill: def $al killed $al def $eax
@@ -2024,37 +2021,29 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX512-NEXT:    setne %bl
 ; AVX512-NEXT:    orb %cl, %bl
 ; AVX512-NEXT:    setne %cl
-; AVX512-NEXT:    kmovd %ecx, %k2
-; AVX512-NEXT:    kshiftlw $3, %k2, %k2
-; AVX512-NEXT:    korw %k2, %k1, %k1
+; AVX512-NEXT:    kmovd %ecx, %k3
+; AVX512-NEXT:    kshiftlw $3, %k3, %k3
+; AVX512-NEXT:    korw %k3, %k2, %k2
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    kmovd %r8d, %k1
-; AVX512-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
+; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k2} {z}
+; AVX512-NEXT:    kmovd %r8d, %k2
+; AVX512-NEXT:    kandw %k0, %k2, %k0
 ; AVX512-NEXT:    kmovd %edx, %k2
 ; AVX512-NEXT:    kshiftlw $15, %k2, %k2
 ; AVX512-NEXT:    kshiftrw $14, %k2, %k2
 ; AVX512-NEXT:    korw %k2, %k0, %k0
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrw $3, %k0, %k1
-; AVX512-NEXT:    kshiftlw $3, %k1, %k1
-; AVX512-NEXT:    kshiftlw $14, %k0, %k0
-; AVX512-NEXT:    kshiftrw $14, %k0, %k0
-; AVX512-NEXT:    kmovd %esi, %k2
-; AVX512-NEXT:    kshiftlw $15, %k2, %k2
-; AVX512-NEXT:    kshiftrw $13, %k2, %k2
-; AVX512-NEXT:    korw %k2, %k1, %k1
+; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kmovd %esi, %k1
+; AVX512-NEXT:    kshiftlw $15, %k1, %k1
+; AVX512-NEXT:    kshiftrw $13, %k1, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k0
-; AVX512-NEXT:    kshiftrw $4, %k0, %k1
-; AVX512-NEXT:    kshiftlw $4, %k1, %k1
-; AVX512-NEXT:    kshiftlw $13, %k0, %k0
-; AVX512-NEXT:    kshiftrw $13, %k0, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    movw $-9, %cx
+; AVX512-NEXT:    kmovd %ecx, %k1
+; AVX512-NEXT:    kandw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovd %eax, %k1
 ; AVX512-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512-NEXT:    kshiftrw $12, %k1, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
+; AVX512-NEXT:    korw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    movb %al, (%rdi)
 ; AVX512-NEXT:    popq %rbx

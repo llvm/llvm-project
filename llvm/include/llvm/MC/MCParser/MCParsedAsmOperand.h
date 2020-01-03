@@ -75,10 +75,10 @@ public:
   /// Only valid when parsing MS-style inline assembly.
   virtual bool isCallOperand() const { return false; }
 
-  /// isOffsetOf - Do we need to emit code to get the offset of the variable,
-  /// rather then the value of the variable?   Only valid when parsing MS-style
-  /// inline assembly.
-  virtual bool isOffsetOf() const { return false; }
+  /// isOffsetOfLocal - Do we need to emit code to get the offset of the local
+  /// variable, rather than its value?   Only valid when parsing MS-style inline
+  /// assembly.
+  virtual bool isOffsetOfLocal() const { return false; }
 
   /// getOffsetOfLoc - Get the location of the offset operator.
   virtual SMLoc getOffsetOfLoc() const { return SMLoc(); }

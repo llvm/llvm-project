@@ -1075,7 +1075,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
-  case TargetOpcode::G_BSWAP: {
+  case TargetOpcode::G_BSWAP:
+  case TargetOpcode::G_BITREVERSE: {
     if (SizeOp0 % NarrowSize != 0)
       return UnableToLegalize;
 
@@ -2312,6 +2313,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerInsert(MI);
   case G_BSWAP:
     return lowerBswap(MI);
+  case G_BITREVERSE:
+    return lowerBitreverse(MI);
   }
 }
 
@@ -4386,6 +4389,48 @@ LegalizerHelper::lowerBswap(MachineInstr &MI) {
     Res = MIRBuilder.buildOr(Ty, Res, HiShiftedRight);
   }
   Res.getInstr()->getOperand(0).setReg(Dst);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+//{ (Src & Mask) >> N } | { (Src << N) & Mask }
+static MachineInstrBuilder SwapN(unsigned N, DstOp Dst, MachineIRBuilder &B,
+                                 MachineInstrBuilder Src, APInt Mask) {
+  const LLT Ty = Dst.getLLTTy(*B.getMRI());
+  MachineInstrBuilder C_N = B.buildConstant(Ty, N);
+  MachineInstrBuilder MaskLoNTo0 = B.buildConstant(Ty, Mask);
+  auto LHS = B.buildLShr(Ty, B.buildAnd(Ty, Src, MaskLoNTo0), C_N);
+  auto RHS = B.buildAnd(Ty, B.buildShl(Ty, Src, C_N), MaskLoNTo0);
+  return B.buildOr(Dst, LHS, RHS);
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerBitreverse(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  const LLT Ty = MRI.getType(Src);
+  unsigned Size = Ty.getSizeInBits();
+
+  MachineInstrBuilder BSWAP =
+      MIRBuilder.buildInstr(TargetOpcode::G_BSWAP, {Ty}, {Src});
+
+  // swap high and low 4 bits in 8 bit blocks 7654|3210 -> 3210|7654
+  //    [(val & 0xF0F0F0F0) >> 4] | [(val & 0x0F0F0F0F) << 4]
+  // -> [(val & 0xF0F0F0F0) >> 4] | [(val << 4) & 0xF0F0F0F0]
+  MachineInstrBuilder Swap4 =
+      SwapN(4, Ty, MIRBuilder, BSWAP, APInt::getSplat(Size, APInt(8, 0xF0)));
+
+  // swap high and low 2 bits in 4 bit blocks 32|10 76|54 -> 10|32 54|76
+  //    [(val & 0xCCCCCCCC) >> 2] & [(val & 0x33333333) << 2]
+  // -> [(val & 0xCCCCCCCC) >> 2] & [(val << 2) & 0xCCCCCCCC]
+  MachineInstrBuilder Swap2 =
+      SwapN(2, Ty, MIRBuilder, Swap4, APInt::getSplat(Size, APInt(8, 0xCC)));
+
+  // swap high and low 1 bit in 2 bit blocks 1|0 3|2 5|4 7|6 -> 0|1 2|3 4|5 6|7
+  //    [(val & 0xAAAAAAAA) >> 1] & [(val & 0x55555555) << 1]
+  // -> [(val & 0xAAAAAAAA) >> 1] & [(val << 1) & 0xAAAAAAAA]
+  SwapN(1, Dst, MIRBuilder, Swap2, APInt::getSplat(Size, APInt(8, 0xAA)));
 
   MI.eraseFromParent();
   return Legalized;

@@ -21,7 +21,7 @@ entry:
 define i32 @caller() {
 ; CHECK-LABEL: define {{[^@]+}}@caller()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = call i32 @test(i32** nofree nonnull align 8 dereferenceable(8) @G2)
+; CHECK-NEXT:    [[X:%.*]] = call i32 @test(i32** nofree nonnull readonly align 8 dereferenceable(8) @G2)
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:

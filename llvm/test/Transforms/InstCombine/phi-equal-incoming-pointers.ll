@@ -528,7 +528,7 @@ define i32 @test_extra_uses_multiple_geps(i1 %cond, i1 %cond2) {
 ; ALL-NEXT:    call void @foo.i32(i32* nonnull [[PTR1_TYPED]])
 ; ALL-NEXT:    br label [[EXIT:%.*]]
 ; ALL:       bb2:
-; ALL-NEXT:    [[PTR2_1:%.*]] = getelementptr inbounds i8, i8* [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR2_1:%.*]] = getelementptr i8, i8* [[OBJ]], i64 16
 ; ALL-NEXT:    [[PTR2_TYPED:%.*]] = bitcast i8* [[PTR2_1]] to i32*
 ; ALL-NEXT:    [[RES2:%.*]] = load i32, i32* [[PTR2_TYPED]], align 4
 ; ALL-NEXT:    call void @foo.i32(i32* nonnull [[PTR2_TYPED]])

@@ -54,13 +54,24 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
 std::unique_ptr<BenchmarkRunner>
 ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
                                       const LLVMState &State) const {
+  PfmCountersInfo PfmCounters = State.getPfmCounters();
   switch (Mode) {
   case InstructionBenchmark::Unknown:
     return nullptr;
   case InstructionBenchmark::Latency:
   case InstructionBenchmark::InverseThroughput:
+    if (!PfmCounters.CycleCounter) {
+      const char *ModeName = Mode == InstructionBenchmark::Latency
+                                 ? "latency"
+                                 : "inverse_throughput";
+      report_fatal_error(Twine("can't run '").concat(ModeName).concat("' mode, "
+                               "sched model does not define a cycle counter."));
+    }
     return createLatencyBenchmarkRunner(State, Mode);
   case InstructionBenchmark::Uops:
+    if (!PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
+      report_fatal_error("can't run 'uops' mode, sched model does not define "
+                         "uops or issue counters.");
     return createUopsBenchmarkRunner(State);
   }
   return nullptr;
