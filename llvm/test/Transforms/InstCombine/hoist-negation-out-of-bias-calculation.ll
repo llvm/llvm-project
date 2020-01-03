@@ -14,9 +14,9 @@
 
 define i8 @t0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[NEGY:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[NEGY]], [[X:%.*]]
-; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 [[UNBIASEDX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 0, [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[NEGBIAS]]
 ;
   %negy = sub i8 0, %y
@@ -30,9 +30,9 @@ declare i8 @gen8()
 define i8 @t1_commutative(i8 %y) {
 ; CHECK-LABEL: @t1_commutative(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[NEGY:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[X]], [[NEGY]]
-; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 [[UNBIASEDX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 0, [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[NEGBIAS]]
 ;
   %x = call i8 @gen8()
@@ -44,9 +44,9 @@ define i8 @t1_commutative(i8 %y) {
 
 define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t2_vec(
-; CHECK-NEXT:    [[NEGY:%.*]] = sub <2 x i8> zeroinitializer, [[Y:%.*]]
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and <2 x i8> [[NEGY]], [[X:%.*]]
-; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> [[UNBIASEDX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
 ;
   %negy = sub <2 x i8> <i8 0, i8 0>, %y
@@ -57,9 +57,9 @@ define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define <2 x i8> @t3_vec_undef(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t3_vec_undef(
-; CHECK-NEXT:    [[NEGY:%.*]] = sub <2 x i8> <i8 0, i8 undef>, [[Y:%.*]]
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and <2 x i8> [[NEGY]], [[X:%.*]]
-; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> [[UNBIASEDX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
 ;
   %negy = sub <2 x i8> <i8 0, i8 undef>, %y
