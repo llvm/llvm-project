@@ -135,8 +135,8 @@ def X86strict_vfpext  : SDNode<"X86ISD::STRICT_VFPEXT",
                                                     [SDNPHasChain]>;
 
 def X86any_vfpext : PatFrags<(ops node:$src),
-                              [(X86vfpext node:$src),
-                               (X86strict_vfpext node:$src)]>;
+                              [(X86strict_vfpext node:$src),
+                               (X86vfpext node:$src)]>;
 
 def X86vfpround: SDNode<"X86ISD::VFPROUND",
                         SDTypeProfile<1, 1, [SDTCVecEltisVT<0, f32>,
@@ -150,8 +150,8 @@ def X86strict_vfpround: SDNode<"X86ISD::STRICT_VFPROUND",
                                              [SDNPHasChain]>;
 
 def X86any_vfpround : PatFrags<(ops node:$src),
-                              [(X86vfpround node:$src),
-                               (X86strict_vfpround node:$src)]>;
+                              [(X86strict_vfpround node:$src),
+                               (X86vfpround node:$src)]>;
 
 def X86frounds   : SDNode<"X86ISD::VFPROUNDS",
                            SDTypeProfile<1, 2, [SDTCVecEltisVT<0, f32>,
