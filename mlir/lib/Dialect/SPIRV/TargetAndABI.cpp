@@ -17,7 +17,7 @@ namespace mlir {
 }
 
 StringRef mlir::spirv::getInterfaceVarABIAttrName() {
-  return "spirv.interface_var_abi";
+  return "spv.interface_var_abi";
 }
 
 mlir::spirv::InterfaceVarABIAttr
@@ -32,7 +32,7 @@ mlir::spirv::getInterfaceVarABIAttr(unsigned descriptorSet, unsigned binding,
 }
 
 StringRef mlir::spirv::getEntryPointABIAttrName() {
-  return "spirv.entry_point_abi";
+  return "spv.entry_point_abi";
 }
 
 mlir::spirv::EntryPointABIAttr
