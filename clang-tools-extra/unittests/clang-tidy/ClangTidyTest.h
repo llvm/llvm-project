@@ -97,6 +97,7 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
 
   std::vector<std::string> Args(1, "clang-tidy");
   Args.push_back("-fsyntax-only");
+  Args.push_back("-fno-delayed-template-parsing");
   std::string extension(llvm::sys::path::extension(Filename.str()));
   if (extension == ".m" || extension == ".mm") {
     Args.push_back("-fobjc-abi-version=2");
