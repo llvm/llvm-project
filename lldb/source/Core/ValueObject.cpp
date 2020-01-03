@@ -400,11 +400,11 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   if (TargetSP target_sp = GetTargetSP()) {
     if (auto clang_modules_decl_vendor =
             target_sp->GetClangModulesDeclVendor()) {
-      if (clang_modules_decl_vendor->FindDecls(class_name, false,
-                                               UINT32_MAX, decls) > 0 &&
-          decls.size() > 0) {
-        CompilerType module_type =
-            ClangASTContext::GetTypeForDecl(decls.front());
+      ConstString key_cs(class_name);
+      auto types = clang_modules_decl_vendor->FindTypes(
+          key_cs, /*max_matches*/ UINT32_MAX);
+      if (!types.empty()) {
+        auto module_type = types.front();
         m_override_type =
             is_pointer_type ? module_type.GetPointerType() : module_type;
       }
