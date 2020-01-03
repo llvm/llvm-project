@@ -28,10 +28,6 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_procmaps.h"
 
-#if SANITIZER_NETBSD
-#define _RTLD_SOURCE  // Fast LWP private pointer getters in ThreadSelfTlsTcb().
-#endif
-
 #include <dlfcn.h>  // for dlsym()
 #include <link.h>
 #include <pthread.h>
@@ -54,6 +50,7 @@
 #if SANITIZER_NETBSD
 #include <sys/sysctl.h>
 #include <sys/tls.h>
+#include <lwp.h>
 #endif
 
 #if SANITIZER_SOLARIS
@@ -403,13 +400,7 @@ uptr ThreadSelf() {
 
 #if SANITIZER_NETBSD
 static struct tls_tcb * ThreadSelfTlsTcb() {
-  struct tls_tcb * tcb;
-# ifdef __HAVE___LWP_GETTCB_FAST
-  tcb = (struct tls_tcb *)__lwp_gettcb_fast();
-# elif defined(__HAVE___LWP_GETPRIVATE_FAST)
-  tcb = (struct tls_tcb *)__lwp_getprivate_fast();
-# endif
-  return tcb;
+  return (struct tls_tcb *)_lwp_getprivate();
 }
 
 uptr ThreadSelf() {
