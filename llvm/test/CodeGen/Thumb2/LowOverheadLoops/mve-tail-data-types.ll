@@ -966,11 +966,10 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    beq .LBB9_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
 ; CHECK-NEXT:    sub.w r4, r12, #1
-; CHECK-NEXT:    and r5, r12, #3
+; CHECK-NEXT:    and r10, r12, #3
 ; CHECK-NEXT:    cmp r4, #3
 ; CHECK-NEXT:    bhs .LBB9_6
 ; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:    mov r10, r5
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB9_8
 ; CHECK-NEXT:  .LBB9_4: @ %vector.ph
@@ -986,10 +985,9 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    letp lr, .LBB9_5
 ; CHECK-NEXT:    b .LBB9_11
 ; CHECK-NEXT:  .LBB9_6: @ %for.body.preheader.new
-; CHECK-NEXT:    sub.w r7, r12, r5
-; CHECK-NEXT:    mov r10, r5
-; CHECK-NEXT:    subs r7, #4
+; CHECK-NEXT:    bic r7, r12, #3
 ; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    subs r7, #4
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    add.w lr, lr, r7, lsr #2
 ; CHECK-NEXT:    dls lr, lr

@@ -4,7 +4,7 @@
 define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocapture readonly %b, float* nocapture readonly %c, i32 %N) {
 ; CHECK-LABEL: fast_float_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    beq.w .LBB0_11
 ; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
@@ -32,7 +32,6 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    cmp r6, #3
 ; CHECK-NEXT:    bhs .LBB0_6
 ; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:    mov r8, r7
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:  .LBB0_4: @ %vector.ph
@@ -46,8 +45,7 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    letp lr, .LBB0_5
 ; CHECK-NEXT:    b .LBB0_11
 ; CHECK-NEXT:  .LBB0_6: @ %for.body.preheader.new
-; CHECK-NEXT:    subs r3, r3, r7
-; CHECK-NEXT:    mov r8, r7
+; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    add.w lr, r12, r3, lsr #2
 ; CHECK-NEXT:    movs r3, #0
@@ -78,10 +76,10 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    vstr s0, [r6, #12]
 ; CHECK-NEXT:    le lr, .LBB0_7
 ; CHECK-NEXT:  .LBB0_8: @ %for.cond.cleanup.loopexit.unr-lcssa
-; CHECK-NEXT:    wls lr, r8, .LBB0_11
+; CHECK-NEXT:    wls lr, r7, .LBB0_11
 ; CHECK-NEXT:  @ %bb.9: @ %for.body.epil.preheader
 ; CHECK-NEXT:    mvn r3, #3
-; CHECK-NEXT:    mov lr, r8
+; CHECK-NEXT:    mov lr, r7
 ; CHECK-NEXT:    add.w r3, r3, r12, lsl #2
 ; CHECK-NEXT:    add r1, r3
 ; CHECK-NEXT:    add r2, r3
@@ -97,7 +95,7 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    adds r0, #4
 ; CHECK-NEXT:    le lr, .LBB0_10
 ; CHECK-NEXT:  .LBB0_11: @ %for.cond.cleanup
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %cmp8 = icmp eq i32 %N, 0
   br i1 %cmp8, label %for.cond.cleanup, label %vector.memcheck
