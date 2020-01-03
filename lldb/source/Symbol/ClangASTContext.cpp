@@ -526,9 +526,8 @@ ClangASTContext::ClangASTContext(clang::ASTContext *ast_ctx)
     : TypeSystem(), m_target_triple(), m_ast_up(ast_ctx),
       m_language_options_up(), m_source_manager_up(), m_diagnostics_engine_up(),
       m_target_options_rp(), m_target_info_up(), m_identifier_table_up(),
-      m_selector_table_up(), m_builtins_up(), m_callback_tag_decl(nullptr),
-      m_callback_objc_decl(nullptr), m_callback_baton(nullptr),
-      m_pointer_byte_size(0), m_ast_owned(false) {}
+      m_selector_table_up(), m_builtins_up(), m_pointer_byte_size(0),
+      m_ast_owned(false) {}
 
 //----------------------------------------------------------------------
 // Destructor
