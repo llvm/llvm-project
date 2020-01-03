@@ -98,7 +98,8 @@ ValueHandle LoopNestRangeBuilder::LoopNestRangeBuilder::operator()(
 }
 
 namespace mlir {
-  namespace edsc {
+namespace edsc {
+
 template <>
 GenericLoopNestRangeBuilder<
     loop::ForOp>::GenericLoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
@@ -123,7 +124,7 @@ GenericLoopNestRangeBuilder<
   }
   builder = std::make_unique<AffineLoopNestBuilder>(ivs, lbs, ubs, steps);
 }
-    
+
 } // namespace edsc
 } // namespace mlir
 
