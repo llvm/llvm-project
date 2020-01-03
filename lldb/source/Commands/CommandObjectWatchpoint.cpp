@@ -415,10 +415,6 @@ protected:
 };
 
 // CommandObjectWatchpointDelete
-#define LLDB_OPTIONS_watchpoint_delete
-#include "CommandOptions.inc"
-
-// CommandObjectWatchpointDelete
 #pragma mark Delete
 
 class CommandObjectWatchpointDelete : public CommandObjectParsed {
@@ -427,8 +423,7 @@ public:
       : CommandObjectParsed(interpreter, "watchpoint delete",
                             "Delete the specified watchpoint(s).  If no "
                             "watchpoints are specified, delete them all.",
-                            nullptr, eCommandRequiresTarget),
-        m_options() {
+                            nullptr, eCommandRequiresTarget) {
     CommandArgumentEntry arg;
     CommandObject::AddIDsArgumentData(arg, eArgTypeWatchpointID,
                                       eArgTypeWatchpointIDRange);
@@ -438,41 +433,6 @@ public:
   }
 
   ~CommandObjectWatchpointDelete() override = default;
-
-  Options *GetOptions() override { return &m_options; }
-
-  class CommandOptions : public Options {
-  public:
-    CommandOptions() : Options(), m_force(false) {}
-
-    ~CommandOptions() override = default;
-
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      const int short_option = m_getopt_table[option_idx].val;
-
-      switch (short_option) {
-      case 'f':
-        m_force = true;
-        break;
-      default:
-        llvm_unreachable("Unimplemented option");
-      }
-
-      return {};
-    }
-
-    void OptionParsingStarting(ExecutionContext *execution_context) override {
-      m_force = false;
-    }
-
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_delete_options);
-    }
-
-    // Instance variables to hold the values for command options.
-    bool m_force;
-  };
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -493,9 +453,8 @@ protected:
       return false;
     }
 
-    if (command.empty()) {
-      if (!m_options.m_force &&
-          !m_interpreter.Confirm(
+    if (command.GetArgumentCount() == 0) {
+      if (!m_interpreter.Confirm(
               "About to delete all watchpoints, do you want to do that?",
               true)) {
         result.AppendMessage("Operation cancelled...");
@@ -506,31 +465,27 @@ protected:
                                        (uint64_t)num_watchpoints);
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      return result.Succeeded();
-    }
+    } else {
+      // Particular watchpoints selected; delete them.
+      std::vector<uint32_t> wp_ids;
+      if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
+              target, command, wp_ids)) {
+        result.AppendError("Invalid watchpoints specification.");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
 
-    // Particular watchpoints selected; delete them.
-    std::vector<uint32_t> wp_ids;
-    if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
-                                                               wp_ids)) {
-      result.AppendError("Invalid watchpoints specification.");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
+      int count = 0;
+      const size_t size = wp_ids.size();
+      for (size_t i = 0; i < size; ++i)
+        if (target->RemoveWatchpointByID(wp_ids[i]))
+          ++count;
+      result.AppendMessageWithFormat("%d watchpoints deleted.\n", count);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
-
-    int count = 0;
-    const size_t size = wp_ids.size();
-    for (size_t i = 0; i < size; ++i)
-      if (target->RemoveWatchpointByID(wp_ids[i]))
-        ++count;
-    result.AppendMessageWithFormat("%d watchpoints deleted.\n", count);
-    result.SetStatus(eReturnStatusSuccessFinishNoResult);
 
     return result.Succeeded();
   }
-
-private:
-  CommandOptions m_options;
 };
 
 // CommandObjectWatchpointIgnore
