@@ -19,17 +19,13 @@ define i32 @t0_32(i32 %ptr) nounwind {
 ; X86-LABEL: t0_32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    andl $-16, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t0_32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    andl $15, %ecx
-; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    andl $-16, %eax
 ; X64-NEXT:    retq
   %bias = and i32 %ptr, 15
   %r = sub i32 %ptr, %bias
@@ -40,18 +36,13 @@ define i64 @t1_64(i64 %ptr) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    sbbl $0, %edx
+; X86-NEXT:    andl $-16, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t1_64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    andl $15, %ecx
-; X64-NEXT:    subq %rcx, %rax
+; X64-NEXT:    andq $-16, %rax
 ; X64-NEXT:    retq
   %bias = and i64 %ptr, 15
   %r = sub i64 %ptr, %bias
@@ -62,17 +53,13 @@ define i32 @t2_powerof2(i32 %ptr) nounwind {
 ; X86-LABEL: t2_powerof2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $16, %ecx
-; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    andl $-17, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t2_powerof2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    andl $16, %ecx
-; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    andl $-17, %eax
 ; X64-NEXT:    retq
   %bias = and i32 %ptr, 16
   %r = sub i32 %ptr, %bias
@@ -82,17 +69,13 @@ define i32 @t3_random_constant(i32 %ptr) nounwind {
 ; X86-LABEL: t3_random_constant:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $42, %ecx
-; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    andl $-43, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t3_random_constant:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    andl $42, %ecx
-; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    andl $-43, %eax
 ; X64-NEXT:    retq
   %bias = and i32 %ptr, 42
   %r = sub i32 %ptr, %bias
@@ -109,7 +92,7 @@ define i32 @t4_extrause(i32 %ptr, i32* %bias_storage) nounwind {
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    andl $15, %edx
 ; X86-NEXT:    movl %edx, (%ecx)
-; X86-NEXT:    subl %edx, %eax
+; X86-NEXT:    andl $-16, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t4_extrause:
@@ -118,7 +101,7 @@ define i32 @t4_extrause(i32 %ptr, i32* %bias_storage) nounwind {
 ; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    andl $15, %ecx
 ; X64-NEXT:    movl %ecx, (%rsi)
-; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    andl $-16, %eax
 ; X64-NEXT:    retq
   %bias = and i32 %ptr, 15
   store i32 %bias, i32* %bias_storage
