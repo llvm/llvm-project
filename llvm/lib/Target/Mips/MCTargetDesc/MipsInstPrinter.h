@@ -83,8 +83,8 @@ public:
   static const char *getRegisterName(unsigned RegNo);
 
   void printRegName(raw_ostream &OS, unsigned RegNo) const override;
-  void printInst(const MCInst *MI, raw_ostream &O, StringRef Annot,
-                 const MCSubtargetInfo &STI) override;
+  void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
+                 const MCSubtargetInfo &STI, raw_ostream &O) override;
 
   bool printAliasInstr(const MCInst *MI, raw_ostream &OS);
   void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,

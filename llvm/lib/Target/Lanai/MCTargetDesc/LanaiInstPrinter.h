@@ -24,8 +24,8 @@ public:
                    const MCRegisterInfo &MRI)
       : MCInstPrinter(MAI, MII, MRI) {}
 
-  void printInst(const MCInst *MI, raw_ostream &O, StringRef Annot,
-                 const MCSubtargetInfo &STI) override;
+  void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
+                 const MCSubtargetInfo &STI, raw_ostream &O) override;
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                     const char *Modifier = nullptr);
   void printPredicateOperand(const MCInst *MI, unsigned OpNum, raw_ostream &O);

@@ -26,8 +26,9 @@
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
-void AMDGPUInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
-                                  StringRef Annot, const MCSubtargetInfo &STI) {
+void AMDGPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                                  StringRef Annot, const MCSubtargetInfo &STI,
+                                  raw_ostream &OS) {
   OS.flush();
   printInstruction(MI, STI, OS);
   printAnnotation(OS, Annot);
@@ -1342,8 +1343,9 @@ void AMDGPUInstPrinter::printEndpgm(const MCInst *MI, unsigned OpNo,
 
 #include "AMDGPUGenAsmWriter.inc"
 
-void R600InstPrinter::printInst(const MCInst *MI, raw_ostream &O,
-                                StringRef Annot, const MCSubtargetInfo &STI) {
+void R600InstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                                StringRef Annot, const MCSubtargetInfo &STI,
+                                raw_ostream &O) {
   O.flush();
   printInstruction(MI, O);
   printAnnotation(O, Annot);

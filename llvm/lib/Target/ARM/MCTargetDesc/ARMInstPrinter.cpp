@@ -88,8 +88,9 @@ void ARMInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   OS << markup("<reg:") << getRegisterName(RegNo, DefaultAltIdx) << markup(">");
 }
 
-void ARMInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
-                               StringRef Annot, const MCSubtargetInfo &STI) {
+void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                               StringRef Annot, const MCSubtargetInfo &STI,
+                               raw_ostream &O) {
   unsigned Opcode = MI->getOpcode();
 
   switch (Opcode) {

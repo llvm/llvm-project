@@ -293,7 +293,7 @@ static void printInstruction(formatted_raw_ostream &FOS,
 
   FOS.PadToColumn(14);
 
-  MCIP.printInst(&MCI, InstrStream, "", STI);
+  MCIP.printInst(&MCI, 0, "", STI, InstrStream);
   InstrStream.flush();
 
   if (UseDifferentColor)
