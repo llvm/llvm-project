@@ -685,13 +685,18 @@ Error DWARFDebugLine::LineTable::parse(
         (*OffsetPtr) += Len - 1;
         break;
       }
-      // Make sure the stated and parsed lengths are the same.
-      // Otherwise we have an unparseable line-number program.
-      if (*OffsetPtr - ExtOffset != Len)
-        return createStringError(errc::illegal_byte_sequence,
-                           "unexpected line op length at offset 0x%8.8" PRIx64
-                           " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx64,
-                           ExtOffset, Len, *OffsetPtr - ExtOffset);
+      // Make sure the length as recorded in the table and the standard length
+      // for the opcode match. If they don't, continue from the end as claimed
+      // by the table.
+      uint64_t End = ExtOffset + Len;
+      if (*OffsetPtr != End) {
+        RecoverableErrorCallback(createStringError(
+            errc::illegal_byte_sequence,
+            "unexpected line op length at offset 0x%8.8" PRIx64
+            " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx64,
+            ExtOffset, Len, *OffsetPtr - ExtOffset));
+        *OffsetPtr = End;
+      }
     } else if (Opcode < Prologue.OpcodeBase) {
       if (OS)
         *OS << LNStandardString(Opcode);
