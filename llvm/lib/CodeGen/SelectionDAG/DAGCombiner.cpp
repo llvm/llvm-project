@@ -7131,6 +7131,13 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
                        DAG.getAllOnesConstant(DL, VT));
   }
 
+  // fold (not (add X, -1)) -> (neg X)
+  if (isAllOnesConstant(N1) && N0.getOpcode() == ISD::ADD &&
+      isAllOnesOrAllOnesSplat(N0.getOperand(1))) {
+    return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                       N0.getOperand(0));
+  }
+
   // fold (xor (and x, y), y) -> (and (not x), y)
   if (N0Opcode == ISD::AND && N0.hasOneUse() && N0->getOperand(1) == N1) {
     SDValue X = N0.getOperand(0);
