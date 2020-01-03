@@ -687,4 +687,4 @@ deduction ability. See [building operations](#building-operations) for more
 details.
 
 [TableGen]: https://llvm.org/docs/TableGen/index.html
-[OpBase]: https://github.com/tensorflow/mlir/blob/master/include/mlir/IR/OpBase.td
+[OpBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/OpBase.td

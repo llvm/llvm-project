@@ -24,7 +24,7 @@ efficient([rationale](Rationale.md#reserving-dialect-type-kinds). For a dialect
 author, this means that a range of type `kind` values must be explicitly, and
 statically, reserved. A dialect can reserve a range of values by adding a new
 entry to the
-[DialectSymbolRegistry](https://github.com/tensorflow/mlir/blob/master/include/mlir/IR/DialectSymbolRegistry.def).
+[DialectSymbolRegistry](https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/DialectSymbolRegistry.def).
 To support out-of-tree and experimental dialects, the registry predefines a set
 of privates ranges, `PRIVATE_EXPERIMENTAL_[0-9]`, that are free for immediate
 use.
