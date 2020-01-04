@@ -8,13 +8,9 @@
 define <3 x i16> @zext_i8(<3 x i8>) {
 ; SSE3-LABEL: zext_i8:
 ; SSE3:       # %bb.0:
+; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; SSE3-NEXT:    movd %eax, %xmm0
-; SSE3-NEXT:    pinsrw $1, %edx, %xmm0
-; SSE3-NEXT:    pinsrw $2, %ecx, %xmm0
-; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE3-NEXT:    # kill: def $dx killed $dx killed $edx
 ; SSE3-NEXT:    # kill: def $cx killed $cx killed $ecx

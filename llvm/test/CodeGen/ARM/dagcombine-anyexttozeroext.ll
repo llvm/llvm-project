@@ -113,17 +113,14 @@ define float @k(<8 x i8>* nocapture %in) {
 }
 
 define float @KnownUpperZero(<4 x i16> %v) {
-; FIXME: uxtb are not required
 ; CHECK-LABEL: KnownUpperZero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i16 d16, #0x3
-; CHECK-NEXT:    vmov d17, r0, r1
-; CHECK-NEXT:    vand d16, d17, d16
+; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vmov.u16 r0, d16[0]
 ; CHECK-NEXT:    vmov.u16 r1, d16[3]
-; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    and r0, r0, #3
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    uxtb r0, r1
+; CHECK-NEXT:    and r0, r1, #3
 ; CHECK-NEXT:    vmov s2, r0
 ; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vcvt.f32.s32 s2, s2
