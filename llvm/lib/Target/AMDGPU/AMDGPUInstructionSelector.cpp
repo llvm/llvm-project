@@ -1930,12 +1930,15 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
   if (VecRB->getID() == AMDGPU::VGPRRegBankID && ValSize != 32)
     return false;
 
+  unsigned SubReg;
+  std::tie(IdxReg, SubReg) = computeIndirectRegIndex(*MRI, TRI, VecRC, IdxReg,
+                                                     ValSize / 8);
+
   const bool IndexMode = VecRB->getID() == AMDGPU::VGPRRegBankID &&
                          STI.useVGPRIndexMode();
 
   MachineBasicBlock *BB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
-  unsigned SubReg = ValSize == 64 ? AMDGPU::sub0_sub1 : AMDGPU::sub0;
 
   if (IndexMode) {
     BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_ON))
