@@ -9,7 +9,7 @@ This check will try to enforce coding guidelines on the identifiers naming. It
 supports one of the following casing types and tries to convert from one to
 another if a mismatch is detected
 
-Casing types inclde:
+Casing types include:
 
  - ``lower_case``,
  - ``UPPER_CASE``,

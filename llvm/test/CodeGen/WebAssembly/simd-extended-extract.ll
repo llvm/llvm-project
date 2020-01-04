@@ -21,16 +21,6 @@ define void @foo(<4 x i8>* %p) {
 ; CHECK:         .functype foo (i32) -> ()
 ; CHECK-NEXT:    i32.load8_u 0
 ; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    i32.load8_u 1
-; CHECK-NEXT:    i32x4.replace_lane 1
-; CHECK-NEXT:    i32.const 2
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    i32.load8_u 0
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    i32.const 3
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    i32.load8_u 0
-; CHECK-NEXT:    i32x4.replace_lane 3
 ; CHECK-NEXT:    local.tee
 ; CHECK-NEXT:    i8x16.extract_lane_s 0
 ; CHECK-NEXT:    f64.convert_i32_s
@@ -40,6 +30,9 @@ define void @foo(<4 x i8>* %p) {
 ; CHECK-NEXT:    f64.add
 ; CHECK-NEXT:    f32.demote_f64
 ; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    i32.load8_u 1
+; CHECK-NEXT:    i32x4.replace_lane 1
+; CHECK-NEXT:    local.tee
 ; CHECK-NEXT:    i8x16.extract_lane_s 4
 ; CHECK-NEXT:    f64.convert_i32_s
 ; CHECK-NEXT:    f64.const 0x0p0
@@ -48,6 +41,11 @@ define void @foo(<4 x i8>* %p) {
 ; CHECK-NEXT:    f64.add
 ; CHECK-NEXT:    f32.demote_f64
 ; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.load8_u 0
+; CHECK-NEXT:    i32x4.replace_lane 2
+; CHECK-NEXT:    local.tee
 ; CHECK-NEXT:    i8x16.extract_lane_s 8
 ; CHECK-NEXT:    f64.convert_i32_s
 ; CHECK-NEXT:    f64.const 0x0p0
@@ -56,6 +54,10 @@ define void @foo(<4 x i8>* %p) {
 ; CHECK-NEXT:    f64.add
 ; CHECK-NEXT:    f32.demote_f64
 ; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    i32.const 3
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.load8_u 0
+; CHECK-NEXT:    i32x4.replace_lane 3
 ; CHECK-NEXT:    i8x16.extract_lane_s 12
 ; CHECK-NEXT:    f64.convert_i32_s
 ; CHECK-NEXT:    f64.const 0x0p0

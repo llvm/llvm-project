@@ -1,4 +1,4 @@
-.. title:: clang-tidy - hicpp-undelegated-construtor
+.. title:: clang-tidy - hicpp-undelegated-constructor
 .. meta::
    :http-equiv=refresh: 5;URL=bugprone-undelegated-constructor.html
 

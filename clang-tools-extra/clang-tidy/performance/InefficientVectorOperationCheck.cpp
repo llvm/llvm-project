@@ -165,7 +165,7 @@ void InefficientVectorOperationCheck::registerMatchers(MatchFinder *Finder) {
 
     // A method's name starts with "add_" might not mean it's an add field
     // call; it could be the getter for a proto field of which the name starts
-    // with "add_". So we exlude const methods.
+    // with "add_". So we exclude const methods.
     const auto AddFieldMethodDecl =
         cxxMethodDecl(matchesName("::add_"), unless(isConst()));
     AddMatcher(ProtoDecl, ProtoVarDeclName, ProtoVarDeclStmtName,

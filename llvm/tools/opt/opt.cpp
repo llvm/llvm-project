@@ -482,6 +482,10 @@ static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
                                         getCodeModel(), GetCodeGenOptLevel());
 }
 
+#ifdef BUILD_EXAMPLES
+void initializeExampleIRTransforms(llvm::PassRegistry &Registry);
+#endif
+
 
 void exportDebugifyStats(llvm::StringRef Path, const DebugifyStatsMap &Map) {
   std::error_code EC;
@@ -558,6 +562,10 @@ int main(int argc, char **argv) {
   initializeWriteBitcodePassPass(Registry);
   initializeHardwareLoopsPass(Registry);
   initializeTypePromotionPass(Registry);
+
+#ifdef BUILD_EXAMPLES
+  initializeExampleIRTransforms(Registry);
+#endif
 
   cl::ParseCommandLineOptions(argc, argv,
     "llvm .bc -> .bc modular optimizer and analysis printer\n");

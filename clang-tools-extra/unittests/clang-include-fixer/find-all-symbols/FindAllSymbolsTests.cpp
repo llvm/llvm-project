@@ -198,8 +198,8 @@ TEST_F(FindAllSymbolsTest, ExternCSymbols) {
 TEST_F(FindAllSymbolsTest, CXXRecordSymbols) {
   static const char Header[] = R"(
       struct Glob {};
-      struct A; // Not a defintion, ignored.
-      class NOP; // Not a defintion, ignored
+      struct A; // Not a definition, ignored.
+      class NOP; // Not a definition, ignored
       namespace na {
       struct A {
         struct AAAA {};

@@ -1411,7 +1411,7 @@ TEST(Hover, All) {
           )cpp",
           [](HoverInfo &HI) { HI.Name = "int"; }},
       {
-          R"cpp(// More compilcated structured types.
+          R"cpp(// More complicated structured types.
             int bar();
             ^[[auto]] (*foo)() = bar;
           )cpp",

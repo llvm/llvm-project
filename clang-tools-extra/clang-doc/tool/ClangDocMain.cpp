@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This tool for generating C and C++ documenation from source code
+// This tool for generating C and C++ documentation from source code
 // and comments. Generally, it runs a LibTooling FrontendAction on source files,
 // mapping each declaration in those files to its USR and serializing relevant
 // information into LLVM bitcode. It then runs a pass over the collected

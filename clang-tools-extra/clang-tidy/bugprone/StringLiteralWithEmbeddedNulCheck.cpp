@@ -27,7 +27,7 @@ AST_MATCHER(StringLiteral, containsNul) {
 
 void StringLiteralWithEmbeddedNulCheck::registerMatchers(MatchFinder *Finder) {
   // Match a string that contains embedded NUL character. Extra-checks are
-  // applied in |check| to find incorectly escaped characters.
+  // applied in |check| to find incorrectly escaped characters.
   Finder->addMatcher(stringLiteral(containsNul()).bind("strlit"), this);
 
   // The remaining checks only apply to C++.

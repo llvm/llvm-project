@@ -103,7 +103,7 @@ struct Symbol {
     /// this header. This number is only meaningful if aggregated in an index.
     unsigned References = 0;
   };
-  /// One Symbol can potentially be incuded via different headers.
+  /// One Symbol can potentially be included via different headers.
   ///   - If we haven't seen a definition, this covers all declarations.
   ///   - If we have seen a definition, this covers declarations visible from
   ///   any definition.
@@ -115,7 +115,7 @@ struct Symbol {
     /// Whether or not this symbol is meant to be used for the code completion.
     /// See also isIndexedForCodeCompletion().
     /// Note that we don't store completion information (signature, snippet,
-    /// type, inclues) if the symbol is not indexed for code completion.
+    /// type, includes) if the symbol is not indexed for code completion.
     IndexedForCodeCompletion = 1 << 0,
     /// Indicates if the symbol is deprecated.
     Deprecated = 1 << 1,

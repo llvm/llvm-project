@@ -485,7 +485,7 @@ llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
     }
 
     void VisitUsingDecl(const UsingDecl *D) {
-      // "using ns::identifer;" is a non-declaration reference.
+      // "using ns::identifier;" is a non-declaration reference.
       Refs.push_back(
           ReferenceLoc{D->getQualifierLoc(), D->getLocation(), /*IsDecl=*/false,
                        explicitReferenceTargets(DynTypedNode::create(*D),

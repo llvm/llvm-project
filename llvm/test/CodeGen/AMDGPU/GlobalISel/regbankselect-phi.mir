@@ -760,11 +760,10 @@ body: |
   ; FAST:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
   ; FAST:   G_BR %bb.2
   ; FAST: bb.2:
-  ; FAST:   [[PHI:%[0-9]+]]:vgpr(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
-  ; FAST:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[PHI]](s1)
-  ; FAST:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-  ; FAST:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
+  ; FAST:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
+  ; FAST:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; FAST:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+  ; FAST:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY3]], [[COPY4]]
   ; FAST:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   ; GREEDY-LABEL: name: phi_s1_scc_vcc_sbranch
   ; GREEDY: bb.0:
@@ -783,11 +782,10 @@ body: |
   ; GREEDY:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
   ; GREEDY:   G_BR %bb.2
   ; GREEDY: bb.2:
-  ; GREEDY:   [[PHI:%[0-9]+]]:vgpr(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
-  ; GREEDY:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[PHI]](s1)
-  ; GREEDY:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-  ; GREEDY:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
+  ; GREEDY:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
+  ; GREEDY:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GREEDY:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+  ; GREEDY:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY3]], [[COPY4]]
   ; GREEDY:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2
@@ -838,11 +836,10 @@ body: |
   ; FAST:   [[ICMP2:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
   ; FAST:   G_BR %bb.2
   ; FAST: bb.2:
-  ; FAST:   [[PHI:%[0-9]+]]:vgpr(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
-  ; FAST:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[PHI]](s1)
-  ; FAST:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-  ; FAST:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
+  ; FAST:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
+  ; FAST:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; FAST:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+  ; FAST:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY3]], [[COPY4]]
   ; FAST:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   ; GREEDY-LABEL: name: phi_s1_vcc_scc_sbranch
   ; GREEDY: bb.0:
@@ -861,11 +858,10 @@ body: |
   ; GREEDY:   [[ICMP2:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
   ; GREEDY:   G_BR %bb.2
   ; GREEDY: bb.2:
-  ; GREEDY:   [[PHI:%[0-9]+]]:vgpr(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
-  ; GREEDY:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[PHI]](s1)
-  ; GREEDY:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-  ; GREEDY:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
+  ; GREEDY:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
+  ; GREEDY:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GREEDY:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+  ; GREEDY:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY3]], [[COPY4]]
   ; GREEDY:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2
@@ -1296,10 +1292,9 @@ body: |
   ; FAST:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY1]](s32)
   ; FAST:   G_BR %bb.2
   ; FAST: bb.2:
-  ; FAST:   [[PHI:%[0-9]+]]:vgpr(s1) = G_PHI [[ICMP]](s1), %bb.0, [[TRUNC]](s1), %bb.1
-  ; FAST:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[PHI]](s1)
-  ; FAST:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY]]
+  ; FAST:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[TRUNC]](s1), %bb.1
+  ; FAST:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; FAST:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY3]], [[COPY]]
   ; FAST:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   ; GREEDY-LABEL: name: phi_s1_vcc_s_sbranch
   ; GREEDY: bb.0:
@@ -1318,10 +1313,9 @@ body: |
   ; GREEDY:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY1]](s32)
   ; GREEDY:   G_BR %bb.2
   ; GREEDY: bb.2:
-  ; GREEDY:   [[PHI:%[0-9]+]]:vgpr(s1) = G_PHI [[ICMP]](s1), %bb.0, [[TRUNC]](s1), %bb.1
-  ; GREEDY:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[PHI]](s1)
-  ; GREEDY:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY]]
+  ; GREEDY:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[TRUNC]](s1), %bb.1
+  ; GREEDY:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GREEDY:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY3]], [[COPY]]
   ; GREEDY:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2
@@ -1372,11 +1366,10 @@ body: |
   ; FAST:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
   ; FAST:   G_BR %bb.2
   ; FAST: bb.2:
-  ; FAST:   [[PHI:%[0-9]+]]:vgpr(s1) = G_PHI [[TRUNC]](s1), %bb.0, [[ICMP1]](s1), %bb.1
-  ; FAST:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[PHI]](s1)
-  ; FAST:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-  ; FAST:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
+  ; FAST:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[TRUNC]](s1), %bb.0, [[ICMP1]](s1), %bb.1
+  ; FAST:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; FAST:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+  ; FAST:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY3]], [[COPY4]]
   ; FAST:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   ; GREEDY-LABEL: name: phi_s1_s_vcc_sbranch
   ; GREEDY: bb.0:
@@ -1395,11 +1388,10 @@ body: |
   ; GREEDY:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
   ; GREEDY:   G_BR %bb.2
   ; GREEDY: bb.2:
-  ; GREEDY:   [[PHI:%[0-9]+]]:vgpr(s1) = G_PHI [[TRUNC]](s1), %bb.0, [[ICMP1]](s1), %bb.1
-  ; GREEDY:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[PHI]](s1)
-  ; GREEDY:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-  ; GREEDY:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
+  ; GREEDY:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[TRUNC]](s1), %bb.0, [[ICMP1]](s1), %bb.1
+  ; GREEDY:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GREEDY:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+  ; GREEDY:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY3]], [[COPY4]]
   ; GREEDY:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2

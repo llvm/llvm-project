@@ -667,7 +667,7 @@ size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed, ArrayRef<Range> Lexed,
         Indexed[I].start.character - Lexed[MappedIndex[I]].start.character;
     int Line = Indexed[I].start.line;
     if (Line != LastLine)
-      LastDColumn = 0; // colmun offsets don't carry cross lines.
+      LastDColumn = 0; // column offsets don't carry cross lines.
     Cost += abs(DLine - LastDLine) + abs(DColumn - LastDColumn);
     std::tie(LastLine, LastDLine, LastDColumn) = std::tie(Line, DLine, DColumn);
   }

@@ -95,7 +95,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_no_member: // Could be no member in namespace.
   case diag::err_no_member_suggest:
     if (LastUnresolvedName) {
-      // Try to fix unresolved name caused by missing declaraion.
+      // Try to fix unresolved name caused by missing declaration.
       // E.g.
       //   clang::SourceManager SM;
       //          ~~~~~~~~~~~~~
@@ -161,7 +161,7 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
   };
 
   std::vector<Fix> Fixes;
-  // Deduplicate fixes by include headers. This doesn't distiguish symbols in
+  // Deduplicate fixes by include headers. This doesn't distinguish symbols in
   // different scopes from the same header, but this case should be rare and is
   // thus ignored.
   llvm::StringSet<> InsertedHeaders;

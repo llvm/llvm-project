@@ -61,7 +61,7 @@ void GlobalNamesInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *UsingDirective = dyn_cast<UsingDirectiveDecl>(D)) {
     if (UsingDirective->getNominatedNamespace()->isAnonymousNamespace()) {
-      // Anynoumous namespaces inject a using directive into the AST to import
+      // Anonymous namespaces inject a using directive into the AST to import
       // the names into the containing namespace.
       // We should not have them in headers, but there is another warning for
       // that.

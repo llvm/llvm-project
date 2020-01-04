@@ -20,7 +20,7 @@
 // map.
 //
 // Modularize takes as input either one or more module maps (by default,
-// "module.modulemap") or one or more text files contatining lists of headers
+// "module.modulemap") or one or more text files containing lists of headers
 // to check.
 //
 // In the case of a module map, the module map must be well-formed in
