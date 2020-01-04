@@ -3996,8 +3996,10 @@ LegalizerHelper::lowerFPTOUI(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   MachineInstrBuilder ResHighBit = MIRBuilder.buildConstant(DstTy, TwoPExpInt);
   MachineInstrBuilder Res = MIRBuilder.buildXor(DstTy, ResLowBits, ResHighBit);
 
+  const LLT S1 = LLT::scalar(1);
+
   MachineInstrBuilder FCMP =
-      MIRBuilder.buildFCmp(CmpInst::FCMP_ULT, DstTy, Src, Threshold);
+      MIRBuilder.buildFCmp(CmpInst::FCMP_ULT, S1, Src, Threshold);
   MIRBuilder.buildSelect(Dst, FCMP, FPTOSI, Res);
 
   MI.eraseFromParent();
