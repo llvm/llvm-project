@@ -10,6 +10,5 @@ static_library("GlobalISel") {
     "GIMatchDagOperands.cpp",
     "GIMatchDagPredicate.cpp",
     "GIMatchDagPredicateDependencyEdge.cpp",
-    "GIMatchTree.cpp",
   ]
 }
