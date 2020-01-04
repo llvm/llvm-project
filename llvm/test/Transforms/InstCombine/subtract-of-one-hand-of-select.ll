@@ -74,16 +74,5 @@ define i8 @n4_wrong_hands(i1 %c, i8 %TrueVal, i8 %FalseVal, i8 %Op1) {
   ret i8 %r
 }
 
-define i8 @n5_wrong_sub(i1 %c, i8 %Op1, i8 %FalseVal) {
-; CHECK-LABEL: @n5_wrong_sub(
-; CHECK-NEXT:    [[O:%.*]] = select i1 [[C:%.*]], i8 [[OP1:%.*]], i8 [[FALSEVAL:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[OP1]], [[O]]
-; CHECK-NEXT:    ret i8 [[R]]
-;
-  %o = select i1 %c, i8 %Op1, i8 %FalseVal
-  %r = sub i8 %Op1, %o ; wrong order
-  ret i8 %r
-}
-
 ; CHECK: !0 = !{!"branch_weights", i32 0, i32 100}
 !0  = !{!"branch_weights", i32 0, i32 100}
