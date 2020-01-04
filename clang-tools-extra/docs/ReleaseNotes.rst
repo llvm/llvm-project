@@ -94,6 +94,12 @@ Improvements to clang-tidy
   Without the null terminator it can result in undefined behaviour when the
   string is read.
 
+- New :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone-signed-char-misuse>` check.
+
+  Finds ``signed char`` -> integer conversions which might indicate a programming
+  error.
+
 - New :doc:`cert-mem57-cpp
   <clang-tidy/checks/cert-mem57-cpp>` check.
 
