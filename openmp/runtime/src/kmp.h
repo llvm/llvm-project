@@ -2253,7 +2253,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned started : 1; /* 1==started, 0==not started     */
   unsigned executing : 1; /* 1==executing, 0==not executing */
   unsigned complete : 1; /* 1==complete, 0==not complete   */
-  unsigned freed : 1; /* 1==freed, 0==allocateed        */
+  unsigned freed : 1; /* 1==freed, 0==allocated        */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
   unsigned reserved31 : 7; /* reserved for library use */
 

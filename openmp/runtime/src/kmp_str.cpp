@@ -251,7 +251,7 @@ void __kmp_str_fname_init(kmp_str_fname_t *fname, char const *path) {
     char *base = NULL; // Pointer to the beginning of basename.
     fname->path = __kmp_str_format("%s", path);
     // Original code used strdup() function to copy a string, but on Windows* OS
-    // Intel(R) 64 it causes assertioon id debug heap, so I had to replace
+    // Intel(R) 64 it causes assertion id debug heap, so I had to replace
     // strdup with __kmp_str_format().
     if (KMP_OS_WINDOWS) {
       __kmp_str_replace(fname->path, '\\', '/');

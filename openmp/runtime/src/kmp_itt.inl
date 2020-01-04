@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 // Inline function definitions. This file should be included into kmp_itt.h file
-// for production build (to let compliler inline functions) or into kmp_itt.c
+// for production build (to let compiler inline functions) or into kmp_itt.c
 // file for debug build (to reduce the number of files to recompile and save
 // build time).
 
@@ -502,7 +502,7 @@ void *__kmp_itt_barrier_object(int gtid, int bt, int set_name,
     // Now form the barrier id. Encode barrier type (bt) in barrier id too, so
     // barriers of different types do not have the same ids.
     KMP_BUILD_ASSERT(sizeof(kmp_team_t) >= bs_last_barrier);
-    // This conditon is a must (we would have zero divide otherwise).
+    // This condition is a must (we would have zero divide otherwise).
     KMP_BUILD_ASSERT(sizeof(kmp_team_t) >= 2 * bs_last_barrier);
     // More strong condition: make sure we have room at least for for two
     // differtent ids (for each barrier type).

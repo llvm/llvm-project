@@ -12,7 +12,7 @@
 
 /*
  * Test for taskloop
- * Method: caculate how many times the iteration space is dispatched
+ * Method: calculate how many times the iteration space is dispatched
  *     and judge if each dispatch has the requested grainsize
  * It is possible for two adjacent chunks are executed by the same thread
  */
