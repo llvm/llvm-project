@@ -1898,6 +1898,33 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     }
   }
 
+  {
+    // If we are subtracting from select with one hand matching the value
+    // we are subtracting, sink subtraction into hands of select:
+    //   sub (select %Cond, %TrueVal, %FalseVal), %Op1
+    //     ->
+    //   select %Cond, (sub %TrueVal, %Op1), (sub %FalseVal, %Op1)
+    // This will result in select between new subtraction and 0.
+    Value *Cond, *TrueVal, *FalseVal;
+    if (match(Op0, m_OneUse(m_Select(m_Value(Cond), m_Value(TrueVal),
+                                     m_Value(FalseVal)))) &&
+        (Op1 == TrueVal || Op1 == FalseVal)) {
+      // While it is really tempting to just create two subtractions and let
+      // InstCombine fold one of those to 0, it isn't possible to do so
+      // because of worklist visitation order. So ugly it is.
+      bool SubtractingTrueVal = Op1 == TrueVal;
+      Value *NewSub =
+          Builder.CreateSub(SubtractingTrueVal ? FalseVal : TrueVal, Op1);
+      Constant *Zero = Constant::getNullValue(I.getType());
+      SelectInst *NewSel =
+          SelectInst::Create(Cond, SubtractingTrueVal ? Zero : NewSub,
+                             SubtractingTrueVal ? NewSub : Zero);
+      // Preserve prof metadata if any.
+      NewSel->copyMetadata(cast<Instruction>(*Op0));
+      return NewSel;
+    }
+  }
+
   if (Op1->hasOneUse()) {
     Value *X = nullptr, *Y = nullptr, *Z = nullptr;
     Constant *C = nullptr;
