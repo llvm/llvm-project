@@ -52,6 +52,7 @@ add_llvm_component_library(LLVMTransformUtils
   SSAUpdater.cpp
   SSAUpdaterBulk.cpp
   SanitizerStats.cpp
+  ScalarEvolutionExpander.cpp
   SimplifyCFG.cpp
   SimplifyIndVar.cpp
   SimplifyLibCalls.cpp
