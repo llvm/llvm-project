@@ -1354,6 +1354,7 @@ def : GCNPat <
 /********** Intrinsic Patterns **********/
 /********** ================== **********/
 
+// FIXME: Should use _e64 and select source modifiers.
 def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
 
 def : GCNPat <

@@ -375,6 +375,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Custom);
 
   if (Subtarget->has16BitInsts()) {
+    setOperationAction(ISD::FPOW, MVT::f16, Promote);
     setOperationAction(ISD::FLOG, MVT::f16, Custom);
     setOperationAction(ISD::FEXP, MVT::f16, Custom);
     setOperationAction(ISD::FLOG10, MVT::f16, Custom);
