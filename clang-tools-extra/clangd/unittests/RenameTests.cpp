@@ -30,7 +30,7 @@ using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
-// Covnert a Range to a Ref.
+// Convert a Range to a Ref.
 Ref refWithRange(const clangd::Range &Range, const std::string &URI) {
   Ref Result;
   Result.Kind = RefKind::Reference;
@@ -460,14 +460,14 @@ TEST(RenameTest, Renameable) {
       )cpp",
        "used outside main file", HeaderFile, Index},
 
-      {R"cpp(// disallow -- symbol in annonymous namespace in header is not indexable.
+      {R"cpp(// disallow -- symbol in anonymous namespace in header is not indexable.
         namespace {
         class Unin^dexable {};
         }
       )cpp",
        "not eligible for indexing", HeaderFile, Index},
 
-      {R"cpp(// allow -- symbol in annonymous namespace in non-header file is indexable.
+      {R"cpp(// allow -- symbol in anonymous namespace in non-header file is indexable.
         namespace {
         class [[F^oo]] {};
         }

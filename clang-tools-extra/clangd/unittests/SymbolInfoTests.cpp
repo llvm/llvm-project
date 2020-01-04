@@ -305,7 +305,7 @@ TEST(SymbolInfoTests, All) {
               {CreateExpectedSymbolDetails("bar", "foo",
                                            "c:TestTU.cpp@50@F@foo#I#@bar")}},
           {
-              R"cpp( // Type inferrence with auto keyword
+              R"cpp( // Type inference with auto keyword
           struct foo {};
           foo getfoo() { return foo{}; }
           void f() {

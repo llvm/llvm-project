@@ -61,7 +61,7 @@ private:
   // or block to be read.
   Cursor skipUntilRecordOrBlock(unsigned &BlockOrRecordID);
 
-  // Helper function to set up the approriate type of Info.
+  // Helper function to set up the appropriate type of Info.
   llvm::Expected<std::unique_ptr<Info>> readBlockToInfo(unsigned ID);
 
   llvm::BitstreamCursor &Stream;

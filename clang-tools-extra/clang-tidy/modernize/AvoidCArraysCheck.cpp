@@ -43,7 +43,7 @@ namespace tidy {
 namespace modernize {
 
 void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
-  // std::array<> is avaliable since C++11.
+  // std::array<> is available since C++11.
   if (!getLangOpts().CPlusPlus11)
     return;
 

@@ -88,7 +88,7 @@ public:
 
   const std::vector<Diag> &getDiagnostics() const;
 
-  /// Returns the esitmated size of the AST and the accessory structures, in
+  /// Returns the estimated size of the AST and the accessory structures, in
   /// bytes. Does not include the size of the preamble.
   std::size_t getUsedBytes() const;
   const IncludeStructure &getIncludeStructure() const;

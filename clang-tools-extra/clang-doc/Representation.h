@@ -135,7 +135,7 @@ struct Reference {
   bool mergeable(const Reference &Other);
   void merge(Reference &&I);
 
-  SymbolID USR = SymbolID(); // Unique identifer for referenced decl
+  SymbolID USR = SymbolID(); // Unique identifier for referenced decl
   SmallString<16> Name;      // Name of type (possibly unresolved).
   InfoType RefType = InfoType::IT_default; // Indicates the type of this
                                            // Reference (namespace, record,

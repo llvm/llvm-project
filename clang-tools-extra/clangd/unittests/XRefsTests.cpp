@@ -187,7 +187,7 @@ TEST(LocateSymbol, WithIndex) {
   EXPECT_THAT(LocateWithIndex(Test),
               ElementsAre(Sym("Foo", Test.range(), SymbolHeader.range("foo"))));
 
-  Test = Annotations(R"cpp(// defintion in AST.
+  Test = Annotations(R"cpp(// definition in AST.
         class [[Forward]] {};
         F^orward create();
       )cpp");

@@ -9,7 +9,7 @@
 // not raise performance-unnecessary-value-param.
 void foo(id object) { }
 
-// Same for explcitly non-ARC-managed Objective-C objects.
+// Same for explicitly non-ARC-managed Objective-C objects.
 void bar(__unsafe_unretained id object) { }
 
 // Same for Objective-c classes.
