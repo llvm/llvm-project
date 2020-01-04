@@ -60,10 +60,16 @@ define amdgpu_ps <2 x half> @image_load_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; UNPACKED:   [[INT:%[0-9]+]]:_(<2 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 3, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 4 from custom "TargetCustom8")
   ; UNPACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INT]](<2 x s32>)
-  ; UNPACKED:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
-  ; UNPACKED:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[UV1]](s32)
-  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; UNPACKED:   $vgpr0 = COPY [[BUILD_VECTOR1]](<2 x s16>)
+  ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; UNPACKED:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY10]], [[C]]
+  ; UNPACKED:   [[COPY11:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
+  ; UNPACKED:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY11]], [[C]]
+  ; UNPACKED:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; UNPACKED:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
+  ; UNPACKED:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; UNPACKED:   $vgpr0 = COPY [[BITCAST]](<2 x s16>)
   ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; PACKED-LABEL: name: image_load_v2f16
   ; PACKED: bb.1 (%ir-block.0):
@@ -103,16 +109,25 @@ define amdgpu_ps <3 x half> @image_load_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; UNPACKED:   [[INT:%[0-9]+]]:_(<3 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 6 from custom "TargetCustom8", align 8)
   ; UNPACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INT]](<3 x s32>)
-  ; UNPACKED:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
-  ; UNPACKED:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[UV1]](s32)
-  ; UNPACKED:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
-  ; UNPACKED:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-  ; UNPACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+  ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; UNPACKED:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY10]], [[C]]
+  ; UNPACKED:   [[COPY11:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
+  ; UNPACKED:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY11]], [[C]]
+  ; UNPACKED:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; UNPACKED:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
+  ; UNPACKED:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; UNPACKED:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; UNPACKED:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY12]], [[C]]
+  ; UNPACKED:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; UNPACKED:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C1]](s32)
+  ; UNPACKED:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
+  ; UNPACKED:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+  ; UNPACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>)
   ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-  ; UNPACKED:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
+  ; UNPACKED:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
   ; UNPACKED:   [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
   ; UNPACKED:   [[EXTRACT2:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
   ; UNPACKED:   $vgpr0 = COPY [[EXTRACT1]](<2 x s16>)
@@ -161,14 +176,24 @@ define amdgpu_ps <4 x half> @image_load_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; UNPACKED:   [[INT:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 15, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 8 from custom "TargetCustom8")
   ; UNPACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INT]](<4 x s32>)
-  ; UNPACKED:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
-  ; UNPACKED:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[UV1]](s32)
-  ; UNPACKED:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
-  ; UNPACKED:   [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[UV3]](s32)
-  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
-  ; UNPACKED:   $vgpr0 = COPY [[BUILD_VECTOR1]](<2 x s16>)
-  ; UNPACKED:   $vgpr1 = COPY [[BUILD_VECTOR2]](<2 x s16>)
+  ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; UNPACKED:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY10]], [[C]]
+  ; UNPACKED:   [[COPY11:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
+  ; UNPACKED:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY11]], [[C]]
+  ; UNPACKED:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; UNPACKED:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
+  ; UNPACKED:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; UNPACKED:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; UNPACKED:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY12]], [[C]]
+  ; UNPACKED:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[UV3]](s32)
+  ; UNPACKED:   [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY13]], [[C]]
+  ; UNPACKED:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C1]](s32)
+  ; UNPACKED:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
+  ; UNPACKED:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+  ; UNPACKED:   $vgpr0 = COPY [[BITCAST]](<2 x s16>)
+  ; UNPACKED:   $vgpr1 = COPY [[BITCAST1]](<2 x s16>)
   ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ; PACKED-LABEL: name: image_load_v4f16
   ; PACKED: bb.1 (%ir-block.0):

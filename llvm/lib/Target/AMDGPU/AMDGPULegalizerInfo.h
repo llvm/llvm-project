@@ -82,6 +82,8 @@ public:
   bool legalizeFlog(MachineInstr &MI, MachineIRBuilder &B,
                     double Log2BaseInverted) const;
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B) const;
 
   Register getLiveInRegister(MachineRegisterInfo &MRI,
                              Register Reg, LLT Ty) const;
