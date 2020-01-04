@@ -1055,6 +1055,18 @@ macro(add_llvm_example name)
   set_target_properties(${name} PROPERTIES FOLDER "Examples")
 endmacro(add_llvm_example name)
 
+macro(add_llvm_example_library name)
+  if( NOT LLVM_BUILD_EXAMPLES )
+    set(EXCLUDE_FROM_ALL ON)
+  endif()
+  add_llvm_library(${name} BUILDTREE_ONLY ${ARGN})
+  if( LLVM_BUILD_EXAMPLES )
+    install(TARGETS ${name} RUNTIME DESTINATION examples)
+  endif()
+
+  set_target_properties(${name} PROPERTIES FOLDER "Examples")
+endmacro(add_llvm_example_library name)
+
 # This is a macro that is used to create targets for executables that are needed
 # for development, but that are not intended to be installed by default.
 macro(add_llvm_utility name)
