@@ -1420,6 +1420,12 @@ public:
     return buildInstr(TargetOpcode::G_INTRINSIC_TRUNC, {Dst}, {Src0}, Flags);
   }
 
+  /// Build and insert \p Res = GFFLOOR \p Op0, \p Op1
+  MachineInstrBuilder buildFFloor(const DstOp &Dst, const SrcOp &Src0,
+                                          Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FFLOOR, {Dst}, {Src0}, Flags);
+  }
+
   /// Build and insert \p Dst = G_FLOG \p Src
   MachineInstrBuilder buildFLog(const DstOp &Dst, const SrcOp &Src,
                                 Optional<unsigned> Flags = None) {
