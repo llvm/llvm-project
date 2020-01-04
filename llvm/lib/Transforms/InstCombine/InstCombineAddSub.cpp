@@ -1899,57 +1899,52 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   }
 
   {
-    // If we are subtracting the select with one hand matching the value
-    // we are subtracting from, sink subtraction into hands of select:
+    // If we have a subtraction between some value and a select between
+    // said value and something else, sink subtraction into select hands, i.e.:
+    //   sub (select %Cond, %TrueVal, %FalseVal), %Op1
+    //     ->
+    //   select %Cond, (sub %TrueVal, %Op1), (sub %FalseVal, %Op1)
+    //  or
     //   sub %Op0, (select %Cond, %TrueVal, %FalseVal)
     //     ->
     //   select %Cond, (sub %Op0, %TrueVal), (sub %Op0, %FalseVal)
     // This will result in select between new subtraction and 0.
-    Value *Cond, *TrueVal, *FalseVal;
-    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_Value(TrueVal),
-                                     m_Value(FalseVal)))) &&
-        (Op0 == TrueVal || Op0 == FalseVal)) {
+    auto SinkSubIntoSelect =
+        [Ty = I.getType()](Value *Select, Value *OtherHandOfSub,
+                           auto SubBuilder) -> Instruction * {
+      Value *Cond, *TrueVal, *FalseVal;
+      if (!match(Select, m_OneUse(m_Select(m_Value(Cond), m_Value(TrueVal),
+                                           m_Value(FalseVal)))))
+        return nullptr;
+      if (OtherHandOfSub != TrueVal && OtherHandOfSub != FalseVal)
+        return nullptr;
       // While it is really tempting to just create two subtractions and let
       // InstCombine fold one of those to 0, it isn't possible to do so
       // because of worklist visitation order. So ugly it is.
-      bool SubtractingFromTrueVal = Op0 == TrueVal;
-      Value *NewSub =
-          Builder.CreateSub(Op0, SubtractingFromTrueVal ? FalseVal : TrueVal);
-      Constant *Zero = Constant::getNullValue(I.getType());
+      bool OtherHandOfSubIsTrueVal = OtherHandOfSub == TrueVal;
+      Value *NewSub = SubBuilder(OtherHandOfSubIsTrueVal ? FalseVal : TrueVal);
+      Constant *Zero = Constant::getNullValue(Ty);
       SelectInst *NewSel =
-          SelectInst::Create(Cond, SubtractingFromTrueVal ? Zero : NewSub,
-                             SubtractingFromTrueVal ? NewSub : Zero);
+          SelectInst::Create(Cond, OtherHandOfSubIsTrueVal ? Zero : NewSub,
+                             OtherHandOfSubIsTrueVal ? NewSub : Zero);
       // Preserve prof metadata if any.
-      NewSel->copyMetadata(cast<Instruction>(*Op1));
+      NewSel->copyMetadata(cast<Instruction>(*Select));
       return NewSel;
-    }
-  }
-
-  {
-    // If we are subtracting from select with one hand matching the value
-    // we are subtracting, sink subtraction into hands of select:
-    //   sub (select %Cond, %TrueVal, %FalseVal), %Op1
-    //     ->
-    //   select %Cond, (sub %TrueVal, %Op1), (sub %FalseVal, %Op1)
-    // This will result in select between new subtraction and 0.
-    Value *Cond, *TrueVal, *FalseVal;
-    if (match(Op0, m_OneUse(m_Select(m_Value(Cond), m_Value(TrueVal),
-                                     m_Value(FalseVal)))) &&
-        (Op1 == TrueVal || Op1 == FalseVal)) {
-      // While it is really tempting to just create two subtractions and let
-      // InstCombine fold one of those to 0, it isn't possible to do so
-      // because of worklist visitation order. So ugly it is.
-      bool SubtractingTrueVal = Op1 == TrueVal;
-      Value *NewSub =
-          Builder.CreateSub(SubtractingTrueVal ? FalseVal : TrueVal, Op1);
-      Constant *Zero = Constant::getNullValue(I.getType());
-      SelectInst *NewSel =
-          SelectInst::Create(Cond, SubtractingTrueVal ? Zero : NewSub,
-                             SubtractingTrueVal ? NewSub : Zero);
-      // Preserve prof metadata if any.
-      NewSel->copyMetadata(cast<Instruction>(*Op0));
+    };
+    if (Instruction *NewSel = SinkSubIntoSelect(
+            /*Select=*/Op0, /*OtherHandOfSub=*/Op1,
+            [Builder = &Builder, Op1](Value *OtherHandOfSelect) {
+              return Builder->CreateSub(OtherHandOfSelect,
+                                        /*OtherHandOfSub=*/Op1);
+            }))
       return NewSel;
-    }
+    if (Instruction *NewSel = SinkSubIntoSelect(
+            /*Select=*/Op1, /*OtherHandOfSub=*/Op0,
+            [Builder = &Builder, Op0](Value *OtherHandOfSelect) {
+              return Builder->CreateSub(/*OtherHandOfSub=*/Op0,
+                                        OtherHandOfSelect);
+            }))
+      return NewSel;
   }
 
   if (Op1->hasOneUse()) {
