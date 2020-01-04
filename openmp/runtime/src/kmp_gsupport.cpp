@@ -496,7 +496,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)(void) {
 //
 // Conversely, KMP_DISPATCH_NEXT returns and inclusive upper bound in *p_ub,
 // but the Gnu codegen expects an excluside upper bound, so the adjustment
-// "*p_ub += stride" compenstates for the discrepancy.
+// "*p_ub += stride" compensates for the discrepancy.
 //
 // Correction: the gnu codegen always adjusts the upper bound by +-1, not the
 // stride value.  We adjust the dispatch parameters accordingly (by +-1), but

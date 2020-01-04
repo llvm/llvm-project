@@ -2094,11 +2094,10 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MachineFunction::CallSiteInfo CSInfo;
   bool isStructRet = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
   bool isThisReturn = false;
-  auto Attr = MF.getFunction().getFnAttribute("disable-tail-calls");
   bool PreferIndirect = false;
 
   // Disable tail calls if they're not supported.
-  if (!Subtarget->supportsTailCall() || Attr.getValueAsString() == "true")
+  if (!Subtarget->supportsTailCall())
     isTailCall = false;
 
   if (isa<GlobalAddressSDNode>(Callee)) {
@@ -2975,9 +2974,7 @@ bool ARMTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   if (!Subtarget->supportsTailCall())
     return false;
 
-  auto Attr =
-      CI->getParent()->getParent()->getFnAttribute("disable-tail-calls");
-  if (!CI->isTailCall() || Attr.getValueAsString() == "true")
+  if (!CI->isTailCall())
     return false;
 
   return true;

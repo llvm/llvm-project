@@ -23,6 +23,7 @@ unittest("ClangTidyTests") {
   ]
   include_dirs = [ "//clang-tools-extra/clang-tidy" ]
   sources = [
+    "AddConstTest.cpp",
     "ClangTidyDiagnosticConsumerTest.cpp",
     "ClangTidyOptionsTest.cpp",
     "GlobListTest.cpp",

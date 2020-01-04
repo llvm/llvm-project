@@ -68,6 +68,8 @@ static bool usePackedStack(MachineFunction &MF) {
   bool CallConv = MF.getFunction().getCallingConv() != CallingConv::GHC;
   bool BackChain = MF.getFunction().hasFnAttribute("backchain");
   bool FramAddressTaken = MF.getFrameInfo().isFrameAddressTaken();
+  if (HasPackedStackAttr && BackChain)
+    report_fatal_error("packed-stack with backchain is currently unsupported.");
   return HasPackedStackAttr && !IsVarArg && CallConv && !BackChain &&
          !FramAddressTaken;
 }

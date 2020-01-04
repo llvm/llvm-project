@@ -332,7 +332,7 @@ bool CombineRule::parseDefs() {
             getDefOfSubClass(*Defs->getArg(I), "GIDefMatchData")) {
       declareMatchData(Defs->getArgNameStr(I),
                        MatchDataRec->getValueAsString("Type"),
-                       llvm::to_string(llvm::format("MatchData%d", ID)));
+                       llvm::to_string(llvm::format("MatchData%" PRIu64, ID)));
       continue;
     }
 

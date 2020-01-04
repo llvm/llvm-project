@@ -12,6 +12,7 @@
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
+#include "clang/Basic/Diagnostic.h"
 
 namespace clang {
 namespace tidy {
@@ -21,8 +22,11 @@ namespace {
 void recordFixes(const VarDecl &Var, ASTContext &Context,
                  DiagnosticBuilder &Diagnostic) {
   Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
-  if (!Var.getType().isLocalConstQualified())
-    Diagnostic << utils::fixit::changeVarDeclToConst(Var);
+  if (!Var.getType().isLocalConstQualified()) {
+    if (llvm::Optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
+            Var, Context, DeclSpec::TQ::TQ_const))
+      Diagnostic << *Fix;
+  }
 }
 
 } // namespace

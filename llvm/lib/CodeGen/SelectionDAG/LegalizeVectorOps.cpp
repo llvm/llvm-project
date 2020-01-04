@@ -130,7 +130,7 @@ class VectorLegalizer {
   /// supported by the target.
   SDValue ExpandVSELECT(SDValue Op);
   SDValue ExpandSELECT(SDValue Op);
-  SDValue ExpandLoad(SDValue Op);
+  std::pair<SDValue, SDValue> ExpandLoad(SDValue Op);
   SDValue ExpandStore(SDValue Op);
   SDValue ExpandFNEG(SDValue Op);
   SDValue ExpandFSUB(SDValue Op);
@@ -265,9 +265,13 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
           return TranslateLegalizeResults(Op, Lowered);
         }
         LLVM_FALLTHROUGH;
-      case TargetLowering::Expand:
+      case TargetLowering::Expand: {
         Changed = true;
-        return ExpandLoad(Op);
+        std::pair<SDValue, SDValue> Tmp = ExpandLoad(Result);
+        AddLegalizedOperand(Op.getValue(0), Tmp.first);
+        AddLegalizedOperand(Op.getValue(1), Tmp.second);
+        return Op.getResNo() ? Tmp.first : Tmp.second;
+      }
       }
     }
   } else if (Op.getOpcode() == ISD::STORE) {
@@ -290,9 +294,12 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         }
         return TranslateLegalizeResults(Op, Lowered);
       }
-      case TargetLowering::Expand:
+      case TargetLowering::Expand: {
         Changed = true;
-        return ExpandStore(Op);
+        SDValue Chain = ExpandStore(Result);
+        AddLegalizedOperand(Op, Chain);
+        return Chain;
+      }
       }
     }
   }
@@ -633,7 +640,7 @@ SDValue VectorLegalizer::PromoteFP_TO_INT(SDValue Op) {
   return Promoted;
 }
 
-SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
+std::pair<SDValue, SDValue> VectorLegalizer::ExpandLoad(SDValue Op) {
   LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
 
   EVT SrcVT = LD->getMemoryVT();
@@ -760,16 +767,12 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
     std::tie(Value, NewChain) = TLI.scalarizeVectorLoad(LD, DAG);
   }
 
-  AddLegalizedOperand(Op.getValue(0), Value);
-  AddLegalizedOperand(Op.getValue(1), NewChain);
-
-  return (Op.getResNo() ? NewChain : Value);
+  return std::make_pair(Value, NewChain);
 }
 
 SDValue VectorLegalizer::ExpandStore(SDValue Op) {
   StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
   SDValue TF = TLI.scalarizeVectorStore(ST, DAG);
-  AddLegalizedOperand(Op, TF);
   return TF;
 }
 

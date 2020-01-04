@@ -218,3 +218,61 @@ define void @double_(double* nocapture %A, i32 %n) nounwind uwtable ssp {
 ; <label>:26                                      ; preds = %2
   ret void
 }
+
+define ppc_fp128 @fp128_(ppc_fp128* nocapture %n, ppc_fp128 %d) nounwind readonly {
+;CHECK-LABEL: fp128_
+;CHECK: LV(REG): VF = 1
+;CHECK: LV(REG): Found max usage: 1 item
+;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 3 registers
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.06 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %x.05 = phi ppc_fp128 [ %d, %entry ], [ %sub, %for.body ]
+  %arrayidx = getelementptr inbounds ppc_fp128, ppc_fp128* %n, i32 %i.06
+  %0 = load ppc_fp128, ppc_fp128* %arrayidx, align 8
+  %sub = fsub ppc_fp128 %x.05, %0
+  %inc = add nsw i32 %i.06, 1
+  %exitcond = icmp eq i32 %inc, 2048
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret ppc_fp128 %sub
+}
+
+
+define void @fp16_(half* nocapture readonly %pIn, half* nocapture %pOut, i32 %numRows, i32 %numCols, i32 %scale.coerce) #0 {
+;CHECK-LABEL: fp16_
+;CHECK: LV(REG): VF = 1
+;CHECK: LV(REG): Found max usage: 1 item
+;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 5 registers
+entry:
+  %tmp.0.extract.trunc = trunc i32 %scale.coerce to i16
+  %0 = bitcast i16 %tmp.0.extract.trunc to half
+  %mul = mul i32 %numCols, %numRows
+  %shr = lshr i32 %mul, 2
+  %cmp26 = icmp eq i32 %shr, 0
+  br i1 %cmp26, label %while.end, label %while.body
+
+while.body:                                       ; preds = %entry, %while.body
+  %pIn.addr.029 = phi half* [ %add.ptr, %while.body ], [ %pIn, %entry ]
+  %pOut.addr.028 = phi half* [ %add.ptr7, %while.body ], [ %pOut, %entry ]
+  %blkCnt.027 = phi i32 [ %dec, %while.body ], [ %shr, %entry ]
+  %1 = load half, half* %pIn.addr.029, align 2
+  %arrayidx2 = getelementptr inbounds half, half* %pIn.addr.029, i32 1
+  %2 = load half, half* %arrayidx2, align 2
+  %mul3 = fmul half %1, %0
+  %mul4 = fmul half %2, %0
+  store half %mul3, half* %pOut.addr.028, align 2
+  %arrayidx6 = getelementptr inbounds half, half* %pOut.addr.028, i32 1
+  store half %mul4, half* %arrayidx6, align 2
+  %add.ptr = getelementptr inbounds half, half* %pIn.addr.029, i32 2
+  %add.ptr7 = getelementptr inbounds half, half* %pOut.addr.028, i32 2
+  %dec = add nsw i32 %blkCnt.027, -1
+  %cmp = icmp eq i32 %dec, 0
+  br i1 %cmp, label %while.end, label %while.body
+
+while.end:                                        ; preds = %while.body, %entry
+  ret void
+}

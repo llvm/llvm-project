@@ -1126,3 +1126,8 @@ let Command = "watchpoint command add" in {
     "to run as command for this watchpoint. Be sure to give a module name if "
     "appropriate.">;
 }
+
+let Command = "watchpoint delete" in {
+  def watchpoint_delete_force : Option<"force", "f">, Group<1>,
+    Desc<"Delete all watchpoints without querying for confirmation.">;
+}

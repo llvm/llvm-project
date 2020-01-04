@@ -413,7 +413,7 @@ the script assumes host architecture is target one.
 =item B<canon_arch( $arch )>
 
 Input string is an architecture name to canonize. The function recognizes many variants, for example:
-C<32e>, C<Intel64>, C<Intel(R) 64>, etc. Returned string is a canononized architecture name,
+C<32e>, C<Intel64>, C<Intel(R) 64>, etc. Returned string is a canonized architecture name,
 one of: C<32>, C<32e>, C<64>, C<arm>, C<ppc64le>, C<ppc64>, C<mic>, C<mips>, C<mips64>, C<riscv64> or C<undef> is input string is not recognized.
 
 =item B<legal_arch( $arch )>

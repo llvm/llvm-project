@@ -3161,9 +3161,7 @@ static bool shouldGuaranteeTCO(CallingConv::ID CC, bool GuaranteedTailCallOpt) {
 }
 
 bool X86TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
-  auto Attr =
-      CI->getParent()->getParent()->getFnAttribute("disable-tail-calls");
-  if (!CI->isTailCall() || Attr.getValueAsString() == "true")
+  if (!CI->isTailCall())
     return false;
 
   ImmutableCallSite CS(CI);
@@ -3786,7 +3784,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsGuaranteeTCO = MF.getTarget().Options.GuaranteedTailCallOpt ||
       CallConv == CallingConv::Tail;
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
-  auto Attr = MF.getFunction().getFnAttribute("disable-tail-calls");
   const auto *CI = dyn_cast_or_null<CallInst>(CLI.CS.getInstruction());
   const Function *Fn = CI ? CI->getCalledFunction() : nullptr;
   bool HasNCSR = (CI && CI->hasFnAttr("no_caller_saved_registers")) ||
@@ -3801,9 +3798,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
-
-  if (Attr.getValueAsString() == "true")
-    isTailCall = false;
 
   if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO) {
     // If we are using a GOT, disable tail calls to external symbols with
@@ -18987,43 +18981,21 @@ static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::CVTUI2P, DL, MVT::v2f64, N0);
   }
 
-  // Legalize to v4i32 type.
-  N0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i32, N0,
-                   DAG.getUNDEF(MVT::v2i32));
+  // Zero extend to 2i64, OR with the floating point representation of 2^52.
+  // This gives us the floating point equivalent of 2^52 + the i32 integer
+  // since double has 52-bits of mantissa. Then subtract 2^52 in floating
+  // point leaving just our i32 integers in double format.
+  SDValue ZExtIn = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v2i64, N0);
+  SDValue VBias =
+      DAG.getConstantFP(BitsToDouble(0x4330000000000000ULL), DL, MVT::v2f64);
+  SDValue Or = DAG.getNode(ISD::OR, DL, MVT::v2i64, ZExtIn,
+                           DAG.getBitcast(MVT::v2i64, VBias));
+  Or = DAG.getBitcast(MVT::v2f64, Or);
 
-  // Same implementation as VectorLegalizer::ExpandUINT_TO_FLOAT,
-  // but using v2i32 to v2f64 with X86ISD::CVTSI2P.
-  SDValue HalfWord = DAG.getConstant(16, DL, MVT::v4i32);
-  SDValue HalfWordMask = DAG.getConstant(0x0000FFFF, DL, MVT::v4i32);
-
-  // Two to the power of half-word-size.
-  SDValue TWOHW = DAG.getConstantFP((double)(1 << 16), DL, MVT::v2f64);
-
-  // Clear upper part of LO, lower HI.
-  SDValue HI = DAG.getNode(ISD::SRL, DL, MVT::v4i32, N0, HalfWord);
-  SDValue LO = DAG.getNode(ISD::AND, DL, MVT::v4i32, N0, HalfWordMask);
-
-  if (IsStrict) {
-    SDValue fHI = DAG.getNode(X86ISD::STRICT_CVTSI2P, DL,
-                              {MVT::v2f64, MVT::Other}, {Op.getOperand(0), HI});
-    fHI = DAG.getNode(ISD::STRICT_FMUL, DL, {MVT::v2f64, MVT::Other},
-                      {fHI.getValue(1), fHI, TWOHW});
-    SDValue fLO = DAG.getNode(X86ISD::STRICT_CVTSI2P, DL,
-                              {MVT::v2f64, MVT::Other}, {Op.getOperand(0), LO});
-    SDValue Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                                fHI.getValue(1), fLO.getValue(1));
-
-    // Add the two halves
-    return DAG.getNode(ISD::STRICT_FADD, DL, {MVT::v2f64, MVT::Other},
-                       {Chain, fHI, fLO});
-  }
-
-  SDValue fHI = DAG.getNode(X86ISD::CVTSI2P, DL, MVT::v2f64, HI);
-          fHI = DAG.getNode(ISD::FMUL, DL, MVT::v2f64, fHI, TWOHW);
-  SDValue fLO = DAG.getNode(X86ISD::CVTSI2P, DL, MVT::v2f64, LO);
-
-  // Add the two halves.
-  return DAG.getNode(ISD::FADD, DL, MVT::v2f64, fHI, fLO);
+  if (IsStrict)
+    return DAG.getNode(ISD::STRICT_FSUB, DL, {MVT::v2f64, MVT::Other},
+                       {Op.getOperand(0), Or, VBias});
+  return DAG.getNode(ISD::FSUB, DL, MVT::v2f64, Or, VBias);
 }
 
 static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,

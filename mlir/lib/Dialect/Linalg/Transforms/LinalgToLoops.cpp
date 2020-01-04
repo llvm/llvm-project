@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/AffineOps/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -423,7 +422,7 @@ LogicalResult LinalgOpToLoopsImpl<LoopTy, IndexedValueTy, ConcreteOpTy>::doit(
                                    invertedMap, getViewSizes(linalgOp));
   assert(loopRanges.size() == allIvs.size());
 
-  LoopNestRangeBuilder(allPIvs, loopRanges)([&] {
+  GenericLoopNestRangeBuilder<LoopTy>(allPIvs, loopRanges)([&] {
     auto allIvValues = extractValues(allIvs);
     LinalgScopedEmitter<IndexedValueTy, ConcreteOpTy>::emitScalarImplementation(
         allIvValues, linalgOp);

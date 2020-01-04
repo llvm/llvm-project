@@ -598,8 +598,8 @@ public:
   iterator_range<type_iterator> getTypes() const { return {begin(), end()}; }
 
 private:
-  /// See `detail::indexed_accessor_range_base` for details.
-  static OpResult dereference_iterator(Operation *op, ptrdiff_t index);
+  /// See `indexed_accessor_range` for details.
+  static OpResult dereference(Operation *op, ptrdiff_t index);
 
   /// Allow access to `dereference_iterator`.
   friend indexed_accessor_range<ResultRange, Operation *, OpResult, OpResult,

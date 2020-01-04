@@ -19769,8 +19769,10 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
       int EltIdx = i / Split;
       int SubIdx = i % Split;
       SDValue Elt = RHS.getOperand(EltIdx);
+      // X & undef --> 0 (not undef). So this lane must be converted to choose
+      // from the zero constant vector (same as if the element had all 0-bits).
       if (Elt.isUndef()) {
-        Indices.push_back(-1);
+        Indices.push_back(i + NumSubElts);
         continue;
       }
 

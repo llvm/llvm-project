@@ -2671,9 +2671,7 @@ bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   const Function *ParentFn = CI->getParent()->getParent();
   if (AMDGPU::isEntryFunctionCC(ParentFn->getCallingConv()))
     return false;
-
-  auto Attr = ParentFn->getFnAttribute("disable-tail-calls");
-  return (Attr.getValueAsString() != "true");
+  return true;
 }
 
 // The wave scratch offset register is used as the global base pointer.
@@ -11025,6 +11023,8 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
 }
 
 static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited) {
+  if (!isa<Instruction>(V))
+    return false;
   if (!Visited.insert(V).second)
     return false;
   bool Result = false;

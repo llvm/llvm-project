@@ -52,6 +52,10 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
                                           SDValue &Chain) const {
   const Function &F = DAG.getMachineFunction().getFunction();
 
+  // First, check if tail calls have been disabled in this function.
+  if (F.getFnAttribute("disable-tail-calls").getValueAsString() == "true")
+    return false;
+
   // Conservatively require the attributes of the call to match those of
   // the return. Ignore NoAlias and NonNull because they don't affect the
   // call sequence.

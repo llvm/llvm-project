@@ -2076,7 +2076,7 @@ static int __kmp_affinity_create_cpuinfo_map(AddrUnsPair **address2os,
     return -1;
   }
 
-  // Set the file pointer back to the begginning, so that we can scan the file
+  // Set the file pointer back to the beginning, so that we can scan the file
   // again, this time performing a full parse of the data. Allocate a vector of
   // ProcCpuInfo object, where we will place the data. Adding an extra element
   // at the end allows us to remove a lot of extra checks for termination
@@ -2461,7 +2461,7 @@ restart_radix_check:
             threadInfo[i][threadIdIndex] = threadIdCt++;
           }
 
-          // Aparrently the thread id field was specified for some entries and
+          // Apparently the thread id field was specified for some entries and
           // not others. Start the thread id counter off at the next higher
           // thread id.
           else if (threadIdCt <= threadInfo[i][threadIdIndex]) {
