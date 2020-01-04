@@ -132,7 +132,8 @@ const RegisterBankInfo::PartialMapping SGPROnly64BreakDown[] {
 };
 
 
-// For some instructions which can operate 64-bit only for the scalar version.
+// For some instructions which can operate 64-bit only for the scalar
+// version. Otherwise, these need to be split into 2 32-bit operations.
 const RegisterBankInfo::ValueMapping ValMappingsSGPR64OnlyVGPR32[] {
   /*32-bit sgpr*/     {&SGPROnly64BreakDown[0], 1},
   /*2 x 32-bit sgpr*/ {&SGPROnly64BreakDown[1], 2},
@@ -205,6 +206,18 @@ const RegisterBankInfo::ValueMapping *getValueMappingSGPR64Only(unsigned BankID,
 
   assert(BankID == AMDGPU::SGPRRegBankID);
   return &ValMappingsSGPR64OnlyVGPR32[2];
+}
+
+/// Split any 64-bit value into 2 32-bit pieces. Unlike
+/// getValueMappingSGPR64Only, this splits both VGPRs and SGPRs.
+const RegisterBankInfo::ValueMapping *getValueMappingSplit64(unsigned BankID,
+                                                             unsigned Size) {
+  assert(Size == 64);
+  if (BankID == AMDGPU::VGPRRegBankID)
+    return &ValMappingsSGPR64OnlyVGPR32[4];
+
+  assert(BankID == AMDGPU::SGPRRegBankID);
+  return &ValMappingsSGPR64OnlyVGPR32[1];
 }
 
 const RegisterBankInfo::PartialMapping LoadSGPROnlyBreakDown[] {

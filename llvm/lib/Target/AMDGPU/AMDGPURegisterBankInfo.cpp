@@ -1288,13 +1288,16 @@ void AMDGPURegisterBankInfo::lowerScalarMinMax(MachineIRBuilder &B,
 
 // For cases where only a single copy is inserted for matching register banks.
 // Replace the register in the instruction operand
-static void substituteSimpleCopyRegs(
+static bool substituteSimpleCopyRegs(
   const AMDGPURegisterBankInfo::OperandsMapper &OpdMapper, unsigned OpIdx) {
   SmallVector<unsigned, 1> SrcReg(OpdMapper.getVRegs(OpIdx));
   if (!SrcReg.empty()) {
     assert(SrcReg.size() == 1);
     OpdMapper.getMI().getOperand(OpIdx).setReg(SrcReg[0]);
+    return true;
   }
+
+  return false;
 }
 
 /// Handle register layout difference for f16 images for some subtargets.
@@ -2117,9 +2120,14 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_INSERT_VECTOR_ELT: {
     SmallVector<Register, 2> InsRegs(OpdMapper.getVRegs(2));
 
+    Register DstReg = MI.getOperand(0).getReg();
+    LLT VecTy = MRI.getType(DstReg);
+
     assert(OpdMapper.getVRegs(0).empty());
-    assert(OpdMapper.getVRegs(1).empty());
     assert(OpdMapper.getVRegs(3).empty());
+
+    if (substituteSimpleCopyRegs(OpdMapper, 1))
+      MRI.setType(MI.getOperand(1).getReg(), VecTy);
 
     if (InsRegs.empty()) {
       applyDefaultMapping(OpdMapper);
@@ -2127,7 +2135,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
 
-    Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
     Register InsReg = MI.getOperand(2).getReg();
     Register IdxReg = MI.getOperand(3).getReg();
@@ -2951,15 +2958,22 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned VecSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     unsigned InsertSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
     unsigned IdxSize = MRI.getType(MI.getOperand(3).getReg()).getSizeInBits();
-    unsigned SrcBankID = getRegBankID(MI.getOperand(1).getReg(), MRI, *TRI);
     unsigned InsertEltBankID = getRegBankID(MI.getOperand(2).getReg(),
                                             MRI, *TRI);
     unsigned IdxBankID = getRegBankID(MI.getOperand(3).getReg(), MRI, *TRI);
 
     OpdsMapping[0] = AMDGPU::getValueMapping(OutputBankID, VecSize);
-    OpdsMapping[1] = AMDGPU::getValueMapping(SrcBankID, VecSize);
-    OpdsMapping[2] = AMDGPU::getValueMappingSGPR64Only(InsertEltBankID,
-                                                       InsertSize);
+    OpdsMapping[1] = AMDGPU::getValueMapping(OutputBankID, VecSize);
+
+    // This is a weird case, because we need to break down the mapping based on
+    // the register bank of a different operand.
+    if (InsertSize == 64 && OutputBankID == AMDGPU::VGPRRegBankID) {
+      OpdsMapping[2] = AMDGPU::getValueMappingSplit64(InsertEltBankID,
+                                                      InsertSize);
+    } else {
+      assert(InsertSize == 32 || InsertSize == 64);
+      OpdsMapping[2] = AMDGPU::getValueMapping(InsertEltBankID, InsertSize);
+    }
 
     // The index can be either if the source vector is VGPR.
     OpdsMapping[3] = AMDGPU::getValueMapping(IdxBankID, IdxSize);
