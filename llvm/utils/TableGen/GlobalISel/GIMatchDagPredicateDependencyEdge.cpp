@@ -11,8 +11,6 @@
 #include "GIMatchDagInstr.h"
 #include "GIMatchDagPredicate.h"
 
-#include "llvm/Support/raw_ostream.h"
-
 using namespace llvm;
 
 LLVM_DUMP_METHOD void
