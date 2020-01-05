@@ -163,10 +163,6 @@ bool MCAssembler::isSymbolLinkerVisible(const MCSymbol &Symbol) const {
   if (!Symbol.isTemporary())
     return true;
 
-  // Absolute temporary labels are never visible.
-  if (!Symbol.isInSection())
-    return false;
-
   if (Symbol.isUsedInReloc())
     return true;
 
