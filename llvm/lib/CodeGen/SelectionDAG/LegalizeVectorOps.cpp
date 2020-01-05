@@ -1178,13 +1178,15 @@ SDValue VectorLegalizer::ExpandFP_TO_UINT(SDValue Op) {
   // Attempt to expand using TargetLowering.
   SDValue Result, Chain;
   if (TLI.expandFP_TO_UINT(Op.getNode(), Result, Chain, DAG)) {
-    if (Op.getNode()->isStrictFPOpcode())
+    if (Op->isStrictFPOpcode())
       // Relink the chain
       DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), Chain);
     return Result;
   }
 
   // Otherwise go ahead and unroll.
+  if (Op->isStrictFPOpcode())
+    return UnrollStrictFPOp(Op);
   return DAG.UnrollVectorOp(Op.getNode());
 }
 
@@ -1393,6 +1395,8 @@ SDValue VectorLegalizer::ExpandFixedPointMul(SDValue Op) {
 SDValue VectorLegalizer::ExpandStrictFPOp(SDValue Op) {
   if (Op.getOpcode() == ISD::STRICT_UINT_TO_FP)
     return ExpandUINT_TO_FLOAT(Op);
+  if (Op.getOpcode() == ISD::STRICT_FP_TO_UINT)
+    return ExpandFP_TO_UINT(Op);
 
   return UnrollStrictFPOp(Op);
 }
