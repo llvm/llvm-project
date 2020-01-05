@@ -272,6 +272,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
   }
 
+  // FIXME: Not really legal. Placeholder for custom lowering.
+  getActionDefinitionsBuilder({G_SDIV, G_UDIV, G_SREM, G_UREM})
+    .legalFor({S32, S64})
+    .clampScalar(0, S32, S64)
+    .widenScalarToNextPow2(0, 32)
+    .scalarize(0);
+
   getActionDefinitionsBuilder({G_UMULH, G_SMULH})
     .legalFor({S32})
     .clampScalar(0, S32, S32)

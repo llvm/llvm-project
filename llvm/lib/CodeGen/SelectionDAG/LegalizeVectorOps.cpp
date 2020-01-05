@@ -148,6 +148,8 @@ class VectorLegalizer {
   SDValue ExpandFixedPointMul(SDValue Op);
   SDValue ExpandStrictFPOp(SDValue Op);
 
+  SDValue UnrollStrictFPOp(SDValue Op);
+
   /// Implements vector promotion.
   ///
   /// This is essentially just bitcasting the operands to a different type and
@@ -1176,13 +1178,15 @@ SDValue VectorLegalizer::ExpandFP_TO_UINT(SDValue Op) {
   // Attempt to expand using TargetLowering.
   SDValue Result, Chain;
   if (TLI.expandFP_TO_UINT(Op.getNode(), Result, Chain, DAG)) {
-    if (Op.getNode()->isStrictFPOpcode())
+    if (Op->isStrictFPOpcode())
       // Relink the chain
       DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), Chain);
     return Result;
   }
 
   // Otherwise go ahead and unroll.
+  if (Op->isStrictFPOpcode())
+    return UnrollStrictFPOp(Op);
   return DAG.UnrollVectorOp(Op.getNode());
 }
 
@@ -1208,8 +1212,11 @@ SDValue VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op) {
                          TargetLowering::Expand) ||
        (IsStrict && TLI.getOperationAction(ISD::STRICT_SINT_TO_FP, VT) ==
                         TargetLowering::Expand)) ||
-      TLI.getOperationAction(ISD::SRL, VT) == TargetLowering::Expand)
-    return IsStrict ? SDValue() : DAG.UnrollVectorOp(Op.getNode());
+      TLI.getOperationAction(ISD::SRL, VT) == TargetLowering::Expand) {
+    if (IsStrict)
+      return UnrollStrictFPOp(Op);
+    return DAG.UnrollVectorOp(Op.getNode());
+  }
 
   unsigned BW = VT.getScalarSizeInBits();
   assert((BW == 64 || BW == 32) &&
@@ -1386,11 +1393,15 @@ SDValue VectorLegalizer::ExpandFixedPointMul(SDValue Op) {
 }
 
 SDValue VectorLegalizer::ExpandStrictFPOp(SDValue Op) {
-  if (Op.getOpcode() == ISD::STRICT_UINT_TO_FP) {
-    if (SDValue Res = ExpandUINT_TO_FLOAT(Op))
-      return Res;
-  }
+  if (Op.getOpcode() == ISD::STRICT_UINT_TO_FP)
+    return ExpandUINT_TO_FLOAT(Op);
+  if (Op.getOpcode() == ISD::STRICT_FP_TO_UINT)
+    return ExpandFP_TO_UINT(Op);
 
+  return UnrollStrictFPOp(Op);
+}
+
+SDValue VectorLegalizer::UnrollStrictFPOp(SDValue Op) {
   EVT VT = Op.getValue(0).getValueType();
   EVT EltVT = VT.getVectorElementType();
   unsigned NumElems = VT.getVectorNumElements();
