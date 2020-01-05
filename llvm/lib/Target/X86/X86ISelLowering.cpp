@@ -37618,6 +37618,68 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Try to match:
+//   (or (and (M, (sub 0, X)), (pandn M, X)))
+// which is a special case of:
+//   (select M, (sub 0, X), X)
+// Per:
+// http://graphics.stanford.edu/~seander/bithacks.html#ConditionalNegate
+// We know that, if fNegate is 0 or 1:
+//   (fNegate ? -v : v) == ((v ^ -fNegate) + fNegate)
+//
+// Here, we have a mask, M (all 1s or 0), and, similarly, we know that:
+//   ((M & 1) ? -X : X) == ((X ^ -(M & 1)) + (M & 1))
+//   ( M      ? -X : X) == ((X ^   M     ) + (M & 1))
+// This lets us transform our vselect to:
+//   (add (xor X, M), (and M, 1))
+// And further to:
+//   (sub (xor X, M), M)
+static SDValue combineLogicBlendIntoConditionalNegate(
+    EVT VT, SDValue Mask, SDValue X, SDValue Y, const SDLoc &DL,
+    SelectionDAG &DAG, const X86Subtarget &Subtarget) {
+  EVT MaskVT = Mask.getValueType();
+  assert(MaskVT.isInteger() &&
+         DAG.ComputeNumSignBits(Mask) == MaskVT.getScalarSizeInBits() &&
+         "Mask must be zero/all-bits");
+
+  if (X.getValueType() != MaskVT || Y.getValueType() != MaskVT)
+    return SDValue();
+  if (!DAG.getTargetLoweringInfo().isOperationLegal(ISD::SUB, MaskVT))
+    return SDValue();
+
+  auto IsNegV = [](SDNode *N, SDValue V) {
+    return N->getOpcode() == ISD::SUB && N->getOperand(1) == V &&
+           ISD::isBuildVectorAllZeros(N->getOperand(0).getNode());
+  };
+
+  SDValue V;
+  if (IsNegV(Y.getNode(), X))
+    V = X;
+  else if (IsNegV(X.getNode(), Y))
+    V = Y;
+  else
+    return SDValue();
+
+  SDValue SubOp1 = DAG.getNode(ISD::XOR, DL, MaskVT, V, Mask);
+  SDValue SubOp2 = Mask;
+
+  // If the negate was on the false side of the select, then
+  // the operands of the SUB need to be swapped. PR 27251.
+  // This is because the pattern being matched above is
+  // (vselect M, (sub (0, X), X)  -> (sub (xor X, M), M)
+  // but if the pattern matched was
+  // (vselect M, X, (sub (0, X))), that is really negation of the pattern
+  // above, -(vselect M, (sub 0, X), X), and therefore the replacement
+  // pattern also needs to be a negation of the replacement pattern above.
+  // And -(sub X, Y) is just sub (Y, X), so swapping the operands of the
+  // sub accomplishes the negation of the replacement pattern.
+  if (V == Y)
+    std::swap(SubOp1, SubOp2);
+
+  SDValue Res = DAG.getNode(ISD::SUB, DL, MaskVT, SubOp1, SubOp2);
+  return DAG.getBitcast(VT, Res);
+}
+
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
@@ -40184,68 +40246,6 @@ static bool matchLogicBlend(SDNode *N, SDValue &X, SDValue &Y, SDValue &Mask) {
   // TODO: Attempt to match against AND(XOR(-1,M),Y) as well, waiting for
   // ANDNP combine allows other combines to happen that prevent matching.
   return true;
-}
-
-// Try to match:
-//   (or (and (M, (sub 0, X)), (pandn M, X)))
-// which is a special case of vselect:
-//   (vselect M, (sub 0, X), X)
-// Per:
-// http://graphics.stanford.edu/~seander/bithacks.html#ConditionalNegate
-// We know that, if fNegate is 0 or 1:
-//   (fNegate ? -v : v) == ((v ^ -fNegate) + fNegate)
-//
-// Here, we have a mask, M (all 1s or 0), and, similarly, we know that:
-//   ((M & 1) ? -X : X) == ((X ^ -(M & 1)) + (M & 1))
-//   ( M      ? -X : X) == ((X ^   M     ) + (M & 1))
-// This lets us transform our vselect to:
-//   (add (xor X, M), (and M, 1))
-// And further to:
-//   (sub (xor X, M), M)
-static SDValue combineLogicBlendIntoConditionalNegate(
-    EVT VT, SDValue Mask, SDValue X, SDValue Y, const SDLoc &DL,
-    SelectionDAG &DAG, const X86Subtarget &Subtarget) {
-  EVT MaskVT = Mask.getValueType();
-  assert(MaskVT.isInteger() &&
-         DAG.ComputeNumSignBits(Mask) == MaskVT.getScalarSizeInBits() &&
-         "Mask must be zero/all-bits");
-
-  if (X.getValueType() != MaskVT || Y.getValueType() != MaskVT)
-    return SDValue();
-  if (!DAG.getTargetLoweringInfo().isOperationLegal(ISD::SUB, MaskVT))
-    return SDValue();
-
-  auto IsNegV = [](SDNode *N, SDValue V) {
-    return N->getOpcode() == ISD::SUB && N->getOperand(1) == V &&
-           ISD::isBuildVectorAllZeros(N->getOperand(0).getNode());
-  };
-
-  SDValue V;
-  if (IsNegV(Y.getNode(), X))
-    V = X;
-  else if (IsNegV(X.getNode(), Y))
-    V = Y;
-  else
-    return SDValue();
-
-  SDValue SubOp1 = DAG.getNode(ISD::XOR, DL, MaskVT, V, Mask);
-  SDValue SubOp2 = Mask;
-
-  // If the negate was on the false side of the select, then
-  // the operands of the SUB need to be swapped. PR 27251.
-  // This is because the pattern being matched above is
-  // (vselect M, (sub (0, X), X)  -> (sub (xor X, M), M)
-  // but if the pattern matched was
-  // (vselect M, X, (sub (0, X))), that is really negation of the pattern
-  // above, -(vselect M, (sub 0, X), X), and therefore the replacement
-  // pattern also needs to be a negation of the replacement pattern above.
-  // And -(sub X, Y) is just sub (Y, X), so swapping the operands of the
-  // sub accomplishes the negation of the replacement pattern.
-  if (V == Y)
-    std::swap(SubOp1, SubOp2);
-
-  SDValue Res = DAG.getNode(ISD::SUB, DL, MaskVT, SubOp1, SubOp2);
-  return DAG.getBitcast(VT, Res);
 }
 
 // Try to fold:
