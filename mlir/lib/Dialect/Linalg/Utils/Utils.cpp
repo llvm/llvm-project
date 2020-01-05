@@ -114,7 +114,7 @@ GenericLoopNestRangeBuilder<
   SmallVector<ValueHandle, 4> lbs;
   SmallVector<ValueHandle, 4> ubs;
   SmallVector<int64_t, 4> steps;
-  for (const Value range : ranges) {
+  for (Value range : ranges) {
     assert(range.getType() && "expected linalg.range type");
     assert(range.getDefiningOp() && "need operations to extract range parts");
     RangeOp rangeOp = cast<RangeOp>(range.getDefiningOp());
