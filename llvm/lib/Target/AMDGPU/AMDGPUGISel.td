@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 include "AMDGPU.td"
+include "AMDGPUCombine.td"
 
 def sd_vsrc0 : ComplexPattern<i32, 1, "">;
 def gi_vsrc0 :
