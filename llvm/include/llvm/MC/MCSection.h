@@ -175,12 +175,6 @@ public:
   iterator end() { return Fragments.end(); }
   const_iterator end() const { return Fragments.end(); }
 
-  reverse_iterator rbegin() { return Fragments.rbegin(); }
-  const_reverse_iterator rbegin() const { return Fragments.rbegin(); }
-
-  reverse_iterator rend() { return Fragments.rend(); }
-  const_reverse_iterator rend() const  { return Fragments.rend(); }
-
   MCSection::iterator getSubsectionInsertionPoint(unsigned Subsection);
 
   void dump() const;
