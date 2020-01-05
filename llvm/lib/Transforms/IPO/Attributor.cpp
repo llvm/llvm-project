@@ -1792,20 +1792,6 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
       return std::max(int64_t(0), DerefBytes);
     }
   }
-  if (const Value *Base =
-          GetPointerBaseWithConstantOffset(UseV, Offset, DL,
-                                           /*AllowNonInbounds*/ false)) {
-    if (Base == &AssociatedValue) {
-      // As long as we only use known information there is no need to track
-      // dependences here.
-      auto &DerefAA = A.getAAFor<AADereferenceable>(
-          QueryingAA, IRPosition::value(*Base), /* TrackDependence */ false);
-      IsNonNull |= (!NullPointerIsDefined && DerefAA.isKnownNonNull());
-      IsNonNull |= (!NullPointerIsDefined && (Offset != 0));
-      int64_t DerefBytes = DerefAA.getKnownDereferenceableBytes();
-      return std::max(int64_t(0), DerefBytes - std::max(int64_t(0), Offset));
-    }
-  }
 
   return 0;
 }

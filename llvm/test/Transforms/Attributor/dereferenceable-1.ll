@@ -30,7 +30,7 @@ define i32* @test3_1(i32* dereferenceable(8) %0) local_unnamed_addr {
 }
 
 define i32* @test3_2(i32* dereferenceable_or_null(32) %0) local_unnamed_addr {
-; ATTRIBUTOR: define nonnull dereferenceable(16) i32* @test3_2(i32* nofree nonnull readnone dereferenceable(32) "no-capture-maybe-returned" %0)
+; ATTRIBUTOR: define nonnull dereferenceable(16) i32* @test3_2(i32* nofree readnone dereferenceable_or_null(32) "no-capture-maybe-returned" %0)
   %ret = getelementptr inbounds i32, i32* %0, i64 4
   ret i32* %ret
 }

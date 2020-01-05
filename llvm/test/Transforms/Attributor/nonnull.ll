@@ -817,5 +817,24 @@ define void @PR43833_simple(i32* %0, i32 %1) {
   br i1 %11, label %7, label %8
 }
 
+declare i8* @strrchr(i8* %0, i32 %1) nofree nounwind readonly
+
+; We should not mark the return of @strrchr as `nonnull`, it may well be NULL!
+define i8* @mybasename(i8* nofree readonly %str) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@mybasename
+; ATTRIBUTOR-SAME: (i8* nofree readonly [[STR:%.*]])
+; ATTRIBUTOR-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 47)
+; ATTRIBUTOR-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
+; ATTRIBUTOR-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
+; ATTRIBUTOR-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
+; ATTRIBUTOR-NEXT:    ret i8* [[COND]]
+;
+  %call = call i8* @strrchr(i8* %str, i32 47)
+  %tobool = icmp ne i8* %call, null
+  %add.ptr = getelementptr inbounds i8, i8* %call, i64 1
+  %cond = select i1 %tobool, i8* %add.ptr, i8* %str
+  ret i8* %cond
+}
+
 attributes #0 = { "null-pointer-is-valid"="true" }
 attributes #1 = { nounwind willreturn}
