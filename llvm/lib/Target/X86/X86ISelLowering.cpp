@@ -28328,29 +28328,8 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
-SDValue X86TargetLowering::LowerGC_TRANSITION_START(SDValue Op,
-                                                    SelectionDAG &DAG) const {
-  // TODO: Eventually, the lowering of these nodes should be informed by or
-  // deferred to the GC strategy for the function in which they appear. For
-  // now, however, they must be lowered to something. Since they are logically
-  // no-ops in the case of a null GC strategy (or a GC strategy which does not
-  // require special handling for these nodes), lower them as literal NOOPs for
-  // the time being.
-  SmallVector<SDValue, 2> Ops;
-
-  Ops.push_back(Op.getOperand(0));
-  if (Op->getGluedNode())
-    Ops.push_back(Op->getOperand(Op->getNumOperands() - 1));
-
-  SDLoc OpDL(Op);
-  SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDValue NOOP(DAG.getMachineNode(X86::NOOP, SDLoc(Op), VTs, Ops), 0);
-
-  return NOOP;
-}
-
-SDValue X86TargetLowering::LowerGC_TRANSITION_END(SDValue Op,
-                                                  SelectionDAG &DAG) const {
+SDValue X86TargetLowering::LowerGC_TRANSITION(SDValue Op,
+                                              SelectionDAG &DAG) const {
   // TODO: Eventually, the lowering of these nodes should be informed by or
   // deferred to the GC strategy for the function in which they appear. For
   // now, however, they must be lowered to something. Since they are logically
@@ -28516,8 +28495,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::MGATHER:            return LowerMGATHER(Op, Subtarget, DAG);
   case ISD::MSCATTER:           return LowerMSCATTER(Op, Subtarget, DAG);
   case ISD::GC_TRANSITION_START:
-                                return LowerGC_TRANSITION_START(Op, DAG);
-  case ISD::GC_TRANSITION_END:  return LowerGC_TRANSITION_END(Op, DAG);
+  case ISD::GC_TRANSITION_END:  return LowerGC_TRANSITION(Op, DAG);
   case ISD::ADDRSPACECAST:
     return LowerADDRSPACECAST(Op, DAG);
   }
