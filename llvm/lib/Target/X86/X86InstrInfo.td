@@ -2851,7 +2851,7 @@ let SchedRW = [WriteStore], Defs = [EFLAGS] in {
 //===----------------------------------------------------------------------===//
 // CLZERO Instruction
 //
-let SchedRW = [WriteSystem] in {
+let SchedRW = [WriteLoad] in {
   let Uses = [EAX] in
   def CLZERO32r : I<0x01, MRM_FC, (outs), (ins), "clzero", []>,
                   TB, Requires<[HasCLZERO, Not64BitMode]>;
