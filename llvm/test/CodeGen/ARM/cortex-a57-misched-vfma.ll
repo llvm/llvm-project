@@ -93,12 +93,12 @@ define arm_aapcs_vfpcc float @Test3(float %f1, float %f2, float %f3, float %f4, 
 ; CHECK-SAME:  Latency=0
 
 ; CHECK-DEFAULT: VMLSS
-; CHECK-FAST:    VFMSS
-; > VMLSS common latency = 9
+; CHECK-FAST:    VFNMSS
+; > VFNMSS common latency = 9
 ; CHECK:       Latency            : 9
 ; CHECK:       Successors:
 ; CHECK:       Data
-; > VMLSS read-advanced latency to the next VMLSS = 4
+; > VFNMSS read-advanced latency to the next VMLSS = 4
 ; CHECK-SAME:  Latency=4
 
 ; CHECK-DEFAULT: VMLSS

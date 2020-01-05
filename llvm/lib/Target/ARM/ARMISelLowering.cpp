@@ -15018,16 +15018,19 @@ int ARMTargetLowering::getScalingFactorCost(const DataLayout &DL,
 /// patterns (and we don't have the non-fused floating point instruction).
 bool ARMTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                                    EVT VT) const {
-  if (!Subtarget->hasMVEFloatOps())
-    return false;
-
   if (!VT.isSimple())
     return false;
 
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::v4f32:
   case MVT::v8f16:
-    return true;
+    return Subtarget->hasMVEFloatOps();
+  case MVT::f16:
+    return Subtarget->useFPVFMx16();
+  case MVT::f32:
+    return Subtarget->useFPVFMx();
+  case MVT::f64:
+    return Subtarget->useFPVFMx64();
   default:
     break;
   }
