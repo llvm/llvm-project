@@ -51,7 +51,7 @@ loc:
 # ELF: Data:                 2's complement, big endian
 # ELF: Version:              1 (current)
 # ELF: OS/ABI:               UNIX - System V
-# ELF: ABI Version:          0x0
+# ELF: ABI Version:          0
 # ELF: Type:                 EXEC (Executable file)
 # ELF: Machine:              MIPS R3000
 # ELF: Version:              0x1
