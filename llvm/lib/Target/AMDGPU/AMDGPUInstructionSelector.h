@@ -100,6 +100,7 @@ private:
   splitBufferOffsets(MachineIRBuilder &B, Register OrigOffset) const;
 
   bool selectStoreIntrinsic(MachineInstr &MI, bool IsFormat) const;
+  bool selectDSOrderedIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
 
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I) const;
   int getS_CMPOpcode(CmpInst::Predicate P, unsigned Size) const;
