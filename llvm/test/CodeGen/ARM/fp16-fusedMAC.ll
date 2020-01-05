@@ -230,21 +230,19 @@ define arm_aapcs_vfpcc void @fms1(half *%a1, half *%a2, half *%a3) {
 ; CHECK-LABEL: fms1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vldr.16 s2, [r2]
-; CHECK-NEXT:    vldr.16 s4, [r0]
-; CHECK-NEXT:    vneg.f16 s4, s4
-; CHECK-NEXT:    vfma.f16 s2, s4, s0
-; CHECK-NEXT:    vstr.16 s2, [r0]
+; CHECK-NEXT:    vldr.16 s2, [r0]
+; CHECK-NEXT:    vldr.16 s4, [r2]
+; CHECK-NEXT:    vfms.f16 s4, s2, s0
+; CHECK-NEXT:    vstr.16 s4, [r0]
 ; CHECK-NEXT:    bx lr
 ;
 ; DONT-FUSE-LABEL: fms1:
 ; DONT-FUSE:       @ %bb.0:
 ; DONT-FUSE-NEXT:    vldr.16 s0, [r1]
-; DONT-FUSE-NEXT:    vldr.16 s2, [r2]
-; DONT-FUSE-NEXT:    vldr.16 s4, [r0]
-; DONT-FUSE-NEXT:    vneg.f16 s4, s4
-; DONT-FUSE-NEXT:    vfma.f16 s2, s4, s0
-; DONT-FUSE-NEXT:    vstr.16 s2, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s2, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s4, [r2]
+; DONT-FUSE-NEXT:    vfms.f16 s4, s2, s0
+; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
   %f1 = load half, half *%a1, align 2
@@ -259,22 +257,20 @@ define arm_aapcs_vfpcc void @fms1(half *%a1, half *%a2, half *%a3) {
 define arm_aapcs_vfpcc void @fms2(half *%a1, half *%a2, half *%a3) {
 ; CHECK-LABEL: fms2:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vldr.16 s2, [r2]
-; CHECK-NEXT:    vldr.16 s4, [r0]
-; CHECK-NEXT:    vneg.f16 s4, s4
-; CHECK-NEXT:    vfma.f16 s2, s0, s4
-; CHECK-NEXT:    vstr.16 s2, [r0]
+; CHECK-NEXT:    vldr.16 s0, [r0]
+; CHECK-NEXT:    vldr.16 s2, [r1]
+; CHECK-NEXT:    vldr.16 s4, [r2]
+; CHECK-NEXT:    vfms.f16 s4, s2, s0
+; CHECK-NEXT:    vstr.16 s4, [r0]
 ; CHECK-NEXT:    bx lr
 ;
 ; DONT-FUSE-LABEL: fms2:
 ; DONT-FUSE:       @ %bb.0:
-; DONT-FUSE-NEXT:    vldr.16 s0, [r1]
-; DONT-FUSE-NEXT:    vldr.16 s2, [r2]
-; DONT-FUSE-NEXT:    vldr.16 s4, [r0]
-; DONT-FUSE-NEXT:    vneg.f16 s4, s4
-; DONT-FUSE-NEXT:    vfma.f16 s2, s0, s4
-; DONT-FUSE-NEXT:    vstr.16 s2, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s0, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s2, [r1]
+; DONT-FUSE-NEXT:    vldr.16 s4, [r2]
+; DONT-FUSE-NEXT:    vfms.f16 s4, s2, s0
+; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
   %f1 = load half, half *%a1, align 2
@@ -292,9 +288,8 @@ define arm_aapcs_vfpcc void @fnma1(half *%a1, half *%a2, half *%a3) {
 ; CHECK-NEXT:    vldr.16 s0, [r1]
 ; CHECK-NEXT:    vldr.16 s2, [r0]
 ; CHECK-NEXT:    vldr.16 s4, [r2]
-; CHECK-NEXT:    vfma.f16 s4, s2, s0
-; CHECK-NEXT:    vneg.f16 s0, s4
-; CHECK-NEXT:    vstr.16 s0, [r0]
+; CHECK-NEXT:    vfnma.f16 s4, s2, s0
+; CHECK-NEXT:    vstr.16 s4, [r0]
 ; CHECK-NEXT:    bx lr
 ;
 ; DONT-FUSE-LABEL: fnma1:
@@ -302,9 +297,8 @@ define arm_aapcs_vfpcc void @fnma1(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vldr.16 s0, [r1]
 ; DONT-FUSE-NEXT:    vldr.16 s2, [r0]
 ; DONT-FUSE-NEXT:    vldr.16 s4, [r2]
-; DONT-FUSE-NEXT:    vfma.f16 s4, s2, s0
-; DONT-FUSE-NEXT:    vneg.f16 s0, s4
-; DONT-FUSE-NEXT:    vstr.16 s0, [r0]
+; DONT-FUSE-NEXT:    vfnma.f16 s4, s2, s0
+; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
   %f1 = load half, half *%a1, align 2
@@ -321,10 +315,8 @@ define arm_aapcs_vfpcc void @fnma2(half *%a1, half *%a2, half *%a3) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
 ; CHECK-NEXT:    vldr.16 s2, [r0]
-; CHECK-NEXT:    vneg.f16 s2, s2
 ; CHECK-NEXT:    vldr.16 s4, [r2]
-; CHECK-NEXT:    vneg.f16 s4, s4
-; CHECK-NEXT:    vfma.f16 s4, s2, s0
+; CHECK-NEXT:    vfnma.f16 s4, s2, s0
 ; CHECK-NEXT:    vstr.16 s4, [r0]
 ; CHECK-NEXT:    bx lr
 ;
@@ -332,10 +324,8 @@ define arm_aapcs_vfpcc void @fnma2(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE:       @ %bb.0:
 ; DONT-FUSE-NEXT:    vldr.16 s0, [r1]
 ; DONT-FUSE-NEXT:    vldr.16 s2, [r0]
-; DONT-FUSE-NEXT:    vneg.f16 s2, s2
 ; DONT-FUSE-NEXT:    vldr.16 s4, [r2]
-; DONT-FUSE-NEXT:    vneg.f16 s4, s4
-; DONT-FUSE-NEXT:    vfma.f16 s4, s2, s0
+; DONT-FUSE-NEXT:    vfnma.f16 s4, s2, s0
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
@@ -355,8 +345,7 @@ define arm_aapcs_vfpcc void @fnms1(half *%a1, half *%a2, half *%a3) {
 ; CHECK-NEXT:    vldr.16 s0, [r1]
 ; CHECK-NEXT:    vldr.16 s2, [r0]
 ; CHECK-NEXT:    vldr.16 s4, [r2]
-; CHECK-NEXT:    vneg.f16 s4, s4
-; CHECK-NEXT:    vfma.f16 s4, s2, s0
+; CHECK-NEXT:    vfnms.f16 s4, s2, s0
 ; CHECK-NEXT:    vstr.16 s4, [r0]
 ; CHECK-NEXT:    bx lr
 ;
@@ -365,8 +354,7 @@ define arm_aapcs_vfpcc void @fnms1(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vldr.16 s0, [r1]
 ; DONT-FUSE-NEXT:    vldr.16 s2, [r0]
 ; DONT-FUSE-NEXT:    vldr.16 s4, [r2]
-; DONT-FUSE-NEXT:    vneg.f16 s4, s4
-; DONT-FUSE-NEXT:    vfma.f16 s4, s2, s0
+; DONT-FUSE-NEXT:    vfnms.f16 s4, s2, s0
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
@@ -383,23 +371,19 @@ define arm_aapcs_vfpcc void @fnms2(half *%a1, half *%a2, half *%a3) {
 ; CHECK-LABEL: fnms2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vldr.16 s2, [r2]
-; CHECK-NEXT:    vldr.16 s4, [r0]
-; CHECK-NEXT:    vneg.f16 s4, s4
-; CHECK-NEXT:    vfma.f16 s2, s4, s0
-; CHECK-NEXT:    vneg.f16 s0, s2
-; CHECK-NEXT:    vstr.16 s0, [r0]
+; CHECK-NEXT:    vldr.16 s2, [r0]
+; CHECK-NEXT:    vldr.16 s4, [r2]
+; CHECK-NEXT:    vfnms.f16 s4, s2, s0
+; CHECK-NEXT:    vstr.16 s4, [r0]
 ; CHECK-NEXT:    bx lr
 ;
 ; DONT-FUSE-LABEL: fnms2:
 ; DONT-FUSE:       @ %bb.0:
 ; DONT-FUSE-NEXT:    vldr.16 s0, [r1]
-; DONT-FUSE-NEXT:    vldr.16 s2, [r2]
-; DONT-FUSE-NEXT:    vldr.16 s4, [r0]
-; DONT-FUSE-NEXT:    vneg.f16 s4, s4
-; DONT-FUSE-NEXT:    vfma.f16 s2, s4, s0
-; DONT-FUSE-NEXT:    vneg.f16 s0, s2
-; DONT-FUSE-NEXT:    vstr.16 s0, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s2, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s4, [r2]
+; DONT-FUSE-NEXT:    vfnms.f16 s4, s2, s0
+; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
   %f1 = load half, half *%a1, align 2
@@ -415,24 +399,20 @@ define arm_aapcs_vfpcc void @fnms2(half *%a1, half *%a2, half *%a3) {
 define arm_aapcs_vfpcc void @fnms3(half *%a1, half *%a2, half *%a3) {
 ; CHECK-LABEL: fnms3:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr.16 s0, [r0]
-; CHECK-NEXT:    vldr.16 s2, [r2]
-; CHECK-NEXT:    vldr.16 s4, [r1]
-; CHECK-NEXT:    vneg.f16 s4, s4
-; CHECK-NEXT:    vfma.f16 s2, s0, s4
-; CHECK-NEXT:    vneg.f16 s0, s2
-; CHECK-NEXT:    vstr.16 s0, [r0]
+; CHECK-NEXT:    vldr.16 s0, [r1]
+; CHECK-NEXT:    vldr.16 s2, [r0]
+; CHECK-NEXT:    vldr.16 s4, [r2]
+; CHECK-NEXT:    vfnms.f16 s4, s2, s0
+; CHECK-NEXT:    vstr.16 s4, [r0]
 ; CHECK-NEXT:    bx lr
 ;
 ; DONT-FUSE-LABEL: fnms3:
 ; DONT-FUSE:       @ %bb.0:
-; DONT-FUSE-NEXT:    vldr.16 s0, [r0]
-; DONT-FUSE-NEXT:    vldr.16 s2, [r2]
-; DONT-FUSE-NEXT:    vldr.16 s4, [r1]
-; DONT-FUSE-NEXT:    vneg.f16 s4, s4
-; DONT-FUSE-NEXT:    vfma.f16 s2, s0, s4
-; DONT-FUSE-NEXT:    vneg.f16 s0, s2
-; DONT-FUSE-NEXT:    vstr.16 s0, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s0, [r1]
+; DONT-FUSE-NEXT:    vldr.16 s2, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s4, [r2]
+; DONT-FUSE-NEXT:    vfnms.f16 s4, s2, s0
+; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
   %f1 = load half, half *%a1, align 2
