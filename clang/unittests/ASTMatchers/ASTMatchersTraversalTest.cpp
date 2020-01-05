@@ -1699,7 +1699,6 @@ void bar()
       functionDecl(hasName("foo"), traverse(ast_type_traits::TK_AsIs,
                                             hasDescendant(floatLiteral())))));
 
-
   EXPECT_TRUE(
       matches(R"cpp(
 void foo()
@@ -1708,8 +1707,7 @@ void foo()
 }
 )cpp",
               traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                                varDecl(hasInitializer(integerLiteral(equals(3)))))));
-
+                       varDecl(hasInitializer(integerLiteral(equals(3)))))));
 }
 
 template <typename MatcherT>
