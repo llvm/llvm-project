@@ -824,6 +824,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       // Attr->getStart is currently ignored.
       Fn->addFnAttr("patchable-function-entry",
                     std::to_string(Attr->getCount()));
+    } else if (unsigned Count = CGM.getCodeGenOpts().PatchableFunctionEntryCount) {
+      Fn->addFnAttr("patchable-function-entry",
+                    std::to_string(Count));
     }
   }
 
