@@ -1700,6 +1700,28 @@ void bar()
                                             hasDescendant(floatLiteral())))));
 }
 
+template <typename MatcherT>
+bool matcherTemplateWithBinding(StringRef Code, const MatcherT &M) {
+  return matchAndVerifyResultTrue(
+      Code, M.bind("matchedStmt"),
+      std::make_unique<VerifyIdIsBoundTo<ReturnStmt>>("matchedStmt", 1));
+}
+
+TEST(Traversal, traverseWithBinding) {
+  // Some existing matcher code expects to take a matcher as a
+  // template arg and bind to it.  Verify that that works.
+
+  EXPECT_TRUE(matcherTemplateWithBinding(
+      R"cpp(
+int foo()
+{
+  return 42.0;
+}
+)cpp",
+      traverse(ast_type_traits::TK_AsIs,
+               returnStmt(has(implicitCastExpr(has(floatLiteral())))))));
+}
+
 TEST(Traversal, traverseMatcherNesting) {
 
   StringRef Code = R"cpp(
