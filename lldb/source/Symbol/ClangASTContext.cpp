@@ -1547,6 +1547,11 @@ clang::FunctionTemplateDecl *ClangASTContext::CreateFunctionTemplateDecl(
     // TODO: verify which decl context we should put template_param_decls into..
     template_param_decls[i]->setDeclContext(func_decl);
   }
+  // Function templates inside a record need to have an access specifier.
+  // It doesn't matter what access specifier we give the template as LLDB
+  // anyway allows accessing everything inside a record.
+  if (decl_ctx->isRecord())
+    func_tmpl_decl->setAccess(clang::AccessSpecifier::AS_public);
 
   return func_tmpl_decl;
 }
