@@ -50,33 +50,24 @@ public:
   };
 
 private:
-  FragmentType Kind;
-
-protected:
-  bool HasInstructions;
-
-private:
-  /// The layout order of this fragment.
-  unsigned LayoutOrder;
-
   /// The data for the section this fragment is in.
   MCSection *Parent;
 
   /// The atom this fragment is in, as represented by its defining symbol.
   const MCSymbol *Atom;
 
-  /// \name Assembler Backend Data
-  /// @{
-  //
-  // FIXME: This could all be kept private to the assembler implementation.
-
   /// The offset of this fragment in its section. This is ~0 until
   /// initialized.
   uint64_t Offset;
 
-  /// @}
+  /// The layout order of this fragment.
+  unsigned LayoutOrder;
+
+  FragmentType Kind;
 
 protected:
+  bool HasInstructions;
+
   MCFragment(FragmentType Kind, bool HasInstructions,
              MCSection *Parent = nullptr);
 

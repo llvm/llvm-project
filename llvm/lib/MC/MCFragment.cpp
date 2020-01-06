@@ -234,8 +234,8 @@ void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
                        MCSection *Parent)
-    : Kind(Kind), HasInstructions(HasInstructions), LayoutOrder(0),
-      Parent(Parent), Atom(nullptr), Offset(~UINT64_C(0)) {
+    : Parent(Parent), Atom(nullptr), Offset(~UINT64_C(0)), LayoutOrder(0),
+      Kind(Kind), HasInstructions(HasInstructions) {
   if (Parent && !isa<MCDummyFragment>(*this))
     Parent->getFragmentList().push_back(this);
 }
