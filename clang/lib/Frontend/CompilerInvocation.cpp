@@ -2983,7 +2983,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                      Arch != llvm::Triple::x86;
     emitError |= (DefaultCC == LangOptions::DCC_VectorCall ||
                   DefaultCC == LangOptions::DCC_RegCall) &&
-                 !(Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64);
+                 !T.isX86();
     if (emitError)
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << T.getTriple();

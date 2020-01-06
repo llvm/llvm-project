@@ -4163,9 +4163,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
 
   // If X86, and the datalayout matches the expected format, add pointer size
   // address spaces to the datalayout.
-  Triple::ArchType Arch = Triple(TT).getArch();
-  if ((Arch != llvm::Triple::x86 && Arch != llvm::Triple::x86_64) ||
-      DL.contains(AddrSpaces))
+  if (!Triple(TT).isX86() || DL.contains(AddrSpaces))
     return DL;
 
   SmallVector<StringRef, 4> Groups;

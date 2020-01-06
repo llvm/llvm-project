@@ -2491,7 +2491,7 @@ bool MachO::isPICDefaultForced() const {
 
 bool MachO::SupportsProfiling() const {
   // Profiling instrumentation is only supported on x86.
-  return getArch() == llvm::Triple::x86 || getArch() == llvm::Triple::x86_64;
+  return getTriple().isX86();
 }
 
 void Darwin::addMinVersionArgs(const ArgList &Args,
