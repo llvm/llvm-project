@@ -320,6 +320,9 @@ class MVEVectorVTInfo<ValueType vec, ValueType dblvec, ValueType pred,
 
   // The suffix used on an instruction that mentions the whole type.
   string Suffix = suffixletter ## BitsSuffix;
+
+  // The letter part of the suffix only.
+  string SuffixLetter = suffixletter;
 }
 
 // Integer vector types that don't treat signed and unsigned differently.
@@ -1090,12 +1093,12 @@ let Predicates = [HasMVEFloat] in {
             (v4f32 (MVE_VMAXNMf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2)))>;
   def : Pat<(v8f16 (fmaxnum (v8f16 MQPR:$val1), (v8f16 MQPR:$val2))),
             (v8f16 (MVE_VMAXNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2)))>;
-  def : Pat<(v4f32 (int_arm_mve_max_predicated (v4f32 MQPR:$val1), (v4f32 MQPR:$val2),
+  def : Pat<(v4f32 (int_arm_mve_max_predicated (v4f32 MQPR:$val1), (v4f32 MQPR:$val2), (i32 0),
                           (v4i1 VCCR:$mask), (v4f32 MQPR:$inactive))),
             (v4f32 (MVE_VMAXNMf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2),
                           ARMVCCThen, (v4i1 VCCR:$mask),
                           (v4f32 MQPR:$inactive)))>;
-  def : Pat<(v8f16 (int_arm_mve_max_predicated (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
+  def : Pat<(v8f16 (int_arm_mve_max_predicated (v8f16 MQPR:$val1), (v8f16 MQPR:$val2), (i32 0),
                           (v8i1 VCCR:$mask), (v8f16 MQPR:$inactive))),
             (v8f16 (MVE_VMAXNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
                           ARMVCCThen, (v8i1 VCCR:$mask),
@@ -1111,12 +1114,12 @@ let Predicates = [HasMVEFloat] in {
   def : Pat<(v8f16 (fminnum (v8f16 MQPR:$val1), (v8f16 MQPR:$val2))),
             (v8f16 (MVE_VMINNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2)))>;
   def : Pat<(v4f32 (int_arm_mve_min_predicated (v4f32 MQPR:$val1), (v4f32 MQPR:$val2),
-                          (v4i1 VCCR:$mask), (v4f32 MQPR:$inactive))),
+                          (i32 0), (v4i1 VCCR:$mask), (v4f32 MQPR:$inactive))),
             (v4f32 (MVE_VMINNMf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2),
                           ARMVCCThen, (v4i1 VCCR:$mask),
                           (v4f32 MQPR:$inactive)))>;
   def : Pat<(v8f16 (int_arm_mve_min_predicated (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
-                          (v8i1 VCCR:$mask), (v8f16 MQPR:$inactive))),
+                          (i32 0), (v8i1 VCCR:$mask), (v8f16 MQPR:$inactive))),
             (v8f16 (MVE_VMINNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
                           ARMVCCThen, (v8i1 VCCR:$mask),
                           (v8f16 MQPR:$inactive)))>;
@@ -1149,7 +1152,8 @@ multiclass MVE_VMINMAX_m<string iname, bit bit_4, MVEVectorVTInfo VTI,
 
     // Predicated min/max
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+                            (i32 VTI.Unsigned), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
@@ -1771,14 +1775,15 @@ multiclass MVE_VQADD_m<MVEVectorVTInfo VTI,
   def "" : MVE_VQADD_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
 
   let Predicates = [HasMVEInt] in {
-    // Unpredicated add-and-divide-by-two
+    // Unpredicated saturating add
     def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
 
-    // Predicated add-and-divide-by-two
+    // Predicated saturating add
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+                            (i32 VTI.Unsigned), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
@@ -1801,14 +1806,15 @@ multiclass MVE_VQSUB_m<MVEVectorVTInfo VTI,
   def "" : MVE_VQSUB_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
 
   let Predicates = [HasMVEInt] in {
-    // Unpredicated subtract-and-divide-by-two
+    // Unpredicated saturating subtract
     def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
 
-    // Predicated subtract-and-divide-by-two
+    // Predicated saturating subtract
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+                            (i32 VTI.Unsigned), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
@@ -1845,13 +1851,15 @@ multiclass MVE_VABD_m<MVEVectorVTInfo VTI,
 
   let Predicates = [HasMVEInt] in {
     // Unpredicated absolute difference
-    def : Pat<(VTI.Vec (unpred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+    def : Pat<(VTI.Vec (unpred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 VTI.Unsigned))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
 
     // Predicated absolute difference
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+                            (i32 VTI.Unsigned), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
@@ -1887,13 +1895,15 @@ multiclass MVE_VRHADD_m<MVEVectorVTInfo VTI,
 
   let Predicates = [HasMVEInt] in {
     // Unpredicated rounding add-with-divide-by-two
-    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 VTI.Unsigned))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
 
     // Predicated add-with-divide-by-two
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+                            (i32 VTI.Unsigned), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
@@ -1939,12 +1949,12 @@ multiclass MVE_VHADD_m<MVEVectorVTInfo VTI,
 
   let Predicates = [HasMVEInt] in {
     // Unpredicated add-and-divide-by-two
-    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn), (i32 VTI.Unsigned))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
 
     // Predicated add-and-divide-by-two
-    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn), (i32 VTI.Unsigned),
                             (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
@@ -1969,13 +1979,15 @@ multiclass MVE_VHSUB_m<MVEVectorVTInfo VTI,
 
   let Predicates = [HasMVEInt] in {
     // Unpredicated subtract-and-divide-by-two
-    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 VTI.Unsigned))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
 
     // Predicated subtract-and-divide-by-two
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+                            (i32 VTI.Unsigned), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
@@ -3318,11 +3330,13 @@ multiclass MVE_VABDT_fp_m<MVEVectorVTInfo VTI,
   def "" : MVE_VABD_fp<VTI.Suffix, VTI.Size{0}>;
 
   let Predicates = [HasMVEFloat] in {
-    def : Pat<(VTI.Vec (unpred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+    def : Pat<(VTI.Vec (unpred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 0))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+                            (i32 0), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
@@ -3976,17 +3990,22 @@ multiclass MVE_VMULL_m<MVEVectorVTInfo VTI,
   def "" : MVE_VMULL<"vmull" # !if(Top, "t", "b"), VTI.Suffix, VTI.Unsigned,
                      VTI.Size, Top, cstr>;
 
+  foreach uflag = [!if(!eq(VTI.SuffixLetter, "p"),
+                       (?), (? (i32 VTI.Unsigned)))] in
   let Predicates = [HasMVEInt] in {
+
     // Unpredicated multiply
-    def : Pat<(VTI.DblVec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (i32 Top))),
+    def : Pat<(VTI.DblVec !con((unpred_op (VTI.Vec MQPR:$Qm),
+                                          (VTI.Vec MQPR:$Qn)),
+                               uflag, (? (i32 Top)))),
               (VTI.DblVec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
 
     // Predicated multiply
-    def : Pat<(VTI.DblVec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (i32 Top),
-                            (VTI.Pred VCCR:$mask), (VTI.DblVec MQPR:$inactive))),
+    def : Pat<(VTI.DblVec !con((pred_int (VTI.Vec MQPR:$Qm),
+                                         (VTI.Vec MQPR:$Qn)),
+                               uflag, (? (i32 Top), (VTI.Pred VCCR:$mask),
+                                         (VTI.DblVec MQPR:$inactive)))),
               (VTI.DblVec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
@@ -4059,13 +4078,15 @@ multiclass MVE_VxMULH_m<string iname, MVEVectorVTInfo VTI, SDNode unpred_op,
 
   let Predicates = [HasMVEInt] in {
     // Unpredicated multiply returning high bits
-    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
+    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                            (i32 VTI.Unsigned))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
 
     // Predicated multiply returning high bits
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+                            (i32 VTI.Unsigned), (VTI.Pred VCCR:$mask),
+                            (VTI.Vec MQPR:$inactive))),
               (VTI.Vec (!cast<Instruction>(NAME)
                             (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             ARMVCCThen, (VTI.Pred VCCR:$mask),
