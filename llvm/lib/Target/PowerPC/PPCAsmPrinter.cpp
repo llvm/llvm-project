@@ -177,6 +177,8 @@ public:
 
   void SetupMachineFunction(MachineFunction &MF) override;
 
+  const MCExpr *lowerConstant(const Constant *CV) override;
+
   void EmitGlobalVariable(const GlobalVariable *GV) override;
 
   void EmitFunctionDescriptor() override;
@@ -1761,6 +1763,26 @@ void PPCAIXAsmPrinter::ValidateGV(const GlobalVariable *GV) {
 
   if (GV->hasComdat())
     report_fatal_error("COMDAT not yet supported by AIX.");
+}
+
+const MCExpr *PPCAIXAsmPrinter::lowerConstant(const Constant *CV) {
+  if (const Function *F = dyn_cast<Function>(CV)) {
+    MCSymbolXCOFF *FSym = cast<MCSymbolXCOFF>(getSymbol(F));
+    if (!FSym->hasContainingCsect()) {
+      const XCOFF::StorageClass SC =
+          F->isDeclaration()
+              ? TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(F)
+              : XCOFF::C_HIDEXT;
+      MCSectionXCOFF *Csect = OutStreamer->getContext().getXCOFFSection(
+          FSym->getName(), XCOFF::XMC_DS,
+          F->isDeclaration() ? XCOFF::XTY_ER : XCOFF::XTY_SD, SC,
+          SectionKind::getMetadata());
+      FSym->setContainingCsect(Csect);
+    }
+    return MCSymbolRefExpr::create(
+        FSym->getContainingCsect()->getQualNameSymbol(), OutContext);
+  }
+  return PPCAsmPrinter::lowerConstant(CV);
 }
 
 void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
