@@ -96,31 +96,6 @@ private:
   D64 *m_data_64;
 };
   
-namespace Foundation109 {
-  struct DataDescriptor_32 {
-    uint32_t _used;
-    uint32_t _priv1 : 2;
-    uint32_t _size : 30;
-    uint32_t _priv2 : 2;
-    uint32_t _offset : 30;
-    uint32_t _priv3;
-    uint32_t _data;
-  };
-  
-  struct DataDescriptor_64 {
-    uint64_t _used;
-    uint64_t _priv1 : 2;
-    uint64_t _size : 62;
-    uint64_t _priv2 : 2;
-    uint64_t _offset : 62;
-    uint32_t _priv3;
-    uint64_t _data;
-  };
-  
-  using NSArrayMSyntheticFrontEnd =
-      GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
-}
-  
 namespace Foundation1010 {
   struct DataDescriptor_32 {
     uint32_t _used;
@@ -858,8 +833,6 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
       return (new Foundation1428::NSArrayMSyntheticFrontEnd(valobj_sp));
     if (runtime->GetFoundationVersion() >= 1100)
       return (new Foundation1010::NSArrayMSyntheticFrontEnd(valobj_sp));
-    else
-      return (new Foundation109::NSArrayMSyntheticFrontEnd(valobj_sp));
   } else if (class_name == g_NSCallStackArray) {
     return (new CallStackArray::NSCallStackArraySyntheticFrontEnd(valobj_sp));
   } else {
