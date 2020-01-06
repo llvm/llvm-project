@@ -20162,8 +20162,7 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   if (IsStrict)
     return DAG.getNode(X86ISD::STRICT_VFPEXT, DL, {VT, MVT::Other},
                        {Op->getOperand(0), Res});
-  else
-    return DAG.getNode(X86ISD::VFPEXT, DL, VT, Res);
+  return DAG.getNode(X86ISD::VFPEXT, DL, VT, Res);
 }
 
 SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
