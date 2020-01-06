@@ -166,6 +166,11 @@ private:
   void renderTruncImm32(MachineInstrBuilder &MIB,
                         const MachineInstr &MI) const;
 
+  bool isInlineImmediate16(int64_t Imm) const;
+  bool isInlineImmediate32(int64_t Imm) const;
+  bool isInlineImmediate64(int64_t Imm) const;
+  bool isInlineImmediate(const APFloat &Imm) const;
+
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const AMDGPURegisterBankInfo &RBI;

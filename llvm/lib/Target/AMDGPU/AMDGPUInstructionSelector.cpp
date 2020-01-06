@@ -2117,3 +2117,19 @@ void AMDGPUInstructionSelector::renderTruncImm32(MachineInstrBuilder &MIB,
   assert(CstVal && "Expected constant value");
   MIB.addImm(CstVal.getValue());
 }
+
+bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {
+  return AMDGPU::isInlinableLiteral16(Imm, STI.hasInv2PiInlineImm());
+}
+
+bool AMDGPUInstructionSelector::isInlineImmediate32(int64_t Imm) const {
+  return AMDGPU::isInlinableLiteral32(Imm, STI.hasInv2PiInlineImm());
+}
+
+bool AMDGPUInstructionSelector::isInlineImmediate64(int64_t Imm) const {
+  return AMDGPU::isInlinableLiteral64(Imm, STI.hasInv2PiInlineImm());
+}
+
+bool AMDGPUInstructionSelector::isInlineImmediate(const APFloat &Imm) const {
+  return TII.isInlineConstant(Imm);
+}

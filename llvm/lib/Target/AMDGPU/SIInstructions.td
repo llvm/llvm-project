@@ -660,7 +660,7 @@ def : Pat <
 >;
 
 def : Pat <
-  (int_amdgcn_kill (i1 (setcc f32:$src, InlineFPImm<f32>:$imm, cond:$cond))),
+  (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO $src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
 >;
 
@@ -1324,8 +1324,8 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i64 InlineImm<i64>:$imm),
-  (S_MOV_B64 InlineImm<i64>:$imm)
+  (i64 InlineImm64:$imm),
+  (S_MOV_B64 InlineImm64:$imm)
 >;
 
 // XXX - Should this use a s_cmp to set SCC?
@@ -1346,8 +1346,8 @@ def : GCNPat <
 }
 
 def : GCNPat <
-  (f64 InlineFPImm<f64>:$imm),
-  (S_MOV_B64 (f64 (bitcast_fpimm_to_i64 InlineFPImm<f64>:$imm)))
+  (f64 InlineImmFP64:$imm),
+  (S_MOV_B64 (f64 (bitcast_fpimm_to_i64 InlineImmFP64:$imm)))
 >;
 
 /********** ================== **********/
