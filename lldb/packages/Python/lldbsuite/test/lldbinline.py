@@ -133,7 +133,7 @@ class InlineTest(TestBase):
 
     def do_test(self):
         exe = self.getBuildArtifact("a.out")
-        source_files = [f for f in os.listdir(self.getSourceDir())
+        source_files = [os.path.join(self.getSourceDir(), f) for f in os.listdir(self.getSourceDir())
                         if source_type(f)]
         target = self.dbg.CreateTarget(exe)
 
