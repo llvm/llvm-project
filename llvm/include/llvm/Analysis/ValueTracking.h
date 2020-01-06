@@ -232,9 +232,9 @@ class Value;
   /// return undef.
   Value *isBytewiseValue(Value *V, const DataLayout &DL);
 
-  /// Given an aggregrate and an sequence of indices, see if the scalar value
+  /// Given an aggregate and an sequence of indices, see if the scalar value
   /// indexed is already around as a register, for example if it were inserted
-  /// directly into the aggregrate.
+  /// directly into the aggregate.
   ///
   /// If InsertBefore is not null, this function will duplicate (modified)
   /// insertvalues when a part of a nested struct is extracted.

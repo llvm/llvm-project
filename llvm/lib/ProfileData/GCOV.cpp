@@ -439,7 +439,7 @@ LLVM_DUMP_METHOD void GCOVBlock::dump() const { print(dbgs()); }
 //===----------------------------------------------------------------------===//
 // Cycles detection
 //
-// The algorithm in GCC is based on the algorihtm by Hawick & James:
+// The algorithm in GCC is based on the algorithm by Hawick & James:
 //   "Enumerating Circuits and Loops in Graphs with Self-Arcs and Multiple-Arcs"
 //   http://complexity.massey.ac.nz/cstn/013/cstn-013.pdf.
 

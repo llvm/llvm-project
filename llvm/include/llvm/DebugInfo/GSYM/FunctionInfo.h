@@ -32,7 +32,7 @@ class GsymReader;
 /// The function information gets the function start address as an argument
 /// to the FunctionInfo::decode(...) function. This information is calculated
 /// from the GSYM header and an address offset from the GSYM address offsets
-/// table. The encoded FunctionInfo information must be alinged to a 4 byte
+/// table. The encoded FunctionInfo information must be aligned to a 4 byte
 /// boundary.
 ///
 /// The encoded data for a FunctionInfo starts with fixed data that all

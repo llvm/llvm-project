@@ -107,7 +107,7 @@ public:
   /// make these decisions: function formal arguments, call
   /// instruction args, call instruction returns and function
   /// returns. However, once a decision has been made on where an
-  /// arugment should go, exactly what happens can vary slightly. This
+  /// argument should go, exactly what happens can vary slightly. This
   /// class abstracts the differences.
   struct ValueHandler {
     ValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,

@@ -262,7 +262,7 @@ static bool isNoopBitcast(Type *T1, Type *T2,
 /// Look through operations that will be free to find the earliest source of
 /// this value.
 ///
-/// @param ValLoc If V has aggegate type, we will be interested in a particular
+/// @param ValLoc If V has aggregate type, we will be interested in a particular
 /// scalar component. This records its address; the reverse of this list gives a
 /// sequence of indices appropriate for an extractvalue to locate the important
 /// value. This value is updated during the function and on exit will indicate

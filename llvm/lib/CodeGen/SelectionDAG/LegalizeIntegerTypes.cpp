@@ -620,7 +620,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue ExtPassThru = GetPromotedInteger(N->getPassThru());
   assert(NVT == ExtPassThru.getValueType() &&
-      "Gather result type and the passThru agrument type should be the same");
+      "Gather result type and the passThru argument type should be the same");
 
   SDLoc dl(N);
   SDValue Ops[] = {N->getChain(), ExtPassThru, N->getMask(), N->getBasePtr(),

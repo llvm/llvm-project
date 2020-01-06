@@ -601,7 +601,7 @@ static bool canFold(const MCAssembler *Asm, const MCSymbolRefExpr *A,
 /// and
 ///   Result = (LHS_A - LHS_B + LHS_Cst) + (RHS_A - RHS_B + RHS_Cst).
 ///
-/// This routine attempts to aggresively fold the operands such that the result
+/// This routine attempts to aggressively fold the operands such that the result
 /// is representable in an MCValue, but may not always succeed.
 ///
 /// \returns True on success, false if the result is not representable in an
