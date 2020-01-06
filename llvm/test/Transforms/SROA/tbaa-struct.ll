@@ -11,7 +11,7 @@ define void @bar(%vector* %y2) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[X14:%.*]] = call <2 x float> @foo(%vector* [[Y2:%.*]])
 ; CHECK-NEXT:    [[X7_SROA_0_0_X18_SROA_CAST:%.*]] = bitcast %vector* [[Y2]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[X14]], <2 x float>* [[X7_SROA_0_0_X18_SROA_CAST]], align 4
+; CHECK-NEXT:    store <2 x float> [[X14]], <2 x float>* [[X7_SROA_0_0_X18_SROA_CAST]], align 4, !tbaa.struct !0
 ; CHECK-NEXT:    ret void
 ;
   %x7 = alloca %vector

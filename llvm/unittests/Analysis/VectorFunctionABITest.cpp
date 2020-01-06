@@ -256,7 +256,7 @@ TEST_F(VFABIParserTest, Align) {
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0].Alignment, Align(2));
 
-  // Missing alignement value.
+  // Missing alignment value.
   EXPECT_FALSE(invokeParser("_ZGVsM2l2a_sin"));
   // Invalid alignment token "x".
   EXPECT_FALSE(invokeParser("_ZGVsM2l2ax_sin"));

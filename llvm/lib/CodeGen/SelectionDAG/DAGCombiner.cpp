@@ -19786,14 +19786,10 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
         return SDValue();
 
       // Extract the sub element from the constant bit mask.
-      if (DAG.getDataLayout().isBigEndian()) {
-        Bits.lshrInPlace((Split - SubIdx - 1) * NumSubBits);
-      } else {
-        Bits.lshrInPlace(SubIdx * NumSubBits);
-      }
-
-      if (Split > 1)
-        Bits = Bits.trunc(NumSubBits);
+      if (DAG.getDataLayout().isBigEndian())
+        Bits = Bits.extractBits(NumSubBits, (Split - SubIdx - 1) * NumSubBits);
+      else
+        Bits = Bits.extractBits(NumSubBits, SubIdx * NumSubBits);
 
       if (Bits.isAllOnesValue())
         Indices.push_back(i);

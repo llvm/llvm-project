@@ -951,7 +951,7 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
 ///
 /// \param StartAddr start address of the fused/unfused branch.
 /// \param Size size of the fused/unfused branch.
-/// \param BoundaryAlignment aligment requirement of the branch.
+/// \param BoundaryAlignment alignment requirement of the branch.
 /// \returns true if the branch cross the boundary.
 static bool mayCrossBoundary(uint64_t StartAddr, uint64_t Size,
                              Align BoundaryAlignment) {
@@ -964,7 +964,7 @@ static bool mayCrossBoundary(uint64_t StartAddr, uint64_t Size,
 ///
 /// \param StartAddr start address of the fused/unfused branch.
 /// \param Size size of the fused/unfused branch.
-/// \param BoundaryAlignment aligment requirement of the branch.
+/// \param BoundaryAlignment alignment requirement of the branch.
 /// \returns true if the branch is against the boundary.
 static bool isAgainstBoundary(uint64_t StartAddr, uint64_t Size,
                               Align BoundaryAlignment) {
@@ -976,7 +976,7 @@ static bool isAgainstBoundary(uint64_t StartAddr, uint64_t Size,
 ///
 /// \param StartAddr start address of the fused/unfused branch.
 /// \param Size size of the fused/unfused branch.
-/// \param BoundaryAlignment aligment requirement of the branch.
+/// \param BoundaryAlignment alignment requirement of the branch.
 /// \returns true if the branch needs padding.
 static bool needPadding(uint64_t StartAddr, uint64_t Size,
                         Align BoundaryAlignment) {

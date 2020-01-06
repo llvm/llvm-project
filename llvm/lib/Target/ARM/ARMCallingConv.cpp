@@ -181,7 +181,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     assert(PendingMembers[0].getLocVT() == LocVT);
 
   // Add the argument to the list to be allocated once we know the size of the
-  // aggregate. Store the type's required alignmnent as extra info for later: in
+  // aggregate. Store the type's required alignment as extra info for later: in
   // the [N x i64] case all trace has been removed by the time we actually get
   // to do allocation.
   PendingMembers.push_back(CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo,

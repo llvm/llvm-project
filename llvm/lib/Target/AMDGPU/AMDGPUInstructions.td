@@ -158,20 +158,30 @@ def brtarget   : Operand<OtherVT>;
 class HasOneUseUnaryOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0),
   (op $src0),
-  [{ return N->hasOneUse(); }]
->;
+  [{ return N->hasOneUse(); }]> {
+
+  let GISelPredicateCode = [{
+    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
+  }];
+}
 
 class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1),
   (op $src0, $src1),
-  [{ return N->hasOneUse(); }]
->;
+  [{ return N->hasOneUse(); }]> {
+  let GISelPredicateCode = [{
+    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
+  }];
+}
 
 class HasOneUseTernaryOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1, node:$src2),
   (op $src0, $src1, $src2),
-  [{ return N->hasOneUse(); }]
->;
+  [{ return N->hasOneUse(); }]> {
+  let GISelPredicateCode = [{
+    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
+  }];
+}
 
 let Properties = [SDNPCommutative, SDNPAssociative] in {
 def smax_oneuse : HasOneUseBinOp<smax>;

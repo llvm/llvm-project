@@ -569,6 +569,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (OutMI.getOperand(OutMI.getNumOperands() - 1).getImm() == 0) {
       unsigned NewOpc;
       switch (OutMI.getOpcode()) {
+      default: llvm_unreachable("Invalid opcode");
       case X86::VPCMPBZ128rmi:   NewOpc = X86::VPCMPEQBZ128rm;   break;
       case X86::VPCMPBZ128rmik:  NewOpc = X86::VPCMPEQBZ128rmk;  break;
       case X86::VPCMPBZ128rri:   NewOpc = X86::VPCMPEQBZ128rr;   break;
@@ -640,6 +641,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (OutMI.getOperand(OutMI.getNumOperands() - 1).getImm() == 6) {
       unsigned NewOpc;
       switch (OutMI.getOpcode()) {
+      default: llvm_unreachable("Invalid opcode");
       case X86::VPCMPBZ128rmi:   NewOpc = X86::VPCMPGTBZ128rm;   break;
       case X86::VPCMPBZ128rmik:  NewOpc = X86::VPCMPGTBZ128rmk;  break;
       case X86::VPCMPBZ128rri:   NewOpc = X86::VPCMPGTBZ128rr;   break;

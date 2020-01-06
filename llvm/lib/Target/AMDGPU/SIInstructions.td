@@ -1793,54 +1793,59 @@ def : ExpPattern<AMDGPUexport_done, i32, EXP_DONE>;
 // COPY is workaround tablegen bug from multiple outputs
 // from S_LSHL_B32's multiple outputs from implicit scc def.
 def : GCNPat <
-  (v2i16 (build_vector (i16 0), i16:$src1)),
-  (v2i16 (COPY (S_LSHL_B32 i16:$src1, (i16 16))))
+  (v2i16 (build_vector (i16 0), (i16 SReg_32:$src1))),
+  (S_LSHL_B32 SReg_32:$src1, (i16 16))
 >;
 
 def : GCNPat <
-  (v2i16 (build_vector i16:$src0, (i16 undef))),
-  (v2i16 (COPY $src0))
+  (v2i16 (build_vector (i16 SReg_32:$src0), (i16 undef))),
+  (COPY_TO_REGCLASS SReg_32:$src0, SReg_32)
+>;
+
+def : GCNPat <
+  (v2i16 (build_vector (i16 VGPR_32:$src0), (i16 undef))),
+  (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)
 >;
 
 def : GCNPat <
   (v2f16 (build_vector f16:$src0, (f16 undef))),
-  (v2f16 (COPY $src0))
+  (COPY $src0)
 >;
 
 def : GCNPat <
-  (v2i16 (build_vector (i16 undef), i16:$src1)),
-  (v2i16 (COPY (S_LSHL_B32 $src1, (i32 16))))
+  (v2i16 (build_vector (i16 undef), (i16 SReg_32:$src1))),
+  (S_LSHL_B32 SReg_32:$src1, (i32 16))
 >;
 
 def : GCNPat <
-  (v2f16 (build_vector (f16 undef), f16:$src1)),
-  (v2f16 (COPY (S_LSHL_B32 $src1, (i32 16))))
+  (v2f16 (build_vector (f16 undef), (f16 SReg_32:$src1))),
+  (S_LSHL_B32 SReg_32:$src1, (i32 16))
 >;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
-  (v2i16 (build_vector i16:$src0, i16:$src1)),
-  (v2i16 (S_PACK_LL_B32_B16 $src0, $src1))
+  (v2i16 (build_vector (i16 SReg_32:$src0), (i16 SReg_32:$src1))),
+  (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
 def : GCNPat <
-  (v2i16 (build_vector i16:$src0, (i16 (trunc (srl_oneuse i32:$src1, (i32 16)))))),
-  (v2i16 (S_PACK_LH_B32_B16 i16:$src0, i32:$src1))
+  (v2i16 (build_vector (i16 SReg_32:$src0), (i16 (trunc (srl_oneuse SReg_32:$src1, (i32 16)))))),
+  (v2i16 (S_PACK_LH_B32_B16 SReg_32:$src0, SReg_32:$src1))
 >;
 
 
 def : GCNPat <
-  (v2i16 (build_vector (i16 (trunc (srl_oneuse i32:$src0, (i32 16)))),
-                       (i16 (trunc (srl_oneuse i32:$src1, (i32 16)))))),
-  (v2i16 (S_PACK_HH_B32_B16 $src0, $src1))
+  (v2i16 (build_vector (i16 (trunc (srl_oneuse SReg_32:$src0, (i32 16)))),
+                       (i16 (trunc (srl_oneuse SReg_32:$src1, (i32 16)))))),
+  (S_PACK_HH_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
 // TODO: Should source modifiers be matched to v_pack_b32_f16?
 def : GCNPat <
-  (v2f16 (build_vector f16:$src0, f16:$src1)),
-  (v2f16 (S_PACK_LL_B32_B16 $src0, $src1))
+  (v2f16 (build_vector (f16 SReg_32:$src0), (f16 SReg_32:$src1))),
+  (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
 } // End SubtargetPredicate = HasVOP3PInsts

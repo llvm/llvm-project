@@ -154,7 +154,7 @@ static cl::opt<bool> DisableAttributor(
 
 static cl::opt<bool> AnnotateDeclarationCallSites(
     "attributor-annotate-decl-cs", cl::Hidden,
-    cl::desc("Annoate call sites of function declarations."), cl::init(false));
+    cl::desc("Annotate call sites of function declarations."), cl::init(false));
 
 static cl::opt<bool> ManifestInternal(
     "attributor-manifest-internal", cl::Hidden,
@@ -3544,7 +3544,7 @@ struct AAAlignImpl : AAAlign {
         if (SI->getPointerOperand() == &AnchorVal)
           if (SI->getAlignment() < getAssumedAlign()) {
             STATS_DECLTRACK(AAAlign, Store,
-                            "Number of times alignemnt added to a store");
+                            "Number of times alignment added to a store");
             SI->setAlignment(Align(getAssumedAlign()));
             Changed = ChangeStatus::CHANGED;
           }
@@ -3553,7 +3553,7 @@ struct AAAlignImpl : AAAlign {
           if (LI->getAlignment() < getAssumedAlign()) {
             LI->setAlignment(Align(getAssumedAlign()));
             STATS_DECLTRACK(AAAlign, Load,
-                            "Number of times alignemnt added to a load");
+                            "Number of times alignment added to a load");
             Changed = ChangeStatus::CHANGED;
           }
       }

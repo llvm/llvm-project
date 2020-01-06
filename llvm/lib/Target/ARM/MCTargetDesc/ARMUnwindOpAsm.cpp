@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the unwind opcode assmebler for ARM exception handling
+// This file implements the unwind opcode assembler for ARM exception handling
 // table.
 //
 //===----------------------------------------------------------------------===//

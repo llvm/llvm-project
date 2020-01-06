@@ -29,7 +29,7 @@ namespace orc {
 
 /// Generic ORC ABI support.
 ///
-/// This class can be substituted as the target architecure support class for
+/// This class can be substituted as the target architecture support class for
 /// ORC templates that require one (e.g. IndirectStubsManagers). It does not
 /// support lazy JITing however, and any attempt to use that functionality
 /// will result in execution of an llvm_unreachable.

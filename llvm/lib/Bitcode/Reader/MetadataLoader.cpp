@@ -411,7 +411,7 @@ void PlaceholderQueue::flush(BitcodeReaderMetadataList &MetadataList) {
   }
 }
 
-} // anonynous namespace
+} // anonymous namespace
 
 static Error error(const Twine &Message) {
   return make_error<StringError>(

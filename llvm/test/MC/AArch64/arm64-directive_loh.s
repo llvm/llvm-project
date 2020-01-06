@@ -84,13 +84,13 @@ _fct1:
 # CHECK-ERRORS-NEXT:              ^
 .loh 1 L1, L2, L3
 
-# Too few argumets.
+# Too few arguments.
 # CHECK-ERRORS: error: unexpected token in '.loh' directive
 # CHECK-ERRORS-NEXT: .loh AdrpAdrp L1
 # CHECK-ERRORS-NEXT:                 ^
 .loh AdrpAdrp L1
 
-# Too few argumets with alternative syntax.
+# Too few arguments with alternative syntax.
 # CHECK-ERRORS: error: unexpected token in '.loh' directive
 # CHECK-ERRORS-NEXT: .loh 1 L1
 # CHECK-ERRORS-NEXT:          ^
