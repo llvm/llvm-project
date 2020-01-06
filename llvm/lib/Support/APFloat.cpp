@@ -4511,7 +4511,9 @@ hash_code hash_value(const APFloat &Arg) {
 APFloat::APFloat(const fltSemantics &Semantics, StringRef S)
     : APFloat(Semantics) {
   auto StatusOrErr = convertFromString(S, rmNearestTiesToEven);
-  assert(StatusOrErr && "Invalid floating point representation");
+  if (!StatusOrErr) {
+    assert(false && "Invalid floating point representation");
+  }
 }
 
 APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
