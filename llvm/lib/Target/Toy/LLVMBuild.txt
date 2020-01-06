@@ -1,0 +1,31 @@
+;===- ./lib/Target/Toy/LLVMBuild.txt ---------------------------*- Conf -*--===;
+;
+; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+; See https://llvm.org/LICENSE.txt for license information.
+; SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+;
+;===------------------------------------------------------------------------===;
+;
+; This is an LLVMBuild description file for the components in this subdirectory.
+;
+; For more information on the LLVMBuild system, please see:
+;
+;   http://llvm.org/docs/LLVMBuild.html
+;
+;===------------------------------------------------------------------------===;
+
+[common]
+subdirectories = MCTargetDesc TargetInfo
+
+[component_0]
+type = TargetGroup
+name = Toy
+parent = Target
+
+[component_1]
+type = Library
+name = ToyCodeGen
+parent = Toy
+required_libraries = AsmPrinter CodeGen Core MC SelectionDAG
+                     ToyDesc ToyInfo Support Target
+add_to_library_groups = Toy
