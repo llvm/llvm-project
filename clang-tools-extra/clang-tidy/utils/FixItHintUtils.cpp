@@ -95,6 +95,7 @@ static Optional<FixItHint> changeValue(const VarDecl &Var,
       return fixIfNotDangerous(*IgnoredParens, buildQualifier(Qualifier));
     return None;
   }
+  llvm_unreachable("Unknown QualifierPolicy enum");
 }
 
 static Optional<FixItHint> changePointerItself(const VarDecl &Var,
