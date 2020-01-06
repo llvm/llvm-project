@@ -303,27 +303,39 @@ def dpu_attach(debugger, command, result, internal_dict):
         print("Could not connect to dpu")
         return None
 
-    open_print_sequence_addr = target_dpu \
-        .FindFunctions("__open_print_sequence") \
-        .GetContextAtIndex(0).GetFunction().GetStartAddress() \
-                                           .GetFileAddress()
-    close_print_sequence_addr = target_dpu \
-        .FindFunctions("__close_print_sequence") \
-        .GetContextAtIndex(0).GetFunction().GetStartAddress() \
-                                           .GetFileAddress()
-    print_buffer_addr = target_dpu \
-        .FindFirstGlobalVariable("__stdout_buffer").GetAddress() \
-                                                   .GetFileAddress()
-    print_buffer_size = target_dpu \
-        .FindFirstGlobalVariable("__stdout_buffer_size").GetValueAsUnsigned()
-    print_buffer_var_addr = target_dpu \
-        .FindFirstGlobalVariable("__stdout_buffer_state").GetAddress() \
-                                                         .GetFileAddress()
-    process_dpu.SetDpuPrintInfo(open_print_sequence_addr,
-                                close_print_sequence_addr,
-                                print_buffer_addr,
-                                print_buffer_size,
-                                print_buffer_var_addr)
+    open_print_sequence_fct = target_dpu \
+        .FindFunctions("__open_print_sequence")
+    close_print_sequence_fct = target_dpu \
+        .FindFunctions("__close_print_sequence")
+    print_buffer_var = target_dpu \
+        .FindFirstGlobalVariable("__stdout_buffer")
+    print_buffer_size_var = target_dpu \
+        .FindFirstGlobalVariable("__stdout_buffer_size")
+    print_buffer_var_var = target_dpu \
+        .FindFirstGlobalVariable("__stdout_buffer_state")
+
+    if (open_print_sequence_fct.IsValid()
+        and close_print_sequence_fct.IsValid()
+        and print_buffer_var.IsValid()
+        and print_buffer_size_var.IsValid()
+        and print_buffer_var_var.IsValid()):
+
+        open_print_sequence_addr = open_print_sequence_fct \
+            .GetContextAtIndex(0).GetFunction().GetStartAddress() \
+                                               .GetFileAddress()
+        close_print_sequence_addr = close_print_sequence_fct \
+            .GetContextAtIndex(0).GetFunction().GetStartAddress() \
+                                               .GetFileAddress()
+        print_buffer_addr = print_buffer_var.GetAddress().GetFileAddress()
+        print_buffer_size = print_buffer_size_var.GetValueAsUnsigned()
+        print_buffer_var_addr = print_buffer_var_var.GetAddress() \
+                                                    .GetFileAddress()
+
+        process_dpu.SetDpuPrintInfo(open_print_sequence_addr,
+                                    close_print_sequence_addr,
+                                    print_buffer_addr,
+                                    print_buffer_size,
+                                    print_buffer_var_addr)
 
     debugger.SetSelectedTarget(target)
     if not(set_debug_mode(debugger, rank, 0)):
