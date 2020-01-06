@@ -39,7 +39,7 @@ struct ContentDescriptor {
 
 using ContentDescriptors = SmallVector<ContentDescriptor, 4>;
 
-} // end anonmyous namespace
+} // end anonymous namespace
 
 void DWARFDebugLine::ContentTypeTracker::trackContentType(
     dwarf::LineNumberEntryFormat ContentType) {

@@ -93,7 +93,7 @@ namespace pointer_union_detail {
     static constexpr int NumLowBitsAvailable = lowBitsAvailable<PTs...>();
   };
 
-  /// Implement assigment in terms of construction.
+  /// Implement assignment in terms of construction.
   template <typename Derived, typename T> struct AssignableFrom {
     Derived &operator=(T t) {
       return static_cast<Derived &>(*this) = Derived(t);

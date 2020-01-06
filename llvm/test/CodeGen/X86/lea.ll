@@ -23,7 +23,7 @@ define i32 @test1(i32 %x) nounwind {
 
 
 ; ISel the add of -4 with a neg and use an lea for the rest of the
-; arithemtic.
+; arithmetic.
 define i32 @test2(i32 %x_offs) nounwind readnone {
 ; LINUX-LABEL: test2:
 ; LINUX:       # %bb.0: # %entry

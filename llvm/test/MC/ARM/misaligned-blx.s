@@ -6,7 +6,7 @@
 _f1:
         bx lr
 
-        @ A misalgined ARM destination.
+        @ A misaligned ARM destination.
         .arm
         .globl _misaligned
 _misaligned:

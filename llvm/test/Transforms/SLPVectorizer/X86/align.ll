@@ -39,7 +39,7 @@ entry:
   ret void
 }
 
-; Float has 4 byte abi alignment on x86_64. We must use the alignmnet of the
+; Float has 4 byte abi alignment on x86_64. We must use the alignment of the
 ; value being loaded/stored not the alignment of the pointer type.
 
 define void @test2(float * %a, float * %b) {

@@ -1,6 +1,6 @@
 ; RUN: opt -S -deadargelim %s | FileCheck %s
 
-; Don't eliminate dead arugments from naked functions.
+; Don't eliminate dead arguments from naked functions.
 ; CHECK: define internal i32 @naked(i32 %x)
 
 define internal i32 @naked(i32 %x) #0 {

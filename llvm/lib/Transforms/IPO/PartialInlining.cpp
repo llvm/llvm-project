@@ -702,7 +702,7 @@ PartialInlinerImpl::computeOutliningInfo(Function *F) {
   return OutliningInfo;
 }
 
-// Check if there is PGO data or user annoated branch data:
+// Check if there is PGO data or user annotated branch data:
 static bool hasProfileData(Function *F, FunctionOutliningInfo *OI) {
   if (F->hasProfileData())
     return true;

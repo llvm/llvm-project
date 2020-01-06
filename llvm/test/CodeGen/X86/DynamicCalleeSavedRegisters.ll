@@ -7,7 +7,7 @@ declare x86_regcallcc i32 @callee(i32 %a0, i32 %b0, i32 %c0, i32 %d0, i32 %e0);
 ; One might think that the caller could assume that ESI value is the same before
 ; and after calling the callee.
 ; However, RegCall also says that a register that was used for
-; passing/returning argumnets, can be assumed to be modified by the callee.
+; passing/returning arguments, can be assumed to be modified by the callee.
 ; In other words, it is no longer a callee saved register.
 ; In this case we want to see that EDX/ECX values are saved and EDI/ESI are assumed
 ; to be modified by the callee.
