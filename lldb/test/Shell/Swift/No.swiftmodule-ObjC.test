@@ -2,7 +2,7 @@
 # This tests debugging without the presence of a .swiftmodule.
 
 # RUN: rm -rf %t && mkdir %t && cd %t
-# RUN: %clang -c -fmodules -gmodules -I%S/Inputs \
+# RUN: %clang_host -c -fmodules -gmodules -I%S/Inputs \
 # RUN:          %S/Inputs/ObjCStuff.m -o %t/ObjCStuff.o
 # RUN: %target-swift-frontend -c -g -serialize-debugging-options \
 # RUN:          -module-cache-path %t/cache \
