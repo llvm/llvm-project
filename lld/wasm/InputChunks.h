@@ -83,7 +83,7 @@ protected:
 
 // Represents a WebAssembly data segment which can be included as part of
 // an output data segments.  Note that in WebAssembly, unlike ELF and other
-// formats, used the term "data segment" to refer to the continous regions of
+// formats, used the term "data segment" to refer to the continuous regions of
 // memory that make on the data section. See:
 // https://webassembly.github.io/spec/syntax/modules.html#syntax-data
 //
@@ -156,7 +156,7 @@ public:
 
   // The size of a given input function can depend on the values of the
   // LEB relocations within it.  This finalizeContents method is called after
-  // all the symbol values have be calcualted but before getSize() is ever
+  // all the symbol values have be calculated but before getSize() is ever
   // called.
   void calculateSize();
 

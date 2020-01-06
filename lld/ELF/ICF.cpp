@@ -42,7 +42,7 @@
 //    relocation targets. Relocation targets are considered equivalent if
 //    their targets are in the same equivalence class. Sections with
 //    different relocation targets are put into different equivalence
-//    clases.
+//    classes.
 //
 // 3. If we split an equivalence class in step 2, two relocations
 //    previously target the same equivalence class may now target
