@@ -441,15 +441,29 @@ bool AMDGPUInstructionSelector::selectG_UADDO_USUBO(MachineInstr &I) const {
 
 bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
+  LLT DstTy = MRI->getType(DstReg);
+  LLT SrcTy = MRI->getType(SrcReg);
+  const unsigned SrcSize = SrcTy.getSizeInBits();
+  const unsigned DstSize = DstTy.getSizeInBits();
+
+  // TODO: Should handle any multiple of 32 offset.
   unsigned Offset = I.getOperand(2).getImm();
-  if (Offset % 32 != 0)
+  if (Offset % DstSize != 0)
     return false;
 
-  unsigned SubReg = TRI.getSubRegFromChannel(Offset / 32);
+  const RegisterBank *SrcBank = RBI.getRegBank(SrcReg, *MRI, TRI);
+  const TargetRegisterClass *SrcRC =
+    TRI.getRegClassForSizeOnBank(SrcSize, *SrcBank, *MRI);
+  if (!SrcRC)
+    return false;
+
+  ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(SrcRC, DstSize / 8);
+
   const DebugLoc &DL = I.getDebugLoc();
-  MachineInstr *Copy = BuildMI(*BB, &I, DL, TII.get(TargetOpcode::COPY),
-                               I.getOperand(0).getReg())
-                               .addReg(I.getOperand(1).getReg(), 0, SubReg);
+  MachineInstr *Copy = BuildMI(*BB, &I, DL, TII.get(TargetOpcode::COPY), DstReg)
+                               .addReg(SrcReg, 0, SubRegs[Offset / DstSize]);
 
   for (const MachineOperand &MO : Copy->operands()) {
     const TargetRegisterClass *RC =
@@ -470,7 +484,7 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
 
   const unsigned SrcSize = SrcTy.getSizeInBits();
   if (SrcSize < 32)
-    return false;
+    return selectImpl(MI, *CoverageInfo);
 
   const DebugLoc &DL = MI.getDebugLoc();
   const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);

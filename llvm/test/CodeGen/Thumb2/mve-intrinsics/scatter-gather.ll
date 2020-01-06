@@ -191,11 +191,11 @@ declare <2 x i64> @llvm.arm.mve.vldr.gather.base.v2i64.v2i64(<2 x i64>, i32)
 define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_u64(<2 x i64> %addr) {
 ; CHECK-LABEL: test_vldrdq_gather_base_u64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrd.u64 q1, [q0, #336]
+; CHECK-NEXT:    vldrd.u64 q1, [q0, #-336]
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = call <2 x i64> @llvm.arm.mve.vldr.gather.base.v2i64.v2i64(<2 x i64> %addr, i32 336)
+  %0 = call <2 x i64> @llvm.arm.mve.vldr.gather.base.v2i64.v2i64(<2 x i64> %addr, i32 -336)
   ret <2 x i64> %0
 }
 
@@ -221,12 +221,12 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_wb_u64(<2 x i64>* %add
 ; CHECK-LABEL: test_vldrdq_gather_base_wb_u64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrd.u64 q1, [q0, #328]!
+; CHECK-NEXT:    vldrd.u64 q1, [q0, #-328]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <2 x i64>, <2 x i64>* %addr, align 8
-  %1 = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.v2i64.v2i64(<2 x i64> %0, i32 328)
+  %1 = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.v2i64.v2i64(<2 x i64> %0, i32 -328)
   %2 = extractvalue { <2 x i64>, <2 x i64> } %1, 1
   store <2 x i64> %2, <2 x i64>* %addr, align 8
   %3 = extractvalue { <2 x i64>, <2 x i64> } %1, 0
@@ -297,13 +297,13 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_z_u64(<2 x i64> %addr,
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrdt.u64 q1, [q0, #1000]
+; CHECK-NEXT:    vldrdt.u64 q1, [q0, #-1000]
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
   %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1(<2 x i64> %addr, i32 1000, <4 x i1> %1)
+  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1(<2 x i64> %addr, i32 -1000, <4 x i1> %1)
   ret <2 x i64> %2
 }
 
@@ -728,12 +728,12 @@ define arm_aapcs_vfpcc <4 x float> @test_vldrwq_gather_base_wb_f32(<4 x i32>* %a
 ; CHECK-LABEL: test_vldrwq_gather_base_wb_f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [q0, #64]!
+; CHECK-NEXT:    vldrw.u32 q1, [q0, #-64]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <4 x i32>, <4 x i32>* %addr, align 8
-  %1 = call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4f32.v4i32(<4 x i32> %0, i32 64)
+  %1 = call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4f32.v4i32(<4 x i32> %0, i32 -64)
   %2 = extractvalue { <4 x float>, <4 x i32> } %1, 1
   store <4 x i32> %2, <4 x i32>* %addr, align 8
   %3 = extractvalue { <4 x float>, <4 x i32> } %1, 0
@@ -782,14 +782,14 @@ define arm_aapcs_vfpcc <4 x float> @test_vldrwq_gather_base_wb_z_f32(<4 x i32>* 
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q1, [q0, #352]!
+; CHECK-NEXT:    vldrwt.u32 q1, [q0, #-352]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <4 x i32>, <4 x i32>* %addr, align 8
   %1 = zext i16 %p to i32
   %2 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
-  %3 = call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v4f32.v4i32.v4i1(<4 x i32> %0, i32 352, <4 x i1> %2)
+  %3 = call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v4f32.v4i32.v4i1(<4 x i32> %0, i32 -352, <4 x i1> %2)
   %4 = extractvalue { <4 x float>, <4 x i32> } %3, 1
   store <4 x i32> %4, <4 x i32>* %addr, align 8
   %5 = extractvalue { <4 x float>, <4 x i32> } %3, 0
@@ -845,13 +845,13 @@ define arm_aapcs_vfpcc <4 x float> @test_vldrwq_gather_base_z_f32(<4 x i32> %add
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q1, [q0, #300]
+; CHECK-NEXT:    vldrwt.u32 q1, [q0, #-300]
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
   %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <4 x float> @llvm.arm.mve.vldr.gather.base.predicated.v4f32.v4i32.v4i1(<4 x i32> %addr, i32 300, <4 x i1> %1)
+  %2 = call <4 x float> @llvm.arm.mve.vldr.gather.base.predicated.v4f32.v4i32.v4i1(<4 x i32> %addr, i32 -300, <4 x i1> %1)
   ret <4 x float> %2
 }
 
@@ -1254,10 +1254,10 @@ declare void @llvm.arm.mve.vstr.scatter.base.v2i64.v2i64(<2 x i64>, i32, <2 x i6
 define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_u64(<2 x i64> %addr, <2 x i64> %value) {
 ; CHECK-LABEL: test_vstrdq_scatter_base_u64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vstrd.64 q1, [q0, #472]
+; CHECK-NEXT:    vstrd.64 q1, [q0, #-472]
 ; CHECK-NEXT:    bx lr
 entry:
-  call void @llvm.arm.mve.vstr.scatter.base.v2i64.v2i64(<2 x i64> %addr, i32 472, <2 x i64> %value)
+  call void @llvm.arm.mve.vstr.scatter.base.v2i64.v2i64(<2 x i64> %addr, i32 -472, <2 x i64> %value)
   ret void
 }
 
@@ -1319,12 +1319,12 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_wb_u64(<2 x i64>* %addr, <
 ; CHECK-LABEL: test_vstrdq_scatter_base_wb_u64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vstrd.64 q0, [q1, #168]!
+; CHECK-NEXT:    vstrd.64 q0, [q1, #-168]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <2 x i64>, <2 x i64>* %addr, align 8
-  %1 = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.v2i64.v2i64(<2 x i64> %0, i32 168, <2 x i64> %value)
+  %1 = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.v2i64.v2i64(<2 x i64> %0, i32 -168, <2 x i64> %value)
   store <2 x i64> %1, <2 x i64>* %addr, align 8
   ret void
 }
@@ -1698,12 +1698,12 @@ define arm_aapcs_vfpcc void @test_vstrwq_scatter_base_p_f32(<4 x i32> %addr, <4 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q1, [q0, #400]
+; CHECK-NEXT:    vstrwt.32 q1, [q0, #-400]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
   %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  call void @llvm.arm.mve.vstr.scatter.base.predicated.v4i32.v4f32.v4i1(<4 x i32> %addr, i32 400, <4 x float> %value, <4 x i1> %1)
+  call void @llvm.arm.mve.vstr.scatter.base.predicated.v4i32.v4f32.v4i1(<4 x i32> %addr, i32 -400, <4 x float> %value, <4 x i1> %1)
   ret void
 }
 
@@ -1730,12 +1730,12 @@ define arm_aapcs_vfpcc void @test_vstrwq_scatter_base_p_u32(<4 x i32> %addr, <4 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q1, [q0, #376]
+; CHECK-NEXT:    vstrwt.32 q1, [q0, #-376]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
   %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  call void @llvm.arm.mve.vstr.scatter.base.predicated.v4i32.v4i32.v4i1(<4 x i32> %addr, i32 376, <4 x i32> %value, <4 x i1> %1)
+  call void @llvm.arm.mve.vstr.scatter.base.predicated.v4i32.v4i32.v4i1(<4 x i32> %addr, i32 -376, <4 x i32> %value, <4 x i1> %1)
   ret void
 }
 
@@ -1765,12 +1765,12 @@ define arm_aapcs_vfpcc void @test_vstrwq_scatter_base_wb_f32(<4 x i32>* %addr, <
 ; CHECK-LABEL: test_vstrwq_scatter_base_wb_f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [q1, #412]!
+; CHECK-NEXT:    vstrw.32 q0, [q1, #-412]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <4 x i32>, <4 x i32>* %addr, align 8
-  %1 = call <4 x i32> @llvm.arm.mve.vstr.scatter.base.wb.v4i32.v4f32(<4 x i32> %0, i32 412, <4 x float> %value)
+  %1 = call <4 x i32> @llvm.arm.mve.vstr.scatter.base.wb.v4i32.v4f32(<4 x i32> %0, i32 -412, <4 x float> %value)
   store <4 x i32> %1, <4 x i32>* %addr, align 8
   ret void
 }
@@ -1839,12 +1839,12 @@ define arm_aapcs_vfpcc void @test_vstrwq_scatter_base_wb_s32(<4 x i32>* %addr, <
 ; CHECK-LABEL: test_vstrwq_scatter_base_wb_s32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [q1, #152]!
+; CHECK-NEXT:    vstrw.32 q0, [q1, #-152]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <4 x i32>, <4 x i32>* %addr, align 8
-  %1 = call <4 x i32> @llvm.arm.mve.vstr.scatter.base.wb.v4i32.v4i32(<4 x i32> %0, i32 152, <4 x i32> %value)
+  %1 = call <4 x i32> @llvm.arm.mve.vstr.scatter.base.wb.v4i32.v4i32(<4 x i32> %0, i32 -152, <4 x i32> %value)
   store <4 x i32> %1, <4 x i32>* %addr, align 8
   ret void
 }

@@ -196,12 +196,12 @@ int64x2_t test_vldrdq_gather_base_s64(uint64x2_t addr)
 
 // CHECK-LABEL: @test_vldrdq_gather_base_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.base.v2i64.v2i64(<2 x i64> [[ADDR:%.*]], i32 336)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.base.v2i64.v2i64(<2 x i64> [[ADDR:%.*]], i32 -336)
 // CHECK-NEXT:    ret <2 x i64> [[TMP0]]
 //
 uint64x2_t test_vldrdq_gather_base_u64(uint64x2_t addr)
 {
-    return vldrdq_gather_base_u64(addr, 0x150);
+    return vldrdq_gather_base_u64(addr, -0x150);
 }
 
 // CHECK-LABEL: @test_vldrdq_gather_base_wb_s64(
@@ -221,7 +221,7 @@ int64x2_t test_vldrdq_gather_base_wb_s64(uint64x2_t *addr)
 // CHECK-LABEL: @test_vldrdq_gather_base_wb_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* [[ADDR:%.*]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.v2i64.v2i64(<2 x i64> [[TMP0]], i32 328)
+// CHECK-NEXT:    [[TMP1:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.v2i64.v2i64(<2 x i64> [[TMP0]], i32 -328)
 // CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP1]], 1
 // CHECK-NEXT:    store <2 x i64> [[TMP2]], <2 x i64>* [[ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP1]], 0
@@ -229,7 +229,7 @@ int64x2_t test_vldrdq_gather_base_wb_s64(uint64x2_t *addr)
 //
 uint64x2_t test_vldrdq_gather_base_wb_u64(uint64x2_t *addr)
 {
-    return vldrdq_gather_base_wb_u64(addr, 0x148);
+    return vldrdq_gather_base_wb_u64(addr, -0x148);
 }
 
 // CHECK-LABEL: @test_vldrdq_gather_base_wb_z_s64(
@@ -280,12 +280,12 @@ int64x2_t test_vldrdq_gather_base_z_s64(uint64x2_t addr, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1(<2 x i64> [[ADDR:%.*]], i32 1000, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1(<2 x i64> [[ADDR:%.*]], i32 -1000, <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 //
 uint64x2_t test_vldrdq_gather_base_z_u64(uint64x2_t addr, mve_pred16_t p)
 {
-    return vldrdq_gather_base_z_u64(addr, 0x3e8, p);
+    return vldrdq_gather_base_z_u64(addr, -0x3e8, p);
 }
 
 // CHECK-LABEL: @test_vldrdq_gather_offset_s64(
@@ -741,7 +741,7 @@ uint32x4_t test_vldrwq_gather_base_u32(uint32x4_t addr)
 // CHECK-LABEL: @test_vldrwq_gather_base_wb_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* [[ADDR:%.*]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4f32.v4i32(<4 x i32> [[TMP0]], i32 64)
+// CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4f32.v4i32(<4 x i32> [[TMP0]], i32 -64)
 // CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x float>, <4 x i32> } [[TMP1]], 1
 // CHECK-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* [[ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x float>, <4 x i32> } [[TMP1]], 0
@@ -749,7 +749,7 @@ uint32x4_t test_vldrwq_gather_base_u32(uint32x4_t addr)
 //
 float32x4_t test_vldrwq_gather_base_wb_f32(uint32x4_t *addr)
 {
-    return vldrwq_gather_base_wb_f32(addr, 0x40);
+    return vldrwq_gather_base_wb_f32(addr, -0x40);
 }
 
 // CHECK-LABEL: @test_vldrwq_gather_base_wb_s32(
@@ -785,7 +785,7 @@ uint32x4_t test_vldrwq_gather_base_wb_u32(uint32x4_t *addr)
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* [[ADDR:%.*]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v4f32.v4i32.v4i1(<4 x i32> [[TMP0]], i32 352, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v4f32.v4i32.v4i1(<4 x i32> [[TMP0]], i32 -352, <4 x i1> [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x float>, <4 x i32> } [[TMP3]], 1
 // CHECK-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x float>, <4 x i32> } [[TMP3]], 0
@@ -793,7 +793,7 @@ uint32x4_t test_vldrwq_gather_base_wb_u32(uint32x4_t *addr)
 //
 float32x4_t test_vldrwq_gather_base_wb_z_f32(uint32x4_t *addr, mve_pred16_t p)
 {
-    return vldrwq_gather_base_wb_z_f32(addr, 0x160, p);
+    return vldrwq_gather_base_wb_z_f32(addr, -0x160, p);
 }
 
 // CHECK-LABEL: @test_vldrwq_gather_base_wb_z_s32(
@@ -856,12 +856,12 @@ int32x4_t test_vldrwq_gather_base_z_s32(uint32x4_t addr, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vldr.gather.base.predicated.v4i32.v4i32.v4i1(<4 x i32> [[ADDR:%.*]], i32 300, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vldr.gather.base.predicated.v4i32.v4i32.v4i1(<4 x i32> [[ADDR:%.*]], i32 -300, <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 uint32x4_t test_vldrwq_gather_base_z_u32(uint32x4_t addr, mve_pred16_t p)
 {
-    return vldrwq_gather_base_z_u32(addr, 0x12c, p);
+    return vldrwq_gather_base_z_u32(addr, -0x12c, p);
 }
 
 // CHECK-LABEL: @test_vldrwq_gather_offset_f32(
@@ -1272,15 +1272,15 @@ void test_vstrdq_scatter_base_s64(uint64x2_t addr, int64x2_t value)
 
 // CHECK-LABEL: @test_vstrdq_scatter_base_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.v2i64.v2i64(<2 x i64> [[ADDR:%.*]], i32 472, <2 x i64> [[VALUE:%.*]])
+// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.v2i64.v2i64(<2 x i64> [[ADDR:%.*]], i32 -472, <2 x i64> [[VALUE:%.*]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrdq_scatter_base_u64(uint64x2_t addr, uint64x2_t value)
 {
 #ifdef POLYMORPHIC
-    vstrdq_scatter_base(addr, 0x1d8, value);
+    vstrdq_scatter_base(addr, -0x1d8, value);
 #else /* POLYMORPHIC */
-    vstrdq_scatter_base_u64(addr, 0x1d8, value);
+    vstrdq_scatter_base_u64(addr, -0x1d8, value);
 #endif /* POLYMORPHIC */
 }
 
@@ -1339,16 +1339,16 @@ void test_vstrdq_scatter_base_wb_s64(uint64x2_t *addr, int64x2_t value)
 // CHECK-LABEL: @test_vstrdq_scatter_base_wb_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* [[ADDR:%.*]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.v2i64.v2i64(<2 x i64> [[TMP0]], i32 168, <2 x i64> [[VALUE:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.v2i64.v2i64(<2 x i64> [[TMP0]], i32 -168, <2 x i64> [[VALUE:%.*]])
 // CHECK-NEXT:    store <2 x i64> [[TMP1]], <2 x i64>* [[ADDR]], align 8
 // CHECK-NEXT:    ret void
 //
 void test_vstrdq_scatter_base_wb_u64(uint64x2_t *addr, uint64x2_t value)
 {
 #ifdef POLYMORPHIC
-    vstrdq_scatter_base_wb(addr, 0xa8, value);
+    vstrdq_scatter_base_wb(addr, -0xa8, value);
 #else /* POLYMORPHIC */
-    vstrdq_scatter_base_wb_u64(addr, 0xa8, value);
+    vstrdq_scatter_base_wb_u64(addr, -0xa8, value);
 #endif /* POLYMORPHIC */
 }
 
@@ -1790,15 +1790,15 @@ void test_vstrwq_scatter_base_f32(uint32x4_t addr, float32x4_t value)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.predicated.v4i32.v4f32.v4i1(<4 x i32> [[ADDR:%.*]], i32 400, <4 x float> [[VALUE:%.*]], <4 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.predicated.v4i32.v4f32.v4i1(<4 x i32> [[ADDR:%.*]], i32 -400, <4 x float> [[VALUE:%.*]], <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrwq_scatter_base_p_f32(uint32x4_t addr, float32x4_t value, mve_pred16_t p)
 {
 #ifdef POLYMORPHIC
-    vstrwq_scatter_base_p(addr, 0x190, value, p);
+    vstrwq_scatter_base_p(addr, -0x190, value, p);
 #else /* POLYMORPHIC */
-    vstrwq_scatter_base_p_f32(addr, 0x190, value, p);
+    vstrwq_scatter_base_p_f32(addr, -0x190, value, p);
 #endif /* POLYMORPHIC */
 }
 
@@ -1822,15 +1822,15 @@ void test_vstrwq_scatter_base_p_s32(uint32x4_t addr, int32x4_t value, mve_pred16
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.predicated.v4i32.v4i32.v4i1(<4 x i32> [[ADDR:%.*]], i32 376, <4 x i32> [[VALUE:%.*]], <4 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.predicated.v4i32.v4i32.v4i1(<4 x i32> [[ADDR:%.*]], i32 -376, <4 x i32> [[VALUE:%.*]], <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrwq_scatter_base_p_u32(uint32x4_t addr, uint32x4_t value, mve_pred16_t p)
 {
 #ifdef POLYMORPHIC
-    vstrwq_scatter_base_p(addr, 0x178, value, p);
+    vstrwq_scatter_base_p(addr, -0x178, value, p);
 #else /* POLYMORPHIC */
-    vstrwq_scatter_base_p_u32(addr, 0x178, value, p);
+    vstrwq_scatter_base_p_u32(addr, -0x178, value, p);
 #endif /* POLYMORPHIC */
 }
 
@@ -1865,16 +1865,16 @@ void test_vstrwq_scatter_base_u32(uint32x4_t addr, uint32x4_t value)
 // CHECK-LABEL: @test_vstrwq_scatter_base_wb_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* [[ADDR:%.*]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.arm.mve.vstr.scatter.base.wb.v4i32.v4f32(<4 x i32> [[TMP0]], i32 412, <4 x float> [[VALUE:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.arm.mve.vstr.scatter.base.wb.v4i32.v4f32(<4 x i32> [[TMP0]], i32 -412, <4 x float> [[VALUE:%.*]])
 // CHECK-NEXT:    store <4 x i32> [[TMP1]], <4 x i32>* [[ADDR]], align 8
 // CHECK-NEXT:    ret void
 //
 void test_vstrwq_scatter_base_wb_f32(uint32x4_t *addr, float32x4_t value)
 {
 #ifdef POLYMORPHIC
-    vstrwq_scatter_base_wb(addr, 0x19c, value);
+    vstrwq_scatter_base_wb(addr, -0x19c, value);
 #else /* POLYMORPHIC */
-    vstrwq_scatter_base_wb_f32(addr, 0x19c, value);
+    vstrwq_scatter_base_wb_f32(addr, -0x19c, value);
 #endif /* POLYMORPHIC */
 }
 
@@ -1935,16 +1935,16 @@ void test_vstrwq_scatter_base_wb_p_u32(uint32x4_t *addr, uint32x4_t value, mve_p
 // CHECK-LABEL: @test_vstrwq_scatter_base_wb_s32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* [[ADDR:%.*]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.arm.mve.vstr.scatter.base.wb.v4i32.v4i32(<4 x i32> [[TMP0]], i32 152, <4 x i32> [[VALUE:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.arm.mve.vstr.scatter.base.wb.v4i32.v4i32(<4 x i32> [[TMP0]], i32 -152, <4 x i32> [[VALUE:%.*]])
 // CHECK-NEXT:    store <4 x i32> [[TMP1]], <4 x i32>* [[ADDR]], align 8
 // CHECK-NEXT:    ret void
 //
 void test_vstrwq_scatter_base_wb_s32(uint32x4_t *addr, int32x4_t value)
 {
 #ifdef POLYMORPHIC
-    vstrwq_scatter_base_wb(addr, 0x98, value);
+    vstrwq_scatter_base_wb(addr, -0x98, value);
 #else /* POLYMORPHIC */
-    vstrwq_scatter_base_wb_s32(addr, 0x98, value);
+    vstrwq_scatter_base_wb_s32(addr, -0x98, value);
 #endif /* POLYMORPHIC */
 }
 
