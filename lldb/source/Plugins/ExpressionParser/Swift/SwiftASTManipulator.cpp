@@ -1078,8 +1078,13 @@ bool SwiftASTManipulator::AddExternalVariables(
 
     redirected_var_decl->setImplicit(true);
 
-    m_source_file.addTopLevelDecl(top_level_code);
-    m_source_file.addTopLevelDecl(redirected_var_decl);
+    // FIXME: This should use SourceFile::addTopLevelDecl, but if these decls
+    // are not inserted at the beginning of the source file then
+    // SwiftREPL/FoundationTypes.test fails.
+    //
+    // See rdar://58355191
+    m_source_file.prependTopLevelDecl(top_level_code);
+    m_source_file.prependTopLevelDecl(redirected_var_decl);
 
     variable.m_decl = redirected_var_decl;
 
