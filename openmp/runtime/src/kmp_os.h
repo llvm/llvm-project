@@ -313,7 +313,7 @@ extern "C" {
 #  define KMP_FALLTHROUGH() [[fallthrough]]
 #elif __has_cpp_attribute(clang::fallthrough)
 #  define KMP_FALLTHROUGH() [[clang::fallthrough]]
-#elif __has_attribute(fallthough) || __GNUC__ >= 7
+#elif __has_attribute(fallthrough) || __GNUC__ >= 7
 #  define KMP_FALLTHROUGH() __attribute__((__fallthrough__))
 #else
 #  define KMP_FALLTHROUGH() ((void)0)
