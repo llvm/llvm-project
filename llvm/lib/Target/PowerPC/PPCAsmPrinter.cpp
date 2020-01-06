@@ -1776,7 +1776,7 @@ const MCExpr *PPCAIXAsmPrinter::lowerConstant(const Constant *CV) {
       MCSectionXCOFF *Csect = OutStreamer->getContext().getXCOFFSection(
           FSym->getName(), XCOFF::XMC_DS,
           F->isDeclaration() ? XCOFF::XTY_ER : XCOFF::XTY_SD, SC,
-          SectionKind::getMetadata());
+          SectionKind::getData());
       FSym->setContainingCsect(Csect);
     }
     return MCSymbolRefExpr::create(
