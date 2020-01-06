@@ -106,9 +106,6 @@ public:
   /// this is false, but specific fragment types may set it to true.
   bool hasInstructions() const { return HasInstructions; }
 
-  /// Return true if given frgment has FT_Dummy type.
-  bool isDummy() const { return Kind == FT_Dummy; }
-
   void dump() const;
 };
 
