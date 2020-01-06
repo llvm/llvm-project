@@ -341,7 +341,7 @@ Build LLDB standalone for development with Xcode:
    <https://cmake.org/cmake/help/v3.14/release/3.14.html#command-line>`_
 
 
-Building The Documentation
+Building the Documentation
 --------------------------
 
 If you wish to build the optional (reference) documentation, additional
