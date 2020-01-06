@@ -345,9 +345,10 @@ def imm_1248 : Immediate<u32, IB_ConstRange<1, 8>> {
 
 // imm_mem7bit<n> is a valid immediate offset for a load/store intrinsic whose
 // memory access size is n bytes (e.g. 1 for vldrb_[whatever], 2 for vldrh,
-// ...). The set of valid immediates for these is {0*n, 1*n, ..., 127*n}.
+// ...). The set of valid immediates for these is {-127*n, ..., -1*n, 0*n, 1*n,
+// ..., 127*n}.
 class imm_mem7bit<int membytes>
-  : Immediate<sint, IB_ConstRange<0, !mul(membytes, 127)>> {
+  : Immediate<sint, IB_ConstRange<!mul(membytes, -127), !mul(membytes, 127)>> {
   let extra = !if(!eq(membytes, 1), ?, "Multiple");
   let extraarg = !cast<string>(membytes);
 }

@@ -861,6 +861,13 @@ public:
   }
   bool hasCode() const { return Code != nullptr; }
 
+  static std::string signedHexLiteral(const llvm::APInt &iOrig) {
+    llvm::APInt i = iOrig.trunc(64);
+    SmallString<40> s;
+    i.toString(s, 16, true, true);
+    return s.str();
+  }
+
   std::string genSema() const {
     std::vector<std::string> SemaChecks;
 
@@ -895,8 +902,8 @@ public:
         SemaChecks.push_back("SemaBuiltinConstantArg(TheCall, " + Index + ")");
       else
         SemaChecks.push_back("SemaBuiltinConstantArgRange(TheCall, " + Index +
-                             ", 0x" + lo.toString(16, true) + ", 0x" +
-                             hi.toString(16, true) + ")");
+                             ", " + signedHexLiteral(lo) + ", " +
+                             signedHexLiteral(hi) + ")");
 
       if (!IA.ExtraCheckType.empty()) {
         std::string Suffix;
