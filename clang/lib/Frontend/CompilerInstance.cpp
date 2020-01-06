@@ -55,6 +55,10 @@
 
 using namespace clang;
 
+#define DEBUG_TYPE "modules"
+
+ALWAYS_ENABLED_STATISTIC(NumCompiledModules, "Number of compiled modules.");
+
 CompilerInstance::CompilerInstance(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     InMemoryModuleCache *SharedModuleCache)
@@ -1063,6 +1067,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                   llvm::function_ref<void(CompilerInstance &)> PostBuildStep =
                       [](CompilerInstance &) {}) {
   llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
+  ++NumCompiledModules;
 
   // Construct a compiler invocation for creating this module.
   auto Invocation =

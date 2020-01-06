@@ -12,6 +12,7 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
@@ -33,6 +34,12 @@
 #include <io.h>
 #endif
 using namespace llvm;
+
+#define DEBUG_TYPE "memory-buffer"
+
+ALWAYS_ENABLED_STATISTIC(NumMmapFile, "Number of mmap-ed files.");
+ALWAYS_ENABLED_STATISTIC(NumAllocFile,
+                         "Number of files read into allocated memory buffer.");
 
 //===----------------------------------------------------------------------===//
 // MemoryBuffer implementation itself.
@@ -449,8 +456,10 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
       // buffer by copying off the stream.
       sys::fs::file_type Type = Status.type();
       if (Type != sys::fs::file_type::regular_file &&
-          Type != sys::fs::file_type::block_file)
+          Type != sys::fs::file_type::block_file) {
+        ++NumAllocFile;
         return getMemoryBufferForStream(FD, Filename);
+      }
 
       FileSize = Status.getSize();
     }
@@ -463,8 +472,10 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     std::unique_ptr<MB> Result(
         new (NamedBufferAlloc(Filename)) MemoryBufferMMapFile<MB>(
             RequiresNullTerminator, FD, MapSize, Offset, EC));
-    if (!EC)
+    if (!EC) {
+      ++NumMmapFile;
       return std::move(Result);
+    }
   }
 
   auto Buf = WritableMemoryBuffer::getNewUninitMemBuffer(MapSize, Filename);
@@ -475,6 +486,7 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
   }
 
   // Read until EOF, zero-initialize the rest.
+  ++NumAllocFile;
   MutableArrayRef<char> ToRead = Buf->getBuffer();
   while (!ToRead.empty()) {
     Expected<size_t> ReadBytes =
