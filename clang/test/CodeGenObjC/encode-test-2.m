@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -triple=i686-apple-darwin9 -emit-llvm -o %t %s
-// RUN: grep -e "@\\\22<X>\\\22" %t
-// RUN: grep -e "@\\\22<X><Y>\\\22" %t
-// RUN: grep -e "@\\\22<X><Y><Z>\\\22" %t
-// RUN: grep -e "@\\\22Foo<X><Y><Z>\\\22" %t
-// RUN: grep -e "{Intf=@@@@#}" %t  
+// RUN: %clang_cc1 -triple=i686-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
+
+// CHECK: private unnamed_addr constant [7 x i8] c"@\22<X>\22\00",
+// CHECK: private unnamed_addr constant [10 x i8] c"@\22<X><Y>\22\00",
+// CHECK: private unnamed_addr constant [13 x i8] c"@\22<X><Y><Z>\22\00",
+// CHECK: private unnamed_addr constant [16 x i8] c"@\22Foo<X><Y><Z>\22\00",
+// CHECK: private unnamed_addr constant [13 x i8] c"{Intf=@@@@#}\00",
 
 @protocol X, Y, Z;
 @class Foo;
