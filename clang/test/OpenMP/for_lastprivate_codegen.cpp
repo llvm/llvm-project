@@ -176,7 +176,7 @@ char cnt;
 // CHECK-DAG: [[X:@.+]] = global double 0.0
 // CHECK-DAG: [[F:@.+]] = global float 0.0
 // CHECK-DAG: [[CNT:@.+]] = global i8 0
-// OMP50-DAG: [[IV_REF:@.+]] = {{.*}}common global i32* null
+// OMP50-DAG: [[IV_REF:@.+]] = {{.*}}common global i32 0
 // OMP50-DAG: [[LAST_IV_F:@.+]] = {{.*}}common global i32 0
 // OMP50-DAG: [[LAST_F:@.+]] = {{.*}}common global float 0.000000e+00,
 
@@ -663,9 +663,6 @@ int main() {
 
 // CHECK: [[GTID_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[GTID_ADDR_REF]]
 // CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]
-// OMP50: [[LOCAL_IV_REF:%.+]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* bitcast (i32** [[IV_REF]] to i8*), i64 8, i8*** @{{.+}})
-// OMP50: [[BC:%.+]] = bitcast i8* [[LOCAL_IV_REF]] to i32**
-// OMP50: store i32* %{{.+}}, i32** [[BC]],
 // CHECK: [[CNT_PRIV:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 1, i8* inttoptr (i64 3 to i8*))
 // CHECK: call {{.+}} @__kmpc_for_static_init_4(%{{.+}}* @{{.+}}, i32 [[GTID]], i32 34, i32* [[IS_LAST_ADDR:%.+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
 // UB = min(UB, GlobalUB)
@@ -677,11 +674,13 @@ int main() {
 // CHECK-NEXT: [[LB:%.+]] = load i32, i32* [[OMP_LB]]
 // CHECK-NEXT: store i32 [[LB]], i32* [[OMP_IV:[^,]+]]
 // <Skip loop body>
+// OMP50: [[LOCAL_IV_REF:%.+]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* bitcast (i32* [[IV_REF]] to i8*), i64 4, i8*** @{{.+}})
+// OMP50: [[BC:%.+]] = bitcast i8* [[LOCAL_IV_REF]] to i32*
+// OMP50: store i32 %{{.+}}, i32* [[BC]],
 // CHECK: store float 0.000000e+00, float* [[F_PRIV:%.+]],
-// OMP50: [[LOCAL_IV_REF:%.+]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* bitcast (i32** [[IV_REF]] to i8*), i64 8, i8*** @{{.+}})
-// OMP50: [[BC:%.+]] = bitcast i8* [[LOCAL_IV_REF]] to i32**
-// OMP50: [[IV_ADDR:%.+]] = load i32*, i32** [[BC]],
-// OMP50: [[IV:%.+]] = load i32, i32* [[IV_ADDR]],
+// OMP50: [[LOCAL_IV_REF:%.+]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* bitcast (i32* [[IV_REF]] to i8*), i64 4, i8*** @{{.+}})
+// OMP50: [[BC:%.+]] = bitcast i8* [[LOCAL_IV_REF]] to i32*
+// OMP50: [[IV:%.+]] = load i32, i32* [[BC]],
 // OMP50: call void @__kmpc_critical(%struct.ident_t* @{{.+}}, i32 [[GTID]], [8 x i32]* [[F_REGION:@.+]])
 // OMP50: [[LAST_IV:%.+]] = load i32, i32* [[LAST_IV_F]],
 // OMP50: [[CMP:%.+]] = icmp sle i32 [[LAST_IV]], [[IV]]
