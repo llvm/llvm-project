@@ -1,9 +1,0 @@
-add_entrypoint_object(
-  strcpy
-  SRCS
-    strcpy.cpp
-  HDRS
-    strcpy.h
-  DEPENDS
-    string_h
-)

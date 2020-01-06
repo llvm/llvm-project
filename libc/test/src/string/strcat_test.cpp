@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include "src/string/strcat/strcat.h"
+#include "src/string/strcat.h"
 #include "gtest/gtest.h"
 
 TEST(StrCatTest, EmptyDest) {

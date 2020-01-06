@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include "src/string/strcpy/strcpy.h"
+#include "src/string/strcpy.h"
 #include "gtest/gtest.h"
 
 TEST(StrCpyTest, EmptyDest) {

@@ -1,2 +1,20 @@
-add_subdirectory(strcpy)
-add_subdirectory(strcat)
+add_entrypoint_object(
+  strcat
+  SRCS
+    strcat.cpp
+  HDRS
+    strcat.h
+  DEPENDS
+    strcpy
+    string_h
+)
+
+add_entrypoint_object(
+  strcpy
+  SRCS
+    strcpy.cpp
+  HDRS
+    strcpy.h
+  DEPENDS
+    string_h
+)
