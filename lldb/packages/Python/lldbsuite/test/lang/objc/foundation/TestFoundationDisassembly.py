@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 @skipUnlessDarwin
+@skipIfAsan
 class FoundationDisassembleTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
