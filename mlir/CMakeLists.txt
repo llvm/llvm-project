@@ -89,6 +89,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     DESTINATION include
     COMPONENT mlir-headers
     FILES_MATCHING
+    PATTERN "*.def"
     PATTERN "*.h"
     PATTERN "*.inc"
     PATTERN "*.td"
