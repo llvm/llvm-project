@@ -3039,6 +3039,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_StrictFP(SDNode *N) {
   switch (N->getOpcode()) {
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+    return WidenVecRes_STRICT_FSETCC(N);
   case ISD::STRICT_FP_EXTEND:
   case ISD::STRICT_FP_ROUND:
   case ISD::STRICT_FP_TO_SINT:
@@ -4116,6 +4119,47 @@ SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
                      WidenVT, InOp1, InOp2, N->getOperand(2));
 }
 
+SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
+  assert(N->getValueType(0).isVector() &&
+         N->getOperand(1).getValueType().isVector() &&
+         "Operands must be vectors");
+  EVT VT = N->getValueType(0);
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  unsigned WidenNumElts = WidenVT.getVectorNumElements();
+  unsigned NumElts = VT.getVectorNumElements();
+  EVT EltVT = VT.getVectorElementType();
+
+  SDLoc dl(N);
+  SDValue Chain = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  SDValue CC = N->getOperand(3);
+  EVT TmpEltVT = LHS.getValueType().getVectorElementType();
+
+  // Fully unroll and reassemble.
+  SmallVector<SDValue, 8> Scalars(WidenNumElts, DAG.getUNDEF(EltVT));
+  SmallVector<SDValue, 8> Chains(NumElts);
+  for (unsigned i = 0; i != NumElts; ++i) {
+    SDValue LHSElem = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, dl, TmpEltVT, LHS,
+        DAG.getConstant(i, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+    SDValue RHSElem = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, dl, TmpEltVT, RHS,
+        DAG.getConstant(i, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+
+    Scalars[i] = DAG.getNode(N->getOpcode(), dl, {MVT::i1, MVT::Other},
+                             {Chain, LHSElem, RHSElem, CC});
+    Chains[i] = Scalars[i].getValue(1);
+    Scalars[i] = DAG.getSelect(dl, EltVT, Scalars[i],
+                               DAG.getBoolConstant(true, dl, EltVT, VT),
+                               DAG.getBoolConstant(false, dl, EltVT, VT));
+  }
+
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
+  ReplaceValueWith(SDValue(N, 1), NewChain);
+
+  return DAG.getBuildVector(WidenVT, dl, Scalars);
+}
 
 //===----------------------------------------------------------------------===//
 // Widen Vector Operand
@@ -4147,6 +4191,8 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::MGATHER:            Res = WidenVecOp_MGATHER(N, OpNo); break;
   case ISD::MSCATTER:           Res = WidenVecOp_MSCATTER(N, OpNo); break;
   case ISD::SETCC:              Res = WidenVecOp_SETCC(N); break;
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:     Res = WidenVecOp_STRICT_FSETCC(N); break;
   case ISD::VSELECT:            Res = WidenVecOp_VSELECT(N); break;
   case ISD::FCOPYSIGN:          Res = WidenVecOp_FCOPYSIGN(N); break;
 
@@ -4588,6 +4634,44 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
   ISD::NodeType ExtendCode =
       TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
   return DAG.getNode(ExtendCode, dl, VT, CC);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_STRICT_FSETCC(SDNode *N) {
+  SDValue Chain = N->getOperand(0);
+  SDValue LHS = GetWidenedVector(N->getOperand(1));
+  SDValue RHS = GetWidenedVector(N->getOperand(2));
+  SDValue CC = N->getOperand(3);
+  SDLoc dl(N);
+
+  EVT VT = N->getValueType(0);
+  EVT EltVT = VT.getVectorElementType();
+  EVT TmpEltVT = LHS.getValueType().getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  // Unroll into a build vector.
+  SmallVector<SDValue, 8> Scalars(NumElts);
+  SmallVector<SDValue, 8> Chains(NumElts);
+
+  for (unsigned i = 0; i != NumElts; ++i) {
+    SDValue LHSElem = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, dl, TmpEltVT, LHS,
+        DAG.getConstant(i, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+    SDValue RHSElem = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, dl, TmpEltVT, RHS,
+        DAG.getConstant(i, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+
+    Scalars[i] = DAG.getNode(N->getOpcode(), dl, {MVT::i1, MVT::Other},
+                             {Chain, LHSElem, RHSElem, CC});
+    Chains[i] = Scalars[i].getValue(1);
+    Scalars[i] = DAG.getSelect(dl, EltVT, Scalars[i],
+                               DAG.getBoolConstant(true, dl, EltVT, VT),
+                               DAG.getBoolConstant(false, dl, EltVT, VT));
+  }
+
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
+  ReplaceValueWith(SDValue(N, 1), NewChain);
+
+  return DAG.getBuildVector(VT, dl, Scalars);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
