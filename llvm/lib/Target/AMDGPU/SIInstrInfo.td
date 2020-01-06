@@ -775,8 +775,8 @@ def NegSubInlineConst16 : ImmLeaf<i16, [{
   return Imm < -16 && Imm >= -64;
 }], NegateImm>;
 
-def ShiftAmt32Imm : PatLeaf <(imm), [{
-  return N->getZExtValue() < 32;
+def ShiftAmt32Imm : ImmLeaf <i32, [{
+  return Imm < 32;
 }]>;
 
 def getNegV2I16Imm : SDNodeXForm<build_vector, [{
