@@ -20,18 +20,22 @@ extern "C" void LLVMInitializeToyTarget() {
 }
 
 static std::string computeDataLayout() {
+  // TODO: Appropriately fill-up this stub function later
   return "";
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+  // TODO: Appropriately fill-up this stub function later
   return *RM;
 }
 
 static CodeModel::Model getEffectiveToyCodeModel() {
+  // TODO: Appropriately fill-up this stub function later
   return CodeModel::Small;
 }
 
 ToyTargetMachine::ToyTargetMachine(
+    // TODO: Appropriately fill-up this stub constructor later
     const Target &T, const Triple &TT, StringRef &CPU, StringRef &FS,
     const TargetOptions &Options, Optional<Reloc::Model> &RM,
     Optional<CodeModel::Model> &CM, CodeGenOpt::Level &OL, bool &JIT)

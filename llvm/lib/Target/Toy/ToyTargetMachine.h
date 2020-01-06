@@ -17,6 +17,7 @@
 
 namespace llvm {
 
+// TODO: Appropriately define this stub class later
 class ToyTargetMachine : public LLVMTargetMachine {
 
 public:
@@ -24,6 +25,7 @@ public:
                    StringRef &FS, const TargetOptions &Options,
                    Optional<Reloc::Model> &RM, Optional<CodeModel::Model> &CM,
                    CodeGenOpt::Level &OL, bool &JIT);
+
   ~ToyTargetMachine() override;
 };
 
