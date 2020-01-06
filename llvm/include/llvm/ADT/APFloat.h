@@ -38,6 +38,7 @@ class StringRef;
 class APFloat;
 class raw_ostream;
 
+template <typename T> class Expected;
 template <typename T> class SmallVectorImpl;
 
 /// Enum that represents what fraction of the LSB truncated bits of an fp number
@@ -299,7 +300,7 @@ public:
                                           bool, roundingMode);
   opStatus convertFromZeroExtendedInteger(const integerPart *, unsigned int,
                                           bool, roundingMode);
-  opStatus convertFromString(StringRef, roundingMode);
+  Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const;
   double convertToDouble() const;
   float convertToFloat() const;
@@ -525,8 +526,8 @@ private:
                                         bool *) const;
   opStatus convertFromUnsignedParts(const integerPart *, unsigned int,
                                     roundingMode);
-  opStatus convertFromHexadecimalString(StringRef, roundingMode);
-  opStatus convertFromDecimalString(StringRef, roundingMode);
+  Expected<opStatus> convertFromHexadecimalString(StringRef, roundingMode);
+  Expected<opStatus> convertFromDecimalString(StringRef, roundingMode);
   char *convertNormalToHexString(char *, unsigned int, bool,
                                  roundingMode) const;
   opStatus roundSignificandWithExponent(const integerPart *, unsigned int, int,
@@ -648,7 +649,7 @@ public:
   cmpResult compare(const DoubleAPFloat &RHS) const;
   bool bitwiseIsEqual(const DoubleAPFloat &RHS) const;
   APInt bitcastToAPInt() const;
-  opStatus convertFromString(StringRef, roundingMode);
+  Expected<opStatus> convertFromString(StringRef, roundingMode);
   opStatus next(bool nextDown);
 
   opStatus convertToInteger(MutableArrayRef<integerPart> Input,
@@ -1108,7 +1109,7 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(
         convertFromZeroExtendedInteger(Input, InputSize, IsSigned, RM));
   }
-  opStatus convertFromString(StringRef, roundingMode);
+  Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
   }
