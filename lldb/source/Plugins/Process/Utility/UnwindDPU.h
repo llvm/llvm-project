@@ -61,7 +61,7 @@ private:
   std::vector<CursorSP> m_frames;
 
   bool SetFrame(CursorSP *prev_frame, lldb::addr_t cfa, lldb::addr_t pc,
-                Function **fct);
+                Address &fct_base_addr);
 };
 } // namespace lldb_private
 #endif /* dpu_UnwindDPU_h_ */

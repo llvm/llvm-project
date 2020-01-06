@@ -55,11 +55,11 @@ public:
   bool WriteRegisterToSavedLocation(const RegisterInfo *reg_info,
                                     const RegisterValue &value);
 
-  void GetFunction(Function **fct, lldb::addr_t pc);
+  bool GetFunctionBaseAddress(Address &addr, lldb::addr_t pc);
 
   bool PCIsInstructionReturn(lldb::addr_t pc);
 
-  bool GetUnwindPlanSP(Function *fct, lldb::UnwindPlanSP &unwind_plan_sp);
+  bool GetUnwindPlanSP(Address &pc_addr, lldb::UnwindPlanSP &unwind_plan_sp);
 
 private:
   bool LookForRegisterLocation(const RegisterInfo *reg_info, lldb::addr_t &addr);

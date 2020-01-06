@@ -31,10 +31,10 @@ void UnwindDPU::DoClear() { m_frames.clear(); }
 
 #define FORMAT_PC(pc) (0x80000000 | ((pc)*8))
 
-#define NB_FRAME_MAX (256)
 bool UnwindDPU::SetFrame(CursorSP *prev_frame, lldb::addr_t cfa,
-                         lldb::addr_t pc, Function **fct) {
-  if (m_frames.size() > NB_FRAME_MAX)
+                         lldb::addr_t pc, Address &fct_base_addr) {
+  constexpr std::size_t nb_frame_max = 256;
+  if (m_frames.size() > nb_frame_max)
     return false;
 
   CursorSP new_frame(new Cursor());
@@ -49,10 +49,8 @@ bool UnwindDPU::SetFrame(CursorSP *prev_frame, lldb::addr_t cfa,
   *prev_frame = new_frame;
 
   // If the current function is __bootstrap, we can stop the unwinding
-  (*prev_frame)->reg_ctx_sp->GetFunction(fct, pc);
-  if (*fct != NULL &&
-      (*fct)->GetAddressRange().GetBaseAddress().GetFileAddress() ==
-          FORMAT_PC(0)) {
+  if ((*prev_frame)->reg_ctx_sp->GetFunctionBaseAddress(fct_base_addr, pc) &&
+      fct_base_addr.GetFileAddress() == FORMAT_PC(0)) {
     return false;
   }
 
@@ -73,21 +71,20 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   lldb::addr_t first_pc_addr = reg_pc.GetAsUInt32();
   lldb::addr_t first_r22_value = reg_r22.GetAsUInt32();
 
-  Function *fct = NULL;
-  if (!SetFrame(&prev_frame, first_r22_value, first_pc_addr, &fct))
+  Address fct_base_addr;
+  if (!SetFrame(&prev_frame, first_r22_value, first_pc_addr, fct_base_addr))
     return m_frames.size();
 
-  lldb::addr_t start_addr = 0;
+  lldb::addr_t start_addr = fct_base_addr.GetFileAddress();
   int32_t cfa_offset = 1;
-  if (fct != NULL) {
-    start_addr = fct->GetAddressRange().GetBaseAddress().GetFileAddress();
-
+  if (start_addr != LLDB_INVALID_ADDRESS) {
     // Check if we have the stack size save in the cfi information.
     // If we have it, use it to set the cfa in order to have it set to the right
     // value from the beginning so that comparison between frame always give the
     // expected answer.
     UnwindPlanSP unwind_plan_sp(new UnwindPlan(lldb::eRegisterKindGeneric));
-    if (prev_frame->reg_ctx_sp->GetUnwindPlanSP(fct, unwind_plan_sp)) {
+    if (prev_frame->reg_ctx_sp->GetUnwindPlanSP(fct_base_addr,
+                                                unwind_plan_sp)) {
       if (unwind_plan_sp->IsValidRowIndex(0)) {
         UnwindPlan::RowSP row = unwind_plan_sp->GetRowAtIndex(0);
         UnwindPlan::Row::FAValue &CFAValue = row->GetCFAValue();
@@ -102,14 +99,15 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   // Also, if the cfa_offset is null, it means that we are a leaf, function,
   // apply same method to compute the frame (but add 1 to the cfa in order to
   // differenciate it from the previous frame (StackID comparison).
-  if (((first_pc_addr >= start_addr) && (first_pc_addr < (start_addr + 16))) ||
-      prev_frame->reg_ctx_sp->PCIsInstructionReturn(first_pc_addr) ||
-      cfa_offset == 0) {
+  if ((start_addr != LLDB_INVALID_ADDRESS) &&
+      (((first_pc_addr >= start_addr) && (first_pc_addr < (start_addr + 16))) ||
+       prev_frame->reg_ctx_sp->PCIsInstructionReturn(first_pc_addr) ||
+       cfa_offset == 0)) {
     RegisterValue reg_r23;
     reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r23"), reg_r23);
     prev_frame->cfa += (cfa_offset == 0 ? 1 : cfa_offset);
     if (!SetFrame(&prev_frame, first_r22_value,
-                  FORMAT_PC(reg_r23.GetAsUInt32()), &fct))
+                  FORMAT_PC(reg_r23.GetAsUInt32()), fct_base_addr))
       return m_frames.size();
   }
 
@@ -124,7 +122,7 @@ uint32_t UnwindDPU::DoGetFrameCount() {
         (m_thread.GetProcess()->ReadMemory(prev_frame->cfa - 8, &pc_addr,
                                            reg_size_in_bytes,
                                            error) != reg_size_in_bytes) ||
-        (!SetFrame(&prev_frame, cfa_addr, FORMAT_PC(pc_addr), &fct)))
+        (!SetFrame(&prev_frame, cfa_addr, FORMAT_PC(pc_addr), fct_base_addr)))
       return m_frames.size();
   }
 

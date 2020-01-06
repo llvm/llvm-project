@@ -120,9 +120,8 @@ bool RegisterContextDPU::PCInPrologue(lldb::addr_t start_addr,
   return m_pc >= start_addr && m_pc < end_addr;
 }
 
-bool RegisterContextDPU::GetUnwindPlanSP(Function *fct,
+bool RegisterContextDPU::GetUnwindPlanSP(Address &pc_addr,
                                          lldb::UnwindPlanSP &unwind_plan_sp) {
-  Address pc_addr = fct->GetAddressRange().GetBaseAddress();
   ModuleSP module_sp(pc_addr.GetModule());
   DWARFCallFrameInfo *debug_frame =
       module_sp->GetUnwindTable().GetDebugFrameInfo();
@@ -137,14 +136,13 @@ bool RegisterContextDPU::GetUnwindPlanSP(Function *fct,
 
 bool RegisterContextDPU::LookForRegisterLocation(const RegisterInfo *reg_info,
                                                  lldb::addr_t &addr) {
-  Function *fct = NULL;
-  GetFunction(&fct, m_pc);
-  if (fct == NULL) {
+  Address fct_base_addr;
+  if (!GetFunctionBaseAddress(fct_base_addr, m_pc)) {
     return false;
   }
 
   UnwindPlanSP unwind_plan_sp(new UnwindPlan(lldb::eRegisterKindGeneric));
-  if (GetUnwindPlanSP(fct, unwind_plan_sp)) {
+  if (GetUnwindPlanSP(fct_base_addr, unwind_plan_sp)) {
     uint32_t row_id = 0;
     addr = LLDB_INVALID_ADDRESS;
     while (unwind_plan_sp->IsValidRowIndex(row_id)) {
@@ -162,9 +160,7 @@ bool RegisterContextDPU::LookForRegisterLocation(const RegisterInfo *reg_info,
         }
       }
       if (addr != LLDB_INVALID_ADDRESS &&
-          !PCInPrologue(
-              fct->GetAddressRange().GetBaseAddress().GetFileAddress(),
-              nb_callee_saved_regs) &&
+          !PCInPrologue(fct_base_addr.GetFileAddress(), nb_callee_saved_regs) &&
           !PCIsInstructionReturn(m_pc))
         return true;
     }
@@ -202,18 +198,26 @@ bool RegisterContextDPU::WriteRegisterToSavedLocation(
   return m_prev_frame->WriteRegisterToSavedLocation(reg_info, value);
 }
 
-void RegisterContextDPU::GetFunction(Function **fct, lldb::addr_t pc) {
+bool RegisterContextDPU::GetFunctionBaseAddress(Address &addr,
+                                                lldb::addr_t pc) {
   Address resolved_addr;
   m_thread.GetProcess()->GetTarget().ResolveLoadAddress(pc, resolved_addr);
+  addr = Address();
 
   SymbolContext sc;
   ModuleSP module_sp(resolved_addr.GetModule());
   if (!module_sp) {
-    return;
+    return false;
   }
   module_sp->ResolveSymbolContextForAddress(resolved_addr,
                                             eSymbolContextFunction, sc);
-  *fct = sc.function;
+  Function *fct = sc.function;
+  if (fct == NULL) {
+    return false;
+  } else {
+    addr = sc.function->GetAddressRange().GetBaseAddress();
+    return true;
+  }
 }
 
 bool RegisterContextDPU::PCIsInstructionReturn(lldb::addr_t pc) {
