@@ -1208,6 +1208,8 @@ public:
     Err->log(OS);
   }
 
+  StringRef getFileName() { return FileName; }
+
   Error takeError() { return Error(std::move(Err)); }
 
   std::error_code convertToErrorCode() const override;
