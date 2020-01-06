@@ -18,9 +18,6 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 
-#define STR(x) STR_AGAIN(x)
-#define STR_AGAIN(x) #x
-
 #include "../../Driver/ToolChains/DPUCharacteristics.h"
 
 using namespace clang;
@@ -37,8 +34,8 @@ void DPUTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   DefineStd(Builder, "DPU", Opts);
   Builder.defineMacro("__ELF__");
-  Builder.defineMacro("NR_THREADS", STR(DPU_NR_THREADS));
-  Builder.defineMacro("NR_ATOMIC_BITS", STR(DPU_NR_ATOMIC_BITS));
+  Builder.defineMacro("NR_THREADS", Twine(DPU_NR_THREADS));
+  Builder.defineMacro("NR_ATOMIC_BITS", Twine(DPU_NR_ATOMIC_BITS));
 }
 
 ArrayRef<Builtin::Info> DPUTargetInfo::getTargetBuiltins() const {
