@@ -15,6 +15,10 @@
 /// - t2LoopDec - placed within in the loop body.
 /// - t2LoopEnd - the loop latch terminator.
 ///
+/// In addition to this, we also look for the presence of the VCTP instruction,
+/// which determines whether we can generated the tail-predicated low-overhead
+/// loop form.
+///
 //===----------------------------------------------------------------------===//
 
 #include "ARM.h"

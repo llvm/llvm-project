@@ -590,7 +590,7 @@ bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
   APFloat F(0.0);
   auto ErrOrStatus = F.convertFromString(*this, APFloat::rmNearestTiesToEven);
   if (!ErrOrStatus) {
-    assert("Invalid floating point representation");
+    assert(false && "Invalid floating point representation");
     return true;
   }
 
