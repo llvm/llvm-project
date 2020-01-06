@@ -714,6 +714,17 @@ internal::Matcher<T> traverse(ast_type_traits::TraversalKind TK,
       .template unconditionalConvertTo<T>();
 }
 
+template <typename T>
+internal::BindableMatcher<T>
+traverse(ast_type_traits::TraversalKind TK,
+         const internal::BindableMatcher<T> &InnerMatcher) {
+  return internal::BindableMatcher<T>(
+      internal::DynTypedMatcher::constructRestrictedWrapper(
+          new internal::TraversalMatcher<T>(TK, InnerMatcher),
+          InnerMatcher.getID().first)
+          .template unconditionalConvertTo<T>());
+}
+
 template <typename... T>
 internal::TraversalWrapper<internal::VariadicOperatorMatcher<T...>>
 traverse(ast_type_traits::TraversalKind TK,

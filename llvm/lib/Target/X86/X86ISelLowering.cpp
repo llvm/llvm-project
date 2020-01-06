@@ -1176,6 +1176,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
     setOperationAction(ISD::STRICT_SINT_TO_FP,  MVT::v8i32, Legal);
 
+    if (Subtarget.is64Bit() && !Subtarget.hasAVX512()) {
+      // We need to mark SINT_TO_FP as Custom even though we want to expand it
+      // so that DAG combine doesn't try to turn it into uint_to_fp.
+      setOperationAction(ISD::SINT_TO_FP,        MVT::v4i64, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v4i64, Custom);
+      setOperationAction(ISD::UINT_TO_FP,        MVT::v4i64, Custom);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i64, Custom);
+    }
+
     setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FADD,        MVT::v8f32, Legal);
     setOperationAction(ISD::STRICT_FADD,        MVT::v4f64, Legal);
@@ -18620,42 +18629,91 @@ static SDValue vectorizeExtractedCast(SDValue Cast, SelectionDAG &DAG,
 
 static SDValue lowerINT_TO_FP_vXi64(SDValue Op, SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
-  assert(Subtarget.hasDQI() && !Subtarget.hasVLX() && "Unexpected features");
-
   SDLoc DL(Op);
   bool IsStrict = Op->isStrictFPOpcode();
   MVT VT = Op->getSimpleValueType(0);
   SDValue Src = Op->getOperand(IsStrict ? 1 : 0);
-  assert((Src.getSimpleValueType() == MVT::v2i64 ||
-          Src.getSimpleValueType() == MVT::v4i64) &&
-         "Unsupported custom type");
 
-  // With AVX512DQ, but not VLX we need to widen to get a 512-bit result type.
-  assert((VT == MVT::v4f32 || VT == MVT::v2f64 || VT == MVT::v4f64) &&
-         "Unexpected VT!");
-  MVT WideVT = VT == MVT::v4f32 ? MVT::v8f32 : MVT::v8f64;
+  if (Subtarget.hasDQI()) {
+    assert(!Subtarget.hasVLX() && "Unexpected features");
 
-  // Need to concat with zero vector for strict fp to avoid spurious
-  // exceptions.
-  SDValue Tmp =
-      IsStrict ? DAG.getConstant(0, DL, MVT::v8i64) : DAG.getUNDEF(MVT::v8i64);
-  Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v8i64, Tmp, Src,
-                    DAG.getIntPtrConstant(0, DL));
-  SDValue Res, Chain;
-  if (IsStrict) {
-    Res = DAG.getNode(Op.getOpcode(), DL, {WideVT, MVT::Other},
-                      {Op->getOperand(0), Src});
-    Chain = Res.getValue(1);
-  } else {
-    Res = DAG.getNode(Op.getOpcode(), DL, WideVT, Src);
+    assert((Src.getSimpleValueType() == MVT::v2i64 ||
+            Src.getSimpleValueType() == MVT::v4i64) &&
+           "Unsupported custom type");
+
+    // With AVX512DQ, but not VLX we need to widen to get a 512-bit result type.
+    assert((VT == MVT::v4f32 || VT == MVT::v2f64 || VT == MVT::v4f64) &&
+           "Unexpected VT!");
+    MVT WideVT = VT == MVT::v4f32 ? MVT::v8f32 : MVT::v8f64;
+
+    // Need to concat with zero vector for strict fp to avoid spurious
+    // exceptions.
+    SDValue Tmp = IsStrict ? DAG.getConstant(0, DL, MVT::v8i64)
+                           : DAG.getUNDEF(MVT::v8i64);
+    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v8i64, Tmp, Src,
+                      DAG.getIntPtrConstant(0, DL));
+    SDValue Res, Chain;
+    if (IsStrict) {
+      Res = DAG.getNode(Op.getOpcode(), DL, {WideVT, MVT::Other},
+                        {Op->getOperand(0), Src});
+      Chain = Res.getValue(1);
+    } else {
+      Res = DAG.getNode(Op.getOpcode(), DL, WideVT, Src);
+    }
+
+    Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                      DAG.getIntPtrConstant(0, DL));
+
+    if (IsStrict)
+      return DAG.getMergeValues({Res, Chain}, DL);
+    return Res;
   }
 
-  Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                    DAG.getIntPtrConstant(0, DL));
+  bool IsSigned = Op->getOpcode() == ISD::SINT_TO_FP ||
+                  Op->getOpcode() == ISD::STRICT_SINT_TO_FP;
+  if (VT != MVT::v4f32 || IsSigned)
+    return SDValue();
+
+  SDValue Zero = DAG.getConstant(0, DL, MVT::v4i64);
+  SDValue One  = DAG.getConstant(1, DL, MVT::v4i64);
+  SDValue Sign = DAG.getNode(ISD::OR, DL, MVT::v4i64,
+                             DAG.getNode(ISD::SRL, DL, MVT::v4i64, Src, One),
+                             DAG.getNode(ISD::AND, DL, MVT::v4i64, Src, One));
+  SDValue IsNeg = DAG.getSetCC(DL, MVT::v4i64, Src, Zero, ISD::SETLT);
+  SDValue SignSrc = DAG.getSelect(DL, MVT::v4i64, IsNeg, Sign, Src);
+  SmallVector<SDValue, 4> SignCvts(4);
+  SmallVector<SDValue, 4> Chains(4);
+  for (int i = 0; i != 4; ++i) {
+    SDValue Src = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, SignSrc,
+                              DAG.getIntPtrConstant(i, DL));
+    if (IsStrict) {
+      SignCvts[i] =
+          DAG.getNode(ISD::STRICT_SINT_TO_FP, DL, {MVT::f32, MVT::Other},
+                      {Op.getOperand(0), Src});
+      Chains[i] = SignCvts[i].getValue(1);
+    } else {
+      SignCvts[i] = DAG.getNode(ISD::SINT_TO_FP, DL, MVT::f32, Src);
+    }
+  }
+  SDValue SignCvt = DAG.getBuildVector(VT, DL, SignCvts);
+
+  SDValue Slow, Chain;
+  if (IsStrict) {
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
+    Slow = DAG.getNode(ISD::STRICT_FADD, DL, {MVT::v4f32, MVT::Other},
+                       {Chain, SignCvt, SignCvt});
+    Chain = Slow.getValue(1);
+  } else {
+    Slow = DAG.getNode(ISD::FADD, DL, MVT::v4f32, SignCvt, SignCvt);
+  }
+
+  IsNeg = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i32, IsNeg);
+  SDValue Cvt = DAG.getSelect(DL, MVT::v4f32, IsNeg, Slow, SignCvt);
 
   if (IsStrict)
-    return DAG.getMergeValues({Res, Chain}, DL);
-  return Res;
+    return DAG.getMergeValues({Cvt, Chain}, DL);
+
+  return Cvt;
 }
 
 SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
@@ -20162,8 +20220,7 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   if (IsStrict)
     return DAG.getNode(X86ISD::STRICT_VFPEXT, DL, {VT, MVT::Other},
                        {Op->getOperand(0), Res});
-  else
-    return DAG.getNode(X86ISD::VFPEXT, DL, VT, Res);
+  return DAG.getNode(X86ISD::VFPEXT, DL, VT, Res);
 }
 
 SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
@@ -29012,6 +29069,49 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
       return;
     }
+    if (SrcVT == MVT::v2i64 && !IsSigned && Subtarget.is64Bit() &&
+        Subtarget.hasAVX() && !Subtarget.hasAVX512()) {
+      // TODO Any SSE41+ subtarget should work here but BLENDV codegen ends up
+      // a lot worse than it should be.
+      SDValue Zero = DAG.getConstant(0, dl, SrcVT);
+      SDValue One  = DAG.getConstant(1, dl, SrcVT);
+      SDValue Sign = DAG.getNode(ISD::OR, dl, SrcVT,
+                                 DAG.getNode(ISD::SRL, dl, SrcVT, Src, One),
+                                 DAG.getNode(ISD::AND, dl, SrcVT, Src, One));
+      SDValue IsNeg = DAG.getSetCC(dl, MVT::v2i64, Src, Zero, ISD::SETLT);
+      SDValue SignSrc = DAG.getSelect(dl, SrcVT, IsNeg, Sign, Src);
+      SmallVector<SDValue, 4> SignCvts(4, DAG.getConstantFP(0.0, dl, MVT::f32));
+      for (int i = 0; i != 2; ++i) {
+        SDValue Src = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64,
+                                  SignSrc, DAG.getIntPtrConstant(i, dl));
+        if (IsStrict)
+          SignCvts[i] =
+              DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {MVT::f32, MVT::Other},
+                          {N->getOperand(0), Src});
+        else
+          SignCvts[i] = DAG.getNode(ISD::SINT_TO_FP, dl, MVT::f32, Src);
+      };
+      SDValue SignCvt = DAG.getBuildVector(MVT::v4f32, dl, SignCvts);
+      SDValue Slow, Chain;
+      if (IsStrict) {
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                            SignCvts[0].getValue(1), SignCvts[1].getValue(1));
+        Slow = DAG.getNode(ISD::STRICT_FADD, dl, {MVT::v4f32, MVT::Other},
+                           {Chain, SignCvt, SignCvt});
+        Chain = Slow.getValue(1);
+      } else {
+        Slow = DAG.getNode(ISD::FADD, dl, MVT::v4f32, SignCvt, SignCvt);
+      }
+      IsNeg = DAG.getBitcast(MVT::v4i32, IsNeg);
+      IsNeg =
+          DAG.getVectorShuffle(MVT::v4i32, dl, IsNeg, IsNeg, {1, 3, -1, -1});
+      SDValue Cvt = DAG.getSelect(dl, MVT::v4f32, IsNeg, Slow, SignCvt);
+      Results.push_back(Cvt);
+      if (IsStrict)
+        Results.push_back(Chain);
+      return;
+    }
+
     if (SrcVT != MVT::v2i32)
       return;
 
@@ -37697,10 +37797,21 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   EVT VT = LHS.getValueType();
   EVT CondVT = Cond.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  bool CondConstantVector = ISD::isBuildVectorOfConstantSDNodes(Cond.getNode());
+
+  // Attempt to combine (select M, (sub 0, X), X) -> (sub (xor X, M), M).
+  // Limit this to cases of non-constant masks that createShuffleMaskFromVSELECT
+  // can't catch, plus vXi8 cases where we'd likely end up with BLENDV.
+  if (CondVT.isVector() && CondVT.isInteger() &&
+      CondVT.getScalarSizeInBits() == VT.getScalarSizeInBits() &&
+      (!CondConstantVector || CondVT.getScalarType() == MVT::i8) &&
+      DAG.ComputeNumSignBits(Cond) == CondVT.getScalarSizeInBits())
+    if (SDValue V = combineLogicBlendIntoConditionalNegate(VT, Cond, RHS, LHS,
+                                                           DL, DAG, Subtarget))
+      return V;
 
   // Convert vselects with constant condition into shuffles.
-  if (ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()) &&
-      DCI.isBeforeLegalizeOps()) {
+  if (CondConstantVector && DCI.isBeforeLegalizeOps()) {
     SmallVector<int, 64> Mask;
     if (createShuffleMaskFromVSELECT(Mask, Cond))
       return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);

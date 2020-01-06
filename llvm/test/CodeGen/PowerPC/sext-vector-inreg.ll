@@ -4,11 +4,8 @@
 define <4 x i32> @test_signext_vector_inreg(<4 x i16> %n) {
 ; CHECK-P9-LABEL: test_signext_vector_inreg:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    vspltisw 3, 8
 ; CHECK-P9-NEXT:    vmrglh 2, 2, 2
-; CHECK-P9-NEXT:    vadduwm 3, 3, 3
-; CHECK-P9-NEXT:    vslw 2, 2, 3
-; CHECK-P9-NEXT:    vsraw 2, 2, 3
+; CHECK-P9-NEXT:    vextsh2w 2, 2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: test_signext_vector_inreg:
