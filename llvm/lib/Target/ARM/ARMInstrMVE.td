@@ -1097,7 +1097,7 @@ let Predicates = [HasMVEFloat] in {
                           (v4f32 MQPR:$inactive)))>;
   def : Pat<(v8f16 (int_arm_mve_max_predicated (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
                           (v8i1 VCCR:$mask), (v8f16 MQPR:$inactive))),
-            (v8f16 (MVE_VMAXNMf32 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
+            (v8f16 (MVE_VMAXNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
                           ARMVCCThen, (v8i1 VCCR:$mask),
                           (v8f16 MQPR:$inactive)))>;
 }
@@ -1117,7 +1117,7 @@ let Predicates = [HasMVEFloat] in {
                           (v4f32 MQPR:$inactive)))>;
   def : Pat<(v8f16 (int_arm_mve_min_predicated (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
                           (v8i1 VCCR:$mask), (v8f16 MQPR:$inactive))),
-            (v8f16 (MVE_VMINNMf32 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
+            (v8f16 (MVE_VMINNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2),
                           ARMVCCThen, (v8i1 VCCR:$mask),
                           (v8f16 MQPR:$inactive)))>;
 }

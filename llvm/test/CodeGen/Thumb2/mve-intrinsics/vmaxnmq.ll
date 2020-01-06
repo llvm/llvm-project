@@ -30,7 +30,7 @@ define arm_aapcs_vfpcc <8 x half> @test_vmaxnmq_m_f16(<8 x half> %inactive, <8 x
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmaxnmt.f32 q0, q1, q2
+; CHECK-NEXT:    vmaxnmt.f16 q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
@@ -66,7 +66,7 @@ define arm_aapcs_vfpcc <8 x half> @test_vmaxnmq_x_f16(<8 x half> %a, <8 x half> 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmaxnmt.f32 q0, q0, q1
+; CHECK-NEXT:    vmaxnmt.f16 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
