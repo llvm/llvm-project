@@ -408,11 +408,6 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
                                   const MachineOperand &BaseOp1,
                                   const MachineInstr &MI2,
                                   const MachineOperand &BaseOp2) {
-  // Support only base operands with base registers.
-  // Note: this could be extended to support FI operands.
-  if (!BaseOp1.isReg() || !BaseOp2.isReg())
-    return false;
-
   if (BaseOp1.isIdenticalTo(BaseOp2))
     return true;
 
