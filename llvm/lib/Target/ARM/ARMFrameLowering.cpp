@@ -2424,7 +2424,8 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   } else {
     // Get TLS base address from the coprocessor
     // mrc p15, #0, SR0, c13, c0, #3
-    BuildMI(McrMBB, DL, TII.get(ARM::MRC), ScratchReg0)
+    BuildMI(McrMBB, DL, TII.get(Thumb ? ARM::t2MRC : ARM::MRC),
+            ScratchReg0)
         .addImm(15)
         .addImm(0)
         .addImm(13)
@@ -2438,7 +2439,8 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
     // Get the stack limit from the right offset
     // ldr SR0, [sr0, #4 * TlsOffset]
-    BuildMI(GetMBB, DL, TII.get(ARM::LDRi12), ScratchReg0)
+    BuildMI(GetMBB, DL, TII.get(Thumb ? ARM::t2LDRi12 : ARM::LDRi12),
+            ScratchReg0)
         .addReg(ScratchReg0)
         .addImm(4 * TlsOffset)
         .add(predOps(ARMCC::AL));
