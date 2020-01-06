@@ -29,7 +29,7 @@ private:
 
 } // namespace std
 
-// All of the following codesnippets should be valid with appropriate 'owner<>' anaylsis,
+// All of the following codesnippets should be valid with appropriate 'owner<>' analysis,
 // but currently the type information of 'gsl::owner<>' gets lost in typededuction.
 int main() {
   std::vector<gsl::owner<int *>> OwnerStdVector(100, nullptr);

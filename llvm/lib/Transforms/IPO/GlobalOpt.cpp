@@ -433,6 +433,20 @@ static bool GlobalUsersSafeToSRA(GlobalValue *GV) {
   return true;
 }
 
+static bool CanDoGlobalSRA(GlobalVariable *GV) {
+  Constant *Init = GV->getInitializer();
+
+  if (isa<StructType>(Init->getType())) {
+    // nothing to check
+  } else if (SequentialType *STy = dyn_cast<SequentialType>(Init->getType())) {
+    if (STy->getNumElements() > 16 && GV->hasNUsesOrMore(16))
+      return false; // It's not worth it.
+  } else
+    return false;
+
+  return GlobalUsersSafeToSRA(GV);
+}
+
 /// Copy over the debug info for a variable to its SRA replacements.
 static void transferSRADebugInfo(GlobalVariable *GV, GlobalVariable *NGV,
                                  uint64_t FragmentOffsetInBits,
@@ -462,87 +476,93 @@ static void transferSRADebugInfo(GlobalVariable *GV, GlobalVariable *NGV,
 /// insert so that the caller can reprocess it.
 static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   // Make sure this global only has simple uses that we can SRA.
-  if (!GlobalUsersSafeToSRA(GV))
+  if (!CanDoGlobalSRA(GV))
     return nullptr;
 
   assert(GV->hasLocalLinkage());
   Constant *Init = GV->getInitializer();
   Type *Ty = Init->getType();
 
-  std::vector<GlobalVariable *> NewGlobals;
-  Module::GlobalListType &Globals = GV->getParent()->getGlobalList();
+  std::map<unsigned, GlobalVariable *> NewGlobals;
 
   // Get the alignment of the global, either explicit or target-specific.
   unsigned StartAlignment = GV->getAlignment();
   if (StartAlignment == 0)
     StartAlignment = DL.getABITypeAlignment(GV->getType());
 
-  if (StructType *STy = dyn_cast<StructType>(Ty)) {
-    unsigned NumElements = STy->getNumElements();
-    NewGlobals.reserve(NumElements);
-    const StructLayout &Layout = *DL.getStructLayout(STy);
-    for (unsigned i = 0, e = NumElements; i != e; ++i) {
-      Constant *In = Init->getAggregateElement(i);
-      assert(In && "Couldn't get element of initializer?");
-      GlobalVariable *NGV = new GlobalVariable(STy->getElementType(i), false,
-                                               GlobalVariable::InternalLinkage,
-                                               In, GV->getName()+"."+Twine(i),
-                                               GV->getThreadLocalMode(),
-                                              GV->getType()->getAddressSpace());
-      NGV->setExternallyInitialized(GV->isExternallyInitialized());
-      NGV->copyAttributesFrom(GV);
-      Globals.push_back(NGV);
-      NewGlobals.push_back(NGV);
+  // Loop over all users and create replacement variables for used aggregate
+  // elements.
+  for (User *GEP : GV->users()) {
+    assert(((isa<ConstantExpr>(GEP) && cast<ConstantExpr>(GEP)->getOpcode() ==
+                                           Instruction::GetElementPtr) ||
+            isa<GetElementPtrInst>(GEP)) &&
+           "NonGEP CE's are not SRAable!");
+
+    // Ignore the 1th operand, which has to be zero or else the program is quite
+    // broken (undefined).  Get the 2nd operand, which is the structure or array
+    // index.
+    unsigned ElementIdx = cast<ConstantInt>(GEP->getOperand(2))->getZExtValue();
+    if (NewGlobals.count(ElementIdx) == 1)
+      continue; // we`ve already created replacement variable
+    assert(NewGlobals.count(ElementIdx) == 0);
+
+    Type *ElTy = nullptr;
+    if (StructType *STy = dyn_cast<StructType>(Ty))
+      ElTy = STy->getElementType(ElementIdx);
+    else if (SequentialType *STy = dyn_cast<SequentialType>(Ty))
+      ElTy = STy->getElementType();
+    assert(ElTy);
+
+    Constant *In = Init->getAggregateElement(ElementIdx);
+    assert(In && "Couldn't get element of initializer?");
+
+    GlobalVariable *NGV = new GlobalVariable(
+        ElTy, false, GlobalVariable::InternalLinkage, In,
+        GV->getName() + "." + Twine(ElementIdx), GV->getThreadLocalMode(),
+        GV->getType()->getAddressSpace());
+    NGV->setExternallyInitialized(GV->isExternallyInitialized());
+    NGV->copyAttributesFrom(GV);
+    NewGlobals.insert(std::make_pair(ElementIdx, NGV));
+
+    if (StructType *STy = dyn_cast<StructType>(Ty)) {
+      const StructLayout &Layout = *DL.getStructLayout(STy);
 
       // Calculate the known alignment of the field.  If the original aggregate
       // had 256 byte alignment for example, something might depend on that:
       // propagate info to each field.
-      uint64_t FieldOffset = Layout.getElementOffset(i);
+      uint64_t FieldOffset = Layout.getElementOffset(ElementIdx);
       Align NewAlign(MinAlign(StartAlignment, FieldOffset));
-      if (NewAlign > Align(DL.getABITypeAlignment(STy->getElementType(i))))
+      if (NewAlign >
+          Align(DL.getABITypeAlignment(STy->getElementType(ElementIdx))))
         NGV->setAlignment(NewAlign);
 
       // Copy over the debug info for the variable.
       uint64_t Size = DL.getTypeAllocSizeInBits(NGV->getValueType());
-      uint64_t FragmentOffsetInBits = Layout.getElementOffsetInBits(i);
-      transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size, NumElements);
-    }
-  } else if (SequentialType *STy = dyn_cast<SequentialType>(Ty)) {
-    unsigned NumElements = STy->getNumElements();
-    if (NumElements > 16 && GV->hasNUsesOrMore(16))
-      return nullptr; // It's not worth it.
-    NewGlobals.reserve(NumElements);
-    auto ElTy = STy->getElementType();
-    uint64_t EltSize = DL.getTypeAllocSize(ElTy);
-    Align EltAlign(DL.getABITypeAlignment(ElTy));
-    uint64_t FragmentSizeInBits = DL.getTypeAllocSizeInBits(ElTy);
-    for (unsigned i = 0, e = NumElements; i != e; ++i) {
-      Constant *In = Init->getAggregateElement(i);
-      assert(In && "Couldn't get element of initializer?");
-
-      GlobalVariable *NGV = new GlobalVariable(STy->getElementType(), false,
-                                               GlobalVariable::InternalLinkage,
-                                               In, GV->getName()+"."+Twine(i),
-                                               GV->getThreadLocalMode(),
-                                              GV->getType()->getAddressSpace());
-      NGV->setExternallyInitialized(GV->isExternallyInitialized());
-      NGV->copyAttributesFrom(GV);
-      Globals.push_back(NGV);
-      NewGlobals.push_back(NGV);
+      uint64_t FragmentOffsetInBits = Layout.getElementOffsetInBits(ElementIdx);
+      transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size,
+                           STy->getNumElements());
+    } else if (SequentialType *STy = dyn_cast<SequentialType>(Ty)) {
+      uint64_t EltSize = DL.getTypeAllocSize(ElTy);
+      Align EltAlign(DL.getABITypeAlignment(ElTy));
+      uint64_t FragmentSizeInBits = DL.getTypeAllocSizeInBits(ElTy);
 
       // Calculate the known alignment of the field.  If the original aggregate
       // had 256 byte alignment for example, something might depend on that:
       // propagate info to each field.
-      Align NewAlign(MinAlign(StartAlignment, EltSize * i));
+      Align NewAlign(MinAlign(StartAlignment, EltSize * ElementIdx));
       if (NewAlign > EltAlign)
         NGV->setAlignment(NewAlign);
-      transferSRADebugInfo(GV, NGV, FragmentSizeInBits * i, FragmentSizeInBits,
-                           NumElements);
+      transferSRADebugInfo(GV, NGV, FragmentSizeInBits * ElementIdx,
+                           FragmentSizeInBits, STy->getNumElements());
     }
   }
 
   if (NewGlobals.empty())
     return nullptr;
+
+  Module::GlobalListType &Globals = GV->getParent()->getGlobalList();
+  for (auto NewGlobalVar : NewGlobals)
+    Globals.push_back(NewGlobalVar.second);
 
   LLVM_DEBUG(dbgs() << "PERFORMING GLOBAL SRA ON: " << *GV << "\n");
 
@@ -559,11 +579,11 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
     // Ignore the 1th operand, which has to be zero or else the program is quite
     // broken (undefined).  Get the 2nd operand, which is the structure or array
     // index.
-    unsigned Val = cast<ConstantInt>(GEP->getOperand(2))->getZExtValue();
-    if (Val >= NewGlobals.size()) Val = 0; // Out of bound array access.
+    unsigned ElementIdx = cast<ConstantInt>(GEP->getOperand(2))->getZExtValue();
+    assert(NewGlobals.count(ElementIdx) == 1);
 
-    Value *NewPtr = NewGlobals[Val];
-    Type *NewTy = NewGlobals[Val]->getValueType();
+    Value *NewPtr = NewGlobals[ElementIdx];
+    Type *NewTy = NewGlobals[ElementIdx]->getValueType();
 
     // Form a shorter GEP if needed.
     if (GEP->getNumOperands() > 3) {
@@ -581,7 +601,8 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
         for (unsigned i = 3, e = GEPI->getNumOperands(); i != e; ++i)
           Idxs.push_back(GEPI->getOperand(i));
         NewPtr = GetElementPtrInst::Create(
-            NewTy, NewPtr, Idxs, GEPI->getName() + "." + Twine(Val), GEPI);
+            NewTy, NewPtr, Idxs, GEPI->getName() + "." + Twine(ElementIdx),
+            GEPI);
       }
     }
     GEP->replaceAllUsesWith(NewPtr);
@@ -596,17 +617,8 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   Globals.erase(GV);
   ++NumSRA;
 
-  // Loop over the new globals array deleting any globals that are obviously
-  // dead.  This can arise due to scalarization of a structure or an array that
-  // has elements that are dead.
-  unsigned FirstGlobal = 0;
-  for (unsigned i = 0, e = NewGlobals.size(); i != e; ++i)
-    if (NewGlobals[i]->use_empty()) {
-      Globals.erase(NewGlobals[i]);
-      if (FirstGlobal == i) ++FirstGlobal;
-    }
-
-  return FirstGlobal != NewGlobals.size() ? NewGlobals[FirstGlobal] : nullptr;
+  assert(NewGlobals.size() > 0);
+  return NewGlobals.begin()->second;
 }
 
 /// Return true if all users of the specified value will trap if the value is

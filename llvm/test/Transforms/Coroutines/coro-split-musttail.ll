@@ -2,7 +2,7 @@
 ; musttail call.
 ; RUN: opt < %s -coro-split -S | FileCheck %s
 
-define void @f() "coroutine.presplit"="1" {
+define void @f() #0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %alloc = call i8* @malloc(i64 16) #3
@@ -47,14 +47,19 @@ exit:
 ; CHECK-NEXT: musttail call fastcc void %[[pv2]](i8* null)
 ; CHECK-NEXT: ret void
 
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
-declare i1 @llvm.coro.alloc(token) #3
-declare i64 @llvm.coro.size.i64() #5
-declare i8* @llvm.coro.begin(token, i8* writeonly) #3
-declare token @llvm.coro.save(i8*) #3
-declare i8* @llvm.coro.frame() #5
-declare i8 @llvm.coro.suspend(token, i1) #3
-declare i8* @llvm.coro.free(token, i8* nocapture readonly) #2
-declare i1 @llvm.coro.end(i8*, i1) #3
-declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #5
+declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #1
+declare i1 @llvm.coro.alloc(token) #2
+declare i64 @llvm.coro.size.i64() #3
+declare i8* @llvm.coro.begin(token, i8* writeonly) #2
+declare token @llvm.coro.save(i8*) #2
+declare i8* @llvm.coro.frame() #3
+declare i8 @llvm.coro.suspend(token, i1) #2
+declare i8* @llvm.coro.free(token, i8* nocapture readonly) #1
+declare i1 @llvm.coro.end(i8*, i1) #2
+declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #1
 declare i8* @malloc(i64)
+
+attributes #0 = { "coroutine.presplit"="1" }
+attributes #1 = { argmemonly nounwind readonly }
+attributes #2 = { nounwind }
+attributes #3 = { nounwind readnone }

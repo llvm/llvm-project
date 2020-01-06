@@ -96,7 +96,7 @@ const FunctionDecl *getSelectedFunction(const SelectionTree::Node *SelNode) {
 }
 
 // Checks the decls mentioned in Source are visible in the context of Target.
-// Achives that by checking declaraions occur before target location in
+// Achieves that by checking declarations occur before target location in
 // translation unit or declared in the same class.
 bool checkDeclsAreVisible(const llvm::DenseSet<const Decl *> &DeclRefs,
                           const FunctionDecl *Target, const SourceManager &SM) {

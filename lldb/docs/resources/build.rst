@@ -365,6 +365,7 @@ To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build t
 ::
 
   > ninja docs-lldb-html
+  > ninja docs-lldb-man
   > ninja lldb-cpp-doc
   > ninja lldb-python-doc
 

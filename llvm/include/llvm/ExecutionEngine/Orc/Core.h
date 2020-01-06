@@ -1277,7 +1277,7 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU) {
   });
 }
 
-/// ReexportsGenerator can be used with JITDylib::setGenerator to automatically
+/// ReexportsGenerator can be used with JITDylib::addGenerator to automatically
 /// re-export a subset of the source JITDylib's symbols in the target.
 class ReexportsGenerator : public JITDylib::DefinitionGenerator {
 public:

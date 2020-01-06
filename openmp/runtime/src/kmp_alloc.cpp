@@ -57,7 +57,7 @@ static void bectl(kmp_info_t *th, bget_compact_t compact,
    multiple of this size.  This MUST be a power of two. */
 
 /* On IA-32 architecture with  Linux* OS, malloc() does not
-   ensure 16 byte alignmnent */
+   ensure 16 byte alignment */
 
 #if KMP_ARCH_X86 || !KMP_HAVE_QUAD
 

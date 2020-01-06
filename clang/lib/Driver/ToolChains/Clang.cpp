@@ -1991,8 +1991,20 @@ void Clang::AddSparcTargetArgs(const ArgList &Args,
 
 void Clang::AddSystemZTargetArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
-  if (Args.hasFlag(options::OPT_mbackchain, options::OPT_mno_backchain, false))
+  bool HasBackchain = Args.hasFlag(options::OPT_mbackchain,
+                                   options::OPT_mno_backchain, false);
+  bool HasPackedStack = Args.hasFlag(options::OPT_mpacked_stack,
+                                     options::OPT_mno_packed_stack, false);
+  if (HasBackchain && HasPackedStack) {
+    const Driver &D = getToolChain().getDriver();
+    D.Diag(diag::err_drv_unsupported_opt)
+      << Args.getLastArg(options::OPT_mpacked_stack)->getAsString(Args) +
+      " " + Args.getLastArg(options::OPT_mbackchain)->getAsString(Args);
+  }
+  if (HasBackchain)
     CmdArgs.push_back("-mbackchain");
+  if (HasPackedStack)
+    CmdArgs.push_back("-mpacked-stack");
 }
 
 void Clang::AddX86TargetArgs(const ArgList &Args,
@@ -5013,8 +5025,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << A->getAsString(Args) << TripleStr;
     }
   }
-
-  Args.AddLastArg(CmdArgs, options::OPT_mpacked_stack);
 
   if (Args.getLastArg(options::OPT_fapple_kext) ||
       (Args.hasArg(options::OPT_mkernel) && types::isCXX(InputType)))

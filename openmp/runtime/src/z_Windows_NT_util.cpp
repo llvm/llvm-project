@@ -1504,7 +1504,7 @@ void __kmp_free_handle(kmp_thread_t tHandle) {
 int __kmp_get_load_balance(int max) {
   static ULONG glb_buff_size = 100 * 1024;
 
-  // Saved count of the running threads for the thread balance algortihm
+  // Saved count of the running threads for the thread balance algorithm
   static int glb_running_threads = 0;
   static double glb_call_time = 0; /* Thread balance algorithm call time */
 

@@ -933,7 +933,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
     }
   } else {
     KMP_DEBUG_ASSERT(resumed_task !=
-                     NULL); // verify that resumed task is passed as arguemnt
+                     NULL); // verify that resumed task is passed as argument
   }
 
   // Free this task and then ancestor tasks if they have no children.
@@ -3090,7 +3090,7 @@ static void __kmp_enable_tasking(kmp_task_team_t *task_team,
  * master thread may exit the barrier code and free the team data structure,
  * and return the threads to the thread pool).
  *
- * This does not work with the the tasking code, as the thread is still
+ * This does not work with the tasking code, as the thread is still
  * expected to participate in the execution of any tasks that may have been
  * spawned my a member of the team, and the thread still needs access to all
  * to each thread in the team, so that it can steal work from it.
@@ -3757,7 +3757,7 @@ static void __kmp_bottom_half_finish_proxy(kmp_int32 gtid, kmp_task_t *ptask) {
 @param gtid Global Thread ID of encountering thread
 @param ptask Task which execution is completed
 
-Execute the completation of a proxy task from a thread of that is part of the
+Execute the completion of a proxy task from a thread of that is part of the
 team. Run first and bottom halves directly.
 */
 void __kmpc_proxy_task_completed(kmp_int32 gtid, kmp_task_t *ptask) {
@@ -3782,7 +3782,7 @@ void __kmpc_proxy_task_completed(kmp_int32 gtid, kmp_task_t *ptask) {
 @ingroup TASKING
 @param ptask Task which execution is completed
 
-Execute the completation of a proxy task from a thread that could not belong to
+Execute the completion of a proxy task from a thread that could not belong to
 the team.
 */
 void __kmpc_proxy_task_completed_ooo(kmp_task_t *ptask) {
@@ -4193,7 +4193,7 @@ void __kmp_taskloop_recur(ident_t *, int, kmp_task_t *, kmp_uint64 *,
 #endif
                           void *);
 
-// Execute part of the the taskloop submitted as a task.
+// Execute part of the taskloop submitted as a task.
 int __kmp_taskloop_task(int gtid, void *ptask) {
   __taskloop_params_t *p =
       (__taskloop_params_t *)((kmp_task_t *)ptask)->shareds;
@@ -4240,8 +4240,8 @@ int __kmp_taskloop_task(int gtid, void *ptask) {
   return 0;
 }
 
-// Schedule part of the the taskloop as a task,
-// execute the rest of the the taskloop.
+// Schedule part of the taskloop as a task,
+// execute the rest of the taskloop.
 //
 // loc        Source location information
 // gtid       Global thread ID

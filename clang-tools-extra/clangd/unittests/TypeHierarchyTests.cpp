@@ -50,7 +50,7 @@ template <class... ChildMatchers>
   return Field(&TypeHierarchyItem::children,
                HasValue(UnorderedElementsAre(ChildrenM...)));
 }
-// Note: "not resolved" is differnt from "resolved but empty"!
+// Note: "not resolved" is different from "resolved but empty"!
 MATCHER(ParentsNotResolved, "") { return !arg.parents; }
 MATCHER(ChildrenNotResolved, "") { return !arg.children; }
 

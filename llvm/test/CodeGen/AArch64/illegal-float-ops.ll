@@ -247,6 +247,54 @@ define void @test_fmuladd(fp128 %fp128) {
   ret void
 }
 
+define i32 @test_fptosi32(fp128 %a) {
+; CHECK-LABEL: test_fptosi32:
+; CHECK: bl __fixtfsi
+  %conv.i = fptosi fp128 %a to i32
+  %b = add nsw i32 %conv.i, 48
+  ret i32 %b
+}
+
+define i64 @test_fptosi64(fp128 %a) {
+; CHECK-LABEL: test_fptosi64:
+; CHECK: bl __fixtfdi
+  %conv.i = fptosi fp128 %a to i64
+  %b = add nsw i64 %conv.i, 48
+  ret i64 %b
+}
+
+define i128 @test_fptosi128(fp128 %a) {
+; CHECK-LABEL: test_fptosi128:
+; CHECK: bl __fixtfti
+  %conv.i = fptosi fp128 %a to i128
+  %b = add nsw i128 %conv.i, 48
+  ret i128 %b
+}
+
+define i32 @test_fptoui32(fp128 %a) {
+; CHECK-LABEL: test_fptoui32:
+; CHECK: bl __fixunstfsi
+  %conv.i = fptoui fp128 %a to i32
+  %b = add nsw i32 %conv.i, 48
+  ret i32 %b
+}
+
+define i64 @test_fptoui64(fp128 %a) {
+; CHECK-LABEL: test_fptoui64:
+; CHECK: bl __fixunstfdi
+  %conv.i = fptoui fp128 %a to i64
+  %b = add nsw i64 %conv.i, 48
+  ret i64 %b
+}
+
+define i128 @test_fptoui128(fp128 %a) {
+; CHECK-LABEL: test_fptoui128:
+; CHECK: bl __fixunstfti
+  %conv.i = fptoui fp128 %a to i128
+  %b = add nsw i128 %conv.i, 48
+  ret i128 %b
+}
+
 define void @test_exp_finite(double %double) #0 {
   %expdouble = call double @llvm.exp.f64(double %double)
   store double %expdouble, double* @vardouble

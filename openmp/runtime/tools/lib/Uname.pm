@@ -356,7 +356,7 @@ if ( 0 ) {
                $output =~ m{^ProductVersion:\s*(.*)\s*$}m
                    or runtime_error( "There is no ProductVersion in sw_vers output:", $output, "(eof)" );
                my $release = $1;
-               # Sometimes release reported as "10.4.11" (3 componentes), sometimes as "10.6".
+               # Sometimes release reported as "10.4.11" (3 components), sometimes as "10.6".
                # Handle both variants.
                $release =~ m{^(\d+.\d+)(?:\.\d+)?(?=\s|$)}
                    or runtime_error( "Cannot parse OS X* version: $release" );

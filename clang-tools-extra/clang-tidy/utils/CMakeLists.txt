@@ -22,6 +22,7 @@ add_clang_library(clangTidyUtils
   clangASTMatchers
   clangBasic
   clangLex
+  clangSema
   clangTidy
   clangTransformer
   )

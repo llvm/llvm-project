@@ -93,6 +93,16 @@ define fastcc void @caller_to16_from16([8 x i64], i64 %a, i64 %b) {
 ; COMMON-NEXT: b callee_stack16
 }
 
+define fastcc void @disable_tail_calls() nounwind "disable-tail-calls"="true" {
+; COMMON-LABEL: disable_tail_calls:
+; COMMON-NEXT: // %bb.
+
+  tail call fastcc void @callee_stack0()
+  ret void
+
+; COMMON: bl callee_stack0
+; COMMON: ret
+}
 
 ; Weakly-referenced extern functions cannot be tail-called, as AAELF does
 ; not define the behaviour of branch instructions to undefined weak symbols.

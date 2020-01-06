@@ -222,6 +222,8 @@ public:
         count(end.getIndex() - begin.getIndex()) {}
   indexed_accessor_range_base(const iterator_range<iterator> &range)
       : indexed_accessor_range_base(range.begin(), range.end()) {}
+  indexed_accessor_range_base(BaseT base, ptrdiff_t count)
+      : base(base), count(count) {}
 
   iterator begin() const { return iterator(base, 0); }
   iterator end() const { return iterator(base, count); }
@@ -267,8 +269,6 @@ public:
   }
 
 protected:
-  indexed_accessor_range_base(BaseT base, ptrdiff_t count)
-      : base(base), count(count) {}
   indexed_accessor_range_base(const indexed_accessor_range_base &) = default;
   indexed_accessor_range_base(indexed_accessor_range_base &&) = default;
   indexed_accessor_range_base &
@@ -286,18 +286,20 @@ protected:
 /// bases that are offsetable should derive from indexed_accessor_range_base
 /// instead. Derived range classes are expected to implement the following
 /// static method:
-///   * ReferenceT dereference_iterator(const BaseT &base, ptrdiff_t index)
+///   * ReferenceT dereference(const BaseT &base, ptrdiff_t index)
 ///     - Derefence an iterator pointing to a parent base at the given index.
 template <typename DerivedT, typename BaseT, typename T,
           typename PointerT = T *, typename ReferenceT = T &>
 class indexed_accessor_range
     : public detail::indexed_accessor_range_base<
-          indexed_accessor_range<DerivedT, BaseT, T, PointerT, ReferenceT>,
-          std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT> {
+          DerivedT, std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT> {
 public:
+  indexed_accessor_range(BaseT base, ptrdiff_t startIndex, ptrdiff_t count)
+      : detail::indexed_accessor_range_base<
+            DerivedT, std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT>(
+            std::make_pair(base, startIndex), count) {}
   using detail::indexed_accessor_range_base<
-      indexed_accessor_range<DerivedT, BaseT, T, PointerT, ReferenceT>,
-      std::pair<BaseT, ptrdiff_t>, T, PointerT,
+      DerivedT, std::pair<BaseT, ptrdiff_t>, T, PointerT,
       ReferenceT>::indexed_accessor_range_base;
 
   /// Returns the current base of the range.
@@ -306,14 +308,6 @@ public:
   /// Returns the current start index of the range.
   ptrdiff_t getStartIndex() const { return this->base.second; }
 
-protected:
-  indexed_accessor_range(BaseT base, ptrdiff_t startIndex, ptrdiff_t count)
-      : detail::indexed_accessor_range_base<
-            indexed_accessor_range<DerivedT, BaseT, T, PointerT, ReferenceT>,
-            std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT>(
-            std::make_pair(base, startIndex), count) {}
-
-private:
   /// See `detail::indexed_accessor_range_base` for details.
   static std::pair<BaseT, ptrdiff_t>
   offset_base(const std::pair<BaseT, ptrdiff_t> &base, ptrdiff_t index) {
@@ -325,13 +319,8 @@ private:
   static ReferenceT
   dereference_iterator(const std::pair<BaseT, ptrdiff_t> &base,
                        ptrdiff_t index) {
-    return DerivedT::dereference_iterator(base.first, base.second + index);
+    return DerivedT::dereference(base.first, base.second + index);
   }
-
-  /// Allow access to `offset_base` and `dereference_iterator`.
-  friend detail::indexed_accessor_range_base<
-      indexed_accessor_range<DerivedT, BaseT, T, PointerT, ReferenceT>,
-      std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT>;
 };
 
 /// Given a container of pairs, return a range over the second elements.

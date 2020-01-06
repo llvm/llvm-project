@@ -1,3 +1,6 @@
+; This fails at least on macOS.
+; XFAIL: darwin
+
 ; RUN: opt %s %loadbye -goodbye -wave-goodbye -disable-output 2>&1 | FileCheck %s
 ; REQUIRES: plugins, examples
 ; CHECK: Bye

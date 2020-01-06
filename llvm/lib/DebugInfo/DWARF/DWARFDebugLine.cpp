@@ -1026,7 +1026,10 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
   if (Kind == FileLineInfoKind::None || !hasFileAtIndex(FileIndex))
     return false;
   const FileNameEntry &Entry = getFileNameEntry(FileIndex);
-  StringRef FileName = Entry.Name.getAsCString().getValue();
+  Optional<const char *> Name = Entry.Name.getAsCString();
+  if (!Name)
+    return false;
+  StringRef FileName = *Name;
   if (Kind != FileLineInfoKind::AbsoluteFilePath ||
       isPathAbsoluteOnWindowsOrPosix(FileName)) {
     Result = FileName;

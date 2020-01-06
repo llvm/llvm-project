@@ -26,7 +26,7 @@ std::string createQualifiedNameForReplacement(
     llvm::StringRef RawSymbolName,
     llvm::StringRef SymbolScopedQualifiersName,
     const find_all_symbols::SymbolInfo &MatchedSymbol) {
-  // No need to add missing qualifiers if SymbolIndentifer has a global scope
+  // No need to add missing qualifiers if SymbolIdentifier has a global scope
   // operator "::".
   if (RawSymbolName.startswith("::"))
     return RawSymbolName;

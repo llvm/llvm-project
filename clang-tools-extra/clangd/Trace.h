@@ -27,7 +27,7 @@ namespace clangd {
 namespace trace {
 
 /// A consumer of trace events. The events are produced by Spans and trace::log.
-/// Implmentations of this interface must be thread-safe.
+/// Implementations of this interface must be thread-safe.
 class EventTracer {
 public:
   virtual ~EventTracer() = default;

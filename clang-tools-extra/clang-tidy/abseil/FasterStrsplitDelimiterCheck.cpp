@@ -65,7 +65,7 @@ void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
       expr(ignoringParenCasts(stringLiteral(lengthIsOne()).bind("Literal")));
 
   // Binds to a string_view (either absl or std) that was passed by value and
-  // contructed from string literal.
+  // constructed from string literal.
   auto StringViewArg = ignoringElidableConstructorCall(ignoringImpCasts(
       cxxConstructExpr(hasType(recordDecl(hasName("::absl::string_view"))),
                        hasArgument(0, ignoringParenImpCasts(SingleChar)))));

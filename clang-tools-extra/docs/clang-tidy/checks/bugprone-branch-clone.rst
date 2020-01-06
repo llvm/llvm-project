@@ -57,7 +57,7 @@ the code. For example:
 
 Here the check reports that the ``'a'`` and ``'A'`` branches are identical
 (and that the ``'b'`` and ``'B'`` branches are also identical), but does not
-report that the ``default:`` branch is also idenical to the first two branches.
+report that the ``default:`` branch is also identical to the first two branches.
 If this is indeed the correct behavior, then it could be implemented as:
 
 .. code-block:: c++

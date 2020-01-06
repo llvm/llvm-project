@@ -84,10 +84,9 @@ bool UserExpression::LockAndCheckContext(ExecutionContext &exe_ctx,
   if (m_address.IsValid()) {
     if (!frame_sp)
       return false;
-    else
-      return (0 == Address::CompareLoadAddress(m_address,
-                                               frame_sp->GetFrameCodeAddress(),
-                                               target_sp.get()));
+    return (Address::CompareLoadAddress(m_address,
+                                        frame_sp->GetFrameCodeAddress(),
+                                        target_sp.get()) == 0);
   }
 
   return true;

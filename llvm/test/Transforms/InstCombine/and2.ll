@@ -3,8 +3,8 @@
 
 define i1 @test2(i1 %X, i1 %Y) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[B:%.*]] = and i1 %X, %Y
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = and i1 %X, %Y
   %b = and i1 %a, %X
@@ -13,8 +13,8 @@ define i1 @test2(i1 %X, i1 %Y) {
 
 define i32 @test3(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[B:%.*]] = and i32 %X, %Y
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %a = and i32 %X, %Y
   %b = and i32 %Y, %a
@@ -23,8 +23,8 @@ define i32 @test3(i32 %X, i32 %Y) {
 
 define i1 @test7(i32 %i, i1 %b) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 %i, 0
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[I:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp slt i32 %i, 1
@@ -36,7 +36,7 @@ define i1 @test7(i32 %i, i1 %b) {
 
 define i1 @test8(i32 %i) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[I_OFF:%.*]] = add i32 %i, -1
+; CHECK-NEXT:    [[I_OFF:%.*]] = add i32 [[I:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I_OFF]], 13
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
@@ -49,8 +49,8 @@ define i1 @test8(i32 %i) {
 ; FIXME: Vectors should fold too.
 define <2 x i1> @test8vec(<2 x i32> %i) {
 ; CHECK-LABEL: @test8vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> %i, zeroinitializer
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i32> %i, <i32 14, i32 14>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[I:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i32> [[I]], <i32 14, i32 14>
 ; CHECK-NEXT:    [[COND:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[COND]]
 ;
@@ -63,7 +63,7 @@ define <2 x i1> @test8vec(<2 x i32> %i) {
 ; combine -x & 1 into x & 1
 define i64 @test9(i64 %x) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[AND:%.*]] = and i64 %x, 1
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i64 [[AND]]
 ;
   %sub = sub nsw i64 0, %x
@@ -74,7 +74,7 @@ define i64 @test9(i64 %x) {
 ; combine -x & 1 into x & 1
 define <2 x i64> @test9vec(<2 x i64> %x) {
 ; CHECK-LABEL: @test9vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> %x, <i64 1, i64 1>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[X:%.*]], <i64 1, i64 1>
 ; CHECK-NEXT:    ret <2 x i64> [[AND]]
 ;
   %sub = sub nsw <2 x i64> <i64 0, i64 0>, %x
@@ -84,8 +84,8 @@ define <2 x i64> @test9vec(<2 x i64> %x) {
 
 define i64 @test10(i64 %x) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[AND:%.*]] = and i64 %x, 1
-; CHECK-NEXT:    [[ADD:%.*]] = sub i64 [[AND]], %x
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], -2
+; CHECK-NEXT:    [[ADD:%.*]] = sub i64 0, [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sub = sub nsw i64 0, %x
@@ -98,7 +98,7 @@ define i64 @test10(i64 %x) {
 
 define i8 @and1_shl1_is_cmp_eq_0(i8 %x) {
 ; CHECK-LABEL: @and1_shl1_is_cmp_eq_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 %x, 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[AND]]
 ;
@@ -111,7 +111,7 @@ define i8 @and1_shl1_is_cmp_eq_0(i8 %x) {
 
 define i8 @and1_shl1_is_cmp_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @and1_shl1_is_cmp_eq_0_multiuse(
-; CHECK-NEXT:    [[SH:%.*]] = shl i8 1, %x
+; CHECK-NEXT:    [[SH:%.*]] = shl i8 1, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SH]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SH]], [[AND]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
@@ -126,7 +126,7 @@ define i8 @and1_shl1_is_cmp_eq_0_multiuse(i8 %x) {
 
 define <2 x i8> @and1_shl1_is_cmp_eq_0_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @and1_shl1_is_cmp_eq_0_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> %x, zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
@@ -139,7 +139,7 @@ define <2 x i8> @and1_shl1_is_cmp_eq_0_vec(<2 x i8> %x) {
 
 define i8 @and1_lshr1_is_cmp_eq_0(i8 %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 %x, 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[AND]]
 ;
@@ -152,7 +152,7 @@ define i8 @and1_lshr1_is_cmp_eq_0(i8 %x) {
 
 define i8 @and1_lshr1_is_cmp_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_multiuse(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i8 1, %x
+; CHECK-NEXT:    [[SH:%.*]] = lshr i8 1, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SH]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[SH]], [[AND]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
@@ -167,7 +167,7 @@ define i8 @and1_lshr1_is_cmp_eq_0_multiuse(i8 %x) {
 
 define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> %x, zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;

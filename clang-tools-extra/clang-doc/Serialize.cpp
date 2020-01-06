@@ -32,7 +32,7 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
 // A function to extract the appropriate relative path for a given info's
 // documentation. The path returned is a composite of the parent namespaces.
 //
-// Example: Given the below, the diretory path for class C info will be
+// Example: Given the below, the directory path for class C info will be
 // <root>/A/B
 //
 // namespace A {

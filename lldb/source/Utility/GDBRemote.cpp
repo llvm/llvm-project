@@ -93,9 +93,6 @@ void yaml::MappingTraits<GDBRemotePacket>::mapping(IO &io,
 StringRef
 yaml::MappingTraits<GDBRemotePacket>::validate(IO &io,
                                                GDBRemotePacket &Packet) {
-  if (Packet.bytes_transmitted != Packet.packet.data.size())
-    return "BinaryData size doesn't match bytes transmitted";
-
   return {};
 }
 

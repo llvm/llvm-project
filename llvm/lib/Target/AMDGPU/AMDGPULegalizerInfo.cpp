@@ -272,6 +272,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
   }
 
+  // FIXME: Not really legal. Placeholder for custom lowering.
+  getActionDefinitionsBuilder({G_SDIV, G_UDIV, G_SREM, G_UREM})
+    .legalFor({S32, S64})
+    .clampScalar(0, S32, S64)
+    .widenScalarToNextPow2(0, 32)
+    .scalarize(0);
+
   getActionDefinitionsBuilder({G_UMULH, G_SMULH})
     .legalFor({S32})
     .clampScalar(0, S32, S32)
@@ -646,6 +653,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // Split vector extloads.
     unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+    unsigned Align = Query.MMODescrs[0].AlignInBits;
+
+    if (MemSize < DstTy.getSizeInBits())
+      MemSize = std::max(MemSize, Align);
+
     if (DstTy.isVector() && DstTy.getSizeInBits() > MemSize)
       return true;
 
@@ -660,7 +672,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     if (NumRegs == 3 && !ST.hasDwordx3LoadStores())
       return true;
 
-    unsigned Align = Query.MMODescrs[0].AlignInBits;
     if (Align < MemSize) {
       const SITargetLowering *TLI = ST.getTargetLowering();
       return !TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS, Align / 8);
@@ -802,13 +813,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           unsigned MemSize = Query.MMODescrs[0].SizeInBits;
           unsigned Align = Query.MMODescrs[0].AlignInBits;
 
-          // No extending vector loads.
-          if (Size > MemSize && Ty0.isVector())
-            return false;
-
           // FIXME: Widening store from alignment not valid.
           if (MemSize < Size)
             MemSize = std::max(MemSize, Align);
+
+          // No extending vector loads.
+          if (Size > MemSize && Ty0.isVector())
+            return false;
 
           switch (MemSize) {
           case 8:

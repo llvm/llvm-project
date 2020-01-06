@@ -3021,6 +3021,9 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_BSWAP:
   case G_BITREVERSE:
   case G_SDIV:
+  case G_UDIV:
+  case G_SREM:
+  case G_UREM:
   case G_SMIN:
   case G_SMAX:
   case G_UMIN:

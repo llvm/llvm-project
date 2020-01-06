@@ -13,6 +13,7 @@
 
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
@@ -801,38 +802,6 @@ static unsigned extractSWZ(unsigned AuxiliaryData) {
   return (AuxiliaryData >> 3) & 1;
 }
 
-// Returns Base register, constant offset, and offset def point.
-static std::tuple<Register, unsigned, MachineInstr *>
-getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
-  MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
-  if (!Def)
-    return std::make_tuple(Reg, 0, nullptr);
-
-  if (Def->getOpcode() == AMDGPU::G_CONSTANT) {
-    unsigned Offset;
-    const MachineOperand &Op = Def->getOperand(1);
-    if (Op.isImm())
-      Offset = Op.getImm();
-    else
-      Offset = Op.getCImm()->getZExtValue();
-
-    return std::make_tuple(Register(), Offset, Def);
-  }
-
-  int64_t Offset;
-  if (Def->getOpcode() == AMDGPU::G_ADD) {
-    // TODO: Handle G_OR used for add case
-    if (mi_match(Def->getOperand(2).getReg(), MRI, m_ICst(Offset)))
-      return std::make_tuple(Def->getOperand(1).getReg(), Offset, Def);
-
-    // FIXME: matcher should ignore copies
-    if (mi_match(Def->getOperand(2).getReg(), MRI, m_Copy(m_ICst(Offset))))
-      return std::make_tuple(Def->getOperand(1).getReg(), Offset, Def);
-  }
-
-  return std::make_tuple(Reg, 0, Def);
-}
-
 static unsigned getBufferStoreOpcode(LLT Ty,
                                      const unsigned MemSize,
                                      const bool Offen) {
@@ -929,7 +898,7 @@ AMDGPUInstructionSelector::splitBufferOffsets(MachineIRBuilder &B,
   MachineInstr *OffsetDef;
 
   std::tie(BaseReg, TotalConstOffset, OffsetDef)
-    = getBaseWithConstantOffset(*MRI, OrigOffset);
+    = AMDGPU::getBaseWithConstantOffset(*MRI, OrigOffset);
 
   unsigned ImmOffset = TotalConstOffset;
 

@@ -84,7 +84,7 @@ public:
   };
 
   /// Holds an identifier name check failure, tracking the kind of the
-  /// identifer, its possible fixup and the starting locations of all the
+  /// identifier, its possible fixup and the starting locations of all the
   /// identifier usages.
   struct NamingCheckFailure {
     std::string KindName;

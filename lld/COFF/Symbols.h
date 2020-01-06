@@ -229,6 +229,14 @@ public:
   uint64_t getRVA() { return va - config->imageBase; }
   void setVA(uint64_t v) { va = v; }
 
+  bool isEqual(COFFSymbolRef s) const {
+    return va == s.getValue();
+  }
+
+  bool isEqual(uint64_t otherVa) const {
+    return va == otherVa;
+  }
+
   // Section index relocations against absolute symbols resolve to
   // this 16 bit number, and it is the largest valid section index
   // plus one. This variable keeps it.

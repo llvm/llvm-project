@@ -39,6 +39,8 @@ SourceLocation findPreviousAnyTokenKind(SourceLocation Start,
                                         const SourceManager &SM,
                                         const LangOptions &LangOpts,
                                         TokenKind TK, TokenKinds... TKs) {
+  if (Start.isInvalid() || Start.isMacroID())
+    return SourceLocation();
   while (true) {
     SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
@@ -46,7 +48,7 @@ SourceLocation findPreviousAnyTokenKind(SourceLocation Start,
 
     Token T;
     // Returning 'true' is used to signal failure to retrieve the token.
-    if (Lexer::getRawToken(L, T, SM, LangOpts))
+    if (Lexer::getRawToken(L, T, SM, LangOpts, /*IgnoreWhiteSpace=*/true))
       return SourceLocation();
 
     if (T.isOneOf(TK, TKs...))

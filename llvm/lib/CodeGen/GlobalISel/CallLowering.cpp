@@ -65,7 +65,11 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
   Info.SwiftErrorVReg = SwiftErrorVReg;
   Info.IsMustTailCall = CS.isMustTailCall();
   Info.IsTailCall = CS.isTailCall() &&
-                    isInTailCallPosition(CS, MIRBuilder.getMF().getTarget());
+                    isInTailCallPosition(CS, MIRBuilder.getMF().getTarget()) &&
+                    (MIRBuilder.getMF()
+                         .getFunction()
+                         .getFnAttribute("disable-tail-calls")
+                         .getValueAsString() != "true");
   Info.IsVarArg = CS.getFunctionType()->isVarArg();
   return lowerCall(MIRBuilder, Info);
 }

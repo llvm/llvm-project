@@ -17,6 +17,7 @@ function(add_mlir_dialect dialect dialect_doc_filename)
   mlir_tablegen(${dialect}.h.inc -gen-op-decls)
   mlir_tablegen(${dialect}.cpp.inc -gen-op-defs)
   add_public_tablegen_target(MLIR${dialect}IncGen)
+  add_dependencies(mlir-headers MLIR${dialect}IncGen)
 
   # Generate Dialect Documentation
   set(LLVM_TARGET_DEFINITIONS ${dialect_doc_filename}.td)
@@ -32,6 +33,10 @@ function(add_mlir_dialect dialect dialect_doc_filename)
   add_dependencies(mlir-doc ${dialect_doc_filename}DocGen)
 endfunction()
 
+# Installing the headers and docs needs to depend on generating any public
+# tablegen'd targets.
+add_custom_target(mlir-headers)
+set_target_properties(mlir-headers PROPERTIES FOLDER "Misc")
 add_custom_target(mlir-doc)
 
 # TODO: This is to handle the current static registration, but should be

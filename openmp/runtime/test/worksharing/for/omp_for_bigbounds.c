@@ -7,7 +7,7 @@
 
 /*
  * Test that large bounds are handled properly and calculations of
- * loop iterations don't accidently overflow
+ * loop iterations don't accidentally overflow
  */
 #include <stdio.h>
 #include <omp.h>

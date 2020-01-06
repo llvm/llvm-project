@@ -7152,7 +7152,7 @@ int __kmp_invoke_teams_master(int gtid) {
 
 /* this sets the requested number of threads for the next parallel region
    encountered by this team. since this should be enclosed in the forkjoin
-   critical section it should avoid race conditions with assymmetrical nested
+   critical section it should avoid race conditions with asymmetrical nested
    parallelism */
 
 void __kmp_push_num_threads(ident_t *id, int gtid, int num_threads) {

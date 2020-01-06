@@ -3026,7 +3026,7 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
   Expr *LastE = nullptr;
   while (E != LastE) {
     LastE = E;
-    E = E->IgnoreImplicit();
+    E = E->IgnoreParenImpCasts();
 
     auto SR = E->getSourceRange();
 

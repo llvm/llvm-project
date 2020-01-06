@@ -1,4 +1,4 @@
-//===-- ClangMove.cpp - move defintion to new file --------------*- C++ -*-===//
+//===-- ClangMove.cpp - move definition to new file -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

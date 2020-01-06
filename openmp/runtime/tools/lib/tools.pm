@@ -256,7 +256,7 @@ sub get_options {
         "v|verbose"       => sub { ++ $verbose;     $ENV{ "tools.pm_verbose"    } = $verbose;    },
         "quiet"           => sub { -- $verbose;     $ENV{ "tools.pm_verbose"    } = $verbose;    },
         "with-timestamps" => sub { $timestamps = 1; $ENV{ "tools.pm_timestamps" } = $timestamps; },
-        @_, # Caller argumetsa are at the end so caller options overrides standard.
+        @_, # Caller arguments are at the end so caller options overrides standard.
     ) or cmdline_error();
 
 }; # sub get_options
@@ -708,7 +708,7 @@ Look for the first occurrence of "icc" in the specified directories:
 
     my $icc = which( "icc", -dirs => [ ".", "/usr/local/bin", "/usr/bin", "/bin" ] );
 
-Look for the the C<omp_lib.f> file:
+Look for the C<omp_lib.f> file:
 
     my @omp_lib = which( "omp_lib.f", -all => 1, -exec => 0, -dirs => [ @include ] );
 
