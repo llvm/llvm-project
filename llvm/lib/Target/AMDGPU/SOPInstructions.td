@@ -1213,7 +1213,7 @@ def : GCNPat <
 
 def : GCNPat <
   (i32 (smax i32:$x, (i32 (ineg i32:$x)))),
-  (S_ABS_I32 $x)
+  (S_ABS_I32 SReg_32:$x)
 >;
 
 def : GCNPat <
