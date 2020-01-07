@@ -10829,8 +10829,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         ExprLoc = VLENExpr->getExprLoc();
       }
       OMPDeclareSimdDeclAttr::BranchStateTy State = Attr->getBranchState();
-      if (CGM.getTriple().getArch() == llvm::Triple::x86 ||
-          CGM.getTriple().getArch() == llvm::Triple::x86_64) {
+      if (CGM.getTriple().isX86()) {
         emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
       } else if (CGM.getTriple().getArch() == llvm::Triple::aarch64) {
         unsigned VLEN = VLENVal.getExtValue();

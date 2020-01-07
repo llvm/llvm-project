@@ -7650,8 +7650,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           }
           outs() << "\n";
         } else {
-          unsigned int Arch = MachOOF->getArch();
-          if (Arch == Triple::x86_64 || Arch == Triple::x86) {
+          if (MachOOF->getArchTriple().isX86()) {
             outs() << format("\t.byte 0x%02x #bad opcode\n",
                              *(Bytes.data() + Index) & 0xff);
             Size = 1; // skip exactly one illegible byte and move on.
@@ -7716,8 +7715,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           IP->printInst(&Inst, PC, AnnotationsStr, *STI, outs());
           outs() << "\n";
         } else {
-          unsigned int Arch = MachOOF->getArch();
-          if (Arch == Triple::x86_64 || Arch == Triple::x86) {
+          if (MachOOF->getArchTriple().isX86()) {
             outs() << format("\t.byte 0x%02x #bad opcode\n",
                              *(Bytes.data() + Index) & 0xff);
             InstSize = 1; // skip exactly one illegible byte and move on.
