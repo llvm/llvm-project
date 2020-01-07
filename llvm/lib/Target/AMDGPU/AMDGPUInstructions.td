@@ -343,8 +343,9 @@ class StoreFrag<SDPatternOperator op> : PatFrag <
 >;
 
 class StoreHi16<SDPatternOperator op> : PatFrag <
-  (ops node:$value, node:$ptr), (op (srl node:$value, (i32 16)), node:$ptr)
->;
+  (ops node:$value, node:$ptr), (op (srl node:$value, (i32 16)), node:$ptr)> {
+  let IsStore = 1;
+}
 
 def LoadAddress_constant : AddressSpaceList<[  AddrSpaces.Constant ]>;
 def LoadAddress_global : AddressSpaceList<[  AddrSpaces.Global, AddrSpaces.Constant ]>;
@@ -485,6 +486,10 @@ def truncstorei16_#as : PatFrag<(ops node:$val, node:$ptr),
   let MemoryVT = i16;
 }
 
+def store_hi16_#as : StoreHi16 <truncstorei16>;
+def truncstorei8_hi16_#as : StoreHi16<truncstorei8>;
+def truncstorei16_hi16_#as : StoreHi16<truncstorei16>;
+
 defm atomic_store_#as : binary_atomic_op<atomic_store>;
 
 } // End let AddressSpaces = ...
@@ -520,16 +525,7 @@ defm atomic_load_xor : ret_noret_binary_atomic_op<atomic_load_xor>;
 defm atomic_load_fadd : ret_noret_binary_atomic_op<atomic_load_fadd, 0>;
 defm AMDGPUatomic_cmp_swap : ret_noret_binary_atomic_op<AMDGPUatomic_cmp_swap>;
 
-
-def store_hi16_private : StoreHi16 <truncstorei16>, PrivateAddress;
-def truncstorei8_hi16_private : StoreHi16<truncstorei8>, PrivateAddress;
-
 def store_atomic_global : GlobalStore<atomic_store>;
-def truncstorei8_hi16_global : StoreHi16 <truncstorei8>, GlobalAddress;
-def truncstorei16_hi16_global : StoreHi16 <truncstorei16>, GlobalAddress;
-
-def store_local_hi16 : StoreHi16 <truncstorei16>, LocalAddress;
-def truncstorei8_local_hi16 : StoreHi16<truncstorei8>, LocalAddress;
 def atomic_store_local : LocalStore <atomic_store>;
 
 
@@ -559,8 +555,6 @@ def store_align16_local: PatFrag<(ops node:$val, node:$ptr),
 
 
 def atomic_store_flat  : FlatStore <atomic_store>;
-def truncstorei8_hi16_flat  : StoreHi16<truncstorei8>, FlatStoreAddress;
-def truncstorei16_hi16_flat : StoreHi16<truncstorei16>, FlatStoreAddress;
 
 
 class local_binary_atomic_op<SDNode atomic_op> :
