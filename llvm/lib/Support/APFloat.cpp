@@ -1065,18 +1065,22 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
       significand.parts = fullSignificand;
     semantics = &extendedSemantics;
 
-    status = addend.convert(extendedSemantics, rmTowardZero, &ignored);
+    // Make a copy so we can convert it to the extended semantics.
+    // Note that we cannot convert the addend directly, as the extendedSemantics
+    // is a local variable (which we take a reference to).
+    IEEEFloat extendedAddend(addend);
+    status = extendedAddend.convert(extendedSemantics, rmTowardZero, &ignored);
     assert(status == opOK);
     (void)status;
 
     // Shift the significand of the addend right by one bit. This guarantees
     // that the high bit of the significand is zero (same as fullSignificand),
     // so the addition will overflow (if it does overflow at all) into the top bit.
-    lost_fraction = addend.shiftSignificandRight(1);
+    lost_fraction = extendedAddend.shiftSignificandRight(1);
     assert(lost_fraction == lfExactlyZero &&
            "Lost precision while shifting addend for fused-multiply-add.");
 
-    lost_fraction = addOrSubtractSignificand(addend, false);
+    lost_fraction = addOrSubtractSignificand(extendedAddend, false);
 
     /* Restore our state.  */
     if (newPartsCount == 1)
