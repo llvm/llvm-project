@@ -5868,11 +5868,21 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
     unsigned NumBytesNoStackCalls = 0;
     std::vector<outliner::Candidate> CandidatesWithoutStackFixups;
 
+    // Check if we have to save LR.
     for (outliner::Candidate &C : RepeatedSequenceLocs) {
       C.initLRU(TRI);
 
+      // If we have a noreturn caller, then we're going to be conservative and
+      // say that we have to save LR. If we don't have a ret at the end of the
+      // block, then we can't reason about liveness accurately.
+      //
+      // FIXME: We can probably do better than always disabling this in
+      // noreturn functions by fixing up the liveness info.
+      bool IsNoReturn =
+          C.getMF()->getFunction().hasFnAttribute(Attribute::NoReturn);
+
       // Is LR available? If so, we don't need a save.
-      if (C.LRU.available(AArch64::LR)) {
+      if (C.LRU.available(AArch64::LR) && !IsNoReturn) {
         NumBytesNoStackCalls += 4;
         C.setCallInfo(MachineOutlinerNoLRSave, 4);
         CandidatesWithoutStackFixups.push_back(C);
