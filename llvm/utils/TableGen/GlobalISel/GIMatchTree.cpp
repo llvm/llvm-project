@@ -641,7 +641,7 @@ void GIMatchTreeVRegDefPartitioner::addToPartition(bool Result,
     P = Partitions.insert(std::make_pair(I->second, BitVector())).first;
   P->second.resize(LeafIdx + 1);
   P->second.set(LeafIdx);
-};
+}
 
 void GIMatchTreeVRegDefPartitioner::repartition(
     GIMatchTreeBuilder::LeafVec &Leaves) {
