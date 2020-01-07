@@ -68,9 +68,8 @@ public:
       Register SrcReg = MI.getOperand(1).getReg();
       const RegisterBank *SrcBank = RBI.getRegBank(SrcReg, MRI, *RBI.TRI);
       if (SrcBank == &AMDGPU::VCCRegBank) {
-        const LLT S1 = LLT::scalar(1);
         const LLT S32 = LLT::scalar(32);
-        assert(MRI.getType(SrcReg) == S1);
+        assert(MRI.getType(SrcReg) == LLT::scalar(1));
         assert(MRI.getType(DstReg) == S32);
         assert(NewBank == &AMDGPU::VGPRRegBank);
 
