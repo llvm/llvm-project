@@ -5,12 +5,13 @@
 # RUN: yaml2obj %s -o %t.o
 ## Sanity check that the strings have been pooled.
 # RUN: llvm-readobj %t.o --string-dump .strtab --string-dump .shstrtab \
-# RUN:   | FileCheck %s --check-prefix=VALIDATE --implicit-check-not=bar --implicit-check-not=.blag
+# RUN:   | FileCheck %s --check-prefix=VALIDATE --implicit-check-not='] bar' --implicit-check-not=.blag
 
-# VALIDATE: String dump of section '.strtab':
-# VALIDATE: bazfoobar
-# VALIDATE: String dump of section '.shstrtab':
-# VALIDATE: .blam.blah.blag
+# VALIDATE:      String dump of section '.strtab':
+# VALIDATE-NEXT: [     1] bazfoobar
+# VALIDATE-EMPTY:
+# VALIDATE-NEXT: String dump of section '.shstrtab':
+# VALIDATE-NEXT: [     1] .blam.blah.blag
 
 ## Case 1: Basic copy.
 # RUN: llvm-objcopy %t.o %t.copy
@@ -57,7 +58,7 @@
 ## Case 5: Remove symbol.
 # RUN: llvm-objcopy %t.o %t.remove-symbol -N foobar
 # RUN: llvm-readobj --symbols %t.remove-symbol \
-# RUN:   | FileCheck %s --check-prefix=REMOVE-SYMBOL --implicit-check-not foobar
+# RUN:   | FileCheck %s --check-prefix=REMOVE-SYMBOL --implicit-check-not='Name: foobar'
 
 # REMOVE-SYMBOL: Symbols [
 # REMOVE-SYMBOL:   Name: bar (
