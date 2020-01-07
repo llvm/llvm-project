@@ -1069,6 +1069,10 @@ public:
   InputSection *getTargetInputSection() const;
   bool assignOffsets();
 
+  // When true, round up reported size of section to 4 KiB. See comment
+  // in addThunkSection() for more details.
+  bool roundUpSizeForErrata = false;
+
 private:
   std::vector<Thunk *> thunks;
   size_t size = 0;
