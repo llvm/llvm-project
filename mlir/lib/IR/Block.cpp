@@ -179,6 +179,20 @@ void Block::eraseArgument(unsigned index, bool updatePredTerms) {
   }
 }
 
+/// Insert one value to the given position of the argument list. The existing
+/// arguments are shifted. The block is expected not to have predecessors.
+BlockArgument Block::insertArgument(args_iterator it, Type type) {
+  assert(llvm::empty(getPredecessors()) &&
+         "cannot insert arguments to blocks with predecessors");
+
+  // Use the args_iterator (on the BlockArgListType) to compute the insertion
+  // iterator in the underlying argument storage.
+  size_t distance = std::distance(args_begin(), it);
+  auto arg = BlockArgument::create(type, this);
+  arguments.insert(std::next(arguments.begin(), distance), arg);
+  return arg;
+}
+
 //===----------------------------------------------------------------------===//
 // Terminator management
 //===----------------------------------------------------------------------===//

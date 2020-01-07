@@ -593,6 +593,24 @@ LogicalResult verify(LaunchFuncOp op) {
 // GPUFuncOp
 //===----------------------------------------------------------------------===//
 
+/// Adds a workgroup attribution to "op" of the MemRef type with the given shape
+/// and element type.
+Value GPUFuncOp::addWorkgroupAttribution(ArrayRef<int64_t> shape,
+                                         Type elementType) {
+  unsigned pos = getNumFuncArguments() + getNumWorkgroupAttributions();
+  Block &bodyBlock = body().front();
+  Value attribution = bodyBlock.insertArgument(
+      std::next(bodyBlock.args_begin(), pos),
+      MemRefType::get(shape, elementType, /*affineMapComposition=*/{},
+                      GPUDialect::getWorkgroupAddressSpace()));
+  auto numWorkgroupBuffersAttr =
+      getAttrOfType<IntegerAttr>(getNumWorkgroupAttributionsAttrName());
+  setAttr(getNumWorkgroupAttributionsAttrName(),
+          IntegerAttr::get(numWorkgroupBuffersAttr.getType(),
+                           numWorkgroupBuffersAttr.getValue() + 1));
+  return attribution;
+}
+
 void GPUFuncOp::build(Builder *builder, OperationState &result, StringRef name,
                       FunctionType type, ArrayRef<Type> workgroupAttributions,
                       ArrayRef<Type> privateAttributions,
